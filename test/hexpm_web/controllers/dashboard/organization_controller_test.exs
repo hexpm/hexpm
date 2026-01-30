@@ -382,6 +382,21 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       assert response(conn, 200) == "Invoice"
     end
+
+    test "returns 404 for non-integer invoice ID", %{user: user, organization: organization} do
+      stub(Hexpm.Billing.Mock, :get, fn _token ->
+        %{"invoices" => [%{"id" => 123}]}
+      end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/invoices/invalid")
+
+      assert response(conn, 404)
+    end
   end
 
   describe "POST /dashboard/orgs/:dashboard_org/invoices/:id/pay" do
@@ -657,6 +672,23 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
                "The number of open seats cannot be less than the number of organization members."
     end
 
+    test "returns error for non-integer seats params", %{organization: organization, user: user} do
+      mock_customer(organization)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}/add-seats", %{
+          "current-seats" => "invalid",
+          "add-seats" => "2"
+        })
+
+      response(conn, 400)
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Invalid seat numbers."
+    end
+
     test "create audit_log with action billing.update", %{organization: organization, user: user} do
       stub(Hexpm.Billing.Mock, :update, fn _organization_name, _map -> {:ok, %{}} end)
 
@@ -717,6 +749,22 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
                "The number of open seats cannot be less than the number of organization members."
+    end
+
+    test "returns error for non-integer seats param", %{organization: organization, user: user} do
+      mock_customer(organization)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}/remove-seats", %{
+          "seats" => "invalid"
+        })
+
+      response(conn, 400)
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Invalid seat number."
     end
 
     test "create audit_log with action billing.update", %{organization: organization, user: user} do

@@ -173,5 +173,12 @@ defmodule HexpmWeb.Dashboard.SessionControllerTest do
       assert html_response(conn, 404)
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "Session not found"
     end
+
+    test "returns 404 for non-integer session ID string", %{conn: conn} do
+      conn = delete(conn, ~p"/dashboard/sessions?id=invalid")
+
+      assert html_response(conn, 404)
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "Session not found"
+    end
   end
 end

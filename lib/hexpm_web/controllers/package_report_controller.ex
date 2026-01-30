@@ -9,11 +9,15 @@ defmodule HexpmWeb.PackageReportController do
   @report_bad_version_msg "No release matches given requirement"
 
   def comment(conn, params) do
-    report = PackageReports.get(params["id"])
-    author = conn.assigns.current_user
-    PackageReports.new_comment(report, author, params)
+    report = PackageReports.get(safe_string(params["id"]))
 
-    redirect(conn, to: ~p"/reports/#{report}")
+    if report do
+      author = conn.assigns.current_user
+      PackageReports.new_comment(report, author, params)
+      redirect(conn, to: ~p"/reports/#{report}")
+    else
+      not_found(conn)
+    end
   end
 
   def index(conn, _params) do
@@ -78,7 +82,7 @@ defmodule HexpmWeb.PackageReportController do
   end
 
   def show(conn, params) do
-    report = PackageReports.get(params["id"])
+    report = PackageReports.get(safe_string(params["id"]))
     user = conn.assigns.current_user
 
     if report do
@@ -118,7 +122,7 @@ defmodule HexpmWeb.PackageReportController do
   end
 
   def accept(conn, params) do
-    report_id = params["id"]
+    report_id = safe_string(params["id"])
 
     report = PackageReports.get(report_id)
 
@@ -132,7 +136,7 @@ defmodule HexpmWeb.PackageReportController do
   end
 
   def reject(conn, params) do
-    report_id = params["id"]
+    report_id = safe_string(params["id"])
 
     report = PackageReports.get(report_id)
 
@@ -147,7 +151,7 @@ defmodule HexpmWeb.PackageReportController do
   end
 
   def solve(conn, params) do
-    report_id = params["id"]
+    report_id = safe_string(params["id"])
 
     report = PackageReports.get(report_id)
 
@@ -162,7 +166,7 @@ defmodule HexpmWeb.PackageReportController do
   end
 
   def unresolve(conn, params) do
-    report_id = params["id"]
+    report_id = safe_string(params["id"])
 
     report = PackageReports.get(report_id)
 
