@@ -85,7 +85,8 @@ defmodule HexpmWeb.API.OAuthController do
   defp handle_authorization_code_grant(conn, params) do
     with {:ok, client} <- authenticate_client(params),
          :ok <- validate_client_supports_grant(client, "authorization_code"),
-         {:ok, auth_code} <- validate_authorization_code(safe_param(params, "code"), client.client_id),
+         {:ok, auth_code} <-
+           validate_authorization_code(safe_param(params, "code"), client.client_id),
          :ok <- validate_redirect_uri_match(auth_code, params["redirect_uri"]),
          :ok <- validate_pkce(auth_code, safe_param(params, "code_verifier")) do
       {:ok, used_auth_code} = AuthorizationCodes.mark_as_used(auth_code)
@@ -124,7 +125,11 @@ defmodule HexpmWeb.API.OAuthController do
            validate_client_supports_grant(client, "urn:ietf:params:oauth:grant-type:device_code") do
       usage_info = build_usage_info(conn)
 
-      case DeviceCodes.poll_device_token(safe_param(params, "device_code"), safe_param(params, "client_id"), usage_info) do
+      case DeviceCodes.poll_device_token(
+             safe_param(params, "device_code"),
+             safe_param(params, "client_id"),
+             usage_info
+           ) do
         {:ok, token} ->
           render(conn, :token, token: token)
 
@@ -143,7 +148,8 @@ defmodule HexpmWeb.API.OAuthController do
   defp handle_refresh_token_grant(conn, params) do
     with {:ok, client} <- authenticate_client(params),
          :ok <- validate_client_supports_grant(client, "refresh_token"),
-         {:ok, token} <- validate_refresh_token(safe_param(params, "refresh_token"), client.client_id) do
+         {:ok, token} <-
+           validate_refresh_token(safe_param(params, "refresh_token"), client.client_id) do
       usage_info = build_usage_info(conn)
 
       case Tokens.revoke_and_create_token(
@@ -360,7 +366,8 @@ defmodule HexpmWeb.API.OAuthController do
     end
   end
 
-  defp validate_scopes(client, scope_string) when is_binary(scope_string) or is_nil(scope_string) do
+  defp validate_scopes(client, scope_string)
+       when is_binary(scope_string) or is_nil(scope_string) do
     scopes = String.split(scope_string || "", " ", trim: true)
 
     if Clients.supports_scopes?(client, scopes) do
@@ -397,7 +404,8 @@ defmodule HexpmWeb.API.OAuthController do
     end
   end
 
-  defp validate_pkce(auth_code, code_verifier) when is_binary(code_verifier) and code_verifier != "" do
+  defp validate_pkce(auth_code, code_verifier)
+       when is_binary(code_verifier) and code_verifier != "" do
     if AuthorizationCodes.verify_code_challenge(auth_code, code_verifier) do
       :ok
     else
