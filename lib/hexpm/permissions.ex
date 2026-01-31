@@ -17,6 +17,9 @@ defmodule Hexpm.Permissions do
   @resource_only_scopes ~w(package repository docs)
   @all_scopes @api_scopes ++ @simple_scopes
 
+  # OAuth clients can register bare resource-only scopes as patterns
+  @client_allowed_scopes @all_scopes ++ @resource_only_scopes
+
   # Legacy domain list for KeyPermission compatibility
   @legacy_domains ~w(api package repository repositories docs)
 
@@ -24,6 +27,31 @@ defmodule Hexpm.Permissions do
   Returns all valid domains for KeyPermissions (legacy format).
   """
   def valid_domains, do: @legacy_domains
+
+  @doc """
+  Returns the list of resource-only scope prefixes (docs, package, repository).
+  These scopes require a resource suffix (e.g., docs:acme, package:hexpm/poison).
+  """
+  def resource_only_scopes, do: @resource_only_scopes
+
+  @doc """
+  Checks if a scope is a resource-specific scope (e.g., docs:acme, package:hexpm/poison).
+  """
+  def resource_specific_scope?(scope) when is_binary(scope) do
+    case String.split(scope, ":", parts: 2) do
+      [base, _resource] when base in @resource_only_scopes -> true
+      _ -> false
+    end
+  end
+
+  @doc """
+  Validates a scope for OAuth client registration.
+  More permissive than user-requested scopes - allows bare resource-only scopes
+  (docs, package, repository) as patterns that match any resource-specific scope.
+  """
+  def valid_client_allowed_scope?(scope) when is_binary(scope) do
+    scope in @client_allowed_scopes or resource_specific_scope?(scope)
+  end
 
   @doc """
   Validates a list of scopes against the allowed scope definitions.
@@ -266,7 +294,10 @@ defmodule Hexpm.Permissions do
   defp check_access?(permissions, "docs", resource) when is_binary(resource) do
     Enum.any?(permissions, fn perm ->
       case perm do
+        # Legacy KeyPermission format
         %{domain: "docs", resource: ^resource} -> true
+        # OAuth scope format: docs:{organization}
+        %{scope: "docs:" <> scope_resource, is_oauth_scope: true} -> scope_resource == resource
         _ -> false
       end
     end)

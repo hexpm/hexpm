@@ -44,6 +44,9 @@ defmodule Hexpm.Accounts.Key do
     |> changeset(user_or_organization, params)
   end
 
+  # TODO(hexdocs-oauth-migration): Remove build_for_docs/2 after hexdocs migrates to OAuth.
+  # This function builds legacy API keys for hexdocs authentication. The new OAuth flow
+  # uses standard OAuth tokens instead of API keys.
   def build_for_docs(user, organization) do
     permission =
       KeyPermission.changeset(%KeyPermission{}, user, %{
