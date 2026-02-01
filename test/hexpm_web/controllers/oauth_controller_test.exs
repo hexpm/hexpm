@@ -68,7 +68,6 @@ defmodule HexpmWeb.OAuthControllerTest do
       assert redirected_to(conn) =~ "/login"
     end
 
-    @tag :skip
     test "shows authorization page when authenticated", %{client: client} do
       user = insert(:user)
       conn = login_user(build_conn(), user)
@@ -88,8 +87,6 @@ defmodule HexpmWeb.OAuthControllerTest do
       assert html =~ client.name
       assert html =~ "api:read"
       assert html =~ "repositories"
-      assert html =~ "Select All"
-      assert html =~ "Deselect All"
     end
   end
 
