@@ -10,4 +10,5 @@ defmodule Hexpm.Billing.Behaviour do
   @callback invoice(id :: pos_integer()) :: binary()
   @callback pay_invoice(id :: pos_integer()) :: :ok | {:error, map()}
   @callback report() :: [map()]
+  @callback pending_payment_action(organization()) :: map()
 end

@@ -92,6 +92,23 @@ export default class App {
         e.target.value = value
       })
     }
+
+    // Set up billing callbacks for SCA/3D Secure flow
+    window.hexpm_billing_success = this.onBillingSuccess.bind(this)
+    window.hexpm_billing_error = this.onBillingError.bind(this)
+  }
+
+  onBillingSuccess() {
+    window.location.reload()
+  }
+
+  onBillingError(error) {
+    $('div.flash').html(
+      '<div class="alert alert-danger" role="alert">' +
+      '<strong>Failed to update payment method</strong><br>' +
+      (error.message || JSON.stringify(error)) +
+      '</div>'
+    )
   }
 
   onDataCopy(event) {
@@ -197,19 +214,9 @@ export default class App {
   }
 
   billing_checkout(token) {
-    $.post(window.hexpm_billing_post_action, { token: token, _csrf_token: window.hexpm_billing_csrf_token })
-      .done(function (data) {
-        window.location.reload()
-      })
-      .fail(function (data) {
-        var response = JSON.parse(data.responseText);
-        $('div.flash').html(
-          '<div class="alert alert-danger" role="alert">' +
-          '<strong>Failed to update payment method</strong><br>' +
-          response.errors +
-          '</div>'
-        )
-      })
+    // Legacy callback - kept for backward compatibility
+    // New SCA flow handles payment directly, so just reload
+    window.location.reload()
   }
 }
 
