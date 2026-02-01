@@ -5,6 +5,7 @@ defmodule HexpmWeb.ControllerHelpers do
   import Phoenix.Controller
 
   alias Hexpm.Accounts.{Auth, Organizations}
+  alias Hexpm.UserSessions
   alias Hexpm.Repository.{Packages, Releases, Repositories}
 
   @max_cache_age 60
@@ -350,6 +351,47 @@ defmodule HexpmWeb.ControllerHelpers do
       "To increase your security, please change your password." <>
       "<br /><a class=\"small\" href=\"#{~p"/docs/faq"}#password-security\">" <>
       "Learn more about our password security.</a>"
+  end
+
+  def start_session_internal(conn, user) do
+    {:ok, _user_session, session_token} =
+      UserSessions.create_browser_session(user,
+        name: detect_browser(conn),
+        audit: %{audit_data(conn) | user: user}
+      )
+
+    conn
+    |> configure_session(renew: true)
+    |> put_session("session_token", Base.encode64(session_token))
+  end
+
+  def start_tfa_session(conn, user, return) do
+    {:ok, _user_session, session_token} =
+      UserSessions.create_browser_session(user,
+        name: detect_browser(conn),
+        audit: %{audit_data(conn) | user: user}
+      )
+
+    conn
+    |> configure_session(renew: true)
+    |> put_session("tfa_user_id", %{
+      "uid" => user.id,
+      "return" => return,
+      "session_token" => Base.encode64(session_token)
+    })
+  end
+
+  defp detect_browser(conn) do
+    user_agent = get_req_header(conn, "user-agent") |> List.first()
+
+    cond do
+      is_nil(user_agent) -> "Unknown Browser"
+      String.contains?(user_agent, "Chrome") -> "Chrome"
+      String.contains?(user_agent, "Firefox") -> "Firefox"
+      String.contains?(user_agent, "Safari") -> "Safari"
+      String.contains?(user_agent, "Edge") -> "Edge"
+      true -> "Browser Session"
+    end
   end
 
   def requires_login(conn, _opts) do

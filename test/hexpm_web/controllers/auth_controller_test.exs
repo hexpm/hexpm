@@ -73,7 +73,7 @@ defmodule HexpmWeb.AuthControllerTest do
         |> HexpmWeb.AuthController.callback(%{})
 
       assert redirected_to(conn) == "/users/#{user.username}"
-      assert get_session(conn, "user_id") == user.id
+      assert get_session(conn, "session_token")
     end
 
     test "redirects to TFA when user has TFA enabled" do
@@ -87,7 +87,10 @@ defmodule HexpmWeb.AuthControllerTest do
         |> HexpmWeb.AuthController.callback(%{})
 
       assert redirected_to(conn) == "/tfa"
-      assert get_session(conn, "tfa_user_id") == %{uid: user.id, return: nil}
+      tfa_data = get_session(conn, "tfa_user_id")
+      assert tfa_data["uid"] == user.id
+      assert tfa_data["return"] == nil
+      assert tfa_data["session_token"]
     end
   end
 
@@ -230,7 +233,7 @@ defmodule HexpmWeb.AuthControllerTest do
       # GitHub email is pre-verified, user logged in immediately
       assert redirected_to(conn) == "/users/#{chosen_username}"
       assert Phoenix.Flash.get(conn.assigns.flash, "info") == "Account created successfully!"
-      assert get_session(conn, "user_id") == user.id
+      assert get_session(conn, "session_token")
 
       # Session should be cleared
       refute get_session(conn, "pending_oauth")
