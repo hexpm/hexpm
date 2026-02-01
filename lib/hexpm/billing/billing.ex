@@ -12,6 +12,7 @@ defmodule Hexpm.Billing do
   def invoice(id), do: impl().invoice(id)
   def pay_invoice(id), do: impl().pay_invoice(id)
   def report(), do: impl().report()
+  def pending_payment_action(organization), do: impl().pending_payment_action(organization)
 
   @doc """
   Change payment method used by an organization.

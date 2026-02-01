@@ -98,6 +98,64 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       refute response(conn, 200) =~ "Billing"
       refute response(conn, 200) =~ "Billing information"
     end
+
+    test "shows incomplete subscription status", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      stub(Hexpm.Billing.Mock, :get, fn token ->
+        assert organization.name == token
+
+        %{
+          "checkout_html" => "",
+          "invoices" => [],
+          "subscription" => %{
+            "status" => "incomplete",
+            "current_period_end" => "2017-12-12T00:00:00Z",
+            "cancel_at_period_end" => false
+          },
+          "plan_id" => "organization-monthly",
+          "amount_with_tax" => 700,
+          "quantity" => 1,
+          "proration_amount" => 0
+        }
+      end)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}")
+
+      assert response(conn, 200) =~ "Requires payment confirmation"
+    end
+
+    test "shows incomplete_expired subscription status", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      stub(Hexpm.Billing.Mock, :get, fn token ->
+        assert organization.name == token
+
+        %{
+          "checkout_html" => "",
+          "invoices" => [],
+          "subscription" => %{
+            "status" => "incomplete_expired",
+            "current_period_end" => "2017-12-12T00:00:00Z",
+            "cancel_at_period_end" => false
+          },
+          "plan_id" => "organization-monthly",
+          "amount_with_tax" => 700,
+          "quantity" => 1,
+          "proration_amount" => 0
+        }
+      end)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}")
+
+      assert response(conn, 200) =~ "Payment confirmation expired"
+    end
   end
 
   describe "GET /dashboard/orgs/:dashboard_org/audit-logs" do

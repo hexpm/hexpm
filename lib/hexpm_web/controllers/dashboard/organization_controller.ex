@@ -541,15 +541,11 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       card: nil,
       invoices: nil,
       person: nil,
-      company: nil,
-      post_action: nil,
-      csrf_token: nil
+      company: nil
     ]
   end
 
-  defp customer_assigns(customer, organization) do
-    post_action = ~p"/dashboard/orgs/#{organization}/billing-token"
-
+  defp customer_assigns(customer, _organization) do
     [
       billing_started?: true,
       billing_active?: !!customer["subscription"],
@@ -568,9 +564,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       card: customer["card"],
       invoices: customer["invoices"],
       person: customer["person"],
-      company: customer["company"],
-      post_action: post_action,
-      csrf_token: get_csrf_token()
+      company: customer["company"]
     ]
   end
 
