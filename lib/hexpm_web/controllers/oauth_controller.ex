@@ -29,7 +29,7 @@ defmodule HexpmWeb.OAuthController do
          {:ok, _} <- validate_pkce_params(params) do
       if logged_in?(conn) do
         render(conn, "authorize.html", %{
-          container: "container page page-xs",
+          container: "container page page-xs oauth",
           client: client,
           redirect_uri: redirect_uri,
           scopes: scopes,
@@ -117,7 +117,7 @@ defmodule HexpmWeb.OAuthController do
             "Two-factor authentication is required for api:write permissions. Please enable 2FA in your security settings and try again."
           )
           |> render("authorize.html", %{
-            container: "container page page-xs",
+            container: "container page page-xs oauth",
             client: client,
             redirect_uri: params["redirect_uri"],
             scopes: scopes,
