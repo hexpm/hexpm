@@ -12,7 +12,7 @@
     <%= form_tag @form_action, method: "post", id: "authorization-form" do %>
       <%= @render_scopes.(@scopes) %>
 
-      <%= for {key, value} <- @hidden_fields, key != "scope" do %>
+      <%= for {key, value} <- @hidden_fields do %>
         <input type="hidden" name="<%= key %>" value="<%= value %>">
       <% end %>
 
