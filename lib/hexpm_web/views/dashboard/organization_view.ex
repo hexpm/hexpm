@@ -117,7 +117,7 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
   end
 
   defp subscription_status(%{"status" => "incomplete"}, _card) do
-    "TODO"
+    "Requires payment confirmation - check your email for instructions"
   end
 
   # TODO: Check if last invoice was unpaid and add note about it?
@@ -126,7 +126,7 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
   end
 
   defp subscription_status(%{"status" => "incomplete_expired"}, _card) do
-    "Not active"
+    "Payment confirmation expired - please update payment method"
   end
 
   @trial_ends_no_card_message """
