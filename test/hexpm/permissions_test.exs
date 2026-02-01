@@ -188,6 +188,29 @@ defmodule Hexpm.PermissionsTest do
       refute Permissions.verify_access?(key, "repositories", nil)
     end
 
+    test "verifies OAuth docs scope permissions" do
+      token = %Token{scopes: ["docs:myorg"]}
+
+      # Should allow access to the specific organization's docs
+      assert Permissions.verify_access?(token, "docs", "myorg")
+
+      # Should not allow access to other organizations
+      refute Permissions.verify_access?(token, "docs", "other-org")
+
+      # Should not grant other permissions
+      refute Permissions.verify_access?(token, "api", "read")
+      refute Permissions.verify_access?(token, "api", "write")
+      refute Permissions.verify_access?(token, "repositories", nil)
+    end
+
+    test "verifies multiple OAuth docs scopes" do
+      token = %Token{scopes: ["docs:org1", "docs:org2"]}
+
+      assert Permissions.verify_access?(token, "docs", "org1")
+      assert Permissions.verify_access?(token, "docs", "org2")
+      refute Permissions.verify_access?(token, "docs", "org3")
+    end
+
     test "verifies api permissions" do
       key = build(:key, permissions: [build(:key_permission, domain: "api")])
       assert Permissions.verify_access?(key, "api", "read")

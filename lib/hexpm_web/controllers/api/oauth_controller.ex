@@ -91,6 +91,7 @@ defmodule HexpmWeb.API.OAuthController do
          :ok <- validate_pkce(auth_code, safe_param(params, "code_verifier")) do
       {:ok, used_auth_code} = AuthorizationCodes.mark_as_used(auth_code)
       usage_info = build_usage_info(conn)
+      audit = %{audit_data(conn) | user: used_auth_code.user}
 
       case Tokens.create_session_and_token_for_user(
              used_auth_code.user,
@@ -101,7 +102,7 @@ defmodule HexpmWeb.API.OAuthController do
              name: safe_param(params, "name"),
              with_refresh_token: true,
              usage_info: usage_info,
-             audit: audit_data(conn)
+             audit: audit
            ) do
         {:ok, token} ->
           render(conn, :token, token: token)

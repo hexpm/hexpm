@@ -41,6 +41,38 @@ defmodule Hexpm.OAuth.ClientsTest do
 
       assert Clients.supports_scopes?(client, [])
     end
+
+    test "returns true for resource-specific scopes when base scope is allowed" do
+      # When client has "docs" in allowed_scopes, it should accept "docs:acme"
+      client = %Client{allowed_scopes: ["docs"]}
+
+      assert Clients.supports_scopes?(client, ["docs:acme"])
+      assert Clients.supports_scopes?(client, ["docs:myorg"])
+      assert Clients.supports_scopes?(client, ["docs:some-organization"])
+    end
+
+    test "returns true for multiple resource-specific scopes" do
+      client = %Client{allowed_scopes: ["docs", "repository"]}
+
+      assert Clients.supports_scopes?(client, ["docs:acme", "repository:beta"])
+      assert Clients.supports_scopes?(client, ["docs:org1", "docs:org2"])
+    end
+
+    test "returns false for resource-specific scopes when base scope is not allowed" do
+      client = %Client{allowed_scopes: ["api"]}
+
+      refute Clients.supports_scopes?(client, ["docs:acme"])
+      refute Clients.supports_scopes?(client, ["repository:myorg"])
+    end
+
+    test "handles mixed exact and prefix scope matching" do
+      client = %Client{allowed_scopes: ["api:read", "docs"]}
+
+      assert Clients.supports_scopes?(client, ["api:read"])
+      assert Clients.supports_scopes?(client, ["docs:acme"])
+      assert Clients.supports_scopes?(client, ["api:read", "docs:acme"])
+      refute Clients.supports_scopes?(client, ["api:write"])
+    end
   end
 
   describe "valid_redirect_uri?/2" do
@@ -64,6 +96,95 @@ defmodule Hexpm.OAuth.ClientsTest do
 
       refute Clients.valid_redirect_uri?(client, "https://malicious.com/callback")
       refute Clients.valid_redirect_uri?(client, "https://example.com/different")
+    end
+
+    test "supports wildcard subdomain patterns" do
+      client = %Client{redirect_uris: ["https://*.hexdocs.pm/oauth/callback"]}
+
+      assert Clients.valid_redirect_uri?(client, "https://acme.hexdocs.pm/oauth/callback")
+      assert Clients.valid_redirect_uri?(client, "https://myorg.hexdocs.pm/oauth/callback")
+      assert Clients.valid_redirect_uri?(client, "https://test-org.hexdocs.pm/oauth/callback")
+    end
+
+    test "wildcard matches single subdomain segment only" do
+      client = %Client{redirect_uris: ["https://*.hexdocs.pm/oauth/callback"]}
+
+      # Should NOT match multiple subdomain levels
+      refute Clients.valid_redirect_uri?(client, "https://sub.acme.hexdocs.pm/oauth/callback")
+      refute Clients.valid_redirect_uri?(client, "https://a.b.hexdocs.pm/oauth/callback")
+    end
+
+    test "wildcard requires exact path match" do
+      client = %Client{redirect_uris: ["https://*.hexdocs.pm/oauth/callback"]}
+
+      refute Clients.valid_redirect_uri?(client, "https://acme.hexdocs.pm/different/path")
+      refute Clients.valid_redirect_uri?(client, "https://acme.hexdocs.pm/oauth/callback/extra")
+      refute Clients.valid_redirect_uri?(client, "https://acme.hexdocs.pm/")
+    end
+
+    test "wildcard requires exact scheme match" do
+      client = %Client{redirect_uris: ["https://*.hexdocs.pm/oauth/callback"]}
+
+      refute Clients.valid_redirect_uri?(client, "http://acme.hexdocs.pm/oauth/callback")
+    end
+
+    test "wildcard requires exact domain suffix match" do
+      client = %Client{redirect_uris: ["https://*.hexdocs.pm/oauth/callback"]}
+
+      refute Clients.valid_redirect_uri?(client, "https://acme.evil-hexdocs.pm/oauth/callback")
+
+      refute Clients.valid_redirect_uri?(
+               client,
+               "https://acme.hexdocs.pm.evil.com/oauth/callback"
+             )
+    end
+
+    test "wildcard does not match empty subdomain" do
+      client = %Client{redirect_uris: ["https://*.hexdocs.pm/oauth/callback"]}
+
+      refute Clients.valid_redirect_uri?(client, "https://hexdocs.pm/oauth/callback")
+      refute Clients.valid_redirect_uri?(client, "https://.hexdocs.pm/oauth/callback")
+    end
+
+    test "supports mix of exact and wildcard URIs" do
+      client = %Client{
+        redirect_uris: [
+          "https://*.hexdocs.pm/oauth/callback",
+          "https://hexdocs.pm/oauth/callback"
+        ]
+      }
+
+      assert Clients.valid_redirect_uri?(client, "https://acme.hexdocs.pm/oauth/callback")
+      assert Clients.valid_redirect_uri?(client, "https://hexdocs.pm/oauth/callback")
+    end
+
+    test "wildcard handles ports correctly" do
+      client = %Client{redirect_uris: ["https://*.hexdocs.pm:8443/oauth/callback"]}
+
+      assert Clients.valid_redirect_uri?(client, "https://acme.hexdocs.pm:8443/oauth/callback")
+      refute Clients.valid_redirect_uri?(client, "https://acme.hexdocs.pm/oauth/callback")
+      refute Clients.valid_redirect_uri?(client, "https://acme.hexdocs.pm:443/oauth/callback")
+    end
+
+    test "wildcard with default https port" do
+      # https://foo.example.com and https://foo.example.com:443 should be equivalent
+      client = %Client{redirect_uris: ["https://*.example.com/callback"]}
+
+      assert Clients.valid_redirect_uri?(client, "https://foo.example.com/callback")
+      assert Clients.valid_redirect_uri?(client, "https://foo.example.com:443/callback")
+    end
+
+    test "wildcard in middle of subdomain" do
+      client = %Client{redirect_uris: ["https://staging-*.hexdocs.pm/oauth/callback"]}
+
+      assert Clients.valid_redirect_uri?(client, "https://staging-acme.hexdocs.pm/oauth/callback")
+
+      assert Clients.valid_redirect_uri?(
+               client,
+               "https://staging-myorg.hexdocs.pm/oauth/callback"
+             )
+
+      refute Clients.valid_redirect_uri?(client, "https://prod-acme.hexdocs.pm/oauth/callback")
     end
   end
 
