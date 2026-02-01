@@ -1,6 +1,7 @@
 defmodule HexpmWeb.LoginController do
   use HexpmWeb, :controller
   require Logger
+  alias Hexpm.UserSessions
   alias HexpmWeb.Plugs.Attack
 
   plug :nillify_params, ["return"]
@@ -43,8 +44,6 @@ defmodule HexpmWeb.LoginController do
   end
 
   def delete(conn, _params) do
-    alias Hexpm.UserSessions
-
     # Revoke browser session if exists
     if session_token = get_session(conn, "session_token") do
       case Base.decode64(session_token) do
@@ -64,38 +63,10 @@ defmodule HexpmWeb.LoginController do
     |> redirect(to: ~p"/")
   end
 
-  def start_session(conn, user, return) do
+  defp start_session(conn, user, return) do
     conn
     |> start_session_internal(user)
     |> redirect_return(user, return)
-  end
-
-  def start_session_internal(conn, user) do
-    alias Hexpm.UserSessions
-
-    # Create browser session
-    {:ok, _user_session, session_token} =
-      UserSessions.create_browser_session(user,
-        name: detect_browser(conn),
-        audit: %{audit_data(conn) | user: user}
-      )
-
-    conn
-    |> configure_session(renew: true)
-    |> put_session("session_token", Base.encode64(session_token))
-  end
-
-  defp detect_browser(conn) do
-    user_agent = get_req_header(conn, "user-agent") |> List.first()
-
-    cond do
-      is_nil(user_agent) -> "Unknown Browser"
-      String.contains?(user_agent, "Chrome") -> "Chrome"
-      String.contains?(user_agent, "Firefox") -> "Firefox"
-      String.contains?(user_agent, "Safari") -> "Safari"
-      String.contains?(user_agent, "Edge") -> "Edge"
-      true -> "Browser Session"
-    end
   end
 
   defp redirect_return(%{params: %{"hexdocs" => organization}} = conn, user, return)
@@ -140,26 +111,10 @@ defmodule HexpmWeb.LoginController do
     )
   end
 
-  defp login(conn, %User{id: user_id, tfa: %{secret: secret}} = user,
-         password_breached: breached?
-       )
+  defp login(conn, %User{tfa: %{secret: secret}} = user, password_breached: breached?)
        when is_binary(secret) do
-    alias Hexpm.UserSessions
-
-    # Pre-create browser session for after TFA
-    {:ok, _user_session, session_token} =
-      UserSessions.create_browser_session(user,
-        name: detect_browser(conn),
-        audit: %{audit_data(conn) | user: user}
-      )
-
     conn
-    |> configure_session(renew: true)
-    |> put_session("tfa_user_id", %{
-      "uid" => user_id,
-      "return" => safe_string(conn.params["return"]),
-      "session_token" => Base.encode64(session_token)
-    })
+    |> start_tfa_session(user, safe_string(conn.params["return"]))
     |> maybe_put_flash(breached?)
     |> redirect(to: ~p"/tfa")
   end

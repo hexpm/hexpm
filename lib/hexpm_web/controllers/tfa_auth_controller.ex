@@ -20,7 +20,7 @@ defmodule HexpmWeb.TFAAuthController do
           |> configure_session(renew: true)
           |> put_session("session_token", session_token)
         else
-          HexpmWeb.LoginController.start_session_internal(conn, user)
+          start_session_internal(conn, user)
         end
 
       conn

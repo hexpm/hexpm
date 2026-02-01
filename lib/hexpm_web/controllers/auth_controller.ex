@@ -45,13 +45,11 @@ defmodule HexpmWeb.AuthController do
   defp handle_existing_user_login(conn, user) do
     if User.tfa_enabled?(user) do
       conn
-      |> configure_session(renew: true)
-      |> put_session("tfa_user_id", %{uid: user.id, return: conn.params["return"]})
+      |> start_tfa_session(user, conn.params["return"])
       |> redirect(to: ~p"/tfa")
     else
       conn
-      |> configure_session(renew: true)
-      |> put_session("user_id", user.id)
+      |> start_session_internal(user)
       |> redirect(to: conn.params["return"] || ~p"/users/#{user}")
     end
   end
@@ -174,8 +172,7 @@ defmodule HexpmWeb.AuthController do
       {:ok, user} ->
         conn
         |> delete_session("pending_oauth")
-        |> configure_session(renew: true)
-        |> put_session("user_id", user.id)
+        |> start_session_internal(user)
         |> put_flash(:info, "Account created successfully!")
         |> redirect(to: ~p"/users/#{user}")
 

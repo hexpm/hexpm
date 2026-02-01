@@ -13,7 +13,8 @@ defmodule HexpmWeb.TFARecoveryController do
          {:ok, updated_user} <- Hexpm.Accounts.Users.tfa_recover(user, code) do
       conn
       |> delete_session("tfa_user_id")
-      |> HexpmWeb.LoginController.start_session(updated_user, session["return"])
+      |> start_session_internal(updated_user)
+      |> redirect(to: session["return"] || ~p"/users/#{updated_user}")
     else
       _ ->
         render_show_error(conn)
