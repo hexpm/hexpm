@@ -1005,4 +1005,100 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert "repository:#{org.name}" in scopes
     end
   end
+
+  describe "POST /api/oauth/revoke_by_hash" do
+    setup do
+      user = insert(:user)
+
+      client_params = %{
+        client_id: Clients.generate_client_id(),
+        name: "Test OAuth Client",
+        client_type: "public",
+        allowed_grant_types: ["authorization_code"],
+        allowed_scopes: ["api", "api:read", "api:write"]
+      }
+
+      {:ok, client} = Client.build(client_params) |> Repo.insert()
+
+      {:ok, session} =
+        Hexpm.UserSessions.create_oauth_session(user, client.client_id, audit: audit_data(user))
+
+      token_changeset =
+        Tokens.create_for_user(
+          user,
+          client.client_id,
+          ["api:read"],
+          "authorization_code",
+          "test_code",
+          user_session_id: session.id,
+          with_refresh_token: true
+        )
+
+      {:ok, token} = Repo.insert(token_changeset)
+
+      %{
+        hash_user: user,
+        hash_client: client,
+        hash_token: token,
+        hash_refresh_token: token.refresh_token,
+        hash_refresh_token_hash: token.refresh_token_hash
+      }
+    end
+
+    test "successfully revokes token using valid hash", %{
+      hash_token: token,
+      hash_refresh_token_hash: hash
+    } do
+      build_conn()
+      |> post(~p"/api/oauth/revoke_by_hash", %{token_hash: hash})
+      |> response(200)
+
+      updated_token = Repo.get(Token, token.id)
+      assert Tokens.revoked?(updated_token)
+    end
+
+    test "accepts uppercase hash", %{hash_token: token, hash_refresh_token_hash: hash} do
+      build_conn()
+      |> post(~p"/api/oauth/revoke_by_hash", %{token_hash: String.upcase(hash)})
+      |> response(200)
+
+      updated_token = Repo.get(Token, token.id)
+      assert Tokens.revoked?(updated_token)
+    end
+
+    test "returns 200 OK for invalid hash (security per RFC 7009)" do
+      build_conn()
+      |> post(~p"/api/oauth/revoke_by_hash", %{token_hash: "invalid_hash_value"})
+      |> response(200)
+    end
+
+    test "returns 200 OK for missing token_hash parameter" do
+      build_conn()
+      |> post(~p"/api/oauth/revoke_by_hash", %{})
+      |> response(200)
+    end
+
+    test "returns 200 OK for empty token_hash parameter" do
+      build_conn()
+      |> post(~p"/api/oauth/revoke_by_hash", %{token_hash: ""})
+      |> response(200)
+    end
+
+    test "handles revocation of already revoked token", %{
+      hash_token: token,
+      hash_refresh_token_hash: hash
+    } do
+      {:ok, _} = Tokens.revoke(token)
+
+      build_conn()
+      |> post(~p"/api/oauth/revoke_by_hash", %{token_hash: hash})
+      |> response(200)
+    end
+
+    test "hash is computed correctly for new tokens", %{hash_refresh_token: refresh_token} do
+      expected_hash = :crypto.hash(:sha256, refresh_token) |> Base.encode16(case: :lower)
+      token = Repo.get_by(Token, refresh_token_hash: expected_hash)
+      assert token != nil
+    end
+  end
 end

@@ -79,6 +79,21 @@ defmodule HexpmWeb.API.OAuthController do
     end
   end
 
+  @doc """
+  Token revocation endpoint using refresh token hash.
+  Allows revocation when the actual token value is not available.
+  """
+  def revoke_by_hash(conn, params) do
+    case revoke_token_by_hash(params) do
+      :ok ->
+        send_resp(conn, 200, "")
+
+      {:error, _reason} ->
+        # Return 200 OK even for invalid tokens (security per RFC 7009)
+        send_resp(conn, 200, "")
+    end
+  end
+
   defp get_grant_type(%{"grant_type" => grant_type}), do: grant_type
   defp get_grant_type(_), do: nil
 
@@ -312,6 +327,22 @@ defmodule HexpmWeb.API.OAuthController do
   end
 
   defp revoke_token(_params), do: {:error, :invalid_request}
+
+  defp revoke_token_by_hash(%{"token_hash" => token_hash})
+       when is_binary(token_hash) and token_hash != "" do
+    case Tokens.lookup_by_refresh_token_hash(token_hash) do
+      {:ok, token} ->
+        case Tokens.revoke(token) do
+          {:ok, _} -> :ok
+          {:error, _} -> {:error, :revocation_failed}
+        end
+
+      {:error, :not_found} ->
+        {:error, :not_found}
+    end
+  end
+
+  defp revoke_token_by_hash(_params), do: {:error, :invalid_request}
 
   defp lookup_token_for_revocation(token_value, client_id) do
     # Try to find as access token first
