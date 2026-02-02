@@ -59,25 +59,30 @@ defmodule HexpmWeb.OAuthController do
   """
   def consent(conn, params) do
     if user = conn.assigns.current_user do
-      case params["action"] do
-        "approve" ->
-          handle_authorization_approval(conn, user, params)
+      # Validate client and redirect_uri first to prevent open redirect
+      with {:ok, client} <- validate_client(params["client_id"]),
+           {:ok, redirect_uri} <- validate_redirect_uri(client, params["redirect_uri"]) do
+        case params["action"] do
+          "approve" ->
+            handle_authorization_approval(conn, user, client, redirect_uri, params)
 
-        "deny" ->
-          handle_authorization_denial(conn, params)
+          "deny" ->
+            handle_authorization_denial(conn, redirect_uri, params)
 
-        _ ->
-          render_oauth_error(conn, :invalid_request, "Invalid action")
+          _ ->
+            render_oauth_error(conn, :invalid_request, "Invalid action")
+        end
+      else
+        {:error, error} ->
+          render_oauth_error(conn, :invalid_request, error)
       end
     else
       render_oauth_error(conn, :access_denied, "User not authenticated")
     end
   end
 
-  defp handle_authorization_approval(conn, user, params) do
-    with {:ok, client} <- validate_client(params["client_id"]),
-         {:ok, redirect_uri} <- validate_redirect_uri(client, params["redirect_uri"]),
-         {:ok, requested_scopes} <- validate_scopes(client, params["scope"]),
+  defp handle_authorization_approval(conn, user, client, redirect_uri, params) do
+    with {:ok, requested_scopes} <- validate_scopes(client, params["scope"]),
          {:ok, selected_scopes} <- get_selected_scopes(params, requested_scopes, client),
          {:ok, _} <- validate_state(params),
          {:ok, _} <- validate_pkce_params(params),
@@ -109,23 +114,24 @@ defmodule HexpmWeb.OAuthController do
     else
       {:error, :tfa_required} ->
         # Re-render the authorization page with error message
-        with {:ok, client} <- validate_client(params["client_id"]),
-             {:ok, scopes} <- validate_scopes(client, params["scope"]) do
-          conn
-          |> put_flash(
-            :error,
-            "Two-factor authentication is required for api:write permissions. Please enable 2FA in your security settings and try again."
-          )
-          |> render("authorize.html", %{
-            container: "container page page-xs oauth",
-            client: client,
-            redirect_uri: params["redirect_uri"],
-            scopes: scopes,
-            state: params["state"],
-            code_challenge: params["code_challenge"],
-            code_challenge_method: params["code_challenge_method"]
-          })
-        else
+        # Client and redirect_uri already validated, just need scopes
+        case validate_scopes(client, params["scope"]) do
+          {:ok, scopes} ->
+            conn
+            |> put_flash(
+              :error,
+              "Two-factor authentication is required for api:write permissions. Please enable 2FA in your security settings and try again."
+            )
+            |> render("authorize.html", %{
+              container: "container page page-xs oauth",
+              client: client,
+              redirect_uri: redirect_uri,
+              scopes: scopes,
+              state: params["state"],
+              code_challenge: params["code_challenge"],
+              code_challenge_method: params["code_challenge_method"]
+            })
+
           {:error, error} ->
             render_oauth_error(conn, :invalid_request, "Invalid request: #{error}")
         end
@@ -137,18 +143,18 @@ defmodule HexpmWeb.OAuthController do
           state: params["state"]
         }
 
-        redirect_to_client(conn, params["redirect_uri"], error_params)
+        redirect_to_client(conn, redirect_uri, error_params)
     end
   end
 
-  defp handle_authorization_denial(conn, params) do
+  defp handle_authorization_denial(conn, redirect_uri, params) do
     error_params = %{
       error: "access_denied",
       error_description: "User denied authorization",
       state: params["state"]
     }
 
-    redirect_to_client(conn, params["redirect_uri"], error_params)
+    redirect_to_client(conn, redirect_uri, error_params)
   end
 
   defp validate_client(nil), do: {:error, "Missing client_id"}
