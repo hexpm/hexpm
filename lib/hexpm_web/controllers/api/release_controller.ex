@@ -194,9 +194,13 @@ defmodule HexpmWeb.API.ReleaseController do
 
   defp log_tarball(repository, package, version, request_id, body) do
     Task.Supervisor.start_child(Hexpm.Tasks, fn ->
-      filename = "#{repository}-#{package}-#{version}-#{request_id}.tar.gz"
+      # Use random ID instead of user-controlled request_id in key to prevent overwrites
+      random_id = Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
+      filename = "#{repository}-#{package}-#{version}-#{random_id}.tar.gz"
       key = Path.join(["debug", "tarballs", filename])
-      Hexpm.Store.put(:repo_bucket, key, body, [])
+      # Store request_id in metadata for debugging (ignored by Store.Local)
+      opts = [cache_control: "private", meta: %{"request-id" => request_id || "unknown"}]
+      Hexpm.Store.put(:repo_bucket, key, body, opts)
     end)
   end
 
