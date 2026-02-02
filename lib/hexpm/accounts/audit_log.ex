@@ -248,6 +248,9 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("billing.cancel", {organization, _params}),
     do: %{organization: serialize(organization)}
 
+  defp extract_params("billing.resume", {organization, _params}),
+    do: %{organization: serialize(organization)}
+
   defp extract_params("billing.create", {organization, params}),
     do: %{
       organization: serialize(organization),

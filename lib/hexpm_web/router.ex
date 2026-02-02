@@ -194,6 +194,7 @@ defmodule HexpmWeb.Router do
     post "/orgs/:dashboard_org/leave", OrganizationController, :leave
     post "/orgs/:dashboard_org/billing-token", OrganizationController, :billing_token
     post "/orgs/:dashboard_org/cancel-billing", OrganizationController, :cancel_billing
+    post "/orgs/:dashboard_org/resume-billing", OrganizationController, :resume_billing
     post "/orgs/:dashboard_org/update-billing", OrganizationController, :update_billing
     post "/orgs/:dashboard_org/create-billing", OrganizationController, :create_billing
     post "/orgs/:dashboard_org/add-seats", OrganizationController, :add_seats

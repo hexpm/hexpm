@@ -36,6 +36,17 @@ defmodule Hexpm.Billing do
     result
   end
 
+  def resume(organization_name, audit: %{audit_data: audit_data, organization: organization}) do
+    case impl().resume(organization_name) do
+      {:ok, result} ->
+        Repo.insert!(audit(audit_data, "billing.resume", {organization, organization_name}))
+        {:ok, result}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   def create(params, audit: %{audit_data: audit_data, organization: organization}) do
     case impl().create(params) do
       {:ok, result} ->
