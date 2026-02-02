@@ -233,14 +233,27 @@
       </div>
       <div class="modal-body">
         <%= if @plan_id == "organization-monthly" do %>
-          The annual plan is billed each year for a price of <strong>$70 per user / year</strong>.
+          <p>
+            <strong>Current plan:</strong> Monthly @ $7.00 per user / month ($84.00 per user / year)<br>
+            <strong>New plan:</strong> Annual @ $70.00 per user / year
+          </p>
+          <p><strong>You save $14.00 per user / year</strong> by switching to the annual plan.</p>
         <% else %>
-          The monthly plan is billed each month for a price of <strong>$7 per user / month</strong>.
+          <p>
+            <strong>Current plan:</strong> Annual @ $70.00 per user / year<br>
+            <strong>New plan:</strong> Monthly @ $7.00 per user / month ($84.00 per user / year)
+          </p>
+          <p>The monthly plan costs $14.00 more per user / year than the annual plan.</p>
         <% end %>
-        <br><br>
+        <br>
         <%= if @subscription do %>
-          You will receive the first invoice at the end of your current billing period on
-          <%= payment_date(@subscription["current_period_end"]) %>.
+          <%= if @quantity do %>
+            With <strong><%= @quantity %> user(s)</strong>, your next invoice will be
+            <strong><%= plan_change_invoice_amount(@plan_id, @quantity) %></strong>
+            (before tax) on <%= payment_date(@subscription["current_period_end"]) %>.
+          <% else %>
+            Your first invoice for the new plan will be on <%= payment_date(@subscription["current_period_end"]) %>.
+          <% end %>
         <% else %>
           You do not have an active subscription, after changing plan you will have to
           activate your subscription to start using the organization.
