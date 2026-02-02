@@ -242,6 +242,96 @@ defmodule HexpmWeb.OAuthControllerTest do
       assert redirect_url =~ "error=invalid_request"
       assert redirect_url =~ "code_challenge"
     end
+
+    test "returns error for invalid client_id on deny (no open redirect)", %{user: user} do
+      conn = login_user(build_conn(), user)
+
+      # Use a valid UUID format that doesn't exist in the database
+      fake_client_id = Ecto.UUID.generate()
+
+      conn =
+        post(conn, ~p"/oauth/authorize", %{
+          "client_id" => fake_client_id,
+          "redirect_uri" => "https://evil.com/steal",
+          "scope" => "api:read",
+          "state" => "test_state",
+          "action" => "deny"
+        })
+
+      # Should return error JSON, NOT redirect to evil.com
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_request"
+      assert response["error_description"] =~ "Invalid client"
+    end
+
+    test "returns error for invalid redirect_uri on deny (no open redirect)", %{
+      client: client,
+      user: user
+    } do
+      conn = login_user(build_conn(), user)
+
+      conn =
+        post(conn, ~p"/oauth/authorize", %{
+          "client_id" => client.client_id,
+          "redirect_uri" => "https://evil.com/steal",
+          "scope" => "api:read",
+          "state" => "test_state",
+          "action" => "deny"
+        })
+
+      # Should return error JSON, NOT redirect to evil.com
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_request"
+      assert response["error_description"] =~ "Invalid redirect_uri"
+    end
+
+    test "returns error for invalid client_id on approve (no open redirect)", %{user: user} do
+      conn = login_user(build_conn(), user)
+
+      # Use a valid UUID format that doesn't exist in the database
+      fake_client_id = Ecto.UUID.generate()
+
+      conn =
+        post(conn, ~p"/oauth/authorize", %{
+          "client_id" => fake_client_id,
+          "redirect_uri" => "https://evil.com/steal",
+          "scope" => "api:read",
+          "state" => "test_state",
+          "code_challenge" => "challenge123",
+          "code_challenge_method" => "S256",
+          "action" => "approve",
+          "selected_scopes" => ["api:read"]
+        })
+
+      # Should return error JSON, NOT redirect to evil.com
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_request"
+      assert response["error_description"] =~ "Invalid client"
+    end
+
+    test "returns error for invalid redirect_uri on approve (no open redirect)", %{
+      client: client,
+      user: user
+    } do
+      conn = login_user(build_conn(), user)
+
+      conn =
+        post(conn, ~p"/oauth/authorize", %{
+          "client_id" => client.client_id,
+          "redirect_uri" => "https://evil.com/steal",
+          "scope" => "api:read",
+          "state" => "test_state",
+          "code_challenge" => "challenge123",
+          "code_challenge_method" => "S256",
+          "action" => "approve",
+          "selected_scopes" => ["api:read"]
+        })
+
+      # Should return error JSON, NOT redirect to evil.com
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_request"
+      assert response["error_description"] =~ "Invalid redirect_uri"
+    end
   end
 
   describe "hexdocs OAuth flow (docs scope with wildcard redirect)" do
