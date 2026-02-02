@@ -17,6 +17,10 @@ defmodule Hexpm.Billing.Local do
     %{}
   end
 
+  def resume(_organization) do
+    {:ok, %{}}
+  end
+
   def create(_params) do
     {:ok, %{}}
   end

@@ -27,6 +27,13 @@ defmodule Hexpm.Billing.Hexpm do
     body
   end
 
+  def resume(organization) do
+    case post("/api/customers/#{organization}/resume", %{}) do
+      {:ok, 200, _headers, body} -> {:ok, body}
+      {:ok, 422, _headers, body} -> {:error, body}
+    end
+  end
+
   def create(params) do
     case post("/api/customers", params) do
       {:ok, 200, _headers, body} -> {:ok, body}

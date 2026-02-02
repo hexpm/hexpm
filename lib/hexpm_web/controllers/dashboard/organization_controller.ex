@@ -200,6 +200,25 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end)
   end
 
+  def resume_billing(conn, %{"dashboard_org" => organization}) do
+    access_organization(conn, organization, "admin", fn organization ->
+      audit = %{audit_data: audit_data(conn), organization: organization}
+
+      case Hexpm.Billing.resume(organization.name, audit: audit) do
+        {:ok, _customer} ->
+          conn
+          |> put_flash(:info, "Your subscription has been resumed.")
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+
+        {:error, reason} ->
+          conn
+          |> put_status(400)
+          |> put_flash(:error, reason["errors"] || "Failed to resume subscription.")
+          |> render_index(organization)
+      end
+    end)
+  end
+
   def show_invoice(conn, %{"dashboard_org" => organization, "id" => id}) do
     access_organization(conn, organization, "admin", fn organization ->
       case safe_to_integer(id) do

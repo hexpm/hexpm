@@ -54,6 +54,12 @@
 
             <%= raw(@checkout_html) %>
 
+            <%= if @subscription && @subscription["cancel_at_period_end"] && @card do %>
+              <%= form_tag(~p"/dashboard/orgs/#{@organization}/resume-billing", class: "resume-billing", style: "display: inline-block; margin-right: 10px;") do %>
+                <%= submit "Resume subscription", class: "btn btn-success" %>
+              <% end %>
+            <% end %>
+
             <%= form_tag(~p"/dashboard/orgs/#{@organization}/cancel-billing", class: "cancel-billing") do %>
               <%= submit "Cancel subscription", class: "btn btn-danger", disabled: !@subscription || @subscription["cancel_at_period_end"] %>
             <% end %>
@@ -121,7 +127,8 @@
             </div>
 
           <% else %>
-            Subscription is not active. <strong>Private packages will not be available</strong> until a payment method has been added.<br><br>
+            <% {title, description} = inactive_subscription_message(@subscription) %>
+            <strong><%= title %></strong> <%= description %><br><br>
             Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.<br><br>
 
             <%= raw(@checkout_html) %>
@@ -183,7 +190,7 @@
                       </td>
                     <td><%= dollar_money(!!invoice["refund"], invoice["amount_due"])%></td>
                     <td><%= payment_card(invoice["card"]) %></td>
-                    <td><%= invoice_status(invoice, @organization, @card) %></td>
+                    <td><%= invoice_status(invoice, @organization, @card, @subscription) %></td>
                   </tr>
                 <% end %>
               </tbody>

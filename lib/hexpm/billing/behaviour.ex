@@ -4,6 +4,7 @@ defmodule Hexpm.Billing.Behaviour do
   @callback checkout(organization(), data :: map()) :: {:ok, map()} | {:error, map()}
   @callback get(organization()) :: map() | nil
   @callback cancel(organization()) :: map()
+  @callback resume(organization()) :: {:ok, map()} | {:error, map()}
   @callback create(map()) :: {:ok, map()} | {:error, map()}
   @callback update(organization(), map()) :: {:ok, map()} | {:error, map()}
   @callback change_plan(organization(), map()) :: :ok
