@@ -10,11 +10,17 @@ defmodule HexpmWeb.PackageReportController do
 
   def comment(conn, params) do
     report = PackageReports.get(safe_string(params["id"]))
+    user = conn.assigns.current_user
 
     if report do
-      author = conn.assigns.current_user
-      PackageReports.new_comment(report, author, params)
-      redirect(conn, to: ~p"/reports/#{report}")
+      for_owner = Owners.get(report.package, user) != nil
+
+      if visible_report?(report, user, for_owner) do
+        PackageReports.new_comment(report, user, params)
+        redirect(conn, to: ~p"/reports/#{report}")
+      else
+        not_found(conn)
+      end
     else
       not_found(conn)
     end
