@@ -8,6 +8,7 @@ defmodule Hexpm.OAuth.Token do
   schema "oauth_tokens" do
     field :jti, :string
     field :refresh_jti, :string
+    field :refresh_token_hash, :string
     field :token_type, :string, default: "bearer"
     field :scopes, {:array, :string}, default: []
     field :expires_at, :utc_datetime
@@ -34,6 +35,7 @@ defmodule Hexpm.OAuth.Token do
     |> cast(attrs, [
       :jti,
       :refresh_jti,
+      :refresh_token_hash,
       :token_type,
       :scopes,
       :expires_at,
@@ -60,6 +62,7 @@ defmodule Hexpm.OAuth.Token do
     |> validate_scopes()
     |> unique_constraint(:jti)
     |> unique_constraint(:refresh_jti)
+    |> unique_constraint(:refresh_token_hash)
   end
 
   def build(attrs) do

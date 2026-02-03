@@ -9,6 +9,29 @@ defmodule Hexpm.OAuth.Tokens do
   @default_refresh_token_expires_in 30 * 24 * 60 * 60
 
   @doc """
+  Computes SHA256 hash of a refresh token, hex-encoded lowercase.
+  """
+  def hash_refresh_token(refresh_token) when is_binary(refresh_token) do
+    :crypto.hash(:sha256, refresh_token)
+    |> Base.encode16(case: :lower)
+  end
+
+  @doc """
+  Looks up a token by its refresh token hash.
+  The hash should be a hex-encoded SHA256 hash of the refresh token.
+
+  Returns {:ok, token} if found, {:error, :not_found} otherwise.
+  """
+  def lookup_by_refresh_token_hash(hash) when is_binary(hash) do
+    normalized_hash = String.downcase(hash)
+
+    case Repo.get_by(Token, refresh_token_hash: normalized_hash) do
+      nil -> {:error, :not_found}
+      token -> {:ok, token}
+    end
+  end
+
+  @doc """
   Looks up a token by its value and type.
 
   ## Options
@@ -87,10 +110,13 @@ defmodule Hexpm.OAuth.Tokens do
         {:ok, refresh_token, refresh_jti} =
           JWT.generate_refresh_token(user.username, "user", scopes, refresh_opts)
 
+        refresh_token_hash = hash_refresh_token(refresh_token)
+
         Map.merge(attrs, %{
           refresh_jti: refresh_jti,
           refresh_token: refresh_token,
-          refresh_token_expires_at: refresh_expires_at
+          refresh_token_expires_at: refresh_expires_at,
+          refresh_token_hash: refresh_token_hash
         })
       else
         attrs
