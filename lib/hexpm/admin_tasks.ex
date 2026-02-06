@@ -271,27 +271,40 @@ defmodule Hexpm.AdminTasks do
   @spec remove_package(String.t(), String.t()) :: :ok | {:error, atom()}
   def remove_package(repo, package_name) do
     with {:ok, package} <- find_package(repo, package_name) do
-      package_owners =
-        Ecto.assoc(package, :package_owners)
-        |> Repo.all()
+      {:ok, {releases, package}} =
+        Repo.transaction(fn ->
+          remove_package_db(package)
+        end)
 
-      releases =
-        Release.all(package)
-        |> Repo.all()
-        |> Repo.preload(package: :repository)
-
-      Enum.each(package_owners, &Repo.delete!/1)
-
-      Enum.each(releases, fn release ->
-        Release.delete(release, force: true) |> Repo.delete!()
-      end)
-
-      Repo.delete!(package)
-      Enum.each(releases, &Assets.revert_release/1)
-      RegistryBuilder.package_delete(package)
-      RegistryBuilder.repository(package.repository)
+      run_package_removal_side_effects({releases, package})
       :ok
     end
+  end
+
+  defp remove_package_db(package) do
+    package_owners =
+      Ecto.assoc(package, :package_owners)
+      |> Repo.all()
+
+    releases =
+      Release.all(package)
+      |> Repo.all()
+      |> Repo.preload(package: :repository)
+
+    Enum.each(package_owners, &Repo.delete!/1)
+
+    Enum.each(releases, fn release ->
+      Release.delete(release, force: true) |> Repo.delete!()
+    end)
+
+    Repo.delete!(package)
+    {releases, package}
+  end
+
+  defp run_package_removal_side_effects({releases, package}) do
+    Enum.each(releases, &Assets.revert_release/1)
+    RegistryBuilder.package_delete(package)
+    RegistryBuilder.repository(package.repository)
   end
 
   @doc """
