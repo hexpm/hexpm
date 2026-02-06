@@ -24,6 +24,10 @@ defmodule Hexpm.AdminTasks do
       iex> AdminTasks.remove_user("spammer")
       :ok
 
+      # Remove a user and their sole-owned packages
+      iex> AdminTasks.remove_user("spammer", delete_packages: true)
+      :ok
+
       # Add an owner to a package
       iex> AdminTasks.add_owner("phoenix", "jose", level: "full")
       {:ok, %PackageOwner{}}
@@ -159,18 +163,55 @@ defmodule Hexpm.AdminTasks do
   ## Arguments
 
   - `username` - The username of the user to remove
+  - `opts` - Options:
+    - `:delete_packages` - When `true`, deletes all packages where the user is
+      the sole owner before removing the user (default: `false`)
 
   ## Examples
 
       iex> AdminTasks.remove_user("spammer")
       :ok
+
+      iex> AdminTasks.remove_user("spammer", delete_packages: true)
+      :ok
   """
-  @spec remove_user(String.t()) :: :ok | {:error, atom()}
-  def remove_user(username) do
+  @spec remove_user(String.t(), keyword()) :: :ok | {:error, atom()}
+  def remove_user(username, opts \\ []) do
     with {:ok, user} <- find_user(username) do
-      Repo.delete!(user)
+      if Keyword.get(opts, :delete_packages, false) do
+        {:ok, deleted} =
+          Repo.transaction(fn ->
+            deleted = delete_sole_owned_packages(user)
+            Repo.delete!(user)
+            deleted
+          end)
+
+        Enum.each(deleted, &run_package_removal_side_effects/1)
+      else
+        Repo.delete!(user)
+      end
+
       :ok
     end
+  end
+
+  defp delete_sole_owned_packages(user) do
+    owned_packages =
+      Ecto.assoc(user, :owned_packages)
+      |> Repo.all()
+      |> Repo.preload(:repository)
+
+    Enum.flat_map(owned_packages, fn package ->
+      owner_count =
+        Ecto.assoc(package, :package_owners)
+        |> Repo.aggregate(:count)
+
+      if owner_count == 1 do
+        [remove_package_db(package)]
+      else
+        []
+      end
+    end)
   end
 
   @doc """
