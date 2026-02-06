@@ -138,6 +138,47 @@ defmodule Hexpm.AdminTasksTest do
     end
   end
 
+  describe "remove_user/2 with delete_packages" do
+    test "deletes sole-owned packages" do
+      user = insert(:user)
+      package = insert(:package)
+      insert(:package_owner, package: package, user: user)
+      package_id = package.id
+
+      assert :ok = AdminTasks.remove_user(user.username, delete_packages: true)
+
+      refute Repo.get(User, user.id)
+      refute Repo.get(Package, package_id)
+    end
+
+    test "preserves packages with multiple owners" do
+      user = insert(:user)
+      other_user = insert(:user)
+      package = insert(:package)
+      insert(:package_owner, package: package, user: user)
+      insert(:package_owner, package: package, user: other_user)
+      package_id = package.id
+
+      assert :ok = AdminTasks.remove_user(user.username, delete_packages: true)
+
+      refute Repo.get(User, user.id)
+      assert Repo.get(Package, package_id)
+    end
+
+    test "without option leaves packages intact" do
+      user = insert(:user)
+      package = insert(:package)
+      insert(:package_owner, package: package, user: user)
+      insert(:release, package: package, publisher: user)
+      package_id = package.id
+
+      assert :ok = AdminTasks.remove_user(user.username)
+
+      refute Repo.get(User, user.id)
+      assert Repo.get(Package, package_id)
+    end
+  end
+
   describe "rename_user/2" do
     test "renames user" do
       user = insert(:user, username: "oldname")
