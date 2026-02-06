@@ -93,6 +93,7 @@ defmodule Hexpm.AdminTasksTest do
       session = insert(:session, user_id: user.id)
       oauth_client = insert(:oauth_client)
       oauth_token = insert(:oauth_token, user: user, client_id: oauth_client.client_id)
+
       audit_log =
         insert(:audit_log,
           user: user,
@@ -108,6 +109,7 @@ defmodule Hexpm.AdminTasksTest do
           user_data: %{"id" => user.id, "username" => user.username},
           key_data: %{"id" => key.id, "name" => key.name}
         )
+
       organization = insert(:organization)
       org_user = insert(:organization_user, user: user, organization: organization)
       report = insert(:package_report, author: user, package: package, description: "test report")
