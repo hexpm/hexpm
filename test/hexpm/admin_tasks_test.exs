@@ -93,7 +93,21 @@ defmodule Hexpm.AdminTasksTest do
       session = insert(:session, user_id: user.id)
       oauth_client = insert(:oauth_client)
       oauth_token = insert(:oauth_token, user: user, client_id: oauth_client.client_id)
-      audit_log = insert(:audit_log, user: user, action: "test.action")
+      audit_log =
+        insert(:audit_log,
+          user: user,
+          action: "test.action",
+          user_data: %{"id" => user.id, "username" => user.username}
+        )
+
+      audit_log_with_key =
+        insert(:audit_log,
+          user: user,
+          key: key,
+          action: "test.key_action",
+          user_data: %{"id" => user.id, "username" => user.username},
+          key_data: %{"id" => key.id, "name" => key.name}
+        )
       organization = insert(:organization)
       org_user = insert(:organization_user, user: user, organization: organization)
       report = insert(:package_report, author: user, package: package, description: "test report")
@@ -130,8 +144,16 @@ defmodule Hexpm.AdminTasksTest do
       refute Repo.get(Hexpm.Accounts.OrganizationUser, org_user.id)
       refute Repo.get(Hexpm.Accounts.PasswordReset, password_reset.id)
 
-      # SET NULL preserves records
-      assert Repo.get(Hexpm.Accounts.AuditLog, audit_log.id).user_id == nil
+      # SET NULL preserves records, user_data and key_data survive deletion
+      audit_log_reloaded = Repo.get(Hexpm.Accounts.AuditLog, audit_log.id)
+      assert audit_log_reloaded.user_id == nil
+      assert audit_log_reloaded.user_data["username"] == user.username
+
+      audit_log_with_key_reloaded = Repo.get(Hexpm.Accounts.AuditLog, audit_log_with_key.id)
+      assert audit_log_with_key_reloaded.user_id == nil
+      assert audit_log_with_key_reloaded.key_id == nil
+      assert audit_log_with_key_reloaded.user_data["username"] == user.username
+      assert audit_log_with_key_reloaded.key_data["name"] == key.name
       assert Repo.get(Hexpm.Repository.PackageReport, report.id).author_id == nil
       assert Repo.get(Hexpm.Repository.PackageReportComment, comment.id).author_id == nil
       assert Repo.get(Release, release.id).publisher_id == nil
