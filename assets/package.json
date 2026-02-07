@@ -19,7 +19,7 @@
     "sass": "^1.74.1",
     "style-loader": "^4.0.0",
     "webpack-cli": "^5.1.4",
-    "webpack": "5.94.0"
+    "webpack": "5.104.1"
   },
   "packageManager": "yarn@1.22.22"
 }
