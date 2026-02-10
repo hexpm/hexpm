@@ -85,5 +85,38 @@
         </li>
       </ul>
     </div>
+
+    <div class="panel panel-default">
+      <div class="panel-heading">Email Options</div>
+      <div class="panel-body">
+        <p>
+          Hex.pm always sends account-critical emails such as verification, password resets, and security alerts.
+          Below are the optional emails that you can turn off. If an email is checked, you will be notified when the event occurs.
+        </p>
+      </div>
+
+      <%= form_for :optional_emails, ~p"/dashboard/email/options", [method: :post], fn f -> %>
+        <ul class="list-group">
+          <%= for type <- @optional_email_types do %>
+            <li class="list-group-item">
+              <div class="checkbox">
+                <label>
+                  <%= checkbox f, type.id,
+                    value: "true",
+                    checked: Map.get(@optional_email_preferences, to_string(type.id)) %>
+                  <strong><%= type.title %></strong>
+                </label>
+              </div>
+              <p>
+                <%= type.description %>
+              </p>
+            </li>
+          <% end %>
+        </ul>
+        <div class="panel-body">
+          <button type="submit" class="btn btn-primary">Save preferences</button>
+        </div>
+      <% end %>
+    </div>
   </div>
 </div>

@@ -150,6 +150,44 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert_delivered_email(Hexpm.Emails.organization_invite(organization, new_user))
     end
 
+    test "adding member does not send invite when user opts out", %{
+      user: user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      new_user = insert(:user)
+
+      {:ok, new_user} =
+        Users.update_optional_emails(
+          new_user,
+          %{
+            "organization_invite" => "false",
+            "owner_added_to_package" => "true",
+            "owner_removed_from_package" => "true",
+            "package_published" => "true"
+          },
+          audit: audit_data(new_user)
+        )
+
+      params = %{"username" => new_user.username, role: "write"}
+
+      mock_customer(organization)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}", %{
+          "action" => "add_member",
+          "organization_user" => params
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+
+      assert Repo.get_by(assoc(organization, :organization_users), user_id: new_user.id)
+
+      refute_delivered_email(Hexpm.Emails.organization_invite(organization, new_user))
+    end
+
     test "add member to organization without enough seats", %{
       user: user,
       organization: organization

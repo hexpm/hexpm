@@ -3,6 +3,8 @@ defmodule HexpmWeb.Dashboard.EmailController do
 
   plug :requires_login
 
+  alias Hexpm.Accounts.OptionalEmails
+
   def index(conn, _params) do
     render_index(conn, conn.assigns.current_user)
   end
@@ -97,6 +99,8 @@ defmodule HexpmWeb.Dashboard.EmailController do
 
   defp render_index(conn, user, create_changeset \\ create_changeset()) do
     emails = Email.order_emails(user.emails)
+    optional_email_types = OptionalEmails.list()
+    optional_email_preferences = OptionalEmails.preferences(user)
 
     render(
       conn,
@@ -104,12 +108,31 @@ defmodule HexpmWeb.Dashboard.EmailController do
       title: "Dashboard - Email",
       container: "container page dashboard",
       create_changeset: create_changeset,
-      emails: emails
+      emails: emails,
+      optional_email_types: optional_email_types,
+      optional_email_preferences: optional_email_preferences
     )
   end
 
   defp create_changeset() do
     Email.changeset(%Email{}, :create, %{}, false)
+  end
+
+  def update_options(conn, params) do
+    user = conn.assigns.current_user
+    optional_params = Map.get(params, "optional_emails", %{})
+
+    case Users.update_optional_emails(user, optional_params, audit: audit_data(conn)) do
+      {:ok, _user} ->
+        conn
+        |> put_flash(:info, "Email preferences updated.")
+        |> redirect(to: ~p"/dashboard/email")
+
+      {:error, _changeset} ->
+        conn
+        |> put_flash(:error, "Could not update email preferences.")
+        |> redirect(to: ~p"/dashboard/email")
+    end
   end
 
   defp email_error_message(:unknown_email, email), do: "Unknown email #{email}."

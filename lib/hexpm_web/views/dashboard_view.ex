@@ -1,5 +1,6 @@
 defmodule HexpmWeb.DashboardView do
   use HexpmWeb, :view
+  alias Hexpm.Accounts.OptionalEmails
 
   defp account_settings() do
     [
@@ -112,6 +113,12 @@ defmodule HexpmWeb.DashboardView do
 
   def humanize_audit_log_info(%AuditLog{action: "email.public", params: params}) do
     "Set email #{params["email"]} as public email"
+  end
+
+  def humanize_audit_log_info(%AuditLog{action: "email.options", params: params}) do
+    changes = params["changes"] || params[:changes] || %{}
+    changes_list = format_email_preference_changes(changes)
+    "Updated email preferences: #{changes_list}"
   end
 
   def humanize_audit_log_info(%AuditLog{action: "email.gravatar", params: params}) do
@@ -246,13 +253,22 @@ defmodule HexpmWeb.DashboardView do
     end
   end
 
-  defp plan_id("organization-monthly"), do: "monthly"
-  defp plan_id("organization-annually"), do: "annually"
-
   def double_html_escape(string) do
     string
     |> Phoenix.HTML.html_escape()
     |> Phoenix.HTML.safe_to_string()
     |> Phoenix.HTML.html_escape()
+  end
+
+  defp plan_id("organization-monthly"), do: "monthly"
+  defp plan_id("organization-annually"), do: "annually"
+
+  defp format_email_preference_changes(changes) do
+    changes
+    |> Enum.map_join(", ", fn {key, value} ->
+      %{title: title} = Enum.find(OptionalEmails.list(), &(to_string(&1.id) == key))
+      status = if value, do: "enabled", else: "disabled"
+      "#{title}: #{status}"
+    end)
   end
 end

@@ -203,6 +203,15 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("email.public", {old_email, new_email}),
     do: %{old_email: serialize(old_email), new_email: serialize(new_email)}
 
+  defp extract_params("email.options", {old_preferences, new_preferences}) do
+    changes =
+      new_preferences
+      |> Enum.filter(fn {key, value} -> Map.get(old_preferences, key) != value end)
+      |> Map.new()
+
+    %{old_preferences: old_preferences, new_preferences: new_preferences, changes: changes}
+  end
+
   defp extract_params("email.gravatar", {organization, {old_email, new_email}}),
     do: %{
       organization: serialize(organization),
