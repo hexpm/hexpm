@@ -177,8 +177,8 @@ defmodule HexpmWeb.Router do
 
     post "/security/reset-auth-app", SecurityController, :reset_auth_app, as: :dashboard_security
 
-    get "/tfa/setup", TFAAuthSetupController, :index, as: :dashboard_tfa_setup
-    post "/tfa/setup", TFAAuthSetupController, :create, as: :dashboard_tfa_setup
+    post "/security/verify-tfa-code", SecurityController, :verify_tfa_code,
+      as: :dashboard_security
 
     get "/email", EmailController, :index
     post "/email", EmailController, :create

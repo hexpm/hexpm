@@ -37,7 +37,10 @@ defmodule HexpmWeb.Components.PackageCard do
 
       <%= if @updated_at do %>
         <div class="tw:text-xs tw:text-grey-400 tw:mt-2">
-          Last Updated: <span class="tw:font-semibold tw:text-grey-600">{human_relative_time_from_now(@updated_at)}</span>
+          Last Updated:
+          <span class="tw:font-semibold tw:text-grey-600">
+            {human_relative_time_from_now(@updated_at)}
+          </span>
         </div>
       <% end %>
     </a>

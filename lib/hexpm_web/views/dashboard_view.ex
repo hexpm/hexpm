@@ -1,5 +1,6 @@
 defmodule HexpmWeb.DashboardView do
   use HexpmWeb, :view
+  import HexpmWeb.ViewIcons, only: [icon: 3]
 
   defp account_settings() do
     [
@@ -8,8 +9,38 @@ defmodule HexpmWeb.DashboardView do
       email: {"Emails", ~p"/dashboard/email"},
       keys: {"Keys", ~p"/dashboard/keys"},
       sessions: {"Sessions", ~p"/dashboard/sessions"},
-      audit_logs: {"Recent activities", ~p"/dashboard/audit-logs"}
+      audit_logs: {"Recent Activities", ~p"/dashboard/audit-logs"}
     ]
+  end
+
+  defp icon_for_setting(:profile, selected?) do
+    color = if selected?, do: "tw:text-purple-600", else: "tw:text-grey-600"
+    icon(:heroicon, "user-circle", class: "tw:w-5 tw:h-5 #{color}")
+  end
+
+  defp icon_for_setting(:security, selected?) do
+    color = if selected?, do: "tw:text-purple-600", else: "tw:text-grey-600"
+    icon(:heroicon, "shield-check", class: "tw:w-5 tw:h-5 #{color}")
+  end
+
+  defp icon_for_setting(:email, selected?) do
+    color = if selected?, do: "tw:text-purple-600", else: "tw:text-grey-600"
+    icon(:heroicon, "envelope", class: "tw:w-5 tw:h-5 #{color}")
+  end
+
+  defp icon_for_setting(:keys, selected?) do
+    color = if selected?, do: "tw:text-purple-600", else: "tw:text-grey-600"
+    icon(:heroicon, "key", class: "tw:w-5 tw:h-5 #{color}")
+  end
+
+  defp icon_for_setting(:sessions, selected?) do
+    color = if selected?, do: "tw:text-purple-600", else: "tw:text-grey-600"
+    icon(:heroicon, "computer-desktop", class: "tw:w-5 tw:h-5 #{color}")
+  end
+
+  defp icon_for_setting(:audit_logs, selected?) do
+    color = if selected?, do: "tw:text-purple-600", else: "tw:text-grey-600"
+    icon(:heroicon, "clock", class: "tw:w-5 tw:h-5 #{color}")
   end
 
   defp selected_setting(conn, id) do

@@ -22,13 +22,23 @@ defmodule HexpmWeb.Components.Buttons do
   attr :disabled, :boolean, default: false
   attr :full_width, :boolean, default: false
   attr :loading, :boolean, default: false
-  attr :rest, :global, include: ~w(phx-click phx-target phx-value-id form)
+
+  # Global attributes:
+  # - phx-click, phx-target, phx-value-id: LiveView event handling
+  # - form: Associate button with a form element
+  # - onclick: For submitting hidden forms (e.g., confirmation modals with CSRF protection)
+  # - data-input-id: Legacy jQuery integration for package pages
+  # - id: Required for phx-hook elements and form submissions
+  attr :rest, :global,
+    include:
+      ~w(phx-click phx-target phx-value-id form onclick data-input-id id phx-hook data-copy-target data-print-target data-download-target)
+
   attr :size, :string, default: "md", values: ["sm", "md", "lg"]
   attr :type, :string, default: "button", values: ["button", "submit", "reset"]
 
   attr :variant, :string,
     default: "primary",
-    values: ["primary", "secondary", "danger", "outline", "ghost", "blue"]
+    values: ["primary", "secondary", "danger", "danger-outline", "outline", "ghost", "blue"]
 
   slot :inner_block, required: true
 
@@ -42,13 +52,13 @@ defmodule HexpmWeb.Components.Buttons do
           # Base styles
           "tw:inline-flex tw:items-center tw:justify-center tw:gap-2 tw:font-semibold tw:rounded",
           "tw:transition-colors tw:focus:outline-none tw:focus:ring-2 tw:focus:ring-offset-2",
+          "tw:cursor-pointer",
           # Size variants
           button_size(@size),
           # Color variants
           button_variant(@variant),
-          # States
-          (@disabled || @loading) && "tw:opacity-50 tw:cursor-not-allowed",
-          !(@disabled || @loading) && "tw:cursor-pointer",
+          # Disabled state - use CSS pseudo-class for dynamic changes
+          "disabled:tw:opacity-50 disabled:tw:cursor-not-allowed",
           @full_width && "tw:w-full",
           @class
         ]
@@ -81,7 +91,7 @@ defmodule HexpmWeb.Components.Buttons do
 
   attr :variant, :string,
     default: "primary",
-    values: ["primary", "secondary", "danger", "outline", "ghost", "blue"]
+    values: ["primary", "secondary", "danger", "danger-outline", "outline", "ghost", "blue"]
 
   slot :inner_block, required: true
 
@@ -138,6 +148,14 @@ defmodule HexpmWeb.Components.Buttons do
     [
       "tw:bg-red-600 tw:text-white",
       "tw:hover:bg-red-700",
+      "tw:focus:ring-red-500"
+    ]
+  end
+
+  defp button_variant("danger-outline") do
+    [
+      "tw:bg-white tw:border tw:border-red-300 tw:text-red-600",
+      "tw:hover:bg-red-50",
       "tw:focus:ring-red-500"
     ]
   end
