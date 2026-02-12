@@ -20,11 +20,22 @@ import { Socket } from "phoenix";
 import { LiveSocket } from "phoenix_live_view";
 import PasswordStrength from "./hooks/password_strength";
 import PasswordMatch from "./hooks/password_match";
+import TFACodeValidator from "./hooks/tfa_code_validator";
+import { CopyButton } from "./hooks/copy_button";
+import { PrintButton } from "./hooks/print_button";
+import { DownloadButton } from "./hooks/download_button";
 
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")
   .getAttribute("content");
-let Hooks = { PasswordStrength, PasswordMatch };
+let Hooks = { 
+  PasswordStrength, 
+  PasswordMatch, 
+  TFACodeValidator, 
+  CopyButton,
+  PrintButton,
+  DownloadButton
+};
 let liveSocket = new LiveSocket("/live", Socket, {
   params: { _csrf_token: csrfToken },
   hooks: Hooks,
@@ -42,12 +53,8 @@ import elixir from "highlight.js/lib/languages/elixir";
 
 export default class App {
   constructor() {
-    // Copy button
+    // Copy button (for package snippets)
     $(".copy-button").click(this.onCopy.bind(this));
-
-    $(".copy-data-button").click(this.onDataCopy.bind(this));
-    $(".print-data-button").click(this.onDataPrint.bind(this));
-    $(".download-data-button").click(this.onDataDownload.bind(this));
 
     // Pricing selector
     $(".pricing-button").click(this.onPricing.bind(this));
@@ -108,55 +115,6 @@ export default class App {
         }
         e.target.value = value;
       });
-    }
-  }
-
-  onDataCopy(event) {
-    let succeeded = false;
-    const targetElement = $(event.currentTarget);
-    const value = this.getAssociatedValueFromElement(targetElement);
-    const textarea = document.createElement("textarea");
-    textarea.textContent = value;
-    document.body.appendChild(textarea);
-    textarea.select();
-    succeeded = document.execCommand("copy");
-    document.body.removeChild(textarea);
-
-    succeeded
-      ? this.copySucceeded(targetElement)
-      : this.copyFailed(targetElement);
-  }
-
-  onDataPrint(event) {
-    const value = this.getAssociatedValueFromElement($(event.currentTarget));
-    const printWindow = window.open("", "");
-    const div = printWindow.document.createElement("div");
-    div.innerHTML = `<p>${value}</p>`;
-    div.setAttribute("style", "white-space:pre-line; font-family:monospace");
-
-    printWindow.document.body.appendChild(div);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
-  }
-
-  onDataDownload(event) {
-    const value = this.getAssociatedValueFromElement($(event.currentTarget));
-    const data = new Blob([value], { type: "text/plain" });
-    const container = document.createElement("a");
-    container.href = URL.createObjectURL(data);
-    container.download = "hex-recovery-codes";
-    container.click();
-  }
-
-  getAssociatedValueFromElement(element) {
-    try {
-      const dataId = element.attr("data-input-id");
-      const associatedElement = document.getElementById(dataId);
-      return associatedElement.dataset.value;
-    } catch (error) {
-      return null;
     }
   }
 
@@ -241,7 +199,7 @@ export default class App {
           '<div class="alert alert-danger" role="alert">' +
             "<strong>Failed to update payment method</strong><br>" +
             response.errors +
-            "</div>"
+            "</div>",
         );
       });
   }

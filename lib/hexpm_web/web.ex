@@ -73,7 +73,16 @@ defmodule HexpmWeb do
       import HexpmWeb.Components.Buttons
       import HexpmWeb.Components.Form
       import HexpmWeb.Components.Input
+      import HexpmWeb.Components.Modal
       import HexpmWeb.Components.Package
+
+      # Import security dashboard components
+      import HexpmWeb.Templates.Dashboard.Security.Components.ConnectedAccountsCard
+      import HexpmWeb.Templates.Dashboard.Security.Components.PasswordCard
+      import HexpmWeb.Templates.Dashboard.Security.Components.TFACard
+      import HexpmWeb.Templates.Dashboard.Security.Components.AuthenticatorAppCard
+      import HexpmWeb.Templates.Dashboard.Security.Components.RecoveryCodesCard
+      import HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal
 
       alias HexpmWeb.ViewHelpers
       alias HexpmWeb.{Endpoint, Router}

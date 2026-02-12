@@ -51,7 +51,9 @@ defmodule HexpmWeb.Components.UserProfile do
 
         <div class="tw:bg-grey-100 tw:border tw:border-grey-200 tw:rounded-lg tw:p-3 tw:text-center">
           <p class="tw:text-grey-500 tw:text-sm tw:mb-1">Total Downloads</p>
-          <p class="tw:text-grey-900 tw:text-xl tw:font-bold">{human_number_space(@total_downloads)}+</p>
+          <p class="tw:text-grey-900 tw:text-xl tw:font-bold">
+            {human_number_space(@total_downloads)}+
+          </p>
         </div>
       </div>
 
@@ -66,7 +68,9 @@ defmodule HexpmWeb.Components.UserProfile do
                 class="tw:group tw:relative tw:p-2 tw:rounded-lg tw:bg-grey-100 tw:hover:bg-grey-200 tw:transition-colors"
                 title={@public_email}
               >
-                {HexpmWeb.ViewIcons.icon(:heroicon, "envelope", class: "tw:w-5 tw:h-5 tw:text-grey-700")}
+                {HexpmWeb.ViewIcons.icon(:heroicon, "envelope",
+                  class: "tw:w-5 tw:h-5 tw:text-grey-700"
+                )}
                 <span class="tw:absolute tw:bottom-full tw:left-1/2 tw:-translate-x-1/2 tw:mb-2 tw:px-3 tw:py-1 tw:bg-grey-900 tw:text-white tw:text-xs tw:rounded tw:whitespace-nowrap tw:opacity-0 tw:group-hover:opacity-100 tw:transition-opacity tw:pointer-events-none">
                   {@public_email}
                 </span>

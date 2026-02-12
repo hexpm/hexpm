@@ -37,7 +37,7 @@ defmodule HexpmWeb.Components.SocialInput do
           "tw:border-grey-200 tw:focus-within:ring-purple-600 tw:focus-within:border-transparent"
       ]}>
         <div class="tw:flex tw:items-center tw:px-3 tw:py-2 tw:border-r tw:border-grey-200">
-          <%= render_icon(@icon) %>
+          {render_icon(@icon)}
           <span class="tw:text-grey-500 tw:text-sm tw:mx-2">/</span>
         </div>
         <input
@@ -53,9 +53,9 @@ defmodule HexpmWeb.Components.SocialInput do
         <div class="tw:mt-1">
           <p
             :for={msg <- Enum.map(@form[@field].errors, &translate_error/1)}
-            class="tw:flex tw:items-center tw:gap-1 tw:text-small tw:text-red-600"
+            class="tw:flex tw:items-center tw:gap-1 tw:text-sm tw:text-red-600"
           >
-            <%= HexpmWeb.ViewIcons.icon(:heroicon, "exclamation-circle", width: 16, height: 16) %>
+            {HexpmWeb.ViewIcons.icon(:heroicon, "exclamation-circle", width: 16, height: 16)}
             <span>{msg}</span>
           </p>
         </div>

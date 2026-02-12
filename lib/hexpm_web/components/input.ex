@@ -33,6 +33,7 @@ defmodule HexpmWeb.Components.Input do
 
   attr :type, :string, default: "text"
   attr :value, :string, default: nil
+  attr :rest, :global, doc: "Additional HTML attributes to pass to the input element"
 
   def text_input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
     # For controller views, always show errors after submission
@@ -70,6 +71,7 @@ defmodule HexpmWeb.Components.Input do
           @errors == [] && "tw:border-grey-200 tw:focus:border-primary-600 tw:focus:ring-primary-600",
           @class
         ]}
+        {@rest}
       />
       <.errors errors={@errors} />
     </div>
