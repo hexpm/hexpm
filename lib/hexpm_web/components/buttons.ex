@@ -185,6 +185,41 @@ defmodule HexpmWeb.Components.Buttons do
   end
 
   @doc """
+  Renders an icon-only button with hover states.
+
+  ## Examples
+
+      <.icon_button icon="trash" phx-click="delete" />
+      <.icon_button icon="pencil" variant="primary" />
+      <.icon_button icon="trash" variant="danger" aria-label="Delete" />
+  """
+  attr :class, :string, default: ""
+  attr :disabled, :boolean, default: false
+  attr :icon, :string, required: true
+  attr :size, :integer, default: 16
+  attr :type, :string, default: "button", values: ["button", "submit", "reset"]
+  attr :variant, :string, default: "default", values: ["default", "danger", "primary"]
+  attr :rest, :global, include: ~w(phx-click phx-target phx-value-id id aria-label onclick)
+
+  def icon_button(assigns) do
+    ~H"""
+    <button
+      type={@type}
+      disabled={@disabled}
+      class={[
+        "tw:p-2 tw:rounded tw:transition-colors tw:cursor-pointer",
+        icon_button_variant(@variant),
+        "tw:disabled:opacity-50 tw:disabled:cursor-not-allowed",
+        @class
+      ]}
+      {@rest}
+    >
+      {icon(:heroicon, @icon, width: @size, height: @size)}
+    </button>
+    """
+  end
+
+  @doc """
   Renders a text link with consistent styling.
 
   ## Examples
@@ -236,5 +271,18 @@ defmodule HexpmWeb.Components.Buttons do
 
   defp text_link_variant("purple") do
     "tw:text-primary-700 tw:hover:text-primary-800 tw:hover:underline tw:focus:ring-primary-500 tw:font-semibold"
+  end
+
+  # Icon button variants
+  defp icon_button_variant("default") do
+    "tw:text-grey-400 tw:hover:text-grey-700 tw:hover:bg-grey-100 tw:disabled:hover:text-grey-400 tw:disabled:hover:bg-transparent"
+  end
+
+  defp icon_button_variant("danger") do
+    "tw:text-grey-400 tw:hover:text-red-600 tw:hover:bg-red-50 tw:disabled:hover:text-grey-400 tw:disabled:hover:bg-transparent"
+  end
+
+  defp icon_button_variant("primary") do
+    "tw:text-grey-400 tw:hover:text-primary-600 tw:hover:bg-primary-50 tw:disabled:hover:text-grey-400 tw:disabled:hover:bg-transparent"
   end
 end
