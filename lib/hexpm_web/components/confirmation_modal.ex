@@ -20,7 +20,6 @@ defmodule HexpmWeb.Components.ConfirmationModal do
   use PhoenixHTMLHelpers
   import HexpmWeb.Components.Modal, only: [modal: 1, hide_modal: 1]
   import HexpmWeb.Components.Buttons
-  import HexpmWeb.ViewIcons, only: [icon: 3]
 
   attr :id, :string, required: true
   attr :title, :string, required: true
@@ -35,24 +34,9 @@ defmodule HexpmWeb.Components.ConfirmationModal do
     <.modal id={@id} max_width="md">
       <%!-- Header with Icon --%>
       <:header>
-        <div class="tw:flex tw:items-center tw:gap-4">
-          <div class={[
-            "tw:flex-shrink-0 tw:w-12 tw:h-12 tw:rounded-full tw:flex tw:items-center tw:justify-center",
-            if(@danger, do: "tw:bg-red-100", else: "tw:bg-blue-100")
-          ]}>
-            {icon(:heroicon, "exclamation-triangle",
-              class: [
-                "tw:w-6 tw:h-6",
-                if(@danger, do: "tw:text-red-600", else: "tw:text-blue-600")
-              ]
-            )}
-          </div>
-          <div class="tw:flex-1">
-            <h2 class="tw:text-xl tw:font-semibold tw:text-grey-900">
-              {@title}
-            </h2>
-          </div>
-        </div>
+        <h2 class="tw:text-lg tw:font-semibold tw:text-grey-900">
+          {@title}
+        </h2>
       </:header>
 
       <%!-- Message --%>
