@@ -15,15 +15,15 @@ defmodule HexpmWeb.Components.Modal do
           </.button>
         </:footer>
       </.modal>
-      
+
       # Show modal with onclick:
       <button onclick="document.getElementById('my-modal').showModal()">Open</button>
-      
+
       # Show modal with Phoenix.LiveView.JS:
       <.button phx-click={show_modal("my-modal")}>Open</.button>
   """
   use Phoenix.Component
-  import HexpmWeb.ViewIcons, only: [icon: 3]
+  import HexpmWeb.Components.Buttons, only: [icon_button: 1]
   alias Phoenix.LiveView.JS
 
   @doc """
@@ -112,7 +112,7 @@ defmodule HexpmWeb.Components.Modal do
       <%!-- Backdrop --%>
       <div
         id={"#{@id}-backdrop"}
-        class="tw:fixed tw:inset-0 tw:bg-grey-900/80 tw:transition-opacity"
+        class="tw:fixed tw:inset-0 tw:bg-grey-900/25 tw:transition-opacity"
         aria-hidden="true"
         phx-click={hide_modal(@id)}
       >
@@ -125,7 +125,8 @@ defmodule HexpmWeb.Components.Modal do
           <div
             id={"#{@id}-content"}
             class={[
-              "tw:relative tw:w-full tw:bg-white tw:rounded-lg tw:shadow-xl tw:flex tw:flex-col tw:max-h-[calc(100vh-2rem)]",
+              "tw:relative tw:w-full tw:bg-white tw:rounded-[20px] tw:flex tw:flex-col tw:max-h-[calc(100vh-2rem)] tw:p-6",
+              "tw:shadow-[0px_15px_50px_0px_rgba(3,9,19,0.4)]",
               modal_max_width(@max_width)
             ]}
             role="dialog"
@@ -134,36 +135,37 @@ defmodule HexpmWeb.Components.Modal do
             phx-window-keydown={hide_modal(@id)}
             phx-key="escape"
           >
+            <%!-- Close Button (top right) --%>
+            <div class="tw:absolute tw:top-6 tw:right-6">
+              <.icon_button
+                icon="x-mark"
+                variant="default"
+                phx-click={hide_modal(@id)}
+                aria-label="Close modal"
+              />
+            </div>
+
             <%!-- Header --%>
             <%= if @header != [] || @title do %>
-              <div class="tw:flex tw:items-center tw:justify-between tw:px-6 tw:py-4 tw:border-b tw:border-grey-200">
+              <div class="tw:mb-4 tw:pr-10">
                 <%= if @header != [] do %>
                   {render_slot(@header)}
                 <% else %>
-                  <h2 id={"#{@id}-title"} class="tw:text-xl tw:font-semibold tw:text-grey-900">
+                  <h2 id={"#{@id}-title"} class="tw:text-lg tw:font-semibold tw:text-grey-900">
                     {@title}
                   </h2>
                 <% end %>
-
-                <button
-                  type="button"
-                  class="tw:text-grey-400 tw:hover:text-grey-600 tw:transition-colors tw:p-1 tw:rounded-lg tw:hover:bg-grey-100"
-                  phx-click={hide_modal(@id)}
-                  aria-label="Close modal"
-                >
-                  {icon(:heroicon, "x-mark", class: "tw:w-6 tw:h-6")}
-                </button>
               </div>
             <% end %>
 
             <%!-- Body --%>
-            <div class="tw:flex-1 tw:overflow-y-auto tw:px-6 tw:py-6">
+            <div class="tw:flex-1 tw:overflow-y-auto">
               {render_slot(@inner_block)}
             </div>
 
             <%!-- Footer --%>
             <%= if @footer != [] do %>
-              <div class="tw:flex tw:items-center tw:justify-end tw:gap-3 tw:px-6 tw:py-4 tw:border-t tw:border-grey-200">
+              <div class="tw:flex tw:items-center tw:justify-end tw:gap-3 tw:mt-6">
                 {render_slot(@footer)}
               </div>
             <% end %>

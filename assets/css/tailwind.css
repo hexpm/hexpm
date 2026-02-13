@@ -7,6 +7,9 @@
 /* Syntax highlighting for code blocks */
 @import "../vendor/css/github-dark.css";
 
+/* Tooltip component styles */
+@import "./tooltip.css";
+
 /* Reset Bootstrap's 14px body font-size to proper 16px base for rem calculations */
 html {
   font-size: 16px !important;

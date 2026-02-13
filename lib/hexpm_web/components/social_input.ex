@@ -46,7 +46,7 @@ defmodule HexpmWeb.Components.SocialInput do
           name={@form[@field].name}
           value={@form[@field].value}
           placeholder={@placeholder}
-          class="tw:flex-1 tw:px-3 tw:py-2 tw:text-grey-900 tw:border-0 focus:tw:outline-none focus:tw:ring-0 tw:bg-transparent"
+          class="tw:flex-1 tw:px-3 tw:py-2 tw:text-grey-900 tw:border-0 tw:focus:outline-none tw:focus:ring-0 tw:bg-transparent"
         />
       </div>
       <%= if @has_errors do %>

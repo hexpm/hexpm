@@ -74,7 +74,7 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
                 type="button"
                 phx-hook="CopyButton"
                 data-copy-target="tfa-secret"
-                class="tw:relative tw:flex-shrink-0 tw:p-2 tw:text-grey-500 hover:tw:text-grey-700 hover:tw:bg-grey-100 tw:rounded tw:transition-colors"
+                class="tw:relative tw:flex-shrink-0 tw:p-2 tw:text-grey-500 tw:hover:text-grey-700 tw:hover:bg-grey-100 tw:rounded tw:transition-colors"
                 aria-label="Copy setup key to clipboard"
               >
                 {icon(:heroicon, "clipboard-document", class: "tw:w-5 tw:h-5")}
