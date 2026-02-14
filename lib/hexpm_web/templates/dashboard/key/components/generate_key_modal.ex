@@ -39,7 +39,12 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
           </span>
 
           <%!-- API Permissions --%>
-          <div class="tw:mb-4" phx-hook="PermissionGroup" id="api-permission-group" data-parent="api-parent">
+          <div
+            class="tw:mb-4"
+            phx-hook="PermissionGroup"
+            id="api-permission-group"
+            data-parent="api-parent"
+          >
             <label class="tw:flex tw:items-center tw:mb-2">
               <input
                 type="checkbox"

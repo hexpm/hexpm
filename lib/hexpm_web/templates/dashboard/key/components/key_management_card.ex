@@ -1,6 +1,7 @@
 defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
   use Phoenix.Component
   use PhoenixHTMLHelpers
+
   use Phoenix.VerifiedRoutes,
     endpoint: HexpmWeb.Endpoint,
     router: HexpmWeb.Router,
@@ -30,6 +31,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
 
   def key_management_card(assigns) do
     assigns = assign(assigns, :form, Phoenix.Component.to_form(assigns.key_changeset, as: :key))
+
     ~H"""
     <div class="tw:bg-white tw:rounded-lg tw:shadow-sm tw:border tw:border-grey-200 tw:p-8">
       <%!-- Header --%>
