@@ -1,9 +1,11 @@
-<p><%= Common.greeting(@username) %></p>
-
-<p>
+<h1 style="color: #030913; font-size: 24px; line-height: 32px; font-weight: 600; margin: 0 0 24px 0; text-align: center;">
     <%= TFAAppDisabled.title() %>
+</h1>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= Common.greeting(@username) %>,
 </p>
 
-<p>
-  <%= Common.unauthorized_change_notice(:html) %>
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= raw(Common.unauthorized_change_notice(:html)) %>
 </p>

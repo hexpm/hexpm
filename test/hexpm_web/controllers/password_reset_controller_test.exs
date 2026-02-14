@@ -25,7 +25,7 @@ defmodule HexpmWeb.PasswordResetControllerTest do
           "h-captcha-response" => "captcha"
         })
 
-      assert response(conn, 200) =~ "Reset your password"
+      assert response(conn, 200) =~ "Check your email"
 
       mock_captcha_success()
 
@@ -36,7 +36,7 @@ defmodule HexpmWeb.PasswordResetControllerTest do
           "h-captcha-response" => "captcha"
         })
 
-      assert response(conn, 200) =~ "Reset your password"
+      assert response(conn, 200) =~ "Check your email"
 
       user =
         Hexpm.Repo.get_by!(User, username: c.user.username)

@@ -59,7 +59,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
       |> post("/dashboard/email", %{email: %{email: email}})
 
     response(conn, 400)
-    assert conn.resp_body =~ "Add email"
+    assert conn.resp_body =~ "Email Settings"
     assert conn.resp_body =~ "already in use"
   end
 

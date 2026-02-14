@@ -1,0 +1,103 @@
+<% paginate = ViewHelpers.paginate(@page, @total_count, items_per_page: @per_page, page_links: 5)
+shown_items = length(@items)
+range_start = (@page - 1) * @per_page + 1
+range_end = range_start + shown_items - 1 %>
+
+<div class="tw:flex tw:flex-col tw:sm:flex-row tw:items-center tw:justify-between tw:gap-4 tw:py-6">
+  <%!-- Pagination Info --%>
+  <div class="tw:text-grey-600 tw:text-sm">
+    <%= if paginate[:page_links] == [1] do %>
+      <span class="tw:font-medium tw:text-grey-900">{@total_count}</span>
+      {if shown_items == 1, do: @unit, else: @units} of
+      <span class="tw:font-medium tw:text-grey-900">{@total_count}</span>
+      total
+    <% else %>
+      Showing <span class="tw:font-medium tw:text-grey-900">{range_start}&ndash;{range_end}</span>
+      {@units} of <span class="tw:font-medium tw:text-grey-900">{@total_count}</span> total
+    <% end %>
+  </div>
+
+  <%!-- Pagination Controls --%>
+  <%= unless paginate[:page_links] == [1] do %>
+    <nav class="tw:flex tw:items-center tw:gap-1" aria-label="Pagination">
+      <%!-- Previous Button --%>
+      <%= if paginate[:prev] do %>
+        <a
+          href={@path_fn.(%{page: @page - 1})}
+          class="tw:inline-flex tw:items-center tw:justify-center tw:size-10 tw:bg-white tw:border tw:border-grey-300 tw:rounded-lg tw:text-grey-700 tw:hover:bg-grey-50 tw:hover:border-grey-400 tw:transition-colors"
+          aria-label="Previous page"
+        >
+          <svg class="tw:size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+        </a>
+      <% else %>
+        <span class="tw:inline-flex tw:items-center tw:justify-center tw:size-10 tw:bg-grey-50 tw:border tw:border-grey-200 tw:rounded-lg tw:text-grey-400 tw:cursor-not-allowed">
+          <svg class="tw:size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+        </span>
+      <% end %>
+
+      <%!-- Page Numbers --%>
+      <div class="tw:flex tw:items-center tw:gap-1">
+        <%= for page <- paginate[:page_links] do %>
+          <%= if page == @page do %>
+            <span
+              class="tw:inline-flex tw:items-center tw:justify-center tw:min-w-10 tw:h-10 tw:px-3 tw:bg-primary-600 tw:text-white tw:font-semibold tw:rounded-lg tw:border tw:border-primary-600"
+              aria-current="page"
+            >
+              {page}
+            </span>
+          <% else %>
+            <a
+              href={@path_fn.(%{page: page})}
+              class="tw:inline-flex tw:items-center tw:justify-center tw:min-w-10 tw:h-10 tw:px-3 tw:bg-white tw:border tw:border-grey-300 tw:rounded-lg tw:text-grey-700 tw:font-medium tw:hover:bg-grey-50 tw:hover:border-grey-400 tw:transition-colors"
+            >
+              {page}
+            </a>
+          <% end %>
+        <% end %>
+      </div>
+
+      <%!-- Next Button --%>
+      <%= if paginate[:next] do %>
+        <a
+          href={@path_fn.(%{page: @page + 1})}
+          class="tw:inline-flex tw:items-center tw:justify-center tw:size-10 tw:bg-white tw:border tw:border-grey-300 tw:rounded-lg tw:text-grey-700 tw:hover:bg-grey-50 tw:hover:border-grey-400 tw:transition-colors"
+          aria-label="Next page"
+        >
+          <svg class="tw:size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </a>
+      <% else %>
+        <span class="tw:inline-flex tw:items-center tw:justify-center tw:size-10 tw:bg-grey-50 tw:border tw:border-grey-200 tw:rounded-lg tw:text-grey-400 tw:cursor-not-allowed">
+          <svg class="tw:size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </span>
+      <% end %>
+    </nav>
+  <% end %>
+</div>

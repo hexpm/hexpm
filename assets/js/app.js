@@ -11,209 +11,203 @@
 //
 // If you no longer want to use a dependency, remember
 // to also remove its path from "config.paths.watched".
-import "phoenix_html"
+import "phoenix_html";
 // Import local files
 //
 // Local files can be imported directly using relative
 // paths "./socket" or full ones "web/static/js/socket".
-import { Socket } from "phoenix"
-import { LiveSocket } from "phoenix_live_view"
+import { Socket } from "phoenix";
+import { LiveSocket } from "phoenix_live_view";
+import PasswordStrength from "./hooks/password_strength";
+import PasswordMatch from "./hooks/password_match";
+import TFACodeValidator from "./hooks/tfa_code_validator";
+import { CopyButton } from "./hooks/copy_button";
+import { PrintButton } from "./hooks/print_button";
+import { DownloadButton } from "./hooks/download_button";
+import { PermissionGroup } from "./hooks/permission_group";
 
-let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content");
-let liveSocket = new LiveSocket("/live", Socket, { params: { _csrf_token: csrfToken } });
+let csrfToken = document
+  .querySelector("meta[name='csrf-token']")
+  .getAttribute("content");
+let Hooks = { 
+  PasswordStrength, 
+  PasswordMatch, 
+  TFACodeValidator, 
+  CopyButton,
+  PrintButton,
+  DownloadButton,
+  PermissionGroup
+};
+let liveSocket = new LiveSocket("/live", Socket, {
+  params: { _csrf_token: csrfToken },
+  hooks: Hooks,
+});
 
 // connect if there are any LiveViews on the page
-liveSocket.connect()
+liveSocket.connect();
 
 // import socket from "./socket"
 
-import $ from "jquery"
-import "bootstrap"
-import hljs from 'highlight.js/lib/core';
-import elixir from 'highlight.js/lib/languages/elixir';
-
+import $ from "jquery";
+import "bootstrap";
+import hljs from "highlight.js/lib/core";
+import elixir from "highlight.js/lib/languages/elixir";
 
 export default class App {
   constructor() {
-    // Copy button
-    $(".copy-button").click(this.onCopy.bind(this))
-
-    $(".copy-data-button").click(this.onDataCopy.bind(this))
-    $(".print-data-button").click(this.onDataPrint.bind(this))
-    $(".download-data-button").click(this.onDataDownload.bind(this))
+    // Copy button (for package snippets)
+    $(".copy-button").click(this.onCopy.bind(this));
 
     // Pricing selector
-    $(".pricing-button").click(this.onPricing.bind(this))
+    $(".pricing-button").click(this.onPricing.bind(this));
 
     // Focus username, 2FA or search field
     if ($("#username").length > 0) {
-      $("#username").focus()
+      $("#username").focus();
     } else if ($("#code").length > 0) {
-      $("#code").focus()
+      $("#code").focus();
     } else {
-      $("[name='search']").focus()
+      $("[name='search']").focus();
     }
 
     // Switch tabs
     $(".nav-tabs a").click(function (e) {
-      e.preventDefault()
-      $(this).tab("show")
-    })
+      e.preventDefault();
+      $(this).tab("show");
+    });
 
-    $("[data-toggle='popover']").popover({ container: "body", html: true, animation: false })
+    $("[data-toggle='popover']").popover({
+      container: "body",
+      html: true,
+      animation: false,
+    });
 
     // Highlight syntax
-    hljs.registerLanguage('elixir', elixir);
-    hljs.highlightAll()
+    hljs.registerLanguage("elixir", elixir);
+    hljs.highlightAll();
 
     // API permissions checkboxes
     $(".permission-group .group-owner input").change(function () {
       if (this.checked) {
-        $(this).parents(".permission-group").find(".group-child label input").each(function () {
-          $(this).prop("disabled", true)
-          $(this).prop("checked", true)
-        })
+        $(this)
+          .parents(".permission-group")
+          .find(".group-child label input")
+          .each(function () {
+            $(this).prop("disabled", true);
+            $(this).prop("checked", true);
+          });
       } else {
-        $(this).parents(".permission-group").find(".group-child label input").each(function () {
-          $(this).prop("disabled", false)
-          $(this).prop("checked", false)
-        })
+        $(this)
+          .parents(".permission-group")
+          .find(".group-child label input")
+          .each(function () {
+            $(this).prop("disabled", false);
+            $(this).prop("checked", false);
+          });
       }
-    })
+    });
 
     // Auto-format device verification code input
-    const userCodeInput = document.getElementById('user_code')
+    const userCodeInput = document.getElementById("user_code");
     if (userCodeInput) {
-      userCodeInput.addEventListener('input', function(e) {
-        let value = e.target.value.replace(/[^A-Z0-9]/g, '').toUpperCase()
+      userCodeInput.addEventListener("input", function (e) {
+        let value = e.target.value.replace(/[^A-Z0-9]/g, "").toUpperCase();
         if (value.length > 4) {
-          value = value.slice(0, 4) + '-' + value.slice(4, 8)
+          value = value.slice(0, 4) + "-" + value.slice(4, 8);
         }
-        e.target.value = value
-      })
-    }
-  }
-
-  onDataCopy(event) {
-    let succeeded = false
-    const targetElement = $(event.currentTarget)
-    const value = this.getAssociatedValueFromElement(targetElement)
-    const textarea = document.createElement("textarea")
-    textarea.textContent = value
-    document.body.appendChild(textarea)
-    textarea.select()
-    succeeded = document.execCommand("copy")
-    document.body.removeChild(textarea)
-
-    succeeded
-      ? this.copySucceeded(targetElement)
-      : this.copyFailed(targetElement)
-  }
-
-  onDataPrint(event) {
-    const value = this.getAssociatedValueFromElement($(event.currentTarget))
-    const printWindow = window.open("", "")
-    const div = printWindow.document.createElement("div")
-    div.innerHTML = `<p>${value}</p>`
-    div.setAttribute("style", "white-space:pre-line; font-family:monospace")
-
-    printWindow.document.body.appendChild(div)
-    printWindow.document.close()
-    printWindow.focus()
-    printWindow.print()
-    printWindow.close()
-  }
-
-  onDataDownload(event) {
-    const value = this.getAssociatedValueFromElement($(event.currentTarget))
-    const data = new Blob([value], { type: "text/plain" })
-    const container = document.createElement("a")
-    container.href = URL.createObjectURL(data)
-    container.download = "hex-recovery-codes"
-    container.click()
-  }
-
-  getAssociatedValueFromElement(element) {
-    try {
-      const dataId = element.attr("data-input-id")
-      const associatedElement = document.getElementById(dataId)
-      return associatedElement.dataset.value
-    } catch (error) {
-      return null
+        e.target.value = value;
+      });
     }
   }
 
   onCopy(event) {
-    var button = $(event.currentTarget)
-    var succeeded = false
+    var button = $(event.currentTarget);
+    var succeeded = false;
 
     try {
-      var snippet = document.getElementById(button.attr("data-input-id"))
-      snippet.select()
-      succeeded = document.execCommand("copy")
+      var snippet = document.getElementById(button.attr("data-input-id"));
+      snippet.select();
+      succeeded = document.execCommand("copy");
     } catch (e) {
-      console.log("snippet copy failed", e)
+      console.log("snippet copy failed", e);
     }
 
-    succeeded ? this.copySucceeded(button) : this.copyFailed(button)
+    succeeded ? this.copySucceeded(button) : this.copyFailed(button);
   }
 
   copySucceeded(button) {
-    button.children(".heroicon-clipboard-document-list").hide()
-    button.children(".heroicon-check-circle").show()
-    button.tooltip({ title: "Copied!", container: "body", placement: "bottom", trigger: "manual" }).tooltip("show")
+    button.children(".heroicon-clipboard-document-list").hide();
+    button.children(".heroicon-check-circle").show();
+    button
+      .tooltip({
+        title: "Copied!",
+        container: "body",
+        placement: "bottom",
+        trigger: "manual",
+      })
+      .tooltip("show");
 
     setTimeout(() => {
-      button.children(".heroicon-check-circle").hide()
-      button.children(".heroicon-clipboard-document-list").show()
-      button.tooltip("hide")
-    }, 1500)
+      button.children(".heroicon-check-circle").hide();
+      button.children(".heroicon-clipboard-document-list").show();
+      button.tooltip("hide");
+    }, 1500);
   }
 
   copyFailed(button) {
-    button.children(".heroicon-clipboard-document-list").hide()
-    button.children(".heroicon-x-circle").show()
-    button.tooltip({ title: "Copy not supported in your browser", container: "body", placement: "bottom", trigger: "manual" }).tooltip("show")
+    button.children(".heroicon-clipboard-document-list").hide();
+    button.children(".heroicon-x-circle").show();
+    button
+      .tooltip({
+        title: "Copy not supported in your browser",
+        container: "body",
+        placement: "bottom",
+        trigger: "manual",
+      })
+      .tooltip("show");
 
     setTimeout(() => {
-      button.children(".heroicon-x-circle").hide()
-      button.children(".heroicon-clipboard-document-list").show()
-      button.tooltip("hide")
-    }, 1500)
+      button.children(".heroicon-x-circle").hide();
+      button.children(".heroicon-clipboard-document-list").show();
+      button.tooltip("hide");
+    }, 1500);
   }
 
   onPricing(event) {
-    var button = $(event.currentTarget)
-    $(".pricing .btn-selected").removeClass("btn-selected")
-    button.addClass("btn-selected")
+    var button = $(event.currentTarget);
+    $(".pricing .btn-selected").removeClass("btn-selected");
+    button.addClass("btn-selected");
 
     if (button.text() === "Monthly") {
-      $(".price.price-monthly").show()
-      $(".price.price-yearly").hide()
+      $(".price.price-monthly").show();
+      $(".price.price-yearly").hide();
     } else if (button.text() === "Yearly") {
-      $(".price.price-monthly").hide()
-      $(".price.price-yearly").show()
+      $(".price.price-monthly").hide();
+      $(".price.price-yearly").show();
     }
   }
 
   billing_checkout(token) {
-    $.post(window.hexpm_billing_post_action, { token: token, _csrf_token: window.hexpm_billing_csrf_token })
+    $.post(window.hexpm_billing_post_action, {
+      token: token,
+      _csrf_token: window.hexpm_billing_csrf_token,
+    })
       .done(function (data) {
-        window.location.reload()
+        window.location.reload();
       })
       .fail(function (data) {
         var response = JSON.parse(data.responseText);
-        $('div.flash').html(
+        $("div.flash").html(
           '<div class="alert alert-danger" role="alert">' +
-          '<strong>Failed to update payment method</strong><br>' +
-          response.errors +
-          '</div>'
-        )
-      })
+            "<strong>Failed to update payment method</strong><br>" +
+            response.errors +
+            "</div>",
+        );
+      });
   }
 }
 
-window.app = new App()
-window.hexpm_billing_checkout = app.billing_checkout
-window.$ = $
-window.liveSocket = liveSocket
+window.app = new App();
+window.hexpm_billing_checkout = app.billing_checkout;
+window.$ = $;
+window.liveSocket = liveSocket;

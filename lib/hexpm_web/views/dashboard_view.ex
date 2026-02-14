@@ -1,5 +1,7 @@
 defmodule HexpmWeb.DashboardView do
   use HexpmWeb, :view
+  import HexpmWeb.ViewIcons, only: [icon: 3]
+  import HexpmWeb.Dashboard.Key.Components.KeyManagementCard
 
   defp account_settings() do
     [
@@ -8,8 +10,38 @@ defmodule HexpmWeb.DashboardView do
       email: {"Emails", ~p"/dashboard/email"},
       keys: {"Keys", ~p"/dashboard/keys"},
       sessions: {"Sessions", ~p"/dashboard/sessions"},
-      audit_logs: {"Recent activities", ~p"/dashboard/audit-logs"}
+      audit_logs: {"Recent Activities", ~p"/dashboard/audit-logs"}
     ]
+  end
+
+  defp icon_for_setting(:profile, selected?) do
+    color = if selected?, do: "tw:text-purple-600", else: "tw:text-grey-600"
+    icon(:heroicon, "user-circle", class: "tw:w-5 tw:h-5 #{color}")
+  end
+
+  defp icon_for_setting(:security, selected?) do
+    color = if selected?, do: "tw:text-purple-600", else: "tw:text-grey-600"
+    icon(:heroicon, "shield-check", class: "tw:w-5 tw:h-5 #{color}")
+  end
+
+  defp icon_for_setting(:email, selected?) do
+    color = if selected?, do: "tw:text-purple-600", else: "tw:text-grey-600"
+    icon(:heroicon, "envelope", class: "tw:w-5 tw:h-5 #{color}")
+  end
+
+  defp icon_for_setting(:keys, selected?) do
+    color = if selected?, do: "tw:text-purple-600", else: "tw:text-grey-600"
+    icon(:heroicon, "key", class: "tw:w-5 tw:h-5 #{color}")
+  end
+
+  defp icon_for_setting(:sessions, selected?) do
+    color = if selected?, do: "tw:text-purple-600", else: "tw:text-grey-600"
+    icon(:heroicon, "computer-desktop", class: "tw:w-5 tw:h-5 #{color}")
+  end
+
+  defp icon_for_setting(:audit_logs, selected?) do
+    color = if selected?, do: "tw:text-purple-600", else: "tw:text-grey-600"
+    icon(:heroicon, "clock", class: "tw:w-5 tw:h-5 #{color}")
   end
 
   defp selected_setting(conn, id) do
@@ -28,24 +60,6 @@ defmodule HexpmWeb.DashboardView do
       "selected"
     end
   end
-
-  defp permission_name(%KeyPermission{domain: "api", resource: nil}),
-    do: "API"
-
-  defp permission_name(%KeyPermission{domain: "api", resource: resource}),
-    do: "API:#{resource}"
-
-  defp permission_name(%KeyPermission{domain: "repository", resource: resource}),
-    do: "REPO:#{resource}"
-
-  defp permission_name(%KeyPermission{domain: "package", resource: "hexpm/" <> resource}),
-    do: "PKG:#{resource}"
-
-  defp permission_name(%KeyPermission{domain: "package", resource: resource}),
-    do: "PKG:#{resource}"
-
-  defp permission_name(%KeyPermission{domain: "repositories"}),
-    do: "REPOS"
 
   def humanize_audit_log_info(%AuditLog{action: "docs.publish", params: params}) do
     "Publish documentation for #{params["package"]["name"]} (#{params["release"]["version"]})"

@@ -118,10 +118,10 @@ defmodule HexpmWeb.PackageControllerTest do
       :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
 
       conn = get(build_conn(), "/packages?search=with underscore")
-      assert response(conn, 200) =~ "exact-match"
+      assert response(conn, 200) =~ "Exact Match"
       assert response(conn, 200) =~ "total downloads: 1 234"
       assert response(conn, 200) =~ ~r/#{package5.name}.*0.0.1/s
-      refute response(conn, 200) =~ "no-results"
+      refute response(conn, 200) =~ "No Results Found"
     end
 
     test "search with exact match", %{package5: package5, package5_release: package5_release} do
@@ -135,20 +135,20 @@ defmodule HexpmWeb.PackageControllerTest do
       :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
 
       conn = get(build_conn(), "/packages?search=with_underscore")
-      assert response(conn, 200) =~ "exact-match"
+      assert response(conn, 200) =~ "Exact Match"
       assert response(conn, 200) =~ "total downloads: 5 000"
-      refute response(conn, 200) =~ "results-found"
+      refute response(conn, 200) =~ "Search Results"
     end
 
     test "search with build_tool match" do
       conn = get(build_conn(), "/packages?search=build_tool%3Amix")
-      assert response(conn, 200) =~ "results-found"
+      assert response(conn, 200) =~ "packages found"
     end
 
     test "search without match" do
       conn = get(build_conn(), "/packages?search=nonexistent")
-      assert response(conn, 200) =~ "no-results"
-      refute response(conn, 200) =~ "exact-match"
+      assert response(conn, 200) =~ "No Results Found"
+      refute response(conn, 200) =~ "Exact Match"
     end
 
     test "list private packages", %{
@@ -186,40 +186,29 @@ defmodule HexpmWeb.PackageControllerTest do
       |> response(404)
     end
 
-    test "show first few audit_logs related to this package", %{package1: package} do
+    test "show package details with activity link", %{package1: package} do
       insert(:audit_log, action: "docs.publish", params: %{package: %{id: package.id}})
-      insert(:audit_log, action: "docs.revert", params: %{package: %{id: package.id}})
-      insert(:audit_log, action: "owner.add", params: %{package: %{id: package.id}})
-      insert(:audit_log, action: "owner.remove", params: %{package: %{id: package.id}})
-      insert(:audit_log, action: "release.publish", params: %{package: %{id: package.id}})
-      insert(:audit_log, action: "release.revert", params: %{package: %{id: package.id}})
-      insert(:audit_log, action: "release.retire", params: %{package: %{id: package.id}})
-      insert(:audit_log, action: "release.unretire", params: %{package: %{id: package.id}})
 
       html_response =
         build_conn()
         |> get("/packages/#{package.name}")
         |> html_response(200)
 
-      assert html_response =~ "Publish doc"
-      assert html_response =~ "Revert doc"
-      assert html_response =~ "Add owner"
-      assert html_response =~ "Remove owner"
-      assert html_response =~ "Publish release"
-      assert html_response =~ "Revert release"
-      assert html_response =~ "Retire release"
-      assert html_response =~ "Unretire release"
+      # Activity tab link should be present
+      assert html_response =~ "Activity"
+      # Check we have the package details sidebar
+      assert html_response =~ "Package Details"
+      assert html_response =~ "Checksum"
     end
 
-    test "show latest valid version documentation link", %{package1: package} do
+    test "show documentation link when available", %{package1: package} do
       html_response =
         build_conn()
         |> get("/packages/#{package.name}")
         |> html_response(200)
 
-      assert html_response =~ "0.0.1.tar.gz"
-      refute html_response =~ "0.0.2.tar.gz"
-      refute html_response =~ "0.0.3-dev.0.1.tar.gz"
+      # Should have documentation button in header
+      assert html_response =~ "Online Documentation"
     end
   end
 

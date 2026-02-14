@@ -1,17 +1,21 @@
-<p><%= PackagePublished.intro(@publisher, @package, @version) %></p>
+<h1 style="color: #030913; font-size: 24px; line-height: 32px; font-weight: 600; margin: 0 0 24px 0; text-align: center;">
+  Package Published
+</h1>
 
-<p>
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= PackagePublished.intro(@publisher, @package, @version) %>
+</p>
+
+<div style="background-color: #1c2a3a; padding: 20px; margin: 16px 0; border-radius: 4px;">
+  <p style="color: #f0f5f9; font-size: 20px; line-height: 28px; font-weight: 500; margin: 0 0 8px 0;">
     <%= Common.for_mix_label() %>
-
-    <pre>
-        <%= PackagePublished.mix_code(@package, @version) %>
-    </pre>
 </p>
+  <pre style="color: #f0f5f9; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 14px; line-height: 20px; margin: 0; white-space: pre-wrap;"><%= PackagePublished.mix_code(@package, @version) %></pre>
+</div>
 
-<p>
+<div style="background-color: #1c2a3a; padding: 20px; margin: 16px 0; border-radius: 4px;">
+  <p style="color: #f0f5f9; font-size: 20px; line-height: 28px; font-weight: 500; margin: 0 0 8px 0;">
     <%= Common.for_rebar3_label() %>
-
-    <pre>
-        <%= PackagePublished.rebar3_code(@package, @version) %>
-    </pre>
 </p>
+  <pre style="color: #f0f5f9; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 14px; line-height: 20px; margin: 0; white-space: pre-wrap;"><%= PackagePublished.rebar3_code(@package, @version) %></pre>
+</div>

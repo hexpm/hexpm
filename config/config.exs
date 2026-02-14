@@ -63,6 +63,16 @@ config :mime,
 
 config :logger, :default_formatter, format: "[$level] $metadata$message\n"
 
+config :tailwind,
+  version: "4.1.11",
+  default: [
+    args: ~w(
+      --input=./assets/css/tailwind.css
+      --output=./priv/static/assets/tailwind.css
+    ),
+    cd: Path.expand("..", __DIR__)
+  ]
+
 config :ueberauth, Ueberauth,
   providers: [
     github: {Ueberauth.Strategy.Github, [default_scope: "user:email"]}

@@ -1,0 +1,37 @@
+<%!-- Hero Section with Title --%>
+<div class="tw:flex tw:flex-col tw:items-center tw:justify-center tw:mt-12 tw:mb-16">
+  <h1 class="tw:text-grey-900 tw:text-4xl tw:font-bold">
+    Sponsors
+  </h1>
+
+  <p class="tw:text-grey-600 tw:text-center tw:text-lg tw:mt-3 tw:max-w-4xl tw:mx-auto">
+    The following companies provide resources and services that make running Hex possible.
+  </p>
+</div>
+
+<%!-- Sponsors Grid --%>
+<div class="tw:max-w-7xl tw:mx-auto tw:flex tw:flex-col tw:lg:flex-row tw:gap-6 tw:mb-12 tw:px-4 tw:lg:px-0">
+  <.sponsor_card
+    name="Dashbit"
+    url="https://dashbit.co"
+    logo_src={~p"/images/dashbit.png"}
+    description="Dashbit helps startups and enterprises adopt and run Elixir in production. In turn, these relationships gives them resources and feedback to invest back into the community. Their goal is to advance the Elixir ecosystem through continuous adoption and sustainable open source development."
+    contribution="Dashbit provides consultancy and development help for Hex."
+  />
+
+  <.sponsor_card
+    name="Fastly"
+    url="https://www.fastly.com/"
+    logo_src={~p"/images/fastly.png"}
+    description="Founded in 2011, Fastly is the only content delivery network that gives businesses complete control over how they serve content, unprecedented access to real-time performance analytics, and the ability to cache frequently changing content at the edge. Our secure, global network allows enterprises to increase revenue and improve customer experiences across their websites and mobile applications while maintaining fast, consistent, and reliable performance."
+    contribution="Fastly provides Hex with free CDN services."
+  />
+
+  <.sponsor_card
+    name="DraftKings"
+    url="https://draftkings.com/"
+    logo_src={~p"/images/draftkings.svg"}
+    description="Defining what it means to build and deliver the most extraordinary sports & entertainment experiences. The Crown is Yours."
+    contribution="DraftKings provides development help for Hex."
+  />
+</div>

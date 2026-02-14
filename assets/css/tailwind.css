@@ -1,0 +1,218 @@
+/* Tailwind CSS v4 with prefix to avoid conflicts with existing SCSS */
+@import "tailwindcss" prefix(tw);
+
+/* Tell Tailwind where to scan for classes */
+@source "../lib";
+
+/* Syntax highlighting for code blocks */
+@import "../vendor/css/github-dark.css";
+
+/* Tooltip component styles */
+@import "./tooltip.css";
+
+/* Reset Bootstrap's 14px body font-size to proper 16px base for rem calculations */
+html {
+  font-size: 16px !important;
+}
+
+body {
+  font-size: 16px !important;
+}
+
+/* Google Fonts: Inter + JetBrains Mono */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
+
+/*
+ * Hex.pm Design System
+ * Use tw: prefix for all Tailwind utility classes, e.g.:
+ *   <h1 class="tw:text-h1 tw:font-bold tw:text-grey-900">Title</h1>
+ *   <p class="tw:text-body tw:text-grey-700">Body text</p>
+ *   <code class="tw:font-mono tw:text-small">code</code>
+ */
+
+@theme {
+  /* ===== BREAKPOINTS ===== */
+  --breakpoint-xs: 480px;
+
+  /* ===== TYPOGRAPHY ===== */
+
+  /* Font Families */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Type Scale (name: [size, line-height]) */
+  --text-h1: 3.75rem; /* 60px */
+  --text-h1--line-height: 1.2;
+  --text-h2: 3rem; /* 48px */
+  --text-h2--line-height: 1.25;
+  --text-h3: 2.5rem; /* 40px */
+  --text-h3--line-height: 1.2;
+  --text-h4: 2rem; /* 32px */
+  --text-h4--line-height: 1.25;
+  --text-h5: 1.5rem; /* 24px */
+  --text-h5--line-height: 1.33;
+  --text-h6: 1.25rem; /* 20px */
+  --text-h6--line-height: 1.4;
+  --text-leading: 1.125rem; /* 18px - marketing/quote */
+  --text-leading--line-height: 1.56;
+  --text-body: 1rem; /* 16px */
+  --text-body--line-height: 1.5;
+  --text-small: 0.875rem; /* 14px - forms, subinfo */
+  --text-small--line-height: 1.43;
+  --text-caption: 0.75rem; /* 12px */
+  --text-caption--line-height: 1.5;
+  --text-tiny: 0.6875rem; /* 11px */
+  --text-tiny--line-height: 1.45;
+
+  /* ===== COLORS ===== */
+
+  /* Primary Palette (Brand Purple) */
+  --color-primary-900: #2b1551;
+  --color-primary-800: #3d2165;
+  --color-primary-700: #523079;
+  --color-primary-600: #69438d;
+  --color-primary-500: #8769a4;
+  --color-primary-400: #a58ebb;
+  --color-primary-300: #c3b4d1;
+  --color-primary-200: #e1d9e8;
+  --color-primary-100: #f0edf4;
+  --color-primary-50: #f7f5f9;
+
+  /* Green Palette (Success) */
+  --color-green-900: #054333;
+  --color-green-800: #085438;
+  --color-green-700: #0c643c;
+  --color-green-600: #11753d;
+  --color-green-500: #419164;
+  --color-green-400: #70ac8b;
+  --color-green-300: #a0c8b1;
+  --color-green-200: #cfe3d8;
+  --color-green-100: #e8f2ec;
+  --color-green-50: #f3f8f5;
+
+  /* Blue Palette (Info/Links) */
+  --color-blue-900: #04237d;
+  --color-blue-800: #07329b;
+  --color-blue-700: #0a44b9;
+  --color-blue-600: #0f59d8;
+  --color-blue-500: #3f7ae0;
+  --color-blue-400: #6f9be8;
+  --color-blue-300: #9fbdef;
+  --color-blue-200: #cfdef7;
+  --color-blue-100: #e7effc;
+  --color-blue-50: #f3f6fd;
+
+  /* Yellow Palette (Warning) */
+  --color-yellow-900: #8a5912;
+  --color-yellow-800: #ac751d;
+  --color-yellow-700: #cd942a;
+  --color-yellow-600: #efb63a;
+  --color-yellow-500: #f2c561;
+  --color-yellow-400: #f5d389;
+  --color-yellow-300: #f9e2b0;
+  --color-yellow-200: #fcf0d8;
+  --color-yellow-100: #fef8ec;
+  --color-yellow-50: #fefbf5;
+
+  /* Red Palette (Danger) */
+  --color-red-900: #620e32;
+  --color-red-800: #7a1638;
+  --color-red-700: #92203c;
+  --color-red-600: #aa2c3f;
+  --color-red-500: #bb5665;
+  --color-red-400: #cc808c;
+  --color-red-300: #ddabb2;
+  --color-red-200: #eed5d9;
+  --color-red-100: #f7eaec;
+  --color-red-50: #faf4f5;
+
+  /* Grey Palette (Text & UI) */
+  --color-grey-900: #030913;
+  --color-grey-800: #0d1829;
+  --color-grey-700: #1c2a3a;
+  --color-grey-600: #304254;
+  --color-grey-500: #445668;
+  --color-grey-400: #61758a;
+  --color-grey-300: #91a4b7;
+  --color-grey-200: #cad5e0;
+  --color-grey-100: #e1e8f0;
+  --color-grey-50: #f0f5f9;
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes flash-autodismiss {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  85% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+/* ===== GLOBAL BASE STYLES ===== */
+@layer base {
+  /* Remove browser default focus outline (orange/blue) */
+  input:focus,
+  textarea:focus,
+  select:focus,
+  button:focus {
+    outline: none !important;
+  }
+
+  /* Base document styles */
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    color: var(--color-grey-700);
+    background-color: white;
+    line-height: 1.5;
+  }
+
+  /* Links (global - navbar overrides with tw: classes) */
+  a {
+    color: var(--color-primary-700);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  a:hover {
+    color: var(--color-primary-500);
+  }
+
+  /* Code blocks */
+  code,
+  pre {
+    font-family: var(--font-mono);
+  }
+
+  code {
+    font-size: 0.875em;
+    background-color: var(--color-grey-100);
+    padding: 0.125rem 0.25rem;
+    border-radius: 0.25rem;
+  }
+
+  pre {
+    background-color: var(--color-grey-900);
+    color: var(--color-grey-100);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+  }
+
+  pre code {
+    background: none;
+    padding: 0;
+  }
+}
