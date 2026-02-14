@@ -1,6 +1,7 @@
 defmodule HexpmWeb.DashboardView do
   use HexpmWeb, :view
   import HexpmWeb.ViewIcons, only: [icon: 3]
+  import HexpmWeb.Dashboard.Key.Components.KeyManagementCard
 
   defp account_settings() do
     [
@@ -59,24 +60,6 @@ defmodule HexpmWeb.DashboardView do
       "selected"
     end
   end
-
-  defp permission_name(%KeyPermission{domain: "api", resource: nil}),
-    do: "API"
-
-  defp permission_name(%KeyPermission{domain: "api", resource: resource}),
-    do: "API:#{resource}"
-
-  defp permission_name(%KeyPermission{domain: "repository", resource: resource}),
-    do: "REPO:#{resource}"
-
-  defp permission_name(%KeyPermission{domain: "package", resource: "hexpm/" <> resource}),
-    do: "PKG:#{resource}"
-
-  defp permission_name(%KeyPermission{domain: "package", resource: resource}),
-    do: "PKG:#{resource}"
-
-  defp permission_name(%KeyPermission{domain: "repositories"}),
-    do: "REPOS"
 
   def humanize_audit_log_info(%AuditLog{action: "docs.publish", params: params}) do
     "Publish documentation for #{params["package"]["name"]} (#{params["release"]["version"]})"

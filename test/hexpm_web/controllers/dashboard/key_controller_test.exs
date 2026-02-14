@@ -35,6 +35,34 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
                "The key computer was successfully generated"
     end
+
+    test "stores generated key in session and displays it once", c do
+      # Create a key
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> post("/dashboard/keys", %{key: %{name: "mykey"}})
+
+      assert redirected_to(conn) == "/dashboard/keys"
+
+      # Follow the redirect - should display the generated key
+      conn = get(conn, "/dashboard/keys")
+      response_body = html_response(conn, 200)
+
+      # Modal should be present with the key
+      assert response_body =~ "Key Generated Successfully"
+      assert response_body =~ "mykey"
+
+      # Key should now be removed from session
+      assert get_session(conn, :generated_key) == nil
+
+      # Reload the page - modal should not appear again
+      conn = get(conn, "/dashboard/keys")
+      response_body = html_response(conn, 200)
+
+      # Modal should not be present anymore
+      refute response_body =~ "Key Generated Successfully"
+    end
   end
 
   describe "DELETE /dashboard/keys" do

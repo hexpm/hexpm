@@ -7,6 +7,7 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
   use PhoenixHTMLHelpers
   import HexpmWeb.Components.Buttons
   import HexpmWeb.Components.Badge
+  import HexpmWeb.Components.Table
   import HexpmWeb.Components.Tooltip
   import HexpmWeb.Components.Modal, only: [show_modal: 1]
   import HexpmWeb.Dashboard.Email.Components.AddEmailModal
@@ -39,26 +40,22 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
       </p>
 
       <%!-- Email Table --%>
-      <div class="tw:border-b tw:border-grey-200 tw:mb-6">
-        <table class="tw:w-full">
-          <thead>
-            <tr class="tw:border-b tw:border-grey-200">
-              <th class="tw:px-0 tw:py-3 tw:text-left tw:text-sm tw:font-medium tw:text-grey-500">
-                Email
-              </th>
-              <th class="tw:px-4 tw:py-3 tw:text-left tw:text-sm tw:font-medium tw:text-grey-500">
-                Status
-              </th>
-              <th class="tw:px-4 tw:py-3 tw:text-right tw:text-sm tw:font-medium tw:text-grey-500">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody class="tw:divide-y tw:divide-grey-200">
-            <.email_row :for={email <- @emails} email={email} csrf_token={@csrf_token} />
-          </tbody>
-        </table>
-      </div>
+      <.table>
+        <:header>
+          <th class="tw:px-0 tw:py-3 tw:text-left tw:text-sm tw:font-medium tw:text-grey-500">
+            Email
+          </th>
+          <th class="tw:px-4 tw:py-3 tw:text-left tw:text-sm tw:font-medium tw:text-grey-500">
+            Status
+          </th>
+          <th class="tw:px-4 tw:py-3 tw:text-right tw:text-sm tw:font-medium tw:text-grey-500">
+            Actions
+          </th>
+        </:header>
+        <:row :for={email <- @emails}>
+          <.email_row email={email} csrf_token={@csrf_token} />
+        </:row>
+      </.table>
 
       <%!-- Add Email Button --%>
       <div>
@@ -86,7 +83,7 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
   attr :csrf_token, :string, required: true
 
   defp email_row(assigns) do
-    modal_id = "delete-email-#{String.replace(assigns.email.email, ~r/[^a-zA-Z0-9]/, "-")}"
+    modal_id = "delete-email-#{assigns.email.id}"
     assigns = assign(assigns, :modal_id, modal_id)
 
     ~H"""

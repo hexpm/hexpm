@@ -24,6 +24,7 @@ import TFACodeValidator from "./hooks/tfa_code_validator";
 import { CopyButton } from "./hooks/copy_button";
 import { PrintButton } from "./hooks/print_button";
 import { DownloadButton } from "./hooks/download_button";
+import { PermissionGroup } from "./hooks/permission_group";
 
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")
@@ -34,7 +35,8 @@ let Hooks = {
   TFACodeValidator, 
   CopyButton,
   PrintButton,
-  DownloadButton
+  DownloadButton,
+  PermissionGroup
 };
 let liveSocket = new LiveSocket("/live", Socket, {
   params: { _csrf_token: csrfToken },
