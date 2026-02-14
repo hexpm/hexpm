@@ -16,7 +16,7 @@ defmodule HexpmWeb.Dashboard.Email.Components.DeleteEmailModal do
   attr :csrf_token, :string, required: true
 
   def delete_email_modal(assigns) do
-    modal_id = "delete-email-#{String.replace(assigns.email.email, ~r/[^a-zA-Z0-9]/, "-")}"
+    modal_id = "delete-email-#{assigns.email.id}"
     assigns = assign(assigns, :modal_id, modal_id)
 
     ~H"""

@@ -1,14 +1,14 @@
 /**
  * CopyButton Hook
- * 
+ *
  * Handles copying text to clipboard with visual feedback.
  * Shows an inline "Copied!" tooltip when successful.
- * 
+ *
  * Usage:
  * <button phx-hook="CopyButton" data-copy-target="element-id">
  *   <icon />
  * </button>
- * 
+ *
  * The target element should have a data-value attribute with the text to copy.
  */
 export const CopyButton = {
@@ -25,17 +25,17 @@ export const CopyButton = {
 
   handleCopy(event) {
     event.preventDefault();
-    
+
     const targetId = this.el.dataset.copyTarget;
     const targetElement = document.getElementById(targetId);
-    
+
     if (!targetElement) {
       console.error(`Copy target element not found: ${targetId}`);
       return;
     }
 
     const textToCopy = targetElement.dataset.value;
-    
+
     if (!textToCopy) {
       console.error(`No data-value found on target element: ${targetId}`);
       return;
@@ -43,7 +43,8 @@ export const CopyButton = {
 
     // Modern clipboard API
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(textToCopy)
+      navigator.clipboard
+        .writeText(textToCopy)
         .then(() => this.showSuccess())
         .catch((err) => this.showError(err));
     } else {
@@ -59,11 +60,11 @@ export const CopyButton = {
     textarea.style.opacity = "0";
     document.body.appendChild(textarea);
     textarea.select();
-    
+
     try {
       const successful = document.execCommand("copy");
       document.body.removeChild(textarea);
-      
+
       if (successful) {
         this.showSuccess();
       } else {
@@ -76,29 +77,37 @@ export const CopyButton = {
   },
 
   showSuccess() {
+    // Remove any existing tooltips first to prevent stacking on rapid clicks
+    const existingTooltips = this.el.querySelectorAll(".copy-tooltip");
+    existingTooltips.forEach((t) => t.remove());
+
     // Create tooltip element
     const tooltip = document.createElement("div");
     tooltip.textContent = "Copied!";
-    tooltip.className = "copy-tooltip tw:absolute tw:bg-grey-900 tw:text-white tw:text-xs tw:px-2 tw:py-1 tw:rounded tw:whitespace-nowrap tw:pointer-events-none tw:z-50";
-    tooltip.style.bottom = "calc(100% + 8px)";
-    tooltip.style.left = "50%";
-    tooltip.style.transform = "translateX(-50%)";
+    tooltip.className =
+      "copy-tooltip tw:absolute tw:bg-grey-900 tw:text-white tw:text-xs tw:px-2 tw:py-1 tw:rounded tw:whitespace-nowrap tw:pointer-events-none";
     tooltip.style.opacity = "0";
     tooltip.style.transition = "opacity 0.2s ease-in-out";
-    
+    tooltip.style.zIndex = "9999";
+
+    // Position to the left of the button
+    tooltip.style.right = "calc(100% + 8px)";
+    tooltip.style.top = "50%";
+    tooltip.style.transform = "translateY(-50%)";
+
     // Make button position relative if it isn't already
     const originalPosition = this.el.style.position;
     if (getComputedStyle(this.el).position === "static") {
       this.el.style.position = "relative";
     }
-    
+
     this.el.appendChild(tooltip);
-    
+
     // Trigger animation
     setTimeout(() => {
       tooltip.style.opacity = "1";
     }, 10);
-    
+
     // Remove tooltip after delay
     setTimeout(() => {
       tooltip.style.opacity = "0";
@@ -116,28 +125,36 @@ export const CopyButton = {
 
   showError(err) {
     console.error("Failed to copy:", err);
-    
+
+    // Remove any existing tooltips first to prevent stacking on rapid clicks
+    const existingTooltips = this.el.querySelectorAll(".copy-tooltip");
+    existingTooltips.forEach((t) => t.remove());
+
     // Create error tooltip
     const tooltip = document.createElement("div");
     tooltip.textContent = "Failed to copy";
-    tooltip.className = "copy-tooltip tw:absolute tw:bg-red-600 tw:text-white tw:text-xs tw:px-2 tw:py-1 tw:rounded tw:whitespace-nowrap tw:pointer-events-none tw:z-50";
-    tooltip.style.bottom = "calc(100% + 8px)";
-    tooltip.style.left = "50%";
-    tooltip.style.transform = "translateX(-50%)";
+    tooltip.className =
+      "copy-tooltip tw:absolute tw:bg-red-600 tw:text-white tw:text-xs tw:px-2 tw:py-1 tw:rounded tw:whitespace-nowrap tw:pointer-events-none";
     tooltip.style.opacity = "0";
     tooltip.style.transition = "opacity 0.2s ease-in-out";
-    
+    tooltip.style.zIndex = "9999";
+
+    // Position to the left of the button
+    tooltip.style.right = "calc(100% + 8px)";
+    tooltip.style.top = "50%";
+    tooltip.style.transform = "translateY(-50%)";
+
     const originalPosition = this.el.style.position;
     if (getComputedStyle(this.el).position === "static") {
       this.el.style.position = "relative";
     }
-    
+
     this.el.appendChild(tooltip);
-    
+
     setTimeout(() => {
       tooltip.style.opacity = "1";
     }, 10);
-    
+
     setTimeout(() => {
       tooltip.style.opacity = "0";
       setTimeout(() => {
@@ -149,5 +166,5 @@ export const CopyButton = {
         }
       }, 200);
     }, 2000);
-  }
+  },
 };
