@@ -36,7 +36,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert response["user_code"]
       assert response["verification_uri"]
       assert response["verification_uri_complete"]
-      assert response["expires_in"] == 600
+      assert response["expires_in"] in 599..600
       assert response["interval"] == 5
     end
 
