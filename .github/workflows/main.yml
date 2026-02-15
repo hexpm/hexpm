@@ -205,8 +205,8 @@ jobs:
         with:
           platforms: ${{ matrix.platform }}
           outputs: type=image,name=gcr.io/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
-          cache-from: type=gha,scope=${{ matrix.platform }}
-          cache-to: type=gha,scope=${{ matrix.platform }},mode=max
+          cache-from: type=gha,scope=${{ matrix.runner }}
+          cache-to: type=gha,scope=${{ matrix.runner }},mode=max
       - name: Export digest
         if: ${{ github.event_name != 'pull_request' }}
         run: |
