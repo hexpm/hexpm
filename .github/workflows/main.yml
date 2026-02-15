@@ -237,9 +237,7 @@ jobs:
       WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCLOUD_WORKFLOW_IDENTITY_POOL_PROVIDER }}
     steps:
       - name: Set short git commit SHA
-        run: |
-          calculatedSha=$(git rev-parse --short ${{ github.sha }})
-          echo "COMMIT_SHORT_SHA=$calculatedSha" >> $GITHUB_ENV
+        run: echo "COMMIT_SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
       - name: Download digests
         uses: actions/download-artifact@v4
         with:
