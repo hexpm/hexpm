@@ -169,6 +169,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end)
   end
 
+  # TODO: Remove when all customers migrated to SCA/PaymentIntents
   def billing_token(conn, %{"dashboard_org" => organization, "token" => token}) do
     access_organization(conn, organization, "admin", fn organization ->
       audit = %{audit_data: audit_data(conn), organization: organization}
@@ -560,11 +561,17 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       card: nil,
       invoices: nil,
       person: nil,
-      company: nil
+      company: nil,
+      # TODO: Remove when all customers migrated to SCA/PaymentIntents
+      post_action: nil,
+      csrf_token: nil
     ]
   end
 
-  defp customer_assigns(customer, _organization) do
+  defp customer_assigns(customer, organization) do
+    # TODO: Remove when all customers migrated to SCA/PaymentIntents
+    post_action = ~p"/dashboard/orgs/#{organization}/billing-token"
+
     [
       billing_started?: true,
       billing_active?: !!customer["subscription"],
@@ -583,7 +590,10 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       card: customer["card"],
       invoices: customer["invoices"],
       person: customer["person"],
-      company: customer["company"]
+      company: customer["company"],
+      # TODO: Remove when all customers migrated to SCA/PaymentIntents
+      post_action: post_action,
+      csrf_token: get_csrf_token()
     ]
   end
 
