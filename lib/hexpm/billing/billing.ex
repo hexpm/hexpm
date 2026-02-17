@@ -3,6 +3,7 @@ defmodule Hexpm.Billing do
 
   defp impl(), do: Application.get_env(:hexpm, :billing_impl)
 
+  # TODO: Remove when all customers migrated to SCA/PaymentIntents
   def checkout(organization, data), do: impl().checkout(organization, data)
   def get(organization), do: impl().get(organization)
   def cancel(organization), do: impl().cancel(organization)
@@ -14,9 +15,7 @@ defmodule Hexpm.Billing do
   def report(), do: impl().report()
   def pending_payment_action(organization), do: impl().pending_payment_action(organization)
 
-  @doc """
-  Change payment method used by an organization.
-  """
+  # TODO: Remove when all customers migrated to SCA/PaymentIntents
   def checkout(organization_name, data,
         audit: %{audit_data: audit_data, organization: organization}
       ) do

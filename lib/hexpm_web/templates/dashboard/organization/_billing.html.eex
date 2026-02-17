@@ -52,6 +52,11 @@
             </dl>
             <br>
 
+            <%!-- TODO: Remove when all customers migrated to SCA/PaymentIntents --%>
+            <script>
+              window.hexpm_billing_post_action = "<%= @post_action %>";
+              window.hexpm_billing_csrf_token = "<%= @csrf_token %>";
+            </script>
             <%= raw(@checkout_html) %>
 
             <%= if @subscription && @subscription["cancel_at_period_end"] && @card do %>
@@ -131,6 +136,11 @@
             <strong><%= title %></strong> <%= description %><br><br>
             Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.<br><br>
 
+            <%!-- TODO: Remove when all customers migrated to SCA/PaymentIntents --%>
+            <script>
+              window.hexpm_billing_post_action = "<%= @post_action %>";
+              window.hexpm_billing_csrf_token = "<%= @csrf_token %>";
+            </script>
             <%= raw(@checkout_html) %>
 
             <button type="button" class="btn btn-default" data-toggle="modal" data-target="#change-plan">

@@ -1,6 +1,7 @@
 defmodule Hexpm.Billing.Behaviour do
   @type organization() :: String.t()
 
+  # TODO: Remove when all customers migrated to SCA/PaymentIntents
   @callback checkout(organization(), data :: map()) :: {:ok, map()} | {:error, map()}
   @callback get(organization()) :: map() | nil
   @callback cancel(organization()) :: map()

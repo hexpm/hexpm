@@ -179,6 +179,7 @@ defmodule HexpmWeb.DashboardView do
     "Remove password"
   end
 
+  # TODO: Remove when all customers migrated to SCA/PaymentIntents
   def humanize_audit_log_info(%AuditLog{action: "billing.checkout", params: params}) do
     "Update payment method for organization #{params["organization"]["name"]}"
   end
