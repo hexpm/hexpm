@@ -239,7 +239,6 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("session.create", session), do: serialize(session)
   defp extract_params("session.revoke", session), do: serialize(session)
 
-  # TODO: Remove when all customers migrated to SCA/PaymentIntents
   defp extract_params("billing.checkout", {organization, data}),
     do: %{
       organization: serialize(organization),
