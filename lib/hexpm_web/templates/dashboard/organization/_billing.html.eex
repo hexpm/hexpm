@@ -2,6 +2,11 @@
     <div class="panel panel-default">
       <div class="panel-heading">Billing</div>
       <%= if @billing_started? do %>
+        <%= if @pending_action_html do %>
+          <div class="panel-body">
+            <%= raw(@pending_action_html) %>
+          </div>
+        <% end %>
         <div class="panel-body">
           <%= if @subscription do %>
             <dl>
@@ -52,11 +57,18 @@
             </dl>
             <br>
 
+            <%!-- TODO: Remove when all customers migrated to SCA/PaymentIntents --%>
             <script>
               window.hexpm_billing_post_action = "<%= @post_action %>";
               window.hexpm_billing_csrf_token = "<%= @csrf_token %>";
             </script>
             <%= raw(@checkout_html) %>
+
+            <%= if @subscription && @subscription["cancel_at_period_end"] && @card do %>
+              <%= form_tag(~p"/dashboard/orgs/#{@organization}/resume-billing", class: "resume-billing", style: "display: inline-block; margin-right: 10px;") do %>
+                <%= submit "Resume subscription", class: "btn btn-success" %>
+              <% end %>
+            <% end %>
 
             <%= form_tag(~p"/dashboard/orgs/#{@organization}/cancel-billing", class: "cancel-billing") do %>
               <%= submit "Cancel subscription", class: "btn btn-danger", disabled: !@subscription || @subscription["cancel_at_period_end"] %>
@@ -125,9 +137,11 @@
             </div>
 
           <% else %>
-            Subscription is not active. <strong>Private packages will not be available</strong> until a payment method has been added.<br><br>
+            <% {title, description} = inactive_subscription_message(@subscription) %>
+            <strong><%= title %></strong> <%= description %><br><br>
             Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.<br><br>
 
+            <%!-- TODO: Remove when all customers migrated to SCA/PaymentIntents --%>
             <script>
               window.hexpm_billing_post_action = "<%= @post_action %>";
               window.hexpm_billing_csrf_token = "<%= @csrf_token %>";
@@ -191,7 +205,7 @@
                       </td>
                     <td><%= dollar_money(!!invoice["refund"], invoice["amount_due"])%></td>
                     <td><%= payment_card(invoice["card"]) %></td>
-                    <td><%= invoice_status(invoice, @organization, @card) %></td>
+                    <td><%= invoice_status(invoice, @organization, @card, @subscription) %></td>
                   </tr>
                 <% end %>
               </tbody>

@@ -98,6 +98,64 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       refute response(conn, 200) =~ "Billing"
       refute response(conn, 200) =~ "Billing information"
     end
+
+    test "shows incomplete subscription status", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      stub(Hexpm.Billing.Mock, :get, fn token ->
+        assert organization.name == token
+
+        %{
+          "checkout_html" => "",
+          "invoices" => [],
+          "subscription" => %{
+            "status" => "incomplete",
+            "current_period_end" => "2017-12-12T00:00:00Z",
+            "cancel_at_period_end" => false
+          },
+          "plan_id" => "organization-monthly",
+          "amount_with_tax" => 700,
+          "quantity" => 1,
+          "proration_amount" => 0
+        }
+      end)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}")
+
+      assert response(conn, 200) =~ "Requires payment confirmation"
+    end
+
+    test "shows incomplete_expired subscription status", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      stub(Hexpm.Billing.Mock, :get, fn token ->
+        assert organization.name == token
+
+        %{
+          "checkout_html" => "",
+          "invoices" => [],
+          "subscription" => %{
+            "status" => "incomplete_expired",
+            "current_period_end" => "2017-12-12T00:00:00Z",
+            "cancel_at_period_end" => false
+          },
+          "plan_id" => "organization-monthly",
+          "amount_with_tax" => 700,
+          "quantity" => 1,
+          "proration_amount" => 0
+        }
+      end)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}")
+
+      assert response(conn, 200) =~ "Payment confirmation expired"
+    end
   end
 
   describe "GET /dashboard/orgs/:dashboard_org/audit-logs" do
@@ -357,6 +415,80 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       audit_logs = AuditLogs.all_by(user)
       assert audit_log = Enum.find(audit_logs, &(&1.action == "billing.cancel"))
       assert audit_log.action == "billing.cancel"
+      assert audit_log.params["organization"]["name"] == organization.name
+    end
+  end
+
+  describe "POST /dashboard/orgs/:dashboard_org/resume-billing" do
+    test "resumes cancelled subscription", %{user: user, organization: organization} do
+      stub(Hexpm.Billing.Mock, :resume, fn token ->
+        assert organization.name == token
+
+        {:ok,
+         %{
+           "subscription" => %{
+             "cancel_at_period_end" => false,
+             "current_period_end" => "2017-12-12T00:00:00Z"
+           }
+         }}
+      end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}/resume-billing")
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Your subscription has been resumed."
+    end
+
+    test "fails when resume returns error", %{user: user, organization: organization} do
+      stub(Hexpm.Billing.Mock, :resume, fn token ->
+        assert organization.name == token
+        {:error, %{"errors" => "No active subscription to resume"}}
+      end)
+
+      stub(Hexpm.Billing.Mock, :get, fn token ->
+        assert organization.name == token
+        %{"checkout_html" => "", "invoices" => []}
+      end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}/resume-billing")
+
+      # On failure, renders the page with an error flash
+      assert html_response(conn, 400)
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "No active subscription to resume"
+    end
+
+    test "create audit_log with action billing.resume", %{user: user, organization: organization} do
+      stub(Hexpm.Billing.Mock, :resume, fn token ->
+        assert organization.name == token
+
+        {:ok,
+         %{
+           "subscription" => %{
+             "cancel_at_period_end" => false,
+             "current_period_end" => "2017-12-12T00:00:00Z"
+           }
+         }}
+      end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      build_conn()
+      |> test_login(user)
+      |> post("/dashboard/orgs/#{organization.name}/resume-billing")
+
+      audit_logs = AuditLogs.all_by(user)
+      assert audit_log = Enum.find(audit_logs, &(&1.action == "billing.resume"))
+      assert audit_log.action == "billing.resume"
       assert audit_log.params["organization"]["name"] == organization.name
     end
   end

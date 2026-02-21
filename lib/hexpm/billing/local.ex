@@ -1,6 +1,7 @@
 defmodule Hexpm.Billing.Local do
   @behaviour Hexpm.Billing.Behaviour
 
+  # TODO: Remove when all customers migrated to SCA/PaymentIntents
   def checkout(_organization, _data) do
     {:ok, %{}}
   end
@@ -15,6 +16,10 @@ defmodule Hexpm.Billing.Local do
 
   def cancel(_organization) do
     %{}
+  end
+
+  def resume(_organization) do
+    {:ok, %{}}
   end
 
   def create(_params) do
@@ -39,5 +44,9 @@ defmodule Hexpm.Billing.Local do
 
   def report() do
     []
+  end
+
+  def pending_payment_action(_organization) do
+    %{"requires_action" => false}
   end
 end

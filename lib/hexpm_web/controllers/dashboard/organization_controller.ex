@@ -169,6 +169,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end)
   end
 
+  # TODO: Remove when all customers migrated to SCA/PaymentIntents
   def billing_token(conn, %{"dashboard_org" => organization, "token" => token}) do
     access_organization(conn, organization, "admin", fn organization ->
       audit = %{audit_data: audit_data(conn), organization: organization}
@@ -197,6 +198,25 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       conn
       |> put_flash(:info, message)
       |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+    end)
+  end
+
+  def resume_billing(conn, %{"dashboard_org" => organization}) do
+    access_organization(conn, organization, "admin", fn organization ->
+      audit = %{audit_data: audit_data(conn), organization: organization}
+
+      case Hexpm.Billing.resume(organization.name, audit: audit) do
+        {:ok, _customer} ->
+          conn
+          |> put_flash(:info, "Your subscription has been resumed.")
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+
+        {:error, reason} ->
+          conn
+          |> put_status(400)
+          |> put_flash(:error, reason["errors"] || "Failed to resume subscription.")
+          |> render_index(organization)
+      end
     end)
   end
 
@@ -542,12 +562,15 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       invoices: nil,
       person: nil,
       company: nil,
+      pending_action_html: nil,
+      # TODO: Remove when all customers migrated to SCA/PaymentIntents
       post_action: nil,
       csrf_token: nil
     ]
   end
 
   defp customer_assigns(customer, organization) do
+    # TODO: Remove when all customers migrated to SCA/PaymentIntents
     post_action = ~p"/dashboard/orgs/#{organization}/billing-token"
 
     [
@@ -569,6 +592,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       invoices: customer["invoices"],
       person: customer["person"],
       company: customer["company"],
+      pending_action_html: customer["pending_action_html"],
+      # TODO: Remove when all customers migrated to SCA/PaymentIntents
       post_action: post_action,
       csrf_token: get_csrf_token()
     ]
