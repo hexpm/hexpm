@@ -562,6 +562,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       invoices: nil,
       person: nil,
       company: nil,
+      pending_action_html: nil,
       # TODO: Remove when all customers migrated to SCA/PaymentIntents
       post_action: nil,
       csrf_token: nil
@@ -591,6 +592,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       invoices: customer["invoices"],
       person: customer["person"],
       company: customer["company"],
+      pending_action_html: customer["pending_action_html"],
       # TODO: Remove when all customers migrated to SCA/PaymentIntents
       post_action: post_action,
       csrf_token: get_csrf_token()

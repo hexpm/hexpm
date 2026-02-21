@@ -2,6 +2,11 @@
     <div class="panel panel-default">
       <div class="panel-heading">Billing</div>
       <%= if @billing_started? do %>
+        <%= if @pending_action_html do %>
+          <div class="panel-body">
+            <%= raw(@pending_action_html) %>
+          </div>
+        <% end %>
         <div class="panel-body">
           <%= if @subscription do %>
             <dl>
