@@ -462,8 +462,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> test_login(user)
         |> post("/dashboard/orgs/#{organization.name}/resume-billing")
 
-      # On failure, renders the page with an error flash
-      assert html_response(conn, 400)
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) == "No active subscription to resume"
     end
 
@@ -588,7 +587,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> test_login(user)
         |> post("/dashboard/orgs/#{organization.name}/invoices/123/pay")
 
-      response(conn, 400)
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
                "Failed to pay invoice: Card failure."
@@ -798,7 +797,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
           "add-seats" => "1"
         })
 
-      response(conn, 400)
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
                "The number of open seats cannot be less than the number of organization members."
@@ -817,7 +816,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
           "add-seats" => "2"
         })
 
-      response(conn, 400)
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Invalid seat numbers."
     end
 
@@ -877,7 +876,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
           "seats" => "1"
         })
 
-      response(conn, 400)
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
                "The number of open seats cannot be less than the number of organization members."
@@ -895,7 +894,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
           "seats" => "invalid"
         })
 
-      response(conn, 400)
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Invalid seat number."
     end
 
@@ -1014,7 +1013,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> test_login(c.user)
         |> delete("/dashboard/orgs/#{c.organization.name}/keys", %{name: "computer"})
 
-      assert response(conn, 400) =~ "The key computer was not found"
+      assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "The key computer was not found."
     end
   end
 
@@ -1055,8 +1055,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
           profile: %{public_email: "invalid_email"}
         })
 
+      assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Oops, something went wrong!"
-      assert response(conn, 400)
     end
   end
 end

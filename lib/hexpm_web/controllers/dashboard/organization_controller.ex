@@ -156,15 +156,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
           {:error, :last_member} ->
             conn
-            |> put_status(400)
             |> put_flash(:error, "The last member of an organization cannot leave.")
-            |> render_index(organization)
+            |> redirect(to: ~p"/dashboard/orgs/#{organization}")
         end
       else
         conn
-        |> put_status(400)
         |> put_flash(:error, "Invalid organization name.")
-        |> render_index(organization)
+        |> redirect(to: ~p"/dashboard/orgs/#{organization}")
       end
     end)
   end
@@ -213,9 +211,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
         {:error, reason} ->
           conn
-          |> put_status(400)
           |> put_flash(:error, reason["errors"] || "Failed to resume subscription.")
-          |> render_index(organization)
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}")
       end
     end)
   end
@@ -264,9 +261,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
               {:error, reason} ->
                 conn
-                |> put_status(400)
                 |> put_flash(:error, "Failed to pay invoice: #{reason["errors"]}.")
-                |> render_index(organization)
+                |> redirect(to: ~p"/dashboard/orgs/#{organization}")
             end
           else
             not_found(conn)
@@ -312,9 +308,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
       if is_nil(current_seats) or is_nil(add_seats_val) do
         conn
-        |> put_status(400)
         |> put_flash(:error, "Invalid seat numbers.")
-        |> render_index(organization)
+        |> redirect(to: ~p"/dashboard/orgs/#{organization}")
       else
         user_count = Organizations.user_count(organization)
         seats = current_seats + add_seats_val
@@ -330,15 +325,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
             {:error, reason} ->
               conn
-              |> put_status(400)
               |> put_flash(:error, reason["errors"] || "Failed to update billing information.")
-              |> render_index(organization)
+              |> redirect(to: ~p"/dashboard/orgs/#{organization}")
           end
         else
           conn
-          |> put_status(400)
           |> put_flash(:error, @not_enough_seats)
-          |> render_index(organization)
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}")
         end
       end
     end)
@@ -350,9 +343,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
       if is_nil(seats) do
         conn
-        |> put_status(400)
         |> put_flash(:error, "Invalid seat number.")
-        |> render_index(organization)
+        |> redirect(to: ~p"/dashboard/orgs/#{organization}")
       else
         user_count = Organizations.user_count(organization)
 
@@ -367,15 +359,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
             {:error, reason} ->
               conn
-              |> put_status(400)
               |> put_flash(:error, reason["errors"] || "Failed to update billing information.")
-              |> render_index(organization)
+              |> redirect(to: ~p"/dashboard/orgs/#{organization}")
           end
         else
           conn
-          |> put_status(400)
           |> put_flash(:error, @not_enough_seats)
-          |> render_index(organization)
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}")
         end
       end
     end)
@@ -473,9 +463,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
         {:error, _} ->
           conn
-          |> put_status(400)
           |> put_flash(:error, "The key #{name} was not found.")
-          |> render_index(organization)
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}")
       end
     end)
   end
@@ -490,9 +479,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
         {:error, _} ->
           conn
-          |> put_status(400)
           |> put_flash(:error, "Oops, something went wrong!")
-          |> render_index(organization)
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}")
       end
     end)
   end
