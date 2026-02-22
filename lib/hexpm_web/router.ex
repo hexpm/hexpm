@@ -42,6 +42,18 @@ defmodule HexpmWeb.Router do
     plug :default_repository
   end
 
+  pipeline :browser_api do
+    plug :accepts, ["json"]
+    plug :fetch_session
+    plug :put_secure_browser_headers
+    plug :user_agent, required: false
+    plug :validate_url
+    plug HexpmWeb.Plugs.Attack
+    plug :login
+    plug :disable_deactivated
+    plug :default_repository
+  end
+
   pipeline :admin do
     plug HexpmWeb.Plugs.DashboardAuth
   end
@@ -215,6 +227,12 @@ defmodule HexpmWeb.Router do
     delete "/sessions", SessionController, :delete
 
     get "/audit-logs", AuditLogController, :index
+  end
+
+  scope "/dashboard", HexpmWeb.Dashboard do
+    pipe_through :browser_api
+
+    post "/billing-api/*path", BillingProxyController, :proxy
   end
 
   scope "/", HexpmWeb do

@@ -1,7 +1,8 @@
 import Config
 
 config :hexpm,
-  billing_report: false,
+  billing_report: true,
+  billing_impl: Hexpm.Billing.Hexpm,
   secret: "796f75666f756e64746865686578",
   jwt_signing_key: """
   -----BEGIN EC PRIVATE KEY-----

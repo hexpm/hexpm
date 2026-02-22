@@ -62,17 +62,36 @@
               window.hexpm_billing_post_action = "<%= @post_action %>";
               window.hexpm_billing_csrf_token = "<%= @csrf_token %>";
             </script>
-            <%= raw(@checkout_html) %>
 
-            <%= if @subscription && @subscription["cancel_at_period_end"] && @card do %>
-              <%= form_tag(~p"/dashboard/orgs/#{@organization}/resume-billing", class: "resume-billing", style: "display: inline-block; margin-right: 10px;") do %>
-                <%= submit "Resume subscription", class: "btn btn-success" %>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#payment-method-modal">
+                <%= if @card do %>Update payment method<% else %>Add payment method<% end %>
+              </button>
+
+              <%= if @subscription && @subscription["cancel_at_period_end"] && @card do %>
+                <%= form_tag(~p"/dashboard/orgs/#{@organization}/resume-billing", class: "resume-billing") do %>
+                  <%= submit "Resume subscription", class: "btn btn-success" %>
+                <% end %>
               <% end %>
-            <% end %>
 
-            <%= form_tag(~p"/dashboard/orgs/#{@organization}/cancel-billing", class: "cancel-billing") do %>
-              <%= submit "Cancel subscription", class: "btn btn-danger", disabled: !@subscription || @subscription["cancel_at_period_end"] %>
-            <% end %>
+              <%= form_tag(~p"/dashboard/orgs/#{@organization}/cancel-billing", class: "cancel-billing") do %>
+                <%= submit "Cancel subscription", class: "btn btn-danger", disabled: !@subscription || @subscription["cancel_at_period_end"] %>
+              <% end %>
+            </div>
+
+            <div class="modal fade" id="payment-method-modal" tabindex="-1" role="dialog">
+              <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">Payment method</h4>
+                  </div>
+                  <div class="modal-body">
+                    <%= raw(@checkout_html) %>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <div class="modal fade" id="add-seats" tabindex="-1" role="dialog" >
               <div class="modal-dialog" role="document">
@@ -146,15 +165,24 @@
               window.hexpm_billing_post_action = "<%= @post_action %>";
               window.hexpm_billing_csrf_token = "<%= @csrf_token %>";
             </script>
-            <%= raw(@checkout_html) %>
 
-            <button type="button" class="btn btn-default" data-toggle="modal" data-target="#change-plan">
-              <%= if @plan_id == "organization-monthly" do %>
-                Switch to annual plan
-              <% else %>
-                Switch to monthly plan
-              <% end %>
+            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#payment-method-modal">
+              Add payment method
             </button>
+
+            <div class="modal fade" id="payment-method-modal" tabindex="-1" role="dialog">
+              <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">Payment method</h4>
+                  </div>
+                  <div class="modal-body">
+                    <%= raw(@checkout_html) %>
+                  </div>
+                </div>
+              </div>
+            </div>
           <% end %>
         </div>
 
@@ -162,18 +190,18 @@
           <h4>Billing information</h4>
           <div>
             <ul class="nav nav-tabs" role="tablist">
-              <li role="presentation" class="<%= if show_person?(@person, @errors) do %>active<% end %>"><a href="#person" aria-controls="person" role="tab" data-toggle="tab">Person</a></li>
-              <li role="presentation" class="<%= if show_company?(@company, @errors) do %>active<% end %>"><a href="#company" aria-controls="company" role="tab" data-toggle="tab">Company</a></li>
+              <li role="presentation" class="<%= if show_person?(@person, @company, @errors) do %>active<% end %>"><a href="#person" aria-controls="person" role="tab" data-toggle="tab">Person</a></li>
+              <li role="presentation" class="<%= if show_company?(@person, @company, @errors) do %>active<% end %>"><a href="#company" aria-controls="company" role="tab" data-toggle="tab">Company</a></li>
             </ul>
 
             <div class="tab-content">
-              <div role="tabpanel" class="tab-pane <%= if show_person?(@person, @errors) do %>active<% end %>" id="person">
+              <div role="tabpanel" class="tab-pane <%= if show_person?(@person, @company, @errors) do %>active<% end %>" id="person">
                 <%= form_tag(~p"/dashboard/orgs/#{@organization}/update-billing") do %>
                   <%= render "_billing_person.html", assigns %>
                   <%= submit "Save", class: "btn btn-primary" %>
                 <% end %>
               </div>
-              <div role="tabpanel" class="tab-pane <%= if show_company?(@company, @errors) do %>active<% end %>" id="company">
+              <div role="tabpanel" class="tab-pane <%= if show_company?(@person, @company, @errors) do %>active<% end %>" id="company">
                 <%= form_tag(~p"/dashboard/orgs/#{@organization}/update-billing") do %>
                   <%= render "_billing_company.html", assigns %>
                   <%= submit "Save", class: "btn btn-primary" %>
@@ -228,18 +256,18 @@
           <h4>Billing information</h4>
           <div>
             <ul class="nav nav-tabs" role="tablist">
-              <li role="presentation" class="active"><a href="#person" aria-controls="person" role="tab" data-toggle="tab">Person</a></li>
-              <li role="presentation"><a href="#company" aria-controls="company" role="tab" data-toggle="tab">Company</a></li>
+              <li role="presentation"><a href="#person" aria-controls="person" role="tab" data-toggle="tab">Person</a></li>
+              <li role="presentation" class="active"><a href="#company" aria-controls="company" role="tab" data-toggle="tab">Company</a></li>
             </ul>
 
             <div class="tab-content">
-              <div role="tabpanel" class="tab-pane active" id="person">
+              <div role="tabpanel" class="tab-pane" id="person">
                 <%= form_tag(~p"/dashboard/orgs/#{@organization}/create-billing") do %>
                   <%= render "_billing_person.html", assigns %>
                   <%= submit "Save", class: "btn btn-primary" %>
                 <% end %>
               </div>
-              <div role="tabpanel" class="tab-pane" id="company">
+              <div role="tabpanel" class="tab-pane active" id="company">
                 <%= form_tag(~p"/dashboard/orgs/#{@organization}/create-billing") do %>
                   <%= render "_billing_company.html", assigns %>
                   <%= submit "Save", class: "btn btn-primary" %>
@@ -251,3 +279,33 @@
       <% end %>
     </div>
   </div>
+
+  <script>
+  (function() {
+    // Show loading state on billing form submissions
+    document.addEventListener('submit', function(event) {
+      var form = event.target;
+      // Skip the Stripe payment form - it handles its own loading state
+      if (form.id === 'payment-form') return;
+
+      var button = form.querySelector('button[type="submit"], input[type="submit"]');
+      if (button && !button.disabled) {
+        button.disabled = true;
+        if (button.tagName === 'INPUT') {
+          button.value = 'Processing...';
+        } else {
+          button.textContent = 'Processing...';
+        }
+      }
+    });
+
+    // Close modal and reload page after successful payment method setup
+    window.hexpm_billing_success = function() {
+      var modal = document.getElementById('payment-method-modal');
+      if (modal) {
+        $(modal).modal('hide');
+      }
+      window.location.reload();
+    };
+  })();
+  </script>

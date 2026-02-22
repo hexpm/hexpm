@@ -584,12 +584,12 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
     unquote([{"", ""}] ++ Enum.sort_by(@country_codes, &elem(&1, 1)))
   end
 
-  defp show_person?(person, errors) do
-    (person || errors["person"]) && !errors["company"]
+  defp show_person?(person, company, errors) do
+    (person || errors["person"]) && !company && !errors["company"]
   end
 
-  defp show_company?(company, errors) do
-    (company || errors["company"]) && !errors["person"]
+  defp show_company?(person, company, errors) do
+    !show_person?(person, company, errors)
   end
 
   defp organization_admin?(current_user, organization) do
