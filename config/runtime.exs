@@ -27,8 +27,14 @@ if config_env() == :prod do
     sitekey: System.fetch_env!("HEXPM_HCAPTCHA_SITEKEY"),
     secret: System.fetch_env!("HEXPM_HCAPTCHA_SECRET")
 
+  hexpm_port =
+    case System.get_env("HEXPM_PORT") do
+      port when port not in [nil, ""] -> String.to_integer(port)
+      _ -> nil
+    end
+
   config :hexpm, HexpmWeb.Endpoint,
-    http: [port: String.to_integer(System.get_env("HEXPM_PORT"))],
+    http: [port: hexpm_port],
     url: [host: System.fetch_env!("HEXPM_HOST")],
     secret_key_base: System.fetch_env!("HEXPM_SECRET_KEY_BASE"),
     live_view: [signing_salt: System.fetch_env!("HEXPM_LIVE_VIEW_SIGNING_SALT")],
