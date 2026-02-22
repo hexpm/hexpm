@@ -266,6 +266,25 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
   end
 
   defp invoice_status(
+         %{
+           "paid" => false,
+           "attempted" => true,
+           "payment_intent_client_secret" => client_secret,
+           "payment_method" => payment_method
+         },
+         _organization,
+         _card,
+         _subscription
+       )
+       when is_binary(client_secret) do
+    content_tag(:button, "Authenticate payment",
+      type: "button",
+      class: "btn btn-warning btn-xs sca-pay-button",
+      data: [client_secret: client_secret, payment_method: payment_method]
+    )
+  end
+
+  defp invoice_status(
          %{"paid" => false, "attempted" => true, "id" => invoice_id},
          organization,
          _card,

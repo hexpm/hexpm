@@ -5,6 +5,12 @@
     <%= render DashboardView, "_sidebar.html", assigns %>
   </div>
 
+  <%= if @pending_action_html do %>
+    <div class="col-sm-9" style="margin-bottom: 20px; margin-top: -20px;">
+      <%= raw(@pending_action_html) %>
+    </div>
+  <% end %>
+
   <div class="col-sm-9 organization members">
     <div class="panel panel-default">
       <div class="panel-heading">Public profile</div>
@@ -283,15 +289,27 @@
       </div>
       <%= form_tag ~p"/dashboard/orgs/#{@organization}/leave" do %>
         <div class="modal-body">
-          <p>This action cannot be undone. You will permanently leave the organization <strong><%= @organization.name %>.</p>
+          <p>This action cannot be undone. You will permanently leave the organization <strong><%= @organization.name %></strong>.</p>
           <p>Please type <strong><%= @organization.name %></strong> to confirm.</p>
-          <input type="text" name="organization_name" style="width: 100%; margin-top: 15px;" autocomplete="off" required>
+          <input type="text" name="organization_name" id="leave-org-confirm" data-expected="<%= @organization.name %>" class="form-control" style="margin-top: 15px;" autocomplete="off" required>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-          <%= submit "Leave", class: "btn btn-danger" %>
+          <%= submit "Leave", class: "btn btn-danger", id: "leave-org-submit", disabled: true %>
         </div>
       <% end %>
     </div>
   </div>
 </div>
+
+<script>
+(function() {
+  var input = document.getElementById('leave-org-confirm');
+  var button = document.getElementById('leave-org-submit');
+  if (input && button) {
+    input.addEventListener('input', function() {
+      button.disabled = input.value !== input.getAttribute('data-expected');
+    });
+  }
+})();
+</script>

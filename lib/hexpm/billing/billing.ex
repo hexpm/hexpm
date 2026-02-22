@@ -65,9 +65,16 @@ defmodule Hexpm.Billing do
         Repo.insert!(audit(audit_data, "billing.update", {organization, params}))
         {:ok, result}
 
+      {:requires_action, result} ->
+        {:requires_action, result}
+
       {:error, reason} ->
         {:error, reason}
     end
+  end
+
+  def void_invoice(payments_token) do
+    impl().void_invoice(payments_token)
   end
 
   def change_plan(organization_name, params,

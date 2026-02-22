@@ -323,6 +323,16 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
               |> put_flash(:info, "The number of open seats have been increased.")
               |> redirect(to: ~p"/dashboard/orgs/#{organization}")
 
+            {:requires_action, body} ->
+              conn
+              |> put_status(402)
+              |> json(%{
+                requires_action: true,
+                client_secret: body["client_secret"],
+                invoice_id: body["invoice_id"],
+                stripe_publishable_key: body["stripe_publishable_key"]
+              })
+
             {:error, reason} ->
               conn
               |> put_flash(:error, reason["errors"] || "Failed to update billing information.")
@@ -368,6 +378,16 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
           |> redirect(to: ~p"/dashboard/orgs/#{organization}")
         end
       end
+    end)
+  end
+
+  def void_invoice(conn, %{"dashboard_org" => organization, "invoice_id" => invoice_id}) do
+    access_organization(conn, organization, "admin", fn organization ->
+      Hexpm.Billing.void_invoice(invoice_id)
+
+      conn
+      |> put_flash(:error, "Payment authentication failed or was cancelled.")
+      |> redirect(to: ~p"/dashboard/orgs/#{organization}")
     end)
   end
 
@@ -551,6 +571,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       person: nil,
       company: nil,
       pending_action_html: nil,
+      stripe_publishable_key: nil,
       # TODO: Remove when all customers migrated to SCA/PaymentIntents
       post_action: nil,
       csrf_token: nil
@@ -581,6 +602,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       person: customer["person"],
       company: customer["company"],
       pending_action_html: customer["pending_action_html"],
+      stripe_publishable_key: customer["stripe_publishable_key"],
       # TODO: Remove when all customers migrated to SCA/PaymentIntents
       post_action: post_action,
       csrf_token: get_csrf_token()

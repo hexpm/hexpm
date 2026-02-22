@@ -45,8 +45,15 @@ defmodule Hexpm.Billing.Hexpm do
   def update(organization, params) do
     case patch("/api/customers/#{organization}", params) do
       {:ok, 200, _headers, body} -> {:ok, body}
+      {:ok, 402, _headers, body} -> {:requires_action, body}
       {:ok, 404, _headers, _body} -> {:ok, nil}
       {:ok, 422, _headers, body} -> {:error, body}
+    end
+  end
+
+  def void_invoice(payments_token) do
+    case post("/api/invoices/#{payments_token}/void", %{}) do
+      {:ok, 204, _headers, _body} -> :ok
     end
   end
 

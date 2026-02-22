@@ -7,9 +7,11 @@ defmodule Hexpm.Billing.Behaviour do
   @callback cancel(organization()) :: map()
   @callback resume(organization()) :: {:ok, map()} | {:error, map()}
   @callback create(map()) :: {:ok, map()} | {:error, map()}
-  @callback update(organization(), map()) :: {:ok, map()} | {:error, map()}
+  @callback update(organization(), map()) ::
+              {:ok, map()} | {:requires_action, map()} | {:error, map()}
   @callback change_plan(organization(), map()) :: :ok
   @callback invoice(id :: pos_integer()) :: binary()
+  @callback void_invoice(payments_token :: String.t()) :: :ok
   @callback pay_invoice(id :: pos_integer()) :: :ok | {:error, map()}
   @callback report() :: [map()]
   @callback pending_payment_action(organization()) :: map()
