@@ -89,17 +89,6 @@ defmodule Hexpm.Billing.Hexpm do
     body
   end
 
-  def pending_payment_action(organization) do
-    result =
-      fn -> get_json("/api/customers/#{organization}/pending_action") end
-      |> Hexpm.HTTP.retry("billing")
-
-    case result do
-      {:ok, 200, _headers, body} -> body
-      {:ok, 404, _headers, _body} -> %{"requires_action" => false}
-    end
-  end
-
   defp auth() do
     Application.get_env(:hexpm, :billing_key)
   end

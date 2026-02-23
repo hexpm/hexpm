@@ -255,7 +255,7 @@
         <%= if @subscription do %>
           <%= if @quantity do %>
             With <strong><%= @quantity %> user(s)</strong>, your next invoice will be
-            <strong><%= plan_change_invoice_amount(@plan_id, @quantity) %></strong>
+            <strong><%= new_plan_cost(@plan_id, @quantity) %></strong>
             (before tax) on <%= payment_date(@subscription["current_period_end"]) %>.
           <% else %>
             Your first invoice for the new plan will be on <%= payment_date(@subscription["current_period_end"]) %>.

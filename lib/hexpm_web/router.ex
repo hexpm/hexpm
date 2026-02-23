@@ -45,6 +45,7 @@ defmodule HexpmWeb.Router do
   pipeline :browser_api do
     plug :accepts, ["json"]
     plug :fetch_session
+    plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug :user_agent, required: false
     plug :validate_url

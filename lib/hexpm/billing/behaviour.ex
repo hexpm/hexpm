@@ -14,5 +14,4 @@ defmodule Hexpm.Billing.Behaviour do
   @callback void_invoice(payments_token :: String.t()) :: :ok
   @callback pay_invoice(id :: pos_integer()) :: :ok | {:error, map()}
   @callback report() :: [map()]
-  @callback pending_payment_action(organization()) :: map()
 end

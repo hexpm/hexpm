@@ -49,8 +49,4 @@ defmodule Hexpm.Billing.Local do
   def report() do
     []
   end
-
-  def pending_payment_action(_organization) do
-    %{"requires_action" => false}
-  end
 end

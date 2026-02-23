@@ -31,17 +31,17 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
   defp plan_price("organization-monthly"), do: "$7.00"
   defp plan_price("organization-annually"), do: "$70.00"
 
-  def plan_change_invoice_amount("organization-monthly", quantity) when is_integer(quantity) do
+  def new_plan_cost("organization-monthly", quantity) when is_integer(quantity) do
     # Switching FROM monthly TO annual
     "$#{:erlang.float_to_binary(quantity * 70.0, decimals: 2)}"
   end
 
-  def plan_change_invoice_amount("organization-annually", quantity) when is_integer(quantity) do
+  def new_plan_cost("organization-annually", quantity) when is_integer(quantity) do
     # Switching FROM annual TO monthly
     "$#{:erlang.float_to_binary(quantity * 7.0, decimals: 2)}"
   end
 
-  def plan_change_invoice_amount(_, _), do: nil
+  def new_plan_cost(_, _), do: nil
 
   defp proration_description("organization-monthly", price, days, quantity, quantity) do
     assigns = %{days: days, price: money(price)}

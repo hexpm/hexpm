@@ -93,22 +93,6 @@ export default class App {
       })
     }
 
-    // Set up billing callbacks for SCA/3D Secure flow
-    window.hexpm_billing_success = this.onBillingSuccess.bind(this)
-    window.hexpm_billing_error = this.onBillingError.bind(this)
-  }
-
-  onBillingSuccess() {
-    window.location.reload()
-  }
-
-  onBillingError(error) {
-    $('div.flash').html(
-      '<div class="alert alert-danger" role="alert">' +
-      '<strong>Failed to update payment method</strong><br>' +
-      (error.message || JSON.stringify(error)) +
-      '</div>'
-    )
   }
 
   onDataCopy(event) {

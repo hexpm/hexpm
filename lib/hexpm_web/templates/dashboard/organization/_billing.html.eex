@@ -326,6 +326,17 @@
       window.location.reload();
     };
 
+    window.hexpm_billing_error = function(error) {
+      var flash = document.querySelector('div.flash');
+      if (flash) {
+        flash.innerHTML =
+          '<div class="alert alert-danger" role="alert">' +
+          '<strong>Failed to update payment method</strong><br>' +
+          (error.message || JSON.stringify(error)) +
+          '</div>';
+      }
+    };
+
     // Handle add-seats form with inline 3DS authentication
     var addSeatsForm = document.getElementById('add-seats-form');
     if (addSeatsForm) {

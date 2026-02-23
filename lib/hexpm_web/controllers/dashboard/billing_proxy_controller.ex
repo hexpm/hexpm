@@ -5,7 +5,10 @@ defmodule HexpmWeb.Dashboard.BillingProxyController do
 
   @timeout 15_000
 
-  def proxy(conn, %{"path" => ["api", "customers", organization | _] = path}) do
+  @allowed_actions ~w(setup_intent confirm_setup_intent)
+
+  def proxy(conn, %{"path" => ["api", "customers", organization, action] = path})
+      when action in @allowed_actions do
     access_organization(conn, organization, "admin", fn _organization ->
       billing_url = Application.get_env(:hexpm, :billing_url)
       billing_key = Application.get_env(:hexpm, :billing_key)
@@ -31,6 +34,12 @@ defmodule HexpmWeb.Dashboard.BillingProxyController do
           |> send_resp(502, Jason.encode!(%{"errors" => inspect(reason)}))
       end
     end)
+  end
+
+  def proxy(conn, _params) do
+    conn
+    |> put_resp_content_type("application/json")
+    |> send_resp(404, Jason.encode!(%{"errors" => "Not found"}))
   end
 
   defp encode_body(body) when is_binary(body), do: body

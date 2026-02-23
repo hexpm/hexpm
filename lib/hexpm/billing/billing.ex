@@ -13,7 +13,6 @@ defmodule Hexpm.Billing do
   def invoice(id), do: impl().invoice(id)
   def pay_invoice(id), do: impl().pay_invoice(id)
   def report(), do: impl().report()
-  def pending_payment_action(organization), do: impl().pending_payment_action(organization)
 
   # TODO: Remove when all customers migrated to SCA/PaymentIntents
   def checkout(organization_name, data,
