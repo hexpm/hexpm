@@ -33,12 +33,21 @@ if config_env() == :prod do
       _ -> nil
     end
 
-  config :hexpm, HexpmWeb.Endpoint,
-    http: [port: hexpm_port],
+  endpoint_config = [
     url: [host: System.fetch_env!("HEXPM_HOST")],
     secret_key_base: System.fetch_env!("HEXPM_SECRET_KEY_BASE"),
     live_view: [signing_salt: System.fetch_env!("HEXPM_LIVE_VIEW_SIGNING_SALT")],
     check_origin: ["//#{System.fetch_env!("HEXPM_HOST")}"]
+  ]
+
+  endpoint_config =
+    if hexpm_port do
+      [{:http, [port: hexpm_port]} | endpoint_config]
+    else
+      [{:server, false} | endpoint_config]
+    end
+
+  config :hexpm, HexpmWeb.Endpoint, endpoint_config
 
   config :ex_aws,
     access_key_id: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_ID"),
