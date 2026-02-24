@@ -1,6 +1,8 @@
 defmodule Hexpm.Repository.Owners do
   use Hexpm.Context
 
+  alias Hexpm.Accounts.OptionalEmails
+
   def all(package, preload \\ []) do
     assoc(package, :package_owners)
     |> Repo.all()
@@ -57,9 +59,12 @@ defmodule Hexpm.Repository.Owners do
           |> Enum.map(& &1.user)
           |> Kernel.++([user])
           |> Repo.preload(organization: [organization_users: [user: :emails]])
+          |> Enum.filter(&OptionalEmails.allowed?(&1, :owner_added_to_package))
 
-        Emails.owner_added(package, owners, user)
-        |> Mailer.deliver_later!()
+        if owners != [] do
+          Emails.owner_added(package, owners, user)
+          |> Mailer.deliver_later!()
+        end
 
         {:ok, %{owner | user: user}}
 
@@ -116,9 +121,12 @@ defmodule Hexpm.Repository.Owners do
           owners
           |> Enum.map(& &1.user)
           |> Repo.preload(organization: [users: :emails])
+          |> Enum.filter(&OptionalEmails.allowed?(&1, :owner_removed_from_package))
 
-        Emails.owner_removed(package, owners, owner.user)
-        |> Mailer.deliver_later!()
+        if owners != [] do
+          Emails.owner_removed(package, owners, owner.user)
+          |> Mailer.deliver_later!()
+        end
 
         :ok
     end

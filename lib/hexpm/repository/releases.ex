@@ -1,6 +1,8 @@
 defmodule Hexpm.Repository.Releases do
   use Hexpm.Context
 
+  alias Hexpm.Accounts.OptionalEmails
+
   @publish_timeout 60_000
 
   def all(package) do
@@ -242,10 +244,16 @@ defmodule Hexpm.Repository.Releases do
   end
 
   defp email_package_owners(package, release, publisher) do
-    Hexpm.Repo.all(assoc(package, :owners))
-    |> Hexpm.Repo.preload([:emails, organization: [users: :emails]])
-    |> Emails.package_published(publisher, package.name, release.version)
-    |> Mailer.deliver_later!()
+    owners =
+      Hexpm.Repo.all(assoc(package, :owners))
+      |> Hexpm.Repo.preload([:emails, organization: [users: :emails]])
+      |> Enum.filter(&OptionalEmails.allowed?(&1, :package_published))
+
+    if owners != [] do
+      owners
+      |> Emails.package_published(publisher, package.name, release.version)
+      |> Mailer.deliver_later!()
+    end
   end
 
   if Mix.env() == :test do

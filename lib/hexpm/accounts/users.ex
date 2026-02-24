@@ -1,7 +1,7 @@
 defmodule Hexpm.Accounts.Users do
   use Hexpm.Context
 
-  alias Hexpm.Accounts.{RecoveryCode, TFA, UserProvider}
+  alias Hexpm.Accounts.{OptionalEmails, RecoveryCode, TFA, UserProvider}
 
   def get(username_or_email, preload \\ [])
 
@@ -177,6 +177,25 @@ defmodule Hexpm.Accounts.Users do
         Email.changeset(build_assoc(user, :emails), :create_for_org, params, false)
       )
     end)
+  end
+
+  def update_optional_emails(user, params, audit: audit_data) do
+    old_preferences = OptionalEmails.preferences(user)
+    new_preferences = OptionalEmails.normalize_preferences(params)
+    changeset = User.optional_emails_changeset(user, new_preferences)
+
+    multi =
+      Multi.new()
+      |> Multi.update(:user, changeset)
+      |> audit(audit_data, "email.options", {old_preferences, new_preferences})
+
+    case Repo.transaction(multi) do
+      {:ok, %{user: user}} ->
+        {:ok, user}
+
+      {:error, :user, changeset, _} ->
+        {:error, changeset}
+    end
   end
 
   def update_password(%User{organization_id: id} = user, _params, _opts) when not is_nil(id) do
