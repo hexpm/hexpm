@@ -23,6 +23,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install OTP and Elixir
         uses: erlef/setup-beam@v1
@@ -70,6 +72,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install OTP and Elixir
         uses: erlef/setup-beam@v1
@@ -121,6 +125,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install OTP and Elixir
         uses: erlef/setup-beam@v1
@@ -180,6 +186,8 @@ jobs:
       WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCLOUD_WORKFLOW_IDENTITY_POOL_PROVIDER }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Google auth
