@@ -185,3 +185,12 @@
   padding: 6px 12px;
   height: variables.$form-input-height;
 }
+
+// Copy button icon states
+.copy-icon-hidden {
+  display: none;
+}
+
+.copy-icon-success {
+  color: green;
+}

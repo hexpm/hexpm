@@ -7,7 +7,7 @@
       <%= assigns[:auth_description] || "The application" %> <strong><%= @client_name %></strong> would like to access your Hex account.
     </p>
 
-    <h4 style="color: #212529; font-weight: 600; margin-top: 25px; margin-bottom: 16px; font-size: 18px;">Requested permissions:</h4>
+    <h4 class="authorization-permissions-heading">Requested permissions:</h4>
 
     <%= form_tag @form_action, method: "post", id: "authorization-form" do %>
       <%= @render_scopes.(@scopes) %>
@@ -16,10 +16,10 @@
         <input type="hidden" name="<%= key %>" value="<%= value %>">
       <% end %>
 
-      <div class="text-center" style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #dee2e6;">
-        <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
-          <%= submit "Authorize", name: "action", value: @approve_value, class: "btn btn-primary btn-lg", style: "flex: 1; min-width: 200px; max-width: 250px; padding: 14px 24px; font-weight: 600; border-radius: 8px; font-size: 16px;" %>
-          <%= submit "Deny", name: "action", value: @deny_value, class: "btn btn-danger btn-lg", style: "flex: 1; min-width: 200px; max-width: 250px; padding: 14px 24px; font-weight: 600; border-radius: 8px; font-size: 16px;" %>
+      <div class="text-center authorization-actions">
+        <div class="authorization-button-group">
+          <%= submit "Authorize", name: "action", value: @approve_value, class: "btn btn-primary btn-lg authorization-btn" %>
+          <%= submit "Deny", name: "action", value: @deny_value, class: "btn btn-danger btn-lg authorization-btn" %>
         </div>
       </div>
     <% end %>

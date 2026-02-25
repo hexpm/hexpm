@@ -1,5 +1,5 @@
 <%= if @error_message do %>
-  <div class="alert alert-danger" style="margin-bottom: 20px;">
+  <div class="alert alert-danger device-alert-mb">
     <%= @error_message %>
   </div>
 <% end %>
@@ -13,32 +13,31 @@
     </div>
     <div class="panel-body">
       <%= if @pre_filled do %>
-        <div class="alert alert-warning" style="margin-bottom: 24px; padding: 16px 20px; border-radius: 8px; background-color: #fff3cd; border: 2px solid #ffc107; color: #856404; display: flex; align-items: flex-start; gap: 12px;">
-          <i class="fa fa-exclamation-triangle" style="font-size: 20px; margin-top: 2px;"></i>
+        <div class="alert alert-warning device-security-alert">
+          <i class="fa fa-exclamation-triangle device-security-alert-icon"></i>
           <div>
-            <strong style="font-weight: 600; display: block; margin-bottom: 4px;">Security Check:</strong>
+            <strong class="device-security-alert-title">Security Check:</strong>
             <span>Please verify that this code matches the one displayed on your device or terminal before continuing.</span>
           </div>
         </div>
       <% else %>
-        <p style="color: #495057; font-size: 15px; line-height: 1.6;">Enter the verification code displayed on your device:</p>
+        <p class="device-instruction-text">Enter the verification code displayed on your device:</p>
       <% end %>
 
       <%= form_tag(~p"/oauth/device", method: "get") do %>
-        <div class="form-group" style="margin-bottom: 24px;">
-          <label for="user_code" style="font-weight: 600; color: #212529; margin-bottom: 10px; display: block; font-size: 15px;">Verification Code</label>
+        <div class="form-group device-form-group">
+          <label for="user_code" class="device-code-label">Verification Code</label>
           <input id="user_code"
                  type="text"
-                 class="form-control"
+                 class="form-control device-code-input<%= if @pre_filled, do: " device-code-input--prefilled" %>"
                  name="user_code"
                  value="<%= format_user_code(@user_code) %>"
                  placeholder="XXXX-XXXX"
                  pattern="[A-Z0-9]{4}-?[A-Z0-9]{4}"
                  maxlength="9"
-                 style="text-transform: uppercase; font-family: monospace; font-size: 18px; text-align: center; padding: 14px; border-radius: 8px;<%= if @pre_filled, do: " background-color: #fffbf0; border: 2px solid #ffc107;", else: " border: 2px solid #ced4da;" %>"
                  <%= if @pre_filled, do: "readonly" %>
                  required>
-          <small class="form-text text-muted" style="margin-top: 8px; color: #6c757d; font-size: 13px; line-height: 1.5;">
+          <small class="form-text text-muted device-help-text">
             <%= if @pre_filled do %>
               This code was provided in your authorization link. Confirm it matches your device.
             <% else %>
@@ -49,28 +48,28 @@
 
         <%= if @pre_filled do %>
           <input type="hidden" name="verified" value="true">
-          <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px;">
-            <button type="submit" class="btn btn-primary btn-lg" style="flex: 1; min-width: 200px; padding: 14px 24px; font-weight: 600; border-radius: 8px; font-size: 16px;">Verify and Continue</button>
-            <a href="<%= ~p"/" %>" class="btn btn-danger btn-lg" style="flex: 1; min-width: 200px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 24px; font-weight: 600; border-radius: 8px; font-size: 16px;">
+          <div class="device-button-group">
+            <button type="submit" class="btn btn-primary btn-lg device-btn-primary-lg">Verify and Continue</button>
+            <a href="<%= ~p"/" %>" class="btn btn-danger btn-lg device-btn-danger-lg">
               <i class="fa fa-times-circle"></i> Code does not match
             </a>
           </div>
         <% else %>
-          <button type="submit" class="btn btn-primary" style="margin-top: 20px; padding: 12px 32px; font-weight: 600; border-radius: 8px;">Verify Code</button>
+          <button type="submit" class="btn btn-primary device-btn-verify">Verify Code</button>
         <% end %>
       <% end %>
 
-      <hr style="margin: 36px 0; border: 0; border-top: 1px solid #dee2e6;">
+      <hr class="device-divider">
 
       <div class="help-section">
-        <h5 style="color: #212529; font-weight: 600; margin-bottom: 12px; font-size: 16px;">What is this?</h5>
-        <p style="color: #6c757d; font-size: 14px; line-height: 1.6; margin-bottom: 12px;">
+        <h5 class="device-help-title">What is this?</h5>
+        <p class="device-help-paragraph">
           This page allows you to authorize applications (like command-line tools) to access your Hex account.
           Your application should have displayed a verification code that you need to enter above.
         </p>
 
-        <p style="color: #6c757d; font-size: 14px; line-height: 1.6; margin-bottom: 0;">
-          <strong style="color: #212529; font-weight: 600;">Security Note:</strong> Only enter the code if you initiated this authorization request
+        <p class="device-help-paragraph-last">
+          <strong class="device-help-note">Security Note:</strong> Only enter the code if you initiated this authorization request
           from a trusted application.
         </p>
       </div>
