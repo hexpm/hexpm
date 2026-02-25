@@ -1,33 +1,33 @@
 @use 'sass:math';
 
-@import "../vendor/css/github";
+@use "../vendor/css/github";
 
-@import "vendor/media-queries";
-@import "vendor/lato";
+@use "vendor/media-queries";
+@use "vendor/lato";
 
-@import "base/variables";
-@import "base/mixins";
-@import "base/general";
+@use "base/variables";
+@use "base/mixins";
+@use "base/general";
 
-@import "template/error";
-@import "template/footer";
-@import "template/navbar";
+@use "template/error";
+@use "template/footer";
+@use "template/navbar";
 
-@import "template/page";
-@import "template/blog";
-@import "template/content-wrapper";
-@import "template/dashboard";
-@import "template/docs";
-@import "template/home";
-@import "template/login";
-@import "template/package-list";
-@import "template/package-view";
-@import "template/policies";
-@import "template/pricing";
-@import "template/signup";
-@import "template/sponsors";
-@import "template/stats";
-@import "template/user";
-@import "template/version-list";
-@import "template/audit-log-list";
-@import "template/reports";
+@use "template/page";
+@use "template/blog";
+@use "template/content-wrapper";
+@use "template/dashboard";
+@use "template/docs";
+@use "template/home";
+@use "template/login";
+@use "template/package-list";
+@use "template/package-view";
+@use "template/policies";
+@use "template/pricing";
+@use "template/signup";
+@use "template/sponsors";
+@use "template/stats";
+@use "template/user";
+@use "template/version-list";
+@use "template/audit-log-list";
+@use "template/reports";

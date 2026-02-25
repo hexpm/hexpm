@@ -1,12 +1,14 @@
-const path = require('path');
-const webpack = require('webpack');
-const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
-const TerserPlugin = require("terser-webpack-plugin");
+import path from 'path';
+import webpack from 'webpack';
+import MiniCssExtractPlugin from 'mini-css-extract-plugin';
+import CssMinimizerPlugin from 'css-minimizer-webpack-plugin';
+import TerserPlugin from 'terser-webpack-plugin';
+import { fileURLToPath } from 'url';
 
-module.exports = (env, options) => ({
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+export default {
   optimization: {
-    // minimize: true,
     minimizer: [
       new TerserPlugin(),
       new CssMinimizerPlugin(),
@@ -32,12 +34,17 @@ module.exports = (env, options) => ({
             loader: "css-loader",
             options: {url: false}
           },
-          "sass-loader"
+          {
+            loader: "sass-loader",
+            options: {
+              api: "modern-compiler"
+            }
+          }
         ]
       },
       {
-          test: /\.css$/,
-          use:  [MiniCssExtractPlugin.loader, 'css-loader']
+        test: /\.css$/,
+        use: [MiniCssExtractPlugin.loader, 'css-loader']
       },
     ]
   },
@@ -47,4 +54,4 @@ module.exports = (env, options) => ({
       jQuery: "jquery",
     })
   ]
-});
+};
