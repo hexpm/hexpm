@@ -11,8 +11,8 @@ defmodule HexpmWeb.BlogView do
     render_template("index.xml", posts: posts())
   end
 
-  def render(other, _assigns) do
-    content_tag(:div, render_template(other, %{}), class: "show-post")
+  def render(other, assigns) do
+    content_tag(:div, render_template(other, assigns), class: "show-post")
   end
 
   defp posts() do

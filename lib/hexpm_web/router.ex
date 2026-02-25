@@ -18,6 +18,31 @@ defmodule HexpmWeb.Router do
     plug :login
     plug :disable_deactivated
     plug :default_repository
+
+    plug PlugContentSecurityPolicy,
+      nonces_for: [:script_src, :style_src],
+      directives: %{
+        # Fallback for directives that don't have explicit rules
+        default_src: ~w('self'),
+        # 'strict-dynamic' allows scripts loaded by nonced scripts to execute
+        script_src: ~w('strict-dynamic'),
+        # Gravatar for user/org profile pictures
+        img_src: ~w('self' data: https://www.gravatar.com),
+        # Allow fonts from self and Google Fonts
+        font_src: ~w('self' https://fonts.gstatic.com),
+        # hcaptcha iframe, asciinema iframe for blog embeds
+        frame_src: ~w('self' https://hcaptcha.com https://asciinema.org),
+        # hcaptcha verification
+        connect_src: ~w('self' https://*.hcaptcha.com),
+        # Disallow plugins (Flash, etc.)
+        object_src: ~w('none'),
+        # Disallow <base> tag hijacking
+        base_uri: ~w('self'),
+        # Only allow forms to submit to self
+        form_action: ~w('self'),
+        # Disallow embedding this site in frames (clickjacking protection)
+        frame_ancestors: ~w('none')
+      }
   end
 
   pipeline :upload do

@@ -53,5 +53,7 @@ export default {
     new webpack.ProvidePlugin({
       jQuery: "jquery",
     })
-  ]
+  ],
+  // Use source-map instead of default eval-based devtool for CSP compliance
+  devtool: "source-map",
 };

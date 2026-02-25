@@ -14,12 +14,12 @@
     <%= csrf_meta_tag() %>
 
     <link rel="search" type="application/opensearchdescription+xml" title="Hex" href="/hexsearch.xml">
-    <link rel="stylesheet" href="<%= ~p"/assets/app.css" %>">
+    <link rel="stylesheet" href="<%= ~p"/assets/app.css" %>" nonce="<%= @style_src_nonce %>">
     <link rel="alternate" type="application/rss+xml" title="RSS - Blog" href="/feeds/blog.xml">
 
     <%= if host = Application.get_env(:hexpm, :host) do %>
-    <script async defer src="https://s.<%= host %>/js/script.js"></script>
-    <script>window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};plausible.init({endpoint:"https://s.<%= host %>/api/event",captureOnLocalhost:true})</script>
+    <script async defer src="https://s.<%= host %>/js/script.js" nonce="<%= @script_src_nonce %>"></script>
+    <script nonce="<%= @script_src_nonce %>">window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};plausible.init({endpoint:"https://s.<%= host %>/api/event",captureOnLocalhost:true})</script>
     <% end %>
   </head>
   <body>

@@ -56,7 +56,7 @@
     <%= if assigns[:captcha_error] do %>
       <span class="form-error"><%= @captcha_error %></span>
     <% end %>
-    <script src="https://hcaptcha.com/1/api.js" async defer></script>
+    <script src="https://hcaptcha.com/1/api.js" async defer nonce="<%= @script_src_nonce %>"></script>
   <% end %>
 
   <button type="submit" class="btn btn-primary">Sign up</button>

@@ -27,7 +27,7 @@
 </div>
 
 <%= if assigns[:with_checkboxes] do %>
-<script>
+<script nonce="<%= @script_src_nonce %>">
 document.addEventListener('DOMContentLoaded', function() {
   var checkboxes = document.querySelectorAll('.scope-checkbox');
   var form = document.getElementById('authorization-form');
