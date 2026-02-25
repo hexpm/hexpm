@@ -19,7 +19,7 @@ defmodule HexpmWeb.Router do
     plug :disable_deactivated
     plug :default_repository
 
-    plug PlugContentSecurityPolicy,
+    plug HexpmWeb.Plugs.ContentSecurityPolicy,
       nonces_for: [:script_src, :style_src],
       directives: %{
         # Fallback for directives that don't have explicit rules
