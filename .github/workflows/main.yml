@@ -220,10 +220,11 @@ jobs:
           cache-to: type=gha,scope=${{ matrix.runner }},mode=max
       - name: Export digest
         if: ${{ github.event_name != 'pull_request' }}
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
         run: |
           mkdir -p /tmp/digests
-          digest="${{ steps.build.outputs.digest }}"
-          touch "/tmp/digests/${digest#sha256:}"
+          touch "/tmp/digests/${DIGEST#sha256:}"
       - name: Upload digest
         if: ${{ github.event_name != 'pull_request' }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
@@ -275,5 +276,5 @@ jobs:
         working-directory: /tmp/digests
         run: |
           docker buildx imagetools create \
-            -t gcr.io/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}:${{ env.COMMIT_SHORT_SHA }} \
+            -t gcr.io/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}:${COMMIT_SHORT_SHA} \
             $(printf 'gcr.io/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
