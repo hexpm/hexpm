@@ -47,7 +47,7 @@
             <div class="security-button-group">
               <button type="submit" class="btn btn-primary">Change password</button>
               <%= if Hexpm.Accounts.User.can_remove_password?(@current_user) do %>
-                <button type="button" class="btn btn-danger" onclick="document.getElementById('remove-password-form').submit()">Remove password</button>
+                <button type="submit" form="remove-password-form" class="btn btn-danger">Remove password</button>
               <% end %>
             </div>
           <% end %>

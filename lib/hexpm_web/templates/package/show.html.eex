@@ -203,9 +203,8 @@ tools = [
         <span class="config-tool"><%= file %></span>
         <div class="config-input">
           <div class="input-group">
-            <input type="text" class="form-control snippet"
+            <input type="text" class="form-control snippet select-on-focus"
               value="<%= dep_snippet(tool, @package, @current_release) %>"
-              onfocus="this.select();"
               readonly="readonly" id="<%= tool %>-snippet" />
             <span class="input-group-btn">
               <button class="btn btn-default btn-no-hover copy-button" type="button" data-input-id="<%= tool %>-snippet">
@@ -222,9 +221,8 @@ tools = [
     <h3>Checksum</h3>
     <div class="config-input">
       <div class="input-group">
-        <input type="text" class="form-control snippet"
+        <input type="text" class="form-control snippet select-on-focus"
           value="<%= Base.encode16(@current_release.outer_checksum, case: :lower) %>"
-          onfocus="this.select();"
           readonly="readonly" id="checksum-snippet" />
         <span class="input-group-btn">
           <button class="btn btn-default btn-no-hover copy-button" type="button" data-input-id="checksum-snippet">
