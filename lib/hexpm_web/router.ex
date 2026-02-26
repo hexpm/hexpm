@@ -26,14 +26,15 @@ defmodule HexpmWeb.Router do
         default_src: ~w('self'),
         # 'strict-dynamic' allows scripts loaded by nonced scripts to execute
         script_src: ~w('strict-dynamic'),
-        # Gravatar for user/org profile pictures
-        img_src: ~w('self' data: https://www.gravatar.com),
+        # Gravatar for user/org profile pictures, Stripe tracking pixel
+        img_src: ~w('self' data: https://www.gravatar.com https://q.stripe.com),
         # Allow fonts from self and Google Fonts
         font_src: ~w('self' https://fonts.gstatic.com),
-        # hcaptcha iframe, asciinema iframe for blog embeds
-        frame_src: ~w('self' https://hcaptcha.com https://asciinema.org),
-        # hcaptcha verification
-        connect_src: ~w('self' https://*.hcaptcha.com),
+        # hcaptcha iframe, asciinema iframe for blog embeds, Stripe Checkout
+        frame_src:
+          ~w('self' https://hcaptcha.com https://*.hcaptcha.com https://asciinema.org https://checkout.stripe.com),
+        # hcaptcha verification, Stripe Checkout
+        connect_src: ~w('self' https://*.hcaptcha.com https://checkout.stripe.com),
         # Disallow plugins (Flash, etc.)
         object_src: ~w('none'),
         # Disallow <base> tag hijacking
