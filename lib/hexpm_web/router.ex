@@ -33,7 +33,7 @@ defmodule HexpmWeb.Router do
         # hcaptcha iframe, asciinema iframe for blog embeds, Stripe Checkout
         frame_src:
           ~w('self' https://hcaptcha.com https://*.hcaptcha.com https://asciinema.org https://checkout.stripe.com),
-        # hcaptcha verification, Stripe Checkout
+        # hcaptcha verification, Stripe Checkout (Plausible added at runtime)
         connect_src: ~w('self' https://*.hcaptcha.com https://checkout.stripe.com),
         # Disallow plugins (Flash, etc.)
         object_src: ~w('none'),

@@ -30,19 +30,29 @@ defmodule HexpmWeb.Plugs.ContentSecurityPolicy do
   end
 
   defp call_csp_plug(conn, opts, report_uri) do
-    opts =
-      if report_uri do
-        directives =
-          opts[:directives]
-          |> Map.put(:report_uri, [report_uri])
-          |> Map.put(:report_to, [@report_group])
+    directives =
+      opts[:directives]
+      |> maybe_add_report_uri(report_uri)
+      |> maybe_add_plausible_host()
 
-        Keyword.put(opts, :directives, directives)
-      else
-        opts
-      end
-
+    opts = Keyword.put(opts, :directives, directives)
     PlugContentSecurityPolicy.call(conn, PlugContentSecurityPolicy.init(opts))
+  end
+
+  defp maybe_add_report_uri(directives, nil), do: directives
+
+  defp maybe_add_report_uri(directives, report_uri) do
+    directives
+    |> Map.put(:report_uri, [report_uri])
+    |> Map.put(:report_to, [@report_group])
+  end
+
+  # Allow Plausible analytics to send events to s.<host>
+  defp maybe_add_plausible_host(directives) do
+    case Application.get_env(:hexpm, :host) do
+      nil -> directives
+      host -> Map.update(directives, :connect_src, [], &(&1 ++ ["https://s.#{host}"]))
+    end
   end
 
   defp add_reporting_headers(conn, report_uri) do
