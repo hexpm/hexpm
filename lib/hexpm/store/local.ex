@@ -4,11 +4,11 @@ defmodule Hexpm.Store.Local do
   # only used during development (not safe)
 
   def list(bucket, prefix) do
-    relative = Path.join([dir(), bucket])
-    paths = Path.join(relative, "**") |> Path.wildcard()
+    bucket_dir = Path.join([dir(), bucket])
+    paths = Path.join(bucket_dir, "**") |> Path.wildcard()
 
     Enum.flat_map(paths, fn path ->
-      relative = Path.relative_to(path, relative)
+      relative = Path.relative_to(path, bucket_dir)
 
       if String.starts_with?(relative, prefix) and File.regular?(path) do
         [relative]
@@ -19,7 +19,7 @@ defmodule Hexpm.Store.Local do
   end
 
   def get(bucket, key, _opts) do
-    path = Path.join([dir(), bucket, key])
+    path = safe_path!(bucket, key)
 
     case File.read(path) do
       {:ok, contents} -> contents
@@ -28,19 +28,28 @@ defmodule Hexpm.Store.Local do
   end
 
   def put(bucket, key, blob, _opts) do
-    path = Path.join([dir(), bucket, key])
+    path = safe_path!(bucket, key)
     File.mkdir_p!(Path.dirname(path))
     File.write!(path, blob)
   end
 
   def delete(bucket, key) do
-    [dir(), bucket, key]
-    |> Path.join()
+    bucket
+    |> safe_path!(key)
     |> File.rm()
   end
 
   def delete_many(bucket, keys) do
     Enum.each(keys, &delete(bucket, &1))
+  end
+
+  defp safe_path!(bucket, key) do
+    bucket_dir = Path.join([dir(), bucket])
+
+    case Path.safe_relative(key, bucket_dir) do
+      {:ok, relative} -> Path.join(bucket_dir, relative)
+      :error -> raise ArgumentError, "invalid path"
+    end
   end
 
   defp dir() do
