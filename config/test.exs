@@ -1,6 +1,8 @@
 import Config
 
 config :hexpm,
+  repo_bucket: {Hexpm.Store.Memory, "repo_bucket"},
+  logs_bucket: {Hexpm.Store.Memory, "logs_bucket"},
   secret: "796f75666f756e64746865686578",
   jwt_signing_key: """
   -----BEGIN EC PRIVATE KEY-----
