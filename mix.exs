@@ -65,6 +65,7 @@ defmodule Hexpm.MixProject do
       {:phoenix_view, "~> 2.0"},
       {:phoenix, "~> 1.6"},
       {:plug_attack, "~> 0.3"},
+      {:plug_content_security_policy, "~> 0.2.1"},
       {:plug_cowboy, "~> 2.1"},
       {:plug, "~> 1.7"},
       {:postgrex, "~> 0.14"},

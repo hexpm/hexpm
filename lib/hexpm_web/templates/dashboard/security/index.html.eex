@@ -10,12 +10,12 @@
         <h4>GitHub</h4>
         <%= if Hexpm.Accounts.UserProviders.has_provider?(@current_user, "github") do %>
           <p>Your GitHub account is connected.</p>
-          <%= form_tag(~p"/dashboard/security/disconnect-github", [style: "margin-top: 15px;"]) do %>
+          <%= form_tag(~p"/dashboard/security/disconnect-github", [class: "security-github-form"]) do %>
             <button type="submit" class="btn btn-danger">Disconnect GitHub</button>
           <% end %>
         <% else %>
           <p>Connect your GitHub account to enable GitHub login.</p>
-          <a href="<%= ~p"/auth/github" %>" class="btn btn-primary" style="margin-top: 15px; display: inline-block;">Connect GitHub</a>
+          <a href="<%= ~p"/auth/github" %>" class="btn btn-primary security-connect-btn">Connect GitHub</a>
         <% end %>
       </div>
     </div>
@@ -44,20 +44,20 @@
               <%= ViewHelpers.error_tag f, :password_confirmation %>
             </div>
 
-            <div style="display: flex; gap: 10px;">
+            <div class="security-button-group">
               <button type="submit" class="btn btn-primary">Change password</button>
               <%= if Hexpm.Accounts.User.can_remove_password?(@current_user) do %>
-                <button type="button" class="btn btn-danger" onclick="document.getElementById('remove-password-form').submit()">Remove password</button>
+                <button type="submit" form="remove-password-form" class="btn btn-danger">Remove password</button>
               <% end %>
             </div>
           <% end %>
 
           <%= if Hexpm.Accounts.User.can_remove_password?(@current_user) do %>
-            <form id="remove-password-form" action="<%= ~p"/dashboard/security/remove-password" %>" method="post" style="display: none;">
+            <form id="remove-password-form" action="<%= ~p"/dashboard/security/remove-password" %>" method="post" class="security-hidden-form">
               <input type="hidden" name="_csrf_token" value="<%= Plug.CSRFProtection.get_csrf_token() %>">
             </form>
           <% else %>
-            <p class="text-muted" style="margin-top: 15px;">You must connect a GitHub account before you can remove your password.</p>
+            <p class="text-muted security-note">You must connect a GitHub account before you can remove your password.</p>
           <% end %>
         <% else %>
           <%= form_tag(~p"/dashboard/security/add-password", [method: :post]) do %>
@@ -82,7 +82,7 @@
           <button type="submit" class="btn btn-primary">Disable</button>
         <% end %>
       <% else %>
-        <a href="<%= ~p"/dashboard/tfa/setup" %>" class="btn btn-primary" style="float: right; margin-top: -8px;">Enable</a>
+        <a href="<%= ~p"/dashboard/tfa/setup" %>" class="btn btn-primary security-tfa-enable-btn">Enable</a>
       <% end %>
       </div>
       <%= if Hexpm.Accounts.User.tfa_enabled?(@current_user) do %>

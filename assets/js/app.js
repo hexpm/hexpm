@@ -45,6 +45,9 @@ export default class App {
     // Pricing selector
     $(".pricing-button").click(this.onPricing.bind(this))
 
+    // Select text on focus for snippet inputs
+    $(".select-on-focus").focus(function() { this.select() })
+
     // Focus username, 2FA or search field
     if ($("#username").length > 0) {
       $("#username").focus()

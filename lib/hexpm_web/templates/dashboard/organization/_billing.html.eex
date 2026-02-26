@@ -52,11 +52,11 @@
             </dl>
             <br>
 
-            <script>
+            <script nonce="<%= @script_src_nonce %>">
               window.hexpm_billing_post_action = "<%= @post_action %>";
               window.hexpm_billing_csrf_token = "<%= @csrf_token %>";
             </script>
-            <%= raw(@checkout_html) %>
+            <%= raw(add_script_nonces(@checkout_html, @script_src_nonce)) %>
 
             <%= form_tag(~p"/dashboard/orgs/#{@organization}/cancel-billing", class: "cancel-billing") do %>
               <%= submit "Cancel subscription", class: "btn btn-danger", disabled: !@subscription || @subscription["cancel_at_period_end"] %>
@@ -128,11 +128,11 @@
             Subscription is not active. <strong>Private packages will not be available</strong> until a payment method has been added.<br><br>
             Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.<br><br>
 
-            <script>
+            <script nonce="<%= @script_src_nonce %>">
               window.hexpm_billing_post_action = "<%= @post_action %>";
               window.hexpm_billing_csrf_token = "<%= @csrf_token %>";
             </script>
-            <%= raw(@checkout_html) %>
+            <%= raw(add_script_nonces(@checkout_html, @script_src_nonce)) %>
 
             <button type="button" class="btn btn-default" data-toggle="modal" data-target="#change-plan">
               <%= if @plan_id == "organization-monthly" do %>

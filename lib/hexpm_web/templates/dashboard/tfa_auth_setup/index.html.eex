@@ -8,7 +8,7 @@
       <div class="panel-heading">Setup Security App</div>
       <div class="panel-body recovery-codes-panel">
         <h1>Scan this barcode with your app</h1>
-        <div style="text-align:center"><%= raw ViewHelpers.auth_qr_code_svg(@current_user, @tfa_secret) %></div>
+        <div class="tfa-qr-container"><%= raw ViewHelpers.auth_qr_code_svg(@current_user, @tfa_secret) %></div>
         <div>
           You can also use your setup key
           (<code id="tfa-secret" data-value="<%= @tfa_secret %>"><%= @tfa_secret %></code>

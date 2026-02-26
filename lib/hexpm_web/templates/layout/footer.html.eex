@@ -53,7 +53,7 @@
       </div>
     </div>
 
-    <script src="<%= ~p"/assets/app.js" %>"></script>
+    <script src="<%= ~p"/assets/app.js" %>" nonce="<%= @script_src_nonce %>"></script>
 
   </body>
 </html>
