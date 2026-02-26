@@ -1,10 +1,13 @@
+@use "../base/mixins";
+@use "../base/variables";
+
 .versions-title {
-  @include font-size(38, 66.88);
+  @include mixins.font-size(38, 66.88);
   margin: 40px 0;
-  color: $color-text-grey;
+  color: variables.$color-text-grey;
 
   .version-package-title {
-    color: $color-purple;
+    color: variables.$color-purple;
   }
 }
 
@@ -19,28 +22,28 @@
       padding: 18px;
 
       &:nth-child(even) {
-        background: $color-light-grey;
+        background: variables.$color-light-grey;
       }
 
       a {
-        color: $color-link;
+        color: variables.$color-link;
         word-wrap: break-word;
 
         &.version-number {
-          @include font-size(26, $base-line-height);
+          @include mixins.font-size(26, variables.$base-line-height);
           padding-right: .25em;
           line-height: 25px;
         }
       }
 
       .release-date {
-        @include font-size(18, $base-line-height);
+        @include mixins.font-size(18, variables.$base-line-height);
         font-weight: 300;
-        color: $color-text-grey;
+        color: variables.$color-text-grey;
       }
 
       p {
-        @include font-size(14, $base-line-height);
+        @include mixins.font-size(14, variables.$base-line-height);
         padding: 10px 0 0;
         margin: 0;
         font-weight: 300;

@@ -1,8 +1,11 @@
+@use "../base/mixins";
+@use "../base/variables";
+
 .package-title {
-  @include font-size(50);
+  @include mixins.font-size(50);
   margin-bottom: 10px;
   font-weight: 300;
-  color: $color-purple;
+  color: variables.$color-purple;
   word-wrap: break-word;
 
   a {
@@ -12,12 +15,12 @@
   }
 
   .version {
-    @include font-size(20, $base-line-height);
+    @include mixins.font-size(20, variables.$base-line-height);
     padding: 0 0 0 4px;
     color: #969da1;
 
     &.retired {
-      color: $color-red;
+      color: variables.$color-red;
     }
   }
 }
@@ -35,7 +38,7 @@
 
 .package-view {
   h3 {
-    @include font-size(20, $base-line-height);
+    @include mixins.font-size(20, variables.$base-line-height);
     margin-bottom: 15px;
     font-weight: bold;
     color: #000;
@@ -82,8 +85,8 @@
 .build-tool {
   display: inline-block;
   padding: 4px 6px;
-  color: $color-white;
-  background: $color-text-grey;
+  color: variables.$color-white;
+  background: variables.$color-text-grey;
   border-radius: 4px;
 
   &.mix {
@@ -100,7 +103,7 @@
 }
 
 .config-tool {
-  @include font-size(18, $base-line-height);
+  @include mixins.font-size(18, variables.$base-line-height);
   display: inline-block;
   margin-bottom: 8px;
   font-weight: 300;
@@ -120,7 +123,7 @@
   list-style: none;
 
   li {
-    @include font-size(18);
+    @include mixins.font-size(18);
     margin: 0 0 10px;
     overflow: hidden;
     font-weight: 300;
@@ -157,7 +160,7 @@
   list-style: none;
 
   li {
-    @include font-size(18);
+    @include mixins.font-size(18);
     margin: 0 0 10px;
     overflow: hidden;
     font-weight: 300;
@@ -175,10 +178,19 @@
 
 .version-retirement {
   font-weight: normal;
-  color: $color-red;
+  color: variables.$color-red;
 }
 
 .btn.copy-button {
   padding: 6px 12px;
-  height: $form-input-height;
+  height: variables.$form-input-height;
+}
+
+// Copy button icon states
+.copy-icon-hidden {
+  display: none;
+}
+
+.copy-icon-success {
+  color: green;
 }

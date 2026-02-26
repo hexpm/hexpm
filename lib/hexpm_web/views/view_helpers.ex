@@ -332,6 +332,20 @@ defmodule HexpmWeb.ViewHelpers do
     "otpauth://totp/hex.pm:#{user.username}?issuer=hex.pm&secret=#{secret}"
     |> EQRCode.encode()
     |> EQRCode.svg(width: 250)
+    |> convert_svg_inline_styles_to_attributes()
+  end
+
+  # Convert inline styles in SVG to presentation attributes for CSP compliance
+  # See: https://github.com/SiliconJungles/eqrcode/issues/33
+  defp convert_svg_inline_styles_to_attributes(svg) do
+    svg
+    # Convert style="fill: #XXX;" to fill="#XXX"
+    |> String.replace(~r/style="fill:\s*([^;"]+);?"/, "fill=\"\\1\"")
+    # Convert style="background-color: #XXX" on svg element to a rect background
+    |> String.replace(
+      ~r/<svg([^>]*)\s+style="background-color:\s*([^"]+)"([^>]*)>/,
+      "<svg\\1\\3><rect width=\"100%\" height=\"100%\" fill=\"\\2\"/>"
+    )
   end
 
   # assumes positive values only, and graph dimensions of 800 x 200

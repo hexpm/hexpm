@@ -1,8 +1,10 @@
+@use "../base/variables";
+
 .footer {
   width: 100%;
   flex-shrink: 0;
   margin-top: 30px;
-  color: $color-white;
+  color: variables.$color-white;
   background: #3e424d;
   border-top: 1px solid #cbccd2;
 
@@ -17,7 +19,7 @@
     }
 
     a {
-      color: $color-white;
+      color: variables.$color-white;
     }
   }
 

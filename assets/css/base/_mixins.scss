@@ -1,15 +1,18 @@
+@use "sass:math";
+@use "variables";
+
 @mixin font-size($size-value, $line-height: 14) {
   font: {
-    size: math.div($size-value, $base-font-size) + rem;
+    size: math.div($size-value, variables.$base-font-size) + rem;
   };
 
   @if $line-height != 14 {
-    line-height: math.div($line-height, $base-line-height) + rem;
+    line-height: math.div($line-height, variables.$base-line-height) + rem;
   }
 }
 
 @mixin line-height($size-value) {
-  line-height: math.div($size-value, $base-line-height) + rem;
+  line-height: math.div($size-value, variables.$base-line-height) + rem;
 }
 
 @mixin font-face($font-family, $file-path, $weight: normal, $style: normal) {

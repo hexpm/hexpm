@@ -1,15 +1,18 @@
+@use "../base/mixins";
+@use "../base/variables";
+
 .page {
   h2 {
-    @include font-size(35, 50);
+    @include mixins.font-size(35, 50);
     padding: 20px 0;
     margin-bottom: 20px;
     font-weight: 300;
-    color: $color-purple;
+    color: variables.$color-purple;
     border-bottom: #ccc 1px solid;
   }
 
   p {
-    @include font-size(16, 35);
+    @include mixins.font-size(16, 35);
     margin-bottom: 20px;
     font-weight: 300;
     color: #555;
@@ -17,7 +20,7 @@
 
   ol,
   li {
-    @include font-size(16, 35);
+    @include mixins.font-size(16, 35);
     font-weight: 300;
     color: #555;
 

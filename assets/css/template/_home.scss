@@ -1,13 +1,17 @@
+@use "../base/mixins";
+@use "../base/variables";
+@use "../vendor/media-queries";
+
 .featured-home {
   background: #3e424d url("../images/bg-featured-home.png") no-repeat bottom;
   background-size: 750px;
 
-  @include hdpi(2) {
+  @include media-queries.hdpi(2) {
     background: #3e424d url("../images/bg-featured-home@2.png") no-repeat bottom;
     background-size: 750px;
   }
 
-  @include hdpi(3) {
+  @include media-queries.hdpi(3) {
     background: #3e424d url("../images/bg-featured-home@3.png") no-repeat bottom;
     background-size: 750px;
   }
@@ -23,7 +27,7 @@
     font-weight: 100;
     color: #ededed;
 
-    @include general-mobile {
+    @include media-queries.general-mobile {
       font-size: 30px;
     }
   }
@@ -76,7 +80,7 @@
       height: 120px;
     }
 
-    @include general-mobile {
+    @include media-queries.general-mobile {
       height: 92%;
     }
   }
@@ -84,7 +88,7 @@
   .text-content {
     position: relative;
     z-index: 300;
-    background: $color-white;
+    background: variables.$color-white;
 
     .side-box {
       position: relative;
@@ -96,7 +100,7 @@
         min-height: 140px
       }
 
-      @include general-mobile {
+      @include media-queries.general-mobile {
         width: 0;
       }
 
@@ -108,7 +112,7 @@
         height: 80px;
         border-radius: 50%;
 
-        @include general-mobile {
+        @include media-queries.general-mobile {
           top: 5px;
           left: 5px;
           width: 40px;
@@ -121,23 +125,23 @@
       padding-right: 15px;
       padding-left: 120px;
 
-      @include general-mobile {
+      @include media-queries.general-mobile {
         padding-left: 20px;
       }
 
       h3 {
-        @include font-size(22, 30);
+        @include mixins.font-size(22, 30);
         margin: 16px 0;
         font-weight: bold;
         color: #1e1c17;
 
-        @include general-mobile {
+        @include media-queries.general-mobile {
           text-align: right;
         }
       }
 
       p {
-        @include font-size(16, 40);
+        @include mixins.font-size(16, 40);
       }
 
       code {
@@ -149,59 +153,59 @@
 }
 
 .elixir .side-box {
-  background: $color-purple;
+  background: variables.$color-purple;
 
   .lang-symbol {
-    background: $color-purple-light url("../images/elixir.png") center no-repeat;
+    background: variables.$color-purple-light url("../images/elixir.png") center no-repeat;
     background-size: 46px;
 
-    @include hdpi(2) {
-      background: $color-purple-light url("../images/elixir@2.png") center no-repeat;
+    @include media-queries.hdpi(2) {
+      background: variables.$color-purple-light url("../images/elixir@2.png") center no-repeat;
       background-size: 46px;
     }
 
-    @include hdpi(3) {
-      background: $color-purple-light url("../images/elixir@3.png") center no-repeat;
+    @include media-queries.hdpi(3) {
+      background: variables.$color-purple-light url("../images/elixir@3.png") center no-repeat;
       background-size: 46px;
     }
 
-    @include general-mobile {
+    @include media-queries.general-mobile {
       background-size: 20px;
     }
   }
 }
 
 .erlang .side-box {
-  background: $color-erl-red;
+  background: variables.$color-erl-red;
 
   .lang-symbol {
-    background: $color-erl-red-light url("../images/erlang.png") center no-repeat;
+    background: variables.$color-erl-red-light url("../images/erlang.png") center no-repeat;
     background-size: 60px;
 
-    @include hdpi(2) {
-      background: $color-erl-red-light url("../images/erlang@2.png") center no-repeat;
+    @include media-queries.hdpi(2) {
+      background: variables.$color-erl-red-light url("../images/erlang@2.png") center no-repeat;
       background-size: 60px;
     }
 
-    @include hdpi(3) {
-      background: $color-erl-red-light url("../static/images/erlang@3.png") center no-repeat;
+    @include media-queries.hdpi(3) {
+      background: variables.$color-erl-red-light url("../static/images/erlang@3.png") center no-repeat;
       background-size: 60px;
     }
 
-    @include general-mobile {
+    @include media-queries.general-mobile {
       background-size: 20px;
     }
   }
 }
 
 .gleam .side-box {
-  background: $color-gleam-pink;
+  background: variables.$color-gleam-pink;
 
   .lang-symbol {
-    background: $color-gleam-pink-light url("../images/lucy.svg") center no-repeat;
+    background: variables.$color-gleam-pink-light url("../images/lucy.svg") center no-repeat;
     background-size: 60px;
 
-    @include general-mobile {
+    @include media-queries.general-mobile {
       background-size: 20px;
     }
   }
@@ -212,7 +216,7 @@
   text-align: center;
 
   .input {
-      height: $form-input-height;
+      height: variables.$form-input-height;
   }
 
   .input-group {
@@ -229,7 +233,7 @@
     }
 
     .btn-search {
-        height: $form-input-height;
+        height: variables.$form-input-height;
     }
   }
 }

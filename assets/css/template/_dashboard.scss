@@ -1,3 +1,5 @@
+@use "../base/variables";
+
 .list-group-item {
   margin: 0 0 -1px !important;
 }
@@ -59,7 +61,7 @@
 
 .dashboard .security {
   .recovery-codes-panel {
-    border-bottom: $base-border;
+    border-bottom: variables.$base-border;
   }
 
   .recovery-code {
@@ -71,7 +73,7 @@
   }
 
   .recovery-code .recovery-code-used {
-    color: $color-grey;
+    color: variables.$color-grey;
   }
 
   .recovery-codes-container button {
@@ -94,7 +96,7 @@
 
   svg {
     width: .9em;
-    fill: $color-erl-red;
+    fill: variables.$color-erl-red;
   }
 
   button:disabled svg {
@@ -213,4 +215,65 @@
     float: right;
     margin-top: -8px;
   }
+}
+
+// Security page styles
+.security-github-form {
+  margin-top: 15px;
+}
+
+.security-connect-btn {
+  margin-top: 15px;
+  display: inline-block;
+}
+
+.security-button-group {
+  display: flex;
+  gap: 10px;
+}
+
+.security-hidden-form {
+  display: none;
+}
+
+.security-note {
+  margin-top: 15px;
+}
+
+.security-tfa-enable-btn {
+  float: right;
+  margin-top: -8px;
+}
+
+// TFA setup page styles
+.tfa-qr-container {
+  text-align: center;
+}
+
+// Organization page styles
+.org-member-actions {
+  float: right;
+}
+
+.org-add-member-input {
+  width: 250px;
+}
+
+.org-add-member-role {
+  width: 80px;
+}
+
+.org-danger-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.org-danger-item-content {
+  flex: 1;
+}
+
+.org-confirm-input {
+  width: 100%;
+  margin-top: 15px;
 }

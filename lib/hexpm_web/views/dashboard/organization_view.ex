@@ -603,6 +603,12 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
     unquote([{"", ""}] ++ Enum.sort_by(@country_codes, &elem(&1, 1)))
   end
 
+  defp add_script_nonces(nil, _nonce), do: nil
+
+  defp add_script_nonces(html, nonce) do
+    String.replace(html, "<script", ~s(<script nonce="#{nonce}"))
+  end
+
   defp show_person?(person, company, errors) do
     (person || errors["person"]) && !company && !errors["company"]
   end

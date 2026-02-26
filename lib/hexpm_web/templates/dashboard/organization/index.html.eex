@@ -123,7 +123,7 @@
           <li class="list-group-item clearfix">
             <img src="<%= ViewHelpers.gravatar_url(User.email(organization_user.user, :gravatar), :small) %>" class="member-avatar">
             <a class="member-username" href="<%= ~p"/users/#{organization_user.user}" %>"><%= organization_user.user.username %></a>
-            <div style="float: right">
+            <div class="org-member-actions">
               <div class="dropdown role-dropdown">
                 <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
                   <%= organization_role(organization_user.role) %>
@@ -155,11 +155,11 @@
             <%= content_tag :fieldset, disabled: @billing_active? and @quantity <= length(@organization.organization_users) do %>
               <input type="hidden" name="action" value="add_member">
               <div class="form-group">
-                <%= ViewHelpers.text_input f, :username, style: "width: 250px", placeholder: "Username or email address", required: true %>
+                <%= ViewHelpers.text_input f, :username, class: "org-add-member-input", placeholder: "Username or email address", required: true %>
                 <%= ViewHelpers.error_tag f, :username %>
               </div>
               <div class="form-group">
-                <%= ViewHelpers.select f, :role, organization_roles_selector(), style: "width: 80px" %>
+                <%= ViewHelpers.select f, :role, organization_roles_selector(), class: "org-add-member-role" %>
                 <%= ViewHelpers.error_tag f, :role %>
               </div>
               <button type="submit" class="btn btn-primary">Add member</button>
@@ -209,8 +209,8 @@
     <div class="panel panel-danger">
     <div class="panel-heading">Danger zone</div>
       <ul class="list-group clearfix">
-        <li class="list-group-item clearfix" style="display: flex; flex-direction: row; align-items: center;">
-          <div style="flex: 1">
+        <li class="list-group-item clearfix org-danger-item">
+          <div class="org-danger-item-content">
             <p><strong>Leave organization</strong></p>
             <p>Once you leave the organization there is no going back, please be certain.</p>
           </div>
@@ -291,7 +291,7 @@
         <div class="modal-body">
           <p>This action cannot be undone. You will permanently leave the organization <strong><%= @organization.name %></strong>.</p>
           <p>Please type <strong><%= @organization.name %></strong> to confirm.</p>
-          <input type="text" name="organization_name" id="leave-org-confirm" data-expected="<%= @organization.name %>" class="form-control" style="margin-top: 15px;" autocomplete="off" required>
+          <input type="text" name="organization_name" id="leave-org-confirm" data-expected="<%= @organization.name %>" class="org-confirm-input" autocomplete="off" required>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>

@@ -53,10 +53,11 @@
             <br>
 
             <%!-- TODO: Remove when all customers migrated to SCA/PaymentIntents --%>
-            <script>
+            <script nonce="<%= @script_src_nonce %>">
               window.hexpm_billing_post_action = "<%= @post_action %>";
               window.hexpm_billing_csrf_token = "<%= @csrf_token %>";
             </script>
+            <%= raw(add_script_nonces(@checkout_html, @script_src_nonce)) %>
 
             <div style="display: flex; gap: 10px; align-items: center;">
               <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#payment-method-modal">
@@ -179,10 +180,11 @@
             Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.<br><br>
 
             <%!-- TODO: Remove when all customers migrated to SCA/PaymentIntents --%>
-            <script>
+            <script nonce="<%= @script_src_nonce %>">
               window.hexpm_billing_post_action = "<%= @post_action %>";
               window.hexpm_billing_csrf_token = "<%= @csrf_token %>";
             </script>
+            <%= raw(add_script_nonces(@checkout_html, @script_src_nonce)) %>
 
             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#payment-method-modal">
               Add payment method

@@ -1,10 +1,10 @@
 <h2>Log in</h2>
 
-<a href="<%= ~p"/auth/github" %>" class="btn btn-default btn-block" style="margin-bottom: 20px;">
+<a href="<%= ~p"/auth/github" %>" class="btn btn-default btn-block login-github-btn">
   Log in with GitHub
 </a>
 
-<div style="text-align: center; margin: 20px 0; color: #999;">or</div>
+<div class="login-divider">or</div>
 
 <%= form_tag(~p"/login") do %>
   <div class="form-group">
@@ -14,7 +14,7 @@
 
   <div class="form-group">
     <label for="password">Password</label>
-    <span style="float: right;"><a href="<%= ~p"/password/reset" %>">Forgot your password?</a></span>
+    <span class="login-forgot-password"><a href="<%= ~p"/password/reset" %>">Forgot your password?</a></span>
     <input id="password" type="password" class="form-control" name="password">
   </div>
 

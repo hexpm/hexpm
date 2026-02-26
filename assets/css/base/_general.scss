@@ -1,3 +1,7 @@
+@use "../vendor/media-queries";
+@use "mixins";
+@use "variables";
+
 html {
   position: relative;
   height: 100%;
@@ -5,16 +9,16 @@ html {
 }
 
 body {
-  @include font-size(16, 30);
+  @include mixins.font-size(16, 30);
   display: flex;
   height: 100%;
-  font-family: $base-font-family;
+  font-family: variables.$base-font-family;
   flex-direction: column;
 }
 
 h1,
 h2 {
-  font-family: $base-title-font-family;
+  font-family: variables.$base-title-font-family;
   font-weight: 300;
   text-align: center;
 }
@@ -30,7 +34,7 @@ a,
 a:hover,
 a:focus {
   font-weight: normal;
-  color: $color-link;
+  color: variables.$color-link;
 }
 
 pre {
@@ -147,7 +151,7 @@ input[type="checkbox"] {
 
 // Responsive: Portrait tablets and up
 
-@include min-screen(768px) {
+@include media-queries.min-screen(768px) {
   .container {
     width: auto;
     max-width: 1000px;

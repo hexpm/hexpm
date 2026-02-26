@@ -1,0 +1,136 @@
+// Device authorization page styles
+
+.device-alert-mb {
+  margin-bottom: 20px;
+}
+
+.device-security-alert {
+  margin-bottom: 24px;
+  padding: 16px 20px;
+  border-radius: 8px;
+  background-color: #fff3cd;
+  border: 2px solid #ffc107;
+  color: #856404;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.device-security-alert-icon {
+  font-size: 20px;
+  margin-top: 2px;
+}
+
+.device-security-alert-title {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.device-instruction-text {
+  color: #495057;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.device-form-group {
+  margin-bottom: 24px;
+}
+
+.device-code-label {
+  font-weight: 600;
+  color: #212529;
+  margin-bottom: 10px;
+  display: block;
+  font-size: 15px;
+}
+
+.device-code-input {
+  text-transform: uppercase;
+  font-family: monospace;
+  font-size: 18px;
+  text-align: center;
+  padding: 14px;
+  border-radius: 8px;
+  border: 2px solid #ced4da;
+
+  &--prefilled {
+    background-color: #fffbf0;
+    border: 2px solid #ffc107;
+  }
+}
+
+.device-help-text {
+  margin-top: 8px;
+  color: #6c757d;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.device-button-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+
+.device-btn-primary-lg {
+  flex: 1;
+  min-width: 200px;
+  padding: 14px 24px;
+  font-weight: 600;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+.device-btn-danger-lg {
+  flex: 1;
+  min-width: 200px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  font-weight: 600;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+.device-btn-verify {
+  margin-top: 20px;
+  padding: 12px 32px;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+.device-divider {
+  margin: 36px 0;
+  border: 0;
+  border-top: 1px solid #dee2e6;
+}
+
+.device-help-title {
+  color: #212529;
+  font-weight: 600;
+  margin-bottom: 12px;
+  font-size: 16px;
+}
+
+.device-help-paragraph {
+  color: #6c757d;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.device-help-paragraph-last {
+  color: #6c757d;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 0;
+}
+
+.device-help-note {
+  color: #212529;
+  font-weight: 600;
+}

@@ -19,7 +19,7 @@
     </p>
   </div>
 
-  <div style="display: flex; gap: 10px;">
+  <div class="complete-signup-button-group">
     <button type="submit" class="btn btn-primary">Complete signup</button>
     <a href="<%= ~p"/signup" %>" class="btn btn-danger">Cancel signup</a>
   </div>

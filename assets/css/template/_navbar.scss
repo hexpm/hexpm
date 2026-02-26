@@ -1,7 +1,11 @@
+@use "../base/mixins";
+@use "../base/variables";
+@use "../vendor/media-queries";
+
 .navbar {
   min-height: 70px;
   margin-bottom: 0;
-  background: $color-text-grey;
+  background: variables.$color-text-grey;
   border: 0;
   border-bottom: #919ca2 1px solid;
   border-radius: 0;
@@ -25,21 +29,21 @@
 
 .navbar-default .navbar-nav > li > a {
   @media (min-width: 768px) {
-    @include font-size(16, 115);
+    @include mixins.font-size(16, 115);
     height: 70px;
   }
 
   @media (max-width: 767px) {
-    @include font-size(16, 70);
+    @include mixins.font-size(16, 70);
     height: 50px;
   }
 
   padding-top: 0;
   padding-bottom: 0;
-  color: $color-white;
+  color: variables.$color-white;
 
   &:hover {
-    color: $color-white;
+    color: variables.$color-white;
   }
 }
 
@@ -60,7 +64,7 @@
 .navbar-default .navbar-form {
   border: 0;
 
-  @include general-mobile {
+  @include media-queries.general-mobile {
     padding: 0 15px 0 10px;
     margin-top: 8px;
     margin-right: -15px;
@@ -82,31 +86,31 @@
     -webkit-box-shadow: none;
 
     // Override bootstrap input fields height.
-    height: $form-input-height;
+    height: variables.$form-input-height;
   }
 
   button.btn {
     color: #adb3b6;
-    background: $color-white;
+    background: variables.$color-white;
     padding: 6px 12px;
   }
 }
 
 .navbar-default .navbar-nav > li > a:hover,
 .navbar-default .navbar-nav > li > a:focus {
-  color: $color-white;
+  color: variables.$color-white;
 }
 
 .navbar-default .navbar-nav > .open > a,
 .navbar-default .navbar-nav > .open > a:hover,
 .navbar-default .navbar-nav > .open > a:focus {
-  color: $color-white;
+  color: variables.$color-white;
   background-color: #6c7479;
 }
 
 .navbar-default .navbar-nav .open .dropdown-menu > li > a {
-  @include general-mobile {
-    color: $color-white;
+  @include media-queries.general-mobile {
+    color: variables.$color-white;
   }
 }
 
@@ -145,7 +149,7 @@
   li .btn-link {
     padding: 5px 15px 5px 25px;
     font-size: 13px;
-    color: $color-white;
+    color: variables.$color-white;
   }
 
   .divider {
@@ -156,7 +160,7 @@
       margin: 0;
     }
 
-    background-color: $color-text-grey;
+    background-color: variables.$color-text-grey;
   }
 
   form {
@@ -167,7 +171,7 @@
   .dropdown-header.menu-dropdown-header {
     font-size: 15px;
     font-weight: bold;
-    color: $color-white;
+    color: variables.$color-white;
     text-transform: uppercase;
   }
 }

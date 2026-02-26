@@ -1,3 +1,10 @@
+@use "../base/variables";
+
+// Utility class for inline-block display (used in markdown IALs)
+.inline-block {
+  display: inline-block;
+}
+
 .docs {
   .sidebar {
     padding-top: 30px;
@@ -34,6 +41,6 @@
   a:hover code.inline,
   a:focus code.inline {
     font-weight: normal;
-    color: $color-link;
+    color: variables.$color-link;
   }
 }

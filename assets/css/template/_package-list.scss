@@ -1,7 +1,11 @@
+@use "../base/mixins";
+@use "../base/variables";
+@use "../vendor/media-queries";
+
 .packages-title {
-  @include font-size(38, $base-line-height);
+  @include mixins.font-size(38, variables.$base-line-height);
   margin: 40px 0;
-  color: $color-text-grey;
+  color: variables.$color-text-grey;
 }
 
 .letter-sort > .list {
@@ -9,12 +13,12 @@
   margin: 0;
   text-align: center;
   list-style: none;
-  border: $base-border;
+  border: variables.$base-border;
   border-right: 0;
   border-left: 0;
 
-  @include general-mobile {
-    box-shadow: $base-box-shadow;
+  @include media-queries.general-mobile {
+    box-shadow: variables.$base-box-shadow;
 
     > li {
       margin: 10px;
@@ -22,8 +26,8 @@
   }
 
   > li {
-    @include font-size(22, $base-line-height);
-    @include line-height(36);
+    @include mixins.font-size(22, variables.$base-line-height);
+    @include mixins.line-height(36);
     display: inline-block;
     margin: 0 8px;
     font-size: 20px;
@@ -32,11 +36,11 @@
 
   > li > a {
     font-weight: 300;
-    color: $color-text-grey;
+    color: variables.$color-text-grey;
   }
 
   > li > a:hover {
-    color: $color-link;
+    color: variables.$color-link;
   }
 }
 
@@ -56,24 +60,24 @@
       padding: 18px;
 
       &:nth-child(even) {
-        background: $color-light-grey;
+        background: variables.$color-light-grey;
       }
 
       a {
-        @include font-size(26, $base-line-height);
+        @include mixins.font-size(26, variables.$base-line-height);
         line-height: 25px;
-        color: $color-link;
+        color: variables.$color-link;
         word-wrap: break-word;
       }
 
       .version {
-        @include font-size(18, $base-line-height);
+        @include mixins.font-size(18, variables.$base-line-height);
         font-weight: 300;
-        color: $color-text-grey;
+        color: variables.$color-text-grey;
       }
 
       p {
-        @include font-size(14, $base-line-height);
+        @include mixins.font-size(14, variables.$base-line-height);
         padding: 10px 0 0;
         margin: 0;
         font-weight: 300;
@@ -81,17 +85,17 @@
       }
 
       .downloads-info {
-        @include font-size(18, $base-line-height);
+        @include mixins.font-size(18, variables.$base-line-height);
         float: right;
         font-weight: 300;
-        color: $color-text-grey;
+        color: variables.$color-text-grey;
         text-align: right;
 
         .download-count {
           display: inline-block;
           padding: 0 0 10px;
           font-weight: bold;
-          color: $color-text-grey;
+          color: variables.$color-text-grey;
         }
 
         .downloads-count-wrapper {
@@ -99,20 +103,20 @@
           display: inline-block;
 
           .downloads-count-desc {
-            border-bottom: 1px dotted $color-purple;
+            border-bottom: 1px dotted variables.$color-purple;
           }
 
           .tooltiptext {
-            @include font-size(14, $base-line-height);
+            @include mixins.font-size(14, variables.$base-line-height);
             position: relative;
             top: -2em;
             width: 300px;
             padding: 5px;
-            color: $color-white;
+            color: variables.$color-white;
             text-align: center;
             text-transform: none;
             visibility: hidden;
-            background-color: $color-text-grey;
+            background-color: variables.$color-text-grey;
             border: #919ca2 1px solid;
             border-radius: 4px;
             transition: all .3s ease-in-out;
@@ -145,21 +149,21 @@
 
 .pagination-info,
 .pagination-sort {
-  @include font-size(16, $base-line-height);
+  @include mixins.font-size(16, variables.$base-line-height);
   float: left;
   padding: 10px;
   font-weight: 300;
-  color: $color-text-grey;
+  color: variables.$color-text-grey;
 }
 
 .pagination-info {
-  @include general-mobile {
+  @include media-queries.general-mobile {
     padding: 10px 0;
   }
 }
 
 .pagination-sort {
-  @include general-mobile {
+  @include media-queries.general-mobile {
     float: right;
     padding: 10px 0;
   }
@@ -175,7 +179,7 @@
     span,
     span:hover,
     span:focus {
-      color: $color-link;
+      color: variables.$color-link;
     }
   }
 
@@ -186,8 +190,8 @@
     span,
     span:hover,
     span:focus {
-      background-color: $color-link;
-      border-color: $color-link;
+      background-color: variables.$color-link;
+      border-color: variables.$color-link;
     }
   }
 }
