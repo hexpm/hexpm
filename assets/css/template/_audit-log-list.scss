@@ -1,10 +1,13 @@
+@use "../base/mixins";
+@use "../base/variables";
+
 .audit-log-title {
-  @include font-size(38, $base-line-height);
+  @include mixins.font-size(38, variables.$base-line-height);
   margin: 40px 0;
-  color: $color-text-grey;
+  color: variables.$color-text-grey;
 
   .audit-log-package-title {
-    color: $color-purple;
+    color: variables.$color-purple;
   }
 }
 

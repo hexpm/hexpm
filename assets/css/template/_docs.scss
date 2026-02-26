@@ -1,3 +1,5 @@
+@use "../base/variables";
+
 .docs {
   .sidebar {
     padding-top: 30px;
@@ -34,6 +36,6 @@
   a:hover code.inline,
   a:focus code.inline {
     font-weight: normal;
-    color: $color-link;
+    color: variables.$color-link;
   }
 }

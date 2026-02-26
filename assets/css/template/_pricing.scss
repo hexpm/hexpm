@@ -1,3 +1,5 @@
+@use "../vendor/media-queries";
+
 .pricing {
   margin-top: 10px;
 
@@ -48,7 +50,7 @@
       height: 430px;
       background: #8f9198;
 
-      @include general-mobile {
+      @include media-queries.general-mobile {
         height: 94%;
       }
     }

@@ -1,3 +1,5 @@
+@use "../base/variables";
+
 .list-group-item {
   margin: 0 0 -1px !important;
 }
@@ -59,7 +61,7 @@
 
 .dashboard .security {
   .recovery-codes-panel {
-    border-bottom: $base-border;
+    border-bottom: variables.$base-border;
   }
 
   .recovery-code {
@@ -71,7 +73,7 @@
   }
 
   .recovery-code .recovery-code-used {
-    color: $color-grey;
+    color: variables.$color-grey;
   }
 
   .recovery-codes-container button {
@@ -94,7 +96,7 @@
 
   svg {
     width: .9em;
-    fill: $color-erl-red;
+    fill: variables.$color-erl-red;
   }
 
   button:disabled svg {
