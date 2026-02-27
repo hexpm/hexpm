@@ -21,6 +21,8 @@ defmodule Hexpm.OAuth.Client do
   @valid_client_types ~w(public confidential)
   @valid_grant_types ~w(authorization_code urn:ietf:params:oauth:grant-type:device_code refresh_token client_credentials)
 
+  def valid_grant_types, do: @valid_grant_types
+
   def changeset(client, attrs) do
     client
     |> cast(attrs, [
@@ -32,7 +34,7 @@ defmodule Hexpm.OAuth.Client do
       :redirect_uris,
       :allowed_scopes
     ])
-    |> validate_required([:client_id, :name, :client_type])
+    |> validate_required([:client_id, :name, :client_type, :allowed_grant_types])
     |> validate_inclusion(:client_type, @valid_client_types)
     |> validate_grant_types()
     |> validate_scopes()

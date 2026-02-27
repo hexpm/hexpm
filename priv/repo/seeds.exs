@@ -1,5 +1,6 @@
 import Hexpm.Factory
 alias Hexpm.Accounts.Users
+alias Hexpm.OAuth.Client
 alias Hexpm.Repository.{PackageDependant, PackageDownload, ReleaseDownload}
 
 Hexpm.Fake.start()
@@ -14,7 +15,8 @@ Hexpm.Repo.transaction(fn ->
   insert(:oauth_client,
     name: "Hex CLI",
     client_id: "78ea6566-89fd-481e-a1d6-7d9d78eacca8",
-    client_type: "public"
+    client_type: "public",
+    allowed_grant_types: Client.valid_grant_types()
   )
 
   insert(
