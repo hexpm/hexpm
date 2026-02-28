@@ -48,13 +48,36 @@ if Code.ensure_loaded?(Wallaby) do
       fill_stripe_card(session, card_number, expiry, cvc)
 
       # Wait for Stripe Elements to fully process the card input
-      Process.sleep(2000)
+      wait_until(2000, fn ->
+        evaluate_js(session, """
+          var errors = document.getElementById('card-errors');
+          var hasError = errors && errors.textContent.trim().length > 0;
+          var btn = document.getElementById('payment-button');
+          return !hasError && btn;
+        """)
+      end)
 
       # Click the first #payment-button on the page (outside the modal, has JS handler)
       Wallaby.Browser.click(session, css("#payment-button", at: 0))
 
-      # Wait for the form handler to execute and Stripe to process
-      Process.sleep(3000)
+      # Wait for Stripe to process (3DS iframe appears or error shows)
+      wait_until(3000, fn ->
+        evaluate_js(session, """
+          var cardEl = document.getElementById('card-element');
+          var frames = document.querySelectorAll('iframe');
+          for (var i = 0; i < frames.length; i++) {
+            if (cardEl && cardEl.contains(frames[i])) continue;
+            var name = frames[i].name || '';
+            var src = frames[i].src || '';
+            if (name.indexOf('challenge') !== -1 || name.indexOf('three-ds') !== -1 ||
+                src.indexOf('three-ds') !== -1 || src.indexOf('3ds2') !== -1) {
+              return true;
+            }
+          }
+          var errors = document.getElementById('card-errors');
+          return errors && errors.textContent.trim().length > 0;
+        """)
+      end)
 
       session
     end
@@ -71,7 +94,12 @@ if Code.ensure_loaded?(Wallaby) do
         complete_stripe_3ds(session)
 
         # Wait for page reload after 3DS completion
-        Process.sleep(5000)
+        wait_until(5000, fn ->
+          evaluate_js(session, """
+            return !!document.querySelector("button") &&
+              document.body.textContent.indexOf('Update payment method') !== -1;
+          """)
+        end)
 
         assert_has(session, css("button", text: "Update payment method", count: :any))
       end

@@ -9,6 +9,29 @@ defmodule HexpmWeb.IntegrationHelpers do
   @poll_interval 1_000
   @poll_timeout 60_000
 
+  @doc """
+  Polls until `fun` returns a truthy value, or `timeout` ms have elapsed.
+  Returns early as soon as the condition is met. If the timeout is reached,
+  returns without error to let subsequent operations provide clear failures.
+  """
+  def wait_until(timeout, fun) do
+    deadline = System.monotonic_time(:millisecond) + timeout
+    do_wait_until(deadline, fun)
+  end
+
+  defp do_wait_until(deadline, fun) do
+    if fun.() do
+      :ok
+    else
+      if System.monotonic_time(:millisecond) >= deadline do
+        :ok
+      else
+        Process.sleep(50)
+        do_wait_until(deadline, fun)
+      end
+    end
+  end
+
   def unique_org_name do
     hex = :crypto.strong_rand_bytes(4) |> Base.encode16(case: :lower)
     "itest_#{hex}"
@@ -199,12 +222,26 @@ defmodule HexpmWeb.IntegrationHelpers do
     focus_stripe_iframe(session, 0)
     js_focus_and_click(session, "cardnumber")
     Wallaby.Browser.send_keys(session, String.graphemes(card_number))
-    Process.sleep(500)
+
+    wait_until(500, fn ->
+      evaluate_js(session, """
+        var input = document.querySelector("input[name='cardnumber']");
+        if (!input || !input.value) return false;
+        return input.value.replace(/[^0-9]/g, '').length >= 15;
+      """)
+    end)
 
     focus_stripe_iframe(session, 0)
     js_focus_and_click(session, "exp-date")
     Wallaby.Browser.send_keys(session, String.graphemes(expiry))
-    Process.sleep(500)
+
+    wait_until(500, fn ->
+      evaluate_js(session, """
+        var input = document.querySelector("input[name='exp-date']");
+        if (!input || !input.value) return false;
+        return input.value.replace(/[^0-9]/g, '').length >= 4;
+      """)
+    end)
 
     focus_stripe_iframe(session, 0)
     js_focus_and_click(session, "cvc")
@@ -239,7 +276,12 @@ defmodule HexpmWeb.IntegrationHelpers do
       }
     """)
 
-    Process.sleep(100)
+    wait_until(100, fn ->
+      evaluate_js(session, """
+        var input = document.querySelector("input[name='#{field_name}']");
+        return input && document.activeElement === input;
+      """)
+    end)
   end
 
   # Focuses a Stripe Elements iframe by index inside #card-element.
@@ -326,8 +368,16 @@ defmodule HexpmWeb.IntegrationHelpers do
 
     cond do
       has_visible_iframe ->
-        # Give Stripe Elements a moment to fully render card fields
-        Process.sleep(1000)
+        # Wait for Stripe Elements to fully render card fields inside the iframe
+        focus_stripe_iframe(session, 0)
+
+        wait_until(1000, fn ->
+          evaluate_js(session, """
+            return !!document.querySelector("input[name='cardnumber']");
+          """)
+        end)
+
+        Wallaby.Browser.focus_default_frame(session)
         :ok
 
       not modal_open ->
@@ -411,7 +461,19 @@ defmodule HexpmWeb.IntegrationHelpers do
       """)
 
     if has_3ds do
-      Process.sleep(2000)
+      wait_until(2000, fn ->
+        evaluate_js(session, """
+          var cardEl = document.getElementById('card-element');
+          var frames = document.querySelectorAll('iframe');
+          for (var i = 0; i < frames.length; i++) {
+            if (cardEl && cardEl.contains(frames[i])) continue;
+            var rect = frames[i].getBoundingClientRect();
+            if (rect.height > 300 && rect.width > 300) return true;
+          }
+          return false;
+        """)
+      end)
+
       :ok
     else
       if attempts <= 0 do
@@ -444,7 +506,13 @@ defmodule HexpmWeb.IntegrationHelpers do
       """)
 
     if is_open do
-      Process.sleep(300)
+      wait_until(300, fn ->
+        evaluate_js(session, """
+          var modal = document.getElementById('#{modal_id}');
+          return modal && modal.classList.contains('show');
+        """)
+      end)
+
       :ok
     else
       if attempts <= 0 do
