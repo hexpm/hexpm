@@ -30,11 +30,11 @@ defmodule HexpmWeb.Router do
         img_src: ~w('self' data: https://www.gravatar.com https://q.stripe.com),
         # Allow fonts from self and Google Fonts
         font_src: ~w('self' https://fonts.gstatic.com),
-        # hcaptcha iframe, asciinema iframe for blog embeds, Stripe Checkout
+        # hcaptcha iframe, asciinema iframe for blog embeds, Stripe Checkout + 3DS
         frame_src:
-          ~w('self' https://hcaptcha.com https://*.hcaptcha.com https://asciinema.org https://checkout.stripe.com),
-        # hcaptcha verification, Stripe Checkout (Plausible added at runtime)
-        connect_src: ~w('self' https://*.hcaptcha.com https://checkout.stripe.com),
+          ~w('self' https://hcaptcha.com https://*.hcaptcha.com https://asciinema.org https://checkout.stripe.com https://js.stripe.com https://hooks.stripe.com),
+        # hcaptcha verification, Stripe API (Plausible added at runtime)
+        connect_src: ~w('self' https://*.hcaptcha.com https://api.stripe.com),
         # Disallow plugins (Flash, etc.)
         object_src: ~w('none'),
         # Disallow <base> tag hijacking
