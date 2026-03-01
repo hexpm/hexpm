@@ -191,6 +191,7 @@ jobs:
       otp: 27.3
       elixir: 1.18.4
       STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
 
     permissions:
       contents: "read"
@@ -276,7 +277,7 @@ jobs:
             -e HEXPM_BILLING_HOST=localhost \
             -e HEXPM_BILLING_SECRET_KEY_BASE=dummysecretkeybasethatis64characterslongatleastfortheciruntowork!! \
             -e HEXPM_BILLING_STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY \
-            -e HEXPM_BILLING_STRIPE_PUBLISHABLE_KEY=pk_test_dummy \
+            -e HEXPM_BILLING_STRIPE_PUBLISHABLE_KEY=$STRIPE_PUBLISHABLE_KEY \
             -e HEXPM_BILLING_STRIPE_SIGNING_SECRET_KEY=$STRIPE_WEBHOOK_SECRET \
             -e HEXPM_BILLING_ENABLE_TEST_ROUTES=true \
             -e HEXPM_BILLING_SENTRY_DSN=https://public@o0.ingest.sentry.io/0 \
@@ -303,7 +304,7 @@ jobs:
             -e HEXPM_BILLING_HOST=localhost \
             -e HEXPM_BILLING_SECRET_KEY_BASE=dummysecretkeybasethatis64characterslongatleastfortheciruntowork!! \
             -e HEXPM_BILLING_STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY \
-            -e HEXPM_BILLING_STRIPE_PUBLISHABLE_KEY=pk_test_dummy \
+            -e HEXPM_BILLING_STRIPE_PUBLISHABLE_KEY=$STRIPE_PUBLISHABLE_KEY \
             -e HEXPM_BILLING_STRIPE_SIGNING_SECRET_KEY=$STRIPE_WEBHOOK_SECRET \
             -e HEXPM_BILLING_ENABLE_TEST_ROUTES=true \
             -e HEXPM_BILLING_SENTRY_DSN=https://public@o0.ingest.sentry.io/0 \
