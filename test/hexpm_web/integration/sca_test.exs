@@ -162,7 +162,27 @@ if Code.ensure_loaded?(Wallaby) do
           "cancel-subscription-modal"
         )
 
-        click(session, css("#cancel-subscription-modal .btn-danger"))
+        # Diagnostic: submit via fetch to capture response
+        submit_result =
+          evaluate_js(session, """
+            var form = document.querySelector('#cancel-subscription-modal form');
+            if (!form) return {error: 'no form found'};
+            var formData = new URLSearchParams(new FormData(form));
+            return await fetch(form.action, {
+              method: 'POST',
+              body: formData,
+              credentials: 'same-origin',
+              redirect: 'manual'
+            }).then(function(r) {
+              return {status: r.status, type: r.type, url: r.url, action: form.action};
+            }).catch(function(e) { return {error: e.message}; });
+          """)
+
+        IO.puts("DIAG cancel submit: #{inspect(submit_result)}")
+
+        Wallaby.Browser.execute_script(session, "window.location.reload();")
+        Process.sleep(2000)
+
         assert_flash(session, "info", "cancelled")
       end
 
@@ -182,7 +202,43 @@ if Code.ensure_loaded?(Wallaby) do
         |> visit_org_billing(organization, wait_for: "button[data-target='#change-plan']")
 
         open_modal(session, css("button[data-target='#change-plan']"), "change-plan")
-        click(session, css("#change-plan button[type='submit']"))
+
+        # Diagnostic: capture form details before submitting
+        form_info =
+          evaluate_js(session, """
+            var form = document.querySelector('#change-plan form');
+            if (!form) return {error: 'no form found'};
+            var inputs = {};
+            var formInputs = form.querySelectorAll('input');
+            for (var i = 0; i < formInputs.length; i++) {
+              inputs[formInputs[i].name] = formInputs[i].value.substring(0, 50);
+            }
+            return {action: form.action, method: form.method, inputs: inputs};
+          """)
+
+        IO.puts("DIAG change-plan form: #{inspect(form_info)}")
+
+        # Submit via fetch to capture the response status
+        submit_result =
+          evaluate_js(session, """
+            var form = document.querySelector('#change-plan form');
+            var formData = new URLSearchParams(new FormData(form));
+            return await fetch(form.action, {
+              method: 'POST',
+              body: formData,
+              credentials: 'same-origin',
+              redirect: 'manual'
+            }).then(function(r) {
+              return {status: r.status, type: r.type, redirected: r.redirected, url: r.url};
+            }).catch(function(e) { return {error: e.message}; });
+          """)
+
+        IO.puts("DIAG change-plan submit: #{inspect(submit_result)}")
+
+        # Reload after the manual-redirect fetch to show the flash
+        Wallaby.Browser.execute_script(session, "window.location.reload();")
+        Process.sleep(2000)
+
         assert_flash(session, "info", "switched")
       end
     end
