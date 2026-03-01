@@ -57,11 +57,26 @@ if Code.ensure_loaded?(Wallaby) do
         """)
       end)
 
-      # Click the first #payment-button on the page (outside the modal, has JS handler)
-      Wallaby.Browser.click(session, css("#payment-button", at: 0))
+      # Install fetch interceptor to capture SetupIntent flow state
+      Wallaby.Browser.execute_script(session, """
+        window.__sca_debug = {fetches: [], errors: []};
+        window.addEventListener('error', function(e) {
+          window.__sca_debug.errors.push(e.message || String(e));
+        });
+        window.addEventListener('unhandledrejection', function(e) {
+          window.__sca_debug.errors.push('Promise: ' + (e.reason ? (e.reason.message || String(e.reason)) : 'unknown'));
+        });
+      """)
+
+      # Submit the first payment form directly via requestSubmit() to avoid
+      # element-finding ambiguity with duplicate #payment-button elements
+      Wallaby.Browser.execute_script(session, """
+        var forms = document.querySelectorAll('#payment-form');
+        if (forms.length > 0) forms[0].requestSubmit();
+      """)
 
       # Wait for Stripe to process (3DS iframe appears or error shows)
-      wait_until(3000, fn ->
+      wait_until(5000, fn ->
         evaluate_js(session, """
           var cardEl = document.getElementById('card-element');
           var frames = document.querySelectorAll('iframe');
@@ -119,6 +134,22 @@ if Code.ensure_loaded?(Wallaby) do
         |> browser_login(user)
         |> visit_org_billing(organization)
         |> setup_card(@card_3ds)
+
+        # Check if the SCA flow had any issues before trying 3DS
+        debug = evaluate_js(session, "return window.__sca_debug || {};")
+
+        card_errors =
+          evaluate_js(session, """
+            var el = document.getElementById('card-errors');
+            return el ? el.textContent.trim() : '';
+          """)
+
+        if card_errors != "" do
+          flunk(
+            "Card errors after setup: #{card_errors}\n" <>
+              "SCA debug: #{inspect(debug)}"
+          )
+        end
 
         complete_stripe_3ds(session)
 

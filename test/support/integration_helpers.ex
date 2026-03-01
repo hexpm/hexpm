@@ -515,7 +515,30 @@ defmodule HexpmWeb.IntegrationHelpers do
       :ok
     else
       if attempts <= 0 do
-        flunk("3DS iframe did not appear within timeout")
+        diag =
+          evaluate_js(session, """
+            var result = {};
+            result.sca_debug = window.__sca_debug || 'not set';
+            var cardErrors = document.getElementById('card-errors');
+            result.card_errors = cardErrors ? cardErrors.textContent.trim() : '';
+            result.total_iframes = document.querySelectorAll('iframe').length;
+            var iframes = [];
+            document.querySelectorAll('iframe').forEach(function(f) {
+              iframes.push({name: f.name || '', src: (f.src || '').substring(0, 100),
+                w: f.getBoundingClientRect().width, h: f.getBoundingClientRect().height});
+            });
+            result.iframes = iframes;
+            result.payment_button_disabled = (function() {
+              var btn = document.getElementById('payment-button');
+              return btn ? {disabled: btn.disabled, text: btn.textContent.trim()} : 'not found';
+            })();
+            return result;
+          """)
+
+        flunk(
+          "3DS iframe did not appear within timeout\n" <>
+            "Diagnostics: #{inspect(diag, pretty: true)}"
+        )
       end
 
       Process.sleep(1000)
