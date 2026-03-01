@@ -228,9 +228,7 @@ jobs:
           node-version: 22
 
       - name: Build assets
-        run: |
-          yarn install --cwd assets
-          npx --prefix assets webpack --mode production
+        run: cd assets && yarn install && npx webpack --mode production
 
       - name: Google auth
         id: auth
