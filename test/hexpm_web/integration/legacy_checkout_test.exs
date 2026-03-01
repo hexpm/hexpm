@@ -90,7 +90,9 @@ if Code.ensure_loaded?(Wallaby) do
         """)
 
         # Wait for the POST to complete and page to reload
-        Process.sleep(5000)
+        wait_until(15_000, fn ->
+          get_billing_customer(name)["card"] != nil
+        end)
 
         # Verify card is shown on billing page
         customer = get_billing_customer(name)

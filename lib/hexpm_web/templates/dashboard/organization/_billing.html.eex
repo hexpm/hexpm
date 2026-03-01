@@ -52,43 +52,58 @@
             </dl>
             <br>
 
-            <%!-- TODO: Remove when all customers migrated to SCA/PaymentIntents --%>
-            <script nonce="<%= @script_src_nonce %>">
-              window.hexpm_billing_post_action = "<%= @post_action %>";
-              window.hexpm_billing_csrf_token = "<%= @csrf_token %>";
-            </script>
-            <%= raw(add_script_nonces(@checkout_html, @script_src_nonce)) %>
+            <%= if @use_payment_intents do %>
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#payment-method-modal">
+                  <%= if @card do %>Update payment method<% else %>Add payment method<% end %>
+                </button>
 
-            <div style="display: flex; gap: 10px; align-items: center;">
-              <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#payment-method-modal">
-                <%= if @card do %>Update payment method<% else %>Add payment method<% end %>
-              </button>
-
-              <%= if @subscription && @subscription["cancel_at_period_end"] && @card do %>
-                <%= form_tag(~p"/dashboard/orgs/#{@organization}/resume-billing", class: "resume-billing") do %>
-                  <%= submit "Resume subscription", class: "btn btn-success" %>
+                <%= if @subscription && @subscription["cancel_at_period_end"] && @card do %>
+                  <%= form_tag(~p"/dashboard/orgs/#{@organization}/resume-billing", class: "resume-billing") do %>
+                    <%= submit "Resume subscription", class: "btn btn-success" %>
+                  <% end %>
                 <% end %>
-              <% end %>
 
-              <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#cancel-subscription-modal"
-                <%= if !@subscription || @subscription["cancel_at_period_end"] do %>disabled<% end %>>
-                Cancel subscription
-              </button>
-            </div>
+                <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#cancel-subscription-modal"
+                  <%= if !@subscription || @subscription["cancel_at_period_end"] do %>disabled<% end %>>
+                  Cancel subscription
+                </button>
+              </div>
 
-            <div class="modal fade" id="payment-method-modal" tabindex="-1" role="dialog">
-              <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                  <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                    <h4 class="modal-title">Payment method</h4>
-                  </div>
-                  <div class="modal-body">
-                    <%= raw(@checkout_html) %>
+              <div class="modal fade" id="payment-method-modal" tabindex="-1" role="dialog">
+                <div class="modal-dialog" role="document">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                      <h4 class="modal-title">Payment method</h4>
+                    </div>
+                    <div class="modal-body">
+                      <%= raw(add_script_nonces(@checkout_html, @script_src_nonce)) %>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            <% else %>
+              <%!-- TODO: Remove when all customers migrated to SCA/PaymentIntents --%>
+              <script nonce="<%= @script_src_nonce %>">
+                window.hexpm_billing_post_action = "<%= @post_action %>";
+                window.hexpm_billing_csrf_token = "<%= @csrf_token %>";
+              </script>
+              <%= raw(add_script_nonces(@checkout_html, @script_src_nonce)) %>
+
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <%= if @subscription && @subscription["cancel_at_period_end"] && @card do %>
+                  <%= form_tag(~p"/dashboard/orgs/#{@organization}/resume-billing", class: "resume-billing") do %>
+                    <%= submit "Resume subscription", class: "btn btn-success" %>
+                  <% end %>
+                <% end %>
+
+                <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#cancel-subscription-modal"
+                  <%= if !@subscription || @subscription["cancel_at_period_end"] do %>disabled<% end %>>
+                  Cancel subscription
+                </button>
+              </div>
+            <% end %>
 
             <div class="modal fade" id="cancel-subscription-modal" tabindex="-1" role="dialog">
               <div class="modal-dialog" role="document">
@@ -179,30 +194,32 @@
             <strong><%= title %></strong> <%= description %><br><br>
             Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.<br><br>
 
-            <%!-- TODO: Remove when all customers migrated to SCA/PaymentIntents --%>
-            <script nonce="<%= @script_src_nonce %>">
-              window.hexpm_billing_post_action = "<%= @post_action %>";
-              window.hexpm_billing_csrf_token = "<%= @csrf_token %>";
-            </script>
-            <%= raw(add_script_nonces(@checkout_html, @script_src_nonce)) %>
+            <%= if @use_payment_intents do %>
+              <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#payment-method-modal">
+                Add payment method
+              </button>
 
-            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#payment-method-modal">
-              Add payment method
-            </button>
-
-            <div class="modal fade" id="payment-method-modal" tabindex="-1" role="dialog">
-              <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                  <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                    <h4 class="modal-title">Payment method</h4>
-                  </div>
-                  <div class="modal-body">
-                    <%= raw(@checkout_html) %>
+              <div class="modal fade" id="payment-method-modal" tabindex="-1" role="dialog">
+                <div class="modal-dialog" role="document">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                      <h4 class="modal-title">Payment method</h4>
+                    </div>
+                    <div class="modal-body">
+                      <%= raw(add_script_nonces(@checkout_html, @script_src_nonce)) %>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            <% else %>
+              <%!-- TODO: Remove when all customers migrated to SCA/PaymentIntents --%>
+              <script nonce="<%= @script_src_nonce %>">
+                window.hexpm_billing_post_action = "<%= @post_action %>";
+                window.hexpm_billing_csrf_token = "<%= @csrf_token %>";
+              </script>
+              <%= raw(add_script_nonces(@checkout_html, @script_src_nonce)) %>
+            <% end %>
           <% end %>
         </div>
 

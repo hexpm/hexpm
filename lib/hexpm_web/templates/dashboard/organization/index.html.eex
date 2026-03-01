@@ -302,7 +302,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="<%= @script_src_nonce %>">
 (function() {
   var input = document.getElementById('leave-org-confirm');
   var button = document.getElementById('leave-org-submit');

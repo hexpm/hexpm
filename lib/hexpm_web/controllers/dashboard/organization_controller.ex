@@ -572,6 +572,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       company: nil,
       pending_action_html: nil,
       stripe_publishable_key: nil,
+      use_payment_intents: false,
       # TODO: Remove when all customers migrated to SCA/PaymentIntents
       post_action: nil,
       csrf_token: nil
@@ -603,6 +604,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       company: customer["company"],
       pending_action_html: customer["pending_action_html"],
       stripe_publishable_key: customer["stripe_publishable_key"],
+      use_payment_intents: customer["use_payment_intents"] || false,
       # TODO: Remove when all customers migrated to SCA/PaymentIntents
       post_action: post_action,
       csrf_token: get_csrf_token()

@@ -58,13 +58,11 @@ defmodule HexpmWeb.Dashboard.BillingProxyController do
         fun.(organization)
       else
         conn
-        |> put_status(403)
         |> put_resp_content_type("application/json")
         |> send_resp(403, Jason.encode!(%{"errors" => "Forbidden"}))
       end
     else
       conn
-      |> put_status(404)
       |> put_resp_content_type("application/json")
       |> send_resp(404, Jason.encode!(%{"errors" => "Not found"}))
     end
