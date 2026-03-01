@@ -76,6 +76,15 @@ if Code.ensure_loaded?(Wallaby) do
         # full chain: hexpm billing_token controller -> hexpm_billing -> Stripe.
         token_json = Jason.encode!(token)
 
+        # Check that hexpm_billing_checkout is defined before calling it
+        checkout_defined =
+          evaluate_js(session, """
+            return typeof window.hexpm_billing_checkout;
+          """)
+
+        assert checkout_defined == "function",
+               "Expected hexpm_billing_checkout to be a function, got: #{inspect(checkout_defined)}"
+
         Wallaby.Browser.execute_script(session, """
           window.hexpm_billing_checkout(#{token_json});
         """)
@@ -85,7 +94,12 @@ if Code.ensure_loaded?(Wallaby) do
 
         # Verify card is shown on billing page
         customer = get_billing_customer(name)
-        assert customer["card"]
+
+        assert customer["card"],
+               "Expected customer to have a card after legacy checkout.\n" <>
+                 "Customer keys: #{inspect(Map.keys(customer))}\n" <>
+                 "Token: #{inspect(token)}"
+
         assert customer["card"]["brand"] == "Visa"
         assert customer["card"]["last4"] == "4242"
 

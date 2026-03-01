@@ -394,7 +394,45 @@ defmodule HexpmWeb.IntegrationHelpers do
 
       attempts <= 0 ->
         Wallaby.Browser.take_screenshot(session, name: "stripe_iframe_debug")
-        flunk("Stripe Elements iframe did not become visible within timeout (modal is open)")
+
+        diag =
+          evaluate_js(session, """
+            var diag = {};
+            diag.pageUrl = window.location.href;
+            diag.stripeLoaded = typeof window.Stripe !== 'undefined';
+            diag.stripeType = typeof window.Stripe;
+            diag.jqueryLoaded = typeof window.$ !== 'undefined';
+            var card = document.getElementById('card-element');
+            diag.cardElementExists = !!card;
+            diag.cardElementHTML = card ? card.innerHTML.substring(0, 500) : 'N/A';
+            diag.cardElementParentVisible = card ? window.getComputedStyle(card.parentElement).display : 'N/A';
+            diag.totalIframes = document.querySelectorAll('iframe').length;
+            var stripeScripts = [];
+            document.querySelectorAll('script[src]').forEach(function(s) {
+              if (s.src.indexOf('stripe') !== -1) {
+                stripeScripts.push({src: s.src, hasNonce: !!s.nonce});
+              }
+            });
+            diag.stripeScripts = stripeScripts;
+            diag.allScriptCount = document.querySelectorAll('script').length;
+            diag.noncedScriptCount = document.querySelectorAll('script[nonce]').length;
+            var allCards = document.querySelectorAll('#card-element');
+            diag.cardElementCount = allCards.length;
+            for (var i = 0; i < allCards.length; i++) {
+              diag['cardElement_' + i + '_iframes'] = allCards[i].querySelectorAll('iframe').length;
+              diag['cardElement_' + i + '_html'] = allCards[i].innerHTML.substring(0, 200);
+              var parentForm = allCards[i].closest('form');
+              diag['cardElement_' + i + '_inModal'] = !!allCards[i].closest('.modal');
+              diag['cardElement_' + i + '_parentDisplay'] = parentForm ? window.getComputedStyle(parentForm).display : 'N/A';
+            }
+            diag.bodyTextSnippet = document.body ? document.body.textContent.substring(0, 200).trim() : 'N/A';
+            return diag;
+          """)
+
+        flunk(
+          "Stripe Elements iframe did not become visible within timeout (modal is open)\n" <>
+            "Diagnostics: #{inspect(diag, pretty: true)}"
+        )
 
       true ->
         Process.sleep(1000)
