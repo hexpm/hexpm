@@ -219,33 +219,9 @@ defmodule HexpmWeb.IntegrationHelpers do
     # ChromeDriver's findElement intermittently fails in cross-origin iframes,
     # even though executeScript works fine. We use JS to focus/click fields
     # and WebDriver's send_keys to type values.
-    focus_stripe_iframe(session, 0)
-    js_focus_and_click(session, "cardnumber")
-    Wallaby.Browser.send_keys(session, String.graphemes(card_number))
-
-    wait_until(500, fn ->
-      evaluate_js(session, """
-        var input = document.querySelector("input[name='cardnumber']");
-        if (!input || !input.value) return false;
-        return input.value.replace(/[^0-9]/g, '').length >= 15;
-      """)
-    end)
-
-    focus_stripe_iframe(session, 0)
-    js_focus_and_click(session, "exp-date")
-    Wallaby.Browser.send_keys(session, String.graphemes(expiry))
-
-    wait_until(500, fn ->
-      evaluate_js(session, """
-        var input = document.querySelector("input[name='exp-date']");
-        if (!input || !input.value) return false;
-        return input.value.replace(/[^0-9]/g, '').length >= 4;
-      """)
-    end)
-
-    focus_stripe_iframe(session, 0)
-    js_focus_and_click(session, "cvc")
-    Wallaby.Browser.send_keys(session, String.graphemes(cvc))
+    type_in_stripe_field(session, "cardnumber", card_number, String.length(card_number))
+    type_in_stripe_field(session, "exp-date", expiry, String.length(expiry))
+    type_in_stripe_field(session, "cvc", cvc, 3)
 
     # ZIP code field may not be present depending on Stripe Elements config.
     focus_stripe_iframe(session, 0)
@@ -263,6 +239,40 @@ defmodule HexpmWeb.IntegrationHelpers do
     Wallaby.Browser.focus_default_frame(session)
 
     session
+  end
+
+  # Types a value into a Stripe Elements field with retry logic.
+  # Stripe Elements in headless Chrome can sometimes miss keystrokes,
+  # especially when the field auto-advances or loses focus. This retries
+  # the entire field input if not enough digits were entered.
+  defp type_in_stripe_field(session, field_name, value, expected_digits, attempts \\ 3) do
+    focus_stripe_iframe(session, 0)
+    js_focus_and_click(session, field_name)
+    Wallaby.Browser.send_keys(session, String.graphemes(value))
+
+    filled =
+      wait_until(2000, fn ->
+        evaluate_js(session, """
+          var input = document.querySelector("input[name='#{field_name}']");
+          if (!input || !input.value) return false;
+          return input.value.replace(/[^0-9]/g, '').length >= #{expected_digits};
+        """)
+      end)
+
+    if filled != :ok && attempts > 1 do
+      # Clear the field and retry
+      focus_stripe_iframe(session, 0)
+      js_focus_and_click(session, field_name)
+
+      Wallaby.Browser.execute_script(session, """
+        var input = document.querySelector("input[name='#{field_name}']");
+        if (input) { input.select(); }
+      """)
+
+      Wallaby.Browser.send_keys(session, [:backspace])
+      Process.sleep(200)
+      type_in_stripe_field(session, field_name, value, expected_digits, attempts - 1)
+    end
   end
 
   # Uses JavaScript to focus and click an input field inside a Stripe iframe.
