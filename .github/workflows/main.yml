@@ -169,6 +169,179 @@ jobs:
       - name: Run tests
         run: cd hex && mix test --include integration && cd ..
 
+  integration-test:
+    name: Integration Test
+    runs-on: ubuntu-24.04
+    if: ${{ github.event_name != 'pull_request' }}
+    concurrency: integration-test
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+    env:
+      otp: 27.3
+      elixir: 1.18.4
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+
+    permissions:
+      contents: "read"
+      id-token: "write"
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install OTP and Elixir
+        uses: erlef/setup-beam@e6d7c94229049569db56a7ad5a540c051a010af9 # v1.20.4
+        with:
+          otp-version: ${{ env.otp }}
+          elixir-version: ${{ env.elixir }}
+
+      - name: Cache dependencies
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-elixir-${{ env.elixir }}-otp-${{ env.otp }}-${{ hashFiles('**/mix.lock') }}
+
+      - name: Install dependencies
+        run: mix do deps.get, deps.compile
+
+      - name: Compile
+        run: MIX_ENV=test mix compile
+
+      - name: Google auth
+        id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 #v3.0.0
+        with:
+          token_format: "access_token"
+          project_id: hexpm-prod
+          service_account: ${{ secrets.GCLOUD_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ secrets.GCLOUD_WORKFLOW_IDENTITY_POOL_PROVIDER }}
+
+      - name: Docker Auth
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: gcr.io
+          username: "oauth2accesstoken"
+          password: "${{ steps.auth.outputs.access_token }}"
+
+      - name: Create hexpm_billing database
+        run: PGPASSWORD=postgres createdb -U postgres -h localhost hexpm_billing_ci
+
+      - name: Install Stripe CLI
+        run: |
+          curl -s https://packages.stripe.dev/api/security/keypair/stripe-cli-gpg/public | gpg --dearmor | sudo tee /usr/share/keyrings/stripe.gpg
+          echo "deb [signed-by=/usr/share/keyrings/stripe.gpg] https://packages.stripe.dev/stripe-cli-debian-local stable main" | sudo tee -a /etc/apt/sources.list.d/stripe.list
+          sudo apt update
+          sudo apt install stripe
+
+      - name: Get Stripe webhook secret
+        id: stripe-secret
+        run: echo "webhook_secret=$(stripe listen --print-secret --api-key $STRIPE_SECRET_KEY)" >> $GITHUB_OUTPUT
+
+      - name: Start Stripe webhook forwarding
+        run: |
+          stripe listen --forward-to localhost:4001/webhooks/payments --api-key $STRIPE_SECRET_KEY > /tmp/stripe-listen.log 2>&1 &
+          for i in $(seq 1 30); do
+            if grep -q "Ready!" /tmp/stripe-listen.log 2>/dev/null; then
+              echo "Stripe CLI is ready"
+              break
+            fi
+            sleep 1
+          done
+
+      - name: Pull and start hexpm_billing
+        env:
+          STRIPE_WEBHOOK_SECRET: ${{ steps.stripe-secret.outputs.webhook_secret }}
+        run: |
+          docker pull gcr.io/hexpm-prod/hexpm_billing:latest
+
+          docker run --rm --network host \
+            -e HEXPM_BILLING_DATABASE_URL=postgres://postgres:postgres@localhost:5432/hexpm_billing_ci \
+            -e HEXPM_BILLING_DATABASE_SSL=false \
+            -e HEXPM_BILLING_API_SECRET=hex_billing_key \
+            -e HEXPM_BILLING_PORT=4001 \
+            -e HEXPM_BILLING_HOST=localhost \
+            -e HEXPM_BILLING_SECRET_KEY_BASE=dummysecretkeybasethatis64characterslongatleastfortheciruntowork!! \
+            -e HEXPM_BILLING_STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY \
+            -e HEXPM_BILLING_STRIPE_PUBLISHABLE_KEY=pk_test_dummy \
+            -e HEXPM_BILLING_STRIPE_SIGNING_SECRET_KEY=$STRIPE_WEBHOOK_SECRET \
+            -e HEXPM_BILLING_ENABLE_TEST_ROUTES=true \
+            -e HEXPM_BILLING_SENTRY_DSN=https://public@o0.ingest.sentry.io/0 \
+            -e HEXPM_BILLING_ENV=ci \
+            -e HEXPM_BILLING_SENDGRID_API_KEY=SG.dummy \
+            -e HEXPM_BILLING_EXCHANGERATESAPI_KEY=dummy \
+            -e HEXPM_BILLING_BUCKET=dummy \
+            -e HEXPM_BILLING_EMAIL=billing@example.com \
+            -e HEXPM_BILLING_ENVIRONMENT=ci \
+            -e HEXPM_BILLING_EMAIL_HOST=localhost \
+            -e HEXPM_BILLING_VAT_NO=dummy \
+            -e "HEXPM_BILLING_COMPANY_ADDRESS_LINE=dummy" \
+            -e "HEXPM_BILLING_COMPANY_CONTACT_LINE=dummy" \
+            -e HEXPM_BILLING_HEXPM_URL=http://localhost:4000 \
+            -e BEAM_PORT=14001 \
+            gcr.io/hexpm-prod/hexpm_billing:latest \
+            /app/bin/hexpm_billing eval 'HexpmBilling.ReleaseTasks.migrate()'
+
+          docker run -d --name hexpm_billing --network host \
+            -e HEXPM_BILLING_DATABASE_URL=postgres://postgres:postgres@localhost:5432/hexpm_billing_ci \
+            -e HEXPM_BILLING_DATABASE_SSL=false \
+            -e HEXPM_BILLING_API_SECRET=hex_billing_key \
+            -e HEXPM_BILLING_PORT=4001 \
+            -e HEXPM_BILLING_HOST=localhost \
+            -e HEXPM_BILLING_SECRET_KEY_BASE=dummysecretkeybasethatis64characterslongatleastfortheciruntowork!! \
+            -e HEXPM_BILLING_STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY \
+            -e HEXPM_BILLING_STRIPE_PUBLISHABLE_KEY=pk_test_dummy \
+            -e HEXPM_BILLING_STRIPE_SIGNING_SECRET_KEY=$STRIPE_WEBHOOK_SECRET \
+            -e HEXPM_BILLING_ENABLE_TEST_ROUTES=true \
+            -e HEXPM_BILLING_SENTRY_DSN=https://public@o0.ingest.sentry.io/0 \
+            -e HEXPM_BILLING_ENV=ci \
+            -e HEXPM_BILLING_SENDGRID_API_KEY=SG.dummy \
+            -e HEXPM_BILLING_EXCHANGERATESAPI_KEY=dummy \
+            -e HEXPM_BILLING_BUCKET=dummy \
+            -e HEXPM_BILLING_EMAIL=billing@example.com \
+            -e HEXPM_BILLING_ENVIRONMENT=ci \
+            -e HEXPM_BILLING_EMAIL_HOST=localhost \
+            -e HEXPM_BILLING_VAT_NO=dummy \
+            -e "HEXPM_BILLING_COMPANY_ADDRESS_LINE=dummy" \
+            -e "HEXPM_BILLING_COMPANY_CONTACT_LINE=dummy" \
+            -e HEXPM_BILLING_HEXPM_URL=http://localhost:4000 \
+            -e BEAM_PORT=14001 \
+            gcr.io/hexpm-prod/hexpm_billing:latest \
+            /app/bin/hexpm_billing start
+
+      - name: Wait for hexpm_billing
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:4001/status > /dev/null 2>&1; then
+              echo "hexpm_billing is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "hexpm_billing failed to start"
+          docker logs hexpm_billing
+          exit 1
+
+      - name: Run integration tests
+        run: mix test --only integration
+
+      - name: Show hexpm_billing logs on failure
+        if: failure()
+        run: docker logs hexpm_billing
+
   docker:
     name: Docker (${{ matrix.platform }})
     runs-on: ${{ matrix.runner }}
