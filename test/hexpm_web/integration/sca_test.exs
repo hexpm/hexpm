@@ -176,7 +176,7 @@ if Code.ensure_loaded?(Wallaby) do
         # Wait for subscription to be fully active before cancelling
         wait_for_billing_status(name, fn customer ->
           sub = customer["subscription"]
-          sub && sub["status"] == "active"
+          sub && sub["status"] == "active" && sub["current_period_end"]
         end)
 
         session
@@ -203,7 +203,7 @@ if Code.ensure_loaded?(Wallaby) do
         # Wait for subscription to be fully active before changing plan
         wait_for_billing_status(name, fn customer ->
           sub = customer["subscription"]
-          sub && sub["status"] == "active"
+          sub && sub["status"] == "active" && sub["current_period_end"]
         end)
 
         session

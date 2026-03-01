@@ -300,7 +300,7 @@
     </div>
   </div>
 
-  <script>
+  <script nonce="<%= @script_src_nonce %>">
   (function() {
     // Show loading state on billing form submissions
     document.addEventListener('submit', function(event) {
