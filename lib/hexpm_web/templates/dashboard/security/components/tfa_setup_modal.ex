@@ -10,6 +10,7 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
   import HexpmWeb.Components.Modal
   import HexpmWeb.Components.Buttons, only: [button: 1]
   alias HexpmWeb.ViewHelpers
+  alias Phoenix.LiveView.JS
   use Hexpm.Shared
 
   use Phoenix.VerifiedRoutes,
@@ -151,7 +152,7 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
           id="tfa-submit-btn"
           type="button"
           variant="primary"
-          onclick="document.getElementById('tfa-verification-form').submit()"
+          phx-click={JS.dispatch("submit", to: "#tfa-verification-form")}
           class="tw:opacity-50 tw:cursor-not-allowed"
         >
           Enable Two-Factor Authentication

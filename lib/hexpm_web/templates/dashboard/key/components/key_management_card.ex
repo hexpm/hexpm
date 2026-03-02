@@ -63,6 +63,11 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
             <.key_row key={key} csrf_token={@csrf_token} delete_key_path={@delete_key_path} />
           </:row>
         </.table>
+
+        <%!-- Revoke Key Modals rendered outside the table to avoid invalid HTML inside <tbody> --%>
+        <%= for key <- @keys do %>
+          <.revoke_key_modal key={key} csrf_token={@csrf_token} delete_key_path={@delete_key_path} />
+        <% end %>
       <% end %>
 
       <%!-- Generate New Key Button --%>
@@ -148,13 +153,6 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
         </div>
       </td>
     </tr>
-
-    <%!-- Revoke Key Modal --%>
-    <.revoke_key_modal
-      key={@key}
-      csrf_token={@csrf_token}
-      delete_key_path={@delete_key_path}
-    />
     """
   end
 

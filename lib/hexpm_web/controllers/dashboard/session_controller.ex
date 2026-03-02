@@ -9,7 +9,10 @@ defmodule HexpmWeb.Dashboard.SessionController do
     render_index(conn)
   end
 
-  def delete(conn, %{"id" => id}) do
+  def delete(conn, %{"_id" => id}), do: do_delete(conn, id)
+  def delete(conn, %{"id" => id}), do: do_delete(conn, id)
+
+  defp do_delete(conn, id) do
     user = conn.assigns.current_user
     sessions = UserSessions.all_for_user(user)
 
@@ -27,7 +30,7 @@ defmodule HexpmWeb.Dashboard.SessionController do
         is_current_session =
           session.type == "browser" && current_session_token &&
             case Base.decode64(current_session_token) do
-              {:ok, token} -> token == session.session_token
+              {:ok, token} -> Plug.Crypto.secure_compare(token, session.session_token)
               _ -> false
             end
 
@@ -63,7 +66,8 @@ defmodule HexpmWeb.Dashboard.SessionController do
       "index.html",
       title: "Dashboard - Sessions",
       container: "container page dashboard",
-      sessions: sessions
+      sessions: sessions,
+      current_session_token: get_session(conn, "session_token")
     )
   end
 end

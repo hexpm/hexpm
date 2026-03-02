@@ -13,7 +13,7 @@ defmodule HexpmWeb.Components.Badge do
       <.badge variant="green">API</.badge>
       <.badge variant="purple">REPOS</.badge>
   """
-  attr :variant, :string, default: "default", values: ~w(default green purple)
+  attr :variant, :string, default: "default", values: ~w(default green purple blue)
   slot :inner_block, required: true
 
   def badge(assigns) do
@@ -30,4 +30,5 @@ defmodule HexpmWeb.Components.Badge do
   defp badge_variant("default"), do: "tw:bg-grey-200 tw:text-grey-700"
   defp badge_variant("green"), do: "tw:bg-green-100 tw:text-green-700"
   defp badge_variant("purple"), do: "tw:bg-purple-100 tw:text-purple-700"
+  defp badge_variant("blue"), do: "tw:bg-blue-100 tw:text-blue-700"
 end
