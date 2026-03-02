@@ -3,7 +3,7 @@ defmodule HexpmWeb.Dashboard.AuditLogController do
 
   plug :requires_login
 
-  @per_page 100
+  @per_page 20
 
   def index(conn, params) do
     page = Hexpm.Utils.safe_int(params["page"]) || 1
@@ -18,7 +18,8 @@ defmodule HexpmWeb.Dashboard.AuditLogController do
       audit_logs: audit_logs,
       audit_logs_total_count: count,
       page: page,
-      per_page: @per_page
+      per_page: @per_page,
+      path_fn: &~p"/dashboard/audit-logs?#{&1}"
     )
   end
 end
