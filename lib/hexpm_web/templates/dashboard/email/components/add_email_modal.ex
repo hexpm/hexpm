@@ -6,6 +6,7 @@ defmodule HexpmWeb.Dashboard.Email.Components.AddEmailModal do
   use PhoenixHTMLHelpers
   import HexpmWeb.Components.Buttons
   import HexpmWeb.Components.Input
+  alias Phoenix.LiveView.JS
 
   use Phoenix.VerifiedRoutes,
     endpoint: HexpmWeb.Endpoint,
@@ -41,7 +42,7 @@ defmodule HexpmWeb.Dashboard.Email.Components.AddEmailModal do
         >
           Cancel
         </.button>
-        <.button type="button" onclick="document.getElementById('add-email-form').submit()">
+        <.button type="button" phx-click={JS.dispatch("submit", to: "#add-email-form")}>
           Add Email
         </.button>
       </:footer>

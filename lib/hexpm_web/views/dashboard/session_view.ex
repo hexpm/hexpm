@@ -1,4 +1,4 @@
 defmodule HexpmWeb.Dashboard.SessionView do
   use HexpmWeb, :view
-  alias HexpmWeb.DashboardView
+  import HexpmWeb.Dashboard.Session.Components.SessionManagementCard
 end

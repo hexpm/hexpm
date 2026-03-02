@@ -57,6 +57,11 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
         </:row>
       </.table>
 
+      <%!-- Delete Email Modals rendered outside the table to avoid invalid HTML inside <tbody> --%>
+      <%= for email <- @emails do %>
+        <.delete_email_modal email={email} />
+      <% end %>
+
       <%!-- Add Email Button --%>
       <div>
         <.button
@@ -235,9 +240,6 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
         </div>
       </td>
     </tr>
-
-    <%!-- Delete Email Modal --%>
-    <.delete_email_modal email={@email} csrf_token={@csrf_token} />
     """
   end
 end
