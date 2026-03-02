@@ -71,6 +71,48 @@ defmodule Hexpm.BillingTest do
     end
   end
 
+  describe "resume/2" do
+    test "returns {:ok, result} when impl().resume/1 succeeds" do
+      stub(Hexpm.Billing.Mock, :resume, fn "organization token" -> {:ok, :whatever} end)
+
+      assert Hexpm.Billing.resume("organization token",
+               audit: %{audit_data: audit_data(insert(:user)), organization: nil}
+             ) == {:ok, :whatever}
+    end
+
+    test "returns {:error, reason} when impl().resume/1 fails" do
+      stub(Hexpm.Billing.Mock, :resume, fn "organization token" -> {:error, "error reason"} end)
+
+      assert Hexpm.Billing.resume("organization token",
+               audit: %{audit_data: audit_data(insert(:user)), organization: nil}
+             ) == {:error, "error reason"}
+    end
+
+    test "creates an Audit Log for billing.resume on success" do
+      stub(Hexpm.Billing.Mock, :resume, fn "organization token" -> {:ok, %{}} end)
+
+      user = insert(:user)
+
+      Hexpm.Billing.resume("organization token",
+        audit: %{audit_data: audit_data(user), organization: nil}
+      )
+
+      assert [%AuditLog{action: "billing.resume"}] = AuditLogs.all_by(user)
+    end
+
+    test "does not create Audit Log for billing.resume on failure" do
+      stub(Hexpm.Billing.Mock, :resume, fn "organization token" -> {:error, "error"} end)
+
+      user = insert(:user)
+
+      Hexpm.Billing.resume("organization token",
+        audit: %{audit_data: audit_data(user), organization: nil}
+      )
+
+      assert [] == AuditLogs.all_by(user)
+    end
+  end
+
   describe "create/2" do
     test "returns {:ok, whatever} when impl().create/1 succeeds" do
       stub(Hexpm.Billing.Mock, :create, fn _params -> {:ok, :whatever} end)

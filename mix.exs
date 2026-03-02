@@ -78,7 +78,8 @@ defmodule Hexpm.MixProject do
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:ueberauth, "~> 0.10"},
-      {:ueberauth_github, "~> 0.8"}
+      {:ueberauth_github, "~> 0.8"},
+      {:wallaby, "~> 0.30", only: :test, runtime: false}
     ]
   end
 

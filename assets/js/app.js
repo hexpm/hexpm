@@ -95,6 +95,7 @@ export default class App {
         e.target.value = value
       })
     }
+
   }
 
   onDataCopy(event) {
@@ -199,24 +200,29 @@ export default class App {
     }
   }
 
+  // TODO: Remove when all customers migrated to SCA/PaymentIntents
   billing_checkout(token) {
-    $.post(window.hexpm_billing_post_action, { token: token, _csrf_token: window.hexpm_billing_csrf_token })
-      .done(function (data) {
-        window.location.reload()
-      })
-      .fail(function (data) {
-        var response = JSON.parse(data.responseText);
-        $('div.flash').html(
-          '<div class="alert alert-danger" role="alert">' +
-          '<strong>Failed to update payment method</strong><br>' +
-          response.errors +
-          '</div>'
-        )
-      })
+    if (window.hexpm_billing_post_action) {
+      $.post(window.hexpm_billing_post_action, { token: token, _csrf_token: window.hexpm_billing_csrf_token })
+        .done(function (data) {
+          window.location.reload()
+        })
+        .fail(function (data) {
+          var response = JSON.parse(data.responseText);
+          $('div.flash').html(
+            '<div class="alert alert-danger" role="alert">' +
+            '<strong>Failed to update payment method</strong><br>' +
+            response.errors +
+            '</div>'
+          )
+        })
+    } else {
+      window.location.reload()
+    }
   }
 }
 
 window.app = new App()
-window.hexpm_billing_checkout = app.billing_checkout
+window.hexpm_billing_checkout = app.billing_checkout // TODO: Remove when all customers migrated to SCA/PaymentIntents
 window.$ = $
 window.liveSocket = liveSocket

@@ -98,6 +98,64 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       refute response(conn, 200) =~ "Billing"
       refute response(conn, 200) =~ "Billing information"
     end
+
+    test "shows incomplete subscription status", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      stub(Hexpm.Billing.Mock, :get, fn token ->
+        assert organization.name == token
+
+        %{
+          "checkout_html" => "",
+          "invoices" => [],
+          "subscription" => %{
+            "status" => "incomplete",
+            "current_period_end" => "2017-12-12T00:00:00Z",
+            "cancel_at_period_end" => false
+          },
+          "plan_id" => "organization-monthly",
+          "amount_with_tax" => 700,
+          "quantity" => 1,
+          "proration_amount" => 0
+        }
+      end)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}")
+
+      assert response(conn, 200) =~ "Requires payment confirmation"
+    end
+
+    test "shows incomplete_expired subscription status", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      stub(Hexpm.Billing.Mock, :get, fn token ->
+        assert organization.name == token
+
+        %{
+          "checkout_html" => "",
+          "invoices" => [],
+          "subscription" => %{
+            "status" => "incomplete_expired",
+            "current_period_end" => "2017-12-12T00:00:00Z",
+            "cancel_at_period_end" => false
+          },
+          "plan_id" => "organization-monthly",
+          "amount_with_tax" => 700,
+          "quantity" => 1,
+          "proration_amount" => 0
+        }
+      end)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}")
+
+      assert response(conn, 200) =~ "Payment confirmation expired"
+    end
   end
 
   describe "GET /dashboard/orgs/:dashboard_org/audit-logs" do
@@ -361,6 +419,79 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     end
   end
 
+  describe "POST /dashboard/orgs/:dashboard_org/resume-billing" do
+    test "resumes cancelled subscription", %{user: user, organization: organization} do
+      stub(Hexpm.Billing.Mock, :resume, fn token ->
+        assert organization.name == token
+
+        {:ok,
+         %{
+           "subscription" => %{
+             "cancel_at_period_end" => false,
+             "current_period_end" => "2017-12-12T00:00:00Z"
+           }
+         }}
+      end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}/resume-billing")
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Your subscription has been resumed."
+    end
+
+    test "fails when resume returns error", %{user: user, organization: organization} do
+      stub(Hexpm.Billing.Mock, :resume, fn token ->
+        assert organization.name == token
+        {:error, %{"errors" => "No active subscription to resume"}}
+      end)
+
+      stub(Hexpm.Billing.Mock, :get, fn token ->
+        assert organization.name == token
+        %{"checkout_html" => "", "invoices" => []}
+      end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}/resume-billing")
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "No active subscription to resume"
+    end
+
+    test "create audit_log with action billing.resume", %{user: user, organization: organization} do
+      stub(Hexpm.Billing.Mock, :resume, fn token ->
+        assert organization.name == token
+
+        {:ok,
+         %{
+           "subscription" => %{
+             "cancel_at_period_end" => false,
+             "current_period_end" => "2017-12-12T00:00:00Z"
+           }
+         }}
+      end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      build_conn()
+      |> test_login(user)
+      |> post("/dashboard/orgs/#{organization.name}/resume-billing")
+
+      audit_logs = AuditLogs.all_by(user)
+      assert audit_log = Enum.find(audit_logs, &(&1.action == "billing.resume"))
+      assert audit_log.action == "billing.resume"
+      assert audit_log.params["organization"]["name"] == organization.name
+    end
+  end
+
   describe "GET /dashboard/orgs/:dashboard_org/invoices/:id" do
     test "show invoice", %{user: user, organization: organization} do
       stub(Hexpm.Billing.Mock, :get, fn token ->
@@ -456,7 +587,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> test_login(user)
         |> post("/dashboard/orgs/#{organization.name}/invoices/123/pay")
 
-      response(conn, 400)
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
                "Failed to pay invoice: Card failure."
@@ -666,7 +797,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
           "add-seats" => "1"
         })
 
-      response(conn, 400)
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
                "The number of open seats cannot be less than the number of organization members."
@@ -685,7 +816,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
           "add-seats" => "2"
         })
 
-      response(conn, 400)
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Invalid seat numbers."
     end
 
@@ -745,7 +876,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
           "seats" => "1"
         })
 
-      response(conn, 400)
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
                "The number of open seats cannot be less than the number of organization members."
@@ -763,7 +894,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
           "seats" => "invalid"
         })
 
-      response(conn, 400)
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Invalid seat number."
     end
 
@@ -882,7 +1013,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> test_login(c.user)
         |> delete("/dashboard/orgs/#{c.organization.name}/keys", %{name: "computer"})
 
-      assert response(conn, 400) =~ "The key computer was not found"
+      assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "The key computer was not found."
     end
   end
 
@@ -923,8 +1055,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
           profile: %{public_email: "invalid_email"}
         })
 
+      assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Oops, something went wrong!"
-      assert response(conn, 400)
     end
   end
 end

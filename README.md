@@ -82,6 +82,73 @@ mix phx.server
 
 Hexpm will be available at [http://localhost:4000/](http://localhost:4000/).
 
+### Billing Integration Tests
+
+Integration tests exercise the full chain: hexpm -> hexpm_billing -> Stripe. They are excluded from regular `mix test` runs and require additional setup.
+
+#### Stripe Sandbox Setup
+
+1. **Create a Stripe sandbox** (if you don't already have one):
+
+   Go to the [Stripe Dashboard](https://dashboard.stripe.com), open the account picker, click "Switch to sandbox", then "Create sandbox". Give it a name (e.g. "hexpm-dev").
+
+2. **Install and authenticate the Stripe CLI:**
+
+   ```shell
+   brew install stripe/stripe-cli/stripe
+   stripe login
+   ```
+
+   This opens a browser where you select which sandbox to log into. The CLI generates restricted keys valid for 90 days, stored in `~/.config/stripe/config.toml`.
+
+3. **Configure hexpm_billing with your sandbox keys:**
+
+   Copy the API keys from your sandbox's [API keys page](https://dashboard.stripe.com/test/apikeys) and update `hexpm_billing/config/dev.exs`:
+
+   - `stripe_secret_key` — your sandbox secret key (`sk_test_...`)
+   - `stripe_publishable_key` — your sandbox publishable key (`pk_test_...`)
+
+4. **Forward Stripe webhooks to hexpm_billing:**
+
+   ```shell
+   stripe listen --forward-to localhost:4001/webhooks/payments
+   ```
+
+   The CLI will print a webhook signing secret (`whsec_...`). Update `stripe_signing_secret_key` in `hexpm_billing/config/dev.exs` with this value. The secret stays the same between CLI restarts.
+
+#### Prerequisites
+
+1. **hexpm_billing running locally on port 4001:**
+
+   ```shell
+   # In the hexpm_billing repo
+   mix deps.get
+   mix ecto.setup
+   MIX_ENV=dev mix phx.server
+   ```
+
+2. **ChromeDriver installed** (for browser tests):
+
+   ```shell
+   brew install chromedriver
+   ```
+
+3. **Stripe CLI forwarding webhooks** (see above):
+
+   ```shell
+   stripe listen --forward-to localhost:4001/webhooks/payments
+   ```
+
+#### Running
+
+```shell
+# All integration tests
+mix test --only integration
+
+# Only browser/SCA tests
+mix test test/hexpm_web/integration/sca_test.exs --include integration
+```
+
 ## License
 
     Copyright 2015 Six Colors AB

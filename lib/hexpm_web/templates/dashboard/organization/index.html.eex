@@ -5,6 +5,12 @@
     <%= render DashboardView, "_sidebar.html", assigns %>
   </div>
 
+  <%= if @pending_action_html do %>
+    <div class="col-sm-9" style="margin-bottom: 20px; margin-top: -20px;">
+      <%= raw(@pending_action_html) %>
+    </div>
+  <% end %>
+
   <div class="col-sm-9 organization members">
     <div class="panel panel-default">
       <div class="panel-heading">Public profile</div>
@@ -233,14 +239,27 @@
       </div>
       <div class="modal-body">
         <%= if @plan_id == "organization-monthly" do %>
-          The annual plan is billed each year for a price of <strong>$70 per user / year</strong>.
+          <p>
+            <strong>Current plan:</strong> Monthly @ $7.00 per user / month ($84.00 per user / year)<br>
+            <strong>New plan:</strong> Annual @ $70.00 per user / year
+          </p>
+          <p><strong>You save $14.00 per user / year</strong> by switching to the annual plan.</p>
         <% else %>
-          The monthly plan is billed each month for a price of <strong>$7 per user / month</strong>.
+          <p>
+            <strong>Current plan:</strong> Annual @ $70.00 per user / year<br>
+            <strong>New plan:</strong> Monthly @ $7.00 per user / month ($84.00 per user / year)
+          </p>
+          <p>The monthly plan costs $14.00 more per user / year than the annual plan.</p>
         <% end %>
-        <br><br>
+        <br>
         <%= if @subscription do %>
-          You will receive the first invoice at the end of your current billing period on
-          <%= payment_date(@subscription["current_period_end"]) %>.
+          <%= if @quantity do %>
+            With <strong><%= @quantity %> user(s)</strong>, your next invoice will be
+            <strong><%= new_plan_cost(@plan_id, @quantity) %></strong>
+            (before tax) on <%= payment_date(@subscription["current_period_end"]) %>.
+          <% else %>
+            Your first invoice for the new plan will be on <%= payment_date(@subscription["current_period_end"]) %>.
+          <% end %>
         <% else %>
           You do not have an active subscription, after changing plan you will have to
           activate your subscription to start using the organization.
@@ -270,15 +289,27 @@
       </div>
       <%= form_tag ~p"/dashboard/orgs/#{@organization}/leave" do %>
         <div class="modal-body">
-          <p>This action cannot be undone. You will permanently leave the organization <strong><%= @organization.name %>.</p>
+          <p>This action cannot be undone. You will permanently leave the organization <strong><%= @organization.name %></strong>.</p>
           <p>Please type <strong><%= @organization.name %></strong> to confirm.</p>
-          <input type="text" name="organization_name" class="org-confirm-input" autocomplete="off" required>
+          <input type="text" name="organization_name" id="leave-org-confirm" data-expected="<%= @organization.name %>" class="org-confirm-input" autocomplete="off" required>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-          <%= submit "Leave", class: "btn btn-danger" %>
+          <%= submit "Leave", class: "btn btn-danger", id: "leave-org-submit", disabled: true %>
         </div>
       <% end %>
     </div>
   </div>
 </div>
+
+<script nonce="<%= @script_src_nonce %>">
+(function() {
+  var input = document.getElementById('leave-org-confirm');
+  var button = document.getElementById('leave-org-submit');
+  if (input && button) {
+    input.addEventListener('input', function() {
+      button.disabled = input.value !== input.getAttribute('data-expected');
+    });
+  }
+})();
+</script>

@@ -187,6 +187,10 @@ defmodule HexpmWeb.DashboardView do
     "Cancel billing on organization #{params["organization"]["name"]}"
   end
 
+  def humanize_audit_log_info(%AuditLog{action: "billing.resume", params: params}) do
+    "Resume billing on organization #{params["organization"]["name"]}"
+  end
+
   def humanize_audit_log_info(%AuditLog{action: "billing.create", params: params}) do
     "Add billing information to organization #{params["organization"]["name"]}"
   end

@@ -4,6 +4,7 @@ defmodule Hexpm.Billing.Hexpm do
   @behaviour Hexpm.Billing.Behaviour
   @timeout 15_000
 
+  # TODO: Remove when all customers migrated to SCA/PaymentIntents
   def checkout(organization, data) do
     case post("/api/customers/#{organization}/payment_source", data) do
       {:ok, 204, _headers, body} -> {:ok, body}
@@ -27,6 +28,13 @@ defmodule Hexpm.Billing.Hexpm do
     body
   end
 
+  def resume(organization) do
+    case post("/api/customers/#{organization}/resume", %{}) do
+      {:ok, 200, _headers, body} -> {:ok, body}
+      {:ok, 422, _headers, body} -> {:error, body}
+    end
+  end
+
   def create(params) do
     case post("/api/customers", params) do
       {:ok, 200, _headers, body} -> {:ok, body}
@@ -37,8 +45,15 @@ defmodule Hexpm.Billing.Hexpm do
   def update(organization, params) do
     case patch("/api/customers/#{organization}", params) do
       {:ok, 200, _headers, body} -> {:ok, body}
+      {:ok, 402, _headers, body} -> {:requires_action, body}
       {:ok, 404, _headers, _body} -> {:ok, nil}
       {:ok, 422, _headers, body} -> {:error, body}
+    end
+  end
+
+  def void_invoice(payments_token) do
+    case post("/api/invoices/#{payments_token}/void", %{}) do
+      {:ok, 204, _headers, _body} -> :ok
     end
   end
 

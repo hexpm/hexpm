@@ -156,19 +156,18 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
           {:error, :last_member} ->
             conn
-            |> put_status(400)
             |> put_flash(:error, "The last member of an organization cannot leave.")
-            |> render_index(organization)
+            |> redirect(to: ~p"/dashboard/orgs/#{organization}")
         end
       else
         conn
-        |> put_status(400)
         |> put_flash(:error, "Invalid organization name.")
-        |> render_index(organization)
+        |> redirect(to: ~p"/dashboard/orgs/#{organization}")
       end
     end)
   end
 
+  # TODO: Remove when all customers migrated to SCA/PaymentIntents
   def billing_token(conn, %{"dashboard_org" => organization, "token" => token}) do
     access_organization(conn, organization, "admin", fn organization ->
       audit = %{audit_data: audit_data(conn), organization: organization}
@@ -197,6 +196,24 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       conn
       |> put_flash(:info, message)
       |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+    end)
+  end
+
+  def resume_billing(conn, %{"dashboard_org" => organization}) do
+    access_organization(conn, organization, "admin", fn organization ->
+      audit = %{audit_data: audit_data(conn), organization: organization}
+
+      case Hexpm.Billing.resume(organization.name, audit: audit) do
+        {:ok, _customer} ->
+          conn
+          |> put_flash(:info, "Your subscription has been resumed.")
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+
+        {:error, reason} ->
+          conn
+          |> put_flash(:error, reason["errors"] || "Failed to resume subscription.")
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+      end
     end)
   end
 
@@ -244,9 +261,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
               {:error, reason} ->
                 conn
-                |> put_status(400)
                 |> put_flash(:error, "Failed to pay invoice: #{reason["errors"]}.")
-                |> render_index(organization)
+                |> redirect(to: ~p"/dashboard/orgs/#{organization}")
             end
           else
             not_found(conn)
@@ -292,9 +308,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
       if is_nil(current_seats) or is_nil(add_seats_val) do
         conn
-        |> put_status(400)
         |> put_flash(:error, "Invalid seat numbers.")
-        |> render_index(organization)
+        |> redirect(to: ~p"/dashboard/orgs/#{organization}")
       else
         user_count = Organizations.user_count(organization)
         seats = current_seats + add_seats_val
@@ -308,17 +323,25 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
               |> put_flash(:info, "The number of open seats have been increased.")
               |> redirect(to: ~p"/dashboard/orgs/#{organization}")
 
+            {:requires_action, body} ->
+              conn
+              |> put_status(402)
+              |> json(%{
+                requires_action: true,
+                client_secret: body["client_secret"],
+                invoice_id: body["invoice_id"],
+                stripe_publishable_key: body["stripe_publishable_key"]
+              })
+
             {:error, reason} ->
               conn
-              |> put_status(400)
               |> put_flash(:error, reason["errors"] || "Failed to update billing information.")
-              |> render_index(organization)
+              |> redirect(to: ~p"/dashboard/orgs/#{organization}")
           end
         else
           conn
-          |> put_status(400)
           |> put_flash(:error, @not_enough_seats)
-          |> render_index(organization)
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}")
         end
       end
     end)
@@ -330,9 +353,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
       if is_nil(seats) do
         conn
-        |> put_status(400)
         |> put_flash(:error, "Invalid seat number.")
-        |> render_index(organization)
+        |> redirect(to: ~p"/dashboard/orgs/#{organization}")
       else
         user_count = Organizations.user_count(organization)
 
@@ -347,17 +369,25 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
             {:error, reason} ->
               conn
-              |> put_status(400)
               |> put_flash(:error, reason["errors"] || "Failed to update billing information.")
-              |> render_index(organization)
+              |> redirect(to: ~p"/dashboard/orgs/#{organization}")
           end
         else
           conn
-          |> put_status(400)
           |> put_flash(:error, @not_enough_seats)
-          |> render_index(organization)
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}")
         end
       end
+    end)
+  end
+
+  def void_invoice(conn, %{"dashboard_org" => organization, "invoice_id" => invoice_id}) do
+    access_organization(conn, organization, "admin", fn organization ->
+      Hexpm.Billing.void_invoice(invoice_id)
+
+      conn
+      |> put_flash(:error, "Payment authentication failed or was cancelled.")
+      |> redirect(to: ~p"/dashboard/orgs/#{organization}")
     end)
   end
 
@@ -453,9 +483,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
         {:error, _} ->
           conn
-          |> put_status(400)
           |> put_flash(:error, "The key #{name} was not found.")
-          |> render_index(organization)
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}")
       end
     end)
   end
@@ -470,9 +499,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
         {:error, _} ->
           conn
-          |> put_status(400)
           |> put_flash(:error, "Oops, something went wrong!")
-          |> render_index(organization)
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}")
       end
     end)
   end
@@ -542,12 +570,17 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       invoices: nil,
       person: nil,
       company: nil,
+      pending_action_html: nil,
+      stripe_publishable_key: nil,
+      use_payment_intents: false,
+      # TODO: Remove when all customers migrated to SCA/PaymentIntents
       post_action: nil,
       csrf_token: nil
     ]
   end
 
   defp customer_assigns(customer, organization) do
+    # TODO: Remove when all customers migrated to SCA/PaymentIntents
     post_action = ~p"/dashboard/orgs/#{organization}/billing-token"
 
     [
@@ -569,6 +602,10 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       invoices: customer["invoices"],
       person: customer["person"],
       company: customer["company"],
+      pending_action_html: customer["pending_action_html"],
+      stripe_publishable_key: customer["stripe_publishable_key"],
+      use_payment_intents: customer["use_payment_intents"] || false,
+      # TODO: Remove when all customers migrated to SCA/PaymentIntents
       post_action: post_action,
       csrf_token: get_csrf_token()
     ]
