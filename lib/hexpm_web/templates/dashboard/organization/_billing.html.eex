@@ -53,6 +53,10 @@
             <br>
 
             <%= if @use_payment_intents do %>
+              <script nonce="<%= @script_src_nonce %>">
+                window.hexpm_billing_csrf_token = "<%= @csrf_token %>";
+              </script>
+
               <div style="display: flex; gap: 10px; align-items: center;">
                 <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#payment-method-modal">
                   <%= if @card do %>Update payment method<% else %>Add payment method<% end %>
@@ -195,6 +199,10 @@
             Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.<br><br>
 
             <%= if @use_payment_intents do %>
+              <script nonce="<%= @script_src_nonce %>">
+                window.hexpm_billing_csrf_token = "<%= @csrf_token %>";
+              </script>
+
               <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#payment-method-modal">
                 Add payment method
               </button>

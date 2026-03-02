@@ -41,10 +41,6 @@ if Code.ensure_loaded?(Wallaby) do
     end
 
     defp setup_card(session, card_number, expiry \\ @card_expiry, cvc \\ @card_cvc) do
-      # The checkout_html is rendered twice: once outside the modal (with CSP nonces,
-      # scripts execute, card element mounts here) and once inside the modal (no nonces,
-      # scripts blocked). We fill the card element outside the modal and submit
-      # that form directly.
       fill_stripe_card(session, card_number, expiry, cvc)
 
       # Wait for Stripe Elements to fully process the card input
