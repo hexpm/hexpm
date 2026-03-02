@@ -117,7 +117,11 @@ if Code.ensure_loaded?(Wallaby) do
              "Expected redirect after form submit, got: #{inspect(result)}"
 
       Wallaby.Browser.execute_script(session, "window.location.reload();")
-      Process.sleep(2000)
+
+      # Wait for page to finish loading after reload
+      wait_until(10_000, fn ->
+        evaluate_js(session, "return document.readyState === 'complete';")
+      end)
 
       session
     end

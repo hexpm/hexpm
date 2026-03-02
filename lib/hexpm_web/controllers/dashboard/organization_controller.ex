@@ -325,13 +325,16 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
             {:requires_action, body} ->
               conn
-              |> put_status(402)
-              |> json(%{
-                requires_action: true,
-                client_secret: body["client_secret"],
-                invoice_id: body["invoice_id"],
-                stripe_publishable_key: body["stripe_publishable_key"]
-              })
+              |> put_resp_content_type("application/json")
+              |> send_resp(
+                402,
+                Jason.encode!(%{
+                  requires_action: true,
+                  client_secret: body["client_secret"],
+                  invoice_id: body["invoice_id"],
+                  stripe_publishable_key: body["stripe_publishable_key"]
+                })
+              )
 
             {:error, reason} ->
               conn
@@ -383,7 +386,10 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   def void_invoice(conn, %{"dashboard_org" => organization, "invoice_id" => invoice_id}) do
     access_organization(conn, organization, "admin", fn organization ->
-      Hexpm.Billing.void_invoice(invoice_id)
+      case Hexpm.Billing.void_invoice(invoice_id) do
+        :ok -> :ok
+        {:error, _reason} -> :ok
+      end
 
       conn
       |> put_flash(:error, "Payment authentication failed or was cancelled.")

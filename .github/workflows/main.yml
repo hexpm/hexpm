@@ -277,59 +277,41 @@ jobs:
         run: |
           docker pull gcr.io/hexpm-prod/hexpm_billing:latest
 
-          docker run --rm --network host \
-            -e HEXPM_BILLING_DATABASE_URL=postgres://postgres:postgres@localhost:5432/hexpm_billing_ci \
-            -e HEXPM_BILLING_DATABASE_SSL=false \
-            -e HEXPM_BILLING_API_SECRET=hex_billing_key \
-            -e HEXPM_BILLING_PORT=4001 \
-            -e HEXPM_BILLING_HOST=localhost \
-            -e HEXPM_BILLING_SECRET_KEY_BASE=dummysecretkeybasethatis64characterslongatleastfortheciruntowork!! \
-            -e HEXPM_BILLING_STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY \
-            -e HEXPM_BILLING_STRIPE_PUBLISHABLE_KEY=$STRIPE_PUBLISHABLE_KEY \
-            -e HEXPM_BILLING_STRIPE_SIGNING_SECRET_KEY=$STRIPE_WEBHOOK_SECRET \
-            -e HEXPM_BILLING_ENABLE_TEST_ROUTES=true \
-            -e HEXPM_BILLING_DEFAULT_USE_PAYMENT_INTENTS=true \
-            -e HEXPM_BILLING_SENTRY_DSN=https://public@o0.ingest.sentry.io/0 \
-            -e HEXPM_BILLING_ENV=ci \
-            -e HEXPM_BILLING_SENDGRID_API_KEY=SG.dummy \
-            -e HEXPM_BILLING_EXCHANGERATESAPI_KEY=dummy \
-            -e HEXPM_BILLING_BUCKET=dummy \
-            -e HEXPM_BILLING_EMAIL=billing@example.com \
-            -e HEXPM_BILLING_ENVIRONMENT=ci \
-            -e HEXPM_BILLING_EMAIL_HOST=localhost \
-            -e HEXPM_BILLING_VAT_NO=dummy \
-            -e "HEXPM_BILLING_COMPANY_ADDRESS_LINE=dummy" \
-            -e "HEXPM_BILLING_COMPANY_CONTACT_LINE=dummy" \
-            -e HEXPM_BILLING_HEXPM_URL=http://localhost:4000 \
-            -e BEAM_PORT=14001 \
+          cat > /tmp/hexpm_billing.env <<EOF
+          HEXPM_BILLING_DATABASE_URL=postgres://postgres:postgres@localhost:5432/hexpm_billing_ci
+          HEXPM_BILLING_DATABASE_SSL=false
+          HEXPM_BILLING_API_SECRET=hex_billing_key
+          HEXPM_BILLING_PORT=4001
+          HEXPM_BILLING_HOST=localhost
+          HEXPM_BILLING_SECRET_KEY_BASE=dummysecretkeybasethatis64characterslongatleastfortheciruntowork!!
+          HEXPM_BILLING_STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY
+          HEXPM_BILLING_STRIPE_PUBLISHABLE_KEY=$STRIPE_PUBLISHABLE_KEY
+          HEXPM_BILLING_STRIPE_SIGNING_SECRET_KEY=$STRIPE_WEBHOOK_SECRET
+          HEXPM_BILLING_ENABLE_TEST_ROUTES=true
+          HEXPM_BILLING_DEFAULT_USE_PAYMENT_INTENTS=true
+          HEXPM_BILLING_SENTRY_DSN=https://public@o0.ingest.sentry.io/0
+          HEXPM_BILLING_ENV=ci
+          HEXPM_BILLING_SENDGRID_API_KEY=SG.dummy
+          HEXPM_BILLING_EXCHANGERATESAPI_KEY=dummy
+          HEXPM_BILLING_BUCKET=dummy
+          HEXPM_BILLING_EMAIL=billing@example.com
+          HEXPM_BILLING_ENVIRONMENT=ci
+          HEXPM_BILLING_EMAIL_HOST=localhost
+          HEXPM_BILLING_VAT_NO=dummy
+          HEXPM_BILLING_COMPANY_ADDRESS_LINE=dummy
+          HEXPM_BILLING_COMPANY_CONTACT_LINE=dummy
+          HEXPM_BILLING_HEXPM_URL=http://localhost:4000
+          BEAM_PORT=14001
+          EOF
+
+          # Strip leading whitespace from env file
+          sed -i 's/^[[:space:]]*//' /tmp/hexpm_billing.env
+
+          docker run --rm --network host --env-file /tmp/hexpm_billing.env \
             gcr.io/hexpm-prod/hexpm_billing:latest \
             /app/bin/hexpm_billing eval 'HexpmBilling.ReleaseTasks.migrate()'
 
-          docker run -d --name hexpm_billing --network host \
-            -e HEXPM_BILLING_DATABASE_URL=postgres://postgres:postgres@localhost:5432/hexpm_billing_ci \
-            -e HEXPM_BILLING_DATABASE_SSL=false \
-            -e HEXPM_BILLING_API_SECRET=hex_billing_key \
-            -e HEXPM_BILLING_PORT=4001 \
-            -e HEXPM_BILLING_HOST=localhost \
-            -e HEXPM_BILLING_SECRET_KEY_BASE=dummysecretkeybasethatis64characterslongatleastfortheciruntowork!! \
-            -e HEXPM_BILLING_STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY \
-            -e HEXPM_BILLING_STRIPE_PUBLISHABLE_KEY=$STRIPE_PUBLISHABLE_KEY \
-            -e HEXPM_BILLING_STRIPE_SIGNING_SECRET_KEY=$STRIPE_WEBHOOK_SECRET \
-            -e HEXPM_BILLING_ENABLE_TEST_ROUTES=true \
-            -e HEXPM_BILLING_DEFAULT_USE_PAYMENT_INTENTS=true \
-            -e HEXPM_BILLING_SENTRY_DSN=https://public@o0.ingest.sentry.io/0 \
-            -e HEXPM_BILLING_ENV=ci \
-            -e HEXPM_BILLING_SENDGRID_API_KEY=SG.dummy \
-            -e HEXPM_BILLING_EXCHANGERATESAPI_KEY=dummy \
-            -e HEXPM_BILLING_BUCKET=dummy \
-            -e HEXPM_BILLING_EMAIL=billing@example.com \
-            -e HEXPM_BILLING_ENVIRONMENT=ci \
-            -e HEXPM_BILLING_EMAIL_HOST=localhost \
-            -e HEXPM_BILLING_VAT_NO=dummy \
-            -e "HEXPM_BILLING_COMPANY_ADDRESS_LINE=dummy" \
-            -e "HEXPM_BILLING_COMPANY_CONTACT_LINE=dummy" \
-            -e HEXPM_BILLING_HEXPM_URL=http://localhost:4000 \
-            -e BEAM_PORT=14001 \
+          docker run -d --name hexpm_billing --network host --env-file /tmp/hexpm_billing.env \
             gcr.io/hexpm-prod/hexpm_billing:latest \
             /app/bin/hexpm_billing start
 
