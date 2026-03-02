@@ -1,0 +1,97 @@
+<div class="tw:bg-grey-50 tw:min-h-screen tw:py-8">
+  <div class="tw:max-w-7xl tw:mx-auto tw:px-4 tw:lg:px-0">
+    <div class="tw:flex tw:flex-col tw:gap-10 tw:lg:flex-row">
+      <%!-- Left Sidebar - Profile --%>
+      <div class="tw:w-full tw:lg:w-[25%] tw:flex-shrink-0">
+        <.user_sidebar
+          user={@user}
+          gravatar_email={@gravatar_email}
+          public_email={@public_email}
+          total_packages={length(@user.owned_packages)}
+          total_downloads={@total_downloads}
+        />
+      </div>
+
+      <%!-- Right Content - Packages --%>
+      <div class="tw:w-full tw:lg:w-[75%]">
+        <%!-- Header with Sort (only show if there are packages) --%>
+        <%= if @total_count > 0 do %>
+          <div class="tw:flex tw:items-center tw:justify-between tw:mb-6">
+            <h1 class="tw:text-grey-900 tw:text-xl tw:font-semibold">
+              Packages
+            </h1>
+
+            <%!-- Sort Dropdown --%>
+            <.dropdown
+              id="sort-dropdown"
+              label={
+                case @sort_by do
+                  "downloads" -> "Most Downloaded"
+                  "newest" -> "Newest First"
+                  _ -> "Most Popular"
+                end
+              }
+            >
+              <.dropdown_item href="?sort=popular">Most Popular</.dropdown_item>
+              <.dropdown_item href="?sort=downloads">Most Downloaded</.dropdown_item>
+              <.dropdown_item href="?sort=newest">Newest First</.dropdown_item>
+            </.dropdown>
+          </div>
+        <% end %>
+
+        <%!-- Packages Grid or Empty State --%>
+        <%= if @total_count == 0 do %>
+          <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:mt-6 tw:py-32 tw:flex tw:flex-col tw:items-center tw:justify-center">
+            <%!-- Package Icon --%>
+            <div class="tw:mb-4">
+              <img
+                src={~p"/images/icons/package-box.svg"}
+                alt="Package icon"
+                class="tw:w-24 tw:h-24 tw:opacity-40 tw:grayscale"
+              />
+            </div>
+
+            <%!-- Empty State Text --%>
+            <h3 class="tw:text-grey-900 tw:text-xl tw:font-semibold tw:mb-2">
+              No Packages
+            </h3>
+            <p class="tw:text-grey-500 tw:text-base">
+              The author hasn't added any packages.
+            </p>
+          </div>
+        <% else %>
+          <div class="tw:grid tw:grid-cols-1 tw:lg:grid-cols-2 tw:gap-4">
+            <%= for package <- @packages do %>
+              <.package_card
+                package={package}
+                downloads={get_in(@downloads, [package.id, "all"]) || 0}
+                updated_at={package.updated_at}
+              />
+            <% end %>
+          </div>
+
+          <%!-- Pagination --%>
+          <%= if @total_count > @per_page do %>
+            {render(
+              HexpmWeb.SharedView,
+              "_pagination.html",
+              items: @packages,
+              page: @page,
+              total_count: @total_count,
+              per_page: @per_page,
+              unit: "package",
+              units: "packages",
+              path_fn: fn params ->
+                query =
+                  ViewHelpers.params(params, sort: @sort_by)
+                  |> URI.encode_query()
+
+                "?#{query}"
+              end
+            )}
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

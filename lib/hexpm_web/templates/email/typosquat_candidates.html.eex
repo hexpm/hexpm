@@ -1,4 +1,7 @@
-<pre>
-    <%= TyposquatCandidates.intro(@threshold) %>
-    <%= TyposquatCandidates.table(@candidates) %>
-</pre>
+<h1 style="color: #030913; font-size: 24px; line-height: 32px; font-weight: 600; margin: 0 0 24px 0; text-align: center;">
+  Typosquat Candidates
+</h1>
+
+<div style="background-color: #1c2a3a; padding: 20px; margin: 16px 0; border-radius: 4px;">
+  <pre style="color: #f0f5f9; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 14px; line-height: 20px; margin: 0; white-space: pre-wrap;"><%= TyposquatCandidates.intro(@threshold) %><%= TyposquatCandidates.table(@candidates) %></pre>
+</div>

@@ -14,7 +14,10 @@ defmodule HexpmWeb.EmailVerificationController do
       end
 
       conn
-      |> put_flash(:info, "A verification email has been sent to #{email_address}.")
+      |> put_flash(
+        :info,
+        "If this email exists in our database and is not already verified, you will receive a verification link at informed email: #{email_address}."
+      )
       |> redirect(to: ~p"/")
     else
       conn
@@ -42,7 +45,6 @@ defmodule HexpmWeb.EmailVerificationController do
       conn,
       "show.html",
       title: "Verify email",
-      container: "container page page-xs",
       captcha_error: captcha_error
     )
   end

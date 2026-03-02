@@ -248,10 +248,19 @@ defmodule Hexpm.Accounts.Users do
 
   def tfa_disable_app(user, audit: audit_data) do
     secret = Hexpm.Accounts.TFA.generate_secret()
+    recovery_codes = Hexpm.Accounts.RecoveryCode.generate_set()
 
     multi =
       Multi.new()
-      |> Multi.update(:user, User.update_tfa(user, %{app_enabled: false, secret: secret}))
+      |> Multi.update(
+        :user,
+        User.update_tfa(user, %{
+          tfa_enabled: false,
+          app_enabled: false,
+          secret: secret,
+          recovery_codes: recovery_codes
+        })
+      )
       |> audit(audit_data, "security.update", fn %{user: user} -> user end)
 
     case Repo.transaction(multi) do

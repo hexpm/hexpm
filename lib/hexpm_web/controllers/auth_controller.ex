@@ -1,8 +1,30 @@
 defmodule HexpmWeb.AuthController do
   use HexpmWeb, :controller
+  plug :check_oauth_config when action in [:request]
   plug Ueberauth
 
   alias Hexpm.Accounts.{Auth, Users, UserProviders}
+
+  # Prevent Ueberauth crashes when OAuth credentials are missing in development
+  def check_oauth_config(%{params: %{"provider" => provider}} = conn, _opts) do
+    case provider do
+      "github" ->
+        if github_oauth_configured?() do
+          conn
+        else
+          conn
+          |> put_flash(:error, "GitHub login is not configured on this server.")
+          |> redirect(to: ~p"/login")
+          |> halt()
+        end
+
+      _ ->
+        # For other providers, let Ueberauth handle the error
+        conn
+    end
+  end
+
+  def check_oauth_config(conn, _opts), do: conn
 
   def request(conn, _params) do
     conn
@@ -214,4 +236,15 @@ defmodule HexpmWeb.AuthController do
   end
 
   defp generate_username(_nickname, _email), do: nil
+
+  defp github_oauth_configured? do
+    case Application.get_env(:ueberauth, Ueberauth.Strategy.Github.OAuth) do
+      [client_id: id, client_secret: secret]
+      when is_binary(id) and id != "" and is_binary(secret) and secret != "" ->
+        true
+
+      _ ->
+        false
+    end
+  end
 end

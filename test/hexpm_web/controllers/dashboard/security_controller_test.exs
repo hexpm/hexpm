@@ -17,19 +17,22 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
         |> get("/dashboard/security")
 
       result = response(conn, 200)
-      assert result =~ "Two-factor security"
+      assert result =~ "Two-Factor Authentication"
+      assert result =~ "Disable"
     end
 
-    test "redirects to setup if tfa is not enabled" do
-      tfa = build(:tfa, app_enabled: false)
+    test "shows modal if tfa is not enabled but secret exists" do
+      tfa = build(:tfa, tfa_enabled: false, app_enabled: false)
       user = insert(:user_with_tfa, tfa: tfa)
 
       conn =
         build_conn()
         |> test_login(user)
-        |> get("/dashboard/security")
+        |> get("/dashboard/security?show_tfa_modal=true")
 
-      assert redirected_to(conn) == "/dashboard/tfa/setup"
+      result = response(conn, 200)
+      assert result =~ "Two-Factor Authentication"
+      assert result =~ "Enable"
     end
 
     test "does NOT show remove password button when user has no providers" do
@@ -57,13 +60,13 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
 
       result = response(conn, 200)
 
-      assert result =~ "Remove password"
+      assert result =~ "Remove Password"
       refute result =~ "You must connect a GitHub account before you can remove your password"
     end
   end
 
   describe "post /dashboard_security/enable-tfa" do
-    test "sets the users tfa to enabled" do
+    test "generates secret and recovery codes but does NOT enable TFA yet" do
       user = insert(:user)
 
       conn =
@@ -71,15 +74,21 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
         |> test_login(user)
         |> post("/dashboard/security/enable-tfa")
 
-      updated_user =
-        Hexpm.Accounts.User
-        |> Hexpm.Repo.get(user.id)
-        |> Hexpm.Repo.preload(:emails)
+      updated_user = Hexpm.Repo.get(Hexpm.Accounts.User, user.id)
 
-      assert updated_user.tfa.tfa_enabled
-      assert redirected_to(conn) == "/dashboard/tfa/setup"
+      # TFA should NOT be enabled until code is verified
+      refute updated_user.tfa.tfa_enabled
+      refute updated_user.tfa.app_enabled
 
-      assert_delivered_email(Hexpm.Emails.tfa_enabled(updated_user))
+      # But secret and recovery codes should be generated
+      assert updated_user.tfa.secret
+      assert length(updated_user.tfa.recovery_codes) > 0
+
+      # Should redirect to security page with modal open
+      assert redirected_to(conn) == "/dashboard/security?show_tfa_modal=true"
+
+      # No email should be sent yet (only after verification)
+      assert_no_emails_delivered()
     end
   end
 
@@ -133,8 +142,11 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
         |> Hexpm.Repo.get(c.user.id)
         |> Hexpm.Repo.preload(:emails)
 
+      refute updated_user.tfa.tfa_enabled
       refute updated_user.tfa.app_enabled
-      assert redirected_to(conn) == "/dashboard/tfa/setup"
+      assert updated_user.tfa.secret != c.user.tfa.secret
+      assert updated_user.tfa.recovery_codes != c.user.tfa.recovery_codes
+      assert redirected_to(conn) == "/dashboard/security?show_tfa_modal=true"
 
       assert_delivered_email(Hexpm.Emails.tfa_disabled_app(updated_user))
     end
@@ -149,8 +161,8 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
         |> test_login(user)
         |> get("/dashboard/security")
 
-      assert response(conn, 200) =~ "Password authentication"
-      assert response(conn, 200) =~ "Current password"
+      assert response(conn, 200) =~ "Password Authentication"
+      assert response(conn, 200) =~ "Current Password"
     end
 
     test "update password", _c do
@@ -189,7 +201,7 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
           }
         })
 
-      assert response(conn, 400) =~ "Password authentication"
+      assert response(conn, 400) =~ "Password Authentication"
       assert {:ok, _} = Auth.password_auth(user.username, "password")
     end
 
@@ -207,7 +219,7 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
           }
         })
 
-      assert response(conn, 400) =~ "Password authentication"
+      assert response(conn, 400) =~ "Password Authentication"
       assert {:ok, _} = Auth.password_auth(user.username, "password")
       assert :error = Auth.password_auth(user.username, "newpass")
     end
@@ -222,7 +234,7 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
           user: %{password: "newpass", password_confirmation: "newpass"}
         })
 
-      assert response(conn, 400) =~ "Password authentication"
+      assert response(conn, 400) =~ "Password Authentication"
       assert {:ok, _} = Auth.password_auth(user.username, "password")
       assert :error = Auth.password_auth(user.username, "newpass")
     end
@@ -317,8 +329,12 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
           }
         })
 
-      assert redirected_to(conn) == "/dashboard/security"
-      assert Phoenix.Flash.get(conn.assigns.flash, "error") =~ "should be at least 7 character(s)"
+      # Should re-render with 400 status showing inline errors (not redirect)
+      response(conn, 400)
+
+      # Verify user's password was NOT updated
+      updated_user = Hexpm.Accounts.Users.get_by_id(user.id)
+      refute updated_user.password
     end
 
     test "validates password confirmation" do
@@ -334,8 +350,12 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
           }
         })
 
-      assert redirected_to(conn) == "/dashboard/security"
-      assert Phoenix.Flash.get(conn.assigns.flash, "error") =~ "does not match password"
+      # Should re-render with 400 status showing inline errors (not redirect)
+      response(conn, 400)
+
+      # Verify user's password was NOT updated
+      updated_user = Hexpm.Accounts.Users.get_by_id(user.id)
+      refute updated_user.password
     end
 
     test "requires login" do

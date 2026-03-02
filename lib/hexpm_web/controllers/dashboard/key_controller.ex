@@ -4,7 +4,9 @@ defmodule HexpmWeb.Dashboard.KeyController do
   plug :requires_login
 
   def index(conn, _params) do
-    render_index(conn)
+    generated_key = get_session(conn, :generated_key)
+    conn = delete_session(conn, :generated_key)
+    render_index(conn, changeset(), generated_key)
   end
 
   def delete(conn, %{"name" => name}) do
@@ -30,12 +32,9 @@ defmodule HexpmWeb.Dashboard.KeyController do
 
     case Keys.create(user, key_params, audit: audit_data(conn)) do
       {:ok, %{key: key}} ->
-        flash =
-          "The key #{key.name} was successfully generated, " <>
-            "copy the secret \"#{key.user_secret}\", you won't be able to see it again."
-
         conn
-        |> put_flash(:info, flash)
+        |> put_session(:generated_key, %{name: key.name, user_secret: key.user_secret})
+        |> put_flash(:info, "The key #{key.name} was successfully generated.")
         |> redirect(to: ~p"/dashboard/keys")
 
       {:error, :key, changeset, _} ->
@@ -45,7 +44,7 @@ defmodule HexpmWeb.Dashboard.KeyController do
     end
   end
 
-  defp render_index(conn, changeset \\ changeset()) do
+  defp render_index(conn, changeset \\ changeset(), generated_key \\ nil) do
     user = Hexpm.Repo.preload(conn.assigns.current_user, :owned_packages)
     keys = Keys.all(user)
     organizations = Organizations.all_by_user(user)
@@ -61,7 +60,8 @@ defmodule HexpmWeb.Dashboard.KeyController do
       packages: packages,
       delete_key_path: ~p"/dashboard/keys",
       create_key_path: ~p"/dashboard/keys",
-      key_changeset: changeset
+      key_changeset: changeset,
+      generated_key: generated_key
     )
   end
 

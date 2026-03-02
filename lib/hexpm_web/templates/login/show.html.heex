@@ -1,0 +1,45 @@
+<.auth_layout
+  title="Log In"
+  subtitle="Use your credentials to log in to your account"
+  show_oauth={true}
+  oauth_provider="GitHub"
+  oauth_href={~p"/auth/github"}
+>
+  <%!-- Form --%>
+  <%= form_tag(~p"/login", id: "login-form", class: "tw:space-y-6") do %>
+    <%!-- Username/Email Field --%>
+    <.text_input id="username" name="username" label="Username or Email" />
+
+    <%!-- Password Field --%>
+    <.password_input id="password" name="password" label="Password">
+      <:hint>
+        <.text_link href={~p"/password/reset"} variant="primary" class="tw:text-small">
+          Forgot Password?
+        </.text_link>
+      </:hint>
+    </.password_input>
+
+    <%!-- Hidden Fields --%>
+    <input type="hidden" name="return" value={@return} />
+    <input :if={@hexdocs not in [nil, ""]} type="hidden" name="hexdocs" value={@hexdocs} />
+
+    <%!-- Submit Button --%>
+    <.button type="submit" full_width class="tw:mt-8">
+      Log In
+    </.button>
+  <% end %>
+
+  <%!-- Footer Links --%>
+  <:footer_links>
+    <p class="tw:text-small tw:text-center tw:mt-8">
+      <span class="tw:text-grey-800">Don't have an account?</span>
+      <.text_link href={~p"/signup"} variant="primary" class="tw:font-semibold tw:ml-1">
+        Register Now
+      </.text_link>
+      |
+      <.text_link href={~p"/email/verification"} variant="secondary">
+        Resend verification email
+      </.text_link>
+    </p>
+  </:footer_links>
+</.auth_layout>

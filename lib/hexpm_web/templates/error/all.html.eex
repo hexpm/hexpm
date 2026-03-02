@@ -1,7 +1,13 @@
-<%= render(HexpmWeb.LayoutView, "header.html", assigns) %>
-  <div class="error-view">
-    <h1><%= @status %></h1>
-    <span class="call-to-action">Whoops!</span>
-    <span class="message"><%= @message %></span>
+<div class="tw:min-h-dvh tw:flex tw:flex-col">
+  <%= HexpmWeb.Components.Navbar.header(%{current_user: assigns[:current_user], search: nil, show_search: false}) %>
+
+  <div class="tw:flex tw:flex-1 tw:flex-col tw:bg-slate-100">
+    <div class="error-view">
+      <h1><%= @status %></h1>
+      <span class="call-to-action">Whoops!</span>
+      <span class="message"><%= @message %></span>
+    </div>
   </div>
-<%= render(HexpmWeb.LayoutView, "footer.html", assigns) %>
+
+  <%= HexpmWeb.Components.Footer.footer(%{}) %>
+</div>

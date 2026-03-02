@@ -1,0 +1,11 @@
+<%!-- Keys section for organization dashboard --%>
+<.key_management_card
+  keys={@keys}
+  organizations={[]}
+  packages={[]}
+  key_changeset={@key_changeset}
+  csrf_token={Plug.CSRFProtection.get_csrf_token()}
+  create_key_path={@create_key_path}
+  delete_key_path={@delete_key_path}
+  generated_key={assigns[:generated_key]}
+/>

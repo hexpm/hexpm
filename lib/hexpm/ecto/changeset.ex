@@ -95,7 +95,7 @@ defmodule Hexpm.Changeset do
 
           if Bcrypt.verify_pass(value, hash),
             do: [],
-            else: [{error_field, {"is invalid", []}}]
+            else: [{error_field, {"incorrect password", []}}]
 
         :error ->
           [{error_field, {"can't be blank", []}}]
