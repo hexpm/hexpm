@@ -118,8 +118,9 @@ jobs:
       - name: Pull and start hexpm_billing
         env:
           STRIPE_WEBHOOK_SECRET: ${{ steps.stripe-secret.outputs.webhook_secret }}
+          BILLING_TAG: ${{ inputs.billing_tag || 'latest' }}
         run: |
-          docker pull gcr.io/hexpm-prod/hexpm_billing:${{ inputs.billing_tag || 'latest' }}
+          docker pull "gcr.io/hexpm-prod/hexpm_billing:${BILLING_TAG}"
 
           cat > /tmp/hexpm_billing.env <<EOF
           HEXPM_BILLING_DATABASE_URL=postgres://postgres:postgres@localhost:5432/hexpm_billing_ci
@@ -152,11 +153,11 @@ jobs:
           sed -i 's/^[[:space:]]*//' /tmp/hexpm_billing.env
 
           docker run --rm --network host --env-file /tmp/hexpm_billing.env \
-            gcr.io/hexpm-prod/hexpm_billing:${{ inputs.billing_tag || 'latest' }} \
+            "gcr.io/hexpm-prod/hexpm_billing:${BILLING_TAG}" \
             /app/bin/hexpm_billing eval 'HexpmBilling.ReleaseTasks.migrate()'
 
           docker run -d --name hexpm_billing --network host --env-file /tmp/hexpm_billing.env \
-            gcr.io/hexpm-prod/hexpm_billing:${{ inputs.billing_tag || 'latest' }} \
+            "gcr.io/hexpm-prod/hexpm_billing:${BILLING_TAG}" \
             /app/bin/hexpm_billing start
 
       - name: Wait for hexpm_billing

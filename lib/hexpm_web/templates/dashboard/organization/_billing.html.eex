@@ -55,6 +55,7 @@
             <%= if @use_payment_intents do %>
               <script nonce="<%= @script_src_nonce %>">
                 window.hexpm_billing_csrf_token = "<%= @csrf_token %>";
+                window.hexpm_billing_api_url = "<%= ~p"/dashboard/billing-api" %>";
               </script>
 
               <div style="display: flex; gap: 10px; align-items: center;">
@@ -201,6 +202,7 @@
             <%= if @use_payment_intents do %>
               <script nonce="<%= @script_src_nonce %>">
                 window.hexpm_billing_csrf_token = "<%= @csrf_token %>";
+                window.hexpm_billing_api_url = "<%= ~p"/dashboard/billing-api" %>";
               </script>
 
               <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#payment-method-modal">

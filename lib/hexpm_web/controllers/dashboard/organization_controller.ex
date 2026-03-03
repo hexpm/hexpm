@@ -391,9 +391,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         {:error, _reason} -> :ok
       end
 
-      conn
-      |> put_flash(:error, "Payment authentication failed or was cancelled.")
-      |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+      send_resp(conn, 204, "")
     end)
   end
 

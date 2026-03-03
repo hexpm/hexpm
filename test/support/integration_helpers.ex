@@ -9,6 +9,36 @@ defmodule HexpmWeb.IntegrationHelpers do
   @poll_interval 1_000
   @poll_timeout 60_000
 
+  # Shared JS function that finds the 3DS challenge iframe.
+  # Excludes iframes inside #card-element (Stripe Elements).
+  # First looks for iframes with 3DS-related names/sources, then falls
+  # back to any large (>200px) non-card iframe. Returns the element or null.
+  @find_3ds_iframe_js """
+    function find3dsIframe() {
+      var cardEl = document.getElementById('card-element');
+      var frames = document.querySelectorAll('iframe');
+      for (var i = 0; i < frames.length; i++) {
+        if (cardEl && cardEl.contains(frames[i])) continue;
+        var name = frames[i].name || '';
+        var src = frames[i].src || '';
+        if (name.indexOf('challenge') !== -1 ||
+            name.indexOf('three-ds') !== -1 ||
+            src.indexOf('three-ds') !== -1 ||
+            src.indexOf('3ds2') !== -1) {
+          return frames[i];
+        }
+      }
+      for (var i = 0; i < frames.length; i++) {
+        if (cardEl && cardEl.contains(frames[i])) continue;
+        var rect = frames[i].getBoundingClientRect();
+        if (rect.height > 200 && rect.width > 200) {
+          return frames[i];
+        }
+      }
+      return null;
+    }
+  """
+
   @doc """
   Polls until `fun` returns a truthy value, or `timeout` ms have elapsed.
   Returns early as soon as the condition is met. If the timeout is reached,
@@ -178,32 +208,6 @@ defmodule HexpmWeb.IntegrationHelpers do
       Process.sleep(@poll_interval)
       do_poll(token, condition, deadline)
     end
-  end
-
-  @doc """
-  Patches fetch() in the browser to rewrite the billing API URL.
-
-  hexpm_billing generates checkout HTML with apiBaseUrl pointing to its configured
-  hexpm URL (e.g. localhost:4000), but the test server runs on a different port.
-  This intercepts fetch calls and rewrites the URL to point to the test server.
-  """
-  def patch_billing_api_url(session) do
-    test_url = Application.get_env(:wallaby, :base_url)
-
-    Wallaby.Browser.execute_script(session, """
-      if (!window.__fetch_patched) {
-        var originalFetch = window.fetch;
-        window.fetch = function(url, options) {
-          if (typeof url === 'string' && url.indexOf('/dashboard/billing-api') !== -1) {
-            url = url.replace(/https?:\\/\\/[^/]+/, '#{test_url}');
-          }
-          return originalFetch.call(this, url, options);
-        };
-        window.__fetch_patched = true;
-      }
-    """)
-
-    session
   end
 
   @doc """
@@ -450,76 +454,43 @@ defmodule HexpmWeb.IntegrationHelpers do
     end
   end
 
-  # Gets the name attribute of the 3DS challenge iframe.
-  # Excludes iframes inside #card-element (Stripe Elements) to avoid
-  # matching the card input iframe instead of the 3DS modal.
   defp get_3ds_iframe_name(session) do
     name =
-      evaluate_js(session, """
-        var cardEl = document.getElementById('card-element');
-        var frames = document.querySelectorAll('iframe');
-        for (var i = 0; i < frames.length; i++) {
-          if (cardEl && cardEl.contains(frames[i])) continue;
-          var name = frames[i].name || '';
-          var src = frames[i].src || '';
-          if (name.indexOf('challenge') !== -1 ||
-              name.indexOf('three-ds') !== -1 ||
-              src.indexOf('three-ds') !== -1 ||
-              src.indexOf('3ds2') !== -1) {
-            return name;
-          }
-        }
-        for (var i = 0; i < frames.length; i++) {
-          if (cardEl && cardEl.contains(frames[i])) continue;
-          var rect = frames[i].getBoundingClientRect();
-          if (rect.height > 200 && rect.width > 200) {
-            return frames[i].name || '';
-          }
-        }
-        return '';
-      """)
+      evaluate_js(
+        session,
+        @find_3ds_iframe_js <>
+          """
+            var frame = find3dsIframe();
+            return frame ? (frame.name || '') : '';
+          """
+      )
 
     assert name != "", "Could not find 3DS iframe name"
     name
   end
 
-  # Waits for the 3DS challenge iframe to appear.
-  # Excludes iframes inside #card-element (Stripe Elements).
   defp wait_for_3ds_iframe(session, attempts \\ 30) do
     has_3ds =
-      evaluate_js(session, """
-        var cardEl = document.getElementById('card-element');
-        var frames = document.querySelectorAll('iframe');
-        for (var i = 0; i < frames.length; i++) {
-          if (cardEl && cardEl.contains(frames[i])) continue;
-          var name = frames[i].name || '';
-          var src = frames[i].src || '';
-          if (name.indexOf('challenge') !== -1 ||
-              name.indexOf('three-ds') !== -1 ||
-              src.indexOf('three-ds') !== -1 ||
-              src.indexOf('3ds2') !== -1) {
-            return true;
-          }
-          var rect = frames[i].getBoundingClientRect();
-          if (rect.height > 200 && rect.width > 200) {
-            return true;
-          }
-        }
-        return false;
-      """)
+      evaluate_js(
+        session,
+        @find_3ds_iframe_js <>
+          """
+            return find3dsIframe() !== null;
+          """
+      )
 
     if has_3ds do
       wait_until(2000, fn ->
-        evaluate_js(session, """
-          var cardEl = document.getElementById('card-element');
-          var frames = document.querySelectorAll('iframe');
-          for (var i = 0; i < frames.length; i++) {
-            if (cardEl && cardEl.contains(frames[i])) continue;
-            var rect = frames[i].getBoundingClientRect();
-            if (rect.height > 300 && rect.width > 300) return true;
-          }
-          return false;
-        """)
+        evaluate_js(
+          session,
+          @find_3ds_iframe_js <>
+            """
+              var frame = find3dsIframe();
+              if (!frame) return false;
+              var rect = frame.getBoundingClientRect();
+              return rect.height > 300 && rect.width > 300;
+            """
+        )
       end)
 
       :ok
@@ -619,10 +590,7 @@ defmodule HexpmWeb.IntegrationHelpers do
   end
 
   defp do_visit_org_billing(session, organization, wait_for, attempts) do
-    session =
-      session
-      |> Wallaby.Browser.visit("/dashboard/orgs/#{organization.name}")
-      |> patch_billing_api_url()
+    session = Wallaby.Browser.visit(session, "/dashboard/orgs/#{organization.name}")
 
     has_element =
       evaluate_js(session, """
