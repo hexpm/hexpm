@@ -51,8 +51,10 @@ defmodule Hexpm.Billing.Hexpm do
     end
   end
 
-  def void_invoice(payments_token) do
-    case post("/api/invoices/#{payments_token}/void", %{}) do
+  def void_invoice(organization, payments_token) do
+    case post("/api/customers/#{organization}/void_invoice", %{
+           "payments_token" => payments_token
+         }) do
       {:ok, 204, _headers, _body} -> :ok
       {:ok, status, _headers, body} when status in 400..499 -> {:error, body}
     end

@@ -386,7 +386,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   def void_invoice(conn, %{"dashboard_org" => organization, "invoice_id" => invoice_id}) do
     access_organization(conn, organization, "admin", fn organization ->
-      case Hexpm.Billing.void_invoice(invoice_id) do
+      case Hexpm.Billing.void_invoice(organization.name, invoice_id) do
         :ok -> :ok
         {:error, _reason} -> :ok
       end

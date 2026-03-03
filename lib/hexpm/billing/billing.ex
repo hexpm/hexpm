@@ -72,8 +72,8 @@ defmodule Hexpm.Billing do
     end
   end
 
-  def void_invoice(payments_token) do
-    impl().void_invoice(payments_token)
+  def void_invoice(organization, payments_token) do
+    impl().void_invoice(organization, payments_token)
   end
 
   def change_plan(organization_name, params,

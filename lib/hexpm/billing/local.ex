@@ -30,7 +30,7 @@ defmodule Hexpm.Billing.Local do
     {:ok, %{}}
   end
 
-  def void_invoice(_payments_token) do
+  def void_invoice(_organization, _payments_token) do
     :ok
   end
 
