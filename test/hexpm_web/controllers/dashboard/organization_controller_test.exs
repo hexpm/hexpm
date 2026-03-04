@@ -36,7 +36,29 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     end
   end
 
+  describe "GET /dashboard/orgs/new" do
+    test "redirects to sudo when not in sudo mode", %{user: user} do
+      conn =
+        build_conn()
+        |> test_login(user, sudo: false)
+        |> get("/dashboard/orgs/new")
+
+      assert redirected_to(conn) == "/sudo"
+    end
+  end
+
   describe "GET /dashboard/orgs/:dashboard_org" do
+    test "redirects to sudo when not in sudo mode", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user)
+
+      conn =
+        build_conn()
+        |> test_login(user, sudo: false)
+        |> get("/dashboard/orgs/#{organization.name}")
+
+      assert redirected_to(conn) == "/sudo"
+    end
+
     test "show organization", %{user: user, organization: organization} do
       insert(:organization_user, organization: organization, user: user)
 
