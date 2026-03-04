@@ -18,27 +18,33 @@ defmodule HexpmWeb.AuthController do
     provider = to_string(auth.provider)
     provider_uid = to_string(auth.uid)
 
-    if logged_in?(conn) do
-      # User is already logged in - try to link this provider
-      link_provider_to_user(conn, provider, provider_uid, auth.info.email)
-    else
-      # Not logged in - check if provider exists or create new user
-      case Auth.provider_auth(provider, provider_uid) do
-        {:ok, %{user: user}} ->
-          # Existing user with this provider - log them in
-          handle_existing_user_login(conn, user)
+    cond do
+      # Check if this is a sudo verification flow
+      get_session(conn, "sudo_verification") ->
+        handle_sudo_verification(conn, provider, provider_uid)
 
-        :error ->
-          # No user found with this provider
-          handle_new_provider(
-            conn,
-            provider,
-            provider_uid,
-            auth.info.email,
-            auth.info.name,
-            auth.info.nickname
-          )
-      end
+      logged_in?(conn) ->
+        # User is already logged in - try to link this provider
+        link_provider_to_user(conn, provider, provider_uid, auth.info.email)
+
+      true ->
+        # Not logged in - check if provider exists or create new user
+        case Auth.provider_auth(provider, provider_uid) do
+          {:ok, %{user: user}} ->
+            # Existing user with this provider - log them in
+            handle_existing_user_login(conn, user)
+
+          :error ->
+            # No user found with this provider
+            handle_new_provider(
+              conn,
+              provider,
+              provider_uid,
+              auth.info.email,
+              auth.info.name,
+              auth.info.nickname
+            )
+        end
     end
   end
 
@@ -213,4 +219,31 @@ defmodule HexpmWeb.AuthController do
   end
 
   defp generate_username(_nickname, _email), do: nil
+
+  @spec handle_sudo_verification(Plug.Conn.t(), String.t(), String.t()) :: Plug.Conn.t()
+  defp handle_sudo_verification(conn, provider, provider_uid) do
+    user = conn.assigns.current_user
+    user = Hexpm.Repo.preload(user, :user_providers)
+
+    # Verify the OAuth provider matches user's linked provider
+    has_matching_provider =
+      Enum.any?(user.user_providers, fn p ->
+        p.provider == provider && p.provider_uid == provider_uid
+      end)
+
+    return_to = get_session(conn, "sudo_return_to") || ~p"/dashboard/security"
+
+    conn = delete_session(conn, "sudo_verification")
+
+    if has_matching_provider do
+      conn
+      |> HexpmWeb.Plugs.Sudo.set_sudo_authenticated()
+      |> delete_session("sudo_return_to")
+      |> redirect(to: return_to)
+    else
+      conn
+      |> put_flash(:error, "GitHub account does not match your linked account.")
+      |> redirect(to: ~p"/sudo")
+    end
+  end
 end
