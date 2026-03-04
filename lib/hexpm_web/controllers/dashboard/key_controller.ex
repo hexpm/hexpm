@@ -2,6 +2,7 @@ defmodule HexpmWeb.Dashboard.KeyController do
   use HexpmWeb, :controller
 
   plug :requires_login
+  plug HexpmWeb.Plugs.Sudo
 
   def index(conn, _params) do
     render_index(conn)
