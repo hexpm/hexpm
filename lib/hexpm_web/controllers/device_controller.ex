@@ -5,6 +5,7 @@ defmodule HexpmWeb.DeviceController do
   alias Hexpm.Accounts.User
   alias Hexpm.Permissions
   alias HexpmWeb.Plugs.Attack
+  alias HexpmWeb.Plugs.Sudo
   alias HexpmWeb.DeviceView
 
   plug :nillify_params, ["user_code"]
@@ -58,34 +59,34 @@ defmodule HexpmWeb.DeviceController do
   POST /oauth/device
   """
   def create(conn, %{"user_code" => user_code} = params) do
-    if logged_in?(conn) do
-      current_user = conn.assigns.current_user
+    cond do
+      not logged_in?(conn) ->
+        redirect(conn, to: build_login_redirect_path(user_code))
 
-      # Check rate limits before processing any device operations
-      case check_rate_limits(conn, current_user) do
-        {:rate_limited, message} ->
-          render_verification_form(conn, nil, message, user_code)
+      not Sudo.sudo_active?(conn) ->
+        normalized_code = DeviceView.normalize_user_code(user_code)
 
-        :ok ->
+        Sudo.redirect_to_sudo(
+          conn,
+          ~p"/oauth/device?user_code=#{normalized_code}",
+          "Please verify your identity to authorize this device."
+        )
+
+      true ->
+        current_user = conn.assigns.current_user
+        normalized_code = DeviceView.normalize_user_code(user_code)
+
+        with :ok <- check_rate_limits(conn, current_user) do
           case params["action"] do
-            "verify" ->
-              normalized_code = DeviceView.normalize_user_code(user_code)
-              handle_verification(conn, normalized_code)
-
-            "authorize" ->
-              normalized_code = DeviceView.normalize_user_code(user_code)
-              handle_authorization(conn, normalized_code, current_user, params)
-
-            "deny" ->
-              normalized_code = DeviceView.normalize_user_code(user_code)
-              handle_denial(conn, normalized_code)
-
-            _ ->
-              render_verification_form(conn, nil, "Invalid action", user_code)
+            "verify" -> handle_verification(conn, normalized_code)
+            "authorize" -> handle_authorization(conn, normalized_code, current_user, params)
+            "deny" -> handle_denial(conn, normalized_code)
+            _ -> render_verification_form(conn, nil, "Invalid action", user_code)
           end
-      end
-    else
-      redirect(conn, to: build_login_redirect_path(user_code))
+        else
+          {:rate_limited, message} ->
+            render_verification_form(conn, nil, message, user_code)
+        end
     end
   end
 

@@ -26,10 +26,33 @@ defmodule HexpmWeb.Plugs.Sudo do
       conn
     else
       conn
-      |> put_session("sudo_return_to", conn.request_path)
-      |> put_flash(:info, "Please verify your identity to continue.")
-      |> redirect(to: ~p"/sudo")
+      |> redirect_to_sudo(full_request_path(conn), "Please verify your identity to continue.")
       |> halt()
+    end
+  end
+
+  @doc """
+  Redirects to the sudo verification page with a return URL and flash message.
+
+  This can be used directly in controllers when manual sudo checks are needed:
+
+      if not Sudo.sudo_active?(conn) do
+        Sudo.redirect_to_sudo(conn, ~p"/some/path", "Please verify your identity.")
+      end
+  """
+  @spec redirect_to_sudo(Plug.Conn.t(), String.t(), String.t()) :: Plug.Conn.t()
+  def redirect_to_sudo(conn, return_to, message) do
+    conn
+    |> put_session("sudo_return_to", return_to)
+    |> put_flash(:info, message)
+    |> redirect(to: ~p"/sudo")
+  end
+
+  @spec full_request_path(Plug.Conn.t()) :: String.t()
+  defp full_request_path(conn) do
+    case conn.query_string do
+      "" -> conn.request_path
+      qs -> conn.request_path <> "?" <> qs
     end
   end
 
