@@ -10,6 +10,15 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
   end
 
   describe "get /dashboard/security" do
+    test "redirects to sudo when not in sudo mode", c do
+      conn =
+        build_conn()
+        |> test_login(c.user, sudo: false)
+        |> get("/dashboard/security")
+
+      assert redirected_to(conn) == "/sudo"
+    end
+
     test "when tfa is enabled", c do
       conn =
         build_conn()

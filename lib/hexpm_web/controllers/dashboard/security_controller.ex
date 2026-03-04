@@ -3,6 +3,7 @@ defmodule HexpmWeb.Dashboard.SecurityController do
   alias Hexpm.Accounts.{User, Users, UserProviders}
 
   plug :requires_login
+  plug HexpmWeb.Plugs.Sudo
 
   def index(conn, _params) do
     user = conn.assigns.current_user
