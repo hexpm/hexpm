@@ -223,6 +223,32 @@ defmodule HexpmWeb.Plugs.Attack do
     )
   end
 
+  @spec sudo_password_throttle(integer(), keyword()) :: {:allow | :block, {:throttle, keyword()}}
+  def sudo_password_throttle(user_id, opts \\ []) do
+    time = opts[:time] || System.system_time(:millisecond)
+
+    timed_throttle(
+      {:sudo_password, user_id},
+      time: time,
+      storage: @storage,
+      limit: 5,
+      period: 15 * 60_000
+    )
+  end
+
+  @spec sudo_tfa_throttle(integer(), keyword()) :: {:allow | :block, {:throttle, keyword()}}
+  def sudo_tfa_throttle(user_id, opts \\ []) do
+    time = opts[:time] || System.system_time(:millisecond)
+
+    timed_throttle(
+      {:sudo_tfa, user_id},
+      time: time,
+      storage: @storage,
+      limit: 5,
+      period: 15 * 60_000
+    )
+  end
+
   defp api?(%Plug.Conn{request_path: "/api/" <> _}), do: true
   defp api?(%Plug.Conn{}), do: false
 end
