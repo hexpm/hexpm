@@ -24,37 +24,51 @@
         <p class="device-instruction-text">Enter the verification code displayed on your device:</p>
       <% end %>
 
-      <%= form_tag(~p"/oauth/device", method: "get") do %>
-        <div class="form-group device-form-group">
-          <label for="user_code" class="device-code-label">Verification Code</label>
-          <input id="user_code"
-                 type="text"
-                 class="form-control device-code-input<%= if @pre_filled, do: " device-code-input--prefilled" %>"
-                 name="user_code"
-                 value="<%= format_user_code(@user_code) %>"
-                 placeholder="XXXX-XXXX"
-                 pattern="[A-Z0-9]{4}-?[A-Z0-9]{4}"
-                 maxlength="9"
-                 <%= if @pre_filled, do: "readonly" %>
-                 required>
-          <small class="form-text text-muted device-help-text">
-            <%= if @pre_filled do %>
+      <%= if @pre_filled do %>
+        <%= form_tag(~p"/oauth/device", method: "post") do %>
+          <div class="form-group device-form-group">
+            <label for="user_code" class="device-code-label">Verification Code</label>
+            <input id="user_code"
+                   type="text"
+                   class="form-control device-code-input device-code-input--prefilled"
+                   name="user_code"
+                   value="<%= format_user_code(@user_code) %>"
+                   placeholder="XXXX-XXXX"
+                   pattern="[A-Z0-9]{4}-?[A-Z0-9]{4}"
+                   maxlength="9"
+                   readonly
+                   required>
+            <small class="form-text text-muted device-help-text">
               This code was provided in your authorization link. Confirm it matches your device.
-            <% else %>
-              Enter the 8-character code shown on your device (format: XXXX-XXXX)
-            <% end %>
-          </small>
-        </div>
+            </small>
+          </div>
 
-        <%= if @pre_filled do %>
-          <input type="hidden" name="verified" value="true">
+          <input type="hidden" name="action" value="verify">
           <div class="device-button-group">
             <button type="submit" class="btn btn-primary btn-lg device-btn-primary-lg">Verify and Continue</button>
             <a href="<%= ~p"/" %>" class="btn btn-danger btn-lg device-btn-danger-lg">
               <i class="fa fa-times-circle"></i> Code does not match
             </a>
           </div>
-        <% else %>
+        <% end %>
+      <% else %>
+        <%= form_tag(~p"/oauth/device", method: "get") do %>
+          <div class="form-group device-form-group">
+            <label for="user_code" class="device-code-label">Verification Code</label>
+            <input id="user_code"
+                   type="text"
+                   class="form-control device-code-input"
+                   name="user_code"
+                   value="<%= format_user_code(@user_code) %>"
+                   placeholder="XXXX-XXXX"
+                   pattern="[A-Z0-9]{4}-?[A-Z0-9]{4}"
+                   maxlength="9"
+                   required>
+            <small class="form-text text-muted device-help-text">
+              Enter the 8-character code shown on your device (format: XXXX-XXXX)
+            </small>
+          </div>
+
           <button type="submit" class="btn btn-primary device-btn-verify">Verify Code</button>
         <% end %>
       <% end %>
