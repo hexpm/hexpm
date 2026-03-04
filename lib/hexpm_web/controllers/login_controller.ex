@@ -66,6 +66,7 @@ defmodule HexpmWeb.LoginController do
   defp start_session(conn, user, return) do
     conn
     |> start_session_internal(user)
+    |> HexpmWeb.Plugs.Sudo.set_sudo_authenticated()
     |> redirect_return(user, return)
   end
 

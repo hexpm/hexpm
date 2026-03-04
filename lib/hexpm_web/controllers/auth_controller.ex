@@ -50,6 +50,7 @@ defmodule HexpmWeb.AuthController do
     else
       conn
       |> start_session_internal(user)
+      |> HexpmWeb.Plugs.Sudo.set_sudo_authenticated()
       |> redirect(to: conn.params["return"] || ~p"/users/#{user}")
     end
   end
@@ -173,6 +174,7 @@ defmodule HexpmWeb.AuthController do
         conn
         |> delete_session("pending_oauth")
         |> start_session_internal(user)
+        |> HexpmWeb.Plugs.Sudo.set_sudo_authenticated()
         |> put_flash(:info, "Account created successfully!")
         |> redirect(to: ~p"/users/#{user}")
 
