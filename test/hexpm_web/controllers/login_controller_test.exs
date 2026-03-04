@@ -67,16 +67,15 @@ defmodule HexpmWeb.LoginControllerTest do
   end
 
   test "log out", c do
-    conn = post(build_conn(), "/login", %{username: c.user.username, password: "password"})
-    assert redirected_to(conn) == "/users/#{c.user.username}"
-
     conn =
-      conn
-      |> recycle()
+      build_conn()
+      |> test_login(c.user)
+      |> put_session("tfa_setup_secret", "secret")
       |> post("/logout")
 
     assert redirected_to(conn) == "/"
     refute get_session(conn, "session_token")
+    refute get_session(conn, "tfa_setup_secret")
   end
 
   test "login, create hexdocs key and redirect", c do
