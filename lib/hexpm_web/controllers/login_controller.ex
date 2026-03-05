@@ -59,7 +59,7 @@ defmodule HexpmWeb.LoginController do
     end
 
     conn
-    |> delete_session("session_token")
+    |> clear_session()
     |> redirect(to: ~p"/")
   end
 
