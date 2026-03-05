@@ -237,7 +237,7 @@ jobs:
   docker-merge:
     name: Docker Merge
     runs-on: ubuntu-24.04
-    if: ${{ github.event_name != 'pull_request' && secrets.GCLOUD_SERVICE_ACCOUNT != '' }}
+    if: ${{ github.event_name != 'pull_request' && github.repository == 'hexpm/hexpm' }}
     needs: docker
     permissions:
       contents: "read"
