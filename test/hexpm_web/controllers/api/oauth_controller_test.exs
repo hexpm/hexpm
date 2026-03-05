@@ -627,7 +627,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
         name: "Test OAuth Client",
         client_type: "public",
         allowed_grant_types: ["client_credentials"],
-        allowed_scopes: ["api", "repositories"]
+        allowed_scopes: ["api", "api:read", "api:write", "repositories"]
       }
 
       {:ok, client} = Client.build(client_params) |> Repo.insert()
@@ -1003,6 +1003,165 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       scopes = String.split(response["scope"], " ")
       assert "api" in scopes
       assert "repository:#{org.name}" in scopes
+    end
+
+    test "returns error when api:read key requests 'api' scope (CVE-2026-21621)", %{
+      user: user,
+      client: client
+    } do
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{name: "read_only_key", permissions: [%{domain: "api", resource: "read"}]},
+          audit: audit_data(user)
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 400)
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_scope"
+    end
+
+    test "succeeds when api:read key requests 'api:read' scope", %{user: user, client: client} do
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{name: "read_only_key", permissions: [%{domain: "api", resource: "read"}]},
+          audit: audit_data(user)
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "api:read"
+        })
+
+      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+      assert response["scope"] == "api:read"
+    end
+
+    test "returns error when api:read key requests 'api:write' scope", %{
+      user: user,
+      client: client
+    } do
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{name: "read_only_key", permissions: [%{domain: "api", resource: "read"}]},
+          audit: audit_data(user)
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "api:write"
+        })
+
+      assert json_response(conn, 400)
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_scope"
+    end
+
+    test "succeeds when api:write key requests 'api:write' scope", %{user: user, client: client} do
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{name: "write_key", permissions: [%{domain: "api", resource: "write"}]},
+          audit: audit_data(user)
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "api:write"
+        })
+
+      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+      assert response["scope"] == "api:write"
+    end
+
+    test "succeeds when api:write key requests 'api:read' scope (write implies read)", %{
+      user: user,
+      client: client
+    } do
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{name: "write_key", permissions: [%{domain: "api", resource: "write"}]},
+          audit: audit_data(user)
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "api:read"
+        })
+
+      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+      assert response["scope"] == "api:read"
+    end
+
+    test "returns error when api:write key requests 'api' scope", %{user: user, client: client} do
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{name: "write_key", permissions: [%{domain: "api", resource: "write"}]},
+          audit: audit_data(user)
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 400)
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_scope"
+    end
+
+    test "succeeds when full api key (resource: nil) requests 'api' scope", %{
+      user: user,
+      client: client
+    } do
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{name: "full_api_key", permissions: [%{domain: "api"}]},
+          audit: audit_data(user)
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+      assert response["scope"] == "api"
     end
   end
 

@@ -161,6 +161,37 @@ defmodule Hexpm.PermissionsTest do
     end
   end
 
+  describe "permission_to_scopes/1" do
+    test "full api permission grants all api scopes" do
+      assert Permissions.permission_to_scopes(%{domain: "api", resource: nil}) ==
+               ["api", "api:read", "api:write"]
+    end
+
+    test "api write permission grants write and read scopes" do
+      assert Permissions.permission_to_scopes(%{domain: "api", resource: "write"}) ==
+               ["api:write", "api:read"]
+    end
+
+    test "api read permission grants only read scope" do
+      assert Permissions.permission_to_scopes(%{domain: "api", resource: "read"}) ==
+               ["api:read"]
+    end
+
+    test "repository permission grants specific repository scope" do
+      assert Permissions.permission_to_scopes(%{domain: "repository", resource: "acme"}) ==
+               ["repository:acme"]
+    end
+
+    test "repositories permission grants all_repositories marker" do
+      assert Permissions.permission_to_scopes(%{domain: "repositories", resource: nil}) ==
+               [:all_repositories]
+    end
+
+    test "unknown permission grants no scopes" do
+      assert Permissions.permission_to_scopes(%{domain: "package", resource: nil}) == []
+    end
+  end
+
   describe "verify_access? with KeyPermissions" do
     test "verifies repository permissions" do
       key = build(:key, permissions: [build(:key_permission, domain: "repositories")])

@@ -111,6 +111,34 @@ defmodule Hexpm.Permissions do
   end
 
   @doc """
+  Returns the list of OAuth scopes that a key permission grants access to.
+
+  Unlike `permission_to_scope/1` which does a 1:1 mapping, this function
+  returns all scopes the permission implies, respecting the scope hierarchy
+  (e.g., write implies read).
+
+  Examples:
+  - %{domain: "api", resource: nil} -> ["api", "api:read", "api:write"]
+  - %{domain: "api", resource: "write"} -> ["api:write", "api:read"]
+  - %{domain: "api", resource: "read"} -> ["api:read"]
+  - %{domain: "repository", resource: "acme"} -> ["repository:acme"]
+  - %{domain: "repositories"} -> [:all_repositories]
+  """
+  def permission_to_scopes(%{domain: "api", resource: nil}),
+    do: ["api", "api:read", "api:write"]
+
+  def permission_to_scopes(%{domain: "api", resource: "write"}),
+    do: ["api:write", "api:read"]
+
+  def permission_to_scopes(%{domain: "api", resource: "read"}), do: ["api:read"]
+
+  def permission_to_scopes(%{domain: "repository", resource: resource}),
+    do: ["repository:#{resource}"]
+
+  def permission_to_scopes(%{domain: "repositories"}), do: [:all_repositories]
+  def permission_to_scopes(_permission), do: []
+
+  @doc """
   Converts a scope string to KeyPermission format.
 
   Examples:

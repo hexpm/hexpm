@@ -289,19 +289,11 @@ defmodule HexpmWeb.API.OAuthController do
   end
 
   defp validate_scopes_against_key(scopes, permissions) do
-    # Build set of allowed scopes from key permissions
     allowed_scopes =
-      Enum.flat_map(permissions, fn permission ->
-        case permission.domain do
-          "api" -> ["api"]
-          "repository" -> ["repository:#{permission.resource}"]
-          "repositories" -> [:all_repositories]
-          _ -> []
-        end
-      end)
+      permissions
+      |> Enum.flat_map(&Hexpm.Permissions.permission_to_scopes/1)
       |> MapSet.new()
 
-    # Check if all scopes are allowed
     Enum.all?(scopes, fn scope ->
       scope in allowed_scopes or
         (:all_repositories in allowed_scopes and String.starts_with?(scope, "repository:"))
