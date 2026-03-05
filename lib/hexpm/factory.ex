@@ -209,6 +209,7 @@ defmodule Hexpm.Factory do
         "refresh_token",
         "client_credentials"
       ],
+      allowed_scopes: ["api", "api:read", "api:write", "repositories"],
       redirect_uris: ["https://example.com/callback"]
     }
   end

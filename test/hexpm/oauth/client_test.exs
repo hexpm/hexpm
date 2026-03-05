@@ -11,7 +11,8 @@ defmodule Hexpm.OAuth.ClientTest do
                client_id: "can't be blank",
                name: "can't be blank",
                client_type: "can't be blank",
-               allowed_grant_types: "can't be blank"
+               allowed_grant_types: "can't be blank",
+               allowed_scopes: "can't be blank"
              } = errors_on(changeset)
     end
 
@@ -94,6 +95,7 @@ defmodule Hexpm.OAuth.ClientTest do
         name: "Test Client",
         client_type: "public",
         allowed_grant_types: ["authorization_code"],
+        allowed_scopes: ["api"],
         redirect_uris: [
           "https://example.com/callback",
           "http://localhost:3000/callback",
@@ -176,6 +178,7 @@ defmodule Hexpm.OAuth.ClientTest do
         name: "Test Client",
         client_type: "public",
         allowed_grant_types: ["authorization_code"],
+        allowed_scopes: ["api"],
         redirect_uris: ["https://*.example.com/callback"]
       }
 
@@ -189,6 +192,7 @@ defmodule Hexpm.OAuth.ClientTest do
         name: "Test Client",
         client_type: "public",
         allowed_grant_types: ["authorization_code"],
+        allowed_scopes: ["api"],
         redirect_uris: ["https://staging-*.example.com/callback"]
       }
 
@@ -203,7 +207,8 @@ defmodule Hexpm.OAuth.ClientTest do
         client_id: "test_client",
         name: "Test Client",
         client_type: "public",
-        allowed_grant_types: ["authorization_code"]
+        allowed_grant_types: ["authorization_code"],
+        allowed_scopes: ["api"]
       }
 
       changeset = Client.build(attrs)

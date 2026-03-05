@@ -16,7 +16,8 @@ Hexpm.Repo.transaction(fn ->
     name: "Hex CLI",
     client_id: "78ea6566-89fd-481e-a1d6-7d9d78eacca8",
     client_type: "public",
-    allowed_grant_types: Client.valid_grant_types()
+    allowed_grant_types: Client.valid_grant_types(),
+    allowed_scopes: ["api", "api:read", "api:write", "repositories"]
   )
 
   insert(
