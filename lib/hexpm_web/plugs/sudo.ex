@@ -87,9 +87,4 @@ defmodule HexpmWeb.Plugs.Sudo do
       NaiveDateTime.utc_now() |> NaiveDateTime.to_iso8601()
     )
   end
-
-  @spec clear_sudo(Plug.Conn.t()) :: Plug.Conn.t()
-  def clear_sudo(conn) do
-    delete_session(conn, "sudo_authenticated_at")
-  end
 end

@@ -44,19 +44,6 @@ defmodule HexpmWeb.Plugs.SudoTest do
     end
   end
 
-  describe "clear_sudo/1" do
-    test "removes timestamp from session" do
-      timestamp = DateTime.utc_now() |> DateTime.to_iso8601()
-
-      conn =
-        build_conn()
-        |> Plug.Test.init_test_session(%{"sudo_authenticated_at" => timestamp})
-        |> Sudo.clear_sudo()
-
-      refute get_session(conn, "sudo_authenticated_at")
-    end
-  end
-
   describe "call/2" do
     test "allows request when sudo active" do
       user = insert(:user)
