@@ -196,7 +196,7 @@ jobs:
       - name: Google auth
         id: auth
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 #v3.0.0
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name != 'pull_request' && env.SERVICE_ACCOUNT != '' }}
         with:
           token_format: "access_token"
           project_id: ${{ env.PROJECT_ID }}
@@ -205,7 +205,7 @@ jobs:
       - name: Docker Auth
         id: docker-auth
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name != 'pull_request' && env.SERVICE_ACCOUNT != '' }}
         with:
           registry: gcr.io
           username: "oauth2accesstoken"
@@ -215,18 +215,18 @@ jobs:
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           platforms: ${{ matrix.platform }}
-          outputs: type=image,name=gcr.io/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
+          outputs: type=image,name=gcr.io/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' && env.SERVICE_ACCOUNT != '' }}
           cache-from: type=gha,scope=${{ matrix.runner }}
           cache-to: type=gha,scope=${{ matrix.runner }},mode=max
       - name: Export digest
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name != 'pull_request' && env.SERVICE_ACCOUNT != '' }}
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
         run: |
           mkdir -p /tmp/digests
           touch "/tmp/digests/${DIGEST#sha256:}"
       - name: Upload digest
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name != 'pull_request' && env.SERVICE_ACCOUNT != '' }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: digests-${{ matrix.runner }}
@@ -237,7 +237,7 @@ jobs:
   docker-merge:
     name: Docker Merge
     runs-on: ubuntu-24.04
-    if: ${{ github.event_name != 'pull_request' }}
+    if: ${{ github.event_name != 'pull_request' && secrets.GCLOUD_SERVICE_ACCOUNT != '' }}
     needs: docker
     permissions:
       contents: "read"
