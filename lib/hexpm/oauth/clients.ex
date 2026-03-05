@@ -46,10 +46,6 @@ defmodule Hexpm.OAuth.Clients do
   @doc """
   Validates that the client is allowed to use the specified scopes.
   """
-  def supports_scopes?(%Client{allowed_scopes: nil}, requested_scopes) do
-    Permissions.validate_scopes(requested_scopes) == :ok
-  end
-
   def supports_scopes?(%Client{allowed_scopes: allowed_scopes}, requested_scopes) do
     Enum.all?(requested_scopes, fn scope ->
       scope in allowed_scopes or resource_scope_allowed_by_base?(scope, allowed_scopes)

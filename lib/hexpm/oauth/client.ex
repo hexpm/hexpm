@@ -34,7 +34,7 @@ defmodule Hexpm.OAuth.Client do
       :redirect_uris,
       :allowed_scopes
     ])
-    |> validate_required([:client_id, :name, :client_type, :allowed_grant_types])
+    |> validate_required([:client_id, :name, :client_type, :allowed_grant_types, :allowed_scopes])
     |> validate_inclusion(:client_type, @valid_client_types)
     |> validate_grant_types()
     |> validate_scopes()

@@ -67,7 +67,8 @@ defmodule HexpmWeb.TestController do
       client_type: params["client_type"] || "public",
       client_secret: params["client_secret"],
       redirect_uris: params["redirect_uris"] || [],
-      allowed_grant_types: params["allowed_grant_types"] || Client.valid_grant_types()
+      allowed_grant_types: params["allowed_grant_types"] || Client.valid_grant_types(),
+      allowed_scopes: params["allowed_scopes"] || ["api", "api:read", "api:write", "repositories"]
     }
 
     changeset = Client.changeset(%Client{}, attrs)
