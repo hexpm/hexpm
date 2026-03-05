@@ -60,11 +60,12 @@ defmodule HexpmWeb.DeviceControllerTest do
 
       assert html =~ formatted_code
 
-      # Visit with verified=true should show authorization form
+      # POST with action=verify should show authorization form
       conn =
-        get(
+        post(
           login_user(build_conn(), user),
-          ~p"/oauth/device?user_code=#{response.user_code}&verified=true"
+          ~p"/oauth/device",
+          %{"user_code" => response.user_code, "action" => "verify"}
         )
 
       assert html_response(conn, 200) =~ client.name
@@ -128,9 +129,11 @@ defmodule HexpmWeb.DeviceControllerTest do
       assert html =~ ~r/value="#{formatted_code}"/
       assert html =~ "readonly"
 
-      # Step 2: Submit verification form (user confirms code matches)
+      # Step 2: Submit verification form via POST (user confirms code matches)
       conn = login_user(build_conn(), user)
-      conn = get(conn, ~p"/oauth/device?user_code=#{response.user_code}&verified=true")
+
+      conn =
+        post(conn, ~p"/oauth/device", %{"user_code" => response.user_code, "action" => "verify"})
 
       html = html_response(conn, 200)
       assert html =~ "Authorize Device"
@@ -573,7 +576,9 @@ defmodule HexpmWeb.DeviceControllerTest do
         DeviceCodes.initiate_device_authorization(mock_conn, client.client_id, [malicious_scope])
 
       conn = login_user(build_conn(), user)
-      conn = get(conn, ~p"/oauth/device?user_code=#{response.user_code}&verified=true")
+
+      conn =
+        post(conn, ~p"/oauth/device", %{"user_code" => response.user_code, "action" => "verify"})
 
       html = html_response(conn, 200)
 
