@@ -13,8 +13,6 @@ config :hexpm, HexpmWeb.Endpoint,
   url: [scheme: "https", port: 443],
   cache_static_manifest: "priv/static/cache_manifest.json"
 
-config :hexpm, Hexpm.RepoBase, ssl: true
-
 config :bcrypt_elixir, log_rounds: 12
 
 config :sentry,
