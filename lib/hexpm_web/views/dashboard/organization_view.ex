@@ -31,6 +31,18 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
   defp plan_price("organization-monthly"), do: "$7.00"
   defp plan_price("organization-annually"), do: "$70.00"
 
+  def new_plan_cost("organization-monthly", quantity) when is_integer(quantity) do
+    # Switching FROM monthly TO annual
+    "$#{:erlang.float_to_binary(quantity * 70.0, decimals: 2)}"
+  end
+
+  def new_plan_cost("organization-annually", quantity) when is_integer(quantity) do
+    # Switching FROM annual TO monthly
+    "$#{:erlang.float_to_binary(quantity * 7.0, decimals: 2)}"
+  end
+
+  def new_plan_cost(_, _), do: nil
+
   defp proration_description("organization-monthly", price, days, quantity, quantity) do
     assigns = %{days: days, price: money(price)}
 
@@ -117,7 +129,7 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
   end
 
   defp subscription_status(%{"status" => "incomplete"}, _card) do
-    "TODO"
+    "Requires payment confirmation - check your email for instructions"
   end
 
   # TODO: Check if last invoice was unpaid and add note about it?
@@ -126,7 +138,37 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
   end
 
   defp subscription_status(%{"status" => "incomplete_expired"}, _card) do
-    "Not active"
+    "Payment confirmation expired - please update payment method"
+  end
+
+  def inactive_subscription_message(nil = _subscription) do
+    {"Subscription is not active.",
+     "Private packages will not be available until a payment method has been added."}
+  end
+
+  def inactive_subscription_message(%{"status" => "canceled"}) do
+    {"Your subscription has been cancelled.",
+     "Private packages are no longer available. Add a payment method to reactivate your subscription."}
+  end
+
+  def inactive_subscription_message(%{"status" => "past_due"}) do
+    {"Your subscription has a past due invoice.",
+     "Please pay the outstanding invoice or update your payment method to maintain access to private packages."}
+  end
+
+  def inactive_subscription_message(%{"status" => "incomplete"}) do
+    {"Your subscription requires payment confirmation.",
+     "Check your email for authentication instructions or update your payment method."}
+  end
+
+  def inactive_subscription_message(%{"status" => "incomplete_expired"}) do
+    {"Your subscription payment confirmation has expired.",
+     "Please add a new payment method to reactivate your subscription."}
+  end
+
+  def inactive_subscription_message(_subscription) do
+    {"Subscription is not active.",
+     "Private packages will not be available until a payment method has been added."}
   end
 
   @trial_ends_no_card_message """
@@ -154,24 +196,51 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
     "(\"#{name}\" discount for #{percent_off}% of price)"
   end
 
-  defp invoice_status(%{"refund" => true, "status" => "succeeded"}, _organization, _card),
-    do: "Refund Paid"
+  defp invoice_status(
+         %{"refund" => true, "status" => "succeeded"},
+         _organization,
+         _card,
+         _subscription
+       ),
+       do: "Refund Paid"
 
-  defp invoice_status(%{"refund" => true, "status" => status}, _organization, _card)
+  defp invoice_status(
+         %{"refund" => true, "status" => status},
+         _organization,
+         _card,
+         _subscription
+       )
        when status in ["failed", "canceled"],
        do: "Refund Canceled"
 
-  defp invoice_status(%{"refund" => true, "status" => status}, _organization, _card)
+  defp invoice_status(
+         %{"refund" => true, "status" => status},
+         _organization,
+         _card,
+         _subscription
+       )
        when status in ["pending", "requires_action"],
        do: "Refund Pending"
 
-  defp invoice_status(%{"paid" => true}, _organization, _card), do: "Paid"
-  defp invoice_status(%{"status" => "uncollectible"}, _organization, _card), do: "Forgiven"
+  defp invoice_status(%{"paid" => true}, _organization, _card, _subscription), do: "Paid"
 
-  defp invoice_status(%{"paid" => false, "attempted" => false}, _organization, _card),
-    do: "Pending"
+  defp invoice_status(%{"status" => "uncollectible"}, _organization, _card, _subscription),
+    do: "Forgiven"
 
-  defp invoice_status(%{"paid" => false, "attempted" => true}, _organization, nil = _card) do
+  defp invoice_status(
+         %{"paid" => false, "attempted" => false},
+         _organization,
+         _card,
+         _subscription
+       ),
+       do: "Pending"
+
+  defp invoice_status(
+         %{"paid" => false, "attempted" => true},
+         _organization,
+         nil = _card,
+         _subscription
+       ) do
     submit(
       "Pay now",
       class: "btn btn-primary",
@@ -180,10 +249,46 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
     )
   end
 
+  # Subscription in a state that cannot accept payment
+  defp invoice_status(
+         %{"paid" => false, "attempted" => true},
+         _organization,
+         _card,
+         %{"status" => status}
+       )
+       when status in ["incomplete_expired", "canceled"] do
+    submit(
+      "Pay now",
+      class: "btn btn-primary",
+      disabled: true,
+      title: "Subscription is not active"
+    )
+  end
+
+  defp invoice_status(
+         %{
+           "paid" => false,
+           "attempted" => true,
+           "payment_intent_client_secret" => client_secret,
+           "payment_method" => payment_method
+         },
+         _organization,
+         _card,
+         _subscription
+       )
+       when is_binary(client_secret) do
+    content_tag(:button, "Authenticate payment",
+      type: "button",
+      class: "btn btn-warning btn-xs sca-pay-button",
+      data: [client_secret: client_secret, payment_method: payment_method]
+    )
+  end
+
   defp invoice_status(
          %{"paid" => false, "attempted" => true, "id" => invoice_id},
          organization,
-         _card
+         _card,
+         _subscription
        ) do
     form_tag(~p"/dashboard/orgs/#{organization}/invoices/#{invoice_id}/pay") do
       submit("Pay now", class: "btn btn-primary")
@@ -504,12 +609,12 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
     String.replace(html, "<script", ~s(<script nonce="#{nonce}"))
   end
 
-  defp show_person?(person, errors) do
-    (person || errors["person"]) && !errors["company"]
+  defp show_person?(person, company, errors) do
+    (person || errors["person"]) && !company && !errors["company"]
   end
 
-  defp show_company?(company, errors) do
-    (company || errors["company"]) && !errors["person"]
+  defp show_company?(person, company, errors) do
+    !show_person?(person, company, errors)
   end
 
   defp organization_admin?(current_user, organization) do

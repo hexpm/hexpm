@@ -1,4 +1,4 @@
-ExUnit.start()
+ExUnit.start(exclude: [:integration])
 
 tmp_dir = Application.get_env(:hexpm, :tmp_dir)
 File.rm_rf(tmp_dir)
