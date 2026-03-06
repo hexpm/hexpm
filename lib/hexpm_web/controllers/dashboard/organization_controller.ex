@@ -4,6 +4,28 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   plug :requires_login
 
+  plug HexpmWeb.Plugs.Sudo
+       when action in [
+              :new,
+              :create,
+              :show,
+              :update,
+              :audit_logs,
+              :leave,
+              :billing_token,
+              :cancel_billing,
+              :update_billing,
+              :create_billing,
+              :add_seats,
+              :remove_seats,
+              :change_plan,
+              :create_key,
+              :delete_key,
+              :show_invoice,
+              :pay_invoice,
+              :update_profile
+            ]
+
   def redirect_repo(conn, params) do
     glob = params["glob"] || []
     path = ~p"/dashboard/orgs" <> "/" <> Enum.join(glob, "/")

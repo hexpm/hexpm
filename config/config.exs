@@ -9,7 +9,8 @@ config :hexpm,
   logs_bucket: {Hexpm.Store.Local, "logs_bucket"},
   cdn_impl: Hexpm.CDN.Local,
   billing_impl: Hexpm.Billing.Local,
-  pwned_impl: Hexpm.Pwned.Local
+  pwned_impl: Hexpm.Pwned.Local,
+  sudo_timeout: Duration.new!(hour: 1)
 
 config :hexpm, :features, package_reports: true
 

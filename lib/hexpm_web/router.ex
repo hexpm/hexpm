@@ -112,6 +112,12 @@ defmodule HexpmWeb.Router do
     get "/auth/:provider", AuthController, :request
     get "/auth/:provider/callback", AuthController, :callback
 
+    get "/sudo", SudoController, :show
+    post "/sudo", SudoController, :create
+    get "/sudo/github", SudoController, :github
+    get "/sudo/recovery", SudoController, :show_recovery
+    post "/sudo/recovery", SudoController, :verify_recovery
+
     get "/oauth/authorize", OAuthController, :authorize
     post "/oauth/authorize", OAuthController, :consent
     get "/oauth/device", DeviceController, :show

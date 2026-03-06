@@ -98,6 +98,28 @@ defmodule HexpmWeb.DeviceControllerTest do
       assert redirected_to(conn) =~ "%3Fuser_code%3D"
     end
 
+    test "allows viewing form without sudo mode" do
+      user = insert(:user)
+      conn = login_user(build_conn(), user, sudo: false)
+      client = create_test_client()
+
+      mock_conn =
+        build_conn()
+        |> Map.put(:scheme, :https)
+        |> Map.put(:host, "hex.pm")
+        |> Map.put(:port, 443)
+
+      {:ok, response} =
+        DeviceCodes.initiate_device_authorization(mock_conn, client.client_id, ["api"])
+
+      # Should be able to view the form without sudo
+      conn = get(conn, ~p"/oauth/device?user_code=#{response.user_code}")
+      html = html_response(conn, 200)
+
+      assert html =~ "Device Authorization"
+      assert html =~ "Security Check"
+    end
+
     test "verification flow from pre-filled form to authorization" do
       user = insert(:user)
       client = create_test_client("Test App")
@@ -170,6 +192,38 @@ defmodule HexpmWeb.DeviceControllerTest do
         })
 
       assert redirected_to(conn) =~ "/login"
+    end
+
+    test "redirects to sudo when authorizing device without sudo mode", %{
+      user: user,
+      device_code: device_code
+    } do
+      conn = login_user(build_conn(), user, sudo: false)
+
+      conn =
+        post(conn, ~p"/oauth/device", %{
+          "user_code" => device_code.user_code,
+          "action" => "authorize"
+        })
+
+      assert redirected_to(conn) == "/sudo"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "verify your identity"
+    end
+
+    test "redirects to sudo when denying device without sudo mode", %{
+      user: user,
+      device_code: device_code
+    } do
+      conn = login_user(build_conn(), user, sudo: false)
+
+      conn =
+        post(conn, ~p"/oauth/device", %{
+          "user_code" => device_code.user_code,
+          "action" => "deny"
+        })
+
+      assert redirected_to(conn) == "/sudo"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "verify your identity"
     end
 
     test "shows error when authorizing without selecting scopes", %{
@@ -471,8 +525,10 @@ defmodule HexpmWeb.DeviceControllerTest do
     end
   end
 
-  defp login_user(conn, user) do
+  defp login_user(conn, user, opts \\ []) do
     alias Hexpm.UserSessions
+
+    sudo = Keyword.get(opts, :sudo, true)
 
     {:ok, _session, session_token} =
       UserSessions.create_browser_session(user,
@@ -480,9 +536,21 @@ defmodule HexpmWeb.DeviceControllerTest do
         audit: test_audit_data(user)
       )
 
+    session_data = %{"session_token" => Base.encode64(session_token)}
+
+    session_data =
+      if sudo do
+        Map.put(
+          session_data,
+          "sudo_authenticated_at",
+          NaiveDateTime.utc_now() |> NaiveDateTime.to_iso8601()
+        )
+      else
+        session_data
+      end
+
     conn
-    |> init_test_session(%{})
-    |> put_session("session_token", Base.encode64(session_token))
+    |> init_test_session(session_data)
   end
 
   describe "device verification rate limiting" do

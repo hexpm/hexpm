@@ -169,6 +169,60 @@ defmodule HexpmWeb.AuthControllerTest do
     end
   end
 
+  describe "GET /auth/github/callback - Sudo verification" do
+    test "OAuth callback with sudo_verification flag grants sudo and redirects to return_to" do
+      email = Hexpm.Fake.sequence(:email)
+      user = insert(:user)
+      insert(:user_provider, user: user, provider: "github", provider_uid: "88888")
+
+      conn =
+        build_conn()
+        |> mock_github_auth_success("88888", email)
+        |> Plug.Conn.assign(:current_user, user)
+        |> put_session("sudo_verification", true)
+        |> put_session("sudo_return_to", "/dashboard/keys")
+        |> HexpmWeb.AuthController.callback(%{})
+
+      assert redirected_to(conn) == "/dashboard/keys"
+      assert HexpmWeb.Plugs.Sudo.sudo_active?(conn)
+      refute get_session(conn, "sudo_verification")
+      refute get_session(conn, "sudo_return_to")
+    end
+
+    test "OAuth callback with mismatched provider_uid shows error" do
+      email = Hexpm.Fake.sequence(:email)
+      user = insert(:user)
+      insert(:user_provider, user: user, provider: "github", provider_uid: "99999")
+
+      conn =
+        build_conn()
+        |> mock_github_auth_success("77777", email)
+        |> Plug.Conn.assign(:current_user, user)
+        |> put_session("sudo_verification", true)
+        |> put_session("sudo_return_to", "/dashboard/keys")
+        |> HexpmWeb.AuthController.callback(%{})
+
+      assert redirected_to(conn) == "/sudo"
+      assert Phoenix.Flash.get(conn.assigns.flash, "error") =~ "does not match"
+      refute HexpmWeb.Plugs.Sudo.sudo_active?(conn)
+      refute get_session(conn, "sudo_verification")
+    end
+
+    test "OAuth callback without sudo_verification flag follows normal login flow" do
+      email = Hexpm.Fake.sequence(:email)
+      user = insert(:user)
+      insert(:user_provider, user: user, provider: "github", provider_uid: "66666")
+
+      conn =
+        build_conn()
+        |> mock_github_auth_success("66666", email)
+        |> HexpmWeb.AuthController.callback(%{})
+
+      assert redirected_to(conn) == "/users/#{user.username}"
+      assert get_session(conn, "session_token")
+    end
+  end
+
   describe "GET /auth/complete-signup - Username selection form" do
     test "shows form with suggested username" do
       email = Hexpm.Fake.sequence(:email)

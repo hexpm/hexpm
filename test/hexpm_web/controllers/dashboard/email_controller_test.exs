@@ -28,6 +28,15 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     assert response(conn, 200) =~ "Emails"
   end
 
+  test "redirects to sudo when not in sudo mode", c do
+    conn =
+      build_conn()
+      |> test_login(c.user, sudo: false)
+      |> get("/dashboard/email")
+
+    assert redirected_to(conn) == "/sudo"
+  end
+
   test "requires login" do
     conn = get(build_conn(), "/dashboard/email")
     assert redirected_to(conn) == "/login?return=%2Fdashboard%2Femail"

@@ -14,6 +14,7 @@ defmodule HexpmWeb.TFARecoveryController do
       conn
       |> delete_session("tfa_user_id")
       |> start_session_internal(updated_user)
+      |> HexpmWeb.Plugs.Sudo.set_sudo_authenticated()
       |> redirect(to: session["return"] || ~p"/users/#{updated_user}")
     else
       _ ->
