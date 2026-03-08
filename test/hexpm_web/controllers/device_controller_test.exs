@@ -98,6 +98,62 @@ defmodule HexpmWeb.DeviceControllerTest do
       assert redirected_to(conn) =~ "%3Fuser_code%3D"
     end
 
+    test "auto-verifies when returning from sudo with pending verification" do
+      user = insert(:user)
+      client = create_test_client("Test App")
+
+      mock_conn =
+        build_conn()
+        |> Map.put(:scheme, :https)
+        |> Map.put(:host, "hex.pm")
+        |> Map.put(:port, 443)
+
+      {:ok, response} =
+        DeviceCodes.initiate_device_authorization(mock_conn, client.client_id, ["api"])
+
+      normalized_code = HexpmWeb.DeviceView.normalize_user_code(response.user_code)
+
+      conn =
+        login_user(build_conn(), user,
+          extra_session: %{"device_verify_pending" => normalized_code}
+        )
+
+      # GET with device_verify_pending matching the user_code should skip the
+      # "Verify and Continue" form and go straight to the authorization page
+      conn = get(conn, ~p"/oauth/device?user_code=#{response.user_code}")
+      html = html_response(conn, 200)
+
+      assert html =~ "Authorize Device"
+      assert html =~ client.name
+      refute html =~ "Verify and Continue"
+    end
+
+    test "does not auto-verify when device_verify_pending code does not match" do
+      user = insert(:user)
+      client = create_test_client("Test App")
+
+      mock_conn =
+        build_conn()
+        |> Map.put(:scheme, :https)
+        |> Map.put(:host, "hex.pm")
+        |> Map.put(:port, 443)
+
+      {:ok, response} =
+        DeviceCodes.initiate_device_authorization(mock_conn, client.client_id, ["api"])
+
+      conn =
+        login_user(build_conn(), user,
+          extra_session: %{"device_verify_pending" => "WRONGCODE"}
+        )
+
+      # GET with mismatched device_verify_pending should show the normal form
+      conn = get(conn, ~p"/oauth/device?user_code=#{response.user_code}")
+      html = html_response(conn, 200)
+
+      assert html =~ "Verify and Continue"
+      refute html =~ "Authorize Device"
+    end
+
     test "allows viewing form without sudo mode" do
       user = insert(:user)
       conn = login_user(build_conn(), user, sudo: false)
@@ -208,6 +264,7 @@ defmodule HexpmWeb.DeviceControllerTest do
 
       assert redirected_to(conn) == "/sudo"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "verify your identity"
+      assert get_session(conn, "device_verify_pending") == device_code.user_code
     end
 
     test "redirects to sudo when denying device without sudo mode", %{
@@ -529,6 +586,7 @@ defmodule HexpmWeb.DeviceControllerTest do
     alias Hexpm.UserSessions
 
     sudo = Keyword.get(opts, :sudo, true)
+    extra_session = Keyword.get(opts, :extra_session, %{})
 
     {:ok, _session, session_token} =
       UserSessions.create_browser_session(user,
@@ -548,6 +606,8 @@ defmodule HexpmWeb.DeviceControllerTest do
       else
         session_data
       end
+
+    session_data = Map.merge(session_data, extra_session)
 
     conn
     |> init_test_session(session_data)

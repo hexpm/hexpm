@@ -27,25 +27,33 @@ defmodule HexpmWeb.DeviceController do
       else
         normalized_code = DeviceView.normalize_user_code(user_code)
 
-        # Validate the code exists but show verification form
-        case DeviceCodes.get_for_verification(normalized_code) do
-          {:ok, _device_code} ->
-            # Code is valid, show pre-filled verification form
-            render_verification_form(conn, nil, nil, user_code)
+        # If returning from sudo verification after clicking "Verify and Continue",
+        # skip straight to the verification step instead of showing the form again
+        if get_session(conn, "device_verify_pending") == normalized_code and Sudo.sudo_active?(conn) do
+          conn
+          |> delete_session("device_verify_pending")
+          |> handle_verification(normalized_code)
+        else
+          # Validate the code exists but show verification form
+          case DeviceCodes.get_for_verification(normalized_code) do
+            {:ok, _device_code} ->
+              # Code is valid, show pre-filled verification form
+              render_verification_form(conn, nil, nil, user_code)
 
-          {:error, :invalid_code} ->
-            render_verification_form(conn, nil, "Invalid verification code", user_code)
+            {:error, :invalid_code} ->
+              render_verification_form(conn, nil, "Invalid verification code", user_code)
 
-          {:error, :expired} ->
-            render_verification_form(conn, nil, "Verification code has expired", user_code)
+            {:error, :expired} ->
+              render_verification_form(conn, nil, "Verification code has expired", user_code)
 
-          {:error, :already_processed} ->
-            render_verification_form(
-              conn,
-              nil,
-              "This application has already been processed",
-              user_code
-            )
+            {:error, :already_processed} ->
+              render_verification_form(
+                conn,
+                nil,
+                "This application has already been processed",
+                user_code
+              )
+          end
         end
       end
     else
@@ -66,8 +74,9 @@ defmodule HexpmWeb.DeviceController do
       not Sudo.sudo_active?(conn) ->
         normalized_code = DeviceView.normalize_user_code(user_code)
 
-        Sudo.redirect_to_sudo(
-          conn,
+        conn
+        |> put_session("device_verify_pending", normalized_code)
+        |> Sudo.redirect_to_sudo(
           ~p"/oauth/device?user_code=#{normalized_code}",
           "Please verify your identity to authorize this device."
         )
