@@ -142,9 +142,7 @@ defmodule HexpmWeb.DeviceControllerTest do
         DeviceCodes.initiate_device_authorization(mock_conn, client.client_id, ["api"])
 
       conn =
-        login_user(build_conn(), user,
-          extra_session: %{"device_verify_pending" => "WRONGCODE"}
-        )
+        login_user(build_conn(), user, extra_session: %{"device_verify_pending" => "WRONGCODE"})
 
       # GET with mismatched device_verify_pending should show the normal form
       conn = get(conn, ~p"/oauth/device?user_code=#{response.user_code}")

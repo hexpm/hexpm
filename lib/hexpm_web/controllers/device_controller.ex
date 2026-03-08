@@ -29,7 +29,8 @@ defmodule HexpmWeb.DeviceController do
 
         # If returning from sudo verification after clicking "Verify and Continue",
         # skip straight to the verification step instead of showing the form again
-        if get_session(conn, "device_verify_pending") == normalized_code and Sudo.sudo_active?(conn) do
+        if get_session(conn, "device_verify_pending") == normalized_code and
+             Sudo.sudo_active?(conn) do
           conn
           |> delete_session("device_verify_pending")
           |> handle_verification(normalized_code)
