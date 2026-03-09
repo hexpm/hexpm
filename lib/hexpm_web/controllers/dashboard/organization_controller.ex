@@ -481,7 +481,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       delete_key_path: delete_key_path,
       create_key_path: create_key_path,
       key_changeset: opts[:key_changeset] || key_changeset(),
-      add_member_changeset: opts[:add_member_changeset] || add_member_changeset()
+      add_member_changeset: opts[:add_member_changeset] || add_member_changeset(),
+      new_organization_changeset: create_changeset()
     ]
 
     assigns = Keyword.merge(assigns, customer_assigns(customer, organization))

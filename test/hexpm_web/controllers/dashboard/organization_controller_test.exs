@@ -81,11 +81,11 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> test_login(user)
         |> get("/dashboard/orgs/#{organization.name}")
 
+      assert response(conn, 200) =~ "Public profile"
       assert response(conn, 200) =~ "Billing"
-      assert response(conn, 200) =~ "Billing information"
     end
 
-    test "hide for non-admins", %{user: user, organization: organization} do
+    test "show profile tab for non-admins", %{user: user, organization: organization} do
       insert(:organization_user, organization: organization, user: user, role: "read")
 
       mock_customer(organization)
@@ -95,8 +95,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> test_login(user)
         |> get("/dashboard/orgs/#{organization.name}")
 
+      assert response(conn, 200) =~ "Public profile"
       refute response(conn, 200) =~ "Billing"
-      refute response(conn, 200) =~ "Billing information"
     end
   end
 

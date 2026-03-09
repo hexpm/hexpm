@@ -2,6 +2,10 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
   use HexpmWeb, :view
   alias HexpmWeb.DashboardView
 
+  import HexpmWeb.Components.Buttons, only: [button: 1, text_link: 1]
+  import HexpmWeb.Components.SocialInput, only: [social_input: 1]
+  import HexpmWeb.Dashboard.Organization.Components.OrgTabNav, only: [org_tab_nav: 1]
+
   defp organization_roles_selector() do
     Enum.map(organization_roles(), fn {name, id, _title} ->
       {name, id}
