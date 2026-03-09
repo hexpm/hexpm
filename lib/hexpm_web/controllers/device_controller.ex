@@ -5,10 +5,11 @@ defmodule HexpmWeb.DeviceController do
   alias Hexpm.Accounts.User
   alias Hexpm.Permissions
   alias HexpmWeb.Plugs.Attack
-  alias HexpmWeb.Plugs.Sudo
   alias HexpmWeb.DeviceView
 
   plug :nillify_params, ["user_code"]
+  plug :requires_login_with_query_string
+  plug HexpmWeb.Plugs.Sudo
 
   @doc """
   Shows the device verification page.
@@ -19,40 +20,32 @@ defmodule HexpmWeb.DeviceController do
   def show(conn, params) do
     user_code = params["user_code"]
 
-    cond do
-      not logged_in?(conn) ->
-        redirect(conn, to: build_login_redirect_path(user_code))
+    if is_nil(user_code) do
+      # No code provided, show empty form
+      render_verification_form(conn, nil, nil, nil)
+    else
+      normalized_code = DeviceView.normalize_user_code(user_code)
 
-      not Sudo.sudo_active?(conn) ->
-        redirect_to_sudo_with_device_path(conn, user_code)
+      # Validate the code exists but show verification form
+      case DeviceCodes.get_for_verification(normalized_code) do
+        {:ok, _device_code} ->
+          # Code is valid, show pre-filled verification form
+          render_verification_form(conn, nil, nil, user_code)
 
-      is_nil(user_code) ->
-        # No code provided, show empty form
-        render_verification_form(conn, nil, nil, nil)
+        {:error, :invalid_code} ->
+          render_verification_form(conn, nil, "Invalid verification code", user_code)
 
-      true ->
-        normalized_code = DeviceView.normalize_user_code(user_code)
+        {:error, :expired} ->
+          render_verification_form(conn, nil, "Verification code has expired", user_code)
 
-        # Validate the code exists but show verification form
-        case DeviceCodes.get_for_verification(normalized_code) do
-          {:ok, _device_code} ->
-            # Code is valid, show pre-filled verification form
-            render_verification_form(conn, nil, nil, user_code)
-
-          {:error, :invalid_code} ->
-            render_verification_form(conn, nil, "Invalid verification code", user_code)
-
-          {:error, :expired} ->
-            render_verification_form(conn, nil, "Verification code has expired", user_code)
-
-          {:error, :already_processed} ->
-            render_verification_form(
-              conn,
-              nil,
-              "This application has already been processed",
-              user_code
-            )
-        end
+        {:error, :already_processed} ->
+          render_verification_form(
+            conn,
+            nil,
+            "This application has already been processed",
+            user_code
+          )
+      end
     end
   end
 
@@ -62,28 +55,19 @@ defmodule HexpmWeb.DeviceController do
   POST /oauth/device
   """
   def create(conn, %{"user_code" => user_code} = params) do
-    cond do
-      not logged_in?(conn) ->
-        redirect(conn, to: build_login_redirect_path(user_code))
+    current_user = conn.assigns.current_user
+    normalized_code = DeviceView.normalize_user_code(user_code)
 
-      not Sudo.sudo_active?(conn) ->
-        redirect_to_sudo_with_device_path(conn, user_code)
-
-      true ->
-        current_user = conn.assigns.current_user
-        normalized_code = DeviceView.normalize_user_code(user_code)
-
-        with :ok <- check_rate_limits(conn, current_user) do
-          case params["action"] do
-            "verify" -> handle_verification(conn, normalized_code)
-            "authorize" -> handle_authorization(conn, normalized_code, current_user, params)
-            "deny" -> handle_denial(conn, normalized_code)
-            _ -> render_verification_form(conn, nil, "Invalid action", user_code)
-          end
-        else
-          {:rate_limited, message} ->
-            render_verification_form(conn, nil, message, user_code)
-        end
+    with :ok <- check_rate_limits(conn, current_user) do
+      case params["action"] do
+        "verify" -> handle_verification(conn, normalized_code)
+        "authorize" -> handle_authorization(conn, normalized_code, current_user, params)
+        "deny" -> handle_denial(conn, normalized_code)
+        _ -> render_verification_form(conn, nil, "Invalid action", user_code)
+      end
+    else
+      {:rate_limited, message} ->
+        render_verification_form(conn, nil, message, user_code)
     end
   end
 
@@ -91,29 +75,20 @@ defmodule HexpmWeb.DeviceController do
     render_verification_form(conn, nil, "Missing verification code", nil)
   end
 
-  defp redirect_to_sudo_with_device_path(conn, user_code) do
-    return_path = build_device_path(user_code)
+  defp requires_login_with_query_string(conn, _opts) do
+    if logged_in?(conn) do
+      conn
+    else
+      return_path =
+        case conn.query_string do
+          "" -> conn.request_path
+          qs -> conn.request_path <> "?" <> qs
+        end
 
-    Sudo.redirect_to_sudo(
-      conn,
-      return_path,
-      "Please verify your identity to authorize this device."
-    )
-  end
-
-  defp build_device_path(user_code) do
-    case user_code do
-      nil ->
-        ~p"/oauth/device"
-
-      code ->
-        normalized_code = DeviceView.normalize_user_code(code)
-        ~p"/oauth/device?user_code=#{normalized_code}"
+      conn
+      |> redirect(to: ~p"/login?return=#{return_path}")
+      |> halt()
     end
-  end
-
-  defp build_login_redirect_path(user_code) do
-    ~p"/login?return=#{build_device_path(user_code)}"
   end
 
   defp check_rate_limits(conn, user) do
