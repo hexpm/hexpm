@@ -398,8 +398,15 @@ defmodule HexpmWeb.ControllerHelpers do
     if logged_in?(conn) do
       conn
     else
-      redirect(conn, to: ~p"/login?return=#{conn.request_path}")
-      |> halt
+      return_path =
+        case conn.query_string do
+          "" -> conn.request_path
+          qs -> conn.request_path <> "?" <> qs
+        end
+
+      conn
+      |> redirect(to: ~p"/login?return=#{return_path}")
+      |> halt()
     end
   end
 

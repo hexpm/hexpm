@@ -8,7 +8,7 @@ defmodule HexpmWeb.DeviceController do
   alias HexpmWeb.DeviceView
 
   plug :nillify_params, ["user_code"]
-  plug :requires_login_with_query_string
+  plug :requires_login
   plug HexpmWeb.Plugs.Sudo
 
   @doc """
@@ -73,22 +73,6 @@ defmodule HexpmWeb.DeviceController do
 
   def create(conn, _params) do
     render_verification_form(conn, nil, "Missing verification code", nil)
-  end
-
-  defp requires_login_with_query_string(conn, _opts) do
-    if logged_in?(conn) do
-      conn
-    else
-      return_path =
-        case conn.query_string do
-          "" -> conn.request_path
-          qs -> conn.request_path <> "?" <> qs
-        end
-
-      conn
-      |> redirect(to: ~p"/login?return=#{return_path}")
-      |> halt()
-    end
   end
 
   defp check_rate_limits(conn, user) do
