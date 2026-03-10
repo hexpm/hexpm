@@ -28,7 +28,9 @@ defmodule HexpmWeb.OAuthController do
          {:ok, _} <- validate_state(params),
          {:ok, _} <- validate_pkce_params(params) do
       if logged_in?(conn) do
-        render(conn, "authorize.html", %{
+        conn
+        |> HexpmWeb.Plugs.ContentSecurityPolicy.allow_form_action(redirect_uri)
+        |> render("authorize.html", %{
           container: "container page page-xs oauth",
           client: client,
           redirect_uri: redirect_uri,

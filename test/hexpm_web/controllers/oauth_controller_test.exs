@@ -88,6 +88,24 @@ defmodule HexpmWeb.OAuthControllerTest do
       assert html =~ "api:read"
       assert html =~ "repositories"
     end
+
+    test "CSP form-action includes redirect URI origin", %{client: client} do
+      user = insert(:user)
+      conn = login_user(build_conn(), user)
+
+      conn =
+        get(conn, ~p"/oauth/authorize", %{
+          "client_id" => client.client_id,
+          "redirect_uri" => "https://example.com/callback",
+          "scope" => "api:read",
+          "state" => "test_state",
+          "code_challenge" => "challenge123",
+          "code_challenge_method" => "S256"
+        })
+
+      [csp] = get_resp_header(conn, "content-security-policy")
+      assert csp =~ "form-action 'self' https://example.com"
+    end
   end
 
   describe "POST /oauth/authorize (consent)" do

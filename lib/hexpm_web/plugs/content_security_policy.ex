@@ -13,6 +13,35 @@ defmodule HexpmWeb.Plugs.ContentSecurityPolicy do
 
   @report_group "csp-endpoint"
 
+  @doc """
+  Extends the form-action CSP directive to allow a redirect URI's origin.
+
+  Chrome applies form-action to redirects after form submission, so OAuth
+  consent pages need to allow the client's callback origin.
+  """
+  def allow_form_action(conn, redirect_uri) do
+    origin = uri_origin(redirect_uri)
+
+    case get_resp_header(conn, "content-security-policy") do
+      [csp] ->
+        updated = String.replace(csp, "form-action 'self'", "form-action 'self' #{origin}")
+        put_resp_header(conn, "content-security-policy", updated)
+
+      _ ->
+        conn
+    end
+  end
+
+  defp uri_origin(url) do
+    uri = URI.parse(url)
+
+    if uri.port && uri.port != URI.default_port(uri.scheme) do
+      "#{uri.scheme}://#{uri.host}:#{uri.port}"
+    else
+      "#{uri.scheme}://#{uri.host}"
+    end
+  end
+
   @impl Plug
   def init(opts), do: opts
 
