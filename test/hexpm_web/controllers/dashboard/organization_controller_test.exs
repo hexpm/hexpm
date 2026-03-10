@@ -100,6 +100,75 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     end
   end
 
+  describe "GET /dashboard/orgs/:dashboard_org/members" do
+    test "shows members tab", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user)
+      mock_customer(organization)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/members")
+
+      assert response(conn, 200) =~ "Members"
+    end
+
+    test "returns 404 for non-members", %{user: user, organization: organization} do
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/members")
+
+      assert response(conn, 404)
+    end
+  end
+
+  describe "GET /dashboard/orgs/:dashboard_org/keys" do
+    test "shows keys tab for write members", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "write")
+      mock_customer(organization)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/keys")
+
+      assert response(conn, 200) =~ "Keys"
+    end
+
+    test "returns 400 for read-only members", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "read")
+      mock_customer(organization)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/keys")
+
+      assert response(conn, 400)
+    end
+
+    test "shows generated key name after key creation", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "write")
+      mock_customer(organization)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}/keys", %{key: %{name: "mykey"}})
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}/keys"
+
+      conn =
+        conn
+        |> recycle()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/keys")
+
+      assert response(conn, 200) =~ "mykey"
+    end
+  end
+
   describe "GET /dashboard/orgs/:dashboard_org/audit-logs" do
     test "show audit log", %{user: user, organization: organization} do
       insert(:organization_user, organization: organization, user: user)
@@ -792,7 +861,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> test_login(c.user)
         |> post("/dashboard/orgs/#{c.organization.name}/keys", %{key: %{name: "computer"}})
 
-      assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}"
+      assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}/keys"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
                "The key computer was successfully generated"
@@ -811,7 +880,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> test_login(c.user)
         |> delete("/dashboard/orgs/#{c.organization.name}/keys", %{name: "computer"})
 
-      assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}"
+      assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}/keys"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
                "The key computer was revoked successfully"
@@ -835,6 +904,36 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> delete("/dashboard/orgs/#{c.organization.name}/keys", %{name: "computer"})
 
       assert response(conn, 400) =~ "The key computer was not found"
+    end
+  end
+
+  describe "GET /dashboard/orgs/:dashboard_org/packages" do
+    test "renders packages tab for members", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "read")
+      mock_customer(c.organization)
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> get("/dashboard/orgs/#{c.organization.name}/packages")
+
+      assert response(conn, 200) =~ "Packages"
+    end
+
+    test "returns 404 for non-members", c do
+      mock_customer(c.organization)
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> get("/dashboard/orgs/#{c.organization.name}/packages")
+
+      assert response(conn, 404)
+    end
+
+    test "requires login" do
+      conn = get(build_conn(), "/dashboard/orgs/test-org/packages")
+      assert redirected_to(conn) =~ "/login"
     end
   end
 

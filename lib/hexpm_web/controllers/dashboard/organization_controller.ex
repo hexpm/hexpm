@@ -25,6 +25,20 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end)
   end
 
+  def keys(conn, %{"dashboard_org" => organization}) do
+    access_organization(conn, organization, "write", fn organization ->
+      generated_key = get_session(conn, :generated_key)
+      conn = delete_session(conn, :generated_key)
+      render_index(conn, organization, tab: :keys, generated_key: generated_key)
+    end)
+  end
+
+  def packages(conn, %{"dashboard_org" => organization}) do
+    access_organization(conn, organization, "read", fn organization ->
+      render_index(conn, organization, tab: :packages)
+    end)
+  end
+
   def update(conn, %{
         "dashboard_org" => organization,
         "action" => "add_member",
@@ -395,18 +409,15 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
       case Keys.create(organization, key_params, audit: audit_data(conn)) do
         {:ok, %{key: key}} ->
-          flash =
-            "The key #{key.name} was successfully generated, " <>
-              "copy the secret \"#{key.user_secret}\", you won't be able to see it again."
-
           conn
-          |> put_flash(:info, flash)
-          |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+          |> put_session(:generated_key, %{name: key.name, user_secret: key.user_secret})
+          |> put_flash(:info, "The key #{key.name} was successfully generated.")
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}/keys")
 
         {:error, :key, changeset, _} ->
           conn
           |> put_status(400)
-          |> render_index(organization, key_changeset: changeset)
+          |> render_index(organization, tab: :keys, key_changeset: changeset)
       end
     end)
   end
@@ -417,13 +428,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         {:ok, _struct} ->
           conn
           |> put_flash(:info, "The key #{name} was revoked successfully.")
-          |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}/keys")
 
         {:error, _} ->
           conn
           |> put_status(400)
           |> put_flash(:error, "The key #{name} was not found.")
-          |> render_index(organization)
+          |> render_index(organization, tab: :keys)
       end
     end)
   end
@@ -460,6 +471,12 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     )
   end
 
+  defp organization_packages(%{repository: %{packages: packages}}) when is_list(packages) do
+    Packages.attach_latest_releases(packages)
+  end
+
+  defp organization_packages(_), do: []
+
   defp render_index(conn, organization, opts \\ []) do
     user = organization.user
     public_email = user && Enum.find(user.emails, & &1.public)
@@ -470,6 +487,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     audit_logs_total_count = AuditLogs.count_by(organization)
     delete_key_path = ~p"/dashboard/orgs/#{organization}/keys"
     create_key_path = ~p"/dashboard/orgs/#{organization}/keys"
+    packages = organization_packages(organization)
 
     assigns = [
       title: "Dashboard - Organization",
@@ -487,7 +505,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       errors: opts[:errors],
       delete_key_path: delete_key_path,
       create_key_path: create_key_path,
+      generated_key: opts[:generated_key],
       key_changeset: opts[:key_changeset] || key_changeset(),
+      packages: packages,
       add_member_changeset: opts[:add_member_changeset] || add_member_changeset(),
       new_organization_changeset: create_changeset()
     ]

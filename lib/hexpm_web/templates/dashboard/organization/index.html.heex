@@ -23,6 +23,22 @@
                 current_user={@current_user}
                 organization={@organization}
               />
+            <% :keys -> %>
+              <.keys_tab
+                create_key_path={@create_key_path}
+                csrf_token={Plug.CSRFProtection.get_csrf_token()}
+                delete_key_path={@delete_key_path}
+                generated_key={@generated_key}
+                key_changeset={@key_changeset}
+                keys={@keys}
+                organization={@organization}
+                packages={@packages}
+              />
+            <% :packages -> %>
+              <.packages_tab
+                organization={@organization}
+                packages={@packages}
+              />
             <% _ -> %>
           <% end %>
         </.org_tab_nav>

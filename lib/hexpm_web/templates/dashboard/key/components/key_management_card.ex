@@ -28,6 +28,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
   attr :create_key_path, :string, required: true
   attr :delete_key_path, :string, required: true
   attr :generated_key, :map, default: nil
+  attr :organization, :map, default: nil
 
   def key_management_card(assigns) do
     assigns = assign(assigns, :form, Phoenix.Component.to_form(assigns.key_changeset, as: :key))
