@@ -140,7 +140,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
           "organization_user" => params
         })
 
-      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}/members"
 
       assert repo_user =
                Repo.get_by(assoc(organization, :organization_users), user_id: new_user.id)
@@ -205,7 +205,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
           "organization_user" => params
         })
 
-      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}/members"
       refute Repo.get_by(assoc(organization, :organization_users), user_id: new_user.id)
     end
 
@@ -223,7 +223,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
           "organization_user" => params
         })
 
-      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}/members"
 
       assert repo_user =
                Repo.get_by(assoc(organization, :organization_users), user_id: new_user.id)

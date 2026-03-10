@@ -2,31 +2,10 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
   use HexpmWeb, :view
   alias HexpmWeb.DashboardView
 
-  import HexpmWeb.Components.Buttons, only: [button: 1, text_link: 1]
-  import HexpmWeb.Components.SocialInput, only: [social_input: 1]
+  import HexpmWeb.Dashboard.Organization.Components.MembersTab, only: [members_tab: 1]
   import HexpmWeb.Dashboard.Organization.Components.OrgTabNav, only: [org_tab_nav: 1]
+  import HexpmWeb.Dashboard.Organization.Components.ProfileTab, only: [profile_tab: 1]
 
-  defp organization_roles_selector() do
-    Enum.map(organization_roles(), fn {name, id, _title} ->
-      {name, id}
-    end)
-  end
-
-  defp organization_roles() do
-    [
-      {"Admin", "admin", "This role has full control of the organization"},
-      {"Write", "write", "This role has package owner access to all organization packages"},
-      {"Read", "read", "This role can fetch all organization packages"}
-    ]
-  end
-
-  defp organization_role(id) do
-    Enum.find_value(organization_roles(), fn {name, organization_id, _title} ->
-      if id == organization_id do
-        name
-      end
-    end)
-  end
 
   defp plan("organization-monthly"), do: "Organization, monthly billed ($7.00 per user / month)"
   defp plan("organization-annually"), do: "Organization, annually billed ($70.00 per user / year)"
@@ -496,8 +475,4 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
     (company || errors["company"]) && !errors["person"]
   end
 
-  defp organization_admin?(current_user, organization) do
-    user = Enum.find(organization.organization_users, &(&1.user_id == current_user.id))
-    user.role == "admin"
-  end
 end

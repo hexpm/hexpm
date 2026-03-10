@@ -22,7 +22,7 @@ config :hexpm,
   dashboard_password: "hex_password"
 
 config :hexpm, HexpmWeb.Endpoint,
-  http: [port: 4000],
+  http: [port: 4001],
   debug_errors: true,
   code_reloader: true,
   cache_static_lookup: false,

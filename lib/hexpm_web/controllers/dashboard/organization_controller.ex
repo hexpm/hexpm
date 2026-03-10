@@ -19,6 +19,12 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end)
   end
 
+  def members(conn, %{"dashboard_org" => organization}) do
+    access_organization(conn, organization, "read", fn organization ->
+      render_index(conn, organization, tab: :members)
+    end)
+  end
+
   def update(conn, %{
         "dashboard_org" => organization,
         "action" => "add_member",
@@ -36,24 +42,24 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
             {:ok, _} ->
               conn
               |> put_flash(:info, "User #{username} has been added to the organization.")
-              |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+              |> redirect(to: ~p"/dashboard/orgs/#{organization}/members")
 
             {:error, changeset} ->
               conn
               |> put_status(400)
-              |> render_index(organization, add_member: changeset)
+              |> render_index(organization, tab: :members, add_member_changeset: changeset)
           end
         else
           conn
           |> put_status(400)
           |> put_flash(:error, "Unknown user #{username}.")
-          |> render_index(organization)
+          |> render_index(organization, tab: :members)
         end
       else
         conn
         |> put_status(400)
         |> put_flash(:error, "Not enough seats in organization to add member.")
-        |> render_index(organization)
+        |> render_index(organization, tab: :members)
       end
     end)
   end
@@ -73,13 +79,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         :ok ->
           conn
           |> put_flash(:info, "User #{username} has been removed from the organization.")
-          |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}/members")
 
         {:error, :last_member} ->
           conn
           |> put_status(400)
           |> put_flash(:error, "Cannot remove last member from organization.")
-          |> render_index(organization)
+          |> render_index(organization, tab: :members)
       end
     end)
   end
@@ -97,24 +103,24 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
           {:ok, _} ->
             conn
             |> put_flash(:info, "User #{username}'s role has been changed to #{params["role"]}.")
-            |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+            |> redirect(to: ~p"/dashboard/orgs/#{organization}/members")
 
           {:error, :last_admin} ->
             conn
             |> put_status(400)
             |> put_flash(:error, "Cannot demote last admin member.")
-            |> render_index(organization)
+            |> render_index(organization, tab: :members)
 
           {:error, changeset} ->
             conn
             |> put_status(400)
-            |> render_index(organization, change_role: changeset)
+            |> render_index(organization, tab: :members, change_role_changeset: changeset)
         end
       else
         conn
         |> put_status(400)
         |> put_flash(:error, "Unknown user #{username}.")
-        |> render_index(organization)
+        |> render_index(organization, tab: :members)
       end
     end)
   end
@@ -468,6 +474,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     assigns = [
       title: "Dashboard - Organization",
       container: "container page dashboard",
+      tab: opts[:tab] || :profile,
       changeset: user && User.update_profile(user, %{}),
       public_email: public_email && public_email.email,
       gravatar_email: gravatar_email && gravatar_email.email,
@@ -568,7 +575,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   end
 
   defp add_member_changeset() do
-    Organization.add_member(%OrganizationUser{}, %{})
+    Organization.add_member(%OrganizationUser{}, %{"role" => "read"})
   end
 
   defp create_changeset() do
