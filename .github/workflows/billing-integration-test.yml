@@ -173,6 +173,9 @@ jobs:
           docker logs hexpm_billing
           exit 1
 
+      - name: Stream hexpm_billing logs
+        run: docker logs -f --timestamps hexpm_billing > /tmp/hexpm_billing.log 2>&1 &
+
       - name: Run integration tests
         run: mix test --only integration
 
@@ -186,4 +189,12 @@ jobs:
 
       - name: Show hexpm_billing logs on failure
         if: failure()
-        run: docker logs hexpm_billing
+        run: docker logs --timestamps hexpm_billing
+
+      - name: Upload hexpm_billing logs on failure
+        if: failure()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: hexpm-billing-logs
+          path: /tmp/hexpm_billing.log
+          if-no-files-found: ignore
