@@ -331,7 +331,7 @@ defmodule Hexpm.Accounts.AuditLogTest do
   end
 
   describe "audit_with_user/4" do
-    test "action user.create", %{user: user, key: key} do
+    test "with nil user in audit_data", %{user: user, key: key} do
       audit_data = %{
         user: nil,
         auth_credential: key,
@@ -349,6 +349,18 @@ defmodule Hexpm.Accounts.AuditLogTest do
 
       assert {_, fun} = Ecto.Multi.to_list(multi)[:"log.user.create.0"]
       assert {:ok, %AuditLog{action: "user.create"}} = fun.(Hexpm.Repo, %{user: user})
+    end
+
+    test "with nil audit_data" do
+      multi =
+        AuditLog.audit_with_user(
+          Ecto.Multi.new(),
+          nil,
+          "user.create",
+          fn %{user: user} -> user end
+        )
+
+      assert Ecto.Multi.to_list(multi) == []
     end
   end
 
