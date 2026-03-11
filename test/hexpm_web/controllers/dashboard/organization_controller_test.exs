@@ -180,7 +180,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> test_login(user)
         |> get("/dashboard/orgs/#{organization.name}/audit-logs")
 
-      assert response(conn, 200) =~ "Recent activities"
+      assert response(conn, 200) =~ "Recent Activities"
     end
   end
 

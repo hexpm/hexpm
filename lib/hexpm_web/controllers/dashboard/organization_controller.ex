@@ -141,17 +141,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   def audit_logs(conn, %{"dashboard_org" => organization} = params) do
     access_organization(conn, organization, "read", fn organization ->
-      per_page = 100
+      per_page = 20
       page = Hexpm.Utils.safe_int(params["page"]) || 1
-      audit_logs = Hexpm.Accounts.AuditLogs.all_by(organization, page, per_page)
-      count = Hexpm.Accounts.AuditLogs.count_by(organization)
+      audit_logs = AuditLogs.all_by(organization, page, per_page)
+      count = AuditLogs.count_by(organization)
 
-      render(
-        conn,
-        "audit_logs.html",
-        title: "Dashboard - Recent activities",
-        container: "container page dashboard",
-        organization: organization,
+      render_index(conn, organization,
+        tab: :audit_logs,
         audit_logs: audit_logs,
         audit_logs_total_count: count,
         page: page,
@@ -483,8 +479,10 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     gravatar_email = user && Enum.find(user.emails, & &1.gravatar)
     customer = Hexpm.Billing.get(organization.name)
     keys = Keys.all(organization)
-    audit_logs = AuditLogs.all_by(organization, 1, 30)
-    audit_logs_total_count = AuditLogs.count_by(organization)
+    per_page = opts[:per_page] || 30
+    page = opts[:page] || 1
+    audit_logs = opts[:audit_logs] || AuditLogs.all_by(organization, page, per_page)
+    audit_logs_total_count = opts[:audit_logs_total_count] || AuditLogs.count_by(organization)
     delete_key_path = ~p"/dashboard/orgs/#{organization}/keys"
     create_key_path = ~p"/dashboard/orgs/#{organization}/keys"
     packages = organization_packages(organization)
@@ -501,6 +499,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       keys: keys,
       audit_logs: audit_logs,
       audit_logs_total_count: audit_logs_total_count,
+      page: page,
+      per_page: per_page,
+      audit_logs_path_fn: &~p"/dashboard/orgs/#{organization}/audit-logs?#{&1}",
       params: opts[:params],
       errors: opts[:errors],
       delete_key_path: delete_key_path,

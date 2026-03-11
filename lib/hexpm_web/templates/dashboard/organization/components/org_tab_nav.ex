@@ -51,7 +51,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.OrgTabNav do
        &String.starts_with?(&1, "/dashboard/orgs/#{name}/keys")},
       {"Packages", "/dashboard/orgs/#{name}/packages",
        &String.starts_with?(&1, "/dashboard/orgs/#{name}/packages")},
-      {"Audit Logs", "/dashboard/orgs/#{name}/audit-logs",
+      {"Recent Activities", "/dashboard/orgs/#{name}/audit-logs",
        &String.starts_with?(&1, "/dashboard/orgs/#{name}/audit-logs")},
       {"Danger Zone", "/dashboard/orgs/#{name}/danger-zone",
        &String.starts_with?(&1, "/dashboard/orgs/#{name}/danger-zone")}

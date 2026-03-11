@@ -39,6 +39,21 @@
                 organization={@organization}
                 packages={@packages}
               />
+            <% :audit_logs -> %>
+              <.audit_logs_tab audit_logs={@audit_logs} />
+              <%= if Enum.any?(@audit_logs) do %>
+                <div class="tw:mt-4">
+                  {render(HexpmWeb.SharedView, "_pagination.html",
+                    items: @audit_logs,
+                    page: @page,
+                    total_count: @audit_logs_total_count,
+                    per_page: @per_page,
+                    unit: "activity",
+                    units: "activities",
+                    path_fn: @audit_logs_path_fn
+                  )}
+                </div>
+              <% end %>
             <% _ -> %>
           <% end %>
         </.org_tab_nav>
