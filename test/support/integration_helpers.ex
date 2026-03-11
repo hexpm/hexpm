@@ -7,7 +7,7 @@ defmodule HexpmWeb.IntegrationHelpers do
   import ExUnit.Assertions
 
   @poll_interval 1_000
-  @poll_timeout 60_000
+  @poll_timeout 90_000
 
   # Shared JS function that finds the 3DS challenge iframe.
   # Excludes iframes inside #card-element (Stripe Elements).
@@ -54,7 +54,7 @@ defmodule HexpmWeb.IntegrationHelpers do
       :ok
     else
       if System.monotonic_time(:millisecond) >= deadline do
-        :ok
+        :timeout
       else
         Process.sleep(50)
         do_wait_until(deadline, fun)

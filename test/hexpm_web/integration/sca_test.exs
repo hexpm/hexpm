@@ -43,6 +43,17 @@ if Code.ensure_loaded?(Wallaby) do
     defp setup_card(session, card_number, expiry \\ @card_expiry, cvc \\ @card_cvc) do
       fill_stripe_card(session, card_number, expiry, cvc)
 
+      # Verify card was actually filled (retry if not)
+      card_error =
+        evaluate_js(session, """
+          var errors = document.getElementById('card-errors');
+          return errors ? errors.textContent.trim() : '';
+        """)
+
+      if card_error != "" && String.contains?(card_error, "incomplete") do
+        fill_stripe_card(session, card_number, expiry, cvc)
+      end
+
       # Wait for Stripe Elements to fully process the card input
       wait_until(2000, fn ->
         evaluate_js(session, """
