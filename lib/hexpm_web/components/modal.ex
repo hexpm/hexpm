@@ -159,7 +159,7 @@ defmodule HexpmWeb.Components.Modal do
             <% end %>
 
             <%!-- Body --%>
-            <div class="tw:flex-1 tw:overflow-y-auto">
+            <div class="tw:flex-1 tw:overflow-y-auto tw:px-0.5 tw:py-0.5">
               {render_slot(@inner_block)}
             </div>
 

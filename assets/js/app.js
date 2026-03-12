@@ -29,14 +29,14 @@ import { PermissionGroup } from "./hooks/permission_group";
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")
   .getAttribute("content");
-let Hooks = { 
-  PasswordStrength, 
-  PasswordMatch, 
-  TFACodeValidator, 
+let Hooks = {
+  PasswordStrength,
+  PasswordMatch,
+  TFACodeValidator,
   CopyButton,
   PrintButton,
   DownloadButton,
-  PermissionGroup
+  PermissionGroup,
 };
 let liveSocket = new LiveSocket("/live", Socket, {
   params: { _csrf_token: csrfToken },
@@ -188,9 +188,12 @@ export default class App {
   }
 
   billing_checkout(token) {
-    $.post(window.hexpm_billing_post_action, {
+    const el = document.getElementById("billing-checkout-data");
+    const postAction = el && el.dataset.postAction;
+    const csrfToken = el && el.dataset.csrfToken;
+    $.post(postAction, {
       token: token,
-      _csrf_token: window.hexpm_billing_csrf_token,
+      _csrf_token: csrfToken,
     })
       .done(function (data) {
         window.location.reload();

@@ -1,7 +1,12 @@
 defmodule HexpmWeb.DashboardView do
   use HexpmWeb, :view
-  import HexpmWeb.ViewIcons, only: [icon: 3]
+  import HexpmWeb.Components.Modal, only: [show_modal: 1]
   import HexpmWeb.Dashboard.Key.Components.KeyManagementCard
+
+  import HexpmWeb.Dashboard.Organization.Components.CreateOrganizationModal,
+    only: [create_organization_modal: 1]
+
+  import HexpmWeb.ViewIcons, only: [icon: 3]
 
   defp account_settings() do
     [
@@ -250,6 +255,11 @@ defmodule HexpmWeb.DashboardView do
     else
       "Revoke OAuth application: #{client_name}"
     end
+  end
+
+  defp new_organization_changeset(assigns) do
+    assigns[:new_organization_changeset] ||
+      Hexpm.Accounts.Organization.changeset(%Hexpm.Accounts.Organization{}, %{})
   end
 
   defp plan_id("organization-monthly"), do: "monthly"

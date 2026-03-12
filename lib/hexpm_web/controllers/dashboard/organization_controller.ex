@@ -1,6 +1,7 @@
 defmodule HexpmWeb.Dashboard.OrganizationController do
   use HexpmWeb, :controller
   alias HexpmWeb.Dashboard.KeyController
+  alias HexpmWeb.Dashboard.Organization.Components.BillingHelpers
 
   plug :requires_login
 
@@ -16,6 +17,26 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   def show(conn, %{"dashboard_org" => organization}) do
     access_organization(conn, organization, "read", fn organization ->
       render_index(conn, organization)
+    end)
+  end
+
+  def members(conn, %{"dashboard_org" => organization}) do
+    access_organization(conn, organization, "read", fn organization ->
+      render_index(conn, organization, tab: :members)
+    end)
+  end
+
+  def keys(conn, %{"dashboard_org" => organization}) do
+    access_organization(conn, organization, "write", fn organization ->
+      generated_key = get_session(conn, :generated_key)
+      conn = delete_session(conn, :generated_key)
+      render_index(conn, organization, tab: :keys, generated_key: generated_key)
+    end)
+  end
+
+  def packages(conn, %{"dashboard_org" => organization}) do
+    access_organization(conn, organization, "read", fn organization ->
+      render_index(conn, organization, tab: :packages)
     end)
   end
 
@@ -36,24 +57,24 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
             {:ok, _} ->
               conn
               |> put_flash(:info, "User #{username} has been added to the organization.")
-              |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+              |> redirect(to: ~p"/dashboard/orgs/#{organization}/members")
 
             {:error, changeset} ->
               conn
               |> put_status(400)
-              |> render_index(organization, add_member: changeset)
+              |> render_index(organization, tab: :members, add_member_changeset: changeset)
           end
         else
           conn
           |> put_status(400)
           |> put_flash(:error, "Unknown user #{username}.")
-          |> render_index(organization)
+          |> render_index(organization, tab: :members)
         end
       else
         conn
         |> put_status(400)
         |> put_flash(:error, "Not enough seats in organization to add member.")
-        |> render_index(organization)
+        |> render_index(organization, tab: :members)
       end
     end)
   end
@@ -73,13 +94,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         :ok ->
           conn
           |> put_flash(:info, "User #{username} has been removed from the organization.")
-          |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}/members")
 
         {:error, :last_member} ->
           conn
           |> put_status(400)
           |> put_flash(:error, "Cannot remove last member from organization.")
-          |> render_index(organization)
+          |> render_index(organization, tab: :members)
       end
     end)
   end
@@ -97,46 +118,54 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
           {:ok, _} ->
             conn
             |> put_flash(:info, "User #{username}'s role has been changed to #{params["role"]}.")
-            |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+            |> redirect(to: ~p"/dashboard/orgs/#{organization}/members")
 
           {:error, :last_admin} ->
             conn
             |> put_status(400)
             |> put_flash(:error, "Cannot demote last admin member.")
-            |> render_index(organization)
+            |> render_index(organization, tab: :members)
 
           {:error, changeset} ->
             conn
             |> put_status(400)
-            |> render_index(organization, change_role: changeset)
+            |> render_index(organization, tab: :members, change_role_changeset: changeset)
         end
       else
         conn
         |> put_status(400)
         |> put_flash(:error, "Unknown user #{username}.")
-        |> render_index(organization)
+        |> render_index(organization, tab: :members)
       end
     end)
   end
 
   def audit_logs(conn, %{"dashboard_org" => organization} = params) do
     access_organization(conn, organization, "read", fn organization ->
-      per_page = 100
+      per_page = 20
       page = Hexpm.Utils.safe_int(params["page"]) || 1
-      audit_logs = Hexpm.Accounts.AuditLogs.all_by(organization, page, per_page)
-      count = Hexpm.Accounts.AuditLogs.count_by(organization)
+      audit_logs = AuditLogs.all_by(organization, page, per_page)
+      count = AuditLogs.count_by(organization)
 
-      render(
-        conn,
-        "audit_logs.html",
-        title: "Dashboard - Recent activities",
-        container: "container page dashboard",
-        organization: organization,
+      render_index(conn, organization,
+        tab: :audit_logs,
         audit_logs: audit_logs,
         audit_logs_total_count: count,
         page: page,
         per_page: per_page
       )
+    end)
+  end
+
+  def billing(conn, %{"dashboard_org" => organization}) do
+    access_organization(conn, organization, "admin", fn organization ->
+      render_index(conn, organization, tab: :billing)
+    end)
+  end
+
+  def danger_zone(conn, %{"dashboard_org" => organization}) do
+    access_organization(conn, organization, "read", fn organization ->
+      render_index(conn, organization, tab: :danger_zone)
     end)
   end
 
@@ -158,13 +187,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
             conn
             |> put_status(400)
             |> put_flash(:error, "The last member of an organization cannot leave.")
-            |> render_index(organization)
+            |> render_index(organization, tab: :danger_zone)
         end
       else
         conn
         |> put_status(400)
         |> put_flash(:error, "Invalid organization name.")
-        |> render_index(organization)
+        |> render_index(organization, tab: :danger_zone)
       end
     end)
   end
@@ -196,7 +225,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
       conn
       |> put_flash(:info, message)
-      |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+      |> redirect(to: ~p"/dashboard/orgs/#{organization}/billing")
     end)
   end
 
@@ -231,7 +260,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
           :ok ->
             conn
             |> put_flash(:info, "Invoice paid.")
-            |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+            |> redirect(to: ~p"/dashboard/orgs/#{organization}/billing")
 
           {:error, reason} ->
             conn
@@ -290,7 +319,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
         conn
         |> put_flash(:info, "The number of open seats have been increased.")
-        |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+        |> redirect(to: ~p"/dashboard/orgs/#{organization}/billing")
       else
         conn
         |> put_status(400)
@@ -313,7 +342,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
         conn
         |> put_flash(:info, "The number of open seats have been reduced.")
-        |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+        |> redirect(to: ~p"/dashboard/orgs/#{organization}/billing")
       else
         conn
         |> put_status(400)
@@ -335,7 +364,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
       conn
       |> put_flash(:info, "You have switched to the #{plan_name(params["plan_id"])} plan.")
-      |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+      |> redirect(to: ~p"/dashboard/orgs/#{organization}/billing")
     end)
   end
 
@@ -369,19 +398,61 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       |> Map.put_new("person", nil)
       |> Map.put_new("company", nil)
 
-    case fun.(customer_params) do
-      {:ok, _} ->
+    with :ok <- validate_billing_params(customer_params),
+         {:ok, _} <- fun.(customer_params) do
+      conn
+      |> put_flash(:info, "Updated your billing information.")
+      |> redirect(to: ~p"/dashboard/orgs/#{organization}/billing")
+    else
+      {:error, errors} when is_map_key(errors, "email") or
+                             is_map_key(errors, "person") or
+                             is_map_key(errors, "company") ->
         conn
-        |> put_flash(:info, "Updated your billing information.")
-        |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+        |> put_status(400)
+        |> put_flash(:error, "Please fill in all required fields.")
+        |> render_index(organization, params: params, errors: errors, tab: :billing)
 
       {:error, reason} ->
         conn
         |> put_status(400)
         |> put_flash(:error, "Failed to update billing information.")
-        |> render_index(organization, params: params, errors: reason["errors"])
+        |> render_index(organization, params: params, errors: reason["errors"], tab: :billing)
     end
   end
+
+  defp validate_billing_params(%{"email" => email} = params) when is_binary(email) and email != "" do
+    person = params["person"]
+    company = params["company"]
+
+    cond do
+      is_map(person) && (person["country"] == nil || person["country"] == "") ->
+        {:error, %{"person" => %{"country" => ["can't be blank"]}}}
+
+      is_map(company) ->
+        errors =
+          %{}
+          |> maybe_add_error(company["name"] in [nil, ""], "company", "name", "can't be blank")
+          |> maybe_add_error(company["address_country"] in [nil, ""], "company", "country", "can't be blank")
+          |> maybe_add_error(company["address_line1"] in [nil, ""], "company", "address", "can't be blank")
+          |> maybe_add_error(company["address_city"] in [nil, ""], "company", "city", "can't be blank")
+          |> maybe_add_error(company["address_zip"] in [nil, ""], "company", "zip_code", "can't be blank")
+
+        if map_size(errors) > 0, do: {:error, errors}, else: :ok
+
+      true ->
+        :ok
+    end
+  end
+
+  defp validate_billing_params(_params) do
+    {:error, %{"email" => ["can't be blank"]}}
+  end
+
+  defp maybe_add_error(errors, true, section, field, message) do
+    put_in(errors, [Access.key(section, %{}), field], [message])
+  end
+
+  defp maybe_add_error(errors, false, _section, _field, _message), do: errors
 
   def create_key(conn, %{"dashboard_org" => organization} = params) do
     access_organization(conn, organization, "write", fn organization ->
@@ -389,18 +460,15 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
       case Keys.create(organization, key_params, audit: audit_data(conn)) do
         {:ok, %{key: key}} ->
-          flash =
-            "The key #{key.name} was successfully generated, " <>
-              "copy the secret \"#{key.user_secret}\", you won't be able to see it again."
-
           conn
-          |> put_flash(:info, flash)
-          |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+          |> put_session(:generated_key, %{name: key.name, user_secret: key.user_secret})
+          |> put_flash(:info, "The key #{key.name} was successfully generated.")
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}/keys")
 
         {:error, :key, changeset, _} ->
           conn
           |> put_status(400)
-          |> render_index(organization, key_changeset: changeset)
+          |> render_index(organization, tab: :keys, key_changeset: changeset)
       end
     end)
   end
@@ -411,13 +479,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         {:ok, _struct} ->
           conn
           |> put_flash(:info, "The key #{name} was revoked successfully.")
-          |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}/keys")
 
         {:error, _} ->
           conn
           |> put_status(400)
           |> put_flash(:error, "The key #{name} was not found.")
-          |> render_index(organization)
+          |> render_index(organization, tab: :keys)
       end
     end)
   end
@@ -454,20 +522,30 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     )
   end
 
+  defp organization_packages(%{repository: %{packages: packages}}) when is_list(packages) do
+    Packages.attach_latest_releases(packages)
+  end
+
+  defp organization_packages(_), do: []
+
   defp render_index(conn, organization, opts \\ []) do
     user = organization.user
     public_email = user && Enum.find(user.emails, & &1.public)
     gravatar_email = user && Enum.find(user.emails, & &1.gravatar)
     customer = Hexpm.Billing.get(organization.name)
     keys = Keys.all(organization)
-    audit_logs = AuditLogs.all_by(organization, 1, 30)
-    audit_logs_total_count = AuditLogs.count_by(organization)
+    per_page = opts[:per_page] || 30
+    page = opts[:page] || 1
+    audit_logs = opts[:audit_logs] || AuditLogs.all_by(organization, page, per_page)
+    audit_logs_total_count = opts[:audit_logs_total_count] || AuditLogs.count_by(organization)
     delete_key_path = ~p"/dashboard/orgs/#{organization}/keys"
     create_key_path = ~p"/dashboard/orgs/#{organization}/keys"
+    packages = organization_packages(organization)
 
     assigns = [
       title: "Dashboard - Organization",
       container: "container page dashboard",
+      tab: opts[:tab] || :profile,
       changeset: user && User.update_profile(user, %{}),
       public_email: public_email && public_email.email,
       gravatar_email: gravatar_email && gravatar_email.email,
@@ -476,12 +554,18 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       keys: keys,
       audit_logs: audit_logs,
       audit_logs_total_count: audit_logs_total_count,
+      page: page,
+      per_page: per_page,
+      audit_logs_path_fn: &~p"/dashboard/orgs/#{organization}/audit-logs?#{&1}",
       params: opts[:params],
       errors: opts[:errors],
       delete_key_path: delete_key_path,
       create_key_path: create_key_path,
+      generated_key: opts[:generated_key],
       key_changeset: opts[:key_changeset] || key_changeset(),
-      add_member_changeset: opts[:add_member_changeset] || add_member_changeset()
+      packages: packages,
+      add_member_changeset: opts[:add_member_changeset] || add_member_changeset(),
+      new_organization_changeset: create_changeset()
     ]
 
     assigns = Keyword.merge(assigns, customer_assigns(customer, organization))
@@ -491,7 +575,6 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   defp customer_assigns(nil, _organization) do
     [
       billing_started?: false,
-      billing_active?: false,
       checkout_html: nil,
       billing_email: nil,
       plan_id: "organization-monthly",
@@ -500,12 +583,15 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       amount_with_tax: nil,
       quantity: nil,
       max_period_quantity: nil,
+      proration_amount: nil,
+      proration_days: nil,
+      tax_rate: nil,
+      discount: nil,
       card: nil,
-      invoices: nil,
+      invoices: [],
       person: nil,
       company: nil,
-      post_action: nil,
-      csrf_token: nil
+      post_action: nil
     ]
   end
 
@@ -514,7 +600,6 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
     [
       billing_started?: true,
-      billing_active?: !!customer["subscription"],
       checkout_html: customer["checkout_html"],
       billing_email: customer["email"],
       plan_id: customer["plan_id"],
@@ -531,8 +616,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       invoices: customer["invoices"],
       person: customer["person"],
       company: customer["company"],
-      post_action: post_action,
-      csrf_token: get_csrf_token()
+      post_action: post_action
     ]
   end
 
@@ -567,7 +651,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   end
 
   defp add_member_changeset() do
-    Organization.add_member(%OrganizationUser{}, %{})
+    Organization.add_member(%OrganizationUser{}, %{"role" => "read"})
   end
 
   defp create_changeset() do
@@ -583,7 +667,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   end
 
   defp cancel_message(cancel_date) do
-    date = HexpmWeb.Dashboard.OrganizationView.payment_date(cancel_date)
+    date = BillingHelpers.payment_date(cancel_date)
 
     "Your subscription is cancelled, you will have access to the organization until " <>
       "the end of your billing period at #{date}"

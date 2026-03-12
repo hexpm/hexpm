@@ -194,7 +194,12 @@ defmodule HexpmWeb.Router do
     post "/orgs", OrganizationController, :create
     get "/orgs/:dashboard_org", OrganizationController, :show
     post "/orgs/:dashboard_org", OrganizationController, :update
+    get "/orgs/:dashboard_org/members", OrganizationController, :members
+    get "/orgs/:dashboard_org/keys", OrganizationController, :keys
+    get "/orgs/:dashboard_org/packages", OrganizationController, :packages
     get "/orgs/:dashboard_org/audit-logs", OrganizationController, :audit_logs
+    get "/orgs/:dashboard_org/billing", OrganizationController, :billing
+    get "/orgs/:dashboard_org/danger-zone", OrganizationController, :danger_zone
     post "/orgs/:dashboard_org/leave", OrganizationController, :leave
     post "/orgs/:dashboard_org/billing-token", OrganizationController, :billing_token
     post "/orgs/:dashboard_org/cancel-billing", OrganizationController, :cancel_billing

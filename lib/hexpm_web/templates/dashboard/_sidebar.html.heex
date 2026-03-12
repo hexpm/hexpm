@@ -60,24 +60,29 @@
           </li>
         <% end %>
       </ul>
-      <a
-        href={~p"/dashboard/orgs"}
+      <button
+        type="button"
+        phx-click={show_modal("create-organization-modal")}
         class="tw:flex tw:items-center tw:gap-2 tw:mt-3 tw:px-3 tw:py-2 tw:text-sm tw:text-grey-600 tw:hover:text-grey-900 tw:border tw:border-dashed tw:border-grey-300 tw:rounded-lg tw:w-full tw:justify-center tw:transition-colors"
       >
         {HexpmWeb.ViewIcons.icon(:heroicon, "plus", class: "tw:w-4 tw:h-4")} Create New
-      </a>
+      </button>
     </div>
   <% else %>
     <div class="tw:border-t tw:border-grey-200 tw:pt-6">
       <h3 class="tw:text-grey-600 tw:text-xs tw:font-semibold tw:uppercase tw:tracking-wider tw:mb-3">
         Organization
       </h3>
-      <a
-        href={~p"/dashboard/orgs"}
+      <button
+        type="button"
+        phx-click={show_modal("create-organization-modal")}
         class="tw:flex tw:items-center tw:gap-2 tw:px-3 tw:py-2 tw:text-sm tw:text-grey-600 tw:hover:text-grey-900 tw:border tw:border-dashed tw:border-grey-300 tw:rounded-lg tw:w-full tw:justify-center tw:transition-colors"
       >
         {HexpmWeb.ViewIcons.icon(:heroicon, "plus", class: "tw:w-4 tw:h-4")} Create New
-      </a>
+      </button>
     </div>
   <% end %>
 </nav>
+
+<%!-- Create organization modal — always rendered so the sidebar "Create New" button works from any dashboard page --%>
+<.create_organization_modal changeset={new_organization_changeset(assigns)} />
