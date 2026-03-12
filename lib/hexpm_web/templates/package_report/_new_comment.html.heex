@@ -1,0 +1,13 @@
+<div class="tw:pt-4 tw:border-t tw:border-grey-100">
+  <%= form_tag ~p"/reports/#{@report}/comment" do %>
+    <label for="report-comment-text" class="tw:block tw:text-small tw:font-medium tw:text-grey-900 tw:mb-[6px]">Leave a comment</label>
+    <textarea
+      id="report-comment-text"
+      name="text"
+      rows="3"
+      placeholder="Write a comment..."
+      class="tw:w-full tw:px-3 tw:py-2.5 tw:border tw:border-grey-200 tw:rounded-lg tw:text-sm tw:text-grey-900 tw:placeholder:text-grey-400 tw:focus:outline-none tw:focus:ring-2 tw:focus:ring-purple-600 tw:focus:border-transparent tw:resize-none tw:mb-2"
+    ></textarea>
+    <.button type="submit">Comment</.button>
+  <% end %>
+</div>

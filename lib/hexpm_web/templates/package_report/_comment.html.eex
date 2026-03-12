@@ -1,6 +1,0 @@
-<div class="comment-div">
-  <p><%= @comment.author.username %> commented · <%= ViewHelpers.human_relative_time_from_now(@comment.inserted_at) %> </p> 
-  <div>
-    <p><%= @comment.text %></p>
-  </div>
-</div>

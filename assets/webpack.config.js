@@ -9,8 +9,7 @@ module.exports = (env, options) => ({
     // minimize: true,
     minimizer: [new TerserPlugin(), new CssMinimizerPlugin()],
   },
-  entry: ["./js/app.js", "./css/app.scss"],
-  // Bootstrap CSS removed - migrating to Tailwind. Bootstrap JS still available via node_modules if needed.
+  entry: ["./js/app.js"],
   output: {
     filename: "app.js",
     path: path.resolve(__dirname, "../priv/static/assets"),
@@ -21,17 +20,6 @@ module.exports = (env, options) => ({
         test: /\.js$/,
         exclude: /node_modules/,
         use: ["babel-loader"],
-      },
-      {
-        test: /\.scss$/,
-        use: [
-          MiniCssExtractPlugin.loader,
-          {
-            loader: "css-loader",
-            options: { url: false },
-          },
-          "sass-loader",
-        ],
       },
       {
         test: /\.css$/,
