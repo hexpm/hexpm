@@ -1,7 +1,8 @@
 defmodule HexpmWeb.PackageView do
   use HexpmWeb, :view
 
-  import HexpmWeb.Components.Icons
+  import HexpmWeb.Components.Badge
+  import HexpmWeb.Components.PackageLayout
 
   def show_sort_info(nil), do: show_sort_info(:name)
   def show_sort_info(:name), do: "Sort: Name"
@@ -150,6 +151,16 @@ defmodule HexpmWeb.PackageView do
 
   def path_for_audit_logs(package, options) do
     ~p"/packages/#{package.repository}/#{package}/audit-logs?#{options}"
+  end
+
+  def path_for_dependents(package, options \\ %{})
+
+  def path_for_dependents(%{repository: %{id: 1}} = package, options) do
+    ~p"/packages/#{package}/dependents?#{options}"
+  end
+
+  def path_for_dependents(package, options) do
+    ~p"/packages/#{package.repository}/#{package}/dependents?#{options}"
   end
 
   @doc """

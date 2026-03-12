@@ -1,0 +1,29 @@
+<tr class="tw:hover:bg-grey-50 tw:transition-colors">
+  <td class="tw:px-5 tw:py-3.5">
+    <a href={~p"/reports/#{@report}"} class="tw:font-mono tw:text-purple-600 tw:hover:text-purple-700 tw:font-medium">
+      #{@report.id}
+    </a>
+  </td>
+  <td class="tw:px-5 tw:py-3.5 tw:font-medium tw:text-grey-900">{@report.package.name}</td>
+  <td class="tw:px-5 tw:py-3.5 tw:text-grey-500">
+    <%= for ar <- @report.package_report_releases do %>
+      <span class="tw:inline-block tw:bg-grey-100 tw:text-grey-700 tw:text-xs tw:font-mono tw:px-1.5 tw:py-0.5 tw:rounded tw:mr-1">{ar.release.version}</span>
+    <% end %>
+  </td>
+  <td class="tw:px-5 tw:py-3.5">
+    <span class={[
+      "tw:inline-flex tw:items-center tw:px-2 tw:py-0.5 tw:rounded tw:text-xs tw:font-medium",
+      case @report.state do
+        "to_accept" -> "tw:bg-yellow-100 tw:text-yellow-700"
+        "accepted" -> "tw:bg-blue-100 tw:text-blue-700"
+        "solved" -> "tw:bg-green-100 tw:text-green-700"
+        "rejected" -> "tw:bg-red-100 tw:text-red-700"
+        _ -> "tw:bg-grey-100 tw:text-grey-700"
+      end
+    ]}>
+      {Phoenix.Naming.humanize(@report.state)}
+    </span>
+  </td>
+  <td class="tw:px-5 tw:py-3.5 tw:text-grey-600">{@report.author.username}</td>
+  <td class="tw:px-5 tw:py-3.5 tw:text-grey-500">{ViewHelpers.text_length(@report.description, 50)}</td>
+</tr>

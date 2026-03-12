@@ -1,0 +1,75 @@
+<div class="tw:max-w-7xl tw:mx-auto tw:px-4 tw:py-8">
+  <%!-- Header --%>
+  <div class="tw:mb-6">
+    <div class="tw:flex tw:items-start tw:justify-between tw:gap-4">
+      <div>
+        <h1 class="tw:text-grey-900 tw:text-2xl tw:font-semibold tw:mb-1">
+          Report <span class="tw:font-mono tw:text-purple-600">#{@report.id}</span>
+          — affects <span class="tw:font-semibold">{@report.package.name}</span>
+        </h1>
+        <p class="tw:text-grey-500 tw:text-sm">
+          {ViewHelpers.human_relative_time_from_now(@report.inserted_at)} · by {@report.author.username}
+        </p>
+      </div>
+      <span class={[
+        "tw:inline-flex tw:items-center tw:px-3 tw:py-1 tw:rounded-full tw:text-sm tw:font-medium tw:shrink-0",
+        case @report.state do
+          "to_accept" -> "tw:bg-yellow-100 tw:text-yellow-700"
+          "accepted" -> "tw:bg-blue-100 tw:text-blue-700"
+          "solved" -> "tw:bg-green-100 tw:text-green-700"
+          "rejected" -> "tw:bg-red-100 tw:text-red-700"
+          _ -> "tw:bg-grey-100 tw:text-grey-700"
+        end
+      ]}>
+        {Phoenix.Naming.humanize(@report.state)}
+      </span>
+    </div>
+  </div>
+
+  <div class="tw:grid tw:grid-cols-1 tw:lg:grid-cols-3 tw:gap-6">
+    <%!-- Left: Info + Moderator --%>
+    <div class="tw:flex tw:flex-col tw:gap-4">
+      <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-xl tw:p-5">
+        <h2 class="tw:text-grey-900 tw:font-semibold tw:mb-3">Information</h2>
+        <dl class="tw:space-y-3 tw:text-sm">
+          <div>
+            <dt class="tw:text-grey-400 tw:text-xs tw:uppercase tw:tracking-wider tw:font-medium tw:mb-1">State</dt>
+            <dd class="tw:text-grey-900 tw:font-medium">{Phoenix.Naming.humanize(@report.state)}</dd>
+          </div>
+          <div>
+            <dt class="tw:text-grey-400 tw:text-xs tw:uppercase tw:tracking-wider tw:font-medium tw:mb-1">Affected releases</dt>
+            <dd class="tw:flex tw:flex-wrap tw:gap-1">
+              <%= if Enum.empty?(@report.package_report_releases) do %>
+                <span class="tw:text-grey-400">None specified</span>
+              <% else %>
+                <%= for ar <- @report.package_report_releases do %>
+                  <span class="tw:bg-grey-100 tw:text-grey-700 tw:text-xs tw:font-mono tw:px-2 tw:py-0.5 tw:rounded">{ar.release.version}</span>
+                <% end %>
+              <% end %>
+            </dd>
+          </div>
+        </dl>
+      </div>
+
+      <%= if @for_moderator do %>
+        {render("_moderator_panel.html", report: @report, author: @report.author)}
+      <% end %>
+    </div>
+
+    <%!-- Right: Description + Comments --%>
+    <div class="tw:lg:col-span-2 tw:flex tw:flex-col tw:gap-4">
+      <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-xl tw:p-5">
+        <h2 class="tw:text-grey-900 tw:font-semibold tw:mb-3">Description</h2>
+        <p class="tw:text-grey-700 tw:text-sm tw:leading-relaxed tw:whitespace-pre-wrap">{@report.description}</p>
+      </div>
+
+      {render("_comments_section.html",
+        report: @report,
+        for_moderator: @for_moderator,
+        for_owner: @for_owner,
+        for_author: @for_author,
+        comments: @comments
+      )}
+    </div>
+  </div>
+</div>

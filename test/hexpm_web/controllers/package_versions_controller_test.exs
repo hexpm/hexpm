@@ -1,4 +1,4 @@
-defmodule HexpmWeb.VersionControllerTest do
+defmodule HexpmWeb.PackageVersionsControllerTest do
   use HexpmWeb.ConnCase, async: true
 
   setup do
@@ -58,9 +58,9 @@ defmodule HexpmWeb.VersionControllerTest do
     test "list all versions for public package", %{package1: package1} do
       conn = get(build_conn(), "/packages/#{package1.name}/versions")
       result = response(conn, 200)
-      assert result =~ ~r/0.0.1/
-      assert result =~ ~r/0.0.2/
-      assert result =~ ~r/0.0.3-dev/
+      assert result =~ "0.0.1"
+      assert result =~ "0.0.2"
+      assert result =~ "0.0.3-dev"
       assert result =~ package1.name
     end
 
@@ -75,9 +75,31 @@ defmodule HexpmWeb.VersionControllerTest do
         |> get("/packages/#{repository1.name}/#{package2.name}/versions")
 
       result = response(conn, 200)
-      assert result =~ ~r/0.1.0/
-      assert result =~ ~r/1.0.0/
+      assert result =~ "0.1.0"
+      assert result =~ "1.0.0"
       assert result =~ package2.name
+    end
+
+    test "unauthenticated access to private package versions returns 404", %{
+      package2: package2,
+      repository1: repository1
+    } do
+      conn = get(build_conn(), "/packages/#{repository1.name}/#{package2.name}/versions")
+      assert response(conn, 404)
+    end
+
+    test "user without org access cannot view private package versions", %{
+      package2: package2,
+      repository1: repository1
+    } do
+      other_user = insert(:user)
+
+      conn =
+        build_conn()
+        |> test_login(other_user)
+        |> get("/packages/#{repository1.name}/#{package2.name}/versions")
+
+      assert response(conn, 404)
     end
   end
 end

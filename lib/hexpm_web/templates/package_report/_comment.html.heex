@@ -1,0 +1,8 @@
+<div class="tw:py-4 tw:first:pt-0 tw:last:pb-0">
+  <div class="tw:flex tw:items-center tw:gap-2 tw:mb-1.5">
+    <span class="tw:text-grey-900 tw:text-sm tw:font-medium">{@comment.author.username}</span>
+    <span class="tw:text-grey-400 tw:text-xs">·</span>
+    <span class="tw:text-grey-400 tw:text-xs">{ViewHelpers.human_relative_time_from_now(@comment.inserted_at)}</span>
+  </div>
+  <p class="tw:text-grey-700 tw:text-sm tw:leading-relaxed tw:whitespace-pre-wrap">{@comment.text}</p>
+</div>

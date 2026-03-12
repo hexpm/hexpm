@@ -41,6 +41,8 @@ body {
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
   /* Type Scale (name: [size, line-height]) */
+  --text-error-digit: 11.25rem; /* 180px */
+  --text-error-digit--line-height: 1;
   --text-h1: 3.75rem; /* 60px */
   --text-h1--line-height: 1.2;
   --text-h2: 3rem; /* 48px */
@@ -215,4 +217,62 @@ body {
     background: none;
     padding: 0;
   }
+}
+
+/* ===== LEGACY UTILITY CLASSES ===== */
+/* Migrated from Bootstrap-era _general.scss. These are still referenced
+   by a small number of templates/helpers that haven't been fully migrated. */
+
+/* IE upgrade banner (root layout) */
+.browserupgrade {
+  padding: 0.2em 0;
+  margin: 0.2em 0;
+  color: #000;
+  background: #ccc;
+}
+
+/* hCaptcha widget spacing (signup, password-reset, email-verification) */
+.h-captcha {
+  margin: 10px 0;
+}
+
+/* Read-only mode banner (app layout) */
+.read-only-mode {
+  padding: 10px;
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #721c24;
+  background-color: #f8d7da;
+}
+
+/* Inline form validation (view_helpers.ex) */
+.form-error {
+  display: block;
+  margin-top: 5px;
+  margin-bottom: 10px;
+  color: #a94442;
+}
+
+.form-input-error {
+  border-color: #a94442;
+}
+
+/* Help text below form fields (complete_signup, org new) */
+.help-block {
+  font-size: 14px;
+}
+
+/* Docs page anchor headings (markdown_engine.ex) */
+.section-heading:hover a.hover-link {
+  opacity: 1;
+}
+
+.section-heading a.hover-link {
+  display: inline-block;
+  margin-left: -1.2em;
+  font-size: 16px;
+  color: #555;
+  border: 0;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
 }

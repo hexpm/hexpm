@@ -1,0 +1,57 @@
+<div class="tw:max-w-2xl tw:mx-auto tw:px-4 tw:py-8">
+  <div class="tw:mb-6">
+    <h1 class="tw:text-grey-900 tw:text-2xl tw:font-semibold">Report a package</h1>
+    <p class="tw:text-grey-500 tw:text-sm tw:mt-1">
+      Reporting <span class="tw:font-semibold tw:text-grey-700">{@package_name}</span>
+    </p>
+  </div>
+
+  <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-xl tw:p-6">
+    <%= form_tag ~p"/reports" do %>
+      <input type="hidden" name="package" value={@package_name} />
+      <input type="hidden" name="repository" value={@repository} />
+
+      <div class="tw:mb-6">
+        <label for="description" class="tw:block tw:text-small tw:font-medium tw:text-grey-900 tw:mb-[6px]">Description</label>
+        <p class="tw:text-grey-500 tw:text-sm tw:mb-2">
+          Provide a description of the vulnerability you have detected.
+        </p>
+        <textarea
+          id="description"
+          name="description"
+          rows="6"
+          placeholder="Enter report description here..."
+          class="tw:w-full tw:px-3 tw:py-2.5 tw:border tw:border-grey-200 tw:rounded-lg tw:text-sm tw:text-grey-900 tw:placeholder:text-grey-400 tw:focus:outline-none tw:focus:ring-2 tw:focus:ring-purple-600 tw:focus:border-transparent tw:resize-none"
+        >{@description}</textarea>
+      </div>
+
+      <div class="tw:mb-6">
+        <label for="requirement" class="tw:block tw:text-small tw:font-medium tw:text-grey-900 tw:mb-[6px]">Affected releases</label>
+        <p class="tw:text-grey-500 tw:text-sm tw:mb-1">
+          Indicate in which releases you have detected the described vulnerability.
+        </p>
+        <p class="tw:text-grey-500 tw:text-sm tw:mb-2">
+          Provide a <a href="https://hexdocs.pm/elixir/Version.html#module-requirements" target="_blank" rel="noopener" class="tw:text-purple-600 tw:hover:underline">version requirement</a> representing the affected releases.
+        </p>
+        <p class="tw:text-xs tw:text-grey-400 tw:mb-2 tw:font-mono">
+          e.g. "== 2.0.0" selects only 2.0.0; "&gt;= 2.0.0 and &lt;= 3.0.0" selects all versions between 2.0.0 and 3.0.0 inclusive.
+        </p>
+        <.text_input
+          id="requirement"
+          name="requirement"
+          value={@requirement}
+          placeholder="~> 1.0"
+          class="tw:font-mono"
+        />
+      </div>
+
+      <div class="tw:border-t tw:border-grey-100 tw:pt-5">
+        <p class="tw:text-sm tw:text-grey-500 tw:mb-4">
+          Make sure the description and affected releases are correct.
+          You will <strong>not</strong> be able to modify this report after it has been submitted.
+        </p>
+        <.button type="submit">Submit report</.button>
+      </div>
+    <% end %>
+  </div>
+</div>

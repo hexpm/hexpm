@@ -1,0 +1,63 @@
+<.package_layout
+  active_tab={:activity}
+  current_release={@current_release}
+  daily_graph={@daily_graph}
+  dependants_count={@dependants_count}
+  docs_html_url={@docs_html_url}
+  downloads={@downloads}
+  package={@package}
+  repository_name={@repository_name}
+>
+  <:inner_content>
+    <%= if Enum.empty?(@audit_logs) do %>
+      <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:p-12 tw:text-center">
+        <span class="tw:flex tw:justify-center tw:mb-3 tw:text-grey-300">
+          {HexpmWeb.ViewIcons.icon(:heroicon, "clock", class: "tw:size-10")}
+        </span>
+        <p class="tw:text-grey-500">No recent activities found.</p>
+      </div>
+    <% else %>
+      <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:overflow-hidden">
+        <table class="tw:w-full tw:text-sm">
+          <thead>
+            <tr class="tw:border-b tw:border-grey-200 tw:bg-grey-50">
+              <th class="tw:px-5 tw:py-3 tw:text-left tw:text-xs tw:font-semibold tw:text-grey-500 tw:uppercase tw:tracking-wider tw:w-36">
+                Date
+              </th>
+              <th class="tw:px-5 tw:py-3 tw:text-left tw:text-xs tw:font-semibold tw:text-grey-500 tw:uppercase tw:tracking-wider">
+                Activity
+              </th>
+            </tr>
+          </thead>
+          <tbody class="tw:divide-y tw:divide-grey-100">
+            <%= for audit_log <- @audit_logs do %>
+              <tr class="tw:hover:bg-grey-50 tw:transition-colors">
+                <td
+                  class="tw:px-5 tw:py-3.5 tw:text-grey-400 tw:whitespace-nowrap"
+                  title={ViewHelpers.pretty_datetime(audit_log.inserted_at)}
+                >
+                  {ViewHelpers.pretty_date(audit_log.inserted_at, :short)}
+                </td>
+                <td class="tw:px-5 tw:py-3.5 tw:text-grey-700">
+                  {humanize_audit_log_info(audit_log)}
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+
+      {render(
+        HexpmWeb.SharedView,
+        "_pagination.html",
+        items: @audit_logs,
+        page: @page,
+        total_count: @audit_logs_total_count,
+        per_page: @per_page,
+        unit: "activity",
+        units: "activities",
+        path_fn: &path_for_audit_logs(@package, &1)
+      )}
+    <% end %>
+  </:inner_content>
+</.package_layout>

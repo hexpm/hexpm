@@ -1,3 +1,0 @@
-<a href="<%= Router.user_path(@user) %>">
-  <img src="<%= ViewHelpers.gravatar_url(User.email(@user, :gravatar), :small) %>" class="user-avatar"><%= @user.username %>
-</a>

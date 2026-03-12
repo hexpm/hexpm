@@ -398,6 +398,18 @@ defmodule HexpmWeb.ViewHelpers do
       _ -> 100
     end
   end
+
+  def main_repository?(%{repository_id: 1}), do: true
+  def main_repository?(_), do: false
+
+  def safe_url(url) when is_binary(url) do
+    case URI.parse(url) do
+      %URI{scheme: scheme} when scheme in ["http", "https", "mailto"] -> url
+      _ -> "#"
+    end
+  end
+
+  def safe_url(_), do: "#"
 end
 
 defimpl Phoenix.HTML.Safe, for: Version do
