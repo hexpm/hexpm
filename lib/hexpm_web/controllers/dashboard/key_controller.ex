@@ -48,7 +48,7 @@ defmodule HexpmWeb.Dashboard.KeyController do
     user = Hexpm.Repo.preload(conn.assigns.current_user, :owned_packages)
     keys = Keys.all(user)
     organizations = Organizations.all_by_user(user)
-    packages = Enum.filter(user.owned_packages, &(&1.repository_id == 1))
+    packages = Enum.filter(user.owned_packages, &HexpmWeb.ViewHelpers.main_repository?/1)
 
     render(
       conn,

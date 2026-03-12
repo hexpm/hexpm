@@ -1,0 +1,23 @@
+<%
+  [d1, d2, d3] = @status |> to_string() |> String.pad_leading(3, "0") |> String.graphemes() |> Enum.take(3)
+%>
+<div class="tw:flex tw:flex-1 tw:flex-col tw:items-center tw:justify-center tw:bg-grey-50 tw:px-4 tw:py-24">
+  <div class="tw:flex tw:leading-none tw:mb-6 tw:select-none">
+    <span class="tw:text-error-digit tw:font-bold tw:text-amber-400">{d1}</span>
+    <span class="tw:text-error-digit tw:font-bold tw:text-blue-400">{d2}</span>
+    <span class="tw:text-error-digit tw:font-bold tw:text-green-500">{d3}</span>
+  </div>
+
+  <p class="tw:text-h3 tw:font-bold tw:text-grey-900 tw:mb-3">Whoops!</p>
+
+  <%= if message = assigns[:message] do %>
+    <p class="tw:text-h4 tw:font-light tw:text-grey-500 tw:mb-8">{message}</p>
+  <% end %>
+
+  <a
+    href="/"
+    class="tw:inline-flex tw:items-center tw:gap-2 tw:px-5 tw:py-2.5 tw:bg-purple-600 tw:text-white tw:text-sm tw:font-medium tw:rounded-lg tw:hover:bg-purple-700 tw:transition-colors"
+  >
+    Go back home
+  </a>
+</div>

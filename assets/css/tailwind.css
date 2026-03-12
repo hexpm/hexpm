@@ -41,6 +41,8 @@ body {
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
   /* Type Scale (name: [size, line-height]) */
+  --text-error-digit: 11.25rem; /* 180px */
+  --text-error-digit--line-height: 1;
   --text-h1: 3.75rem; /* 60px */
   --text-h1--line-height: 1.2;
   --text-h2: 3rem; /* 48px */

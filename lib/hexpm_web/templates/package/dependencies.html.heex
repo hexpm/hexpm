@@ -1,0 +1,83 @@
+<%
+requirements = ((@current_release && @current_release.requirements) || [])
+  |> Enum.sort_by(& &1.name)
+requirements_count = length(requirements)
+%>
+
+<.package_layout
+  active_tab={:dependencies}
+  current_release={@current_release}
+  daily_graph={@daily_graph}
+  dependants_count={@dependants_count}
+  docs_html_url={@docs_html_url}
+  downloads={@downloads}
+  package={@package}
+  repository_name={@repository_name}
+>
+  <:inner_content>
+    <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-xl tw:overflow-hidden">
+      <div class="tw:px-5 tw:py-4 tw:border-b tw:border-grey-200 tw:flex tw:items-center tw:justify-between">
+        <h2 class="tw:text-grey-900 tw:text-xl tw:font-semibold">
+          Dependencies of <span class="tw:font-mono">{@package.name}</span>
+        </h2>
+        <span class="tw:text-sm tw:text-grey-500">
+          {requirements_count} {if requirements_count == 1, do: "dependency", else: "dependencies"}
+        </span>
+      </div>
+
+      <%= if requirements_count == 0 do %>
+        <div class="tw:py-12 tw:text-center">
+          <p class="tw:text-grey-500 tw:text-sm">
+            {@package.name} has no dependencies.
+          </p>
+        </div>
+      <% else %>
+        <table class="tw:w-full tw:text-sm">
+          <thead>
+            <tr class="tw:bg-grey-50 tw:border-b tw:border-grey-200">
+              <th class="tw:px-5 tw:py-3 tw:text-left tw:text-xs tw:font-semibold tw:text-grey-500 tw:uppercase tw:tracking-wider">
+                Package
+              </th>
+              <th class="tw:px-5 tw:py-3 tw:text-left tw:text-xs tw:font-semibold tw:text-grey-500 tw:uppercase tw:tracking-wider tw:w-40">
+                Requirement
+              </th>
+              <th class="tw:px-5 tw:py-3 tw:w-24">
+                <span class="tw:sr-only">Status</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody class="tw:divide-y tw:divide-grey-100">
+            <%= for req <- requirements do %>
+              <tr class="tw:hover:bg-grey-50 tw:transition-colors">
+                <td class="tw:px-5 tw:py-3.5">
+                  <a
+                    href={ViewHelpers.path_for_package(req.repository, req.name)}
+                    class="tw:font-semibold tw:text-grey-900 tw:hover:text-purple-600 tw:transition-colors tw:font-mono"
+                  >
+                    <%= if req.repository != "hexpm" do %>
+                      {req.repository}/
+                    <% end %>
+                    {req.name}
+                  </a>
+                  <%= if req.app && req.app != req.name do %>
+                    <span class="tw:ml-1.5 tw:text-grey-400 tw:text-xs">(app: {req.app})</span>
+                  <% end %>
+                </td>
+                <td class="tw:px-5 tw:py-3.5">
+                  <span class="tw:font-mono tw:text-grey-600 tw:bg-grey-50 tw:px-2 tw:py-0.5 tw:rounded">
+                    {req.requirement}
+                  </span>
+                </td>
+                <td class="tw:px-5 tw:py-3.5">
+                  <%= if req.optional do %>
+                    <.badge>optional</.badge>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% end %>
+    </div>
+  </:inner_content>
+</.package_layout>

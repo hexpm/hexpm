@@ -338,6 +338,58 @@ defmodule HexpmWeb.PackageControllerTest do
     end
   end
 
+  describe "GET /packages/:name/versions" do
+    test "renders versions page", %{package1: package1} do
+      conn = get(build_conn(), "/packages/#{package1.name}/versions")
+      result = response(conn, 200)
+      assert result =~ "0.0.1"
+      assert result =~ "0.0.2"
+    end
+
+    test "returns 404 for unknown package" do
+      conn = get(build_conn(), "/packages/nonexistent_package/versions")
+      assert response(conn, 404)
+    end
+
+    test "returns 404 for private package without auth", %{
+      package3: package3,
+      repository1: repository1
+    } do
+      conn = get(build_conn(), "/packages/#{repository1.name}/#{package3.name}/versions")
+      assert response(conn, 404)
+    end
+  end
+
+  describe "GET /packages/:name/dependents" do
+    test "renders dependants page", %{package1: package1} do
+      conn = get(build_conn(), "/packages/#{package1.name}/dependents")
+      assert response(conn, 200) =~ "Packages depending on"
+    end
+
+    test "returns 404 for private package without auth", %{
+      package3: package3,
+      repository1: repository1
+    } do
+      conn = get(build_conn(), "/packages/#{repository1.name}/#{package3.name}/dependents")
+      assert response(conn, 404)
+    end
+  end
+
+  describe "GET /packages/:name/dependencies" do
+    test "renders dependencies page", %{package1: package1} do
+      conn = get(build_conn(), "/packages/#{package1.name}/dependencies")
+      assert response(conn, 200) =~ "Dependencies of"
+    end
+
+    test "returns 404 for private package without auth", %{
+      package3: package3,
+      repository1: repository1
+    } do
+      conn = get(build_conn(), "/packages/#{repository1.name}/#{package3.name}/dependencies")
+      assert response(conn, 404)
+    end
+  end
+
   defp escape(html) do
     {:safe, safe} = Phoenix.HTML.html_escape(html)
     IO.iodata_to_binary(safe)
