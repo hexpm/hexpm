@@ -198,6 +198,7 @@ defmodule HexpmWeb.Router do
     get "/orgs/:dashboard_org/keys", OrganizationController, :keys
     get "/orgs/:dashboard_org/packages", OrganizationController, :packages
     get "/orgs/:dashboard_org/audit-logs", OrganizationController, :audit_logs
+    get "/orgs/:dashboard_org/billing", OrganizationController, :billing
     post "/orgs/:dashboard_org/leave", OrganizationController, :leave
     post "/orgs/:dashboard_org/billing-token", OrganizationController, :billing_token
     post "/orgs/:dashboard_org/cancel-billing", OrganizationController, :cancel_billing

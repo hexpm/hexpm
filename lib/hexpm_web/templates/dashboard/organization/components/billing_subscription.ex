@@ -1,0 +1,325 @@
+defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
+  use Phoenix.Component
+  use PhoenixHTMLHelpers
+
+  use Phoenix.VerifiedRoutes,
+    endpoint: HexpmWeb.Endpoint,
+    router: HexpmWeb.Router,
+    statics: HexpmWeb.static_paths()
+
+  import Phoenix.HTML, only: [raw: 1]
+  import HexpmWeb.Components.Modal, only: [modal: 1, show_modal: 1, hide_modal: 1]
+  import HexpmWeb.Components.Buttons, only: [button: 1]
+
+  alias HexpmWeb.Dashboard.Organization.Components.BillingHelpers
+
+  attr :organization, :map, required: true
+  attr :plan_id, :string, default: nil
+  attr :quantity, :integer, default: nil
+  attr :member_count, :integer, default: 0
+  attr :subscription, :map, default: nil
+  attr :card, :map, default: nil
+  attr :discount, :map, default: nil
+  attr :tax_rate, :any, default: nil
+  attr :amount_with_tax, :integer, default: nil
+  attr :checkout_html, :string, default: nil
+  attr :post_action, :string, default: nil
+  attr :csrf_token, :string, default: nil
+  attr :proration_amount, :integer, default: 0
+  attr :proration_days, :integer, default: 0
+  attr :max_period_quantity, :integer, default: nil
+
+  def billing_subscription(assigns) do
+    assigns = assign(assigns, :safe_quantity, assigns.quantity || 0)
+
+    ~H"""
+    <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:overflow-hidden">
+      <div class="tw:px-6 tw:py-5 tw:border-b tw:border-grey-200 tw:flex tw:items-center tw:justify-between">
+        <h2 class="tw:text-grey-900 tw:text-lg tw:font-semibold">Subscription</h2>
+        <%= if @subscription do %>
+          <span class={["tw:inline-flex tw:items-center tw:px-2.5 tw:py-0.5 tw:rounded-full tw:text-xs tw:font-medium", subscription_badge_class(@subscription)]}>
+            {BillingHelpers.subscription_badge_label(@subscription)}
+            {BillingHelpers.discount_status(@discount)}
+          </span>
+        <% end %>
+      </div>
+
+      <div class="tw:px-6 tw:py-5">
+        <%= if @subscription do %>
+          <dl class="tw:grid tw:grid-cols-1 tw:gap-4 sm:tw:grid-cols-2">
+            <div>
+              <dt class="tw:text-xs tw:font-medium tw:text-grey-500 tw:uppercase tw:tracking-wider tw:mb-1">Plan</dt>
+              <dd class="tw:text-sm tw:text-grey-900 tw:flex tw:items-center tw:gap-2">
+                {BillingHelpers.plan(@plan_id)}
+                <.button type="button" variant="outline" size="sm" phx-click={show_modal("change-plan-modal")}>
+                  <%= if @plan_id == "organization-monthly", do: "Switch to annual", else: "Switch to monthly" %>
+                </.button>
+              </dd>
+            </div>
+            <div>
+              <dt class="tw:text-xs tw:font-medium tw:text-grey-500 tw:uppercase tw:tracking-wider tw:mb-1">Payment method</dt>
+              <dd class="tw:text-sm tw:text-grey-900">{BillingHelpers.payment_card(@card)}</dd>
+            </div>
+            <div>
+              <dt class="tw:text-xs tw:font-medium tw:text-grey-500 tw:uppercase tw:tracking-wider tw:mb-1">Next invoice</dt>
+              <dd class="tw:text-sm tw:text-grey-900">
+                <%= if @subscription["cancel_at_period_end"] do %>
+                  Subscription ends on {BillingHelpers.payment_date(@subscription["current_period_end"])}
+                <% else %>
+                  {BillingHelpers.payment_date(@subscription["current_period_end"])}
+                <% end %>
+              </dd>
+            </div>
+            <div>
+              <dt class="tw:text-xs tw:font-medium tw:text-grey-500 tw:uppercase tw:tracking-wider tw:mb-1">
+                {if @plan_id == "organization-annually", do: "Annual cost", else: "Monthly cost"}
+              </dt>
+              <dd class="tw:text-sm tw:text-grey-900">
+                {BillingHelpers.plan_price(@plan_id)} x {@safe_quantity} user(s)
+                <%= if @tax_rate && @tax_rate != 0 do %>
+                  x {@tax_rate}% VAT
+                <% end %>
+                = ${BillingHelpers.money(@amount_with_tax)}
+              </dd>
+            </div>
+            <%= if BillingHelpers.subscription_status(@subscription, @card) not in ["Active", ""] do %>
+              <div class="sm:tw:col-span-2">
+                <dt class="tw:text-xs tw:font-medium tw:text-grey-500 tw:uppercase tw:tracking-wider tw:mb-1">Status</dt>
+                <dd class="tw:text-sm tw:text-grey-900">
+                  {BillingHelpers.subscription_status(@subscription, @card)}
+                </dd>
+              </div>
+            <% end %>
+            <div>
+              <dt class="tw:text-xs tw:font-medium tw:text-grey-500 tw:uppercase tw:tracking-wider tw:mb-1">Seats</dt>
+              <dd class="tw:text-sm tw:text-grey-900 tw:flex tw:items-center tw:gap-3">
+                {@member_count} of {@safe_quantity} in use
+                <div class="tw:flex tw:gap-2">
+                  <.button type="button" variant="outline" size="sm" phx-click={show_modal("add-seats-modal")}>
+                    Add seats
+                  </.button>
+                  <.button type="button" variant="danger-outline" size="sm" phx-click={show_modal("remove-seats-modal")}>
+                    Remove seats
+                  </.button>
+                </div>
+              </dd>
+            </div>
+          </dl>
+
+          <div class="tw:mt-6"
+            id="billing-checkout-data"
+            data-post-action={@post_action}
+            data-csrf-token={@csrf_token}>
+            {raw(@checkout_html || "")}
+          </div>
+
+          <div class="tw:mt-4">
+            <.button type="button" variant="danger-outline" size="sm"
+              disabled={!@subscription || @subscription["cancel_at_period_end"]}
+              phx-click={show_modal("cancel-billing-modal")}>
+              Cancel subscription
+            </.button>
+          </div>
+
+          <.cancel_billing_modal organization={@organization} subscription={@subscription} />
+          <.add_seats_modal
+            organization={@organization}
+            plan_id={@plan_id}
+            quantity={@safe_quantity}
+            member_count={@member_count}
+            proration_amount={@proration_amount}
+            proration_days={@proration_days}
+            max_period_quantity={@max_period_quantity}
+          />
+          <.remove_seats_modal
+            organization={@organization}
+            quantity={@safe_quantity}
+            member_count={@member_count}
+            plan_id={@plan_id}
+          />
+          <.change_plan_modal organization={@organization} plan_id={@plan_id} />
+
+        <% else %>
+          <p class="tw:text-sm tw:text-grey-600 tw:mb-4">
+            No active subscription. <strong>Private packages will not be available</strong>
+            until a payment method has been added.
+          </p>
+          <p class="tw:text-sm tw:text-grey-600 tw:mb-6">
+            Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.
+          </p>
+          <div class="tw:mt-4"
+            id="billing-checkout-data"
+            data-post-action={@post_action}
+            data-csrf-token={@csrf_token}>
+            {raw(@checkout_html || "")}
+          </div>
+        <% end %>
+      </div>
+    </div>
+    """
+  end
+
+  defp subscription_badge_class(%{"status" => "active", "cancel_at_period_end" => false}),
+    do: "tw:bg-green-100 tw:text-green-700"
+
+  defp subscription_badge_class(%{"status" => "trialing"}),
+    do: "tw:bg-blue-100 tw:text-blue-700"
+
+  defp subscription_badge_class(%{"status" => "past_due"}),
+    do: "tw:bg-orange-100 tw:text-orange-700"
+
+  defp subscription_badge_class(_), do: "tw:bg-grey-100 tw:text-grey-600"
+
+  attr :organization, :map, required: true
+  attr :subscription, :map, default: nil
+
+  defp cancel_billing_modal(assigns) do
+    ~H"""
+    <.modal id="cancel-billing-modal" title="Cancel subscription">
+      <p class="tw:text-sm tw:text-grey-600 tw:mb-2">
+        Are you sure you want to cancel your subscription?
+      </p>
+      <p class="tw:text-sm tw:text-grey-600">
+        Your subscription will remain active until the end of the current billing period.
+        After that, private packages will no longer be accessible.
+      </p>
+      <form id="cancel-billing-form" action={~p"/dashboard/orgs/#{@organization}/cancel-billing"} method="post">
+        <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+      </form>
+      <:footer>
+        <.button type="button" variant="secondary" phx-click={hide_modal("cancel-billing-modal")}>
+          Keep subscription
+        </.button>
+        <.button type="submit" form="cancel-billing-form" variant="danger">
+          Yes, cancel
+        </.button>
+      </:footer>
+    </.modal>
+    """
+  end
+
+  attr :organization, :map, required: true
+  attr :plan_id, :string, default: nil
+  attr :quantity, :integer, default: 0
+  attr :member_count, :integer, default: 0
+  attr :proration_amount, :integer, default: 0
+  attr :proration_days, :integer, default: 0
+  attr :max_period_quantity, :integer, default: nil
+
+  defp add_seats_modal(assigns) do
+    ~H"""
+    <.modal id="add-seats-modal" title="Add seats">
+      <form id="add-seats-form" action={~p"/dashboard/orgs/#{@organization}/add-seats"} method="post">
+        <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+        <input type="hidden" name="current-seats" value={@quantity} />
+        <p class="tw:text-sm tw:text-grey-600 tw:mb-4">
+          You have {@quantity} seats of which {@member_count} are in use.
+        </p>
+        <div class="tw:mb-4">
+          <label for="add-seats-input" class="tw:block tw:text-sm tw:font-medium tw:text-grey-700 tw:mb-1">
+            Number of new seats to add
+          </label>
+          <div class="tw:flex tw:items-center tw:gap-2">
+            <input id="add-seats-input" type="number" name="add-seats"
+              min="1" max="999" step="1" value="1" required
+              class="tw:w-24 tw:h-10 tw:px-3 tw:border tw:border-grey-200 tw:rounded-lg tw:text-sm tw:focus:outline-none tw:focus:ring-2 tw:focus:ring-purple-600" />
+            <span class="tw:text-sm tw:text-grey-600">seat(s) @ {BillingHelpers.plan_price(@plan_id)}</span>
+          </div>
+        </div>
+        <%= if @proration_amount && @proration_amount > 0 do %>
+          <p class="tw:text-sm tw:text-grey-600">
+            {BillingHelpers.proration_description(@plan_id, @proration_amount, @proration_days, @quantity, @max_period_quantity)}
+          </p>
+        <% end %>
+      </form>
+      <:footer>
+        <.button type="button" variant="secondary" phx-click={hide_modal("add-seats-modal")}>
+          Cancel
+        </.button>
+        <.button type="submit" form="add-seats-form" variant="primary">
+          Add seats
+        </.button>
+      </:footer>
+    </.modal>
+    """
+  end
+
+  attr :organization, :map, required: true
+  attr :quantity, :integer, default: 0
+  attr :member_count, :integer, default: 0
+  attr :plan_id, :string, default: nil
+
+  defp remove_seats_modal(assigns) do
+    ~H"""
+    <.modal id="remove-seats-modal" title="Remove seats">
+      <form id="remove-seats-form" action={~p"/dashboard/orgs/#{@organization}/remove-seats"} method="post">
+        <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+        <p class="tw:text-sm tw:text-grey-600 tw:mb-4">
+          You have {@quantity} seats of which {@member_count} are in use.
+        </p>
+        <%= if @quantity <= @member_count do %>
+          <p class="tw:text-sm tw:font-medium tw:text-red-600">
+            You are already at the minimum number of seats. Remove members to free up seats.
+          </p>
+        <% else %>
+          <div>
+            <label for="remove-seats-select" class="tw:block tw:text-sm tw:font-medium tw:text-grey-700 tw:mb-1">
+              Reduce to
+            </label>
+            <div class="tw:flex tw:items-center tw:gap-2">
+              <select id="remove-seats-select" name="seats" required
+                class="tw:w-24 tw:h-10 tw:px-3 tw:border tw:border-grey-200 tw:rounded-lg tw:text-sm tw:focus:outline-none tw:focus:ring-2 tw:focus:ring-purple-600">
+                <%= for n <- max(@quantity - 1, 1)..max(@member_count, 1) do %>
+                  <option value={n}>{n}</option>
+                <% end %>
+              </select>
+              <span class="tw:text-sm tw:text-grey-600">seat(s) @ {BillingHelpers.plan_price(@plan_id)}</span>
+            </div>
+          </div>
+        <% end %>
+      </form>
+      <:footer>
+        <.button type="button" variant="secondary" phx-click={hide_modal("remove-seats-modal")}>
+          Cancel
+        </.button>
+        <.button type="submit" form="remove-seats-form" variant="danger"
+          disabled={@quantity <= @member_count}>
+          Remove seats
+        </.button>
+      </:footer>
+    </.modal>
+    """
+  end
+
+  attr :organization, :map, required: true
+  attr :plan_id, :string, default: nil
+
+  defp change_plan_modal(assigns) do
+    ~H"""
+    <.modal id="change-plan-modal" title="Change plan">
+      <form id="change-plan-form" action={~p"/dashboard/orgs/#{@organization}/change-plan"} method="post">
+        <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+        <input type="hidden" name="plan_id"
+          value={if @plan_id == "organization-monthly", do: "organization-annually", else: "organization-monthly"} />
+        <p class="tw:text-sm tw:text-grey-600">
+          <%= if @plan_id == "organization-monthly" do %>
+            Switch to the annual plan and save with
+            <strong>{BillingHelpers.plan_price("organization-annually")} per user / year</strong>.
+          <% else %>
+            Switch to the monthly plan at
+            <strong>{BillingHelpers.plan_price("organization-monthly")} per user / month</strong>.
+          <% end %>
+        </p>
+      </form>
+      <:footer>
+        <.button type="button" variant="secondary" phx-click={hide_modal("change-plan-modal")}>
+          Cancel
+        </.button>
+        <.button type="submit" form="change-plan-form" variant="primary">
+          Confirm
+        </.button>
+      </:footer>
+    </.modal>
+    """
+  end
+end

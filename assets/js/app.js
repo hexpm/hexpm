@@ -188,9 +188,12 @@ export default class App {
   }
 
   billing_checkout(token) {
-    $.post(window.hexpm_billing_post_action, {
+    const el = document.getElementById("billing-checkout-data");
+    const postAction = el && el.dataset.postAction;
+    const csrfToken = el && el.dataset.csrfToken;
+    $.post(postAction, {
       token: token,
-      _csrf_token: window.hexpm_billing_csrf_token,
+      _csrf_token: csrfToken,
     })
       .done(function (data) {
         window.location.reload();

@@ -318,6 +318,40 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     end
   end
 
+  describe "GET /dashboard/orgs/:dashboard_org/billing" do
+    test "shows billing tab for admin", %{user: user, organization: organization} do
+      mock_customer(organization)
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/billing")
+
+      assert response(conn, 200) =~ "Billing"
+    end
+
+    test "returns 400 for non-admin member", %{user: user, organization: organization} do
+      mock_customer(organization)
+      insert(:organization_user, organization: organization, user: user, role: "read")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/billing")
+
+      assert response(conn, 400)
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "permission"
+    end
+
+    test "returns 404 for users not in the organization", %{user: user, organization: organization} do
+      build_conn()
+      |> test_login(user)
+      |> get("/dashboard/orgs/#{organization.name}/billing")
+      |> response(404)
+    end
+  end
+
   describe "POST /dashboard/orgs/:dashboard_org/billing-token" do
     test "calls Hexpm.Billing.checkout/2 when user is admin", %{
       user: user,
@@ -383,7 +417,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         "Your subscription is cancelled, you will have access to the organization until " <>
           "the end of your billing period at December 12, 2017"
 
-      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}/billing"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) == message
     end
 
@@ -401,7 +435,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> test_login(user)
         |> post("/dashboard/orgs/#{organization.name}/cancel-billing")
 
-      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}/billing"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Your subscription is cancelled"
     end
 
@@ -480,7 +514,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> test_login(user)
         |> post("/dashboard/orgs/#{organization.name}/invoices/123/pay")
 
-      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}/billing"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Invoice paid."
     end
 
@@ -556,7 +590,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
           "email" => "billing@example.com"
         })
 
-      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}/billing"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Updated your billing information."
     end
 
@@ -577,6 +611,74 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert audit_log.action == "billing.update"
       assert audit_log.params["email"] == "billing@example.com"
       assert audit_log.params["organization"]["name"] == organization.name
+    end
+  end
+
+  describe "POST billing validation (update-billing)" do
+    test "rejects missing email with 400 and inline error", %{user: user, organization: organization} do
+      mock_customer(organization)
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}/update-billing", %{
+          "person" => %{"country" => "US"}
+        })
+
+      assert response(conn, 400)
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "required fields"
+    end
+
+    test "rejects person billing with missing country", %{user: user, organization: organization} do
+      mock_customer(organization)
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}/update-billing", %{
+          "email" => "billing@example.com",
+          "person" => %{"country" => ""}
+        })
+
+      assert response(conn, 400)
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "required fields"
+    end
+
+    test "rejects company billing with missing required fields", %{
+      user: user,
+      organization: organization
+    } do
+      mock_customer(organization)
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}/update-billing", %{
+          "email" => "billing@example.com",
+          "company" => %{"name" => "", "address_country" => "US"}
+        })
+
+      assert response(conn, 400)
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "required fields"
+    end
+
+    test "accepts valid person billing", %{user: user, organization: organization} do
+      mock_customer(organization)
+      stub(Hexpm.Billing.Mock, :update, fn _, _ -> {:ok, %{}} end)
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}/update-billing", %{
+          "email" => "billing@example.com",
+          "person" => %{"country" => "PT"}
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}/billing"
     end
   end
 
@@ -660,16 +762,17 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> post("/dashboard/orgs/#{organization.name}/create-billing", params)
 
       response(conn, 302)
-      assert get_resp_header(conn, "location") == ["/dashboard/orgs/#{organization.name}"]
+      assert get_resp_header(conn, "location") == ["/dashboard/orgs/#{organization.name}/billing"]
       assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Updated your billing information."
     end
 
     test "create audit_log with action billing.create", %{user: user, organization: organization} do
       stub(Hexpm.Billing.Mock, :create, fn _ -> {:ok, %{}} end)
+      stub(Hexpm.Billing.Mock, :get, fn _ -> nil end)
 
       insert(:organization_user, organization: organization, user: user, role: "admin")
 
-      params = %{"company" => nil, "person" => nil}
+      params = %{"email" => "billing@example.com", "person" => %{"country" => "US"}, "company" => nil}
 
       build_conn()
       |> test_login(user)
@@ -699,7 +802,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
           "add-seats" => "2"
         })
 
-      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}/billing"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
                "The number of open seats have been increased."
@@ -763,7 +866,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
           "seats" => "3"
         })
 
-      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}/billing"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
                "The number of open seats have been reduced."
@@ -824,7 +927,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
           "plan_id" => "organization-annually"
         })
 
-      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}/billing"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
                "You have switched to the annual organization plan."
