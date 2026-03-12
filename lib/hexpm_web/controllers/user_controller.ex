@@ -56,7 +56,7 @@ defmodule HexpmWeb.UserController do
       conn,
       "show.html",
       title: user.username,
-      container: "tw:flex-1 tw:flex tw:flex-col",
+      container: "flex-1 flex flex-col",
       user: user,
       packages: paginated_packages,
       downloads: downloads,

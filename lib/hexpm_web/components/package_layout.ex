@@ -57,52 +57,52 @@ defmodule HexpmWeb.Components.PackageLayout do
       |> assign(:this_version_downloads, version_downloads(assigns))
 
     ~H"""
-    <div class="tw:bg-grey-50 tw:min-h-screen">
+    <div class="bg-grey-50 min-h-screen">
       <%!-- Header Section --%>
-      <div class="tw:max-w-7xl tw:mx-auto tw:pt-8 tw:pb-6">
-        <div class="tw:flex tw:items-start tw:justify-between tw:gap-12">
+      <div class="max-w-7xl mx-auto pt-8 pb-6">
+        <div class="flex items-start justify-between gap-12">
           <%!-- Left: Package Name, Version, Description --%>
-          <div class="tw:flex tw:flex-col tw:gap-2">
+          <div class="flex flex-col gap-2">
             <a
               href="/packages"
-              class="tw:inline-flex tw:items-center tw:gap-1 tw:text-xs tw:font-medium tw:text-grey-400 tw:hover:text-purple-600 tw:transition-colors tw:w-fit"
+              class="inline-flex items-center gap-1 text-xs font-medium text-grey-400 hover:text-purple-600 transition-colors w-fit"
             >
-              {HexpmWeb.ViewIcons.icon(:heroicon, "arrow-left", class: "tw:size-3")}
+              {HexpmWeb.ViewIcons.icon(:heroicon, "arrow-left", class: "size-3")}
               Packages
             </a>
-            <div class="tw:flex tw:items-end tw:gap-4">
-              <h1 class="tw:text-grey-900 tw:text-2xl tw:font-semibold">
+            <div class="flex items-end gap-4">
+              <h1 class="text-grey-900 text-2xl font-semibold">
                 <a
                   href={ViewHelpers.path_for_package(@package)}
-                  class="tw:hover:text-purple-600 tw:transition-colors"
+                  class="text-grey-900 hover:text-purple-600 transition-colors"
                 >
                   {ViewHelpers.package_name(@package)}
                 </a>
               </h1>
               <%= if @current_release do %>
-                <div class="tw:bg-grey-200 tw:flex tw:items-center tw:gap-1.5 tw:px-3 tw:py-1 tw:rounded-xl">
-                  {HexpmWeb.ViewIcons.icon(:heroicon, "tag", class: "tw:size-3.5 tw:text-grey-500")}
-                  <p class="tw:text-grey-700 tw:text-sm tw:font-medium">
+                <div class="bg-grey-200 flex items-center gap-1.5 px-3 py-1 rounded-xl">
+                  {HexpmWeb.ViewIcons.icon(:heroicon, "tag", class: "size-3.5 text-grey-500")}
+                  <p class="text-grey-700 text-sm font-medium">
                     v {@current_release.version}
                   </p>
                 </div>
               <% end %>
             </div>
             <%= if @description do %>
-              <p class="tw:text-grey-600 tw:max-w-[600px]">
+              <p class="text-grey-600 max-w-[600px]">
                 {ViewHelpers.text_length(@description, 300)}
               </p>
             <% end %>
           </div>
 
           <%!-- Right: Action Buttons — always visible --%>
-          <div class="tw:flex tw:items-center tw:gap-3 tw:mt-6">
+          <div class="flex items-center gap-3 mt-6">
             <%= if @docs_html_url do %>
               <a
                 href={@docs_html_url}
-                class="tw:bg-grey-100 tw:flex tw:items-center tw:gap-2 tw:px-4 tw:py-2.5 tw:rounded-lg tw:text-grey-800 tw:text-sm tw:font-medium tw:hover:bg-grey-200 tw:transition-colors"
+                class="bg-grey-100 flex items-center gap-2 px-4 py-2.5 rounded-lg text-grey-800 text-sm font-medium hover:bg-grey-200 transition-colors"
               >
-                {HexpmWeb.ViewIcons.icon(:heroicon, "archive-box", class: "tw:size-4 tw:shrink-0")}
+                {HexpmWeb.ViewIcons.icon(:heroicon, "archive-box", class: "size-4 shrink-0")}
                 <span>Online Documentation</span>
               </a>
             <% end %>
@@ -111,9 +111,9 @@ defmodule HexpmWeb.Components.PackageLayout do
               <a
                 href={url}
                 rel="nofollow"
-                class="tw:bg-grey-900 tw:flex tw:items-center tw:justify-center tw:p-2.5 tw:rounded-lg tw:hover:bg-grey-800 tw:transition-colors"
+                class="bg-grey-900 flex items-center justify-center p-2.5 rounded-lg hover:bg-grey-800 transition-colors"
               >
-                <.github_icon class="tw:size-4 tw:text-white" />
+                <.github_icon class="size-4 text-white" />
               </a>
             <% end %>
           </div>
@@ -121,17 +121,17 @@ defmodule HexpmWeb.Components.PackageLayout do
       </div>
 
       <%!-- Main Container with Sidebar --%>
-      <div class="tw:max-w-7xl tw:mx-auto tw:pt-10">
-        <div class="tw:flex tw:gap-5">
+      <div class="max-w-7xl mx-auto pt-10">
+        <div class="flex gap-5">
           <%!-- Left: Content Area --%>
-          <div class="tw:flex-1 tw:min-w-0">
+          <div class="flex-1 min-w-0">
             <%!-- Tab Navigation --%>
-            <div class="tw:flex tw:items-center tw:border-b tw:border-grey-200">
+            <div class="flex items-center border-b border-grey-200">
               <a
                 href={ViewHelpers.path_for_package(@package)}
                 class={tab_class(@active_tab == :readme)}
               >
-                {HexpmWeb.ViewIcons.icon(:heroicon, "document-text", class: "tw:size-4.5")}
+                {HexpmWeb.ViewIcons.icon(:heroicon, "document-text", class: "size-4.5")}
                 <span>Readme</span>
               </a>
               <%= if @current_release do %>
@@ -139,7 +139,7 @@ defmodule HexpmWeb.Components.PackageLayout do
                   href={dependencies_path(@package)}
                   class={tab_class(@active_tab == :dependencies)}
                 >
-                  {HexpmWeb.ViewIcons.icon(:heroicon, "document", class: "tw:size-4.5")}
+                  {HexpmWeb.ViewIcons.icon(:heroicon, "document", class: "size-4.5")}
                   <span>{Enum.count(@current_release.requirements || [])} Dependencies</span>
                 </a>
               <% end %>
@@ -147,41 +147,41 @@ defmodule HexpmWeb.Components.PackageLayout do
                 href={dependents_path(@package)}
                 class={tab_class(@active_tab == :dependants)}
               >
-                {HexpmWeb.ViewIcons.icon(:heroicon, "document", class: "tw:size-4.5")}
+                {HexpmWeb.ViewIcons.icon(:heroicon, "document", class: "size-4.5")}
                 <span>{@dependants_count} Dependants</span>
               </a>
               <a
                 href={audit_logs_path(@package)}
                 class={tab_class(@active_tab == :activity)}
               >
-                {HexpmWeb.ViewIcons.icon(:heroicon, "clock", class: "tw:size-4.5")}
+                {HexpmWeb.ViewIcons.icon(:heroicon, "clock", class: "size-4.5")}
                 <span>Activity</span>
               </a>
               <a
                 href={ViewHelpers.path_for_releases(@package)}
                 class={tab_class(@active_tab == :versions)}
               >
-                {HexpmWeb.ViewIcons.icon(:heroicon, "arrow-down-tray", class: "tw:size-4.5")}
+                {HexpmWeb.ViewIcons.icon(:heroicon, "arrow-down-tray", class: "size-4.5")}
                 <span>Versions</span>
               </a>
             </div>
 
             <%!-- Tab Content --%>
-            <div class="tw:py-6">
+            <div class="py-6">
               {render_slot(@inner_content)}
             </div>
           </div>
 
           <%!-- Right: Sidebar — identical on every tab --%>
-          <div class="tw:w-72 tw:shrink-0 tw:flex tw:flex-col tw:gap-6">
+          <div class="w-72 shrink-0 flex flex-col gap-6">
             <%!-- Checksum Card --%>
             <%= if @current_release do %>
-              <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:p-5">
-                <h3 class="tw:text-grey-700 tw:text-lg tw:font-semibold tw:mb-4">Checksum</h3>
-                <div class="tw:flex tw:border tw:border-grey-200 tw:rounded tw:overflow-hidden">
+              <div class="bg-white border border-grey-200 rounded-lg p-5">
+                <h3 class="text-grey-700 text-lg font-semibold mb-4">Checksum</h3>
+                <div class="flex border border-grey-200 rounded overflow-hidden">
                   <input
                     type="text"
-                    class="tw:flex-1 tw:min-w-0 tw:px-3 tw:py-2.5 tw:text-grey-400 tw:text-xs tw:font-mono tw:bg-white tw:border-none tw:outline-none"
+                    class="flex-1 min-w-0 px-3 py-2.5 text-grey-400 text-xs font-mono bg-white border-none outline-none"
                     value={Base.encode16(@current_release.outer_checksum, case: :lower)}
                     readonly
                     onfocus="this.select();"
@@ -193,23 +193,23 @@ defmodule HexpmWeb.Components.PackageLayout do
                     phx-hook="CopyButton"
                     id="checksum-copy-btn"
                     data-copy-target="checksum-snippet"
-                    class="tw:bg-grey-50 tw:border-l tw:border-grey-200 tw:size-9 tw:flex tw:items-center tw:justify-center tw:hover:bg-grey-100 tw:transition-colors tw:shrink-0"
+                    class="bg-grey-50 border-l border-grey-200 size-9 flex items-center justify-center hover:bg-grey-100 transition-colors shrink-0"
                   >
-                    {HexpmWeb.ViewIcons.icon(:heroicon, "square-2-stack", class: "tw:size-4")}
+                    {HexpmWeb.ViewIcons.icon(:heroicon, "square-2-stack", class: "size-4")}
                   </button>
                 </div>
               </div>
 
               <%!-- Dependency Config Card --%>
-              <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:p-5">
-                <h3 class="tw:text-grey-700 tw:text-lg tw:font-semibold tw:mb-4">Dependency Config</h3>
+              <div class="bg-white border border-grey-200 rounded-lg p-5">
+                <h3 class="text-grey-700 text-lg font-semibold mb-4">Dependency Config</h3>
                 <%= for {tool, file} <- @tools do %>
-                  <div class="tw:mb-4 tw:last:mb-0">
-                    <p class="tw:text-grey-400 tw:text-xs tw:font-medium tw:mb-1.5">{file}</p>
-                    <div class="tw:flex tw:border tw:border-grey-200 tw:rounded tw:overflow-hidden">
+                  <div class="mb-4 last:mb-0">
+                    <p class="text-grey-400 text-xs font-medium mb-1.5">{file}</p>
+                    <div class="flex border border-grey-200 rounded overflow-hidden">
                       <input
                         type="text"
-                        class="tw:flex-1 tw:min-w-0 tw:px-3 tw:py-2.5 tw:text-grey-400 tw:text-xs tw:font-mono tw:bg-white tw:border-none tw:outline-none"
+                        class="flex-1 min-w-0 px-3 py-2.5 text-grey-400 text-xs font-mono bg-white border-none outline-none"
                         value={HexpmWeb.PackageView.dep_snippet(tool, @package, @current_release)}
                         readonly
                         onfocus="this.select();"
@@ -221,9 +221,9 @@ defmodule HexpmWeb.Components.PackageLayout do
                         phx-hook="CopyButton"
                         id={"#{tool}-copy-btn"}
                         data-copy-target={"#{tool}-snippet"}
-                        class="tw:bg-grey-50 tw:border-l tw:border-grey-200 tw:size-9 tw:flex tw:items-center tw:justify-center tw:hover:bg-grey-100 tw:transition-colors tw:shrink-0"
+                        class="bg-grey-50 border-l border-grey-200 size-9 flex items-center justify-center hover:bg-grey-100 transition-colors shrink-0"
                       >
-                        {HexpmWeb.ViewIcons.icon(:heroicon, "square-2-stack", class: "tw:size-4")}
+                        {HexpmWeb.ViewIcons.icon(:heroicon, "square-2-stack", class: "size-4")}
                       </button>
                     </div>
                   </div>
@@ -231,13 +231,13 @@ defmodule HexpmWeb.Components.PackageLayout do
               </div>
 
               <%!-- Package Details Card --%>
-              <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:p-5">
-                <h3 class="tw:text-grey-700 tw:text-lg tw:font-semibold tw:mb-4">Package Details</h3>
+              <div class="bg-white border border-grey-200 rounded-lg p-5">
+                <h3 class="text-grey-700 text-lg font-semibold mb-4">Package Details</h3>
 
                 <%!-- Downloads Chart --%>
                 <%= if @graph_points != "" do %>
-                  <div class="tw:mb-5">
-                    <svg viewBox="0 0 260 70" class="tw:w-full tw:h-auto">
+                  <div class="mb-5">
+                    <svg viewBox="0 0 260 70" class="w-full h-auto">
                       <defs>
                         <linearGradient id="pkg-grad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="260" y2="70">
                           <stop offset="0%" style="stop-color:#4f28a7;" />
@@ -258,45 +258,45 @@ defmodule HexpmWeb.Components.PackageLayout do
                 <% end %>
 
                 <%!-- Download Stats --%>
-                <div class="tw:grid tw:grid-cols-3 tw:gap-3 tw:pb-4 tw:border-b tw:border-grey-200">
-                  <div class="tw:flex tw:flex-col tw:gap-0.5">
-                    <p class="tw:text-grey-400 tw:text-[10px] tw:font-medium tw:uppercase tw:tracking-wide">this version</p>
-                    <p class="tw:text-grey-700 tw:text-base tw:font-bold">{ViewHelpers.human_number_space(@this_version_downloads)}</p>
+                <div class="grid grid-cols-3 gap-3 pb-4 border-b border-grey-200">
+                  <div class="flex flex-col gap-0.5">
+                    <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">this version</p>
+                    <p class="text-grey-700 text-base font-bold">{ViewHelpers.human_number_space(@this_version_downloads)}</p>
                   </div>
-                  <div class="tw:flex tw:flex-col tw:gap-0.5">
-                    <p class="tw:text-grey-400 tw:text-[10px] tw:font-medium tw:uppercase tw:tracking-wide">last 7 days</p>
-                    <p class="tw:text-grey-700 tw:text-base tw:font-bold">{ViewHelpers.human_number_space(@downloads["week"] || 0)}</p>
+                  <div class="flex flex-col gap-0.5">
+                    <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">last 7 days</p>
+                    <p class="text-grey-700 text-base font-bold">{ViewHelpers.human_number_space(@downloads["week"] || 0)}</p>
                   </div>
-                  <div class="tw:flex tw:flex-col tw:gap-0.5">
-                    <p class="tw:text-grey-400 tw:text-[10px] tw:font-medium tw:uppercase tw:tracking-wide">all time</p>
-                    <p class="tw:text-grey-700 tw:text-base tw:font-bold">{ViewHelpers.human_number_space(@downloads["all"] || 0)}</p>
+                  <div class="flex flex-col gap-0.5">
+                    <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">all time</p>
+                    <p class="text-grey-700 text-base font-bold">{ViewHelpers.human_number_space(@downloads["all"] || 0)}</p>
                   </div>
                 </div>
 
                 <%!-- Additional Details --%>
-                <div class="tw:grid tw:grid-cols-2 tw:gap-x-3 tw:gap-y-4 tw:pt-4">
-                  <div class="tw:flex tw:flex-col tw:gap-0.5">
-                    <p class="tw:text-grey-400 tw:text-[10px] tw:font-medium tw:uppercase tw:tracking-wide">Last Updated</p>
-                    <p class="tw:text-grey-700 tw:font-bold">{ViewHelpers.pretty_date(@current_release.inserted_at, :short)}</p>
+                <div class="grid grid-cols-2 gap-x-3 gap-y-4 pt-4">
+                  <div class="flex flex-col gap-0.5">
+                    <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">Last Updated</p>
+                    <p class="text-grey-700 font-bold">{ViewHelpers.pretty_date(@current_release.inserted_at, :short)}</p>
                   </div>
                   <%= if @licenses != [] do %>
-                    <div class="tw:flex tw:flex-col tw:gap-0.5">
-                      <p class="tw:text-grey-400 tw:text-[10px] tw:font-medium tw:uppercase tw:tracking-wide">
+                    <div class="flex flex-col gap-0.5">
+                      <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">
                         {if length(@licenses) == 1, do: "License", else: "Licenses"}
                       </p>
-                      <div class="tw:flex tw:items-center tw:gap-1.5 tw:flex-wrap">
-                        <p class="tw:text-grey-700 tw:font-bold">{List.first(@licenses)}</p>
+                      <div class="flex items-center gap-1.5 flex-wrap">
+                        <p class="text-grey-700 font-bold">{List.first(@licenses)}</p>
                         <%= if length(@licenses) > 1 do %>
-                          <div class="tw:relative tw:group">
-                            <span class="tw:text-xs tw:font-medium tw:text-purple-600 tw:cursor-default">
+                          <div class="relative group">
+                            <span class="text-xs font-medium text-purple-600 cursor-default">
                               +{length(@licenses) - 1} more
                             </span>
-                            <div class="tw:absolute tw:bottom-full tw:left-0 tw:mb-1.5 tw:hidden tw:group-hover:block tw:z-10">
-                              <div class="tw:bg-grey-900 tw:text-white tw:text-xs tw:rounded-lg tw:px-3 tw:py-2 tw:whitespace-nowrap tw:shadow-lg">
+                            <div class="absolute bottom-full left-0 mb-1.5 hidden group-hover:block z-10">
+                              <div class="bg-grey-900 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
                                 <%= for license <- tl(@licenses) do %>
                                   <p>{license}</p>
                                 <% end %>
-                                <div class="tw:absolute tw:top-full tw:left-3 tw:border-4 tw:border-transparent tw:border-t-grey-900"></div>
+                                <div class="absolute top-full left-3 border-4 border-transparent border-t-grey-900"></div>
                               </div>
                             </div>
                           </div>
@@ -305,9 +305,9 @@ defmodule HexpmWeb.Components.PackageLayout do
                     </div>
                   <% end %>
                   <%= if @build_tools != [] do %>
-                    <div class="tw:flex tw:flex-col tw:gap-0.5">
-                      <p class="tw:text-grey-400 tw:text-[10px] tw:font-medium tw:uppercase tw:tracking-wide">Build Tools</p>
-                      <div class="tw:flex tw:flex-wrap tw:gap-1.5">
+                    <div class="flex flex-col gap-0.5">
+                      <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">Build Tools</p>
+                      <div class="flex flex-wrap gap-1.5">
                         <%= for tool <- Enum.uniq(@build_tools) do %>
                           <.badge variant="purple">{tool}</.badge>
                         <% end %>
@@ -315,18 +315,18 @@ defmodule HexpmWeb.Components.PackageLayout do
                     </div>
                   <% end %>
                   <%= if @current_release.publisher do %>
-                    <div class="tw:flex tw:flex-col tw:gap-0.5">
-                      <p class="tw:text-grey-400 tw:text-[10px] tw:font-medium tw:uppercase tw:tracking-wide">Publisher</p>
+                    <div class="flex flex-col gap-0.5">
+                      <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">Publisher</p>
                       <a
                         href={HexpmWeb.Router.user_path(@current_release.publisher)}
-                        class="tw:flex tw:items-center tw:gap-1.5 tw:hover:text-purple-600 tw:transition-colors"
+                        class="flex items-center gap-1.5 hover:text-purple-600 transition-colors"
                       >
                         <img
                           src={ViewHelpers.gravatar_url(Hexpm.Accounts.User.email(@current_release.publisher, :gravatar), :small)}
-                          class="tw:size-5 tw:rounded-full"
+                          class="size-5 rounded-full"
                           alt={@current_release.publisher.username}
                         />
-                        <span class="tw:text-grey-700 tw:text-sm tw:font-medium">{@current_release.publisher.username}</span>
+                        <span class="text-grey-700 text-sm font-medium">{@current_release.publisher.username}</span>
                       </a>
                     </div>
                   <% end %>
@@ -369,9 +369,9 @@ defmodule HexpmWeb.Components.PackageLayout do
 
   defp tab_class(true),
     do:
-      "tw:flex tw:items-center tw:gap-1 tw:px-[18px] tw:py-3 tw:text-primary-default tw:font-medium tw:border-b-2 tw:border-primary-default tw:-mb-px"
+      "flex items-center gap-1 px-[18px] py-3 text-primary-default font-medium border-b-2 border-primary-default -mb-px"
 
   defp tab_class(false),
     do:
-      "tw:flex tw:items-center tw:gap-1 tw:px-[18px] tw:py-3 tw:text-grey-500 tw:font-medium tw:hover:text-grey-700 tw:transition-colors"
+      "flex items-center gap-1 px-[18px] py-3 text-grey-500 font-medium hover:text-grey-700 transition-colors"
 end

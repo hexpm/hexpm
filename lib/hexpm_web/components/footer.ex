@@ -16,9 +16,9 @@ defmodule HexpmWeb.Components.Footer do
   """
   def footer(assigns) do
     ~H"""
-    <footer class="tw:bg-grey-900 tw:text-grey-200 tw:font-sans">
-      <div class="tw:max-w-7xl tw:mx-auto tw:px-4 tw:lg:px-0 tw:pt-12 tw:pb-10 tw:flex tw:flex-col tw:gap-10">
-        <div class="tw:flex tw:flex-col tw:gap-10 tw:lg:flex-row tw:lg:items-start tw:lg:gap-24 tw:xl:gap-28">
+    <footer class="bg-grey-900 text-grey-200 font-sans">
+      <div class="max-w-7xl mx-auto px-4 lg:px-0 pt-12 pb-10 flex flex-col gap-10">
+        <div class="flex flex-col gap-10 lg:flex-row lg:items-start lg:gap-24 xl:gap-28">
           <.footer_branding />
           <.footer_links />
         </div>
@@ -30,10 +30,10 @@ defmodule HexpmWeb.Components.Footer do
 
   defp footer_branding(assigns) do
     ~H"""
-    <div class="tw:flex tw:w-full tw:items-start tw:justify-between tw:gap-6 tw:lg:w-auto tw:lg:flex-col tw:lg:items-start tw:lg:justify-start tw:lg:gap-6">
-      <div class="tw:flex tw:items-center tw:gap-3">
-        <img src={~p"/images/hex-full.svg"} alt="hex logo" class="tw:h-8 tw:w-auto" />
-        <span class="tw:text-white tw:text-2xl tw:font-bold tw:tracking-tight">
+    <div class="flex w-full items-start justify-between gap-6 lg:w-auto lg:flex-col lg:items-start lg:justify-start lg:gap-6">
+      <div class="flex items-center gap-3">
+        <img src={~p"/images/hex-full.svg"} alt="hex logo" class="h-8 w-auto" />
+        <span class="text-white text-2xl font-bold tracking-tight">
           Hex
         </span>
       </div>
@@ -44,7 +44,7 @@ defmodule HexpmWeb.Components.Footer do
 
   defp social_links(assigns) do
     ~H"""
-    <div class="tw:flex tw:gap-3 tw:lg:mt-4">
+    <div class="flex gap-3 lg:mt-4">
       <.social_link
         href="https://github.com/hexpm"
         label="GitHub"
@@ -67,7 +67,7 @@ defmodule HexpmWeb.Components.Footer do
     ~H"""
     <a
       href={@href}
-      class="tw:inline-flex tw:h-10 tw:w-10 tw:items-center tw:justify-center tw:rounded-lg tw:bg-grey-800 tw:text-slate-200 tw:hover:bg-grey-700 tw:transition tw:duration-200 tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-grey-500"
+      class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-grey-800 text-slate-200 hover:bg-grey-700 transition duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-grey-500"
       target="_blank"
       rel="noopener noreferrer"
       aria-label={@label}
@@ -79,8 +79,8 @@ defmodule HexpmWeb.Components.Footer do
 
   defp footer_links(assigns) do
     ~H"""
-    <div class="tw:flex-1">
-      <div class="tw:grid tw:grid-cols-2 tw:gap-y-4 tw:gap-x-12 tw:md:grid-cols-3 tw:lg:gap-x-16 tw:xl:gap-x-24">
+    <div class="flex-1">
+      <div class="grid grid-cols-2 gap-y-4 gap-x-12 md:grid-cols-3 lg:gap-x-16 xl:gap-x-24">
         <.footer_link_column>
           <.footer_link href={~p"/about"} label="About" />
           <.footer_link href={~p"/blog"} label="Blog" />
@@ -125,7 +125,7 @@ defmodule HexpmWeb.Components.Footer do
 
   defp footer_link_column(assigns) do
     ~H"""
-    <div class="tw:flex tw:flex-col tw:gap-3 tw:font-medium tw:leading-4">
+    <div class="flex flex-col gap-3 font-medium leading-4">
       {render_slot(@inner_block)}
     </div>
     """
@@ -139,7 +139,7 @@ defmodule HexpmWeb.Components.Footer do
     ~H"""
     <a
       href={@href}
-      class="tw:hover:text-white tw:transition-colors"
+      class="text-grey-200 hover:text-white transition-colors"
       target={if @external, do: "_blank"}
       rel={if @external, do: "noopener noreferrer"}
     >
@@ -150,12 +150,12 @@ defmodule HexpmWeb.Components.Footer do
 
   defp footer_copyright(assigns) do
     ~H"""
-    <div class="tw:bg-grey-800">
-      <div class="tw:max-w-7xl tw:mx-auto tw:px-4 tw:lg:px-0 tw:py-4 tw:flex tw:flex-col tw:items-center tw:gap-3 tw:text-sm tw:text-grey-200 tw:md:flex-row tw:md:justify-between">
-        <p class="tw:text-center tw:leading-[14px] tw:md:text-left">
+    <div class="bg-grey-800">
+      <div class="max-w-7xl mx-auto px-4 lg:px-0 py-4 flex flex-col items-center gap-3 text-sm text-grey-200 md:flex-row md:justify-between">
+        <p class="text-center leading-[14px] md:text-left">
           Copyright 2025. Six Colors AB.
         </p>
-        <p class="tw:text-center tw:leading-[18px] tw:md:text-right">
+        <p class="text-center leading-[18px] md:text-right">
           Powered by the Erlang VM and the Elixir Programming Language
         </p>
       </div>

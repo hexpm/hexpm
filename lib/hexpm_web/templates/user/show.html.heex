@@ -1,8 +1,8 @@
-<div class="tw:bg-grey-50 tw:min-h-screen tw:py-8">
-  <div class="tw:max-w-7xl tw:mx-auto tw:px-4 tw:lg:px-0">
-    <div class="tw:flex tw:flex-col tw:gap-10 tw:lg:flex-row">
+<div class="bg-grey-50 min-h-screen py-8">
+  <div class="max-w-7xl mx-auto px-4 lg:px-0">
+    <div class="flex flex-col gap-10 lg:flex-row">
       <%!-- Left Sidebar - Profile --%>
-      <div class="tw:w-full tw:lg:w-[25%] tw:flex-shrink-0">
+      <div class="w-full lg:w-[25%] flex-shrink-0">
         <.user_sidebar
           user={@user}
           gravatar_email={@gravatar_email}
@@ -13,11 +13,11 @@
       </div>
 
       <%!-- Right Content - Packages --%>
-      <div class="tw:w-full tw:lg:w-[75%]">
+      <div class="w-full lg:w-[75%]">
         <%!-- Header with Sort (only show if there are packages) --%>
         <%= if @total_count > 0 do %>
-          <div class="tw:flex tw:items-center tw:justify-between tw:mb-6">
-            <h1 class="tw:text-grey-900 tw:text-xl tw:font-semibold">
+          <div class="flex items-center justify-between mb-6">
+            <h1 class="text-grey-900 text-xl font-semibold">
               Packages
             </h1>
 
@@ -41,26 +41,26 @@
 
         <%!-- Packages Grid or Empty State --%>
         <%= if @total_count == 0 do %>
-          <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:mt-6 tw:py-32 tw:flex tw:flex-col tw:items-center tw:justify-center">
+          <div class="bg-white border border-grey-200 rounded-lg mt-6 py-32 flex flex-col items-center justify-center">
             <%!-- Package Icon --%>
-            <div class="tw:mb-4">
+            <div class="mb-4">
               <img
                 src={~p"/images/icons/package-box.svg"}
                 alt="Package icon"
-                class="tw:w-24 tw:h-24 tw:opacity-40 tw:grayscale"
+                class="w-24 h-24 opacity-40 grayscale"
               />
             </div>
 
             <%!-- Empty State Text --%>
-            <h3 class="tw:text-grey-900 tw:text-xl tw:font-semibold tw:mb-2">
+            <h3 class="text-grey-900 text-xl font-semibold mb-2">
               No Packages
             </h3>
-            <p class="tw:text-grey-500 tw:text-base">
+            <p class="text-grey-500 text-base">
               The author hasn't added any packages.
             </p>
           </div>
         <% else %>
-          <div class="tw:grid tw:grid-cols-1 tw:lg:grid-cols-2 tw:gap-4">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <%= for package <- @packages do %>
               <.package_card
                 package={package}

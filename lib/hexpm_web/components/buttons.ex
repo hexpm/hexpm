@@ -13,7 +13,7 @@ defmodule HexpmWeb.Components.Buttons do
       <.button>Save</.button>
       <.button variant="secondary">Cancel</.button>
       <.button variant="danger" phx-click="delete">Delete</.button>
-      <.button variant="outline" class="tw:w-full">Sign Up</.button>
+      <.button variant="outline" class="w-full">Sign Up</.button>
 
       <.button disabled>Disabled</.button>
       <.button loading>Processing...</.button>
@@ -50,22 +50,22 @@ defmodule HexpmWeb.Components.Buttons do
       class={
         [
           # Base styles
-          "tw:inline-flex tw:items-center tw:justify-center tw:gap-2 tw:font-semibold tw:rounded",
-          "tw:transition-colors tw:focus:outline-none tw:focus:ring-2 tw:focus:ring-offset-2",
-          "tw:cursor-pointer",
+          "inline-flex items-center justify-center gap-2 font-semibold rounded",
+          "transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2",
+          "cursor-pointer",
           # Size variants
           button_size(@size),
           # Color variants
           button_variant(@variant),
           # Disabled state - use CSS pseudo-class for dynamic changes
-          "disabled:tw:opacity-50 disabled:tw:cursor-not-allowed",
-          @full_width && "tw:w-full",
+          "disabled:opacity-50 disabled:cursor-not-allowed",
+          @full_width && "w-full",
           @class
         ]
       }
       {@rest}
     >
-      <span :if={@loading} class="tw:animate-spin">
+      <span :if={@loading} class="animate-spin">
         {icon(:heroicon, "arrow-path", width: 16, height: 16)}
       </span>
       {render_slot(@inner_block)}
@@ -104,14 +104,14 @@ defmodule HexpmWeb.Components.Buttons do
       class={
         [
           # Base styles
-          "tw:inline-flex tw:items-center tw:justify-center tw:gap-2 tw:font-semibold tw:rounded",
-          "tw:transition-colors tw:focus:outline-none tw:focus:ring-2 tw:focus:ring-offset-2",
-          "tw:cursor-pointer",
+          "inline-flex items-center justify-center gap-2 font-semibold rounded",
+          "transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2",
+          "cursor-pointer",
           # Size variants
           button_size(@size),
           # Color variants
           button_variant(@variant),
-          @full_width && "tw:w-full",
+          @full_width && "w-full",
           @class
         ]
       }
@@ -123,64 +123,64 @@ defmodule HexpmWeb.Components.Buttons do
   end
 
   # Size variants
-  defp button_size("sm"), do: "tw:h-9 tw:px-3 tw:text-sm"
-  defp button_size("md"), do: "tw:h-12 tw:px-4 tw:text-md"
-  defp button_size("lg"), do: "tw:h-14 tw:px-6 tw:text-lg"
+  defp button_size("sm"), do: "h-9 px-3 text-sm"
+  defp button_size("md"), do: "h-12 px-4 text-md"
+  defp button_size("lg"), do: "h-14 px-6 text-lg"
 
   # Color variants
   defp button_variant("primary") do
     [
-      "tw:bg-primary-600 tw:text-white",
-      "tw:hover:bg-primary-700",
-      "tw:focus:ring-primary-500"
+      "bg-primary-600 text-white",
+      "hover:bg-primary-700",
+      "focus:ring-primary-500"
     ]
   end
 
   defp button_variant("secondary") do
     [
-      "tw:bg-grey-200 tw:text-grey-900",
-      "tw:hover:bg-grey-300",
-      "tw:focus:ring-grey-400"
+      "bg-grey-200 text-grey-900",
+      "hover:bg-grey-300",
+      "focus:ring-grey-400"
     ]
   end
 
   defp button_variant("danger") do
     [
-      "tw:bg-red-600 tw:text-white",
-      "tw:hover:bg-red-700",
-      "tw:focus:ring-red-500"
+      "bg-red-600 text-white",
+      "hover:bg-red-700",
+      "focus:ring-red-500"
     ]
   end
 
   defp button_variant("danger-outline") do
     [
-      "tw:bg-white tw:border tw:border-red-300 tw:text-red-600",
-      "tw:hover:bg-red-50",
-      "tw:focus:ring-red-500"
+      "bg-white border border-red-300 text-red-600",
+      "hover:bg-red-50",
+      "focus:ring-red-500"
     ]
   end
 
   defp button_variant("outline") do
     [
-      "tw:bg-transparent tw:border tw:border-grey-300 tw:text-grey-900",
-      "tw:hover:bg-grey-50",
-      "tw:focus:ring-grey-400"
+      "bg-transparent border border-grey-300 text-grey-900",
+      "hover:bg-grey-50",
+      "focus:ring-grey-400"
     ]
   end
 
   defp button_variant("ghost") do
     [
-      "tw:bg-transparent tw:text-grey-700",
-      "tw:hover:bg-grey-100",
-      "tw:focus:ring-grey-400"
+      "bg-transparent text-grey-700",
+      "hover:bg-grey-100",
+      "focus:ring-grey-400"
     ]
   end
 
   defp button_variant("blue") do
     [
-      "tw:bg-blue-700 tw:text-white",
-      "tw:hover:bg-blue-800",
-      "tw:focus:ring-blue-500"
+      "bg-blue-700 text-white",
+      "hover:bg-blue-800",
+      "focus:ring-blue-500"
     ]
   end
 
@@ -207,9 +207,9 @@ defmodule HexpmWeb.Components.Buttons do
       type={@type}
       disabled={@disabled}
       class={[
-        "tw:p-2 tw:rounded tw:transition-colors tw:cursor-pointer",
+        "p-2 rounded transition-colors cursor-pointer",
         icon_button_variant(@variant),
-        "tw:disabled:opacity-50 tw:disabled:cursor-not-allowed",
+        "disabled:opacity-50 disabled:cursor-not-allowed",
         @class
       ]}
       {@rest}
@@ -248,8 +248,8 @@ defmodule HexpmWeb.Components.Buttons do
       navigate={@navigate}
       patch={@patch}
       class={[
-        "tw:transition-colors tw:cursor-pointer",
-        "tw:focus:outline-none tw:focus:ring-2 tw:focus:ring-offset-2",
+        "transition-colors cursor-pointer",
+        "focus:outline-none focus:ring-2 focus:ring-offset-2",
         text_link_variant(@variant),
         @class
       ]}
@@ -262,27 +262,27 @@ defmodule HexpmWeb.Components.Buttons do
 
   # Text link variants
   defp text_link_variant("primary") do
-    "tw:text-blue-600 tw:hover:text-blue-500 tw:focus:ring-blue-500 tw:font-medium"
+    "text-blue-600 hover:text-blue-500 focus:ring-blue-500 font-medium"
   end
 
   defp text_link_variant("secondary") do
-    "tw:text-grey-600 tw:hover:text-grey-900 tw:focus:ring-grey-400 tw:font-medium"
+    "text-grey-600 hover:text-grey-900 focus:ring-grey-400 font-medium"
   end
 
   defp text_link_variant("purple") do
-    "tw:text-primary-700 tw:hover:text-primary-800 tw:hover:underline tw:focus:ring-primary-500 tw:font-semibold"
+    "text-primary-700 hover:text-primary-800 hover:underline focus:ring-primary-500 font-semibold"
   end
 
   # Icon button variants
   defp icon_button_variant("default") do
-    "tw:text-grey-400 tw:hover:text-grey-700 tw:hover:bg-grey-100 tw:disabled:hover:text-grey-400 tw:disabled:hover:bg-transparent"
+    "text-grey-400 hover:text-grey-700 hover:bg-grey-100 disabled:hover:text-grey-400 disabled:hover:bg-transparent"
   end
 
   defp icon_button_variant("danger") do
-    "tw:text-grey-400 tw:hover:text-red-600 tw:hover:bg-red-50 tw:disabled:hover:text-grey-400 tw:disabled:hover:bg-transparent"
+    "text-grey-400 hover:text-red-600 hover:bg-red-50 disabled:hover:text-grey-400 disabled:hover:bg-transparent"
   end
 
   defp icon_button_variant("primary") do
-    "tw:text-grey-400 tw:hover:text-primary-600 tw:hover:bg-primary-50 tw:disabled:hover:text-grey-400 tw:disabled:hover:bg-transparent"
+    "text-grey-400 hover:text-primary-600 hover:bg-primary-50 disabled:hover:text-grey-400 disabled:hover:bg-transparent"
   end
 end

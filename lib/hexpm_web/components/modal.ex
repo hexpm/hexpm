@@ -38,23 +38,23 @@ defmodule HexpmWeb.Components.Modal do
     |> JS.show(
       to: "##{id}",
       transition:
-        {"tw:transition-all tw:transform tw:ease-out tw:duration-300", "tw:opacity-0",
-         "tw:opacity-100"}
+        {"transition-all transform ease-out duration-300", "opacity-0",
+         "opacity-100"}
     )
     |> JS.show(
       to: "##{id}-backdrop",
       transition:
-        {"tw:transition-all tw:transform tw:ease-out tw:duration-300", "tw:opacity-0",
-         "tw:opacity-100"}
+        {"transition-all transform ease-out duration-300", "opacity-0",
+         "opacity-100"}
     )
     |> JS.show(
       to: "##{id}-content",
       transition:
-        {"tw:transition-all tw:transform tw:ease-out tw:duration-300",
-         "tw:opacity-0 tw:translate-y-4 sm:tw:translate-y-0 sm:tw:scale-95",
-         "tw:opacity-100 tw:translate-y-0 sm:tw:scale-100"}
+        {"transition-all transform ease-out duration-300",
+         "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95",
+         "opacity-100 translate-y-0 sm:scale-100"}
     )
-    |> JS.add_class("tw:overflow-hidden", to: "body")
+    |> JS.add_class("overflow-hidden", to: "body")
     |> JS.focus_first(to: "##{id}-content")
   end
 
@@ -69,23 +69,23 @@ defmodule HexpmWeb.Components.Modal do
     |> JS.hide(
       to: "##{id}",
       transition:
-        {"tw:transition-all tw:transform tw:ease-in tw:duration-200", "tw:opacity-100",
-         "tw:opacity-0"}
+        {"transition-all transform ease-in duration-200", "opacity-100",
+         "opacity-0"}
     )
     |> JS.hide(
       to: "##{id}-backdrop",
       transition:
-        {"tw:transition-all tw:transform tw:ease-in tw:duration-200", "tw:opacity-100",
-         "tw:opacity-0"}
+        {"transition-all transform ease-in duration-200", "opacity-100",
+         "opacity-0"}
     )
     |> JS.hide(
       to: "##{id}-content",
       transition:
-        {"tw:transition-all tw:transform tw:ease-in tw:duration-200",
-         "tw:opacity-100 tw:translate-y-0 sm:tw:scale-100",
-         "tw:opacity-0 tw:translate-y-4 sm:tw:translate-y-0 sm:tw:scale-95"}
+        {"transition-all transform ease-in duration-200",
+         "opacity-100 translate-y-0 sm:scale-100",
+         "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"}
     )
-    |> JS.remove_class("tw:overflow-hidden", to: "body")
+    |> JS.remove_class("overflow-hidden", to: "body")
   end
 
   @doc """
@@ -105,28 +105,28 @@ defmodule HexpmWeb.Components.Modal do
     ~H"""
     <div
       id={@id}
-      class={["tw:relative tw:z-50", @class]}
+      class={["relative z-50", @class]}
       aria-labelledby={"#{@id}-title"}
       style={unless @show, do: "display: none;"}
     >
       <%!-- Backdrop --%>
       <div
         id={"#{@id}-backdrop"}
-        class="tw:fixed tw:inset-0 tw:bg-grey-900/25 tw:transition-opacity"
+        class="fixed inset-0 bg-grey-900/25 transition-opacity"
         aria-hidden="true"
         phx-click={hide_modal(@id)}
       >
       </div>
 
       <%!-- Modal Container --%>
-      <div class="tw:fixed tw:inset-0 tw:z-10 tw:overflow-y-auto">
-        <div class="tw:flex tw:min-h-full tw:items-center tw:justify-center tw:p-4">
+      <div class="fixed inset-0 z-10 overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4">
           <%!-- Modal Content --%>
           <div
             id={"#{@id}-content"}
             class={[
-              "tw:relative tw:w-full tw:bg-white tw:rounded-[20px] tw:flex tw:flex-col tw:max-h-[calc(100vh-2rem)] tw:p-6",
-              "tw:shadow-[0px_15px_50px_0px_rgba(3,9,19,0.4)]",
+              "relative w-full bg-white rounded-[20px] flex flex-col max-h-[calc(100vh-2rem)] p-6",
+              "shadow-[0px_15px_50px_0px_rgba(3,9,19,0.4)]",
               modal_max_width(@max_width)
             ]}
             role="dialog"
@@ -136,7 +136,7 @@ defmodule HexpmWeb.Components.Modal do
             phx-key="escape"
           >
             <%!-- Close Button (top right) --%>
-            <div class="tw:absolute tw:top-6 tw:right-6">
+            <div class="absolute top-6 right-6">
               <.icon_button
                 icon="x-mark"
                 variant="default"
@@ -147,11 +147,11 @@ defmodule HexpmWeb.Components.Modal do
 
             <%!-- Header --%>
             <%= if @header != [] || @title do %>
-              <div class="tw:mb-4 tw:pr-10">
+              <div class="mb-4 pr-10">
                 <%= if @header != [] do %>
                   {render_slot(@header)}
                 <% else %>
-                  <h2 id={"#{@id}-title"} class="tw:text-lg tw:font-semibold tw:text-grey-900">
+                  <h2 id={"#{@id}-title"} class="text-lg font-semibold text-grey-900">
                     {@title}
                   </h2>
                 <% end %>
@@ -159,13 +159,13 @@ defmodule HexpmWeb.Components.Modal do
             <% end %>
 
             <%!-- Body --%>
-            <div class="tw:flex-1 tw:overflow-y-auto tw:px-0.5 tw:py-0.5">
+            <div class="flex-1 overflow-y-auto px-0.5 py-0.5">
               {render_slot(@inner_block)}
             </div>
 
             <%!-- Footer --%>
             <%= if @footer != [] do %>
-              <div class="tw:flex tw:items-center tw:justify-end tw:gap-3 tw:mt-6">
+              <div class="flex items-center justify-end gap-3 mt-6">
                 {render_slot(@footer)}
               </div>
             <% end %>
@@ -176,11 +176,11 @@ defmodule HexpmWeb.Components.Modal do
     """
   end
 
-  defp modal_max_width("sm"), do: "tw:max-w-sm"
-  defp modal_max_width("md"), do: "tw:max-w-md"
-  defp modal_max_width("lg"), do: "tw:max-w-lg"
-  defp modal_max_width("xl"), do: "tw:max-w-xl"
-  defp modal_max_width("2xl"), do: "tw:max-w-2xl"
-  defp modal_max_width("3xl"), do: "tw:max-w-3xl"
-  defp modal_max_width("4xl"), do: "tw:max-w-4xl"
+  defp modal_max_width("sm"), do: "max-w-sm"
+  defp modal_max_width("md"), do: "max-w-md"
+  defp modal_max_width("lg"), do: "max-w-lg"
+  defp modal_max_width("xl"), do: "max-w-xl"
+  defp modal_max_width("2xl"), do: "max-w-2xl"
+  defp modal_max_width("3xl"), do: "max-w-3xl"
+  defp modal_max_width("4xl"), do: "max-w-4xl"
 end

@@ -11,14 +11,14 @@ defmodule HexpmWeb.Components.Table do
 
       <.table>
         <:header>
-          <th class="tw:px-0 tw:py-3 tw:text-left">Name</th>
-          <th class="tw:px-4 tw:py-3 tw:text-left">Status</th>
-          <th class="tw:px-4 tw:py-3 tw:text-right">Actions</th>
+          <th class="px-0 py-3 text-left">Name</th>
+          <th class="px-4 py-3 text-left">Status</th>
+          <th class="px-4 py-3 text-right">Actions</th>
         </:header>
         <:row>
-          <td class="tw:px-0 tw:py-4">John Doe</td>
-          <td class="tw:px-4 tw:py-4">Active</td>
-          <td class="tw:px-4 tw:py-4 tw:text-right">...</td>
+          <td class="px-0 py-4">John Doe</td>
+          <td class="px-4 py-4">Active</td>
+          <td class="px-4 py-4 text-right">...</td>
         </:row>
       </.table>
   """
@@ -29,14 +29,14 @@ defmodule HexpmWeb.Components.Table do
 
   def table(assigns) do
     ~H"""
-    <div class={["tw:border-b tw:border-grey-200 tw:mb-6", @class]}>
-      <table class="tw:w-full">
+    <div class={["border-b border-grey-200 mb-6", @class]}>
+      <table class="w-full">
         <thead>
-          <tr class="tw:border-b tw:border-grey-200">
+          <tr class="border-b border-grey-200">
             {render_slot(@header)}
           </tr>
         </thead>
-        <tbody class="tw:divide-y tw:divide-grey-200">
+        <tbody class="divide-y divide-grey-200">
           {render_slot(@row)}
         </tbody>
       </table>

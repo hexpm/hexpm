@@ -1,5 +1,4 @@
-/* Tailwind CSS v4 with prefix to avoid conflicts with existing SCSS */
-@import "tailwindcss" prefix(tw);
+@import "tailwindcss";
 
 /* Tell Tailwind where to scan for classes */
 @source "../lib";
@@ -24,10 +23,6 @@ body {
 
 /*
  * Hex.pm Design System
- * Use tw: prefix for all Tailwind utility classes, e.g.:
- *   <h1 class="tw:text-h1 tw:font-bold tw:text-grey-900">Title</h1>
- *   <p class="tw:text-body tw:text-grey-700">Body text</p>
- *   <code class="tw:font-mono tw:text-small">code</code>
  */
 
 @theme {
@@ -181,42 +176,82 @@ body {
     line-height: 1.5;
   }
 
-  /* Links (global - navbar overrides with tw: classes) */
+  /* Remove browser default link underlines; color must be set explicitly per context */
   a {
-    color: var(--color-primary-700);
     text-decoration: none;
     transition: color 0.2s ease;
   }
 
-  a:hover {
-    color: var(--color-primary-500);
-  }
-
-  /* Code blocks */
+  /* Code blocks — base font only */
   code,
   pre {
     font-family: var(--font-mono);
   }
+}
 
-  code {
-    font-size: 0.875em;
-    background-color: var(--color-grey-100);
-    padding: 0.125rem 0.25rem;
-    border-radius: 0.25rem;
-  }
+/* ===== MARKDOWN / PROSE STYLES ===== */
+/* Scoped styles for blog, docs, policy, and other markdown-rendered content.
+   NOT applied globally — UI components use Tailwind utilities directly. */
 
-  pre {
-    background-color: var(--color-grey-900);
-    color: var(--color-grey-100);
-    padding: 1rem;
-    border-radius: 0.5rem;
-    overflow-x: auto;
-  }
+.blog-content a,
+.policy-content a,
+.docs-content a,
+.prose a {
+  color: #2563eb;
+  text-decoration: underline;
+  font-weight: 500;
+}
 
-  pre code {
-    background: none;
-    padding: 0;
-  }
+.blog-content a:hover,
+.policy-content a:hover,
+.docs-content a:hover,
+.prose a:hover {
+  color: #1d4ed8;
+}
+
+/* Links inside raw markdown paragraph excerpts on the blog index */
+.blog-latest-excerpt a {
+  color: #93c5fd; /* blue-300 — readable on dark bg-grey-900 */
+  text-decoration: underline;
+}
+
+.blog-latest-excerpt a:hover {
+  color: #bfdbfe; /* blue-200 */
+}
+
+.blog-card-excerpt a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.blog-card-excerpt a:hover {
+  color: #1d4ed8;
+}
+
+.blog-content pre,
+.policy-content pre,
+.prose pre {
+  background-color: var(--color-grey-900);
+  color: var(--color-grey-100);
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+}
+
+.blog-content code,
+.policy-content code,
+.prose code {
+  font-size: 0.875em;
+  background-color: var(--color-grey-100);
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+}
+
+.blog-content pre code,
+.policy-content pre code,
+.prose pre code {
+  background: none;
+  padding: 0;
 }
 
 /* ===== LEGACY UTILITY CLASSES ===== */

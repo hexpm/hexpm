@@ -41,7 +41,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingTab do
       |> assign(:member_count, length(assigns.organization.organization_users || []))
 
     ~H"""
-    <div class="tw:space-y-6">
+    <div class="space-y-6">
       <%= if @billing_started? do %>
         <.billing_subscription
           organization={@organization}
@@ -86,12 +86,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingTab do
 
   defp setup_billing_notice(assigns) do
     ~H"""
-    <div class="tw:bg-amber-50 tw:border tw:border-amber-200 tw:rounded-lg tw:px-6 tw:py-5">
-      <h2 class="tw:text-amber-900 tw:text-base tw:font-semibold tw:mb-2">Subscription not active</h2>
-      <p class="tw:text-sm tw:text-amber-800 tw:mb-1">
+    <div class="bg-amber-50 border border-amber-200 rounded-lg px-6 py-5">
+      <h2 class="text-amber-900 text-base font-semibold mb-2">Subscription not active</h2>
+      <p class="text-sm text-amber-800 mb-1">
         Private packages will not be available until a payment method has been added.
       </p>
-      <p class="tw:text-sm tw:text-amber-800">
+      <p class="text-sm text-amber-800">
         Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.
         Enter your billing information below to enable the payment method form.
       </p>

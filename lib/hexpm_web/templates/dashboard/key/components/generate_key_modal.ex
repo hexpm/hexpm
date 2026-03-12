@@ -16,7 +16,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
     ~H"""
     <.modal id="generate-key-modal">
       <:header>
-        <h2 class="tw:text-lg tw:font-semibold tw:text-grey-900">
+        <h2 class="text-lg font-semibold text-grey-900">
           Generate New Key
         </h2>
       </:header>
@@ -25,99 +25,99 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
         <input type="hidden" name="_csrf_token" value={@csrf_token} />
 
         <%!-- Key Name --%>
-        <div class="tw:mb-6">
-          <label class="tw:block tw:text-sm tw:font-medium tw:text-grey-700 tw:mb-2">
+        <div class="mb-6">
+          <label class="block text-sm font-medium text-grey-700 mb-2">
             Key name
           </label>
-          <.text_input field={@form[:name]} placeholder="Name" class="tw:w-full" />
+          <.text_input field={@form[:name]} placeholder="Name" class="w-full" />
         </div>
 
         <%!-- Key Permissions --%>
-        <div class="tw:mb-6">
-          <span class="tw:block tw:text-sm tw:font-medium tw:text-grey-700 tw:mb-3">
+        <div class="mb-6">
+          <span class="block text-sm font-medium text-grey-700 mb-3">
             Key permissions
           </span>
 
           <%!-- API Permissions --%>
           <div
-            class="tw:mb-4"
+            class="mb-4"
             phx-hook="PermissionGroup"
             id="api-permission-group"
             data-parent="api-parent"
           >
-            <label class="tw:flex tw:items-center tw:mb-2">
+            <label class="flex items-center mb-2">
               <input
                 type="checkbox"
                 id="api-parent"
                 name="key[permissions][apis]"
                 value="on"
-                class="tw:rounded tw:border-grey-300 tw:text-purple-600 focus:tw:ring-purple-500"
+                class="rounded border-grey-300 text-purple-600 focus:ring-purple-500"
               />
-              <span class="tw:ml-2 tw:text-sm tw:text-grey-700 tw:font-medium">API</span>
+              <span class="ml-2 text-sm text-grey-700 font-medium">API</span>
             </label>
-            <div class="tw:ml-6 tw:space-y-2">
-              <label class="tw:flex tw:items-center">
+            <div class="ml-6 space-y-2">
+              <label class="flex items-center">
                 <input
                   type="checkbox"
                   name="key[permissions][api][read]"
                   value="on"
-                  class="child-checkbox tw:rounded tw:border-grey-300 tw:text-purple-600 focus:tw:ring-purple-500"
+                  class="child-checkbox rounded border-grey-300 text-purple-600 focus:ring-purple-500"
                 />
-                <span class="tw:ml-2 tw:text-sm tw:text-grey-700">Read</span>
+                <span class="ml-2 text-sm text-grey-700">Read</span>
               </label>
-              <label class="tw:flex tw:items-center">
+              <label class="flex items-center">
                 <input
                   type="checkbox"
                   name="key[permissions][api][write]"
                   value="on"
-                  class="child-checkbox tw:rounded tw:border-grey-300 tw:text-purple-600 focus:tw:ring-purple-500"
+                  class="child-checkbox rounded border-grey-300 text-purple-600 focus:ring-purple-500"
                 />
-                <span class="tw:ml-2 tw:text-sm tw:text-grey-700">Write</span>
+                <span class="ml-2 text-sm text-grey-700">Write</span>
               </label>
             </div>
           </div>
 
           <%!-- Repository Permissions --%>
           <%= if @organization do %>
-            <label class="tw:flex tw:items-center">
+            <label class="flex items-center">
               <input
                 type="checkbox"
                 name={"key[permissions][repository][#{@organization.name}]"}
                 value="on"
-                class="tw:rounded tw:border-grey-300 tw:text-purple-600 focus:tw:ring-purple-500"
+                class="rounded border-grey-300 text-purple-600 focus:ring-purple-500"
               />
-              <span class="tw:ml-2 tw:text-sm tw:text-grey-700">Organization repository</span>
+              <span class="ml-2 text-sm text-grey-700">Organization repository</span>
             </label>
           <% else %>
             <div
-              class="tw:mb-4"
+              class="mb-4"
               phx-hook="PermissionGroup"
               id="repositories-permission-group"
               data-parent="repositories-parent"
             >
-              <label class="tw:flex tw:items-center tw:mb-2">
+              <label class="flex items-center mb-2">
                 <input
                   type="checkbox"
                   id="repositories-parent"
                   name="key[permissions][repositories]"
                   value="on"
-                  class="tw:rounded tw:border-grey-300 tw:text-purple-600 focus:tw:ring-purple-500"
+                  class="rounded border-grey-300 text-purple-600 focus:ring-purple-500"
                 />
-                <span class="tw:ml-2 tw:text-sm tw:text-grey-700 tw:font-medium">
+                <span class="ml-2 text-sm text-grey-700 font-medium">
                   All Repositories
                 </span>
               </label>
               <%= if @organizations != [] do %>
-                <div class="tw:ml-6 tw:space-y-2">
+                <div class="ml-6 space-y-2">
                   <%= for organization <- @organizations do %>
-                    <label class="tw:flex tw:items-center">
+                    <label class="flex items-center">
                       <input
                         type="checkbox"
                         name={"key[permissions][repository][#{organization.name}]"}
                         value="on"
-                        class="child-checkbox tw:rounded tw:border-grey-300 tw:text-purple-600 focus:tw:ring-purple-500"
+                        class="child-checkbox rounded border-grey-300 text-purple-600 focus:ring-purple-500"
                       />
-                      <span class="tw:ml-2 tw:text-sm tw:text-grey-700">
+                      <span class="ml-2 text-sm text-grey-700">
                         Repository: {organization.name}
                       </span>
                     </label>
@@ -129,25 +129,25 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
 
           <%!-- Package Permissions --%>
           <%= if @packages != [] do %>
-            <div class="tw:mb-4">
-              <label class="tw:flex tw:items-center tw:mb-2">
+            <div class="mb-4">
+              <label class="flex items-center mb-2">
                 <input
                   type="checkbox"
                   disabled
-                  class="tw:rounded tw:border-grey-300 tw:text-purple-600 focus:tw:ring-purple-500 tw:opacity-50"
+                  class="rounded border-grey-300 text-purple-600 focus:ring-purple-500 opacity-50"
                 />
-                <span class="tw:ml-2 tw:text-sm tw:text-grey-700 tw:font-medium">Packages</span>
+                <span class="ml-2 text-sm text-grey-700 font-medium">Packages</span>
               </label>
-              <div class="tw:ml-6 tw:space-y-2">
+              <div class="ml-6 space-y-2">
                 <%= for package <- @packages do %>
-                  <label class="tw:flex tw:items-center">
+                  <label class="flex items-center">
                     <input
                       type="checkbox"
                       name={"key[permissions][package][#{package.name}]"}
                       value="on"
-                      class="tw:rounded tw:border-grey-300 tw:text-purple-600 focus:tw:ring-purple-500"
+                      class="rounded border-grey-300 text-purple-600 focus:ring-purple-500"
                     />
-                    <span class="tw:ml-2 tw:text-sm tw:text-grey-700">
+                    <span class="ml-2 text-sm text-grey-700">
                       Package: {package.name}
                     </span>
                   </label>
@@ -159,7 +159,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
       </form>
 
       <:footer>
-        <div class="tw:flex tw:gap-3 tw:justify-end">
+        <div class="flex gap-3 justify-end">
           <.button phx-click={hide_modal("generate-key-modal")} variant="secondary">
             Cancel
           </.button>

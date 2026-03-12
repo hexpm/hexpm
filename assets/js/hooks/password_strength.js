@@ -70,13 +70,13 @@ const PasswordStrength = {
       if (!checkIcon || !xIcon) return;
 
       if (checks[key]) {
-        checkIcon.classList.remove("tw:hidden");
-        checkIcon.classList.add("tw:text-green-600");
-        xIcon.classList.add("tw:hidden");
+        checkIcon.classList.remove("hidden");
+        checkIcon.classList.add("text-green-600");
+        xIcon.classList.add("hidden");
       } else {
-        checkIcon.classList.add("tw:hidden");
-        checkIcon.classList.remove("tw:text-green-600");
-        xIcon.classList.remove("tw:hidden");
+        checkIcon.classList.add("hidden");
+        checkIcon.classList.remove("text-green-600");
+        xIcon.classList.remove("hidden");
       }
     });
 
@@ -94,11 +94,11 @@ const PasswordStrength = {
 
   updateStrengthUI(score, length) {
     const strengths = [
-      { label: "Too weak", color: "tw:bg-red-500", width: "25%" },
-      { label: "Weak", color: "tw:bg-orange-500", width: "40%" },
-      { label: "Fair", color: "tw:bg-yellow-500", width: "60%" },
-      { label: "Good", color: "tw:bg-blue-500", width: "80%" },
-      { label: "Strong", color: "tw:bg-green-600", width: "100%" },
+      { label: "Too weak", color: "bg-red-500", width: "25%" },
+      { label: "Weak", color: "bg-orange-500", width: "40%" },
+      { label: "Fair", color: "bg-yellow-500", width: "60%" },
+      { label: "Good", color: "bg-blue-500", width: "80%" },
+      { label: "Strong", color: "bg-green-600", width: "100%" },
     ];
 
     const strength = length === 0 ? null : strengths[score];
@@ -108,14 +108,14 @@ const PasswordStrength = {
       if (this.strengthBar) {
         this.strengthBar.style.width = "0%";
         this.strengthBar.className =
-          "tw:h-full tw:rounded-full tw:transition-all tw:duration-300";
+          "h-full rounded-full transition-all duration-300";
       }
       if (this.progressBar) {
         this.progressBar.setAttribute("aria-valuenow", "0");
       }
       if (this.strengthLabel) {
         this.strengthLabel.textContent = "";
-        this.strengthLabel.className = "tw:text-small tw:font-medium";
+        this.strengthLabel.className = "text-small font-medium";
       }
       return;
     }
@@ -126,7 +126,7 @@ const PasswordStrength = {
     // Update strength bar
     if (this.strengthBar) {
       this.strengthBar.style.width = strength.width;
-      this.strengthBar.className = `tw:h-full tw:rounded-full tw:transition-all tw:duration-300 ${strength.color}`;
+      this.strengthBar.className = `h-full rounded-full transition-all duration-300 ${strength.color}`;
     }
 
     // Update ARIA progress value
@@ -138,13 +138,13 @@ const PasswordStrength = {
     if (this.strengthLabel) {
       this.strengthLabel.textContent = strength.label;
       const labelColors = {
-        "Too weak": "tw:text-red-600",
-        Weak: "tw:text-orange-600",
-        Fair: "tw:text-yellow-600",
-        Good: "tw:text-blue-600",
-        Strong: "tw:text-green-600",
+        "Too weak": "text-red-600",
+        Weak: "text-orange-600",
+        Fair: "text-yellow-600",
+        Good: "text-blue-600",
+        Strong: "text-green-600",
       };
-      this.strengthLabel.className = `tw:text-small tw:font-medium ${
+      this.strengthLabel.className = `text-small font-medium ${
         labelColors[strength.label]
       }`;
     }

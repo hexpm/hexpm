@@ -78,11 +78,11 @@ const PasswordMatch = {
   },
 
   showError() {
-    this.errorContainer.classList.remove("tw:hidden");
+    this.errorContainer.classList.remove("hidden");
   },
 
   hideError() {
-    this.errorContainer.classList.add("tw:hidden");
+    this.errorContainer.classList.add("hidden");
   },
 };
 

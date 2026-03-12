@@ -15,44 +15,42 @@ description = @package.meta.description
   repository_name={@repository_name}
 >
   <:inner_content>
-    <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:p-6">
-      <h2 class="tw:text-grey-900 tw:text-[32px] tw:font-semibold tw:mb-11">
+    <div class="bg-white border border-grey-200 rounded-lg p-6">
+      <h2 class="text-grey-900 text-[32px] font-semibold mb-11">
         {ViewHelpers.package_name(@package)}
       </h2>
 
       <%= if description do %>
-        <div class="tw:text-grey-600 tw:mb-8 tw:leading-relaxed">
+        <div class="text-grey-600 mb-8 leading-relaxed">
           {ViewHelpers.text_length(description, 300) |> text_to_html(insert_brs: false)}
         </div>
       <% end %>
 
       <%!-- Installation Section --%>
       <%= if @current_release do %>
-        <section class="tw:mb-8">
-          <h3 class="tw:text-grey-900 tw:text-2xl tw:font-semibold tw:mb-4">Installation</h3>
-          <p class="tw:text-grey-600 tw:mb-3">
+        <section class="mb-8">
+          <h3 class="text-grey-900 text-2xl font-semibold mb-4">Installation</h3>
+          <p class="text-grey-600 mb-3">
             The package can be installed by adding
-            <code class="tw:bg-grey-50 tw:px-2 tw:py-0.5 tw:rounded tw:text-grey-500 tw:text-sm tw:font-mono">
+            <code class="bg-grey-50 px-2 py-0.5 rounded text-grey-500 text-sm font-mono">
               {@package.name}
             </code>
             to your list of dependencies in mix.exs:
           </p>
-          <div class="tw:bg-grey-50 tw:rounded-lg tw:p-4 tw:font-mono tw:text-sm tw:text-grey-600">
-            <pre phx-no-curly-interpolation>def deps do
+          <pre phx-no-curly-interpolation class="bg-grey-50 rounded-lg p-4 font-mono text-sm text-grey-600 overflow-x-auto">def deps do
   [{:<%= @package.name %>, "~> <%= @current_release.version %>"}]
 end</pre>
-          </div>
         </section>
       <% end %>
 
       <%!-- Links Section --%>
       <%= if links != [] do %>
-        <section class="tw:mb-8">
-          <h3 class="tw:text-grey-900 tw:text-2xl tw:font-semibold tw:mb-4">Links</h3>
-          <ul class="tw:space-y-2">
+        <section class="mb-8">
+          <h3 class="text-grey-900 text-2xl font-semibold mb-4">Links</h3>
+          <ul class="space-y-2">
             <%= for {name, link} <- links do %>
               <li>
-                <a href={ViewHelpers.safe_url(link)} rel="nofollow" class="tw:text-blue-600 tw:hover:text-blue-700 tw:hover:underline">
+                <a href={ViewHelpers.safe_url(link)} rel="nofollow" class="text-blue-600 hover:text-blue-700 hover:underline">
                   {name}
                 </a>
               </li>
@@ -63,9 +61,9 @@ end</pre>
 
       <%!-- Licenses Section --%>
       <%= if licenses != [] do %>
-        <section class="tw:mb-8">
-          <h3 class="tw:text-grey-900 tw:text-2xl tw:font-semibold tw:mb-4">Licenses</h3>
-          <p class="tw:text-grey-600">{Enum.join(licenses, ", ")}</p>
+        <section class="mb-8">
+          <h3 class="text-grey-900 text-2xl font-semibold mb-4">Licenses</h3>
+          <p class="text-grey-600">{Enum.join(licenses, ", ")}</p>
         </section>
       <% end %>
     </div>

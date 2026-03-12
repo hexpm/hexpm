@@ -21,7 +21,7 @@ defmodule HexpmWeb.Components.Home do
         href={~p"/docs/usage"}
       >
         Specify your Mix dependencies as two-item tuples like
-        <code class="tw:font-mono tw:text-grey-400">{"{:plug, \"~> 1.1.0\"}"}</code>
+        <code class="font-mono text-grey-400">{"{:plug, \"~> 1.1.0\"}"}</code>
         in your dependency list, Elixir will ask if you want to install Hex if you haven't already.
       </.language_card>
   """
@@ -32,22 +32,22 @@ defmodule HexpmWeb.Components.Home do
 
   def language_card(assigns) do
     ~H"""
-    <div class="tw:bg-grey-900 tw:rounded-xl tw:p-8 tw:flex tw:gap-5">
-      <div class="tw:flex tw:flex-col tw:shrink-0">
-        <div class="tw:flex tw:gap-2 tw:mb-4">
-          <div class="tw:w-3 tw:h-3 tw:rounded-full tw:bg-green-500"></div>
-          <div class="tw:w-3 tw:h-3 tw:rounded-full tw:bg-yellow-500"></div>
-          <div class="tw:w-3 tw:h-3 tw:rounded-full tw:bg-red-500"></div>
+    <div class="bg-grey-900 rounded-xl p-8 flex gap-5">
+      <div class="flex flex-col shrink-0">
+        <div class="flex gap-2 mb-4">
+          <div class="w-3 h-3 rounded-full bg-green-500"></div>
+          <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+          <div class="w-3 h-3 rounded-full bg-red-500"></div>
         </div>
-        <div class="tw:flex tw:items-center tw:justify-center tw:flex-1">
-          <img src={@image_src} alt={@language} class="tw:w-16 tw:h-16 tw:object-contain" />
+        <div class="flex items-center justify-center flex-1">
+          <img src={@image_src} alt={@language} class="w-16 h-16 object-contain" />
         </div>
       </div>
-      <div class="tw:flex tw:flex-col tw:gap-2">
-        <a href={@href} class="tw:text-grey-100 tw:font-semibold tw:text-lg tw:hover:text-white">
+      <div class="flex flex-col gap-2">
+        <a href={@href} class="text-grey-100 font-semibold text-lg hover:text-white">
           Using with {@language}
         </a>
-        <p class="tw:text-grey-200 tw:leading-6">
+        <p class="text-grey-200 leading-6">
           {render_slot(@inner_block)}
         </p>
       </div>
@@ -66,7 +66,7 @@ defmodule HexpmWeb.Components.Home do
 
   def code_inline(assigns) do
     ~H"""
-    <span class="tw:bg-grey-700 tw:text-grey-200 tw:mx-1 tw:px-0.5 tw:py-0.5 tw:rounded tw:border tw:border-grey-600 tw:font-mono tw:text-sm">
+    <span class="bg-grey-700 text-grey-200 mx-1 px-0.5 py-0.5 rounded border border-grey-600 font-mono text-sm">
       {render_slot(@inner_block)}
     </span>
     """
@@ -84,11 +84,11 @@ defmodule HexpmWeb.Components.Home do
 
   def company_logo(assigns) do
     ~H"""
-    <div class="tw:flex tw:items-center tw:justify-center tw:grayscale tw:hover:grayscale-0 tw:transition-all tw:duration-300">
+    <div class="flex items-center justify-center grayscale hover:grayscale-0 transition-all duration-300">
       <img
         src={~p"/images/clients/#{@src}"}
         alt={@alt}
-        class="tw:h-8 tw:w-auto tw:opacity-70 tw:hover:opacity-100 tw:transition-opacity tw:duration-300"
+        class="h-8 w-auto opacity-70 hover:opacity-100 transition-opacity duration-300"
       />
     </div>
     """
@@ -103,10 +103,10 @@ defmodule HexpmWeb.Components.Home do
   """
   def companies_section(assigns) do
     ~H"""
-    <div class="tw:bg-white tw:pt-4 tw:pb-8 tw:lg:pb-16">
-      <div class="tw:max-w-7xl tw:mx-auto tw:px-4 tw:lg:px-0">
+    <div class="bg-white pt-4 pb-8 lg:pb-16">
+      <div class="max-w-7xl mx-auto px-4 lg:px-0">
         <%!-- Mobile: 3x3 grid with alternating pattern --%>
-        <div class="tw:grid tw:grid-cols-3 tw:gap-6 tw:md:hidden">
+        <div class="grid grid-cols-3 gap-6 md:hidden">
           <%!-- Row 1: x x x --%>
           <.company_logo src="sketch.svg" alt="Sketch" />
           <.company_logo src="discord.svg" alt="Discord" />
@@ -121,9 +121,9 @@ defmodule HexpmWeb.Components.Home do
           <.company_logo src="bet365.svg" alt="Bet365" />
         </div>
         <%!-- Desktop: 2 rows (5 + 4) --%>
-        <div class="tw:hidden tw:md:block tw:space-y-12">
+        <div class="hidden md:block space-y-12">
           <%!-- First row: 5 logos --%>
-          <div class="tw:flex tw:items-center tw:justify-center tw:gap-8 tw:md:gap-12 tw:flex-wrap">
+          <div class="flex items-center justify-center gap-8 md:gap-12 flex-wrap">
             <.company_logo src="sketch.svg" alt="Sketch" />
             <.company_logo src="discord.svg" alt="Discord" />
             <.company_logo src="square_enix.svg" alt="Square Enix" />
@@ -131,7 +131,7 @@ defmodule HexpmWeb.Components.Home do
             <.company_logo src="we_chat.svg" alt="WeChat" />
           </div>
           <%!-- Second row: 4 logos --%>
-          <div class="tw:flex tw:items-center tw:justify-center tw:gap-8 tw:md:gap-24 tw:flex-wrap">
+          <div class="flex items-center justify-center gap-8 md:gap-24 flex-wrap">
             <.company_logo src="lonely_planet.svg" alt="Lonely Planet" />
             <.company_logo src="whatsapp.svg" alt="WhatsApp" />
             <.company_logo src="pepsico.svg" alt="PepsiCo" />
@@ -167,24 +167,24 @@ defmodule HexpmWeb.Components.Home do
     assigns = Map.put(assigns, :polygon_color, get_color_class(assigns.color, :polygon))
 
     ~H"""
-    <div class={["tw:rounded-xl tw:p-4 tw:flex tw:items-center tw:gap-3 tw:mb-6", @bg_color]}>
-      <div class="tw:size-[60px] tw:flex tw:items-center tw:justify-center tw:relative">
-        <svg class={["tw:size-full", @polygon_color]} viewBox="0 0 60 60" fill="none">
+    <div class={["rounded-xl p-4 flex items-center gap-3 mb-6", @bg_color]}>
+      <div class="size-[60px] flex items-center justify-center relative">
+        <svg class={["size-full", @polygon_color]} viewBox="0 0 60 60" fill="none">
           <polygon points="30,5 52,15 52,45 30,55 8,45 8,15" fill="currentColor" />
         </svg>
-        <span class="tw:absolute tw:text-2xl">{@emoji}</span>
+        <span class="absolute text-2xl">{@emoji}</span>
       </div>
-      <h2 class="tw:text-grey-100 tw:font-semibold tw:text-xl">{@title}</h2>
+      <h2 class="text-grey-100 font-semibold text-xl">{@title}</h2>
     </div>
     """
   end
 
-  defp get_color_class("primary", :bg), do: "tw:bg-primary-600"
-  defp get_color_class("primary", :polygon), do: "tw:text-primary-700"
-  defp get_color_class("green", :bg), do: "tw:bg-green-600"
-  defp get_color_class("green", :polygon), do: "tw:text-green-700"
-  defp get_color_class("blue", :bg), do: "tw:bg-blue-600"
-  defp get_color_class("blue", :polygon), do: "tw:text-blue-700"
+  defp get_color_class("primary", :bg), do: "bg-primary-600"
+  defp get_color_class("primary", :polygon), do: "text-primary-700"
+  defp get_color_class("green", :bg), do: "bg-green-600"
+  defp get_color_class("green", :polygon), do: "text-green-700"
+  defp get_color_class("blue", :bg), do: "bg-blue-600"
+  defp get_color_class("blue", :polygon), do: "text-blue-700"
 
   @doc """
   Renders a package item in the package lists (Most Downloaded, New Packages, Recently Updated).
@@ -205,27 +205,27 @@ defmodule HexpmWeb.Components.Home do
 
   def package_item(assigns) do
     ~H"""
-    <li class="tw:py-4 tw:border-b tw:border-grey-100 tw:last:border-b-0">
-      <div class="tw:flex tw:items-center tw:justify-between tw:gap-4">
-        <div class="tw:flex tw:flex-col tw:gap-1 tw:min-w-0">
-          <div class="tw:flex tw:items-end tw:gap-2">
+    <li class="py-4 border-b border-grey-100 last:border-b-0">
+      <div class="flex items-center justify-between gap-4">
+        <div class="flex flex-col gap-1 min-w-0">
+          <div class="flex items-end gap-2">
             <a
               href={~p"/packages/#{@package}"}
-              class="tw:text-grey-900 tw:font-medium tw:text-lg tw:hover:text-primary-600 tw:transition-colors"
+              class="text-grey-900 font-medium text-lg hover:text-primary-600 transition-colors"
             >
               {@package}
             </a>
-            <span class="tw:text-grey-500 tw:text-xs tw:bg-grey-50 tw:p-1 tw:rounded-md">
+            <span class="text-grey-500 text-xs bg-grey-50 p-1 rounded-md">
               {if @version, do: @version, else: "N/A"}
             </span>
           </div>
-          <p class="tw:text-grey-500 tw:text-sm tw:leading-5 tw:line-clamp-2 tw:min-h-[2.5rem]">
+          <p class="text-grey-500 text-sm leading-5 line-clamp-2 min-h-[2.5rem]">
             {if @description, do: HexpmWeb.ViewHelpers.text_length(@description, 100), else: "\u00A0"}
           </p>
         </div>
         <span
           :if={@downloads && is_integer(@downloads) && @downloads > 0}
-          class="tw:text-grey-600 tw:text-lg tw:shrink-0 tw:text-center tw:min-w-[4rem]"
+          class="text-grey-600 text-lg shrink-0 text-center min-w-[4rem]"
         >
           {HexpmWeb.ViewHelpers.human_number_space(@downloads, 3)}
         </span>
@@ -247,15 +247,15 @@ defmodule HexpmWeb.Components.Home do
 
   def stat_item(assigns) do
     ~H"""
-    <div class="tw:flex tw:items-center tw:gap-3">
-      <div class="tw:size-12 tw:bg-grey-100 tw:rounded-lg tw:flex tw:items-center tw:justify-center">
-        {icon(:heroicon, @icon, class: "tw:size-6 tw:text-grey-400")}
+    <div class="flex items-center gap-3">
+      <div class="size-12 bg-grey-100 rounded-lg flex items-center justify-center">
+        {icon(:heroicon, @icon, class: "size-6 text-grey-400")}
       </div>
-      <div class="tw:flex tw:flex-col tw:gap-1">
-        <span class="tw:text-grey-900 tw:text-2xl tw:font-bold tw:leading-6">
+      <div class="flex flex-col gap-1">
+        <span class="text-grey-900 text-2xl font-bold leading-6">
           {HexpmWeb.ViewHelpers.human_number_space(@number)}
         </span>
-        <span class="tw:text-grey-600">{@label}</span>
+        <span class="text-grey-600">{@label}</span>
       </div>
     </div>
     """
@@ -277,14 +277,14 @@ defmodule HexpmWeb.Components.Home do
 
   def feature_card(assigns) do
     ~H"""
-    <div class="tw:bg-grey-50 tw:rounded-xl tw:p-6 tw:hover:bg-grey-100 tw:transition-colors">
-      <div class="tw:flex tw:items-center tw:gap-2 tw:mb-3">
-        {icon(:heroicon, @icon, class: "tw:size-5 tw:text-primary-600")}
-        <h3 class="tw:text-grey-900 tw:text-lg tw:font-semibold">
+    <div class="bg-grey-50 rounded-xl p-6 hover:bg-grey-100 transition-colors">
+      <div class="flex items-center gap-2 mb-3">
+        {icon(:heroicon, @icon, class: "size-5 text-primary-600")}
+        <h3 class="text-grey-900 text-lg font-semibold">
           {@title}
         </h3>
       </div>
-      <p class="tw:text-grey-700 tw:text-sm tw:leading-6">
+      <p class="text-grey-700 text-sm leading-6">
         {render_slot(@inner_block)}
       </p>
     </div>

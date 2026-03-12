@@ -16,29 +16,29 @@ defmodule HexpmWeb.Components.PackageCard do
     ~H"""
     <a
       href={path_for_package(@package)}
-      class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:p-4 tw:flex tw:flex-col tw:hover:border-grey-300 tw:transition-colors"
+      class="bg-white border border-grey-200 rounded-lg p-4 flex flex-col hover:border-grey-300 transition-colors"
     >
-      <div class="tw:flex tw:items-baseline tw:gap-2 tw:mb-2">
-        <h3 class="tw:text-grey-900 tw:text-lg tw:font-medium">
+      <div class="flex items-baseline gap-2 mb-2">
+        <h3 class="text-grey-900 text-lg font-medium">
           {package_name(@package)}
         </h3>
-        <span class="tw:text-grey-500 tw:text-xs">
+        <span class="text-grey-500 text-xs">
           {@package.latest_release.version}
         </span>
-        <div class="tw:ml-auto tw:flex tw:items-center tw:gap-1 tw:text-grey-400 tw:text-sm">
-          {HexpmWeb.ViewIcons.icon(:heroicon, "arrow-down-tray", class: "tw:w-3.5 tw:h-3.5")}
+        <div class="ml-auto flex items-center gap-1 text-grey-400 text-sm">
+          {HexpmWeb.ViewIcons.icon(:heroicon, "arrow-down-tray", class: "w-3.5 h-3.5")}
           <span>{human_number_space(@downloads)}+</span>
         </div>
       </div>
 
-      <p class="tw:text-grey-500 tw:text-sm tw:mb-auto tw:line-clamp-1">
+      <p class="text-grey-500 text-sm mb-auto line-clamp-1">
         {@package.meta.description || "No description available"}
       </p>
 
       <%= if @updated_at do %>
-        <div class="tw:text-xs tw:text-grey-400 tw:mt-2">
+        <div class="text-xs text-grey-400 mt-2">
           Last Updated:
-          <span class="tw:font-semibold tw:text-grey-600">
+          <span class="font-semibold text-grey-600">
             {human_relative_time_from_now(@updated_at)}
           </span>
         </div>

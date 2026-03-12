@@ -45,56 +45,56 @@ defmodule HexpmWeb.Components.Pricing do
 
   def pricing_card(assigns) do
     ~H"""
-    <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:p-6 tw:flex tw:flex-col">
+    <div class="bg-white border border-grey-200 rounded-lg p-6 flex flex-col">
       <%!-- Icon --%>
-      <div class="tw:mb-6">
+      <div class="mb-6">
         <div class={[
-          "tw:size-15 tw:rounded-full tw:flex tw:items-center tw:justify-center",
+          "size-15 rounded-full flex items-center justify-center",
           icon_bg_class(@icon_bg)
         ]}>
-          <img src={@icon_src} alt={@title} class="tw:size-8" />
+          <img src={@icon_src} alt={@title} class="size-8" />
         </div>
       </div>
 
       <%!-- Price --%>
-      <div class="tw:mb-6">
+      <div class="mb-6">
         <%= if @price_text do %>
-          <div class="tw:flex tw:items-baseline tw:gap-2 tw:mb-4">
-            <span class="tw:text-grey-900 tw:text-5xl tw:font-bold">{@price_text}</span>
+          <div class="flex items-baseline gap-2 mb-4">
+            <span class="text-grey-900 text-5xl font-bold">{@price_text}</span>
           </div>
         <% else %>
           <%!-- Monthly Price --%>
-          <div class="price-display monthly-active tw:flex tw:items-baseline tw:gap-2 tw:mb-4">
-            <span class="tw:text-grey-900 tw:text-5xl tw:font-bold">
+          <div class="price-display monthly-active flex items-baseline gap-2 mb-4">
+            <span class="text-grey-900 text-5xl font-bold">
               ${@price_monthly}
             </span>
-            <span class="tw:text-grey-500">/mo</span>
+            <span class="text-grey-500">/mo</span>
           </div>
           <%!-- Yearly Price --%>
-          <div class="price-display tw:hidden tw:items-baseline tw:gap-2 tw:mb-4">
-            <span class="tw:text-grey-900 tw:text-5xl tw:font-bold">
+          <div class="price-display hidden items-baseline gap-2 mb-4">
+            <span class="text-grey-900 text-5xl font-bold">
               ${@price_yearly}
             </span>
-            <span class="tw:text-grey-500">/yr</span>
+            <span class="text-grey-500">/yr</span>
           </div>
         <% end %>
       </div>
 
       <%!-- Title & Description --%>
-      <div class="tw:mb-6">
-        <h3 class="tw:text-grey-900 tw:text-2xl tw:font-semibold tw:mb-2">
+      <div class="mb-6">
+        <h3 class="text-grey-900 text-2xl font-semibold mb-2">
           {@title}
         </h3>
-        <p class="tw:text-grey-600">
+        <p class="text-grey-600">
           {@description}
         </p>
       </div>
 
       <%!-- Features --%>
-      <ul class="tw:space-y-3 tw:mb-8 tw:flex-1">
-        <li :for={feature <- @feature} class="tw:flex tw:gap-2 tw:items-center">
-          {icon(:heroicon, "check-circle", class: "tw:size-4.5 tw:text-blue-500 tw:shrink-0")}
-          <span class="tw:text-grey-900">{render_slot(feature)}</span>
+      <ul class="space-y-3 mb-8 flex-1">
+        <li :for={feature <- @feature} class="flex gap-2 items-center">
+          {icon(:heroicon, "check-circle", class: "size-4.5 text-blue-500 shrink-0")}
+          <span class="text-grey-900">{render_slot(feature)}</span>
         </li>
       </ul>
 
@@ -106,9 +106,9 @@ defmodule HexpmWeb.Components.Pricing do
     """
   end
 
-  defp icon_bg_class("blue"), do: "tw:bg-blue-100"
-  defp icon_bg_class("green"), do: "tw:bg-green-100"
-  defp icon_bg_class("purple"), do: "tw:bg-primary-100"
+  defp icon_bg_class("blue"), do: "bg-blue-100"
+  defp icon_bg_class("green"), do: "bg-green-100"
+  defp icon_bg_class("purple"), do: "bg-primary-100"
 
   @doc """
   Renders a billing period toggle switch (Monthly/Yearly) using client-side JS.
@@ -119,28 +119,28 @@ defmodule HexpmWeb.Components.Pricing do
   """
   def billing_toggle(assigns) do
     ~H"""
-    <div class="tw:flex tw:items-center tw:justify-center tw:gap-3 tw:mb-12">
-      <span class="tw:text-grey-900 tw:text-sm tw:font-medium">Monthly</span>
+    <div class="flex items-center justify-center gap-3 mb-12">
+      <span class="text-grey-900 text-sm font-medium">Monthly</span>
       <button
         type="button"
         phx-click={toggle_billing()}
-        class="tw:relative tw:w-15 tw:h-8 tw:bg-grey-200 tw:rounded-full tw:transition-colors tw:cursor-pointer"
+        class="relative w-15 h-8 bg-grey-200 rounded-full transition-colors cursor-pointer"
       >
         <div
           id="billing-toggle-indicator"
-          class="tw:absolute tw:left-1.5 tw:top-1.5 tw:size-5 tw:bg-blue-500 tw:rounded-full tw:shadow-lg tw:transition-transform tw:duration-200"
+          class="absolute left-1.5 top-1.5 size-5 bg-blue-500 rounded-full shadow-lg transition-transform duration-200"
         >
         </div>
       </button>
-      <span class="tw:text-grey-900 tw:text-sm tw:font-medium">Yearly</span>
+      <span class="text-grey-900 text-sm font-medium">Yearly</span>
     </div>
     """
   end
 
   defp toggle_billing do
-    JS.toggle_class("tw:translate-x-[28px]", to: "#billing-toggle-indicator")
-    |> JS.toggle_class("tw:hidden", to: ".price-display")
-    |> JS.toggle_class("tw:flex", to: ".price-display")
+    JS.toggle_class("translate-x-[28px]", to: "#billing-toggle-indicator")
+    |> JS.toggle_class("hidden", to: ".price-display")
+    |> JS.toggle_class("flex", to: ".price-display")
   end
 
   @doc """
@@ -160,13 +160,13 @@ defmodule HexpmWeb.Components.Pricing do
 
   def faq_item(assigns) do
     ~H"""
-    <details class="tw:group tw:py-6">
-      <summary class="tw:flex tw:justify-between tw:items-center tw:cursor-pointer tw:list-none">
-        <span class="tw:text-grey-900 tw:text-xl tw:font-medium">
+    <details class="group py-6">
+      <summary class="flex justify-between items-center cursor-pointer list-none">
+        <span class="text-grey-900 text-xl font-medium">
           {render_slot(@question)}
         </span>
         <svg
-          class="tw:size-6 tw:text-grey-900 tw:transition-transform tw:group-open:rotate-45"
+          class="size-6 text-grey-900 transition-transform group-open:rotate-45"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -174,7 +174,7 @@ defmodule HexpmWeb.Components.Pricing do
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
         </svg>
       </summary>
-      <div class="tw:mt-4 tw:text-grey-600">
+      <div class="mt-4 text-grey-600">
         {render_slot(@answer)}
       </div>
     </details>

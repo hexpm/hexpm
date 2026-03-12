@@ -25,30 +25,30 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
 
   def email_management_card(assigns) do
     ~H"""
-    <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:p-8">
+    <div class="bg-white border border-grey-200 rounded-lg p-8">
       <%!-- Title --%>
-      <h2 class="tw:text-grey-900 tw:text-xl tw:font-semibold tw:mb-2">
+      <h2 class="text-grey-900 text-xl font-semibold mb-2">
         Email Settings
       </h2>
 
       <%!-- Info Text --%>
-      <p class="tw:text-sm tw:text-grey-500 tw:mb-6">
-        The <strong class="tw:font-semibold">primary</strong>
+      <p class="text-sm text-grey-500 mb-6">
+        The <strong class="font-semibold">primary</strong>
         email address will be used when Hex.pm communicates with you.
-        The <strong class="tw:font-semibold">public</strong>
+        The <strong class="font-semibold">public</strong>
         email address will be displayed on your profile page.
       </p>
 
       <%!-- Email Table --%>
       <.table>
         <:header>
-          <th class="tw:px-0 tw:py-3 tw:text-left tw:text-sm tw:font-medium tw:text-grey-500">
+          <th class="px-0 py-3 text-left text-sm font-medium text-grey-500">
             Email
           </th>
-          <th class="tw:px-4 tw:py-3 tw:text-left tw:text-sm tw:font-medium tw:text-grey-500">
+          <th class="px-4 py-3 text-left text-sm font-medium text-grey-500">
             Status
           </th>
-          <th class="tw:px-4 tw:py-3 tw:text-right tw:text-sm tw:font-medium tw:text-grey-500">
+          <th class="px-4 py-3 text-right text-sm font-medium text-grey-500">
             Actions
           </th>
         </:header>
@@ -69,9 +69,9 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
           size="md"
           phx-click={show_modal("add-email-modal")}
           id="add-email-button"
-          class="tw:border-dashed"
+          class="border-dashed"
         >
-          <span class="tw:flex tw:items-center tw:gap-1">
+          <span class="flex items-center gap-1">
             {icon(:heroicon, "plus", width: 14, height: 14)}
             <span>Add New Email</span>
           </span>
@@ -94,15 +94,15 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
     ~H"""
     <tr>
       <%!-- Email Column --%>
-      <td class="tw:px-0 tw:py-4">
-        <span class="tw:text-base tw:font-medium tw:text-grey-800 tw:break-all">
+      <td class="px-0 py-4">
+        <span class="text-base font-medium text-grey-800 break-all">
           {@email.email}
         </span>
       </td>
 
       <%!-- Status Column --%>
-      <td class="tw:px-4 tw:py-4">
-        <div class="tw:flex tw:flex-wrap tw:gap-2">
+      <td class="px-4 py-4">
+        <div class="flex flex-wrap gap-2">
           <.badge :if={not @email.verified}>Not Verified</.badge>
           <.badge :if={@email.primary}>Primary</.badge>
           <.badge :if={@email.public}>Public</.badge>
@@ -112,14 +112,14 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
       </td>
 
       <%!-- Actions Column --%>
-      <td class="tw:px-4 tw:py-4">
-        <div class="tw:flex tw:items-center tw:justify-end tw:gap-1">
+      <td class="px-4 py-4">
+        <div class="flex items-center justify-end gap-1">
           <%!-- Set as Primary --%>
           <%= if @email.verified and not @email.primary do %>
             <form
               action={~p"/dashboard/email/primary"}
               method="post"
-              class="tw:inline-flex tw:items-center tw:m-0"
+              class="inline-flex items-center m-0"
             >
               <input type="hidden" name="_csrf_token" value={@csrf_token} />
               <input type="hidden" name="email" value={@email.email} />
@@ -134,7 +134,7 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
             <form
               action={~p"/dashboard/email/public"}
               method="post"
-              class="tw:inline-flex tw:items-center tw:m-0"
+              class="inline-flex items-center m-0"
             >
               <input type="hidden" name="_csrf_token" value={@csrf_token} />
               <input type="hidden" name="email" value={@email.email} />
@@ -153,7 +153,7 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
             <form
               action={~p"/dashboard/email/public"}
               method="post"
-              class="tw:inline-flex tw:items-center tw:m-0"
+              class="inline-flex items-center m-0"
             >
               <input type="hidden" name="_csrf_token" value={@csrf_token} />
               <input type="hidden" name="email" value="none" />
@@ -173,7 +173,7 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
             <form
               action={~p"/dashboard/email/gravatar"}
               method="post"
-              class="tw:inline-flex tw:items-center tw:m-0"
+              class="inline-flex items-center m-0"
             >
               <input type="hidden" name="_csrf_token" value={@csrf_token} />
               <input type="hidden" name="email" value={@email.email} />
@@ -192,7 +192,7 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
             <form
               action={~p"/dashboard/email/gravatar"}
               method="post"
-              class="tw:inline-flex tw:items-center tw:m-0"
+              class="inline-flex items-center m-0"
             >
               <input type="hidden" name="_csrf_token" value={@csrf_token} />
               <input type="hidden" name="email" value="none" />
@@ -202,7 +202,7 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
                   icon="user-circle"
                   variant="default"
                   aria-label="Unset gravatar"
-                  class="tw:opacity-50"
+                  class="opacity-50"
                 />
               </.tooltip>
             </form>
@@ -213,7 +213,7 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
             <form
               action={~p"/dashboard/email/resend"}
               method="post"
-              class="tw:inline-flex tw:items-center tw:m-0"
+              class="inline-flex items-center m-0"
             >
               <input type="hidden" name="_csrf_token" value={@csrf_token} />
               <input type="hidden" name="email" value={@email.email} />
@@ -229,7 +229,7 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
           <% end %>
 
           <%!-- Delete Button --%>
-          <.tooltip text="Delete email" class="tw:inline-block">
+          <.tooltip text="Delete email" class="inline-block">
             <.icon_button
               icon="trash"
               variant="danger"

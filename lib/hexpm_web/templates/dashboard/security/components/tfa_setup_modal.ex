@@ -34,23 +34,23 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
   def tfa_setup_modal(assigns) do
     ~H"""
     <.modal id="tfa-setup-modal" title="Two-Factor Authentication Setup" max_width="2xl" show={@show}>
-      <div class="tw:space-y-6">
+      <div class="space-y-6">
         <%!-- Instructions --%>
         <div>
-          <h3 class="tw:text-lg tw:font-semibold tw:text-grey-900 tw:mb-2">
+          <h3 class="text-lg font-semibold text-grey-900 mb-2">
             Scan this QR code with your authenticator app
           </h3>
-          <p class="tw:text-sm tw:text-grey-600">
+          <p class="text-sm text-grey-600">
             Use apps like Google Authenticator, Authy, or 1Password to scan the QR code below.
           </p>
         </div>
 
         <%!-- QR Code --%>
-        <div class="tw:flex tw:justify-center tw:p-6 tw:bg-grey-50 tw:rounded-lg tw:border tw:border-grey-200">
+        <div class="flex justify-center p-6 bg-grey-50 rounded-lg border border-grey-200">
           <%= if @user.tfa && @user.tfa.secret do %>
             {raw(ViewHelpers.auth_qr_code_svg(@user))}
           <% else %>
-            <div class="tw:text-center tw:text-grey-500">
+            <div class="text-center text-grey-500">
               <p>Please enable two-factor authentication first.</p>
             </div>
           <% end %>
@@ -58,16 +58,16 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
 
         <%!-- Manual Setup Key --%>
         <%= if @user.tfa && @user.tfa.secret do %>
-          <div class="tw:bg-grey-50 tw:border tw:border-grey-200 tw:rounded-lg tw:p-4">
-            <p class="tw:text-sm tw:text-grey-700 tw:mb-3">
+          <div class="bg-grey-50 border border-grey-200 rounded-lg p-4">
+            <p class="text-sm text-grey-700 mb-3">
               Can't scan the QR code? Use this setup key instead:
             </p>
             <div
               id="tfa-secret"
               data-value={@user.tfa.secret}
-              class="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:p-3 tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg"
+              class="flex items-center justify-between gap-3 p-3 bg-white border border-grey-200 rounded-lg"
             >
-              <code class="tw:font-mono tw:text-sm tw:text-grey-900 tw:break-all">
+              <code class="font-mono text-sm text-grey-900 break-all">
                 {@user.tfa.secret}
               </code>
               <button
@@ -75,10 +75,10 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
                 type="button"
                 phx-hook="CopyButton"
                 data-copy-target="tfa-secret"
-                class="tw:relative tw:flex-shrink-0 tw:p-2 tw:text-grey-500 tw:hover:text-grey-700 tw:hover:bg-grey-100 tw:rounded tw:transition-colors"
+                class="relative flex-shrink-0 p-2 text-grey-500 hover:text-grey-700 hover:bg-grey-100 rounded transition-colors"
                 aria-label="Copy setup key to clipboard"
               >
-                {icon(:heroicon, "clipboard-document", class: "tw:w-5 tw:h-5")}
+                {icon(:heroicon, "clipboard-document", class: "w-5 h-5")}
               </button>
             </div>
           </div>
@@ -86,15 +86,15 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
 
         <%!-- Error Message --%>
         <%= if @error == "invalid_code" do %>
-          <div class="tw:flex tw:items-center tw:gap-3 tw:p-4 tw:bg-red-50 tw:border tw:border-red-200 tw:rounded-lg">
+          <div class="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
             {icon(:heroicon, "exclamation-circle",
-              class: "tw:w-5 tw:h-5 tw:text-red-600 tw:flex-shrink-0"
+              class: "w-5 h-5 text-red-600 flex-shrink-0"
             )}
-            <div class="tw:flex-1">
-              <p class="tw:text-sm tw:text-red-800 tw:font-medium">
+            <div class="flex-1">
+              <p class="text-sm text-red-800 font-medium">
                 Incorrect verification code
               </p>
-              <p class="tw:text-sm tw:text-red-700 tw:mt-1">
+              <p class="text-sm text-red-700 mt-1">
                 Please check your authenticator app and try again. Codes refresh every 30 seconds.
               </p>
             </div>
@@ -109,11 +109,11 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
             id="tfa-verification-form"
           >
             <input type="hidden" name="_csrf_token" value={@csrf_token} />
-            <div class="tw:space-y-4">
+            <div class="space-y-4">
               <div>
                 <label
                   for="verification_code"
-                  class="tw:block tw:text-sm tw:font-medium tw:text-grey-700 tw:mb-2"
+                  class="block text-sm font-medium text-grey-700 mb-2"
                 >
                   Enter the 6-digit code from your app
                 </label>
@@ -129,9 +129,9 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
                   inputmode="numeric"
                   phx-hook="TFACodeValidator"
                   data-target-button="tfa-submit-btn"
-                  class="tw:w-full tw:px-3 tw:py-2 tw:border tw:border-grey-300 tw:rounded-lg tw:text-center tw:text-xl tw:font-mono tw:tracking-widest tw:focus:outline-none tw:focus:ring-2 tw:focus:ring-purple-500 tw:focus:border-transparent"
+                  class="w-full px-3 py-2 border border-grey-300 rounded-lg text-center text-xl font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
-                <p class="tw:mt-2 tw:text-xs tw:text-grey-500">
+                <p class="mt-2 text-xs text-grey-500">
                   The code refreshes every 30 seconds
                 </p>
               </div>
@@ -153,7 +153,7 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
           type="button"
           variant="primary"
           phx-click={JS.dispatch("submit", to: "#tfa-verification-form")}
-          class="tw:opacity-50 tw:cursor-not-allowed"
+          class="opacity-50 cursor-not-allowed"
         >
           Enable Two-Factor Authentication
         </.button>

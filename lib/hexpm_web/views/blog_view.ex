@@ -25,20 +25,20 @@ defmodule HexpmWeb.BlogView do
 
     # Build the styled wrapper with header and content
     Phoenix.HTML.raw("""
-    <div class="tw:bg-grey-50 tw:py-10 tw:px-4 tw:flex-1 tw:flex tw:flex-col">
-      <div class="tw:max-w-4xl tw:mx-auto tw:w-full">
-        <a href="/blog" class="tw:inline-flex tw:items-center tw:gap-2 tw:text-sm tw:font-medium tw:text-grey-700 tw:hover:text-grey-900 tw:transition-colors tw:mb-8">
+    <div class="bg-grey-50 py-10 px-4 flex-1 flex flex-col">
+      <div class="max-w-4xl mx-auto w-full">
+        <a href="/blog" class="inline-flex items-center gap-2 text-sm font-medium text-grey-700 hover:text-grey-900 transition-colors mb-8">
           #{arrow_icon}
           Back to Blog
         </a>
-        <header class="tw:text-center tw:mb-8">
-          <h1 class="tw:text-2xl tw:lg:text-4xl tw:font-bold tw:text-grey-900 tw:mb-3">#{Phoenix.HTML.html_escape(post_title) |> Phoenix.HTML.safe_to_string()}</h1>
-          <div class="tw:flex tw:items-center tw:justify-center tw:gap-6 tw:text-sm tw:text-grey-600">
-            <span class="tw:font-medium">#{published_human}</span>
-            <span>by <span class="tw:font-semibold tw:text-grey-800">#{Phoenix.HTML.html_escape(author_display) |> Phoenix.HTML.safe_to_string()}</span></span>
+        <header class="text-center mb-8">
+          <h1 class="text-2xl lg:text-4xl font-bold text-grey-900 mb-3">#{Phoenix.HTML.html_escape(post_title) |> Phoenix.HTML.safe_to_string()}</h1>
+          <div class="flex items-center justify-center gap-6 text-sm text-grey-600">
+            <span class="font-medium">#{published_human}</span>
+            <span>by <span class="font-semibold text-grey-800">#{Phoenix.HTML.html_escape(author_display) |> Phoenix.HTML.safe_to_string()}</span></span>
           </div>
         </header>
-        <article class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:p-6 tw:lg:p-10 tw:shadow-xs blog-content">
+        <article class="bg-white border border-grey-200 rounded-lg p-6 lg:p-10 shadow-xs blog-content">
           <style>
             .blog-content h2 {
               font-size: 1.5rem;

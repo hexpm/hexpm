@@ -34,11 +34,11 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
     assigns = assign(assigns, :form, Phoenix.Component.to_form(assigns.key_changeset, as: :key))
 
     ~H"""
-    <div class="tw:bg-white tw:rounded-lg tw:shadow-sm tw:border tw:border-grey-200 tw:p-8">
+    <div class="bg-white rounded-lg shadow-sm border border-grey-200 p-8">
       <%!-- Header --%>
-      <div class="tw:mb-6">
-        <h2 class="tw:text-xl tw:font-semibold tw:mb-2">Keys</h2>
-        <p class="tw:text-sm tw:text-grey-500">
+      <div class="mb-6">
+        <h2 class="text-xl font-semibold mb-2">Keys</h2>
+        <p class="text-sm text-grey-500">
           Keys are used to authenticate and authorize clients to interact with the Hex API and repository.
         </p>
       </div>
@@ -47,16 +47,16 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
       <%= if @keys != [] do %>
         <.table>
           <:header>
-            <th class="tw:px-0 tw:py-3 tw:text-left tw:text-sm tw:font-medium tw:text-grey-500">
+            <th class="px-0 py-3 text-left text-sm font-medium text-grey-500">
               Name
             </th>
-            <th class="tw:px-4 tw:py-3 tw:text-left tw:text-sm tw:font-medium tw:text-grey-500">
+            <th class="px-4 py-3 text-left text-sm font-medium text-grey-500">
               Permissions
             </th>
-            <th class="tw:px-4 tw:py-3 tw:text-left tw:text-sm tw:font-medium tw:text-grey-500">
+            <th class="px-4 py-3 text-left text-sm font-medium text-grey-500">
               Last Use
             </th>
-            <th class="tw:px-4 tw:py-3 tw:text-right tw:text-sm tw:font-medium tw:text-grey-500">
+            <th class="px-4 py-3 text-right text-sm font-medium text-grey-500">
               Actions
             </th>
           </:header>
@@ -78,9 +78,9 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
           size="md"
           phx-click={show_modal("generate-key-modal")}
           id="generate-key-button"
-          class="tw:border-dashed"
+          class="border-dashed"
         >
-          <span class="tw:flex tw:items-center tw:gap-1">
+          <span class="flex items-center gap-1">
             {icon(:heroicon, "plus", width: 14, height: 14)}
             <span>Generate New Key</span>
           </span>
@@ -112,15 +112,15 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
     ~H"""
     <tr>
       <%!-- Name Column --%>
-      <td class="tw:px-0 tw:py-4">
-        <span class="tw:text-base tw:font-medium tw:text-grey-800">
+      <td class="px-0 py-4">
+        <span class="text-base font-medium text-grey-800">
           {@key.name}
         </span>
       </td>
 
       <%!-- Permissions Column --%>
-      <td class="tw:px-4 tw:py-4">
-        <div class="tw:flex tw:flex-wrap tw:gap-2">
+      <td class="px-4 py-4">
+        <div class="flex flex-wrap gap-2">
           <%= for permission <- @key.permissions do %>
             <.badge variant={permission_variant(permission)}>
               {permission_name(permission)}
@@ -130,10 +130,10 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
       </td>
 
       <%!-- Last Use Column --%>
-      <td class="tw:px-4 tw:py-4">
+      <td class="px-4 py-4">
         <%= if @key.last_use && @key.last_use.used_at do %>
           <.tooltip text={last_use_details(@key.last_use)}>
-            <span class="tw:text-sm tw:text-grey-600 tw:cursor-help">
+            <span class="text-sm text-grey-600 cursor-help">
               {pretty_date(@key.last_use.used_at)} ...
             </span>
           </.tooltip>
@@ -141,8 +141,8 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
       </td>
 
       <%!-- Actions Column --%>
-      <td class="tw:px-4 tw:py-4">
-        <div class="tw:flex tw:items-center tw:justify-end">
+      <td class="px-4 py-4">
+        <div class="flex items-center justify-end">
           <.tooltip text="Revoke key">
             <.icon_button
               phx-click={show_modal(@modal_id)}

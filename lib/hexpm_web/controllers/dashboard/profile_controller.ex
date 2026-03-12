@@ -29,7 +29,7 @@ defmodule HexpmWeb.Dashboard.ProfileController do
       conn,
       "index.html",
       title: "Dashboard - Public profile",
-      container: "tw:flex-1 tw:flex tw:flex-col",
+      container: "flex-1 flex flex-col",
       changeset: changeset
     )
   end

@@ -1,29 +1,29 @@
-<div class="tw:max-w-7xl tw:mx-auto tw:px-4 tw:py-8">
-  <div class="tw:flex tw:items-center tw:justify-between tw:mb-6">
-    <h1 class="tw:text-grey-900 tw:text-2xl tw:font-semibold">Package Reports</h1>
+<div class="max-w-7xl mx-auto px-4 py-8">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-grey-900 text-2xl font-semibold">Package Reports</h1>
     <%= if @total > 0 do %>
-      <span class="tw:text-grey-500 tw:text-sm">{@total} result{if @total == 1, do: "", else: "s"} found</span>
+      <span class="text-grey-500 text-sm">{@total} result{if @total == 1, do: "", else: "s"} found</span>
     <% end %>
   </div>
 
   <%= if @total == 0 do %>
-    <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-xl tw:p-12 tw:text-center">
-      <p class="tw:text-grey-500">No reports found.</p>
+    <div class="bg-white border border-grey-200 rounded-xl p-12 text-center">
+      <p class="text-grey-500">No reports found.</p>
     </div>
   <% else %>
-    <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-xl tw:overflow-hidden">
-      <table class="tw:w-full tw:text-sm">
+    <div class="bg-white border border-grey-200 rounded-xl overflow-hidden">
+      <table class="w-full text-sm">
         <thead>
-          <tr class="tw:bg-grey-50 tw:border-b tw:border-grey-200">
-            <th class="tw:px-5 tw:py-3 tw:text-left tw:text-xs tw:font-semibold tw:text-grey-500 tw:uppercase tw:tracking-wider tw:w-16">ID</th>
-            <th class="tw:px-5 tw:py-3 tw:text-left tw:text-xs tw:font-semibold tw:text-grey-500 tw:uppercase tw:tracking-wider">Package</th>
-            <th class="tw:px-5 tw:py-3 tw:text-left tw:text-xs tw:font-semibold tw:text-grey-500 tw:uppercase tw:tracking-wider">Versions</th>
-            <th class="tw:px-5 tw:py-3 tw:text-left tw:text-xs tw:font-semibold tw:text-grey-500 tw:uppercase tw:tracking-wider tw:w-28">State</th>
-            <th class="tw:px-5 tw:py-3 tw:text-left tw:text-xs tw:font-semibold tw:text-grey-500 tw:uppercase tw:tracking-wider">By user</th>
-            <th class="tw:px-5 tw:py-3 tw:text-left tw:text-xs tw:font-semibold tw:text-grey-500 tw:uppercase tw:tracking-wider">Description</th>
+          <tr class="bg-grey-50 border-b border-grey-200">
+            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 uppercase tracking-wider w-16">ID</th>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 uppercase tracking-wider">Package</th>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 uppercase tracking-wider">Versions</th>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 uppercase tracking-wider w-28">State</th>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 uppercase tracking-wider">By user</th>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 uppercase tracking-wider">Description</th>
           </tr>
         </thead>
-        <tbody class="tw:divide-y tw:divide-grey-100">
+        <tbody class="divide-y divide-grey-100">
           <%= for report <- @reports do %>
             {render("_package_report.html", report: report)}
           <% end %>

@@ -6,7 +6,7 @@ defmodule HexpmWeb.PolicyController do
       conn,
       "coc.html",
       title: "Code of Conduct",
-      container: "tw:flex-1 tw:flex tw:flex-col"
+      container: "flex-1 flex flex-col"
     )
   end
 
@@ -15,7 +15,7 @@ defmodule HexpmWeb.PolicyController do
       conn,
       "copyright.html",
       title: "Copyright Policy",
-      container: "tw:flex-1 tw:flex tw:flex-col"
+      container: "flex-1 flex flex-col"
     )
   end
 
@@ -24,7 +24,7 @@ defmodule HexpmWeb.PolicyController do
       conn,
       "privacy.html",
       title: "Privacy Policy",
-      container: "tw:flex-1 tw:flex tw:flex-col"
+      container: "flex-1 flex flex-col"
     )
   end
 
@@ -33,7 +33,7 @@ defmodule HexpmWeb.PolicyController do
       conn,
       "tos.html",
       title: "Terms of Service",
-      container: "tw:flex-1 tw:flex tw:flex-col"
+      container: "flex-1 flex flex-col"
     )
   end
 
@@ -42,7 +42,7 @@ defmodule HexpmWeb.PolicyController do
       conn,
       "dispute.html",
       title: "Dispute policy",
-      container: "tw:flex-1 tw:flex tw:flex-col"
+      container: "flex-1 flex flex-col"
     )
   end
 end

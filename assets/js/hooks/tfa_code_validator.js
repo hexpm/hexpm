@@ -49,11 +49,11 @@ export default {
     
     // Update button visual state
     if (isValid) {
-      this.button.classList.remove('tw:opacity-50', 'tw:cursor-not-allowed');
-      this.button.classList.add('tw:cursor-pointer');
+      this.button.classList.remove('opacity-50', 'cursor-not-allowed');
+      this.button.classList.add('cursor-pointer');
     } else {
-      this.button.classList.add('tw:opacity-50', 'tw:cursor-not-allowed');
-      this.button.classList.remove('tw:cursor-pointer');
+      this.button.classList.add('opacity-50', 'cursor-not-allowed');
+      this.button.classList.remove('cursor-pointer');
     }
   }
 };

@@ -1,17 +1,17 @@
-<div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-xl tw:p-5">
-  <h2 class="tw:text-grey-900 tw:font-semibold tw:mb-3">Moderator actions</h2>
+<div class="bg-white border border-grey-200 rounded-xl p-5">
+  <h2 class="text-grey-900 font-semibold mb-3">Moderator actions</h2>
 
   <%= if @report.state in ["solved", "unresolved"] do %>
-    <p class="tw:text-grey-500 tw:text-sm tw:italic">This report's state is final and cannot be changed.</p>
+    <p class="text-grey-500 text-sm italic">This report's state is final and cannot be changed.</p>
   <% else %>
-    <div class="tw:flex tw:flex-wrap tw:gap-2">
+    <div class="flex flex-wrap gap-2">
       <%= if @report.state in ["to_accept", "rejected"] do %>
         <%= form_tag ~p"/reports/#{@report.id}/accept" do %>
           <button
             type="submit"
             name="operation"
             value="Accept"
-            class="tw:bg-green-600 tw:hover:bg-green-700 tw:text-white tw:text-sm tw:font-medium tw:px-4 tw:py-2 tw:rounded-lg tw:transition-colors"
+            class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
           >
             Accept
           </button>
@@ -24,7 +24,7 @@
             type="submit"
             name="operation"
             value="Reject"
-            class="tw:bg-red-600 tw:hover:bg-red-700 tw:text-white tw:text-sm tw:font-medium tw:px-4 tw:py-2 tw:rounded-lg tw:transition-colors"
+            class="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
           >
             Reject
           </button>
@@ -37,7 +37,7 @@
             type="submit"
             name="operation"
             value="Solve"
-            class="tw:bg-blue-600 tw:hover:bg-blue-700 tw:text-white tw:text-sm tw:font-medium tw:px-4 tw:py-2 tw:rounded-lg tw:transition-colors"
+            class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
           >
             Mark as solved
           </button>
@@ -48,7 +48,7 @@
             type="submit"
             name="operation"
             value="Set unresolved"
-            class="tw:bg-grey-600 tw:hover:bg-grey-700 tw:text-white tw:text-sm tw:font-medium tw:px-4 tw:py-2 tw:rounded-lg tw:transition-colors"
+            class="bg-grey-600 hover:bg-grey-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
           >
             Set unresolved
           </button>

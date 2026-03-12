@@ -15,21 +15,21 @@ defmodule HexpmWeb.Dashboard.Organization.Components.DangerZoneTab do
 
   def danger_zone_tab(assigns) do
     ~H"""
-    <div class="tw:space-y-4">
+    <div class="space-y-4">
       <%!-- Section header --%>
-      <div class="tw:bg-white tw:border tw:border-red-200 tw:rounded-lg tw:overflow-hidden">
-        <div class="tw:px-6 tw:py-5 tw:border-b tw:border-red-200 tw:bg-red-50">
-          <h2 class="tw:text-red-700 tw:text-lg tw:font-semibold">Danger Zone</h2>
-          <p class="tw:text-sm tw:text-red-600 tw:mt-1">
+      <div class="bg-white border border-red-200 rounded-lg overflow-hidden">
+        <div class="px-6 py-5 border-b border-red-200 bg-red-50">
+          <h2 class="text-red-700 text-lg font-semibold">Danger Zone</h2>
+          <p class="text-sm text-red-600 mt-1">
             Actions here are irreversible. Please proceed with caution.
           </p>
         </div>
 
         <%!-- Leave organization --%>
-        <div class="tw:px-6 tw:py-5 tw:flex tw:items-start tw:justify-between tw:gap-6">
+        <div class="px-6 py-5 flex items-start justify-between gap-6">
           <div>
-            <h3 class="tw:text-sm tw:font-semibold tw:text-grey-900">Leave organization</h3>
-            <p class="tw:text-sm tw:text-grey-500 tw:mt-1">
+            <h3 class="text-sm font-semibold text-grey-900">Leave organization</h3>
+            <p class="text-sm text-grey-500 mt-1">
               Once you leave the organization there is no going back, please be certain.
             </p>
           </div>
@@ -37,7 +37,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.DangerZoneTab do
             type="button"
             variant="danger"
             size="sm"
-            class="tw:shrink-0"
+            class="shrink-0"
             phx-click={show_modal("leave-org-modal")}
           >
             Leave organization
@@ -55,11 +55,11 @@ defmodule HexpmWeb.Dashboard.Organization.Components.DangerZoneTab do
   defp leave_modal(assigns) do
     ~H"""
     <.modal id="leave-org-modal" title="Leave organization">
-      <p class="tw:text-sm tw:text-grey-600 tw:mb-4">
+      <p class="text-sm text-grey-600 mb-4">
         Are you sure you want to leave <strong>{@organization.name}</strong>?
         Once you leave the organization there is no going back.
       </p>
-      <p class="tw:text-sm tw:text-grey-600 tw:mb-6">
+      <p class="text-sm text-grey-600 mb-6">
         Please type <strong>{@organization.name}</strong> to confirm.
       </p>
       <form id="leave-org-form"

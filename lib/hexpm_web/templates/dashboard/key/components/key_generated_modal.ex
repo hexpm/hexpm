@@ -24,21 +24,21 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyGeneratedModal do
     ~H"""
     <.modal id="key-generated-modal" show={true}>
       <:header>
-        <h2 class="tw:text-lg tw:font-semibold tw:text-grey-900">
+        <h2 class="text-lg font-semibold text-grey-900">
           Key Generated Successfully
         </h2>
       </:header>
 
-      <div class="tw:space-y-4">
-        <p class="tw:text-sm tw:text-grey-600">
-          Your key <strong class="tw:font-semibold">{@key_name}</strong> has been generated.
+      <div class="space-y-4">
+        <p class="text-sm text-grey-600">
+          Your key <strong class="font-semibold">{@key_name}</strong> has been generated.
           Copy the secret below and store it securely.
         </p>
 
-        <div class="tw:bg-amber-50 tw:border tw:border-amber-200 tw:rounded-lg tw:p-4">
-          <div class="tw:flex tw:gap-2">
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div class="flex gap-2">
             <svg
-              class="tw:w-5 tw:h-5 tw:text-amber-600 tw:flex-shrink-0"
+              class="w-5 h-5 text-amber-600 flex-shrink-0"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -48,22 +48,22 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyGeneratedModal do
                 clip-rule="evenodd"
               />
             </svg>
-            <p class="tw:text-sm tw:text-amber-800">
-              <strong class="tw:font-semibold">Warning:</strong>
+            <p class="text-sm text-amber-800">
+              <strong class="font-semibold">Warning:</strong>
               You won't be able to see this secret again. Make sure to copy it now.
             </p>
           </div>
         </div>
 
-        <div class="tw:space-y-2">
-          <label class="tw:block tw:text-sm tw:font-medium tw:text-grey-700">
+        <div class="space-y-2">
+          <label class="block text-sm font-medium text-grey-700">
             Key Secret
           </label>
-          <div class="tw:flex tw:items-center tw:gap-2">
+          <div class="flex items-center gap-2">
             <div
               id="key-secret-value"
               data-value={@key_secret}
-              class="tw:flex-1 tw:px-3 tw:py-2 tw:border tw:border-grey-300 tw:rounded-lg tw:bg-grey-50 tw:text-sm tw:font-mono tw:text-grey-900 tw:break-all"
+              class="flex-1 px-3 py-2 border border-grey-300 rounded-lg bg-grey-50 text-sm font-mono text-grey-900 break-all"
             >
               {@key_secret}
             </div>
@@ -72,17 +72,17 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyGeneratedModal do
               phx-hook="CopyButton"
               id="copy-key-secret"
               data-copy-target="key-secret-value"
-              class="tw:flex-shrink-0 tw:p-2 tw:text-grey-600 tw:hover:text-grey-900 tw:hover:bg-grey-100 tw:rounded tw:transition-colors"
+              class="flex-shrink-0 p-2 text-grey-600 hover:text-grey-900 hover:bg-grey-100 rounded transition-colors"
               title="Copy to clipboard"
             >
-              {icon(:heroicon, "clipboard-document", class: "tw:w-5 tw:h-5")}
+              {icon(:heroicon, "clipboard-document", class: "w-5 h-5")}
             </button>
           </div>
         </div>
       </div>
 
       <:footer>
-        <div class="tw:flex tw:justify-end">
+        <div class="flex justify-end">
           <.button phx-click={hide_modal("key-generated-modal")} variant="primary">
             I've Saved My Key
           </.button>
