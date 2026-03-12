@@ -17,35 +17,35 @@ defmodule HexpmWeb.Dashboard.Session.Components.SessionManagementCard do
 
   def session_management_card(assigns) do
     ~H"""
-    <div class="tw:bg-white tw:rounded-lg tw:shadow-sm tw:border tw:border-grey-200 tw:p-8">
+    <div class="bg-white rounded-lg shadow-sm border border-grey-200 p-8">
       <%!-- Header --%>
-      <div class="tw:mb-6">
-        <h2 class="tw:text-xl tw:font-semibold tw:mb-2">Sessions</h2>
-        <p class="tw:text-sm tw:text-grey-500">
+      <div class="mb-6">
+        <h2 class="text-xl font-semibold mb-2">Sessions</h2>
+        <p class="text-sm text-grey-500">
           Active sessions for your account. This includes both browser sessions and authorized OAuth applications.
         </p>
       </div>
 
       <%= if @sessions == [] do %>
-        <div class="tw:text-center tw:py-8 tw:text-grey-500">
+        <div class="text-center py-8 text-grey-500">
           <p>No active sessions found.</p>
         </div>
       <% else %>
         <.table>
           <:header>
-            <th class="tw:px-4 tw:py-3 tw:text-left tw:text-small tw:font-medium tw:text-grey-700">
+            <th class="px-4 py-3 text-left text-small font-medium text-grey-700">
               Type
             </th>
-            <th class="tw:px-4 tw:py-3 tw:text-left tw:text-small tw:font-medium tw:text-grey-700">
+            <th class="px-4 py-3 text-left text-small font-medium text-grey-700">
               Name
             </th>
-            <th class="tw:px-4 tw:py-3 tw:text-left tw:text-small tw:font-medium tw:text-grey-700">
+            <th class="px-4 py-3 text-left text-small font-medium text-grey-700">
               Application
             </th>
-            <th class="tw:px-4 tw:py-3 tw:text-left tw:text-small tw:font-medium tw:text-grey-700">
+            <th class="px-4 py-3 text-left text-small font-medium text-grey-700">
               Last Activity
             </th>
-            <th class="tw:px-4 tw:py-3 tw:text-right tw:text-small tw:font-medium tw:text-grey-700">
+            <th class="px-4 py-3 text-right text-small font-medium text-grey-700">
               Actions
             </th>
           </:header>
@@ -76,9 +76,9 @@ defmodule HexpmWeb.Dashboard.Session.Components.SessionManagementCard do
     assigns = assign(assigns, modal_id: modal_id, is_current: is_current)
 
     ~H"""
-    <tr class="last:tw:border-0 tw:hover:bg-grey-50 tw:transition-colors">
+    <tr class="last:border-0 hover:bg-grey-50 transition-colors">
       <%!-- Type Column --%>
-      <td class="tw:px-4 tw:py-4">
+      <td class="px-4 py-4">
         <%= if @session.type == "browser" do %>
           <.badge variant="blue">Browser</.badge>
         <% else %>
@@ -90,39 +90,39 @@ defmodule HexpmWeb.Dashboard.Session.Components.SessionManagementCard do
       </td>
 
       <%!-- Name Column --%>
-      <td class="tw:px-4 tw:py-4">
-        <span class="tw:text-grey-900">
+      <td class="px-4 py-4">
+        <span class="text-grey-900">
           {@session.name || "Unnamed session"}
         </span>
       </td>
 
       <%!-- Application Column --%>
-      <td class="tw:px-4 tw:py-4">
+      <td class="px-4 py-4">
         <%= if @session.type == "oauth" and @session.client do %>
-          <span class="tw:text-grey-900">{@session.client.name}</span>
+          <span class="text-grey-900">{@session.client.name}</span>
         <% else %>
-          <span class="tw:text-grey-500">-</span>
+          <span class="text-grey-500">-</span>
         <% end %>
       </td>
 
       <%!-- Last Activity Column --%>
-      <td class="tw:px-4 tw:py-4">
+      <td class="px-4 py-4">
         <%= if @session.last_use && @session.last_use.used_at do %>
           <.tooltip text={"#{ViewHelpers.pretty_datetime(@session.last_use.used_at)} • IP: #{@session.last_use.ip}"}>
-            <span class="tw:text-grey-700 tw:cursor-help tw:border-b tw:border-dashed tw:border-grey-400">
+            <span class="text-grey-700 cursor-help border-b border-dashed border-grey-400">
               {ViewHelpers.pretty_date(@session.last_use.used_at)}
             </span>
           </.tooltip>
         <% else %>
-          <span class="tw:text-grey-700">
+          <span class="text-grey-700">
             {ViewHelpers.pretty_date(@session.inserted_at)}
           </span>
         <% end %>
       </td>
 
       <%!-- Actions Column --%>
-      <td class="tw:px-4 tw:py-4">
-        <div class="tw:flex tw:items-center tw:justify-end tw:gap-1">
+      <td class="px-4 py-4">
+        <div class="flex items-center justify-end gap-1">
           <%= if @is_current do %>
             <.tooltip text="Cannot revoke current session">
               <.icon_button icon="trash" variant="default" disabled />

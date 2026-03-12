@@ -6,9 +6,9 @@ defmodule HexpmWeb.PolicyView do
 
     # Build the styled wrapper similar to blog posts
     Phoenix.HTML.raw("""
-    <div class="tw:bg-grey-50 tw:py-10 tw:px-4 tw:flex-1 tw:flex tw:flex-col">
-      <div class="tw:max-w-4xl tw:mx-auto tw:w-full">
-        <article class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:p-6 tw:lg:p-10 tw:shadow-xs policy-content">
+    <div class="bg-grey-50 py-10 px-4 flex-1 flex flex-col">
+      <div class="max-w-4xl mx-auto w-full">
+        <article class="bg-white border border-grey-200 rounded-lg p-6 lg:p-10 shadow-xs policy-content">
           <style>
             .policy-content h2 {
               font-size: 1.875rem;

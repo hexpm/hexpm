@@ -20,15 +20,15 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.PasswordCard do
 
   def password_card(assigns) do
     ~H"""
-    <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:p-8">
-      <h2 class="tw:text-grey-900 tw:text-xl tw:font-semibold tw:mb-6">
+    <div class="bg-white border border-grey-200 rounded-lg p-8">
+      <h2 class="text-grey-900 text-xl font-semibold mb-6">
         Password Authentication
       </h2>
 
       <%= if Hexpm.Accounts.User.has_password?(@user) do %>
         <%!-- Change Password Form --%>
         <%= form_for @changeset, ~p"/dashboard/security/change-password", [method: :post], fn f -> %>
-          <div class="tw:space-y-5">
+          <div class="space-y-5">
             <.password_input
               field={f[:password_current]}
               label="Current Password"
@@ -48,7 +48,7 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.PasswordCard do
               match_password_id={Phoenix.HTML.Form.input_id(f, :password)}
             />
 
-            <div class="tw:flex tw:items-center tw:gap-3 tw:pt-2">
+            <div class="flex items-center gap-3 pt-2">
               <.button type="submit" variant="primary">
                 Change Password
               </.button>
@@ -74,14 +74,14 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.PasswordCard do
             <button type="submit" id="remove-password-form-submit" style="display: none;"></button>
           <% end %>
         <% else %>
-          <p class="tw:text-grey-500 tw:text-sm tw:mt-4 tw:p-3 tw:bg-grey-50 tw:rounded-lg">
+          <p class="text-grey-500 text-sm mt-4 p-3 bg-grey-50 rounded-lg">
             You must connect a GitHub account before you can remove your password.
           </p>
         <% end %>
       <% else %>
         <%!-- Add Password Form --%>
         <%= form_for @add_password_changeset, ~p"/dashboard/security/add-password", [method: :post], fn f -> %>
-          <div class="tw:space-y-5">
+          <div class="space-y-5">
             <.password_input
               field={f[:password]}
               label="New Password"

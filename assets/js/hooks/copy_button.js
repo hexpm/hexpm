@@ -85,7 +85,7 @@ export const CopyButton = {
     const tooltip = document.createElement("div");
     tooltip.textContent = "Copied!";
     tooltip.className =
-      "copy-tooltip tw:absolute tw:bg-grey-900 tw:text-white tw:text-xs tw:px-2 tw:py-1 tw:rounded tw:whitespace-nowrap tw:pointer-events-none";
+      "copy-tooltip absolute bg-grey-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap pointer-events-none";
     tooltip.style.opacity = "0";
     tooltip.style.transition = "opacity 0.2s ease-in-out";
     tooltip.style.zIndex = "9999";
@@ -134,7 +134,7 @@ export const CopyButton = {
     const tooltip = document.createElement("div");
     tooltip.textContent = "Failed to copy";
     tooltip.className =
-      "copy-tooltip tw:absolute tw:bg-red-600 tw:text-white tw:text-xs tw:px-2 tw:py-1 tw:rounded tw:whitespace-nowrap tw:pointer-events-none";
+      "copy-tooltip absolute bg-red-600 text-white text-xs px-2 py-1 rounded whitespace-nowrap pointer-events-none";
     tooltip.style.opacity = "0";
     tooltip.style.transition = "opacity 0.2s ease-in-out";
     tooltip.style.zIndex = "9999";

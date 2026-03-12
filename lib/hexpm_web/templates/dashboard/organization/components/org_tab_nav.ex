@@ -14,17 +14,17 @@ defmodule HexpmWeb.Dashboard.Organization.Components.OrgTabNav do
   def org_tab_nav(assigns) do
     ~H"""
     <div>
-      <div class="tw:border-b tw:border-grey-200 tw:mb-6">
-        <nav class="tw:-mb-px tw:flex tw:gap-1 tw:overflow-x-auto" aria-label="Organization tabs">
+      <div class="border-b border-grey-200 mb-6">
+        <nav class="-mb-px flex gap-1 overflow-x-auto" aria-label="Organization tabs">
           <%= for {label, path, _active?} = tab <- tabs(@organization, @current_user) do %>
             <a
               href={path}
               class={[
-                "tw:whitespace-nowrap tw:px-4 tw:py-3 tw:text-sm tw:font-medium tw:border-b-2 tw:transition-colors",
+                "whitespace-nowrap px-4 py-3 text-sm font-medium border-b-2 transition-colors",
                 if(active?(@conn, tab),
-                  do: "tw:border-purple-600 tw:text-purple-600",
+                  do: "border-purple-600 text-purple-600",
                   else:
-                    "tw:border-transparent tw:text-grey-500 tw:hover:text-grey-700 tw:hover:border-grey-300"
+                    "border-transparent text-grey-500 hover:text-grey-700 hover:border-grey-300"
                 )
               ]}
             >

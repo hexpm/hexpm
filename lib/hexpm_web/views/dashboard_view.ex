@@ -20,33 +20,33 @@ defmodule HexpmWeb.DashboardView do
   end
 
   defp icon_for_setting(:profile, selected?) do
-    color = if selected?, do: "tw:text-purple-600", else: "tw:text-grey-600"
-    icon(:heroicon, "user-circle", class: "tw:w-5 tw:h-5 #{color}")
+    color = if selected?, do: "text-purple-600", else: "text-grey-600"
+    icon(:heroicon, "user-circle", class: "w-5 h-5 #{color}")
   end
 
   defp icon_for_setting(:security, selected?) do
-    color = if selected?, do: "tw:text-purple-600", else: "tw:text-grey-600"
-    icon(:heroicon, "shield-check", class: "tw:w-5 tw:h-5 #{color}")
+    color = if selected?, do: "text-purple-600", else: "text-grey-600"
+    icon(:heroicon, "shield-check", class: "w-5 h-5 #{color}")
   end
 
   defp icon_for_setting(:email, selected?) do
-    color = if selected?, do: "tw:text-purple-600", else: "tw:text-grey-600"
-    icon(:heroicon, "envelope", class: "tw:w-5 tw:h-5 #{color}")
+    color = if selected?, do: "text-purple-600", else: "text-grey-600"
+    icon(:heroicon, "envelope", class: "w-5 h-5 #{color}")
   end
 
   defp icon_for_setting(:keys, selected?) do
-    color = if selected?, do: "tw:text-purple-600", else: "tw:text-grey-600"
-    icon(:heroicon, "key", class: "tw:w-5 tw:h-5 #{color}")
+    color = if selected?, do: "text-purple-600", else: "text-grey-600"
+    icon(:heroicon, "key", class: "w-5 h-5 #{color}")
   end
 
   defp icon_for_setting(:sessions, selected?) do
-    color = if selected?, do: "tw:text-purple-600", else: "tw:text-grey-600"
-    icon(:heroicon, "computer-desktop", class: "tw:w-5 tw:h-5 #{color}")
+    color = if selected?, do: "text-purple-600", else: "text-grey-600"
+    icon(:heroicon, "computer-desktop", class: "w-5 h-5 #{color}")
   end
 
   defp icon_for_setting(:audit_logs, selected?) do
-    color = if selected?, do: "tw:text-purple-600", else: "tw:text-grey-600"
-    icon(:heroicon, "clock", class: "tw:w-5 tw:h-5 #{color}")
+    color = if selected?, do: "text-purple-600", else: "text-grey-600"
+    icon(:heroicon, "clock", class: "w-5 h-5 #{color}")
   end
 
   defp selected_setting(conn, id) do

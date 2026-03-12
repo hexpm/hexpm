@@ -43,20 +43,20 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInfoForms do
       |> assign(:initial_tab, initial_tab)
 
     ~H"""
-    <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:overflow-hidden">
-      <div class="tw:px-6 tw:py-5 tw:border-b tw:border-grey-200">
-        <h2 class="tw:text-grey-900 tw:text-lg tw:font-semibold">Billing information</h2>
+    <div class="bg-white border border-grey-200 rounded-lg overflow-hidden">
+      <div class="px-6 py-5 border-b border-grey-200">
+        <h2 class="text-grey-900 text-lg font-semibold">Billing information</h2>
       </div>
-      <div class="tw:px-6 tw:py-5">
-        <div class="tw:flex tw:gap-4 tw:border-b tw:border-grey-200 tw:mb-6">
+      <div class="px-6 py-5">
+        <div class="flex gap-4 border-b border-grey-200 mb-6">
           <.billing_tab_btn id="billing-tab-btn-person" active={@initial_tab == "person"}
             phx-click={
               JS.show(to: "#billing-panel-person")
               |> JS.hide(to: "#billing-panel-company")
-              |> JS.add_class("tw:border-purple-600 tw:text-purple-600", to: "#billing-tab-btn-person")
-              |> JS.remove_class("tw:border-transparent tw:text-grey-500", to: "#billing-tab-btn-person")
-              |> JS.remove_class("tw:border-purple-600 tw:text-purple-600", to: "#billing-tab-btn-company")
-              |> JS.add_class("tw:border-transparent tw:text-grey-500", to: "#billing-tab-btn-company")
+              |> JS.add_class("border-purple-600 text-purple-600", to: "#billing-tab-btn-person")
+              |> JS.remove_class("border-transparent text-grey-500", to: "#billing-tab-btn-person")
+              |> JS.remove_class("border-purple-600 text-purple-600", to: "#billing-tab-btn-company")
+              |> JS.add_class("border-transparent text-grey-500", to: "#billing-tab-btn-company")
             }>
             Person
           </.billing_tab_btn>
@@ -64,16 +64,16 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInfoForms do
             phx-click={
               JS.show(to: "#billing-panel-company")
               |> JS.hide(to: "#billing-panel-person")
-              |> JS.add_class("tw:border-purple-600 tw:text-purple-600", to: "#billing-tab-btn-company")
-              |> JS.remove_class("tw:border-transparent tw:text-grey-500", to: "#billing-tab-btn-company")
-              |> JS.remove_class("tw:border-purple-600 tw:text-purple-600", to: "#billing-tab-btn-person")
-              |> JS.add_class("tw:border-transparent tw:text-grey-500", to: "#billing-tab-btn-person")
+              |> JS.add_class("border-purple-600 text-purple-600", to: "#billing-tab-btn-company")
+              |> JS.remove_class("border-transparent text-grey-500", to: "#billing-tab-btn-company")
+              |> JS.remove_class("border-purple-600 text-purple-600", to: "#billing-tab-btn-person")
+              |> JS.add_class("border-transparent text-grey-500", to: "#billing-tab-btn-person")
             }>
             Company
           </.billing_tab_btn>
         </div>
 
-        <div id="billing-panel-person" class={if @initial_tab != "person", do: "tw:hidden"}>
+        <div id="billing-panel-person" class={if @initial_tab != "person", do: "hidden"}>
           <form action={billing_form_path(@organization, @billing_started?)} method="post">
             <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
             <.person_fields
@@ -83,13 +83,13 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInfoForms do
               params={@params}
               person={@person}
             />
-            <div class="tw:mt-6">
+            <div class="mt-6">
               <.button type="submit" variant="primary">Save</.button>
             </div>
           </form>
         </div>
 
-        <div id="billing-panel-company" class={if @initial_tab != "company", do: "tw:hidden"}>
+        <div id="billing-panel-company" class={if @initial_tab != "company", do: "hidden"}>
           <form action={billing_form_path(@organization, @billing_started?)} method="post">
             <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
             <.company_fields
@@ -99,7 +99,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInfoForms do
               params={@params}
               company={@company}
             />
-            <div class="tw:mt-6">
+            <div class="mt-6">
               <.button type="submit" variant="primary">Save</.button>
             </div>
           </form>
@@ -120,10 +120,10 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInfoForms do
       type="button"
       id={@id}
       class={[
-        "tw:pb-3 tw:text-sm tw:font-medium tw:border-b-2 tw:transition-colors",
+        "pb-3 text-sm font-medium border-b-2 transition-colors",
         if(@active,
-          do: "tw:border-purple-600 tw:text-purple-600",
-          else: "tw:border-transparent tw:text-grey-500 tw:hover:text-grey-700"
+          do: "border-purple-600 text-purple-600",
+          else: "border-transparent text-grey-500 hover:text-grey-700"
         )
       ]}
       {@rest}
@@ -157,7 +157,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInfoForms do
       |> assign(:country_options, Enum.map(countries(), fn {code, name} -> {name, code} end))
 
     ~H"""
-    <div class="tw:space-y-4">
+    <div class="space-y-4">
       <.text_input
         id="person-billing-email"
         name="email"
@@ -203,7 +203,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInfoForms do
       |> assign(:country_options, Enum.map(countries(), fn {code, name} -> {name, code} end))
 
     ~H"""
-    <div class="tw:space-y-4">
+    <div class="space-y-4">
       <.text_input
         id="company-billing-email"
         name="email"
@@ -237,8 +237,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInfoForms do
       />
 
       <div>
-        <span class="tw:block tw:text-sm tw:font-medium tw:text-grey-700 tw:mb-1">Address</span>
-        <div class="tw:grid tw:grid-cols-2 tw:gap-3">
+        <span class="block text-sm font-medium text-grey-700 mb-1">Address</span>
+        <div class="grid grid-cols-2 gap-3">
           <.text_input
             id="company-address-line1"
             name="company[address_line1]"
@@ -256,7 +256,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInfoForms do
         </div>
       </div>
 
-      <div class="tw:grid tw:grid-cols-2 tw:gap-3">
+      <div class="grid grid-cols-2 gap-3">
         <.text_input
           id="company-zip"
           name="company[address_zip]"

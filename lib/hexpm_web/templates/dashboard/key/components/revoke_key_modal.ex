@@ -14,25 +14,25 @@ defmodule HexpmWeb.Dashboard.Key.Components.RevokeKeyModal do
     ~H"""
     <.modal id={@modal_id}>
       <:header>
-        <h2 class="tw:text-lg tw:font-semibold tw:text-grey-900">
+        <h2 class="text-lg font-semibold text-grey-900">
           Revoke Key
         </h2>
       </:header>
 
-      <p class="tw:text-sm tw:text-grey-600 tw:mb-4">
-        Are you sure you want to revoke the key <strong class="tw:font-semibold">{@key.name}</strong>?
+      <p class="text-sm text-grey-600 mb-4">
+        Are you sure you want to revoke the key <strong class="font-semibold">{@key.name}</strong>?
       </p>
 
-      <p class="tw:text-sm tw:text-grey-600">
+      <p class="text-sm text-grey-600">
         This action cannot be undone. Any applications using this key will no longer be able to authenticate.
       </p>
 
       <:footer>
-        <div class="tw:flex tw:gap-3 tw:justify-end">
+        <div class="flex gap-3 justify-end">
           <.button phx-click={hide_modal(@modal_id)} variant="secondary">
             Cancel
           </.button>
-          <form action={@delete_key_path} method="post" class="tw:m-0">
+          <form action={@delete_key_path} method="post" class="m-0">
             <input type="hidden" name="_method" value="delete" />
             <input type="hidden" name="_csrf_token" value={@csrf_token} />
             <input type="hidden" name="name" value={@key.name} />

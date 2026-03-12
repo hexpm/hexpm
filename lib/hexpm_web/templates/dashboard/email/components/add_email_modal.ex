@@ -19,7 +19,7 @@ defmodule HexpmWeb.Dashboard.Email.Components.AddEmailModal do
     ~H"""
     <HexpmWeb.Components.Modal.modal id="add-email-modal" max_width="md">
       <:header>
-        <h2 class="tw:text-lg tw:font-semibold tw:text-grey-900">
+        <h2 class="text-lg font-semibold text-grey-900">
           Add New Email
         </h2>
       </:header>

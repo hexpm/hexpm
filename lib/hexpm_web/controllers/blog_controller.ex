@@ -12,7 +12,7 @@ defmodule HexpmWeb.BlogController do
       conn,
       "index.html",
       title: "Blog",
-      container: "tw:flex-1 tw:flex tw:flex-col"
+      container: "flex-1 flex flex-col"
     )
   end
 
@@ -50,7 +50,7 @@ defmodule HexpmWeb.BlogController do
         conn,
         "#{template}.html",
         title: title(slug),
-        container: "tw:flex-1 tw:flex tw:flex-col"
+        container: "flex-1 flex flex-col"
       )
     else
       not_found(conn)

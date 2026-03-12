@@ -56,7 +56,7 @@ defmodule HexpmWeb.Components.Input do
 
   def text_input(assigns) do
     ~H"""
-    <div class="tw:relative">
+    <div class="relative">
       <.label :if={@label} for={@id} label={@label} required={@required} class={@label_class} />
       <input
         id={@id}
@@ -66,11 +66,11 @@ defmodule HexpmWeb.Components.Input do
         placeholder={@placeholder}
         list={@list}
         class={[
-          "tw:w-full tw:h-12 tw:bg-white tw:border tw:rounded tw:px-3",
-          "tw:text-grey-900 tw:placeholder:text-grey-300",
-          "tw:focus:outline-none tw:focus:ring-1",
-          @errors != [] && "tw:border-red-300 tw:focus:border-red-600 tw:focus:ring-red-600",
-          @errors == [] && "tw:border-grey-200 tw:focus:border-primary-600 tw:focus:ring-primary-600",
+          "w-full h-12 bg-white border rounded px-3",
+          "text-grey-900 placeholder:text-grey-300",
+          "focus:outline-none focus:ring-1",
+          @errors != [] && "border-red-300 focus:border-red-600 focus:ring-red-600",
+          @errors == [] && "border-grey-200 focus:border-primary-600 focus:ring-primary-600",
           @class
         ]}
         {@rest}
@@ -147,15 +147,15 @@ defmodule HexpmWeb.Components.Input do
     ~H"""
     <div>
       <.label :if={@label} for={@id} label={@label} required={@required} class={@label_class} />
-      <div class="tw:relative">
+      <div class="relative">
         <select
           id={@id}
           name={@name}
           class={[
-            "tw:w-full tw:h-12 tw:pl-4 tw:pr-10 tw:bg-white tw:border tw:rounded-lg",
-            "tw:text-grey-900 tw:font-medium tw:cursor-pointer",
-            "tw:focus:outline-none tw:focus:ring-2",
-            "tw:appearance-none",
+            "w-full h-12 pl-4 pr-10 bg-white border rounded-lg",
+            "text-grey-900 font-medium cursor-pointer",
+            "focus:outline-none focus:ring-2",
+            "appearance-none",
             select_border_classes(@variant, @errors),
             @class
           ]}
@@ -169,7 +169,7 @@ defmodule HexpmWeb.Components.Input do
           <% end %>
         </select>
         <%!-- Chevron down icon --%>
-        <div class="tw:absolute tw:right-3 tw:top-1/2 tw:-translate-y-1/2 tw:pointer-events-none tw:text-grey-400">
+        <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-grey-400">
           {icon(:heroicon, "chevron-down", width: 15, height: 15)}
         </div>
       </div>
@@ -259,14 +259,14 @@ defmodule HexpmWeb.Components.Input do
 
     ~H"""
     <div
-      class="tw:relative"
+      class="relative"
       phx-hook={password_hook(@show_strength, @match_password_id)}
       id={password_container_id(@id, @show_strength, @match_password_id)}
       data-password-id={@match_password_id && "##{@match_password_id}"}
     >
       <div
         :if={@label || @hint != []}
-        class="tw:flex tw:items-center tw:justify-between tw:mb-[6px]"
+        class="flex items-center justify-between mb-[6px]"
       >
         <.label
           :if={@label}
@@ -278,44 +278,44 @@ defmodule HexpmWeb.Components.Input do
         />
         {render_slot(@hint)}
       </div>
-      <div class="tw:relative">
+      <div class="relative">
         <input
           id={@id}
           type="password"
           name={@name}
           placeholder={@placeholder}
           class={[
-            "tw:w-full tw:h-12 tw:bg-white tw:border tw:rounded tw:px-3 tw:pr-10",
-            "tw:text-grey-900 tw:placeholder:text-grey-300",
-            "tw:focus:outline-none tw:focus:ring-1",
-            @errors != [] && "tw:border-red-300 tw:focus:border-red-600 tw:focus:ring-red-600",
+            "w-full h-12 bg-white border rounded px-3 pr-10",
+            "text-grey-900 placeholder:text-grey-300",
+            "focus:outline-none focus:ring-1",
+            @errors != [] && "border-red-300 focus:border-red-600 focus:ring-red-600",
             @errors == [] &&
-              "tw:border-grey-200 tw:focus:border-primary-600 tw:focus:ring-primary-600",
+              "border-grey-200 focus:border-primary-600 focus:ring-primary-600",
             @class
           ]}
         />
         <button
           type="button"
           tabindex="-1"
-          class="tw:absolute tw:right-3 tw:top-1/2 tw:-translate-y-1/2 tw:text-grey-400 tw:hover:text-grey-600 tw:transition-colors"
+          class="absolute right-3 top-1/2 -translate-y-1/2 text-grey-400 hover:text-grey-600 transition-colors"
           phx-click={toggle_password_visibility(@id)}
           aria-label="Toggle password visibility"
         >
           <span id={"#{@id}-eye-icon"}>
             {icon(:heroicon, "eye", width: 16, height: 16)}
           </span>
-          <span id={"#{@id}-eye-slash-icon"} class="tw:hidden">
+          <span id={"#{@id}-eye-slash-icon"} class="hidden">
             {icon(:heroicon, "eye-slash", width: 16, height: 16)}
           </span>
         </button>
       </div>
 
       <%!-- Password Strength Meter --%>
-      <div :if={@show_strength} class="tw:mt-3">
+      <div :if={@show_strength} class="mt-3">
         <%!-- Strength Bar --%>
-        <div class="tw:flex tw:items-center tw:gap-3 tw:mb-3">
+        <div class="flex items-center gap-3 mb-3">
           <div
-            class="tw:flex-1 tw:h-2 tw:bg-grey-100 tw:rounded-full tw:overflow-hidden"
+            class="flex-1 h-2 bg-grey-100 rounded-full overflow-hidden"
             role="progressbar"
             aria-valuemin="0"
             aria-valuemax="100"
@@ -324,21 +324,21 @@ defmodule HexpmWeb.Components.Input do
           >
             <div
               data-strength-bar
-              class="tw:h-full tw:rounded-full tw:transition-all tw:duration-300"
+              class="h-full rounded-full transition-all duration-300"
               style="width: 0%"
             >
             </div>
           </div>
           <span
             data-strength-label
-            class="tw:text-small tw:font-medium tw:min-w-[60px]"
+            class="text-small font-medium min-w-[60px]"
             aria-live="polite"
           >
           </span>
         </div>
 
         <%!-- Requirements Checklist --%>
-        <div class="tw:space-y-2" aria-live="polite" aria-label="Password requirements">
+        <div class="space-y-2" aria-live="polite" aria-label="Password requirements">
           <.password_requirement key="length" label="At least 8 characters" />
           <.password_requirement key="lowercase" label="One lowercase letter" />
           <.password_requirement key="uppercase" label="One uppercase letter" />
@@ -350,11 +350,11 @@ defmodule HexpmWeb.Components.Input do
       <div
         :if={@match_password_id}
         data-match-error
-        class="tw:mt-1 tw:hidden"
+        class="mt-1 hidden"
         role="alert"
         aria-live="polite"
       >
-        <p class="tw:flex tw:items-center tw:gap-1 tw:text-small tw:text-red-600">
+        <p class="flex items-center gap-1 text-small text-red-600">
           {icon(:heroicon, "exclamation-circle", width: 16, height: 16)}
           <span>Passwords do not match</span>
         </p>
@@ -379,13 +379,13 @@ defmodule HexpmWeb.Components.Input do
     <label
       for={@for}
       class={[
-        "tw:block tw:text-small tw:font-medium tw:text-grey-900",
-        !@no_margin && "tw:mb-[6px]",
+        "block text-small font-medium text-grey-900",
+        !@no_margin && "mb-[6px]",
         @class
       ]}
     >
       {@label}
-      <span :if={@required} class="tw:text-red-600 tw:ml-1">*</span>
+      <span :if={@required} class="text-red-600 ml-1">*</span>
     </label>
     """
   end
@@ -397,8 +397,8 @@ defmodule HexpmWeb.Components.Input do
 
   def errors(assigns) do
     ~H"""
-    <div :if={@errors != []} class="tw:mt-1">
-      <p :for={msg <- @errors} class="tw:flex tw:items-center tw:gap-1 tw:text-small tw:text-red-600">
+    <div :if={@errors != []} class="mt-1">
+      <p :for={msg <- @errors} class="flex items-center gap-1 text-small text-red-600">
         {icon(:heroicon, "exclamation-circle", width: 16, height: 16)}
         <span>{msg}</span>
       </p>
@@ -415,14 +415,14 @@ defmodule HexpmWeb.Components.Input do
     ~H"""
     <div
       data-requirement={@key}
-      class="tw:flex tw:items-center tw:gap-2 tw:text-small tw:text-grey-600"
+      class="flex items-center gap-2 text-small text-grey-600"
     >
-      <span class="tw:relative tw:w-4 tw:h-4">
-        <span data-x-icon class="tw:absolute tw:inset-0">
-          {icon(:heroicon, "x-circle", class: "tw:w-4 tw:h-4 tw:text-red-500")}
+      <span class="relative w-4 h-4">
+        <span data-x-icon class="absolute inset-0">
+          {icon(:heroicon, "x-circle", class: "w-4 h-4 text-red-500")}
         </span>
-        <span data-check-icon class="tw:absolute tw:inset-0 tw:hidden">
-          {icon(:heroicon, "check-circle", class: "tw:w-4 tw:h-4 tw:transition-colors")}
+        <span data-check-icon class="absolute inset-0 hidden">
+          {icon(:heroicon, "check-circle", class: "w-4 h-4 transition-colors")}
         </span>
       </span>
       <span>{@label}</span>
@@ -450,8 +450,8 @@ defmodule HexpmWeb.Components.Input do
 
   defp toggle_password_visibility(input_id) do
     JS.toggle_attribute({"type", "text", "password"}, to: "##{input_id}")
-    |> JS.toggle_class("tw:hidden", to: "##{input_id}-eye-icon")
-    |> JS.toggle_class("tw:hidden", to: "##{input_id}-eye-slash-icon")
+    |> JS.toggle_class("hidden", to: "##{input_id}-eye-icon")
+    |> JS.toggle_class("hidden", to: "##{input_id}-eye-slash-icon")
   end
 
   defp translate_error({msg, opts}) do
@@ -464,18 +464,18 @@ defmodule HexpmWeb.Components.Input do
 
   # Helper function to determine border classes based on variant and error state
   defp select_border_classes("light", errors) when errors != [] do
-    "tw:border-red-300 tw:focus:border-red-600 tw:focus:ring-red-600 tw:focus:ring-opacity-20"
+    "border-red-300 focus:border-red-600 focus:ring-red-600 focus:ring-opacity-20"
   end
 
   defp select_border_classes("light", _errors) do
-    "tw:border-grey-200 tw:focus:border-purple-600 tw:focus:ring-purple-600 tw:focus:ring-opacity-20"
+    "border-grey-200 focus:border-purple-600 focus:ring-purple-600 focus:ring-opacity-20"
   end
 
   defp select_border_classes("default", errors) when errors != [] do
-    "tw:border-red-300 tw:focus:border-red-600 tw:focus:ring-red-600 tw:focus:ring-opacity-20"
+    "border-red-300 focus:border-red-600 focus:ring-red-600 focus:ring-opacity-20"
   end
 
   defp select_border_classes("default", _errors) do
-    "tw:border-grey-300 tw:focus:border-primary-600 tw:focus:ring-primary-600 tw:focus:ring-opacity-20"
+    "border-grey-300 focus:border-primary-600 focus:ring-primary-600 focus:ring-opacity-20"
   end
 end

@@ -18,12 +18,12 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.RecoveryCodesCard do
 
   def recovery_codes_card(assigns) do
     ~H"""
-    <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:p-8">
-      <h2 class="tw:text-grey-900 tw:text-xl tw:font-semibold tw:mb-4">
+    <div class="bg-white border border-grey-200 rounded-lg p-8">
+      <h2 class="text-grey-900 text-xl font-semibold mb-4">
         Recovery Codes
       </h2>
 
-      <p class="tw:text-grey-600 tw:text-sm tw:mb-6">
+      <p class="text-grey-600 text-sm mb-6">
         Recovery codes can be used to access your account in the event you lose access to
         your device and cannot receive two-factor authentication codes.
       </p>
@@ -31,24 +31,24 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.RecoveryCodesCard do
       <%= if show_recovery_codes?(@user) do %>
         <%!-- Recovery Codes Display --%>
         <div
-          class="tw:p-6 tw:bg-grey-50 tw:border tw:border-grey-200 tw:rounded-lg tw:mb-6"
+          class="p-6 bg-grey-50 border border-grey-200 rounded-lg mb-6"
           id="recovery-codes"
           data-value={aggregate_recovery_codes(@user.tfa.recovery_codes)}
         >
-          <div class="tw:grid tw:grid-cols-2 tw:gap-3">
+          <div class="grid grid-cols-2 gap-3">
             <%= for code <- @user.tfa.recovery_codes do %>
-              <div class="tw:flex tw:items-center tw:justify-between tw:p-2 tw:bg-white tw:rounded tw:border tw:border-grey-200">
+              <div class="flex items-center justify-between p-2 bg-white rounded border border-grey-200">
                 <code class={[
-                  "tw:text-sm tw:font-mono",
+                  "text-sm font-mono",
                   if(code.used_at,
-                    do: "tw:text-grey-400 tw:line-through",
-                    else: "tw:text-grey-900"
+                    do: "text-grey-400 line-through",
+                    else: "text-grey-900"
                   )
                 ]}>
                   {code.code}
                 </code>
                 <%= if code.used_at do %>
-                  <span class="tw:text-xs tw:px-2 tw:py-1 tw:bg-grey-100 tw:text-grey-600 tw:rounded">
+                  <span class="text-xs px-2 py-1 bg-grey-100 text-grey-600 rounded">
                     Used
                   </span>
                 <% end %>
@@ -58,7 +58,7 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.RecoveryCodesCard do
         </div>
 
         <%!-- Action Buttons --%>
-        <div class="tw:flex tw:items-center tw:gap-3 tw:mb-8">
+        <div class="flex items-center gap-3 mb-8">
           <.button
             id="download-recovery-codes-btn"
             type="button"
@@ -93,11 +93,11 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.RecoveryCodesCard do
       <% end %>
 
       <%!-- Generate New Codes Section --%>
-      <div class="tw:border-t tw:border-grey-200 tw:pt-6">
-        <h3 class="tw:text-grey-900 tw:font-medium tw:mb-2">
+      <div class="border-t border-grey-200 pt-6">
+        <h3 class="text-grey-900 font-medium mb-2">
           Generate New Recovery Codes
         </h3>
-        <p class="tw:text-grey-600 tw:text-sm tw:mb-4">
+        <p class="text-grey-600 text-sm mb-4">
           When you generate new recovery codes, you must download or print the new codes.
           Your old codes won't work anymore.
         </p>

@@ -24,9 +24,9 @@ defmodule HexpmWeb.Components.Navbar do
 
   def header(assigns) do
     ~H"""
-    <nav id="main-navbar" class="tw:bg-grey-900 tw:w-full tw:font-sans">
-      <div class="tw:max-w-7xl tw:mx-auto tw:px-4 tw:lg:px-0">
-        <div class="tw:flex tw:items-center tw:justify-between tw:h-[72px] tw:gap-8 tw:lg:gap-20">
+    <nav id="main-navbar" class="bg-grey-900 w-full font-sans">
+      <div class="max-w-7xl mx-auto px-4 lg:px-0">
+        <div class="flex items-center justify-between h-[72px] gap-8 lg:gap-20">
           <.logo />
           <.desktop_nav current_user={@current_user} search={@search} show_search={@show_search} />
           <.mobile_nav_controls current_user={@current_user} show_search={@show_search} />
@@ -41,9 +41,9 @@ defmodule HexpmWeb.Components.Navbar do
 
   defp logo(assigns) do
     ~H"""
-    <a href="/" class="tw:shrink-0 tw:flex tw:items-center tw:gap-3">
-      <img src={~p"/images/hex-full.svg"} alt="hex logo" class="tw:h-8 tw:w-auto" />
-      <span class="tw:text-white tw:text-2xl tw:font-bold tw:tracking-tight">
+    <a href="/" class="shrink-0 flex items-center gap-3">
+      <img src={~p"/images/hex-full.svg"} alt="hex logo" class="h-8 w-auto" />
+      <span class="text-white text-2xl font-bold tracking-tight">
         Hex
       </span>
     </a>
@@ -56,7 +56,7 @@ defmodule HexpmWeb.Components.Navbar do
 
   defp desktop_nav(assigns) do
     ~H"""
-    <div class="tw:hidden tw:lg:flex tw:items-center tw:flex-1 tw:justify-end tw:gap-10">
+    <div class="hidden lg:flex items-center flex-1 justify-end gap-10">
       <.search_form :if={@show_search} search={@search} />
       <.nav_links />
       <.auth_section current_user={@current_user} />
@@ -68,17 +68,17 @@ defmodule HexpmWeb.Components.Navbar do
     ~H"""
     <a
       href={~p"/packages"}
-      class="tw:text-grey-200 tw:text-md tw:hover:text-white tw:transition-colors"
+      class="text-grey-200 text-md hover:text-white transition-colors"
     >
       Packages
     </a>
     <a
       href={~p"/pricing"}
-      class="tw:text-grey-200 tw:text-md tw:hover:text-white tw:transition-colors"
+      class="text-grey-200 text-md hover:text-white transition-colors"
     >
       Pricing
     </a>
-    <a href={~p"/docs"} class="tw:text-grey-200 tw:text-md tw:hover:text-white tw:transition-colors">
+    <a href={~p"/docs"} class="text-grey-200 text-md hover:text-white transition-colors">
       Docs
     </a>
     """
@@ -101,7 +101,7 @@ defmodule HexpmWeb.Components.Navbar do
     <a
       :if={!@current_user}
       href={~p"/login"}
-      class="tw:inline-flex tw:items-center tw:justify-center tw:bg-grey-400 tw:px-6 tw:py-1 tw:rounded-lg tw:text-white tw:text-md tw:hover:bg-grey-500 tw:hover:scale-105 tw:transition-all tw:duration-200"
+      class="inline-flex items-center justify-center bg-grey-400 px-6 py-1 rounded-lg text-white text-md hover:bg-grey-500 hover:scale-105 transition-all duration-200"
     >
       Log In
     </a>
@@ -113,11 +113,11 @@ defmodule HexpmWeb.Components.Navbar do
 
   defp mobile_nav_controls(assigns) do
     ~H"""
-    <div class="tw:flex tw:lg:hidden tw:items-center tw:gap-6">
+    <div class="flex lg:hidden items-center gap-6">
       <img
         :if={@current_user}
         src={gravatar_url(User.email(@current_user, :gravatar), :small)}
-        class="tw:w-5 tw:h-5 tw:rounded-full"
+        class="w-5 h-5 rounded-full"
         alt={@current_user.username}
       />
       <.mobile_search_toggle :if={@show_search} />
@@ -130,11 +130,11 @@ defmodule HexpmWeb.Components.Navbar do
 
   defp mobile_search_bar(assigns) do
     ~H"""
-    <div id="mobile-search-bar" class="tw:hidden tw:lg:hidden! tw:bg-grey-900 tw:pb-4">
+    <div id="mobile-search-bar" class="hidden lg:hidden! bg-grey-900 pb-4">
       <form role="search" action={~p"/packages"}>
-        <div class="tw:relative">
-          <div class="tw:absolute tw:left-3 tw:top-1/2 tw:-translate-y-1/2 tw:pointer-events-none">
-            {icon(:heroicon, "magnifying-glass", width: 18, height: 18, class: "tw:text-grey-300")}
+        <div class="relative">
+          <div class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+            {icon(:heroicon, "magnifying-glass", width: 18, height: 18, class: "text-grey-300")}
           </div>
           <input
             id="mobile-search-input"
@@ -142,7 +142,7 @@ defmodule HexpmWeb.Components.Navbar do
             type="text"
             value={@search}
             placeholder="Find packages..."
-            class="tw:w-full tw:bg-grey-800 tw:border tw:border-grey-600 tw:rounded-lg tw:px-3 tw:pl-10 tw:py-[11px] tw:text-white tw:text-base tw:font-medium tw:leading-4 tw:placeholder:text-grey-300 tw:focus:outline-none tw:focus:border-grey-500 tw:focus:shadow-[inset_0px_0px_6px_0px_rgba(255,255,255,0.3)]"
+            class="w-full bg-grey-800 border border-grey-600 rounded-lg px-3 pl-10 py-[11px] text-white text-base font-medium leading-4 placeholder:text-grey-300 focus:outline-none focus:border-grey-500 focus:shadow-[inset_0px_0px_6px_0px_rgba(255,255,255,0.3)]"
           />
           <input type="hidden" name="sort" value="recent_downloads" />
         </div>
@@ -155,8 +155,8 @@ defmodule HexpmWeb.Components.Navbar do
 
   defp mobile_menu(assigns) do
     ~H"""
-    <div id="navbar-mobile" class="tw:hidden tw:lg:hidden! tw:bg-grey-900 tw:pb-6">
-      <div class="tw:flex tw:flex-col tw:gap-4">
+    <div id="navbar-mobile" class="hidden lg:hidden! bg-grey-900 pb-6">
+      <div class="flex flex-col gap-4">
         <.mobile_nav_links />
         <.mobile_auth_section current_user={@current_user} />
       </div>
@@ -166,13 +166,13 @@ defmodule HexpmWeb.Components.Navbar do
 
   defp mobile_nav_links(assigns) do
     ~H"""
-    <a href={~p"/packages"} class="tw:text-grey-200 tw:text-md tw:py-2 tw:hover:text-white">
+    <a href={~p"/packages"} class="text-grey-200 text-md py-2 hover:text-white">
       Packages
     </a>
-    <a href={~p"/pricing"} class="tw:text-grey-200 tw:text-md tw:py-2 tw:hover:text-white">
+    <a href={~p"/pricing"} class="text-grey-200 text-md py-2 hover:text-white">
       Pricing
     </a>
-    <a href={~p"/docs"} class="tw:text-grey-200 tw:text-md tw:py-2 tw:hover:text-white">
+    <a href={~p"/docs"} class="text-grey-200 text-md py-2 hover:text-white">
       Docs
     </a>
     """
@@ -182,7 +182,7 @@ defmodule HexpmWeb.Components.Navbar do
 
   defp mobile_auth_section(assigns) do
     ~H"""
-    <div :if={@current_user} class="tw:border-t tw:border-grey-700 tw:pt-4 tw:mt-2">
+    <div :if={@current_user} class="border-t border-grey-700 pt-4 mt-2">
       <.mobile_user_menu_link href={~p"/users/#{@current_user}"} label="Profile" />
       <.mobile_user_menu_link href={~p"/dashboard/profile"} label="Dashboard" />
       <.mobile_logout_form />
@@ -190,7 +190,7 @@ defmodule HexpmWeb.Components.Navbar do
     <a
       :if={!@current_user}
       href={~p"/login"}
-      class="tw:bg-grey-600 tw:px-6 tw:py-[11px] tw:rounded-lg tw:text-white tw:text-md tw:text-center tw:hover:bg-grey-500 tw:mt-2"
+      class="bg-grey-600 px-6 py-[11px] rounded-lg text-white text-md text-center hover:bg-grey-500 mt-2"
     >
       Log In
     </a>
@@ -202,7 +202,7 @@ defmodule HexpmWeb.Components.Navbar do
 
   defp mobile_user_menu_link(assigns) do
     ~H"""
-    <a href={@href} class="tw:block tw:text-grey-200 tw:text-md tw:py-2 tw:hover:text-white">
+    <a href={@href} class="block text-grey-200 text-md py-2 hover:text-white">
       {@label}
     </a>
     """
@@ -210,11 +210,11 @@ defmodule HexpmWeb.Components.Navbar do
 
   defp mobile_logout_form(assigns) do
     ~H"""
-    <form action={~p"/logout"} method="post" class="tw:mt-2">
+    <form action={~p"/logout"} method="post" class="mt-2">
       <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
       <button
         type="submit"
-        class="tw:w-full tw:text-left tw:text-grey-200 tw:text-md tw:py-2 tw:hover:text-white tw:cursor-pointer"
+        class="w-full text-left text-grey-200 text-md py-2 hover:text-white cursor-pointer"
       >
         Log out
       </button>
@@ -226,16 +226,16 @@ defmodule HexpmWeb.Components.Navbar do
 
   defp search_form(assigns) do
     ~H"""
-    <form role="search" action={~p"/packages"} class="tw:shrink-0 tw:w-[420px] tw:mr-auto">
-      <div class="tw:relative tw:flex tw:items-center">
-        <div class="tw:absolute tw:left-3 tw:pointer-events-none">
-          {icon(:heroicon, "magnifying-glass", width: 18, height: 18, class: "tw:text-grey-300")}
+    <form role="search" action={~p"/packages"} class="shrink-0 w-[420px] mr-auto">
+      <div class="relative flex items-center">
+        <div class="absolute left-3 pointer-events-none">
+          {icon(:heroicon, "magnifying-glass", width: 18, height: 18, class: "text-grey-300")}
         </div>
         <input
           placeholder="Find packages..."
           name="search"
           type="text"
-          class="tw:w-full tw:h-[40px] tw:bg-grey-800 tw:border tw:border-grey-600 tw:rounded-lg tw:px-3 tw:pl-10 tw:py-[11px] tw:text-white tw:leading-4 tw:placeholder:text-grey-300 tw:focus:outline-none tw:focus:border-grey-500 tw:focus:shadow-[inset_0px_0px_6px_0px_rgba(255,255,255,0.3)]"
+          class="w-full h-[40px] bg-grey-800 border border-grey-600 rounded-lg px-3 pl-10 py-[11px] text-white leading-4 placeholder:text-grey-300 focus:outline-none focus:border-grey-500 focus:shadow-[inset_0px_0px_6px_0px_rgba(255,255,255,0.3)]"
           value={@search}
         />
         <input type="hidden" name="sort" value="recent_downloads" />
@@ -253,7 +253,7 @@ defmodule HexpmWeb.Components.Navbar do
     ~H"""
     <button
       type="button"
-      class={"tw:text-grey-200 tw:p-0 tw:cursor-pointer " <> @class}
+      class={"text-grey-200 p-0 cursor-pointer " <> @class}
       phx-click={toggle_mobile_search()}
       aria-label="Search"
       aria-expanded="false"
@@ -268,11 +268,11 @@ defmodule HexpmWeb.Components.Navbar do
     JS.toggle(
       to: "#mobile-search-bar",
       in:
-        {"tw:transition-all tw:ease-out tw:duration-200 tw:transform",
-         "tw:opacity-0 tw:-translate-y-2", "tw:opacity-100 tw:translate-y-0"},
+        {"transition-all ease-out duration-200 transform",
+         "opacity-0 -translate-y-2", "opacity-100 translate-y-0"},
       out:
-        {"tw:transition-all tw:ease-in tw:duration-150 tw:transform",
-         "tw:opacity-100 tw:translate-y-0", "tw:opacity-0 tw:-translate-y-2"}
+        {"transition-all ease-in duration-150 transform",
+         "opacity-100 translate-y-0", "opacity-0 -translate-y-2"}
     )
     |> JS.focus(to: "#mobile-search-input")
   end
@@ -286,19 +286,19 @@ defmodule HexpmWeb.Components.Navbar do
     ~H"""
     <button
       type="button"
-      class={"tw:bg-grey-700 tw:rounded-lg tw:p-[10px] tw:w-10 tw:h-10 tw:flex tw:items-center tw:justify-center tw:cursor-pointer " <> @class}
+      class={"bg-grey-700 rounded-lg p-[10px] w-10 h-10 flex items-center justify-center cursor-pointer " <> @class}
       phx-click={toggle_mobile_menu()}
       aria-expanded="false"
       aria-controls="navbar-mobile"
     >
-      <span class="tw:sr-only">Toggle navigation</span>
+      <span class="sr-only">Toggle navigation</span>
       <%!-- Hamburger icon (shown when closed) --%>
-      <span id="menu-open-icon" class="tw:block">
-        {icon(:heroicon, "bars-3", width: 20, height: 20, class: "tw:text-grey-200")}
+      <span id="menu-open-icon" class="block">
+        {icon(:heroicon, "bars-3", width: 20, height: 20, class: "text-grey-200")}
       </span>
       <%!-- X icon (shown when open) --%>
-      <span id="menu-close-icon" class="tw:hidden">
-        {icon(:heroicon, "x-mark", width: 20, height: 20, class: "tw:text-grey-200")}
+      <span id="menu-close-icon" class="hidden">
+        {icon(:heroicon, "x-mark", width: 20, height: 20, class: "text-grey-200")}
       </span>
     </button>
     """
@@ -308,11 +308,11 @@ defmodule HexpmWeb.Components.Navbar do
     JS.toggle(
       to: "#navbar-mobile",
       in:
-        {"tw:transition-all tw:ease-out tw:duration-300 tw:transform",
-         "tw:opacity-0 tw:-translate-y-2", "tw:opacity-100 tw:translate-y-0"},
+        {"transition-all ease-out duration-300 transform",
+         "opacity-0 -translate-y-2", "opacity-100 translate-y-0"},
       out:
-        {"tw:transition-all tw:ease-in tw:duration-200 tw:transform",
-         "tw:opacity-100 tw:translate-y-0", "tw:opacity-0 tw:-translate-y-2"}
+        {"transition-all ease-in duration-200 transform",
+         "opacity-100 translate-y-0", "opacity-0 -translate-y-2"}
     )
     |> JS.toggle(to: "#menu-open-icon")
     |> JS.toggle(to: "#menu-close-icon")
@@ -331,13 +331,13 @@ defmodule HexpmWeb.Components.Navbar do
 
   def user_dropdown(assigns) do
     ~H"""
-    <div class="tw:relative">
+    <div class="relative">
       <.user_dropdown_button avatar_url={@avatar_url} class={@class} username={@username} />
 
       <%!-- Backdrop for click-away --%>
       <div
         id="user-dropdown-backdrop"
-        class="tw:hidden tw:fixed tw:inset-0 tw:z-40"
+        class="hidden fixed inset-0 z-40"
         phx-click={hide_user_dropdown()}
       />
 
@@ -359,15 +359,15 @@ defmodule HexpmWeb.Components.Navbar do
     ~H"""
     <button
       type="button"
-      class={"tw:flex tw:items-center tw:gap-[10px] tw:bg-grey-600 tw:px-6 tw:py-[11px] tw:rounded-lg tw:text-white tw:text-md tw:leading-[18px] tw:cursor-pointer " <> @class}
+      class={"flex items-center gap-[10px] bg-grey-600 px-6 py-[11px] rounded-lg text-white text-md leading-[18px] cursor-pointer " <> @class}
       phx-click={toggle_user_dropdown()}
       aria-expanded="false"
       aria-haspopup="true"
       aria-controls="user-dropdown-menu"
     >
-      <img src={@avatar_url} class="tw:w-5 tw:h-5 tw:rounded-full" alt={@username} />
+      <img src={@avatar_url} class="w-5 h-5 rounded-full" alt={@username} />
       <span>{@username}</span>
-      {icon(:heroicon, "chevron-down", width: 16, height: 16, class: "tw:text-grey-200")}
+      {icon(:heroicon, "chevron-down", width: 16, height: 16, class: "text-grey-200")}
     </button>
     """
   end
@@ -381,11 +381,11 @@ defmodule HexpmWeb.Components.Navbar do
     ~H"""
     <div
       id="user-dropdown-menu"
-      class="tw:hidden tw:absolute tw:right-0 tw:mt-2 tw:w-48 tw:bg-grey-700 tw:border tw:border-grey-600 tw:rounded-lg tw:shadow-lg tw:py-1 tw:z-50"
+      class="hidden absolute right-0 mt-2 w-48 bg-grey-700 border border-grey-600 rounded-lg shadow-lg py-1 z-50"
     >
       <.user_menu_link href={@user_path} label="Profile" />
       <.user_menu_link href={@dashboard_path} label="Dashboard" />
-      <div class="tw:border-t tw:border-grey-600 tw:my-1"></div>
+      <div class="border-t border-grey-600 my-1"></div>
       <.logout_form csrf_token={@csrf_token} logout_path={@logout_path} />
     </div>
     """
@@ -398,7 +398,7 @@ defmodule HexpmWeb.Components.Navbar do
     ~H"""
     <a
       href={@href}
-      class="tw:block tw:px-4 tw:py-2 tw:text-sm tw:text-grey-200 tw:hover:bg-grey-600 tw:transition-colors"
+      class="block px-4 py-2 text-sm text-grey-200 hover:bg-grey-600 transition-colors"
     >
       {@label}
     </a>
@@ -414,7 +414,7 @@ defmodule HexpmWeb.Components.Navbar do
       <input type="hidden" name="_csrf_token" value={@csrf_token} />
       <button
         type="submit"
-        class="tw:w-full tw:text-left tw:px-4 tw:py-2 tw:text-sm tw:text-grey-200 tw:hover:bg-grey-600 tw:transition-colors tw:cursor-pointer"
+        class="w-full text-left px-4 py-2 text-sm text-grey-200 hover:bg-grey-600 transition-colors cursor-pointer"
       >
         Log out
       </button>
@@ -426,11 +426,11 @@ defmodule HexpmWeb.Components.Navbar do
     JS.toggle(
       to: "#user-dropdown-menu",
       in:
-        {"tw:transition-all tw:ease-out tw:duration-200 tw:transform",
-         "tw:opacity-0 tw:-translate-y-2", "tw:opacity-100 tw:translate-y-0"},
+        {"transition-all ease-out duration-200 transform",
+         "opacity-0 -translate-y-2", "opacity-100 translate-y-0"},
       out:
-        {"tw:transition-all tw:ease-in tw:duration-150 tw:transform",
-         "tw:opacity-100 tw:translate-y-0", "tw:opacity-0 tw:-translate-y-2"}
+        {"transition-all ease-in duration-150 transform",
+         "opacity-100 translate-y-0", "opacity-0 -translate-y-2"}
     )
     |> JS.toggle(to: "#user-dropdown-backdrop")
   end
@@ -439,8 +439,8 @@ defmodule HexpmWeb.Components.Navbar do
     JS.hide(
       to: "#user-dropdown-menu",
       transition:
-        {"tw:transition-all tw:ease-in tw:duration-150 tw:transform",
-         "tw:opacity-100 tw:translate-y-0", "tw:opacity-0 tw:-translate-y-2"}
+        {"transition-all ease-in duration-150 transform",
+         "opacity-100 translate-y-0", "opacity-0 -translate-y-2"}
     )
     |> JS.hide(to: "#user-dropdown-backdrop")
   end

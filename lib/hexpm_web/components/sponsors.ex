@@ -12,21 +12,21 @@ defmodule HexpmWeb.Components.Sponsors do
 
   def sponsor_card(assigns) do
     ~H"""
-    <article class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:p-6 tw:flex tw:flex-col tw:flex-1">
-      <div class="tw:mb-4 tw:flex tw:items-center tw:justify-between">
+    <article class="bg-white border border-grey-200 rounded-lg p-6 flex flex-col flex-1">
+      <div class="mb-4 flex items-center justify-between">
         <a
           href={@url}
-          class="tw:block tw:flex-shrink-0"
+          class="block flex-shrink-0"
           target="_blank"
           rel="noopener noreferrer"
         >
-          <img src={@logo_src} alt={"#{@name} logo"} class="tw:h-12 tw:w-auto tw:object-contain" />
+          <img src={@logo_src} alt={"#{@name} logo"} class="h-12 w-auto object-contain" />
         </a>
         <a
           href={@url}
           target="_blank"
           rel="noopener noreferrer"
-          class="tw:text-grey-400 tw:hover:text-blue-500 tw:transition-colors tw:ml-4"
+          class="text-grey-400 hover:text-blue-500 transition-colors ml-4"
           aria-label={"Visit #{@name} website"}
         >
           <svg
@@ -35,7 +35,7 @@ defmodule HexpmWeb.Components.Sponsors do
             viewBox="0 0 24 24"
             stroke-width="1.5"
             stroke="currentColor"
-            class="tw:w-5 tw:h-5"
+            class="w-5 h-5"
           >
             <path
               stroke-linecap="round"
@@ -46,11 +46,11 @@ defmodule HexpmWeb.Components.Sponsors do
         </a>
       </div>
 
-      <div class="tw:text-grey-600 tw:text-sm tw:leading-6 tw:space-y-3 tw:flex-1">
+      <div class="text-grey-600 text-sm leading-6 space-y-3 flex-1">
         <p>
           {@description}
         </p>
-        <p class="tw:font-medium tw:text-grey-900">
+        <p class="font-medium text-grey-900">
           {@contribution}
         </p>
       </div>

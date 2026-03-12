@@ -10,7 +10,7 @@ defmodule HexpmWeb.Components.Icons do
   @doc """
   Renders a GitHub icon.
   """
-  attr :class, :string, default: "tw:h-4 tw:w-4"
+  attr :class, :string, default: "h-4 w-4"
 
   def github_icon(assigns) do
     ~H"""
@@ -34,7 +34,7 @@ defmodule HexpmWeb.Components.Icons do
   @doc """
   Renders a Twitter/X icon.
   """
-  attr :class, :string, default: "tw:h-4 tw:w-4"
+  attr :class, :string, default: "h-4 w-4"
 
   def twitter_icon(assigns) do
     ~H"""
@@ -56,7 +56,7 @@ defmodule HexpmWeb.Components.Icons do
   @doc """
   Renders a Bluesky icon.
   """
-  attr :class, :string, default: "tw:h-4 tw:w-4"
+  attr :class, :string, default: "h-4 w-4"
 
   def bluesky_icon(assigns) do
     ~H"""
@@ -78,7 +78,7 @@ defmodule HexpmWeb.Components.Icons do
   @doc """
   Renders an Elixir Forum icon (using Elixir logo).
   """
-  attr :class, :string, default: "tw:h-4 tw:w-4"
+  attr :class, :string, default: "h-4 w-4"
 
   def elixirforum_icon(assigns) do
     ~H"""
@@ -107,7 +107,7 @@ defmodule HexpmWeb.Components.Icons do
   @doc """
   Renders a Slack icon.
   """
-  attr :class, :string, default: "tw:h-4 tw:w-4"
+  attr :class, :string, default: "h-4 w-4"
 
   def slack_icon(assigns) do
     ~H"""
@@ -129,7 +129,7 @@ defmodule HexpmWeb.Components.Icons do
   @doc """
   Renders a Libera (IRC) icon.
   """
-  attr :class, :string, default: "tw:h-4 tw:w-4"
+  attr :class, :string, default: "h-4 w-4"
 
   def libera_icon(assigns) do
     ~H"""
@@ -156,9 +156,9 @@ defmodule HexpmWeb.Components.Icons do
   ## Examples
 
       <.social_icon icon={:github} />
-      <.social_icon icon={:twitter} class="tw:h-6 tw:w-6" />
+      <.social_icon icon={:twitter} class="h-6 w-6" />
   """
-  attr :class, :string, default: "tw:h-4 tw:w-4"
+  attr :class, :string, default: "h-4 w-4"
   attr :icon, :atom, required: true
 
   def social_icon(%{icon: :github} = assigns) do

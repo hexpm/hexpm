@@ -1,8 +1,8 @@
-<a href={HexpmWeb.Router.user_path(@user)} class="tw:flex tw:items-center tw:gap-2 tw:hover:text-purple-600 tw:transition-colors">
+<a href={HexpmWeb.Router.user_path(@user)} class="flex items-center gap-2 hover:text-purple-600 transition-colors">
   <img
     src={ViewHelpers.gravatar_url(Hexpm.Accounts.User.email(@user, :gravatar), :small)}
-    class="tw:size-6 tw:rounded-full"
+    class="size-6 rounded-full"
     alt={@user.username}
   />
-  <span class="tw:text-grey-700 tw:text-sm tw:font-medium">{@user.username}</span>
+  <span class="text-grey-700 text-sm font-medium">{@user.username}</span>
 </a>

@@ -2,28 +2,28 @@
   <%!-- Back Link --%>
   <a
     href={~p"/users/#{@current_user.username}"}
-    class="tw:inline-flex tw:items-center tw:gap-2 tw:text-grey-600 tw:text-sm tw:mb-6 tw:hover:text-grey-900"
+    class="inline-flex items-center gap-2 text-grey-600 text-sm mb-6 hover:text-grey-900"
   >
-    {HexpmWeb.ViewIcons.icon(:heroicon, "arrow-left", class: "tw:w-4 tw:h-4")} Back to Profile
+    {HexpmWeb.ViewIcons.icon(:heroicon, "arrow-left", class: "w-4 h-4")} Back to Profile
   </a>
 
   <%!-- Settings Title --%>
-  <h1 class="tw:text-grey-900 tw:text-3xl tw:font-semibold tw:mb-8">
+  <h1 class="text-grey-900 text-3xl font-semibold mb-8">
     Settings
   </h1>
 
   <%!-- Account Settings Section --%>
-  <div class="tw:mb-8">
-    <ul class="tw:space-y-1">
+  <div class="mb-8">
+    <ul class="space-y-1">
       <%= for {id, {name, path}} <- account_settings() do %>
         <li>
           <a
             href={path}
             class={[
-              "tw:flex tw:items-center tw:gap-3 tw:px-3 tw:py-2 tw:rounded-lg tw:text-sm tw:transition-colors",
+              "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
               if(selected_setting(@conn, id),
-                do: "tw:bg-purple-50 tw:text-purple-600 tw:font-medium",
-                else: "tw:text-grey-600 tw:hover:text-grey-900"
+                do: "bg-purple-50 text-purple-600 font-medium",
+                else: "text-grey-600 hover:text-grey-900"
               )
             ]}
           >
@@ -37,24 +37,24 @@
 
   <%!-- Organization Settings Section --%>
   <%= if @current_user.organizations != [] do %>
-    <div class="tw:border-t tw:border-grey-200 tw:pt-6">
-      <h3 class="tw:text-grey-600 tw:text-xs tw:font-semibold tw:uppercase tw:tracking-wider tw:mb-3">
+    <div class="border-t border-grey-200 pt-6">
+      <h3 class="text-grey-600 text-xs font-semibold uppercase tracking-wider mb-3">
         Organization
       </h3>
-      <ul class="tw:space-y-1">
+      <ul class="space-y-1">
         <%= for organization <- Enum.sort_by(@current_user.organizations, & &1.name) do %>
           <li>
             <a
               href={~p"/dashboard/orgs/#{organization}"}
               class={[
-                "tw:flex tw:items-center tw:gap-3 tw:px-3 tw:py-2 tw:rounded-lg tw:text-sm tw:transition-colors",
+                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
                 if(selected_organization(@conn, organization.name),
-                  do: "tw:bg-purple-50 tw:text-purple-600 tw:font-medium",
-                  else: "tw:text-grey-600 tw:hover:text-grey-900"
+                  do: "bg-purple-50 text-purple-600 font-medium",
+                  else: "text-grey-600 hover:text-grey-900"
                 )
               ]}
             >
-              {HexpmWeb.ViewIcons.icon(:heroicon, "building-office-2", class: "tw:w-5 tw:h-5")}
+              {HexpmWeb.ViewIcons.icon(:heroicon, "building-office-2", class: "w-5 h-5")}
               {organization.name}
             </a>
           </li>
@@ -63,22 +63,22 @@
       <button
         type="button"
         phx-click={show_modal("create-organization-modal")}
-        class="tw:flex tw:items-center tw:gap-2 tw:mt-3 tw:px-3 tw:py-2 tw:text-sm tw:text-grey-600 tw:hover:text-grey-900 tw:border tw:border-dashed tw:border-grey-300 tw:rounded-lg tw:w-full tw:justify-center tw:transition-colors"
+        class="flex items-center gap-2 mt-3 px-3 py-2 text-sm text-grey-600 hover:text-grey-900 border border-dashed border-grey-300 rounded-lg w-full justify-center transition-colors"
       >
-        {HexpmWeb.ViewIcons.icon(:heroicon, "plus", class: "tw:w-4 tw:h-4")} Create New
+        {HexpmWeb.ViewIcons.icon(:heroicon, "plus", class: "w-4 h-4")} Create New
       </button>
     </div>
   <% else %>
-    <div class="tw:border-t tw:border-grey-200 tw:pt-6">
-      <h3 class="tw:text-grey-600 tw:text-xs tw:font-semibold tw:uppercase tw:tracking-wider tw:mb-3">
+    <div class="border-t border-grey-200 pt-6">
+      <h3 class="text-grey-600 text-xs font-semibold uppercase tracking-wider mb-3">
         Organization
       </h3>
       <button
         type="button"
         phx-click={show_modal("create-organization-modal")}
-        class="tw:flex tw:items-center tw:gap-2 tw:px-3 tw:py-2 tw:text-sm tw:text-grey-600 tw:hover:text-grey-900 tw:border tw:border-dashed tw:border-grey-300 tw:rounded-lg tw:w-full tw:justify-center tw:transition-colors"
+        class="flex items-center gap-2 px-3 py-2 text-sm text-grey-600 hover:text-grey-900 border border-dashed border-grey-300 rounded-lg w-full justify-center transition-colors"
       >
-        {HexpmWeb.ViewIcons.icon(:heroicon, "plus", class: "tw:w-4 tw:h-4")} Create New
+        {HexpmWeb.ViewIcons.icon(:heroicon, "plus", class: "w-4 h-4")} Create New
       </button>
     </div>
   <% end %>

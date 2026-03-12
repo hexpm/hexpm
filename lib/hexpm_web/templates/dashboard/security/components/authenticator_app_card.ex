@@ -17,12 +17,12 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.AuthenticatorAppCard 
 
   def authenticator_app_card(assigns) do
     ~H"""
-    <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:p-8">
-      <h2 class="tw:text-grey-900 tw:text-xl tw:font-semibold tw:mb-4">
+    <div class="bg-white border border-grey-200 rounded-lg p-8">
+      <h2 class="text-grey-900 text-xl font-semibold mb-4">
         Authenticator App
       </h2>
 
-      <p class="tw:text-grey-600 tw:text-sm tw:mb-4">
+      <p class="text-grey-600 text-sm mb-4">
         Reset your authenticator app if you've lost access to your device. This will
         invalidate your current two-factor device and recovery codes.
       </p>

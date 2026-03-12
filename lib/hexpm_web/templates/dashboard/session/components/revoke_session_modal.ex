@@ -22,22 +22,22 @@ defmodule HexpmWeb.Dashboard.Session.Components.RevokeSessionModal do
     ~H"""
     <HexpmWeb.Components.Modal.modal id={@modal_id} max_width="md">
       <:header>
-        <h2 class="tw:text-lg tw:font-semibold tw:text-grey-900">
+        <h2 class="text-lg font-semibold text-grey-900">
           Revoke {@session_type} Session?
         </h2>
       </:header>
 
-      <p class="tw:text-grey-700">
+      <p class="text-grey-700">
         Are you sure you want to revoke the session <strong>{@session.name || "Unnamed session"}</strong>?
       </p>
 
       <%= if @session.type == "oauth" and @session.client do %>
-        <p class="tw:text-grey-700 tw:mt-2">
+        <p class="text-grey-700 mt-2">
           This will revoke access for <strong>{@session.client.name}</strong>.
         </p>
       <% end %>
 
-      <p class="tw:text-grey-600 tw:text-small tw:mt-3">
+      <p class="text-grey-600 text-small mt-3">
         This action cannot be undone. You will need to sign in again or re-authorize the application.
       </p>
 

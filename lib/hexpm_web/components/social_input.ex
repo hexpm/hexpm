@@ -31,14 +31,14 @@ defmodule HexpmWeb.Components.SocialInput do
     ~H"""
     <div>
       <div class={[
-        "tw:flex tw:items-center tw:border tw:rounded-lg tw:focus-within:ring-2 tw:transition-colors",
-        @has_errors && "tw:border-red-300 tw:focus-within:ring-red-600",
+        "flex items-center border rounded-lg focus-within:ring-2 transition-colors",
+        @has_errors && "border-red-300 focus-within:ring-red-600",
         !@has_errors &&
-          "tw:border-grey-200 tw:focus-within:ring-purple-600 tw:focus-within:border-transparent"
+          "border-grey-200 focus-within:ring-purple-600 focus-within:border-transparent"
       ]}>
-        <div class="tw:flex tw:items-center tw:px-3 tw:py-2 tw:border-r tw:border-grey-200">
+        <div class="flex items-center px-3 py-2 border-r border-grey-200">
           {render_icon(@icon)}
-          <span class="tw:text-grey-500 tw:text-sm tw:mx-2">/</span>
+          <span class="text-grey-500 text-sm mx-2">/</span>
         </div>
         <input
           type="text"
@@ -46,14 +46,14 @@ defmodule HexpmWeb.Components.SocialInput do
           name={@form[@field].name}
           value={@form[@field].value}
           placeholder={@placeholder}
-          class="tw:flex-1 tw:px-3 tw:py-2 tw:text-grey-900 tw:border-0 tw:focus:outline-none tw:focus:ring-0 tw:bg-transparent"
+          class="flex-1 px-3 py-2 text-grey-900 border-0 focus:outline-none focus:ring-0 bg-transparent"
         />
       </div>
       <%= if @has_errors do %>
-        <div class="tw:mt-1">
+        <div class="mt-1">
           <p
             :for={msg <- Enum.map(@form[@field].errors, &translate_error/1)}
-            class="tw:flex tw:items-center tw:gap-1 tw:text-sm tw:text-red-600"
+            class="flex items-center gap-1 text-sm text-red-600"
           >
             {HexpmWeb.ViewIcons.icon(:heroicon, "exclamation-circle", width: 16, height: 16)}
             <span>{msg}</span>
@@ -68,7 +68,7 @@ defmodule HexpmWeb.Components.SocialInput do
     assigns = %{}
 
     ~H"""
-    <HexpmWeb.Components.Icons.twitter_icon class="tw:w-5 tw:h-5 tw:text-grey-600" />
+    <HexpmWeb.Components.Icons.twitter_icon class="w-5 h-5 text-grey-600" />
     """
   end
 
@@ -76,7 +76,7 @@ defmodule HexpmWeb.Components.SocialInput do
     assigns = %{}
 
     ~H"""
-    <HexpmWeb.Components.Icons.bluesky_icon class="tw:w-5 tw:h-5 tw:text-grey-600" />
+    <HexpmWeb.Components.Icons.bluesky_icon class="w-5 h-5 text-grey-600" />
     """
   end
 
@@ -84,7 +84,7 @@ defmodule HexpmWeb.Components.SocialInput do
     assigns = %{}
 
     ~H"""
-    <HexpmWeb.Components.Icons.github_icon class="tw:w-5 tw:h-5 tw:text-grey-600" />
+    <HexpmWeb.Components.Icons.github_icon class="w-5 h-5 text-grey-600" />
     """
   end
 
@@ -92,7 +92,7 @@ defmodule HexpmWeb.Components.SocialInput do
     assigns = %{}
 
     ~H"""
-    <HexpmWeb.Components.Icons.elixirforum_icon class="tw:w-5 tw:h-5 tw:text-grey-600" />
+    <HexpmWeb.Components.Icons.elixirforum_icon class="w-5 h-5 text-grey-600" />
     """
   end
 
@@ -100,7 +100,7 @@ defmodule HexpmWeb.Components.SocialInput do
     assigns = %{}
 
     ~H"""
-    <HexpmWeb.Components.Icons.libera_icon class="tw:w-5 tw:h-5 tw:text-grey-600" />
+    <HexpmWeb.Components.Icons.libera_icon class="w-5 h-5 text-grey-600" />
     """
   end
 

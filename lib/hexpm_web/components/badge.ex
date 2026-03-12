@@ -19,7 +19,7 @@ defmodule HexpmWeb.Components.Badge do
   def badge(assigns) do
     ~H"""
     <span class={[
-      "tw:inline-flex tw:items-center tw:justify-center tw:px-3 tw:py-1 tw:rounded tw:text-xs tw:font-medium tw:leading-3",
+      "inline-flex items-center justify-center px-3 py-1 rounded text-xs font-medium leading-3",
       badge_variant(@variant)
     ]}>
       {render_slot(@inner_block)}
@@ -27,10 +27,10 @@ defmodule HexpmWeb.Components.Badge do
     """
   end
 
-  defp badge_variant("default"), do: "tw:bg-grey-200 tw:text-grey-700"
-  defp badge_variant("blue"), do: "tw:bg-blue-100 tw:text-blue-700"
-  defp badge_variant("green"), do: "tw:bg-green-100 tw:text-green-700"
-  defp badge_variant("purple"), do: "tw:bg-purple-100 tw:text-purple-700"
-  defp badge_variant("red"), do: "tw:bg-red-100 tw:text-red-700"
-  defp badge_variant("yellow"), do: "tw:bg-yellow-100 tw:text-yellow-700"
+  defp badge_variant("default"), do: "bg-grey-200 text-grey-700"
+  defp badge_variant("blue"), do: "bg-blue-100 text-blue-700"
+  defp badge_variant("green"), do: "bg-green-100 text-green-700"
+  defp badge_variant("purple"), do: "bg-purple-100 text-purple-700"
+  defp badge_variant("red"), do: "bg-red-100 text-red-700"
+  defp badge_variant("yellow"), do: "bg-yellow-100 text-yellow-700"
 end

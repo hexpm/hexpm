@@ -2,7 +2,7 @@
   title="Recovery code"
   subtitle="Enter one of your backup recovery codes to access your account"
 >
-  <%= form_tag(~p"/tfa/recovery", id: "tfa-recovery-form", class: "tw:space-y-6") do %>
+  <%= form_tag(~p"/tfa/recovery", id: "tfa-recovery-form", class: "space-y-6") do %>
     <.text_input
       id="code"
       name="code"
@@ -20,9 +20,9 @@
   <% end %>
 
   <:footer_links>
-    <p class="tw:text-small tw:text-center tw:mt-8">
-      <span class="tw:text-grey-800">Have your authenticator app?</span>
-      <.text_link href={~p"/tfa"} variant="primary" class="tw:font-semibold tw:ml-1">
+    <p class="text-small text-center mt-8">
+      <span class="text-grey-800">Have your authenticator app?</span>
+      <.text_link href={~p"/tfa"} variant="primary" class="font-semibold ml-1">
         Use authenticator instead
       </.text_link>
     </p>

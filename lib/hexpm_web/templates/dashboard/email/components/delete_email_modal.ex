@@ -24,12 +24,12 @@ defmodule HexpmWeb.Dashboard.Email.Components.DeleteEmailModal do
       <%!-- Cannot Delete Primary Email Modal --%>
       <HexpmWeb.Components.Modal.modal id={@modal_id} max_width="md">
         <:header>
-          <h2 class="tw:text-lg tw:font-semibold tw:text-grey-900">
+          <h2 class="text-lg font-semibold text-grey-900">
             Cannot Delete Primary Email
           </h2>
         </:header>
 
-        <p class="tw:text-grey-700">
+        <p class="text-grey-700">
           You cannot delete your primary email address. Please add a new email and set it as primary before deleting this one.
         </p>
 
@@ -56,12 +56,12 @@ defmodule HexpmWeb.Dashboard.Email.Components.DeleteEmailModal do
       <%!-- Confirm Delete Email Modal --%>
       <HexpmWeb.Components.Modal.modal id={@modal_id} max_width="md">
         <:header>
-          <h2 class="tw:text-lg tw:font-semibold tw:text-grey-900">
+          <h2 class="text-lg font-semibold text-grey-900">
             Delete Email?
           </h2>
         </:header>
 
-        <p class="tw:text-grey-700">
+        <p class="text-grey-700">
           Are you sure you want to delete <strong>{@email.email}</strong>? This action cannot be undone.
         </p>
 

@@ -22,13 +22,13 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
 
   def members_tab(assigns) do
     ~H"""
-    <div class="tw:space-y-6">
+    <div class="space-y-6">
       <%!-- Member List --%>
-      <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:overflow-hidden">
-        <div class="tw:px-6 tw:py-5 tw:border-b tw:border-grey-200 tw:flex tw:items-center tw:justify-between">
+      <div class="bg-white border border-grey-200 rounded-lg overflow-hidden">
+        <div class="px-6 py-5 border-b border-grey-200 flex items-center justify-between">
           <div>
-            <h2 class="tw:text-grey-900 tw:text-lg tw:font-semibold">Members</h2>
-            <p class="tw:text-grey-500 tw:text-sm tw:mt-1">
+            <h2 class="text-grey-900 text-lg font-semibold">Members</h2>
+            <p class="text-grey-500 text-sm mt-1">
               <% count = member_count(@organization) %>
               {count} {member_label(count)}
             </p>
@@ -37,33 +37,33 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
             <.button
               variant="outline"
               size="sm"
-              class="tw:border-dashed"
+              class="border-dashed"
               phx-click={show_modal(add_member_modal_id())}
             >
-              {HexpmWeb.ViewIcons.icon(:heroicon, "plus", class: "tw:w-4 tw:h-4")}
+              {HexpmWeb.ViewIcons.icon(:heroicon, "plus", class: "w-4 h-4")}
               Add member
             </.button>
           <% end %>
         </div>
 
-        <ul class="tw:divide-y tw:divide-grey-100">
+        <ul class="divide-y divide-grey-100">
           <%= for org_user <- @organization.organization_users do %>
-            <li class="tw:flex tw:items-center tw:justify-between tw:px-6 tw:py-4">
+            <li class="flex items-center justify-between px-6 py-4">
               <%!-- Avatar + name --%>
-              <div class="tw:flex tw:items-center tw:gap-3">
+              <div class="flex items-center gap-3">
                 <img
                   src={HexpmWeb.ViewHelpers.gravatar_url(Hexpm.Accounts.User.email(org_user.user, :gravatar), :small)}
                   alt={org_user.user.username}
-                  class="tw:w-9 tw:h-9 tw:rounded-full tw:flex-shrink-0"
+                  class="w-9 h-9 rounded-full flex-shrink-0"
                 />
                 <div>
-                  <p class="tw:text-sm tw:font-medium tw:text-grey-900">{org_user.user.username}</p>
-                  <p class="tw:text-xs tw:text-grey-500">{org_user.user.full_name}</p>
+                  <p class="text-sm font-medium text-grey-900">{org_user.user.username}</p>
+                  <p class="text-xs text-grey-500">{org_user.user.full_name}</p>
                 </div>
               </div>
 
               <%!-- Actions --%>
-              <div class="tw:flex tw:items-center tw:gap-2">
+              <div class="flex items-center gap-2">
                 <%= if admin?(@current_user, @organization) do %>
                   <%!-- Role select (auto-submits on change) --%>
                   <%= form_for :organization_user, ~p"/dashboard/orgs/#{@organization}", [method: :post, onchange: "this.submit()"], fn _f -> %>
@@ -75,7 +75,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                       value={org_user.role}
                       options={role_options()}
                       variant="light"
-                      class="tw:w-28 tw:h-9 tw:text-sm"
+                      class="w-28 h-9 text-sm"
                     />
                   <% end %>
 
@@ -90,7 +90,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                   <% end %>
                 <% else %>
                   <span class={[
-                    "tw:inline-flex tw:items-center tw:px-2.5 tw:py-0.5 tw:rounded-full tw:text-xs tw:font-medium",
+                    "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
                     role_badge_class(org_user.role)
                   ]}>
                     {String.capitalize(org_user.role)}
@@ -106,10 +106,10 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
       <%= if admin?(@current_user, @organization) do %>
         <%= for org_user <- @organization.organization_users, org_user.user.id != @current_user.id do %>
           <.modal id={"remove-member-#{org_user.user.username}"} title="Remove member?" max_width="sm">
-            <p class="tw:text-sm tw:text-grey-600">
+            <p class="text-sm text-grey-600">
               Are you sure you want to remove
-              <strong class="tw:font-semibold tw:text-grey-900">{org_user.user.username}</strong>
-              from <strong class="tw:font-semibold tw:text-grey-900">{@organization.name}</strong>?
+              <strong class="font-semibold text-grey-900">{org_user.user.username}</strong>
+              from <strong class="font-semibold text-grey-900">{@organization.name}</strong>?
               They will lose access to all private packages.
             </p>
 
@@ -136,14 +136,14 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
       <%!-- Add Member modal (admin only) --%>
       <%= if admin?(@current_user, @organization) do %>
         <.modal id={add_member_modal_id()} title="Add member" max_width="sm">
-          <div class="tw:px-1">
-            <p class="tw:text-sm tw:text-grey-500 tw:mb-6">
+          <div class="px-1">
+            <p class="text-sm text-grey-500 mb-6">
               Add an existing Hex user to your organization.
             </p>
 
             <%= form_for @add_member_changeset, ~p"/dashboard/orgs/#{@organization}", [method: :post], fn f -> %>
               <input type="hidden" name="action" value="add_member" />
-              <div class="tw:space-y-4">
+              <div class="space-y-4">
                 <.text_input
                   field={f[:username]}
                   label="Username"
@@ -157,7 +157,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                   variant="light"
                 />
               </div>
-              <div class="tw:flex tw:justify-end tw:gap-3 tw:mt-6">
+              <div class="flex justify-end gap-3 mt-6">
                 <.button
                   type="button"
                   variant="secondary"
@@ -192,7 +192,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
   defp member_label(1), do: "member"
   defp member_label(_), do: "members"
 
-  defp role_badge_class("admin"), do: "tw:bg-purple-100 tw:text-purple-700"
-  defp role_badge_class("write"), do: "tw:bg-blue-100 tw:text-blue-700"
-  defp role_badge_class(_), do: "tw:bg-grey-100 tw:text-grey-600"
+  defp role_badge_class("admin"), do: "bg-purple-100 text-purple-700"
+  defp role_badge_class("write"), do: "bg-blue-100 text-blue-700"
+  defp role_badge_class(_), do: "bg-grey-100 text-grey-600"
 end

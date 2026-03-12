@@ -20,13 +20,13 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFACard do
 
   def tfa_card(assigns) do
     ~H"""
-    <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:p-8">
-      <div class="tw:flex tw:items-start tw:justify-between">
+    <div class="bg-white border border-grey-200 rounded-lg p-8">
+      <div class="flex items-start justify-between">
         <div>
-          <h2 class="tw:text-grey-900 tw:text-xl tw:font-semibold tw:mb-2">
+          <h2 class="text-grey-900 text-xl font-semibold mb-2">
             Two-Factor Authentication
           </h2>
-          <p class="tw:text-grey-600 tw:text-sm">
+          <p class="text-grey-600 text-sm">
             Add an extra layer of security to your account
           </p>
         </div>
@@ -45,9 +45,9 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFACard do
       </div>
 
       <%= if Hexpm.Accounts.User.tfa_enabled?(@user) do %>
-        <div class="tw:flex tw:items-center tw:gap-2 tw:p-3 tw:bg-green-50 tw:border tw:border-green-200 tw:rounded-lg tw:mt-6">
-          {icon(:heroicon, "check-circle", class: "tw:w-5 tw:h-5 tw:text-green-600")}
-          <span class="tw:text-sm tw:text-green-700 tw:font-medium">
+        <div class="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg mt-6">
+          {icon(:heroicon, "check-circle", class: "w-5 h-5 text-green-600")}
+          <span class="text-sm text-green-700 font-medium">
             Two-factor authentication is enabled
           </span>
         </div>

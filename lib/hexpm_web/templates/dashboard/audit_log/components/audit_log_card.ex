@@ -15,24 +15,24 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
     assigns = assign(assigns, :grouped, grouped)
 
     ~H"""
-    <div class="tw:bg-white tw:rounded-lg tw:shadow-sm tw:border tw:border-grey-200 tw:p-8">
+    <div class="bg-white rounded-lg shadow-sm border border-grey-200 p-8">
       <%!-- Header --%>
-      <div class="tw:mb-8">
-        <h2 class="tw:text-xl tw:font-semibold tw:mb-2">Recent Activities</h2>
-        <p class="tw:text-sm tw:text-grey-500">
+      <div class="mb-8">
+        <h2 class="text-xl font-semibold mb-2">Recent Activities</h2>
+        <p class="text-sm text-grey-500">
           A log of recent actions taken on your account.
         </p>
       </div>
 
       <%= if @audit_logs == [] do %>
-        <div class="tw:text-center tw:py-12 tw:text-grey-500">
-          <span class="tw:flex tw:justify-center tw:mb-3 tw:text-grey-300">
+        <div class="text-center py-12 text-grey-500">
+          <span class="flex justify-center mb-3 text-grey-300">
             {icon(:heroicon, "clock", width: 40, height: 40)}
           </span>
           <p>No recent activities found.</p>
         </div>
       <% else %>
-        <div class="tw:space-y-8">
+        <div class="space-y-8">
           <%= for {period_label, entries} <- @grouped do %>
             <.period_group period_label={period_label} entries={entries} />
           <% end %>
@@ -51,11 +51,11 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
     ~H"""
     <div>
       <%!-- Period label e.g. "THIS WEEK" / "EARLIER THIS MONTH" --%>
-      <p class="tw:text-xs tw:font-semibold tw:tracking-wider tw:uppercase tw:text-grey-400 tw:mb-4">
+      <p class="text-xs font-semibold tracking-wider uppercase text-grey-400 mb-4">
         {@period_label}
       </p>
 
-      <div class="tw:relative">
+      <div class="relative">
         <%= for {log, idx} <- Enum.with_index(@entries) do %>
           <.timeline_item log={log} is_last={idx == @last_idx} />
         <% end %>
@@ -73,26 +73,26 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
     assigns = assign(assigns, icon: icon, description: description)
 
     ~H"""
-    <div class="tw:flex tw:gap-4 tw:group">
+    <div class="flex gap-4 group">
       <%!-- Left column: dot + connector line --%>
-      <div class="tw:flex tw:flex-col tw:items-center tw:flex-shrink-0">
+      <div class="flex flex-col items-center flex-shrink-0">
         <%!-- Circle dot --%>
-        <div class="tw:w-8 tw:h-8 tw:rounded-full tw:border-2 tw:border-grey-200 tw:bg-white tw:flex tw:items-center tw:justify-center tw:z-10 tw:text-grey-400">
+        <div class="w-8 h-8 rounded-full border-2 border-grey-200 bg-white flex items-center justify-center z-10 text-grey-400">
           {icon(:heroicon, @icon, width: 16, height: 16)}
         </div>
         <%!-- Vertical connector line (hidden on last item) --%>
         <%= unless @is_last do %>
-          <div class="tw:w-px tw:flex-1 tw:bg-grey-200 tw:my-1 tw:min-h-[20px]"></div>
+          <div class="w-px flex-1 bg-grey-200 my-1 min-h-[20px]"></div>
         <% end %>
       </div>
 
       <%!-- Right column: action text + date --%>
-      <div class="tw:pb-6 tw:flex-1 tw:min-w-0">
-        <p class="tw:text-base tw:font-medium tw:text-grey-700 tw:leading-6">
+      <div class="pb-6 flex-1 min-w-0">
+        <p class="text-base font-medium text-grey-700 leading-6">
           {@description}
         </p>
         <p
-          class="tw:text-xs tw:font-medium tw:text-grey-500 tw:mt-0.5"
+          class="text-xs font-medium text-grey-500 mt-0.5"
           title={ViewHelpers.pretty_datetime(@log.inserted_at)}
         >
           {ViewHelpers.pretty_date(@log.inserted_at, :short)}
