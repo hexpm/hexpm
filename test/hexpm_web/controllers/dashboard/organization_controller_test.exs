@@ -301,6 +301,31 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     end
   end
 
+  describe "GET /dashboard/orgs/:dashboard_org/danger-zone" do
+    test "shows danger zone for member", %{user: user, organization: organization} do
+      mock_customer(organization)
+      insert(:organization_user, organization: organization, user: user, role: "read")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/danger-zone")
+
+      assert response(conn, 200) =~ "Danger Zone"
+      assert response(conn, 200) =~ "Leave organization"
+    end
+
+    test "returns 404 for users not in the organization", %{
+      user: user,
+      organization: organization
+    } do
+      build_conn()
+      |> test_login(user)
+      |> get("/dashboard/orgs/#{organization.name}/danger-zone")
+      |> response(404)
+    end
+  end
+
   describe "POST /dashboard/orgs/:dashboard_org/leave" do
     test "leave organization", %{user: user, organization: organization} do
       insert(:organization_user, organization: organization, user: user, role: "admin")
@@ -315,6 +340,24 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       assert redirected_to(conn) == "/dashboard/profile"
       refute Repo.get_by(assoc(organization, :organization_users), user_id: user.id)
+    end
+
+    test "rejects wrong organization name and stays on danger zone", %{
+      user: user,
+      organization: organization
+    } do
+      mock_customer(organization)
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}/leave", %{
+          "organization_name" => "wrong-name"
+        })
+
+      assert response(conn, 400)
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Invalid organization name."
     end
   end
 

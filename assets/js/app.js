@@ -29,14 +29,14 @@ import { PermissionGroup } from "./hooks/permission_group";
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")
   .getAttribute("content");
-let Hooks = { 
-  PasswordStrength, 
-  PasswordMatch, 
-  TFACodeValidator, 
+let Hooks = {
+  PasswordStrength,
+  PasswordMatch,
+  TFACodeValidator,
   CopyButton,
   PrintButton,
   DownloadButton,
-  PermissionGroup
+  PermissionGroup,
 };
 let liveSocket = new LiveSocket("/live", Socket, {
   params: { _csrf_token: csrfToken },

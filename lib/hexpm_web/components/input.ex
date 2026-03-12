@@ -34,7 +34,7 @@ defmodule HexpmWeb.Components.Input do
   attr :list, :string, default: nil, doc: "ID of a <datalist> element for autocomplete suggestions"
   attr :type, :string, default: "text"
   attr :value, :string, default: nil
-  attr :rest, :global, doc: "Additional HTML attributes to pass to the input element"
+  attr :rest, :global, include: ~w(pattern title), doc: "Additional HTML attributes to pass to the input element"
 
   def text_input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
     # For controller views, always show errors after submission

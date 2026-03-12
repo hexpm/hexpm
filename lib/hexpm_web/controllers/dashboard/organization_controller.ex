@@ -163,6 +163,12 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end)
   end
 
+  def danger_zone(conn, %{"dashboard_org" => organization}) do
+    access_organization(conn, organization, "read", fn organization ->
+      render_index(conn, organization, tab: :danger_zone)
+    end)
+  end
+
   def leave(conn, %{
         "dashboard_org" => organization,
         "organization_name" => organization_name
@@ -181,13 +187,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
             conn
             |> put_status(400)
             |> put_flash(:error, "The last member of an organization cannot leave.")
-            |> render_index(organization)
+            |> render_index(organization, tab: :danger_zone)
         end
       else
         conn
         |> put_status(400)
         |> put_flash(:error, "Invalid organization name.")
-        |> render_index(organization)
+        |> render_index(organization, tab: :danger_zone)
       end
     end)
   end
