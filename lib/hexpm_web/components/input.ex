@@ -339,11 +339,10 @@ defmodule HexpmWeb.Components.Input do
 
         <%!-- Requirements Checklist --%>
         <div class="tw:space-y-2" aria-live="polite" aria-label="Password requirements">
-          <.password_requirement key="length" label="At least 7 characters" />
+          <.password_requirement key="length" label="At least 8 characters" />
           <.password_requirement key="lowercase" label="One lowercase letter" />
           <.password_requirement key="uppercase" label="One uppercase letter" />
           <.password_requirement key="number" label="One number" />
-          <.password_requirement key="special" label="One special character" />
         </div>
       </div>
 

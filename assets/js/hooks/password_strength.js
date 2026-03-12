@@ -1,9 +1,9 @@
 /**
  * Password Strength Hook
  *
- * Calculates password strength based on:
- * - Length (min 7 characters required)
- * - Character diversity (lowercase, uppercase, numbers, special chars)
+ * Calculates password strength based on NIST SP 800-63B and ASVS v5 guidelines:
+ * - Length (min 8 characters required)
+ * - Character diversity (lowercase, uppercase, numbers)
  *
  * Updates the UI with:
  * - Strength bar (visual indicator)
@@ -22,7 +22,6 @@ const PasswordStrength = {
       lowercase: this.el.querySelector('[data-requirement="lowercase"]'),
       uppercase: this.el.querySelector('[data-requirement="uppercase"]'),
       number: this.el.querySelector('[data-requirement="number"]'),
-      special: this.el.querySelector('[data-requirement="special"]'),
     };
 
     // Guard: If input is missing, hook cannot function
@@ -53,11 +52,10 @@ const PasswordStrength = {
 
   checkStrength(password) {
     const checks = {
-      length: password.length >= 7,
+      length: password.length >= 8,
       lowercase: /[a-z]/.test(password),
       uppercase: /[A-Z]/.test(password),
       number: /[0-9]/.test(password),
-      special: /[^A-Za-z0-9]/.test(password),
     };
 
     // Update requirement checkmarks
@@ -72,24 +70,23 @@ const PasswordStrength = {
       if (!checkIcon || !xIcon) return;
 
       if (checks[key]) {
-        // Show green checkmark, hide red X
         checkIcon.classList.remove("tw:hidden");
         checkIcon.classList.add("tw:text-green-600");
         xIcon.classList.add("tw:hidden");
       } else {
-        // Show red X, hide checkmark
         checkIcon.classList.add("tw:hidden");
         checkIcon.classList.remove("tw:text-green-600");
         xIcon.classList.remove("tw:hidden");
       }
     });
 
-    // Calculate strength score (0-4)
+    // Calculate strength score (0-4) per NIST SP 800-63B / ASVS v5
+    // Length is the primary driver; character diversity adds incremental value
     let score = 0;
     if (checks.length) score++;
+    if (password.length >= 12) score++;
     if (checks.lowercase && checks.uppercase) score++;
     if (checks.number) score++;
-    if (checks.special) score++;
 
     // Update strength bar and label
     this.updateStrengthUI(score, password.length);
