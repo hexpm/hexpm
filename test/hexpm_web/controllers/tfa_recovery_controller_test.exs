@@ -14,7 +14,7 @@ defmodule HexpmWeb.TFARecoveryControllerTest do
         |> get("/tfa/recovery")
 
       result = response(conn, 200)
-      assert result =~ "Enter a recovery code"
+      assert result =~ "Recovery code"
     end
   end
 
