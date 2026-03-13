@@ -253,6 +253,21 @@ defmodule HexpmWeb.ViewHelpers do
     |> :erlang.list_to_binary()
   end
 
+  def human_number_compact(nil), do: "0"
+  def human_number_compact(n) when n >= 1_000_000_000, do: format_compact(n / 1_000_000_000, "B")
+  def human_number_compact(n) when n >= 1_000_000, do: format_compact(n / 1_000_000, "M")
+  def human_number_compact(n) when n >= 1_000, do: format_compact(n / 1_000, "K")
+  def human_number_compact(n), do: "#{n}"
+
+  defp format_compact(value, unit) do
+    rounded = Float.round(value, 1)
+
+    case Float.ratio(rounded) do
+      {_, 1} -> "#{trunc(rounded)}#{unit}"
+      {_, _} -> "#{rounded}#{unit}"
+    end
+  end
+
   defp do_human_number(int, max, digits, _unit) when is_integer(int) and digits <= max do
     human_number_space(int)
   end

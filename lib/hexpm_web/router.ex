@@ -95,6 +95,7 @@ defmodule HexpmWeb.Router do
     get "/dashboard", DashboardController, :index
 
     get "/users/:username", UserController, :show
+    get "/users/:username/stats", UserController, :stats
 
     get "/orgs/:username", UserController, :show
 
