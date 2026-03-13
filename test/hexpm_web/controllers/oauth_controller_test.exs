@@ -40,7 +40,10 @@ defmodule HexpmWeb.OAuthControllerTest do
       client_type: "confidential",
       allowed_grant_types: ["authorization_code", "refresh_token"],
       allowed_scopes: ["docs"],
-      redirect_uris: ["https://*.hexorgs.pm/oauth/callback", "https://*.hexdocs.pm/oauth/callback"],
+      redirect_uris: [
+        "https://*.hexorgs.pm/oauth/callback",
+        "https://*.hexdocs.pm/oauth/callback"
+      ],
       client_secret: Clients.generate_client_secret()
     }
 
