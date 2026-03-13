@@ -4,8 +4,6 @@ defmodule Hexpm.Accounts.Key do
   @derive HexpmWeb.Stale
   @derive {Phoenix.Param, key: :name}
 
-  @days_30 60 * 60 * 24 * 30
-
   schema "keys" do
     field :name, :string
     field :secret_first, :string
@@ -42,27 +40,6 @@ defmodule Hexpm.Accounts.Key do
     build_assoc(user_or_organization, :keys)
     |> associate_owner(user_or_organization)
     |> changeset(user_or_organization, params)
-  end
-
-  # TODO(hexdocs-oauth-migration): Remove build_for_docs/2 after hexdocs migrates to OAuth.
-  # This function builds legacy API keys for hexdocs authentication. The new OAuth flow
-  # uses standard OAuth tokens instead of API keys.
-  def build_for_docs(user, organization) do
-    permission =
-      KeyPermission.changeset(%KeyPermission{}, user, %{
-        "domain" => "docs",
-        "resource" => organization
-      })
-
-    revoke_at =
-      NaiveDateTime.add(NaiveDateTime.utc_now(), @days_30) |> DateTime.from_naive!("Etc/UTC")
-
-    build_assoc(user, :keys)
-    |> change()
-    |> add_keys()
-    |> put_change(:revoke_at, revoke_at)
-    |> put_change(:public, false)
-    |> put_embed(:permissions, [permission])
   end
 
   defmacrop query_revoked(key) do

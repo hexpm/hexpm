@@ -70,29 +70,6 @@ defmodule HexpmWeb.LoginController do
     |> redirect_return(user, return)
   end
 
-  # TODO(hexdocs-oauth-migration): Remove legacy hexdocs redirect handling after hexdocs migrates to OAuth.
-  # This code path handles the old ?hexdocs= parameter flow where hexpm generates an API key
-  # and redirects back to hexdocs with the key in the URL. The new OAuth flow uses standard
-  # Authorization Code with PKCE instead.
-  defp redirect_return(%{params: %{"hexdocs" => organization}} = conn, user, return)
-       when is_binary(organization) do
-    case generate_hexdocs_key(user, organization) do
-      {:ok, key} ->
-        docs_url =
-          Application.get_env(:hexpm, :docs_url)
-          |> String.replace("://", "://#{organization}.")
-
-        url = "#{docs_url}#{safe_path(return)}?key=#{key.user_secret}"
-        redirect(conn, external: url)
-
-      {:error, _changeset} ->
-        conn
-        |> put_flash(:error, "You don't have access to organization #{organization}")
-        |> put_status(400)
-        |> render_show()
-    end
-  end
-
   defp redirect_return(conn, _user, "/" <> _ = return) do
     redirect(conn, to: return)
   end
@@ -101,18 +78,13 @@ defmodule HexpmWeb.LoginController do
     redirect(conn, to: ~p"/users/#{user}")
   end
 
-  defp generate_hexdocs_key(user, organization) do
-    Keys.create_for_docs(user, organization)
-  end
-
   defp render_show(conn) do
     render(
       conn,
       "show.html",
       title: "Log in",
       container: "container page page-xs login",
-      return: safe_string(conn.params["return"]),
-      hexdocs: safe_string(conn.params["hexdocs"])
+      return: safe_string(conn.params["return"])
     )
   end
 
@@ -129,9 +101,6 @@ defmodule HexpmWeb.LoginController do
     |> maybe_put_flash(breached?)
     |> start_session(user, safe_string(conn.params["return"]))
   end
-
-  defp safe_path("/" <> _ = path), do: path
-  defp safe_path(_), do: "/"
 
   defp maybe_put_flash(conn, false), do: conn
 

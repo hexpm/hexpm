@@ -1,13 +1,10 @@
 defmodule HexpmWeb.LoginControllerTest do
   use HexpmWeb.ConnCase
-  alias Hexpm.Accounts.Auth
 
   setup do
     mock_pwned()
     user = insert(:user)
-    organization = insert(:organization)
-    insert(:organization_user, organization: organization, user: user)
-    %{user: user, organization: organization}
+    %{user: user}
   end
 
   test "show log in page" do
@@ -76,58 +73,6 @@ defmodule HexpmWeb.LoginControllerTest do
     assert redirected_to(conn) == "/"
     refute get_session(conn, "session_token")
     refute get_session(conn, "tfa_setup_secret")
-  end
-
-  test "login, create hexdocs key and redirect", c do
-    conn =
-      post(build_conn(), "/login", %{
-        username: c.user.username,
-        password: "password",
-        hexdocs: c.organization.name,
-        return: "/my_package/index.html"
-      })
-
-    url = "http://#{c.organization.name}.localhost:5002/my_package/index.html?key="
-    url_size = byte_size(url)
-    assert <<^url::binary-size(url_size), key::binary>> = redirected_to(conn)
-
-    assert {:ok,
-            %{auth_credential: auth_key, user: _user, organization: _organization, email: _email}} =
-             Auth.key_auth(key, [])
-
-    assert auth_key.revoke_at
-    refute auth_key.public
-    assert hd(auth_key.permissions).domain == "docs"
-    assert hd(auth_key.permissions).resource == c.organization.name
-
-    assert get_session(conn, "session_token")
-  end
-
-  test "already logged in, create hexdocs key and redirect", c do
-    conn = post(build_conn(), "/login", %{username: c.user.username, password: "password"})
-    assert redirected_to(conn) == "/users/#{c.user.username}"
-
-    conn =
-      conn
-      |> recycle()
-      |> post("/login", %{
-        username: c.user.username,
-        password: "password",
-        hexdocs: c.organization.name
-      })
-
-    assert redirected_to(conn) =~ "http://#{c.organization.name}.localhost:5002"
-  end
-
-  test "log in, try create hexdocs key for wrong organization", c do
-    conn =
-      post(build_conn(), "/login", %{
-        username: c.user.username,
-        password: "password",
-        hexdocs: "not_my_org"
-      })
-
-    assert conn.status == 400
   end
 
   test "deactivated", c do

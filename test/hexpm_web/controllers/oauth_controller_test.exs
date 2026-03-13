@@ -40,7 +40,7 @@ defmodule HexpmWeb.OAuthControllerTest do
       client_type: "confidential",
       allowed_grant_types: ["authorization_code", "refresh_token"],
       allowed_scopes: ["docs"],
-      redirect_uris: ["https://*.hexdocs.pm/oauth/callback"],
+      redirect_uris: ["https://*.hexorgs.pm/oauth/callback", "https://*.hexdocs.pm/oauth/callback"],
       client_secret: Clients.generate_client_secret()
     }
 
@@ -369,7 +369,7 @@ defmodule HexpmWeb.OAuthControllerTest do
       conn = login_user(build_conn(), user)
 
       # Hexdocs would redirect to this URL with the organization subdomain
-      redirect_uri = "https://#{organization.name}.hexdocs.pm/oauth/callback"
+      redirect_uri = "https://#{organization.name}.hexorgs.pm/oauth/callback"
 
       conn =
         post(conn, ~p"/oauth/authorize", %{
@@ -429,7 +429,7 @@ defmodule HexpmWeb.OAuthControllerTest do
       conn =
         get(conn, ~p"/oauth/authorize", %{
           "client_id" => client.client_id,
-          "redirect_uri" => "https://evil.#{organization.name}.hexdocs.pm/oauth/callback",
+          "redirect_uri" => "https://evil.#{organization.name}.hexorgs.pm/oauth/callback",
           "scope" => "docs:#{organization.name}",
           "state" => "test_state",
           "code_challenge" => "challenge123",
@@ -451,7 +451,7 @@ defmodule HexpmWeb.OAuthControllerTest do
       conn =
         post(conn, ~p"/oauth/authorize", %{
           "client_id" => client.client_id,
-          "redirect_uri" => "https://#{other_org.name}.hexdocs.pm/oauth/callback",
+          "redirect_uri" => "https://#{other_org.name}.hexorgs.pm/oauth/callback",
           "scope" => "docs:#{other_org.name}",
           "state" => "test_state",
           "code_challenge" => "challenge123",

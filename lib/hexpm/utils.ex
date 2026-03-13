@@ -173,7 +173,7 @@ defmodule Hexpm.Utils do
   end
 
   def docs_html_url(%Repository{} = repository, package, release) do
-    docs_url = URI.parse(Application.get_env(:hexpm, :docs_url))
+    docs_url = URI.parse(Application.get_env(:hexpm, :private_docs_url))
     docs_url = %{docs_url | host: "#{repository.name}.#{docs_url.host}"}
     package = package.name
     version = release && "#{release.version}/"
