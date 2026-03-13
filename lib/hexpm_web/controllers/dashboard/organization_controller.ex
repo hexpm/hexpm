@@ -629,7 +629,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         :organization_users,
         user: :emails,
         users: :emails,
-        repository: :packages
+        repository: [packages: :repository]
       ])
 
     if organization do

@@ -41,10 +41,12 @@ defmodule HexpmWeb.Components.PackageLayout do
 
     tools = [mix: "mix.exs", rebar: "rebar.config", erlang_mk: "erlang.mk"]
 
-    {_labels, graph_points, _fill} =
+    {graph_labels, graph_points, graph_fill} =
       if assigns.daily_graph != [],
         do: ViewHelpers.time_series_graph(assigns.daily_graph),
         else: {[], "", ""}
+
+    y_axis_labels = Enum.zip(graph_labels, [194, 154, 114, 74, 34])
 
     assigns =
       assigns
@@ -52,6 +54,8 @@ defmodule HexpmWeb.Components.PackageLayout do
       |> assign(:description, assigns.package.meta.description)
       |> assign(:tools, tools)
       |> assign(:graph_points, graph_points)
+      |> assign(:graph_fill, graph_fill)
+      |> assign(:y_axis_labels, y_axis_labels)
       |> assign(:licenses, assigns.package.meta.licenses || [])
       |> assign(:build_tools, (assigns.current_release && assigns.current_release.meta.build_tools) || [])
       |> assign(:this_version_downloads, version_downloads(assigns))
@@ -235,24 +239,53 @@ defmodule HexpmWeb.Components.PackageLayout do
                 <h3 class="text-grey-700 text-lg font-semibold mb-4">Package Details</h3>
 
                 <%!-- Downloads Chart --%>
-                <%= if @graph_points != "" do %>
-                  <div class="mb-5">
-                    <svg viewBox="0 0 260 70" class="w-full h-auto">
+                <%= if is_binary(@graph_points) and @graph_points != "" do %>
+                  <% chart_id = "pkg-chart-#{@package.id}" %>
+                  <div class="mb-4">
+                    <svg viewBox="0 0 800 210" class="w-full h-auto" role="img" aria-label="Downloads over the last 30 days">
                       <defs>
-                        <linearGradient id="pkg-grad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="260" y2="70">
+                        <linearGradient id={"#{chart_id}-line"} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="800" y2="200">
                           <stop offset="0%" style="stop-color:#4f28a7;" />
                           <stop offset="33%" style="stop-color:#7209b7;" />
                           <stop offset="66%" style="stop-color:#b5179e;" />
                           <stop offset="100%" style="stop-color:#f72585;" />
                         </linearGradient>
+                        <linearGradient id={"#{chart_id}-fill"} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="200">
+                          <stop offset="0%" style="stop-color:#7209b7;stop-opacity:0.15;" />
+                          <stop offset="100%" style="stop-color:#7209b7;stop-opacity:0.01;" />
+                        </linearGradient>
                       </defs>
+                      <%!-- Horizontal grid lines --%>
+                      <%= for y <- [40, 80, 120, 160, 200] do %>
+                        <line x1="0" y1={y} x2="800" y2={y} stroke="#e5e7eb" stroke-width="1" />
+                      <% end %>
+                      <%!-- Fill area --%>
+                      <polygon
+                        fill={"url(##{chart_id}-fill)"}
+                        points={@graph_fill}
+                      />
+                      <%!-- Line --%>
                       <polyline
                         fill="none"
-                        stroke="url(#pkg-grad)"
-                        stroke-width="2"
+                        stroke={"url(##{chart_id}-line)"}
+                        stroke-width="3"
                         stroke-linecap="round"
+                        stroke-linejoin="round"
                         points={@graph_points}
                       />
+                      <%!-- Y-axis labels --%>
+                      <%= for {label, y} <- @y_axis_labels do %>
+                        <text x="4" y={y} fill="#9ca3af" font-size="26" font-family="sans-serif">{ViewHelpers.human_number_space(label)}</text>
+                      <% end %>
+                      <%!-- Caption --%>
+                      <text x="796" y="28" text-anchor="end" fill="#9ca3af" font-size="26" font-family="sans-serif">
+                        Last 30 days,
+                        <%= if @current_release do %>
+                          {@current_release.version}
+                        <% else %>
+                          all versions
+                        <% end %>
+                      </text>
                     </svg>
                   </div>
                 <% end %>

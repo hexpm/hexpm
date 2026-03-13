@@ -4,4 +4,7 @@ defmodule HexpmWeb.UserView do
   import HexpmWeb.Components.Dropdown
   import HexpmWeb.Components.PackageCard
   import HexpmWeb.Components.UserProfile
+
+  def stats_sort_label("name"), do: "By Name"
+  def stats_sort_label(_), do: "Most Downloaded"
 end

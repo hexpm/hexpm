@@ -69,4 +69,22 @@ defmodule Hexpm.Repository.Download do
     from(d in Download, where: d.package_id == ^package_id)
     |> Download.query_filter(filter)
   end
+
+  def by_packages_period(package_ids, filter) do
+    from(d in Download, where: d.package_id in ^package_ids)
+    |> Download.query_filter_with_package(filter)
+  end
+
+  def query_filter_with_package(query, :day) do
+    from(
+      d in query,
+      group_by: [d.package_id, d.day],
+      order_by: d.day,
+      select: %Download{
+        package_id: d.package_id,
+        day: date_trunc_format("day", "YYYY-MM-DD", d.day),
+        downloads: sum(d.downloads)
+      }
+    )
+  end
 end
