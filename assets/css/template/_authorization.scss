@@ -62,6 +62,7 @@
 .scope-label {
   display: flex;
   align-items: flex-start;
+  gap: 12px;
   cursor: pointer;
   padding: 12px;
   border-radius: 8px;
@@ -85,7 +86,6 @@
 }
 
 .scope-checkbox {
-  margin-right: 12px;
   margin-top: 4px;
   width: 18px;
   height: 18px;
