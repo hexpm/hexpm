@@ -378,6 +378,25 @@ defmodule Hexpm.Permissions do
   """
   def expand_repositories_scope(user, scopes, api_key \\ nil)
 
+  def expand_repositories_scope(%Organization{} = org, scopes, api_key) do
+    if "repositories" in scopes do
+      allowed_repos = get_allowed_repositories_from_key(api_key.permissions)
+
+      repo_scopes =
+        if :all in allowed_repos or org.name in allowed_repos do
+          ["repository:#{org.name}"]
+        else
+          []
+        end
+
+      scopes
+      |> Enum.reject(&(&1 == "repositories"))
+      |> Kernel.++(repo_scopes)
+    else
+      scopes
+    end
+  end
+
   def expand_repositories_scope(%User{} = user, scopes, nil) do
     if "repositories" in scopes do
       # Ensure organizations are preloaded

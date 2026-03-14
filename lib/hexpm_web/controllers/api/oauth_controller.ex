@@ -239,6 +239,9 @@ defmodule HexpmWeb.API.OAuthController do
 
       {:error, error, description} ->
         render_oauth_error(conn, error, description)
+
+      {:error, error} ->
+        render_oauth_error(conn, :invalid_client, error)
     end
   end
 
@@ -268,12 +271,13 @@ defmodule HexpmWeb.API.OAuthController do
        when is_binary(scope_string) or is_nil(scope_string) do
     requested_scopes = String.split(scope_string || "", " ", trim: true)
 
-    user = auth_info.user || (auth_info.organization && auth_info.organization.user)
+    user_or_org = auth_info.user || auth_info.organization
     api_key = auth_info.auth_credential
 
     # Expand scopes, constraining by API key permissions
     # The expansion itself ensures scopes don't exceed key permissions
-    expanded_scopes = Hexpm.Permissions.expand_repositories_scope(user, requested_scopes, api_key)
+    expanded_scopes =
+      Hexpm.Permissions.expand_repositories_scope(user_or_org, requested_scopes, api_key)
 
     # Final validation: check that all requested scopes are allowed
     # This validates non-repository scopes (like "api")

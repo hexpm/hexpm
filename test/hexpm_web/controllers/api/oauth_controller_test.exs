@@ -704,6 +704,20 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert response["error"] == "invalid_request"
     end
 
+    test "returns error for invalid client_id", %{api_key: api_key} do
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => Ecto.UUID.generate(),
+          "client_secret" => api_key,
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 401)
+      response = json_response(conn, 401)
+      assert response["error"] == "invalid_client"
+    end
+
     test "returns error for invalid API key", %{client: client} do
       conn =
         post(build_conn(), ~p"/api/oauth/token", %{
@@ -1162,6 +1176,49 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert json_response(conn, 200)
       response = json_response(conn, 200)
       assert response["scope"] == "api"
+    end
+
+    test "succeeds when api-only key requests 'repositories' scope", %{
+      user: user,
+      client: client
+    } do
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{name: "api_only_key", permissions: [%{domain: "api"}]},
+          audit: audit_data(user)
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "repositories"
+        })
+
+      assert json_response(conn, 200)
+    end
+
+    test "succeeds for organization key requesting 'repositories' scope", %{client: client} do
+      org = insert(:organization)
+
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          org,
+          %{name: "org_key", permissions: [%{domain: "repository", resource: org.name}]},
+          audit: audit_data(org)
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "repositories"
+        })
+
+      assert json_response(conn, 200)
     end
   end
 
