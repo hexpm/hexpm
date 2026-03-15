@@ -276,7 +276,7 @@ defmodule Hexpm.UserSessionsTest do
       end
 
       # Verify we have 5 sessions
-      assert UserSessions.count_for_user(organization.user) == 5
+      assert UserSessions.count_for_user(organization) == 5
 
       # Try to create a 6th session
       {:ok, _session} =
@@ -290,7 +290,7 @@ defmodule Hexpm.UserSessionsTest do
         )
 
       # Verify we still only have 5 sessions (oldest was revoked)
-      assert UserSessions.count_for_user(organization.user) == 5
+      assert UserSessions.count_for_user(organization) == 5
     end
 
     test "organization with 10 seats gets 10 sessions" do
@@ -317,7 +317,7 @@ defmodule Hexpm.UserSessionsTest do
       end
 
       # Verify we have 10 sessions
-      assert UserSessions.count_for_user(organization.user) == 10
+      assert UserSessions.count_for_user(organization) == 10
 
       # Try to create an 11th session
       {:ok, _session} =
@@ -331,7 +331,7 @@ defmodule Hexpm.UserSessionsTest do
         )
 
       # Verify we still only have 10 sessions (oldest was revoked)
-      assert UserSessions.count_for_user(organization.user) == 10
+      assert UserSessions.count_for_user(organization) == 10
     end
 
     test "organization with unavailable billing gets fallback limit of 5" do
@@ -382,13 +382,13 @@ defmodule Hexpm.UserSessionsTest do
         end
 
       # Verify we have 10 sessions
-      assert UserSessions.count_for_user(organization.user) == 10
+      assert UserSessions.count_for_user(organization) == 10
 
       # Reduce seats to 5
       UserSessions.revoke_excess_sessions_for_organization(organization, 5)
 
       # Verify we now have only 5 sessions
-      assert UserSessions.count_for_user(organization.user) == 5
+      assert UserSessions.count_for_user(organization) == 5
 
       # Verify the 5 oldest sessions were revoked
       Enum.take(sessions, 5)
@@ -414,7 +414,7 @@ defmodule Hexpm.UserSessionsTest do
       sessions =
         for i <- 1..10 do
           attrs = %{
-            user_id: organization.user.id,
+            organization_id: organization.id,
             type: "oauth",
             client_id: client.client_id,
             name: "Session #{i}",
@@ -427,13 +427,13 @@ defmodule Hexpm.UserSessionsTest do
         end
 
       # Verify we have 10 sessions
-      assert UserSessions.count_for_user(organization.user) == 10
+      assert UserSessions.count_for_user(organization) == 10
 
       # Reduce seats to 4 (but minimum 5 should apply)
       UserSessions.revoke_excess_sessions_for_organization(organization, 4)
 
       # Verify we now have only 5 sessions (minimum enforced)
-      assert UserSessions.count_for_user(organization.user) == 5
+      assert UserSessions.count_for_user(organization) == 5
 
       # Verify the 5 oldest sessions were revoked
       Enum.take(sessions, 5)
@@ -451,7 +451,7 @@ defmodule Hexpm.UserSessionsTest do
       # Create 5 sessions (less than new limit)
       for i <- 1..5 do
         attrs = %{
-          user_id: organization.user.id,
+          organization_id: organization.id,
           type: "oauth",
           client_id: client.client_id,
           name: "Session #{i}",
@@ -463,13 +463,13 @@ defmodule Hexpm.UserSessionsTest do
       end
 
       # Verify we have 5 sessions
-      assert UserSessions.count_for_user(organization.user) == 5
+      assert UserSessions.count_for_user(organization) == 5
 
       # Reduce seats from 10 to 7 (but we only have 5 sessions, so no revocation needed)
       UserSessions.revoke_excess_sessions_for_organization(organization, 7)
 
       # Verify we still have 5 sessions (none revoked)
-      assert UserSessions.count_for_user(organization.user) == 5
+      assert UserSessions.count_for_user(organization) == 5
     end
   end
 

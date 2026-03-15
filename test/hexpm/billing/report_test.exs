@@ -144,7 +144,7 @@ defmodule Hexpm.Billing.ReportTest do
     end
 
     # Verify we have 10 sessions
-    assert Hexpm.UserSessions.count_for_user(organization.user) == 10
+    assert Hexpm.UserSessions.count_for_user(organization) == 10
 
     # Billing report returns reduced seats (10 -> 5)
     stub(Billing.Mock, :report, fn ->
@@ -160,6 +160,6 @@ defmodule Hexpm.Billing.ReportTest do
     assert updated_org.billing_seats == 5
 
     # Check excess sessions were revoked (should only have 5 now)
-    assert Hexpm.UserSessions.count_for_user(organization.user) == 5
+    assert Hexpm.UserSessions.count_for_user(organization) == 5
   end
 end

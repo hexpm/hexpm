@@ -1219,6 +1219,156 @@ defmodule HexpmWeb.API.OAuthControllerTest do
         })
 
       assert json_response(conn, 200)
+      response = json_response(conn, 200)
+      assert response["access_token"]
+      assert response["scope"] == "repository:#{org.name}"
+    end
+
+    test "org key creates session with organization_id", %{client: client} do
+      org = insert(:organization)
+
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          org,
+          %{name: "org_key", permissions: [%{domain: "repository", resource: org.name}]},
+          audit: audit_data(org)
+        )
+
+      post(build_conn(), ~p"/api/oauth/token", %{
+        "grant_type" => "client_credentials",
+        "client_id" => client.client_id,
+        "client_secret" => key.user_secret,
+        "scope" => "repositories"
+      })
+
+      session =
+        Hexpm.Repo.one(
+          from(s in Hexpm.UserSession,
+            where: s.organization_id == ^org.id,
+            order_by: [desc: s.inserted_at],
+            limit: 1
+          )
+        )
+
+      assert session
+      assert session.organization_id == org.id
+      assert is_nil(session.user_id)
+    end
+
+    test "org key creates token with organization_id", %{client: client} do
+      org = insert(:organization)
+
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          org,
+          %{name: "org_key", permissions: [%{domain: "repository", resource: org.name}]},
+          audit: audit_data(org)
+        )
+
+      post(build_conn(), ~p"/api/oauth/token", %{
+        "grant_type" => "client_credentials",
+        "client_id" => client.client_id,
+        "client_secret" => key.user_secret,
+        "scope" => "repositories"
+      })
+
+      token =
+        Hexpm.Repo.one(
+          from(t in Hexpm.OAuth.Token,
+            where: t.organization_id == ^org.id,
+            order_by: [desc: t.inserted_at],
+            limit: 1
+          )
+        )
+
+      assert token
+      assert token.organization_id == org.id
+      assert is_nil(token.user_id)
+    end
+
+    test "enforces session limit for org key exchanges", %{client: client} do
+      org = insert(:organization, billing_seats: 1)
+
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          org,
+          %{name: "org_key", permissions: [%{domain: "repository", resource: org.name}]},
+          audit: audit_data(org)
+        )
+
+      # Create max_sessions (5) sessions
+      for _ <- 1..5 do
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "repositories"
+        })
+      end
+
+      # 6th should succeed but oldest should be revoked
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "repositories"
+        })
+
+      assert json_response(conn, 200)
+
+      active_count =
+        Hexpm.Repo.one(
+          from(s in Hexpm.UserSession,
+            where:
+              s.organization_id == ^org.id and is_nil(s.revoked_at) and
+                (is_nil(s.expires_at) or s.expires_at > ^DateTime.utc_now()),
+            select: count(s.id)
+          )
+        )
+
+      assert active_count == 5
+    end
+
+    test "succeeds for legacy org key without virtual user", %{client: client} do
+      # Create org without a virtual user (legacy scenario)
+      org =
+        Hexpm.Repo.insert!(%Hexpm.Accounts.Organization{
+          name: "legacy_org_#{System.unique_integer([:positive])}",
+          billing_active: true,
+          trial_end: ~U[2020-01-01T00:00:00.000000Z]
+        })
+
+      # Create a repository for the org (required for key creation)
+      Hexpm.Repo.insert!(%Hexpm.Repository.Repository{
+        name: org.name,
+        organization_id: org.id
+      })
+
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          org,
+          %{name: "legacy_key", permissions: [%{domain: "repository", resource: org.name}]},
+          audit: %{
+            user: org,
+            auth_credential: nil,
+            user_agent: "TEST",
+            remote_ip: "127.0.0.1"
+          }
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "repositories"
+        })
+
+      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+      assert response["access_token"]
+      assert response["scope"] == "repository:#{org.name}"
     end
   end
 

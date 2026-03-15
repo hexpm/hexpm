@@ -125,6 +125,55 @@ defmodule Hexpm.OAuth.Tokens do
     Token.build(attrs)
   end
 
+  defp create_for_user_or_org(
+         %Hexpm.Accounts.User{} = user,
+         client_id,
+         scopes,
+         grant_type,
+         grant_reference,
+         opts
+       ) do
+    create_for_user(user, client_id, scopes, grant_type, grant_reference, opts)
+  end
+
+  defp create_for_user_or_org(
+         %Hexpm.Accounts.Organization{} = org,
+         client_id,
+         scopes,
+         grant_type,
+         grant_reference,
+         opts
+       ) do
+    create_for_org(org, client_id, scopes, grant_type, grant_reference, opts)
+  end
+
+  defp create_for_org(org, client_id, scopes, grant_type, grant_reference, opts) do
+    expires_in = Keyword.get(opts, :expires_in, @default_expires_in)
+    expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)
+
+    jwt_opts = [
+      session_id: Keyword.get(opts, :user_session_id),
+      expires_in: expires_in
+    ]
+
+    {:ok, access_token, jti} =
+      JWT.generate_access_token(org.name, "org", scopes, jwt_opts)
+
+    attrs = %{
+      jti: jti,
+      access_token: access_token,
+      scopes: scopes,
+      expires_at: expires_at,
+      grant_type: grant_type,
+      grant_reference: grant_reference,
+      organization_id: org.id,
+      client_id: client_id,
+      user_session_id: Keyword.get(opts, :user_session_id)
+    }
+
+    Token.build(attrs)
+  end
+
   @doc """
   Creates and inserts a token for a user.
   """
@@ -186,22 +235,21 @@ defmodule Hexpm.OAuth.Tokens do
       end
     end)
     |> Ecto.Multi.run(:token, fn _repo, %{update_session_last_use: session} ->
-      # Get the user from session (could be user or org's user)
-      user =
-        case user_or_org do
-          %Hexpm.Accounts.User{} = u -> u
-          %Hexpm.Accounts.Organization{user: u} -> u
-        end
-
       token_opts =
         opts
         |> Keyword.put(:user_session_id, session.id)
         |> Keyword.put(:expires_in, expires_in)
-        # No refresh token for API keys
         |> Keyword.put(:with_refresh_token, false)
 
       changeset =
-        create_for_user(user, client_id, scopes, grant_type, grant_reference, token_opts)
+        create_for_user_or_org(
+          user_or_org,
+          client_id,
+          scopes,
+          grant_type,
+          grant_reference,
+          token_opts
+        )
 
       Repo.insert(changeset)
     end)

@@ -1,7 +1,7 @@
 defmodule Hexpm.UserSession do
   use Hexpm.Schema
 
-  alias Hexpm.Accounts.User
+  alias Hexpm.Accounts.{Organization, User}
   alias Hexpm.OAuth.{Client, Token}
 
   @types ~w(browser oauth)
@@ -25,6 +25,7 @@ defmodule Hexpm.UserSession do
     belongs_to :client, Client, references: :client_id, type: :binary_id
 
     belongs_to :user, User
+    belongs_to :organization, Organization
     has_many :tokens, Token, foreign_key: :user_session_id
 
     timestamps()
@@ -32,8 +33,18 @@ defmodule Hexpm.UserSession do
 
   def changeset(session, attrs) do
     session
-    |> cast(attrs, [:type, :name, :revoked_at, :expires_at, :user_id, :client_id, :session_token])
-    |> validate_required([:type, :user_id])
+    |> cast(attrs, [
+      :type,
+      :name,
+      :revoked_at,
+      :expires_at,
+      :user_id,
+      :organization_id,
+      :client_id,
+      :session_token
+    ])
+    |> validate_required([:type])
+    |> validate_user_or_organization()
     |> validate_inclusion(:type, @types)
     |> validate_type_specific_fields()
   end
@@ -65,6 +76,17 @@ defmodule Hexpm.UserSession do
 
       _ ->
         changeset
+    end
+  end
+
+  defp validate_user_or_organization(changeset) do
+    user_id = get_field(changeset, :user_id)
+    organization_id = get_field(changeset, :organization_id)
+
+    if is_nil(user_id) and is_nil(organization_id) do
+      add_error(changeset, :user_id, "either user or organization is required")
+    else
+      changeset
     end
   end
 

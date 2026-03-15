@@ -1,7 +1,7 @@
 defmodule Hexpm.OAuth.Token do
   use Hexpm.Schema
 
-  alias Hexpm.Accounts.User
+  alias Hexpm.Accounts.{Organization, User}
   alias Hexpm.Permissions
   alias Hexpm.UserSession
 
@@ -22,6 +22,7 @@ defmodule Hexpm.OAuth.Token do
     field :refresh_token, :string, virtual: true
 
     belongs_to :user, User
+    belongs_to :organization, Organization
     belongs_to :client, Hexpm.OAuth.Client, references: :client_id, type: :binary_id
     belongs_to :user_session, UserSession
 
@@ -45,6 +46,7 @@ defmodule Hexpm.OAuth.Token do
       :grant_reference,
       :user_session_id,
       :user_id,
+      :organization_id,
       :client_id,
       :access_token,
       :refresh_token
@@ -55,7 +57,6 @@ defmodule Hexpm.OAuth.Token do
       :scopes,
       :expires_at,
       :grant_type,
-      :user_id,
       :client_id
     ])
     |> validate_inclusion(:grant_type, @valid_grant_types)
