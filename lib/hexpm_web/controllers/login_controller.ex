@@ -84,8 +84,7 @@ defmodule HexpmWeb.LoginController do
       "show.html",
       title: "Log in",
       container: "container page page-xs login",
-      return: safe_string(conn.params["return"]),
-      hexdocs: conn.params["hexdocs"]
+      return: safe_string(conn.params["return"])
     )
   end
 

@@ -21,7 +21,6 @@
 
     <%!-- Hidden Fields --%>
     <input type="hidden" name="return" value={@return} />
-    <input :if={@hexdocs not in [nil, ""]} type="hidden" name="hexdocs" value={@hexdocs} />
 
     <%!-- Submit Button --%>
     <.button type="submit" full_width class="mt-8">
