@@ -6,7 +6,6 @@ defmodule HexpmWeb.Dashboard.Email.Components.DeleteEmailModal do
   use PhoenixHTMLHelpers
   import HexpmWeb.Components.Buttons
   import HexpmWeb.Components.Modal, only: [show_modal: 2]
-  alias Phoenix.LiveView.JS
 
   use Phoenix.VerifiedRoutes,
     endpoint: HexpmWeb.Endpoint,
@@ -79,7 +78,7 @@ defmodule HexpmWeb.Dashboard.Email.Components.DeleteEmailModal do
           <.button
             type="button"
             variant="danger"
-            phx-click={JS.dispatch("submit", to: "##{@modal_id}-form")}
+            onclick={"document.getElementById('#{@modal_id}-form').submit()"}
           >
             Delete Email
           </.button>
