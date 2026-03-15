@@ -37,7 +37,10 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
       <div class="px-6 py-5 border-b border-grey-200 flex items-center justify-between">
         <h2 class="text-grey-900 text-lg font-semibold">Subscription</h2>
         <%= if @subscription do %>
-          <span class={["inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium", subscription_badge_class(@subscription)]}>
+          <span class={[
+            "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
+            subscription_badge_class(@subscription)
+          ]}>
             {BillingHelpers.subscription_badge_label(@subscription)}
             {BillingHelpers.discount_status(@discount)}
           </span>
@@ -49,22 +52,37 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
           <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <dt class="text-xs font-medium text-grey-500 uppercase tracking-wider mb-1">Plan</dt>
-              <dd class="text-sm text-grey-900 flex items-center gap-2">
-                {BillingHelpers.plan(@plan_id)}
-                <.button type="button" variant="outline" size="sm" phx-click={show_modal("change-plan-modal")}>
-                  <%= if @plan_id == "organization-monthly", do: "Switch to annual", else: "Switch to monthly" %>
-                </.button>
+              <dd class="text-sm text-grey-900">
+                <p>{BillingHelpers.plan(@plan_id)}</p>
+                <div class="mt-2">
+                  <.button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    phx-click={show_modal("change-plan-modal")}
+                  >
+                    {if @plan_id == "organization-monthly",
+                      do: "Switch to annual",
+                      else: "Switch to monthly"}
+                  </.button>
+                </div>
               </dd>
             </div>
             <div>
-              <dt class="text-xs font-medium text-grey-500 uppercase tracking-wider mb-1">Payment method</dt>
+              <dt class="text-xs font-medium text-grey-500 uppercase tracking-wider mb-1">
+                Payment method
+              </dt>
               <dd class="text-sm text-grey-900">{BillingHelpers.payment_card(@card)}</dd>
             </div>
             <div>
-              <dt class="text-xs font-medium text-grey-500 uppercase tracking-wider mb-1">Next invoice</dt>
+              <dt class="text-xs font-medium text-grey-500 uppercase tracking-wider mb-1">
+                Next invoice
+              </dt>
               <dd class="text-sm text-grey-900">
                 <%= if @subscription["cancel_at_period_end"] do %>
-                  Subscription ends on {BillingHelpers.payment_date(@subscription["current_period_end"])}
+                  Subscription ends on {BillingHelpers.payment_date(
+                    @subscription["current_period_end"]
+                  )}
                 <% else %>
                   {BillingHelpers.payment_date(@subscription["current_period_end"])}
                 <% end %>
@@ -84,7 +102,9 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
             </div>
             <%= if BillingHelpers.subscription_status(@subscription, @card) not in ["Active", ""] do %>
               <div class="sm:col-span-2">
-                <dt class="text-xs font-medium text-grey-500 uppercase tracking-wider mb-1">Status</dt>
+                <dt class="text-xs font-medium text-grey-500 uppercase tracking-wider mb-1">
+                  Status
+                </dt>
                 <dd class="text-sm text-grey-900">
                   {BillingHelpers.subscription_status(@subscription, @card)}
                 </dd>
@@ -92,13 +112,23 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
             <% end %>
             <div>
               <dt class="text-xs font-medium text-grey-500 uppercase tracking-wider mb-1">Seats</dt>
-              <dd class="text-sm text-grey-900 flex items-center gap-3">
-                {@member_count} of {@safe_quantity} in use
-                <div class="flex gap-2">
-                  <.button type="button" variant="outline" size="sm" phx-click={show_modal("add-seats-modal")}>
+              <dd class="text-sm text-grey-900">
+                <p>{@member_count} of {@safe_quantity} in use</p>
+                <div class="mt-2 flex gap-2">
+                  <.button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    phx-click={show_modal("add-seats-modal")}
+                  >
                     Add seats
                   </.button>
-                  <.button type="button" variant="danger-outline" size="sm" phx-click={show_modal("remove-seats-modal")}>
+                  <.button
+                    type="button"
+                    variant="danger-outline"
+                    size="sm"
+                    phx-click={show_modal("remove-seats-modal")}
+                  >
                     Remove seats
                   </.button>
                 </div>
@@ -106,17 +136,23 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
             </div>
           </dl>
 
-          <div class="mt-6"
+          <div
+            class="mt-6"
             id="billing-checkout-data"
             data-post-action={@post_action}
-            data-csrf-token={@csrf_token}>
+            data-csrf-token={@csrf_token}
+          >
             {raw(@checkout_html || "")}
           </div>
 
           <div class="mt-4">
-            <.button type="button" variant="danger-outline" size="sm"
+            <.button
+              type="button"
+              variant="danger-outline"
+              size="sm"
               disabled={!@subscription || @subscription["cancel_at_period_end"]}
-              phx-click={show_modal("cancel-billing-modal")}>
+              phx-click={show_modal("cancel-billing-modal")}
+            >
               Cancel subscription
             </.button>
           </div>
@@ -138,7 +174,6 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
             plan_id={@plan_id}
           />
           <.change_plan_modal organization={@organization} plan_id={@plan_id} />
-
         <% else %>
           <p class="text-sm text-grey-600 mb-4">
             No active subscription. <strong>Private packages will not be available</strong>
@@ -147,10 +182,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
           <p class="text-sm text-grey-600 mb-6">
             Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.
           </p>
-          <div class="mt-4"
+          <div
+            class="mt-4"
             id="billing-checkout-data"
             data-post-action={@post_action}
-            data-csrf-token={@csrf_token}>
+            data-csrf-token={@csrf_token}
+          >
             {raw(@checkout_html || "")}
           </div>
         <% end %>
@@ -183,7 +220,11 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
         Your subscription will remain active until the end of the current billing period.
         After that, private packages will no longer be accessible.
       </p>
-      <form id="cancel-billing-form" action={~p"/dashboard/orgs/#{@organization}/cancel-billing"} method="post">
+      <form
+        id="cancel-billing-form"
+        action={~p"/dashboard/orgs/#{@organization}/cancel-billing"}
+        method="post"
+      >
         <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
       </form>
       <:footer>
@@ -220,15 +261,29 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
             Number of new seats to add
           </label>
           <div class="flex items-center gap-2">
-            <input id="add-seats-input" type="number" name="add-seats"
-              min="1" max="999" step="1" value="1" required
-              class="w-24 h-10 px-3 border border-grey-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-600" />
+            <input
+              id="add-seats-input"
+              type="number"
+              name="add-seats"
+              min="1"
+              max="999"
+              step="1"
+              value="1"
+              required
+              class="w-24 h-10 px-3 border border-grey-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-600"
+            />
             <span class="text-sm text-grey-600">seat(s) @ {BillingHelpers.plan_price(@plan_id)}</span>
           </div>
         </div>
         <%= if @proration_amount && @proration_amount > 0 do %>
           <p class="text-sm text-grey-600">
-            {BillingHelpers.proration_description(@plan_id, @proration_amount, @proration_days, @quantity, @max_period_quantity)}
+            {BillingHelpers.proration_description(
+              @plan_id,
+              @proration_amount,
+              @proration_days,
+              @quantity,
+              @max_period_quantity
+            )}
           </p>
         <% end %>
       </form>
@@ -252,7 +307,11 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
   defp remove_seats_modal(assigns) do
     ~H"""
     <.modal id="remove-seats-modal" title="Remove seats">
-      <form id="remove-seats-form" action={~p"/dashboard/orgs/#{@organization}/remove-seats"} method="post">
+      <form
+        id="remove-seats-form"
+        action={~p"/dashboard/orgs/#{@organization}/remove-seats"}
+        method="post"
+      >
         <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
         <p class="text-sm text-grey-600 mb-4">
           You have {@quantity} seats of which {@member_count} are in use.
@@ -267,13 +326,19 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
               Reduce to
             </label>
             <div class="flex items-center gap-2">
-              <select id="remove-seats-select" name="seats" required
-                class="w-24 h-10 px-3 border border-grey-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-600">
+              <select
+                id="remove-seats-select"
+                name="seats"
+                required
+                class="w-24 h-10 px-3 border border-grey-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-600"
+              >
                 <%= for n <- max(@quantity - 1, 1)..max(@member_count, 1) do %>
                   <option value={n}>{n}</option>
                 <% end %>
               </select>
-              <span class="text-sm text-grey-600">seat(s) @ {BillingHelpers.plan_price(@plan_id)}</span>
+              <span class="text-sm text-grey-600">
+                seat(s) @ {BillingHelpers.plan_price(@plan_id)}
+              </span>
             </div>
           </div>
         <% end %>
@@ -282,8 +347,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
         <.button type="button" variant="secondary" phx-click={hide_modal("remove-seats-modal")}>
           Cancel
         </.button>
-        <.button type="submit" form="remove-seats-form" variant="danger"
-          disabled={@quantity <= @member_count}>
+        <.button
+          type="submit"
+          form="remove-seats-form"
+          variant="danger"
+          disabled={@quantity <= @member_count}
+        >
           Remove seats
         </.button>
       </:footer>
@@ -297,17 +366,26 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
   defp change_plan_modal(assigns) do
     ~H"""
     <.modal id="change-plan-modal" title="Change plan">
-      <form id="change-plan-form" action={~p"/dashboard/orgs/#{@organization}/change-plan"} method="post">
+      <form
+        id="change-plan-form"
+        action={~p"/dashboard/orgs/#{@organization}/change-plan"}
+        method="post"
+      >
         <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
-        <input type="hidden" name="plan_id"
-          value={if @plan_id == "organization-monthly", do: "organization-annually", else: "organization-monthly"} />
+        <input
+          type="hidden"
+          name="plan_id"
+          value={
+            if @plan_id == "organization-monthly",
+              do: "organization-annually",
+              else: "organization-monthly"
+          }
+        />
         <p class="text-sm text-grey-600">
           <%= if @plan_id == "organization-monthly" do %>
-            Switch to the annual plan and save with
-            <strong>{BillingHelpers.plan_price("organization-annually")} per user / year</strong>.
+            Switch to the annual plan and save with <strong>{BillingHelpers.plan_price("organization-annually")} per user / year</strong>.
           <% else %>
-            Switch to the monthly plan at
-            <strong>{BillingHelpers.plan_price("organization-monthly")} per user / month</strong>.
+            Switch to the monthly plan at <strong>{BillingHelpers.plan_price("organization-monthly")} per user / month</strong>.
           <% end %>
         </p>
       </form>
