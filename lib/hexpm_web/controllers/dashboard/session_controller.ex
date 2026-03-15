@@ -10,7 +10,6 @@ defmodule HexpmWeb.Dashboard.SessionController do
   end
 
   def delete(conn, %{"_id" => id}), do: do_delete(conn, id)
-  def delete(conn, %{"id" => id}), do: do_delete(conn, id)
 
   defp do_delete(conn, id) do
     user = conn.assigns.current_user
