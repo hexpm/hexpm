@@ -31,7 +31,7 @@ defmodule Hexpm.Accounts.UserTest do
 
     test "validates password" do
       changeset = User.build(%{password: "x"})
-      assert errors_on(changeset)[:password] == "should be at least 7 character(s)"
+      assert errors_on(changeset)[:password] == "should be at least 8 character(s)"
     end
 
     test "username and email are unique", %{user: user} do
@@ -136,7 +136,7 @@ defmodule Hexpm.Accounts.UserTest do
           password_confirmation: "short"
         })
 
-      assert errors_on(changeset)[:password] == "should be at least 7 character(s)"
+      assert errors_on(changeset)[:password] == "should be at least 8 character(s)"
 
       changeset =
         User.update_password_no_check(user, %{

@@ -174,14 +174,14 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
         |> post("/dashboard/security/change-password", %{
           user: %{
             password_current: "password",
-            password: "newpass",
-            password_confirmation: "newpass"
+            password: "newpassx",
+            password_confirmation: "newpassx"
           }
         })
 
       assert redirected_to(conn) == "/dashboard/security"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Your password has been updated"
-      assert {:ok, _} = Auth.password_auth(user.username, "newpass")
+      assert {:ok, _} = Auth.password_auth(user.username, "newpassx")
       assert :error = Auth.password_auth(user.username, "password")
 
       assert_delivered_email(Hexpm.Emails.password_changed(user))
