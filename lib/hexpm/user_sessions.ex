@@ -33,7 +33,8 @@ defmodule Hexpm.UserSessions do
   alias Hexpm.UserSession
   alias Hexpm.OAuth.Token
 
-  @min_sessions 5
+  @max_user_sessions 5
+  @min_org_sessions 5
   @default_session_expires_in 30 * 24 * 60 * 60
 
   @doc """
@@ -43,10 +44,10 @@ defmodule Hexpm.UserSessions do
   """
   def get_organization_session_limit(organization) do
     if is_integer(organization.billing_seats) and organization.billing_seats > 0 do
-      max(@min_sessions, organization.billing_seats)
+      max(@min_org_sessions, organization.billing_seats)
     else
       # Default to minimum if not cached yet (will be updated by billing report)
-      @min_sessions
+      @min_org_sessions
     end
   end
 
@@ -136,7 +137,7 @@ defmodule Hexpm.UserSessions do
       if organization do
         get_organization_session_limit(organization)
       else
-        @min_sessions
+        @max_user_sessions
       end
 
     owner = user || organization
@@ -336,7 +337,7 @@ defmodule Hexpm.UserSessions do
 
   The max_sessions parameter allows overriding the default limit (e.g., for organizations).
   """
-  def enforce_session_limit(user_or_org, max_sessions \\ @min_sessions) do
+  def enforce_session_limit(user_or_org, max_sessions \\ @max_user_sessions) do
     owner_filter = owner_filter(user_or_org)
     count = count_sessions(owner_filter)
 
@@ -352,7 +353,7 @@ defmodule Hexpm.UserSessions do
   Called after reducing seats to ensure active sessions don't exceed the new limit.
   """
   def revoke_excess_sessions_for_organization(organization, new_seat_limit) do
-    max_sessions = max(@min_sessions, new_seat_limit)
+    max_sessions = max(@min_org_sessions, new_seat_limit)
 
     owner_filter = owner_filter(organization)
     count = count_sessions(owner_filter)
