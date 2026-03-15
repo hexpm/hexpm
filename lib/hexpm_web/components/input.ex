@@ -31,10 +31,16 @@ defmodule HexpmWeb.Components.Input do
     doc:
       "Controls error display: nil (default - show all), true (always show), false (never show)"
 
-  attr :list, :string, default: nil, doc: "ID of a <datalist> element for autocomplete suggestions"
+  attr :list, :string,
+    default: nil,
+    doc: "ID of a <datalist> element for autocomplete suggestions"
+
   attr :type, :string, default: "text"
   attr :value, :string, default: nil
-  attr :rest, :global, include: ~w(pattern title), doc: "Additional HTML attributes to pass to the input element"
+
+  attr :rest, :global,
+    include: ~w(pattern title),
+    doc: "Additional HTML attributes to pass to the input element"
 
   def text_input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
     # For controller views, always show errors after submission
@@ -107,7 +113,7 @@ defmodule HexpmWeb.Components.Input do
   attr :options, :list, required: true, doc: "List of {label, value} tuples for select options"
   attr :prompt, :string, default: nil, doc: "Optional prompt text for the first option"
   attr :required, :boolean, default: false
-  attr :rest, :global, include: ~w(disabled multiple)
+  attr :rest, :global, include: ~w(disabled multiple onchange)
 
   attr :show_errors, :boolean,
     default: nil,
