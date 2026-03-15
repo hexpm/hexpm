@@ -1,8 +1,8 @@
-<%
-requirements = ((@current_release && @current_release.requirements) || [])
+<% requirements =
+  ((@current_release && @current_release.requirements) || [])
   |> Enum.sort_by(& &1.name)
-requirements_count = length(requirements)
-%>
+
+requirements_count = length(requirements) %>
 
 <.package_layout
   active_tab={:dependencies}

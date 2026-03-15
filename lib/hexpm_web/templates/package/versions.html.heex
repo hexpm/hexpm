@@ -1,6 +1,4 @@
-<%
-versions = Enum.map(@releases, & &1.version)
-%>
+<% versions = Enum.map(@releases, & &1.version) %>
 
 <.package_layout
   active_tab={:versions}
@@ -34,10 +32,8 @@ versions = Enum.map(@releases, & &1.version)
         </thead>
         <tbody class="divide-y divide-grey-100">
           <%= for release <- @releases do %>
-            <%
-              retired? = release.retirement != nil
-              previous_version = Hexpm.Utils.previous_version(release.version, versions)
-            %>
+            <% retired? = release.retirement != nil
+            previous_version = Hexpm.Utils.previous_version(release.version, versions) %>
             <tr class={["hover:bg-grey-50 transition-colors", retired? && "opacity-60 bg-grey-50"]}>
               <td class="px-5 py-3.5">
                 <div class="flex items-center gap-2">
@@ -81,7 +77,13 @@ versions = Enum.map(@releases, & &1.version)
                     <% end %>
                     <%= if previous_version && ViewHelpers.main_repository?(@package) do %>
                       <a
-                        href={Hexpm.Utils.diff_html_url(@package.name, release.version, previous_version)}
+                        href={
+                          Hexpm.Utils.diff_html_url(
+                            @package.name,
+                            release.version,
+                            previous_version
+                          )
+                        }
                         title="Diff with previous version"
                         class="text-grey-400 hover:text-purple-600 transition-colors"
                       >

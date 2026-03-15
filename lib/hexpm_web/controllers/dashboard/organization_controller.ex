@@ -404,9 +404,10 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       |> put_flash(:info, "Updated your billing information.")
       |> redirect(to: ~p"/dashboard/orgs/#{organization}/billing")
     else
-      {:error, errors} when is_map_key(errors, "email") or
-                             is_map_key(errors, "person") or
-                             is_map_key(errors, "company") ->
+      {:error, errors}
+      when is_map_key(errors, "email") or
+             is_map_key(errors, "person") or
+             is_map_key(errors, "company") ->
         conn
         |> put_status(400)
         |> put_flash(:error, "Please fill in all required fields.")
@@ -420,7 +421,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end
   end
 
-  defp validate_billing_params(%{"email" => email} = params) when is_binary(email) and email != "" do
+  defp validate_billing_params(%{"email" => email} = params)
+       when is_binary(email) and email != "" do
     person = params["person"]
     company = params["company"]
 
@@ -432,10 +434,30 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         errors =
           %{}
           |> maybe_add_error(company["name"] in [nil, ""], "company", "name", "can't be blank")
-          |> maybe_add_error(company["address_country"] in [nil, ""], "company", "country", "can't be blank")
-          |> maybe_add_error(company["address_line1"] in [nil, ""], "company", "address", "can't be blank")
-          |> maybe_add_error(company["address_city"] in [nil, ""], "company", "city", "can't be blank")
-          |> maybe_add_error(company["address_zip"] in [nil, ""], "company", "zip_code", "can't be blank")
+          |> maybe_add_error(
+            company["address_country"] in [nil, ""],
+            "company",
+            "country",
+            "can't be blank"
+          )
+          |> maybe_add_error(
+            company["address_line1"] in [nil, ""],
+            "company",
+            "address",
+            "can't be blank"
+          )
+          |> maybe_add_error(
+            company["address_city"] in [nil, ""],
+            "company",
+            "city",
+            "can't be blank"
+          )
+          |> maybe_add_error(
+            company["address_zip"] in [nil, ""],
+            "company",
+            "zip_code",
+            "can't be blank"
+          )
 
         if map_size(errors) > 0, do: {:error, errors}, else: :ok
 

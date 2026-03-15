@@ -68,9 +68,7 @@ defmodule HexpmWeb.Components.UserProfile do
                 class="group relative p-2 rounded-lg bg-grey-100 hover:bg-grey-200 transition-colors"
                 title={@public_email}
               >
-                {HexpmWeb.ViewIcons.icon(:heroicon, "envelope",
-                  class: "w-5 h-5 text-grey-700"
-                )}
+                {HexpmWeb.ViewIcons.icon(:heroicon, "envelope", class: "w-5 h-5 text-grey-700")}
                 <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-grey-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                   {@public_email}
                 </span>

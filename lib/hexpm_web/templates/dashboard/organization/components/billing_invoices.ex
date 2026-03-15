@@ -48,10 +48,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInvoices do
     ~H"""
     <td class="px-0 py-4 whitespace-nowrap text-grey-900">
       <%= if @invoice["id"] do %>
-        <a href={~p"/dashboard/orgs/#{@organization}/invoices/#{@invoice["id"]}"}
+        <a
+          href={~p"/dashboard/orgs/#{@organization}/invoices/#{@invoice["id"]}"}
           target="_blank"
           rel="noopener"
-          class="text-purple-600 hover:text-purple-700 hover:underline">
+          class="text-purple-600 hover:text-purple-700 hover:underline"
+        >
           {BillingHelpers.payment_date(@invoice["date"] || @invoice["created"])}
         </a>
       <% else %>

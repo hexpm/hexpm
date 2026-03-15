@@ -52,8 +52,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingHelpers do
   end
 
   # Short label for pill badges — single line, no HTML
-  def subscription_badge_label(%{"status" => "active", "cancel_at_period_end" => false}), do: "Active"
-  def subscription_badge_label(%{"status" => "active", "cancel_at_period_end" => true}), do: "Cancels at period end"
+  def subscription_badge_label(%{"status" => "active", "cancel_at_period_end" => false}),
+    do: "Active"
+
+  def subscription_badge_label(%{"status" => "active", "cancel_at_period_end" => true}),
+    do: "Cancels at period end"
+
   def subscription_badge_label(%{"status" => "trialing"}), do: "Trialing"
   def subscription_badge_label(%{"status" => "past_due"}), do: "Past due"
   def subscription_badge_label(%{"status" => "incomplete"}), do: "Incomplete"

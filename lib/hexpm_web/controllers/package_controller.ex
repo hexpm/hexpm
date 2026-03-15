@@ -84,7 +84,9 @@ defmodule HexpmWeb.PackageController do
       dependants_count =
         Packages.count(repositories, "depends:#{package.repository.name}:#{package.name}")
 
-      render(conn, "dependencies.html",
+      render(
+        conn,
+        "dependencies.html",
         [
           title: "Dependencies of #{package.name}",
           container: "container",
@@ -123,7 +125,9 @@ defmodule HexpmWeb.PackageController do
 
       dependants_downloads = Downloads.packages_all_views(dependants)
 
-      render(conn, "dependents.html",
+      render(
+        conn,
+        "dependents.html",
         [
           title: "Packages depending on #{package.name}",
           container: "container",
@@ -149,7 +153,9 @@ defmodule HexpmWeb.PackageController do
       dependants_count =
         Packages.count(repositories, "depends:#{package.repository.name}:#{package.name}")
 
-      render(conn, "versions.html",
+      render(
+        conn,
+        "versions.html",
         [
           title: "#{package.name} versions",
           container: "container",
@@ -176,7 +182,9 @@ defmodule HexpmWeb.PackageController do
       dependants_count =
         Packages.count(repositories, "depends:#{package.repository.name}:#{package.name}")
 
-      render(conn, "audit_logs.html",
+      render(
+        conn,
+        "audit_logs.html",
         [
           title: "Recent Activities for #{package.name}",
           container: "container",

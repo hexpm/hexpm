@@ -62,9 +62,11 @@ defmodule HexpmWeb.Dashboard.Organization.Components.DangerZoneTab do
       <p class="text-sm text-grey-600 mb-6">
         Please type <strong>{@organization.name}</strong> to confirm.
       </p>
-      <form id="leave-org-form"
+      <form
+        id="leave-org-form"
         action={~p"/dashboard/orgs/#{@organization}/leave"}
-        method="post">
+        method="post"
+      >
         <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
         <.text_input
           id="leave-org-name-input"

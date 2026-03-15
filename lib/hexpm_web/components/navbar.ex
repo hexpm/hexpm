@@ -268,11 +268,11 @@ defmodule HexpmWeb.Components.Navbar do
     JS.toggle(
       to: "#mobile-search-bar",
       in:
-        {"transition-all ease-out duration-200 transform",
-         "opacity-0 -translate-y-2", "opacity-100 translate-y-0"},
+        {"transition-all ease-out duration-200 transform", "opacity-0 -translate-y-2",
+         "opacity-100 translate-y-0"},
       out:
-        {"transition-all ease-in duration-150 transform",
-         "opacity-100 translate-y-0", "opacity-0 -translate-y-2"}
+        {"transition-all ease-in duration-150 transform", "opacity-100 translate-y-0",
+         "opacity-0 -translate-y-2"}
     )
     |> JS.focus(to: "#mobile-search-input")
   end
@@ -308,11 +308,11 @@ defmodule HexpmWeb.Components.Navbar do
     JS.toggle(
       to: "#navbar-mobile",
       in:
-        {"transition-all ease-out duration-300 transform",
-         "opacity-0 -translate-y-2", "opacity-100 translate-y-0"},
+        {"transition-all ease-out duration-300 transform", "opacity-0 -translate-y-2",
+         "opacity-100 translate-y-0"},
       out:
-        {"transition-all ease-in duration-200 transform",
-         "opacity-100 translate-y-0", "opacity-0 -translate-y-2"}
+        {"transition-all ease-in duration-200 transform", "opacity-100 translate-y-0",
+         "opacity-0 -translate-y-2"}
     )
     |> JS.toggle(to: "#menu-open-icon")
     |> JS.toggle(to: "#menu-close-icon")
@@ -426,11 +426,11 @@ defmodule HexpmWeb.Components.Navbar do
     JS.toggle(
       to: "#user-dropdown-menu",
       in:
-        {"transition-all ease-out duration-200 transform",
-         "opacity-0 -translate-y-2", "opacity-100 translate-y-0"},
+        {"transition-all ease-out duration-200 transform", "opacity-0 -translate-y-2",
+         "opacity-100 translate-y-0"},
       out:
-        {"transition-all ease-in duration-150 transform",
-         "opacity-100 translate-y-0", "opacity-0 -translate-y-2"}
+        {"transition-all ease-in duration-150 transform", "opacity-100 translate-y-0",
+         "opacity-0 -translate-y-2"}
     )
     |> JS.toggle(to: "#user-dropdown-backdrop")
   end
@@ -439,8 +439,8 @@ defmodule HexpmWeb.Components.Navbar do
     JS.hide(
       to: "#user-dropdown-menu",
       transition:
-        {"transition-all ease-in duration-150 transform",
-         "opacity-100 translate-y-0", "opacity-0 -translate-y-2"}
+        {"transition-all ease-in duration-150 transform", "opacity-100 translate-y-0",
+         "opacity-0 -translate-y-2"}
     )
     |> JS.hide(to: "#user-dropdown-backdrop")
   end

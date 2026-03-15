@@ -1,6 +1,5 @@
-<%
-  [d1, d2, d3] = @status |> to_string() |> String.pad_leading(3, "0") |> String.graphemes() |> Enum.take(3)
-%>
+<% [d1, d2, d3] =
+  @status |> to_string() |> String.pad_leading(3, "0") |> String.graphemes() |> Enum.take(3) %>
 <div class="flex flex-1 flex-col items-center justify-center bg-grey-50 px-4 py-24">
   <div class="flex leading-none mb-6 select-none">
     <span class="text-error-digit font-bold text-amber-400">{d1}</span>

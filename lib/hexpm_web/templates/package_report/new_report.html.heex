@@ -12,7 +12,9 @@
       <input type="hidden" name="repository" value={@repository} />
 
       <div class="mb-6">
-        <label for="description" class="block text-small font-medium text-grey-900 mb-[6px]">Description</label>
+        <label for="description" class="block text-small font-medium text-grey-900 mb-[6px]">
+          Description
+        </label>
         <p class="text-grey-500 text-sm mb-2">
           Provide a description of the vulnerability you have detected.
         </p>
@@ -26,12 +28,23 @@
       </div>
 
       <div class="mb-6">
-        <label for="requirement" class="block text-small font-medium text-grey-900 mb-[6px]">Affected releases</label>
+        <label for="requirement" class="block text-small font-medium text-grey-900 mb-[6px]">
+          Affected releases
+        </label>
         <p class="text-grey-500 text-sm mb-1">
           Indicate in which releases you have detected the described vulnerability.
         </p>
         <p class="text-grey-500 text-sm mb-2">
-          Provide a <a href="https://hexdocs.pm/elixir/Version.html#module-requirements" target="_blank" rel="noopener" class="text-purple-600 hover:underline">version requirement</a> representing the affected releases.
+          Provide a
+          <a
+            href="https://hexdocs.pm/elixir/Version.html#module-requirements"
+            target="_blank"
+            rel="noopener"
+            class="text-purple-600 hover:underline"
+          >
+            version requirement
+          </a>
+          representing the affected releases.
         </p>
         <p class="text-xs text-grey-400 mb-2 font-mono">
           e.g. "== 2.0.0" selects only 2.0.0; "&gt;= 2.0.0 and &lt;= 3.0.0" selects all versions between 2.0.0 and 3.0.0 inclusive.

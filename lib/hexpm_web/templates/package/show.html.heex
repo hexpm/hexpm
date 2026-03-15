@@ -1,8 +1,6 @@
-<%
-licenses = @package.meta.licenses || []
+<% licenses = @package.meta.licenses || []
 links = Enum.to_list(@package.meta.links || [])
-description = @package.meta.description
-%>
+description = @package.meta.description %>
 
 <.package_layout
   active_tab={:readme}
@@ -37,7 +35,10 @@ description = @package.meta.description
             </code>
             to your list of dependencies in mix.exs:
           </p>
-          <pre phx-no-curly-interpolation class="bg-grey-50 rounded-lg p-4 font-mono text-sm text-grey-600 overflow-x-auto">def deps do
+          <pre
+            phx-no-curly-interpolation
+            class="bg-grey-50 rounded-lg p-4 font-mono text-sm text-grey-600 overflow-x-auto"
+          >def deps do
   [{:<%= @package.name %>, "~> <%= @current_release.version %>"}]
 end</pre>
         </section>
@@ -50,7 +51,11 @@ end</pre>
           <ul class="space-y-2">
             <%= for {name, link} <- links do %>
               <li>
-                <a href={ViewHelpers.safe_url(link)} rel="nofollow" class="text-blue-600 hover:text-blue-700 hover:underline">
+                <a
+                  href={ViewHelpers.safe_url(link)}
+                  rel="nofollow"
+                  class="text-blue-600 hover:text-blue-700 hover:underline"
+                >
                   {name}
                 </a>
               </li>

@@ -387,7 +387,10 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "permission"
     end
 
-    test "returns 404 for users not in the organization", %{user: user, organization: organization} do
+    test "returns 404 for users not in the organization", %{
+      user: user,
+      organization: organization
+    } do
       build_conn()
       |> test_login(user)
       |> get("/dashboard/orgs/#{organization.name}/billing")
@@ -658,7 +661,10 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
   end
 
   describe "POST billing validation (update-billing)" do
-    test "rejects missing email with 400 and inline error", %{user: user, organization: organization} do
+    test "rejects missing email with 400 and inline error", %{
+      user: user,
+      organization: organization
+    } do
       mock_customer(organization)
       insert(:organization_user, organization: organization, user: user, role: "admin")
 
@@ -815,7 +821,11 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       insert(:organization_user, organization: organization, user: user, role: "admin")
 
-      params = %{"email" => "billing@example.com", "person" => %{"country" => "US"}, "company" => nil}
+      params = %{
+        "email" => "billing@example.com",
+        "person" => %{"country" => "US"},
+        "company" => nil
+      }
 
       build_conn()
       |> test_login(user)

@@ -23,8 +23,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.OrgTabNav do
                 "whitespace-nowrap px-4 py-3 text-sm font-medium border-b-2 transition-colors",
                 if(active?(@conn, tab),
                   do: "border-purple-600 text-purple-600",
-                  else:
-                    "border-transparent text-grey-500 hover:text-grey-700 hover:border-grey-300"
+                  else: "border-transparent text-grey-500 hover:text-grey-700 hover:border-grey-300"
                 )
               ]}
             >
@@ -43,8 +42,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.OrgTabNav do
     name = org.name
 
     core_tabs = [
-      {"Profile", "/dashboard/orgs/#{name}",
-       &(&1 == "/dashboard/orgs/#{name}")},
+      {"Profile", "/dashboard/orgs/#{name}", &(&1 == "/dashboard/orgs/#{name}")},
       {"Members", "/dashboard/orgs/#{name}/members",
        &String.starts_with?(&1, "/dashboard/orgs/#{name}/members")},
       {"Keys", "/dashboard/orgs/#{name}/keys",
@@ -58,9 +56,10 @@ defmodule HexpmWeb.Dashboard.Organization.Components.OrgTabNav do
     ]
 
     if organization_admin?(org, current_user) do
-      billing_tab = {"Billing", "/dashboard/orgs/#{name}/billing",
-                     &(String.starts_with?(&1, "/dashboard/orgs/#{name}/billing") or
-                         String.starts_with?(&1, "/dashboard/orgs/#{name}/invoices"))}
+      billing_tab =
+        {"Billing", "/dashboard/orgs/#{name}/billing",
+         &(String.starts_with?(&1, "/dashboard/orgs/#{name}/billing") or
+             String.starts_with?(&1, "/dashboard/orgs/#{name}/invoices"))}
 
       List.insert_at(core_tabs, 5, billing_tab)
     else

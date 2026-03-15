@@ -37,13 +37,17 @@
             <dd class="text-grey-900 font-medium">{Phoenix.Naming.humanize(@report.state)}</dd>
           </div>
           <div>
-            <dt class="text-grey-400 text-xs uppercase tracking-wider font-medium mb-1">Affected releases</dt>
+            <dt class="text-grey-400 text-xs uppercase tracking-wider font-medium mb-1">
+              Affected releases
+            </dt>
             <dd class="flex flex-wrap gap-1">
               <%= if Enum.empty?(@report.package_report_releases) do %>
                 <span class="text-grey-400">None specified</span>
               <% else %>
                 <%= for ar <- @report.package_report_releases do %>
-                  <span class="bg-grey-100 text-grey-700 text-xs font-mono px-2 py-0.5 rounded">{ar.release.version}</span>
+                  <span class="bg-grey-100 text-grey-700 text-xs font-mono px-2 py-0.5 rounded">
+                    {ar.release.version}
+                  </span>
                 <% end %>
               <% end %>
             </dd>
@@ -60,7 +64,9 @@
     <div class="lg:col-span-2 flex flex-col gap-4">
       <div class="bg-white border border-grey-200 rounded-xl p-5">
         <h2 class="text-grey-900 font-semibold mb-3">Description</h2>
-        <p class="text-grey-700 text-sm leading-relaxed whitespace-pre-wrap">{@report.description}</p>
+        <p class="text-grey-700 text-sm leading-relaxed whitespace-pre-wrap">
+          {@report.description}
+        </p>
       </div>
 
       {render("_comments_section.html",

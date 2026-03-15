@@ -40,8 +40,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
               class="border-dashed"
               phx-click={show_modal(add_member_modal_id())}
             >
-              {HexpmWeb.ViewIcons.icon(:heroicon, "plus", class: "w-4 h-4")}
-              Add member
+              {HexpmWeb.ViewIcons.icon(:heroicon, "plus", class: "w-4 h-4")} Add member
             </.button>
           <% end %>
         </div>
@@ -52,7 +51,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
               <%!-- Avatar + name --%>
               <div class="flex items-center gap-3">
                 <img
-                  src={HexpmWeb.ViewHelpers.gravatar_url(Hexpm.Accounts.User.email(org_user.user, :gravatar), :small)}
+                  src={
+                    HexpmWeb.ViewHelpers.gravatar_url(
+                      Hexpm.Accounts.User.email(org_user.user, :gravatar),
+                      :small
+                    )
+                  }
                   alt={org_user.user.username}
                   class="w-9 h-9 rounded-full flex-shrink-0"
                 />
@@ -68,7 +72,11 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                   <%!-- Role select (auto-submits on change) --%>
                   <%= form_for :organization_user, ~p"/dashboard/orgs/#{@organization}", [method: :post, onchange: "this.submit()"], fn _f -> %>
                     <input type="hidden" name="action" value="change_role" />
-                    <input type="hidden" name="organization_user[username]" value={org_user.user.username} />
+                    <input
+                      type="hidden"
+                      name="organization_user[username]"
+                      value={org_user.user.username}
+                    />
                     <.select_input
                       id={"role-#{org_user.user.username}"}
                       name="organization_user[role]"
@@ -123,7 +131,11 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
               </.button>
               <%= form_for :organization_user, ~p"/dashboard/orgs/#{@organization}", [method: :post, id: "remove-member-form-#{org_user.user.username}"], fn _f -> %>
                 <input type="hidden" name="action" value="remove_member" />
-                <input type="hidden" name="organization_user[username]" value={org_user.user.username} />
+                <input
+                  type="hidden"
+                  name="organization_user[username]"
+                  value={org_user.user.username}
+                />
                 <.button type="submit" variant="danger">
                   Remove member
                 </.button>

@@ -10,5 +10,4 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
   import HexpmWeb.Dashboard.Organization.Components.OrgTabNav, only: [org_tab_nav: 1]
   import HexpmWeb.Dashboard.Organization.Components.PackagesTab, only: [packages_tab: 1]
   import HexpmWeb.Dashboard.Organization.Components.ProfileTab, only: [profile_tab: 1]
-
 end

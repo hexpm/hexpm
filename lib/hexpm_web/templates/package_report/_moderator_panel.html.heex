@@ -2,7 +2,9 @@
   <h2 class="text-grey-900 font-semibold mb-3">Moderator actions</h2>
 
   <%= if @report.state in ["solved", "unresolved"] do %>
-    <p class="text-grey-500 text-sm italic">This report's state is final and cannot be changed.</p>
+    <p class="text-grey-500 text-sm italic">
+      This report's state is final and cannot be changed.
+    </p>
   <% else %>
     <div class="flex flex-wrap gap-2">
       <%= if @report.state in ["to_accept", "rejected"] do %>

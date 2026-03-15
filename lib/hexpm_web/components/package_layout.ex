@@ -57,7 +57,10 @@ defmodule HexpmWeb.Components.PackageLayout do
       |> assign(:graph_fill, graph_fill)
       |> assign(:y_axis_labels, y_axis_labels)
       |> assign(:licenses, assigns.package.meta.licenses || [])
-      |> assign(:build_tools, (assigns.current_release && assigns.current_release.meta.build_tools) || [])
+      |> assign(
+        :build_tools,
+        (assigns.current_release && assigns.current_release.meta.build_tools) || []
+      )
       |> assign(:this_version_downloads, version_downloads(assigns))
 
     ~H"""
@@ -71,8 +74,7 @@ defmodule HexpmWeb.Components.PackageLayout do
               href="/packages"
               class="inline-flex items-center gap-1 text-xs font-medium text-grey-400 hover:text-purple-600 transition-colors w-fit"
             >
-              {HexpmWeb.ViewIcons.icon(:heroicon, "arrow-left", class: "size-3")}
-              Packages
+              {HexpmWeb.ViewIcons.icon(:heroicon, "arrow-left", class: "size-3")} Packages
             </a>
             <div class="flex items-end gap-4">
               <h1 class="text-grey-900 text-2xl font-semibold">
@@ -218,7 +220,9 @@ defmodule HexpmWeb.Components.PackageLayout do
                         readonly
                         onfocus="this.select();"
                         id={"#{tool}-snippet"}
-                        data-value={HexpmWeb.PackageView.dep_snippet(tool, @package, @current_release)}
+                        data-value={
+                          HexpmWeb.PackageView.dep_snippet(tool, @package, @current_release)
+                        }
                       />
                       <button
                         type="button"
@@ -242,15 +246,34 @@ defmodule HexpmWeb.Components.PackageLayout do
                 <%= if is_binary(@graph_points) and @graph_points != "" do %>
                   <% chart_id = "pkg-chart-#{@package.id}" %>
                   <div class="mb-4">
-                    <svg viewBox="0 0 800 210" class="w-full h-auto" role="img" aria-label="Downloads over the last 30 days">
+                    <svg
+                      viewBox="0 0 800 210"
+                      class="w-full h-auto"
+                      role="img"
+                      aria-label="Downloads over the last 30 days"
+                    >
                       <defs>
-                        <linearGradient id={"#{chart_id}-line"} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="800" y2="200">
+                        <linearGradient
+                          id={"#{chart_id}-line"}
+                          gradientUnits="userSpaceOnUse"
+                          x1="0"
+                          y1="0"
+                          x2="800"
+                          y2="200"
+                        >
                           <stop offset="0%" style="stop-color:#4f28a7;" />
                           <stop offset="33%" style="stop-color:#7209b7;" />
                           <stop offset="66%" style="stop-color:#b5179e;" />
                           <stop offset="100%" style="stop-color:#f72585;" />
                         </linearGradient>
-                        <linearGradient id={"#{chart_id}-fill"} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="200">
+                        <linearGradient
+                          id={"#{chart_id}-fill"}
+                          gradientUnits="userSpaceOnUse"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="200"
+                        >
                           <stop offset="0%" style="stop-color:#7209b7;stop-opacity:0.15;" />
                           <stop offset="100%" style="stop-color:#7209b7;stop-opacity:0.01;" />
                         </linearGradient>
@@ -275,10 +298,19 @@ defmodule HexpmWeb.Components.PackageLayout do
                       />
                       <%!-- Y-axis labels --%>
                       <%= for {label, y} <- @y_axis_labels do %>
-                        <text x="4" y={y} fill="#9ca3af" font-size="26" font-family="sans-serif">{ViewHelpers.human_number_space(label)}</text>
+                        <text x="4" y={y} fill="#9ca3af" font-size="26" font-family="sans-serif">
+                          {ViewHelpers.human_number_space(label)}
+                        </text>
                       <% end %>
                       <%!-- Caption --%>
-                      <text x="796" y="28" text-anchor="end" fill="#9ca3af" font-size="26" font-family="sans-serif">
+                      <text
+                        x="796"
+                        y="28"
+                        text-anchor="end"
+                        fill="#9ca3af"
+                        font-size="26"
+                        font-family="sans-serif"
+                      >
                         Last 30 days,
                         <%= if @current_release do %>
                           {@current_release.version}
@@ -293,24 +325,40 @@ defmodule HexpmWeb.Components.PackageLayout do
                 <%!-- Download Stats --%>
                 <div class="grid grid-cols-3 gap-3 pb-4 border-b border-grey-200">
                   <div class="flex flex-col gap-0.5">
-                    <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">this version</p>
-                    <p class="text-grey-700 text-base font-bold">{ViewHelpers.human_number_space(@this_version_downloads)}</p>
+                    <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">
+                      this version
+                    </p>
+                    <p class="text-grey-700 text-base font-bold">
+                      {ViewHelpers.human_number_space(@this_version_downloads)}
+                    </p>
                   </div>
                   <div class="flex flex-col gap-0.5">
-                    <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">last 7 days</p>
-                    <p class="text-grey-700 text-base font-bold">{ViewHelpers.human_number_space(@downloads["week"] || 0)}</p>
+                    <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">
+                      last 7 days
+                    </p>
+                    <p class="text-grey-700 text-base font-bold">
+                      {ViewHelpers.human_number_space(@downloads["week"] || 0)}
+                    </p>
                   </div>
                   <div class="flex flex-col gap-0.5">
-                    <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">all time</p>
-                    <p class="text-grey-700 text-base font-bold">{ViewHelpers.human_number_space(@downloads["all"] || 0)}</p>
+                    <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">
+                      all time
+                    </p>
+                    <p class="text-grey-700 text-base font-bold">
+                      {ViewHelpers.human_number_space(@downloads["all"] || 0)}
+                    </p>
                   </div>
                 </div>
 
                 <%!-- Additional Details --%>
                 <div class="grid grid-cols-2 gap-x-3 gap-y-4 pt-4">
                   <div class="flex flex-col gap-0.5">
-                    <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">Last Updated</p>
-                    <p class="text-grey-700 font-bold">{ViewHelpers.pretty_date(@current_release.inserted_at, :short)}</p>
+                    <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">
+                      Last Updated
+                    </p>
+                    <p class="text-grey-700 font-bold">
+                      {ViewHelpers.pretty_date(@current_release.inserted_at, :short)}
+                    </p>
                   </div>
                   <%= if @licenses != [] do %>
                     <div class="flex flex-col gap-0.5">
@@ -329,7 +377,8 @@ defmodule HexpmWeb.Components.PackageLayout do
                                 <%= for license <- tl(@licenses) do %>
                                   <p>{license}</p>
                                 <% end %>
-                                <div class="absolute top-full left-3 border-4 border-transparent border-t-grey-900"></div>
+                                <div class="absolute top-full left-3 border-4 border-transparent border-t-grey-900">
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -339,7 +388,9 @@ defmodule HexpmWeb.Components.PackageLayout do
                   <% end %>
                   <%= if @build_tools != [] do %>
                     <div class="flex flex-col gap-0.5">
-                      <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">Build Tools</p>
+                      <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">
+                        Build Tools
+                      </p>
                       <div class="flex flex-wrap gap-1.5">
                         <%= for tool <- Enum.uniq(@build_tools) do %>
                           <.badge variant="purple">{tool}</.badge>
@@ -349,17 +400,26 @@ defmodule HexpmWeb.Components.PackageLayout do
                   <% end %>
                   <%= if @current_release.publisher do %>
                     <div class="flex flex-col gap-0.5">
-                      <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">Publisher</p>
+                      <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">
+                        Publisher
+                      </p>
                       <a
                         href={HexpmWeb.Router.user_path(@current_release.publisher)}
                         class="flex items-center gap-1.5 hover:text-purple-600 transition-colors"
                       >
                         <img
-                          src={ViewHelpers.gravatar_url(Hexpm.Accounts.User.email(@current_release.publisher, :gravatar), :small)}
+                          src={
+                            ViewHelpers.gravatar_url(
+                              Hexpm.Accounts.User.email(@current_release.publisher, :gravatar),
+                              :small
+                            )
+                          }
                           class="size-5 rounded-full"
                           alt={@current_release.publisher.username}
                         />
-                        <span class="text-grey-700 text-sm font-medium">{@current_release.publisher.username}</span>
+                        <span class="text-grey-700 text-sm font-medium">
+                          {@current_release.publisher.username}
+                        </span>
                       </a>
                     </div>
                   <% end %>

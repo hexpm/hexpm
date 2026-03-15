@@ -37,15 +37,11 @@ defmodule HexpmWeb.Components.Modal do
     js
     |> JS.show(
       to: "##{id}",
-      transition:
-        {"transition-all transform ease-out duration-300", "opacity-0",
-         "opacity-100"}
+      transition: {"transition-all transform ease-out duration-300", "opacity-0", "opacity-100"}
     )
     |> JS.show(
       to: "##{id}-backdrop",
-      transition:
-        {"transition-all transform ease-out duration-300", "opacity-0",
-         "opacity-100"}
+      transition: {"transition-all transform ease-out duration-300", "opacity-0", "opacity-100"}
     )
     |> JS.show(
       to: "##{id}-content",
@@ -68,15 +64,11 @@ defmodule HexpmWeb.Components.Modal do
     js
     |> JS.hide(
       to: "##{id}",
-      transition:
-        {"transition-all transform ease-in duration-200", "opacity-100",
-         "opacity-0"}
+      transition: {"transition-all transform ease-in duration-200", "opacity-100", "opacity-0"}
     )
     |> JS.hide(
       to: "##{id}-backdrop",
-      transition:
-        {"transition-all transform ease-in duration-200", "opacity-100",
-         "opacity-0"}
+      transition: {"transition-all transform ease-in duration-200", "opacity-100", "opacity-0"}
     )
     |> JS.hide(
       to: "##{id}-content",

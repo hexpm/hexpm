@@ -2,7 +2,9 @@
   <div class="flex items-center justify-between mb-6">
     <h1 class="text-grey-900 text-2xl font-semibold">Package Reports</h1>
     <%= if @total > 0 do %>
-      <span class="text-grey-500 text-sm">{@total} result{if @total == 1, do: "", else: "s"} found</span>
+      <span class="text-grey-500 text-sm">
+        {@total} result{if @total == 1, do: "", else: "s"} found
+      </span>
     <% end %>
   </div>
 
@@ -15,12 +17,24 @@
       <table class="w-full text-sm">
         <thead>
           <tr class="bg-grey-50 border-b border-grey-200">
-            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 uppercase tracking-wider w-16">ID</th>
-            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 uppercase tracking-wider">Package</th>
-            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 uppercase tracking-wider">Versions</th>
-            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 uppercase tracking-wider w-28">State</th>
-            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 uppercase tracking-wider">By user</th>
-            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 uppercase tracking-wider">Description</th>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 uppercase tracking-wider w-16">
+              ID
+            </th>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 uppercase tracking-wider">
+              Package
+            </th>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 uppercase tracking-wider">
+              Versions
+            </th>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 uppercase tracking-wider w-28">
+              State
+            </th>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 uppercase tracking-wider">
+              By user
+            </th>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 uppercase tracking-wider">
+              Description
+            </th>
           </tr>
         </thead>
         <tbody class="divide-y divide-grey-100">

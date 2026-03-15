@@ -1,13 +1,18 @@
 <tr class="hover:bg-grey-50 transition-colors">
   <td class="px-5 py-3.5">
-    <a href={~p"/reports/#{@report}"} class="font-mono text-purple-600 hover:text-purple-700 font-medium">
+    <a
+      href={~p"/reports/#{@report}"}
+      class="font-mono text-purple-600 hover:text-purple-700 font-medium"
+    >
       #{@report.id}
     </a>
   </td>
   <td class="px-5 py-3.5 font-medium text-grey-900">{@report.package.name}</td>
   <td class="px-5 py-3.5 text-grey-500">
     <%= for ar <- @report.package_report_releases do %>
-      <span class="inline-block bg-grey-100 text-grey-700 text-xs font-mono px-1.5 py-0.5 rounded mr-1">{ar.release.version}</span>
+      <span class="inline-block bg-grey-100 text-grey-700 text-xs font-mono px-1.5 py-0.5 rounded mr-1">
+        {ar.release.version}
+      </span>
     <% end %>
   </td>
   <td class="px-5 py-3.5">

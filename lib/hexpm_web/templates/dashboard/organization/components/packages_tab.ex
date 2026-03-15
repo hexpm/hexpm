@@ -29,12 +29,11 @@ defmodule HexpmWeb.Dashboard.Organization.Components.PackagesTab do
           </p>
         </div>
         <.button_link
-          href={"https://hex.pm/docs/private"}
+          href="https://hex.pm/docs/private"
           variant="outline"
           size="sm"
         >
-          {icon(:heroicon, "book-open", class: "w-4 h-4")}
-          Publishing docs
+          {icon(:heroicon, "book-open", class: "w-4 h-4")} Publishing docs
         </.button_link>
       </div>
 
@@ -47,7 +46,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.PackagesTab do
           <p class="text-grey-500 text-sm max-w-sm">
             Publish your first private package to this organization using
             <code class="font-mono bg-grey-100 px-1.5 py-0.5 rounded text-xs">
-              mix hex.publish --organization <%= @organization.name %>
+              mix hex.publish --organization {@organization.name}
             </code>
           </p>
         </div>

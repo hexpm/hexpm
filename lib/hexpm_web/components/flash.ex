@@ -58,8 +58,7 @@ defmodule HexpmWeb.Components.Flash do
   defp dismiss_flash(id) do
     JS.hide(
       to: "##{id}",
-      transition:
-        {"transition-opacity ease-out duration-300", "opacity-100", "opacity-0"}
+      transition: {"transition-opacity ease-out duration-300", "opacity-100", "opacity-0"}
     )
   end
 

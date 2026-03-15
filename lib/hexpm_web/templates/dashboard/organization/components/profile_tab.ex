@@ -55,11 +55,15 @@ defmodule HexpmWeb.Dashboard.Organization.Components.ProfileTab do
             </.text_link>
             <p class="text-grey-500 text-sm mt-2">
               <%= if @org_gravatar_email do %>
-                <.text_link href="https://en.gravatar.com/emails/" variant="purple">Gravatar</.text_link>
+                <.text_link href="https://en.gravatar.com/emails/" variant="purple">
+                  Gravatar
+                </.text_link>
                 is used to display your organization's profile picture. You can choose your Gravatar email below or
                 go to Gravatar to change the image.
               <% else %>
-                <.text_link href="https://en.gravatar.com/emails/" variant="purple">Gravatar</.text_link>
+                <.text_link href="https://en.gravatar.com/emails/" variant="purple">
+                  Gravatar
+                </.text_link>
                 is used to display your organization's profile picture.
                 Choose a Gravatar email address below to show your avatar on your profile.
               <% end %>
@@ -91,10 +95,25 @@ defmodule HexpmWeb.Dashboard.Organization.Components.ProfileTab do
                   Socials
                 </h3>
                 <div class="space-y-5">
-                  <.social_input form={fh} field={:twitter} icon={:twitter} placeholder="your_username" />
-                  <.social_input form={fh} field={:bluesky} icon={:bluesky} placeholder="your_username.bsky.social" />
+                  <.social_input
+                    form={fh}
+                    field={:twitter}
+                    icon={:twitter}
+                    placeholder="your_username"
+                  />
+                  <.social_input
+                    form={fh}
+                    field={:bluesky}
+                    icon={:bluesky}
+                    placeholder="your_username.bsky.social"
+                  />
                   <.social_input form={fh} field={:github} icon={:github} placeholder="your_username" />
-                  <.social_input form={fh} field={:elixirforum} icon={:elixirforum} placeholder="your_username" />
+                  <.social_input
+                    form={fh}
+                    field={:elixirforum}
+                    icon={:elixirforum}
+                    placeholder="your_username"
+                  />
                 </div>
               </div>
             <% end) %>
