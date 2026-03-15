@@ -11,13 +11,14 @@ defmodule HexpmWeb.BlogView do
     render_template("index.xml", posts: posts())
   end
 
-  def render(other, _assigns) do
+  def render(other, assigns) do
     content_string = get_raw_content(other)
 
     # Extract metadata for the header
     {_published_rfc2822, published_human, author} = published_metadata(content_string)
     post_title = title(content_string)
     author_display = author || "Hex.pm"
+    nonce = assigns[:style_src_nonce]
 
     # Convert icon to string
     arrow_icon =
@@ -39,7 +40,7 @@ defmodule HexpmWeb.BlogView do
           </div>
         </header>
         <article class="bg-white border border-grey-200 rounded-lg p-6 lg:p-10 shadow-xs blog-content">
-          <style>
+          <style nonce="#{nonce}">
             .blog-content h2 {
               font-size: 1.5rem;
               font-weight: 700;
