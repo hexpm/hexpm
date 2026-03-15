@@ -10,7 +10,6 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
   import HexpmWeb.Components.Modal
   import HexpmWeb.Components.Buttons, only: [button: 1]
   alias HexpmWeb.ViewHelpers
-  alias Phoenix.LiveView.JS
   use Hexpm.Shared
 
   use Phoenix.VerifiedRoutes,
@@ -87,9 +86,7 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
         <%!-- Error Message --%>
         <%= if @error == "invalid_code" do %>
           <div class="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
-            {icon(:heroicon, "exclamation-circle",
-              class: "w-5 h-5 text-red-600 flex-shrink-0"
-            )}
+            {icon(:heroicon, "exclamation-circle", class: "w-5 h-5 text-red-600 flex-shrink-0")}
             <div class="flex-1">
               <p class="text-sm text-red-800 font-medium">
                 Incorrect verification code
@@ -127,8 +124,7 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
                   pattern="[0-9]{6}"
                   autocomplete="off"
                   inputmode="numeric"
-                  phx-hook="TFACodeValidator"
-                  data-target-button="tfa-submit-btn"
+                  oninput="document.getElementById('tfa-submit-btn').disabled = !/^[0-9]{6}$/.test(this.value)"
                   class="w-full px-3 py-2 border border-grey-300 rounded-lg text-center text-xl font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
                 <p class="mt-2 text-xs text-grey-500">
@@ -152,8 +148,8 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
           id="tfa-submit-btn"
           type="button"
           variant="primary"
-          phx-click={JS.dispatch("submit", to: "#tfa-verification-form")}
-          class="opacity-50 cursor-not-allowed"
+          disabled
+          onclick="document.getElementById('tfa-verification-form').submit()"
         >
           Enable Two-Factor Authentication
         </.button>
