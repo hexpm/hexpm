@@ -9,7 +9,6 @@
     "exports-loader": "^5.0.0",
     "file-loader": "^6.2.0",
     "highlight.js": "^11.9.0",
-    "jquery": "^3.7.1",
     "mini-css-extract-plugin": "^2.8.1",
     "phoenix_html": "file:../deps/phoenix_html",
     "phoenix_live_view": "file:../deps/phoenix_live_view",

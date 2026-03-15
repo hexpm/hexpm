@@ -26,7 +26,6 @@ let liveSocket = new LiveSocket("/live", Socket, {
 
 liveSocket.connect();
 
-import $ from "jquery";
 import hljs from "highlight.js/lib/core";
 import elixir from "highlight.js/lib/languages/elixir";
 
@@ -58,24 +57,29 @@ function billingCheckout(token) {
   const el = document.getElementById("billing-checkout-data");
   const postAction = el && el.dataset.postAction;
   const billingCsrfToken = el && el.dataset.csrfToken;
-  $.post(postAction, {
-    token: token,
-    _csrf_token: billingCsrfToken,
+
+  fetch(postAction, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ token: token, _csrf_token: billingCsrfToken }),
   })
-    .done(function () {
-      window.location.reload();
-    })
-    .fail(function (data) {
-      var response = JSON.parse(data.responseText);
-      $("div.flash").html(
-        '<div class="alert alert-danger" role="alert">' +
-          "<strong>Failed to update payment method</strong><br>" +
-          response.errors +
-          "</div>",
-      );
+    .then(function (response) {
+      if (response.ok) {
+        window.location.reload();
+      } else {
+        return response.json().then(function (data) {
+          const flash = document.querySelector("div.flash");
+          if (flash) {
+            flash.innerHTML =
+              '<div class="alert alert-danger" role="alert">' +
+              "<strong>Failed to update payment method</strong><br>" +
+              data.errors +
+              "</div>";
+          }
+        });
+      }
     });
 }
 
 window.hexpm_billing_checkout = billingCheckout;
-window.$ = $;
 window.liveSocket = liveSocket;
