@@ -96,6 +96,14 @@ defmodule HexpmWeb.Components.SocialInput do
     """
   end
 
+  defp render_icon(:slack) do
+    assigns = %{}
+
+    ~H"""
+    <HexpmWeb.Components.Icons.slack_icon class="w-5 h-5 text-grey-600" />
+    """
+  end
+
   defp render_icon(:libera) do
     assigns = %{}
 

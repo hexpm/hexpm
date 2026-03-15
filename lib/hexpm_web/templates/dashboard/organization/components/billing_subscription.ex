@@ -236,8 +236,9 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
                       submitButton.textContent = 'Payment confirmed! Adding seats...';
                       addSeatsForm.submit();
                     } catch (error) {
-                      submitButton.textContent = 'Add seats';
+                      submitButton.textContent = error.message || 'Payment failed. Try again.';
                       submitButton.disabled = false;
+                      setTimeout(function() { submitButton.textContent = 'Add seats'; }, 3000);
                     }
                   });
                 }
@@ -331,7 +332,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
         <.button type="button" variant="secondary" phx-click={hide_modal("cancel-billing-modal")}>
           Keep subscription
         </.button>
-        <.button type="submit" form="cancel-billing-form" variant="danger">
+        <.button
+          type="submit"
+          form="cancel-billing-form"
+          variant="danger"
+          onclick="this.disabled=true;this.form.submit();"
+        >
           Yes, cancel
         </.button>
       </:footer>
@@ -452,6 +458,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
           form="remove-seats-form"
           variant="danger"
           disabled={@quantity <= @member_count}
+          onclick="this.disabled=true;this.form.submit();"
         >
           Remove seats
         </.button>
@@ -493,7 +500,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
         <.button type="button" variant="secondary" phx-click={hide_modal("change-plan-modal")}>
           Cancel
         </.button>
-        <.button type="submit" form="change-plan-form" variant="primary">
+        <.button
+          type="submit"
+          form="change-plan-form"
+          variant="primary"
+          onclick="this.disabled=true;this.form.submit();"
+        >
           Confirm
         </.button>
       </:footer>

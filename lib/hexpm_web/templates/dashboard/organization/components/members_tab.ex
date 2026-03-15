@@ -19,6 +19,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
   attr :add_member_changeset, :any, required: true
   attr :current_user, :map, required: true
   attr :organization, :map, required: true
+  attr :quantity, :integer, default: nil
 
   def members_tab(assigns) do
     ~H"""
@@ -30,7 +31,11 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
             <h2 class="text-grey-900 text-lg font-semibold">Members</h2>
             <p class="text-grey-500 text-sm mt-1">
               <% count = member_count(@organization) %>
-              {count} {member_label(count)}
+              <%= if @quantity do %>
+                {count} of {@quantity} seats in use
+              <% else %>
+                {count} {member_label(count)}
+              <% end %>
             </p>
           </div>
           <%= if admin?(@current_user, @organization) do %>
@@ -61,7 +66,14 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                   class="w-9 h-9 rounded-full flex-shrink-0"
                 />
                 <div>
-                  <p class="text-sm font-medium text-grey-900">{org_user.user.username}</p>
+                  <p class="text-sm font-medium text-grey-900">
+                    <a
+                      href={~p"/users/#{org_user.user}"}
+                      class="hover:text-primary-600 transition-colors"
+                    >
+                      {org_user.user.username}
+                    </a>
+                  </p>
                   <p class="text-xs text-grey-500">{org_user.user.full_name}</p>
                 </div>
               </div>
@@ -159,7 +171,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                 <.text_input
                   field={f[:username]}
                   label="Username"
-                  placeholder="hex username"
+                  placeholder="hex username or email address"
                   required
                 />
                 <.select_input

@@ -278,45 +278,55 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   def show_invoice(conn, %{"dashboard_org" => organization, "id" => id}) do
     access_organization(conn, organization, "admin", fn organization ->
-      id = String.to_integer(id)
-      customer = Hexpm.Billing.get(organization.name)
-      invoice_ids = Enum.map(customer["invoices"], & &1["id"])
+      id = safe_to_integer(id)
 
-      if id in invoice_ids do
-        invoice = Hexpm.Billing.invoice(id)
-
-        conn
-        |> put_resp_header("content-type", "text/html")
-        |> send_resp(200, invoice)
-      else
+      if is_nil(id) do
         not_found(conn)
+      else
+        customer = Hexpm.Billing.get(organization.name)
+        invoice_ids = Enum.map(customer["invoices"], & &1["id"])
+
+        if id in invoice_ids do
+          invoice = Hexpm.Billing.invoice(id)
+
+          conn
+          |> put_resp_header("content-type", "text/html")
+          |> send_resp(200, invoice)
+        else
+          not_found(conn)
+        end
       end
     end)
   end
 
   def pay_invoice(conn, %{"dashboard_org" => organization, "id" => id}) do
     access_organization(conn, organization, "admin", fn organization ->
-      id = String.to_integer(id)
-      customer = Hexpm.Billing.get(organization.name)
-      invoice_ids = Enum.map(customer["invoices"], & &1["id"])
+      id = safe_to_integer(id)
 
-      audit = %{audit_data: audit_data(conn), organization: organization}
-
-      if id in invoice_ids do
-        case Hexpm.Billing.pay_invoice(id, audit: audit) do
-          :ok ->
-            conn
-            |> put_flash(:info, "Invoice paid.")
-            |> redirect(to: ~p"/dashboard/orgs/#{organization}/billing")
-
-          {:error, reason} ->
-            conn
-            |> put_status(400)
-            |> put_flash(:error, "Failed to pay invoice: #{reason["errors"]}.")
-            |> render_index(organization)
-        end
-      else
+      if is_nil(id) do
         not_found(conn)
+      else
+        customer = Hexpm.Billing.get(organization.name)
+        invoice_ids = Enum.map(customer["invoices"], & &1["id"])
+
+        audit = %{audit_data: audit_data(conn), organization: organization}
+
+        if id in invoice_ids do
+          case Hexpm.Billing.pay_invoice(id, audit: audit) do
+            :ok ->
+              conn
+              |> put_flash(:info, "Invoice paid.")
+              |> redirect(to: ~p"/dashboard/orgs/#{organization}/billing")
+
+            {:error, reason} ->
+              conn
+              |> put_status(400)
+              |> put_flash(:error, "Failed to pay invoice: #{reason["errors"]}.")
+              |> render_index(organization, tab: :billing)
+          end
+        else
+          not_found(conn)
+        end
       end
     end)
   end
@@ -395,7 +405,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
           conn
           |> put_status(400)
           |> put_flash(:error, @not_enough_seats)
-          |> render_index(organization)
+          |> render_index(organization, tab: :billing)
         end
       end
     end)
@@ -430,7 +440,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
           conn
           |> put_status(400)
           |> put_flash(:error, @not_enough_seats)
-          |> render_index(organization)
+          |> render_index(organization, tab: :billing)
         end
       end
     end)

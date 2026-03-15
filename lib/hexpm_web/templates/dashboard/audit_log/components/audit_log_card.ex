@@ -353,6 +353,13 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
   end
 
   defp humanize_action(%AuditLog{
+         action: "billing.resume",
+         params: %{"organization" => %{"name" => org}}
+       }) do
+    "Resumed billing for #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
          action: "billing.create",
          params: %{"organization" => %{"name" => org}}
        }) do

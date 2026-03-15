@@ -90,6 +90,7 @@ defmodule HexpmWeb.Components.Footer do
 
         <.footer_link_column>
           <.footer_link href={~p"/docs"} label="Documentation" />
+          <.footer_link href={~p"/docs/faq"} label="FAQ" />
           <.footer_link
             href="https://github.com/hexpm/specifications"
             label="Specifications"
@@ -106,7 +107,7 @@ defmodule HexpmWeb.Components.Footer do
             external
           />
           <.footer_link href="mailto:security@hex.pm" label="Report Security Issue" />
-          <.footer_link href="mailto:support@hex.pm" label="Contact Issue" />
+          <.footer_link href="mailto:support@hex.pm" label="Contact Support" />
         </.footer_link_column>
 
         <.footer_link_column>
@@ -156,7 +157,12 @@ defmodule HexpmWeb.Components.Footer do
           Copyright 2015. Six Colors AB.
         </p>
         <p class="text-center leading-[18px] md:text-right">
-          Powered by the Erlang VM and the Elixir Programming Language
+          Powered by the
+          <a href="https://www.erlang.org/" class="underline hover:text-grey-300">Erlang VM</a>
+          and the
+          <a href="https://elixir-lang.org/" class="underline hover:text-grey-300">
+            Elixir Programming Language
+          </a>
         </p>
       </div>
     </div>

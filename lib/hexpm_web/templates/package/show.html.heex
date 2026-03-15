@@ -41,7 +41,7 @@ description = @package.meta.description %>
             phx-no-curly-interpolation
             class="bg-grey-50 rounded-lg p-4 font-mono text-sm text-grey-600 overflow-x-auto"
           >def deps do
-  [{:<%= @package.name %>, "~> <%= @current_release.version %>"}]
+  [{:<%= @package.name %>, "<%= snippet_version(:mix, @current_release.version) %>"<%= snippet_organization(@repository_name) %>}]
 end</pre>
         </section>
       <% end %>

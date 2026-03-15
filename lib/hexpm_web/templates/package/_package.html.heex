@@ -4,14 +4,14 @@
     <div class="flex-1 min-w-0">
       <div class="flex items-center gap-3 mb-2">
         <a
-          href={~p"/packages/#{@package}"}
+          href={ViewHelpers.path_for_package(@package)}
           class="text-grey-900 font-semibold text-xl hover:text-primary-600 transition-colors"
         >
           {ViewHelpers.package_name(@package)}
         </a>
         <%= if @package.latest_release do %>
           <a
-            href={~p"/packages/#{@package}"}
+            href={ViewHelpers.path_for_package(@package)}
             class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-grey-100 text-grey-700 hover:bg-primary-100 hover:text-primary-700 transition-colors"
           >
             v{@package.latest_release.version}

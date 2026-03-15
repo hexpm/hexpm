@@ -85,8 +85,8 @@ defmodule HexpmWeb.PackageView do
     "#{major}.#{minor}.#{patch}#{pre_snippet(pre)}"
   end
 
-  defp snippet_organization("hexpm"), do: ""
-  defp snippet_organization(repository), do: ", organization: #{inspect(repository)}"
+  def snippet_organization("hexpm"), do: ""
+  def snippet_organization(repository), do: ", organization: #{inspect(repository)}"
 
   defp pre_snippet([]) do
     ""
