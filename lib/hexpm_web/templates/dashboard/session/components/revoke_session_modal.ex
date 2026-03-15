@@ -5,7 +5,6 @@ defmodule HexpmWeb.Dashboard.Session.Components.RevokeSessionModal do
   use Phoenix.Component
   use PhoenixHTMLHelpers
   import HexpmWeb.Components.Buttons
-  alias Phoenix.LiveView.JS
 
   use Phoenix.VerifiedRoutes,
     endpoint: HexpmWeb.Endpoint,
@@ -55,7 +54,7 @@ defmodule HexpmWeb.Dashboard.Session.Components.RevokeSessionModal do
         <.button
           type="button"
           variant="danger"
-          phx-click={JS.dispatch("submit", to: "##{@modal_id}-form")}
+          onclick={"document.getElementById('#{@modal_id}-form').submit()"}
         >
           Revoke Session
         </.button>
