@@ -2,6 +2,7 @@
 
 /* Tell Tailwind where to scan for classes */
 @source "../lib";
+@source "../js";
 
 /* Syntax highlighting for code blocks */
 @import "../vendor/css/github-dark.css";
