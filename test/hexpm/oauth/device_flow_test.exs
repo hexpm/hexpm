@@ -168,6 +168,28 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
       assert token.token_type == "bearer"
       assert DateTime.compare(token.expires_at, DateTime.utc_now()) == :gt
     end
+
+    test "returns token on multiple polls after authorization", %{
+      device_code: device_code,
+      client: client
+    } do
+      user = insert(:user)
+
+      # Authorize the device
+      {:ok, _} = DeviceCodes.authorize_device(device_code.user_code, user, device_code.scopes)
+
+      # Poll multiple times - each poll creates a new token and revokes the old one
+      {:ok, token1} = DeviceCodes.poll_device_token(device_code.device_code, client.client_id)
+      {:ok, token2} = DeviceCodes.poll_device_token(device_code.device_code, client.client_id)
+      {:ok, token3} = DeviceCodes.poll_device_token(device_code.device_code, client.client_id)
+
+      # Each poll should return a valid token with different JTI
+      assert token1.access_token
+      assert token2.access_token
+      assert token3.access_token
+      assert token1.jti != token2.jti
+      assert token2.jti != token3.jti
+    end
   end
 
   describe "authorize_device/2" do

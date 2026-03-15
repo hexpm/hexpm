@@ -53,8 +53,8 @@ defmodule Hexpm.Repository.Releases do
     |> publish_result(user, body)
   end
 
-  def publish_docs(package, release, body, audit: audit_data) do
-    Assets.push_docs(release, body)
+  def publish_docs(package, release, body_path, audit: audit_data) do
+    Assets.push_docs(release, body_path)
 
     now = DateTime.utc_now()
     release_changeset = Ecto.Changeset.change(release, has_docs: true)

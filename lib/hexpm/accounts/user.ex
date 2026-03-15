@@ -202,13 +202,16 @@ defmodule Hexpm.Accounts.User do
 
   def organization?(user), do: user.organization_id != nil
 
-  def tfa_enabled?(%{tfa: nil}), do: false
-  def tfa_enabled?(%{tfa: %{tfa_enabled: true}}), do: true
-  def tfa_enabled?(%{tfa: %{tfa_enabled: _value}}), do: false
+  def tfa_enabled?(%{tfa: %{secret: secret}}) when is_binary(secret), do: true
+  def tfa_enabled?(_), do: false
 
   def update_tfa(user, changes) do
     current_tfa = user.tfa || %{}
     put_embed(change(user, %{}), :tfa, Map.merge(current_tfa, changes))
+  end
+
+  def clear_tfa(user) do
+    put_embed(change(user, %{}), :tfa, nil)
   end
 
   def recovery_code_used(user, code) do

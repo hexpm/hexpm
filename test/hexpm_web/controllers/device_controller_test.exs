@@ -60,11 +60,12 @@ defmodule HexpmWeb.DeviceControllerTest do
 
       assert html =~ formatted_code
 
-      # Visit with verified=true should show authorization form
+      # POST with action=verify should show authorization form
       conn =
-        get(
+        post(
           login_user(build_conn(), user),
-          ~p"/oauth/device?user_code=#{response.user_code}&verified=true"
+          ~p"/oauth/device",
+          %{"user_code" => response.user_code, "action" => "verify"}
         )
 
       assert html_response(conn, 200) =~ client.name
@@ -95,6 +96,37 @@ defmodule HexpmWeb.DeviceControllerTest do
       assert redirected_to(conn) =~ "/login"
       assert redirected_to(conn) =~ "return="
       assert redirected_to(conn) =~ "%3Fuser_code%3D"
+    end
+
+    test "redirects to sudo when viewing form without sudo mode" do
+      user = insert(:user)
+      conn = login_user(build_conn(), user, sudo: false)
+
+      conn = get(conn, ~p"/oauth/device")
+
+      assert redirected_to(conn) == "/sudo"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "verify your identity"
+    end
+
+    test "redirects to sudo with return path when viewing form with user_code without sudo mode" do
+      user = insert(:user)
+      conn = login_user(build_conn(), user, sudo: false)
+      client = create_test_client()
+
+      mock_conn =
+        build_conn()
+        |> Map.put(:scheme, :https)
+        |> Map.put(:host, "hex.pm")
+        |> Map.put(:port, 443)
+
+      {:ok, response} =
+        DeviceCodes.initiate_device_authorization(mock_conn, client.client_id, ["api"])
+
+      conn = get(conn, ~p"/oauth/device?user_code=#{response.user_code}")
+
+      assert redirected_to(conn) == "/sudo"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "verify your identity"
+      assert get_session(conn, "sudo_return_to") =~ "user_code="
     end
 
     test "verification flow from pre-filled form to authorization" do
@@ -128,9 +160,11 @@ defmodule HexpmWeb.DeviceControllerTest do
       assert html =~ ~r/value="#{formatted_code}"/
       assert html =~ "readonly"
 
-      # Step 2: Submit verification form (user confirms code matches)
+      # Step 2: Submit verification form via POST (user confirms code matches)
       conn = login_user(build_conn(), user)
-      conn = get(conn, ~p"/oauth/device?user_code=#{response.user_code}&verified=true")
+
+      conn =
+        post(conn, ~p"/oauth/device", %{"user_code" => response.user_code, "action" => "verify"})
 
       html = html_response(conn, 200)
       assert html =~ "Authorize Device"
@@ -167,6 +201,22 @@ defmodule HexpmWeb.DeviceControllerTest do
         })
 
       assert redirected_to(conn) =~ "/login"
+    end
+
+    test "redirects to sudo when posting without sudo mode", %{
+      user: user,
+      device_code: device_code
+    } do
+      conn = login_user(build_conn(), user, sudo: false)
+
+      conn =
+        post(conn, ~p"/oauth/device", %{
+          "user_code" => device_code.user_code,
+          "action" => "authorize"
+        })
+
+      assert redirected_to(conn) == "/sudo"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "verify your identity"
     end
 
     test "shows error when authorizing without selecting scopes", %{
@@ -468,8 +518,10 @@ defmodule HexpmWeb.DeviceControllerTest do
     end
   end
 
-  defp login_user(conn, user) do
+  defp login_user(conn, user, opts \\ []) do
     alias Hexpm.UserSessions
+
+    sudo = Keyword.get(opts, :sudo, true)
 
     {:ok, _session, session_token} =
       UserSessions.create_browser_session(user,
@@ -477,9 +529,21 @@ defmodule HexpmWeb.DeviceControllerTest do
         audit: test_audit_data(user)
       )
 
+    session_data = %{"session_token" => Base.encode64(session_token)}
+
+    session_data =
+      if sudo do
+        Map.put(
+          session_data,
+          "sudo_authenticated_at",
+          NaiveDateTime.utc_now() |> NaiveDateTime.to_iso8601()
+        )
+      else
+        session_data
+      end
+
     conn
-    |> init_test_session(%{})
-    |> put_session("session_token", Base.encode64(session_token))
+    |> init_test_session(session_data)
   end
 
   describe "device verification rate limiting" do
@@ -542,6 +606,48 @@ defmodule HexpmWeb.DeviceControllerTest do
 
       response_body =~ "Too many verification attempts" and
         response_body =~ "wait 15 minutes"
+    end
+  end
+
+  describe "XSS protection" do
+    test "escapes malicious scope names in authorization page" do
+      user = insert(:user)
+
+      # Create client with a malicious scope containing XSS payload
+      malicious_scope = "package:<script>alert('xss')</script>"
+
+      client_params = %{
+        client_id: Clients.generate_client_id(),
+        name: "Test Client",
+        client_type: "public",
+        allowed_grant_types: ["urn:ietf:params:oauth:grant-type:device_code"],
+        allowed_scopes: [malicious_scope],
+        client_secret: nil
+      }
+
+      {:ok, client} = Client.build(client_params) |> Repo.insert()
+
+      mock_conn =
+        build_conn()
+        |> Map.put(:scheme, :https)
+        |> Map.put(:host, "hex.pm")
+        |> Map.put(:port, 443)
+
+      {:ok, response} =
+        DeviceCodes.initiate_device_authorization(mock_conn, client.client_id, [malicious_scope])
+
+      conn = login_user(build_conn(), user)
+
+      conn =
+        post(conn, ~p"/oauth/device", %{"user_code" => response.user_code, "action" => "verify"})
+
+      html = html_response(conn, 200)
+
+      # The raw script tag should NOT appear in the HTML
+      refute html =~ "<script>alert('xss')</script>"
+
+      # The escaped version SHOULD appear
+      assert html =~ "&lt;script&gt;" or html =~ "&#60;script&#62;"
     end
   end
 end

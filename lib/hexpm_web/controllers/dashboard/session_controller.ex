@@ -9,13 +9,24 @@ defmodule HexpmWeb.Dashboard.SessionController do
     render_index(conn)
   end
 
-  def delete(conn, %{"_id" => id}), do: do_delete(conn, id)
+  def delete(conn, %{"_id" => id}) do
+    case safe_to_integer(id) do
+      nil ->
+        conn
+        |> put_status(404)
+        |> put_flash(:error, "Session not found.")
+        |> render_index()
 
-  defp do_delete(conn, id) do
+      id ->
+        delete_session_by_id(conn, id)
+    end
+  end
+
+  defp delete_session_by_id(conn, id) do
     user = conn.assigns.current_user
     sessions = UserSessions.all_for_user(user)
 
-    case Enum.find(sessions, &(&1.id == String.to_integer(id))) do
+    case Enum.find(sessions, &(&1.id == id)) do
       nil ->
         conn
         |> put_status(404)

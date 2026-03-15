@@ -21,5 +21,10 @@ defmodule Hexpm do
         %Hexpm.Accounts.User{username: "hexdocs", service: true}
         |> Hexpm.Repo.insert!()
     end
+
+    unless Hexpm.Repo.get_by(Hexpm.Accounts.User, username: "admin") do
+      %Hexpm.Accounts.User{username: "admin", service: true}
+      |> Hexpm.Repo.insert!()
+    end
   end
 end

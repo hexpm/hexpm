@@ -6,7 +6,7 @@ defmodule HexpmWeb.Plugs do
   alias Hexpm.UserSessions
   alias HexpmWeb.ControllerHelpers
 
-  # Max filesize: 20mib
+  # Max filesize: 20MB
   # Min upload speed: ~10kb/s
   # Read 100kb every 10s
   @read_body_opts [
@@ -33,24 +33,43 @@ defmodule HexpmWeb.Plugs do
         conn
 
       _ ->
-        {conn, body} = read_body(conn)
-        put_in(conn.params["body"], body)
+        {conn, path} = read_body_to_file(conn)
+        put_in(conn.params["body"], path)
     end
   end
 
-  def read_body(conn) do
+  def read_body_to_file(conn) do
+    {:ok, path} = Plug.Upload.random_file("upload")
+
+    {:ok, {conn, _size}} =
+      File.open(path, [:write, :raw], fn fd ->
+        read_body_to_file_loop(conn, fd, 0)
+      end)
+
+    {conn, path}
+  end
+
+  defp read_body_to_file_loop(conn, fd, size) do
     case read_body(conn, @read_body_opts) do
       {:ok, body, conn} ->
-        {conn, body}
+        :ok = IO.binwrite(fd, body)
+        {conn, size + byte_size(body)}
+
+      {:more, body, conn} ->
+        new_size = size + byte_size(body)
+
+        if new_size > @read_body_opts[:length] do
+          raise Plug.Parsers.RequestTooLargeError
+        end
+
+        :ok = IO.binwrite(fd, body)
+        read_body_to_file_loop(conn, fd, new_size)
 
       {:error, :timeout} ->
         raise Plug.TimeoutError
 
       {:error, _} ->
         raise Plug.BadRequestError
-
-      {:more, _, _} ->
-        raise Plug.Parsers.RequestTooLargeError
     end
   end
 

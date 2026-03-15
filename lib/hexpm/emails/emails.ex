@@ -40,6 +40,15 @@ defmodule Hexpm.Emails do
     |> render(:password_reset_request)
   end
 
+  def security_password_reset(user, reset) do
+    email()
+    |> email_to(user)
+    |> subject("Hex.pm - Your password has been reset for security reasons")
+    |> assign(:username, user.username)
+    |> assign(:key, reset.key)
+    |> render(:security_password_reset)
+  end
+
   def password_changed(user) do
     email()
     |> email_to(user)
@@ -62,22 +71,6 @@ defmodule Hexpm.Emails do
     |> subject("Hex.pm - TFA has been disabled on your account")
     |> assign(:username, user.username)
     |> render(:tfa_disabled)
-  end
-
-  def tfa_enabled_app(user) do
-    email()
-    |> email_to(user)
-    |> subject("Hex.pm - A new TFA app has been enabled on your account")
-    |> assign(:username, user.username)
-    |> render(:tfa_app_enabled)
-  end
-
-  def tfa_disabled_app(user) do
-    email()
-    |> email_to(user)
-    |> subject("Hex.pm - A TFA app has been disabled on your account")
-    |> assign(:username, user.username)
-    |> render(:tfa_app_disabled)
   end
 
   def tfa_rotate_recovery_codes(user) do

@@ -13,6 +13,7 @@ config :hexpm,
   private_key: File.read!("test/fixtures/private.pem"),
   user_confirm: false,
   docs_url: "http://localhost:4043",
+  private_docs_url: "http://localhost:4043",
   diff_url: "http://localhost:4004",
   preview_url: "http://localhost:4005",
   cdn_url: "http://localhost:4043"

@@ -27,11 +27,6 @@ defmodule Hexpm.Accounts.Keys do
     end)
   end
 
-  def create_for_docs(user, organization) do
-    Key.build_for_docs(user, organization)
-    |> Repo.insert()
-  end
-
   def revoke(key, audit: audit_data) do
     Multi.new()
     |> Multi.update(:key, Key.revoke(key))

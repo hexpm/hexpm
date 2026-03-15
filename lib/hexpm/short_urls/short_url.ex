@@ -54,6 +54,9 @@ defmodule Hexpm.ShortURLs.ShortURL do
     url = URI.parse(url)
 
     cond do
+      url.scheme not in ["http", "https"] ->
+        [url: "must use http or https scheme"]
+
       url.host == "hex.pm" or String.ends_with?(url.host, [".hex.pm"]) ->
         []
 

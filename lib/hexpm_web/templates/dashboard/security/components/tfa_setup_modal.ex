@@ -25,6 +25,7 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
       <.tfa_setup_modal user={@current_user} csrf_token={@csrf_token} show={true} />
   """
   attr :user, :map, required: true
+  attr :tfa_secret, :string, default: nil
   attr :csrf_token, :string, required: true
   attr :show, :boolean, default: false
   attr :error, :string, default: nil
@@ -46,8 +47,8 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
 
         <%!-- QR Code --%>
         <div class="flex justify-center p-6 bg-grey-50 rounded-lg border border-grey-200">
-          <%= if @user.tfa && @user.tfa.secret do %>
-            {raw(ViewHelpers.auth_qr_code_svg(@user))}
+          <%= if @tfa_secret do %>
+            {raw(ViewHelpers.auth_qr_code_svg(@user, @tfa_secret))}
           <% else %>
             <div class="text-center text-grey-500">
               <p>Please enable two-factor authentication first.</p>
@@ -56,18 +57,18 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
         </div>
 
         <%!-- Manual Setup Key --%>
-        <%= if @user.tfa && @user.tfa.secret do %>
+        <%= if @tfa_secret do %>
           <div class="bg-grey-50 border border-grey-200 rounded-lg p-4">
             <p class="text-sm text-grey-700 mb-3">
               Can't scan the QR code? Use this setup key instead:
             </p>
             <div
               id="tfa-secret"
-              data-value={@user.tfa.secret}
+              data-value={@tfa_secret}
               class="flex items-center justify-between gap-3 p-3 bg-white border border-grey-200 rounded-lg"
             >
               <code class="font-mono text-sm text-grey-900 break-all">
-                {@user.tfa.secret}
+                {@tfa_secret}
               </code>
               <button
                 id="copy-tfa-secret-btn"
@@ -99,7 +100,7 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
         <% end %>
 
         <%!-- Verification Form --%>
-        <%= if @user.tfa && @user.tfa.secret do %>
+        <%= if @tfa_secret do %>
           <form
             action={~p"/dashboard/security/verify-tfa-code"}
             method="post"

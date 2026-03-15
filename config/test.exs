@@ -1,6 +1,8 @@
 import Config
 
 config :hexpm,
+  repo_bucket: {Hexpm.Store.Memory, "repo_bucket"},
+  logs_bucket: {Hexpm.Store.Memory, "logs_bucket"},
   secret: "796f75666f756e64746865686578",
   jwt_signing_key: """
   -----BEGIN EC PRIVATE KEY-----
@@ -15,6 +17,7 @@ config :hexpm,
   public_key: File.read!("test/fixtures/public.pem"),
   cdn_url: "http://localhost:5000",
   docs_url: "http://localhost:5002",
+  private_docs_url: "http://localhost:5002",
   diff_url: "http://localhost:5004",
   preview_url: "http://localhost:5005",
   fastly_hexrepo: "fastly_hexrepo",

@@ -161,6 +161,37 @@ defmodule Hexpm.PermissionsTest do
     end
   end
 
+  describe "permission_to_scopes/1" do
+    test "full api permission grants all api scopes" do
+      assert Permissions.permission_to_scopes(%{domain: "api", resource: nil}) ==
+               ["api", "api:read", "api:write"]
+    end
+
+    test "api write permission grants write and read scopes" do
+      assert Permissions.permission_to_scopes(%{domain: "api", resource: "write"}) ==
+               ["api:write", "api:read"]
+    end
+
+    test "api read permission grants only read scope" do
+      assert Permissions.permission_to_scopes(%{domain: "api", resource: "read"}) ==
+               ["api:read"]
+    end
+
+    test "repository permission grants specific repository scope" do
+      assert Permissions.permission_to_scopes(%{domain: "repository", resource: "acme"}) ==
+               ["repository:acme"]
+    end
+
+    test "repositories permission grants all_repositories marker" do
+      assert Permissions.permission_to_scopes(%{domain: "repositories", resource: nil}) ==
+               [:all_repositories]
+    end
+
+    test "unknown permission grants no scopes" do
+      assert Permissions.permission_to_scopes(%{domain: "package", resource: nil}) == []
+    end
+  end
+
   describe "verify_access? with KeyPermissions" do
     test "verifies repository permissions" do
       key = build(:key, permissions: [build(:key_permission, domain: "repositories")])
@@ -186,6 +217,29 @@ defmodule Hexpm.PermissionsTest do
       assert Permissions.verify_access?(key, "docs", "foo")
       refute Permissions.verify_access?(key, "docs", "bar")
       refute Permissions.verify_access?(key, "repositories", nil)
+    end
+
+    test "verifies OAuth docs scope permissions" do
+      token = %Token{scopes: ["docs:myorg"]}
+
+      # Should allow access to the specific organization's docs
+      assert Permissions.verify_access?(token, "docs", "myorg")
+
+      # Should not allow access to other organizations
+      refute Permissions.verify_access?(token, "docs", "other-org")
+
+      # Should not grant other permissions
+      refute Permissions.verify_access?(token, "api", "read")
+      refute Permissions.verify_access?(token, "api", "write")
+      refute Permissions.verify_access?(token, "repositories", nil)
+    end
+
+    test "verifies multiple OAuth docs scopes" do
+      token = %Token{scopes: ["docs:org1", "docs:org2"]}
+
+      assert Permissions.verify_access?(token, "docs", "org1")
+      assert Permissions.verify_access?(token, "docs", "org2")
+      refute Permissions.verify_access?(token, "docs", "org3")
     end
 
     test "verifies api permissions" do

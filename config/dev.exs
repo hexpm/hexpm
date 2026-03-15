@@ -2,6 +2,7 @@ import Config
 
 config :hexpm,
   billing_report: false,
+  sudo_timeout: Duration.new!(minute: 1),
   secret: "796f75666f756e64746865686578",
   jwt_signing_key: """
   -----BEGIN EC PRIVATE KEY-----
@@ -13,6 +14,7 @@ config :hexpm,
   tmp_dir: Path.expand("../tmp/dev", __DIR__),
   private_key: Path.expand("../test/fixtures/private.pem", __DIR__) |> File.read!(),
   docs_url: "http://localhost:4002",
+  private_docs_url: "http://localhost:4002",
   diff_url: "http://localhost:4004",
   preview_url: "http://localhost:4005",
   cdn_url: "http://localhost:4000",

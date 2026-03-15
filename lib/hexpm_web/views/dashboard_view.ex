@@ -145,6 +145,14 @@ defmodule HexpmWeb.DashboardView do
     "Update user profile"
   end
 
+  def humanize_audit_log_info(%AuditLog{action: "user_provider.create", params: params}) do
+    "Link #{params["provider"]} account"
+  end
+
+  def humanize_audit_log_info(%AuditLog{action: "user_provider.delete", params: params}) do
+    "Unlink #{params["provider"]} account"
+  end
+
   def humanize_audit_log_info(%AuditLog{action: "security.update"}) do
     "Update TFA settings"
   end
@@ -196,6 +204,10 @@ defmodule HexpmWeb.DashboardView do
 
   def humanize_audit_log_info(%AuditLog{action: "billing.cancel", params: params}) do
     "Cancel billing on organization #{params["organization"]["name"]}"
+  end
+
+  def humanize_audit_log_info(%AuditLog{action: "billing.resume", params: params}) do
+    "Resume billing on organization #{params["organization"]["name"]}"
   end
 
   def humanize_audit_log_info(%AuditLog{action: "billing.create", params: params}) do
@@ -264,4 +276,11 @@ defmodule HexpmWeb.DashboardView do
 
   defp plan_id("organization-monthly"), do: "monthly"
   defp plan_id("organization-annually"), do: "annually"
+
+  def double_html_escape(string) do
+    string
+    |> Phoenix.HTML.html_escape()
+    |> Phoenix.HTML.safe_to_string()
+    |> Phoenix.HTML.html_escape()
+  end
 end

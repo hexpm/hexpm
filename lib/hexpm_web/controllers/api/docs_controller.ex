@@ -2,6 +2,7 @@ defmodule HexpmWeb.API.DocsController do
   use HexpmWeb, :controller
 
   @tarball_max_size 16 * 1024 * 1024
+  @tarball_max_uncompressed_size 128 * 1024 * 1024
 
   plug :fetch_release
 
@@ -33,25 +34,35 @@ defmodule HexpmWeb.API.DocsController do
     end
   end
 
-  def create(conn, %{"body" => body}) when byte_size(body) > @tarball_max_size do
-    validation_failed(conn, %{tar: "too big"})
-  end
+  def create(conn, %{"body" => body_path}) do
+    %{size: size} = File.stat!(body_path)
 
-  def create(conn, %{"body" => body}) do
-    repository = conn.assigns.repository
-    package = conn.assigns.package
-    release = conn.assigns.release
-    request_id = List.first(get_resp_header(conn, "x-request-id"))
+    cond do
+      size > @tarball_max_size ->
+        validation_failed(conn, %{tar: "too big"})
 
-    log_tarball(repository.name, package.name, release.version, request_id, body)
-    Hexpm.Repository.Releases.publish_docs(package, release, body, audit: audit_data(conn))
+      gzip_too_large?(body_path) ->
+        validation_failed(conn, %{tar: "too big (uncompressed)"})
 
-    location = Hexpm.Utils.docs_tarball_url(repository, package, release)
+      true ->
+        repository = conn.assigns.repository
+        package = conn.assigns.package
+        release = conn.assigns.release
+        request_id = List.first(get_resp_header(conn, "x-request-id"))
 
-    conn
-    |> put_resp_header("location", location)
-    |> api_cache(:public)
-    |> send_resp(201, "")
+        log_tarball(repository.name, package.name, release.version, request_id, body_path)
+
+        Hexpm.Repository.Releases.publish_docs(package, release, body_path,
+          audit: audit_data(conn)
+        )
+
+        location = Hexpm.Utils.docs_tarball_url(repository, package, release)
+
+        conn
+        |> put_resp_header("location", location)
+        |> api_cache(:public)
+        |> send_resp(201, "")
+    end
   end
 
   def delete(conn, _params) do
@@ -62,11 +73,41 @@ defmodule HexpmWeb.API.DocsController do
     |> send_resp(204, "")
   end
 
-  defp log_tarball(repository, package, version, request_id, body) do
-    Task.Supervisor.start_child(Hexpm.Tasks, fn ->
-      filename = "#{repository}-#{package}-#{version}-#{request_id}.tar.gz"
-      key = Path.join(["debug", "docs", filename])
-      Hexpm.Store.put(:repo_bucket, key, body, [])
-    end)
+  defp gzip_too_large?(path) do
+    z = :zlib.open()
+
+    try do
+      :zlib.inflateInit(z, 16 + 15)
+      data = File.read!(path)
+      gzip_too_large_loop?(z, data, 0)
+    after
+      :zlib.close(z)
+    end
+  end
+
+  defp gzip_too_large_loop?(z, data, size) do
+    case :zlib.safeInflate(z, data) do
+      {:continue, output} ->
+        new_size = size + IO.iodata_length(output)
+
+        if new_size > @tarball_max_uncompressed_size do
+          true
+        else
+          gzip_too_large_loop?(z, [], new_size)
+        end
+
+      {:finished, output} ->
+        size + IO.iodata_length(output) > @tarball_max_uncompressed_size
+    end
+  end
+
+  defp log_tarball(repository, package, version, request_id, body_path) do
+    # Use random ID instead of user-controlled request_id in key to prevent overwrites
+    random_id = Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
+    filename = "#{repository}-#{package}-#{version}-#{random_id}.tar.gz"
+    key = Path.join(["debug", "docs", filename])
+    # Store request_id in metadata for debugging (ignored by Store.Local)
+    opts = [cache_control: "private", meta: %{"request-id" => request_id || "unknown"}]
+    Hexpm.Store.put_file(:repo_bucket, key, body_path, opts)
   end
 end

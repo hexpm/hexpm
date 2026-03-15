@@ -1,28 +1,31 @@
 defmodule HexpmWeb.Dashboard.SecurityController do
   use HexpmWeb, :controller
-  alias Hexpm.Accounts.{User, Users, UserProviders}
-  import Hexpm.Accounts.AuditLog, only: [audit: 4]
+  alias Hexpm.Accounts.{TFA, User, Users, UserProviders}
 
   plug :requires_login
+  plug HexpmWeb.Plugs.Sudo
 
   def index(conn, params) do
     user = conn.assigns.current_user
     tfa_error = params["tfa_error"]
     show_modal = params["show_tfa_modal"]
+    tfa_secret = get_session(conn, :tfa_setup_secret)
 
     cond do
       # TFA error - reopen modal with error
-      tfa_error == "invalid_code" and has_tfa_secret?(user) ->
+      tfa_error == "invalid_code" and tfa_secret ->
         conn
         |> assign(:show_tfa_modal, true)
         |> assign(:tfa_error, "invalid_code")
+        |> assign(:tfa_secret, tfa_secret)
         |> render_index(User.update_password(user, %{}))
 
       # User clicked "Enable" OR "Setup New App" - show modal for setup
-      show_modal == "true" and has_tfa_secret?(user) ->
+      show_modal == "true" and tfa_secret ->
         conn
         |> assign(:show_tfa_modal, true)
         |> assign(:tfa_error, nil)
+        |> assign(:tfa_secret, tfa_secret)
         |> render_index(User.update_password(user, %{}))
 
       # Normal case
@@ -30,41 +33,23 @@ defmodule HexpmWeb.Dashboard.SecurityController do
         conn
         |> assign(:show_tfa_modal, false)
         |> assign(:tfa_error, nil)
+        |> assign(:tfa_secret, nil)
         |> render_index(User.update_password(user, %{}))
     end
   end
 
   def enable_tfa(conn, _params) do
-    user = conn.assigns.current_user
-
-    # Generate secret but DON'T enable TFA yet
+    # Generate secret and store in session (not in DB)
     # TFA will only be enabled after user verifies the code
-    secret = Hexpm.Accounts.TFA.generate_secret()
-    codes = Hexpm.Accounts.RecoveryCode.generate_set()
+    secret = TFA.generate_secret()
 
-    case Hexpm.Repo.update(
-           Hexpm.Accounts.User.update_tfa(user, %{
-             secret: secret,
-             recovery_codes: codes,
-             # Keep disabled until verified!
-             tfa_enabled: false,
-             app_enabled: false
-           })
-         ) do
-      {:ok, updated_user} ->
-        conn
-        |> assign(:current_user, updated_user)
-        |> put_flash(
-          :info,
-          "Please scan the QR code to complete two-factor authentication setup."
-        )
-        |> redirect(to: ~p"/dashboard/security?show_tfa_modal=true")
-
-      {:error, _changeset} ->
-        conn
-        |> put_flash(:error, "Failed to initialize two-factor authentication. Please try again.")
-        |> redirect(to: ~p"/dashboard/security")
-    end
+    conn
+    |> put_session(:tfa_setup_secret, secret)
+    |> put_flash(
+      :info,
+      "Please scan the QR code to complete two-factor authentication setup."
+    )
+    |> redirect(to: ~p"/dashboard/security?show_tfa_modal=true")
   end
 
   def disable_tfa(conn, _params) do
@@ -72,6 +57,7 @@ defmodule HexpmWeb.Dashboard.SecurityController do
     Users.tfa_disable(user, audit: audit_data(conn))
 
     conn
+    |> delete_session(:tfa_setup_secret)
     |> put_flash(:info, "Two factor authentication has been disabled.")
     |> redirect(to: ~p"/dashboard/security")
   end
@@ -87,11 +73,52 @@ defmodule HexpmWeb.Dashboard.SecurityController do
 
   def reset_auth_app(conn, _params) do
     user = conn.assigns.current_user
-    Users.tfa_disable_app(user, audit: audit_data(conn))
+    Users.tfa_disable(user, audit: audit_data(conn))
+
+    # Generate new secret in session for re-setup
+    secret = TFA.generate_secret()
 
     conn
+    |> put_session(:tfa_setup_secret, secret)
     |> put_flash(:info, "Please scan the new QR code with your authenticator app")
     |> redirect(to: ~p"/dashboard/security?show_tfa_modal=true")
+  end
+
+  def verify_tfa_code(conn, %{"verification_code" => verification_code}) do
+    user = conn.assigns.current_user
+    secret = get_session(conn, :tfa_setup_secret)
+
+    cond do
+      User.tfa_enabled?(user) ->
+        conn
+        |> delete_session(:tfa_setup_secret)
+        |> put_flash(:info, "Two-factor authentication is already enabled.")
+        |> redirect(to: ~p"/dashboard/security")
+
+      secret ->
+        case Users.tfa_enable(user, secret, verification_code, audit: audit_data(conn)) do
+          {:ok, _user} ->
+            conn
+            |> delete_session(:tfa_setup_secret)
+            |> put_flash(:info, "Two-factor authentication has been successfully enabled!")
+            |> redirect(to: ~p"/dashboard/security")
+
+          :error ->
+            conn
+            |> put_flash(:error, "Your verification code was incorrect. Please try again.")
+            |> redirect(to: ~p"/dashboard/security?tfa_error=invalid_code")
+
+          {:error, _changeset} ->
+            conn
+            |> put_flash(:error, "Failed to enable two-factor authentication. Please try again.")
+            |> redirect(to: ~p"/dashboard/security?show_tfa_modal=true")
+        end
+
+      true ->
+        conn
+        |> put_flash(:error, "Two-factor authentication setup has not been started.")
+        |> redirect(to: ~p"/dashboard/security")
+    end
   end
 
   def change_password(conn, params) do
@@ -186,11 +213,12 @@ defmodule HexpmWeb.Dashboard.SecurityController do
     user = conn.assigns.current_user
 
     add_password_changeset =
-      if user.password do
-        User.update_password(user, %{})
-      else
-        User.add_password(user, %{})
-      end
+      conn.assigns[:add_password_changeset] ||
+        if user.password do
+          User.update_password(user, %{})
+        else
+          User.add_password(user, %{})
+        end
 
     render(
       conn,
@@ -206,54 +234,5 @@ defmodule HexpmWeb.Dashboard.SecurityController do
 
   defp maybe_put_flash(conn, true) do
     put_flash(conn, :raw_error, password_breached_message())
-  end
-
-  def verify_tfa_code(conn, %{"verification_code" => verification_code}) do
-    user = conn.assigns.current_user
-
-    cond do
-      not has_tfa_secret?(user) ->
-        conn
-        |> put_flash(:error, "Two-factor authentication setup has not been started.")
-        |> redirect(to: ~p"/dashboard/security")
-
-      not Hexpm.Accounts.TFA.token_valid?(user.tfa.secret, verification_code) ->
-        conn
-        |> put_flash(:error, "Your verification code was incorrect. Please try again.")
-        |> redirect(to: ~p"/dashboard/security?tfa_error=invalid_code")
-
-      true ->
-        enable_tfa_for_user(conn, user)
-    end
-  end
-
-  defp enable_tfa_for_user(conn, user) do
-    multi =
-      Ecto.Multi.new()
-      |> Ecto.Multi.update(
-        :user,
-        User.update_tfa(user, %{tfa_enabled: true, app_enabled: true})
-      )
-      |> audit(audit_data(conn), "security.update", fn %{user: user} -> user end)
-
-    case Hexpm.Repo.transaction(multi) do
-      {:ok, %{user: updated_user}} ->
-        updated_user
-        |> Hexpm.Emails.tfa_enabled()
-        |> Hexpm.Emails.Mailer.deliver_later!()
-
-        conn
-        |> put_flash(:info, "Two-factor authentication has been successfully enabled!")
-        |> redirect(to: ~p"/dashboard/security")
-
-      {:error, :user, _changeset, _} ->
-        conn
-        |> put_flash(:error, "Failed to enable two-factor authentication. Please try again.")
-        |> redirect(to: ~p"/dashboard/security?show_tfa_modal=true")
-    end
-  end
-
-  defp has_tfa_secret?(user) do
-    user.tfa != nil and is_struct(user.tfa) and user.tfa.secret != nil
   end
 end

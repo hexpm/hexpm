@@ -20,11 +20,12 @@ defmodule HexpmWeb.TFAAuthController do
           |> configure_session(renew: true)
           |> put_session("session_token", session_token)
         else
-          HexpmWeb.LoginController.start_session_internal(conn, user)
+          start_session_internal(conn, user)
         end
 
       conn
       |> delete_session("tfa_user_id")
+      |> HexpmWeb.Plugs.Sudo.set_sudo_authenticated()
       |> redirect(to: session_data["return"] || ~p"/users/#{user}")
     else
       Logger.warning("Failed 2FA attempt",

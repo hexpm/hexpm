@@ -33,6 +33,18 @@ defmodule Hexpm.ShortURLs.ShortURLTest do
       assert errors == [{:url, {"can't be blank", [validation: :required]}}]
     end
 
+    test "rejects javascript: scheme" do
+      assert %{valid?: false, errors: errors} =
+               ShortURL.changeset(%{url: "javascript://hex.pm/%0Aalert(1)"})
+
+      assert errors == [url: {"must use http or https scheme", []}]
+    end
+
+    test "rejects non-http schemes" do
+      assert %{valid?: false} = ShortURL.changeset(%{url: "ftp://hex.pm/foo"})
+      assert %{valid?: false} = ShortURL.changeset(%{url: "data://hex.pm/foo"})
+    end
+
     test "where host is not on hex.pm" do
       assert %{valid?: false, errors: errors} =
                ShortURL.changeset(%{url: "https://supersimple.org?spoof=hex.pm"})

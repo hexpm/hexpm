@@ -2,6 +2,7 @@ defmodule HexpmWeb.Dashboard.KeyController do
   use HexpmWeb, :controller
 
   plug :requires_login
+  plug HexpmWeb.Plugs.Sudo
 
   def index(conn, _params) do
     generated_key = get_session(conn, :generated_key)

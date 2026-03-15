@@ -1,5 +1,0 @@
-<%= Common.greeting(@username) %>
-
-<%= TFAAppDisabled.title() %>
-
-<%= Common.unauthorized_change_notice(:text) %>

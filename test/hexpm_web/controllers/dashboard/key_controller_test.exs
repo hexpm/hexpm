@@ -17,6 +17,15 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
       assert response(conn, 200) =~ "Keys"
     end
 
+    test "redirects to sudo when not in sudo mode", c do
+      conn =
+        build_conn()
+        |> test_login(c.user, sudo: false)
+        |> get("/dashboard/keys")
+
+      assert redirected_to(conn) == "/sudo"
+    end
+
     test "requires login" do
       conn = get(build_conn(), "/dashboard/keys")
       assert redirected_to(conn) == "/login?return=%2Fdashboard%2Fkeys"

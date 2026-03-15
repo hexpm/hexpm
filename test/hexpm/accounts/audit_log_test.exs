@@ -139,6 +139,24 @@ defmodule Hexpm.Accounts.AuditLogTest do
       assert audit.params.organization.name == "Organization Name"
     end
 
+    test "action billing.resume", %{user: user} do
+      organization = build(:organization, name: "Organization Name")
+
+      audit_data = %{
+        user: user,
+        auth_credential: nil,
+        user_agent: "user_agent",
+        remote_ip: "127.0.0.1"
+      }
+
+      audit = AuditLog.build(audit_data, "billing.resume", {organization, "Organization Name"})
+      assert audit.action == "billing.resume"
+      assert audit.user_id == user.id
+      assert audit.user_agent == "user_agent"
+      assert audit.remote_ip == "127.0.0.1"
+      assert audit.params.organization.name == "Organization Name"
+    end
+
     test "action billing.create", %{user: user} do
       organization = build(:organization, name: "Organization Name")
 
@@ -313,7 +331,7 @@ defmodule Hexpm.Accounts.AuditLogTest do
   end
 
   describe "audit_with_user/4" do
-    test "action user.create", %{user: user, key: key} do
+    test "with nil user in audit_data", %{user: user, key: key} do
       audit_data = %{
         user: nil,
         auth_credential: key,
@@ -331,6 +349,18 @@ defmodule Hexpm.Accounts.AuditLogTest do
 
       assert {_, fun} = Ecto.Multi.to_list(multi)[:"log.user.create.0"]
       assert {:ok, %AuditLog{action: "user.create"}} = fun.(Hexpm.Repo, %{user: user})
+    end
+
+    test "with nil audit_data" do
+      multi =
+        AuditLog.audit_with_user(
+          Ecto.Multi.new(),
+          nil,
+          "user.create",
+          fn %{user: user} -> user end
+        )
+
+      assert Ecto.Multi.to_list(multi) == []
     end
   end
 

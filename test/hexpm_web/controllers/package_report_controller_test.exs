@@ -374,6 +374,80 @@ defmodule HexpmWeb.PackageReportControllerTest do
     end
   end
 
+  describe "POST /reports/:id/comment" do
+    test "author can comment on their report", %{user3: user3, report2: report2} do
+      conn =
+        build_conn()
+        |> test_login(user3)
+        |> post("/reports/#{report2.id}/comment", %{"text" => "test comment"})
+
+      assert redirected_to(conn) == "/reports/#{report2.id}"
+    end
+
+    test "moderator can comment on any report", %{user2: user2, report2: report2} do
+      conn =
+        build_conn()
+        |> test_login(user2)
+        |> post("/reports/#{report2.id}/comment", %{"text" => "test comment"})
+
+      assert redirected_to(conn) == "/reports/#{report2.id}"
+    end
+
+    test "owner can comment on accepted report", %{user1: user1, report2: report2} do
+      conn =
+        build_conn()
+        |> test_login(user1)
+        |> post("/reports/#{report2.id}/comment", %{"text" => "test comment"})
+
+      assert redirected_to(conn) == "/reports/#{report2.id}"
+    end
+
+    test "unauthorized user cannot comment on to_accept report", %{user4: user4, report1: report1} do
+      conn =
+        build_conn()
+        |> test_login(user4)
+        |> post("/reports/#{report1.id}/comment", %{"text" => "test comment"})
+
+      response(conn, 404)
+    end
+
+    test "owner cannot comment on to_accept report", %{user1: user1, report1: report1} do
+      conn =
+        build_conn()
+        |> test_login(user1)
+        |> post("/reports/#{report1.id}/comment", %{"text" => "test comment"})
+
+      response(conn, 404)
+    end
+
+    test "unauthorized user cannot comment on accepted report", %{user4: user4, report2: report2} do
+      conn =
+        build_conn()
+        |> test_login(user4)
+        |> post("/reports/#{report2.id}/comment", %{"text" => "test comment"})
+
+      response(conn, 404)
+    end
+
+    test "unauthorized user cannot comment on rejected report", %{user4: user4, report4: report4} do
+      conn =
+        build_conn()
+        |> test_login(user4)
+        |> post("/reports/#{report4.id}/comment", %{"text" => "test comment"})
+
+      response(conn, 404)
+    end
+
+    test "returns 404 for non-existent report", %{user1: user1} do
+      conn =
+        build_conn()
+        |> test_login(user1)
+        |> post("/reports/999999/comment", %{"text" => "test comment"})
+
+      response(conn, 404)
+    end
+  end
+
   describe "solve/2" do
     test "get marked package after solve report", %{
       report2: report2,

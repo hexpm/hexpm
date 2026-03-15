@@ -1,11 +1,13 @@
-const path = require("path");
-const MiniCssExtractPlugin = require("mini-css-extract-plugin");
-const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
-const TerserPlugin = require("terser-webpack-plugin");
+import path from 'path';
+import MiniCssExtractPlugin from 'mini-css-extract-plugin';
+import CssMinimizerPlugin from 'css-minimizer-webpack-plugin';
+import TerserPlugin from 'terser-webpack-plugin';
+import { fileURLToPath } from 'url';
 
-module.exports = (env, options) => ({
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+export default {
   optimization: {
-    // minimize: true,
     minimizer: [new TerserPlugin(), new CssMinimizerPlugin()],
   },
   entry: ["./js/app.js"],
@@ -19,6 +21,9 @@ module.exports = (env, options) => ({
         test: /\.js$/,
         exclude: /node_modules/,
         use: ["babel-loader"],
+        resolve: {
+          fullySpecified: false,
+        },
       },
       {
         test: /\.css$/,
@@ -29,4 +34,6 @@ module.exports = (env, options) => ({
   plugins: [
     new MiniCssExtractPlugin({ filename: "app.css" }),
   ],
-});
+  // Use source-map instead of default eval-based devtool for CSP compliance
+  devtool: "source-map",
+};

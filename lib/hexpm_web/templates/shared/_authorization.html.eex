@@ -1,33 +1,31 @@
-<div class="panel panel-default">
-  <div class="panel-heading">
-    <h3 class="panel-title"><%= assigns[:auth_title] || "Authorize Application" %></h3>
+<div class="bg-white border border-grey-200 rounded-lg shadow-sm">
+  <div class="px-6 py-4 border-b border-grey-200">
+    <h3 class="text-lg font-semibold text-grey-900"><%= assigns[:auth_title] || "Authorize Application" %></h3>
   </div>
-  <div class="panel-body">
-    <p>
-      <%= assigns[:auth_description] || "The application" %> <strong><%= @client_name %></strong> would like to access your Hex account.
+  <div class="px-6 py-5 space-y-4">
+    <p class="text-grey-700">
+      <%= assigns[:auth_description] || "The application" %> <strong class="font-semibold text-grey-900"><%= @client_name %></strong> would like to access your Hex account.
     </p>
 
-    <h4 style="color: #212529; font-weight: 600; margin-top: 25px; margin-bottom: 16px; font-size: 18px;">Requested permissions:</h4>
+    <h4 class="text-sm font-semibold text-grey-800">Requested permissions:</h4>
 
     <%= form_tag @form_action, method: "post", id: "authorization-form" do %>
       <%= @render_scopes.(@scopes) %>
 
-      <%= for {key, value} <- @hidden_fields, key != "scope" do %>
+      <%= for {key, value} <- @hidden_fields do %>
         <input type="hidden" name="<%= key %>" value="<%= value %>">
       <% end %>
 
-      <div class="text-center" style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #dee2e6;">
-        <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
-          <%= submit "Authorize", name: "action", value: @approve_value, class: "btn btn-primary btn-lg", style: "flex: 1; min-width: 200px; max-width: 250px; padding: 14px 24px; font-weight: 600; border-radius: 8px; font-size: 16px;" %>
-          <%= submit "Deny", name: "action", value: @deny_value, class: "btn btn-danger btn-lg", style: "flex: 1; min-width: 200px; max-width: 250px; padding: 14px 24px; font-weight: 600; border-radius: 8px; font-size: 16px;" %>
-        </div>
+      <div class="flex items-center justify-center gap-4 pt-4">
+        <%= submit "Authorize", name: "action", value: @approve_value, class: "px-6 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors" %>
+        <%= submit "Deny", name: "action", value: @deny_value, class: "px-6 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors" %>
       </div>
     <% end %>
   </div>
 </div>
 
 <%= if assigns[:with_checkboxes] do %>
-<script>
+<script nonce="<%= @script_src_nonce %>">
 document.addEventListener('DOMContentLoaded', function() {
   var checkboxes = document.querySelectorAll('.scope-checkbox');
   var form = document.getElementById('authorization-form');

@@ -8,6 +8,8 @@ defmodule HexpmWeb.DeviceController do
   alias HexpmWeb.DeviceView
 
   plug :nillify_params, ["user_code"]
+  plug :requires_login
+  plug HexpmWeb.Plugs.Sudo
 
   @doc """
   Shows the device verification page.
@@ -17,65 +19,33 @@ defmodule HexpmWeb.DeviceController do
   """
   def show(conn, params) do
     user_code = params["user_code"]
-    show_authorization = params["verified"] == "true"
 
-    if logged_in?(conn) do
-      # Don't check rate limits for just viewing the form (GET request)
-      cond do
-        # No code provided, show empty form
-        is_nil(user_code) ->
-          render_verification_form(conn, nil, nil, nil)
-
-        # Code provided and verified, show authorization
-        show_authorization ->
-          normalized_code = DeviceView.normalize_user_code(user_code)
-
-          case DeviceCodes.get_for_verification(normalized_code) do
-            {:ok, device_code} ->
-              render_verification_form(conn, device_code, nil, nil)
-
-            {:error, :invalid_code} ->
-              render_verification_form(conn, nil, "Invalid verification code", user_code)
-
-            {:error, :expired} ->
-              render_verification_form(conn, nil, "Verification code has expired", user_code)
-
-            {:error, :already_processed} ->
-              render_verification_form(
-                conn,
-                nil,
-                "This application has already been processed",
-                user_code
-              )
-          end
-
-        # Code provided but not verified yet, show pre-filled form for verification
-        true ->
-          normalized_code = DeviceView.normalize_user_code(user_code)
-
-          # Validate the code exists but show verification form
-          case DeviceCodes.get_for_verification(normalized_code) do
-            {:ok, _device_code} ->
-              # Code is valid, show pre-filled verification form
-              render_verification_form(conn, nil, nil, user_code)
-
-            {:error, :invalid_code} ->
-              render_verification_form(conn, nil, "Invalid verification code", user_code)
-
-            {:error, :expired} ->
-              render_verification_form(conn, nil, "Verification code has expired", user_code)
-
-            {:error, :already_processed} ->
-              render_verification_form(
-                conn,
-                nil,
-                "This application has already been processed",
-                user_code
-              )
-          end
-      end
+    if is_nil(user_code) do
+      # No code provided, show empty form
+      render_verification_form(conn, nil, nil, nil)
     else
-      redirect(conn, to: build_login_redirect_path(user_code))
+      normalized_code = DeviceView.normalize_user_code(user_code)
+
+      # Validate the code exists but show verification form
+      case DeviceCodes.get_for_verification(normalized_code) do
+        {:ok, _device_code} ->
+          # Code is valid, show pre-filled verification form
+          render_verification_form(conn, nil, nil, user_code)
+
+        {:error, :invalid_code} ->
+          render_verification_form(conn, nil, "Invalid verification code", user_code)
+
+        {:error, :expired} ->
+          render_verification_form(conn, nil, "Verification code has expired", user_code)
+
+        {:error, :already_processed} ->
+          render_verification_form(
+            conn,
+            nil,
+            "This application has already been processed",
+            user_code
+          )
+      end
     end
   end
 
@@ -85,49 +55,24 @@ defmodule HexpmWeb.DeviceController do
   POST /oauth/device
   """
   def create(conn, %{"user_code" => user_code} = params) do
-    if logged_in?(conn) do
-      current_user = conn.assigns.current_user
+    current_user = conn.assigns.current_user
+    normalized_code = DeviceView.normalize_user_code(user_code)
 
-      # Check rate limits before processing any device operations
-      case check_rate_limits(conn, current_user) do
-        {:rate_limited, message} ->
-          render_verification_form(conn, nil, message, user_code)
-
-        :ok ->
-          case params["action"] do
-            "authorize" ->
-              normalized_code = DeviceView.normalize_user_code(user_code)
-              handle_authorization(conn, normalized_code, current_user, params)
-
-            "deny" ->
-              normalized_code = DeviceView.normalize_user_code(user_code)
-              handle_denial(conn, normalized_code)
-
-            _ ->
-              render_verification_form(conn, nil, "Invalid action", user_code)
-          end
+    with :ok <- check_rate_limits(conn, current_user) do
+      case params["action"] do
+        "verify" -> handle_verification(conn, normalized_code)
+        "authorize" -> handle_authorization(conn, normalized_code, current_user, params)
+        "deny" -> handle_denial(conn, normalized_code)
+        _ -> render_verification_form(conn, nil, "Invalid action", user_code)
       end
     else
-      redirect(conn, to: build_login_redirect_path(user_code))
+      {:rate_limited, message} ->
+        render_verification_form(conn, nil, message, user_code)
     end
   end
 
   def create(conn, _params) do
     render_verification_form(conn, nil, "Missing verification code", nil)
-  end
-
-  defp build_login_redirect_path(user_code) do
-    redirect_path =
-      case user_code do
-        nil ->
-          ~p"/oauth/device"
-
-        code ->
-          normalized_code = DeviceView.normalize_user_code(code)
-          ~p"/oauth/device?user_code=#{normalized_code}"
-      end
-
-    ~p"/login?return=#{redirect_path}"
   end
 
   defp check_rate_limits(conn, user) do
@@ -145,6 +90,27 @@ defmodule HexpmWeb.DeviceController do
 
       _ ->
         :ok
+    end
+  end
+
+  defp handle_verification(conn, user_code) do
+    case DeviceCodes.get_for_verification(user_code) do
+      {:ok, device_code} ->
+        render_verification_form(conn, device_code, nil, nil)
+
+      {:error, :invalid_code} ->
+        render_verification_form(conn, nil, "Invalid verification code", user_code)
+
+      {:error, :expired} ->
+        render_verification_form(conn, nil, "Verification code has expired", user_code)
+
+      {:error, :already_processed} ->
+        render_verification_form(
+          conn,
+          nil,
+          "This application has already been processed",
+          user_code
+        )
     end
   end
 

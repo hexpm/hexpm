@@ -31,6 +31,7 @@
 <%!-- Two-Factor Authentication Setup Modal --%>
 <.tfa_setup_modal
   user={@current_user}
+  tfa_secret={assigns[:tfa_secret]}
   csrf_token={Plug.CSRFProtection.get_csrf_token()}
   show={assigns[:show_tfa_modal] == true}
   error={assigns[:tfa_error]}

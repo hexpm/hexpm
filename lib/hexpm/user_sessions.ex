@@ -27,6 +27,7 @@ defmodule Hexpm.UserSessions do
   """
   use Hexpm.Context
 
+  require Ecto.Query
   import Hexpm.Accounts.AuditLog, only: [audit: 4]
 
   alias Hexpm.UserSession
@@ -130,9 +131,6 @@ defmodule Hexpm.UserSessions do
   Requires audit data for security logging.
   """
   def create_api_key_session(user, organization, client_id, expires_at, opts) do
-    # Determine which user to use for session limit enforcement
-    session_user = user || organization.user
-
     # Calculate session limit: use dynamic limit for orgs, default for users
     max_sessions =
       if organization do
@@ -141,18 +139,23 @@ defmodule Hexpm.UserSessions do
         @max_sessions
       end
 
-    enforce_session_limit(session_user, max_sessions)
+    owner = user || organization
+    enforce_session_limit(owner, max_sessions)
 
-    # Determine which user ID to use (user or org's user)
-    user_id = if user, do: user.id, else: organization.user.id
+    owner_attrs =
+      if user do
+        %{user_id: user.id}
+      else
+        %{organization_id: organization.id}
+      end
 
-    attrs = %{
-      user_id: user_id,
-      type: "oauth",
-      client_id: client_id,
-      name: Keyword.get(opts, :name),
-      expires_at: expires_at
-    }
+    attrs =
+      Map.merge(owner_attrs, %{
+        type: "oauth",
+        client_id: client_id,
+        name: Keyword.get(opts, :name),
+        expires_at: expires_at
+      })
 
     changeset = UserSession.changeset(%UserSession{}, attrs)
 
@@ -312,13 +315,16 @@ defmodule Hexpm.UserSessions do
   @doc """
   Counts total active sessions for a user.
   """
-  def count_for_user(user) do
+  def count_for_user(user_or_org) do
+    count_sessions(owner_filter(user_or_org))
+  end
+
+  defp count_sessions(owner_filter) do
     now = DateTime.utc_now()
 
     from(s in UserSession,
-      where:
-        s.user_id == ^user.id and is_nil(s.revoked_at) and
-          (is_nil(s.expires_at) or s.expires_at > ^now),
+      where: ^owner_filter,
+      where: is_nil(s.revoked_at) and (is_nil(s.expires_at) or s.expires_at > ^now),
       select: count(s.id)
     )
     |> Repo.one()
@@ -331,19 +337,18 @@ defmodule Hexpm.UserSessions do
 
   The max_sessions parameter allows overriding the default limit (e.g., for organizations).
   """
-  def enforce_session_limit(user, max_sessions \\ @max_sessions) do
-    count = count_for_user(user)
+  def enforce_session_limit(user_or_org, max_sessions \\ @max_sessions) do
+    owner_filter = owner_filter(user_or_org)
+    count = count_sessions(owner_filter)
 
     if count >= max_sessions do
       now = DateTime.utc_now()
       revoke_count = count - max_sessions + 1
 
-      # Find the IDs of sessions to revoke using a subquery
       session_ids_to_revoke =
         from(s in UserSession,
-          where:
-            s.user_id == ^user.id and is_nil(s.revoked_at) and
-              (is_nil(s.expires_at) or s.expires_at > ^now),
+          where: ^owner_filter,
+          where: is_nil(s.revoked_at) and (is_nil(s.expires_at) or s.expires_at > ^now),
           order_by: [
             asc: fragment("(last_use->>'used_at')::timestamptz NULLS FIRST"),
             asc: s.inserted_at
@@ -352,7 +357,6 @@ defmodule Hexpm.UserSessions do
           select: s.id
         )
 
-      # Use a transaction to revoke sessions and their tokens atomically
       Ecto.Multi.new()
       |> Ecto.Multi.update_all(
         :revoke_sessions,
@@ -378,23 +382,19 @@ defmodule Hexpm.UserSessions do
   Uses the same LRU logic as enforce_session_limit.
   """
   def revoke_excess_sessions_for_organization(organization, new_seat_limit) do
-    # Preload the organization user if not already loaded
-    organization = Repo.preload(organization, :user)
     max_sessions = max(@max_sessions, new_seat_limit)
 
-    count = count_for_user(organization.user)
+    owner_filter = owner_filter(organization)
+    count = count_sessions(owner_filter)
 
-    # Only revoke if we exceed the limit (no +1 since we're not creating a new session)
     if count > max_sessions do
       now = DateTime.utc_now()
       revoke_count = count - max_sessions
 
-      # Find the IDs of sessions to revoke using a subquery
       session_ids_to_revoke =
         from(s in UserSession,
-          where:
-            s.user_id == ^organization.user.id and is_nil(s.revoked_at) and
-              (is_nil(s.expires_at) or s.expires_at > ^now),
+          where: ^owner_filter,
+          where: is_nil(s.revoked_at) and (is_nil(s.expires_at) or s.expires_at > ^now),
           order_by: [
             asc: fragment("(last_use->>'used_at')::timestamptz NULLS FIRST"),
             asc: s.inserted_at
@@ -403,7 +403,6 @@ defmodule Hexpm.UserSessions do
           select: s.id
         )
 
-      # Use a transaction to revoke sessions and their tokens atomically
       Ecto.Multi.new()
       |> Ecto.Multi.update_all(
         :revoke_sessions,
@@ -421,6 +420,14 @@ defmodule Hexpm.UserSessions do
     end
 
     :ok
+  end
+
+  defp owner_filter(%Hexpm.Accounts.User{} = user) do
+    Ecto.Query.dynamic([s], s.user_id == ^user.id)
+  end
+
+  defp owner_filter(%Hexpm.Accounts.Organization{} = org) do
+    Ecto.Query.dynamic([s], s.organization_id == ^org.id)
   end
 
   @doc """

@@ -19,6 +19,32 @@ defmodule HexpmWeb.Router do
     plug :login
     plug :disable_deactivated
     plug :default_repository
+
+    plug HexpmWeb.Plugs.ContentSecurityPolicy,
+      nonces_for: [:script_src, :style_src],
+      directives: %{
+        # Fallback for directives that don't have explicit rules
+        default_src: ~w('self'),
+        # 'strict-dynamic' allows scripts loaded by nonced scripts to execute
+        script_src: ~w('strict-dynamic'),
+        # Gravatar for user/org profile pictures, Stripe tracking pixel
+        img_src: ~w('self' data: https://www.gravatar.com https://q.stripe.com),
+        # Allow fonts from self and Google Fonts
+        font_src: ~w('self' https://fonts.gstatic.com),
+        # hcaptcha iframe, asciinema iframe for blog embeds, Stripe Checkout + 3DS
+        frame_src:
+          ~w('self' https://hcaptcha.com https://*.hcaptcha.com https://asciinema.org https://*.stripe.com),
+        # hcaptcha verification, Stripe API (Plausible added at runtime)
+        connect_src: ~w('self' https://*.hcaptcha.com https://api.stripe.com),
+        # Disallow plugins (Flash, etc.)
+        object_src: ~w('none'),
+        # Disallow <base> tag hijacking
+        base_uri: ~w('self'),
+        # Only allow forms to submit to self
+        form_action: ~w('self'),
+        # Disallow embedding this site in frames (clickjacking protection)
+        frame_ancestors: ~w('none')
+      }
   end
 
   pipeline :upload do
@@ -40,6 +66,19 @@ defmodule HexpmWeb.Router do
     plug :validate_url
     plug HexpmWeb.Plugs.Attack
     plug Corsica, origins: "*", allow_methods: ["HEAD", "GET"]
+    plug :default_repository
+  end
+
+  pipeline :browser_api do
+    plug :accepts, ["json"]
+    plug :fetch_session
+    plug :protect_from_forgery
+    plug :put_secure_browser_headers
+    plug :user_agent, required: false
+    plug :validate_url
+    plug HexpmWeb.Plugs.Attack
+    plug :login
+    plug :disable_deactivated
     plug :default_repository
   end
 
@@ -86,6 +125,12 @@ defmodule HexpmWeb.Router do
     post "/auth/complete-signup", AuthController, :complete_signup
     get "/auth/:provider", AuthController, :request
     get "/auth/:provider/callback", AuthController, :callback
+
+    get "/sudo", SudoController, :show
+    post "/sudo", SudoController, :create
+    get "/sudo/github", SudoController, :github
+    get "/sudo/recovery", SudoController, :show_recovery
+    post "/sudo/recovery", SudoController, :verify_recovery
 
     get "/oauth/authorize", OAuthController, :authorize
     post "/oauth/authorize", OAuthController, :consent
@@ -207,10 +252,12 @@ defmodule HexpmWeb.Router do
     post "/orgs/:dashboard_org/leave", OrganizationController, :leave
     post "/orgs/:dashboard_org/billing-token", OrganizationController, :billing_token
     post "/orgs/:dashboard_org/cancel-billing", OrganizationController, :cancel_billing
+    post "/orgs/:dashboard_org/resume-billing", OrganizationController, :resume_billing
     post "/orgs/:dashboard_org/update-billing", OrganizationController, :update_billing
     post "/orgs/:dashboard_org/create-billing", OrganizationController, :create_billing
     post "/orgs/:dashboard_org/add-seats", OrganizationController, :add_seats
     post "/orgs/:dashboard_org/remove-seats", OrganizationController, :remove_seats
+    post "/orgs/:dashboard_org/void-invoice", OrganizationController, :void_invoice
     post "/orgs/:dashboard_org/change-plan", OrganizationController, :change_plan
     post "/orgs/:dashboard_org/keys", OrganizationController, :create_key
     delete "/orgs/:dashboard_org/keys", OrganizationController, :delete_key
@@ -226,6 +273,12 @@ defmodule HexpmWeb.Router do
     delete "/sessions", SessionController, :delete
 
     get "/audit-logs", AuditLogController, :index
+  end
+
+  scope "/dashboard", HexpmWeb.Dashboard do
+    pipe_through :browser_api
+
+    post "/billing-api/*path", BillingProxyController, :proxy
   end
 
   scope "/", HexpmWeb do
@@ -314,6 +367,7 @@ defmodule HexpmWeb.Router do
     post "/oauth/token", OAuthController, :token
     post "/oauth/device_authorization", OAuthController, :device_authorization
     post "/oauth/revoke", OAuthController, :revoke
+    post "/oauth/revoke_by_hash", OAuthController, :revoke_by_hash
   end
 
   if Mix.env() in [:dev, :test, :hex] do

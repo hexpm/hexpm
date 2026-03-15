@@ -4,8 +4,6 @@ defmodule Hexpm.Accounts.TFA do
   @primary_key false
   embedded_schema do
     field :secret, :string
-    field :tfa_enabled, :boolean, default: false
-    field :app_enabled, :boolean, default: false
     embeds_many :recovery_codes, Hexpm.Accounts.RecoveryCode
   end
 
@@ -15,7 +13,7 @@ defmodule Hexpm.Accounts.TFA do
 
   def changeset(tfa, params) do
     tfa
-    |> cast(params, ~w(secret app_enabled tfa_enabled)a)
+    |> cast(params, ~w(secret)a)
     |> cast_embed(:recovery_codes)
   end
 

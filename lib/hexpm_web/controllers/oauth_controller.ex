@@ -10,13 +10,28 @@ defmodule HexpmWeb.OAuthController do
   Initiates the authorization code flow.
   """
   def authorize(conn, params) do
+    # Per OAuth 2.0 spec (RFC 6749 4.1.2.1), we must NOT redirect to an invalid
+    # redirect_uri. Validate client and redirect_uri first before other params.
     with {:ok, client} <- validate_client(params["client_id"]),
-         {:ok, redirect_uri} <- validate_redirect_uri(client, params["redirect_uri"]),
-         {:ok, scopes} <- validate_scopes(client, params["scope"]),
+         {:ok, redirect_uri} <- validate_redirect_uri(client, params["redirect_uri"]) do
+      # Now we have a validated redirect_uri, safe to redirect errors to it
+      authorize_with_valid_redirect(conn, client, redirect_uri, params)
+    else
+      {:error, error} ->
+        # Client or redirect_uri invalid - show error page, never redirect
+        render_oauth_error(conn, :invalid_request, error)
+    end
+  end
+
+  defp authorize_with_valid_redirect(conn, client, redirect_uri, params) do
+    with {:ok, scopes} <- validate_scopes(client, params["scope"]),
          {:ok, _} <- validate_state(params),
          {:ok, _} <- validate_pkce_params(params) do
       if logged_in?(conn) do
-        render(conn, "authorize.html", %{
+        conn
+        |> HexpmWeb.Plugs.ContentSecurityPolicy.allow_form_action(redirect_uri)
+        |> render("authorize.html", %{
+          container: "container page page-xs oauth",
           client: client,
           redirect_uri: redirect_uri,
           scopes: scopes,
@@ -30,19 +45,14 @@ defmodule HexpmWeb.OAuthController do
       end
     else
       {:error, error} ->
-        case params["redirect_uri"] do
-          nil ->
-            render_oauth_error(conn, :invalid_request, "Invalid request: #{error}")
+        # Other validation failed - safe to redirect to validated URI
+        error_params = %{
+          error: "invalid_request",
+          error_description: error,
+          state: params["state"]
+        }
 
-          redirect_uri ->
-            error_params = %{
-              error: "invalid_request",
-              error_description: error,
-              state: params["state"]
-            }
-
-            redirect_to_client(conn, redirect_uri, error_params)
-        end
+        redirect_to_client(conn, redirect_uri, error_params)
     end
   end
 
@@ -51,28 +61,34 @@ defmodule HexpmWeb.OAuthController do
   """
   def consent(conn, params) do
     if user = conn.assigns.current_user do
-      case params["action"] do
-        "approve" ->
-          handle_authorization_approval(conn, user, params)
+      # Validate client and redirect_uri first to prevent open redirect
+      with {:ok, client} <- validate_client(params["client_id"]),
+           {:ok, redirect_uri} <- validate_redirect_uri(client, params["redirect_uri"]) do
+        case params["action"] do
+          "approve" ->
+            handle_authorization_approval(conn, user, client, redirect_uri, params)
 
-        "deny" ->
-          handle_authorization_denial(conn, params)
+          "deny" ->
+            handle_authorization_denial(conn, redirect_uri, params)
 
-        _ ->
-          render_oauth_error(conn, :invalid_request, "Invalid action")
+          _ ->
+            render_oauth_error(conn, :invalid_request, "Invalid action")
+        end
+      else
+        {:error, error} ->
+          render_oauth_error(conn, :invalid_request, error)
       end
     else
       render_oauth_error(conn, :access_denied, "User not authenticated")
     end
   end
 
-  defp handle_authorization_approval(conn, user, params) do
-    with {:ok, client} <- validate_client(params["client_id"]),
-         {:ok, redirect_uri} <- validate_redirect_uri(client, params["redirect_uri"]),
-         {:ok, requested_scopes} <- validate_scopes(client, params["scope"]),
+  defp handle_authorization_approval(conn, user, client, redirect_uri, params) do
+    with {:ok, requested_scopes} <- validate_scopes(client, params["scope"]),
          {:ok, selected_scopes} <- get_selected_scopes(params, requested_scopes, client),
          {:ok, _} <- validate_state(params),
          {:ok, _} <- validate_pkce_params(params),
+         {:ok, _} <- validate_user_resource_access(user, selected_scopes),
          {:ok, _} <- validate_2fa_for_scopes(user, selected_scopes) do
       case AuthorizationCodes.create_and_insert_for_user(
              user,
@@ -100,22 +116,24 @@ defmodule HexpmWeb.OAuthController do
     else
       {:error, :tfa_required} ->
         # Re-render the authorization page with error message
-        with {:ok, client} <- validate_client(params["client_id"]),
-             {:ok, scopes} <- validate_scopes(client, params["scope"]) do
-          conn
-          |> put_flash(
-            :error,
-            "Two-factor authentication is required for api:write permissions. Please enable 2FA in your security settings and try again."
-          )
-          |> render("authorize.html", %{
-            client: client,
-            redirect_uri: params["redirect_uri"],
-            scopes: scopes,
-            state: params["state"],
-            code_challenge: params["code_challenge"],
-            code_challenge_method: params["code_challenge_method"]
-          })
-        else
+        # Client and redirect_uri already validated, just need scopes
+        case validate_scopes(client, params["scope"]) do
+          {:ok, scopes} ->
+            conn
+            |> put_flash(
+              :error,
+              "Two-factor authentication is required for api:write permissions. Please enable 2FA in your security settings and try again."
+            )
+            |> render("authorize.html", %{
+              container: "container page page-xs oauth",
+              client: client,
+              redirect_uri: redirect_uri,
+              scopes: scopes,
+              state: params["state"],
+              code_challenge: params["code_challenge"],
+              code_challenge_method: params["code_challenge_method"]
+            })
+
           {:error, error} ->
             render_oauth_error(conn, :invalid_request, "Invalid request: #{error}")
         end
@@ -127,18 +145,18 @@ defmodule HexpmWeb.OAuthController do
           state: params["state"]
         }
 
-        redirect_to_client(conn, params["redirect_uri"], error_params)
+        redirect_to_client(conn, redirect_uri, error_params)
     end
   end
 
-  defp handle_authorization_denial(conn, params) do
+  defp handle_authorization_denial(conn, redirect_uri, params) do
     error_params = %{
       error: "access_denied",
       error_description: "User denied authorization",
       state: params["state"]
     }
 
-    redirect_to_client(conn, params["redirect_uri"], error_params)
+    redirect_to_client(conn, redirect_uri, error_params)
   end
 
   defp validate_client(nil), do: {:error, "Missing client_id"}
@@ -159,7 +177,8 @@ defmodule HexpmWeb.OAuthController do
     end
   end
 
-  defp validate_scopes(client, scope_string) do
+  defp validate_scopes(client, scope_string)
+       when is_binary(scope_string) or is_nil(scope_string) do
     scopes = String.split(scope_string || "", " ", trim: true)
 
     if Clients.supports_scopes?(client, scopes) do
@@ -168,6 +187,8 @@ defmodule HexpmWeb.OAuthController do
       {:error, "Invalid scope"}
     end
   end
+
+  defp validate_scopes(_client, _scope_string), do: {:error, "Invalid scope"}
 
   defp validate_state(params) do
     state = params["state"]
@@ -217,6 +238,39 @@ defmodule HexpmWeb.OAuthController do
         else
           {:error, "Invalid scopes selected"}
         end
+    end
+  end
+
+  defp validate_user_resource_access(user, scopes) do
+    # Validate that user has access to all resources mentioned in scopes
+    # e.g., docs:acme requires user to have access to the "acme" organization
+    user = Hexpm.Repo.preload(user, :organizations)
+    user_orgs = Hexpm.Accounts.Users.all_organizations(user)
+    user_org_names = MapSet.new(user_orgs, & &1.name)
+
+    invalid_scopes =
+      scopes
+      |> Enum.filter(&resource_scope?/1)
+      |> Enum.reject(&user_has_resource_access?(&1, user_org_names))
+
+    case invalid_scopes do
+      [] -> {:ok, :valid}
+      _ -> {:error, "You don't have access to: #{Enum.join(invalid_scopes, ", ")}"}
+    end
+  end
+
+  defp resource_scope?(scope) do
+    case String.split(scope, ":", parts: 2) do
+      [base, _resource] when base in ~w(docs repository) -> true
+      _ -> false
+    end
+  end
+
+  defp user_has_resource_access?(scope, user_org_names) do
+    case String.split(scope, ":", parts: 2) do
+      ["docs", org_name] -> org_name in user_org_names
+      ["repository", org_name] -> org_name in user_org_names
+      _ -> true
     end
   end
 

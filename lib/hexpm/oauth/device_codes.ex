@@ -342,7 +342,8 @@ defmodule Hexpm.OAuth.DeviceCodes do
       where:
         t.grant_type == "urn:ietf:params:oauth:grant-type:device_code" and
           t.grant_reference == ^device_code_record.device_code and
-          t.client_id == ^device_code_record.client_id,
+          t.client_id == ^device_code_record.client_id and
+          is_nil(t.revoked_at),
       preload: [:user]
     )
     |> Repo.one()

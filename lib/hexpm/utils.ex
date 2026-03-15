@@ -105,11 +105,12 @@ defmodule Hexpm.Utils do
 
   def parse_search(nil), do: nil
   def parse_search(""), do: nil
-  def parse_search(search), do: String.trim(search)
+  def parse_search(search) when is_binary(search), do: String.trim(search)
+  def parse_search(_), do: nil
 
   defp diff(a, b) do
     {days, time} = :calendar.time_difference(a, b)
-    :calendar.time_to_seconds(time) - days * 24 * 60 * 60
+    days * 24 * 60 * 60 + :calendar.time_to_seconds(time)
   end
 
   @doc """
@@ -172,7 +173,7 @@ defmodule Hexpm.Utils do
   end
 
   def docs_html_url(%Repository{} = repository, package, release) do
-    docs_url = URI.parse(Application.get_env(:hexpm, :docs_url))
+    docs_url = URI.parse(Application.get_env(:hexpm, :private_docs_url))
     docs_url = %{docs_url | host: "#{repository.name}.#{docs_url.host}"}
     package = package.name
     version = release && "#{release.version}/"

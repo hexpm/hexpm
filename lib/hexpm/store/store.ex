@@ -30,6 +30,11 @@ defmodule Hexpm.Store do
     impl.put(bucket, key, body, opts)
   end
 
+  def put_file(bucket, key, path, opts) do
+    {impl, bucket} = impl_bucket(bucket)
+    impl.put_file(bucket, key, path, opts)
+  end
+
   def delete(bucket, key) do
     {impl, bucket} = impl_bucket(bucket)
     impl.delete(bucket, key)
