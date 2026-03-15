@@ -29,7 +29,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.PackagesTab do
           </p>
         </div>
         <.button_link
-          href="https://hex.pm/docs/private"
+          href={~p"/docs/private"}
           variant="outline"
           size="sm"
         >

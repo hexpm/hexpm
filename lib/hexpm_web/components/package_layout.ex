@@ -9,6 +9,11 @@ defmodule HexpmWeb.Components.PackageLayout do
   """
   use Phoenix.Component
 
+  use Phoenix.VerifiedRoutes,
+    endpoint: HexpmWeb.Endpoint,
+    router: HexpmWeb.Router,
+    statics: HexpmWeb.static_paths()
+
   import HexpmWeb.Components.Badge
   import HexpmWeb.Components.Icons
 
@@ -76,7 +81,7 @@ defmodule HexpmWeb.Components.PackageLayout do
           <%!-- Left: Package Name, Version, Description --%>
           <div class="flex flex-col gap-2">
             <a
-              href="/packages"
+              href={~p"/packages"}
               class="inline-flex items-center gap-1 text-xs font-medium text-grey-400 hover:text-purple-600 transition-colors w-fit"
             >
               {HexpmWeb.ViewIcons.icon(:heroicon, "arrow-left", class: "size-3")} Packages

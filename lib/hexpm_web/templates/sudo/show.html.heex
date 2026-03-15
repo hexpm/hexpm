@@ -1,0 +1,63 @@
+<%= if @tfa_enabled do %>
+  <.auth_layout
+    title="Verify your identity"
+    subtitle="For your security, please verify your identity to continue"
+    show_oauth={false}
+  >
+    <%= form_tag(~p"/sudo", id: "sudo-tfa-form", class: "space-y-6") do %>
+      <input type="hidden" name="type" value="tfa" />
+      <.text_input
+        id="code"
+        name="code"
+        label="Authentication Code"
+        pattern="\d{6}"
+        title="Must be 6 digits"
+        maxlength="6"
+        inputmode="numeric"
+        autocomplete="off"
+      />
+      <.button type="submit" full_width>
+        Verify
+      </.button>
+    <% end %>
+
+    <:footer_links>
+      <p class="text-small text-center mt-6">
+        <.text_link href={~p"/sudo/recovery"} variant="primary">
+          Use a recovery code instead
+        </.text_link>
+      </p>
+    </:footer_links>
+  </.auth_layout>
+<% else %>
+  <.auth_layout
+    title="Verify your identity"
+    subtitle="For your security, please verify your identity to continue"
+    show_oauth={@has_github}
+  >
+    <:oauth_button>
+      <a
+        href={~p"/sudo/github"}
+        class="flex items-center justify-center gap-3 w-full h-12 bg-grey-900 rounded text-white text-md font-semibold hover:bg-grey-800 transition-colors mb-6"
+      >
+        <HexpmWeb.Components.Icons.github_icon class="w-5 h-5" /> Re-authenticate with GitHub
+      </a>
+    </:oauth_button>
+
+    <%= if @has_password do %>
+      <%= form_tag(~p"/sudo", id: "sudo-password-form", class: "space-y-6") do %>
+        <input type="hidden" name="type" value="password" />
+        <.password_input id="password" name="password" label="Password" />
+        <.button type="submit" full_width>
+          Verify
+        </.button>
+      <% end %>
+    <% end %>
+
+    <%= if !@has_github && !@has_password do %>
+      <p class="text-sm text-red-600">
+        Unable to verify your identity. Please contact support.
+      </p>
+    <% end %>
+  </.auth_layout>
+<% end %>

@@ -16,9 +16,6 @@ defmodule HexpmWeb.Components.Modal do
         </:footer>
       </.modal>
 
-      # Show modal with onclick:
-      <button onclick="document.getElementById('my-modal').showModal()">Open</button>
-
       # Show modal with Phoenix.LiveView.JS:
       <.button phx-click={show_modal("my-modal")}>Open</.button>
   """
@@ -35,15 +32,15 @@ defmodule HexpmWeb.Components.Modal do
   """
   def show_modal(js \\ %JS{}, id) when is_binary(id) do
     js
-    |> JS.show(
+    |> JS.remove_class("hidden",
       to: "##{id}",
       transition: {"transition-all transform ease-out duration-300", "opacity-0", "opacity-100"}
     )
-    |> JS.show(
+    |> JS.remove_class("hidden",
       to: "##{id}-backdrop",
       transition: {"transition-all transform ease-out duration-300", "opacity-0", "opacity-100"}
     )
-    |> JS.show(
+    |> JS.remove_class("hidden",
       to: "##{id}-content",
       transition:
         {"transition-all transform ease-out duration-300",
@@ -62,15 +59,15 @@ defmodule HexpmWeb.Components.Modal do
   """
   def hide_modal(js \\ %JS{}, id) do
     js
-    |> JS.hide(
+    |> JS.add_class("hidden",
       to: "##{id}",
       transition: {"transition-all transform ease-in duration-200", "opacity-100", "opacity-0"}
     )
-    |> JS.hide(
+    |> JS.add_class("hidden",
       to: "##{id}-backdrop",
       transition: {"transition-all transform ease-in duration-200", "opacity-100", "opacity-0"}
     )
-    |> JS.hide(
+    |> JS.add_class("hidden",
       to: "##{id}-content",
       transition:
         {"transition-all transform ease-in duration-200",
@@ -97,14 +94,13 @@ defmodule HexpmWeb.Components.Modal do
     ~H"""
     <div
       id={@id}
-      class={["relative z-50", @class]}
+      class={["relative z-50", unless(@show, do: "hidden"), @class]}
       aria-labelledby={"#{@id}-title"}
-      style={unless @show, do: "display: none;"}
     >
       <%!-- Backdrop --%>
       <div
         id={"#{@id}-backdrop"}
-        class="fixed inset-0 bg-grey-900/25 transition-opacity"
+        class={["fixed inset-0 bg-grey-900/25 transition-opacity", unless(@show, do: "hidden")]}
         aria-hidden="true"
         phx-click={hide_modal(@id)}
       >
@@ -119,6 +115,7 @@ defmodule HexpmWeb.Components.Modal do
             class={[
               "relative w-full bg-white rounded-[20px] flex flex-col max-h-[calc(100vh-2rem)] p-6",
               "shadow-[0px_15px_50px_0px_rgba(3,9,19,0.4)]",
+              unless(@show, do: "hidden"),
               modal_max_width(@max_width)
             ]}
             role="dialog"
