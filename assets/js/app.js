@@ -1,4 +1,5 @@
 import "phoenix_html";
+import "../css/tooltip.css";
 import { Socket } from "phoenix";
 import { LiveSocket } from "phoenix_live_view";
 import PasswordStrength from "./hooks/password_strength";
