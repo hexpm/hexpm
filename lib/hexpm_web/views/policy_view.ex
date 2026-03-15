@@ -3,13 +3,13 @@ defmodule HexpmWeb.PolicyView do
 
   def render(template, assigns) do
     content_string = render_template(template, assigns) |> Phoenix.HTML.safe_to_string()
+    nonce = assigns[:style_src_nonce]
 
-    # Build the styled wrapper similar to blog posts
     Phoenix.HTML.raw("""
     <div class="bg-grey-50 py-10 px-4 flex-1 flex flex-col">
       <div class="max-w-4xl mx-auto w-full">
         <article class="bg-white border border-grey-200 rounded-lg p-6 lg:p-10 shadow-xs policy-content">
-          <style>
+          <style nonce="#{nonce}">
             .policy-content h2 {
               font-size: 1.875rem;
               font-weight: 700;
