@@ -69,7 +69,7 @@ config :tailwind,
   default: [
     args: ~w(
       --input=./assets/css/tailwind.css
-      --output=./priv/static/assets/tailwind.css
+      --output=./priv/static/assets/app.css
     ),
     cd: Path.expand("..", __DIR__)
   ]

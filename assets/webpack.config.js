@@ -1,6 +1,4 @@
 import path from 'path';
-import MiniCssExtractPlugin from 'mini-css-extract-plugin';
-import CssMinimizerPlugin from 'css-minimizer-webpack-plugin';
 import TerserPlugin from 'terser-webpack-plugin';
 import { fileURLToPath } from 'url';
 
@@ -8,7 +6,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default {
   optimization: {
-    minimizer: [new TerserPlugin(), new CssMinimizerPlugin()],
+    minimizer: [new TerserPlugin()],
   },
   entry: ["./js/app.js"],
   output: {
@@ -25,15 +23,8 @@ export default {
           fullySpecified: false,
         },
       },
-      {
-        test: /\.css$/,
-        use: [MiniCssExtractPlugin.loader, "css-loader"],
-      },
     ],
   },
-  plugins: [
-    new MiniCssExtractPlugin({ filename: "app.css" }),
-  ],
   // Use source-map instead of default eval-based devtool for CSP compliance
   devtool: "source-map",
 };
