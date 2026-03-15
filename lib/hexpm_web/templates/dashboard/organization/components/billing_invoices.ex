@@ -14,6 +14,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInvoices do
   attr :organization, :map, required: true
   attr :invoices, :list, default: []
   attr :card, :map, default: nil
+  attr :subscription, :map, default: nil
+  attr :stripe_publishable_key, :string, default: nil
 
   def billing_invoices(assigns) do
     ~H"""
@@ -31,7 +33,13 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInvoices do
               <th class="px-4 py-3 text-left text-sm font-medium text-grey-500">Status</th>
             </:header>
             <:row :for={invoice <- @invoices}>
-              <.invoice_row invoice={invoice} organization={@organization} card={@card} />
+              <.invoice_row
+                invoice={invoice}
+                organization={@organization}
+                card={@card}
+                subscription={@subscription}
+                stripe_publishable_key={@stripe_publishable_key}
+              />
             </:row>
           </.table>
         </div>
@@ -43,6 +51,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInvoices do
   attr :invoice, :map, required: true
   attr :organization, :map, required: true
   attr :card, :map, default: nil
+  attr :subscription, :map, default: nil
+  attr :stripe_publishable_key, :string, default: nil
 
   defp invoice_row(assigns) do
     ~H"""
@@ -67,26 +77,26 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInvoices do
       {BillingHelpers.payment_card(@invoice["card"])}
     </td>
     <td class="px-4 py-4 whitespace-nowrap">
-      {invoice_status(@invoice, @organization, @card)}
+      {invoice_status(@invoice, @organization, @card, @subscription)}
     </td>
     """
   end
 
-  defp invoice_status(%{"refund" => true, "status" => "succeeded"}, _, _), do: "Refund Paid"
+  defp invoice_status(%{"refund" => true, "status" => "succeeded"}, _, _, _), do: "Refund Paid"
 
-  defp invoice_status(%{"refund" => true, "status" => s}, _, _)
+  defp invoice_status(%{"refund" => true, "status" => s}, _, _, _)
        when s in ["failed", "canceled"],
        do: "Refund Canceled"
 
-  defp invoice_status(%{"refund" => true, "status" => s}, _, _)
+  defp invoice_status(%{"refund" => true, "status" => s}, _, _, _)
        when s in ["pending", "requires_action"],
        do: "Refund Pending"
 
-  defp invoice_status(%{"paid" => true}, _, _), do: "Paid"
-  defp invoice_status(%{"status" => "uncollectible"}, _, _), do: "Forgiven"
-  defp invoice_status(%{"paid" => false, "attempted" => false}, _, _), do: "Pending"
+  defp invoice_status(%{"paid" => true}, _, _, _), do: "Paid"
+  defp invoice_status(%{"status" => "uncollectible"}, _, _, _), do: "Forgiven"
+  defp invoice_status(%{"paid" => false, "attempted" => false}, _, _, _), do: "Pending"
 
-  defp invoice_status(%{"paid" => false, "attempted" => true}, _, nil) do
+  defp invoice_status(%{"paid" => false, "attempted" => true}, _, nil, _) do
     assigns = %{}
 
     ~H"""
@@ -94,7 +104,42 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInvoices do
     """
   end
 
-  defp invoice_status(%{"paid" => false, "attempted" => true, "id" => inv_id}, org, _card) do
+  defp invoice_status(%{"paid" => false, "attempted" => true}, _, _card, %{"status" => status})
+       when status in ["incomplete_expired", "canceled"] do
+    assigns = %{}
+
+    ~H"""
+    <span class="text-grey-400 italic" title="Subscription is not active">Pay now</span>
+    """
+  end
+
+  defp invoice_status(
+         %{
+           "paid" => false,
+           "attempted" => true,
+           "payment_intent_client_secret" => client_secret,
+           "payment_method" => payment_method
+         },
+         _org,
+         _card,
+         _subscription
+       )
+       when is_binary(client_secret) do
+    assigns = %{client_secret: client_secret, payment_method: payment_method}
+
+    ~H"""
+    <button
+      type="button"
+      class="sca-pay-button text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-100 transition-colors"
+      data-client-secret={@client_secret}
+      data-payment-method={@payment_method}
+    >
+      Authenticate payment
+    </button>
+    """
+  end
+
+  defp invoice_status(%{"paid" => false, "attempted" => true, "id" => inv_id}, org, _card, _sub) do
     assigns = %{inv_id: inv_id, org: org}
 
     ~H"""
@@ -105,6 +150,6 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInvoices do
     """
   end
 
-  defp invoice_status(%{"paid" => false, "attempted" => true}, _, _), do: "Payment Failed"
-  defp invoice_status(_, _, _), do: ""
+  defp invoice_status(%{"paid" => false, "attempted" => true}, _, _, _), do: "Payment Failed"
+  defp invoice_status(_, _, _, _), do: ""
 end

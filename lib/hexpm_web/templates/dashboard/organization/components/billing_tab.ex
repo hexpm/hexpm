@@ -34,6 +34,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingTab do
   attr :company, :map, default: nil
   attr :params, :map, default: %{}
   attr :errors, :map, default: %{}
+  attr :script_src_nonce, :string, default: ""
+  attr :stripe_publishable_key, :string, default: nil
 
   def billing_tab(assigns) do
     assigns =
@@ -59,6 +61,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingTab do
           proration_amount={@proration_amount}
           proration_days={@proration_days}
           max_period_quantity={@max_period_quantity}
+          script_src_nonce={@script_src_nonce}
+          stripe_publishable_key={@stripe_publishable_key}
         />
       <% else %>
         <.setup_billing_notice organization={@organization} />
@@ -79,6 +83,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingTab do
         organization={@organization}
         invoices={@invoices}
         card={@card}
+        subscription={@subscription}
+        stripe_publishable_key={@stripe_publishable_key}
       />
     </div>
     """
@@ -87,14 +93,29 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingTab do
   defp setup_billing_notice(assigns) do
     ~H"""
     <div class="bg-amber-50 border border-amber-200 rounded-lg px-6 py-5">
-      <h2 class="text-amber-900 text-base font-semibold mb-2">Subscription not active</h2>
-      <p class="text-sm text-amber-800 mb-1">
-        Private packages will not be available until a payment method has been added.
-      </p>
-      <p class="text-sm text-amber-800">
-        Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.
-        Enter your billing information below to enable the payment method form.
-      </p>
+      <%= if Hexpm.Accounts.Organization.trialing?(@organization) do %>
+        <h2 class="text-amber-900 text-base font-semibold mb-2">Trial active</h2>
+        <p class="text-sm text-amber-800 mb-1">
+          Subscription is in trial mode until {HexpmWeb.ViewHelpers.pretty_date(
+            @organization.trial_end
+          )}.
+          After the trial is over private packages will not be available.
+        </p>
+        <p class="text-sm text-amber-800">
+          Add a payment method to continue using organizations after the trial.
+          Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.
+          Enter your billing information below to enable the payment method form.
+        </p>
+      <% else %>
+        <h2 class="text-amber-900 text-base font-semibold mb-2">Subscription not active</h2>
+        <p class="text-sm text-amber-800 mb-1">
+          Private packages will not be available until a payment method has been added.
+        </p>
+        <p class="text-sm text-amber-800">
+          Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.
+          Enter your billing information below to enable the payment method form.
+        </p>
+      <% end %>
     </div>
     """
   end

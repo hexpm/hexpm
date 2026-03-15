@@ -14,6 +14,8 @@ defmodule HexpmWeb.Components.PackageLayout do
 
   alias HexpmWeb.ViewHelpers
 
+  @package_reports_enabled Application.compile_env!(:hexpm, [:features, :package_reports])
+
   attr :package, :map, required: true
   attr :current_release, :map, default: nil
   attr :dependants_count, :integer, default: 0
@@ -22,8 +24,10 @@ defmodule HexpmWeb.Components.PackageLayout do
 
   # Sidebar data — same on all tabs
   attr :docs_html_url, :string, default: nil
+  attr :docs_tarball_url, :string, default: nil
   attr :downloads, :map, default: %{}
   attr :daily_graph, :list, default: []
+  attr :owners, :list, default: []
 
   # Dependants tab data — only loaded on the dependants page
   attr :dependants, :list, default: []
@@ -62,6 +66,7 @@ defmodule HexpmWeb.Components.PackageLayout do
         (assigns.current_release && assigns.current_release.meta.build_tools) || []
       )
       |> assign(:this_version_downloads, version_downloads(assigns))
+      |> assign(:package_reports_enabled, @package_reports_enabled)
 
     ~H"""
     <div class="bg-grey-50 min-h-screen">
@@ -99,6 +104,11 @@ defmodule HexpmWeb.Components.PackageLayout do
                 {ViewHelpers.text_length(@description, 300)}
               </p>
             <% end %>
+            <%= if @current_release && @current_release.retirement do %>
+              <div class="bg-red-50 border border-red-200 rounded-lg px-4 py-3 mt-2 text-sm text-red-800">
+                {HexpmWeb.PackageView.retirement_html(@current_release.retirement)}
+              </div>
+            <% end %>
           </div>
 
           <%!-- Right: Action Buttons — always visible --%>
@@ -112,6 +122,15 @@ defmodule HexpmWeb.Components.PackageLayout do
                 <span>Online Documentation</span>
               </a>
             <% end %>
+            <%= if @docs_tarball_url do %>
+              <a
+                href={@docs_tarball_url}
+                title="Download documentation"
+                class="bg-grey-100 flex items-center justify-center p-2.5 rounded-lg hover:bg-grey-200 transition-colors"
+              >
+                {HexpmWeb.ViewIcons.icon(:heroicon, "cloud-arrow-down", class: "size-4 text-grey-800")}
+              </a>
+            <% end %>
             <%= if @github_link do %>
               <% {_name, url} = @github_link %>
               <a
@@ -120,6 +139,15 @@ defmodule HexpmWeb.Components.PackageLayout do
                 class="bg-grey-900 flex items-center justify-center p-2.5 rounded-lg hover:bg-grey-800 transition-colors"
               >
                 <.github_icon class="size-4 text-white" />
+              </a>
+            <% end %>
+            <%= if @package_reports_enabled do %>
+              <a
+                href={"/reports/new?package=#{@package.name}&repository=#{@package.repository.name}"}
+                class="bg-grey-100 flex items-center gap-2 px-4 py-2.5 rounded-lg text-grey-800 text-sm font-medium hover:bg-grey-200 transition-colors"
+              >
+                {HexpmWeb.ViewIcons.icon(:heroicon, "flag", class: "size-4 shrink-0")}
+                <span>Report</span>
               </a>
             <% end %>
           </div>
@@ -323,13 +351,21 @@ defmodule HexpmWeb.Components.PackageLayout do
                 <% end %>
 
                 <%!-- Download Stats --%>
-                <div class="grid grid-cols-3 gap-3 pb-4 border-b border-grey-200">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pb-4 border-b border-grey-200">
                   <div class="flex flex-col gap-0.5">
                     <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">
                       this version
                     </p>
                     <p class="text-grey-700 text-base font-bold">
                       {ViewHelpers.human_number_space(@this_version_downloads)}
+                    </p>
+                  </div>
+                  <div class="flex flex-col gap-0.5">
+                    <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">
+                      yesterday
+                    </p>
+                    <p class="text-grey-700 text-base font-bold">
+                      {ViewHelpers.human_number_space(@downloads["day"] || 0)}
                     </p>
                   </div>
                   <div class="flex flex-col gap-0.5">
@@ -425,6 +461,37 @@ defmodule HexpmWeb.Components.PackageLayout do
                   <% end %>
                 </div>
               </div>
+
+              <%!-- Owners Card --%>
+              <%= if @owners != [] do %>
+                <div class="bg-white border border-grey-200 rounded-lg p-5">
+                  <h3 class="text-grey-700 text-lg font-semibold mb-4">Owners</h3>
+                  <ul class="space-y-3">
+                    <%= for owner <- @owners do %>
+                      <li>
+                        <a
+                          href={HexpmWeb.Router.user_path(owner.user)}
+                          class="flex items-center gap-2 hover:text-purple-600 transition-colors"
+                        >
+                          <img
+                            src={
+                              ViewHelpers.gravatar_url(
+                                Hexpm.Accounts.User.email(owner.user, :gravatar),
+                                :small
+                              )
+                            }
+                            class="size-6 rounded-full"
+                            alt={owner.user.username}
+                          />
+                          <span class="text-grey-700 text-sm font-medium">
+                            {owner.user.username}
+                          </span>
+                        </a>
+                      </li>
+                    <% end %>
+                  </ul>
+                </div>
+              <% end %>
             <% end %>
           </div>
         </div>

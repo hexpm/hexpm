@@ -28,6 +28,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
   attr :proration_amount, :integer, default: 0
   attr :proration_days, :integer, default: 0
   attr :max_period_quantity, :integer, default: nil
+  attr :script_src_nonce, :string, default: ""
+  attr :stripe_publishable_key, :string, default: nil
 
   def billing_subscription(assigns) do
     assigns = assign(assigns, :safe_quantity, assigns.quantity || 0)
@@ -142,10 +144,21 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
             data-post-action={@post_action}
             data-csrf-token={@csrf_token}
           >
-            {raw(@checkout_html || "")}
+            {raw(BillingHelpers.add_script_nonces(@checkout_html, @script_src_nonce) || "")}
           </div>
 
-          <div class="mt-4">
+          <div class="mt-4 flex gap-3 items-center">
+            <%= if @subscription["cancel_at_period_end"] && @card && @card["brand"] do %>
+              <form action={~p"/dashboard/orgs/#{@organization}/resume-billing"} method="post">
+                <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+                <button
+                  type="submit"
+                  class="inline-flex items-center justify-center gap-2 font-semibold rounded h-9 px-3 text-sm bg-green-600 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 cursor-pointer"
+                >
+                  Resume subscription
+                </button>
+              </form>
+            <% end %>
             <.button
               type="button"
               variant="danger-outline"
@@ -174,6 +187,93 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
             plan_id={@plan_id}
           />
           <.change_plan_modal organization={@organization} plan_id={@plan_id} />
+
+          <%= if @stripe_publishable_key do %>
+            <script nonce={@script_src_nonce}>
+              (function() {
+                var addSeatsForm = document.getElementById('add-seats-form');
+                if (addSeatsForm) {
+                  addSeatsForm.addEventListener('submit', async function(event) {
+                    event.preventDefault();
+
+                    var submitButton = addSeatsForm.querySelector('button[type="submit"]');
+                    submitButton.disabled = true;
+                    submitButton.textContent = 'Processing...';
+
+                    try {
+                      var formData = new URLSearchParams(new FormData(addSeatsForm));
+                      var response = await fetch(addSeatsForm.action, {
+                        method: 'POST',
+                        body: formData,
+                        credentials: 'same-origin',
+                        redirect: 'manual'
+                      });
+
+                      if (response.type === 'opaqueredirect') {
+                        window.location.reload();
+                        return;
+                      }
+
+                      var data = await response.json();
+                      submitButton.textContent = 'Authenticating payment...';
+
+                      var stripe = Stripe(data.stripe_publishable_key);
+                      var result = await stripe.confirmCardPayment(data.client_secret);
+
+                      if (result.error) {
+                        var voidData = new URLSearchParams();
+                        voidData.append('invoice_id', data.invoice_id);
+                        voidData.append('_csrf_token', formData.get('_csrf_token'));
+                        await fetch('<%= ~p"/dashboard/orgs/#{@organization}/void-invoice" %>', {
+                          method: 'POST',
+                          body: voidData,
+                          credentials: 'same-origin',
+                          redirect: 'manual'
+                        });
+                        throw result.error;
+                      }
+
+                      submitButton.textContent = 'Payment confirmed! Adding seats...';
+                      addSeatsForm.submit();
+                    } catch (error) {
+                      submitButton.textContent = 'Add seats';
+                      submitButton.disabled = false;
+                    }
+                  });
+                }
+
+                var scaButtons = document.querySelectorAll('.sca-pay-button');
+                if (scaButtons.length > 0) {
+                  var stripe = Stripe('<%= @stripe_publishable_key %>');
+
+                  scaButtons.forEach(function(button) {
+                    button.addEventListener('click', async function() {
+                      var clientSecret = button.getAttribute('data-client-secret');
+                      var paymentMethod = button.getAttribute('data-payment-method');
+                      button.disabled = true;
+                      button.textContent = 'Authenticating...';
+
+                      try {
+                        var confirmParams = {};
+                        if (paymentMethod) {
+                          confirmParams.payment_method = paymentMethod;
+                        }
+                        var result = await stripe.confirmCardPayment(clientSecret, confirmParams);
+                        if (result.error) throw result.error;
+
+                        button.textContent = 'Payment confirmed!';
+                        setTimeout(function() { window.location.reload(); }, 2000);
+                      } catch (error) {
+                        button.textContent = error.message || 'Authentication failed. Try again.';
+                        button.disabled = false;
+                        setTimeout(function() { button.textContent = 'Authenticate payment'; }, 3000);
+                      }
+                    });
+                  });
+                }
+              })();
+            </script>
+          <% end %>
         <% else %>
           <p class="text-sm text-grey-600 mb-4">
             No active subscription. <strong>Private packages will not be available</strong>
@@ -188,7 +288,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
             data-post-action={@post_action}
             data-csrf-token={@csrf_token}
           >
-            {raw(@checkout_html || "")}
+            {raw(BillingHelpers.add_script_nonces(@checkout_html, @script_src_nonce) || "")}
           </div>
         <% end %>
       </div>
