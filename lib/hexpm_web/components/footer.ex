@@ -153,7 +153,7 @@ defmodule HexpmWeb.Components.Footer do
     <div class="bg-grey-800">
       <div class="max-w-7xl mx-auto px-4 lg:px-0 py-4 flex flex-col items-center gap-3 text-sm text-grey-200 md:flex-row md:justify-between">
         <p class="text-center leading-[14px] md:text-left">
-          Copyright 2025. Six Colors AB.
+          Copyright 2015. Six Colors AB.
         </p>
         <p class="text-center leading-[18px] md:text-right">
           Powered by the Erlang VM and the Elixir Programming Language
