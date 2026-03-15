@@ -215,8 +215,8 @@ defmodule HexpmWeb.Components.Home do
             >
               {@package}
             </a>
-            <span class="text-grey-500 text-xs bg-grey-50 p-1 rounded-md">
-              {if @version, do: @version, else: "N/A"}
+            <span :if={@version} class="text-grey-500 text-xs bg-grey-50 p-1 rounded-md">
+              {@version}
             </span>
           </div>
           <p class="text-grey-500 text-sm leading-5 line-clamp-2 min-h-[2.5rem]">
