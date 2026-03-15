@@ -10,7 +10,7 @@
 /* Tooltip component styles */
 @import "./tooltip.css";
 
-/* Reset Bootstrap's 14px body font-size to proper 16px base for rem calculations */
+/* Reset body font-size to proper 16px base for rem calculations */
 html {
   font-size: 16px !important;
 }
@@ -256,8 +256,7 @@ body {
 }
 
 /* ===== LEGACY UTILITY CLASSES ===== */
-/* Migrated from Bootstrap-era _general.scss. These are still referenced
-   by a small number of templates/helpers that haven't been fully migrated. */
+/* Legacy utility classes still referenced by some templates/helpers. */
 
 /* IE upgrade banner (root layout) */
 .browserupgrade {
