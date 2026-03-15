@@ -10,13 +10,8 @@
 /* Tooltip component styles */
 @import "./tooltip.css";
 
-/* Reset body font-size to proper 16px base for rem calculations */
-html {
-  font-size: 16px !important;
-}
-
-body {
-  font-size: 16px !important;
+html, body {
+  font-size: 16px;
 }
 
 /* Google Fonts: Inter + JetBrains Mono */
@@ -160,7 +155,7 @@ body {
   textarea:focus,
   select:focus,
   button:focus {
-    outline: none !important;
+    outline: none;
   }
 
   /* Base document styles */
