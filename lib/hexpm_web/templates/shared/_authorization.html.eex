@@ -1,13 +1,13 @@
 <div class="bg-white border border-grey-200 rounded-lg shadow-sm">
-  <div class="px-6 py-4 border-b border-grey-200">
-    <h3 class="text-lg font-semibold text-grey-900"><%= assigns[:auth_title] || "Authorize Application" %></h3>
+  <div class="px-8 pt-8 pb-4">
+    <h1 class="font-bold text-[32px] leading-[36px] text-grey-900 text-center mb-3"><%= assigns[:auth_title] || "Authorize Application" %></h1>
   </div>
-  <div class="px-6 py-5 space-y-4">
+  <div class="px-8 pb-8 space-y-4">
     <p class="text-grey-700">
       <%= assigns[:auth_description] || "The application" %> <strong class="font-semibold text-grey-900"><%= @client_name %></strong> would like to access your Hex account.
     </p>
 
-    <h4 class="text-sm font-semibold text-grey-800">Requested permissions:</h4>
+    <h3 class="text-lg font-semibold text-grey-900">Requested permissions</h3>
 
     <%= form_tag @form_action, method: "post", id: "authorization-form" do %>
       <%= @render_scopes.(@scopes) %>
@@ -16,9 +16,9 @@
         <input type="hidden" name="<%= key %>" value="<%= value %>">
       <% end %>
 
-      <div class="flex items-center justify-center gap-4 pt-4">
-        <%= submit "Authorize", name: "action", value: @approve_value, class: "px-6 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors" %>
-        <%= submit "Deny", name: "action", value: @deny_value, class: "px-6 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors" %>
+      <div class="flex items-center justify-center gap-3 pt-4">
+        <%= submit "Authorize", name: "action", value: @approve_value, class: "inline-flex items-center justify-center gap-2 font-semibold rounded h-12 px-4 text-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 cursor-pointer bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 flex-1" %>
+        <%= submit "Deny", name: "action", value: @deny_value, class: "inline-flex items-center justify-center gap-2 font-semibold rounded h-12 px-4 text-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 cursor-pointer bg-white border border-red-300 text-red-600 hover:bg-red-50 focus:ring-red-500 whitespace-nowrap" %>
       </div>
     <% end %>
   </div>

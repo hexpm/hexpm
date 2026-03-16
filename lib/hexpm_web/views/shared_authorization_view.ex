@@ -66,16 +66,14 @@ defmodule HexpmWeb.SharedAuthorizationView do
         </ul>
       </div>
     <% else %>
-      <div class="scope-group">
-        <ul>
-          <.render_scope_item
-            :for={scope <- @scopes}
-            scope={scope}
-            style={@style}
-            current_user={@current_user}
-          />
-        </ul>
-      </div>
+      <ul class="list-none space-y-1">
+        <.render_scope_item
+          :for={scope <- @scopes}
+          scope={scope}
+          style={@style}
+          current_user={@current_user}
+        />
+      </ul>
     <% end %>
     """
   end
@@ -83,10 +81,17 @@ defmodule HexpmWeb.SharedAuthorizationView do
   defp render_scope_item(assigns) do
     description = Permissions.scope_description(assigns.scope)
     requires_2fa = assigns.scope in ["api", "api:write"]
-    checked = not (requires_2fa and not User.tfa_enabled?(assigns.current_user))
+    has_2fa = User.tfa_enabled?(assigns.current_user)
+    disabled = requires_2fa and not has_2fa
+    checked = not disabled
 
     assigns =
-      assign(assigns, description: description, requires_2fa: requires_2fa, checked: checked)
+      assign(assigns,
+        description: description,
+        requires_2fa: requires_2fa,
+        checked: checked,
+        disabled: disabled
+      )
 
     ~H"""
     <%= if @style == :oauth do %>
@@ -118,28 +123,30 @@ defmodule HexpmWeb.SharedAuthorizationView do
         </label>
       </li>
     <% else %>
-      <li class="scope-item">
-        <label class="scope-label scope-label--device">
+      <li class="flex items-start gap-3 py-2">
+        <label class={[
+          "flex items-start gap-3 cursor-pointer",
+          @disabled && "opacity-60 cursor-not-allowed"
+        ]}>
           <input
             type="checkbox"
             name="selected_scopes[]"
             value={@scope}
             checked={@checked}
-            class="scope-checkbox"
+            disabled={@disabled}
+            class="scope-checkbox mt-1 h-4 w-4 rounded border-grey-300 text-primary-600 focus:ring-primary-500"
           />
-          <div class="scope-content">
-            <div class="scope-header">
-              <code class="scope-name">
-                {@scope}
-              </code>
+          <div>
+            <div class="flex items-center gap-2">
+              <code class="text-sm font-semibold text-grey-900">{@scope}</code>
               <span
                 :if={@requires_2fa}
-                class="scope-requires-2fa"
+                class="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800"
               >
-                <i class="fa fa-shield"></i> Requires 2FA
+                Requires 2FA
               </span>
             </div>
-            <span class="scope-description">{@description}</span>
+            <span class="text-sm text-grey-600">{@description}</span>
           </div>
         </label>
       </li>
