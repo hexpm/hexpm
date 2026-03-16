@@ -17,7 +17,7 @@ defmodule HexpmWeb.Components.Footer do
   def footer(assigns) do
     ~H"""
     <footer class="bg-grey-900 text-grey-200 font-sans">
-      <div class="max-w-7xl mx-auto px-4 lg:px-0 pt-12 pb-10 flex flex-col gap-10">
+      <div class="max-w-7xl mx-auto px-4 pt-12 pb-10 flex flex-col gap-10">
         <div class="flex flex-col gap-10 lg:flex-row lg:items-start lg:gap-24 xl:gap-28">
           <.footer_branding />
           <.footer_links />
@@ -152,7 +152,7 @@ defmodule HexpmWeb.Components.Footer do
   defp footer_copyright(assigns) do
     ~H"""
     <div class="bg-grey-800">
-      <div class="max-w-7xl mx-auto px-4 lg:px-0 py-4 flex flex-col items-center gap-3 text-sm text-grey-200 md:flex-row md:justify-between">
+      <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col items-center gap-3 text-sm text-grey-200 md:flex-row md:justify-between">
         <p class="text-center leading-[14px] md:text-left">
           Copyright 2015. Six Colors AB.
         </p>
