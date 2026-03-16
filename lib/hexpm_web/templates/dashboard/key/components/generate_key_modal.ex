@@ -79,15 +79,17 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
 
           <%!-- Repository Permissions --%>
           <%= if @organization do %>
-            <label class="flex items-center">
-              <input
-                type="checkbox"
-                name={"key[permissions][repository][#{@organization.name}]"}
-                value="on"
-                class="rounded border-grey-300 text-purple-600 focus:ring-purple-500"
-              />
-              <span class="ml-2 text-sm text-grey-700">Organization repository</span>
-            </label>
+            <div class="mb-4">
+              <label class="flex items-center">
+                <input
+                  type="checkbox"
+                  name={"key[permissions][repository][#{@organization.name}]"}
+                  value="on"
+                  class="rounded border-grey-300 text-purple-600 focus:ring-purple-500"
+                />
+                <span class="ml-2 text-sm text-grey-700">Organization repository</span>
+              </label>
+            </div>
           <% else %>
             <div
               class="mb-4"
