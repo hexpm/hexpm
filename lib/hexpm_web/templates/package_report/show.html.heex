@@ -1,0 +1,81 @@
+<div class="max-w-7xl mx-auto px-4 py-8">
+  <%!-- Header --%>
+  <div class="mb-6">
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <h1 class="text-grey-900 text-2xl font-semibold mb-1">
+          Report <span class="font-mono text-purple-600">#{@report.id}</span>
+          — affects <span class="font-semibold">{@report.package.name}</span>
+        </h1>
+        <p class="text-grey-500 text-sm">
+          {ViewHelpers.human_relative_time_from_now(@report.inserted_at)} · by {@report.author.username}
+        </p>
+      </div>
+      <span class={[
+        "inline-flex items-center px-3 py-1 rounded-full text-sm font-medium shrink-0",
+        case @report.state do
+          "to_accept" -> "bg-yellow-100 text-yellow-700"
+          "accepted" -> "bg-blue-100 text-blue-700"
+          "solved" -> "bg-green-100 text-green-700"
+          "rejected" -> "bg-red-100 text-red-700"
+          _ -> "bg-grey-100 text-grey-700"
+        end
+      ]}>
+        {Phoenix.Naming.humanize(@report.state)}
+      </span>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <%!-- Left: Info + Moderator --%>
+    <div class="flex flex-col gap-4">
+      <div class="bg-white border border-grey-200 rounded-xl p-5">
+        <h2 class="text-grey-900 font-semibold mb-3">Information</h2>
+        <dl class="space-y-3 text-sm">
+          <div>
+            <dt class="text-grey-400 text-xs uppercase tracking-wider font-medium mb-1">State</dt>
+            <dd class="text-grey-900 font-medium">{Phoenix.Naming.humanize(@report.state)}</dd>
+          </div>
+          <div>
+            <dt class="text-grey-400 text-xs uppercase tracking-wider font-medium mb-1">
+              Affected releases
+            </dt>
+            <dd class="flex flex-wrap gap-1">
+              <%= if Enum.empty?(@report.package_report_releases) do %>
+                <span class="text-grey-400">None specified</span>
+              <% else %>
+                <%= for ar <- @report.package_report_releases do %>
+                  <span class="bg-grey-100 text-grey-700 text-xs font-mono px-2 py-0.5 rounded">
+                    {ar.release.version}
+                  </span>
+                <% end %>
+              <% end %>
+            </dd>
+          </div>
+        </dl>
+      </div>
+
+      <%= if @for_moderator do %>
+        {render("_moderator_panel.html", report: @report, author: @report.author)}
+      <% end %>
+    </div>
+
+    <%!-- Right: Description + Comments --%>
+    <div class="lg:col-span-2 flex flex-col gap-4">
+      <div class="bg-white border border-grey-200 rounded-xl p-5">
+        <h2 class="text-grey-900 font-semibold mb-3">Description</h2>
+        <p class="text-grey-700 text-sm leading-relaxed whitespace-pre-wrap">
+          {@report.description}
+        </p>
+      </div>
+
+      {render("_comments_section.html",
+        report: @report,
+        for_moderator: @for_moderator,
+        for_owner: @for_owner,
+        for_author: @for_author,
+        comments: @comments
+      )}
+    </div>
+  </div>
+</div>

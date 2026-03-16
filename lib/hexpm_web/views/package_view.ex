@@ -1,6 +1,9 @@
 defmodule HexpmWeb.PackageView do
   use HexpmWeb, :view
 
+  import HexpmWeb.Components.Badge
+  import HexpmWeb.Components.PackageLayout
+
   def show_sort_info(nil), do: show_sort_info(:name)
   def show_sort_info(:name), do: "Sort: Name"
   def show_sort_info(:inserted_at), do: "Sort: Recently created"
@@ -82,8 +85,8 @@ defmodule HexpmWeb.PackageView do
     "#{major}.#{minor}.#{patch}#{pre_snippet(pre)}"
   end
 
-  defp snippet_organization("hexpm"), do: ""
-  defp snippet_organization(repository), do: ", organization: #{inspect(repository)}"
+  def snippet_organization("hexpm"), do: ""
+  def snippet_organization(repository), do: ", organization: #{inspect(repository)}"
 
   defp pre_snippet([]) do
     ""
@@ -148,6 +151,16 @@ defmodule HexpmWeb.PackageView do
 
   def path_for_audit_logs(package, options) do
     ~p"/packages/#{package.repository}/#{package}/audit-logs?#{options}"
+  end
+
+  def path_for_dependents(package, options \\ %{})
+
+  def path_for_dependents(%{repository: %{id: 1}} = package, options) do
+    ~p"/packages/#{package}/dependents?#{options}"
+  end
+
+  def path_for_dependents(package, options) do
+    ~p"/packages/#{package.repository}/#{package}/dependents?#{options}"
   end
 
   @doc """

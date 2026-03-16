@@ -1,6 +1,6 @@
 defmodule HexpmWeb.Dashboard.EmailView do
   use HexpmWeb, :view
-  alias HexpmWeb.DashboardView
+  import HexpmWeb.Dashboard.Email.Components.EmailManagementCard
 
   def public_email_options(user) do
     emails =

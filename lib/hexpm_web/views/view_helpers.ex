@@ -253,6 +253,21 @@ defmodule HexpmWeb.ViewHelpers do
     |> :erlang.list_to_binary()
   end
 
+  def human_number_compact(nil), do: "0"
+  def human_number_compact(n) when n >= 1_000_000_000, do: format_compact(n / 1_000_000_000, "B")
+  def human_number_compact(n) when n >= 1_000_000, do: format_compact(n / 1_000_000, "M")
+  def human_number_compact(n) when n >= 1_000, do: format_compact(n / 1_000, "K")
+  def human_number_compact(n), do: "#{n}"
+
+  defp format_compact(value, unit) do
+    rounded = Float.round(value, 1)
+
+    case Float.ratio(rounded) do
+      {_, 1} -> "#{trunc(rounded)}#{unit}"
+      {_, _} -> "#{rounded}#{unit}"
+    end
+  end
+
   defp do_human_number(int, max, digits, _unit) when is_integer(int) and digits <= max do
     human_number_space(int)
   end
@@ -260,7 +275,8 @@ defmodule HexpmWeb.ViewHelpers do
   defp do_human_number(int, max, digits, {unit, mag}) when is_integer(int) and digits > max do
     shifted = int / :math.pow(10, mag)
     len = trunc(:math.log10(shifted)) + 2
-    float = Float.round(shifted, max - len)
+    precision = max(0, max - len)
+    float = Float.round(shifted, precision)
 
     case Float.ratio(float) do
       {_, 1} -> human_number_space(trunc(float)) <> unit
@@ -411,6 +427,18 @@ defmodule HexpmWeb.ViewHelpers do
       _ -> 100
     end
   end
+
+  def main_repository?(%{repository_id: 1}), do: true
+  def main_repository?(_), do: false
+
+  def safe_url(url) when is_binary(url) do
+    case URI.parse(url) do
+      %URI{scheme: scheme} when scheme in ["http", "https", "mailto"] -> url
+      _ -> "#"
+    end
+  end
+
+  def safe_url(_), do: "#"
 end
 
 defimpl Phoenix.HTML.Safe, for: Version do

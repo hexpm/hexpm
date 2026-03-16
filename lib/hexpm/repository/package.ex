@@ -128,9 +128,11 @@ defmodule Hexpm.Repository.Package do
   def recent(repository, count) do
     from(
       p in assoc(repository, :packages),
+      left_join: d in PackageDownload,
+      on: d.package_id == p.id and d.view == "recent",
       order_by: [desc: p.inserted_at],
       limit: ^count,
-      select: {p.name, p.inserted_at, p.meta}
+      select: {p.name, p.inserted_at, p.meta, d.downloads}
     )
   end
 

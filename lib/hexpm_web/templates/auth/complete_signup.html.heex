@@ -1,0 +1,25 @@
+<.auth_layout
+  title="Complete your signup"
+  subtitle="Choose a username for your Hex account"
+  show_oauth={false}
+>
+  <% changeset =
+    @changeset ||
+      Ecto.Changeset.cast(%Hexpm.Accounts.User{}, %{username: @suggested_username}, [:username]) %>
+
+  <%= form_for changeset, ~p"/auth/complete-signup", [as: :user, class: "space-y-6"], fn f -> %>
+    <.text_input field={f[:username]} label="Username" />
+    <p class="text-grey-500 text-sm -mt-4">
+      Username must be at least 3 characters and can only contain letters, numbers, underscores, hyphens, and periods.
+    </p>
+
+    <div class="flex gap-3">
+      <.button type="submit" variant="primary" full_width>
+        Complete signup
+      </.button>
+      <.text_link href={~p"/signup"} variant="secondary" class="flex items-center justify-center">
+        Cancel
+      </.text_link>
+    </div>
+  <% end %>
+</.auth_layout>

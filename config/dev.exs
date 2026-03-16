@@ -40,7 +40,8 @@ config :hexpm, HexpmWeb.Endpoint,
       "--watch",
       "--watch-options-stdin",
       cd: Path.expand("../assets", __DIR__)
-    ]
+    ],
+    tailwind: {Tailwind, :install_and_run, [:default, ~w(--watch)]}
   ]
 
 config :hexpm, HexpmWeb.Endpoint,

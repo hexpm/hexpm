@@ -1,0 +1,30 @@
+<.auth_layout
+  title="Recovery code"
+  subtitle="Enter one of your backup recovery codes to access your account"
+>
+  <%= form_tag(~p"/tfa/recovery", id: "tfa-recovery-form", class: "space-y-6") do %>
+    <.text_input
+      id="code"
+      name="code"
+      label="Recovery Code"
+      placeholder="xxxx-xxxx-xxxx-xxxx"
+      pattern="\w{4}-\w{4}-\w{4}-\w{4}"
+      title="Recovery code in xxxx-xxxx-xxxx-xxxx format"
+      maxlength="19"
+      autocomplete="off"
+    />
+
+    <.button type="submit" full_width>
+      Verify
+    </.button>
+  <% end %>
+
+  <:footer_links>
+    <p class="text-small text-center mt-8">
+      <span class="text-grey-800">Have your authenticator app?</span>
+      <.text_link href={~p"/tfa"} variant="primary" class="font-semibold ml-1">
+        Use authenticator instead
+      </.text_link>
+    </p>
+  </:footer_links>
+</.auth_layout>

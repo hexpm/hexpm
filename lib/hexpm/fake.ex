@@ -76,7 +76,10 @@ defmodule Hexpm.Fake do
   end
 
   defp get!(key, counter, original_key \\ nil) do
-    case :ets.lookup(__MODULE__, {key, counter}) do
+    [{_key, size}] = :ets.lookup(__MODULE__, {key, :size})
+    wrapped_counter = rem(counter, size)
+
+    case :ets.lookup(__MODULE__, {key, wrapped_counter}) do
       [{_key, value}] ->
         value
 

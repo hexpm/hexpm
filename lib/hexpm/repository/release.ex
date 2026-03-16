@@ -258,10 +258,12 @@ defmodule Hexpm.Repository.Release do
     from(
       r in Hexpm.Repository.Release,
       join: p in assoc(r, :package),
+      left_join: d in Hexpm.Repository.PackageDownload,
+      on: d.package_id == p.id and d.view == "recent",
       where: p.repository_id == ^repository.id,
       order_by: [desc: r.inserted_at],
       limit: ^count,
-      select: {p.name, r.version, r.inserted_at, p.meta}
+      select: {p.name, r.version, r.inserted_at, p.meta, d.downloads}
     )
   end
 end

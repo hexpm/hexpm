@@ -55,7 +55,7 @@ defmodule Hexpm.Accounts.User do
 
     if password do
       changeset
-      |> validate_length(:password, min: 7)
+      |> validate_length(:password, min: 8)
       |> validate_confirmation(:password, message: "does not match password")
       |> update_change(:password, &Auth.gen_password/1)
     else
@@ -99,7 +99,7 @@ defmodule Hexpm.Accounts.User do
   def update_password_no_check(user, params) do
     cast(user, params, ~w(password)a)
     |> validate_required(~w(password)a)
-    |> validate_length(:password, min: 7)
+    |> validate_length(:password, min: 8)
     |> validate_confirmation(:password, message: "does not match password")
     |> update_change(:password, &Auth.gen_password/1)
   end
@@ -110,7 +110,7 @@ defmodule Hexpm.Accounts.User do
 
     cast(user, params, ~w(password)a)
     |> validate_required(~w(password)a)
-    |> validate_length(:password, min: 7)
+    |> validate_length(:password, min: 8)
     |> validate_password(:password, password)
     |> validate_confirmation(:password, message: "does not match password")
     |> update_change(:password, &Auth.gen_password/1)
@@ -247,7 +247,7 @@ defmodule Hexpm.Accounts.User do
   def add_password(user, params) do
     cast(user, params, ~w(password)a)
     |> validate_required(~w(password)a)
-    |> validate_length(:password, min: 7)
+    |> validate_length(:password, min: 8)
     |> validate_confirmation(:password, message: "does not match password")
     |> update_change(:password, &Auth.gen_password/1)
   end

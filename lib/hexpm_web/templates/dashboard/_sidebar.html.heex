@@ -1,0 +1,88 @@
+<nav>
+  <%!-- Back Link --%>
+  <a
+    href={~p"/users/#{@current_user.username}"}
+    class="inline-flex items-center gap-2 text-grey-600 text-sm mb-6 hover:text-grey-900"
+  >
+    {HexpmWeb.ViewIcons.icon(:heroicon, "arrow-left", class: "w-4 h-4")} Back to Profile
+  </a>
+
+  <%!-- Settings Title --%>
+  <h1 class="text-grey-900 text-3xl font-semibold mb-8">
+    Settings
+  </h1>
+
+  <%!-- Account Settings Section --%>
+  <div class="mb-8">
+    <ul class="space-y-1">
+      <%= for {id, {name, path}} <- account_settings() do %>
+        <li>
+          <a
+            href={path}
+            class={[
+              "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
+              if(selected_setting(@conn, id),
+                do: "bg-purple-50 text-purple-600 font-medium",
+                else: "text-grey-600 hover:text-grey-900"
+              )
+            ]}
+          >
+            {icon_for_setting(id, selected_setting(@conn, id))}
+            {name}
+          </a>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+
+  <%!-- Organization Settings Section --%>
+  <%= if @current_user.organizations != [] do %>
+    <div class="border-t border-grey-200 pt-6">
+      <h3 class="text-grey-600 text-xs font-semibold uppercase tracking-wider mb-3">
+        Organization
+      </h3>
+      <ul class="space-y-1">
+        <%= for organization <- Enum.sort_by(@current_user.organizations, & &1.name) do %>
+          <li>
+            <a
+              href={~p"/dashboard/orgs/#{organization}"}
+              class={[
+                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
+                if(selected_organization(@conn, organization.name),
+                  do: "bg-purple-50 text-purple-600 font-medium",
+                  else: "text-grey-600 hover:text-grey-900"
+                )
+              ]}
+            >
+              {HexpmWeb.ViewIcons.icon(:heroicon, "building-office-2", class: "w-5 h-5")}
+              {organization.name}
+            </a>
+          </li>
+        <% end %>
+      </ul>
+      <button
+        type="button"
+        phx-click={show_modal("create-organization-modal")}
+        class="flex items-center gap-2 mt-3 px-3 py-2 text-sm text-grey-600 hover:text-grey-900 border border-dashed border-grey-300 rounded-lg w-full justify-center transition-colors"
+      >
+        {HexpmWeb.ViewIcons.icon(:heroicon, "plus", class: "w-4 h-4")} Create New
+      </button>
+    </div>
+  <% else %>
+    <div class="border-t border-grey-200 pt-6">
+      <h3 class="text-grey-600 text-xs font-semibold uppercase tracking-wider mb-3">
+        Organization
+      </h3>
+      <button
+        type="button"
+        phx-click={show_modal("create-organization-modal")}
+        class="flex items-center gap-2 px-3 py-2 text-sm text-grey-600 hover:text-grey-900 border border-dashed border-grey-300 rounded-lg w-full justify-center transition-colors"
+      >
+        {HexpmWeb.ViewIcons.icon(:heroicon, "plus", class: "w-4 h-4")} Create New
+      </button>
+    </div>
+  <% end %>
+</nav>
+
+<%!-- Create organization modal — always rendered so the sidebar "Create New" button works from any dashboard page --%>
+<.create_organization_modal changeset={new_organization_changeset(assigns)} />

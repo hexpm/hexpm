@@ -219,14 +219,14 @@ defmodule HexpmWeb.PackageReportController do
 
   defp build_report_form(conn, params) do
     %{"repository" => repository, "package" => name} = params
-    description = params["description"]
 
     render(
       conn,
       "new_report.html",
       package_name: name,
       repository: repository,
-      description: description
+      description: params["description"],
+      requirement: params["requirement"]
     )
   end
 end

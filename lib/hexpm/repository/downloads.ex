@@ -54,6 +54,26 @@ defmodule Hexpm.Repository.Downloads do
     Repo.all(query)
   end
 
+  def for_packages_period(packages, group_by, opts \\ []) do
+    package_ids = Enum.map(packages, & &1.id)
+
+    base = Download.by_packages_period(package_ids, group_by || :all)
+
+    query =
+      opts
+      |> Keyword.take([:downloads_after, :downloads_before])
+      |> Enum.reduce(base, fn
+        {:downloads_after, %Date{} = date}, query -> Download.since_date(query, date)
+        {:downloads_after, nil}, query -> query
+        {:downloads_before, %Date{} = date}, query -> Download.before_date(query, date)
+        {:downloads_before, nil}, query -> query
+      end)
+
+    query
+    |> Repo.all()
+    |> Enum.group_by(& &1.package_id)
+  end
+
   def last_day() do
     Download.last_day()
     |> Repo.one()

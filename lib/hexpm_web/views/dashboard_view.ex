@@ -1,5 +1,12 @@
 defmodule HexpmWeb.DashboardView do
   use HexpmWeb, :view
+  import HexpmWeb.Components.Modal, only: [show_modal: 1]
+  import HexpmWeb.Dashboard.Key.Components.KeyManagementCard
+
+  import HexpmWeb.Dashboard.Organization.Components.CreateOrganizationModal,
+    only: [create_organization_modal: 1]
+
+  import HexpmWeb.ViewIcons, only: [icon: 3]
 
   defp account_settings() do
     [
@@ -8,8 +15,38 @@ defmodule HexpmWeb.DashboardView do
       email: {"Emails", ~p"/dashboard/email"},
       keys: {"Keys", ~p"/dashboard/keys"},
       sessions: {"Sessions", ~p"/dashboard/sessions"},
-      audit_logs: {"Recent activities", ~p"/dashboard/audit-logs"}
+      audit_logs: {"Recent Activities", ~p"/dashboard/audit-logs"}
     ]
+  end
+
+  defp icon_for_setting(:profile, selected?) do
+    color = if selected?, do: "text-purple-600", else: "text-grey-600"
+    icon(:heroicon, "user-circle", class: "w-5 h-5 #{color}")
+  end
+
+  defp icon_for_setting(:security, selected?) do
+    color = if selected?, do: "text-purple-600", else: "text-grey-600"
+    icon(:heroicon, "shield-check", class: "w-5 h-5 #{color}")
+  end
+
+  defp icon_for_setting(:email, selected?) do
+    color = if selected?, do: "text-purple-600", else: "text-grey-600"
+    icon(:heroicon, "envelope", class: "w-5 h-5 #{color}")
+  end
+
+  defp icon_for_setting(:keys, selected?) do
+    color = if selected?, do: "text-purple-600", else: "text-grey-600"
+    icon(:heroicon, "key", class: "w-5 h-5 #{color}")
+  end
+
+  defp icon_for_setting(:sessions, selected?) do
+    color = if selected?, do: "text-purple-600", else: "text-grey-600"
+    icon(:heroicon, "computer-desktop", class: "w-5 h-5 #{color}")
+  end
+
+  defp icon_for_setting(:audit_logs, selected?) do
+    color = if selected?, do: "text-purple-600", else: "text-grey-600"
+    icon(:heroicon, "clock", class: "w-5 h-5 #{color}")
   end
 
   defp selected_setting(conn, id) do
@@ -28,24 +65,6 @@ defmodule HexpmWeb.DashboardView do
       "selected"
     end
   end
-
-  defp permission_name(%KeyPermission{domain: "api", resource: nil}),
-    do: "API"
-
-  defp permission_name(%KeyPermission{domain: "api", resource: resource}),
-    do: "API:#{resource}"
-
-  defp permission_name(%KeyPermission{domain: "repository", resource: resource}),
-    do: "REPO:#{resource}"
-
-  defp permission_name(%KeyPermission{domain: "package", resource: "hexpm/" <> resource}),
-    do: "PKG:#{resource}"
-
-  defp permission_name(%KeyPermission{domain: "package", resource: resource}),
-    do: "PKG:#{resource}"
-
-  defp permission_name(%KeyPermission{domain: "repositories"}),
-    do: "REPOS"
 
   def humanize_audit_log_info(%AuditLog{action: "docs.publish", params: params}) do
     "Publish documentation for #{params["package"]["name"]} (#{params["release"]["version"]})"
@@ -248,6 +267,11 @@ defmodule HexpmWeb.DashboardView do
     else
       "Revoke OAuth application: #{client_name}"
     end
+  end
+
+  defp new_organization_changeset(assigns) do
+    assigns[:new_organization_changeset] ||
+      Hexpm.Accounts.Organization.changeset(%Hexpm.Accounts.Organization{}, %{})
   end
 
   defp plan_id("organization-monthly"), do: "monthly"

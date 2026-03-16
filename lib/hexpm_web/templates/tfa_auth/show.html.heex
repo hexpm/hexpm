@@ -1,0 +1,31 @@
+<.auth_layout
+  title="Two-factor authentication"
+  subtitle="Enter the 6-digit code from your authenticator app"
+>
+  <%= form_tag(~p"/tfa", id: "tfa-form", class: "space-y-6") do %>
+    <.text_input
+      id="code"
+      name="code"
+      label="Authentication Code"
+      placeholder="000000"
+      pattern="\d{6}"
+      title="Must be 6 digits"
+      maxlength="6"
+      inputmode="numeric"
+      autocomplete="off"
+    />
+
+    <.button type="submit" full_width>
+      Verify
+    </.button>
+  <% end %>
+
+  <:footer_links>
+    <p class="text-small text-center mt-8">
+      <span class="text-grey-800">Lost access to your app?</span>
+      <.text_link href={~p"/tfa/recovery"} variant="primary" class="font-semibold ml-1">
+        Use a recovery code
+      </.text_link>
+    </p>
+  </:footer_links>
+</.auth_layout>

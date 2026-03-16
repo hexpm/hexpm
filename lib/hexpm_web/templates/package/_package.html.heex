@@ -1,0 +1,51 @@
+<li class="p-6 hover:bg-grey-50 transition-colors">
+  <div class="flex items-start justify-between gap-6">
+    <%!-- Package Info --%>
+    <div class="flex-1 min-w-0">
+      <div class="flex items-center gap-3 mb-2">
+        <a
+          href={ViewHelpers.path_for_package(@package)}
+          class="text-grey-900 font-semibold text-xl hover:text-primary-600 transition-colors"
+        >
+          {ViewHelpers.package_name(@package)}
+        </a>
+        <%= if @package.latest_release do %>
+          <a
+            href={ViewHelpers.path_for_package(@package)}
+            class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-grey-100 text-grey-700 hover:bg-primary-100 hover:text-primary-700 transition-colors"
+          >
+            v{@package.latest_release.version}
+          </a>
+        <% end %>
+      </div>
+
+      <%= if @package.meta.description do %>
+        <p class="text-grey-600 text-sm leading-6 line-clamp-2">
+          {ViewHelpers.text_length(@package.meta.description, 200)}
+        </p>
+      <% end %>
+
+      <%= if @package.inserted_at do %>
+        <p class="text-grey-500 text-xs mt-2">
+          Published {ViewHelpers.human_relative_time_from_now(@package.inserted_at)}
+        </p>
+      <% end %>
+    </div>
+
+    <%!-- Download Stats --%>
+    <div class="flex flex-col items-end gap-1 shrink-0 min-w-[120px]">
+      <div class="text-grey-900 text-2xl font-bold text-right">
+        {ViewHelpers.human_number_space(display_downloads(@package_downloads, @view) || 0)}
+      </div>
+      <div class="text-grey-500 text-xs text-right">
+        {display_downloads_view_title(@view)}
+      </div>
+      <div
+        class="text-grey-400 text-xs text-right cursor-help"
+        title={display_downloads_for_opposite_views(@package_downloads, @view)}
+      >
+        {display_downloads_for_opposite_views(@package_downloads, @view)}
+      </div>
+    </div>
+  </div>
+</li>

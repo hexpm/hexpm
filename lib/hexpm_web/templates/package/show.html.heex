@@ -1,0 +1,78 @@
+<% licenses = @package.meta.licenses || []
+links = Enum.to_list(@package.meta.links || [])
+description = @package.meta.description %>
+
+<.package_layout
+  active_tab={:readme}
+  current_release={@current_release}
+  daily_graph={@daily_graph}
+  dependants_count={@dependants_count}
+  docs_html_url={@docs_html_url}
+  docs_tarball_url={@docs_tarball_url}
+  downloads={@downloads}
+  owners={@owners}
+  package={@package}
+  repository_name={@repository_name}
+>
+  <:inner_content>
+    <div class="bg-white border border-grey-200 rounded-lg p-6">
+      <h2 class="text-grey-900 text-[32px] font-semibold mb-11">
+        {ViewHelpers.package_name(@package)}
+      </h2>
+
+      <%= if description do %>
+        <div class="text-grey-600 mb-8 leading-relaxed">
+          {ViewHelpers.text_length(description, 300) |> text_to_html(insert_brs: false)}
+        </div>
+      <% end %>
+
+      <%!-- Installation Section --%>
+      <%= if @current_release do %>
+        <section class="mb-8">
+          <h3 class="text-grey-900 text-2xl font-semibold mb-4">Installation</h3>
+          <p class="text-grey-600 mb-3">
+            The package can be installed by adding
+            <code class="bg-grey-50 px-2 py-0.5 rounded text-grey-500 text-sm font-mono">
+              {@package.name}
+            </code>
+            to your list of dependencies in mix.exs:
+          </p>
+          <pre
+            phx-no-curly-interpolation
+            class="bg-grey-50 rounded-lg p-4 font-mono text-sm text-grey-600 overflow-x-auto"
+          >def deps do
+  [{:<%= @package.name %>, "<%= snippet_version(:mix, @current_release.version) %>"<%= snippet_organization(@repository_name) %>}]
+end</pre>
+        </section>
+      <% end %>
+
+      <%!-- Links Section --%>
+      <%= if links != [] do %>
+        <section class="mb-8">
+          <h3 class="text-grey-900 text-2xl font-semibold mb-4">Links</h3>
+          <ul class="space-y-2">
+            <%= for {name, link} <- links do %>
+              <li>
+                <a
+                  href={ViewHelpers.safe_url(link)}
+                  rel="nofollow"
+                  class="text-blue-600 hover:text-blue-700 hover:underline"
+                >
+                  {name}
+                </a>
+              </li>
+            <% end %>
+          </ul>
+        </section>
+      <% end %>
+
+      <%!-- Licenses Section --%>
+      <%= if licenses != [] do %>
+        <section class="mb-8">
+          <h3 class="text-grey-900 text-2xl font-semibold mb-4">Licenses</h3>
+          <p class="text-grey-600">{Enum.join(licenses, ", ")}</p>
+        </section>
+      <% end %>
+    </div>
+  </:inner_content>
+</.package_layout>

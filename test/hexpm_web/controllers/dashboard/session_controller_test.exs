@@ -67,7 +67,7 @@ defmodule HexpmWeb.Dashboard.SessionControllerTest do
       {:ok, session, _token} =
         UserSessions.create_browser_session(user, name: "To Delete", audit: test_audit_data(user))
 
-      conn = delete(conn, ~p"/dashboard/sessions?id=#{session.id}")
+      conn = delete(conn, ~p"/dashboard/sessions?_id=#{session.id}")
 
       assert redirected_to(conn) == ~p"/dashboard/sessions"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "browser session was revoked"
@@ -86,7 +86,7 @@ defmodule HexpmWeb.Dashboard.SessionControllerTest do
           audit: test_audit_data(user)
         )
 
-      conn = delete(conn, ~p"/dashboard/sessions?id=#{session.id}")
+      conn = delete(conn, ~p"/dashboard/sessions?_id=#{session.id}")
 
       assert redirected_to(conn) == ~p"/dashboard/sessions"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "OAuth session was revoked"
@@ -112,7 +112,7 @@ defmodule HexpmWeb.Dashboard.SessionControllerTest do
 
       session = Repo.get(Hexpm.UserSession, token.user_session_id)
 
-      conn = delete(conn, ~p"/dashboard/sessions?id=#{session.id}")
+      conn = delete(conn, ~p"/dashboard/sessions?_id=#{session.id}")
 
       assert redirected_to(conn) == ~p"/dashboard/sessions"
 
@@ -127,7 +127,7 @@ defmodule HexpmWeb.Dashboard.SessionControllerTest do
       {:ok, decoded_token} = Base.decode64(session_token)
       current_session = UserSessions.get_browser_session_by_token(decoded_token)
 
-      conn = delete(conn, ~p"/dashboard/sessions?id=#{current_session.id}")
+      conn = delete(conn, ~p"/dashboard/sessions?_id=#{current_session.id}")
 
       assert redirected_to(conn) == ~p"/dashboard/sessions"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "Cannot revoke your current session"
@@ -138,7 +138,7 @@ defmodule HexpmWeb.Dashboard.SessionControllerTest do
     end
 
     test "returns 404 for non-existent session", %{conn: conn} do
-      conn = delete(conn, ~p"/dashboard/sessions?id=99999")
+      conn = delete(conn, ~p"/dashboard/sessions?_id=99999")
 
       assert html_response(conn, 404)
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "Session not found"
@@ -152,7 +152,7 @@ defmodule HexpmWeb.Dashboard.SessionControllerTest do
       past_time = DateTime.add(DateTime.utc_now(), -3600, :second)
       Repo.update!(Hexpm.UserSession.changeset(session, %{expires_at: past_time}))
 
-      conn = delete(conn, ~p"/dashboard/sessions?id=#{session.id}")
+      conn = delete(conn, ~p"/dashboard/sessions?_id=#{session.id}")
 
       assert html_response(conn, 404)
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "Session not found"
@@ -167,7 +167,7 @@ defmodule HexpmWeb.Dashboard.SessionControllerTest do
 
       {:ok, _} = UserSessions.revoke(session)
 
-      conn = delete(conn, ~p"/dashboard/sessions?id=#{session.id}")
+      conn = delete(conn, ~p"/dashboard/sessions?_id=#{session.id}")
 
       # Should return 404 since revoked sessions are excluded from all_for_user
       assert html_response(conn, 404)
@@ -175,7 +175,7 @@ defmodule HexpmWeb.Dashboard.SessionControllerTest do
     end
 
     test "returns 404 for non-integer session ID string", %{conn: conn} do
-      conn = delete(conn, ~p"/dashboard/sessions?id=invalid")
+      conn = delete(conn, ~p"/dashboard/sessions?_id=invalid")
 
       assert html_response(conn, 404)
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "Session not found"

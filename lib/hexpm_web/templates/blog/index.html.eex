@@ -1,8 +1,63 @@
-<%= for post <- @posts do %>
-  <div class="index-post">
-    <h3><a href="<%= ~p"/blog/#{post.slug}" %>"><%= post.title %></a></h3>
-    <div class="subtitle"><%= raw post.subtitle %></div>
-    <p class="content"><%= raw post.paragraph %></p>
-    <a href="<%= ~p"/blog/#{post.slug}" %>">Read more...</a>
+<%
+  latest = List.first(@posts)
+  rest = Enum.drop(@posts, 1)
+%>
+
+<div class="bg-grey-50 py-12 px-4 lg:py-16 flex-1">
+  <div class="max-w-6xl mx-auto flex flex-col gap-10">
+    <div class="text-center flex flex-col gap-3 font-sans">
+      <h1 class="text-3xl lg:text-4xl font-bold text-grey-900">hex.pm Blog</h1>
+      <p class="text-base text-grey-600">Learn what’s new with hex.pm with our latest Blog Updates</p>
+    </div>
+
+    <%= if latest do %>
+      <% latest_author = latest.author || "Hex.pm" %>
+      <article class="relative mx-auto w-full max-w-6xl overflow-hidden rounded-lg border border-grey-800 bg-grey-900 p-6 text-grey-100 shadow-[0_4px_20px_rgba(3,9,19,0.25)] flex flex-col items-center gap-5 text-center lg:p-10">
+        <span class="absolute left-6 top-6 rounded bg-yellow-500 px-3 py-1 text-sm font-semibold text-grey-900">Latest</span>
+
+        <div class="flex flex-wrap items-center justify-center gap-1 text-sm">
+          <span class="text-grey-200"><%= latest.published_date %></span>
+          <span class="text-grey-300">by</span>
+          <span class="text-blue-300 font-medium"><%= latest_author %></span>
+        </div>
+
+        <h2 class="text-2xl font-semibold text-white">
+          <a href="<%= ~p"/blog/#{latest.slug}" %>" class="text-white hover:text-blue-200 transition-colors"><%= latest.title %></a>
+        </h2>
+
+        <p class="max-w-3xl text-base leading-6 text-grey-100 blog-latest-excerpt">
+          <%= raw latest.paragraph %>
+        </p>
+
+        <a
+          href="<%= ~p"/blog/#{latest.slug}" %>"
+          class="rounded bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-500">
+          Read More
+        </a>
+      </article>
+    <% end %>
+
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <%= for post <- rest do %>
+        <% author = post.author || "Hex.pm" %>
+        <article class="bg-white border border-grey-200 rounded-lg p-4 shadow-[0_1px_2px_rgba(3,9,19,0.05)] flex flex-col gap-3">
+          <div class="flex flex-wrap items-center gap-1 text-sm text-grey-700">
+            <span><%= post.published_date %></span>
+            <span class="text-grey-500">by</span>
+            <span class="text-blue-600 font-medium"><%= author %></span>
+          </div>
+
+          <h3 class="text-lg font-semibold text-grey-900">
+            <a href="<%= ~p"/blog/#{post.slug}" %>" class="text-grey-900 hover:text-blue-600 transition-colors"><%= post.title %></a>
+          </h3>
+
+          <p class="text-sm leading-6 text-grey-600 blog-card-excerpt">
+            <%= raw post.paragraph %>  <a href="<%= ~p"/blog/#{post.slug}" %>" class="text-blue-600 text-sm font-medium hover:underline">
+            Read More
+          </a>
+          </p>
+        </article>
+      <% end %>
+    </div>
   </div>
-<% end %>
+</div>

@@ -1,0 +1,61 @@
+<div class="bg-white border border-grey-200 rounded-xl p-5">
+  <h2 class="text-grey-900 font-semibold mb-3">Moderator actions</h2>
+
+  <%= if @report.state in ["solved", "unresolved"] do %>
+    <p class="text-grey-500 text-sm italic">
+      This report's state is final and cannot be changed.
+    </p>
+  <% else %>
+    <div class="flex flex-wrap gap-2">
+      <%= if @report.state in ["to_accept", "rejected"] do %>
+        <%= form_tag ~p"/reports/#{@report.id}/accept" do %>
+          <button
+            type="submit"
+            name="operation"
+            value="Accept"
+            class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          >
+            Accept
+          </button>
+        <% end %>
+      <% end %>
+
+      <%= if @report.state in ["to_accept", "accepted"] do %>
+        <%= form_tag ~p"/reports/#{@report.id}/reject" do %>
+          <button
+            type="submit"
+            name="operation"
+            value="Reject"
+            class="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          >
+            Reject
+          </button>
+        <% end %>
+      <% end %>
+
+      <%= if @report.state == "accepted" do %>
+        <%= form_tag ~p"/reports/#{@report.id}/solve" do %>
+          <button
+            type="submit"
+            name="operation"
+            value="Solve"
+            class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          >
+            Mark as solved
+          </button>
+        <% end %>
+
+        <%= form_tag ~p"/reports/#{@report.id}/unresolve" do %>
+          <button
+            type="submit"
+            name="operation"
+            value="Set unresolved"
+            class="bg-grey-600 hover:bg-grey-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          >
+            Set unresolved
+          </button>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+</div>

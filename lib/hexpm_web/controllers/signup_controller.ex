@@ -6,7 +6,9 @@ defmodule HexpmWeb.SignupController do
       path = ~p"/users/#{conn.assigns.current_user}"
       redirect(conn, to: path)
     else
-      render_show(conn, User.build(%{}))
+      # Initialize with one empty email record so inputs_for can render the fields
+      changeset = User.build(%{"emails" => [%{"email" => "", "email_confirmation" => ""}]})
+      render_show(conn, changeset)
     end
   end
 
@@ -30,6 +32,7 @@ defmodule HexpmWeb.SignupController do
           {:error, changeset} ->
             conn
             |> put_status(400)
+            |> put_flash(:error, "Oops, something went wrong! Please check the errors below.")
             |> render_show(changeset)
         end
 
