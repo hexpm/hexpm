@@ -18,7 +18,7 @@
   font-weight: 500;
   padding: 6px 12px;
   border-radius: 4px;
-  white-space: nowrap;
+  white-space: pre;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease-in-out;

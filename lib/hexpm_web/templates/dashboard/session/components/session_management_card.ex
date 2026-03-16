@@ -108,7 +108,7 @@ defmodule HexpmWeb.Dashboard.Session.Components.SessionManagementCard do
       <%!-- Last Activity Column --%>
       <td class="px-4 py-4">
         <%= if @session.last_use && @session.last_use.used_at do %>
-          <.tooltip text={"#{ViewHelpers.pretty_datetime(@session.last_use.used_at)} • IP: #{@session.last_use.ip} • #{@session.last_use.user_agent}"}>
+          <.tooltip text={"#{ViewHelpers.pretty_datetime(@session.last_use.used_at)}\n#{@session.last_use.ip}\n#{@session.last_use.user_agent}"}>
             <span class="text-grey-700 cursor-help border-b border-dashed border-grey-400">
               {ViewHelpers.pretty_date(@session.last_use.used_at)}
             </span>

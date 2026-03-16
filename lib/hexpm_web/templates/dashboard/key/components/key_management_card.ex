@@ -177,10 +177,6 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
   defp permission_variant(%KeyPermission{domain: "package"}), do: "default"
 
   defp last_use_details(last_use) do
-    """
-    Used at: #{pretty_datetime(last_use.used_at)}
-    IP: #{last_use.ip}
-    User agent: #{last_use.user_agent}
-    """
+    "#{pretty_datetime(last_use.used_at)}\n#{last_use.ip}\n#{last_use.user_agent}"
   end
 end
