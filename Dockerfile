@@ -9,7 +9,7 @@ ENV LANG=C.UTF-8
 # install build dependencies
 RUN apt update && \
     apt upgrade -y && \
-    apt install -y --no-install-recommends git build-essential nodejs yarnpkg && \
+    apt install -y --no-install-recommends git build-essential && \
     apt clean -y && rm -rf /var/lib/apt/lists/*
 
 # prepare build dir
@@ -32,8 +32,7 @@ RUN mix deps.compile
 # build assets
 COPY priv priv
 COPY assets assets
-RUN cd assets && yarnpkg install && yarnpkg run webpack --mode production
-RUN mix phx.digest
+RUN mix assets.deploy
 
 # build project
 COPY lib lib

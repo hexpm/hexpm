@@ -26,8 +26,8 @@ let liveSocket = new LiveSocket("/live", Socket, {
 
 liveSocket.connect();
 
-import hljs from "highlight.js/lib/core";
-import elixir from "highlight.js/lib/languages/elixir";
+import hljs from "../vendor/js/highlight.js/core";
+import elixir from "../vendor/js/highlight.js/languages/elixir";
 
 // Highlight syntax on blog, policy, and docs pages
 hljs.registerLanguage("elixir", elixir);

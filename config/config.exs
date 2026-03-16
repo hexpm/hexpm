@@ -64,6 +64,15 @@ config :mime,
 
 config :logger, :default_formatter, format: "[$level] $metadata$message\n"
 
+config :esbuild,
+  version: "0.25.0",
+  hexpm: [
+    args:
+      ~w(js/app.js --bundle --target=es2017 --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
+    cd: Path.expand("../assets", __DIR__),
+    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+  ]
+
 config :tailwind,
   version: "4.1.11",
   default: [

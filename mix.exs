@@ -39,6 +39,7 @@ defmodule Hexpm.MixProject do
       {:corsica, "~> 2.0"},
       {:earmark, "~> 1.4"},
       {:ecto_psql_extras, "~> 0.6"},
+      {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
       {:ecto_sql, "~> 3.0"},
       {:ecto, "~> 3.0"},
       {:eqrcode, "~> 0.2.1"},
@@ -94,12 +95,11 @@ defmodule Hexpm.MixProject do
 
   defp aliases() do
     [
-      setup: ["deps.get", "ecto.setup", "cmd yarn install --cwd assets", "tailwind.install"],
+      setup: ["deps.get", "ecto.setup", "esbuild.install", "tailwind.install"],
       "ecto.setup": ["ecto.reset", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.create", "ecto.load", "ecto.migrate"],
       "assets.deploy": [
-        "cmd --cd assets yarn install",
-        "cmd --cd assets node node_modules/webpack/bin/webpack.js --mode production",
+        "esbuild hexpm --minify",
         "tailwind default --minify",
         "phx.digest"
       ],

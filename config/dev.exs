@@ -33,14 +33,7 @@ config :hexpm, HexpmWeb.Endpoint,
   secret_key_base: "38K8orQfRHMC6ZWXIdgItQEiumeY+L2Ls0fvYfTMt4AoG5+DSFsLG6vMajNcd5Td",
   live_view: [signing_salt: "2UTSB72sZsF9KTlxefkIrFFPXTO7d+Ep"],
   watchers: [
-    node: [
-      "node_modules/webpack/bin/webpack.js",
-      "--mode",
-      "development",
-      "--watch",
-      "--watch-options-stdin",
-      cd: Path.expand("../assets", __DIR__)
-    ],
+    esbuild: {Esbuild, :install_and_run, [:hexpm, ~w(--sourcemap=inline --watch)]},
     tailwind: {Tailwind, :install_and_run, [:default, ~w(--watch)]}
   ]
 
