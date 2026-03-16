@@ -65,16 +65,16 @@
               </td>
               <td class="px-5 py-3.5">
                 <div class="flex items-center justify-end gap-2">
+                  <%= if release.has_docs do %>
+                    <a
+                      href={Hexpm.Utils.docs_html_url(@package.repository, @package, release)}
+                      title="Docs"
+                      class="text-grey-400 hover:text-purple-600 transition-colors"
+                    >
+                      {HexpmWeb.ViewIcons.icon(:heroicon, "book-open", class: "size-4")}
+                    </a>
+                  <% end %>
                   <%= unless retired? do %>
-                    <%= if release.has_docs do %>
-                      <a
-                        href={Hexpm.Utils.docs_html_url(@package.repository, @package, release)}
-                        title="Docs"
-                        class="text-grey-400 hover:text-purple-600 transition-colors"
-                      >
-                        {HexpmWeb.ViewIcons.icon(:heroicon, "book-open", class: "size-4")}
-                      </a>
-                    <% end %>
                     <%= if previous_version && ViewHelpers.main_repository?(@package) do %>
                       <a
                         href={

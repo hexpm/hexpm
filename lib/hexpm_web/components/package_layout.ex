@@ -9,6 +9,8 @@ defmodule HexpmWeb.Components.PackageLayout do
   """
   use Phoenix.Component
 
+  import HexpmWeb.Components.Chart
+
   use Phoenix.VerifiedRoutes,
     endpoint: HexpmWeb.Endpoint,
     router: HexpmWeb.Router,
@@ -76,8 +78,8 @@ defmodule HexpmWeb.Components.PackageLayout do
     ~H"""
     <div class="bg-grey-50 min-h-screen">
       <%!-- Header Section --%>
-      <div class="max-w-7xl mx-auto pt-8 pb-6">
-        <div class="flex items-start justify-between gap-12">
+      <div class="max-w-7xl mx-auto px-4 pt-8 pb-2 lg:pb-6">
+        <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 lg:gap-12">
           <%!-- Left: Package Name, Version, Description --%>
           <div class="flex flex-col gap-2">
             <a
@@ -96,7 +98,7 @@ defmodule HexpmWeb.Components.PackageLayout do
                 </a>
               </h1>
               <%= if @current_release do %>
-                <div class="bg-grey-200 flex items-center gap-1.5 px-3 py-1 rounded-xl">
+                <div class="bg-grey-200 flex items-center gap-1.5 px-3 py-1 rounded-xl whitespace-nowrap">
                   {HexpmWeb.ViewIcons.icon(:heroicon, "tag", class: "size-3.5 text-grey-500")}
                   <p class="text-grey-700 text-sm font-medium">
                     v {@current_release.version}
@@ -117,7 +119,7 @@ defmodule HexpmWeb.Components.PackageLayout do
           </div>
 
           <%!-- Right: Action Buttons — always visible --%>
-          <div class="flex items-center gap-3 mt-6">
+          <div class="flex items-center gap-3 lg:mt-6">
             <%= if @docs_html_url do %>
               <a
                 href={@docs_html_url}
@@ -160,12 +162,12 @@ defmodule HexpmWeb.Components.PackageLayout do
       </div>
 
       <%!-- Main Container with Sidebar --%>
-      <div class="max-w-7xl mx-auto pt-10">
-        <div class="flex gap-5">
+      <div class="max-w-7xl mx-auto px-4 pt-4 lg:pt-10 pb-10">
+        <div class="flex flex-col lg:flex-row gap-5">
           <%!-- Left: Content Area --%>
           <div class="flex-1 min-w-0">
             <%!-- Tab Navigation --%>
-            <div class="flex items-center border-b border-grey-200">
+            <div class="flex items-center border-b border-grey-200 overflow-x-auto">
               <a
                 href={ViewHelpers.path_for_package(@package)}
                 class={tab_class(@active_tab == :readme)}
@@ -212,7 +214,7 @@ defmodule HexpmWeb.Components.PackageLayout do
           </div>
 
           <%!-- Right: Sidebar — identical on every tab --%>
-          <div class="w-72 shrink-0 flex flex-col gap-6">
+          <div class="w-full lg:w-[373px] shrink-0 flex flex-col gap-6">
             <%!-- Checksum Card --%>
             <%= if @current_release do %>
               <div class="bg-white border border-grey-200 rounded-lg p-5">
@@ -277,86 +279,31 @@ defmodule HexpmWeb.Components.PackageLayout do
 
                 <%!-- Downloads Chart --%>
                 <%= if is_binary(@graph_points) and @graph_points != "" do %>
-                  <% chart_id = "pkg-chart-#{@package.id}" %>
-                  <div class="mb-4">
-                    <svg
-                      viewBox="0 0 800 210"
-                      class="w-full h-auto"
-                      role="img"
-                      aria-label="Downloads over the last 30 days"
-                    >
-                      <defs>
-                        <linearGradient
-                          id={"#{chart_id}-line"}
-                          gradientUnits="userSpaceOnUse"
-                          x1="0"
-                          y1="0"
-                          x2="800"
-                          y2="200"
-                        >
-                          <stop offset="0%" style="stop-color:#4f28a7;" />
-                          <stop offset="33%" style="stop-color:#7209b7;" />
-                          <stop offset="66%" style="stop-color:#b5179e;" />
-                          <stop offset="100%" style="stop-color:#f72585;" />
-                        </linearGradient>
-                        <linearGradient
-                          id={"#{chart_id}-fill"}
-                          gradientUnits="userSpaceOnUse"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="200"
-                        >
-                          <stop offset="0%" style="stop-color:#7209b7;stop-opacity:0.15;" />
-                          <stop offset="100%" style="stop-color:#7209b7;stop-opacity:0.01;" />
-                        </linearGradient>
-                      </defs>
-                      <%!-- Horizontal grid lines --%>
-                      <%= for y <- [40, 80, 120, 160, 200] do %>
-                        <line x1="0" y1={y} x2="800" y2={y} stroke="#e5e7eb" stroke-width="1" />
-                      <% end %>
-                      <%!-- Fill area --%>
-                      <polygon
-                        fill={"url(##{chart_id}-fill)"}
-                        points={@graph_fill}
-                      />
-                      <%!-- Line --%>
-                      <polyline
-                        fill="none"
-                        stroke={"url(##{chart_id}-line)"}
-                        stroke-width="3"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        points={@graph_points}
-                      />
-                      <%!-- Y-axis labels --%>
-                      <%= for {label, y} <- @y_axis_labels do %>
-                        <text x="4" y={y} fill="#9ca3af" font-size="26" font-family="sans-serif">
-                          {ViewHelpers.human_number_space(label)}
-                        </text>
-                      <% end %>
-                      <%!-- Caption --%>
-                      <text
-                        x="796"
-                        y="28"
-                        text-anchor="end"
-                        fill="#9ca3af"
-                        font-size="26"
-                        font-family="sans-serif"
-                      >
+                  <div class="mb-5">
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-[10px] text-grey-400 font-medium uppercase tracking-wide">
+                        Downloads
+                      </span>
+                      <span class="text-[10px] text-grey-400">
                         Last 30 days,
                         <%= if @current_release do %>
                           {@current_release.version}
                         <% else %>
                           all versions
                         <% end %>
-                      </text>
-                    </svg>
+                      </span>
+                    </div>
+                    <.downloads_chart
+                      id={"pkg-chart-#{@package.id}"}
+                      graph_points={@graph_points}
+                      graph_fill={@graph_fill}
+                      y_axis_labels={@y_axis_labels}
+                    />
                   </div>
                 <% end %>
 
                 <%!-- Download Stats --%>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pb-4 border-b border-grey-200">
+                <div class="grid grid-cols-2 gap-3 pb-4 border-b border-grey-200">
                   <div class="flex flex-col gap-0.5">
                     <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">
                       this version
@@ -534,9 +481,9 @@ defmodule HexpmWeb.Components.PackageLayout do
 
   defp tab_class(true),
     do:
-      "flex items-center gap-1 px-[18px] py-3 text-primary-default font-medium border-b-2 border-primary-default -mb-px"
+      "flex items-center gap-1 px-[18px] py-3 text-primary-default font-medium border-b-2 border-primary-default -mb-px whitespace-nowrap"
 
   defp tab_class(false),
     do:
-      "flex items-center gap-1 px-[18px] py-3 text-grey-500 font-medium hover:text-grey-700 transition-colors"
+      "flex items-center gap-1 px-[18px] py-3 text-grey-500 font-medium hover:text-grey-700 transition-colors whitespace-nowrap"
 end

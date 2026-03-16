@@ -1,5 +1,5 @@
 <div class="bg-grey-50 min-h-screen py-8">
-  <div class="max-w-7xl mx-auto px-4 lg:px-0">
+  <div class="max-w-7xl mx-auto px-4">
     <div class="flex flex-col gap-10 lg:flex-row">
       <%!-- Left Sidebar --%>
       <div class="w-full lg:w-[25%] flex-shrink-0">
@@ -79,65 +79,13 @@
 
                 <%!-- Chart --%>
                 <%= if is_binary(item.graph_points) and item.graph_points != "" do %>
-                  <div class="flex items-stretch gap-2">
-                    <svg
-                      viewBox="0 0 800 200"
-                      preserveAspectRatio="none"
-                      class="flex-1 h-32"
-                      role="img"
-                      aria-label={"Downloads for #{ViewHelpers.package_name(item.package)} over the last 30 days"}
-                    >
-                      <defs>
-                        <linearGradient
-                          id={"line-grad-#{item.package.id}"}
-                          gradientUnits="userSpaceOnUse"
-                          x1="0"
-                          y1="0"
-                          x2="800"
-                          y2="200"
-                        >
-                          <stop offset="0%" style="stop-color:#4f28a7;" />
-                          <stop offset="33%" style="stop-color:#7209b7;" />
-                          <stop offset="66%" style="stop-color:#b5179e;" />
-                          <stop offset="100%" style="stop-color:#f72585;" />
-                        </linearGradient>
-                        <linearGradient
-                          id={"fill-grad-#{item.package.id}"}
-                          gradientUnits="userSpaceOnUse"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="200"
-                        >
-                          <stop offset="0%" style="stop-color:#7209b7;stop-opacity:0.15;" />
-                          <stop offset="100%" style="stop-color:#7209b7;stop-opacity:0.01;" />
-                        </linearGradient>
-                      </defs>
-                      <%= for y <- [40, 80, 120, 160, 200] do %>
-                        <line x1="0" y1={y} x2="800" y2={y} stroke="#e5e7eb" stroke-width="1.5" />
-                      <% end %>
-                      <polygon
-                        fill={"url(#fill-grad-#{item.package.id})"}
-                        points={item.graph_fill}
-                      />
-                      <polyline
-                        fill="none"
-                        stroke={"url(#line-grad-#{item.package.id})"}
-                        stroke-width="3"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        points={item.graph_points}
-                      />
-                    </svg>
-                    <%!-- Y-axis labels on the right, outside the chart --%>
-                    <div class="flex flex-col justify-between py-0.5 shrink-0">
-                      <%= for {label, _y} <- Enum.reverse(item.y_axis_labels) do %>
-                        <span class="text-grey-500 text-[10px] font-medium leading-none text-right">
-                          {ViewHelpers.human_number_compact(label)}
-                        </span>
-                      <% end %>
-                    </div>
-                  </div>
+                  <.downloads_chart
+                    id={"stats-chart-#{item.package.id}"}
+                    graph_points={item.graph_points}
+                    graph_fill={item.graph_fill}
+                    y_axis_labels={item.y_axis_labels}
+                    aria_label={"Downloads for #{ViewHelpers.package_name(item.package)} over the last 30 days"}
+                  />
                 <% else %>
                   <div class="h-32 flex items-center justify-center text-grey-300 text-xs">
                     No data for last 30 days
