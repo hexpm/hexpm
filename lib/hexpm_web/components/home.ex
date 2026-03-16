@@ -32,24 +32,24 @@ defmodule HexpmWeb.Components.Home do
 
   def language_card(assigns) do
     ~H"""
-    <div class="bg-grey-900 rounded-xl p-8 flex gap-5">
-      <div class="flex flex-col shrink-0">
-        <div class="flex gap-2 mb-4">
-          <div class="w-3 h-3 rounded-full bg-green-500"></div>
-          <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
-          <div class="w-3 h-3 rounded-full bg-red-500"></div>
-        </div>
-        <div class="flex items-center justify-center flex-1">
-          <img src={@image_src} alt={@language} class="w-16 h-16 object-contain" />
-        </div>
+    <div class="bg-grey-900 rounded-xl p-4">
+      <div class="flex gap-1.5 mb-3">
+        <div class="w-2 h-2 rounded-full bg-green-500"></div>
+        <div class="w-2 h-2 rounded-full bg-yellow-500"></div>
+        <div class="w-2 h-2 rounded-full bg-red-500"></div>
       </div>
-      <div class="flex flex-col gap-2">
-        <a href={@href} class="text-grey-100 font-semibold text-lg hover:text-white">
-          Using with {@language}
-        </a>
-        <p class="text-grey-200 leading-6">
-          {render_slot(@inner_block)}
-        </p>
+      <div class="flex gap-4">
+        <div class="flex items-center shrink-0">
+          <img src={@image_src} alt={@language} class="w-10 h-12 object-contain" />
+        </div>
+        <div class="flex flex-col gap-1">
+          <a href={@href} class="text-grey-100 font-semibold text-base hover:text-white">
+            Using with {@language}
+          </a>
+          <p class="text-grey-200 text-sm leading-5">
+            {render_slot(@inner_block)}
+          </p>
+        </div>
       </div>
     </div>
     """

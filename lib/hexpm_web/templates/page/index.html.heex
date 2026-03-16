@@ -1,15 +1,39 @@
 <%!-- Hero Section --%>
 <div class="bg-white">
-  <div class="bg-grey-50 pb-10">
-    <div class="max-w-6xl mx-auto px-4 pt-12 pb-16 md:pt-20 md:pb-24">
-      <div class="lg:flex items-center gap-6">
-        <%!-- Left side - headline and CTAs --%>
+  <div class="bg-grey-50 pb-6">
+    <div class="max-w-6xl mx-auto px-4 pt-6 pb-4 md:pt-20 md:pb-24 lg:pb-14">
+      <%!-- Mobile: centered layout with image on top --%>
+      <div class="flex flex-col items-center text-center lg:hidden">
+        <img
+          src={~p"/images/home/packages.png"}
+          alt="Packages"
+          class="w-full max-w-sm -mb-8"
+        />
+        <h1 class="relative text-grey-800 text-2xl font-semibold leading-8 mb-6">
+          The package manager<br />for the Erlang ecosystem
+        </h1>
+        <a
+          href={~p"/docs/usage"}
+          class="inline-flex items-center gap-3 px-8 py-4 border-[1.5px] border-primary-600 bg-transparent text-primary-600 font-medium text-base rounded-xl hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all duration-200 mb-4"
+        >
+          Getting Started {icon(:heroicon, "arrow-right", class: "size-4")}
+        </a>
+        <a
+          href={~p"/docs/publish"}
+          class="text-grey-500 font-medium text-base hover:text-grey-800 transition-colors"
+        >
+          Publish Packages
+        </a>
+      </div>
+
+      <%!-- Desktop: side-by-side layout --%>
+      <div class="hidden lg:flex items-center gap-6">
         <div class="flex flex-col gap-8 flex-1 mb-24">
           <h1 class="text-grey-800 text-4xl font-semibold leading-tight md:text-5xl md:leading-[60px]">
             The package manager<br />for the Erlang ecosystem
           </h1>
 
-          <div class="flex flex-wrap items-center gap-4 md:gap-14">
+          <div class="flex flex-wrap items-center gap-14">
             <a
               href={~p"/docs/usage"}
               class="inline-flex items-center gap-3 px-10 py-5 border-[1.5px] border-primary-600 bg-transparent text-primary-600 font-medium text-lg rounded-xl hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all duration-200"
@@ -27,14 +51,14 @@
         <img
           src={~p"/images/home/packages.png"}
           alt="Packages"
-          class="hidden lg:block w-full lg:w-1/2 max-w-xl"
+          class="w-full lg:w-1/2 max-w-xl"
         />
       </div>
     </div>
   </div>
 
   <%!-- Using with Elixir/Erlang/Gleam cards --%>
-  <div class="max-w-7xl mx-auto px-4 pb-8 lg:pb-16 -mt-30">
+  <div class="max-w-7xl mx-auto px-4 pb-8 lg:pb-16 lg:-mt-20">
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <.language_card language="Elixir" image_src={~p"/images/elixir.svg"} href={~p"/docs/usage"}>
         Specify your Mix dependencies as two-item tuples like
