@@ -156,7 +156,7 @@ defmodule HexpmWeb.Components.Navbar do
   defp mobile_menu(assigns) do
     ~H"""
     <div id="navbar-mobile" class="hidden lg:hidden! bg-grey-900 pb-6">
-      <div class="flex flex-col gap-4">
+      <div class="flex flex-col">
         <.mobile_nav_links />
         <.mobile_auth_section current_user={@current_user} />
       </div>
@@ -182,7 +182,7 @@ defmodule HexpmWeb.Components.Navbar do
 
   defp mobile_auth_section(assigns) do
     ~H"""
-    <div :if={@current_user} class="border-t border-grey-700 pt-4 mt-2">
+    <div :if={@current_user} class="border-t border-grey-700 pt-2 mt-2">
       <.mobile_user_menu_link href={~p"/users/#{@current_user}"} label="Profile" />
       <.mobile_user_menu_link href={~p"/dashboard/profile"} label="Dashboard" />
       <.mobile_logout_form />
@@ -210,7 +210,7 @@ defmodule HexpmWeb.Components.Navbar do
 
   defp mobile_logout_form(assigns) do
     ~H"""
-    <form action={~p"/logout"} method="post" class="mt-2">
+    <form action={~p"/logout"} method="post">
       <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
       <button
         type="submit"
