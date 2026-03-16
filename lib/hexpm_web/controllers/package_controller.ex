@@ -348,6 +348,11 @@ defmodule HexpmWeb.PackageController do
           nil
       end
 
+    docs_tarball_url =
+      if latest_release_with_docs do
+        Hexpm.Utils.docs_tarball_url(repository, package, latest_release_with_docs)
+      end
+
     last_download_day = Downloads.last_day() || Date.utc_today()
     start_download_day = Date.add(last_download_day, -30)
     package_downloads = Downloads.package(package)
@@ -366,6 +371,7 @@ defmodule HexpmWeb.PackageController do
 
     [
       docs_html_url: docs_html_url,
+      docs_tarball_url: docs_tarball_url,
       downloads: package_downloads,
       daily_graph: daily_graph
     ]

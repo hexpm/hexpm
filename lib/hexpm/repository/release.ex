@@ -206,7 +206,7 @@ defmodule Hexpm.Repository.Release do
       end
 
     if stable_releases == [] and unstable_fallback? do
-      latest(releases)
+      latest(with_docs_releases)
     else
       latest(stable_releases)
     end
