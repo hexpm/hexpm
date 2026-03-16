@@ -19,6 +19,7 @@ defmodule HexpmWeb.Components.SocialInput do
   attr :form, :any, required: true
   attr :field, :atom, required: true
   attr :icon, :atom, required: true
+  attr :label, :string, required: true
   attr :placeholder, :string, default: "your_username"
 
   def social_input(assigns) do
@@ -36,7 +37,7 @@ defmodule HexpmWeb.Components.SocialInput do
         !@has_errors &&
           "border-grey-200 focus-within:ring-purple-600 focus-within:border-transparent"
       ]}>
-        <div class="flex items-center px-3 py-2 border-r border-grey-200">
+        <div class="flex items-center px-3 py-2 border-r border-grey-200" title={@label}>
           {render_icon(@icon)}
           <span class="text-grey-500 text-sm mx-2">/</span>
         </div>

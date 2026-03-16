@@ -99,20 +99,29 @@ defmodule HexpmWeb.Dashboard.Organization.Components.ProfileTab do
                     form={fh}
                     field={:twitter}
                     icon={:twitter}
-                    placeholder="your_username"
+                    label="Twitter"
+                    placeholder="Twitter username"
                   />
                   <.social_input
                     form={fh}
                     field={:bluesky}
                     icon={:bluesky}
-                    placeholder="your_username.bsky.social"
+                    label="Bluesky"
+                    placeholder="Bluesky username"
                   />
-                  <.social_input form={fh} field={:github} icon={:github} placeholder="your_username" />
+                  <.social_input
+                    form={fh}
+                    field={:github}
+                    icon={:github}
+                    label="GitHub"
+                    placeholder="GitHub username"
+                  />
                   <.social_input
                     form={fh}
                     field={:elixirforum}
                     icon={:elixirforum}
-                    placeholder="your_username"
+                    label="Elixir Forum"
+                    placeholder="Elixir Forum username"
                   />
                 </div>
               </div>

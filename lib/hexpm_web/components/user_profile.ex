@@ -86,7 +86,7 @@ defmodule HexpmWeb.Components.UserProfile do
               >
                 <.social_icon icon={service_to_icon(service)} class="w-5 h-5 text-grey-700" />
                 <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-grey-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                  {handle}
+                  {service}: {handle}
                 </span>
               </a>
             <% end %>
