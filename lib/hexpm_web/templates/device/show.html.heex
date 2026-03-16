@@ -7,11 +7,15 @@
 <% end %>
 
 <%= if @device_code do %>
-  {render(
-    HexpmWeb.SharedView,
-    "_authorization.html",
-    Map.merge(assigns, authorization_assigns(@conn, @device_code))
-  )}
+  <div class="flex items-center justify-center my-auto py-16">
+    <div class="w-full max-w-lg">
+      {render(
+        HexpmWeb.SharedView,
+        "_authorization.html",
+        Map.merge(assigns, authorization_assigns(@conn, @device_code))
+      )}
+    </div>
+  </div>
 <% else %>
   <div class="flex items-center justify-center my-auto py-16">
     <div class="bg-white border border-grey-200 rounded-lg w-full max-w-lg px-10 py-10">
@@ -60,12 +64,9 @@
             <.button type="submit" variant="primary" full_width>
               Verify and Continue
             </.button>
-            <a
-              href={~p"/"}
-              class="inline-flex items-center justify-center gap-2 font-semibold rounded h-10 px-4 text-sm border border-red-300 text-red-600 hover:bg-red-50 transition-colors"
-            >
+            <.button_link href={~p"/"} variant="danger-outline" class="whitespace-nowrap">
               Code does not match
-            </a>
+            </.button_link>
           </div>
         <% end %>
       <% else %>
