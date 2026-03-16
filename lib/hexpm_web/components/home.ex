@@ -282,9 +282,9 @@ defmodule HexpmWeb.Components.Home do
     <div class="bg-grey-50 rounded-xl p-6 hover:bg-grey-100 transition-colors">
       <div class="flex items-center gap-2 mb-3">
         {icon(:heroicon, @icon, class: "size-5 text-primary-600")}
-        <h3 class="text-grey-900 text-lg font-semibold">
+        <h2 class="text-grey-900 text-lg font-semibold">
           {@title}
-        </h3>
+        </h2>
       </div>
       <p class="text-grey-700 text-sm leading-6">
         {render_slot(@inner_block)}
