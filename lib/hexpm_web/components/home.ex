@@ -104,7 +104,7 @@ defmodule HexpmWeb.Components.Home do
   def companies_section(assigns) do
     ~H"""
     <div class="bg-white pt-4 pb-8 lg:pb-16">
-      <div class="max-w-7xl mx-auto px-4 lg:px-0">
+      <div class="max-w-7xl mx-auto px-4">
         <%!-- Mobile: 3x3 grid with alternating pattern --%>
         <div class="grid grid-cols-3 gap-6 md:hidden">
           <%!-- Row 1: x x x --%>
@@ -144,13 +144,13 @@ defmodule HexpmWeb.Components.Home do
   end
 
   @doc """
-  Renders a package column header with emoji icon.
+  Renders a package column header with an icon.
 
   ## Examples
 
       <.package_column_header
         color="primary"
-        emoji="😍"
+        icon="arrow-trending-up"
         title="Most Downloaded"
       />
   """
@@ -159,7 +159,7 @@ defmodule HexpmWeb.Components.Home do
     values: ["primary", "green", "blue"],
     doc: "Color scheme for the header"
 
-  attr :emoji, :string, required: true
+  attr :icon, :string, required: true
   attr :title, :string, required: true
 
   def package_column_header(assigns) do
@@ -172,7 +172,9 @@ defmodule HexpmWeb.Components.Home do
         <svg class={["size-full", @polygon_color]} viewBox="0 0 60 60" fill="none">
           <polygon points="30,5 52,15 52,45 30,55 8,45 8,15" fill="currentColor" />
         </svg>
-        <span class="absolute text-2xl">{@emoji}</span>
+        <span class="absolute text-white">
+          {HexpmWeb.ViewIcons.icon(:heroicon, @icon, class: "size-6")}
+        </span>
       </div>
       <h2 class="text-grey-100 font-semibold text-xl">{@title}</h2>
     </div>
