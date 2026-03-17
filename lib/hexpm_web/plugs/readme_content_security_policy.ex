@@ -20,9 +20,10 @@ defmodule HexpmWeb.Plugs.ReadmeContentSecurityPolicy do
     img_url = Application.fetch_env!(:hexpm, :img_url)
     host = Application.get_env(:hexpm, :host)
 
+    # TODO: Remove new.hex.pm when new.hex.pm replaces hex.pm
     frame_ancestors =
       if host do
-        "https://#{host}"
+        "https://#{host} https://new.#{host}"
       else
         "http://localhost:*"
       end
