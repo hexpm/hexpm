@@ -189,6 +189,27 @@ defmodule HexpmWeb.TestController do
     end
   end
 
+  def preview_file_list(conn, %{"file" => file}) do
+    path = Application.app_dir(:hexpm, "priv/preview/file_lists/#{file}")
+
+    if File.exists?(path) do
+      send_resp(conn, 200, File.read!(path))
+    else
+      send_resp(conn, 404, "")
+    end
+  end
+
+  def preview_file(conn, %{"package" => package, "version" => version, "filename" => filename}) do
+    filename = Path.join(filename)
+    path = Application.app_dir(:hexpm, "priv/preview/files/#{package}/#{version}/#{filename}")
+
+    if File.exists?(path) do
+      send_resp(conn, 200, File.read!(path))
+    else
+      send_resp(conn, 404, "")
+    end
+  end
+
   defp send_object(nil, conn), do: send_resp(conn, 404, "")
   defp send_object(obj, conn), do: send_resp(conn, 200, obj)
 end

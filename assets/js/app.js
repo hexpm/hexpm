@@ -84,3 +84,27 @@ function billingCheckout(token) {
 
 window.hexpm_billing_checkout = billingCheckout;
 window.liveSocket = liveSocket;
+
+// README iframe: show spinner until loaded, fall back to description if no readme
+var readmeFrame = document.getElementById("readme-frame");
+
+window.addEventListener("message", function (event) {
+  if (!event.data || !readmeFrame) return;
+
+  if (event.data.type === "readme-height" &&
+      typeof event.data.height === "number" &&
+      event.data.height > 0 && event.data.height < 100000) {
+    readmeFrame.classList.remove("opacity-0", "h-0", "overflow-hidden");
+    readmeFrame.style.height = Math.ceil(event.data.height) + "px";
+    var loading = document.getElementById("readme-loading");
+    if (loading) loading.remove();
+  }
+
+  if (event.data.type === "readme-not-found") {
+    var loading = document.getElementById("readme-loading");
+    if (loading) loading.remove();
+    readmeFrame.remove();
+    var fallback = document.getElementById("readme-fallback");
+    if (fallback) fallback.classList.remove("hidden");
+  }
+});

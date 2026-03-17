@@ -59,9 +59,12 @@ defmodule HexpmWeb.Components.PackageLayout do
 
     y_axis_labels = Enum.zip(graph_labels, [194, 154, 114, 74, 34])
 
+    links = Enum.to_list(assigns.package.meta.links || [])
+
     assigns =
       assigns
       |> assign(:github_link, github_link)
+      |> assign(:links, links)
       |> assign(:description, assigns.package.meta.description)
       |> assign(:tools, tools)
       |> assign(:graph_points, graph_points)
@@ -413,6 +416,26 @@ defmodule HexpmWeb.Components.PackageLayout do
                   <% end %>
                 </div>
               </div>
+
+              <%!-- Links Card --%>
+              <%= if @links != [] do %>
+                <div class="bg-white border border-grey-200 rounded-lg p-5">
+                  <h3 class="text-grey-700 text-lg font-semibold mb-4">Links</h3>
+                  <ul class="space-y-2">
+                    <%= for {name, url} <- @links do %>
+                      <li>
+                        <a
+                          href={ViewHelpers.safe_url(url)}
+                          rel="nofollow"
+                          class="text-sm text-blue-600 hover:text-blue-700 hover:underline"
+                        >
+                          {name}
+                        </a>
+                      </li>
+                    <% end %>
+                  </ul>
+                </div>
+              <% end %>
 
               <%!-- Owners Card --%>
               <%= if @owners != [] do %>

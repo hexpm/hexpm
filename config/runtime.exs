@@ -20,7 +20,11 @@ if config_env() == :prod do
     levenshtein_threshold: System.fetch_env!("HEXPM_LEVENSHTEIN_THRESHOLD"),
     dashboard_user: System.fetch_env!("HEXPM_DASHBOARD_USER"),
     dashboard_password: System.fetch_env!("HEXPM_DASHBOARD_PASSWORD"),
-    jwt_signing_key: System.fetch_env!("HEXPM_JWT_SIGNING_KEY")
+    jwt_signing_key: System.fetch_env!("HEXPM_JWT_SIGNING_KEY"),
+    img_url: System.fetch_env!("HEXPM_IMG_URL"),
+    img_proxy_secret: System.fetch_env!("HEXPM_IMG_PROXY_SECRET"),
+    readme_host: System.fetch_env!("HEXPM_README_HOST"),
+    readme_url: System.fetch_env!("HEXPM_README_URL")
 
   config :hexpm, Hexpm.Emails.Mailer, api_key: System.fetch_env!("HEXPM_SENDGRID_API_KEY")
 

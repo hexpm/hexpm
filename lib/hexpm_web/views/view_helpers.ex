@@ -461,6 +461,11 @@ defmodule HexpmWeb.ViewHelpers do
   def main_repository?(%{repository_id: 1}), do: true
   def main_repository?(_), do: false
 
+  def readme_url(package_name, version) do
+    readme_url = Application.fetch_env!(:hexpm, :readme_url)
+    "#{readme_url}/#{package_name}/#{version}"
+  end
+
   def safe_url(url) when is_binary(url) do
     case URI.parse(url) do
       %URI{scheme: scheme} when scheme in ["http", "https", "mailto"] -> url
