@@ -123,50 +123,29 @@ defmodule HexpmWeb.ReadmeController do
   }
 
   defp highlight_code_blocks(html) do
+    Regex.replace(
+      ~r{<pre><code class="([\w-]+)">(.*?)</code></pre>}s,
+      html,
+      fn full_match, lang, code ->
+        language =
+          if String.starts_with?(lang, "language-"),
+            do: String.trim_leading(lang, "language-"),
+            else: lang
+
+        case Map.get(@supported_languages, language) do
+          nil -> full_match
+          lexer -> code |> unescape_html() |> Makeup.highlight(lexer: lexer)
+        end
+      end
+    )
+  end
+
+  defp unescape_html(html) do
     html
-    |> Floki.parse_document!()
-    |> highlight_nodes()
-    |> Floki.raw_html()
-  end
-
-  defp highlight_nodes(nodes) when is_list(nodes) do
-    Enum.map(nodes, &highlight_node/1)
-  end
-
-  defp highlight_node({"pre", _pre_attrs, [{"code", code_attrs, children}]} = node) do
-    language = extract_language(code_attrs)
-
-    case Map.get(@supported_languages, language) do
-      nil ->
-        node
-
-      lexer ->
-        code_text = Floki.text({"code", code_attrs, children})
-        highlighted = Makeup.highlight(code_text, lexer: lexer)
-        [highlighted_node] = Floki.parse_fragment!(highlighted)
-        highlighted_node
-    end
-  end
-
-  defp highlight_node({tag, attrs, children}) do
-    {tag, attrs, highlight_nodes(children)}
-  end
-
-  defp highlight_node(other), do: other
-
-  defp extract_language(attrs) do
-    Enum.find_value(attrs, fn
-      {"class", class} ->
-        class
-        |> String.split()
-        |> Enum.find_value(fn
-          "language-" <> lang -> lang
-          lang -> if Map.has_key?(@supported_languages, lang), do: lang
-        end)
-
-      _ ->
-        nil
-    end)
+    |> String.replace("&amp;", "&")
+    |> String.replace("&lt;", "<")
+    |> String.replace("&gt;", ">")
+    |> String.replace("&quot;", "\"")
   end
 
   defp send_no_readme(conn) do
