@@ -85,7 +85,12 @@ defmodule HexpmWeb.ReadmeController do
   end
 
   defp find_readme(files) do
-    case Enum.find(files, &readme?/1) do
+    readmes = Enum.filter(files, &readme?/1)
+
+    result =
+      Enum.find(readmes, &markdown_file?/1) || List.first(readmes)
+
+    case result do
       nil -> :error
       filename -> {:ok, filename}
     end
@@ -95,6 +100,10 @@ defmodule HexpmWeb.ReadmeController do
     basename = Path.basename(filename, Path.extname(filename))
     ext = Path.extname(filename) |> String.downcase()
     String.downcase(basename) == "readme" and (ext == "" or ext in @readme_extensions)
+  end
+
+  defp markdown_file?(filename) do
+    String.downcase(Path.extname(filename)) in [".md", ".markdown"]
   end
 
   defp render_readme(filename, content, package_name, version) do
