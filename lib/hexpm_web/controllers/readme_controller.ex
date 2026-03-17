@@ -161,7 +161,7 @@ defmodule HexpmWeb.ReadmeController do
         |> String.split()
         |> Enum.find_value(fn
           "language-" <> lang -> lang
-          _ -> nil
+          lang -> if Map.has_key?(@supported_languages, lang), do: lang
         end)
 
       _ ->
