@@ -5,7 +5,7 @@ defmodule HexpmWeb.ReadmeController do
 
   @readme_extensions ~w(.md .markdown .txt)
 
-  @makeup_css Makeup.stylesheet()
+  @makeup_css File.read!("assets/vendor/css/makeup.css")
 
   def not_found(conn, _params) do
     conn
