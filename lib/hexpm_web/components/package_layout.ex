@@ -167,7 +167,7 @@ defmodule HexpmWeb.Components.PackageLayout do
           <%!-- Left: Content Area --%>
           <div class="flex-1 min-w-0">
             <%!-- Tab Navigation --%>
-            <div class="flex items-center border-b border-grey-200 overflow-x-auto">
+            <div class="flex items-center border-b border-grey-200 overflow-x-auto overflow-y-hidden">
               <a
                 href={ViewHelpers.path_for_package(@package)}
                 class={tab_class(@active_tab == :readme)}
