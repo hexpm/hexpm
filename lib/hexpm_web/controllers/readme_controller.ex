@@ -6,14 +6,12 @@ defmodule HexpmWeb.ReadmeController do
   @readme_extensions ~w(.md .markdown .txt)
 
   @highlight_css File.read!("assets/vendor/css/github.css")
-  @highlight_js File.read!("assets/vendor/js/highlight.js/highlight.min.js")
+  @highlight_js File.read!("assets/vendor/js/highlight.js/cdn/highlight.js")
 
   @highlight_languages Enum.map_join(
-                         ~w(elixir erlang rust go ruby),
+                         ~w(elixir erlang gleam),
                          "\n",
-                         &File.read!(
-                           "assets/vendor/js/highlight.js/languages/highlight.lang.#{&1}.min.js"
-                         )
+                         &File.read!("assets/vendor/js/highlight.js/cdn/#{&1}.js")
                        )
 
   def not_found(conn, _params) do
@@ -164,6 +162,7 @@ defmodule HexpmWeb.ReadmeController do
   defp readme_css do
     ~S"""
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { overflow: hidden; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.6; color: #24292e; padding: 0; }
     .readme { max-width: 100%; overflow-wrap: break-word; word-wrap: break-word; }
     .readme h1, .readme h2, .readme h3, .readme h4, .readme h5, .readme h6 { margin-top: 24px; margin-bottom: 16px; font-weight: 600; line-height: 1.25; }
