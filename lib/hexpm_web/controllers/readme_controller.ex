@@ -5,14 +5,7 @@ defmodule HexpmWeb.ReadmeController do
 
   @readme_extensions ~w(.md .markdown .txt)
 
-  @highlight_css File.read!("assets/vendor/css/github.css")
-  @highlight_js File.read!("assets/vendor/js/highlight.js/cdn/highlight.js")
-
-  @highlight_languages Enum.map_join(
-                         ~w(elixir erlang gleam),
-                         "\n",
-                         &File.read!("assets/vendor/js/highlight.js/cdn/#{&1}.js")
-                       )
+  @makeup_css Makeup.stylesheet()
 
   def not_found(conn, _params) do
     conn
@@ -120,7 +113,60 @@ defmodule HexpmWeb.ReadmeController do
 
     html
     |> Sanitizer.sanitize()
+    |> highlight_code_blocks()
     |> URLRewriter.rewrite(package_name, version)
+  end
+
+  @supported_languages %{
+    "elixir" => Makeup.Lexers.ElixirLexer,
+    "erlang" => Makeup.Lexers.ErlangLexer
+  }
+
+  defp highlight_code_blocks(html) do
+    html
+    |> Floki.parse_document!()
+    |> highlight_nodes()
+    |> Floki.raw_html()
+  end
+
+  defp highlight_nodes(nodes) when is_list(nodes) do
+    Enum.map(nodes, &highlight_node/1)
+  end
+
+  defp highlight_node({"pre", _pre_attrs, [{"code", code_attrs, children}]} = node) do
+    language = extract_language(code_attrs)
+
+    case Map.get(@supported_languages, language) do
+      nil ->
+        node
+
+      lexer ->
+        code_text = Floki.text({"code", code_attrs, children})
+        highlighted = Makeup.highlight(code_text, lexer: lexer)
+        [highlighted_node] = Floki.parse_fragment!(highlighted)
+        highlighted_node
+    end
+  end
+
+  defp highlight_node({tag, attrs, children}) do
+    {tag, attrs, highlight_nodes(children)}
+  end
+
+  defp highlight_node(other), do: other
+
+  defp extract_language(attrs) do
+    Enum.find_value(attrs, fn
+      {"class", class} ->
+        class
+        |> String.split()
+        |> Enum.find_value(fn
+          "language-" <> lang -> lang
+          _ -> nil
+        end)
+
+      _ ->
+        nil
+    end)
   end
 
   defp send_no_readme(conn) do
@@ -154,15 +200,13 @@ defmodule HexpmWeb.ReadmeController do
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <style nonce="#{nonce}">#{readme_css()}</style>
-      <style nonce="#{nonce}">#{@highlight_css}</style>
+      <style nonce="#{nonce}">#{@makeup_css}</style>
     </head>
     <body>
       <article class="readme">
         #{content_html}
       </article>
-      <script nonce="#{nonce}">#{@highlight_js}</script>
-      <script nonce="#{nonce}">#{@highlight_languages}</script>
-      <script nonce="#{nonce}">#{highlight_init_js()}</script>
+      <script nonce="#{nonce}">#{height_reporter_js()}</script>
     </body>
     </html>
     """
@@ -204,12 +248,9 @@ defmodule HexpmWeb.ReadmeController do
     """
   end
 
-  defp highlight_init_js do
+  defp height_reporter_js do
     ~S"""
     document.addEventListener('DOMContentLoaded', function() {
-      if (typeof hljs !== 'undefined') {
-        hljs.highlightAll();
-      }
       function sendHeight() {
         window.parent.postMessage({type: 'readme-height', height: document.body.scrollHeight}, '*');
       }
