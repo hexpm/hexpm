@@ -113,8 +113,8 @@ defmodule HexpmWeb.ReadmeController do
 
     html
     |> Sanitizer.sanitize()
-    |> highlight_code_blocks()
     |> URLRewriter.rewrite(package_name, version)
+    |> highlight_code_blocks()
   end
 
   @supported_languages %{
