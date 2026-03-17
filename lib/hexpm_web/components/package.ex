@@ -79,8 +79,7 @@ defmodule HexpmWeb.Components.Package do
             :for={{letter, index} <- Enum.with_index(@letters)}
             href={~p"/packages?letter=#{letter}"}
             data-mobile-letter-extra={index >= 13 || nil}
-            style={index >= 13 && "display: none;"}
-            class={letter_button_classes(@current_letter, letter, :mobile)}
+            class={[index >= 13 && "hidden" | letter_button_classes(@current_letter, letter, :mobile)]}
           >
             {letter}
           </a>
@@ -88,8 +87,7 @@ defmodule HexpmWeb.Components.Package do
             :if={@current_letter}
             href={~p"/packages"}
             data-mobile-letter-extra
-            style="display: none;"
-            class="col-span-2 inline-flex items-center justify-center h-10 bg-grey-200 text-grey-700 text-sm font-medium rounded-lg border border-grey-300 hover:bg-grey-300 transition-all"
+            class="hidden col-span-2 inline-flex items-center justify-center h-10 bg-grey-200 text-grey-700 text-sm font-medium rounded-lg border border-grey-300 hover:bg-grey-300 transition-all"
           >
             Clear
           </a>
