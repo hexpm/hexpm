@@ -66,13 +66,8 @@ jobs:
       - name: Compile
         run: MIX_ENV=test mix compile
 
-      - name: Setup Node.js
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
-        with:
-          node-version: 22
-
       - name: Build assets
-        run: cd assets && yarn install && npx webpack --mode production
+        run: mix assets.deploy
 
       - name: Google auth
         id: auth
