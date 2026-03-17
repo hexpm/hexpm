@@ -68,7 +68,7 @@ if Code.ensure_loaded?(Wallaby) do
       |> visit("/login")
       |> fill_in(css("#username"), with: user.username)
       |> fill_in(css("#password"), with: "password")
-      |> click(button("Log in"))
+      |> click(button("Log In"))
     end
   end
 end

@@ -355,30 +355,20 @@ defmodule HexpmWeb.IntegrationHelpers do
   end
 
   # Waits for the Stripe Elements iframe to be visible inside #card-element.
-  # Checks that the iframe exists, is visible, and has non-zero dimensions
-  # (which ensures the Bootstrap modal animation has completed).
-  #
-  # If the modal isn't open (Bootstrap JS hadn't initialized when the button
-  # was clicked), forces it open via jQuery.
+  # The card form is rendered inline on the billing page inside #billing-checkout-data.
+  # Checks that the iframe exists, is visible, and has non-zero dimensions.
   defp wait_for_stripe_iframe(session, attempts \\ 30) do
-    state =
+    has_visible_iframe =
       evaluate_js(session, """
-        var modal = document.getElementById('payment-method-modal');
-        var modalOpen = modal && window.getComputedStyle(modal).display !== 'none';
         var card = document.getElementById('card-element');
-        var hasVisibleIframe = false;
-        if (card) {
-          var iframes = card.querySelectorAll('iframe');
-          for (var i = 0; i < iframes.length; i++) {
-            var rect = iframes[i].getBoundingClientRect();
-            if (rect.height > 0 && rect.width > 0) { hasVisibleIframe = true; break; }
-          }
+        if (!card) return false;
+        var iframes = card.querySelectorAll('iframe');
+        for (var i = 0; i < iframes.length; i++) {
+          var rect = iframes[i].getBoundingClientRect();
+          if (rect.height > 0 && rect.width > 0) return true;
         }
-        return {modalOpen: modalOpen, hasVisibleIframe: hasVisibleIframe};
+        return false;
       """)
-
-    modal_open = state["modalOpen"]
-    has_visible_iframe = state["hasVisibleIframe"]
 
     cond do
       has_visible_iframe ->
@@ -394,18 +384,6 @@ defmodule HexpmWeb.IntegrationHelpers do
         Wallaby.Browser.focus_default_frame(session)
         :ok
 
-      not modal_open ->
-        # Bootstrap JS hadn't initialized when the button was clicked.
-        # Force the modal open via jQuery and retry.
-        Wallaby.Browser.execute_script(session, """
-          if (typeof $ !== 'undefined') {
-            $('#payment-method-modal').modal('show');
-          }
-        """)
-
-        Process.sleep(1000)
-        wait_for_stripe_iframe(session, attempts - 1)
-
       attempts <= 0 ->
         Wallaby.Browser.take_screenshot(session, name: "stripe_iframe_debug")
 
@@ -415,7 +393,6 @@ defmodule HexpmWeb.IntegrationHelpers do
             diag.pageUrl = window.location.href;
             diag.stripeLoaded = typeof window.Stripe !== 'undefined';
             diag.stripeType = typeof window.Stripe;
-            diag.jqueryLoaded = typeof window.$ !== 'undefined';
             var card = document.getElementById('card-element');
             diag.cardElementExists = !!card;
             diag.cardElementHTML = card ? card.innerHTML.substring(0, 500) : 'N/A';
@@ -436,7 +413,6 @@ defmodule HexpmWeb.IntegrationHelpers do
               diag['cardElement_' + i + '_iframes'] = allCards[i].querySelectorAll('iframe').length;
               diag['cardElement_' + i + '_html'] = allCards[i].innerHTML.substring(0, 200);
               var parentForm = allCards[i].closest('form');
-              diag['cardElement_' + i + '_inModal'] = !!allCards[i].closest('.modal');
               diag['cardElement_' + i + '_parentDisplay'] = parentForm ? window.getComputedStyle(parentForm).display : 'N/A';
             }
             diag.bodyTextSnippet = document.body ? document.body.textContent.substring(0, 200).trim() : 'N/A';
@@ -444,7 +420,7 @@ defmodule HexpmWeb.IntegrationHelpers do
           """)
 
         flunk(
-          "Stripe Elements iframe did not become visible within timeout (modal is open)\n" <>
+          "Stripe Elements iframe did not become visible within timeout\n" <>
             "Diagnostics: #{inspect(diag, pretty: true)}"
         )
 
@@ -528,11 +504,12 @@ defmodule HexpmWeb.IntegrationHelpers do
   end
 
   @doc """
-  Opens a Bootstrap modal and waits for it to be visible.
+  Opens a modal and waits for it to be visible.
 
   Clicks the trigger button, then verifies the modal actually opened.
-  If Bootstrap JS hasn't initialized its event listeners yet, falls back
-  to opening the modal via jQuery.
+  The modal uses Phoenix.LiveView.JS which toggles the `hidden` class.
+  Falls back to manually removing the `hidden` class if the JS handler
+  didn't fire.
   """
   def open_modal(session, trigger_selector, modal_id) do
     Wallaby.Browser.click(session, trigger_selector)
@@ -544,27 +521,22 @@ defmodule HexpmWeb.IntegrationHelpers do
     is_open =
       evaluate_js(session, """
         var modal = document.getElementById('#{modal_id}');
-        return modal && window.getComputedStyle(modal).display !== 'none';
+        return modal && !modal.classList.contains('hidden');
       """)
 
     if is_open do
-      wait_until(300, fn ->
-        evaluate_js(session, """
-          var modal = document.getElementById('#{modal_id}');
-          return modal && modal.classList.contains('show');
-        """)
-      end)
-
       :ok
     else
       if attempts <= 0 do
         flunk("Modal ##{modal_id} did not open within timeout")
       end
 
+      # Phoenix.LiveView.JS handler may not have fired; manually remove hidden class
       Wallaby.Browser.execute_script(session, """
-        if (typeof $ !== 'undefined') {
-          $('##{modal_id}').modal('show');
-        }
+        ['#{modal_id}', '#{modal_id}-backdrop', '#{modal_id}-content'].forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el) el.classList.remove('hidden');
+        });
       """)
 
       Process.sleep(500)
@@ -581,16 +553,16 @@ defmodule HexpmWeb.IntegrationHelpers do
   without the billing section. This retries the page load if that happens.
 
   An optional `wait_for` selector can be provided to wait for a specific
-  element to appear (e.g., a subscription-only button).
+  element to appear (e.g., a subscription-only form).
   """
   def visit_org_billing(session, organization, opts \\ []) do
-    wait_for = Keyword.get(opts, :wait_for, "button[data-target='#payment-method-modal']")
+    wait_for = Keyword.get(opts, :wait_for, "#billing-checkout-data")
     attempts = Keyword.get(opts, :attempts, 5)
     do_visit_org_billing(session, organization, wait_for, attempts)
   end
 
   defp do_visit_org_billing(session, organization, wait_for, attempts) do
-    session = Wallaby.Browser.visit(session, "/dashboard/orgs/#{organization.name}")
+    session = Wallaby.Browser.visit(session, "/dashboard/orgs/#{organization.name}/billing")
 
     has_element =
       evaluate_js(session, """
@@ -625,35 +597,34 @@ defmodule HexpmWeb.IntegrationHelpers do
   @doc """
   Asserts that a flash message is visible with the expected text.
   Polls the DOM for up to 10 seconds. On failure, captures diagnostic info
-  about what alerts are actually on the page.
+  about what flash messages are actually on the page.
   """
-  def assert_flash(session, type, text, timeout \\ 10_000) do
+  def assert_flash(session, _type, text, timeout \\ 10_000) do
     deadline = System.monotonic_time(:millisecond) + timeout
-    do_assert_flash(session, type, text, deadline)
+    do_assert_flash(session, text, deadline)
   end
 
-  defp do_assert_flash(session, type, text, deadline) do
+  defp do_assert_flash(session, text, deadline) do
     page_info =
       evaluate_js(session, """
-        var alerts = document.querySelectorAll('.alert');
+        var flashes = document.querySelectorAll('.flash-message');
         var result = [];
-        for (var i = 0; i < alerts.length; i++) {
+        for (var i = 0; i < flashes.length; i++) {
           result.push({
-            classes: alerts[i].className,
-            text: alerts[i].textContent.trim().substring(0, 200)
+            id: flashes[i].id,
+            text: flashes[i].textContent.trim().substring(0, 200)
           });
         }
         return {
           url: window.location.href,
           title: document.title,
-          alerts: result
+          flashes: result
         };
       """)
 
     found =
-      Enum.any?(page_info["alerts"] || [], fn alert ->
-        String.contains?(alert["classes"] || "", "alert-#{type}") &&
-          String.contains?(alert["text"] || "", text)
+      Enum.any?(page_info["flashes"] || [], fn flash ->
+        String.contains?(flash["text"] || "", text)
       end)
 
     if found do
@@ -661,15 +632,15 @@ defmodule HexpmWeb.IntegrationHelpers do
     else
       if System.monotonic_time(:millisecond) >= deadline do
         flunk(
-          "Expected .alert-#{type} with text '#{text}'\n" <>
+          "Expected flash with text '#{text}'\n" <>
             "Page URL: #{page_info["url"]}\n" <>
             "Page title: #{page_info["title"]}\n" <>
-            "Alerts on page: #{inspect(page_info["alerts"])}"
+            "Flash messages on page: #{inspect(page_info["flashes"])}"
         )
       end
 
       Process.sleep(500)
-      do_assert_flash(session, type, text, deadline)
+      do_assert_flash(session, text, deadline)
     end
   end
 

@@ -203,9 +203,9 @@ if Code.ensure_loaded?(Wallaby) do
 
         session
         |> browser_login(user)
-        |> visit_org_billing(organization, wait_for: "button[data-target='#add-seats']")
+        |> visit_org_billing(organization, wait_for: "#add-seats-form")
 
-        open_modal(session, css("button[data-target='#add-seats']"), "add-seats")
+        open_modal(session, button("Add seats"), "add-seats-modal")
         submit_modal_form(session, "#add-seats-form")
         assert_flash(session, "info", "seats have been increased")
       end
@@ -223,17 +223,10 @@ if Code.ensure_loaded?(Wallaby) do
 
         session
         |> browser_login(user)
-        |> visit_org_billing(organization,
-          wait_for: "button[data-target='#cancel-subscription-modal']"
-        )
+        |> visit_org_billing(organization, wait_for: "#cancel-billing-form")
 
-        open_modal(
-          session,
-          css("button[data-target='#cancel-subscription-modal']"),
-          "cancel-subscription-modal"
-        )
-
-        submit_modal_form(session, "#cancel-subscription-modal form")
+        open_modal(session, button("Cancel subscription"), "cancel-billing-modal")
+        submit_modal_form(session, "#cancel-billing-form")
         assert_flash(session, "info", "cancelled")
       end
 
@@ -250,10 +243,10 @@ if Code.ensure_loaded?(Wallaby) do
 
         session
         |> browser_login(user)
-        |> visit_org_billing(organization, wait_for: "button[data-target='#change-plan']")
+        |> visit_org_billing(organization, wait_for: "#change-plan-form")
 
-        open_modal(session, css("button[data-target='#change-plan']"), "change-plan")
-        submit_modal_form(session, "#change-plan form")
+        open_modal(session, button("Switch to annual"), "change-plan-modal")
+        submit_modal_form(session, "#change-plan-form")
         assert_flash(session, "info", "switched")
       end
     end

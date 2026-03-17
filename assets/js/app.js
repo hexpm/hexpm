@@ -60,21 +60,22 @@ function billingCheckout(token) {
 
   fetch(postAction, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ token: token, _csrf_token: billingCsrfToken }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: token, _csrf_token: billingCsrfToken }),
   })
     .then(function (response) {
       if (response.ok) {
         window.location.reload();
       } else {
         return response.json().then(function (data) {
-          const flash = document.querySelector("div.flash");
+          const flash = document.getElementById("flash-container");
           if (flash) {
             flash.innerHTML =
-              '<div class="alert alert-danger" role="alert">' +
+              '<div class="flash-message flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg bg-red-100 border-red-300" role="alert">' +
+              '<div class="flex-1 text-small leading-5 text-red-800">' +
               "<strong>Failed to update payment method</strong><br>" +
               data.errors +
-              "</div>";
+              "</div></div>";
           }
         });
       }

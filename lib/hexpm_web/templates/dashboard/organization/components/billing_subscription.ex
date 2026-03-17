@@ -138,6 +138,11 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
             </div>
           </dl>
 
+          <script nonce={@script_src_nonce}>
+            window.hexpm_billing_api_url = '/dashboard/billing-api';
+            window.hexpm_billing_csrf_token = '<%= Plug.CSRFProtection.get_csrf_token() %>';
+            window.hexpm_billing_success = function() { window.location.reload(); };
+          </script>
           <div
             class="mt-6"
             id="billing-checkout-data"
@@ -283,6 +288,11 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
           <p class="text-sm text-grey-600 mb-6">
             Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.
           </p>
+          <script nonce={@script_src_nonce}>
+            window.hexpm_billing_api_url = '/dashboard/billing-api';
+            window.hexpm_billing_csrf_token = '<%= Plug.CSRFProtection.get_csrf_token() %>';
+            window.hexpm_billing_success = function() { window.location.reload(); };
+          </script>
           <div
             class="mt-4"
             id="billing-checkout-data"

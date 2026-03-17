@@ -57,13 +57,14 @@ if Code.ensure_loaded?(Wallaby) do
 
         assert has_legacy_checkout, "Expected legacy checkout.stripe.com script on page"
 
-        # Verify hexpm_billing_post_action is set (legacy checkout uses it)
+        # Verify billing-checkout-data element has post_action set
         post_action =
           evaluate_js(session, """
-            return window.hexpm_billing_post_action || null;
+            var el = document.getElementById('billing-checkout-data');
+            return el ? el.dataset.postAction : null;
           """)
 
-        assert post_action, "Expected hexpm_billing_post_action to be set"
+        assert post_action, "Expected billing-checkout-data data-post-action to be set"
         assert String.contains?(post_action, "billing-token")
 
         # Create a unique Stripe test token via hexpm_billing's dev endpoint.
