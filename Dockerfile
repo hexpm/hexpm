@@ -29,13 +29,11 @@ COPY config config
 RUN mix deps.get
 RUN mix deps.compile
 
-# build assets
+# build project and assets
 COPY priv priv
 COPY assets assets
-RUN mix assets.deploy
-
-# build project
 COPY lib lib
+RUN mix assets.deploy
 RUN mix compile
 
 # build release
