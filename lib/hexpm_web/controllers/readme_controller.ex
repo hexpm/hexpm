@@ -178,7 +178,7 @@ defmodule HexpmWeb.ReadmeController do
     .readme p { margin-top: 0; margin-bottom: 16px; }
     .readme a { color: #0366d6; text-decoration: none; }
     .readme a:hover { text-decoration: underline; }
-    .readme img { max-width: 100%; height: auto; }
+    .readme img { max-width: 100%; height: auto; margin: 2px; }
     .readme pre { padding: 16px; overflow: auto; font-size: 85%; line-height: 1.45; background-color: #f6f8fa; border-radius: 6px; margin-bottom: 16px; }
     .readme code { padding: 0.2em 0.4em; font-size: 85%; background-color: #f6f8fa; border-radius: 3px; font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; }
     .readme pre code { padding: 0; background: transparent; font-size: 100%; }
