@@ -208,6 +208,65 @@ defmodule HexpmWeb.ReadmeControllerTest do
       assert csp =~ "frame-ancestors"
     end
 
+    test "syntax highlights elixir code blocks", %{package: package} do
+      mock_file_list_and_readme(
+        package.name,
+        "1.0.0",
+        "README.md",
+        "```elixir\nIO.puts(\"hello\")\n```"
+      )
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/1.0.0")
+
+      assert conn.status == 200
+      # Makeup wraps tokens in spans with class attributes
+      assert conn.resp_body =~ "<span class=\""
+      # The code content should be present
+      assert conn.resp_body =~ "IO"
+      assert conn.resp_body =~ "puts"
+    end
+
+    test "preserves newlines in unhighlighted code blocks", %{package: package} do
+      mock_file_list_and_readme(
+        package.name,
+        "1.0.0",
+        "README.md",
+        "```\nfoo\nbar\nbaz\n```"
+      )
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/1.0.0")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "foo\nbar\nbaz"
+    end
+
+    test "preserves newlines in highlighted code blocks", %{package: package} do
+      mock_file_list_and_readme(
+        package.name,
+        "1.0.0",
+        "README.md",
+        "```elixir\nfoo\nbar\nbaz\n```"
+      )
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/1.0.0")
+
+      assert conn.status == 200
+      # Makeup wraps whitespace in spans, newlines must be preserved
+      assert conn.resp_body =~ "foo"
+      assert conn.resp_body =~ "bar"
+      assert conn.resp_body =~ "baz"
+      assert conn.resp_body =~ "\n"
+    end
+
     test "rewrites image URLs to proxy", %{package: package} do
       mock_file_list_and_readme(
         package.name,
