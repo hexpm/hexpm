@@ -16,7 +16,7 @@
     "phoenix": "file:../deps/phoenix",
     "phoenix_html": "file:../deps/phoenix_html",
     "phoenix_live_view": "file:../deps/phoenix_live_view",
-    "sass": "^1.74.1",
+    "sass": "^1.98.0",
     "sass-loader": "^16.0.0",
     "style-loader": "^4.0.0",
     "webpack": "^5.94.0",
