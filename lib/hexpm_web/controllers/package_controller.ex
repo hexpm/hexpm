@@ -369,11 +369,14 @@ defmodule HexpmWeb.PackageController do
         if dl = graph_downloads[day], do: dl.downloads, else: 0
       end)
 
+    owners = Owners.all(package, user: [:emails, :organization])
+
     [
       docs_html_url: docs_html_url,
       docs_tarball_url: docs_tarball_url,
       downloads: package_downloads,
-      daily_graph: daily_graph
+      daily_graph: daily_graph,
+      owners: owners
     ]
   end
 
