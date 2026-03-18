@@ -73,11 +73,11 @@ defmodule HexpmWeb.ReadmeController do
   end
 
   defp fetch_readme(package_name, version) do
-    case Hexpm.Store.get(:repo_bucket, "file_lists/#{package_name}-#{version}.json", []) do
-      nil ->
-        :error
+    cdn_url = Application.fetch_env!(:hexpm, :cdn_url)
+    file_list_url = "#{cdn_url}/preview-files/#{package_name}-#{version}.json"
 
-      json ->
+    case Hexpm.HTTP.impl().get(file_list_url, []) do
+      {:ok, 200, _headers, json} ->
         files = Jason.decode!(json)
 
         case find_readme_file(files) do
@@ -85,15 +85,16 @@ defmodule HexpmWeb.ReadmeController do
             :error
 
           filename ->
-            case Hexpm.Store.get(
-                   :repo_bucket,
-                   "files/#{package_name}/#{version}/#{filename}",
-                   []
-                 ) do
-              nil -> :error
-              content -> {:ok, filename, content}
+            readme_url = "#{cdn_url}/preview/#{package_name}/#{version}/#{filename}"
+
+            case Hexpm.HTTP.impl().get(readme_url, []) do
+              {:ok, 200, _headers, content} -> {:ok, filename, content}
+              _ -> :error
             end
         end
+
+      _ ->
+        :error
     end
   end
 

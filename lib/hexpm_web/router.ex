@@ -402,6 +402,10 @@ defmodule HexpmWeb.Router do
       get "/:package/:version/*filename", TestController, :preview_file
     end
 
+    scope "/preview-files", HexpmWeb do
+      get "/:file", TestController, :preview_file_list
+    end
+
     scope "/api", HexpmWeb do
       pipe_through :api
 
