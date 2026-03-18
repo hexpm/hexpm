@@ -81,6 +81,39 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
 
       assert result =~ ~s[src="data:image/png;base64,abc123"]
     end
+
+    test "proxies protocol-relative image URLs" do
+      html = ~s[<img src="//example.com/logo.png">]
+      result = URLRewriter.rewrite(html, "my_package", "1.0.0")
+
+      expected = "https://example.com/logo.png"
+      encoded = Base.encode16(expected, case: :lower)
+      assert result =~ encoded
+      assert result =~ "http://localhost:5000/img/fetch/"
+    end
+
+    test "resolves protocol-relative link URLs" do
+      html = ~s[<a href="//example.com/docs">Docs</a>]
+      result = URLRewriter.rewrite(html, "my_package", "1.0.0")
+
+      assert result =~ ~s[href="https://example.com/docs"]
+    end
+
+    test "normalizes path traversal in relative URLs" do
+      html = ~s[<a href="./foo/../bar/baz">Link</a>]
+      result = URLRewriter.rewrite(html, "my_package", "1.0.0")
+
+      assert result =~ "http://localhost:5000/preview/my_package/1.0.0/bar/baz"
+      refute result =~ ".."
+    end
+
+    test "rejects path traversal escaping the base directory" do
+      html = ~s[<a href="../../etc/passwd">Link</a>]
+      result = URLRewriter.rewrite(html, "my_package", "1.0.0")
+
+      refute result =~ "preview"
+      assert result =~ ~s[href="../../etc/passwd"]
+    end
   end
 
   describe "proxy_image_url/1" do

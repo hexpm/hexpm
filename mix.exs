@@ -58,6 +58,7 @@ defmodule Hexpm.MixProject do
       {:makeup, "~> 1.2"},
       {:makeup_elixir, "~> 1.0"},
       {:makeup_erlang, "~> 1.0"},
+      {:makeup_syntect, "~> 0.1"},
       {:mox, "~> 1.0", only: :test},
       {:nimble_ownership, "~> 1.0"},
       {:stream_data, "~> 1.0", only: :test},

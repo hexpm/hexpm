@@ -5,7 +5,8 @@ defmodule HexpmWeb.ReadmeController do
 
   @readme_filenames ~w(README.md readme.md README.markdown readme.markdown README.txt readme.txt README readme)
 
-  @makeup_css File.read!("assets/vendor/css/makeup.css")
+  plug :put_root_layout, false
+  plug :put_layout, false
 
   def not_found(conn, _params) do
     conn
@@ -51,8 +52,7 @@ defmodule HexpmWeb.ReadmeController do
 
         conn
         |> put_resp_header("cache-control", "public, max-age=3600")
-        |> put_resp_content_type("text/html")
-        |> send_resp(200, readme_page(conn, html))
+        |> render(:show, readme_html: html, parent_origins: parent_origins())
 
       :error ->
         send_no_readme(conn)
@@ -60,16 +60,32 @@ defmodule HexpmWeb.ReadmeController do
   end
 
   defp fetch_readme(package_name, version) do
-    cdn_url = Application.fetch_env!(:hexpm, :cdn_url)
+    case Hexpm.Store.get(:repo_bucket, "file_lists/#{package_name}-#{version}.json", []) do
+      nil ->
+        :error
 
-    Enum.find_value(@readme_filenames, :error, fn filename ->
-      readme_url = "#{cdn_url}/preview/#{package_name}/#{version}/#{filename}"
+      json ->
+        files = Jason.decode!(json)
 
-      case Hexpm.HTTP.impl().get(readme_url, []) do
-        {:ok, 200, _headers, content} -> {:ok, filename, content}
-        _ -> nil
-      end
-    end)
+        case find_readme_file(files) do
+          nil ->
+            :error
+
+          filename ->
+            case Hexpm.Store.get(
+                   :repo_bucket,
+                   "files/#{package_name}/#{version}/#{filename}",
+                   []
+                 ) do
+              nil -> :error
+              content -> {:ok, filename, content}
+            end
+        end
+    end
+  end
+
+  defp find_readme_file(files) do
+    Enum.find(@readme_filenames, &(&1 in files))
   end
 
   defp render_readme(filename, content, package_name, version) do
@@ -90,127 +106,66 @@ defmodule HexpmWeb.ReadmeController do
     |> highlight_code_blocks()
   end
 
-  @supported_languages %{
-    "elixir" => Makeup.Lexers.ElixirLexer,
-    "erlang" => Makeup.Lexers.ErlangLexer
-  }
-
   defp highlight_code_blocks(html) do
-    Regex.replace(
-      ~r{<pre><code class="([\w-]+)">(.*?)</code></pre>}s,
-      html,
-      fn full_match, lang, code ->
-        language =
-          if String.starts_with?(lang, "language-"),
-            do: String.trim_leading(lang, "language-"),
-            else: lang
-
-        case Map.get(@supported_languages, language) do
-          nil -> full_match
-          lexer -> code |> unescape_html() |> Makeup.highlight(lexer: lexer)
-        end
-      end
-    )
+    html
+    |> Floki.parse_fragment!()
+    |> highlight_nodes()
+    |> Floki.raw_html()
   end
 
-  defp unescape_html(html) do
-    html
-    |> String.replace("&amp;", "&")
-    |> String.replace("&lt;", "<")
-    |> String.replace("&gt;", ">")
-    |> String.replace("&quot;", "\"")
+  defp highlight_nodes(nodes) when is_list(nodes) do
+    Enum.flat_map(nodes, &highlight_node/1)
+  end
+
+  defp highlight_node({"pre", _pre_attrs, [{"code", code_attrs, children}]} = node) do
+    language = extract_language(code_attrs)
+
+    with language when is_binary(language) <- language,
+         {:ok, {lexer, opts}} <- Makeup.Registry.fetch_lexer_by_name(language) do
+      code_text = Floki.text({"code", code_attrs, children})
+      highlighted_html = Makeup.highlight(code_text, lexer: lexer, lexer_options: opts)
+      Floki.parse_fragment!(highlighted_html)
+    else
+      _ -> [node]
+    end
+  end
+
+  defp highlight_node({tag, attrs, children}) do
+    [{tag, attrs, highlight_nodes(children)}]
+  end
+
+  defp highlight_node(other), do: [other]
+
+  defp extract_language(attrs) do
+    case List.keyfind(attrs, "class", 0) do
+      {"class", class} ->
+        parts = String.split(class)
+
+        Enum.find_value(parts, fn
+          "language-" <> lang -> lang
+          _ -> nil
+        end) ||
+          case parts do
+            [single] -> single
+            _ -> nil
+          end
+
+      nil ->
+        nil
+    end
   end
 
   defp send_no_readme(conn) do
-    nonce = conn.assigns[:readme_csp_nonce] || ""
-
-    html = """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head><meta charset="utf-8"></head>
-    <body>
-      <script nonce="#{nonce}">
-        window.parent.postMessage({type: 'readme-not-found'}, '*');
-      </script>
-    </body>
-    </html>
-    """
-
     conn
     |> put_resp_header("cache-control", "public, max-age=3600")
-    |> put_resp_content_type("text/html")
-    |> send_resp(200, html)
+    |> render(:no_readme, parent_origins: parent_origins())
   end
 
-  defp readme_page(conn, content_html) do
-    nonce = conn.assigns[:readme_csp_nonce] || ""
-
-    """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1">
-      <style nonce="#{nonce}">#{readme_css()}</style>
-      <style nonce="#{nonce}">#{@makeup_css}</style>
-    </head>
-    <body>
-      <article class="readme">
-        #{content_html}
-      </article>
-      <script nonce="#{nonce}">#{height_reporter_js()}</script>
-    </body>
-    </html>
-    """
-  end
-
-  defp readme_css do
-    ~S"""
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { overflow: hidden; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.6; color: #24292e; padding: 0; }
-    .readme { max-width: 100%; overflow-wrap: break-word; word-wrap: break-word; }
-    .readme h1, .readme h2, .readme h3, .readme h4, .readme h5, .readme h6 { margin-top: 24px; margin-bottom: 16px; font-weight: 600; line-height: 1.25; }
-    .readme h1 { font-size: 2em; padding-bottom: 0.3em; border-bottom: 1px solid #eaecef; }
-    .readme h2 { font-size: 1.5em; padding-bottom: 0.3em; border-bottom: 1px solid #eaecef; }
-    .readme h3 { font-size: 1.25em; }
-    .readme h4 { font-size: 1em; }
-    .readme p { margin-top: 0; margin-bottom: 16px; }
-    .readme a { color: #0366d6; text-decoration: none; }
-    .readme a:hover { text-decoration: underline; }
-    .readme img { max-width: 100%; height: auto; margin: 2px; }
-    .readme pre { padding: 16px; overflow: auto; font-size: 85%; line-height: 1.45; background-color: #f6f8fa; border-radius: 6px; margin-bottom: 16px; }
-    .readme code { padding: 0.2em 0.4em; font-size: 85%; background-color: #f6f8fa; border-radius: 3px; font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; }
-    .readme pre code { padding: 0; background: transparent; font-size: 100%; }
-    .readme blockquote { padding: 0 1em; color: #6a737d; border-left: 0.25em solid #dfe2e5; margin-bottom: 16px; }
-    .readme ul, .readme ol { padding-left: 2em; margin-bottom: 16px; }
-    .readme li { margin-top: 0.25em; }
-    .readme table { border-collapse: collapse; border-spacing: 0; margin-bottom: 16px; display: block; width: max-content; max-width: 100%; overflow: auto; }
-    .readme table th, .readme table td { padding: 6px 13px; border: 1px solid #dfe2e5; }
-    .readme table th { font-weight: 600; background-color: #f6f8fa; }
-    .readme table tr:nth-child(2n) { background-color: #f6f8fa; }
-    .readme hr { height: 0.25em; padding: 0; margin: 24px 0; background-color: #e1e4e8; border: 0; }
-    .readme details { margin-bottom: 16px; }
-    .readme details summary { cursor: pointer; font-weight: 600; }
-    .readme dl { padding: 0; margin-bottom: 16px; }
-    .readme dl dt { padding: 0; margin-top: 16px; font-size: 1em; font-style: italic; font-weight: 600; }
-    .readme dl dd { padding: 0 16px; margin-bottom: 16px; }
-    .readme kbd { display: inline-block; padding: 3px 5px; font: 11px SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; line-height: 10px; color: #444d56; vertical-align: middle; background-color: #fafbfc; border: 1px solid #d1d5da; border-radius: 3px; box-shadow: inset 0 -1px 0 #d1d5da; }
-    .readme input[type="checkbox"] { margin-right: 0.5em; }
-    @media (prefers-color-scheme: dark) { .color-scheme-light { display: none !important; } }
-    @media (prefers-color-scheme: light) { .color-scheme-dark { display: none !important; } }
-    """
-  end
-
-  defp height_reporter_js do
-    ~S"""
-    document.addEventListener('DOMContentLoaded', function() {
-      function sendHeight() {
-        window.parent.postMessage({type: 'readme-height', height: document.body.scrollHeight}, '*');
-      }
-      sendHeight();
-      new ResizeObserver(sendHeight).observe(document.body);
-    });
-    """
+  defp parent_origins do
+    case Application.get_env(:hexpm, :host) do
+      nil -> ["*"]
+      # TODO: Remove new.hex.pm when new.hex.pm replaces hex.pm
+      host -> ["https://#{host}", "https://new.#{host}"]
+    end
   end
 end

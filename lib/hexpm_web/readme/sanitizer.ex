@@ -114,13 +114,19 @@ defmodule HexpmWeb.Readme.Sanitizer do
   defp style_to_align(attrs, _tag), do: attrs
 
   defp sanitize_url_attr({name, value}) do
-    uri = URI.parse(String.trim(value))
+    # Strip ASCII control characters and whitespace that WHATWG URL parsing
+    # would ignore but RFC 3986 (Elixir's URI) would not. This prevents
+    # bypasses like "java\tscript:alert(1)" where URI.parse sees no scheme
+    # but browsers strip the tab and execute javascript:.
+    normalized = String.replace(value, ~r/[\x00-\x1f\x7f]/, "")
+
+    uri = URI.parse(String.trim(normalized))
 
     cond do
       uri.scheme == nil ->
         [{name, value}]
 
-      MapSet.member?(@safe_url_schemes, uri.scheme) ->
+      MapSet.member?(@safe_url_schemes, String.downcase(uri.scheme)) ->
         [{name, value}]
 
       true ->

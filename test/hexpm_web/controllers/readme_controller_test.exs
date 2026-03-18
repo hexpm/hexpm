@@ -14,25 +14,26 @@ defmodule HexpmWeb.ReadmeControllerTest do
     %{package: package}
   end
 
-  defp mock_readme(filename, content) do
-    Mox.expect(Hexpm.HTTP.Mock, :get, fn url, _headers ->
-      if String.ends_with?(url, "/#{filename}") do
-        {:ok, 200, [], content}
-      else
-        {:ok, 404, [], ""}
-      end
-    end)
+  defp store_readme(package_name, version, filename, content) do
+    file_list = Jason.encode!([filename])
+    Hexpm.Store.put(:repo_bucket, "file_lists/#{package_name}-#{version}.json", file_list, [])
+
+    Hexpm.Store.put(
+      :repo_bucket,
+      "files/#{package_name}/#{version}/#{filename}",
+      content,
+      []
+    )
   end
 
-  defp mock_readme_not_found do
-    Mox.expect(Hexpm.HTTP.Mock, :get, 8, fn _url, _headers ->
-      {:ok, 404, [], ""}
-    end)
+  defp store_file_list(package_name, version, files) do
+    file_list = Jason.encode!(files)
+    Hexpm.Store.put(:repo_bucket, "file_lists/#{package_name}-#{version}.json", file_list, [])
   end
 
   describe "show/2" do
     test "renders README for package with version", %{package: package} do
-      mock_readme("README.md", "# My Package\n\nThis is a test README.")
+      store_readme(package.name, "1.0.0", "README.md", "# My Package\n\nThis is a test README.")
 
       conn =
         build_conn()
@@ -47,7 +48,7 @@ defmodule HexpmWeb.ReadmeControllerTest do
     end
 
     test "renders README for package without version (latest)", %{package: package} do
-      mock_readme("README.md", "# Latest README")
+      store_readme(package.name, "1.0.0", "README.md", "# Latest README")
 
       conn =
         build_conn()
@@ -58,15 +59,15 @@ defmodule HexpmWeb.ReadmeControllerTest do
       assert conn.resp_body =~ "Latest README"
     end
 
-    test "tries lowercase readme.md", %{package: package} do
-      # First try README.md (404), then readme.md (200)
-      Mox.expect(Hexpm.HTTP.Mock, :get, 2, fn url, _headers ->
-        if String.ends_with?(url, "/readme.md") do
-          {:ok, 200, [], "# Lowercase Readme"}
-        else
-          {:ok, 404, [], ""}
-        end
-      end)
+    test "prioritizes README.md over other filenames", %{package: package} do
+      store_file_list(package.name, "1.0.0", ["readme.md", "README.txt"])
+
+      Hexpm.Store.put(
+        :repo_bucket,
+        "files/#{package.name}/1.0.0/readme.md",
+        "# Lowercase Readme",
+        []
+      )
 
       conn =
         build_conn()
@@ -78,14 +79,7 @@ defmodule HexpmWeb.ReadmeControllerTest do
     end
 
     test "renders plain text for non-markdown README", %{package: package} do
-      # All markdown variants return 404, then txt variants, then README without extension
-      Mox.expect(Hexpm.HTTP.Mock, :get, 7, fn url, _headers ->
-        if String.ends_with?(url, "/README") do
-          {:ok, 200, [], "Plain text README content"}
-        else
-          {:ok, 404, [], ""}
-        end
-      end)
+      store_readme(package.name, "1.0.0", "README", "Plain text README content")
 
       conn =
         build_conn()
@@ -98,14 +92,7 @@ defmodule HexpmWeb.ReadmeControllerTest do
     end
 
     test "renders plain text for .txt README", %{package: package} do
-      # All md/markdown variants return 404, then README.txt matches
-      Mox.expect(Hexpm.HTTP.Mock, :get, 5, fn url, _headers ->
-        if String.ends_with?(url, "/README.txt") do
-          {:ok, 200, [], "Text README"}
-        else
-          {:ok, 404, [], ""}
-        end
-      end)
+      store_readme(package.name, "1.0.0", "README.txt", "Text README")
 
       conn =
         build_conn()
@@ -117,9 +104,19 @@ defmodule HexpmWeb.ReadmeControllerTest do
       assert conn.resp_body =~ "Text README"
     end
 
-    test "shows no README when all filenames return 404", %{package: package} do
-      mock_readme_not_found()
+    test "shows no README when file list has no readme files", %{package: package} do
+      store_file_list(package.name, "1.0.0", ["lib/my_package.ex", "mix.exs"])
 
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/1.0.0")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "readme-not-found"
+    end
+
+    test "shows no README when no file list exists", %{package: package} do
       conn =
         build_conn()
         |> Map.put(:host, "readme.localhost")
@@ -168,7 +165,12 @@ defmodule HexpmWeb.ReadmeControllerTest do
     end
 
     test "sanitizes HTML in README", %{package: package} do
-      mock_readme("README.md", "# Title\n\n<script>alert(1)</script>\n\nSafe content.")
+      store_readme(
+        package.name,
+        "1.0.0",
+        "README.md",
+        "# Title\n\n<script>alert(1)</script>\n\nSafe content."
+      )
 
       conn =
         build_conn()
@@ -181,7 +183,7 @@ defmodule HexpmWeb.ReadmeControllerTest do
     end
 
     test "sets correct CSP headers", %{package: package} do
-      mock_readme("README.md", "# Test")
+      store_readme(package.name, "1.0.0", "README.md", "# Test")
 
       conn =
         build_conn()
@@ -197,7 +199,12 @@ defmodule HexpmWeb.ReadmeControllerTest do
     end
 
     test "rewrites image URLs to proxy", %{package: package} do
-      mock_readme("README.md", "![logo](https://example.com/logo.png)")
+      store_readme(
+        package.name,
+        "1.0.0",
+        "README.md",
+        "![logo](https://example.com/logo.png)"
+      )
 
       conn =
         build_conn()

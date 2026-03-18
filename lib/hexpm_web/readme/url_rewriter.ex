@@ -81,12 +81,19 @@ defmodule HexpmWeb.Readme.URLRewriter do
       uri.scheme != nil ->
         url
 
+      String.starts_with?(url, "//") ->
+        "https:" <> url
+
       String.starts_with?(url, "#") ->
         url
 
       true ->
         path = String.trim_leading(url, "./")
-        "#{base_url}/#{path}"
+
+        case Path.safe_relative(path) do
+          {:ok, safe_path} -> "#{base_url}/#{safe_path}"
+          :error -> url
+        end
     end
   end
 

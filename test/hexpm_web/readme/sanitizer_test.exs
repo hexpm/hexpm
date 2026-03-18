@@ -45,6 +45,12 @@ defmodule HexpmWeb.Readme.SanitizerTest do
       refute result =~ ~s[href=]
     end
 
+    test "strips javascript: URLs with control characters (WHATWG bypass)" do
+      html = ~s[<a href="java\tscript:alert(1)">click</a>]
+      result = Sanitizer.sanitize(html)
+      refute result =~ ~s[href=]
+    end
+
     test "allows mailto: URLs" do
       html = ~s[<a href="mailto:test@example.com">email</a>]
       result = Sanitizer.sanitize(html)

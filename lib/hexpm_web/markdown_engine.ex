@@ -65,6 +65,9 @@ defmodule HexpmWeb.MarkdownEngine do
     String.replace(string, ~r"([^a-zA-Z0-9\-])", "")
   end
 
+  # The markdown engine processes trusted internal .md files (not user READMEs),
+  # so regex-based highlighting is appropriate here. Using Floki would normalize
+  # SVG attributes (viewBox -> viewbox) breaking heroicon rendering.
   defp highlight_code_blocks(html) do
     Regex.replace(
       ~r{<pre><code class="([\w-]+)">(.*?)</code></pre>}s,
