@@ -108,7 +108,12 @@ defmodule HexpmWeb.ReadmeController do
     html =
       case ext do
         ext when ext in [".md", ".markdown"] ->
-          Earmark.as_html!(content, %Earmark.Options{gfm: true})
+          {:ok, ast, _} =
+            Earmark.Parser.as_ast(content, %Earmark.Options{gfm: true})
+
+          ast
+          |> Earmark.Transform.map_ast(&highlight_code_block/1)
+          |> Earmark.Transform.transform()
 
         _ ->
           "<pre>#{Plug.HTML.html_escape(content)}</pre>"
@@ -117,36 +122,45 @@ defmodule HexpmWeb.ReadmeController do
     html
     |> Sanitizer.sanitize()
     |> URLRewriter.rewrite(package_name, version)
-    |> highlight_code_blocks()
   end
 
-  defp highlight_code_blocks(html) do
-    Regex.replace(
-      ~r{<pre><code class="([\w-]+)">(.*?)</code></pre>}s,
-      html,
-      fn full_match, lang, code ->
-        language =
-          if String.starts_with?(lang, "language-"),
-            do: String.trim_leading(lang, "language-"),
-            else: lang
+  defp highlight_code_block(
+         {"pre", pre_attrs, [{"code", code_attrs, [code], _code_meta}], _pre_meta}
+       )
+       when is_binary(code) do
+    language = extract_language(code_attrs)
 
-        case Makeup.Registry.fetch_lexer_by_name(language) do
-          {:ok, {lexer, opts}} ->
-            code |> unescape_html() |> Makeup.highlight(lexer: lexer, lexer_options: opts)
+    with language when is_binary(language) <- language,
+         {:ok, {lexer, opts}} <- Makeup.Registry.fetch_lexer_by_name(language) do
+      inner = Makeup.highlight_inner_html(code, lexer: lexer, lexer_options: opts)
 
-          :error ->
-            full_match
-        end
-      end
-    )
+      {"pre", [{"class", "highlight"} | pre_attrs],
+       [{"code", code_attrs, [inner], %{verbatim: true}}], %{}}
+    else
+      _ ->
+        {"pre", pre_attrs, [{"code", code_attrs, [code], %{}}], %{}}
+    end
   end
 
-  defp unescape_html(html) do
-    html
-    |> String.replace("&amp;", "&")
-    |> String.replace("&lt;", "<")
-    |> String.replace("&gt;", ">")
-    |> String.replace("&quot;", "\"")
+  defp highlight_code_block(node), do: node
+
+  defp extract_language(attrs) do
+    case List.keyfind(attrs, "class", 0) do
+      {"class", class} ->
+        parts = String.split(class)
+
+        Enum.find_value(parts, fn
+          "language-" <> lang -> lang
+          _ -> nil
+        end) ||
+          case parts do
+            [single] -> single
+            _ -> nil
+          end
+
+      nil ->
+        nil
+    end
   end
 
   defp send_no_readme(conn) do
