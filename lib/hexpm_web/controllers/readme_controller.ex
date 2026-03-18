@@ -121,52 +121,32 @@ defmodule HexpmWeb.ReadmeController do
   end
 
   defp highlight_code_blocks(html) do
+    Regex.replace(
+      ~r{<pre><code class="([\w-]+)">(.*?)</code></pre>}s,
+      html,
+      fn full_match, lang, code ->
+        language =
+          if String.starts_with?(lang, "language-"),
+            do: String.trim_leading(lang, "language-"),
+            else: lang
+
+        case Makeup.Registry.fetch_lexer_by_name(language) do
+          {:ok, {lexer, opts}} ->
+            code |> unescape_html() |> Makeup.highlight(lexer: lexer, lexer_options: opts)
+
+          :error ->
+            full_match
+        end
+      end
+    )
+  end
+
+  defp unescape_html(html) do
     html
-    |> Floki.parse_fragment!()
-    |> highlight_nodes()
-    |> Floki.raw_html()
-  end
-
-  defp highlight_nodes(nodes) when is_list(nodes) do
-    Enum.flat_map(nodes, &highlight_node/1)
-  end
-
-  defp highlight_node({"pre", _pre_attrs, [{"code", code_attrs, children}]} = node) do
-    language = extract_language(code_attrs)
-
-    with language when is_binary(language) <- language,
-         {:ok, {lexer, opts}} <- Makeup.Registry.fetch_lexer_by_name(language) do
-      code_text = Floki.text({"code", code_attrs, children})
-      highlighted_html = Makeup.highlight(code_text, lexer: lexer, lexer_options: opts)
-      Floki.parse_fragment!(highlighted_html)
-    else
-      _ -> [node]
-    end
-  end
-
-  defp highlight_node({tag, attrs, children}) do
-    [{tag, attrs, highlight_nodes(children)}]
-  end
-
-  defp highlight_node(other), do: [other]
-
-  defp extract_language(attrs) do
-    case List.keyfind(attrs, "class", 0) do
-      {"class", class} ->
-        parts = String.split(class)
-
-        Enum.find_value(parts, fn
-          "language-" <> lang -> lang
-          _ -> nil
-        end) ||
-          case parts do
-            [single] -> single
-            _ -> nil
-          end
-
-      nil ->
-        nil
-    end
+    |> String.replace("&amp;", "&")
+    |> String.replace("&lt;", "<")
+    |> String.replace("&gt;", ">")
+    |> String.replace("&quot;", "\"")
   end
 
   defp send_no_readme(conn) do
