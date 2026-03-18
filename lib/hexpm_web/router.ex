@@ -399,8 +399,7 @@ defmodule HexpmWeb.Router do
     end
 
     scope "/preview", HexpmWeb do
-      get "/file_lists/:file", TestController, :preview_file_list
-      get "/files/:package/:version/*filename", TestController, :preview_file
+      get "/:package/:version/*filename", TestController, :preview_file
     end
 
     scope "/api", HexpmWeb do

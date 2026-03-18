@@ -3,7 +3,7 @@ defmodule HexpmWeb.ReadmeController do
 
   alias HexpmWeb.Readme.{Sanitizer, URLRewriter}
 
-  @readme_extensions ~w(.md .markdown .txt)
+  @readme_filenames ~w(README.md readme.md README.markdown readme.markdown README.txt readme.txt README readme)
 
   @makeup_css File.read!("assets/vendor/css/makeup.css")
 
@@ -61,42 +61,15 @@ defmodule HexpmWeb.ReadmeController do
 
   defp fetch_readme(package_name, version) do
     preview_url = Application.fetch_env!(:hexpm, :preview_url)
-    file_list_url = "#{preview_url}/preview/file_lists/#{package_name}-#{version}.json"
 
-    with {:ok, 200, _headers, body} <- Hexpm.HTTP.impl().get(file_list_url, []),
-         {:ok, files} <- Jason.decode(body),
-         {:ok, filename} <- find_readme(files) do
-      readme_url = "#{preview_url}/preview/files/#{package_name}/#{version}/#{filename}"
+    Enum.find_value(@readme_filenames, :error, fn filename ->
+      readme_url = "#{preview_url}/preview/#{package_name}/#{version}/#{filename}"
 
       case Hexpm.HTTP.impl().get(readme_url, []) do
         {:ok, 200, _headers, content} -> {:ok, filename, content}
-        _ -> :error
+        _ -> nil
       end
-    else
-      _ -> :error
-    end
-  end
-
-  defp find_readme(files) do
-    readmes = Enum.filter(files, &readme?/1)
-
-    result =
-      Enum.find(readmes, &markdown_file?/1) || List.first(readmes)
-
-    case result do
-      nil -> :error
-      filename -> {:ok, filename}
-    end
-  end
-
-  defp readme?(filename) do
-    basename = Path.basename(filename, Path.extname(filename))
-    ext = Path.extname(filename) |> String.downcase()
-    String.downcase(basename) == "readme" and (ext == "" or ext in @readme_extensions)
-  end
-
-  defp markdown_file?(filename) do
-    String.downcase(Path.extname(filename)) in [".md", ".markdown"]
+    end)
   end
 
   defp render_readme(filename, content, package_name, version) do
