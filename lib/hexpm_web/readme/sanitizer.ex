@@ -15,8 +15,8 @@ defmodule HexpmWeb.Readme.Sanitizer do
   @allowed_attributes %{
     "a" => MapSet.new(~w(href title)),
     "img" => MapSet.new(~w(src alt width height title)),
-    "th" => MapSet.new(~w(align colspan rowspan style)),
-    "td" => MapSet.new(~w(align colspan rowspan style)),
+    "th" => MapSet.new(~w(align colspan rowspan)),
+    "td" => MapSet.new(~w(align colspan rowspan)),
     "input" => MapSet.new(~w(type checked disabled)),
     "code" => MapSet.new(~w(class)),
     "div" => MapSet.new(~w(class)),
@@ -74,6 +74,7 @@ defmodule HexpmWeb.Readme.Sanitizer do
     allowed = Map.get(@allowed_attributes, tag, MapSet.new())
 
     attrs
+    |> style_to_align(tag)
     |> Enum.filter(fn {name, _value} ->
       MapSet.member?(allowed, name) and not String.starts_with?(name, "on")
     end)
@@ -90,11 +91,27 @@ defmodule HexpmWeb.Readme.Sanitizer do
     [{"id", "user-content-" <> value}]
   end
 
-  defp sanitize_attribute(tag, {"style", value}) when tag in ~w(th td) do
-    sanitize_style(value)
+  defp sanitize_attribute(_tag, attr), do: [attr]
+
+  # Convert style="text-align: X" to align="X" to avoid CSP style-src violations
+  defp style_to_align(attrs, tag) when tag in ~w(th td) do
+    case Enum.find(attrs, fn {name, _} -> name == "style" end) do
+      {"style", value} ->
+        case Regex.run(~r/text-align\s*:\s*(left|right|center|justify)/i, value) do
+          [_, alignment] ->
+            attrs = Enum.reject(attrs, fn {name, _} -> name == "style" end)
+            [{"align", String.downcase(alignment)} | attrs]
+
+          nil ->
+            attrs
+        end
+
+      nil ->
+        attrs
+    end
   end
 
-  defp sanitize_attribute(_tag, attr), do: [attr]
+  defp style_to_align(attrs, _tag), do: attrs
 
   defp sanitize_url_attr({name, value}) do
     uri = URI.parse(String.trim(value))
@@ -108,14 +125,6 @@ defmodule HexpmWeb.Readme.Sanitizer do
 
       true ->
         []
-    end
-  end
-
-  defp sanitize_style(value) do
-    # Only allow text-align property
-    case Regex.run(~r/text-align\s*:\s*(left|right|center|justify)/i, value) do
-      [match | _] -> [{"style", match}]
-      nil -> []
     end
   end
 

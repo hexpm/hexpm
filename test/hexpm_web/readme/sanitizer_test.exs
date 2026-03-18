@@ -77,16 +77,18 @@ defmodule HexpmWeb.Readme.SanitizerTest do
       refute result =~ "onerror"
     end
 
-    test "allows table cells with text-align style" do
+    test "converts text-align style to align attribute on table cells" do
       html = ~s[<td style="text-align: center">data</td>]
       result = Sanitizer.sanitize(html)
-      assert result =~ ~s[style="text-align: center"]
+      assert result =~ ~s[align="center"]
+      refute result =~ "style"
     end
 
     test "strips non-text-align style from table cells" do
       html = ~s[<td style="background-color: red; color: blue">data</td>]
       result = Sanitizer.sanitize(html)
       refute result =~ "style"
+      refute result =~ "align"
     end
 
     test "strips style attributes from non-table elements" do
