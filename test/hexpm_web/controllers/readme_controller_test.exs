@@ -44,19 +44,18 @@ defmodule HexpmWeb.ReadmeControllerTest do
       assert conn.resp_body =~ "My Package"
       assert conn.resp_body =~ "This is a test README."
       assert get_resp_header(conn, "content-security-policy") |> List.first() =~ "frame-ancestors"
-      assert get_resp_header(conn, "cache-control") == ["public, max-age=3600"]
+      assert get_resp_header(conn, "cache-control") == ["public, max-age=86400"]
     end
 
-    test "renders README for package without version (latest)", %{package: package} do
-      store_readme(package.name, "1.0.0", "README.md", "# Latest README")
-
+    test "redirects versionless URL to latest version", %{package: package} do
       conn =
         build_conn()
         |> Map.put(:host, "readme.localhost")
         |> get("/#{package.name}")
 
-      assert conn.status == 200
-      assert conn.resp_body =~ "Latest README"
+      assert conn.status == 302
+      assert get_resp_header(conn, "location") == ["/#{package.name}/1.0.0"]
+      assert get_resp_header(conn, "cache-control") == ["public, max-age=3600"]
     end
 
     test "prioritizes README.md over other filenames", %{package: package} do

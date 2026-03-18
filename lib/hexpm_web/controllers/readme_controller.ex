@@ -14,27 +14,40 @@ defmodule HexpmWeb.ReadmeController do
     |> send_resp(404, "Not Found")
   end
 
+  def show(conn, %{"version" => version} = params) do
+    name = params["name"]
+    package = Packages.get("hexpm", name)
+
+    if package do
+      release = Enum.find(Releases.all(package), &(to_string(&1.version) == version))
+
+      if release do
+        serve_readme(conn, package, release)
+      else
+        send_no_readme(conn)
+      end
+    else
+      send_no_readme(conn)
+    end
+  end
+
   def show(conn, params) do
     name = params["name"]
-    version = params["version"]
-
     package = Packages.get("hexpm", name)
 
     if package do
       releases = Releases.all(package)
 
       release =
-        if version do
-          Enum.find(releases, &(to_string(&1.version) == version))
-        else
-          Hexpm.Repository.Release.latest_version(releases,
-            only_stable: true,
-            unstable_fallback: true
-          )
-        end
+        Hexpm.Repository.Release.latest_version(releases,
+          only_stable: true,
+          unstable_fallback: true
+        )
 
       if release do
-        serve_readme(conn, package, release)
+        conn
+        |> put_resp_header("cache-control", "public, max-age=3600")
+        |> redirect(to: "/#{name}/#{release.version}")
       else
         send_no_readme(conn)
       end
@@ -51,7 +64,7 @@ defmodule HexpmWeb.ReadmeController do
         html = render_readme(filename, content, package.name, version)
 
         conn
-        |> put_resp_header("cache-control", "public, max-age=3600")
+        |> put_resp_header("cache-control", "public, max-age=86400")
         |> render(:show, readme_html: html, parent_origins: parent_origins())
 
       :error ->
