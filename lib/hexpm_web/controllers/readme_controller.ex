@@ -60,10 +60,10 @@ defmodule HexpmWeb.ReadmeController do
   end
 
   defp fetch_readme(package_name, version) do
-    preview_url = Application.fetch_env!(:hexpm, :preview_url)
+    cdn_url = Application.fetch_env!(:hexpm, :cdn_url)
 
     Enum.find_value(@readme_filenames, :error, fn filename ->
-      readme_url = "#{preview_url}/preview/#{package_name}/#{version}/#{filename}"
+      readme_url = "#{cdn_url}/preview/#{package_name}/#{version}/#{filename}"
 
       case Hexpm.HTTP.impl().get(readme_url, []) do
         {:ok, 200, _headers, content} -> {:ok, filename, content}

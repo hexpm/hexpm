@@ -13,8 +13,8 @@ defmodule HexpmWeb.Readme.URLRewriter do
   package and version.
   """
   def rewrite(html, package_name, version) do
-    preview_url = Application.fetch_env!(:hexpm, :preview_url)
-    base_url = "#{preview_url}/preview/#{package_name}/#{version}"
+    cdn_url = Application.fetch_env!(:hexpm, :cdn_url)
+    base_url = "#{cdn_url}/preview/#{package_name}/#{version}"
 
     html
     |> Floki.parse_document!()

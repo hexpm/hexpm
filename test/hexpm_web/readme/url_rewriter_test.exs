@@ -16,7 +16,7 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
       html = ~s[<img src="docs/logo.png">]
       result = URLRewriter.rewrite(html, "my_package", "1.0.0")
 
-      expected = "http://localhost:5005/preview/my_package/1.0.0/docs/logo.png"
+      expected = "http://localhost:5000/preview/my_package/1.0.0/docs/logo.png"
       encoded = Base.encode16(expected, case: :lower)
       assert result =~ encoded
     end
@@ -25,7 +25,7 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
       html = ~s[<a href="CHANGELOG.md">Changelog</a>]
       result = URLRewriter.rewrite(html, "my_package", "1.0.0")
 
-      assert result =~ "http://localhost:5005/preview/my_package/1.0.0/CHANGELOG.md"
+      assert result =~ "http://localhost:5000/preview/my_package/1.0.0/CHANGELOG.md"
     end
 
     test "preserves fragment-only links" do
@@ -46,7 +46,7 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
       html = ~s[<img src="./images/logo.png">]
       result = URLRewriter.rewrite(html, "my_package", "1.0.0")
 
-      expected = "http://localhost:5005/preview/my_package/1.0.0/images/logo.png"
+      expected = "http://localhost:5000/preview/my_package/1.0.0/images/logo.png"
       encoded = Base.encode16(expected, case: :lower)
       assert result =~ encoded
     end
