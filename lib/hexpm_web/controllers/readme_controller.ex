@@ -197,6 +197,8 @@ defmodule HexpmWeb.ReadmeController do
     .readme dl dd { padding: 0 16px; margin-bottom: 16px; }
     .readme kbd { display: inline-block; padding: 3px 5px; font: 11px SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; line-height: 10px; color: #444d56; vertical-align: middle; background-color: #fafbfc; border: 1px solid #d1d5da; border-radius: 3px; box-shadow: inset 0 -1px 0 #d1d5da; }
     .readme input[type="checkbox"] { margin-right: 0.5em; }
+    @media (prefers-color-scheme: dark) { .color-scheme-light { display: none !important; } }
+    @media (prefers-color-scheme: light) { .color-scheme-dark { display: none !important; } }
     """
   end
 

@@ -51,6 +51,30 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
       assert result =~ encoded
     end
 
+    test "adds color-scheme-light class for gh-light-mode-only fragment" do
+      html = ~s[<img src="https://example.com/logo.png#gh-light-mode-only" alt="Logo">]
+      result = URLRewriter.rewrite(html, "my_package", "1.0.0")
+
+      assert result =~ ~s[class="color-scheme-light"]
+      # Fragment should be stripped from the proxied URL
+      refute result =~ "gh-light-mode-only"
+    end
+
+    test "adds color-scheme-dark class for gh-dark-mode-only fragment" do
+      html = ~s[<img src="https://example.com/logo.png#gh-dark-mode-only" alt="Logo">]
+      result = URLRewriter.rewrite(html, "my_package", "1.0.0")
+
+      assert result =~ ~s[class="color-scheme-dark"]
+      refute result =~ "gh-dark-mode-only"
+    end
+
+    test "does not add class for other fragments on images" do
+      html = ~s[<img src="https://example.com/logo.png#section" alt="Logo">]
+      result = URLRewriter.rewrite(html, "my_package", "1.0.0")
+
+      refute result =~ ~s[class="]
+    end
+
     test "does not proxy non-http/https image URLs" do
       html = ~s[<img src="data:image/png;base64,abc123">]
       result = URLRewriter.rewrite(html, "my_package", "1.0.0")

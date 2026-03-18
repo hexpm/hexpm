@@ -34,15 +34,24 @@ defmodule HexpmWeb.Readme.URLRewriter do
 
   defp rewrite_node(other, _base_url), do: other
 
-  defp rewrite_attrs("img", attrs, base_url) do
-    Enum.map(attrs, fn
-      {"src", src} ->
-        src = resolve_url(src, base_url)
-        {"src", proxy_image_url(src)}
+  @color_scheme_fragments %{
+    "gh-light-mode-only" => "color-scheme-light",
+    "gh-dark-mode-only" => "color-scheme-dark"
+  }
 
-      attr ->
-        attr
-    end)
+  defp rewrite_attrs("img", attrs, base_url) do
+    {src, attrs} = List.keytake(attrs, "src", 0)
+
+    case src do
+      {"src", src_value} ->
+        src_value = resolve_url(src_value, base_url)
+        {class, src_value} = extract_color_scheme_class(src_value)
+        attrs = [{"src", proxy_image_url(src_value)} | attrs]
+        if class, do: [{"class", class} | attrs], else: attrs
+
+      nil ->
+        attrs
+    end
   end
 
   defp rewrite_attrs("a", attrs, base_url) do
@@ -53,6 +62,15 @@ defmodule HexpmWeb.Readme.URLRewriter do
   end
 
   defp rewrite_attrs(_tag, attrs, _base_url), do: attrs
+
+  defp extract_color_scheme_class(url) do
+    uri = URI.parse(url)
+
+    case Map.get(@color_scheme_fragments, uri.fragment) do
+      nil -> {nil, url}
+      class -> {class, %{uri | fragment: nil} |> URI.to_string()}
+    end
+  end
 
   defp resolve_url(url, _base_url) when url == "" or is_nil(url), do: url
 
