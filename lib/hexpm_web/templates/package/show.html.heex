@@ -1,6 +1,4 @@
-<% licenses = @package.meta.licenses || []
-links = Enum.to_list(@package.meta.links || [])
-description = @package.meta.description %>
+<% description = @package.meta.description %>
 
 <.package_layout
   active_tab={:readme}
@@ -16,62 +14,50 @@ description = @package.meta.description %>
 >
   <:inner_content>
     <div class="bg-white border border-grey-200 rounded-lg p-6">
-      <h2 class="text-grey-900 text-[32px] font-semibold mb-11">
-        {ViewHelpers.package_name(@package)}
-      </h2>
-
-      <%= if description do %>
-        <div class="text-grey-600 mb-8 leading-relaxed">
-          {ViewHelpers.text_length(description, 300) |> text_to_html(insert_brs: false)}
+      <%= if ViewHelpers.main_repository?(@package) and @current_release do %>
+        <div id="readme-loading" class="flex items-center justify-center py-12 text-grey-400">
+          <svg class="animate-spin h-6 w-6 mr-3" viewBox="0 0 24 24" fill="none">
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            >
+            </circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            >
+            </path>
+          </svg>
+          Loading README...
         </div>
-      <% end %>
 
-      <%!-- Installation Section --%>
-      <%= if @current_release do %>
-        <section class="mb-8">
-          <h3 class="text-grey-900 text-2xl font-semibold mb-4">Installation</h3>
-          <p class="text-grey-600 mb-3">
-            The package can be installed by adding
-            <code class="bg-grey-50 px-2 py-0.5 rounded text-grey-500 text-sm font-mono">
-              {@package.name}
-            </code>
-            to your list of dependencies in mix.exs:
-          </p>
-          <pre
-            phx-no-curly-interpolation
-            class="bg-grey-50 rounded-lg p-4 font-mono text-sm text-grey-600 overflow-x-auto"
-          >def deps do
-  [{:<%= @package.name %>, "<%= snippet_version(:mix, @current_release.version) %>"<%= snippet_organization(@repository_name) %>}]
-end</pre>
-        </section>
-      <% end %>
+        <%= if description do %>
+          <div id="readme-fallback" class="text-grey-600 mb-8 leading-relaxed hidden">
+            {ViewHelpers.text_length(description, 300) |> text_to_html(insert_brs: false)}
+          </div>
+        <% end %>
 
-      <%!-- Links Section --%>
-      <%= if links != [] do %>
-        <section class="mb-8">
-          <h3 class="text-grey-900 text-2xl font-semibold mb-4">Links</h3>
-          <ul class="space-y-2">
-            <%= for {name, link} <- links do %>
-              <li>
-                <a
-                  href={ViewHelpers.safe_url(link)}
-                  rel="nofollow"
-                  class="text-blue-600 hover:text-blue-700 hover:underline"
-                >
-                  {name}
-                </a>
-              </li>
-            <% end %>
-          </ul>
-        </section>
-      <% end %>
-
-      <%!-- Licenses Section --%>
-      <%= if licenses != [] do %>
-        <section class="mb-8">
-          <h3 class="text-grey-900 text-2xl font-semibold mb-4">Licenses</h3>
-          <p class="text-grey-600">{Enum.join(licenses, ", ")}</p>
-        </section>
+        <iframe
+          id="readme-frame"
+          src={"#{ViewHelpers.readme_url(@package.name, @current_release.version)}"}
+          sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+          loading="lazy"
+          referrerpolicy="no-referrer"
+          title={"README for #{ViewHelpers.package_name(@package)}"}
+          class="w-full border-0 opacity-0 h-0 overflow-hidden"
+        >
+        </iframe>
+      <% else %>
+        <%= if description do %>
+          <div class="text-grey-600 mb-8 leading-relaxed">
+            {ViewHelpers.text_length(description, 300) |> text_to_html(insert_brs: false)}
+          </div>
+        <% end %>
       <% end %>
     </div>
   </:inner_content>

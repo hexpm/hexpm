@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style nonce={@style_src_nonce}>
+      <%= raw(HexpmWeb.ReadmeView.readme_css()) %>
+    </style>
+    <style nonce={@style_src_nonce}>
+      <%= raw(HexpmWeb.ReadmeView.makeup_css()) %>
+    </style>
+  </head>
+  <body>
+    <article class="readme">
+      {raw(@readme_html)}
+    </article>
+    <script nonce={@script_src_nonce}>
+      document.addEventListener('DOMContentLoaded', function() {
+        var origins = <%= raw(Jason.encode!(@parent_origins)) %>;
+        function sendHeight() {
+          var height = document.body.scrollHeight;
+          origins.forEach(function(o) {
+            window.parent.postMessage({type: 'readme-height', height: height}, o);
+          });
+        }
+        sendHeight();
+        new ResizeObserver(sendHeight).observe(document.body);
+      });
+    </script>
+  </body>
+</html>

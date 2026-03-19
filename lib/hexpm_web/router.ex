@@ -82,12 +82,26 @@ defmodule HexpmWeb.Router do
     plug :default_repository
   end
 
+  pipeline :readme do
+    plug :accepts, ["html"]
+    plug :put_secure_browser_headers
+    plug HexpmWeb.Plugs.ReadmeContentSecurityPolicy
+  end
+
   pipeline :admin do
     plug HexpmWeb.Plugs.DashboardAuth
   end
 
   if Mix.env() == :dev do
     forward "/sent_emails", Bamboo.SentEmailViewerPlug
+  end
+
+  scope "/", HexpmWeb, host: "readme." do
+    pipe_through :readme
+
+    get "/:name/:version", ReadmeController, :show
+    get "/:name", ReadmeController, :show
+    match :*, "/*path", ReadmeController, :not_found
   end
 
   scope "/", HexpmWeb do
@@ -382,6 +396,14 @@ defmodule HexpmWeb.Router do
           get "/tarballs/:ball", TestController, :tarball
         end
       end
+    end
+
+    scope "/preview", HexpmWeb do
+      get "/:package/:version/*filename", TestController, :preview_file
+    end
+
+    scope "/preview-files", HexpmWeb do
+      get "/:file", TestController, :preview_file_list
     end
 
     scope "/api", HexpmWeb do

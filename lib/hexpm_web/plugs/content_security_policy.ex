@@ -63,6 +63,7 @@ defmodule HexpmWeb.Plugs.ContentSecurityPolicy do
       opts[:directives]
       |> maybe_add_report_uri(report_uri)
       |> maybe_add_plausible_host()
+      |> maybe_add_readme_host()
 
     opts = Keyword.put(opts, :directives, directives)
     PlugContentSecurityPolicy.call(conn, PlugContentSecurityPolicy.init(opts))
@@ -81,6 +82,16 @@ defmodule HexpmWeb.Plugs.ContentSecurityPolicy do
     case Application.get_env(:hexpm, :host) do
       nil -> directives
       host -> Map.update(directives, :connect_src, [], &(&1 ++ ["https://s.#{host}"]))
+    end
+  end
+
+  defp maybe_add_readme_host(directives) do
+    readme_url = Application.get_env(:hexpm, :readme_url)
+
+    if readme_url do
+      Map.update(directives, :frame_src, [], &(&1 ++ [readme_url]))
+    else
+      directives
     end
   end
 

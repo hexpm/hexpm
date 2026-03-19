@@ -4,8 +4,8 @@
 @source "../lib";
 @source "../js";
 
-/* Syntax highlighting for code blocks */
-@import "../vendor/css/github-dark.css";
+/* Syntax highlighting for code blocks (Makeup) */
+@import "../vendor/css/makeup.css";
 
 /* Tooltip component styles */
 @import "./tooltip.css";
@@ -227,8 +227,6 @@ html, body {
 .blog-content pre,
 .policy-content pre,
 .prose pre {
-  background-color: var(--color-grey-900);
-  color: var(--color-grey-100);
   padding: 1rem;
   border-radius: 0.5rem;
   overflow-x: auto;
