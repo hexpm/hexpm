@@ -1,5 +1,5 @@
 defmodule Hexpm.ReleaseTasks do
-  alias Hexpm.ReleaseTasks.{CheckNames, Stats}
+  alias Hexpm.ReleaseTasks.{CheckNames, PurgeExpiredRecords, Stats}
   require Logger
 
   @start_apps [
@@ -82,6 +82,17 @@ defmodule Hexpm.ReleaseTasks do
     task(&Stats.run/0)
 
     Logger.info("[task] Finished stats")
+    stop()
+  end
+
+  def purge_expired_records() do
+    start_apps(@start_apps)
+    Logger.info("[task] Running purge_expired_records")
+    start_repo()
+
+    task(&PurgeExpiredRecords.run/0)
+
+    Logger.info("[task] Finished purge_expired_records")
     stop()
   end
 
