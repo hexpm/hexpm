@@ -14,13 +14,17 @@ defmodule HexpmWeb.Dashboard.Organization.Components.OrgTabNav do
   def org_tab_nav(assigns) do
     ~H"""
     <div>
-      <div class="border-b border-grey-200 mb-6">
-        <nav class="-mb-px flex gap-1 overflow-x-auto" aria-label="Organization tabs">
+      <div class="border-b border-grey-200 mb-4 sm:mb-6">
+        <nav
+          class="-mb-px flex gap-1 overflow-x-auto scrollbar-hide touch-pan-x"
+          aria-label="Organization tabs"
+        >
           <%= for {label, path, _active?} = tab <- tabs(@organization, @current_user) do %>
             <a
               href={path}
               class={[
-                "whitespace-nowrap px-4 py-3 text-sm font-medium border-b-2 transition-colors",
+                "whitespace-nowrap px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium border-b-2 transition-colors",
+                "min-h-[44px] flex items-center",
                 if(active?(@conn, tab),
                   do: "border-purple-600 text-purple-600",
                   else: "border-transparent text-grey-500 hover:text-grey-700 hover:border-grey-300"
@@ -49,7 +53,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.OrgTabNav do
        &String.starts_with?(&1, "/dashboard/orgs/#{name}/keys")},
       {"Packages", "/dashboard/orgs/#{name}/packages",
        &String.starts_with?(&1, "/dashboard/orgs/#{name}/packages")},
-      {"Recent Activities", "/dashboard/orgs/#{name}/audit-logs",
+      {"Activity", "/dashboard/orgs/#{name}/audit-logs",
        &String.starts_with?(&1, "/dashboard/orgs/#{name}/audit-logs")},
       {"Danger Zone", "/dashboard/orgs/#{name}/danger-zone",
        &String.starts_with?(&1, "/dashboard/orgs/#{name}/danger-zone")}

@@ -7,6 +7,19 @@ defmodule HexpmWeb.DashboardView do
     only: [create_organization_modal: 1]
 
   import HexpmWeb.ViewIcons, only: [icon: 3]
+  alias Phoenix.LiveView.JS
+
+  def toggle_sidebar_menu do
+    JS.toggle(
+      to: "#sidebar-content",
+      in: {"transition-all ease-out duration-200", "hidden", "block"},
+      out: {"transition-all ease-in duration-150", "block", "hidden"}
+    )
+    |> JS.toggle(to: "#sidebar-backdrop")
+    |> JS.toggle(to: "#sidebar-menu-icon")
+    |> JS.toggle(to: "#sidebar-close-icon")
+    |> JS.toggle_attribute({"aria-expanded", "true", "false"}, to: "#sidebar-toggle")
+  end
 
   defp account_settings() do
     [

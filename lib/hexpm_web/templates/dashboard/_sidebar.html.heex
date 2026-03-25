@@ -1,8 +1,38 @@
-<nav>
-  <%!-- Back Link --%>
+<%!-- Mobile Menu Toggle (visible only on mobile) --%>
+<button
+  type="button"
+  id="sidebar-toggle"
+  class="lg:hidden flex items-center gap-2 px-4 py-3 mb-4 bg-white border border-grey-200 rounded-lg text-grey-900 font-medium w-full shadow-xs"
+  phx-click={toggle_sidebar_menu()}
+  aria-expanded="false"
+  aria-controls="sidebar-content"
+>
+  <span id="sidebar-menu-icon">
+    {HexpmWeb.ViewIcons.icon(:heroicon, "bars-3", class: "w-5 h-5")}
+  </span>
+  <span id="sidebar-close-icon" class="hidden">
+    {HexpmWeb.ViewIcons.icon(:heroicon, "x-mark", class: "w-5 h-5")}
+  </span>
+  <span>Settings Menu</span>
+</button>
+
+<%!-- Sidebar Content (hidden on mobile by default, overlay on mobile when opened) --%>
+<nav
+  id="sidebar-content"
+  class="hidden lg:block lg:static fixed inset-0 z-40 lg:z-auto bg-white lg:bg-transparent p-6 lg:p-0 overflow-y-auto"
+>
+  <%!-- Back Link - On mobile closes menu, on desktop navigates to profile --%>
+  <button
+    type="button"
+    phx-click={toggle_sidebar_menu()}
+    class="lg:hidden inline-flex items-center gap-2 text-grey-600 text-sm mb-6 hover:text-grey-900"
+  >
+    {HexpmWeb.ViewIcons.icon(:heroicon, "x-mark", class: "w-4 h-4")} Close Menu
+  </button>
+
   <a
     href={~p"/users/#{@current_user.username}"}
-    class="inline-flex items-center gap-2 text-grey-600 text-sm mb-6 hover:text-grey-900"
+    class="hidden lg:inline-flex items-center gap-2 text-grey-600 text-sm mb-6 hover:text-grey-900"
   >
     {HexpmWeb.ViewIcons.icon(:heroicon, "arrow-left", class: "w-4 h-4")} Back to Profile
   </a>
@@ -83,6 +113,13 @@
     </div>
   <% end %>
 </nav>
+
+<%!-- Backdrop for mobile menu (z-30 to be below sidebar z-40) --%>
+<div
+  id="sidebar-backdrop"
+  class="hidden lg:hidden fixed inset-0 bg-black/50 z-30"
+  phx-click={toggle_sidebar_menu()}
+/>
 
 <%!-- Create organization modal — always rendered so the sidebar "Create New" button works from any dashboard page --%>
 <.create_organization_modal changeset={new_organization_changeset(assigns)} />
