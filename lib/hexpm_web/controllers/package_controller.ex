@@ -33,8 +33,6 @@ defmodule HexpmWeb.PackageController do
     downloads = Downloads.packages_all_views(Enum.reject([exact_match | all_matches], &is_nil/1))
     packages = Packages.diff(all_matches, exact_match)
 
-    maybe_log_search(search, package_count)
-
     render(
       conn,
       "index.html",
@@ -265,10 +263,4 @@ defmodule HexpmWeb.PackageController do
   defp fixup_params(params) do
     params
   end
-
-  defp maybe_log_search(search, 0) do
-    Hexpm.Repository.PackageSearches.add_or_increment(%{"term" => search})
-  end
-
-  defp maybe_log_search(_search, _package_count), do: :noop
 end
