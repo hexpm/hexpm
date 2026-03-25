@@ -29,7 +29,7 @@ defmodule HexpmWeb.Components.Table do
 
   def table(assigns) do
     ~H"""
-    <div class={["border-b border-grey-200 mb-6", @class]}>
+    <div class={["border-b border-grey-200 mb-6 overflow-x-scroll", @class]}>
       <table class="w-full">
         <thead>
           <tr class="border-b border-grey-200">
