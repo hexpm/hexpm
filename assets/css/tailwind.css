@@ -304,3 +304,32 @@ html, body {
   opacity: 0;
   transition: opacity 0.3s ease-in-out;
 }
+
+/* Dashboard sidebar: visible on desktop, toggled via data-open on mobile */
+@media (width < 1024px) {
+  #sidebar-content:not([data-open]) {
+    display: none;
+  }
+}
+
+#sidebar-backdrop:not([data-open]) {
+  display: none;
+}
+
+#sidebar-toggle[aria-expanded="true"] #sidebar-menu-icon {
+  display: none;
+}
+
+#sidebar-toggle:not([aria-expanded="true"]) #sidebar-close-icon {
+  display: none;
+}
+
+/* Hide scrollbar for horizontal scrolling tabs on mobile */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
