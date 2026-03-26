@@ -305,6 +305,17 @@ html, body {
   transition: opacity 0.3s ease-in-out;
 }
 
+/* Ensure dashboard sidebar respects responsive breakpoints even after
+   JS.toggle sets inline display styles on mobile */
+@media (width >= 1024px) {
+  #sidebar-content {
+    display: block !important;
+  }
+  #sidebar-backdrop {
+    display: none !important;
+  }
+}
+
 /* Hide scrollbar for horizontal scrolling tabs on mobile */
 .scrollbar-hide {
   -ms-overflow-style: none;  /* IE and Edge */
