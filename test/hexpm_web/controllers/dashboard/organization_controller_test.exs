@@ -972,7 +972,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
     test "create audit_log with action billing.create", %{user: user, organization: organization} do
       stub(Hexpm.Billing.Mock, :create, fn _ -> {:ok, %{}} end)
-      stub(Hexpm.Billing.Mock, :get, fn _ -> nil end)
+      stub(Hexpm.Billing.Mock, :get, fn _, _opts -> nil end)
 
       insert(:organization_user, organization: organization, user: user, role: "admin")
 
