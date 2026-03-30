@@ -6,34 +6,62 @@ defmodule Hexpm.OAuth.Clients do
 
   @doc """
   Gets a client by client_id.
+
+  Looks up from the in-memory cache first (populated at application startup
+  via `load_cache/0`), falls back to a database query on cache miss.
   """
   def get(client_id) do
-    Repo.get(Client, client_id)
+    cache = :persistent_term.get({__MODULE__, :cache}, %{})
+
+    case Map.fetch(cache, client_id) do
+      {:ok, client} -> client
+      :error -> Repo.get(Client, client_id)
+    end
+  end
+
+  @doc """
+  Loads all OAuth clients into the in-memory cache.
+  Called at application startup and after mutations.
+  """
+  def load_cache do
+    clients = Repo.all(Client)
+    cache = Map.new(clients, fn client -> {client.client_id, client} end)
+    :persistent_term.put({__MODULE__, :cache}, cache)
   end
 
   @doc """
   Creates a new OAuth client.
   """
   def create(attrs) do
-    %Client{}
-    |> Client.changeset(attrs)
-    |> Repo.insert()
+    result =
+      %Client{}
+      |> Client.changeset(attrs)
+      |> Repo.insert()
+
+    if match?({:ok, _}, result), do: load_cache()
+    result
   end
 
   @doc """
   Updates an OAuth client.
   """
   def update(%Client{} = client, attrs) do
-    client
-    |> Client.changeset(attrs)
-    |> Repo.update()
+    result =
+      client
+      |> Client.changeset(attrs)
+      |> Repo.update()
+
+    if match?({:ok, _}, result), do: load_cache()
+    result
   end
 
   @doc """
   Deletes an OAuth client.
   """
   def delete(%Client{} = client) do
-    Repo.delete(client)
+    result = Repo.delete(client)
+    if match?({:ok, _}, result), do: load_cache()
+    result
   end
 
   @doc """

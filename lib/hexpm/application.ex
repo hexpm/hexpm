@@ -19,6 +19,7 @@ defmodule Hexpm.Application do
       {Hexpm.Billing.Report, name: Hexpm.Billing.Report, interval: 60_000},
       goth_spec(),
       setup(),
+      load_caches(),
       HexpmWeb.Telemetry,
       HexpmWeb.Endpoint
     ]
@@ -68,6 +69,18 @@ defmodule Hexpm.Application do
 
     %{
       id: :task_setup,
+      start: {Task, :start_link, [fun]},
+      restart: :temporary
+    }
+  end
+
+  defp load_caches() do
+    fun = fn ->
+      Hexpm.OAuth.Clients.load_cache()
+    end
+
+    %{
+      id: :load_caches,
       start: {Task, :start_link, [fun]},
       restart: :temporary
     }

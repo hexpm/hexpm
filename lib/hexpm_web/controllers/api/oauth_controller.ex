@@ -260,7 +260,7 @@ defmodule HexpmWeb.API.OAuthController do
   defp authenticate_api_key(api_key_secret, conn) do
     usage_info = build_usage_info(conn)
 
-    case Hexpm.Accounts.Auth.key_auth(api_key_secret, usage_info) do
+    case Hexpm.Accounts.Auth.key_auth(api_key_secret, usage_info, preload: :oauth) do
       {:ok, auth_info} -> {:ok, auth_info}
       :error -> {:error, :invalid_client}
       :revoked -> {:error, :invalid_client}

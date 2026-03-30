@@ -37,6 +37,9 @@ defmodule Hexpm.UserSessions do
   @min_org_sessions 5
   @default_session_expires_in 30 * 24 * 60 * 60
 
+  def default_session_expires_in, do: @default_session_expires_in
+  def max_user_sessions, do: @max_user_sessions
+
   @doc """
   Calculates the session limit for an organization based on seat count.
   Returns max(5, seat_count), using cached billing_seats field.
@@ -173,6 +176,79 @@ defmodule Hexpm.UserSessions do
     case Repo.transaction(multi) do
       {:ok, %{session: session}} -> {:ok, session}
       {:error, :session, changeset, _} -> {:error, changeset}
+    end
+  end
+
+  @doc """
+  Builds an Ecto.Multi for creating an OAuth session without executing a transaction.
+
+  Returns the Multi (caller is responsible for executing the transaction).
+
+  ## Options
+    * `:expires_at` - Session expiration (defaults to now + 30 days)
+    * `:name` - Session name
+    * `:usage_info` - Map with :used_at, :user_agent, :ip to set as initial last_use
+    * `:audit` - Audit data for logging
+  """
+  def build_oauth_session_multi(user, client_id, opts) do
+    expires_at =
+      Keyword.get(
+        opts,
+        :expires_at,
+        DateTime.add(DateTime.utc_now(), @default_session_expires_in, :second)
+      )
+
+    %{
+      user_id: user.id,
+      type: "oauth",
+      client_id: client_id,
+      name: Keyword.get(opts, :name),
+      expires_at: expires_at
+    }
+    |> build_session_multi(opts)
+  end
+
+  @doc """
+  Builds an Ecto.Multi for creating an API key session without executing a transaction.
+
+  Similar to `build_oauth_session_multi/3` but supports both users and organizations,
+  and uses the provided `expires_at` directly (API key sessions have shorter lifetimes).
+
+  Returns the Multi (caller is responsible for executing the transaction).
+  """
+  def build_api_key_session_multi(user, organization, client_id, expires_at, opts) do
+    owner_attrs =
+      if user do
+        %{user_id: user.id}
+      else
+        %{organization_id: organization.id}
+      end
+
+    Map.merge(owner_attrs, %{
+      type: "oauth",
+      client_id: client_id,
+      name: Keyword.get(opts, :name),
+      expires_at: expires_at
+    })
+    |> build_session_multi(opts)
+  end
+
+  defp build_session_multi(attrs, opts) do
+    changeset = UserSession.changeset(%UserSession{}, attrs)
+
+    changeset =
+      if usage_info = Keyword.get(opts, :usage_info) do
+        Ecto.Changeset.put_embed(changeset, :last_use, struct(UserSession.Use, usage_info))
+      else
+        changeset
+      end
+
+    multi = Ecto.Multi.new() |> Ecto.Multi.insert(:session, changeset)
+
+    if audit_data = Keyword.get(opts, :audit) do
+      audit(multi, audit_data, "session.create", fn %{session: session} -> session end)
+    else
+      multi
     end
   end
 
