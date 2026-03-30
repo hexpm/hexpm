@@ -69,9 +69,9 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.PasswordCard do
         <%= if Hexpm.Accounts.User.can_remove_password?(@user) do %>
           <%= form_tag(
             ~p"/dashboard/security/remove-password",
-            [method: :post, id: "remove-password-form", style: "display: none;"]
+            [method: :post, id: "remove-password-form", class: "hidden"]
           ) do %>
-            <button type="submit" id="remove-password-form-submit" style="display: none;"></button>
+            <button type="submit" id="remove-password-form-submit" class="hidden"></button>
           <% end %>
         <% else %>
           <p class="text-grey-500 text-sm mt-4 p-3 bg-grey-50 rounded-lg">

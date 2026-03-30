@@ -330,8 +330,7 @@ defmodule HexpmWeb.Components.Input do
           >
             <div
               data-strength-bar
-              class="h-full rounded-full transition-all duration-300"
-              style="width: 0%"
+              class="h-full w-0 rounded-full transition-all duration-300"
             >
             </div>
           </div>
