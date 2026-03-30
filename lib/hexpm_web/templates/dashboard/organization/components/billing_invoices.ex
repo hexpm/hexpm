@@ -56,29 +56,31 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInvoices do
 
   defp invoice_row(assigns) do
     ~H"""
-    <td class="px-0 py-4 whitespace-nowrap text-grey-900">
-      <%= if @invoice["id"] do %>
-        <a
-          href={~p"/dashboard/orgs/#{@organization}/invoices/#{@invoice["id"]}"}
-          target="_blank"
-          rel="noopener"
-          class="text-purple-600 hover:text-purple-700 hover:underline"
-        >
+    <tr>
+      <td class="px-0 py-4 whitespace-nowrap text-grey-900">
+        <%= if @invoice["id"] do %>
+          <a
+            href={~p"/dashboard/orgs/#{@organization}/invoices/#{@invoice["id"]}"}
+            target="_blank"
+            rel="noopener"
+            class="text-purple-600 hover:text-purple-700 hover:underline"
+          >
+            {BillingHelpers.payment_date(@invoice["date"] || @invoice["created"])}
+          </a>
+        <% else %>
           {BillingHelpers.payment_date(@invoice["date"] || @invoice["created"])}
-        </a>
-      <% else %>
-        {BillingHelpers.payment_date(@invoice["date"] || @invoice["created"])}
-      <% end %>
-    </td>
-    <td class="px-4 py-4 whitespace-nowrap text-grey-900">
-      {BillingHelpers.dollar_money(!!@invoice["refund"], @invoice["amount_due"])}
-    </td>
-    <td class="px-4 py-4 whitespace-nowrap text-grey-600">
-      {BillingHelpers.payment_card(@invoice["card"])}
-    </td>
-    <td class="px-4 py-4 whitespace-nowrap">
-      {invoice_status(@invoice, @organization, @card, @subscription)}
-    </td>
+        <% end %>
+      </td>
+      <td class="px-4 py-4 whitespace-nowrap text-grey-900">
+        {BillingHelpers.dollar_money(!!@invoice["refund"], @invoice["amount_due"])}
+      </td>
+      <td class="px-4 py-4 whitespace-nowrap text-grey-600">
+        {BillingHelpers.payment_card(@invoice["card"])}
+      </td>
+      <td class="px-4 py-4 whitespace-nowrap">
+        {invoice_status(@invoice, @organization, @card, @subscription)}
+      </td>
+    </tr>
     """
   end
 
