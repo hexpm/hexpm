@@ -6,7 +6,7 @@ defmodule Hexpm.Billing.Local do
     {:ok, %{}}
   end
 
-  def get(_organization) do
+  def get(_organization, _opts \\ []) do
     # Realistic stub data for local development — allows the billing UI to be
     # reviewed without a running billing service. Safe: this module is only
     # used in dev (see config/config.exs). Production uses Billing.Hexpm.
@@ -79,7 +79,7 @@ defmodule Hexpm.Billing.Local do
     :ok
   end
 
-  def invoice(_id) do
+  def invoice(_id, _opts \\ []) do
     %{}
   end
 

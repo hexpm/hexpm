@@ -49,8 +49,12 @@ defmodule Hexpm.Accounts.Keys do
     |> Repo.transaction()
   end
 
+  # Throttle last_use updates to at most once per 5 minutes per key,
+  # matching the browser session throttle behavior.
+  @last_use_throttle_seconds 300
+
   def update_last_use(%Key{public: true} = key, usage_info) do
-    if Repo.write_mode?() do
+    if Repo.write_mode?() && should_update_last_use?(key) do
       key
       |> Key.update_last_use(usage_info)
       |> Repo.update!()
@@ -60,6 +64,13 @@ defmodule Hexpm.Accounts.Keys do
   def update_last_use(%Key{public: false} = key, _usage_info) do
     key
   end
+
+  defp should_update_last_use?(%Key{last_use: %{used_at: used_at}})
+       when not is_nil(used_at) do
+    DateTime.diff(DateTime.utc_now(), used_at, :second) >= @last_use_throttle_seconds
+  end
+
+  defp should_update_last_use?(_key), do: true
 
   defp maybe_retry_for_unique_name(
          {:error, :key, %Ecto.Changeset{errors: [{:name, {"has already been taken", _}}]}, _},

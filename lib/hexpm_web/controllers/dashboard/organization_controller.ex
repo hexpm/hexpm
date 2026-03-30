@@ -287,7 +287,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         invoice_ids = Enum.map(customer["invoices"], & &1["id"])
 
         if id in invoice_ids do
-          invoice = Hexpm.Billing.invoice(id)
+          invoice =
+            Hexpm.Billing.invoice(id, style_nonce: conn.assigns[:style_src_nonce])
 
           conn
           |> put_resp_header("content-type", "text/html")
@@ -659,7 +660,10 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     user = organization.user
     public_email = user && Enum.find(user.emails, & &1.public)
     gravatar_email = user && Enum.find(user.emails, & &1.gravatar)
-    customer = Hexpm.Billing.get(organization.name)
+
+    customer =
+      Hexpm.Billing.get(organization.name, script_nonce: conn.assigns[:script_src_nonce])
+
     keys = Keys.all(organization)
     per_page = opts[:per_page] || 30
     page = opts[:page] || 1

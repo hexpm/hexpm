@@ -149,7 +149,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
             data-post-action={@post_action}
             data-csrf-token={@csrf_token}
           >
-            {raw(BillingHelpers.add_script_nonces(@checkout_html, @script_src_nonce) || "")}
+            {raw(@checkout_html || "")}
           </div>
 
           <div class="mt-4 flex gap-3 items-center">
@@ -299,7 +299,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
             data-post-action={@post_action}
             data-csrf-token={@csrf_token}
           >
-            {raw(BillingHelpers.add_script_nonces(@checkout_html, @script_src_nonce) || "")}
+            {raw(@checkout_html || "")}
           </div>
         <% end %>
       </div>

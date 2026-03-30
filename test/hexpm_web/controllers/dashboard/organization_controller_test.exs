@@ -10,7 +10,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
   end
 
   defp mock_customer(organization) do
-    stub(Hexpm.Billing.Mock, :get, fn token ->
+    stub(Hexpm.Billing.Mock, :get, fn token, _opts ->
       assert organization.name == token
 
       %{
@@ -180,7 +180,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     test "shows incomplete subscription status", %{user: user, organization: organization} do
       insert(:organization_user, organization: organization, user: user, role: "admin")
 
-      stub(Hexpm.Billing.Mock, :get, fn token ->
+      stub(Hexpm.Billing.Mock, :get, fn token, _opts ->
         assert organization.name == token
 
         %{
@@ -209,7 +209,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     test "shows incomplete_expired subscription status", %{user: user, organization: organization} do
       insert(:organization_user, organization: organization, user: user, role: "admin")
 
-      stub(Hexpm.Billing.Mock, :get, fn token ->
+      stub(Hexpm.Billing.Mock, :get, fn token, _opts ->
         assert organization.name == token
 
         %{
@@ -253,7 +253,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
   describe "POST /dashboard/orgs/:dashboard_org" do
     test "add member to organization", %{user: user, organization: organization} do
-      stub(Hexpm.Billing.Mock, :get, fn token ->
+      stub(Hexpm.Billing.Mock, :get, fn token, _opts ->
         assert organization.name == token
 
         %{
@@ -290,7 +290,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       user: user,
       organization: organization
     } do
-      stub(Hexpm.Billing.Mock, :get, fn token ->
+      stub(Hexpm.Billing.Mock, :get, fn token, _opts ->
         assert organization.name == token
 
         %{
@@ -608,7 +608,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         {:error, %{"errors" => "No active subscription to resume"}}
       end)
 
-      stub(Hexpm.Billing.Mock, :get, fn token ->
+      stub(Hexpm.Billing.Mock, :get, fn token, _opts ->
         assert organization.name == token
         %{"checkout_html" => "", "invoices" => []}
       end)
@@ -652,12 +652,12 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
   describe "GET /dashboard/orgs/:dashboard_org/invoices/:id" do
     test "show invoice", %{user: user, organization: organization} do
-      stub(Hexpm.Billing.Mock, :get, fn token ->
+      stub(Hexpm.Billing.Mock, :get, fn token, _opts ->
         assert organization.name == token
         %{"invoices" => [%{"id" => 123}]}
       end)
 
-      stub(Hexpm.Billing.Mock, :invoice, fn id ->
+      stub(Hexpm.Billing.Mock, :invoice, fn id, _opts ->
         assert id == 123
         "Invoice"
       end)
@@ -673,7 +673,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     end
 
     test "returns 404 for non-integer invoice ID", %{user: user, organization: organization} do
-      stub(Hexpm.Billing.Mock, :get, fn _token ->
+      stub(Hexpm.Billing.Mock, :get, fn _token, _opts ->
         %{"invoices" => [%{"id" => 123}]}
       end)
 
@@ -690,7 +690,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
   describe "POST /dashboard/orgs/:dashboard_org/invoices/:id/pay" do
     test "pay invoice succeed", %{user: user, organization: organization} do
-      stub(Hexpm.Billing.Mock, :get, fn token ->
+      stub(Hexpm.Billing.Mock, :get, fn token, _opts ->
         assert organization.name == token
 
         invoice = %{
@@ -720,7 +720,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     end
 
     test "pay invoice failed", %{user: user, organization: organization} do
-      stub(Hexpm.Billing.Mock, :get, fn token ->
+      stub(Hexpm.Billing.Mock, :get, fn token, _opts ->
         assert organization.name == token
 
         invoice = %{
@@ -755,7 +755,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       user: user,
       organization: organization
     } do
-      stub(Hexpm.Billing.Mock, :get, fn _token -> %{"invoices" => [%{"id" => 123}]} end)
+      stub(Hexpm.Billing.Mock, :get, fn _token, _opts -> %{"invoices" => [%{"id" => 123}]} end)
       stub(Hexpm.Billing.Mock, :pay_invoice, fn _id -> :ok end)
 
       insert(:organization_user, organization: organization, user: user, role: "admin")

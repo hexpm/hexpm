@@ -1,5 +1,5 @@
 defmodule HexpmWeb.SudoControllerTest do
-  use HexpmWeb.ConnCase, async: true
+  use HexpmWeb.ConnCase
 
   alias HexpmWeb.Plugs.Sudo
 
@@ -109,8 +109,9 @@ defmodule HexpmWeb.SudoControllerTest do
 
     test "rate limits password attempts" do
       user = insert(:user)
+      PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
 
-      # Make 5 failed attempts
+      # Make 5 failed attempts to exhaust the limit
       for _ <- 1..5 do
         build_conn()
         |> test_login(user, sudo: false)
@@ -167,8 +168,9 @@ defmodule HexpmWeb.SudoControllerTest do
 
     test "rate limits 2FA attempts" do
       user = insert(:user_with_tfa)
+      PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
 
-      # Make 5 failed attempts
+      # Make 5 failed attempts to exhaust the limit
       for _ <- 1..5 do
         build_conn()
         |> test_login(user, sudo: false)

@@ -132,12 +132,6 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingHelpers do
   def show_person?(person, errors), do: (person || errors["person"]) && !errors["company"]
   def show_company?(company, errors), do: (company || errors["company"]) && !errors["person"]
 
-  def add_script_nonces(nil, _nonce), do: nil
-
-  def add_script_nonces(html, nonce) do
-    String.replace(html, "<script", ~s(<script nonce="#{nonce}"))
-  end
-
   @trial_no_card """
   your subscription will end after the trial period because we have no payment method on file.
   Please add a payment method to continue using organizations after the trial.

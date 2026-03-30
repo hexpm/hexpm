@@ -2,7 +2,7 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
   use HexpmWeb.ConnCase, async: true
 
   defp mock_customer(context) do
-    stub(Hexpm.Billing.Mock, :get, fn token ->
+    stub(Hexpm.Billing.Mock, :get, fn token, _opts ->
       assert context.organization.name == token
       %{"quantity" => 1}
     end)
