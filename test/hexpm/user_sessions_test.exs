@@ -338,7 +338,7 @@ defmodule Hexpm.UserSessionsTest do
       organization = insert(:organization)
 
       # Mock billing to return nil/unavailable
-      Mox.stub(Hexpm.Billing.Mock, :get, fn _name -> nil end)
+      Mox.stub(Hexpm.Billing.Mock, :get, fn _name, _opts -> nil end)
 
       # Calculate session limit
       limit = UserSessions.get_organization_session_limit(organization)
@@ -349,7 +349,7 @@ defmodule Hexpm.UserSessionsTest do
       organization = insert(:organization)
 
       # Mock billing to return invalid data
-      Mox.stub(Hexpm.Billing.Mock, :get, fn _name ->
+      Mox.stub(Hexpm.Billing.Mock, :get, fn _name, _opts ->
         %{"quantity" => "invalid"}
       end)
 

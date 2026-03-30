@@ -6,7 +6,7 @@ defmodule Hexpm.Billing.Local do
     {:ok, %{}}
   end
 
-  def get(_organization) do
+  def get(_organization, _opts \\ []) do
     %{
       "checkout_html" => "",
       "monthly_cost" => 800,
@@ -38,7 +38,7 @@ defmodule Hexpm.Billing.Local do
     :ok
   end
 
-  def invoice(_id) do
+  def invoice(_id, _opts \\ []) do
     %{}
   end
 

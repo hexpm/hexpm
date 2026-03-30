@@ -83,7 +83,7 @@
                       <h4 class="modal-title">Payment method</h4>
                     </div>
                     <div class="modal-body">
-                      <%= raw(add_script_nonces(@checkout_html, @script_src_nonce)) %>
+                      <%= raw(@checkout_html) %>
                     </div>
                   </div>
                 </div>
@@ -94,7 +94,7 @@
                 window.hexpm_billing_post_action = "<%= @post_action %>";
                 window.hexpm_billing_csrf_token = "<%= @csrf_token %>";
               </script>
-              <%= raw(add_script_nonces(@checkout_html, @script_src_nonce)) %>
+              <%= raw(@checkout_html) %>
 
               <div style="display: flex; gap: 10px; align-items: center;">
                 <%= if @subscription && @subscription["cancel_at_period_end"] && @card do %>
@@ -217,7 +217,7 @@
                       <h4 class="modal-title">Payment method</h4>
                     </div>
                     <div class="modal-body">
-                      <%= raw(add_script_nonces(@checkout_html, @script_src_nonce)) %>
+                      <%= raw(@checkout_html) %>
                     </div>
                   </div>
                 </div>
@@ -228,7 +228,7 @@
                 window.hexpm_billing_post_action = "<%= @post_action %>";
                 window.hexpm_billing_csrf_token = "<%= @csrf_token %>";
               </script>
-              <%= raw(add_script_nonces(@checkout_html, @script_src_nonce)) %>
+              <%= raw(@checkout_html) %>
             <% end %>
           <% end %>
         </div>

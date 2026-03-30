@@ -3,14 +3,14 @@ defmodule Hexpm.Billing.Behaviour do
 
   # TODO: Remove when all customers migrated to SCA/PaymentIntents
   @callback checkout(organization(), data :: map()) :: {:ok, map()} | {:error, map()}
-  @callback get(organization()) :: map() | nil
+  @callback get(organization(), opts :: keyword()) :: map() | nil
   @callback cancel(organization()) :: map()
   @callback resume(organization()) :: {:ok, map()} | {:error, map()}
   @callback create(map()) :: {:ok, map()} | {:error, map()}
   @callback update(organization(), map()) ::
               {:ok, map()} | {:requires_action, map()} | {:error, map()}
   @callback change_plan(organization(), map()) :: :ok
-  @callback invoice(id :: pos_integer()) :: binary()
+  @callback invoice(id :: pos_integer(), opts :: keyword()) :: binary()
   @callback void_invoice(organization(), payments_token :: String.t()) :: :ok | {:error, map()}
   @callback pay_invoice(id :: pos_integer()) :: :ok | {:error, map()}
   @callback report() :: [map()]
