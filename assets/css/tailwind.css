@@ -259,6 +259,62 @@ html, body {
   background: #ccc;
 }
 
+/* Billing service embedded buttons & alerts (hexpm_billing renders these classes) */
+.billing-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  border-radius: 0.25rem;
+  height: 2.25rem;
+  padding: 0 0.75rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border: none;
+}
+
+.billing-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.billing-button-primary {
+  background-color: var(--color-primary-600);
+  color: white;
+}
+
+.billing-button-primary:hover:not(:disabled) {
+  background-color: var(--color-primary-700);
+}
+
+.billing-button-warning {
+  background-color: var(--color-yellow-600);
+  color: white;
+}
+
+.billing-button-warning:hover:not(:disabled) {
+  background-color: var(--color-yellow-700);
+}
+
+.billing-alert {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.billing-alert-warning {
+  background-color: var(--color-yellow-100);
+  border: 1px solid var(--color-yellow-300);
+  color: var(--color-yellow-900);
+}
+
+.billing-form-error {
+  color: var(--color-red-600);
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+}
+
 /* hCaptcha widget spacing (signup, password-reset, email-verification) */
 .h-captcha {
   margin: 10px 0;
