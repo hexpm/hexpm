@@ -216,7 +216,6 @@ benchee_json
 benchfella
 benchmark_ips
 benchwarmer
-bencode
 bencoder
 bencodex
 bendy
@@ -1629,7 +1628,6 @@ haikunator
 hairnet
 hamcrest
 haphazard
-happy
 happy_with
 harakiri
 hare
@@ -1799,7 +1797,6 @@ instrumental
 integer_to_ip
 intellij_elixir
 interactor
-intercom
 inxect
 ioffice_logglix
 iona
@@ -2098,7 +2095,6 @@ marshal
 maru
 maru_entity
 maru_swagger
-marvel
 marvin
 match_trie
 materialize
@@ -2478,7 +2474,6 @@ parsex
 parsey
 particle
 partisan
-pascal
 pass
 passport
 passwordless
@@ -2984,7 +2979,6 @@ reup
 reverse_proxy
 revision_plate_ex
 revolver
-rex
 rfc3339
 riak
 riak_core_ng
@@ -3096,7 +3090,6 @@ sensor
 sentient
 sentinel
 sentix
-sentry
 sentry_elixir
 sequences
 serial
@@ -3138,7 +3131,6 @@ shrivel
 siariwyd
 side_effect
 sidejob
-sideshow
 sidetask
 sidewalk
 sift_ex
@@ -3229,8 +3221,6 @@ spacerace
 spacesaving
 spaghetti_pool
 sparkel
-sparkpost
-spartan
 spatial_hash
 spawndir
 speak_ex
@@ -3514,7 +3504,6 @@ ua_parser2
 uber
 ucol
 ucol_nif
-udia
 udpflux
 ueberauth
 ueberauth_active_directory
@@ -3571,7 +3560,6 @@ until_then
 updown
 upyun
 urania
-uri
 uri_query
 uri_template
 urilib
