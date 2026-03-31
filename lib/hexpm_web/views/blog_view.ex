@@ -153,8 +153,9 @@ defmodule HexpmWeb.BlogView do
             .blog-content img {
               border-radius: 0.5rem;
               box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-              margin: 1rem 0;
+              margin: 1rem auto;
               max-width: 100%;
+              display: block;
             }
             .blog-content .subtitle {
               color: #6b7280;
@@ -162,7 +163,7 @@ defmodule HexpmWeb.BlogView do
               margin-bottom: 1.5rem;
             }
           </style>
-          #{content_string}
+          #{strip_header(content_string)}
         </article>
       </div>
     </div>
@@ -233,6 +234,12 @@ defmodule HexpmWeb.BlogView do
       Calendar.strftime(datetime, "%d %b %Y"),
       author
     }
+  end
+
+  defp strip_header(content) do
+    content
+    |> String.replace(~r/<h2>.*<\/h2>\s*/sU, "", global: false)
+    |> String.replace(~r/<div class="subtitle">.*<\/div>\s*/sU, "", global: false)
   end
 
   defp regex_run(regex, string) do
