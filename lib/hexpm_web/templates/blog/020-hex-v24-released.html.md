@@ -6,7 +6,7 @@ Hex 2.4 replaces password based authentication with an OAuth device flow and add
 
 ### OAuth device flow
 
-Previously when authenticating with the Hex CLI your password was sent directly to the server and we were not able to properly hide the password input in the terminal. We have now replaced this with an [OAuth 2.0 device authorization flow](https://datatracker.ietf.org/doc/html/rfc8628). When you run `mix hex.user auth` or any command that requires authentication you will be given a URL and a code to enter in your browser.
+We have replaced password based authentication in the Hex CLI with an [OAuth 2.0 device authorization flow](https://datatracker.ietf.org/doc/html/rfc8628). When you run `mix hex.user auth` or any command that requires authentication you will be given a URL and a code to enter in your browser.
 
 <img src="/images/blog/020_device_verification.png" srcset="/images/blog/020_device_verification.png 2x" alt="Device verification code">
 
@@ -14,7 +14,7 @@ Since the CLI authenticates through the browser it works regardless of the authe
 
 The OAuth tokens are automatically refreshed and do not need to be manually managed. If a token cannot be refreshed you will be prompted to re-authorize through the browser.
 
-[Gleam](https://gleam.run) 0.15.0 has already been released with support for the new OAuth flow and we are hoping to have support in rebar3 soon. Once all CLI clients support OAuth we plan to deprecate password based authentication for CLIs.
+Update Hex to the latest version by running `mix local.hex`. [Gleam](https://gleam.run) 0.15.0 has already been released with support for the new OAuth flow and we are hoping to have support in rebar3 soon. Once all CLI clients support OAuth we plan to deprecate password based authentication for CLIs.
 
 ### Two-factor authentication required for publishing
 
@@ -34,6 +34,4 @@ Looking ahead we want to add support for [trusted publishing](https://docs.pypi.
 
 As you may have noticed, the hex.pm website has a new look. Package pages now show the README directly, package search results show more information at a glance, and the dashboard has been reworked. Thanks to [Paulo Valim](https://www.linkedin.com/in/paulo-valim/) for implementing the new design.
 
-### Upgrading
-
-Install the latest version of Hex by running `mix local.hex`. For a full list of changes check the [release notes](https://github.com/hexpm/hex/releases/tag/v2.4.0).
+For a full list of changes check the [release notes](https://github.com/hexpm/hex/releases/tag/v2.4.0).
