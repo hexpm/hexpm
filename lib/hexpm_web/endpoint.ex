@@ -66,5 +66,7 @@ defmodule HexpmWeb.Endpoint do
     plug Plug.SSL, rewrite_on: [:x_forwarded_proto]
   end
 
+  plug HexpmWeb.Plugs.CanonicalHost
+
   plug HexpmWeb.Router
 end
