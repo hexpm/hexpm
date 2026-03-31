@@ -1,18 +1,32 @@
-<li class="p-6 hover:bg-grey-50 transition-colors">
+<li class={[
+  "group p-6 transition-colors",
+  @exact_match? && "hover:bg-green-100",
+  not @exact_match? && "hover:bg-grey-50"
+]}>
   <div class="flex items-start justify-between gap-6">
     <%!-- Package Info --%>
     <div class="flex-1 min-w-0">
       <div class="flex items-center gap-3 mb-2">
         <a
           href={ViewHelpers.path_for_package(@package)}
-          class="text-grey-900 font-semibold text-xl hover:text-primary-600 transition-colors"
+          class={[
+            "text-grey-900 font-semibold text-xl transition-colors",
+            @exact_match? && "hover:text-green-600",
+            not @exact_match? && "hover:text-primary-600"
+          ]}
         >
           {ViewHelpers.package_name(@package)}
         </a>
         <%= if @package.latest_release do %>
           <a
             href={ViewHelpers.path_for_package(@package)}
-            class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-grey-100 text-grey-700 hover:bg-primary-100 hover:text-primary-700 transition-colors"
+            class={[
+              "inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium transition-colors",
+              @exact_match? &&
+                "bg-green-100 group-hover:bg-green-200 text-green-700 hover:text-green-800",
+              not @exact_match? &&
+                "bg-grey-100 text-grey-700 hover:bg-primary-100 hover:text-primary-700"
+            ]}
           >
             v{@package.latest_release.version}
           </a>

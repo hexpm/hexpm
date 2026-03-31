@@ -299,7 +299,13 @@ defmodule HexpmWeb.ViewHelpers do
   defp rel_from_now({0, {hour, _, _}}) when hour < 24, do: "#{hour} hours ago"
   defp rel_from_now({1, {_, _, _}}), do: "1 day ago"
   defp rel_from_now({day, {_, _, _}}) when day < 0, do: "about now"
-  defp rel_from_now({day, {_, _, _}}), do: "#{day} days ago"
+  defp rel_from_now({day, {_, _, _}}) when day < 7, do: "#{day} days ago"
+  defp rel_from_now({day, {_, _, _}}) when day < 14, do: "1 week ago"
+  defp rel_from_now({day, {_, _, _}}) when day < 30, do: "#{div(day, 7)} weeks ago"
+  defp rel_from_now({day, {_, _, _}}) when day < 60, do: "1 month ago"
+  defp rel_from_now({day, {_, _, _}}) when day < 365, do: "#{div(day, 30)} months ago"
+  defp rel_from_now({day, {_, _, _}}) when day < 730, do: "about 1 year ago"
+  defp rel_from_now({day, {_, _, _}}), do: "about #{div(day, 365)} years ago"
 
   def pretty_datetime(datetime) do
     Calendar.strftime(datetime, "%b %d, %Y, %H:%M")

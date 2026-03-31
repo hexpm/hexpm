@@ -37,6 +37,7 @@
         </div>
         <ul class="bg-white rounded-lg overflow-hidden">
           {render("_package.html",
+            exact_match?: true,
             package: @exact_match,
             package_downloads: downloads_for_package(@exact_match, @downloads),
             view: @sort
@@ -103,6 +104,7 @@
         <ul class="divide-y divide-grey-200">
           <%= for package <- @packages do %>
             {render("_package.html",
+              exact_match?: false,
               package: package,
               package_downloads: downloads_for_package(package, @downloads),
               view: @sort
