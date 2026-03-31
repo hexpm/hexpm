@@ -1,6 +1,8 @@
 defmodule HexpmWeb.PackageViewTest do
   use HexpmWeb.ConnCase, async: true
 
+  import Phoenix.View
+
   alias HexpmWeb.PackageView
 
   defp parse_html_list_to_string(html_map) do
@@ -117,6 +119,35 @@ defmodule HexpmWeb.PackageViewTest do
     assert PackageView.snippet_version(:erlang_mk, version1) == "0.0.2"
     assert PackageView.snippet_version(:erlang_mk, version2) == "0.2.99"
     assert PackageView.snippet_version(:erlang_mk, version3) == "2.0.2"
+  end
+
+  describe "_package.html" do
+    test "renders package partial without exact_match?" do
+      package =
+        build(:package,
+          repository_id: 1,
+          repository: build(:repository, id: 1, name: "hexpm"),
+          inserted_at: ~U[2025-01-01 00:00:00Z]
+        )
+
+      package = %{
+        package
+        | latest_release: %Hexpm.Repository.Release{
+            version: Version.parse!("1.0.0"),
+            inserted_at: ~N[2025-01-01 00:00:00]
+          }
+      }
+
+      result =
+        render_to_string(PackageView, "_package.html",
+          package: package,
+          package_downloads: %{"all" => 1000, "recent" => 100},
+          view: :recent_downloads
+        )
+
+      assert result =~ package.name
+      assert result =~ "v1.0.0"
+    end
   end
 
   describe "retirement_message/1" do
