@@ -201,7 +201,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
                   addSeatsForm.addEventListener('submit', async function(event) {
                     event.preventDefault();
 
-                    var submitButton = addSeatsForm.querySelector('button[type="submit"]');
+                    var submitButton = document.querySelector('button[type="submit"][form="add-seats-form"]');
                     submitButton.disabled = true;
                     submitButton.textContent = 'Processing...';
 
