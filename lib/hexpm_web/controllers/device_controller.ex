@@ -142,11 +142,14 @@ defmodule HexpmWeb.DeviceController do
   end
 
   defp redirect_to_device(conn, nil) do
-    redirect(conn, to: ~p"/oauth/device")
+    conn
+    |> clear_verified_code()
+    |> redirect(to: ~p"/oauth/device")
   end
 
   defp redirect_to_device(conn, message) do
     conn
+    |> clear_verified_code()
     |> put_flash(:error, message)
     |> redirect(to: ~p"/oauth/device")
   end
