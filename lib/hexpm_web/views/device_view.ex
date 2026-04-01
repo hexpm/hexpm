@@ -51,7 +51,7 @@ defmodule HexpmWeb.DeviceView do
       render_scopes: &render_grouped_scopes(&1, current_user),
       format_summary: &format_scopes(&1, :summary),
       form_action: ~p"/oauth/device/authorize",
-      hidden_fields: [{"user_code", device_code.user_code}],
+      hidden_fields: [],
       approve_value: "authorize",
       deny_value: "deny",
       with_checkboxes: true,
