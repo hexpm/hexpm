@@ -45,7 +45,10 @@ defmodule HexpmWeb.DeviceController do
     case DeviceCodes.get_for_verification(normalized_code) do
       {:ok, _device_code} ->
         conn
-        |> put_session("device_code_verified", {normalized_code, NaiveDateTime.utc_now()})
+        |> put_session("device_code_verified", %{
+          "user_code" => normalized_code,
+          "verified_at" => NaiveDateTime.utc_now() |> NaiveDateTime.to_iso8601()
+        })
         |> redirect(to: ~p"/oauth/device/authorize")
 
       {:error, :invalid_code} ->
@@ -117,13 +120,20 @@ defmodule HexpmWeb.DeviceController do
 
   defp get_verified_code(conn) do
     case get_session(conn, "device_code_verified") do
-      {user_code, verified_at} when is_binary(user_code) ->
-        expires_at = NaiveDateTime.shift(verified_at, minute: @verification_timeout_minutes)
+      %{"user_code" => user_code, "verified_at" => verified_at_string}
+      when is_binary(user_code) ->
+        case NaiveDateTime.from_iso8601(verified_at_string) do
+          {:ok, verified_at} ->
+            expires_at = NaiveDateTime.shift(verified_at, minute: @verification_timeout_minutes)
 
-        if NaiveDateTime.compare(NaiveDateTime.utc_now(), expires_at) == :lt do
-          {:ok, user_code}
-        else
-          :error
+            if NaiveDateTime.compare(NaiveDateTime.utc_now(), expires_at) == :lt do
+              {:ok, user_code}
+            else
+              :error
+            end
+
+          _ ->
+            :error
         end
 
       _ ->
