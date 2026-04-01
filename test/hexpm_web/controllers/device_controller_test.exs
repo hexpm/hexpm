@@ -185,8 +185,7 @@ defmodule HexpmWeb.DeviceControllerTest do
 
       conn =
         post(conn, ~p"/oauth/device", %{
-          "user_code" => device_code.user_code,
-          "action" => "verify"
+          "user_code" => device_code.user_code
         })
 
       assert redirected_to(conn) == "/oauth/device/authorize"
@@ -200,8 +199,7 @@ defmodule HexpmWeb.DeviceControllerTest do
 
       conn =
         post(conn, ~p"/oauth/device", %{
-          "user_code" => device_code.user_code,
-          "action" => "verify"
+          "user_code" => device_code.user_code
         })
 
       flag = get_session(conn, "device_code_verified")
@@ -214,8 +212,7 @@ defmodule HexpmWeb.DeviceControllerTest do
 
       conn =
         post(conn, ~p"/oauth/device", %{
-          "user_code" => device_code.user_code,
-          "action" => "verify"
+          "user_code" => device_code.user_code
         })
 
       assert redirected_to(conn) == "/oauth/device/authorize"
@@ -226,8 +223,7 @@ defmodule HexpmWeb.DeviceControllerTest do
 
       conn =
         post(conn, ~p"/oauth/device", %{
-          "user_code" => "INVALID",
-          "action" => "verify"
+          "user_code" => "INVALID"
         })
 
       assert html_response(conn, 200) =~ "Invalid verification code"
@@ -243,8 +239,7 @@ defmodule HexpmWeb.DeviceControllerTest do
 
       conn =
         post(conn, ~p"/oauth/device", %{
-          "user_code" => response.user_code,
-          "action" => "verify"
+          "user_code" => response.user_code
         })
 
       assert html_response(conn, 200) =~ "Verification code has expired"
@@ -258,8 +253,7 @@ defmodule HexpmWeb.DeviceControllerTest do
 
       conn =
         post(conn, ~p"/oauth/device", %{
-          "user_code" => response.user_code,
-          "action" => "verify"
+          "user_code" => response.user_code
         })
 
       assert html_response(conn, 200) =~ "already been processed"
@@ -269,29 +263,6 @@ defmodule HexpmWeb.DeviceControllerTest do
       conn = login_user(build_conn(), user)
       conn = post(conn, ~p"/oauth/device", %{})
       assert html_response(conn, 200) =~ "Missing verification code"
-    end
-
-    test "shows error for invalid action", %{user: user, device_code: device_code} do
-      conn = login_user(build_conn(), user)
-
-      conn =
-        post(conn, ~p"/oauth/device", %{
-          "user_code" => device_code.user_code,
-          "action" => "invalid"
-        })
-
-      assert html_response(conn, 200) =~ "Invalid action"
-    end
-
-    test "shows error when action is missing", %{user: user, device_code: device_code} do
-      conn = login_user(build_conn(), user)
-
-      conn =
-        post(conn, ~p"/oauth/device", %{
-          "user_code" => device_code.user_code
-        })
-
-      assert html_response(conn, 200) =~ "Invalid action"
     end
   end
 
@@ -647,8 +618,7 @@ defmodule HexpmWeb.DeviceControllerTest do
 
       conn =
         post(conn, ~p"/oauth/device", %{
-          "user_code" => response.user_code,
-          "action" => "verify"
+          "user_code" => response.user_code
         })
 
       assert redirected_to(conn) == "/oauth/device/authorize"
@@ -756,8 +726,7 @@ defmodule HexpmWeb.DeviceControllerTest do
         build_conn()
         |> login_user(user)
         |> post(~p"/oauth/device", %{
-          "user_code" => device_code.user_code,
-          "action" => "verify"
+          "user_code" => device_code.user_code
         })
 
       assert redirected_to(conn) == "/oauth/device/authorize"

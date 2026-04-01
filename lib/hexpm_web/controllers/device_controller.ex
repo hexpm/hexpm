@@ -38,8 +38,8 @@ defmodule HexpmWeb.DeviceController do
     end
   end
 
-  # POST /oauth/device — only handles "verify" action now
-  def create(conn, %{"user_code" => user_code, "action" => "verify"}) do
+  # POST /oauth/device — verifies user_code and sets session flag
+  def create(conn, %{"user_code" => user_code}) do
     normalized_code = DeviceView.normalize_user_code(user_code)
 
     case DeviceCodes.get_for_verification(normalized_code) do
@@ -60,10 +60,6 @@ defmodule HexpmWeb.DeviceController do
       {:error, :already_processed} ->
         render_verification_form(conn, "This application has already been processed", user_code)
     end
-  end
-
-  def create(conn, %{"user_code" => user_code}) do
-    render_verification_form(conn, "Invalid action", user_code)
   end
 
   def create(conn, _params) do
