@@ -1,0 +1,17 @@
+<%= if @error_message do %>
+  <div class="max-w-lg mx-auto mt-4 mb-2">
+    <div class="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+      {raw(@error_message)}
+    </div>
+  </div>
+<% end %>
+
+<div class="flex items-center justify-center my-auto py-16">
+  <div class="w-full max-w-lg">
+    {render(
+      HexpmWeb.SharedView,
+      "_authorization.html",
+      Map.merge(assigns, authorization_assigns(@conn, @device_code))
+    )}
+  </div>
+</div>

@@ -4,75 +4,145 @@ defmodule HexpmWeb.DeviceController do
   alias Hexpm.OAuth.DeviceCodes
   alias Hexpm.Accounts.User
   alias Hexpm.Permissions
-  alias HexpmWeb.Plugs.Attack
+  alias HexpmWeb.Plugs.{Attack, Sudo}
   alias HexpmWeb.DeviceView
+
+  @verification_timeout_minutes 5
 
   plug :nillify_params, ["user_code"]
   plug :requires_login
-  plug HexpmWeb.Plugs.Sudo
+  plug Sudo when action in [:authorize_show, :authorize_create]
 
-  @doc """
-  Shows the device verification page.
-
-  GET /oauth/device
-  GET /oauth/device?user_code=XXXX-XXXX
-  """
+  # GET /oauth/device
   def show(conn, params) do
     user_code = params["user_code"]
 
     if is_nil(user_code) do
-      # No code provided, show empty form
-      render_verification_form(conn, nil, nil, nil)
+      render_verification_form(conn, nil, nil)
     else
       normalized_code = DeviceView.normalize_user_code(user_code)
 
-      # Validate the code exists but show verification form
       case DeviceCodes.get_for_verification(normalized_code) do
         {:ok, _device_code} ->
-          # Code is valid, show pre-filled verification form
-          render_verification_form(conn, nil, nil, user_code)
+          render_verification_form(conn, nil, user_code)
 
         {:error, :invalid_code} ->
-          render_verification_form(conn, nil, "Invalid verification code", user_code)
+          render_verification_form(conn, "Invalid verification code", user_code)
 
         {:error, :expired} ->
-          render_verification_form(conn, nil, "Verification code has expired", user_code)
+          render_verification_form(conn, "Verification code has expired", user_code)
 
         {:error, :already_processed} ->
-          render_verification_form(
-            conn,
-            nil,
-            "This application has already been processed",
-            user_code
-          )
+          render_verification_form(conn, "This application has already been processed", user_code)
       end
     end
   end
 
-  @doc """
-  Handles device authorization or denial.
-
-  POST /oauth/device
-  """
-  def create(conn, %{"user_code" => user_code} = params) do
-    current_user = conn.assigns.current_user
+  # POST /oauth/device — only handles "verify" action now
+  def create(conn, %{"user_code" => user_code, "action" => "verify"}) do
     normalized_code = DeviceView.normalize_user_code(user_code)
 
-    with :ok <- check_rate_limits(conn, current_user) do
-      case params["action"] do
-        "verify" -> handle_verification(conn, normalized_code)
-        "authorize" -> handle_authorization(conn, normalized_code, current_user, params)
-        "deny" -> handle_denial(conn, normalized_code)
-        _ -> render_verification_form(conn, nil, "Invalid action", user_code)
-      end
-    else
-      {:rate_limited, message} ->
-        render_verification_form(conn, nil, message, user_code)
+    case DeviceCodes.get_for_verification(normalized_code) do
+      {:ok, _device_code} ->
+        conn
+        |> put_session("device_code_verified", {normalized_code, NaiveDateTime.utc_now()})
+        |> redirect(to: ~p"/oauth/device/authorize")
+
+      {:error, :invalid_code} ->
+        render_verification_form(conn, "Invalid verification code", user_code)
+
+      {:error, :expired} ->
+        render_verification_form(conn, "Verification code has expired", user_code)
+
+      {:error, :already_processed} ->
+        render_verification_form(conn, "This application has already been processed", user_code)
     end
+  end
+
+  def create(conn, %{"user_code" => user_code}) do
+    render_verification_form(conn, "Invalid action", user_code)
   end
 
   def create(conn, _params) do
-    render_verification_form(conn, nil, "Missing verification code", nil)
+    render_verification_form(conn, "Missing verification code", nil)
+  end
+
+  # GET /oauth/device/authorize — requires sudo (via plug) + valid session flag
+  def authorize_show(conn, _params) do
+    case get_verified_code(conn) do
+      {:ok, user_code} ->
+        case DeviceCodes.get_for_verification(user_code) do
+          {:ok, device_code} ->
+            render_authorization(conn, device_code, nil)
+
+          {:error, :invalid_code} ->
+            redirect_to_device(conn, "Invalid verification code")
+
+          {:error, :expired} ->
+            redirect_to_device(conn, "Verification code has expired")
+
+          {:error, :already_processed} ->
+            redirect_to_device(conn, "This application has already been processed")
+        end
+
+      :error ->
+        redirect_to_device(conn, nil)
+    end
+  end
+
+  # POST /oauth/device/authorize — requires sudo (via plug) + valid session flag
+  def authorize_create(conn, params) do
+    current_user = conn.assigns.current_user
+
+    case get_verified_code(conn) do
+      {:ok, user_code} ->
+        with :ok <- check_rate_limits(conn, current_user) do
+          case params["action"] do
+            "authorize" -> handle_authorization(conn, user_code, current_user, params)
+            "deny" -> handle_denial(conn, user_code)
+            _ -> redirect_to_device(conn, "Invalid action")
+          end
+        else
+          {:rate_limited, message} ->
+            case DeviceCodes.get_for_verification(user_code) do
+              {:ok, device_code} -> render_authorization(conn, device_code, message)
+              _ -> redirect_to_device(conn, message)
+            end
+        end
+
+      :error ->
+        redirect_to_device(conn, nil)
+    end
+  end
+
+  defp get_verified_code(conn) do
+    case get_session(conn, "device_code_verified") do
+      {user_code, verified_at} when is_binary(user_code) ->
+        expires_at = NaiveDateTime.shift(verified_at, minute: @verification_timeout_minutes)
+
+        if NaiveDateTime.compare(NaiveDateTime.utc_now(), expires_at) == :lt do
+          {:ok, user_code}
+        else
+          :error
+        end
+
+      _ ->
+        :error
+    end
+  end
+
+  defp clear_verified_code(conn) do
+    delete_session(conn, "device_code_verified")
+  end
+
+  defp redirect_to_device(conn, nil) do
+    redirect(conn, to: ~p"/oauth/device")
+  end
+
+  defp redirect_to_device(conn, message) do
+    conn
+    |> put_flash(:error, message)
+    |> redirect(to: ~p"/oauth/device")
   end
 
   defp check_rate_limits(conn, user) do
@@ -93,34 +163,18 @@ defmodule HexpmWeb.DeviceController do
     end
   end
 
-  defp handle_verification(conn, user_code) do
-    case DeviceCodes.get_for_verification(user_code) do
-      {:ok, device_code} ->
-        render_verification_form(conn, device_code, nil, nil)
-
-      {:error, :invalid_code} ->
-        render_verification_form(conn, nil, "Invalid verification code", user_code)
-
-      {:error, :expired} ->
-        render_verification_form(conn, nil, "Verification code has expired", user_code)
-
-      {:error, :already_processed} ->
-        render_verification_form(
-          conn,
-          nil,
-          "This application has already been processed",
-          user_code
-        )
-    end
-  end
-
   defp handle_authorization(conn, user_code, user, params) do
     selected_scopes = params["selected_scopes"] || []
 
     if selected_scopes == [] do
-      render_verification_form(conn, nil, "At least one permission must be selected", user_code)
+      case DeviceCodes.get_for_verification(user_code) do
+        {:ok, device_code} ->
+          render_authorization(conn, device_code, "At least one permission must be selected")
+
+        _ ->
+          redirect_to_device(conn, "Invalid verification code")
+      end
     else
-      # First validate the scopes are valid for this device code
       case DeviceCodes.get_for_verification(user_code) do
         {:ok, device_code} ->
           requested_scopes = device_code.scopes || []
@@ -128,19 +182,19 @@ defmodule HexpmWeb.DeviceController do
 
           cond do
             invalid_scopes != [] ->
-              render_verification_form(
+              render_authorization(
                 conn,
-                nil,
-                "Selected scopes not in original request",
-                user_code
+                device_code,
+                "Selected scopes not in original request"
               )
 
-            Permissions.requires_write_access?(selected_scopes) and not User.tfa_enabled?(user) ->
+            Permissions.requires_write_access?(selected_scopes) and
+                not User.tfa_enabled?(user) ->
               error_message =
                 "Two-factor authentication is required for api:write permissions. " <>
                   "Please <a href='/dashboard/security'>enable 2FA in your security settings</a> and try again."
 
-              render_verification_form(conn, nil, {:safe, error_message}, user_code)
+              render_authorization(conn, device_code, {:safe, error_message})
 
             true ->
               case DeviceCodes.authorize_device(user_code, user, selected_scopes,
@@ -148,20 +202,21 @@ defmodule HexpmWeb.DeviceController do
                    ) do
                 {:ok, _device_code} ->
                   conn
+                  |> clear_verified_code()
                   |> put_flash(:info, "Device has been successfully authorized!")
                   |> redirect(to: ~p"/")
 
                 {:error, :invalid_code, message} ->
-                  render_verification_form(conn, nil, message, user_code)
+                  redirect_to_device(conn, message)
 
                 {:error, :expired_token, message} ->
-                  render_verification_form(conn, nil, message, user_code)
+                  redirect_to_device(conn, message)
 
                 {:error, :invalid_grant, message} ->
-                  render_verification_form(conn, nil, message, user_code)
+                  redirect_to_device(conn, message)
 
                 {:error, :invalid_scopes, message} ->
-                  render_verification_form(conn, nil, message, user_code)
+                  redirect_to_device(conn, message)
 
                 {:error, changeset} ->
                   error_message =
@@ -170,23 +225,18 @@ defmodule HexpmWeb.DeviceController do
                       _ -> "Authorization failed"
                     end
 
-                  render_verification_form(conn, nil, error_message, user_code)
+                  redirect_to_device(conn, error_message)
               end
           end
 
         {:error, :invalid_code} ->
-          render_verification_form(conn, nil, "Invalid user code", user_code)
+          redirect_to_device(conn, "Invalid user code")
 
         {:error, :expired} ->
-          render_verification_form(conn, nil, "Device code has expired", user_code)
+          redirect_to_device(conn, "Device code has expired")
 
         {:error, :already_processed} ->
-          render_verification_form(
-            conn,
-            nil,
-            "Device code is not pending authorization",
-            user_code
-          )
+          redirect_to_device(conn, "Device code is not pending authorization")
       end
     end
   end
@@ -195,11 +245,12 @@ defmodule HexpmWeb.DeviceController do
     case DeviceCodes.deny_device(user_code) do
       {:ok, _device_code} ->
         conn
+        |> clear_verified_code()
         |> put_flash(:info, "Device authorization has been denied.")
         |> redirect(to: ~p"/")
 
       {:error, :invalid_code, message} ->
-        render_verification_form(conn, nil, message, user_code)
+        redirect_to_device(conn, message)
 
       {:error, changeset} ->
         error_message =
@@ -208,20 +259,30 @@ defmodule HexpmWeb.DeviceController do
             _ -> "Denial failed"
           end
 
-        render_verification_form(conn, nil, error_message, user_code)
+        redirect_to_device(conn, error_message)
     end
   end
 
-  defp render_verification_form(conn, device_code, error_message, pre_filled_code) do
+  defp render_verification_form(conn, error_message, pre_filled_code) do
     render(
       conn,
       "show.html",
       title: "Device Authorization",
       container: "container page page-xs device",
-      device_code: device_code,
       error_message: error_message,
       user_code: pre_filled_code || conn.params["user_code"],
-      pre_filled: not is_nil(pre_filled_code) and is_nil(device_code),
+      pre_filled: not is_nil(pre_filled_code)
+    )
+  end
+
+  defp render_authorization(conn, device_code, error_message) do
+    render(
+      conn,
+      "authorize.html",
+      title: "Device Authorization",
+      container: "container page page-xs device",
+      device_code: device_code,
+      error_message: error_message,
       current_user: conn.assigns[:current_user]
     )
   end

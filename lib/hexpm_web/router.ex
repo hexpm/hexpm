@@ -150,6 +150,8 @@ defmodule HexpmWeb.Router do
     post "/oauth/authorize", OAuthController, :consent
     get "/oauth/device", DeviceController, :show
     post "/oauth/device", DeviceController, :create
+    get "/oauth/device/authorize", DeviceController, :authorize_show
+    post "/oauth/device/authorize", DeviceController, :authorize_create
 
     get "/dashboard", DashboardController, :index
 
