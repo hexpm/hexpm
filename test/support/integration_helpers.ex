@@ -219,10 +219,6 @@ defmodule HexpmWeb.IntegrationHelpers do
   def fill_stripe_card(session, card_number, expiry \\ "1230", cvc \\ "123", zip \\ "10001") do
     wait_for_stripe_iframe(session)
 
-    # Stripe Elements uses a cross-origin iframe from js.stripe.com.
-    # ChromeDriver's findElement intermittently fails in cross-origin iframes,
-    # even though executeScript works fine. We use JS to focus/click fields
-    # and WebDriver's send_keys to type values.
     type_in_stripe_field(session, "cardnumber", card_number, String.length(card_number))
     type_in_stripe_field(session, "exp-date", expiry, String.length(expiry))
     type_in_stripe_field(session, "cvc", cvc, 3)
@@ -236,8 +232,7 @@ defmodule HexpmWeb.IntegrationHelpers do
       """)
 
     if has_postal do
-      js_focus_and_click(session, "postal")
-      Wallaby.Browser.send_keys(session, String.graphemes(zip))
+      type_in_stripe_field(session, "postal", zip, String.length(zip))
     end
 
     Wallaby.Browser.focus_default_frame(session)
@@ -246,15 +241,21 @@ defmodule HexpmWeb.IntegrationHelpers do
   end
 
   # Types a value into a Stripe Elements field with retry logic.
-  # Stripe Elements in headless Chrome can sometimes miss keystrokes,
-  # especially when the field auto-advances or loses focus. This retries
-  # the entire field input if not enough digits were entered.
+  # Uses JavaScript execCommand('insertText') instead of WebDriver send_keys
+  # because send_keys drops keystrokes when going through the cross-origin
+  # iframe bridge. execCommand operates directly in the iframe's JS context.
   defp type_in_stripe_field(session, field_name, value, expected_digits, attempts \\ 3) do
     focus_stripe_iframe(session, 0)
-    js_focus_and_click(session, field_name)
-    # Send the value as a single WebDriver action instead of individual keystrokes
-    # to reduce the chance of dropped keystrokes in the cross-origin iframe
-    Wallaby.Browser.send_keys(session, [value])
+
+    Wallaby.Browser.execute_script(session, """
+      var input = document.querySelector("input[name='#{field_name}']");
+      if (input) {
+        input.focus();
+        input.click();
+        input.select();
+        document.execCommand('insertText', false, '#{value}');
+      }
+    """)
 
     filled =
       wait_until(2000, fn ->
@@ -266,38 +267,20 @@ defmodule HexpmWeb.IntegrationHelpers do
       end)
 
     if filled != :ok && attempts > 1 do
-      # Clear the field and retry
       focus_stripe_iframe(session, 0)
-      js_focus_and_click(session, field_name)
 
       Wallaby.Browser.execute_script(session, """
         var input = document.querySelector("input[name='#{field_name}']");
-        if (input) { input.select(); }
+        if (input) {
+          input.focus();
+          input.select();
+          document.execCommand('delete');
+        }
       """)
 
-      Wallaby.Browser.send_keys(session, [:backspace])
       Process.sleep(200)
       type_in_stripe_field(session, field_name, value, expected_digits, attempts - 1)
     end
-  end
-
-  # Uses JavaScript to focus and click an input field inside a Stripe iframe.
-  # This is more reliable than WebDriver's findElement for cross-origin iframes.
-  defp js_focus_and_click(session, field_name) do
-    Wallaby.Browser.execute_script(session, """
-      var input = document.querySelector("input[name='#{field_name}']");
-      if (input) {
-        input.focus();
-        input.click();
-      }
-    """)
-
-    wait_until(1000, fn ->
-      evaluate_js(session, """
-        var input = document.querySelector("input[name='#{field_name}']");
-        return input && document.activeElement === input;
-      """)
-    end)
   end
 
   # Focuses a Stripe Elements iframe by index inside #card-element.
