@@ -267,6 +267,27 @@ defmodule HexpmWeb.ReadmeControllerTest do
       assert conn.resp_body =~ "\n"
     end
 
+    test "renders task list checkboxes", %{package: package} do
+      mock_file_list_and_readme(
+        package.name,
+        "1.0.0",
+        "README.md",
+        "- [ ] unchecked\n- [x] checked\n- normal\n"
+      )
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/1.0.0")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ ~s[<input type="checkbox" disabled="disabled"/>]
+      assert conn.resp_body =~ ~s[<input type="checkbox" checked="checked" disabled="disabled"/>]
+      assert conn.resp_body =~ "unchecked"
+      assert conn.resp_body =~ "checked"
+      assert conn.resp_body =~ "normal"
+    end
+
     test "rewrites image URLs to proxy", %{package: package} do
       mock_file_list_and_readme(
         package.name,

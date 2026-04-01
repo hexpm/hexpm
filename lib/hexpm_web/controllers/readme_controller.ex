@@ -1,7 +1,7 @@
 defmodule HexpmWeb.ReadmeController do
   use HexpmWeb, :controller
 
-  alias HexpmWeb.Readme.{Sanitizer, URLRewriter}
+  alias HexpmWeb.Readme.{Sanitizer, TaskList, URLRewriter}
 
   @readme_filenames ~w(README.md readme.md README.markdown readme.markdown README.txt readme.txt README readme)
 
@@ -108,7 +108,8 @@ defmodule HexpmWeb.ReadmeController do
     html =
       case ext do
         ext when ext in [".md", ".markdown"] ->
-          Earmark.as_html!(content, %Earmark.Options{gfm: true})
+          {:ok, ast, _messages} = Earmark.Parser.as_ast(content, gfm: true)
+          ast |> TaskList.convert() |> Earmark.transform()
 
         _ ->
           "<pre>#{Plug.HTML.html_escape(content)}</pre>"
