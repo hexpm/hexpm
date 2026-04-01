@@ -6,7 +6,8 @@ defmodule HexpmWeb.MarkdownEngine do
 
   @supported_languages %{
     "elixir" => Makeup.Lexers.ElixirLexer,
-    "erlang" => Makeup.Lexers.ErlangLexer
+    "erlang" => Makeup.Lexers.ErlangLexer,
+    "gleam" => Makeup.Lexers.GleamLexer
   }
 
   def compile(path, _name) do
