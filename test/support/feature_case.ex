@@ -64,11 +64,20 @@ if Code.ensure_loaded?(Wallaby) do
 
       Mox.stub(Hexpm.Pwned.Mock, :password_breached?, fn _password -> false end)
 
+      session =
+        session
+        |> visit("/login")
+        |> fill_in(css("#username"), with: user.username)
+        |> fill_in(css("#password"), with: "password")
+        |> click(button("Log In"))
+
+      # Wait for login redirect to complete before returning
+      HexpmWeb.IntegrationHelpers.wait_until(5000, fn ->
+        url = HexpmWeb.IntegrationHelpers.evaluate_js(session, "return window.location.pathname;")
+        url != "/login"
+      end)
+
       session
-      |> visit("/login")
-      |> fill_in(css("#username"), with: user.username)
-      |> fill_in(css("#password"), with: "password")
-      |> click(button("Log In"))
     end
   end
 end

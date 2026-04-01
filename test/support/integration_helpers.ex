@@ -252,7 +252,9 @@ defmodule HexpmWeb.IntegrationHelpers do
   defp type_in_stripe_field(session, field_name, value, expected_digits, attempts \\ 3) do
     focus_stripe_iframe(session, 0)
     js_focus_and_click(session, field_name)
-    Wallaby.Browser.send_keys(session, String.graphemes(value))
+    # Send the value as a single WebDriver action instead of individual keystrokes
+    # to reduce the chance of dropped keystrokes in the cross-origin iframe
+    Wallaby.Browser.send_keys(session, [value])
 
     filled =
       wait_until(2000, fn ->
@@ -290,7 +292,7 @@ defmodule HexpmWeb.IntegrationHelpers do
       }
     """)
 
-    wait_until(100, fn ->
+    wait_until(1000, fn ->
       evaluate_js(session, """
         var input = document.querySelector("input[name='#{field_name}']");
         return input && document.activeElement === input;
