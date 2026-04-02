@@ -9,7 +9,15 @@ defmodule HexpmWeb.SudoController do
 
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def show(conn, _params) do
-    render_show(conn)
+    if Sudo.sudo_active?(conn) do
+      return_to = get_session(conn, "sudo_return_to") || ~p"/dashboard/security"
+
+      conn
+      |> delete_session("sudo_return_to")
+      |> redirect(to: return_to)
+    else
+      render_show(conn)
+    end
   end
 
   @spec show_recovery(Plug.Conn.t(), map()) :: Plug.Conn.t()

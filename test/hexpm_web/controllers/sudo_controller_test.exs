@@ -14,6 +14,30 @@ defmodule HexpmWeb.SudoControllerTest do
       assert redirected_to(conn) =~ "/login"
     end
 
+    test "redirects to return path when sudo is already active" do
+      user = insert(:user)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> put_session("sudo_return_to", "/dashboard/keys")
+        |> get(~p"/sudo")
+
+      assert redirected_to(conn) == "/dashboard/keys"
+      refute get_session(conn, "sudo_return_to")
+    end
+
+    test "redirects to default path when sudo is active and no return path" do
+      user = insert(:user)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get(~p"/sudo")
+
+      assert redirected_to(conn) == "/dashboard/security"
+    end
+
     test "shows password form for user with password (no 2FA)" do
       user = insert(:user)
 
