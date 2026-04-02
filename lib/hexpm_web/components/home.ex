@@ -66,7 +66,9 @@ defmodule HexpmWeb.Components.Home do
 
   def code_inline(assigns) do
     ~H"""
-    <span class="bg-grey-700 text-grey-200 mx-1 px-0.5 py-0.5 rounded border border-grey-600 font-mono text-sm">{render_slot(@inner_block)}</span>
+    <span class="bg-grey-700 text-grey-200 mx-1 px-0.5 py-0.5 rounded border border-grey-600 font-mono text-sm">
+      {render_slot(@inner_block)}
+    </span>
     """
   end
 
