@@ -125,7 +125,8 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
                   pattern="[0-9]{6}"
                   autocomplete="off"
                   inputmode="numeric"
-                  oninput="document.getElementById('tfa-submit-btn').disabled = !/^[0-9]{6}$/.test(this.value)"
+                  phx-hook="TFACodeInput"
+                  data-submit-button="tfa-submit-btn"
                   class="w-full px-3 py-2 border border-grey-300 rounded-lg text-center text-xl font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
                 <p class="mt-2 text-xs text-grey-500">
@@ -148,9 +149,10 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
         <.button
           id="tfa-submit-btn"
           type="button"
+          phx-hook="FormSubmit"
+          data-form="tfa-verification-form"
           variant="primary"
           disabled
-          onclick="document.getElementById('tfa-verification-form').submit()"
         >
           Enable Two-Factor Authentication
         </.button>
