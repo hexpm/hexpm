@@ -8,7 +8,10 @@ import { PrintButton } from "./hooks/print_button";
 import { DownloadButton } from "./hooks/download_button";
 import { PermissionGroup } from "./hooks/permission_group";
 import { TFACodeInput } from "./hooks/tfa_code_input";
-import { FormSubmit } from "./hooks/form_submit";
+import { SubmitOnce } from "./hooks/submit_once";
+import { AutoSubmit } from "./hooks/auto_submit";
+import { NavigateOnChange } from "./hooks/navigate_on_change";
+import { ConfirmSubmit } from "./hooks/confirm_submit";
 
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")
@@ -21,7 +24,10 @@ let Hooks = {
   DownloadButton,
   PermissionGroup,
   TFACodeInput,
-  FormSubmit,
+  SubmitOnce,
+  AutoSubmit,
+  NavigateOnChange,
+  ConfirmSubmit,
 };
 let liveSocket = new LiveSocket("/live", Socket, {
   params: { _csrf_token: csrfToken },

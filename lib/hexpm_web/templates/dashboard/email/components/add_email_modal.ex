@@ -39,20 +39,19 @@ defmodule HexpmWeb.Dashboard.Email.Components.AddEmailModal do
           placeholder="your.email@example.com"
           required
         />
+        <div class="flex items-center justify-end gap-3 mt-6">
+          <.button
+            type="button"
+            variant="outline"
+            phx-click={HexpmWeb.Components.Modal.hide_modal("add-email-modal")}
+          >
+            Cancel
+          </.button>
+          <.button type="submit">
+            Add Email
+          </.button>
+        </div>
       </.sudo_form>
-
-      <:footer>
-        <.button
-          type="button"
-          variant="outline"
-          phx-click={HexpmWeb.Components.Modal.hide_modal("add-email-modal")}
-        >
-          Cancel
-        </.button>
-        <.button type="button" onclick="document.getElementById('add-email-form').submit()">
-          Add Email
-        </.button>
-      </:footer>
     </HexpmWeb.Components.Modal.modal>
     """
   end

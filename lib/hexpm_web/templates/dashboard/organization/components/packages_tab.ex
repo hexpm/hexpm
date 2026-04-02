@@ -81,38 +81,35 @@ defmodule HexpmWeb.Dashboard.Organization.Components.PackagesTab do
 
   defp package_row(assigns) do
     ~H"""
-    <tr
-      class="hover:bg-grey-50 cursor-pointer transition-colors"
-      onclick={"window.location='#{path_for_package(@package)}'"}
-    >
+    <tr class="hover:bg-grey-50 transition-colors">
       <td class="px-0 py-4">
-        <div class="flex items-center gap-2">
+        <a href={path_for_package(@package)} class="flex items-center gap-2">
           <span class="text-sm font-medium text-grey-900">{@package.name}</span>
           <%= if @package.meta && @package.meta.description do %>
             <span class="text-xs text-grey-400 truncate max-w-xs hidden lg:block">
               — {@package.meta.description}
             </span>
           <% end %>
-        </div>
+        </a>
       </td>
       <td class="px-4 py-4">
-        <span class="text-sm text-grey-600 font-mono">
+        <a href={path_for_package(@package)} class="text-sm text-grey-600 font-mono">
           <%= if @package.latest_release do %>
             v{@package.latest_release.version}
           <% else %>
             —
           <% end %>
-        </span>
+        </a>
       </td>
       <td class="px-4 py-4">
-        <span class="text-sm text-grey-600">
+        <a href={path_for_package(@package)} class="text-sm text-grey-600">
           {human_number_space(package_downloads(@package))}
-        </span>
+        </a>
       </td>
       <td class="px-4 py-4">
-        <span class="text-sm text-grey-500">
+        <a href={path_for_package(@package)} class="text-sm text-grey-500">
           {pretty_date(@package.updated_at)}
-        </span>
+        </a>
       </td>
     </tr>
     """

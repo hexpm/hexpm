@@ -26,12 +26,11 @@ defmodule HexpmWeb.Components.Buttons do
   # Global attributes:
   # - phx-click, phx-target, phx-value-id: LiveView event handling
   # - form: Associate button with a form element
-  # - onclick: For submitting hidden forms (e.g., confirmation modals with CSRF protection)
   # - data-input-id: Legacy jQuery integration for package pages
   # - id: Required for phx-hook elements and form submissions
   attr :rest, :global,
     include:
-      ~w(phx-click phx-target phx-value-id form onclick data-input-id id phx-hook data-copy-target data-print-target data-download-target)
+      ~w(phx-click phx-target phx-value-id form data-input-id id phx-hook data-copy-target data-print-target data-download-target data-confirm data-target)
 
   attr :size, :string, default: "md", values: ["sm", "md", "lg"]
   attr :type, :string, default: "button", values: ["button", "submit", "reset"]
@@ -199,7 +198,7 @@ defmodule HexpmWeb.Components.Buttons do
   attr :size, :integer, default: 16
   attr :type, :string, default: "button", values: ["button", "submit", "reset"]
   attr :variant, :string, default: "default", values: ["default", "danger", "primary"]
-  attr :rest, :global, include: ~w(phx-click phx-target phx-value-id id aria-label onclick)
+  attr :rest, :global, include: ~w(phx-click phx-target phx-value-id id aria-label)
 
   def icon_button(assigns) do
     ~H"""

@@ -163,7 +163,7 @@ defmodule HexpmWeb.Components.Package do
           label="Sort by"
           options={select_options}
           value={current_value}
-          onchange="window.location.href = this.value"
+          phx-hook="NavigateOnChange"
         />
       </div>
     </div>

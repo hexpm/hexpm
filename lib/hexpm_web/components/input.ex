@@ -113,7 +113,7 @@ defmodule HexpmWeb.Components.Input do
   attr :options, :list, required: true, doc: "List of {label, value} tuples for select options"
   attr :prompt, :string, default: nil, doc: "Optional prompt text for the first option"
   attr :required, :boolean, default: false
-  attr :rest, :global, include: ~w(disabled multiple onchange)
+  attr :rest, :global, include: ~w(disabled multiple phx-hook)
 
   attr :show_errors, :boolean,
     default: nil,

@@ -50,14 +50,10 @@ defmodule HexpmWeb.Dashboard.Session.Components.RevokeSessionModal do
         </.button>
         <%= form_tag(~p"/dashboard/sessions", [method: :delete, id: "#{@modal_id}-form"]) do %>
           <input type="hidden" name="_id" value={@session.id} />
+          <.button type="submit" variant="danger">
+            Revoke Session
+          </.button>
         <% end %>
-        <.button
-          type="button"
-          variant="danger"
-          onclick={"document.getElementById('#{@modal_id}-form').submit()"}
-        >
-          Revoke Session
-        </.button>
       </:footer>
     </HexpmWeb.Components.Modal.modal>
     """

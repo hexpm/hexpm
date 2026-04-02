@@ -357,10 +357,11 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
           Keep subscription
         </.button>
         <.button
-          type="submit"
+          type="button"
           form="cancel-billing-form"
           variant="danger"
-          onclick="this.disabled=true;this.form.submit();"
+          id="cancel-billing-button"
+          phx-hook="SubmitOnce"
         >
           Yes, cancel
         </.button>
@@ -482,11 +483,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
           Cancel
         </.button>
         <.button
-          type="submit"
+          type="button"
           form="remove-seats-form"
           variant="danger"
           disabled={@quantity <= @member_count}
-          onclick="this.disabled=true;this.form.submit();"
+          id="remove-seats-button"
+          phx-hook="SubmitOnce"
         >
           Remove seats
         </.button>
@@ -529,10 +531,11 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
           Cancel
         </.button>
         <.button
-          type="submit"
+          type="button"
           form="change-plan-form"
           variant="primary"
-          onclick="this.disabled=true;this.form.submit();"
+          id="change-plan-button"
+          phx-hook="SubmitOnce"
         >
           Confirm
         </.button>

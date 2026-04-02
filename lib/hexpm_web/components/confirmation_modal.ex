@@ -49,15 +49,14 @@ defmodule HexpmWeb.Components.ConfirmationModal do
         <.button type="button" variant="outline" phx-click={hide_modal(@id)}>
           {@cancel_text}
         </.button>
-        <%= form_tag(@confirm_action, [method: :post, id: "#{@id}-form"]) do %>
+        <%= form_tag(@confirm_action, [method: :post, class: "m-0"]) do %>
+          <.button
+            type="submit"
+            variant={if @danger, do: "danger", else: "primary"}
+          >
+            {@confirm_text}
+          </.button>
         <% end %>
-        <.button
-          type="button"
-          variant={if @danger, do: "danger", else: "primary"}
-          onclick={"document.getElementById('#{@id}-form').submit()"}
-        >
-          {@confirm_text}
-        </.button>
       </:footer>
     </.modal>
     """

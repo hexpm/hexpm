@@ -86,7 +86,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                   <.sudo_form
                     current_user={@current_user}
                     action={~p"/dashboard/orgs/#{@organization}"}
-                    onchange="this.submit()"
+                    id={"change-role-form-#{org_user.user.username}"}
+                    phx-hook="AutoSubmit"
                   >
                     <input type="hidden" name="action" value="change_role" />
                     <input

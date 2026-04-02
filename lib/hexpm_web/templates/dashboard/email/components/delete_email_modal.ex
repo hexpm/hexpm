@@ -81,14 +81,10 @@ defmodule HexpmWeb.Dashboard.Email.Components.DeleteEmailModal do
             id={"#{@modal_id}-form"}
           >
             <input type="hidden" name="email" value={@email.email} />
+            <.button type="submit" variant="danger">
+              Delete Email
+            </.button>
           </.sudo_form>
-          <.button
-            type="button"
-            variant="danger"
-            onclick={"document.getElementById('#{@modal_id}-form').submit()"}
-          >
-            Delete Email
-          </.button>
         </:footer>
       </HexpmWeb.Components.Modal.modal>
     <% end %>

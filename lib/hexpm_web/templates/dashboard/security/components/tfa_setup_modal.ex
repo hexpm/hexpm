@@ -133,29 +133,26 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
                 </p>
               </div>
             </div>
+            <div class="flex items-center justify-end gap-3 mt-6">
+              <.button
+                type="button"
+                variant="secondary"
+                phx-click={hide_modal("tfa-setup-modal")}
+              >
+                Cancel
+              </.button>
+              <.button
+                id="tfa-submit-btn"
+                type="submit"
+                variant="primary"
+                disabled
+              >
+                Enable Two-Factor Authentication
+              </.button>
+            </div>
           </.sudo_form>
         <% end %>
       </div>
-
-      <:footer>
-        <.button
-          type="button"
-          variant="secondary"
-          phx-click={hide_modal("tfa-setup-modal")}
-        >
-          Cancel
-        </.button>
-        <.button
-          id="tfa-submit-btn"
-          type="button"
-          phx-hook="FormSubmit"
-          data-form="tfa-verification-form"
-          variant="primary"
-          disabled
-        >
-          Enable Two-Factor Authentication
-        </.button>
-      </:footer>
     </.modal>
     """
   end

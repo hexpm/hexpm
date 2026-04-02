@@ -63,7 +63,10 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.PasswordCard do
                 <.button
                   type="button"
                   variant="danger-outline"
-                  onclick="if(confirm('Are you sure you want to remove your password? You will need to use GitHub to sign in.')) { document.getElementById('remove-password-form-submit').click(); }"
+                  id="remove-password-confirm-btn"
+                  phx-hook="ConfirmSubmit"
+                  data-confirm="Are you sure you want to remove your password? You will need to use GitHub to sign in."
+                  data-target="remove-password-form-submit"
                 >
                   Remove Password
                 </.button>
