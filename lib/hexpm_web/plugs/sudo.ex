@@ -6,8 +6,14 @@ defmodule HexpmWeb.Plugs.Sudo do
   The authentication duration is configured via `:hexpm, :sudo_timeout` and is
   automatically granted on login.
 
+  On GET requests where sudo is active, a signed form token is stored in
+  `conn.assigns.sudo_form_token`. Forms on sudo-protected pages should include
+  this as a hidden field. On non-GET requests, the plug accepts either active
+  sudo or a valid form token, so form submissions work even if sudo expires
+  between page load and form submit.
+
   Usage in controllers:
-      plug HexpmWeb.Plugs.Sudo when action in [:change_password, :disable_tfa]
+      plug HexpmWeb.Plugs.Sudo
   """
 
   use HexpmWeb, :verified_routes
@@ -17,17 +23,29 @@ defmodule HexpmWeb.Plugs.Sudo do
 
   @behaviour Plug
 
+  @token_salt "sudo_form_token"
+
   @impl Plug
   def init(opts), do: opts
 
   @impl Plug
   def call(conn, _opts) do
-    if sudo_active?(conn) do
-      conn
-    else
-      conn
-      |> redirect_to_sudo(full_request_path(conn), "Please verify your identity to continue.")
-      |> halt()
+    cond do
+      sudo_active?(conn) ->
+        conn
+
+      conn.method != "GET" and valid_form_token?(conn) ->
+        conn
+
+      true ->
+        return_to =
+          if conn.method == "GET" do
+            full_request_path(conn)
+          end
+
+        conn
+        |> redirect_to_sudo(return_to, "Please verify your identity to continue.")
+        |> halt()
     end
   end
 
@@ -40,10 +58,16 @@ defmodule HexpmWeb.Plugs.Sudo do
         Sudo.redirect_to_sudo(conn, ~p"/some/path", "Please verify your identity.")
       end
   """
-  @spec redirect_to_sudo(Plug.Conn.t(), String.t(), String.t()) :: Plug.Conn.t()
+  @spec redirect_to_sudo(Plug.Conn.t(), String.t() | nil, String.t()) :: Plug.Conn.t()
   def redirect_to_sudo(conn, return_to, message) do
+    conn =
+      if return_to do
+        put_session(conn, "sudo_return_to", return_to)
+      else
+        conn
+      end
+
     conn
-    |> put_session("sudo_return_to", return_to)
     |> put_flash(:info, message)
     |> redirect(to: ~p"/sudo")
   end
@@ -86,5 +110,39 @@ defmodule HexpmWeb.Plugs.Sudo do
       "sudo_authenticated_at",
       NaiveDateTime.utc_now() |> NaiveDateTime.to_iso8601()
     )
+  end
+
+  @doc """
+  Generates a signed sudo form token for the given method and action.
+
+  The token binds to the current user, the HTTP method, and the form action path,
+  so it can only be used for the specific endpoint the form targets.
+  """
+  @spec generate_form_token(Plug.Conn.t(), String.t(), String.t()) :: String.t()
+  def generate_form_token(conn, method, action) do
+    data = {conn.assigns.current_user.id, method, action}
+    Phoenix.Token.sign(HexpmWeb.Endpoint, @token_salt, data)
+  end
+
+  @spec valid_form_token?(Plug.Conn.t()) :: boolean()
+  defp valid_form_token?(conn) do
+    case conn.params["_sudo_token"] do
+      token when is_binary(token) ->
+        timeout = sudo_timeout()
+        max_age = timeout.hour * 3600 + timeout.minute * 60 + timeout.second
+
+        case Phoenix.Token.verify(HexpmWeb.Endpoint, @token_salt, token, max_age: max_age) do
+          {:ok, {user_id, method, action}} ->
+            user_id == conn.assigns.current_user.id and
+              method == conn.method and
+              action == conn.request_path
+
+          _ ->
+            false
+        end
+
+      _ ->
+        false
+    end
   end
 end

@@ -45,7 +45,7 @@ defmodule HexpmWeb.Plugs.SudoTest do
   end
 
   describe "call/2" do
-    test "allows request when sudo active" do
+    test "allows GET request when sudo active" do
       user = insert(:user)
 
       conn =
@@ -56,7 +56,7 @@ defmodule HexpmWeb.Plugs.SudoTest do
       refute conn.halted
     end
 
-    test "redirects to /sudo when not active" do
+    test "redirects GET to /sudo when not active" do
       user = insert(:user)
 
       conn =
@@ -71,7 +71,7 @@ defmodule HexpmWeb.Plugs.SudoTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "verify your identity"
     end
 
-    test "stores return path in session" do
+    test "stores return path in session for GET requests" do
       user = insert(:user)
 
       conn =
@@ -81,6 +81,96 @@ defmodule HexpmWeb.Plugs.SudoTest do
         |> Sudo.call([])
 
       assert get_session(conn, "sudo_return_to") == "/dashboard/security"
+    end
+
+    test "does not store return path for POST requests" do
+      user = insert(:user)
+
+      conn =
+        build_conn(:post, "/dashboard/security/verify-tfa-code", %{})
+        |> test_login(user, sudo: false)
+        |> fetch_flash()
+        |> Sudo.call([])
+
+      assert conn.halted
+      assert redirected_to(conn) == "/sudo"
+      refute get_session(conn, "sudo_return_to")
+    end
+  end
+
+  describe "form token" do
+    test "allows POST with valid form token when sudo expired" do
+      user = insert(:user)
+
+      token =
+        build_conn()
+        |> Plug.Conn.assign(:current_user, user)
+        |> Sudo.generate_form_token("POST", "/dashboard/security/change-password")
+
+      conn =
+        build_conn(:post, "/dashboard/security/change-password", %{
+          "_sudo_token" => token
+        })
+        |> test_login(user, sudo: false)
+        |> Plug.Conn.assign(:current_user, user)
+        |> Sudo.call([])
+
+      refute conn.halted
+    end
+
+    test "rejects form token for wrong path" do
+      user = insert(:user)
+
+      token =
+        build_conn()
+        |> Plug.Conn.assign(:current_user, user)
+        |> Sudo.generate_form_token("POST", "/dashboard/security/change-password")
+
+      conn =
+        build_conn(:post, "/dashboard/security/disable-tfa", %{"_sudo_token" => token})
+        |> test_login(user, sudo: false)
+        |> Plug.Conn.assign(:current_user, user)
+        |> fetch_flash()
+        |> Sudo.call([])
+
+      assert conn.halted
+    end
+
+    test "rejects form token for wrong user" do
+      user1 = insert(:user)
+      user2 = insert(:user)
+
+      token =
+        build_conn()
+        |> Plug.Conn.assign(:current_user, user1)
+        |> Sudo.generate_form_token("POST", "/dashboard/security/change-password")
+
+      conn =
+        build_conn(:post, "/dashboard/security/change-password", %{"_sudo_token" => token})
+        |> test_login(user2, sudo: false)
+        |> Plug.Conn.assign(:current_user, user2)
+        |> fetch_flash()
+        |> Sudo.call([])
+
+      assert conn.halted
+    end
+
+    test "rejects form token for wrong method" do
+      user = insert(:user)
+
+      token =
+        build_conn()
+        |> Plug.Conn.assign(:current_user, user)
+        |> Sudo.generate_form_token("POST", "/dashboard/keys")
+
+      conn =
+        build_conn(:delete, "/dashboard/keys", %{"_sudo_token" => token})
+        |> test_login(user, sudo: false)
+        |> Plug.Conn.assign(:current_user, user)
+        |> fetch_flash()
+        |> Sudo.call([])
+
+      assert conn.halted
     end
   end
 end
