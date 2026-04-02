@@ -31,7 +31,13 @@
               >organization dashboard</a>.
             </p>
 
-            <%= form_for @changeset, ~p"/dashboard/orgs", [class: "space-y-4"], fn f -> %>
+            <.sudo_form
+              :let={f}
+              current_user={@current_user}
+              for={@changeset}
+              action={~p"/dashboard/orgs"}
+              class="space-y-4"
+            >
               <.text_input
                 field={f[:name]}
                 label="Organization name"
@@ -46,7 +52,7 @@
               <.button type="submit" variant="primary">
                 Submit
               </.button>
-            <% end %>
+            </.sudo_form>
           </div>
         </div>
       </div>

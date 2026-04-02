@@ -4,14 +4,16 @@ defmodule HexpmWeb.Dashboard.Organization.Components.CreateOrganizationModal do
   Submits to POST /dashboard/orgs — the existing create action handles it.
   """
   use Phoenix.Component
-  import HexpmWeb.Components.Modal, only: [modal: 1, hide_modal: 1]
   import HexpmWeb.Components.Buttons, only: [button: 1]
+  import HexpmWeb.Components.Form, only: [sudo_form: 1]
+  import HexpmWeb.Components.Modal, only: [modal: 1, hide_modal: 1]
 
   @modal_id "create-organization-modal"
 
   def modal_id, do: @modal_id
 
   attr :changeset, :any, required: true
+  attr :current_user, :map, required: true
 
   def create_organization_modal(assigns) do
     ~H"""
@@ -22,13 +24,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.CreateOrganizationModal do
         paid plans at <strong class="text-grey-700">$7.00 per user / month</strong>.
       </p>
 
-      <form id="create-org-form" action="/dashboard/orgs" method="post">
-        <input
-          type="hidden"
-          name="_csrf_token"
-          value={Plug.CSRFProtection.get_csrf_token()}
-        />
-
+      <.sudo_form current_user={@current_user} action="/dashboard/orgs" id="create-org-form">
         <div class="mb-6">
           <label
             for="org-name-input"
@@ -71,7 +67,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.CreateOrganizationModal do
             Create Organization
           </.button>
         </div>
-      </form>
+      </.sudo_form>
     </.modal>
     """
   end

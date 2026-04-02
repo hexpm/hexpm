@@ -10,6 +10,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInfoForms do
   alias Phoenix.LiveView.JS
   alias HexpmWeb.Dashboard.Organization.Components.BillingHelpers
   import HexpmWeb.Components.Buttons, only: [button: 1]
+  import HexpmWeb.Components.Form, only: [sudo_form: 1]
   import HexpmWeb.Components.Input, only: [text_input: 1, select_input: 1]
 
   attr :organization, :map, required: true
@@ -80,8 +81,10 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInfoForms do
         </div>
 
         <div id="billing-panel-person" class={if @initial_tab != "person", do: "hidden"}>
-          <form action={billing_form_path(@organization, @billing_started?)} method="post">
-            <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+          <.sudo_form
+            current_user={@current_user}
+            action={billing_form_path(@organization, @billing_started?)}
+          >
             <.person_fields
               billing_email={@billing_email}
               current_user={@current_user}
@@ -92,12 +95,14 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInfoForms do
             <div class="mt-6">
               <.button type="submit" variant="primary">Save</.button>
             </div>
-          </form>
+          </.sudo_form>
         </div>
 
         <div id="billing-panel-company" class={if @initial_tab != "company", do: "hidden"}>
-          <form action={billing_form_path(@organization, @billing_started?)} method="post">
-            <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+          <.sudo_form
+            current_user={@current_user}
+            action={billing_form_path(@organization, @billing_started?)}
+          >
             <.company_fields
               billing_email={@billing_email}
               current_user={@current_user}
@@ -108,7 +113,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInfoForms do
             <div class="mt-6">
               <.button type="submit" variant="primary">Save</.button>
             </div>
-          </form>
+          </.sudo_form>
         </div>
       </div>
     </div>

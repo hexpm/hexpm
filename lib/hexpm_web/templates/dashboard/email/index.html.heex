@@ -11,7 +11,7 @@
         <.email_management_card
           emails={@emails}
           create_changeset={@create_changeset}
-          csrf_token={Plug.CSRFProtection.get_csrf_token()}
+          current_user={@current_user}
         />
       </div>
     </div>

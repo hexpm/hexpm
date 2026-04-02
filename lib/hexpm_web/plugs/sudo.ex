@@ -118,10 +118,9 @@ defmodule HexpmWeb.Plugs.Sudo do
   The token binds to the current user, the HTTP method, and the form action path,
   so it can only be used for the specific endpoint the form targets.
   """
-  @spec generate_form_token(Plug.Conn.t(), String.t(), String.t()) :: String.t()
-  def generate_form_token(conn, method, action) do
-    data = {conn.assigns.current_user.id, method, action}
-    Phoenix.Token.sign(HexpmWeb.Endpoint, @token_salt, data)
+  @spec generate_form_token(integer(), String.t(), String.t()) :: String.t()
+  def generate_form_token(user_id, method, action) do
+    Phoenix.Token.sign(HexpmWeb.Endpoint, @token_salt, {user_id, method, action})
   end
 
   @spec valid_form_token?(Plug.Conn.t()) :: boolean()

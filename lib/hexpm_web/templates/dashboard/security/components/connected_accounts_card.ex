@@ -6,6 +6,7 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.ConnectedAccountsCard
   use Phoenix.Component
   use PhoenixHTMLHelpers
   import HexpmWeb.Components.Buttons
+  import HexpmWeb.Components.Form, only: [sudo_form: 1]
   import HexpmWeb.Components.Icons, only: [github_icon: 1]
   use Hexpm.Shared
 
@@ -38,11 +39,11 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.ConnectedAccountsCard
             <p class="text-grey-600 text-sm mb-4">
               Your GitHub account is connected. You can sign in using GitHub.
             </p>
-            <%= form_tag(~p"/dashboard/security/disconnect-github", [method: :post]) do %>
+            <.sudo_form current_user={@user} action={~p"/dashboard/security/disconnect-github"}>
               <.button type="submit" variant="danger" size="sm">
                 Disconnect
               </.button>
-            <% end %>
+            </.sudo_form>
           <% else %>
             <p class="text-grey-600 text-sm mb-4">
               Connect your GitHub account to enable GitHub login.

@@ -7,6 +7,7 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFACard do
   use PhoenixHTMLHelpers
   import HexpmWeb.ViewIcons, only: [icon: 3]
   import HexpmWeb.Components.Buttons
+  import HexpmWeb.Components.Form, only: [sudo_form: 1]
   import HexpmWeb.Components.Modal, only: [show_modal: 1]
   import HexpmWeb.Components.ConfirmationModal
   use Hexpm.Shared
@@ -36,11 +37,15 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFACard do
             Disable
           </.button>
         <% else %>
-          <%= form_tag(~p"/dashboard/security/enable-tfa", [method: :post, id: "enable-tfa-form"]) do %>
+          <.sudo_form
+            current_user={@user}
+            action={~p"/dashboard/security/enable-tfa"}
+            id="enable-tfa-form"
+          >
             <.button type="submit" variant="primary">
               Enable
             </.button>
-          <% end %>
+          </.sudo_form>
         <% end %>
       </div>
 

@@ -122,4 +122,7 @@
 />
 
 <%!-- Create organization modal — always rendered so the sidebar "Create New" button works from any dashboard page --%>
-<.create_organization_modal changeset={new_organization_changeset(assigns)} />
+<.create_organization_modal
+  changeset={new_organization_changeset(assigns)}
+  current_user={@current_user}
+/>

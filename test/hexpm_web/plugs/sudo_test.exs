@@ -103,9 +103,7 @@ defmodule HexpmWeb.Plugs.SudoTest do
       user = insert(:user)
 
       token =
-        build_conn()
-        |> Plug.Conn.assign(:current_user, user)
-        |> Sudo.generate_form_token("POST", "/dashboard/security/change-password")
+        Sudo.generate_form_token(user.id, "POST", "/dashboard/security/change-password")
 
       conn =
         build_conn(:post, "/dashboard/security/change-password", %{
@@ -122,9 +120,7 @@ defmodule HexpmWeb.Plugs.SudoTest do
       user = insert(:user)
 
       token =
-        build_conn()
-        |> Plug.Conn.assign(:current_user, user)
-        |> Sudo.generate_form_token("POST", "/dashboard/security/change-password")
+        Sudo.generate_form_token(user.id, "POST", "/dashboard/security/change-password")
 
       conn =
         build_conn(:post, "/dashboard/security/disable-tfa", %{"_sudo_token" => token})
@@ -140,10 +136,7 @@ defmodule HexpmWeb.Plugs.SudoTest do
       user1 = insert(:user)
       user2 = insert(:user)
 
-      token =
-        build_conn()
-        |> Plug.Conn.assign(:current_user, user1)
-        |> Sudo.generate_form_token("POST", "/dashboard/security/change-password")
+      token = Sudo.generate_form_token(user1.id, "POST", "/dashboard/security/change-password")
 
       conn =
         build_conn(:post, "/dashboard/security/change-password", %{"_sudo_token" => token})
@@ -159,9 +152,7 @@ defmodule HexpmWeb.Plugs.SudoTest do
       user = insert(:user)
 
       token =
-        build_conn()
-        |> Plug.Conn.assign(:current_user, user)
-        |> Sudo.generate_form_token("POST", "/dashboard/keys")
+        Sudo.generate_form_token(user.id, "POST", "/dashboard/keys")
 
       conn =
         build_conn(:delete, "/dashboard/keys", %{"_sudo_token" => token})

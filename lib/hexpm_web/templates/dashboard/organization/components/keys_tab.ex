@@ -7,7 +7,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.KeysTab do
 
   import HexpmWeb.Dashboard.Key.Components.KeyManagementCard, only: [key_management_card: 1]
 
-  attr :csrf_token, :string, required: true
+  attr :current_user, :map, required: true
   attr :create_key_path, :string, required: true
   attr :delete_key_path, :string, required: true
   attr :generated_key, :map, default: nil
@@ -20,7 +20,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.KeysTab do
     ~H"""
     <.key_management_card
       create_key_path={@create_key_path}
-      csrf_token={@csrf_token}
+      current_user={@current_user}
       delete_key_path={@delete_key_path}
       generated_key={@generated_key}
       key_changeset={@key_changeset}

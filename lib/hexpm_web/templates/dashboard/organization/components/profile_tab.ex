@@ -12,10 +12,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.ProfileTab do
     statics: HexpmWeb.static_paths()
 
   import HexpmWeb.Components.Buttons, only: [button: 1, text_link: 1]
+  import HexpmWeb.Components.Form, only: [sudo_form: 1]
   import HexpmWeb.Components.Input, only: [text_input: 1]
   import HexpmWeb.Components.SocialInput, only: [social_input: 1]
 
   attr :changeset, :any, required: true
+  attr :current_user, :map, required: true
   attr :gravatar_email, :string, default: nil
   attr :organization, :map, required: true
   attr :public_email, :string, default: nil
@@ -71,7 +73,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.ProfileTab do
           </div>
         </div>
 
-        <%= form_for @changeset, ~p"/dashboard/orgs/#{@organization}/profile", [method: :post], fn f -> %>
+        <.sudo_form
+          :let={f}
+          current_user={@current_user}
+          for={@changeset}
+          action={~p"/dashboard/orgs/#{@organization}/profile"}
+        >
           <div class="space-y-6">
             <.text_input field={f[:full_name]} label="Full Name" />
 
@@ -131,7 +138,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.ProfileTab do
               <.button type="submit" variant="primary">Save Changes</.button>
             </div>
           </div>
-        <% end %>
+        </.sudo_form>
       <% else %>
         <div class="rounded-lg bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800">
           There is no profile associated with your organization. To enable the profile, your organization needs to be migrated. Please contact{" "}

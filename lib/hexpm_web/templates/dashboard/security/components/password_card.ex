@@ -6,6 +6,7 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.PasswordCard do
   use Phoenix.Component
   use PhoenixHTMLHelpers
   import HexpmWeb.Components.Buttons
+  import HexpmWeb.Components.Form, only: [sudo_form: 1]
   import HexpmWeb.Components.Input
   use Hexpm.Shared
 
@@ -27,7 +28,12 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.PasswordCard do
 
       <%= if Hexpm.Accounts.User.has_password?(@user) do %>
         <%!-- Change Password Form --%>
-        <%= form_for @changeset, ~p"/dashboard/security/change-password", [method: :post], fn f -> %>
+        <.sudo_form
+          :let={f}
+          current_user={@user}
+          for={@changeset}
+          action={~p"/dashboard/security/change-password"}
+        >
           <div class="space-y-5">
             <.password_input
               field={f[:password_current]}
@@ -64,15 +70,17 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.PasswordCard do
               <% end %>
             </div>
           </div>
-        <% end %>
+        </.sudo_form>
 
         <%= if Hexpm.Accounts.User.can_remove_password?(@user) do %>
-          <%= form_tag(
-            ~p"/dashboard/security/remove-password",
-            [method: :post, id: "remove-password-form", class: "hidden"]
-          ) do %>
+          <.sudo_form
+            current_user={@user}
+            action={~p"/dashboard/security/remove-password"}
+            id="remove-password-form"
+            class="hidden"
+          >
             <button type="submit" id="remove-password-form-submit" class="hidden"></button>
-          <% end %>
+          </.sudo_form>
         <% else %>
           <p class="text-grey-500 text-sm mt-4 p-3 bg-grey-50 rounded-lg">
             You must connect a GitHub account before you can remove your password.
@@ -80,7 +88,12 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.PasswordCard do
         <% end %>
       <% else %>
         <%!-- Add Password Form --%>
-        <%= form_for @add_password_changeset, ~p"/dashboard/security/add-password", [method: :post], fn f -> %>
+        <.sudo_form
+          :let={f}
+          current_user={@user}
+          for={@add_password_changeset}
+          action={~p"/dashboard/security/add-password"}
+        >
           <div class="space-y-5">
             <.password_input
               field={f[:password]}
@@ -99,7 +112,7 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.PasswordCard do
               Add Password
             </.button>
           </div>
-        <% end %>
+        </.sudo_form>
       <% end %>
     </div>
     """

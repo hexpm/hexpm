@@ -46,6 +46,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingTab do
     <div class="space-y-6">
       <%= if @billing_started? do %>
         <.billing_subscription
+          current_user={@current_user}
           organization={@organization}
           plan_id={@plan_id}
           quantity={@quantity}
@@ -80,6 +81,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingTab do
       />
 
       <.billing_invoices
+        current_user={@current_user}
         organization={@organization}
         invoices={@invoices}
         card={@card}

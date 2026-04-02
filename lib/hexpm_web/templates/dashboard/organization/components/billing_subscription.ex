@@ -8,11 +8,13 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
     statics: HexpmWeb.static_paths()
 
   import Phoenix.HTML, only: [raw: 1]
-  import HexpmWeb.Components.Modal, only: [modal: 1, show_modal: 1, hide_modal: 1]
   import HexpmWeb.Components.Buttons, only: [button: 1]
+  import HexpmWeb.Components.Form, only: [sudo_form: 1]
+  import HexpmWeb.Components.Modal, only: [modal: 1, show_modal: 1, hide_modal: 1]
 
   alias HexpmWeb.Dashboard.Organization.Components.BillingHelpers
 
+  attr :current_user, :map, required: true
   attr :organization, :map, required: true
   attr :plan_id, :string, default: nil
   attr :quantity, :integer, default: nil
@@ -154,15 +156,17 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
 
           <div class="mt-4 flex gap-3 items-center">
             <%= if @subscription["cancel_at_period_end"] && @card && @card["brand"] do %>
-              <form action={~p"/dashboard/orgs/#{@organization}/resume-billing"} method="post">
-                <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+              <.sudo_form
+                current_user={@current_user}
+                action={~p"/dashboard/orgs/#{@organization}/resume-billing"}
+              >
                 <button
                   type="submit"
                   class="inline-flex items-center justify-center gap-2 font-semibold rounded h-9 px-3 text-sm bg-green-600 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 cursor-pointer"
                 >
                   Resume subscription
                 </button>
-              </form>
+              </.sudo_form>
             <% end %>
             <.button
               type="button"
@@ -175,8 +179,13 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
             </.button>
           </div>
 
-          <.cancel_billing_modal organization={@organization} subscription={@subscription} />
+          <.cancel_billing_modal
+            current_user={@current_user}
+            organization={@organization}
+            subscription={@subscription}
+          />
           <.add_seats_modal
+            current_user={@current_user}
             organization={@organization}
             plan_id={@plan_id}
             quantity={@safe_quantity}
@@ -186,12 +195,17 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
             max_period_quantity={@max_period_quantity}
           />
           <.remove_seats_modal
+            current_user={@current_user}
             organization={@organization}
             quantity={@safe_quantity}
             member_count={@member_count}
             plan_id={@plan_id}
           />
-          <.change_plan_modal organization={@organization} plan_id={@plan_id} />
+          <.change_plan_modal
+            current_user={@current_user}
+            organization={@organization}
+            plan_id={@plan_id}
+          />
 
           <%= if @stripe_publishable_key do %>
             <script nonce={@script_src_nonce}>
@@ -318,6 +332,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
 
   defp subscription_badge_class(_), do: "bg-grey-100 text-grey-600"
 
+  attr :current_user, :map, required: true
   attr :organization, :map, required: true
   attr :subscription, :map, default: nil
 
@@ -331,13 +346,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
         Your subscription will remain active until the end of the current billing period.
         After that, private packages will no longer be accessible.
       </p>
-      <form
-        id="cancel-billing-form"
+      <.sudo_form
+        current_user={@current_user}
         action={~p"/dashboard/orgs/#{@organization}/cancel-billing"}
-        method="post"
+        id="cancel-billing-form"
       >
-        <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
-      </form>
+      </.sudo_form>
       <:footer>
         <.button type="button" variant="secondary" phx-click={hide_modal("cancel-billing-modal")}>
           Keep subscription
@@ -355,6 +369,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
     """
   end
 
+  attr :current_user, :map, required: true
   attr :organization, :map, required: true
   attr :plan_id, :string, default: nil
   attr :quantity, :integer, default: 0
@@ -366,8 +381,11 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
   defp add_seats_modal(assigns) do
     ~H"""
     <.modal id="add-seats-modal" title="Add seats">
-      <form id="add-seats-form" action={~p"/dashboard/orgs/#{@organization}/add-seats"} method="post">
-        <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+      <.sudo_form
+        current_user={@current_user}
+        action={~p"/dashboard/orgs/#{@organization}/add-seats"}
+        id="add-seats-form"
+      >
         <input type="hidden" name="current-seats" value={@quantity} />
         <p class="text-sm text-grey-600 mb-4">
           You have {@quantity} seats of which {@member_count} are in use.
@@ -402,7 +420,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
             )}
           </p>
         <% end %>
-      </form>
+      </.sudo_form>
       <:footer>
         <.button type="button" variant="secondary" phx-click={hide_modal("add-seats-modal")}>
           Cancel
@@ -415,6 +433,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
     """
   end
 
+  attr :current_user, :map, required: true
   attr :organization, :map, required: true
   attr :quantity, :integer, default: 0
   attr :member_count, :integer, default: 0
@@ -423,12 +442,11 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
   defp remove_seats_modal(assigns) do
     ~H"""
     <.modal id="remove-seats-modal" title="Remove seats">
-      <form
-        id="remove-seats-form"
+      <.sudo_form
+        current_user={@current_user}
         action={~p"/dashboard/orgs/#{@organization}/remove-seats"}
-        method="post"
+        id="remove-seats-form"
       >
-        <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
         <p class="text-sm text-grey-600 mb-4">
           You have {@quantity} seats of which {@member_count} are in use.
         </p>
@@ -458,7 +476,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
             </div>
           </div>
         <% end %>
-      </form>
+      </.sudo_form>
       <:footer>
         <.button type="button" variant="secondary" phx-click={hide_modal("remove-seats-modal")}>
           Cancel
@@ -477,18 +495,18 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
     """
   end
 
+  attr :current_user, :map, required: true
   attr :organization, :map, required: true
   attr :plan_id, :string, default: nil
 
   defp change_plan_modal(assigns) do
     ~H"""
     <.modal id="change-plan-modal" title="Change plan">
-      <form
-        id="change-plan-form"
+      <.sudo_form
+        current_user={@current_user}
         action={~p"/dashboard/orgs/#{@organization}/change-plan"}
-        method="post"
+        id="change-plan-form"
       >
-        <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
         <input
           type="hidden"
           name="plan_id"
@@ -505,7 +523,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
             Switch to the monthly plan at <strong>{BillingHelpers.plan_price("organization-monthly")} per user / month</strong>.
           <% end %>
         </p>
-      </form>
+      </.sudo_form>
       <:footer>
         <.button type="button" variant="secondary" phx-click={hide_modal("change-plan-modal")}>
           Cancel

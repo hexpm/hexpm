@@ -4,9 +4,10 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
   import HexpmWeb.Components.Modal
   import HexpmWeb.Components.Buttons
   import HexpmWeb.Components.Input
+  import HexpmWeb.Components.Form, only: [sudo_form: 1]
 
   attr :form, :map, required: true
-  attr :csrf_token, :string, required: true
+  attr :current_user, :map, required: true
   attr :create_key_path, :string, required: true
   attr :organizations, :list, required: true
   attr :packages, :list, required: true
@@ -21,9 +22,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
         </h2>
       </:header>
 
-      <form action={@create_key_path} method="post" id="generate-key-form">
-        <input type="hidden" name="_csrf_token" value={@csrf_token} />
-
+      <.sudo_form current_user={@current_user} action={@create_key_path} id="generate-key-form">
         <%!-- Key Name --%>
         <div class="mb-6">
           <label class="block text-sm font-medium text-grey-700 mb-2">
@@ -158,7 +157,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
             </div>
           <% end %>
         </div>
-      </form>
+      </.sudo_form>
 
       <:footer>
         <div class="flex gap-3 justify-end">

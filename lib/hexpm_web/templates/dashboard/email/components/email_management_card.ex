@@ -7,6 +7,7 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
   use PhoenixHTMLHelpers
   import HexpmWeb.Components.Buttons
   import HexpmWeb.Components.Badge
+  import HexpmWeb.Components.Form, only: [sudo_form: 1]
   import HexpmWeb.Components.Table
   import HexpmWeb.Components.Tooltip
   import HexpmWeb.Components.Modal, only: [show_modal: 1]
@@ -21,7 +22,7 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
 
   attr :emails, :list, required: true
   attr :create_changeset, :any, required: true
-  attr :csrf_token, :string, required: true
+  attr :current_user, :map, required: true
 
   def email_management_card(assigns) do
     ~H"""
@@ -53,13 +54,13 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
           </th>
         </:header>
         <:row :for={email <- @emails}>
-          <.email_row email={email} csrf_token={@csrf_token} />
+          <.email_row email={email} current_user={@current_user} />
         </:row>
       </.table>
 
       <%!-- Delete Email Modals rendered outside the table to avoid invalid HTML inside <tbody> --%>
       <%= for email <- @emails do %>
-        <.delete_email_modal email={email} />
+        <.delete_email_modal email={email} current_user={@current_user} />
       <% end %>
 
       <%!-- Add Email Button --%>
@@ -80,12 +81,12 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
     </div>
 
     <%!-- Add Email Modal --%>
-    <.add_email_modal changeset={@create_changeset} />
+    <.add_email_modal changeset={@create_changeset} current_user={@current_user} />
     """
   end
 
   attr :email, :map, required: true
-  attr :csrf_token, :string, required: true
+  attr :current_user, :map, required: true
 
   defp email_row(assigns) do
     modal_id = "delete-email-#{assigns.email.id}"
@@ -116,27 +117,25 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
         <div class="flex items-center justify-end gap-1">
           <%!-- Set as Primary --%>
           <%= if @email.verified and not @email.primary do %>
-            <form
+            <.sudo_form
+              current_user={@current_user}
               action={~p"/dashboard/email/primary"}
-              method="post"
               class="inline-flex items-center m-0"
             >
-              <input type="hidden" name="_csrf_token" value={@csrf_token} />
               <input type="hidden" name="email" value={@email.email} />
               <.tooltip text="Set as primary">
                 <.icon_button type="submit" icon="star" variant="default" aria-label="Set as primary" />
               </.tooltip>
-            </form>
+            </.sudo_form>
           <% end %>
 
           <%!-- Set as Public / Private --%>
           <%= if @email.verified and not @email.public do %>
-            <form
+            <.sudo_form
+              current_user={@current_user}
               action={~p"/dashboard/email/public"}
-              method="post"
               class="inline-flex items-center m-0"
             >
-              <input type="hidden" name="_csrf_token" value={@csrf_token} />
               <input type="hidden" name="email" value={@email.email} />
               <.tooltip text="Set as public">
                 <.icon_button
@@ -146,16 +145,15 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
                   aria-label="Set as public"
                 />
               </.tooltip>
-            </form>
+            </.sudo_form>
           <% end %>
 
           <%= if @email.verified and @email.public do %>
-            <form
+            <.sudo_form
+              current_user={@current_user}
               action={~p"/dashboard/email/public"}
-              method="post"
               class="inline-flex items-center m-0"
             >
-              <input type="hidden" name="_csrf_token" value={@csrf_token} />
               <input type="hidden" name="email" value="none" />
               <.tooltip text="Set as private">
                 <.icon_button
@@ -165,17 +163,16 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
                   aria-label="Set as private"
                 />
               </.tooltip>
-            </form>
+            </.sudo_form>
           <% end %>
 
           <%!-- Set as Gravatar / Unset Gravatar --%>
           <%= if @email.verified and not @email.gravatar do %>
-            <form
+            <.sudo_form
+              current_user={@current_user}
               action={~p"/dashboard/email/gravatar"}
-              method="post"
               class="inline-flex items-center m-0"
             >
-              <input type="hidden" name="_csrf_token" value={@csrf_token} />
               <input type="hidden" name="email" value={@email.email} />
               <.tooltip text="Set as gravatar">
                 <.icon_button
@@ -185,16 +182,15 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
                   aria-label="Set as gravatar"
                 />
               </.tooltip>
-            </form>
+            </.sudo_form>
           <% end %>
 
           <%= if @email.verified and @email.gravatar do %>
-            <form
+            <.sudo_form
+              current_user={@current_user}
               action={~p"/dashboard/email/gravatar"}
-              method="post"
               class="inline-flex items-center m-0"
             >
-              <input type="hidden" name="_csrf_token" value={@csrf_token} />
               <input type="hidden" name="email" value="none" />
               <.tooltip text="Unset gravatar">
                 <.icon_button
@@ -205,17 +201,16 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
                   class="opacity-50"
                 />
               </.tooltip>
-            </form>
+            </.sudo_form>
           <% end %>
 
           <%!-- Resend Verification --%>
           <%= unless @email.verified do %>
-            <form
+            <.sudo_form
+              current_user={@current_user}
               action={~p"/dashboard/email/resend"}
-              method="post"
               class="inline-flex items-center m-0"
             >
-              <input type="hidden" name="_csrf_token" value={@csrf_token} />
               <input type="hidden" name="email" value={@email.email} />
               <.tooltip text="Resend verification email">
                 <.icon_button
@@ -225,7 +220,7 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
                   aria-label="Resend verification"
                 />
               </.tooltip>
-            </form>
+            </.sudo_form>
           <% end %>
 
           <%!-- Delete Button --%>

@@ -7,10 +7,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.DangerZoneTab do
     router: HexpmWeb.Router,
     statics: HexpmWeb.static_paths()
 
-  import HexpmWeb.Components.Modal, only: [modal: 1, show_modal: 1, hide_modal: 1]
   import HexpmWeb.Components.Buttons, only: [button: 1]
+  import HexpmWeb.Components.Form, only: [sudo_form: 1]
   import HexpmWeb.Components.Input, only: [text_input: 1]
+  import HexpmWeb.Components.Modal, only: [modal: 1, show_modal: 1, hide_modal: 1]
 
+  attr :current_user, :map, required: true
   attr :organization, :map, required: true
 
   def danger_zone_tab(assigns) do
@@ -45,11 +47,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.DangerZoneTab do
         </div>
       </div>
 
-      <.leave_modal organization={@organization} />
+      <.leave_modal current_user={@current_user} organization={@organization} />
     </div>
     """
   end
 
+  attr :current_user, :map, required: true
   attr :organization, :map, required: true
 
   defp leave_modal(assigns) do
@@ -62,12 +65,11 @@ defmodule HexpmWeb.Dashboard.Organization.Components.DangerZoneTab do
       <p class="text-sm text-grey-600 mb-6">
         Please type <strong>{@organization.name}</strong> to confirm.
       </p>
-      <form
-        id="leave-org-form"
+      <.sudo_form
+        current_user={@current_user}
         action={~p"/dashboard/orgs/#{@organization}/leave"}
-        method="post"
+        id="leave-org-form"
       >
-        <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
         <.text_input
           id="leave-org-name-input"
           name="organization_name"
@@ -76,7 +78,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.DangerZoneTab do
           pattern={@organization.name}
           title={"Please type '#{@organization.name}' to confirm"}
         />
-      </form>
+      </.sudo_form>
       <:footer>
         <.button type="button" variant="secondary" phx-click={hide_modal("leave-org-modal")}>
           Cancel

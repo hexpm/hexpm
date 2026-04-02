@@ -24,7 +24,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
   attr :organizations, :list, required: true
   attr :packages, :list, required: true
   attr :key_changeset, :map, required: true
-  attr :csrf_token, :string, required: true
+  attr :current_user, :map, required: true
   attr :create_key_path, :string, required: true
   attr :delete_key_path, :string, required: true
   attr :generated_key, :map, default: nil
@@ -61,13 +61,17 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
             </th>
           </:header>
           <:row :for={key <- @keys}>
-            <.key_row key={key} csrf_token={@csrf_token} delete_key_path={@delete_key_path} />
+            <.key_row key={key} delete_key_path={@delete_key_path} />
           </:row>
         </.table>
 
         <%!-- Revoke Key Modals rendered outside the table to avoid invalid HTML inside <tbody> --%>
         <%= for key <- @keys do %>
-          <.revoke_key_modal key={key} csrf_token={@csrf_token} delete_key_path={@delete_key_path} />
+          <.revoke_key_modal
+            key={key}
+            current_user={@current_user}
+            delete_key_path={@delete_key_path}
+          />
         <% end %>
       <% end %>
 
@@ -91,7 +95,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
     <%!-- Generate Key Modal --%>
     <.generate_key_modal
       form={@form}
-      csrf_token={@csrf_token}
+      current_user={@current_user}
       create_key_path={@create_key_path}
       organizations={@organizations}
       packages={@packages}

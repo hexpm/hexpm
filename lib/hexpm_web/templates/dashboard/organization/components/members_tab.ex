@@ -13,6 +13,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
     statics: HexpmWeb.static_paths()
 
   import HexpmWeb.Components.Buttons, only: [button: 1, icon_button: 1]
+  import HexpmWeb.Components.Form, only: [sudo_form: 1]
   import HexpmWeb.Components.Input, only: [text_input: 1, select_input: 1]
   import HexpmWeb.Components.Modal, only: [modal: 1, show_modal: 1, hide_modal: 1]
 
@@ -82,7 +83,11 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
               <div class="flex items-center gap-2">
                 <%= if admin?(@current_user, @organization) do %>
                   <%!-- Role select (auto-submits on change) --%>
-                  <%= form_for :organization_user, ~p"/dashboard/orgs/#{@organization}", [method: :post, onchange: "this.submit()"], fn _f -> %>
+                  <.sudo_form
+                    current_user={@current_user}
+                    action={~p"/dashboard/orgs/#{@organization}"}
+                    onchange="this.submit()"
+                  >
                     <input type="hidden" name="action" value="change_role" />
                     <input
                       type="hidden"
@@ -97,7 +102,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                       variant="light"
                       class="w-28 h-9 text-sm"
                     />
-                  <% end %>
+                  </.sudo_form>
 
                   <%!-- Remove (hidden for self) --%>
                   <%= if org_user.user.id != @current_user.id do %>
@@ -141,7 +146,11 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
               >
                 Cancel
               </.button>
-              <%= form_for :organization_user, ~p"/dashboard/orgs/#{@organization}", [method: :post, id: "remove-member-form-#{org_user.user.username}"], fn _f -> %>
+              <.sudo_form
+                current_user={@current_user}
+                action={~p"/dashboard/orgs/#{@organization}"}
+                id={"remove-member-form-#{org_user.user.username}"}
+              >
                 <input type="hidden" name="action" value="remove_member" />
                 <input
                   type="hidden"
@@ -151,7 +160,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                 <.button type="submit" variant="danger">
                   Remove member
                 </.button>
-              <% end %>
+              </.sudo_form>
             </:footer>
           </.modal>
         <% end %>
@@ -165,7 +174,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
               Add an existing Hex user to your organization.
             </p>
 
-            <%= form_for @add_member_changeset, ~p"/dashboard/orgs/#{@organization}", [method: :post], fn f -> %>
+            <.sudo_form
+              :let={f}
+              current_user={@current_user}
+              for={@add_member_changeset}
+              action={~p"/dashboard/orgs/#{@organization}"}
+            >
               <input type="hidden" name="action" value="add_member" />
               <div class="space-y-4">
                 <.text_input
@@ -193,7 +207,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                   Add member
                 </.button>
               </div>
-            <% end %>
+            </.sudo_form>
           </div>
         </.modal>
       <% end %>

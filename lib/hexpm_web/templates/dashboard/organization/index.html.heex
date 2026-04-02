@@ -13,6 +13,7 @@
             <% :profile -> %>
               <.profile_tab
                 changeset={@changeset}
+                current_user={@current_user}
                 gravatar_email={@gravatar_email}
                 organization={@organization}
                 public_email={@public_email}
@@ -27,7 +28,7 @@
             <% :keys -> %>
               <.keys_tab
                 create_key_path={@create_key_path}
-                csrf_token={Plug.CSRFProtection.get_csrf_token()}
+                current_user={@current_user}
                 delete_key_path={@delete_key_path}
                 generated_key={@generated_key}
                 key_changeset={@key_changeset}
@@ -83,7 +84,7 @@
                 tax_rate={@tax_rate}
               />
             <% :danger_zone -> %>
-              <.danger_zone_tab organization={@organization} />
+              <.danger_zone_tab current_user={@current_user} organization={@organization} />
             <% _ -> %>
           <% end %>
         </.org_tab_nav>

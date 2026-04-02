@@ -5,6 +5,7 @@ defmodule HexpmWeb.Dashboard.Email.Components.DeleteEmailModal do
   use Phoenix.Component
   use PhoenixHTMLHelpers
   import HexpmWeb.Components.Buttons
+  import HexpmWeb.Components.Form, only: [sudo_form: 1]
   import HexpmWeb.Components.Modal, only: [show_modal: 2]
 
   use Phoenix.VerifiedRoutes,
@@ -13,6 +14,7 @@ defmodule HexpmWeb.Dashboard.Email.Components.DeleteEmailModal do
     statics: HexpmWeb.static_paths()
 
   attr :email, :map, required: true
+  attr :current_user, :map, required: true
 
   def delete_email_modal(assigns) do
     modal_id = "delete-email-#{assigns.email.id}"
@@ -72,9 +74,14 @@ defmodule HexpmWeb.Dashboard.Email.Components.DeleteEmailModal do
           >
             Cancel
           </.button>
-          <%= form_tag(~p"/dashboard/email", [method: :delete, id: "#{@modal_id}-form"]) do %>
+          <.sudo_form
+            current_user={@current_user}
+            action={~p"/dashboard/email"}
+            method="delete"
+            id={"#{@modal_id}-form"}
+          >
             <input type="hidden" name="email" value={@email.email} />
-          <% end %>
+          </.sudo_form>
           <.button
             type="button"
             variant="danger"

@@ -2,9 +2,10 @@ defmodule HexpmWeb.Dashboard.Key.Components.RevokeKeyModal do
   use Phoenix.Component
   import HexpmWeb.Components.Modal
   import HexpmWeb.Components.Buttons
+  import HexpmWeb.Components.Form, only: [sudo_form: 1]
 
   attr :key, :map, required: true
-  attr :csrf_token, :string, required: true
+  attr :current_user, :map, required: true
   attr :delete_key_path, :string, required: true
 
   def revoke_key_modal(assigns) do
@@ -32,14 +33,17 @@ defmodule HexpmWeb.Dashboard.Key.Components.RevokeKeyModal do
           <.button phx-click={hide_modal(@modal_id)} variant="secondary">
             Cancel
           </.button>
-          <form action={@delete_key_path} method="post" class="m-0">
-            <input type="hidden" name="_method" value="delete" />
-            <input type="hidden" name="_csrf_token" value={@csrf_token} />
+          <.sudo_form
+            current_user={@current_user}
+            action={@delete_key_path}
+            method="delete"
+            class="m-0"
+          >
             <input type="hidden" name="name" value={@key.name} />
             <.button type="submit" variant="danger">
               Revoke Key
             </.button>
-          </form>
+          </.sudo_form>
         </div>
       </:footer>
     </.modal>

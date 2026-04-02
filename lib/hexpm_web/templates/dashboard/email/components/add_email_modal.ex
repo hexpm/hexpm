@@ -5,6 +5,7 @@ defmodule HexpmWeb.Dashboard.Email.Components.AddEmailModal do
   use Phoenix.Component
   use PhoenixHTMLHelpers
   import HexpmWeb.Components.Buttons
+  import HexpmWeb.Components.Form, only: [sudo_form: 1]
   import HexpmWeb.Components.Input
 
   use Phoenix.VerifiedRoutes,
@@ -13,6 +14,7 @@ defmodule HexpmWeb.Dashboard.Email.Components.AddEmailModal do
     statics: HexpmWeb.static_paths()
 
   attr :changeset, :any, required: true
+  attr :current_user, :map, required: true
 
   def add_email_modal(assigns) do
     ~H"""
@@ -23,7 +25,13 @@ defmodule HexpmWeb.Dashboard.Email.Components.AddEmailModal do
         </h2>
       </:header>
 
-      <%= form_for @changeset, ~p"/dashboard/email", [method: :post, id: "add-email-form"], fn f -> %>
+      <.sudo_form
+        :let={f}
+        current_user={@current_user}
+        for={@changeset}
+        action={~p"/dashboard/email"}
+        id="add-email-form"
+      >
         <.text_input
           field={f[:email]}
           label="Email address"
@@ -31,7 +39,7 @@ defmodule HexpmWeb.Dashboard.Email.Components.AddEmailModal do
           placeholder="your.email@example.com"
           required
         />
-      <% end %>
+      </.sudo_form>
 
       <:footer>
         <.button

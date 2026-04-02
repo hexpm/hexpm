@@ -9,8 +9,10 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInvoices do
 
   alias HexpmWeb.Dashboard.Organization.Components.BillingHelpers
   import HexpmWeb.Components.Buttons, only: [button: 1]
+  import HexpmWeb.Components.Form, only: [sudo_form: 1]
   import HexpmWeb.Components.Table, only: [table: 1]
 
+  attr :current_user, :map, required: true
   attr :organization, :map, required: true
   attr :invoices, :list, default: []
   attr :card, :map, default: nil
@@ -34,6 +36,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInvoices do
             </:header>
             <:row :for={invoice <- @invoices}>
               <.invoice_row
+                current_user={@current_user}
                 invoice={invoice}
                 organization={@organization}
                 card={@card}
@@ -48,6 +51,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInvoices do
     """
   end
 
+  attr :current_user, :map, required: true
   attr :invoice, :map, required: true
   attr :organization, :map, required: true
   attr :card, :map, default: nil
@@ -78,27 +82,27 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInvoices do
         {BillingHelpers.payment_card(@invoice["card"])}
       </td>
       <td class="px-4 py-4 whitespace-nowrap">
-        {invoice_status(@invoice, @organization, @card, @subscription)}
+        {invoice_status(@invoice, @organization, @card, @subscription, @current_user)}
       </td>
     </tr>
     """
   end
 
-  defp invoice_status(%{"refund" => true, "status" => "succeeded"}, _, _, _), do: "Refund Paid"
+  defp invoice_status(%{"refund" => true, "status" => "succeeded"}, _, _, _, _), do: "Refund Paid"
 
-  defp invoice_status(%{"refund" => true, "status" => s}, _, _, _)
+  defp invoice_status(%{"refund" => true, "status" => s}, _, _, _, _)
        when s in ["failed", "canceled"],
        do: "Refund Canceled"
 
-  defp invoice_status(%{"refund" => true, "status" => s}, _, _, _)
+  defp invoice_status(%{"refund" => true, "status" => s}, _, _, _, _)
        when s in ["pending", "requires_action"],
        do: "Refund Pending"
 
-  defp invoice_status(%{"paid" => true}, _, _, _), do: "Paid"
-  defp invoice_status(%{"status" => "uncollectible"}, _, _, _), do: "Forgiven"
-  defp invoice_status(%{"paid" => false, "attempted" => false}, _, _, _), do: "Pending"
+  defp invoice_status(%{"paid" => true}, _, _, _, _), do: "Paid"
+  defp invoice_status(%{"status" => "uncollectible"}, _, _, _, _), do: "Forgiven"
+  defp invoice_status(%{"paid" => false, "attempted" => false}, _, _, _, _), do: "Pending"
 
-  defp invoice_status(%{"paid" => false, "attempted" => true}, _, nil, _) do
+  defp invoice_status(%{"paid" => false, "attempted" => true}, _, nil, _, _) do
     assigns = %{}
 
     ~H"""
@@ -106,7 +110,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInvoices do
     """
   end
 
-  defp invoice_status(%{"paid" => false, "attempted" => true}, _, _card, %{"status" => status})
+  defp invoice_status(%{"paid" => false, "attempted" => true}, _, _card, %{"status" => status}, _)
        when status in ["incomplete_expired", "canceled"] do
     assigns = %{}
 
@@ -124,7 +128,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInvoices do
          },
          _org,
          _card,
-         _subscription
+         _subscription,
+         _current_user
        )
        when is_binary(client_secret) do
     assigns = %{client_secret: client_secret, payment_method: payment_method}
@@ -141,17 +146,26 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInvoices do
     """
   end
 
-  defp invoice_status(%{"paid" => false, "attempted" => true, "id" => inv_id}, org, _card, _sub) do
-    assigns = %{inv_id: inv_id, org: org}
+  defp invoice_status(
+         %{"paid" => false, "attempted" => true, "id" => inv_id},
+         org,
+         _card,
+         _sub,
+         current_user
+       ) do
+    assigns = %{inv_id: inv_id, org: org, current_user: current_user}
 
     ~H"""
-    <form action={~p"/dashboard/orgs/#{@org}/invoices/#{@inv_id}/pay"} method="post" class="inline">
-      <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+    <.sudo_form
+      current_user={@current_user}
+      action={~p"/dashboard/orgs/#{@org}/invoices/#{@inv_id}/pay"}
+      class="inline"
+    >
       <.button type="submit" variant="primary" size="sm">Pay now</.button>
-    </form>
+    </.sudo_form>
     """
   end
 
-  defp invoice_status(%{"paid" => false, "attempted" => true}, _, _, _), do: "Payment Failed"
-  defp invoice_status(_, _, _, _), do: ""
+  defp invoice_status(%{"paid" => false, "attempted" => true}, _, _, _, _), do: "Payment Failed"
+  defp invoice_status(_, _, _, _, _), do: ""
 end

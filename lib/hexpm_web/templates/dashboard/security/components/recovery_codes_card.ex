@@ -6,6 +6,7 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.RecoveryCodesCard do
   use Phoenix.Component
   use PhoenixHTMLHelpers
   import HexpmWeb.Components.Buttons
+  import HexpmWeb.Components.Form, only: [sudo_form: 1]
   alias Hexpm.Accounts.User
   use Hexpm.Shared
 
@@ -102,11 +103,11 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.RecoveryCodesCard do
           Your old codes won't work anymore.
         </p>
 
-        <%= form_tag(~p"/dashboard/security/rotate-recovery-codes", [method: :post]) do %>
+        <.sudo_form current_user={@user} action={~p"/dashboard/security/rotate-recovery-codes"}>
           <.button type="submit" variant="outline">
             Generate New Codes
           </.button>
-        <% end %>
+        </.sudo_form>
       </div>
     </div>
     """

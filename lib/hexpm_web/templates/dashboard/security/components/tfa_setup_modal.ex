@@ -9,6 +9,7 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
   import HexpmWeb.ViewIcons, only: [icon: 3]
   import HexpmWeb.Components.Modal
   import HexpmWeb.Components.Buttons, only: [button: 1]
+  import HexpmWeb.Components.Form, only: [sudo_form: 1]
   alias HexpmWeb.ViewHelpers
   use Hexpm.Shared
 
@@ -22,11 +23,10 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
 
   ## Examples
 
-      <.tfa_setup_modal user={@current_user} csrf_token={@csrf_token} show={true} />
+      <.tfa_setup_modal user={@current_user} show={true} />
   """
   attr :user, :map, required: true
   attr :tfa_secret, :string, default: nil
-  attr :csrf_token, :string, required: true
   attr :show, :boolean, default: false
   attr :error, :string, default: nil
   attr :form_action, :string, default: nil
@@ -101,12 +101,11 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
 
         <%!-- Verification Form --%>
         <%= if @tfa_secret do %>
-          <form
+          <.sudo_form
+            current_user={@user}
             action={~p"/dashboard/security/verify-tfa-code"}
-            method="post"
             id="tfa-verification-form"
           >
-            <input type="hidden" name="_csrf_token" value={@csrf_token} />
             <div class="space-y-4">
               <div>
                 <label
@@ -134,7 +133,7 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
                 </p>
               </div>
             </div>
-          </form>
+          </.sudo_form>
         <% end %>
       </div>
 
