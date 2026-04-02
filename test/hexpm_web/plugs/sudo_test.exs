@@ -68,7 +68,6 @@ defmodule HexpmWeb.Plugs.SudoTest do
       assert conn.halted
       assert redirected_to(conn) == "/sudo"
       assert get_session(conn, "sudo_return_to") == "/"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "verify your identity"
     end
 
     test "stores return path in session for GET requests" do

@@ -284,7 +284,6 @@ defmodule HexpmWeb.DeviceControllerTest do
       conn = get(conn, ~p"/oauth/device/authorize")
 
       assert redirected_to(conn) == "/sudo"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "verify your identity"
     end
 
     test "shows permissions page with valid session flag and sudo", %{

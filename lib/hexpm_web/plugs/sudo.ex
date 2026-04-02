@@ -44,22 +44,22 @@ defmodule HexpmWeb.Plugs.Sudo do
           end
 
         conn
-        |> redirect_to_sudo(return_to, "Please verify your identity to continue.")
+        |> redirect_to_sudo(return_to)
         |> halt()
     end
   end
 
   @doc """
-  Redirects to the sudo verification page with a return URL and flash message.
+  Redirects to the sudo verification page with a return URL.
 
   This can be used directly in controllers when manual sudo checks are needed:
 
       if not Sudo.sudo_active?(conn) do
-        Sudo.redirect_to_sudo(conn, ~p"/some/path", "Please verify your identity.")
+        Sudo.redirect_to_sudo(conn, ~p"/some/path")
       end
   """
-  @spec redirect_to_sudo(Plug.Conn.t(), String.t() | nil, String.t()) :: Plug.Conn.t()
-  def redirect_to_sudo(conn, return_to, message) do
+  @spec redirect_to_sudo(Plug.Conn.t(), String.t() | nil) :: Plug.Conn.t()
+  def redirect_to_sudo(conn, return_to) do
     conn =
       if return_to do
         put_session(conn, "sudo_return_to", return_to)
@@ -67,9 +67,7 @@ defmodule HexpmWeb.Plugs.Sudo do
         conn
       end
 
-    conn
-    |> put_flash(:info, message)
-    |> redirect(to: ~p"/sudo")
+    redirect(conn, to: ~p"/sudo")
   end
 
   @spec full_request_path(Plug.Conn.t()) :: String.t()
@@ -127,10 +125,7 @@ defmodule HexpmWeb.Plugs.Sudo do
   defp valid_form_token?(conn) do
     case conn.params["_sudo_token"] do
       token when is_binary(token) ->
-        timeout = sudo_timeout()
-        max_age = timeout.hour * 3600 + timeout.minute * 60 + timeout.second
-
-        case Phoenix.Token.verify(HexpmWeb.Endpoint, @token_salt, token, max_age: max_age) do
+        case Phoenix.Token.verify(HexpmWeb.Endpoint, @token_salt, token, max_age: :infinity) do
           {:ok, {user_id, method, action}} ->
             user_id == conn.assigns.current_user.id and
               method == conn.method and
