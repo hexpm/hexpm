@@ -68,8 +68,8 @@ end)
 - [x] Configurable precision
 - [x] Rounding modes
 - [ ] Functions
-  - Trigonometric
-  - Logarithmic
+  - [ ] Trigonometric
+  - [ ] Logarithmic
 
 ## Type Specifications
 

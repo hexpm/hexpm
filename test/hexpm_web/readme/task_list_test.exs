@@ -79,6 +79,21 @@ defmodule HexpmWeb.Readme.TaskListTest do
              ] = items
     end
 
+    test "nested list inside TODO list is render normally" do
+      unchecked_cb = checkbox(false)
+
+      ast =
+        parse_and_convert("""
+        - [ ] TODO
+          - Not a task
+        """)
+
+      assert [{"ul", _attrs, items, _meta}] = ast
+
+      assert [{"li", _, [^unchecked_cb, "TODO", nested], _}] = items
+      assert {"ul", _, [{"li", _, ["Not a task"], _}], _} = nested
+    end
+
     test "converts nested TODO lists" do
       unchecked_cb = checkbox(false)
       checked_cb = checkbox(true)
