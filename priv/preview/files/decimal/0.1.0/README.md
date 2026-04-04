@@ -67,9 +67,8 @@ end)
 - [x] Basic arithmetic operations
 - [x] Configurable precision
 - [x] Rounding modes
-- [ ] Functions
-  - [ ] Trigonometric
-  - [ ] Logarithmic
+- [ ] Trigonometric functions
+- [ ] Logarithmic functions
 
 ## Type Specifications
 
