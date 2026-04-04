@@ -28,10 +28,10 @@ defmodule HexpmWeb.Readme.TaskList do
     case Regex.run(@checkbox_pattern, text) do
       [match, marker] ->
         remaining = String.slice(text, String.length(match)..-1//1)
-        [checkbox_input(marker) | prepend_if_nonempty(remaining, rest)]
+        [checkbox_input(marker) | prepend_if_nonempty(remaining, Enum.map(rest, &convert_node/1))]
 
       nil ->
-        [text | rest]
+        [text | Enum.map(rest, &convert_node/1)]
     end
   end
 
@@ -40,11 +40,19 @@ defmodule HexpmWeb.Readme.TaskList do
     case Regex.run(@checkbox_pattern, text) do
       [match, marker] ->
         remaining = String.slice(text, String.length(match)..-1//1)
-        p_children = [checkbox_input(marker) | prepend_if_nonempty(remaining, p_rest)]
-        [{"p", p_attrs, p_children, p_meta} | rest]
+
+        p_children = [
+          checkbox_input(marker)
+          | prepend_if_nonempty(remaining, Enum.map(p_rest, &convert_node/1))
+        ]
+
+        [{"p", p_attrs, p_children, p_meta} | Enum.map(rest, &convert_node/1)]
 
       nil ->
-        [{"p", p_attrs, [text | p_rest], p_meta} | rest]
+        [
+          {"p", p_attrs, [text | Enum.map(p_rest, &convert_node/1)], p_meta}
+          | Enum.map(rest, &convert_node/1)
+        ]
     end
   end
 
