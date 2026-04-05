@@ -232,6 +232,8 @@ defmodule HexpmWeb.Components.Navbar do
           {icon(:heroicon, "magnifying-glass", width: 18, height: 18, class: "text-grey-300")}
         </div>
         <input
+          id="search-input"
+          phx-hook="SearchShortcut"
           placeholder="Find packages..."
           name="search"
           type="text"
