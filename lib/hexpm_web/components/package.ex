@@ -25,10 +25,10 @@ defmodule HexpmWeb.Components.Package do
 
   def letter_browser(assigns) do
     ~H"""
-    <div class="mb-6 bg-grey-50 rounded-xl p-4 lg:p-6">
+    <div class="mb-6 bg-grey-50 dark:bg-grey-800 rounded-xl p-4 lg:p-6">
       <%!-- Desktop: All letters visible --%>
       <div class="hidden sm:block">
-        <h3 class="text-grey-700 text-sm font-semibold mb-3 uppercase tracking-wide">
+        <h3 class="text-grey-700 dark:text-grey-200 text-sm font-semibold mb-3 uppercase tracking-wide">
           Browse by Letter
         </h3>
         <div class="flex flex-wrap gap-2">
@@ -42,7 +42,7 @@ defmodule HexpmWeb.Components.Package do
           <a
             :if={@current_letter}
             href={~p"/packages"}
-            class="inline-flex items-center justify-center px-3 h-10 bg-grey-200 text-grey-700 text-sm font-medium rounded-lg border border-grey-300 hover:bg-grey-300 transition-all"
+            class="inline-flex items-center justify-center px-3 h-10 bg-grey-200 dark:bg-grey-700 text-grey-700 dark:text-grey-100 text-sm font-medium rounded-lg border border-grey-300 dark:border-grey-600 hover:bg-grey-300 dark:hover:bg-grey-600 transition-all"
           >
             Clear
           </a>
@@ -51,7 +51,7 @@ defmodule HexpmWeb.Components.Package do
       <%!-- Mobile: Compact grid --%>
       <div class="sm:hidden">
         <div class="flex items-center justify-between mb-3">
-          <h3 class="text-grey-700 text-sm font-semibold uppercase tracking-wide">
+          <h3 class="text-grey-700 dark:text-grey-200 text-sm font-semibold uppercase tracking-wide">
             <span :if={@current_letter}>Letter: {@current_letter}</span>
             <span :if={!@current_letter}>Browse by Letter</span>
           </h3>
@@ -67,7 +67,7 @@ defmodule HexpmWeb.Components.Package do
               |> JS.toggle(to: "#letter-toggle-show")
               |> JS.toggle(to: "#letter-toggle-hide")
             }
-            class="text-primary-600 text-sm font-medium hover:text-primary-700 transition-colors"
+            class="text-primary-600 dark:text-primary-300 text-sm font-medium hover:text-primary-700 dark:hover:text-primary-200 transition-colors"
           >
             <span id="letter-toggle-show">Show All</span>
             <span id="letter-toggle-hide" class="hidden">Hide</span>
@@ -87,7 +87,7 @@ defmodule HexpmWeb.Components.Package do
             :if={@current_letter}
             href={~p"/packages"}
             data-mobile-letter-extra
-            class="hidden col-span-2 inline-flex items-center justify-center h-10 bg-grey-200 text-grey-700 text-sm font-medium rounded-lg border border-grey-300 hover:bg-grey-300 transition-all"
+            class="hidden col-span-2 inline-flex items-center justify-center h-10 bg-grey-200 dark:bg-grey-700 text-grey-700 dark:text-grey-100 text-sm font-medium rounded-lg border border-grey-300 dark:border-grey-600 hover:bg-grey-300 dark:hover:bg-grey-600 transition-all"
           >
             Clear
           </a>
@@ -126,8 +126,8 @@ defmodule HexpmWeb.Components.Package do
     ~H"""
     <div>
       <%!-- Desktop: Pill buttons --%>
-      <div class="hidden lg:block bg-grey-50 rounded-lg p-4">
-        <h3 class="text-grey-700 text-sm font-semibold mb-3">Sort by</h3>
+      <div class="hidden lg:block bg-grey-50 dark:bg-grey-800 rounded-lg p-4">
+        <h3 class="text-grey-700 dark:text-grey-200 text-sm font-semibold mb-3">Sort by</h3>
         <div class="flex flex-wrap gap-2">
           <a
             :for={{value, label} <- @sort_options}
@@ -182,7 +182,7 @@ defmodule HexpmWeb.Components.Package do
       if(current_letter == letter,
         do: "bg-primary-600 text-white border-primary-600 shadow-sm",
         else:
-          "bg-white text-grey-700 border-grey-200 hover:bg-primary-50 hover:text-primary-700 hover:border-primary-300"
+          "bg-white dark:bg-grey-800 text-grey-700 dark:text-grey-200 border-grey-200 dark:border-grey-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 hover:text-primary-700 dark:hover:text-primary-200 hover:border-primary-300 dark:hover:border-primary-500"
       )
     ]
   end
@@ -192,7 +192,8 @@ defmodule HexpmWeb.Components.Package do
       "inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
       if(current_sort == value,
         do: "bg-primary-600 text-white shadow-sm",
-        else: "bg-white text-grey-700 hover:bg-grey-100"
+        else:
+          "bg-white dark:bg-grey-800 text-grey-700 dark:text-grey-200 hover:bg-grey-100 dark:hover:bg-grey-700"
       )
     ]
   end

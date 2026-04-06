@@ -1,4 +1,4 @@
-<div class="bg-grey-50 min-h-screen py-4 sm:py-8">
+<div class="bg-grey-50 dark:bg-grey-950 min-h-screen py-4 sm:py-8">
   <div class="max-w-7xl mx-auto px-4">
     {ViewHelpers.changeset_error(@changeset)}
 
@@ -10,16 +10,16 @@
 
       <%!-- Right Content - Single White Card --%>
       <div class="flex-1 min-w-0">
-        <div class="bg-white border border-grey-200 rounded-lg p-4 sm:p-8">
+        <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4 sm:p-8">
           <%!-- Profile Settings Title --%>
-          <h2 class="text-grey-900 text-xl font-semibold mb-8">
+          <h2 class="text-grey-900 dark:text-white text-xl font-semibold mb-8">
             Profile Settings
           </h2>
 
           <%!-- Profile Form --%>
           <.form :let={f} for={@changeset} action={~p"/dashboard/profile"} method="post">
             <%!-- Profile Picture Section --%>
-            <div class="flex items-start gap-6 mb-8 pb-8 border-b border-grey-200">
+            <div class="flex items-start gap-6 mb-8 pb-8 border-b border-grey-200 dark:border-grey-700">
               <%= if User.email(@current_user, :gravatar) do %>
                 <img
                   src={ViewHelpers.gravatar_url(User.email(@current_user, :gravatar), :large)}
@@ -27,9 +27,9 @@
                   class="w-24 h-24 rounded-full flex-shrink-0"
                 />
               <% else %>
-                <div class="w-24 h-24 rounded-full bg-grey-100 flex items-center justify-center flex-shrink-0">
+                <div class="w-24 h-24 rounded-full bg-grey-100 dark:bg-grey-900 flex items-center justify-center flex-shrink-0">
                   {HexpmWeb.ViewIcons.icon(:heroicon, "user-circle",
-                    class: "w-16 h-16 text-grey-400"
+                    class: "w-16 h-16 text-grey-400 dark:text-grey-300"
                   )}
                 </div>
               <% end %>
@@ -42,7 +42,7 @@
                 >
                   Change Photo
                 </.text_link>
-                <p class="text-grey-500 text-sm mt-2">
+                <p class="text-grey-500 dark:text-grey-300 text-sm mt-2">
                   <%= if User.email(@current_user, :gravatar) do %>
                     <.text_link href="https://en.gravatar.com/emails/" variant="purple">
                       Gravatar
@@ -74,7 +74,7 @@
                   value={public_email_value(@changeset.data)}
                   variant="light"
                 />
-                <p class="mt-2 text-grey-500 text-sm">
+                <p class="mt-2 text-grey-500 dark:text-grey-300 text-sm">
                   You can add or remove email address on the <.text_link
                     navigate={~p"/dashboard/email"}
                     variant="purple"
@@ -93,8 +93,8 @@
 
               <%!-- Social Media Handles --%>
               <%= inputs_for f, :handles, fn f -> %>
-                <div class="border-t border-grey-200 pt-6 mt-6">
-                  <h3 class="text-grey-900 text-sm font-semibold uppercase tracking-wider mb-6">
+                <div class="border-t border-grey-200 dark:border-grey-700 pt-6 mt-6">
+                  <h3 class="text-grey-900 dark:text-white text-sm font-semibold uppercase tracking-wider mb-6">
                     Socials
                   </h3>
 
@@ -153,7 +153,7 @@
                         label="Libera"
                         placeholder="Libera nickname"
                       />
-                      <p class="mt-2 text-grey-500 text-sm">
+                      <p class="mt-2 text-grey-500 dark:text-grey-300 text-sm">
                         Elixir IRC channel:
                         <.text_link href="irc://irc.libera.chat/elixir" variant="purple">
                           irc://irc.libera.chat/elixir

@@ -24,7 +24,7 @@ defmodule HexpmWeb.Components.Navbar do
 
   def header(assigns) do
     ~H"""
-    <nav id="main-navbar" class="bg-grey-900 w-full font-sans">
+    <nav id="main-navbar" class="bg-grey-800 w-full font-sans">
       <div class="max-w-7xl mx-auto px-4">
         <div class="flex items-center justify-between h-[72px] gap-8 lg:gap-20">
           <.logo />
@@ -161,7 +161,7 @@ defmodule HexpmWeb.Components.Navbar do
 
   defp mobile_search_bar(assigns) do
     ~H"""
-    <div id="mobile-search-bar" class="hidden lg:hidden! bg-grey-900 pb-4">
+    <div id="mobile-search-bar" class="hidden lg:hidden! bg-grey-800 pb-4">
       <form role="search" action={~p"/packages"}>
         <div class="relative">
           <div class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -186,7 +186,7 @@ defmodule HexpmWeb.Components.Navbar do
 
   defp mobile_menu(assigns) do
     ~H"""
-    <div id="navbar-mobile" class="hidden lg:hidden! bg-grey-900 pb-6">
+    <div id="navbar-mobile" class="hidden lg:hidden! bg-grey-800 pb-6">
       <div class="flex flex-col">
         <.mobile_nav_links />
         <.mobile_auth_section current_user={@current_user} />

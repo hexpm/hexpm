@@ -121,6 +121,7 @@ html, body {
   --color-red-50: #faf4f5;
 
   /* Grey Palette (Text & UI) */
+  --color-grey-950: #02060d;
   --color-grey-900: #030913;
   --color-grey-800: #0d1829;
   --color-grey-700: #1c2a3a;
@@ -192,6 +193,12 @@ html, body {
   pre {
     font-family: var(--font-mono);
   }
+
+  html[data-theme="dark"] body {
+    color: var(--color-grey-200);
+    background-color: var(--color-grey-800);
+  }
+
 }
 
 /* ===== MARKDOWN / PROSE STYLES ===== */
@@ -351,12 +358,21 @@ html[data-theme="dark"] [data-theme-toggle] [data-theme-icon="light"] {
   background-color: #f8d7da;
 }
 
+html[data-theme="dark"] .read-only-mode {
+  color: var(--color-red-100);
+  background-color: var(--color-red-800);
+}
+
 /* Inline form validation (view_helpers.ex) */
 .form-error {
   display: block;
   margin-top: 5px;
   margin-bottom: 10px;
   color: #a94442;
+}
+
+html[data-theme="dark"] .form-error {
+  color: var(--color-red-300);
 }
 
 .form-input-error {

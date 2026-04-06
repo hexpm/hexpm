@@ -31,14 +31,14 @@ defmodule HexpmWeb.Dashboard.Organization.Components.ProfileTab do
       end)
 
     ~H"""
-    <div class="bg-white border border-grey-200 rounded-lg p-8">
-      <h2 class="text-grey-900 text-xl font-semibold mb-8">
+    <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-8">
+      <h2 class="text-grey-900 dark:text-white text-xl font-semibold mb-8">
         Public profile
       </h2>
 
       <%= if @organization.user do %>
         <%!-- Profile Picture --%>
-        <div class="flex items-start gap-6 mb-8 pb-8 border-b border-grey-200">
+        <div class="flex items-start gap-6 mb-8 pb-8 border-b border-grey-200 dark:border-grey-700">
           <%= if @org_gravatar_email do %>
             <img
               src={HexpmWeb.ViewHelpers.gravatar_url(@org_gravatar_email, :large)}
@@ -46,8 +46,10 @@ defmodule HexpmWeb.Dashboard.Organization.Components.ProfileTab do
               class="w-24 h-24 rounded-full flex-shrink-0"
             />
           <% else %>
-            <div class="w-24 h-24 rounded-full bg-grey-100 flex items-center justify-center flex-shrink-0">
-              {HexpmWeb.ViewIcons.icon(:heroicon, "user-circle", class: "w-16 h-16 text-grey-400")}
+            <div class="w-24 h-24 rounded-full bg-grey-100 dark:bg-grey-900 flex items-center justify-center flex-shrink-0">
+              {HexpmWeb.ViewIcons.icon(:heroicon, "user-circle",
+                class: "w-16 h-16 text-grey-400 dark:text-grey-300"
+              )}
             </div>
           <% end %>
 
@@ -55,7 +57,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.ProfileTab do
             <.text_link href="https://en.gravatar.com/emails/" variant="purple" class="text-sm">
               Change Photo
             </.text_link>
-            <p class="text-grey-500 text-sm mt-2">
+            <p class="text-grey-500 dark:text-grey-300 text-sm mt-2">
               <%= if @org_gravatar_email do %>
                 <.text_link href="https://en.gravatar.com/emails/" variant="purple">
                   Gravatar
@@ -97,8 +99,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.ProfileTab do
             />
 
             <%= inputs_for(f, :handles, fn fh -> %>
-              <div class="border-t border-grey-200 pt-6 mt-6">
-                <h3 class="text-grey-900 text-sm font-semibold uppercase tracking-wider mb-6">
+              <div class="border-t border-grey-200 dark:border-grey-700 pt-6 mt-6">
+                <h3 class="text-grey-900 dark:text-white text-sm font-semibold uppercase tracking-wider mb-6">
                   Socials
                 </h3>
                 <div class="space-y-5">

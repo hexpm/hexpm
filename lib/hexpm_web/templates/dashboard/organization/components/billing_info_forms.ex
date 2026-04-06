@@ -44,22 +44,32 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInfoForms do
       |> assign(:initial_tab, initial_tab)
 
     ~H"""
-    <div class="bg-white border border-grey-200 rounded-lg overflow-hidden">
-      <div class="px-6 py-5 border-b border-grey-200">
-        <h2 class="text-grey-900 text-lg font-semibold">Billing information</h2>
+    <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden">
+      <div class="px-6 py-5 border-b border-grey-200 dark:border-grey-700">
+        <h2 class="text-grey-900 dark:text-white text-lg font-semibold">Billing information</h2>
       </div>
       <div class="px-6 py-5">
-        <div class="flex gap-4 border-b border-grey-200 mb-6">
+        <div class="flex gap-4 border-b border-grey-200 dark:border-grey-700 mb-6">
           <.billing_tab_btn
             id="billing-tab-btn-person"
             active={@initial_tab == "person"}
             phx-click={
               JS.show(to: "#billing-panel-person")
               |> JS.hide(to: "#billing-panel-company")
-              |> JS.add_class("border-purple-600 text-purple-600", to: "#billing-tab-btn-person")
-              |> JS.remove_class("border-transparent text-grey-500", to: "#billing-tab-btn-person")
-              |> JS.remove_class("border-purple-600 text-purple-600", to: "#billing-tab-btn-company")
-              |> JS.add_class("border-transparent text-grey-500", to: "#billing-tab-btn-company")
+              |> JS.add_class(
+                "border-purple-600 dark:border-purple-300 text-purple-600 dark:text-purple-300",
+                to: "#billing-tab-btn-person"
+              )
+              |> JS.remove_class("border-transparent text-grey-500 dark:text-grey-300",
+                to: "#billing-tab-btn-person"
+              )
+              |> JS.remove_class(
+                "border-purple-600 dark:border-purple-300 text-purple-600 dark:text-purple-300",
+                to: "#billing-tab-btn-company"
+              )
+              |> JS.add_class("border-transparent text-grey-500 dark:text-grey-300",
+                to: "#billing-tab-btn-company"
+              )
             }
           >
             Person
@@ -70,10 +80,20 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInfoForms do
             phx-click={
               JS.show(to: "#billing-panel-company")
               |> JS.hide(to: "#billing-panel-person")
-              |> JS.add_class("border-purple-600 text-purple-600", to: "#billing-tab-btn-company")
-              |> JS.remove_class("border-transparent text-grey-500", to: "#billing-tab-btn-company")
-              |> JS.remove_class("border-purple-600 text-purple-600", to: "#billing-tab-btn-person")
-              |> JS.add_class("border-transparent text-grey-500", to: "#billing-tab-btn-person")
+              |> JS.add_class(
+                "border-purple-600 dark:border-purple-300 text-purple-600 dark:text-purple-300",
+                to: "#billing-tab-btn-company"
+              )
+              |> JS.remove_class("border-transparent text-grey-500 dark:text-grey-300",
+                to: "#billing-tab-btn-company"
+              )
+              |> JS.remove_class(
+                "border-purple-600 dark:border-purple-300 text-purple-600 dark:text-purple-300",
+                to: "#billing-tab-btn-person"
+              )
+              |> JS.add_class("border-transparent text-grey-500 dark:text-grey-300",
+                to: "#billing-tab-btn-person"
+              )
             }
           >
             Company
@@ -133,8 +153,9 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInfoForms do
       class={[
         "pb-3 text-sm font-medium border-b-2 transition-colors",
         if(@active,
-          do: "border-purple-600 text-purple-600",
-          else: "border-transparent text-grey-500 hover:text-grey-700"
+          do: "border-purple-600 dark:border-purple-300 text-purple-600 dark:text-purple-300",
+          else:
+            "border-transparent text-grey-500 dark:text-grey-300 hover:text-grey-700 dark:hover:text-grey-100"
         )
       ]}
       {@rest}
@@ -254,7 +275,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInfoForms do
       />
 
       <div>
-        <span class="block text-sm font-medium text-grey-700 mb-1">Address</span>
+        <span class="block text-sm font-medium text-grey-700 dark:text-grey-200 mb-1">Address</span>
         <div class="grid grid-cols-2 gap-3">
           <.text_input
             id="company-address-line1"

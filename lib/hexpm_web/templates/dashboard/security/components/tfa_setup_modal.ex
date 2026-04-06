@@ -37,20 +37,20 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
       <div class="space-y-6">
         <%!-- Instructions --%>
         <div>
-          <h3 class="text-lg font-semibold text-grey-900 mb-2">
+          <h3 class="text-lg font-semibold text-grey-900 dark:text-white mb-2">
             Scan this QR code with your authenticator app
           </h3>
-          <p class="text-sm text-grey-600">
+          <p class="text-sm text-grey-600 dark:text-grey-300">
             Use apps like Google Authenticator, Authy, or 1Password to scan the QR code below.
           </p>
         </div>
 
         <%!-- QR Code --%>
-        <div class="flex justify-center p-6 bg-grey-50 rounded-lg border border-grey-200">
+        <div class="flex justify-center p-6 bg-grey-50 dark:bg-grey-900 rounded-lg border border-grey-200 dark:border-grey-700">
           <%= if @tfa_secret do %>
             {raw(ViewHelpers.auth_qr_code_svg(@user, @tfa_secret))}
           <% else %>
-            <div class="text-center text-grey-500">
+            <div class="text-center text-grey-500 dark:text-grey-300">
               <p>Please enable two-factor authentication first.</p>
             </div>
           <% end %>
@@ -58,16 +58,16 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
 
         <%!-- Manual Setup Key --%>
         <%= if @tfa_secret do %>
-          <div class="bg-grey-50 border border-grey-200 rounded-lg p-4">
-            <p class="text-sm text-grey-700 mb-3">
+          <div class="bg-grey-50 dark:bg-grey-900 border border-grey-200 dark:border-grey-700 rounded-lg p-4">
+            <p class="text-sm text-grey-700 dark:text-grey-200 mb-3">
               Can't scan the QR code? Use this setup key instead:
             </p>
             <div
               id="tfa-secret"
               data-value={@tfa_secret}
-              class="flex items-center justify-between gap-3 p-3 bg-white border border-grey-200 rounded-lg"
+              class="flex items-center justify-between gap-3 p-3 bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg"
             >
-              <code class="font-mono text-sm text-grey-900 break-all">
+              <code class="font-mono text-sm text-grey-900 dark:text-white break-all">
                 {@tfa_secret}
               </code>
               <button
@@ -75,7 +75,7 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
                 type="button"
                 phx-hook="CopyButton"
                 data-copy-target="tfa-secret"
-                class="relative flex-shrink-0 p-2 text-grey-500 hover:text-grey-700 hover:bg-grey-100 rounded transition-colors"
+                class="relative flex-shrink-0 p-2 text-grey-500 dark:text-grey-300 hover:text-grey-700 dark:hover:text-white hover:bg-grey-100 dark:hover:bg-grey-700 rounded transition-colors"
                 aria-label="Copy setup key to clipboard"
               >
                 {icon(:heroicon, "clipboard-document", class: "w-5 h-5")}
@@ -110,7 +110,7 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
               <div>
                 <label
                   for="verification_code"
-                  class="block text-sm font-medium text-grey-700 mb-2"
+                  class="block text-sm font-medium text-grey-700 dark:text-grey-200 mb-2"
                 >
                   Enter the 6-digit code from your app
                 </label>
@@ -126,9 +126,9 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFASetupModal do
                   inputmode="numeric"
                   phx-hook="TFACodeInput"
                   data-submit-button="tfa-submit-btn"
-                  class="w-full px-3 py-2 border border-grey-300 rounded-lg text-center text-xl font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  class="w-full px-3 py-2 border border-grey-300 dark:border-grey-600 bg-white dark:bg-grey-800 text-grey-900 dark:text-white rounded-lg text-center text-xl font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
-                <p class="mt-2 text-xs text-grey-500">
+                <p class="mt-2 text-xs text-grey-500 dark:text-grey-300">
                   The code refreshes every 30 seconds
                 </p>
               </div>

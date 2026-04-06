@@ -79,7 +79,7 @@ defmodule HexpmWeb.Components.PackageLayout do
       |> assign(:package_reports_enabled, @package_reports_enabled)
 
     ~H"""
-    <div class="bg-grey-50 min-h-screen">
+    <div class="bg-grey-50 dark:bg-grey-950 min-h-screen">
       <%!-- Header Section --%>
       <div class="max-w-7xl mx-auto px-4 pt-8 pb-2 lg:pb-6">
         <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 lg:gap-12">
@@ -87,28 +87,32 @@ defmodule HexpmWeb.Components.PackageLayout do
           <div class="flex flex-col gap-2">
             <a
               href={~p"/packages"}
-              class="inline-flex items-center gap-1 text-xs font-medium text-grey-400 hover:text-purple-600 transition-colors w-fit"
+              class="inline-flex items-center gap-1 text-xs font-medium text-grey-400 dark:text-grey-300 hover:text-purple-600 dark:hover:text-primary-300 transition-colors w-fit"
             >
               {HexpmWeb.ViewIcons.icon(:heroicon, "arrow-left", class: "size-3")} Packages
             </a>
             <div class="flex items-end gap-4">
-              <h1 class="text-grey-900 text-2xl font-semibold">
+              <h1 class="text-grey-900 dark:text-grey-100 text-2xl font-semibold">
                 <a
                   href={ViewHelpers.path_for_package(@package)}
-                  class="text-grey-900 hover:text-purple-600 transition-colors"
+                  class="text-grey-900 dark:text-grey-100 hover:text-purple-600 dark:hover:text-primary-300 transition-colors"
                 >
                   {ViewHelpers.package_name(@package)}
                 </a>
               </h1>
               <%= if @current_release do %>
-                <div class="bg-grey-200 flex items-center gap-1.5 px-3 py-1 rounded-xl whitespace-nowrap">
-                  {HexpmWeb.ViewIcons.icon(:heroicon, "tag", class: "size-3.5 text-grey-500")}
-                  <p class="text-grey-700 text-sm font-medium">v{@current_release.version}</p>
+                <div class="bg-grey-200 dark:bg-grey-800 flex items-center gap-1.5 px-3 py-1 rounded-xl whitespace-nowrap">
+                  {HexpmWeb.ViewIcons.icon(:heroicon, "tag",
+                    class: "size-3.5 text-grey-500 dark:text-grey-300"
+                  )}
+                  <p class="text-grey-700 dark:text-grey-200 text-sm font-medium">
+                    v{@current_release.version}
+                  </p>
                 </div>
               <% end %>
             </div>
             <%= if @description do %>
-              <p class="text-grey-600 max-w-[600px]">
+              <p class="text-grey-600 dark:text-grey-300 max-w-[600px]">
                 {ViewHelpers.text_length(@description, 300)}
               </p>
             <% end %>
@@ -124,7 +128,7 @@ defmodule HexpmWeb.Components.PackageLayout do
             <%= if @docs_html_url do %>
               <a
                 href={@docs_html_url}
-                class="bg-grey-100 flex items-center gap-2 px-4 py-2.5 rounded-lg text-grey-800 text-sm font-medium hover:bg-grey-200 transition-colors"
+                class="bg-grey-100 dark:bg-grey-800 flex items-center gap-2 px-4 py-2.5 rounded-lg text-grey-800 dark:text-grey-100 text-sm font-medium hover:bg-grey-200 dark:hover:bg-grey-700 transition-colors"
               >
                 {HexpmWeb.ViewIcons.icon(:heroicon, "archive-box", class: "size-4 shrink-0")}
                 <span>Online Documentation</span>
@@ -134,9 +138,11 @@ defmodule HexpmWeb.Components.PackageLayout do
               <a
                 href={@docs_tarball_url}
                 title="Download documentation"
-                class="bg-grey-100 flex items-center justify-center p-2.5 rounded-lg hover:bg-grey-200 transition-colors"
+                class="bg-grey-100 dark:bg-grey-800 flex items-center justify-center p-2.5 rounded-lg hover:bg-grey-200 dark:hover:bg-grey-700 transition-colors"
               >
-                {HexpmWeb.ViewIcons.icon(:heroicon, "cloud-arrow-down", class: "size-4 text-grey-800")}
+                {HexpmWeb.ViewIcons.icon(:heroicon, "cloud-arrow-down",
+                  class: "size-4 text-grey-800 dark:text-grey-100"
+                )}
               </a>
             <% end %>
             <%= if @github_link do %>
@@ -152,7 +158,7 @@ defmodule HexpmWeb.Components.PackageLayout do
             <%= if @package_reports_enabled do %>
               <a
                 href={"/reports/new?package=#{@package.name}&repository=#{@package.repository.name}"}
-                class="bg-grey-100 flex items-center gap-2 px-4 py-2.5 rounded-lg text-grey-800 text-sm font-medium hover:bg-grey-200 transition-colors"
+                class="bg-grey-100 dark:bg-grey-800 flex items-center gap-2 px-4 py-2.5 rounded-lg text-grey-800 dark:text-grey-100 text-sm font-medium hover:bg-grey-200 dark:hover:bg-grey-700 transition-colors"
               >
                 {HexpmWeb.ViewIcons.icon(:heroicon, "flag", class: "size-4 shrink-0")}
                 <span>Report</span>
@@ -168,7 +174,7 @@ defmodule HexpmWeb.Components.PackageLayout do
           <%!-- Left: Content Area --%>
           <div class="flex-1 min-w-0">
             <%!-- Tab Navigation --%>
-            <div class="flex items-center border-b border-grey-200 overflow-x-auto overflow-y-hidden">
+            <div class="flex items-center border-b border-grey-200 dark:border-grey-700 overflow-x-auto overflow-y-hidden">
               <a
                 href={ViewHelpers.path_for_package(@package)}
                 class={tab_class(@active_tab == :readme)}
@@ -218,12 +224,12 @@ defmodule HexpmWeb.Components.PackageLayout do
           <div class="w-full lg:w-[373px] shrink-0 flex flex-col gap-6">
             <%!-- Checksum Card --%>
             <%= if @current_release do %>
-              <div class="bg-white border border-grey-200 rounded-lg p-5">
-                <h3 class="text-grey-700 text-lg font-semibold mb-4">Checksum</h3>
-                <div class="flex border border-grey-200 rounded overflow-hidden">
+              <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-5">
+                <h3 class="text-grey-700 dark:text-grey-100 text-lg font-semibold mb-4">Checksum</h3>
+                <div class="flex border border-grey-200 dark:border-grey-700 rounded overflow-hidden">
                   <input
                     type="text"
-                    class="flex-1 min-w-0 px-3 py-2.5 text-grey-400 text-xs font-mono bg-white border-none outline-none"
+                    class="flex-1 min-w-0 px-3 py-2.5 text-grey-400 dark:text-grey-300 text-xs font-mono bg-white dark:bg-grey-800 border-none outline-none"
                     value={Base.encode16(@current_release.outer_checksum, case: :lower)}
                     readonly
                     onfocus="this.select();"
@@ -235,7 +241,7 @@ defmodule HexpmWeb.Components.PackageLayout do
                     phx-hook="CopyButton"
                     id="checksum-copy-btn"
                     data-copy-target="checksum-snippet"
-                    class="bg-grey-50 border-l border-grey-200 size-9 flex items-center justify-center hover:bg-grey-100 transition-colors shrink-0"
+                    class="bg-grey-50 dark:bg-grey-900 border-l border-grey-200 dark:border-grey-700 size-9 flex items-center justify-center hover:bg-grey-100 dark:hover:bg-grey-700 transition-colors shrink-0"
                   >
                     {HexpmWeb.ViewIcons.icon(:heroicon, "square-2-stack", class: "size-4")}
                   </button>
@@ -243,15 +249,17 @@ defmodule HexpmWeb.Components.PackageLayout do
               </div>
 
               <%!-- Dependency Config Card --%>
-              <div class="bg-white border border-grey-200 rounded-lg p-5">
-                <h3 class="text-grey-700 text-lg font-semibold mb-4">Dependency Config</h3>
+              <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-5">
+                <h3 class="text-grey-700 dark:text-grey-100 text-lg font-semibold mb-4">
+                  Dependency Config
+                </h3>
                 <%= for {tool, file} <- @tools do %>
                   <div class="mb-4 last:mb-0">
-                    <p class="text-grey-400 text-xs font-medium mb-1.5">{file}</p>
-                    <div class="flex border border-grey-200 rounded overflow-hidden">
+                    <p class="text-grey-400 dark:text-grey-300 text-xs font-medium mb-1.5">{file}</p>
+                    <div class="flex border border-grey-200 dark:border-grey-700 rounded overflow-hidden">
                       <input
                         type="text"
-                        class="flex-1 min-w-0 px-3 py-2.5 text-grey-400 text-xs font-mono bg-white border-none outline-none"
+                        class="flex-1 min-w-0 px-3 py-2.5 text-grey-400 dark:text-grey-300 text-xs font-mono bg-white dark:bg-grey-800 border-none outline-none"
                         value={HexpmWeb.PackageView.dep_snippet(tool, @package, @current_release)}
                         readonly
                         onfocus="this.select();"
@@ -265,7 +273,7 @@ defmodule HexpmWeb.Components.PackageLayout do
                         phx-hook="CopyButton"
                         id={"#{tool}-copy-btn"}
                         data-copy-target={"#{tool}-snippet"}
-                        class="bg-grey-50 border-l border-grey-200 size-9 flex items-center justify-center hover:bg-grey-100 transition-colors shrink-0"
+                        class="bg-grey-50 dark:bg-grey-900 border-l border-grey-200 dark:border-grey-700 size-9 flex items-center justify-center hover:bg-grey-100 dark:hover:bg-grey-700 transition-colors shrink-0"
                       >
                         {HexpmWeb.ViewIcons.icon(:heroicon, "square-2-stack", class: "size-4")}
                       </button>
@@ -275,17 +283,19 @@ defmodule HexpmWeb.Components.PackageLayout do
               </div>
 
               <%!-- Package Details Card --%>
-              <div class="bg-white border border-grey-200 rounded-lg p-5">
-                <h3 class="text-grey-700 text-lg font-semibold mb-4">Package Details</h3>
+              <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-5">
+                <h3 class="text-grey-700 dark:text-grey-100 text-lg font-semibold mb-4">
+                  Package Details
+                </h3>
 
                 <%!-- Downloads Chart --%>
                 <%= if is_binary(@graph_points) and @graph_points != "" do %>
                   <div class="mb-5">
                     <div class="flex items-center justify-between mb-2">
-                      <span class="text-[10px] text-grey-400 font-medium uppercase tracking-wide">
+                      <span class="text-[10px] text-grey-400 dark:text-grey-300 font-medium uppercase tracking-wide">
                         Downloads
                       </span>
-                      <span class="text-[10px] text-grey-400">
+                      <span class="text-[10px] text-grey-400 dark:text-grey-300">
                         Last 30 days,
                         <%= if @current_release do %>
                           {@current_release.version}
@@ -304,36 +314,36 @@ defmodule HexpmWeb.Components.PackageLayout do
                 <% end %>
 
                 <%!-- Download Stats --%>
-                <div class="grid grid-cols-2 gap-3 pb-4 border-b border-grey-200">
+                <div class="grid grid-cols-2 gap-3 pb-4 border-b border-grey-200 dark:border-grey-700">
                   <div class="flex flex-col gap-0.5">
-                    <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">
+                    <p class="text-grey-400 dark:text-grey-300 text-[10px] font-medium uppercase tracking-wide">
                       this version
                     </p>
-                    <p class="text-grey-700 text-base font-bold">
+                    <p class="text-grey-700 dark:text-grey-100 text-base font-bold">
                       {ViewHelpers.human_number_space(@this_version_downloads)}
                     </p>
                   </div>
                   <div class="flex flex-col gap-0.5">
-                    <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">
+                    <p class="text-grey-400 dark:text-grey-300 text-[10px] font-medium uppercase tracking-wide">
                       yesterday
                     </p>
-                    <p class="text-grey-700 text-base font-bold">
+                    <p class="text-grey-700 dark:text-grey-100 text-base font-bold">
                       {ViewHelpers.human_number_space(@downloads["day"] || 0)}
                     </p>
                   </div>
                   <div class="flex flex-col gap-0.5">
-                    <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">
+                    <p class="text-grey-400 dark:text-grey-300 text-[10px] font-medium uppercase tracking-wide">
                       last 7 days
                     </p>
-                    <p class="text-grey-700 text-base font-bold">
+                    <p class="text-grey-700 dark:text-grey-100 text-base font-bold">
                       {ViewHelpers.human_number_space(@downloads["week"] || 0)}
                     </p>
                   </div>
                   <div class="flex flex-col gap-0.5">
-                    <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">
+                    <p class="text-grey-400 dark:text-grey-300 text-[10px] font-medium uppercase tracking-wide">
                       all time
                     </p>
-                    <p class="text-grey-700 text-base font-bold">
+                    <p class="text-grey-700 dark:text-grey-100 text-base font-bold">
                       {ViewHelpers.human_number_space(@downloads["all"] || 0)}
                     </p>
                   </div>
@@ -342,31 +352,33 @@ defmodule HexpmWeb.Components.PackageLayout do
                 <%!-- Additional Details --%>
                 <div class="grid grid-cols-2 gap-x-3 gap-y-4 pt-4">
                   <div class="flex flex-col gap-0.5">
-                    <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">
+                    <p class="text-grey-400 dark:text-grey-300 text-[10px] font-medium uppercase tracking-wide">
                       Last Updated
                     </p>
-                    <p class="text-grey-700 font-bold">
+                    <p class="text-grey-700 dark:text-grey-100 font-bold">
                       {ViewHelpers.pretty_date(@current_release.inserted_at, :short)}
                     </p>
                   </div>
                   <%= if @licenses != [] do %>
                     <div class="flex flex-col gap-0.5">
-                      <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">
+                      <p class="text-grey-400 dark:text-grey-300 text-[10px] font-medium uppercase tracking-wide">
                         {if length(@licenses) == 1, do: "License", else: "Licenses"}
                       </p>
                       <div class="flex items-center gap-1.5 flex-wrap">
-                        <p class="text-grey-700 font-bold">{List.first(@licenses)}</p>
+                        <p class="text-grey-700 dark:text-grey-100 font-bold">
+                          {List.first(@licenses)}
+                        </p>
                         <%= if length(@licenses) > 1 do %>
                           <div class="relative group">
-                            <span class="text-xs font-medium text-purple-600 cursor-default">
+                            <span class="text-xs font-medium text-purple-600 dark:text-primary-300 cursor-default">
                               +{length(@licenses) - 1} more
                             </span>
                             <div class="absolute bottom-full left-0 mb-1.5 hidden group-hover:block z-10">
-                              <div class="bg-grey-900 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
+                              <div class="bg-grey-900 dark:bg-grey-900 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
                                 <%= for license <- tl(@licenses) do %>
                                   <p>{license}</p>
                                 <% end %>
-                                <div class="absolute top-full left-3 border-4 border-transparent border-t-grey-900">
+                                <div class="absolute top-full left-3 border-4 border-transparent border-t-grey-900 dark:border-t-grey-900">
                                 </div>
                               </div>
                             </div>
@@ -377,7 +389,7 @@ defmodule HexpmWeb.Components.PackageLayout do
                   <% end %>
                   <%= if @build_tools != [] do %>
                     <div class="flex flex-col gap-0.5">
-                      <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">
+                      <p class="text-grey-400 dark:text-grey-300 text-[10px] font-medium uppercase tracking-wide">
                         Build Tools
                       </p>
                       <div class="flex flex-wrap gap-1.5">
@@ -389,12 +401,12 @@ defmodule HexpmWeb.Components.PackageLayout do
                   <% end %>
                   <%= if @current_release.publisher do %>
                     <div class="flex flex-col gap-0.5">
-                      <p class="text-grey-400 text-[10px] font-medium uppercase tracking-wide">
+                      <p class="text-grey-400 dark:text-grey-300 text-[10px] font-medium uppercase tracking-wide">
                         Publisher
                       </p>
                       <a
                         href={HexpmWeb.Router.user_path(@current_release.publisher)}
-                        class="flex items-center gap-1.5 hover:text-purple-600 transition-colors"
+                        class="flex items-center gap-1.5 hover:text-purple-600 dark:hover:text-primary-300 transition-colors"
                       >
                         <img
                           src={
@@ -406,7 +418,7 @@ defmodule HexpmWeb.Components.PackageLayout do
                           class="size-5 rounded-full"
                           alt={@current_release.publisher.username}
                         />
-                        <span class="text-grey-700 text-sm font-medium">
+                        <span class="text-grey-700 dark:text-grey-100 text-sm font-medium">
                           {@current_release.publisher.username}
                         </span>
                       </a>
@@ -417,15 +429,15 @@ defmodule HexpmWeb.Components.PackageLayout do
 
               <%!-- Links Card --%>
               <%= if @links != [] do %>
-                <div class="bg-white border border-grey-200 rounded-lg p-5">
-                  <h3 class="text-grey-700 text-lg font-semibold mb-4">Links</h3>
+                <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-5">
+                  <h3 class="text-grey-700 dark:text-grey-100 text-lg font-semibold mb-4">Links</h3>
                   <ul class="space-y-2">
                     <%= for {name, url} <- @links do %>
                       <li>
                         <a
                           href={ViewHelpers.safe_url(url)}
                           rel="nofollow"
-                          class="text-sm text-blue-600 hover:text-blue-700 hover:underline"
+                          class="text-sm text-blue-600 dark:text-blue-300 hover:text-blue-700 dark:hover:text-blue-200 hover:underline"
                         >
                           {name}
                         </a>
@@ -437,14 +449,14 @@ defmodule HexpmWeb.Components.PackageLayout do
 
               <%!-- Owners Card --%>
               <%= if @owners != [] do %>
-                <div class="bg-white border border-grey-200 rounded-lg p-5">
-                  <h3 class="text-grey-700 text-lg font-semibold mb-4">Owners</h3>
+                <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-5">
+                  <h3 class="text-grey-700 dark:text-grey-100 text-lg font-semibold mb-4">Owners</h3>
                   <ul class="space-y-3">
                     <%= for owner <- @owners do %>
                       <li>
                         <a
                           href={HexpmWeb.Router.user_path(owner.user)}
-                          class="flex items-center gap-2 hover:text-purple-600 transition-colors"
+                          class="flex items-center gap-2 hover:text-purple-600 dark:hover:text-primary-300 transition-colors"
                         >
                           <img
                             src={
@@ -456,7 +468,7 @@ defmodule HexpmWeb.Components.PackageLayout do
                             class="size-6 rounded-full"
                             alt={owner.user.username}
                           />
-                          <span class="text-grey-700 text-sm font-medium">
+                          <span class="text-grey-700 dark:text-grey-100 text-sm font-medium">
                             {owner.user.username}
                           </span>
                         </a>
@@ -502,9 +514,9 @@ defmodule HexpmWeb.Components.PackageLayout do
 
   defp tab_class(true),
     do:
-      "flex items-center gap-1 px-[18px] py-3 text-primary-default font-medium border-b-2 border-primary-default -mb-px whitespace-nowrap"
+      "flex items-center gap-1 px-[18px] py-3 text-grey-900 dark:text-white font-medium border-b-2 border-primary-default dark:border-white -mb-px whitespace-nowrap"
 
   defp tab_class(false),
     do:
-      "flex items-center gap-1 px-[18px] py-3 text-grey-500 font-medium hover:text-grey-700 transition-colors whitespace-nowrap"
+      "flex items-center gap-1 px-[18px] py-3 text-grey-500 dark:text-grey-300 font-medium hover:text-grey-700 dark:hover:text-grey-200 transition-colors whitespace-nowrap"
 end

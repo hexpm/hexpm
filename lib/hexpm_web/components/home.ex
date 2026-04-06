@@ -32,7 +32,7 @@ defmodule HexpmWeb.Components.Home do
 
   def language_card(assigns) do
     ~H"""
-    <div class="bg-grey-900 rounded-xl p-4">
+    <div class="bg-grey-900 dark:bg-grey-950 border border-grey-800 dark:border-grey-800 rounded-xl p-4 shadow-xs">
       <div class="flex gap-1.5 mb-3">
         <div class="w-2 h-2 rounded-full bg-green-500"></div>
         <div class="w-2 h-2 rounded-full bg-yellow-500"></div>
@@ -66,7 +66,7 @@ defmodule HexpmWeb.Components.Home do
 
   def code_inline(assigns) do
     ~H"""
-    <span class="bg-grey-700 text-grey-200 mx-1 px-0.5 py-0.5 rounded border border-grey-600 font-mono text-sm">
+    <span class="bg-grey-700 dark:bg-grey-800 text-grey-200 dark:text-grey-100 mx-1 px-0.5 py-0.5 rounded border border-grey-600 dark:border-grey-700 font-mono text-sm">
       {render_slot(@inner_block)}
     </span>
     """
@@ -103,7 +103,7 @@ defmodule HexpmWeb.Components.Home do
   """
   def companies_section(assigns) do
     ~H"""
-    <div class="bg-white pt-4 pb-8 lg:pb-16">
+    <div class="bg-white dark:bg-grey-950 pt-4 pb-8 lg:pb-16">
       <div class="max-w-7xl mx-auto px-4">
         <%!-- Mobile: 3x3 grid with alternating pattern --%>
         <div class="grid grid-cols-3 gap-6 md:hidden">
@@ -207,27 +207,30 @@ defmodule HexpmWeb.Components.Home do
 
   def package_item(assigns) do
     ~H"""
-    <li class="py-4 border-b border-grey-100 last:border-b-0">
+    <li class="py-4 border-b border-grey-100 dark:border-grey-800 last:border-b-0">
       <div class="flex items-center justify-between gap-4">
         <div class="flex flex-col gap-1 min-w-0">
           <div class="flex items-end gap-2">
             <a
               href={~p"/packages/#{@package}"}
-              class="text-grey-900 font-medium text-lg hover:text-primary-600 transition-colors"
+              class="text-grey-900 dark:text-grey-100 font-medium text-lg hover:text-primary-600 dark:hover:text-primary-300 transition-colors"
             >
               {@package}
             </a>
-            <span :if={@version} class="text-grey-500 text-xs bg-grey-50 p-1 rounded-md">
+            <span
+              :if={@version}
+              class="text-grey-500 dark:text-grey-300 text-xs bg-grey-50 dark:bg-grey-800 p-1 rounded-md"
+            >
               {@version}
             </span>
           </div>
-          <p class="text-grey-500 text-sm leading-5 line-clamp-2 min-h-[2.5rem]">
+          <p class="text-grey-500 dark:text-grey-300 text-sm leading-5 line-clamp-2 min-h-[2.5rem]">
             {if @description, do: HexpmWeb.ViewHelpers.text_length(@description, 100), else: "\u00A0"}
           </p>
         </div>
         <span
           :if={@downloads && is_integer(@downloads) && @downloads > 0}
-          class="text-grey-600 text-lg shrink-0 text-center min-w-[4rem]"
+          class="text-grey-600 dark:text-grey-300 text-lg shrink-0 text-center min-w-[4rem]"
         >
           {HexpmWeb.ViewHelpers.human_number_space(@downloads, 3)}
         </span>
@@ -250,14 +253,14 @@ defmodule HexpmWeb.Components.Home do
   def stat_item(assigns) do
     ~H"""
     <div class="flex items-center gap-3">
-      <div class="size-12 bg-grey-100 rounded-lg flex items-center justify-center">
-        {icon(:heroicon, @icon, class: "size-6 text-grey-400")}
+      <div class="size-12 bg-grey-100 dark:bg-grey-900 rounded-lg flex items-center justify-center">
+        {icon(:heroicon, @icon, class: "size-6 text-grey-400 dark:text-grey-300")}
       </div>
       <div class="flex flex-col gap-1">
-        <span class="text-grey-900 text-2xl font-bold leading-6">
+        <span class="text-grey-900 dark:text-white text-2xl font-bold leading-6">
           {HexpmWeb.ViewHelpers.human_number_space(@number)}
         </span>
-        <span class="text-grey-600">{@label}</span>
+        <span class="text-grey-600 dark:text-grey-300">{@label}</span>
       </div>
     </div>
     """
@@ -279,14 +282,14 @@ defmodule HexpmWeb.Components.Home do
 
   def feature_card(assigns) do
     ~H"""
-    <div class="bg-grey-50 rounded-xl p-6 hover:bg-grey-100 transition-colors">
+    <div class="bg-grey-50 dark:bg-grey-800 border border-grey-100 dark:border-grey-700 rounded-xl p-6 hover:bg-grey-100 dark:hover:bg-grey-700 transition-colors">
       <div class="flex items-center gap-2 mb-3">
         {icon(:heroicon, @icon, class: "size-5 text-primary-600")}
-        <h2 class="text-grey-900 text-lg font-semibold">
+        <h2 class="text-grey-900 dark:text-white text-lg font-semibold">
           {@title}
         </h2>
       </div>
-      <p class="text-grey-700 text-sm leading-6">
+      <p class="text-grey-700 dark:text-grey-300 text-sm leading-6">
         {render_slot(@inner_block)}
       </p>
     </div>

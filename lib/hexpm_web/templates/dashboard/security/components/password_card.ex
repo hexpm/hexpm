@@ -21,8 +21,8 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.PasswordCard do
 
   def password_card(assigns) do
     ~H"""
-    <div class="bg-white border border-grey-200 rounded-lg p-8">
-      <h2 class="text-grey-900 text-xl font-semibold mb-6">
+    <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-8">
+      <h2 class="text-grey-900 dark:text-white text-xl font-semibold mb-6">
         Password Authentication
       </h2>
 
@@ -85,7 +85,7 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.PasswordCard do
             <button type="submit" id="remove-password-form-submit" class="hidden"></button>
           </.sudo_form>
         <% else %>
-          <p class="text-grey-500 text-sm mt-4 p-3 bg-grey-50 rounded-lg">
+          <p class="text-grey-500 dark:text-grey-300 text-sm mt-4 p-3 bg-grey-50 dark:bg-grey-900 rounded-lg">
             You must connect a GitHub account before you can remove your password.
           </p>
         <% end %>

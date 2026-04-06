@@ -1,10 +1,10 @@
 <%!-- Hero Section --%>
 <section class="max-w-7xl mx-auto px-4 pt-12 pb-16">
   <div class="text-center mb-12">
-    <h1 class="text-grey-900 text-4xl font-bold mb-4">
+    <h1 class="text-grey-900 dark:text-white text-4xl font-bold mb-4">
       Our Plans & Pricing
     </h1>
-    <p class="text-grey-600 text-lg max-w-2xl mx-auto">
+    <p class="text-grey-600 dark:text-grey-300 text-lg max-w-2xl mx-auto">
       Hex is free to use for public open source packages. You can publish unlimited private packages with organizations
     </p>
   </div>
@@ -65,20 +65,20 @@
 </section>
 
 <%!-- FAQ Section --%>
-<section class="bg-white py-16">
+<section class="bg-white dark:bg-grey-950 py-16">
   <div class="max-w-7xl mx-auto px-4">
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
       <%!-- Left Column - Title --%>
       <div class="lg:col-span-4">
-        <h2 class="text-grey-900 text-4xl font-bold mb-4">
+        <h2 class="text-grey-900 dark:text-white text-4xl font-bold mb-4">
           Frequently Asked Questions
         </h2>
-        <p class="text-grey-900 text-lg mb-6">
+        <p class="text-grey-900 dark:text-grey-100 text-lg mb-6">
           Everything you need to know right here at your fingertips.
         </p>
         <a
           href={~p"/docs/faq"}
-          class="inline-flex items-center text-blue-500 font-medium text-base hover:text-blue-600 transition-colors"
+          class="inline-flex items-center text-blue-500 dark:text-blue-300 font-medium text-base hover:text-blue-600 dark:hover:text-blue-200 transition-colors"
         >
           View full FAQ
           <svg
@@ -100,7 +100,7 @@
 
       <%!-- Right Column - Questions --%>
       <div class="lg:col-span-8">
-        <div class="divide-y divide-grey-200">
+        <div class="divide-y divide-grey-200 dark:divide-grey-800">
           <.faq_item>
             <:question>How are organizations billed?</:question>
             <:answer>
@@ -139,7 +139,7 @@
               </p>
               <p>
                 We will keep all your data for a minimum of 90 days. You can contact
-                <a href="mailto:support@hex.pm" class="text-blue-500 underline">
+                <a href="mailto:support@hex.pm" class="text-blue-500 dark:text-blue-300 underline">
                   support@hex.pm
                 </a>
                 to retrieve a dump of all your packages and documentation.

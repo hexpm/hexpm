@@ -72,11 +72,13 @@ defmodule HexpmWeb.Components.Input do
         placeholder={@placeholder}
         list={@list}
         class={[
-          "w-full h-12 bg-white border rounded px-3",
-          "text-grey-900 placeholder:text-grey-300",
+          "w-full h-12 bg-white border rounded px-3 dark:bg-grey-800",
+          "text-grey-900 placeholder:text-grey-300 dark:text-grey-100 dark:placeholder:text-grey-400",
           "focus:outline-none focus:ring-1",
-          @errors != [] && "border-red-300 focus:border-red-600 focus:ring-red-600",
-          @errors == [] && "border-grey-200 focus:border-primary-600 focus:ring-primary-600",
+          @errors != [] &&
+            "border-red-300 focus:border-red-600 focus:ring-red-600 dark:border-red-700 dark:focus:border-red-400 dark:focus:ring-red-400",
+          @errors == [] &&
+            "border-grey-200 focus:border-primary-600 focus:ring-primary-600 dark:border-grey-600 dark:focus:border-primary-400 dark:focus:ring-primary-400",
           @class
         ]}
         {@rest}
@@ -158,9 +160,9 @@ defmodule HexpmWeb.Components.Input do
           id={@id}
           name={@name}
           class={[
-            "w-full h-12 pl-4 pr-10 bg-white border rounded-lg",
-            "text-grey-900 font-medium cursor-pointer",
-            "focus:outline-none focus:ring-2",
+            "w-full h-12 pl-4 pr-10 bg-white border rounded-lg dark:bg-grey-800",
+            "text-grey-900 font-medium cursor-pointer dark:text-grey-100",
+            "focus:outline-none focus:ring-2 dark:focus:ring-offset-grey-800",
             "appearance-none",
             select_border_classes(@variant, @errors),
             @class
@@ -175,7 +177,7 @@ defmodule HexpmWeb.Components.Input do
           <% end %>
         </select>
         <%!-- Chevron down icon --%>
-        <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-grey-400">
+        <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-grey-400 dark:text-grey-300">
           {icon(:heroicon, "chevron-down", width: 15, height: 15)}
         </div>
       </div>
@@ -292,18 +294,19 @@ defmodule HexpmWeb.Components.Input do
           placeholder={@placeholder}
           class={[
             "w-full h-12 bg-white border rounded px-3 pr-10",
-            "text-grey-900 placeholder:text-grey-300",
+            "text-grey-900 placeholder:text-grey-300 dark:bg-grey-800 dark:text-grey-100 dark:placeholder:text-grey-400",
             "focus:outline-none focus:ring-1",
-            @errors != [] && "border-red-300 focus:border-red-600 focus:ring-red-600",
+            @errors != [] &&
+              "border-red-300 focus:border-red-600 focus:ring-red-600 dark:border-red-700 dark:focus:border-red-400 dark:focus:ring-red-400",
             @errors == [] &&
-              "border-grey-200 focus:border-primary-600 focus:ring-primary-600",
+              "border-grey-200 focus:border-primary-600 focus:ring-primary-600 dark:border-grey-600 dark:focus:border-primary-400 dark:focus:ring-primary-400",
             @class
           ]}
         />
         <button
           type="button"
           tabindex="-1"
-          class="absolute right-3 top-1/2 -translate-y-1/2 text-grey-400 hover:text-grey-600 transition-colors"
+          class="absolute right-3 top-1/2 -translate-y-1/2 text-grey-400 hover:text-grey-600 transition-colors dark:text-grey-300 dark:hover:text-grey-100"
           phx-click={toggle_password_visibility(@id)}
           aria-label="Toggle password visibility"
         >
@@ -336,7 +339,7 @@ defmodule HexpmWeb.Components.Input do
           </div>
           <span
             data-strength-label
-            class="text-small font-medium min-w-[60px]"
+            class="text-small font-medium min-w-[60px] dark:text-grey-200"
             aria-live="polite"
           >
           </span>
@@ -359,7 +362,7 @@ defmodule HexpmWeb.Components.Input do
         role="alert"
         aria-live="polite"
       >
-        <p class="flex items-center gap-1 text-small text-red-600">
+        <p class="flex items-center gap-1 text-small text-red-600 dark:text-red-400">
           {icon(:heroicon, "exclamation-circle", width: 16, height: 16)}
           <span>Passwords do not match</span>
         </p>
@@ -384,7 +387,7 @@ defmodule HexpmWeb.Components.Input do
     <label
       for={@for}
       class={[
-        "block text-small font-medium text-grey-900",
+        "block text-small font-medium text-grey-900 dark:text-grey-100",
         !@no_margin && "mb-[6px]",
         @class
       ]}
@@ -403,7 +406,10 @@ defmodule HexpmWeb.Components.Input do
   def errors(assigns) do
     ~H"""
     <div :if={@errors != []} class="mt-1">
-      <p :for={msg <- @errors} class="flex items-center gap-1 text-small text-red-600">
+      <p
+        :for={msg <- @errors}
+        class="flex items-center gap-1 text-small text-red-600 dark:text-red-400"
+      >
         {icon(:heroicon, "exclamation-circle", width: 16, height: 16)}
         <span>{msg}</span>
       </p>
@@ -420,7 +426,7 @@ defmodule HexpmWeb.Components.Input do
     ~H"""
     <div
       data-requirement={@key}
-      class="flex items-center gap-2 text-small text-grey-600"
+      class="flex items-center gap-2 text-small text-grey-600 dark:text-grey-300"
     >
       <span class="relative w-4 h-4">
         <span data-x-icon class="absolute inset-0">
@@ -469,18 +475,18 @@ defmodule HexpmWeb.Components.Input do
 
   # Helper function to determine border classes based on variant and error state
   defp select_border_classes("light", errors) when errors != [] do
-    "border-red-300 focus:border-red-600 focus:ring-red-600 focus:ring-opacity-20"
+    "border-red-300 focus:border-red-600 focus:ring-red-600 focus:ring-opacity-20 dark:border-red-700 dark:focus:border-red-400 dark:focus:ring-red-400"
   end
 
   defp select_border_classes("light", _errors) do
-    "border-grey-200 focus:border-purple-600 focus:ring-purple-600 focus:ring-opacity-20"
+    "border-grey-200 focus:border-purple-600 focus:ring-purple-600 focus:ring-opacity-20 dark:border-grey-600 dark:focus:border-primary-400 dark:focus:ring-primary-400"
   end
 
   defp select_border_classes("default", errors) when errors != [] do
-    "border-red-300 focus:border-red-600 focus:ring-red-600 focus:ring-opacity-20"
+    "border-red-300 focus:border-red-600 focus:ring-red-600 focus:ring-opacity-20 dark:border-red-700 dark:focus:border-red-400 dark:focus:ring-red-400"
   end
 
   defp select_border_classes("default", _errors) do
-    "border-grey-300 focus:border-primary-600 focus:ring-primary-600 focus:ring-opacity-20"
+    "border-grey-300 focus:border-primary-600 focus:ring-primary-600 focus:ring-opacity-20 dark:border-grey-600 dark:focus:border-primary-400 dark:focus:ring-primary-400"
   end
 end

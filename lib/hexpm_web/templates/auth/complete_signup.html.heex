@@ -9,7 +9,7 @@
 
   <.form :let={f} for={changeset} action={~p"/auth/complete-signup"} as="user" class="space-y-6">
     <.text_input field={f[:username]} label="Username" />
-    <p class="text-grey-500 text-sm -mt-4">
+    <p class="text-grey-500 dark:text-grey-300 text-sm -mt-4">
       Username must be at least 3 characters and can only contain letters, numbers, underscores, hyphens, and periods.
     </p>
 

@@ -100,7 +100,10 @@ defmodule HexpmWeb.Components.Modal do
       <%!-- Backdrop --%>
       <div
         id={"#{@id}-backdrop"}
-        class={["fixed inset-0 bg-grey-900/25 transition-opacity", unless(@show, do: "hidden")]}
+        class={[
+          "fixed inset-0 bg-grey-900/25 dark:bg-grey-950/60 transition-opacity",
+          unless(@show, do: "hidden")
+        ]}
         aria-hidden="true"
         phx-click={hide_modal(@id)}
       >
@@ -113,7 +116,7 @@ defmodule HexpmWeb.Components.Modal do
           <div
             id={"#{@id}-content"}
             class={[
-              "relative w-full bg-white rounded-[20px] flex flex-col max-h-[calc(100vh-2rem)] p-6",
+              "relative w-full bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-[20px] flex flex-col max-h-[calc(100vh-2rem)] p-6",
               "shadow-[0px_15px_50px_0px_rgba(3,9,19,0.4)]",
               unless(@show, do: "hidden"),
               modal_max_width(@max_width)
@@ -140,7 +143,7 @@ defmodule HexpmWeb.Components.Modal do
                 <%= if @header != [] do %>
                   {render_slot(@header)}
                 <% else %>
-                  <h2 id={"#{@id}-title"} class="text-lg font-semibold text-grey-900">
+                  <h2 id={"#{@id}-title"} class="text-lg font-semibold text-grey-900 dark:text-white">
                     {@title}
                   </h2>
                 <% end %>

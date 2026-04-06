@@ -50,7 +50,7 @@ defmodule HexpmWeb.Components.Buttons do
         [
           # Base styles
           "inline-flex items-center justify-center gap-2 font-semibold rounded",
-          "transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2",
+          "transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-grey-800",
           "cursor-pointer",
           # Size variants
           button_size(@size),
@@ -104,7 +104,7 @@ defmodule HexpmWeb.Components.Buttons do
         [
           # Base styles
           "inline-flex items-center justify-center gap-2 font-semibold rounded",
-          "transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2",
+          "transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-grey-800",
           "cursor-pointer",
           # Size variants
           button_size(@size),
@@ -137,8 +137,8 @@ defmodule HexpmWeb.Components.Buttons do
 
   defp button_variant("secondary") do
     [
-      "bg-grey-200 text-grey-900",
-      "hover:bg-grey-300",
+      "bg-grey-200 text-grey-900 dark:bg-grey-700 dark:text-grey-100",
+      "hover:bg-grey-300 dark:hover:bg-grey-600",
       "focus:ring-grey-400"
     ]
   end
@@ -153,24 +153,24 @@ defmodule HexpmWeb.Components.Buttons do
 
   defp button_variant("danger-outline") do
     [
-      "bg-white border border-red-300 text-red-600",
-      "hover:bg-red-50",
+      "bg-white border border-red-300 text-red-600 dark:bg-grey-800 dark:border-red-700 dark:text-red-300",
+      "hover:bg-red-50 dark:hover:bg-red-900/30",
       "focus:ring-red-500"
     ]
   end
 
   defp button_variant("outline") do
     [
-      "bg-transparent border border-grey-300 text-grey-900",
-      "hover:bg-grey-50",
+      "bg-transparent border border-grey-300 text-grey-900 dark:border-grey-600 dark:text-grey-100",
+      "hover:bg-grey-50 dark:hover:bg-grey-800",
       "focus:ring-grey-400"
     ]
   end
 
   defp button_variant("ghost") do
     [
-      "bg-transparent text-grey-700",
-      "hover:bg-grey-100",
+      "bg-transparent text-grey-700 dark:text-grey-200",
+      "hover:bg-grey-100 dark:hover:bg-grey-800",
       "focus:ring-grey-400"
     ]
   end
@@ -248,7 +248,7 @@ defmodule HexpmWeb.Components.Buttons do
       patch={@patch}
       class={[
         "transition-colors cursor-pointer",
-        "focus:outline-none focus:ring-2 focus:ring-offset-2",
+        "focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-grey-800",
         text_link_variant(@variant),
         @class
       ]}
@@ -265,23 +265,23 @@ defmodule HexpmWeb.Components.Buttons do
   end
 
   defp text_link_variant("secondary") do
-    "text-grey-600 hover:text-grey-900 focus:ring-grey-400 font-medium"
+    "text-grey-600 hover:text-grey-900 focus:ring-grey-400 font-medium dark:text-grey-300 dark:hover:text-white dark:focus:ring-offset-grey-800"
   end
 
   defp text_link_variant("purple") do
-    "text-primary-700 hover:text-primary-800 hover:underline focus:ring-primary-500 font-semibold"
+    "text-primary-700 hover:text-primary-800 hover:underline focus:ring-primary-500 font-semibold dark:text-primary-300 dark:hover:text-primary-200 dark:focus:ring-offset-grey-800"
   end
 
   # Icon button variants
   defp icon_button_variant("default") do
-    "text-grey-400 hover:text-grey-700 hover:bg-grey-100 disabled:hover:text-grey-400 disabled:hover:bg-transparent"
+    "text-grey-400 hover:text-grey-700 hover:bg-grey-100 disabled:hover:text-grey-400 disabled:hover:bg-transparent dark:text-grey-300 dark:hover:text-grey-100 dark:hover:bg-grey-800 dark:disabled:hover:text-grey-300"
   end
 
   defp icon_button_variant("danger") do
-    "text-grey-400 hover:text-red-600 hover:bg-red-50 disabled:hover:text-grey-400 disabled:hover:bg-transparent"
+    "text-grey-400 hover:text-red-600 hover:bg-red-50 disabled:hover:text-grey-400 disabled:hover:bg-transparent dark:text-grey-300 dark:hover:text-red-300 dark:hover:bg-red-900/30 dark:disabled:hover:text-grey-300"
   end
 
   defp icon_button_variant("primary") do
-    "text-grey-400 hover:text-primary-600 hover:bg-primary-50 disabled:hover:text-grey-400 disabled:hover:bg-transparent"
+    "text-grey-400 hover:text-primary-600 hover:bg-primary-50 disabled:hover:text-grey-400 disabled:hover:bg-transparent dark:text-grey-300 dark:hover:text-primary-200 dark:hover:bg-primary-900/40 dark:disabled:hover:text-grey-300"
   end
 end
