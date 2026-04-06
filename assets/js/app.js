@@ -12,6 +12,7 @@ import { SubmitOnce } from "./hooks/submit_once";
 import { AutoSubmit } from "./hooks/auto_submit";
 import { NavigateOnChange } from "./hooks/navigate_on_change";
 import { ConfirmSubmit } from "./hooks/confirm_submit";
+import { initializeTheme } from "./theme";
 
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")
@@ -35,6 +36,7 @@ let liveSocket = new LiveSocket("/live", Socket, {
 });
 
 liveSocket.connect();
+initializeTheme();
 
 // Focus username, 2FA or search field
 if (document.getElementById("username")) {
@@ -94,9 +96,12 @@ var readmeFrame = document.getElementById("readme-frame");
 window.addEventListener("message", function (event) {
   if (!event.data || !readmeFrame) return;
 
-  if (event.data.type === "readme-height" &&
-      typeof event.data.height === "number" &&
-      event.data.height > 0 && event.data.height < 100000) {
+  if (
+    event.data.type === "readme-height" &&
+    typeof event.data.height === "number" &&
+    event.data.height > 0 &&
+    event.data.height < 100000
+  ) {
     readmeFrame.classList.remove("opacity-0", "h-0", "overflow-hidden");
     readmeFrame.style.height = Math.ceil(event.data.height) + "px";
     var loading = document.getElementById("readme-loading");

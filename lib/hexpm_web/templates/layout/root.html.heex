@@ -6,8 +6,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description(assigns)} />
     <meta name="sogou_site_verification" content="GrtyJPARqi" />
+    <meta name="color-scheme" content="light dark" />
 
     <title>{title(assigns)}</title>
+
+    <script nonce={@script_src_nonce}>
+      (() => {
+        const storageKey = "hexpm-theme";
+
+        let storedTheme = null;
+
+        try {
+          storedTheme = window.localStorage.getItem(storageKey);
+        } catch (_error) {}
+
+        const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
+
+        const theme = storedTheme === "light" || storedTheme === "dark" ? storedTheme : systemTheme;
+
+        document.documentElement.setAttribute("data-theme", theme);
+        document.documentElement.style.colorScheme = theme;
+      })();
+    </script>
 
     {og_tags(assigns)}
     {canonical_url(assigns)}

@@ -59,6 +59,7 @@ defmodule HexpmWeb.Components.Navbar do
     <div class="hidden lg:flex items-center flex-1 justify-end gap-10">
       <.search_form :if={@show_search} search={@search} />
       <.nav_links />
+      <.theme_toggle />
       <.auth_section current_user={@current_user} />
     </div>
     """
@@ -120,9 +121,39 @@ defmodule HexpmWeb.Components.Navbar do
         class="w-5 h-5 rounded-full"
         alt={@current_user.username}
       />
+      <.theme_toggle compact />
       <.mobile_search_toggle :if={@show_search} />
       <.mobile_menu_toggle />
     </div>
+    """
+  end
+
+  attr :class, :string, default: ""
+  attr :compact, :boolean, default: false
+
+  defp theme_toggle(assigns) do
+    ~H"""
+    <a
+      href="#"
+      data-theme-toggle
+      class={[
+        "inline-flex items-center justify-center text-grey-200 transition-colors hover:text-white cursor-pointer",
+        @compact && "h-10 w-10",
+        !@compact && "h-5 w-5",
+        @class
+      ]}
+      role="button"
+      aria-label="Toggle theme"
+      aria-pressed="false"
+    >
+      <span class="sr-only">Toggle color theme</span>
+      <span data-theme-icon="dark">
+        {icon(:heroicon, "moon", width: 18, height: 18)}
+      </span>
+      <span data-theme-icon="light">
+        {icon(:heroicon, "sun", width: 18, height: 18)}
+      </span>
+    </a>
     """
   end
 

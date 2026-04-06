@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
 /* Tell Tailwind where to scan for classes */
 @source "../lib";
@@ -165,6 +166,14 @@ html, body {
     -moz-osx-font-smoothing: grayscale;
   }
 
+  html[data-theme="light"] {
+    color-scheme: light;
+  }
+
+  html[data-theme="dark"] {
+    color-scheme: dark;
+  }
+
   body {
     font-family: var(--font-sans);
     color: var(--color-grey-700);
@@ -246,6 +255,19 @@ html, body {
 .prose pre code {
   background: none;
   padding: 0;
+}
+
+/* Theme toggle state */
+[data-theme-toggle] [data-theme-icon="light"] {
+  display: none;
+}
+
+html[data-theme="dark"] [data-theme-toggle] [data-theme-icon="dark"] {
+  display: none;
+}
+
+html[data-theme="dark"] [data-theme-toggle] [data-theme-icon="light"] {
+  display: inline-flex;
 }
 
 /* ===== LEGACY UTILITY CLASSES ===== */
