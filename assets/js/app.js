@@ -77,7 +77,7 @@ function billingCheckout(token) {
               '<div class="flash-message flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg bg-red-100 border-red-300" role="alert">' +
               '<div class="flex-1 text-small leading-5 text-red-800">' +
               "<strong>Failed to update payment method</strong><br>" +
-              data.errors +
+              (typeof data.errors === "string" ? data.errors : JSON.stringify(data.errors)) +
               "</div></div>";
           }
         });
