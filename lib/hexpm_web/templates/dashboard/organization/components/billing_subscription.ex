@@ -12,6 +12,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
   import HexpmWeb.Components.Form, only: [sudo_form: 1]
   import HexpmWeb.Components.Modal, only: [modal: 1, show_modal: 1, hide_modal: 1]
 
+  alias Phoenix.LiveView.JS
   alias HexpmWeb.Dashboard.Organization.Components.BillingHelpers
 
   attr :current_user, :map, required: true
@@ -151,18 +152,25 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
           <script nonce={@script_src_nonce}>
             window.hexpm_billing_api_url = '/dashboard/billing-api';
             window.hexpm_billing_csrf_token = '<%= Plug.CSRFProtection.get_csrf_token() %>';
+            window.hexpm_billing_defer_mount = true;
             window.hexpm_billing_success = function() { window.location.reload(); };
           </script>
-          <div
-            class="mt-6"
-            id="billing-checkout-data"
-            data-post-action={@post_action}
-            data-csrf-token={@csrf_token}
-          >
-            {raw(@checkout_html || "")}
-          </div>
+
+          <.payment_method_modal
+            checkout_html={@checkout_html}
+            post_action={@post_action}
+            csrf_token={@csrf_token}
+          />
 
           <div class="mt-4 flex gap-3 items-center">
+            <.button
+              type="button"
+              variant="outline"
+              size="sm"
+              phx-click={show_modal("payment-method-modal") |> JS.dispatch("payment-modal:opened")}
+            >
+              Update payment method
+            </.button>
             <%= if @subscription["cancel_at_period_end"] && @card && @card["brand"] do %>
               <.sudo_form
                 current_user={@current_user}
@@ -318,16 +326,23 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
           <script nonce={@script_src_nonce}>
             window.hexpm_billing_api_url = '/dashboard/billing-api';
             window.hexpm_billing_csrf_token = '<%= Plug.CSRFProtection.get_csrf_token() %>';
+            window.hexpm_billing_defer_mount = true;
             window.hexpm_billing_success = function() { window.location.reload(); };
           </script>
-          <div
-            class="mt-4"
-            id="billing-checkout-data"
-            data-post-action={@post_action}
-            data-csrf-token={@csrf_token}
+
+          <.payment_method_modal
+            checkout_html={@checkout_html}
+            post_action={@post_action}
+            csrf_token={@csrf_token}
+          />
+
+          <.button
+            type="button"
+            variant="primary"
+            phx-click={show_modal("payment-method-modal") |> JS.dispatch("payment-modal:opened")}
           >
-            {raw(@checkout_html || "")}
-          </div>
+            Add payment method
+          </.button>
         <% end %>
       </div>
     </div>
@@ -345,6 +360,24 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
 
   defp subscription_badge_class(_),
     do: "bg-grey-100 dark:bg-grey-700 text-grey-600 dark:text-grey-200"
+
+  attr :checkout_html, :string, required: true
+  attr :post_action, :string, required: true
+  attr :csrf_token, :string, required: true
+
+  defp payment_method_modal(assigns) do
+    ~H"""
+    <.modal id="payment-method-modal" title="Payment method" max_width="md">
+      <div
+        id="billing-checkout-data"
+        data-post-action={@post_action}
+        data-csrf-token={@csrf_token}
+      >
+        {raw(@checkout_html || "")}
+      </div>
+    </.modal>
+    """
+  end
 
   attr :current_user, :map, required: true
   attr :organization, :map, required: true
