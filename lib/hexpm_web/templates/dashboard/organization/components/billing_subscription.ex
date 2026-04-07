@@ -309,9 +309,16 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
                           button.textContent = 'Payment confirmed!';
                           setTimeout(function() { window.location.reload(); }, 2000);
                         } catch (error) {
-                          button.textContent = error.message || 'Authentication failed. Try again.';
+                          var flash = document.getElementById('flash-container');
+                          if (flash) {
+                            flash.innerHTML =
+                              '<div class="flash-message flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg bg-red-100 border-red-300" role="alert">' +
+                              '<div class="flex-1 text-small leading-5 text-red-800">' +
+                              (error.message || 'Authentication failed. Try again.') +
+                              '</div></div>';
+                          }
                           button.disabled = false;
-                          setTimeout(function() { button.textContent = 'Authenticate payment'; }, 3000);
+                          button.textContent = 'Authenticate payment';
                         }
                       });
                     });
