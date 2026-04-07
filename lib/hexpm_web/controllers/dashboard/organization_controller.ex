@@ -722,6 +722,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       invoices: [],
       person: nil,
       company: nil,
+      pending_action_html: nil,
       post_action: nil,
       stripe_publishable_key: nil
     ]
@@ -748,6 +749,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       invoices: customer["invoices"],
       person: customer["person"],
       company: customer["company"],
+      pending_action_html: customer["pending_action_html"],
       post_action: post_action,
       stripe_publishable_key: customer["stripe_publishable_key"]
     ]

@@ -27,6 +27,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingTab do
   attr :proration_amount, :integer, default: 0
   attr :proration_days, :integer, default: 0
   attr :checkout_html, :string, default: nil
+  attr :pending_action_html, :string, default: nil
   attr :post_action, :string, default: nil
   attr :csrf_token, :string, default: nil
   attr :invoices, :list, default: []
@@ -57,6 +58,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingTab do
           tax_rate={@tax_rate}
           amount_with_tax={@amount_with_tax}
           checkout_html={@checkout_html}
+          pending_action_html={@pending_action_html}
           post_action={@post_action}
           csrf_token={@csrf_token}
           proration_amount={@proration_amount}

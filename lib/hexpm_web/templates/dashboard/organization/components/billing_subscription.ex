@@ -26,6 +26,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
   attr :tax_rate, :any, default: nil
   attr :amount_with_tax, :integer, default: nil
   attr :checkout_html, :string, default: nil
+  attr :pending_action_html, :string, default: nil
   attr :post_action, :string, default: nil
   attr :csrf_token, :string, default: nil
   attr :proration_amount, :integer, default: 0
@@ -51,6 +52,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
           </span>
         <% end %>
       </div>
+
+      <%= if @pending_action_html do %>
+        <div class="px-6 py-4">
+          {raw(@pending_action_html)}
+        </div>
+      <% end %>
 
       <div class="px-6 py-5">
         <%= if @subscription do %>
