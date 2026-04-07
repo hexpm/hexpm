@@ -145,7 +145,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInvoices do
     ~H"""
     <button
       type="button"
-      class="sca-pay-button text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-100 transition-colors"
+      class="sca-pay-button text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-100 transition-colors cursor-pointer"
       data-client-secret={@client_secret}
       data-payment-method={@payment_method}
     >

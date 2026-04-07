@@ -285,35 +285,38 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
                   });
                 }
 
-                var scaButtons = document.querySelectorAll('.sca-pay-button');
-                if (scaButtons.length > 0) {
-                  var stripe = Stripe('<%= @stripe_publishable_key %>');
+                // Bind after full page load since invoice buttons are rendered after this script
+                document.addEventListener('DOMContentLoaded', function() {
+                  var scaButtons = document.querySelectorAll('.sca-pay-button');
+                  if (scaButtons.length > 0) {
+                    var stripe = Stripe('<%= @stripe_publishable_key %>');
 
-                  scaButtons.forEach(function(button) {
-                    button.addEventListener('click', async function() {
-                      var clientSecret = button.getAttribute('data-client-secret');
-                      var paymentMethod = button.getAttribute('data-payment-method');
-                      button.disabled = true;
-                      button.textContent = 'Authenticating...';
+                    scaButtons.forEach(function(button) {
+                      button.addEventListener('click', async function() {
+                        var clientSecret = button.getAttribute('data-client-secret');
+                        var paymentMethod = button.getAttribute('data-payment-method');
+                        button.disabled = true;
+                        button.textContent = 'Authenticating...';
 
-                      try {
-                        var confirmParams = {};
-                        if (paymentMethod) {
-                          confirmParams.payment_method = paymentMethod;
+                        try {
+                          var confirmParams = {};
+                          if (paymentMethod) {
+                            confirmParams.payment_method = paymentMethod;
+                          }
+                          var result = await stripe.confirmCardPayment(clientSecret, confirmParams);
+                          if (result.error) throw result.error;
+
+                          button.textContent = 'Payment confirmed!';
+                          setTimeout(function() { window.location.reload(); }, 2000);
+                        } catch (error) {
+                          button.textContent = error.message || 'Authentication failed. Try again.';
+                          button.disabled = false;
+                          setTimeout(function() { button.textContent = 'Authenticate payment'; }, 3000);
                         }
-                        var result = await stripe.confirmCardPayment(clientSecret, confirmParams);
-                        if (result.error) throw result.error;
-
-                        button.textContent = 'Payment confirmed!';
-                        setTimeout(function() { window.location.reload(); }, 2000);
-                      } catch (error) {
-                        button.textContent = error.message || 'Authentication failed. Try again.';
-                        button.disabled = false;
-                        setTimeout(function() { button.textContent = 'Authenticate payment'; }, 3000);
-                      }
+                      });
                     });
-                  });
-                }
+                  }
+                });
               })();
             </script>
           <% end %>
