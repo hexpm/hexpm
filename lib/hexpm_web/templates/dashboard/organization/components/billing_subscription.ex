@@ -278,9 +278,17 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
                       submitButton.textContent = 'Payment confirmed! Adding seats...';
                       addSeatsForm.submit();
                     } catch (error) {
-                      submitButton.textContent = error.message || 'Payment failed. Try again.';
+                      var flash = document.getElementById('flash-container');
+                      if (flash) {
+                        flash.innerHTML =
+                          '<div class="flash-message flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg bg-red-100 border-red-300" role="alert">' +
+                          '<div class="flex-1 text-small leading-5 text-red-800">' +
+                          (error.message || 'Payment failed. Try again.') +
+                          '</div></div>';
+                      }
+                      document.getElementById('add-seats-nonce').value = crypto.randomUUID();
+                      submitButton.textContent = 'Add seats';
                       submitButton.disabled = false;
-                      setTimeout(function() { submitButton.textContent = 'Add seats'; }, 3000);
                     }
                   });
                 }
@@ -452,6 +460,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
         id="add-seats-form"
       >
         <input type="hidden" name="current-seats" value={@quantity} />
+        <input type="hidden" name="nonce" id="add-seats-nonce" value={Ecto.UUID.generate()} />
         <p class="text-sm text-grey-600 dark:text-grey-300 mb-4">
           You have {@quantity} seats of which {@member_count} are in use.
         </p>

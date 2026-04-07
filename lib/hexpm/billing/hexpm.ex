@@ -64,8 +64,10 @@ defmodule Hexpm.Billing.Hexpm do
   end
 
   def change_plan(organization, params) do
-    {:ok, 204, _headers, _body} = post("/api/customers/#{organization}/plan", params)
-    :ok
+    case post("/api/customers/#{organization}/plan", params) do
+      {:ok, 204, _headers, _body} -> :ok
+      {:ok, 422, _headers, body} -> {:error, body}
+    end
   end
 
   def invoice(id, opts \\ []) do

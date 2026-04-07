@@ -79,9 +79,14 @@ defmodule Hexpm.Billing do
   def change_plan(organization_name, params,
         audit: %{audit_data: audit_data, organization: organization}
       ) do
-    impl().change_plan(organization_name, params)
-    Repo.insert!(audit(audit_data, "billing.change_plan", {organization, params}))
-    :ok
+    case impl().change_plan(organization_name, params) do
+      :ok ->
+        Repo.insert!(audit(audit_data, "billing.change_plan", {organization, params}))
+        :ok
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   def pay_invoice(id, audit: %{audit_data: audit_data, organization: organization}) do

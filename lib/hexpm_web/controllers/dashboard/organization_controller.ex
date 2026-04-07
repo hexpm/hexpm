@@ -377,8 +377,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
         if seats >= user_count do
           audit = %{audit_data: audit_data(conn), organization: organization}
+          billing_params = %{"quantity" => seats, "nonce" => params["nonce"]}
 
-          case Hexpm.Billing.update(organization.name, %{"quantity" => seats}, audit: audit) do
+          case Hexpm.Billing.update(organization.name, billing_params, audit: audit) do
             {:ok, _customer} ->
               conn
               |> put_flash(:info, "The number of open seats have been increased.")
@@ -462,15 +463,21 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     access_organization(conn, organization, "admin", fn organization ->
       audit = %{audit_data: audit_data(conn), organization: organization}
 
-      Hexpm.Billing.change_plan(
-        organization.name,
-        %{"plan_id" => params["plan_id"]},
-        audit: audit
-      )
+      case Hexpm.Billing.change_plan(
+             organization.name,
+             %{"plan_id" => params["plan_id"]},
+             audit: audit
+           ) do
+        :ok ->
+          conn
+          |> put_flash(:info, "You have switched to the #{plan_name(params["plan_id"])} plan.")
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}/billing")
 
-      conn
-      |> put_flash(:info, "You have switched to the #{plan_name(params["plan_id"])} plan.")
-      |> redirect(to: ~p"/dashboard/orgs/#{organization}/billing")
+        {:error, reason} ->
+          conn
+          |> put_flash(:error, reason["errors"] || "Failed to change plan.")
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}/billing")
+      end
     end)
   end
 
