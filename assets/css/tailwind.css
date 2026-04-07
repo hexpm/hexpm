@@ -350,6 +350,10 @@ html[data-theme-preference="system"] [data-theme-menu] [data-theme-choice="syste
   color: var(--color-yellow-900);
 }
 
+.billing-button-submit {
+  margin-top: 1rem;
+}
+
 .billing-form-error {
   color: var(--color-red-600);
   margin-top: 0.5rem;
