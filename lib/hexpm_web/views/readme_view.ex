@@ -20,8 +20,7 @@ defmodule HexpmWeb.ReadmeView do
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { overflow: hidden; }
-    html[data-theme="light"] { color-scheme: light; }
-    html[data-theme="dark"] { color-scheme: dark; }
+    html { color-scheme: light !important; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.6; color: var(--color-grey-700); padding: 0; }
     .readme { max-width: 100%; overflow-wrap: break-word; word-wrap: break-word; }
     .readme h1, .readme h2, .readme h3, .readme h4, .readme h5, .readme h6 { margin-top: 24px; margin-bottom: 16px; font-weight: 600; line-height: 1.25; }
