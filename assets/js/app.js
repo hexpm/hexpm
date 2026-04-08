@@ -12,7 +12,7 @@ import { SubmitOnce } from "./hooks/submit_once";
 import { AutoSubmit } from "./hooks/auto_submit";
 import { NavigateOnChange } from "./hooks/navigate_on_change";
 import { ConfirmSubmit } from "./hooks/confirm_submit";
-import { initializeTheme } from "./theme";
+import { initializeTheme, syncReadmeFrameTheme, resolveTheme } from "./theme";
 
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")
@@ -104,6 +104,7 @@ window.addEventListener("message", function (event) {
   ) {
     readmeFrame.classList.remove("opacity-0", "h-0", "overflow-hidden");
     readmeFrame.style.height = Math.ceil(event.data.height) + "px";
+    syncReadmeFrameTheme(resolveTheme());
     var loading = document.getElementById("readme-loading");
     if (loading) loading.remove();
   }

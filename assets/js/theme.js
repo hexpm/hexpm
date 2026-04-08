@@ -81,4 +81,4 @@ export function initializeTheme() {
   });
 }
 
-export { applyTheme, resolveTheme };
+export { applyTheme, resolveTheme, syncReadmeFrameTheme };
