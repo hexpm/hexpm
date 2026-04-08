@@ -7,6 +7,7 @@ import { CopyButton } from "./hooks/copy_button";
 import { PrintButton } from "./hooks/print_button";
 import { DownloadButton } from "./hooks/download_button";
 import { PermissionGroup } from "./hooks/permission_group";
+import { KeyExpiry } from "./hooks/key_expiry";
 import { TFACodeInput } from "./hooks/tfa_code_input";
 import { SubmitOnce } from "./hooks/submit_once";
 import { AutoSubmit } from "./hooks/auto_submit";
@@ -24,6 +25,7 @@ let Hooks = {
   PrintButton,
   DownloadButton,
   PermissionGroup,
+  KeyExpiry,
   TFACodeInput,
   SubmitOnce,
   AutoSubmit,

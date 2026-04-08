@@ -12,7 +12,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
   import HexpmWeb.Components.Modal, only: [show_modal: 1]
   import HexpmWeb.Components.Table
   import HexpmWeb.Components.Tooltip
-  import HexpmWeb.ViewHelpers, only: [pretty_date: 1, pretty_datetime: 1]
+  import HexpmWeb.ViewHelpers, only: [pretty_date: 1, pretty_date: 2, pretty_datetime: 1]
   import HexpmWeb.ViewIcons, only: [icon: 3]
   import HexpmWeb.Dashboard.Key.Components.RevokeKeyModal
   import HexpmWeb.Dashboard.Key.Components.GenerateKeyModal
@@ -52,6 +52,9 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
             </th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
               Permissions
+            </th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
+              Expires
             </th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
               Last Use
@@ -131,6 +134,17 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
             </.badge>
           <% end %>
         </div>
+      </td>
+
+      <%!-- Expires Column --%>
+      <td class="px-4 py-4">
+        <span class="text-sm text-grey-600 dark:text-grey-300">
+          <%= if @key.revoke_at do %>
+            {pretty_date(@key.revoke_at, :short)}
+          <% else %>
+            Never
+          <% end %>
+        </span>
       </td>
 
       <%!-- Last Use Column --%>

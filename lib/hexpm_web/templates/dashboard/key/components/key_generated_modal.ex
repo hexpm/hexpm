@@ -24,21 +24,21 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyGeneratedModal do
     ~H"""
     <.modal id="key-generated-modal" show={true}>
       <:header>
-        <h2 class="text-lg font-semibold text-grey-900">
+        <h2 class="text-lg font-semibold text-grey-900 dark:text-white">
           Key Generated Successfully
         </h2>
       </:header>
 
       <div class="space-y-4">
-        <p class="text-sm text-grey-600">
+        <p class="text-sm text-grey-600 dark:text-grey-300">
           Your key <strong class="font-semibold">{@key_name}</strong> has been generated.
           Copy the secret below and store it securely.
         </p>
 
-        <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+        <div class="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg p-4">
           <div class="flex gap-2">
             <svg
-              class="w-5 h-5 text-amber-600 flex-shrink-0"
+              class="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -48,7 +48,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyGeneratedModal do
                 clip-rule="evenodd"
               />
             </svg>
-            <p class="text-sm text-amber-800">
+            <p class="text-sm text-amber-800 dark:text-amber-200">
               <strong class="font-semibold">Warning:</strong>
               You won't be able to see this secret again. Make sure to copy it now.
             </p>
@@ -56,14 +56,14 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyGeneratedModal do
         </div>
 
         <div class="space-y-2">
-          <label class="block text-sm font-medium text-grey-700">
+          <label class="block text-sm font-medium text-grey-700 dark:text-grey-300">
             Key Secret
           </label>
           <div class="flex items-center gap-2">
             <div
               id="key-secret-value"
               data-value={@key_secret}
-              class="flex-1 px-3 py-2 border border-grey-300 rounded-lg bg-grey-50 text-sm font-mono text-grey-900 break-all"
+              class="flex-1 px-3 py-2 border border-grey-300 dark:border-grey-600 rounded-lg bg-grey-50 dark:bg-grey-700 text-sm font-mono text-grey-900 dark:text-grey-100 break-all"
             >
               {@key_secret}
             </div>
@@ -72,7 +72,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyGeneratedModal do
               phx-hook="CopyButton"
               id="copy-key-secret"
               data-copy-target="key-secret-value"
-              class="flex-shrink-0 p-2 text-grey-600 hover:text-grey-900 hover:bg-grey-100 rounded transition-colors"
+              class="flex-shrink-0 p-2 text-grey-600 dark:text-grey-400 hover:text-grey-900 dark:hover:text-white hover:bg-grey-100 dark:hover:bg-grey-700 rounded transition-colors"
               title="Copy to clipboard"
             >
               {icon(:heroicon, "clipboard-document", class: "w-5 h-5")}

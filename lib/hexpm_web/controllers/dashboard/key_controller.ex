@@ -29,7 +29,7 @@ defmodule HexpmWeb.Dashboard.KeyController do
 
   def create(conn, params) do
     user = conn.assigns.current_user
-    key_params = munge_permissions(params["key"])
+    key_params = params["key"] |> munge_permissions() |> munge_expiry()
 
     case Keys.create(user, key_params, audit: audit_data(conn)) do
       {:ok, %{key: key}} ->
@@ -68,6 +68,26 @@ defmodule HexpmWeb.Dashboard.KeyController do
 
   defp changeset() do
     Key.changeset(%Key{}, %{}, %{})
+  end
+
+  def munge_expiry(params) do
+    case params["expires_in"] do
+      days when days in ~w(7 30 60 90 365) ->
+        revoke_at =
+          DateTime.utc_now()
+          |> DateTime.add(String.to_integer(days), :day)
+          |> DateTime.truncate(:second)
+
+        Map.put(params, "revoke_at", revoke_at)
+
+      "custom" ->
+        {:ok, date} = Date.from_iso8601(params["custom_expiry_date"])
+        {:ok, revoke_at} = DateTime.new(date, ~T[23:59:59], "Etc/UTC")
+        Map.put(params, "revoke_at", revoke_at)
+
+      "none" ->
+        params
+    end
   end
 
   def munge_permissions(params) do

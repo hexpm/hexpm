@@ -164,7 +164,9 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       conn =
         build_conn()
         |> test_login(user)
-        |> post("/dashboard/orgs/#{organization.name}/keys", %{key: %{name: "mykey"}})
+        |> post("/dashboard/orgs/#{organization.name}/keys", %{
+          key: %{name: "mykey", expires_in: "30"}
+        })
 
       assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}/keys"
 
@@ -1203,12 +1205,55 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       conn =
         build_conn()
         |> test_login(c.user)
-        |> post("/dashboard/orgs/#{c.organization.name}/keys", %{key: %{name: "computer"}})
+        |> post("/dashboard/orgs/#{c.organization.name}/keys", %{
+          key: %{name: "computer", expires_in: "30"}
+        })
 
       assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}/keys"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
                "The key computer was successfully generated"
+    end
+  end
+
+  describe "POST /dashboard/orgs/:dashboard_org/keys with expiry" do
+    test "create org key with expires_in sets revoke_at", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "admin")
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> post("/dashboard/orgs/#{c.organization.name}/keys", %{
+          key: %{name: "org-temp", expires_in: "30"}
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}/keys"
+
+      key = Hexpm.Repo.one!(Hexpm.Accounts.Key.get(c.organization, "org-temp"))
+      assert key.revoke_at != nil
+      diff = DateTime.diff(key.revoke_at, DateTime.utc_now(), :day)
+      assert diff >= 29 and diff <= 30
+    end
+
+    test "create org key with custom expiry date sets revoke_at", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "admin")
+      future_date = Date.utc_today() |> Date.add(45)
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> post("/dashboard/orgs/#{c.organization.name}/keys", %{
+          key: %{
+            name: "org-custom",
+            expires_in: "custom",
+            custom_expiry_date: Date.to_iso8601(future_date)
+          }
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}/keys"
+
+      key = Hexpm.Repo.one!(Hexpm.Accounts.Key.get(c.organization, "org-custom"))
+      assert DateTime.to_date(key.revoke_at) == future_date
     end
   end
 

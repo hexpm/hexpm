@@ -28,12 +28,23 @@ defmodule Hexpm.Accounts.Key do
   end
 
   def changeset(key, user_or_organization, params) do
-    cast(key, params, ~w(name)a)
+    cast(key, params, ~w(name revoke_at)a)
     |> validate_required(~w(name)a)
+    |> validate_revoke_at_in_future()
     |> add_keys()
     |> prepare_changes(&unique_name/1)
     |> cast_embed(:permissions, with: &KeyPermission.changeset(&1, user_or_organization, &2))
     |> put_default_embed(:permissions, [%KeyPermission{domain: "api"}])
+  end
+
+  defp validate_revoke_at_in_future(changeset) do
+    validate_change(changeset, :revoke_at, fn :revoke_at, revoke_at ->
+      if DateTime.compare(revoke_at, DateTime.utc_now()) == :gt do
+        []
+      else
+        [revoke_at: "must be in the future"]
+      end
+    end)
   end
 
   def build(user_or_organization, params) do

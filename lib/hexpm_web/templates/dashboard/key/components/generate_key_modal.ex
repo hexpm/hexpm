@@ -17,7 +17,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
     ~H"""
     <.modal id="generate-key-modal">
       <:header>
-        <h2 class="text-lg font-semibold text-grey-900">
+        <h2 class="text-lg font-semibold text-grey-900 dark:text-white">
           Generate New Key
         </h2>
       </:header>
@@ -25,15 +25,47 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
       <.sudo_form current_user={@current_user} action={@create_key_path} id="generate-key-form">
         <%!-- Key Name --%>
         <div class="mb-6">
-          <label class="block text-sm font-medium text-grey-700 mb-2">
+          <label class="block text-sm font-medium text-grey-700 dark:text-grey-300 mb-2">
             Key name
           </label>
           <.text_input field={@form[:name]} placeholder="Name" class="w-full" />
         </div>
 
+        <%!-- Key Expiration --%>
+        <div class="mb-6" phx-hook="KeyExpiry" id="key-expiry-group">
+          <.select_input
+            id="key-expires-in"
+            name="key[expires_in]"
+            label="Expiration"
+            options={[
+              {"30 days", "30"},
+              {"7 days", "7"},
+              {"60 days", "60"},
+              {"90 days", "90"},
+              {"1 year", "365"},
+              {"Custom...", "custom"},
+              {"No expiration", "none"}
+            ]}
+            value="30"
+          />
+          <div id="custom-expiry-input" class="hidden mt-2">
+            <.text_input
+              id="key-custom-expiry-date"
+              name="key[custom_expiry_date]"
+              type="date"
+              placeholder="Select date"
+              min={Date.utc_today() |> Date.add(1) |> Date.to_iso8601()}
+              class="w-full"
+            />
+          </div>
+          <div id="no-expiry-warning" class="hidden mt-2 text-sm text-yellow-700 dark:text-yellow-400">
+            For security, we recommend setting an expiration for your key.
+          </div>
+        </div>
+
         <%!-- Key Permissions --%>
         <div class="mb-6">
-          <span class="block text-sm font-medium text-grey-700 mb-3">
+          <span class="block text-sm font-medium text-grey-700 dark:text-grey-300 mb-3">
             Key permissions
           </span>
 
@@ -52,7 +84,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
                 value="on"
                 class="rounded border-grey-300 text-purple-600 focus:ring-purple-500"
               />
-              <span class="ml-2 text-sm text-grey-700 font-medium">API</span>
+              <span class="ml-2 text-sm text-grey-700 dark:text-grey-300 font-medium">API</span>
             </label>
             <div class="ml-6 space-y-2">
               <label class="flex items-center">
@@ -62,7 +94,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
                   value="on"
                   class="child-checkbox rounded border-grey-300 text-purple-600 focus:ring-purple-500"
                 />
-                <span class="ml-2 text-sm text-grey-700">Read</span>
+                <span class="ml-2 text-sm text-grey-700 dark:text-grey-300">Read</span>
               </label>
               <label class="flex items-center">
                 <input
@@ -71,7 +103,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
                   value="on"
                   class="child-checkbox rounded border-grey-300 text-purple-600 focus:ring-purple-500"
                 />
-                <span class="ml-2 text-sm text-grey-700">Write</span>
+                <span class="ml-2 text-sm text-grey-700 dark:text-grey-300">Write</span>
               </label>
             </div>
           </div>
@@ -86,7 +118,9 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
                   value="on"
                   class="rounded border-grey-300 text-purple-600 focus:ring-purple-500"
                 />
-                <span class="ml-2 text-sm text-grey-700">Organization repository</span>
+                <span class="ml-2 text-sm text-grey-700 dark:text-grey-300">
+                  Organization repository
+                </span>
               </label>
             </div>
           <% else %>
@@ -104,7 +138,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
                   value="on"
                   class="rounded border-grey-300 text-purple-600 focus:ring-purple-500"
                 />
-                <span class="ml-2 text-sm text-grey-700 font-medium">
+                <span class="ml-2 text-sm text-grey-700 dark:text-grey-300 font-medium">
                   All Repositories
                 </span>
               </label>
@@ -118,7 +152,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
                         value="on"
                         class="child-checkbox rounded border-grey-300 text-purple-600 focus:ring-purple-500"
                       />
-                      <span class="ml-2 text-sm text-grey-700">
+                      <span class="ml-2 text-sm text-grey-700 dark:text-grey-300">
                         Repository: {organization.name}
                       </span>
                     </label>
@@ -137,7 +171,9 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
                   disabled
                   class="rounded border-grey-300 text-purple-600 focus:ring-purple-500 opacity-50"
                 />
-                <span class="ml-2 text-sm text-grey-700 font-medium">Packages</span>
+                <span class="ml-2 text-sm text-grey-700 dark:text-grey-300 font-medium">
+                  Packages
+                </span>
               </label>
               <div class="ml-6 space-y-2">
                 <%= for package <- @packages do %>
@@ -148,7 +184,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
                       value="on"
                       class="rounded border-grey-300 text-purple-600 focus:ring-purple-500"
                     />
-                    <span class="ml-2 text-sm text-grey-700">
+                    <span class="ml-2 text-sm text-grey-700 dark:text-grey-300">
                       Package: {package.name}
                     </span>
                   </label>

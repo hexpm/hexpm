@@ -22,6 +22,35 @@ defmodule Hexpm.Accounts.KeysTest do
     }
   end
 
+  describe "create/2 with revoke_at" do
+    test "create key with future revoke_at", %{user: user} do
+      revoke_at = DateTime.utc_now() |> DateTime.add(30, :day) |> DateTime.truncate(:second)
+
+      params = %{
+        "name" => "expiring-key",
+        "permissions" => [%{"domain" => "api"}],
+        "revoke_at" => revoke_at
+      }
+
+      assert {:ok, %{key: key}} = Keys.create(user, params, audit: audit_data(user))
+      assert key.name == "expiring-key"
+      assert DateTime.compare(key.revoke_at, DateTime.utc_now()) == :gt
+    end
+
+    test "create key with past revoke_at fails validation", %{user: user} do
+      revoke_at = DateTime.utc_now() |> DateTime.add(-1, :day) |> DateTime.truncate(:second)
+
+      params = %{
+        "name" => "expired-key",
+        "permissions" => [%{"domain" => "api"}],
+        "revoke_at" => revoke_at
+      }
+
+      assert {:error, :key, changeset, _} = Keys.create(user, params, audit: audit_data(user))
+      assert errors_on(changeset)[:revoke_at] == "must be in the future"
+    end
+  end
+
   describe "create/2" do
     test "user api permissions", %{user: user} do
       params = %{
