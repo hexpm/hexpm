@@ -13,7 +13,7 @@
   repository_name={@repository_name}
 >
   <:inner_content>
-    <div class="bg-white dark:bg-gray-900 border border-grey-200 dark:border-grey-700 rounded-lg p-6">
+    <div class="bg-white dark:bg-grey-900 border border-grey-200 dark:border-grey-700 rounded-lg p-6">
       <%= if ViewHelpers.main_repository?(@package) and @current_release do %>
         <div
           id="readme-loading"
@@ -51,7 +51,7 @@
         <iframe
           id="readme-frame"
           src={"#{ViewHelpers.readme_url(@package.name, @current_release.version)}"}
-          sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox"
+          sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
           loading="lazy"
           referrerpolicy="no-referrer"
           title={"README for #{ViewHelpers.package_name(@package)}"}
