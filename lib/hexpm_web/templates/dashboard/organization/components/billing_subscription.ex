@@ -37,9 +37,9 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
     assigns = assign(assigns, :safe_quantity, assigns.quantity || 0)
 
     ~H"""
-    <div class="bg-white border border-grey-200 rounded-lg overflow-hidden">
-      <div class="px-6 py-5 border-b border-grey-200 flex items-center justify-between">
-        <h2 class="text-grey-900 text-lg font-semibold">Subscription</h2>
+    <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden">
+      <div class="px-6 py-5 border-b border-grey-200 dark:border-grey-700 flex items-center justify-between">
+        <h2 class="text-grey-900 dark:text-white text-lg font-semibold">Subscription</h2>
         <%= if @subscription do %>
           <span class={[
             "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
@@ -55,14 +55,17 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
         <%= if @subscription do %>
           <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <dt class="text-xs font-medium text-grey-500 uppercase tracking-wider mb-1">Plan</dt>
-              <dd class="text-sm text-grey-900">
+              <dt class="text-xs font-medium text-grey-500 dark:text-grey-300 uppercase tracking-wider mb-1">
+                Plan
+              </dt>
+              <dd class="text-sm text-grey-900 dark:text-white">
                 <p>{BillingHelpers.plan(@plan_id)}</p>
                 <div class="mt-2">
                   <.button
                     type="button"
                     variant="outline"
                     size="sm"
+                    class="dark:hover:border-grey-400 dark:hover:bg-grey-600 dark:hover:text-white"
                     phx-click={show_modal("change-plan-modal")}
                   >
                     {if @plan_id == "organization-monthly",
@@ -73,16 +76,18 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
               </dd>
             </div>
             <div>
-              <dt class="text-xs font-medium text-grey-500 uppercase tracking-wider mb-1">
+              <dt class="text-xs font-medium text-grey-500 dark:text-grey-300 uppercase tracking-wider mb-1">
                 Payment method
               </dt>
-              <dd class="text-sm text-grey-900">{BillingHelpers.payment_card(@card)}</dd>
+              <dd class="text-sm text-grey-900 dark:text-white">
+                {BillingHelpers.payment_card(@card)}
+              </dd>
             </div>
             <div>
-              <dt class="text-xs font-medium text-grey-500 uppercase tracking-wider mb-1">
+              <dt class="text-xs font-medium text-grey-500 dark:text-grey-300 uppercase tracking-wider mb-1">
                 Next invoice
               </dt>
-              <dd class="text-sm text-grey-900">
+              <dd class="text-sm text-grey-900 dark:text-white">
                 <%= if @subscription["cancel_at_period_end"] do %>
                   Subscription ends on {BillingHelpers.payment_date(
                     @subscription["current_period_end"]
@@ -93,10 +98,10 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
               </dd>
             </div>
             <div>
-              <dt class="text-xs font-medium text-grey-500 uppercase tracking-wider mb-1">
+              <dt class="text-xs font-medium text-grey-500 dark:text-grey-300 uppercase tracking-wider mb-1">
                 {if @plan_id == "organization-annually", do: "Annual cost", else: "Monthly cost"}
               </dt>
-              <dd class="text-sm text-grey-900">
+              <dd class="text-sm text-grey-900 dark:text-white">
                 {BillingHelpers.plan_price(@plan_id)} x {@safe_quantity} user(s)
                 <%= if @tax_rate && @tax_rate != 0 do %>
                   x {@tax_rate}% VAT
@@ -106,23 +111,26 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
             </div>
             <%= if BillingHelpers.subscription_status(@subscription, @card) not in ["Active", ""] do %>
               <div class="sm:col-span-2">
-                <dt class="text-xs font-medium text-grey-500 uppercase tracking-wider mb-1">
+                <dt class="text-xs font-medium text-grey-500 dark:text-grey-300 uppercase tracking-wider mb-1">
                   Status
                 </dt>
-                <dd class="text-sm text-grey-900">
+                <dd class="text-sm text-grey-900 dark:text-white">
                   {BillingHelpers.subscription_status(@subscription, @card)}
                 </dd>
               </div>
             <% end %>
             <div>
-              <dt class="text-xs font-medium text-grey-500 uppercase tracking-wider mb-1">Seats</dt>
-              <dd class="text-sm text-grey-900">
+              <dt class="text-xs font-medium text-grey-500 dark:text-grey-300 uppercase tracking-wider mb-1">
+                Seats
+              </dt>
+              <dd class="text-sm text-grey-900 dark:text-white">
                 <p>{@member_count} of {@safe_quantity} in use</p>
                 <div class="mt-2 flex gap-2">
                   <.button
                     type="button"
                     variant="outline"
                     size="sm"
+                    class="dark:hover:border-grey-400 dark:hover:bg-grey-600 dark:hover:text-white"
                     phx-click={show_modal("add-seats-modal")}
                   >
                     Add seats
@@ -295,12 +303,17 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
             </script>
           <% end %>
         <% else %>
-          <p class="text-sm text-grey-600 mb-4">
-            No active subscription. <strong>Private packages will not be available</strong>
+          <p class="text-sm text-grey-600 dark:text-grey-300 mb-4">
+            No active subscription.
+            <strong class="text-grey-900 dark:text-white">
+              Private packages will not be available
+            </strong>
             until a payment method has been added.
           </p>
-          <p class="text-sm text-grey-600 mb-6">
-            Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.
+          <p class="text-sm text-grey-600 dark:text-grey-300 mb-6">
+            Subscription cost is
+            <strong class="text-grey-900 dark:text-white">$7.00 per user / month</strong>
+            + local VAT when applicable.
           </p>
           <script nonce={@script_src_nonce}>
             window.hexpm_billing_api_url = '/dashboard/billing-api';
@@ -330,7 +343,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
   defp subscription_badge_class(%{"status" => "past_due"}),
     do: "bg-orange-100 text-orange-700"
 
-  defp subscription_badge_class(_), do: "bg-grey-100 text-grey-600"
+  defp subscription_badge_class(_),
+    do: "bg-grey-100 dark:bg-grey-700 text-grey-600 dark:text-grey-200"
 
   attr :current_user, :map, required: true
   attr :organization, :map, required: true
@@ -339,10 +353,10 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
   defp cancel_billing_modal(assigns) do
     ~H"""
     <.modal id="cancel-billing-modal" title="Cancel subscription">
-      <p class="text-sm text-grey-600 mb-2">
+      <p class="text-sm text-grey-600 dark:text-grey-300 mb-2">
         Are you sure you want to cancel your subscription?
       </p>
-      <p class="text-sm text-grey-600">
+      <p class="text-sm text-grey-600 dark:text-grey-300">
         Your subscription will remain active until the end of the current billing period.
         After that, private packages will no longer be accessible.
       </p>
@@ -388,11 +402,14 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
         id="add-seats-form"
       >
         <input type="hidden" name="current-seats" value={@quantity} />
-        <p class="text-sm text-grey-600 mb-4">
+        <p class="text-sm text-grey-600 dark:text-grey-300 mb-4">
           You have {@quantity} seats of which {@member_count} are in use.
         </p>
         <div class="mb-4">
-          <label for="add-seats-input" class="block text-sm font-medium text-grey-700 mb-1">
+          <label
+            for="add-seats-input"
+            class="block text-sm font-medium text-grey-700 dark:text-grey-200 mb-1"
+          >
             Number of new seats to add
           </label>
           <div class="flex items-center gap-2">
@@ -407,11 +424,13 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
               required
               class="w-24 h-10 px-3 border border-grey-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-600"
             />
-            <span class="text-sm text-grey-600">seat(s) @ {BillingHelpers.plan_price(@plan_id)}</span>
+            <span class="text-sm text-grey-600 dark:text-grey-300">
+              seat(s) @ {BillingHelpers.plan_price(@plan_id)}
+            </span>
           </div>
         </div>
         <%= if @proration_amount && @proration_amount > 0 do %>
-          <p class="text-sm text-grey-600">
+          <p class="text-sm text-grey-600 dark:text-grey-300">
             {BillingHelpers.proration_description(
               @plan_id,
               @proration_amount,
@@ -448,7 +467,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
         action={~p"/dashboard/orgs/#{@organization}/remove-seats"}
         id="remove-seats-form"
       >
-        <p class="text-sm text-grey-600 mb-4">
+        <p class="text-sm text-grey-600 dark:text-grey-300 mb-4">
           You have {@quantity} seats of which {@member_count} are in use.
         </p>
         <%= if @quantity <= @member_count do %>
@@ -471,7 +490,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
                   <option value={n}>{n}</option>
                 <% end %>
               </select>
-              <span class="text-sm text-grey-600">
+              <span class="text-sm text-grey-600 dark:text-grey-300">
                 seat(s) @ {BillingHelpers.plan_price(@plan_id)}
               </span>
             </div>
@@ -518,11 +537,11 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
               else: "organization-monthly"
           }
         />
-        <p class="text-sm text-grey-600">
+        <p class="text-sm text-grey-600 dark:text-grey-300">
           <%= if @plan_id == "organization-monthly" do %>
-            Switch to the annual plan and save with <strong>{BillingHelpers.plan_price("organization-annually")} per user / year</strong>.
+            Switch to the annual plan and save with <strong class="text-grey-900 dark:text-white">{BillingHelpers.plan_price("organization-annually")} per user / year</strong>.
           <% else %>
-            Switch to the monthly plan at <strong>{BillingHelpers.plan_price("organization-monthly")} per user / month</strong>.
+            Switch to the monthly plan at <strong class="text-grey-900 dark:text-white">{BillingHelpers.plan_price("organization-monthly")} per user / month</strong>.
           <% end %>
         </p>
       </.sudo_form>

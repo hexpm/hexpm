@@ -12,6 +12,7 @@ import { SubmitOnce } from "./hooks/submit_once";
 import { AutoSubmit } from "./hooks/auto_submit";
 import { NavigateOnChange } from "./hooks/navigate_on_change";
 import { ConfirmSubmit } from "./hooks/confirm_submit";
+import { initializeTheme, syncReadmeFrameTheme, resolveTheme } from "./theme";
 import { SearchShortcut } from "./hooks/search_shortcut";
 
 let csrfToken = document
@@ -37,6 +38,7 @@ let liveSocket = new LiveSocket("/live", Socket, {
 });
 
 liveSocket.connect();
+initializeTheme();
 
 // Focus username, 2FA or search field
 if (document.getElementById("username")) {
@@ -79,7 +81,7 @@ function billingCheckout(token) {
               '<div class="flash-message flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg bg-red-100 border-red-300" role="alert">' +
               '<div class="flex-1 text-small leading-5 text-red-800">' +
               "<strong>Failed to update payment method</strong><br>" +
-              data.errors +
+              (typeof data.errors === "string" ? data.errors : JSON.stringify(data.errors)) +
               "</div></div>";
           }
         });
@@ -96,11 +98,15 @@ var readmeFrame = document.getElementById("readme-frame");
 window.addEventListener("message", function (event) {
   if (!event.data || !readmeFrame) return;
 
-  if (event.data.type === "readme-height" &&
-      typeof event.data.height === "number" &&
-      event.data.height > 0 && event.data.height < 100000) {
+  if (
+    event.data.type === "readme-height" &&
+    typeof event.data.height === "number" &&
+    event.data.height > 0 &&
+    event.data.height < 100000
+  ) {
     readmeFrame.classList.remove("opacity-0", "h-0", "overflow-hidden");
     readmeFrame.style.height = Math.ceil(event.data.height) + "px";
+    syncReadmeFrameTheme(resolveTheme());
     var loading = document.getElementById("readme-loading");
     if (loading) loading.remove();
   }

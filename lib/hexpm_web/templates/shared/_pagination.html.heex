@@ -5,15 +5,19 @@ range_end = range_start + shown_items - 1 %>
 
 <div class="flex flex-col sm:flex-row items-center justify-between gap-4 py-6">
   <%!-- Pagination Info --%>
-  <div class="text-grey-600 text-sm">
+  <div class="text-grey-600 dark:text-grey-300 text-sm">
     <%= if paginate[:page_links] == [1] do %>
-      <span class="font-medium text-grey-900">{@total_count}</span>
+      <span class="font-medium text-grey-900 dark:text-white">{@total_count}</span>
       {if shown_items == 1, do: @unit, else: @units} of
-      <span class="font-medium text-grey-900">{@total_count}</span>
+      <span class="font-medium text-grey-900 dark:text-white">{@total_count}</span>
       total
     <% else %>
-      Showing <span class="font-medium text-grey-900">{range_start}&ndash;{range_end}</span>
-      {@units} of <span class="font-medium text-grey-900">{@total_count}</span> total
+      Showing
+      <span class="font-medium text-grey-900 dark:text-white">
+        {range_start}&ndash;{range_end}
+      </span>
+      {@units} of <span class="font-medium text-grey-900 dark:text-white">{@total_count}</span>
+      total
     <% end %>
   </div>
 
@@ -24,7 +28,7 @@ range_end = range_start + shown_items - 1 %>
       <%= if paginate[:prev] do %>
         <a
           href={@path_fn.(%{page: @page - 1})}
-          class="inline-flex items-center justify-center size-10 bg-white border border-grey-300 rounded-lg text-grey-700 hover:bg-grey-50 hover:border-grey-400 transition-colors"
+          class="inline-flex items-center justify-center size-10 bg-white dark:bg-grey-800 border border-grey-300 dark:border-grey-600 rounded-lg text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-700 hover:border-grey-400 dark:hover:border-grey-500 transition-colors"
           aria-label="Previous page"
         >
           <svg class="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -37,7 +41,7 @@ range_end = range_start + shown_items - 1 %>
           </svg>
         </a>
       <% else %>
-        <span class="inline-flex items-center justify-center size-10 bg-grey-50 border border-grey-200 rounded-lg text-grey-400 cursor-not-allowed">
+        <span class="inline-flex items-center justify-center size-10 bg-grey-50 dark:bg-grey-900 border border-grey-200 dark:border-grey-700 rounded-lg text-grey-400 dark:text-grey-300 cursor-not-allowed">
           <svg class="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
@@ -62,7 +66,7 @@ range_end = range_start + shown_items - 1 %>
           <% else %>
             <a
               href={@path_fn.(%{page: page})}
-              class="inline-flex items-center justify-center min-w-10 h-10 px-3 bg-white border border-grey-300 rounded-lg text-grey-700 font-medium hover:bg-grey-50 hover:border-grey-400 transition-colors"
+              class="inline-flex items-center justify-center min-w-10 h-10 px-3 bg-white dark:bg-grey-800 border border-grey-300 dark:border-grey-600 rounded-lg text-grey-700 dark:text-grey-200 font-medium hover:bg-grey-50 dark:hover:bg-grey-700 hover:border-grey-400 dark:hover:border-grey-500 transition-colors"
             >
               {page}
             </a>
@@ -74,7 +78,7 @@ range_end = range_start + shown_items - 1 %>
       <%= if paginate[:next] do %>
         <a
           href={@path_fn.(%{page: @page + 1})}
-          class="inline-flex items-center justify-center size-10 bg-white border border-grey-300 rounded-lg text-grey-700 hover:bg-grey-50 hover:border-grey-400 transition-colors"
+          class="inline-flex items-center justify-center size-10 bg-white dark:bg-grey-800 border border-grey-300 dark:border-grey-600 rounded-lg text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-700 hover:border-grey-400 dark:hover:border-grey-500 transition-colors"
           aria-label="Next page"
         >
           <svg class="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -87,7 +91,7 @@ range_end = range_start + shown_items - 1 %>
           </svg>
         </a>
       <% else %>
-        <span class="inline-flex items-center justify-center size-10 bg-grey-50 border border-grey-200 rounded-lg text-grey-400 cursor-not-allowed">
+        <span class="inline-flex items-center justify-center size-10 bg-grey-50 dark:bg-grey-900 border border-grey-200 dark:border-grey-700 rounded-lg text-grey-400 dark:text-grey-300 cursor-not-allowed">
           <svg class="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"

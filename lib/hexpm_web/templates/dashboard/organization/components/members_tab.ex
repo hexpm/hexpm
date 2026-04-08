@@ -26,11 +26,11 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
     ~H"""
     <div class="space-y-6">
       <%!-- Member List --%>
-      <div class="bg-white border border-grey-200 rounded-lg overflow-hidden">
-        <div class="px-6 py-5 border-b border-grey-200 flex items-center justify-between">
+      <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden">
+        <div class="px-6 py-5 border-b border-grey-200 dark:border-grey-700 flex items-center justify-between">
           <div>
-            <h2 class="text-grey-900 text-lg font-semibold">Members</h2>
-            <p class="text-grey-500 text-sm mt-1">
+            <h2 class="text-grey-900 dark:text-white text-lg font-semibold">Members</h2>
+            <p class="text-grey-500 dark:text-grey-300 text-sm mt-1">
               <% count = member_count(@organization) %>
               <%= if @quantity do %>
                 {count} of {@quantity} seats in use
@@ -51,7 +51,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
           <% end %>
         </div>
 
-        <ul class="divide-y divide-grey-100">
+        <ul class="divide-y divide-grey-100 dark:divide-grey-700">
           <%= for org_user <- @organization.organization_users do %>
             <li class="flex items-center justify-between px-6 py-4">
               <%!-- Avatar + name --%>
@@ -67,7 +67,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                   class="w-9 h-9 rounded-full flex-shrink-0"
                 />
                 <div>
-                  <p class="text-sm font-medium text-grey-900">
+                  <p class="text-sm font-medium text-grey-900 dark:text-white">
                     <a
                       href={~p"/users/#{org_user.user}"}
                       class="hover:text-primary-600 transition-colors"
@@ -75,7 +75,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                       {org_user.user.username}
                     </a>
                   </p>
-                  <p class="text-xs text-grey-500">{org_user.user.full_name}</p>
+                  <p class="text-xs text-grey-500 dark:text-grey-300">{org_user.user.full_name}</p>
                 </div>
               </div>
 
@@ -132,10 +132,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
       <%= if admin?(@current_user, @organization) do %>
         <%= for org_user <- @organization.organization_users, org_user.user.id != @current_user.id do %>
           <.modal id={"remove-member-#{org_user.user.username}"} title="Remove member?" max_width="sm">
-            <p class="text-sm text-grey-600">
+            <p class="text-sm text-grey-600 dark:text-grey-300">
               Are you sure you want to remove
-              <strong class="font-semibold text-grey-900">{org_user.user.username}</strong>
-              from <strong class="font-semibold text-grey-900">{@organization.name}</strong>?
+              <strong class="font-semibold text-grey-900 dark:text-white">
+                {org_user.user.username}
+              </strong>
+              from <strong class="font-semibold text-grey-900 dark:text-white">{@organization.name}</strong>?
               They will lose access to all private packages.
             </p>
 
@@ -171,7 +173,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
       <%= if admin?(@current_user, @organization) do %>
         <.modal id={add_member_modal_id()} title="Add member" max_width="sm">
           <div class="px-1">
-            <p class="text-sm text-grey-500 mb-6">
+            <p class="text-sm text-grey-500 dark:text-grey-300 mb-6">
               Add an existing Hex user to your organization.
             </p>
 

@@ -16,7 +16,7 @@ defmodule HexpmWeb.Components.Footer do
   """
   def footer(assigns) do
     ~H"""
-    <footer class="bg-grey-900 text-grey-200 font-sans">
+    <footer class="bg-grey-800 text-grey-200 font-sans">
       <div class="max-w-7xl mx-auto px-4 pt-12 pb-10 flex flex-col gap-10">
         <div class="flex flex-col gap-10 lg:flex-row lg:items-start lg:gap-24 xl:gap-28">
           <.footer_branding />
@@ -67,7 +67,7 @@ defmodule HexpmWeb.Components.Footer do
     ~H"""
     <a
       href={@href}
-      class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-grey-800 text-slate-200 hover:bg-grey-700 transition duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-grey-500"
+      class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-grey-700 text-slate-200 hover:bg-grey-600 transition duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-grey-500"
       target="_blank"
       rel="noopener noreferrer"
       aria-label={@label}
@@ -151,7 +151,7 @@ defmodule HexpmWeb.Components.Footer do
 
   defp footer_copyright(assigns) do
     ~H"""
-    <div class="bg-grey-800">
+    <div class="bg-grey-700">
       <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col items-center gap-3 text-sm text-grey-200 md:flex-row md:justify-between">
         <p class="text-center leading-[14px] md:text-left">
           Copyright 2015. Six Colors AB.

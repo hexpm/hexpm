@@ -62,13 +62,13 @@ defmodule HexpmWeb.Components.AuthLayout do
       "flex items-center justify-center my-auto py-16",
       @class
     ]}>
-      <div class="bg-white border border-grey-200 rounded-lg w-full max-w-lg px-10 py-10">
+      <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg w-full max-w-lg px-10 py-10 shadow-xs">
         <%!-- Header --%>
-        <h1 class="font-bold text-[40px] leading-[40px] text-grey-900 text-center mb-3">
+        <h1 class="font-bold text-[40px] leading-[40px] text-grey-900 dark:text-white text-center mb-3">
           {@title}
         </h1>
 
-        <p :if={@subtitle} class="text-grey-600 text-center mb-8 leading-6">
+        <p :if={@subtitle} class="text-grey-600 dark:text-grey-300 text-center mb-8 leading-6">
           {@subtitle}
         </p>
 
@@ -90,9 +90,9 @@ defmodule HexpmWeb.Components.AuthLayout do
           :if={@show_oauth && (@oauth_button != [] || @oauth_href)}
           class="flex items-center gap-4 mb-8"
         >
-          <div class="flex-1 h-px bg-grey-200"></div>
-          <span class="text-small text-grey-400">{@divider_text}</span>
-          <div class="flex-1 h-px bg-grey-200"></div>
+          <div class="flex-1 h-px bg-grey-200 dark:bg-grey-700"></div>
+          <span class="text-small text-grey-400 dark:text-grey-300">{@divider_text}</span>
+          <div class="flex-1 h-px bg-grey-200 dark:bg-grey-700"></div>
         </div>
 
         <%!-- Form Content --%>

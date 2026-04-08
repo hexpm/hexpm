@@ -21,13 +21,13 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.TFACard do
 
   def tfa_card(assigns) do
     ~H"""
-    <div class="bg-white border border-grey-200 rounded-lg p-8">
+    <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-8">
       <div class="flex items-start justify-between">
         <div>
-          <h2 class="text-grey-900 text-xl font-semibold mb-2">
+          <h2 class="text-grey-900 dark:text-white text-xl font-semibold mb-2">
             Two-Factor Authentication
           </h2>
-          <p class="text-grey-600 text-sm">
+          <p class="text-grey-600 dark:text-grey-300 text-sm">
             Add an extra layer of security to your account
           </p>
         </div>

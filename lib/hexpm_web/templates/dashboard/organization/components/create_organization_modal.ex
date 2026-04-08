@@ -18,17 +18,17 @@ defmodule HexpmWeb.Dashboard.Organization.Components.CreateOrganizationModal do
   def create_organization_modal(assigns) do
     ~H"""
     <.modal id={modal_id()} title="Create New Organization" max_width="md">
-      <p class="text-sm text-grey-500 mb-6">
+      <p class="text-sm text-grey-500 dark:text-grey-300 mb-6">
         With organizations you can manage public packages with fine-grained
         access control for your members. Private packages are available on
-        paid plans at <strong class="text-grey-700">$7.00 per user / month</strong>.
+        paid plans at <strong class="text-grey-700 dark:text-grey-100">$7.00 per user / month</strong>.
       </p>
 
       <.sudo_form current_user={@current_user} action="/dashboard/orgs" id="create-org-form">
         <div class="mb-6">
           <label
             for="org-name-input"
-            class="block text-sm font-medium text-grey-700 mb-1"
+            class="block text-sm font-medium text-grey-700 dark:text-grey-200 mb-1"
           >
             Organization name
           </label>
@@ -40,11 +40,13 @@ defmodule HexpmWeb.Dashboard.Organization.Components.CreateOrganizationModal do
             pattern="[a-z][a-z0-9_]*"
             required
             autocomplete="off"
-            class="w-full h-10 px-3 border border-grey-300 rounded-lg text-sm text-grey-900 placeholder:text-grey-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            class="w-full h-10 px-3 border border-grey-300 dark:border-grey-600 bg-white dark:bg-grey-800 rounded-lg text-sm text-grey-900 dark:text-white placeholder:text-grey-400 dark:placeholder:text-grey-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
           />
-          <p class="mt-1.5 text-xs text-grey-500">
+          <p class="mt-1.5 text-xs text-grey-500 dark:text-grey-300">
             Only lowercase letters, numbers, and underscores. Used in
-            <code class="font-mono bg-grey-100 px-1 rounded">mix.exs</code>
+            <code class="font-mono bg-grey-100 dark:bg-grey-900 px-1 rounded text-grey-800 dark:text-grey-100">
+              mix.exs
+            </code>
             dependencies.
           </p>
 

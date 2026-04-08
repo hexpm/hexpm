@@ -22,17 +22,25 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInvoices do
   def billing_invoices(assigns) do
     ~H"""
     <%= if @invoices && @invoices != [] do %>
-      <div class="bg-white border border-grey-200 rounded-lg overflow-hidden">
-        <div class="px-6 py-5 border-b border-grey-200">
-          <h2 class="text-grey-900 text-lg font-semibold">Payment history</h2>
+      <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden">
+        <div class="px-6 py-5 border-b border-grey-200 dark:border-grey-700">
+          <h2 class="text-grey-900 dark:text-white text-lg font-semibold">Payment history</h2>
         </div>
         <div class="px-6">
           <.table>
             <:header>
-              <th class="px-0 py-3 text-left text-sm font-medium text-grey-500">Date</th>
-              <th class="px-4 py-3 text-left text-sm font-medium text-grey-500">Amount</th>
-              <th class="px-4 py-3 text-left text-sm font-medium text-grey-500">Payment</th>
-              <th class="px-4 py-3 text-left text-sm font-medium text-grey-500">Status</th>
+              <th class="px-0 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
+                Date
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
+                Amount
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
+                Payment
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
+                Status
+              </th>
             </:header>
             <:row :for={invoice <- @invoices}>
               <.invoice_row
@@ -61,7 +69,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInvoices do
   defp invoice_row(assigns) do
     ~H"""
     <tr>
-      <td class="px-0 py-4 whitespace-nowrap text-grey-900">
+      <td class="px-0 py-4 whitespace-nowrap text-grey-900 dark:text-white">
         <%= if @invoice["id"] do %>
           <a
             href={~p"/dashboard/orgs/#{@organization}/invoices/#{@invoice["id"]}"}
@@ -75,10 +83,10 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInvoices do
           {BillingHelpers.payment_date(@invoice["date"] || @invoice["created"])}
         <% end %>
       </td>
-      <td class="px-4 py-4 whitespace-nowrap text-grey-900">
+      <td class="px-4 py-4 whitespace-nowrap text-grey-900 dark:text-white">
         {BillingHelpers.dollar_money(!!@invoice["refund"], @invoice["amount_due"])}
       </td>
-      <td class="px-4 py-4 whitespace-nowrap text-grey-600">
+      <td class="px-4 py-4 whitespace-nowrap text-grey-600 dark:text-grey-300">
         {BillingHelpers.payment_card(@invoice["card"])}
       </td>
       <td class="px-4 py-4 whitespace-nowrap">
@@ -106,7 +114,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInvoices do
     assigns = %{}
 
     ~H"""
-    <span class="text-grey-400 italic" title="No payment method on file">Pay now</span>
+    <span class="text-grey-300 italic" title="No payment method on file">Pay now</span>
     """
   end
 
@@ -115,7 +123,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInvoices do
     assigns = %{}
 
     ~H"""
-    <span class="text-grey-400 italic" title="Subscription is not active">Pay now</span>
+    <span class="text-grey-300 italic" title="Subscription is not active">Pay now</span>
     """
   end
 

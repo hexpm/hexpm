@@ -34,11 +34,11 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
     assigns = assign(assigns, :form, Phoenix.Component.to_form(assigns.key_changeset, as: :key))
 
     ~H"""
-    <div class="bg-white rounded-lg shadow-sm border border-grey-200 p-8">
+    <div class="bg-white dark:bg-grey-800 rounded-lg shadow-sm border border-grey-200 dark:border-grey-700 p-8">
       <%!-- Header --%>
       <div class="mb-6">
-        <h2 class="text-xl font-semibold mb-2">Keys</h2>
-        <p class="text-sm text-grey-500">
+        <h2 class="text-xl font-semibold text-grey-900 dark:text-white mb-2">Keys</h2>
+        <p class="text-sm text-grey-500 dark:text-grey-300">
           Keys are used to authenticate and authorize clients to interact with the Hex API and repository.
         </p>
       </div>
@@ -47,16 +47,16 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
       <%= if @keys != [] do %>
         <.table>
           <:header>
-            <th class="px-0 py-3 text-left text-sm font-medium text-grey-500">
+            <th class="px-0 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
               Name
             </th>
-            <th class="px-4 py-3 text-left text-sm font-medium text-grey-500">
+            <th class="px-4 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
               Permissions
             </th>
-            <th class="px-4 py-3 text-left text-sm font-medium text-grey-500">
+            <th class="px-4 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
               Last Use
             </th>
-            <th class="px-4 py-3 text-right text-sm font-medium text-grey-500">
+            <th class="px-4 py-3 text-right text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
               Actions
             </th>
           </:header>
@@ -117,7 +117,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
     <tr>
       <%!-- Name Column --%>
       <td class="px-0 py-4">
-        <span class="text-base font-medium text-grey-800">
+        <span class="text-base font-medium text-grey-800 dark:text-white">
           {@key.name}
         </span>
       </td>
@@ -137,7 +137,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
       <td class="px-4 py-4">
         <%= if @key.last_use && @key.last_use.used_at do %>
           <.tooltip text={last_use_details(@key.last_use)}>
-            <span class="text-sm text-grey-600 cursor-help">
+            <span class="text-sm text-grey-600 dark:text-grey-300 cursor-help">
               {pretty_date(@key.last_use.used_at)} ...
             </span>
           </.tooltip>

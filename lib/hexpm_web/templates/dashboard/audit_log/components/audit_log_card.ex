@@ -15,18 +15,18 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
     assigns = assign(assigns, :grouped, grouped)
 
     ~H"""
-    <div class="bg-white rounded-lg shadow-sm border border-grey-200 p-8">
+    <div class="bg-white dark:bg-grey-800 rounded-lg shadow-sm border border-grey-200 dark:border-grey-700 p-8">
       <%!-- Header --%>
       <div class="mb-8">
-        <h2 class="text-xl font-semibold mb-2">Recent Activities</h2>
-        <p class="text-sm text-grey-500">
+        <h2 class="text-xl font-semibold text-grey-900 dark:text-white mb-2">Recent Activities</h2>
+        <p class="text-sm text-grey-500 dark:text-grey-300">
           A log of recent actions taken on your account.
         </p>
       </div>
 
       <%= if @audit_logs == [] do %>
-        <div class="text-center py-12 text-grey-500">
-          <span class="flex justify-center mb-3 text-grey-300">
+        <div class="text-center py-12 text-grey-500 dark:text-grey-300">
+          <span class="flex justify-center mb-3 text-grey-300 dark:text-grey-400">
             {icon(:heroicon, "clock", width: 40, height: 40)}
           </span>
           <p>No recent activities found.</p>
@@ -51,7 +51,7 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
     ~H"""
     <div>
       <%!-- Period label e.g. "THIS WEEK" / "EARLIER THIS MONTH" --%>
-      <p class="text-xs font-semibold tracking-wider uppercase text-grey-400 mb-4">
+      <p class="text-xs font-semibold tracking-wider uppercase text-grey-400 dark:text-grey-300 mb-4">
         {@period_label}
       </p>
 
@@ -77,22 +77,22 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
       <%!-- Left column: dot + connector line --%>
       <div class="flex flex-col items-center flex-shrink-0">
         <%!-- Circle dot --%>
-        <div class="w-8 h-8 rounded-full border-2 border-grey-200 bg-white flex items-center justify-center z-10 text-grey-400">
+        <div class="w-8 h-8 rounded-full border-2 border-grey-200 dark:border-grey-600 bg-white dark:bg-grey-900 flex items-center justify-center z-10 text-grey-400 dark:text-grey-300">
           {icon(:heroicon, @icon, width: 16, height: 16)}
         </div>
         <%!-- Vertical connector line (hidden on last item) --%>
         <%= unless @is_last do %>
-          <div class="w-px flex-1 bg-grey-200 my-1 min-h-[20px]"></div>
+          <div class="w-px flex-1 bg-grey-200 dark:bg-grey-700 my-1 min-h-[20px]"></div>
         <% end %>
       </div>
 
       <%!-- Right column: action text + date --%>
       <div class="pb-6 flex-1 min-w-0">
-        <p class="text-base font-medium text-grey-700 leading-6">
+        <p class="text-base font-medium text-grey-700 dark:text-grey-100 leading-6">
           {@description}
         </p>
         <p
-          class="text-xs font-medium text-grey-500 mt-0.5"
+          class="text-xs font-medium text-grey-500 dark:text-grey-300 mt-0.5"
           title={ViewHelpers.pretty_datetime(@log.inserted_at)}
         >
           {ViewHelpers.pretty_date(@log.inserted_at, :short)}

@@ -26,14 +26,14 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
 
   def email_management_card(assigns) do
     ~H"""
-    <div class="bg-white border border-grey-200 rounded-lg p-8">
+    <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-8">
       <%!-- Title --%>
-      <h2 class="text-grey-900 text-xl font-semibold mb-2">
+      <h2 class="text-grey-900 dark:text-white text-xl font-semibold mb-2">
         Email Settings
       </h2>
 
       <%!-- Info Text --%>
-      <p class="text-sm text-grey-500 mb-6">
+      <p class="text-sm text-grey-500 dark:text-grey-300 mb-6">
         The <strong class="font-semibold">primary</strong>
         email address will be used when Hex.pm communicates with you.
         The <strong class="font-semibold">public</strong>
@@ -43,13 +43,13 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
       <%!-- Email Table --%>
       <.table>
         <:header>
-          <th class="px-0 py-3 text-left text-sm font-medium text-grey-500">
+          <th class="px-0 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
             Email
           </th>
-          <th class="px-4 py-3 text-left text-sm font-medium text-grey-500">
+          <th class="px-4 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
             Status
           </th>
-          <th class="px-4 py-3 text-right text-sm font-medium text-grey-500">
+          <th class="px-4 py-3 text-right text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
             Actions
           </th>
         </:header>
@@ -96,7 +96,7 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
     <tr>
       <%!-- Email Column --%>
       <td class="px-0 py-4">
-        <span class="text-base font-medium text-grey-800 break-all">
+        <span class="text-base font-medium text-grey-800 dark:text-white break-all">
           {@email.email}
         </span>
       </td>

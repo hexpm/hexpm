@@ -20,11 +20,11 @@ defmodule HexpmWeb.Dashboard.Organization.Components.PackagesTab do
 
   def packages_tab(assigns) do
     ~H"""
-    <div class="bg-white border border-grey-200 rounded-lg overflow-hidden">
-      <div class="px-6 py-5 border-b border-grey-200 flex items-center justify-between">
+    <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden">
+      <div class="px-6 py-5 border-b border-grey-200 dark:border-grey-700 flex items-center justify-between">
         <div>
-          <h2 class="text-grey-900 text-lg font-semibold">Packages</h2>
-          <p class="text-grey-500 text-sm mt-1">
+          <h2 class="text-grey-900 dark:text-white text-lg font-semibold">Packages</h2>
+          <p class="text-grey-500 dark:text-grey-300 text-sm mt-1">
             {package_count(@packages)} {package_label(@packages)} in this organization
           </p>
         </div>
@@ -39,13 +39,13 @@ defmodule HexpmWeb.Dashboard.Organization.Components.PackagesTab do
 
       <%= if @packages == [] do %>
         <div class="py-20 flex flex-col items-center justify-center text-center px-6">
-          <div class="w-14 h-14 rounded-full bg-grey-100 flex items-center justify-center mb-4">
-            {icon(:heroicon, "cube", class: "w-7 h-7 text-grey-400")}
+          <div class="w-14 h-14 rounded-full bg-grey-100 dark:bg-grey-900 flex items-center justify-center mb-4">
+            {icon(:heroicon, "cube", class: "w-7 h-7 text-grey-400 dark:text-grey-300")}
           </div>
-          <h3 class="text-grey-900 text-base font-semibold mb-1">No packages yet</h3>
-          <p class="text-grey-500 text-sm max-w-sm">
+          <h3 class="text-grey-900 dark:text-white text-base font-semibold mb-1">No packages yet</h3>
+          <p class="text-grey-500 dark:text-grey-300 text-sm max-w-sm">
             Publish your first private package to this organization using
-            <code class="font-mono bg-grey-100 px-1.5 py-0.5 rounded text-xs">
+            <code class="font-mono bg-grey-100 dark:bg-grey-900 px-1.5 py-0.5 rounded text-xs text-grey-800 dark:text-grey-100">
               mix hex.publish --organization {@organization.name}
             </code>
           </p>
@@ -54,16 +54,16 @@ defmodule HexpmWeb.Dashboard.Organization.Components.PackagesTab do
         <div class="px-6">
           <.table>
             <:header>
-              <th class="px-0 py-3 text-left text-sm font-medium text-grey-500">
+              <th class="px-0 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
                 Package
               </th>
-              <th class="px-4 py-3 text-left text-sm font-medium text-grey-500">
+              <th class="px-4 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
                 Version
               </th>
-              <th class="px-4 py-3 text-left text-sm font-medium text-grey-500">
+              <th class="px-4 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
                 Downloads
               </th>
-              <th class="px-4 py-3 text-left text-sm font-medium text-grey-500">
+              <th class="px-4 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
                 Updated
               </th>
             </:header>
@@ -81,19 +81,22 @@ defmodule HexpmWeb.Dashboard.Organization.Components.PackagesTab do
 
   defp package_row(assigns) do
     ~H"""
-    <tr class="hover:bg-grey-50 transition-colors">
+    <tr class="hover:bg-grey-50 dark:hover:bg-grey-700 transition-colors">
       <td class="px-0 py-4">
         <a href={path_for_package(@package)} class="flex items-center gap-2">
-          <span class="text-sm font-medium text-grey-900">{@package.name}</span>
+          <span class="text-sm font-medium text-grey-900 dark:text-white">{@package.name}</span>
           <%= if @package.meta && @package.meta.description do %>
-            <span class="text-xs text-grey-400 truncate max-w-xs hidden lg:block">
+            <span class="text-xs text-grey-300 truncate max-w-xs hidden lg:block">
               — {@package.meta.description}
             </span>
           <% end %>
         </a>
       </td>
       <td class="px-4 py-4">
-        <a href={path_for_package(@package)} class="text-sm text-grey-600 font-mono">
+        <a
+          href={path_for_package(@package)}
+          class="text-sm text-grey-600 dark:text-grey-300 font-mono"
+        >
           <%= if @package.latest_release do %>
             v{@package.latest_release.version}
           <% else %>
@@ -102,12 +105,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.PackagesTab do
         </a>
       </td>
       <td class="px-4 py-4">
-        <a href={path_for_package(@package)} class="text-sm text-grey-600">
+        <a href={path_for_package(@package)} class="text-sm text-grey-600 dark:text-grey-300">
           {human_number_space(package_downloads(@package))}
         </a>
       </td>
       <td class="px-4 py-4">
-        <a href={path_for_package(@package)} class="text-sm text-grey-500">
+        <a href={path_for_package(@package)} class="text-sm text-grey-500 dark:text-grey-300">
           {pretty_date(@package.updated_at)}
         </a>
       </td>

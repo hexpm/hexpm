@@ -16,7 +16,7 @@ defmodule HexpmWeb do
   below.
   """
 
-  def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)
+  def static_paths, do: ~w(assets fonts images favicon.ico robots.txt reports)
 
   def controller() do
     quote do

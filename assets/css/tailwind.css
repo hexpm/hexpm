@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
 /* Tell Tailwind where to scan for classes */
 @source "../lib";
@@ -13,9 +14,6 @@
 html, body {
   font-size: 16px;
 }
-
-/* Google Fonts: Inter + JetBrains Mono */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
 
 /*
  * Hex.pm Design System
@@ -120,6 +118,7 @@ html, body {
   --color-red-50: #faf4f5;
 
   /* Grey Palette (Text & UI) */
+  --color-grey-950: #02060d;
   --color-grey-900: #030913;
   --color-grey-800: #0d1829;
   --color-grey-700: #1c2a3a;
@@ -165,6 +164,14 @@ html, body {
     -moz-osx-font-smoothing: grayscale;
   }
 
+  html[data-theme="light"] {
+    color-scheme: light;
+  }
+
+  html[data-theme="dark"] {
+    color-scheme: dark;
+  }
+
   body {
     font-family: var(--font-sans);
     color: var(--color-grey-700);
@@ -183,6 +190,12 @@ html, body {
   pre {
     font-family: var(--font-mono);
   }
+
+  html[data-theme="dark"] body {
+    color: var(--color-grey-200);
+    background-color: var(--color-grey-800);
+  }
+
 }
 
 /* ===== MARKDOWN / PROSE STYLES ===== */
@@ -246,6 +259,34 @@ html, body {
 .prose pre code {
   background: none;
   padding: 0;
+}
+
+/* Theme toggle icon state — controlled by data-theme-preference on <html> */
+[data-theme-toggle] [data-theme-icon] {
+  display: none;
+}
+
+html[data-theme-preference="light"] [data-theme-toggle] [data-theme-icon="light"] {
+  display: inline-flex;
+}
+
+html[data-theme-preference="dark"] [data-theme-toggle] [data-theme-icon="dark"] {
+  display: inline-flex;
+}
+
+html[data-theme-preference="system"] [data-theme-toggle] [data-theme-icon="system"] {
+  display: inline-flex;
+}
+
+/* Highlight active choice in theme menu */
+[data-theme-menu] [data-theme-choice] {
+  font-weight: normal;
+}
+
+html[data-theme-preference="light"] [data-theme-menu] [data-theme-choice="light"],
+html[data-theme-preference="dark"] [data-theme-menu] [data-theme-choice="dark"],
+html[data-theme-preference="system"] [data-theme-menu] [data-theme-choice="system"] {
+  font-weight: 600;
 }
 
 /* ===== LEGACY UTILITY CLASSES ===== */
@@ -329,12 +370,21 @@ html, body {
   background-color: #f8d7da;
 }
 
+html[data-theme="dark"] .read-only-mode {
+  color: var(--color-red-100);
+  background-color: var(--color-red-800);
+}
+
 /* Inline form validation (view_helpers.ex) */
 .form-error {
   display: block;
   margin-top: 5px;
   margin-bottom: 10px;
   color: #a94442;
+}
+
+html[data-theme="dark"] .form-error {
+  color: var(--color-red-300);
 }
 
 .form-input-error {

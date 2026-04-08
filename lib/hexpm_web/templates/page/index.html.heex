@@ -1,6 +1,6 @@
 <%!-- Hero Section --%>
-<div class="bg-white">
-  <div class="bg-grey-50 pb-6">
+<div class="bg-white dark:bg-grey-950">
+  <div class="bg-grey-50 dark:bg-grey-700 pb-6">
     <div class="max-w-6xl mx-auto px-4 pt-6 pb-4 md:pt-20 md:pb-24 lg:pb-14">
       <%!-- Mobile: centered layout with image on top --%>
       <div class="flex flex-col items-center text-center lg:hidden">
@@ -9,18 +9,18 @@
           alt="Packages"
           class="w-full max-w-sm -mb-8"
         />
-        <h1 class="relative text-grey-800 text-2xl font-semibold leading-8 mb-6">
+        <h1 class="relative text-grey-800 dark:text-white text-2xl font-semibold leading-8 mb-6">
           The package manager<br />for the Erlang ecosystem
         </h1>
         <a
           href={~p"/docs/usage"}
-          class="inline-flex items-center gap-3 px-8 py-4 border-[1.5px] border-primary-600 bg-transparent text-primary-600 font-medium text-base rounded-xl hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all duration-200 mb-4"
+          class="inline-flex items-center gap-3 px-8 py-4 border-[1.5px] border-primary-600 bg-transparent text-primary-600 dark:bg-primary-600 dark:text-white dark:border-primary-600 font-medium text-base rounded-xl hover:bg-primary-600 hover:text-white hover:border-primary-600 dark:hover:bg-primary-500 dark:hover:border-primary-500 transition-all duration-200 mb-4"
         >
           Getting Started {icon(:heroicon, "arrow-right", class: "size-4")}
         </a>
         <a
           href={~p"/docs/publish"}
-          class="text-grey-500 font-medium text-base hover:text-grey-800 transition-colors"
+          class="text-grey-500 dark:text-grey-300 font-medium text-base hover:text-grey-800 dark:hover:text-white transition-colors"
         >
           Publish Packages
         </a>
@@ -29,20 +29,20 @@
       <%!-- Desktop: side-by-side layout --%>
       <div class="hidden lg:flex items-center gap-6">
         <div class="flex flex-col gap-8 flex-1 mb-24">
-          <h1 class="text-grey-800 text-4xl font-semibold leading-tight md:text-5xl md:leading-[60px]">
+          <h1 class="text-grey-800 dark:text-white text-4xl font-semibold leading-tight md:text-5xl md:leading-[60px]">
             The package manager<br />for the Erlang ecosystem
           </h1>
 
           <div class="flex flex-wrap items-center gap-14">
             <a
               href={~p"/docs/usage"}
-              class="inline-flex items-center gap-3 px-10 py-5 border-[1.5px] border-primary-600 bg-transparent text-primary-600 font-medium text-lg rounded-xl hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all duration-200"
+              class="inline-flex items-center gap-3 px-10 py-5 border-[1.5px] border-primary-600 bg-transparent text-primary-600 dark:bg-primary-600 dark:text-white dark:border-primary-600 font-medium text-lg rounded-xl hover:bg-primary-600 hover:text-white hover:border-primary-600 dark:hover:bg-primary-500 dark:hover:border-primary-500 transition-all duration-200"
             >
               Getting Started {icon(:heroicon, "arrow-right", class: "size-[18px]")}
             </a>
             <a
               href={~p"/docs/publish"}
-              class="text-grey-600 font-medium text-lg hover:text-grey-800 transition-colors"
+              class="text-grey-600 dark:text-grey-300 font-medium text-lg hover:text-grey-800 dark:hover:text-white transition-colors"
             >
               Publish Packages
             </a>
@@ -95,7 +95,7 @@
   <%!-- <.companies_section /> --%>
 
   <%!-- Getting Started Section --%>
-  <div class="bg-white py-4">
+  <div class="bg-white dark:bg-grey-950 py-4">
     <div class="max-w-7xl mx-auto px-4">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <.feature_card icon="cloud-arrow-down" title="Getting started" href={~p"/docs/usage"}>
@@ -130,7 +130,7 @@
   </div>
 
   <%!-- Package columns section --%>
-  <div class="bg-white">
+  <div class="bg-white dark:bg-grey-950">
     <div class="max-w-7xl mx-auto px-4 py-8 lg:py-16">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
         <%!-- Most Downloaded --%>
@@ -247,7 +247,7 @@
 
   <%!-- Stats section --%>
   <%!-- Mobile: White section with single column stats --%>
-  <div class="bg-white mt-24 xs:mt-42 sm:mt-64 md:mt-[480px] lg:mt-24 py-12 relative z-10 lg:hidden">
+  <div class="bg-white dark:bg-grey-950 mt-24 xs:mt-42 sm:mt-64 md:mt-[480px] lg:mt-24 py-12 relative z-10 lg:hidden">
     <div class="max-w-7xl mx-auto px-4">
       <div class="flex flex-col gap-6">
         <div class="grid grid-cols-2 gap-6">
@@ -272,7 +272,7 @@
   </div>
 
   <%!-- Desktop: White section with 2x2 grid and image overflow space --%>
-  <div class="hidden lg:block bg-white -mt-20 md:-mt-32 pb-24 relative z-10">
+  <div class="hidden lg:block bg-white dark:bg-grey-950 -mt-20 md:-mt-32 pb-24 relative z-10">
     <div class="max-w-7xl mx-auto px-4 pt-16 md:pb-16">
       <div class="flex flex-col lg:flex-row gap-12">
         <%!-- Left side: Stats (2x2 grid) --%>

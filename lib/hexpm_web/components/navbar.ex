@@ -25,7 +25,7 @@ defmodule HexpmWeb.Components.Navbar do
 
   def header(assigns) do
     ~H"""
-    <nav id="main-navbar" class="bg-grey-900 w-full font-sans">
+    <nav id="main-navbar" class="bg-grey-800 w-full font-sans">
       <div class="max-w-7xl mx-auto px-4">
         <div class="flex items-center justify-between h-[72px] gap-8 lg:gap-20">
           <.logo />
@@ -66,6 +66,7 @@ defmodule HexpmWeb.Components.Navbar do
     <div class="hidden lg:flex items-center flex-1 justify-end gap-10">
       <.search_form :if={@show_search} search={@search} autofocus={@autofocus_search} />
       <.nav_links />
+      <.theme_toggle />
       <.auth_section current_user={@current_user} />
     </div>
     """
@@ -127,8 +128,68 @@ defmodule HexpmWeb.Components.Navbar do
         class="w-5 h-5 rounded-full"
         alt={@current_user.username}
       />
+      <.theme_toggle compact />
       <.mobile_search_toggle :if={@show_search} />
       <.mobile_menu_toggle />
+    </div>
+    """
+  end
+
+  attr :class, :string, default: ""
+  attr :compact, :boolean, default: false
+
+  defp theme_toggle(assigns) do
+    ~H"""
+    <div class={["relative flex items-center", @class]}>
+      <button
+        type="button"
+        data-theme-toggle
+        class={[
+          "inline-flex items-center justify-center text-grey-200 transition-colors hover:text-white cursor-pointer",
+          @compact && "h-10 w-10",
+          !@compact && "h-5 w-5"
+        ]}
+        aria-label="Change theme"
+        aria-haspopup="true"
+      >
+        <span class="sr-only">Change color theme</span>
+        <span data-theme-icon="light">
+          {icon(:heroicon, "sun", width: 18, height: 18)}
+        </span>
+        <span data-theme-icon="dark">
+          {icon(:heroicon, "moon", width: 18, height: 18)}
+        </span>
+        <span data-theme-icon="system">
+          {icon(:heroicon, "computer-desktop", width: 18, height: 18)}
+        </span>
+      </button>
+
+      <div
+        data-theme-menu
+        class="hidden absolute right-0 mt-2 w-36 bg-grey-700 border border-grey-600 rounded-lg shadow-lg py-1 z-50"
+      >
+        <button
+          type="button"
+          data-theme-choice="light"
+          class="w-full flex items-center gap-2 px-4 py-2 text-sm text-grey-200 hover:bg-grey-600 transition-colors cursor-pointer"
+        >
+          {icon(:heroicon, "sun", width: 16, height: 16)} Light
+        </button>
+        <button
+          type="button"
+          data-theme-choice="dark"
+          class="w-full flex items-center gap-2 px-4 py-2 text-sm text-grey-200 hover:bg-grey-600 transition-colors cursor-pointer"
+        >
+          {icon(:heroicon, "moon", width: 16, height: 16)} Dark
+        </button>
+        <button
+          type="button"
+          data-theme-choice="system"
+          class="w-full flex items-center gap-2 px-4 py-2 text-sm text-grey-200 hover:bg-grey-600 transition-colors cursor-pointer"
+        >
+          {icon(:heroicon, "computer-desktop", width: 16, height: 16)} System
+        </button>
+      </div>
     </div>
     """
   end
@@ -137,7 +198,7 @@ defmodule HexpmWeb.Components.Navbar do
 
   defp mobile_search_bar(assigns) do
     ~H"""
-    <div id="mobile-search-bar" class="hidden lg:hidden! bg-grey-900 pb-4">
+    <div id="mobile-search-bar" class="hidden lg:hidden! bg-grey-800 pb-4">
       <form role="search" action={~p"/packages"}>
         <div class="relative">
           <div class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -162,7 +223,7 @@ defmodule HexpmWeb.Components.Navbar do
 
   defp mobile_menu(assigns) do
     ~H"""
-    <div id="navbar-mobile" class="hidden lg:hidden! bg-grey-900 pb-6">
+    <div id="navbar-mobile" class="hidden lg:hidden! bg-grey-800 pb-6">
       <div class="flex flex-col">
         <.mobile_nav_links />
         <.mobile_auth_section current_user={@current_user} />

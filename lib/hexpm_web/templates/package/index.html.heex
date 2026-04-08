@@ -1,12 +1,12 @@
 <%!-- Package Index Page --%>
-<div class="bg-white min-h-dvh">
+<div class="bg-white dark:bg-grey-950 min-h-dvh">
   <div class="max-w-7xl mx-auto px-4 py-8 lg:py-12">
     <%!-- Header --%>
     <div class="mb-8">
-      <h1 class="text-grey-900 text-4xl font-bold mb-2">
+      <h1 class="text-grey-900 dark:text-grey-100 text-4xl font-bold mb-2">
         Packages
       </h1>
-      <p class="text-grey-600 text-lg">
+      <p class="text-grey-600 dark:text-grey-300 text-lg">
         Browse and discover packages for the Erlang ecosystem
       </p>
     </div>
@@ -18,7 +18,7 @@
 
     <%!-- Exact Match Section --%>
     <%= if @exact_match do %>
-      <div class="mb-6 bg-green-50 border border-green-200 rounded-xl p-6">
+      <div class="mb-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-6">
         <div class="flex items-center gap-2 mb-4">
           <svg
             class="size-5 text-green-600"
@@ -33,9 +33,9 @@
               d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <h3 class="text-green-900 font-semibold text-lg">Exact Match</h3>
+          <h3 class="text-green-900 dark:text-green-200 font-semibold text-lg">Exact Match</h3>
         </div>
-        <ul class="bg-white rounded-lg overflow-hidden">
+        <ul class="bg-white dark:bg-grey-800 rounded-lg overflow-hidden divide-y divide-grey-200 dark:divide-grey-700">
           {render("_package.html",
             exact_match?: true,
             package: @exact_match,
@@ -48,7 +48,7 @@
 
     <%!-- No Results --%>
     <%= if !@exact_match and @packages == [] do %>
-      <div class="bg-grey-50 rounded-xl p-12 text-center">
+      <div class="bg-grey-50 dark:bg-grey-800 rounded-xl p-12 text-center">
         <svg
           class="mx-auto size-16 text-grey-300 mb-4"
           fill="none"
@@ -62,8 +62,10 @@
             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
           />
         </svg>
-        <h3 class="text-grey-900 text-2xl font-semibold mb-2">No Results Found</h3>
-        <p class="text-grey-600">
+        <h3 class="text-grey-900 dark:text-grey-100 text-2xl font-semibold mb-2">
+          No Results Found
+        </h3>
+        <p class="text-grey-600 dark:text-grey-300">
           Try adjusting your search or browse by letter above
         </p>
       </div>
@@ -76,17 +78,17 @@
       <%!-- Results Header with Sort Selector --%>
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h2 class="text-grey-900 text-2xl font-semibold">
+          <h2 class="text-grey-900 dark:text-grey-100 text-2xl font-semibold">
             {if @exact_match, do: "Search Results", else: "All Packages"}
           </h2>
           <div class="flex items-center gap-3 mt-1">
-            <p class="text-grey-600">
+            <p class="text-grey-600 dark:text-grey-300">
               {@package_count} {if @package_count == 1, do: "package", else: "packages"} found
             </p>
             <% total_pages = ceil(@package_count / @per_page) %>
             <%= if total_pages > 1 do %>
-              <span class="text-grey-400">•</span>
-              <p class="text-grey-600 font-medium">
+              <span class="text-grey-400 dark:text-grey-300">•</span>
+              <p class="text-grey-600 dark:text-grey-300 font-medium">
                 Page {@page} of {total_pages}
               </p>
             <% end %>
@@ -100,8 +102,8 @@
       </div>
 
       <%!-- Package List --%>
-      <div class="bg-white border border-grey-200 rounded-xl overflow-hidden">
-        <ul class="divide-y divide-grey-200">
+      <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-xl overflow-hidden">
+        <ul class="divide-y divide-grey-200 dark:divide-grey-700">
           <%= for package <- @packages do %>
             {render("_package.html",
               exact_match?: false,

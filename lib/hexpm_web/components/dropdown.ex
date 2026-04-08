@@ -33,7 +33,7 @@ defmodule HexpmWeb.Components.Dropdown do
         assigns,
         :computed_button_class,
         assigns.button_class ||
-          "border border-grey-200 rounded-lg px-3 py-2 text-grey-400 text-sm font-medium flex items-center gap-1 hover:border-grey-300 transition-colors bg-white"
+          "border border-grey-200 rounded-lg px-3 py-2 text-grey-400 text-sm font-medium flex items-center gap-1 hover:border-grey-300 transition-colors bg-white dark:bg-grey-800 dark:border-grey-600 dark:text-grey-300 dark:hover:border-grey-500"
       )
 
     ~H"""
@@ -49,7 +49,7 @@ defmodule HexpmWeb.Components.Dropdown do
 
       <div
         id={"#{@id}-menu"}
-        class="hidden absolute right-0 mt-2 w-48 bg-white border border-grey-200 rounded-lg shadow-lg py-2 z-10"
+        class="hidden absolute right-0 mt-2 w-48 bg-white border border-grey-200 rounded-lg shadow-lg py-2 z-10 dark:bg-grey-800 dark:border-grey-600"
         phx-click-away={hide_dropdown(@id)}
       >
         {render_slot(@inner_block)}
@@ -76,7 +76,7 @@ defmodule HexpmWeb.Components.Dropdown do
         assigns,
         :computed_class,
         assigns.class ||
-          "block px-4 py-2 text-sm hover:bg-grey-50 text-grey-700 hover:text-grey-900"
+          "block px-4 py-2 text-sm hover:bg-grey-50 text-grey-700 hover:text-grey-900 dark:text-grey-200 dark:hover:bg-grey-700 dark:hover:text-white"
       )
 
     ~H"""

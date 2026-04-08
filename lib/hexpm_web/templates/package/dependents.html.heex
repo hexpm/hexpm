@@ -10,22 +10,24 @@
   repository_name={@repository_name}
 >
   <:inner_content>
-    <div class="bg-white border border-grey-200 rounded-xl overflow-hidden">
-      <div class="px-5 py-4 border-b border-grey-200 flex items-center justify-between">
-        <h2 class="text-grey-900 text-xl font-semibold">
+    <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-xl overflow-hidden">
+      <div class="px-5 py-4 border-b border-grey-200 dark:border-grey-700 flex items-center justify-between">
+        <h2 class="text-grey-900 dark:text-grey-100 text-xl font-semibold">
           Packages depending on <span class="font-mono">{@package.name}</span>
         </h2>
-        <span class="text-sm text-grey-500">
+        <span class="text-sm text-grey-400 dark:text-grey-300">
           {@dependants_count} {if @dependants_count == 1, do: "package", else: "packages"}
         </span>
       </div>
 
       <%= if Enum.empty?(@dependants) do %>
         <div class="py-12 text-center">
-          <p class="text-grey-500 text-sm">No packages depend on {@package.name} yet.</p>
+          <p class="text-grey-500 dark:text-grey-300 text-sm">
+            No packages depend on {@package.name} yet.
+          </p>
         </div>
       <% else %>
-        <ul class="divide-y divide-grey-200">
+        <ul class="divide-y divide-grey-200 dark:divide-grey-700">
           <%= for package <- @dependants do %>
             {render("_package.html",
               package: package,

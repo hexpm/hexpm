@@ -14,7 +14,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.OrgTabNav do
   def org_tab_nav(assigns) do
     ~H"""
     <div>
-      <div class="border-b border-grey-200 mb-4 sm:mb-6">
+      <div class="border-b border-grey-200 dark:border-grey-800 mb-4 sm:mb-6">
         <nav
           class="-mb-px flex gap-1 overflow-x-auto scrollbar-hide touch-pan-x"
           aria-label="Organization tabs"
@@ -26,8 +26,9 @@ defmodule HexpmWeb.Dashboard.Organization.Components.OrgTabNav do
                 "whitespace-nowrap px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium border-b-2 transition-colors",
                 "min-h-[44px] flex items-center",
                 if(active?(@conn, tab),
-                  do: "border-purple-600 text-purple-600",
-                  else: "border-transparent text-grey-500 hover:text-grey-700 hover:border-grey-300"
+                  do: "border-purple-600 dark:border-purple-300 text-purple-600 dark:text-purple-300",
+                  else:
+                    "border-transparent text-grey-500 dark:text-grey-300 hover:text-grey-700 dark:hover:text-grey-100 hover:border-grey-300 dark:hover:border-grey-700"
                 )
               ]}
             >

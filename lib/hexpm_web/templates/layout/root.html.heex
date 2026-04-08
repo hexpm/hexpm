@@ -6,8 +6,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description(assigns)} />
     <meta name="sogou_site_verification" content="GrtyJPARqi" />
+    <meta name="color-scheme" content="light dark" />
 
     <title>{title(assigns)}</title>
+
+    <script nonce={@script_src_nonce}>
+      (() => {
+        const storageKey = "hexpm-theme";
+
+        let storedTheme = null;
+
+        try {
+          storedTheme = window.localStorage.getItem(storageKey);
+        } catch (_error) {}
+
+        const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
+
+        const preference = storedTheme === "light" || storedTheme === "dark" ? storedTheme : "system";
+        const theme = preference === "system" ? systemTheme : preference;
+
+        document.documentElement.setAttribute("data-theme", theme);
+        document.documentElement.setAttribute("data-theme-preference", preference);
+        document.documentElement.style.colorScheme = theme;
+      })();
+    </script>
 
     {og_tags(assigns)}
     {canonical_url(assigns)}
@@ -19,6 +43,11 @@
       type="application/opensearchdescription+xml"
       title="Hex"
       href="/hexsearch.xml"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+      nonce={@style_src_nonce}
     />
     <link rel="stylesheet" href={~p"/assets/app.css"} nonce={@style_src_nonce} />
     <link rel="alternate" type="application/rss+xml" title="RSS - Blog" href="/feeds/blog.xml" />
