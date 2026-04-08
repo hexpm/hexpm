@@ -233,6 +233,31 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
           <%= if @stripe_publishable_key do %>
             <script nonce={@script_src_nonce}>
               (function() {
+                function showFlashError(message) {
+                  var container = document.getElementById('flash-container');
+                  if (container) {
+                    var div = document.createElement('div');
+                    div.className = 'flash-message flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg pointer-events-auto max-w-md w-full animate-[flash-autodismiss_10s_ease-in-out_forwards] bg-red-100 border-red-300';
+                    div.setAttribute('role', 'alert');
+
+                    var msg = document.createElement('div');
+                    msg.className = 'flex-1 text-small leading-5 text-red-800';
+                    msg.textContent = message;
+
+                    var btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'shrink-0 -mr-1 mt-[2px] p-1 rounded transition-colors hover:bg-red-200';
+                    btn.setAttribute('aria-label', 'Dismiss');
+                    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg>';
+                    btn.addEventListener('click', function() { div.remove(); });
+
+                    div.appendChild(msg);
+                    div.appendChild(btn);
+                    container.innerHTML = '';
+                    container.appendChild(div);
+                  }
+                }
+
                 var addSeatsForm = document.getElementById('add-seats-form');
                 if (addSeatsForm) {
                   addSeatsForm.addEventListener('submit', async function(event) {
@@ -278,14 +303,14 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
                       submitButton.textContent = 'Payment confirmed! Adding seats...';
                       addSeatsForm.submit();
                     } catch (error) {
-                      var flash = document.getElementById('flash-container');
-                      if (flash) {
-                        flash.innerHTML =
-                          '<div class="flash-message flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg bg-red-100 border-red-300" role="alert">' +
-                          '<div class="flex-1 text-small leading-5 text-red-800">' +
-                          (error.message || 'Payment failed. Try again.') +
-                          '</div></div>';
+                      var modal = document.getElementById('add-seats-modal');
+                      if (modal) {
+                        modal.classList.add('hidden');
+                        document.getElementById('add-seats-modal-backdrop').classList.add('hidden');
+                        document.getElementById('add-seats-modal-content').classList.add('hidden');
+                        document.body.classList.remove('overflow-hidden');
                       }
+                      showFlashError(error.message || 'Payment failed. Try again.');
                       document.getElementById('add-seats-nonce').value = crypto.randomUUID();
                       submitButton.textContent = 'Add seats';
                       submitButton.disabled = false;
@@ -317,14 +342,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
                           button.textContent = 'Payment confirmed!';
                           setTimeout(function() { window.location.reload(); }, 2000);
                         } catch (error) {
-                          var flash = document.getElementById('flash-container');
-                          if (flash) {
-                            flash.innerHTML =
-                              '<div class="flash-message flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg bg-red-100 border-red-300" role="alert">' +
-                              '<div class="flex-1 text-small leading-5 text-red-800">' +
-                              (error.message || 'Authentication failed. Try again.') +
-                              '</div></div>';
-                          }
+                          showFlashError(error.message || 'Authentication failed. Try again.');
                           button.disabled = false;
                           button.textContent = 'Authenticate payment';
                         }

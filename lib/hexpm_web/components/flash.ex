@@ -19,8 +19,8 @@ defmodule HexpmWeb.Components.Flash do
     <div
       id={@id}
       class={[
-        "flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg",
-        "animate-[flash-autodismiss_7s_ease-in-out_forwards]",
+        "flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg pointer-events-auto max-w-md w-full",
+        "animate-[flash-autodismiss_10s_ease-in-out_forwards]",
         flash_bg_color(@type),
         flash_border_color(@type),
         "flash-message",

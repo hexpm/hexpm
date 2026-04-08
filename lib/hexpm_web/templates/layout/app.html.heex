@@ -20,66 +20,68 @@
     />
 
     <%= unless assigns[:error] || assigns[:custom_flash] do %>
-      <div
-        id="flash-container"
-        class="fixed top-22 right-4 z-50 flex flex-col gap-3 max-w-md w-full px-4"
-      >
-        <%= if flash = Phoenix.Flash.get(@flash, :raw_error) do %>
-          {HexpmWeb.Components.Flash.flash_message(%{
-            id: "flash-error-raw",
-            type: :error,
-            message: raw(flash)
-          })}
-        <% end %>
-        <%= if flash = Phoenix.Flash.get(@flash, :error) do %>
-          {HexpmWeb.Components.Flash.flash_message(%{
-            id: "flash-error",
-            type: :error,
-            message: flash
-          })}
-        <% end %>
-        <%= if flash = Phoenix.Flash.get(@flash, :raw_warning) do %>
-          {HexpmWeb.Components.Flash.flash_message(%{
-            id: "flash-warning-raw",
-            type: :warning,
-            message: raw(flash)
-          })}
-        <% end %>
-        <%= if flash = Phoenix.Flash.get(@flash, :warning) do %>
-          {HexpmWeb.Components.Flash.flash_message(%{
-            id: "flash-warning",
-            type: :warning,
-            message: flash
-          })}
-        <% end %>
-        <%= if flash = Phoenix.Flash.get(@flash, :raw_info) do %>
-          {HexpmWeb.Components.Flash.flash_message(%{
-            id: "flash-info-raw",
-            type: :info,
-            message: raw(flash)
-          })}
-        <% end %>
-        <%= if flash = Phoenix.Flash.get(@flash, :info) do %>
-          {HexpmWeb.Components.Flash.flash_message(%{
-            id: "flash-info",
-            type: :info,
-            message: flash
-          })}
-        <% end %>
-        <%= if flash = Phoenix.Flash.get(@flash, :raw_success) do %>
-          {HexpmWeb.Components.Flash.flash_message(%{
-            id: "flash-success-raw",
-            type: :success,
-            message: raw(flash)
-          })}
-        <% end %>
-        <%= if flash = Phoenix.Flash.get(@flash, :success) do %>
-          {HexpmWeb.Components.Flash.flash_message(%{
-            id: "flash-success",
-            type: :success,
-            message: flash
-          })}
-        <% end %>
+      <div class="sticky top-4 z-50 h-0 pointer-events-none">
+        <div
+          id="flash-container"
+          class="max-w-7xl mx-auto px-4 flex flex-col items-end gap-3 pt-3"
+        >
+          <%= if flash = Phoenix.Flash.get(@flash, :raw_error) do %>
+            {HexpmWeb.Components.Flash.flash_message(%{
+              id: "flash-error-raw",
+              type: :error,
+              message: raw(flash)
+            })}
+          <% end %>
+          <%= if flash = Phoenix.Flash.get(@flash, :error) do %>
+            {HexpmWeb.Components.Flash.flash_message(%{
+              id: "flash-error",
+              type: :error,
+              message: flash
+            })}
+          <% end %>
+          <%= if flash = Phoenix.Flash.get(@flash, :raw_warning) do %>
+            {HexpmWeb.Components.Flash.flash_message(%{
+              id: "flash-warning-raw",
+              type: :warning,
+              message: raw(flash)
+            })}
+          <% end %>
+          <%= if flash = Phoenix.Flash.get(@flash, :warning) do %>
+            {HexpmWeb.Components.Flash.flash_message(%{
+              id: "flash-warning",
+              type: :warning,
+              message: flash
+            })}
+          <% end %>
+          <%= if flash = Phoenix.Flash.get(@flash, :raw_info) do %>
+            {HexpmWeb.Components.Flash.flash_message(%{
+              id: "flash-info-raw",
+              type: :info,
+              message: raw(flash)
+            })}
+          <% end %>
+          <%= if flash = Phoenix.Flash.get(@flash, :info) do %>
+            {HexpmWeb.Components.Flash.flash_message(%{
+              id: "flash-info",
+              type: :info,
+              message: flash
+            })}
+          <% end %>
+          <%= if flash = Phoenix.Flash.get(@flash, :raw_success) do %>
+            {HexpmWeb.Components.Flash.flash_message(%{
+              id: "flash-success-raw",
+              type: :success,
+              message: raw(flash)
+            })}
+          <% end %>
+          <%= if flash = Phoenix.Flash.get(@flash, :success) do %>
+            {HexpmWeb.Components.Flash.flash_message(%{
+              id: "flash-success",
+              type: :success,
+              message: flash
+            })}
+          <% end %>
+        </div>
       </div>
     <% end %>
 
