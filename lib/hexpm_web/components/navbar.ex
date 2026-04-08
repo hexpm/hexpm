@@ -159,7 +159,7 @@ defmodule HexpmWeb.Components.Navbar do
 
       <div
         data-theme-menu
-        class="hidden absolute right-0 mt-2 w-36 bg-grey-700 border border-grey-600 rounded-lg shadow-lg py-1 z-50"
+        class="hidden absolute right-0 top-full mt-2 w-36 bg-grey-700 border border-grey-600 rounded-lg shadow-lg py-1 z-50"
       >
         <button
           type="button"
