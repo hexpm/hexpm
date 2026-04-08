@@ -170,17 +170,17 @@ defmodule HexpmWeb.Components.Navbar do
         </button>
         <button
           type="button"
-          data-theme-choice="system"
-          class="w-full flex items-center gap-2 px-4 py-2 text-sm text-grey-200 hover:bg-grey-600 transition-colors cursor-pointer"
-        >
-          {icon(:heroicon, "computer-desktop", width: 16, height: 16)} System
-        </button>
-        <button
-          type="button"
           data-theme-choice="dark"
           class="w-full flex items-center gap-2 px-4 py-2 text-sm text-grey-200 hover:bg-grey-600 transition-colors cursor-pointer"
         >
           {icon(:heroicon, "moon", width: 16, height: 16)} Dark
+        </button>
+        <button
+          type="button"
+          data-theme-choice="system"
+          class="w-full flex items-center gap-2 px-4 py-2 text-sm text-grey-200 hover:bg-grey-600 transition-colors cursor-pointer"
+        >
+          {icon(:heroicon, "computer-desktop", width: 16, height: 16)} System
         </button>
       </div>
     </div>

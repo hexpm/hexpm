@@ -7,7 +7,6 @@
       (() => {
         const theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
         document.documentElement.setAttribute("data-theme", theme);
-        document.documentElement.style.colorScheme = theme;
       })();
     </script>
     <style nonce={@style_src_nonce}>
@@ -30,7 +29,6 @@
         function applyTheme(theme) {
           if (theme !== "light" && theme !== "dark") return;
           document.documentElement.setAttribute("data-theme", theme);
-          document.documentElement.style.colorScheme = theme;
         }
         function sendHeight() {
           var height = document.body.scrollHeight;

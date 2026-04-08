@@ -20,7 +20,7 @@ defmodule HexpmWeb.ReadmeView do
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { overflow: hidden; }
-    html { color-scheme: light !important; }
+    html { color-scheme: light; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.6; color: var(--color-grey-700); padding: 0; }
     .readme { max-width: 100%; overflow-wrap: break-word; word-wrap: break-word; }
     .readme h1, .readme h2, .readme h3, .readme h4, .readme h5, .readme h6 { margin-top: 24px; margin-bottom: 16px; font-weight: 600; line-height: 1.25; }
@@ -34,7 +34,7 @@ defmodule HexpmWeb.ReadmeView do
     .readme img { max-width: 100%; height: auto; margin: 2px; }
     .readme pre { padding: 1rem; overflow-x: auto; background-color: var(--color-grey-900); border-radius: 0.5rem; margin-bottom: 1rem; }
     .readme .highlight,
-    .readme .highlight pre { background: var(--color-grey-900) !important; }
+    .readme .highlight pre { background: var(--color-grey-900); }
     .readme code { padding: 0.125rem 0.375rem; font-size: 0.875rem; background-color: var(--color-grey-50); border-radius: 0.25rem; font-family: ui-monospace, monospace; color: var(--color-grey-800); }
     .readme pre code { padding: 0; background: transparent; font-size: 0.875rem; color: var(--color-grey-100); }
     .readme blockquote { padding: 0 1em; color: var(--color-grey-500); border-left: 0.25em solid var(--color-grey-100); margin-bottom: 16px; }
@@ -58,10 +58,10 @@ defmodule HexpmWeb.ReadmeView do
     html[data-theme="dark"] body { color: var(--color-grey-200); background-color: var(--color-grey-800); }
     html[data-theme="dark"] .readme h1, html[data-theme="dark"] .readme h2 { border-bottom-color: var(--color-grey-600); }
     html[data-theme="dark"] .readme a { color: var(--color-blue-300); }
-    html[data-theme="dark"] .readme code:not(pre code) { background-color: var(--color-grey-800); color: var(--color-grey-100); }
+    html[data-theme="dark"] .readme code:not(pre code) { background-color: var(--color-grey-900); color: var(--color-grey-100); }
     html[data-theme="dark"] .readme pre { background-color: var(--color-grey-900); }
     html[data-theme="dark"] .readme .highlight,
-    html[data-theme="dark"] .readme .highlight pre { background: var(--color-grey-900) !important; }
+    html[data-theme="dark"] .readme .highlight pre { background: var(--color-grey-900); }
     html[data-theme="dark"] .readme pre code { background-color: transparent; color: var(--color-grey-100); }
     html[data-theme="dark"] .readme blockquote { color: var(--color-grey-300); border-left-color: var(--color-grey-500); }
     html[data-theme="dark"] .readme table th, html[data-theme="dark"] .readme table td { border-color: var(--color-grey-600); }
