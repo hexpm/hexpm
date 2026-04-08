@@ -7,6 +7,10 @@ defmodule HexpmWeb.LayoutView do
     Map.get(assigns, :hide_search) != true
   end
 
+  def autofocus_search?(assigns) do
+    Map.get(assigns, :autofocus_search, false)
+  end
+
   def title(assigns) do
     if title = Map.get(assigns, :title) do
       "#{title} | Hex"
