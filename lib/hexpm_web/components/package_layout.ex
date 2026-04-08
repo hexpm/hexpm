@@ -17,7 +17,6 @@ defmodule HexpmWeb.Components.PackageLayout do
     statics: HexpmWeb.static_paths()
 
   import HexpmWeb.Components.Badge
-  import HexpmWeb.Components.Icons
 
   alias HexpmWeb.ViewHelpers
 
@@ -31,7 +30,6 @@ defmodule HexpmWeb.Components.PackageLayout do
 
   # Sidebar data — same on all tabs
   attr :docs_html_url, :string, default: nil
-  attr :docs_tarball_url, :string, default: nil
   attr :downloads, :map, default: %{}
   attr :daily_graph, :list, default: []
   attr :owners, :list, default: []
@@ -43,13 +41,6 @@ defmodule HexpmWeb.Components.PackageLayout do
   slot :inner_content, required: true
 
   def package_layout(assigns) do
-    links = Enum.to_list(assigns.package.meta.links || [])
-
-    github_link =
-      Enum.find(links, fn {name, _url} ->
-        String.downcase(to_string(name)) =~ "github"
-      end)
-
     tools = [mix: "mix.exs", rebar: "rebar.config", erlang_mk: "erlang.mk"]
 
     {graph_labels, graph_points, graph_fill} =
@@ -63,7 +54,6 @@ defmodule HexpmWeb.Components.PackageLayout do
 
     assigns =
       assigns
-      |> assign(:github_link, github_link)
       |> assign(:links, links)
       |> assign(:description, assigns.package.meta.description)
       |> assign(:tools, tools)
@@ -130,29 +120,17 @@ defmodule HexpmWeb.Components.PackageLayout do
                 href={@docs_html_url}
                 class="bg-grey-100 dark:bg-grey-800 flex items-center gap-2 px-4 py-2.5 rounded-lg text-grey-800 dark:text-grey-100 text-sm font-medium hover:bg-grey-200 dark:hover:bg-grey-700 transition-colors"
               >
-                {HexpmWeb.ViewIcons.icon(:heroicon, "archive-box", class: "size-4 shrink-0")}
-                <span>Online Documentation</span>
+                {HexpmWeb.ViewIcons.icon(:heroicon, "book-open", class: "size-4 shrink-0")}
+                <span>HexDocs</span>
               </a>
             <% end %>
-            <%= if @docs_tarball_url do %>
+            <%= if @current_release do %>
               <a
-                href={@docs_tarball_url}
-                title="Download documentation"
-                class="bg-grey-100 dark:bg-grey-800 flex items-center justify-center p-2.5 rounded-lg hover:bg-grey-200 dark:hover:bg-grey-700 transition-colors"
+                href={Hexpm.Utils.preview_html_url(@package.name, @current_release.version)}
+                class="bg-grey-100 dark:bg-grey-800 flex items-center gap-2 px-4 py-2.5 rounded-lg text-grey-800 dark:text-grey-100 text-sm font-medium hover:bg-grey-200 dark:hover:bg-grey-700 transition-colors"
               >
-                {HexpmWeb.ViewIcons.icon(:heroicon, "cloud-arrow-down",
-                  class: "size-4 text-grey-800 dark:text-grey-100"
-                )}
-              </a>
-            <% end %>
-            <%= if @github_link do %>
-              <% {_name, url} = @github_link %>
-              <a
-                href={url}
-                rel="nofollow"
-                class="bg-grey-900 flex items-center justify-center p-2.5 rounded-lg hover:bg-grey-800 transition-colors"
-              >
-                <.github_icon class="size-4 text-white" />
+                {HexpmWeb.ViewIcons.icon(:heroicon, "code-bracket", class: "size-4 shrink-0")}
+                <span>HexPreview</span>
               </a>
             <% end %>
             <%= if @package_reports_enabled do %>
