@@ -27,7 +27,7 @@
           </p>
         </div>
       <% else %>
-        <ul class="divide-y divide-grey-300 dark:divide-grey-700">
+        <ul class="divide-y divide-grey-200 dark:divide-grey-700">
           <%= for package <- @dependants do %>
             {render("_package.html",
               package: package,

@@ -35,7 +35,7 @@
           </svg>
           <h3 class="text-green-900 dark:text-green-200 font-semibold text-lg">Exact Match</h3>
         </div>
-        <ul class="bg-white dark:bg-grey-800 rounded-lg overflow-hidden divide-y divide-grey-300 dark:divide-grey-700">
+        <ul class="bg-white dark:bg-grey-800 rounded-lg overflow-hidden divide-y divide-grey-200 dark:divide-grey-700">
           {render("_package.html",
             exact_match?: true,
             package: @exact_match,
@@ -103,7 +103,7 @@
 
       <%!-- Package List --%>
       <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-xl overflow-hidden">
-        <ul class="divide-y divide-grey-300 dark:divide-grey-700">
+        <ul class="divide-y divide-grey-200 dark:divide-grey-700">
           <%= for package <- @packages do %>
             {render("_package.html",
               exact_match?: false,

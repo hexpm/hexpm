@@ -47,16 +47,16 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
       <%= if @keys != [] do %>
         <.table>
           <:header>
-            <th class="px-0 py-3 text-left text-sm font-medium text-grey-500 dark:text-grey-300">
+            <th class="px-0 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
               Name
             </th>
-            <th class="px-4 py-3 text-left text-sm font-medium text-grey-500 dark:text-grey-300">
+            <th class="px-4 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
               Permissions
             </th>
-            <th class="px-4 py-3 text-left text-sm font-medium text-grey-500 dark:text-grey-300">
+            <th class="px-4 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
               Last Use
             </th>
-            <th class="px-4 py-3 text-right text-sm font-medium text-grey-500 dark:text-grey-300">
+            <th class="px-4 py-3 text-right text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
               Actions
             </th>
           </:header>

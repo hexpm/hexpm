@@ -43,13 +43,13 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
       <%!-- Email Table --%>
       <.table>
         <:header>
-          <th class="px-0 py-3 text-left text-sm font-medium text-grey-500 dark:text-grey-300">
+          <th class="px-0 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
             Email
           </th>
-          <th class="px-4 py-3 text-left text-sm font-medium text-grey-500 dark:text-grey-300">
+          <th class="px-4 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
             Status
           </th>
-          <th class="px-4 py-3 text-right text-sm font-medium text-grey-500 dark:text-grey-300">
+          <th class="px-4 py-3 text-right text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
             Actions
           </th>
         </:header>
