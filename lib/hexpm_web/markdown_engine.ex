@@ -18,6 +18,7 @@ defmodule HexpmWeb.MarkdownEngine do
       |> header_anchors("h3")
       |> header_anchors("h4")
       |> highlight_code_blocks()
+      |> replace_inline_alignment()
       |> inject_nonce_placeholder()
 
     # Generate code that replaces placeholder with actual nonce at runtime
@@ -84,6 +85,14 @@ defmodule HexpmWeb.MarkdownEngine do
           lexer -> code |> unescape_html() |> Makeup.highlight(lexer: lexer)
         end
       end
+    )
+  end
+
+  defp replace_inline_alignment(html) do
+    Regex.replace(
+      ~r/ style="text-align: (left|center|right);"/,
+      html,
+      fn _, align -> ~s( class="text-#{align}") end
     )
   end
 
