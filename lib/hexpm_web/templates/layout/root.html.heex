@@ -24,9 +24,11 @@
           ? "dark"
           : "light";
 
-        const theme = storedTheme === "light" || storedTheme === "dark" ? storedTheme : systemTheme;
+        const preference = storedTheme === "light" || storedTheme === "dark" ? storedTheme : "system";
+        const theme = preference === "system" ? systemTheme : preference;
 
         document.documentElement.setAttribute("data-theme", theme);
+        document.documentElement.setAttribute("data-theme-preference", preference);
         document.documentElement.style.colorScheme = theme;
       })();
     </script>

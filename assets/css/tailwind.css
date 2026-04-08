@@ -264,17 +264,32 @@ html, body {
   padding: 0;
 }
 
-/* Theme toggle state */
-[data-theme-toggle] [data-theme-icon="light"] {
+/* Theme toggle icon state — controlled by data-theme-preference on <html> */
+[data-theme-toggle] [data-theme-icon] {
   display: none;
 }
 
-html[data-theme="dark"] [data-theme-toggle] [data-theme-icon="dark"] {
-  display: none;
-}
-
-html[data-theme="dark"] [data-theme-toggle] [data-theme-icon="light"] {
+html[data-theme-preference="light"] [data-theme-toggle] [data-theme-icon="light"] {
   display: inline-flex;
+}
+
+html[data-theme-preference="dark"] [data-theme-toggle] [data-theme-icon="dark"] {
+  display: inline-flex;
+}
+
+html[data-theme-preference="system"] [data-theme-toggle] [data-theme-icon="system"] {
+  display: inline-flex;
+}
+
+/* Highlight active choice in theme menu */
+[data-theme-menu] [data-theme-choice] {
+  font-weight: normal;
+}
+
+html[data-theme-preference="light"] [data-theme-menu] [data-theme-choice="light"],
+html[data-theme-preference="dark"] [data-theme-menu] [data-theme-choice="dark"],
+html[data-theme-preference="system"] [data-theme-menu] [data-theme-choice="system"] {
+  font-weight: 600;
 }
 
 /* ===== LEGACY UTILITY CLASSES ===== */

@@ -133,26 +133,57 @@ defmodule HexpmWeb.Components.Navbar do
 
   defp theme_toggle(assigns) do
     ~H"""
-    <button
-      type="button"
-      data-theme-toggle
-      class={[
-        "inline-flex items-center justify-center text-grey-200 transition-colors hover:text-white cursor-pointer",
-        @compact && "h-10 w-10",
-        !@compact && "h-5 w-5",
-        @class
-      ]}
-      aria-label="Toggle theme"
-      aria-pressed="false"
-    >
-      <span class="sr-only">Toggle color theme</span>
-      <span data-theme-icon="dark">
-        {icon(:heroicon, "moon", width: 18, height: 18)}
-      </span>
-      <span data-theme-icon="light">
-        {icon(:heroicon, "sun", width: 18, height: 18)}
-      </span>
-    </button>
+    <div class={["relative flex items-center", @class]}>
+      <button
+        type="button"
+        data-theme-toggle
+        class={[
+          "inline-flex items-center justify-center text-grey-200 transition-colors hover:text-white cursor-pointer",
+          @compact && "h-10 w-10",
+          !@compact && "h-5 w-5"
+        ]}
+        aria-label="Change theme"
+        aria-haspopup="true"
+      >
+        <span class="sr-only">Change color theme</span>
+        <span data-theme-icon="light">
+          {icon(:heroicon, "sun", width: 18, height: 18)}
+        </span>
+        <span data-theme-icon="dark">
+          {icon(:heroicon, "moon", width: 18, height: 18)}
+        </span>
+        <span data-theme-icon="system">
+          {icon(:heroicon, "computer-desktop", width: 18, height: 18)}
+        </span>
+      </button>
+
+      <div
+        data-theme-menu
+        class="hidden absolute right-0 mt-2 w-36 bg-grey-700 border border-grey-600 rounded-lg shadow-lg py-1 z-50"
+      >
+        <button
+          type="button"
+          data-theme-choice="light"
+          class="w-full flex items-center gap-2 px-4 py-2 text-sm text-grey-200 hover:bg-grey-600 transition-colors cursor-pointer"
+        >
+          {icon(:heroicon, "sun", width: 16, height: 16)} Light
+        </button>
+        <button
+          type="button"
+          data-theme-choice="system"
+          class="w-full flex items-center gap-2 px-4 py-2 text-sm text-grey-200 hover:bg-grey-600 transition-colors cursor-pointer"
+        >
+          {icon(:heroicon, "computer-desktop", width: 16, height: 16)} System
+        </button>
+        <button
+          type="button"
+          data-theme-choice="dark"
+          class="w-full flex items-center gap-2 px-4 py-2 text-sm text-grey-200 hover:bg-grey-600 transition-colors cursor-pointer"
+        >
+          {icon(:heroicon, "moon", width: 16, height: 16)} Dark
+        </button>
+      </div>
+    </div>
     """
   end
 
