@@ -52,6 +52,10 @@ defmodule HexpmWeb.PackageView do
     "dep_#{package.name} = hex #{version}"
   end
 
+  def dep_snippet(:gleam, package, release) do
+    "gleam add #{package.name}@#{release.version}"
+  end
+
   defp do_dep_snippet(tool, name, version, organization \\ nil)
 
   defp do_dep_snippet(:mix, {name, app_name}, version, organization) when name == app_name,

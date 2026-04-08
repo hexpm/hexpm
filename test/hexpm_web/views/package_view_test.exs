@@ -73,6 +73,13 @@ defmodule HexpmWeb.PackageViewTest do
       assert PackageView.dep_snippet(:erlang_mk, package, release) == "dep_cowboy = hex 1.0.4"
     end
 
+    test "format gleam dependency snippet" do
+      version = Version.parse!("5.0.0")
+      package = %{name: "lustre"}
+      release = %{meta: %{app: package.name}, version: version}
+      assert PackageView.dep_snippet(:gleam, package, release) == "gleam add lustre@5.0.0"
+    end
+
     test "escape mix application name" do
       version = Version.parse!("1.0.0")
       package = %{name: "lfe_app", repository: %{name: "hexpm"}}

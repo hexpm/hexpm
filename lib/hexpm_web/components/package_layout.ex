@@ -50,7 +50,7 @@ defmodule HexpmWeb.Components.PackageLayout do
         String.downcase(to_string(name)) =~ "github"
       end)
 
-    tools = [mix: "mix.exs", rebar: "rebar.config", erlang_mk: "erlang.mk"]
+    tools = [mix: "mix.exs", rebar: "rebar.config", gleam: "Gleam", erlang_mk: "erlang.mk"]
 
     {graph_labels, graph_points, graph_fill} =
       if assigns.daily_graph != [],
