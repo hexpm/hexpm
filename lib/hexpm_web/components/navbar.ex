@@ -133,8 +133,8 @@ defmodule HexpmWeb.Components.Navbar do
 
   defp theme_toggle(assigns) do
     ~H"""
-    <a
-      href="#"
+    <button
+      type="button"
       data-theme-toggle
       class={[
         "inline-flex items-center justify-center text-grey-200 transition-colors hover:text-white cursor-pointer",
@@ -142,7 +142,6 @@ defmodule HexpmWeb.Components.Navbar do
         !@compact && "h-5 w-5",
         @class
       ]}
-      role="button"
       aria-label="Toggle theme"
       aria-pressed="false"
     >
@@ -153,7 +152,7 @@ defmodule HexpmWeb.Components.Navbar do
       <span data-theme-icon="light">
         {icon(:heroicon, "sun", width: 18, height: 18)}
       </span>
-    </a>
+    </button>
     """
   end
 
