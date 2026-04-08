@@ -374,11 +374,11 @@ defmodule HexpmWeb.Components.PackageLayout do
                               +{length(@licenses) - 1} more
                             </span>
                             <div class="absolute bottom-full left-0 mb-1.5 hidden group-hover:block z-10">
-                              <div class="bg-grey-900 dark:bg-grey-900 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
+                              <div class="bg-grey-900 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
                                 <%= for license <- tl(@licenses) do %>
                                   <p>{license}</p>
                                 <% end %>
-                                <div class="absolute top-full left-3 border-4 border-transparent border-t-grey-900 dark:border-t-grey-900">
+                                <div class="absolute top-full left-3 border-4 border-transparent border-t-grey-900">
                                 </div>
                               </div>
                             </div>
