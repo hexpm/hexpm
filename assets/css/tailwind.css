@@ -237,6 +237,14 @@ html, body {
   color: #1d4ed8;
 }
 
+html[data-theme="dark"] .blog-card-excerpt a {
+  color: #93c5fd; /* blue-300 */
+}
+
+html[data-theme="dark"] .blog-card-excerpt a:hover {
+  color: #bfdbfe; /* blue-200 */
+}
+
 .blog-content pre,
 .policy-content pre,
 .prose pre {

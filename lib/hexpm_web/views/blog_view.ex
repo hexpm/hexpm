@@ -26,39 +26,39 @@ defmodule HexpmWeb.BlogView do
 
     # Build the styled wrapper with header and content
     Phoenix.HTML.raw("""
-    <div class="bg-grey-50 py-10 px-4 flex-1 flex flex-col">
+    <div class="bg-grey-50 dark:bg-grey-950 py-10 px-4 flex-1 flex flex-col">
       <div class="max-w-4xl mx-auto w-full">
-        <a href="/blog" class="inline-flex items-center gap-2 text-sm font-medium text-grey-700 hover:text-grey-900 transition-colors mb-8">
+        <a href="/blog" class="inline-flex items-center gap-2 text-sm font-medium text-grey-700 dark:text-grey-300 hover:text-grey-900 dark:hover:text-grey-100 transition-colors mb-8">
           #{arrow_icon}
           Back to Blog
         </a>
         <header class="text-center mb-8">
-          <h1 class="text-2xl lg:text-4xl font-bold text-grey-900 mb-3">#{Phoenix.HTML.html_escape(post_title) |> Phoenix.HTML.safe_to_string()}</h1>
-          <div class="flex items-center justify-center gap-6 text-sm text-grey-600">
+          <h1 class="text-2xl lg:text-4xl font-bold text-grey-900 dark:text-white mb-3">#{Phoenix.HTML.html_escape(post_title) |> Phoenix.HTML.safe_to_string()}</h1>
+          <div class="flex items-center justify-center gap-6 text-sm text-grey-600 dark:text-grey-400">
             <span class="font-medium">#{published_human}</span>
-            <span>by <span class="font-semibold text-grey-800">#{Phoenix.HTML.html_escape(author_display) |> Phoenix.HTML.safe_to_string()}</span></span>
+            <span>by <span class="font-semibold text-grey-800 dark:text-grey-200">#{Phoenix.HTML.html_escape(author_display) |> Phoenix.HTML.safe_to_string()}</span></span>
           </div>
         </header>
-        <article class="bg-white border border-grey-200 rounded-lg p-6 lg:p-10 shadow-xs blog-content">
+        <article class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-6 lg:p-10 shadow-xs blog-content">
           <style nonce="#{nonce}">
             .blog-content h2 {
               font-size: 1.5rem;
               font-weight: 700;
-              color: #111827;
+              color: var(--color-grey-900);
               margin-top: 2rem;
               margin-bottom: 1rem;
             }
             .blog-content h3 {
               font-size: 1.25rem;
               font-weight: 700;
-              color: #111827;
+              color: var(--color-grey-900);
               margin-top: 1.5rem;
               margin-bottom: 0.75rem;
             }
             .blog-content h4 {
               font-size: 1.125rem;
               font-weight: 600;
-              color: #111827;
+              color: var(--color-grey-900);
               margin-top: 1rem;
               margin-bottom: 0.5rem;
             }
@@ -78,41 +78,41 @@ defmodule HexpmWeb.BlogView do
             .blog-content h4 > a svg {
               width: 0.875rem;
               height: 0.875rem;
-              color: #9ca3af;
+              color: var(--color-grey-300);
             }
             .blog-content h2 > a:hover svg,
             .blog-content h3 > a:hover svg,
             .blog-content h4 > a:hover svg {
-              color: #2563eb;
+              color: var(--color-blue-600);
             }
             .blog-content p {
               font-size: 1rem;
               line-height: 1.75;
-              color: #374151;
+              color: var(--color-grey-600);
               margin-bottom: 1rem;
             }
             .blog-content a {
-              color: #2563eb;
+              color: var(--color-blue-600);
               text-decoration: underline;
               font-weight: 500;
             }
             .blog-content a:hover {
-              color: #1d4ed8;
+              color: var(--color-blue-700);
             }
             .blog-content strong {
               font-weight: 600;
-              color: #111827;
+              color: var(--color-grey-900);
             }
-            .blog-content code {
-              background-color: #f3f4f6;
+            .blog-content code:not(pre code) {
+              background-color: var(--color-grey-50);
               padding: 0.125rem 0.375rem;
               border-radius: 0.25rem;
               font-size: 0.875rem;
               font-family: ui-monospace, monospace;
-              color: #1f2937;
+              color: var(--color-grey-800);
             }
             .blog-content pre {
-              background-color: #111827;
+              background-color: var(--color-grey-900);
               padding: 1rem;
               border-radius: 0.5rem;
               overflow-x: auto;
@@ -122,12 +122,12 @@ defmodule HexpmWeb.BlogView do
               background-color: transparent;
               padding: 0;
               font-size: 0.875rem;
-              color: #e5e7eb;
+              color: var(--color-grey-100);
             }
             /* Override highlight.js background to use our dark background */
             .blog-content pre .hljs {
               background: transparent;
-              color: #e5e7eb;
+              color: var(--color-grey-100);
             }
             .blog-content ul, .blog-content ol {
               padding-left: 1.5rem;
@@ -140,14 +140,14 @@ defmodule HexpmWeb.BlogView do
               list-style-type: decimal;
             }
             .blog-content li {
-              color: #374151;
+              color: var(--color-grey-600);
               margin-bottom: 0.5rem;
             }
             .blog-content blockquote {
-              border-left: 4px solid #2563eb;
+              border-left: 4px solid var(--color-blue-600);
               padding-left: 1rem;
               font-style: italic;
-              color: #4b5563;
+              color: var(--color-grey-500);
               margin-bottom: 1rem;
             }
             .blog-content img {
@@ -158,9 +158,49 @@ defmodule HexpmWeb.BlogView do
               display: block;
             }
             .blog-content .subtitle {
-              color: #6b7280;
+              color: var(--color-grey-500);
               font-size: 0.875rem;
               margin-bottom: 1.5rem;
+            }
+            /* Dark mode overrides */
+            html[data-theme="dark"] .blog-content h2,
+            html[data-theme="dark"] .blog-content h3,
+            html[data-theme="dark"] .blog-content h4,
+            html[data-theme="dark"] .blog-content strong {
+              color: white;
+            }
+            html[data-theme="dark"] .blog-content h2 > a svg,
+            html[data-theme="dark"] .blog-content h3 > a svg,
+            html[data-theme="dark"] .blog-content h4 > a svg {
+              color: var(--color-grey-300);
+            }
+            html[data-theme="dark"] .blog-content h2 > a:hover svg,
+            html[data-theme="dark"] .blog-content h3 > a:hover svg,
+            html[data-theme="dark"] .blog-content h4 > a:hover svg {
+              color: var(--color-blue-200);
+            }
+            html[data-theme="dark"] .blog-content p {
+              color: var(--color-grey-200);
+            }
+            html[data-theme="dark"] .blog-content a {
+              color: var(--color-blue-300);
+            }
+            html[data-theme="dark"] .blog-content a:hover {
+              color: var(--color-blue-200);
+            }
+            html[data-theme="dark"] .blog-content code:not(pre code) {
+              background-color: var(--color-grey-700);
+              color: var(--color-grey-100);
+            }
+            html[data-theme="dark"] .blog-content li {
+              color: var(--color-grey-200);
+            }
+            html[data-theme="dark"] .blog-content blockquote {
+              border-left-color: var(--color-blue-300);
+              color: var(--color-grey-300);
+            }
+            html[data-theme="dark"] .blog-content .subtitle {
+              color: var(--color-grey-400);
             }
           </style>
           #{strip_header(content_string)}
