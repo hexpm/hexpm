@@ -996,7 +996,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     test "increase number of seats", %{organization: organization, user: user} do
       stub(Hexpm.Billing.Mock, :update, fn organization_name, map ->
         assert organization_name == organization.name
-        assert map == %{"quantity" => 3}
+        assert map["quantity"] == 3
         {:ok, %{}}
       end)
 
@@ -1156,7 +1156,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       stub(Hexpm.Billing.Mock, :change_plan, fn organization_name, map ->
         assert organization_name == organization.name
         assert map == %{"plan_id" => "organization-annually"}
-        {:ok, %{}}
+        :ok
       end)
 
       insert(:organization_user, organization: organization, user: user, role: "admin")
@@ -1178,7 +1178,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       organization: organization,
       user: user
     } do
-      stub(Hexpm.Billing.Mock, :change_plan, fn _organization_name, _map -> {:ok, %{}} end)
+      stub(Hexpm.Billing.Mock, :change_plan, fn _organization_name, _map -> :ok end)
 
       insert(:organization_user, organization: organization, user: user, role: "admin")
 
