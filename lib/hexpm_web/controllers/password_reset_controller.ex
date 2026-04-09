@@ -12,13 +12,12 @@ defmodule HexpmWeb.PasswordResetController do
       render(
         conn,
         "create.html",
-        title: "Reset your password",
+        title: "Check your email",
         container: "container page page-xs password-view"
       )
     else
       conn
       |> put_status(400)
-      |> put_flash(:error, "Oops, something went wrong!")
       |> render_show("Please complete the captcha to reset password")
     end
   end

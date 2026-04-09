@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns#">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description(assigns)} />
+    <meta name="sogou_site_verification" content="GrtyJPARqi" />
+    <meta name="color-scheme" content="light dark" />
+
+    <title>{title(assigns)}</title>
+
+    <script nonce={@script_src_nonce}>
+      (() => {
+        const storageKey = "hexpm-theme";
+
+        let storedTheme = null;
+
+        try {
+          storedTheme = window.localStorage.getItem(storageKey);
+        } catch (_error) {}
+
+        const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
+
+        const preference = storedTheme === "light" || storedTheme === "dark" ? storedTheme : "system";
+        const theme = preference === "system" ? systemTheme : preference;
+
+        document.documentElement.setAttribute("data-theme", theme);
+        document.documentElement.setAttribute("data-theme-preference", preference);
+        document.documentElement.style.colorScheme = theme;
+      })();
+    </script>
+
+    {og_tags(assigns)}
+    {canonical_url(assigns)}
+    {csrf_meta_tag()}
+
+    <link rel="icon" type="image/svg+xml" href={~p"/images/hex-full.svg"} />
+    <link
+      rel="search"
+      type="application/opensearchdescription+xml"
+      title="Hex"
+      href="/hexsearch.xml"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+      nonce={@style_src_nonce}
+    />
+    <link rel="stylesheet" href={~p"/assets/app.css"} nonce={@style_src_nonce} />
+    <link rel="alternate" type="application/rss+xml" title="RSS - Blog" href="/feeds/blog.xml" />
+
+    <%= if host = Application.get_env(:hexpm, :host) do %>
+      <script async defer src={"https://s.#{host}/js/script.js"} nonce={@script_src_nonce}>
+      </script>
+      <script nonce={@script_src_nonce}>
+        window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};plausible.init({endpoint:"https://s.<%= host %>/api/event",captureOnLocalhost:true})
+      </script>
+    <% end %>
+  </head>
+
+  <body>
+    <!--[if lt IE 10]>
+      <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
+    <![endif]-->
+
+    {@inner_content}
+
+    <script src={~p"/assets/app.js"} nonce={@script_src_nonce}>
+    </script>
+  </body>
+</html>

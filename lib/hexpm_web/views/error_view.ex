@@ -9,7 +9,9 @@ defmodule HexpmWeb.ErrorView do
       status: status,
       message: message(status),
       container: "container error-view",
-      current_user: assigns[:current_user]
+      current_user: assigns[:current_user],
+      script_src_nonce: assigns[:script_src_nonce],
+      style_src_nonce: assigns[:style_src_nonce]
     )
   end
 
@@ -29,7 +31,9 @@ defmodule HexpmWeb.ErrorView do
       error: true,
       status: "500",
       message: "Internal server error",
-      current_user: assigns[:current_user]
+      current_user: assigns[:current_user],
+      script_src_nonce: assigns[:script_src_nonce],
+      style_src_nonce: assigns[:style_src_nonce]
     )
   end
 

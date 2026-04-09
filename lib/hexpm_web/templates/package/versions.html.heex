@@ -1,0 +1,120 @@
+<% versions = Enum.map(@releases, & &1.version) %>
+
+<.package_layout
+  active_tab={:versions}
+  current_release={@current_release}
+  daily_graph={@daily_graph}
+  dependants_count={@dependants_count}
+  docs_html_url={@docs_html_url}
+  downloads={@downloads}
+  owners={@owners}
+  package={@package}
+  repository_name={@repository_name}
+>
+  <:inner_content>
+    <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden">
+      <div class="px-5 py-4 border-b border-grey-200 dark:border-grey-700">
+        <h2 class="text-grey-900 dark:text-grey-100 text-xl font-semibold">Versions</h2>
+      </div>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-grey-50 dark:bg-grey-900/60 border-b border-grey-200 dark:border-grey-700">
+            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider w-32">
+              Version
+            </th>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider w-40">
+              Published Date
+            </th>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
+              Note
+            </th>
+            <th class="px-5 py-3 w-24"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-grey-100 dark:divide-grey-700">
+          <%= for release <- @releases do %>
+            <% retired? = release.retirement != nil
+            previous_version = Hexpm.Utils.previous_version(release.version, versions) %>
+            <tr class={[
+              "hover:bg-grey-50 dark:hover:bg-grey-700/60 transition-colors",
+              retired? && "opacity-60 bg-grey-50 dark:bg-grey-900/40"
+            ]}>
+              <td class="px-5 py-3.5">
+                <div class="flex items-center gap-2">
+                  <a
+                    href={ViewHelpers.path_for_release(@package, release)}
+                    class="font-semibold text-grey-900 dark:text-grey-100 hover:text-purple-600 dark:hover:text-primary-300 transition-colors font-mono"
+                  >
+                    {release.version}
+                  </a>
+                  <%= cond do %>
+                    <% retired? && release.retirement.reason == "report" -> %>
+                      <.badge variant="red">reported</.badge>
+                    <% retired? -> %>
+                      <.badge variant="yellow">retired</.badge>
+                    <% true -> %>
+                  <% end %>
+                </div>
+              </td>
+              <td
+                class="px-5 py-3.5 text-grey-500 dark:text-grey-300 text-sm"
+                title={ViewHelpers.pretty_datetime(release.inserted_at)}
+              >
+                {ViewHelpers.pretty_date(release.inserted_at)}
+              </td>
+              <td class="px-5 py-3.5 text-grey-500 dark:text-grey-300 text-sm">
+                <%= if retired? && release.retirement.message do %>
+                  {release.retirement.message}
+                <% end %>
+              </td>
+              <td class="px-5 py-3.5">
+                <div class="flex items-center justify-end gap-2">
+                  <%= if release.has_docs do %>
+                    <a
+                      href={Hexpm.Utils.docs_html_url(@package.repository, @package, release)}
+                      title="Docs"
+                      class="text-grey-400 dark:text-grey-300 hover:text-purple-600 dark:hover:text-primary-300 transition-colors"
+                    >
+                      {HexpmWeb.ViewIcons.icon(:heroicon, "book-open", class: "size-4")}
+                    </a>
+                    <a
+                      href={Hexpm.Utils.docs_tarball_url(@package.repository, @package, release)}
+                      title="Download docs"
+                      class="text-grey-400 dark:text-grey-300 hover:text-purple-600 dark:hover:text-primary-300 transition-colors"
+                    >
+                      {HexpmWeb.ViewIcons.icon(:heroicon, "cloud-arrow-down", class: "size-4")}
+                    </a>
+                  <% end %>
+                  <%= unless retired? do %>
+                    <%= if previous_version && ViewHelpers.main_repository?(@package) do %>
+                      <a
+                        href={
+                          Hexpm.Utils.diff_html_url(
+                            @package.name,
+                            release.version,
+                            previous_version
+                          )
+                        }
+                        title="Diff with previous version"
+                        class="text-grey-400 dark:text-grey-300 hover:text-purple-600 dark:hover:text-primary-300 transition-colors"
+                      >
+                        {HexpmWeb.ViewIcons.icon(:heroicon, "arrows-right-left", class: "size-4")}
+                      </a>
+                    <% end %>
+                    <a
+                      href={Hexpm.Utils.preview_html_url(@package.name, release.version)}
+                      title="Preview"
+                      class="text-grey-400 dark:text-grey-300 hover:text-purple-600 dark:hover:text-primary-300 transition-colors"
+                    >
+                      {HexpmWeb.ViewIcons.icon(:heroicon, "code-bracket", class: "size-4")}
+                    </a>
+                  <% end %>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </:inner_content>
+</.package_layout>

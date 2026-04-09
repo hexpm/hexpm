@@ -27,12 +27,12 @@ defmodule HexpmWeb.MarkdownEngineTest do
   end
 
   test "does not change h2 tags" do
-    {:safe, html} = HexpmWeb.MarkdownEngine.compile(@path, nil)
+    html = render_markdown()
     assert html =~ "<h2>"
   end
 
   test "adds anchors to h3 tags" do
-    {:safe, html} = HexpmWeb.MarkdownEngine.compile(@path, nil)
+    html = render_markdown()
 
     h3 = """
     <h3 id="contact" class="section-heading">
@@ -47,7 +47,7 @@ defmodule HexpmWeb.MarkdownEngineTest do
   end
 
   test "adds anchors to h4 tags" do
-    {:safe, html} = HexpmWeb.MarkdownEngine.compile(@path, nil)
+    html = render_markdown()
 
     h4 = """
     <h4 id="how-do-i-contact-hex" class="section-heading">
@@ -59,5 +59,12 @@ defmodule HexpmWeb.MarkdownEngineTest do
     """
 
     assert html =~ h4
+  end
+
+  defp render_markdown do
+    quoted = HexpmWeb.MarkdownEngine.compile(@path, nil)
+    {result, _binding} = Code.eval_quoted(quoted, assigns: %{script_src_nonce: "test-nonce"})
+    {:safe, html} = result
+    html
   end
 end

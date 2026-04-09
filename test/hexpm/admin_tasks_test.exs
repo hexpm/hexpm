@@ -81,6 +81,126 @@ defmodule Hexpm.AdminTasksTest do
     test "returns error for nonexistent user" do
       assert {:error, :user_not_found} = AdminTasks.remove_user("nonexistent")
     end
+
+    test "removes user with associated records" do
+      user = insert(:user)
+      user_id = user.id
+      email_ids = Enum.map(user.emails, & &1.id)
+
+      key = insert(:key, user: user)
+      package = insert(:package)
+      package_owner = insert(:package_owner, package: package, user: user)
+      session = insert(:session, user_id: user.id)
+      oauth_client = insert(:oauth_client)
+      oauth_token = insert(:oauth_token, user: user, client_id: oauth_client.client_id)
+
+      audit_log =
+        insert(:audit_log,
+          user: user,
+          action: "test.action",
+          user_data: %{"id" => user.id, "username" => user.username}
+        )
+
+      audit_log_with_key =
+        insert(:audit_log,
+          user: user,
+          key: key,
+          action: "test.key_action",
+          user_data: %{"id" => user.id, "username" => user.username},
+          key_data: %{"id" => key.id, "name" => key.name}
+        )
+
+      organization = insert(:organization)
+      org_user = insert(:organization_user, user: user, organization: organization)
+      report = insert(:package_report, author: user, package: package, description: "test report")
+
+      comment =
+        Repo.insert!(%Hexpm.Repository.PackageReportComment{
+          text: "test comment",
+          author_id: user.id,
+          package_report_id: report.id
+        })
+
+      password_reset =
+        Repo.insert!(%Hexpm.Accounts.PasswordReset{
+          key: "test_key",
+          primary_email: "test@example.com",
+          user_id: user.id
+        })
+
+      release = insert(:release, package: package, publisher: user)
+
+      assert :ok = AdminTasks.remove_user(user.username)
+
+      refute Repo.get(User, user_id)
+
+      # CASCADE deletes
+      for email_id <- email_ids do
+        refute Repo.get(Hexpm.Accounts.Email, email_id)
+      end
+
+      refute Repo.get(Hexpm.Accounts.Key, key.id)
+      refute Repo.get(Hexpm.Repository.PackageOwner, package_owner.id)
+      refute Repo.get(Hexpm.UserSession, session.id)
+      refute Repo.get(Hexpm.OAuth.Token, oauth_token.id)
+      refute Repo.get(Hexpm.Accounts.OrganizationUser, org_user.id)
+      refute Repo.get(Hexpm.Accounts.PasswordReset, password_reset.id)
+
+      # SET NULL preserves records, user_data and key_data survive deletion
+      audit_log_reloaded = Repo.get(Hexpm.Accounts.AuditLog, audit_log.id)
+      assert audit_log_reloaded.user_id == nil
+      assert audit_log_reloaded.user_data["username"] == user.username
+
+      audit_log_with_key_reloaded = Repo.get(Hexpm.Accounts.AuditLog, audit_log_with_key.id)
+      assert audit_log_with_key_reloaded.user_id == nil
+      assert audit_log_with_key_reloaded.key_id == nil
+      assert audit_log_with_key_reloaded.user_data["username"] == user.username
+      assert audit_log_with_key_reloaded.key_data["name"] == key.name
+      assert Repo.get(Hexpm.Repository.PackageReport, report.id).author_id == nil
+      assert Repo.get(Hexpm.Repository.PackageReportComment, comment.id).author_id == nil
+      assert Repo.get(Release, release.id).publisher_id == nil
+    end
+  end
+
+  describe "remove_user/2 with delete_packages" do
+    test "deletes sole-owned packages" do
+      user = insert(:user)
+      package = insert(:package)
+      insert(:package_owner, package: package, user: user)
+      package_id = package.id
+
+      assert :ok = AdminTasks.remove_user(user.username, delete_packages: true)
+
+      refute Repo.get(User, user.id)
+      refute Repo.get(Package, package_id)
+    end
+
+    test "preserves packages with multiple owners" do
+      user = insert(:user)
+      other_user = insert(:user)
+      package = insert(:package)
+      insert(:package_owner, package: package, user: user)
+      insert(:package_owner, package: package, user: other_user)
+      package_id = package.id
+
+      assert :ok = AdminTasks.remove_user(user.username, delete_packages: true)
+
+      refute Repo.get(User, user.id)
+      assert Repo.get(Package, package_id)
+    end
+
+    test "without option leaves packages intact" do
+      user = insert(:user)
+      package = insert(:package)
+      insert(:package_owner, package: package, user: user)
+      insert(:release, package: package, publisher: user)
+      package_id = package.id
+
+      assert :ok = AdminTasks.remove_user(user.username)
+
+      refute Repo.get(User, user.id)
+      assert Repo.get(Package, package_id)
+    end
   end
 
   describe "rename_user/2" do

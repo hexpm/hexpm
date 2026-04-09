@@ -67,7 +67,8 @@ defmodule HexpmWeb.TestController do
       client_type: params["client_type"] || "public",
       client_secret: params["client_secret"],
       redirect_uris: params["redirect_uris"] || [],
-      allowed_grant_types: params["allowed_grant_types"]
+      allowed_grant_types: params["allowed_grant_types"] || Client.valid_grant_types(),
+      allowed_scopes: params["allowed_scopes"] || ["api", "api:read", "api:write", "repositories"]
     }
 
     changeset = Client.changeset(%Client{}, attrs)
@@ -185,6 +186,27 @@ defmodule HexpmWeb.TestController do
       conn
       |> put_status(404)
       |> render(:error, error: %{error: "No pending device codes"})
+    end
+  end
+
+  def preview_file_list(conn, %{"file" => file}) do
+    path = Application.app_dir(:hexpm, "priv/preview/file_lists/#{file}")
+
+    if File.exists?(path) do
+      send_resp(conn, 200, File.read!(path))
+    else
+      send_resp(conn, 404, "")
+    end
+  end
+
+  def preview_file(conn, %{"package" => package, "version" => version, "filename" => filename}) do
+    filename = Path.join(filename)
+    path = Application.app_dir(:hexpm, "priv/preview/files/#{package}/#{version}/#{filename}")
+
+    if File.exists?(path) do
+      send_resp(conn, 200, File.read!(path))
+    else
+      send_resp(conn, 404, "")
     end
   end
 

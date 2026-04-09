@@ -52,11 +52,11 @@ defmodule HexpmWeb.SharedAuthorizationView do
   defp scope_group(assigns) do
     ~H"""
     <%= if @style == :oauth do %>
-      <div class="scope-group" style="margin-bottom: 20px;">
-        <h5 class="scope-category-header" style="margin-bottom: 10px; color: #333; font-weight: 600;">
+      <div class="scope-group scope-group--oauth">
+        <h5 class="scope-category-header">
           {@category_name}
         </h5>
-        <ul class="list-unstyled" style="margin-left: 20px;">
+        <ul class="list-unstyled scope-list">
           <.render_scope_item
             :for={scope <- @scopes}
             scope={scope}
@@ -66,16 +66,14 @@ defmodule HexpmWeb.SharedAuthorizationView do
         </ul>
       </div>
     <% else %>
-      <div class="scope-group">
-        <ul>
-          <.render_scope_item
-            :for={scope <- @scopes}
-            scope={scope}
-            style={@style}
-            current_user={@current_user}
-          />
-        </ul>
-      </div>
+      <ul class="list-none space-y-1">
+        <.render_scope_item
+          :for={scope <- @scopes}
+          scope={scope}
+          style={@style}
+          current_user={@current_user}
+        />
+      </ul>
     <% end %>
     """
   end
@@ -83,78 +81,72 @@ defmodule HexpmWeb.SharedAuthorizationView do
   defp render_scope_item(assigns) do
     description = Permissions.scope_description(assigns.scope)
     requires_2fa = assigns.scope in ["api", "api:write"]
-    checked = not (requires_2fa and not User.tfa_enabled?(assigns.current_user))
+    has_2fa = User.tfa_enabled?(assigns.current_user)
+    disabled = requires_2fa and not has_2fa
+    checked = not disabled
 
     assigns =
-      assign(assigns, description: description, requires_2fa: requires_2fa, checked: checked)
+      assign(assigns,
+        description: description,
+        requires_2fa: requires_2fa,
+        checked: checked,
+        disabled: disabled
+      )
 
     ~H"""
     <%= if @style == :oauth do %>
-      <li class="scope-item" style="list-style: none; margin-bottom: 12px;">
-        <label
-          style="display: flex; align-items: flex-start; cursor: pointer; padding: 12px; border-radius: 8px; border: 2px solid #e9ecef; background-color: #f8f9fa; transition: all 0.2s ease;"
-          onmouseover="this.style.borderColor='#0d6efd'; this.style.backgroundColor='#f0f7ff';"
-          onmouseout="this.style.borderColor='#e9ecef'; this.style.backgroundColor='#f8f9fa';"
-        >
+      <li class="scope-item">
+        <label class="scope-label">
           <input
             type="checkbox"
             name="selected_scopes[]"
             value={@scope}
             checked={@checked}
-            style="margin-right: 12px; margin-top: 4px; width: 18px; height: 18px; cursor: pointer;"
             class="scope-checkbox"
           />
-          <div style="flex: 1;">
-            <div style="margin-bottom: 8px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-              <code
-                class="scope-name"
-                style="background-color: #e7f3ff; color: #0366d6; padding: 4px 10px; border-radius: 5px; font-size: 14px; font-weight: 600;"
-              >
+          <div class="scope-content">
+            <div class="scope-header">
+              <code class="scope-name">
                 {@scope}
               </code>
               <span
                 :if={@requires_2fa}
-                class="label label-warning"
-                style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 5px; font-size: 12px; font-weight: 600; background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7; margin-left: 8px;"
+                class="scope-requires-2fa"
               >
                 <i class="fa fa-shield"></i> Requires 2FA
               </span>
             </div>
-            <span class="scope-description" style="color: #6c757d; font-size: 14px; line-height: 1.5;">
+            <span class="scope-description">
               {@description}
             </span>
           </div>
         </label>
       </li>
     <% else %>
-      <li style="list-style: none; margin-bottom: 12px;">
-        <label
-          style="display: flex; align-items: flex-start; cursor: pointer; padding: 14px; border-radius: 8px; border: 2px solid #e9ecef; background-color: #ffffff; transition: all 0.2s ease;"
-          onmouseover="this.style.borderColor='#0d6efd'; this.style.backgroundColor='#f8f9fa';"
-          onmouseout="this.style.borderColor='#e9ecef'; this.style.backgroundColor='#ffffff';"
-        >
+      <li class="flex items-start gap-3 py-2">
+        <label class={[
+          "flex items-start gap-3 cursor-pointer",
+          @disabled && "opacity-60 cursor-not-allowed"
+        ]}>
           <input
             type="checkbox"
             name="selected_scopes[]"
             value={@scope}
             checked={@checked}
-            style="margin-right: 12px; margin-top: 4px; width: 18px; height: 18px; cursor: pointer;"
-            class="scope-checkbox"
+            disabled={@disabled}
+            class="scope-checkbox mt-1 h-4 w-4 rounded border-grey-300 text-primary-600 focus:ring-primary-500"
           />
-          <div style="flex: 1;">
-            <div style="margin-bottom: 8px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-              <code style="background-color: #e7f3ff; color: #0366d6; padding: 4px 10px; border-radius: 5px; font-size: 14px; font-weight: 600;">
-                {@scope}
-              </code>
+          <div>
+            <div class="flex items-center gap-2">
+              <code class="text-sm font-semibold text-grey-900">{@scope}</code>
               <span
                 :if={@requires_2fa}
-                class="label label-warning"
-                style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 5px; font-size: 12px; font-weight: 600; background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7; margin-left: 8px;"
+                class="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800"
               >
-                <i class="fa fa-shield"></i> Requires 2FA
+                Requires 2FA
               </span>
             </div>
-            <span style="color: #6c757d; font-size: 14px; line-height: 1.6;">{@description}</span>
+            <span class="text-sm text-grey-600">{@description}</span>
           </div>
         </label>
       </li>

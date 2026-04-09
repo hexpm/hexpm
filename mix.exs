@@ -39,21 +39,29 @@ defmodule Hexpm.MixProject do
       {:corsica, "~> 2.0"},
       {:earmark, "~> 1.4"},
       {:ecto_psql_extras, "~> 0.6"},
+      {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
       {:ecto_sql, "~> 3.0"},
       {:ecto, "~> 3.0"},
       {:eqrcode, "~> 0.2.1"},
       {:ex_aws_s3, "~> 2.0"},
       {:ex_aws, "~> 2.0"},
       {:ex_machina, "~> 2.0"},
-      {:finch, "~> 0.20.0"},
+      {:finch, "~> 0.21.0"},
+      {:floki, "~> 0.37"},
       {:goth, "~> 1.4"},
       {:hackney, "~> 1.7"},
-      {:hex_core, "~> 0.8", hex_core_opts()},
+      {:hex_core, "~> 0.14", hex_core_opts()},
       {:jason, "~> 1.0"},
       {:joken, "~> 2.6"},
       {:libcluster, "~> 3.0"},
       {:logster, "~> 1.0"},
+      {:makeup, "~> 1.2"},
+      {:makeup_elixir, "~> 1.0"},
+      {:makeup_erlang, "~> 1.0"},
+      {:makeup_syntect, "~> 0.1"},
+      {:makeup_gleam, "~> 1.0"},
       {:mox, "~> 1.0", only: :test},
+      {:nimble_ownership, "~> 1.0"},
       {:stream_data, "~> 1.0", only: :test},
       {:phoenix_ecto, "~> 4.0"},
       {:phoenix_html, "~> 4.0"},
@@ -64,11 +72,13 @@ defmodule Hexpm.MixProject do
       {:phoenix_view, "~> 2.0"},
       {:phoenix, "~> 1.6"},
       {:plug_attack, "~> 0.3"},
+      {:plug_content_security_policy, "~> 0.2.1"},
       {:plug_cowboy, "~> 2.1"},
       {:plug, "~> 1.7"},
       {:postgrex, "~> 0.14"},
       {:pot, "~> 1.0"},
-      {:sentry, "~> 11.0"},
+      {:sentry, "~> 12.0"},
+      {:tailwind, "~> 0.4", runtime: Mix.env() == :dev},
       {:tidewave, "~> 0.5", only: :dev},
       # Dependency is broken with mix due to missing dependency on :ssl application
       {:ssl_verify_fun, "~> 1.1", manager: :rebar3, override: true},
@@ -76,7 +86,8 @@ defmodule Hexpm.MixProject do
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:ueberauth, "~> 0.10"},
-      {:ueberauth_github, "~> 0.8"}
+      {:ueberauth_github, "~> 0.8"},
+      {:wallaby, "~> 0.30", only: :test, runtime: false}
     ]
   end
 
@@ -90,9 +101,14 @@ defmodule Hexpm.MixProject do
 
   defp aliases() do
     [
-      setup: ["deps.get", "ecto.setup", "cmd yarn install --cwd assets"],
+      setup: ["deps.get", "ecto.setup", "esbuild.install", "tailwind.install"],
       "ecto.setup": ["ecto.reset", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.create", "ecto.load", "ecto.migrate"],
+      "assets.deploy": [
+        "esbuild hexpm --minify",
+        "tailwind default --minify",
+        "phx.digest"
+      ],
       test: ["ecto.create --quiet", "ecto.load --skip-if-loaded", "ecto.migrate", "test"]
     ]
   end

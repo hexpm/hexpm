@@ -2,6 +2,10 @@ defmodule HexpmWeb.Endpoint do
   use Sentry.PlugCapture
   use Phoenix.Endpoint, otp_app: :hexpm
 
+  if Mix.env() == :test do
+    plug Phoenix.Ecto.SQL.Sandbox
+  end
+
   plug HexpmWeb.Plugs.Forwarded
 
   @session_options [
@@ -61,6 +65,8 @@ defmodule HexpmWeb.Endpoint do
   if Mix.env() == :prod do
     plug Plug.SSL, rewrite_on: [:x_forwarded_proto]
   end
+
+  plug HexpmWeb.Plugs.CanonicalHost
 
   plug HexpmWeb.Router
 end

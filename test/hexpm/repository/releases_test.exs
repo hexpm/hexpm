@@ -11,17 +11,21 @@ defmodule Hexpm.Repository.ReleasesTest do
     user = insert(:user)
     hexpm = Hexpm.Repo.get(Repository, 1)
 
+    {:ok, body_path} = Plug.Upload.random_file("test")
+    File.write!(body_path, "BODY")
+
     %{
       repository: repository,
       package: package,
       release: release,
       user: user,
-      hexpm: hexpm
+      hexpm: hexpm,
+      body_path: body_path
     }
   end
 
   describe "publish/7" do
-    test "publish package pushes artifacts", %{hexpm: hexpm, user: user} do
+    test "publish package pushes artifacts", %{hexpm: hexpm, user: user, body_path: body_path} do
       name = Fake.sequence(:package)
       meta = default_meta(name, "0.1.0")
       audit = audit_data(user)
@@ -34,7 +38,7 @@ defmodule Hexpm.Repository.ReleasesTest do
                  hexpm,
                  nil,
                  user,
-                 "BODY",
+                 body_path,
                  meta,
                  "00",
                  "00",
@@ -54,7 +58,8 @@ defmodule Hexpm.Repository.ReleasesTest do
     test "publish private package with public dependency", %{
       repository: repository,
       package: package,
-      user: user
+      user: user,
+      body_path: body_path
     } do
       meta = %{
         default_meta(Fake.sequence(:package), "0.1.0")
@@ -68,7 +73,7 @@ defmodule Hexpm.Repository.ReleasesTest do
                  repository,
                  nil,
                  user,
-                 "BODY",
+                 body_path,
                  meta,
                  "00",
                  "00",
@@ -77,14 +82,14 @@ defmodule Hexpm.Repository.ReleasesTest do
                )
     end
 
-    test "sets release.publisher to user when publish a new release" do
+    test "sets release.publisher to user when publish a new release", %{body_path: body_path} do
       repository = insert(:repository)
       user = insert(:user)
       meta = default_meta(Fake.sequence(:package), "0.1.0")
       audit = audit_data(user)
 
       {:ok, %{release: release}} =
-        Releases.publish(repository, nil, user, "BODY", meta, "00", "00",
+        Releases.publish(repository, nil, user, body_path, meta, "00", "00",
           audit: audit,
           replace: false
         )
@@ -92,7 +97,7 @@ defmodule Hexpm.Repository.ReleasesTest do
       assert release.publisher_id == user.id
     end
 
-    test "can't publish reserved package name", %{user: user} do
+    test "can't publish reserved package name", %{user: user, body_path: body_path} do
       Repo.insert_all("reserved_packages", [
         %{"repository_id" => 1, "name" => "reserved_name"}
       ])
@@ -105,7 +110,7 @@ defmodule Hexpm.Repository.ReleasesTest do
                  Repository.hexpm(),
                  nil,
                  user,
-                 "BODY",
+                 body_path,
                  meta,
                  "123abc",
                  "123abc",
@@ -116,7 +121,11 @@ defmodule Hexpm.Repository.ReleasesTest do
       assert %{name: "is reserved"} = errors_on(changeset)
     end
 
-    test "can't publish reserved package version", %{package: package, user: user} do
+    test "can't publish reserved package version", %{
+      package: package,
+      user: user,
+      body_path: body_path
+    } do
       Repo.insert_all("reserved_packages", [
         %{"repository_id" => 1, "name" => package.name, "version" => "0.2.0"}
       ])
@@ -129,7 +138,7 @@ defmodule Hexpm.Repository.ReleasesTest do
                  Repository.hexpm(),
                  package,
                  user,
-                 "BODY",
+                 body_path,
                  meta,
                  "123abc",
                  "123abc",
@@ -140,7 +149,11 @@ defmodule Hexpm.Repository.ReleasesTest do
       assert %{version: "is reserved"} = errors_on(changeset)
     end
 
-    test "can't publish using non-semantic version", %{package: package, user: user} do
+    test "can't publish using non-semantic version", %{
+      package: package,
+      user: user,
+      body_path: body_path
+    } do
       Repo.insert_all("reserved_packages", [
         %{"repository_id" => 1, "name" => package.name, "version" => "0.2.0"}
       ])
@@ -153,7 +166,7 @@ defmodule Hexpm.Repository.ReleasesTest do
                  Repository.hexpm(),
                  package,
                  user,
-                 "BODY",
+                 body_path,
                  meta,
                  "123abc",
                  "123abc",

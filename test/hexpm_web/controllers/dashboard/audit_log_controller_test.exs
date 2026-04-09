@@ -15,13 +15,20 @@ defmodule HexpmWeb.Dashboard.AuditLogControllerTest do
         |> test_login(user)
         |> get("/dashboard/audit-logs")
 
-      assert html_response(conn, :ok) =~ "Recent activities"
+      assert html_response(conn, :ok) =~ "Recent Activities"
     end
 
     test "shows the most recent audit logs for current user" do
       user = insert(:user)
 
-      insert(:audit_log, user: user, action: "docs.publish")
+      insert(:audit_log,
+        user: user,
+        action: "docs.publish",
+        params: %{
+          "package" => %{"name" => "my_package"},
+          "release" => %{"version" => "1.0.0"}
+        }
+      )
 
       response =
         build_conn()
@@ -29,14 +36,31 @@ defmodule HexpmWeb.Dashboard.AuditLogControllerTest do
         |> get("/dashboard/audit-logs")
         |> html_response(:ok)
 
-      assert response =~ "Publish doc"
+      assert response =~ "Published documentation for my_package"
+    end
+
+    test "renders page gracefully when audit log params are incomplete" do
+      user = insert(:user)
+
+      insert(:audit_log,
+        user: user,
+        action: "session.create",
+        params: %{"type" => "oauth"}
+      )
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/audit-logs")
+
+      assert html_response(conn, :ok) =~ "Recent Activities"
     end
 
     test "shows the second page of audit logs for current user" do
       user = insert(:user)
 
       insert(:audit_log, user: user, action: "user.create")
-      insert_list(100, :audit_log, action: "user.update", user: user)
+      insert_list(20, :audit_log, action: "user.update", user: user)
 
       response =
         build_conn()
@@ -44,7 +68,7 @@ defmodule HexpmWeb.Dashboard.AuditLogControllerTest do
         |> get("/dashboard/audit-logs?page=2")
         |> html_response(:ok)
 
-      assert response =~ "Create user"
+      assert response =~ "Created user account"
     end
   end
 end

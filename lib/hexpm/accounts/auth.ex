@@ -5,22 +5,17 @@ defmodule Hexpm.Accounts.Auth do
   alias Hexpm.Accounts.{Key, Keys, Organization, Organizations, User, Users, UserProviders}
   alias Hexpm.OAuth.{Tokens, JWT}
 
-  def key_auth(user_secret, usage_info) do
+  def key_auth(user_secret, usage_info, opts \\ []) do
     app_secret = Application.get_env(:hexpm, :secret)
 
     <<first::binary-size(32), second::binary-size(32)>> =
       :crypto.mac(:hmac, :sha256, app_secret, user_secret)
       |> Base.encode16(case: :lower)
 
+    preload = Keyword.get(opts, :preload, :full)
+
     result =
-      from(
-        k in Key,
-        where: k.secret_first == ^first,
-        left_join: u in assoc(k, :user),
-        left_join: o in assoc(k, :organization),
-        preload: [user: {u, [:emails, owned_packages: :repository, organizations: :repository]}],
-        preload: [organization: {o, [:repository, user: [:emails, owned_packages: :repository]]}]
-      )
+      key_auth_query(first, preload)
       |> Hexpm.Repo.one()
 
     case result do
@@ -41,13 +36,38 @@ defmodule Hexpm.Accounts.Auth do
                auth_credential: key,
                user: key.user,
                organization: key.organization,
-               email: find_email(key.user, nil)
+               email: if(preload == :full, do: find_email(key.user, nil))
              }}
           end
         else
           :error
         end
     end
+  end
+
+  defp key_auth_query(first, :full) do
+    from(
+      k in Key,
+      where: k.secret_first == ^first,
+      left_join: u in assoc(k, :user),
+      left_join: o in assoc(k, :organization),
+      preload: [user: {u, [:emails, owned_packages: :repository, organizations: :repository]}],
+      preload: [organization: {o, [:repository, user: [:emails, owned_packages: :repository]]}]
+    )
+  end
+
+  # Lightweight preload for OAuth token endpoint: only loads user with organizations
+  # (for scope expansion) and organization. Skips emails and owned_packages
+  # which are not needed for token issuance.
+  defp key_auth_query(first, :oauth) do
+    from(
+      k in Key,
+      where: k.secret_first == ^first,
+      left_join: u in assoc(k, :user),
+      left_join: o in assoc(k, :organization),
+      preload: [user: {u, [:organizations]}],
+      preload: [organization: o]
+    )
   end
 
   def password_auth(username_or_email, password) do

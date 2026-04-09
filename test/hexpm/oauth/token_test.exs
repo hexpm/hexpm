@@ -12,7 +12,6 @@ defmodule Hexpm.OAuth.TokenTest do
                jti: "can't be blank",
                expires_at: "can't be blank",
                grant_type: "can't be blank",
-               user_id: "can't be blank",
                client_id: "can't be blank"
              } = errors_on(changeset)
     end

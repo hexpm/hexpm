@@ -45,6 +45,15 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     assert user.optional_emails["organization_invite"] == false
   end
 
+  test "redirects to sudo when not in sudo mode", c do
+    conn =
+      build_conn()
+      |> test_login(c.user, sudo: false)
+      |> get("/dashboard/email")
+
+    assert redirected_to(conn) == "/sudo"
+  end
+
   test "requires login" do
     conn = get(build_conn(), "/dashboard/email")
     assert redirected_to(conn) == "/login?return=%2Fdashboard%2Femail"
@@ -76,7 +85,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
       |> post("/dashboard/email", %{email: %{email: email}})
 
     response(conn, 400)
-    assert conn.resp_body =~ "Add email"
+    assert conn.resp_body =~ "Email Settings"
     assert conn.resp_body =~ "already in use"
   end
 

@@ -9,6 +9,29 @@ defmodule Hexpm.OAuth.Tokens do
   @default_refresh_token_expires_in 30 * 24 * 60 * 60
 
   @doc """
+  Computes SHA256 hash of a refresh token, hex-encoded lowercase.
+  """
+  def hash_refresh_token(refresh_token) when is_binary(refresh_token) do
+    :crypto.hash(:sha256, refresh_token)
+    |> Base.encode16(case: :lower)
+  end
+
+  @doc """
+  Looks up a token by its refresh token hash.
+  The hash should be a hex-encoded SHA256 hash of the refresh token.
+
+  Returns {:ok, token} if found, {:error, :not_found} otherwise.
+  """
+  def lookup_by_refresh_token_hash(hash) when is_binary(hash) do
+    normalized_hash = String.downcase(hash)
+
+    case Repo.get_by(Token, refresh_token_hash: normalized_hash) do
+      nil -> {:error, :not_found}
+      token -> {:ok, token}
+    end
+  end
+
+  @doc """
   Looks up a token by its value and type.
 
   ## Options
@@ -87,14 +110,66 @@ defmodule Hexpm.OAuth.Tokens do
         {:ok, refresh_token, refresh_jti} =
           JWT.generate_refresh_token(user.username, "user", scopes, refresh_opts)
 
+        refresh_token_hash = hash_refresh_token(refresh_token)
+
         Map.merge(attrs, %{
           refresh_jti: refresh_jti,
           refresh_token: refresh_token,
-          refresh_token_expires_at: refresh_expires_at
+          refresh_token_expires_at: refresh_expires_at,
+          refresh_token_hash: refresh_token_hash
         })
       else
         attrs
       end
+
+    Token.build(attrs)
+  end
+
+  defp create_for_user_or_org(
+         %Hexpm.Accounts.User{} = user,
+         client_id,
+         scopes,
+         grant_type,
+         grant_reference,
+         opts
+       ) do
+    create_for_user(user, client_id, scopes, grant_type, grant_reference, opts)
+  end
+
+  defp create_for_user_or_org(
+         %Hexpm.Accounts.Organization{} = org,
+         client_id,
+         scopes,
+         grant_type,
+         grant_reference,
+         opts
+       ) do
+    create_for_org(org, client_id, scopes, grant_type, grant_reference, opts)
+  end
+
+  defp create_for_org(org, client_id, scopes, grant_type, grant_reference, opts) do
+    expires_in = Keyword.get(opts, :expires_in, @default_expires_in)
+    expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)
+
+    jwt_opts = [
+      session_id: Keyword.get(opts, :user_session_id),
+      expires_in: expires_in
+    ]
+
+    {:ok, access_token, jti} =
+      JWT.generate_access_token(org.name, "org", scopes, jwt_opts)
+
+    attrs = %{
+      jti: jti,
+      access_token: access_token,
+      scopes: scopes,
+      expires_at: expires_at,
+      grant_type: grant_type,
+      grant_reference: grant_reference,
+      organization_id: org.id,
+      client_id: client_id,
+      user_session_id: Keyword.get(opts, :user_session_id)
+    }
 
     Token.build(attrs)
   end
@@ -134,50 +209,46 @@ defmodule Hexpm.OAuth.Tokens do
     expires_in = Keyword.get(opts, :expires_in, @default_expires_in)
     session_expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)
 
-    Ecto.Multi.new()
-    |> Ecto.Multi.run(:session, fn _repo, _changes ->
-      # Determine if this is a user or organization
-      {user, organization} =
-        case user_or_org do
-          %Hexpm.Accounts.User{} = u -> {u, nil}
-          %Hexpm.Accounts.Organization{} = o -> {nil, o}
-        end
-
-      UserSessions.create_api_key_session(
-        user,
-        organization,
-        client_id,
-        session_expires_at,
-        name: Keyword.get(opts, :name),
-        audit: Keyword.fetch!(opts, :audit)
-      )
-    end)
-    |> Ecto.Multi.run(:update_session_last_use, fn _repo, %{session: session} ->
-      if Keyword.has_key?(opts, :usage_info) do
-        UserSessions.update_last_use(session, Keyword.get(opts, :usage_info))
-      else
-        {:ok, session}
+    {user, organization} =
+      case user_or_org do
+        %Hexpm.Accounts.User{} = u -> {u, nil}
+        %Hexpm.Accounts.Organization{} = o -> {nil, o}
       end
-    end)
-    |> Ecto.Multi.run(:token, fn _repo, %{update_session_last_use: session} ->
-      # Get the user from session (could be user or org's user)
-      user =
-        case user_or_org do
-          %Hexpm.Accounts.User{} = u -> u
-          %Hexpm.Accounts.Organization{user: u} -> u
-        end
 
-      token_opts =
-        opts
-        |> Keyword.put(:user_session_id, session.id)
-        |> Keyword.put(:expires_in, expires_in)
-        # No refresh token for API keys
-        |> Keyword.put(:with_refresh_token, false)
+    max_sessions =
+      if organization do
+        UserSessions.get_organization_session_limit(organization)
+      else
+        UserSessions.max_user_sessions()
+      end
 
-      changeset =
-        create_for_user(user, client_id, scopes, grant_type, grant_reference, token_opts)
+    # Enforce session limit outside transaction
+    UserSessions.enforce_session_limit(user_or_org, max_sessions)
 
-      Repo.insert(changeset)
+    # Pre-compute JWT outside the transaction (CPU-intensive ES256 signing)
+    token_opts =
+      Keyword.merge(opts, expires_in: expires_in, with_refresh_token: false)
+
+    token_changeset =
+      create_for_user_or_org(
+        user_or_org,
+        client_id,
+        scopes,
+        grant_type,
+        grant_reference,
+        token_opts
+      )
+
+    # Build flat Multi (no nested transactions, last_use folded into INSERT)
+    UserSessions.build_api_key_session_multi(user, organization, client_id, session_expires_at,
+      name: Keyword.get(opts, :name),
+      usage_info: Keyword.get(opts, :usage_info),
+      audit: Keyword.fetch!(opts, :audit)
+    )
+    |> Ecto.Multi.run(:token, fn _repo, %{session: session} ->
+      token_changeset
+      |> Ecto.Changeset.put_change(:user_session_id, session.id)
+      |> Repo.insert()
     end)
     |> Repo.transaction()
     |> case do
@@ -197,32 +268,30 @@ defmodule Hexpm.OAuth.Tokens do
         grant_reference \\ nil,
         opts \\ []
       ) do
-    Ecto.Multi.new()
-    |> Ecto.Multi.run(:session, fn _repo, _changes ->
-      UserSessions.create_oauth_session(
-        user,
-        client_id,
-        name: Keyword.get(opts, :name),
-        audit: Keyword.fetch!(opts, :audit)
-      )
-    end)
-    |> Ecto.Multi.run(:update_session_last_use, fn _repo, %{session: session} ->
-      if Keyword.has_key?(opts, :usage_info) do
-        UserSessions.update_last_use(session, Keyword.get(opts, :usage_info))
-      else
-        {:ok, session}
-      end
-    end)
-    |> Ecto.Multi.run(:token, fn _repo, %{update_session_last_use: session} ->
-      token_opts =
-        opts
-        |> Keyword.put(:user_session_id, session.id)
-        |> Keyword.put(:refresh_token_expires_at, session.expires_at)
+    # Enforce session limit outside transaction
+    UserSessions.enforce_session_limit(user)
 
-      changeset =
-        create_for_user(user, client_id, scopes, grant_type, grant_reference, token_opts)
+    # Compute session expiration upfront (used for both session and refresh token)
+    session_expires_at =
+      DateTime.add(DateTime.utc_now(), UserSessions.default_session_expires_in(), :second)
 
-      Repo.insert(changeset)
+    # Pre-compute JWT outside the transaction (CPU-intensive ES256 signing)
+    token_opts = Keyword.put(opts, :refresh_token_expires_at, session_expires_at)
+
+    token_changeset =
+      create_for_user(user, client_id, scopes, grant_type, grant_reference, token_opts)
+
+    # Build flat Multi (no nested transactions, last_use folded into INSERT)
+    UserSessions.build_oauth_session_multi(user, client_id,
+      expires_at: session_expires_at,
+      name: Keyword.get(opts, :name),
+      usage_info: Keyword.get(opts, :usage_info),
+      audit: Keyword.fetch!(opts, :audit)
+    )
+    |> Ecto.Multi.run(:token, fn _repo, %{session: session} ->
+      token_changeset
+      |> Ecto.Changeset.put_change(:user_session_id, session.id)
+      |> Repo.insert()
     end)
     |> Repo.transaction()
     |> case do
@@ -243,31 +312,25 @@ defmodule Hexpm.OAuth.Tokens do
         grant_reference \\ nil,
         opts \\ []
       ) do
-    alias Hexpm.UserSessions
+    # Pre-compute JWT outside the transaction (CPU-intensive ES256 signing)
+    token_opts =
+      Keyword.put(opts, :refresh_token_expires_at, old_token.refresh_token_expires_at)
+
+    token_changeset =
+      create_for_user(old_token.user, client_id, scopes, grant_type, grant_reference, token_opts)
+
+    session_id = Keyword.get(opts, :user_session_id) || old_token.user_session_id
 
     Ecto.Multi.new()
     |> Ecto.Multi.update(:revoked_token, revoke_changeset(old_token))
     |> Ecto.Multi.run(:new_token, fn _repo, _changes ->
-      # Preserve the absolute expiration from the old token
-      token_opts =
-        Keyword.put(opts, :refresh_token_expires_at, old_token.refresh_token_expires_at)
-
-      changeset =
-        create_for_user(
-          old_token.user,
-          client_id,
-          scopes,
-          grant_type,
-          grant_reference,
-          token_opts
-        )
-
-      Repo.insert(changeset)
+      token_changeset
+      |> Ecto.Changeset.put_change(:user_session_id, session_id)
+      |> Repo.insert()
     end)
-    |> Ecto.Multi.run(:update_session_last_use, fn _repo, %{new_token: new_token} ->
-      # Update session's last_use when token is refreshed
-      if new_token.user_session_id && Keyword.has_key?(opts, :usage_info) do
-        case Repo.get(Hexpm.UserSession, new_token.user_session_id) do
+    |> Ecto.Multi.run(:update_session_last_use, fn _repo, _changes ->
+      if session_id && Keyword.has_key?(opts, :usage_info) do
+        case Repo.get(Hexpm.UserSession, session_id) do
           nil ->
             {:ok, nil}
 

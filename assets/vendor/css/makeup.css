@@ -1,0 +1,106 @@
+/*
+ * Makeup syntax highlighting theme: GitHub Dark
+ * Based on GitHub's dark code theme colors
+ */
+
+.highlight {
+  background: #0d1117;
+  color: #c9d1d9;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+.highlight .unselectable {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.highlight .hll { background-color: #161b22; }
+
+/* Keywords */
+.highlight .k  { color: #ff7b72; }
+.highlight .kc { color: #ff7b72; }
+.highlight .kd { color: #ff7b72; }
+.highlight .kn { color: #ff7b72; }
+.highlight .kp { color: #ff7b72; }
+.highlight .kr { color: #ff7b72; }
+.highlight .kt { color: #ff7b72; }
+
+/* Names */
+.highlight .nc { color: #d2a8ff; }
+.highlight .nd { color: #d2a8ff; }
+.highlight .ne { color: #d2a8ff; }
+.highlight .nf { color: #d2a8ff; }
+.highlight .fm { color: #d2a8ff; }
+.highlight .nb { color: #ffa657; }
+.highlight .bp { color: #ffa657; }
+.highlight .na { color: #79c0ff; }
+.highlight .ni { color: #c9d1d9; }
+.highlight .nl { color: #79c0ff; }
+.highlight .nn { color: #c9d1d9; }
+.highlight .no { color: #79c0ff; }
+.highlight .nt { color: #7ee787; }
+.highlight .nv { color: #79c0ff; }
+.highlight .vc { color: #79c0ff; }
+.highlight .vg { color: #79c0ff; }
+.highlight .vi { color: #79c0ff; }
+.highlight .vm { color: #79c0ff; }
+
+/* Strings */
+.highlight .s  { color: #a5d6ff; }
+.highlight .s1 { color: #a5d6ff; }
+.highlight .s2 { color: #a5d6ff; }
+.highlight .sa { color: #a5d6ff; }
+.highlight .sb { color: #a5d6ff; }
+.highlight .sc { color: #a5d6ff; }
+.highlight .sd { color: #a5d6ff; }
+.highlight .se { color: #79c0ff; }
+.highlight .sh { color: #a5d6ff; }
+.highlight .si { color: #a5d6ff; }
+.highlight .sr { color: #a5d6ff; }
+.highlight .ss { color: #79c0ff; }
+.highlight .sx { color: #a5d6ff; }
+.highlight .dl { color: #a5d6ff; }
+
+/* Numbers */
+.highlight .m  { color: #79c0ff; }
+.highlight .mb { color: #79c0ff; }
+.highlight .mf { color: #79c0ff; }
+.highlight .mh { color: #79c0ff; }
+.highlight .mi { color: #79c0ff; }
+.highlight .mo { color: #79c0ff; }
+.highlight .il { color: #79c0ff; }
+
+/* Operators */
+.highlight .o  { color: #ff7b72; }
+.highlight .ow { color: #ff7b72; }
+.highlight .p  { color: #c9d1d9; }
+
+/* Comments */
+.highlight .c  { color: #8b949e; font-style: italic; }
+.highlight .c1 { color: #8b949e; font-style: italic; }
+.highlight .ch { color: #8b949e; font-style: italic; }
+.highlight .cm { color: #8b949e; font-style: italic; }
+.highlight .cp { color: #8b949e; font-style: italic; }
+.highlight .cpf { color: #8b949e; font-style: italic; }
+.highlight .cs { color: #8b949e; font-style: italic; }
+
+/* Generic (diffs, etc.) */
+.highlight .gd { color: #ffdcd7; background-color: #67060c; }
+.highlight .gi { color: #aff5b4; background-color: #033a16; }
+.highlight .ge { font-style: italic; }
+.highlight .gs { font-weight: bold; }
+.highlight .gh { color: #1f6feb; font-weight: bold; }
+.highlight .gu { color: #1f6feb; }
+.highlight .go { color: #8b949e; }
+.highlight .gp { color: #8b949e; }
+.highlight .gr { color: #ffa657; }
+.highlight .gt { color: #ffa657; }
+
+/* Errors */
+.highlight .err { color: #ffa657; }

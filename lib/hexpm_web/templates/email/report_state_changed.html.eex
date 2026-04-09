@@ -1,3 +1,11 @@
-<p> A moderator modified the package report #<%= @report_id %> state to <%= @new_state%> at <%= @updated_at %>.</p>
+<h1 style="color: #030913; font-size: 24px; line-height: 32px; font-weight: 600; margin: 0 0 24px 0; text-align: center;">
+  Report State Changed
+</h1>
 
-<p><%= ReportState.state_explain(@new_state) %></p>
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  A moderator modified the package report #<%= @report_id %> state to <%= @new_state %> at <%= @updated_at %>.
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= ReportState.state_explain(@new_state) %>
+</p>

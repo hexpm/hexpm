@@ -23,6 +23,13 @@ defmodule Hexpm.Store.S3 do
     |> ExAws.request!(region: region(bucket))
   end
 
+  def put_file(bucket, key, path, opts) do
+    path
+    |> S3.Upload.stream_file()
+    |> S3.upload(bucket(bucket), key, opts)
+    |> ExAws.request!(region: region(bucket))
+  end
+
   def delete(bucket, key) do
     S3.delete_object(bucket(bucket), key)
     |> ExAws.request!(region: region(bucket))

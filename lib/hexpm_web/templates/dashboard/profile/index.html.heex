@@ -1,0 +1,179 @@
+<div class="bg-grey-50 dark:bg-grey-950 min-h-screen py-4 sm:py-8">
+  <div class="max-w-7xl mx-auto px-4">
+    {ViewHelpers.changeset_error(@changeset)}
+
+    <div class="flex flex-col gap-4 sm:gap-8 lg:flex-row">
+      <%!-- Left Sidebar --%>
+      <div class="w-full lg:w-64 flex-shrink-0">
+        {render(HexpmWeb.DashboardView, "_sidebar.html", assigns)}
+      </div>
+
+      <%!-- Right Content - Single White Card --%>
+      <div class="flex-1 min-w-0">
+        <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4 sm:p-8">
+          <%!-- Profile Settings Title --%>
+          <h2 class="text-grey-900 dark:text-white text-xl font-semibold mb-8">
+            Profile Settings
+          </h2>
+
+          <%!-- Profile Form --%>
+          <.form :let={f} for={@changeset} action={~p"/dashboard/profile"} method="post">
+            <%!-- Profile Picture Section --%>
+            <div class="flex items-start gap-6 mb-8 pb-8 border-b border-grey-200 dark:border-grey-700">
+              <%= if User.email(@current_user, :gravatar) do %>
+                <img
+                  src={ViewHelpers.gravatar_url(User.email(@current_user, :gravatar), :large)}
+                  alt="Profile picture"
+                  class="w-24 h-24 rounded-full flex-shrink-0"
+                />
+              <% else %>
+                <div class="w-24 h-24 rounded-full bg-grey-100 dark:bg-grey-900 flex items-center justify-center flex-shrink-0">
+                  {HexpmWeb.ViewIcons.icon(:heroicon, "user-circle",
+                    class: "w-16 h-16 text-grey-400 dark:text-grey-300"
+                  )}
+                </div>
+              <% end %>
+
+              <div class="flex-1">
+                <.text_link
+                  href="https://en.gravatar.com/emails/"
+                  variant="purple"
+                  class="text-sm"
+                >
+                  Change Photo
+                </.text_link>
+                <p class="text-grey-500 dark:text-grey-300 text-sm mt-2">
+                  <%= if User.email(@current_user, :gravatar) do %>
+                    <.text_link href="https://en.gravatar.com/emails/" variant="purple">
+                      Gravatar
+                    </.text_link>
+                    is used to display your profile picture. You can choose your Gravatar email below or
+                    go to Gravatar to change the image.
+                  <% else %>
+                    <.text_link href="https://en.gravatar.com/emails/" variant="purple">
+                      Gravatar
+                    </.text_link>
+                    is used to display your profile picture.
+                    Choose a Gravatar email address below to show your avatar on your profile.
+                  <% end %>
+                </p>
+              </div>
+            </div>
+
+            <%!-- Form Fields --%>
+            <div class="space-y-6">
+              <%!-- Full Name --%>
+              <.text_input field={f[:full_name]} label="Full Name" />
+
+              <%!-- Public Email --%>
+              <div>
+                <.select_input
+                  field={f[:public_email]}
+                  label="Public Email"
+                  options={public_email_options(@changeset.data)}
+                  value={public_email_value(@changeset.data)}
+                  variant="light"
+                />
+                <p class="mt-2 text-grey-500 dark:text-grey-300 text-sm">
+                  You can add or remove email address on the <.text_link
+                    navigate={~p"/dashboard/email"}
+                    variant="purple"
+                  >email settings page</.text_link>.
+                </p>
+              </div>
+
+              <%!-- Gravatar Email --%>
+              <.select_input
+                field={f[:gravatar_email]}
+                label="Gravatar Email"
+                options={gravatar_email_options(@changeset.data)}
+                value={gravatar_email_value(@changeset.data)}
+                variant="light"
+              />
+
+              <%!-- Social Media Handles --%>
+              <%= inputs_for f, :handles, fn f -> %>
+                <div class="border-t border-grey-200 dark:border-grey-700 pt-6 mt-6">
+                  <h3 class="text-grey-900 dark:text-white text-sm font-semibold uppercase tracking-wider mb-6">
+                    Socials
+                  </h3>
+
+                  <div class="space-y-5">
+                    <%!-- Twitter/X --%>
+                    <.social_input
+                      form={f}
+                      field={:twitter}
+                      icon={:twitter}
+                      label="Twitter"
+                      placeholder="Twitter username"
+                    />
+
+                    <%!-- Bluesky --%>
+                    <.social_input
+                      form={f}
+                      field={:bluesky}
+                      icon={:bluesky}
+                      label="Bluesky"
+                      placeholder="Bluesky username"
+                    />
+
+                    <%!-- GitHub --%>
+                    <.social_input
+                      form={f}
+                      field={:github}
+                      icon={:github}
+                      label="GitHub"
+                      placeholder="GitHub username"
+                    />
+
+                    <%!-- Elixir Forum --%>
+                    <.social_input
+                      form={f}
+                      field={:elixirforum}
+                      icon={:elixirforum}
+                      label="Elixir Forum"
+                      placeholder="Elixir Forum username"
+                    />
+
+                    <%!-- Slack --%>
+                    <.social_input
+                      form={f}
+                      field={:slack}
+                      icon={:slack}
+                      label="Slack"
+                      placeholder="Slack username"
+                    />
+
+                    <%!-- Libera (IRC) --%>
+                    <div>
+                      <.social_input
+                        form={f}
+                        field={:freenode}
+                        icon={:libera}
+                        label="Libera"
+                        placeholder="Libera nickname"
+                      />
+                      <p class="mt-2 text-grey-500 dark:text-grey-300 text-sm">
+                        Elixir IRC channel:
+                        <.text_link href="irc://irc.libera.chat/elixir" variant="purple">
+                          irc://irc.libera.chat/elixir
+                        </.text_link>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              <% end %>
+
+              <%!-- Save Button --%>
+              <div class="flex justify-start pt-6">
+                <.button type="submit" variant="primary">
+                  Save Changes
+                </.button>
+              </div>
+            </div>
+          </.form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

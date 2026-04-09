@@ -1,0 +1,102 @@
+<%= if @error_message do %>
+  <div class="max-w-lg mx-auto mt-4 mb-2">
+    <div class="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+      {raw(@error_message)}
+    </div>
+  </div>
+<% end %>
+
+<div class="flex items-center justify-center my-auto py-16">
+  <div class="bg-white border border-grey-200 rounded-lg w-full max-w-lg px-10 py-10">
+    <h1 class="font-bold text-[32px] leading-[36px] text-grey-900 text-center mb-3">
+      Device Authorization
+    </h1>
+
+    <%= if @pre_filled do %>
+      <div class="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 mb-6">
+        <p class="text-sm text-yellow-800">
+          <span class="font-semibold">Security Check:</span>
+          Please verify that this code matches the one displayed on your device or terminal before continuing.
+        </p>
+      </div>
+    <% else %>
+      <p class="text-grey-600 text-center mb-8">
+        Enter the verification code displayed on your device
+      </p>
+    <% end %>
+
+    <%= if @pre_filled do %>
+      <.form for={%{}} action={~p"/oauth/device"} method="post" class="space-y-6">
+        <div>
+          <label for="user_code" class="block text-sm font-medium text-grey-700 mb-1">
+            Verification Code
+          </label>
+          <input
+            id="user_code"
+            type="text"
+            class="w-full h-10 px-3 border border-grey-200 rounded-lg text-sm bg-grey-50 focus:outline-none focus:ring-2 focus:ring-purple-600"
+            name="user_code"
+            value={format_user_code(@user_code)}
+            placeholder="XXXX-XXXX"
+            pattern="[A-Z0-9]{4}-?[A-Z0-9]{4}"
+            maxlength="9"
+            readonly
+            required
+          />
+          <p class="mt-1.5 text-grey-500 text-xs">
+            This code was provided in your authorization link. Confirm it matches your device.
+          </p>
+        </div>
+
+        <div class="flex gap-3">
+          <.button type="submit" variant="primary" full_width>
+            Verify and Continue
+          </.button>
+          <.button_link href={~p"/"} variant="danger-outline" class="whitespace-nowrap">
+            Code does not match
+          </.button_link>
+        </div>
+      </.form>
+    <% else %>
+      <.form for={%{}} action={~p"/oauth/device"} method="get" class="space-y-6">
+        <div>
+          <label for="user_code" class="block text-sm font-medium text-grey-700 mb-1">
+            Verification Code
+          </label>
+          <input
+            id="user_code"
+            type="text"
+            class="w-full h-10 px-3 border border-grey-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-600"
+            name="user_code"
+            value={format_user_code(@user_code)}
+            placeholder="XXXX-XXXX"
+            pattern="[A-Z0-9]{4}-?[A-Z0-9]{4}"
+            maxlength="9"
+            required
+          />
+          <p class="mt-1.5 text-grey-500 text-xs">
+            Enter the 8-character code shown on your device (format: XXXX-XXXX)
+          </p>
+        </div>
+
+        <.button type="submit" variant="primary" full_width>
+          Verify Code
+        </.button>
+      </.form>
+    <% end %>
+
+    <hr class="my-6 border-grey-200" />
+
+    <div>
+      <h3 class="text-sm font-semibold text-grey-900 mb-2">What is this?</h3>
+      <p class="text-sm text-grey-600 mb-2">
+        This page allows you to authorize applications (like command-line tools) to access your Hex account.
+        Your application should have displayed a verification code that you need to enter above.
+      </p>
+      <p class="text-sm text-grey-600">
+        <span class="font-semibold">Security Note:</span>
+        Only enter the code if you initiated this authorization request from a trusted application.
+      </p>
+    </div>
+  </div>
+</div>

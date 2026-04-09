@@ -1,6 +1,6 @@
 ARG ELIXIR_VERSION=1.18.1
 ARG ERLANG_VERSION=27.2
-ARG DEBIAN_VERSION=bookworm-20241223-slim
+ARG DEBIAN_VERSION=trixie-20260223-slim
 
 FROM hexpm/elixir:${ELIXIR_VERSION}-erlang-${ERLANG_VERSION}-debian-${DEBIAN_VERSION} AS build
 
@@ -9,7 +9,7 @@ ENV LANG=C.UTF-8
 # install build dependencies
 RUN apt update && \
     apt upgrade -y && \
-    apt install -y --no-install-recommends git build-essential nodejs yarnpkg && \
+    apt install -y --no-install-recommends git build-essential && \
     apt clean -y && rm -rf /var/lib/apt/lists/*
 
 # prepare build dir
@@ -29,14 +29,11 @@ COPY config config
 RUN mix deps.get
 RUN mix deps.compile
 
-# build assets
+# build project and assets
 COPY priv priv
 COPY assets assets
-RUN cd assets && yarnpkg install && yarnpkg run webpack --mode production
-RUN mix phx.digest
-
-# build project
 COPY lib lib
+RUN mix assets.deploy
 RUN mix compile
 
 # build release

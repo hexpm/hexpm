@@ -4,6 +4,7 @@ defmodule Hexpm.Billing.Hexpm do
   @behaviour Hexpm.Billing.Behaviour
   @timeout 15_000
 
+  # TODO: Remove when all customers migrated to SCA/PaymentIntents
   def checkout(organization, data) do
     case post("/api/customers/#{organization}/payment_source", data) do
       {:ok, 204, _headers, body} -> {:ok, body}
@@ -11,9 +12,12 @@ defmodule Hexpm.Billing.Hexpm do
     end
   end
 
-  def get(organization) do
+  def get(organization, opts \\ []) do
+    query = URI.encode_query(Enum.reject(opts, fn {_k, v} -> is_nil(v) end))
+    url = "/api/customers/#{organization}?#{query}"
+
     result =
-      fn -> get_json("/api/customers/#{organization}") end
+      fn -> get_json(url) end
       |> Hexpm.HTTP.retry("billing")
 
     case result do
@@ -27,6 +31,13 @@ defmodule Hexpm.Billing.Hexpm do
     body
   end
 
+  def resume(organization) do
+    case post("/api/customers/#{organization}/resume", %{}) do
+      {:ok, 200, _headers, body} -> {:ok, body}
+      {:ok, status, _headers, body} when status in 400..499 -> {:error, body}
+    end
+  end
+
   def create(params) do
     case post("/api/customers", params) do
       {:ok, 200, _headers, body} -> {:ok, body}
@@ -37,19 +48,34 @@ defmodule Hexpm.Billing.Hexpm do
   def update(organization, params) do
     case patch("/api/customers/#{organization}", params) do
       {:ok, 200, _headers, body} -> {:ok, body}
+      {:ok, 402, _headers, body} -> {:requires_action, body}
       {:ok, 404, _headers, _body} -> {:ok, nil}
       {:ok, 422, _headers, body} -> {:error, body}
     end
   end
 
-  def change_plan(organization, params) do
-    {:ok, 204, _headers, _body} = post("/api/customers/#{organization}/plan", params)
-    :ok
+  def void_invoice(organization, payments_token) do
+    case post("/api/customers/#{organization}/void_invoice", %{
+           "payments_token" => payments_token
+         }) do
+      {:ok, 204, _headers, _body} -> :ok
+      {:ok, status, _headers, body} when status in 400..499 -> {:error, body}
+    end
   end
 
-  def invoice(id) do
+  def change_plan(organization, params) do
+    case post("/api/customers/#{organization}/plan", params) do
+      {:ok, 204, _headers, _body} -> :ok
+      {:ok, 422, _headers, body} -> {:error, body}
+    end
+  end
+
+  def invoice(id, opts \\ []) do
+    query = URI.encode_query(Enum.reject(opts, fn {_k, v} -> is_nil(v) end))
+    url = "/api/invoices/#{id}/html?#{query}"
+
     {:ok, 200, _headers, body} =
-      fn -> get_html("/api/invoices/#{id}/html") end
+      fn -> get_html(url) end
       |> Hexpm.HTTP.retry("billing")
 
     body

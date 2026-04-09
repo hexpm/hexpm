@@ -1,6 +1,7 @@
 defmodule HexpmWeb.LoginController do
   use HexpmWeb, :controller
   require Logger
+  alias Hexpm.UserSessions
   alias HexpmWeb.Plugs.Attack
 
   plug :nillify_params, ["return"]
@@ -43,8 +44,6 @@ defmodule HexpmWeb.LoginController do
   end
 
   def delete(conn, _params) do
-    alias Hexpm.UserSessions
-
     # Revoke browser session if exists
     if session_token = get_session(conn, "session_token") do
       case Base.decode64(session_token) do
@@ -60,61 +59,15 @@ defmodule HexpmWeb.LoginController do
     end
 
     conn
-    |> delete_session("session_token")
+    |> clear_session()
     |> redirect(to: ~p"/")
   end
 
-  def start_session(conn, user, return) do
+  defp start_session(conn, user, return) do
     conn
     |> start_session_internal(user)
+    |> HexpmWeb.Plugs.Sudo.set_sudo_authenticated()
     |> redirect_return(user, return)
-  end
-
-  def start_session_internal(conn, user) do
-    alias Hexpm.UserSessions
-
-    # Create browser session
-    {:ok, _user_session, session_token} =
-      UserSessions.create_browser_session(user,
-        name: detect_browser(conn),
-        audit: %{audit_data(conn) | user: user}
-      )
-
-    conn
-    |> configure_session(renew: true)
-    |> put_session("session_token", Base.encode64(session_token))
-  end
-
-  defp detect_browser(conn) do
-    user_agent = get_req_header(conn, "user-agent") |> List.first()
-
-    cond do
-      is_nil(user_agent) -> "Unknown Browser"
-      String.contains?(user_agent, "Chrome") -> "Chrome"
-      String.contains?(user_agent, "Firefox") -> "Firefox"
-      String.contains?(user_agent, "Safari") -> "Safari"
-      String.contains?(user_agent, "Edge") -> "Edge"
-      true -> "Browser Session"
-    end
-  end
-
-  defp redirect_return(%{params: %{"hexdocs" => organization}} = conn, user, return)
-       when is_binary(organization) do
-    case generate_hexdocs_key(user, organization) do
-      {:ok, key} ->
-        docs_url =
-          Application.get_env(:hexpm, :docs_url)
-          |> String.replace("://", "://#{organization}.")
-
-        url = "#{docs_url}#{safe_path(return)}?key=#{key.user_secret}"
-        redirect(conn, external: url)
-
-      {:error, _changeset} ->
-        conn
-        |> put_flash(:error, "You don't have access to organization #{organization}")
-        |> put_status(400)
-        |> render_show()
-    end
   end
 
   defp redirect_return(conn, _user, "/" <> _ = return) do
@@ -125,41 +78,20 @@ defmodule HexpmWeb.LoginController do
     redirect(conn, to: ~p"/users/#{user}")
   end
 
-  defp generate_hexdocs_key(user, organization) do
-    Keys.create_for_docs(user, organization)
-  end
-
   defp render_show(conn) do
     render(
       conn,
       "show.html",
       title: "Log in",
       container: "container page page-xs login",
-      return: safe_string(conn.params["return"]),
-      hexdocs: safe_string(conn.params["hexdocs"])
+      return: safe_string(conn.params["return"])
     )
   end
 
-  defp login(conn, %User{id: user_id, tfa: %{secret: secret}} = user,
-         password_breached: breached?
-       )
+  defp login(conn, %User{tfa: %{secret: secret}} = user, password_breached: breached?)
        when is_binary(secret) do
-    alias Hexpm.UserSessions
-
-    # Pre-create browser session for after TFA
-    {:ok, _user_session, session_token} =
-      UserSessions.create_browser_session(user,
-        name: detect_browser(conn),
-        audit: %{audit_data(conn) | user: user}
-      )
-
     conn
-    |> configure_session(renew: true)
-    |> put_session("tfa_user_id", %{
-      "uid" => user_id,
-      "return" => safe_string(conn.params["return"]),
-      "session_token" => Base.encode64(session_token)
-    })
+    |> start_tfa_session(user, safe_string(conn.params["return"]))
     |> maybe_put_flash(breached?)
     |> redirect(to: ~p"/tfa")
   end
@@ -169,9 +101,6 @@ defmodule HexpmWeb.LoginController do
     |> maybe_put_flash(breached?)
     |> start_session(user, safe_string(conn.params["return"]))
   end
-
-  defp safe_path("/" <> _ = path), do: path
-  defp safe_path(_), do: "/"
 
   defp maybe_put_flash(conn, false), do: conn
 

@@ -12,17 +12,22 @@ defmodule HexpmWeb.PasswordController do
     username = get_session(conn, "reset_username")
     key = get_session(conn, "reset_key")
 
-    if username && key do
+    with {:ok, username} <- validate_session_params(username, key),
+         :ok <- validate_reset_key(username, key) do
       changeset = User.update_password(%User{}, %{})
-
-      conn
-      |> delete_session("reset_username")
-      |> delete_session("reset_key")
-      |> render_show(username, key, changeset)
+      render_show(conn, username, key, changeset)
     else
-      conn
-      |> put_flash(:error, "Invalid password reset key.")
-      |> redirect(to: ~p"/")
+      {:error, :missing_session} ->
+        conn
+        |> put_flash(:error, "Invalid password reset key.")
+        |> redirect(to: ~p"/")
+
+      {:error, :invalid_key} ->
+        conn
+        |> delete_session("reset_username")
+        |> delete_session("reset_key")
+        |> put_flash(:error, "This password reset link has expired or already been used.")
+        |> redirect(to: ~p"/password/reset")
     end
   end
 
@@ -51,8 +56,13 @@ defmodule HexpmWeb.PasswordController do
 
       :error ->
         conn
-        |> put_flash(:error, "Failed to change your password.")
-        |> redirect(to: ~p"/")
+        |> delete_session("reset_username")
+        |> delete_session("reset_key")
+        |> put_flash(
+          :error,
+          "This password reset link has expired or already been used. Please request a new one."
+        )
+        |> redirect(to: ~p"/password/reset")
 
       {:error, changeset} ->
         conn
@@ -66,11 +76,29 @@ defmodule HexpmWeb.PasswordController do
       conn,
       "show.html",
       title: "Choose a new password",
-      container: "container page page-xs password-view",
       username: username,
       key: key,
       changeset: changeset
     )
+  end
+
+  defp validate_session_params(username, key) when is_binary(username) and is_binary(key) do
+    {:ok, username}
+  end
+
+  defp validate_session_params(_username, _key) do
+    {:error, :missing_session}
+  end
+
+  defp validate_reset_key(username, key) do
+    # Need to preload both :password_resets and :emails for can_reset_password?
+    user = Users.get(username, [:emails, :password_resets])
+
+    if user && User.can_reset_password?(user, key) do
+      :ok
+    else
+      {:error, :invalid_key}
+    end
   end
 
   defp maybe_put_flash(conn, false), do: conn

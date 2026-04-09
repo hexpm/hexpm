@@ -36,7 +36,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert response["user_code"]
       assert response["verification_uri"]
       assert response["verification_uri_complete"]
-      assert response["expires_in"] == 600
+      assert response["expires_in"] in 599..600
       assert response["interval"] == 5
     end
 
@@ -81,9 +81,9 @@ defmodule HexpmWeb.API.OAuthControllerTest do
           "scope" => "invalid_scope"
         })
 
-      assert json_response(conn, 401)
-      response = json_response(conn, 401)
-      assert response["error"] == "invalid_client"
+      assert json_response(conn, 400)
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_scope"
     end
 
     test "initiates device authorization with name parameter", %{client: client} do
@@ -102,6 +102,46 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       # Verify device code was created with the name
       device_code = Repo.get_by(Hexpm.OAuth.DeviceCode, device_code: response["device_code"])
       assert device_code.name == name
+    end
+
+    test "returns error for scope as array (malformed JSON)", %{client: client} do
+      conn =
+        post(build_conn(), ~p"/api/oauth/device_authorization", %{
+          "client_id" => client.client_id,
+          "scope" => ["api:write"]
+        })
+
+      assert json_response(conn, 400)
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_scope"
+    end
+
+    test "returns error for client_id as array (malformed JSON)" do
+      conn =
+        post(build_conn(), ~p"/api/oauth/device_authorization", %{
+          "client_id" => ["invalid"],
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 401)
+      response = json_response(conn, 401)
+      assert response["error"] == "invalid_client"
+    end
+
+    test "handles name as non-string gracefully", %{client: client} do
+      conn =
+        post(build_conn(), ~p"/api/oauth/device_authorization", %{
+          "client_id" => client.client_id,
+          "scope" => "api",
+          "name" => ["invalid", "name"]
+        })
+
+      # Should succeed but ignore the malformed name
+      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+
+      device_code = Repo.get_by(Hexpm.OAuth.DeviceCode, device_code: response["device_code"])
+      assert device_code.name == nil
     end
   end
 
@@ -587,7 +627,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
         name: "Test OAuth Client",
         client_type: "public",
         allowed_grant_types: ["client_credentials"],
-        allowed_scopes: ["api", "repositories"]
+        allowed_scopes: ["api", "api:read", "api:write", "repositories"]
       }
 
       {:ok, client} = Client.build(client_params) |> Repo.insert()
@@ -662,6 +702,20 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert json_response(conn, 400)
       response = json_response(conn, 400)
       assert response["error"] == "invalid_request"
+    end
+
+    test "returns error for invalid client_id", %{api_key: api_key} do
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => Ecto.UUID.generate(),
+          "client_secret" => api_key,
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 401)
+      response = json_response(conn, 401)
+      assert response["error"] == "invalid_client"
     end
 
     test "returns error for invalid API key", %{client: client} do
@@ -963,6 +1017,454 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       scopes = String.split(response["scope"], " ")
       assert "api" in scopes
       assert "repository:#{org.name}" in scopes
+    end
+
+    test "returns error when api:read key requests 'api' scope (CVE-2026-21621)", %{
+      user: user,
+      client: client
+    } do
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{name: "read_only_key", permissions: [%{domain: "api", resource: "read"}]},
+          audit: audit_data(user)
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 400)
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_scope"
+    end
+
+    test "succeeds when api:read key requests 'api:read' scope", %{user: user, client: client} do
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{name: "read_only_key", permissions: [%{domain: "api", resource: "read"}]},
+          audit: audit_data(user)
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "api:read"
+        })
+
+      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+      assert response["scope"] == "api:read"
+    end
+
+    test "returns error when api:read key requests 'api:write' scope", %{
+      user: user,
+      client: client
+    } do
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{name: "read_only_key", permissions: [%{domain: "api", resource: "read"}]},
+          audit: audit_data(user)
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "api:write"
+        })
+
+      assert json_response(conn, 400)
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_scope"
+    end
+
+    test "succeeds when api:write key requests 'api:write' scope", %{user: user, client: client} do
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{name: "write_key", permissions: [%{domain: "api", resource: "write"}]},
+          audit: audit_data(user)
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "api:write"
+        })
+
+      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+      assert response["scope"] == "api:write"
+    end
+
+    test "succeeds when api:write key requests 'api:read' scope (write implies read)", %{
+      user: user,
+      client: client
+    } do
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{name: "write_key", permissions: [%{domain: "api", resource: "write"}]},
+          audit: audit_data(user)
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "api:read"
+        })
+
+      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+      assert response["scope"] == "api:read"
+    end
+
+    test "returns error when api:write key requests 'api' scope", %{user: user, client: client} do
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{name: "write_key", permissions: [%{domain: "api", resource: "write"}]},
+          audit: audit_data(user)
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 400)
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_scope"
+    end
+
+    test "succeeds when full api key (resource: nil) requests 'api' scope", %{
+      user: user,
+      client: client
+    } do
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{name: "full_api_key", permissions: [%{domain: "api"}]},
+          audit: audit_data(user)
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+      assert response["scope"] == "api"
+    end
+
+    test "succeeds when api-only key requests 'repositories' scope", %{
+      user: user,
+      client: client
+    } do
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{name: "api_only_key", permissions: [%{domain: "api"}]},
+          audit: audit_data(user)
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "repositories"
+        })
+
+      assert json_response(conn, 200)
+    end
+
+    test "succeeds for organization key requesting 'repositories' scope", %{client: client} do
+      org = insert(:organization)
+
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          org,
+          %{name: "org_key", permissions: [%{domain: "repository", resource: org.name}]},
+          audit: audit_data(org)
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "repositories"
+        })
+
+      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+      assert response["access_token"]
+      assert response["scope"] == "repository:#{org.name}"
+    end
+
+    test "org key creates session with organization_id", %{client: client} do
+      org = insert(:organization)
+
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          org,
+          %{name: "org_key", permissions: [%{domain: "repository", resource: org.name}]},
+          audit: audit_data(org)
+        )
+
+      post(build_conn(), ~p"/api/oauth/token", %{
+        "grant_type" => "client_credentials",
+        "client_id" => client.client_id,
+        "client_secret" => key.user_secret,
+        "scope" => "repositories"
+      })
+
+      session =
+        Hexpm.Repo.one(
+          from(s in Hexpm.UserSession,
+            where: s.organization_id == ^org.id,
+            order_by: [desc: s.inserted_at],
+            limit: 1
+          )
+        )
+
+      assert session
+      assert session.organization_id == org.id
+      assert is_nil(session.user_id)
+    end
+
+    test "org key creates token with organization_id", %{client: client} do
+      org = insert(:organization)
+
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          org,
+          %{name: "org_key", permissions: [%{domain: "repository", resource: org.name}]},
+          audit: audit_data(org)
+        )
+
+      post(build_conn(), ~p"/api/oauth/token", %{
+        "grant_type" => "client_credentials",
+        "client_id" => client.client_id,
+        "client_secret" => key.user_secret,
+        "scope" => "repositories"
+      })
+
+      token =
+        Hexpm.Repo.one(
+          from(t in Hexpm.OAuth.Token,
+            where: t.organization_id == ^org.id,
+            order_by: [desc: t.inserted_at],
+            limit: 1
+          )
+        )
+
+      assert token
+      assert token.organization_id == org.id
+      assert is_nil(token.user_id)
+    end
+
+    test "enforces session limit for org key exchanges", %{client: client} do
+      org = insert(:organization, billing_seats: 1)
+
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          org,
+          %{name: "org_key", permissions: [%{domain: "repository", resource: org.name}]},
+          audit: audit_data(org)
+        )
+
+      # Create max_sessions (5) sessions
+      for _ <- 1..5 do
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "repositories"
+        })
+      end
+
+      # 6th should succeed but oldest should be revoked
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "repositories"
+        })
+
+      assert json_response(conn, 200)
+
+      active_count =
+        Hexpm.Repo.one(
+          from(s in Hexpm.UserSession,
+            where:
+              s.organization_id == ^org.id and is_nil(s.revoked_at) and
+                (is_nil(s.expires_at) or s.expires_at > ^DateTime.utc_now()),
+            select: count(s.id)
+          )
+        )
+
+      assert active_count == 5
+    end
+
+    test "succeeds for legacy org key without virtual user", %{client: client} do
+      # Create org without a virtual user (legacy scenario)
+      org =
+        Hexpm.Repo.insert!(%Hexpm.Accounts.Organization{
+          name: "legacy_org_#{System.unique_integer([:positive])}",
+          billing_active: true,
+          trial_end: ~U[2020-01-01T00:00:00.000000Z]
+        })
+
+      # Create a repository for the org (required for key creation)
+      Hexpm.Repo.insert!(%Hexpm.Repository.Repository{
+        name: org.name,
+        organization_id: org.id
+      })
+
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          org,
+          %{name: "legacy_key", permissions: [%{domain: "repository", resource: org.name}]},
+          audit: %{
+            user: org,
+            auth_credential: nil,
+            user_agent: "TEST",
+            remote_ip: "127.0.0.1"
+          }
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "repositories"
+        })
+
+      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+      assert response["access_token"]
+      assert response["scope"] == "repository:#{org.name}"
+    end
+  end
+
+  describe "POST /api/oauth/revoke_by_hash" do
+    setup do
+      user = insert(:user)
+
+      client_params = %{
+        client_id: Clients.generate_client_id(),
+        name: "Test OAuth Client",
+        client_type: "public",
+        allowed_grant_types: ["authorization_code"],
+        allowed_scopes: ["api", "api:read", "api:write"]
+      }
+
+      {:ok, client} = Client.build(client_params) |> Repo.insert()
+
+      {:ok, session} =
+        Hexpm.UserSessions.create_oauth_session(user, client.client_id, audit: audit_data(user))
+
+      token_changeset =
+        Tokens.create_for_user(
+          user,
+          client.client_id,
+          ["api:read"],
+          "authorization_code",
+          "test_code",
+          user_session_id: session.id,
+          with_refresh_token: true
+        )
+
+      {:ok, token} = Repo.insert(token_changeset)
+
+      %{
+        hash_user: user,
+        hash_client: client,
+        hash_token: token,
+        hash_refresh_token: token.refresh_token,
+        hash_refresh_token_hash: token.refresh_token_hash
+      }
+    end
+
+    test "successfully revokes token using valid hash", %{
+      hash_token: token,
+      hash_refresh_token_hash: hash
+    } do
+      build_conn()
+      |> post(~p"/api/oauth/revoke_by_hash", %{token_hash: hash})
+      |> response(200)
+
+      updated_token = Repo.get(Token, token.id)
+      assert Tokens.revoked?(updated_token)
+    end
+
+    test "accepts uppercase hash", %{hash_token: token, hash_refresh_token_hash: hash} do
+      build_conn()
+      |> post(~p"/api/oauth/revoke_by_hash", %{token_hash: String.upcase(hash)})
+      |> response(200)
+
+      updated_token = Repo.get(Token, token.id)
+      assert Tokens.revoked?(updated_token)
+    end
+
+    test "returns 200 OK for invalid hash (security per RFC 7009)" do
+      build_conn()
+      |> post(~p"/api/oauth/revoke_by_hash", %{token_hash: "invalid_hash_value"})
+      |> response(200)
+    end
+
+    test "returns 200 OK for missing token_hash parameter" do
+      build_conn()
+      |> post(~p"/api/oauth/revoke_by_hash", %{})
+      |> response(200)
+    end
+
+    test "returns 200 OK for empty token_hash parameter" do
+      build_conn()
+      |> post(~p"/api/oauth/revoke_by_hash", %{token_hash: ""})
+      |> response(200)
+    end
+
+    test "handles revocation of already revoked token", %{
+      hash_token: token,
+      hash_refresh_token_hash: hash
+    } do
+      {:ok, _} = Tokens.revoke(token)
+
+      build_conn()
+      |> post(~p"/api/oauth/revoke_by_hash", %{token_hash: hash})
+      |> response(200)
+    end
+
+    test "hash is computed correctly for new tokens", %{hash_refresh_token: refresh_token} do
+      expected_hash = :crypto.hash(:sha256, refresh_token) |> Base.encode16(case: :lower)
+      token = Repo.get_by(Token, refresh_token_hash: expected_hash)
+      assert token != nil
     end
   end
 end

@@ -1,4 +1,4 @@
 defmodule HexpmWeb.Dashboard.AuditLogView do
   use HexpmWeb, :view
-  alias HexpmWeb.DashboardView
+  import HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard
 end

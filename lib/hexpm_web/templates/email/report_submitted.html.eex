@@ -1,5 +1,15 @@
-<p> <%= @author_name %> submitted a report on <%= @package_name %> package at <%= @inserted_at %>.</p>
+<h1 style="color: #030913; font-size: 24px; line-height: 32px; font-weight: 600; margin: 0 0 24px 0; text-align: center;">
+  Package Report Submitted
+</h1>
 
-<p> The report id is <%= @report_id %>. <p>
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= @author_name %> submitted a report on <%= @package_name %> package at <%= @inserted_at %>.
+</p>
 
-<p><%= ReportState.state_explain("to_accept") %></p>
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  The report id is <%= @report_id %>.
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= ReportState.state_explain("to_accept") %>
+</p>

@@ -1,0 +1,126 @@
+defmodule HexpmWeb.Components.SocialInput do
+  @moduledoc """
+  Reusable component for social media input fields with inline icons.
+  """
+  use Phoenix.Component
+
+  @doc """
+  Renders a social media input field with an icon.
+
+  ## Examples
+
+      <.social_input
+        form={f}
+        field={:twitter}
+        icon={:twitter}
+        placeholder="your_username"
+      />
+  """
+  attr :form, :any, required: true
+  attr :field, :atom, required: true
+  attr :icon, :atom, required: true
+  attr :label, :string, required: true
+  attr :placeholder, :string, default: "your_username"
+
+  def social_input(assigns) do
+    # Get the form field for error handling
+    field = assigns.form[assigns.field]
+    errors = if field, do: field.errors, else: []
+
+    assigns = assign(assigns, :has_errors, errors != [])
+
+    ~H"""
+    <div>
+      <div class={[
+        "flex items-center border rounded-lg focus-within:ring-2 transition-colors",
+        @has_errors && "border-red-300 focus-within:ring-red-600",
+        !@has_errors &&
+          "border-grey-200 dark:border-grey-600 focus-within:ring-purple-600 focus-within:border-transparent"
+      ]}>
+        <div
+          class="flex items-center px-3 py-2 border-r border-grey-200 dark:border-grey-600"
+          title={@label}
+        >
+          {render_icon(@icon)}
+          <span class="text-grey-500 dark:text-grey-300 text-sm mx-2">/</span>
+        </div>
+        <input
+          type="text"
+          id={@form[@field].id}
+          name={@form[@field].name}
+          value={@form[@field].value}
+          placeholder={@placeholder}
+          class="flex-1 px-3 py-2 text-grey-900 dark:text-grey-100 placeholder:text-grey-300 dark:placeholder:text-grey-400 border-0 focus:outline-none focus:ring-0 bg-transparent"
+        />
+      </div>
+      <%= if @has_errors do %>
+        <div class="mt-1">
+          <p
+            :for={msg <- Enum.map(@form[@field].errors, &translate_error/1)}
+            class="flex items-center gap-1 text-sm text-red-600 dark:text-red-400"
+          >
+            {HexpmWeb.ViewIcons.icon(:heroicon, "exclamation-circle", width: 16, height: 16)}
+            <span>{msg}</span>
+          </p>
+        </div>
+      <% end %>
+    </div>
+    """
+  end
+
+  defp render_icon(:twitter) do
+    assigns = %{}
+
+    ~H"""
+    <HexpmWeb.Components.Icons.twitter_icon class="w-5 h-5 text-grey-600 dark:text-grey-200" />
+    """
+  end
+
+  defp render_icon(:bluesky) do
+    assigns = %{}
+
+    ~H"""
+    <HexpmWeb.Components.Icons.bluesky_icon class="w-5 h-5 text-grey-600 dark:text-grey-200" />
+    """
+  end
+
+  defp render_icon(:github) do
+    assigns = %{}
+
+    ~H"""
+    <HexpmWeb.Components.Icons.github_icon class="w-5 h-5 text-grey-600 dark:text-grey-200" />
+    """
+  end
+
+  defp render_icon(:elixirforum) do
+    assigns = %{}
+
+    ~H"""
+    <HexpmWeb.Components.Icons.elixirforum_icon class="w-5 h-5 text-grey-600 dark:text-grey-200" />
+    """
+  end
+
+  defp render_icon(:slack) do
+    assigns = %{}
+
+    ~H"""
+    <HexpmWeb.Components.Icons.slack_icon class="w-5 h-5 text-grey-600 dark:text-grey-200" />
+    """
+  end
+
+  defp render_icon(:libera) do
+    assigns = %{}
+
+    ~H"""
+    <HexpmWeb.Components.Icons.libera_icon class="w-5 h-5 text-grey-600 dark:text-grey-200" />
+    """
+  end
+
+  defp translate_error({msg, opts}) do
+    Enum.reduce(opts, msg, fn {key, value}, acc ->
+      String.replace(acc, "%{#{key}}", to_string(value))
+    end)
+  end
+
+  defp translate_error(msg) when is_binary(msg), do: msg
+end

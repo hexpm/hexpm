@@ -2,6 +2,7 @@ defmodule HexpmWeb.Dashboard.EmailController do
   use HexpmWeb, :controller
 
   plug :requires_login
+  plug HexpmWeb.Plugs.Sudo
 
   alias Hexpm.Accounts.OptionalEmails
 

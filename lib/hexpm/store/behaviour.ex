@@ -8,6 +8,7 @@ defmodule Hexpm.Store.Behaviour do
   @callback list(bucket, prefix) :: [key]
   @callback get(bucket, key, opts) :: body | nil
   @callback put(bucket, key, body, opts) :: term
+  @callback put_file(bucket, key, Path.t(), opts) :: term
   @callback delete(bucket, key) :: term
   @callback delete_many(bucket, [key]) :: :ok
 end

@@ -19,6 +19,10 @@ defmodule Hexpm.Store.GCS do
     end
   end
 
+  def put_file(_bucket, _key, _path, _opts) do
+    raise "not implemented"
+  end
+
   def put(bucket, key, blob, opts) do
     headers =
       headers() ++

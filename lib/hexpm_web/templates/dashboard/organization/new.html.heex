@@ -1,0 +1,63 @@
+{ViewHelpers.changeset_error(@changeset)}
+
+<div class="bg-grey-50 dark:bg-grey-950 min-h-screen py-8">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="flex flex-col gap-8 lg:flex-row">
+      <div class="w-full lg:w-64 flex-shrink-0">
+        {render(DashboardView, "_sidebar.html", assigns)}
+      </div>
+
+      <div class="flex-1">
+        <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden">
+          <div class="px-6 py-5 border-b border-grey-200 dark:border-grey-700">
+            <h2 class="text-grey-900 dark:text-white text-lg font-semibold">
+              Create new organization
+            </h2>
+          </div>
+          <div class="px-6 py-6">
+            <p class="text-sm text-grey-600 dark:text-grey-300 mb-4">
+              With organizations you can manage public packages with fine-grained access control to
+              packages for your organization members. With a paid organization you can publish and
+              host private packages, for more information see the <a
+                href={~p"/docs/private"}
+                class="text-blue-600 dark:text-blue-300 hover:text-blue-500 dark:hover:text-blue-200"
+              >private package documentation</a>.
+            </p>
+            <p class="text-sm text-grey-600 dark:text-grey-300 mb-6">
+              For private packages the first month is free and you don't need to enter any payment
+              information to try it out. After the first month the cost to use private packages with
+              organizations is <strong class="font-semibold text-grey-900 dark:text-white">$7.00 per user / month</strong>. If you wish to continue with
+              private packages after the trial period add your billing details on the <a
+                href={~p"/dashboard/orgs"}
+                class="text-blue-600 dark:text-blue-300 hover:text-blue-500 dark:hover:text-blue-200"
+              >organization dashboard</a>.
+            </p>
+
+            <.sudo_form
+              :let={f}
+              current_user={@current_user}
+              for={@changeset}
+              action={~p"/dashboard/orgs"}
+              class="space-y-4"
+            >
+              <.text_input
+                field={f[:name]}
+                label="Organization name"
+                placeholder="Only allows lowercase letters and underscore"
+                required
+                pattern="[a-z]\w*"
+              />
+              <p class="text-grey-500 dark:text-grey-300 text-xs -mt-2">
+                This name will be used when you declare your dependencies in <code class="bg-grey-50 dark:bg-grey-900 px-1 py-0.5 rounded text-xs font-mono text-grey-800 dark:text-grey-100">mix.exs</code>.
+              </p>
+
+              <.button type="submit" variant="primary">
+                Submit
+              </.button>
+            </.sudo_form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

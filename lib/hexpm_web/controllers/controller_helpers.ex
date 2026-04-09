@@ -5,6 +5,7 @@ defmodule HexpmWeb.ControllerHelpers do
   import Phoenix.Controller
 
   alias Hexpm.Accounts.{Auth, Organizations}
+  alias Hexpm.UserSessions
   alias Hexpm.Repository.{Packages, Releases, Repositories}
 
   @max_cache_age 60
@@ -352,12 +353,60 @@ defmodule HexpmWeb.ControllerHelpers do
       "Learn more about our password security.</a>"
   end
 
+  def start_session_internal(conn, user) do
+    {:ok, _user_session, session_token} =
+      UserSessions.create_browser_session(user,
+        name: detect_browser(conn),
+        audit: %{audit_data(conn) | user: user}
+      )
+
+    conn
+    |> configure_session(renew: true)
+    |> put_session("session_token", Base.encode64(session_token))
+  end
+
+  def start_tfa_session(conn, user, return) do
+    {:ok, _user_session, session_token} =
+      UserSessions.create_browser_session(user,
+        name: detect_browser(conn),
+        audit: %{audit_data(conn) | user: user}
+      )
+
+    conn
+    |> configure_session(renew: true)
+    |> put_session("tfa_user_id", %{
+      "uid" => user.id,
+      "return" => return,
+      "session_token" => Base.encode64(session_token)
+    })
+  end
+
+  defp detect_browser(conn) do
+    user_agent = get_req_header(conn, "user-agent") |> List.first()
+
+    cond do
+      is_nil(user_agent) -> "Unknown Browser"
+      String.contains?(user_agent, "Chrome") -> "Chrome"
+      String.contains?(user_agent, "Firefox") -> "Firefox"
+      String.contains?(user_agent, "Safari") -> "Safari"
+      String.contains?(user_agent, "Edge") -> "Edge"
+      true -> "Browser Session"
+    end
+  end
+
   def requires_login(conn, _opts) do
     if logged_in?(conn) do
       conn
     else
-      redirect(conn, to: ~p"/login?return=#{conn.request_path}")
-      |> halt
+      return_path =
+        case conn.query_string do
+          "" -> conn.request_path
+          qs -> conn.request_path <> "?" <> qs
+        end
+
+      conn
+      |> redirect(to: ~p"/login?return=#{return_path}")
+      |> halt()
     end
   end
 
@@ -422,8 +471,8 @@ defmodule HexpmWeb.ControllerHelpers do
                 :ok ->
                   # Authorization already passed, send 100 Continue and read body
                   conn = inform(conn, :continue, [])
-                  {conn, body} = HexpmWeb.Plugs.read_body(conn)
-                  put_in(conn.params["body"], body)
+                  {conn, path} = HexpmWeb.Plugs.read_body_to_file(conn)
+                  put_in(conn.params["body"], path)
 
                 {:error, :too_large} ->
                   validation_failed(conn, %{tar: "too big"})
@@ -468,4 +517,16 @@ defmodule HexpmWeb.ControllerHelpers do
   """
   def safe_string(value) when is_binary(value), do: value
   def safe_string(_), do: nil
+
+  @doc """
+  Safely parses a string to integer. Returns nil for non-string or invalid input.
+  """
+  def safe_to_integer(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {int, ""} -> int
+      _ -> nil
+    end
+  end
+
+  def safe_to_integer(_), do: nil
 end

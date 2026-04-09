@@ -1,0 +1,48 @@
+<div class="max-w-7xl mx-auto px-4 py-8">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-grey-900 text-2xl font-semibold">Package Reports</h1>
+    <%= if @total > 0 do %>
+      <span class="text-grey-500 text-sm">
+        {@total} result{if @total == 1, do: "", else: "s"} found
+      </span>
+    <% end %>
+  </div>
+
+  <%= if @total == 0 do %>
+    <div class="bg-white border border-grey-200 rounded-xl p-12 text-center">
+      <p class="text-grey-500">No reports found.</p>
+    </div>
+  <% else %>
+    <div class="bg-white border border-grey-200 rounded-xl overflow-hidden">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-grey-50 border-b border-grey-200">
+            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 uppercase tracking-wider w-16">
+              ID
+            </th>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 uppercase tracking-wider">
+              Package
+            </th>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 uppercase tracking-wider">
+              Versions
+            </th>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 uppercase tracking-wider w-28">
+              State
+            </th>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 uppercase tracking-wider">
+              By user
+            </th>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 uppercase tracking-wider">
+              Description
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-grey-100">
+          <%= for report <- @reports do %>
+            {render("_package_report.html", report: report)}
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+</div>

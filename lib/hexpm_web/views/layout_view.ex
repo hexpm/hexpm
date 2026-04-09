@@ -1,8 +1,14 @@
 defmodule HexpmWeb.LayoutView do
   use HexpmWeb, :view
+  import HexpmWeb.Components.Footer
+  import HexpmWeb.Components.Navbar
 
   def show_search?(assigns) do
     Map.get(assigns, :hide_search) != true
+  end
+
+  def autofocus_search?(assigns) do
+    Map.get(assigns, :autofocus_search, false)
   end
 
   def title(assigns) do

@@ -1,0 +1,305 @@
+<%!-- Hero Section --%>
+<div class="bg-white dark:bg-grey-950">
+  <div class="bg-grey-50 dark:bg-grey-700 pb-6">
+    <div class="max-w-6xl mx-auto px-4 pt-6 pb-4 md:pt-20 md:pb-24 lg:pb-14">
+      <%!-- Mobile: centered layout with image on top --%>
+      <div class="flex flex-col items-center text-center lg:hidden">
+        <img
+          src={~p"/images/home/packages.png"}
+          alt="Packages"
+          class="w-full max-w-sm -mb-8"
+        />
+        <h1 class="relative text-grey-800 dark:text-white text-2xl font-semibold leading-8 mb-6">
+          The package manager<br />for the Erlang ecosystem
+        </h1>
+        <a
+          href={~p"/docs/usage"}
+          class="inline-flex items-center gap-3 px-8 py-4 border-[1.5px] border-primary-600 bg-transparent text-primary-600 dark:bg-primary-600 dark:text-white dark:border-primary-600 font-medium text-base rounded-xl hover:bg-primary-600 hover:text-white hover:border-primary-600 dark:hover:bg-primary-500 dark:hover:border-primary-500 transition-all duration-200 mb-4"
+        >
+          Getting Started {icon(:heroicon, "arrow-right", class: "size-4")}
+        </a>
+        <a
+          href={~p"/docs/publish"}
+          class="text-grey-500 dark:text-grey-300 font-medium text-base hover:text-grey-800 dark:hover:text-white transition-colors"
+        >
+          Publish Packages
+        </a>
+      </div>
+
+      <%!-- Desktop: side-by-side layout --%>
+      <div class="hidden lg:flex items-center gap-6">
+        <div class="flex flex-col gap-8 flex-1 mb-24">
+          <h1 class="text-grey-800 dark:text-white text-4xl font-semibold leading-tight md:text-5xl md:leading-[60px]">
+            The package manager<br />for the Erlang ecosystem
+          </h1>
+
+          <div class="flex flex-wrap items-center gap-14">
+            <a
+              href={~p"/docs/usage"}
+              class="inline-flex items-center gap-3 px-10 py-5 border-[1.5px] border-primary-600 bg-transparent text-primary-600 dark:bg-primary-600 dark:text-white dark:border-primary-600 font-medium text-lg rounded-xl hover:bg-primary-600 hover:text-white hover:border-primary-600 dark:hover:bg-primary-500 dark:hover:border-primary-500 transition-all duration-200"
+            >
+              Getting Started {icon(:heroicon, "arrow-right", class: "size-[18px]")}
+            </a>
+            <a
+              href={~p"/docs/publish"}
+              class="text-grey-600 dark:text-grey-300 font-medium text-lg hover:text-grey-800 dark:hover:text-white transition-colors"
+            >
+              Publish Packages
+            </a>
+          </div>
+        </div>
+        <img
+          src={~p"/images/home/packages.png"}
+          alt="Packages"
+          class="w-full lg:w-1/2 max-w-xl"
+        />
+      </div>
+    </div>
+  </div>
+
+  <%!-- Using with Elixir/Erlang/Gleam cards --%>
+  <div class="max-w-7xl mx-auto px-4 pb-8 lg:pb-16 lg:-mt-20">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <.language_card language="Elixir" image_src={~p"/images/elixir.svg"} href={~p"/docs/usage"}>
+        Specify your Mix dependencies as two-item tuples like
+        <.code_inline>{"{:plug, \"~> 1.19\"}"}</.code_inline>
+        in your dependency list, Elixir will ask if you want to install Hex if you haven't already.
+      </.language_card>
+
+      <.language_card
+        language="Erlang"
+        image_src={~p"/images/erlang.svg"}
+        href={~p"/docs/rebar3-usage"}
+      >
+        Download rebar3, put it in your PATH and give it executable permissions. Now you can specify Hex dependencies in your rebar.config like <.code_inline>{"{deps, [hackney]}"}</.code_inline>.
+      </.language_card>
+
+      <.language_card
+        language="Gleam"
+        image_src={~p"/images/lucy.svg"}
+        href={~p"/docs/gleam-usage"}
+      >
+        Add the Hex dependency to your
+        <.code_inline>gleam.toml</.code_inline>
+        file using the
+        <.code_inline>{"lustre = \">= 5.2.0 and < 6.0.0\""}</.code_inline>
+        format. Or use the
+        <.code_inline>{"gleam add lustre@5"}</.code_inline>
+        command.
+      </.language_card>
+    </div>
+  </div>
+
+  <%!-- Companies --%>
+  <%!-- Disabled for now --%>
+  <%!-- <.companies_section /> --%>
+
+  <%!-- Getting Started Section --%>
+  <div class="bg-white dark:bg-grey-950 py-4">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <.feature_card icon="cloud-arrow-down" title="Getting started" href={~p"/docs/usage"}>
+          Fetch dependencies from Hex without creating an account. Hex is usable out of the box in Elixir with
+          <.text_link href={~p"/docs/usage"} variant="purple">Mix</.text_link>
+          and in Erlang with <.text_link href={~p"/docs/rebar3-usage"} variant="purple">Rebar3</.text_link>.
+          Check our <.text_link href={~p"/docs/faq"} variant="purple">FAQ</.text_link>
+          for commonly asked questions.
+        </.feature_card>
+
+        <.feature_card icon="cloud-arrow-up" title="Publish packages" href={~p"/docs/publish"}>
+          <.text_link href={~p"/signup"} variant="purple">Create an account</.text_link>
+          and follow the <.text_link href={~p"/docs/publish"} variant="purple">publishing guide</.text_link>.
+          Your package will be immediately available to all Elixir and Erlang users and the documentation will be available on <.text_link
+            href="https://hexdocs.pm"
+            variant="purple"
+            target="_blank"
+            rel="noopener"
+          >
+            HexDocs
+          </.text_link>.
+        </.feature_card>
+
+        <.feature_card icon="shield-check" title="Private packages" href={~p"/pricing"}>
+          Publish private packages by <.text_link href={~p"/dashboard/orgs"} variant="purple">creating an organization</.text_link>.
+          Your private packages will get the same features as public packages such as fast dependency fetching, HexDocs, and run on the same reliable infrastructure that serves millions of packages daily. See our
+          <.text_link href={~p"/pricing"} variant="purple">pricing page</.text_link>
+          for more details.
+        </.feature_card>
+      </div>
+    </div>
+  </div>
+
+  <%!-- Package columns section --%>
+  <div class="bg-white dark:bg-grey-950">
+    <div class="max-w-7xl mx-auto px-4 py-8 lg:py-16">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+        <%!-- Most Downloaded --%>
+        <div>
+          <.package_column_header
+            color="primary"
+            icon="arrow-trending-up"
+            title="Most Downloaded"
+          />
+          <ul class="flex flex-col">
+            <%= for {package, downloads} <- @package_top do %>
+              <.package_item
+                description={package.meta.description}
+                downloads={downloads}
+                package={package.name}
+                version={package.latest_release.version}
+              />
+            <% end %>
+          </ul>
+        </div>
+
+        <%!-- New Packages --%>
+        <div>
+          <.package_column_header color="green" icon="sparkles" title="New Packages" />
+          <ul class="flex flex-col">
+            <%= for {package, _inserted_at, %PackageMetadata{} = meta, version, downloads} <- @package_new do %>
+              <.package_item
+                description={meta.description}
+                package={package}
+                version={version && to_string(version)}
+                downloads={downloads}
+              />
+            <% end %>
+          </ul>
+        </div>
+
+        <%!-- Recently Updated --%>
+        <div>
+          <.package_column_header color="blue" icon="arrow-path" title="Recently Updated" />
+          <ul class="flex flex-col">
+            <%= for {package, version, _inserted_at, %PackageMetadata{} = meta, downloads} <- @releases_new do %>
+              <.package_item
+                description={meta.description}
+                package={package}
+                version={to_string(version)}
+                downloads={downloads}
+              />
+            <% end %>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <%!-- Open source section with stats --%>
+  <%!-- Mobile: Purple section with overflowing image --%>
+  <div class="bg-primary-900 pt-12 pb-64 lg:hidden">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="flex flex-col gap-6">
+        <img src={~p"/images/home/open-source.svg"} alt="Open Source" class="size-[60px]" />
+        <h2 class="text-white text-4xl font-bold leading-tight">
+          hex.pm is<br />open-source
+        </h2>
+      </div>
+      <%!-- Image positioned to overflow into white section --%>
+      <div class="absolute left-1/2 -translate-x-1/2 mt-8 z-20 w-full px-4">
+        <img
+          src={~p"/images/home/webview.svg"}
+          alt="Hex.pm interface"
+          class="w-full rounded-lg shadow-2xl"
+        />
+      </div>
+    </div>
+  </div>
+
+  <%!-- Desktop: Purple section with image overflow --%>
+  <div class="hidden lg:block bg-primary-900 pb-32 md:pb-48">
+    <div class="max-w-7xl mx-auto px-4 pt-12 md:pt-16">
+      <div class="flex flex-col lg:flex-row items-start">
+        <%!-- Left side - open source message --%>
+        <div class="flex flex-col gap-6 lg:flex-1">
+          <img
+            src={~p"/images/home/open-source.svg"}
+            alt="Open Source"
+            class="size-[60px]"
+          />
+
+          <h2 class="text-white text-4xl font-bold leading-tight md:text-5xl md:leading-[60px]">
+            hex.pm is<br />open-source
+          </h2>
+        </div>
+
+        <%!-- Right side - screenshot with geometric decoration (overflows into white section) --%>
+        <div class="flex-1 relative">
+          <div class="absolute pt-12">
+            <%!-- Geometric figure positioned behind image --%>
+            <div class="absolute -top-3 -left-14 w-32 h-32 bg-[#69438d] rounded-full flex items-center justify-center">
+              <%!-- Inner circle with primary-900 background --%>
+              <div class="w-16 h-16 bg-primary-900 rounded-full"></div>
+            </div>
+            <%!-- hex.pm screenshot image (extends into white section below) --%>
+            <div class="relative z-20">
+              <img
+                src={~p"/images/home/webview.svg"}
+                alt="Hex.pm interface"
+                class="w-full rounded-lg shadow-2xl"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <%!-- Stats section --%>
+  <%!-- Mobile: White section with single column stats --%>
+  <div class="bg-white dark:bg-grey-950 mt-24 xs:mt-42 sm:mt-64 md:mt-[480px] lg:mt-24 py-12 relative z-10 lg:hidden">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="flex flex-col gap-6">
+        <div class="grid grid-cols-2 gap-6">
+          <.stat_item icon="archive-box" number={@num_packages} label="packages available" />
+          <.stat_item icon="rectangle-stack" number={@num_releases} label="package versions" />
+          <.stat_item icon="arrow-down-tray" number={@total["day"]} label="downloads yesterday" />
+          <.stat_item icon="users" number={@total["all"]} label="downloads all time" />
+        </div>
+        <%!-- CTAs below stats --%>
+        <div class="flex flex-col gap-4 mt-4">
+          <.button_link href={~p"/signup"} size="lg" variant="blue" class="w-full">
+            Get Started for FREE
+          </.button_link>
+          <div class="text-center">
+            <.text_link href={~p"/pricing"} variant="primary">
+              Private Packages @ $7/month
+            </.text_link>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <%!-- Desktop: White section with 2x2 grid and image overflow space --%>
+  <div class="hidden lg:block bg-white dark:bg-grey-950 -mt-20 md:-mt-32 pb-24 relative z-10">
+    <div class="max-w-7xl mx-auto px-4 pt-16 md:pb-16">
+      <div class="flex flex-col lg:flex-row gap-12">
+        <%!-- Left side: Stats (2x2 grid) --%>
+        <div class="lg:flex-1">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+            <.stat_item icon="archive-box" number={@num_packages} label="packages available" />
+            <.stat_item icon="rectangle-stack" number={@num_releases} label="package versions" />
+            <.stat_item icon="arrow-down-tray" number={@total["day"]} label="downloads yesterday" />
+            <.stat_item icon="users" number={@total["all"]} label="downloads all time" />
+          </div>
+
+          <%!-- CTAs below stats --%>
+          <div class="flex flex-wrap items-center gap-6 mt-10">
+            <.button_link href={~p"/signup"} size="lg" variant="blue">
+              Get Started for FREE
+            </.button_link>
+            <.text_link href={~p"/pricing"} variant="primary">
+              Private Packages @ $7/month
+            </.text_link>
+          </div>
+        </div>
+
+        <%!-- Right side: Empty (image overflows here from purple section) --%>
+        <div class="flex-1">
+          <%!-- Intentionally empty - screenshot image overflows into this space --%>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

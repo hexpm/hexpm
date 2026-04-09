@@ -1,0 +1,69 @@
+<% description = @package.meta.description %>
+
+<.package_layout
+  active_tab={:readme}
+  current_release={@current_release}
+  daily_graph={@daily_graph}
+  dependants_count={@dependants_count}
+  docs_html_url={@docs_html_url}
+  downloads={@downloads}
+  owners={@owners}
+  package={@package}
+  repository_name={@repository_name}
+>
+  <:inner_content>
+    <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-6">
+      <%= if ViewHelpers.main_repository?(@package) and @current_release do %>
+        <div
+          id="readme-loading"
+          class="flex items-center justify-center py-12 text-grey-400 dark:text-grey-300"
+        >
+          <svg class="animate-spin h-6 w-6 mr-3" viewBox="0 0 24 24" fill="none">
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            >
+            </circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            >
+            </path>
+          </svg>
+          Loading README...
+        </div>
+
+        <%= if description do %>
+          <div
+            id="readme-fallback"
+            class="text-grey-600 dark:text-grey-300 mb-8 leading-relaxed hidden"
+          >
+            {ViewHelpers.text_length(description, 300) |> text_to_html(insert_brs: false)}
+          </div>
+        <% end %>
+
+        <iframe
+          id="readme-frame"
+          src={"#{ViewHelpers.readme_url(@package.name, @current_release.version)}"}
+          sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+          loading="lazy"
+          referrerpolicy="no-referrer"
+          title={"README for #{ViewHelpers.package_name(@package)}"}
+          class="w-full border-0 opacity-0 h-0 overflow-hidden"
+        >
+        </iframe>
+      <% else %>
+        <%= if description do %>
+          <div class="text-grey-600 dark:text-grey-300 mb-8 leading-relaxed">
+            {ViewHelpers.text_length(description, 300) |> text_to_html(insert_brs: false)}
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  </:inner_content>
+</.package_layout>

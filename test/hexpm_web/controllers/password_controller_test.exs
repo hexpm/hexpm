@@ -18,18 +18,82 @@ defmodule HexpmWeb.PasswordControllerTest do
       assert get_session(conn, "reset_key") == "RESET_KEY"
     end
 
-    test "show select new password" do
+    test "show select new password", c do
+      # Need to create a valid password reset first
+      Users.password_reset_init(c.user.username, audit: audit_data(c.user))
+      user = Repo.preload(c.user, :password_resets)
+      reset_key = hd(user.password_resets).key
+
       conn =
         build_conn()
         |> Plug.Test.init_test_session(%{
-          "reset_username" => "username",
-          "reset_key" => "RESET_KEY"
+          "reset_username" => c.user.username,
+          "reset_key" => reset_key
         })
         |> get("/password/new")
 
       assert conn.status == 200
       assert conn.resp_body =~ "Choose a new password"
-      assert conn.resp_body =~ "RESET_KEY"
+      assert conn.resp_body =~ reset_key
+    end
+
+    test "redirect to home when accessing without session data" do
+      conn = get(build_conn(), "/password/new")
+
+      assert redirected_to(conn) == "/"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Invalid password reset key."
+    end
+
+    test "redirect to password reset when session has invalid key", c do
+      # Create a valid reset, but use a different (invalid) key in session
+      Users.password_reset_init(c.user.username, audit: audit_data(c.user))
+
+      conn =
+        build_conn()
+        |> Plug.Test.init_test_session(%{
+          "reset_username" => c.user.username,
+          "reset_key" => "INVALID_KEY_123"
+        })
+        |> get("/password/new")
+
+      assert redirected_to(conn) == "/password/reset"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "This password reset link has expired or already been used."
+
+      # Verify session was cleared
+      refute get_session(conn, "reset_username")
+      refute get_session(conn, "reset_key")
+    end
+
+    test "redirect when trying to access with used reset key", c do
+      # Create and immediately use a reset key
+      Users.password_reset_init(c.user.username, audit: audit_data(c.user))
+      user = Repo.preload(c.user, :password_resets)
+      reset_key = hd(user.password_resets).key
+
+      # Complete the password reset (this consumes/deletes the key)
+      Users.password_reset_finish(
+        c.user.username,
+        reset_key,
+        %{"password" => "new_pass123", "password_confirmation" => "new_pass123"},
+        true,
+        audit: audit_data(c.user)
+      )
+
+      # Now try to access the form with the same (now deleted) key
+      conn =
+        build_conn()
+        |> Plug.Test.init_test_session(%{
+          "reset_username" => c.user.username,
+          "reset_key" => reset_key
+        })
+        |> get("/password/new")
+
+      assert redirected_to(conn) == "/password/reset"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "This password reset link has expired or already been used."
     end
   end
 
@@ -82,7 +146,9 @@ defmodule HexpmWeb.PasswordControllerTest do
         })
 
       response(conn, 302)
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Failed to change your password."
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "This password reset link has expired or already been used. Please request a new one."
     end
 
     test "do not allow changing password with changed primary email", c do
@@ -105,7 +171,56 @@ defmodule HexpmWeb.PasswordControllerTest do
         })
 
       response(conn, 302)
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Failed to change your password."
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "This password reset link has expired or already been used. Please request a new one."
+    end
+
+    test "prevent reusing reset key after successful password change", c do
+      username = c.user.username
+      Users.password_reset_init(username, audit: audit_data(c.user))
+      user = Repo.preload(c.user, :password_resets)
+      reset_key = hd(user.password_resets).key
+
+      # First request - should succeed
+      conn1 =
+        build_conn()
+        |> test_login(user)
+        |> post("/password/new", %{
+          "user" => %{
+            "username" => user.username,
+            "key" => reset_key,
+            "password" => "new_pass123",
+            "password_confirmation" => "new_pass123"
+          }
+        })
+
+      assert redirected_to(conn1) == "/"
+      assert Phoenix.Flash.get(conn1.assigns.flash, :info) =~ "password has been changed"
+
+      # Second request with same key - should fail gracefully (no crash)
+      conn2 =
+        build_conn()
+        |> test_login(user)
+        |> post("/password/new", %{
+          "user" => %{
+            "username" => user.username,
+            "key" => reset_key,
+            "password" => "another_pass456",
+            "password_confirmation" => "another_pass456"
+          }
+        })
+
+      assert redirected_to(conn2) == "/password/reset"
+
+      assert Phoenix.Flash.get(conn2.assigns.flash, :error) ==
+               "This password reset link has expired or already been used. Please request a new one."
+
+      # Verify password wasn't changed to the second attempt
+      assert :error = Auth.password_auth(username, "another_pass456")
+      # Verify first password still works
+      assert {:ok, %{user: %User{username: ^username}}} =
+               Auth.password_auth(username, "new_pass123")
     end
 
     test "revokes all access (keys, sessions, tokens) when checkbox checked", c do
