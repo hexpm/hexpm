@@ -15,7 +15,7 @@ The new release also brings many improvements to better understand and manage de
 
 `mix hex.outdated` now makes it easy to see what changed in your dependencies between the versions you are using and the latest ones, it outputs a link which will show you a list of diffs:
 
-```
+```bash
 $ mix hex.outdated
 ```
 
@@ -27,7 +27,7 @@ Navigating to http://hex.pm/l/T16Wu will show you:
 
 `mix hex.package diff` can now be used to diff the currently used version (in `mix.lock`) against an arbitrary version:
 
-```
+```bash
 $ mix hex.package diff ecto 3.5.1
 (...)
 @@ -1,15 +1,16 @@
@@ -41,7 +41,7 @@ $ mix hex.package diff ecto 3.5.1
 
 When running outside of Mix project, it now allows a more compact version range specification:
 
-```
+```bash
 $ mix hex.package diff ecto 3.5.{0,1}
 (...)
 @@ -1,15 +1,16 @@
@@ -59,7 +59,7 @@ Thanks [@halostatue](https://github.com/halostatue), [@RyanSiu1995](https://gith
 
 Hex now makes it easy to find packages with sponsorships. Run the command below to find such dependencies in your current project and here is how the output might look like:
 
-```
+```bash
 $ mix hex.sponsor
 Dependency  Sponsorship
 cowboy      https://github.com/sponsors/essen
@@ -93,7 +93,7 @@ Worth mentioning that there's no re-publishing time window on [Hex.pm Private Pa
 
 The <https://github.com/hexpm/hex> repository now maintains a `latest` branch which means you can install Hex via:
 
-```
+```bash
 $ mix archive.install github hexpm/hex branch latest
 ```
 

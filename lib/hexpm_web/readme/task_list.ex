@@ -11,27 +11,23 @@ defmodule HexpmWeb.Readme.TaskList do
   @checkbox_pattern ~r/^\[([ xX])\]\s?/
 
   def convert(ast) do
-    Enum.map(ast, &convert_node/1)
+    Earmark.Transform.map_ast(ast, &convert_node/1, false)
   end
 
   defp convert_node({"li", attrs, children, meta}) do
-    {"li", attrs, convert_li_children(children), meta}
+    {:replace, {"li", attrs, children |> convert_li_children() |> convert(), meta}}
   end
 
-  defp convert_node({tag, attrs, children, meta}) do
-    {tag, attrs, convert(children), meta}
-  end
-
-  defp convert_node(text) when is_binary(text), do: text
+  defp convert_node(node), do: node
 
   defp convert_li_children([text | rest]) when is_binary(text) do
     case Regex.run(@checkbox_pattern, text) do
       [match, marker] ->
         remaining = String.slice(text, String.length(match)..-1//1)
-        [checkbox_input(marker) | prepend_if_nonempty(remaining, Enum.map(rest, &convert_node/1))]
+        [checkbox_input(marker) | prepend_if_nonempty(remaining, rest)]
 
       nil ->
-        [text | Enum.map(rest, &convert_node/1)]
+        [text | rest]
     end
   end
 
@@ -40,19 +36,11 @@ defmodule HexpmWeb.Readme.TaskList do
     case Regex.run(@checkbox_pattern, text) do
       [match, marker] ->
         remaining = String.slice(text, String.length(match)..-1//1)
-
-        p_children = [
-          checkbox_input(marker)
-          | prepend_if_nonempty(remaining, Enum.map(p_rest, &convert_node/1))
-        ]
-
-        [{"p", p_attrs, p_children, p_meta} | Enum.map(rest, &convert_node/1)]
+        p_children = [checkbox_input(marker) | prepend_if_nonempty(remaining, p_rest)]
+        [{"p", p_attrs, p_children, p_meta} | rest]
 
       nil ->
-        [
-          {"p", p_attrs, [text | Enum.map(p_rest, &convert_node/1)], p_meta}
-          | Enum.map(rest, &convert_node/1)
-        ]
+        [{"p", p_attrs, [text | p_rest], p_meta} | rest]
     end
   end
 

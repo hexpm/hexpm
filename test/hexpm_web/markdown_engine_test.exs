@@ -34,31 +34,19 @@ defmodule HexpmWeb.MarkdownEngineTest do
   test "adds anchors to h3 tags" do
     html = render_markdown()
 
-    h3 = """
-    <h3 id="contact" class="section-heading">
-      <a href="#contact" class="hover-link">
-        #{@icon}
-      </a>
-      Contact
-    </h3>
-    """
-
-    assert html =~ h3
+    assert html =~ ~s(<h3 id="contact" class="section-heading">)
+    assert html =~ ~s(<a href="#contact" class="hover-link">)
+    assert html =~ @icon
+    assert html =~ "Contact</h3>"
   end
 
   test "adds anchors to h4 tags" do
     html = render_markdown()
 
-    h4 = """
-    <h4 id="how-do-i-contact-hex" class="section-heading">
-      <a href="#how-do-i-contact-hex" class="hover-link">
-        #{@icon}
-      </a>
-      How do I contact Hex?
-    </h4>
-    """
-
-    assert html =~ h4
+    assert html =~ ~s(<h4 id="how-do-i-contact-hex" class="section-heading">)
+    assert html =~ ~s(<a href="#how-do-i-contact-hex" class="hover-link">)
+    assert html =~ @icon
+    assert html =~ "How do I contact Hex?</h4>"
   end
 
   defp render_markdown do

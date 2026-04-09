@@ -1,6 +1,8 @@
 defmodule HexpmWeb.MarkdownEngine do
   @behaviour Phoenix.Template.Engine
 
+  import Earmark.AstTools, only: [find_att_in_node: 2, merge_atts: 2]
+
   # Placeholder that will be replaced with the actual nonce at runtime
   @nonce_placeholder "%%SCRIPT_NONCE%%"
 
@@ -10,16 +12,15 @@ defmodule HexpmWeb.MarkdownEngine do
     "gleam" => Makeup.Lexers.GleamLexer
   }
 
+  @header_tags ["h3", "h4"]
+
   def compile(path, _name) do
     html =
       path
       |> File.read!()
-      |> Earmark.as_html!(%Earmark.Options{gfm: true})
-      |> header_anchors("h3")
-      |> header_anchors("h4")
-      |> highlight_code_blocks()
-      |> replace_inline_alignment()
-      |> inject_nonce_placeholder()
+      |> Earmark.as_ast!(gfm: true)
+      |> Earmark.Transform.map_ast(&transform_node/1, true)
+      |> Earmark.transform()
 
     # Generate code that replaces placeholder with actual nonce at runtime
     quote do
@@ -31,76 +32,72 @@ defmodule HexpmWeb.MarkdownEngine do
     end
   end
 
-  # Replace <script> tags without nonce with placeholder nonce
-  defp inject_nonce_placeholder(html) do
-    String.replace(html, ~r/<script(?![^>]*nonce=)/, "<script nonce=\"#{@nonce_placeholder}\"")
-  end
+  defp transform_node({tag, _attrs, children, meta}) when tag in @header_tags do
+    header_text = children |> extract_text() |> String.downcase()
 
-  defp header_anchors(html, tag) do
-    icon =
+    anchor =
+      header_text
+      |> String.replace(" ", "-")
+      |> String.replace(~r"([^a-zA-Z0-9\-])", "")
+
+    icon_html =
       HexpmWeb.ViewIcons.icon(:heroicon, :link, class: "icon-link")
       |> Phoenix.HTML.safe_to_string()
 
-    Regex.replace(~r"<#{tag}>\n?(.*)<\/#{tag}>", html, fn _, header ->
-      anchor =
-        header
-        |> String.downcase()
-        |> dashify()
-        |> only_alphanumeric()
+    link = {"a", [{"href", "##{anchor}"}, {"class", "hover-link"}], [icon_html], %{}}
 
-      """
-      <#{tag} id="#{anchor}" class="section-heading">
-        <a href="##{anchor}" class="hover-link">
-          #{icon}
-        </a>
-        #{header}
-      </#{tag}>
-      """
-    end)
+    {:replace,
+     {tag, [{"id", anchor}, {"class", "section-heading"}], [link, " " | children],
+      Map.put(meta, :verbatim, true)}}
   end
 
-  defp dashify(string) do
-    String.replace(string, " ", "-")
+  defp transform_node(
+         {"pre", _pre_attrs, [{"code", code_attrs, children, _code_meta}], _pre_meta}
+       ) do
+    language = find_att_in_node(code_attrs, "class")
+
+    case language && Map.get(@supported_languages, language) do
+      nil ->
+        {"pre", [], nil, %{}}
+
+      lexer ->
+        code = extract_text(children)
+        inner_html = Makeup.highlight_inner_html(code, lexer: lexer)
+
+        {:replace,
+         {"pre", [{"class", "highlight"}], [{"code", [], [inner_html], %{verbatim: true}}], %{}}}
+    end
   end
 
-  defp only_alphanumeric(string) do
-    String.replace(string, ~r"([^a-zA-Z0-9\-])", "")
+  defp transform_node({"script", attrs, children, meta}) do
+    if find_att_in_node(attrs, "nonce") do
+      {"script", attrs, nil, meta}
+    else
+      {:replace, {"script", [{"nonce", @nonce_placeholder} | attrs], children, meta}}
+    end
   end
 
-  # The markdown engine processes trusted internal .md files (not user READMEs),
-  # so regex-based highlighting is appropriate here. Using Floki would normalize
-  # SVG attributes (viewBox -> viewbox) breaking heroicon rendering.
-  defp highlight_code_blocks(html) do
-    Regex.replace(
-      ~r{<pre><code class="([\w-]+)">(.*?)</code></pre>}s,
-      html,
-      fn full_match, lang, code ->
-        language =
-          if String.starts_with?(lang, "language-"),
-            do: String.trim_leading(lang, "language-"),
-            else: lang
+  defp transform_node({tag, attrs, _children, meta}) when tag in ["th", "td"] do
+    case find_att_in_node(attrs, "style") do
+      "text-align: " <> align ->
+        new_attrs =
+          attrs
+          |> List.keydelete("style", 0)
+          |> merge_atts(class: "text-#{String.trim_trailing(align, ";")}")
 
-        case Map.get(@supported_languages, language) do
-          nil -> full_match
-          lexer -> code |> unescape_html() |> Makeup.highlight(lexer: lexer)
-        end
-      end
-    )
+        {tag, new_attrs, nil, meta}
+
+      _ ->
+        {tag, attrs, nil, meta}
+    end
   end
 
-  defp replace_inline_alignment(html) do
-    Regex.replace(
-      ~r/ style="text-align: (left|center|right);"/,
-      html,
-      fn _, align -> ~s( class="text-#{align}") end
-    )
+  defp transform_node(node), do: node
+
+  defp extract_text(nodes) when is_list(nodes) do
+    Enum.map_join(nodes, &extract_text/1)
   end
 
-  defp unescape_html(html) do
-    html
-    |> String.replace("&amp;", "&")
-    |> String.replace("&lt;", "<")
-    |> String.replace("&gt;", ">")
-    |> String.replace("&quot;", ~s["])
-  end
+  defp extract_text({_tag, _attrs, children, _meta}), do: extract_text(children)
+  defp extract_text(text) when is_binary(text), do: text
 end

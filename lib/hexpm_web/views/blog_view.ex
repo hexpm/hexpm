@@ -12,7 +12,7 @@ defmodule HexpmWeb.BlogView do
   end
 
   def render(other, assigns) do
-    content_string = get_raw_content(other)
+    content_string = get_raw_content(other, assigns)
 
     # Extract metadata for the header
     {_published_rfc2822, published_human, author} = published_metadata(content_string)
@@ -171,7 +171,7 @@ defmodule HexpmWeb.BlogView do
   end
 
   # Get raw template content without wrapper (used by both render and posts)
-  defp get_raw_content(template) do
+  defp get_raw_content(template, assigns \\ %{}) do
     # Ensure template has .html suffix for render_template
     template_name =
       if String.ends_with?(template, ".html") do
@@ -180,7 +180,7 @@ defmodule HexpmWeb.BlogView do
         "#{template}.html"
       end
 
-    render_template(template_name, %{})
+    render_template(template_name, assigns)
     |> Phoenix.HTML.safe_to_string()
   end
 
