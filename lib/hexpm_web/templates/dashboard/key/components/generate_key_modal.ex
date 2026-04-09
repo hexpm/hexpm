@@ -55,6 +55,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
               type="date"
               placeholder="Select date"
               min={Date.utc_today() |> Date.add(1) |> Date.to_iso8601()}
+              max="9999-12-31"
               class="w-full"
             />
           </div>
