@@ -198,7 +198,6 @@ defmodule HexpmWeb.Dashboard.Email.Components.EmailManagementCard do
                   icon="user-circle"
                   variant="default"
                   aria-label="Unset gravatar"
-                  class="opacity-50"
                 />
               </.tooltip>
             </.sudo_form>
