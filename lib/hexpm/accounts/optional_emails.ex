@@ -12,19 +12,21 @@ defmodule Hexpm.Accounts.OptionalEmails do
     %{
       id: :organization_invite,
       title: "Organization invites",
-      description: "You’ll be notified whenever an organization you belong to adds you.",
+      description: "You’ll be notified when you are invited to an organization.",
       optional: true
     },
     %{
       id: :owner_added_to_package,
       title: "Owner added to package",
-      description: "You’ll be notified whenever you are added as an owner to a package.",
+      description:
+        "You’ll be notified whenever an owner is added to a package you own or when you are added as an owner.",
       optional: true
     },
     %{
       id: :owner_removed_from_package,
       title: "Owner removed from package",
-      description: "You’ll be notified whenever you are removed as an owner from a package.",
+      description:
+        "You’ll be notified whenever an owner is removed from a package you own or when you are removed as an owner.",
       optional: true
     },
     %{
