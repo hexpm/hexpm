@@ -15,7 +15,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
 
   def generate_key_modal(assigns) do
     ~H"""
-    <.modal id="generate-key-modal">
+    <.modal id="generate-key-modal" show={@form.source.action != nil}>
       <:header>
         <h2 class="text-lg font-semibold text-grey-900 dark:text-white">
           Generate New Key

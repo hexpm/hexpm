@@ -45,6 +45,17 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
                "The key computer was successfully generated"
     end
 
+    test "shows validation errors when name is missing", c do
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> post("/dashboard/keys", %{key: %{name: "", expires_in: "30"}})
+
+      response_body = response(conn, 400)
+      assert response_body =~ "Generate New Key"
+      assert response_body =~ "can&#39;t be blank"
+    end
+
     test "stores generated key in session and displays it once", c do
       # Create a key
       conn =
