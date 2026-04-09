@@ -77,6 +77,13 @@
                     >
                       {HexpmWeb.ViewIcons.icon(:heroicon, "book-open", class: "size-4")}
                     </a>
+                    <a
+                      href={Hexpm.Utils.docs_tarball_url(@package.repository, @package, release)}
+                      title="Download docs"
+                      class="text-grey-400 dark:text-grey-300 hover:text-purple-600 dark:hover:text-primary-300 transition-colors"
+                    >
+                      {HexpmWeb.ViewIcons.icon(:heroicon, "cloud-arrow-down", class: "size-4")}
+                    </a>
                   <% end %>
                   <%= unless retired? do %>
                     <%= if previous_version && ViewHelpers.main_repository?(@package) do %>

@@ -208,7 +208,7 @@ defmodule HexpmWeb.PackageControllerTest do
         |> html_response(200)
 
       # Should have documentation button in header
-      assert html_response =~ "Online Documentation"
+      assert html_response =~ "HexDocs"
     end
   end
 

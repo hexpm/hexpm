@@ -379,6 +379,31 @@
             color: var(--color-grey-500);
             margin-bottom: 1rem;
           }
+          .docs-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+            font-size: 0.875rem;
+          }
+          .docs-content table th {
+            background-color: var(--color-grey-50);
+            font-weight: 600;
+            color: var(--color-grey-900);
+            padding: 0.75rem 1rem;
+            border-bottom: 2px solid var(--color-grey-200);
+            text-align: left;
+          }
+          .docs-content table td {
+            padding: 0.75rem 1rem;
+            color: var(--color-grey-700);
+            border-bottom: 1px solid var(--color-grey-200);
+          }
+          .docs-content table.table-striped tbody tr:nth-child(even) {
+            background-color: var(--color-grey-100);
+          }
+          .docs-content table.table-striped tbody tr:hover {
+            background-color: var(--color-grey-200);
+          }
           .docs-content dl {
             margin-bottom: 1rem;
           }
@@ -407,6 +432,21 @@
           }
           html[data-theme="dark"] .docs-content dd {
             color: var(--color-grey-300);
+          }
+          html[data-theme="dark"] .docs-content table th {
+            background-color: var(--color-grey-700);
+            color: white;
+            border-bottom-color: var(--color-grey-600);
+          }
+          html[data-theme="dark"] .docs-content table td {
+            color: var(--color-grey-200);
+            border-bottom-color: var(--color-grey-600);
+          }
+          html[data-theme="dark"] .docs-content table.table-striped tbody tr:nth-child(even) {
+            background-color: var(--color-grey-700);
+          }
+          html[data-theme="dark"] .docs-content table.table-striped tbody tr:hover {
+            background-color: var(--color-grey-500);
           }
         </style>
         {render(DocsView, @view, assigns)}

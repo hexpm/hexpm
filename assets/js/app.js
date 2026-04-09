@@ -13,6 +13,7 @@ import { AutoSubmit } from "./hooks/auto_submit";
 import { NavigateOnChange } from "./hooks/navigate_on_change";
 import { ConfirmSubmit } from "./hooks/confirm_submit";
 import { initializeTheme, syncReadmeFrameTheme, resolveTheme } from "./theme";
+import { SearchShortcut } from "./hooks/search_shortcut";
 
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")
@@ -29,6 +30,7 @@ let Hooks = {
   AutoSubmit,
   NavigateOnChange,
   ConfirmSubmit,
+  SearchShortcut,
 };
 let liveSocket = new LiveSocket("/live", Socket, {
   params: { _csrf_token: csrfToken },

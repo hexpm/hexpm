@@ -130,7 +130,8 @@ Hexpm.Repo.transaction(fn ->
           :release_metadata,
           app: "decimal",
           build_tools: ["mix"]
-        )
+        ),
+      has_docs: true
     )
 
   insert(

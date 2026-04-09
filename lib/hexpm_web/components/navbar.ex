@@ -21,6 +21,7 @@ defmodule HexpmWeb.Components.Navbar do
   attr :current_user, :any, default: nil
   attr :search, :string, default: nil
   attr :show_search, :boolean, default: true
+  attr :autofocus_search, :boolean, default: false
 
   def header(assigns) do
     ~H"""
@@ -28,7 +29,12 @@ defmodule HexpmWeb.Components.Navbar do
       <div class="max-w-7xl mx-auto px-4">
         <div class="flex items-center justify-between h-[72px] gap-8 lg:gap-20">
           <.logo />
-          <.desktop_nav current_user={@current_user} search={@search} show_search={@show_search} />
+          <.desktop_nav
+            current_user={@current_user}
+            search={@search}
+            show_search={@show_search}
+            autofocus_search={@autofocus_search}
+          />
           <.mobile_nav_controls current_user={@current_user} show_search={@show_search} />
         </div>
 
@@ -53,11 +59,12 @@ defmodule HexpmWeb.Components.Navbar do
   attr :current_user, :any, required: true
   attr :search, :string, required: true
   attr :show_search, :boolean, required: true
+  attr :autofocus_search, :boolean, required: true
 
   defp desktop_nav(assigns) do
     ~H"""
     <div class="hidden lg:flex items-center flex-1 justify-end gap-10">
-      <.search_form :if={@show_search} search={@search} />
+      <.search_form :if={@show_search} search={@search} autofocus={@autofocus_search} />
       <.nav_links />
       <.theme_toggle />
       <.auth_section current_user={@current_user} />
@@ -159,7 +166,7 @@ defmodule HexpmWeb.Components.Navbar do
 
       <div
         data-theme-menu
-        class="hidden absolute right-0 mt-2 w-36 bg-grey-700 border border-grey-600 rounded-lg shadow-lg py-1 z-50"
+        class="hidden absolute right-0 top-full mt-2 w-36 bg-grey-700 border border-grey-600 rounded-lg shadow-lg py-1 z-50"
       >
         <button
           type="button"
@@ -284,6 +291,7 @@ defmodule HexpmWeb.Components.Navbar do
   end
 
   attr :search, :string, default: nil
+  attr :autofocus, :boolean, default: false
 
   defp search_form(assigns) do
     ~H"""
@@ -293,11 +301,14 @@ defmodule HexpmWeb.Components.Navbar do
           {icon(:heroicon, "magnifying-glass", width: 18, height: 18, class: "text-grey-300")}
         </div>
         <input
+          id="search-input"
+          phx-hook="SearchShortcut"
           placeholder="Find packages..."
           name="search"
           type="text"
           class="w-full h-[40px] bg-grey-800 border border-grey-600 rounded-lg px-3 pl-10 py-[11px] text-white leading-4 placeholder:text-grey-300 focus:outline-none focus:border-grey-500 focus:shadow-[inset_0px_0px_6px_0px_rgba(255,255,255,0.3)]"
           value={@search}
+          autofocus={@autofocus}
         />
         <input type="hidden" name="sort" value="recent_downloads" />
       </div>
