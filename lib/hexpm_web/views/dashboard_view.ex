@@ -302,7 +302,12 @@ defmodule HexpmWeb.DashboardView do
   defp format_email_preference_changes(changes) do
     changes
     |> Enum.map_join(", ", fn {key, value} ->
-      %{title: title} = Enum.find(OptionalEmails.list(), &(to_string(&1.id) == key))
+      title =
+        case Enum.find(OptionalEmails.list(), &(to_string(&1.id) == key)) do
+          %{title: title} -> title
+          nil -> key
+        end
+
       status = if value, do: "enabled", else: "disabled"
       "#{title}: #{status}"
     end)

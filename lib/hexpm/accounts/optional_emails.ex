@@ -12,28 +12,24 @@ defmodule Hexpm.Accounts.OptionalEmails do
     %{
       id: :organization_invite,
       title: "Organization invites",
-      description: "You’ll be notified when you are invited to an organization.",
-      optional: true
+      description: "You’ll be notified when you are invited to an organization."
     },
     %{
       id: :owner_added_to_package,
       title: "Owner added to package",
       description:
-        "You’ll be notified whenever an owner is added to a package you own or when you are added as an owner.",
-      optional: true
+        "You’ll be notified whenever an owner is added to a package you own or when you are added as an owner."
     },
     %{
       id: :owner_removed_from_package,
       title: "Owner removed from package",
       description:
-        "You’ll be notified whenever an owner is removed from a package you own or when you are removed as an owner.",
-      optional: true
+        "You’ll be notified whenever an owner is removed from a package you own or when you are removed as an owner."
     },
     %{
       id: :package_published,
       title: "Package published",
-      description: "You’ll be notified whenever a package you own is published.",
-      optional: true
+      description: "You’ll be notified whenever a package you own is published."
     }
   ]
 
@@ -68,7 +64,7 @@ defmodule Hexpm.Accounts.OptionalEmails do
   def normalize_preferences(params) when is_map(params) do
     Enum.into(@types, %{}, fn %{id: id} ->
       key = to_string(id)
-      value = params[key] || params[String.to_atom(key)]
+      value = params[key]
       {key, to_bool(value)}
     end)
   end

@@ -87,7 +87,6 @@ defmodule Hexpm.Accounts.User do
     |> validate_format(:username, @username_regex)
     |> validate_exclusion(:username, @reserved_names)
     |> unique_constraint(:username, name: "users_username_idx")
-    |> ensure_optional_email_preferences()
   end
 
   def to_organization(user, organization) do
@@ -260,11 +259,11 @@ defmodule Hexpm.Accounts.User do
   end
 
   defp ensure_optional_email_preferences(changeset) do
-    preferences = get_field(changeset, :optional_emails) || OptionalEmails.default_preferences()
-
-    changeset
-    |> put_change(:optional_emails, preferences)
-    |> validate_optional_email_preferences()
+    if get_field(changeset, :optional_emails) do
+      changeset
+    else
+      put_change(changeset, :optional_emails, OptionalEmails.default_preferences())
+    end
   end
 
   def optional_emails_changeset(user, optional_emails) do
