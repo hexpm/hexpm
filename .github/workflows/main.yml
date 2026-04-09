@@ -6,6 +6,12 @@ permissions:
   contents: read
 
 jobs:
+  hello:
+    name: Hello
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/hello-world-javascript-action@main
+
   format:
     name: Format
     runs-on: ubuntu-24.04
