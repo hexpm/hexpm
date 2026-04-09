@@ -1,0 +1,21 @@
+name: Dependency Review
+
+# pull_request_target is needed to get write permission for posting PR
+# comments on fork PRs; no code from the PR is executed
+on:
+  pull_request_target: {} # zizmor: ignore[dangerous-triggers]
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    name: Review Dependencies
+    runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
+        with:
+          comment-summary-in-pr: always
+          retry-on-snapshot-warnings: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
