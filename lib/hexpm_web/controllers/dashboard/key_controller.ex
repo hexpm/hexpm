@@ -81,11 +81,14 @@ defmodule HexpmWeb.Dashboard.KeyController do
         Map.put(params, "revoke_at", revoke_at)
 
       "custom" ->
-        {:ok, date} = Date.from_iso8601(params["custom_expiry_date"])
-        {:ok, revoke_at} = DateTime.new(date, ~T[23:59:59], "Etc/UTC")
-        Map.put(params, "revoke_at", revoke_at)
+        with {:ok, date} <- Date.from_iso8601(params["custom_expiry_date"] || ""),
+             {:ok, revoke_at} <- DateTime.new(date, ~T[23:59:59], "Etc/UTC") do
+          Map.put(params, "revoke_at", revoke_at)
+        else
+          _ -> params
+        end
 
-      "none" ->
+      _other ->
         params
     end
   end

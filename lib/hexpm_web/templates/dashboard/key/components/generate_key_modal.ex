@@ -38,8 +38,8 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
             name="key[expires_in]"
             label="Expiration"
             options={[
-              {"30 days", "30"},
               {"7 days", "7"},
+              {"30 days", "30"},
               {"60 days", "60"},
               {"90 days", "90"},
               {"1 year", "365"},
