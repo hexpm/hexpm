@@ -154,6 +154,9 @@ defmodule Hexpm.Accounts.Users do
           end)
 
         {:error, %Ecto.Changeset{data: user, errors: errors, valid?: false}}
+
+      {:error, :user, changeset, _} ->
+        {:error, changeset}
     end
   end
 

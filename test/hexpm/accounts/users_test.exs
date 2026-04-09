@@ -200,7 +200,8 @@ defmodule Hexpm.Accounts.UsersTest do
               "github" => "github",
               "elixirforum" => "elixirforum",
               "freenode" => "freenode",
-              "slack" => "slack"
+              "slack" => "slack",
+              "url" => "https://example.com"
             }
           },
           audit: audit_data(build(:user))
@@ -212,7 +213,8 @@ defmodule Hexpm.Accounts.UsersTest do
                github: "github",
                elixirforum: "elixirforum",
                freenode: "freenode",
-               slack: "slack"
+               slack: "slack",
+               url: "https://example.com"
              } = updated_user.handles
     end
 

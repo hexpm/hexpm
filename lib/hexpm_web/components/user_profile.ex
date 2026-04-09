@@ -77,13 +77,31 @@ defmodule HexpmWeb.Components.UserProfile do
               </a>
             <% end %>
 
+            <%!-- Custom URL --%>
+            <%= if @user.handles && @user.handles.url do %>
+              <a
+                href={@user.handles.url}
+                class="group relative p-2 rounded-lg bg-grey-100 dark:bg-grey-900 hover:bg-grey-200 dark:hover:bg-grey-800 transition-colors"
+                target="_blank"
+                rel="noopener noreferrer nofollow me"
+                title={@user.handles.url}
+              >
+                {HexpmWeb.ViewIcons.icon(:heroicon, "link",
+                  class: "w-5 h-5 text-grey-700 dark:text-grey-200"
+                )}
+                <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-grey-900 dark:bg-grey-700 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                  {@user.handles.url}
+                </span>
+              </a>
+            <% end %>
+
             <%!-- Social Media Icons --%>
             <%= for {service, handle, url} <- Hexpm.Accounts.UserHandles.render(@user) do %>
               <a
                 href={url}
                 class="group relative p-2 rounded-lg bg-grey-100 dark:bg-grey-900 hover:bg-grey-200 dark:hover:bg-grey-800 transition-colors"
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="noopener noreferrer nofollow me"
                 title={"#{service}: #{handle}"}
               >
                 <.social_icon

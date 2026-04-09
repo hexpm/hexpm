@@ -99,6 +99,14 @@
                   </h3>
 
                   <div class="space-y-5">
+                    <%!-- Custom URL --%>
+                    <.text_input
+                      field={f[:url]}
+                      type="url"
+                      label="URL"
+                      placeholder="Your custom URL"
+                    />
+
                     <%!-- Twitter/X --%>
                     <.social_input
                       form={f}

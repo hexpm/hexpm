@@ -368,7 +368,10 @@ defmodule Hexpm.Accounts.AuditLog do
   defp fields(%ReleaseRetirement{}), do: [:status, :message]
   defp fields(%Organization{}), do: [:id, :name, :public, :active, :billing_active]
   defp fields(%User{}), do: [:id, :username]
-  defp fields(%UserHandles{}), do: [:twitter, :bluesky, :github, :elixirforum, :freenode, :slack]
+
+  defp fields(%UserHandles{}),
+    do: [:twitter, :bluesky, :github, :elixirforum, :freenode, :slack, :url]
+
   defp fields(%Hexpm.UserSession{}), do: [:id, :type, :name, :client_id]
   defp fields(%Hexpm.OAuth.Client{}), do: [:id, :name]
 

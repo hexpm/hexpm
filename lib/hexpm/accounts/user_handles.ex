@@ -10,10 +10,25 @@ defmodule Hexpm.Accounts.UserHandles do
     field :elixirforum, :string
     field :freenode, :string
     field :slack, :string
+    field :url, :string
   end
 
   def changeset(handles, params) do
-    cast(handles, params, ~w(twitter bluesky github elixirforum freenode slack)a)
+    handles
+    |> cast(params, ~w(twitter bluesky github elixirforum freenode slack url)a)
+    |> validate_change(:url, fn :url, url ->
+      case URI.new(url) do
+        {:ok, uri} ->
+          if uri.scheme not in ["http", "https"] do
+            [url: "should be a valid http or https URL"]
+          else
+            []
+          end
+
+        {:error, err} ->
+          [url: err]
+      end
+    end)
   end
 
   def services() do

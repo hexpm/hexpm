@@ -14,7 +14,8 @@ defmodule Hexpm.Accounts.UserHandlesTest do
               github: "https://github.com/eric",
               elixirforum: "https://elixirforum.com/u/eric",
               freenode: "freenode",
-              slack: "slack"
+              slack: "slack",
+              url: "https://example.com"
             )
         )
 
@@ -39,7 +40,8 @@ defmodule Hexpm.Accounts.UserHandlesTest do
               github: "http://github.com/eric",
               elixirforum: "http://elixirforum.com/u/eric",
               freenode: "freenode",
-              slack: "slack"
+              slack: "slack",
+              url: "https://example.com"
             )
         )
 
@@ -64,7 +66,8 @@ defmodule Hexpm.Accounts.UserHandlesTest do
               github: "github.com/eric",
               elixirforum: "elixirforum.com/u/eric",
               freenode: "freenode",
-              slack: "slack"
+              slack: "slack",
+              url: "https://example.com"
             )
         )
 

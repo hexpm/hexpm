@@ -104,6 +104,13 @@ defmodule HexpmWeb.Dashboard.Organization.Components.ProfileTab do
                   Socials
                 </h3>
                 <div class="space-y-5">
+                  <.text_input
+                    field={fh[:url]}
+                    type="url"
+                    label="URL"
+                    placeholder="Your organization's custom URL"
+                  />
+
                   <.social_input
                     form={fh}
                     field={:twitter}
