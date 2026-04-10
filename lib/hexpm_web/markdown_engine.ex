@@ -44,11 +44,11 @@ defmodule HexpmWeb.MarkdownEngine do
       HexpmWeb.ViewIcons.icon(:heroicon, :link, class: "icon-link")
       |> Phoenix.HTML.safe_to_string()
 
-    link = {"a", [{"href", "##{anchor}"}, {"class", "hover-link"}], [icon_html], %{}}
+    icon = {"span", [], [icon_html], %{verbatim: true}}
+    link = {"a", [{"href", "##{anchor}"}, {"class", "hover-link"}], [icon], %{}}
 
     {:replace,
-     {tag, [{"id", anchor}, {"class", "section-heading"}], [link, " " | children],
-      Map.put(meta, :verbatim, true)}}
+     {tag, [{"id", anchor}, {"class", "section-heading"}], [link, " " | children], meta}}
   end
 
   defp transform_node(
