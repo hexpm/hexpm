@@ -56,7 +56,7 @@ defmodule HexpmWeb.Readme.TaskList do
     end
   end
 
-  defp convert_li_children(children), do: children
+  defp convert_li_children(children), do: Enum.map(children, &convert_node/1)
 
   defp checkbox_input(" ") do
     {"input", [{"type", "checkbox"}, {"disabled", "disabled"}], [], %{}}

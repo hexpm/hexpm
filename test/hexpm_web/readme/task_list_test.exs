@@ -79,7 +79,7 @@ defmodule HexpmWeb.Readme.TaskListTest do
              ] = items
     end
 
-    test "nested list inside TODO list is render normally" do
+    test "nested list inside TODO list is rendered normally" do
       unchecked_cb = checkbox(false)
 
       ast =
