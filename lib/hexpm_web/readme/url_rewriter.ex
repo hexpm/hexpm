@@ -40,10 +40,8 @@ defmodule HexpmWeb.Readme.URLRewriter do
   }
 
   defp rewrite_attrs("img", attrs, base_url) do
-    {src, attrs} = List.keytake(attrs, "src", 0)
-
-    case src do
-      {"src", src_value} ->
+    case List.keytake(attrs, "src", 0) do
+      {{"src", src_value}, attrs} ->
         src_value = resolve_url(src_value, base_url)
         {class, src_value} = extract_color_scheme_class(src_value)
         attrs = [{"src", proxy_image_url(src_value)} | attrs]

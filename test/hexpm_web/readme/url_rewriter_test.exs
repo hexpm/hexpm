@@ -75,6 +75,14 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
       refute result =~ ~s[class="]
     end
 
+    test "handles img tag without src attribute" do
+      html = ~s[<img alt="Logo">]
+      result = URLRewriter.rewrite(html, "my_package", "1.0.0")
+
+      assert result =~ ~s[alt="Logo"]
+      refute result =~ "src="
+    end
+
     test "does not proxy non-http/https image URLs" do
       html = ~s[<img src="data:image/png;base64,abc123">]
       result = URLRewriter.rewrite(html, "my_package", "1.0.0")
