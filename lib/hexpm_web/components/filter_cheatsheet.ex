@@ -7,10 +7,11 @@ defmodule HexpmWeb.Components.FilterCheatsheet do
     {"name:", "Match package (or repo/package) name", "name:phoenix"},
     {"description:", "Full-text search of package descriptions", "description:auth"},
     {"depends:", "Packages depending on a given package", "depends:ecto"},
-    {"build_tool:", "Filter by build tool (repeat for OR)", "build_tool:mix"},
+    {"build_tool:", "Filter by build tool", "build_tool:mix"},
     {"updated_after:", "Packages updated after an ISO8601 datetime",
      "updated_after:2025-01-01T00:00:00Z"},
-    {"extra:", "Match custom metadata (key,value)", "extra:license,MIT"}
+    {"extra:", "Match custom metadata (key,value). Nested keys are separated by commas",
+     "extra:license,MIT"}
   ]
 
   attr :id, :string, required: true
@@ -21,7 +22,8 @@ defmodule HexpmWeb.Components.FilterCheatsheet do
     ~H"""
     <.modal id={@id} title="Search filters">
       <p class="text-sm text-grey-600 dark:text-grey-300 mb-3">
-        Type any of these into the search box. They can be combined with free text.
+        Type any of these into the search box. They can be combined with free text
+        which searches package names and descriptions.
       </p>
       <table class="w-full text-sm">
         <thead>

@@ -91,14 +91,6 @@ defmodule HexpmWeb.PackageControllerTest do
       assert result =~ package2.name
     end
 
-    test "search with letter", %{package1: package1, package2: package2} do
-      conn = get(build_conn(), "/packages?letter=#{String.at(package1.name, 0)}")
-      assert response(conn, 200) =~ package1.name
-
-      conn = get(build_conn(), "/packages?letter=#{String.at(package2.name, 0)}")
-      assert response(conn, 200) =~ package2.name
-    end
-
     test "search with search query", %{package1: package1, package2: package2} do
       conn = get(build_conn(), "/packages?search=#{package1.name}")
       assert response(conn, 200) =~ ~r/#{package1.name}.*0.0.2/s

@@ -8,8 +8,6 @@ defmodule HexpmWeb.PackageLive.Index do
 
   @packages_per_page 30
   @sort_params ~w(name recent_downloads total_downloads inserted_at updated_at)
-  @letters for letter <- ?A..?Z, do: <<letter>>
-
   @impl true
   def mount(_params, _session, socket) do
     organizations = Users.all_organizations(socket.assigns.current_user)
@@ -19,11 +17,10 @@ defmodule HexpmWeb.PackageLive.Index do
       assign(socket,
         title: "Packages",
         container: "container",
+        live_search: true,
         per_page: @packages_per_page,
-        letters: @letters,
         repositories: repositories,
-        depends_suggestions: [],
-        canonical_query: ""
+        depends_suggestions: []
       )
 
     {:ok, socket}
@@ -36,25 +33,17 @@ defmodule HexpmWeb.PackageLive.Index do
 
   defp load_results(socket, params) do
     repositories = socket.assigns.repositories
-    letter = Hexpm.Utils.parse_search(params["letter"])
     search = Hexpm.Utils.parse_search(params["search"])
-
-    filter =
-      cond do
-        letter -> {:letter, letter}
-        search -> search
-        true -> nil
-      end
 
     sort = sort(params["sort"])
     page_param = Hexpm.Utils.safe_int(params["page"]) || 1
-    package_count = Packages.count(repositories, filter)
+    package_count = Packages.count(repositories, search)
     page = Hexpm.Utils.safe_page(page_param, package_count, @packages_per_page)
     exact_match = exact_match(repositories, search)
 
     all_matches =
       repositories
-      |> Packages.search(page, @packages_per_page, filter, sort, nil)
+      |> Packages.search(page, @packages_per_page, search, sort, nil)
       |> Packages.attach_latest_releases()
 
     downloads =
@@ -74,7 +63,6 @@ defmodule HexpmWeb.PackageLive.Index do
       search: search,
       search_query: search_query,
       canonical_query: canonical_query,
-      letter: letter,
       sort: sort,
       package_count: package_count,
       page: page,
@@ -100,13 +88,7 @@ defmodule HexpmWeb.PackageLive.Index do
           </p>
         </div>
 
-        <%!-- Letter Navigation (only show when not searching) --%>
-        <%= unless @search do %>
-          <.letter_browser letters={@letters} current_letter={@letter} />
-        <% end %>
-
         <button
-          :if={is_nil(@letter)}
           type="button"
           phx-click={
             Phoenix.LiveView.JS.toggle(to: "#filter-sidebar")
@@ -114,16 +96,22 @@ defmodule HexpmWeb.PackageLive.Index do
           }
           aria-expanded="false"
           aria-controls="filter-sidebar"
-          class="md:hidden mb-2 px-3 py-1 border rounded text-sm"
+          class="md:hidden mb-4 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-grey-700 dark:text-grey-200 bg-grey-50 dark:bg-grey-800 border border-grey-200 dark:border-grey-600 rounded-lg hover:bg-grey-100 dark:hover:bg-grey-700 transition-colors"
         >
+          <svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+            />
+          </svg>
           Filters
         </button>
         <div class="flex flex-col md:flex-row gap-6">
           <.sidebar
-            :if={is_nil(@letter)}
             query={@search_query}
             depends_suggestions={@depends_suggestions}
-            canonical_query={@canonical_query}
           />
           <div class="flex-1 min-w-0">
             <%!-- Exact Match Section --%>
@@ -178,15 +166,13 @@ defmodule HexpmWeb.PackageLive.Index do
                   No Results Found
                 </h3>
                 <p class="text-grey-600 dark:text-grey-300">
-                  Try adjusting your search or browse by letter above
+                  Try adjusting your search
                 </p>
               </div>
             <% end %>
 
             <%!-- Package List --%>
             <%= if @packages != [] do %>
-              <% page = if @page == 1, do: nil, else: @page %>
-
               <%!-- Results Header with Sort Selector --%>
               <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                 <div>
@@ -194,23 +180,20 @@ defmodule HexpmWeb.PackageLive.Index do
                     {if @exact_match, do: "Search Results", else: "All Packages"}
                   </h2>
                   <div class="flex items-center gap-3 mt-1">
-                    <p class="text-grey-600 dark:text-grey-300">
+                    <p class="text-grey-600 dark:text-grey-300 whitespace-nowrap">
                       {@package_count} {if @package_count == 1, do: "package", else: "packages"} found
                     </p>
                     <% total_pages = ceil(@package_count / @per_page) %>
                     <%= if total_pages > 1 do %>
                       <span class="text-grey-400 dark:text-grey-300">•</span>
-                      <p class="text-grey-600 dark:text-grey-300 font-medium">
+                      <p class="text-grey-600 dark:text-grey-300 font-medium whitespace-nowrap">
                         Page {@page} of {total_pages}
                       </p>
                     <% end %>
                   </div>
                 </div>
 
-                <%!-- Sort Selector (hide when browsing by letter) --%>
-                <%= unless @letter do %>
-                  <.sort_selector sort={@sort} search={@search} page={page} />
-                <% end %>
+                <.sort_selector sort={@sort} />
               </div>
 
               <%!-- Package List --%>
@@ -237,8 +220,7 @@ defmodule HexpmWeb.PackageLive.Index do
                   per_page: @per_page,
                   unit: "package",
                   units: "packages",
-                  path_fn:
-                    &~p"/packages?#{ViewHelpers.params(&1, search: @search, sort: @sort, letter: @letter)}"
+                  path_fn: &~p"/packages?#{ViewHelpers.params(&1, search: @search, sort: @sort)}"
                 )}
               </div>
             <% end %>
@@ -251,12 +233,7 @@ defmodule HexpmWeb.PackageLive.Index do
 
   @impl true
   def handle_event("filter_change", params, socket) do
-    build_tools =
-      params
-      |> Map.get("build_tool", %{})
-      |> Enum.filter(fn {_k, v} -> v == "true" end)
-      |> Enum.map(fn {k, _v} -> k end)
-      |> Enum.sort()
+    build_tool = nil_if_empty(params["build_tool"])
 
     depends = nil_if_empty(params["depends"])
 
@@ -267,19 +244,11 @@ defmodule HexpmWeb.PackageLive.Index do
         date_string -> "#{date_string}T00:00:00Z"
       end
 
-    extras =
-      params
-      |> Map.get("extra", %{})
-      |> Enum.sort_by(fn {k, _v} -> String.to_integer(k) end)
-      |> Enum.map(fn {_idx, %{"key" => k, "value" => v}} -> {String.trim(k), String.trim(v)} end)
-      |> Enum.reject(fn {k, v} -> k == "" or v == "" end)
-
     new_query = %{
       socket.assigns.search_query
-      | build_tools: build_tools,
+      | build_tool: build_tool,
         depends: depends,
-        updated_after: updated_after,
-        extra: extras
+        updated_after: updated_after
     }
 
     suggestions =
@@ -293,6 +262,37 @@ defmodule HexpmWeb.PackageLive.Index do
 
     url_params =
       %{sort: socket.assigns.sort, search: new_search}
+      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+
+    {:noreply, push_patch(socket, to: ~p"/packages?#{url_params}")}
+  end
+
+  @impl true
+  def handle_event("sort_change", %{"sort" => sort}, socket) do
+    url_params =
+      %{sort: sort, search: socket.assigns.search}
+      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+
+    {:noreply, push_patch(socket, to: ~p"/packages?#{url_params}")}
+  end
+
+  @impl true
+  def handle_event("search_change", %{"search" => search}, socket) do
+    search = nil_if_empty(search)
+
+    url_params =
+      %{sort: socket.assigns.sort, search: search}
+      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+
+    {:noreply, push_patch(socket, to: ~p"/packages?#{url_params}")}
+  end
+
+  @impl true
+  def handle_event("search_submit", %{"search" => search}, socket) do
+    search = nil_if_empty(search)
+
+    url_params =
+      %{sort: socket.assigns.sort, search: search}
       |> Enum.reject(fn {_k, v} -> is_nil(v) end)
 
     {:noreply, push_patch(socket, to: ~p"/packages?#{url_params}")}

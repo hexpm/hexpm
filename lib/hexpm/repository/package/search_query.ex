@@ -8,7 +8,7 @@ defmodule Hexpm.Repository.Package.SearchQuery do
 
   defstruct free_text: nil,
             depends: nil,
-            build_tools: [],
+            build_tool: nil,
             updated_after: nil,
             extra: [],
             name: nil,
@@ -41,7 +41,6 @@ defmodule Hexpm.Repository.Package.SearchQuery do
            acc
            | free_text: free_text,
              extra: Enum.reverse(acc.extra),
-             build_tools: Enum.reverse(acc.build_tools),
              unknown: Enum.reverse(acc.unknown)
          }}
 
@@ -61,7 +60,7 @@ defmodule Hexpm.Repository.Package.SearchQuery do
   defp apply_token({:pair, "updated_after", v}, acc), do: {:ok, %{acc | updated_after: v}}
 
   defp apply_token({:pair, "build_tool", v}, acc) do
-    {:ok, %{acc | build_tools: [v | acc.build_tools]}}
+    {:ok, %{acc | build_tool: v}}
   end
 
   defp apply_token({:pair, "extra", v}, acc) do
@@ -150,7 +149,7 @@ defmodule Hexpm.Repository.Package.SearchQuery do
       pair("name", q.name),
       pair("description", q.description),
       pair("depends", q.depends),
-      Enum.map(q.build_tools, &pair("build_tool", &1)),
+      pair("build_tool", q.build_tool),
       pair("updated_after", q.updated_after),
       Enum.map(q.extra, fn {k, v} -> pair("extra", "#{k},#{v}") end),
       Enum.map(q.unknown, fn {k, v} -> pair(k, v) end)

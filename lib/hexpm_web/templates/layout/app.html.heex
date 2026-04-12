@@ -17,6 +17,7 @@
       search={search(assigns)}
       show_search={show_search?(assigns)}
       autofocus_search={autofocus_search?(assigns)}
+      live_search={!!assigns[:live_search]}
     />
 
     <%= unless assigns[:error] || assigns[:custom_flash] do %>

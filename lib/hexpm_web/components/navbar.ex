@@ -23,6 +23,7 @@ defmodule HexpmWeb.Components.Navbar do
   attr :search, :string, default: nil
   attr :show_search, :boolean, default: true
   attr :autofocus_search, :boolean, default: false
+  attr :live_search, :boolean, default: false
 
   def header(assigns) do
     ~H"""
@@ -35,12 +36,18 @@ defmodule HexpmWeb.Components.Navbar do
             search={@search}
             show_search={@show_search}
             autofocus_search={@autofocus_search}
+            live_search={@live_search}
           />
           <.mobile_nav_controls current_user={@current_user} show_search={@show_search} />
         </div>
 
-        <.mobile_search_bar :if={@show_search} search={@search} />
-        <.mobile_menu current_user={@current_user} />
+        <.mobile_search_bar :if={@show_search} search={@search} live_search={@live_search} />
+        <.mobile_menu
+          current_user={@current_user}
+          show_search={@show_search}
+          search={@search}
+          live_search={@live_search}
+        />
       </div>
     </nav>
     """
@@ -61,11 +68,17 @@ defmodule HexpmWeb.Components.Navbar do
   attr :search, :string, required: true
   attr :show_search, :boolean, required: true
   attr :autofocus_search, :boolean, required: true
+  attr :live_search, :boolean, required: true
 
   defp desktop_nav(assigns) do
     ~H"""
     <div class="hidden lg:flex items-center flex-1 justify-end gap-10">
-      <.search_form :if={@show_search} search={@search} autofocus={@autofocus_search} />
+      <.search_form
+        :if={@show_search}
+        search={@search}
+        autofocus={@autofocus_search}
+        live_search={@live_search}
+      />
       <.nav_links />
       <.theme_toggle />
       <.auth_section current_user={@current_user} />
@@ -110,7 +123,7 @@ defmodule HexpmWeb.Components.Navbar do
     <a
       :if={!@current_user}
       href={~p"/login"}
-      class="inline-flex items-center justify-center bg-grey-400 px-6 py-1 rounded-lg text-white text-md hover:bg-grey-500 hover:scale-105 transition-all duration-200"
+      class="inline-flex items-center justify-center bg-grey-400 px-6 py-1 rounded-lg text-white text-md hover:bg-grey-500 hover:scale-105 transition-all duration-200 whitespace-nowrap"
     >
       Log In
     </a>
@@ -196,12 +209,19 @@ defmodule HexpmWeb.Components.Navbar do
   end
 
   attr :search, :string, required: true
+  attr :live_search, :boolean, required: true
 
   defp mobile_search_bar(assigns) do
     ~H"""
     <div id="mobile-search-bar" class="hidden lg:hidden! bg-grey-800 pb-4">
       <div class="flex items-center gap-2">
-        <form role="search" action={~p"/packages"} class="flex-1">
+        <form
+          role="search"
+          action={~p"/packages"}
+          class="flex-1"
+          phx-change={@live_search && "search_change"}
+          phx-submit={@live_search && "search_submit"}
+        >
           <div class="relative">
             <div class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
               {icon(:heroicon, "magnifying-glass", width: 18, height: 18, class: "text-grey-300")}
@@ -211,10 +231,11 @@ defmodule HexpmWeb.Components.Navbar do
               name="search"
               type="text"
               value={@search}
+              phx-debounce={if @live_search, do: "300"}
               placeholder="Find packages..."
               class="w-full bg-grey-800 border border-grey-600 rounded-lg px-3 pl-10 py-[11px] text-white text-base font-medium leading-4 placeholder:text-grey-300 focus:outline-none focus:border-grey-500 focus:shadow-[inset_0px_0px_6px_0px_rgba(255,255,255,0.3)]"
             />
-            <input type="hidden" name="sort" value="recent_downloads" />
+            <input :if={!@live_search} type="hidden" name="sort" value="recent_downloads" />
           </div>
         </form>
         <button
@@ -231,11 +252,46 @@ defmodule HexpmWeb.Components.Navbar do
   end
 
   attr :current_user, :any, required: true
+  attr :show_search, :boolean, required: true
+  attr :search, :string, required: true
+  attr :live_search, :boolean, required: true
 
   defp mobile_menu(assigns) do
     ~H"""
     <div id="navbar-mobile" class="hidden lg:hidden! bg-grey-800 pb-6">
       <div class="flex flex-col">
+        <div :if={@show_search} class="flex items-center gap-2 pb-4">
+          <form
+            role="search"
+            action={~p"/packages"}
+            class="flex-1"
+            phx-change={@live_search && "search_change"}
+            phx-submit={@live_search && "search_submit"}
+          >
+            <div class="relative">
+              <div class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                {icon(:heroicon, "magnifying-glass", width: 18, height: 18, class: "text-grey-300")}
+              </div>
+              <input
+                name="search"
+                type="text"
+                value={@search}
+                phx-debounce={if @live_search, do: "300"}
+                placeholder="Find packages..."
+                class="w-full bg-grey-800 border border-grey-600 rounded-lg px-3 pl-10 py-[11px] text-white text-base font-medium leading-4 placeholder:text-grey-300 focus:outline-none focus:border-grey-500 focus:shadow-[inset_0px_0px_6px_0px_rgba(255,255,255,0.3)]"
+              />
+              <input :if={!@live_search} type="hidden" name="sort" value="recent_downloads" />
+            </div>
+          </form>
+          <button
+            type="button"
+            phx-click={show_modal("search-cheatsheet")}
+            aria-label="Search filter cheatsheet"
+            class="flex items-center justify-center w-[43px] self-stretch shrink-0 text-grey-200 hover:text-white border border-grey-600 rounded-lg text-sm font-medium cursor-pointer"
+          >
+            ?
+          </button>
+        </div>
         <.mobile_nav_links />
         <.mobile_auth_section current_user={@current_user} />
       </div>
@@ -303,11 +359,18 @@ defmodule HexpmWeb.Components.Navbar do
 
   attr :search, :string, default: nil
   attr :autofocus, :boolean, default: false
+  attr :live_search, :boolean, default: false
 
   defp search_form(assigns) do
     ~H"""
-    <div class="shrink-0 flex items-center gap-2 mr-auto">
-      <form role="search" action={~p"/packages"} class="w-[420px]">
+    <div class="min-w-0 flex-1 flex items-center gap-2 mr-auto">
+      <form
+        role="search"
+        action={~p"/packages"}
+        class="max-w-[420px] w-full"
+        phx-change={@live_search && "search_change"}
+        phx-submit={@live_search && "search_submit"}
+      >
         <div class="relative flex items-center">
           <div class="absolute left-3 pointer-events-none">
             {icon(:heroicon, "magnifying-glass", width: 18, height: 18, class: "text-grey-300")}
@@ -315,6 +378,7 @@ defmodule HexpmWeb.Components.Navbar do
           <input
             id="search-input"
             phx-hook="SearchShortcut"
+            phx-debounce={if @live_search, do: "300"}
             placeholder="Find packages..."
             name="search"
             type="text"
@@ -322,14 +386,14 @@ defmodule HexpmWeb.Components.Navbar do
             value={@search}
             autofocus={@autofocus}
           />
-          <input type="hidden" name="sort" value="recent_downloads" />
+          <input :if={!@live_search} type="hidden" name="sort" value="recent_downloads" />
         </div>
       </form>
       <button
         type="button"
         phx-click={show_modal("search-cheatsheet")}
         aria-label="Search filter cheatsheet"
-        class="px-2 py-1 text-grey-200 hover:text-white border border-grey-600 rounded text-sm cursor-pointer"
+        class="flex items-center justify-center size-[40px] shrink-0 text-grey-200 hover:text-white border border-grey-600 rounded-lg text-sm font-medium cursor-pointer"
       >
         ?
       </button>

@@ -36,7 +36,7 @@ defmodule HexpmWeb.PackageLive.IndexTest do
     assert html =~ "Packages"
   end
 
-  describe "build_tool checkbox" do
+  describe "build_tool dropdown" do
     setup do
       repository = Hexpm.Repository.Repositories.get("hexpm")
       mix_pkg = insert(:package, name: "mix_only", repository_id: repository.id)
@@ -52,14 +52,14 @@ defmodule HexpmWeb.PackageLive.IndexTest do
       :ok
     end
 
-    test "ticking a build_tool patches URL and narrows results", %{conn: conn} do
+    test "selecting a build_tool patches URL and narrows results", %{conn: conn} do
       {:ok, view, _} = live(conn, ~p"/packages")
       html = render(view)
       assert html =~ "mix_only"
       assert html =~ "rebar_only"
 
       view
-      |> form("#filter-form", %{"build_tool" => %{"mix" => "true"}})
+      |> form("#filter-form", %{"build_tool" => "mix"})
       |> render_change()
 
       assert_patch(view, ~p"/packages?sort=recent_downloads&search=build_tool%3Amix")
@@ -68,17 +68,15 @@ defmodule HexpmWeb.PackageLive.IndexTest do
       refute html =~ "rebar_only"
     end
 
-    test "unticking a checked build_tool clears the filter from the URL", %{conn: conn} do
+    test "selecting Any clears the filter from the URL", %{conn: conn} do
       {:ok, view, _} = live(conn, ~p"/packages?search=build_tool%3Amix")
       html = render(view)
       assert html =~ "mix_only"
       refute html =~ "rebar_only"
 
-      # Simulate unticking: send the filter_change event with no build_tool key,
-      # which is what a browser sends when all checkboxes are unchecked.
-      # We bypass form/2 because LiveViewTest validates checkbox values against
-      # the rendered DOM. render_change/3 dispatches directly to handle_event.
-      render_change(view, "filter_change", %{})
+      view
+      |> form("#filter-form", %{"build_tool" => ""})
+      |> render_change()
 
       assert_patch(view, ~p"/packages?sort=recent_downloads")
 
@@ -109,70 +107,6 @@ defmodule HexpmWeb.PackageLive.IndexTest do
       html = render(view)
       assert html =~ "ecto_consumer"
       refute html =~ "postgrex_dep_src"
-    end
-  end
-
-  describe "extra metadata filter" do
-    test "narrows by extra key/value", %{conn: conn} do
-      repository = Hexpm.Repository.Repositories.get("hexpm")
-
-      insert(:package,
-        name: "licensed_pkg",
-        repository_id: repository.id,
-        meta: build(:package_metadata, extra: %{"license" => "MIT"})
-      )
-
-      insert(:package,
-        name: "plain_pkg",
-        repository_id: repository.id,
-        meta: build(:package_metadata, extra: %{})
-      )
-
-      {:ok, view, _} = live(conn, ~p"/packages")
-      html = render(view)
-      assert html =~ "licensed_pkg"
-      assert html =~ "plain_pkg"
-
-      view
-      |> form("#filter-form", %{
-        "extra" => %{"0" => %{"key" => "license", "value" => "MIT"}}
-      })
-      |> render_change()
-
-      html = render(view)
-      assert html =~ "licensed_pkg"
-      refute html =~ "plain_pkg"
-    end
-
-    test "preserves order when multiple extra rows are submitted", %{conn: conn} do
-      repository = Hexpm.Repository.Repositories.get("hexpm")
-
-      insert(:package,
-        name: "two_extras_pkg",
-        repository_id: repository.id,
-        meta:
-          build(:package_metadata,
-            extra: %{"license" => "MIT", "category" => "db"}
-          )
-      )
-
-      {:ok, view, _} = live(conn, ~p"/packages")
-
-      render_change(view, "filter_change", %{
-        "extra" => %{
-          "0" => %{"key" => "license", "value" => "MIT"},
-          "1" => %{"key" => "category", "value" => "db"}
-        }
-      })
-
-      # URL carries both pairs in the order rendered.
-      assert_patch(
-        view,
-        ~p"/packages?sort=recent_downloads&search=extra%3Alicense%2CMIT+extra%3Acategory%2Cdb"
-      )
-
-      html = render(view)
-      assert html =~ "two_extras_pkg"
     end
   end
 
@@ -212,16 +146,9 @@ defmodule HexpmWeb.PackageLive.IndexTest do
     end
   end
 
-  describe "query preview and clear" do
-    test "shows canonical serialized query", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/packages?search=build_tool%3Amix+depends%3Aecto")
-      # Canonical order puts depends before build_tool.
-      assert html =~ "depends:ecto build_tool:mix"
-    end
-
+  describe "clear filters" do
     test "clear all button resets the URL", %{conn: conn} do
       {:ok, view, _} = live(conn, ~p"/packages?search=build_tool%3Amix")
-      assert render(view) =~ "build_tool:mix"
 
       view |> element("button", "Clear all") |> render_click()
       assert_patch(view, ~p"/packages?sort=recent_downloads")
@@ -277,19 +204,12 @@ defmodule HexpmWeb.PackageLive.IndexTest do
       refute html =~ "combo_other"
 
       # Sidebar controls are pre-filled:
-      # - build_tool[mix] checkbox is checked
-      assert html =~ ~s(name="build_tool[mix]" value="true" checked)
+      # - build_tool dropdown has mix selected
+      assert html =~ ~s(value="mix" selected)
       # - depends input is populated
       assert html =~ ~s(name="depends" value="ecto_combo_dep")
       # - updated_after date is populated with the date portion
       assert html =~ ~s(name="updated_after" value="2024-01-01")
-      # - extra row has the license/MIT values
-      assert html =~ ~s(value="license")
-      assert html =~ ~s(value="MIT")
-
-      # Query preview shows the canonical form.
-      assert html =~
-               "depends:ecto_combo_dep build_tool:mix updated_after:2024-01-01T00:00:00Z extra:license,MIT"
     end
   end
 end

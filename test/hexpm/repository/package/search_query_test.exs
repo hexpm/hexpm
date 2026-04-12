@@ -15,7 +15,7 @@ defmodule Hexpm.Repository.Package.SearchQueryTest do
     end
 
     test "a single filter is captured" do
-      assert SearchQuery.parse("build_tool:mix") == {:ok, %SearchQuery{build_tools: ["mix"]}}
+      assert SearchQuery.parse("build_tool:mix") == {:ok, %SearchQuery{build_tool: "mix"}}
     end
 
     test "updated_after is captured as a raw string" do
@@ -31,13 +31,13 @@ defmodule Hexpm.Repository.Package.SearchQueryTest do
     test "mixed free text and filters" do
       {:ok, q} = SearchQuery.parse("phoenix build_tool:mix depends:ecto")
       assert q.free_text == "phoenix"
-      assert q.build_tools == ["mix"]
+      assert q.build_tool == "mix"
       assert q.depends == "ecto"
     end
 
-    test "repeated build_tool filters accumulate" do
+    test "repeated build_tool uses last value" do
       {:ok, q} = SearchQuery.parse("build_tool:mix build_tool:rebar3")
-      assert q.build_tools == ["mix", "rebar3"]
+      assert q.build_tool == "rebar3"
     end
 
     test "repeated extra filters accumulate as {key, value} tuples" do
@@ -48,13 +48,13 @@ defmodule Hexpm.Repository.Package.SearchQueryTest do
     test "quoted values preserve spaces" do
       {:ok, q} = SearchQuery.parse(~s(name:"my package" build_tool:mix))
       assert q.name == "my package"
-      assert q.build_tools == ["mix"]
+      assert q.build_tool == "mix"
     end
 
     test "unknown filter operators round-trip via :unknown" do
       {:ok, q} = SearchQuery.parse("foo:bar build_tool:mix")
       assert q.unknown == [{"foo", "bar"}]
-      assert q.build_tools == ["mix"]
+      assert q.build_tool == "mix"
     end
 
     test "malformed extra value returns an error" do
@@ -65,12 +65,12 @@ defmodule Hexpm.Repository.Package.SearchQueryTest do
       {:ok, q} = SearchQuery.parse(":foo build_tool:mix")
       assert q.free_text == ":foo"
       assert q.unknown == []
-      assert q.build_tools == ["mix"]
+      assert q.build_tool == "mix"
     end
 
     test "tabs and newlines separate tokens just like spaces" do
       {:ok, q} = SearchQuery.parse("build_tool:mix\tdepends:ecto\nname:phoenix")
-      assert q.build_tools == ["mix"]
+      assert q.build_tool == "mix"
       assert q.depends == "ecto"
       assert q.name == "phoenix"
     end
@@ -85,17 +85,17 @@ defmodule Hexpm.Repository.Package.SearchQueryTest do
       assert SearchQuery.serialize(%SearchQuery{free_text: "phoenix"}) == "phoenix"
     end
 
-    test "filters serialize in canonical order: free_text, name, description, depends, build_tools, updated_after, extra, unknown" do
+    test "filters serialize in canonical order: free_text, name, description, depends, build_tool, updated_after, extra, unknown" do
       q = %SearchQuery{
         free_text: "phoenix",
-        build_tools: ["mix", "rebar3"],
+        build_tool: "mix",
         depends: "ecto",
         updated_after: "2025-01-01T00:00:00Z",
         extra: [{"license", "MIT"}]
       }
 
       assert SearchQuery.serialize(q) ==
-               "phoenix depends:ecto build_tool:mix build_tool:rebar3 updated_after:2025-01-01T00:00:00Z extra:license,MIT"
+               "phoenix depends:ecto build_tool:mix updated_after:2025-01-01T00:00:00Z extra:license,MIT"
     end
 
     test "quotes values containing spaces" do
@@ -104,7 +104,7 @@ defmodule Hexpm.Repository.Package.SearchQueryTest do
     end
 
     test "parse ∘ serialize is identity for supported fields" do
-      input = "phoenix depends:ecto build_tool:mix build_tool:rebar3 extra:license,MIT"
+      input = "phoenix depends:ecto build_tool:mix extra:license,MIT"
       {:ok, q} = SearchQuery.parse(input)
       assert SearchQuery.serialize(q) == input
     end
@@ -115,13 +115,10 @@ defmodule Hexpm.Repository.Package.SearchQueryTest do
     end
 
     test "double quotes inside values are stripped to keep parse symmetric" do
-      # value is ~s("hello") — stripping quotes gives "hello" (no spaces, no outer quoting)
       q = %SearchQuery{name: ~s("hello")}
       serialized = SearchQuery.serialize(q)
-      # embedded quotes are stripped; no outer quoting needed since result has no spaces
       assert serialized == "name:hello"
       refute serialized =~ "\""
-      # round-trips (without the stripped quotes)
       {:ok, parsed} = SearchQuery.parse(serialized)
       assert parsed.name == "hello"
     end
@@ -132,7 +129,7 @@ defmodule Hexpm.Repository.Package.SearchQueryTest do
     end
 
     test "serialize ∘ parse round-trips for structs built directly" do
-      q = %SearchQuery{name: "ecto", build_tools: ["mix", "rebar3"]}
+      q = %SearchQuery{name: "ecto", build_tool: "mix"}
       assert {:ok, ^q} = q |> SearchQuery.serialize() |> SearchQuery.parse()
     end
   end
