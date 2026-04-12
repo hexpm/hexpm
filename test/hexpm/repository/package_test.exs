@@ -330,6 +330,22 @@ defmodule Hexpm.Repository.PackageTest do
     assert ["benchee"] = search_for(repository, "build_tool:rebar3")
   end
 
+  test "build_tool filter OR-combines multiple values", %{repository: repository} do
+    ecto = insert(:package, name: "ecto_or", repository_id: repository.id)
+    insert(:release, package: ecto, meta: build(:release_metadata, build_tools: ["mix"]))
+
+    benchee = insert(:package, name: "benchee_or", repository_id: repository.id)
+    insert(:release, package: benchee, meta: build(:release_metadata, build_tools: ["rebar3"]))
+
+    gleam_pkg = insert(:package, name: "gleam_pkg_or", repository_id: repository.id)
+    insert(:release, package: gleam_pkg, meta: build(:release_metadata, build_tools: ["gleam"]))
+
+    results = search_for(repository, "build_tool:mix build_tool:rebar3")
+    assert "ecto_or" in results
+    assert "benchee_or" in results
+    refute "gleam_pkg_or" in results
+  end
+
   test "sort packages by total downloads", %{repository: repository} do
     %{id: ecto_id} = insert(:package, repository_id: repository.id)
     %{id: phoenix_id} = insert(:package, repository_id: repository.id)

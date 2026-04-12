@@ -205,10 +205,21 @@ defmodule Hexpm.Repository.Package do
   defp search(query, search) when is_binary(search) do
     case parse_search(search) do
       {:ok, params} ->
-        Enum.reduce(params, query, fn {k, v}, q -> search_param(k, v, q) end)
+        params
+        |> group_build_tools()
+        |> Enum.reduce(query, fn {k, v}, q -> search_param(k, v, q) end)
 
       :error ->
         basic_search(query, search)
+    end
+  end
+
+  defp group_build_tools(params) do
+    {tools, rest} = Enum.split_with(params, fn {k, _} -> k == "build_tool" end)
+
+    case tools do
+      [] -> rest
+      _ -> rest ++ [{"build_tool", Enum.map(tools, fn {_, v} -> v end)}]
     end
   end
 
@@ -295,17 +306,23 @@ defmodule Hexpm.Repository.Package do
     end
   end
 
-  defp search_param("build_tool", search, query) do
+  defp search_param("build_tool", values, query) when is_list(values) do
     # go with a sub-query because a join would add multiples and distinct mucks with sort order
+    # Uses PostgreSQL ?| (jsonb key-exists-any) to OR-combine multiple build tool values.
+    # In Ecto fragments, ? is the placeholder character, so ?| is escaped as \\?|.
     from(p in query,
       where:
         exists(
           from(r in Release,
             where: r.package_id == parent_as(:package).id,
-            where: fragment("?->'build_tools' @> ?", r.meta, ^search)
+            where: fragment("?->'build_tools' \\?| ?", r.meta, ^values)
           )
         )
     )
+  end
+
+  defp search_param("build_tool", search, query) when is_binary(search) do
+    search_param("build_tool", [search], query)
   end
 
   defp search_param(_, _, query) do
