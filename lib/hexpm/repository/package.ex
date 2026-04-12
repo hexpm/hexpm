@@ -148,6 +148,8 @@ defmodule Hexpm.Repository.Package do
       select: count()
     )
     |> search(search)
+    # `updated_after` search injects an order_by that PostgreSQL rejects inside COUNT(*).
+    |> exclude(:order_by)
   end
 
   @doc """

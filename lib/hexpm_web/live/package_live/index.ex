@@ -242,7 +242,19 @@ defmodule HexpmWeb.PackageLive.Index do
 
     depends = nil_if_empty(params["depends"])
 
-    new_query = %{socket.assigns.search_query | build_tools: build_tools, depends: depends}
+    updated_after =
+      case params["updated_after"] do
+        nil -> nil
+        "" -> nil
+        date_string -> "#{date_string}T00:00:00Z"
+      end
+
+    new_query = %{
+      socket.assigns.search_query
+      | build_tools: build_tools,
+        depends: depends,
+        updated_after: updated_after
+    }
 
     suggestions =
       if depends,

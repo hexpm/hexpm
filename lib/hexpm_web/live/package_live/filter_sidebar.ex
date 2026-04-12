@@ -46,8 +46,27 @@ defmodule HexpmWeb.PackageLive.FilterSidebar do
             <option :for={name <- @depends_suggestions} value={name} />
           </datalist>
         </fieldset>
+
+        <fieldset class="mb-6">
+          <legend class="text-sm font-medium mb-2">Updated after</legend>
+          <input
+            type="date"
+            name="updated_after"
+            value={date_value(@query.updated_after)}
+            class="w-full px-2 py-1 border rounded text-sm"
+          />
+        </fieldset>
       </form>
     </aside>
     """
+  end
+
+  defp date_value(nil), do: ""
+
+  defp date_value(iso8601) do
+    case DateTime.from_iso8601(iso8601) do
+      {:ok, dt, _} -> Date.to_iso8601(DateTime.to_date(dt))
+      _ -> ""
+    end
   end
 end

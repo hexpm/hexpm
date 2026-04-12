@@ -111,4 +111,40 @@ defmodule HexpmWeb.PackageLive.IndexTest do
       refute html =~ "postgrex_dep_src"
     end
   end
+
+  describe "updated_after filter" do
+    test "narrows results by date", %{conn: conn} do
+      repository = Hexpm.Repository.Repositories.get("hexpm")
+
+      insert(:package,
+        name: "old_pkg",
+        repository_id: repository.id,
+        updated_at: ~U[2020-01-01 00:00:00Z]
+      )
+
+      insert(:package,
+        name: "new_pkg",
+        repository_id: repository.id,
+        updated_at: ~U[2025-06-01 00:00:00Z]
+      )
+
+      {:ok, view, _} = live(conn, ~p"/packages")
+      html = render(view)
+      assert html =~ "old_pkg"
+      assert html =~ "new_pkg"
+
+      view
+      |> form("#filter-form", %{"updated_after" => "2024-01-01"})
+      |> render_change()
+
+      assert_patch(
+        view,
+        ~p"/packages?sort=recent_downloads&search=updated_after%3A2024-01-01T00%3A00%3A00Z"
+      )
+
+      html = render(view)
+      assert html =~ "new_pkg"
+      refute html =~ "old_pkg"
+    end
+  end
 end
