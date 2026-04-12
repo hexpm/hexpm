@@ -143,5 +143,35 @@ defmodule Hexpm.Repository.Package.SearchQuery do
     end
   end
 
-  def serialize(_query), do: raise("not implemented")
+  @spec serialize(t()) :: String.t()
+  def serialize(%__MODULE__{} = q) do
+    [
+      q.free_text,
+      pair("name", q.name),
+      pair("description", q.description),
+      pair("depends", q.depends),
+      Enum.map(q.build_tools, &pair("build_tool", &1)),
+      pair("updated_after", q.updated_after),
+      Enum.map(q.extra, fn {k, v} -> pair("extra", "#{k},#{v}") end),
+      Enum.map(q.unknown, fn {k, v} -> pair(k, v) end)
+    ]
+    |> List.flatten()
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(" ")
+  end
+
+  defp pair(_key, nil), do: nil
+  defp pair(_key, ""), do: nil
+
+  defp pair(key, value) do
+    case String.replace(value, "\"", "") do
+      "" ->
+        nil
+
+      stripped ->
+        if String.contains?(stripped, " "),
+          do: ~s(#{key}:"#{stripped}"),
+          else: "#{key}:#{stripped}"
+    end
+  end
 end

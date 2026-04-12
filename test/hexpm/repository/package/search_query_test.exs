@@ -75,4 +75,65 @@ defmodule Hexpm.Repository.Package.SearchQueryTest do
       assert q.name == "phoenix"
     end
   end
+
+  describe "serialize/1" do
+    test "empty query serializes to empty string" do
+      assert SearchQuery.serialize(%SearchQuery{}) == ""
+    end
+
+    test "free text only" do
+      assert SearchQuery.serialize(%SearchQuery{free_text: "phoenix"}) == "phoenix"
+    end
+
+    test "filters serialize in canonical order: free_text, name, description, depends, build_tools, updated_after, extra, unknown" do
+      q = %SearchQuery{
+        free_text: "phoenix",
+        build_tools: ["mix", "rebar3"],
+        depends: "ecto",
+        updated_after: "2025-01-01T00:00:00Z",
+        extra: [{"license", "MIT"}]
+      }
+
+      assert SearchQuery.serialize(q) ==
+               "phoenix depends:ecto build_tool:mix build_tool:rebar3 updated_after:2025-01-01T00:00:00Z extra:license,MIT"
+    end
+
+    test "quotes values containing spaces" do
+      q = %SearchQuery{name: "my package"}
+      assert SearchQuery.serialize(q) == ~s(name:"my package")
+    end
+
+    test "parse ∘ serialize is identity for supported fields" do
+      input = "phoenix depends:ecto build_tool:mix build_tool:rebar3 extra:license,MIT"
+      {:ok, q} = SearchQuery.parse(input)
+      assert SearchQuery.serialize(q) == input
+    end
+
+    test "unknown keys round-trip" do
+      {:ok, q} = SearchQuery.parse("foo:bar build_tool:mix")
+      assert SearchQuery.serialize(q) == "build_tool:mix foo:bar"
+    end
+
+    test "double quotes inside values are stripped to keep parse symmetric" do
+      # value is ~s("hello") — stripping quotes gives "hello" (no spaces, no outer quoting)
+      q = %SearchQuery{name: ~s("hello")}
+      serialized = SearchQuery.serialize(q)
+      # embedded quotes are stripped; no outer quoting needed since result has no spaces
+      assert serialized == "name:hello"
+      refute serialized =~ "\""
+      # round-trips (without the stripped quotes)
+      {:ok, parsed} = SearchQuery.parse(serialized)
+      assert parsed.name == "hello"
+    end
+
+    test "name and description serialize" do
+      assert SearchQuery.serialize(%SearchQuery{name: "ecto"}) == "name:ecto"
+      assert SearchQuery.serialize(%SearchQuery{description: "auth"}) == "description:auth"
+    end
+
+    test "serialize ∘ parse round-trips for structs built directly" do
+      q = %SearchQuery{name: "ecto", build_tools: ["mix", "rebar3"]}
+      assert {:ok, ^q} = q |> SearchQuery.serialize() |> SearchQuery.parse()
+    end
+  end
 end
