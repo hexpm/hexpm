@@ -181,7 +181,10 @@ defmodule HexpmWeb.Router do
     get "/policies/copyright", PolicyController, :copyright
     get "/policies/dispute", PolicyController, :dispute
 
-    get "/packages", PackageController, :index
+    live_session :packages, on_mount: {HexpmWeb.Live.InitAssigns, :default} do
+      live "/packages", PackageLive.Index, :index
+    end
+
     get "/packages/:name", PackageController, :show
     get "/packages/:name/audit-logs", PackageController, :audit_logs
     get "/packages/:name/dependents", PackageController, :dependents

@@ -94,10 +94,29 @@ defmodule HexpmWeb do
     end
   end
 
+  def live_view() do
+    quote do
+      use Phoenix.LiveView, layout: {HexpmWeb.LayoutView, :app}
+
+      import Phoenix.HTML
+      import Phoenix.HTML.Form
+      import HexpmWeb.ViewIcons
+      import HexpmWeb.Components.Buttons
+      import HexpmWeb.Components.Input
+      import HexpmWeb.Components.Modal
+      import HexpmWeb.Components.Package
+      alias HexpmWeb.ViewHelpers
+      use Hexpm.Shared
+
+      unquote(verified_routes())
+    end
+  end
+
   def router() do
     quote do
       use Phoenix.Router
       import HexpmWeb.Plugs
+      import Phoenix.LiveView.Router
 
       alias HexpmWeb.{Endpoint, Router}
       alias HexpmWeb.Router.Helpers, as: Routes
