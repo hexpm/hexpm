@@ -6,6 +6,7 @@ defmodule HexpmWeb.PackageLive.FilterSidebar do
   @build_tools ~w(mix rebar3 make gleam)
 
   attr :query, SearchQuery, required: true
+  attr :depends_suggestions, :list, default: []
 
   def sidebar(assigns) do
     assigns = assign(assigns, :build_tools, @build_tools)
@@ -28,6 +29,22 @@ defmodule HexpmWeb.PackageLive.FilterSidebar do
               <span>{tool}</span>
             </label>
           </div>
+        </fieldset>
+
+        <fieldset class="mb-6">
+          <legend class="text-sm font-medium mb-2">Depends on</legend>
+          <input
+            type="text"
+            name="depends"
+            value={@query.depends || ""}
+            list="depends-suggestions"
+            placeholder="package name"
+            phx-debounce="300"
+            class="w-full px-2 py-1 border rounded text-sm"
+          />
+          <datalist id="depends-suggestions">
+            <option :for={name <- @depends_suggestions} value={name} />
+          </datalist>
         </fieldset>
       </form>
     </aside>

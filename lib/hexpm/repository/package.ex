@@ -150,6 +150,25 @@ defmodule Hexpm.Repository.Package do
     |> search(search)
   end
 
+  @doc """
+  Returns up to 10 packages whose names start with `prefix` within the given repositories.
+  Used by the sidebar depends-filter autocomplete.
+  """
+  def search_by_prefix(repositories, prefix) when is_binary(prefix) and prefix != "" do
+    repo_ids = Enum.map(repositories, & &1.id)
+    pattern = escape_search(String.downcase(prefix)) <> "%"
+
+    from(p in __MODULE__,
+      where: p.repository_id in ^repo_ids,
+      where: like(p.name, ^pattern),
+      order_by: [asc: p.name],
+      limit: 10
+    )
+    |> Hexpm.Repo.all()
+  end
+
+  def search_by_prefix(_repositories, _), do: []
+
   defp put_first_owner(changeset, user, repository) do
     if repository.id == 1 do
       put_assoc(changeset, :package_owners, [%PackageOwner{user_id: user.id}])

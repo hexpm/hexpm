@@ -87,4 +87,28 @@ defmodule HexpmWeb.PackageLive.IndexTest do
       assert html =~ "rebar_only"
     end
   end
+
+  describe "depends filter" do
+    test "typing in depends narrows to packages that depend on the named package", %{conn: conn} do
+      repository = Hexpm.Repository.Repositories.get("hexpm")
+      ecto = insert(:package, name: "ecto_dep_src", repository_id: repository.id)
+      insert(:package, name: "postgrex_dep_src", repository_id: repository.id)
+
+      consumer = insert(:package, name: "ecto_consumer", repository_id: repository.id)
+      release = insert(:release, package: consumer)
+      insert(:requirement, release: release, dependency: ecto, requirement: "~> 1.0")
+
+      Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
+
+      {:ok, view, _} = live(conn, ~p"/packages")
+
+      view
+      |> form("#filter-form", %{"depends" => "ecto_dep_src"})
+      |> render_change()
+
+      html = render(view)
+      assert html =~ "ecto_consumer"
+      refute html =~ "postgrex_dep_src"
+    end
+  end
 end

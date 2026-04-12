@@ -21,7 +21,8 @@ defmodule HexpmWeb.PackageLive.Index do
         container: "container",
         per_page: @packages_per_page,
         letters: @letters,
-        repositories: repositories
+        repositories: repositories,
+        depends_suggestions: []
       )
 
     {:ok, socket}
@@ -101,7 +102,11 @@ defmodule HexpmWeb.PackageLive.Index do
         <% end %>
 
         <div class="flex gap-6">
-          <.sidebar :if={is_nil(@letter)} query={@search_query} />
+          <.sidebar
+            :if={is_nil(@letter)}
+            query={@search_query}
+            depends_suggestions={@depends_suggestions}
+          />
           <div class="flex-1 min-w-0">
             <%!-- Exact Match Section --%>
             <%= if @exact_match do %>
@@ -235,7 +240,17 @@ defmodule HexpmWeb.PackageLive.Index do
       |> Enum.map(fn {k, _v} -> k end)
       |> Enum.sort()
 
-    new_query = %{socket.assigns.search_query | build_tools: build_tools}
+    depends = nil_if_empty(params["depends"])
+
+    new_query = %{socket.assigns.search_query | build_tools: build_tools, depends: depends}
+
+    suggestions =
+      if depends,
+        do: suggestions_for(depends, socket.assigns.repositories),
+        else: []
+
+    socket = assign(socket, depends_suggestions: suggestions)
+
     new_search = nil_if_empty(SearchQuery.serialize(new_query))
 
     url_params =
@@ -243,6 +258,12 @@ defmodule HexpmWeb.PackageLive.Index do
       |> Enum.reject(fn {_k, v} -> is_nil(v) end)
 
     {:noreply, push_patch(socket, to: ~p"/packages?#{url_params}")}
+  end
+
+  defp suggestions_for(prefix, repositories) do
+    repositories
+    |> Hexpm.Repository.Package.search_by_prefix(prefix)
+    |> Enum.map(& &1.name)
   end
 
   defp nil_if_empty(nil), do: nil
