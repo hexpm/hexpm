@@ -60,5 +60,19 @@ defmodule Hexpm.Repository.Package.SearchQueryTest do
     test "malformed extra value returns an error" do
       assert {:error, {:extra, _}} = SearchQuery.parse("extra:no_comma_here")
     end
+
+    test "a leading colon is treated as free text, not an empty-key filter" do
+      {:ok, q} = SearchQuery.parse(":foo build_tool:mix")
+      assert q.free_text == ":foo"
+      assert q.unknown == []
+      assert q.build_tools == ["mix"]
+    end
+
+    test "tabs and newlines separate tokens just like spaces" do
+      {:ok, q} = SearchQuery.parse("build_tool:mix\tdepends:ecto\nname:phoenix")
+      assert q.build_tools == ["mix"]
+      assert q.depends == "ecto"
+      assert q.name == "phoenix"
+    end
   end
 end
