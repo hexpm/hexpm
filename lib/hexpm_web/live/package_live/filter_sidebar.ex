@@ -56,6 +56,33 @@ defmodule HexpmWeb.PackageLive.FilterSidebar do
             class="w-full px-2 py-1 border rounded text-sm"
           />
         </fieldset>
+
+        <fieldset class="mb-6">
+          <legend class="text-sm font-medium mb-2">Extra metadata</legend>
+          <div class="space-y-2">
+            <div
+              :for={{{k, v}, idx} <- Enum.with_index(@query.extra ++ [{"", ""}])}
+              class="flex gap-1"
+            >
+              <input
+                type="text"
+                name={"extra[#{idx}][key]"}
+                value={k}
+                placeholder="key"
+                phx-debounce="300"
+                class="w-1/2 px-2 py-1 border rounded text-sm"
+              />
+              <input
+                type="text"
+                name={"extra[#{idx}][value]"}
+                value={v}
+                placeholder="value"
+                phx-debounce="300"
+                class="w-1/2 px-2 py-1 border rounded text-sm"
+              />
+            </div>
+          </div>
+        </fieldset>
       </form>
     </aside>
     """

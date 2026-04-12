@@ -249,11 +249,19 @@ defmodule HexpmWeb.PackageLive.Index do
         date_string -> "#{date_string}T00:00:00Z"
       end
 
+    extras =
+      params
+      |> Map.get("extra", %{})
+      |> Enum.sort_by(fn {k, _v} -> String.to_integer(k) end)
+      |> Enum.map(fn {_idx, %{"key" => k, "value" => v}} -> {String.trim(k), String.trim(v)} end)
+      |> Enum.reject(fn {k, v} -> k == "" or v == "" end)
+
     new_query = %{
       socket.assigns.search_query
       | build_tools: build_tools,
         depends: depends,
-        updated_after: updated_after
+        updated_after: updated_after,
+        extra: extras
     }
 
     suggestions =

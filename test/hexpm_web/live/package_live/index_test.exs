@@ -112,6 +112,70 @@ defmodule HexpmWeb.PackageLive.IndexTest do
     end
   end
 
+  describe "extra metadata filter" do
+    test "narrows by extra key/value", %{conn: conn} do
+      repository = Hexpm.Repository.Repositories.get("hexpm")
+
+      insert(:package,
+        name: "licensed_pkg",
+        repository_id: repository.id,
+        meta: build(:package_metadata, extra: %{"license" => "MIT"})
+      )
+
+      insert(:package,
+        name: "plain_pkg",
+        repository_id: repository.id,
+        meta: build(:package_metadata, extra: %{})
+      )
+
+      {:ok, view, _} = live(conn, ~p"/packages")
+      html = render(view)
+      assert html =~ "licensed_pkg"
+      assert html =~ "plain_pkg"
+
+      view
+      |> form("#filter-form", %{
+        "extra" => %{"0" => %{"key" => "license", "value" => "MIT"}}
+      })
+      |> render_change()
+
+      html = render(view)
+      assert html =~ "licensed_pkg"
+      refute html =~ "plain_pkg"
+    end
+
+    test "preserves order when multiple extra rows are submitted", %{conn: conn} do
+      repository = Hexpm.Repository.Repositories.get("hexpm")
+
+      insert(:package,
+        name: "two_extras_pkg",
+        repository_id: repository.id,
+        meta:
+          build(:package_metadata,
+            extra: %{"license" => "MIT", "category" => "db"}
+          )
+      )
+
+      {:ok, view, _} = live(conn, ~p"/packages")
+
+      render_change(view, "filter_change", %{
+        "extra" => %{
+          "0" => %{"key" => "license", "value" => "MIT"},
+          "1" => %{"key" => "category", "value" => "db"}
+        }
+      })
+
+      # URL carries both pairs in the order rendered.
+      assert_patch(
+        view,
+        ~p"/packages?sort=recent_downloads&search=extra%3Alicense%2CMIT+extra%3Acategory%2Cdb"
+      )
+
+      html = render(view)
+      assert html =~ "two_extras_pkg"
+    end
+  end
+
   describe "updated_after filter" do
     test "narrows results by date", %{conn: conn} do
       repository = Hexpm.Repository.Repositories.get("hexpm")
