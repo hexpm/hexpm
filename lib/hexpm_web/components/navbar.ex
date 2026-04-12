@@ -9,6 +9,7 @@ defmodule HexpmWeb.Components.Navbar do
     router: HexpmWeb.Router,
     statics: HexpmWeb.static_paths()
 
+  import HexpmWeb.Components.Modal, only: [show_modal: 1]
   import HexpmWeb.ViewHelpers, only: [gravatar_url: 2]
   import HexpmWeb.ViewIcons, only: [icon: 3]
 
@@ -199,22 +200,32 @@ defmodule HexpmWeb.Components.Navbar do
   defp mobile_search_bar(assigns) do
     ~H"""
     <div id="mobile-search-bar" class="hidden lg:hidden! bg-grey-800 pb-4">
-      <form role="search" action={~p"/packages"}>
-        <div class="relative">
-          <div class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-            {icon(:heroicon, "magnifying-glass", width: 18, height: 18, class: "text-grey-300")}
+      <div class="flex items-center gap-2">
+        <form role="search" action={~p"/packages"} class="flex-1">
+          <div class="relative">
+            <div class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+              {icon(:heroicon, "magnifying-glass", width: 18, height: 18, class: "text-grey-300")}
+            </div>
+            <input
+              id="mobile-search-input"
+              name="search"
+              type="text"
+              value={@search}
+              placeholder="Find packages..."
+              class="w-full bg-grey-800 border border-grey-600 rounded-lg px-3 pl-10 py-[11px] text-white text-base font-medium leading-4 placeholder:text-grey-300 focus:outline-none focus:border-grey-500 focus:shadow-[inset_0px_0px_6px_0px_rgba(255,255,255,0.3)]"
+            />
+            <input type="hidden" name="sort" value="recent_downloads" />
           </div>
-          <input
-            id="mobile-search-input"
-            name="search"
-            type="text"
-            value={@search}
-            placeholder="Find packages..."
-            class="w-full bg-grey-800 border border-grey-600 rounded-lg px-3 pl-10 py-[11px] text-white text-base font-medium leading-4 placeholder:text-grey-300 focus:outline-none focus:border-grey-500 focus:shadow-[inset_0px_0px_6px_0px_rgba(255,255,255,0.3)]"
-          />
-          <input type="hidden" name="sort" value="recent_downloads" />
-        </div>
-      </form>
+        </form>
+        <button
+          type="button"
+          phx-click={show_modal("search-cheatsheet")}
+          aria-label="Search filter cheatsheet"
+          class="px-2 py-1 text-grey-200 hover:text-white border border-grey-600 rounded text-sm cursor-pointer"
+        >
+          ?
+        </button>
+      </div>
     </div>
     """
   end
@@ -295,24 +306,34 @@ defmodule HexpmWeb.Components.Navbar do
 
   defp search_form(assigns) do
     ~H"""
-    <form role="search" action={~p"/packages"} class="shrink-0 w-[420px] mr-auto">
-      <div class="relative flex items-center">
-        <div class="absolute left-3 pointer-events-none">
-          {icon(:heroicon, "magnifying-glass", width: 18, height: 18, class: "text-grey-300")}
+    <div class="shrink-0 flex items-center gap-2 mr-auto">
+      <form role="search" action={~p"/packages"} class="w-[420px]">
+        <div class="relative flex items-center">
+          <div class="absolute left-3 pointer-events-none">
+            {icon(:heroicon, "magnifying-glass", width: 18, height: 18, class: "text-grey-300")}
+          </div>
+          <input
+            id="search-input"
+            phx-hook="SearchShortcut"
+            placeholder="Find packages..."
+            name="search"
+            type="text"
+            class="w-full h-[40px] bg-grey-800 border border-grey-600 rounded-lg px-3 pl-10 py-[11px] text-white leading-4 placeholder:text-grey-300 focus:outline-none focus:border-grey-500 focus:shadow-[inset_0px_0px_6px_0px_rgba(255,255,255,0.3)]"
+            value={@search}
+            autofocus={@autofocus}
+          />
+          <input type="hidden" name="sort" value="recent_downloads" />
         </div>
-        <input
-          id="search-input"
-          phx-hook="SearchShortcut"
-          placeholder="Find packages..."
-          name="search"
-          type="text"
-          class="w-full h-[40px] bg-grey-800 border border-grey-600 rounded-lg px-3 pl-10 py-[11px] text-white leading-4 placeholder:text-grey-300 focus:outline-none focus:border-grey-500 focus:shadow-[inset_0px_0px_6px_0px_rgba(255,255,255,0.3)]"
-          value={@search}
-          autofocus={@autofocus}
-        />
-        <input type="hidden" name="sort" value="recent_downloads" />
-      </div>
-    </form>
+      </form>
+      <button
+        type="button"
+        phx-click={show_modal("search-cheatsheet")}
+        aria-label="Search filter cheatsheet"
+        class="px-2 py-1 text-grey-200 hover:text-white border border-grey-600 rounded text-sm cursor-pointer"
+      >
+        ?
+      </button>
+    </div>
     """
   end
 
