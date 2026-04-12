@@ -211,4 +211,20 @@ defmodule HexpmWeb.PackageLive.IndexTest do
       refute html =~ "old_pkg"
     end
   end
+
+  describe "query preview and clear" do
+    test "shows canonical serialized query", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/packages?search=build_tool%3Amix+depends%3Aecto")
+      # Canonical order puts depends before build_tool.
+      assert html =~ "depends:ecto build_tool:mix"
+    end
+
+    test "clear all button resets the URL", %{conn: conn} do
+      {:ok, view, _} = live(conn, ~p"/packages?search=build_tool%3Amix")
+      assert render(view) =~ "build_tool:mix"
+
+      view |> element("button", "Clear all") |> render_click()
+      assert_patch(view, ~p"/packages?sort=recent_downloads")
+    end
+  end
 end

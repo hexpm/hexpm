@@ -22,7 +22,8 @@ defmodule HexpmWeb.PackageLive.Index do
         per_page: @packages_per_page,
         letters: @letters,
         repositories: repositories,
-        depends_suggestions: []
+        depends_suggestions: [],
+        canonical_query: ""
       )
 
     {:ok, socket}
@@ -67,9 +68,12 @@ defmodule HexpmWeb.PackageLive.Index do
         {:error, _} -> %SearchQuery{}
       end
 
+    canonical_query = SearchQuery.serialize(search_query)
+
     assign(socket,
       search: search,
       search_query: search_query,
+      canonical_query: canonical_query,
       letter: letter,
       sort: sort,
       package_count: package_count,
@@ -106,6 +110,7 @@ defmodule HexpmWeb.PackageLive.Index do
             :if={is_nil(@letter)}
             query={@search_query}
             depends_suggestions={@depends_suggestions}
+            canonical_query={@canonical_query}
           />
           <div class="flex-1 min-w-0">
             <%!-- Exact Match Section --%>
@@ -278,6 +283,11 @@ defmodule HexpmWeb.PackageLive.Index do
       |> Enum.reject(fn {_k, v} -> is_nil(v) end)
 
     {:noreply, push_patch(socket, to: ~p"/packages?#{url_params}")}
+  end
+
+  @impl true
+  def handle_event("clear_filters", _params, socket) do
+    {:noreply, push_patch(socket, to: ~p"/packages?#{[sort: socket.assigns.sort]}")}
   end
 
   defp suggestions_for(prefix, repositories) do

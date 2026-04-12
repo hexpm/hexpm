@@ -7,6 +7,7 @@ defmodule HexpmWeb.PackageLive.FilterSidebar do
 
   attr :query, SearchQuery, required: true
   attr :depends_suggestions, :list, default: []
+  attr :canonical_query, :string, default: ""
 
   def sidebar(assigns) do
     assigns = assign(assigns, :build_tools, @build_tools)
@@ -83,6 +84,20 @@ defmodule HexpmWeb.PackageLive.FilterSidebar do
             </div>
           </div>
         </fieldset>
+
+        <div class="pt-4 border-t">
+          <div :if={@canonical_query != ""}>
+            <p class="text-xs text-grey-500 mb-1">Query</p>
+            <pre class="text-xs font-mono bg-grey-50 dark:bg-grey-900 px-2 py-1 rounded break-words whitespace-pre-wrap">{@canonical_query}</pre>
+          </div>
+          <button
+            type="button"
+            phx-click="clear_filters"
+            class="mt-2 text-sm text-blue-600 hover:underline"
+          >
+            Clear all
+          </button>
+        </div>
       </form>
     </aside>
     """
