@@ -105,7 +105,20 @@ defmodule HexpmWeb.PackageLive.Index do
           <.letter_browser letters={@letters} current_letter={@letter} />
         <% end %>
 
-        <div class="flex gap-6">
+        <button
+          :if={is_nil(@letter)}
+          type="button"
+          phx-click={
+            Phoenix.LiveView.JS.toggle(to: "#filter-sidebar")
+            |> Phoenix.LiveView.JS.toggle_attribute({"aria-expanded", "true", "false"})
+          }
+          aria-expanded="false"
+          aria-controls="filter-sidebar"
+          class="md:hidden mb-2 px-3 py-1 border rounded text-sm"
+        >
+          Filters
+        </button>
+        <div class="flex flex-col md:flex-row gap-6">
           <.sidebar
             :if={is_nil(@letter)}
             query={@search_query}

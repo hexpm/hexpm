@@ -13,7 +13,7 @@ defmodule HexpmWeb.PackageLive.FilterSidebar do
     assigns = assign(assigns, :build_tools, @build_tools)
 
     ~H"""
-    <aside id="filter-sidebar" class="w-56 shrink-0" aria-label="Filters">
+    <aside id="filter-sidebar" class="w-full md:w-56 shrink-0 hidden md:block" aria-label="Filters">
       <form phx-change="filter_change" id="filter-form">
         <h3 class="font-semibold text-grey-900 dark:text-grey-100 mb-3">Filters</h3>
 
