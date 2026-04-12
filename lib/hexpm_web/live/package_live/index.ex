@@ -2,6 +2,7 @@ defmodule HexpmWeb.PackageLive.Index do
   use HexpmWeb, :live_view
 
   import HexpmWeb.PackageView, only: [downloads_for_package: 2]
+  import HexpmWeb.PackageLive.FilterSidebar
 
   alias Hexpm.Repository.Package.SearchQuery
 
@@ -99,124 +100,154 @@ defmodule HexpmWeb.PackageLive.Index do
           <.letter_browser letters={@letters} current_letter={@letter} />
         <% end %>
 
-        <%!-- Exact Match Section --%>
-        <%= if @exact_match do %>
-          <div class="mb-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-6">
-            <div class="flex items-center gap-2 mb-4">
-              <svg
-                class="size-5 text-green-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <h3 class="text-green-900 dark:text-green-200 font-semibold text-lg">Exact Match</h3>
-            </div>
-            <ul class="bg-white dark:bg-grey-800 rounded-lg overflow-hidden divide-y divide-grey-200 dark:divide-grey-700">
-              {HexpmWeb.PackageView.render("_package.html",
-                exact_match?: true,
-                package: @exact_match,
-                package_downloads: downloads_for_package(@exact_match, @downloads),
-                view: @sort
-              )}
-            </ul>
-          </div>
-        <% end %>
+        <div class="flex gap-6">
+          <.sidebar :if={is_nil(@letter)} query={@search_query} />
+          <div class="flex-1 min-w-0">
+            <%!-- Exact Match Section --%>
+            <%= if @exact_match do %>
+              <div class="mb-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-6">
+                <div class="flex items-center gap-2 mb-4">
+                  <svg
+                    class="size-5 text-green-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <h3 class="text-green-900 dark:text-green-200 font-semibold text-lg">
+                    Exact Match
+                  </h3>
+                </div>
+                <ul class="bg-white dark:bg-grey-800 rounded-lg overflow-hidden divide-y divide-grey-200 dark:divide-grey-700">
+                  {HexpmWeb.PackageView.render("_package.html",
+                    exact_match?: true,
+                    package: @exact_match,
+                    package_downloads: downloads_for_package(@exact_match, @downloads),
+                    view: @sort
+                  )}
+                </ul>
+              </div>
+            <% end %>
 
-        <%!-- No Results --%>
-        <%= if !@exact_match and @packages == [] do %>
-          <div class="bg-grey-50 dark:bg-grey-800 rounded-xl p-12 text-center">
-            <svg
-              class="mx-auto size-16 text-grey-300 mb-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
-            <h3 class="text-grey-900 dark:text-grey-100 text-2xl font-semibold mb-2">
-              No Results Found
-            </h3>
-            <p class="text-grey-600 dark:text-grey-300">
-              Try adjusting your search or browse by letter above
-            </p>
-          </div>
-        <% end %>
-
-        <%!-- Package List --%>
-        <%= if @packages != [] do %>
-          <% page = if @page == 1, do: nil, else: @page %>
-
-          <%!-- Results Header with Sort Selector --%>
-          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-            <div>
-              <h2 class="text-grey-900 dark:text-grey-100 text-2xl font-semibold">
-                {if @exact_match, do: "Search Results", else: "All Packages"}
-              </h2>
-              <div class="flex items-center gap-3 mt-1">
+            <%!-- No Results --%>
+            <%= if !@exact_match and @packages == [] do %>
+              <div class="bg-grey-50 dark:bg-grey-800 rounded-xl p-12 text-center">
+                <svg
+                  class="mx-auto size-16 text-grey-300 mb-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                <h3 class="text-grey-900 dark:text-grey-100 text-2xl font-semibold mb-2">
+                  No Results Found
+                </h3>
                 <p class="text-grey-600 dark:text-grey-300">
-                  {@package_count} {if @package_count == 1, do: "package", else: "packages"} found
+                  Try adjusting your search or browse by letter above
                 </p>
-                <% total_pages = ceil(@package_count / @per_page) %>
-                <%= if total_pages > 1 do %>
-                  <span class="text-grey-400 dark:text-grey-300">•</span>
-                  <p class="text-grey-600 dark:text-grey-300 font-medium">
-                    Page {@page} of {total_pages}
-                  </p>
+              </div>
+            <% end %>
+
+            <%!-- Package List --%>
+            <%= if @packages != [] do %>
+              <% page = if @page == 1, do: nil, else: @page %>
+
+              <%!-- Results Header with Sort Selector --%>
+              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                <div>
+                  <h2 class="text-grey-900 dark:text-grey-100 text-2xl font-semibold">
+                    {if @exact_match, do: "Search Results", else: "All Packages"}
+                  </h2>
+                  <div class="flex items-center gap-3 mt-1">
+                    <p class="text-grey-600 dark:text-grey-300">
+                      {@package_count} {if @package_count == 1, do: "package", else: "packages"} found
+                    </p>
+                    <% total_pages = ceil(@package_count / @per_page) %>
+                    <%= if total_pages > 1 do %>
+                      <span class="text-grey-400 dark:text-grey-300">•</span>
+                      <p class="text-grey-600 dark:text-grey-300 font-medium">
+                        Page {@page} of {total_pages}
+                      </p>
+                    <% end %>
+                  </div>
+                </div>
+
+                <%!-- Sort Selector (hide when browsing by letter) --%>
+                <%= unless @letter do %>
+                  <.sort_selector sort={@sort} search={@search} page={page} />
                 <% end %>
               </div>
-            </div>
 
-            <%!-- Sort Selector (hide when browsing by letter) --%>
-            <%= unless @letter do %>
-              <.sort_selector sort={@sort} search={@search} page={page} />
+              <%!-- Package List --%>
+              <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-xl overflow-hidden">
+                <ul class="divide-y divide-grey-200 dark:divide-grey-700">
+                  <%= for package <- @packages do %>
+                    {HexpmWeb.PackageView.render("_package.html",
+                      exact_match?: false,
+                      package: package,
+                      package_downloads: downloads_for_package(package, @downloads),
+                      view: @sort
+                    )}
+                  <% end %>
+                </ul>
+              </div>
+
+              <%!-- Pagination --%>
+              <div class="mt-8">
+                {HexpmWeb.SharedView.render(
+                  "_pagination.html",
+                  items: @packages,
+                  page: @page,
+                  total_count: @package_count,
+                  per_page: @per_page,
+                  unit: "package",
+                  units: "packages",
+                  path_fn:
+                    &~p"/packages?#{ViewHelpers.params(&1, search: @search, sort: @sort, letter: @letter)}"
+                )}
+              </div>
             <% end %>
           </div>
-
-          <%!-- Package List --%>
-          <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-xl overflow-hidden">
-            <ul class="divide-y divide-grey-200 dark:divide-grey-700">
-              <%= for package <- @packages do %>
-                {HexpmWeb.PackageView.render("_package.html",
-                  exact_match?: false,
-                  package: package,
-                  package_downloads: downloads_for_package(package, @downloads),
-                  view: @sort
-                )}
-              <% end %>
-            </ul>
-          </div>
-
-          <%!-- Pagination --%>
-          <div class="mt-8">
-            {HexpmWeb.SharedView.render(
-              "_pagination.html",
-              items: @packages,
-              page: @page,
-              total_count: @package_count,
-              per_page: @per_page,
-              unit: "package",
-              units: "packages",
-              path_fn:
-                &~p"/packages?#{ViewHelpers.params(&1, search: @search, sort: @sort, letter: @letter)}"
-            )}
-          </div>
-        <% end %>
+        </div>
       </div>
     </div>
     """
   end
+
+  @impl true
+  def handle_event("filter_change", params, socket) do
+    build_tools =
+      params
+      |> Map.get("build_tool", %{})
+      |> Enum.filter(fn {_k, v} -> v == "true" end)
+      |> Enum.map(fn {k, _v} -> k end)
+      |> Enum.sort()
+
+    new_query = %{socket.assigns.search_query | build_tools: build_tools}
+    new_search = nil_if_empty(SearchQuery.serialize(new_query))
+
+    url_params =
+      %{sort: socket.assigns.sort, search: new_search}
+      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+
+    {:noreply, push_patch(socket, to: ~p"/packages?#{url_params}")}
+  end
+
+  defp nil_if_empty(nil), do: nil
+  defp nil_if_empty(""), do: nil
+  defp nil_if_empty(s), do: s
 
   defp sort(nil), do: sort("recent_downloads")
   defp sort("downloads"), do: sort("recent_downloads")

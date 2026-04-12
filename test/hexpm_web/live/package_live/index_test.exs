@@ -35,4 +35,56 @@ defmodule HexpmWeb.PackageLive.IndexTest do
     {:ok, _view, html} = live(conn, ~p"/packages?search=extra:no_comma")
     assert html =~ "Packages"
   end
+
+  describe "build_tool checkbox" do
+    setup do
+      repository = Hexpm.Repository.Repositories.get("hexpm")
+      mix_pkg = insert(:package, name: "mix_only", repository_id: repository.id)
+      insert(:release, package: mix_pkg, meta: build(:release_metadata, build_tools: ["mix"]))
+
+      rebar_pkg = insert(:package, name: "rebar_only", repository_id: repository.id)
+
+      insert(:release,
+        package: rebar_pkg,
+        meta: build(:release_metadata, build_tools: ["rebar3"])
+      )
+
+      :ok
+    end
+
+    test "ticking a build_tool patches URL and narrows results", %{conn: conn} do
+      {:ok, view, _} = live(conn, ~p"/packages")
+      html = render(view)
+      assert html =~ "mix_only"
+      assert html =~ "rebar_only"
+
+      view
+      |> form("#filter-form", %{"build_tool" => %{"mix" => "true"}})
+      |> render_change()
+
+      assert_patch(view, ~p"/packages?sort=recent_downloads&search=build_tool%3Amix")
+      html = render(view)
+      assert html =~ "mix_only"
+      refute html =~ "rebar_only"
+    end
+
+    test "unticking a checked build_tool clears the filter from the URL", %{conn: conn} do
+      {:ok, view, _} = live(conn, ~p"/packages?search=build_tool%3Amix")
+      html = render(view)
+      assert html =~ "mix_only"
+      refute html =~ "rebar_only"
+
+      # Simulate unticking: send the filter_change event with no build_tool key,
+      # which is what a browser sends when all checkboxes are unchecked.
+      # We bypass form/2 because LiveViewTest validates checkbox values against
+      # the rendered DOM. render_change/3 dispatches directly to handle_event.
+      render_change(view, "filter_change", %{})
+
+      assert_patch(view, ~p"/packages?sort=recent_downloads")
+
+      html = render(view)
+      assert html =~ "mix_only"
+      assert html =~ "rebar_only"
+    end
+  end
 end
