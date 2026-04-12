@@ -3,53 +3,6 @@ defmodule HexpmWeb.PackageController do
 
   @packages_per_page 30
   @audit_logs_per_page 10
-  @sort_params ~w(name recent_downloads total_downloads inserted_at updated_at)
-  @letters for letter <- ?A..?Z, do: <<letter>>
-
-  def index(conn, params) do
-    letter = Hexpm.Utils.parse_search(params["letter"])
-    search = Hexpm.Utils.parse_search(params["search"])
-
-    filter =
-      cond do
-        letter ->
-          {:letter, letter}
-
-        search ->
-          search
-
-        true ->
-          nil
-      end
-
-    organizations = Users.all_organizations(conn.assigns.current_user)
-    repositories = Enum.map(organizations, & &1.repository)
-    sort = sort(params["sort"])
-    page_param = Hexpm.Utils.safe_int(params["page"]) || 1
-    package_count = Packages.count(repositories, filter)
-    page = Hexpm.Utils.safe_page(page_param, package_count, @packages_per_page)
-    exact_match = exact_match(repositories, search)
-    all_matches = fetch_packages(repositories, page, @packages_per_page, filter, sort)
-    downloads = Downloads.packages_all_views(Enum.reject([exact_match | all_matches], &is_nil/1))
-    packages = Packages.diff(all_matches, exact_match)
-
-    render(
-      conn,
-      "index.html",
-      title: "Packages",
-      container: "container",
-      per_page: @packages_per_page,
-      search: search,
-      letter: letter,
-      sort: sort,
-      package_count: package_count,
-      page: page,
-      packages: packages,
-      letters: @letters,
-      downloads: downloads,
-      exact_match: exact_match
-    )
-  end
 
   def show(conn, params) do
     # TODO: Show flash if private package and organization does not have active billing
@@ -222,10 +175,6 @@ defmodule HexpmWeb.PackageController do
     end || not_found(conn)
   end
 
-  defp sort(nil), do: sort("recent_downloads")
-  defp sort("downloads"), do: sort("recent_downloads")
-  defp sort(param), do: Hexpm.Utils.safe_to_atom(param, @sort_params)
-
   defp matching_release(releases, version) do
     Enum.find(releases, &(to_string(&1.version) == version))
   end
@@ -363,44 +312,6 @@ defmodule HexpmWeb.PackageController do
       daily_graph: daily_graph,
       owners: owners
     ]
-  end
-
-  defp fetch_packages(repositories, page, packages_per_page, search, sort) do
-    repositories
-    |> Packages.search(page, packages_per_page, search, sort, nil)
-    |> Packages.attach_latest_releases()
-  end
-
-  defp exact_match(_organizations, nil) do
-    nil
-  end
-
-  defp exact_match(repositories, search) do
-    search
-    |> String.replace(" ", "_")
-    |> String.split("/", parts: 2)
-    |> case do
-      [repository, package] ->
-        if repository in Enum.map(repositories, & &1.name) do
-          Packages.get(repository, package)
-        end
-
-      [term] ->
-        try do
-          Packages.get(repositories, term)
-        rescue
-          Ecto.MultipleResultsError ->
-            nil
-        end
-    end
-    |> case do
-      nil ->
-        nil
-
-      package ->
-        [package] = Packages.attach_latest_releases([package])
-        package
-    end
   end
 
   defp fixup_params(%{"name" => name, "version" => version} = params) do
