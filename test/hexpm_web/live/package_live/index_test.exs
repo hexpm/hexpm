@@ -227,4 +227,69 @@ defmodule HexpmWeb.PackageLive.IndexTest do
       assert_patch(view, ~p"/packages?sort=recent_downloads")
     end
   end
+
+  describe "multi-filter integration" do
+    test "combined URL narrows results and pre-fills the sidebar", %{conn: conn} do
+      repository = Hexpm.Repository.Repositories.get("hexpm")
+
+      # Target: uses mix, depends on ecto, recently updated, has license=MIT
+      ecto =
+        insert(:package, name: "ecto_combo_dep", repository_id: repository.id)
+
+      target =
+        insert(:package,
+          name: "combo_target",
+          repository_id: repository.id,
+          updated_at: ~U[2025-06-01 00:00:00Z],
+          meta: build(:package_metadata, extra: %{"license" => "MIT"})
+        )
+
+      target_release =
+        insert(:release, package: target, meta: build(:release_metadata, build_tools: ["mix"]))
+
+      insert(:requirement, release: target_release, dependency: ecto, requirement: "~> 1.0")
+
+      # Non-matching: uses rebar3 (wrong build_tool) — should NOT appear.
+      other =
+        insert(:package,
+          name: "combo_other",
+          repository_id: repository.id,
+          updated_at: ~U[2025-06-01 00:00:00Z],
+          meta: build(:package_metadata, extra: %{"license" => "MIT"})
+        )
+
+      other_release =
+        insert(:release, package: other, meta: build(:release_metadata, build_tools: ["rebar3"]))
+
+      insert(:requirement, release: other_release, dependency: ecto, requirement: "~> 1.0")
+
+      Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
+
+      query =
+        "build_tool:mix depends:ecto_combo_dep updated_after:2024-01-01T00:00:00Z extra:license,MIT"
+
+      url = ~p"/packages?search=#{query}"
+
+      {:ok, _view, html} = live(conn, url)
+
+      # Intersection is narrowed correctly.
+      assert html =~ "combo_target"
+      refute html =~ "combo_other"
+
+      # Sidebar controls are pre-filled:
+      # - build_tool[mix] checkbox is checked
+      assert html =~ ~s(name="build_tool[mix]" value="true" checked)
+      # - depends input is populated
+      assert html =~ ~s(name="depends" value="ecto_combo_dep")
+      # - updated_after date is populated with the date portion
+      assert html =~ ~s(name="updated_after" value="2024-01-01")
+      # - extra row has the license/MIT values
+      assert html =~ ~s(value="license")
+      assert html =~ ~s(value="MIT")
+
+      # Query preview shows the canonical form.
+      assert html =~
+               "depends:ecto_combo_dep build_tool:mix updated_after:2024-01-01T00:00:00Z extra:license,MIT"
+    end
+  end
 end
