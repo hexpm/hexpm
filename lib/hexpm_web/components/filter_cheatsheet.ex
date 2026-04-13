@@ -4,9 +4,11 @@ defmodule HexpmWeb.Components.FilterCheatsheet do
   import HexpmWeb.Components.Modal
 
   @filters [
-    {"name:", "Match package (or repo/package) name", "name:phoenix"},
+    {"name:", "Match package name. Supports * wildcards and repo/package form",
+     "name:phx* or name:hexpm/phoenix"},
     {"description:", "Full-text search of package descriptions", "description:auth"},
-    {"depends:", "Packages depending on a given package", "depends:ecto"},
+    {"depends:", "Packages depending on a given package. Supports repo:package form",
+     "depends:ecto or depends:hexpm:ecto"},
     {"build_tool:", "Filter by build tool", "build_tool:mix"},
     {"updated_after:", "Packages updated after an ISO8601 datetime",
      "updated_after:2025-01-01T00:00:00Z"},
@@ -41,6 +43,9 @@ defmodule HexpmWeb.Components.FilterCheatsheet do
           </tr>
         </tbody>
       </table>
+      <p class="text-sm text-grey-600 dark:text-grey-300 mt-4">
+        Wrap values in double quotes to include spaces, e.g. <code class="font-mono">name:"my package"</code>.
+      </p>
     </.modal>
     """
   end
