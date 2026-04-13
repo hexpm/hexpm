@@ -389,31 +389,6 @@ defmodule Hexpm.Repository.PackageTest do
              |> Enum.map(& &1.id)
   end
 
-  test "search_by_prefix returns up to 10 packages matching a prefix", %{
-    repository: repository
-  } do
-    for name <- ~w(phx1 phx2 phx3 phx4 phx5 phx6 phx7 phx8 phx9 phx10 phx11) do
-      insert(:package, name: name, repository_id: repository.id)
-    end
-
-    results = Hexpm.Repository.Package.search_by_prefix([repository], "phx")
-    assert length(results) == 10
-    assert Enum.all?(results, &String.starts_with?(&1.name, "phx"))
-  end
-
-  test "search_by_prefix treats LIKE metacharacters as literal", %{repository: repository} do
-    insert(:package, name: "foo_bar", repository_id: repository.id)
-    insert(:package, name: "foobar", repository_id: repository.id)
-    insert(:package, name: "fooquux", repository_id: repository.id)
-
-    # `_` must match only the literal underscore, not any single character.
-    results = Hexpm.Repository.Package.search_by_prefix([repository], "foo_")
-    names = Enum.map(results, & &1.name)
-    assert "foo_bar" in names
-    refute "foobar" in names
-    refute "fooquux" in names
-  end
-
   defp search_for(repository, search_term) do
     Package.all([repository], 1, 10, search_term, :name, nil)
     |> Repo.all()

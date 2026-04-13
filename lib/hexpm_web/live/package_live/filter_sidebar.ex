@@ -8,7 +8,6 @@ defmodule HexpmWeb.PackageLive.FilterSidebar do
   @build_tools ~w(mix rebar3 make gleam)
 
   attr :query, SearchQuery, required: true
-  attr :depends_suggestions, :list, default: []
 
   def sidebar(assigns) do
     assigns = assign(assigns, :build_tools, @build_tools)
@@ -53,14 +52,10 @@ defmodule HexpmWeb.PackageLive.FilterSidebar do
               type="text"
               name="depends"
               value={@query.depends || ""}
-              list="depends-suggestions"
               placeholder="package name"
               phx-debounce="300"
               class="w-full h-9 px-3 text-sm bg-white dark:bg-grey-700 border border-grey-200 dark:border-grey-600 rounded-lg text-grey-900 dark:text-grey-100 placeholder:text-grey-400 dark:placeholder:text-grey-400 focus:outline-none focus:ring-1 focus:border-primary-600 focus:ring-primary-600 dark:focus:border-primary-400 dark:focus:ring-primary-400"
             />
-            <datalist id="depends-suggestions">
-              <option :for={name <- @depends_suggestions} value={name} />
-            </datalist>
           </fieldset>
 
           <fieldset>

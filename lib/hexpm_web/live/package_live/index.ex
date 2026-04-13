@@ -19,8 +19,7 @@ defmodule HexpmWeb.PackageLive.Index do
         container: "container",
         live_search: true,
         per_page: @packages_per_page,
-        repositories: repositories,
-        depends_suggestions: []
+        repositories: repositories
       )
 
     {:ok, socket}
@@ -109,10 +108,7 @@ defmodule HexpmWeb.PackageLive.Index do
           Filters
         </button>
         <div class="flex flex-col md:flex-row gap-6">
-          <.sidebar
-            query={@search_query}
-            depends_suggestions={@depends_suggestions}
-          />
+          <.sidebar query={@search_query} />
           <div class="flex-1 min-w-0">
             <%!-- Exact Match Section --%>
             <%= if @exact_match do %>
@@ -251,13 +247,6 @@ defmodule HexpmWeb.PackageLive.Index do
         updated_after: updated_after
     }
 
-    suggestions =
-      if depends,
-        do: suggestions_for(depends, socket.assigns.repositories),
-        else: []
-
-    socket = assign(socket, depends_suggestions: suggestions)
-
     new_search = nil_if_empty(SearchQuery.serialize(new_query))
 
     url_params =
@@ -301,12 +290,6 @@ defmodule HexpmWeb.PackageLive.Index do
   @impl true
   def handle_event("clear_filters", _params, socket) do
     {:noreply, push_patch(socket, to: ~p"/packages?#{[sort: socket.assigns.sort]}")}
-  end
-
-  defp suggestions_for(prefix, repositories) do
-    repositories
-    |> Hexpm.Repository.Package.search_by_prefix(prefix)
-    |> Enum.map(& &1.name)
   end
 
   defp nil_if_empty(nil), do: nil
