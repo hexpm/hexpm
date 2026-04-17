@@ -8,21 +8,25 @@ defmodule Hexpm.Application do
     read_only_mode()
     Hexpm.BlockAddress.start()
 
-    children = [
-      Hexpm.RepoBase,
-      {Finch, name: Hexpm.Finch},
-      {Task.Supervisor, name: Hexpm.Tasks},
-      {Cluster.Supervisor, [topologies, [name: Hexpm.ClusterSupervisor]]},
-      {Phoenix.PubSub, name: Hexpm.PubSub, adapter: Phoenix.PubSub.PG2},
-      HexpmWeb.RateLimitPubSub,
-      {PlugAttack.Storage.Ets, name: HexpmWeb.Plugs.Attack.Storage, clean_period: 60_000},
-      {Hexpm.Billing.Report, name: Hexpm.Billing.Report, interval: 60_000},
-      goth_spec(),
-      setup(),
-      load_caches(),
-      HexpmWeb.Telemetry,
-      HexpmWeb.Endpoint
-    ]
+    children =
+      [
+        Hexpm.RepoBase,
+        {Finch, name: Hexpm.Finch},
+        {Task.Supervisor, name: Hexpm.Tasks},
+        {Cluster.Supervisor, [topologies, [name: Hexpm.ClusterSupervisor]]},
+        {Phoenix.PubSub, name: Hexpm.PubSub, adapter: Phoenix.PubSub.PG2},
+        HexpmWeb.RateLimitPubSub,
+        {PlugAttack.Storage.Ets, name: HexpmWeb.Plugs.Attack.Storage, clean_period: 60_000},
+        {Hexpm.Billing.Report, name: Hexpm.Billing.Report, interval: 60_000}
+      ] ++
+        cache_spec() ++
+        [
+          goth_spec(),
+          setup(),
+          load_caches(),
+          HexpmWeb.Telemetry,
+          HexpmWeb.Endpoint
+        ]
 
     File.mkdir_p(Application.get_env(:hexpm, :tmp_dir))
     shutdown_on_eof()
@@ -72,6 +76,14 @@ defmodule Hexpm.Application do
       start: {Task, :start_link, [fun]},
       restart: :temporary
     }
+  end
+
+  defp cache_spec() do
+    if Application.fetch_env!(:hexpm, :cache_enabled) do
+      [{Hexpm.Cache, name: Hexpm.Cache, interval: 3_600_000}]
+    else
+      []
+    end
   end
 
   defp load_caches() do

@@ -73,9 +73,4 @@ defmodule Hexpm.Repository.Downloads do
     |> Repo.all()
     |> Enum.group_by(& &1.package_id)
   end
-
-  def last_day() do
-    Download.last_day()
-    |> Repo.one()
-  end
 end

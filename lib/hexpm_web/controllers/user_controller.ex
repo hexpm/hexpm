@@ -133,7 +133,7 @@ defmodule HexpmWeb.UserController do
   end
 
   defp build_package_graphs(packages, package_downloads, sort_by) do
-    last_day = Downloads.last_day() || Date.utc_today()
+    last_day = Hexpm.Cache.last_download_day() || Date.utc_today()
     start_day = Date.add(last_day, -30)
 
     period_downloads =

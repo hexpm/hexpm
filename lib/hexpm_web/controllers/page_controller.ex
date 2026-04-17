@@ -15,7 +15,7 @@ defmodule HexpmWeb.PageController do
       container: "",
       autofocus_search: true,
       num_packages: Packages.count(),
-      num_releases: Releases.count(),
+      num_releases: Hexpm.Cache.release_count(),
       package_top: Downloads.top_packages(hexpm, "recent", 6),
       package_new: package_new,
       releases_new: Releases.recent(hexpm, 6),

@@ -15,10 +15,6 @@ defmodule Hexpm.Repository.Releases do
     Repo.all(Release.recent(repository, count))
   end
 
-  def count() do
-    Repo.one!(Release.count())
-  end
-
   def get(package, version) do
     release = Repo.get_by(assoc(package, :releases), version: version)
     release && %{release | package: package}
