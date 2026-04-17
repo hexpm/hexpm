@@ -22,12 +22,16 @@ defmodule Hexpm.Cache do
 
   @impl true
   def init(opts) do
-    table = opts[:name] || __MODULE__
-    :ets.new(table, [:named_table, :public, :set, read_concurrency: true])
-    state = %{table: table, interval: opts[:interval]}
-    populate(state)
-    schedule(state)
-    {:ok, state}
+    if Keyword.get(opts, :enabled, true) do
+      table = opts[:name] || __MODULE__
+      :ets.new(table, [:named_table, :public, :set, read_concurrency: true])
+      state = %{table: table, interval: opts[:interval]}
+      populate(state)
+      schedule(state)
+      {:ok, state}
+    else
+      :ignore
+    end
   end
 
   @impl true
