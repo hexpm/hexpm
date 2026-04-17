@@ -443,10 +443,10 @@ defmodule Hexpm.UserSessions do
 
   # Revokes the given number of least recently used sessions and their tokens.
   #
-  # Uses SELECT FOR UPDATE to acquire row locks in deterministic order, preventing
-  # deadlocks when multiple concurrent requests revoke sessions simultaneously.
-  # Session IDs are materialized once to ensure both the session and token
-  # revocations target the same set of sessions.
+  # Uses SKIP LOCKED so concurrent enforcers don't queue on the same rows; at
+  # worst this over-revokes by one or two sessions, which is acceptable for a
+  # soft limit. Session IDs are materialized once so both the session and token
+  # update_all target the same set.
   defp revoke_lru_sessions(owner_filter, revoke_count) do
     now = DateTime.utc_now()
 
@@ -461,7 +461,7 @@ defmodule Hexpm.UserSessions do
           ],
           limit: ^revoke_count,
           select: s.id,
-          lock: "FOR UPDATE"
+          lock: "FOR UPDATE SKIP LOCKED"
         )
         |> Repo.all()
 
