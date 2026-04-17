@@ -253,7 +253,9 @@ defmodule HexpmWeb.PackageController do
           [docs_html_url: nil]
       end
 
-    last_download_day = Hexpm.Cache.last_download_day() || Date.utc_today()
+    last_download_day =
+      Hexpm.Cache.fetch(:last_download_day, &Downloads.last_day/0) || Date.utc_today()
+
     start_download_day = Date.add(last_download_day, -30)
     downloads = Downloads.package(package)
 
@@ -339,7 +341,9 @@ defmodule HexpmWeb.PackageController do
           nil
       end
 
-    last_download_day = Hexpm.Cache.last_download_day() || Date.utc_today()
+    last_download_day =
+      Hexpm.Cache.fetch(:last_download_day, &Downloads.last_day/0) || Date.utc_today()
+
     start_download_day = Date.add(last_download_day, -30)
     package_downloads = Downloads.package(package)
 

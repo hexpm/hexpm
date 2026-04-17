@@ -1,39 +1,40 @@
 defmodule Hexpm.CacheTest do
-  use Hexpm.DataCase
-  alias Ecto.Adapters.SQL.Sandbox
-  alias Hexpm.{Cache, RepoBase}
+  use ExUnit.Case, async: true
+  alias Hexpm.Cache
 
-  setup do
-    Sandbox.mode(RepoBase, {:shared, self()})
-    :ok
-  end
-
-  test "populates release_count and last_download_day" do
-    package = insert(:package)
-    release = insert(:release, package: package)
-    insert(:download, package: package, release: release, downloads: 1, day: ~D[2024-01-15])
-
-    {:ok, pid} = Cache.start_link(name: :cache_test_populate, interval: 60_000)
+  test "fetch populates on first call and returns cached on subsequent calls" do
+    {:ok, pid} = Cache.start_link(name: :cache_test_fetch, interval: 60_000)
     on_exit(fn -> if Process.alive?(pid), do: GenServer.stop(pid) end)
 
-    assert Cache.release_count(:cache_test_populate) == 1
-    assert Cache.last_download_day(:cache_test_populate) == ~D[2024-01-15]
+    counter = :counters.new(1, [])
+
+    fun = fn ->
+      :counters.add(counter, 1, 1)
+      :counters.get(counter, 1)
+    end
+
+    assert Cache.fetch(:cache_test_fetch, :key, fun) == 1
+    assert Cache.fetch(:cache_test_fetch, :key, fun) == 1
+    assert :counters.get(counter, 1) == 1
   end
 
-  test "refresh re-reads values" do
+  test "refresh re-runs registered fns" do
     {:ok, pid} = Cache.start_link(name: :cache_test_refresh, interval: 60_000)
     on_exit(fn -> if Process.alive?(pid), do: GenServer.stop(pid) end)
 
-    assert Cache.release_count(:cache_test_refresh) == 0
-    assert Cache.last_download_day(:cache_test_refresh) == nil
+    counter = :counters.new(1, [])
 
-    package = insert(:package)
-    release = insert(:release, package: package)
-    insert(:download, package: package, release: release, downloads: 1, day: ~D[2024-02-20])
+    fun = fn ->
+      :counters.add(counter, 1, 1)
+      :counters.get(counter, 1)
+    end
 
+    assert Cache.fetch(:cache_test_refresh, :key, fun) == 1
     :ok = Cache.refresh(:cache_test_refresh)
+    assert Cache.fetch(:cache_test_refresh, :key, fun) == 2
+  end
 
-    assert Cache.release_count(:cache_test_refresh) == 1
-    assert Cache.last_download_day(:cache_test_refresh) == ~D[2024-02-20]
+  test "fetch falls through to fun when cache not started" do
+    assert Cache.fetch(:no_such_cache, :key, fn -> :fallback end) == :fallback
   end
 end

@@ -1,6 +1,10 @@
 defmodule Hexpm.Repository.Downloads do
   use Hexpm.Context
 
+  def last_day() do
+    Repo.one(Download.last_day())
+  end
+
   def package(package) do
     PackageDownload.package(package)
     |> Repo.all()

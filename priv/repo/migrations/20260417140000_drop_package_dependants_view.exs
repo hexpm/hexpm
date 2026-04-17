@@ -1,13 +1,16 @@
 defmodule Hexpm.Repo.Migrations.DropPackageDependantsView do
   use Ecto.Migration
 
+  @disable_ddl_transaction true
+  @disable_migration_lock true
+
   def up() do
     execute("DROP MATERIALIZED VIEW package_dependants")
-    create(index(:requirements, [:dependency_id]))
+    create(index(:requirements, [:dependency_id], concurrently: true))
   end
 
   def down() do
-    drop(index(:requirements, [:dependency_id]))
+    drop(index(:requirements, [:dependency_id], concurrently: true))
 
     execute("""
       CREATE MATERIALIZED VIEW package_dependants (

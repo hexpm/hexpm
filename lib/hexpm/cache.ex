@@ -1,19 +1,26 @@
 defmodule Hexpm.Cache do
   use GenServer
 
-  alias Hexpm.Repo
-  alias Hexpm.Repository.{Download, Release}
-
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: opts[:name])
   end
 
-  def release_count(table \\ __MODULE__) do
-    lookup(table, :release_count, fn -> Repo.one!(Release.count()) end)
-  end
+  def fetch(table \\ __MODULE__, key, fun) do
+    case :ets.whereis(table) do
+      :undefined ->
+        fun.()
 
-  def last_download_day(table \\ __MODULE__) do
-    lookup(table, :last_download_day, fn -> Repo.one(Download.last_day()) end)
+      _ ->
+        case :ets.lookup(table, key) do
+          [{^key, value, _fun}] ->
+            value
+
+          [] ->
+            value = fun.()
+            :ets.insert(table, {key, value, fun})
+            value
+        end
+    end
   end
 
   def refresh(server \\ __MODULE__) do
@@ -26,7 +33,6 @@ defmodule Hexpm.Cache do
       table = opts[:name] || __MODULE__
       :ets.new(table, [:named_table, :public, :set, read_concurrency: true])
       state = %{table: table, interval: opts[:interval]}
-      populate(state)
       schedule(state)
       {:ok, state}
     else
@@ -47,22 +53,10 @@ defmodule Hexpm.Cache do
     {:reply, :ok, state}
   end
 
-  defp lookup(table, key, fallback) do
-    case :ets.whereis(table) do
-      :undefined ->
-        fallback.()
-
-      _ ->
-        case :ets.lookup(table, key) do
-          [{^key, value}] -> value
-          [] -> fallback.()
-        end
-    end
-  end
-
   defp populate(%{table: table}) do
-    :ets.insert(table, {:release_count, Repo.one!(Release.count())})
-    :ets.insert(table, {:last_download_day, Repo.one(Download.last_day())})
+    for {key, _value, fun} <- :ets.tab2list(table) do
+      :ets.insert(table, {key, fun.(), fun})
+    end
   end
 
   defp schedule(%{interval: interval}) do

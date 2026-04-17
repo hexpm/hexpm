@@ -11,6 +11,10 @@ defmodule Hexpm.Repository.Releases do
     |> Release.sort()
   end
 
+  def count() do
+    Repo.one!(Release.count())
+  end
+
   def recent(repository, count) do
     Repo.all(Release.recent(repository, count))
   end
