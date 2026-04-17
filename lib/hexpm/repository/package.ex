@@ -275,24 +275,33 @@ defmodule Hexpm.Repository.Package do
   end
 
   defp search_param("depends", search, query) do
-    case String.split(search, ":", parts: 2) do
-      [repository, package] ->
-        from(
-          p in query,
-          join: pd in Hexpm.Repository.PackageDependant,
-          on: p.id == pd.dependant_id,
-          where: pd.name == ^package,
-          where: pd.repo == ^repository
-        )
+    dependants =
+      case String.split(search, ":", parts: 2) do
+        [repository, package] ->
+          from(req in Requirement,
+            join: rel in Release,
+            on: rel.id == req.release_id,
+            join: dep in Package,
+            on: dep.id == req.dependency_id,
+            join: repo in Repository,
+            on: repo.id == dep.repository_id,
+            where: dep.name == ^package,
+            where: repo.name == ^repository,
+            select: rel.package_id
+          )
 
-      _ ->
-        from(
-          p in query,
-          join: pd in Hexpm.Repository.PackageDependant,
-          on: p.id == pd.dependant_id,
-          where: pd.name == ^search
-        )
-    end
+        _ ->
+          from(req in Requirement,
+            join: rel in Release,
+            on: rel.id == req.release_id,
+            join: dep in Package,
+            on: dep.id == req.dependency_id,
+            where: dep.name == ^search,
+            select: rel.package_id
+          )
+      end
+
+    from(p in query, where: p.id in subquery(dependants))
   end
 
   defp search_param("build_tool", search, query) do

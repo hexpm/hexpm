@@ -2,8 +2,10 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 15.1 (Debian 15.1-1.pgdg110+1)
--- Dumped by pg_dump version 15.0 (Homebrew)
+\restrict PJDOASPBpizSSTkTAAnRCfmwhOt5W5IuZgClp3Gp4M7UTtrDWxqfviysNB0YfKw
+
+-- Dumped from database version 14.22 (Homebrew)
+-- Dumped by pg_dump version 14.22 (Homebrew)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -157,7 +159,11 @@ CREATE TABLE public.audit_logs (
     inserted_at timestamp without time zone NOT NULL,
     user_agent character varying(255),
     organization_id bigint,
-    remote_ip character varying(255)
+    remote_ip character varying(255),
+    key_id bigint,
+    oauth_token_id bigint,
+    user_data jsonb,
+    key_data jsonb
 );
 
 
@@ -178,6 +184,45 @@ CREATE SEQUENCE public.audit_logs_id_seq
 --
 
 ALTER SEQUENCE public.audit_logs_id_seq OWNED BY public.audit_logs.id;
+
+
+--
+-- Name: authorization_codes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.authorization_codes (
+    id bigint NOT NULL,
+    code character varying(255) NOT NULL,
+    redirect_uri character varying(255) NOT NULL,
+    scopes character varying(255)[] DEFAULT ARRAY[]::character varying[] NOT NULL,
+    expires_at timestamp(0) without time zone NOT NULL,
+    used_at timestamp(0) without time zone,
+    code_challenge character varying(255),
+    code_challenge_method character varying(255),
+    user_id bigint NOT NULL,
+    client_id uuid NOT NULL,
+    inserted_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL
+);
+
+
+--
+-- Name: authorization_codes_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.authorization_codes_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: authorization_codes_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.authorization_codes_id_seq OWNED BY public.authorization_codes.id;
 
 
 --
@@ -209,6 +254,47 @@ CREATE SEQUENCE public.blocked_addresses_id_seq
 --
 
 ALTER SEQUENCE public.blocked_addresses_id_seq OWNED BY public.blocked_addresses.id;
+
+
+--
+-- Name: device_codes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.device_codes (
+    id bigint NOT NULL,
+    device_code character varying(255) NOT NULL,
+    user_code character varying(255) NOT NULL,
+    verification_uri character varying(255) NOT NULL,
+    verification_uri_complete character varying(255),
+    name character varying(255),
+    client_id uuid NOT NULL,
+    expires_at timestamp without time zone NOT NULL,
+    "interval" integer NOT NULL,
+    status character varying(255) NOT NULL,
+    scopes character varying(255)[] DEFAULT ARRAY[]::character varying[] NOT NULL,
+    user_id bigint,
+    inserted_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL
+);
+
+
+--
+-- Name: device_codes_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.device_codes_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: device_codes_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.device_codes_id_seq OWNED BY public.device_codes.id;
 
 
 --
@@ -326,7 +412,6 @@ CREATE TABLE public.keys (
     updated_at timestamp without time zone NOT NULL,
     secret_first text NOT NULL,
     secret_second text NOT NULL,
-    revoked_at timestamp without time zone,
     permissions jsonb[] NOT NULL,
     last_use jsonb,
     organization_id bigint,
@@ -356,6 +441,68 @@ ALTER SEQUENCE public.keys_id_seq OWNED BY public.keys.id;
 
 
 --
+-- Name: oauth_clients; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.oauth_clients (
+    client_id uuid NOT NULL,
+    client_secret character varying(255),
+    name character varying(255) NOT NULL,
+    client_type character varying(255) NOT NULL,
+    allowed_grant_types character varying(255)[] NOT NULL,
+    redirect_uris character varying(255)[],
+    allowed_scopes character varying(255)[] NOT NULL,
+    inserted_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL
+);
+
+
+--
+-- Name: oauth_tokens; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.oauth_tokens (
+    id bigint NOT NULL,
+    jti text NOT NULL,
+    refresh_jti text,
+    token_type character varying(255) DEFAULT 'bearer'::character varying NOT NULL,
+    refresh_token_expires_at timestamp(0) without time zone,
+    scopes character varying(255)[] DEFAULT ARRAY[]::character varying[] NOT NULL,
+    expires_at timestamp(0) without time zone NOT NULL,
+    revoked_at timestamp(0) without time zone,
+    user_id bigint,
+    client_id uuid NOT NULL,
+    grant_type character varying(255) NOT NULL,
+    grant_reference text,
+    inserted_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    user_session_id bigint,
+    refresh_token_hash text,
+    organization_id bigint,
+    CONSTRAINT user_or_organization_required CHECK (((user_id IS NOT NULL) OR (organization_id IS NOT NULL)))
+);
+
+
+--
+-- Name: oauth_tokens_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.oauth_tokens_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: oauth_tokens_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.oauth_tokens_id_seq OWNED BY public.oauth_tokens.id;
+
+
+--
 -- Name: organization_users; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -380,22 +527,9 @@ CREATE TABLE public.organizations (
     inserted_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
     billing_active boolean DEFAULT false NOT NULL,
-    trial_end timestamp without time zone NOT NULL
-);
-
-
---
--- Name: packages; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.packages (
-    id integer NOT NULL,
-    name character varying(255) NOT NULL,
-    meta jsonb NOT NULL,
-    inserted_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL,
-    docs_updated_at timestamp without time zone,
-    repository_id integer NOT NULL
+    trial_end timestamp without time zone NOT NULL,
+    billing_override boolean,
+    billing_seats integer
 );
 
 
@@ -416,49 +550,6 @@ CREATE TABLE public.releases (
     inner_checksum bytea NOT NULL,
     outer_checksum bytea
 );
-
-
---
--- Name: repositories; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.repositories (
-    id bigint NOT NULL,
-    name character varying(255) NOT NULL,
-    organization_id bigint,
-    inserted_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL
-);
-
-
---
--- Name: requirements; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.requirements (
-    id integer NOT NULL,
-    release_id integer NOT NULL,
-    dependency_id integer NOT NULL,
-    requirement text NOT NULL,
-    optional boolean DEFAULT false NOT NULL,
-    app text NOT NULL
-);
-
-
---
--- Name: package_dependants; Type: MATERIALIZED VIEW; Schema: public; Owner: -
---
-
-CREATE MATERIALIZED VIEW public.package_dependants AS
- SELECT DISTINCT p3.name,
-    r4.name AS repo,
-    p0.id AS dependant_id
-   FROM ((((public.packages p0
-     JOIN public.releases r1 ON ((r1.package_id = p0.id)))
-     JOIN public.requirements r2 ON ((r2.release_id = r1.id)))
-     JOIN public.packages p3 ON ((p3.id = r2.dependency_id)))
-     JOIN public.repositories r4 ON ((r4.id = p3.repository_id)))
-  WITH NO DATA;
 
 
 --
@@ -548,7 +639,7 @@ ALTER SEQUENCE public.package_owners_id_seq OWNED BY public.package_owners.id;
 CREATE TABLE public.package_report_comments (
     id bigint NOT NULL,
     text text NOT NULL,
-    author_id bigint NOT NULL,
+    author_id bigint,
     package_report_id bigint NOT NULL,
     inserted_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL
@@ -615,7 +706,7 @@ CREATE TABLE public.package_reports (
     description text NOT NULL,
     state character varying(255) NOT NULL,
     package_id bigint NOT NULL,
-    author_id bigint NOT NULL,
+    author_id bigint,
     inserted_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL
 );
@@ -638,6 +729,21 @@ CREATE SEQUENCE public.package_reports_id_seq
 --
 
 ALTER SEQUENCE public.package_reports_id_seq OWNED BY public.package_reports.id;
+
+
+--
+-- Name: packages; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.packages (
+    id integer NOT NULL,
+    name character varying(255) NOT NULL,
+    meta jsonb NOT NULL,
+    inserted_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    docs_updated_at timestamp without time zone,
+    repository_id integer NOT NULL
+);
 
 
 --
@@ -726,6 +832,19 @@ ALTER SEQUENCE public.releases_id_seq OWNED BY public.releases.id;
 
 
 --
+-- Name: repositories; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.repositories (
+    id bigint NOT NULL,
+    name character varying(255) NOT NULL,
+    organization_id bigint,
+    inserted_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL
+);
+
+
+--
 -- Name: repositories_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -780,6 +899,20 @@ CREATE SEQUENCE public.repository_users_id_seq
 --
 
 ALTER SEQUENCE public.repository_users_id_seq OWNED BY public.organization_users.id;
+
+
+--
+-- Name: requirements; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.requirements (
+    id integer NOT NULL,
+    release_id integer NOT NULL,
+    dependency_id integer NOT NULL,
+    requirement text NOT NULL,
+    optional boolean DEFAULT false NOT NULL,
+    app text NOT NULL
+);
 
 
 --
@@ -908,6 +1041,81 @@ ALTER SEQUENCE public.short_urls_id_seq OWNED BY public.short_urls.id;
 
 
 --
+-- Name: user_providers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_providers (
+    id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    provider character varying(255) NOT NULL,
+    provider_uid character varying(255) NOT NULL,
+    provider_email character varying(255),
+    provider_data jsonb DEFAULT '{}'::jsonb,
+    inserted_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL
+);
+
+
+--
+-- Name: user_providers_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.user_providers_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: user_providers_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.user_providers_id_seq OWNED BY public.user_providers.id;
+
+
+--
+-- Name: user_sessions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_sessions (
+    id bigint NOT NULL,
+    user_id bigint,
+    type character varying(255) NOT NULL,
+    name character varying(255),
+    revoked_at timestamp without time zone,
+    last_use jsonb,
+    session_token bytea,
+    client_id uuid,
+    inserted_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    expires_at timestamp without time zone,
+    organization_id bigint,
+    CONSTRAINT user_or_organization_required CHECK (((user_id IS NOT NULL) OR (organization_id IS NOT NULL)))
+);
+
+
+--
+-- Name: user_sessions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.user_sessions_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: user_sessions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.user_sessions_id_seq OWNED BY public.user_sessions.id;
+
+
+--
 -- Name: users; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -923,7 +1131,8 @@ CREATE TABLE public.users (
     organization_id bigint,
     deactivated_at timestamp(0) without time zone,
     tfa jsonb,
-    role character varying(255) DEFAULT 'basic'::character varying
+    role character varying(255) DEFAULT 'basic'::character varying,
+    optional_emails jsonb
 );
 
 
@@ -955,10 +1164,24 @@ ALTER TABLE ONLY public.audit_logs ALTER COLUMN id SET DEFAULT nextval('public.a
 
 
 --
+-- Name: authorization_codes id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.authorization_codes ALTER COLUMN id SET DEFAULT nextval('public.authorization_codes_id_seq'::regclass);
+
+
+--
 -- Name: blocked_addresses id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.blocked_addresses ALTER COLUMN id SET DEFAULT nextval('public.blocked_addresses_id_seq'::regclass);
+
+
+--
+-- Name: device_codes id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.device_codes ALTER COLUMN id SET DEFAULT nextval('public.device_codes_id_seq'::regclass);
 
 
 --
@@ -987,6 +1210,13 @@ ALTER TABLE ONLY public.installs ALTER COLUMN id SET DEFAULT nextval('public.ins
 --
 
 ALTER TABLE ONLY public.keys ALTER COLUMN id SET DEFAULT nextval('public.keys_id_seq'::regclass);
+
+
+--
+-- Name: oauth_tokens id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.oauth_tokens ALTER COLUMN id SET DEFAULT nextval('public.oauth_tokens_id_seq'::regclass);
 
 
 --
@@ -1088,6 +1318,20 @@ ALTER TABLE ONLY public.short_urls ALTER COLUMN id SET DEFAULT nextval('public.s
 
 
 --
+-- Name: user_providers id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_providers ALTER COLUMN id SET DEFAULT nextval('public.user_providers_id_seq'::regclass);
+
+
+--
+-- Name: user_sessions id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_sessions ALTER COLUMN id SET DEFAULT nextval('public.user_sessions_id_seq'::regclass);
+
+
+--
 -- Name: users id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1103,11 +1347,27 @@ ALTER TABLE ONLY public.audit_logs
 
 
 --
+-- Name: authorization_codes authorization_codes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.authorization_codes
+    ADD CONSTRAINT authorization_codes_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: blocked_addresses blocked_addresses_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.blocked_addresses
     ADD CONSTRAINT blocked_addresses_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: device_codes device_codes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.device_codes
+    ADD CONSTRAINT device_codes_pkey PRIMARY KEY (id);
 
 
 --
@@ -1148,6 +1408,22 @@ ALTER TABLE ONLY public.keys
 
 ALTER TABLE ONLY public.keys
     ADD CONSTRAINT keys_secret_first_key UNIQUE (secret_first);
+
+
+--
+-- Name: oauth_clients oauth_clients_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.oauth_clients
+    ADD CONSTRAINT oauth_clients_pkey PRIMARY KEY (client_id);
+
+
+--
+-- Name: oauth_tokens oauth_tokens_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.oauth_tokens
+    ADD CONSTRAINT oauth_tokens_pkey PRIMARY KEY (id);
 
 
 --
@@ -1287,6 +1563,22 @@ ALTER TABLE ONLY public.short_urls
 
 
 --
+-- Name: user_providers user_providers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_providers
+    ADD CONSTRAINT user_providers_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: user_sessions user_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_sessions
+    ADD CONSTRAINT user_sessions_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1295,31 +1587,66 @@ ALTER TABLE ONLY public.users
 
 
 --
--- Name: audit_logs_actor_id_index; Type: INDEX; Schema: public; Owner: -
+-- Name: audit_logs_key_id_index; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX audit_logs_actor_id_index ON public.audit_logs USING btree (user_id);
-
-
---
--- Name: audit_logs_inserted_at_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX audit_logs_inserted_at_index ON public.audit_logs USING btree (inserted_at);
+CREATE INDEX audit_logs_key_id_index ON public.audit_logs USING btree (key_id);
 
 
 --
--- Name: audit_logs_organization_id_index; Type: INDEX; Schema: public; Owner: -
+-- Name: audit_logs_oauth_token_id_index; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX audit_logs_organization_id_index ON public.audit_logs USING btree (organization_id);
+CREATE INDEX audit_logs_oauth_token_id_index ON public.audit_logs USING btree (oauth_token_id);
 
 
 --
--- Name: audit_logs_params_package_id_index; Type: INDEX; Schema: public; Owner: -
+-- Name: audit_logs_organization_id_inserted_at_index; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX audit_logs_params_package_id_index ON public.audit_logs USING btree (((((params -> 'package'::text) ->> 'id'::text))::integer));
+CREATE INDEX audit_logs_organization_id_inserted_at_index ON public.audit_logs USING btree (organization_id, inserted_at DESC);
+
+
+--
+-- Name: audit_logs_params_package_id_inserted_at_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX audit_logs_params_package_id_inserted_at_index ON public.audit_logs USING btree (((((params -> 'package'::text) ->> 'id'::text))::integer), inserted_at DESC);
+
+
+--
+-- Name: audit_logs_user_id_inserted_at_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX audit_logs_user_id_inserted_at_index ON public.audit_logs USING btree (user_id, inserted_at DESC);
+
+
+--
+-- Name: authorization_codes_client_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX authorization_codes_client_id_index ON public.authorization_codes USING btree (client_id);
+
+
+--
+-- Name: authorization_codes_code_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX authorization_codes_code_index ON public.authorization_codes USING btree (code);
+
+
+--
+-- Name: authorization_codes_expires_at_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX authorization_codes_expires_at_index ON public.authorization_codes USING btree (expires_at);
+
+
+--
+-- Name: authorization_codes_user_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX authorization_codes_user_id_index ON public.authorization_codes USING btree (user_id);
 
 
 --
@@ -1330,6 +1657,41 @@ CREATE INDEX blocked_addresses_ip_idx ON public.blocked_addresses USING btree (i
 
 
 --
+-- Name: device_codes_device_code_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX device_codes_device_code_index ON public.device_codes USING btree (device_code);
+
+
+--
+-- Name: device_codes_expires_at_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX device_codes_expires_at_index ON public.device_codes USING btree (expires_at);
+
+
+--
+-- Name: device_codes_status_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX device_codes_status_index ON public.device_codes USING btree (status);
+
+
+--
+-- Name: device_codes_user_code_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX device_codes_user_code_index ON public.device_codes USING btree (user_code);
+
+
+--
+-- Name: device_codes_user_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX device_codes_user_id_index ON public.device_codes USING btree (user_id);
+
+
+--
 -- Name: downloads_day_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1337,17 +1699,17 @@ CREATE INDEX downloads_day_idx ON public.downloads USING btree (day);
 
 
 --
--- Name: downloads_package_id_index; Type: INDEX; Schema: public; Owner: -
+-- Name: downloads_package_id_day_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX downloads_package_id_index ON public.downloads USING btree (package_id);
+CREATE INDEX downloads_package_id_day_idx ON public.downloads USING btree (package_id, day);
 
 
 --
--- Name: downloads_release_id_idx; Type: INDEX; Schema: public; Owner: -
+-- Name: downloads_release_id_day_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX downloads_release_id_idx ON public.downloads USING btree (release_id);
+CREATE INDEX downloads_release_id_day_idx ON public.downloads USING btree (release_id, day);
 
 
 --
@@ -1394,17 +1756,17 @@ CREATE UNIQUE INDEX installs_hex_index ON public.installs USING btree (hex);
 
 
 --
--- Name: keys_name_index; Type: INDEX; Schema: public; Owner: -
+-- Name: keys_organization_id_name_index; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX keys_name_index ON public.keys USING btree (name);
+CREATE INDEX keys_organization_id_name_index ON public.keys USING btree (organization_id, name);
 
 
 --
--- Name: keys_organization_id_name_revoked_at_key; Type: INDEX; Schema: public; Owner: -
+-- Name: keys_public_index; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX keys_organization_id_name_revoked_at_key ON public.keys USING btree (organization_id, name) WHERE (revoked_at IS NULL);
+CREATE INDEX keys_public_index ON public.keys USING btree (public);
 
 
 --
@@ -1415,17 +1777,73 @@ CREATE INDEX keys_revoke_at_index ON public.keys USING btree (revoke_at);
 
 
 --
--- Name: keys_revoked_at_index; Type: INDEX; Schema: public; Owner: -
+-- Name: keys_user_id_name_index; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX keys_revoked_at_index ON public.keys USING btree (revoked_at);
+CREATE INDEX keys_user_id_name_index ON public.keys USING btree (user_id, name);
 
 
 --
--- Name: keys_user_id_name_revoked_at_key; Type: INDEX; Schema: public; Owner: -
+-- Name: oauth_tokens_client_id_index; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX keys_user_id_name_revoked_at_key ON public.keys USING btree (user_id, name) WHERE (revoked_at IS NULL);
+CREATE INDEX oauth_tokens_client_id_index ON public.oauth_tokens USING btree (client_id);
+
+
+--
+-- Name: oauth_tokens_expires_at_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX oauth_tokens_expires_at_index ON public.oauth_tokens USING btree (expires_at);
+
+
+--
+-- Name: oauth_tokens_jti_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX oauth_tokens_jti_index ON public.oauth_tokens USING btree (jti);
+
+
+--
+-- Name: oauth_tokens_organization_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX oauth_tokens_organization_id_index ON public.oauth_tokens USING btree (organization_id);
+
+
+--
+-- Name: oauth_tokens_refresh_jti_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX oauth_tokens_refresh_jti_index ON public.oauth_tokens USING btree (refresh_jti);
+
+
+--
+-- Name: oauth_tokens_refresh_token_expires_at_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX oauth_tokens_refresh_token_expires_at_index ON public.oauth_tokens USING btree (refresh_token_expires_at);
+
+
+--
+-- Name: oauth_tokens_refresh_token_hash_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX oauth_tokens_refresh_token_hash_index ON public.oauth_tokens USING btree (refresh_token_hash) WHERE (refresh_token_hash IS NOT NULL);
+
+
+--
+-- Name: oauth_tokens_user_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX oauth_tokens_user_id_index ON public.oauth_tokens USING btree (user_id);
+
+
+--
+-- Name: oauth_tokens_user_session_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX oauth_tokens_user_session_id_index ON public.oauth_tokens USING btree (user_session_id) WHERE (revoked_at IS NULL);
 
 
 --
@@ -1454,13 +1872,6 @@ CREATE UNIQUE INDEX organizations_name_index ON public.organizations USING btree
 --
 
 CREATE INDEX organizations_public_index ON public.organizations USING btree (public);
-
-
---
--- Name: package_dependants_name_repo_dependant_id_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX package_dependants_name_repo_dependant_id_idx ON public.package_dependants USING btree (name, repo, dependant_id);
 
 
 --
@@ -1590,6 +2001,13 @@ CREATE INDEX releases_inserted_at_idx ON public.releases USING btree (inserted_a
 
 
 --
+-- Name: releases_meta_build_tools_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX releases_meta_build_tools_idx ON public.releases USING gin (((meta -> 'build_tools'::text)));
+
+
+--
 -- Name: releases_package_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1608,6 +2026,13 @@ CREATE UNIQUE INDEX repositories_name_index ON public.repositories USING btree (
 --
 
 CREATE UNIQUE INDEX repositories_organization_id_index ON public.repositories USING btree (organization_id);
+
+
+--
+-- Name: requirements_dependency_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX requirements_dependency_id_index ON public.requirements USING btree (dependency_id);
 
 
 --
@@ -1632,6 +2057,62 @@ CREATE UNIQUE INDEX short_urls_short_code_index ON public.short_urls USING btree
 
 
 --
+-- Name: user_providers_provider_provider_uid_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX user_providers_provider_provider_uid_index ON public.user_providers USING btree (provider, provider_uid);
+
+
+--
+-- Name: user_providers_user_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX user_providers_user_id_index ON public.user_providers USING btree (user_id);
+
+
+--
+-- Name: user_sessions_client_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX user_sessions_client_id_index ON public.user_sessions USING btree (client_id);
+
+
+--
+-- Name: user_sessions_expires_at_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX user_sessions_expires_at_index ON public.user_sessions USING btree (expires_at);
+
+
+--
+-- Name: user_sessions_organization_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX user_sessions_organization_id_index ON public.user_sessions USING btree (organization_id);
+
+
+--
+-- Name: user_sessions_session_token_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX user_sessions_session_token_index ON public.user_sessions USING btree (session_token);
+
+
+--
+-- Name: user_sessions_type_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX user_sessions_type_index ON public.user_sessions USING btree (type);
+
+
+--
+-- Name: user_sessions_user_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX user_sessions_user_id_index ON public.user_sessions USING btree (user_id);
+
+
+--
 -- Name: users_organization_id_index; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1650,7 +2131,23 @@ CREATE UNIQUE INDEX users_username_idx ON public.users USING btree (username);
 --
 
 ALTER TABLE ONLY public.audit_logs
-    ADD CONSTRAINT audit_logs_actor_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+    ADD CONSTRAINT audit_logs_actor_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: audit_logs audit_logs_key_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.audit_logs
+    ADD CONSTRAINT audit_logs_key_id_fkey FOREIGN KEY (key_id) REFERENCES public.keys(id) ON DELETE SET NULL;
+
+
+--
+-- Name: audit_logs audit_logs_oauth_token_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.audit_logs
+    ADD CONSTRAINT audit_logs_oauth_token_id_fkey FOREIGN KEY (oauth_token_id) REFERENCES public.oauth_tokens(id) ON DELETE SET NULL;
 
 
 --
@@ -1659,6 +2156,38 @@ ALTER TABLE ONLY public.audit_logs
 
 ALTER TABLE ONLY public.audit_logs
     ADD CONSTRAINT audit_logs_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: authorization_codes authorization_codes_client_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.authorization_codes
+    ADD CONSTRAINT authorization_codes_client_id_fkey FOREIGN KEY (client_id) REFERENCES public.oauth_clients(client_id) ON DELETE CASCADE;
+
+
+--
+-- Name: authorization_codes authorization_codes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.authorization_codes
+    ADD CONSTRAINT authorization_codes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: device_codes device_codes_client_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.device_codes
+    ADD CONSTRAINT device_codes_client_id_fkey FOREIGN KEY (client_id) REFERENCES public.oauth_clients(client_id) ON DELETE CASCADE;
+
+
+--
+-- Name: device_codes device_codes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.device_codes
+    ADD CONSTRAINT device_codes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -1702,6 +2231,38 @@ ALTER TABLE ONLY public.keys
 
 
 --
+-- Name: oauth_tokens oauth_tokens_client_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.oauth_tokens
+    ADD CONSTRAINT oauth_tokens_client_id_fkey FOREIGN KEY (client_id) REFERENCES public.oauth_clients(client_id) ON DELETE CASCADE;
+
+
+--
+-- Name: oauth_tokens oauth_tokens_organization_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.oauth_tokens
+    ADD CONSTRAINT oauth_tokens_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id) ON DELETE CASCADE;
+
+
+--
+-- Name: oauth_tokens oauth_tokens_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.oauth_tokens
+    ADD CONSTRAINT oauth_tokens_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: oauth_tokens oauth_tokens_user_session_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.oauth_tokens
+    ADD CONSTRAINT oauth_tokens_user_session_id_fkey FOREIGN KEY (user_session_id) REFERENCES public.user_sessions(id) ON DELETE SET NULL;
+
+
+--
 -- Name: organization_users organization_users_organization_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1714,7 +2275,7 @@ ALTER TABLE ONLY public.organization_users
 --
 
 ALTER TABLE ONLY public.organization_users
-    ADD CONSTRAINT organization_users_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+    ADD CONSTRAINT organization_users_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -1738,7 +2299,7 @@ ALTER TABLE ONLY public.package_owners
 --
 
 ALTER TABLE ONLY public.package_report_comments
-    ADD CONSTRAINT package_report_comments_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.users(id);
+    ADD CONSTRAINT package_report_comments_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.users(id) ON DELETE SET NULL;
 
 
 --
@@ -1770,7 +2331,7 @@ ALTER TABLE ONLY public.package_report_releases
 --
 
 ALTER TABLE ONLY public.package_reports
-    ADD CONSTRAINT package_reports_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.users(id);
+    ADD CONSTRAINT package_reports_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.users(id) ON DELETE SET NULL;
 
 
 --
@@ -1794,7 +2355,7 @@ ALTER TABLE ONLY public.packages
 --
 
 ALTER TABLE ONLY public.password_resets
-    ADD CONSTRAINT password_resets_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+    ADD CONSTRAINT password_resets_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -1810,7 +2371,7 @@ ALTER TABLE ONLY public.releases
 --
 
 ALTER TABLE ONLY public.releases
-    ADD CONSTRAINT releases_publisher_id_fkey FOREIGN KEY (publisher_id) REFERENCES public.users(id);
+    ADD CONSTRAINT releases_publisher_id_fkey FOREIGN KEY (publisher_id) REFERENCES public.users(id) ON DELETE SET NULL;
 
 
 --
@@ -1846,6 +2407,38 @@ ALTER TABLE ONLY public.reserved_packages
 
 
 --
+-- Name: user_providers user_providers_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_providers
+    ADD CONSTRAINT user_providers_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_sessions user_sessions_client_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_sessions
+    ADD CONSTRAINT user_sessions_client_id_fkey FOREIGN KEY (client_id) REFERENCES public.oauth_clients(client_id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_sessions user_sessions_organization_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_sessions
+    ADD CONSTRAINT user_sessions_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_sessions user_sessions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_sessions
+    ADD CONSTRAINT user_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: users users_organization_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1856,6 +2449,8 @@ ALTER TABLE ONLY public.users
 --
 -- PostgreSQL database dump complete
 --
+
+\unrestrict PJDOASPBpizSSTkTAAnRCfmwhOt5W5IuZgClp3Gp4M7UTtrDWxqfviysNB0YfKw
 
 INSERT INTO public."schema_migrations" (version) VALUES (20140128201839);
 INSERT INTO public."schema_migrations" (version) VALUES (20140128205233);
@@ -1965,3 +2560,34 @@ INSERT INTO public."schema_migrations" (version) VALUES (20220219013427);
 INSERT INTO public."schema_migrations" (version) VALUES (20220323140836);
 INSERT INTO public."schema_migrations" (version) VALUES (20221103004202);
 INSERT INTO public."schema_migrations" (version) VALUES (20221106173432);
+INSERT INTO public."schema_migrations" (version) VALUES (20230124011453);
+INSERT INTO public."schema_migrations" (version) VALUES (20230504180925);
+INSERT INTO public."schema_migrations" (version) VALUES (20230510205035);
+INSERT INTO public."schema_migrations" (version) VALUES (20240604161405);
+INSERT INTO public."schema_migrations" (version) VALUES (20250919152128);
+INSERT INTO public."schema_migrations" (version) VALUES (20250923100001);
+INSERT INTO public."schema_migrations" (version) VALUES (20250923100002);
+INSERT INTO public."schema_migrations" (version) VALUES (20250923100003);
+INSERT INTO public."schema_migrations" (version) VALUES (20250923100004);
+INSERT INTO public."schema_migrations" (version) VALUES (20250923100005);
+INSERT INTO public."schema_migrations" (version) VALUES (20251004230016);
+INSERT INTO public."schema_migrations" (version) VALUES (20251004230017);
+INSERT INTO public."schema_migrations" (version) VALUES (20251005174900);
+INSERT INTO public."schema_migrations" (version) VALUES (20251007175802);
+INSERT INTO public."schema_migrations" (version) VALUES (20251010135827);
+INSERT INTO public."schema_migrations" (version) VALUES (20251010172623);
+INSERT INTO public."schema_migrations" (version) VALUES (20251020202843);
+INSERT INTO public."schema_migrations" (version) VALUES (20251023120000);
+INSERT INTO public."schema_migrations" (version) VALUES (20251211004001);
+INSERT INTO public."schema_migrations" (version) VALUES (20260202233553);
+INSERT INTO public."schema_migrations" (version) VALUES (20260203000536);
+INSERT INTO public."schema_migrations" (version) VALUES (20260206120000);
+INSERT INTO public."schema_migrations" (version) VALUES (20260206130000);
+INSERT INTO public."schema_migrations" (version) VALUES (20260227120000);
+INSERT INTO public."schema_migrations" (version) VALUES (20260305120000);
+INSERT INTO public."schema_migrations" (version) VALUES (20260315120000);
+INSERT INTO public."schema_migrations" (version) VALUES (20260325120000);
+INSERT INTO public."schema_migrations" (version) VALUES (20260416120000);
+INSERT INTO public."schema_migrations" (version) VALUES (20260417120000);
+INSERT INTO public."schema_migrations" (version) VALUES (20260417130000);
+INSERT INTO public."schema_migrations" (version) VALUES (20260417140000);

@@ -1,7 +1,7 @@
 import Hexpm.Factory
 alias Hexpm.Accounts.Users
 alias Hexpm.OAuth.Client
-alias Hexpm.Repository.{PackageDependant, PackageDownload, ReleaseDownload}
+alias Hexpm.Repository.{PackageDownload, ReleaseDownload}
 
 Hexpm.Fake.start()
 Hexpm.setup()
@@ -704,7 +704,6 @@ Hexpm.Repo.transaction(fn ->
     )
   end)
 
-  Hexpm.Repo.refresh_view(PackageDependant, concurrently: false)
   Hexpm.Repo.refresh_view(PackageDownload, concurrently: false)
   Hexpm.Repo.refresh_view(ReleaseDownload, concurrently: false)
 end)

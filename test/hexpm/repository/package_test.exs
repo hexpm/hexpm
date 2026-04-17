@@ -240,8 +240,6 @@ defmodule Hexpm.Repository.PackageTest do
     insert(:requirement, release: rel, dependency: poison, requirement: "~> 1.0")
     insert(:requirement, release: rel, dependency: ecto, requirement: "~> 1.0")
 
-    Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
-
     assert ["ecto", "phoenix"] = search_for(repository, "depends:#{repository.name}:poison")
 
     assert ["phoenix"] =
@@ -263,8 +261,6 @@ defmodule Hexpm.Repository.PackageTest do
     rel = insert(:release, package: phoenix)
     insert(:requirement, release: rel, dependency: poison, requirement: "~> 1.0")
     insert(:requirement, release: rel, dependency: ecto, requirement: "~> 1.0")
-
-    Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
 
     assert ["phoenix"] = search_for(repository, "depends:#{repository.name}:poison")
   end
