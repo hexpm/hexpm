@@ -167,6 +167,66 @@ defmodule HexpmWeb.PackageControllerTest do
       assert result =~ "#{repository1.name} / #{package3.name}"
       refute result =~ "#{repository2.name} / #{package4.name}"
     end
+
+    test "depends search only returns packages from repositories the user can access", %{
+      user1: user1,
+      repository1: repository1,
+      repository2: repository2
+    } do
+      dependency = insert(:package, name: "repo_visible_dep", repository_id: repository1.id)
+      visible = insert(:package, name: "repo_visible_match", repository_id: repository1.id)
+      hidden = insert(:package, name: "repo_hidden_match", repository_id: repository2.id)
+
+      insert(:release, package: dependency, version: "1.0.0")
+
+      rel = insert(:release, package: visible, version: "1.0.0")
+      insert(:requirement, release: rel, dependency: dependency, requirement: "~> 1.0")
+
+      rel = insert(:release, package: hidden, version: "1.0.0")
+      insert(:requirement, release: rel, dependency: dependency, requirement: "~> 1.0")
+
+      search = URI.encode_www_form("depends:#{repository1.name}:#{dependency.name}")
+
+      result =
+        build_conn()
+        |> test_login(user1)
+        |> get("/packages?search=#{search}")
+        |> response(200)
+
+      assert result =~ "#{repository1.name} / #{visible.name}"
+      refute result =~ "#{repository2.name} / #{hidden.name}"
+    end
+
+    test "depends search can match visible packages via a hidden dependency package", %{
+      user1: user1,
+      repository1: repository1,
+      repository2: repository2
+    } do
+      hidden_dependency =
+        insert(:package, name: "repo_hidden_dependency", repository_id: repository2.id)
+
+      visible = insert(:package, name: "repo_visible_inference", repository_id: repository1.id)
+      hidden = insert(:package, name: "repo_hidden_inference", repository_id: repository2.id)
+
+      insert(:release, package: hidden_dependency, version: "1.0.0")
+
+      rel = insert(:release, package: visible, version: "1.0.0")
+      insert(:requirement, release: rel, dependency: hidden_dependency, requirement: "~> 1.0")
+
+      rel = insert(:release, package: hidden, version: "1.0.0")
+      insert(:requirement, release: rel, dependency: hidden_dependency, requirement: "~> 1.0")
+
+      search = URI.encode_www_form("depends:#{repository2.name}:#{hidden_dependency.name}")
+
+      result =
+        build_conn()
+        |> test_login(user1)
+        |> get("/packages?search=#{search}")
+        |> response(200)
+
+      assert result =~ "#{repository1.name} / #{visible.name}"
+      refute result =~ "#{repository2.name} / #{hidden.name}"
+    end
   end
 
   describe "GET /packages/:name" do

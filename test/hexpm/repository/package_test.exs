@@ -2,7 +2,7 @@ defmodule Hexpm.Repository.PackageTest do
   use Hexpm.DataCase
 
   alias Hexpm.Accounts.User
-  alias Hexpm.Repository.{Package, Repository}
+  alias Hexpm.Repository.{Package, Packages, Repository}
 
   setup do
     user = insert(:user)
@@ -281,6 +281,34 @@ defmodule Hexpm.Repository.PackageTest do
     assert ["phoenix"] =
              Package.dependants([repository], poison, 1, 10, :name, nil)
              |> Repo.all()
+             |> Enum.map(& &1.name)
+  end
+
+  test "depends search can return private packages if caller passes a broad repository list", %{
+    repository: repository
+  } do
+    private_repo = insert(:repository)
+    dependency = insert(:package, name: "dependency", repository_id: repository.id)
+    public_match = insert(:package, name: "public_match", repository_id: repository.id)
+    private_match = insert(:package, name: "private_match", repository_id: private_repo.id)
+
+    insert(:release, package: dependency, version: "1.0.0")
+
+    rel = insert(:release, package: public_match, version: "1.0.0")
+    insert(:requirement, release: rel, dependency: dependency, requirement: "~> 1.0")
+
+    rel = insert(:release, package: private_match, version: "1.0.0")
+    insert(:requirement, release: rel, dependency: dependency, requirement: "~> 1.0")
+
+    assert ["private_match", "public_match"] =
+             Packages.search(
+               [repository, private_repo],
+               1,
+               10,
+               "depends:#{repository.name}:#{dependency.name}",
+               :name,
+               nil
+             )
              |> Enum.map(& &1.name)
   end
 
