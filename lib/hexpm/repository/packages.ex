@@ -86,9 +86,13 @@ defmodule Hexpm.Repository.Packages do
   end
 
   def dependants(repositories, dependency, page, packages_per_page, sort, fields \\ nil) do
-    Package.dependants(repositories, dependency, page, packages_per_page, sort, fields)
-    |> Repo.all()
-    |> attach_repositories(repositories)
+    if sort in [:recent_downloads, :total_downloads] do
+      dependants_by_downloads(repositories, dependency, page, packages_per_page, sort, fields)
+    else
+      Package.dependants(repositories, dependency, page, packages_per_page, sort, fields)
+      |> Repo.all()
+      |> attach_repositories(repositories)
+    end
   end
 
   def search_with_versions(repositories, page, packages_per_page, query, sort) do
@@ -112,6 +116,68 @@ defmodule Hexpm.Repository.Packages do
       %{package | repository: repository}
     end)
   end
+
+  defp dependants_by_downloads(repositories, dependency, page, packages_per_page, sort, fields) do
+    view = dependant_download_view(sort)
+    offset = (page - 1) * packages_per_page
+
+    downloaded_ids =
+      Package.downloaded_dependant_ids(
+        repositories,
+        dependency,
+        view,
+        packages_per_page,
+        offset
+      )
+      |> Repo.all()
+
+    remaining = packages_per_page - length(downloaded_ids)
+
+    package_ids =
+      if remaining > 0 do
+        downloaded_count =
+          if downloaded_ids == [] and offset > 0 do
+            Repo.one!(Package.count_downloaded_dependants(repositories, dependency, view))
+          else
+            offset + length(downloaded_ids)
+          end
+
+        zero_download_offset = max(offset - downloaded_count, 0)
+
+        zero_download_ids =
+          Package.undownloaded_dependant_ids(
+            repositories,
+            dependency,
+            view,
+            remaining,
+            zero_download_offset
+          )
+          |> Repo.all()
+
+        downloaded_ids ++ zero_download_ids
+      else
+        downloaded_ids
+      end
+
+    load_dependants(repositories, package_ids, fields)
+  end
+
+  defp load_dependants(_repositories, [], _fields), do: []
+
+  defp load_dependants(repositories, package_ids, fields) do
+    packages =
+      package_ids
+      |> Package.by_ids(fields)
+      |> Repo.all()
+      |> attach_repositories(repositories)
+
+    packages_by_id = Map.new(packages, &{&1.id, &1})
+
+    Enum.map(package_ids, &Map.fetch!(packages_by_id, &1))
+  end
+
+  defp dependant_download_view(:recent_downloads), do: "recent"
+  defp dependant_download_view(:total_downloads), do: "all"
 
   def recent(repository, count) do
     Repo.all(Package.recent(repository, count))

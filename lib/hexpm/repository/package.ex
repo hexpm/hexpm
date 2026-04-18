@@ -138,6 +138,71 @@ defmodule Hexpm.Repository.Package do
     |> fields(fields)
   end
 
+  def downloaded_dependant_ids(repositories, dependency, view, limit, offset) do
+    repository_ids = Enum.map(repositories, & &1.id)
+
+    from(
+      pd in PackageDownload,
+      join: p in Package,
+      as: :package,
+      on: p.id == pd.package_id,
+      where: pd.view == ^view,
+      where: p.repository_id in ^repository_ids,
+      where: exists(dependency_exists_query(dependency.id)),
+      order_by: [fragment("? DESC NULLS LAST", pd.downloads)],
+      limit: ^limit,
+      offset: ^offset,
+      select: p.id
+    )
+  end
+
+  def count_downloaded_dependants(repositories, dependency, view) do
+    repository_ids = Enum.map(repositories, & &1.id)
+
+    from(
+      pd in PackageDownload,
+      join: p in Package,
+      as: :package,
+      on: p.id == pd.package_id,
+      where: pd.view == ^view,
+      where: p.repository_id in ^repository_ids,
+      where: exists(dependency_exists_query(dependency.id)),
+      select: count()
+    )
+  end
+
+  def undownloaded_dependant_ids(repositories, dependency, view, limit, offset) do
+    repository_ids = Enum.map(repositories, & &1.id)
+
+    from(
+      p in Package,
+      as: :package,
+      where: p.repository_id in ^repository_ids,
+      where: exists(dependency_exists_query(dependency.id)),
+      where:
+        not exists(
+          from(pd in PackageDownload,
+            where: pd.package_id == parent_as(:package).id,
+            where: pd.view == ^view
+          )
+        ),
+      order_by: p.id,
+      limit: ^limit,
+      offset: ^offset,
+      select: p.id
+    )
+  end
+
+  def by_ids(ids, nil) do
+    from(p in Package, where: p.id in ^ids, preload: :downloads)
+  end
+
+  def by_ids(ids, fields) do
+    fields = Enum.uniq([:id, :repository_id | fields])
+
+    from(p in Package, where: p.id in ^ids, select: ^fields)
+  end
+
   def recent(repository, count) do
     from(
       p in assoc(repository, :packages),
@@ -361,6 +426,15 @@ defmodule Hexpm.Repository.Package do
       on: rel.id == req.release_id,
       where: req.dependency_id == ^dependency_id,
       select: rel.package_id
+    )
+  end
+
+  defp dependency_exists_query(dependency_id) do
+    from(r in Release,
+      join: req in Requirement,
+      on: req.release_id == r.id,
+      where: r.package_id == parent_as(:package).id,
+      where: req.dependency_id == ^dependency_id
     )
   end
 
