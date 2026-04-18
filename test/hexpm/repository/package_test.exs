@@ -265,6 +265,25 @@ defmodule Hexpm.Repository.PackageTest do
     assert ["phoenix"] = search_for(repository, "depends:#{repository.name}:poison")
   end
 
+  test "dependants query filters by dependency package id", %{repository: repository} do
+    private_repo = insert(:repository)
+    poison = insert(:package, name: "poison", repository_id: repository.id)
+    ecto = insert(:package, name: "ecto", repository_id: private_repo.id)
+    phoenix = insert(:package, name: "phoenix", repository_id: repository.id)
+
+    rel = insert(:release, package: ecto)
+    insert(:requirement, release: rel, dependency: poison, requirement: "~> 1.0")
+    rel = insert(:release, package: phoenix)
+    insert(:requirement, release: rel, dependency: poison, requirement: "~> 1.0")
+
+    assert 1 = Package.count_dependants([repository], poison) |> Repo.one!()
+
+    assert ["phoenix"] =
+             Package.dependants([repository], poison, 1, 10, :name, nil)
+             |> Repo.all()
+             |> Enum.map(& &1.name)
+  end
+
   test "search build tools", %{repository: repository} do
     ecto = insert(:package, name: "ecto", repository_id: repository.id)
     insert(:release, package: ecto, meta: build(:release_metadata, build_tools: ["mix"]))

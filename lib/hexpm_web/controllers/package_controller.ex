@@ -79,8 +79,7 @@ defmodule HexpmWeb.PackageController do
       releases = Releases.all(package)
       current_release = current_release(releases)
 
-      dependants_count =
-        Packages.count(repositories, "depends:#{package.repository.name}:#{package.name}")
+      dependants_count = Packages.count_dependants(repositories, package)
 
       render(
         conn,
@@ -105,19 +104,17 @@ defmodule HexpmWeb.PackageController do
       releases = Releases.all(package)
       current_release = current_release(releases)
 
-      dependants_count =
-        Packages.count(repositories, "depends:#{package.repository.name}:#{package.name}")
+      dependants_count = Packages.count_dependants(repositories, package)
 
       page = Hexpm.Utils.safe_page(page_param, dependants_count, per_page)
 
       dependants =
-        Packages.search(
+        Packages.dependants(
           repositories,
+          package,
           page,
           per_page,
-          "depends:#{package.repository.name}:#{package.name}",
-          :recent_downloads,
-          nil
+          :recent_downloads
         )
         |> Packages.attach_latest_releases()
 
@@ -148,8 +145,7 @@ defmodule HexpmWeb.PackageController do
       releases = Releases.all(package)
       current_release = current_release(releases)
 
-      dependants_count =
-        Packages.count(repositories, "depends:#{package.repository.name}:#{package.name}")
+      dependants_count = Packages.count_dependants(repositories, package)
 
       render(
         conn,
@@ -177,8 +173,7 @@ defmodule HexpmWeb.PackageController do
       releases = Releases.all(package)
       current_release = current_release(releases)
 
-      dependants_count =
-        Packages.count(repositories, "depends:#{package.repository.name}:#{package.name}")
+      dependants_count = Packages.count_dependants(repositories, package)
 
       render(
         conn,
@@ -282,16 +277,9 @@ defmodule HexpmWeb.PackageController do
     owners = Owners.all(package, user: [:emails, :organization])
 
     dependants =
-      Packages.search(
-        repositories,
-        1,
-        20,
-        "depends:#{repository.name}:#{package.name}",
-        :recent_downloads,
-        [:name, :repository_id]
-      )
+      Packages.dependants(repositories, package, 1, 20, :recent_downloads, [:name, :repository_id])
 
-    dependants_count = Packages.count(repositories, "depends:#{repository.name}:#{package.name}")
+    dependants_count = Packages.count_dependants(repositories, package)
 
     audit_logs = AuditLogs.all_by(package, 1, @audit_logs_per_page)
 

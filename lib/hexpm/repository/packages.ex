@@ -9,6 +9,10 @@ defmodule Hexpm.Repository.Packages do
     Repo.one!(Package.count(repositories, filter))
   end
 
+  def count_dependants(repositories, dependency) do
+    Repo.one!(Package.count_dependants(repositories, dependency))
+  end
+
   def diff(packages, nil), do: packages
 
   def diff(packages, remove) do
@@ -77,6 +81,12 @@ defmodule Hexpm.Repository.Packages do
 
   def search(repositories, page, packages_per_page, query, sort, fields) do
     Package.all(repositories, page, packages_per_page, query, sort, fields)
+    |> Repo.all()
+    |> attach_repositories(repositories)
+  end
+
+  def dependants(repositories, dependency, page, packages_per_page, sort, fields \\ nil) do
+    Package.dependants(repositories, dependency, page, packages_per_page, sort, fields)
     |> Repo.all()
     |> attach_repositories(repositories)
   end

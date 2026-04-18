@@ -116,12 +116,25 @@ defmodule Hexpm.Repository.Package do
     from(
       p in assoc(repositories, :packages),
       as: :package,
-      join: r in assoc(p, :repository),
       preload: :downloads
     )
     |> sort(sort)
     |> Hexpm.Utils.paginate(page, count)
     |> search(search)
+    |> fields(fields)
+  end
+
+  def dependants(repositories, dependency, page, count, sort, fields) do
+    dependant_ids = dependant_ids_query(dependency.id)
+
+    from(
+      p in assoc(repositories, :packages),
+      as: :package,
+      preload: :downloads,
+      where: p.id in subquery(dependant_ids)
+    )
+    |> sort(sort)
+    |> Hexpm.Utils.paginate(page, count)
     |> fields(fields)
   end
 
@@ -144,10 +157,20 @@ defmodule Hexpm.Repository.Package do
     from(
       p in assoc(repositories, :packages),
       as: :package,
-      join: r in assoc(p, :repository),
       select: count()
     )
     |> search(search)
+  end
+
+  def count_dependants(repositories, dependency) do
+    dependant_ids = dependant_ids_query(dependency.id)
+
+    from(
+      p in assoc(repositories, :packages),
+      as: :package,
+      where: p.id in subquery(dependant_ids),
+      select: count()
+    )
   end
 
   defp put_first_owner(changeset, user, repository) do
@@ -217,8 +240,10 @@ defmodule Hexpm.Repository.Package do
     description = description_search(search)
 
     if repository do
+      query = with_repository(query)
+
       from(
-        [p, r] in query,
+        [p, ..., repository: r] in query,
         where:
           (name_query(p, package) and name_query(r, repository)) or
             description_query(p, description)
@@ -232,8 +257,10 @@ defmodule Hexpm.Repository.Package do
   defp search_param("name", search, query) do
     case String.split(search, "/", parts: 2) do
       [repository, package] ->
+        query = with_repository(query)
+
         from(
-          [p, r] in query,
+          [p, ..., repository: r] in query,
           where: name_query(p, extra_name_search(package)),
           where: name_query(r, extra_name_search(repository))
         )
@@ -275,33 +302,40 @@ defmodule Hexpm.Repository.Package do
   end
 
   defp search_param("depends", search, query) do
-    dependants =
-      case String.split(search, ":", parts: 2) do
-        [repository, package] ->
-          from(req in Requirement,
-            join: rel in Release,
-            on: rel.id == req.release_id,
-            join: dep in Package,
-            on: dep.id == req.dependency_id,
-            join: repo in Repository,
-            on: repo.id == dep.repository_id,
-            where: dep.name == ^package,
-            where: repo.name == ^repository,
-            select: rel.package_id
-          )
+    case String.split(search, ":", parts: 2) do
+      [repository, package] ->
+        from(p in query,
+          where:
+            exists(
+              from(req in Requirement,
+                join: rel in Release,
+                on: rel.id == req.release_id,
+                join: dep in Package,
+                on: dep.id == req.dependency_id,
+                join: repo in Repository,
+                on: repo.id == dep.repository_id,
+                where: rel.package_id == parent_as(:package).id,
+                where: dep.name == ^package,
+                where: repo.name == ^repository
+              )
+            )
+        )
 
-        _ ->
-          from(req in Requirement,
-            join: rel in Release,
-            on: rel.id == req.release_id,
-            join: dep in Package,
-            on: dep.id == req.dependency_id,
-            where: dep.name == ^search,
-            select: rel.package_id
-          )
-      end
-
-    from(p in query, where: p.id in subquery(dependants))
+      _ ->
+        from(p in query,
+          where:
+            exists(
+              from(req in Requirement,
+                join: rel in Release,
+                on: rel.id == req.release_id,
+                join: dep in Package,
+                on: dep.id == req.dependency_id,
+                where: rel.package_id == parent_as(:package).id,
+                where: dep.name == ^search
+              )
+            )
+        )
+    end
   end
 
   defp search_param("build_tool", search, query) do
@@ -319,6 +353,23 @@ defmodule Hexpm.Repository.Package do
 
   defp search_param(_, _, query) do
     query
+  end
+
+  defp dependant_ids_query(dependency_id) do
+    from(req in Requirement,
+      join: rel in Release,
+      on: rel.id == req.release_id,
+      where: req.dependency_id == ^dependency_id,
+      select: rel.package_id
+    )
+  end
+
+  defp with_repository(query) do
+    if Ecto.Query.has_named_binding?(query, :repository) do
+      query
+    else
+      from(p in query, join: r in assoc(p, :repository), as: :repository)
+    end
   end
 
   defp extra_value(<<"[", value::binary>>) do
