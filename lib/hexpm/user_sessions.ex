@@ -260,7 +260,7 @@ defmodule Hexpm.UserSessions do
     from(s in UserSession,
       where:
         s.type == "browser" and s.session_token == ^token and is_nil(s.revoked_at) and
-          (is_nil(s.expires_at) or s.expires_at > ^now)
+          s.expires_at > ^now
     )
     |> Repo.one()
   end
@@ -272,9 +272,7 @@ defmodule Hexpm.UserSessions do
     now = DateTime.utc_now()
 
     from(s in UserSession,
-      where:
-        s.user_id == ^user.id and is_nil(s.revoked_at) and
-          (is_nil(s.expires_at) or s.expires_at > ^now),
+      where: s.user_id == ^user.id and is_nil(s.revoked_at) and s.expires_at > ^now,
       order_by: [desc: s.inserted_at],
       preload: [:client]
     )
@@ -392,15 +390,11 @@ defmodule Hexpm.UserSessions do
   Counts total active sessions for a user.
   """
   def count_for_user(user_or_org) do
-    count_sessions(owner_filter(user_or_org))
-  end
-
-  defp count_sessions(owner_filter) do
     now = DateTime.utc_now()
 
     from(s in UserSession,
-      where: ^owner_filter,
-      where: is_nil(s.revoked_at) and (is_nil(s.expires_at) or s.expires_at > ^now),
+      where: ^owner_filter(user_or_org),
+      where: is_nil(s.revoked_at) and s.expires_at > ^now,
       select: count(s.id)
     )
     |> Repo.one()
@@ -413,14 +407,7 @@ defmodule Hexpm.UserSessions do
   The max_sessions parameter allows overriding the default limit (e.g., for organizations).
   """
   def enforce_session_limit(user_or_org, max_sessions \\ @max_user_sessions) do
-    owner_filter = owner_filter(user_or_org)
-    count = count_sessions(owner_filter)
-
-    if count >= max_sessions do
-      revoke_lru_sessions(owner_filter, count - max_sessions + 1)
-    end
-
-    :ok
+    revoke_lru_sessions(owner_filter(user_or_org), max_sessions - 1)
   end
 
   @doc """
@@ -429,36 +416,28 @@ defmodule Hexpm.UserSessions do
   """
   def revoke_excess_sessions_for_organization(organization, new_seat_limit) do
     max_sessions = max(@min_org_sessions, new_seat_limit)
-
-    owner_filter = owner_filter(organization)
-    count = count_sessions(owner_filter)
-
-    if count > max_sessions do
-      revoke_lru_sessions(owner_filter, count - max_sessions)
-    end
-
-    :ok
+    revoke_lru_sessions(owner_filter(organization), max_sessions)
   end
 
-  # Revokes the given number of least recently used sessions and their tokens.
+  # Revokes any active sessions beyond `keep_count`, ranked most-recently-used first.
   #
   # Uses SKIP LOCKED so concurrent enforcers don't queue on the same rows; at
   # worst this over-revokes by one or two sessions, which is acceptable for a
   # soft limit. Session IDs are materialized once so both the session and token
   # update_all target the same set.
-  defp revoke_lru_sessions(owner_filter, revoke_count) do
+  defp revoke_lru_sessions(owner_filter, keep_count) do
     now = DateTime.utc_now()
 
     Repo.transaction(fn ->
       session_ids =
         from(s in UserSession,
           where: ^owner_filter,
-          where: is_nil(s.revoked_at) and (is_nil(s.expires_at) or s.expires_at > ^now),
+          where: is_nil(s.revoked_at) and s.expires_at > ^now,
           order_by: [
-            asc: fragment("(last_use->>'used_at')::timestamptz NULLS FIRST"),
-            asc: s.inserted_at
+            desc_nulls_last: fragment("(last_use->>'used_at')::timestamptz"),
+            desc: s.inserted_at
           ],
-          limit: ^revoke_count,
+          offset: ^keep_count,
           select: s.id,
           lock: "FOR UPDATE SKIP LOCKED"
         )
@@ -478,6 +457,8 @@ defmodule Hexpm.UserSessions do
         )
       end
     end)
+
+    :ok
   end
 
   defp owner_filter(%Hexpm.Accounts.User{} = user) do
