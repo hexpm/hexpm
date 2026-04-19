@@ -17,12 +17,18 @@ defmodule Hexpm.Repo.Migrations.AddPackageDependantsTable do
     execute("""
     CREATE OR REPLACE FUNCTION package_dependants_insert() RETURNS trigger AS $$
     BEGIN
+      -- ON CONFLICT DO UPDATE (no-op SET) takes a row-level lock on the
+      -- existing (dependency_id, package_id) row, which serializes against
+      -- a concurrent DELETE trigger's NOT EXISTS check on the same row.
+      -- Without this, a publish + revert race on the same (package, dep)
+      -- can leave a stale row missing from package_dependants.
       INSERT INTO package_dependants (dependency_id, package_id, dependant_repository_id)
       SELECT NEW.dependency_id, rel.package_id, p.repository_id
       FROM releases rel
       JOIN packages p ON p.id = rel.package_id
       WHERE rel.id = NEW.release_id
-      ON CONFLICT DO NOTHING;
+      ON CONFLICT (dependency_id, package_id)
+        DO UPDATE SET package_id = EXCLUDED.package_id;
       RETURN NEW;
     END;
     $$ LANGUAGE plpgsql;
