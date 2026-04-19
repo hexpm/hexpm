@@ -327,30 +327,4 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
                DeviceCodes.get_device_code_for_verification(device_code.user_code)
     end
   end
-
-  describe "cleanup_expired_device_codes/0" do
-    test "marks expired pending device codes as expired" do
-      # Create expired device code
-      client = create_test_client()
-      conn = create_mock_conn()
-      {:ok, response} = DeviceCodes.initiate_device_authorization(conn, client.client_id, ["api"])
-      device_code = Repo.get_by(DeviceCode, device_code: response.device_code)
-
-      past_time = DateTime.add(DateTime.utc_now(), -3600, :second)
-      Repo.update!(DeviceCode.changeset(device_code, %{expires_at: past_time}))
-
-      # Create non-expired device code
-      client2 = create_test_client("Client 2")
-
-      {:ok, _response2} =
-        DeviceCodes.initiate_device_authorization(conn, client2.client_id, ["api"])
-
-      # Run cleanup
-      assert {1, nil} = DeviceCodes.cleanup_expired_device_codes()
-
-      # Verify only expired code was updated
-      updated_device_code = Repo.get(DeviceCode, device_code.id)
-      assert updated_device_code.status == "expired"
-    end
-  end
 end

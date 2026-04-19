@@ -408,19 +408,6 @@ defmodule Hexpm.OAuth.Tokens do
     Enum.all?(required_scopes, &(&1 in token_scopes))
   end
 
-  @doc """
-  Cleans up expired OAuth tokens.
-  This should be called periodically to remove old records.
-  """
-  def cleanup_expired_tokens do
-    now = DateTime.utc_now()
-
-    from(t in Token,
-      where: t.expires_at < ^now and is_nil(t.revoked_at)
-    )
-    |> Repo.delete_all()
-  end
-
   defp extract_jti_for_type(claims, :access) do
     case claims do
       %{"jti" => jti} -> {:ok, jti}

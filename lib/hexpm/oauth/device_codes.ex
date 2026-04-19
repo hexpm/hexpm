@@ -197,22 +197,6 @@ defmodule Hexpm.OAuth.DeviceCodes do
   end
 
   @doc """
-  Cleans up expired device codes.
-  This should be called periodically to remove old records.
-  """
-  def cleanup_expired do
-    now = DateTime.utc_now()
-
-    from(dc in DeviceCode,
-      where: dc.expires_at < ^now and dc.status == "pending"
-    )
-    |> Repo.update_all(set: [status: "expired", updated_at: now])
-  end
-
-  # Alias for compatibility
-  def cleanup_expired_device_codes, do: cleanup_expired()
-
-  @doc """
   Generates a cryptographically secure device code.
   Returns a 32-character base64url encoded string.
   """

@@ -653,41 +653,6 @@ defmodule Hexpm.UserSessionsTest do
 
       refute Hexpm.UserSession.active?(revoked_session)
     end
-
-    test "cleanup_expired_sessions deletes expired sessions" do
-      user = insert(:user)
-
-      # Create 3 active sessions
-      for i <- 1..3 do
-        UserSessions.create_browser_session(user, name: "Active #{i}", audit: audit_data(user))
-      end
-
-      # Create 2 expired sessions
-      expired_ids =
-        for i <- 1..2 do
-          {:ok, session, _token} =
-            UserSessions.create_browser_session(user,
-              name: "Expired #{i}",
-              audit: audit_data(user)
-            )
-
-          past_time = DateTime.add(DateTime.utc_now(), -3600, :second)
-          Repo.update!(Hexpm.UserSession.changeset(session, %{expires_at: past_time}))
-          session.id
-        end
-
-      # Run cleanup
-      {deleted_count, _} = UserSessions.cleanup_expired_sessions()
-      assert deleted_count == 2
-
-      # Verify expired sessions were deleted
-      Enum.each(expired_ids, fn id ->
-        assert Repo.get(Hexpm.UserSession, id) == nil
-      end)
-
-      # Verify active sessions still exist
-      assert UserSessions.count_for_user(user) == 3
-    end
   end
 
   describe "OAuth token expiration" do

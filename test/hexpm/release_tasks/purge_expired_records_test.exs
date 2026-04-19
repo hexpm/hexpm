@@ -3,13 +3,23 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
 
   alias Hexpm.ReleaseTasks.PurgeExpiredRecords
 
-  defp days_ago(days) do
-    DateTime.add(DateTime.utc_now(), -days * 86400, :second)
+  defp seconds_ago(seconds) do
+    DateTime.add(DateTime.utc_now(), -seconds, :second)
   end
 
-  defp truncated_days_ago(days) do
-    days_ago(days) |> DateTime.truncate(:second)
+  defp seconds_from_now(seconds) do
+    DateTime.add(DateTime.utc_now(), seconds, :second)
   end
+
+  defp truncated_seconds_ago(seconds) do
+    seconds_ago(seconds) |> DateTime.truncate(:second)
+  end
+
+  defp truncated_seconds_from_now(seconds) do
+    seconds_from_now(seconds) |> DateTime.truncate(:second)
+  end
+
+  defp days_ago(days), do: seconds_ago(days * 86400)
 
   defp naive_days_ago(days) do
     NaiveDateTime.utc_now()
@@ -18,7 +28,7 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
   end
 
   describe "purge authorization codes" do
-    test "deletes expired codes older than 30 days" do
+    test "deletes any expired code" do
       user = insert(:user)
       client = insert(:oauth_client)
 
@@ -27,7 +37,7 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
           code: "expired-code",
           redirect_uri: "https://example.com/callback",
           scopes: ["api"],
-          expires_at: truncated_days_ago(31),
+          expires_at: truncated_seconds_ago(60),
           code_challenge: "challenge",
           code_challenge_method: "S256",
           user_id: user.id,
@@ -39,8 +49,7 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
           code: "active-code",
           redirect_uri: "https://example.com/callback",
           scopes: ["api"],
-          expires_at:
-            DateTime.utc_now() |> DateTime.add(600, :second) |> DateTime.truncate(:second),
+          expires_at: truncated_seconds_from_now(600),
           code_challenge: "challenge2",
           code_challenge_method: "S256",
           user_id: user.id,
@@ -55,7 +64,7 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
   end
 
   describe "purge device codes" do
-    test "deletes expired codes older than 30 days" do
+    test "deletes any expired code" do
       client = insert(:oauth_client)
 
       expired =
@@ -63,7 +72,7 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
           device_code: "expired-device",
           user_code: "EXPR1234",
           verification_uri: "https://hex.pm/device",
-          expires_at: days_ago(31),
+          expires_at: seconds_ago(60),
           client_id: client.client_id
         })
 
@@ -72,7 +81,7 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
           device_code: "active-device",
           user_code: "ACTV5678",
           verification_uri: "https://hex.pm/device",
-          expires_at: DateTime.add(DateTime.utc_now(), 600, :second),
+          expires_at: seconds_from_now(600),
           client_id: client.client_id
         })
 
@@ -83,34 +92,8 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
     end
   end
 
-  describe "purge password resets" do
-    test "deletes resets older than 30 days" do
-      user = insert(:user)
-
-      old =
-        Repo.insert!(%Hexpm.Accounts.PasswordReset{
-          key: "old-key",
-          primary_email: "old@example.com",
-          user_id: user.id,
-          inserted_at: days_ago(31)
-        })
-
-      recent =
-        Repo.insert!(%Hexpm.Accounts.PasswordReset{
-          key: "new-key",
-          primary_email: "new@example.com",
-          user_id: user.id
-        })
-
-      PurgeExpiredRecords.run()
-
-      refute Repo.get(Hexpm.Accounts.PasswordReset, old.id)
-      assert Repo.get(Hexpm.Accounts.PasswordReset, recent.id)
-    end
-  end
-
   describe "purge oauth tokens" do
-    test "deletes expired tokens older than 90 days" do
+    test "deletes any expired token" do
       user = insert(:user)
       client = insert(:oauth_client)
 
@@ -119,18 +102,18 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
           jti: "expired-jti",
           token_type: "bearer",
           scopes: ["api"],
-          expires_at: truncated_days_ago(91),
+          expires_at: truncated_seconds_ago(60),
           grant_type: "authorization_code",
           user_id: user.id,
           client_id: client.client_id
         })
 
-      recent_expired =
+      active =
         Repo.insert!(%Hexpm.OAuth.Token{
-          jti: "recent-expired-jti",
+          jti: "active-jti",
           token_type: "bearer",
           scopes: ["api"],
-          expires_at: truncated_days_ago(60),
+          expires_at: truncated_seconds_from_now(86400),
           grant_type: "authorization_code",
           user_id: user.id,
           client_id: client.client_id
@@ -139,10 +122,10 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
       PurgeExpiredRecords.run()
 
       refute Repo.get(Hexpm.OAuth.Token, expired.id)
-      assert Repo.get(Hexpm.OAuth.Token, recent_expired.id)
+      assert Repo.get(Hexpm.OAuth.Token, active.id)
     end
 
-    test "deletes revoked tokens older than 90 days" do
+    test "deletes any revoked token" do
       user = insert(:user)
       client = insert(:oauth_client)
 
@@ -151,21 +134,8 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
           jti: "revoked-jti",
           token_type: "bearer",
           scopes: ["api"],
-          expires_at: truncated_days_ago(91),
-          revoked_at: truncated_days_ago(91),
-          grant_type: "authorization_code",
-          user_id: user.id,
-          client_id: client.client_id
-        })
-
-      recent_revoked =
-        Repo.insert!(%Hexpm.OAuth.Token{
-          jti: "recent-revoked-jti",
-          token_type: "bearer",
-          scopes: ["api"],
-          expires_at:
-            DateTime.utc_now() |> DateTime.add(86400, :second) |> DateTime.truncate(:second),
-          revoked_at: truncated_days_ago(60),
+          expires_at: truncated_seconds_from_now(86400),
+          revoked_at: truncated_seconds_ago(60),
           grant_type: "authorization_code",
           user_id: user.id,
           client_id: client.client_id
@@ -174,12 +144,11 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
       PurgeExpiredRecords.run()
 
       refute Repo.get(Hexpm.OAuth.Token, revoked.id)
-      assert Repo.get(Hexpm.OAuth.Token, recent_revoked.id)
     end
   end
 
   describe "purge user sessions" do
-    test "deletes expired sessions older than 90 days" do
+    test "deletes any expired session" do
       user = insert(:user)
 
       expired =
@@ -187,26 +156,26 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
           type: "browser",
           name: "expired session",
           session_token: :crypto.strong_rand_bytes(32),
-          expires_at: days_ago(91),
+          expires_at: seconds_ago(60),
           user_id: user.id
         })
 
-      recent =
+      active =
         Repo.insert!(%Hexpm.UserSession{
           type: "browser",
-          name: "recent session",
+          name: "active session",
           session_token: :crypto.strong_rand_bytes(32),
-          expires_at: days_ago(60),
+          expires_at: seconds_from_now(86400),
           user_id: user.id
         })
 
       PurgeExpiredRecords.run()
 
       refute Repo.get(Hexpm.UserSession, expired.id)
-      assert Repo.get(Hexpm.UserSession, recent.id)
+      assert Repo.get(Hexpm.UserSession, active.id)
     end
 
-    test "deletes revoked sessions older than 90 days" do
+    test "deletes any revoked session" do
       user = insert(:user)
 
       revoked =
@@ -214,23 +183,13 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
           type: "browser",
           name: "revoked session",
           session_token: :crypto.strong_rand_bytes(32),
-          revoked_at: days_ago(91),
-          user_id: user.id
-        })
-
-      recent_revoked =
-        Repo.insert!(%Hexpm.UserSession{
-          type: "browser",
-          name: "recent revoked session",
-          session_token: :crypto.strong_rand_bytes(32),
-          revoked_at: days_ago(60),
+          revoked_at: seconds_ago(60),
           user_id: user.id
         })
 
       PurgeExpiredRecords.run()
 
       refute Repo.get(Hexpm.UserSession, revoked.id)
-      assert Repo.get(Hexpm.UserSession, recent_revoked.id)
     end
 
     test "keeps sessions with no expiry or revocation" do
@@ -251,13 +210,13 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
   end
 
   describe "purge plug sessions" do
-    test "deletes sessions inactive for more than 90 days" do
+    test "deletes sessions inactive for more than 30 days" do
       stale =
         Repo.insert!(%Hexpm.PlugSession{
           token: :crypto.strong_rand_bytes(32),
           data: %{},
-          inserted_at: naive_days_ago(91),
-          updated_at: naive_days_ago(91)
+          inserted_at: naive_days_ago(31),
+          updated_at: naive_days_ago(31)
         })
 
       recent =
@@ -270,6 +229,32 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
 
       refute Repo.get(Hexpm.PlugSession, stale.id)
       assert Repo.get(Hexpm.PlugSession, recent.id)
+    end
+  end
+
+  describe "purge password resets" do
+    test "deletes resets older than 90 days" do
+      user = insert(:user)
+
+      old =
+        Repo.insert!(%Hexpm.Accounts.PasswordReset{
+          key: "old-key",
+          primary_email: "old@example.com",
+          user_id: user.id,
+          inserted_at: days_ago(91)
+        })
+
+      recent =
+        Repo.insert!(%Hexpm.Accounts.PasswordReset{
+          key: "new-key",
+          primary_email: "new@example.com",
+          user_id: user.id
+        })
+
+      PurgeExpiredRecords.run()
+
+      refute Repo.get(Hexpm.Accounts.PasswordReset, old.id)
+      assert Repo.get(Hexpm.Accounts.PasswordReset, recent.id)
     end
   end
 

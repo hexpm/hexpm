@@ -16,9 +16,8 @@ defmodule Hexpm.UserSessions do
 
   ## Session Expiration
 
-  All sessions expire after 30 days of creation (non-sliding window). Sessions
-  are automatically cleaned up by calling `cleanup_expired_sessions/0` periodically
-  via a scheduled job (e.g., cron, Oban, Quantum).
+  All sessions expire after 30 days of creation (non-sliding window). Expired
+  rows are deleted by `Hexpm.ReleaseTasks.PurgeExpiredRecords`.
 
   ## Last Use Tracking
 
@@ -487,22 +486,5 @@ defmodule Hexpm.UserSessions do
 
   defp owner_filter(%Hexpm.Accounts.Organization{} = org) do
     Ecto.Query.dynamic([s], s.organization_id == ^org.id)
-  end
-
-  @doc """
-  Cleans up expired sessions by deleting them from the database.
-
-  This function should be called periodically (e.g., daily) via a scheduled job
-  such as cron, Oban, or Quantum to prevent accumulation of expired records.
-
-  Returns `{count, nil}` where count is the number of deleted sessions.
-  """
-  def cleanup_expired_sessions do
-    now = DateTime.utc_now()
-
-    from(s in UserSession,
-      where: s.expires_at < ^now
-    )
-    |> Repo.delete_all()
   end
 end
