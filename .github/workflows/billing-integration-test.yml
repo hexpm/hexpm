@@ -1,7 +1,6 @@
 name: Billing Integration Test
 
 on:
-  push:
   workflow_dispatch:
     inputs:
       billing_tag:
