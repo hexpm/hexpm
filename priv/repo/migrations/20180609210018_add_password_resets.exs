@@ -2,7 +2,7 @@ defmodule Hexpm.Repo.Migrations.AddPasswordResets do
   use Ecto.Migration
 
   def change do
-    create table(:password_resets) do
+    create_if_not_exists table(:password_resets) do
       add(:key, :string, null: false)
       add(:primary_email, :string, null: false)
       add(:user_id, references(:users))
@@ -10,7 +10,7 @@ defmodule Hexpm.Repo.Migrations.AddPasswordResets do
       timestamps(updated_at: false)
     end
 
-    create(index(:password_resets, [:user_id]))
+    create_if_not_exists(index(:password_resets, [:user_id]))
 
     execute("""
     INSERT INTO password_resets (key, primary_email, user_id, inserted_at)

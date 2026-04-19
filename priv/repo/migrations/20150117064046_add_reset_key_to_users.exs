@@ -4,8 +4,8 @@ defmodule Hexpm.Repo.Migrations.AddResetKeyToUsers do
   def up() do
     execute("""
       ALTER TABLE users
-        ADD COLUMN reset_key text,
-        ADD COLUMN reset_expiry timestamp
+        ADD COLUMN IF NOT EXISTS reset_key text,
+        ADD COLUMN IF NOT EXISTS reset_expiry timestamp
     """)
   end
 

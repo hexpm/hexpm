@@ -5,7 +5,7 @@ defmodule Hexpm.Repo.Migrations.AddPackageDownloadsView do
     execute("CREATE TYPE calendar_view AS ENUM ('day', 'week', 'all')")
 
     execute("""
-      CREATE MATERIALIZED VIEW package_downloads (
+      CREATE MATERIALIZED VIEW IF NOT EXISTS package_downloads (
         package_id,
         view,
         downloads) AS

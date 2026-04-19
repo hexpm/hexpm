@@ -5,15 +5,15 @@ defmodule Hexpm.Repo.Migrations.DropPackageDependantsView do
   @disable_migration_lock true
 
   def up() do
-    execute("DROP MATERIALIZED VIEW package_dependants")
-    create(index(:requirements, [:dependency_id], concurrently: true))
+    execute("DROP MATERIALIZED VIEW IF EXISTS package_dependants")
+    create_if_not_exists(index(:requirements, [:dependency_id], concurrently: true))
   end
 
   def down() do
-    drop(index(:requirements, [:dependency_id], concurrently: true))
+    drop_if_exists(index(:requirements, [:dependency_id], concurrently: true))
 
     execute("""
-      CREATE MATERIALIZED VIEW package_dependants (
+      CREATE MATERIALIZED VIEW IF NOT EXISTS package_dependants (
         name,
         repo,
         dependant_id) AS

@@ -3,7 +3,7 @@ defmodule Hexpm.Repo.Migrations.BlockedAddresses do
 
   def up() do
     execute("""
-      CREATE TABLE blocked_addresses (
+      CREATE TABLE IF NOT EXISTS blocked_addresses (
         id serial PRIMARY KEY,
         ip text,
         comment text)

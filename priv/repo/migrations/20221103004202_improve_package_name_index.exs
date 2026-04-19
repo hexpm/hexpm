@@ -2,13 +2,13 @@ defmodule Hexpm.RepoBase.Migrations.ImprovePackageNameIndex do
   use Ecto.Migration
 
   def up do
-    create(unique_index(:packages, [:repository_id, "name text_pattern_ops"]))
-    drop(unique_index(:packages, [:repository_id, :name]))
+    create_if_not_exists(unique_index(:packages, [:repository_id, "name text_pattern_ops"]))
+    drop_if_exists(unique_index(:packages, [:repository_id, :name]))
 
-    execute("DROP MATERIALIZED VIEW release_downloads")
+    execute("DROP MATERIALIZED VIEW IF EXISTS release_downloads")
 
     execute("""
-      CREATE MATERIALIZED VIEW release_downloads (
+      CREATE MATERIALIZED VIEW IF NOT EXISTS release_downloads (
         package_id,
         release_id,
         downloads) AS
@@ -21,13 +21,13 @@ defmodule Hexpm.RepoBase.Migrations.ImprovePackageNameIndex do
   end
 
   def down do
-    create(unique_index(:packages, [:repository_id, :name]))
-    drop(unique_index(:packages, [:repository_id, "name text_pattern_ops"]))
+    create_if_not_exists(unique_index(:packages, [:repository_id, :name]))
+    drop_if_exists(unique_index(:packages, [:repository_id, "name text_pattern_ops"]))
 
-    execute("DROP MATERIALIZED VIEW release_downloads")
+    execute("DROP MATERIALIZED VIEW IF EXISTS release_downloads")
 
     execute("""
-      CREATE MATERIALIZED VIEW release_downloads (
+      CREATE MATERIALIZED VIEW IF NOT EXISTS release_downloads (
         release_id,
         downloads) AS
           SELECT release_id, SUM(downloads)

@@ -6,11 +6,11 @@ defmodule Hexpm.Repo.Migrations.OptimizeRequirementsDependencyReleaseIndex do
 
   def up() do
     drop_if_exists(index(:requirements, [:dependency_id], concurrently: true))
-    create(index(:requirements, [:dependency_id, :release_id], concurrently: true))
+    create_if_not_exists(index(:requirements, [:dependency_id, :release_id], concurrently: true))
   end
 
   def down() do
     drop_if_exists(index(:requirements, [:dependency_id, :release_id], concurrently: true))
-    create(index(:requirements, [:dependency_id], concurrently: true))
+    create_if_not_exists(index(:requirements, [:dependency_id], concurrently: true))
   end
 end

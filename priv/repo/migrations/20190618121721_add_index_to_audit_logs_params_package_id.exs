@@ -2,7 +2,7 @@ defmodule Hexpm.RepoBase.Migrations.AddIndexToAuditLogsParamsPackageId do
   use Ecto.Migration
 
   def change do
-    create(
+    create_if_not_exists(
       index(
         :audit_logs,
         ["((params -> 'package' ->> 'id')::integer)"],

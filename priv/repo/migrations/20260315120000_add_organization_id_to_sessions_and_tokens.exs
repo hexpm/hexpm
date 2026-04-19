@@ -3,17 +3,17 @@ defmodule Hexpm.RepoBase.Migrations.AddOrganizationIdToSessionsAndTokens do
 
   def change do
     alter table(:user_sessions) do
-      add :organization_id, references(:organizations, on_delete: :delete_all)
+      add_if_not_exists :organization_id, references(:organizations, on_delete: :delete_all)
       modify :user_id, :bigint, null: true, from: {:bigint, null: false}
     end
 
     alter table(:oauth_tokens) do
-      add :organization_id, references(:organizations, on_delete: :delete_all)
+      add_if_not_exists :organization_id, references(:organizations, on_delete: :delete_all)
       modify :user_id, :bigint, null: true, from: {:bigint, null: false}
     end
 
-    create index(:user_sessions, [:organization_id])
-    create index(:oauth_tokens, [:organization_id])
+    create_if_not_exists index(:user_sessions, [:organization_id])
+    create_if_not_exists index(:oauth_tokens, [:organization_id])
 
     create constraint(:user_sessions, :user_or_organization_required,
              check: "user_id IS NOT NULL OR organization_id IS NOT NULL"

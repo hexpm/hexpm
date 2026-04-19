@@ -3,7 +3,7 @@ defmodule Hexpm.Repo.Migrations.CreateUserSessions do
 
   def up do
     # Create unified user_sessions table
-    create table(:user_sessions) do
+    create_if_not_exists table(:user_sessions) do
       add :user_id, references(:users, on_delete: :delete_all), null: false
       add :type, :string, null: false
       add :name, :string
@@ -14,15 +14,16 @@ defmodule Hexpm.Repo.Migrations.CreateUserSessions do
       add :session_token, :binary
 
       # OAuth-specific fields
-      add :client_id, references(:oauth_clients, column: :client_id, type: :uuid, on_delete: :delete_all)
+      add :client_id,
+          references(:oauth_clients, column: :client_id, type: :uuid, on_delete: :delete_all)
 
       timestamps(type: :utc_datetime_usec)
     end
 
-    create index(:user_sessions, [:user_id])
-    create index(:user_sessions, [:type])
-    create index(:user_sessions, [:session_token])
-    create index(:user_sessions, [:client_id])
+    create_if_not_exists index(:user_sessions, [:user_id])
+    create_if_not_exists index(:user_sessions, [:type])
+    create_if_not_exists index(:user_sessions, [:session_token])
+    create_if_not_exists index(:user_sessions, [:client_id])
 
     # Migrate browser sessions from sessions table
     execute """
@@ -73,7 +74,7 @@ defmodule Hexpm.Repo.Migrations.CreateUserSessions do
 
     # Add new column to oauth_tokens
     alter table(:oauth_tokens) do
-      add :user_session_id, references(:user_sessions, on_delete: :nilify_all)
+      add_if_not_exists :user_session_id, references(:user_sessions, on_delete: :nilify_all)
     end
 
     # Update oauth_tokens to reference user_sessions
@@ -86,11 +87,11 @@ defmodule Hexpm.Repo.Migrations.CreateUserSessions do
 
     # Drop old session_id column from oauth_tokens
     alter table(:oauth_tokens) do
-      remove :session_id
+      remove_if_exists :session_id
     end
 
     # Drop oauth_sessions table
-    drop table(:oauth_sessions)
+    drop_if_exists table(:oauth_sessions)
 
     # Clean up sessions table - remove user sessions, keep only Plug session storage
     execute "DELETE FROM sessions WHERE data->>'user_id' IS NOT NULL"
@@ -98,18 +99,21 @@ defmodule Hexpm.Repo.Migrations.CreateUserSessions do
 
   def down do
     # Recreate oauth_sessions table
-    create table(:oauth_sessions) do
+    create_if_not_exists table(:oauth_sessions) do
       add :name, :string
       add :revoked_at, :utc_datetime_usec
       add :last_use, :jsonb
       add :user_id, references(:users, on_delete: :delete_all), null: false
-      add :client_id, references(:oauth_clients, column: :client_id, type: :uuid, on_delete: :delete_all), null: false
+
+      add :client_id,
+          references(:oauth_clients, column: :client_id, type: :uuid, on_delete: :delete_all),
+          null: false
 
       timestamps(type: :utc_datetime_usec)
     end
 
-    create index(:oauth_sessions, [:user_id])
-    create index(:oauth_sessions, [:client_id])
+    create_if_not_exists index(:oauth_sessions, [:user_id])
+    create_if_not_exists index(:oauth_sessions, [:client_id])
 
     # Migrate OAuth sessions back
     execute """
@@ -140,7 +144,7 @@ defmodule Hexpm.Repo.Migrations.CreateUserSessions do
 
     # Restore session_id column
     alter table(:oauth_tokens) do
-      add :session_id, references(:oauth_sessions, on_delete: :nilify_all)
+      add_if_not_exists :session_id, references(:oauth_sessions, on_delete: :nilify_all)
     end
 
     # Update oauth_tokens back
@@ -157,10 +161,10 @@ defmodule Hexpm.Repo.Migrations.CreateUserSessions do
 
     # Remove user_session_id column
     alter table(:oauth_tokens) do
-      remove :user_session_id
+      remove_if_exists :user_session_id
     end
 
     # Drop user_sessions table
-    drop table(:user_sessions)
+    drop_if_exists table(:user_sessions)
   end
 end

@@ -2,7 +2,7 @@ defmodule Hexpm.RepoBase.Migrations.AddPackageReportsTable do
   use Ecto.Migration
 
   def up() do
-    create table(:package_reports) do
+    create_if_not_exists table(:package_reports) do
       add(:description, :text, null: false)
       add(:state, :string, null: false)
       add(:package_id, references(:packages), null: false)
@@ -11,10 +11,10 @@ defmodule Hexpm.RepoBase.Migrations.AddPackageReportsTable do
       timestamps()
     end
 
-    create(index(:package_reports, [:package_id]))
+    create_if_not_exists(index(:package_reports, [:package_id]))
   end
 
   def down() do
-    drop(table("package_reports"))
+    drop_if_exists(table("package_reports"))
   end
 end
