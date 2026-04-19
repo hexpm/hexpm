@@ -228,12 +228,12 @@ defmodule Hexpm.Repository.Package do
   end
 
   def count_dependants(repositories, dependency) do
-    dependant_ids = dependant_ids_query(dependency.id)
+    repository_ids = Enum.map(repositories, & &1.id)
 
     from(
-      p in assoc(repositories, :packages),
-      as: :package,
-      where: p.id in subquery(dependant_ids),
+      pd in PackageDependant,
+      where: pd.dependency_id == ^dependency.id,
+      where: pd.dependant_repository_id in ^repository_ids,
       select: count()
     )
   end
@@ -372,14 +372,12 @@ defmodule Hexpm.Repository.Package do
         from(p in query,
           where:
             exists(
-              from(req in Requirement,
-                join: rel in Release,
-                on: rel.id == req.release_id,
+              from(pd in PackageDependant,
                 join: dep in Package,
-                on: dep.id == req.dependency_id,
+                on: dep.id == pd.dependency_id,
                 join: repo in Repository,
                 on: repo.id == dep.repository_id,
-                where: rel.package_id == parent_as(:package).id,
+                where: pd.package_id == parent_as(:package).id,
                 where: dep.name == ^package,
                 where: repo.name == ^repository
               )
@@ -390,12 +388,10 @@ defmodule Hexpm.Repository.Package do
         from(p in query,
           where:
             exists(
-              from(req in Requirement,
-                join: rel in Release,
-                on: rel.id == req.release_id,
+              from(pd in PackageDependant,
                 join: dep in Package,
-                on: dep.id == req.dependency_id,
-                where: rel.package_id == parent_as(:package).id,
+                on: dep.id == pd.dependency_id,
+                where: pd.package_id == parent_as(:package).id,
                 where: dep.name == ^search
               )
             )
@@ -421,20 +417,16 @@ defmodule Hexpm.Repository.Package do
   end
 
   defp dependant_ids_query(dependency_id) do
-    from(req in Requirement,
-      join: rel in Release,
-      on: rel.id == req.release_id,
-      where: req.dependency_id == ^dependency_id,
-      select: rel.package_id
+    from(pd in PackageDependant,
+      where: pd.dependency_id == ^dependency_id,
+      select: pd.package_id
     )
   end
 
   defp dependency_exists_query(dependency_id) do
-    from(r in Release,
-      join: req in Requirement,
-      on: req.release_id == r.id,
-      where: r.package_id == parent_as(:package).id,
-      where: req.dependency_id == ^dependency_id
+    from(pd in PackageDependant,
+      where: pd.dependency_id == ^dependency_id,
+      where: pd.package_id == parent_as(:package).id
     )
   end
 
