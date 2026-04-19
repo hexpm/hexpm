@@ -1,4 +1,4 @@
-defmodule Hexpm.Repo.Migrations.DropUnusedIndexes do
+defmodule Hexpm.Repo.Migrations.DropMoreUnusedIndexes do
   use Ecto.Migration
 
   @disable_ddl_transaction true
@@ -53,9 +53,51 @@ defmodule Hexpm.Repo.Migrations.DropUnusedIndexes do
         concurrently: true
       )
     )
+
+    drop_if_exists(
+      index(:oauth_tokens, [:client_id],
+        name: :oauth_tokens_client_id_index,
+        concurrently: true
+      )
+    )
+
+    drop_if_exists(
+      index(:oauth_tokens, [:organization_id],
+        name: :oauth_tokens_organization_id_index,
+        concurrently: true
+      )
+    )
+
+    drop_if_exists(
+      index(:user_sessions, [:client_id],
+        name: :user_sessions_client_id_index,
+        concurrently: true
+      )
+    )
   end
 
   def down() do
+    create_if_not_exists(
+      index(:user_sessions, [:client_id],
+        name: :user_sessions_client_id_index,
+        concurrently: true
+      )
+    )
+
+    create_if_not_exists(
+      index(:oauth_tokens, [:organization_id],
+        name: :oauth_tokens_organization_id_index,
+        concurrently: true
+      )
+    )
+
+    create_if_not_exists(
+      index(:oauth_tokens, [:client_id],
+        name: :oauth_tokens_client_id_index,
+        concurrently: true
+      )
+    )
+
     create_if_not_exists(
       index(:authorization_codes, [:user_id],
         name: :authorization_codes_user_id_index,
