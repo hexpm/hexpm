@@ -344,24 +344,8 @@ defmodule HexpmWeb.Components.PackageLayout do
                       </p>
                       <div class="flex items-center gap-1.5 flex-wrap">
                         <p class="text-grey-700 dark:text-grey-100 font-bold">
-                          {List.first(@licenses)}
+                          {Enum.join(@licenses, ", ")}
                         </p>
-                        <%= if length(@licenses) > 1 do %>
-                          <div class="relative group">
-                            <span class="text-xs font-medium text-purple-600 dark:text-primary-300 cursor-default">
-                              +{length(@licenses) - 1} more
-                            </span>
-                            <div class="absolute bottom-full left-0 mb-1.5 hidden group-hover:block z-10">
-                              <div class="bg-grey-900 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
-                                <%= for license <- tl(@licenses) do %>
-                                  <p>{license}</p>
-                                <% end %>
-                                <div class="absolute top-full left-3 border-4 border-transparent border-t-grey-900">
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        <% end %>
                       </div>
                     </div>
                   <% end %>
