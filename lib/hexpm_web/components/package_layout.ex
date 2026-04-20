@@ -67,6 +67,10 @@ defmodule HexpmWeb.Components.PackageLayout do
       )
       |> assign(:this_version_downloads, version_downloads(assigns))
       |> assign(:package_reports_enabled, @package_reports_enabled)
+      |> assign(
+        :dependency_count,
+        assigns.current_release && Enum.count(assigns.current_release.requirements || [])
+      )
 
     ~H"""
     <div class="bg-grey-50 dark:bg-grey-950 min-h-screen">
@@ -166,7 +170,9 @@ defmodule HexpmWeb.Components.PackageLayout do
                   class={tab_class(@active_tab == :dependencies)}
                 >
                   {HexpmWeb.ViewIcons.icon(:heroicon, "document", class: "size-4.5")}
-                  <span>{Enum.count(@current_release.requirements || [])} Dependencies</span>
+                  <span>
+                    {@dependency_count} {pluralize(@dependency_count, "Dependency", "Dependencies")}
+                  </span>
                 </a>
               <% end %>
               <a
@@ -174,7 +180,9 @@ defmodule HexpmWeb.Components.PackageLayout do
                 class={tab_class(@active_tab == :dependants)}
               >
                 {HexpmWeb.ViewIcons.icon(:heroicon, "document", class: "size-4.5")}
-                <span>{@dependants_count} Dependants</span>
+                <span>
+                  {@dependants_count} {pluralize(@dependants_count, "Dependant", "Dependants")}
+                </span>
               </a>
               <a
                 href={audit_logs_path(@package)}
@@ -481,4 +489,7 @@ defmodule HexpmWeb.Components.PackageLayout do
   defp tab_class(false),
     do:
       "flex items-center gap-1 px-[18px] py-3 text-grey-500 dark:text-grey-300 font-medium hover:text-grey-700 dark:hover:text-grey-200 transition-colors whitespace-nowrap"
+
+  defp pluralize(1, singular, _plural), do: singular
+  defp pluralize(_count, _singular, plural), do: plural
 end

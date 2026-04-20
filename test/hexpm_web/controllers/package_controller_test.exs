@@ -232,7 +232,38 @@ defmodule HexpmWeb.PackageControllerTest do
   describe "GET /packages/:name" do
     test "show package", %{package1: package1} do
       conn = get(build_conn(), "/packages/#{package1.name}")
-      assert response(conn, 200) =~ escape(~s({:#{package1.name}, "~> 0.0.2"}))
+      html = response(conn, 200)
+
+      assert html =~ escape(~s({:#{package1.name}, "~> 0.0.2"}))
+
+      assert {:ok, document} = Floki.parse_document(html)
+      assert link_text(document, "/packages/#{package1.name}/dependents") == "0 Dependants"
+      assert link_text(document, "/packages/#{package1.name}/dependencies") == "0 Dependencies"
+    end
+
+    test "show package uses singular dependant label for one dependant", %{package1: package1} do
+      add_dependant(package1, "single_dependant")
+
+      html =
+        build_conn()
+        |> get("/packages/#{package1.name}")
+        |> html_response(200)
+
+      assert {:ok, document} = Floki.parse_document(html)
+      assert link_text(document, "/packages/#{package1.name}/dependents") == "1 Dependant"
+    end
+
+    test "show package uses plural dependant label for multiple dependants", %{package1: package1} do
+      add_dependant(package1, "first_dependant")
+      add_dependant(package1, "second_dependant")
+
+      html =
+        build_conn()
+        |> get("/packages/#{package1.name}")
+        |> html_response(200)
+
+      assert {:ok, document} = Floki.parse_document(html)
+      assert link_text(document, "/packages/#{package1.name}/dependents") == "2 Dependants"
     end
 
     test "package name is case sensitive", %{package1: package1} do
@@ -453,5 +484,26 @@ defmodule HexpmWeb.PackageControllerTest do
   defp escape(html) do
     {:safe, safe} = Phoenix.HTML.html_escape(html)
     IO.iodata_to_binary(safe)
+  end
+
+  defp add_dependant(package, name) do
+    dependant = insert(:package, name: name, repository_id: package.repository_id)
+
+    release =
+      insert(
+        :release,
+        package: dependant,
+        meta: build(:release_metadata, app: dependant.name)
+      )
+
+    insert(:requirement, release: release, dependency: package, requirement: "~> 0.0.1")
+  end
+
+  defp link_text(document, href) do
+    document
+    |> Floki.find(~s(a[href="#{href}"]))
+    |> Floki.text(sep: " ")
+    |> String.replace(~r/\s+/, " ")
+    |> String.trim()
   end
 end
