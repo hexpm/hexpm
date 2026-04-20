@@ -2,7 +2,7 @@ defmodule Hexpm.Repository.PackageTest do
   use Hexpm.DataCase
 
   alias Hexpm.Accounts.User
-  alias Hexpm.Repository.{Package, Packages, Repository}
+  alias Hexpm.Repository.{Package, Packages, Releases, Repository}
 
   setup do
     user = insert(:user)
@@ -357,6 +357,71 @@ defmodule Hexpm.Repository.PackageTest do
              |> Enum.map(& &1.id)
   end
 
+  test "reverting a release only removes affected dependant pairs", %{
+    repository: repository,
+    user: user
+  } do
+    dependency = %{
+      insert(:package, name: "dependency", repository_id: repository.id)
+      | repository: repository
+    }
+
+    survivor = %{
+      insert(:package, name: "survivor", repository_id: repository.id)
+      | repository: repository
+    }
+
+    doomed = %{
+      insert(:package, name: "doomed", repository_id: repository.id)
+      | repository: repository
+    }
+
+    shared_packages =
+      for index <- 1..4 do
+        insert(:package, name: "shared#{index}", repository_id: repository.id)
+      end
+
+    survivor_release_one = %{
+      insert(:release, package: survivor, version: "1.0.0")
+      | package: survivor
+    }
+
+    survivor_release_two = %{
+      insert(:release, package: survivor, version: "2.0.0")
+      | package: survivor
+    }
+
+    doomed_release = %{insert(:release, package: doomed, version: "1.0.0") | package: doomed}
+
+    for package <- shared_packages do
+      release = insert(:release, package: package, version: "1.0.0")
+      insert(:requirement, release: release, dependency: dependency, requirement: "~> 1.0")
+    end
+
+    for release <- [survivor_release_one, survivor_release_two, doomed_release] do
+      insert(:requirement, release: release, dependency: dependency, requirement: "~> 1.0")
+    end
+
+    assert 6 = Package.count_dependants([repository], dependency) |> Repo.one!()
+
+    assert ["doomed", "shared1", "shared2", "shared3", "shared4", "survivor"] =
+             dependant_names(repository, dependency)
+
+    assert :ok = Releases.revert(doomed, doomed_release, audit: audit_data(user))
+
+    assert 5 = Package.count_dependants([repository], dependency) |> Repo.one!()
+
+    assert ["shared1", "shared2", "shared3", "shared4", "survivor"] =
+             dependant_names(repository, dependency)
+
+    assert :ok = Releases.revert(survivor, survivor_release_one, audit: audit_data(user))
+
+    assert 5 = Package.count_dependants([repository], dependency) |> Repo.one!()
+
+    assert ["shared1", "shared2", "shared3", "shared4", "survivor"] =
+             dependant_names(repository, dependency)
+  end
+
   test "depends search can return private packages if caller passes a broad repository list", %{
     repository: repository
   } do
@@ -507,6 +572,12 @@ defmodule Hexpm.Repository.PackageTest do
 
   defp search_for(repository, search_term) do
     Package.all([repository], 1, 10, search_term, :name, nil)
+    |> Repo.all()
+    |> Enum.map(& &1.name)
+  end
+
+  defp dependant_names(repository, dependency) do
+    Package.dependants([repository], dependency, 1, 20, :name, nil)
     |> Repo.all()
     |> Enum.map(& &1.name)
   end
