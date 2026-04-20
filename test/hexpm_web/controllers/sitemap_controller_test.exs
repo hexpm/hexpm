@@ -31,6 +31,21 @@ defmodule HexpmWeb.SitemapControllerTest do
     assert response(conn, 200) == expected
   end
 
+  test "GET /docs_sitemap.xml keeps one entry when a package has multiple docs releases", %{
+    package: package
+  } do
+    insert(:release, package: package, version: "0.2.0", has_docs: true)
+
+    conn = get(build_conn(), "/docs_sitemap.xml")
+
+    expected =
+      "docs_sitemap.xml"
+      |> read_fixture()
+      |> String.replace("{package}", package.name)
+
+    assert response(conn, 200) == expected
+  end
+
   test "GET /preview_sitemap.xml", %{package: package} do
     conn = get(build_conn(), "/preview_sitemap.xml")
     assert response(conn, 200) =~ "/preview/#{package.name}/0.1.0/sitemap.xml"

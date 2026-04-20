@@ -15,13 +15,19 @@ defmodule Hexpm.Repository.Sitemaps do
     packages =
       from(
         p in Package,
-        join: r in assoc(p, :releases),
+        as: :package,
         order_by: p.name,
         where: p.repository_id == 1,
         where: not is_nil(p.docs_updated_at),
-        where: r.has_docs,
-        select: {p.name, p.docs_updated_at},
-        distinct: true
+        where:
+          exists(
+            from(r in Release,
+              where: r.package_id == parent_as(:package).id,
+              where: r.has_docs,
+              select: 1
+            )
+          ),
+        select: {p.name, p.docs_updated_at}
       )
       |> Repo.all()
 
