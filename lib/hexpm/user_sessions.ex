@@ -280,29 +280,6 @@ defmodule Hexpm.UserSessions do
   end
 
   @doc """
-  Gets all active browser sessions for a user.
-  """
-  def all_browser_for_user(user) do
-    from(s in UserSession,
-      where: s.user_id == ^user.id and s.type == "browser" and is_nil(s.revoked_at),
-      order_by: [desc: s.inserted_at]
-    )
-    |> Repo.all()
-  end
-
-  @doc """
-  Gets all active OAuth sessions for a user.
-  """
-  def all_oauth_for_user(user) do
-    from(s in UserSession,
-      where: s.user_id == ^user.id and s.type == "oauth" and is_nil(s.revoked_at),
-      order_by: [desc: s.inserted_at],
-      preload: [:client]
-    )
-    |> Repo.all()
-  end
-
-  @doc """
   Revokes a session and all associated tokens (for OAuth sessions).
   """
   def revoke(session, revoke_at \\ nil, opts \\ [])
