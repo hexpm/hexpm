@@ -156,6 +156,22 @@ defmodule Hexpm.Repository.Package do
     )
   end
 
+  def downloaded_package_ids(repositories, view, limit, offset) do
+    repository_ids = Enum.map(repositories, & &1.id)
+
+    from(
+      pd in PackageDownload,
+      join: p in Package,
+      on: p.id == pd.package_id,
+      where: pd.view == ^view,
+      where: p.repository_id in ^repository_ids,
+      order_by: [fragment("? DESC NULLS LAST", pd.downloads)],
+      limit: ^limit,
+      offset: ^offset,
+      select: pd.package_id
+    )
+  end
+
   def count_downloaded_dependants(repositories, dependency, view) do
     repository_ids = Enum.map(repositories, & &1.id)
 
@@ -171,6 +187,19 @@ defmodule Hexpm.Repository.Package do
     )
   end
 
+  def count_downloaded_packages(repositories, view) do
+    repository_ids = Enum.map(repositories, & &1.id)
+
+    from(
+      pd in PackageDownload,
+      join: p in Package,
+      on: p.id == pd.package_id,
+      where: pd.view == ^view,
+      where: p.repository_id in ^repository_ids,
+      select: count()
+    )
+  end
+
   def undownloaded_dependant_ids(repositories, dependency, view, limit, offset) do
     repository_ids = Enum.map(repositories, & &1.id)
 
@@ -179,6 +208,27 @@ defmodule Hexpm.Repository.Package do
       as: :package,
       where: p.repository_id in ^repository_ids,
       where: exists(dependency_exists_query(dependency.id)),
+      where:
+        not exists(
+          from(pd in PackageDownload,
+            where: pd.package_id == parent_as(:package).id,
+            where: pd.view == ^view
+          )
+        ),
+      order_by: p.id,
+      limit: ^limit,
+      offset: ^offset,
+      select: p.id
+    )
+  end
+
+  def undownloaded_package_ids(repositories, view, limit, offset) do
+    repository_ids = Enum.map(repositories, & &1.id)
+
+    from(
+      p in Package,
+      as: :package,
+      where: p.repository_id in ^repository_ids,
       where:
         not exists(
           from(pd in PackageDownload,

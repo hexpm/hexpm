@@ -468,6 +468,39 @@ defmodule Hexpm.Repository.PackageTest do
              |> Enum.map(& &1.id)
   end
 
+  test "search packages by total downloads uses download order and repo scoping", %{
+    repository: repository
+  } do
+    private_repo = insert(:repository)
+    top = insert(:package, name: "top", repository_id: repository.id)
+    middle = insert(:package, name: "middle", repository_id: repository.id)
+    zero = insert(:package, name: "zero", repository_id: repository.id)
+    hidden = insert(:package, name: "hidden", repository_id: private_repo.id)
+
+    insert(:release,
+      package: top,
+      daily_downloads: [build(:download, package_id: top.id, downloads: 10)]
+    )
+
+    insert(:release,
+      package: middle,
+      daily_downloads: [build(:download, package_id: middle.id, downloads: 5)]
+    )
+
+    insert(:release, package: zero)
+
+    insert(:release,
+      package: hidden,
+      daily_downloads: [build(:download, package_id: hidden.id, downloads: 100)]
+    )
+
+    :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
+
+    assert [top.id, middle.id, zero.id] ==
+             Packages.search([repository], 1, 10, nil, :total_downloads, nil)
+             |> Enum.map(& &1.id)
+  end
+
   test "sort packages by recent downloads", %{repository: repository} do
     %{id: ecto_id} = insert(:package, repository_id: repository.id)
     %{id: phoenix_id} = insert(:package, repository_id: repository.id)
@@ -502,6 +535,29 @@ defmodule Hexpm.Repository.PackageTest do
     assert [decimal_id, ecto_id, phoenix_id] ==
              Package.all([repository], 1, 10, nil, :recent_downloads, nil)
              |> Repo.all()
+             |> Enum.map(& &1.id)
+  end
+
+  test "search packages by recent downloads paginates into zero-download packages", %{
+    repository: repository
+  } do
+    top = insert(:package, name: "top", repository_id: repository.id)
+    zero_one = insert(:package, name: "zero_one", repository_id: repository.id)
+    zero_two = insert(:package, name: "zero_two", repository_id: repository.id)
+
+    insert(:release,
+      package: top,
+      daily_downloads: [build(:download, package_id: top.id, downloads: 10)]
+    )
+
+    for package <- [zero_one, zero_two] do
+      insert(:release, package: package)
+    end
+
+    :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
+
+    assert [zero_two.id] ==
+             Packages.search([repository], 2, 2, nil, :recent_downloads, nil)
              |> Enum.map(& &1.id)
   end
 
