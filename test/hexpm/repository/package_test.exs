@@ -561,6 +561,29 @@ defmodule Hexpm.Repository.PackageTest do
              |> Enum.map(& &1.id)
   end
 
+  test "search packages by recent downloads fills first page with zero-download packages", %{
+    repository: repository
+  } do
+    top = insert(:package, name: "top", repository_id: repository.id)
+    zero_one = insert(:package, name: "zero_one", repository_id: repository.id)
+    zero_two = insert(:package, name: "zero_two", repository_id: repository.id)
+
+    insert(:release,
+      package: top,
+      daily_downloads: [build(:download, package_id: top.id, downloads: 10)]
+    )
+
+    for package <- [zero_one, zero_two] do
+      insert(:release, package: package)
+    end
+
+    :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
+
+    assert [top.id, zero_one.id] ==
+             Packages.search([repository], 1, 2, nil, :recent_downloads, nil)
+             |> Enum.map(& &1.id)
+  end
+
   defp search_for(repository, search_term) do
     Package.all([repository], 1, 10, search_term, :name, nil)
     |> Repo.all()
