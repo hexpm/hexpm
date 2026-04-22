@@ -2,12 +2,14 @@ defmodule Hexpm.Repo.Migrations.OptimizePackageDependantsDeleteTrigger do
   use Ecto.Migration
 
   def up() do
-    create table(:package_dependants_deleted_releases, primary_key: false) do
-      add :backend_pid, :bigint, null: false
-      add :xact_id, :bigint, null: false
-      add :release_id, :integer, null: false
-      add :package_id, :integer, null: false
-    end
+    execute("""
+    CREATE UNLOGGED TABLE package_dependants_deleted_releases (
+      backend_pid bigint NOT NULL,
+      xact_id bigint NOT NULL,
+      release_id integer NOT NULL,
+      package_id integer NOT NULL
+    )
+    """)
 
     create unique_index(
              :package_dependants_deleted_releases,
@@ -24,8 +26,7 @@ defmodule Hexpm.Repo.Migrations.OptimizePackageDependantsDeleteTrigger do
         backend_pid, xact_id, release_id, package_id
       )
       VALUES (pg_backend_pid(), txid_current(), OLD.id, OLD.package_id)
-      ON CONFLICT (backend_pid, xact_id, release_id)
-        DO UPDATE SET package_id = EXCLUDED.package_id;
+      ON CONFLICT (backend_pid, xact_id, release_id) DO NOTHING;
       RETURN OLD;
     END;
     $$ LANGUAGE plpgsql;
