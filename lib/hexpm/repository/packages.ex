@@ -123,74 +123,41 @@ defmodule Hexpm.Repository.Packages do
 
   defp dependants_by_downloads(repositories, dependency, page, packages_per_page, sort, fields) do
     view = download_view(sort)
-    offset = (page - 1) * packages_per_page
 
-    downloaded_ids =
-      Package.downloaded_dependant_ids(
-        repositories,
-        dependency,
-        view,
-        packages_per_page,
-        offset
-      )
-      |> Repo.all()
-
-    remaining = packages_per_page - length(downloaded_ids)
-
-    package_ids =
-      if remaining > 0 do
-        downloaded_count =
-          if downloaded_ids == [] and offset > 0 do
-            Repo.one!(Package.count_downloaded_dependants(repositories, dependency, view))
-          else
-            offset + length(downloaded_ids)
-          end
-
-        zero_download_offset = max(offset - downloaded_count, 0)
-
-        zero_download_ids =
-          Package.undownloaded_dependant_ids(
-            repositories,
-            dependency,
-            view,
-            remaining,
-            zero_download_offset
-          )
-          |> Repo.all()
-
-        downloaded_ids ++ zero_download_ids
-      else
-        downloaded_ids
-      end
-
-    load_packages(repositories, package_ids, fields)
+    paginate_by_downloads(repositories, page, packages_per_page, fields,
+      downloaded: &Package.downloaded_dependant_ids(repositories, dependency, view, &1, &2),
+      count: fn -> Package.count_downloaded_dependants(repositories, dependency, view) end,
+      undownloaded: &Package.undownloaded_dependant_ids(repositories, dependency, view, &1, &2)
+    )
   end
 
   defp packages_by_downloads(repositories, page, packages_per_page, sort, fields) do
     view = download_view(sort)
+
+    paginate_by_downloads(repositories, page, packages_per_page, fields,
+      downloaded: &Package.downloaded_package_ids(repositories, view, &1, &2),
+      count: fn -> Package.count_downloaded_packages(repositories, view) end,
+      undownloaded: &Package.undownloaded_package_ids(repositories, view, &1, &2)
+    )
+  end
+
+  defp paginate_by_downloads(repositories, page, packages_per_page, fields, queries) do
     offset = (page - 1) * packages_per_page
 
-    downloaded_ids =
-      Package.downloaded_package_ids(repositories, view, packages_per_page, offset)
-      |> Repo.all()
-
+    downloaded_ids = Repo.all(queries[:downloaded].(packages_per_page, offset))
     remaining = packages_per_page - length(downloaded_ids)
 
     package_ids =
       if remaining > 0 do
         downloaded_count =
           if downloaded_ids == [] and offset > 0 do
-            Repo.one!(Package.count_downloaded_packages(repositories, view))
+            Repo.one!(queries[:count].())
           else
             offset + length(downloaded_ids)
           end
 
         zero_download_offset = max(offset - downloaded_count, 0)
-
-        zero_download_ids =
-          Package.undownloaded_package_ids(repositories, view, remaining, zero_download_offset)
-          |> Repo.all()
-
+        zero_download_ids = Repo.all(queries[:undownloaded].(remaining, zero_download_offset))
         downloaded_ids ++ zero_download_ids
       else
         downloaded_ids
