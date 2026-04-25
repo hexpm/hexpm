@@ -512,11 +512,16 @@ defmodule HexpmWeb.PackageControllerTest do
   end
 
   defp link_text(document, href) do
-    document
-    |> Floki.find(~s(a[href="#{href}"]))
-    |> Floki.text(sep: " ")
-    |> String.replace(~r/\s+/, " ")
-    |> String.trim()
+    case Floki.find(document, ~s(a[href="#{href}"])) do
+      [link | _rest] ->
+        link
+        |> Floki.text(sep: " ")
+        |> String.replace(~r/\s+/, " ")
+        |> String.trim()
+
+      [] ->
+        nil
+    end
   end
 
   defp package_tab_hrefs(document, package_name) do
