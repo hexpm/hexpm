@@ -425,6 +425,50 @@ defmodule HexpmWeb.PackageControllerTest do
 
       assert response(conn, :ok) =~ "Publish documentation"
     end
+
+    test "paginates audit logs 100 per page" do
+      package = insert(:package, name: "Test")
+      base_time = ~U[2024-01-01 00:00:00Z]
+
+      Enum.each(1..101, fn version ->
+        timestamp = DateTime.add(base_time, version, :second)
+
+        insert(:audit_log,
+          action: "release.publish",
+          params: %{
+            "package" => %{"id" => package.id},
+            "release" => %{"version" => "0.0.#{version}"}
+          },
+          inserted_at: timestamp
+        )
+      end)
+
+      first_page =
+        build_conn()
+        |> get("/packages/Test/audit-logs")
+        |> response(:ok)
+
+      {:ok, first_document} = Floki.parse_document(first_page)
+      first_page_activities = table_column_texts(first_document, 2)
+
+      assert "Publish release 0.0.101" in first_page_activities
+      assert "Publish release 0.0.2" in first_page_activities
+      refute "Publish release 0.0.1" in first_page_activities
+      assert first_page =~ "/packages/Test/audit-logs?page=2"
+
+      second_page =
+        build_conn()
+        |> get("/packages/Test/audit-logs?page=2")
+        |> response(:ok)
+
+      {:ok, second_document} = Floki.parse_document(second_page)
+      second_page_activities = table_column_texts(second_document, 2)
+
+      assert "Publish release 0.0.1" in second_page_activities
+      refute "Publish release 0.0.2" in second_page_activities
+      assert current_page(second_document) == "2"
+      assert normalized_text(second_document) =~ "101 total"
+    end
   end
 
   describe "GET /packages/:repository/:name/audit-logs" do
@@ -538,5 +582,34 @@ defmodule HexpmWeb.PackageControllerTest do
     |> Enum.map(&List.first(Floki.attribute(&1, "href")))
     |> Enum.filter(&(&1 in package_paths))
     |> Enum.uniq()
+  end
+
+  defp table_column_texts(document, column_index) do
+    document
+    |> Floki.find("tbody tr")
+    |> Enum.map(fn row ->
+      row
+      |> Floki.find("td")
+      |> Enum.at(column_index - 1)
+      |> case do
+        nil -> nil
+        cell -> Floki.text(cell, sep: " ") |> String.replace(~r/\s+/, " ") |> String.trim()
+      end
+    end)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp current_page(document) do
+    case Floki.find(document, ~s([aria-current="page"])) do
+      [page | _rest] -> Floki.text(page, sep: " ") |> String.trim()
+      [] -> nil
+    end
+  end
+
+  defp normalized_text(document) do
+    document
+    |> Floki.text(sep: " ")
+    |> String.replace(~r/\s+/, " ")
+    |> String.trim()
   end
 end

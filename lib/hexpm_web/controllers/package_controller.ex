@@ -2,7 +2,9 @@ defmodule HexpmWeb.PackageController do
   use HexpmWeb, :controller
 
   @packages_per_page 30
-  @audit_logs_per_page 10
+  @versions_per_page 100
+  @activity_per_page 100
+  @audit_logs_preview_count 10
   @sort_params ~w(name recent_downloads total_downloads inserted_at updated_at)
   @letters for letter <- ?A..?Z, do: <<letter>>
 
@@ -143,7 +145,12 @@ defmodule HexpmWeb.PackageController do
   def versions(conn, params) do
     access_package(conn, params, fn package, repositories ->
       releases = Releases.all(package)
+      page_param = Hexpm.Utils.safe_int(params["page"]) || 1
+      per_page = @versions_per_page
+      total_count = Enum.count(releases)
+      page = Hexpm.Utils.safe_page(page_param, total_count, per_page)
       current_release = current_release(releases)
+      paginated_releases = paginate_list(releases, page, per_page)
 
       dependants_count = Packages.count_dependants(repositories, package)
 
@@ -154,10 +161,14 @@ defmodule HexpmWeb.PackageController do
           title: "#{package.name} versions",
           container: "container",
           package: package,
-          releases: releases,
+          releases: paginated_releases,
+          all_versions: Enum.map(releases, & &1.version),
           current_release: current_release,
           dependants_count: dependants_count,
-          repository_name: package.repository.name
+          repository_name: package.repository.name,
+          page: page,
+          per_page: per_page,
+          releases_total_count: total_count
         ] ++ sidebar_assigns(package, releases, current_release)
       )
     end)
@@ -166,7 +177,7 @@ defmodule HexpmWeb.PackageController do
   def audit_logs(conn, params) do
     access_package(conn, params, fn package, repositories ->
       page_param = Hexpm.Utils.safe_int(params["page"]) || 1
-      per_page = @audit_logs_per_page
+      per_page = @activity_per_page
       total_count = AuditLogs.count_by(package)
       page = Hexpm.Utils.safe_page(page_param, total_count, per_page)
       audit_logs = AuditLogs.all_by(package, page, per_page)
@@ -281,7 +292,7 @@ defmodule HexpmWeb.PackageController do
 
     dependants_count = Packages.count_dependants(repositories, package)
 
-    audit_logs = AuditLogs.all_by(package, 1, @audit_logs_per_page)
+    audit_logs = AuditLogs.all_by(package, 1, @audit_logs_preview_count)
 
     render(
       conn,
@@ -362,6 +373,11 @@ defmodule HexpmWeb.PackageController do
     repositories
     |> Packages.search(page, packages_per_page, search, sort, nil)
     |> Packages.attach_latest_releases()
+  end
+
+  defp paginate_list(list, page, per_page) do
+    offset = (page - 1) * per_page
+    Enum.slice(list, offset, per_page)
   end
 
   defp exact_match(_organizations, nil) do

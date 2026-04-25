@@ -157,6 +157,16 @@ defmodule HexpmWeb.PackageView do
     ~p"/packages/#{package.repository}/#{package}/audit-logs?#{options}"
   end
 
+  def path_for_versions(package, options \\ %{})
+
+  def path_for_versions(%{repository: %{id: 1}} = package, options) do
+    ~p"/packages/#{package}/versions?#{options}"
+  end
+
+  def path_for_versions(package, options) do
+    ~p"/packages/#{package.repository}/#{package}/versions?#{options}"
+  end
+
   def path_for_dependents(package, options \\ %{})
 
   def path_for_dependents(%{repository: %{id: 1}} = package, options) do

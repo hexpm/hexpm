@@ -261,5 +261,19 @@ version_rows =
         </tbody>
       </table>
     </div>
+
+    <%= unless Enum.empty?(@releases) do %>
+      {render(
+        HexpmWeb.SharedView,
+        "_pagination.html",
+        items: @releases,
+        page: @page,
+        total_count: @releases_total_count,
+        per_page: @per_page,
+        unit: "version",
+        units: "versions",
+        path_fn: &path_for_versions(@package, &1)
+      )}
+    <% end %>
   </:inner_content>
 </.package_layout>
