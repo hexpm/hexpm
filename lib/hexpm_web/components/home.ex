@@ -202,13 +202,14 @@ defmodule HexpmWeb.Components.Home do
   """
   attr :description, :string, default: nil
   attr :downloads, :integer, default: nil
+  attr :inserted_at, :any, default: nil
   attr :package, :string, required: true
   attr :version, :string, default: nil
 
   def package_item(assigns) do
     ~H"""
     <li class="py-4 border-b border-grey-100 dark:border-grey-800 last:border-b-0">
-      <div class="flex items-center justify-between gap-4">
+      <div class="flex items-start justify-between gap-4">
         <div class="flex flex-col gap-1 min-w-0">
           <div class="flex items-end gap-2">
             <a
@@ -229,7 +230,14 @@ defmodule HexpmWeb.Components.Home do
           </p>
         </div>
         <span
-          :if={@downloads && is_integer(@downloads) && @downloads > 0}
+          :if={@inserted_at}
+          class="text-grey-500 dark:text-grey-300 text-sm shrink-0 text-right whitespace-nowrap min-w-[4rem] mt-1.5"
+          title={HexpmWeb.ViewHelpers.pretty_date(@inserted_at)}
+        >
+          {HexpmWeb.ViewHelpers.human_relative_time_from_now(@inserted_at)}
+        </span>
+        <span
+          :if={!@inserted_at && @downloads && is_integer(@downloads) && @downloads > 0}
           class="text-grey-600 dark:text-grey-300 text-lg shrink-0 text-center min-w-[4rem]"
         >
           {HexpmWeb.ViewHelpers.human_number_space(@downloads, 3)}
