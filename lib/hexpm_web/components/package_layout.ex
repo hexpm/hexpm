@@ -25,6 +25,7 @@ defmodule HexpmWeb.Components.PackageLayout do
   attr :package, :map, required: true
   attr :current_release, :map, default: nil
   attr :dependants_count, :integer, default: 0
+  attr :versions_count, :integer, default: 0
   attr :repository_name, :string, required: true
   attr :active_tab, :atom, required: true
 
@@ -32,6 +33,7 @@ defmodule HexpmWeb.Components.PackageLayout do
   attr :docs_html_url, :string, default: nil
   attr :downloads, :map, default: %{}
   attr :daily_graph, :list, default: []
+  attr :graph_release, :map, default: nil
   attr :owners, :list, default: []
 
   # Dependants tab data — only loaded on the dependants page
@@ -164,12 +166,21 @@ defmodule HexpmWeb.Components.PackageLayout do
                 {HexpmWeb.ViewIcons.icon(:heroicon, "document-text", class: "size-4.5")}
                 <span>Readme</span>
               </a>
+              <a
+                href={ViewHelpers.path_for_releases(@package)}
+                class={tab_class(@active_tab == :versions)}
+              >
+                {HexpmWeb.ViewIcons.icon(:heroicon, "tag", class: "size-4.5")}
+                <span>
+                  {@versions_count} {pluralize(@versions_count, "Version", "Versions")}
+                </span>
+              </a>
               <%= if @current_release do %>
                 <a
                   href={dependencies_path(@package)}
                   class={tab_class(@active_tab == :dependencies)}
                 >
-                  {HexpmWeb.ViewIcons.icon(:heroicon, "document", class: "size-4.5")}
+                  {HexpmWeb.ViewIcons.icon(:heroicon, "cube", class: "size-4.5")}
                   <span>
                     {@dependency_count} {pluralize(@dependency_count, "Dependency", "Dependencies")}
                   </span>
@@ -179,7 +190,7 @@ defmodule HexpmWeb.Components.PackageLayout do
                 href={dependents_path(@package)}
                 class={tab_class(@active_tab == :dependants)}
               >
-                {HexpmWeb.ViewIcons.icon(:heroicon, "document", class: "size-4.5")}
+                {HexpmWeb.ViewIcons.icon(:heroicon, "puzzle-piece", class: "size-4.5")}
                 <span>
                   {@dependants_count} {pluralize(@dependants_count, "Dependant", "Dependants")}
                 </span>
@@ -190,13 +201,6 @@ defmodule HexpmWeb.Components.PackageLayout do
               >
                 {HexpmWeb.ViewIcons.icon(:heroicon, "clock", class: "size-4.5")}
                 <span>Activity</span>
-              </a>
-              <a
-                href={ViewHelpers.path_for_releases(@package)}
-                class={tab_class(@active_tab == :versions)}
-              >
-                {HexpmWeb.ViewIcons.icon(:heroicon, "arrow-down-tray", class: "size-4.5")}
-                <span>Versions</span>
               </a>
             </div>
 
@@ -283,8 +287,8 @@ defmodule HexpmWeb.Components.PackageLayout do
                       </span>
                       <span class="text-[10px] text-grey-400 dark:text-grey-300">
                         Last 30 days,
-                        <%= if @current_release do %>
-                          {@current_release.version}
+                        <%= if @graph_release do %>
+                          {@graph_release.version}
                         <% else %>
                           all versions
                         <% end %>

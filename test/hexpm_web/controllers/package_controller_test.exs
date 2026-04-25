@@ -239,6 +239,15 @@ defmodule HexpmWeb.PackageControllerTest do
       assert {:ok, document} = Floki.parse_document(html)
       assert link_text(document, "/packages/#{package1.name}/dependents") == "0 Dependants"
       assert link_text(document, "/packages/#{package1.name}/dependencies") == "0 Dependencies"
+      assert link_text(document, "/packages/#{package1.name}/versions") == "3 Versions"
+
+      assert package_tab_hrefs(document, package1.name) == [
+               "/packages/#{package1.name}",
+               "/packages/#{package1.name}/versions",
+               "/packages/#{package1.name}/dependencies",
+               "/packages/#{package1.name}/dependents",
+               "/packages/#{package1.name}/audit-logs"
+             ]
     end
 
     test "show package uses singular dependant label for one dependant", %{package1: package1} do
@@ -435,6 +444,9 @@ defmodule HexpmWeb.PackageControllerTest do
       result = response(conn, 200)
       assert result =~ "0.0.1"
       assert result =~ "0.0.2"
+
+      assert {:ok, document} = Floki.parse_document(result)
+      assert link_text(document, "/packages/#{package1.name}/versions") == "3 Versions"
     end
 
     test "returns 404 for unknown package" do
@@ -505,5 +517,21 @@ defmodule HexpmWeb.PackageControllerTest do
     |> Floki.text(sep: " ")
     |> String.replace(~r/\s+/, " ")
     |> String.trim()
+  end
+
+  defp package_tab_hrefs(document, package_name) do
+    package_paths = [
+      "/packages/#{package_name}",
+      "/packages/#{package_name}/versions",
+      "/packages/#{package_name}/dependencies",
+      "/packages/#{package_name}/dependents",
+      "/packages/#{package_name}/audit-logs"
+    ]
+
+    document
+    |> Floki.find("a")
+    |> Enum.map(&List.first(Floki.attribute(&1, "href")))
+    |> Enum.filter(&(&1 in package_paths))
+    |> Enum.uniq()
   end
 end

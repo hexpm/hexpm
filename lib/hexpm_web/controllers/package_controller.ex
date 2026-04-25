@@ -254,14 +254,14 @@ defmodule HexpmWeb.PackageController do
     start_download_day = Date.add(last_download_day, -30)
     downloads = Downloads.package(package)
 
-    graph_downloads_for =
+    graph_release =
       case type do
-        :package -> package
+        :package -> nil
         :release -> release
       end
 
     graph_downloads =
-      Downloads.for_period(graph_downloads_for, :day, downloads_after: start_download_day)
+      Downloads.for_period(graph_release || package, :day, downloads_after: start_download_day)
 
     graph_downloads = Map.new(graph_downloads, &{Date.from_iso8601!(&1.day), &1})
 
@@ -299,8 +299,10 @@ defmodule HexpmWeb.PackageController do
         owners: owners,
         dependants: dependants,
         dependants_count: dependants_count,
+        versions_count: Enum.count(releases),
         audit_logs: audit_logs,
         daily_graph: daily_graph,
+        graph_release: graph_release,
         type: type
       ] ++ docs_assigns
     )
@@ -335,10 +337,8 @@ defmodule HexpmWeb.PackageController do
     start_download_day = Date.add(last_download_day, -30)
     package_downloads = Downloads.package(package)
 
-    graph_source = current_release || package
-
     graph_downloads =
-      Downloads.for_period(graph_source, :day, downloads_after: start_download_day)
+      Downloads.for_period(package, :day, downloads_after: start_download_day)
 
     graph_downloads = Map.new(graph_downloads, &{Date.from_iso8601!(&1.day), &1})
 
@@ -353,7 +353,8 @@ defmodule HexpmWeb.PackageController do
       docs_html_url: docs_html_url,
       downloads: package_downloads,
       daily_graph: daily_graph,
-      owners: owners
+      owners: owners,
+      versions_count: Enum.count(releases)
     ]
   end
 
