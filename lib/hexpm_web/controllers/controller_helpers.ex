@@ -47,10 +47,14 @@ defmodule HexpmWeb.ControllerHelpers do
   defp maybe_put_resp_header(conn, header, value), do: put_resp_header(conn, header, value)
 
   def render_error(conn, status, assigns \\ []) do
+    assigns =
+      assigns
+      |> Map.new()
+      |> Map.put_new(:error, true)
+      |> Map.put_new(:status, status)
+
     conn
     |> put_status(status)
-    |> put_layout(false)
-    |> put_root_layout(false)
     |> put_view(HexpmWeb.ErrorView)
     |> render(:"#{status}", assigns)
     |> halt()

@@ -25,7 +25,12 @@ config :bcrypt_elixir, log_rounds: 4
 config :hexpm, HexpmWeb.Endpoint,
   url: [host: "localhost"],
   root: Path.dirname(__DIR__),
-  render_errors: [view: HexpmWeb.ErrorView, accepts: ~w(html json elixir erlang)],
+  render_errors: [
+    view: HexpmWeb.ErrorView,
+    accepts: ~w(html json elixir erlang),
+    root_layout: {HexpmWeb.LayoutView, :root},
+    layout: {HexpmWeb.LayoutView, :app}
+  ],
   pubsub_server: Hexpm.PubSub
 
 config :hexpm, Hexpm.RepoBase,

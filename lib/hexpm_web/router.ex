@@ -418,6 +418,14 @@ defmodule HexpmWeb.Router do
     end
   end
 
+  if Mix.env() == :test do
+    scope "/_test", HexpmWeb do
+      pipe_through :browser
+
+      get "/raise", TestController, :raise_error
+    end
+  end
+
   scope "/" do
     pipe_through [:browser, :admin]
     live_dashboard("/db", metrics: HexpmWeb.Telemetry)
