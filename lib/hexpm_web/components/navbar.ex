@@ -109,7 +109,7 @@ defmodule HexpmWeb.Components.Navbar do
     <a
       :if={!@current_user}
       href={~p"/login"}
-      class="inline-flex items-center justify-center bg-grey-400 px-6 py-1 rounded-lg text-white text-md hover:bg-grey-500 hover:scale-105 transition-all duration-200"
+      class="inline-flex items-center justify-center whitespace-nowrap bg-grey-400 px-6 py-1 rounded-lg text-white text-md hover:bg-grey-500 hover:scale-105 transition-all duration-200"
     >
       Log In
     </a>
@@ -295,7 +295,7 @@ defmodule HexpmWeb.Components.Navbar do
 
   defp search_form(assigns) do
     ~H"""
-    <form role="search" action={~p"/packages"} class="shrink-0 w-[420px] mr-auto">
+    <form role="search" action={~p"/packages"} class="min-w-0 flex-1 max-w-[420px] mr-auto">
       <div class="relative flex items-center">
         <div class="absolute left-3 pointer-events-none">
           {icon(:heroicon, "magnifying-glass", width: 18, height: 18, class: "text-grey-300")}

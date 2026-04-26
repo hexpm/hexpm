@@ -156,12 +156,12 @@
         <div>
           <.package_column_header color="green" icon="sparkles" title="New Packages" />
           <ul class="flex flex-col">
-            <%= for {package, _inserted_at, %PackageMetadata{} = meta, version, downloads} <- @package_new do %>
+            <%= for {package, inserted_at, %PackageMetadata{} = meta, version, _downloads} <- @package_new do %>
               <.package_item
                 description={meta.description}
                 package={package}
                 version={version && to_string(version)}
-                downloads={downloads}
+                inserted_at={inserted_at}
               />
             <% end %>
           </ul>
@@ -171,12 +171,12 @@
         <div>
           <.package_column_header color="blue" icon="arrow-path" title="Recently Updated" />
           <ul class="flex flex-col">
-            <%= for {package, version, _inserted_at, %PackageMetadata{} = meta, downloads} <- @releases_new do %>
+            <%= for {package, version, inserted_at, %PackageMetadata{} = meta, _downloads} <- @releases_new do %>
               <.package_item
                 description={meta.description}
                 package={package}
                 version={to_string(version)}
-                downloads={downloads}
+                inserted_at={inserted_at}
               />
             <% end %>
           </ul>

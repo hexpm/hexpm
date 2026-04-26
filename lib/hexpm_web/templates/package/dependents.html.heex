@@ -8,14 +8,15 @@
   owners={@owners}
   package={@package}
   repository_name={@repository_name}
+  versions_count={@versions_count}
 >
   <:inner_content>
     <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-xl overflow-hidden">
-      <div class="px-5 py-4 border-b border-grey-200 dark:border-grey-700 flex items-center justify-between">
-        <h2 class="text-grey-900 dark:text-grey-100 text-xl font-semibold">
+      <div class="px-5 py-4 border-b border-grey-200 dark:border-grey-700 flex flex-col items-start gap-1.5 sm:flex-row sm:items-center sm:justify-between">
+        <h2 class="text-grey-900 dark:text-grey-100 text-xl font-semibold leading-tight">
           Packages depending on <span class="font-mono">{@package.name}</span>
         </h2>
-        <span class="text-sm text-grey-400 dark:text-grey-300">
+        <span class="text-sm text-grey-400 dark:text-grey-300 sm:shrink-0">
           {@dependants_count} {if @dependants_count == 1, do: "package", else: "packages"}
         </span>
       </div>

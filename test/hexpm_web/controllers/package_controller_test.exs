@@ -239,6 +239,17 @@ defmodule HexpmWeb.PackageControllerTest do
       assert {:ok, document} = Floki.parse_document(html)
       assert link_text(document, "/packages/#{package1.name}/dependents") == "0 Dependants"
       assert link_text(document, "/packages/#{package1.name}/dependencies") == "0 Dependencies"
+      assert link_text(document, "/packages/#{package1.name}/versions") == "3 Versions"
+
+      assert package_tab_hrefs(document, package1.name) == [
+               "/packages/#{package1.name}",
+               "/packages/#{package1.name}/versions",
+               "/packages/#{package1.name}/dependencies",
+               "/packages/#{package1.name}/dependents",
+               "/packages/#{package1.name}/audit-logs"
+             ]
+
+      assert [_ | _] = Floki.find(document, "details summary.package-tabs-mobile-trigger")
     end
 
     test "show package uses singular dependant label for one dependant", %{package1: package1} do
@@ -416,6 +427,50 @@ defmodule HexpmWeb.PackageControllerTest do
 
       assert response(conn, :ok) =~ "Publish documentation"
     end
+
+    test "paginates audit logs 100 per page" do
+      package = insert(:package, name: "Test")
+      base_time = ~U[2024-01-01 00:00:00Z]
+
+      Enum.each(1..101, fn version ->
+        timestamp = DateTime.add(base_time, version, :second)
+
+        insert(:audit_log,
+          action: "release.publish",
+          params: %{
+            "package" => %{"id" => package.id},
+            "release" => %{"version" => "0.0.#{version}"}
+          },
+          inserted_at: timestamp
+        )
+      end)
+
+      first_page =
+        build_conn()
+        |> get("/packages/Test/audit-logs")
+        |> response(:ok)
+
+      {:ok, first_document} = Floki.parse_document(first_page)
+      first_page_activities = table_column_texts(first_document, 2)
+
+      assert "Publish release 0.0.101" in first_page_activities
+      assert "Publish release 0.0.2" in first_page_activities
+      refute "Publish release 0.0.1" in first_page_activities
+      assert first_page =~ "/packages/Test/audit-logs?page=2"
+
+      second_page =
+        build_conn()
+        |> get("/packages/Test/audit-logs?page=2")
+        |> response(:ok)
+
+      {:ok, second_document} = Floki.parse_document(second_page)
+      second_page_activities = table_column_texts(second_document, 2)
+
+      assert "Publish release 0.0.1" in second_page_activities
+      refute "Publish release 0.0.2" in second_page_activities
+      assert current_page(second_document) == "2"
+      assert normalized_text(second_document) =~ "101 total"
+    end
   end
 
   describe "GET /packages/:repository/:name/audit-logs" do
@@ -435,6 +490,9 @@ defmodule HexpmWeb.PackageControllerTest do
       result = response(conn, 200)
       assert result =~ "0.0.1"
       assert result =~ "0.0.2"
+
+      assert {:ok, document} = Floki.parse_document(result)
+      assert link_text(document, "/packages/#{package1.name}/versions") == "3 Versions"
     end
 
     test "returns 404 for unknown package" do
@@ -499,9 +557,61 @@ defmodule HexpmWeb.PackageControllerTest do
     insert(:requirement, release: release, dependency: package, requirement: "~> 0.0.1")
   end
 
+  # Tabs render in both the mobile (<details>) and desktop nav, so a single href
+  # appears multiple times. Return the text of just the first match.
   defp link_text(document, href) do
+    case Floki.find(document, ~s(a[href="#{href}"])) do
+      [link | _rest] ->
+        link
+        |> Floki.text(sep: " ")
+        |> String.replace(~r/\s+/, " ")
+        |> String.trim()
+
+      [] ->
+        nil
+    end
+  end
+
+  defp package_tab_hrefs(document, package_name) do
+    package_paths = [
+      "/packages/#{package_name}",
+      "/packages/#{package_name}/versions",
+      "/packages/#{package_name}/dependencies",
+      "/packages/#{package_name}/dependents",
+      "/packages/#{package_name}/audit-logs"
+    ]
+
     document
-    |> Floki.find(~s(a[href="#{href}"]))
+    |> Floki.find("a")
+    |> Enum.map(&List.first(Floki.attribute(&1, "href")))
+    |> Enum.filter(&(&1 in package_paths))
+    |> Enum.uniq()
+  end
+
+  defp table_column_texts(document, column_index) do
+    document
+    |> Floki.find("tbody tr")
+    |> Enum.map(fn row ->
+      row
+      |> Floki.find("td")
+      |> Enum.at(column_index - 1)
+      |> case do
+        nil -> nil
+        cell -> Floki.text(cell, sep: " ") |> String.replace(~r/\s+/, " ") |> String.trim()
+      end
+    end)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp current_page(document) do
+    case Floki.find(document, ~s([aria-current="page"])) do
+      [page | _rest] -> Floki.text(page, sep: " ") |> String.trim()
+      [] -> nil
+    end
+  end
+
+  defp normalized_text(document) do
+    document
     |> Floki.text(sep: " ")
     |> String.replace(~r/\s+/, " ")
     |> String.trim()
