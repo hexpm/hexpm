@@ -156,12 +156,11 @@
         <div>
           <.package_column_header color="green" icon="sparkles" title="New Packages" />
           <ul class="flex flex-col">
-            <%= for {package, inserted_at, %PackageMetadata{} = meta, version, downloads} <- @package_new do %>
+            <%= for {package, inserted_at, %PackageMetadata{} = meta, version, _downloads} <- @package_new do %>
               <.package_item
                 description={meta.description}
                 package={package}
                 version={version && to_string(version)}
-                downloads={downloads}
                 inserted_at={inserted_at}
               />
             <% end %>

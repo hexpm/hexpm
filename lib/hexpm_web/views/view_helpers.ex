@@ -285,11 +285,13 @@ defmodule HexpmWeb.ViewHelpers do
   end
 
   def human_relative_time_from_now(datetime) do
+    content_tag(:span, human_relative_time_from_now_text(datetime), title: pretty_date(datetime))
+  end
+
+  def human_relative_time_from_now_text(datetime) do
     ts = NaiveDateTime.to_erl(datetime) |> :calendar.datetime_to_gregorian_seconds()
     diff = :calendar.datetime_to_gregorian_seconds(:calendar.universal_time()) - ts
-    rel = rel_from_now(:calendar.seconds_to_daystime(diff))
-
-    content_tag(:span, rel, title: pretty_date(datetime))
+    rel_from_now(:calendar.seconds_to_daystime(diff))
   end
 
   defp rel_from_now({0, {0, 0, sec}}) when sec < 30, do: "about now"

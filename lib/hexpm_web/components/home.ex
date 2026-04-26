@@ -234,7 +234,7 @@ defmodule HexpmWeb.Components.Home do
           class="text-grey-500 dark:text-grey-300 text-sm shrink-0 text-right whitespace-nowrap min-w-[4rem] mt-1.5"
           title={HexpmWeb.ViewHelpers.pretty_date(@inserted_at)}
         >
-          {HexpmWeb.ViewHelpers.human_relative_time_from_now(@inserted_at)}
+          {HexpmWeb.ViewHelpers.human_relative_time_from_now_text(@inserted_at)}
         </span>
         <span
           :if={!@inserted_at && @downloads && is_integer(@downloads) && @downloads > 0}

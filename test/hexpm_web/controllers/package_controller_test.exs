@@ -248,6 +248,8 @@ defmodule HexpmWeb.PackageControllerTest do
                "/packages/#{package1.name}/dependents",
                "/packages/#{package1.name}/audit-logs"
              ]
+
+      assert [_ | _] = Floki.find(document, "details summary.package-tabs-mobile-trigger")
     end
 
     test "show package uses singular dependant label for one dependant", %{package1: package1} do
@@ -555,6 +557,8 @@ defmodule HexpmWeb.PackageControllerTest do
     insert(:requirement, release: release, dependency: package, requirement: "~> 0.0.1")
   end
 
+  # Tabs render in both the mobile (<details>) and desktop nav, so a single href
+  # appears multiple times. Return the text of just the first match.
   defp link_text(document, href) do
     case Floki.find(document, ~s(a[href="#{href}"])) do
       [link | _rest] ->
