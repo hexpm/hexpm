@@ -49,6 +49,29 @@ if (document.getElementById("username")) {
   document.getElementById("code").focus();
 }
 
+// Position CSS tooltips with viewport-relative coordinates so they can escape
+// ancestor overflow containers (the .tooltip pseudo-elements use position: fixed).
+function positionTooltip(el) {
+  const rect = el.getBoundingClientRect();
+  el.style.setProperty("--tooltip-x", `${rect.left + rect.width / 2}px`);
+  el.style.setProperty("--tooltip-y", `${rect.top}px`);
+}
+
+document.addEventListener("mouseover", function (e) {
+  if (!(e.target instanceof Element)) return;
+  const tooltip = e.target.closest(".tooltip");
+  if (!tooltip) return;
+  const from = e.relatedTarget instanceof Element ? e.relatedTarget.closest(".tooltip") : null;
+  if (from === tooltip) return;
+  positionTooltip(tooltip);
+});
+
+document.addEventListener("focusin", function (e) {
+  if (!(e.target instanceof Element)) return;
+  const tooltip = e.target.closest(".tooltip");
+  if (tooltip) positionTooltip(tooltip);
+});
+
 // Auto-format device verification code input
 const userCodeInput = document.getElementById("user_code");
 if (userCodeInput) {
