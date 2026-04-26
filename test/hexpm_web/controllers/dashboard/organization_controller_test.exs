@@ -107,6 +107,20 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert response(conn, 200) =~ "Public profile"
       refute response(conn, 200) =~ "Billing"
     end
+
+    test "profile form submits under profile key", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      mock_customer(organization)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}")
+
+      body = response(conn, 200)
+      assert body =~ ~s(name="profile[full_name]")
+      refute body =~ ~s(name="user[full_name]")
+    end
   end
 
   describe "GET /dashboard/orgs/:dashboard_org/members" do
@@ -1389,6 +1403,29 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Profile updated successfully."
+    end
+
+    test "saves and re-renders public_email and gravatar_email", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "admin")
+      mock_customer(c.organization)
+
+      build_conn()
+      |> test_login(c.user)
+      |> post("/dashboard/orgs/#{c.organization.name}/profile", %{
+        profile: %{
+          public_email: "public@example.com",
+          gravatar_email: "gravatar@example.com"
+        }
+      })
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> get("/dashboard/orgs/#{c.organization.name}")
+
+      body = response(conn, 200)
+      assert body =~ ~s(name="profile[public_email]" value="public@example.com")
+      assert body =~ ~s(name="profile[gravatar_email]" value="gravatar@example.com")
     end
 
     test "when update fails", c do

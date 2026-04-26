@@ -59,16 +59,23 @@ defmodule HexpmWeb.Components.Form do
   attr :action, :string, required: true
   attr :for, :any, default: %{}
   attr :method, :string, default: "post"
+  attr :as, :atom, default: nil
   attr :rest, :global, include: ~w(id class phx-hook)
   slot :inner_block, required: true
 
   def sudo_form(assigns) do
     token_method = assigns.method |> String.upcase()
     sudo_token = Sudo.generate_form_token(assigns.current_user.id, token_method, assigns.action)
-    assigns = assign(assigns, :sudo_token, sudo_token)
+
+    form_opts =
+      [method: assigns.method] ++
+        if(assigns.as, do: [as: assigns.as], else: []) ++
+        Map.to_list(assigns.rest)
+
+    assigns = assigns |> assign(:sudo_token, sudo_token) |> assign(:form_opts, form_opts)
 
     ~H"""
-    <%= form_for @for, @action, [method: @method] ++ Map.to_list(@rest), fn f -> %>
+    <%= form_for @for, @action, @form_opts, fn f -> %>
       <input type="hidden" name="_sudo_token" value={@sudo_token} />
       {render_slot(@inner_block, f)}
     <% end %>
