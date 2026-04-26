@@ -66,6 +66,19 @@ defmodule Hexpm.Permissions do
     end
   end
 
+  @doc """
+  Expands the full API scope into the granular API scopes used for interactive
+  authorization.
+  """
+  def expand_api_scope(scopes) when is_list(scopes) do
+    scopes
+    |> Enum.flat_map(fn
+      "api" -> ["api:read", "api:write"]
+      scope -> [scope]
+    end)
+    |> Enum.uniq()
+  end
+
   defp valid_scope?(scope) do
     case String.split(scope, ":", parts: 2) do
       [scope_name] ->

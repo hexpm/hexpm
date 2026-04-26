@@ -38,6 +38,9 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert response["verification_uri_complete"]
       assert response["expires_in"] in 599..600
       assert response["interval"] == 5
+
+      device_code = Repo.get_by(Hexpm.OAuth.DeviceCode, device_code: response["device_code"])
+      assert device_code.scopes == ["api:read", "api:write"]
     end
 
     test "handles multiple scopes", %{client: client} do
@@ -195,7 +198,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert response["access_token"]
       assert response["token_type"] == "bearer"
       assert response["expires_in"] > 0
-      assert response["scope"] == "api"
+      assert response["scope"] == "api:read api:write"
     end
 
     test "returns error for invalid grant type", %{client: client, response: response} do
@@ -301,7 +304,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert response["refresh_token"]
       assert response["token_type"] == "bearer"
       assert response["expires_in"] > 0
-      assert response["scope"] == "api"
+      assert response["scope"] == "api:read api:write"
 
       # New tokens should be different
       refute response["access_token"] == refresh_token
