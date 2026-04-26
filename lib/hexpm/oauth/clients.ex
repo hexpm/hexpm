@@ -76,8 +76,13 @@ defmodule Hexpm.OAuth.Clients do
   """
   def supports_scopes?(%Client{allowed_scopes: allowed_scopes}, requested_scopes) do
     Enum.all?(requested_scopes, fn scope ->
-      scope in allowed_scopes or resource_scope_allowed_by_base?(scope, allowed_scopes)
+      scope in allowed_scopes or api_scope_allowed_by_full_api?(scope, allowed_scopes) or
+        resource_scope_allowed_by_base?(scope, allowed_scopes)
     end)
+  end
+
+  defp api_scope_allowed_by_full_api?(scope, allowed_scopes) do
+    scope in ["api:read", "api:write"] and "api" in allowed_scopes
   end
 
   # Check if a resource-specific scope (e.g., "docs:acme") is allowed

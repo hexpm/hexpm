@@ -92,6 +92,26 @@ defmodule HexpmWeb.OAuthControllerTest do
       assert html =~ "repositories"
     end
 
+    test "expands full api scope on authorization page", %{client: client} do
+      user = insert(:user)
+      conn = login_user(build_conn(), user)
+
+      conn =
+        get(conn, ~p"/oauth/authorize", %{
+          "client_id" => client.client_id,
+          "redirect_uri" => "https://example.com/callback",
+          "scope" => "api repositories",
+          "state" => "test_state",
+          "code_challenge" => "challenge123",
+          "code_challenge_method" => "S256"
+        })
+
+      html = html_response(conn, 200)
+      assert html =~ "api:read"
+      assert html =~ "api:write"
+      assert html =~ "repositories"
+    end
+
     test "CSP form-action includes redirect URI origin", %{client: client} do
       user = insert(:user)
       conn = login_user(build_conn(), user)
@@ -164,6 +184,27 @@ defmodule HexpmWeb.OAuthControllerTest do
       # Verify authorization code was created with only selected scopes
       auth_code = Repo.get_by(Hexpm.OAuth.AuthorizationCode, client_id: client.client_id)
       assert auth_code
+      assert auth_code.scopes == ["api:read", "repositories"]
+    end
+
+    test "approves read scope from full api request without 2FA", %{client: client, user: user} do
+      conn = login_user(build_conn(), user)
+
+      conn =
+        post(conn, ~p"/oauth/authorize", %{
+          "client_id" => client.client_id,
+          "redirect_uri" => "https://example.com/callback",
+          "scope" => "api repositories",
+          "state" => "test_state",
+          "code_challenge" => "challenge123",
+          "code_challenge_method" => "S256",
+          "action" => "approve",
+          "selected_scopes" => ["api:read", "repositories"]
+        })
+
+      assert redirected_to(conn) =~ "https://example.com/callback?code="
+
+      auth_code = Repo.get_by(Hexpm.OAuth.AuthorizationCode, client_id: client.client_id)
       assert auth_code.scopes == ["api:read", "repositories"]
     end
 

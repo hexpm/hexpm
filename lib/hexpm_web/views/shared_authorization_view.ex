@@ -102,6 +102,7 @@ defmodule HexpmWeb.SharedAuthorizationView do
             name="selected_scopes[]"
             value={@scope}
             checked={@checked}
+            disabled={@disabled}
             class="scope-checkbox"
           />
           <div class="scope-content">

@@ -44,7 +44,7 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
 
       assert response.client_id == client.client_id
       assert response.status == "pending"
-      assert response.scopes == ["api"]
+      assert response.scopes == ["api:read", "api:write"]
     end
 
     test "creates device code with custom scopes" do

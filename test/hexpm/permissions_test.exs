@@ -42,6 +42,20 @@ defmodule Hexpm.PermissionsTest do
     end
   end
 
+  describe "expand_api_scope/1" do
+    test "expands full api scope into read and write scopes" do
+      assert Permissions.expand_api_scope(["api", "repositories"]) == [
+               "api:read",
+               "api:write",
+               "repositories"
+             ]
+    end
+
+    test "keeps explicit api scopes without duplicates" do
+      assert Permissions.expand_api_scope(["api:read", "api"]) == ["api:read", "api:write"]
+    end
+  end
+
   describe "resource-specific package scopes" do
     setup do
       repository = %{name: "hexpm"}

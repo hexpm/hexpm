@@ -2,6 +2,7 @@ defmodule Hexpm.OAuth.DeviceCodes do
   use Hexpm.Context
 
   alias Hexpm.OAuth.{DeviceCode, Token, Tokens}
+  alias Hexpm.Permissions
   alias Hexpm.UserSessions
 
   @default_device_code_expiry_seconds 10 * 60
@@ -13,6 +14,7 @@ defmodule Hexpm.OAuth.DeviceCodes do
   for the client to display to the user.
   """
   def initiate_device_authorization(conn, client_id, scopes, opts \\ []) do
+    scopes = Permissions.expand_api_scope(scopes)
     device_code = generate_device_code()
     user_code = generate_user_code()
     expires_at = DateTime.add(DateTime.utc_now(), @default_device_code_expiry_seconds, :second)
