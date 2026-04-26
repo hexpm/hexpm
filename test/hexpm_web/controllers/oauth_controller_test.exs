@@ -110,6 +110,13 @@ defmodule HexpmWeb.OAuthControllerTest do
       assert html =~ "api:read"
       assert html =~ "api:write"
       assert html =~ "repositories"
+
+      assert {:ok, document} = Floki.parse_document(html)
+
+      assert [{"input", attrs, _}] =
+               Floki.find(document, ~s(input[value="api:write"][name="selected_scopes[]"]))
+
+      assert {"disabled", "disabled"} in attrs
     end
 
     test "CSP form-action includes redirect URI origin", %{client: client} do
