@@ -585,7 +585,7 @@ defmodule Hexpm.Permissions do
         "Read-only access to your Hex account and packages. Allows viewing packages, account information, organizations, and audit logs. Cannot modify any data."
 
       "api:write" ->
-        "Read and write access to your Hex account and packages. Includes: publish, unpublish, retire, and unretire packages; manage package owners; manage API keys."
+        "Write access to your Hex account and packages. Includes: publish, unpublish, retire, and unretire packages; manage package owners; manage API keys."
 
       "repositories" ->
         "Access to fetch packages from all private repositories you belong to. Does not grant ability to publish packages or modify repository settings."

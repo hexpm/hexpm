@@ -281,7 +281,7 @@ defmodule Hexpm.PermissionsTest do
     test "provides descriptions for all basic scopes" do
       assert Permissions.scope_description("api") =~ "Complete access"
       assert Permissions.scope_description("api:read") =~ "Read-only access"
-      assert Permissions.scope_description("api:write") =~ "Read and write access"
+      assert Permissions.scope_description("api:write") =~ "Write access"
       assert Permissions.scope_description("repositories") =~ "private repositories"
       # package and docs are no longer simple scopes - they require resources
     end
