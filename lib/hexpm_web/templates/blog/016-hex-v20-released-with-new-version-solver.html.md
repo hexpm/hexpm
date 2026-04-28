@@ -24,4 +24,4 @@ We are planning to replace the current HTTP client in Hex that uses [httpc](http
 
 SSO login with initial support for Okta and Google is also on the roadmap. Along with that we will be adding web authentication for the CLI to support SSO and 2FA.
 
-If you would like to contribute to any of these features or have other improvements you want to work on then you can find the Hex team in the #hex channel on the [Elixir slack](https://elixir-slackin.herokuapp.com/) or find us on GitHub at [github.com/hexpm/hexpm](https://github.com/hexpm/hexpm) or [github.com/hexpm/hex](https://github.com/hexpm/hex).
+If you would like to contribute to any of these features or have other improvements you want to work on then you can find the Hex team in the #hex channel on the [Elixir slack](https://elixir-slack.community) or find us on GitHub at [github.com/hexpm/hexpm](https://github.com/hexpm/hexpm) or [github.com/hexpm/hex](https://github.com/hexpm/hex).

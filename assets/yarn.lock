@@ -2113,6 +2113,11 @@ mini-css-extract-plugin@^2.8.1:
     schema-utils "^4.0.0"
     tapable "^2.2.1"
 
+morphdom@2.7.7:
+  version "2.7.7"
+  resolved "https://registry.yarnpkg.com/morphdom/-/morphdom-2.7.7.tgz#72559af781357a4eb2169a0a578acb76ff7e8abf"
+  integrity sha512-04GmsiBcalrSCNmzfo+UjU8tt3PhZJKzcOy+r1FlGA7/zri8wre3I1WkYN9PT3sIeIKfW9bpyElA+VzOg2E24g==
+
 ms@2.1.2:
   version "2.1.2"
   resolved "https://registry.yarnpkg.com/ms/-/ms-2.1.2.tgz#d09d1f357b443f493382a8eb3ccd183872ae6009"
@@ -2199,13 +2204,15 @@ path-parse@^1.0.7:
   integrity sha512-LDJzPVEEEPR+y48z93A0Ed0yXb8pAByGWo/k5YYdYgpY2/2EsOsksJrq7lOHxryrVOn1ejG6oAp8ahvOIQD8sw==
 
 "phoenix@file:../deps/phoenix":
-  version "1.7.18"
+  version "1.8.1"
 
 "phoenix_html@file:../deps/phoenix_html":
-  version "4.1.0"
+  version "4.3.0"
 
 "phoenix_live_view@file:../deps/phoenix_live_view":
-  version "1.0.1"
+  version "1.1.16"
+  dependencies:
+    morphdom "2.7.7"
 
 picocolors@^1.0.0:
   version "1.0.0"

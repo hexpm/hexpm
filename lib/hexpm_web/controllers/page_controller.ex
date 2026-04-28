@@ -10,6 +10,7 @@ defmodule HexpmWeb.PageController do
       container: "",
       custom_flash: true,
       hide_search: true,
+      conn: conn,
       num_packages: Packages.count(),
       num_releases: Releases.count(),
       package_top: Downloads.top_packages(hexpm, "recent", 8),

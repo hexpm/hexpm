@@ -1,6 +1,12 @@
 <%= ViewHelpers.changeset_error(@changeset) %>
 <h2>Sign up</h2>
 
+<a href="<%= ~p"/auth/github" %>" class="btn btn-default btn-block" style="margin-bottom: 20px;">
+  Sign up with GitHub
+</a>
+
+<div style="text-align: center; margin: 20px 0; color: #999;">or</div>
+
 <%= form_for @changeset, ~p"/signup", fn f -> %>
   <div class="form-group">
     <%= label f, :full_name %>

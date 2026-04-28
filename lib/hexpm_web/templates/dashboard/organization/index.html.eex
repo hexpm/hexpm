@@ -92,7 +92,7 @@
                 <%= label f, :slack %>
                 <%= ViewHelpers.text_input f, :slack, placeholder: "Your organization's nickname on Elixir Slack channel" %>
                 <span class="help-block">Elixir Slack channel:
-                  <a href="https://elixir-slackin.herokuapp.com">elixir-slackin.herokuapp.com</a>
+                  <a href="https://elixir-slack.community">elixir-slack.community</a>
                 </span>
                 <%= ViewHelpers.error_tag f, :slack %>
               </div>

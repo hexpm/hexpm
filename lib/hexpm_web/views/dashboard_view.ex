@@ -4,7 +4,6 @@ defmodule HexpmWeb.DashboardView do
   defp account_settings() do
     [
       profile: {"Profile", ~p"/dashboard/profile"},
-      password: {"Password", ~p"/dashboard/password"},
       security: {"Security", ~p"/dashboard/security"},
       email: {"Emails", ~p"/dashboard/email"},
       keys: {"Keys", ~p"/dashboard/keys"},
@@ -162,6 +161,14 @@ defmodule HexpmWeb.DashboardView do
 
   def humanize_audit_log_info(%AuditLog{action: "password.update"}) do
     "Update password"
+  end
+
+  def humanize_audit_log_info(%AuditLog{action: "password.add"}) do
+    "Add password"
+  end
+
+  def humanize_audit_log_info(%AuditLog{action: "password.remove"}) do
+    "Remove password"
   end
 
   def humanize_audit_log_info(%AuditLog{action: "billing.checkout", params: params}) do
