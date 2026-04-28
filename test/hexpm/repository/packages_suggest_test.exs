@@ -152,7 +152,8 @@ defmodule Hexpm.Repository.PackagesSuggestTest do
       assert result.name == "ecto"
       assert result.repository_id == repository.id
       assert is_binary(result.href)
-      assert is_binary(result.name_html)
+      assert {:safe, name_html} = result.name_html
+      assert name_html =~ "ecto"
       assert result.latest_version == "1.0.0"
       assert is_integer(result.recent_downloads)
     end

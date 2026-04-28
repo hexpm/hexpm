@@ -14,9 +14,7 @@ defmodule HexpmWeb.SearchSuggestionsLiveTest do
   describe "home variant" do
     test "renders the search input", %{conn: conn} do
       {:ok, _view, html} =
-        live_isolated(conn, HexpmWeb.SearchSuggestionsLive,
-          session: %{"variant" => "home"}
-        )
+        live_isolated(conn, HexpmWeb.SearchSuggestionsLive, session: %{"variant" => "home"})
 
       assert html =~ ~s(id="home-search-input")
       assert html =~ ~s(role="combobox")
@@ -28,9 +26,7 @@ defmodule HexpmWeb.SearchSuggestionsLiveTest do
       insert(:package, name: "phoenix_live_dashboard")
 
       {:ok, view, _html} =
-        live_isolated(conn, HexpmWeb.SearchSuggestionsLive,
-          session: %{"variant" => "home"}
-        )
+        live_isolated(conn, HexpmWeb.SearchSuggestionsLive, session: %{"variant" => "home"})
 
       html = view |> element("form") |> render_change(%{"search" => "phoenix"})
 
@@ -43,9 +39,7 @@ defmodule HexpmWeb.SearchSuggestionsLiveTest do
       insert(:package, name: "phoenix_html")
 
       {:ok, view, _html} =
-        live_isolated(conn, HexpmWeb.SearchSuggestionsLive,
-          session: %{"variant" => "home"}
-        )
+        live_isolated(conn, HexpmWeb.SearchSuggestionsLive, session: %{"variant" => "home"})
 
       view |> element("form") |> render_change(%{"search" => "phoenix"})
       html = view |> element("form") |> render_change(%{"search" => ""})
@@ -58,9 +52,7 @@ defmodule HexpmWeb.SearchSuggestionsLiveTest do
       insert(:package, name: "plug_crypto")
 
       {:ok, view, _html} =
-        live_isolated(conn, HexpmWeb.SearchSuggestionsLive,
-          session: %{"variant" => "home"}
-        )
+        live_isolated(conn, HexpmWeb.SearchSuggestionsLive, session: %{"variant" => "home"})
 
       view |> element("form") |> render_change(%{"search" => "plug"})
 
@@ -73,9 +65,7 @@ defmodule HexpmWeb.SearchSuggestionsLiveTest do
       insert(:package, name: "ecto")
 
       {:ok, view, _html} =
-        live_isolated(conn, HexpmWeb.SearchSuggestionsLive,
-          session: %{"variant" => "home"}
-        )
+        live_isolated(conn, HexpmWeb.SearchSuggestionsLive, session: %{"variant" => "home"})
 
       # Type "ecto" to get suggestions but do NOT press ArrowDown
       view |> element("form") |> render_change(%{"search" => "ecto"})
@@ -89,9 +79,7 @@ defmodule HexpmWeb.SearchSuggestionsLiveTest do
       insert(:package, name: "ecto")
 
       {:ok, view, _html} =
-        live_isolated(conn, HexpmWeb.SearchSuggestionsLive,
-          session: %{"variant" => "home"}
-        )
+        live_isolated(conn, HexpmWeb.SearchSuggestionsLive, session: %{"variant" => "home"})
 
       view |> element("form") |> render_change(%{"search" => "ecto"})
       view |> element("input[phx-keydown]") |> render_keydown(%{"key" => "ArrowDown"})
@@ -102,9 +90,7 @@ defmodule HexpmWeb.SearchSuggestionsLiveTest do
 
     test "submitting with no matching packages performs a text search", %{conn: conn} do
       {:ok, view, _html} =
-        live_isolated(conn, HexpmWeb.SearchSuggestionsLive,
-          session: %{"variant" => "home"}
-        )
+        live_isolated(conn, HexpmWeb.SearchSuggestionsLive, session: %{"variant" => "home"})
 
       view |> element("form") |> render_submit(%{"search" => "no_match_xyzzy_12345"})
       assert_redirect(view, "/packages?search=no_match_xyzzy_12345&sort=recent_downloads")
@@ -114,9 +100,7 @@ defmodule HexpmWeb.SearchSuggestionsLiveTest do
       insert(:package, name: "jason")
 
       {:ok, view, _html} =
-        live_isolated(conn, HexpmWeb.SearchSuggestionsLive,
-          session: %{"variant" => "home"}
-        )
+        live_isolated(conn, HexpmWeb.SearchSuggestionsLive, session: %{"variant" => "home"})
 
       view |> element("form") |> render_change(%{"search" => "jason"})
       assert render(view) =~ ~s(role="listbox")
@@ -129,9 +113,7 @@ defmodule HexpmWeb.SearchSuggestionsLiveTest do
       insert(:package, name: "bandit")
 
       {:ok, view, _html} =
-        live_isolated(conn, HexpmWeb.SearchSuggestionsLive,
-          session: %{"variant" => "home"}
-        )
+        live_isolated(conn, HexpmWeb.SearchSuggestionsLive, session: %{"variant" => "home"})
 
       view |> element("form") |> render_change(%{"search" => "bandit"})
       assert render(view) =~ ~s(role="listbox")
@@ -157,9 +139,7 @@ defmodule HexpmWeb.SearchSuggestionsLiveTest do
   describe "nav variant" do
     test "renders with nav-specific input ID", %{conn: conn} do
       {:ok, _view, html} =
-        live_isolated(conn, HexpmWeb.SearchSuggestionsLive,
-          session: %{"variant" => "nav"}
-        )
+        live_isolated(conn, HexpmWeb.SearchSuggestionsLive, session: %{"variant" => "nav"})
 
       assert html =~ ~s(id="nav-search-input")
       assert html =~ ~s(aria-controls="nav-suggest-list")
@@ -169,9 +149,7 @@ defmodule HexpmWeb.SearchSuggestionsLiveTest do
       insert(:package, name: "req")
 
       {:ok, view, _html} =
-        live_isolated(conn, HexpmWeb.SearchSuggestionsLive,
-          session: %{"variant" => "nav"}
-        )
+        live_isolated(conn, HexpmWeb.SearchSuggestionsLive, session: %{"variant" => "nav"})
 
       html = view |> element("form") |> render_change(%{"search" => "req"})
 
@@ -183,9 +161,7 @@ defmodule HexpmWeb.SearchSuggestionsLiveTest do
       insert(:package, name: "oban")
 
       {:ok, view, _html} =
-        live_isolated(conn, HexpmWeb.SearchSuggestionsLive,
-          session: %{"variant" => "nav"}
-        )
+        live_isolated(conn, HexpmWeb.SearchSuggestionsLive, session: %{"variant" => "nav"})
 
       view |> element("form") |> render_change(%{"search" => "oban"})
       view |> element("form") |> render_submit(%{"search" => "oban"})
@@ -197,9 +173,7 @@ defmodule HexpmWeb.SearchSuggestionsLiveTest do
       insert(:package, name: "oban")
 
       {:ok, view, _html} =
-        live_isolated(conn, HexpmWeb.SearchSuggestionsLive,
-          session: %{"variant" => "nav"}
-        )
+        live_isolated(conn, HexpmWeb.SearchSuggestionsLive, session: %{"variant" => "nav"})
 
       view |> element("form") |> render_change(%{"search" => "oban"})
       view |> element("input[phx-keydown]") |> render_keydown(%{"key" => "ArrowDown"})
