@@ -133,7 +133,12 @@ defmodule HexpmWeb.SearchSuggestionsLive do
       phx-submit="submit"
       autocomplete="off"
     >
-      <div class="relative flex items-center" phx-click-away="close" phx-hook="SearchInputSync" id="nav-search-wrapper">
+      <div
+        class="relative flex items-center"
+        phx-click-away="close"
+        phx-hook="SearchInputSync"
+        id="nav-search-wrapper"
+      >
         <div class="absolute left-3 pointer-events-none">
           {icon(:heroicon, "magnifying-glass", width: 18, height: 18, class: "text-grey-300")}
         </div>
