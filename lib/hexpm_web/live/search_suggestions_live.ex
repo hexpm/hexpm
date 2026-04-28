@@ -16,6 +16,7 @@ defmodule HexpmWeb.SearchSuggestionsLive do
 
   alias Hexpm.Repository.{Packages, Repository}
   import HexpmWeb.SearchSuggestionsComponent
+  import HexpmWeb.ViewIcons, only: [icon: 3]
 
   @default_limit 8
 
@@ -55,6 +56,18 @@ defmodule HexpmWeb.SearchSuggestionsLive do
 
   def handle_event("close", _params, socket) do
     {:noreply, socket |> assign(:open, false) |> assign(:active, nil)}
+  end
+
+  # Sent by the SearchInputSync JS hook when the parent LiveView (e.g.
+  # PackageLive.Index) pushes a "sync-search" event to keep the nav input
+  # in sync with the URL search parameter (e.g. after sidebar filter changes).
+  def handle_event("sync_term", %{"value" => value}, socket) do
+    {:noreply,
+     socket
+     |> assign(:term, value)
+     |> assign(:items, [])
+     |> assign(:open, false)
+     |> assign(:active, nil)}
   end
 
   def handle_event("submit", %{"search" => term}, socket) do
@@ -120,7 +133,10 @@ defmodule HexpmWeb.SearchSuggestionsLive do
       phx-submit="submit"
       autocomplete="off"
     >
-      <div class="relative flex items-center" phx-click-away="close">
+      <div class="relative flex items-center" phx-click-away="close" phx-hook="SearchInputSync" id="nav-search-wrapper">
+        <div class="absolute left-3 pointer-events-none">
+          {icon(:heroicon, "magnifying-glass", width: 18, height: 18, class: "text-grey-300")}
+        </div>
         <input
           type="search"
           placeholder="Find packages..."

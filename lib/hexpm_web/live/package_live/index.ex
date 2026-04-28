@@ -27,7 +27,13 @@ defmodule HexpmWeb.PackageLive.Index do
 
   @impl true
   def handle_params(params, _uri, socket) do
-    {:noreply, load_results(socket, params)}
+    socket = load_results(socket, params)
+    # Keep the nav search input in sync with the current search query.
+    # SearchSuggestionsLive runs in its own process, so its @term assign
+    # doesn't automatically update when the parent push_patches to a new URL
+    # (e.g. after the sidebar filter changes). We bridge this via a JS event
+    # that the SearchInputSync hook picks up and forwards to the child LiveView.
+    {:noreply, push_event(socket, "sync-search", %{value: socket.assigns.search || ""})}
   end
 
   defp load_results(socket, params) do
