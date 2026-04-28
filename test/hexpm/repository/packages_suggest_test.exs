@@ -184,5 +184,47 @@ defmodule Hexpm.Repository.PackagesSuggestTest do
       # Exact match should be first
       assert hd(names(results)) == "ecto"
     end
+
+    test "name_html wraps matched portion in a mark element", %{repository: repository} do
+      insert(:package, name: "ecto", repository_id: repository.id)
+
+      [result] = Packages.suggest(repository, "ecto")
+
+      assert {:safe, name_html} = result.name_html
+      assert name_html == "<mark>ecto</mark>"
+    end
+
+    test "name_html match is case-insensitive and preserves original casing", %{
+      repository: repository
+    } do
+      insert(:package, name: "EctoSQL", repository_id: repository.id)
+
+      [result] = Packages.suggest(repository, "ecto")
+
+      assert {:safe, name_html} = result.name_html
+      # Original casing preserved; matched portion wrapped in <mark>
+      assert name_html == "<mark>Ecto</mark>SQL"
+    end
+
+    test "description_html does not pass raw HTML tags from descriptions", %{
+      repository: repository
+    } do
+      # A description containing an HTML tag should never appear unescaped in the output.
+      # ts_headline wraps matched terms in <strong> but surrounding text (including any
+      # HTML in the description) must be escaped.
+      insert(:package,
+        name: "mypackage",
+        repository_id: repository.id,
+        meta: build(:package_metadata, description: "mypackage <em>emphasis</em> here")
+      )
+
+      [result] = Packages.suggest(repository, "mypackage")
+
+      assert {:safe, desc_html} = result.description_html
+      # The <em> from the description must not appear as raw HTML
+      refute desc_html =~ ~r/<em[^>]*>/
+      # Only <strong> tags (from ts_headline markup) are permitted
+      assert Regex.scan(~r/<\w/, desc_html) |> Enum.all?(fn [tag] -> tag == "<s" end)
+    end
   end
 end

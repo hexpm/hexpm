@@ -321,19 +321,24 @@ defmodule Hexpm.Repository.Packages do
   end
 
   defp add_suggest_order_by(query, pkg_part, prefix, substr, tsquery) do
-    # Note: The tsvector is recomputed here for ranking, but PostgreSQL's query planner
-    # will optimize this. The WHERE clause uses the GIN index, and ORDER BY only runs
-    # on the filtered result set. For further optimization, consider using a CTE
-    # to compute the tsvector once (see add_suggest_order_by_with_cte/5 for example).
+    # Name-match tiers are exclusive so each package falls into exactly one band:
+    #   exact  → 3.0  (lower(name) = term)
+    #   prefix → 2.0  (lower(name) LIKE term%)
+    #   substr → 1.0  (lower(name) LIKE %term%)
+    # The tsvector is recomputed here for ranking, but the ORDER BY only runs on
+    # the small filtered result set so the cost is negligible.
     order_by(
       query,
       [p, r, d],
       desc:
         fragment(
           """
-          (CASE WHEN lower(?) = ? THEN 3.0 ELSE 0 END) +
-          (CASE WHEN lower(?) LIKE ? THEN 2.0 ELSE 0 END) +
-          (CASE WHEN lower(?) LIKE ? THEN 1.0 ELSE 0 END) +
+          (CASE
+            WHEN lower(?) = ?        THEN 3.0
+            WHEN lower(?) LIKE ?     THEN 2.0
+            WHEN lower(?) LIKE ?     THEN 1.0
+            ELSE 0.0
+          END) +
           (LEAST(5.0, ln(1 + COALESCE(?, 0))) * 0.2) +
           (COALESCE(
             ts_rank_cd(
@@ -415,8 +420,12 @@ defmodule Hexpm.Repository.Packages do
 
   defp highlight_name(name, term) when is_binary(term) and term != "" do
     escaped_name = Phoenix.HTML.html_escape(name) |> Phoenix.HTML.safe_to_string()
-    escaped_term = Phoenix.HTML.html_escape(term) |> Phoenix.HTML.safe_to_string()
-    highlighted = String.replace(escaped_name, escaped_term, "<strong>#{escaped_term}</strong>")
+    # Escape the term for use in a regex pattern, then compile case-insensitively
+    # so "Ecto" highlights "ecto" and vice versa. The replacement fn preserves the
+    # original casing of the matched characters from the name.
+    escaped_term = Regex.escape(Phoenix.HTML.html_escape(term) |> Phoenix.HTML.safe_to_string())
+    pattern = Regex.compile!(escaped_term, "i")
+    highlighted = Regex.replace(pattern, escaped_name, fn match -> "<mark>#{match}</mark>" end)
     Phoenix.HTML.raw(highlighted)
   end
 
@@ -426,7 +435,27 @@ defmodule Hexpm.Repository.Packages do
 
   defp safe_description_html(nil), do: nil
 
+  # ts_headline returns text with matched terms wrapped in <strong>…</strong>.
+  # The surrounding text comes from user-supplied package descriptions and must
+  # be HTML-escaped before marking safe, otherwise a crafted description could
+  # inject arbitrary HTML. We split on the known delimiters, escape text segments
+  # (even indices), and reassemble.
   defp safe_description_html(description) when is_binary(description) do
-    Phoenix.HTML.raw(description)
+    parts = String.split(description, ~r{</?strong>})
+
+    safe =
+      parts
+      |> Enum.with_index()
+      |> Enum.map_join(fn {part, idx} ->
+        escaped = part |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+
+        if rem(idx, 2) == 0 do
+          escaped
+        else
+          "<strong>#{escaped}</strong>"
+        end
+      end)
+
+    Phoenix.HTML.raw(safe)
   end
 end
