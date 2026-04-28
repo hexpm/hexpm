@@ -33,7 +33,7 @@ defmodule HexpmWeb.SearchSuggestionsLive do
      |> assign(:term, term)
      |> assign(:items, [])
      |> assign(:open, false)
-     |> assign(:active, nil)}
+     |> assign(:active, nil), layout: false}
   end
 
   def handle_event("suggest", params, socket) do
@@ -117,7 +117,6 @@ defmodule HexpmWeb.SearchSuggestionsLive do
       action={~p"/packages"}
       role="search"
       class="min-w-0 flex-1"
-      phx-change="suggest"
       phx-submit="submit"
       autocomplete="off"
     >
@@ -129,7 +128,7 @@ defmodule HexpmWeb.SearchSuggestionsLive do
           id={input_id(@variant)}
           value={@term}
           autocomplete="off"
-          autocapitalize="off"
+          autocapitalize="none"
           autocorrect="off"
           spellcheck="false"
           role="combobox"
@@ -137,6 +136,7 @@ defmodule HexpmWeb.SearchSuggestionsLive do
           aria-expanded={if @open, do: "true", else: "false"}
           aria-controls={listbox_id(@variant)}
           aria-activedescendant={active_id(@variant, @active)}
+          phx-change="suggest"
           phx-keydown="keydown"
           phx-debounce="100"
           phx-hook="SearchShortcut"
@@ -160,7 +160,6 @@ defmodule HexpmWeb.SearchSuggestionsLive do
       method="get"
       action={~p"/packages"}
       role="search"
-      phx-change="suggest"
       phx-submit="submit"
       autocomplete="off"
     >
@@ -172,7 +171,7 @@ defmodule HexpmWeb.SearchSuggestionsLive do
           id={input_id(@variant)}
           value={@term}
           autocomplete="off"
-          autocapitalize="off"
+          autocapitalize="none"
           autocorrect="off"
           spellcheck="false"
           role="combobox"
@@ -180,6 +179,7 @@ defmodule HexpmWeb.SearchSuggestionsLive do
           aria-expanded={if @open, do: "true", else: "false"}
           aria-controls={listbox_id(@variant)}
           aria-activedescendant={active_id(@variant, @active)}
+          phx-change="suggest"
           phx-keydown="keydown"
           phx-debounce="100"
           phx-hook="SearchShortcut"

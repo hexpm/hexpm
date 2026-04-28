@@ -176,7 +176,7 @@ defmodule Hexpm.Repository.Packages do
     |> then(fn packages ->
       packages_with_releases =
         packages
-        |> Enum.map(fn {id, _, _, _, _, _} -> %{id: id} end)
+        |> Enum.map(fn {id, _, _, _, _, _} -> %Package{id: id} end)
         |> attach_latest_releases()
 
       packages
