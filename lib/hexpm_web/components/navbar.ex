@@ -19,7 +19,7 @@ defmodule HexpmWeb.Components.Navbar do
   @doc """
   Renders the main header/navbar.
   """
-  attr :conn, :map, required: true
+  attr :conn, :map, default: nil
   attr :current_user, :any, default: nil
   attr :search, :string, default: nil
   attr :show_search, :boolean, default: true
@@ -66,7 +66,7 @@ defmodule HexpmWeb.Components.Navbar do
     """
   end
 
-  attr :conn, :map, required: true
+  attr :conn, :map, default: nil
   attr :current_user, :any, required: true
   attr :search, :string, required: true
   attr :show_search, :boolean, required: true
@@ -361,7 +361,7 @@ defmodule HexpmWeb.Components.Navbar do
     """
   end
 
-  attr :conn, :map, required: true
+  attr :conn, :map, default: nil
   attr :search, :string, default: nil
   attr :autofocus, :boolean, default: false
   attr :live_search, :boolean, default: false
@@ -398,15 +398,35 @@ defmodule HexpmWeb.Components.Navbar do
         </form>
       <% else %>
         <div class="max-w-[420px] w-full">
-          {Phoenix.Component.live_render(@conn, HexpmWeb.SearchSuggestionsLive,
-            id: "nav-search",
-            session: %{
-              "variant" => "nav",
-              "limit" => 8,
-              "autofocus" => @autofocus,
-              "search" => @search
-            }
-          )}
+          <%= if @conn do %>
+            {Phoenix.Component.live_render(@conn, HexpmWeb.SearchSuggestionsLive,
+              id: "nav-search",
+              session: %{
+                "variant" => "nav",
+                "limit" => 8,
+                "autofocus" => @autofocus,
+                "search" => @search
+              }
+            )}
+          <% else %>
+            <form role="search" action={~p"/packages"} class="w-full">
+              <div class="relative flex items-center">
+                <div class="absolute left-3 pointer-events-none">
+                  {icon(:heroicon, "magnifying-glass", width: 18, height: 18, class: "text-grey-300")}
+                </div>
+                <input
+                  id="search-input"
+                  phx-hook="SearchShortcut"
+                  placeholder="Find packages..."
+                  name="search"
+                  type="text"
+                  class="w-full h-[40px] bg-grey-800 border border-grey-600 rounded-lg px-3 pl-10 py-[11px] text-white leading-4 placeholder:text-grey-300 focus:outline-none focus:border-grey-500 focus:shadow-[inset_0px_0px_6px_0px_rgba(255,255,255,0.3)]"
+                  value={@search}
+                  autofocus={@autofocus}
+                />
+              </div>
+            </form>
+          <% end %>
         </div>
       <% end %>
       <button

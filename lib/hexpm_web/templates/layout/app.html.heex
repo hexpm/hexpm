@@ -13,7 +13,7 @@
     </div>
 
     <.header
-      conn={@conn}
+      conn={assigns[:conn]}
       current_user={assigns[:current_user]}
       search={search(assigns)}
       show_search={show_search?(assigns)}
