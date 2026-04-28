@@ -1,0 +1,34 @@
+<tr class="hover:bg-grey-50 transition-colors">
+  <td class="px-5 py-3.5">
+    <a
+      href={~p"/reports/#{@report}"}
+      class="font-mono text-purple-600 hover:text-purple-700 font-medium"
+    >
+      #{@report.id}
+    </a>
+  </td>
+  <td class="px-5 py-3.5 font-medium text-grey-900">{@report.package.name}</td>
+  <td class="px-5 py-3.5 text-grey-500">
+    <%= for ar <- @report.package_report_releases do %>
+      <span class="inline-block bg-grey-100 text-grey-700 text-xs font-mono px-1.5 py-0.5 rounded mr-1">
+        {ar.release.version}
+      </span>
+    <% end %>
+  </td>
+  <td class="px-5 py-3.5">
+    <span class={[
+      "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium",
+      case @report.state do
+        "to_accept" -> "bg-yellow-100 text-yellow-700"
+        "accepted" -> "bg-blue-100 text-blue-700"
+        "solved" -> "bg-green-100 text-green-700"
+        "rejected" -> "bg-red-100 text-red-700"
+        _ -> "bg-grey-100 text-grey-700"
+      end
+    ]}>
+      {Phoenix.Naming.humanize(@report.state)}
+    </span>
+  </td>
+  <td class="px-5 py-3.5 text-grey-600">{@report.author.username}</td>
+  <td class="px-5 py-3.5 text-grey-500">{ViewHelpers.text_length(@report.description, 50)}</td>
+</tr>

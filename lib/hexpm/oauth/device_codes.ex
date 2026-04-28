@@ -2,6 +2,7 @@ defmodule Hexpm.OAuth.DeviceCodes do
   use Hexpm.Context
 
   alias Hexpm.OAuth.{DeviceCode, Token, Tokens}
+  alias Hexpm.Permissions
   alias Hexpm.UserSessions
 
   @default_device_code_expiry_seconds 10 * 60
@@ -13,6 +14,7 @@ defmodule Hexpm.OAuth.DeviceCodes do
   for the client to display to the user.
   """
   def initiate_device_authorization(conn, client_id, scopes, opts \\ []) do
+    scopes = Permissions.expand_api_scope(scopes)
     device_code = generate_device_code()
     user_code = generate_user_code()
     expires_at = DateTime.add(DateTime.utc_now(), @default_device_code_expiry_seconds, :second)
@@ -197,22 +199,6 @@ defmodule Hexpm.OAuth.DeviceCodes do
   end
 
   @doc """
-  Cleans up expired device codes.
-  This should be called periodically to remove old records.
-  """
-  def cleanup_expired do
-    now = DateTime.utc_now()
-
-    from(dc in DeviceCode,
-      where: dc.expires_at < ^now and dc.status == "pending"
-    )
-    |> Repo.update_all(set: [status: "expired", updated_at: now])
-  end
-
-  # Alias for compatibility
-  def cleanup_expired_device_codes, do: cleanup_expired()
-
-  @doc """
   Generates a cryptographically secure device code.
   Returns a 32-character base64url encoded string.
   """
@@ -342,7 +328,8 @@ defmodule Hexpm.OAuth.DeviceCodes do
       where:
         t.grant_type == "urn:ietf:params:oauth:grant-type:device_code" and
           t.grant_reference == ^device_code_record.device_code and
-          t.client_id == ^device_code_record.client_id,
+          t.client_id == ^device_code_record.client_id and
+          is_nil(t.revoked_at),
       preload: [:user]
     )
     |> Repo.one()

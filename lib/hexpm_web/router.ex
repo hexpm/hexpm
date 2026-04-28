@@ -10,6 +10,7 @@ defmodule HexpmWeb.Router do
     plug :fetch_session
     plug :fetch_flash
     plug :put_root_layout, {HexpmWeb.LayoutView, :root}
+    plug :put_layout, {HexpmWeb.LayoutView, :app}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug :user_agent, required: false
@@ -18,6 +19,32 @@ defmodule HexpmWeb.Router do
     plug :login
     plug :disable_deactivated
     plug :default_repository
+
+    plug HexpmWeb.Plugs.ContentSecurityPolicy,
+      nonces_for: [:script_src, :style_src],
+      directives: %{
+        # Fallback for directives that don't have explicit rules
+        default_src: ~w('self'),
+        # 'strict-dynamic' allows scripts loaded by nonced scripts to execute
+        script_src: ~w('strict-dynamic'),
+        # Gravatar for user/org profile pictures, Stripe tracking pixel
+        img_src: ~w('self' data: https://www.gravatar.com https://q.stripe.com),
+        # Allow fonts from self and Google Fonts
+        font_src: ~w('self' https://fonts.gstatic.com),
+        # hcaptcha iframe, asciinema iframe for blog embeds, Stripe Checkout + 3DS
+        frame_src:
+          ~w('self' https://hcaptcha.com https://*.hcaptcha.com https://asciinema.org https://*.stripe.com),
+        # hcaptcha verification, Stripe API (Plausible added at runtime)
+        connect_src: ~w('self' https://*.hcaptcha.com https://api.stripe.com),
+        # Disallow plugins (Flash, etc.)
+        object_src: ~w('none'),
+        # Disallow <base> tag hijacking
+        base_uri: ~w('self'),
+        # Only allow forms to submit to self
+        form_action: ~w('self'),
+        # Disallow embedding this site in frames (clickjacking protection)
+        frame_ancestors: ~w('none')
+      }
   end
 
   pipeline :upload do
@@ -42,12 +69,39 @@ defmodule HexpmWeb.Router do
     plug :default_repository
   end
 
+  pipeline :browser_api do
+    plug :accepts, ["json"]
+    plug :fetch_session
+    plug :protect_from_forgery
+    plug :put_secure_browser_headers
+    plug :user_agent, required: false
+    plug :validate_url
+    plug HexpmWeb.Plugs.Attack
+    plug :login
+    plug :disable_deactivated
+    plug :default_repository
+  end
+
+  pipeline :readme do
+    plug :accepts, ["html"]
+    plug :put_secure_browser_headers
+    plug HexpmWeb.Plugs.ReadmeContentSecurityPolicy
+  end
+
   pipeline :admin do
     plug HexpmWeb.Plugs.DashboardAuth
   end
 
   if Mix.env() == :dev do
     forward "/sent_emails", Bamboo.SentEmailViewerPlug
+  end
+
+  scope "/", HexpmWeb, host: "readme." do
+    pipe_through :readme
+
+    get "/:name/:version", ReadmeController, :show
+    get "/:name", ReadmeController, :show
+    match :*, "/*path", ReadmeController, :not_found
   end
 
   scope "/", HexpmWeb do
@@ -86,14 +140,23 @@ defmodule HexpmWeb.Router do
     get "/auth/:provider", AuthController, :request
     get "/auth/:provider/callback", AuthController, :callback
 
+    get "/sudo", SudoController, :show
+    post "/sudo", SudoController, :create
+    get "/sudo/github", SudoController, :github
+    get "/sudo/recovery", SudoController, :show_recovery
+    post "/sudo/recovery", SudoController, :verify_recovery
+
     get "/oauth/authorize", OAuthController, :authorize
     post "/oauth/authorize", OAuthController, :consent
     get "/oauth/device", DeviceController, :show
     post "/oauth/device", DeviceController, :create
+    get "/oauth/device/authorize", DeviceController, :authorize_show
+    post "/oauth/device/authorize", DeviceController, :authorize_create
 
     get "/dashboard", DashboardController, :index
 
     get "/users/:username", UserController, :show
+    get "/users/:username/stats", UserController, :stats
 
     get "/orgs/:username", UserController, :show
 
@@ -118,22 +181,23 @@ defmodule HexpmWeb.Router do
     get "/policies/copyright", PolicyController, :copyright
     get "/policies/dispute", PolicyController, :dispute
 
-    get "/packages/:name/versions", VersionController, :index
-    get "/packages/:repository/:name/versions", VersionController, :index
-
     get "/packages", PackageController, :index
     get "/packages/:name", PackageController, :show
     get "/packages/:name/audit-logs", PackageController, :audit_logs
+    get "/packages/:name/dependents", PackageController, :dependents
+    get "/packages/:name/dependencies", PackageController, :dependencies
+    get "/packages/:name/versions", PackageController, :versions
     get "/packages/:name/:version", PackageController, :show
     get "/packages/:repository/:name/audit-logs", PackageController, :audit_logs
+    get "/packages/:repository/:name/dependents", PackageController, :dependents
+    get "/packages/:repository/:name/dependencies", PackageController, :dependencies
+    get "/packages/:repository/:name/versions", PackageController, :versions
     get "/packages/:repository/:name/:version", PackageController, :show
 
     get "/blog", BlogController, :index
     get "/blog/:slug", BlogController, :show
 
     get "/l/:short_code", ShortURLController, :show
-
-    get "/package_searches/download", PackageSearchController, :download
 
     if Application.compile_env!(:hexpm, [:features, :package_reports]) do
       get "/reports", PackageReportController, :index
@@ -176,8 +240,8 @@ defmodule HexpmWeb.Router do
 
     post "/security/reset-auth-app", SecurityController, :reset_auth_app, as: :dashboard_security
 
-    get "/tfa/setup", TFAAuthSetupController, :index, as: :dashboard_tfa_setup
-    post "/tfa/setup", TFAAuthSetupController, :create, as: :dashboard_tfa_setup
+    post "/security/verify-tfa-code", SecurityController, :verify_tfa_code,
+      as: :dashboard_security
 
     get "/email", EmailController, :index
     post "/email", EmailController, :create
@@ -186,6 +250,7 @@ defmodule HexpmWeb.Router do
     post "/email/public", EmailController, :public
     post "/email/resend", EmailController, :resend_verify
     post "/email/gravatar", EmailController, :gravatar
+    post "/email/options", EmailController, :update_options
 
     get "/repos", OrganizationController, :redirect_repo
     get "/repos/*glob", OrganizationController, :redirect_repo
@@ -193,14 +258,21 @@ defmodule HexpmWeb.Router do
     post "/orgs", OrganizationController, :create
     get "/orgs/:dashboard_org", OrganizationController, :show
     post "/orgs/:dashboard_org", OrganizationController, :update
+    get "/orgs/:dashboard_org/members", OrganizationController, :members
+    get "/orgs/:dashboard_org/keys", OrganizationController, :keys
+    get "/orgs/:dashboard_org/packages", OrganizationController, :packages
     get "/orgs/:dashboard_org/audit-logs", OrganizationController, :audit_logs
+    get "/orgs/:dashboard_org/billing", OrganizationController, :billing
+    get "/orgs/:dashboard_org/danger-zone", OrganizationController, :danger_zone
     post "/orgs/:dashboard_org/leave", OrganizationController, :leave
     post "/orgs/:dashboard_org/billing-token", OrganizationController, :billing_token
     post "/orgs/:dashboard_org/cancel-billing", OrganizationController, :cancel_billing
+    post "/orgs/:dashboard_org/resume-billing", OrganizationController, :resume_billing
     post "/orgs/:dashboard_org/update-billing", OrganizationController, :update_billing
     post "/orgs/:dashboard_org/create-billing", OrganizationController, :create_billing
     post "/orgs/:dashboard_org/add-seats", OrganizationController, :add_seats
     post "/orgs/:dashboard_org/remove-seats", OrganizationController, :remove_seats
+    post "/orgs/:dashboard_org/void-invoice", OrganizationController, :void_invoice
     post "/orgs/:dashboard_org/change-plan", OrganizationController, :change_plan
     post "/orgs/:dashboard_org/keys", OrganizationController, :create_key
     delete "/orgs/:dashboard_org/keys", OrganizationController, :delete_key
@@ -216,6 +288,12 @@ defmodule HexpmWeb.Router do
     delete "/sessions", SessionController, :delete
 
     get "/audit-logs", AuditLogController, :index
+  end
+
+  scope "/dashboard", HexpmWeb.Dashboard do
+    pipe_through :browser_api
+
+    post "/billing-api/*path", BillingProxyController, :proxy
   end
 
   scope "/", HexpmWeb do
@@ -304,6 +382,7 @@ defmodule HexpmWeb.Router do
     post "/oauth/token", OAuthController, :token
     post "/oauth/device_authorization", OAuthController, :device_authorization
     post "/oauth/revoke", OAuthController, :revoke
+    post "/oauth/revoke_by_hash", OAuthController, :revoke_by_hash
   end
 
   if Mix.env() in [:dev, :test, :hex] do
@@ -320,6 +399,14 @@ defmodule HexpmWeb.Router do
       end
     end
 
+    scope "/preview", HexpmWeb do
+      get "/:package/:version/*filename", TestController, :preview_file
+    end
+
+    scope "/preview-files", HexpmWeb do
+      get "/:file", TestController, :preview_file_list
+    end
+
     scope "/api", HexpmWeb do
       pipe_through :api
 
@@ -328,6 +415,14 @@ defmodule HexpmWeb.Router do
       post "/oauth_token", TestController, :oauth_token
       post "/oauth_device_authorize", TestController, :oauth_device_authorize
       get "/oauth_device_pending", TestController, :oauth_device_pending
+    end
+  end
+
+  if Mix.env() == :test do
+    scope "/_test", HexpmWeb do
+      pipe_through :browser
+
+      get "/raise", TestController, :raise_error
     end
   end
 

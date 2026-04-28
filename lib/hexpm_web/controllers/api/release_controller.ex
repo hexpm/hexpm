@@ -31,7 +31,7 @@ defmodule HexpmWeb.API.ReleaseController do
 
   @download_period_params ~w(day month all)
 
-  def publish(conn, %{"body" => body} = params) do
+  def publish(conn, %{"body" => body_path} = params) do
     replace? = Map.get(params, "replace", true)
     request_id = List.first(get_resp_header(conn, "x-request-id"))
 
@@ -40,14 +40,14 @@ defmodule HexpmWeb.API.ReleaseController do
       conn.assigns.meta["name"],
       conn.assigns.meta["version"],
       request_id,
-      body
+      body_path
     )
 
     Releases.publish(
       conn.assigns.repository,
       conn.assigns.package,
       conn.assigns.current_user || conn.assigns.current_organization.user,
-      body,
+      body_path,
       conn.assigns.meta,
       conn.assigns.inner_checksum,
       conn.assigns.outer_checksum,
@@ -57,13 +57,13 @@ defmodule HexpmWeb.API.ReleaseController do
     |> publish_result(conn)
   end
 
-  def create(conn, %{"body" => body}) do
+  def create(conn, %{"body" => body_path}) do
     handle_tarball(
       conn,
       conn.assigns.repository,
       conn.assigns.package,
       conn.assigns.current_user || conn.assigns.current_organization.user,
-      body
+      body_path
     )
   end
 
@@ -124,8 +124,8 @@ defmodule HexpmWeb.API.ReleaseController do
     end
   end
 
-  defp handle_tarball(conn, repository, package, user, body) do
-    case release_metadata(body) do
+  defp handle_tarball(conn, repository, package, user, body_path) do
+    case release_metadata(body_path) do
       {:ok, meta, inner_checksum, outer_checksum} ->
         # Validate that tarball name matches URL parameter name
         cond do
@@ -135,13 +135,13 @@ defmodule HexpmWeb.API.ReleaseController do
           true ->
             replace? = Map.get(conn.params, "replace", true)
             request_id = List.first(get_resp_header(conn, "x-request-id"))
-            log_tarball(repository.name, meta["name"], meta["version"], request_id, body)
+            log_tarball(repository.name, meta["name"], meta["version"], request_id, body_path)
 
             Releases.publish(
               repository,
               package,
               user,
-              body,
+              body_path,
               meta,
               inner_checksum,
               outer_checksum,
@@ -192,16 +192,18 @@ defmodule HexpmWeb.API.ReleaseController do
 
   defp normalize_errors(changeset), do: changeset
 
-  defp log_tarball(repository, package, version, request_id, body) do
-    Task.Supervisor.start_child(Hexpm.Tasks, fn ->
-      filename = "#{repository}-#{package}-#{version}-#{request_id}.tar.gz"
-      key = Path.join(["debug", "tarballs", filename])
-      Hexpm.Store.put(:repo_bucket, key, body, [])
-    end)
+  defp log_tarball(repository, package, version, request_id, body_path) do
+    # Use random ID instead of user-controlled request_id in key to prevent overwrites
+    random_id = Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
+    filename = "#{repository}-#{package}-#{version}-#{random_id}.tar.gz"
+    key = Path.join(["debug", "tarballs", filename])
+    # Store request_id in metadata for debugging (ignored by Store.Local)
+    opts = [cache_control: "private", meta: %{"request-id" => request_id || "unknown"}]
+    Hexpm.Store.put_file(:repo_bucket, key, body_path, opts)
   end
 
-  defp release_metadata(tarball) do
-    case :hex_tarball.unpack(tarball, :memory) do
+  defp release_metadata(body_path) do
+    case :hex_tarball.unpack({:file, String.to_charlist(body_path)}, :none) do
       {:ok, %{inner_checksum: inner_checksum, outer_checksum: outer_checksum, metadata: metadata}} ->
         {:ok, metadata, inner_checksum, outer_checksum}
 

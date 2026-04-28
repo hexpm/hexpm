@@ -4,7 +4,7 @@
 
 I'm incredibly excited to announce the new web-based Hex package differ: [diff.hex.pm](https://diff.hex.pm), maintained by the Hex team! This is the result of the issue on the [hex.pm Github repo](https://github.com/hexpm/hexpm/issues/848) and the discussion it started.
 
-I'm super grateful to the Hex team, [Eric Meadows-Jönsson](https://twitter.com/emjii), [Wojtek Mach](https://twitter.com/wojtekmach), and [Todd Resudek](https://twitter.com/sprsmpl), for all their support and help in turning this idea into a live service.
+I'm super grateful to the Hex team, [Eric Meadows-Jönsson](https://x.com/emjii), [Wojtek Mach](https://x.com/wojtekmach), and [Todd Resudek](https://x.com/sprsmpl), for all their support and help in turning this idea into a live service.
 
 ### What does it do?
 
@@ -16,7 +16,7 @@ Across language ecosystems, package dependencies are becoming a more and more co
 
 Fortunately, the Hex team has been pro-active in managing this. With `hex` `0.20.0` a new command was added to mix: `mix hex.package diff package_name version_from..version_to`. It works by downloading the two selected package versions directly to your hard drive and then running `git diff` on them, finally outputting the result. If all it takes to audit dependency updates is scrolling through a diff that a tool generates for you, you're a lot more likely to do it. This is more convenient than manually downloading the packages, but when it comes to security, ease of use is everything.
 
-So how can we make it better? Looking at other languages, there are some third-party services that provide web-based diffs, for example, there's one for [npm](https://diff.intrinsic.com/), and there's one for [RubyGems](https://diff.coditsu.io/). Inspired by the Ruby differ made by [Maciej Mensfeld](https://twitter.com/maciejmensfeld) and the mix command by [Wojtek Mach](https://twitter.com/wojtekmach), I made a [web-based differ for Hex](https://diff.jola.dev). I was excited to see people using it, but it didn't make sense to me for it to be a third-party service. If the intent is to create a trustworthy source of package changes, it needs to be managed by a trustworthy organization. Fortunately, the Hex team was really supportive of the idea!
+So how can we make it better? Looking at other languages, there are some third-party services that provide web-based diffs, for example, there's one for [npm](https://diff.intrinsic.com/), and there's one for [RubyGems](https://diff.coditsu.io/). Inspired by the Ruby differ made by [Maciej Mensfeld](https://x.com/maciejmensfeld) and the mix command by [Wojtek Mach](https://x.com/wojtekmach), I made a [web-based differ for Hex](https://diff.jola.dev). I was excited to see people using it, but it didn't make sense to me for it to be a third-party service. If the intent is to create a trustworthy source of package changes, it needs to be managed by a trustworthy organization. Fortunately, the Hex team was really supportive of the idea!
 
 When it's easy to work in a secure way, people are more likely to do it. This service, [diff.hex.pm](https://diff.hex.pm), is another step towards improving the security story for Elixir, by letting you generate diffs from any browser and share them as links. This also lends itself to automation: now you can generate these links programmatically and make dependency audits a part of your workflow. We hope this will inspire the community with lots of new ideas for security that doesn't slow you down.
 

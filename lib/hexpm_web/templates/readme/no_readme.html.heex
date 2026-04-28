@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head><meta charset="utf-8" /></head>
+  <body>
+    <script nonce={@script_src_nonce}>
+      var origins = <%= raw(Jason.encode!(@parent_origins)) %>;
+      origins.forEach(function(o) {
+        window.parent.postMessage({type: 'readme-not-found'}, o);
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,456 @@
+<div class="bg-grey-50 dark:bg-grey-950 py-10 px-4 flex-1 flex flex-col">
+  <div class="max-w-7xl mx-auto w-full flex gap-8 flex-col lg:flex-row">
+    <%!-- Sidebar --%>
+    <aside class="w-full lg:w-64 shrink-0">
+      <nav class="bg-white dark:bg-grey-900 border border-grey-200 dark:border-grey-700 rounded-lg p-4 shadow-xs sticky top-4">
+        <div class="space-y-6">
+          <div>
+            <h3 class="text-sm font-semibold text-grey-900 dark:text-grey-100 mb-2">Mix</h3>
+            <ul class="space-y-1">
+              <li>
+                <a
+                  href={~p"/docs/usage"}
+                  class={[
+                    "block px-3 py-1.5 text-sm rounded transition-colors",
+                    if(@view_name == :usage,
+                      do:
+                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
+                      else:
+                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-700"
+                    )
+                  ]}
+                >
+                  Usage
+                </a>
+              </li>
+              <li>
+                <a
+                  href={~p"/docs/publish"}
+                  class={[
+                    "block px-3 py-1.5 text-sm rounded transition-colors",
+                    if(@view_name == :publish,
+                      do:
+                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
+                      else:
+                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-800"
+                    )
+                  ]}
+                >
+                  Publishing packages
+                </a>
+              </li>
+              <li>
+                <a
+                  href={~p"/docs/private"}
+                  class={[
+                    "block px-3 py-1.5 text-sm rounded transition-colors",
+                    if(@view_name == :private,
+                      do:
+                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
+                      else:
+                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-800"
+                    )
+                  ]}
+                >
+                  Private packages
+                </a>
+              </li>
+              <li>
+                <a
+                  target="_blank"
+                  rel="noopener"
+                  href="https://hexdocs.pm/hex"
+                  class="block px-3 py-1.5 text-sm rounded text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-700 flex items-center gap-1"
+                >
+                  Tasks {icon(:heroicon, "window", class: "w-3 h-3")}
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 class="text-sm font-semibold text-grey-900 dark:text-grey-100 mb-2">Rebar</h3>
+            <ul class="space-y-1">
+              <li>
+                <a
+                  href={~p"/docs/rebar3-usage"}
+                  class={[
+                    "block px-3 py-1.5 text-sm rounded transition-colors",
+                    if(@view_name == :rebar3_usage,
+                      do:
+                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
+                      else:
+                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-700"
+                    )
+                  ]}
+                >
+                  Usage
+                </a>
+              </li>
+              <li>
+                <a
+                  href={~p"/docs/rebar3-publish"}
+                  class={[
+                    "block px-3 py-1.5 text-sm rounded transition-colors",
+                    if(@view_name == :rebar3_publish,
+                      do:
+                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
+                      else:
+                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-800"
+                    )
+                  ]}
+                >
+                  Publishing packages
+                </a>
+              </li>
+              <li>
+                <a
+                  href={~p"/docs/rebar3-private"}
+                  class={[
+                    "block px-3 py-1.5 text-sm rounded transition-colors",
+                    if(@view_name == :rebar3_private,
+                      do:
+                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
+                      else:
+                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-800"
+                    )
+                  ]}
+                >
+                  Private packages
+                </a>
+              </li>
+              <li>
+                <a
+                  target="_blank"
+                  rel="noopener"
+                  href="https://rebar3.org/docs/package_management/hex_package_management/"
+                  class="block px-3 py-1.5 text-sm rounded text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-700 flex items-center gap-1"
+                >
+                  Tasks {icon(:heroicon, "window", class: "w-3 h-3")}
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 class="text-sm font-semibold text-grey-900 dark:text-grey-100 mb-2">Gleam</h3>
+            <ul class="space-y-1">
+              <li>
+                <a
+                  href={~p"/docs/gleam-usage"}
+                  class={[
+                    "block px-3 py-1.5 text-sm rounded transition-colors",
+                    if(@view_name == :gleam_usage,
+                      do:
+                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
+                      else:
+                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-700"
+                    )
+                  ]}
+                >
+                  Usage
+                </a>
+              </li>
+              <li>
+                <a
+                  target="_blank"
+                  rel="noopener"
+                  href="https://gleam.run/command-line-reference/"
+                  class="block px-3 py-1.5 text-sm rounded text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-700 flex items-center gap-1"
+                >
+                  Tasks {icon(:heroicon, "window", class: "w-3 h-3")}
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 class="text-sm font-semibold text-grey-900 dark:text-grey-100 mb-2">Hex</h3>
+            <ul class="space-y-1">
+              <li>
+                <a
+                  href={~p"/docs/faq"}
+                  class={[
+                    "block px-3 py-1.5 text-sm rounded transition-colors",
+                    if(@view_name == :faq,
+                      do:
+                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
+                      else:
+                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-700"
+                    )
+                  ]}
+                >
+                  FAQ
+                </a>
+              </li>
+              <li>
+                <a
+                  href={~p"/docs/self-hosting"}
+                  class={[
+                    "block px-3 py-1.5 text-sm rounded transition-colors",
+                    if(@view_name == :self_hosting,
+                      do:
+                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
+                      else:
+                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-800"
+                    )
+                  ]}
+                >
+                  Self-hosting
+                </a>
+              </li>
+              <li>
+                <a
+                  href={~p"/docs/mirrors"}
+                  class={[
+                    "block px-3 py-1.5 text-sm rounded transition-colors",
+                    if(@view_name == :mirrors,
+                      do:
+                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
+                      else:
+                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-800"
+                    )
+                  ]}
+                >
+                  Mirrors
+                </a>
+              </li>
+              <li>
+                <a
+                  href={~p"/docs/public-keys"}
+                  class={[
+                    "block px-3 py-1.5 text-sm rounded transition-colors",
+                    if(@view_name == :public_keys,
+                      do:
+                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
+                      else:
+                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-800"
+                    )
+                  ]}
+                >
+                  Public keys
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </nav>
+    </aside>
+
+    <%!-- Content --%>
+    <main class="flex-1">
+      <article class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-6 lg:p-10 shadow-xs docs-content">
+        <style nonce={@style_src_nonce}>
+          .docs-content h2 {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: var(--color-grey-900);
+            margin-bottom: 1.5rem;
+          }
+          .docs-content h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--color-grey-900);
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+          }
+          .docs-content h4 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--color-grey-900);
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+          }
+          .docs-content h2 > a,
+          .docs-content h3 > a,
+          .docs-content h4 > a {
+            display: none;
+            margin-left: 0.5rem;
+          }
+          .docs-content h2:hover > a,
+          .docs-content h3:hover > a,
+          .docs-content h4:hover > a {
+            display: inline-block;
+          }
+          .docs-content h2 > a svg,
+          .docs-content h3 > a svg,
+          .docs-content h4 > a svg {
+            width: 0.875rem;
+            height: 0.875rem;
+            color: var(--color-grey-300);
+          }
+          .docs-content h2 > a:hover svg,
+          .docs-content h3 > a:hover svg,
+          .docs-content h4 > a:hover svg {
+            color: var(--color-blue-600);
+          }
+          .docs-content p {
+            font-size: 1rem;
+            line-height: 1.75;
+            color: var(--color-grey-600);
+            margin-bottom: 1rem;
+          }
+          .docs-content a {
+            color: var(--color-blue-600);
+            text-decoration: underline;
+            font-weight: 500;
+          }
+          .docs-content a:hover {
+            color: var(--color-blue-700);
+          }
+          .docs-content strong {
+            font-weight: 600;
+            color: var(--color-grey-900);
+          }
+          .docs-content code:not(pre code) {
+            background-color: var(--color-grey-50);
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            font-family: ui-monospace, monospace;
+            color: var(--color-grey-800);
+          }
+          .docs-content pre {
+            background-color: var(--color-grey-900);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin-bottom: 1rem;
+          }
+          .docs-content pre code {
+            background-color: transparent;
+            padding: 0;
+            font-size: 0.875rem;
+            color: var(--color-grey-100);
+          }
+          /* Override highlight.js background to use our dark background */
+          .docs-content pre .hljs {
+            background: transparent;
+            color: var(--color-grey-100);
+          }
+          html[data-theme="dark"] .docs-content h2,
+          html[data-theme="dark"] .docs-content h3,
+          html[data-theme="dark"] .docs-content h4,
+          html[data-theme="dark"] .docs-content strong {
+            color: white;
+          }
+          html[data-theme="dark"] .docs-content h2 > a svg,
+          html[data-theme="dark"] .docs-content h3 > a svg,
+          html[data-theme="dark"] .docs-content h4 > a svg {
+            color: var(--color-grey-300);
+          }
+          html[data-theme="dark"] .docs-content h2 > a:hover svg,
+          html[data-theme="dark"] .docs-content h3 > a:hover svg,
+          html[data-theme="dark"] .docs-content h4 > a:hover svg {
+            color: var(--color-blue-200);
+          }
+          html[data-theme="dark"] .docs-content p {
+            color: var(--color-grey-200);
+          }
+          html[data-theme="dark"] .docs-content a {
+            color: var(--color-blue-300);
+          }
+          html[data-theme="dark"] .docs-content a:hover {
+            color: var(--color-blue-200);
+          }
+          html[data-theme="dark"] .docs-content code:not(pre code) {
+            background-color: var(--color-grey-700);
+            color: var(--color-grey-100);
+          }
+          .docs-content ul, .docs-content ol {
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+            line-height: 1.75;
+          }
+          .docs-content ul {
+            list-style-type: disc;
+          }
+          .docs-content ol {
+            list-style-type: decimal;
+          }
+          .docs-content li {
+            color: var(--color-grey-600);
+            margin-bottom: 0.5rem;
+          }
+          .docs-content blockquote {
+            border-left: 4px solid var(--color-blue-600);
+            padding-left: 1rem;
+            font-style: italic;
+            color: var(--color-grey-500);
+            margin-bottom: 1rem;
+          }
+          .docs-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+            font-size: 0.875rem;
+          }
+          .docs-content table th {
+            background-color: var(--color-grey-50);
+            font-weight: 600;
+            color: var(--color-grey-900);
+            padding: 0.75rem 1rem;
+            border-bottom: 2px solid var(--color-grey-200);
+            text-align: left;
+          }
+          .docs-content table td {
+            padding: 0.75rem 1rem;
+            color: var(--color-grey-700);
+            border-bottom: 1px solid var(--color-grey-200);
+          }
+          .docs-content table.table-striped tbody tr:nth-child(even) {
+            background-color: var(--color-grey-100);
+          }
+          .docs-content table.table-striped tbody tr:hover {
+            background-color: var(--color-grey-200);
+          }
+          .docs-content dl {
+            margin-bottom: 1rem;
+          }
+          .docs-content dt {
+            font-weight: 600;
+            color: var(--color-grey-900);
+            margin-top: 0.75rem;
+          }
+          .docs-content dt:first-child {
+            margin-top: 0;
+          }
+          .docs-content dd {
+            color: var(--color-grey-600);
+            margin-left: 1rem;
+            line-height: 1.75;
+          }
+          html[data-theme="dark"] .docs-content li {
+            color: var(--color-grey-200);
+          }
+          html[data-theme="dark"] .docs-content blockquote {
+            border-left-color: var(--color-blue-300);
+            color: var(--color-grey-300);
+          }
+          html[data-theme="dark"] .docs-content dt {
+            color: var(--color-grey-100);
+          }
+          html[data-theme="dark"] .docs-content dd {
+            color: var(--color-grey-300);
+          }
+          html[data-theme="dark"] .docs-content table th {
+            background-color: var(--color-grey-700);
+            color: white;
+            border-bottom-color: var(--color-grey-600);
+          }
+          html[data-theme="dark"] .docs-content table td {
+            color: var(--color-grey-200);
+            border-bottom-color: var(--color-grey-600);
+          }
+          html[data-theme="dark"] .docs-content table.table-striped tbody tr:nth-child(even) {
+            background-color: var(--color-grey-700);
+          }
+          html[data-theme="dark"] .docs-content table.table-striped tbody tr:hover {
+            background-color: var(--color-grey-500);
+          }
+        </style>
+        {render(DocsView, @view, assigns)}
+      </article>
+    </main>
+  </div>
+</div>

@@ -83,6 +83,7 @@ defmodule Hexpm.RepoBase do
       ssl_opts =
         if ca_cert do
           [
+            verify: :verify_peer,
             cacerts: [decode_cert(ca_cert)],
             key: decode_key(client_key),
             cert: decode_cert(client_cert),
@@ -92,9 +93,11 @@ defmodule Hexpm.RepoBase do
 
       opts =
         opts
-        |> Keyword.put(:ssl_opts, ssl_opts)
         |> Keyword.put(:url, url)
         |> Keyword.put(:pool_size, pool_size)
+        |> then(fn opts ->
+          if ssl_opts, do: Keyword.put(opts, :ssl, ssl_opts), else: opts
+        end)
 
       {:ok, opts}
     else

@@ -1,0 +1,95 @@
+<div class="bg-grey-50 dark:bg-grey-950 min-h-screen py-4 sm:py-8">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="flex flex-col gap-4 sm:gap-8 lg:flex-row">
+      <%!-- Left Sidebar --%>
+      <div class="w-full lg:w-64 flex-shrink-0">
+        {render(HexpmWeb.DashboardView, "_sidebar.html", assigns)}
+      </div>
+
+      <%!-- Right Content --%>
+      <div class="flex-1 min-w-0">
+        <.org_tab_nav conn={@conn} current_user={@current_user} organization={@organization}>
+          <%= case @tab do %>
+            <% :profile -> %>
+              <.profile_tab
+                changeset={@changeset}
+                current_user={@current_user}
+                gravatar_email={@gravatar_email}
+                organization={@organization}
+                public_email={@public_email}
+              />
+            <% :members -> %>
+              <.members_tab
+                add_member_changeset={@add_member_changeset}
+                current_user={@current_user}
+                organization={@organization}
+                quantity={@quantity}
+              />
+            <% :keys -> %>
+              <.keys_tab
+                create_key_path={@create_key_path}
+                current_user={@current_user}
+                delete_key_path={@delete_key_path}
+                generated_key={@generated_key}
+                key_changeset={@key_changeset}
+                keys={@keys}
+                organization={@organization}
+                packages={@packages}
+              />
+            <% :packages -> %>
+              <.packages_tab
+                organization={@organization}
+                packages={@packages}
+              />
+            <% :audit_logs -> %>
+              <.audit_logs_tab audit_logs={@audit_logs} />
+              <%= if Enum.any?(@audit_logs) do %>
+                <div class="mt-4">
+                  {render(HexpmWeb.SharedView, "_pagination.html",
+                    items: @audit_logs,
+                    page: @page,
+                    total_count: @audit_logs_total_count,
+                    per_page: @per_page,
+                    unit: "activity",
+                    units: "activities",
+                    path_fn: @audit_logs_path_fn
+                  )}
+                </div>
+              <% end %>
+            <% :billing -> %>
+              <.billing_tab
+                amount_with_tax={@amount_with_tax}
+                billing_email={@billing_email}
+                billing_started?={@billing_started?}
+                card={@card}
+                checkout_html={@checkout_html}
+                company={@company}
+                csrf_token={Plug.CSRFProtection.get_csrf_token()}
+                current_user={@current_user}
+                discount={@discount}
+                errors={@errors}
+                invoices={@invoices}
+                max_period_quantity={@max_period_quantity}
+                organization={@organization}
+                params={@params}
+                person={@person}
+                plan_id={@plan_id}
+                pending_action_html={@pending_action_html}
+                post_action={@post_action}
+                proration_amount={@proration_amount}
+                proration_days={@proration_days}
+                quantity={@quantity}
+                script_src_nonce={@script_src_nonce}
+                stripe_publishable_key={@stripe_publishable_key}
+                subscription={@subscription}
+                tax_rate={@tax_rate}
+              />
+            <% :danger_zone -> %>
+              <.danger_zone_tab current_user={@current_user} organization={@organization} />
+            <% _ -> %>
+          <% end %>
+        </.org_tab_nav>
+      </div>
+    </div>
+  </div>
+</div>

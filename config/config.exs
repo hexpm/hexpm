@@ -4,12 +4,14 @@ config :hexpm,
   user_confirm: true,
   user_agent_req: true,
   billing_report: true,
+  cache_enabled: true,
   support_email: "support@hex.pm",
   repo_bucket: {Hexpm.Store.Local, "repo_bucket"},
   logs_bucket: {Hexpm.Store.Local, "logs_bucket"},
   cdn_impl: Hexpm.CDN.Local,
   billing_impl: Hexpm.Billing.Local,
-  pwned_impl: Hexpm.Pwned.Local
+  pwned_impl: Hexpm.Pwned.Local,
+  sudo_timeout: Duration.new!(hour: 1)
 
 config :hexpm, :features, package_reports: true
 
@@ -23,7 +25,12 @@ config :bcrypt_elixir, log_rounds: 4
 config :hexpm, HexpmWeb.Endpoint,
   url: [host: "localhost"],
   root: Path.dirname(__DIR__),
-  render_errors: [view: HexpmWeb.ErrorView, accepts: ~w(html json elixir erlang)],
+  render_errors: [
+    view: HexpmWeb.ErrorView,
+    accepts: ~w(html json elixir erlang),
+    root_layout: {HexpmWeb.LayoutView, :root},
+    layout: {HexpmWeb.LayoutView, :app}
+  ],
   pubsub_server: Hexpm.PubSub
 
 config :hexpm, Hexpm.RepoBase,
@@ -62,6 +69,25 @@ config :mime,
   }
 
 config :logger, :default_formatter, format: "[$level] $metadata$message\n"
+
+config :esbuild,
+  version: "0.25.0",
+  hexpm: [
+    args:
+      ~w(js/app.js --bundle --target=es2017 --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
+    cd: Path.expand("../assets", __DIR__),
+    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+  ]
+
+config :tailwind,
+  version: "4.1.11",
+  default: [
+    args: ~w(
+      --input=./assets/css/tailwind.css
+      --output=./priv/static/assets/app.css
+    ),
+    cd: Path.expand("..", __DIR__)
+  ]
 
 config :ueberauth, Ueberauth,
   providers: [

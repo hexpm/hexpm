@@ -2,9 +2,12 @@ defmodule HexpmWeb.Dashboard.KeyController do
   use HexpmWeb, :controller
 
   plug :requires_login
+  plug HexpmWeb.Plugs.Sudo
 
   def index(conn, _params) do
-    render_index(conn)
+    generated_key = get_session(conn, :generated_key)
+    conn = delete_session(conn, :generated_key)
+    render_index(conn, changeset(), generated_key)
   end
 
   def delete(conn, %{"name" => name}) do
@@ -26,16 +29,13 @@ defmodule HexpmWeb.Dashboard.KeyController do
 
   def create(conn, params) do
     user = conn.assigns.current_user
-    key_params = munge_permissions(params["key"])
+    key_params = params["key"] |> munge_permissions() |> munge_expiry()
 
     case Keys.create(user, key_params, audit: audit_data(conn)) do
       {:ok, %{key: key}} ->
-        flash =
-          "The key #{key.name} was successfully generated, " <>
-            "copy the secret \"#{key.user_secret}\", you won't be able to see it again."
-
         conn
-        |> put_flash(:info, flash)
+        |> put_session(:generated_key, %{name: key.name, user_secret: key.user_secret})
+        |> put_flash(:info, "The key #{key.name} was successfully generated.")
         |> redirect(to: ~p"/dashboard/keys")
 
       {:error, :key, changeset, _} ->
@@ -45,11 +45,11 @@ defmodule HexpmWeb.Dashboard.KeyController do
     end
   end
 
-  defp render_index(conn, changeset \\ changeset()) do
+  defp render_index(conn, changeset \\ changeset(), generated_key \\ nil) do
     user = Hexpm.Repo.preload(conn.assigns.current_user, :owned_packages)
     keys = Keys.all(user)
     organizations = Organizations.all_by_user(user)
-    packages = Enum.filter(user.owned_packages, &(&1.repository_id == 1))
+    packages = Enum.filter(user.owned_packages, &HexpmWeb.ViewHelpers.main_repository?/1)
 
     render(
       conn,
@@ -61,12 +61,36 @@ defmodule HexpmWeb.Dashboard.KeyController do
       packages: packages,
       delete_key_path: ~p"/dashboard/keys",
       create_key_path: ~p"/dashboard/keys",
-      key_changeset: changeset
+      key_changeset: changeset,
+      generated_key: generated_key
     )
   end
 
   defp changeset() do
     Key.changeset(%Key{}, %{}, %{})
+  end
+
+  def munge_expiry(params) do
+    case params["expires_in"] do
+      days when days in ~w(7 30 60 90 365) ->
+        revoke_at =
+          DateTime.utc_now()
+          |> DateTime.add(String.to_integer(days), :day)
+          |> DateTime.truncate(:second)
+
+        Map.put(params, "revoke_at", revoke_at)
+
+      "custom" ->
+        with {:ok, date} <- Date.from_iso8601(params["custom_expiry_date"] || ""),
+             {:ok, revoke_at} <- DateTime.new(date, ~T[23:59:59], "Etc/UTC") do
+          Map.put(params, "revoke_at", revoke_at)
+        else
+          _ -> params
+        end
+
+      _other ->
+        params
+    end
   end
 
   def munge_permissions(params) do

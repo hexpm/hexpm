@@ -1,0 +1,135 @@
+<div class="bg-grey-50 dark:bg-grey-950 min-h-screen py-8">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="flex flex-col gap-10 lg:flex-row">
+      <%!-- Left Sidebar --%>
+      <div class="w-full lg:w-[25%] flex-shrink-0">
+        <.user_sidebar
+          user={@user}
+          gravatar_email={@gravatar_email}
+          public_email={@public_email}
+          total_packages={@total_packages}
+          total_downloads={@total_downloads}
+        />
+      </div>
+
+      <%!-- Right Content --%>
+      <div class="w-full lg:w-[75%]">
+        <%!-- Tab Nav --%>
+        <div class="flex gap-1 mb-6 border-b border-grey-200 dark:border-grey-800">
+          <a
+            href={~p"/users/#{@user.username}"}
+            class="px-4 py-2.5 text-sm font-medium text-grey-500 dark:text-grey-300 hover:text-grey-900 dark:hover:text-grey-100 transition-colors"
+          >
+            Packages
+          </a>
+          <a
+            href={~p"/users/#{@user.username}/stats"}
+            class="px-4 py-2.5 text-sm font-medium text-grey-900 dark:text-white border-b-2 border-primary-600 dark:border-primary-300 -mb-px"
+            aria-current="page"
+          >
+            Stats
+          </a>
+        </div>
+
+        <%!-- Header --%>
+        <div class="flex items-center justify-between mb-6">
+          <h1 class="text-grey-900 dark:text-white text-xl font-semibold">Stats</h1>
+          <div class="flex items-center gap-3">
+            <span class="text-grey-400 dark:text-grey-300 text-xs">Updated daily</span>
+            <.dropdown
+              id="stats-sort-dropdown"
+              label={stats_sort_label(@sort_by)}
+            >
+              <.dropdown_item href="?sort=downloads">Most Downloaded</.dropdown_item>
+              <.dropdown_item href="?sort=name">By Name</.dropdown_item>
+            </.dropdown>
+          </div>
+        </div>
+
+        <%= if @package_graphs == [] do %>
+          <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg py-32 flex flex-col items-center justify-center">
+            <h3 class="text-grey-900 dark:text-white text-xl font-semibold mb-2">No Packages</h3>
+            <p class="text-grey-500 dark:text-grey-300 text-base">
+              No download data to display yet.
+            </p>
+          </div>
+        <% else %>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <%= for item <- @package_graphs do %>
+              <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4">
+                <%!-- Package name + version + description --%>
+                <div class="mb-3">
+                  <div class="flex items-baseline gap-2">
+                    <a
+                      href={ViewHelpers.path_for_package(item.package)}
+                      class="text-grey-900 dark:text-white font-semibold text-sm hover:text-purple-600 dark:hover:text-purple-300 transition-colors"
+                    >
+                      {ViewHelpers.package_name(item.package)}
+                    </a>
+                    <%= if item.package.latest_release do %>
+                      <span class="text-grey-400 dark:text-grey-300 text-xs">
+                        v{item.package.latest_release.version}
+                      </span>
+                    <% end %>
+                  </div>
+                  <%= if item.package.meta.description do %>
+                    <p class="text-grey-500 dark:text-grey-300 text-xs mt-0.5 truncate">
+                      {ViewHelpers.text_length(item.package.meta.description, 80)}
+                    </p>
+                  <% end %>
+                </div>
+
+                <%!-- Chart --%>
+                <%= if is_binary(item.graph_points) and item.graph_points != "" do %>
+                  <.downloads_chart
+                    id={"stats-chart-#{item.package.id}"}
+                    graph_points={item.graph_points}
+                    graph_fill={item.graph_fill}
+                    y_axis_labels={item.y_axis_labels}
+                    aria_label={"Downloads for #{ViewHelpers.package_name(item.package)} over the last 30 days"}
+                  />
+                <% else %>
+                  <div class="h-32 flex items-center justify-center text-grey-300 text-xs">
+                    No data for last 30 days
+                  </div>
+                <% end %>
+
+                <%!-- Stats row below chart --%>
+                <div class="flex items-center justify-between mt-3">
+                  <div class="flex items-center gap-5">
+                    <div class="flex items-baseline gap-1.5">
+                      <span class="text-grey-900 dark:text-white text-sm font-semibold">
+                        {ViewHelpers.human_number_compact(item.all_downloads)}
+                      </span>
+                      <span class="text-grey-400 dark:text-grey-300 text-[10px] font-medium uppercase tracking-wide">
+                        Total
+                      </span>
+                    </div>
+                    <div class="w-px h-3 bg-grey-200 dark:bg-grey-700"></div>
+                    <div class="flex items-baseline gap-1.5">
+                      <span class="text-grey-900 dark:text-white text-sm font-semibold">
+                        {ViewHelpers.human_number_compact(item.day_downloads)}
+                      </span>
+                      <span class="text-grey-400 dark:text-grey-300 text-[10px] font-medium uppercase tracking-wide">
+                        Yesterday
+                      </span>
+                    </div>
+                    <div class="w-px h-3 bg-grey-200 dark:bg-grey-700"></div>
+                    <div class="flex items-baseline gap-1.5">
+                      <span class="text-grey-900 dark:text-white text-sm font-semibold">
+                        {ViewHelpers.human_number_compact(item.week_downloads)}
+                      </span>
+                      <span class="text-grey-400 dark:text-grey-300 text-[10px] font-medium uppercase tracking-wide">
+                        Last 7 days
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

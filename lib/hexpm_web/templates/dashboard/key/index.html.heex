@@ -1,0 +1,24 @@
+<div class="bg-grey-50 dark:bg-grey-950 min-h-screen py-4 sm:py-8">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="flex flex-col gap-4 sm:gap-8 lg:flex-row">
+      <%!-- Left Sidebar --%>
+      <div class="w-full lg:w-64 flex-shrink-0">
+        {render(HexpmWeb.DashboardView, "_sidebar.html", assigns)}
+      </div>
+
+      <%!-- Right Content --%>
+      <div class="flex-1 min-w-0">
+        <.key_management_card
+          keys={@keys}
+          organizations={@organizations}
+          packages={@packages}
+          key_changeset={@key_changeset}
+          current_user={@current_user}
+          create_key_path={@create_key_path}
+          delete_key_path={@delete_key_path}
+          generated_key={assigns[:generated_key]}
+        />
+      </div>
+    </div>
+  </div>
+</div>

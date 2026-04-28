@@ -44,7 +44,7 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
 
       assert response.client_id == client.client_id
       assert response.status == "pending"
-      assert response.scopes == ["api"]
+      assert response.scopes == ["api:read", "api:write"]
     end
 
     test "creates device code with custom scopes" do
@@ -167,6 +167,28 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
       assert token.access_token
       assert token.token_type == "bearer"
       assert DateTime.compare(token.expires_at, DateTime.utc_now()) == :gt
+    end
+
+    test "returns token on multiple polls after authorization", %{
+      device_code: device_code,
+      client: client
+    } do
+      user = insert(:user)
+
+      # Authorize the device
+      {:ok, _} = DeviceCodes.authorize_device(device_code.user_code, user, device_code.scopes)
+
+      # Poll multiple times - each poll creates a new token and revokes the old one
+      {:ok, token1} = DeviceCodes.poll_device_token(device_code.device_code, client.client_id)
+      {:ok, token2} = DeviceCodes.poll_device_token(device_code.device_code, client.client_id)
+      {:ok, token3} = DeviceCodes.poll_device_token(device_code.device_code, client.client_id)
+
+      # Each poll should return a valid token with different JTI
+      assert token1.access_token
+      assert token2.access_token
+      assert token3.access_token
+      assert token1.jti != token2.jti
+      assert token2.jti != token3.jti
     end
   end
 
@@ -303,32 +325,6 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
 
       assert {:error, :already_processed} =
                DeviceCodes.get_device_code_for_verification(device_code.user_code)
-    end
-  end
-
-  describe "cleanup_expired_device_codes/0" do
-    test "marks expired pending device codes as expired" do
-      # Create expired device code
-      client = create_test_client()
-      conn = create_mock_conn()
-      {:ok, response} = DeviceCodes.initiate_device_authorization(conn, client.client_id, ["api"])
-      device_code = Repo.get_by(DeviceCode, device_code: response.device_code)
-
-      past_time = DateTime.add(DateTime.utc_now(), -3600, :second)
-      Repo.update!(DeviceCode.changeset(device_code, %{expires_at: past_time}))
-
-      # Create non-expired device code
-      client2 = create_test_client("Client 2")
-
-      {:ok, _response2} =
-        DeviceCodes.initiate_device_authorization(conn, client2.client_id, ["api"])
-
-      # Run cleanup
-      assert {1, nil} = DeviceCodes.cleanup_expired_device_codes()
-
-      # Verify only expired code was updated
-      updated_device_code = Repo.get(DeviceCode, device_code.id)
-      assert updated_device_code.status == "expired"
     end
   end
 end

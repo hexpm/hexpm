@@ -1,43 +1,67 @@
 defmodule Hexpm.Accounts.Users do
   use Hexpm.Context
 
-  alias Hexpm.Accounts.{RecoveryCode, TFA, UserProvider}
+  alias Hexpm.Accounts.{OptionalEmails, RecoveryCode, TFA, UserProvider}
 
-  def get(username_or_email, preload \\ []) do
+  def get(username_or_email, preload \\ [])
+
+  def get(username_or_email, preload) when is_binary(username_or_email) do
     User.get(String.downcase(username_or_email), preload)
     |> Repo.one()
   end
 
-  def public_get(username_or_email, preload \\ []) do
+  def get(_, _), do: nil
+
+  def public_get(username_or_email, preload \\ [])
+
+  def public_get(username_or_email, preload) when is_binary(username_or_email) do
     User.public_get(String.downcase(username_or_email), preload)
     |> Repo.one()
   end
+
+  def public_get(_, _), do: nil
 
   def get_by_id(id, preload \\ []) do
     Repo.get(User, id)
     |> Repo.preload(preload)
   end
 
-  def get_by_username(username, preload \\ []) do
+  def get_by_username(username, preload \\ [])
+
+  def get_by_username(username, preload) when is_binary(username) do
     Repo.get_by(User, username: String.downcase(username))
     |> Repo.preload(preload)
   end
 
-  def get_by_role(role, preload \\ []) do
+  def get_by_username(_, _), do: nil
+
+  def get_by_role(role, preload \\ [])
+
+  def get_by_role(role, preload) when is_binary(role) do
     User.get_by_role(String.downcase(role))
     |> Repo.all()
     |> Repo.preload(preload)
   end
 
-  def get_email(email, preload \\ []) do
+  def get_by_role(_, _), do: []
+
+  def get_email(email, preload \\ [])
+
+  def get_email(email, preload) when is_binary(email) do
     Repo.get_by(Email, email: String.downcase(email), verified: true)
     |> Repo.preload(preload)
   end
 
-  def get_maybe_unverified_email(email, preload \\ []) do
+  def get_email(_, _), do: nil
+
+  def get_maybe_unverified_email(email, preload \\ [])
+
+  def get_maybe_unverified_email(email, preload) when is_binary(email) do
     Repo.get_by(Email, email: String.downcase(email))
     |> Repo.preload(preload)
   end
+
+  def get_maybe_unverified_email(_, _), do: nil
 
   def all_organizations(%User{organizations: organizations}) when is_list(organizations) do
     [Organization.hexpm() | organizations]
@@ -130,6 +154,9 @@ defmodule Hexpm.Accounts.Users do
           end)
 
         {:error, %Ecto.Changeset{data: user, errors: errors, valid?: false}}
+
+      {:error, :user, changeset, _} ->
+        {:error, changeset}
     end
   end
 
@@ -155,6 +182,25 @@ defmodule Hexpm.Accounts.Users do
     end)
   end
 
+  def update_optional_emails(user, params, audit: audit_data) do
+    old_preferences = OptionalEmails.preferences(user)
+    new_preferences = OptionalEmails.normalize_preferences(params)
+    changeset = User.optional_emails_changeset(user, new_preferences)
+
+    multi =
+      Multi.new()
+      |> Multi.update(:user, changeset)
+      |> audit(audit_data, "email.options", {old_preferences, new_preferences})
+
+    case Repo.transaction(multi) do
+      {:ok, %{user: user}} ->
+        {:ok, user}
+
+      {:error, :user, changeset, _} ->
+        {:error, changeset}
+    end
+  end
+
   def update_password(%User{organization_id: id} = user, _params, _opts) when not is_nil(id) do
     organization_error(user, "cannot change password of organizations")
   end
@@ -178,62 +224,22 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
-  def tfa_enable(user, audit: audit_data) do
-    secret = Hexpm.Accounts.TFA.generate_secret()
-    codes = Hexpm.Accounts.RecoveryCode.generate_set()
+  def tfa_enable(user, secret, verification_code, audit: audit_data) do
+    if TFA.token_valid?(secret, verification_code) do
+      codes = Hexpm.Accounts.RecoveryCode.generate_set()
 
-    multi =
-      Multi.new()
-      |> Multi.update(
-        :user,
-        User.update_tfa(user, %{tfa_enabled: true, secret: secret, recovery_codes: codes})
-      )
-      |> audit(audit_data, "security.update", fn %{user: user} -> user end)
-
-    case Repo.transaction(multi) do
-      {:ok, %{user: user}} ->
-        user
-        |> Emails.tfa_enabled()
-        |> Mailer.deliver_later!()
-
-      {:error, :user, changeset, _} ->
-        {:error, changeset}
-    end
-  end
-
-  def tfa_disable(user, audit: audit_data) do
-    multi =
-      Multi.new()
-      |> Multi.update(
-        :user,
-        User.update_tfa(user, %{tfa_enabled: false, secret: nil, recovery_codes: []})
-      )
-      |> audit(audit_data, "security.update", fn %{user: user} -> user end)
-
-    case Repo.transaction(multi) do
-      {:ok, %{user: user}} ->
-        user
-        |> Emails.tfa_disabled()
-        |> Mailer.deliver_later!()
-
-        user
-
-      {:error, :user, changeset, _} ->
-        {:error, changeset}
-    end
-  end
-
-  def tfa_enable_app(user, verification_code, audit: audit_data) do
-    if TFA.token_valid?(user.tfa.secret, verification_code) do
       multi =
         Multi.new()
-        |> Multi.update(:user, User.update_tfa(user, %{app_enabled: true}))
+        |> Multi.update(
+          :user,
+          User.update_tfa(user, %{secret: secret, recovery_codes: codes})
+        )
         |> audit(audit_data, "security.update", fn %{user: user} -> user end)
 
       case Repo.transaction(multi) do
         {:ok, %{user: user}} ->
           user
-          |> Emails.tfa_enabled_app()
+          |> Emails.tfa_enabled()
           |> Mailer.deliver_later!()
 
           {:ok, user}
@@ -246,18 +252,16 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
-  def tfa_disable_app(user, audit: audit_data) do
-    secret = Hexpm.Accounts.TFA.generate_secret()
-
+  def tfa_disable(user, audit: audit_data) do
     multi =
       Multi.new()
-      |> Multi.update(:user, User.update_tfa(user, %{app_enabled: false, secret: secret}))
+      |> Multi.update(:user, User.clear_tfa(user))
       |> audit(audit_data, "security.update", fn %{user: user} -> user end)
 
     case Repo.transaction(multi) do
       {:ok, %{user: user}} ->
         user
-        |> Emails.tfa_disabled_app()
+        |> Emails.tfa_disabled()
         |> Mailer.deliver_later!()
 
         user

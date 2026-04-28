@@ -16,9 +16,8 @@ defmodule Hexpm.UserSessions do
 
   ## Session Expiration
 
-  All sessions expire after 30 days of creation (non-sliding window). Sessions
-  are automatically cleaned up by calling `cleanup_expired_sessions/0` periodically
-  via a scheduled job (e.g., cron, Oban, Quantum).
+  All sessions expire after 30 days of creation (non-sliding window). Expired
+  rows are deleted by `Hexpm.ReleaseTasks.PurgeExpiredRecords`.
 
   ## Last Use Tracking
 
@@ -27,13 +26,18 @@ defmodule Hexpm.UserSessions do
   """
   use Hexpm.Context
 
+  require Ecto.Query
   import Hexpm.Accounts.AuditLog, only: [audit: 4]
 
   alias Hexpm.UserSession
   alias Hexpm.OAuth.Token
 
-  @max_sessions 5
+  @max_user_sessions 5
+  @min_org_sessions 5
   @default_session_expires_in 30 * 24 * 60 * 60
+
+  def default_session_expires_in, do: @default_session_expires_in
+  def max_user_sessions, do: @max_user_sessions
 
   @doc """
   Calculates the session limit for an organization based on seat count.
@@ -42,10 +46,10 @@ defmodule Hexpm.UserSessions do
   """
   def get_organization_session_limit(organization) do
     if is_integer(organization.billing_seats) and organization.billing_seats > 0 do
-      max(@max_sessions, organization.billing_seats)
+      max(@min_org_sessions, organization.billing_seats)
     else
       # Default to minimum if not cached yet (will be updated by billing report)
-      @max_sessions
+      @min_org_sessions
     end
   end
 
@@ -130,29 +134,31 @@ defmodule Hexpm.UserSessions do
   Requires audit data for security logging.
   """
   def create_api_key_session(user, organization, client_id, expires_at, opts) do
-    # Determine which user to use for session limit enforcement
-    session_user = user || organization.user
-
     # Calculate session limit: use dynamic limit for orgs, default for users
     max_sessions =
       if organization do
         get_organization_session_limit(organization)
       else
-        @max_sessions
+        @max_user_sessions
       end
 
-    enforce_session_limit(session_user, max_sessions)
+    owner = user || organization
+    enforce_session_limit(owner, max_sessions)
 
-    # Determine which user ID to use (user or org's user)
-    user_id = if user, do: user.id, else: organization.user.id
+    owner_attrs =
+      if user do
+        %{user_id: user.id}
+      else
+        %{organization_id: organization.id}
+      end
 
-    attrs = %{
-      user_id: user_id,
-      type: "oauth",
-      client_id: client_id,
-      name: Keyword.get(opts, :name),
-      expires_at: expires_at
-    }
+    attrs =
+      Map.merge(owner_attrs, %{
+        type: "oauth",
+        client_id: client_id,
+        name: Keyword.get(opts, :name),
+        expires_at: expires_at
+      })
 
     changeset = UserSession.changeset(%UserSession{}, attrs)
 
@@ -173,6 +179,79 @@ defmodule Hexpm.UserSessions do
   end
 
   @doc """
+  Builds an Ecto.Multi for creating an OAuth session without executing a transaction.
+
+  Returns the Multi (caller is responsible for executing the transaction).
+
+  ## Options
+    * `:expires_at` - Session expiration (defaults to now + 30 days)
+    * `:name` - Session name
+    * `:usage_info` - Map with :used_at, :user_agent, :ip to set as initial last_use
+    * `:audit` - Audit data for logging
+  """
+  def build_oauth_session_multi(user, client_id, opts) do
+    expires_at =
+      Keyword.get(
+        opts,
+        :expires_at,
+        DateTime.add(DateTime.utc_now(), @default_session_expires_in, :second)
+      )
+
+    %{
+      user_id: user.id,
+      type: "oauth",
+      client_id: client_id,
+      name: Keyword.get(opts, :name),
+      expires_at: expires_at
+    }
+    |> build_session_multi(opts)
+  end
+
+  @doc """
+  Builds an Ecto.Multi for creating an API key session without executing a transaction.
+
+  Similar to `build_oauth_session_multi/3` but supports both users and organizations,
+  and uses the provided `expires_at` directly (API key sessions have shorter lifetimes).
+
+  Returns the Multi (caller is responsible for executing the transaction).
+  """
+  def build_api_key_session_multi(user, organization, client_id, expires_at, opts) do
+    owner_attrs =
+      if user do
+        %{user_id: user.id}
+      else
+        %{organization_id: organization.id}
+      end
+
+    Map.merge(owner_attrs, %{
+      type: "oauth",
+      client_id: client_id,
+      name: Keyword.get(opts, :name),
+      expires_at: expires_at
+    })
+    |> build_session_multi(opts)
+  end
+
+  defp build_session_multi(attrs, opts) do
+    changeset = UserSession.changeset(%UserSession{}, attrs)
+
+    changeset =
+      if usage_info = Keyword.get(opts, :usage_info) do
+        Ecto.Changeset.put_embed(changeset, :last_use, struct(UserSession.Use, usage_info))
+      else
+        changeset
+      end
+
+    multi = Ecto.Multi.new() |> Ecto.Multi.insert(:session, changeset)
+
+    if audit_data = Keyword.get(opts, :audit) do
+      audit(multi, audit_data, "session.create", fn %{session: session} -> session end)
+    else
+      multi
+    end
+  end
+
+  @doc """
   Gets a browser session by token.
   """
   def get_browser_session_by_token(token) do
@@ -181,7 +260,7 @@ defmodule Hexpm.UserSessions do
     from(s in UserSession,
       where:
         s.type == "browser" and s.session_token == ^token and is_nil(s.revoked_at) and
-          (is_nil(s.expires_at) or s.expires_at > ^now)
+          s.expires_at > ^now
     )
     |> Repo.one()
   end
@@ -193,32 +272,7 @@ defmodule Hexpm.UserSessions do
     now = DateTime.utc_now()
 
     from(s in UserSession,
-      where:
-        s.user_id == ^user.id and is_nil(s.revoked_at) and
-          (is_nil(s.expires_at) or s.expires_at > ^now),
-      order_by: [desc: s.inserted_at],
-      preload: [:client]
-    )
-    |> Repo.all()
-  end
-
-  @doc """
-  Gets all active browser sessions for a user.
-  """
-  def all_browser_for_user(user) do
-    from(s in UserSession,
-      where: s.user_id == ^user.id and s.type == "browser" and is_nil(s.revoked_at),
-      order_by: [desc: s.inserted_at]
-    )
-    |> Repo.all()
-  end
-
-  @doc """
-  Gets all active OAuth sessions for a user.
-  """
-  def all_oauth_for_user(user) do
-    from(s in UserSession,
-      where: s.user_id == ^user.id and s.type == "oauth" and is_nil(s.revoked_at),
+      where: s.user_id == ^user.id and is_nil(s.revoked_at) and s.expires_at > ^now,
       order_by: [desc: s.inserted_at],
       preload: [:client]
     )
@@ -312,13 +366,12 @@ defmodule Hexpm.UserSessions do
   @doc """
   Counts total active sessions for a user.
   """
-  def count_for_user(user) do
+  def count_for_user(user_or_org) do
     now = DateTime.utc_now()
 
     from(s in UserSession,
-      where:
-        s.user_id == ^user.id and is_nil(s.revoked_at) and
-          (is_nil(s.expires_at) or s.expires_at > ^now),
+      where: ^owner_filter(user_or_org),
+      where: is_nil(s.revoked_at) and s.expires_at > ^now,
       select: count(s.id)
     )
     |> Repo.one()
@@ -327,116 +380,69 @@ defmodule Hexpm.UserSessions do
   @doc """
   Enforces the session limit by revoking least recently used sessions if needed.
   Called before creating a new session to ensure the user stays within the limit.
-  Uses update_all for efficiency instead of fetching and iterating.
 
   The max_sessions parameter allows overriding the default limit (e.g., for organizations).
   """
-  def enforce_session_limit(user, max_sessions \\ @max_sessions) do
-    count = count_for_user(user)
-
-    if count >= max_sessions do
-      now = DateTime.utc_now()
-      revoke_count = count - max_sessions + 1
-
-      # Find the IDs of sessions to revoke using a subquery
-      session_ids_to_revoke =
-        from(s in UserSession,
-          where:
-            s.user_id == ^user.id and is_nil(s.revoked_at) and
-              (is_nil(s.expires_at) or s.expires_at > ^now),
-          order_by: [
-            asc: fragment("(last_use->>'used_at')::timestamptz NULLS FIRST"),
-            asc: s.inserted_at
-          ],
-          limit: ^revoke_count,
-          select: s.id
-        )
-
-      # Use a transaction to revoke sessions and their tokens atomically
-      Ecto.Multi.new()
-      |> Ecto.Multi.update_all(
-        :revoke_sessions,
-        from(s in UserSession, where: s.id in subquery(session_ids_to_revoke)),
-        set: [revoked_at: now, updated_at: now]
-      )
-      |> Ecto.Multi.update_all(
-        :revoke_tokens,
-        from(t in Token,
-          where: t.user_session_id in subquery(session_ids_to_revoke) and is_nil(t.revoked_at)
-        ),
-        set: [revoked_at: now, updated_at: now]
-      )
-      |> Repo.transaction()
-    end
-
-    :ok
+  def enforce_session_limit(user_or_org, max_sessions \\ @max_user_sessions) do
+    revoke_lru_sessions(owner_filter(user_or_org), max_sessions - 1)
   end
 
   @doc """
   Revokes excess sessions for an organization when seat count is reduced.
   Called after reducing seats to ensure active sessions don't exceed the new limit.
-  Uses the same LRU logic as enforce_session_limit.
   """
   def revoke_excess_sessions_for_organization(organization, new_seat_limit) do
-    # Preload the organization user if not already loaded
-    organization = Repo.preload(organization, :user)
-    max_sessions = max(@max_sessions, new_seat_limit)
+    max_sessions = max(@min_org_sessions, new_seat_limit)
+    revoke_lru_sessions(owner_filter(organization), max_sessions)
+  end
 
-    count = count_for_user(organization.user)
+  # Revokes any active sessions beyond `keep_count`, ranked most-recently-used first.
+  #
+  # Uses SKIP LOCKED so concurrent enforcers don't queue on the same rows; at
+  # worst this over-revokes by one or two sessions, which is acceptable for a
+  # soft limit. Session IDs are materialized once so both the session and token
+  # update_all target the same set.
+  defp revoke_lru_sessions(owner_filter, keep_count) do
+    now = DateTime.utc_now()
 
-    # Only revoke if we exceed the limit (no +1 since we're not creating a new session)
-    if count > max_sessions do
-      now = DateTime.utc_now()
-      revoke_count = count - max_sessions
-
-      # Find the IDs of sessions to revoke using a subquery
-      session_ids_to_revoke =
+    Repo.transaction(fn ->
+      session_ids =
         from(s in UserSession,
-          where:
-            s.user_id == ^organization.user.id and is_nil(s.revoked_at) and
-              (is_nil(s.expires_at) or s.expires_at > ^now),
+          where: ^owner_filter,
+          where: is_nil(s.revoked_at) and s.expires_at > ^now,
           order_by: [
-            asc: fragment("(last_use->>'used_at')::timestamptz NULLS FIRST"),
-            asc: s.inserted_at
+            desc_nulls_last: fragment("(last_use->>'used_at')::timestamptz"),
+            desc: s.inserted_at
           ],
-          limit: ^revoke_count,
-          select: s.id
+          offset: ^keep_count,
+          select: s.id,
+          lock: "FOR UPDATE SKIP LOCKED"
+        )
+        |> Repo.all()
+
+      if session_ids != [] do
+        Repo.update_all(
+          from(s in UserSession, where: s.id in ^session_ids),
+          set: [revoked_at: now, updated_at: now]
         )
 
-      # Use a transaction to revoke sessions and their tokens atomically
-      Ecto.Multi.new()
-      |> Ecto.Multi.update_all(
-        :revoke_sessions,
-        from(s in UserSession, where: s.id in subquery(session_ids_to_revoke)),
-        set: [revoked_at: now, updated_at: now]
-      )
-      |> Ecto.Multi.update_all(
-        :revoke_tokens,
-        from(t in Token,
-          where: t.user_session_id in subquery(session_ids_to_revoke) and is_nil(t.revoked_at)
-        ),
-        set: [revoked_at: now, updated_at: now]
-      )
-      |> Repo.transaction()
-    end
+        Repo.update_all(
+          from(t in Token,
+            where: t.user_session_id in ^session_ids and is_nil(t.revoked_at)
+          ),
+          set: [revoked_at: now, updated_at: now]
+        )
+      end
+    end)
 
     :ok
   end
 
-  @doc """
-  Cleans up expired sessions by deleting them from the database.
+  defp owner_filter(%Hexpm.Accounts.User{} = user) do
+    Ecto.Query.dynamic([s], s.user_id == ^user.id)
+  end
 
-  This function should be called periodically (e.g., daily) via a scheduled job
-  such as cron, Oban, or Quantum to prevent accumulation of expired records.
-
-  Returns `{count, nil}` where count is the number of deleted sessions.
-  """
-  def cleanup_expired_sessions do
-    now = DateTime.utc_now()
-
-    from(s in UserSession,
-      where: s.expires_at < ^now
-    )
-    |> Repo.delete_all()
+  defp owner_filter(%Hexpm.Accounts.Organization{} = org) do
+    Ecto.Query.dynamic([s], s.organization_id == ^org.id)
   end
 end

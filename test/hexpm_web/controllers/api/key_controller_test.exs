@@ -192,6 +192,47 @@ defmodule HexpmWeb.API.KeyControllerTest do
       refute Repo.one(Key.get(c.eric, "macbook"))
     end
 
+    test "create api key with future revoke_at", c do
+      revoke_at =
+        DateTime.utc_now()
+        |> DateTime.add(30, :day)
+        |> DateTime.truncate(:second)
+        |> DateTime.to_iso8601()
+
+      body = %{name: "expiring", revoke_at: revoke_at}
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/json")
+        |> put_req_header("authorization", basic_auth(c.eric))
+        |> post("/api/keys", body)
+
+      assert conn.status == 201
+      response = json_response(conn, 201)
+      assert response["revoke_at"]
+
+      key = Repo.one!(Key.get(c.eric, "expiring"))
+      assert key.revoke_at != nil
+    end
+
+    test "create api key with past revoke_at returns 422", c do
+      revoke_at =
+        DateTime.utc_now()
+        |> DateTime.add(-1, :day)
+        |> DateTime.truncate(:second)
+        |> DateTime.to_iso8601()
+
+      body = %{name: "expired", revoke_at: revoke_at}
+
+      build_conn()
+      |> put_req_header("content-type", "application/json")
+      |> put_req_header("authorization", basic_auth(c.eric))
+      |> post("/api/keys", body)
+      |> json_response(422)
+
+      refute Repo.one(Key.get(c.eric, "expired"))
+    end
+
     test "create repositories key", c do
       body = %{name: "macbook", permissions: [%{domain: "repositories"}]}
 

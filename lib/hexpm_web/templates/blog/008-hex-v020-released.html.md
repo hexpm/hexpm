@@ -24,7 +24,7 @@ Diff can be a great tool for debugging as well as code auditing, for more inform
 
 From this release you can configure Hex inside your mix project. This can for example be useful if you have some packages in a self-hosted private repository. Instead of every user of the package setting up the correct configuration you can instead this configuration to the project itself:
 
-```
+```elixir
 # mix.exs
 
 defmodule MyApp.MixProject

@@ -2,7 +2,7 @@ defmodule Hexpm.Repository.PackageTest do
   use Hexpm.DataCase
 
   alias Hexpm.Accounts.User
-  alias Hexpm.Repository.{Package, Repository}
+  alias Hexpm.Repository.{Package, Packages, Releases, Repository}
 
   setup do
     user = insert(:user)
@@ -240,8 +240,6 @@ defmodule Hexpm.Repository.PackageTest do
     insert(:requirement, release: rel, dependency: poison, requirement: "~> 1.0")
     insert(:requirement, release: rel, dependency: ecto, requirement: "~> 1.0")
 
-    Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
-
     assert ["ecto", "phoenix"] = search_for(repository, "depends:#{repository.name}:poison")
 
     assert ["phoenix"] =
@@ -264,9 +262,192 @@ defmodule Hexpm.Repository.PackageTest do
     insert(:requirement, release: rel, dependency: poison, requirement: "~> 1.0")
     insert(:requirement, release: rel, dependency: ecto, requirement: "~> 1.0")
 
-    Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
-
     assert ["phoenix"] = search_for(repository, "depends:#{repository.name}:poison")
+  end
+
+  test "dependants query filters by dependency package id", %{repository: repository} do
+    private_repo = insert(:repository)
+    poison = insert(:package, name: "poison", repository_id: repository.id)
+    ecto = insert(:package, name: "ecto", repository_id: private_repo.id)
+    phoenix = insert(:package, name: "phoenix", repository_id: repository.id)
+
+    rel = insert(:release, package: ecto)
+    insert(:requirement, release: rel, dependency: poison, requirement: "~> 1.0")
+    rel = insert(:release, package: phoenix)
+    insert(:requirement, release: rel, dependency: poison, requirement: "~> 1.0")
+
+    assert 1 = Package.count_dependants([repository], poison) |> Repo.one!()
+
+    assert ["phoenix"] =
+             Package.dependants([repository], poison, 1, 10, :name, nil)
+             |> Repo.all()
+             |> Enum.map(& &1.name)
+  end
+
+  test "dependants sort by recent downloads uses download order and repo scoping", %{
+    repository: repository
+  } do
+    private_repo = insert(:repository)
+    dependency = insert(:package, name: "dependency", repository_id: repository.id)
+    top = insert(:package, name: "top", repository_id: repository.id)
+    middle = insert(:package, name: "middle", repository_id: repository.id)
+    zero = insert(:package, name: "zero", repository_id: repository.id)
+    hidden = insert(:package, name: "hidden", repository_id: private_repo.id)
+
+    insert(:release,
+      package: top,
+      daily_downloads: [build(:download, package_id: top.id, downloads: 10)]
+    )
+
+    insert(:release,
+      package: middle,
+      daily_downloads: [build(:download, package_id: middle.id, downloads: 5)]
+    )
+
+    insert(:release,
+      package: zero,
+      daily_downloads: [
+        build(:download, package_id: zero.id, downloads: 10, day: Hexpm.Utils.utc_days_ago(91))
+      ]
+    )
+
+    insert(:release,
+      package: hidden,
+      daily_downloads: [build(:download, package_id: hidden.id, downloads: 100)]
+    )
+
+    for package <- [top, middle, zero, hidden] do
+      rel = Repo.one!(assoc(package, :releases))
+      insert(:requirement, release: rel, dependency: dependency, requirement: "~> 1.0")
+    end
+
+    :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
+
+    assert [top.id, middle.id, zero.id] ==
+             Packages.dependants([repository], dependency, 1, 10, :recent_downloads)
+             |> Enum.map(& &1.id)
+  end
+
+  test "dependants sort by recent downloads paginates into zero-download dependants", %{
+    repository: repository
+  } do
+    dependency = insert(:package, name: "dependency", repository_id: repository.id)
+    top = insert(:package, name: "top", repository_id: repository.id)
+    zero_one = insert(:package, name: "zero_one", repository_id: repository.id)
+    zero_two = insert(:package, name: "zero_two", repository_id: repository.id)
+
+    insert(:release,
+      package: top,
+      daily_downloads: [build(:download, package_id: top.id, downloads: 10)]
+    )
+
+    for package <- [zero_one, zero_two] do
+      insert(:release, package: package)
+    end
+
+    for package <- [top, zero_one, zero_two] do
+      rel = Repo.one!(assoc(package, :releases))
+      insert(:requirement, release: rel, dependency: dependency, requirement: "~> 1.0")
+    end
+
+    :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
+
+    assert [zero_two.id] ==
+             Packages.dependants([repository], dependency, 2, 2, :recent_downloads)
+             |> Enum.map(& &1.id)
+  end
+
+  test "reverting a release only removes affected dependant pairs", %{
+    repository: repository,
+    user: user
+  } do
+    dependency = %{
+      insert(:package, name: "dependency", repository_id: repository.id)
+      | repository: repository
+    }
+
+    survivor = %{
+      insert(:package, name: "survivor", repository_id: repository.id)
+      | repository: repository
+    }
+
+    doomed = %{
+      insert(:package, name: "doomed", repository_id: repository.id)
+      | repository: repository
+    }
+
+    shared_packages =
+      for index <- 1..4 do
+        insert(:package, name: "shared#{index}", repository_id: repository.id)
+      end
+
+    survivor_release_one = %{
+      insert(:release, package: survivor, version: "1.0.0")
+      | package: survivor
+    }
+
+    survivor_release_two = %{
+      insert(:release, package: survivor, version: "2.0.0")
+      | package: survivor
+    }
+
+    doomed_release = %{insert(:release, package: doomed, version: "1.0.0") | package: doomed}
+
+    for package <- shared_packages do
+      release = insert(:release, package: package, version: "1.0.0")
+      insert(:requirement, release: release, dependency: dependency, requirement: "~> 1.0")
+    end
+
+    for release <- [survivor_release_one, survivor_release_two, doomed_release] do
+      insert(:requirement, release: release, dependency: dependency, requirement: "~> 1.0")
+    end
+
+    assert 6 = Package.count_dependants([repository], dependency) |> Repo.one!()
+
+    assert ["doomed", "shared1", "shared2", "shared3", "shared4", "survivor"] =
+             dependant_names(repository, dependency)
+
+    assert :ok = Releases.revert(doomed, doomed_release, audit: audit_data(user))
+
+    assert 5 = Package.count_dependants([repository], dependency) |> Repo.one!()
+
+    assert ["shared1", "shared2", "shared3", "shared4", "survivor"] =
+             dependant_names(repository, dependency)
+
+    assert :ok = Releases.revert(survivor, survivor_release_one, audit: audit_data(user))
+
+    assert 5 = Package.count_dependants([repository], dependency) |> Repo.one!()
+
+    assert ["shared1", "shared2", "shared3", "shared4", "survivor"] =
+             dependant_names(repository, dependency)
+  end
+
+  test "depends search can return private packages if caller passes a broad repository list", %{
+    repository: repository
+  } do
+    private_repo = insert(:repository)
+    dependency = insert(:package, name: "dependency", repository_id: repository.id)
+    public_match = insert(:package, name: "public_match", repository_id: repository.id)
+    private_match = insert(:package, name: "private_match", repository_id: private_repo.id)
+
+    insert(:release, package: dependency, version: "1.0.0")
+
+    rel = insert(:release, package: public_match, version: "1.0.0")
+    insert(:requirement, release: rel, dependency: dependency, requirement: "~> 1.0")
+
+    rel = insert(:release, package: private_match, version: "1.0.0")
+    insert(:requirement, release: rel, dependency: dependency, requirement: "~> 1.0")
+
+    assert ["private_match", "public_match"] =
+             Packages.search(
+               [repository, private_repo],
+               1,
+               10,
+               "depends:#{repository.name}:#{dependency.name}",
+               :name,
+               nil
+             )
+             |> Enum.map(& &1.name)
   end
 
   test "search build tools", %{repository: repository} do
@@ -352,6 +533,39 @@ defmodule Hexpm.Repository.PackageTest do
              |> Enum.map(& &1.id)
   end
 
+  test "search packages by total downloads uses download order and repo scoping", %{
+    repository: repository
+  } do
+    private_repo = insert(:repository)
+    top = insert(:package, name: "top", repository_id: repository.id)
+    middle = insert(:package, name: "middle", repository_id: repository.id)
+    zero = insert(:package, name: "zero", repository_id: repository.id)
+    hidden = insert(:package, name: "hidden", repository_id: private_repo.id)
+
+    insert(:release,
+      package: top,
+      daily_downloads: [build(:download, package_id: top.id, downloads: 10)]
+    )
+
+    insert(:release,
+      package: middle,
+      daily_downloads: [build(:download, package_id: middle.id, downloads: 5)]
+    )
+
+    insert(:release, package: zero)
+
+    insert(:release,
+      package: hidden,
+      daily_downloads: [build(:download, package_id: hidden.id, downloads: 100)]
+    )
+
+    :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
+
+    assert [top.id, middle.id, zero.id] ==
+             Packages.search([repository], 1, 10, nil, :total_downloads, nil)
+             |> Enum.map(& &1.id)
+  end
+
   test "sort packages by recent downloads", %{repository: repository} do
     %{id: ecto_id} = insert(:package, repository_id: repository.id)
     %{id: phoenix_id} = insert(:package, repository_id: repository.id)
@@ -389,8 +603,60 @@ defmodule Hexpm.Repository.PackageTest do
              |> Enum.map(& &1.id)
   end
 
+  test "search packages by recent downloads paginates into zero-download packages", %{
+    repository: repository
+  } do
+    top = insert(:package, name: "top", repository_id: repository.id)
+    zero_one = insert(:package, name: "zero_one", repository_id: repository.id)
+    zero_two = insert(:package, name: "zero_two", repository_id: repository.id)
+
+    insert(:release,
+      package: top,
+      daily_downloads: [build(:download, package_id: top.id, downloads: 10)]
+    )
+
+    for package <- [zero_one, zero_two] do
+      insert(:release, package: package)
+    end
+
+    :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
+
+    assert [zero_two.id] ==
+             Packages.search([repository], 2, 2, nil, :recent_downloads, nil)
+             |> Enum.map(& &1.id)
+  end
+
+  test "search packages by recent downloads fills first page with zero-download packages", %{
+    repository: repository
+  } do
+    top = insert(:package, name: "top", repository_id: repository.id)
+    zero_one = insert(:package, name: "zero_one", repository_id: repository.id)
+    zero_two = insert(:package, name: "zero_two", repository_id: repository.id)
+
+    insert(:release,
+      package: top,
+      daily_downloads: [build(:download, package_id: top.id, downloads: 10)]
+    )
+
+    for package <- [zero_one, zero_two] do
+      insert(:release, package: package)
+    end
+
+    :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
+
+    assert [top.id, zero_one.id] ==
+             Packages.search([repository], 1, 2, nil, :recent_downloads, nil)
+             |> Enum.map(& &1.id)
+  end
+
   defp search_for(repository, search_term) do
     Package.all([repository], 1, 10, search_term, :name, nil)
+    |> Repo.all()
+    |> Enum.map(& &1.name)
+  end
+
+  defp dependant_names(repository, dependency) do
+    Package.dependants([repository], dependency, 1, 20, :name, nil)
     |> Repo.all()
     |> Enum.map(& &1.name)
   end

@@ -438,6 +438,15 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       |> put("/api/packages/#{package.name}/owners/#{hd(user2.emails).email}")
       |> response(403)
     end
+
+    test "add package owner as deactivated user", %{user1: user1, user2: user2, package: package} do
+      Ecto.Changeset.change(user1, deactivated_at: DateTime.utc_now()) |> Repo.update!()
+
+      build_conn()
+      |> put_req_header("authorization", key_for(user1))
+      |> put("/api/packages/#{package.name}/owners/#{hd(user2.emails).email}")
+      |> response(400)
+    end
   end
 
   describe "PUT /repos/:repository/packages/:name/owners/:email" do

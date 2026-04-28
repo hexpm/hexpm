@@ -1,8 +1,30 @@
 defmodule HexpmWeb.AuthController do
   use HexpmWeb, :controller
+  plug :check_oauth_config when action in [:request]
   plug Ueberauth
 
   alias Hexpm.Accounts.{Auth, Users, UserProviders}
+
+  # Prevent Ueberauth crashes when OAuth credentials are missing in development
+  def check_oauth_config(%{params: %{"provider" => provider}} = conn, _opts) do
+    case provider do
+      "github" ->
+        if github_oauth_configured?() do
+          conn
+        else
+          conn
+          |> put_flash(:error, "GitHub login is not configured on this server.")
+          |> redirect(to: ~p"/login")
+          |> halt()
+        end
+
+      _ ->
+        # For other providers, let Ueberauth handle the error
+        conn
+    end
+  end
+
+  def check_oauth_config(conn, _opts), do: conn
 
   def request(conn, _params) do
     conn
@@ -18,40 +40,45 @@ defmodule HexpmWeb.AuthController do
     provider = to_string(auth.provider)
     provider_uid = to_string(auth.uid)
 
-    if logged_in?(conn) do
-      # User is already logged in - try to link this provider
-      link_provider_to_user(conn, provider, provider_uid, auth.info.email)
-    else
-      # Not logged in - check if provider exists or create new user
-      case Auth.provider_auth(provider, provider_uid) do
-        {:ok, %{user: user}} ->
-          # Existing user with this provider - log them in
-          handle_existing_user_login(conn, user)
+    cond do
+      # Check if this is a sudo verification flow
+      get_session(conn, "sudo_verification") ->
+        handle_sudo_verification(conn, provider, provider_uid)
 
-        :error ->
-          # No user found with this provider
-          handle_new_provider(
-            conn,
-            provider,
-            provider_uid,
-            auth.info.email,
-            auth.info.name,
-            auth.info.nickname
-          )
-      end
+      logged_in?(conn) ->
+        # User is already logged in - try to link this provider
+        link_provider_to_user(conn, provider, provider_uid, auth.info.email)
+
+      true ->
+        # Not logged in - check if provider exists or create new user
+        case Auth.provider_auth(provider, provider_uid) do
+          {:ok, %{user: user}} ->
+            # Existing user with this provider - log them in
+            handle_existing_user_login(conn, user)
+
+          :error ->
+            # No user found with this provider
+            handle_new_provider(
+              conn,
+              provider,
+              provider_uid,
+              auth.info.email,
+              auth.info.name,
+              auth.info.nickname
+            )
+        end
     end
   end
 
   defp handle_existing_user_login(conn, user) do
     if User.tfa_enabled?(user) do
       conn
-      |> configure_session(renew: true)
-      |> put_session("tfa_user_id", %{uid: user.id, return: conn.params["return"]})
+      |> start_tfa_session(user, conn.params["return"])
       |> redirect(to: ~p"/tfa")
     else
       conn
-      |> configure_session(renew: true)
-      |> put_session("user_id", user.id)
+      |> start_session_internal(user)
+      |> HexpmWeb.Plugs.Sudo.set_sudo_authenticated()
       |> redirect(to: conn.params["return"] || ~p"/users/#{user}")
     end
   end
@@ -134,7 +161,7 @@ defmodule HexpmWeb.AuthController do
 
       oauth_data ->
         suggested_username =
-          generate_username(oauth_data[:provider_nickname], oauth_data[:provider_email])
+          generate_username(oauth_data["provider_nickname"], oauth_data["provider_email"])
 
         render(conn, "complete_signup.html",
           suggested_username: suggested_username,
@@ -157,10 +184,10 @@ defmodule HexpmWeb.AuthController do
   end
 
   defp create_user_from_oauth(conn, oauth_data, username) do
-    provider = oauth_data[:provider]
-    provider_uid = oauth_data[:provider_uid]
-    provider_email = oauth_data[:provider_email]
-    provider_name = oauth_data[:provider_name]
+    provider = oauth_data["provider"]
+    provider_uid = oauth_data["provider_uid"]
+    provider_email = oauth_data["provider_email"]
+    provider_name = oauth_data["provider_name"]
 
     case Users.add_from_oauth_with_provider(
            username,
@@ -174,14 +201,14 @@ defmodule HexpmWeb.AuthController do
       {:ok, user} ->
         conn
         |> delete_session("pending_oauth")
-        |> configure_session(renew: true)
-        |> put_session("user_id", user.id)
+        |> start_session_internal(user)
+        |> HexpmWeb.Plugs.Sudo.set_sudo_authenticated()
         |> put_flash(:info, "Account created successfully!")
         |> redirect(to: ~p"/users/#{user}")
 
       {:error, changeset} ->
         suggested_username =
-          generate_username(oauth_data[:provider_nickname], oauth_data[:provider_email])
+          generate_username(oauth_data["provider_nickname"], oauth_data["provider_email"])
 
         render(conn, "complete_signup.html",
           suggested_username: suggested_username,
@@ -214,4 +241,42 @@ defmodule HexpmWeb.AuthController do
   end
 
   defp generate_username(_nickname, _email), do: nil
+
+  defp github_oauth_configured? do
+    case Application.get_env(:ueberauth, Ueberauth.Strategy.Github.OAuth) do
+      [client_id: id, client_secret: secret]
+      when is_binary(id) and id != "" and is_binary(secret) and secret != "" ->
+        true
+
+      _ ->
+        false
+    end
+  end
+
+  @spec handle_sudo_verification(Plug.Conn.t(), String.t(), String.t()) :: Plug.Conn.t()
+  defp handle_sudo_verification(conn, provider, provider_uid) do
+    user = conn.assigns.current_user
+    user = Hexpm.Repo.preload(user, :user_providers)
+
+    # Verify the OAuth provider matches user's linked provider
+    has_matching_provider =
+      Enum.any?(user.user_providers, fn p ->
+        p.provider == provider && p.provider_uid == provider_uid
+      end)
+
+    return_to = get_session(conn, "sudo_return_to") || ~p"/dashboard/security"
+
+    conn = delete_session(conn, "sudo_verification")
+
+    if has_matching_provider do
+      conn
+      |> HexpmWeb.Plugs.Sudo.set_sudo_authenticated()
+      |> delete_session("sudo_return_to")
+      |> redirect(to: return_to)
+    else
+      conn
+      |> put_flash(:error, "GitHub account does not match your linked account.")
+      |> redirect(to: ~p"/sudo")
+    end
+  end
 end

@@ -3,7 +3,7 @@ defmodule Hexpm.Repo.Migrations.AddKeysTable do
 
   def up() do
     execute("""
-      CREATE TABLE keys (
+      CREATE TABLE IF NOT EXISTS keys (
         id serial PRIMARY KEY,
         user_id integer REFERENCES users,
         name text,
@@ -15,6 +15,6 @@ defmodule Hexpm.Repo.Migrations.AddKeysTable do
   end
 
   def down() do
-    execute("DROP TABLE keys")
+    execute("DROP TABLE IF EXISTS keys")
   end
 end

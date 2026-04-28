@@ -1,0 +1,37 @@
+<%!-- Hero Section with Title --%>
+<div class="flex flex-col items-center justify-center mt-12 mb-16">
+  <h1 class="text-grey-900 text-4xl font-bold">
+    Sponsors
+  </h1>
+
+  <p class="text-grey-600 text-center text-lg mt-3 max-w-4xl mx-auto">
+    The following companies provide resources and services that make running Hex possible.
+  </p>
+</div>
+
+<%!-- Sponsors Grid --%>
+<div class="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6 mb-12 px-4">
+  <.sponsor_card
+    name="Dashbit"
+    url="https://dashbit.co"
+    logo_src={~p"/images/dashbit.png"}
+    description="Dashbit helps startups and enterprises adopt and run Elixir in production. In turn, these relationships gives them resources and feedback to invest back into the community. Their goal is to advance the Elixir ecosystem through continuous adoption and sustainable open source development."
+    contribution="Dashbit provides consultancy and development help for Hex."
+  />
+
+  <.sponsor_card
+    name="Fastly"
+    url="https://www.fastly.com/"
+    logo_src={~p"/images/fastly.png"}
+    description="Founded in 2011, Fastly is the only content delivery network that gives businesses complete control over how they serve content, unprecedented access to real-time performance analytics, and the ability to cache frequently changing content at the edge. Our secure, global network allows enterprises to increase revenue and improve customer experiences across their websites and mobile applications while maintaining fast, consistent, and reliable performance."
+    contribution="Fastly provides Hex with free CDN services."
+  />
+
+  <.sponsor_card
+    name="DraftKings"
+    url="https://draftkings.com/"
+    logo_src={~p"/images/draftkings.svg"}
+    description="Defining what it means to build and deliver the most extraordinary sports & entertainment experiences. The Crown is Yours."
+    contribution="DraftKings provides development help for Hex."
+  />
+</div>

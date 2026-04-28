@@ -36,7 +36,8 @@ defmodule Hexpm.Fake do
   Enum.each(@generators, fn {key, _deps} ->
     def sequence(unquote(key), opts) do
       [{_key, size}] = :ets.lookup(__MODULE__, {unquote(key), :size})
-      counter = :ets.update_counter(__MODULE__, unquote(key), {2, 1})
+      # Use wrap-around counter: increment by 1, threshold at size-1, wrap to 0
+      counter = :ets.update_counter(__MODULE__, unquote(key), {2, 1, size - 1, 0})
       opts = Keyword.put(opts, :num_objects, size)
       generator(unquote(key), counter, opts)
     end
@@ -75,7 +76,10 @@ defmodule Hexpm.Fake do
   end
 
   defp get!(key, counter, original_key \\ nil) do
-    case :ets.lookup(__MODULE__, {key, counter}) do
+    [{_key, size}] = :ets.lookup(__MODULE__, {key, :size})
+    wrapped_counter = rem(counter, size)
+
+    case :ets.lookup(__MODULE__, {key, wrapped_counter}) do
       [{_key, value}] ->
         value
 

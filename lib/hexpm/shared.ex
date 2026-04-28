@@ -26,6 +26,7 @@ defmodule Hexpm.Shared do
         Repository.Installs,
         Repository.Owners,
         Repository.Package,
+        Repository.PackageDependant,
         Repository.PackageDownload,
         Repository.PackageMetadata,
         Repository.PackageOwner,

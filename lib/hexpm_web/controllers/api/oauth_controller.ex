@@ -5,6 +5,8 @@ defmodule HexpmWeb.API.OAuthController do
 
   alias Hexpm.OAuth.{Clients, Tokens, AuthorizationCodes, DeviceCodes}
 
+  defp safe_param(params, key), do: safe_string(params[key])
+
   @doc """
   Standard OAuth 2.0 token endpoint for API access.
   Handles multiple grant types: authorization_code, device_code, refresh_token, client_credentials.
@@ -36,12 +38,12 @@ defmodule HexpmWeb.API.OAuthController do
   Device authorization endpoint for device flow.
   """
   def device_authorization(conn, params) do
-    with {:ok, client} <- validate_client(params["client_id"]),
+    with {:ok, client} <- validate_client(safe_param(params, "client_id")),
          :ok <-
            validate_client_supports_grant(client, "urn:ietf:params:oauth:grant-type:device_code"),
          {:ok, scopes} <- validate_scopes(client, params["scope"]) do
       case DeviceCodes.initiate_device_authorization(conn, client.client_id, scopes,
-             name: params["name"]
+             name: safe_param(params, "name")
            ) do
         {:ok, response} ->
           render(conn, :device_authorization, device_response: response)
@@ -77,17 +79,34 @@ defmodule HexpmWeb.API.OAuthController do
     end
   end
 
+  @doc """
+  Token revocation endpoint using refresh token hash.
+  Allows revocation when the actual token value is not available.
+  """
+  def revoke_by_hash(conn, params) do
+    case revoke_token_by_hash(params) do
+      :ok ->
+        send_resp(conn, 200, "")
+
+      {:error, _reason} ->
+        # Return 200 OK even for invalid tokens (security per RFC 7009)
+        send_resp(conn, 200, "")
+    end
+  end
+
   defp get_grant_type(%{"grant_type" => grant_type}), do: grant_type
   defp get_grant_type(_), do: nil
 
   defp handle_authorization_code_grant(conn, params) do
     with {:ok, client} <- authenticate_client(params),
          :ok <- validate_client_supports_grant(client, "authorization_code"),
-         {:ok, auth_code} <- validate_authorization_code(params["code"], client.client_id),
+         {:ok, auth_code} <-
+           validate_authorization_code(safe_param(params, "code"), client.client_id),
          :ok <- validate_redirect_uri_match(auth_code, params["redirect_uri"]),
-         :ok <- validate_pkce(auth_code, params["code_verifier"]) do
+         :ok <- validate_pkce(auth_code, safe_param(params, "code_verifier")) do
       {:ok, used_auth_code} = AuthorizationCodes.mark_as_used(auth_code)
       usage_info = build_usage_info(conn)
+      audit = %{audit_data(conn) | user: used_auth_code.user}
 
       case Tokens.create_session_and_token_for_user(
              used_auth_code.user,
@@ -95,10 +114,10 @@ defmodule HexpmWeb.API.OAuthController do
              used_auth_code.scopes,
              "authorization_code",
              used_auth_code.code,
-             name: params["name"],
+             name: safe_param(params, "name"),
              with_refresh_token: true,
              usage_info: usage_info,
-             audit: audit_data(conn)
+             audit: audit
            ) do
         {:ok, token} ->
           render(conn, :token, token: token)
@@ -117,12 +136,16 @@ defmodule HexpmWeb.API.OAuthController do
   end
 
   defp handle_device_code_grant(conn, params) do
-    with {:ok, client} <- validate_client(params["client_id"]),
+    with {:ok, client} <- validate_client(safe_param(params, "client_id")),
          :ok <-
            validate_client_supports_grant(client, "urn:ietf:params:oauth:grant-type:device_code") do
       usage_info = build_usage_info(conn)
 
-      case DeviceCodes.poll_device_token(params["device_code"], params["client_id"], usage_info) do
+      case DeviceCodes.poll_device_token(
+             safe_param(params, "device_code"),
+             safe_param(params, "client_id"),
+             usage_info
+           ) do
         {:ok, token} ->
           render(conn, :token, token: token)
 
@@ -141,7 +164,8 @@ defmodule HexpmWeb.API.OAuthController do
   defp handle_refresh_token_grant(conn, params) do
     with {:ok, client} <- authenticate_client(params),
          :ok <- validate_client_supports_grant(client, "refresh_token"),
-         {:ok, token} <- validate_refresh_token(params["refresh_token"], client.client_id) do
+         {:ok, token} <-
+           validate_refresh_token(safe_param(params, "refresh_token"), client.client_id) do
       usage_info = build_usage_info(conn)
 
       case Tokens.revoke_and_create_token(
@@ -171,9 +195,9 @@ defmodule HexpmWeb.API.OAuthController do
   end
 
   defp handle_client_credentials_grant(conn, params) do
-    with {:ok, client} <- validate_client(params["client_id"]),
+    with {:ok, client} <- validate_client(safe_param(params, "client_id")),
          :ok <- validate_client_supports_grant(client, "client_credentials"),
-         {:ok, api_key_secret} <- validate_api_key_secret(params["client_secret"]),
+         {:ok, api_key_secret} <- validate_api_key_secret(safe_param(params, "client_secret")),
          {:ok, auth_info} <- authenticate_api_key(api_key_secret, conn),
          {:ok, scopes} <- expand_and_validate_scopes(params["scope"], auth_info) do
       usage_info = build_usage_info(conn)
@@ -195,7 +219,7 @@ defmodule HexpmWeb.API.OAuthController do
              scopes,
              "client_credentials",
              api_key_secret,
-             name: params["name"],
+             name: safe_param(params, "name"),
              usage_info: usage_info,
              audit: audit_data
            ) do
@@ -215,6 +239,9 @@ defmodule HexpmWeb.API.OAuthController do
 
       {:error, error, description} ->
         render_oauth_error(conn, error, description)
+
+      {:error, error} ->
+        render_oauth_error(conn, :invalid_client, error)
     end
   end
 
@@ -233,22 +260,24 @@ defmodule HexpmWeb.API.OAuthController do
   defp authenticate_api_key(api_key_secret, conn) do
     usage_info = build_usage_info(conn)
 
-    case Hexpm.Accounts.Auth.key_auth(api_key_secret, usage_info) do
+    case Hexpm.Accounts.Auth.key_auth(api_key_secret, usage_info, preload: :oauth) do
       {:ok, auth_info} -> {:ok, auth_info}
       :error -> {:error, :invalid_client}
       :revoked -> {:error, :invalid_client}
     end
   end
 
-  defp expand_and_validate_scopes(scope_string, auth_info) do
+  defp expand_and_validate_scopes(scope_string, auth_info)
+       when is_binary(scope_string) or is_nil(scope_string) do
     requested_scopes = String.split(scope_string || "", " ", trim: true)
 
-    user = auth_info.user || (auth_info.organization && auth_info.organization.user)
+    user_or_org = auth_info.user || auth_info.organization
     api_key = auth_info.auth_credential
 
     # Expand scopes, constraining by API key permissions
     # The expansion itself ensures scopes don't exceed key permissions
-    expanded_scopes = Hexpm.Permissions.expand_repositories_scope(user, requested_scopes, api_key)
+    expanded_scopes =
+      Hexpm.Permissions.expand_repositories_scope(user_or_org, requested_scopes, api_key)
 
     # Final validation: check that all requested scopes are allowed
     # This validates non-repository scopes (like "api")
@@ -259,20 +288,16 @@ defmodule HexpmWeb.API.OAuthController do
     end
   end
 
+  defp expand_and_validate_scopes(_scope_string, _auth_info) do
+    {:error, :invalid_scope, "Invalid scope parameter"}
+  end
+
   defp validate_scopes_against_key(scopes, permissions) do
-    # Build set of allowed scopes from key permissions
     allowed_scopes =
-      Enum.flat_map(permissions, fn permission ->
-        case permission.domain do
-          "api" -> ["api"]
-          "repository" -> ["repository:#{permission.resource}"]
-          "repositories" -> [:all_repositories]
-          _ -> []
-        end
-      end)
+      permissions
+      |> Enum.flat_map(&Hexpm.Permissions.permission_to_scopes/1)
       |> MapSet.new()
 
-    # Check if all scopes are allowed
     Enum.all?(scopes, fn scope ->
       scope in allowed_scopes or
         (:all_repositories in allowed_scopes and String.starts_with?(scope, "repository:"))
@@ -284,7 +309,8 @@ defmodule HexpmWeb.API.OAuthController do
   defp error_description(:invalid_client), do: "Invalid API key"
   defp error_description(_), do: "An error occurred"
 
-  defp revoke_token(%{"token" => token_value, "client_id" => client_id}) do
+  defp revoke_token(%{"token" => token_value, "client_id" => client_id})
+       when is_binary(token_value) and is_binary(client_id) do
     with {:ok, _client} <- validate_client(client_id),
          {:ok, token} <- lookup_token_for_revocation(token_value, client_id) do
       case Tokens.revoke(token) do
@@ -297,6 +323,22 @@ defmodule HexpmWeb.API.OAuthController do
   end
 
   defp revoke_token(_params), do: {:error, :invalid_request}
+
+  defp revoke_token_by_hash(%{"token_hash" => token_hash})
+       when is_binary(token_hash) and token_hash != "" do
+    case Tokens.lookup_by_refresh_token_hash(token_hash) do
+      {:ok, token} ->
+        case Tokens.revoke(token) do
+          {:ok, _} -> :ok
+          {:error, _} -> {:error, :revocation_failed}
+        end
+
+      {:error, :not_found} ->
+        {:error, :not_found}
+    end
+  end
+
+  defp revoke_token_by_hash(_params), do: {:error, :invalid_request}
 
   defp lookup_token_for_revocation(token_value, client_id) do
     # Try to find as access token first
@@ -328,20 +370,19 @@ defmodule HexpmWeb.API.OAuthController do
     end
   end
 
-  defp validate_client(nil), do: {:error, "Missing client_id"}
-  defp validate_client(""), do: {:error, "Missing client_id"}
-
-  defp validate_client(client_id) do
+  defp validate_client(client_id) when is_binary(client_id) and client_id != "" do
     case Clients.get(client_id) do
       nil -> {:error, "Invalid client"}
       client -> {:ok, client}
     end
   end
 
+  defp validate_client(_), do: {:error, "Missing client_id"}
+
   defp authenticate_client(params) do
-    with {:ok, client} <- validate_client(params["client_id"]) do
+    with {:ok, client} <- validate_client(safe_param(params, "client_id")) do
       if Clients.requires_authentication?(client) do
-        case Clients.authenticate?(client, params["client_secret"]) do
+        case Clients.authenticate?(client, safe_param(params, "client_secret")) do
           true -> {:ok, client}
           false -> {:error, :invalid_client, "Invalid client credentials"}
         end
@@ -353,23 +394,23 @@ defmodule HexpmWeb.API.OAuthController do
     end
   end
 
-  defp validate_scopes(client, scope_string) do
-    scopes = String.split(scope_string || "", " ", trim: true)
+  defp validate_scopes(client, scope_string)
+       when is_binary(scope_string) or is_nil(scope_string) do
+    scopes =
+      (scope_string || "")
+      |> String.split(" ", trim: true)
+      |> Hexpm.Permissions.expand_api_scope()
 
     if Clients.supports_scopes?(client, scopes) do
       {:ok, scopes}
     else
-      {:error, "Invalid scope"}
+      {:error, :invalid_scope, "Invalid scope"}
     end
   end
 
-  defp validate_authorization_code(nil, _),
-    do: {:error, :invalid_grant, "Missing authorization code"}
+  defp validate_scopes(_client, _scope_string), do: {:error, :invalid_scope, "Invalid scope"}
 
-  defp validate_authorization_code("", _),
-    do: {:error, :invalid_grant, "Missing authorization code"}
-
-  defp validate_authorization_code(code, client_id) do
+  defp validate_authorization_code(code, client_id) when is_binary(code) and code != "" do
     case AuthorizationCodes.get_by_code(code, client_id) do
       nil ->
         {:error, :invalid_grant, "Invalid authorization code"}
@@ -383,6 +424,9 @@ defmodule HexpmWeb.API.OAuthController do
     end
   end
 
+  defp validate_authorization_code(_, _),
+    do: {:error, :invalid_grant, "Missing authorization code"}
+
   defp validate_redirect_uri_match(auth_code, redirect_uri) do
     if auth_code.redirect_uri == redirect_uri do
       :ok
@@ -391,23 +435,20 @@ defmodule HexpmWeb.API.OAuthController do
     end
   end
 
-  defp validate_pkce(auth_code, code_verifier) do
-    cond do
-      is_nil(code_verifier) or code_verifier == "" ->
-        {:error, :invalid_grant, "Missing required parameter: code_verifier"}
-
-      not AuthorizationCodes.verify_code_challenge(auth_code, code_verifier) ->
-        {:error, :invalid_grant, "Invalid code verifier"}
-
-      true ->
-        :ok
+  defp validate_pkce(auth_code, code_verifier)
+       when is_binary(code_verifier) and code_verifier != "" do
+    if AuthorizationCodes.verify_code_challenge(auth_code, code_verifier) do
+      :ok
+    else
+      {:error, :invalid_grant, "Invalid code verifier"}
     end
   end
 
-  defp validate_refresh_token(nil, _), do: {:error, :invalid_grant, "Missing refresh token"}
-  defp validate_refresh_token("", _), do: {:error, :invalid_grant, "Missing refresh token"}
+  defp validate_pkce(_, _),
+    do: {:error, :invalid_grant, "Missing required parameter: code_verifier"}
 
-  defp validate_refresh_token(user_refresh_token, client_id) do
+  defp validate_refresh_token(user_refresh_token, client_id)
+       when is_binary(user_refresh_token) and user_refresh_token != "" do
     case Tokens.lookup(user_refresh_token, :refresh, client_id: client_id, validate: false) do
       {:ok, token} ->
         cond do
@@ -431,6 +472,8 @@ defmodule HexpmWeb.API.OAuthController do
         {:error, :invalid_grant, "Invalid refresh token"}
     end
   end
+
+  defp validate_refresh_token(_, _), do: {:error, :invalid_grant, "Missing refresh token"}
 
   defp render_oauth_error(conn, error_type, description) do
     status = error_status(error_type)

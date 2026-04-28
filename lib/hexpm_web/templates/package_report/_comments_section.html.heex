@@ -1,0 +1,22 @@
+<%= if @report.state != "to_accept" and (@for_author or @for_moderator or @for_owner) do %>
+  <div class="bg-white border border-grey-200 rounded-xl p-5" data-testid="comments-section">
+    <h2 class="text-grey-900 font-semibold mb-4">
+      Comments
+      <%= if !Enum.empty?(@comments) do %>
+        <span class="text-grey-400 text-sm font-normal ml-1">{length(@comments)}</span>
+      <% end %>
+    </h2>
+
+    <%= if Enum.empty?(@comments) do %>
+      <p class="text-grey-400 text-sm mb-4">No comments yet.</p>
+    <% else %>
+      <div class="divide-y divide-grey-100 mb-6">
+        <%= for comment <- @comments do %>
+          {render("_comment.html", comment: comment)}
+        <% end %>
+      </div>
+    <% end %>
+
+    {render("_new_comment.html", report: @report)}
+  </div>
+<% end %>

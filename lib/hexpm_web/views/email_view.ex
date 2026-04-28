@@ -2,12 +2,14 @@ defmodule HexpmWeb.EmailView do
   use HexpmWeb, :view
 
   defmodule Common do
+    import Phoenix.HTML, only: [safe_to_string: 1]
+
     def greeting(username), do: "Hello #{username}"
 
     def support_email(), do: "support@hex.pm"
 
     # Smart link wrapping - add <a> only for HTML format
-    def link(url, text, :html), do: ~s(<a href="#{url}">#{text}</a>)
+    def link(url, text, :html), do: safe_to_string(PhoenixHTMLHelpers.Link.link(text, to: url))
     def link(url, _text, :text), do: url
 
     def support_link(:html), do: link("mailto:#{support_email()}", support_email(), :html)
@@ -27,7 +29,7 @@ defmodule HexpmWeb.EmailView do
 
     # URL follow pattern for verification/reset emails
     def follow_link_instruction(url, :html) do
-      ~s(You can do so by following #{link(url, "this link", :html)} or by pasting this link in your web browser: #{url})
+      "You can do so by following #{link(url, "this link", :html)} or by pasting this link in your web browser: #{url}"
     end
 
     def follow_link_instruction(url, :text) do
@@ -100,6 +102,48 @@ defmodule HexpmWeb.EmailView do
 
     def password_reset_notice(url, :text) do
       "If you did not perform this change, you can reset your password by entering your email at #{url}."
+    end
+  end
+
+  defmodule SecurityPasswordReset do
+    def title() do
+      "Your Hex.pm password has been reset"
+    end
+
+    def message() do
+      "Your password has been reset by Hex.pm administrators for security reasons. " <>
+        "This may be due to a security incident, suspicious activity, or a routine security measure."
+    end
+
+    def action_instruction(url, :html) do
+      ~s(Please set a new password by following #{Common.link(url, "this link", :html)} or by pasting the link below in your web browser.)
+    end
+
+    def action_instruction(_url, :text) do
+      "Please set a new password by following this link"
+    end
+
+    def expired_instruction(reset_url, :html) do
+      ~s(If the link above has expired, you can request a new password reset at #{Common.link(reset_url, reset_url, :html)}.)
+    end
+
+    def expired_instruction(reset_url, :text) do
+      "If the link above has expired, you can request a new password reset at #{reset_url}."
+    end
+
+    def questions_notice(format) do
+      "If you have any questions about why this action was taken, please contact support at #{Common.support_link(format)}."
+    end
+
+    defdelegate mix_code(), to: BuildTools, as: :mix_hex_user_auth
+    defdelegate rebar_code(), to: BuildTools, as: :rebar3_hex_user_auth
+
+    def before_code() do
+      "After resetting your password, you will need to regenerate your API keys by running:"
+    end
+
+    def after_code() do
+      "and entering your username and new password."
     end
   end
 

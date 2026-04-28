@@ -3,7 +3,7 @@ defmodule Hexpm.Repo.Migrations.AddReleaseDownloadsView do
 
   def up() do
     execute("""
-      CREATE MATERIALIZED VIEW release_downloads (
+      CREATE MATERIALIZED VIEW IF NOT EXISTS release_downloads (
         release_id,
         downloads) AS
           SELECT d.release_id, SUM(d.downloads)

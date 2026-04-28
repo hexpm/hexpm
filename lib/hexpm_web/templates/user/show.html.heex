@@ -1,0 +1,114 @@
+<div class="bg-grey-50 dark:bg-grey-950 min-h-screen py-8">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="flex flex-col gap-10 lg:flex-row">
+      <%!-- Left Sidebar - Profile --%>
+      <div class="w-full lg:w-[25%] flex-shrink-0">
+        <.user_sidebar
+          user={@user}
+          gravatar_email={@gravatar_email}
+          public_email={@public_email}
+          total_packages={length(@user.owned_packages)}
+          total_downloads={@total_downloads}
+        />
+      </div>
+
+      <%!-- Right Content - Packages --%>
+      <div class="w-full lg:w-[75%]">
+        <%!-- Tab Nav --%>
+        <div class="flex gap-1 mb-6 border-b border-grey-200 dark:border-grey-800">
+          <a
+            href={~p"/users/#{@user.username}"}
+            class="px-4 py-2.5 text-sm font-medium text-grey-900 dark:text-white border-b-2 border-primary-600 dark:border-primary-300 -mb-px"
+            aria-current="page"
+          >
+            Packages
+          </a>
+          <a
+            href={~p"/users/#{@user.username}/stats"}
+            class="px-4 py-2.5 text-sm font-medium text-grey-500 dark:text-grey-300 hover:text-grey-900 dark:hover:text-grey-100 transition-colors"
+          >
+            Stats
+          </a>
+        </div>
+
+        <%!-- Header with Sort (only show if there are packages) --%>
+        <%= if @total_count > 0 do %>
+          <div class="flex items-center justify-between mb-6">
+            <h1 class="text-grey-900 dark:text-white text-xl font-semibold">
+              Packages
+            </h1>
+
+            <%!-- Sort Dropdown --%>
+            <.dropdown
+              id="sort-dropdown"
+              label={
+                case @sort_by do
+                  "downloads" -> "Most Downloaded"
+                  "newest" -> "Newest First"
+                  _ -> "Most Popular"
+                end
+              }
+            >
+              <.dropdown_item href="?sort=popular">Most Popular</.dropdown_item>
+              <.dropdown_item href="?sort=downloads">Most Downloaded</.dropdown_item>
+              <.dropdown_item href="?sort=newest">Newest First</.dropdown_item>
+            </.dropdown>
+          </div>
+        <% end %>
+
+        <%!-- Packages Grid or Empty State --%>
+        <%= if @total_count == 0 do %>
+          <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg mt-6 py-32 flex flex-col items-center justify-center">
+            <%!-- Package Icon --%>
+            <div class="mb-4">
+              <img
+                src={~p"/images/icons/package-box.svg"}
+                alt="Package icon"
+                class="w-24 h-24 opacity-40 grayscale"
+              />
+            </div>
+
+            <%!-- Empty State Text --%>
+            <h3 class="text-grey-900 dark:text-white text-xl font-semibold mb-2">
+              No Packages
+            </h3>
+            <p class="text-grey-500 dark:text-grey-300 text-base">
+              The author hasn't added any packages.
+            </p>
+          </div>
+        <% else %>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <%= for package <- @packages do %>
+              <.package_card
+                package={package}
+                downloads={get_in(@downloads, [package.id, "all"]) || 0}
+                updated_at={package.updated_at}
+              />
+            <% end %>
+          </div>
+
+          <%!-- Pagination --%>
+          <%= if @total_count > @per_page do %>
+            {render(
+              HexpmWeb.SharedView,
+              "_pagination.html",
+              items: @packages,
+              page: @page,
+              total_count: @total_count,
+              per_page: @per_page,
+              unit: "package",
+              units: "packages",
+              path_fn: fn params ->
+                query =
+                  ViewHelpers.params(params, sort: @sort_by)
+                  |> URI.encode_query()
+
+                "?#{query}"
+              end
+            )}
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

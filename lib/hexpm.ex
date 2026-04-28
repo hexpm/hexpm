@@ -1,6 +1,5 @@
 defmodule Hexpm do
   def setup do
-    Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant, concurrently: false)
     Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload, concurrently: false)
     Hexpm.Repo.refresh_view(Hexpm.Repository.ReleaseDownload, concurrently: false)
 
@@ -20,6 +19,11 @@ defmodule Hexpm do
       %{id: 1} =
         %Hexpm.Accounts.User{username: "hexdocs", service: true}
         |> Hexpm.Repo.insert!()
+    end
+
+    unless Hexpm.Repo.get_by(Hexpm.Accounts.User, username: "admin") do
+      %Hexpm.Accounts.User{username: "admin", service: true}
+      |> Hexpm.Repo.insert!()
     end
   end
 end

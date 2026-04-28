@@ -1,0 +1,66 @@
+<% exact_match? = assigns[:exact_match?] || false %>
+<li class={[
+  "group p-6 transition-colors",
+  exact_match? && "hover:bg-green-100 dark:hover:bg-green-900/20",
+  not exact_match? && "hover:bg-grey-50 dark:hover:bg-grey-700/60"
+]}>
+  <div class="flex items-start justify-between gap-6">
+    <%!-- Package Info --%>
+    <div class="flex-1 min-w-0">
+      <div class="flex items-center gap-3 mb-2">
+        <a
+          href={ViewHelpers.path_for_package(@package)}
+          class={[
+            "text-grey-900 dark:text-grey-100 font-semibold text-xl transition-colors",
+            exact_match? && "hover:text-green-600 dark:hover:text-green-300",
+            not exact_match? && "hover:text-primary-600 dark:hover:text-primary-300"
+          ]}
+        >
+          {ViewHelpers.package_name(@package)}
+        </a>
+        <%= if @package.latest_release do %>
+          <a
+            href={ViewHelpers.path_for_package(@package)}
+            class={[
+              "inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium transition-colors",
+              exact_match? &&
+                "bg-green-100 dark:bg-green-900/20 group-hover:bg-green-200 dark:group-hover:bg-green-900/30 text-green-700 dark:text-green-300 hover:text-green-800 dark:hover:text-green-200",
+              not exact_match? &&
+                "bg-grey-100 dark:bg-grey-700 text-grey-700 dark:text-grey-200 hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:text-primary-700 dark:hover:text-primary-200"
+            ]}
+          >
+            v{@package.latest_release.version}
+          </a>
+        <% end %>
+      </div>
+
+      <%= if @package.meta.description do %>
+        <p class="text-grey-600 dark:text-grey-300 text-sm leading-6 line-clamp-2">
+          {ViewHelpers.text_length(@package.meta.description, 200)}
+        </p>
+      <% end %>
+
+      <%= if @package.inserted_at do %>
+        <p class="text-grey-500 dark:text-grey-300 text-xs mt-2">
+          Published {ViewHelpers.human_relative_time_from_now(@package.inserted_at)}
+        </p>
+      <% end %>
+    </div>
+
+    <%!-- Download Stats --%>
+    <div class="flex flex-col items-end gap-1 shrink-0 min-w-[120px]">
+      <div class="text-grey-900 dark:text-grey-100 text-2xl font-bold text-right">
+        {ViewHelpers.human_number_space(display_downloads(@package_downloads, @view) || 0)}
+      </div>
+      <div class="text-grey-500 dark:text-grey-300 text-xs text-right">
+        {display_downloads_view_title(@view)}
+      </div>
+      <div
+        class="text-grey-400 dark:text-grey-300 text-xs text-right cursor-help"
+        title={display_downloads_for_opposite_views(@package_downloads, @view)}
+      >
+        {display_downloads_for_opposite_views(@package_downloads, @view)}
+      </div>
+    </div>
+  </div>
+</li>

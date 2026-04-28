@@ -17,8 +17,13 @@ defmodule Hexpm.Application do
       HexpmWeb.RateLimitPubSub,
       {PlugAttack.Storage.Ets, name: HexpmWeb.Plugs.Attack.Storage, clean_period: 60_000},
       {Hexpm.Billing.Report, name: Hexpm.Billing.Report, interval: 60_000},
+      {Hexpm.Cache,
+       name: Hexpm.Cache,
+       interval: 3_600_000,
+       enabled: Application.fetch_env!(:hexpm, :cache_enabled)},
       goth_spec(),
       setup(),
+      load_caches(),
       HexpmWeb.Telemetry,
       HexpmWeb.Endpoint
     ]
@@ -68,6 +73,18 @@ defmodule Hexpm.Application do
 
     %{
       id: :task_setup,
+      start: {Task, :start_link, [fun]},
+      restart: :temporary
+    }
+  end
+
+  defp load_caches() do
+    fun = fn ->
+      Hexpm.OAuth.Clients.load_cache()
+    end
+
+    %{
+      id: :load_caches,
       start: {Task, :start_link, [fun]},
       restart: :temporary
     }

@@ -3,7 +3,7 @@ defmodule Hexpm.Repo.Migrations.AddReleasesTable do
 
   def up() do
     execute("""
-      CREATE TABLE releases (
+      CREATE TABLE IF NOT EXISTS releases (
         id serial PRIMARY KEY,
         package_id integer REFERENCES packages,
         version text,

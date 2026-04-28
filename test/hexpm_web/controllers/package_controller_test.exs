@@ -118,10 +118,10 @@ defmodule HexpmWeb.PackageControllerTest do
       :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
 
       conn = get(build_conn(), "/packages?search=with underscore")
-      assert response(conn, 200) =~ "exact-match"
+      assert response(conn, 200) =~ "Exact Match"
       assert response(conn, 200) =~ "total downloads: 1 234"
       assert response(conn, 200) =~ ~r/#{package5.name}.*0.0.1/s
-      refute response(conn, 200) =~ "no-results"
+      refute response(conn, 200) =~ "No Results Found"
     end
 
     test "search with exact match", %{package5: package5, package5_release: package5_release} do
@@ -135,20 +135,20 @@ defmodule HexpmWeb.PackageControllerTest do
       :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
 
       conn = get(build_conn(), "/packages?search=with_underscore")
-      assert response(conn, 200) =~ "exact-match"
+      assert response(conn, 200) =~ "Exact Match"
       assert response(conn, 200) =~ "total downloads: 5 000"
-      refute response(conn, 200) =~ "results-found"
+      refute response(conn, 200) =~ "Search Results"
     end
 
     test "search with build_tool match" do
       conn = get(build_conn(), "/packages?search=build_tool%3Amix")
-      assert response(conn, 200) =~ "results-found"
+      assert response(conn, 200) =~ "packages found"
     end
 
     test "search without match" do
       conn = get(build_conn(), "/packages?search=nonexistent")
-      assert response(conn, 200) =~ "no-results"
-      refute response(conn, 200) =~ "exact-match"
+      assert response(conn, 200) =~ "No Results Found"
+      refute response(conn, 200) =~ "Exact Match"
     end
 
     test "list private packages", %{
@@ -167,12 +167,114 @@ defmodule HexpmWeb.PackageControllerTest do
       assert result =~ "#{repository1.name} / #{package3.name}"
       refute result =~ "#{repository2.name} / #{package4.name}"
     end
+
+    test "depends search only returns packages from repositories the user can access", %{
+      user1: user1,
+      repository1: repository1,
+      repository2: repository2
+    } do
+      dependency = insert(:package, name: "repo_visible_dep", repository_id: repository1.id)
+      visible = insert(:package, name: "repo_visible_match", repository_id: repository1.id)
+      hidden = insert(:package, name: "repo_hidden_match", repository_id: repository2.id)
+
+      insert(:release, package: dependency, version: "1.0.0")
+
+      rel = insert(:release, package: visible, version: "1.0.0")
+      insert(:requirement, release: rel, dependency: dependency, requirement: "~> 1.0")
+
+      rel = insert(:release, package: hidden, version: "1.0.0")
+      insert(:requirement, release: rel, dependency: dependency, requirement: "~> 1.0")
+
+      search = URI.encode_www_form("depends:#{repository1.name}:#{dependency.name}")
+
+      result =
+        build_conn()
+        |> test_login(user1)
+        |> get("/packages?search=#{search}")
+        |> response(200)
+
+      assert result =~ "#{repository1.name} / #{visible.name}"
+      refute result =~ "#{repository2.name} / #{hidden.name}"
+    end
+
+    test "depends search can match visible packages via a hidden dependency package", %{
+      user1: user1,
+      repository1: repository1,
+      repository2: repository2
+    } do
+      hidden_dependency =
+        insert(:package, name: "repo_hidden_dependency", repository_id: repository2.id)
+
+      visible = insert(:package, name: "repo_visible_inference", repository_id: repository1.id)
+      hidden = insert(:package, name: "repo_hidden_inference", repository_id: repository2.id)
+
+      insert(:release, package: hidden_dependency, version: "1.0.0")
+
+      rel = insert(:release, package: visible, version: "1.0.0")
+      insert(:requirement, release: rel, dependency: hidden_dependency, requirement: "~> 1.0")
+
+      rel = insert(:release, package: hidden, version: "1.0.0")
+      insert(:requirement, release: rel, dependency: hidden_dependency, requirement: "~> 1.0")
+
+      search = URI.encode_www_form("depends:#{repository2.name}:#{hidden_dependency.name}")
+
+      result =
+        build_conn()
+        |> test_login(user1)
+        |> get("/packages?search=#{search}")
+        |> response(200)
+
+      assert result =~ "#{repository1.name} / #{visible.name}"
+      refute result =~ "#{repository2.name} / #{hidden.name}"
+    end
   end
 
   describe "GET /packages/:name" do
     test "show package", %{package1: package1} do
       conn = get(build_conn(), "/packages/#{package1.name}")
-      assert response(conn, 200) =~ escape(~s({:#{package1.name}, "~> 0.0.2"}))
+      html = response(conn, 200)
+
+      assert html =~ escape(~s({:#{package1.name}, "~> 0.0.2"}))
+
+      assert {:ok, document} = Floki.parse_document(html)
+      assert link_text(document, "/packages/#{package1.name}/dependents") == "0 Dependants"
+      assert link_text(document, "/packages/#{package1.name}/dependencies") == "0 Dependencies"
+      assert link_text(document, "/packages/#{package1.name}/versions") == "3 Versions"
+
+      assert package_tab_hrefs(document, package1.name) == [
+               "/packages/#{package1.name}",
+               "/packages/#{package1.name}/versions",
+               "/packages/#{package1.name}/dependencies",
+               "/packages/#{package1.name}/dependents",
+               "/packages/#{package1.name}/audit-logs"
+             ]
+
+      assert [_ | _] = Floki.find(document, "details summary.package-tabs-mobile-trigger")
+    end
+
+    test "show package uses singular dependant label for one dependant", %{package1: package1} do
+      add_dependant(package1, "single_dependant")
+
+      html =
+        build_conn()
+        |> get("/packages/#{package1.name}")
+        |> html_response(200)
+
+      assert {:ok, document} = Floki.parse_document(html)
+      assert link_text(document, "/packages/#{package1.name}/dependents") == "1 Dependant"
+    end
+
+    test "show package uses plural dependant label for multiple dependants", %{package1: package1} do
+      add_dependant(package1, "first_dependant")
+      add_dependant(package1, "second_dependant")
+
+      html =
+        build_conn()
+        |> get("/packages/#{package1.name}")
+        |> html_response(200)
+
+      assert {:ok, document} = Floki.parse_document(html)
+      assert link_text(document, "/packages/#{package1.name}/dependents") == "2 Dependants"
     end
 
     test "package name is case sensitive", %{package1: package1} do
@@ -186,40 +288,29 @@ defmodule HexpmWeb.PackageControllerTest do
       |> response(404)
     end
 
-    test "show first few audit_logs related to this package", %{package1: package} do
+    test "show package details with activity link", %{package1: package} do
       insert(:audit_log, action: "docs.publish", params: %{package: %{id: package.id}})
-      insert(:audit_log, action: "docs.revert", params: %{package: %{id: package.id}})
-      insert(:audit_log, action: "owner.add", params: %{package: %{id: package.id}})
-      insert(:audit_log, action: "owner.remove", params: %{package: %{id: package.id}})
-      insert(:audit_log, action: "release.publish", params: %{package: %{id: package.id}})
-      insert(:audit_log, action: "release.revert", params: %{package: %{id: package.id}})
-      insert(:audit_log, action: "release.retire", params: %{package: %{id: package.id}})
-      insert(:audit_log, action: "release.unretire", params: %{package: %{id: package.id}})
 
       html_response =
         build_conn()
         |> get("/packages/#{package.name}")
         |> html_response(200)
 
-      assert html_response =~ "Publish doc"
-      assert html_response =~ "Revert doc"
-      assert html_response =~ "Add owner"
-      assert html_response =~ "Remove owner"
-      assert html_response =~ "Publish release"
-      assert html_response =~ "Revert release"
-      assert html_response =~ "Retire release"
-      assert html_response =~ "Unretire release"
+      # Activity tab link should be present
+      assert html_response =~ "Activity"
+      # Check we have the package details sidebar
+      assert html_response =~ "Package Details"
+      assert html_response =~ "Checksum"
     end
 
-    test "show latest valid version documentation link", %{package1: package} do
+    test "show documentation link when available", %{package1: package} do
       html_response =
         build_conn()
         |> get("/packages/#{package.name}")
         |> html_response(200)
 
-      assert html_response =~ "0.0.1.tar.gz"
-      refute html_response =~ "0.0.2.tar.gz"
-      refute html_response =~ "0.0.3-dev.0.1.tar.gz"
+      # Should have documentation button in header
+      assert html_response =~ "HexDocs"
     end
   end
 
@@ -336,6 +427,50 @@ defmodule HexpmWeb.PackageControllerTest do
 
       assert response(conn, :ok) =~ "Publish documentation"
     end
+
+    test "paginates audit logs 100 per page" do
+      package = insert(:package, name: "Test")
+      base_time = ~U[2024-01-01 00:00:00Z]
+
+      Enum.each(1..101, fn version ->
+        timestamp = DateTime.add(base_time, version, :second)
+
+        insert(:audit_log,
+          action: "release.publish",
+          params: %{
+            "package" => %{"id" => package.id},
+            "release" => %{"version" => "0.0.#{version}"}
+          },
+          inserted_at: timestamp
+        )
+      end)
+
+      first_page =
+        build_conn()
+        |> get("/packages/Test/audit-logs")
+        |> response(:ok)
+
+      {:ok, first_document} = Floki.parse_document(first_page)
+      first_page_activities = table_column_texts(first_document, 2)
+
+      assert "Publish release 0.0.101" in first_page_activities
+      assert "Publish release 0.0.2" in first_page_activities
+      refute "Publish release 0.0.1" in first_page_activities
+      assert first_page =~ "/packages/Test/audit-logs?page=2"
+
+      second_page =
+        build_conn()
+        |> get("/packages/Test/audit-logs?page=2")
+        |> response(:ok)
+
+      {:ok, second_document} = Floki.parse_document(second_page)
+      second_page_activities = table_column_texts(second_document, 2)
+
+      assert "Publish release 0.0.1" in second_page_activities
+      refute "Publish release 0.0.2" in second_page_activities
+      assert current_page(second_document) == "2"
+      assert normalized_text(second_document) =~ "101 total"
+    end
   end
 
   describe "GET /packages/:repository/:name/audit-logs" do
@@ -349,8 +484,136 @@ defmodule HexpmWeb.PackageControllerTest do
     end
   end
 
+  describe "GET /packages/:name/versions" do
+    test "renders versions page", %{package1: package1} do
+      conn = get(build_conn(), "/packages/#{package1.name}/versions")
+      result = response(conn, 200)
+      assert result =~ "0.0.1"
+      assert result =~ "0.0.2"
+
+      assert {:ok, document} = Floki.parse_document(result)
+      assert link_text(document, "/packages/#{package1.name}/versions") == "3 Versions"
+    end
+
+    test "returns 404 for unknown package" do
+      conn = get(build_conn(), "/packages/nonexistent_package/versions")
+      assert response(conn, 404)
+    end
+
+    test "returns 404 for private package without auth", %{
+      package3: package3,
+      repository1: repository1
+    } do
+      conn = get(build_conn(), "/packages/#{repository1.name}/#{package3.name}/versions")
+      assert response(conn, 404)
+    end
+  end
+
+  describe "GET /packages/:name/dependents" do
+    test "renders dependants page", %{package1: package1} do
+      conn = get(build_conn(), "/packages/#{package1.name}/dependents")
+      assert response(conn, 200) =~ "Packages depending on"
+    end
+
+    test "returns 404 for private package without auth", %{
+      package3: package3,
+      repository1: repository1
+    } do
+      conn = get(build_conn(), "/packages/#{repository1.name}/#{package3.name}/dependents")
+      assert response(conn, 404)
+    end
+  end
+
+  describe "GET /packages/:name/dependencies" do
+    test "renders dependencies page", %{package1: package1} do
+      conn = get(build_conn(), "/packages/#{package1.name}/dependencies")
+      assert response(conn, 200) =~ "Dependencies of"
+    end
+
+    test "returns 404 for private package without auth", %{
+      package3: package3,
+      repository1: repository1
+    } do
+      conn = get(build_conn(), "/packages/#{repository1.name}/#{package3.name}/dependencies")
+      assert response(conn, 404)
+    end
+  end
+
   defp escape(html) do
     {:safe, safe} = Phoenix.HTML.html_escape(html)
     IO.iodata_to_binary(safe)
+  end
+
+  defp add_dependant(package, name) do
+    dependant = insert(:package, name: name, repository_id: package.repository_id)
+
+    release =
+      insert(
+        :release,
+        package: dependant,
+        meta: build(:release_metadata, app: dependant.name)
+      )
+
+    insert(:requirement, release: release, dependency: package, requirement: "~> 0.0.1")
+  end
+
+  # Tabs render in both the mobile (<details>) and desktop nav, so a single href
+  # appears multiple times. Return the text of just the first match.
+  defp link_text(document, href) do
+    case Floki.find(document, ~s(a[href="#{href}"])) do
+      [link | _rest] ->
+        link
+        |> Floki.text(sep: " ")
+        |> String.replace(~r/\s+/, " ")
+        |> String.trim()
+
+      [] ->
+        nil
+    end
+  end
+
+  defp package_tab_hrefs(document, package_name) do
+    package_paths = [
+      "/packages/#{package_name}",
+      "/packages/#{package_name}/versions",
+      "/packages/#{package_name}/dependencies",
+      "/packages/#{package_name}/dependents",
+      "/packages/#{package_name}/audit-logs"
+    ]
+
+    document
+    |> Floki.find("a")
+    |> Enum.map(&List.first(Floki.attribute(&1, "href")))
+    |> Enum.filter(&(&1 in package_paths))
+    |> Enum.uniq()
+  end
+
+  defp table_column_texts(document, column_index) do
+    document
+    |> Floki.find("tbody tr")
+    |> Enum.map(fn row ->
+      row
+      |> Floki.find("td")
+      |> Enum.at(column_index - 1)
+      |> case do
+        nil -> nil
+        cell -> Floki.text(cell, sep: " ") |> String.replace(~r/\s+/, " ") |> String.trim()
+      end
+    end)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp current_page(document) do
+    case Floki.find(document, ~s([aria-current="page"])) do
+      [page | _rest] -> Floki.text(page, sep: " ") |> String.trim()
+      [] -> nil
+    end
+  end
+
+  defp normalized_text(document) do
+    document
+    |> Floki.text(sep: " ")
+    |> String.replace(~r/\s+/, " ")
+    |> String.trim()
   end
 end

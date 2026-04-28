@@ -12,7 +12,7 @@ defmodule HexpmWeb.BlogController do
       conn,
       "index.html",
       title: "Blog",
-      container: "container page page-sm blog"
+      container: "flex-1 flex flex-col"
     )
   end
 
@@ -50,7 +50,9 @@ defmodule HexpmWeb.BlogController do
         conn,
         "#{template}.html",
         title: title(slug),
-        container: "container page page-sm blog"
+        container: "flex-1 flex flex-col",
+        style_src_nonce: conn.assigns[:style_src_nonce],
+        script_src_nonce: conn.assigns[:script_src_nonce]
       )
     else
       not_found(conn)

@@ -6,41 +6,67 @@ defmodule Hexpm.OAuth.Clients do
 
   @doc """
   Gets a client by client_id.
+
+  Looks up from the in-memory cache first (populated at application startup
+  via `load_cache/0`), falls back to a database query on cache miss.
   """
   def get(client_id) do
-    Repo.get(Client, client_id)
+    cache = :persistent_term.get({__MODULE__, :cache}, %{})
+
+    case Map.fetch(cache, client_id) do
+      {:ok, client} -> client
+      :error -> Repo.get(Client, client_id)
+    end
+  end
+
+  @doc """
+  Loads all OAuth clients into the in-memory cache.
+  Called at application startup and after mutations.
+  """
+  def load_cache do
+    clients = Repo.all(Client)
+    cache = Map.new(clients, fn client -> {client.client_id, client} end)
+    :persistent_term.put({__MODULE__, :cache}, cache)
   end
 
   @doc """
   Creates a new OAuth client.
   """
   def create(attrs) do
-    %Client{}
-    |> Client.changeset(attrs)
-    |> Repo.insert()
+    result =
+      %Client{}
+      |> Client.changeset(attrs)
+      |> Repo.insert()
+
+    if match?({:ok, _}, result), do: load_cache()
+    result
   end
 
   @doc """
   Updates an OAuth client.
   """
   def update(%Client{} = client, attrs) do
-    client
-    |> Client.changeset(attrs)
-    |> Repo.update()
+    result =
+      client
+      |> Client.changeset(attrs)
+      |> Repo.update()
+
+    if match?({:ok, _}, result), do: load_cache()
+    result
   end
 
   @doc """
   Deletes an OAuth client.
   """
   def delete(%Client{} = client) do
-    Repo.delete(client)
+    result = Repo.delete(client)
+    if match?({:ok, _}, result), do: load_cache()
+    result
   end
 
   @doc """
   Validates that the client is allowed to use the specified grant type.
   """
-  def supports_grant_type?(%Client{allowed_grant_types: nil}, _grant_type), do: true
-
   def supports_grant_type?(%Client{allowed_grant_types: grant_types}, grant_type) do
     grant_type in grant_types
   end
@@ -48,21 +74,62 @@ defmodule Hexpm.OAuth.Clients do
   @doc """
   Validates that the client is allowed to use the specified scopes.
   """
-  def supports_scopes?(%Client{allowed_scopes: nil}, requested_scopes) do
-    Permissions.validate_scopes(requested_scopes) == :ok
+  def supports_scopes?(%Client{allowed_scopes: allowed_scopes}, requested_scopes) do
+    Enum.all?(requested_scopes, fn scope ->
+      scope in allowed_scopes or api_scope_allowed_by_full_api?(scope, allowed_scopes) or
+        resource_scope_allowed_by_base?(scope, allowed_scopes)
+    end)
   end
 
-  def supports_scopes?(%Client{allowed_scopes: allowed_scopes}, requested_scopes) do
-    Enum.all?(requested_scopes, &(&1 in allowed_scopes))
+  defp api_scope_allowed_by_full_api?(scope, allowed_scopes) do
+    scope in ["api:read", "api:write"] and "api" in allowed_scopes
+  end
+
+  # Check if a resource-specific scope (e.g., "docs:acme") is allowed
+  # when the client has the base scope (e.g., "docs") in allowed_scopes.
+  defp resource_scope_allowed_by_base?(scope, allowed_scopes) do
+    if Permissions.resource_specific_scope?(scope) do
+      [base, _resource] = String.split(scope, ":", parts: 2)
+      base in allowed_scopes
+    else
+      false
+    end
   end
 
   @doc """
   Validates that the redirect URI is allowed for this client.
+
+  Supports wildcard patterns in the subdomain position, e.g.:
+  - `https://*.hexdocs.pm/oauth/callback` matches `https://acme.hexdocs.pm/oauth/callback`
+  - The wildcard `*` matches a single subdomain segment (no dots)
   """
   def valid_redirect_uri?(%Client{redirect_uris: []}, _uri), do: false
 
   def valid_redirect_uri?(%Client{redirect_uris: allowed_uris}, uri) do
-    uri in allowed_uris
+    Enum.any?(allowed_uris, &uri_matches?(&1, uri))
+  end
+
+  defp uri_matches?(pattern, uri) do
+    if String.contains?(pattern, "*") do
+      # Normalize default ports: https://foo.com:443 → https://foo.com
+      normalized_uri = strip_default_port(uri)
+
+      # Convert wildcard to regex: * → [^.]+ (single subdomain segment)
+      pattern
+      |> Regex.escape()
+      |> String.replace("\\*", "[^.]+")
+      |> then(&Regex.match?(~r/^#{&1}$/, normalized_uri))
+    else
+      pattern == uri
+    end
+  end
+
+  defp strip_default_port(uri) do
+    case URI.parse(uri) do
+      %URI{scheme: "https", port: 443} = parsed -> URI.to_string(%{parsed | port: nil})
+      %URI{scheme: "http", port: 80} = parsed -> URI.to_string(%{parsed | port: nil})
+      _ -> uri
+    end
   end
 
   @doc """

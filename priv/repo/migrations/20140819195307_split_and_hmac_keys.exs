@@ -8,8 +8,8 @@ defmodule Hexpm.Repo.Migrations.SplitAndHmacKeys do
 
     execute("""
       ALTER TABLE keys
-        ADD COLUMN secret_first text UNIQUE,
-        ADD COLUMN secret_second text
+        ADD COLUMN IF NOT EXISTS secret_first text UNIQUE,
+        ADD COLUMN IF NOT EXISTS secret_second text
     """)
 
     execute("""
@@ -20,7 +20,7 @@ defmodule Hexpm.Repo.Migrations.SplitAndHmacKeys do
 
     execute("""
       ALTER TABLE keys
-        DROP COLUMN secret
+        DROP COLUMN IF EXISTS secret
     """)
   end
 

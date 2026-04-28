@@ -1,8 +1,14 @@
 defmodule HexpmWeb.LayoutView do
   use HexpmWeb, :view
+  import HexpmWeb.Components.Footer
+  import HexpmWeb.Components.Navbar
 
   def show_search?(assigns) do
     Map.get(assigns, :hide_search) != true
+  end
+
+  def autofocus_search?(assigns) do
+    Map.get(assigns, :autofocus_search, false)
   end
 
   def title(assigns) do
@@ -35,6 +41,10 @@ defmodule HexpmWeb.LayoutView do
 
   def container_class(assigns) do
     Map.get(assigns, :container, "container")
+  end
+
+  def error_page?(assigns) do
+    assigns[:error] || (is_integer(assigns[:status]) && assigns[:status] >= 400)
   end
 
   def og_tags(assigns) do

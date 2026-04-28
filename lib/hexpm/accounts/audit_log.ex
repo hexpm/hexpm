@@ -6,6 +6,8 @@ defmodule Hexpm.Accounts.AuditLog do
     field :remote_ip, :string
     field :action, :string
     field :params, :map
+    field :user_data, :map
+    field :key_data, :map
 
     belongs_to :user, User
     belongs_to :organization, Organization
@@ -24,6 +26,8 @@ defmodule Hexpm.Accounts.AuditLog do
     %AuditLog{
       user_id: nil,
       organization_id: nil,
+      user_data: nil,
+      key_data: serialize_key(key),
       key: key,
       oauth_token: oauth_token,
       user_agent: truncate_codepoints(audit_data.user_agent, 255),
@@ -41,6 +45,8 @@ defmodule Hexpm.Accounts.AuditLog do
     %AuditLog{
       user_id: user_id,
       organization_id: organization.id,
+      user_data: serialize_user_with_emails(audit_data.user),
+      key_data: serialize_key(key),
       key: key,
       oauth_token: oauth_token,
       user_agent: truncate_codepoints(audit_data.user_agent, 255),
@@ -58,6 +64,8 @@ defmodule Hexpm.Accounts.AuditLog do
     %AuditLog{
       user_id: user_id,
       organization_id: params[:organization][:id] || params[:package][:organization_id],
+      user_data: serialize_user_with_emails(audit_data.user),
+      key_data: serialize_key(key),
       key: key,
       oauth_token: oauth_token,
       user_agent: truncate_codepoints(audit_data.user_agent, 255),
@@ -75,6 +83,8 @@ defmodule Hexpm.Accounts.AuditLog do
     %AuditLog{
       user_id: nil,
       organization_id: organization_id,
+      user_data: nil,
+      key_data: serialize_key(key),
       key: key,
       oauth_token: oauth_token,
       user_agent: truncate_codepoints(audit_data.user_agent, 255),
@@ -193,6 +203,15 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("email.public", {old_email, new_email}),
     do: %{old_email: serialize(old_email), new_email: serialize(new_email)}
 
+  defp extract_params("email.options", {old_preferences, new_preferences}) do
+    changes =
+      new_preferences
+      |> Enum.filter(fn {key, value} -> Map.get(old_preferences, key) != value end)
+      |> Map.new()
+
+    %{old_preferences: old_preferences, new_preferences: new_preferences, changes: changes}
+  end
+
   defp extract_params("email.gravatar", {organization, {old_email, new_email}}),
     do: %{
       organization: serialize(organization),
@@ -238,6 +257,9 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("billing.cancel", {organization, _params}),
     do: %{organization: serialize(organization)}
 
+  defp extract_params("billing.resume", {organization, _params}),
+    do: %{organization: serialize(organization)}
+
   defp extract_params("billing.create", {organization, params}),
     do: %{
       organization: serialize(organization),
@@ -269,6 +291,27 @@ defmodule Hexpm.Accounts.AuditLog do
       organization: serialize(organization),
       invoice_id: invoice_id
     }
+
+  defp serialize_user_with_emails(%User{} = user) do
+    user_map = serialize(user)
+
+    emails =
+      case user.emails do
+        %Ecto.Association.NotLoaded{} ->
+          []
+
+        emails ->
+          Enum.map(emails, &serialize/1)
+      end
+
+    Map.put(user_map, :emails, emails)
+  end
+
+  defp serialize_key(nil), do: nil
+
+  defp serialize_key(%Key{} = key) do
+    serialize(key)
+  end
 
   defp serialize(%Key{} = key) do
     key
@@ -325,7 +368,10 @@ defmodule Hexpm.Accounts.AuditLog do
   defp fields(%ReleaseRetirement{}), do: [:status, :message]
   defp fields(%Organization{}), do: [:id, :name, :public, :active, :billing_active]
   defp fields(%User{}), do: [:id, :username]
-  defp fields(%UserHandles{}), do: [:twitter, :bluesky, :github, :elixirforum, :freenode, :slack]
+
+  defp fields(%UserHandles{}),
+    do: [:twitter, :bluesky, :github, :elixirforum, :freenode, :slack, :url]
+
   defp fields(%Hexpm.UserSession{}), do: [:id, :type, :name, :client_id]
   defp fields(%Hexpm.OAuth.Client{}), do: [:id, :name]
 

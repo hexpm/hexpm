@@ -152,6 +152,22 @@ defmodule HexpmWeb.DashboardViewTest do
                "Set email test@example.com as gravatar email"
     end
 
+    test "email.options" do
+      log =
+        build(:audit_log,
+          action: "email.options",
+          params: %{
+            "changes" => %{
+              "organization_invite" => false,
+              "owner_added_to_package" => true
+            }
+          }
+        )
+
+      assert DashboardView.humanize_audit_log_info(log) ==
+               "Updated email preferences: Organization invites: disabled, Owner added to package: enabled"
+    end
+
     test "user.create" do
       log = build(:audit_log, action: "user.create")
 

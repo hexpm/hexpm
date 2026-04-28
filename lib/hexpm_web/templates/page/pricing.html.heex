@@ -1,0 +1,162 @@
+<%!-- Hero Section --%>
+<section class="max-w-7xl mx-auto px-4 pt-12 pb-16">
+  <div class="text-center mb-12">
+    <h1 class="text-grey-900 dark:text-white text-4xl font-bold mb-4">
+      Our Plans & Pricing
+    </h1>
+    <p class="text-grey-600 dark:text-grey-300 text-lg max-w-2xl mx-auto">
+      Hex is free to use for public open source packages. You can publish unlimited private packages with organizations
+    </p>
+  </div>
+
+  <%!-- Billing Toggle --%>
+  <.billing_toggle />
+
+  <%!-- Pricing Cards --%>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
+    <%!-- Open Source Card --%>
+    <.pricing_card
+      icon_src={~p"/images/pricing/open-source-icon.svg"}
+      icon_bg="blue"
+      price_monthly={0}
+      price_yearly={0}
+      title="Open Source"
+      description="For Public Open Source Packages"
+      cta_text="Get Started for FREE"
+      cta_href={~p"/signup"}
+    >
+      <:feature>Unlimited number of public packages</:feature>
+      <:feature>Public Packages Documentation</:feature>
+      <:feature>Multiple Package Owners</:feature>
+    </.pricing_card>
+
+    <%!-- Private Packages Card --%>
+    <.pricing_card
+      icon_src={~p"/images/pricing/lock-icon.svg"}
+      icon_bg="green"
+      price_monthly={7}
+      price_yearly={70}
+      title="Private Packages"
+      description="For Private Projects with teams of users"
+      cta_text="Try FREE for 30 days"
+      cta_href={~p"/dashboard/orgs"}
+    >
+      <:feature>Unlimited Private Packages</:feature>
+      <:feature>Private Packages Documentation</:feature>
+      <:feature>Republish and Delete Packages</:feature>
+    </.pricing_card>
+
+    <%!-- Enterprise Card --%>
+    <.pricing_card
+      icon_src={~p"/images/pricing/building-icon.svg"}
+      icon_bg="purple"
+      price_text="Custom"
+      title="Enterprise"
+      description="Are you interested in self-hosted Hex or enterprise solutions? Please contact us to hear what we are planning and let us know what you are looking for."
+      cta_text="Contact Sales"
+      cta_href="mailto:support@hex.pm"
+    >
+      <:feature>Run your own infrastructure</:feature>
+      <:feature>Mirroring of hex.pm packages</:feature>
+      <:feature>Whitelist allowed & vetted packages</:feature>
+      <:feature>Apply Security Packages</:feature>
+    </.pricing_card>
+  </div>
+</section>
+
+<%!-- FAQ Section --%>
+<section class="bg-white dark:bg-grey-950 py-16">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+      <%!-- Left Column - Title --%>
+      <div class="lg:col-span-4">
+        <h2 class="text-grey-900 dark:text-white text-4xl font-bold mb-4">
+          Frequently Asked Questions
+        </h2>
+        <p class="text-grey-900 dark:text-grey-100 text-lg mb-6">
+          Everything you need to know right here at your fingertips.
+        </p>
+        <a
+          href={~p"/docs/faq"}
+          class="inline-flex items-center text-blue-500 dark:text-blue-300 font-medium text-base hover:text-blue-600 dark:hover:text-blue-200 transition-colors"
+        >
+          View full FAQ
+          <svg
+            class="ml-2 w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </a>
+      </div>
+
+      <%!-- Right Column - Questions --%>
+      <div class="lg:col-span-8">
+        <div class="divide-y divide-grey-200 dark:divide-grey-800">
+          <.faq_item>
+            <:question>How are organizations billed?</:question>
+            <:answer>
+              <p class="mb-3">
+                Organizations on the monthly plan are billed each month on the day of the month the subscription was started. The subscription is invoiced and charged in advance when the next billing period starts. Changes in the number of open seats in the plan are pro-rated on the next invoice.
+              </p>
+              <p>
+                Organizations on the annual plan are billed each year from the day the subscription was started. The subscription is invoiced and charged in advance when the next billing period starts. Changes in the number of open seats in the plan are pro-rated and charged when the number of seats change.
+              </p>
+            </:answer>
+          </.faq_item>
+
+          <.faq_item>
+            <:question>Do the listed prices include VAT?</:question>
+            <:answer>
+              <p>
+                All prices are listed excluding VAT. Private EU citizens and Swedish companies are required to pay VAT based on the VAT rate of their country of origin. EU companies registered for VAT need to supply a valid VAT number. VAT is not included for customers outside of the EU.
+              </p>
+            </:answer>
+          </.faq_item>
+
+          <.faq_item>
+            <:question>Can I cancel at any time?</:question>
+            <:answer>
+              <p>
+                Yes, you can cancel your subscription at any time. When your subscription is cancelled you can continue to use the organization until the end of the current billing period.
+              </p>
+            </:answer>
+          </.faq_item>
+
+          <.faq_item>
+            <:question>What happens if I fail to pay?</:question>
+            <:answer>
+              <p class="mb-3">
+                Failed invoice payments will be retried three times. After 15 days your subscription will be cancelled and you will not be able to access packages or documentation. When you pay the invoice and start the subscription again your organization will again be enabled.
+              </p>
+              <p>
+                We will keep all your data for a minimum of 90 days. You can contact
+                <a href="mailto:support@hex.pm" class="text-blue-500 dark:text-blue-300 underline">
+                  support@hex.pm
+                </a>
+                to retrieve a dump of all your packages and documentation.
+              </p>
+            </:answer>
+          </.faq_item>
+
+          <.faq_item>
+            <:question>Can I pay annually instead of monthly?</:question>
+            <:answer>
+              <p>
+                Yes, we offer an annual plan that is billed once a year and includes a 2 month discount over the monthly plan for a price of $70 / per user / per year.
+              </p>
+            </:answer>
+          </.faq_item>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

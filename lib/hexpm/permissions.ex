@@ -17,6 +17,9 @@ defmodule Hexpm.Permissions do
   @resource_only_scopes ~w(package repository docs)
   @all_scopes @api_scopes ++ @simple_scopes
 
+  # OAuth clients can register bare resource-only scopes as patterns
+  @client_allowed_scopes @all_scopes ++ @resource_only_scopes
+
   # Legacy domain list for KeyPermission compatibility
   @legacy_domains ~w(api package repository repositories docs)
 
@@ -24,6 +27,31 @@ defmodule Hexpm.Permissions do
   Returns all valid domains for KeyPermissions (legacy format).
   """
   def valid_domains, do: @legacy_domains
+
+  @doc """
+  Returns the list of resource-only scope prefixes (docs, package, repository).
+  These scopes require a resource suffix (e.g., docs:acme, package:hexpm/poison).
+  """
+  def resource_only_scopes, do: @resource_only_scopes
+
+  @doc """
+  Checks if a scope is a resource-specific scope (e.g., docs:acme, package:hexpm/poison).
+  """
+  def resource_specific_scope?(scope) when is_binary(scope) do
+    case String.split(scope, ":", parts: 2) do
+      [base, _resource] when base in @resource_only_scopes -> true
+      _ -> false
+    end
+  end
+
+  @doc """
+  Validates a scope for OAuth client registration.
+  More permissive than user-requested scopes - allows bare resource-only scopes
+  (docs, package, repository) as patterns that match any resource-specific scope.
+  """
+  def valid_client_allowed_scope?(scope) when is_binary(scope) do
+    scope in @client_allowed_scopes or resource_specific_scope?(scope)
+  end
 
   @doc """
   Validates a list of scopes against the allowed scope definitions.
@@ -36,6 +64,19 @@ defmodule Hexpm.Permissions do
       [] -> :ok
       _ -> {:error, "contains invalid scopes: #{Enum.join(invalid_scopes, ", ")}"}
     end
+  end
+
+  @doc """
+  Expands the full API scope into the granular API scopes used for interactive
+  authorization.
+  """
+  def expand_api_scope(scopes) when is_list(scopes) do
+    scopes
+    |> Enum.flat_map(fn
+      "api" -> ["api:read", "api:write"]
+      scope -> [scope]
+    end)
+    |> Enum.uniq()
   end
 
   defp valid_scope?(scope) do
@@ -81,6 +122,34 @@ defmodule Hexpm.Permissions do
         domain
     end
   end
+
+  @doc """
+  Returns the list of OAuth scopes that a key permission grants access to.
+
+  Unlike `permission_to_scope/1` which does a 1:1 mapping, this function
+  returns all scopes the permission implies, respecting the scope hierarchy
+  (e.g., write implies read).
+
+  Examples:
+  - %{domain: "api", resource: nil} -> ["api", "api:read", "api:write"]
+  - %{domain: "api", resource: "write"} -> ["api:write", "api:read"]
+  - %{domain: "api", resource: "read"} -> ["api:read"]
+  - %{domain: "repository", resource: "acme"} -> ["repository:acme"]
+  - %{domain: "repositories"} -> [:all_repositories]
+  """
+  def permission_to_scopes(%{domain: "api", resource: nil}),
+    do: ["api", "api:read", "api:write"]
+
+  def permission_to_scopes(%{domain: "api", resource: "write"}),
+    do: ["api:write", "api:read"]
+
+  def permission_to_scopes(%{domain: "api", resource: "read"}), do: ["api:read"]
+
+  def permission_to_scopes(%{domain: "repository", resource: resource}),
+    do: ["repository:#{resource}"]
+
+  def permission_to_scopes(%{domain: "repositories"}), do: [:all_repositories]
+  def permission_to_scopes(_permission), do: []
 
   @doc """
   Converts a scope string to KeyPermission format.
@@ -266,7 +335,10 @@ defmodule Hexpm.Permissions do
   defp check_access?(permissions, "docs", resource) when is_binary(resource) do
     Enum.any?(permissions, fn perm ->
       case perm do
+        # Legacy KeyPermission format
         %{domain: "docs", resource: ^resource} -> true
+        # OAuth scope format: docs:{organization}
+        %{scope: "docs:" <> scope_resource, is_oauth_scope: true} -> scope_resource == resource
         _ -> false
       end
     end)
@@ -318,6 +390,25 @@ defmodule Hexpm.Permissions do
       ["api:read"]
   """
   def expand_repositories_scope(user, scopes, api_key \\ nil)
+
+  def expand_repositories_scope(%Organization{} = org, scopes, api_key) do
+    if "repositories" in scopes do
+      allowed_repos = get_allowed_repositories_from_key(api_key.permissions)
+
+      repo_scopes =
+        if :all in allowed_repos or org.name in allowed_repos do
+          ["repository:#{org.name}"]
+        else
+          []
+        end
+
+      scopes
+      |> Enum.reject(&(&1 == "repositories"))
+      |> Kernel.++(repo_scopes)
+    else
+      scopes
+    end
+  end
 
   def expand_repositories_scope(%User{} = user, scopes, nil) do
     if "repositories" in scopes do
@@ -494,7 +585,7 @@ defmodule Hexpm.Permissions do
         "Read-only access to your Hex account and packages. Allows viewing packages, account information, organizations, and audit logs. Cannot modify any data."
 
       "api:write" ->
-        "Read and write access to your Hex account and packages. Includes: publish, unpublish, retire, and unretire packages; manage package owners; manage API keys."
+        "Write access to your Hex account and packages. Includes: publish, unpublish, retire, and unretire packages; manage package owners; manage API keys."
 
       "repositories" ->
         "Access to fetch packages from all private repositories you belong to. Does not grant ability to publish packages or modify repository settings."

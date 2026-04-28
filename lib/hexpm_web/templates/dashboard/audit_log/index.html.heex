@@ -1,0 +1,30 @@
+<div class="bg-grey-50 dark:bg-grey-950 min-h-screen py-4 sm:py-8">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="flex flex-col gap-4 sm:gap-8 lg:flex-row">
+      <%!-- Left Sidebar --%>
+      <div class="w-full lg:w-64 flex-shrink-0">
+        {render(HexpmWeb.DashboardView, "_sidebar.html", assigns)}
+      </div>
+
+      <%!-- Right Content --%>
+      <div class="flex-1 min-w-0">
+        <.audit_log_card audit_logs={@audit_logs} />
+
+        <%!-- Pagination --%>
+        <%= if @audit_logs != [] do %>
+          <div class="mt-4">
+            {render(HexpmWeb.SharedView, "_pagination.html",
+              items: @audit_logs,
+              page: @page,
+              total_count: @audit_logs_total_count,
+              per_page: @per_page,
+              unit: "activity",
+              units: "activities",
+              path_fn: @path_fn
+            )}
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

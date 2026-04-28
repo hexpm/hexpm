@@ -10,15 +10,30 @@ defmodule Hexpm.Accounts.UserHandles do
     field :elixirforum, :string
     field :freenode, :string
     field :slack, :string
+    field :url, :string
   end
 
   def changeset(handles, params) do
-    cast(handles, params, ~w(twitter bluesky github elixirforum freenode slack)a)
+    handles
+    |> cast(params, ~w(twitter bluesky github elixirforum freenode slack url)a)
+    |> validate_change(:url, fn :url, url ->
+      case URI.new(url) do
+        {:ok, uri} ->
+          if uri.scheme not in ["http", "https"] do
+            [url: "should be a valid http or https URL"]
+          else
+            []
+          end
+
+        {:error, err} ->
+          [url: err]
+      end
+    end)
   end
 
   def services() do
     [
-      {:twitter, "Twitter", "https://twitter.com/{handle}"},
+      {:twitter, "X.com", "https://x.com/{handle}"},
       {:bluesky, "Bluesky", "https://bsky.app/profile/{handle}"},
       {:github, "GitHub", "https://github.com/{handle}"},
       {:elixirforum, "Elixir Forum", "https://elixirforum.com/u/{handle}"},
@@ -44,7 +59,11 @@ defmodule Hexpm.Accounts.UserHandles do
     end)
   end
 
-  def handle(:twitter, handle), do: unuri(handle, "twitter.com", "/")
+  def handle(:twitter, handle) do
+    handle = String.replace(handle, "twitter.com", "x.com")
+    unuri(handle, "x.com", "/")
+  end
+
   def handle(:bluesky, handle), do: unuri(handle, "bsky.app", "/profile/")
   def handle(:github, handle), do: unuri(handle, "github.com", "/")
   def handle(:elixirforum, handle), do: unuri(handle, "elixirforum.com", "/u/")

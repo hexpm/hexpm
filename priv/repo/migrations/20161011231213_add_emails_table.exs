@@ -3,7 +3,7 @@ defmodule Hexpm.Repo.Migrations.AddEmailsTable do
 
   def up() do
     execute("""
-    CREATE TABLE emails (
+    CREATE TABLE IF NOT EXISTS emails (
       id serial PRIMARY KEY,
       email varchar(255) UNIQUE,
       verified boolean,
@@ -33,9 +33,9 @@ defmodule Hexpm.Repo.Migrations.AddEmailsTable do
 
     execute("""
     ALTER TABLE users
-      DROP COLUMN email,
-      DROP COLUMN confirmed,
-      DROP COLUMN confirmation_key
+      DROP COLUMN IF EXISTS email,
+      DROP COLUMN IF EXISTS confirmed,
+      DROP COLUMN IF EXISTS confirmation_key
     """)
   end
 

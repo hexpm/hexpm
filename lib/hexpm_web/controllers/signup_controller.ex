@@ -6,33 +6,42 @@ defmodule HexpmWeb.SignupController do
       path = ~p"/users/#{conn.assigns.current_user}"
       redirect(conn, to: path)
     else
-      render_show(conn, User.build(%{}))
+      # Initialize with one empty email record so inputs_for can render the fields
+      changeset = User.build(%{"emails" => [%{"email" => "", "email_confirmation" => ""}]})
+      render_show(conn, changeset)
     end
   end
 
   def create(conn, params) do
-    if HexpmWeb.Captcha.verify(params["h-captcha-response"]) do
-      case Users.add(params["user"], audit: audit_data(conn)) do
-        {:ok, _user} ->
-          flash =
-            "A confirmation email has been sent, " <>
-              "you will have access to your account shortly."
+    cond do
+      logged_in?(conn) ->
+        path = ~p"/users/#{conn.assigns.current_user}"
+        redirect(conn, to: path)
 
-          conn
-          |> put_flash(:info, flash)
-          |> redirect(to: ~p"/")
+      HexpmWeb.Captcha.verify(params["h-captcha-response"]) ->
+        case Users.add(params["user"], audit: audit_data(conn)) do
+          {:ok, _user} ->
+            flash =
+              "A confirmation email has been sent, " <>
+                "you will have access to your account shortly."
 
-        {:error, changeset} ->
-          conn
-          |> put_status(400)
-          |> render_show(changeset)
-      end
-    else
-      changeset = %{User.build(params["user"]) | action: :insert}
+            conn
+            |> put_flash(:info, flash)
+            |> redirect(to: ~p"/")
 
-      conn
-      |> put_status(400)
-      |> render_show(changeset, "Please complete the captcha to sign up")
+          {:error, changeset} ->
+            conn
+            |> put_status(400)
+            |> put_flash(:error, "Oops, something went wrong! Please check the errors below.")
+            |> render_show(changeset)
+        end
+
+      true ->
+        changeset = %{User.build(sanitize_params(params["user"])) | action: :insert}
+
+        conn
+        |> put_status(400)
+        |> render_show(changeset, "Please complete the captcha to sign up")
     end
   end
 

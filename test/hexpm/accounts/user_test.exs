@@ -1,7 +1,7 @@
 defmodule Hexpm.Accounts.UserTest do
   use Hexpm.DataCase, async: true
 
-  alias Hexpm.Accounts.{Auth, User}
+  alias Hexpm.Accounts.{Auth, User, OptionalEmails}
 
   setup do
     user = insert(:user, password: Auth.gen_password("password"))
@@ -15,7 +15,8 @@ defmodule Hexpm.Accounts.UserTest do
           username: "username",
           emails: [%{email: "mail@example.com"}],
           password: "password",
-          full_name: "Jane Doe"
+          full_name: "Jane Doe",
+          optional_emails: OptionalEmails.default_preferences()
         })
 
       assert changeset.valid?
@@ -31,7 +32,7 @@ defmodule Hexpm.Accounts.UserTest do
 
     test "validates password" do
       changeset = User.build(%{password: "x"})
-      assert errors_on(changeset)[:password] == "should be at least 7 character(s)"
+      assert errors_on(changeset)[:password] == "should be at least 8 character(s)"
     end
 
     test "username and email are unique", %{user: user} do
@@ -136,7 +137,7 @@ defmodule Hexpm.Accounts.UserTest do
           password_confirmation: "short"
         })
 
-      assert errors_on(changeset)[:password] == "should be at least 7 character(s)"
+      assert errors_on(changeset)[:password] == "should be at least 8 character(s)"
 
       changeset =
         User.update_password_no_check(user, %{

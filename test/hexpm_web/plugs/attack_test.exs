@@ -148,7 +148,7 @@ defmodule HexpmWeb.Plugs.AttackTest do
       insert(:block_address, ip: "10.1.1.1")
       Hexpm.BlockAddress.reload()
 
-      conn = %Plug.Conn{request_ip({10, 1, 1, 1}) | request_path: "/"}
+      conn = %{request_ip({10, 1, 1, 1}) | request_path: "/"}
       assert conn.status == 403
       assert conn.resp_body == Jason.encode!(%{status: 403, message: "Blocked"})
     end

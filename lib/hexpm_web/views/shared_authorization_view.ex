@@ -1,6 +1,8 @@
 defmodule HexpmWeb.SharedAuthorizationView do
   use HexpmWeb, :view
+  use Phoenix.Component
 
+  alias Hexpm.Accounts.User
   alias Hexpm.Permissions
 
   @doc """
@@ -29,83 +31,146 @@ defmodule HexpmWeb.SharedAuthorizationView do
         Map.keys(grouped)
       end
 
-    grouped_html =
-      categories
-      |> Enum.map(fn category ->
-        category_scopes = Map.get(grouped, category)
+    assigns = %{
+      categories: categories,
+      grouped: grouped,
+      style: style,
+      current_user: current_user
+    }
 
-        items =
-          category_scopes
-          |> Enum.map(fn scope ->
-            render_scope_item(scope, style, current_user)
-          end)
-          |> Enum.join("\n")
-
-        if style == :oauth do
-          category_name = format_category_name(category)
-
-          """
-          <div class="scope-group" style="margin-bottom: 20px;">
-            <h5 class="scope-category-header" style="margin-bottom: 10px; color: #333; font-weight: 600;">#{category_name}</h5>
-            <ul class="list-unstyled" style="margin-left: 20px;">#{items}</ul>
-          </div>
-          """
-        else
-          """
-          <div class="scope-group">
-            <ul>#{items}</ul>
-          </div>
-          """
-        end
-      end)
-      |> Enum.join("\n")
-
-    raw(grouped_html)
+    ~H"""
+    <.scope_group
+      :for={category <- @categories}
+      style={@style}
+      category_name={format_category_name(category)}
+      scopes={Map.get(@grouped, category)}
+      current_user={@current_user}
+    />
+    """
   end
 
-  defp render_scope_item(scope, style, current_user) do
-    description = Permissions.scope_description(scope)
-    requires_2fa = scope in ["api", "api:write"]
+  defp scope_group(assigns) do
+    ~H"""
+    <%= if @style == :oauth do %>
+      <div class="scope-group scope-group--oauth">
+        <h5 class="scope-category-header">
+          {@category_name}
+        </h5>
+        <ul class="list-unstyled scope-list">
+          <.render_scope_item
+            :for={scope <- @scopes}
+            scope={scope}
+            style={@style}
+            current_user={@current_user}
+          />
+        </ul>
+      </div>
+    <% else %>
+      <ul class="list-none space-y-1">
+        <.render_scope_item
+          :for={scope <- @scopes}
+          scope={scope}
+          style={@style}
+          current_user={@current_user}
+        />
+      </ul>
+    <% end %>
+    """
+  end
 
-    checked =
-      if requires_2fa and not User.tfa_enabled?(current_user) do
-        ""
-      else
-        ~s(checked="checked")
-      end
+  defp render_scope_item(assigns) do
+    description = Permissions.scope_description(assigns.scope)
+    requires_2fa = assigns.scope in ["api", "api:write"]
+    has_2fa = User.tfa_enabled?(assigns.current_user)
+    required = assigns.scope == "api:read"
+    disabled = required or (requires_2fa and not has_2fa)
+    checked = required or not disabled
 
-    tfa_badge =
-      if requires_2fa do
-        ~s(<span class="label label-warning" style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 5px; font-size: 12px; font-weight: 600; background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7; margin-left: 8px;"><i class="fa fa-shield"></i> Requires 2FA</span>)
-      else
-        ""
-      end
+    assigns =
+      assign(assigns,
+        description: description,
+        requires_2fa: requires_2fa,
+        required: required,
+        checked: checked,
+        disabled: disabled
+      )
 
-    if style == :oauth do
-      ~s(<li class="scope-item" style="list-style: none; margin-bottom: 12px;">
-        <label style="display: flex; align-items: flex-start; cursor: pointer; padding: 12px; border-radius: 8px; border: 2px solid #e9ecef; background-color: #f8f9fa; transition: all 0.2s ease;" onmouseover="this.style.borderColor='#0d6efd'; this.style.backgroundColor='#f0f7ff';" onmouseout="this.style.borderColor='#e9ecef'; this.style.backgroundColor='#f8f9fa';">
-          <input type="checkbox" name="selected_scopes[]" value="#{scope}" #{checked} style="margin-right: 12px; margin-top: 4px; width: 18px; height: 18px; cursor: pointer;" class="scope-checkbox">
-          <div style="flex: 1;">
-            <div style="margin-bottom: 8px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-              <code class="scope-name" style="background-color: #e7f3ff; color: #0366d6; padding: 4px 10px; border-radius: 5px; font-size: 14px; font-weight: 600;">#{scope}</code>#{tfa_badge}
+    ~H"""
+    <%= if @style == :oauth do %>
+      <li class="scope-item">
+        <label class="scope-label">
+          <input
+            type="checkbox"
+            name="selected_scopes[]"
+            value={@scope}
+            checked={@checked}
+            disabled={@disabled}
+            class="scope-checkbox"
+          />
+          <input :if={@required} type="hidden" name="selected_scopes[]" value={@scope} />
+          <div class="scope-content">
+            <div class="scope-header">
+              <code class="scope-name">
+                {@scope}
+              </code>
+              <span
+                :if={@required}
+                class="scope-required"
+              >
+                Required
+              </span>
+              <span
+                :if={@requires_2fa}
+                class="scope-requires-2fa"
+              >
+                <i class="fa fa-shield"></i> Requires 2FA
+              </span>
             </div>
-            <span class="scope-description" style="color: #6c757d; font-size: 14px; line-height: 1.5;">#{description}</span>
+            <span class="scope-description">
+              {@description}
+            </span>
           </div>
         </label>
-      </li>)
-    else
-      ~s(<li style="list-style: none; margin-bottom: 12px;">
-        <label style="display: flex; align-items: flex-start; cursor: pointer; padding: 14px; border-radius: 8px; border: 2px solid #e9ecef; background-color: #ffffff; transition: all 0.2s ease;" onmouseover="this.style.borderColor='#0d6efd'; this.style.backgroundColor='#f8f9fa';" onmouseout="this.style.borderColor='#e9ecef'; this.style.backgroundColor='#ffffff';">
-          <input type="checkbox" name="selected_scopes[]" value="#{scope}" #{checked} style="margin-right: 12px; margin-top: 4px; width: 18px; height: 18px; cursor: pointer;" class="scope-checkbox">
-          <div style="flex: 1;">
-            <div style="margin-bottom: 8px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-              <code style="background-color: #e7f3ff; color: #0366d6; padding: 4px 10px; border-radius: 5px; font-size: 14px; font-weight: 600;">#{scope}</code>#{tfa_badge}
+      </li>
+    <% else %>
+      <li class="flex items-start gap-3 py-2">
+        <label class={[
+          "flex items-start gap-3",
+          @disabled && "cursor-not-allowed",
+          !@disabled && "cursor-pointer",
+          @disabled && !@required && "opacity-60"
+        ]}>
+          <input
+            type="checkbox"
+            name="selected_scopes[]"
+            value={@scope}
+            checked={@checked}
+            disabled={@disabled}
+            class="scope-checkbox mt-1 h-4 w-4 rounded border-grey-300 text-primary-600 focus:ring-primary-500"
+          />
+          <input :if={@required} type="hidden" name="selected_scopes[]" value={@scope} />
+          <div>
+            <div class="flex items-center gap-2">
+              <code class="text-sm font-semibold text-grey-900">{@scope}</code>
+              <span
+                :if={@required}
+                class="inline-flex items-center rounded-full bg-grey-100 px-2 py-0.5 text-xs font-medium text-grey-700"
+              >
+                Required
+              </span>
+              <span
+                :if={@requires_2fa}
+                class="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800"
+              >
+                Requires 2FA
+              </span>
             </div>
-            <span style="color: #6c757d; font-size: 14px; line-height: 1.6;">#{description}</span>
+            <span class="text-sm text-grey-600">{@description}</span>
           </div>
         </label>
-      </li>)
-    end
+      </li>
+    <% end %>
+    """
   end
 
   defp format_category_name(category) do

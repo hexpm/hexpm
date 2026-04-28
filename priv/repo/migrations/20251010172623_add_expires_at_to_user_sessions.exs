@@ -4,7 +4,7 @@ defmodule Hexpm.Repo.Migrations.AddExpiresAtToUserSessions do
   def up do
     # Add expires_at column
     alter table(:user_sessions) do
-      add :expires_at, :utc_datetime_usec
+      add_if_not_exists :expires_at, :utc_datetime_usec
     end
 
     # Backfill OAuth sessions: use the earliest refresh_token_expires_at from their tokens
@@ -33,14 +33,14 @@ defmodule Hexpm.Repo.Migrations.AddExpiresAtToUserSessions do
     """
 
     # Add index for cleanup queries
-    create index(:user_sessions, [:expires_at])
+    create_if_not_exists index(:user_sessions, [:expires_at])
   end
 
   def down do
-    drop index(:user_sessions, [:expires_at])
+    drop_if_exists index(:user_sessions, [:expires_at])
 
     alter table(:user_sessions) do
-      remove :expires_at
+      remove_if_exists :expires_at
     end
   end
 end

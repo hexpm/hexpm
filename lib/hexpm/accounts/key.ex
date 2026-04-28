@@ -4,8 +4,6 @@ defmodule Hexpm.Accounts.Key do
   @derive HexpmWeb.Stale
   @derive {Phoenix.Param, key: :name}
 
-  @days_30 60 * 60 * 24 * 30
-
   schema "keys" do
     field :name, :string
     field :secret_first, :string
@@ -30,36 +28,29 @@ defmodule Hexpm.Accounts.Key do
   end
 
   def changeset(key, user_or_organization, params) do
-    cast(key, params, ~w(name)a)
+    cast(key, params, ~w(name revoke_at)a)
     |> validate_required(~w(name)a)
+    |> validate_revoke_at_in_future()
     |> add_keys()
     |> prepare_changes(&unique_name/1)
     |> cast_embed(:permissions, with: &KeyPermission.changeset(&1, user_or_organization, &2))
     |> put_default_embed(:permissions, [%KeyPermission{domain: "api"}])
   end
 
+  defp validate_revoke_at_in_future(changeset) do
+    validate_change(changeset, :revoke_at, fn :revoke_at, revoke_at ->
+      if DateTime.compare(revoke_at, DateTime.utc_now()) == :gt do
+        []
+      else
+        [revoke_at: "must be in the future"]
+      end
+    end)
+  end
+
   def build(user_or_organization, params) do
     build_assoc(user_or_organization, :keys)
     |> associate_owner(user_or_organization)
     |> changeset(user_or_organization, params)
-  end
-
-  def build_for_docs(user, organization) do
-    permission =
-      KeyPermission.changeset(%KeyPermission{}, user, %{
-        "domain" => "docs",
-        "resource" => organization
-      })
-
-    revoke_at =
-      NaiveDateTime.add(NaiveDateTime.utc_now(), @days_30) |> DateTime.from_naive!("Etc/UTC")
-
-    build_assoc(user, :keys)
-    |> change()
-    |> add_keys()
-    |> put_change(:revoke_at, revoke_at)
-    |> put_change(:public, false)
-    |> put_embed(:permissions, [permission])
   end
 
   defmacrop query_revoked(key) do

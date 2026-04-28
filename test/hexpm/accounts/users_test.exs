@@ -1,7 +1,7 @@
 defmodule Hexpm.Accounts.UsersTest do
   use Hexpm.DataCase, async: true
 
-  alias Hexpm.Accounts.{Users, UserProviders}
+  alias Hexpm.Accounts.{OptionalEmails, User, Users, UserProviders}
 
   describe "add_from_oauth_with_provider/6" do
     test "creates user and provider atomically" do
@@ -29,6 +29,7 @@ defmodule Hexpm.Accounts.UsersTest do
       assert user_email.verified
       assert user_email.primary
       assert user_email.public
+      assert user.optional_emails == OptionalEmails.default_preferences()
 
       user_provider = UserProviders.get_by_provider("github", "12345")
       assert user_provider
@@ -138,6 +139,40 @@ defmodule Hexpm.Accounts.UsersTest do
     end
   end
 
+  test "new users default to optional email preferences" do
+    username = Hexpm.Fake.sequence(:username)
+    email = Hexpm.Fake.sequence(:email)
+
+    params = %{
+      "username" => username,
+      "emails" => [%{"email" => email}]
+    }
+
+    audit = %{user: nil, user_agent: "TEST", remote_ip: "127.0.0.1", auth_credential: nil}
+
+    {:ok, user} = Users.add(params, audit: audit)
+
+    assert user.optional_emails == OptionalEmails.default_preferences()
+  end
+
+  test "rejects invalid optional email values" do
+    user = insert(:user)
+
+    changeset =
+      User.optional_emails_changeset(user, %{"organization_invite" => "yes"})
+
+    assert %{optional_emails: _} = errors_on(changeset)
+  end
+
+  test "rejects unknown optional email keys" do
+    user = insert(:user)
+
+    changeset =
+      User.optional_emails_changeset(user, %{"unknown_pref" => true})
+
+    assert %{optional_emails: _} = errors_on(changeset)
+  end
+
   describe "update_profile/3 when user is an organization" do
     test "updates full_name" do
       organization = insert(:organization, user: build(:user, full_name: "Old Full Name"))
@@ -165,7 +200,8 @@ defmodule Hexpm.Accounts.UsersTest do
               "github" => "github",
               "elixirforum" => "elixirforum",
               "freenode" => "freenode",
-              "slack" => "slack"
+              "slack" => "slack",
+              "url" => "https://example.com"
             }
           },
           audit: audit_data(build(:user))
@@ -177,7 +213,8 @@ defmodule Hexpm.Accounts.UsersTest do
                github: "github",
                elixirforum: "elixirforum",
                freenode: "freenode",
-               slack: "slack"
+               slack: "slack",
+               url: "https://example.com"
              } = updated_user.handles
     end
 

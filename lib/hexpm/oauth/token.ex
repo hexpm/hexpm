@@ -1,13 +1,14 @@
 defmodule Hexpm.OAuth.Token do
   use Hexpm.Schema
 
-  alias Hexpm.Accounts.User
+  alias Hexpm.Accounts.{Organization, User}
   alias Hexpm.Permissions
   alias Hexpm.UserSession
 
   schema "oauth_tokens" do
     field :jti, :string
     field :refresh_jti, :string
+    field :refresh_token_hash, :string
     field :token_type, :string, default: "bearer"
     field :scopes, {:array, :string}, default: []
     field :expires_at, :utc_datetime
@@ -21,6 +22,7 @@ defmodule Hexpm.OAuth.Token do
     field :refresh_token, :string, virtual: true
 
     belongs_to :user, User
+    belongs_to :organization, Organization
     belongs_to :client, Hexpm.OAuth.Client, references: :client_id, type: :binary_id
     belongs_to :user_session, UserSession
 
@@ -34,6 +36,7 @@ defmodule Hexpm.OAuth.Token do
     |> cast(attrs, [
       :jti,
       :refresh_jti,
+      :refresh_token_hash,
       :token_type,
       :scopes,
       :expires_at,
@@ -43,6 +46,7 @@ defmodule Hexpm.OAuth.Token do
       :grant_reference,
       :user_session_id,
       :user_id,
+      :organization_id,
       :client_id,
       :access_token,
       :refresh_token
@@ -53,13 +57,13 @@ defmodule Hexpm.OAuth.Token do
       :scopes,
       :expires_at,
       :grant_type,
-      :user_id,
       :client_id
     ])
     |> validate_inclusion(:grant_type, @valid_grant_types)
     |> validate_scopes()
     |> unique_constraint(:jti)
     |> unique_constraint(:refresh_jti)
+    |> unique_constraint(:refresh_token_hash)
   end
 
   def build(attrs) do

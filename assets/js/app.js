@@ -1,239 +1,146 @@
-// Brunch automatically concatenates all files in your
-// watched paths. Those paths can be configured at
-// config.paths.watched in "brunch-config.js".
-//
-// However, those files will only be executed if
-// explicitly imported. The only exception are files
-// in vendor, which are never wrapped in imports and
-// therefore are always executed.
+import "phoenix_html";
+import { Socket } from "phoenix";
+import { LiveSocket } from "phoenix_live_view";
+import PasswordStrength from "./hooks/password_strength";
+import PasswordMatch from "./hooks/password_match";
+import { CopyButton } from "./hooks/copy_button";
+import { PrintButton } from "./hooks/print_button";
+import { DownloadButton } from "./hooks/download_button";
+import { PermissionGroup } from "./hooks/permission_group";
+import { KeyExpiry } from "./hooks/key_expiry";
+import { TFACodeInput } from "./hooks/tfa_code_input";
+import { SubmitOnce } from "./hooks/submit_once";
+import { AutoSubmit } from "./hooks/auto_submit";
+import { NavigateOnChange } from "./hooks/navigate_on_change";
+import { ConfirmSubmit } from "./hooks/confirm_submit";
+import { initializeTheme, syncReadmeFrameTheme, resolveTheme } from "./theme";
+import { SearchShortcut } from "./hooks/search_shortcut";
 
-// Import dependencies
-//
-// If you no longer want to use a dependency, remember
-// to also remove its path from "config.paths.watched".
-import "phoenix_html"
-// Import local files
-//
-// Local files can be imported directly using relative
-// paths "./socket" or full ones "web/static/js/socket".
-import { Socket } from "phoenix"
-import { LiveSocket } from "phoenix_live_view"
+let csrfToken = document
+  .querySelector("meta[name='csrf-token']")
+  .getAttribute("content");
+let Hooks = {
+  PasswordStrength,
+  PasswordMatch,
+  CopyButton,
+  PrintButton,
+  DownloadButton,
+  PermissionGroup,
+  KeyExpiry,
+  TFACodeInput,
+  SubmitOnce,
+  AutoSubmit,
+  NavigateOnChange,
+  ConfirmSubmit,
+  SearchShortcut,
+};
+let liveSocket = new LiveSocket("/live", Socket, {
+  params: { _csrf_token: csrfToken },
+  hooks: Hooks,
+});
 
-let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content");
-let liveSocket = new LiveSocket("/live", Socket, { params: { _csrf_token: csrfToken } });
+liveSocket.connect();
+initializeTheme();
 
-// connect if there are any LiveViews on the page
-liveSocket.connect()
-
-// import socket from "./socket"
-
-import $ from "jquery"
-import "bootstrap"
-import hljs from 'highlight.js/lib/core';
-import elixir from 'highlight.js/lib/languages/elixir';
-
-
-export default class App {
-  constructor() {
-    // Copy button
-    $(".copy-button").click(this.onCopy.bind(this))
-
-    $(".copy-data-button").click(this.onDataCopy.bind(this))
-    $(".print-data-button").click(this.onDataPrint.bind(this))
-    $(".download-data-button").click(this.onDataDownload.bind(this))
-
-    // Pricing selector
-    $(".pricing-button").click(this.onPricing.bind(this))
-
-    // Focus username, 2FA or search field
-    if ($("#username").length > 0) {
-      $("#username").focus()
-    } else if ($("#code").length > 0) {
-      $("#code").focus()
-    } else {
-      $("[name='search']").focus()
-    }
-
-    // Switch tabs
-    $(".nav-tabs a").click(function (e) {
-      e.preventDefault()
-      $(this).tab("show")
-    })
-
-    $("[data-toggle='popover']").popover({ container: "body", html: true, animation: false })
-
-    // Highlight syntax
-    hljs.registerLanguage('elixir', elixir);
-    hljs.highlightAll()
-
-    // API permissions checkboxes
-    $(".permission-group .group-owner input").change(function () {
-      if (this.checked) {
-        $(this).parents(".permission-group").find(".group-child label input").each(function () {
-          $(this).prop("disabled", true)
-          $(this).prop("checked", true)
-        })
-      } else {
-        $(this).parents(".permission-group").find(".group-child label input").each(function () {
-          $(this).prop("disabled", false)
-          $(this).prop("checked", false)
-        })
-      }
-    })
-
-    // Auto-format device verification code input
-    const userCodeInput = document.getElementById('user_code')
-    if (userCodeInput) {
-      userCodeInput.addEventListener('input', function(e) {
-        let value = e.target.value.replace(/[^A-Z0-9]/g, '').toUpperCase()
-        if (value.length > 4) {
-          value = value.slice(0, 4) + '-' + value.slice(4, 8)
-        }
-        e.target.value = value
-      })
-    }
-
-    // Global shortcut: Cmd+K / Ctrl+K focuses the search bar
-    window.addEventListener('keydown', (e) => {
-      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
-      const meta = isMac ? e.metaKey : e.ctrlKey
-      if (meta && (e.key === 'k' || e.key === 'K')) {
-        // Avoid interfering with textareas or inputs where user is typing
-        const tag = (document.activeElement && document.activeElement.tagName) || ''
-        if (tag === 'INPUT' || tag === 'TEXTAREA') return
-        e.preventDefault()
-
-        const homeSearch = document.getElementById('search')
-        const navbarSearch = document.querySelector('form.navbar-form input[name="search"]')
-        const target = homeSearch || navbarSearch
-        if (target) {
-          target.focus()
-          try { target.select() } catch (_) {}
-        }
-      }
-    })
-  }
-
-  onDataCopy(event) {
-    let succeeded = false
-    const targetElement = $(event.currentTarget)
-    const value = this.getAssociatedValueFromElement(targetElement)
-    const textarea = document.createElement("textarea")
-    textarea.textContent = value
-    document.body.appendChild(textarea)
-    textarea.select()
-    succeeded = document.execCommand("copy")
-    document.body.removeChild(textarea)
-
-    succeeded
-      ? this.copySucceeded(targetElement)
-      : this.copyFailed(targetElement)
-  }
-
-  onDataPrint(event) {
-    const value = this.getAssociatedValueFromElement($(event.currentTarget))
-    const printWindow = window.open("", "")
-    const div = printWindow.document.createElement("div")
-    div.innerHTML = `<p>${value}</p>`
-    div.setAttribute("style", "white-space:pre-line; font-family:monospace")
-
-    printWindow.document.body.appendChild(div)
-    printWindow.document.close()
-    printWindow.focus()
-    printWindow.print()
-    printWindow.close()
-  }
-
-  onDataDownload(event) {
-    const value = this.getAssociatedValueFromElement($(event.currentTarget))
-    const data = new Blob([value], { type: "text/plain" })
-    const container = document.createElement("a")
-    container.href = URL.createObjectURL(data)
-    container.download = "hex-recovery-codes"
-    container.click()
-  }
-
-  getAssociatedValueFromElement(element) {
-    try {
-      const dataId = element.attr("data-input-id")
-      const associatedElement = document.getElementById(dataId)
-      return associatedElement.dataset.value
-    } catch (error) {
-      return null
-    }
-  }
-
-  onCopy(event) {
-    var button = $(event.currentTarget)
-    var succeeded = false
-
-    try {
-      var snippet = document.getElementById(button.attr("data-input-id"))
-      snippet.select()
-      succeeded = document.execCommand("copy")
-    } catch (e) {
-      console.log("snippet copy failed", e)
-    }
-
-    succeeded ? this.copySucceeded(button) : this.copyFailed(button)
-  }
-
-  copySucceeded(button) {
-    button.children(".heroicon-clipboard-document-list").hide()
-    button.children(".heroicon-check-circle").show()
-    button.tooltip({ title: "Copied!", container: "body", placement: "bottom", trigger: "manual" }).tooltip("show")
-
-    setTimeout(() => {
-      button.children(".heroicon-check-circle").hide()
-      button.children(".heroicon-clipboard-document-list").show()
-      button.tooltip("hide")
-    }, 1500)
-  }
-
-  copyFailed(button) {
-    button.children(".heroicon-clipboard-document-list").hide()
-    button.children(".heroicon-x-circle").show()
-    button.tooltip({ title: "Copy not supported in your browser", container: "body", placement: "bottom", trigger: "manual" }).tooltip("show")
-
-    setTimeout(() => {
-      button.children(".heroicon-x-circle").hide()
-      button.children(".heroicon-clipboard-document-list").show()
-      button.tooltip("hide")
-    }, 1500)
-  }
-
-  onPricing(event) {
-    var button = $(event.currentTarget)
-    $(".pricing .btn-selected").removeClass("btn-selected")
-    button.addClass("btn-selected")
-
-    if (button.text() === "Monthly") {
-      $(".price.price-monthly").show()
-      $(".price.price-yearly").hide()
-    } else if (button.text() === "Yearly") {
-      $(".price.price-monthly").hide()
-      $(".price.price-yearly").show()
-    }
-  }
-
-  billing_checkout(token) {
-    $.post(window.hexpm_billing_post_action, { token: token, _csrf_token: window.hexpm_billing_csrf_token })
-      .done(function (data) {
-        window.location.reload()
-      })
-      .fail(function (data) {
-        var response = JSON.parse(data.responseText);
-        $('div.flash').html(
-          '<div class="alert alert-danger" role="alert">' +
-          '<strong>Failed to update payment method</strong><br>' +
-          response.errors +
-          '</div>'
-        )
-      })
-  }
+// Focus username, 2FA or search field
+if (document.getElementById("username")) {
+  document.getElementById("username").focus();
+} else if (document.getElementById("code")) {
+  document.getElementById("code").focus();
 }
 
-window.app = new App()
-window.hexpm_billing_checkout = app.billing_checkout
-window.$ = $
-window.liveSocket = liveSocket
+// Position CSS tooltips with viewport-relative coordinates so they can escape
+// ancestor overflow containers (the .tooltip pseudo-elements use position: fixed).
+function positionTooltip(el) {
+  const rect = el.getBoundingClientRect();
+  el.style.setProperty("--tooltip-x", `${rect.left + rect.width / 2}px`);
+  el.style.setProperty("--tooltip-y", `${rect.top}px`);
+}
+
+document.addEventListener("mouseover", function (e) {
+  if (!(e.target instanceof Element)) return;
+  const tooltip = e.target.closest(".tooltip");
+  if (!tooltip) return;
+  const from = e.relatedTarget instanceof Element ? e.relatedTarget.closest(".tooltip") : null;
+  if (from === tooltip) return;
+  positionTooltip(tooltip);
+});
+
+document.addEventListener("focusin", function (e) {
+  if (!(e.target instanceof Element)) return;
+  const tooltip = e.target.closest(".tooltip");
+  if (tooltip) positionTooltip(tooltip);
+});
+
+// Auto-format device verification code input
+const userCodeInput = document.getElementById("user_code");
+if (userCodeInput) {
+  userCodeInput.addEventListener("input", function (e) {
+    let value = e.target.value.replace(/[^A-Z0-9]/g, "").toUpperCase();
+    if (value.length > 4) {
+      value = value.slice(0, 4) + "-" + value.slice(4, 8);
+    }
+    e.target.value = value;
+  });
+}
+
+// Billing checkout called by hexpm_billing templates
+function billingCheckout(token) {
+  const el = document.getElementById("billing-checkout-data");
+  const postAction = el && el.dataset.postAction;
+  const billingCsrfToken = el && el.dataset.csrfToken;
+
+  fetch(postAction, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: token, _csrf_token: billingCsrfToken }),
+  })
+    .then(function (response) {
+      if (response.ok) {
+        window.location.reload();
+      } else {
+        return response.json().then(function (data) {
+          const flash = document.getElementById("flash-container");
+          if (flash) {
+            flash.innerHTML =
+              '<div class="flash-message flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg bg-red-100 border-red-300" role="alert">' +
+              '<div class="flex-1 text-small leading-5 text-red-800">' +
+              "<strong>Failed to update payment method</strong><br>" +
+              (typeof data.errors === "string" ? data.errors : JSON.stringify(data.errors)) +
+              "</div></div>";
+          }
+        });
+      }
+    });
+}
+
+window.hexpm_billing_checkout = billingCheckout;
+window.liveSocket = liveSocket;
+
+// README iframe: show spinner until loaded, fall back to description if no readme
+var readmeFrame = document.getElementById("readme-frame");
+
+window.addEventListener("message", function (event) {
+  if (!event.data || !readmeFrame) return;
+
+  if (
+    event.data.type === "readme-height" &&
+    typeof event.data.height === "number" &&
+    event.data.height > 0 &&
+    event.data.height < 100000
+  ) {
+    readmeFrame.classList.remove("opacity-0", "h-0", "overflow-hidden");
+    readmeFrame.style.height = Math.ceil(event.data.height) + "px";
+    syncReadmeFrameTheme(resolveTheme());
+    var loading = document.getElementById("readme-loading");
+    if (loading) loading.remove();
+  }
+
+  if (event.data.type === "readme-not-found") {
+    var loading = document.getElementById("readme-loading");
+    if (loading) loading.remove();
+    readmeFrame.remove();
+    var fallback = document.getElementById("readme-fallback");
+    if (fallback) fallback.classList.remove("hidden");
+  }
+});

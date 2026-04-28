@@ -1,0 +1,37 @@
+<div class="bg-grey-50 dark:bg-grey-950 min-h-screen py-4 sm:py-8">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="flex flex-col gap-4 sm:gap-8 lg:flex-row">
+      <%!-- Left Sidebar --%>
+      <div class="w-full lg:w-64 flex-shrink-0">
+        {render(HexpmWeb.DashboardView, "_sidebar.html", assigns)}
+      </div>
+
+      <%!-- Right Content --%>
+      <div class="flex-1 min-w-0 space-y-4 sm:space-y-6">
+        <.connected_accounts_card user={@current_user} />
+
+        <.password_card
+          changeset={@password_changeset}
+          add_password_changeset={@add_password_changeset}
+          user={@current_user}
+        />
+
+        <.tfa_card user={@current_user} />
+
+        <%= if Hexpm.Accounts.User.tfa_enabled?(@current_user) do %>
+          <.authenticator_app_card user={@current_user} />
+
+          <.recovery_codes_card user={@current_user} />
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%!-- Two-Factor Authentication Setup Modal --%>
+<.tfa_setup_modal
+  user={@current_user}
+  tfa_secret={assigns[:tfa_secret]}
+  show={assigns[:show_tfa_modal] == true}
+  error={assigns[:tfa_error]}
+/>

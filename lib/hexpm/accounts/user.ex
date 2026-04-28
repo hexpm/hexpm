@@ -4,7 +4,7 @@ defmodule Hexpm.Accounts.User do
   @derive {HexpmWeb.Stale, assocs: [:emails, :owned_packages, :organizations, :keys]}
   @derive {Phoenix.Param, key: :username}
 
-  alias Hexpm.Accounts.{RecoveryCode, TFA, UserProvider}
+  alias Hexpm.Accounts.{OptionalEmails, RecoveryCode, TFA, UserProvider}
 
   schema "users" do
     field :username, :string
@@ -13,6 +13,7 @@ defmodule Hexpm.Accounts.User do
     field :service, :boolean, default: false
     field :deactivated_at, :utc_datetime_usec
     field :role, :string, default: "basic"
+    field :optional_emails, :map
     timestamps()
 
     embeds_one :handles, UserHandles, on_replace: :delete
@@ -47,6 +48,7 @@ defmodule Hexpm.Accounts.User do
     |> validate_format(:username, @username_reject_regex)
     |> validate_exclusion(:username, @reserved_names)
     |> unique_constraint(:username, name: "users_username_idx")
+    |> ensure_optional_email_preferences()
     |> validate_password()
   end
 
@@ -55,7 +57,7 @@ defmodule Hexpm.Accounts.User do
 
     if password do
       changeset
-      |> validate_length(:password, min: 7)
+      |> validate_length(:password, min: 8)
       |> validate_confirmation(:password, message: "does not match password")
       |> update_change(:password, &Auth.gen_password/1)
     else
@@ -99,7 +101,7 @@ defmodule Hexpm.Accounts.User do
   def update_password_no_check(user, params) do
     cast(user, params, ~w(password)a)
     |> validate_required(~w(password)a)
-    |> validate_length(:password, min: 7)
+    |> validate_length(:password, min: 8)
     |> validate_confirmation(:password, message: "does not match password")
     |> update_change(:password, &Auth.gen_password/1)
   end
@@ -110,7 +112,7 @@ defmodule Hexpm.Accounts.User do
 
     cast(user, params, ~w(password)a)
     |> validate_required(~w(password)a)
-    |> validate_length(:password, min: 7)
+    |> validate_length(:password, min: 8)
     |> validate_password(:password, password)
     |> validate_confirmation(:password, message: "does not match password")
     |> update_change(:password, &Auth.gen_password/1)
@@ -202,13 +204,16 @@ defmodule Hexpm.Accounts.User do
 
   def organization?(user), do: user.organization_id != nil
 
-  def tfa_enabled?(%{tfa: nil}), do: false
-  def tfa_enabled?(%{tfa: %{tfa_enabled: true}}), do: true
-  def tfa_enabled?(%{tfa: %{tfa_enabled: _value}}), do: false
+  def tfa_enabled?(%{tfa: %{secret: secret}}) when is_binary(secret), do: true
+  def tfa_enabled?(_), do: false
 
   def update_tfa(user, changes) do
     current_tfa = user.tfa || %{}
     put_embed(change(user, %{}), :tfa, Map.merge(current_tfa, changes))
+  end
+
+  def clear_tfa(user) do
+    put_embed(change(user, %{}), :tfa, nil)
   end
 
   def recovery_code_used(user, code) do
@@ -244,12 +249,37 @@ defmodule Hexpm.Accounts.User do
   def add_password(user, params) do
     cast(user, params, ~w(password)a)
     |> validate_required(~w(password)a)
-    |> validate_length(:password, min: 7)
+    |> validate_length(:password, min: 8)
     |> validate_confirmation(:password, message: "does not match password")
     |> update_change(:password, &Auth.gen_password/1)
   end
 
   def remove_password(user) do
     change(user, %{password: nil})
+  end
+
+  defp ensure_optional_email_preferences(changeset) do
+    if get_field(changeset, :optional_emails) do
+      changeset
+    else
+      put_change(changeset, :optional_emails, OptionalEmails.default_preferences())
+    end
+  end
+
+  def optional_emails_changeset(user, optional_emails) do
+    change(user, %{optional_emails: optional_emails})
+    |> validate_optional_email_preferences()
+  end
+
+  defp validate_optional_email_preferences(changeset) do
+    preferences = get_field(changeset, :optional_emails)
+
+    case OptionalEmails.validate_preferences_map(preferences) do
+      {:ok, normalized} ->
+        put_change(changeset, :optional_emails, normalized)
+
+      :error ->
+        add_error(changeset, :optional_emails, "contains invalid preferences")
+    end
   end
 end

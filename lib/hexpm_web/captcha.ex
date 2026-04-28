@@ -8,7 +8,7 @@ defmodule HexpmWeb.Captcha do
     sitekey() != nil
   end
 
-  def verify(token) do
+  def verify(token) when is_binary(token) do
     if enabled?() do
       headers = [{"content-type", "application/x-www-form-urlencoded"}]
       params = %{response: token, secret: secret()}
@@ -25,6 +25,8 @@ defmodule HexpmWeb.Captcha do
       true
     end
   end
+
+  def verify(_token), do: false
 
   def sitekey() do
     Application.get_env(:hexpm, :hcaptcha, [])[:sitekey]

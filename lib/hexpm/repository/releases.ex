@@ -1,6 +1,8 @@
 defmodule Hexpm.Repository.Releases do
   use Hexpm.Context
 
+  alias Hexpm.Accounts.OptionalEmails
+
   @publish_timeout 60_000
 
   def all(package) do
@@ -9,12 +11,12 @@ defmodule Hexpm.Repository.Releases do
     |> Release.sort()
   end
 
-  def recent(repository, count) do
-    Repo.all(Release.recent(repository, count))
-  end
-
   def count() do
     Repo.one!(Release.count())
+  end
+
+  def recent(repository, count) do
+    Repo.all(Release.recent(repository, count))
   end
 
   def get(package, version) do
@@ -49,12 +51,11 @@ defmodule Hexpm.Repository.Releases do
     |> create_release(package, user, inner_checksum, outer_checksum, meta, replace?)
     |> audit_publish(audit_data)
     |> Repo.transaction(timeout: @publish_timeout)
-    |> refresh_package_dependants()
     |> publish_result(user, body)
   end
 
-  def publish_docs(package, release, body, audit: audit_data) do
-    Assets.push_docs(release, body)
+  def publish_docs(package, release, body_path, audit: audit_data) do
+    Assets.push_docs(release, body_path)
 
     now = DateTime.utc_now()
     release_changeset = Ecto.Changeset.change(release, has_docs: true)
@@ -75,7 +76,6 @@ defmodule Hexpm.Repository.Releases do
     |> Multi.run(:release_count, &release_count/2)
     |> Multi.run(:package, &maybe_delete_package/2)
     |> Repo.transaction(timeout: @publish_timeout)
-    |> refresh_package_dependants()
     |> revert_result()
   end
 
@@ -209,24 +209,6 @@ defmodule Hexpm.Repository.Releases do
     end
   end
 
-  defp refresh_package_dependants(result) do
-    Task.Supervisor.start_child(Hexpm.Tasks, fn ->
-      Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
-    end)
-    |> check_alive()
-
-    result
-  end
-
-  defp check_alive({:ok, pid}) do
-    if Process.alive?(pid) do
-      Process.sleep(1)
-      check_alive({:ok, pid})
-    else
-      {:ok, pid}
-    end
-  end
-
   defp release_count(repo, %{release: release}) do
     {:ok, repo.aggregate(assoc(release.package, :releases), :count)}
   end
@@ -242,10 +224,16 @@ defmodule Hexpm.Repository.Releases do
   end
 
   defp email_package_owners(package, release, publisher) do
-    Hexpm.Repo.all(assoc(package, :owners))
-    |> Hexpm.Repo.preload([:emails, organization: [users: :emails]])
-    |> Emails.package_published(publisher, package.name, release.version)
-    |> Mailer.deliver_later!()
+    owners =
+      Hexpm.Repo.all(assoc(package, :owners))
+      |> Hexpm.Repo.preload([:emails, organization: [users: :emails]])
+      |> Enum.filter(&OptionalEmails.allowed?(&1, :package_published))
+
+    if owners != [] do
+      owners
+      |> Emails.package_published(publisher, package.name, release.version)
+      |> Mailer.deliver_later!()
+    end
   end
 
   if Mix.env() == :test do

@@ -8,10 +8,35 @@ defmodule HexpmWeb.SignupControllerTest do
       conn = get(build_conn(), "/signup")
       assert response(conn, 200) =~ "Sign up"
     end
+
+    test "redirect when logged in" do
+      user = insert(:user)
+      conn = test_login(build_conn(), user)
+      conn = get(conn, "/signup")
+      assert redirected_to(conn) == "/users/#{user.username}"
+    end
   end
 
   describe "POST /signup" do
     setup :mock_captcha_success
+
+    test "redirect when logged in" do
+      user = insert(:user)
+      conn = test_login(build_conn(), user)
+
+      conn =
+        post(conn, "/signup", %{
+          "user" => %{
+            "username" => Fake.sequence(:username),
+            "emails" => [%{"email" => Fake.sequence(:email)}],
+            "password" => "hunter42",
+            "full_name" => "José"
+          },
+          "h-captcha-response" => "captcha"
+        })
+
+      assert redirected_to(conn) == "/users/#{user.username}"
+    end
 
     test "create user" do
       username = Fake.sequence(:username)
