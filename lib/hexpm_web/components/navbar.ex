@@ -19,6 +19,7 @@ defmodule HexpmWeb.Components.Navbar do
   @doc """
   Renders the main header/navbar.
   """
+  attr :conn, :map, required: true
   attr :current_user, :any, default: nil
   attr :search, :string, default: nil
   attr :show_search, :boolean, default: true
@@ -32,6 +33,7 @@ defmodule HexpmWeb.Components.Navbar do
         <div class="flex items-center justify-between h-[72px] gap-8 lg:gap-20">
           <.logo />
           <.desktop_nav
+            conn={@conn}
             current_user={@current_user}
             search={@search}
             show_search={@show_search}
@@ -64,6 +66,7 @@ defmodule HexpmWeb.Components.Navbar do
     """
   end
 
+  attr :conn, :map, required: true
   attr :current_user, :any, required: true
   attr :search, :string, required: true
   attr :show_search, :boolean, required: true
@@ -75,6 +78,7 @@ defmodule HexpmWeb.Components.Navbar do
     <div class="hidden lg:flex items-center flex-1 justify-end gap-10">
       <.search_form
         :if={@show_search}
+        conn={@conn}
         search={@search}
         autofocus={@autofocus_search}
         live_search={@live_search}
@@ -357,6 +361,7 @@ defmodule HexpmWeb.Components.Navbar do
     """
   end
 
+  attr :conn, :map, required: true
   attr :search, :string, default: nil
   attr :autofocus, :boolean, default: false
   attr :live_search, :boolean, default: false
@@ -364,31 +369,46 @@ defmodule HexpmWeb.Components.Navbar do
   defp search_form(assigns) do
     ~H"""
     <div class="min-w-0 flex-1 flex items-center gap-2 mr-auto">
-      <form
-        role="search"
-        action={~p"/packages"}
-        class="max-w-[420px] w-full"
-        phx-change={@live_search && "search_change"}
-        phx-submit={@live_search && "search_submit"}
-      >
-        <div class="relative flex items-center">
-          <div class="absolute left-3 pointer-events-none">
-            {icon(:heroicon, "magnifying-glass", width: 18, height: 18, class: "text-grey-300")}
+      <%!-- On the /packages LiveView, the search input is wired to live search/filter.
+           On all other pages, use the SearchSuggestionsLive autocomplete. --%>
+      <%= if @live_search do %>
+        <form
+          role="search"
+          action={~p"/packages"}
+          class="max-w-[420px] w-full"
+          phx-change="search_change"
+          phx-submit="search_submit"
+        >
+          <div class="relative flex items-center">
+            <div class="absolute left-3 pointer-events-none">
+              {icon(:heroicon, "magnifying-glass", width: 18, height: 18, class: "text-grey-300")}
+            </div>
+            <input
+              id="search-input"
+              phx-hook="SearchShortcut"
+              phx-debounce="300"
+              placeholder="Find packages..."
+              name="search"
+              type="text"
+              class="w-full h-[40px] bg-grey-800 border border-grey-600 rounded-lg px-3 pl-10 py-[11px] text-white leading-4 placeholder:text-grey-300 focus:outline-none focus:border-grey-500 focus:shadow-[inset_0px_0px_6px_0px_rgba(255,255,255,0.3)]"
+              value={@search}
+              autofocus={@autofocus}
+            />
           </div>
-          <input
-            id="search-input"
-            phx-hook="SearchShortcut"
-            phx-debounce={if @live_search, do: "300"}
-            placeholder="Find packages..."
-            name="search"
-            type="text"
-            class="w-full h-[40px] bg-grey-800 border border-grey-600 rounded-lg px-3 pl-10 py-[11px] text-white leading-4 placeholder:text-grey-300 focus:outline-none focus:border-grey-500 focus:shadow-[inset_0px_0px_6px_0px_rgba(255,255,255,0.3)]"
-            value={@search}
-            autofocus={@autofocus}
-          />
-          <input :if={!@live_search} type="hidden" name="sort" value="recent_downloads" />
+        </form>
+      <% else %>
+        <div class="max-w-[420px] w-full">
+          {Phoenix.Component.live_render(@conn, HexpmWeb.SearchSuggestionsLive,
+            id: "nav-search",
+            session: %{
+              "variant" => "nav",
+              "limit" => 8,
+              "autofocus" => @autofocus,
+              "search" => @search
+            }
+          )}
         </div>
-      </form>
+      <% end %>
       <button
         type="button"
         phx-click={show_modal("search-cheatsheet")}

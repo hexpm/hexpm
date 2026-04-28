@@ -1,5 +1,9 @@
 defmodule Hexpm.Repository.Packages do
   use Hexpm.Context
+  import Ecto.Query
+  import HexpmWeb.ViewHelpers, only: [path_for_package: 2]
+
+  @max_word_length 50
 
   def count() do
     Repo.one!(Package.count())
@@ -121,5 +125,216 @@ defmodule Hexpm.Repository.Packages do
     user.owned_packages
     |> Enum.filter(&(&1.repository_id in repository_ids))
     |> Enum.sort_by(&[sorter.(&1.repository), &1.name])
+  end
+
+  @doc """
+  Suggest packages by term with weighted ranking.
+
+  - Case-insensitive
+  - Treat '_' literally (escaped in LIKE)
+  - Prefer name exact > prefix > substring; include description matches
+  - Weight by recent downloads and text relevance
+  - Only searches within the given repository
+
+  ## Examples
+
+      iex> repository = Hexpm.Repository.Repository.hexpm()
+      iex> Packages.suggest(repository, "ecto")
+      [%{id: _, name: "ecto", ...}, ...]
+
+      iex> Packages.suggest(repository, "")
+      []
+  """
+  def suggest(repository, term, limit \\ 8)
+
+  def suggest(_repository, "", _limit), do: []
+
+  def suggest(repository, term, limit) when is_binary(term) do
+    term = String.trim(term)
+    do_suggest(repository, term, limit)
+  end
+
+  defp do_suggest(_repository, "", _limit), do: []
+
+  defp do_suggest(repository, term, limit) do
+    {_repo_part, pkg_part} = split_repo_term(term)
+    pkg_part = String.downcase(pkg_part)
+
+    escaped = escape_like(pkg_part)
+    prefix = escaped <> "%"
+    substr = "%" <> escaped <> "%"
+    tsquery = build_tsquery(term)
+
+    Package
+    |> where([p], p.repository_id == ^repository.id)
+    |> add_suggest_joins()
+    |> add_suggest_search_where(substr, tsquery)
+    |> add_suggest_order_by(pkg_part, prefix, substr, tsquery)
+    |> add_suggest_select(tsquery)
+    |> limit(^limit)
+    |> Repo.all()
+    |> then(fn packages ->
+      packages_with_releases =
+        packages
+        |> Enum.map(fn {id, _, _, _, _, _} -> %{id: id} end)
+        |> attach_latest_releases()
+
+      packages
+      |> Enum.zip(packages_with_releases)
+      |> Enum.map(fn {{id, name, repo_id, repo_name, description_html, recent_downloads},
+                      package_with_release} ->
+        href = path_for_package(repo_name, name)
+        name_html = highlight_name(name, pkg_part)
+        latest_release = Map.get(package_with_release, :latest_release)
+        latest_version = if latest_release, do: latest_release.version, else: nil
+
+        %{
+          id: id,
+          name: name,
+          repository_id: repo_id,
+          repository_name: repo_name,
+          href: href,
+          name_html: name_html,
+          description_html: safe_description_html(description_html),
+          recent_downloads: recent_downloads,
+          latest_version: latest_version
+        }
+      end)
+    end)
+  end
+
+  defp add_suggest_joins(query) do
+    query
+    |> join(:inner, [p], r in assoc(p, :repository))
+    |> then(fn q ->
+      from([p, r] in q,
+        left_join: d in PackageDownload,
+        on: d.package_id == p.id and d.view == "recent"
+      )
+    end)
+  end
+
+  defp add_suggest_search_where(query, substr, tsquery) do
+    where(
+      query,
+      [p],
+      fragment("lower(?) LIKE ?", p.name, ^substr) or
+        fragment(
+          "to_tsvector('english', regexp_replace((?->'description')::text, '/', ' ')) @@ to_tsquery('english', ?)",
+          p.meta,
+          ^tsquery
+        )
+    )
+  end
+
+  defp add_suggest_order_by(query, pkg_part, prefix, substr, tsquery) do
+    # Name-match tiers are exclusive so each package falls into exactly one band:
+    #   exact  → 3.0  (lower(name) = term)
+    #   prefix → 2.0  (lower(name) LIKE term%)
+    #   substr → 1.0  (lower(name) LIKE %term%)
+    order_by(
+      query,
+      [p, r, d],
+      desc:
+        fragment(
+          """
+          (CASE
+            WHEN lower(?) = ?        THEN 3.0
+            WHEN lower(?) LIKE ?     THEN 2.0
+            WHEN lower(?) LIKE ?     THEN 1.0
+            ELSE 0.0
+          END) +
+          (LEAST(5.0, ln(1 + COALESCE(?, 0))) * 0.2) +
+          (COALESCE(
+            ts_rank_cd(
+              to_tsvector('english', regexp_replace((?->'description')::text, '/', ' ')),
+              to_tsquery('english', ?)
+            ),
+            0.0
+          ) * 0.4)
+          """,
+          p.name,
+          ^pkg_part,
+          p.name,
+          ^prefix,
+          p.name,
+          ^substr,
+          d.downloads,
+          p.meta,
+          ^tsquery
+        ),
+      asc: p.name
+    )
+  end
+
+  defp add_suggest_select(query, tsquery) do
+    select(query, [p, r, d], {
+      p.id,
+      p.name,
+      p.repository_id,
+      r.name,
+      fragment(
+        """
+        ts_headline('english',
+          regexp_replace((?->'description')::text, '/', ' '),
+          to_tsquery('english', ?),
+          'StartSel=<strong>, StopSel=</strong>, MaxFragments=1, MinWords=5, MaxWords=15'
+        )
+        """,
+        p.meta,
+        ^tsquery
+      ),
+      coalesce(d.downloads, 0)
+    })
+  end
+
+  defp split_repo_term(term) do
+    case String.split(term, "/", parts: 2) do
+      [repo, pkg] -> {String.downcase(repo), pkg}
+      [pkg] -> {nil, pkg}
+      _ -> {nil, term}
+    end
+  end
+
+  defp escape_like(search) do
+    String.replace(search, ~r/(%|_|\\)/u, "\\\\\\1")
+  end
+
+  defp build_tsquery(search) do
+    search
+    |> String.downcase()
+    |> String.replace(~r/[^\w\s]/u, " ")
+    |> String.split(~r/\s+/, trim: true)
+    |> Enum.map(&String.slice(&1, 0, @max_word_length))
+    |> Enum.map(&(&1 <> ":*"))
+    |> Enum.join(" & ")
+  end
+
+  defp highlight_name(name, term) when is_binary(term) and term != "" do
+    escaped_name = Phoenix.HTML.html_escape(name) |> Phoenix.HTML.safe_to_string()
+    escaped_term = Regex.escape(Phoenix.HTML.html_escape(term) |> Phoenix.HTML.safe_to_string())
+    pattern = Regex.compile!(escaped_term, "i")
+    highlighted = Regex.replace(pattern, escaped_name, fn match -> "<mark>#{match}</mark>" end)
+    Phoenix.HTML.raw(highlighted)
+  end
+
+  defp highlight_name(name, _term) do
+    Phoenix.HTML.html_escape(name)
+  end
+
+  defp safe_description_html(nil), do: nil
+
+  defp safe_description_html(description) when is_binary(description) do
+    parts = String.split(description, ~r{</?strong>})
+
+    safe =
+      parts
+      |> Enum.with_index()
+      |> Enum.map_join(fn {part, idx} ->
+        escaped = part |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+        if rem(idx, 2) == 0, do: escaped, else: "<strong>#{escaped}</strong>"
+      end)
+
+    Phoenix.HTML.raw(safe)
   end
 end

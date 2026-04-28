@@ -185,6 +185,12 @@ html, body {
     transition: color 0.2s ease;
   }
 
+  /* Reset mark so Tailwind utility classes apply cleanly */
+  mark {
+    background-color: transparent;
+    color: inherit;
+  }
+
   /* Code blocks — base font only */
   code,
   pre {
