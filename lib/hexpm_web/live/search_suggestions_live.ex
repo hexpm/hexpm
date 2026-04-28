@@ -5,6 +5,12 @@ defmodule HexpmWeb.SearchSuggestionsLive do
   based on a trigram search of the package name and description with weighted ranking.
 
   Defaults to 8 suggestions using `default_limit`.
+
+  Session keys:
+    - `"variant"` - `"home"` | `"home-mobile"` | `"nav"` (default: `"home"`)
+    - `"limit"` - integer max results (default: 8)
+    - `"autofocus"` - boolean, focuses the input on mount (nav variant only)
+    - `"search"` - pre-filled search term (nav variant only)
   """
   use HexpmWeb, :live_view
 
@@ -16,15 +22,18 @@ defmodule HexpmWeb.SearchSuggestionsLive do
   def mount(_params, session, socket) do
     variant = Map.get(session, "variant", "home")
     limit = Map.get(session, "limit", @default_limit)
+    autofocus = Map.get(session, "autofocus", false)
+    term = Map.get(session, "search") || ""
 
     {:ok,
      socket
      |> assign(:variant, variant)
      |> assign(:limit, limit)
-     |> assign(:term, "")
+     |> assign(:autofocus, autofocus)
+     |> assign(:term, term)
      |> assign(:items, [])
      |> assign(:open, false)
-     |> assign(:active, 0)}
+     |> assign(:active, nil)}
   end
 
   def handle_event("suggest", params, socket) do
@@ -41,24 +50,15 @@ defmodule HexpmWeb.SearchSuggestionsLive do
      |> assign(:term, term)
      |> assign(:items, items)
      |> assign(:open, items != [])
-     |> assign(:active, 0)}
+     |> assign(:active, nil)}
   end
 
   def handle_event("close", _params, socket) do
-    {:noreply, socket |> assign(:open, false) |> assign(:active, 0)}
+    {:noreply, socket |> assign(:open, false) |> assign(:active, nil)}
   end
 
   def handle_event("submit", %{"search" => term}, socket) do
-    items = socket.assigns.items
-
-    active =
-      if socket.assigns.active >= 0 and socket.assigns.active < length(items) do
-        socket.assigns.active
-      else
-        0
-      end
-
-    case Enum.at(items, active) do
+    case socket.assigns.active && Enum.at(socket.assigns.items, socket.assigns.active) do
       nil ->
         to = ~p"/packages?#{[search: term, sort: "recent_downloads"]}"
         {:noreply, push_navigate(socket, to: to)}
@@ -68,62 +68,66 @@ defmodule HexpmWeb.SearchSuggestionsLive do
     end
   end
 
+  def handle_event("keydown", %{"key" => "Escape"}, socket) do
+    {:noreply, socket |> assign(:open, false) |> assign(:active, nil)}
+  end
+
   def handle_event("keydown", %{"key" => "ArrowDown"}, socket) do
-    active = socket.assigns.active
     count = length(socket.assigns.items)
 
-    new_active =
-      case active do
-        i when i + 1 >= count -> 0
-        i -> i + 1
-      end
+    if count == 0 do
+      {:noreply, socket}
+    else
+      new_active =
+        case socket.assigns.active do
+          nil -> 0
+          i when i + 1 >= count -> 0
+          i -> i + 1
+        end
 
-    {:noreply, assign(socket, :active, new_active)}
+      {:noreply, assign(socket, :active, new_active)}
+    end
   end
 
   def handle_event("keydown", %{"key" => "ArrowUp"}, socket) do
-    active = socket.assigns.active
     count = length(socket.assigns.items)
 
-    new_active =
-      case active do
-        0 -> count - 1
-        i -> i - 1
-      end
+    if count == 0 do
+      {:noreply, socket}
+    else
+      new_active =
+        case socket.assigns.active do
+          nil -> count - 1
+          0 -> count - 1
+          i -> i - 1
+        end
 
-    {:noreply, assign(socket, :active, new_active)}
+      {:noreply, assign(socket, :active, new_active)}
+    end
   end
 
   def handle_event("keydown", %{"key" => _key}, socket) do
     {:noreply, socket}
   end
 
-  def render(assigns) do
+  def render(%{variant: "nav"} = assigns) do
     ~H"""
-    <.form
-      for={%{}}
+    <form
       method="get"
       action={~p"/packages"}
       role="search"
-      class={form_class(@variant)}
+      class="min-w-0 flex-1"
       phx-change="suggest"
       phx-submit="submit"
       autocomplete="off"
     >
-      <div
-        class="input-group dropdown"
-        phx-click-away="close"
-        phx-window-keydown="keydown"
-        style="position: relative;"
-      >
+      <div class="relative flex items-center" phx-click-away="close">
         <input
           type="search"
-          class="form-control"
-          placeholder="Find packages"
+          placeholder="Find packages..."
           name="search"
           id={input_id(@variant)}
           value={@term}
-          tabindex="1"
           autocomplete="off"
           autocapitalize="off"
           autocorrect="off"
@@ -133,23 +137,69 @@ defmodule HexpmWeb.SearchSuggestionsLive do
           aria-expanded={if @open, do: "true", else: "false"}
           aria-controls={listbox_id(@variant)}
           aria-activedescendant={active_id(@variant, @active)}
-          phx-input="suggest"
+          phx-keydown="keydown"
           phx-debounce="100"
+          phx-hook="SearchShortcut"
+          autofocus={@autofocus}
+          class="w-full h-[40px] bg-grey-800 border border-grey-600 rounded-lg px-3 pl-10 py-[11px] text-white leading-4 placeholder:text-grey-300 focus:outline-none focus:border-grey-500 focus:shadow-[inset_0px_0px_6px_0px_rgba(255,255,255,0.3)]"
         />
         <input type="hidden" name="sort" value="recent_downloads" />
         <label class="sr-only" for={input_id(@variant)}>Find packages</label>
-        <span class="input-group-btn">
-          <button type="submit" class="btn btn-search" tabindex="1">
-            {icon(:heroicon, "magnifying-glass", width: 18, height: 18)}
-            <span class="sr-only">Search</span>
-          </button>
-        </span>
 
         <%= if @open and @items != [] do %>
           <.suggestions variant={@variant} items={@items} active={@active} />
         <% end %>
       </div>
-    </.form>
+    </form>
+    """
+  end
+
+  def render(assigns) do
+    ~H"""
+    <form
+      method="get"
+      action={~p"/packages"}
+      role="search"
+      phx-change="suggest"
+      phx-submit="submit"
+      autocomplete="off"
+    >
+      <div class="relative" phx-click-away="close">
+        <input
+          type="search"
+          placeholder="Find packages..."
+          name="search"
+          id={input_id(@variant)}
+          value={@term}
+          autocomplete="off"
+          autocapitalize="off"
+          autocorrect="off"
+          spellcheck="false"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={if @open, do: "true", else: "false"}
+          aria-controls={listbox_id(@variant)}
+          aria-activedescendant={active_id(@variant, @active)}
+          phx-keydown="keydown"
+          phx-debounce="100"
+          phx-hook="SearchShortcut"
+          class="w-full border border-grey-200 dark:border-grey-600 rounded-lg px-4 py-3 text-grey-800 dark:text-white dark:bg-grey-700 placeholder:text-grey-400 dark:placeholder:text-grey-400 focus:outline-none focus:border-primary-400"
+        />
+        <input type="hidden" name="sort" value="recent_downloads" />
+        <label class="sr-only" for={input_id(@variant)}>Find packages</label>
+
+        <button
+          type="submit"
+          class="absolute right-3 top-1/2 -translate-y-1/2 text-grey-400 hover:text-grey-600 dark:hover:text-grey-200"
+        >
+          <span class="sr-only">Search</span>
+        </button>
+
+        <%= if @open and @items != [] do %>
+          <.suggestions variant={@variant} items={@items} active={@active} />
+        <% end %>
+      </div>
+    </form>
     """
   end
 
@@ -158,12 +208,10 @@ defmodule HexpmWeb.SearchSuggestionsLive do
     String.slice(to_string(term), 0, 100)
   end
 
-  defp form_class("nav"), do: "navbar-form pull-left-non-mobile"
-  defp form_class(_), do: nil
-
-  defp input_id("home"), do: "search"
-  defp input_id("nav"), do: "navbar-search"
-  defp input_id(_), do: "search"
+  defp input_id("home"), do: "home-search-input"
+  defp input_id("home-mobile"), do: "home-mobile-search-input"
+  defp input_id("nav"), do: "nav-search-input"
+  defp input_id(_), do: "home-search-input"
 
   defp active_id(_variant, nil), do: nil
   defp active_id(variant, idx), do: option_id(variant, idx)

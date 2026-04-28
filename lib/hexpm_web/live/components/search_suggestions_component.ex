@@ -37,7 +37,7 @@ defmodule HexpmWeb.SearchSuggestionsComponent do
     doc: "The variant of the search input (\"home\" or \"nav\")"
 
   attr :items, :list, required: true, doc: "List of suggestion items to display"
-  attr :active, :integer, default: nil, doc: "Index of the currently active item"
+  attr :active, :any, default: nil, doc: "Index of the currently active item (nil means no keyboard selection)"
 
   def suggestions(assigns) do
     ~H"""
@@ -48,7 +48,7 @@ defmodule HexpmWeb.SearchSuggestionsComponent do
       style="display: block; position: absolute; left: 0; right: 0; top: 100%; min-width: 100%; width: 100%; z-index: 1000; border-radius: 8px; box-sizing: border-box; border: 10px solid rgba(0,0,0,.1); margin: 2px 0 0 0; padding: 6px 0;"
     >
       <%= for {item, idx} <- Enum.with_index(@items) do %>
-        <li role="option" id={option_id(@variant, idx)} aria-selected={@active == idx}>
+        <li role="option" id={option_id(@variant, idx)} aria-selected={if @active == idx, do: "true", else: "false"}>
           <a
             href={item.href}
             class={if @active == idx, do: "active", else: nil}
@@ -78,6 +78,7 @@ defmodule HexpmWeb.SearchSuggestionsComponent do
   end
 
   def listbox_id("home"), do: "home-suggest-list"
+  def listbox_id("home-mobile"), do: "home-mobile-suggest-list"
   def listbox_id("nav"), do: "nav-suggest-list"
   def listbox_id(_), do: "home-suggest-list"
 
