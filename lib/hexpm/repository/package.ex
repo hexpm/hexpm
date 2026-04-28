@@ -277,23 +277,17 @@ defmodule Hexpm.Repository.Package do
         from(
           p in query,
           join: pd in Hexpm.Repository.PackageDependant,
-          on: p.id == pd.package_id,
-          join: dep in Hexpm.Repository.Package,
-          on: dep.id == pd.dependency_id,
-          join: repo in Repository,
-          on: repo.id == dep.repository_id,
-          where: dep.name == ^package,
-          where: repo.name == ^repository
+          on: p.id == pd.dependant_id,
+          where: pd.name == ^package,
+          where: pd.repo == ^repository
         )
 
       _ ->
         from(
           p in query,
           join: pd in Hexpm.Repository.PackageDependant,
-          on: p.id == pd.package_id,
-          join: dep in Hexpm.Repository.Package,
-          on: dep.id == pd.dependency_id,
-          where: dep.name == ^search
+          on: p.id == pd.dependant_id,
+          where: pd.name == ^search
         )
     end
   end
