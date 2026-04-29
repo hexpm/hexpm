@@ -229,6 +229,23 @@ defmodule HexpmWeb.ReadmeControllerTest do
       assert conn.resp_body =~ "puts"
     end
 
+    test "decodes single quotes in highlighted code blocks", %{package: package} do
+      mock_file_list_and_readme(
+        package.name,
+        "1.0.0",
+        "README.md",
+        "```erlang\n{'div', []}.\n```"
+      )
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/1.0.0")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ ~s|class="ss">&#39;div&#39;|
+    end
+
     test "preserves newlines in unhighlighted code blocks", %{package: package} do
       mock_file_list_and_readme(
         package.name,
