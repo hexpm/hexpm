@@ -81,10 +81,17 @@ defmodule HexpmWeb.Components.PackageLayout do
       |> assign(:tabs, tabs)
       |> assign(:active_package_tab, Enum.find(tabs, & &1.active))
 
+    flash_visible = assigns.current_release && assigns.current_release.vulnerable?
+    assigns = assign(assigns, :flash_visible, flash_visible)
+
     ~H"""
     <div class="bg-grey-50 dark:bg-grey-950 min-h-screen">
       <%!-- Header Section --%>
-      <div class="max-w-7xl mx-auto px-4 pt-8 pb-2 lg:pb-6">
+      <div class={[
+        "max-w-7xl mx-auto px-4 pt-8",
+        @flash_visible && "pb-0 lg:pb-0",
+        !@flash_visible && "pb-2 lg:pb-6"
+      ]}>
         <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 lg:gap-12">
           <%!-- Left: Package Name, Version, Description --%>
           <div class="flex flex-col gap-2">
