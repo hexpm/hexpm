@@ -509,6 +509,80 @@ defmodule HexpmWeb.PackageControllerTest do
     end
   end
 
+  describe "GET /packages/:name/advisories" do
+    test "shows empty state when no advisories", %{package1: package1} do
+      conn = get(build_conn(), "/packages/#{package1.name}/advisories")
+      result = response(conn, 200)
+      assert result =~ "No security advisories found for this package"
+    end
+
+    test "renders an advisory with cvss, references, and affected ranges",
+         %{package1: package1} do
+      record = %{
+        id: "GHSA-test-html",
+        summary: "Test advisory for HTML rendering",
+        aliases: ["CVE-2024-99999"],
+        published_at: ~U[2024-04-03 16:46:30Z],
+        modified_at: ~U[2024-04-05 01:28:39Z],
+        withdrawn_at: nil,
+        cvss_vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+        cvss_score: 9.8,
+        cvss_rating: "critical",
+        references: [%{type: "WEB", url: "https://example.com/advisory"}],
+        affected: [
+          %{
+            package: package1.name,
+            requirements: [Version.parse_requirement!(">= 0.0.1 and < 0.0.2")],
+            versions: ["0.0.1"]
+          }
+        ]
+      }
+
+      Hexpm.Security.Advisories.upsert([record], %{package1.name => package1.id})
+
+      conn = get(build_conn(), "/packages/#{package1.name}/advisories")
+      result = response(conn, 200)
+
+      assert result =~ "GHSA-test-html"
+      assert result =~ "CVE-2024-99999"
+      assert result =~ "Test advisory for HTML rendering"
+      assert result =~ "Critical"
+      assert result =~ "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+      assert result =~ "&gt;= 0.0.1 and &lt; 0.0.2"
+      assert result =~ "https://example.com/advisory"
+    end
+
+    test "withdrawn advisories are excluded", %{package1: package1} do
+      record = %{
+        id: "GHSA-withdrawn-html",
+        summary: "Withdrawn advisory",
+        aliases: [],
+        published_at: ~U[2024-04-03 16:46:30Z],
+        modified_at: ~U[2024-04-05 01:28:39Z],
+        withdrawn_at: ~U[2024-05-01 00:00:00Z],
+        cvss_vector: nil,
+        cvss_score: nil,
+        cvss_rating: nil,
+        references: [],
+        affected: [
+          %{package: package1.name, requirements: [], versions: ["0.0.1"]}
+        ]
+      }
+
+      Hexpm.Security.Advisories.upsert([record], %{package1.name => package1.id})
+
+      conn = get(build_conn(), "/packages/#{package1.name}/advisories")
+      result = response(conn, 200)
+      refute result =~ "GHSA-withdrawn-html"
+      assert result =~ "No security advisories found for this package"
+    end
+
+    test "returns 404 for unknown package" do
+      conn = get(build_conn(), "/packages/nonexistent_package/advisories")
+      assert response(conn, 404)
+    end
+  end
+
   describe "GET /packages/:name/dependents" do
     test "renders dependants page", %{package1: package1} do
       conn = get(build_conn(), "/packages/#{package1.name}/dependents")

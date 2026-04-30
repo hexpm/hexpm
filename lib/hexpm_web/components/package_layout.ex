@@ -579,7 +579,9 @@ defmodule HexpmWeb.Components.PackageLayout do
     ]
   end
 
-  defp advisories_tab(%{package: %{security_advisories: []}}), do: []
+  defp advisories_tab(%{package: %{security_advisories: []}, active_tab: active})
+       when active != :advisories,
+       do: []
 
   defp advisories_tab(assigns) do
     count = length(assigns.package.security_advisories)
