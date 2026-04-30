@@ -16,6 +16,13 @@ defmodule Hexpm.Security.Advisories do
 
   def upsert(records, package_ids) do
     Multi.new()
+    |> Multi.run(:lock, fn repo, _ ->
+      if repo.try_advisory_xact_lock?(:vulnerability_updater) do
+        {:ok, :leader}
+      else
+        {:error, :not_leader}
+      end
+    end)
     |> upsert_advisories(records, package_ids)
     |> reconcile_advisories(records)
     |> Repo.transaction(timeout: 60_000)

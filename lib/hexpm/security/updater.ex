@@ -97,6 +97,10 @@ defmodule Hexpm.Security.Updater do
       {:ok, _changes} ->
         :ok
 
+      {:error, :lock, :not_leader, _changes} ->
+        Logger.info("Another node is updating advisories, skipping")
+        :ok
+
       {:error, step, value, _changes} ->
         Logger.error("Advisory upsert failed at #{inspect(step)}: #{inspect(value)}")
         :ok

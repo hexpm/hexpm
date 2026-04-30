@@ -29,8 +29,7 @@ defmodule Hexpm.Application do
         HexpmWeb.Endpoint,
         advisory_updater()
       ]
-      # Remove disabled children
-      |> Enum.filter(& &1)
+      |> Enum.reject(&is_nil/1)
 
     File.mkdir_p(Application.get_env(:hexpm, :tmp_dir))
     shutdown_on_eof()
@@ -116,9 +115,9 @@ defmodule Hexpm.Application do
     defp goth_spec, do: nil
   end
 
-  if Mix.env() == :prod do
-    defp advisory_updater, do: Hexpm.Security.Updater
-  else
-    defp advisory_updater, do: nil
+  defp advisory_updater do
+    if Application.get_env(:hexpm, :advisory_updater_enabled, false) do
+      Hexpm.Security.Updater
+    end
   end
 end

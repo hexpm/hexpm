@@ -1,7 +1,7 @@
 defmodule Hexpm.Repository.Release do
   use Hexpm.Schema
 
-  @derive {HexpmWeb.Stale, assocs: [:requirements]}
+  @derive {HexpmWeb.Stale, assocs: [:requirements, :security_advisories]}
   @one_hour 60 * 60
   @one_day @one_hour * 24
 
@@ -10,7 +10,7 @@ defmodule Hexpm.Repository.Release do
     field :inner_checksum, :binary
     field :outer_checksum, :binary
     field :has_docs, :boolean, default: false
-    field :vulnerable?, :boolean, virtual: true
+    field :vulnerable?, :boolean, virtual: true, default: false
     timestamps()
 
     belongs_to :package, Package
@@ -240,14 +240,14 @@ defmodule Hexpm.Repository.Release do
   def all(package) do
     package
     |> assoc(:releases)
-    |> with_vulnerable?()
+    |> with_vulnerable()
   end
 
   def sort(releases) do
     Enum.sort(releases, &(Version.compare(&1.version, &2.version) == :gt))
   end
 
-  def with_vulnerable?(query) do
+  def with_vulnerable(query) do
     from(release in query,
       as: :release,
       select_merge: %{

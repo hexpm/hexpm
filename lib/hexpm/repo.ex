@@ -68,7 +68,8 @@ defmodule Hexpm.RepoBase do
     adapter: Ecto.Adapters.Postgres
 
   @advisory_locks %{
-    registry: 1
+    registry: 1,
+    vulnerability_updater: 2
   }
 
   def init(_reason, opts) do

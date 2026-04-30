@@ -6,6 +6,8 @@ defmodule Hexpm.Security.Advisory do
   alias Hexpm.Security.AdvisoryAffectedVersion
   alias Hexpm.Security.AdvisoryReference
 
+  @derive {HexpmWeb.Stale, etag: [:__struct__, :id, :modified_at], last_modified: :modified_at}
+
   @primary_key {:id, :string, autogenerate: false}
   schema "security_advisories" do
     field :summary, :string
