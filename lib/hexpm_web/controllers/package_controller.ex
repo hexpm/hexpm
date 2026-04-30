@@ -199,6 +199,7 @@ defmodule HexpmWeb.PackageController do
           current_release: current_release,
           advisories: advisories,
           dependants_count: dependants_count,
+          versions_count: Enum.count(releases),
           repository_name: package.repository.name
         ] ++ sidebar_assigns(package, releases, current_release)
       )
