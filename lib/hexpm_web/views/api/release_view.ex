@@ -41,7 +41,8 @@ defmodule HexpmWeb.API.ReleaseView do
       :security_advisories,
       release.security_advisories,
       AdvisoryView,
-      "release.json"
+      "release.json",
+      release: release
     )
   end
 

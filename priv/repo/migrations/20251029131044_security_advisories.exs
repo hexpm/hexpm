@@ -4,40 +4,65 @@ defmodule Hexpm.RepoBase.Migrations.SecurityAdvisories do
   def change do
     create table(:security_advisories, primary_key: false) do
       add :id, :string, null: false, primary_key: true
-      add :package_id, references(:packages, on_delete: :delete_all), null: false
       add :summary, :string, null: false
-      add :affected, {:array, :string}, null: false
+      add :aliases, {:array, :string}, null: false, default: []
       add :published_at, :utc_datetime, null: false
       add :modified_at, :utc_datetime, null: false
-      add :details, :map, null: false
+      add :withdrawn_at, :utc_datetime
+      add :cvss_vector, :string
+      add :cvss_score, :float
+      add :cvss_rating, :string
     end
 
-    execute(
-      """
-      CREATE MATERIALIZED VIEW security_advisory_affected_releases AS
-        SELECT DISTINCT
-          security_advisories.id AS advisory_id,
-          releases.id AS release_id
-        FROM security_advisories
-        CROSS JOIN LATERAL
-          jsonb_array_elements(security_advisories.details->'affected')
-          AS affected_entry
-        CROSS JOIN LATERAL
-          jsonb_array_elements_text(affected_entry->'versions')
-          AS affected_version
-        JOIN
-          releases
-          ON releases.package_id = security_advisories.package_id AND
-            releases.version = affected_version
-        WHERE affected_entry->'package'->>'ecosystem' = 'Hex'
-      """,
-      """
-      DROP MATERIALIZED VIEW security_advisory_affected_releases
-      """
-    )
+    create table(:security_advisory_references) do
+      add :advisory_id,
+          references(:security_advisories, type: :string, on_delete: :delete_all),
+          null: false
 
-    create unique_index(:security_advisory_affected_releases, [:advisory_id, :release_id])
-    create index(:security_advisory_affected_releases, [:advisory_id])
+      add :type, :string, null: false
+      add :url, :string, null: false
+    end
+
+    create index(:security_advisory_references, [:advisory_id])
+
+    create table(:security_advisory_affected_packages, primary_key: false) do
+      add :advisory_id,
+          references(:security_advisories, type: :string, on_delete: :delete_all),
+          null: false,
+          primary_key: true
+
+      add :package_id,
+          references(:packages, on_delete: :delete_all),
+          null: false,
+          primary_key: true
+    end
+
+    create index(:security_advisory_affected_packages, [:package_id])
+
+    create table(:security_advisory_affected_versions) do
+      add :advisory_id,
+          references(:security_advisories, type: :string, on_delete: :delete_all),
+          null: false
+
+      add :package_id, references(:packages, on_delete: :delete_all), null: false
+      add :requirement, :string, null: false
+    end
+
+    create index(:security_advisory_affected_versions, [:advisory_id])
+    create index(:security_advisory_affected_versions, [:package_id])
+
+    create table(:security_advisory_affected_releases, primary_key: false) do
+      add :advisory_id,
+          references(:security_advisories, type: :string, on_delete: :delete_all),
+          null: false,
+          primary_key: true
+
+      add :release_id,
+          references(:releases, on_delete: :delete_all),
+          null: false,
+          primary_key: true
+    end
+
     create index(:security_advisory_affected_releases, [:release_id])
   end
 end

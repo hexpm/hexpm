@@ -1371,32 +1371,23 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       assert result["version"] == "#{release.version}"
       assert result["security_advisories"] == []
 
-      advisory_attrs = [
-        %{
-          id: "GHSA-test-1234-abcd",
-          package_id: package.id,
-          summary: "Test security vulnerability",
-          affected: [">= 0.0.1 and < 0.0.2"],
-          published_at: ~U[2024-04-03T16:46:30Z],
-          modified_at: ~U[2024-04-05T01:28:39Z],
-          details: %{
-            "id" => "GHSA-test-1234-abcd",
-            "summary" => "Test security vulnerability",
-            "affected" => [
-              %{
-                "package" => %{
-                  "name" => package.name,
-                  "ecosystem" => "Hex"
-                },
-                "versions" => ["0.0.1"]
-              }
-            ]
-          }
-        }
-      ]
+      record = %{
+        id: "GHSA-test-1234-abcd",
+        summary: "Test security vulnerability",
+        aliases: [],
+        published_at: ~U[2024-04-03 16:46:30Z],
+        modified_at: ~U[2024-04-05 01:28:39Z],
+        withdrawn_at: nil,
+        cvss_vector: nil,
+        cvss_score: nil,
+        cvss_rating: nil,
+        references: [],
+        affected: [
+          %{package: package.name, requirements: [], versions: ["0.0.1"]}
+        ]
+      }
 
-      Hexpm.Security.Advisories.upsert(advisory_attrs)
-      Hexpm.Security.Advisories.refresh_affected_releases()
+      Hexpm.Security.Advisories.upsert([record], %{package.name => package.id})
 
       result =
         build_conn()

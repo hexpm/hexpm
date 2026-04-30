@@ -29,14 +29,16 @@ defmodule Hexpm.Repository.Packages do
 
   def get(repositories, name) when is_list(repositories) do
     Repo.get_by(assoc(repositories, :packages), name: name)
-    |> Repo.preload([:repository, :security_advisories])
+    |> Repo.preload([:repository, security_advisories: [:references, :affected_versions]])
   end
 
   def get(repository, name) do
     package = Repo.get_by(assoc(repository, :packages), name: name)
 
     package &&
-      Repo.preload(%{package | repository: repository}, [:security_advisories])
+      Repo.preload(%{package | repository: repository},
+        security_advisories: [:references, :affected_versions]
+      )
   end
 
   def owner_with_access?(package, user, level \\ "maintainer") do

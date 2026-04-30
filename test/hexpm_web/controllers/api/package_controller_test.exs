@@ -37,7 +37,17 @@ defmodule HexpmWeb.API.PackageControllerTest do
     insert(:release, package: package4, version: "1.0.0")
     insert(:organization_user, organization: repository.organization, user: user)
 
-    insert(:security_advisories, package: package4)
+    advisory = insert(:security_advisories)
+
+    insert(:advisory_affected_version,
+      advisory_id: advisory.id,
+      package_id: package4.id,
+      requirement: Version.parse_requirement!(">= 3.0.0 and < 3.0.2")
+    )
+
+    Hexpm.Repo.insert_all("security_advisory_affected_packages", [
+      %{advisory_id: advisory.id, package_id: package4.id}
+    ])
 
     %{
       package1: Packages.preload(package1),
@@ -282,16 +292,17 @@ defmodule HexpmWeb.API.PackageControllerTest do
       conn = get(build_conn(), "/api/packages/#{package4.name}")
       result = json_response(conn, 200)
 
-      assert result["security_advisories"] == [
-               %{
-                 "affected" => [">= 3.0.0 and < 3.0.2"],
-                 "api_url" => "https://api.osv.dev/v1/vulns/GHSA-mj35-2rgf-cv8p",
-                 "html_url" => "https://osv.dev/vulnerability/GHSA-mj35-2rgf-cv8p",
-                 "id" => "GHSA-mj35-2rgf-cv8p",
-                 "summary" =>
-                   "OpenID Connect client Atom Exhaustion in provider configuration worker ets table location"
-               }
-             ]
+      assert [advisory] = result["security_advisories"]
+      assert advisory["id"] == "GHSA-mj35-2rgf-cv8p"
+      assert advisory["affected"] == [">= 3.0.0 and < 3.0.2"]
+      assert advisory["api_url"] == "https://api.osv.dev/v1/vulns/GHSA-mj35-2rgf-cv8p"
+      assert advisory["html_url"] == "https://osv.dev/vulnerability/GHSA-mj35-2rgf-cv8p"
+
+      assert advisory["summary"] ==
+               "OpenID Connect client Atom Exhaustion in provider configuration worker ets table location"
+
+      assert advisory["aliases"] == ["CVE-2024-31209"]
+      assert advisory["cvss_rating"] == "medium"
     end
   end
 

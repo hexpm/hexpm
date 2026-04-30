@@ -22,9 +22,9 @@
     <% else %>
       <div class="space-y-4">
         <%= for advisory <- @advisories do %>
-          <% aliases = advisory.details["aliases"] || []
-          references = advisory.details["references"] || []
-          severity = cvss_severity(advisory.details) %>
+          <% aliases = advisory.aliases || []
+          references = advisory.references || []
+          severity = cvss_severity(advisory) %>
           <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-5">
             <div class="flex items-start justify-between gap-4">
               <div class="flex-1 min-w-0">
@@ -78,7 +78,7 @@
                       {severity.score} / 10.0
                     </span>
                     <.badge variant={severity_badge_variant(severity.rating)}>
-                      {severity.rating |> to_string() |> String.capitalize()}
+                      {String.capitalize(severity.rating)}
                     </.badge>
                   </div>
                   <a
@@ -91,13 +91,14 @@
                   </a>
                 </div>
               <% end %>
-              <%= if advisory.affected != [] do %>
+              <% affected_requirements = affected_requirements_for(advisory, @package) %>
+              <%= if affected_requirements != [] do %>
                 <div>
                   <p class="text-grey-400 dark:text-grey-400 text-xs font-medium uppercase tracking-wide mb-1.5">
                     Affected Versions
                   </p>
                   <div class="flex flex-wrap gap-1.5">
-                    <%= for req <- advisory.affected do %>
+                    <%= for req <- affected_requirements do %>
                       <span class="bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-xs font-mono px-2 py-0.5 rounded">
                         {to_string(req)}
                       </span>
@@ -114,11 +115,11 @@
                     <%= for ref <- references do %>
                       <li>
                         <a
-                          href={ref["url"]}
+                          href={ref.url}
                           class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline break-all"
                           rel="nofollow"
                         >
-                          {ref["url"]}
+                          {ref.url}
                         </a>
                       </li>
                     <% end %>

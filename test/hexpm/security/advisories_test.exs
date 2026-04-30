@@ -21,143 +21,191 @@ defmodule Hexpm.Security.AdvisoriesTest do
     }
   end
 
-  test "upsert inserts new advisories", %{package: package} do
-    advisory_attrs = [
-      %{
-        id: "GHSA-test-1234-abcd",
-        package_id: package.id,
+  defp record(id, package_name, opts) do
+    %{
+      id: id,
+      summary: opts[:summary] || "summary",
+      aliases: opts[:aliases] || [],
+      published_at: opts[:published_at] || ~U[2024-04-03 16:46:30Z],
+      modified_at: opts[:modified_at] || ~U[2024-04-05 01:28:39Z],
+      withdrawn_at: opts[:withdrawn_at],
+      cvss_vector: opts[:cvss_vector],
+      cvss_score: opts[:cvss_score],
+      cvss_rating: opts[:cvss_rating],
+      references: opts[:references] || [],
+      affected: [
+        %{
+          package: package_name,
+          requirements: opts[:requirements] || [],
+          versions: opts[:versions] || []
+        }
+      ]
+    }
+  end
+
+  test "upsert inserts new advisories with typed columns and references", %{package: package} do
+    record =
+      record("GHSA-test-1234-abcd", "oidcc",
         summary: "Test security vulnerability",
-        affected: [">= 3.0.0 and < 3.0.2"],
-        published_at: ~U[2024-04-03T16:46:30Z],
-        modified_at: ~U[2024-04-05T01:28:39Z],
-        details: %{
-          "id" => "GHSA-test-1234-abcd",
-          "summary" => "Test security vulnerability",
-          "affected" => [
-            %{
-              "package" => %{
-                "name" => "oidcc",
-                "ecosystem" => "Hex"
-              },
-              "versions" => ["3.0.0", "3.0.1"]
-            }
-          ]
-        }
-      }
-    ]
+        aliases: ["CVE-2024-31209"],
+        cvss_vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+        cvss_score: 9.8,
+        cvss_rating: "critical",
+        references: [%{type: "WEB", url: "https://example.com/advisory"}],
+        requirements: [Version.parse_requirement!(">= 3.0.0 and < 3.0.2")],
+        versions: ["3.0.0", "3.0.1"]
+      )
 
-    assert :ok = Advisories.upsert(advisory_attrs)
+    assert {:ok, _} = Advisories.upsert([record], %{"oidcc" => package.id})
 
-    advisory = Repo.get_by(Advisory, id: "GHSA-test-1234-abcd")
-    assert advisory.package_id == package.id
+    advisory =
+      Repo.get!(Advisory, "GHSA-test-1234-abcd")
+      |> Repo.preload([:references, :affected_versions, :affected_packages])
+
     assert advisory.summary == "Test security vulnerability"
-    assert advisory.affected == [Version.parse_requirement!(">= 3.0.0 and < 3.0.2")]
-    assert advisory.published_at == ~U[2024-04-03T16:46:30Z]
-    assert advisory.modified_at == ~U[2024-04-05T01:28:39Z]
-    assert advisory.details["id"] == "GHSA-test-1234-abcd"
+    assert advisory.aliases == ["CVE-2024-31209"]
+    assert advisory.cvss_vector == "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+    assert advisory.cvss_score == 9.8
+    assert advisory.cvss_rating == "critical"
+    assert [%{type: "WEB", url: "https://example.com/advisory"}] = advisory.references
+    assert [%{requirement: req, package_id: pid}] = advisory.affected_versions
+    assert pid == package.id
+    assert to_string(req) == ">= 3.0.0 and < 3.0.2"
+    assert [%{id: pid}] = advisory.affected_packages
+    assert pid == package.id
   end
 
-  test "upsert updates existing advisories", %{package: package} do
-    original_attrs = [
-      %{
-        id: "GHSA-test-1234-abcd",
-        package_id: package.id,
+  test "upsert resolves affected releases via versions", %{
+    package: package,
+    release_300: release_300,
+    release_301: release_301,
+    release_302: release_302
+  } do
+    record = record("GHSA-by-version", "oidcc", versions: ["3.0.0", "3.0.1"])
+
+    assert {:ok, _} = Advisories.upsert([record], %{"oidcc" => package.id})
+
+    affected_ids =
+      from(r in Release, join: a in assoc(r, :security_advisories), select: r.id)
+      |> Repo.all()
+
+    assert release_300.id in affected_ids
+    assert release_301.id in affected_ids
+    refute release_302.id in affected_ids
+  end
+
+  test "upsert resolves affected releases via ranges only (no versions field)", %{
+    package: package,
+    release_300: release_300,
+    release_301: release_301,
+    release_302: release_302
+  } do
+    record =
+      record("GHSA-ranges-only", "oidcc",
+        requirements: [Version.parse_requirement!(">= 3.0.0 and < 3.0.2")]
+      )
+
+    assert {:ok, _} = Advisories.upsert([record], %{"oidcc" => package.id})
+
+    affected_ids =
+      from(r in Release, join: a in assoc(r, :security_advisories), select: r.id)
+      |> Repo.all()
+
+    assert release_300.id in affected_ids
+    assert release_301.id in affected_ids
+    refute release_302.id in affected_ids
+  end
+
+  test "upsert updates existing advisory and replaces children", %{package: package} do
+    original =
+      record("GHSA-test-1234-abcd", "oidcc",
         summary: "Original summary",
-        affected: [">= 3.0.0 and < 3.0.2"],
-        published_at: ~U[2024-04-03T16:46:30Z],
-        modified_at: ~U[2024-04-05T01:28:39Z],
-        details: %{
-          "id" => "GHSA-test-1234-abcd",
-          "affected" => [
-            %{
-              "package" => %{
-                "name" => "oidcc",
-                "ecosystem" => "Hex"
-              },
-              "versions" => ["3.0.0", "3.0.1"]
-            }
-          ]
-        }
-      }
-    ]
+        references: [%{type: "WEB", url: "https://old.example.com/"}],
+        requirements: [Version.parse_requirement!(">= 3.0.0 and < 3.0.2")]
+      )
 
-    assert :ok = Advisories.upsert(original_attrs)
+    assert {:ok, _} = Advisories.upsert([original], %{"oidcc" => package.id})
 
-    updated_attrs = [
-      %{
-        id: "GHSA-test-1234-abcd",
-        package_id: package.id,
+    updated =
+      record("GHSA-test-1234-abcd", "oidcc",
         summary: "Updated summary",
-        affected: [">= 3.0.0 and < 3.0.3"],
-        published_at: ~U[2024-04-03T16:46:30Z],
-        modified_at: ~U[2024-04-06T10:00:00Z],
-        details: %{
-          "id" => "GHSA-test-1234-abcd",
-          "affected" => [
-            %{
-              "package" => %{
-                "name" => "oidcc",
-                "ecosystem" => "Hex"
-              },
-              "versions" => ["3.0.0", "3.0.1", "3.0.2"]
-            }
-          ]
-        }
-      }
-    ]
+        references: [%{type: "WEB", url: "https://new.example.com/"}],
+        requirements: [Version.parse_requirement!(">= 3.0.0 and < 3.0.3")]
+      )
 
-    assert :ok = Advisories.upsert(updated_attrs)
+    assert {:ok, _} = Advisories.upsert([updated], %{"oidcc" => package.id})
 
-    advisories = Repo.all(Advisory)
-    assert length(advisories) == 1
+    advisory =
+      Repo.get!(Advisory, "GHSA-test-1234-abcd")
+      |> Repo.preload([:references, :affected_versions])
 
-    advisory = Repo.get_by(Advisory, id: "GHSA-test-1234-abcd")
     assert advisory.summary == "Updated summary"
-    assert advisory.affected == [Version.parse_requirement!(">= 3.0.0 and < 3.0.3")]
-    assert advisory.modified_at == ~U[2024-04-06T10:00:00Z]
+    assert [%{url: "https://new.example.com/"}] = advisory.references
+    assert [%{requirement: req}] = advisory.affected_versions
+    assert to_string(req) == ">= 3.0.0 and < 3.0.3"
+    assert Repo.aggregate(Advisory, :count) == 1
   end
 
-  test "all returns advisories for package", %{package: package} do
-    advisory1_attrs = %{
-      id: "GHSA-test-1111-aaaa",
-      package_id: package.id,
-      summary: "First vulnerability",
-      affected: [">= 3.0.0 and < 3.0.2"],
-      published_at: ~U[2024-04-03T16:46:30Z],
-      modified_at: ~U[2024-04-05T01:28:39Z],
-      details: %{
-        "affected" => [
-          %{
-            "package" => %{"name" => "oidcc", "ecosystem" => "Hex"},
-            "versions" => ["3.0.0", "3.0.1"]
-          }
-        ]
-      }
+  test "upsert reconciles by deleting advisories absent from the feed", %{package: package} do
+    a = record("GHSA-keep", "oidcc", versions: ["3.0.0"])
+    b = record("GHSA-drop", "oidcc", versions: ["3.0.1"])
+
+    assert {:ok, _} = Advisories.upsert([a, b], %{"oidcc" => package.id})
+    assert Repo.aggregate(Advisory, :count) == 2
+
+    assert {:ok, _} = Advisories.upsert([a], %{"oidcc" => package.id})
+    assert Repo.get(Advisory, "GHSA-keep")
+    refute Repo.get(Advisory, "GHSA-drop")
+  end
+
+  test "upsert handles one advisory affecting multiple Hex packages without collision",
+       %{package: oidcc} do
+    other = insert(:package, name: "ueberauth_oidcc")
+    insert(:release, package: other, version: "3.0.0")
+
+    record = %{
+      id: "GHSA-multi",
+      summary: "Multi-package advisory",
+      aliases: [],
+      published_at: ~U[2024-04-03 16:46:30Z],
+      modified_at: ~U[2024-04-05 01:28:39Z],
+      withdrawn_at: nil,
+      cvss_vector: nil,
+      cvss_score: nil,
+      cvss_rating: nil,
+      references: [],
+      affected: [
+        %{package: "oidcc", requirements: [], versions: ["3.0.0"]},
+        %{package: "ueberauth_oidcc", requirements: [], versions: ["3.0.0"]}
+      ]
     }
 
-    advisory2_attrs = %{
-      id: "GHSA-test-2222-bbbb",
-      package_id: package.id,
-      summary: "Second vulnerability",
-      affected: [">= 3.0.0 and < 3.0.3"],
-      published_at: ~U[2024-05-01T10:00:00Z],
-      modified_at: ~U[2024-05-02T10:00:00Z],
-      details: %{
-        "affected" => [
-          %{
-            "package" => %{"name" => "oidcc", "ecosystem" => "Hex"},
-            "versions" => ["3.0.0", "3.0.1", "3.0.2"]
-          }
-        ]
-      }
-    }
+    package_ids = %{"oidcc" => oidcc.id, "ueberauth_oidcc" => other.id}
+    assert {:ok, _} = Advisories.upsert([record], package_ids)
 
-    assert :ok = Advisories.upsert([advisory1_attrs, advisory2_attrs])
+    oidcc_advisories = Advisories.all(oidcc)
+    other_advisories = Advisories.all(other)
 
-    advisories = Advisories.all(package)
-    assert length(advisories) == 2
-    assert Enum.any?(advisories, &(&1.id == "GHSA-test-1111-aaaa"))
-    assert Enum.any?(advisories, &(&1.id == "GHSA-test-2222-bbbb"))
+    assert length(oidcc_advisories) == 1
+    assert length(other_advisories) == 1
+    assert hd(oidcc_advisories).id == "GHSA-multi"
+    assert hd(other_advisories).id == "GHSA-multi"
+  end
+
+  test "all returns only non-withdrawn advisories", %{package: package} do
+    active = record("GHSA-active", "oidcc", versions: ["3.0.0"])
+
+    withdrawn =
+      record("GHSA-withdrawn", "oidcc",
+        versions: ["3.0.0"],
+        withdrawn_at: ~U[2024-05-01 00:00:00Z]
+      )
+
+    assert {:ok, _} = Advisories.upsert([active, withdrawn], %{"oidcc" => package.id})
+
+    ids = Advisories.all(package) |> Enum.map(& &1.id)
+    assert "GHSA-active" in ids
+    refute "GHSA-withdrawn" in ids
   end
 
   test "all returns advisories for release", %{
@@ -165,82 +213,32 @@ defmodule Hexpm.Security.AdvisoriesTest do
     release_300: release_300,
     release_302: release_302
   } do
-    advisory_attrs = [
-      %{
-        id: "GHSA-test-1234-abcd",
-        package_id: package.id,
-        summary: "Test vulnerability affecting 3.0.0 and 3.0.1",
-        affected: [">= 3.0.0 and < 3.0.2"],
-        published_at: ~U[2024-04-03T16:46:30Z],
-        modified_at: ~U[2024-04-05T01:28:39Z],
-        details: %{
-          "affected" => [
-            %{
-              "package" => %{
-                "name" => "oidcc",
-                "ecosystem" => "Hex"
-              },
-              "versions" => ["3.0.0", "3.0.1"]
-            }
-          ]
-        }
-      }
-    ]
+    record = record("GHSA-rel", "oidcc", versions: ["3.0.0", "3.0.1"])
 
-    assert :ok = Advisories.upsert(advisory_attrs)
-    assert :ok = Advisories.refresh_affected_releases()
+    assert {:ok, _} = Advisories.upsert([record], %{"oidcc" => package.id})
 
-    release_300_advisories = Advisories.all(release_300)
-    assert length(release_300_advisories) == 1
-    assert hd(release_300_advisories).id == "GHSA-test-1234-abcd"
-
-    release_302_advisories = Advisories.all(release_302)
-    assert length(release_302_advisories) == 0
+    assert [%Advisory{id: "GHSA-rel"}] = Advisories.all(release_300)
+    assert [] == Advisories.all(release_302)
   end
 
-  test "refresh_affected_releases updates materialized view", %{
-    package: package,
-    release_300: release_300,
-    release_301: release_301,
-    release_302: release_302,
-    release_303: release_303
-  } do
-    advisory_attrs = [
-      %{
-        id: "GHSA-test-1234-abcd",
-        package_id: package.id,
-        summary: "Affects 3.0.0 and 3.0.1",
-        affected: [">= 3.0.0 and < 3.0.2"],
-        published_at: ~U[2024-04-03T16:46:30Z],
-        modified_at: ~U[2024-04-05T01:28:39Z],
-        details: %{
-          "affected" => [
-            %{
-              "package" => %{
-                "name" => "oidcc",
-                "ecosystem" => "Hex"
-              },
-              "versions" => ["3.0.0", "3.0.1"]
-            }
-          ]
-        }
-      }
-    ]
-
-    assert :ok = Advisories.upsert(advisory_attrs)
-    assert :ok = Advisories.refresh_affected_releases(false)
-
-    affected_release_ids =
-      from(r in Release,
-        join: a in assoc(r, :security_advisories),
-        where: a.id == "GHSA-test-1234-abcd",
-        select: r.id
+  test "affect_release_with_existing_advisories matches new release against ranges",
+       %{package: package} do
+    record =
+      record("GHSA-future", "oidcc",
+        requirements: [Version.parse_requirement!(">= 3.0.0 and < 4.0.0")]
       )
-      |> Repo.all()
 
-    assert release_300.id in affected_release_ids
-    assert release_301.id in affected_release_ids
-    refute release_302.id in affected_release_ids
-    refute release_303.id in affected_release_ids
+    assert {:ok, _} = Advisories.upsert([record], %{"oidcc" => package.id})
+
+    new_release = insert(:release, package: package, version: "3.5.0")
+
+    {:ok, advisory_ids} =
+      Repo.transaction(fn ->
+        {:ok, ids} = Advisories.affect_release_with_existing_advisories(Repo, new_release)
+        ids
+      end)
+
+    assert "GHSA-future" in advisory_ids
+    assert [%Advisory{id: "GHSA-future"}] = Advisories.all(new_release)
   end
 end

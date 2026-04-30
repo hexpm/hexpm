@@ -59,7 +59,8 @@ defmodule HexpmWeb.API.PackageView do
       :security_advisories,
       package.security_advisories,
       AdvisoryView,
-      "package.json"
+      "package.json",
+      package: package
     )
     |> ViewHelpers.include_if_loaded(:downloads, package.downloads, DownloadView, "show.json")
     |> ViewHelpers.include_if_loaded(:owners, package.owners, UserView, "minimal.json")
