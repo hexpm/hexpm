@@ -29,7 +29,7 @@ defmodule Hexpm.Repository.Packages do
 
   def get(repositories, name) when is_list(repositories) do
     Repo.get_by(assoc(repositories, :packages), name: name)
-    |> Repo.preload([:repository, security_advisories: [:references, :affected_versions]])
+    |> Repo.preload([:repository, security_advisories: active_advisories_preload()])
   end
 
   def get(repository, name) do
@@ -37,8 +37,15 @@ defmodule Hexpm.Repository.Packages do
 
     package &&
       Repo.preload(%{package | repository: repository},
-        security_advisories: [:references, :affected_versions]
+        security_advisories: active_advisories_preload()
       )
+  end
+
+  defp active_advisories_preload do
+    from a in Hexpm.Security.Advisory,
+      where: is_nil(a.withdrawn_at),
+      order_by: [desc: a.published_at],
+      preload: [:references, :affected_versions]
   end
 
   def owner_with_access?(package, user, level \\ "maintainer") do

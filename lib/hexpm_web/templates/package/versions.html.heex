@@ -193,34 +193,37 @@ version_rows =
                 {ViewHelpers.pretty_date(row.release.inserted_at)}
               </td>
               <td class="px-5 py-3.5 text-grey-500 dark:text-grey-300 text-sm">
-                <%= cond do %>
-                  <% row.retired? && row.release.retirement.reason == "report" -> %>
-                    <div class="flex items-center gap-2">
-                      <span class="inline-flex shrink-0 items-center justify-center rounded border border-red-300 bg-red-100 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-red-900 dark:border-red-700/60 dark:bg-red-900/30 dark:text-red-100">
-                        reported
-                      </span>
-                      <%= if row.retirement_message do %>
-                        <span>{row.retirement_message}</span>
-                      <% end %>
-                    </div>
-                  <% row.retired? -> %>
-                    <div class="flex items-center gap-2">
-                      <span class="inline-flex shrink-0 items-center justify-center rounded border border-yellow-300 bg-yellow-100 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-yellow-900 dark:border-yellow-700/60 dark:bg-yellow-900/30 dark:text-yellow-100">
-                        retired
-                      </span>
-                      <%= if row.retirement_message do %>
-                        <span>{row.retirement_message}</span>
-                      <% end %>
-                    </div>
-                  <% row.release.vulnerable? -> %>
+                <div class="flex flex-col gap-1.5">
+                  <%= cond do %>
+                    <% row.retired? && row.release.retirement.reason == "report" -> %>
+                      <div class="flex items-center gap-2">
+                        <span class="inline-flex shrink-0 items-center justify-center rounded border border-red-300 bg-red-100 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-red-900 dark:border-red-700/60 dark:bg-red-900/30 dark:text-red-100">
+                          reported
+                        </span>
+                        <%= if row.retirement_message do %>
+                          <span>{row.retirement_message}</span>
+                        <% end %>
+                      </div>
+                    <% row.retired? -> %>
+                      <div class="flex items-center gap-2">
+                        <span class="inline-flex shrink-0 items-center justify-center rounded border border-yellow-300 bg-yellow-100 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-yellow-900 dark:border-yellow-700/60 dark:bg-yellow-900/30 dark:text-yellow-100">
+                          retired
+                        </span>
+                        <%= if row.retirement_message do %>
+                          <span>{row.retirement_message}</span>
+                        <% end %>
+                      </div>
+                    <% true -> %>
+                  <% end %>
+                  <%= if row.release.vulnerable? do %>
                     <a
                       href={ViewHelpers.path_for_package(@package) <> "/advisories"}
                       class="text-red-600 underline hover:text-red-700"
                     >
                       Known security vulnerabilities
                     </a>
-                  <% true -> %>
-                <% end %>
+                  <% end %>
+                </div>
               </td>
               <td class="px-5 py-3.5 align-top">
                 <div class="flex items-center justify-end gap-2">

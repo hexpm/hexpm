@@ -253,8 +253,10 @@ defmodule Hexpm.Repository.Release do
       select_merge: %{
         vulnerable?:
           exists(
-            from(security_advisory_affected_release in "security_advisory_affected_releases",
-              where: security_advisory_affected_release.release_id == parent_as(:release).id,
+            from(saar in "security_advisory_affected_releases",
+              join: a in Hexpm.Security.Advisory,
+              on: a.id == saar.advisory_id,
+              where: saar.release_id == parent_as(:release).id and is_nil(a.withdrawn_at),
               select: 1
             )
           )

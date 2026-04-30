@@ -28,13 +28,6 @@ defmodule Hexpm.Security.Advisories do
     |> Repo.transaction(timeout: 60_000)
   end
 
-  def affected_versions_for_package(package_id) do
-    Repo.all(
-      from av in AdvisoryAffectedVersion,
-        where: av.package_id == ^package_id
-    )
-  end
-
   defp upsert_advisories(multi, records, package_ids) do
     Enum.reduce(records, multi, fn record, multi ->
       Multi.run(multi, {:advisory, record.id}, fn repo, _ ->
