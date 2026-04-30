@@ -216,16 +216,33 @@ Hexpm.Repo.transaction(fn ->
       )
   )
 
-  insert(
-    :security_advisories,
+  oidcc_advisory_record = %{
     id: "GHSA-mj35-2rgf-cv8p",
-    package: oidcc,
     summary:
       "OpenID Connect client Atom Exhaustion in provider configuration worker ets table location",
-    affected: [">= 3.0.0 and < 3.0.2"],
-    published_at: "2024-04-03T16:46:30Z",
-    modified_at: "2024-04-05T01:28:39.837161Z"
-  )
+    aliases: ["CVE-2024-31209"],
+    published_at: ~U[2024-04-03 16:46:30Z],
+    modified_at: ~U[2024-04-05 01:28:39Z],
+    withdrawn_at: nil,
+    cvss_vector: "CVSS:3.1/AV:L/AC:H/PR:H/UI:N/S:C/C:N/I:N/A:H",
+    cvss_score: 5.5,
+    cvss_rating: "medium",
+    references: [
+      %{
+        type: "WEB",
+        url: "https://github.com/erlef/oidcc/security/advisories/GHSA-mj35-2rgf-cv8p"
+      }
+    ],
+    affected: [
+      %{
+        package: "oidcc",
+        requirements: [Version.parse_requirement!(">= 3.0.0 and < 3.0.2")],
+        versions: ["3.0.0"]
+      }
+    ]
+  }
+
+  Hexpm.Security.Advisories.upsert([oidcc_advisory_record], %{"oidcc" => oidcc.id})
 
   postgrex =
     insert(
@@ -768,7 +785,6 @@ Hexpm.Repo.transaction(fn ->
 
   Hexpm.Repo.refresh_view(PackageDownload, concurrently: false)
   Hexpm.Repo.refresh_view(ReleaseDownload, concurrently: false)
-  Hexpm.Repo.refresh_view("security_advisory_affected_releases", concurrently: false)
 end)
 
 Hexpm.Repository.RegistryBuilder.full(Hexpm.Repository.Repositories.get("hexpm"))
