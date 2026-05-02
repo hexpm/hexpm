@@ -36,9 +36,15 @@ requirements_count = length(requirements) %>
       <% else %>
         <table class="w-full table-fixed text-sm">
           <colgroup>
-            <col class="w-2/5" />
-            <col class="w-3/5" />
-            <col class="w-px" />
+            <%= if Enum.any?(requirements, fn req -> req.optional end) do %>
+              <col class="w-2/5" />
+              <col class="w-2/5" />
+              <col class="w-1/5" />
+            <% else %>
+              <col class="w-2/5" />
+              <col class="w-3/5" />
+              <col class="w-px" />
+            <% end %>
           </colgroup>
           <thead>
             <tr class="bg-grey-50 dark:bg-grey-900/60 border-b border-grey-200 dark:border-grey-700">
