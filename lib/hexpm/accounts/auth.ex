@@ -5,11 +5,23 @@ defmodule Hexpm.Accounts.Auth do
   alias Hexpm.Accounts.{Key, Keys, Organization, Organizations, User, Users, UserProviders}
   alias Hexpm.OAuth.{Tokens, JWT}
 
+  @token_prefix Key.token_prefix()
+
   def key_auth(user_secret, usage_info, opts \\ []) do
+    raw_secret = strip_token_prefix(user_secret)
+
+    if String.starts_with?(user_secret, @token_prefix) and not valid_checksum?(raw_secret) do
+      :error
+    else
+      key_auth_validated(raw_secret, usage_info, opts)
+    end
+  end
+
+  defp key_auth_validated(raw_secret, usage_info, opts) do
     app_secret = Application.get_env(:hexpm, :secret)
 
     <<first::binary-size(32), second::binary-size(32)>> =
-      :crypto.mac(:hmac, :sha256, app_secret, user_secret)
+      :crypto.mac(:hmac, :sha256, app_secret, raw_secret)
       |> Base.encode16(case: :lower)
 
     preload = Keyword.get(opts, :preload, :full)
@@ -165,9 +177,19 @@ defmodule Hexpm.Accounts.Auth do
   end
 
   def gen_key() do
-    :crypto.strong_rand_bytes(16)
-    |> Base.encode16(case: :lower)
+    random = :crypto.strong_rand_bytes(16)
+    checksum = <<:erlang.crc32(random)::32>>
+    Base.encode16(random <> checksum, case: :lower)
   end
+
+  defp valid_checksum?(raw) when byte_size(raw) == 40 do
+    case Base.decode16(raw, case: :lower) do
+      {:ok, <<data::binary-size(16), expected::32>>} -> :erlang.crc32(data) == expected
+      _ -> false
+    end
+  end
+
+  defp valid_checksum?(_), do: false
 
   defp find_email(nil, _email) do
     nil
@@ -176,6 +198,9 @@ defmodule Hexpm.Accounts.Auth do
   defp find_email(user, email) do
     Enum.find(user.emails, &(&1.email == email)) || Enum.find(user.emails, & &1.primary)
   end
+
+  defp strip_token_prefix(@token_prefix <> raw), do: raw
+  defp strip_token_prefix(raw), do: raw
 
   defp usage_info(info) do
     %{

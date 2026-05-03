@@ -22,6 +22,28 @@ defmodule Hexpm.Accounts.KeysTest do
     }
   end
 
+  describe "create/2 token format" do
+    test "new keys have v2 token format", %{user: user} do
+      params = %{"name" => "keyname", "permissions" => [%{"domain" => "api"}]}
+      assert {:ok, %{key: key}} = Keys.create(user, params, audit: audit_data(user))
+      assert key.token_format == "v2"
+    end
+
+    test "new key user_secret has hex_ prefix", %{user: user} do
+      params = %{"name" => "keyname", "permissions" => [%{"domain" => "api"}]}
+      assert {:ok, %{key: key}} = Keys.create(user, params, audit: audit_data(user))
+      assert String.starts_with?(key.user_secret, "hex_")
+    end
+
+    test "user_secret body is 40 lowercase hex chars (32 random + 8 CRC32)", %{user: user} do
+      params = %{"name" => "keyname", "permissions" => [%{"domain" => "api"}]}
+      assert {:ok, %{key: key}} = Keys.create(user, params, audit: audit_data(user))
+      assert "hex_" <> body = key.user_secret
+      assert String.length(body) == 40
+      assert body =~ ~r/^[a-f0-9]{40}$/
+    end
+  end
+
   describe "create/2 with revoke_at" do
     test "create key with future revoke_at", %{user: user} do
       revoke_at = DateTime.utc_now() |> DateTime.add(30, :day) |> DateTime.truncate(:second)
@@ -61,7 +83,8 @@ defmodule Hexpm.Accounts.KeysTest do
       assert {:ok, %{key: key}} = Keys.create(user, params, audit: audit_data(user))
       assert key.name == "keyname"
       assert key.user_id == user.id
-      assert {:ok, _} = Base.decode16(key.user_secret, case: :lower)
+      assert "hex_" <> raw = key.user_secret
+      assert {:ok, _} = Base.decode16(raw, case: :lower)
     end
 
     test "organization api permissions", %{organization: organization} do
@@ -75,7 +98,8 @@ defmodule Hexpm.Accounts.KeysTest do
 
       assert key.name == "keyname"
       assert key.organization_id == organization.id
-      assert {:ok, _} = Base.decode16(key.user_secret, case: :lower)
+      assert "hex_" <> raw = key.user_secret
+      assert {:ok, _} = Base.decode16(raw, case: :lower)
     end
 
     test "user package permissions", %{user: user, package: package} do
