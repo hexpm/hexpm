@@ -76,10 +76,10 @@ defmodule HexpmWeb.Plugs.Attack do
 
   defp throttled_user(conn) do
     cond do
-      user = conn.assigns.current_user ->
+      user = conn.assigns[:current_user] ->
         "user #{user.id}"
 
-      organization = conn.assigns.current_organization ->
+      organization = conn.assigns[:current_organization] ->
         "organization #{organization.id}"
 
       true ->

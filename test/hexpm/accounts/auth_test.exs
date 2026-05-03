@@ -32,6 +32,46 @@ defmodule Hexpm.Accounts.AuthTest do
   end
 
   describe "key_auth/2" do
+    test "authorizes correct v2 key (hex_ prefix)", %{user: user} do
+      key = insert(:key, user: user)
+      assert String.starts_with?(key.user_secret, "hex_")
+
+      assert {:ok,
+              %{
+                user: auth_user,
+                auth_credential: auth_key,
+                email: email,
+                organization: organization
+              }} =
+               Auth.key_auth(key.user_secret, %{})
+
+      assert auth_key.id == key.id
+      assert auth_user.id == user.id
+      assert email.id == hd(user.emails).id
+      assert organization == nil
+    end
+
+    test "authorizes legacy v1 key (no prefix)", %{user: user} do
+      raw_secret = Auth.gen_key()
+      app_secret = Application.get_env(:hexpm, :secret)
+
+      <<first::binary-size(32), second::binary-size(32)>> =
+        :crypto.mac(:hmac, :sha256, app_secret, raw_secret)
+        |> Base.encode16(case: :lower)
+
+      key =
+        insert(:key,
+          user: user,
+          secret_first: first,
+          secret_second: second,
+          user_secret: raw_secret,
+          token_format: "v1"
+        )
+
+      assert {:ok, %{auth_credential: auth_key}} = Auth.key_auth(raw_secret, %{})
+      assert auth_key.id == key.id
+    end
+
     test "authorizes correct key", %{user: user} do
       key = insert(:key, user: user)
 
@@ -75,6 +115,12 @@ defmodule Hexpm.Accounts.AuthTest do
     test "does not authorize revoked key", %{user: user} do
       key = insert(:key, user: user, revoke_at: ~N"2017-01-01 00:00:00")
       assert Auth.key_auth(key.user_secret, %{}) == :revoked
+    end
+
+    test "rejects hex_-prefixed token with invalid CRC32 checksum" do
+      # 40 hex chars with the wrong checksum — bypasses DB lookup entirely
+      bad_token = "hex_" <> String.duplicate("a", 40)
+      assert Auth.key_auth(bad_token, %{}) == :error
     end
   end
 
