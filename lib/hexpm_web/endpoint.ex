@@ -63,6 +63,8 @@ defmodule HexpmWeb.Endpoint do
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint], log: false
   plug HexpmWeb.Plugs.RequestLog
 
+  plug HexpmWeb.Plugs.CacheRawBody
+
   plug Plug.Parsers,
     parsers: [:urlencoded, :json, HexpmWeb.PlugParser],
     pass: ["*/*"],
