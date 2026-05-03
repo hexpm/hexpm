@@ -80,6 +80,9 @@ config :mime,
 
 config :logger, :default_formatter, format: "[$level] $metadata$message\n"
 
+# Replaces Phoenix's default ["password"] — keep this list a superset of the default.
+config :phoenix, :filter_parameters, ["password", "secret", "user_secret", "authorization"]
+
 config :esbuild,
   version: "0.25.0",
   hexpm: [
