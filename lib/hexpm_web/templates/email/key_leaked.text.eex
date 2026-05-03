@@ -1,0 +1,11 @@
+<%= Common.greeting(@username) %>
+
+Your API key was found in a public repository
+
+GitHub's secret scanning detected your Hex.pm API key "<%= @key_name %>" in a public repository. To protect your account, the key has been automatically revoked.
+<%= if @found_url && @found_url != "" do %>
+It was found at: <%= @found_url %>
+<% end %>
+You can generate a new key at <%= url(~p"/dashboard/keys") %>.
+
+If you believe this was a false positive or have questions, contact support at <%= Common.support_email() %>.

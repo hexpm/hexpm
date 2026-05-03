@@ -1,0 +1,25 @@
+<h1 style="color: #030913; font-size: 24px; line-height: 32px; font-weight: 600; margin: 0 0 24px 0; text-align: center;">
+    Your API key was found in a public repository
+</h1>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= Common.greeting(@username) %>,
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  GitHub's secret scanning detected your Hex.pm API key <strong><%= @key_name %></strong> in a public repository. To protect your account, the key has been automatically revoked.
+</p>
+
+<%= if @found_url && @found_url != "" do %>
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  It was found at: <a href="<%= @found_url %>"><%= @found_url %></a>.
+</p>
+<% end %>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  You can generate a new key at <a href="<%= url(~p"/dashboard/keys") %>"><%= url(~p"/dashboard/keys") %></a>.
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  If you believe this was a false positive or have questions, contact <a href="mailto:<%= Common.support_email() %>"><%= Common.support_email() %></a>.
+</p>
