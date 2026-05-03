@@ -1,6 +1,7 @@
 import Config
 
 config :hexpm,
+  github_key_cache_ttl: 0,
   repo_bucket: {Hexpm.Store.Memory, "repo_bucket"},
   logs_bucket: {Hexpm.Store.Memory, "logs_bucket"},
   secret: "796f75666f756e64746865686578",

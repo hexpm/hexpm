@@ -50,6 +50,7 @@ defmodule Hexpm.Factory do
       secret_first: first,
       secret_second: second,
       user_secret: user_secret,
+      token_format: "v2",
       permissions: [build(:key_permission, domain: "api")],
       user: nil,
       organization: nil

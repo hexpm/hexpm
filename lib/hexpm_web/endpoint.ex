@@ -50,6 +50,8 @@ defmodule HexpmWeb.Endpoint do
   plug Logster.Plugs.ChangeLogLevel, to: :info
   plug Logster.Plugs.Logger, excludes: [:params]
 
+  plug HexpmWeb.Plugs.CacheRawBody
+
   plug Plug.Parsers,
     parsers: [:urlencoded, :json, HexpmWeb.PlugParser],
     pass: ["*/*"],
