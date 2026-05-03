@@ -55,6 +55,7 @@ requirements_count = length(requirements) %>
                 <td class="px-5 py-3.5">
                   <a
                     href={ViewHelpers.path_for_package(req.repository, req.name)}
+                    title={if req.repository != "hexpm", do: "#{req.repository}/#{req.name}", else: req.name}
                     class="font-semibold text-grey-900 dark:text-grey-100 hover:text-purple-600 dark:hover:text-primary-300 transition-colors font-mono"
                   >
                     <%= if req.repository != "hexpm" do %>
@@ -70,7 +71,10 @@ requirements_count = length(requirements) %>
                 </td>
                 <td class="px-5 py-3.5">
                   <div class="flex flex-wrap items-center gap-1.5">
-                    <span class="font-mono text-grey-600 dark:text-grey-200 bg-grey-50 dark:bg-grey-900/60 px-2 py-0.5 rounded">
+                    <span
+                      title={req.requirement}
+                      class="font-mono text-grey-600 dark:text-grey-200 bg-grey-50 dark:bg-grey-900/60 px-2 py-0.5 rounded"
+                    >
                       {req.requirement}
                     </span>
                     <%= if req.optional do %>
