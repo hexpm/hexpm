@@ -677,6 +677,33 @@ defmodule HexpmWeb.PackageControllerTest do
     end
   end
 
+  describe "GET /packages/:name/:version/dependencies" do
+    test "renders dependencies page for the selected version", %{package1: package1} do
+      conn = get(build_conn(), "/packages/#{package1.name}/0.0.1/dependencies")
+      body = response(conn, 200)
+      assert body =~ "Dependencies of"
+      assert body =~ "gleam add #{package1.name}@0.0.1"
+    end
+
+    test "returns 404 when version does not exist", %{package1: package1} do
+      conn = get(build_conn(), "/packages/#{package1.name}/9.9.9/dependencies")
+      assert response(conn, 404)
+    end
+
+    test "renders for repository/name/version triple", %{
+      package3: package3,
+      repository1: repository1,
+      user1: user1
+    } do
+      conn =
+        build_conn()
+        |> test_login(user1)
+        |> get("/packages/#{repository1.name}/#{package3.name}/0.0.1/dependencies")
+
+      assert response(conn, 200) =~ "Dependencies of"
+    end
+  end
+
   defp escape(html) do
     {:safe, safe} = Phoenix.HTML.html_escape(html)
     IO.iodata_to_binary(safe)

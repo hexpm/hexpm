@@ -188,12 +188,13 @@ defmodule HexpmWeb.Router do
     get "/packages/:name/dependencies", PackageController, :dependencies
     get "/packages/:name/versions", PackageController, :versions
     get "/packages/:name/advisories", PackageController, :advisories
+    get "/packages/:name/:version/dependencies", PackageController, :dependencies
     get "/packages/:name/:version", PackageController, :show
     get "/packages/:repository/:name/audit-logs", PackageController, :audit_logs
     get "/packages/:repository/:name/dependents", PackageController, :dependents
-    get "/packages/:repository/:name/dependencies", PackageController, :dependencies
     get "/packages/:repository/:name/versions", PackageController, :versions
     get "/packages/:repository/:name/advisories", PackageController, :advisories
+    get "/packages/:repository/:name/:version/dependencies", PackageController, :dependencies
     get "/packages/:repository/:name/:version", PackageController, :show
 
     get "/blog", BlogController, :index

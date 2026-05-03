@@ -79,25 +79,39 @@ defmodule HexpmWeb.PackageController do
   end
 
   def dependencies(conn, params) do
+    params = fixup_params(params)
+
     access_package(conn, params, fn package, repositories ->
       releases = Releases.all(package)
-      current_release = current_release(releases)
 
-      dependants_count = Packages.count_dependants(repositories, package)
+      release =
+        if version = params["version"] do
+          matching_release(releases, version)
+        else
+          current_release(releases)
+        end
 
-      render(
-        conn,
-        "dependencies.html",
-        [
-          title: "Dependencies of #{package.name}",
-          container: "container",
-          package: package,
-          releases: releases,
-          current_release: current_release,
-          dependants_count: dependants_count,
-          repository_name: package.repository.name
-        ] ++ sidebar_assigns(package, releases, current_release)
-      )
+      if release do
+        release = preload_release(release)
+        dependants_count = Packages.count_dependants(repositories, package)
+
+        render(
+          conn,
+          "dependencies.html",
+          [
+            title: "Dependencies of #{package.name}",
+            container: "container",
+            package: package,
+            releases: releases,
+            current_release: release,
+            version_pinned?: params["version"] != nil,
+            dependants_count: dependants_count,
+            repository_name: package.repository.name
+          ] ++ sidebar_assigns(package, releases, release)
+        )
+      else
+        not_found(conn)
+      end
     end)
   end
 
@@ -241,8 +255,12 @@ defmodule HexpmWeb.PackageController do
   defp current_release(releases) do
     case Release.latest_version(releases, only_stable: true, unstable_fallback: true) do
       nil -> nil
-      release -> Releases.preload(release, [:requirements, :downloads, :publisher])
+      release -> preload_release(release)
     end
+  end
+
+  defp preload_release(release) do
+    Releases.preload(release, [:requirements, :downloads, :publisher])
   end
 
   defp access_package(conn, params, fun) do
@@ -339,7 +357,9 @@ defmodule HexpmWeb.PackageController do
         package: package,
         repository_name: repository.name,
         releases: releases,
+        all_releases: releases,
         current_release: release,
+        version_pinned?: type == :release,
         downloads: downloads,
         owners: owners,
         dependants: dependants,
@@ -399,7 +419,8 @@ defmodule HexpmWeb.PackageController do
       downloads: package_downloads,
       daily_graph: daily_graph,
       owners: owners,
-      versions_count: Enum.count(releases)
+      versions_count: Enum.count(releases),
+      all_releases: releases
     ]
   end
 
