@@ -151,6 +151,7 @@ defmodule HexpmWeb.ReadmeController do
     |> String.replace("&lt;", "<")
     |> String.replace("&gt;", ">")
     |> String.replace("&quot;", "\"")
+    |> String.replace("&#39;", "'")
   end
 
   defp send_no_readme(conn) do
