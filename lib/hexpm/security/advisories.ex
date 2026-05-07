@@ -12,6 +12,7 @@ defmodule Hexpm.Security.Advisories do
     subject
     |> Advisory.all()
     |> where([a], is_nil(a.withdrawn_at))
+    |> order_by([a], desc: a.published_at)
     |> Repo.all()
     |> Repo.preload([:references, :affected_versions])
   end
