@@ -10,6 +10,8 @@ defmodule Hexpm.Security.Updater do
 
   @advisory_download_url "https://osv-vulnerabilities.storage.googleapis.com/Hex/all.zip"
   @http_receive_timeout 60_000
+  @reference_url_schemes ~w(http https)
+  @reference_url_max_length 2000
 
   @enforce_keys [:update_interval]
   defstruct [:update_interval, etag: nil]
@@ -173,11 +175,23 @@ defmodule Hexpm.Security.Updater do
     |> Map.get("references", [])
     |> Enum.flat_map(fn
       %{"type" => type, "url" => url} when is_binary(type) and is_binary(url) ->
-        [%{type: type, url: url}]
+        if valid_reference_url?(url), do: [%{type: type, url: url}], else: []
 
       _ ->
         []
     end)
+  end
+
+  defp valid_reference_url?(url) do
+    String.length(url) <= @reference_url_max_length and
+      case URI.parse(url) do
+        %URI{scheme: scheme, host: host}
+        when scheme in @reference_url_schemes and is_binary(host) and host != "" ->
+          true
+
+        _ ->
+          false
+      end
   end
 
   defp cvss_vector(advisory) do
