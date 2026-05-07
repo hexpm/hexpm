@@ -38,6 +38,9 @@ defmodule Hexpm.Security.Advisories do
   defp upsert_advisories(multi, records) do
     Multi.run(multi, :upsert_advisories, fn repo, _ ->
       with {:ok, rows} <- advisory_rows(records) do
+        # published_at is set on initial insert only — it's the date the
+        # advisory was first published and is treated as immutable, even if
+        # the feed revises it on a later sync.
         on_conflict_query =
           from(a in Advisory,
             update: [
