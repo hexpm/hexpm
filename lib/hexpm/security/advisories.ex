@@ -29,7 +29,7 @@ defmodule Hexpm.Security.Advisories do
     |> sync_references(records)
     |> sync_affected_versions(records, package_ids)
     |> sync_affected_packages(records, package_ids)
-    |> sync_advisories(records, package_ids)
+    |> sync_affected_releases(records, package_ids)
     |> reconcile_advisories(records)
     |> Repo.transaction(timeout: 60_000)
   end
@@ -78,26 +78,6 @@ defmodule Hexpm.Security.Advisories do
       %Advisory{} |> Advisory.changeset(params) |> Ecto.Changeset.apply_action(:insert)
 
     Map.take(advisory, @advisory_fields)
-  end
-
-  defp sync_advisories(multi, records, package_ids) do
-    Enum.reduce(records, multi, fn record, multi ->
-      Multi.run(multi, {:sync_advisory, record.id}, fn repo, %{upsert_advisories: changed_ids} ->
-        if MapSet.member?(changed_ids, record.id) do
-          sync_changed_advisory(repo, record, package_ids)
-        else
-          {:ok, :skipped}
-        end
-      end)
-    end)
-  end
-
-  defp sync_changed_advisory(repo, record, package_ids) do
-    advisory_id = record.id
-    affected = filter_known_packages(record.affected, package_ids)
-
-    sync_affected_releases(repo, advisory_id, affected, package_ids)
-    {:ok, :synced}
   end
 
   defp filter_known_packages(affected, package_ids) do
@@ -212,48 +192,65 @@ defmodule Hexpm.Security.Advisories do
     end)
   end
 
-  defp sync_affected_releases(repo, advisory_id, affected, package_ids) do
-    repo.delete_all(
-      from r in "security_advisory_affected_releases", where: r.advisory_id == ^advisory_id
-    )
+  defp sync_affected_releases(multi, records, package_ids) do
+    Multi.run(multi, :sync_affected_releases, fn repo, %{upsert_advisories: changed_ids} ->
+      changed_records = Enum.filter(records, &MapSet.member?(changed_ids, &1.id))
 
-    release_ids =
-      affected
-      |> Enum.flat_map(fn %{package: name, requirements: requirements, versions: versions} ->
-        package_id = Map.fetch!(package_ids, name)
-        matching_release_ids(repo, package_id, requirements, versions)
-      end)
-      |> Enum.uniq()
+      advisory_ids = Enum.map(changed_records, & &1.id)
 
-    rows = Enum.map(release_ids, &%{advisory_id: advisory_id, release_id: &1})
-
-    if rows != [] do
-      repo.insert_all("security_advisory_affected_releases", rows)
-    end
-
-    :ok
-  end
-
-  defp matching_release_ids(repo, package_id, requirements, versions) do
-    releases =
-      repo.all(
-        from r in Hexpm.Repository.Release,
-          where: r.package_id == ^package_id,
-          select: {r.id, r.version}
+      repo.delete_all(
+        from(r in "security_advisory_affected_releases", where: r.advisory_id in ^advisory_ids)
       )
 
-    matching_by_requirement =
-      for {id, version} <- releases,
-          requirement <- requirements,
-          Version.match?(version, requirement),
-          do: id
+      all_package_ids =
+        changed_records
+        |> Enum.flat_map(fn record ->
+          record.affected
+          |> filter_known_packages(package_ids)
+          |> Enum.map(fn %{package: name} -> package_ids[name] end)
+        end)
+        |> Enum.uniq()
 
-    matching_by_version =
-      for {id, version} <- releases,
-          to_string(version) in versions,
-          do: id
+      releases =
+        repo.all(
+          from r in Hexpm.Repository.Release,
+            where: r.package_id in ^all_package_ids,
+            select: {r.id, r.package_id, r.version}
+        )
 
-    Enum.uniq(matching_by_requirement ++ matching_by_version)
+      releases_by_package = Enum.group_by(releases, &elem(&1, 1), &{elem(&1, 0), elem(&1, 2)})
+
+      rows =
+        Enum.flat_map(changed_records, fn record ->
+          record.affected
+          |> filter_known_packages(package_ids)
+          |> Enum.flat_map(fn %{package: name, requirements: requirements, versions: versions} ->
+            package_id = package_ids[name]
+            package_releases = Map.get(releases_by_package, package_id, [])
+
+            matching_by_requirement =
+              for {id, version} <- package_releases,
+                  requirement <- requirements,
+                  Version.match?(version, requirement),
+                  do: id
+
+            matching_by_version =
+              for {id, version} <- package_releases,
+                  to_string(version) in versions,
+                  do: id
+
+            Enum.uniq(matching_by_requirement ++ matching_by_version)
+          end)
+          |> Enum.uniq()
+          |> Enum.map(&%{advisory_id: record.id, release_id: &1})
+        end)
+
+      if rows != [] do
+        repo.insert_all("security_advisory_affected_releases", rows)
+      end
+
+      {:ok, :synced}
+    end)
   end
 
   defp reconcile_advisories(multi, records) do
