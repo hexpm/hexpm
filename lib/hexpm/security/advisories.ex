@@ -26,10 +26,10 @@ defmodule Hexpm.Security.Advisories do
       end
     end)
     |> upsert_advisories(records, package_ids)
-    |> sync_references(records)
-    |> sync_affected_versions(records, package_ids)
-    |> sync_affected_packages(records, package_ids)
-    |> sync_affected_releases(records, package_ids)
+    |> sync_references()
+    |> sync_affected_versions(package_ids)
+    |> sync_affected_packages(package_ids)
+    |> sync_affected_releases(package_ids)
     |> reconcile_advisories(records)
     |> Repo.transaction(timeout: 60_000)
   end
@@ -67,7 +67,8 @@ defmodule Hexpm.Security.Advisories do
           returning: [:id]
         )
 
-      {:ok, MapSet.new(returned, & &1.id)}
+      changed_ids = MapSet.new(returned, & &1.id)
+      {:ok, Map.new(records, &{&1.id, &1}) |> Map.filter(fn {id, _} -> id in changed_ids end)}
     end)
   end
 
@@ -108,10 +109,9 @@ defmodule Hexpm.Security.Advisories do
     }
   end
 
-  defp sync_references(multi, records) do
-    Multi.run(multi, :sync_references, fn repo, %{upsert_advisories: changed_ids} ->
-      changed_records = Enum.filter(records, &MapSet.member?(changed_ids, &1.id))
-
+  defp sync_references(multi) do
+    Multi.run(multi, :sync_references, fn repo, %{upsert_advisories: changed_records} ->
+      changed_records = Map.values(changed_records)
       advisory_ids = Enum.map(changed_records, & &1.id)
 
       repo.delete_all(
@@ -131,10 +131,9 @@ defmodule Hexpm.Security.Advisories do
     end)
   end
 
-  defp sync_affected_versions(multi, records, package_ids) do
-    Multi.run(multi, :sync_affected_versions, fn repo, %{upsert_advisories: changed_ids} ->
-      changed_records = Enum.filter(records, &MapSet.member?(changed_ids, &1.id))
-
+  defp sync_affected_versions(multi, package_ids) do
+    Multi.run(multi, :sync_affected_versions, fn repo, %{upsert_advisories: changed_records} ->
+      changed_records = Map.values(changed_records)
       advisory_ids = Enum.map(changed_records, & &1.id)
 
       repo.delete_all(
@@ -163,10 +162,9 @@ defmodule Hexpm.Security.Advisories do
     end)
   end
 
-  defp sync_affected_packages(multi, records, package_ids) do
-    Multi.run(multi, :sync_affected_packages, fn repo, %{upsert_advisories: changed_ids} ->
-      changed_records = Enum.filter(records, &MapSet.member?(changed_ids, &1.id))
-
+  defp sync_affected_packages(multi, package_ids) do
+    Multi.run(multi, :sync_affected_packages, fn repo, %{upsert_advisories: changed_records} ->
+      changed_records = Map.values(changed_records)
       advisory_ids = Enum.map(changed_records, & &1.id)
 
       repo.delete_all(
@@ -192,10 +190,9 @@ defmodule Hexpm.Security.Advisories do
     end)
   end
 
-  defp sync_affected_releases(multi, records, package_ids) do
-    Multi.run(multi, :sync_affected_releases, fn repo, %{upsert_advisories: changed_ids} ->
-      changed_records = Enum.filter(records, &MapSet.member?(changed_ids, &1.id))
-
+  defp sync_affected_releases(multi, package_ids) do
+    Multi.run(multi, :sync_affected_releases, fn repo, %{upsert_advisories: changed_records} ->
+      changed_records = Map.values(changed_records)
       advisory_ids = Enum.map(changed_records, & &1.id)
 
       repo.delete_all(

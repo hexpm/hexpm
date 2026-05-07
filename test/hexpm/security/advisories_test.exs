@@ -228,13 +228,13 @@ defmodule Hexpm.Security.AdvisoriesTest do
     assert {:ok, %{upsert_advisories: changed}} =
              Advisories.upsert([record], %{"oidcc" => package.id})
 
-    assert MapSet.member?(changed, "GHSA-skip")
+    assert Map.has_key?(changed, "GHSA-skip")
 
     # Second upsert with same modified_at — should be a no-op
     assert {:ok, %{upsert_advisories: changed}} =
              Advisories.upsert([record], %{"oidcc" => package.id})
 
-    assert MapSet.size(changed) == 0
+    assert map_size(changed) == 0
   end
 
   test "affect_release_with_existing_advisories matches new release against ranges",
