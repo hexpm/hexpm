@@ -131,7 +131,7 @@ defmodule HexpmWeb.Components.PackageLayout do
                         href={path_for_tab(@active_tab, @package, release)}
                         class={version_item_class(@current_release.version == release.version)}
                       >
-                        <span class="select-none font-mono text-sm">{release.version}</span>
+                        <span class="font-mono text-sm">{release.version}</span>
                         <%= if release.retirement do %>
                           <span class="inline-flex items-center rounded border border-yellow-300 bg-yellow-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-yellow-900 dark:border-yellow-700/60 dark:bg-yellow-900/30 dark:text-yellow-100">
                             retired

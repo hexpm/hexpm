@@ -369,6 +369,12 @@ defmodule HexpmWeb.PackageControllerTest do
       |> get("/packages/#{package3.name}/0.0.1")
       |> response(404)
     end
+
+    test "version-pinned page links Dependencies tab to versioned dependencies",
+         %{package1: package1} do
+      body = response(get(build_conn(), "/packages/#{package1.name}/0.0.1"), 200)
+      assert body =~ "/packages/#{package1.name}/0.0.1/dependencies"
+    end
   end
 
   describe "GET /packages/:repository/:name/:version" do
@@ -699,6 +705,19 @@ defmodule HexpmWeb.PackageControllerTest do
         build_conn()
         |> test_login(user1)
         |> get("/packages/#{repository1.name}/#{package3.name}/0.0.1/dependencies")
+
+      assert response(conn, 200) =~ "Dependencies of"
+    end
+
+    test "renders for repository/name unversioned dependencies", %{
+      package3: package3,
+      repository1: repository1,
+      user1: user1
+    } do
+      conn =
+        build_conn()
+        |> test_login(user1)
+        |> get("/packages/#{repository1.name}/#{package3.name}/dependencies")
 
       assert response(conn, 200) =~ "Dependencies of"
     end
