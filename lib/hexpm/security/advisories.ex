@@ -37,35 +37,35 @@ defmodule Hexpm.Security.Advisories do
 
   defp upsert_advisories(multi, records) do
     Multi.run(multi, :upsert_advisories, fn repo, _ ->
-      rows = Enum.map(records, &advisory_row/1)
+      with {:ok, rows} <- advisory_rows(records) do
+        on_conflict_query =
+          from(a in Advisory,
+            update: [
+              set: [
+                summary: fragment("EXCLUDED.summary"),
+                aliases: fragment("EXCLUDED.aliases"),
+                modified_at: fragment("EXCLUDED.modified_at"),
+                withdrawn_at: fragment("EXCLUDED.withdrawn_at"),
+                cvss_vector: fragment("EXCLUDED.cvss_vector"),
+                cvss_score: fragment("EXCLUDED.cvss_score"),
+                cvss_rating: fragment("EXCLUDED.cvss_rating")
+              ]
+            ],
+            where: fragment("? IS DISTINCT FROM EXCLUDED.modified_at", a.modified_at)
+          )
 
-      on_conflict_query =
-        from(a in Advisory,
-          update: [
-            set: [
-              summary: fragment("EXCLUDED.summary"),
-              aliases: fragment("EXCLUDED.aliases"),
-              modified_at: fragment("EXCLUDED.modified_at"),
-              withdrawn_at: fragment("EXCLUDED.withdrawn_at"),
-              cvss_vector: fragment("EXCLUDED.cvss_vector"),
-              cvss_score: fragment("EXCLUDED.cvss_score"),
-              cvss_rating: fragment("EXCLUDED.cvss_rating")
-            ]
-          ],
-          where: fragment("? IS DISTINCT FROM EXCLUDED.modified_at", a.modified_at)
-        )
+        {_count, returned} =
+          repo.insert_all(
+            Advisory,
+            rows,
+            on_conflict: on_conflict_query,
+            conflict_target: [:id],
+            returning: [:id]
+          )
 
-      {_count, returned} =
-        repo.insert_all(
-          Advisory,
-          rows,
-          on_conflict: on_conflict_query,
-          conflict_target: [:id],
-          returning: [:id]
-        )
-
-      changed_ids = MapSet.new(returned, & &1.id)
-      {:ok, Map.new(records, &{&1.id, &1}) |> Map.filter(fn {id, _} -> id in changed_ids end)}
+        changed_ids = MapSet.new(returned, & &1.id)
+        {:ok, Map.new(records, &{&1.id, &1}) |> Map.filter(fn {id, _} -> id in changed_ids end)}
+      end
     end)
   end
 
@@ -85,23 +85,25 @@ defmodule Hexpm.Security.Advisories do
     end)
   end
 
-  defp advisory_row(record) do
-    params = %{
-      id: record.id,
-      summary: record.summary,
-      aliases: record.aliases,
-      published_at: record.published_at,
-      modified_at: record.modified_at,
-      withdrawn_at: record.withdrawn_at,
-      cvss_vector: record.cvss_vector,
-      cvss_score: record.cvss_score,
-      cvss_rating: record.cvss_rating
-    }
+  defp advisory_rows(records) do
+    Enum.reduce_while(records, {:ok, []}, fn record, {:ok, acc} ->
+      params = %{
+        id: record.id,
+        summary: record.summary,
+        aliases: record.aliases,
+        published_at: record.published_at,
+        modified_at: record.modified_at,
+        withdrawn_at: record.withdrawn_at,
+        cvss_vector: record.cvss_vector,
+        cvss_score: record.cvss_score,
+        cvss_rating: record.cvss_rating
+      }
 
-    {:ok, advisory} =
-      %Advisory{} |> Advisory.changeset(params) |> Ecto.Changeset.apply_action(:insert)
-
-    Map.take(advisory, @advisory_fields)
+      case %Advisory{} |> Advisory.changeset(params) |> Ecto.Changeset.apply_action(:insert) do
+        {:ok, advisory} -> {:cont, {:ok, [Map.take(advisory, @advisory_fields) | acc]}}
+        {:error, _} = error -> {:halt, error}
+      end
+    end)
   end
 
   defp filter_known_packages(affected, package_ids) do
