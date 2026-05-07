@@ -25,7 +25,7 @@ defmodule Hexpm.Security.Advisories do
         {:error, :not_leader}
       end
     end)
-    |> upsert_advisories(records, package_ids)
+    |> upsert_advisories(records)
     |> sync_references()
     |> sync_affected_versions(package_ids)
     |> sync_affected_packages(package_ids)
@@ -34,13 +34,9 @@ defmodule Hexpm.Security.Advisories do
     |> Repo.transaction(timeout: 60_000)
   end
 
-  defp upsert_advisories(multi, records, package_ids) do
+  defp upsert_advisories(multi, records) do
     Multi.run(multi, :upsert_advisories, fn repo, _ ->
-      rows =
-        Enum.map(records, fn record ->
-          affected = filter_known_packages(record.affected, package_ids)
-          advisory_row(record, affected, package_ids)
-        end)
+      rows = Enum.map(records, &advisory_row/1)
 
       on_conflict_query =
         from(a in Advisory,
@@ -72,8 +68,18 @@ defmodule Hexpm.Security.Advisories do
     end)
   end
 
-  defp advisory_row(record, affected, package_ids) do
-    params = build_params(record, affected, package_ids)
+  defp advisory_row(record) do
+    params = %{
+      id: record.id,
+      summary: record.summary,
+      aliases: record.aliases,
+      published_at: record.published_at,
+      modified_at: record.modified_at,
+      withdrawn_at: record.withdrawn_at,
+      cvss_vector: record.cvss_vector,
+      cvss_score: record.cvss_score,
+      cvss_rating: record.cvss_rating
+    }
 
     {:ok, advisory} =
       %Advisory{} |> Advisory.changeset(params) |> Ecto.Changeset.apply_action(:insert)
@@ -83,30 +89,6 @@ defmodule Hexpm.Security.Advisories do
 
   defp filter_known_packages(affected, package_ids) do
     Enum.filter(affected, fn %{package: name} -> Map.has_key?(package_ids, name) end)
-  end
-
-  defp build_params(record, affected, package_ids) do
-    affected_version_params =
-      Enum.flat_map(affected, fn %{package: name, requirements: requirements} ->
-        package_id = Map.fetch!(package_ids, name)
-        Enum.map(requirements, &%{package_id: package_id, requirement: &1})
-      end)
-
-    reference_params = Enum.map(record.references, &%{type: &1.type, url: &1.url})
-
-    %{
-      id: record.id,
-      summary: record.summary,
-      aliases: record.aliases,
-      published_at: record.published_at,
-      modified_at: record.modified_at,
-      withdrawn_at: record.withdrawn_at,
-      cvss_vector: record.cvss_vector,
-      cvss_score: record.cvss_score,
-      cvss_rating: record.cvss_rating,
-      references: reference_params,
-      affected_versions: affected_version_params
-    }
   end
 
   defp sync_references(multi) do
