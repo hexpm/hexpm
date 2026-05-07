@@ -129,6 +129,7 @@ defmodule Hexpm.Security.AdvisoriesTest do
     updated =
       record("GHSA-test-1234-abcd", "oidcc",
         summary: "Updated summary",
+        modified_at: ~U[2024-04-06 00:00:00Z],
         references: [%{type: "WEB", url: "https://new.example.com/"}],
         requirements: [Version.parse_requirement!(">= 3.0.0 and < 3.0.3")]
       )
@@ -219,6 +220,21 @@ defmodule Hexpm.Security.AdvisoriesTest do
 
     assert [%Advisory{id: "GHSA-rel"}] = Advisories.all(release_300)
     assert [] == Advisories.all(release_302)
+  end
+
+  test "upsert skips sync for unchanged advisories", %{package: package} do
+    record = record("GHSA-skip", "oidcc", versions: ["3.0.0"])
+
+    assert {:ok, %{upsert_advisories: changed}} =
+             Advisories.upsert([record], %{"oidcc" => package.id})
+
+    assert MapSet.member?(changed, "GHSA-skip")
+
+    # Second upsert with same modified_at — should be a no-op
+    assert {:ok, %{upsert_advisories: changed}} =
+             Advisories.upsert([record], %{"oidcc" => package.id})
+
+    assert MapSet.size(changed) == 0
   end
 
   test "affect_release_with_existing_advisories matches new release against ranges",

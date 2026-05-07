@@ -6,6 +6,8 @@ defmodule Hexpm.Security.Advisories do
   alias Hexpm.Security.Advisory
   alias Hexpm.Security.AdvisoryAffectedVersion
 
+  @advisory_fields ~w(id summary aliases published_at modified_at withdrawn_at cvss_vector cvss_score cvss_rating)a
+
   def all(subject) do
     subject
     |> Advisory.all()
@@ -24,34 +26,75 @@ defmodule Hexpm.Security.Advisories do
       end
     end)
     |> upsert_advisories(records, package_ids)
+    |> sync_advisories(records, package_ids)
     |> reconcile_advisories(records)
     |> Repo.transaction(timeout: 60_000)
   end
 
   defp upsert_advisories(multi, records, package_ids) do
+    Multi.run(multi, :upsert_advisories, fn repo, _ ->
+      rows =
+        Enum.map(records, fn record ->
+          affected = filter_known_packages(record.affected, package_ids)
+          advisory_row(record, affected, package_ids)
+        end)
+
+      on_conflict_query =
+        from(a in Advisory,
+          update: [
+            set: [
+              summary: fragment("EXCLUDED.summary"),
+              aliases: fragment("EXCLUDED.aliases"),
+              modified_at: fragment("EXCLUDED.modified_at"),
+              withdrawn_at: fragment("EXCLUDED.withdrawn_at"),
+              cvss_vector: fragment("EXCLUDED.cvss_vector"),
+              cvss_score: fragment("EXCLUDED.cvss_score"),
+              cvss_rating: fragment("EXCLUDED.cvss_rating")
+            ]
+          ],
+          where: fragment("? IS DISTINCT FROM EXCLUDED.modified_at", a.modified_at)
+        )
+
+      {_count, returned} =
+        repo.insert_all(
+          Advisory,
+          rows,
+          on_conflict: on_conflict_query,
+          conflict_target: [:id],
+          returning: [:id]
+        )
+
+      {:ok, MapSet.new(returned, & &1.id)}
+    end)
+  end
+
+  defp advisory_row(record, affected, package_ids) do
+    params = build_params(record, affected, package_ids)
+    {:ok, advisory} = %Advisory{} |> Advisory.changeset(params) |> Ecto.Changeset.apply_action(:insert)
+    Map.take(advisory, @advisory_fields)
+  end
+
+  defp sync_advisories(multi, records, package_ids) do
     Enum.reduce(records, multi, fn record, multi ->
-      Multi.run(multi, {:advisory, record.id}, fn repo, _ ->
-        upsert_advisory(repo, record, package_ids)
+      Multi.run(multi, {:sync_advisory, record.id}, fn repo, %{upsert_advisories: changed_ids} ->
+        if MapSet.member?(changed_ids, record.id) do
+          sync_changed_advisory(repo, record, package_ids)
+        else
+          {:ok, :skipped}
+        end
       end)
     end)
   end
 
-  defp upsert_advisory(repo, record, package_ids) do
+  defp sync_changed_advisory(repo, record, package_ids) do
+    advisory_id = record.id
     affected = filter_known_packages(record.affected, package_ids)
 
-    advisory =
-      case repo.get(Advisory, record.id) do
-        nil -> %Advisory{id: record.id}
-        existing -> repo.preload(existing, [:references, :affected_versions])
-      end
-
-    params = build_params(record, affected, package_ids)
-
-    with {:ok, advisory} <- advisory |> Advisory.changeset(params) |> repo.insert_or_update() do
-      {:ok, advisory} = sync_affected_packages(repo, advisory, affected, package_ids)
-      sync_affected_releases(repo, advisory, affected, package_ids)
-      {:ok, advisory}
-    end
+    sync_references(repo, advisory_id, record.references)
+    sync_affected_versions(repo, advisory_id, affected, package_ids)
+    sync_affected_packages(repo, advisory_id, affected, package_ids)
+    sync_affected_releases(repo, advisory_id, affected, package_ids)
+    {:ok, :synced}
   end
 
   defp filter_known_packages(affected, package_ids) do
@@ -82,9 +125,35 @@ defmodule Hexpm.Security.Advisories do
     }
   end
 
-  defp sync_affected_packages(repo, advisory, affected, package_ids) do
-    advisory_id = advisory.id
+  defp sync_references(repo, advisory_id, references) do
+    repo.delete_all(
+      from(r in "security_advisory_references", where: r.advisory_id == ^advisory_id)
+    )
 
+    rows = Enum.map(references, &%{advisory_id: advisory_id, type: &1.type, url: &1.url})
+
+    if rows != [] do
+      repo.insert_all("security_advisory_references", rows)
+    end
+  end
+
+  defp sync_affected_versions(repo, advisory_id, affected, package_ids) do
+    repo.delete_all(
+      from(v in "security_advisory_affected_versions", where: v.advisory_id == ^advisory_id)
+    )
+
+    rows =
+      Enum.flat_map(affected, fn %{package: name, requirements: requirements} ->
+        package_id = Map.fetch!(package_ids, name)
+        Enum.map(requirements, &%{advisory_id: advisory_id, package_id: package_id, requirement: to_string(&1)})
+      end)
+
+    if rows != [] do
+      repo.insert_all("security_advisory_affected_versions", rows)
+    end
+  end
+
+  defp sync_affected_packages(repo, advisory_id, affected, package_ids) do
     repo.delete_all(
       from p in "security_advisory_affected_packages", where: p.advisory_id == ^advisory_id
     )
@@ -100,12 +169,10 @@ defmodule Hexpm.Security.Advisories do
       repo.insert_all("security_advisory_affected_packages", rows)
     end
 
-    {:ok, advisory}
+    {:ok, advisory_id}
   end
 
-  defp sync_affected_releases(repo, advisory, affected, package_ids) do
-    advisory_id = advisory.id
-
+  defp sync_affected_releases(repo, advisory_id, affected, package_ids) do
     repo.delete_all(
       from r in "security_advisory_affected_releases", where: r.advisory_id == ^advisory_id
     )
