@@ -28,6 +28,7 @@ defmodule Hexpm.Security.Advisories do
     |> upsert_advisories(records, package_ids)
     |> sync_references(records)
     |> sync_affected_versions(records, package_ids)
+    |> sync_affected_packages(records, package_ids)
     |> sync_advisories(records, package_ids)
     |> reconcile_advisories(records)
     |> Repo.transaction(timeout: 60_000)
@@ -95,7 +96,6 @@ defmodule Hexpm.Security.Advisories do
     advisory_id = record.id
     affected = filter_known_packages(record.affected, package_ids)
 
-    sync_affected_packages(repo, advisory_id, affected, package_ids)
     sync_affected_releases(repo, advisory_id, affected, package_ids)
     {:ok, :synced}
   end
@@ -183,23 +183,33 @@ defmodule Hexpm.Security.Advisories do
     end)
   end
 
-  defp sync_affected_packages(repo, advisory_id, affected, package_ids) do
-    repo.delete_all(
-      from p in "security_advisory_affected_packages", where: p.advisory_id == ^advisory_id
-    )
+  defp sync_affected_packages(multi, records, package_ids) do
+    Multi.run(multi, :sync_affected_packages, fn repo, %{upsert_advisories: changed_ids} ->
+      changed_records = Enum.filter(records, &MapSet.member?(changed_ids, &1.id))
 
-    rows =
-      affected
-      |> Enum.map(fn %{package: name} ->
-        %{advisory_id: advisory_id, package_id: package_ids[name]}
-      end)
-      |> Enum.uniq()
+      advisory_ids = Enum.map(changed_records, & &1.id)
 
-    if rows != [] do
-      repo.insert_all("security_advisory_affected_packages", rows)
-    end
+      repo.delete_all(
+        from(p in "security_advisory_affected_packages", where: p.advisory_id in ^advisory_ids)
+      )
 
-    {:ok, advisory_id}
+      rows =
+        changed_records
+        |> Enum.flat_map(fn record ->
+          record.affected
+          |> filter_known_packages(package_ids)
+          |> Enum.map(fn %{package: name} ->
+            %{advisory_id: record.id, package_id: package_ids[name]}
+          end)
+        end)
+        |> Enum.uniq()
+
+      if rows != [] do
+        repo.insert_all("security_advisory_affected_packages", rows)
+      end
+
+      {:ok, :synced}
+    end)
   end
 
   defp sync_affected_releases(repo, advisory_id, affected, package_ids) do
