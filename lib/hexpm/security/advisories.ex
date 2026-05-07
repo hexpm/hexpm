@@ -27,6 +27,7 @@ defmodule Hexpm.Security.Advisories do
     end)
     |> upsert_advisories(records, package_ids)
     |> sync_references(records)
+    |> sync_affected_versions(records, package_ids)
     |> sync_advisories(records, package_ids)
     |> reconcile_advisories(records)
     |> Repo.transaction(timeout: 60_000)
@@ -94,7 +95,6 @@ defmodule Hexpm.Security.Advisories do
     advisory_id = record.id
     affected = filter_known_packages(record.affected, package_ids)
 
-    sync_affected_versions(repo, advisory_id, affected, package_ids)
     sync_affected_packages(repo, advisory_id, affected, package_ids)
     sync_affected_releases(repo, advisory_id, affected, package_ids)
     {:ok, :synced}
@@ -151,24 +151,36 @@ defmodule Hexpm.Security.Advisories do
     end)
   end
 
-  defp sync_affected_versions(repo, advisory_id, affected, package_ids) do
-    repo.delete_all(
-      from(v in "security_advisory_affected_versions", where: v.advisory_id == ^advisory_id)
-    )
+  defp sync_affected_versions(multi, records, package_ids) do
+    Multi.run(multi, :sync_affected_versions, fn repo, %{upsert_advisories: changed_ids} ->
+      changed_records = Enum.filter(records, &MapSet.member?(changed_ids, &1.id))
 
-    rows =
-      Enum.flat_map(affected, fn %{package: name, requirements: requirements} ->
-        package_id = Map.fetch!(package_ids, name)
+      advisory_ids = Enum.map(changed_records, & &1.id)
 
-        Enum.map(
-          requirements,
-          &%{advisory_id: advisory_id, package_id: package_id, requirement: to_string(&1)}
-        )
-      end)
+      repo.delete_all(
+        from(v in "security_advisory_affected_versions", where: v.advisory_id in ^advisory_ids)
+      )
 
-    if rows != [] do
-      repo.insert_all("security_advisory_affected_versions", rows)
-    end
+      rows =
+        Enum.flat_map(changed_records, fn record ->
+          affected = filter_known_packages(record.affected, package_ids)
+
+          Enum.flat_map(affected, fn %{package: name, requirements: requirements} ->
+            package_id = Map.fetch!(package_ids, name)
+
+            Enum.map(
+              requirements,
+              &%{advisory_id: record.id, package_id: package_id, requirement: to_string(&1)}
+            )
+          end)
+        end)
+
+      if rows != [] do
+        repo.insert_all("security_advisory_affected_versions", rows)
+      end
+
+      {:ok, :synced}
+    end)
   end
 
   defp sync_affected_packages(repo, advisory_id, affected, package_ids) do
