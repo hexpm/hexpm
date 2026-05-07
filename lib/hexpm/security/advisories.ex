@@ -3,6 +3,10 @@ defmodule Hexpm.Security.Advisories do
 
   import Ecto.Query
 
+  require Logger
+
+  alias Hexpm.Repository.Package
+  alias Hexpm.Repository.RegistryBuilder
   alias Hexpm.Security.Advisory
   alias Hexpm.Security.AdvisoryAffectedVersion
 
@@ -42,7 +46,9 @@ defmodule Hexpm.Security.Advisories do
     |> sync_affected_packages()
     |> sync_affected_releases()
     |> reconcile_advisories(records)
+    |> rebuild_package_registries()
     |> Repo.transaction(timeout: 60_000)
+    |> rebuild_repository_registries()
   end
 
   defp upsert_advisories(multi, records) do
@@ -273,14 +279,70 @@ defmodule Hexpm.Security.Advisories do
     end)
   end
 
+  defp rebuild_package_registries(multi) do
+    Multi.run(multi, :rebuild_package_registries, fn
+      repo, %{upsert_advisories: changed, reconcile: {_count, reconciled_package_ids}} ->
+        advisory_ids = Map.keys(changed)
+
+        upserted_packages =
+          repo.all(
+            from p in Package,
+              join: ap in "security_advisory_affected_packages",
+              on: ap.package_id == p.id,
+              where: ap.advisory_id in ^advisory_ids,
+              distinct: true,
+              preload: [:repository]
+          )
+
+        reconciled_packages =
+          repo.all(
+            from p in Package,
+              where: p.id in ^reconciled_package_ids,
+              preload: [:repository]
+          )
+
+        packages = Enum.uniq_by(upserted_packages ++ reconciled_packages, & &1.id)
+        Enum.each(packages, &RegistryBuilder.package/1)
+        {:ok, packages}
+    end)
+  end
+
+  defp rebuild_repository_registries({:ok, %{rebuild_package_registries: packages}} = result) do
+    metadata = Logger.metadata()
+
+    repositories =
+      packages
+      |> Enum.map(& &1.repository)
+      |> Enum.uniq_by(& &1.id)
+
+    Hexpm.Tasks
+    |> Task.Supervisor.async_stream_nolink(repositories, fn repository ->
+      Logger.metadata(metadata)
+      RegistryBuilder.repository(repository)
+    end)
+    |> Stream.run()
+
+    result
+  end
+
+  defp rebuild_repository_registries(result), do: result
+
   defp reconcile_advisories(multi, records) do
     seen_ids = Enum.map(records, & &1.id)
 
-    Multi.delete_all(
-      multi,
-      :reconcile,
-      from(a in Advisory, where: a.id not in ^seen_ids)
-    )
+    Multi.run(multi, :reconcile, fn repo, _changes ->
+      {count, rows} =
+        repo.delete_all(
+          from(a in Advisory,
+            where: a.id not in ^seen_ids,
+            join: p in "security_advisory_affected_packages",
+            on: p.advisory_id == a.id,
+            select: p.package_id
+          )
+        )
+
+      {:ok, {count, rows}}
+    end)
   end
 
   def affect_release_with_existing_advisories(repo, release) do
