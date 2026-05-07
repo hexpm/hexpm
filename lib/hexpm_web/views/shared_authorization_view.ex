@@ -146,26 +146,26 @@ defmodule HexpmWeb.SharedAuthorizationView do
             value={@scope}
             checked={@checked}
             disabled={@disabled}
-            class="scope-checkbox mt-1 h-4 w-4 rounded border-grey-300 text-primary-600 focus:ring-primary-500"
+            class="scope-checkbox mt-1 h-4 w-4 rounded border-grey-300 dark:border-grey-600 bg-white dark:bg-grey-900 text-primary-600 focus:ring-primary-500 dark:focus:ring-primary-400"
           />
           <input :if={@required} type="hidden" name="selected_scopes[]" value={@scope} />
           <div>
             <div class="flex items-center gap-2">
-              <code class="text-sm font-semibold text-grey-900">{@scope}</code>
+              <code class="text-sm font-semibold text-grey-900 dark:text-grey-100">{@scope}</code>
               <span
                 :if={@required}
-                class="inline-flex items-center rounded-full bg-grey-100 px-2 py-0.5 text-xs font-medium text-grey-700"
+                class="inline-flex items-center rounded-full bg-grey-100 dark:bg-grey-700 px-2 py-0.5 text-xs font-medium text-grey-700 dark:text-grey-200"
               >
                 Required
               </span>
               <span
                 :if={@requires_2fa}
-                class="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800"
+                class="inline-flex items-center rounded-full bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:text-yellow-200"
               >
                 Requires 2FA
               </span>
             </div>
-            <span class="text-sm text-grey-600">{@description}</span>
+            <span class="text-sm text-grey-600 dark:text-grey-300">{@description}</span>
           </div>
         </label>
       </li>
