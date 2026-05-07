@@ -223,18 +223,58 @@ defmodule Hexpm.Security.AdvisoriesTest do
   end
 
   test "upsert skips sync for unchanged advisories", %{package: package} do
-    record = record("GHSA-skip", "oidcc", versions: ["3.0.0"])
+    record =
+      record("GHSA-skip", "oidcc",
+        versions: ["3.0.0"],
+        requirements: [Version.parse_requirement!(">= 3.0.0 and < 3.0.2")],
+        references: [%{type: "WEB", url: "https://example.com/skip"}]
+      )
 
     assert {:ok, %{upsert_advisories: changed}} =
              Advisories.upsert([record], %{"oidcc" => package.id})
 
     assert Map.has_key?(changed, "GHSA-skip")
 
-    # Second upsert with same modified_at — should be a no-op
+    reference_ids = child_keys("security_advisory_references", "GHSA-skip", :id)
+    affected_version_ids = child_keys("security_advisory_affected_versions", "GHSA-skip", :id)
+
+    affected_package_links =
+      child_keys("security_advisory_affected_packages", "GHSA-skip", :package_id)
+
+    affected_release_links =
+      child_keys("security_advisory_affected_releases", "GHSA-skip", :release_id)
+
+    refute reference_ids == []
+    refute affected_version_ids == []
+    refute affected_package_links == []
+    refute affected_release_links == []
+
+    # Second upsert with same modified_at — sync steps must not churn child
+    # rows. References/affected_versions keep their primary keys (proves no
+    # delete+reinsert); join tables preserve their links.
     assert {:ok, %{upsert_advisories: changed}} =
              Advisories.upsert([record], %{"oidcc" => package.id})
 
     assert map_size(changed) == 0
+    assert child_keys("security_advisory_references", "GHSA-skip", :id) == reference_ids
+
+    assert child_keys("security_advisory_affected_versions", "GHSA-skip", :id) ==
+             affected_version_ids
+
+    assert child_keys("security_advisory_affected_packages", "GHSA-skip", :package_id) ==
+             affected_package_links
+
+    assert child_keys("security_advisory_affected_releases", "GHSA-skip", :release_id) ==
+             affected_release_links
+  end
+
+  defp child_keys(table, advisory_id, column) do
+    from(r in table,
+      where: r.advisory_id == ^advisory_id,
+      order_by: field(r, ^column),
+      select: field(r, ^column)
+    )
+    |> Repo.all()
   end
 
   test "affect_release_with_existing_advisories matches new release against ranges",
