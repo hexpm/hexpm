@@ -109,35 +109,27 @@ defmodule Hexpm.Security.Advisories do
   end
 
   defp sync_references(multi) do
-    Multi.run(multi, :sync_references, fn repo, %{changed_advisories: changed} ->
-      advisory_ids = Map.keys(changed)
-
-      repo.delete_all(
-        from(r in "security_advisory_references", where: r.advisory_id in ^advisory_ids)
-      )
-
-      rows =
+    multi
+    |> Multi.delete_all(:delete_references, fn %{changed_advisories: changed} ->
+      from(r in "security_advisory_references", where: r.advisory_id in ^Map.keys(changed))
+    end)
+    |> Multi.insert_all(:insert_references, "security_advisory_references", fn
+      %{changed_advisories: changed} ->
         Enum.flat_map(changed, fn {id, {record, _affected}} ->
           Enum.map(record.references, &%{advisory_id: id, type: &1.type, url: &1.url})
         end)
-
-      if rows != [] do
-        repo.insert_all("security_advisory_references", rows)
-      end
-
-      {:ok, :synced}
     end)
   end
 
   defp sync_affected_versions(multi) do
-    Multi.run(multi, :sync_affected_versions, fn repo, %{changed_advisories: changed} ->
-      advisory_ids = Map.keys(changed)
-
-      repo.delete_all(
-        from(v in "security_advisory_affected_versions", where: v.advisory_id in ^advisory_ids)
+    multi
+    |> Multi.delete_all(:delete_affected_versions, fn %{changed_advisories: changed} ->
+      from(v in "security_advisory_affected_versions",
+        where: v.advisory_id in ^Map.keys(changed)
       )
-
-      rows =
+    end)
+    |> Multi.insert_all(:insert_affected_versions, "security_advisory_affected_versions", fn
+      %{changed_advisories: changed} ->
         Enum.flat_map(changed, fn {id, {_record, affected}} ->
           Enum.flat_map(affected, fn %{package_id: package_id, requirements: requirements} ->
             Enum.map(
@@ -146,93 +138,54 @@ defmodule Hexpm.Security.Advisories do
             )
           end)
         end)
-
-      if rows != [] do
-        repo.insert_all("security_advisory_affected_versions", rows)
-      end
-
-      {:ok, :synced}
     end)
   end
 
   defp sync_affected_packages(multi) do
-    Multi.run(multi, :sync_affected_packages, fn repo, %{changed_advisories: changed} ->
-      advisory_ids = Map.keys(changed)
-
-      repo.delete_all(
-        from(p in "security_advisory_affected_packages", where: p.advisory_id in ^advisory_ids)
+    multi
+    |> Multi.delete_all(:delete_affected_packages, fn %{changed_advisories: changed} ->
+      from(p in "security_advisory_affected_packages",
+        where: p.advisory_id in ^Map.keys(changed)
       )
-
-      rows =
+    end)
+    |> Multi.insert_all(:insert_affected_packages, "security_advisory_affected_packages", fn
+      %{changed_advisories: changed} ->
         changed
         |> Enum.flat_map(fn {id, {_record, affected}} ->
           Enum.map(affected, &%{advisory_id: id, package_id: &1.package_id})
         end)
         |> Enum.uniq()
-
-      if rows != [] do
-        repo.insert_all("security_advisory_affected_packages", rows)
-      end
-
-      {:ok, :synced}
     end)
   end
 
   defp sync_affected_releases(multi) do
-    Multi.run(multi, :sync_affected_releases, fn repo, %{changed_advisories: changed} ->
-      advisory_ids = Map.keys(changed)
-
-      repo.delete_all(
-        from(r in "security_advisory_affected_releases", where: r.advisory_id in ^advisory_ids)
+    multi
+    |> Multi.delete_all(:delete_affected_releases, fn %{changed_advisories: changed} ->
+      from(r in "security_advisory_affected_releases",
+        where: r.advisory_id in ^Map.keys(changed)
       )
-
+    end)
+    |> Multi.all(:load_releases, fn %{changed_advisories: changed} ->
       all_package_ids =
         changed
         |> Enum.flat_map(fn {_id, {_record, affected}} -> Enum.map(affected, & &1.package_id) end)
         |> Enum.uniq()
 
-      releases =
-        repo.all(
-          from r in Hexpm.Repository.Release,
-            where: r.package_id in ^all_package_ids,
-            select: {r.id, r.package_id, r.version}
-        )
+      from r in Hexpm.Repository.Release,
+        where: r.package_id in ^all_package_ids,
+        select: {r.id, r.package_id, r.version}
+    end)
+    |> Multi.insert_all(:insert_affected_releases, "security_advisory_affected_releases", fn
+      %{changed_advisories: changed, load_releases: releases} ->
+        releases_by_package = Enum.group_by(releases, &elem(&1, 1), &{elem(&1, 0), elem(&1, 2)})
 
-      releases_by_package = Enum.group_by(releases, &elem(&1, 1), &{elem(&1, 0), elem(&1, 2)})
-
-      rows =
-        Enum.flat_map(changed, fn {id, {_record, affected}} ->
-          affected
-          |> Enum.flat_map(fn
-            %{
-              package_id: package_id,
-              requirements: requirements,
-              versions: versions
-            } ->
-              package_releases = Map.get(releases_by_package, package_id, [])
-
-              matching_by_requirement =
-                for {release_id, version} <- package_releases,
-                    requirement <- requirements,
-                    Version.match?(version, requirement),
-                    do: release_id
-
-              matching_by_version =
-                for {release_id, version} <- package_releases,
-                    to_string(version) in versions,
-                    do: release_id
-
-              Enum.uniq(matching_by_requirement ++ matching_by_version)
-          end)
-          |> Enum.uniq()
-          |> Enum.map(&%{advisory_id: id, release_id: &1})
-        end)
-
-      if rows != [] do
-        repo.insert_all("security_advisory_affected_releases", rows)
-      end
-
-      {:ok, :synced}
+        for {id, {_record, affected}} <- changed,
+            %{package_id: package_id, requirements: requirements, versions: versions} <- affected,
+            {release_id, version} <- Map.get(releases_by_package, package_id, []),
+            Enum.any?(requirements, &Version.match?(version, &1)) or
+              to_string(version) in versions,
+            uniq: true,
+            do: %{advisory_id: id, release_id: release_id}
     end)
   end
 
