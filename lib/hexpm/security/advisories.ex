@@ -26,10 +26,11 @@ defmodule Hexpm.Security.Advisories do
       end
     end)
     |> upsert_advisories(records)
+    |> prepare_changed(package_ids)
     |> sync_references()
-    |> sync_affected_versions(package_ids)
-    |> sync_affected_packages(package_ids)
-    |> sync_affected_releases(package_ids)
+    |> sync_affected_versions()
+    |> sync_affected_packages()
+    |> sync_affected_releases()
     |> reconcile_advisories(records)
     |> Repo.transaction(timeout: 60_000)
   end
@@ -68,6 +69,22 @@ defmodule Hexpm.Security.Advisories do
     end)
   end
 
+  defp prepare_changed(multi, package_ids) do
+    Multi.run(multi, :changed_advisories, fn _repo, %{upsert_advisories: changed_records} ->
+      enriched =
+        Map.new(changed_records, fn {id, record} ->
+          affected =
+            record.affected
+            |> filter_known_packages(package_ids)
+            |> Enum.map(fn entry -> Map.put(entry, :package_id, package_ids[entry.package]) end)
+
+          {id, {record, affected}}
+        end)
+
+      {:ok, enriched}
+    end)
+  end
+
   defp advisory_row(record) do
     params = %{
       id: record.id,
@@ -92,17 +109,16 @@ defmodule Hexpm.Security.Advisories do
   end
 
   defp sync_references(multi) do
-    Multi.run(multi, :sync_references, fn repo, %{upsert_advisories: changed_records} ->
-      changed_records = Map.values(changed_records)
-      advisory_ids = Enum.map(changed_records, & &1.id)
+    Multi.run(multi, :sync_references, fn repo, %{changed_advisories: changed} ->
+      advisory_ids = Map.keys(changed)
 
       repo.delete_all(
         from(r in "security_advisory_references", where: r.advisory_id in ^advisory_ids)
       )
 
       rows =
-        Enum.flat_map(changed_records, fn record ->
-          Enum.map(record.references, &%{advisory_id: record.id, type: &1.type, url: &1.url})
+        Enum.flat_map(changed, fn {id, {record, _affected}} ->
+          Enum.map(record.references, &%{advisory_id: id, type: &1.type, url: &1.url})
         end)
 
       if rows != [] do
@@ -113,25 +129,20 @@ defmodule Hexpm.Security.Advisories do
     end)
   end
 
-  defp sync_affected_versions(multi, package_ids) do
-    Multi.run(multi, :sync_affected_versions, fn repo, %{upsert_advisories: changed_records} ->
-      changed_records = Map.values(changed_records)
-      advisory_ids = Enum.map(changed_records, & &1.id)
+  defp sync_affected_versions(multi) do
+    Multi.run(multi, :sync_affected_versions, fn repo, %{changed_advisories: changed} ->
+      advisory_ids = Map.keys(changed)
 
       repo.delete_all(
         from(v in "security_advisory_affected_versions", where: v.advisory_id in ^advisory_ids)
       )
 
       rows =
-        Enum.flat_map(changed_records, fn record ->
-          affected = filter_known_packages(record.affected, package_ids)
-
-          Enum.flat_map(affected, fn %{package: name, requirements: requirements} ->
-            package_id = Map.fetch!(package_ids, name)
-
+        Enum.flat_map(changed, fn {id, {_record, affected}} ->
+          Enum.flat_map(affected, fn %{package_id: package_id, requirements: requirements} ->
             Enum.map(
               requirements,
-              &%{advisory_id: record.id, package_id: package_id, requirement: to_string(&1)}
+              &%{advisory_id: id, package_id: package_id, requirement: to_string(&1)}
             )
           end)
         end)
@@ -144,23 +155,18 @@ defmodule Hexpm.Security.Advisories do
     end)
   end
 
-  defp sync_affected_packages(multi, package_ids) do
-    Multi.run(multi, :sync_affected_packages, fn repo, %{upsert_advisories: changed_records} ->
-      changed_records = Map.values(changed_records)
-      advisory_ids = Enum.map(changed_records, & &1.id)
+  defp sync_affected_packages(multi) do
+    Multi.run(multi, :sync_affected_packages, fn repo, %{changed_advisories: changed} ->
+      advisory_ids = Map.keys(changed)
 
       repo.delete_all(
         from(p in "security_advisory_affected_packages", where: p.advisory_id in ^advisory_ids)
       )
 
       rows =
-        changed_records
-        |> Enum.flat_map(fn record ->
-          record.affected
-          |> filter_known_packages(package_ids)
-          |> Enum.map(fn %{package: name} ->
-            %{advisory_id: record.id, package_id: package_ids[name]}
-          end)
+        changed
+        |> Enum.flat_map(fn {id, {_record, affected}} ->
+          Enum.map(affected, &%{advisory_id: id, package_id: &1.package_id})
         end)
         |> Enum.uniq()
 
@@ -172,22 +178,17 @@ defmodule Hexpm.Security.Advisories do
     end)
   end
 
-  defp sync_affected_releases(multi, package_ids) do
-    Multi.run(multi, :sync_affected_releases, fn repo, %{upsert_advisories: changed_records} ->
-      changed_records = Map.values(changed_records)
-      advisory_ids = Enum.map(changed_records, & &1.id)
+  defp sync_affected_releases(multi) do
+    Multi.run(multi, :sync_affected_releases, fn repo, %{changed_advisories: changed} ->
+      advisory_ids = Map.keys(changed)
 
       repo.delete_all(
         from(r in "security_advisory_affected_releases", where: r.advisory_id in ^advisory_ids)
       )
 
       all_package_ids =
-        changed_records
-        |> Enum.flat_map(fn record ->
-          record.affected
-          |> filter_known_packages(package_ids)
-          |> Enum.map(fn %{package: name} -> package_ids[name] end)
-        end)
+        changed
+        |> Enum.flat_map(fn {_id, {_record, affected}} -> Enum.map(affected, & &1.package_id) end)
         |> Enum.uniq()
 
       releases =
@@ -200,28 +201,31 @@ defmodule Hexpm.Security.Advisories do
       releases_by_package = Enum.group_by(releases, &elem(&1, 1), &{elem(&1, 0), elem(&1, 2)})
 
       rows =
-        Enum.flat_map(changed_records, fn record ->
-          record.affected
-          |> filter_known_packages(package_ids)
-          |> Enum.flat_map(fn %{package: name, requirements: requirements, versions: versions} ->
-            package_id = package_ids[name]
-            package_releases = Map.get(releases_by_package, package_id, [])
+        Enum.flat_map(changed, fn {id, {_record, affected}} ->
+          affected
+          |> Enum.flat_map(fn
+            %{
+              package_id: package_id,
+              requirements: requirements,
+              versions: versions
+            } ->
+              package_releases = Map.get(releases_by_package, package_id, [])
 
-            matching_by_requirement =
-              for {id, version} <- package_releases,
-                  requirement <- requirements,
-                  Version.match?(version, requirement),
-                  do: id
+              matching_by_requirement =
+                for {release_id, version} <- package_releases,
+                    requirement <- requirements,
+                    Version.match?(version, requirement),
+                    do: release_id
 
-            matching_by_version =
-              for {id, version} <- package_releases,
-                  to_string(version) in versions,
-                  do: id
+              matching_by_version =
+                for {release_id, version} <- package_releases,
+                    to_string(version) in versions,
+                    do: release_id
 
-            Enum.uniq(matching_by_requirement ++ matching_by_version)
+              Enum.uniq(matching_by_requirement ++ matching_by_version)
           end)
           |> Enum.uniq()
-          |> Enum.map(&%{advisory_id: record.id, release_id: &1})
+          |> Enum.map(&%{advisory_id: id, release_id: &1})
         end)
 
       if rows != [] do
