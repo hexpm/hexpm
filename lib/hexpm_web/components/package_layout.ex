@@ -81,10 +81,17 @@ defmodule HexpmWeb.Components.PackageLayout do
       |> assign(:tabs, tabs)
       |> assign(:active_package_tab, Enum.find(tabs, & &1.active))
 
+    flash_visible = assigns.current_release && assigns.current_release.vulnerable?
+    assigns = assign(assigns, :flash_visible, flash_visible)
+
     ~H"""
     <div class="bg-grey-50 dark:bg-grey-950 min-h-screen">
       <%!-- Header Section --%>
-      <div class="max-w-7xl mx-auto px-4 pt-8 pb-2 lg:pb-6">
+      <div class={[
+        "max-w-7xl mx-auto px-4 pt-8",
+        @flash_visible && "pb-0 lg:pb-0",
+        !@flash_visible && "pb-2 lg:pb-6"
+      ]}>
         <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 lg:gap-12">
           <%!-- Left: Package Name, Version, Description --%>
           <div class="flex flex-col gap-2">
@@ -122,6 +129,18 @@ defmodule HexpmWeb.Components.PackageLayout do
             <%= if @current_release && @current_release.retirement do %>
               <div class="bg-red-50 border border-red-200 rounded-lg px-4 py-3 mt-2 text-sm text-red-800">
                 {HexpmWeb.PackageView.retirement_html(@current_release.retirement)}
+              </div>
+            <% end %>
+            <%= if @current_release && @current_release.vulnerable? do %>
+              <div class="bg-red-600 border border-red-700 rounded-lg px-4 py-3 mt-2 text-sm text-white">
+                <strong>Security advisory:</strong>
+                This version has known vulnerabilities.
+                <a
+                  href={advisories_path(@package)}
+                  class="underline font-semibold hover:text-red-100"
+                >
+                  View advisories
+                </a>
               </div>
             <% end %>
           </div>
@@ -512,6 +531,12 @@ defmodule HexpmWeb.Components.PackageLayout do
   defp dependencies_path(package),
     do: "/packages/#{package.repository.name}/#{package.name}/dependencies"
 
+  defp advisories_path(%{repository: %{id: 1}} = package),
+    do: "/packages/#{package.name}/advisories"
+
+  defp advisories_path(package),
+    do: "/packages/#{package.repository.name}/#{package.name}/advisories"
+
   defp package_tabs(assigns) do
     [
       %{
@@ -543,7 +568,8 @@ defmodule HexpmWeb.Components.PackageLayout do
           label: "Activity",
           path: audit_logs_path(assigns.package)
         }
-      ]
+      ] ++
+      advisories_tab(assigns)
   end
 
   defp dependency_tab(%{current_release: nil}), do: []
@@ -560,13 +586,30 @@ defmodule HexpmWeb.Components.PackageLayout do
     ]
   end
 
+  defp advisories_tab(%{package: %{security_advisories: []}, active_tab: active})
+       when active != :advisories,
+       do: []
+
+  defp advisories_tab(assigns) do
+    count = length(assigns.package.security_advisories)
+
+    [
+      %{
+        active: assigns.active_tab == :advisories,
+        icon: "shield-exclamation",
+        label: "#{count} #{pluralize(count, "Advisory", "Advisories")}",
+        path: advisories_path(assigns.package)
+      }
+    ]
+  end
+
   defp tab_class(true),
     do:
-      "flex items-center gap-1 px-[18px] py-3 text-grey-900 dark:text-white font-medium border-b-2 border-primary-default dark:border-white -mb-px whitespace-nowrap"
+      "flex items-center gap-1 px-[15px] py-3 text-grey-900 dark:text-white font-medium border-b-2 border-primary-default dark:border-white -mb-px whitespace-nowrap"
 
   defp tab_class(false),
     do:
-      "flex items-center gap-1 px-[18px] py-3 text-grey-500 dark:text-grey-300 font-medium hover:text-grey-700 dark:hover:text-grey-200 transition-colors whitespace-nowrap"
+      "flex items-center gap-1 px-[15px] py-3 text-grey-500 dark:text-grey-300 font-medium hover:text-grey-700 dark:hover:text-grey-200 transition-colors whitespace-nowrap"
 
   defp mobile_tab_class(true),
     do:

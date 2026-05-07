@@ -49,6 +49,9 @@ defmodule Hexpm.Repository.Releases do
     |> Multi.run(:reserved_packages, fn _, _ -> {:ok, reserved_packages(repository, meta)} end)
     |> create_package(repository, package, user, meta)
     |> create_release(package, user, inner_checksum, outer_checksum, meta, replace?)
+    |> Multi.run(:matched_advisories, fn repo, %{release: release} ->
+      Hexpm.Security.Advisories.affect_release_with_existing_advisories(repo, release)
+    end)
     |> audit_publish(audit_data)
     |> Repo.transaction(timeout: @publish_timeout)
     |> publish_result(user, body)
@@ -331,4 +334,7 @@ defmodule Hexpm.Repository.Releases do
   defp preload_field(release, :requirements), do: {:requirements, Release.requirements(release)}
   defp preload_field(release, :downloads), do: {:downloads, ReleaseDownload.release(release)}
   defp preload_field(_release, :publisher), do: {:publisher, [:emails, :organization]}
+
+  defp preload_field(_release, :security_advisories),
+    do: {:security_advisories, [:references, :affected_versions]}
 end

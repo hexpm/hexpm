@@ -1,6 +1,8 @@
 defmodule HexpmWeb.PackageController do
   use HexpmWeb, :controller
 
+  alias Hexpm.Security.Advisories
+
   @packages_per_page 30
   @versions_per_page 100
   @activity_per_page 100
@@ -174,6 +176,36 @@ defmodule HexpmWeb.PackageController do
     end)
   end
 
+  def advisories(conn, params) do
+    access_package(conn, params, fn package, _repositories ->
+      releases = Releases.all(package)
+      current_release = current_release(releases)
+      advisories = Advisories.all(package)
+
+      dependants_count =
+        Packages.count(
+          [package.repository],
+          "depends:#{package.repository.name}:#{package.name}"
+        )
+
+      render(
+        conn,
+        "advisories.html",
+        [
+          title: "Security Advisories for #{package.name}",
+          container: "container",
+          package: package,
+          releases: releases,
+          current_release: current_release,
+          advisories: advisories,
+          dependants_count: dependants_count,
+          versions_count: Enum.count(releases),
+          repository_name: package.repository.name
+        ] ++ sidebar_assigns(package, releases, current_release)
+      )
+    end)
+  end
+
   def audit_logs(conn, params) do
     access_package(conn, params, fn package, repositories ->
       page_param = Hexpm.Utils.safe_int(params["page"]) || 1
@@ -238,7 +270,9 @@ defmodule HexpmWeb.PackageController do
 
   defp package(conn, repositories, package, releases, release, type) do
     repository = package.repository
-    release = Releases.preload(release, [:requirements, :downloads, :publisher])
+
+    release =
+      Releases.preload(release, [:requirements, :downloads, :publisher, :security_advisories])
 
     latest_release_with_docs =
       Release.latest_version(releases,

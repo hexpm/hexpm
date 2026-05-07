@@ -29,12 +29,23 @@ defmodule Hexpm.Repository.Packages do
 
   def get(repositories, name) when is_list(repositories) do
     Repo.get_by(assoc(repositories, :packages), name: name)
-    |> Repo.preload(:repository)
+    |> Repo.preload([:repository, security_advisories: active_advisories_preload()])
   end
 
   def get(repository, name) do
     package = Repo.get_by(assoc(repository, :packages), name: name)
-    package && %{package | repository: repository}
+
+    package &&
+      Repo.preload(%{package | repository: repository},
+        security_advisories: active_advisories_preload()
+      )
+  end
+
+  defp active_advisories_preload do
+    from a in Hexpm.Security.Advisory,
+      where: is_nil(a.withdrawn_at),
+      order_by: [desc: a.published_at],
+      preload: [:references, :affected_versions]
   end
 
   def owner_with_access?(package, user, level \\ "maintainer") do
@@ -201,5 +212,17 @@ defmodule Hexpm.Repository.Packages do
     user.owned_packages
     |> Enum.filter(&(&1.repository_id in repository_ids))
     |> Enum.sort_by(&[sorter.(&1.repository), &1.name])
+  end
+
+  @spec resolve_hexpm_package_ids(package_names :: [name]) :: %{optional(name) => pos_integer()}
+        when name: String.t()
+  def resolve_hexpm_package_ids(package_names) do
+    from(package in Package,
+      join: repository in assoc(package, :repository),
+      where: repository.name == "hexpm" and package.name in ^package_names,
+      select: {package.name, package.id}
+    )
+    |> Repo.all()
+    |> Map.new()
   end
 end

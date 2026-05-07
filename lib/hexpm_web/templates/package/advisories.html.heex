@@ -1,0 +1,136 @@
+<.package_layout
+  active_tab={:advisories}
+  current_release={@current_release}
+  daily_graph={@daily_graph}
+  dependants_count={@dependants_count}
+  docs_html_url={@docs_html_url}
+  downloads={@downloads}
+  owners={@owners}
+  package={@package}
+  repository_name={@repository_name}
+  versions_count={@versions_count}
+>
+  <:inner_content>
+    <%= if Enum.empty?(@advisories) do %>
+      <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-12 text-center">
+        <span class="flex justify-center mb-3 text-grey-300 dark:text-grey-500">
+          {HexpmWeb.ViewIcons.icon(:heroicon, "shield-check", class: "size-10")}
+        </span>
+        <p class="text-grey-500 dark:text-grey-300">
+          No security advisories found for this package.
+        </p>
+      </div>
+    <% else %>
+      <div class="space-y-4">
+        <%= for advisory <- @advisories do %>
+          <% aliases = advisory.aliases || []
+          references = advisory.references || []
+          severity = cvss_severity(advisory) %>
+          <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-5">
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1 flex-wrap">
+                  <a
+                    href={"https://osv.dev/vulnerability/#{URI.encode(advisory.id)}"}
+                    class="font-semibold text-grey-900 dark:text-grey-100 hover:text-purple-600 dark:hover:text-primary-300 transition-colors font-mono text-sm"
+                    rel="nofollow"
+                  >
+                    {advisory.id}
+                  </a>
+                  <%= for alias_id <- aliases do %>
+                    <span class="text-grey-400 dark:text-grey-400 text-xs font-mono">
+                      {alias_id}
+                    </span>
+                  <% end %>
+                </div>
+                <p class="text-grey-700 dark:text-grey-300 text-sm mt-1">{advisory.summary}</p>
+              </div>
+              <%= if advisory.published_at do %>
+                <span
+                  class="text-grey-400 dark:text-grey-400 text-xs whitespace-nowrap"
+                  title={ViewHelpers.pretty_datetime(advisory.published_at)}
+                >
+                  {ViewHelpers.pretty_date(advisory.published_at)}
+                </span>
+              <% end %>
+            </div>
+            <div class="mt-3 pt-3 border-t border-grey-100 dark:border-grey-700 flex flex-col gap-3">
+              <%= if severity do %>
+                <div>
+                  <div class="flex items-center gap-1.5 mb-1.5">
+                    <span class="text-grey-400 dark:text-grey-400 text-xs font-medium uppercase tracking-wide leading-none">
+                      CVSS
+                    </span>
+                    <div class="relative group flex items-center">
+                      <span class="inline-flex items-center justify-center size-4 rounded-full bg-grey-200 dark:bg-grey-600 text-grey-500 dark:text-grey-300 text-[10px] font-bold cursor-default leading-none -mt-px">
+                        ?
+                      </span>
+                      <div class="absolute bottom-full left-0 mb-1.5 hidden group-hover:block z-10">
+                        <div class="bg-grey-900 dark:bg-grey-700 text-white text-xs rounded-lg px-3 py-2 w-56 shadow-lg">
+                          The Common Vulnerability Scoring System (CVSS) is an open standard for rating the severity of security vulnerabilities on a scale from 0.0 to 10.0.
+                          <div class="absolute top-full left-2 border-4 border-transparent border-t-grey-900 dark:border-t-grey-700">
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="text-grey-700 dark:text-grey-200 text-sm font-semibold">
+                      {severity.score} / 10.0
+                    </span>
+                    <.badge variant={severity_badge_variant(severity.rating)}>
+                      {String.capitalize(severity.rating)}
+                    </.badge>
+                  </div>
+                  <a
+                    href={cvss_calculator_url(severity.vector)}
+                    class="text-xs font-mono text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline break-all"
+                    rel="nofollow"
+                    title="Open in CVSS calculator"
+                  >
+                    {severity.vector}
+                  </a>
+                </div>
+              <% end %>
+              <% affected_requirements = affected_requirements_for(advisory, @package) %>
+              <%= if affected_requirements != [] do %>
+                <div>
+                  <p class="text-grey-400 dark:text-grey-400 text-xs font-medium uppercase tracking-wide mb-1.5">
+                    Affected Versions
+                  </p>
+                  <div class="flex flex-wrap gap-1.5">
+                    <%= for req <- affected_requirements do %>
+                      <span class="bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-xs font-mono px-2 py-0.5 rounded">
+                        {to_string(req)}
+                      </span>
+                    <% end %>
+                  </div>
+                </div>
+              <% end %>
+              <%= if references != [] do %>
+                <div>
+                  <p class="text-grey-400 dark:text-grey-400 text-xs font-medium uppercase tracking-wide mb-1.5">
+                    References
+                  </p>
+                  <ul class="space-y-1">
+                    <%= for ref <- references do %>
+                      <li>
+                        <a
+                          href={ref.url}
+                          class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline break-all"
+                          rel="nofollow"
+                        >
+                          {ref.url}
+                        </a>
+                      </li>
+                    <% end %>
+                  </ul>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </:inner_content>
+</.package_layout>

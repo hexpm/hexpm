@@ -247,4 +247,36 @@ defmodule HexpmWeb.PackageView do
     do: "#{base_message} #{release_version}"
 
   defp version_from_params(params) when is_map(params), do: params["release"]["version"]
+
+  def affected_requirements_for(advisory, package) do
+    advisory.affected_versions
+    |> Enum.filter(&(&1.package_id == package.id))
+    |> Enum.map(& &1.requirement)
+  end
+
+  def cvss_severity(%Hexpm.Security.Advisory{
+        cvss_vector: vector,
+        cvss_score: score,
+        cvss_rating: rating
+      })
+      when is_binary(vector) and is_number(score) and is_binary(rating) do
+    %{score: score, rating: rating, vector: vector}
+  end
+
+  def cvss_severity(_), do: nil
+
+  def severity_badge_variant("critical"), do: "red"
+  def severity_badge_variant("high"), do: "red"
+  def severity_badge_variant("medium"), do: "yellow"
+  def severity_badge_variant("low"), do: "blue"
+  def severity_badge_variant(_), do: "default"
+
+  def cvss_calculator_url(vector) do
+    "https://www.first.org/cvss/calculator/#{cvss_version(vector)}##{vector}"
+  end
+
+  defp cvss_version(<<"CVSS:4.0/", _::binary>>), do: "4.0"
+  defp cvss_version(<<"CVSS:3.1/", _::binary>>), do: "3.1"
+  defp cvss_version(<<"CVSS:3.0/", _::binary>>), do: "3.0"
+  defp cvss_version(_), do: "3.1"
 end

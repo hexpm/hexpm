@@ -1329,6 +1329,8 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
                "http://localhost:5002/#{package.name}/#{release.version}/"
 
       assert result["version"] == "#{release.version}"
+
+      assert result["security_advisories"] == []
     end
 
     test "get unknown release", %{package: package} do
@@ -1358,6 +1360,46 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       assert result["html_url"] =~ "/packages/#{package.name}/#{release.version}"
       assert result["version"] == "#{release.version}"
       assert result["requirements"][package2.name]["requirement"] == "~> 0.0.1"
+    end
+
+    test "get release with security advisories", %{package: package, release: release} do
+      result =
+        build_conn()
+        |> get("/api/packages/#{package.name}/releases/#{release.version}")
+        |> json_response(200)
+
+      assert result["version"] == "#{release.version}"
+      assert result["security_advisories"] == []
+
+      record = %{
+        id: "GHSA-test-1234-abcd",
+        summary: "Test security vulnerability",
+        aliases: [],
+        published_at: ~U[2024-04-03 16:46:30Z],
+        modified_at: ~U[2024-04-05 01:28:39Z],
+        withdrawn_at: nil,
+        cvss_vector: nil,
+        cvss_score: nil,
+        cvss_rating: nil,
+        references: [],
+        affected: [
+          %{package: package.name, requirements: [], versions: ["0.0.1"]}
+        ]
+      }
+
+      Hexpm.Security.Advisories.upsert([record], %{package.name => package.id})
+
+      result =
+        build_conn()
+        |> get("/api/packages/#{package.name}/releases/#{release.version}")
+        |> json_response(200)
+
+      assert result["url"] =~ "/api/packages/#{package.name}/releases/#{release.version}"
+      assert result["html_url"] =~ "/packages/#{package.name}/#{release.version}"
+      assert result["version"] == "#{release.version}"
+      assert length(result["security_advisories"]) == 1
+      assert hd(result["security_advisories"])["id"] == "GHSA-test-1234-abcd"
+      assert hd(result["security_advisories"])["summary"] == "Test security vulnerability"
     end
   end
 
