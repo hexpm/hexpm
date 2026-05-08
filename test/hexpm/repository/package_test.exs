@@ -48,7 +48,7 @@ defmodule Hexpm.Repository.PackageTest do
     assert package.meta.description == "updated"
   end
 
-  test "update package with invalid license", %{user: user, repository: repository} do
+  test "update private package with invalid license", %{user: user, repository: repository} do
     package =
       Package.build(repository, user, pkg_meta(%{name: "ecto", description: "original"}))
       |> Hexpm.Repo.insert!()
@@ -63,6 +63,32 @@ defmodule Hexpm.Repository.PackageTest do
 
     package = Hexpm.Repo.get_by(Package, name: "ecto")
     assert package.meta.description == "updated"
+  end
+
+  test "validate invalid license on update for public package", %{
+    user: user,
+    public_repository: repository
+  } do
+    repository = %{repository | id: 1}
+
+    package =
+      Package.build(
+        repository,
+        user,
+        pkg_meta(%{name: "ecto", description: "original", licenses: ["Apache-2.0"]})
+      )
+      |> Hexpm.Repo.insert!()
+
+    changeset =
+      Package.update(package, %{
+        "meta" => %{
+          "description" => "updated",
+          "licenses" => ["Invalid-Lic", "Apache-2.0"]
+        }
+      })
+
+    assert changeset.errors == []
+    assert [licenses: {"invalid license \"Invalid-Lic\"", []}] = changeset.changes.meta.errors
   end
 
   test "validate invalid license for public package", %{
