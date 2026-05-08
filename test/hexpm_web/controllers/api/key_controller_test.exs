@@ -245,6 +245,21 @@ defmodule HexpmWeb.API.KeyControllerTest do
       key = Repo.one!(Key.get(c.eric, "macbook"))
       assert [%KeyPermission{domain: "repositories", resource: nil}] = key.permissions
     end
+
+    test "create repositories key with resource returns 422", c do
+      body = %{
+        name: "macbook",
+        permissions: [%{domain: "repositories", resource: "something"}]
+      }
+
+      build_conn()
+      |> put_req_header("content-type", "application/json")
+      |> put_req_header("authorization", basic_auth(c.eric))
+      |> post("/api/keys", body)
+      |> json_response(422)
+
+      refute Repo.one(Key.get(c.eric, "macbook"))
+    end
   end
 
   describe "DELETE /api/keys" do
