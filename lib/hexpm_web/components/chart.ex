@@ -42,6 +42,7 @@ defmodule HexpmWeb.Components.Chart do
         </linearGradient>
       </defs>
       <%!-- Y-axis labels --%>
+      <% {max_label, _} = List.last(@y_axis_labels) %>
       <%= for {label, y} <- @y_axis_labels do %>
         <text
           x="72"
@@ -51,7 +52,7 @@ defmodule HexpmWeb.Components.Chart do
           font-size="22"
           font-family="ui-monospace, SFMono-Regular, monospace"
         >
-          {ViewHelpers.human_number_space(label)}
+          {ViewHelpers.chart_axis_label(label, max_label)}
         </text>
       <% end %>
       <%!-- Chart area --%>

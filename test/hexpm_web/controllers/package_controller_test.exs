@@ -471,6 +471,22 @@ defmodule HexpmWeb.PackageControllerTest do
       assert current_page(second_document) == "2"
       assert normalized_text(second_document) =~ "101 total"
     end
+
+    test "computes daily_graph for sidebar", %{package1: package1} do
+      release = Hexpm.Repository.Releases.all(package1) |> List.first()
+
+      insert(:download,
+        package: package1,
+        release: release,
+        downloads: 42,
+        day: Date.utc_today() |> Date.add(-2)
+      )
+
+      conn = get(build_conn(), "/packages/#{package1.name}/audit-logs")
+      assert response(conn, 200)
+      assert conn.assigns.daily_graph != []
+      assert Enum.any?(conn.assigns.daily_graph, fn n -> n > 0 end)
+    end
   end
 
   describe "GET /packages/:repository/:name/audit-logs" do
@@ -506,6 +522,22 @@ defmodule HexpmWeb.PackageControllerTest do
     } do
       conn = get(build_conn(), "/packages/#{repository1.name}/#{package3.name}/versions")
       assert response(conn, 404)
+    end
+
+    test "computes daily_graph for sidebar", %{package1: package1} do
+      release = Hexpm.Repository.Releases.all(package1) |> List.first()
+
+      insert(:download,
+        package: package1,
+        release: release,
+        downloads: 42,
+        day: Date.utc_today() |> Date.add(-2)
+      )
+
+      conn = get(build_conn(), "/packages/#{package1.name}/versions")
+      assert response(conn, 200)
+      assert conn.assigns.daily_graph != []
+      assert Enum.any?(conn.assigns.daily_graph, fn n -> n > 0 end)
     end
   end
 
@@ -596,6 +628,22 @@ defmodule HexpmWeb.PackageControllerTest do
       conn = get(build_conn(), "/packages/#{repository1.name}/#{package3.name}/dependents")
       assert response(conn, 404)
     end
+
+    test "computes daily_graph for sidebar", %{package1: package1} do
+      release = Hexpm.Repository.Releases.all(package1) |> List.first()
+
+      insert(:download,
+        package: package1,
+        release: release,
+        downloads: 42,
+        day: Date.utc_today() |> Date.add(-2)
+      )
+
+      conn = get(build_conn(), "/packages/#{package1.name}/dependents")
+      assert response(conn, 200)
+      assert conn.assigns.daily_graph != []
+      assert Enum.any?(conn.assigns.daily_graph, fn n -> n > 0 end)
+    end
   end
 
   describe "GET /packages/:name/dependencies" do
@@ -610,6 +658,22 @@ defmodule HexpmWeb.PackageControllerTest do
     } do
       conn = get(build_conn(), "/packages/#{repository1.name}/#{package3.name}/dependencies")
       assert response(conn, 404)
+    end
+
+    test "computes daily_graph for sidebar", %{package1: package1} do
+      release = Hexpm.Repository.Releases.all(package1) |> List.first()
+
+      insert(:download,
+        package: package1,
+        release: release,
+        downloads: 42,
+        day: Date.utc_today() |> Date.add(-2)
+      )
+
+      conn = get(build_conn(), "/packages/#{package1.name}/dependencies")
+      assert response(conn, 200)
+      assert conn.assigns.daily_graph != []
+      assert Enum.any?(conn.assigns.daily_graph, fn n -> n > 0 end)
     end
   end
 
