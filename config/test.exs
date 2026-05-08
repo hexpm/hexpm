@@ -30,7 +30,8 @@ config :hexpm,
   billing_impl: Hexpm.Billing.Mock,
   pwned_impl: Hexpm.Pwned.Mock,
   http_impl: Hexpm.HTTP.Mock,
-  cache_enabled: false
+  cache_enabled: false,
+  skip_advisory_locks: true
 
 config :hexpm, HexpmWeb.Endpoint,
   http: [port: 5000],

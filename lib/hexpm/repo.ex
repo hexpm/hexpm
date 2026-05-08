@@ -132,36 +132,52 @@ defmodule Hexpm.RepoBase do
   end
 
   def try_advisory_xact_lock?(key, opts \\ []) do
-    %Postgrex.Result{rows: [[result]]} =
-      query!(
-        "SELECT pg_try_advisory_xact_lock($1)",
-        [Map.fetch!(@advisory_locks, key)],
-        opts
-      )
+    if skip_advisory_locks?() do
+      true
+    else
+      %Postgrex.Result{rows: [[result]]} =
+        query!(
+          "SELECT pg_try_advisory_xact_lock($1)",
+          [Map.fetch!(@advisory_locks, key)],
+          opts
+        )
 
-    result
+      result
+    end
   end
 
   def try_advisory_lock?(key, opts \\ []) do
-    %Postgrex.Result{rows: [[result]]} =
-      query!(
-        "SELECT pg_try_advisory_lock($1)",
-        [Map.fetch!(@advisory_locks, key)],
-        opts
-      )
+    if skip_advisory_locks?() do
+      true
+    else
+      %Postgrex.Result{rows: [[result]]} =
+        query!(
+          "SELECT pg_try_advisory_lock($1)",
+          [Map.fetch!(@advisory_locks, key)],
+          opts
+        )
 
-    result
+      result
+    end
   end
 
   def advisory_unlock(key, opts \\ []) do
-    %Postgrex.Result{rows: [[true]]} =
-      query!(
-        "SELECT pg_advisory_unlock($1)",
-        [Map.fetch!(@advisory_locks, key)],
-        opts
-      )
+    if skip_advisory_locks?() do
+      :ok
+    else
+      %Postgrex.Result{rows: [[true]]} =
+        query!(
+          "SELECT pg_advisory_unlock($1)",
+          [Map.fetch!(@advisory_locks, key)],
+          opts
+        )
 
-    :ok
+      :ok
+    end
+  end
+
+  defp skip_advisory_locks?() do
+    Application.get_env(:hexpm, :skip_advisory_locks, false)
   end
 end
 
