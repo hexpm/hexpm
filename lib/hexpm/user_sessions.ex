@@ -398,10 +398,12 @@ defmodule Hexpm.UserSessions do
 
   # Revokes any active sessions beyond `keep_count`, ranked most-recently-used first.
   #
-  # Uses SKIP LOCKED so concurrent enforcers don't queue on the same rows; at
-  # worst this over-revokes by one or two sessions, which is acceptable for a
-  # soft limit. Session IDs are materialized once so both the session and token
-  # update_all target the same set.
+  # Updates tokens before sessions so the lock order matches
+  # `Tokens.revoke_and_create_token`, which locks the old token before
+  # touching its session (FK insert and last_use update). Acquiring the
+  # locks in the same order across both flows avoids circular waits.
+  # The `is_nil(revoked_at)` filter on each update keeps concurrent
+  # enforcers idempotent without needing a SELECT FOR UPDATE.
   defp revoke_lru_sessions(owner_filter, keep_count) do
     now = DateTime.utc_now()
 
@@ -415,20 +417,21 @@ defmodule Hexpm.UserSessions do
             desc: s.inserted_at
           ],
           offset: ^keep_count,
-          select: s.id,
-          lock: "FOR UPDATE SKIP LOCKED"
+          select: s.id
         )
         |> Repo.all()
 
       if session_ids != [] do
         Repo.update_all(
-          from(s in UserSession, where: s.id in ^session_ids),
+          from(t in Token,
+            where: t.user_session_id in ^session_ids and is_nil(t.revoked_at)
+          ),
           set: [revoked_at: now, updated_at: now]
         )
 
         Repo.update_all(
-          from(t in Token,
-            where: t.user_session_id in ^session_ids and is_nil(t.revoked_at)
+          from(s in UserSession,
+            where: s.id in ^session_ids and is_nil(s.revoked_at)
           ),
           set: [revoked_at: now, updated_at: now]
         )
