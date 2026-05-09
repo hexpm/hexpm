@@ -8,6 +8,7 @@ defmodule Hexpm.Application do
     read_only_mode()
     Hexpm.BlockAddress.start()
     setup_tmp_dir()
+    Hexpm.GitHub.SecretScanning.start()
 
     children =
       [

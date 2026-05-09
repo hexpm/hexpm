@@ -17,6 +17,11 @@ defmodule Hexpm.GitHub.SecretScanning do
   @key_cache_table __MODULE__.KeyCache
   @token_prefix Key.token_prefix()
 
+  def start() do
+    :ets.new(@key_cache_table, [:named_table, :public, read_concurrency: true])
+    :ok
+  end
+
   @doc """
   Verifies the GitHub ECDSA-P256-SHA256 signature on a raw request body.
 
@@ -64,7 +69,10 @@ defmodule Hexpm.GitHub.SecretScanning do
 
       case revoke_token(token) do
         {:ok, key, user} ->
-          Hexpm.Emails.key_leaked(user, key, url) |> Hexpm.Emails.Mailer.deliver_later()
+          if user do
+            Hexpm.Emails.key_leaked(user, key, url) |> Hexpm.Emails.Mailer.deliver_later()
+          end
+
           %{"token_raw" => token, "token_type" => "hexpm_api_token", "label" => "true_positive"}
 
         :not_found ->
@@ -117,7 +125,6 @@ defmodule Hexpm.GitHub.SecretScanning do
   end
 
   defp fetch_public_keys_cached() do
-    ensure_cache_table()
     now = System.monotonic_time(:second)
     ttl = Application.get_env(:hexpm, :github_key_cache_ttl, 300)
 
@@ -131,12 +138,6 @@ defmodule Hexpm.GitHub.SecretScanning do
           {:ok, keys}
         end
     end
-  end
-
-  defp ensure_cache_table() do
-    :ets.new(@key_cache_table, [:named_table, :public, read_concurrency: true])
-  rescue
-    ArgumentError -> :ok
   end
 
   @doc false
