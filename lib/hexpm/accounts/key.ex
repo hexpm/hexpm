@@ -80,16 +80,6 @@ defmodule Hexpm.Accounts.Key do
     )
   end
 
-  def get_active_by_secret_first(secret_first) do
-    from(k in Key,
-      where: k.secret_first == ^secret_first,
-      where: k.public == true,
-      where: is_nil(k.revoke_at) or k.revoke_at > fragment("NOW()"),
-      left_join: u in assoc(k, :user),
-      preload: [user: {u, :emails}]
-    )
-  end
-
   def get_revoked(user_or_organization, name) do
     from(
       k in assoc(user_or_organization, :keys),
