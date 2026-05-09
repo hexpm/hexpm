@@ -30,6 +30,7 @@ defmodule Hexpm.CacheTest do
     counter = :counters.new(1, [])
 
     fun = fn ->
+      Process.sleep(100)
       :counters.add(counter, 1, 1)
       :counters.get(counter, 1)
     end
@@ -42,7 +43,7 @@ defmodule Hexpm.CacheTest do
     tasks = for _ <- 1..10, do: Task.async(fn -> Cache.fetch(table, :key, fun, 60) end)
     assert Enum.map(tasks, &Task.await/1) == List.duplicate(1, 10)
 
-    Process.sleep(20)
+    Process.sleep(200)
 
     assert :counters.get(counter, 1) == 2
     assert Cache.fetch(table, :key, fun, 60) == 2
