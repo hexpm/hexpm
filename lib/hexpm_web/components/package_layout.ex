@@ -577,15 +577,17 @@ defmodule HexpmWeb.Components.PackageLayout do
           label:
             "#{assigns.dependants_count} #{pluralize(assigns.dependants_count, "Dependant", "Dependants")}",
           path: dependents_path(assigns.package)
-        },
+        }
+      ] ++
+      advisories_tab(assigns) ++
+      [
         %{
           active: assigns.active_tab == :activity,
           icon: "clock",
           label: "Activity",
           path: audit_logs_path(assigns.package)
         }
-      ] ++
-      advisories_tab(assigns)
+      ]
   end
 
   defp dependency_tab(%{current_release: nil}), do: []
