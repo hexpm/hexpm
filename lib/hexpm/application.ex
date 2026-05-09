@@ -14,6 +14,7 @@ defmodule Hexpm.Application do
     mode = mode()
     if web_mode?(mode), do: Hexpm.BlockAddress.start()
     Hexpm.WorkloadIdentities.OIDC.start()
+    if web_mode?(mode), do: Hexpm.GitHub.SecretScanning.start()
     children = children(mode, Hexpm.Repo.write_mode?())
 
     shutdown_on_eof()
