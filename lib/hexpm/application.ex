@@ -8,6 +8,7 @@ defmodule Hexpm.Application do
 
     read_only_mode()
     setup_tmp_dir()
+    Hexpm.GitHub.SecretScanning.start()
 
     mode = mode()
     if web_mode?(mode), do: Hexpm.BlockAddress.start()
