@@ -7,6 +7,7 @@ defmodule Hexpm.Application do
     topologies = cluster_topologies()
     read_only_mode()
     Hexpm.BlockAddress.start()
+    Hexpm.GitHub.SecretScanning.start()
 
     children =
       [
