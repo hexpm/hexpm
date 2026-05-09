@@ -303,6 +303,36 @@ defmodule HexpmWeb.API.GitHubSecretScanningControllerTest do
       assert Repo.get!(Key, key.id).revoke_at == nil
     end
 
+    test "revokes an organization-owned key without sending email", %{
+      conn: conn,
+      ec_priv: ec_priv,
+      stub_github_keys: stub
+    } do
+      stub.()
+      organization = insert(:organization)
+
+      {:ok, %{key: key}} =
+        Keys.create(organization, %{"name" => "org-key"}, audit: audit_data(organization))
+
+      conn =
+        post_alert(
+          conn,
+          [
+            %{
+              "token" => key.user_secret,
+              "type" => "hexpm_api_token",
+              "url" => "https://github.com/example/repo",
+              "source" => "commit"
+            }
+          ],
+          ec_priv
+        )
+
+      assert [%{"label" => "true_positive"}] = json_response(conn, 200)
+      assert Repo.get!(Key, key.id).revoke_at != nil
+      assert [] = Bamboo.SentEmail.all()
+    end
+
     test "does not send email when an already-revoked key is reported", %{
       conn: conn,
       user: user,
