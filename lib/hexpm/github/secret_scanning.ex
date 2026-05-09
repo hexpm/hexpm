@@ -14,13 +14,7 @@ defmodule Hexpm.GitHub.SecretScanning do
   @public_keys_url "https://api.github.com/meta/public_keys/secret_scanning"
   # prime256v1 / P-256 OID
   @p256_oid {1, 2, 840, 10045, 3, 1, 7}
-  @key_cache_table __MODULE__.KeyCache
   @token_prefix Key.token_prefix()
-
-  def start() do
-    :ets.new(@key_cache_table, [:named_table, :public, read_concurrency: true])
-    :ok
-  end
 
   @doc """
   Verifies the GitHub ECDSA-P256-SHA256 signature on a raw request body.
@@ -125,19 +119,8 @@ defmodule Hexpm.GitHub.SecretScanning do
   end
 
   defp fetch_public_keys_cached() do
-    now = System.monotonic_time(:second)
     ttl = Application.get_env(:hexpm, :github_key_cache_ttl, 300)
-
-    case :ets.lookup(@key_cache_table, :keys) do
-      [{:keys, keys, ts}] when ttl > 0 and now - ts < ttl ->
-        {:ok, keys}
-
-      _ ->
-        with {:ok, keys} <- fetch_public_keys() do
-          :ets.insert(@key_cache_table, {:keys, keys, now})
-          {:ok, keys}
-        end
-    end
+    Hexpm.Cache.fetch(Hexpm.Cache, :github_secret_scanning_keys, &fetch_public_keys/0, ttl: ttl)
   end
 
   @doc false

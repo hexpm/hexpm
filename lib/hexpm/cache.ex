@@ -5,19 +5,33 @@ defmodule Hexpm.Cache do
     GenServer.start_link(__MODULE__, opts, name: opts[:name])
   end
 
-  def fetch(table \\ __MODULE__, key, fun) do
+  def fetch(table \\ __MODULE__, key, fun)
+
+  def fetch(table, key, fun) do
+    do_fetch(table, key, fun, [])
+  end
+
+  def fetch(table, key, fun, opts) do
+    do_fetch(table, key, fun, opts)
+  end
+
+  defp do_fetch(table, key, fun, opts) do
     case :ets.whereis(table) do
       :undefined ->
         fun.()
 
       _ ->
+        ttl = Keyword.get(opts, :ttl)
+        now = System.monotonic_time(:second)
+
         case :ets.lookup(table, key) do
-          [{^key, value, _fun}] ->
+          [{^key, value, _fun, inserted_at}]
+          when ttl == nil or now - inserted_at < ttl ->
             value
 
-          [] ->
+          _ ->
             value = fun.()
-            :ets.insert(table, {key, value, fun})
+            :ets.insert(table, {key, value, fun, now})
             value
         end
     end
@@ -54,8 +68,10 @@ defmodule Hexpm.Cache do
   end
 
   defp populate(%{table: table}) do
-    for {key, _value, fun} <- :ets.tab2list(table) do
-      :ets.insert(table, {key, fun.(), fun})
+    now = System.monotonic_time(:second)
+
+    for {key, _value, fun, _ts} <- :ets.tab2list(table) do
+      :ets.insert(table, {key, fun.(), fun, now})
     end
   end
 
