@@ -537,6 +537,23 @@ defmodule Hexpm.Repository.PackageTest do
     assert ["benchee"] = search_for(repository, "build_tool:rebar3")
   end
 
+  test "search combines free text with operator filters", %{repository: repository} do
+    phoenix_mix = insert(:package, name: "phoenix_mix", repository_id: repository.id)
+    insert(:release, package: phoenix_mix, meta: build(:release_metadata, build_tools: ["mix"]))
+
+    phoenix_rebar = insert(:package, name: "phoenix_rebar", repository_id: repository.id)
+
+    insert(:release,
+      package: phoenix_rebar,
+      meta: build(:release_metadata, build_tools: ["rebar3"])
+    )
+
+    other = insert(:package, name: "other_mix", repository_id: repository.id)
+    insert(:release, package: other, meta: build(:release_metadata, build_tools: ["mix"]))
+
+    assert ["phoenix_mix"] = search_for(repository, "phoenix build_tool:mix")
+  end
+
   test "sort packages by total downloads", %{repository: repository} do
     %{id: ecto_id} = insert(:package, repository_id: repository.id)
     %{id: phoenix_id} = insert(:package, repository_id: repository.id)
