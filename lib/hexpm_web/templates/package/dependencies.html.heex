@@ -55,7 +55,11 @@ requirements_count = length(requirements) %>
                 <td class="px-5 py-3.5">
                   <a
                     href={ViewHelpers.path_for_package(req.repository, req.name)}
-                    title={if req.repository != "hexpm", do: "#{req.repository}/#{req.name}", else: req.name}
+                    title={
+                      if req.repository != "hexpm",
+                        do: "#{req.repository}/#{req.name}",
+                        else: req.name
+                    }
                     class="font-semibold text-grey-900 dark:text-grey-100 hover:text-purple-600 dark:hover:text-primary-300 transition-colors font-mono"
                   >
                     <%= if req.repository != "hexpm" do %>
