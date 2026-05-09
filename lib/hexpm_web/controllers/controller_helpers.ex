@@ -161,7 +161,7 @@ defmodule HexpmWeb.ControllerHelpers do
   end
 
   defp put_last_modified(conn, modified) do
-    put_resp_header(conn, "last-modified", :cowboy_clock.rfc1123(modified))
+    put_resp_header(conn, "last-modified", List.to_string(:httpd_util.rfc1123_date(modified)))
   end
 
   defp fresh?(conn, opts) do
