@@ -26,14 +26,7 @@ defmodule HexpmWeb.API.GitHubSecretScanningController do
       raw_body == "" ->
         render_error(conn, 400, message: "missing body")
 
-      not SecretScanning.verify_signature(raw_body, key_id, signature) ->
-        Logger.warning(
-          "GitHub secret scanning: invalid signature from #{inspect(conn.remote_ip)}"
-        )
-
-        render_error(conn, 403, message: "invalid signature")
-
-      true ->
+      SecretScanning.verify_signature(raw_body, key_id, signature) ->
         case Jason.decode(raw_body) do
           {:ok, alerts} when is_list(alerts) ->
             results = SecretScanning.process_alerts(alerts)
@@ -46,6 +39,13 @@ defmodule HexpmWeb.API.GitHubSecretScanningController do
           _ ->
             render_error(conn, 400, message: "body must be a JSON array")
         end
+
+      true ->
+        Logger.warning(
+          "GitHub secret scanning: invalid signature from #{inspect(conn.remote_ip)}"
+        )
+
+        render_error(conn, 403, message: "invalid signature")
     end
   end
 end
