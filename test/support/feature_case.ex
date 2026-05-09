@@ -42,15 +42,24 @@ if Code.ensure_loaded?(Wallaby) do
     # The test config has server: false to avoid starting it for unit tests.
     # Starts Bandit on a free port and returns the base URL.
     defp ensure_endpoint_server do
-      case HexpmWeb.Endpoint.server_info(:http) do
-        {:ok, {_scheme, _ip, port}} ->
-          "http://localhost:#{port}"
+      pid =
+        case Process.whereis(__MODULE__.Bandit) do
+          nil ->
+            {:ok, pid} =
+              Bandit.start_link(
+                plug: HexpmWeb.Endpoint,
+                port: 0,
+                thousand_island_options: [supervisor_options: [name: __MODULE__.Bandit]]
+              )
 
-        _ ->
-          {:ok, _} = Bandit.start_link(plug: HexpmWeb.Endpoint, port: 0)
-          {:ok, {_scheme, _ip, port}} = HexpmWeb.Endpoint.server_info(:http)
-          "http://localhost:#{port}"
-      end
+            pid
+
+          pid ->
+            pid
+        end
+
+      {:ok, {_ip, port}} = ThousandIsland.listener_info(pid)
+      "http://localhost:#{port}"
     end
 
     @doc """
