@@ -199,8 +199,8 @@ defmodule Hexpm.Accounts.Auth do
     Enum.find(user.emails, &(&1.email == email)) || Enum.find(user.emails, & &1.primary)
   end
 
-  defp strip_token_prefix(@token_prefix <> raw), do: raw
-  defp strip_token_prefix(raw), do: raw
+  def strip_token_prefix(@token_prefix <> raw), do: raw
+  def strip_token_prefix(raw), do: raw
 
   defp usage_info(info) do
     %{
