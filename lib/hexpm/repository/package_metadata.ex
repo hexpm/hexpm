@@ -12,14 +12,10 @@ defmodule Hexpm.Repository.PackageMetadata do
   end
 
   def changeset(meta, params, package) do
-    update_changeset(meta, params, package)
-    |> validate_licenses(package)
-  end
-
-  def update_changeset(meta, params, package) do
     cast(meta, params, ~w(description licenses links maintainers extra)a)
     |> validate_required_meta(package)
     |> validate_links()
+    |> validate_licenses(package)
   end
 
   defp validate_required_meta(changeset, package) do

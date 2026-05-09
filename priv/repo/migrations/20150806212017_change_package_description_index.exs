@@ -5,7 +5,7 @@ defmodule Hexpm.Repo.Migrations.ChangePackageDescriptionIndex do
     execute("DROP INDEX IF EXISTS packages_description_text")
 
     execute("""
-      CREATE INDEX packages_description_text ON
+      CREATE INDEX IF NOT EXISTS packages_description_text ON
         packages USING GIN (to_tsvector('english', regexp_replace((meta->'description')::text, '/', ' ')))
     """)
   end
@@ -14,7 +14,7 @@ defmodule Hexpm.Repo.Migrations.ChangePackageDescriptionIndex do
     execute("DROP INDEX IF EXISTS packages_description_text")
 
     execute("""
-      CREATE INDEX packages_description_text ON
+      CREATE INDEX IF NOT EXISTS packages_description_text ON
         packages USING GIN (to_tsvector('english', (meta->'description')::text))
     """)
   end

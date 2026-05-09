@@ -80,6 +80,46 @@ defmodule HexpmWeb.PackageVersionsControllerTest do
       assert result =~ package2.name
     end
 
+    test "paginates versions 100 per page and keeps previous-version diff links", %{
+      package1: package1
+    } do
+      Enum.each(4..101, fn patch ->
+        insert(
+          :release,
+          package: package1,
+          version: "0.0.#{patch}",
+          meta: build(:release_metadata, app: package1.name)
+        )
+      end)
+
+      first_page =
+        build_conn()
+        |> get("/packages/#{package1.name}/versions")
+        |> response(200)
+
+      {:ok, first_document} = Floki.parse_document(first_page)
+      first_page_versions = release_link_texts(first_document, package1.name)
+
+      assert "0.0.101" in first_page_versions
+      assert "0.0.2" in first_page_versions
+      refute "0.0.1" in first_page_versions
+      assert first_page =~ "/packages/#{package1.name}/versions?page=2"
+      assert first_page =~ "/diff/#{package1.name}/0.0.1..0.0.2"
+
+      second_page =
+        build_conn()
+        |> get("/packages/#{package1.name}/versions?page=2")
+        |> response(200)
+
+      {:ok, second_document} = Floki.parse_document(second_page)
+      second_page_versions = release_link_texts(second_document, package1.name)
+
+      assert "0.0.1" in second_page_versions
+      refute "0.0.101" in second_page_versions
+      assert current_page(second_document) == "2"
+      assert normalized_text(second_document) =~ "101 total"
+    end
+
     test "unauthenticated access to private package versions returns 404", %{
       package2: package2,
       repository1: repository1
@@ -101,5 +141,36 @@ defmodule HexpmWeb.PackageVersionsControllerTest do
 
       assert response(conn, 404)
     end
+  end
+
+  defp release_link_texts(document, package_name) do
+    document
+    |> Floki.find("table tbody a")
+    |> Enum.filter(fn link ->
+      case Floki.attribute(link, "href") do
+        [href] ->
+          String.starts_with?(href, "/packages/#{package_name}/") &&
+            href != "/packages/#{package_name}/versions"
+
+        _ ->
+          false
+      end
+    end)
+    |> Enum.map(&Floki.text(&1, sep: " "))
+    |> Enum.map(&String.trim/1)
+  end
+
+  defp current_page(document) do
+    case Floki.find(document, ~s([aria-current="page"])) do
+      [page | _rest] -> Floki.text(page, sep: " ") |> String.trim()
+      [] -> nil
+    end
+  end
+
+  defp normalized_text(document) do
+    document
+    |> Floki.text(sep: " ")
+    |> String.replace(~r/\s+/, " ")
+    |> String.trim()
   end
 end

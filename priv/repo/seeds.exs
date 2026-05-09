@@ -1,7 +1,7 @@
 import Hexpm.Factory
 alias Hexpm.Accounts.Users
 alias Hexpm.OAuth.Client
-alias Hexpm.Repository.{PackageDependant, PackageDownload, ReleaseDownload}
+alias Hexpm.Repository.{PackageDownload, ReleaseDownload}
 
 Hexpm.Fake.start()
 Hexpm.setup()
@@ -43,6 +43,14 @@ Hexpm.Repo.transaction(fn ->
           secret_second: "5bcf597057c2d04a1d228cd8c3254450"
         )
       ]
+    )
+
+  maennchen =
+    insert(
+      :user,
+      username: "maennchen",
+      emails: [build(:email, email: "jonatan@example.com")],
+      password: password.("maennchenmaennchen")
     )
 
   jose =
@@ -164,6 +172,77 @@ Hexpm.Repo.transaction(fn ->
     downloads: 1_000,
     day: Hexpm.Utils.utc_yesterday()
   )
+
+  oidcc =
+    insert(
+      :package,
+      name: "oidcc",
+      package_owners: [build(:package_owner, user: maennchen)],
+      meta:
+        build(
+          :package_metadata,
+          licenses: ["Apache-2.0"],
+          links: %{
+            "Github" => "https://github.com/erlef/oidcc",
+            "Documentation" => "https://hexdocs.pm/oidcc/"
+          },
+          description: "OpenID Connect client library for the BEAM."
+        )
+    )
+
+  insert(
+    :release,
+    package: oidcc,
+    version: "3.0.0",
+    publisher: maennchen,
+    meta:
+      build(
+        :release_metadata,
+        app: "oidcc",
+        build_tools: ["mix"]
+      )
+  )
+
+  insert(
+    :release,
+    package: oidcc,
+    version: "3.0.2",
+    publisher: maennchen,
+    meta:
+      build(
+        :release_metadata,
+        app: "oidcc",
+        build_tools: ["mix"]
+      )
+  )
+
+  oidcc_advisory_record = %{
+    id: "GHSA-mj35-2rgf-cv8p",
+    summary:
+      "OpenID Connect client Atom Exhaustion in provider configuration worker ets table location",
+    aliases: ["CVE-2024-31209"],
+    published_at: ~U[2024-04-03 16:46:30Z],
+    modified_at: ~U[2024-04-05 01:28:39Z],
+    withdrawn_at: nil,
+    cvss_vector: "CVSS:3.1/AV:L/AC:H/PR:H/UI:N/S:C/C:N/I:N/A:H",
+    cvss_score: 5.5,
+    cvss_rating: "medium",
+    references: [
+      %{
+        type: "WEB",
+        url: "https://github.com/erlef/oidcc/security/advisories/GHSA-mj35-2rgf-cv8p"
+      }
+    ],
+    affected: [
+      %{
+        package: "oidcc",
+        requirements: [Version.parse_requirement!(">= 3.0.0 and < 3.0.2")],
+        versions: ["3.0.0"]
+      }
+    ]
+  }
+
+  Hexpm.Security.Advisories.upsert([oidcc_advisory_record], %{"oidcc" => oidcc.id})
 
   postgrex =
     insert(
@@ -704,7 +783,6 @@ Hexpm.Repo.transaction(fn ->
     )
   end)
 
-  Hexpm.Repo.refresh_view(PackageDependant, concurrently: false)
   Hexpm.Repo.refresh_view(PackageDownload, concurrently: false)
   Hexpm.Repo.refresh_view(ReleaseDownload, concurrently: false)
 end)

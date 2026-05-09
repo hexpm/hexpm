@@ -79,6 +79,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.ProfileTab do
           :let={f}
           current_user={@current_user}
           for={@changeset}
+          as={:profile}
           action={~p"/dashboard/orgs/#{@organization}/profile"}
         >
           <div class="space-y-6">

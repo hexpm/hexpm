@@ -1,5 +1,6 @@
 <.package_layout
   active_tab={:activity}
+  all_releases={@all_releases}
   current_release={@current_release}
   daily_graph={@daily_graph}
   dependants_count={@dependants_count}
@@ -8,6 +9,7 @@
   owners={@owners}
   package={@package}
   repository_name={@repository_name}
+  versions_count={@versions_count}
 >
   <:inner_content>
     <%= if Enum.empty?(@audit_logs) do %>

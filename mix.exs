@@ -37,6 +37,7 @@ defmodule Hexpm.MixProject do
       {:bcrypt_elixir, "~> 3.0"},
       {:bypass, "~> 2.1", only: :test},
       {:corsica, "~> 2.0"},
+      {:cvss, "~> 0.1.0"},
       {:earmark, "~> 1.4"},
       {:ecto_psql_extras, "~> 0.6"},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
@@ -78,7 +79,7 @@ defmodule Hexpm.MixProject do
       {:plug, "~> 1.7"},
       {:postgrex, "~> 0.14"},
       {:pot, "~> 1.0"},
-      {:sentry, "~> 12.0"},
+      {:sentry, "~> 13.0"},
       {:tailwind, "~> 0.4", runtime: Mix.env() == :dev},
       {:tidewave, "~> 0.5", only: :dev},
       # Dependency is broken with mix due to missing dependency on :ssl application
@@ -89,7 +90,8 @@ defmodule Hexpm.MixProject do
       {:ueberauth, "~> 0.10"},
       {:ueberauth_github, "~> 0.8"},
       {:wallaby, "~> 0.30", only: :test, runtime: false},
-      {:lazy_html, ">= 0.1.0", only: :test}
+      {:lazy_html, ">= 0.1.0", only: :test},
+      {:req, "~> 0.5.6"}
     ]
   end
 

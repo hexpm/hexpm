@@ -2,7 +2,7 @@ defmodule Hexpm.RepoBase.Migrations.CreateOauthClients do
   use Ecto.Migration
 
   def change do
-    create table(:oauth_clients, primary_key: false) do
+    create_if_not_exists table(:oauth_clients, primary_key: false) do
       add :client_id, :binary_id, primary_key: true
       add :client_secret, :string
       add :name, :string, null: false

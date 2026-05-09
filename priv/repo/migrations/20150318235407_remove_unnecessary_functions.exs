@@ -7,7 +7,7 @@ defmodule Hexpm.Repo.Migrations.RemoveUnnecessaryFunctions do
     execute("DROP FUNCTION IF EXISTS text_match(tsvector, tsquery)")
 
     execute("""
-      CREATE INDEX packages_description_text ON
+      CREATE INDEX IF NOT EXISTS packages_description_text ON
         packages USING GIN (to_tsvector('english', (meta->'description')::text))
     """)
   end
@@ -32,7 +32,7 @@ defmodule Hexpm.Repo.Migrations.RemoveUnnecessaryFunctions do
     """)
 
     execute("""
-      CREATE INDEX packages_description_text ON
+      CREATE INDEX IF NOT EXISTS packages_description_text ON
         packages USING GIN (to_tsvector('english', json_access(meta, 'description')))
     """)
   end

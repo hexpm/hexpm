@@ -179,7 +179,10 @@ defmodule HexpmWeb.OAuthController do
 
   defp validate_scopes(client, scope_string)
        when is_binary(scope_string) or is_nil(scope_string) do
-    scopes = String.split(scope_string || "", " ", trim: true)
+    scopes =
+      (scope_string || "")
+      |> String.split(" ", trim: true)
+      |> Permissions.expand_api_scope()
 
     if Clients.supports_scopes?(client, scopes) do
       {:ok, scopes}

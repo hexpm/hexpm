@@ -2,7 +2,7 @@ defmodule Hexpm.Repo.Migrations.AddReservedPackages do
   use Ecto.Migration
 
   def change do
-    create table(:reserved_packages) do
+    create_if_not_exists table(:reserved_packages) do
       add(
         :repository_id,
         references(:repositories, on_delete: :delete_all, on_update: :update_all),
@@ -14,6 +14,6 @@ defmodule Hexpm.Repo.Migrations.AddReservedPackages do
       add(:reason, :string)
     end
 
-    create(unique_index(:reserved_packages, [:repository_id, :name, :version]))
+    create_if_not_exists(unique_index(:reserved_packages, [:repository_id, :name, :version]))
   end
 end

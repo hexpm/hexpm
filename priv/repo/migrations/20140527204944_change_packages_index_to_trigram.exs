@@ -3,8 +3,12 @@ defmodule Hexpm.Repo.Migrations.ChangePackagesIndexToTrigram do
 
   def up() do
     execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
-    execute("CREATE INDEX packages_name_trgm ON packages USING GIN (name gin_trgm_ops)")
-    execute("DROP INDEX packages_lower_idx")
+
+    execute(
+      "CREATE INDEX IF NOT EXISTS packages_name_trgm ON packages USING GIN (name gin_trgm_ops)"
+    )
+
+    execute("DROP INDEX IF EXISTS packages_lower_idx")
   end
 
   def down() do

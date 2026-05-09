@@ -43,6 +43,10 @@ defmodule HexpmWeb.LayoutView do
     Map.get(assigns, :container, "container")
   end
 
+  def error_page?(assigns) do
+    assigns[:error] || (is_integer(assigns[:status]) && assigns[:status] >= 400)
+  end
+
   def og_tags(assigns) do
     [
       tag(:meta, property: "og:title", content: Map.get(assigns, :title)),

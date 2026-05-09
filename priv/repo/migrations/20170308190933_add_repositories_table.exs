@@ -2,7 +2,7 @@ defmodule Hexpm.Repo.Migrations.AddRepositoriesTable do
   use Ecto.Migration
 
   def up() do
-    create table(:repositories) do
+    create_if_not_exists table(:repositories) do
       add(:name, :string, null: false)
       add(:public, :boolean, null: false, default: false)
       timestamps()
@@ -20,10 +20,10 @@ defmodule Hexpm.Repo.Migrations.AddRepositoriesTable do
       modify(:repository_id, :integer, null: false, default: nil)
     end
 
-    create(unique_index(:repositories, [:name]))
-    create(index(:repositories, [:public]))
-    create(unique_index(:packages, [:repository_id, :name]))
-    drop(index(:packages, [:name], name: "packages_name_idx"))
+    create_if_not_exists(unique_index(:repositories, [:name]))
+    create_if_not_exists(index(:repositories, [:public]))
+    create_if_not_exists(unique_index(:packages, [:repository_id, :name]))
+    drop_if_exists(index(:packages, [:name], name: "packages_name_idx"))
   end
 
   def down() do
@@ -31,8 +31,8 @@ defmodule Hexpm.Repo.Migrations.AddRepositoriesTable do
       remove(:repository_id)
     end
 
-    drop(table(:repositories))
+    drop_if_exists(table(:repositories))
 
-    create(unique_index(:packages, [:name], name: "packages_name_idx"))
+    create_if_not_exists(unique_index(:packages, [:name], name: "packages_name_idx"))
   end
 end

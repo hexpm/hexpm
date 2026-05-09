@@ -56,7 +56,7 @@ defmodule HexpmWeb.Components.Input do
     |> assign(:errors, Enum.map(errors, &translate_error/1))
     |> assign(:id, field.id)
     |> assign(:name, field.name)
-    |> assign(:value, field.value)
+    |> assign(:value, assigns[:value] || field.value)
     |> text_input()
   end
 

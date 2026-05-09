@@ -2,7 +2,7 @@ defmodule Hexpm.RepoBase.Migrations.CreateDeviceCodes do
   use Ecto.Migration
 
   def change do
-    create table(:device_codes) do
+    create_if_not_exists table(:device_codes) do
       add :device_code, :string, null: false
       add :user_code, :string, null: false
       add :verification_uri, :string, null: false
@@ -23,10 +23,10 @@ defmodule Hexpm.RepoBase.Migrations.CreateDeviceCodes do
       timestamps()
     end
 
-    create unique_index(:device_codes, [:device_code])
-    create unique_index(:device_codes, [:user_code])
-    create index(:device_codes, [:expires_at])
-    create index(:device_codes, [:status])
-    create index(:device_codes, [:user_id])
+    create_if_not_exists unique_index(:device_codes, [:device_code])
+    create_if_not_exists unique_index(:device_codes, [:user_code])
+    create_if_not_exists index(:device_codes, [:expires_at])
+    create_if_not_exists index(:device_codes, [:status])
+    create_if_not_exists index(:device_codes, [:user_id])
   end
 end

@@ -11,12 +11,12 @@ defmodule Hexpm.Repository.Releases do
     |> Release.sort()
   end
 
-  def recent(repository, count) do
-    Repo.all(Release.recent(repository, count))
-  end
-
   def count() do
     Repo.one!(Release.count())
+  end
+
+  def recent(repository, count) do
+    Repo.all(Release.recent(repository, count))
   end
 
   def get(package, version) do
@@ -49,9 +49,11 @@ defmodule Hexpm.Repository.Releases do
     |> Multi.run(:reserved_packages, fn _, _ -> {:ok, reserved_packages(repository, meta)} end)
     |> create_package(repository, package, user, meta)
     |> create_release(package, user, inner_checksum, outer_checksum, meta, replace?)
+    |> Multi.run(:matched_advisories, fn repo, %{release: release} ->
+      Hexpm.Security.Advisories.affect_release_with_existing_advisories(repo, release)
+    end)
     |> audit_publish(audit_data)
     |> Repo.transaction(timeout: @publish_timeout)
-    |> refresh_package_dependants()
     |> publish_result(user, body)
   end
 
@@ -77,7 +79,6 @@ defmodule Hexpm.Repository.Releases do
     |> Multi.run(:release_count, &release_count/2)
     |> Multi.run(:package, &maybe_delete_package/2)
     |> Repo.transaction(timeout: @publish_timeout)
-    |> refresh_package_dependants()
     |> revert_result()
   end
 
@@ -211,24 +212,6 @@ defmodule Hexpm.Repository.Releases do
     end
   end
 
-  defp refresh_package_dependants(result) do
-    Task.Supervisor.start_child(Hexpm.Tasks, fn ->
-      Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
-    end)
-    |> check_alive()
-
-    result
-  end
-
-  defp check_alive({:ok, pid}) do
-    if Process.alive?(pid) do
-      Process.sleep(1)
-      check_alive({:ok, pid})
-    else
-      {:ok, pid}
-    end
-  end
-
   defp release_count(repo, %{release: release}) do
     {:ok, repo.aggregate(assoc(release.package, :releases), :count)}
   end
@@ -351,4 +334,7 @@ defmodule Hexpm.Repository.Releases do
   defp preload_field(release, :requirements), do: {:requirements, Release.requirements(release)}
   defp preload_field(release, :downloads), do: {:downloads, ReleaseDownload.release(release)}
   defp preload_field(_release, :publisher), do: {:publisher, [:emails, :organization]}
+
+  defp preload_field(_release, :security_advisories),
+    do: {:security_advisories, [:references, :affected_versions]}
 end

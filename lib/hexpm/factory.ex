@@ -250,4 +250,37 @@ defmodule Hexpm.Factory do
       user_id: user.id
     }
   end
+
+  def advisory_affected_version_factory() do
+    %Hexpm.Security.AdvisoryAffectedVersion{
+      requirement: Version.parse_requirement!(">= 0.0.0")
+    }
+  end
+
+  def advisory_reference_factory() do
+    %Hexpm.Security.AdvisoryReference{
+      type: "WEB",
+      url: "https://example.com/advisory"
+    }
+  end
+
+  def security_advisories_factory() do
+    %Hexpm.Security.Advisory{
+      id: "GHSA-mj35-2rgf-cv8p",
+      summary:
+        "OpenID Connect client Atom Exhaustion in provider configuration worker ets table location",
+      aliases: ["CVE-2024-31209"],
+      published_at: ~U[2024-04-03 16:46:30Z],
+      modified_at: ~U[2024-04-05 01:28:39Z],
+      cvss_vector: "CVSS:3.1/AV:L/AC:H/PR:H/UI:N/S:C/C:N/I:N/A:H",
+      cvss_score: 5.5,
+      cvss_rating: "medium",
+      references: [
+        %Hexpm.Security.AdvisoryReference{
+          type: "WEB",
+          url: "https://github.com/erlef/oidcc/security/advisories/GHSA-mj35-2rgf-cv8p"
+        }
+      ]
+    }
+  end
 end

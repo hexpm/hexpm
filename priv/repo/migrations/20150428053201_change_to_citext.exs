@@ -4,7 +4,7 @@ defmodule Hexpm.Repo.Migrations.ChangeToCitext do
   def up() do
     execute("CREATE EXTENSION citext")
 
-    drop(index(:users, [:username], name: :users_lower_idx))
+    drop_if_exists(index(:users, [:username], name: :users_lower_idx))
 
     alter table(:users) do
       modify(:username, :citext)
@@ -14,11 +14,11 @@ defmodule Hexpm.Repo.Migrations.ChangeToCitext do
       modify(:name, :citext)
     end
 
-    create(index(:users, [:username]))
+    create_if_not_exists(index(:users, [:username]))
   end
 
   def down() do
-    drop(index(:users, [:username]))
+    drop_if_exists(index(:users, [:username]))
 
     alter table(:users) do
       modify(:username, :text)
@@ -28,7 +28,7 @@ defmodule Hexpm.Repo.Migrations.ChangeToCitext do
       modify(:name, :text)
     end
 
-    create(index(:users, ["lower(username)"], name: :users_lower_idx))
+    create_if_not_exists(index(:users, ["lower(username)"], name: :users_lower_idx))
 
     execute("DROP EXTENSION IF EXISTS citext")
   end

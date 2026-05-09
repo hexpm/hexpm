@@ -16,9 +16,8 @@ defmodule Hexpm.UserSessions do
 
   ## Session Expiration
 
-  All sessions expire after 30 days of creation (non-sliding window). Sessions
-  are automatically cleaned up by calling `cleanup_expired_sessions/0` periodically
-  via a scheduled job (e.g., cron, Oban, Quantum).
+  All sessions expire after 30 days of creation (non-sliding window). Expired
+  rows are deleted by `Hexpm.ReleaseTasks.PurgeExpiredRecords`.
 
   ## Last Use Tracking
 
@@ -261,7 +260,7 @@ defmodule Hexpm.UserSessions do
     from(s in UserSession,
       where:
         s.type == "browser" and s.session_token == ^token and is_nil(s.revoked_at) and
-          (is_nil(s.expires_at) or s.expires_at > ^now)
+          s.expires_at > ^now
     )
     |> Repo.one()
   end
@@ -273,32 +272,7 @@ defmodule Hexpm.UserSessions do
     now = DateTime.utc_now()
 
     from(s in UserSession,
-      where:
-        s.user_id == ^user.id and is_nil(s.revoked_at) and
-          (is_nil(s.expires_at) or s.expires_at > ^now),
-      order_by: [desc: s.inserted_at],
-      preload: [:client]
-    )
-    |> Repo.all()
-  end
-
-  @doc """
-  Gets all active browser sessions for a user.
-  """
-  def all_browser_for_user(user) do
-    from(s in UserSession,
-      where: s.user_id == ^user.id and s.type == "browser" and is_nil(s.revoked_at),
-      order_by: [desc: s.inserted_at]
-    )
-    |> Repo.all()
-  end
-
-  @doc """
-  Gets all active OAuth sessions for a user.
-  """
-  def all_oauth_for_user(user) do
-    from(s in UserSession,
-      where: s.user_id == ^user.id and s.type == "oauth" and is_nil(s.revoked_at),
+      where: s.user_id == ^user.id and is_nil(s.revoked_at) and s.expires_at > ^now,
       order_by: [desc: s.inserted_at],
       preload: [:client]
     )
@@ -393,15 +367,11 @@ defmodule Hexpm.UserSessions do
   Counts total active sessions for a user.
   """
   def count_for_user(user_or_org) do
-    count_sessions(owner_filter(user_or_org))
-  end
-
-  defp count_sessions(owner_filter) do
     now = DateTime.utc_now()
 
     from(s in UserSession,
-      where: ^owner_filter,
-      where: is_nil(s.revoked_at) and (is_nil(s.expires_at) or s.expires_at > ^now),
+      where: ^owner_filter(user_or_org),
+      where: is_nil(s.revoked_at) and s.expires_at > ^now,
       select: count(s.id)
     )
     |> Repo.one()
@@ -414,14 +384,7 @@ defmodule Hexpm.UserSessions do
   The max_sessions parameter allows overriding the default limit (e.g., for organizations).
   """
   def enforce_session_limit(user_or_org, max_sessions \\ @max_user_sessions) do
-    owner_filter = owner_filter(user_or_org)
-    count = count_sessions(owner_filter)
-
-    if count >= max_sessions do
-      revoke_lru_sessions(owner_filter, count - max_sessions + 1)
-    end
-
-    :ok
+    revoke_lru_sessions(owner_filter(user_or_org), max_sessions - 1)
   end
 
   @doc """
@@ -430,55 +393,52 @@ defmodule Hexpm.UserSessions do
   """
   def revoke_excess_sessions_for_organization(organization, new_seat_limit) do
     max_sessions = max(@min_org_sessions, new_seat_limit)
-
-    owner_filter = owner_filter(organization)
-    count = count_sessions(owner_filter)
-
-    if count > max_sessions do
-      revoke_lru_sessions(owner_filter, count - max_sessions)
-    end
-
-    :ok
+    revoke_lru_sessions(owner_filter(organization), max_sessions)
   end
 
-  # Revokes the given number of least recently used sessions and their tokens.
+  # Revokes any active sessions beyond `keep_count`, ranked most-recently-used first.
   #
-  # Uses SELECT FOR UPDATE to acquire row locks in deterministic order, preventing
-  # deadlocks when multiple concurrent requests revoke sessions simultaneously.
-  # Session IDs are materialized once to ensure both the session and token
-  # revocations target the same set of sessions.
-  defp revoke_lru_sessions(owner_filter, revoke_count) do
+  # Updates tokens before sessions so the lock order matches
+  # `Tokens.revoke_and_create_token`, which locks the old token before
+  # touching its session (FK insert and last_use update). Acquiring the
+  # locks in the same order across both flows avoids circular waits.
+  # The `is_nil(revoked_at)` filter on each update keeps concurrent
+  # enforcers idempotent without needing a SELECT FOR UPDATE.
+  defp revoke_lru_sessions(owner_filter, keep_count) do
     now = DateTime.utc_now()
 
     Repo.transaction(fn ->
       session_ids =
         from(s in UserSession,
           where: ^owner_filter,
-          where: is_nil(s.revoked_at) and (is_nil(s.expires_at) or s.expires_at > ^now),
+          where: is_nil(s.revoked_at) and s.expires_at > ^now,
           order_by: [
-            asc: fragment("(last_use->>'used_at')::timestamptz NULLS FIRST"),
-            asc: s.inserted_at
+            desc_nulls_last: fragment("(last_use->>'used_at')::timestamptz"),
+            desc: s.inserted_at
           ],
-          limit: ^revoke_count,
-          select: s.id,
-          lock: "FOR UPDATE"
+          offset: ^keep_count,
+          select: s.id
         )
         |> Repo.all()
 
       if session_ids != [] do
-        Repo.update_all(
-          from(s in UserSession, where: s.id in ^session_ids),
-          set: [revoked_at: now, updated_at: now]
-        )
-
         Repo.update_all(
           from(t in Token,
             where: t.user_session_id in ^session_ids and is_nil(t.revoked_at)
           ),
           set: [revoked_at: now, updated_at: now]
         )
+
+        Repo.update_all(
+          from(s in UserSession,
+            where: s.id in ^session_ids and is_nil(s.revoked_at)
+          ),
+          set: [revoked_at: now, updated_at: now]
+        )
       end
     end)
+
+    :ok
   end
 
   defp owner_filter(%Hexpm.Accounts.User{} = user) do
@@ -487,22 +447,5 @@ defmodule Hexpm.UserSessions do
 
   defp owner_filter(%Hexpm.Accounts.Organization{} = org) do
     Ecto.Query.dynamic([s], s.organization_id == ^org.id)
-  end
-
-  @doc """
-  Cleans up expired sessions by deleting them from the database.
-
-  This function should be called periodically (e.g., daily) via a scheduled job
-  such as cron, Oban, or Quantum to prevent accumulation of expired records.
-
-  Returns `{count, nil}` where count is the number of deleted sessions.
-  """
-  def cleanup_expired_sessions do
-    now = DateTime.utc_now()
-
-    from(s in UserSession,
-      where: s.expires_at < ^now
-    )
-    |> Repo.delete_all()
   end
 end

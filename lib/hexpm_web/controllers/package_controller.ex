@@ -1,8 +1,12 @@
 defmodule HexpmWeb.PackageController do
   use HexpmWeb, :controller
 
+  alias Hexpm.Security.Advisories
+
   @packages_per_page 30
-  @audit_logs_per_page 10
+  @versions_per_page 100
+  @activity_per_page 100
+  @audit_logs_preview_count 10
 
   def show(conn, params) do
     # TODO: Show flash if private package and organization does not have active billing
@@ -28,26 +32,39 @@ defmodule HexpmWeb.PackageController do
   end
 
   def dependencies(conn, params) do
+    params = fixup_params(params)
+
     access_package(conn, params, fn package, repositories ->
       releases = Releases.all(package)
-      current_release = current_release(releases)
 
-      dependants_count =
-        Packages.count(repositories, "depends:#{package.repository.name}:#{package.name}")
+      release =
+        if version = params["version"] do
+          matching_release(releases, version)
+        else
+          current_release(releases)
+        end
 
-      render(
-        conn,
-        "dependencies.html",
-        [
-          title: "Dependencies of #{package.name}",
-          container: "container",
-          package: package,
-          releases: releases,
-          current_release: current_release,
-          dependants_count: dependants_count,
-          repository_name: package.repository.name
-        ] ++ sidebar_assigns(package, releases, current_release)
-      )
+      if release do
+        release = preload_release(release)
+        dependants_count = Packages.count_dependants(repositories, package)
+
+        render(
+          conn,
+          "dependencies.html",
+          [
+            title: "Dependencies of #{package.name}",
+            container: "container",
+            package: package,
+            releases: releases,
+            current_release: release,
+            version_pinned?: params["version"] != nil,
+            dependants_count: dependants_count,
+            repository_name: package.repository.name
+          ] ++ sidebar_assigns(package, releases, release)
+        )
+      else
+        not_found(conn)
+      end
     end)
   end
 
@@ -58,19 +75,17 @@ defmodule HexpmWeb.PackageController do
       releases = Releases.all(package)
       current_release = current_release(releases)
 
-      dependants_count =
-        Packages.count(repositories, "depends:#{package.repository.name}:#{package.name}")
+      dependants_count = Packages.count_dependants(repositories, package)
 
       page = Hexpm.Utils.safe_page(page_param, dependants_count, per_page)
 
       dependants =
-        Packages.search(
+        Packages.dependants(
           repositories,
+          package,
           page,
           per_page,
-          "depends:#{package.repository.name}:#{package.name}",
-          :recent_downloads,
-          nil
+          :recent_downloads
         )
         |> Packages.attach_latest_releases()
 
@@ -99,10 +114,14 @@ defmodule HexpmWeb.PackageController do
   def versions(conn, params) do
     access_package(conn, params, fn package, repositories ->
       releases = Releases.all(package)
+      page_param = Hexpm.Utils.safe_int(params["page"]) || 1
+      per_page = @versions_per_page
+      total_count = Enum.count(releases)
+      page = Hexpm.Utils.safe_page(page_param, total_count, per_page)
       current_release = current_release(releases)
+      paginated_releases = paginate_list(releases, page, per_page)
 
-      dependants_count =
-        Packages.count(repositories, "depends:#{package.repository.name}:#{package.name}")
+      dependants_count = Packages.count_dependants(repositories, package)
 
       render(
         conn,
@@ -111,9 +130,43 @@ defmodule HexpmWeb.PackageController do
           title: "#{package.name} versions",
           container: "container",
           package: package,
-          releases: releases,
+          releases: paginated_releases,
+          all_versions: Enum.map(releases, & &1.version),
           current_release: current_release,
           dependants_count: dependants_count,
+          repository_name: package.repository.name,
+          page: page,
+          per_page: per_page,
+          releases_total_count: total_count
+        ] ++ sidebar_assigns(package, releases, current_release)
+      )
+    end)
+  end
+
+  def advisories(conn, params) do
+    access_package(conn, params, fn package, _repositories ->
+      releases = Releases.all(package)
+      current_release = current_release(releases)
+      advisories = Advisories.all(package)
+
+      dependants_count =
+        Packages.count(
+          [package.repository],
+          "depends:#{package.repository.name}:#{package.name}"
+        )
+
+      render(
+        conn,
+        "advisories.html",
+        [
+          title: "Security Advisories for #{package.name}",
+          container: "container",
+          package: package,
+          releases: releases,
+          current_release: current_release,
+          advisories: advisories,
+          dependants_count: dependants_count,
+          versions_count: Enum.count(releases),
           repository_name: package.repository.name
         ] ++ sidebar_assigns(package, releases, current_release)
       )
@@ -123,15 +176,14 @@ defmodule HexpmWeb.PackageController do
   def audit_logs(conn, params) do
     access_package(conn, params, fn package, repositories ->
       page_param = Hexpm.Utils.safe_int(params["page"]) || 1
-      per_page = @audit_logs_per_page
+      per_page = @activity_per_page
       total_count = AuditLogs.count_by(package)
       page = Hexpm.Utils.safe_page(page_param, total_count, per_page)
       audit_logs = AuditLogs.all_by(package, page, per_page)
       releases = Releases.all(package)
       current_release = current_release(releases)
 
-      dependants_count =
-        Packages.count(repositories, "depends:#{package.repository.name}:#{package.name}")
+      dependants_count = Packages.count_dependants(repositories, package)
 
       render(
         conn,
@@ -156,8 +208,12 @@ defmodule HexpmWeb.PackageController do
   defp current_release(releases) do
     case Release.latest_version(releases, only_stable: true, unstable_fallback: true) do
       nil -> nil
-      release -> Releases.preload(release, [:requirements, :downloads, :publisher])
+      release -> preload_release(release)
     end
+  end
+
+  defp preload_release(release) do
+    Releases.preload(release, [:requirements, :downloads, :publisher])
   end
 
   defp access_package(conn, params, fun) do
@@ -181,7 +237,9 @@ defmodule HexpmWeb.PackageController do
 
   defp package(conn, repositories, package, releases, release, type) do
     repository = package.repository
-    release = Releases.preload(release, [:requirements, :downloads, :publisher])
+
+    release =
+      Releases.preload(release, [:requirements, :downloads, :publisher, :security_advisories])
 
     latest_release_with_docs =
       Release.latest_version(releases,
@@ -202,18 +260,20 @@ defmodule HexpmWeb.PackageController do
           [docs_html_url: nil]
       end
 
-    last_download_day = Downloads.last_day() || Date.utc_today()
+    last_download_day =
+      Hexpm.Cache.fetch(:last_download_day, &Downloads.last_day/0) || Date.utc_today()
+
     start_download_day = Date.add(last_download_day, -30)
     downloads = Downloads.package(package)
 
-    graph_downloads_for =
+    graph_release =
       case type do
-        :package -> package
+        :package -> nil
         :release -> release
       end
 
     graph_downloads =
-      Downloads.for_period(graph_downloads_for, :day, downloads_after: start_download_day)
+      Downloads.for_period(graph_release || package, :day, downloads_after: start_download_day)
 
     graph_downloads = Map.new(graph_downloads, &{Date.from_iso8601!(&1.day), &1})
 
@@ -229,18 +289,11 @@ defmodule HexpmWeb.PackageController do
     owners = Owners.all(package, user: [:emails, :organization])
 
     dependants =
-      Packages.search(
-        repositories,
-        1,
-        20,
-        "depends:#{repository.name}:#{package.name}",
-        :recent_downloads,
-        [:name, :repository_id]
-      )
+      Packages.dependants(repositories, package, 1, 20, :recent_downloads, [:name, :repository_id])
 
-    dependants_count = Packages.count(repositories, "depends:#{repository.name}:#{package.name}")
+    dependants_count = Packages.count_dependants(repositories, package)
 
-    audit_logs = AuditLogs.all_by(package, 1, @audit_logs_per_page)
+    audit_logs = AuditLogs.all_by(package, 1, @audit_logs_preview_count)
 
     render(
       conn,
@@ -253,13 +306,17 @@ defmodule HexpmWeb.PackageController do
         package: package,
         repository_name: repository.name,
         releases: releases,
+        all_releases: releases,
         current_release: release,
+        version_pinned?: type == :release,
         downloads: downloads,
         owners: owners,
         dependants: dependants,
         dependants_count: dependants_count,
+        versions_count: Enum.count(releases),
         audit_logs: audit_logs,
         daily_graph: daily_graph,
+        graph_release: graph_release,
         type: type
       ] ++ docs_assigns
     )
@@ -288,14 +345,14 @@ defmodule HexpmWeb.PackageController do
           nil
       end
 
-    last_download_day = Downloads.last_day() || Date.utc_today()
+    last_download_day =
+      Hexpm.Cache.fetch(:last_download_day, &Downloads.last_day/0) || Date.utc_today()
+
     start_download_day = Date.add(last_download_day, -30)
     package_downloads = Downloads.package(package)
 
-    graph_source = current_release || package
-
     graph_downloads =
-      Downloads.for_period(graph_source, :day, downloads_after: start_download_day)
+      Downloads.for_period(package, :day, downloads_after: start_download_day)
 
     graph_downloads = Map.new(graph_downloads, &{Date.from_iso8601!(&1.day), &1})
 
@@ -310,8 +367,15 @@ defmodule HexpmWeb.PackageController do
       docs_html_url: docs_html_url,
       downloads: package_downloads,
       daily_graph: daily_graph,
-      owners: owners
+      owners: owners,
+      versions_count: Enum.count(releases),
+      all_releases: releases
     ]
+  end
+
+  defp paginate_list(list, page, per_page) do
+    offset = (page - 1) * per_page
+    Enum.slice(list, offset, per_page)
   end
 
   defp fixup_params(%{"name" => name, "version" => version} = params) do

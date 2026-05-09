@@ -4,6 +4,7 @@ config :hexpm,
   user_confirm: true,
   user_agent_req: true,
   billing_report: true,
+  cache_enabled: true,
   support_email: "support@hex.pm",
   repo_bucket: {Hexpm.Store.Local, "repo_bucket"},
   logs_bucket: {Hexpm.Store.Local, "logs_bucket"},
@@ -24,7 +25,12 @@ config :bcrypt_elixir, log_rounds: 4
 config :hexpm, HexpmWeb.Endpoint,
   url: [host: "localhost"],
   root: Path.dirname(__DIR__),
-  render_errors: [view: HexpmWeb.ErrorView, accepts: ~w(html json elixir erlang)],
+  render_errors: [
+    view: HexpmWeb.ErrorView,
+    accepts: ~w(html json elixir erlang),
+    root_layout: {HexpmWeb.LayoutView, :root},
+    layout: {HexpmWeb.LayoutView, :app}
+  ],
   pubsub_server: Hexpm.PubSub
 
 config :hexpm, Hexpm.RepoBase,

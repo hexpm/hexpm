@@ -3,7 +3,7 @@ defmodule Hexpm.Repo.Migrations.AddOptionalEmailsToUsers do
 
   def change do
     alter table(:users) do
-      add :optional_emails, :map
+      add_if_not_exists :optional_emails, :map
     end
   end
 end

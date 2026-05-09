@@ -5,17 +5,17 @@ defmodule Hexpm.RepoBase.Migrations.UpdateConstraintOnRevokedAt do
     execute("ALTER TABLE keys DROP CONSTRAINT keys_user_id_name_revoked_at_key")
 
     execute(
-      "CREATE UNIQUE INDEX keys_user_id_name_revoked_at_key ON keys (user_id, name) WHERE (revoked_at IS NULL)"
+      "CREATE UNIQUE INDEX IF NOT EXISTS keys_user_id_name_revoked_at_key ON keys (user_id, name) WHERE (revoked_at IS NULL)"
     )
 
     execute(
-      "CREATE UNIQUE INDEX keys_organization_id_name_revoked_at_key ON keys (organization_id, name) WHERE (revoked_at IS NULL)"
+      "CREATE UNIQUE INDEX IF NOT EXISTS keys_organization_id_name_revoked_at_key ON keys (organization_id, name) WHERE (revoked_at IS NULL)"
     )
   end
 
   def down do
-    execute("DROP INDEX keys_organization_id_name_revoked_at_key")
-    execute("DROP INDEX keys_user_id_name_revoked_at_key")
+    execute("DROP INDEX IF EXISTS keys_organization_id_name_revoked_at_key")
+    execute("DROP INDEX IF EXISTS keys_user_id_name_revoked_at_key")
 
     execute(
       "ALTER TABLE keys ADD CONSTRAINT keys_user_id_name_revoked_at_key UNIQUE (user_id, name, revoked_at)"

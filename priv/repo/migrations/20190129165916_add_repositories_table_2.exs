@@ -2,7 +2,7 @@ defmodule Hexpm.RepoBase.Migrations.AddRepositoriesTable2 do
   use Ecto.Migration
 
   def up do
-    create table(:repositories) do
+    create_if_not_exists table(:repositories) do
       add(:name, :string, null: false)
       add(:public, :boolean, null: false, default: false)
       add(:organization_id, references(:organizations))
@@ -49,10 +49,10 @@ defmodule Hexpm.RepoBase.Migrations.AddRepositoriesTable2 do
 
     execute("UPDATE organizations SET billing_active = true WHERE id = 1")
 
-    create(unique_index(:repositories, [:name]))
-    create(index(:repositories, [:public]))
-    create(unique_index(:packages, [:repository_id, :name]))
-    create(unique_index(:reserved_packages, [:repository_id, :name, :version]))
+    create_if_not_exists(unique_index(:repositories, [:name]))
+    create_if_not_exists(index(:repositories, [:public]))
+    create_if_not_exists(unique_index(:packages, [:repository_id, :name]))
+    create_if_not_exists(unique_index(:reserved_packages, [:repository_id, :name, :version]))
   end
 
   def down() do
@@ -85,8 +85,8 @@ defmodule Hexpm.RepoBase.Migrations.AddRepositoriesTable2 do
 
     execute("UPDATE organizations SET billing_active = false WHERE id = 1")
 
-    drop(table(:repositories))
-    create(unique_index(:packages, [:organization_id, :name]))
-    create(unique_index(:reserved_packages, [:organization_id, :name, :version]))
+    drop_if_exists(table(:repositories))
+    create_if_not_exists(unique_index(:packages, [:organization_id, :name]))
+    create_if_not_exists(unique_index(:reserved_packages, [:organization_id, :name, :version]))
   end
 end

@@ -190,11 +190,14 @@ defmodule HexpmWeb.Router do
     get "/packages/:name/dependents", PackageController, :dependents
     get "/packages/:name/dependencies", PackageController, :dependencies
     get "/packages/:name/versions", PackageController, :versions
+    get "/packages/:name/advisories", PackageController, :advisories
+    get "/packages/:name/:version/dependencies", PackageController, :dependencies
     get "/packages/:name/:version", PackageController, :show
     get "/packages/:repository/:name/audit-logs", PackageController, :audit_logs
     get "/packages/:repository/:name/dependents", PackageController, :dependents
-    get "/packages/:repository/:name/dependencies", PackageController, :dependencies
     get "/packages/:repository/:name/versions", PackageController, :versions
+    get "/packages/:repository/:name/advisories", PackageController, :advisories
+    get "/packages/:repository/:name/:version/dependencies", PackageController, :dependencies
     get "/packages/:repository/:name/:version", PackageController, :show
 
     get "/blog", BlogController, :index
@@ -418,6 +421,14 @@ defmodule HexpmWeb.Router do
       post "/oauth_token", TestController, :oauth_token
       post "/oauth_device_authorize", TestController, :oauth_device_authorize
       get "/oauth_device_pending", TestController, :oauth_device_pending
+    end
+  end
+
+  if Mix.env() == :test do
+    scope "/_test", HexpmWeb do
+      pipe_through :browser
+
+      get "/raise", TestController, :raise_error
     end
   end
 

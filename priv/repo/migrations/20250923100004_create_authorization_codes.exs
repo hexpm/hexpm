@@ -2,7 +2,7 @@ defmodule Hexpm.RepoBase.Migrations.CreateAuthorizationCodes do
   use Ecto.Migration
 
   def change do
-    create table(:authorization_codes) do
+    create_if_not_exists table(:authorization_codes) do
       add :code, :string, null: false
       add :redirect_uri, :string, null: false
       add :scopes, {:array, :string}, null: false, default: []
@@ -21,9 +21,9 @@ defmodule Hexpm.RepoBase.Migrations.CreateAuthorizationCodes do
       timestamps()
     end
 
-    create unique_index(:authorization_codes, [:code])
-    create index(:authorization_codes, [:user_id])
-    create index(:authorization_codes, [:client_id])
-    create index(:authorization_codes, [:expires_at])
+    create_if_not_exists unique_index(:authorization_codes, [:code])
+    create_if_not_exists index(:authorization_codes, [:user_id])
+    create_if_not_exists index(:authorization_codes, [:client_id])
+    create_if_not_exists index(:authorization_codes, [:expires_at])
   end
 end

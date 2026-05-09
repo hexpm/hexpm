@@ -4,8 +4,8 @@ defmodule Hexpm.Repo.Migrations.AddConfirmationToUsers do
   def up() do
     execute("""
       ALTER TABLE users
-        ADD COLUMN confirmed boolean DEFAULT false,
-        ADD COLUMN confirmation_key text
+        ADD COLUMN IF NOT EXISTS confirmed boolean DEFAULT false,
+        ADD COLUMN IF NOT EXISTS confirmation_key text
     """)
 
     execute("""

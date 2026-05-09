@@ -1,5 +1,8 @@
 import Config
 
+config :hexpm,
+  advisory_updater_enabled: System.get_env("HEXPM_ADVISORY_UPDATER") == "1"
+
 if config_env() == :prod do
   config :hexpm,
     host: System.fetch_env!("HEXPM_HOST"),
