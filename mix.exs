@@ -34,6 +34,7 @@ defmodule Hexpm.MixProject do
     [
       {:bamboo_phoenix, "~> 1.0"},
       {:bamboo, "~> 2.2"},
+      {:bandit, "~> 1.0"},
       {:bcrypt_elixir, "~> 3.0"},
       {:bypass, "~> 2.1", only: :test},
       {:corsica, "~> 2.0"},
@@ -74,7 +75,6 @@ defmodule Hexpm.MixProject do
       {:phoenix, "~> 1.6"},
       {:plug_attack, "~> 0.3"},
       {:plug_content_security_policy, "~> 0.2.1"},
-      {:plug_cowboy, "~> 2.1"},
       {:plug, "~> 1.7"},
       {:postgrex, "~> 0.14"},
       {:pot, "~> 1.0"},

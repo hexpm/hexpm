@@ -40,18 +40,17 @@ if Code.ensure_loaded?(Wallaby) do
 
     # Ensures the endpoint HTTP server is running for browser tests.
     # The test config has server: false to avoid starting it for unit tests.
-    # Starts cowboy on a free port and returns the base URL.
+    # Starts Bandit on a free port and returns the base URL.
     defp ensure_endpoint_server do
-      port =
-        try do
-          :ranch.get_port(HexpmWeb.Endpoint.HTTP)
-        rescue
-          _ ->
-            {:ok, _} = Plug.Cowboy.http(HexpmWeb.Endpoint, [], port: 0)
-            :ranch.get_port(HexpmWeb.Endpoint.HTTP)
-        end
+      case HexpmWeb.Endpoint.server_info(:http) do
+        {:ok, {_scheme, _ip, port}} ->
+          "http://localhost:#{port}"
 
-      "http://localhost:#{port}"
+        _ ->
+          {:ok, _} = Bandit.start_link(plug: HexpmWeb.Endpoint, port: 0)
+          {:ok, {_scheme, _ip, port}} = HexpmWeb.Endpoint.server_info(:http)
+          "http://localhost:#{port}"
+      end
     end
 
     @doc """
