@@ -120,7 +120,7 @@ defmodule Hexpm.GitHub.SecretScanning do
 
   defp fetch_public_keys_cached() do
     ttl = Application.get_env(:hexpm, :github_key_cache_ttl, 300)
-    Hexpm.Cache.fetch(Hexpm.Cache, :github_secret_scanning_keys, &fetch_public_keys/0, ttl: ttl)
+    Hexpm.Cache.fetch(:github_secret_scanning_keys, &fetch_public_keys/0, ttl)
   end
 
   @doc false
