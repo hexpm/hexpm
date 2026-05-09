@@ -52,6 +52,22 @@ defmodule HexpmWeb.ViewHelpers do
     ~p"/packages/#{package.repository}/#{package}/versions"
   end
 
+  def path_for_dependencies(%Package{repository_id: 1} = package) do
+    ~p"/packages/#{package}/dependencies"
+  end
+
+  def path_for_dependencies(%Package{} = package) do
+    ~p"/packages/#{package.repository}/#{package}/dependencies"
+  end
+
+  def path_for_dependencies(%Package{repository_id: 1} = package, %Release{} = release) do
+    ~p"/packages/#{package}/#{release}/dependencies"
+  end
+
+  def path_for_dependencies(%Package{} = package, %Release{} = release) do
+    ~p"/packages/#{package.repository}/#{package}/#{release}/dependencies"
+  end
+
   def html_url_for_package(%Package{repository_id: 1} = package) do
     url(~p"/packages/#{package}")
   end

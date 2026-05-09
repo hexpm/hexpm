@@ -369,6 +369,12 @@ defmodule HexpmWeb.PackageControllerTest do
       |> get("/packages/#{package3.name}/0.0.1")
       |> response(404)
     end
+
+    test "version-pinned page links Dependencies tab to versioned dependencies",
+         %{package1: package1} do
+      body = response(get(build_conn(), "/packages/#{package1.name}/0.0.1"), 200)
+      assert body =~ "/packages/#{package1.name}/0.0.1/dependencies"
+    end
   end
 
   describe "GET /packages/:repository/:name/:version" do
@@ -674,6 +680,46 @@ defmodule HexpmWeb.PackageControllerTest do
       assert response(conn, 200)
       assert conn.assigns.daily_graph != []
       assert Enum.any?(conn.assigns.daily_graph, fn n -> n > 0 end)
+    end
+  end
+
+  describe "GET /packages/:name/:version/dependencies" do
+    test "renders dependencies page for the selected version", %{package1: package1} do
+      conn = get(build_conn(), "/packages/#{package1.name}/0.0.1/dependencies")
+      body = response(conn, 200)
+      assert body =~ "Dependencies of"
+      assert body =~ "gleam add #{package1.name}@0.0.1"
+    end
+
+    test "returns 404 when version does not exist", %{package1: package1} do
+      conn = get(build_conn(), "/packages/#{package1.name}/9.9.9/dependencies")
+      assert response(conn, 404)
+    end
+
+    test "renders for repository/name/version triple", %{
+      package3: package3,
+      repository1: repository1,
+      user1: user1
+    } do
+      conn =
+        build_conn()
+        |> test_login(user1)
+        |> get("/packages/#{repository1.name}/#{package3.name}/0.0.1/dependencies")
+
+      assert response(conn, 200) =~ "Dependencies of"
+    end
+
+    test "renders for repository/name unversioned dependencies", %{
+      package3: package3,
+      repository1: repository1,
+      user1: user1
+    } do
+      conn =
+        build_conn()
+        |> test_login(user1)
+        |> get("/packages/#{repository1.name}/#{package3.name}/dependencies")
+
+      assert response(conn, 200) =~ "Dependencies of"
     end
   end
 

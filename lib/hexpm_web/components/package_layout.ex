@@ -24,6 +24,8 @@ defmodule HexpmWeb.Components.PackageLayout do
 
   attr :package, :map, required: true
   attr :current_release, :map, default: nil
+  attr :all_releases, :list, default: []
+  attr :version_pinned?, :boolean, default: false
   attr :dependants_count, :integer, default: 0
   attr :versions_count, :integer, default: 0
   attr :repository_name, :string, required: true
@@ -111,14 +113,34 @@ defmodule HexpmWeb.Components.PackageLayout do
                 </a>
               </h1>
               <%= if @current_release do %>
-                <div class="bg-grey-200 dark:bg-grey-800 flex items-center gap-1.5 px-3 py-1 rounded-xl whitespace-nowrap">
-                  {HexpmWeb.ViewIcons.icon(:heroicon, "tag",
-                    class: "size-3.5 text-grey-500 dark:text-grey-300"
-                  )}
-                  <p class="text-grey-700 dark:text-grey-200 text-sm font-medium">
-                    v{@current_release.version}
-                  </p>
-                </div>
+                <details class="package-version-picker group relative">
+                  <summary class="select-none flex cursor-pointer list-none items-center gap-1.5 rounded-xl border border-grey-300 bg-grey-100 px-3 py-1 text-sm font-medium text-grey-700 transition-colors hover:border-grey-400 hover:bg-grey-200 dark:border-grey-600 dark:bg-grey-800 dark:text-grey-200 dark:hover:border-grey-500 dark:hover:bg-grey-700 [&::-webkit-details-marker]:hidden">
+                    {HexpmWeb.ViewIcons.icon(:heroicon, "tag",
+                      class: "size-3.5 text-grey-500 dark:text-grey-300"
+                    )}
+                    <span class="font-mono">{@current_release.version}</span>
+                    {HexpmWeb.ViewIcons.icon(:heroicon, "chevron-down",
+                      class:
+                        "size-3.5 text-grey-500 dark:text-grey-300 transition-transform group-open:rotate-180"
+                    )}
+                  </summary>
+
+                  <div class="absolute right-0 top-full z-20 mt-2 max-h-80 w-52 max-w-[calc(100vw-2rem)] overflow-y-auto overflow-x-hidden rounded-lg border border-grey-200 bg-white shadow-lg sm:left-0 sm:right-auto sm:w-64 dark:border-grey-700 dark:bg-grey-800">
+                    <%= for release <- @all_releases do %>
+                      <a
+                        href={path_for_tab(@active_tab, @package, release)}
+                        class={version_item_class(@current_release.version == release.version)}
+                      >
+                        <span class="font-mono text-sm">{release.version}</span>
+                        <%= if release.retirement do %>
+                          <span class="inline-flex items-center rounded border border-yellow-300 bg-yellow-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-yellow-900 dark:border-yellow-700/60 dark:bg-yellow-900/30 dark:text-yellow-100">
+                            retired
+                          </span>
+                        <% end %>
+                      </a>
+                    <% end %>
+                  </div>
+                </details>
               <% end %>
             </div>
             <%= if @description do %>
@@ -525,12 +547,6 @@ defmodule HexpmWeb.Components.PackageLayout do
   defp dependents_path(package),
     do: "/packages/#{package.repository.name}/#{package.name}/dependents"
 
-  defp dependencies_path(%{repository: %{id: 1}} = package),
-    do: "/packages/#{package.name}/dependencies"
-
-  defp dependencies_path(package),
-    do: "/packages/#{package.repository.name}/#{package.name}/dependencies"
-
   defp advisories_path(%{repository: %{id: 1}} = package),
     do: "/packages/#{package.name}/advisories"
 
@@ -543,7 +559,7 @@ defmodule HexpmWeb.Components.PackageLayout do
         active: assigns.active_tab == :readme,
         icon: "document-text",
         label: "Readme",
-        path: ViewHelpers.path_for_package(assigns.package)
+        path: readme_path(assigns)
       },
       %{
         active: assigns.active_tab == :versions,
@@ -561,15 +577,17 @@ defmodule HexpmWeb.Components.PackageLayout do
           label:
             "#{assigns.dependants_count} #{pluralize(assigns.dependants_count, "Dependant", "Dependants")}",
           path: dependents_path(assigns.package)
-        },
+        }
+      ] ++
+      advisories_tab(assigns) ++
+      [
         %{
           active: assigns.active_tab == :activity,
           icon: "clock",
           label: "Activity",
           path: audit_logs_path(assigns.package)
         }
-      ] ++
-      advisories_tab(assigns)
+      ]
   end
 
   defp dependency_tab(%{current_release: nil}), do: []
@@ -581,7 +599,7 @@ defmodule HexpmWeb.Components.PackageLayout do
         icon: "cube",
         label:
           "#{assigns.dependency_count} #{pluralize(assigns.dependency_count, "Dependency", "Dependencies")}",
-        path: dependencies_path(assigns.package)
+        path: dependencies_tab_path(assigns)
       }
     ]
   end
@@ -603,6 +621,19 @@ defmodule HexpmWeb.Components.PackageLayout do
     ]
   end
 
+  defp readme_path(%{version_pinned?: true, package: package, current_release: release})
+       when not is_nil(release),
+       do: ViewHelpers.path_for_release(package, release)
+
+  defp readme_path(%{package: package}), do: ViewHelpers.path_for_package(package)
+
+  defp dependencies_tab_path(%{version_pinned?: true, package: package, current_release: release})
+       when not is_nil(release),
+       do: ViewHelpers.path_for_dependencies(package, release)
+
+  defp dependencies_tab_path(%{package: package}),
+    do: ViewHelpers.path_for_dependencies(package)
+
   defp tab_class(true),
     do:
       "flex items-center gap-1 px-[15px] py-3 text-grey-900 dark:text-white font-medium border-b-2 border-primary-default dark:border-white -mb-px whitespace-nowrap"
@@ -621,4 +652,18 @@ defmodule HexpmWeb.Components.PackageLayout do
 
   defp pluralize(1, singular, _plural), do: singular
   defp pluralize(_count, _singular, plural), do: plural
+
+  defp path_for_tab(:dependencies, package, release),
+    do: ViewHelpers.path_for_dependencies(package, release)
+
+  defp path_for_tab(_tab, package, release),
+    do: ViewHelpers.path_for_release(package, release)
+
+  defp version_item_class(true),
+    do:
+      "flex items-center justify-between gap-3 px-3 py-2 bg-grey-100 dark:bg-grey-700/60 text-grey-900 dark:text-white"
+
+  defp version_item_class(false),
+    do:
+      "flex items-center justify-between gap-3 px-3 py-2 text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-700/40 transition-colors"
 end

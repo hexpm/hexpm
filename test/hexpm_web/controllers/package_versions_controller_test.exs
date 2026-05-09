@@ -145,7 +145,7 @@ defmodule HexpmWeb.PackageVersionsControllerTest do
 
   defp release_link_texts(document, package_name) do
     document
-    |> Floki.find("a")
+    |> Floki.find("table tbody a")
     |> Enum.filter(fn link ->
       case Floki.attribute(link, "href") do
         [href] ->
