@@ -23,15 +23,24 @@ defmodule HexpmWeb.Plugs.CacheRawBody do
 
         {:more, _partial, conn} ->
           Logger.warning("CacheRawBody: body exceeded 1 MB limit for #{conn.request_path}")
-          conn
+          send_error(conn, 413, "request body too large")
 
         {:error, reason} ->
           Logger.warning("CacheRawBody: failed to read body: #{inspect(reason)}")
-          conn
+          send_error(conn, 500, "failed to read request body")
       end
     else
       conn
     end
+  end
+
+  defp send_error(conn, status, message) do
+    body = Jason.encode!(%{status: status, message: message})
+
+    conn
+    |> Plug.Conn.put_resp_content_type("application/json")
+    |> Plug.Conn.send_resp(status, body)
+    |> Plug.Conn.halt()
   end
 
   defp paths do

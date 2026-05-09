@@ -9,12 +9,11 @@ defmodule Hexpm.GitHub.SecretScanning do
 
   require Logger
 
-  alias Hexpm.Accounts.{Key, Keys}
+  alias Hexpm.Accounts.{Auth, Keys}
 
   @public_keys_url "https://api.github.com/meta/public_keys/secret_scanning"
   # prime256v1 / P-256 OID
   @p256_oid {1, 2, 840, 10045, 3, 1, 7}
-  @token_prefix Key.token_prefix()
 
   @doc """
   Verifies the GitHub ECDSA-P256-SHA256 signature on a raw request body.
@@ -76,26 +75,14 @@ defmodule Hexpm.GitHub.SecretScanning do
   end
 
   defp revoke_token(token) do
-    raw =
-      case token do
-        @token_prefix <> body -> body
-        other -> other
-      end
-
+    raw = Auth.strip_token_prefix(token)
     app_secret = Application.get_env(:hexpm, :secret)
 
     <<first::binary-size(32), _rest::binary>> =
       :crypto.mac(:hmac, :sha256, app_secret, raw)
       |> Base.encode16(case: :lower)
 
-    case Keys.get_by_secret_first(first) do
-      nil ->
-        :not_found
-
-      {key, user} ->
-        Keys.revoke_immediately(key)
-        {:ok, key, user}
-    end
+    Keys.revoke_by_secret_first(first)
   end
 
   defp find_key(keys, key_id) do
