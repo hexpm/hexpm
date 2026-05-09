@@ -123,6 +123,9 @@ jobs:
           - hex-version: main
             otp: 28.5
             elixir: 1.19.5
+          - hex-version: v2.4
+            otp: 28.5
+            elixir: 1.19.5
           - hex-version: v2.3
             otp: 28.5
             elixir: 1.19.5
@@ -130,9 +133,6 @@ jobs:
             otp: 27.3
             elixir: 1.19.5
           - hex-version: v2.1
-            otp: 27.3
-            elixir: 1.19.5
-          - hex-version: v2.0
             otp: 27.3
             elixir: 1.19.5
 
