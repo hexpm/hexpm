@@ -19,7 +19,7 @@ config :hexpm,
   cdn_url: "http://localhost:4043"
 
 config :hexpm, HexpmWeb.Endpoint,
-  http: [port: 4043, protocol_options: [max_keepalive: :infinity]],
+  http: [port: 4043],
   debug_errors: false,
   secret_key_base: "38K8orQfRHMC6ZWXIdgItQEiumeY+L2Ls0fvYfTMt4AoG5+DSFsLG6vMajNcd5Td",
   live_view: [signing_salt: "2UTSB72sZsF9KTlxefkIrFFPXTO7d+Ep"]

@@ -216,6 +216,46 @@ Hexpm.Repo.transaction(fn ->
       )
   )
 
+  insert(
+    :release,
+    package: oidcc,
+    version: "3.1.0",
+    publisher: maennchen,
+    meta: build(:release_metadata, app: "oidcc", build_tools: ["mix"])
+  )
+
+  insert(
+    :release,
+    package: oidcc,
+    version: "3.1.1",
+    publisher: maennchen,
+    meta: build(:release_metadata, app: "oidcc", build_tools: ["mix"]),
+    retirement: %Hexpm.Repository.ReleaseRetirement{
+      reason: "deprecated",
+      message: "Use 3.1.2 instead"
+    }
+  )
+
+  insert(
+    :release,
+    package: oidcc,
+    version: "3.1.2",
+    publisher: maennchen,
+    meta: build(:release_metadata, app: "oidcc", build_tools: ["mix"])
+  )
+
+  insert(
+    :release,
+    package: oidcc,
+    version: "3.1.3",
+    publisher: maennchen,
+    meta: build(:release_metadata, app: "oidcc", build_tools: ["mix"]),
+    retirement: %Hexpm.Repository.ReleaseRetirement{
+      reason: "security",
+      message: "Known security vulnerability"
+    }
+  )
+
   oidcc_advisory_record = %{
     id: "GHSA-mj35-2rgf-cv8p",
     summary:
@@ -238,6 +278,11 @@ Hexpm.Repo.transaction(fn ->
         package: "oidcc",
         requirements: [Version.parse_requirement!(">= 3.0.0 and < 3.0.2")],
         versions: ["3.0.0"]
+      },
+      %{
+        package: "oidcc",
+        requirements: [Version.parse_requirement!(">= 3.1.2 and < 3.1.4")],
+        versions: ["3.1.2", "3.1.3"]
       }
     ]
   }
