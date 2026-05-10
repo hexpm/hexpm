@@ -262,9 +262,11 @@ defmodule Hexpm.Repository.PackageTest do
 
     rel = insert(:release, package: ecto)
     insert(:requirement, release: rel, dependency: poison, requirement: "~> 1.0")
+    recompute_dependants(ecto)
     rel = insert(:release, package: phoenix)
     insert(:requirement, release: rel, dependency: poison, requirement: "~> 1.0")
     insert(:requirement, release: rel, dependency: ecto, requirement: "~> 1.0")
+    recompute_dependants(phoenix)
 
     assert ["ecto", "phoenix"] = search_for(repository, "depends:#{repository.name}:poison")
 
@@ -284,9 +286,11 @@ defmodule Hexpm.Repository.PackageTest do
 
     rel = insert(:release, package: ecto)
     insert(:requirement, release: rel, dependency: poison, requirement: "~> 1.0")
+    recompute_dependants(ecto)
     rel = insert(:release, package: phoenix)
     insert(:requirement, release: rel, dependency: poison, requirement: "~> 1.0")
     insert(:requirement, release: rel, dependency: ecto, requirement: "~> 1.0")
+    recompute_dependants(phoenix)
 
     assert ["phoenix"] = search_for(repository, "depends:#{repository.name}:poison")
   end
@@ -299,8 +303,10 @@ defmodule Hexpm.Repository.PackageTest do
 
     rel = insert(:release, package: ecto)
     insert(:requirement, release: rel, dependency: poison, requirement: "~> 1.0")
+    recompute_dependants(ecto)
     rel = insert(:release, package: phoenix)
     insert(:requirement, release: rel, dependency: poison, requirement: "~> 1.0")
+    recompute_dependants(phoenix)
 
     assert 1 = Package.count_dependants([repository], poison) |> Repo.one!()
 
@@ -345,6 +351,7 @@ defmodule Hexpm.Repository.PackageTest do
     for package <- [top, middle, zero, hidden] do
       rel = Repo.one!(assoc(package, :releases))
       insert(:requirement, release: rel, dependency: dependency, requirement: "~> 1.0")
+      recompute_dependants(package)
     end
 
     :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
@@ -374,6 +381,7 @@ defmodule Hexpm.Repository.PackageTest do
     for package <- [top, zero_one, zero_two] do
       rel = Repo.one!(assoc(package, :releases))
       insert(:requirement, release: rel, dependency: dependency, requirement: "~> 1.0")
+      recompute_dependants(package)
     end
 
     :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
@@ -383,7 +391,49 @@ defmodule Hexpm.Repository.PackageTest do
              |> Enum.map(& &1.id)
   end
 
-  test "reverting a release only removes affected dependant pairs", %{
+  test "reverting the latest release falls back to the previous latest's deps", %{
+    repository: repository,
+    user: user
+  } do
+    dependency_a = %{
+      insert(:package, name: "dependency_a", repository_id: repository.id)
+      | repository: repository
+    }
+
+    dependency_b = %{
+      insert(:package, name: "dependency_b", repository_id: repository.id)
+      | repository: repository
+    }
+
+    dependant = %{
+      insert(:package, name: "dependant", repository_id: repository.id)
+      | repository: repository
+    }
+
+    release_one = %{
+      insert(:release, package: dependant, version: "1.0.0")
+      | package: dependant
+    }
+
+    release_two = %{
+      insert(:release, package: dependant, version: "2.0.0")
+      | package: dependant
+    }
+
+    insert(:requirement, release: release_one, dependency: dependency_a, requirement: "~> 1.0")
+    insert(:requirement, release: release_two, dependency: dependency_b, requirement: "~> 1.0")
+    recompute_dependants(dependant)
+
+    assert ["dependant"] = dependant_names(repository, dependency_b)
+    assert [] = dependant_names(repository, dependency_a)
+
+    assert :ok = Releases.revert(dependant, release_two, audit: audit_data(user))
+
+    assert [] = dependant_names(repository, dependency_b)
+    assert ["dependant"] = dependant_names(repository, dependency_a)
+  end
+
+  test "reverting a non-latest release does not change dependants", %{
     repository: repository,
     user: user
   } do
@@ -392,60 +442,59 @@ defmodule Hexpm.Repository.PackageTest do
       | repository: repository
     }
 
-    survivor = %{
-      insert(:package, name: "survivor", repository_id: repository.id)
+    dependant = %{
+      insert(:package, name: "dependant", repository_id: repository.id)
       | repository: repository
     }
 
-    doomed = %{
-      insert(:package, name: "doomed", repository_id: repository.id)
+    release_one = %{
+      insert(:release, package: dependant, version: "1.0.0")
+      | package: dependant
+    }
+
+    release_two = %{
+      insert(:release, package: dependant, version: "2.0.0")
+      | package: dependant
+    }
+
+    insert(:requirement, release: release_one, dependency: dependency, requirement: "~> 1.0")
+    insert(:requirement, release: release_two, dependency: dependency, requirement: "~> 1.0")
+    recompute_dependants(dependant)
+
+    assert ["dependant"] = dependant_names(repository, dependency)
+
+    assert :ok = Releases.revert(dependant, release_one, audit: audit_data(user))
+
+    assert ["dependant"] = dependant_names(repository, dependency)
+  end
+
+  test "reverting the only release removes the dependant entry", %{
+    repository: repository,
+    user: user
+  } do
+    dependency = %{
+      insert(:package, name: "dependency", repository_id: repository.id)
       | repository: repository
     }
 
-    shared_packages =
-      for index <- 1..4 do
-        insert(:package, name: "shared#{index}", repository_id: repository.id)
-      end
-
-    survivor_release_one = %{
-      insert(:release, package: survivor, version: "1.0.0")
-      | package: survivor
+    dependant = %{
+      insert(:package, name: "dependant", repository_id: repository.id)
+      | repository: repository
     }
 
-    survivor_release_two = %{
-      insert(:release, package: survivor, version: "2.0.0")
-      | package: survivor
+    release = %{
+      insert(:release, package: dependant, version: "1.0.0")
+      | package: dependant
     }
 
-    doomed_release = %{insert(:release, package: doomed, version: "1.0.0") | package: doomed}
+    insert(:requirement, release: release, dependency: dependency, requirement: "~> 1.0")
+    recompute_dependants(dependant)
 
-    for package <- shared_packages do
-      release = insert(:release, package: package, version: "1.0.0")
-      insert(:requirement, release: release, dependency: dependency, requirement: "~> 1.0")
-    end
+    assert ["dependant"] = dependant_names(repository, dependency)
 
-    for release <- [survivor_release_one, survivor_release_two, doomed_release] do
-      insert(:requirement, release: release, dependency: dependency, requirement: "~> 1.0")
-    end
+    assert :ok = Releases.revert(dependant, release, audit: audit_data(user))
 
-    assert 6 = Package.count_dependants([repository], dependency) |> Repo.one!()
-
-    assert ["doomed", "shared1", "shared2", "shared3", "shared4", "survivor"] =
-             dependant_names(repository, dependency)
-
-    assert :ok = Releases.revert(doomed, doomed_release, audit: audit_data(user))
-
-    assert 5 = Package.count_dependants([repository], dependency) |> Repo.one!()
-
-    assert ["shared1", "shared2", "shared3", "shared4", "survivor"] =
-             dependant_names(repository, dependency)
-
-    assert :ok = Releases.revert(survivor, survivor_release_one, audit: audit_data(user))
-
-    assert 5 = Package.count_dependants([repository], dependency) |> Repo.one!()
-
-    assert ["shared1", "shared2", "shared3", "shared4", "survivor"] =
-             dependant_names(repository, dependency)
+    assert [] = dependant_names(repository, dependency)
   end
 
   test "depends search can return private packages if caller passes a broad repository list", %{
@@ -460,9 +509,11 @@ defmodule Hexpm.Repository.PackageTest do
 
     rel = insert(:release, package: public_match, version: "1.0.0")
     insert(:requirement, release: rel, dependency: dependency, requirement: "~> 1.0")
+    recompute_dependants(public_match)
 
     rel = insert(:release, package: private_match, version: "1.0.0")
     insert(:requirement, release: rel, dependency: dependency, requirement: "~> 1.0")
+    recompute_dependants(private_match)
 
     assert ["private_match", "public_match"] =
              Packages.search(

@@ -52,6 +52,9 @@ defmodule Hexpm.Repository.Releases do
     |> Multi.run(:matched_advisories, fn repo, %{release: release} ->
       Hexpm.Security.Advisories.affect_release_with_existing_advisories(repo, release)
     end)
+    |> Multi.run(:package_dependants, fn repo, %{package: package} ->
+      PackageDependants.recompute_for_package(repo, package)
+    end)
     |> audit_publish(audit_data)
     |> Repo.transaction(timeout: @publish_timeout)
     |> publish_result(user, body)
@@ -78,8 +81,15 @@ defmodule Hexpm.Repository.Releases do
     |> audit_revert(audit_data, package, release)
     |> Multi.run(:release_count, &release_count/2)
     |> Multi.run(:package, &maybe_delete_package/2)
+    |> Multi.run(:package_dependants, &recompute_package_dependants/2)
     |> Repo.transaction(timeout: @publish_timeout)
     |> revert_result()
+  end
+
+  defp recompute_package_dependants(_repo, %{release_count: 0}), do: {:ok, :skipped}
+
+  defp recompute_package_dependants(repo, %{package: package}) do
+    PackageDependants.recompute_for_package(repo, package)
   end
 
   def revert_docs(release, audit: audit_data) do
