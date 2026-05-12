@@ -272,6 +272,34 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       assert Hexpm.Repo.get_by(Package, name: package.name).meta.description == "awesomeness"
     end
 
+    test "rejects release with escaping symlink", %{user: user} do
+      meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "description"}
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(user))
+        |> post("/api/publish", create_tar_with_symlink(meta, "README.md", "../../README.md"))
+
+      result = json_response(conn, 422)
+      assert result["errors"]["tar"] =~ "unsafe_symlink"
+      refute Hexpm.Repo.get_by(Package, name: meta.name)
+    end
+
+    test "accepts release with internal symlink", %{user: user} do
+      meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "description"}
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(user))
+        |> post("/api/publish", create_tar_with_symlink(meta, "dir/link", "../README.md"))
+
+      result = json_response(conn, 201)
+      assert result["version"] == "1.0.0"
+      assert Hexpm.Repo.get_by(Package, name: meta.name)
+    end
+
     test "create new package authorizes with package key permission", %{
       user: user,
       package: package,
@@ -1748,6 +1776,25 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
       result = json_response(conn, 403)
       assert result["message"] == "Two-factor authentication must be enabled for API write access"
+    end
+  end
+
+  defp create_tar_with_symlink(meta, archive_name, target) do
+    tmp_dir =
+      Path.join(
+        Application.get_env(:hexpm, :tmp_dir),
+        "release-controller-test-#{System.unique_integer([:positive])}"
+      )
+
+    File.mkdir_p!(tmp_dir)
+    link_path = Path.join(tmp_dir, "link")
+
+    try do
+      File.ln_s!(target, link_path)
+      files = if archive_name == "README.md", do: [], else: [{"README.md", "README"}]
+      create_tar(meta, files ++ [{archive_name, String.to_charlist(link_path)}])
+    after
+      File.rm_rf(tmp_dir)
     end
   end
 end

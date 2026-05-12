@@ -203,12 +203,28 @@ defmodule HexpmWeb.API.ReleaseController do
   end
 
   defp release_metadata(body_path) do
-    case :hex_tarball.unpack({:file, String.to_charlist(body_path)}, :none) do
-      {:ok, %{inner_checksum: inner_checksum, outer_checksum: outer_checksum, metadata: metadata}} ->
-        {:ok, metadata, inner_checksum, outer_checksum}
+    tmp_dir =
+      Path.join(
+        Application.get_env(:hexpm, :tmp_dir),
+        "release-tarball-#{Base.encode16(:crypto.strong_rand_bytes(16), case: :lower)}"
+      )
 
-      {:error, reason} ->
-        {:error, List.to_string(:hex_tarball.format_error(reason))}
+    File.mkdir_p!(tmp_dir)
+
+    try do
+      case :hex_tarball.unpack(
+             {:file, String.to_charlist(body_path)},
+             String.to_charlist(tmp_dir)
+           ) do
+        {:ok,
+         %{inner_checksum: inner_checksum, outer_checksum: outer_checksum, metadata: metadata}} ->
+          {:ok, metadata, inner_checksum, outer_checksum}
+
+        {:error, reason} ->
+          {:error, List.to_string(:hex_tarball.format_error(reason))}
+      end
+    after
+      File.rm_rf(tmp_dir)
     end
   end
 end
