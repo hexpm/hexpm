@@ -91,6 +91,32 @@ defmodule Hexpm.Repository.PackageTest do
     assert [licenses: {"invalid license \"Invalid-Lic\"", []}] = changeset.changes.meta.errors
   end
 
+  test "allow custom LicenseRef license on update for public package", %{
+    user: user,
+    public_repository: repository
+  } do
+    repository = %{repository | id: 1}
+
+    package =
+      Package.build(
+        repository,
+        user,
+        pkg_meta(%{name: "ecto", description: "original", licenses: ["Apache-2.0"]})
+      )
+      |> Hexpm.Repo.insert!()
+
+    changeset =
+      Package.update(package, %{
+        "meta" => %{
+          "description" => "updated",
+          "licenses" => ["LicenseRef-Journey", "Apache-2.0"]
+        }
+      })
+
+    assert changeset.errors == []
+    assert changeset.changes.meta.errors == []
+  end
+
   test "validate invalid license for public package", %{
     user: user,
     public_repository: repository
@@ -110,6 +136,27 @@ defmodule Hexpm.Repository.PackageTest do
 
     assert changeset.errors == []
     assert [licenses: {"invalid license \"Invalid-Lic\"", []}] = changeset.changes.meta.errors
+  end
+
+  test "allow custom LicenseRef license for public package", %{
+    user: user,
+    public_repository: repository
+  } do
+    repository = %{repository | id: 1}
+
+    changeset =
+      Package.build(
+        repository,
+        user,
+        pkg_meta(%{
+          name: "customlicense",
+          description: "A package with a custom license reference",
+          licenses: ["LicenseRef-Journey"]
+        })
+      )
+
+    assert changeset.errors == []
+    assert changeset.changes.meta.errors == []
   end
 
   test "validate blank description for public package", %{
