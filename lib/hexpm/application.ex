@@ -7,11 +7,13 @@ defmodule Hexpm.Application do
     topologies = cluster_topologies()
     read_only_mode()
     Hexpm.BlockAddress.start()
+    setup_tmp_dir()
 
     children =
       [
         Hexpm.RepoBase,
         {Finch, name: Hexpm.Finch},
+        Hexpm.TmpDir,
         {Task.Supervisor, name: Hexpm.Tasks},
         {Cluster.Supervisor, [topologies, [name: Hexpm.ClusterSupervisor]]},
         {Phoenix.PubSub, name: Hexpm.PubSub, adapter: Phoenix.PubSub.PG2},
@@ -31,7 +33,6 @@ defmodule Hexpm.Application do
       ]
       |> Enum.reject(&is_nil/1)
 
-    File.mkdir_p(Application.get_env(:hexpm, :tmp_dir))
     shutdown_on_eof()
 
     opts = [strategy: :one_for_one, name: Hexpm.Supervisor]
@@ -65,6 +66,13 @@ defmodule Hexpm.Application do
   defp read_only_mode() do
     mode = System.get_env("HEXPM_READ_ONLY_MODE") == "1"
     Application.put_env(:hexpm, :read_only_mode, mode)
+  end
+
+  defp setup_tmp_dir() do
+    if dir = Application.get_env(:hexpm, :tmp_dir) do
+      File.mkdir_p!(dir)
+      Application.put_env(:hexpm, :tmp_dir, Path.expand(dir))
+    end
   end
 
   defp setup() do

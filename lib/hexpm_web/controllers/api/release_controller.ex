@@ -203,13 +203,7 @@ defmodule HexpmWeb.API.ReleaseController do
   end
 
   defp release_metadata(body_path) do
-    tmp_dir =
-      Path.join(
-        Application.get_env(:hexpm, :tmp_dir),
-        "release-tarball-#{Base.encode16(:crypto.strong_rand_bytes(16), case: :lower)}"
-      )
-
-    File.mkdir_p!(tmp_dir)
+    tmp_dir = Hexpm.TmpDir.tmp_dir("release-tarball")
 
     try do
       case :hex_tarball.unpack(
@@ -224,7 +218,7 @@ defmodule HexpmWeb.API.ReleaseController do
           {:error, List.to_string(:hex_tarball.format_error(reason))}
       end
     after
-      File.rm_rf(tmp_dir)
+      Hexpm.TmpDir.cleanup()
     end
   end
 end

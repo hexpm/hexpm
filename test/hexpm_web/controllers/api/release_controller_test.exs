@@ -1780,13 +1780,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
   end
 
   defp create_tar_with_symlink(meta, archive_name, target) do
-    tmp_dir =
-      Path.join(
-        Application.get_env(:hexpm, :tmp_dir),
-        "release-controller-test-#{System.unique_integer([:positive])}"
-      )
-
-    File.mkdir_p!(tmp_dir)
+    tmp_dir = Hexpm.TmpDir.tmp_dir("release-controller-test")
     link_path = Path.join(tmp_dir, "link")
 
     try do
@@ -1794,7 +1788,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       files = if archive_name == "README.md", do: [], else: [{"README.md", "README"}]
       create_tar(meta, files ++ [{archive_name, String.to_charlist(link_path)}])
     after
-      File.rm_rf(tmp_dir)
+      Hexpm.TmpDir.cleanup()
     end
   end
 end
