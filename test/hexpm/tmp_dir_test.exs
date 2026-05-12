@@ -1,6 +1,8 @@
 defmodule Hexpm.TmpDirTest do
   use ExUnit.Case, async: true
 
+  @receive_timeout 1000
+
   test "tmp_file/1 creates a file" do
     path = Hexpm.TmpDir.tmp_file("test")
     assert File.exists?(path)
@@ -22,7 +24,7 @@ defmodule Hexpm.TmpDirTest do
         send(test_pid, {:paths, file, dir})
       end)
 
-    assert_receive {:paths, file, dir}
+    assert_receive {:paths, file, dir}, @receive_timeout
     Hexpm.TmpDir.await_cleanup(task_pid)
 
     refute File.exists?(file)
@@ -41,7 +43,7 @@ defmodule Hexpm.TmpDirTest do
         raise "crash"
       end)
 
-    assert_receive {:paths, file, dir}
+    assert_receive {:paths, file, dir}, @receive_timeout
     Hexpm.TmpDir.await_cleanup(task_pid)
 
     refute File.exists?(file)
@@ -63,7 +65,7 @@ defmodule Hexpm.TmpDirTest do
         send(test_pid, {:paths, paths})
       end)
 
-    assert_receive {:paths, paths}
+    assert_receive {:paths, paths}, @receive_timeout
     Hexpm.TmpDir.await_cleanup(task_pid)
 
     for {file, dir} <- paths do
@@ -94,7 +96,7 @@ defmodule Hexpm.TmpDirTest do
       Process.sleep(:infinity)
     end)
 
-    assert_receive {:other_path, other_file}
+    assert_receive {:other_path, other_file}, @receive_timeout
 
     file = Hexpm.TmpDir.tmp_file("test")
     Hexpm.TmpDir.cleanup()
