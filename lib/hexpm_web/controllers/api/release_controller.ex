@@ -13,6 +13,7 @@ defmodule HexpmWeb.API.ReleaseController do
 
   plug :authorize,
        [
+         authentication: :required,
          domains: [{"api", "write"}, "package"],
          fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
        ]
@@ -24,6 +25,7 @@ defmodule HexpmWeb.API.ReleaseController do
 
   plug :authorize,
        [
+         authentication: :required,
          domains: [{"api", "write"}, "package"],
          fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
        ]
@@ -32,28 +34,34 @@ defmodule HexpmWeb.API.ReleaseController do
   @download_period_params ~w(day month all)
 
   def publish(conn, %{"body" => body_path} = params) do
-    replace? = Map.get(params, "replace", true)
-    request_id = List.first(get_resp_header(conn, "x-request-id"))
+    case release_metadata(body_path) do
+      {:ok, meta, inner_checksum, outer_checksum} ->
+        replace? = Map.get(params, "replace", true)
+        request_id = List.first(get_resp_header(conn, "x-request-id"))
 
-    log_tarball(
-      conn.assigns.repository.name,
-      conn.assigns.meta["name"],
-      conn.assigns.meta["version"],
-      request_id,
-      body_path
-    )
+        log_tarball(
+          conn.assigns.repository.name,
+          meta["name"],
+          meta["version"],
+          request_id,
+          body_path
+        )
 
-    Releases.publish(
-      conn.assigns.repository,
-      conn.assigns.package,
-      conn.assigns.current_user || conn.assigns.current_organization.user,
-      body_path,
-      conn.assigns.meta,
-      conn.assigns.inner_checksum,
-      conn.assigns.outer_checksum,
-      audit: audit_data(conn),
-      replace: replace?
-    )
+        Releases.publish(
+          conn.assigns.repository,
+          conn.assigns.package,
+          conn.assigns.current_user || conn.assigns.current_organization.user,
+          body_path,
+          meta,
+          inner_checksum,
+          outer_checksum,
+          audit: audit_data(conn),
+          replace: replace?
+        )
+
+      {:error, errors} ->
+        {:error, %{tar: errors}}
+    end
     |> publish_result(conn)
   end
 
@@ -110,14 +118,12 @@ defmodule HexpmWeb.API.ReleaseController do
   end
 
   defp parse_tarball(conn, _opts) do
-    case release_metadata(conn.params["body"]) do
-      {:ok, meta, inner_checksum, outer_checksum} ->
+    case release_metadata(conn.params["body"], :metadata) do
+      {:ok, meta, _inner_checksum, _outer_checksum} ->
         params = Map.put(conn.params, "name", meta["name"])
 
         %{conn | params: params}
         |> assign(:meta, meta)
-        |> assign(:inner_checksum, inner_checksum)
-        |> assign(:outer_checksum, outer_checksum)
 
       {:error, errors} ->
         validation_failed(conn, %{tar: errors})
@@ -202,23 +208,29 @@ defmodule HexpmWeb.API.ReleaseController do
     Hexpm.Store.put_file(:repo_bucket, key, body_path, opts)
   end
 
-  defp release_metadata(body_path) do
+  defp release_metadata(body_path, mode \\ :validate)
+
+  defp release_metadata(body_path, :metadata) do
+    unpack_release_metadata(body_path, :none)
+  end
+
+  defp release_metadata(body_path, :validate) do
     tmp_dir = Hexpm.TmpDir.tmp_dir("release-tarball")
 
     try do
-      case :hex_tarball.unpack(
-             {:file, String.to_charlist(body_path)},
-             String.to_charlist(tmp_dir)
-           ) do
-        {:ok,
-         %{inner_checksum: inner_checksum, outer_checksum: outer_checksum, metadata: metadata}} ->
-          {:ok, metadata, inner_checksum, outer_checksum}
-
-        {:error, reason} ->
-          {:error, List.to_string(:hex_tarball.format_error(reason))}
-      end
+      unpack_release_metadata(body_path, String.to_charlist(tmp_dir))
     after
       Hexpm.TmpDir.cleanup()
+    end
+  end
+
+  defp unpack_release_metadata(body_path, output) do
+    case :hex_tarball.unpack({:file, String.to_charlist(body_path)}, output) do
+      {:ok, %{inner_checksum: inner_checksum, outer_checksum: outer_checksum, metadata: metadata}} ->
+        {:ok, metadata, inner_checksum, outer_checksum}
+
+      {:error, reason} ->
+        {:error, List.to_string(:hex_tarball.format_error(reason))}
     end
   end
 end

@@ -286,6 +286,36 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       refute Hexpm.Repo.get_by(Package, name: meta.name)
     end
 
+    test "rejects release with escaping path", %{user: user} do
+      meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "description"}
+      tarball = create_tar(meta, [{"../outside", "outside"}])
+
+      assert_unsafe_path(tarball)
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(user))
+        |> post("/api/publish", tarball)
+
+      result = json_response(conn, 422)
+      assert result["errors"]["tar"] =~ "The path points above the current working directory"
+      refute Hexpm.Repo.get_by(Package, name: meta.name)
+    end
+
+    test "authenticates before extracting release contents" do
+      meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "description"}
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> post("/api/publish", create_tar(meta, [{"../outside", "outside"}]))
+
+      result = json_response(conn, 401)
+      assert result["message"] == "missing authentication information"
+      refute Hexpm.Repo.get_by(Package, name: meta.name)
+    end
+
     test "accepts release with internal symlink", %{user: user} do
       meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "description"}
 
@@ -1787,6 +1817,17 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       File.ln_s!(target, link_path)
       files = if archive_name == "README.md", do: [], else: [{"README.md", "README"}]
       create_tar(meta, files ++ [{archive_name, String.to_charlist(link_path)}])
+    after
+      Hexpm.TmpDir.cleanup()
+    end
+  end
+
+  defp assert_unsafe_path(tarball) do
+    tmp_dir = Hexpm.TmpDir.tmp_dir("release-controller-test")
+
+    try do
+      assert {:error, {:inner_tarball, {~c"../outside", :unsafe_path}}} =
+               :hex_tarball.unpack(tarball, String.to_charlist(tmp_dir))
     after
       Hexpm.TmpDir.cleanup()
     end
