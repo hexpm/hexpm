@@ -194,7 +194,11 @@ defmodule HexpmWeb.PackageController do
     access_package(conn, params, fn package, _repositories ->
       releases = Releases.all(package)
       current_release = current_release(releases)
-      advisories = Advisories.all(package)
+
+      advisories =
+        package
+        |> Advisories.all()
+        |> Advisories.group_for_display()
 
       dependants_count =
         Packages.count(

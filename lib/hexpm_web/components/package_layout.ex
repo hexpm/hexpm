@@ -18,6 +18,7 @@ defmodule HexpmWeb.Components.PackageLayout do
 
   import HexpmWeb.Components.Badge
 
+  alias Hexpm.Security.Advisories
   alias HexpmWeb.ViewHelpers
 
   @package_reports_enabled Application.compile_env!(:hexpm, [:features, :package_reports])
@@ -604,22 +605,32 @@ defmodule HexpmWeb.Components.PackageLayout do
     ]
   end
 
-  defp advisories_tab(%{package: %{security_advisories: []}, active_tab: active})
-       when active != :advisories,
-       do: []
-
   defp advisories_tab(assigns) do
-    count = length(assigns.package.security_advisories)
+    count =
+      assigns.package
+      |> display_advisories()
+      |> length()
 
-    [
-      %{
-        active: assigns.active_tab == :advisories,
-        icon: "shield-exclamation",
-        label: "#{count} #{pluralize(count, "Advisory", "Advisories")}",
-        path: advisories_path(assigns.package)
-      }
-    ]
+    if count == 0 and assigns.active_tab != :advisories do
+      []
+    else
+      [
+        %{
+          active: assigns.active_tab == :advisories,
+          icon: "shield-exclamation",
+          label: "#{count} #{pluralize(count, "Advisory", "Advisories")}",
+          path: advisories_path(assigns.package)
+        }
+      ]
+    end
   end
+
+  defp display_advisories(%{security_advisories: %Ecto.Association.NotLoaded{}}), do: []
+
+  defp display_advisories(%{security_advisories: advisories}) when is_list(advisories),
+    do: Advisories.group_for_display(advisories)
+
+  defp display_advisories(_package), do: []
 
   defp readme_path(%{version_pinned?: true, package: package, current_release: release})
        when not is_nil(release),

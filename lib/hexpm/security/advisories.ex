@@ -17,6 +17,15 @@ defmodule Hexpm.Security.Advisories do
     |> Repo.preload([:references, :affected_versions])
   end
 
+  def group_for_display(advisories) when is_list(advisories) do
+    groups = Enum.group_by(advisories, &display_group_key/1)
+
+    advisories
+    |> Enum.map(&display_group_key/1)
+    |> Enum.uniq()
+    |> Enum.map(fn key -> merge_display_group(Map.fetch!(groups, key)) end)
+  end
+
   def upsert(records, package_ids) do
     Multi.new()
     |> Multi.run(:lock, fn repo, _ ->
@@ -113,6 +122,87 @@ defmodule Hexpm.Security.Advisories do
   defp filter_known_packages(affected, package_ids) do
     Enum.filter(affected, fn %{package: name} -> Map.has_key?(package_ids, name) end)
   end
+
+  defp merge_display_group(advisories) do
+    primary = Enum.min_by(advisories, &source_key/1)
+
+    advisories =
+      [primary | Enum.reject(advisories, &(&1.id == primary.id))]
+
+    %{
+      primary
+      | aliases: display_aliases(primary, advisories),
+        published_at: min_datetime_field(advisories, :published_at),
+        modified_at: max_datetime_field(advisories, :modified_at),
+        references: uniq_references(advisories),
+        affected_versions: uniq_affected_versions(advisories)
+    }
+  end
+
+  defp display_aliases(primary, advisories) do
+    advisories
+    |> Enum.flat_map(&display_identifiers/1)
+    |> Enum.uniq()
+    |> Enum.reject(&(&1 == primary.id))
+  end
+
+  defp display_group_key(advisory) do
+    Enum.find(display_identifiers(advisory), &String.starts_with?(&1, "CVE-")) || advisory.id
+  end
+
+  defp display_identifiers(advisory) do
+    [advisory.id | advisory.aliases || []]
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp source_priority("EEF-" <> _), do: 0
+  defp source_priority("GHSA-" <> _), do: 1
+  defp source_priority("NVD-" <> _), do: 2
+  defp source_priority(_), do: 3
+
+  defp source_key(advisory), do: {source_priority(advisory.id), advisory.id}
+
+  defp min_datetime_field(advisories, field) do
+    Enum.reduce(advisories, nil, fn advisory, acc ->
+      min_datetime(Map.get(advisory, field), acc)
+    end)
+  end
+
+  defp min_datetime(nil, acc), do: acc
+  defp min_datetime(datetime, nil), do: datetime
+
+  defp min_datetime(datetime, acc) do
+    if DateTime.compare(datetime, acc) == :lt, do: datetime, else: acc
+  end
+
+  defp max_datetime_field(advisories, field) do
+    Enum.reduce(advisories, nil, fn advisory, acc ->
+      max_datetime(Map.get(advisory, field), acc)
+    end)
+  end
+
+  defp max_datetime(nil, acc), do: acc
+  defp max_datetime(datetime, nil), do: datetime
+
+  defp max_datetime(datetime, acc) do
+    if DateTime.compare(datetime, acc) == :gt, do: datetime, else: acc
+  end
+
+  defp uniq_references(advisories) do
+    advisories
+    |> Enum.flat_map(&loaded_assoc(&1.references))
+    |> Enum.uniq_by(&{&1.type, &1.url})
+  end
+
+  defp uniq_affected_versions(advisories) do
+    advisories
+    |> Enum.flat_map(&loaded_assoc(&1.affected_versions))
+    |> Enum.uniq_by(&{&1.package_id, to_string(&1.requirement)})
+  end
+
+  defp loaded_assoc(%Ecto.Association.NotLoaded{}), do: []
+  defp loaded_assoc(nil), do: []
+  defp loaded_assoc(values), do: values
 
   defp sync_references(multi) do
     multi
