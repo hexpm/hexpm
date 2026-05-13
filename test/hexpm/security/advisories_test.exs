@@ -222,6 +222,20 @@ defmodule Hexpm.Security.AdvisoriesTest do
     assert [] == Advisories.all(release_302)
   end
 
+  test "group_for_display prefers NVD over CVE and breaks same-source ties by id" do
+    assert [%Advisory{id: "NVD-CVE-2026-0001"}] =
+             Advisories.group_for_display([
+               %Advisory{id: "CVE-2026-0001", aliases: ["CVE-2026-0001"]},
+               %Advisory{id: "NVD-CVE-2026-0001", aliases: ["CVE-2026-0001"]}
+             ])
+
+    assert [%Advisory{id: "OTHER-2026-0001"}] =
+             Advisories.group_for_display([
+               %Advisory{id: "OTHER-2026-0002", aliases: ["CVE-2026-0002"]},
+               %Advisory{id: "OTHER-2026-0001", aliases: ["CVE-2026-0002"]}
+             ])
+  end
+
   test "upsert skips sync for unchanged advisories", %{package: package} do
     record =
       record("GHSA-skip", "oidcc",

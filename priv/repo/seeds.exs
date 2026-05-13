@@ -287,7 +287,61 @@ Hexpm.Repo.transaction(fn ->
     ]
   }
 
-  Hexpm.Security.Advisories.upsert([oidcc_advisory_record], %{"oidcc" => oidcc.id})
+  oidcc_ghsa_alias_advisory_record = %{
+    id: "GHSA-628h-q48j-jr6q",
+    summary: "GHSA source for a duplicate alias advisory",
+    aliases: ["CVE-2026-32689"],
+    published_at: ~U[2026-05-08 00:00:00Z],
+    modified_at: ~U[2026-05-08 00:00:00Z],
+    withdrawn_at: nil,
+    cvss_vector: nil,
+    cvss_score: nil,
+    cvss_rating: nil,
+    references: [
+      %{
+        type: "WEB",
+        url: "https://github.com/phoenixframework/phoenix/security/advisories/GHSA-628h-q48j-jr6q"
+      }
+    ],
+    affected: [
+      %{
+        package: "oidcc",
+        requirements: [Version.parse_requirement!(">= 3.0.0 and < 3.0.2")],
+        versions: ["3.0.0"]
+      }
+    ]
+  }
+
+  oidcc_eef_alias_advisory_record = %{
+    id: "EEF-CVE-2026-32689",
+    summary: "EEF source for a duplicate alias advisory",
+    aliases: ["CVE-2026-32689", "GHSA-628h-q48j-jr6q"],
+    published_at: ~U[2026-05-05 00:00:00Z],
+    modified_at: ~U[2026-05-10 00:00:00Z],
+    withdrawn_at: nil,
+    cvss_vector: nil,
+    cvss_score: nil,
+    cvss_rating: nil,
+    references: [
+      %{type: "ADVISORY", url: "https://cna.erlef.org/cves/CVE-2026-32689.html"}
+    ],
+    affected: [
+      %{
+        package: "oidcc",
+        requirements: [Version.parse_requirement!(">= 3.1.2 and < 3.1.4")],
+        versions: ["3.1.2", "3.1.3"]
+      }
+    ]
+  }
+
+  Hexpm.Security.Advisories.upsert(
+    [
+      oidcc_advisory_record,
+      oidcc_ghsa_alias_advisory_record,
+      oidcc_eef_alias_advisory_record
+    ],
+    %{"oidcc" => oidcc.id}
+  )
 
   postgrex =
     insert(
