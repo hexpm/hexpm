@@ -5,6 +5,10 @@
  * Ignores input when typing in form fields.
  * Skips hidden inputs (offsetParent === null).
  *
+ * Also handles Enter key on the search input: when no autocomplete suggestion
+ * is active, submits the form natively (bypassing the LiveView roundtrip) so
+ * navigation is immediate.
+ *
  * Usage: <input phx-hook="SearchShortcut" />
  */
 export const SearchShortcut = {
@@ -26,10 +30,23 @@ export const SearchShortcut = {
       this.el.select();
     };
 
+    // Submit natively on Enter when no autocomplete suggestion is active,
+    // bypassing the LiveView roundtrip for instant navigation.
+    this.handleEnter = (e) => {
+      if (e.key !== "Enter") return;
+      if (this.el.getAttribute("aria-activedescendant")) return;
+      const form = this.el.closest("form");
+      if (!form) return;
+      e.stopImmediatePropagation();
+      form.submit();
+    };
+
+    this.el.addEventListener("keydown", this.handleEnter, { capture: true });
     document.addEventListener("keydown", this.handleKeydown);
   },
 
   destroyed() {
+    this.el.removeEventListener("keydown", this.handleEnter, { capture: true });
     document.removeEventListener("keydown", this.handleKeydown);
   },
 };
