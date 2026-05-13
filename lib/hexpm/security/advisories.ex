@@ -168,24 +168,12 @@ defmodule Hexpm.Security.Advisories do
     end)
   end
 
-  defp min_datetime(nil, acc), do: acc
-  defp min_datetime(datetime, nil), do: datetime
-
-  defp min_datetime(datetime, acc) do
-    if DateTime.compare(datetime, acc) == :lt, do: datetime, else: acc
+  defp min_datetime_field(advisories, field) do
+    advisories |> Enum.map(&Map.get(&1, field)) |> Enum.reject(&is_nil/1) |> Enum.min(DateTime, fn -> nil end)
   end
 
   defp max_datetime_field(advisories, field) do
-    Enum.reduce(advisories, nil, fn advisory, acc ->
-      max_datetime(Map.get(advisory, field), acc)
-    end)
-  end
-
-  defp max_datetime(nil, acc), do: acc
-  defp max_datetime(datetime, nil), do: datetime
-
-  defp max_datetime(datetime, acc) do
-    if DateTime.compare(datetime, acc) == :gt, do: datetime, else: acc
+    advisories |> Enum.map(&Map.get(&1, field)) |> Enum.reject(&is_nil/1) |> Enum.max(DateTime, fn -> nil end)
   end
 
   defp uniq_references(advisories) do
