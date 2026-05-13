@@ -366,7 +366,7 @@ defmodule HexpmWeb.Components.Navbar do
 
   defp search_form(assigns) do
     ~H"""
-    <div class="min-w-0 flex-1 flex items-center gap-2 mr-auto">
+    <div class="min-w-0 flex-1 mr-auto">
       <div class="max-w-[420px] w-full">
         {Phoenix.Component.live_render(@conn, HexpmWeb.SearchSuggestionsLive,
           id: "nav-search",
@@ -378,14 +378,6 @@ defmodule HexpmWeb.Components.Navbar do
           }
         )}
       </div>
-      <button
-        type="button"
-        phx-click={show_modal("search-cheatsheet")}
-        aria-label="Search filter cheatsheet"
-        class="flex items-center justify-center size-[40px] shrink-0 text-grey-200 hover:text-white border border-grey-600 rounded-lg text-sm font-medium cursor-pointer"
-      >
-        ?
-      </button>
     </div>
     """
   end

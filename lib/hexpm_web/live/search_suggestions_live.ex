@@ -50,7 +50,7 @@ defmodule HexpmWeb.SearchSuggestionsLive do
      socket
      |> assign(:term, term)
      |> assign(:items, items)
-     |> assign(:open, items != [])
+     |> assign(:open, String.trim(term) != "")
      |> assign(:active, nil)}
   end
 
@@ -167,7 +167,7 @@ defmodule HexpmWeb.SearchSuggestionsLive do
         <input type="hidden" name="sort" value="recent_downloads" />
         <label class="sr-only" for={input_id(@variant)}>Find packages</label>
 
-        <%= if @open and @items != [] do %>
+        <%= if @open do %>
           <.suggestions variant={@variant} items={@items} active={@active} />
         <% end %>
       </div>
@@ -216,7 +216,7 @@ defmodule HexpmWeb.SearchSuggestionsLive do
           <span class="sr-only">Search</span>
         </button>
 
-        <%= if @open and @items != [] do %>
+        <%= if @open do %>
           <.suggestions variant={@variant} items={@items} active={@active} />
         <% end %>
       </div>

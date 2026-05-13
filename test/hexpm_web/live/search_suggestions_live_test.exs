@@ -157,6 +157,24 @@ defmodule HexpmWeb.SearchSuggestionsLiveTest do
       assert html =~ ~s(role="listbox")
     end
 
+    test "shows syntax help footer when no package suggestions match", %{conn: conn} do
+      {:ok, view, _html} =
+        live_isolated(conn, HexpmWeb.SearchSuggestionsLive, session: %{"variant" => "nav"})
+
+      html =
+        view
+        |> element("input[name='search']")
+        |> render_change(%{"search" => "no_match_xyzzy_12345"})
+
+      assert html =~ "No suggestions found"
+      assert html =~ "Wildcard"
+      assert html =~ "name:phx*"
+      refute html =~ "Metadata"
+      refute html =~ "extra:license,MIT"
+      assert html =~ "Syntax Help"
+      assert html =~ ~s(phx-click=)
+    end
+
     test "submitting without ArrowDown performs a text search", %{conn: conn} do
       insert(:package, name: "oban")
 
