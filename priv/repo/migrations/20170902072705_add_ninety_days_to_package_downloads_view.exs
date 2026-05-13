@@ -2,10 +2,10 @@ defmodule Hexpm.Repo.Migrations.AddNinetyDaysToPackageDownloadsView do
   use Ecto.Migration
 
   def up() do
-    execute("DROP MATERIALIZED VIEW package_downloads")
+    execute("DROP MATERIALIZED VIEW IF EXISTS package_downloads")
 
     execute("""
-      CREATE MATERIALIZED VIEW package_downloads (
+      CREATE MATERIALIZED VIEW IF NOT EXISTS package_downloads (
         id,
         package_id,
         view,
@@ -51,10 +51,10 @@ defmodule Hexpm.Repo.Migrations.AddNinetyDaysToPackageDownloadsView do
   end
 
   def down() do
-    execute("DROP MATERIALIZED VIEW package_downloads")
+    execute("DROP MATERIALIZED VIEW IF EXISTS package_downloads")
 
     execute("""
-      CREATE MATERIALIZED VIEW package_downloads (
+      CREATE MATERIALIZED VIEW IF NOT EXISTS package_downloads (
         id,
         package_id,
         view,

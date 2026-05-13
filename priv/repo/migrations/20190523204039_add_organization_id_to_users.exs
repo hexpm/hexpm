@@ -6,6 +6,6 @@ defmodule Hexpm.RepoBase.Migrations.AddOrganizationIdToUsers do
       add(:organization_id, references(:organizations))
     end
 
-    create(unique_index(:users, [:organization_id]))
+    create_if_not_exists(unique_index(:users, [:organization_id]))
   end
 end

@@ -3,7 +3,7 @@ defmodule Hexpm.Repo.Migrations.AddStatsTable do
 
   def up() do
     execute("""
-      CREATE TABLE downloads (
+      CREATE TABLE IF NOT EXISTS downloads (
         id serial PRIMARY KEY,
         release_id integer REFERENCES releases,
         downloads integer,

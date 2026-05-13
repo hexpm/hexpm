@@ -1,6 +1,6 @@
 defmodule HexpmWeb.API.PackageView do
   use HexpmWeb, :view
-  alias HexpmWeb.API.{DownloadView, ReleaseView, RetirementView, UserView}
+  alias HexpmWeb.API.{AdvisoryView, DownloadView, ReleaseView, RetirementView, UserView}
   alias HexpmWeb.PackageView
 
   def render("index." <> _, %{packages: packages}) do
@@ -54,6 +54,13 @@ defmodule HexpmWeb.API.PackageView do
       package.releases,
       RetirementView,
       "package.json"
+    )
+    |> ViewHelpers.include_if_loaded(
+      :security_advisories,
+      package.security_advisories,
+      AdvisoryView,
+      "package.json",
+      package: package
     )
     |> ViewHelpers.include_if_loaded(:downloads, package.downloads, DownloadView, "show.json")
     |> ViewHelpers.include_if_loaded(:owners, package.owners, UserView, "minimal.json")

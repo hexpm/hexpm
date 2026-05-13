@@ -30,4 +30,14 @@ defmodule HexpmWeb.ReadOnlyModeTest do
   after
     Application.put_env(:hexpm, :read_only_mode, false)
   end
+
+  test "Hexpm.Repo.insert_all is gated by read-only mode" do
+    Application.put_env(:hexpm, :read_only_mode, true)
+
+    assert_raise Hexpm.WriteInReadOnlyMode, fn ->
+      Hexpm.Repo.insert_all("security_advisory_affected_releases", [])
+    end
+  after
+    Application.put_env(:hexpm, :read_only_mode, false)
+  end
 end

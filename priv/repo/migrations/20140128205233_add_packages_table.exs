@@ -3,7 +3,7 @@ defmodule Hexpm.Repo.Migrations.AddPackagesTables do
 
   def up() do
     execute("""
-      CREATE TABLE packages (
+      CREATE TABLE IF NOT EXISTS packages (
         id serial PRIMARY KEY,
         name text,
         owner_id integer REFERENCES users,

@@ -67,4 +67,12 @@ defmodule HexpmWeb.PageControllerTest do
     assert package2.id == c.package2.id
     assert package2.latest_release.version == "0.0.2"
   end
+
+  test "index renders relative time for new and recently updated packages" do
+    html = build_conn() |> get("/") |> response(200)
+
+    refute html =~ ~r/<span[^>]*title="[^"]+">\s*<span[^>]*title="[^"]+">/
+
+    assert html =~ ~r/(week|weeks|day|days|hour|hours|minute|minutes) ago/
+  end
 end

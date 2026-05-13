@@ -43,7 +43,7 @@ defmodule Hexpm.UserSession do
       :client_id,
       :session_token
     ])
-    |> validate_required([:type])
+    |> validate_required([:type, :expires_at])
     |> validate_user_or_organization()
     |> validate_inclusion(:type, @types)
     |> validate_type_specific_fields()

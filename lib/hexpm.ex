@@ -1,6 +1,5 @@
 defmodule Hexpm do
   def setup do
-    Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant, concurrently: false)
     Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload, concurrently: false)
     Hexpm.Repo.refresh_view(Hexpm.Repository.ReleaseDownload, concurrently: false)
 

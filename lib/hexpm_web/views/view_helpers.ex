@@ -52,6 +52,22 @@ defmodule HexpmWeb.ViewHelpers do
     ~p"/packages/#{package.repository}/#{package}/versions"
   end
 
+  def path_for_dependencies(%Package{repository_id: 1} = package) do
+    ~p"/packages/#{package}/dependencies"
+  end
+
+  def path_for_dependencies(%Package{} = package) do
+    ~p"/packages/#{package.repository}/#{package}/dependencies"
+  end
+
+  def path_for_dependencies(%Package{repository_id: 1} = package, %Release{} = release) do
+    ~p"/packages/#{package}/#{release}/dependencies"
+  end
+
+  def path_for_dependencies(%Package{} = package, %Release{} = release) do
+    ~p"/packages/#{package.repository}/#{package}/#{release}/dependencies"
+  end
+
   def html_url_for_package(%Package{repository_id: 1} = package) do
     url(~p"/packages/#{package}")
   end
@@ -268,6 +284,22 @@ defmodule HexpmWeb.ViewHelpers do
     end
   end
 
+  @doc """
+  Formats a chart axis label using a single unit chosen from `max` so
+  every label on a chart shares the same unit (e.g. all K, never mixing
+  bare numbers with K, or K with M).
+  """
+  def chart_axis_label(0, _max), do: "0"
+
+  def chart_axis_label(value, max) do
+    cond do
+      max >= 4_000_000_000 -> "#{div(value, 1_000_000_000)}B"
+      max >= 4_000_000 -> "#{div(value, 1_000_000)}M"
+      max >= 4_000 -> "#{div(value, 1_000)}K"
+      true -> "#{value}"
+    end
+  end
+
   defp do_human_number(int, max, digits, _unit) when is_integer(int) and digits <= max do
     human_number_space(int)
   end
@@ -285,11 +317,13 @@ defmodule HexpmWeb.ViewHelpers do
   end
 
   def human_relative_time_from_now(datetime) do
+    content_tag(:span, human_relative_time_from_now_text(datetime), title: pretty_date(datetime))
+  end
+
+  def human_relative_time_from_now_text(datetime) do
     ts = NaiveDateTime.to_erl(datetime) |> :calendar.datetime_to_gregorian_seconds()
     diff = :calendar.datetime_to_gregorian_seconds(:calendar.universal_time()) - ts
-    rel = rel_from_now(:calendar.seconds_to_daystime(diff))
-
-    content_tag(:span, rel, title: pretty_date(datetime))
+    rel_from_now(:calendar.seconds_to_daystime(diff))
   end
 
   defp rel_from_now({0, {0, 0, sec}}) when sec < 30, do: "about now"
@@ -453,15 +487,23 @@ defmodule HexpmWeb.ViewHelpers do
     ]
   end
 
+  defp rounded_max(max) when max <= 0, do: 5
+
   defp rounded_max(max) do
-    case max do
-      max when max > 1_000_000 -> max |> Kernel./(1_000_000) |> ceil |> Kernel.*(1_000_000)
-      max when max > 100_000 -> max |> Kernel./(100_000) |> ceil |> Kernel.*(100_000)
-      max when max > 10_000 -> max |> Kernel./(10_000) |> ceil |> Kernel.*(10_000)
-      max when max > 1_000 -> max |> Kernel./(1_000) |> ceil |> Kernel.*(1_000)
-      max when max > 100 -> 1_000
-      _ -> 100
-    end
+    rough_step = max / 5
+    pow = :math.pow(10, trunc(:math.log10(rough_step)))
+    fraction = rough_step / pow
+
+    nice_fraction =
+      cond do
+        fraction <= 1 -> 1
+        fraction <= 2 -> 2
+        fraction <= 5 -> 5
+        true -> 10
+      end
+
+    step = nice_fraction * pow
+    trunc(ceil(max / (step * 5)) * step * 5)
   end
 
   def main_repository?(%{repository_id: 1}), do: true

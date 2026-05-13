@@ -3,8 +3,8 @@ defmodule Hexpm.Repo.Migrations.AddUserKeyDataToAuditLogs do
 
   def up() do
     alter table(:audit_logs) do
-      add :user_data, :map
-      add :key_data, :map
+      add_if_not_exists :user_data, :map
+      add_if_not_exists :key_data, :map
     end
 
     flush()
@@ -35,8 +35,8 @@ defmodule Hexpm.Repo.Migrations.AddUserKeyDataToAuditLogs do
 
   def down() do
     alter table(:audit_logs) do
-      remove :user_data
-      remove :key_data
+      remove_if_exists :user_data
+      remove_if_exists :key_data
     end
   end
 end

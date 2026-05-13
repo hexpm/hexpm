@@ -62,12 +62,9 @@ defmodule HexpmWeb.PackageLive.Index do
         {:error, _} -> %SearchQuery{}
       end
 
-    canonical_query = SearchQuery.serialize(search_query)
-
     assign(socket,
       search: search,
       search_query: search_query,
-      canonical_query: canonical_query,
       sort: sort,
       package_count: package_count,
       page: page,

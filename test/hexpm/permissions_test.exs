@@ -42,6 +42,20 @@ defmodule Hexpm.PermissionsTest do
     end
   end
 
+  describe "expand_api_scope/1" do
+    test "expands full api scope into read and write scopes" do
+      assert Permissions.expand_api_scope(["api", "repositories"]) == [
+               "api:read",
+               "api:write",
+               "repositories"
+             ]
+    end
+
+    test "keeps explicit api scopes without duplicates" do
+      assert Permissions.expand_api_scope(["api:read", "api"]) == ["api:read", "api:write"]
+    end
+  end
+
   describe "resource-specific package scopes" do
     setup do
       repository = %{name: "hexpm"}
@@ -267,7 +281,7 @@ defmodule Hexpm.PermissionsTest do
     test "provides descriptions for all basic scopes" do
       assert Permissions.scope_description("api") =~ "Complete access"
       assert Permissions.scope_description("api:read") =~ "Read-only access"
-      assert Permissions.scope_description("api:write") =~ "Read and write access"
+      assert Permissions.scope_description("api:write") =~ "Write access"
       assert Permissions.scope_description("repositories") =~ "private repositories"
       # package and docs are no longer simple scopes - they require resources
     end

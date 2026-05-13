@@ -3,7 +3,7 @@ defmodule Hexpm.Repo.Migrations.AddPackageOwnersTable do
 
   def up() do
     execute("""
-      CREATE TABLE package_owners (
+      CREATE TABLE IF NOT EXISTS package_owners (
         id serial PRIMARY KEY,
         package_id integer REFERENCES packages,
         owner_id integer REFERENCES users)

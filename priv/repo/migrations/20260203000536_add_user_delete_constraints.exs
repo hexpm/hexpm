@@ -8,9 +8,19 @@ defmodule Hexpm.Repo.Migrations.AddUserDeleteConstraints do
 
     # Drop existing foreign key constraints
     execute("ALTER TABLE audit_logs DROP CONSTRAINT IF EXISTS audit_logs_actor_id_fkey")
-    execute("ALTER TABLE organization_users DROP CONSTRAINT IF EXISTS organization_users_user_id_fkey")
-    execute("ALTER TABLE package_reports DROP CONSTRAINT IF EXISTS package_reports_author_id_fkey")
-    execute("ALTER TABLE package_report_comments DROP CONSTRAINT IF EXISTS package_report_comments_author_id_fkey")
+
+    execute(
+      "ALTER TABLE organization_users DROP CONSTRAINT IF EXISTS organization_users_user_id_fkey"
+    )
+
+    execute(
+      "ALTER TABLE package_reports DROP CONSTRAINT IF EXISTS package_reports_author_id_fkey"
+    )
+
+    execute(
+      "ALTER TABLE package_report_comments DROP CONSTRAINT IF EXISTS package_report_comments_author_id_fkey"
+    )
+
     execute("ALTER TABLE password_resets DROP CONSTRAINT IF EXISTS password_resets_user_id_fkey")
     execute("ALTER TABLE releases DROP CONSTRAINT IF EXISTS releases_publisher_id_fkey")
 
@@ -57,7 +67,11 @@ defmodule Hexpm.Repo.Migrations.AddUserDeleteConstraints do
     execute("ALTER TABLE audit_logs DROP CONSTRAINT audit_logs_actor_id_fkey")
     execute("ALTER TABLE organization_users DROP CONSTRAINT organization_users_user_id_fkey")
     execute("ALTER TABLE package_reports DROP CONSTRAINT package_reports_author_id_fkey")
-    execute("ALTER TABLE package_report_comments DROP CONSTRAINT package_report_comments_author_id_fkey")
+
+    execute(
+      "ALTER TABLE package_report_comments DROP CONSTRAINT package_report_comments_author_id_fkey"
+    )
+
     execute("ALTER TABLE password_resets DROP CONSTRAINT password_resets_user_id_fkey")
     execute("ALTER TABLE releases DROP CONSTRAINT releases_publisher_id_fkey")
 

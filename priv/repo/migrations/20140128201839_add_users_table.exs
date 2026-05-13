@@ -3,7 +3,7 @@ defmodule Hexpm.Repo.Migrations.AddUsersTable do
 
   def up() do
     execute("""
-      CREATE TABLE users (
+      CREATE TABLE IF NOT EXISTS users (
         id serial PRIMARY KEY,
         username text,
         email text UNIQUE,

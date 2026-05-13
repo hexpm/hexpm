@@ -96,8 +96,6 @@ defmodule HexpmWeb.PackageLive.IndexTest do
       release = insert(:release, package: consumer)
       insert(:requirement, release: release, dependency: ecto, requirement: "~> 1.0")
 
-      Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
-
       {:ok, view, _} = live(conn, ~p"/packages")
 
       view
@@ -189,8 +187,6 @@ defmodule HexpmWeb.PackageLive.IndexTest do
         insert(:release, package: other, meta: build(:release_metadata, build_tools: ["rebar3"]))
 
       insert(:requirement, release: other_release, dependency: ecto, requirement: "~> 1.0")
-
-      Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
 
       query =
         "build_tool:mix depends:ecto_combo_dep updated_after:2024-01-01T00:00:00Z extra:license,MIT"

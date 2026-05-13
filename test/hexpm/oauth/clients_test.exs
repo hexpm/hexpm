@@ -28,8 +28,16 @@ defmodule Hexpm.OAuth.ClientsTest do
       assert Clients.supports_scopes?(client, ["api:read", "api:write"])
     end
 
+    test "treats api as allowing granular api scopes" do
+      client = %Client{allowed_scopes: ["api"]}
+
+      assert Clients.supports_scopes?(client, ["api:read"])
+      assert Clients.supports_scopes?(client, ["api:write"])
+      assert Clients.supports_scopes?(client, ["api:read", "api:write"])
+    end
+
     test "returns false when any requested scope is not allowed" do
-      client = %Client{allowed_scopes: ["api", "api:read"]}
+      client = %Client{allowed_scopes: ["api:read"]}
 
       refute Clients.supports_scopes?(client, ["api:write"])
       refute Clients.supports_scopes?(client, ["api", "repositories"])

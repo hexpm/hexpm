@@ -6,7 +6,7 @@ defmodule Hexpm.RepoBase.Migrations.AddDownloadsPackageId do
       add(:package_id, references(:packages, on_delete: :delete_all))
     end
 
-    create(index(:downloads, [:package_id]))
+    create_if_not_exists(index(:downloads, [:package_id]))
   end
 end
 

@@ -2,6 +2,8 @@ defmodule Hexpm.Repository.Package do
   use Hexpm.Schema
   import Ecto.Query
 
+  alias Hexpm.Repository.Package.SearchQuery
+
   @derive {HexpmWeb.Stale, assocs: [:releases, :owners]}
   @derive {Phoenix.Param, key: :name}
 
@@ -17,6 +19,11 @@ defmodule Hexpm.Repository.Package do
     has_many :owners, through: [:package_owners, :user]
     has_many :downloads, PackageDownload
     has_many :package_reports, PackageReport
+
+    many_to_many :security_advisories, Hexpm.Security.Advisory,
+      join_through: "security_advisory_affected_packages",
+      preload_order: [desc: :published_at]
+
     embeds_one :meta, PackageMetadata, on_replace: :delete
   end
 
@@ -77,7 +84,7 @@ defmodule Hexpm.Repository.Package do
     cast(package, params, [])
     # A release publish should always update the package's updated_at
     |> force_change(:updated_at, DateTime.utc_now())
-    |> cast_embed(:meta, with: &PackageMetadata.update_changeset(&1, &2, package), required: true)
+    |> cast_embed(:meta, with: &PackageMetadata.changeset(&1, &2, package), required: true)
     |> validate_metadata_name()
   end
 
@@ -116,13 +123,141 @@ defmodule Hexpm.Repository.Package do
     from(
       p in assoc(repositories, :packages),
       as: :package,
-      join: r in assoc(p, :repository),
       preload: :downloads
     )
     |> sort(sort)
     |> Hexpm.Utils.paginate(page, count)
     |> search(search)
     |> fields(fields)
+  end
+
+  def dependants(repositories, dependency, page, count, sort, fields) do
+    dependant_ids = dependant_ids_query(dependency.id)
+
+    from(
+      p in assoc(repositories, :packages),
+      as: :package,
+      preload: :downloads,
+      where: p.id in subquery(dependant_ids)
+    )
+    |> sort(sort)
+    |> Hexpm.Utils.paginate(page, count)
+    |> fields(fields)
+  end
+
+  def downloaded_dependant_ids(repositories, dependency, view, limit, offset) do
+    repository_ids = Enum.map(repositories, & &1.id)
+
+    from(
+      pd in PackageDownload,
+      join: p in Package,
+      as: :package,
+      on: p.id == pd.package_id,
+      where: pd.view == ^view,
+      where: p.repository_id in ^repository_ids,
+      where: exists(dependency_exists_query(dependency.id)),
+      order_by: [fragment("? DESC NULLS LAST", pd.downloads)],
+      limit: ^limit,
+      offset: ^offset,
+      select: p.id
+    )
+  end
+
+  def downloaded_package_ids(repositories, view, limit, offset) do
+    repository_ids = Enum.map(repositories, & &1.id)
+
+    from(
+      pd in PackageDownload,
+      join: p in Package,
+      on: p.id == pd.package_id,
+      where: pd.view == ^view,
+      where: p.repository_id in ^repository_ids,
+      order_by: [fragment("? DESC NULLS LAST", pd.downloads)],
+      limit: ^limit,
+      offset: ^offset,
+      select: pd.package_id
+    )
+  end
+
+  def count_downloaded_dependants(repositories, dependency, view) do
+    repository_ids = Enum.map(repositories, & &1.id)
+
+    from(
+      pd in PackageDownload,
+      join: p in Package,
+      as: :package,
+      on: p.id == pd.package_id,
+      where: pd.view == ^view,
+      where: p.repository_id in ^repository_ids,
+      where: exists(dependency_exists_query(dependency.id)),
+      select: count()
+    )
+  end
+
+  def count_downloaded_packages(repositories, view) do
+    repository_ids = Enum.map(repositories, & &1.id)
+
+    from(
+      pd in PackageDownload,
+      join: p in Package,
+      on: p.id == pd.package_id,
+      where: pd.view == ^view,
+      where: p.repository_id in ^repository_ids,
+      select: count()
+    )
+  end
+
+  def undownloaded_dependant_ids(repositories, dependency, view, limit, offset) do
+    repository_ids = Enum.map(repositories, & &1.id)
+
+    from(
+      p in Package,
+      as: :package,
+      where: p.repository_id in ^repository_ids,
+      where: exists(dependency_exists_query(dependency.id)),
+      where:
+        not exists(
+          from(pd in PackageDownload,
+            where: pd.package_id == parent_as(:package).id,
+            where: pd.view == ^view
+          )
+        ),
+      order_by: p.id,
+      limit: ^limit,
+      offset: ^offset,
+      select: p.id
+    )
+  end
+
+  def undownloaded_package_ids(repositories, view, limit, offset) do
+    repository_ids = Enum.map(repositories, & &1.id)
+
+    from(
+      p in Package,
+      as: :package,
+      where: p.repository_id in ^repository_ids,
+      where:
+        not exists(
+          from(pd in PackageDownload,
+            where: pd.package_id == parent_as(:package).id,
+            where: pd.view == ^view
+          )
+        ),
+      order_by: p.id,
+      limit: ^limit,
+      offset: ^offset,
+      select: p.id
+    )
+  end
+
+  def by_ids(ids, nil) do
+    from(p in Package, where: p.id in ^ids, preload: :downloads)
+  end
+
+  def by_ids(ids, fields) do
+    fields = Enum.uniq([:id, :repository_id | fields])
+
+    from(p in Package, where: p.id in ^ids, select: ^fields)
   end
 
   def recent(repository, count) do
@@ -144,12 +279,22 @@ defmodule Hexpm.Repository.Package do
     from(
       p in assoc(repositories, :packages),
       as: :package,
-      join: r in assoc(p, :repository),
       select: count()
     )
     |> search(search)
     # `updated_after` search injects an order_by that PostgreSQL rejects inside COUNT(*).
     |> exclude(:order_by)
+  end
+
+  def count_dependants(repositories, dependency) do
+    repository_ids = Enum.map(repositories, & &1.id)
+
+    from(
+      pd in PackageDependant,
+      where: pd.dependency_id == ^dependency.id,
+      where: pd.dependant_repository_id in ^repository_ids,
+      select: count()
+    )
   end
 
   defp put_first_owner(changeset, user, repository) do
@@ -200,13 +345,34 @@ defmodule Hexpm.Repository.Package do
   end
 
   defp search(query, search) when is_binary(search) do
-    case parse_search(search) do
-      {:ok, params} ->
-        Enum.reduce(params, query, fn {k, v}, q -> search_param(k, v, q) end)
+    case SearchQuery.parse(search) do
+      {:ok, %SearchQuery{} = parsed} ->
+        query
+        |> apply_free_text(parsed.free_text)
+        |> apply_filters(parsed)
 
-      :error ->
+      {:error, _} ->
         basic_search(query, search)
     end
+  end
+
+  defp apply_free_text(query, nil), do: query
+  defp apply_free_text(query, text), do: basic_search(query, text)
+
+  defp apply_filters(query, %SearchQuery{} = q) do
+    pairs =
+      [
+        {"name", q.name},
+        {"description", q.description},
+        {"depends", q.depends},
+        {"build_tool", q.build_tool},
+        {"updated_after", q.updated_after}
+      ]
+      |> Enum.reject(fn {_, v} -> is_nil(v) end)
+      |> Kernel.++(Enum.map(q.extra, fn {k, v} -> {"extra", "#{k},#{v}"} end))
+      |> Kernel.++(q.unknown)
+
+    Enum.reduce(pairs, query, fn {k, v}, q -> search_param(k, v, q) end)
   end
 
   defp basic_search(query, search) do
@@ -214,8 +380,10 @@ defmodule Hexpm.Repository.Package do
     description = description_search(search)
 
     if repository do
+      query = with_repository(query)
+
       from(
-        [p, r] in query,
+        [p, ..., repository: r] in query,
         where:
           (name_query(p, package) and name_query(r, repository)) or
             description_query(p, description)
@@ -229,8 +397,10 @@ defmodule Hexpm.Repository.Package do
   defp search_param("name", search, query) do
     case String.split(search, "/", parts: 2) do
       [repository, package] ->
+        query = with_repository(query)
+
         from(
-          [p, r] in query,
+          [p, ..., repository: r] in query,
           where: name_query(p, extra_name_search(package)),
           where: name_query(r, extra_name_search(repository))
         )
@@ -274,20 +444,32 @@ defmodule Hexpm.Repository.Package do
   defp search_param("depends", search, query) do
     case String.split(search, ":", parts: 2) do
       [repository, package] ->
-        from(
-          p in query,
-          join: pd in Hexpm.Repository.PackageDependant,
-          on: p.id == pd.dependant_id,
-          where: pd.name == ^package,
-          where: pd.repo == ^repository
+        from(p in query,
+          where:
+            exists(
+              from(pd in PackageDependant,
+                join: dep in Package,
+                on: dep.id == pd.dependency_id,
+                join: repo in Repository,
+                on: repo.id == dep.repository_id,
+                where: pd.package_id == parent_as(:package).id,
+                where: dep.name == ^package,
+                where: repo.name == ^repository
+              )
+            )
         )
 
       _ ->
-        from(
-          p in query,
-          join: pd in Hexpm.Repository.PackageDependant,
-          on: p.id == pd.dependant_id,
-          where: pd.name == ^search
+        from(p in query,
+          where:
+            exists(
+              from(pd in PackageDependant,
+                join: dep in Package,
+                on: dep.id == pd.dependency_id,
+                where: pd.package_id == parent_as(:package).id,
+                where: dep.name == ^search
+              )
+            )
         )
     end
   end
@@ -306,6 +488,28 @@ defmodule Hexpm.Repository.Package do
 
   defp search_param(_, _, query) do
     query
+  end
+
+  defp dependant_ids_query(dependency_id) do
+    from(pd in PackageDependant,
+      where: pd.dependency_id == ^dependency_id,
+      select: pd.package_id
+    )
+  end
+
+  defp dependency_exists_query(dependency_id) do
+    from(pd in PackageDependant,
+      where: pd.dependency_id == ^dependency_id,
+      where: pd.package_id == parent_as(:package).id
+    )
+  end
+
+  defp with_repository(query) do
+    if Ecto.Query.has_named_binding?(query, :repository) do
+      query
+    else
+      from(p in query, join: r in assoc(p, :repository), as: :repository)
+    end
   end
 
   defp extra_value(<<"[", value::binary>>) do
@@ -407,43 +611,5 @@ defmodule Hexpm.Repository.Package do
 
   defp sort(query, nil) do
     query
-  end
-
-  defp parse_search(search) do
-    search
-    |> String.trim_leading()
-    |> parse_params([])
-  end
-
-  defp parse_params("", params), do: {:ok, Enum.reverse(params)}
-
-  defp parse_params(tail, params) do
-    with {:ok, key, tail} <- parse_key(tail),
-         {:ok, value, tail} <- parse_value(tail) do
-      parse_params(tail, [{key, value} | params])
-    else
-      _ -> :error
-    end
-  end
-
-  defp parse_key(string) do
-    with [k, tail] when k != "" <- String.split(string, ":", parts: 2) do
-      {:ok, k, String.trim_leading(tail)}
-    end
-  end
-
-  defp parse_value(string) do
-    case string do
-      "\"" <> rest ->
-        with [v, tail] <- String.split(rest, "\"", parts: 2) do
-          {:ok, v, String.trim_leading(tail)}
-        end
-
-      _ ->
-        case String.split(string, " ", parts: 2) do
-          [value] -> {:ok, value, ""}
-          [value, tail] -> {:ok, value, String.trim_leading(tail)}
-        end
-    end
   end
 end

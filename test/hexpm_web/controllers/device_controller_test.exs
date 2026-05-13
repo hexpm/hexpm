@@ -246,8 +246,8 @@ defmodule HexpmWeb.DeviceControllerTest do
     end
 
     test "shows error for already processed device code", %{user: user, client: client} do
-      {response, _device_code} = create_device_code(client)
-      DeviceCodes.authorize_device(response.user_code, user, ["api"])
+      {response, device_code} = create_device_code(client)
+      DeviceCodes.authorize_device(response.user_code, user, device_code.scopes)
 
       conn = login_user(build_conn(), user)
 
@@ -370,7 +370,7 @@ defmodule HexpmWeb.DeviceControllerTest do
       conn =
         post(conn, ~p"/oauth/device/authorize", %{
           "action" => "authorize",
-          "selected_scopes" => ["api"]
+          "selected_scopes" => ["api:read", "api:write"]
         })
 
       assert redirected_to(conn, 302) == "/"
@@ -381,6 +381,30 @@ defmodule HexpmWeb.DeviceControllerTest do
       updated_device_code = Repo.get(DeviceCode, device_code.id)
       assert updated_device_code.status == "authorized"
       assert updated_device_code.user_id == user.id
+    end
+
+    test "authorizes api request with read scope without 2FA", %{
+      user: user,
+      client: client
+    } do
+      {_response, device_code} = create_device_code(client)
+      conn = login_with_verified_code(build_conn(), user, device_code.user_code)
+
+      conn =
+        post(conn, ~p"/oauth/device/authorize", %{
+          "action" => "authorize",
+          "selected_scopes" => ["api:read"]
+        })
+
+      assert redirected_to(conn, 302) == "/"
+
+      token =
+        Repo.get_by(Hexpm.OAuth.Token,
+          grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+          grant_reference: device_code.device_code
+        )
+
+      assert token.scopes == ["api:read"]
     end
 
     test "authorizes with selected scopes", %{user: user, client: client} do
@@ -420,7 +444,7 @@ defmodule HexpmWeb.DeviceControllerTest do
       conn =
         post(conn, ~p"/oauth/device/authorize", %{
           "action" => "authorize",
-          "selected_scopes" => ["api"]
+          "selected_scopes" => ["api:write"]
         })
 
       assert html_response(conn, 200) =~ "Two-factor authentication is required"
@@ -498,7 +522,7 @@ defmodule HexpmWeb.DeviceControllerTest do
       conn =
         post(conn, ~p"/oauth/device/authorize", %{
           "action" => "authorize",
-          "selected_scopes" => ["api"]
+          "selected_scopes" => ["api:read", "api:write"]
         })
 
       assert redirected_to(conn) == "/"
@@ -640,7 +664,7 @@ defmodule HexpmWeb.DeviceControllerTest do
       conn =
         post(conn, ~p"/oauth/device/authorize", %{
           "action" => "authorize",
-          "selected_scopes" => ["api", "repositories"]
+          "selected_scopes" => ["api:read", "api:write", "repositories"]
         })
 
       assert redirected_to(conn) == "/"

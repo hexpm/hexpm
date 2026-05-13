@@ -3,7 +3,7 @@ defmodule Hexpm.Repo.Migrations.AddPackageDependantsView do
 
   def up() do
     execute("""
-      CREATE MATERIALIZED VIEW package_dependants (
+      CREATE MATERIALIZED VIEW IF NOT EXISTS package_dependants (
         name,
         dependant_id) AS
           SELECT DISTINCT p3.name AS name, p0.id AS dependant_id
@@ -17,6 +17,6 @@ defmodule Hexpm.Repo.Migrations.AddPackageDependantsView do
   end
 
   def down() do
-    execute("DROP MATERIALIZED VIEW package_dependants")
+    execute("DROP MATERIALIZED VIEW IF EXISTS package_dependants")
   end
 end

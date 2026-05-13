@@ -210,6 +210,10 @@ defmodule HexpmWeb.TestController do
     end
   end
 
+  def raise_error(_conn, _params) do
+    raise "test error"
+  end
+
   defp send_object(nil, conn), do: send_resp(conn, 404, "")
   defp send_object(obj, conn), do: send_resp(conn, 200, obj)
 end

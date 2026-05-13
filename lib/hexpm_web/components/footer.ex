@@ -80,7 +80,7 @@ defmodule HexpmWeb.Components.Footer do
   defp footer_links(assigns) do
     ~H"""
     <div class="flex-1">
-      <div class="grid grid-cols-2 gap-y-4 gap-x-12 md:grid-cols-3 lg:gap-x-16 xl:gap-x-24">
+      <div class="grid grid-cols-1 gap-y-10 gap-x-12 md:grid-cols-3 lg:gap-x-16 xl:gap-x-24">
         <.footer_link_column>
           <.footer_link href={~p"/about"} label="About" />
           <.footer_link href={~p"/blog"} label="Blog" />

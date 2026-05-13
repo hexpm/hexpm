@@ -3,7 +3,7 @@ defmodule Hexpm.Repo.Migrations.AddInstallsTable do
 
   def up() do
     execute("""
-      CREATE TABLE installs (
+      CREATE TABLE IF NOT EXISTS installs (
         id serial PRIMARY KEY,
         hex text,
         elixir text)

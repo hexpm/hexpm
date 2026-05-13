@@ -33,20 +33,29 @@ defmodule Hexpm.Accounts.KeyPermission do
   end
 
   defp validate_permission(changeset, user_or_organization) do
-    validate_change(changeset, :resource, fn _, resource ->
-      domain = get_change(changeset, :domain)
+    # Earlier validations (validate_inclusion on :domain, validate_resource)
+    # ensure the (domain, resource) pair is well-formed before we hand it to
+    # verify_user_access, which only accepts the supported combinations. Bail
+    # out early when the changeset is already invalid so the user sees the
+    # original validation error instead of a 500.
+    if changeset.valid? do
+      validate_change(changeset, :resource, fn _, resource ->
+        domain = get_change(changeset, :domain)
 
-      case Permissions.verify_user_access(user_or_organization, domain, resource) do
-        {:ok, _} ->
-          []
+        case Permissions.verify_user_access(user_or_organization, domain, resource) do
+          {:ok, _} ->
+            []
 
-        :error when domain in ["repository", "docs"] ->
-          [resource: "you do not have access to this repository"]
+          :error when domain in ["repository", "docs"] ->
+            [resource: "you do not have access to this repository"]
 
-        :error when domain == "package" ->
-          [resource: "you do not have access to this package"]
-      end
-    end)
+          :error when domain == "package" ->
+            [resource: "you do not have access to this package"]
+        end
+      end)
+    else
+      changeset
+    end
   end
 
   defp normalize_resource(changeset) do

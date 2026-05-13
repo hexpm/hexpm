@@ -5,7 +5,7 @@ defmodule Hexpm.Repo.Migrations.AddRegistriesTable do
     execute("CREATE TYPE building_state AS ENUM ('waiting', 'working', 'done')")
 
     execute("""
-      CREATE TABLE registries (
+      CREATE TABLE IF NOT EXISTS registries (
         id serial PRIMARY KEY,
         state building_state,
         created_at timestamp DEFAULT now(),

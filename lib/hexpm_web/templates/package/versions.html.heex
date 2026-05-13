@@ -1,7 +1,24 @@
-<% versions = Enum.map(@releases, & &1.version) %>
+<% versions = @all_versions || Enum.map(@releases, & &1.version)
+
+version_rows =
+  Enum.map(@releases, fn release ->
+    retired? = release.retirement != nil
+
+    %{
+      release: release,
+      retired?: retired?,
+      previous_version: Hexpm.Utils.previous_version(release.version, versions),
+      retirement_message:
+        if(retired? && release.retirement.message,
+          do: release.retirement.message |> String.replace(~r/\s+/, " ") |> String.trim(),
+          else: nil
+        )
+    }
+  end) %>
 
 <.package_layout
   active_tab={:versions}
+  all_releases={@all_releases}
   current_release={@current_release}
   daily_graph={@daily_graph}
   dependants_count={@dependants_count}
@@ -10,105 +27,256 @@
   owners={@owners}
   package={@package}
   repository_name={@repository_name}
+  versions_count={@versions_count}
 >
   <:inner_content>
     <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden">
       <div class="px-5 py-4 border-b border-grey-200 dark:border-grey-700">
         <h2 class="text-grey-900 dark:text-grey-100 text-xl font-semibold">Versions</h2>
       </div>
-      <table class="w-full text-sm">
+
+      <div class="divide-y divide-grey-100 dark:divide-grey-700 md:hidden">
+        <%= for row <- version_rows do %>
+          <div class={[
+            "flex items-start justify-between gap-4 px-4 py-4",
+            row.retired? && "bg-grey-50 dark:bg-grey-900/40",
+            row.release.vulnerable? && "bg-red-50/50 dark:bg-red-900/30"
+          ]}>
+            <div class="min-w-0 flex-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <a
+                  href={ViewHelpers.path_for_release(@package, row.release)}
+                  class="font-semibold text-grey-900 dark:text-grey-100 hover:text-purple-600 dark:hover:text-primary-300 transition-colors font-mono"
+                >
+                  {row.release.version}
+                </a>
+                <%= if row.retired? do %>
+                  <% label =
+                    if row.release.retirement.reason == "report",
+                      do: "reported",
+                      else:
+                        Hexpm.Repository.ReleaseRetirement.reason_text(
+                          row.release.retirement.reason
+                        ) || "retired" %>
+                  <% {pill_class, tooltip_class} =
+                    if row.release.retirement.reason == "report",
+                      do:
+                        {"bg-red-100 text-red-900 ring-red-300 dark:bg-red-900/30 dark:text-red-100 dark:ring-red-700/60",
+                         "bg-grey-900 dark:bg-grey-100"},
+                      else:
+                        {"bg-yellow-100 text-yellow-900 ring-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-100 dark:ring-yellow-700/60",
+                         "bg-grey-900 dark:bg-grey-100"} %>
+                  <%= if row.retirement_message do %>
+                    <span
+                      tabindex="0"
+                      class="group relative inline-flex shrink-0 whitespace-nowrap rounded-md focus:outline-none focus:ring-2 focus:ring-primary-default/30 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-grey-800"
+                    >
+                      <span class={"inline-flex cursor-help items-center justify-center rounded-md px-2.5 py-1 text-xs font-semibold leading-3 ring-1 ring-inset #{pill_class}"}>
+                        {label}
+                      </span>
+                      <span class="pointer-events-none invisible absolute left-0 top-full z-10 mt-2 w-56 max-w-[calc(100vw-4rem)] opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+                        <span class={"absolute left-3 top-0 size-3 -translate-y-1/2 rotate-45 shadow-sm #{tooltip_class}"}>
+                        </span>
+                        <span class={"block rounded-lg px-3 py-2 text-xs leading-5 text-white shadow-lg dark:text-grey-900 #{tooltip_class}"}>
+                          {row.retirement_message}
+                        </span>
+                      </span>
+                    </span>
+                  <% else %>
+                    <span class={"inline-flex shrink-0 whitespace-nowrap items-center justify-center rounded-md px-2.5 py-1 text-xs font-semibold leading-3 ring-1 ring-inset #{pill_class}"}>
+                      {label}
+                    </span>
+                  <% end %>
+                <% end %>
+                <%= if row.release.vulnerable? do %>
+                  <a
+                    href={ViewHelpers.path_for_package(@package) <> "/advisories"}
+                    class="inline-flex shrink-0 whitespace-nowrap items-center justify-center rounded-md px-2.5 py-1 text-xs font-semibold leading-3 ring-1 ring-inset bg-red-100 text-red-900 ring-red-300 dark:bg-red-900/30 dark:text-red-100 dark:ring-red-700/60"
+                  >
+                    Vulnerable
+                  </a>
+                <% end %>
+              </div>
+              <p
+                class="mt-1 text-sm text-grey-500 dark:text-grey-300"
+                title={ViewHelpers.pretty_datetime(row.release.inserted_at)}
+              >
+                {ViewHelpers.pretty_date(row.release.inserted_at)}
+              </p>
+            </div>
+
+            <div class="flex w-24 shrink-0 items-center justify-end gap-2">
+              <%= if row.release.has_docs do %>
+                <a
+                  href={Hexpm.Utils.docs_html_url(@package.repository, @package, row.release)}
+                  title="Docs"
+                  class="text-grey-400 dark:text-grey-300 hover:text-purple-600 dark:hover:text-primary-300 transition-colors"
+                >
+                  {HexpmWeb.ViewIcons.icon(:heroicon, "book-open", class: "size-4")}
+                </a>
+                <a
+                  href={Hexpm.Utils.docs_tarball_url(@package.repository, @package, row.release)}
+                  title="Download docs"
+                  class="text-grey-400 dark:text-grey-300 hover:text-purple-600 dark:hover:text-primary-300 transition-colors"
+                >
+                  {HexpmWeb.ViewIcons.icon(:heroicon, "cloud-arrow-down", class: "size-4")}
+                </a>
+              <% end %>
+              <%= if row.previous_version && ViewHelpers.main_repository?(@package) do %>
+                <a
+                  href={
+                    Hexpm.Utils.diff_html_url(
+                      @package.name,
+                      row.release.version,
+                      row.previous_version
+                    )
+                  }
+                  title="Diff with previous version"
+                  class="text-grey-400 dark:text-grey-300 hover:text-purple-600 dark:hover:text-primary-300 transition-colors"
+                >
+                  {HexpmWeb.ViewIcons.icon(:heroicon, "arrows-right-left", class: "size-4")}
+                </a>
+              <% end %>
+              <a
+                href={Hexpm.Utils.preview_html_url(@package.name, row.release.version)}
+                title="Preview"
+                class="text-grey-400 dark:text-grey-300 hover:text-purple-600 dark:hover:text-primary-300 transition-colors"
+              >
+                {HexpmWeb.ViewIcons.icon(:heroicon, "code-bracket", class: "size-4")}
+              </a>
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+      <table class="hidden w-full text-sm md:table md:table-fixed">
+        <colgroup>
+          <col class="w-32" />
+          <col class="w-40" />
+          <col />
+          <col class="w-24" />
+        </colgroup>
         <thead>
           <tr class="bg-grey-50 dark:bg-grey-900/60 border-b border-grey-200 dark:border-grey-700">
-            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider w-32">
+            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
               Version
             </th>
-            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider w-40">
-              Published Date
+            <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider whitespace-nowrap">
+              Publish Date
             </th>
             <th class="px-5 py-3 text-left text-xs font-semibold text-grey-500 dark:text-grey-300 uppercase tracking-wider">
               Note
             </th>
-            <th class="px-5 py-3 w-24"></th>
+            <th class="px-5 py-3">
+              <span class="sr-only">Actions</span>
+            </th>
           </tr>
         </thead>
         <tbody class="divide-y divide-grey-100 dark:divide-grey-700">
-          <%= for release <- @releases do %>
-            <% retired? = release.retirement != nil
-            previous_version = Hexpm.Utils.previous_version(release.version, versions) %>
+          <%= for row <- version_rows do %>
             <tr class={[
               "hover:bg-grey-50 dark:hover:bg-grey-700/60 transition-colors",
-              retired? && "opacity-60 bg-grey-50 dark:bg-grey-900/40"
+              row.retired? && "bg-grey-50 dark:bg-grey-900/40",
+              row.release.vulnerable? && "bg-red-50/50 dark:bg-red-900/30"
             ]}>
-              <td class="px-5 py-3.5">
-                <div class="flex items-center gap-2">
-                  <a
-                    href={ViewHelpers.path_for_release(@package, release)}
-                    class="font-semibold text-grey-900 dark:text-grey-100 hover:text-purple-600 dark:hover:text-primary-300 transition-colors font-mono"
-                  >
-                    {release.version}
-                  </a>
-                  <%= cond do %>
-                    <% retired? && release.retirement.reason == "report" -> %>
-                      <.badge variant="red">reported</.badge>
-                    <% retired? -> %>
-                      <.badge variant="yellow">retired</.badge>
-                    <% true -> %>
+              <td class="px-5 py-3.5 align-top">
+                <a
+                  href={ViewHelpers.path_for_release(@package, row.release)}
+                  class="font-semibold text-grey-900 dark:text-grey-100 hover:text-purple-600 dark:hover:text-primary-300 transition-colors font-mono whitespace-nowrap"
+                >
+                  {row.release.version}
+                </a>
+              </td>
+              <td
+                class="px-5 py-3.5 text-grey-500 dark:text-grey-300 text-sm whitespace-nowrap"
+                title={ViewHelpers.pretty_datetime(row.release.inserted_at)}
+              >
+                {ViewHelpers.pretty_date(row.release.inserted_at)}
+              </td>
+              <td class="px-5 py-3.5 text-grey-500 dark:text-grey-300 text-sm">
+                <div class="flex flex-col gap-1.5">
+                  <%= if row.retired? do %>
+                    <% label =
+                      if row.release.retirement.reason == "report",
+                        do: "reported",
+                        else:
+                          Hexpm.Repository.ReleaseRetirement.reason_text(
+                            row.release.retirement.reason
+                          ) || "retired" %>
+                    <% {pill_class, message_class} =
+                      if row.release.retirement.reason == "report",
+                        do:
+                          {"border-red-300 bg-red-100 text-red-900 dark:border-red-700/60 dark:bg-red-900/30 dark:text-red-100",
+                           "text-red-800 dark:text-red-200"},
+                        else:
+                          {"border-yellow-300 bg-yellow-100 text-yellow-900 dark:border-yellow-700/60 dark:bg-yellow-900/30 dark:text-yellow-100",
+                           "text-yellow-800 dark:text-yellow-200"} %>
+                    <div class="flex items-center gap-2">
+                      <span class={"inline-flex shrink-0 items-center justify-center rounded border px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide #{pill_class}"}>
+                        {label}
+                      </span>
+                      <%= if row.retirement_message do %>
+                        <span class={message_class}>{row.retirement_message}</span>
+                      <% end %>
+                    </div>
+                  <% end %>
+                  <%= if row.release.vulnerable? do %>
+                    <div class="flex items-center gap-2">
+                      <span class="inline-flex shrink-0 items-center justify-center rounded border border-red-300 bg-red-100 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-red-900 dark:border-red-700/60 dark:bg-red-900/30 dark:text-red-100">
+                        Vulnerable
+                      </span>
+                      <a
+                        href={ViewHelpers.path_for_package(@package) <> "/advisories"}
+                        class="text-red-600 underline hover:text-red-700 transition-colors"
+                      >
+                        Known security vulnerabilities
+                      </a>
+                    </div>
                   <% end %>
                 </div>
               </td>
-              <td
-                class="px-5 py-3.5 text-grey-500 dark:text-grey-300 text-sm"
-                title={ViewHelpers.pretty_datetime(release.inserted_at)}
-              >
-                {ViewHelpers.pretty_date(release.inserted_at)}
-              </td>
-              <td class="px-5 py-3.5 text-grey-500 dark:text-grey-300 text-sm">
-                <%= if retired? && release.retirement.message do %>
-                  {release.retirement.message}
-                <% end %>
-              </td>
-              <td class="px-5 py-3.5">
+              <td class="px-5 py-3.5 align-top">
                 <div class="flex items-center justify-end gap-2">
-                  <%= if release.has_docs do %>
+                  <%= if row.release.has_docs do %>
                     <a
-                      href={Hexpm.Utils.docs_html_url(@package.repository, @package, release)}
+                      href={Hexpm.Utils.docs_html_url(@package.repository, @package, row.release)}
                       title="Docs"
                       class="text-grey-400 dark:text-grey-300 hover:text-purple-600 dark:hover:text-primary-300 transition-colors"
                     >
                       {HexpmWeb.ViewIcons.icon(:heroicon, "book-open", class: "size-4")}
                     </a>
                     <a
-                      href={Hexpm.Utils.docs_tarball_url(@package.repository, @package, release)}
+                      href={
+                        Hexpm.Utils.docs_tarball_url(@package.repository, @package, row.release)
+                      }
                       title="Download docs"
                       class="text-grey-400 dark:text-grey-300 hover:text-purple-600 dark:hover:text-primary-300 transition-colors"
                     >
                       {HexpmWeb.ViewIcons.icon(:heroicon, "cloud-arrow-down", class: "size-4")}
                     </a>
                   <% end %>
-                  <%= unless retired? do %>
-                    <%= if previous_version && ViewHelpers.main_repository?(@package) do %>
-                      <a
-                        href={
-                          Hexpm.Utils.diff_html_url(
-                            @package.name,
-                            release.version,
-                            previous_version
-                          )
-                        }
-                        title="Diff with previous version"
-                        class="text-grey-400 dark:text-grey-300 hover:text-purple-600 dark:hover:text-primary-300 transition-colors"
-                      >
-                        {HexpmWeb.ViewIcons.icon(:heroicon, "arrows-right-left", class: "size-4")}
-                      </a>
-                    <% end %>
+                  <%= if row.previous_version && ViewHelpers.main_repository?(@package) do %>
                     <a
-                      href={Hexpm.Utils.preview_html_url(@package.name, release.version)}
-                      title="Preview"
+                      href={
+                        Hexpm.Utils.diff_html_url(
+                          @package.name,
+                          row.release.version,
+                          row.previous_version
+                        )
+                      }
+                      title="Diff with previous version"
                       class="text-grey-400 dark:text-grey-300 hover:text-purple-600 dark:hover:text-primary-300 transition-colors"
                     >
-                      {HexpmWeb.ViewIcons.icon(:heroicon, "code-bracket", class: "size-4")}
+                      {HexpmWeb.ViewIcons.icon(:heroicon, "arrows-right-left", class: "size-4")}
                     </a>
                   <% end %>
+                  <a
+                    href={Hexpm.Utils.preview_html_url(@package.name, row.release.version)}
+                    title="Preview"
+                    class="text-grey-400 dark:text-grey-300 hover:text-purple-600 dark:hover:text-primary-300 transition-colors"
+                  >
+                    {HexpmWeb.ViewIcons.icon(:heroicon, "code-bracket", class: "size-4")}
+                  </a>
                 </div>
               </td>
             </tr>
@@ -116,5 +284,19 @@
         </tbody>
       </table>
     </div>
+
+    <%= unless Enum.empty?(@releases) do %>
+      {render(
+        HexpmWeb.SharedView,
+        "_pagination.html",
+        items: @releases,
+        page: @page,
+        total_count: @releases_total_count,
+        per_page: @per_page,
+        unit: "version",
+        units: "versions",
+        path_fn: &path_for_versions(@package, &1)
+      )}
+    <% end %>
   </:inner_content>
 </.package_layout>

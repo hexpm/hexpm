@@ -5,7 +5,7 @@ defmodule Hexpm.RepoBase.Migrations.AddRepoToPackageDependants do
     execute("DROP MATERIALIZED VIEW IF EXISTS package_dependants")
 
     execute("""
-      CREATE MATERIALIZED VIEW package_dependants (
+      CREATE MATERIALIZED VIEW IF NOT EXISTS package_dependants (
         name,
         repo,
         dependant_id) AS
@@ -23,6 +23,6 @@ defmodule Hexpm.RepoBase.Migrations.AddRepoToPackageDependants do
   end
 
   def down() do
-    execute("DROP MATERIALIZED VIEW package_dependants")
+    execute("DROP MATERIALIZED VIEW IF EXISTS package_dependants")
   end
 end

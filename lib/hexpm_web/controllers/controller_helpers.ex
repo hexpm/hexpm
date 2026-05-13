@@ -47,10 +47,14 @@ defmodule HexpmWeb.ControllerHelpers do
   defp maybe_put_resp_header(conn, header, value), do: put_resp_header(conn, header, value)
 
   def render_error(conn, status, assigns \\ []) do
+    assigns =
+      assigns
+      |> Map.new()
+      |> Map.put_new(:error, true)
+      |> Map.put_new(:status, status)
+
     conn
     |> put_status(status)
-    |> put_layout(false)
-    |> put_root_layout(false)
     |> put_view(HexpmWeb.ErrorView)
     |> render(:"#{status}", assigns)
     |> halt()
@@ -157,7 +161,7 @@ defmodule HexpmWeb.ControllerHelpers do
   end
 
   defp put_last_modified(conn, modified) do
-    put_resp_header(conn, "last-modified", :cowboy_clock.rfc1123(modified))
+    put_resp_header(conn, "last-modified", List.to_string(:httpd_util.rfc1123_date(modified)))
   end
 
   defp fresh?(conn, opts) do

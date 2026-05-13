@@ -66,6 +66,19 @@ defmodule Hexpm.Permissions do
     end
   end
 
+  @doc """
+  Expands the full API scope into the granular API scopes used for interactive
+  authorization.
+  """
+  def expand_api_scope(scopes) when is_list(scopes) do
+    scopes
+    |> Enum.flat_map(fn
+      "api" -> ["api:read", "api:write"]
+      scope -> [scope]
+    end)
+    |> Enum.uniq()
+  end
+
   defp valid_scope?(scope) do
     case String.split(scope, ":", parts: 2) do
       [scope_name] ->
@@ -572,7 +585,7 @@ defmodule Hexpm.Permissions do
         "Read-only access to your Hex account and packages. Allows viewing packages, account information, organizations, and audit logs. Cannot modify any data."
 
       "api:write" ->
-        "Read and write access to your Hex account and packages. Includes: publish, unpublish, retire, and unretire packages; manage package owners; manage API keys."
+        "Write access to your Hex account and packages. Includes: publish, unpublish, retire, and unretire packages; manage package owners; manage API keys."
 
       "repositories" ->
         "Access to fetch packages from all private repositories you belong to. Does not grant ability to publish packages or modify repository settings."

@@ -13,6 +13,10 @@ defmodule Hexpm.Repository.Packages do
     Repo.one!(Package.count(repositories, filter))
   end
 
+  def count_dependants(repositories, dependency) do
+    Repo.one!(Package.count_dependants(repositories, dependency))
+  end
+
   def diff(packages, nil), do: packages
 
   def diff(packages, remove) do
@@ -29,12 +33,23 @@ defmodule Hexpm.Repository.Packages do
 
   def get(repositories, name) when is_list(repositories) do
     Repo.get_by(assoc(repositories, :packages), name: name)
-    |> Repo.preload(:repository)
+    |> Repo.preload([:repository, security_advisories: active_advisories_preload()])
   end
 
   def get(repository, name) do
     package = Repo.get_by(assoc(repository, :packages), name: name)
-    package && %{package | repository: repository}
+
+    package &&
+      Repo.preload(%{package | repository: repository},
+        security_advisories: active_advisories_preload()
+      )
+  end
+
+  defp active_advisories_preload do
+    from a in Hexpm.Security.Advisory,
+      where: is_nil(a.withdrawn_at),
+      order_by: [desc: a.published_at],
+      preload: [:references, :affected_versions]
   end
 
   def owner_with_access?(package, user, level \\ "maintainer") do
@@ -80,9 +95,23 @@ defmodule Hexpm.Repository.Packages do
   end
 
   def search(repositories, page, packages_per_page, query, sort, fields) do
-    Package.all(repositories, page, packages_per_page, query, sort, fields)
-    |> Repo.all()
-    |> attach_repositories(repositories)
+    if query == nil and sort in [:recent_downloads, :total_downloads] do
+      packages_by_downloads(repositories, page, packages_per_page, sort, fields)
+    else
+      Package.all(repositories, page, packages_per_page, query, sort, fields)
+      |> Repo.all()
+      |> attach_repositories(repositories)
+    end
+  end
+
+  def dependants(repositories, dependency, page, packages_per_page, sort, fields \\ nil) do
+    if sort in [:recent_downloads, :total_downloads] do
+      dependants_by_downloads(repositories, dependency, page, packages_per_page, sort, fields)
+    else
+      Package.dependants(repositories, dependency, page, packages_per_page, sort, fields)
+      |> Repo.all()
+      |> attach_repositories(repositories)
+    end
   end
 
   def search_with_versions(repositories, page, packages_per_page, query, sort) do
@@ -106,6 +135,68 @@ defmodule Hexpm.Repository.Packages do
       %{package | repository: repository}
     end)
   end
+
+  defp dependants_by_downloads(repositories, dependency, page, packages_per_page, sort, fields) do
+    view = download_view(sort)
+
+    paginate_by_downloads(repositories, page, packages_per_page, fields,
+      downloaded: &Package.downloaded_dependant_ids(repositories, dependency, view, &1, &2),
+      count: fn -> Package.count_downloaded_dependants(repositories, dependency, view) end,
+      undownloaded: &Package.undownloaded_dependant_ids(repositories, dependency, view, &1, &2)
+    )
+  end
+
+  defp packages_by_downloads(repositories, page, packages_per_page, sort, fields) do
+    view = download_view(sort)
+
+    paginate_by_downloads(repositories, page, packages_per_page, fields,
+      downloaded: &Package.downloaded_package_ids(repositories, view, &1, &2),
+      count: fn -> Package.count_downloaded_packages(repositories, view) end,
+      undownloaded: &Package.undownloaded_package_ids(repositories, view, &1, &2)
+    )
+  end
+
+  defp paginate_by_downloads(repositories, page, packages_per_page, fields, queries) do
+    offset = (page - 1) * packages_per_page
+
+    downloaded_ids = Repo.all(queries[:downloaded].(packages_per_page, offset))
+    remaining = packages_per_page - length(downloaded_ids)
+
+    package_ids =
+      if remaining > 0 do
+        downloaded_count =
+          if downloaded_ids == [] and offset > 0 do
+            Repo.one!(queries[:count].())
+          else
+            offset + length(downloaded_ids)
+          end
+
+        zero_download_offset = max(offset - downloaded_count, 0)
+        zero_download_ids = Repo.all(queries[:undownloaded].(remaining, zero_download_offset))
+        downloaded_ids ++ zero_download_ids
+      else
+        downloaded_ids
+      end
+
+    load_packages(repositories, package_ids, fields)
+  end
+
+  defp load_packages(_repositories, [], _fields), do: []
+
+  defp load_packages(repositories, package_ids, fields) do
+    packages =
+      package_ids
+      |> Package.by_ids(fields)
+      |> Repo.all()
+      |> attach_repositories(repositories)
+
+    packages_by_id = Map.new(packages, &{&1.id, &1})
+
+    Enum.map(package_ids, &Map.fetch!(packages_by_id, &1))
+  end
+
+  defp download_view(:recent_downloads), do: "recent"
+  defp download_view(:total_downloads), do: "all"
 
   def recent(repository, count) do
     Repo.all(Package.recent(repository, count))
@@ -336,5 +427,17 @@ defmodule Hexpm.Repository.Packages do
       end)
 
     Phoenix.HTML.raw(safe)
+  end
+
+  @spec resolve_hexpm_package_ids(package_names :: [name]) :: %{optional(name) => pos_integer()}
+        when name: String.t()
+  def resolve_hexpm_package_ids(package_names) do
+    from(package in Package,
+      join: repository in assoc(package, :repository),
+      where: repository.name == "hexpm" and package.name in ^package_names,
+      select: {package.name, package.id}
+    )
+    |> Repo.all()
+    |> Map.new()
   end
 end

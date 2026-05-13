@@ -1,6 +1,10 @@
 defmodule Hexpm.Repository.Downloads do
   use Hexpm.Context
 
+  def last_day() do
+    Repo.one(Download.last_day())
+  end
+
   def package(package) do
     PackageDownload.package(package)
     |> Repo.all()
@@ -72,10 +76,5 @@ defmodule Hexpm.Repository.Downloads do
     query
     |> Repo.all()
     |> Enum.group_by(& &1.package_id)
-  end
-
-  def last_day() do
-    Download.last_day()
-    |> Repo.one()
   end
 end
