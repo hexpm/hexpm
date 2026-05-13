@@ -95,6 +95,7 @@ defmodule HexpmWeb.PackageLive.IndexTest do
       consumer = insert(:package, name: "ecto_consumer", repository_id: repository.id)
       release = insert(:release, package: consumer)
       insert(:requirement, release: release, dependency: ecto, requirement: "~> 1.0")
+      recompute_dependants(consumer)
 
       {:ok, view, _} = live(conn, ~p"/packages")
 
@@ -173,6 +174,7 @@ defmodule HexpmWeb.PackageLive.IndexTest do
         insert(:release, package: target, meta: build(:release_metadata, build_tools: ["mix"]))
 
       insert(:requirement, release: target_release, dependency: ecto, requirement: "~> 1.0")
+      recompute_dependants(target)
 
       # Non-matching: uses rebar3 (wrong build_tool) — should NOT appear.
       other =
@@ -187,6 +189,7 @@ defmodule HexpmWeb.PackageLive.IndexTest do
         insert(:release, package: other, meta: build(:release_metadata, build_tools: ["rebar3"]))
 
       insert(:requirement, release: other_release, dependency: ecto, requirement: "~> 1.0")
+      recompute_dependants(other)
 
       query =
         "build_tool:mix depends:ecto_combo_dep updated_after:2024-01-01T00:00:00Z extra:license,MIT"
