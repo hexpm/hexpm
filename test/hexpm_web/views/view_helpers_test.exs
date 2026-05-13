@@ -49,7 +49,7 @@ defmodule HexpmWeb.ViewHelpersTest do
   end
 
   describe "human_relative_time_from_now/1" do
-    defp rel(days, hours \\ 0, minutes \\ 0, seconds \\ 0) do
+    defp rel(days, hours \\ 0, minutes \\ 0, seconds \\ 1) do
       datetime =
         NaiveDateTime.utc_now()
         |> NaiveDateTime.add(-(days * 86_400 + hours * 3_600 + minutes * 60 + seconds))
