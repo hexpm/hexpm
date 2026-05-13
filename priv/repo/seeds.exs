@@ -92,7 +92,7 @@ Hexpm.Repo.transaction(fn ->
       meta:
         build(
           :package_metadata,
-          licenses: ["Apache-2.0", "MIT"],
+          licenses: ["Apache-2.0", "MIT", "LicenseRef-Journey"],
           links: %{
             "Github" => "http://example.com/github",
             "Documentation" => "http://example.com/documentation"
