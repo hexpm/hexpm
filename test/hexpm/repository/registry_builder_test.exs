@@ -59,7 +59,8 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       assert Enum.find(versions, &(&1.name == p2.name)) == %{
                name: p2.name,
                versions: ["0.0.1", "0.0.2"],
-               retired: []
+               retired: [],
+               with_advisories: []
              }
 
       package2_releases = v2_map("packages/#{p2.name}", ["hexpm", p2.name]).releases
@@ -69,7 +70,8 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
                version: "0.0.1",
                inner_checksum: Base.decode16!(@checksum),
                outer_checksum: Base.decode16!(@checksum),
-               dependencies: []
+               dependencies: [],
+               advisory_indexes: []
              }
 
       package3_releases = v2_map("packages/#{p3.name}", ["hexpm", p3.name]).releases
@@ -131,7 +133,8 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       assert Enum.find(versions, &(&1.name == p2.name)) == %{
                name: p2.name,
                versions: ["0.0.1", "0.0.2"],
-               retired: []
+               retired: [],
+               with_advisories: []
              }
     end
 
@@ -171,7 +174,8 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
                version: "0.0.1",
                inner_checksum: Base.decode16!(@checksum),
                outer_checksum: Base.decode16!(@checksum),
-               dependencies: []
+               dependencies: [],
+               advisory_indexes: []
              }
 
       package3_releases = v2_map("packages/#{p3.name}", ["hexpm", p3.name]).releases

@@ -50,7 +50,7 @@ You can also add any of the following to the list of application attributes:
 
 <dl class="dl-horizontal">
   <dt><code>licenses</code></dt>
-  <dd>A list of licenses the project is licensed under. This attribute is required.</dd>
+  <dd>A list of licenses the project is licensed under. This attribute is required. Valid license identifiers are available from <a href="https://spdx.org/licenses/">SPDX</a>. Custom licenses may use <code>LicenseRef-&lt;idstring&gt;</code> identifiers and should include the full license text in the package.</dd>
   <dt><code>pkg_name</code></dt>
   <dd>The name of the package in case you want to publish the package with a different name than the application name.</dd>
   <dt><code>links</code></dt>
