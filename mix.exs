@@ -69,6 +69,7 @@ defmodule Hexpm.MixProject do
       {:phoenix_html, "~> 4.0"},
       {:phoenix_html_helpers, "~> 1.0"},
       {:phoenix_live_dashboard, "~> 0.6"},
+      {:phoenix_live_view, "~> 1.0"},
       {:phoenix_live_reload, "~> 1.0", only: :dev},
       {:phoenix_pubsub, "~> 2.0"},
       {:phoenix_view, "~> 2.0"},
@@ -89,6 +90,7 @@ defmodule Hexpm.MixProject do
       {:ueberauth, "~> 0.10"},
       {:ueberauth_github, "~> 0.8"},
       {:wallaby, "~> 0.30", only: :test, runtime: false},
+      {:lazy_html, ">= 0.1.0", only: :test},
       {:req, "~> 0.5.6"}
     ]
   end

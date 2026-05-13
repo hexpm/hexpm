@@ -13,10 +13,12 @@
     </div>
 
     <.header
+      conn={assigns[:conn] || assigns[:socket]}
       current_user={assigns[:current_user]}
       search={search(assigns)}
       show_search={show_search?(assigns)}
       autofocus_search={autofocus_search?(assigns)}
+      live_search={!!assigns[:live_search]}
     />
 
     <%= unless error_page?(assigns) || assigns[:custom_flash] do %>
@@ -91,4 +93,5 @@
   </section>
 
   <.footer />
+  <HexpmWeb.Components.FilterCheatsheet.cheatsheet id="search-cheatsheet" />
 </div>

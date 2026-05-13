@@ -2,6 +2,8 @@ defmodule Hexpm.Repository.Package do
   use Hexpm.Schema
   import Ecto.Query
 
+  alias Hexpm.Repository.Package.SearchQuery
+
   @derive {HexpmWeb.Stale, assocs: [:releases, :owners]}
   @derive {Phoenix.Param, key: :name}
 
@@ -280,6 +282,8 @@ defmodule Hexpm.Repository.Package do
       select: count()
     )
     |> search(search)
+    # `updated_after` search injects an order_by that PostgreSQL rejects inside COUNT(*).
+    |> exclude(:order_by)
   end
 
   def count_dependants(repositories, dependency) do
@@ -340,19 +344,35 @@ defmodule Hexpm.Repository.Package do
     query
   end
 
-  defp search(query, {:letter, letter}) do
-    search = letter <> "%"
-    from(p in query, where: name_query(p, search))
-  end
-
   defp search(query, search) when is_binary(search) do
-    case parse_search(search) do
-      {:ok, params} ->
-        Enum.reduce(params, query, fn {k, v}, q -> search_param(k, v, q) end)
+    case SearchQuery.parse(search) do
+      {:ok, %SearchQuery{} = parsed} ->
+        query
+        |> apply_free_text(parsed.free_text)
+        |> apply_filters(parsed)
 
-      :error ->
+      {:error, _} ->
         basic_search(query, search)
     end
+  end
+
+  defp apply_free_text(query, nil), do: query
+  defp apply_free_text(query, text), do: basic_search(query, text)
+
+  defp apply_filters(query, %SearchQuery{} = q) do
+    pairs =
+      [
+        {"name", q.name},
+        {"description", q.description},
+        {"depends", q.depends},
+        {"build_tool", q.build_tool},
+        {"updated_after", q.updated_after}
+      ]
+      |> Enum.reject(fn {_, v} -> is_nil(v) end)
+      |> Kernel.++(Enum.map(q.extra, fn {k, v} -> {"extra", "#{k},#{v}"} end))
+      |> Kernel.++(q.unknown)
+
+    Enum.reduce(pairs, query, fn {k, v}, q -> search_param(k, v, q) end)
   end
 
   defp basic_search(query, search) do
@@ -455,13 +475,12 @@ defmodule Hexpm.Repository.Package do
   end
 
   defp search_param("build_tool", search, query) do
-    # go with a sub-query because a join would add multiples and distinct mucks with sort order
     from(p in query,
       where:
         exists(
           from(r in Release,
             where: r.package_id == parent_as(:package).id,
-            where: fragment("?->'build_tools' @> ?", r.meta, ^search)
+            where: fragment("?->'build_tools' \\? ?", r.meta, ^search)
           )
         )
     )
@@ -592,43 +611,5 @@ defmodule Hexpm.Repository.Package do
 
   defp sort(query, nil) do
     query
-  end
-
-  defp parse_search(search) do
-    search
-    |> String.trim_leading()
-    |> parse_params([])
-  end
-
-  defp parse_params("", params), do: {:ok, Enum.reverse(params)}
-
-  defp parse_params(tail, params) do
-    with {:ok, key, tail} <- parse_key(tail),
-         {:ok, value, tail} <- parse_value(tail) do
-      parse_params(tail, [{key, value} | params])
-    else
-      _ -> :error
-    end
-  end
-
-  defp parse_key(string) do
-    with [k, tail] when k != "" <- String.split(string, ":", parts: 2) do
-      {:ok, k, String.trim_leading(tail)}
-    end
-  end
-
-  defp parse_value(string) do
-    case string do
-      "\"" <> rest ->
-        with [v, tail] <- String.split(rest, "\"", parts: 2) do
-          {:ok, v, String.trim_leading(tail)}
-        end
-
-      _ ->
-        case String.split(string, " ", parts: 2) do
-          [value] -> {:ok, value, ""}
-          [value, tail] -> {:ok, value, String.trim_leading(tail)}
-        end
-    end
   end
 end

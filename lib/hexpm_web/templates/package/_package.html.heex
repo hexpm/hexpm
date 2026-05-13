@@ -40,9 +40,9 @@
         </p>
       <% end %>
 
-      <%= if @package.inserted_at do %>
+      <%= if @package.updated_at do %>
         <p class="text-grey-500 dark:text-grey-300 text-xs mt-2">
-          Published {ViewHelpers.human_relative_time_from_now(@package.inserted_at)}
+          Updated {ViewHelpers.human_relative_time_from_now(@package.updated_at)}
         </p>
       <% end %>
     </div>
