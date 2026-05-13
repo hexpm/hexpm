@@ -173,9 +173,11 @@ defmodule HexpmWeb.PackageControllerTest do
 
       rel = insert(:release, package: visible, version: "1.0.0")
       insert(:requirement, release: rel, dependency: dependency, requirement: "~> 1.0")
+      recompute_dependants(visible)
 
       rel = insert(:release, package: hidden, version: "1.0.0")
       insert(:requirement, release: rel, dependency: dependency, requirement: "~> 1.0")
+      recompute_dependants(hidden)
 
       search = URI.encode_www_form("depends:#{repository1.name}:#{dependency.name}")
 
@@ -204,9 +206,11 @@ defmodule HexpmWeb.PackageControllerTest do
 
       rel = insert(:release, package: visible, version: "1.0.0")
       insert(:requirement, release: rel, dependency: hidden_dependency, requirement: "~> 1.0")
+      recompute_dependants(visible)
 
       rel = insert(:release, package: hidden, version: "1.0.0")
       insert(:requirement, release: rel, dependency: hidden_dependency, requirement: "~> 1.0")
+      recompute_dependants(hidden)
 
       search = URI.encode_www_form("depends:#{repository2.name}:#{hidden_dependency.name}")
 
@@ -731,6 +735,7 @@ defmodule HexpmWeb.PackageControllerTest do
       )
 
     insert(:requirement, release: release, dependency: package, requirement: "~> 0.0.1")
+    recompute_dependants(dependant)
   end
 
   # Tabs render in both the mobile (<details>) and desktop nav, so a single href
