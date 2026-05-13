@@ -163,17 +163,17 @@ defmodule Hexpm.Security.Advisories do
   defp source_key(advisory), do: {source_priority(advisory.id), advisory.id}
 
   defp min_datetime_field(advisories, field) do
-    Enum.reduce(advisories, nil, fn advisory, acc ->
-      min_datetime(Map.get(advisory, field), acc)
-    end)
-  end
-
-  defp min_datetime_field(advisories, field) do
-    advisories |> Enum.map(&Map.get(&1, field)) |> Enum.reject(&is_nil/1) |> Enum.min(DateTime, fn -> nil end)
+    advisories
+    |> Enum.map(&Map.get(&1, field))
+    |> Enum.reject(&is_nil/1)
+    |> Enum.min(DateTime, fn -> nil end)
   end
 
   defp max_datetime_field(advisories, field) do
-    advisories |> Enum.map(&Map.get(&1, field)) |> Enum.reject(&is_nil/1) |> Enum.max(DateTime, fn -> nil end)
+    advisories
+    |> Enum.map(&Map.get(&1, field))
+    |> Enum.reject(&is_nil/1)
+    |> Enum.max(DateTime, fn -> nil end)
   end
 
   defp uniq_references(advisories) do
