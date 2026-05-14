@@ -421,7 +421,7 @@ defmodule HexpmWeb.Components.PackageLayout do
                         </p>
                         <div class="flex items-center gap-1.5 flex-wrap">
                           <p class="text-grey-700 dark:text-grey-100 font-bold">
-                            {Enum.join(@licenses, ", ")}
+                            {Enum.map_join(@licenses, ", ", &display_license/1)}
                           </p>
                         </div>
                       </div>
@@ -677,4 +677,7 @@ defmodule HexpmWeb.Components.PackageLayout do
   defp version_item_class(false),
     do:
       "flex items-center justify-between gap-3 px-3 py-2 text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-700/40 transition-colors"
+
+  defp display_license("LicenseRef-" <> license_name), do: "#{license_name} (custom)"
+  defp display_license(license), do: license
 end
