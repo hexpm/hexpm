@@ -140,10 +140,19 @@ defmodule Hexpm.Security.Advisories do
   end
 
   defp display_aliases(primary, advisories) do
+    advisory_ids = MapSet.new(advisories, & &1.id)
+
     advisories
     |> Enum.flat_map(&display_identifiers/1)
     |> Enum.uniq()
     |> Enum.reject(&(&1 == primary.id))
+    |> Enum.map(fn id ->
+      if MapSet.member?(advisory_ids, id) do
+        %{id: id, url: "https://osv.dev/vulnerability/#{URI.encode(id)}"}
+      else
+        %{id: id, url: nil}
+      end
+    end)
   end
 
   defp display_group_key(advisory) do
@@ -179,7 +188,11 @@ defmodule Hexpm.Security.Advisories do
   defp uniq_references(advisories) do
     advisories
     |> Enum.flat_map(&loaded_assoc(&1.references))
-    |> Enum.uniq_by(&{&1.type, &1.url})
+    |> Enum.group_by(& &1.url)
+    |> Enum.map(fn {url, refs} ->
+      types = refs |> Enum.map(& &1.type) |> Enum.uniq()
+      %{url: url, types: types}
+    end)
   end
 
   defp uniq_affected_versions(advisories) do

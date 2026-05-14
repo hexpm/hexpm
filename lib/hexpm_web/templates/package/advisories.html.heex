@@ -38,10 +38,20 @@
                   >
                     {advisory.id}
                   </a>
-                  <%= for alias_id <- aliases do %>
-                    <span class="text-grey-400 dark:text-grey-400 text-xs font-mono">
-                      {alias_id}
-                    </span>
+                  <%= for alias <- aliases do %>
+                    <%= if alias.url do %>
+                      <a
+                        href={alias.url}
+                        class="text-grey-400 dark:text-grey-400 text-xs font-mono hover:text-purple-600 dark:hover:text-primary-300 transition-colors"
+                        rel="nofollow"
+                      >
+                        {alias.id}
+                      </a>
+                    <% else %>
+                      <span class="text-grey-400 dark:text-grey-400 text-xs font-mono">
+                        {alias.id}
+                      </span>
+                    <% end %>
                   <% end %>
                 </div>
                 <p class="text-grey-700 dark:text-grey-300 text-sm mt-1">{advisory.summary}</p>

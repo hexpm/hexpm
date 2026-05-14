@@ -236,6 +236,57 @@ defmodule Hexpm.Security.AdvisoriesTest do
              ])
   end
 
+  test "group_for_display merges references by URL and accumulates types" do
+    refs_a = [
+      %{type: "WEB", url: "https://example.com/advisory"},
+      %{type: "ADVISORY", url: "https://shared.example.com/1"}
+    ]
+
+    refs_b = [
+      %{type: "FIX", url: "https://shared.example.com/1"},
+      %{type: "WEB", url: "https://other.example.com/2"}
+    ]
+
+    [merged] =
+      Advisories.group_for_display([
+        %Advisory{id: "GHSA-aaaa-1111-bbbb", aliases: ["CVE-2026-0001"], references: refs_a},
+        %Advisory{id: "GHSA-cccc-2222-dddd", aliases: ["CVE-2026-0001"], references: refs_b}
+      ])
+
+    by_url = Map.new(merged.references, &{&1.url, &1.types})
+
+    assert map_size(by_url) == 3
+    assert by_url["https://example.com/advisory"] == ["WEB"]
+    assert by_url["https://shared.example.com/1"] == ["ADVISORY", "FIX"]
+    assert by_url["https://other.example.com/2"] == ["WEB"]
+  end
+
+  test "group_for_display aliases: links advisory IDs to osv.dev, plain strings have no URL" do
+    [merged] =
+      Advisories.group_for_display([
+        %Advisory{
+          id: "GHSA-aaaa-1111-bbbb",
+          aliases: ["CVE-2026-0001"],
+          references: [],
+          affected_versions: []
+        },
+        %Advisory{
+          id: "GHSA-cccc-2222-dddd",
+          aliases: ["CVE-2026-0001"],
+          references: [],
+          affected_versions: []
+        }
+      ])
+
+    # GHSA-cccc-2222-dddd was a separate advisory → gets an osv.dev URL
+    advisory_alias = Enum.find(merged.aliases, &(&1.id == "GHSA-cccc-2222-dddd"))
+    assert advisory_alias.url == "https://osv.dev/vulnerability/GHSA-cccc-2222-dddd"
+
+    # CVE-2026-0001 is only a plain alias string → no URL
+    cve_alias = Enum.find(merged.aliases, &(&1.id == "CVE-2026-0001"))
+    assert cve_alias.url == nil
+  end
+
   test "upsert skips sync for unchanged advisories", %{package: package} do
     record =
       record("GHSA-skip", "oidcc",
