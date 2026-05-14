@@ -1,9 +1,9 @@
 defmodule Hexpm.Security.AdvisoriesTest do
   use Hexpm.DataCase
 
+  alias Hexpm.Repository.Release
   alias Hexpm.Security.Advisories
   alias Hexpm.Security.Advisory
-  alias Hexpm.Repository.Release
 
   setup do
     package = insert(:package, name: "oidcc")
@@ -333,13 +333,25 @@ defmodule Hexpm.Security.AdvisoriesTest do
              affected_release_links
   end
 
-  defp child_keys(table, advisory_id, column) do
-    from(r in table,
-      where: r.advisory_id == ^advisory_id,
-      order_by: field(r, ^column),
-      select: field(r, ^column)
-    )
-    |> Repo.all()
+  test "upsert rebuilds registry for affected packages", %{package: package, release_300: r300} do
+    record = record("GHSA-rebuild", "oidcc", versions: [to_string(r300.version)])
+
+    refute Hexpm.Store.get(:repo_bucket, "packages/#{package.name}", [])
+
+    assert {:ok, _} = Advisories.upsert([record], %{"oidcc" => package.id})
+
+    decoded = decode_package_registry(package.name)
+    assert [%{id: "GHSA-rebuild"}] = decoded.advisories
+
+    assert Enum.find(decoded.releases, &(&1.version == Version.to_string(r300.version))).advisory_indexes ==
+             [0]
+
+    # Reconcile by omitting the advisory — registry should no longer flag as vulnerable
+    assert {:ok, _} = Advisories.upsert([], %{})
+
+    decoded = decode_package_registry(package.name)
+    assert decoded.advisories == []
+    assert Enum.all?(decoded.releases, &(&1.advisory_indexes == []))
   end
 
   test "affect_release_with_existing_advisories matches new release against ranges",
@@ -361,5 +373,22 @@ defmodule Hexpm.Security.AdvisoriesTest do
 
     assert "GHSA-future" in advisory_ids
     assert [%Advisory{id: "GHSA-future"}] = Advisories.all(new_release)
+  end
+
+  defp decode_package_registry(package_name) do
+    public_key = Application.fetch_env!(:hexpm, :public_key)
+    contents = Hexpm.Store.get(:repo_bucket, "packages/#{package_name}", [])
+    {:ok, payload} = :hex_registry.decode_and_verify_signed(:zlib.gunzip(contents), public_key)
+    {:ok, decoded} = :hex_registry.decode_package(payload, "hexpm", package_name)
+    decoded
+  end
+
+  defp child_keys(table, advisory_id, column) do
+    from(r in table,
+      where: r.advisory_id == ^advisory_id,
+      order_by: field(r, ^column),
+      select: field(r, ^column)
+    )
+    |> Repo.all()
   end
 end

@@ -101,7 +101,7 @@ Hexpm.Repo.transaction(fn ->
         )
     )
 
-  insert(
+  insert_with_tarball(
     :release,
     package: decimal,
     version: "0.0.1",
@@ -114,7 +114,7 @@ Hexpm.Repo.transaction(fn ->
       )
   )
 
-  insert(
+  insert_with_tarball(
     :release,
     package: decimal,
     version: "0.0.2",
@@ -128,7 +128,7 @@ Hexpm.Repo.transaction(fn ->
   )
 
   decimal_release =
-    insert(
+    insert_with_tarball(
       :release,
       package: decimal,
       version: "0.1.0",
@@ -190,7 +190,7 @@ Hexpm.Repo.transaction(fn ->
         )
     )
 
-  insert(
+  insert_with_tarball(
     :release,
     package: oidcc,
     version: "3.0.0",
@@ -203,7 +203,7 @@ Hexpm.Repo.transaction(fn ->
       )
   )
 
-  insert(
+  insert_with_tarball(
     :release,
     package: oidcc,
     version: "3.0.2",
@@ -216,7 +216,7 @@ Hexpm.Repo.transaction(fn ->
       )
   )
 
-  insert(
+  insert_with_tarball(
     :release,
     package: oidcc,
     version: "3.1.0",
@@ -224,7 +224,7 @@ Hexpm.Repo.transaction(fn ->
     meta: build(:release_metadata, app: "oidcc", build_tools: ["mix"])
   )
 
-  insert(
+  insert_with_tarball(
     :release,
     package: oidcc,
     version: "3.1.1",
@@ -236,7 +236,7 @@ Hexpm.Repo.transaction(fn ->
     }
   )
 
-  insert(
+  insert_with_tarball(
     :release,
     package: oidcc,
     version: "3.1.2",
@@ -244,7 +244,7 @@ Hexpm.Repo.transaction(fn ->
     meta: build(:release_metadata, app: "oidcc", build_tools: ["mix"])
   )
 
-  insert(
+  insert_with_tarball(
     :release,
     package: oidcc,
     version: "3.1.3",
@@ -358,7 +358,7 @@ Hexpm.Repo.transaction(fn ->
         )
     )
 
-  insert(
+  insert_with_tarball(
     :release,
     package: postgrex,
     version: "0.0.1",
@@ -371,7 +371,7 @@ Hexpm.Repo.transaction(fn ->
       )
   )
 
-  insert(
+  insert_with_tarball(
     :release,
     package: postgrex,
     version: "0.0.2",
@@ -394,7 +394,7 @@ Hexpm.Repo.transaction(fn ->
   )
 
   postgrex_release =
-    insert(
+    insert_with_tarball(
       :release,
       package: postgrex,
       version: "0.1.0",
@@ -460,7 +460,7 @@ Hexpm.Repo.transaction(fn ->
         )
     )
 
-  insert(
+  insert_with_tarball(
     :release,
     package: ecto,
     version: "0.0.1",
@@ -473,7 +473,7 @@ Hexpm.Repo.transaction(fn ->
       )
   )
 
-  insert(
+  insert_with_tarball(
     :release,
     package: ecto,
     version: "0.0.2",
@@ -494,7 +494,7 @@ Hexpm.Repo.transaction(fn ->
       )
   )
 
-  insert(
+  insert_with_tarball(
     :release,
     package: ecto,
     version: "0.1.0",
@@ -515,7 +515,7 @@ Hexpm.Repo.transaction(fn ->
       )
   )
 
-  insert(
+  insert_with_tarball(
     :release,
     package: ecto,
     version: "0.1.1",
@@ -536,7 +536,7 @@ Hexpm.Repo.transaction(fn ->
       )
   )
 
-  insert(
+  insert_with_tarball(
     :release,
     package: ecto,
     version: "0.1.2",
@@ -563,7 +563,7 @@ Hexpm.Repo.transaction(fn ->
       )
   )
 
-  insert(
+  insert_with_tarball(
     :release,
     package: ecto,
     version: "0.1.3",
@@ -591,7 +591,7 @@ Hexpm.Repo.transaction(fn ->
   )
 
   rel =
-    insert(
+    insert_with_tarball(
       :release,
       package: ecto,
       version: "0.2.0",
@@ -667,7 +667,7 @@ Hexpm.Repo.transaction(fn ->
         )
     )
 
-  insert(
+  insert_with_tarball(
     :release,
     package: private,
     version: "0.0.1",
@@ -695,7 +695,7 @@ Hexpm.Repo.transaction(fn ->
         )
     )
 
-  insert(
+  insert_with_tarball(
     :release,
     package: other_private,
     version: "0.0.1",
@@ -734,7 +734,7 @@ Hexpm.Repo.transaction(fn ->
       )
 
     rel1 =
-      insert(
+      insert_with_tarball(
         :release,
         package: ups,
         version: "0.0.1",
@@ -748,7 +748,7 @@ Hexpm.Repo.transaction(fn ->
       )
 
     rel2 =
-      insert(
+      insert_with_tarball(
         :release,
         package: ups,
         version: "0.2.0",
@@ -820,7 +820,7 @@ Hexpm.Repo.transaction(fn ->
     )
 
   rel =
-    insert(
+    insert_with_tarball(
       :release,
       package: nerves,
       version: "0.0.1",
@@ -861,7 +861,7 @@ Hexpm.Repo.transaction(fn ->
       )
 
     rel =
-      insert(
+      insert_with_tarball(
         :release,
         package: nerves,
         version: "0.0.1",
