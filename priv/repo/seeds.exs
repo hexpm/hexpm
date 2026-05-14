@@ -301,7 +301,8 @@ Hexpm.Repo.transaction(fn ->
       %{
         type: "WEB",
         url: "https://github.com/phoenixframework/phoenix/security/advisories/GHSA-628h-q48j-jr6q"
-      }
+      },
+      %{type: "WEB", url: "https://cna.erlef.org/cves/CVE-2026-32689.html"}
     ],
     affected: [
       %{
