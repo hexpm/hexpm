@@ -60,7 +60,7 @@ defmodule HexpmWeb.PackageController do
             version_pinned?: params["version"] != nil,
             dependants_count: dependants_count,
             repository_name: package.repository.name
-          ] ++ sidebar_assigns(package, releases, release)
+          ] ++ sidebar_assigns(conn, package, releases, release)
         )
       else
         not_found(conn)
@@ -106,7 +106,7 @@ defmodule HexpmWeb.PackageController do
           repository_name: package.repository.name,
           page: page,
           per_page: per_page
-        ] ++ sidebar_assigns(package, releases, current_release)
+        ] ++ sidebar_assigns(conn, package, releases, current_release)
       )
     end)
   end
@@ -138,7 +138,7 @@ defmodule HexpmWeb.PackageController do
           page: page,
           per_page: per_page,
           releases_total_count: total_count
-        ] ++ sidebar_assigns(package, releases, current_release)
+        ] ++ sidebar_assigns(conn, package, releases, current_release)
       )
     end)
   end
@@ -204,7 +204,7 @@ defmodule HexpmWeb.PackageController do
           audit_logs_total_count: total_count,
           page: page,
           per_page: per_page
-        ] ++ sidebar_assigns(package, releases, current_release)
+        ] ++ sidebar_assigns(conn, package, releases, current_release)
       )
     end)
   end
@@ -321,14 +321,18 @@ defmodule HexpmWeb.PackageController do
         audit_logs: audit_logs,
         daily_graph: daily_graph,
         graph_release: graph_release,
-        type: type
+        type: type,
+        current_user: conn.assigns.current_user
       ] ++ docs_assigns
     )
   end
 
-  defp sidebar_assigns(package, releases, current_release) do
-    repository = package.repository
+  defp sidebar_assigns(conn, package, releases, current_release) do
+    sidebar_assigns(package, releases, current_release)
+    |> Keyword.put(:current_user, conn.assigns.current_user)
+  end
 
+  defp sidebar_assigns(package, releases, current_release) do
     latest_release_with_docs =
       Release.latest_version(releases,
         only_stable: true,
@@ -337,17 +341,7 @@ defmodule HexpmWeb.PackageController do
       )
 
     docs_html_url =
-      cond do
-        latest_release_with_docs && current_release &&
-            current_release.version == latest_release_with_docs.version ->
-          Hexpm.Utils.docs_html_url(repository, package, current_release)
-
-        latest_release_with_docs ->
-          Hexpm.Utils.docs_html_url(repository, package, nil)
-
-        true ->
-          nil
-      end
+      Hexpm.Utils.current_docs_html_url(package, current_release, latest_release_with_docs)
 
     last_download_day =
       Hexpm.Cache.fetch(:last_download_day, &Downloads.last_day/0) || Date.utc_today()

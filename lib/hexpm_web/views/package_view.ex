@@ -195,6 +195,9 @@ defmodule HexpmWeb.PackageView do
       "owner.add" ->
         do_owner_action(:add, params)
 
+      "owner.update" ->
+        do_owner_action(:update, params)
+
       "owner.transfer" ->
         do_owner_action(:transfer, params)
 
@@ -228,6 +231,12 @@ defmodule HexpmWeb.PackageView do
        do: "Add #{username} as a level #{level} owner"
 
   defp do_owner_action(:add, _params), do: "Add owner"
+
+  defp do_owner_action(:update, %{"user" => %{"username" => username}, "level" => level})
+       when not is_nil(username) and not is_nil(level),
+       do: "Update #{username} role to #{level}"
+
+  defp do_owner_action(:update, _params), do: "Update owner role"
 
   defp do_owner_action(:transfer, %{"user" => %{"username" => username}})
        when not is_nil(username),

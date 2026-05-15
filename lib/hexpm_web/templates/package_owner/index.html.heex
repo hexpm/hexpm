@@ -1,0 +1,136 @@
+<.package_layout
+  active_tab={:owners}
+  current_release={@current_release}
+  current_user={@current_user}
+  daily_graph={@daily_graph}
+  dependants_count={@dependants_count}
+  docs_html_url={@docs_html_url}
+  downloads={@downloads}
+  graph_release={@graph_release}
+  owners={@owners}
+  package={@package}
+  repository_name={@repository_name}
+  versions_count={@versions_count}
+>
+  <:inner_content>
+    <%!-- Current Owners --%>
+    <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden mb-6">
+      <div class="px-6 py-4 border-b border-grey-200 dark:border-grey-700">
+        <h2 class="text-base font-semibold text-grey-900 dark:text-white">Current owners</h2>
+      </div>
+      <ul class="divide-y divide-grey-100 dark:divide-grey-700">
+        <%= for owner <- @owners do %>
+          <li class="flex items-center justify-between px-6 py-4">
+            <div class="flex items-center gap-3">
+              <img
+                src={
+                  HexpmWeb.ViewHelpers.gravatar_url(
+                    Hexpm.Accounts.User.email(owner.user, :gravatar),
+                    :small
+                  )
+                }
+                alt={owner.user.username}
+                class="w-9 h-9 rounded-full flex-shrink-0"
+              />
+              <div>
+                <p class="text-sm font-medium text-grey-900 dark:text-white">
+                  <a
+                    href={~p"/users/#{owner.user.username}"}
+                    class="hover:text-primary-600 transition-colors"
+                  >
+                    {owner.user.username}
+                  </a>
+                </p>
+                <p class="text-xs text-grey-500 dark:text-grey-300">{owner.user.full_name}</p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <.sudo_form
+                current_user={@current_user}
+                action={~p"/packages/#{@package.name}/owners/#{owner.user.username}"}
+                method="put"
+                id={"role-form-#{owner.user.username}"}
+                class="flex items-center gap-1"
+              >
+                <select
+                  name="level"
+                  class="text-sm border border-grey-200 dark:border-grey-600 rounded px-2 py-1 bg-white dark:bg-grey-700 text-grey-800 dark:text-white"
+                >
+                  <option value="maintainer" selected={owner.level == "maintainer"}>
+                    Maintainer
+                  </option>
+                  <option value="full" selected={owner.level == "full"}>Full owner</option>
+                </select>
+                <button
+                  type="submit"
+                  class="text-xs px-2 py-1 bg-primary-600 hover:bg-primary-700 text-white rounded transition-colors"
+                  title="Update role"
+                >
+                  Update
+                </button>
+              </.sudo_form>
+
+              <%= if length(@owners) > 1 do %>
+                <.sudo_form
+                  current_user={@current_user}
+                  action={~p"/packages/#{@package.name}/owners/#{owner.user.username}"}
+                  method="delete"
+                  id={"remove-form-#{owner.user.username}"}
+                >
+                  <button
+                    type="submit"
+                    class="text-red-500 hover:text-red-700 p-1 rounded transition-colors"
+                    title="Remove owner"
+                    data-confirm={
+                      if owner.user.id == @current_user.id,
+                        do:
+                          "You will lose access to #{@package.name} after removing yourself. Continue?",
+                        else: "Remove #{owner.user.username} as an owner of #{@package.name}?"
+                    }
+                  >
+                    {HexpmWeb.ViewIcons.icon(:heroicon, "x-mark", class: "w-4 h-4")}
+                  </button>
+                </.sudo_form>
+              <% end %>
+            </div>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+
+    <%!-- Add Owner --%>
+    <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-6">
+      <h2 class="text-base font-semibold text-grey-900 dark:text-white mb-4">Add owner</h2>
+      <.sudo_form
+        current_user={@current_user}
+        action={~p"/packages/#{@package.name}/owners"}
+        method="post"
+        id="add-owner-form"
+      >
+        <div class="flex flex-wrap gap-2">
+          <input
+            type="text"
+            name="username"
+            placeholder="Username"
+            required
+            class="flex-1 min-w-48 text-sm border border-grey-200 dark:border-grey-600 rounded px-3 py-2 bg-white dark:bg-grey-700 text-grey-800 dark:text-white placeholder-grey-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          <select
+            name="level"
+            class="text-sm border border-grey-200 dark:border-grey-600 rounded px-2 py-2 bg-white dark:bg-grey-700 text-grey-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="maintainer">Maintainer</option>
+            <option value="full">Full owner</option>
+          </select>
+          <button
+            type="submit"
+            class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            Add
+          </button>
+        </div>
+      </.sudo_form>
+    </div>
+  </:inner_content>
+</.package_layout>

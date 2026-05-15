@@ -181,6 +181,28 @@ defmodule Hexpm.Utils do
   end
 
   @doc """
+  Sidebar docs URL for a package given the currently-displayed release and the
+  latest release that has docs.
+
+  - If the current release has docs published, returns the version-specific URL.
+  - If only an older release has docs, returns the latest-with-docs URL with
+    no version segment.
+  - If no release has docs, returns `nil`.
+  """
+  @spec current_docs_html_url(Package.t(), Release.t() | nil, Release.t() | nil) ::
+          String.t() | nil
+  def current_docs_html_url(_package, _current_release, nil), do: nil
+
+  def current_docs_html_url(package, current_release, latest_release_with_docs) do
+    release =
+      if current_release && current_release.version == latest_release_with_docs.version do
+        current_release
+      end
+
+    docs_html_url(package.repository, package, release)
+  end
+
+  @doc """
   Returns a url to the documentation tarball in the Amazon S3 Hex.pm bucket.
   """
   @spec docs_tarball_url(Repository.t(), Package.t(), Release.t()) :: String.t()

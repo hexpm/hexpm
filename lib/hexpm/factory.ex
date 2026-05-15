@@ -107,7 +107,7 @@ defmodule Hexpm.Factory do
   end
 
   def package_owner_factory() do
-    %Hexpm.Repository.PackageOwner{}
+    %Hexpm.Repository.PackageOwner{level: "full"}
   end
 
   def package_report_factory() do

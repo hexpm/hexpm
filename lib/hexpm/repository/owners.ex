@@ -15,6 +15,17 @@ defmodule Hexpm.Repository.Owners do
     end
   end
 
+  @doc """
+  Whether `user` appears in `owners` with `level: "full"`. Safe to call with a
+  nil user (returns false) and an empty owners list. `owners` is the
+  already-loaded list from `Owners.all/2`.
+  """
+  def full_owner?(_owners, nil), do: false
+
+  def full_owner?(owners, %User{id: user_id}) do
+    Enum.any?(owners, &(&1.user_id == user_id && &1.level == "full"))
+  end
+
   def add(package, user, params, audit: audit_data) do
     repository = package.repository
     owners = all(package, user: [:emails, :organization])
@@ -40,36 +51,43 @@ defmodule Hexpm.Repository.Owners do
 
   defp add_owner(package, owners, user, params, audit_data) do
     owner = Enum.find(owners, &(&1.user_id == user.id))
-    owner = owner || %PackageOwner{package_id: package.id, user_id: user.id}
-    changeset = PackageOwner.changeset(owner, params)
+    new_level = Map.get(params, "level", "full")
+    full_owners = Enum.filter(owners, &(&1.level == "full"))
 
-    multi =
-      Multi.new()
-      |> Multi.insert_or_update(:owner, changeset)
-      |> remove_existing_owners(owners, params)
-      |> audit(audit_data, add_owner_audit_log_action(params), fn %{owner: owner} ->
-        {package, owner.level, user}
-      end)
+    # Prevent demoting the last full owner via an upsert (e.g. from the API).
+    if owner && owner.level == "full" && new_level != "full" && length(full_owners) == 1 do
+      {:error, :last_full_owner}
+    else
+      owner = owner || %PackageOwner{package_id: package.id, user_id: user.id}
+      changeset = PackageOwner.changeset(owner, params)
 
-    case Repo.transaction(multi) do
-      {:ok, %{owner: owner}} ->
-        # TODO: Separate email for the affected person
-        owners =
-          owners
-          |> Enum.map(& &1.user)
-          |> Kernel.++([user])
-          |> Repo.preload(organization: [organization_users: [user: :emails]])
-          |> Enum.filter(&OptionalEmails.allowed?(&1, :owner_added_to_package))
+      multi =
+        Multi.new()
+        |> Multi.insert_or_update(:owner, changeset)
+        |> remove_existing_owners(owners, params)
+        |> audit(audit_data, add_owner_audit_log_action(params), fn %{owner: owner} ->
+          {package, owner.level, user}
+        end)
 
-        if owners != [] do
-          Emails.owner_added(package, owners, user)
-          |> Mailer.deliver_later!()
-        end
+      case Repo.transaction(multi) do
+        {:ok, %{owner: owner}} ->
+          owners =
+            owners
+            |> Enum.map(& &1.user)
+            |> Kernel.++([user])
+            |> Repo.preload(organization: [organization_users: [user: :emails]])
+            |> Enum.filter(&OptionalEmails.allowed?(&1, :owner_added_to_package))
 
-        {:ok, %{owner | user: user}}
+          if owners != [] do
+            Emails.owner_added(package, owners, user)
+            |> Mailer.deliver_later!()
+          end
 
-      {:error, :owner, changeset, _} ->
-        {:error, changeset}
+          {:ok, %{owner | user: user}}
+
+        {:error, :owner, changeset, _} ->
+          {:error, changeset}
+      end
     end
   end
 
@@ -95,6 +113,35 @@ defmodule Hexpm.Repository.Owners do
     multi
   end
 
+  def update_level(package, user, level, audit: audit_data) do
+    owners = all(package, user: [:emails, :organization])
+    owner = Enum.find(owners, &(&1.user_id == user.id))
+    full_owners = Enum.filter(owners, &(&1.level == "full"))
+
+    cond do
+      !owner ->
+        {:error, :not_owner}
+
+      owner.level == "full" and level != "full" and length(full_owners) == 1 ->
+        {:error, :last_full_owner}
+
+      true ->
+        changeset = PackageOwner.changeset(owner, %{"level" => level})
+
+        multi =
+          Multi.new()
+          |> Multi.update(:owner, changeset)
+          |> audit(audit_data, "owner.update", fn %{owner: owner} ->
+            {package, owner.level, user}
+          end)
+
+        case Repo.transaction(multi) do
+          {:ok, %{owner: owner}} -> {:ok, %{owner | user: user}}
+          {:error, :owner, changeset, _} -> {:error, changeset}
+        end
+    end
+  end
+
   def remove(package, user, audit: audit_data) do
     owners = all(package, user: :emails)
     owner = Enum.find(owners, &(&1.user_id == user.id))
@@ -103,6 +150,8 @@ defmodule Hexpm.Repository.Owners do
       !owner ->
         {:error, :not_owner}
 
+      # Only enforced for the public hexpm repository; private org repos
+      # can intentionally orphan a package (e.g. when dissolving an org).
       length(owners) == 1 and package.repository.id == 1 ->
         {:error, :last_owner}
 
@@ -116,7 +165,6 @@ defmodule Hexpm.Repository.Owners do
 
         {:ok, _} = Repo.transaction(multi)
 
-        # TODO: Separate email for the affected person
         owners =
           owners
           |> Enum.map(& &1.user)

@@ -125,7 +125,7 @@ defmodule HexpmWeb.Plugs.Sudo do
   defp valid_form_token?(conn) do
     case conn.params["_sudo_token"] do
       token when is_binary(token) ->
-        case Phoenix.Token.verify(HexpmWeb.Endpoint, @token_salt, token, max_age: :infinity) do
+        case Phoenix.Token.verify(HexpmWeb.Endpoint, @token_salt, token, max_age: 86_400) do
           {:ok, {user_id, method, action}} ->
             user_id == conn.assigns.current_user.id and
               method == conn.method and

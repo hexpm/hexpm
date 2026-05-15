@@ -86,6 +86,11 @@ defmodule HexpmWeb.API.OwnerController do
                   "please contact support@hex.pm to manually merge accounts"
             })
 
+          {:error, :last_full_owner} ->
+            validation_failed(conn, %{
+              "username" => "cannot demote the last full owner of a package"
+            })
+
           {:error, changeset} ->
             validation_failed(conn, changeset)
         end
