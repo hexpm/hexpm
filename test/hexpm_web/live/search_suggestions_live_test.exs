@@ -35,6 +35,19 @@ defmodule HexpmWeb.SearchSuggestionsLiveTest do
       assert html =~ ~s(role="listbox")
     end
 
+    test "does not show dropdown until at least 3 characters are typed", %{conn: conn} do
+      insert(:package, name: "phoenix_html")
+
+      {:ok, view, _html} =
+        live_isolated(conn, HexpmWeb.SearchSuggestionsLive, session: %{"variant" => "home"})
+
+      html = view |> element("input[name='search']") |> render_change(%{"search" => "ph"})
+      refute html =~ ~s(role="listbox")
+
+      html = view |> element("input[name='search']") |> render_change(%{"search" => "pho"})
+      assert html =~ ~s(role="listbox")
+    end
+
     test "hides dropdown when input is cleared", %{conn: conn} do
       insert(:package, name: "phoenix_html")
 

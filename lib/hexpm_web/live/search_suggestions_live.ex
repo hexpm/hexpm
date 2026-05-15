@@ -19,6 +19,7 @@ defmodule HexpmWeb.SearchSuggestionsLive do
   import HexpmWeb.ViewIcons, only: [icon: 3]
 
   @default_limit 8
+  @min_chars 3
 
   def mount(_params, session, socket) do
     variant = Map.get(session, "variant", "home")
@@ -39,18 +40,21 @@ defmodule HexpmWeb.SearchSuggestionsLive do
 
   def handle_event("suggest", params, socket) do
     term = extract_search_term(params)
+    trimmed = String.trim(term)
     repository = Repository.hexpm()
 
-    items =
-      if String.trim(term) == "",
-        do: [],
-        else: Packages.suggest(repository, term, socket.assigns.limit)
+    {items, open} =
+      if String.length(trimmed) >= @min_chars do
+        {Packages.suggest(repository, term, socket.assigns.limit), true}
+      else
+        {[], false}
+      end
 
     {:noreply,
      socket
      |> assign(:term, term)
      |> assign(:items, items)
-     |> assign(:open, String.trim(term) != "")
+     |> assign(:open, open)
      |> assign(:active, nil)}
   end
 
