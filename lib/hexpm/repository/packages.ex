@@ -241,8 +241,12 @@ defmodule Hexpm.Repository.Packages do
   def suggest(_repository, "", _limit), do: []
 
   def suggest(repository, term, limit) when is_binary(term) do
-    term = String.trim(term)
-    do_suggest(repository, term, limit)
+    term
+    |> String.trim()
+    |> case do
+      term when byte_size(term) < 3 -> []
+      term -> do_suggest(repository, term, limit)
+    end
   end
 
   defp do_suggest(_repository, "", _limit), do: []
@@ -260,7 +264,7 @@ defmodule Hexpm.Repository.Packages do
     |> where([p], p.repository_id == ^repository.id)
     |> add_suggest_joins()
     |> add_suggest_search_where(substr, tsquery)
-    |> add_suggest_order_by(pkg_part, prefix, substr, tsquery)
+    |> add_suggest_order_by(pkg_part, prefix, substr)
     |> add_suggest_select(tsquery)
     |> limit(^limit)
     |> Repo.all()
@@ -309,7 +313,7 @@ defmodule Hexpm.Repository.Packages do
     where(
       query,
       [p],
-      fragment("lower(?) LIKE ?", p.name, ^substr) or
+      like(p.name, ^substr) or
         fragment(
           "to_tsvector('english', regexp_replace((?->'description')::text, '/', ' ')) @@ to_tsquery('english', ?)",
           p.meta,
@@ -318,11 +322,14 @@ defmodule Hexpm.Repository.Packages do
     )
   end
 
-  defp add_suggest_order_by(query, pkg_part, prefix, substr, tsquery) do
+  defp add_suggest_order_by(query, pkg_part, prefix, substr) do
     # Name-match tiers are exclusive so each package falls into exactly one band:
-    #   exact  → 3.0  (lower(name) = term)
-    #   prefix → 2.0  (lower(name) LIKE term%)
-    #   substr → 1.0  (lower(name) LIKE %term%)
+    #   exact       → 3.0  (name LIKE term)
+    #   prefix      → 2.0  (name LIKE term%)
+    #   substr      → 1.0  (name LIKE %term%)
+    #   desc-only   → 0.5  (matched via full-text search, not name)
+    # Downloads use an uncapped logarithm so popular packages rank higher within
+    # each tier (e.g. "ecto" surfaces above other "ect*" prefix matches).
     order_by(
       query,
       [p, r, d],
@@ -330,19 +337,12 @@ defmodule Hexpm.Repository.Packages do
         fragment(
           """
           (CASE
-            WHEN lower(?) = ?        THEN 3.0
-            WHEN lower(?) LIKE ?     THEN 2.0
-            WHEN lower(?) LIKE ?     THEN 1.0
-            ELSE 0.0
+            WHEN ? LIKE ?           THEN 3.0
+            WHEN ? LIKE ?           THEN 2.0
+            WHEN ? LIKE ?           THEN 1.0
+            ELSE 0.5
           END) +
-          (LEAST(5.0, ln(1 + COALESCE(?, 0))) * 0.2) +
-          (COALESCE(
-            ts_rank_cd(
-              to_tsvector('english', regexp_replace((?->'description')::text, '/', ' ')),
-              to_tsquery('english', ?)
-            ),
-            0.0
-          ) * 0.4)
+          (ln(1 + COALESCE(?, 0)) * 0.1)
           """,
           p.name,
           ^pkg_part,
@@ -350,9 +350,7 @@ defmodule Hexpm.Repository.Packages do
           ^prefix,
           p.name,
           ^substr,
-          d.downloads,
-          p.meta,
-          ^tsquery
+          d.downloads
         ),
       asc: p.name
     )

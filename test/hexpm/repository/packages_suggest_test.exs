@@ -1,5 +1,5 @@
 defmodule Hexpm.Repository.PackagesSuggestTest do
-  use Hexpm.DataCase, async: true
+  use Hexpm.DataCase
 
   alias Hexpm.Repository.Packages
 
@@ -10,11 +10,13 @@ defmodule Hexpm.Repository.PackagesSuggestTest do
   end
 
   describe "suggest/3" do
-    test "returns empty list for empty string", %{repository: repository} do
+    test "returns empty list for fewer than 3 characters", %{repository: repository} do
       insert(:package, name: "ecto", repository_id: repository.id)
 
       assert [] == Packages.suggest(repository, "")
       assert [] == Packages.suggest(repository, "   ")
+      assert [] == Packages.suggest(repository, "ec")
+      assert [] == Packages.suggest(repository, "e")
     end
 
     test "returns exact match first", %{repository: repository} do
@@ -78,18 +80,16 @@ defmodule Hexpm.Repository.PackagesSuggestTest do
       assert description_string =~ ~r/<strong>ecto<\/strong>/i
     end
 
-    test "is case insensitive", %{repository: repository} do
-      ecto = insert(:package, name: "Ecto", repository_id: repository.id)
-      phoenix = insert(:package, name: "Phoenix", repository_id: repository.id)
+    test "matches regardless of search term case", %{repository: repository} do
+      ecto = insert(:package, name: "ecto", repository_id: repository.id)
+      phoenix = insert(:package, name: "phoenix", repository_id: repository.id)
 
       insert(:release, package: ecto)
       insert(:release, package: phoenix)
 
-      results = Packages.suggest(repository, "ecto")
-      assert "Ecto" in names(results)
-
-      results = Packages.suggest(repository, "ECTO")
-      assert "Ecto" in names(results)
+      assert "ecto" in names(Packages.suggest(repository, "ecto"))
+      assert "ecto" in names(Packages.suggest(repository, "ECTO"))
+      assert "ecto" in names(Packages.suggest(repository, "Ecto"))
     end
 
     test "respects repository scoping", %{repository: repository} do
@@ -168,21 +168,43 @@ defmodule Hexpm.Repository.PackagesSuggestTest do
     end
 
     test "orders by relevance and downloads", %{repository: repository} do
-      # Create packages with different download counts
-      high_downloads = insert(:package, name: "ecto_high", repository_id: repository.id)
+      # Names are chosen so alphabetical order is the reverse of expected download order:
+      # "ecto_zzz" > "ecto_aaa" by downloads, but "ecto_aaa" < "ecto_zzz" alphabetically.
+      # This proves downloads drive the ranking, not the fallback name sort.
+      recent_day = Date.utc_today() |> Date.add(-7)
+      high_downloads = insert(:package, name: "ecto_zzz", repository_id: repository.id)
       exact_match = insert(:package, name: "ecto", repository_id: repository.id)
-      low_downloads = insert(:package, name: "ecto_low", repository_id: repository.id)
+      low_downloads = insert(:package, name: "ecto_aaa", repository_id: repository.id)
 
-      insert(:release, package: high_downloads)
-      insert(:release, package: exact_match)
-      insert(:release, package: low_downloads)
+      insert(:release,
+        package: high_downloads,
+        daily_downloads: [
+          build(:download, package_id: high_downloads.id, downloads: 1_000_000, day: recent_day)
+        ]
+      )
 
-      # Add downloads (would need PackageDownload view refresh in real scenario)
-      # For now, just verify the structure
+      insert(:release,
+        package: exact_match,
+        daily_downloads: [
+          build(:download, package_id: exact_match.id, downloads: 500_000, day: recent_day)
+        ]
+      )
+
+      insert(:release,
+        package: low_downloads,
+        daily_downloads: [
+          build(:download, package_id: low_downloads.id, downloads: 500, day: recent_day)
+        ]
+      )
+
+      :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload, concurrently: false)
+
       results = Packages.suggest(repository, "ecto")
 
-      # Exact match should be first
+      # Exact name match ("ecto") ranks first despite fewer downloads than "ecto_zzz"
       assert hd(names(results)) == "ecto"
+      # Within the prefix-match tier, higher downloads rank first (not alphabetical)
+      assert names(results) == ["ecto", "ecto_zzz", "ecto_aaa"]
     end
 
     test "name_html wraps matched portion in a mark element", %{repository: repository} do
@@ -194,16 +216,13 @@ defmodule Hexpm.Repository.PackagesSuggestTest do
       assert name_html == "<mark>ecto</mark>"
     end
 
-    test "name_html match is case-insensitive and preserves original casing", %{
-      repository: repository
-    } do
-      insert(:package, name: "EctoSQL", repository_id: repository.id)
+    test "name_html highlights the matched portion", %{repository: repository} do
+      insert(:package, name: "ecto_sql", repository_id: repository.id)
 
       [result] = Packages.suggest(repository, "ecto")
 
       assert {:safe, name_html} = result.name_html
-      # Original casing preserved; matched portion wrapped in <mark>
-      assert name_html == "<mark>Ecto</mark>SQL"
+      assert name_html == "<mark>ecto</mark>_sql"
     end
 
     test "description_html does not pass raw HTML tags from descriptions", %{
