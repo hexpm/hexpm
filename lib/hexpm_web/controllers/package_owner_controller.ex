@@ -4,7 +4,7 @@ defmodule HexpmWeb.PackageOwnerController do
   plug :requires_login
   plug :fetch_package
   plug :requires_full_owner
-  plug HexpmWeb.Plugs.Sudo when action in [:create, :update, :delete]
+  plug HexpmWeb.Plugs.Sudo
 
   def index(conn, _params) do
     package = conn.assigns.package
@@ -57,6 +57,11 @@ defmodule HexpmWeb.PackageOwnerController do
           |> put_flash(:error, "#{username} conflicts with an existing organization owner.")
           |> redirect(to: ~p"/packages/#{package.name}/owners")
 
+        {:error, :last_full_owner} ->
+          conn
+          |> put_flash(:error, "Cannot demote the last full owner of a package.")
+          |> redirect(to: ~p"/packages/#{package.name}/owners")
+
         {:error, changeset} ->
           conn
           |> put_flash(:error, changeset_error_to_string(changeset))
@@ -78,7 +83,7 @@ defmodule HexpmWeb.PackageOwnerController do
         {:ok, _} ->
           conn
           |> put_flash(:info, "#{username}'s role updated to #{level}.")
-          |> redirect(to: ~p"/packages/#{package.name}/owners")
+          |> redirect(to: redirect_after_mutation(conn, package, user, level))
 
         {:error, :not_owner} ->
           conn
@@ -111,11 +116,16 @@ defmodule HexpmWeb.PackageOwnerController do
         :ok ->
           conn
           |> put_flash(:info, "#{username} removed from owners.")
-          |> redirect(to: ~p"/packages/#{package.name}/owners")
+          |> redirect(to: redirect_after_mutation(conn, package, user, nil))
 
         {:error, :last_owner} ->
           conn
           |> put_flash(:error, "Cannot remove the last owner of a package.")
+          |> redirect(to: ~p"/packages/#{package.name}/owners")
+
+        {:error, :last_full_owner} ->
+          conn
+          |> put_flash(:error, "Cannot remove the last full owner of a package.")
           |> redirect(to: ~p"/packages/#{package.name}/owners")
 
         {:error, :not_owner} ->
@@ -123,6 +133,16 @@ defmodule HexpmWeb.PackageOwnerController do
           |> put_flash(:error, "#{username} is not an owner of this package.")
           |> redirect(to: ~p"/packages/#{package.name}/owners")
       end
+    end
+  end
+
+  defp redirect_after_mutation(conn, package, target_user, new_level) do
+    current_user = conn.assigns.current_user
+
+    if target_user.id == current_user.id and new_level != "full" do
+      ~p"/packages/#{package.name}"
+    else
+      ~p"/packages/#{package.name}/owners"
     end
   end
 

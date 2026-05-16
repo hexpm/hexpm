@@ -145,6 +145,7 @@ defmodule Hexpm.Repository.Owners do
   def remove(package, user, audit: audit_data) do
     owners = all(package, user: :emails)
     owner = Enum.find(owners, &(&1.user_id == user.id))
+    full_owners = Enum.filter(owners, &(&1.level == "full"))
 
     cond do
       !owner ->
@@ -154,6 +155,9 @@ defmodule Hexpm.Repository.Owners do
       # can intentionally orphan a package (e.g. when dissolving an org).
       length(owners) == 1 and package.repository.id == 1 ->
         {:error, :last_owner}
+
+      owner.level == "full" and length(full_owners) == 1 and package.repository.id == 1 ->
+        {:error, :last_full_owner}
 
       true ->
         multi =

@@ -119,6 +119,11 @@ defmodule HexpmWeb.API.OwnerController do
 
           {:error, :last_owner} ->
             validation_failed(conn, %{"username" => "cannot remove last owner of package"})
+
+          {:error, :last_full_owner} ->
+            validation_failed(conn, %{
+              "username" => "cannot remove the last full owner of package"
+            })
         end
       else
         not_found(conn)

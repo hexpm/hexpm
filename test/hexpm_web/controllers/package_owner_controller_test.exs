@@ -30,6 +30,15 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
       assert html_response(conn, 200) =~ "Current owners"
     end
 
+    test "redirects to /sudo when no sudo mode", %{full_owner: full_owner, package: package} do
+      conn =
+        build_conn()
+        |> test_login(full_owner, sudo: false)
+        |> get("/packages/#{package.name}/owners")
+
+      assert redirected_to(conn) =~ "/sudo"
+    end
+
     test "maintainer is forbidden", %{maintainer: maintainer, package: package} do
       conn =
         build_conn()
@@ -105,6 +114,23 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
 
       assert conn.status == 403
     end
+
+    test "shows error when re-adding the last full owner with lower level", %{
+      full_owner: full_owner,
+      package: package
+    } do
+      conn =
+        build_conn()
+        |> test_login(full_owner, sudo: true)
+        |> post("/packages/#{package.name}/owners", %{
+          "username" => full_owner.username,
+          "level" => "maintainer"
+        })
+
+      assert redirected_to(conn) == "/packages/#{package.name}/owners"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "last full owner"
+      assert Owners.get(package, full_owner).level == "full"
+    end
   end
 
   describe "PUT /packages/:name/owners/:username (role change)" do
@@ -171,6 +197,21 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
       assert Owners.get(package, full_owner).level == "maintainer"
     end
 
+    test "self-demote redirects to package page", %{package: package} do
+      second_full = insert(:user)
+      insert(:package_owner, package: package, user: second_full, level: "full")
+
+      conn =
+        build_conn()
+        |> test_login(second_full, sudo: true)
+        |> put("/packages/#{package.name}/owners/#{second_full.username}", %{
+          "level" => "maintainer"
+        })
+
+      assert redirected_to(conn) == "/packages/#{package.name}"
+      assert Owners.get(package, second_full).level == "maintainer"
+    end
+
     test "is forbidden for maintainer even with sudo", %{
       maintainer: maintainer,
       full_owner: full_owner,
@@ -218,6 +259,33 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
 
       assert redirected_to(conn) == "/packages/#{sole_package.name}/owners"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "last owner"
+    end
+
+    test "cannot remove the last full owner when only maintainers remain", %{
+      full_owner: full_owner,
+      package: package
+    } do
+      conn =
+        build_conn()
+        |> test_login(full_owner, sudo: true)
+        |> delete("/packages/#{package.name}/owners/#{full_owner.username}")
+
+      assert redirected_to(conn) == "/packages/#{package.name}/owners"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "last full owner"
+      assert Owners.get(package, full_owner)
+    end
+
+    test "self-removal redirects to package page", %{package: package} do
+      second_full = insert(:user)
+      insert(:package_owner, package: package, user: second_full, level: "full")
+
+      conn =
+        build_conn()
+        |> test_login(second_full, sudo: true)
+        |> delete("/packages/#{package.name}/owners/#{second_full.username}")
+
+      assert redirected_to(conn) == "/packages/#{package.name}"
+      assert is_nil(Owners.get(package, second_full))
     end
 
     test "redirects to /sudo when no sudo mode", %{
