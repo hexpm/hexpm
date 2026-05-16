@@ -1,17 +1,4 @@
-<.package_layout
-  active_tab={:owners}
-  current_release={@current_release}
-  current_user={@current_user}
-  daily_graph={@daily_graph}
-  dependants_count={@dependants_count}
-  docs_html_url={@docs_html_url}
-  downloads={@downloads}
-  graph_release={@graph_release}
-  owners={@owners}
-  package={@package}
-  repository_name={@repository_name}
-  versions_count={@versions_count}
->
+<.package_layout {@package_layout} active_tab={:owners}>
   <:inner_content>
     <%!-- Current Owners --%>
     <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden mb-6">

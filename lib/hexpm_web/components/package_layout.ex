@@ -24,22 +24,26 @@ defmodule HexpmWeb.Components.PackageLayout do
 
   @package_reports_enabled Application.compile_env!(:hexpm, [:features, :package_reports])
 
+  # All assigns below (except per-page ones) come from
+  # `HexpmWeb.PackageLayoutAssigns.for_package/3`. Use that helper in every
+  # controller action that renders this layout — missing assigns will fail
+  # at compile/render time rather than silently producing broken UI.
   attr :package, :map, required: true
-  attr :current_release, :map, default: nil
-  attr :all_releases, :list, default: []
-  attr :version_pinned?, :boolean, default: false
-  attr :dependants_count, :integer, default: 0
-  attr :versions_count, :integer, default: 0
   attr :repository_name, :string, required: true
-  attr :active_tab, :atom, required: true
-
-  # Sidebar data — same on all tabs
-  attr :docs_html_url, :string, default: nil
-  attr :downloads, :map, default: %{}
-  attr :daily_graph, :list, default: []
+  attr :all_releases, :list, required: true
+  attr :current_release, :map, required: true
+  attr :versions_count, :integer, required: true
+  attr :owners, :list, required: true
+  attr :downloads, :map, required: true
+  attr :daily_graph, :list, required: true
+  attr :docs_html_url, :string, required: true
+  attr :dependants_count, :integer, required: true
+  attr :current_user, :map, required: true
   attr :graph_release, :map, default: nil
-  attr :owners, :list, default: []
-  attr :current_user, :map, default: nil
+
+  # Per-page assigns
+  attr :active_tab, :atom, required: true
+  attr :version_pinned?, :boolean, default: false
 
   # Dependants tab data — only loaded on the dependants page
   attr :dependants, :list, default: []

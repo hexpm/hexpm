@@ -1,21 +1,6 @@
 <% description = @package.meta.description %>
 
-<.package_layout
-  active_tab={:readme}
-  all_releases={@all_releases}
-  current_release={@current_release}
-  current_user={@current_user}
-  version_pinned?={@version_pinned?}
-  daily_graph={@daily_graph}
-  dependants_count={@dependants_count}
-  docs_html_url={@docs_html_url}
-  downloads={@downloads}
-  graph_release={@graph_release}
-  owners={@owners}
-  package={@package}
-  repository_name={@repository_name}
-  versions_count={@versions_count}
->
+<.package_layout {@package_layout} active_tab={:readme} version_pinned?={@version_pinned?}>
   <:inner_content>
     <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-6">
       <%= if ViewHelpers.main_repository?(@package) and @current_release do %>

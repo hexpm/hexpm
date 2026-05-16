@@ -1,7 +1,7 @@
 defmodule HexpmWeb.PackageOwnerController do
   use HexpmWeb, :controller
 
-  alias HexpmWeb.ViewHelpers
+  alias HexpmWeb.{PackageLayoutAssigns, ViewHelpers}
 
   plug :requires_login
   plug :fetch_package
@@ -10,17 +10,14 @@ defmodule HexpmWeb.PackageOwnerController do
 
   def index(conn, _params) do
     package = conn.assigns.package
-    owners = Owners.all(package, user: [:emails, :organization])
 
     render(
       conn,
       "index.html",
       [
         title: "Manage owners – #{package.name}",
-        container: "container",
-        package: package,
-        owners: owners
-      ] ++ package_layout_assigns(conn, package)
+        container: "container"
+      ] ++ PackageLayoutAssigns.for_package(conn, package)
     )
   end
 
@@ -146,58 +143,6 @@ defmodule HexpmWeb.PackageOwnerController do
     else
       ViewHelpers.path_for_owners(package)
     end
-  end
-
-  defp package_layout_assigns(conn, package) do
-    releases = Releases.all(package)
-
-    current_release =
-      case Release.latest_version(releases, only_stable: true, unstable_fallback: true) do
-        nil -> nil
-        release -> Releases.preload(release, [:requirements, :downloads, :publisher])
-      end
-
-    latest_release_with_docs =
-      Release.latest_version(releases,
-        only_stable: true,
-        unstable_fallback: true,
-        with_docs: true
-      )
-
-    docs_html_url =
-      Hexpm.Utils.current_docs_html_url(package, current_release, latest_release_with_docs)
-
-    repositories =
-      Users.all_organizations(conn.assigns.current_user)
-      |> Enum.map(& &1.repository)
-
-    dependants_count = Packages.count_dependants(repositories, package)
-
-    last_download_day =
-      Hexpm.Cache.fetch(:last_download_day, &Downloads.last_day/0) || Date.utc_today()
-
-    start_day = Date.add(last_download_day, -30)
-
-    graph_downloads =
-      Downloads.for_period(package, :day, downloads_after: start_day)
-      |> Map.new(&{Date.from_iso8601!(&1.day), &1})
-
-    daily_graph =
-      Enum.map(Date.range(start_day, last_download_day), fn day ->
-        if dl = graph_downloads[day], do: dl.downloads, else: 0
-      end)
-
-    [
-      current_release: current_release,
-      current_user: conn.assigns.current_user,
-      daily_graph: daily_graph,
-      dependants_count: dependants_count,
-      docs_html_url: docs_html_url,
-      downloads: Downloads.package(package),
-      graph_release: nil,
-      repository_name: package.repository.name,
-      versions_count: Enum.count(releases)
-    ]
   end
 
   defp fetch_package(conn, _opts) do
