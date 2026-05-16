@@ -15,8 +15,15 @@
   <:inner_content>
     <%!-- Current Owners --%>
     <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden mb-6">
-      <div class="px-6 py-4 border-b border-grey-200 dark:border-grey-700">
+      <div class="px-6 py-4 border-b border-grey-200 dark:border-grey-700 flex items-center justify-between">
         <h2 class="text-base font-semibold text-grey-900 dark:text-white">Current owners</h2>
+        {Phoenix.Component.live_render(@conn, HexpmWeb.PackageOwnerLive.AddOwner,
+          id: "add-owner-live",
+          session: %{
+            "package_id" => @package.id,
+            "current_user_id" => @current_user.id
+          }
+        )}
       </div>
       <ul class="divide-y divide-grey-100 dark:divide-grey-700">
         <%= for owner <- @owners do %>
@@ -45,58 +52,27 @@
               </div>
             </div>
 
-            <div class="flex items-center gap-2">
-              <.sudo_form
-                current_user={@current_user}
-                action={HexpmWeb.ViewHelpers.path_for_owner(@package, owner.user.username)}
-                method="put"
-                id={"role-form-#{owner.user.username}"}
-                class="flex items-center gap-2"
-              >
-                <div class="relative">
-                  <select
-                    name="level"
-                    class="w-32 text-sm border border-grey-200 dark:border-grey-600 rounded-lg pl-3 pr-8 py-2 bg-white dark:bg-grey-700 text-grey-800 dark:text-white cursor-pointer appearance-none focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  >
-                    <option value="maintainer" selected={owner.level == "maintainer"}>
-                      Maintainer
-                    </option>
-                    <option value="full" selected={owner.level == "full"}>Full owner</option>
-                  </select>
-                  <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-grey-400 dark:text-grey-300">
-                    {HexpmWeb.ViewIcons.icon(:heroicon, "chevron-down", width: 15, height: 15)}
-                  </div>
-                </div>
-                <button
-                  type="submit"
-                  class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors"
-                  title="Update role"
-                >
-                  Update
-                </button>
-              </.sudo_form>
+            <div class="flex items-center gap-3">
+              <span class={[
+                "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
+                HexpmWeb.PackageOwnerView.role_badge_class(owner.level)
+              ]}>
+                {HexpmWeb.PackageOwnerView.role_label(owner.level)}
+              </span>
 
               <%= if length(@owners) > 1 do %>
-                <.sudo_form
-                  current_user={@current_user}
-                  action={HexpmWeb.ViewHelpers.path_for_owner(@package, owner.user.username)}
-                  method="delete"
-                  id={"remove-form-#{owner.user.username}"}
-                >
-                  <button
-                    type="submit"
-                    class="text-red-500 hover:text-red-700 p-1 rounded transition-colors"
-                    title="Remove owner"
-                    data-confirm={
-                      if owner.user.id == @current_user.id,
-                        do:
-                          "You will lose access to #{@package.name} after removing yourself. Continue?",
-                        else: "Remove #{owner.user.username} as an owner of #{@package.name}?"
-                    }
-                  >
-                    {HexpmWeb.ViewIcons.icon(:heroicon, "x-mark", class: "w-4 h-4")}
-                  </button>
-                </.sudo_form>
+                <.icon_button
+                  icon="pencil-square"
+                  variant="default"
+                  aria-label={"Edit role for #{owner.user.username}"}
+                  phx-click={show_modal("edit-role-#{owner.user.username}")}
+                />
+                <.icon_button
+                  icon="x-mark"
+                  variant="danger"
+                  aria-label={"Remove #{owner.user.username}"}
+                  phx-click={show_modal("remove-owner-#{owner.user.username}")}
+                />
               <% end %>
             </div>
           </li>
@@ -104,43 +80,100 @@
       </ul>
     </div>
 
-    <%!-- Add Owner --%>
-    <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-6">
-      <h2 class="text-base font-semibold text-grey-900 dark:text-white mb-4">Add owner</h2>
-      <.sudo_form
-        current_user={@current_user}
-        action={HexpmWeb.ViewHelpers.path_for_owners(@package)}
-        method="post"
-        id="add-owner-form"
-      >
-        <div class="flex flex-wrap gap-2">
-          <input
-            type="text"
-            name="username"
-            placeholder="Username"
-            required
-            class="flex-1 min-w-48 text-sm border border-grey-200 dark:border-grey-600 rounded px-3 py-2 bg-white dark:bg-grey-700 text-grey-800 dark:text-white placeholder-grey-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
-          <div class="relative">
-            <select
-              name="level"
-              class="w-32 text-sm border border-grey-200 dark:border-grey-600 rounded-lg pl-3 pr-8 py-2 bg-white dark:bg-grey-700 text-grey-800 dark:text-white cursor-pointer appearance-none focus:outline-none focus:ring-2 focus:ring-primary-500"
+    <%!-- Edit role + Remove modals (one per owner, only when more than one) --%>
+    <%= for owner <- @owners, length(@owners) > 1 do %>
+      <.modal id={"edit-role-#{owner.user.username}"} title="Change role" max_width="md">
+        <.sudo_form
+          current_user={@current_user}
+          action={HexpmWeb.ViewHelpers.path_for_owner(@package, owner.user.username)}
+          method="put"
+          id={"role-form-#{owner.user.username}"}
+        >
+          <p class="text-sm text-grey-600 dark:text-grey-300 mb-4">
+            Update the role for
+            <strong class="font-semibold text-grey-900 dark:text-white">
+              {owner.user.username}
+            </strong>
+            on <strong class="font-semibold text-grey-900 dark:text-white">{@package.name}</strong>.
+          </p>
+
+          <div>
+            <label
+              for={"role-select-#{owner.user.username}"}
+              class="block text-small font-medium text-grey-900 dark:text-grey-100 mb-[6px]"
             >
-              <option value="maintainer">Maintainer</option>
-              <option value="full">Full owner</option>
-            </select>
-            <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-grey-400 dark:text-grey-300">
-              {HexpmWeb.ViewIcons.icon(:heroicon, "chevron-down", width: 15, height: 15)}
+              Role
+            </label>
+            <div class="relative">
+              <select
+                id={"role-select-#{owner.user.username}"}
+                name="level"
+                class="w-full h-10 text-sm bg-white dark:bg-grey-700 border border-grey-200 dark:border-grey-600 rounded-lg pl-3 pr-8 text-grey-800 dark:text-white cursor-pointer appearance-none focus:outline-none focus:ring-2 focus:ring-primary-500"
+              >
+                <option value="maintainer" selected={owner.level == "maintainer"}>
+                  Maintainer
+                </option>
+                <option value="full" selected={owner.level == "full"}>Full owner</option>
+              </select>
+              <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-grey-400 dark:text-grey-300">
+                {HexpmWeb.ViewIcons.icon(:heroicon, "chevron-down", width: 15, height: 15)}
+              </div>
             </div>
           </div>
-          <button
-            type="submit"
-            class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            Add
-          </button>
-        </div>
-      </.sudo_form>
-    </div>
+
+          <div class="flex justify-end gap-3 mt-6">
+            <.button
+              type="button"
+              variant="secondary"
+              phx-click={hide_modal("edit-role-#{owner.user.username}")}
+            >
+              Cancel
+            </.button>
+            <.button type="submit" variant="primary">Update role</.button>
+          </div>
+        </.sudo_form>
+      </.modal>
+
+      <.modal id={"remove-owner-#{owner.user.username}"} title="Remove owner?" max_width="md">
+        <%= if owner.user.id == @current_user.id do %>
+          <p class="text-sm text-grey-600 dark:text-grey-300">
+            You are about to remove
+            <strong class="font-semibold text-grey-900 dark:text-white">yourself</strong>
+            as an owner of <strong class="font-semibold text-grey-900 dark:text-white">{@package.name}</strong>.
+            You will lose access to manage this package after confirming.
+          </p>
+        <% else %>
+          <p class="text-sm text-grey-600 dark:text-grey-300">
+            Are you sure you want to remove
+            <strong class="font-semibold text-grey-900 dark:text-white">
+              {owner.user.username}
+            </strong>
+            as an owner of <strong class="font-semibold text-grey-900 dark:text-white">{@package.name}</strong>?
+          </p>
+        <% end %>
+
+        <.sudo_form
+          current_user={@current_user}
+          action={HexpmWeb.ViewHelpers.path_for_owner(@package, owner.user.username)}
+          method="delete"
+          id={"remove-form-#{owner.user.username}"}
+        >
+          <div class="flex justify-end gap-3 mt-6">
+            <.button
+              type="button"
+              variant="secondary"
+              phx-click={hide_modal("remove-owner-#{owner.user.username}")}
+            >
+              Cancel
+            </.button>
+            <.button type="submit" variant="danger">
+              {if owner.user.id == @current_user.id,
+                do: "Remove myself",
+                else: "Remove owner"}
+            </.button>
+          </div>
+        </.sudo_form>
+      </.modal>
+    <% end %>
   </:inner_content>
 </.package_layout>
