@@ -51,20 +51,25 @@
                 action={HexpmWeb.ViewHelpers.path_for_owner(@package, owner.user.username)}
                 method="put"
                 id={"role-form-#{owner.user.username}"}
-                class="flex items-center gap-1"
+                class="flex items-center gap-2"
               >
-                <select
-                  name="level"
-                  class="text-sm border border-grey-200 dark:border-grey-600 rounded px-2 py-1 bg-white dark:bg-grey-700 text-grey-800 dark:text-white"
-                >
-                  <option value="maintainer" selected={owner.level == "maintainer"}>
-                    Maintainer
-                  </option>
-                  <option value="full" selected={owner.level == "full"}>Full owner</option>
-                </select>
+                <div class="relative">
+                  <select
+                    name="level"
+                    class="w-32 text-sm border border-grey-200 dark:border-grey-600 rounded-lg pl-3 pr-8 py-2 bg-white dark:bg-grey-700 text-grey-800 dark:text-white cursor-pointer appearance-none focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="maintainer" selected={owner.level == "maintainer"}>
+                      Maintainer
+                    </option>
+                    <option value="full" selected={owner.level == "full"}>Full owner</option>
+                  </select>
+                  <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-grey-400 dark:text-grey-300">
+                    {HexpmWeb.ViewIcons.icon(:heroicon, "chevron-down", width: 15, height: 15)}
+                  </div>
+                </div>
                 <button
                   type="submit"
-                  class="text-xs px-2 py-1 bg-primary-600 hover:bg-primary-700 text-white rounded transition-colors"
+                  class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors"
                   title="Update role"
                 >
                   Update
@@ -116,13 +121,18 @@
             required
             class="flex-1 min-w-48 text-sm border border-grey-200 dark:border-grey-600 rounded px-3 py-2 bg-white dark:bg-grey-700 text-grey-800 dark:text-white placeholder-grey-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
-          <select
-            name="level"
-            class="text-sm border border-grey-200 dark:border-grey-600 rounded px-2 py-2 bg-white dark:bg-grey-700 text-grey-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-          >
-            <option value="maintainer">Maintainer</option>
-            <option value="full">Full owner</option>
-          </select>
+          <div class="relative">
+            <select
+              name="level"
+              class="w-32 text-sm border border-grey-200 dark:border-grey-600 rounded-lg pl-3 pr-8 py-2 bg-white dark:bg-grey-700 text-grey-800 dark:text-white cursor-pointer appearance-none focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="maintainer">Maintainer</option>
+              <option value="full">Full owner</option>
+            </select>
+            <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-grey-400 dark:text-grey-300">
+              {HexpmWeb.ViewIcons.icon(:heroicon, "chevron-down", width: 15, height: 15)}
+            </div>
+          </div>
           <button
             type="submit"
             class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors"
