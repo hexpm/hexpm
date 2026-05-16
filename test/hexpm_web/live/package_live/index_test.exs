@@ -149,7 +149,7 @@ defmodule HexpmWeb.PackageLive.IndexTest do
     test "clear all button resets the URL", %{conn: conn} do
       {:ok, view, _} = live(conn, ~p"/packages?search=build_tool%3Amix")
 
-      view |> element("button", "Clear all") |> render_click()
+      view |> element("#clear-filters") |> render_click()
       assert_patch(view, ~p"/packages?sort=recent_downloads")
     end
   end
