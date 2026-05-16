@@ -498,7 +498,7 @@ defmodule HexpmWeb.Components.PackageLayout do
                       </h3>
                       <%= if is_full_owner do %>
                         <a
-                          href={~p"/packages/#{@package.name}/owners"}
+                          href={ViewHelpers.path_for_owners(@package)}
                           class="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
                         >
                           Manage
@@ -613,7 +613,7 @@ defmodule HexpmWeb.Components.PackageLayout do
           active: assigns.active_tab == :owners,
           icon: "user-group",
           label: "Owners",
-          path: ~p"/packages/#{assigns.package.name}/owners"
+          path: ViewHelpers.path_for_owners(assigns.package)
         }
       ]
     else

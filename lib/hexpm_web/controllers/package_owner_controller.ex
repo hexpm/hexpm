@@ -1,6 +1,8 @@
 defmodule HexpmWeb.PackageOwnerController do
   use HexpmWeb, :controller
 
+  alias HexpmWeb.ViewHelpers
+
   plug :requires_login
   plug :fetch_package
   plug :requires_full_owner
@@ -29,43 +31,43 @@ defmodule HexpmWeb.PackageOwnerController do
     if is_nil(user) do
       conn
       |> put_flash(:error, "User \"#{username}\" not found.")
-      |> redirect(to: ~p"/packages/#{package.name}/owners")
+      |> redirect(to: ViewHelpers.path_for_owners(package))
     else
       case Owners.add(package, user, params, audit: audit_data(conn)) do
         {:ok, _} ->
           conn
           |> put_flash(:info, "#{username} added as owner.")
-          |> redirect(to: ~p"/packages/#{package.name}/owners")
+          |> redirect(to: ViewHelpers.path_for_owners(package))
 
         {:error, :not_member} ->
           conn
           |> put_flash(:error, "#{username} is not a member of this repository.")
-          |> redirect(to: ~p"/packages/#{package.name}/owners")
+          |> redirect(to: ViewHelpers.path_for_owners(package))
 
         {:error, :not_organization_transfer} ->
           conn
           |> put_flash(:error, "#{username} is an organization — use a transfer to add it.")
-          |> redirect(to: ~p"/packages/#{package.name}/owners")
+          |> redirect(to: ViewHelpers.path_for_owners(package))
 
         {:error, :organization_level} ->
           conn
           |> put_flash(:error, "Organizations must be added as full owners.")
-          |> redirect(to: ~p"/packages/#{package.name}/owners")
+          |> redirect(to: ViewHelpers.path_for_owners(package))
 
         {:error, :organization_user_conflict} ->
           conn
           |> put_flash(:error, "#{username} conflicts with an existing organization owner.")
-          |> redirect(to: ~p"/packages/#{package.name}/owners")
+          |> redirect(to: ViewHelpers.path_for_owners(package))
 
         {:error, :last_full_owner} ->
           conn
           |> put_flash(:error, "Cannot demote the last full owner of a package.")
-          |> redirect(to: ~p"/packages/#{package.name}/owners")
+          |> redirect(to: ViewHelpers.path_for_owners(package))
 
         {:error, changeset} ->
           conn
           |> put_flash(:error, changeset_error_to_string(changeset))
-          |> redirect(to: ~p"/packages/#{package.name}/owners")
+          |> redirect(to: ViewHelpers.path_for_owners(package))
       end
     end
   end
@@ -77,7 +79,7 @@ defmodule HexpmWeb.PackageOwnerController do
     if is_nil(user) do
       conn
       |> put_flash(:error, "User \"#{username}\" not found.")
-      |> redirect(to: ~p"/packages/#{package.name}/owners")
+      |> redirect(to: ViewHelpers.path_for_owners(package))
     else
       case Owners.update_level(package, user, level, audit: audit_data(conn)) do
         {:ok, _} ->
@@ -88,17 +90,17 @@ defmodule HexpmWeb.PackageOwnerController do
         {:error, :not_owner} ->
           conn
           |> put_flash(:error, "#{username} is not an owner of this package.")
-          |> redirect(to: ~p"/packages/#{package.name}/owners")
+          |> redirect(to: ViewHelpers.path_for_owners(package))
 
         {:error, :last_full_owner} ->
           conn
           |> put_flash(:error, "Cannot demote the last full owner of a package.")
-          |> redirect(to: ~p"/packages/#{package.name}/owners")
+          |> redirect(to: ViewHelpers.path_for_owners(package))
 
         {:error, changeset} ->
           conn
           |> put_flash(:error, changeset_error_to_string(changeset))
-          |> redirect(to: ~p"/packages/#{package.name}/owners")
+          |> redirect(to: ViewHelpers.path_for_owners(package))
       end
     end
   end
@@ -110,7 +112,7 @@ defmodule HexpmWeb.PackageOwnerController do
     if is_nil(user) do
       conn
       |> put_flash(:error, "User \"#{username}\" not found.")
-      |> redirect(to: ~p"/packages/#{package.name}/owners")
+      |> redirect(to: ViewHelpers.path_for_owners(package))
     else
       case Owners.remove(package, user, audit: audit_data(conn)) do
         :ok ->
@@ -121,17 +123,17 @@ defmodule HexpmWeb.PackageOwnerController do
         {:error, :last_owner} ->
           conn
           |> put_flash(:error, "Cannot remove the last owner of a package.")
-          |> redirect(to: ~p"/packages/#{package.name}/owners")
+          |> redirect(to: ViewHelpers.path_for_owners(package))
 
         {:error, :last_full_owner} ->
           conn
           |> put_flash(:error, "Cannot remove the last full owner of a package.")
-          |> redirect(to: ~p"/packages/#{package.name}/owners")
+          |> redirect(to: ViewHelpers.path_for_owners(package))
 
         {:error, :not_owner} ->
           conn
           |> put_flash(:error, "#{username} is not an owner of this package.")
-          |> redirect(to: ~p"/packages/#{package.name}/owners")
+          |> redirect(to: ViewHelpers.path_for_owners(package))
       end
     end
   end
@@ -140,9 +142,9 @@ defmodule HexpmWeb.PackageOwnerController do
     current_user = conn.assigns.current_user
 
     if target_user.id == current_user.id and new_level != "full" do
-      ~p"/packages/#{package.name}"
+      ViewHelpers.path_for_package(package)
     else
-      ~p"/packages/#{package.name}/owners"
+      ViewHelpers.path_for_owners(package)
     end
   end
 

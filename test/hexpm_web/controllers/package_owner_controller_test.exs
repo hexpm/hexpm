@@ -301,4 +301,42 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
       assert redirected_to(conn) =~ "/sudo"
     end
   end
+
+  describe "private repository routes" do
+    setup do
+      org_user = insert(:user)
+      organization = insert(:organization, user: org_user)
+      repository = insert(:repository, organization: organization)
+
+      full_owner = insert(:user)
+      insert(:organization_user, organization: organization, user: full_owner, role: "admin")
+
+      package =
+        insert(:package,
+          repository_id: repository.id,
+          package_owners: [build(:package_owner, user: full_owner, level: "full")]
+        )
+
+      package = Hexpm.Repo.preload(package, :repository)
+
+      %{
+        repository: repository,
+        full_owner: full_owner,
+        package: package
+      }
+    end
+
+    test "full owner can view management page on private repo", %{
+      repository: repository,
+      full_owner: full_owner,
+      package: package
+    } do
+      conn =
+        build_conn()
+        |> test_login(full_owner)
+        |> get("/packages/#{repository.name}/#{package.name}/owners")
+
+      assert html_response(conn, 200) =~ "Current owners"
+    end
+  end
 end

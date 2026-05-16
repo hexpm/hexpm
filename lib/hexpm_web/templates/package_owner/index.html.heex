@@ -48,7 +48,7 @@
             <div class="flex items-center gap-2">
               <.sudo_form
                 current_user={@current_user}
-                action={~p"/packages/#{@package.name}/owners/#{owner.user.username}"}
+                action={HexpmWeb.ViewHelpers.path_for_owner(@package, owner.user.username)}
                 method="put"
                 id={"role-form-#{owner.user.username}"}
                 class="flex items-center gap-1"
@@ -74,7 +74,7 @@
               <%= if length(@owners) > 1 do %>
                 <.sudo_form
                   current_user={@current_user}
-                  action={~p"/packages/#{@package.name}/owners/#{owner.user.username}"}
+                  action={HexpmWeb.ViewHelpers.path_for_owner(@package, owner.user.username)}
                   method="delete"
                   id={"remove-form-#{owner.user.username}"}
                 >
@@ -104,7 +104,7 @@
       <h2 class="text-base font-semibold text-grey-900 dark:text-white mb-4">Add owner</h2>
       <.sudo_form
         current_user={@current_user}
-        action={~p"/packages/#{@package.name}/owners"}
+        action={HexpmWeb.ViewHelpers.path_for_owners(@package)}
         method="post"
         id="add-owner-form"
       >
