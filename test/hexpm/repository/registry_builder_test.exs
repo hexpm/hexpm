@@ -67,19 +67,41 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       package2_releases = v2_map("packages/#{p2.name}", ["hexpm", p2.name]).releases
       assert length(package2_releases) == 2
 
-      assert List.first(package2_releases) == %{
+      assert %{
                version: "0.0.1",
-               inner_checksum: Base.decode16!(@checksum),
-               outer_checksum: Base.decode16!(@checksum),
+               inner_checksum: inner,
+               outer_checksum: outer,
                dependencies: [],
-               advisory_indexes: []
-             }
+               advisory_indexes: [],
+               published_at: %{seconds: seconds, nanos: nanos}
+             } = List.first(package2_releases)
+
+      assert inner == Base.decode16!(@checksum)
+      assert outer == Base.decode16!(@checksum)
+      assert is_integer(seconds) and seconds > 0
+      assert is_integer(nanos) and nanos >= 0
 
       package3_releases = v2_map("packages/#{p3.name}", ["hexpm", p3.name]).releases
       assert [%{version: "0.0.2", dependencies: deps}] = package3_releases
       assert length(deps) == 2
       assert %{package: p2.name, requirement: "~> 0.0.1"} in deps
       assert %{package: p1.name, requirement: "0.0.1"} in deps
+    end
+
+    test "published_at matches release inserted_at", %{
+      packages: [_, p2, _],
+      releases: [_, r2, _, _]
+    } do
+      RegistryBuilder.full(Repository.hexpm())
+
+      package2 = v2_map("packages/#{p2.name}", ["hexpm", p2.name])
+      release = Enum.find(package2.releases, &(&1.version == "0.0.1"))
+
+      unix_ns = DateTime.to_unix(r2.inserted_at, :nanosecond)
+      expected_seconds = div(unix_ns, 1_000_000_000)
+      expected_nanos = rem(unix_ns, 1_000_000_000)
+
+      assert release.published_at == %{seconds: expected_seconds, nanos: expected_nanos}
     end
 
     test "advisories are included in registry", %{
@@ -269,13 +291,19 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       package2_releases = v2_map("packages/#{p2.name}", ["hexpm", p2.name]).releases
       assert length(package2_releases) == 2
 
-      assert List.first(package2_releases) == %{
+      assert %{
                version: "0.0.1",
-               inner_checksum: Base.decode16!(@checksum),
-               outer_checksum: Base.decode16!(@checksum),
+               inner_checksum: inner,
+               outer_checksum: outer,
                dependencies: [],
-               advisory_indexes: []
-             }
+               advisory_indexes: [],
+               published_at: %{seconds: seconds, nanos: nanos}
+             } = List.first(package2_releases)
+
+      assert inner == Base.decode16!(@checksum)
+      assert outer == Base.decode16!(@checksum)
+      assert is_integer(seconds) and seconds > 0
+      assert is_integer(nanos) and nanos >= 0
 
       package3_releases = v2_map("packages/#{p3.name}", ["hexpm", p3.name]).releases
       assert [%{version: "0.0.2", dependencies: deps}] = package3_releases
