@@ -37,6 +37,16 @@ defmodule HexpmWeb.ErrorPageTest do
     assert html =~ ~s(<!DOCTYPE html>)
   end
 
+  test "404 pages render search as a static form, not a LiveView" do
+    html =
+      build_conn()
+      |> get("/nothing-here")
+      |> html_response(404)
+
+    assert html =~ ~s(id="nav-search-input")
+    refute html =~ "data-phx-session"
+  end
+
   test "json error responses do not use the site layout" do
     body =
       build_conn()
