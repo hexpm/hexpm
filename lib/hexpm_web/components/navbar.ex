@@ -25,6 +25,7 @@ defmodule HexpmWeb.Components.Navbar do
   attr :show_search, :boolean, default: true
   attr :autofocus_search, :boolean, default: false
   attr :live_search, :boolean, default: false
+  attr :live_suggestions, :boolean, default: true
 
   def header(assigns) do
     ~H"""
@@ -39,6 +40,7 @@ defmodule HexpmWeb.Components.Navbar do
             show_search={@show_search}
             autofocus_search={@autofocus_search}
             live_search={@live_search}
+            live_suggestions={@live_suggestions}
           />
           <.mobile_nav_controls current_user={@current_user} show_search={@show_search} />
         </div>
@@ -72,6 +74,7 @@ defmodule HexpmWeb.Components.Navbar do
   attr :show_search, :boolean, required: true
   attr :autofocus_search, :boolean, required: true
   attr :live_search, :boolean, required: true
+  attr :live_suggestions, :boolean, required: true
 
   defp desktop_nav(assigns) do
     ~H"""
@@ -81,6 +84,7 @@ defmodule HexpmWeb.Components.Navbar do
         conn={@conn}
         search={@search}
         autofocus={@autofocus_search}
+        live_suggestions={@live_suggestions}
       />
       <.nav_links />
       <.theme_toggle />
@@ -363,8 +367,9 @@ defmodule HexpmWeb.Components.Navbar do
   attr :conn, :map, default: nil
   attr :search, :string, default: nil
   attr :autofocus, :boolean, default: false
+  attr :live_suggestions, :boolean, default: true
 
-  defp search_form(assigns) do
+  defp search_form(%{live_suggestions: true} = assigns) do
     ~H"""
     <div class="min-w-0 flex-1 mr-auto">
       <div class="max-w-[420px] w-full">
@@ -377,6 +382,37 @@ defmodule HexpmWeb.Components.Navbar do
             "search" => @search
           }
         )}
+      </div>
+    </div>
+    """
+  end
+
+  defp search_form(assigns) do
+    ~H"""
+    <div class="min-w-0 flex-1 mr-auto">
+      <div class="max-w-[420px] w-full">
+        <form method="get" action={~p"/packages"} role="search" autocomplete="off">
+          <div class="relative flex items-center">
+            <div class="absolute left-3 pointer-events-none">
+              {icon(:heroicon, "magnifying-glass", width: 18, height: 18, class: "text-grey-300")}
+            </div>
+            <input
+              type="search"
+              placeholder="Find packages..."
+              name="search"
+              id="nav-search-input"
+              value={@search}
+              autocomplete="off"
+              autocapitalize="none"
+              autocorrect="off"
+              spellcheck="false"
+              autofocus={@autofocus}
+              class="w-full h-[40px] bg-grey-800 border border-grey-600 rounded-lg px-3 pl-10 py-[11px] text-white leading-4 placeholder:text-grey-300 focus:outline-none focus:border-grey-500 focus:shadow-[inset_0px_0px_6px_0px_rgba(255,255,255,0.3)]"
+            />
+            <input type="hidden" name="sort" value="recent_downloads" />
+            <label class="sr-only" for="nav-search-input">Find packages</label>
+          </div>
+        </form>
       </div>
     </div>
     """
