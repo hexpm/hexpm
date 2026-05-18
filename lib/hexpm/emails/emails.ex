@@ -1,6 +1,7 @@
 defmodule Hexpm.Emails do
   use Bamboo.Phoenix, view: HexpmWeb.EmailView
   import Bamboo.Email
+  import Bamboo.SendGridHelper, only: [with_click_tracking: 2]
   alias Hexpm.Accounts.{Email, User}
 
   def owner_added(package, owners, owner) do
@@ -170,6 +171,7 @@ defmodule Hexpm.Emails do
     new_email()
     |> from(source())
     |> put_layout({HexpmWeb.EmailView, :layout})
+    |> with_click_tracking(false)
   end
 
   defp source() do
