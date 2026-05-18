@@ -3,11 +3,20 @@ defmodule HexpmWeb.PackageLive.Index do
 
   import HexpmWeb.PackageView, only: [downloads_for_package: 2]
   import HexpmWeb.PackageLive.FilterSidebar
+  import HexpmWeb.ViewIcons, only: [icon: 3]
 
   alias Hexpm.Repository.Package.SearchQuery
 
   @packages_per_page 30
   @sort_params ~w(name recent_downloads total_downloads inserted_at updated_at)
+  @sort_options [
+    {"Recent downloads", "recent_downloads"},
+    {"Total downloads", "total_downloads"},
+    {"Recently updated", "updated_at"},
+    {"Recently created", "inserted_at"},
+    {"Name (A–Z)", "name"}
+  ]
+
   @impl true
   def mount(_params, _session, socket) do
     organizations = Users.all_organizations(socket.assigns.current_user)
@@ -19,7 +28,8 @@ defmodule HexpmWeb.PackageLive.Index do
         container: "container",
         live_search: true,
         per_page: @packages_per_page,
-        repositories: repositories
+        repositories: repositories,
+        sort_options: @sort_options
       )
 
     {:ok, socket}
@@ -79,125 +89,194 @@ defmodule HexpmWeb.PackageLive.Index do
     ~H"""
     <%!-- Package Index Page --%>
     <div class="bg-white dark:bg-grey-950 min-h-dvh">
-      <div class="max-w-7xl mx-auto px-4 py-8 lg:py-12">
-        <%!-- Header --%>
-        <div class="mb-8">
-          <h1 class="text-grey-900 dark:text-grey-100 text-4xl font-bold mb-2">
+      <%!-- Header --%>
+      <header class="bg-white dark:bg-grey-950 border-b border-grey-100 dark:border-grey-700 pt-14 pb-6">
+        <div class="max-w-7xl mx-auto px-4">
+          <h1 class="text-h2 font-bold tracking-[-0.02em] text-grey-900 dark:text-grey-100 m-0">
             Packages
           </h1>
-          <p class="text-grey-600 dark:text-grey-300 text-lg">
+          <p class="mt-2 text-body text-grey-500 dark:text-grey-300">
             Browse and discover packages for the Erlang ecosystem
           </p>
         </div>
+      </header>
 
-        <button
-          type="button"
-          phx-click={
-            Phoenix.LiveView.JS.toggle(to: "#filter-sidebar")
-            |> Phoenix.LiveView.JS.toggle_attribute({"aria-expanded", "true", "false"})
-          }
-          aria-expanded="false"
-          aria-controls="filter-sidebar"
-          class="md:hidden mb-4 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-grey-700 dark:text-grey-200 bg-grey-50 dark:bg-grey-800 border border-grey-200 dark:border-grey-600 rounded-lg hover:bg-grey-100 dark:hover:bg-grey-700 transition-colors"
-        >
-          <svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-            />
-          </svg>
-          Filters
-        </button>
-        <div class="flex flex-col md:flex-row gap-6">
-          <.sidebar query={@search_query} />
-          <div class="flex-1 min-w-0">
-            <%!-- Exact Match Section --%>
-            <%= if @exact_match do %>
-              <div class="mb-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-6">
-                <div class="flex items-center gap-2 mb-4">
-                  <svg
-                    class="size-5 text-green-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <h3 class="text-green-900 dark:text-green-200 font-semibold text-lg">
-                    Exact Match
-                  </h3>
-                </div>
-                <ul class="bg-white dark:bg-grey-800 rounded-lg overflow-hidden divide-y divide-grey-200 dark:divide-grey-700">
-                  {HexpmWeb.PackageView.render("_package.html",
-                    exact_match?: true,
-                    package: @exact_match,
-                    package_downloads: downloads_for_package(@exact_match, @downloads),
-                    view: @sort
-                  )}
-                </ul>
+      <main class="max-w-7xl mx-auto px-4 pt-8 pb-20">
+        <%!-- Mobile sticky toolbar --%>
+        <div class="md:hidden sticky top-0 z-20 -mx-4 px-4 py-2.5 mb-3 bg-white/95 dark:bg-grey-900/95 backdrop-blur border-b border-grey-100 dark:border-grey-700 flex items-center gap-2">
+          <button
+            type="button"
+            phx-click={open_sheet()}
+            class="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border-[1.5px] border-grey-900 dark:border-grey-100 bg-transparent text-grey-900 dark:text-grey-100 text-small font-medium hover:bg-grey-900 hover:text-white dark:hover:bg-grey-100 dark:hover:text-grey-900 transition-colors"
+          >
+            {icon(:heroicon, "funnel", width: 14, height: 14)} Filters
+            <span
+              :if={active_count(@search_query) > 0}
+              class="text-tiny font-semibold text-white bg-primary-600 px-1.5 py-px rounded-full tabular-nums leading-[1.45]"
+            >
+              {active_count(@search_query)}
+            </span>
+          </button>
+          <div class="flex-1"></div>
+          <form phx-change="sort_change" class="inline-flex">
+            <label for="sort-select-mobile" class="sr-only">Sort</label>
+            <div class="relative">
+              <select
+                id="sort-select-mobile"
+                name="sort"
+                class="appearance-none h-9 pl-3 pr-8 text-small font-medium bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-600 rounded-lg text-grey-600 dark:text-grey-200 cursor-pointer focus:outline-none focus:border-primary-600 focus:ring-[3px] focus:ring-primary-100 dark:focus:ring-primary-900/40 transition-[border-color,box-shadow] duration-150"
+              >
+                <option
+                  :for={{label, value} <- @sort_options}
+                  value={value}
+                  selected={to_string(@sort) == value}
+                >
+                  Sort: {label}
+                </option>
+              </select>
+              <div class="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-grey-400 dark:text-grey-300">
+                {icon(:heroicon, "chevron-down", width: 12, height: 12)}
               </div>
-            <% end %>
+            </div>
+          </form>
+        </div>
+
+        <%!-- Mobile active filter chips --%>
+        <div
+          :if={active_count(@search_query) > 0}
+          class="md:hidden flex flex-wrap gap-1.5 items-center mb-4"
+        >
+          <span class="text-tiny font-semibold uppercase tracking-[0.08em] text-grey-400 dark:text-grey-300 mr-1">
+            Active
+          </span>
+          <span
+            :for={{label, key, value} <- active_chips(@search_query)}
+            class="inline-flex items-center gap-1.5 h-[26px] pl-2.5 pr-1.5 text-caption font-medium bg-primary-50 dark:bg-primary-900/30 border border-primary-100 dark:border-primary-800 text-primary-700 dark:text-primary-200 rounded-full"
+          >
+            <span class="opacity-65">{label}:</span> {value}
+            <button
+              type="button"
+              aria-label={"Remove #{label} filter"}
+              phx-click="remove_filter"
+              phx-value-key={key}
+              class="w-4 h-4 rounded-full inline-flex items-center justify-center hover:bg-primary-100 dark:hover:bg-primary-800 transition-colors"
+            >
+              {icon(:heroicon, "x-mark", width: 10, height: 10)}
+            </button>
+          </span>
+        </div>
+
+        <div class="md:grid md:grid-cols-[264px_1fr] md:gap-8">
+          <%!-- Desktop filter sidebar --%>
+          <.sidebar query={@search_query} />
+
+          <%!-- Results column --%>
+          <div class="min-w-0">
+            <%!-- Exact Match Section --%>
+            <div
+              :if={@exact_match}
+              class="mb-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-6"
+            >
+              <div class="flex items-center gap-2 mb-4">
+                {icon(:heroicon, "check-circle", class: "size-5 text-green-600")}
+                <h3 class="text-green-900 dark:text-green-200 font-semibold text-lg">
+                  Exact Match
+                </h3>
+              </div>
+              <ul class="bg-white dark:bg-grey-800 rounded-lg overflow-hidden divide-y divide-grey-100 dark:divide-grey-700">
+                {HexpmWeb.PackageView.render("_package.html",
+                  exact_match?: true,
+                  package: @exact_match,
+                  package_downloads: downloads_for_package(@exact_match, @downloads),
+                  view: @sort
+                )}
+              </ul>
+            </div>
 
             <%!-- No Results --%>
-            <%= if !@exact_match and @packages == [] do %>
-              <div class="bg-grey-50 dark:bg-grey-800 rounded-xl p-12 text-center">
-                <svg
-                  class="mx-auto size-16 text-grey-300 mb-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-                <h3 class="text-grey-900 dark:text-grey-100 text-2xl font-semibold mb-2">
-                  No Results Found
-                </h3>
-                <p class="text-grey-600 dark:text-grey-300">
-                  Try adjusting your search
-                </p>
-              </div>
-            <% end %>
+            <div
+              :if={!@exact_match and @packages == []}
+              class="bg-grey-50 dark:bg-grey-800 rounded-xl p-12 text-center"
+            >
+              {icon(:heroicon, "magnifying-glass", class: "mx-auto size-16 text-grey-300 mb-4")}
+              <h3 class="text-grey-900 dark:text-grey-100 text-2xl font-semibold mb-2">
+                No Results Found
+              </h3>
+              <p class="text-grey-600 dark:text-grey-300">
+                Try adjusting your search
+              </p>
+            </div>
 
-            <%!-- Package List --%>
-            <%= if @packages != [] do %>
-              <%!-- Results Header with Sort Selector --%>
-              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+            <%!-- Package list --%>
+            <div :if={@packages != []}>
+              <%!-- Desktop results header with sort --%>
+              <div class="hidden md:flex items-end justify-between gap-6 mb-4">
                 <div>
-                  <h2 class="text-grey-900 dark:text-grey-100 text-2xl font-semibold">
+                  <h2 class="text-[28px] leading-tight font-bold tracking-[-0.01em] text-grey-900 dark:text-grey-100 m-0">
                     {if @exact_match, do: "Search Results", else: "All Packages"}
                   </h2>
-                  <div class="flex items-center gap-3 mt-1">
-                    <p class="text-grey-600 dark:text-grey-300 whitespace-nowrap">
-                      {@package_count} {if @package_count == 1, do: "package", else: "packages"} found
-                    </p>
-                    <% total_pages = ceil(@package_count / @per_page) %>
-                    <%= if total_pages > 1 do %>
-                      <span class="text-grey-400 dark:text-grey-300">•</span>
-                      <p class="text-grey-600 dark:text-grey-300 font-medium whitespace-nowrap">
-                        Page {@page} of {total_pages}
-                      </p>
-                    <% end %>
+                  <div class="text-small text-grey-500 dark:text-grey-300 mt-1.5">
+                    <strong class="text-grey-700 dark:text-grey-100 font-semibold tabular-nums">
+                      {ViewHelpers.human_number_space(@package_count)}
+                    </strong>
+                    {if @package_count == 1, do: "package", else: "packages"} found <% total_pages =
+                      max(1, ceil(@package_count / @per_page)) %>
+                    <span
+                      :if={total_pages > 1}
+                      class="inline-block w-[3px] h-[3px] rounded-full bg-grey-300 dark:bg-grey-500 align-middle mx-2"
+                    >
+                    </span>
+                    <span :if={total_pages > 1}>
+                      Page {@page} of {total_pages}
+                    </span>
                   </div>
                 </div>
-
-                <.sort_selector sort={@sort} />
+                <div class="text-right shrink-0">
+                  <label
+                    for="sort-select"
+                    class="block text-tiny font-semibold uppercase tracking-[0.08em] text-grey-400 dark:text-grey-300 mb-1.5"
+                  >
+                    Sort by
+                  </label>
+                  <form phx-change="sort_change">
+                    <div class="relative min-w-[200px]">
+                      <select
+                        id="sort-select"
+                        name="sort"
+                        class="w-full h-9 pl-3 pr-8 text-small bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-600 rounded-lg text-grey-700 dark:text-grey-100 cursor-pointer appearance-none focus:outline-none focus:border-primary-600 focus:ring-[3px] focus:ring-primary-100 dark:focus:ring-primary-900/40 transition-[border-color,box-shadow] duration-150"
+                      >
+                        <option
+                          :for={{label, value} <- @sort_options}
+                          value={value}
+                          selected={to_string(@sort) == value}
+                        >
+                          {label}
+                        </option>
+                      </select>
+                      <div class="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-grey-400 dark:text-grey-300">
+                        {icon(:heroicon, "chevron-down", width: 14, height: 14)}
+                      </div>
+                    </div>
+                  </form>
+                </div>
               </div>
 
-              <%!-- Package List --%>
-              <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-xl overflow-hidden">
-                <ul class="divide-y divide-grey-200 dark:divide-grey-700">
+              <%!-- Mobile results header --%>
+              <div class="md:hidden flex items-baseline justify-between mb-2 px-1">
+                <h2 class="text-[17px] font-bold text-grey-900 dark:text-grey-100 m-0">
+                  {if @exact_match, do: "Search Results", else: "All Packages"}
+                </h2>
+                <span class="text-caption text-grey-400 dark:text-grey-300 tabular-nums">
+                  <strong class="text-grey-700 dark:text-grey-100 font-semibold">
+                    {ViewHelpers.human_number_space(@package_count)}
+                  </strong>
+                  found
+                </span>
+              </div>
+
+              <%!-- Package list --%>
+              <div class="bg-white dark:bg-grey-800 md:border md:border-grey-100 dark:md:border-grey-700 md:rounded-xl overflow-hidden">
+                <ul class="divide-y divide-grey-100 dark:divide-grey-700">
                   <%= for package <- @packages do %>
                     {HexpmWeb.PackageView.render("_package.html",
                       exact_match?: false,
@@ -222,10 +301,13 @@ defmodule HexpmWeb.PackageLive.Index do
                   path_fn: &~p"/packages?#{ViewHelpers.params(&1, search: @search, sort: @sort)}"
                 )}
               </div>
-            <% end %>
+            </div>
           </div>
         </div>
-      </div>
+      </main>
+
+      <%!-- Mobile filter bottom sheet --%>
+      <.mobile_sheet query={@search_query} />
     </div>
     """
   end
@@ -233,7 +315,6 @@ defmodule HexpmWeb.PackageLive.Index do
   @impl true
   def handle_event("filter_change", params, socket) do
     build_tool = nil_if_empty(params["build_tool"])
-
     depends = nil_if_empty(params["depends"])
 
     updated_after =
@@ -250,13 +331,25 @@ defmodule HexpmWeb.PackageLive.Index do
         updated_after: updated_after
     }
 
-    new_search = nil_if_empty(SearchQuery.serialize(new_query))
+    {:noreply, push_query(socket, new_query)}
+  end
 
-    url_params =
-      %{sort: socket.assigns.sort, search: new_search}
-      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+  @impl true
+  def handle_event("remove_filter", %{"key" => key}, socket) do
+    field =
+      case key do
+        "build_tool" -> :build_tool
+        "depends" -> :depends
+        "updated_after" -> :updated_after
+        _ -> nil
+      end
 
-    {:noreply, push_patch(socket, to: ~p"/packages?#{url_params}")}
+    new_query =
+      if field,
+        do: Map.put(socket.assigns.search_query, field, nil),
+        else: socket.assigns.search_query
+
+    {:noreply, push_query(socket, new_query)}
   end
 
   @impl true
@@ -293,6 +386,16 @@ defmodule HexpmWeb.PackageLive.Index do
   @impl true
   def handle_event("clear_filters", _params, socket) do
     {:noreply, push_patch(socket, to: ~p"/packages?#{[sort: socket.assigns.sort]}")}
+  end
+
+  defp push_query(socket, %SearchQuery{} = query) do
+    new_search = nil_if_empty(SearchQuery.serialize(query))
+
+    url_params =
+      %{sort: socket.assigns.sort, search: new_search}
+      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+
+    push_patch(socket, to: ~p"/packages?#{url_params}")
   end
 
   defp nil_if_empty(nil), do: nil
