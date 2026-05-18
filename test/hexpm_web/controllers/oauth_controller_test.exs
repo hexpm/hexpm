@@ -71,6 +71,23 @@ defmodule HexpmWeb.OAuthControllerTest do
       assert redirected_to(conn) =~ "/login"
     end
 
+    test "return param to login is a local path, not the full URL", %{client: client} do
+      conn =
+        get(build_conn(), ~p"/oauth/authorize", %{
+          "client_id" => client.client_id,
+          "redirect_uri" => "https://example.com/callback",
+          "scope" => "api:read",
+          "state" => "test_state",
+          "code_challenge" => "challenge123",
+          "code_challenge_method" => "S256"
+        })
+
+      %URI{path: "/login", query: query} = URI.parse(redirected_to(conn))
+      return = URI.decode_query(query)["return"]
+      assert String.starts_with?(return, "/oauth/authorize?")
+      assert return =~ "client_id=#{client.client_id}"
+    end
+
     test "shows authorization page when authenticated", %{client: client} do
       user = insert(:user)
       conn = login_user(build_conn(), user)

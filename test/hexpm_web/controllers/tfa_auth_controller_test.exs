@@ -51,6 +51,33 @@ defmodule HexpmWeb.TFAAuthControllerTest do
       assert redirected_to(conn) == "/"
     end
 
+    test "with valid token and non-path return falls back to user profile", c do
+      token = Hexpm.Accounts.TFA.time_based_token(c.user.tfa.secret)
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> put_session("tfa_user_id", %{
+          "uid" => c.user.id,
+          "return" => "https%3A%2F%2Fhex.pm%2Foauth%2Fauthorize%3Fclient_id%3Dabc"
+        })
+        |> post("/tfa", %{"code" => token})
+
+      assert redirected_to(conn) == "/users/#{c.user.username}"
+    end
+
+    test "with valid token and protocol-relative return falls back to user profile", c do
+      token = Hexpm.Accounts.TFA.time_based_token(c.user.tfa.secret)
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> put_session("tfa_user_id", %{"uid" => c.user.id, "return" => "//evil.com"})
+        |> post("/tfa", %{"code" => token})
+
+      assert redirected_to(conn) == "/users/#{c.user.username}"
+    end
+
     test "redirects to login after too many failed attempts", c do
       PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
 

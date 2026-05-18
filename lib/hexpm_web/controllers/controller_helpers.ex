@@ -523,6 +523,16 @@ defmodule HexpmWeb.ControllerHelpers do
   def safe_string(_), do: nil
 
   @doc """
+  Returns the value if it is a local path (starts with `/` but not `//`),
+  otherwise returns nil. Use to validate user-supplied redirect targets before
+  passing to `redirect(to: ...)`.
+  """
+  def safe_return_path("/"), do: "/"
+  def safe_return_path("//" <> _), do: nil
+  def safe_return_path("/" <> _ = path), do: path
+  def safe_return_path(_), do: nil
+
+  @doc """
   Safely parses a string to integer. Returns nil for non-string or invalid input.
   """
   def safe_to_integer(value) when is_binary(value) do
