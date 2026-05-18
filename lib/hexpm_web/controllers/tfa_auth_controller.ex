@@ -26,7 +26,7 @@ defmodule HexpmWeb.TFAAuthController do
       conn
       |> delete_session("tfa_user_id")
       |> HexpmWeb.Plugs.Sudo.set_sudo_authenticated()
-      |> redirect(to: session_data["return"] || ~p"/users/#{user}")
+      |> redirect(to: safe_return_path(session_data["return"]) || ~p"/users/#{user}")
     else
       Logger.warning("Failed 2FA attempt",
         user_id: uid,
