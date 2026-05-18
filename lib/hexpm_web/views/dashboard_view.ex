@@ -95,6 +95,10 @@ defmodule HexpmWeb.DashboardView do
     "Add #{params["user"]["username"]} as a new owner of package #{params["package"]["name"]}"
   end
 
+  def humanize_audit_log_info(%AuditLog{action: "owner.update", params: params}) do
+    "Update #{params["user"]["username"]} role to #{params["level"]} on package #{params["package"]["name"]}"
+  end
+
   def humanize_audit_log_info(%AuditLog{action: "owner.transfer", params: params}) do
     "Transfer package #{params["package"]["name"]} to #{params["user"]["username"]}"
   end

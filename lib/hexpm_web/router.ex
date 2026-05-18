@@ -185,6 +185,10 @@ defmodule HexpmWeb.Router do
       live "/packages", PackageLive.Index, :index
     end
 
+    get "/packages/:name/owners", PackageOwnerController, :index
+    post "/packages/:name/owners", PackageOwnerController, :create
+    put "/packages/:name/owners/:username", PackageOwnerController, :update
+    delete "/packages/:name/owners/:username", PackageOwnerController, :delete
     get "/packages/:name", PackageController, :show
     get "/packages/:name/audit-logs", PackageController, :audit_logs
     get "/packages/:name/dependents", PackageController, :dependents
@@ -193,6 +197,10 @@ defmodule HexpmWeb.Router do
     get "/packages/:name/advisories", PackageController, :advisories
     get "/packages/:name/:version/dependencies", PackageController, :dependencies
     get "/packages/:name/:version", PackageController, :show
+    get "/packages/:repository/:name/owners", PackageOwnerController, :index
+    post "/packages/:repository/:name/owners", PackageOwnerController, :create
+    put "/packages/:repository/:name/owners/:username", PackageOwnerController, :update
+    delete "/packages/:repository/:name/owners/:username", PackageOwnerController, :delete
     get "/packages/:repository/:name/audit-logs", PackageController, :audit_logs
     get "/packages/:repository/:name/dependents", PackageController, :dependents
     get "/packages/:repository/:name/versions", PackageController, :versions

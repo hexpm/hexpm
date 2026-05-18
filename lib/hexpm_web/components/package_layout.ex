@@ -18,26 +18,32 @@ defmodule HexpmWeb.Components.PackageLayout do
 
   import HexpmWeb.Components.Badge
 
+  alias Hexpm.Repository.Owners
   alias Hexpm.Security.Advisories
   alias HexpmWeb.ViewHelpers
 
   @package_reports_enabled Application.compile_env!(:hexpm, [:features, :package_reports])
 
+  # All assigns below (except per-page ones) come from
+  # `HexpmWeb.PackageLayoutAssigns.for_package/3`. Use that helper in every
+  # controller action that renders this layout — missing assigns will fail
+  # at compile/render time rather than silently producing broken UI.
   attr :package, :map, required: true
-  attr :current_release, :map, default: nil
-  attr :all_releases, :list, default: []
-  attr :version_pinned?, :boolean, default: false
-  attr :dependants_count, :integer, default: 0
-  attr :versions_count, :integer, default: 0
   attr :repository_name, :string, required: true
-  attr :active_tab, :atom, required: true
-
-  # Sidebar data — same on all tabs
-  attr :docs_html_url, :string, default: nil
-  attr :downloads, :map, default: %{}
-  attr :daily_graph, :list, default: []
+  attr :all_releases, :list, required: true
+  attr :current_release, :map, required: true
+  attr :versions_count, :integer, required: true
+  attr :owners, :list, required: true
+  attr :downloads, :map, required: true
+  attr :daily_graph, :list, required: true
+  attr :docs_html_url, :string, required: true
+  attr :dependants_count, :integer, required: true
+  attr :current_user, :map, required: true
   attr :graph_release, :map, default: nil
-  attr :owners, :list, default: []
+
+  # Per-page assigns
+  attr :active_tab, :atom, required: true
+  attr :version_pinned?, :boolean, default: false
 
   # Dependants tab data — only loaded on the dependants page
   attr :dependants, :list, default: []
@@ -488,10 +494,21 @@ defmodule HexpmWeb.Components.PackageLayout do
 
                 <%!-- Owners Card --%>
                 <%= if @owners != [] do %>
+                  <% is_full_owner = Owners.full_owner?(@owners, @current_user) %>
                   <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-5">
-                    <h3 class="text-grey-700 dark:text-grey-100 text-lg font-semibold mb-4">
-                      Owners
-                    </h3>
+                    <div class="flex items-center justify-between mb-4">
+                      <h3 class="text-grey-700 dark:text-grey-100 text-lg font-semibold">
+                        Owners
+                      </h3>
+                      <%= if is_full_owner do %>
+                        <a
+                          href={ViewHelpers.path_for_owners(@package)}
+                          class="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
+                        >
+                          Manage
+                        </a>
+                      <% end %>
+                    </div>
                     <ul class="space-y-3">
                       <%= for owner <- @owners do %>
                         <li>
@@ -588,7 +605,24 @@ defmodule HexpmWeb.Components.PackageLayout do
           label: "Activity",
           path: audit_logs_path(assigns.package)
         }
+      ] ++ owners_tab(assigns)
+  end
+
+  defp owners_tab(assigns) do
+    is_full_owner = Owners.full_owner?(assigns.owners, assigns.current_user)
+
+    if is_full_owner do
+      [
+        %{
+          active: assigns.active_tab == :owners,
+          icon: "user-group",
+          label: "Owners",
+          path: ViewHelpers.path_for_owners(assigns.package)
+        }
       ]
+    else
+      []
+    end
   end
 
   defp dependency_tab(%{current_release: nil}), do: []

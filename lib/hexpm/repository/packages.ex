@@ -56,6 +56,8 @@ defmodule Hexpm.Repository.Packages do
     repository = package.repository
     role = PackageOwner.level_to_organization_role(level)
 
+    # Third branch: org admins on private repos implicitly have full access to
+    # all packages in their org, regardless of explicit package-level ownership.
     Repo.one!(Package.package_owner(package, user, level)) or
       Repo.one!(Package.organization_owner(package, user, level)) or
       (repository.id != 1 and Organizations.access?(repository.organization, user, role))

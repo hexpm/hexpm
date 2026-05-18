@@ -52,6 +52,22 @@ defmodule HexpmWeb.ViewHelpers do
     ~p"/packages/#{package.repository}/#{package}/versions"
   end
 
+  def path_for_owners(%Package{repository_id: 1} = package) do
+    ~p"/packages/#{package}/owners"
+  end
+
+  def path_for_owners(%Package{} = package) do
+    ~p"/packages/#{package.repository}/#{package}/owners"
+  end
+
+  def path_for_owner(%Package{repository_id: 1} = package, username) do
+    ~p"/packages/#{package}/owners/#{username}"
+  end
+
+  def path_for_owner(%Package{} = package, username) do
+    ~p"/packages/#{package.repository}/#{package}/owners/#{username}"
+  end
+
   def path_for_dependencies(%Package{repository_id: 1} = package) do
     ~p"/packages/#{package}/dependencies"
   end

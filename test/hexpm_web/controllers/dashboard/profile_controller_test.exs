@@ -24,6 +24,15 @@ defmodule HexpmWeb.Dashboard.ProfileControllerTest do
     assert response(conn, 200) =~ "Public profile"
   end
 
+  test "does not show pending section when there are no invites", c do
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> get("/dashboard/profile")
+
+    refute response(conn, 200) =~ "Pending package invitations"
+  end
+
   test "requires login" do
     conn = get(build_conn(), "/dashboard/profile")
     assert redirected_to(conn) == "/login?return=%2Fdashboard%2Fprofile"
