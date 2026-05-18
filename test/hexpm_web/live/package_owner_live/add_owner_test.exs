@@ -45,6 +45,8 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwnerTest do
     assert html =~ "Preview Target"
     refute html =~ "Enter a Hex username"
     refute html =~ "No user found"
+
+    assert html =~ ~s(href="/users/preview_target")
   end
 
   test "shows not-found state for unknown usernames", %{conn: conn, session: session} do

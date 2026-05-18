@@ -157,14 +157,19 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwner do
 
   defp render_preview(%{looked_up_user: %User{}} = assigns) do
     ~H"""
-    <div class="flex items-center gap-3 w-full">
+    <a
+      href={HexpmWeb.Router.user_path(@looked_up_user)}
+      target="_blank"
+      rel="noopener"
+      class="flex items-center gap-3 w-full group"
+    >
       <img
         src={ViewHelpers.gravatar_url(User.email(@looked_up_user, :gravatar), :small)}
         alt={@looked_up_user.username}
         class="w-12 h-12 rounded-full flex-shrink-0"
       />
       <div class="min-w-0 flex-1">
-        <p class="text-sm font-semibold text-grey-900 dark:text-white truncate">
+        <p class="text-sm font-semibold text-grey-900 dark:text-white truncate group-hover:text-purple-600 dark:group-hover:text-primary-300 transition-colors">
           {@looked_up_user.username}
         </p>
         <p
@@ -180,7 +185,7 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwner do
           {User.email(@looked_up_user, :public)}
         </p>
       </div>
-    </div>
+    </a>
     """
   end
 end
