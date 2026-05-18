@@ -230,7 +230,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
     versions
     |> Enum.with_index()
     |> Enum.flat_map(fn {version, ix} ->
-      [_deps, _inner_checksum, _outer_checksum, _tools, retirement, _advisory_ids] =
+      [_deps, _inner_checksum, _outer_checksum, _tools, retirement, _advisory_ids, _inserted_at] =
         release_map[{name, version}]
 
       if retirement, do: [ix], else: []
@@ -241,7 +241,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
     versions
     |> Enum.with_index()
     |> Enum.flat_map(fn {version, ix} ->
-      [_deps, _inner_checksum, _outer_checksum, _tools, _retirement, advisory_ids] =
+      [_deps, _inner_checksum, _outer_checksum, _tools, _retirement, advisory_ids, _inserted_at] =
         release_map[{name, version}]
 
       if advisory_ids != [], do: [ix], else: []
@@ -263,7 +263,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
 
     releases =
       Enum.map(versions, fn version ->
-        [deps, inner_checksum, outer_checksum, _tools, retirement, advisory_ids] =
+        [deps, inner_checksum, outer_checksum, _tools, retirement, advisory_ids, inserted_at] =
           release_map[{name, version}]
 
         deps =
@@ -275,12 +275,15 @@ defmodule Hexpm.Repository.RegistryBuilder do
             map
           end)
 
+        {published_seconds, published_nanos} = to_unix_nano(inserted_at)
+
         release = %{
           version: version,
           inner_checksum: inner_checksum,
           outer_checksum: outer_checksum,
           dependencies: deps,
-          advisory_indexes: Enum.map(advisory_ids, &advisory_index[&1])
+          advisory_indexes: Enum.map(advisory_ids, &advisory_index[&1]),
+          published_at: %{seconds: published_seconds, nanos: published_nanos}
         }
 
         if retirement do
@@ -461,7 +464,8 @@ defmodule Hexpm.Repository.RegistryBuilder do
             map.outer_checksum,
             map.build_tools,
             map.retirement,
-            map.advisory_ids
+            map.advisory_ids,
+            map.inserted_at
           ]
 
           [{key, value}]
@@ -525,6 +529,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
         outer_checksum: r.outer_checksum,
         build_tools: fragment("?->'build_tools'", r.meta),
         retirement: r.retirement,
+        inserted_at: r.inserted_at,
         advisory_ids: fragment("array_remove(array_agg(?), NULL)", a.id)
       }
     )
