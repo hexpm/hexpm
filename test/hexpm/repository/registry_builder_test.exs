@@ -202,23 +202,8 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       assert [advisory] = package1.advisories
       assert advisory.aliases == ["CVE-2026-0001"]
 
-      published_unix_ns = DateTime.to_unix(published_at, :nanosecond)
-      expected_published_seconds = div(published_unix_ns, 1_000_000_000)
-      expected_published_nanos = rem(published_unix_ns, 1_000_000_000)
-
-      assert advisory.published_at == %{
-               seconds: expected_published_seconds,
-               nanos: expected_published_nanos
-             }
-
-      modified_unix_ns = DateTime.to_unix(modified_at, :nanosecond)
-      expected_modified_seconds = div(modified_unix_ns, 1_000_000_000)
-      expected_modified_nanos = rem(modified_unix_ns, 1_000_000_000)
-
-      assert advisory.modified_at == %{
-               seconds: expected_modified_seconds,
-               nanos: expected_modified_nanos
-             }
+      assert advisory.published_at == %{seconds: DateTime.to_unix(published_at), nanos: 0}
+      assert advisory.modified_at == %{seconds: DateTime.to_unix(modified_at), nanos: 0}
 
       assert advisory.references == [%{type: "WEB", url: "https://example.com/a"}]
     end
