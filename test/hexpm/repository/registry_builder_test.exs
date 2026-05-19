@@ -162,6 +162,67 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       assert Enum.all?(package2.releases, &(&1.advisory_indexes == []))
     end
 
+    test "build_advisory emits aliases, published_at, modified_at, references", %{
+      packages: [p1, _, _],
+      releases: [r1, _, _, _]
+    } do
+      published_at = ~U[2026-01-10 12:00:00Z]
+      modified_at = ~U[2026-02-15 08:30:00Z]
+
+      assert {:ok, _} =
+               Advisories.upsert(
+                 [
+                   %{
+                     id: "GHSA-fields-test-abcd",
+                     summary: "Test fields advisory",
+                     aliases: ["CVE-2026-0001"],
+                     published_at: published_at,
+                     modified_at: modified_at,
+                     withdrawn_at: nil,
+                     cvss_vector: nil,
+                     cvss_score: nil,
+                     cvss_rating: nil,
+                     references: [%{type: "WEB", url: "https://example.com/a"}],
+                     affected: [
+                       %{
+                         package: p1.name,
+                         requirements: [],
+                         versions: [to_string(r1.version)]
+                       }
+                     ]
+                   }
+                 ],
+                 %{p1.name => p1.id}
+               )
+
+      RegistryBuilder.full(Repository.hexpm())
+
+      package1 = v2_map("packages/#{p1.name}", ["hexpm", p1.name])
+
+      assert [advisory] = package1.advisories
+      assert advisory.aliases == ["CVE-2026-0001"]
+
+      published_unix_ns = DateTime.to_unix(published_at, :nanosecond)
+      expected_published_seconds = div(published_unix_ns, 1_000_000_000)
+      expected_published_nanos = rem(published_unix_ns, 1_000_000_000)
+
+      assert advisory.published_at == %{
+               seconds: expected_published_seconds,
+               nanos: expected_published_nanos
+             }
+
+      modified_unix_ns = DateTime.to_unix(modified_at, :nanosecond)
+      expected_modified_seconds = div(modified_unix_ns, 1_000_000_000)
+      expected_modified_nanos = rem(modified_unix_ns, 1_000_000_000)
+
+      assert advisory.modified_at == %{
+               seconds: expected_modified_seconds,
+               nanos: expected_modified_nanos
+             }
+
+      assert advisory.references == [%{type: "WEB", url: "https://example.com/a"}]
+    end
+
     test "withdrawn advisories are not included in registry", %{
       packages: [p1, _, _],
       releases: [r1, _, _, _]
