@@ -10,7 +10,7 @@ jobs:
     name: Format
     runs-on: ubuntu-24.04
     env:
-      otp: 27.3
+      otp: 28.5
       elixir: 1.19.5
 
     services:
@@ -59,7 +59,7 @@ jobs:
     name: Test Hexpm
     runs-on: ubuntu-24.04
     env:
-      otp: 27.3
+      otp: 28.5
       elixir: 1.19.5
 
     services:
@@ -119,12 +119,25 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        hex-version: [main, v2.3, v2.2, v2.1, v2.0]
+        include:
+          - hex-version: main
+            otp: 28.5
+            elixir: 1.19.5
+          - hex-version: v2.3
+            otp: 28.5
+            elixir: 1.19.5
+          - hex-version: v2.2
+            otp: 27.3
+            elixir: 1.19.5
+          - hex-version: v2.1
+            otp: 27.3
+            elixir: 1.19.5
+          - hex-version: v2.0
+            otp: 27.3
+            elixir: 1.19.5
 
     env:
       HEXPM_PATH: ..
-      otp: 27.3
-      elixir: 1.19.5
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -134,8 +147,8 @@ jobs:
       - name: Install OTP and Elixir
         uses: erlef/setup-beam@fc68ffb90438ef2936bbb3251622353b3dcb2f93 # v1.24.0
         with:
-          otp-version: ${{ env.otp }}
-          elixir-version: ${{ env.elixir }}
+          otp-version: ${{ matrix.otp }}
+          elixir-version: ${{ matrix.elixir }}
 
       - name: Cache dependencies
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
@@ -143,7 +156,7 @@ jobs:
           path: |
             deps
             _build
-          key: ${{ runner.os }}-elixir-${{ env.elixir }}-otp-${{ env.otp }}-${{ hashFiles('**/mix.lock') }}
+          key: ${{ runner.os }}-elixir-${{ matrix.elixir }}-otp-${{ matrix.otp }}-${{ hashFiles('**/mix.lock') }}
 
       - name: Install hexpm dependencies
         run: |
@@ -160,7 +173,7 @@ jobs:
           path: |
             hex/deps
             hex/_build
-          key: ${{ runner.os }}-elixir-${{ env.elixir }}-otp-${{ env.otp }}-hex-${{ matrix.hex-version }}-${{ hashFiles('hex/mix.lock') }}
+          key: ${{ runner.os }}-elixir-${{ matrix.elixir }}-otp-${{ matrix.otp }}-hex-${{ matrix.hex-version }}-${{ hashFiles('hex/mix.lock') }}
 
       - name: Install dependencies
         run: |
