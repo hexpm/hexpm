@@ -162,13 +162,10 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       assert Enum.all?(package2.releases, &(&1.advisory_indexes == []))
     end
 
-    test "build_advisory emits aliases, published_at, modified_at, references", %{
+    test "build_advisory emits aliases", %{
       packages: [p1, _, _],
       releases: [r1, _, _, _]
     } do
-      published_at = ~U[2026-01-10 12:00:00Z]
-      modified_at = ~U[2026-02-15 08:30:00Z]
-
       assert {:ok, _} =
                Advisories.upsert(
                  [
@@ -176,13 +173,13 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
                      id: "GHSA-fields-test-abcd",
                      summary: "Test fields advisory",
                      aliases: ["CVE-2026-0001"],
-                     published_at: published_at,
-                     modified_at: modified_at,
+                     published_at: ~U[2026-01-10 12:00:00Z],
+                     modified_at: ~U[2026-02-15 08:30:00Z],
                      withdrawn_at: nil,
                      cvss_vector: nil,
                      cvss_score: nil,
                      cvss_rating: nil,
-                     references: [%{type: "WEB", url: "https://example.com/a"}],
+                     references: [],
                      affected: [
                        %{
                          package: p1.name,
@@ -201,11 +198,6 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
 
       assert [advisory] = package1.advisories
       assert advisory.aliases == ["CVE-2026-0001"]
-
-      assert advisory.published_at == %{seconds: DateTime.to_unix(published_at), nanos: 0}
-      assert advisory.modified_at == %{seconds: DateTime.to_unix(modified_at), nanos: 0}
-
-      assert advisory.references == [%{type: "WEB", url: "https://example.com/a"}]
     end
 
     test "withdrawn advisories are not included in registry", %{

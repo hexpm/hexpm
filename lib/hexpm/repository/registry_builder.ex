@@ -314,38 +314,23 @@ defmodule Hexpm.Repository.RegistryBuilder do
          "summary" => summary,
          "cvss_rating" => cvss_rating,
          "cvss_score" => cvss_score,
-         "aliases" => aliases,
-         "published_at" => published_at,
-         "modified_at" => modified_at,
-         "references" => references
+         "aliases" => aliases
        }) do
     map = %{
       id: id,
       summary: summary,
       html_url: "https://osv.dev/vulnerability/#{URI.encode(id)}",
       api_url: "https://api.osv.dev/v1/vulns/#{URI.encode(id)}",
-      aliases: aliases,
-      references:
-        Enum.map(references, fn %{"type" => type, "url" => url} ->
-          %{type: type, url: url}
-        end)
+      aliases: aliases
     }
 
-    map = put_optional(map, :cvss_score, cvss_score)
-    map = put_optional(map, :severity, cvss_rating && advisory_severity(cvss_rating))
-    map = put_optional(map, :published_at, encode_timestamp(published_at))
-    put_optional(map, :modified_at, encode_timestamp(modified_at))
-  end
+    map = if cvss_score, do: Map.put(map, :cvss_score, cvss_score), else: map
 
-  defp put_optional(map, _key, nil), do: map
-  defp put_optional(map, key, value), do: Map.put(map, key, value)
-
-  defp encode_timestamp(nil), do: nil
-
-  defp encode_timestamp(iso8601) when is_binary(iso8601) do
-    {:ok, ndt} = NaiveDateTime.from_iso8601(iso8601)
-    dt = DateTime.from_naive!(ndt, "Etc/UTC")
-    %{seconds: DateTime.to_unix(dt), nanos: 0}
+    if cvss_rating do
+      Map.put(map, :severity, advisory_severity(cvss_rating))
+    else
+      map
+    end
   end
 
   defp advisory_severity("none"), do: :SEVERITY_NONE
@@ -501,40 +486,21 @@ defmodule Hexpm.Repository.RegistryBuilder do
   end
 
   defp packages(repository, package) do
-    refs_subquery =
-      from r in "security_advisory_references",
-        select: %{
-          advisory_id: r.advisory_id,
-          refs:
-            fragment(
-              "json_agg(json_build_object('type', ?, 'url', ?) ORDER BY ?)",
-              r.type,
-              r.url,
-              r.id
-            )
-        },
-        group_by: r.advisory_id
-
     query =
       from(p in Package,
         left_join: a in assoc(p, :security_advisories),
         on: is_nil(a.withdrawn_at),
-        left_join: ar in subquery(refs_subquery),
-        on: ar.advisory_id == a.id,
         group_by: p.id,
         select:
           {p.id,
            {p.name, p.updated_at,
             fragment(
-              "coalesce(json_agg(json_build_object('id', ?, 'summary', ?, 'cvss_rating', ?, 'cvss_score', ?, 'aliases', ?, 'published_at', ?, 'modified_at', ?, 'references', coalesce(?, '[]'::json)) ORDER BY ?) FILTER (WHERE ? IS NOT NULL), '[]')",
+              "coalesce(json_agg(json_build_object('id', ?, 'summary', ?, 'cvss_rating', ?, 'cvss_score', ?, 'aliases', ?) ORDER BY ?) FILTER (WHERE ? IS NOT NULL), '[]')",
               a.id,
               a.summary,
               a.cvss_rating,
               a.cvss_score,
               a.aliases,
-              a.published_at,
-              a.modified_at,
-              ar.refs,
               a.id,
               a.id
             )}}
