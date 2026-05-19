@@ -76,6 +76,40 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     refute email.public
   end
 
+  test "add email sends security notification to existing primary", c do
+    new_email_addr = Fake.sequence(:email)
+
+    build_conn()
+    |> test_login(c.user)
+    |> post("/dashboard/email", %{email: %{email: new_email_addr}})
+
+    user = Hexpm.Repo.preload(c.user, :emails, force: true)
+    new_email = Enum.find(user.emails, &(&1.email == new_email_addr))
+    assert new_email, "expected new email #{new_email_addr} to exist after POST"
+
+    assert_delivered_email(Hexpm.Emails.email_added(user, new_email))
+  end
+
+  test "change primary email sends security notification to old address", c do
+    new_email_addr = Fake.sequence(:email)
+    user = add_email(c.user, new_email_addr)
+
+    # Verify the new email so it can become primary
+    email_record =
+      Enum.find(Hexpm.Repo.preload(user, :emails).emails, &(&1.email == new_email_addr))
+
+    Hexpm.Accounts.Email.verify(email_record) |> Hexpm.Repo.update!()
+
+    user = Hexpm.Repo.preload(user, :emails, force: true)
+    old_primary = Hexpm.Accounts.User.email(user, :primary)
+
+    build_conn()
+    |> test_login(user)
+    |> post("/dashboard/email/primary", %{email: new_email_addr})
+
+    assert_delivered_email(Hexpm.Emails.primary_email_changed(user, old_primary, new_email_addr))
+  end
+
   test "cannot add existing email", c do
     email = hd(c.user.emails).email
 

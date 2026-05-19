@@ -1,5 +1,6 @@
 defmodule HexpmWeb.API.KeyControllerTest do
   use HexpmWeb.ConnCase, async: true
+  use Bamboo.Test
 
   alias Hexpm.Repo
   alias Hexpm.Accounts.{AuditLog, Key, KeyPermission}
@@ -135,7 +136,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
       key = Repo.one!(Key.get(c.eric, "macbook"))
       assert [%KeyPermission{domain: "api"}] = key.permissions
 
-      log = Repo.one!(AuditLog)
+      log = Repo.one!(from(a in AuditLog, where: a.action == "key.generate"))
       assert log.user_id == c.eric.id
       assert log.action == "key.generate"
       assert %{"name" => "macbook"} = log.params
@@ -287,7 +288,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
       assert Repo.one(Key.get_revoked(c.eric, "key_b"))
 
       assert [log_a, log_b] =
-               AuditLog
+               from(a in AuditLog, where: a.action == "key.remove")
                |> Repo.all()
                |> Enum.sort_by(fn %{params: %{"name" => name}} -> name end)
 
@@ -308,6 +309,18 @@ defmodule HexpmWeb.API.KeyControllerTest do
       assert conn.status == 401
       body = Jason.decode!(conn.resp_body)
       assert %{"message" => "API key revoked", "status" => 401} == body
+    end
+
+    test "revoking all keys sends a single consolidated notification", c do
+      key_a = Key.build(c.eric, %{name: "notif-key-a"}) |> Repo.insert!()
+      _key_b = Key.build(c.eric, %{name: "notif-key-b"}) |> Repo.insert!()
+
+      build_conn()
+      |> put_req_header("authorization", key_a.user_secret)
+      |> delete("/api/keys")
+
+      user = Hexpm.Repo.preload(c.eric, :emails)
+      assert_delivered_email(Hexpm.Emails.api_keys_all_revoked(user))
     end
   end
 
@@ -361,7 +374,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
 
       assert Repo.one(Key.get_revoked(c.eric, "computer"))
 
-      log = Repo.one!(AuditLog)
+      log = Repo.one!(from(a in AuditLog, where: a.action == "key.remove"))
       assert log.user_id == c.eric.id
       assert log.action == "key.remove"
       assert %{"name" => "computer"} = log.params
@@ -387,7 +400,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
 
       assert Repo.one(Key.get_revoked(c.eric, "current"))
 
-      log = Repo.one!(AuditLog)
+      log = Repo.one!(from(a in AuditLog, where: a.action == "key.remove"))
       assert log.user_id == c.eric.id
       assert log.action == "key.remove"
       assert %{"name" => "current"} = log.params

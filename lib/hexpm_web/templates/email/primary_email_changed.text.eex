@@ -1,0 +1,7 @@
+Primary Email Address Changed
+
+<%= Common.greeting(@username) %>
+
+The primary email address on your Hex.pm account has changed from <%= @old_addr %> to <%= @new_addr %>.
+
+<%= Common.unauthorized_change_notice(:text) %>

@@ -1,5 +1,6 @@
 defmodule HexpmWeb.Dashboard.KeyControllerTest do
   use HexpmWeb.ConnCase, async: true
+  use Bamboo.Test
 
   setup do
     %{
@@ -43,6 +44,17 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
 
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
                "The key computer was successfully generated"
+    end
+
+    test "generating a key sends security notification", c do
+      build_conn()
+      |> test_login(c.user)
+      |> post("/dashboard/keys", %{key: %{name: "notify-test", expires_in: "30"}})
+
+      user = Hexpm.Repo.preload(c.user, :emails)
+      key = Hexpm.Accounts.Keys.get(user, "notify-test")
+
+      assert_delivered_email(Hexpm.Emails.api_key_created(user, key))
     end
 
     test "shows validation errors when name is missing", c do
@@ -189,6 +201,20 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
         |> delete("/dashboard/keys", %{name: "computer"})
 
       assert response(conn, 400) =~ "The key computer was not found"
+    end
+
+    test "revoking a key sends security notification", c do
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(c.user, %{"name" => "to-revoke", "permissions" => []},
+          audit: audit_data(c.user)
+        )
+
+      build_conn()
+      |> test_login(c.user)
+      |> delete("/dashboard/keys", %{"name" => key.name})
+
+      user = Hexpm.Repo.preload(c.user, :emails)
+      assert_delivered_email(Hexpm.Emails.api_key_revoked(user, key))
     end
   end
 end

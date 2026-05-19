@@ -1,0 +1,7 @@
+New Email Address Added
+
+<%= Common.greeting(@username) %>
+
+The email address <%= @new_email %> has been added to your Hex.pm account.
+
+<%= Common.unauthorized_change_notice(:text) %>
