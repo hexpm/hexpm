@@ -60,7 +60,7 @@ jobs:
           key: ${{ runner.os }}-elixir-${{ env.elixir }}-otp-${{ env.otp }}-${{ hashFiles('**/mix.lock') }}
 
       - name: Install dependencies
-        run: mix do deps.get, deps.compile
+        run: mix do deps.get + deps.compile
 
       - name: Compile
         run: MIX_ENV=test mix compile
