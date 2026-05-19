@@ -10,7 +10,7 @@ jobs:
     name: Format
     runs-on: ubuntu-24.04
     env:
-      otp: 27.3
+      otp: 28.5
       elixir: 1.19.5
 
     services:
@@ -59,7 +59,7 @@ jobs:
     name: Test Hexpm
     runs-on: ubuntu-24.04
     env:
-      otp: 27.3
+      otp: 28.5
       elixir: 1.19.5
 
     services:
@@ -123,7 +123,7 @@ jobs:
 
     env:
       HEXPM_PATH: ..
-      otp: 27.3
+      otp: 28.5
       elixir: 1.19.5
 
     steps:
