@@ -324,9 +324,9 @@ defmodule Hexpm.Repository.RegistryBuilder do
       summary: summary,
       html_url: "https://osv.dev/vulnerability/#{URI.encode(id)}",
       api_url: "https://api.osv.dev/v1/vulns/#{URI.encode(id)}",
-      aliases: aliases || [],
+      aliases: aliases,
       references:
-        Enum.map(references || [], fn %{"type" => type, "url" => url} ->
+        Enum.map(references, fn %{"type" => type, "url" => url} ->
           %{type: type, url: url}
         end)
     }
