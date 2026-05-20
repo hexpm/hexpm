@@ -231,6 +231,22 @@
                   Public keys
                 </a>
               </li>
+              <li>
+                <a
+                  href={~p"/docs/leaked-keys"}
+                  class={[
+                    "block px-3 py-1.5 text-sm rounded transition-colors",
+                    if(@view_name == :leaked_keys,
+                      do:
+                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
+                      else:
+                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-800"
+                    )
+                  ]}
+                >
+                  Leaked API keys
+                </a>
+              </li>
             </ul>
           </div>
         </div>
