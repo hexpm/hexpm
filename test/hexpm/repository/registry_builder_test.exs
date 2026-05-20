@@ -162,6 +162,44 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       assert Enum.all?(package2.releases, &(&1.advisory_indexes == []))
     end
 
+    test "build_advisory emits aliases", %{
+      packages: [p1, _, _],
+      releases: [r1, _, _, _]
+    } do
+      assert {:ok, _} =
+               Advisories.upsert(
+                 [
+                   %{
+                     id: "GHSA-fields-test-abcd",
+                     summary: "Test fields advisory",
+                     aliases: ["CVE-2026-0001"],
+                     published_at: ~U[2026-01-10 12:00:00Z],
+                     modified_at: ~U[2026-02-15 08:30:00Z],
+                     withdrawn_at: nil,
+                     cvss_vector: nil,
+                     cvss_score: nil,
+                     cvss_rating: nil,
+                     references: [],
+                     affected: [
+                       %{
+                         package: p1.name,
+                         requirements: [],
+                         versions: [to_string(r1.version)]
+                       }
+                     ]
+                   }
+                 ],
+                 %{p1.name => p1.id}
+               )
+
+      RegistryBuilder.full(Repository.hexpm())
+
+      package1 = v2_map("packages/#{p1.name}", ["hexpm", p1.name])
+
+      assert [advisory] = package1.advisories
+      assert advisory.aliases == ["CVE-2026-0001"]
+    end
+
     test "withdrawn advisories are not included in registry", %{
       packages: [p1, _, _],
       releases: [r1, _, _, _]

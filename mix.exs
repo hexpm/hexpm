@@ -51,7 +51,7 @@ defmodule Hexpm.MixProject do
       {:floki, "~> 0.37"},
       {:goth, "~> 1.4"},
       {:hackney, "~> 1.7"},
-      {:hex_core, "~> 0.16.1", hex_core_opts()},
+      {:hex_core, "~> 0.17", hex_core_opts()},
       {:jason, "~> 1.0"},
       {:joken, "~> 2.6"},
       {:lasso, "~> 0.1.4", only: :test},
