@@ -378,6 +378,9 @@ defmodule Hexpm.Accounts.Users do
         Emails.verification(user, email)
         |> Mailer.deliver_later!()
 
+        Emails.email_added(user, email)
+        |> Mailer.deliver_later!()
+
         {:ok, user}
 
       {:error, :email, changeset, _} ->
@@ -414,15 +417,27 @@ defmodule Hexpm.Accounts.Users do
     organization_error(user, "cannot set email of organizations")
   end
 
-  def primary_email(user, params, opts) do
+  def primary_email(user, params, [audit: _audit_data] = opts) do
+    old_primary = User.email(user, :primary)
+
     multi =
       Multi.new()
       |> email_flag_multi(user, params, :primary, opts)
       |> Multi.delete_all(:reset, assoc(user, :password_resets))
 
     case Repo.transaction(multi) do
-      {:ok, _} -> :ok
-      {:error, :primary_email, reason, _} -> {:error, reason}
+      {:ok, _} ->
+        new_primary = params["email"]
+
+        if is_binary(new_primary) and old_primary != new_primary do
+          Emails.primary_email_changed(user, old_primary, new_primary)
+          |> Mailer.deliver_later!()
+        end
+
+        :ok
+
+      {:error, :primary_email, reason, _} ->
+        {:error, reason}
     end
   end
 

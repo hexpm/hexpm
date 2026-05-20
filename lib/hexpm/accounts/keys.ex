@@ -3,6 +3,8 @@ defmodule Hexpm.Accounts.Keys do
 
   require Logger
 
+  alias Hexpm.Accounts.Organization
+
   def all(user_or_organization) do
     Key.all(user_or_organization)
     |> Repo.all()
@@ -24,6 +26,16 @@ defmodule Hexpm.Accounts.Keys do
     |> Multi.insert(:key, Key.build(user_or_organization, params))
     |> audit(audit_data, "key.generate", fn %{key: key} -> key end)
     |> Repo.transaction()
+    |> tap(fn
+      {:ok, %{key: key}} ->
+        user_or_organization
+        |> preload_for_email()
+        |> Emails.api_key_created(key)
+        |> Mailer.deliver_later!()
+
+      _ ->
+        :ok
+    end)
     |> maybe_retry_for_unique_name(fn ->
       create(user_or_organization, params, audit: audit_data)
     end)
@@ -38,7 +50,16 @@ defmodule Hexpm.Accounts.Keys do
 
   def revoke(user_or_organization, name, audit: audit_data) do
     if key = get(user_or_organization, name) do
-      revoke(key, audit: audit_data)
+      result = revoke(key, audit: audit_data)
+
+      if match?({:ok, _}, result) do
+        user_or_organization
+        |> preload_for_email()
+        |> Emails.api_key_revoked(key)
+        |> Mailer.deliver_later!()
+      end
+
+      result
     else
       {:error, :not_found}
     end
@@ -80,6 +101,16 @@ defmodule Hexpm.Accounts.Keys do
     |> Multi.update_all(:keys, Key.revoke_all(user_or_organization), [])
     |> audit_many(audit_data, "key.remove", all(user_or_organization))
     |> Repo.transaction()
+    |> tap(fn
+      {:ok, %{keys: {count, _}}} when count > 0 ->
+        user_or_organization
+        |> preload_for_email()
+        |> Emails.api_keys_all_revoked()
+        |> Mailer.deliver_later!()
+
+      _ ->
+        :ok
+    end)
   end
 
   # Throttle last_use updates to at most once per 5 minutes per key,
@@ -97,6 +128,11 @@ defmodule Hexpm.Accounts.Keys do
   def update_last_use(%Key{public: false} = key, _usage_info) do
     key
   end
+
+  defp preload_for_email(%Organization{} = org),
+    do: Repo.preload(org, organization_users: [user: :emails])
+
+  defp preload_for_email(user), do: user
 
   defp should_update_last_use?(%Key{last_use: %{used_at: used_at}})
        when not is_nil(used_at) do

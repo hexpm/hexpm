@@ -313,13 +313,15 @@ defmodule Hexpm.Repository.RegistryBuilder do
          "id" => id,
          "summary" => summary,
          "cvss_rating" => cvss_rating,
-         "cvss_score" => cvss_score
+         "cvss_score" => cvss_score,
+         "aliases" => aliases
        }) do
     map = %{
       id: id,
       summary: summary,
       html_url: "https://osv.dev/vulnerability/#{URI.encode(id)}",
-      api_url: "https://api.osv.dev/v1/vulns/#{URI.encode(id)}"
+      api_url: "https://api.osv.dev/v1/vulns/#{URI.encode(id)}",
+      aliases: aliases
     }
 
     map = if cvss_score, do: Map.put(map, :cvss_score, cvss_score), else: map
@@ -493,11 +495,12 @@ defmodule Hexpm.Repository.RegistryBuilder do
           {p.id,
            {p.name, p.updated_at,
             fragment(
-              "coalesce(json_agg(json_build_object('id', ?, 'summary', ?, 'cvss_rating', ?, 'cvss_score', ?) ORDER BY ?) FILTER (WHERE ? IS NOT NULL), '[]')",
+              "coalesce(json_agg(json_build_object('id', ?, 'summary', ?, 'cvss_rating', ?, 'cvss_score', ?, 'aliases', ?) ORDER BY ?) FILTER (WHERE ? IS NOT NULL), '[]')",
               a.id,
               a.summary,
               a.cvss_rating,
               a.cvss_score,
+              a.aliases,
               a.id,
               a.id
             )}}
