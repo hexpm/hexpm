@@ -333,6 +333,91 @@ defmodule HexpmWeb.API.GitHubSecretScanningControllerTest do
       assert [] = Bamboo.SentEmail.all()
     end
 
+    test "refreshes public keys when an unknown key_identifier is received", %{
+      conn: conn,
+      user: user,
+      pem_pub: pem_pub,
+      ec_priv: ec_priv
+    } do
+      {:ok, %{key: key}} = Keys.create(user, %{"name" => "rotated"}, audit: audit_data(user))
+      rotated_key_id = "rotated-key-id-xyz"
+
+      Mox.expect(Hexpm.HTTP.Mock, :get, 2, fn _url, _headers ->
+        # First call returns stale keys without the rotated identifier.
+        # After cache invalidation, the second call returns the new identifier.
+        if Process.get(:got_first_call) do
+          {:ok, 200, [],
+           %{
+             "public_keys" => [
+               %{"key_identifier" => rotated_key_id, "key" => pem_pub, "is_current" => true}
+             ]
+           }}
+        else
+          Process.put(:got_first_call, true)
+
+          {:ok, 200, [],
+           %{
+             "public_keys" => [
+               %{"key_identifier" => "stale-key-id", "key" => pem_pub, "is_current" => false}
+             ]
+           }}
+        end
+      end)
+
+      conn =
+        post_alert(
+          conn,
+          [
+            %{
+              "token" => key.user_secret,
+              "type" => "hexpm_api_token",
+              "url" => "",
+              "source" => "content"
+            }
+          ],
+          ec_priv,
+          rotated_key_id
+        )
+
+      assert [%{"label" => "true_positive"}] = json_response(conn, 200)
+      assert Repo.get!(Key, key.id).revoke_at != nil
+    end
+
+    test "does not retry the key fetch on a tampered signature with a known key_id", %{
+      conn: conn,
+      user: user,
+      ec_priv: ec_priv,
+      stub_github_keys: stub
+    } do
+      # Only one stub allowed; a second HTTP call would fail Mox verification.
+      stub.()
+
+      {:ok, %{key: key}} = Keys.create(user, %{"name" => "tampered"}, audit: audit_data(user))
+
+      raw =
+        Jason.encode!([
+          %{
+            "token" => key.user_secret,
+            "type" => "hexpm_api_token",
+            "url" => "",
+            "source" => "content"
+          }
+        ])
+
+      # Sign a different payload so verify fails for the known key.
+      decoy_sig = SecretScanning.sign_payload("not the body", ec_priv)
+
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> put_req_header("github-public-key-identifier", @key_id)
+        |> put_req_header("github-public-key-signature", decoy_sig)
+        |> dispatch(HexpmWeb.Endpoint, :post, "/api/github/secret-scanning", raw)
+
+      assert conn.status == 403
+      assert Repo.get!(Key, key.id).revoke_at == nil
+    end
+
     test "does not send email when an already-revoked key is reported", %{
       conn: conn,
       user: user,
