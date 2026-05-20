@@ -109,6 +109,8 @@ defmodule HexpmWeb.API.GitHubSecretScanningControllerTest do
         ec_priv
       )
 
+      assert_email_delivered_with(subject: ~r/A new API key was created/i)
+
       assert_email_delivered_with(
         subject: ~r/ci-key.*revoked/i,
         html_body: ~r|https://github\.com/example/repo|,
