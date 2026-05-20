@@ -96,6 +96,10 @@ defmodule HexpmWeb.API.GitHubSecretScanningControllerTest do
       stub.()
       {:ok, %{key: key}} = Keys.create(user, %{"name" => "ci-key"}, audit: audit_data(user))
 
+      # Keys.create now sends an api_key_created security notification;
+      # consume it so it doesn't shadow the key_leaked assertion below.
+      assert_email_delivered_with(subject: ~r/new API key.*created/i)
+
       post_alert(
         conn,
         [
