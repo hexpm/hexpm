@@ -324,8 +324,9 @@ defmodule HexpmWeb.Router do
     get "/feeds/blog.xml", FeedsController, :blog
   end
 
-  # GitHub secret scanning alert endpoint — no auth, IP-throttled via Attack.
-  # Signature verification is handled in the controller.
+  # GitHub secret scanning alert endpoint — no auth, exempt from Plugs.Attack
+  # throttling per the partner program agreement. Signature verification is
+  # handled in the controller.
   scope "/api/github", HexpmWeb.API, as: :api_github do
     pipe_through [:accepts_json]
 

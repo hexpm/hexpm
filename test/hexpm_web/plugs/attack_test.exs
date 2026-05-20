@@ -118,6 +118,14 @@ defmodule HexpmWeb.Plugs.AttackTest do
       assert get_resp_header(conn, "x-ratelimit-remaining") == []
     end
 
+    test "doesn't limit requests to the GitHub secret scanning endpoint" do
+      Enum.each(1..150, fn _ ->
+        conn = request_path("/api/github/secret-scanning", {8, 8, 8, 8})
+        assert conn.status == 200
+        assert get_resp_header(conn, "x-ratelimit-remaining") == []
+      end)
+    end
+
     test "doesn't limit requests from service accounts", %{user: user} do
       Hexpm.BlockAddress.reload()
       user = Hexpm.Repo.update!(Ecto.Changeset.change(user, service: true))
@@ -262,7 +270,11 @@ defmodule HexpmWeb.Plugs.AttackTest do
   end
 
   defp request_ip(remote_ip) do
-    conn(:get, "/api/")
+    request_path("/api/", remote_ip)
+  end
+
+  defp request_path(path, remote_ip) do
+    conn(:get, path)
     |> Map.put(:remote_ip, remote_ip)
     |> assign(:current_user, nil)
     |> assign(:current_organization, nil)
