@@ -1,0 +1,7 @@
+All API Keys Revoked
+
+<%= Common.greeting(@username) %>
+
+All API keys on the <%= @username %> Hex.pm account have been revoked.
+
+<%= Common.unauthorized_change_notice(:text) %>

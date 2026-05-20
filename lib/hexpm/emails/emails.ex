@@ -2,7 +2,7 @@ defmodule Hexpm.Emails do
   use Bamboo.Phoenix, view: HexpmWeb.EmailView
   import Bamboo.Email
   import Bamboo.SendGridHelper, only: [with_click_tracking: 2]
-  alias Hexpm.Accounts.{Email, User}
+  alias Hexpm.Accounts.{Email, Organization, User}
 
   def owner_added(package, owners, owner) do
     email()
@@ -82,6 +82,51 @@ defmodule Hexpm.Emails do
     |> render(:tfa_recovery_rotated)
   end
 
+  def email_added(user, new_email) do
+    email()
+    |> email_to(user)
+    |> subject("Hex.pm - A new email address was added to your account")
+    |> assign(:username, user.username)
+    |> assign(:new_email, new_email.email)
+    |> render(:email_added)
+  end
+
+  def primary_email_changed(user, old_addr, new_addr) do
+    email()
+    |> email_to(old_addr)
+    |> subject("Hex.pm - Your primary email address has changed")
+    |> assign(:username, user.username)
+    |> assign(:old_addr, old_addr)
+    |> assign(:new_addr, new_addr)
+    |> render(:primary_email_changed)
+  end
+
+  def api_key_created(user_or_org, key) do
+    email()
+    |> email_to(user_or_org)
+    |> subject("Hex.pm - A new API key was created on your account")
+    |> assign(:username, display_name(user_or_org))
+    |> assign(:key_name, key.name)
+    |> render(:api_key_created)
+  end
+
+  def api_key_revoked(user_or_org, key) do
+    email()
+    |> email_to(user_or_org)
+    |> subject("Hex.pm - An API key was revoked on your account")
+    |> assign(:username, display_name(user_or_org))
+    |> assign(:key_name, key.name)
+    |> render(:api_key_revoked)
+  end
+
+  def api_keys_all_revoked(user_or_org) do
+    email()
+    |> email_to(user_or_org)
+    |> subject("Hex.pm - All API keys have been revoked on your account")
+    |> assign(:username, display_name(user_or_org))
+    |> render(:api_keys_all_revoked)
+  end
+
   def typosquat_candidates(candidates, threshold) do
     email()
     |> email_to(Application.get_env(:hexpm, :support_email))
@@ -146,12 +191,14 @@ defmodule Hexpm.Emails do
       to
       |> List.wrap()
       |> Enum.flat_map(&expand_organization/1)
+      |> Enum.reject(&is_nil(recipient_email(&1)))
       |> Enum.sort_by(&recipient_email/1)
       |> Enum.uniq_by(&recipient_email/1)
 
     to(email, to)
   end
 
+  defp recipient_email(nil), do: nil
   defp recipient_email(email) when is_binary(email), do: email
   defp recipient_email(%Email{email: email}), do: email
   defp recipient_email(%User{} = user), do: User.email(user, :primary)
@@ -161,11 +208,33 @@ defmodule Hexpm.Emails do
   defp expand_organization(%User{organization: nil} = user), do: [user]
   defp expand_organization(%User{organization: %Ecto.Association.NotLoaded{}} = user), do: [user]
 
+  defp expand_organization(
+         %User{organization: %{organization_users: %Ecto.Association.NotLoaded{}}} = user
+       ) do
+    [user]
+  end
+
   defp expand_organization(%User{organization: organization}) do
     organization.organization_users
     |> Enum.filter(&(&1.role == "admin"))
     |> Enum.map(&User.email(&1.user, :primary))
   end
+
+  defp expand_organization(%Organization{organization_users: org_users}) do
+    admins =
+      org_users
+      |> Enum.filter(&(&1.role == "admin"))
+      |> Enum.map(&User.email(&1.user, :primary))
+
+    if admins == [] do
+      Enum.map(org_users, &User.email(&1.user, :primary))
+    else
+      admins
+    end
+  end
+
+  defp display_name(%User{username: username}), do: username
+  defp display_name(%Organization{name: name}), do: name
 
   defp email() do
     new_email()
