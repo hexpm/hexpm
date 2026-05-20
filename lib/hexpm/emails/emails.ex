@@ -82,6 +82,25 @@ defmodule Hexpm.Emails do
     |> render(:tfa_recovery_rotated)
   end
 
+  def key_leaked(user, key, url \\ nil) do
+    email()
+    |> email_to(user)
+    |> subject("Hex.pm - API key #{key.name} was found in a public repository and revoked")
+    |> assign(:username, user.username)
+    |> assign(:key_name, key.name)
+    |> assign(:found_url, safe_url(url))
+    |> render(:key_leaked)
+  end
+
+  defp safe_url(nil), do: nil
+
+  defp safe_url(url) when is_binary(url) do
+    case URI.parse(url) do
+      %URI{scheme: s} when s in ["http", "https"] -> url
+      _ -> nil
+    end
+  end
+
   def typosquat_candidates(candidates, threshold) do
     email()
     |> email_to(Application.get_env(:hexpm, :support_email))
