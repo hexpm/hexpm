@@ -49,6 +49,27 @@ defmodule Hexpm.CacheTest do
     assert Cache.fetch(table, :key, fun, 60) == 2
   end
 
+  test "invalidate removes a cached entry so the next fetch recomputes", %{table: table} do
+    counter = :counters.new(1, [])
+
+    fun = fn ->
+      :counters.add(counter, 1, 1)
+      :counters.get(counter, 1)
+    end
+
+    assert Cache.fetch(table, :key, fun, :infinity) == 1
+    assert Cache.fetch(table, :key, fun, :infinity) == 1
+
+    assert Cache.invalidate(table, :key) == :ok
+    assert :ets.lookup(table, :key) == []
+
+    assert Cache.fetch(table, :key, fun, :infinity) == 2
+  end
+
+  test "invalidate is a no-op when the cache table is missing" do
+    assert Cache.invalidate(:no_such_cache, :key) == :ok
+  end
+
   test "concurrent cold readers run the fun exactly once", %{table: table} do
     counter = :counters.new(1, [])
     {:ok, gate} = Agent.start_link(fn -> nil end)
