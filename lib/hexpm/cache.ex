@@ -15,6 +15,17 @@ defmodule Hexpm.Cache do
     end
   end
 
+  def invalidate(table \\ @table, key)
+
+  def invalidate(table, key) do
+    case :ets.whereis(table) do
+      :undefined -> :ok
+      _ -> :ets.delete(table, key)
+    end
+
+    :ok
+  end
+
   defp do_fetch(table, key, fun, ttl) do
     now = System.monotonic_time(:second)
 
