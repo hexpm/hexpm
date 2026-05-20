@@ -22,15 +22,48 @@ defmodule Hexpm.GitHub.SecretScanning do
   """
   @spec verify_signature(binary(), String.t(), String.t()) :: boolean()
   def verify_signature(raw_body, key_id, signature_b64) do
-    with {:ok, keys} <- fetch_public_keys_cached(),
-         {:ok, pem} <- find_key(keys, key_id),
-         {:ok, sig_der} <- Base.decode64(signature_b64),
-         {:ok, ec_key} <- decode_pem_public_key(pem) do
-      :public_key.verify(raw_body, :sha256, sig_der, ec_key)
-    else
-      err ->
-        Logger.warning("GitHub secret scanning signature verification failed: #{inspect(err)}")
+    case attempt_verify(raw_body, key_id, signature_b64, fetch_public_keys_cached()) do
+      {:ok, valid} ->
+        valid
+
+      {:error, :key_not_found} ->
+        Logger.info(
+          "GitHub secret scanning: refreshing public keys after unknown key_id #{inspect(key_id)}"
+        )
+
+        Hexpm.Cache.invalidate(:github_secret_scanning_keys)
+
+        case attempt_verify(raw_body, key_id, signature_b64, fetch_public_keys()) do
+          {:ok, valid} ->
+            valid
+
+          {:error, reason} ->
+            Logger.warning(
+              "GitHub secret scanning signature verification failed after key refresh: #{inspect(reason)}"
+            )
+
+            false
+        end
+
+      {:error, reason} ->
+        Logger.warning("GitHub secret scanning signature verification failed: #{inspect(reason)}")
         false
+    end
+  end
+
+  defp attempt_verify(raw_body, key_id, signature_b64, keys_result) do
+    with {:ok, keys} <- keys_result,
+         {:ok, pem} <- find_key(keys, key_id),
+         {:ok, sig_der} <- decode_signature(signature_b64),
+         {:ok, ec_key} <- decode_pem_public_key(pem) do
+      {:ok, :public_key.verify(raw_body, :sha256, sig_der, ec_key)}
+    end
+  end
+
+  defp decode_signature(b64) do
+    case Base.decode64(b64) do
+      {:ok, sig} -> {:ok, sig}
+      :error -> {:error, :invalid_base64}
     end
   end
 
