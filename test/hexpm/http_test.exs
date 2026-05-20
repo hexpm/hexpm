@@ -95,6 +95,21 @@ defmodule Hexpm.HTTPTest do
     assert {:ok, 200, _headers, %{"key" => "value"}} = HTTP.get(lasso_url(lasso, "/get"), [])
   end
 
+  test "passes receive_timeout, pool_timeout, and request_timeout to Finch.request/3", %{
+    lasso: lasso
+  } do
+    Lasso.expect_once(lasso, "GET", "/get", fn conn ->
+      Conn.resp(conn, 200, "ok")
+    end)
+
+    assert {:ok, 200, _headers, "ok"} =
+             HTTP.get(lasso_url(lasso, "/get"), [],
+               receive_timeout: 5_000,
+               pool_timeout: 5_000,
+               request_timeout: 5_000
+             )
+  end
+
   defp lasso_url(lasso, path) do
     "http://localhost:#{lasso.port}#{path}"
   end

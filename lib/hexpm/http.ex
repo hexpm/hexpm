@@ -24,49 +24,35 @@ defmodule Hexpm.HTTP do
   @behaviour Hexpm.HTTP.Interface
   @max_retry_times 3
   @base_sleep_time 100
+  @request_opts [:pool_timeout, :receive_timeout, :request_timeout]
 
   def impl() do
     Application.get_env(:hexpm, :http_impl, __MODULE__)
   end
 
   @impl Hexpm.HTTP.Interface
-  def get(url, headers, opts \\ []) do
-    build_request(:get, url, headers, nil, opts)
-    |> Finch.request(Hexpm.Finch)
-    |> read_response()
-  end
+  def get(url, headers, opts \\ []), do: do_request(:get, url, headers, nil, opts)
 
   @impl Hexpm.HTTP.Interface
-  def post(url, headers, body, opts \\ []) do
-    build_request(:post, url, headers, body, opts)
-    |> Finch.request(Hexpm.Finch)
-    |> read_response()
-  end
+  def post(url, headers, body, opts \\ []), do: do_request(:post, url, headers, body, opts)
 
   @impl Hexpm.HTTP.Interface
-  def put(url, headers, body, opts \\ []) do
-    build_request(:put, url, headers, body, opts)
-    |> Finch.request(Hexpm.Finch)
-    |> read_response()
-  end
+  def put(url, headers, body, opts \\ []), do: do_request(:put, url, headers, body, opts)
 
   @impl Hexpm.HTTP.Interface
-  def patch(url, headers, body, opts \\ []) do
-    build_request(:patch, url, headers, body, opts)
-    |> Finch.request(Hexpm.Finch)
-    |> read_response()
-  end
+  def patch(url, headers, body, opts \\ []), do: do_request(:patch, url, headers, body, opts)
 
   @impl Hexpm.HTTP.Interface
-  def delete(url, headers, opts \\ []) do
-    build_request(:delete, url, headers, nil, opts)
-    |> Finch.request(Hexpm.Finch)
-    |> read_response()
-  end
+  def delete(url, headers, opts \\ []), do: do_request(:delete, url, headers, nil, opts)
 
-  defp build_request(method, url, headers, body, opts) do
+  defp do_request(method, url, headers, body, opts) do
+    {request_opts, build_opts} = Keyword.split(opts, @request_opts)
     params = encode_params(body, headers)
-    Finch.build(method, url, headers, params, opts)
+
+    method
+    |> Finch.build(url, headers, params, build_opts)
+    |> Finch.request(Hexpm.Finch, request_opts)
+    |> read_response()
   end
 
   defp encode_params(body, _headers) when is_binary(body) or is_nil(body) do
