@@ -196,6 +196,17 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
   end
 
   defp humanize_action(%AuditLog{
+         action: "owner.update",
+         params: %{
+           "user" => %{"username" => username},
+           "level" => level,
+           "package" => %{"name" => pkg}
+         }
+       }) do
+    "Updated #{username}'s role to #{level} on #{pkg}"
+  end
+
+  defp humanize_action(%AuditLog{
          action: "owner.transfer",
          params: %{"package" => %{"name" => pkg}, "user" => %{"username" => username}}
        }) do

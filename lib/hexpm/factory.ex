@@ -1,5 +1,6 @@
 defmodule Hexpm.Factory do
   use ExMachina.Ecto, repo: Hexpm.Repo
+  use Hexpm.Factory.ReleaseWithTarballStrategy, repo: Hexpm.Repo
   alias Hexpm.Fake
 
   @password Bcrypt.hash_pwd_salt("password")
@@ -108,7 +109,7 @@ defmodule Hexpm.Factory do
   end
 
   def package_owner_factory() do
-    %Hexpm.Repository.PackageOwner{}
+    %Hexpm.Repository.PackageOwner{level: "full"}
   end
 
   def package_report_factory() do

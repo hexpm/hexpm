@@ -40,8 +40,7 @@ defmodule HexpmWeb.OAuthController do
           code_challenge_method: params["code_challenge_method"]
         })
       else
-        return_path = request_url(conn) |> URI.encode_www_form()
-        redirect(conn, to: ~p"/login?return=#{return_path}")
+        redirect(conn, to: ~p"/login?return=#{current_path(conn)}")
       end
     else
       {:error, error} ->

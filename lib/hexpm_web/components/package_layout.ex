@@ -18,25 +18,32 @@ defmodule HexpmWeb.Components.PackageLayout do
 
   import HexpmWeb.Components.Badge
 
+  alias Hexpm.Repository.Owners
+  alias Hexpm.Security.Advisories
   alias HexpmWeb.ViewHelpers
 
   @package_reports_enabled Application.compile_env!(:hexpm, [:features, :package_reports])
 
+  # All assigns below (except per-page ones) come from
+  # `HexpmWeb.PackageLayoutAssigns.for_package/3`. Use that helper in every
+  # controller action that renders this layout — missing assigns will fail
+  # at compile/render time rather than silently producing broken UI.
   attr :package, :map, required: true
-  attr :current_release, :map, default: nil
-  attr :all_releases, :list, default: []
-  attr :version_pinned?, :boolean, default: false
-  attr :dependants_count, :integer, default: 0
-  attr :versions_count, :integer, default: 0
   attr :repository_name, :string, required: true
-  attr :active_tab, :atom, required: true
-
-  # Sidebar data — same on all tabs
-  attr :docs_html_url, :string, default: nil
-  attr :downloads, :map, default: %{}
-  attr :daily_graph, :list, default: []
+  attr :all_releases, :list, required: true
+  attr :current_release, :map, required: true
+  attr :versions_count, :integer, required: true
+  attr :owners, :list, required: true
+  attr :downloads, :map, required: true
+  attr :daily_graph, :list, required: true
+  attr :docs_html_url, :string, required: true
+  attr :dependants_count, :integer, required: true
+  attr :current_user, :map, required: true
   attr :graph_release, :map, default: nil
-  attr :owners, :list, default: []
+
+  # Per-page assigns
+  attr :active_tab, :atom, required: true
+  attr :version_pinned?, :boolean, default: false
 
   # Dependants tab data — only loaded on the dependants page
   attr :dependants, :list, default: []
@@ -420,7 +427,7 @@ defmodule HexpmWeb.Components.PackageLayout do
                         </p>
                         <div class="flex items-center gap-1.5 flex-wrap">
                           <p class="text-grey-700 dark:text-grey-100 font-bold">
-                            {Enum.join(@licenses, ", ")}
+                            {Enum.map_join(@licenses, ", ", &display_license/1)}
                           </p>
                         </div>
                       </div>
@@ -487,10 +494,21 @@ defmodule HexpmWeb.Components.PackageLayout do
 
                 <%!-- Owners Card --%>
                 <%= if @owners != [] do %>
+                  <% is_full_owner = Owners.full_owner?(@owners, @current_user) %>
                   <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-5">
-                    <h3 class="text-grey-700 dark:text-grey-100 text-lg font-semibold mb-4">
-                      Owners
-                    </h3>
+                    <div class="flex items-center justify-between mb-4">
+                      <h3 class="text-grey-700 dark:text-grey-100 text-lg font-semibold">
+                        Owners
+                      </h3>
+                      <%= if is_full_owner do %>
+                        <a
+                          href={ViewHelpers.path_for_owners(@package)}
+                          class="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
+                        >
+                          Manage
+                        </a>
+                      <% end %>
+                    </div>
                     <ul class="space-y-3">
                       <%= for owner <- @owners do %>
                         <li>
@@ -587,7 +605,24 @@ defmodule HexpmWeb.Components.PackageLayout do
           label: "Activity",
           path: audit_logs_path(assigns.package)
         }
+      ] ++ owners_tab(assigns)
+  end
+
+  defp owners_tab(assigns) do
+    is_full_owner = Owners.full_owner?(assigns.owners, assigns.current_user)
+
+    if is_full_owner do
+      [
+        %{
+          active: assigns.active_tab == :owners,
+          icon: "user-group",
+          label: "Owners",
+          path: ViewHelpers.path_for_owners(assigns.package)
+        }
       ]
+    else
+      []
+    end
   end
 
   defp dependency_tab(%{current_release: nil}), do: []
@@ -604,22 +639,32 @@ defmodule HexpmWeb.Components.PackageLayout do
     ]
   end
 
-  defp advisories_tab(%{package: %{security_advisories: []}, active_tab: active})
-       when active != :advisories,
-       do: []
-
   defp advisories_tab(assigns) do
-    count = length(assigns.package.security_advisories)
+    count =
+      assigns.package
+      |> display_advisories()
+      |> length()
 
-    [
-      %{
-        active: assigns.active_tab == :advisories,
-        icon: "shield-exclamation",
-        label: "#{count} #{pluralize(count, "Advisory", "Advisories")}",
-        path: advisories_path(assigns.package)
-      }
-    ]
+    if count == 0 and assigns.active_tab != :advisories do
+      []
+    else
+      [
+        %{
+          active: assigns.active_tab == :advisories,
+          icon: "shield-exclamation",
+          label: "#{count} #{pluralize(count, "Advisory", "Advisories")}",
+          path: advisories_path(assigns.package)
+        }
+      ]
+    end
   end
+
+  defp display_advisories(%{security_advisories: %Ecto.Association.NotLoaded{}}), do: []
+
+  defp display_advisories(%{security_advisories: advisories}) when is_list(advisories),
+    do: Advisories.group_for_display(advisories)
+
+  defp display_advisories(_package), do: []
 
   defp readme_path(%{version_pinned?: true, package: package, current_release: release})
        when not is_nil(release),
@@ -666,4 +711,7 @@ defmodule HexpmWeb.Components.PackageLayout do
   defp version_item_class(false),
     do:
       "flex items-center justify-between gap-3 px-3 py-2 text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-700/40 transition-colors"
+
+  defp display_license("LicenseRef-" <> license_name), do: "#{license_name} (custom)"
+  defp display_license(license), do: license
 end

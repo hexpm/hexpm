@@ -23,6 +23,7 @@ config :ex_aws,
 config :bcrypt_elixir, log_rounds: 4
 
 config :hexpm, HexpmWeb.Endpoint,
+  adapter: Bandit.PhoenixAdapter,
   url: [host: "localhost"],
   root: Path.dirname(__DIR__),
   render_errors: [

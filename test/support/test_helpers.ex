@@ -130,4 +130,11 @@ defmodule Hexpm.TestHelpers do
   def default_requirement(name, requirement) do
     %{"name" => name, "app" => name, "requirement" => requirement, "optional" => false}
   end
+
+  def recompute_dependants(package) do
+    {:ok, _} =
+      Hexpm.Repository.PackageDependants.recompute_for_package(Hexpm.Repo, package)
+
+    package
+  end
 end

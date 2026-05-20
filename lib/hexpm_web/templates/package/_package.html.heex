@@ -1,19 +1,21 @@
 <% exact_match? = assigns[:exact_match?] || false %>
 <li class={[
-  "group p-6 transition-colors",
+  "group px-4 md:px-6 py-5 transition-colors",
   exact_match? && "hover:bg-green-100 dark:hover:bg-green-900/20",
   not exact_match? && "hover:bg-grey-50 dark:hover:bg-grey-700/60"
 ]}>
-  <div class="flex items-start justify-between gap-6">
+  <div class="grid grid-cols-[1fr_auto] gap-4 md:gap-6 items-center">
     <%!-- Package Info --%>
-    <div class="flex-1 min-w-0">
-      <div class="flex items-center gap-3 mb-2">
+    <div class="min-w-0">
+      <div class="flex items-baseline gap-2.5 mb-1">
         <a
           href={ViewHelpers.path_for_package(@package)}
           class={[
-            "text-grey-900 dark:text-grey-100 font-semibold text-xl transition-colors",
-            exact_match? && "hover:text-green-600 dark:hover:text-green-300",
-            not exact_match? && "hover:text-primary-600 dark:hover:text-primary-300"
+            "text-xl font-semibold transition-colors",
+            exact_match? &&
+              "text-grey-900 dark:text-grey-100 hover:text-green-600 dark:hover:text-green-300",
+            not exact_match? &&
+              "text-grey-700 dark:text-grey-100 hover:text-primary-600 dark:hover:text-primary-300"
           ]}
         >
           {ViewHelpers.package_name(@package)}
@@ -22,11 +24,11 @@
           <a
             href={ViewHelpers.path_for_package(@package)}
             class={[
-              "inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium transition-colors",
+              "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium transition-colors",
               exact_match? &&
                 "bg-green-100 dark:bg-green-900/20 group-hover:bg-green-200 dark:group-hover:bg-green-900/30 text-green-700 dark:text-green-300 hover:text-green-800 dark:hover:text-green-200",
               not exact_match? &&
-                "bg-grey-100 dark:bg-grey-700 text-grey-700 dark:text-grey-200 hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:text-primary-700 dark:hover:text-primary-200"
+                "bg-grey-50 dark:bg-grey-700 border border-grey-100 dark:border-grey-600 text-grey-500 dark:text-grey-200 hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:text-primary-700 dark:hover:text-primary-200"
             ]}
           >
             v{@package.latest_release.version}
@@ -35,28 +37,28 @@
       </div>
 
       <%= if @package.meta.description do %>
-        <p class="text-grey-600 dark:text-grey-300 text-sm leading-6 line-clamp-2">
+        <p class="text-grey-500 dark:text-grey-300 text-small leading-snug line-clamp-2 mb-1.5">
           {ViewHelpers.text_length(@package.meta.description, 200)}
         </p>
       <% end %>
 
-      <%= if @package.inserted_at do %>
-        <p class="text-grey-500 dark:text-grey-300 text-xs mt-2">
-          Published {ViewHelpers.human_relative_time_from_now(@package.inserted_at)}
+      <%= if @package.updated_at do %>
+        <p class="text-grey-400 dark:text-grey-400 text-caption mt-1.5">
+          Updated {ViewHelpers.human_relative_time_from_now(@package.updated_at)}
         </p>
       <% end %>
     </div>
 
     <%!-- Download Stats --%>
-    <div class="flex flex-col items-end gap-1 shrink-0 min-w-[120px]">
-      <div class="text-grey-900 dark:text-grey-100 text-2xl font-bold text-right">
+    <div class="text-right shrink-0 min-w-[120px] md:min-w-[180px]">
+      <div class="text-[22px] font-bold tracking-[-0.01em] text-grey-900 dark:text-grey-100 tabular-nums leading-none">
         {ViewHelpers.human_number_space(display_downloads(@package_downloads, @view) || 0)}
       </div>
-      <div class="text-grey-500 dark:text-grey-300 text-xs text-right">
+      <div class="text-grey-400 dark:text-grey-300 text-caption mt-1.5">
         {display_downloads_view_title(@view)}
       </div>
       <div
-        class="text-grey-400 dark:text-grey-300 text-xs text-right cursor-help"
+        class="text-grey-400 dark:text-grey-300 text-caption mt-0.5 tabular-nums cursor-help hidden md:block"
         title={display_downloads_for_opposite_views(@package_downloads, @view)}
       >
         {display_downloads_for_opposite_views(@package_downloads, @view)}

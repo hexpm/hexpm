@@ -2,6 +2,7 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
   use Hexpm.DataCase
 
   alias Hexpm.Repository.{RegistryBuilder, Repository}
+  alias Hexpm.Security.Advisories
 
   @checksum "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
 
@@ -59,24 +60,146 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       assert Enum.find(versions, &(&1.name == p2.name)) == %{
                name: p2.name,
                versions: ["0.0.1", "0.0.2"],
-               retired: []
+               retired: [],
+               with_advisories: []
              }
 
       package2_releases = v2_map("packages/#{p2.name}", ["hexpm", p2.name]).releases
       assert length(package2_releases) == 2
 
-      assert List.first(package2_releases) == %{
+      assert %{
                version: "0.0.1",
-               inner_checksum: Base.decode16!(@checksum),
-               outer_checksum: Base.decode16!(@checksum),
-               dependencies: []
-             }
+               inner_checksum: inner,
+               outer_checksum: outer,
+               dependencies: [],
+               advisory_indexes: [],
+               published_at: %{seconds: seconds, nanos: nanos}
+             } = List.first(package2_releases)
+
+      assert inner == Base.decode16!(@checksum)
+      assert outer == Base.decode16!(@checksum)
+      assert is_integer(seconds) and seconds > 0
+      assert is_integer(nanos) and nanos >= 0
 
       package3_releases = v2_map("packages/#{p3.name}", ["hexpm", p3.name]).releases
       assert [%{version: "0.0.2", dependencies: deps}] = package3_releases
       assert length(deps) == 2
       assert %{package: p2.name, requirement: "~> 0.0.1"} in deps
       assert %{package: p1.name, requirement: "0.0.1"} in deps
+    end
+
+    test "published_at matches release inserted_at", %{
+      packages: [_, p2, _],
+      releases: [_, r2, _, _]
+    } do
+      RegistryBuilder.full(Repository.hexpm())
+
+      package2 = v2_map("packages/#{p2.name}", ["hexpm", p2.name])
+      release = Enum.find(package2.releases, &(&1.version == "0.0.1"))
+
+      unix_ns = DateTime.to_unix(r2.inserted_at, :nanosecond)
+      expected_seconds = div(unix_ns, 1_000_000_000)
+      expected_nanos = rem(unix_ns, 1_000_000_000)
+
+      assert release.published_at == %{seconds: expected_seconds, nanos: expected_nanos}
+    end
+
+    test "advisories are included in registry", %{
+      packages: [p1, p2, _p3],
+      releases: [r1, _r2, _r3, _r4]
+    } do
+      assert {:ok, _} =
+               Advisories.upsert(
+                 [
+                   %{
+                     id: "GHSA-test-1234-abcd",
+                     summary: "Test vulnerability",
+                     aliases: [],
+                     published_at: ~U[2024-04-03 16:46:30Z],
+                     modified_at: ~U[2024-04-05 01:28:39Z],
+                     withdrawn_at: nil,
+                     cvss_vector: nil,
+                     cvss_score: nil,
+                     cvss_rating: "high",
+                     references: [],
+                     affected: [
+                       %{
+                         package: p1.name,
+                         requirements: [],
+                         versions: [to_string(r1.version)]
+                       }
+                     ]
+                   }
+                 ],
+                 %{p1.name => p1.id}
+               )
+
+      RegistryBuilder.full(Repository.hexpm())
+
+      versions = v2_map("versions", ["hexpm"]).packages
+
+      assert %{with_advisories: [0]} = Enum.find(versions, &(&1.name == p1.name))
+      assert %{with_advisories: []} = Enum.find(versions, &(&1.name == p2.name))
+
+      package1 = v2_map("packages/#{p1.name}", ["hexpm", p1.name])
+
+      assert [
+               %{
+                 id: "GHSA-test-1234-abcd",
+                 summary: "Test vulnerability",
+                 severity: :SEVERITY_HIGH
+               } = advisory
+             ] =
+               package1.advisories
+
+      assert String.starts_with?(advisory.html_url, "https://osv.dev/vulnerability/")
+      assert String.starts_with?(advisory.api_url, "https://api.osv.dev/v1/vulns/")
+
+      assert [%{advisory_indexes: [0]}] = package1.releases
+
+      package2 = v2_map("packages/#{p2.name}", ["hexpm", p2.name])
+      assert package2.advisories == []
+      assert Enum.all?(package2.releases, &(&1.advisory_indexes == []))
+    end
+
+    test "withdrawn advisories are not included in registry", %{
+      packages: [p1, _, _],
+      releases: [r1, _, _, _]
+    } do
+      assert {:ok, _} =
+               Advisories.upsert(
+                 [
+                   %{
+                     id: "GHSA-withdrawn-1234",
+                     summary: "Withdrawn vulnerability",
+                     aliases: [],
+                     published_at: ~U[2024-04-03 16:46:30Z],
+                     modified_at: ~U[2024-04-05 01:28:39Z],
+                     withdrawn_at: ~U[2024-04-06 00:00:00Z],
+                     cvss_vector: nil,
+                     cvss_score: nil,
+                     cvss_rating: nil,
+                     references: [],
+                     affected: [
+                       %{
+                         package: p1.name,
+                         requirements: [],
+                         versions: [to_string(r1.version)]
+                       }
+                     ]
+                   }
+                 ],
+                 %{p1.name => p1.id}
+               )
+
+      RegistryBuilder.full(Repository.hexpm())
+
+      versions = v2_map("versions", ["hexpm"]).packages
+      assert %{with_advisories: []} = Enum.find(versions, &(&1.name == p1.name))
+
+      package1 = v2_map("packages/#{p1.name}", ["hexpm", p1.name])
+      assert package1.advisories == []
+      assert [%{advisory_indexes: []}] = package1.releases
     end
 
     test "remove package", %{packages: [p1, p2, p3], releases: [_, _, _, r4]} do
@@ -131,7 +254,8 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       assert Enum.find(versions, &(&1.name == p2.name)) == %{
                name: p2.name,
                versions: ["0.0.1", "0.0.2"],
-               retired: []
+               retired: [],
+               with_advisories: []
              }
     end
 
@@ -167,12 +291,19 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       package2_releases = v2_map("packages/#{p2.name}", ["hexpm", p2.name]).releases
       assert length(package2_releases) == 2
 
-      assert List.first(package2_releases) == %{
+      assert %{
                version: "0.0.1",
-               inner_checksum: Base.decode16!(@checksum),
-               outer_checksum: Base.decode16!(@checksum),
-               dependencies: []
-             }
+               inner_checksum: inner,
+               outer_checksum: outer,
+               dependencies: [],
+               advisory_indexes: [],
+               published_at: %{seconds: seconds, nanos: nanos}
+             } = List.first(package2_releases)
+
+      assert inner == Base.decode16!(@checksum)
+      assert outer == Base.decode16!(@checksum)
+      assert is_integer(seconds) and seconds > 0
+      assert is_integer(nanos) and nanos >= 0
 
       package3_releases = v2_map("packages/#{p3.name}", ["hexpm", p3.name]).releases
       assert [%{version: "0.0.2", dependencies: deps}] = package3_releases

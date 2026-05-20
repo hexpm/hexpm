@@ -447,6 +447,32 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       |> put("/api/packages/#{package.name}/owners/#{hd(user2.emails).email}")
       |> response(400)
     end
+
+    test "cannot demote last full owner via API", %{user1: user1, package: package} do
+      resp =
+        build_conn()
+        |> put_req_header("authorization", key_for(user1))
+        |> put("/api/packages/#{package.name}/owners/#{user1.username}", %{level: "maintainer"})
+        |> json_response(422)
+
+      assert resp["errors"]["username"] =~ "last full owner"
+      assert Owners.get(package, user1).level == "full"
+    end
+
+    test "can demote full owner to maintainer when another full owner exists", %{
+      user1: user1,
+      user2: user2,
+      package: package
+    } do
+      insert(:package_owner, package: package, user: user2, level: "full")
+
+      build_conn()
+      |> put_req_header("authorization", key_for(user1))
+      |> put("/api/packages/#{package.name}/owners/#{user2.username}", %{level: "maintainer"})
+      |> response(204)
+
+      assert Owners.get(package, user2).level == "maintainer"
+    end
   end
 
   describe "PUT /repos/:repository/packages/:name/owners/:email" do

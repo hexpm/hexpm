@@ -3,6 +3,10 @@ defmodule Hexpm.Security.Advisories do
 
   import Ecto.Query
 
+  require Logger
+
+  alias Hexpm.Repository.Package
+  alias Hexpm.Repository.RegistryBuilder
   alias Hexpm.Security.Advisory
   alias Hexpm.Security.AdvisoryAffectedVersion
 
@@ -15,6 +19,15 @@ defmodule Hexpm.Security.Advisories do
     |> order_by([a], desc: a.published_at)
     |> Repo.all()
     |> Repo.preload([:references, :affected_versions])
+  end
+
+  def group_for_display(advisories) when is_list(advisories) do
+    groups = Enum.group_by(advisories, &display_group_key/1)
+
+    advisories
+    |> Enum.map(&display_group_key/1)
+    |> Enum.uniq()
+    |> Enum.map(fn key -> merge_display_group(Map.fetch!(groups, key)) end)
   end
 
   def upsert(records, package_ids) do
@@ -33,7 +46,9 @@ defmodule Hexpm.Security.Advisories do
     |> sync_affected_packages()
     |> sync_affected_releases()
     |> reconcile_advisories(records)
+    |> rebuild_package_registries()
     |> Repo.transaction(timeout: 60_000)
+    |> rebuild_repository_registries()
   end
 
   defp upsert_advisories(multi, records) do
@@ -113,6 +128,88 @@ defmodule Hexpm.Security.Advisories do
   defp filter_known_packages(affected, package_ids) do
     Enum.filter(affected, fn %{package: name} -> Map.has_key?(package_ids, name) end)
   end
+
+  defp merge_display_group(advisories) do
+    primary = Enum.min_by(advisories, &source_key/1)
+
+    advisories =
+      [primary | Enum.reject(advisories, &(&1.id == primary.id))]
+
+    %{
+      primary
+      | aliases: display_aliases(primary, advisories),
+        published_at: min_datetime_field(advisories, :published_at),
+        modified_at: max_datetime_field(advisories, :modified_at),
+        references: uniq_references(advisories),
+        affected_versions: uniq_affected_versions(advisories)
+    }
+  end
+
+  defp display_aliases(primary, advisories) do
+    advisory_ids = MapSet.new(advisories, & &1.id)
+
+    advisories
+    |> Enum.flat_map(&display_identifiers/1)
+    |> Enum.uniq()
+    |> Enum.reject(&(&1 == primary.id))
+    |> Enum.map(fn id ->
+      if MapSet.member?(advisory_ids, id) do
+        %{id: id, url: "https://osv.dev/vulnerability/#{URI.encode(id)}"}
+      else
+        %{id: id, url: nil}
+      end
+    end)
+  end
+
+  defp display_group_key(advisory) do
+    Enum.find(display_identifiers(advisory), &String.starts_with?(&1, "CVE-")) || advisory.id
+  end
+
+  defp display_identifiers(advisory) do
+    [advisory.id | advisory.aliases || []]
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp source_priority("EEF-" <> _), do: 0
+  defp source_priority("GHSA-" <> _), do: 1
+  defp source_priority("NVD-" <> _), do: 2
+  defp source_priority(_), do: 3
+
+  defp source_key(advisory), do: {source_priority(advisory.id), advisory.id}
+
+  defp min_datetime_field(advisories, field) do
+    advisories
+    |> Enum.map(&Map.get(&1, field))
+    |> Enum.reject(&is_nil/1)
+    |> Enum.min(DateTime, fn -> nil end)
+  end
+
+  defp max_datetime_field(advisories, field) do
+    advisories
+    |> Enum.map(&Map.get(&1, field))
+    |> Enum.reject(&is_nil/1)
+    |> Enum.max(DateTime, fn -> nil end)
+  end
+
+  defp uniq_references(advisories) do
+    advisories
+    |> Enum.flat_map(&loaded_assoc(&1.references))
+    |> Enum.group_by(& &1.url)
+    |> Enum.map(fn {url, refs} ->
+      types = refs |> Enum.map(& &1.type) |> Enum.uniq()
+      %{url: url, types: types}
+    end)
+  end
+
+  defp uniq_affected_versions(advisories) do
+    advisories
+    |> Enum.flat_map(&loaded_assoc(&1.affected_versions))
+    |> Enum.uniq_by(&{&1.package_id, to_string(&1.requirement)})
+  end
+
+  defp loaded_assoc(%Ecto.Association.NotLoaded{}), do: []
+  defp loaded_assoc(nil), do: []
+  defp loaded_assoc(values), do: values
 
   defp sync_references(multi) do
     multi
@@ -195,14 +292,70 @@ defmodule Hexpm.Security.Advisories do
     end)
   end
 
+  defp rebuild_package_registries(multi) do
+    Multi.run(multi, :rebuild_package_registries, fn
+      repo, %{upsert_advisories: changed, reconcile: {_count, reconciled_package_ids}} ->
+        advisory_ids = Map.keys(changed)
+
+        upserted_packages =
+          repo.all(
+            from p in Package,
+              join: ap in "security_advisory_affected_packages",
+              on: ap.package_id == p.id,
+              where: ap.advisory_id in ^advisory_ids,
+              distinct: true,
+              preload: [:repository]
+          )
+
+        reconciled_packages =
+          repo.all(
+            from p in Package,
+              where: p.id in ^reconciled_package_ids,
+              preload: [:repository]
+          )
+
+        packages = Enum.uniq_by(upserted_packages ++ reconciled_packages, & &1.id)
+        Enum.each(packages, &RegistryBuilder.package/1)
+        {:ok, packages}
+    end)
+  end
+
+  defp rebuild_repository_registries({:ok, %{rebuild_package_registries: packages}} = result) do
+    metadata = Logger.metadata()
+
+    repositories =
+      packages
+      |> Enum.map(& &1.repository)
+      |> Enum.uniq_by(& &1.id)
+
+    Hexpm.Tasks
+    |> Task.Supervisor.async_stream_nolink(repositories, fn repository ->
+      Logger.metadata(metadata)
+      RegistryBuilder.repository(repository)
+    end)
+    |> Stream.run()
+
+    result
+  end
+
+  defp rebuild_repository_registries(result), do: result
+
   defp reconcile_advisories(multi, records) do
     seen_ids = Enum.map(records, & &1.id)
 
-    Multi.delete_all(
-      multi,
-      :reconcile,
-      from(a in Advisory, where: a.id not in ^seen_ids)
-    )
+    Multi.run(multi, :reconcile, fn repo, _changes ->
+      {count, rows} =
+        repo.delete_all(
+          from(a in Advisory,
+            where: a.id not in ^seen_ids,
+            join: p in "security_advisory_affected_packages",
+            on: p.advisory_id == a.id,
+            select: p.package_id
+          )
+        )
+
+      {:ok, {count, rows}}
+    end)
   end
 
   def affect_release_with_existing_advisories(repo, release) do

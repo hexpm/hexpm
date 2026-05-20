@@ -71,15 +71,17 @@ defmodule HexpmWeb.AuthController do
   end
 
   defp handle_existing_user_login(conn, user) do
+    return = safe_return_path(conn.params["return"])
+
     if User.tfa_enabled?(user) do
       conn
-      |> start_tfa_session(user, conn.params["return"])
+      |> start_tfa_session(user, return)
       |> redirect(to: ~p"/tfa")
     else
       conn
       |> start_session_internal(user)
       |> HexpmWeb.Plugs.Sudo.set_sudo_authenticated()
-      |> redirect(to: conn.params["return"] || ~p"/users/#{user}")
+      |> redirect(to: return || ~p"/users/#{user}")
     end
   end
 

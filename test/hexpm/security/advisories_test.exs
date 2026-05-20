@@ -1,9 +1,9 @@
 defmodule Hexpm.Security.AdvisoriesTest do
   use Hexpm.DataCase
 
+  alias Hexpm.Repository.Release
   alias Hexpm.Security.Advisories
   alias Hexpm.Security.Advisory
-  alias Hexpm.Repository.Release
 
   setup do
     package = insert(:package, name: "oidcc")
@@ -222,6 +222,71 @@ defmodule Hexpm.Security.AdvisoriesTest do
     assert [] == Advisories.all(release_302)
   end
 
+  test "group_for_display prefers NVD over CVE and breaks same-source ties by id" do
+    assert [%Advisory{id: "NVD-CVE-2026-0001"}] =
+             Advisories.group_for_display([
+               %Advisory{id: "CVE-2026-0001", aliases: ["CVE-2026-0001"]},
+               %Advisory{id: "NVD-CVE-2026-0001", aliases: ["CVE-2026-0001"]}
+             ])
+
+    assert [%Advisory{id: "OTHER-2026-0001"}] =
+             Advisories.group_for_display([
+               %Advisory{id: "OTHER-2026-0002", aliases: ["CVE-2026-0002"]},
+               %Advisory{id: "OTHER-2026-0001", aliases: ["CVE-2026-0002"]}
+             ])
+  end
+
+  test "group_for_display merges references by URL and accumulates types" do
+    refs_a = [
+      %{type: "WEB", url: "https://example.com/advisory"},
+      %{type: "ADVISORY", url: "https://shared.example.com/1"}
+    ]
+
+    refs_b = [
+      %{type: "FIX", url: "https://shared.example.com/1"},
+      %{type: "WEB", url: "https://other.example.com/2"}
+    ]
+
+    [merged] =
+      Advisories.group_for_display([
+        %Advisory{id: "GHSA-aaaa-1111-bbbb", aliases: ["CVE-2026-0001"], references: refs_a},
+        %Advisory{id: "GHSA-cccc-2222-dddd", aliases: ["CVE-2026-0001"], references: refs_b}
+      ])
+
+    by_url = Map.new(merged.references, &{&1.url, &1.types})
+
+    assert map_size(by_url) == 3
+    assert by_url["https://example.com/advisory"] == ["WEB"]
+    assert by_url["https://shared.example.com/1"] == ["ADVISORY", "FIX"]
+    assert by_url["https://other.example.com/2"] == ["WEB"]
+  end
+
+  test "group_for_display aliases: links advisory IDs to osv.dev, plain strings have no URL" do
+    [merged] =
+      Advisories.group_for_display([
+        %Advisory{
+          id: "GHSA-aaaa-1111-bbbb",
+          aliases: ["CVE-2026-0001"],
+          references: [],
+          affected_versions: []
+        },
+        %Advisory{
+          id: "GHSA-cccc-2222-dddd",
+          aliases: ["CVE-2026-0001"],
+          references: [],
+          affected_versions: []
+        }
+      ])
+
+    # GHSA-cccc-2222-dddd was a separate advisory → gets an osv.dev URL
+    advisory_alias = Enum.find(merged.aliases, &(&1.id == "GHSA-cccc-2222-dddd"))
+    assert advisory_alias.url == "https://osv.dev/vulnerability/GHSA-cccc-2222-dddd"
+
+    # CVE-2026-0001 is only a plain alias string → no URL
+    cve_alias = Enum.find(merged.aliases, &(&1.id == "CVE-2026-0001"))
+    assert cve_alias.url == nil
+  end
+
   test "upsert skips sync for unchanged advisories", %{package: package} do
     record =
       record("GHSA-skip", "oidcc",
@@ -268,13 +333,25 @@ defmodule Hexpm.Security.AdvisoriesTest do
              affected_release_links
   end
 
-  defp child_keys(table, advisory_id, column) do
-    from(r in table,
-      where: r.advisory_id == ^advisory_id,
-      order_by: field(r, ^column),
-      select: field(r, ^column)
-    )
-    |> Repo.all()
+  test "upsert rebuilds registry for affected packages", %{package: package, release_300: r300} do
+    record = record("GHSA-rebuild", "oidcc", versions: [to_string(r300.version)])
+
+    refute Hexpm.Store.get(:repo_bucket, "packages/#{package.name}", [])
+
+    assert {:ok, _} = Advisories.upsert([record], %{"oidcc" => package.id})
+
+    decoded = decode_package_registry(package.name)
+    assert [%{id: "GHSA-rebuild"}] = decoded.advisories
+
+    assert Enum.find(decoded.releases, &(&1.version == Version.to_string(r300.version))).advisory_indexes ==
+             [0]
+
+    # Reconcile by omitting the advisory — registry should no longer flag as vulnerable
+    assert {:ok, _} = Advisories.upsert([], %{})
+
+    decoded = decode_package_registry(package.name)
+    assert decoded.advisories == []
+    assert Enum.all?(decoded.releases, &(&1.advisory_indexes == []))
   end
 
   test "affect_release_with_existing_advisories matches new release against ranges",
@@ -296,5 +373,22 @@ defmodule Hexpm.Security.AdvisoriesTest do
 
     assert "GHSA-future" in advisory_ids
     assert [%Advisory{id: "GHSA-future"}] = Advisories.all(new_release)
+  end
+
+  defp decode_package_registry(package_name) do
+    public_key = Application.fetch_env!(:hexpm, :public_key)
+    contents = Hexpm.Store.get(:repo_bucket, "packages/#{package_name}", [])
+    {:ok, payload} = :hex_registry.decode_and_verify_signed(:zlib.gunzip(contents), public_key)
+    {:ok, decoded} = :hex_registry.decode_package(payload, "hexpm", package_name)
+    decoded
+  end
+
+  defp child_keys(table, advisory_id, column) do
+    from(r in table,
+      where: r.advisory_id == ^advisory_id,
+      order_by: field(r, ^column),
+      select: field(r, ^column)
+    )
+    |> Repo.all()
   end
 end

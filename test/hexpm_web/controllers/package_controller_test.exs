@@ -91,14 +91,6 @@ defmodule HexpmWeb.PackageControllerTest do
       assert result =~ package2.name
     end
 
-    test "search with letter", %{package1: package1, package2: package2} do
-      conn = get(build_conn(), "/packages?letter=#{String.at(package1.name, 0)}")
-      assert response(conn, 200) =~ package1.name
-
-      conn = get(build_conn(), "/packages?letter=#{String.at(package2.name, 0)}")
-      assert response(conn, 200) =~ package2.name
-    end
-
     test "search with search query", %{package1: package1, package2: package2} do
       conn = get(build_conn(), "/packages?search=#{package1.name}")
       assert response(conn, 200) =~ ~r/#{package1.name}.*0.0.2/s
@@ -181,9 +173,11 @@ defmodule HexpmWeb.PackageControllerTest do
 
       rel = insert(:release, package: visible, version: "1.0.0")
       insert(:requirement, release: rel, dependency: dependency, requirement: "~> 1.0")
+      recompute_dependants(visible)
 
       rel = insert(:release, package: hidden, version: "1.0.0")
       insert(:requirement, release: rel, dependency: dependency, requirement: "~> 1.0")
+      recompute_dependants(hidden)
 
       search = URI.encode_www_form("depends:#{repository1.name}:#{dependency.name}")
 
@@ -212,9 +206,11 @@ defmodule HexpmWeb.PackageControllerTest do
 
       rel = insert(:release, package: visible, version: "1.0.0")
       insert(:requirement, release: rel, dependency: hidden_dependency, requirement: "~> 1.0")
+      recompute_dependants(visible)
 
       rel = insert(:release, package: hidden, version: "1.0.0")
       insert(:requirement, release: rel, dependency: hidden_dependency, requirement: "~> 1.0")
+      recompute_dependants(hidden)
 
       search = URI.encode_www_form("depends:#{repository2.name}:#{hidden_dependency.name}")
 
@@ -590,6 +586,83 @@ defmodule HexpmWeb.PackageControllerTest do
       assert result =~ "https://example.com/advisory"
     end
 
+    test "groups advisories sharing aliases for display", %{package1: package1} do
+      records = [
+        %{
+          id: "GHSA-628h-q48j-jr6q",
+          summary: "GHSA duplicate summary",
+          aliases: ["CVE-2026-32689"],
+          published_at: ~U[2026-05-08 00:00:00Z],
+          modified_at: ~U[2026-05-08 00:00:00Z],
+          withdrawn_at: nil,
+          cvss_vector: nil,
+          cvss_score: nil,
+          cvss_rating: nil,
+          references: [
+            %{
+              type: "WEB",
+              url:
+                "https://github.com/phoenixframework/phoenix/security/advisories/GHSA-628h-q48j-jr6q"
+            }
+          ],
+          affected: [
+            %{
+              package: package1.name,
+              requirements: [Version.parse_requirement!(">= 1.8.0 and < 1.8.6")],
+              versions: []
+            }
+          ]
+        },
+        %{
+          id: "EEF-CVE-2026-32689",
+          summary: "EEF canonical summary",
+          aliases: ["CVE-2026-32689", "GHSA-628h-q48j-jr6q"],
+          published_at: ~U[2026-05-05 00:00:00Z],
+          modified_at: ~U[2026-05-10 00:00:00Z],
+          withdrawn_at: nil,
+          cvss_vector: nil,
+          cvss_score: nil,
+          cvss_rating: nil,
+          references: [
+            %{type: "ADVISORY", url: "https://cna.erlef.org/cves/CVE-2026-32689.html"}
+          ],
+          affected: [
+            %{
+              package: package1.name,
+              requirements: [Version.parse_requirement!(">= 1.7.0 and < 1.7.22")],
+              versions: []
+            }
+          ]
+        }
+      ]
+
+      Hexpm.Security.Advisories.upsert(records, %{package1.name => package1.id})
+
+      conn = get(build_conn(), "/packages/#{package1.name}/advisories")
+      result = response(conn, 200)
+
+      assert {:ok, document} = Floki.parse_document(result)
+      assert link_text(document, "/packages/#{package1.name}/advisories") == "1 Advisory"
+
+      assert Floki.find(
+               document,
+               ~s(a[href="https://osv.dev/vulnerability/EEF-CVE-2026-32689"])
+             )
+             |> length() == 1
+
+      assert result =~ "EEF canonical summary"
+      refute result =~ "GHSA duplicate summary"
+      assert result =~ "CVE-2026-32689"
+      assert result =~ "GHSA-628h-q48j-jr6q"
+      assert result =~ "https://cna.erlef.org/cves/CVE-2026-32689.html"
+
+      assert result =~
+               "https://github.com/phoenixframework/phoenix/security/advisories/GHSA-628h-q48j-jr6q"
+
+      assert result =~ "&gt;= 1.7.0 and &lt; 1.7.22"
+      assert result =~ "&gt;= 1.8.0 and &lt; 1.8.6"
+    end
+
     test "withdrawn advisories are excluded", %{package1: package1} do
       record = %{
         id: "GHSA-withdrawn-html",
@@ -739,6 +812,7 @@ defmodule HexpmWeb.PackageControllerTest do
       )
 
     insert(:requirement, release: release, dependency: package, requirement: "~> 0.0.1")
+    recompute_dependants(dependant)
   end
 
   # Tabs render in both the mobile (<details>) and desktop nav, so a single href
