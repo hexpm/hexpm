@@ -179,6 +179,7 @@ defmodule HexpmWeb.Router do
     get "/docs/faq", DocsController, :faq
     get "/docs/mirrors", DocsController, :mirrors
     get "/docs/public-keys", DocsController, :public_keys
+    get "/docs/leaked-keys", DocsController, :leaked_keys
     get "/docs/self-hosting", DocsController, :self_hosting
 
     get "/policies/codeofconduct", PolicyController, :coc
