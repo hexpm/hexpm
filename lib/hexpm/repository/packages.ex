@@ -68,6 +68,23 @@ defmodule Hexpm.Repository.Packages do
     update_in(package.releases, &Release.sort/1)
   end
 
+  def dependant_requirements(dependants, dependency) do
+    package_ids = Enum.map(dependants, & &1.id)
+
+    from(
+      req in Requirement,
+      join: rel in assoc(req, :release),
+      where: req.dependency_id == ^dependency.id,
+      where: rel.package_id in ^package_ids,
+      where: is_nil(rel.retirement),
+      order_by: [asc: rel.package_id, desc: rel.version],
+      distinct: rel.package_id,
+      select: {rel.package_id, req.requirement}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
   def attach_latest_releases(packages) do
     package_ids = Enum.map(packages, & &1.id)
 

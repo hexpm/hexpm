@@ -34,6 +34,12 @@
             v{@package.latest_release.version}
           </a>
         <% end %>
+        <%= if assigns[:dependency_requirement] do %>
+          <span class="text-grey-400 dark:text-grey-500 text-xs">requires</span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-mono bg-grey-50 dark:bg-grey-700 border border-grey-100 dark:border-grey-600 text-grey-500 dark:text-grey-200">
+            {@dependency_requirement}
+          </span>
+        <% end %>
       </div>
 
       <%= if @package.meta.description do %>
