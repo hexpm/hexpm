@@ -887,5 +887,7 @@ Hexpm.Repo.transaction(fn ->
   Hexpm.Repo.refresh_view(ReleaseDownload, concurrently: false)
 end)
 
+Hexpm.Repository.PackageDependants.backfill()
+
 Hexpm.Repository.RegistryBuilder.full(Hexpm.Repository.Repositories.get("hexpm"))
 Hexpm.Repository.RegistryBuilder.full(Hexpm.Repository.Repositories.get("myrepo"))
