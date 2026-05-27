@@ -1,7 +1,7 @@
 defmodule Hexpm.Repository.PackageDependantsTest do
   use Hexpm.DataCase, async: true
 
-  alias Hexpm.Repository.{Package, PackageDependant, PackageDependants}
+  alias Hexpm.Repository.{Package, PackageDependant, PackageDependants, Packages}
 
   setup do
     repository = insert(:repository)
@@ -152,6 +152,46 @@ defmodule Hexpm.Repository.PackageDependantsTest do
 
     assert latest == nil
     assert row_count(dependant.id) == 0
+  end
+
+  describe "dependant_requirements/2" do
+    test "returns the requirement from the latest non-retired release", %{repository: repository} do
+      dep = insert(:package, name: "dep", repository_id: repository.id)
+      dependant = insert(:package, name: "dependant", repository_id: repository.id)
+
+      old_rel = insert(:release, package: dependant, version: "1.0.0")
+      insert(:requirement, release: old_rel, dependency: dep, requirement: "~> 1.0")
+
+      new_rel = insert(:release, package: dependant, version: "2.0.0")
+      insert(:requirement, release: new_rel, dependency: dep, requirement: "~> 2.0")
+
+      {:ok, _} = PackageDependants.recompute_for_package(Repo, dependant)
+
+      requirements = Packages.dependant_requirements([dependant], dep)
+      assert requirements[dependant.id] == "~> 2.0"
+    end
+
+    test "skips retired releases", %{repository: repository} do
+      dep = insert(:package, name: "dep", repository_id: repository.id)
+      dependant = insert(:package, name: "dependant", repository_id: repository.id)
+
+      old_rel = insert(:release, package: dependant, version: "1.0.0")
+      insert(:requirement, release: old_rel, dependency: dep, requirement: "~> 1.0")
+
+      retired_rel =
+        insert(:release,
+          package: dependant,
+          version: "2.0.0",
+          retirement: %{reason: "deprecated", message: "use something else"}
+        )
+
+      insert(:requirement, release: retired_rel, dependency: dep, requirement: "~> 2.0")
+
+      {:ok, _} = PackageDependants.recompute_for_package(Repo, dependant)
+
+      requirements = Packages.dependant_requirements([dependant], dep)
+      assert requirements[dependant.id] == "~> 1.0"
+    end
   end
 
   test "retired releases still count as latest", %{repository: repository} do
