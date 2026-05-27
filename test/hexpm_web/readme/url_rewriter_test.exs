@@ -122,6 +122,15 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
       refute result =~ "preview"
       assert result =~ ~s[href="../../etc/passwd"]
     end
+
+    test "resolves absolute image paths to preview URL and proxies them" do
+      html = ~s[<img src="/images/examples.png">]
+      result = URLRewriter.rewrite(html, "my_package", "1.0.0")
+
+      expected = "http://localhost:5000/preview/my_package/1.0.0/images/examples.png"
+      encoded = Base.encode16(expected, case: :lower)
+      assert result =~ encoded
+    end
   end
 
   describe "proxy_image_url/1" do
