@@ -13,7 +13,8 @@ defmodule HexpmWeb.Readme.Sanitizer do
   ))
 
   @allowed_attributes %{
-    "a" => MapSet.new(~w(href title)),
+    "a" => MapSet.new(~w(href title id class)),
+    "li" => MapSet.new(~w(id)),
     "img" => MapSet.new(~w(src alt width height title)),
     "th" => MapSet.new(~w(align colspan rowspan)),
     "td" => MapSet.new(~w(align colspan rowspan)),
@@ -91,6 +92,17 @@ defmodule HexpmWeb.Readme.Sanitizer do
     [{"id", "user-content-" <> value}]
   end
 
+  defp sanitize_attribute("a", {"id", "fnref:" <> _} = attr), do: [attr]
+  defp sanitize_attribute("a", {"id", _}), do: []
+  defp sanitize_attribute("li", {"id", "fn:" <> _} = attr), do: [attr]
+  defp sanitize_attribute("li", {"id", _}), do: []
+
+  defp sanitize_attribute("a", {"class", value} = attr)
+       when value in ~w(footnote reversefootnote),
+       do: [attr]
+
+  defp sanitize_attribute("a", {"class", _}), do: []
+
   defp sanitize_attribute(_tag, attr), do: [attr]
 
   # Convert style="text-align: X" to align="X" to avoid CSP style-src violations
@@ -141,7 +153,13 @@ defmodule HexpmWeb.Readme.Sanitizer do
   end
 
   defp maybe_add_link_attrs(attrs, "a") do
-    attrs ++ [{"rel", "nofollow noopener"}, {"target", "_blank"}]
+    href = Enum.find_value(attrs, fn {name, value} -> name == "href" && value end)
+
+    if href && String.starts_with?(href, "#") do
+      attrs
+    else
+      attrs ++ [{"rel", "nofollow noopener"}, {"target", "_blank"}]
+    end
   end
 
   defp maybe_add_link_attrs(attrs, _tag), do: attrs

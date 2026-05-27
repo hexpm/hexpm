@@ -53,6 +53,13 @@ defmodule HexpmWeb.ReadmeView do
     .readme kbd { display: inline-block; padding: 3px 5px; font: 11px ui-monospace, monospace; line-height: 10px; color: var(--color-grey-500); vertical-align: middle; background-color: white; border: 1px solid var(--color-grey-200); border-radius: 3px; box-shadow: inset 0 -1px 0 var(--color-grey-200); }
     .readme input[type="checkbox"] { margin-right: 0.5em; }
     .readme li:has(> input[type="checkbox"]) { list-style: none; }
+    .readme a.footnote::before { content: "["; }
+    .readme a.footnote::after { content: "]"; }
+    .readme a.footnote { vertical-align: super; font-size: 0.75em; line-height: 0; }
+    .readme .footnotes { margin-top: 24px; font-size: 0.75em; color: var(--color-grey-500); }
+    .readme .footnotes ol { padding-left: 1.5em; }
+    .readme .footnotes li { margin-top: 0; }
+    .readme .footnotes li p { margin: 0; display: inline; }
     html[data-theme="light"] .color-scheme-dark { display: none !important; }
     html[data-theme="dark"] .color-scheme-light { display: none !important; }
     html[data-theme="dark"] body { color: var(--color-grey-200); background-color: var(--color-grey-800); }
@@ -64,6 +71,7 @@ defmodule HexpmWeb.ReadmeView do
     html[data-theme="dark"] .readme .highlight pre { background: var(--color-grey-900); }
     html[data-theme="dark"] .readme pre code { background-color: transparent; color: var(--color-grey-100); }
     html[data-theme="dark"] .readme blockquote { color: var(--color-grey-300); border-left-color: var(--color-grey-500); }
+    html[data-theme="dark"] .readme .footnotes { color: var(--color-grey-300); }
     html[data-theme="dark"] .readme table th, html[data-theme="dark"] .readme table td { border-color: var(--color-grey-600); }
     html[data-theme="dark"] .readme table th, html[data-theme="dark"] .readme table tr:nth-child(2n) { background-color: var(--color-grey-800); }
     html[data-theme="dark"] .readme hr { background-color: var(--color-grey-600); }

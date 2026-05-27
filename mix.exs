@@ -38,7 +38,8 @@ defmodule Hexpm.MixProject do
       {:bcrypt_elixir, "~> 3.0"},
       {:corsica, "~> 2.0"},
       {:cvss, "~> 0.1.0"},
-      {:earmark, "~> 1.4"},
+      # TODO: Switch back to a released version once https://github.com/pragdave/earmark/pull/524 is merged
+      {:earmark, github: "maennchen/earmark", branch: "jm/footnote-parsing"},
       {:ecto_psql_extras, "~> 0.6"},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
       {:ecto_sql, "~> 3.0"},

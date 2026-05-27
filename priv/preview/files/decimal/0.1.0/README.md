@@ -123,6 +123,12 @@ Use <kbd>Ctrl</kbd>+<kbd>C</kbd> to copy and <kbd>Ctrl</kbd>+<kbd>V</kbd> to pas
 
 See the full [documentation](https://hexdocs.pm/decimal) for more details.
 
+## Footnotes
+
+Decimal uses IEEE 754[^1] as a reference for rounding modes.
+
+[^1]: IEEE 754 is the standard for floating-point arithmetic.
+
 ## License
 
 Licensed under the [Apache-2.0](LICENSE) license.
