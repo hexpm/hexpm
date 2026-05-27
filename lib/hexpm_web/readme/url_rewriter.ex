@@ -86,7 +86,10 @@ defmodule HexpmWeb.Readme.URLRewriter do
         url
 
       true ->
-        path = String.trim_leading(url, "./")
+        path =
+          url
+          |> String.trim_leading("/")
+          |> String.trim_leading("./")
 
         case Path.safe_relative(path) do
           {:ok, safe_path} -> "#{base_url}/#{safe_path}"
