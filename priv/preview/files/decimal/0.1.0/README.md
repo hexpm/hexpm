@@ -52,6 +52,11 @@ end)
 #=> Decimal.new("0.33333")
 ```
 
+## Inline HTML
+
+Most values have <ins>multiple</ins> representations, for example, `Decimal.new("0.30")` and
+`Decimal.new("0.3")` are <ins>equal</ins> under comparison but distinct structs.
+
 ## Rounding Modes
 
 | Mode | Description |

@@ -109,7 +109,7 @@ defmodule HexpmWeb.ReadmeController do
       case ext do
         ext when ext in [".md", ".markdown"] ->
           {_status, ast, _messages} = Earmark.Parser.as_ast(content, gfm: true)
-          ast |> TaskList.convert() |> Earmark.transform()
+          ast |> TaskList.convert() |> Earmark.transform(escape: false)
 
         _ ->
           "<pre>#{Plug.HTML.html_escape(content)}</pre>"

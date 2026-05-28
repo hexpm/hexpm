@@ -305,6 +305,23 @@ defmodule HexpmWeb.ReadmeControllerTest do
       assert conn.resp_body =~ "normal"
     end
 
+    test "renders inline HTML tags like <ins> in markdown paragraphs", %{package: package} do
+      mock_file_list_and_readme(
+        package.name,
+        "1.0.0",
+        "README.md",
+        "Most colors have <ins>multiple</ins> names."
+      )
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/1.0.0")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "<ins>multiple</ins>"
+    end
+
     test "renders markdown with parse warnings", %{package: package} do
       mock_file_list_and_readme(
         package.name,
