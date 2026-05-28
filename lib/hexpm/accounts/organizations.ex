@@ -2,6 +2,7 @@ defmodule Hexpm.Accounts.Organizations do
   use Hexpm.Context
 
   alias Hexpm.Accounts.OptionalEmails
+  alias Hexpm.Repository.OrgNamesPublisher
 
   def all_by_user(user, preload \\ []) do
     Repo.all(assoc(user, :organizations))
@@ -54,9 +55,15 @@ defmodule Hexpm.Accounts.Organizations do
       |> audit(audit_data, "organization.create", & &1.organization)
 
     case Repo.transaction(multi) do
-      {:ok, result} -> {:ok, result.organization}
-      {:error, :user, changeset, _} -> {:error, changeset}
-      {:error, :organization, changeset, _} -> {:error, changeset}
+      {:ok, result} ->
+        publish_org_names()
+        {:ok, result.organization}
+
+      {:error, :user, changeset, _} ->
+        {:error, changeset}
+
+      {:error, :organization, changeset, _} ->
+        {:error, changeset}
     end
   end
 
@@ -78,7 +85,14 @@ defmodule Hexpm.Accounts.Organizations do
         Organization.add_member(organization_user, %{})
       end)
 
-    Repo.transaction(multi)
+    case Repo.transaction(multi) do
+      {:ok, _result} = ok ->
+        publish_org_names()
+        ok
+
+      {:error, _, _, _} = error ->
+        error
+    end
   end
 
   def merge_with_user(
@@ -180,5 +194,14 @@ defmodule Hexpm.Accounts.Organizations do
       Emails.organization_invite(organization, user)
       |> Mailer.deliver_later!()
     end
+  end
+
+  defp publish_org_names do
+    OrgNamesPublisher.publish()
+  rescue
+    error ->
+      require Logger
+      Logger.error("Failed to publish org_names.csv: #{Exception.message(error)}")
+      :ok
   end
 end
