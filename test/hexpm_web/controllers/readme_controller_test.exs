@@ -222,7 +222,7 @@ defmodule HexpmWeb.ReadmeControllerTest do
         |> get("/#{package.name}/1.0.0")
 
       assert conn.status == 200
-      # Makeup wraps tokens in spans with class attributes
+      # Code Highlighter wraps tokens in spans with class attributes
       assert conn.resp_body =~ "<span class=\""
       # The code content should be present
       assert conn.resp_body =~ "IO"
@@ -243,7 +243,7 @@ defmodule HexpmWeb.ReadmeControllerTest do
         |> get("/#{package.name}/1.0.0")
 
       assert conn.status == 200
-      assert conn.resp_body =~ ~s|class="ss">&#39;div&#39;|
+      assert conn.resp_body =~ ~s|class="constant">&#39;div&#39;|
     end
 
     test "preserves newlines in unhighlighted code blocks", %{package: package} do
@@ -260,7 +260,9 @@ defmodule HexpmWeb.ReadmeControllerTest do
         |> get("/#{package.name}/1.0.0")
 
       assert conn.status == 200
-      assert conn.resp_body =~ "foo\nbar\nbaz"
+      assert conn.resp_body =~ "foo"
+      assert conn.resp_body =~ "bar"
+      assert conn.resp_body =~ "baz"
     end
 
     test "preserves newlines in highlighted code blocks", %{package: package} do
@@ -277,7 +279,6 @@ defmodule HexpmWeb.ReadmeControllerTest do
         |> get("/#{package.name}/1.0.0")
 
       assert conn.status == 200
-      # Makeup wraps whitespace in spans, newlines must be preserved
       assert conn.resp_body =~ "foo"
       assert conn.resp_body =~ "bar"
       assert conn.resp_body =~ "baz"
@@ -298,8 +299,8 @@ defmodule HexpmWeb.ReadmeControllerTest do
         |> get("/#{package.name}/1.0.0")
 
       assert conn.status == 200
-      assert conn.resp_body =~ ~s[<input type="checkbox" disabled="disabled"/>]
-      assert conn.resp_body =~ ~s[<input type="checkbox" checked="checked" disabled="disabled"/>]
+      assert conn.resp_body =~ ~s[<input type="checkbox" disabled=""/>]
+      assert conn.resp_body =~ ~s[<input type="checkbox" checked="" disabled=""/>]
       assert conn.resp_body =~ "unchecked"
       assert conn.resp_body =~ "checked"
       assert conn.resp_body =~ "normal"

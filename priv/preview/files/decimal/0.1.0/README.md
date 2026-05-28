@@ -1,6 +1,6 @@
 # Decimal
 
-Arbitrary precision decimal arithmetic for Elixir.
+Arbitrary precision decimal arithmetic for Elixir. Use `<-- comment -->` more text.
 
 ## Features
 
@@ -54,13 +54,18 @@ end)
 
 ## Rounding Modes
 
-| Mode | Description |
-|------|-------------|
-| `:half_up` | Round towards nearest, ties go up |
-| `:half_down` | Round towards nearest, ties go down |
-| `:half_even` | Round towards nearest, ties go to even (banker's rounding) |
-| `:ceiling` | Always round up |
-| `:floor` | Always round down |
+Decimal supports several rounding modes[^1], all compliant with the General Decimal Arithmetic specification[^2].
+
+| Mode | Ties | Example (`1.5 → 1dp`) |
+|:-----|:----:|----------------------:|
+| `:half_up` | Round up | `2.0` |
+| `:half_down` | Round down | `1.0` |
+| `:half_even` | Round to even | `2.0` |
+| `:ceiling` | — | `2.0` |
+| `:floor` | — | `1.0` |
+
+[^1]: The default rounding mode is `:half_up`.
+[^2]: See [speleotrove.com/decimal](http://speleotrove.com/decimal/) for the full specification.
 
 ## Task List
 
@@ -106,6 +111,10 @@ The library uses a coefficient-exponent representation internally:
 So `1.23` is represented as `%Decimal{sign: 1, coef: 123, exp: -2}`.
 
 </details>
+
+## Inline HTML
+
+Some text with <ins>inline</ins> HTML
 
 ## Definition List
 

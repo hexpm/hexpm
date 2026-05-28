@@ -5,8 +5,8 @@
 @source "../lib";
 @source "../js";
 
-/* Syntax highlighting for code blocks (Makeup) */
-@import "../vendor/css/makeup.css";
+/* Syntax highlighting (lumis html_linked formatter) */
+@import "../vendor/css/lumis.css";
 
 /* Tooltip component styles */
 @import "./tooltip.css";
