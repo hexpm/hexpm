@@ -39,6 +39,17 @@ defmodule Hexpm.ShortURLs.ShortURLTest do
                ShortURL.changeset(%{"url" => "https://acme.staging.hexdocs.pm/some/page"})
     end
 
+    test "validate redirecting to a *.hexorgs.pm subdomain" do
+      assert %{valid?: true} = ShortURL.changeset(%{"url" => "https://acme.hexorgs.pm"})
+      assert %{valid?: true} = ShortURL.changeset(%{"url" => "https://acme.hexorgs.pm/"})
+
+      assert %{valid?: true} =
+               ShortURL.changeset(%{"url" => "https://acme.hexorgs.pm/some_package/readme.html"})
+
+      assert %{valid?: true} =
+               ShortURL.changeset(%{"url" => "https://acme.staging.hexorgs.pm/pkg/page"})
+    end
+
     test "with incorrect params" do
       assert %{valid?: false, errors: errors} = ShortURL.changeset(%{foo: 420})
       assert errors == [{:url, {"can't be blank", [validation: :required]}}]
@@ -61,7 +72,11 @@ defmodule Hexpm.ShortURLs.ShortURLTest do
                ShortURL.changeset(%{url: "https://supersimple.org?spoof=hex.pm"})
 
       assert errors ==
-               [url: {"domain must match hex.pm, *.hex.pm, hexdocs.pm, or *.hexdocs.pm", []}]
+               [
+                 url:
+                   {"domain must match hex.pm, *.hex.pm, hexdocs.pm, *.hexdocs.pm, or *.hexorgs.pm",
+                    []}
+               ]
     end
   end
 end
