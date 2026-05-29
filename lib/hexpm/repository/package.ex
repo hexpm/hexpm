@@ -56,6 +56,8 @@ defmodule Hexpm.Repository.Package do
                     @subdomain_names
                   ])
 
+  def reserved_names(), do: @reserved_names
+
   def build(repository, user, params) do
     package =
       build_assoc(repository, :packages)
