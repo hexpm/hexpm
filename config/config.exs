@@ -19,7 +19,8 @@ config :hexpm, :features, package_reports: true
 config :hexpm, ecto_repos: [Hexpm.RepoBase]
 
 config :ex_aws,
-  json_codec: Jason
+  json_codec: Jason,
+  http_client: ExAws.Request.Req
 
 config :sentry, client: Hexpm.SentryClient
 
