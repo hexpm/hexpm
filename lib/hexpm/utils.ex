@@ -108,20 +108,13 @@ defmodule Hexpm.Utils do
   def parse_search(search) when is_binary(search), do: String.trim(search)
   def parse_search(_), do: nil
 
-  defp diff(a, b) do
-    {days, time} = :calendar.time_difference(a, b)
-    days * 24 * 60 * 60 + :calendar.time_to_seconds(time)
-  end
-
   @doc """
   Determine if a given timestamp is less than a day (86400 seconds) old
   """
   def within_last_day?(nil), do: false
 
   def within_last_day?(a) do
-    diff = diff(NaiveDateTime.to_erl(a), :calendar.universal_time())
-
-    diff < 24 * 60 * 60
+    NaiveDateTime.diff(NaiveDateTime.utc_now(), a, :second) < 24 * 60 * 60
   end
 
   def binarify(term, opts \\ [])
