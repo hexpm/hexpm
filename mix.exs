@@ -50,7 +50,6 @@ defmodule Hexpm.MixProject do
       {:finch, "~> 0.22.0"},
       {:floki, "~> 0.37"},
       {:goth, "~> 1.4"},
-      {:hackney, "~> 1.7"},
       {:hex_core, "~> 0.17", hex_core_opts()},
       {:jason, "~> 1.0"},
       {:joken, "~> 2.6"},
