@@ -111,5 +111,16 @@ defmodule Hexpm.UtilsTest do
       assert url =~ "//decimal."
       refute url =~ "1.0.0"
     end
+
+    test "maps underscores in the package name to hyphens in the subdomain" do
+      hexpm = %Hexpm.Repository.Repository{id: 1, name: "hexpm"}
+      package = %Hexpm.Repository.Package{name: "phoenix_live_view", repository: hexpm}
+      release = %Hexpm.Repository.Release{version: Version.parse!("1.0.0")}
+
+      url = Utils.docs_html_url(hexpm, package, release)
+
+      assert url =~ "//phoenix-live-view."
+      refute url =~ "phoenix_live_view"
+    end
   end
 end

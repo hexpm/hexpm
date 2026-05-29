@@ -167,10 +167,17 @@ defmodule Hexpm.Utils do
   @spec docs_html_url(Repository.t(), Package.t(), Release.t() | nil) :: String.t()
   def docs_html_url(%Repository{id: 1}, package, release) do
     docs_url = URI.parse(Application.get_env(:hexpm, :docs_url))
-    docs_url = %{docs_url | host: "#{package.name}.#{docs_url.host}"}
+    docs_url = %{docs_url | host: "#{package_to_subdomain(package.name)}.#{docs_url.host}"}
     version = release && "#{release.version}/"
     "#{docs_url}/#{version}"
   end
+
+  # Hex package names allow underscores (`^[a-z][a-z0-9_]*$`), but RFC 1123
+  # hostname labels and RFC 6125 wildcard SAN matching don't, and Fastly
+  # enforces strict SAN matching at the HTTP edge. Map `_` -> `-` for the
+  # public hexdocs.pm subdomain. The Fastly Compute subdomain handler
+  # reverses the mapping before building the GCS bucket key.
+  defp package_to_subdomain(name), do: String.replace(name, "_", "-")
 
   def docs_html_url(%Repository{} = repository, package, release) do
     docs_url = URI.parse(Application.get_env(:hexpm, :private_docs_url))
