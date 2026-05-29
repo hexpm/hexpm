@@ -60,11 +60,14 @@ defmodule Hexpm.ShortURLs.ShortURL do
       url.host == "hex.pm" or String.ends_with?(url.host, [".hex.pm"]) ->
         []
 
+      String.ends_with?(url.host || "", [".hexdocs.pm"]) ->
+        []
+
       url.host in ["hexdocs.pm", "staging.hex.pm"] and url.path in [nil, "/"] ->
         []
 
       true ->
-        [url: "domain must match hex.pm, *.hex.pm, or hexdocs.pm"]
+        [url: "domain must match hex.pm, *.hex.pm, hexdocs.pm, or *.hexdocs.pm"]
     end
   end
 end

@@ -1384,7 +1384,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
                "http://localhost:5000/packages/#{package.name}/#{release.version}"
 
       assert result["docs_html_url"] ==
-               "http://localhost:5002/#{package.name}/#{release.version}/"
+               "http://#{package.name}.localhost:5002/#{release.version}/"
 
       assert result["version"] == "#{release.version}"
 

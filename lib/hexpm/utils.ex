@@ -166,10 +166,10 @@ defmodule Hexpm.Utils do
   """
   @spec docs_html_url(Repository.t(), Package.t(), Release.t() | nil) :: String.t()
   def docs_html_url(%Repository{id: 1}, package, release) do
-    docs_url = Application.get_env(:hexpm, :docs_url)
-    package = package.name
+    docs_url = URI.parse(Application.get_env(:hexpm, :docs_url))
+    docs_url = %{docs_url | host: "#{package.name}.#{docs_url.host}"}
     version = release && "#{release.version}/"
-    "#{docs_url}/#{package}/#{version}"
+    "#{docs_url}/#{version}"
   end
 
   def docs_html_url(%Repository{} = repository, package, release) do

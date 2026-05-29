@@ -88,7 +88,7 @@ defmodule Hexpm.UtilsTest do
       current: current
     } do
       url = Utils.current_docs_html_url(package, current, current)
-      assert url =~ "/decimal/"
+      assert url =~ "//decimal."
       assert url =~ "1.2.3"
     end
 
@@ -98,7 +98,7 @@ defmodule Hexpm.UtilsTest do
       older: older
     } do
       url = Utils.current_docs_html_url(package, current, older)
-      assert url =~ "/decimal/"
+      assert url =~ "//decimal."
       refute url =~ "1.2.3"
       refute url =~ "1.0.0"
     end
@@ -108,7 +108,7 @@ defmodule Hexpm.UtilsTest do
       older: older
     } do
       url = Utils.current_docs_html_url(package, nil, older)
-      assert url =~ "/decimal/"
+      assert url =~ "//decimal."
       refute url =~ "1.0.0"
     end
   end
