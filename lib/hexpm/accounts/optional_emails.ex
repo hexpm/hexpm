@@ -4,7 +4,7 @@ defmodule Hexpm.Accounts.OptionalEmails do
   Example:
    if OptionalEmails.allowed?(user, :organization_invite) do
       Emails.organization_invite(organization, user)
-      |> Mailer.deliver_later!()
+      |> Mailer.deliver!()
     end
   """
 

@@ -67,7 +67,7 @@ config :hexpm, Hexpm.RepoBase,
   hostname: "localhost",
   pool_size: 5
 
-config :hexpm, Hexpm.Emails.Mailer, adapter: Bamboo.LocalAdapter
+config :hexpm, Hexpm.Emails.Mailer, adapter: Swoosh.Adapters.Local
 
 config :ueberauth, Ueberauth.Strategy.Github.OAuth,
   client_id: System.get_env("HEXPM_GITHUB_CLIENT_ID"),

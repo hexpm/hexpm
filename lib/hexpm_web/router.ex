@@ -93,7 +93,7 @@ defmodule HexpmWeb.Router do
   end
 
   if Mix.env() == :dev do
-    forward "/sent_emails", Bamboo.SentEmailViewerPlug
+    forward "/dev/mailbox", Plug.Swoosh.MailboxPreview
   end
 
   scope "/", HexpmWeb, host: "readme." do

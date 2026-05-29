@@ -39,7 +39,6 @@ defmodule HexpmWeb.ConnCase do
   setup do
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(Hexpm.RepoBase)
     Hexpm.Store.Memory.checkout()
-    Bamboo.SentEmail.reset()
     :ok
   end
 

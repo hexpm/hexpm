@@ -30,7 +30,6 @@ if Code.ensure_loaded?(Wallaby) do
       :ok = Ecto.Adapters.SQL.Sandbox.checkout(Hexpm.RepoBase)
       Ecto.Adapters.SQL.Sandbox.mode(Hexpm.RepoBase, {:shared, self()})
       Mox.set_mox_global()
-      Bamboo.SentEmail.reset()
 
       metadata = Phoenix.Ecto.SQL.Sandbox.metadata_for(Hexpm.RepoBase, self())
       {:ok, session} = Wallaby.start_session(metadata: metadata)

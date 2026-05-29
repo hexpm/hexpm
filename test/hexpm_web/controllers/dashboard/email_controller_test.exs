@@ -1,6 +1,6 @@
 defmodule HexpmWeb.Dashboard.EmailControllerTest do
   use HexpmWeb.ConnCase, async: true
-  use Bamboo.Test
+  import Swoosh.TestAssertions
 
   alias Hexpm.Accounts.Users
 
@@ -87,7 +87,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     new_email = Enum.find(user.emails, &(&1.email == new_email_addr))
     assert new_email, "expected new email #{new_email_addr} to exist after POST"
 
-    assert_delivered_email(Hexpm.Emails.email_added(user, new_email))
+    assert_email_sent(Hexpm.Emails.email_added(user, new_email))
   end
 
   test "change primary email sends security notification to old address", c do
@@ -107,7 +107,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     |> test_login(user)
     |> post("/dashboard/email/primary", %{email: new_email_addr})
 
-    assert_delivered_email(Hexpm.Emails.primary_email_changed(user, old_primary, new_email_addr))
+    assert_email_sent(Hexpm.Emails.primary_email_changed(user, old_primary, new_email_addr))
   end
 
   test "cannot add existing email", c do
@@ -340,7 +340,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     assert redirected_to(conn) == "/dashboard/email"
     assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "verification email has been sent"
 
-    assert_delivered_email(Hexpm.Emails.verification(user, email))
-    assert_delivered_email(Hexpm.Emails.verification(user, email))
+    assert_email_sent(Hexpm.Emails.verification(user, email))
+    assert_email_sent(Hexpm.Emails.verification(user, email))
   end
 end

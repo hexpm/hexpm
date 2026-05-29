@@ -29,7 +29,7 @@ defmodule Hexpm.Accounts.Keys do
         user_or_organization
         |> preload_for_email()
         |> Emails.api_key_created(key)
-        |> Mailer.deliver_later!()
+        |> Mailer.deliver!()
 
       _ ->
         :ok
@@ -54,7 +54,7 @@ defmodule Hexpm.Accounts.Keys do
         user_or_organization
         |> preload_for_email()
         |> Emails.api_key_revoked(key)
-        |> Mailer.deliver_later!()
+        |> Mailer.deliver!()
       end
 
       result
@@ -73,7 +73,7 @@ defmodule Hexpm.Accounts.Keys do
         user_or_organization
         |> preload_for_email()
         |> Emails.api_keys_all_revoked()
-        |> Mailer.deliver_later!()
+        |> Mailer.deliver!()
 
       _ ->
         :ok

@@ -32,8 +32,8 @@ defmodule Hexpm.MixProject do
 
   defp deps() do
     [
-      {:bamboo_phoenix, "~> 1.0"},
-      {:bamboo, "~> 2.2"},
+      {:swoosh, "~> 1.0"},
+      {:phoenix_swoosh, "~> 1.0"},
       {:bandit, "~> 1.0"},
       {:bcrypt_elixir, "~> 3.0"},
       {:corsica, "~> 2.0"},

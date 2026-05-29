@@ -1,6 +1,6 @@
 defmodule HexpmWeb.PasswordResetControllerTest do
   use HexpmWeb.ConnCase, async: true
-  use Bamboo.Test
+  import Swoosh.TestAssertions
   alias Hexpm.Accounts.User
 
   setup do
@@ -45,8 +45,8 @@ defmodule HexpmWeb.PasswordResetControllerTest do
       assert [reset1, reset2] = user.password_resets
 
       # check email was sent with correct token
-      assert_delivered_email(Hexpm.Emails.password_reset_request(user, reset1))
-      assert_delivered_email(Hexpm.Emails.password_reset_request(user, reset2))
+      assert_email_sent(Hexpm.Emails.password_reset_request(user, reset1))
+      assert_email_sent(Hexpm.Emails.password_reset_request(user, reset2))
 
       # check reset will succeed
       assert User.can_reset_password?(user, reset1.key)

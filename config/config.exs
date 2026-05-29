@@ -43,10 +43,9 @@ config :hexpm, Hexpm.RepoBase,
   migration_timestamps: [type: :utc_datetime_usec]
 
 config :hexpm, Hexpm.Emails.Mailer,
-  adapter: Bamboo.SendGridAdapter,
-  hackney_opts: [
-    recv_timeout: :timer.minutes(1)
-  ]
+  adapter: Swoosh.Adapters.Sendgrid,
+  client: Swoosh.ApiClient.Finch,
+  finch_name: Hexpm.Finch
 
 config :phoenix, :template_engines, md: HexpmWeb.MarkdownEngine
 
