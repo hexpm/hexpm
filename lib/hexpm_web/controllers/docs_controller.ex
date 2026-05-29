@@ -28,7 +28,7 @@ defmodule HexpmWeb.DocsController do
   end
 
   def tasks(conn, _params) do
-    redirect(conn, external: "https://hexdocs.pm/hex")
+    redirect(conn, external: "https://hex.hexdocs.pm")
   end
 
   def gleam_usage(conn, _params) do
