@@ -172,13 +172,6 @@ defmodule Hexpm.Utils do
     "#{docs_url}/#{version}"
   end
 
-  # Hex package names allow underscores (`^[a-z][a-z0-9_]*$`), but RFC 1123
-  # hostname labels and RFC 6125 wildcard SAN matching don't, and Fastly
-  # enforces strict SAN matching at the HTTP edge. Map `_` -> `-` for the
-  # public hexdocs.pm subdomain. The Fastly Compute subdomain handler
-  # reverses the mapping before building the GCS bucket key.
-  defp package_to_subdomain(name), do: String.replace(name, "_", "-")
-
   def docs_html_url(%Repository{} = repository, package, release) do
     docs_url = URI.parse(Application.get_env(:hexpm, :private_docs_url))
     docs_url = %{docs_url | host: "#{repository.name}.#{docs_url.host}"}
@@ -186,6 +179,28 @@ defmodule Hexpm.Utils do
     version = release && "#{release.version}/"
     "#{docs_url}/#{package}/#{version}"
   end
+
+  @doc """
+  Apex-form docs URL for a hexpm-repo package: `<docs_url>/<package>/`.
+
+  Used by `docs_sitemap.xml`, which lists per-package sitemap index
+  entries. Sitemap consumers (Googlebot) require all listed URLs to
+  share a common host with the sitemap file, so even after package
+  docs move to `<package>.hexdocs.pm`, the index keeps emitting
+  `hexdocs.pm/<package>/...` and lets the apex 301 deliver the
+  canonical URL to the crawler.
+  """
+  @spec docs_html_apex_url(String.t()) :: String.t()
+  def docs_html_apex_url(package_name) do
+    Application.get_env(:hexpm, :docs_url) <> "/" <> package_name <> "/"
+  end
+
+  # Hex package names allow underscores (`^[a-z][a-z0-9_]*$`), but RFC 1123
+  # hostname labels and RFC 6125 wildcard SAN matching don't, and Fastly
+  # enforces strict SAN matching at the HTTP edge. Map `_` -> `-` for the
+  # public hexdocs.pm subdomain. The Fastly Compute subdomain handler
+  # reverses the mapping before building the GCS bucket key.
+  defp package_to_subdomain(name), do: String.replace(name, "_", "-")
 
   @doc """
   Sidebar docs URL for a package given the currently-displayed release and the
