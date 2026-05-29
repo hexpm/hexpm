@@ -21,6 +21,8 @@ config :hexpm, ecto_repos: [Hexpm.RepoBase]
 config :ex_aws,
   json_codec: Jason
 
+config :sentry, client: Hexpm.SentryClient
+
 config :bcrypt_elixir, log_rounds: 4
 
 config :hexpm, HexpmWeb.Endpoint,
