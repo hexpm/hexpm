@@ -1,6 +1,6 @@
 defmodule HexpmWeb.API.UserControllerTest do
   use HexpmWeb.ConnCase, async: true
-  use Bamboo.Test
+  import Swoosh.TestAssertions
 
   alias Hexpm.Accounts.User
 
@@ -42,7 +42,7 @@ defmodule HexpmWeb.API.UserControllerTest do
       user = Hexpm.Repo.get_by!(User, username: params.username) |> Hexpm.Repo.preload(:emails)
       user_email = List.first(user.emails)
 
-      assert_delivered_email(Hexpm.Emails.verification(user, user_email))
+      assert_email_sent(Hexpm.Emails.verification(user, user_email))
 
       conn = publish_package(user)
       assert json_response(conn, 403)["message"] == "email not verified"
@@ -258,8 +258,8 @@ defmodule HexpmWeb.API.UserControllerTest do
       assert [reset1, reset2] = user.password_resets
 
       # check email was sent with correct token
-      assert_delivered_email(Hexpm.Emails.password_reset_request(user, reset1))
-      assert_delivered_email(Hexpm.Emails.password_reset_request(user, reset2))
+      assert_email_sent(Hexpm.Emails.password_reset_request(user, reset1))
+      assert_email_sent(Hexpm.Emails.password_reset_request(user, reset2))
 
       # check reset will succeed
       assert User.can_reset_password?(user, reset1.key)

@@ -1,6 +1,6 @@
 defmodule Hexpm.Repository.PackageReportsTests do
   use Hexpm.DataCase, async: true
-  use Bamboo.Test
+  import Swoosh.TestAssertions
 
   alias Hexpm.Repository.PackageReports
   alias Hexpm.Repository.Packages
@@ -49,7 +49,7 @@ defmodule Hexpm.Repository.PackageReportsTests do
 
       assert report.state == "to_accept"
 
-      assert_delivered_email(
+      assert_email_sent(
         Hexpm.Emails.report_submitted(
           moderator,
           report.author.username,
@@ -81,7 +81,7 @@ defmodule Hexpm.Repository.PackageReportsTests do
       PackageReports.accept(id)
       report = PackageReports.get(id)
 
-      assert_delivered_email(
+      assert_email_sent(
         Hexpm.Emails.report_state_changed(
           owner,
           report.id,
@@ -90,7 +90,7 @@ defmodule Hexpm.Repository.PackageReportsTests do
         )
       )
 
-      assert_delivered_email(
+      assert_email_sent(
         Hexpm.Emails.report_state_changed(
           author,
           report.id,
@@ -99,7 +99,7 @@ defmodule Hexpm.Repository.PackageReportsTests do
         )
       )
 
-      assert_delivered_email(
+      assert_email_sent(
         Hexpm.Emails.report_state_changed(
           moderator,
           report.id,
@@ -129,7 +129,7 @@ defmodule Hexpm.Repository.PackageReportsTests do
       PackageReports.reject(id)
       report = PackageReports.get(id)
 
-      assert_delivered_email(
+      assert_email_sent(
         Hexpm.Emails.report_state_changed(
           author,
           report.id,
@@ -138,7 +138,7 @@ defmodule Hexpm.Repository.PackageReportsTests do
         )
       )
 
-      assert_delivered_email(
+      assert_email_sent(
         Hexpm.Emails.report_state_changed(
           moderator,
           report.id,
@@ -170,7 +170,7 @@ defmodule Hexpm.Repository.PackageReportsTests do
       PackageReports.solve(id)
       report = PackageReports.get(id)
 
-      assert_delivered_email(
+      assert_email_sent(
         Hexpm.Emails.report_state_changed(
           owner,
           report.id,
@@ -179,7 +179,7 @@ defmodule Hexpm.Repository.PackageReportsTests do
         )
       )
 
-      assert_delivered_email(
+      assert_email_sent(
         Hexpm.Emails.report_state_changed(
           moderator,
           report.id,
@@ -211,7 +211,7 @@ defmodule Hexpm.Repository.PackageReportsTests do
       PackageReports.unresolve(id)
       report = PackageReports.get(id)
 
-      assert_delivered_email(
+      assert_email_sent(
         Hexpm.Emails.report_state_changed(
           owner,
           report.id,
@@ -220,7 +220,7 @@ defmodule Hexpm.Repository.PackageReportsTests do
         )
       )
 
-      assert_delivered_email(
+      assert_email_sent(
         Hexpm.Emails.report_state_changed(
           moderator,
           report.id,
@@ -258,7 +258,7 @@ defmodule Hexpm.Repository.PackageReportsTests do
           %{"text" => "We need to solve this."}
         )
 
-      assert_delivered_email(
+      assert_email_sent(
         Hexpm.Emails.report_commented(
           moderator,
           comment.author.username,

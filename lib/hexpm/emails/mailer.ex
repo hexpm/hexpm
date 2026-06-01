@@ -1,3 +1,3 @@
 defmodule Hexpm.Emails.Mailer do
-  use Bamboo.Mailer, otp_app: :hexpm
+  use Swoosh.Mailer, otp_app: :hexpm
 end

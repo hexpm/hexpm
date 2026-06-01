@@ -31,6 +31,6 @@ config :hexpm, Hexpm.RepoBase,
   hostname: "localhost",
   pool_size: 10
 
-config :hexpm, Hexpm.Emails.Mailer, adapter: Bamboo.LocalAdapter
+config :hexpm, Hexpm.Emails.Mailer, adapter: Swoosh.Adapters.Local
 
 config :logger, level: :error

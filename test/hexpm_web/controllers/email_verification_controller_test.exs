@@ -1,6 +1,6 @@
 defmodule HexpmWeb.EmailVerificationControllerTest do
   use HexpmWeb.ConnCase, async: true
-  use Bamboo.Test
+  import Swoosh.TestAssertions
   alias Hexpm.Accounts.{User, Users}
 
   describe "GET /email/verify" do
@@ -91,7 +91,7 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
                "If this email exists in our database and is not already verified"
 
       user = Users.get(user.username, [:emails])
-      assert_delivered_email(Hexpm.Emails.verification(user, hd(user.emails)))
+      assert_email_sent(Hexpm.Emails.verification(user, hd(user.emails)))
       assert hd(user.emails).verification_key
     end
 
@@ -112,11 +112,7 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
                "If this email exists in our database and is not already verified"
 
       user = Users.get(user.username, [:emails])
-
-      refute_delivered_email(
-        Hexpm.Emails.verification(user, %{hd(user.emails) | verification_key: "key"})
-      )
-
+      assert_no_email_sent()
       refute hd(user.emails).verification_key
     end
 
@@ -153,13 +149,7 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
                "If this email exists in our database and is not already verified"
 
-      refute_delivered_email(
-        Hexpm.Emails.verification(user1, %{hd(user1.emails) | verification_key: "key"})
-      )
-
-      refute_delivered_email(
-        Hexpm.Emails.verification(user2, %{hd(user2.emails) | verification_key: "key"})
-      )
+      assert_no_email_sent()
 
       user1 = Users.get(user1.username, [:emails])
       refute hd(user1.emails).verification_key

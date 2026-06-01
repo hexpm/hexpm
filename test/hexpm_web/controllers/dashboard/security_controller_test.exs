@@ -1,6 +1,6 @@
 defmodule HexpmWeb.Dashboard.SecurityControllerTest do
   use HexpmWeb.ConnCase, async: true
-  use Bamboo.Test
+  import Swoosh.TestAssertions
 
   alias Hexpm.Accounts.Auth
 
@@ -116,7 +116,7 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
       refute Hexpm.Accounts.User.tfa_enabled?(updated_user)
       assert redirected_to(conn) == "/dashboard/security"
 
-      assert_delivered_email(Hexpm.Emails.tfa_disabled(updated_user))
+      assert_email_sent(Hexpm.Emails.tfa_disabled(updated_user))
     end
   end
 
@@ -135,7 +135,7 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
       assert updated_user.tfa.recovery_codes != c.user.tfa.recovery_codes
       assert redirected_to(conn) == "/dashboard/security"
 
-      assert_delivered_email(Hexpm.Emails.tfa_rotate_recovery_codes(updated_user))
+      assert_email_sent(Hexpm.Emails.tfa_rotate_recovery_codes(updated_user))
     end
   end
 
@@ -158,7 +158,7 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
       assert get_session(conn, :tfa_setup_secret)
 
       assert redirected_to(conn) == "/dashboard/security?show_tfa_modal=true"
-      assert_delivered_email(Hexpm.Emails.tfa_disabled(updated_user))
+      assert_email_sent(Hexpm.Emails.tfa_disabled(updated_user))
     end
   end
 
@@ -194,7 +194,7 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
       assert {:ok, _} = Auth.password_auth(user.username, "newpassxx")
       assert :error = Auth.password_auth(user.username, "password")
 
-      assert_delivered_email(Hexpm.Emails.password_changed(user))
+      assert_email_sent(Hexpm.Emails.password_changed(user))
     end
 
     test "fails to change password with incorrect old password", _c do
@@ -278,7 +278,7 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
 
       assert Hexpm.Accounts.User.tfa_enabled?(updated_user)
       assert updated_user.tfa.secret == secret
-      assert_delivered_email(Hexpm.Emails.tfa_enabled(updated_user))
+      assert_email_sent(Hexpm.Emails.tfa_enabled(updated_user))
 
       # Session secret should be cleared
       refute get_session(conn, :tfa_setup_secret)

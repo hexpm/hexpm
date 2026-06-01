@@ -561,7 +561,7 @@ defmodule Hexpm.AdminTasks do
 
         # Send security password reset email
         Emails.security_password_reset(user, reset)
-        |> Mailer.deliver_later!()
+        |> Mailer.deliver!()
       end)
 
       :ok

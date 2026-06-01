@@ -192,7 +192,7 @@ defmodule Hexpm.Accounts.Organizations do
   defp send_invite_email(organization, user) do
     if OptionalEmails.allowed?(user, :organization_invite) do
       Emails.organization_invite(organization, user)
-      |> Mailer.deliver_later!()
+      |> Mailer.deliver!()
     end
   end
 

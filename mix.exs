@@ -32,8 +32,8 @@ defmodule Hexpm.MixProject do
 
   defp deps() do
     [
-      {:bamboo_phoenix, "~> 1.0"},
-      {:bamboo, "~> 2.2"},
+      {:swoosh, "~> 1.0"},
+      {:phoenix_swoosh, "~> 1.0"},
       {:bandit, "~> 1.0"},
       {:bcrypt_elixir, "~> 3.0"},
       {:corsica, "~> 2.0"},
@@ -50,7 +50,6 @@ defmodule Hexpm.MixProject do
       {:finch, "~> 0.22.0"},
       {:floki, "~> 0.37"},
       {:goth, "~> 1.4"},
-      {:hackney, "~> 1.7"},
       {:hex_core, "~> 0.17", hex_core_opts()},
       {:jason, "~> 1.0"},
       {:joken, "~> 2.6"},
@@ -89,7 +88,6 @@ defmodule Hexpm.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:ueberauth, "~> 0.10"},
       {:ueberauth_github, "~> 0.8"},
-      {:wallaby, "~> 0.30", only: :test, runtime: false},
       {:lazy_html, ">= 0.1.0", only: :test},
       {:req, "~> 0.5.6"}
     ]

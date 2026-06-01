@@ -19,7 +19,10 @@ config :hexpm, :features, package_reports: true
 config :hexpm, ecto_repos: [Hexpm.RepoBase]
 
 config :ex_aws,
-  json_codec: Jason
+  json_codec: Jason,
+  http_client: ExAws.Request.Req
+
+config :sentry, client: Hexpm.SentryClient
 
 config :bcrypt_elixir, log_rounds: 4
 
@@ -39,11 +42,11 @@ config :hexpm, Hexpm.RepoBase,
   priv: "priv/repo",
   migration_timestamps: [type: :utc_datetime_usec]
 
+config :swoosh, :api_client, Swoosh.ApiClient.Finch
+
 config :hexpm, Hexpm.Emails.Mailer,
-  adapter: Bamboo.SendGridAdapter,
-  hackney_opts: [
-    recv_timeout: :timer.minutes(1)
-  ]
+  adapter: Swoosh.Adapters.Sendgrid,
+  finch_name: Hexpm.Finch
 
 config :phoenix, :template_engines, md: HexpmWeb.MarkdownEngine
 
