@@ -88,7 +88,6 @@ defmodule Hexpm.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:ueberauth, "~> 0.10"},
       {:ueberauth_github, "~> 0.8"},
-      {:wallaby, "~> 0.30", only: :test, runtime: false},
       {:lazy_html, ">= 0.1.0", only: :test},
       {:req, "~> 0.5.6"}
     ]
