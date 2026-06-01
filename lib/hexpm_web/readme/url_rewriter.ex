@@ -7,19 +7,15 @@ defmodule HexpmWeb.Readme.URLRewriter do
   """
 
   @doc """
-  Rewrites URLs in the given HTML string.
+  Rewrites URLs in a Floki HTML tree.
 
   Relative paths are resolved against the preview service for the given
   package and version.
   """
-  def rewrite(html, package_name, version) do
+  def rewrite(tree, package_name, version) do
     cdn_url = Application.fetch_env!(:hexpm, :cdn_url)
     base_url = "#{cdn_url}/preview/#{package_name}/#{version}"
-
-    html
-    |> Floki.parse_document!()
-    |> rewrite_nodes(base_url)
-    |> Floki.raw_html()
+    rewrite_nodes(tree, base_url)
   end
 
   defp rewrite_nodes(nodes, base_url) when is_list(nodes) do

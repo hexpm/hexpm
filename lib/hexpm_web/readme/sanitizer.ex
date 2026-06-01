@@ -10,16 +10,24 @@ defmodule HexpmWeb.Readme.Sanitizer do
     p h1 h2 h3 h4 h5 h6 blockquote pre code em strong del ins
     a img ul ol li table thead tbody tr th td br hr div span
     details summary input sup sub dl dt dd abbr kbd samp var
+    section
   ))
 
   @allowed_attributes %{
-    "a" => MapSet.new(~w(href title)),
+    "a" =>
+      MapSet.new(
+        ~w(href title id class aria-label data-footnote-ref data-footnote-backref data-footnote-backref-idx)
+      ),
+    "li" => MapSet.new(~w(id)),
+    "section" => MapSet.new(~w(class data-footnotes)),
+    "sup" => MapSet.new(~w(class)),
     "img" => MapSet.new(~w(src alt width height title)),
     "th" => MapSet.new(~w(align colspan rowspan)),
     "td" => MapSet.new(~w(align colspan rowspan)),
     "input" => MapSet.new(~w(type checked disabled)),
-    "code" => MapSet.new(~w(class)),
-    "div" => MapSet.new(~w(class)),
+    "pre" => MapSet.new(~w(class)),
+    "code" => MapSet.new(~w(class translate tabindex)),
+    "div" => MapSet.new(~w(class data-line)),
     "span" => MapSet.new(~w(class)),
     "h1" => MapSet.new(~w(id)),
     "h2" => MapSet.new(~w(id)),
@@ -32,16 +40,9 @@ defmodule HexpmWeb.Readme.Sanitizer do
   @safe_url_schemes MapSet.new(~w(http https mailto))
 
   @doc """
-  Sanitizes HTML by stripping disallowed tags and attributes.
+  Sanitizes a Floki HTML tree by stripping disallowed tags and attributes.
   """
-  def sanitize(html) do
-    html
-    |> Floki.parse_document!()
-    |> sanitize_nodes()
-    |> Floki.raw_html()
-  end
-
-  defp sanitize_nodes(nodes) when is_list(nodes) do
+  def sanitize(nodes) when is_list(nodes) do
     Enum.flat_map(nodes, &sanitize_node/1)
   end
 
@@ -53,20 +54,20 @@ defmodule HexpmWeb.Readme.Sanitizer do
   defp sanitize_node({"input", attrs, children}) do
     if checkbox_input?(attrs) do
       attrs = sanitize_attributes("input", attrs)
-      children = sanitize_nodes(children)
+      children = sanitize(children)
       [{"input", attrs, children}]
     else
-      sanitize_nodes(children)
+      sanitize(children)
     end
   end
 
   defp sanitize_node({tag, attrs, children}) do
     if MapSet.member?(@allowed_tags, tag) do
       attrs = sanitize_attributes(tag, attrs)
-      children = sanitize_nodes(children)
+      children = sanitize(children)
       [{tag, attrs, children}]
     else
-      sanitize_nodes(children)
+      sanitize(children)
     end
   end
 
@@ -90,6 +91,14 @@ defmodule HexpmWeb.Readme.Sanitizer do
   defp sanitize_attribute(tag, {"id", value}) when tag in ~w(h1 h2 h3 h4 h5 h6) do
     [{"id", "user-content-" <> value}]
   end
+
+  defp sanitize_attribute("a", {"id", "fnref-" <> _} = attr), do: [attr]
+  defp sanitize_attribute("a", {"id", _}), do: []
+  defp sanitize_attribute("li", {"id", "fn-" <> _} = attr), do: [attr]
+  defp sanitize_attribute("li", {"id", _}), do: []
+
+  defp sanitize_attribute("a", {"class", "footnote-backref"} = attr), do: [attr]
+  defp sanitize_attribute("a", {"class", _}), do: []
 
   defp sanitize_attribute(_tag, attr), do: [attr]
 
@@ -141,7 +150,13 @@ defmodule HexpmWeb.Readme.Sanitizer do
   end
 
   defp maybe_add_link_attrs(attrs, "a") do
-    attrs ++ [{"rel", "nofollow noopener"}, {"target", "_blank"}]
+    href = Enum.find_value(attrs, fn {name, value} -> name == "href" && value end)
+
+    if href && String.starts_with?(href, "#") do
+      attrs
+    else
+      attrs ++ [{"rel", "nofollow noopener"}, {"target", "_blank"}]
+    end
   end
 
   defp maybe_add_link_attrs(attrs, _tag), do: attrs

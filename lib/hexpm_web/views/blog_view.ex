@@ -112,22 +112,7 @@ defmodule HexpmWeb.BlogView do
               color: var(--color-grey-800);
             }
             .blog-content pre {
-              background-color: var(--color-grey-900);
-              padding: 1rem;
-              border-radius: 0.5rem;
-              overflow-x: auto;
               margin-bottom: 1rem;
-            }
-            .blog-content pre code {
-              background-color: transparent;
-              padding: 0;
-              font-size: 0.875rem;
-              color: var(--color-grey-100);
-            }
-            /* Override highlight.js background to use our dark background */
-            .blog-content pre .hljs {
-              background: transparent;
-              color: var(--color-grey-100);
             }
             .blog-content ul, .blog-content ol {
               padding-left: 1.5rem;
