@@ -50,6 +50,14 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
       assert result =~ ~s[href="#fnref-1"]
     end
 
+    test "preserves named footnote fragment links unchanged" do
+      html = ~s[<a href="#fn-note">1</a><a href="#fnref-note">back</a>]
+      result = rewrite(html, "my_package", "1.0.0")
+
+      assert result =~ ~s[href="#fn-note"]
+      assert result =~ ~s[href="#fnref-note"]
+    end
+
     test "preserves absolute link URLs" do
       html = ~s[<a href="https://hexdocs.pm/phoenix">Phoenix</a>]
       result = rewrite(html, "my_package", "1.0.0")

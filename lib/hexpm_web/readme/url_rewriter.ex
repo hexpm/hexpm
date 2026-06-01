@@ -81,7 +81,7 @@ defmodule HexpmWeb.Readme.URLRewriter do
       url == "#" ->
         url
 
-      Regex.match?(~r/^#fn(ref)?-\d+$/, url) ->
+      Regex.match?(~r/^#fn(ref)?-.+$/, url) ->
         url
 
       String.starts_with?(url, "#") ->
