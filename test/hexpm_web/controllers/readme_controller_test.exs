@@ -260,9 +260,9 @@ defmodule HexpmWeb.ReadmeControllerTest do
         |> get("/#{package.name}/1.0.0")
 
       assert conn.status == 200
-      assert conn.resp_body =~ "foo"
-      assert conn.resp_body =~ "bar"
-      assert conn.resp_body =~ "baz"
+      # The lines must stay on separate lines; a collapsed block would not
+      # match the newline-separated pattern.
+      assert conn.resp_body =~ ~r/foo.*\n.*bar.*\n.*baz/
     end
 
     test "preserves newlines in highlighted code blocks", %{package: package} do
@@ -279,10 +279,9 @@ defmodule HexpmWeb.ReadmeControllerTest do
         |> get("/#{package.name}/1.0.0")
 
       assert conn.status == 200
-      assert conn.resp_body =~ "foo"
-      assert conn.resp_body =~ "bar"
-      assert conn.resp_body =~ "baz"
-      assert conn.resp_body =~ "\n"
+      # The lines must stay on separate lines even when wrapped in
+      # highlighting markup; a collapsed block would not match.
+      assert conn.resp_body =~ ~r/foo.*\n.*bar.*\n.*baz/
     end
 
     test "renders task list checkboxes", %{package: package} do
