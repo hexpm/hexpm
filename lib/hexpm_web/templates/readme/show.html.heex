@@ -37,11 +37,44 @@
           });
         }
 
+        function findAnchorTarget(id) {
+          return document.getElementById(id) || document.getElementsByName(id)[0] || null;
+        }
+
+        function resolveAnchorTop(id) {
+          if (id === "") return 0;
+          var target = findAnchorTarget(id);
+          if (!target) return null;
+          return target.getBoundingClientRect().top + window.scrollY;
+        }
+
+        function postAnchor(id) {
+          var top = resolveAnchorTop(id);
+          if (top === null) return;
+          origins.forEach(function(o) {
+            window.parent.postMessage({type: 'readme-anchor', id: id, top: top}, o);
+          });
+        }
+
         window.addEventListener("message", function(event) {
           if (!event.data || !isAllowedOrigin(event.origin)) return;
           if (event.data.type === "theme-change") {
             applyTheme(event.data.theme);
           }
+          if (event.data.type === "scroll-to-anchor" && typeof event.data.id === "string") {
+            postAnchor(event.data.id);
+          }
+        });
+
+        document.addEventListener("click", function(event) {
+          var link = event.target.closest && event.target.closest('a[href]');
+          if (!link) return;
+          var href = link.getAttribute("href");
+          if (!href || href.charAt(0) !== "#") return;
+          var id = decodeURIComponent(href.slice(1));
+          if (id !== "" && !findAnchorTarget(id)) return;
+          event.preventDefault();
+          postAnchor(id);
         });
 
         sendHeight();

@@ -35,11 +35,19 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
       assert result =~ "http://localhost:5000/preview/my_package/1.0.0/CHANGELOG.md"
     end
 
-    test "preserves fragment-only links" do
+    test "prefixes fragment-only links with user-content-" do
       html = ~s[<a href="#installation">Install</a>]
       result = rewrite(html, "my_package", "1.0.0")
 
-      assert result =~ ~s[href="#installation"]
+      assert result =~ ~s[href="#user-content-installation"]
+    end
+
+    test "preserves footnote fragment links unchanged" do
+      html = ~s[<a href="#fn-1">1</a><a href="#fnref-1">back</a>]
+      result = rewrite(html, "my_package", "1.0.0")
+
+      assert result =~ ~s[href="#fn-1"]
+      assert result =~ ~s[href="#fnref-1"]
     end
 
     test "preserves absolute link URLs" do
