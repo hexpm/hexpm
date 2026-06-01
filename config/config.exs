@@ -43,10 +43,9 @@ config :hexpm, Hexpm.RepoBase,
   migration_timestamps: [type: :utc_datetime_usec]
 
 config :swoosh, :api_client, Swoosh.ApiClient.Finch
+config :swoosh, :finch_name, Hexpm.Finch
 
-config :hexpm, Hexpm.Emails.Mailer,
-  adapter: Swoosh.Adapters.Sendgrid,
-  finch_name: Hexpm.Finch
+config :hexpm, Hexpm.Emails.Mailer, adapter: Swoosh.Adapters.Sendgrid
 
 config :phoenix, :template_engines, md: HexpmWeb.MarkdownEngine
 
