@@ -29,7 +29,7 @@ A nice side effect: we think the new URLs read a bit more naturally too.
 * If your package name contains `_`, remember to replace it with `-` in the public subdomain.
 * Old URLs will keep redirecting, so existing links will not break, but please update them when convenient.
 
-We redirect the old URLs for every public package and for every organization, with one exception: organizations whose name is also the name of a public package. Because that public package now owns the `<name>.hexdocs.pm` subdomain, the matching organization's old `<name>.hexdocs.pm/package` URLs can no longer be redirected. If your organization shares its name with a public package, update those links to `org.hexorgs.pm/package` directly.
+We redirect the old URLs for every public package and for every organization, with one exception: a small subset of organizations whose name is also the name of a public package. Because that public package now owns the `<name>.hexdocs.pm` subdomain, the matching organization's old `<name>.hexdocs.pm/package` URLs can no longer be redirected.
 
 ### Thanks
 
