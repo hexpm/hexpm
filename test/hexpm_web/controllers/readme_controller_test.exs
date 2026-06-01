@@ -284,6 +284,25 @@ defmodule HexpmWeb.ReadmeControllerTest do
       assert conn.resp_body =~ ~r/foo.*\n.*bar.*\n.*baz/
     end
 
+    test "consumes inline attribute list markers after tables", %{package: package} do
+      mock_file_list_and_readme(
+        package.name,
+        "1.0.0",
+        "README.md",
+        "| a | b |\n|---|---|\n| 1 | 2 |\n{: .my-class}\n"
+      )
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/1.0.0")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "<table"
+      # The marker is stripped, not rendered as a literal table row.
+      refute conn.resp_body =~ "{:"
+    end
+
     test "renders task list checkboxes", %{package: package} do
       mock_file_list_and_readme(
         package.name,

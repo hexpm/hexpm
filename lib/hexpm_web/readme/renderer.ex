@@ -8,6 +8,7 @@ defmodule HexpmWeb.Readme.Renderer do
   inside <pre> blocks.
   """
 
+  alias HexpmWeb.MDExPlugins.InlineAttributeLists
   alias HexpmWeb.Readme.{Sanitizer, URLRewriter}
 
   # Matches whitespace-only text between tags inside <pre> blocks.
@@ -30,6 +31,8 @@ defmodule HexpmWeb.Readme.Renderer do
             syntax_highlight: [formatter: :html_linked]
           )
           |> MDExGFM.attach()
+          |> MDEx.Document.run()
+          |> MDEx.traverse_and_update(&InlineAttributeLists.transform/1)
           |> MDEx.to_html!()
 
         _ ->
