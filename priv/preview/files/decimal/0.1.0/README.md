@@ -2,6 +2,8 @@
 
 Arbitrary precision decimal arithmetic for Elixir. Use `<-- comment -->` more text.
 
+Jump to: [Rounding Modes](#rounding-modes) · [Configuration](#configuration) · [License](#license) · [Top](#)
+
 ## Features
 
 - **Exact arithmetic** with no floating point rounding errors

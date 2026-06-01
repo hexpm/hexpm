@@ -78,8 +78,14 @@ defmodule HexpmWeb.Readme.URLRewriter do
       String.starts_with?(url, "//") ->
         "https:" <> url
 
-      String.starts_with?(url, "#") ->
+      url == "#" ->
         url
+
+      Regex.match?(~r/^#fn(ref)?-.+$/, url) ->
+        url
+
+      String.starts_with?(url, "#") ->
+        "#user-content-" <> String.trim_leading(url, "#")
 
       true ->
         path =

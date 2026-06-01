@@ -8,8 +8,11 @@ defmodule HexpmWeb.Readme.Renderer do
   inside <pre> blocks.
   """
 
+  alias HexpmWeb.MDExPlugins.HeadingAnchors
   alias HexpmWeb.MDExPlugins.InlineAttributeLists
   alias HexpmWeb.Readme.{Sanitizer, URLRewriter}
+
+  @header_tags [1, 2, 3, 4, 5, 6]
 
   # Matches whitespace-only text between tags inside <pre> blocks.
   # Replaced with HTML entities before Floki parsing to work around
@@ -33,6 +36,9 @@ defmodule HexpmWeb.Readme.Renderer do
           |> MDExGFM.attach()
           |> MDEx.Document.run()
           |> MDEx.traverse_and_update(&InlineAttributeLists.transform/1)
+          |> MDEx.traverse_and_update(
+            HeadingAnchors.transform(levels: @header_tags, hover_link: false)
+          )
           |> MDEx.to_html!()
 
         _ ->
