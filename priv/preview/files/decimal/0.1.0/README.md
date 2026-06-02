@@ -1,6 +1,8 @@
 # Decimal
 
-Arbitrary precision decimal arithmetic for Elixir.
+Arbitrary precision decimal arithmetic for Elixir. Use `<-- comment -->` more text.
+
+Jump to: [Rounding Modes](#rounding-modes) · [Configuration](#configuration) · [License](#license) · [Top](#)
 
 ## Features
 
@@ -54,13 +56,18 @@ end)
 
 ## Rounding Modes
 
-| Mode | Description |
-|------|-------------|
-| `:half_up` | Round towards nearest, ties go up |
-| `:half_down` | Round towards nearest, ties go down |
-| `:half_even` | Round towards nearest, ties go to even (banker's rounding) |
-| `:ceiling` | Always round up |
-| `:floor` | Always round down |
+Decimal supports several rounding modes[^1], all compliant with the General Decimal Arithmetic specification[^2].
+
+| Mode | Ties | Example (`1.5 → 1dp`) |
+|:-----|:----:|----------------------:|
+| `:half_up` | Round up | `2.0` |
+| `:half_down` | Round down | `1.0` |
+| `:half_even` | Round to even | `2.0` |
+| `:ceiling` | — | `2.0` |
+| `:floor` | — | `1.0` |
+
+[^1]: The default rounding mode is `:half_up`.
+[^2]: See [speleotrove.com/decimal](http://speleotrove.com/decimal/) for the full specification.
 
 ## Task List
 
@@ -107,6 +114,10 @@ So `1.23` is represented as `%Decimal{sign: 1, coef: 123, exp: -2}`.
 
 </details>
 
+## Inline HTML
+
+Some text with <ins>inline</ins> HTML
+
 ## Definition List
 
 Precision
@@ -118,6 +129,22 @@ Rounding
 ## Keyboard Shortcuts
 
 Use <kbd>Ctrl</kbd>+<kbd>C</kbd> to copy and <kbd>Ctrl</kbd>+<kbd>V</kbd> to paste decimal values.
+
+## Diferent Code Languages
+
+```heex
+<Cinder.collection resource={MyApp.User} actor={@current_user}>
+  <:col :let={user} field="name" filter sort>{user.name}</:col>
+  <:col :let={user} field="email" filter>{user.email}</:col>
+  <:col :let={user} field="department.name" filter sort>{user.department.name}</:col>
+  <:col :let={user} field="settings__country" filter>{user.settings.country}</:col>
+</Cinder.collection>
+```
+
+with no backticks:
+
+    $ mix archive.install hex phx_new
+    $ mix phx.new demo
 
 ## Links
 

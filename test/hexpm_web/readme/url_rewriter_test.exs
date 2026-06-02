@@ -3,10 +3,17 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
 
   alias HexpmWeb.Readme.URLRewriter
 
+  defp rewrite(html, package, version) do
+    html
+    |> Floki.parse_document!()
+    |> URLRewriter.rewrite(package, version)
+    |> Floki.raw_html()
+  end
+
   describe "rewrite/3" do
     test "rewrites absolute image URLs to proxy" do
       html = ~s[<img src="https://example.com/logo.png">]
-      result = URLRewriter.rewrite(html, "my_package", "1.0.0")
+      result = rewrite(html, "my_package", "1.0.0")
 
       assert result =~ "http://localhost:5000/img/fetch/"
       refute result =~ ~s[src="https://example.com/logo.png"]
@@ -14,7 +21,7 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
 
     test "resolves relative image paths to preview URL and proxies them" do
       html = ~s[<img src="docs/logo.png">]
-      result = URLRewriter.rewrite(html, "my_package", "1.0.0")
+      result = rewrite(html, "my_package", "1.0.0")
 
       expected = "http://localhost:5000/preview/my_package/1.0.0/docs/logo.png"
       encoded = Base.encode16(expected, case: :lower)
@@ -23,28 +30,44 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
 
     test "resolves relative link paths to preview URL" do
       html = ~s[<a href="CHANGELOG.md">Changelog</a>]
-      result = URLRewriter.rewrite(html, "my_package", "1.0.0")
+      result = rewrite(html, "my_package", "1.0.0")
 
       assert result =~ "http://localhost:5000/preview/my_package/1.0.0/CHANGELOG.md"
     end
 
-    test "preserves fragment-only links" do
+    test "prefixes fragment-only links with user-content-" do
       html = ~s[<a href="#installation">Install</a>]
-      result = URLRewriter.rewrite(html, "my_package", "1.0.0")
+      result = rewrite(html, "my_package", "1.0.0")
 
-      assert result =~ ~s[href="#installation"]
+      assert result =~ ~s[href="#user-content-installation"]
+    end
+
+    test "preserves footnote fragment links unchanged" do
+      html = ~s[<a href="#fn-1">1</a><a href="#fnref-1">back</a>]
+      result = rewrite(html, "my_package", "1.0.0")
+
+      assert result =~ ~s[href="#fn-1"]
+      assert result =~ ~s[href="#fnref-1"]
+    end
+
+    test "preserves named footnote fragment links unchanged" do
+      html = ~s[<a href="#fn-note">1</a><a href="#fnref-note">back</a>]
+      result = rewrite(html, "my_package", "1.0.0")
+
+      assert result =~ ~s[href="#fn-note"]
+      assert result =~ ~s[href="#fnref-note"]
     end
 
     test "preserves absolute link URLs" do
       html = ~s[<a href="https://hexdocs.pm/phoenix">Phoenix</a>]
-      result = URLRewriter.rewrite(html, "my_package", "1.0.0")
+      result = rewrite(html, "my_package", "1.0.0")
 
       assert result =~ ~s[href="https://hexdocs.pm/phoenix"]
     end
 
     test "strips ./ prefix from relative paths" do
       html = ~s[<img src="./images/logo.png">]
-      result = URLRewriter.rewrite(html, "my_package", "1.0.0")
+      result = rewrite(html, "my_package", "1.0.0")
 
       expected = "http://localhost:5000/preview/my_package/1.0.0/images/logo.png"
       encoded = Base.encode16(expected, case: :lower)
@@ -53,7 +76,7 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
 
     test "adds color-scheme-light class for gh-light-mode-only fragment" do
       html = ~s[<img src="https://example.com/logo.png#gh-light-mode-only" alt="Logo">]
-      result = URLRewriter.rewrite(html, "my_package", "1.0.0")
+      result = rewrite(html, "my_package", "1.0.0")
 
       assert result =~ ~s[class="color-scheme-light"]
       # Fragment should be stripped from the proxied URL
@@ -62,7 +85,7 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
 
     test "adds color-scheme-dark class for gh-dark-mode-only fragment" do
       html = ~s[<img src="https://example.com/logo.png#gh-dark-mode-only" alt="Logo">]
-      result = URLRewriter.rewrite(html, "my_package", "1.0.0")
+      result = rewrite(html, "my_package", "1.0.0")
 
       assert result =~ ~s[class="color-scheme-dark"]
       refute result =~ "gh-dark-mode-only"
@@ -70,14 +93,14 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
 
     test "does not add class for other fragments on images" do
       html = ~s[<img src="https://example.com/logo.png#section" alt="Logo">]
-      result = URLRewriter.rewrite(html, "my_package", "1.0.0")
+      result = rewrite(html, "my_package", "1.0.0")
 
       refute result =~ ~s[class="]
     end
 
     test "handles img tag without src attribute" do
       html = ~s[<img alt="Logo">]
-      result = URLRewriter.rewrite(html, "my_package", "1.0.0")
+      result = rewrite(html, "my_package", "1.0.0")
 
       assert result =~ ~s[alt="Logo"]
       refute result =~ "src="
@@ -85,14 +108,14 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
 
     test "does not proxy non-http/https image URLs" do
       html = ~s[<img src="data:image/png;base64,abc123">]
-      result = URLRewriter.rewrite(html, "my_package", "1.0.0")
+      result = rewrite(html, "my_package", "1.0.0")
 
       assert result =~ ~s[src="data:image/png;base64,abc123"]
     end
 
     test "proxies protocol-relative image URLs" do
       html = ~s[<img src="//example.com/logo.png">]
-      result = URLRewriter.rewrite(html, "my_package", "1.0.0")
+      result = rewrite(html, "my_package", "1.0.0")
 
       expected = "https://example.com/logo.png"
       encoded = Base.encode16(expected, case: :lower)
@@ -102,14 +125,14 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
 
     test "resolves protocol-relative link URLs" do
       html = ~s[<a href="//example.com/docs">Docs</a>]
-      result = URLRewriter.rewrite(html, "my_package", "1.0.0")
+      result = rewrite(html, "my_package", "1.0.0")
 
       assert result =~ ~s[href="https://example.com/docs"]
     end
 
     test "normalizes path traversal in relative URLs" do
       html = ~s[<a href="./foo/../bar/baz">Link</a>]
-      result = URLRewriter.rewrite(html, "my_package", "1.0.0")
+      result = rewrite(html, "my_package", "1.0.0")
 
       assert result =~ "http://localhost:5000/preview/my_package/1.0.0/bar/baz"
       refute result =~ ".."
@@ -117,10 +140,19 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
 
     test "rejects path traversal escaping the base directory" do
       html = ~s[<a href="../../etc/passwd">Link</a>]
-      result = URLRewriter.rewrite(html, "my_package", "1.0.0")
+      result = rewrite(html, "my_package", "1.0.0")
 
       refute result =~ "preview"
       assert result =~ ~s[href="../../etc/passwd"]
+    end
+
+    test "resolves absolute image paths to preview URL and proxies them" do
+      html = ~s[<img src="/images/examples.png">]
+      result = rewrite(html, "my_package", "1.0.0")
+
+      expected = "http://localhost:5000/preview/my_package/1.0.0/images/examples.png"
+      encoded = Base.encode16(expected, case: :lower)
+      assert result =~ encoded
     end
   end
 

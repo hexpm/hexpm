@@ -27,7 +27,8 @@
             {render("_package.html",
               package: package,
               package_downloads: downloads_for_package(package, @dependants_downloads),
-              view: :recent_downloads
+              view: :recent_downloads,
+              dependency_requirement: @dependants_requirements[package.id]
             )}
           <% end %>
         </ul>

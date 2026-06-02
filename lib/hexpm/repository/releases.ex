@@ -245,7 +245,7 @@ defmodule Hexpm.Repository.Releases do
     if owners != [] do
       owners
       |> Emails.package_published(publisher, package.name, release.version)
-      |> Mailer.deliver_later!()
+      |> Mailer.deliver!()
     end
   end
 

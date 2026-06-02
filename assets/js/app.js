@@ -121,6 +121,7 @@ window.liveSocket = liveSocket;
 
 // README iframe: show spinner until loaded, fall back to description if no readme
 var readmeFrame = document.getElementById("readme-frame");
+var pendingInitialHash = window.location.hash ? window.location.hash.slice(1) : null;
 
 window.addEventListener("message", function (event) {
   if (!event.data || !readmeFrame) return;
@@ -136,6 +137,14 @@ window.addEventListener("message", function (event) {
     syncReadmeFrameTheme(resolveTheme());
     var loading = document.getElementById("readme-loading");
     if (loading) loading.remove();
+
+    if (pendingInitialHash !== null && readmeFrame.contentWindow) {
+      readmeFrame.contentWindow.postMessage(
+        { type: "scroll-to-anchor", id: pendingInitialHash },
+        "*",
+      );
+      pendingInitialHash = null;
+    }
   }
 
   if (event.data.type === "readme-not-found") {
@@ -144,5 +153,19 @@ window.addEventListener("message", function (event) {
     readmeFrame.remove();
     var fallback = document.getElementById("readme-fallback");
     if (fallback) fallback.classList.remove("hidden");
+  }
+
+  if (
+    event.data.type === "readme-anchor" &&
+    typeof event.data.id === "string" &&
+    typeof event.data.top === "number"
+  ) {
+    var frameTop = readmeFrame.getBoundingClientRect().top + window.scrollY;
+    window.scrollTo({ top: frameTop + event.data.top, behavior: "smooth" });
+    if (event.data.id) {
+      history.replaceState(null, "", "#" + event.data.id);
+    } else {
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
   }
 });

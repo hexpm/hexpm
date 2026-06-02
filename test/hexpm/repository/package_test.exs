@@ -217,6 +217,18 @@ defmodule Hexpm.Repository.PackageTest do
              |> Hexpm.Repo.insert()
   end
 
+  test "reserved subdomain names", %{user: user, repository: repository} do
+    for name <- ~w(api docs preview search staging stats static) do
+      assert {:error, %{errors: [name: {"is reserved", _}]}} =
+               Package.build(
+                 repository,
+                 user,
+                 pkg_meta(%{name: name, description: "Awesomeness."})
+               )
+               |> Hexpm.Repo.insert()
+    end
+  end
+
   test "search repository", %{repository: repository} do
     other_repository = insert(:repository)
     package1 = insert(:package, repository_id: repository.id)

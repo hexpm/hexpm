@@ -86,6 +86,7 @@ defmodule HexpmWeb.Components.Footer do
           <.footer_link href={~p"/blog"} label="Blog" />
           <.footer_link href={~p"/sponsors"} label="Sponsors" />
           <.footer_link href="https://status.hex.pm" label="Status" external />
+          <.footer_link href="https://osv.dev/list?ecosystem=Hex" label="Advisories" external />
         </.footer_link_column>
 
         <.footer_link_column>

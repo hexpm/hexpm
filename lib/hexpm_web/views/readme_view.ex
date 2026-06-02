@@ -1,7 +1,11 @@
 defmodule HexpmWeb.ReadmeView do
   use HexpmWeb, :view
 
-  @makeup_css File.read!("assets/vendor/css/makeup.css")
+  @external_resource "assets/vendor/css/lumis.css"
+  case File.read("assets/vendor/css/lumis.css") do
+    {:ok, css} -> @lumis_css css
+    {:error, _} -> @lumis_css "/* lumis css not produced yet */"
+  end
 
   def readme_css do
     ~S"""
@@ -32,11 +36,9 @@ defmodule HexpmWeb.ReadmeView do
     .readme a { color: var(--color-blue-600); text-decoration: none; }
     .readme a:hover { text-decoration: underline; }
     .readme img { max-width: 100%; height: auto; margin: 2px; }
-    .readme pre { padding: 1rem; overflow-x: auto; background-color: var(--color-grey-900); border-radius: 0.5rem; margin-bottom: 1rem; }
-    .readme .highlight,
-    .readme .highlight pre { background: var(--color-grey-900); }
-    .readme code { padding: 0.125rem 0.375rem; font-size: 0.875rem; background-color: var(--color-grey-50); border-radius: 0.25rem; font-family: ui-monospace, monospace; color: var(--color-grey-800); }
-    .readme pre code { padding: 0; background: transparent; font-size: 0.875rem; color: var(--color-grey-100); }
+    .readme pre { overflow-x: auto; margin-bottom: 1rem; }
+    .readme code:not(pre code) { padding: 0.125rem 0.375rem; font-size: 0.875rem; background-color: var(--color-grey-50); border-radius: 0.25rem; font-family: ui-monospace, monospace; color: var(--color-grey-800); }
+    .readme pre code { padding: 0; background: transparent; font-size: 0.875rem; }
     .readme blockquote { padding: 0 1em; color: var(--color-grey-500); border-left: 0.25em solid var(--color-grey-100); margin-bottom: 16px; }
     .readme ul, .readme ol { padding-left: 2em; margin-bottom: 16px; }
     .readme li { margin-top: 0.25em; }
@@ -59,10 +61,6 @@ defmodule HexpmWeb.ReadmeView do
     html[data-theme="dark"] .readme h1, html[data-theme="dark"] .readme h2 { border-bottom-color: var(--color-grey-600); }
     html[data-theme="dark"] .readme a { color: var(--color-blue-300); }
     html[data-theme="dark"] .readme code:not(pre code) { background-color: var(--color-grey-900); color: var(--color-grey-100); }
-    html[data-theme="dark"] .readme pre { background-color: var(--color-grey-900); }
-    html[data-theme="dark"] .readme .highlight,
-    html[data-theme="dark"] .readme .highlight pre { background: var(--color-grey-900); }
-    html[data-theme="dark"] .readme pre code { background-color: transparent; color: var(--color-grey-100); }
     html[data-theme="dark"] .readme blockquote { color: var(--color-grey-300); border-left-color: var(--color-grey-500); }
     html[data-theme="dark"] .readme table th, html[data-theme="dark"] .readme table td { border-color: var(--color-grey-600); }
     html[data-theme="dark"] .readme table th, html[data-theme="dark"] .readme table tr:nth-child(2n) { background-color: var(--color-grey-800); }
@@ -71,5 +69,5 @@ defmodule HexpmWeb.ReadmeView do
     """
   end
 
-  def makeup_css, do: @makeup_css
+  def lumis_css, do: @lumis_css
 end

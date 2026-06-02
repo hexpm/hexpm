@@ -26,7 +26,6 @@ J1i2xWFndWa6nfFnRxZmCStCOZWYYPlaxr+FZceFbpMwzTNs4g3d4tLNUcbKAIH4
 0wIDAQAB
 -----END PUBLIC KEY-----
 ```
-{: .inline-block}
 
 #### Revoked keys
 

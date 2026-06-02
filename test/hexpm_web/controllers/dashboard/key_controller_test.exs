@@ -1,6 +1,6 @@
 defmodule HexpmWeb.Dashboard.KeyControllerTest do
   use HexpmWeb.ConnCase, async: true
-  use Bamboo.Test
+  import Swoosh.TestAssertions
 
   setup do
     %{
@@ -54,7 +54,7 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
       user = Hexpm.Repo.preload(c.user, :emails)
       key = Hexpm.Accounts.Keys.get(user, "notify-test")
 
-      assert_delivered_email(Hexpm.Emails.api_key_created(user, key))
+      assert_email_sent(Hexpm.Emails.api_key_created(user, key))
     end
 
     test "shows validation errors when name is missing", c do
@@ -214,7 +214,7 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
       |> delete("/dashboard/keys", %{"name" => key.name})
 
       user = Hexpm.Repo.preload(c.user, :emails)
-      assert_delivered_email(Hexpm.Emails.api_key_revoked(user, key))
+      assert_email_sent(Hexpm.Emails.api_key_revoked(user, key))
     end
   end
 end

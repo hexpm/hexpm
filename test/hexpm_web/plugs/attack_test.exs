@@ -39,6 +39,7 @@ defmodule HexpmWeb.Plugs.AttackTest do
     end
 
     test "broadcasts user rate limits", %{user: user} do
+      align_to_throttle_bucket()
       time = System.system_time(:millisecond)
       Phoenix.PubSub.broadcast!(Hexpm.PubSub, "ratelimit", {:throttle, {:user, user.id}, time})
       Phoenix.PubSub.broadcast!(Hexpm.PubSub, "ratelimit", {:throttle, {:user, -1}, time})
@@ -52,6 +53,7 @@ defmodule HexpmWeb.Plugs.AttackTest do
     end
 
     test "broadcasts ip rate limits" do
+      align_to_throttle_bucket()
       time = System.system_time(:millisecond)
       Phoenix.PubSub.broadcast!(Hexpm.PubSub, "ratelimit", {:throttle, {:ip, {3, 3, 3, 3}}, time})
       Phoenix.PubSub.broadcast!(Hexpm.PubSub, "ratelimit", {:throttle, {:ip, {4, 4, 4, 4}}, time})
@@ -65,6 +67,8 @@ defmodule HexpmWeb.Plugs.AttackTest do
     end
 
     test "halts requests when ip limit is exceeded" do
+      align_to_throttle_bucket()
+
       Enum.each(99..0//-1, fn i ->
         conn = request_ip({1, 1, 1, 1})
         assert conn.status == 200
@@ -79,6 +83,8 @@ defmodule HexpmWeb.Plugs.AttackTest do
     end
 
     test "halts requests when user limit is exceeded", %{user: user} do
+      align_to_throttle_bucket()
+
       Enum.each(499..0//-1, fn i ->
         conn = request_user(user)
         assert conn.status == 200
@@ -267,6 +273,14 @@ defmodule HexpmWeb.Plugs.AttackTest do
       result2 = HexpmWeb.Plugs.Attack.tfa_session_throttle(tfa_user_id_2)
       assert {:allow, _data} = result2
     end
+  end
+
+  # The throttle counter is keyed by `div(time_ms, period_ms)`. If a test's
+  # setup and assertion fall in different buckets, the counter resets between
+  # them. Wait past the next boundary if we're too close to it.
+  defp align_to_throttle_bucket(period_ms \\ 60_000, headroom_ms \\ 5_000) do
+    remaining = period_ms - rem(System.system_time(:millisecond), period_ms)
+    if remaining < headroom_ms, do: Process.sleep(remaining + 50)
   end
 
   defp request_ip(remote_ip) do

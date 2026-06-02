@@ -10,6 +10,7 @@ if config_env() == :prod do
     private_key: System.fetch_env!("HEXPM_SIGNING_KEY"),
     repo_bucket: System.fetch_env!("HEXPM_REPO_BUCKET"),
     logs_bucket: System.fetch_env!("HEXPM_LOGS_BUCKET"),
+    docs_bucket: System.fetch_env!("HEXPM_DOCS_BUCKET"),
     docs_url: System.fetch_env!("HEXPM_DOCS_URL"),
     private_docs_url: System.fetch_env!("HEXPM_PRIVATE_DOCS_URL"),
     diff_url: System.fetch_env!("HEXPM_DIFF_URL"),

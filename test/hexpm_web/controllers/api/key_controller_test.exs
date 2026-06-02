@@ -1,6 +1,6 @@
 defmodule HexpmWeb.API.KeyControllerTest do
   use HexpmWeb.ConnCase, async: true
-  use Bamboo.Test
+  import Swoosh.TestAssertions
 
   alias Hexpm.Repo
   alias Hexpm.Accounts.{AuditLog, Key, KeyPermission}
@@ -354,7 +354,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
       |> delete("/api/keys")
 
       user = Hexpm.Repo.preload(c.eric, :emails)
-      assert_delivered_email(Hexpm.Emails.api_keys_all_revoked(user))
+      assert_email_sent(Hexpm.Emails.api_keys_all_revoked(user))
     end
   end
 

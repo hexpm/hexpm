@@ -708,6 +708,15 @@ defmodule HexpmWeb.PackageControllerTest do
       assert response(conn, 404)
     end
 
+    test "shows requirement for each dependant", %{package1: package1} do
+      add_dependant(package1, "requiring_package")
+
+      html = get(build_conn(), "/packages/#{package1.name}/dependents") |> response(200)
+
+      assert html =~ "requiring_package"
+      assert html =~ "~&gt; 0.0.1"
+    end
+
     test "computes daily_graph for sidebar", %{package1: package1} do
       release = Hexpm.Repository.Releases.all(package1) |> List.first()
 

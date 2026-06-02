@@ -1,6 +1,6 @@
 defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
   use HexpmWeb.ConnCase, async: true
-  use Bamboo.Test
+  import Swoosh.TestAssertions
 
   alias Hexpm.Accounts.{Organizations, Users, AuditLogs}
 
@@ -299,7 +299,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       assert repo_user.role == "write"
 
-      assert_delivered_email(Hexpm.Emails.organization_invite(organization, new_user))
+      assert_email_sent(Hexpm.Emails.organization_invite(organization, new_user))
     end
 
     test "adding member does not send invite when user opts out", %{
@@ -337,7 +337,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       assert Repo.get_by(assoc(organization, :organization_users), user_id: new_user.id)
 
-      refute_delivered_email(Hexpm.Emails.organization_invite(organization, new_user))
+      assert_no_email_sent()
     end
 
     test "add member to organization without enough seats", %{

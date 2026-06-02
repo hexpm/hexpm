@@ -88,7 +88,7 @@ defmodule Hexpm.UtilsTest do
       current: current
     } do
       url = Utils.current_docs_html_url(package, current, current)
-      assert url =~ "/decimal/"
+      assert url =~ "//decimal."
       assert url =~ "1.2.3"
     end
 
@@ -98,7 +98,7 @@ defmodule Hexpm.UtilsTest do
       older: older
     } do
       url = Utils.current_docs_html_url(package, current, older)
-      assert url =~ "/decimal/"
+      assert url =~ "//decimal."
       refute url =~ "1.2.3"
       refute url =~ "1.0.0"
     end
@@ -108,8 +108,19 @@ defmodule Hexpm.UtilsTest do
       older: older
     } do
       url = Utils.current_docs_html_url(package, nil, older)
-      assert url =~ "/decimal/"
+      assert url =~ "//decimal."
       refute url =~ "1.0.0"
+    end
+
+    test "maps underscores in the package name to hyphens in the subdomain" do
+      hexpm = %Hexpm.Repository.Repository{id: 1, name: "hexpm"}
+      package = %Hexpm.Repository.Package{name: "phoenix_live_view", repository: hexpm}
+      release = %Hexpm.Repository.Release{version: Version.parse!("1.0.0")}
+
+      url = Utils.docs_html_url(hexpm, package, release)
+
+      assert url =~ "//phoenix-live-view."
+      refute url =~ "phoenix_live_view"
     end
   end
 end

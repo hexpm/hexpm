@@ -80,7 +80,7 @@ defmodule Hexpm.Repository.Owners do
 
           if owners != [] do
             Emails.owner_added(package, owners, user)
-            |> Mailer.deliver_later!()
+            |> Mailer.deliver!()
           end
 
           {:ok, %{owner | user: user}}
@@ -177,7 +177,7 @@ defmodule Hexpm.Repository.Owners do
 
         if owners != [] do
           Emails.owner_removed(package, owners, owner.user)
-          |> Mailer.deliver_later!()
+          |> Mailer.deliver!()
         end
 
         :ok

@@ -201,7 +201,9 @@ defmodule HexpmWeb.API.PackageControllerTest do
       assert String.slice(result["updated_at"], -1, 1) == "Z"
       assert result["url"] == "http://localhost:5000/api/packages/#{package1.name}"
       assert result["html_url"] == "http://localhost:5000/packages/#{package1.name}"
-      assert result["docs_html_url"] == "http://localhost:5002/#{package1.name}/"
+
+      assert result["docs_html_url"] ==
+               "http://#{String.replace(package1.name, "_", "-")}.localhost:5002/"
 
       assert result["latest_version"] == "0.0.1"
       assert result["latest_stable_version"] == "0.0.1"

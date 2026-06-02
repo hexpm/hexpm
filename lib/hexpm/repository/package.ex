@@ -43,6 +43,7 @@ defmodule Hexpm.Repository.Package do
     lpt3 lpt4 lpt5 lpt6 lpt7 lpt8 lpt9
   )
   @generic_names ~w(package organization www myapp lock locked all assets)
+  @subdomain_names ~w(api docs preview search staging stats static)
 
   @reserved_names Enum.concat([
                     @elixir_names,
@@ -51,8 +52,11 @@ defmodule Hexpm.Repository.Package do
                     @tool_names,
                     @app_names,
                     @windows_names,
-                    @generic_names
+                    @generic_names,
+                    @subdomain_names
                   ])
+
+  def reserved_names(), do: @reserved_names
 
   def build(repository, user, params) do
     package =

@@ -87,7 +87,7 @@ defmodule Hexpm.Accounts.Users do
     case Repo.transaction(multi) do
       {:ok, %{user: %{emails: [email]} = user}} ->
         Emails.verification(user, email)
-        |> Mailer.deliver_later!()
+        |> Mailer.deliver!()
 
         {:ok, user}
 
@@ -110,7 +110,7 @@ defmodule Hexpm.Accounts.Users do
       |> Repo.update!()
 
     Emails.verification(user, email)
-    |> Mailer.deliver_later!()
+    |> Mailer.deliver!()
 
     email
   end
@@ -215,7 +215,7 @@ defmodule Hexpm.Accounts.Users do
       {:ok, %{user: user}} ->
         user
         |> Emails.password_changed()
-        |> Mailer.deliver_later!()
+        |> Mailer.deliver!()
 
         {:ok, user}
 
@@ -240,7 +240,7 @@ defmodule Hexpm.Accounts.Users do
         {:ok, %{user: user}} ->
           user
           |> Emails.tfa_enabled()
-          |> Mailer.deliver_later!()
+          |> Mailer.deliver!()
 
           {:ok, user}
 
@@ -262,7 +262,7 @@ defmodule Hexpm.Accounts.Users do
       {:ok, %{user: user}} ->
         user
         |> Emails.tfa_disabled()
-        |> Mailer.deliver_later!()
+        |> Mailer.deliver!()
 
         user
 
@@ -281,7 +281,7 @@ defmodule Hexpm.Accounts.Users do
       {:ok, %{user: user}} ->
         user
         |> Emails.tfa_rotate_recovery_codes()
-        |> Mailer.deliver_later!()
+        |> Mailer.deliver!()
 
         user
 
@@ -314,7 +314,7 @@ defmodule Hexpm.Accounts.Users do
         |> Repo.transaction()
 
       Emails.password_reset_request(user, reset)
-      |> Mailer.deliver_later!()
+      |> Mailer.deliver!()
 
       :ok
     else
@@ -376,10 +376,10 @@ defmodule Hexpm.Accounts.Users do
         user = Repo.preload(user, :emails, force: true)
 
         Emails.verification(user, email)
-        |> Mailer.deliver_later!()
+        |> Mailer.deliver!()
 
         Emails.email_added(user, email)
-        |> Mailer.deliver_later!()
+        |> Mailer.deliver!()
 
         {:ok, user}
 
@@ -431,7 +431,7 @@ defmodule Hexpm.Accounts.Users do
 
         if is_binary(new_primary) and old_primary != new_primary do
           Emails.primary_email_changed(user, old_primary, new_primary)
-          |> Mailer.deliver_later!()
+          |> Mailer.deliver!()
         end
 
         :ok
@@ -544,7 +544,7 @@ defmodule Hexpm.Accounts.Users do
 
       true ->
         Emails.verification(user, email)
-        |> Mailer.deliver_later!()
+        |> Mailer.deliver!()
 
         :ok
     end
@@ -604,7 +604,7 @@ defmodule Hexpm.Accounts.Users do
       {:ok, %{user: user}} ->
         if not confirmed? do
           Emails.verification(user, List.first(user.emails))
-          |> Mailer.deliver_later!()
+          |> Mailer.deliver!()
         end
 
         {:ok, user}

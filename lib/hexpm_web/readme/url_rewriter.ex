@@ -7,19 +7,15 @@ defmodule HexpmWeb.Readme.URLRewriter do
   """
 
   @doc """
-  Rewrites URLs in the given HTML string.
+  Rewrites URLs in a Floki HTML tree.
 
   Relative paths are resolved against the preview service for the given
   package and version.
   """
-  def rewrite(html, package_name, version) do
+  def rewrite(tree, package_name, version) do
     cdn_url = Application.fetch_env!(:hexpm, :cdn_url)
     base_url = "#{cdn_url}/preview/#{package_name}/#{version}"
-
-    html
-    |> Floki.parse_document!()
-    |> rewrite_nodes(base_url)
-    |> Floki.raw_html()
+    rewrite_nodes(tree, base_url)
   end
 
   defp rewrite_nodes(nodes, base_url) when is_list(nodes) do
@@ -82,11 +78,20 @@ defmodule HexpmWeb.Readme.URLRewriter do
       String.starts_with?(url, "//") ->
         "https:" <> url
 
-      String.starts_with?(url, "#") ->
+      url == "#" ->
         url
 
+      Regex.match?(~r/^#fn(ref)?-.+$/, url) ->
+        url
+
+      String.starts_with?(url, "#") ->
+        "#user-content-" <> String.trim_leading(url, "#")
+
       true ->
-        path = String.trim_leading(url, "./")
+        path =
+          url
+          |> String.trim_leading("/")
+          |> String.trim_leading("./")
 
         case Path.safe_relative(path) do
           {:ok, safe_path} -> "#{base_url}/#{safe_path}"

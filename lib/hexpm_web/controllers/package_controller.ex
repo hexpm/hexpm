@@ -84,6 +84,7 @@ defmodule HexpmWeb.PackageController do
         |> Packages.attach_latest_releases()
 
       dependants_downloads = Downloads.packages_all_views(dependants)
+      dependants_requirements = Packages.dependant_requirements(dependants, package)
 
       render(
         conn,
@@ -94,6 +95,7 @@ defmodule HexpmWeb.PackageController do
           releases: releases,
           dependants: dependants,
           dependants_downloads: dependants_downloads,
+          dependants_requirements: dependants_requirements,
           page: page,
           per_page: per_page
         ] ++

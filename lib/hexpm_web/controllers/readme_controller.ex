@@ -1,7 +1,7 @@
 defmodule HexpmWeb.ReadmeController do
   use HexpmWeb, :controller
 
-  alias HexpmWeb.Readme.{Sanitizer, TaskList, URLRewriter}
+  alias HexpmWeb.Readme.Renderer
 
   @readme_filenames ~w(README.md readme.md README.markdown readme.markdown README.txt readme.txt README readme)
 
@@ -103,55 +103,7 @@ defmodule HexpmWeb.ReadmeController do
   end
 
   defp render_readme(filename, content, package_name, version) do
-    ext = Path.extname(filename) |> String.downcase()
-
-    html =
-      case ext do
-        ext when ext in [".md", ".markdown"] ->
-          {_status, ast, _messages} = Earmark.Parser.as_ast(content, gfm: true)
-          ast |> TaskList.convert() |> Earmark.transform()
-
-        _ ->
-          "<pre>#{Plug.HTML.html_escape(content)}</pre>"
-      end
-
-    html
-    |> Sanitizer.sanitize()
-    |> URLRewriter.rewrite(package_name, version)
-    |> highlight_code_blocks()
-  end
-
-  # Highlighting runs after sanitization since Makeup output is generated
-  # code that doesn't need sanitizing, and the sanitizer's Floki round-trip
-  # strips whitespace from inline elements (breaking newlines in code).
-  defp highlight_code_blocks(html) do
-    Regex.replace(
-      ~r{<pre><code class="([\w-]+)">(.*?)</code></pre>}s,
-      html,
-      fn full_match, lang, code ->
-        language =
-          if String.starts_with?(lang, "language-"),
-            do: String.trim_leading(lang, "language-"),
-            else: lang
-
-        case Makeup.Registry.fetch_lexer_by_name(language) do
-          {:ok, {lexer, opts}} ->
-            code |> unescape_html() |> Makeup.highlight(lexer: lexer, lexer_options: opts)
-
-          :error ->
-            full_match
-        end
-      end
-    )
-  end
-
-  defp unescape_html(html) do
-    html
-    |> String.replace("&amp;", "&")
-    |> String.replace("&lt;", "<")
-    |> String.replace("&gt;", ">")
-    |> String.replace("&quot;", "\"")
-    |> String.replace("&#39;", "'")
+    Renderer.render(filename, content, package_name, version)
   end
 
   defp send_no_readme(conn) do
