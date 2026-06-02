@@ -130,6 +130,22 @@ Rounding
 
 Use <kbd>Ctrl</kbd>+<kbd>C</kbd> to copy and <kbd>Ctrl</kbd>+<kbd>V</kbd> to paste decimal values.
 
+## Diferent Code Languages
+
+```heex
+<Cinder.collection resource={MyApp.User} actor={@current_user}>
+  <:col :let={user} field="name" filter sort>{user.name}</:col>
+  <:col :let={user} field="email" filter>{user.email}</:col>
+  <:col :let={user} field="department.name" filter sort>{user.department.name}</:col>
+  <:col :let={user} field="settings__country" filter>{user.settings.country}</:col>
+</Cinder.collection>
+```
+
+with no backticks:
+
+    $ mix archive.install hex phx_new
+    $ mix phx.new demo
+
 ## Links
 
 See the full [documentation](https://hexdocs.pm/decimal) for more details.

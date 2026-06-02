@@ -37,7 +37,7 @@ defmodule HexpmWeb.ReadmeView do
     .readme a:hover { text-decoration: underline; }
     .readme img { max-width: 100%; height: auto; margin: 2px; }
     .readme pre { overflow-x: auto; margin-bottom: 1rem; }
-    .readme code { padding: 0.125rem 0.375rem; font-size: 0.875rem; background-color: var(--color-grey-50); border-radius: 0.25rem; font-family: ui-monospace, monospace; color: var(--color-grey-800); }
+    .readme code:not(pre code) { padding: 0.125rem 0.375rem; font-size: 0.875rem; background-color: var(--color-grey-50); border-radius: 0.25rem; font-family: ui-monospace, monospace; color: var(--color-grey-800); }
     .readme pre code { padding: 0; background: transparent; font-size: 0.875rem; }
     .readme blockquote { padding: 0 1em; color: var(--color-grey-500); border-left: 0.25em solid var(--color-grey-100); margin-bottom: 16px; }
     .readme ul, .readme ol { padding-left: 2em; margin-bottom: 16px; }
