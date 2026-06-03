@@ -109,20 +109,50 @@ defmodule Hexpm.Accounts.KeysTest do
                "you do not have access to this package"
     end
 
-    test "organization package permissions", %{organization: organization, package: package} do
+    test "organization package permissions" do
+      repository = insert(:repository)
+      organization = repository.organization
+      package = insert(:package, repository_id: repository.id)
+
+      # The organization owns every package in its own repository, even when the
+      # organization's backing user is not an explicit package owner.
+      refute Hexpm.Repository.Packages.owner_with_access?(
+               %{package | repository: repository},
+               organization.user
+             )
+
       params = %{
         "name" => "keyname",
-        "permissions" => [%{"domain" => "package", "resource" => package.name}]
+        "permissions" => [
+          %{"domain" => "package", "resource" => "#{organization.name}/#{package.name}"}
+        ]
       }
 
       assert {:ok, %{key: %Key{}}} =
                Keys.create(organization, params, audit: audit_data(organization))
 
-      unowned_package = insert(:package)
+      # A package in another repository is not accessible to this organization.
+      other_package = insert(:package)
 
       params = %{
         "name" => "keyname",
-        "permissions" => [%{"domain" => "package", "resource" => unowned_package.name}]
+        "permissions" => [
+          %{"domain" => "package", "resource" => "#{organization.name}/#{other_package.name}"}
+        ]
+      }
+
+      assert {:error, :key, changeset, _} =
+               Keys.create(organization, params, audit: audit_data(organization))
+
+      assert errors_on(changeset)[:permissions][:resource] ==
+               "you do not have access to this package"
+
+      # A package qualified with another organization's name is not accessible.
+      params = %{
+        "name" => "keyname",
+        "permissions" => [
+          %{"domain" => "package", "resource" => "other-org/#{package.name}"}
+        ]
       }
 
       assert {:error, :key, changeset, _} =
@@ -133,7 +163,9 @@ defmodule Hexpm.Accounts.KeysTest do
 
       params = %{
         "name" => "keyname",
-        "permissions" => [%{"domain" => "package", "resource" => "NON_EXISTANT_PACKAGE"}]
+        "permissions" => [
+          %{"domain" => "package", "resource" => "#{organization.name}/NON_EXISTANT_PACKAGE"}
+        ]
       }
 
       assert {:error, :key, changeset, _} =
