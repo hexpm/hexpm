@@ -44,7 +44,7 @@ defmodule HexpmWeb.TestControllerTest do
 
   test "POST /api/repo creates organization and returns 204" do
     user = insert(:user)
-    org_name = "org-" <> Fake.sequence(:username)
+    org_name = "org_" <> Fake.sequence(:package)
 
     conn =
       build_conn()

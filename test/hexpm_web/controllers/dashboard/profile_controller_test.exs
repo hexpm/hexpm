@@ -1,6 +1,5 @@
 defmodule HexpmWeb.Dashboard.ProfileControllerTest do
   use HexpmWeb.ConnCase, async: true
-  import Swoosh.TestAssertions
 
   alias Hexpm.Accounts.{User, Users}
 

@@ -21,7 +21,7 @@ defmodule Hexpm.Accounts.Organization do
     has_many :audit_logs, AuditLog, foreign_key: :organization_id
   end
 
-  @name_regex ~r"^[a-z0-9_\-\.]+$"
+  @name_regex ~r"^[a-z0-9_]+$"
   @roles ~w(admin write read)
 
   @reserved_names Enum.uniq(Hexpm.Repository.Package.reserved_names() ++ ~w(phoenix acme))
