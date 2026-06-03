@@ -181,7 +181,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
                   <label class="flex items-center">
                     <input
                       type="checkbox"
-                      name={"key[permissions][package][#{package.name}]"}
+                      name={"key[permissions][package][#{package_resource(@organization, package)}]"}
                       value="on"
                       class="rounded border-grey-300 text-purple-600 focus:ring-purple-500"
                     />
@@ -209,4 +209,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
     </.modal>
     """
   end
+
+  defp package_resource(nil, package), do: package.name
+  defp package_resource(organization, package), do: "#{organization.name}/#{package.name}"
 end
