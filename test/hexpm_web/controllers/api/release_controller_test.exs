@@ -1500,7 +1500,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
                "http://localhost:5000/packages/#{repository.name}/#{package.name}/0.0.1"
 
       assert result["docs_html_url"] ==
-               "http://#{repository.name}.localhost:5002/#{package.name}/0.0.1/"
+               "http://#{String.replace(repository.name, "_", "-")}.localhost:5002/#{package.name}/0.0.1/"
 
       assert result["version"] == "0.0.1"
     end

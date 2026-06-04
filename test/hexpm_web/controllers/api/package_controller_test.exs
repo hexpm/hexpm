@@ -278,7 +278,7 @@ defmodule HexpmWeb.API.PackageControllerTest do
                "http://localhost:5000/packages/#{repository.name}/#{package3.name}"
 
       assert result["docs_html_url"] ==
-               "http://#{repository.name}.localhost:5002/#{package3.name}/"
+               "http://#{String.replace(repository.name, "_", "-")}.localhost:5002/#{package3.name}/"
     end
 
     test "get package with retired versions", %{package4: package4} do
