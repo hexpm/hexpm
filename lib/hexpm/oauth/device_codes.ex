@@ -238,22 +238,15 @@ defmodule Hexpm.OAuth.DeviceCodes do
         {:error, :access_denied, "Authorization denied by user"}
 
       authorized?(device_code_record) ->
-        # Look up the associated token and generate a fresh response
-        case get_device_token(device_code_record) do
-          nil ->
+        case rotate_device_token(device_code_record, usage_info) do
+          {:ok, token} ->
+            {:ok, token}
+
+          {:error, :no_token} ->
             {:error, :invalid_grant, "No token found for authorized device"}
 
-          token ->
-            # Update session's last_use with device's usage info when polling
-            if token.user_session_id && usage_info do
-              case Repo.get(Hexpm.UserSession, token.user_session_id) do
-                nil -> :ok
-                session -> UserSessions.update_last_use(session, usage_info)
-              end
-            end
-
-            # Generate fresh tokens for device flow response
-            {:ok, build_device_token_response(token)}
+          {:error, _reason} ->
+            {:error, :server_error, "Failed to issue token"}
         end
 
       pending?(device_code_record) ->
@@ -330,42 +323,80 @@ defmodule Hexpm.OAuth.DeviceCodes do
           t.grant_reference == ^device_code_record.device_code and
           t.client_id == ^device_code_record.client_id and
           is_nil(t.revoked_at),
+      order_by: [desc: t.inserted_at, desc: t.id],
+      limit: 1,
       preload: [:user]
     )
     |> Repo.one()
   end
 
-  # Builds a secure token response for device flow by generating fresh tokens
-  # and immediately revoking the old token for security
-  defp build_device_token_response(old_token) do
-    # Generate fresh tokens with the same permissions
-    new_token_changeset =
-      Tokens.create_for_user(
-        old_token.user,
-        old_token.client_id,
-        old_token.scopes,
-        "urn:ietf:params:oauth:grant-type:device_code",
-        old_token.grant_reference,
-        expires_in: DateTime.diff(old_token.expires_at, DateTime.utc_now()),
-        with_refresh_token: not is_nil(old_token.refresh_jti),
-        user_session_id: old_token.user_session_id
-      )
+  # Rotates the device flow token: issues a fresh token with the same
+  # permissions and revokes the previous one. A transaction locks the device
+  # code row so concurrent polls serialize and cannot each mint a fresh token,
+  # which would leave multiple live tokens for the same device code. The JWT is
+  # signed before the transaction so the connection and row lock are not held
+  # during the CPU-intensive signing.
+  defp rotate_device_token(device_code_record, usage_info) do
+    case get_device_token(device_code_record) do
+      nil ->
+        {:error, :no_token}
 
-    case Repo.insert(new_token_changeset) do
-      {:ok, new_token} ->
-        # Revoke the old token for security (one-time use pattern)
-        Tokens.revoke(old_token)
+      old_token ->
+        new_token_changeset = rotation_changeset(old_token)
 
-        new_token
+        Repo.transaction(fn ->
+          lock_device_code(device_code_record)
+          update_session_last_use(old_token, usage_info)
+          revoke_live_device_tokens(device_code_record)
 
-      {:error, _changeset} ->
-        # Fallback: build minimal response from existing token info
-        %{
-          access_token: "ERROR_GENERATING_TOKEN",
-          token_type: old_token.token_type,
-          expires_in: max(DateTime.diff(old_token.expires_at, DateTime.utc_now()), 0),
-          scope: Enum.join(old_token.scopes, " ")
-        }
+          case Repo.insert(new_token_changeset) do
+            {:ok, new_token} -> new_token
+            {:error, changeset} -> Repo.rollback(changeset)
+          end
+        end)
+    end
+  end
+
+  defp rotation_changeset(old_token) do
+    Tokens.create_for_user(
+      old_token.user,
+      old_token.client_id,
+      old_token.scopes,
+      "urn:ietf:params:oauth:grant-type:device_code",
+      old_token.grant_reference,
+      expires_in: DateTime.diff(old_token.expires_at, DateTime.utc_now()),
+      with_refresh_token: not is_nil(old_token.refresh_jti),
+      user_session_id: old_token.user_session_id
+    )
+  end
+
+  defp lock_device_code(device_code_record) do
+    from(dc in DeviceCode, where: dc.id == ^device_code_record.id, lock: "FOR UPDATE")
+    |> Repo.one()
+  end
+
+  # Revokes every live token for the device code before the replacement is
+  # inserted, so the partial unique index on live device-code tokens is never
+  # violated and any pre-existing duplicates are cleaned up.
+  defp revoke_live_device_tokens(device_code_record) do
+    now = DateTime.utc_now()
+
+    from(t in Token,
+      where:
+        t.grant_type == "urn:ietf:params:oauth:grant-type:device_code" and
+          t.grant_reference == ^device_code_record.device_code and
+          t.client_id == ^device_code_record.client_id and
+          is_nil(t.revoked_at)
+    )
+    |> Repo.update_all(set: [revoked_at: DateTime.truncate(now, :second), updated_at: now])
+  end
+
+  defp update_session_last_use(token, usage_info) do
+    if token.user_session_id && usage_info do
+      case Repo.get(Hexpm.UserSession, token.user_session_id) do
+        nil -> :ok
+        session -> UserSessions.update_last_use(session, usage_info)
+      end
     end
   end
 
