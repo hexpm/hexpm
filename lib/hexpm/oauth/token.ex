@@ -64,6 +64,10 @@ defmodule Hexpm.OAuth.Token do
     |> unique_constraint(:jti)
     |> unique_constraint(:refresh_jti)
     |> unique_constraint(:refresh_token_hash)
+    |> unique_constraint(:grant_reference,
+      name: :oauth_tokens_device_code_grant_reference_client_id_index,
+      message: "a live token already exists for this device code"
+    )
   end
 
   def build(attrs) do

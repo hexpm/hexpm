@@ -2,7 +2,7 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
   use Hexpm.DataCase, async: true
   import Phoenix.ConnTest
 
-  alias Hexpm.OAuth.{DeviceCodes, DeviceCode, Token, Client, Clients}
+  alias Hexpm.OAuth.{DeviceCodes, DeviceCode, Token, Tokens, Client, Clients}
 
   defp create_mock_conn do
     build_conn()
@@ -190,6 +190,53 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
       assert token1.jti != token2.jti
       assert token2.jti != token3.jti
     end
+
+    test "keeps exactly one live token across multiple polls", %{
+      device_code: device_code,
+      client: client
+    } do
+      user = insert(:user)
+      {:ok, _} = DeviceCodes.authorize_device(device_code.user_code, user, device_code.scopes)
+
+      {:ok, _} = DeviceCodes.poll_device_token(device_code.device_code, client.client_id)
+      {:ok, _} = DeviceCodes.poll_device_token(device_code.device_code, client.client_id)
+      {:ok, _} = DeviceCodes.poll_device_token(device_code.device_code, client.client_id)
+
+      assert length(live_device_tokens(device_code, client)) == 1
+    end
+
+    test "rejects inserting a second live token for the same device code", %{
+      device_code: device_code,
+      client: client
+    } do
+      user = insert(:user)
+      {:ok, _} = DeviceCodes.authorize_device(device_code.user_code, user, device_code.scopes)
+
+      duplicate =
+        Tokens.create_for_user(
+          user,
+          client.client_id,
+          device_code.scopes,
+          "urn:ietf:params:oauth:grant-type:device_code",
+          device_code.device_code
+        )
+
+      assert {:error, changeset} = Repo.insert(duplicate)
+      assert errors_on(changeset)[:grant_reference]
+      assert length(live_device_tokens(device_code, client)) == 1
+    end
+  end
+
+  defp live_device_tokens(device_code, client) do
+    Repo.all(
+      from(t in Token,
+        where:
+          t.grant_type == "urn:ietf:params:oauth:grant-type:device_code" and
+            t.grant_reference == ^device_code.device_code and
+            t.client_id == ^client.client_id and
+            is_nil(t.revoked_at)
+      )
+    )
   end
 
   describe "authorize_device/2" do
