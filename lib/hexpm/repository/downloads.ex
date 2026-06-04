@@ -39,15 +39,20 @@ defmodule Hexpm.Repository.Downloads do
   end
 
   def for_period(package_or_release, group_by, opts \\ []) do
+    date_filters = Keyword.take(opts, [:downloads_after, :downloads_before])
+    date_filtered? = Enum.any?(date_filters, fn {_key, value} -> match?(%Date{}, value) end)
+
     base =
       case package_or_release do
-        %Package{id: package_id} -> Download.by_period(package_id, group_by || :all)
-        %Release{id: release_id} -> ReleaseDownload.by_period(release_id, group_by || :all)
+        %Package{id: package_id} ->
+          Download.by_period(package_id, group_by || :all)
+
+        %Release{id: release_id} ->
+          ReleaseDownload.by_period(release_id, group_by || :all, date_filtered?)
       end
 
     query =
-      opts
-      |> Keyword.take([:downloads_after, :downloads_before])
+      date_filters
       |> Enum.reduce(base, fn
         {:downloads_after, %Date{} = date}, query -> Download.since_date(query, date)
         {:downloads_after, nil}, query -> query

@@ -14,7 +14,7 @@ defmodule Hexpm.Repository.ReleaseDownload do
     from(rd in ReleaseDownload, where: rd.release_id == ^release.id)
   end
 
-  def by_period(release_id, :all) do
+  def by_period(release_id, :all, false) do
     from(d in ReleaseDownload,
       where: d.release_id == ^release_id,
       select: %Download{
@@ -25,7 +25,19 @@ defmodule Hexpm.Repository.ReleaseDownload do
     )
   end
 
-  def by_period(release_id, filter) do
+  def by_period(release_id, :all, true) do
+    from(d in Download,
+      where: d.release_id == ^release_id,
+      group_by: [d.package_id, d.release_id],
+      select: %Download{
+        package_id: d.package_id,
+        release_id: d.release_id,
+        downloads: sum(d.downloads)
+      }
+    )
+  end
+
+  def by_period(release_id, filter, _date_filtered?) do
     from(d in Download, where: d.release_id == ^release_id)
     |> Download.query_filter(filter)
   end
