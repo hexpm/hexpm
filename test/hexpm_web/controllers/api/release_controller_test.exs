@@ -1600,6 +1600,29 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
                ["2000-02-07", 2]
              ]
     end
+
+    test "get release downloads (all) limited to range", %{package: package, release: release} do
+      result =
+        build_conn()
+        |> get(
+          "/api/packages/#{package.name}/releases/#{release.version}?downloads_after=2000-02-01"
+        )
+        |> json_response(200)
+
+      assert result["version"] == "#{release.version}"
+      assert result["downloads"] == 9
+
+      result =
+        build_conn()
+        |> get(
+          "/api/packages/#{package.name}/releases/#{release.version}?" <>
+            "downloads=all&downloads_after=2000-02-01&downloads_before=2000-02-07"
+        )
+        |> json_response(200)
+
+      assert result["version"] == "#{release.version}"
+      assert result["downloads"] == 5
+    end
   end
 
   describe "TOTP validation for write operations with OAuth tokens" do
