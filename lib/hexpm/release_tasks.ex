@@ -32,7 +32,7 @@ defmodule Hexpm.ReleaseTasks do
     Logger.info("[task] Running check_names")
     start_app()
 
-    task(&CheckNames.run/0)
+    monitor("hexpm-check-names", "30 0 * * *", &CheckNames.run/0)
 
     Logger.info("[task] Finished check_names")
     stop()
@@ -79,7 +79,7 @@ defmodule Hexpm.ReleaseTasks do
     Logger.info("[task] Running stats")
     start_app()
 
-    task(&Stats.run/0)
+    monitor("hexpm-stats", "0 1 * * *", &Stats.run/0)
 
     Logger.info("[task] Finished stats")
     stop()
@@ -90,10 +90,37 @@ defmodule Hexpm.ReleaseTasks do
     Logger.info("[task] Running purge_expired_records")
     start_repo()
 
-    task(&PurgeExpiredRecords.run/0)
+    monitor("hexpm-purge-expired-records", "0 2 * * *", &PurgeExpiredRecords.run/0)
 
     Logger.info("[task] Finished purge_expired_records")
     stop()
+  end
+
+  # Wraps a task in a Sentry cron check-in so failures and missed runs surface
+  # in Sentry. `slug` identifies the monitor and `schedule` is its crontab (UTC),
+  # matching the Kubernetes CronJob that invokes the task.
+  @doc false
+  def monitor(slug, schedule, fun) do
+    check_in_id =
+      case Sentry.capture_check_in(
+             status: :in_progress,
+             monitor_slug: slug,
+             monitor_config: [
+               schedule: [type: :crontab, value: schedule],
+               timezone: "Etc/UTC"
+             ]
+           ) do
+        {:ok, check_in_id} -> check_in_id
+        _ -> nil
+      end
+
+    status = task(fun)
+
+    opts = [status: status, monitor_slug: slug]
+    opts = if check_in_id, do: [{:check_in_id, check_in_id} | opts], else: opts
+    Sentry.capture_check_in(opts)
+
+    status
   end
 
   defp task(fun) do
@@ -103,26 +130,31 @@ defmodule Hexpm.ReleaseTasks do
       Task.async(fn ->
         try do
           fun.()
+          :ok
         rescue
           exception ->
-            Sentry.capture_exception(exception, stacktrace: __STACKTRACE__)
-            Logger.warning("Sleeping 5 seconds for Sentry to report error")
-            Process.sleep(5000)
+            report_error(exception, __STACKTRACE__)
+            :error
         end
       end)
 
     receive do
-      {^ref, _result} ->
-        :ok
+      {^ref, result} ->
+        result
 
       {:EXIT, _pid, {error, stacktrace}} ->
         exception = Exception.normalize(:error, error, stacktrace)
-        Sentry.capture_exception(exception, stacktrace: stacktrace)
-        Logger.warning("Sleeping 5 seconds for Sentry to report error")
-        Process.sleep(5000)
+        report_error(exception, stacktrace)
+        :error
     end
   after
     Process.flag(:trap_exit, false)
+  end
+
+  defp report_error(exception, stacktrace) do
+    Sentry.capture_exception(exception, stacktrace: stacktrace)
+    Logger.warning("Sleeping for Sentry to report error")
+    Process.sleep(Application.get_env(:hexpm, :sentry_flush_ms, 5000))
   end
 
   defp start_app() do
