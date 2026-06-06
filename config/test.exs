@@ -57,3 +57,6 @@ config :logger, level: :error
 config :hexpm, :hcaptcha,
   sitekey: "sitekey",
   secret: "secret"
+
+# Don't sleep waiting for Sentry to flush in tests.
+config :hexpm, sentry_flush_ms: 0
