@@ -55,8 +55,9 @@ defmodule Hexpm.MixProject do
       {:lasso, "~> 0.1.4", only: :test},
       {:libcluster, "~> 3.0"},
       {:logster, "~> 1.0"},
-      {:mdex, "~> 0.12"},
+      {:mdex, "~> 0.13"},
       {:mdex_gfm, "~> 0.1"},
+      {:lumis, "~> 0.5"},
       {:mox, "~> 1.0", only: :test},
       {:nimble_ownership, "~> 1.0"},
       {:stream_data, "~> 1.0", only: :test},
@@ -99,7 +100,13 @@ defmodule Hexpm.MixProject do
 
   defp aliases() do
     [
-      setup: ["deps.get", "ecto.setup", "esbuild.install", "tailwind.install"],
+      setup: [
+        "deps.get",
+        "ecto.setup",
+        "esbuild.install",
+        "tailwind.install",
+        "generate_lumis_css"
+      ],
       "ecto.setup": ["ecto.reset", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.create", "ecto.load", "ecto.migrate"],
       "assets.deploy": [
