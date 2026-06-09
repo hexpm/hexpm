@@ -73,6 +73,9 @@ defmodule HexpmWeb.API.DocsController do
     |> send_resp(204, "")
   end
 
+  # sobelow_skip ["Traversal.FileModule"]
+  # `path` is the Plug-generated temp file holding the uploaded request body
+  # (see `create/2` -> `body_path`), never a user-supplied path string.
   defp gzip_too_large?(path) do
     z = :zlib.open()
 

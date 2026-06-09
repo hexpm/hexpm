@@ -215,5 +215,8 @@ defmodule HexpmWeb.TestController do
   end
 
   defp send_object(nil, conn), do: send_resp(conn, 404, "")
+  # sobelow_skip ["XSS.SendResp"]
+  # `obj` is mock repository/tarball data served only in dev/test/hex envs
+  # (this controller is not routed in prod), not user-controlled HTML output.
   defp send_object(obj, conn), do: send_resp(conn, 200, obj)
 end

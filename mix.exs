@@ -75,6 +75,7 @@ defmodule Hexpm.MixProject do
       {:postgrex, "~> 0.14"},
       {:pot, "~> 1.0"},
       {:sentry, "~> 13.0"},
+      {:sobelow, "~> 0.14", only: [:dev, :test], runtime: false},
       {:tailwind, "~> 0.4", runtime: Mix.env() == :dev},
       {:tidewave, "~> 0.5", only: :dev},
       # Dependency is broken with mix due to missing dependency on :ssl application

@@ -1,0 +1,91 @@
+
+XSS.Raw: XSS,lib/hexpm_web/templates/blog/index.html.eex:55,645BEDE
+SQL.Query: SQL injection,lib/hexpm/repo.ex:154,3412DB0
+Traversal.FileModule: Directory Traversal in `File.cp!`,lib/hexpm/store/local.ex:39,70CC34D
+DOS.StringToAtom: Unsafe `String.to_atom`,lib/hexpm/accounts/users.ex:490,37F00F8
+Traversal.FileModule: Directory Traversal in `File.read`,lib/hexpm/store/local.ex:24,4AC7A97
+XSS.Raw: XSS,lib/hexpm_web/views/blog_view.ex:28,17B4C6E
+XSS.Raw: XSS,lib/hexpm_web/templates/dashboard/organization/components/billing_helpers.ex:76,64F382F
+XSS.Raw: XSS,lib/hexpm_web/templates/dashboard/organization/components/billing_helpers.ex:101,7A913B0
+Traversal.FileModule: Directory Traversal in `File.open`,lib/hexpm_web/plugs.ex:45,2BA5A35
+Traversal.FileModule: Directory Traversal in `File.rm_rf`,lib/hexpm/tmp_dir.ex:29,7C44899
+XSS.Raw: XSS,lib/hexpm_web/views/policy_view.ex:8,216BB97
+Traversal.FileModule: Directory Traversal in `File.rm_rf`,lib/hexpm/tmp_dir.ex:103,1ECB764
+Traversal.FileModule: Directory Traversal in `File.mkdir_p!`,lib/hexpm/store/local.ex:32,4C383F3
+XSS.Raw: XSS,lib/hexpm_web/templates/email/password_changed.html.eex:14,36757DD
+DOS.StringToAtom: Unsafe `String.to_atom`,lib/hexpm/accounts/users.ex:473,272C70A
+XSS.Raw: XSS,lib/hexpm_web/templates/email/password_changed.html.eex:18,A739F7
+RCE.CodeModule: Code Execution in `Code.eval_file`,lib/hexpm/release_tasks.ex:218,499B86F
+Traversal.FileModule: Directory Traversal in `File.write!`,lib/hexpm/store/local.ex:33,3A718AF
+XSS.Raw: XSS,lib/hexpm_web/templates/email/tfa_enabled.html.eex:10,2520CFF
+XSS.SendResp: XSS in `send_resp`,lib/hexpm_web/controllers/dashboard/organization_controller.ex:295,69A5EC3
+Traversal.FileModule: Directory Traversal in `File.rm_rf`,lib/hexpm/tmp_dir.ex:115,10FB41F
+SQL.Query: SQL injection,lib/hexpm/repo.ex:130,7F005EE
+XSS.Raw: XSS,lib/hexpm_web/views/icons.ex:44,608BB76
+XSS.Raw: XSS,lib/hexpm_web/templates/readme/no_readme.html.heex:6,7FC2C94
+DOS.StringToAtom: Unsafe `String.to_atom`,lib/hexpm/accounts/users.ex:505,140B623
+XSS.Raw: XSS,lib/hexpm_web/markdown_engine.ex:31,243A42C
+DOS.StringToAtom: Unsafe `String.to_atom`,lib/hexpm/utils.ex:67,B9815B
+DOS.BinToAtom: Unsafe atom interpolation,lib/hexpm/accounts/audit_log.ex:385,82B66D
+RCE.CodeModule: Code Execution in `Code.eval_quoted`,lib/hexpm_web/elixir_format.ex:25,7B2787D
+XSS.Raw: XSS,lib/hexpm_web/templates/email/tfa_recovery_rotated.html.eex:10,1D0D73C
+XSS.Raw: XSS,lib/hexpm_web/templates/readme/show.html.heex:13,2C3CFD1
+DOS.StringToAtom: Unsafe `String.to_atom`,lib/hexpm/accounts/users.ex:512,BDF259
+SQL.Query: SQL injection,lib/hexpm/release_tasks/check_names.ex:48,7A93AA9
+XSS.Raw: XSS,lib/hexpm_web/templates/readme/show.html.heex:16,7AE0C71
+Traversal.FileModule: Directory Traversal in `File.read!`,lib/hexpm_web/markdown_engine.ex:20,67C58D3
+Traversal.FileModule: Directory Traversal in `File.read!`,lib/hexpm/fake.ex:60,3BFC001
+XSS.Raw: XSS,lib/hexpm/repository/packages.ex:429,32E928E
+Traversal.FileModule: Directory Traversal in `File.mkdir_p!`,lib/hexpm/store/local.ex:38,17E59B2
+Traversal.FileModule: Directory Traversal in `File.mkdir_p!`,lib/hexpm/tmp_dir.ex:19,7DA861F
+XSS.SendResp: XSS in `send_resp`,lib/hexpm_web/controllers/test_controller.ex:196,407B87F
+XSS.Raw: XSS,lib/hexpm/repository/packages.ex:409,76A4051
+XSS.SendResp: XSS in `send_resp`,lib/hexpm_web/controllers/test_controller.ex:207,2217187
+XSS.Raw: XSS,lib/hexpm_web/templates/dashboard/organization/components/billing_helpers.ex:109,1EF5ABD
+Traversal.FileModule: Directory Traversal in `File.read!`,lib/hexpm_web/controllers/test_controller.ex:207,54C154F
+Traversal.FileModule: Directory Traversal in `File.rm`,lib/hexpm/store/local.ex:45,268D01A
+XSS.Raw: XSS,lib/hexpm_web/templates/email/organization_invite.html.eex:15,157AD5A
+DOS.BinToAtom: Unsafe atom interpolation,lib/hexpm_web/controllers/controller_helpers.ex:59,4EE4B3C
+XSS.Raw: XSS,lib/hexpm_web/templates/dashboard/organization/components/billing_helpers.ex:94,4C32720
+RCE.CodeModule: Code Execution in `Code.eval_file`,lib/hexpm/release_tasks.ex:195,15DD611
+XSS.Raw: XSS,lib/hexpm_web/templates/dashboard/organization/components/billing_helpers.ex:118,59C4917
+DOS.StringToAtom: Unsafe `String.to_atom`,lib/hexpm/ecto/changeset.ex:89,6749F69
+SQL.Query: SQL injection,lib/hexpm/repo.ex:169,791B3E
+XSS.Raw: XSS,lib/hexpm_web/templates/email/verification.html.eex:14,661EE68
+SQL.Query: SQL injection,lib/hexpm/repo.ex:139,2B47DDD
+DOS.BinToAtom: Unsafe atom interpolation,lib/hexpm/accounts/users.ex:150,278A886
+Traversal.FileModule: Directory Traversal in `File.read!`,lib/hexpm_web/controllers/api/docs_controller.ex:84,3CC6211
+Traversal.FileModule: Directory Traversal in `File.mkdir_p!`,lib/hexpm/tmp_dir.ex:46,2DBD31
+DOS.BinToAtom: Unsafe atom interpolation,lib/hexpm/accounts/users.ex:179,AFFC16
+XSS.SendResp: XSS in `send_resp`,lib/hexpm_web/controllers/test_controller.ex:221,4487330
+XSS.Raw: XSS,lib/hexpm_web/views/view_helpers.ex:378,6A45748
+Traversal.FileModule: Directory Traversal in `File.mkdir_p!`,lib/hexpm/application.ex:73,2DF66A
+XSS.Raw: XSS,lib/hexpm_web/templates/blog/index.html.eex:29,120AEC1
+XSS.Raw: XSS,lib/hexpm_web/templates/email/organization_invite.html.eex:37,635F946
+XSS.Raw: XSS,lib/hexpm_web/templates/email/tfa_disabled.html.eex:10,435EE61
+XSS.SendResp: XSS in `send_resp`,lib/hexpm_web/controllers/dashboard/organization_controller.ex:238,2458A35
+Traversal.FileModule: Directory Traversal in `File.read!`,lib/hexpm_web/controllers/test_controller.ex:196,318B92D
+Traversal.FileModule: Directory Traversal in `File.read!`,lib/hexpm/store/memory.ex:49,12B8A81
+XSS.Raw: XSS,lib/hexpm_web/templates/readme/show.html.heex:25,354FC8F
+XSS.SendResp: XSS in `send_resp`,lib/hexpm_web/controllers/dashboard/organization_controller.ex:243,6E0C476
+XSS.Raw: XSS,lib/hexpm_web/templates/email/email_added.html.eex:14,158644C
+XSS.Raw: XSS,lib/hexpm_web/templates/email/api_key_created.html.eex:14,1C79A12
+DOS.StringToAtom: Unsafe `String.to_atom`,lib/hexpm/accounts/users.ex:520,1F0CB03
+XSS.Raw: XSS,lib/hexpm/repository/packages.ex:426,2D7689D
+DOS.StringToAtom: Unsafe `String.to_atom`,lib/hexpm/accounts/users.ex:488,3C94323
+Traversal.FileModule: Directory Traversal in `File.read!`,lib/hexpm_web/markdown_engine.ex:15,3E618B8
+SQL.Query: SQL injection,lib/hexpm/repo.ex:161,4688B0A
+SQL.Query: SQL injection,lib/hexpm/repo.ex:146,4A60EE7
+RCE.CodeModule: Code Execution in `Code.eval_file`,lib/hexpm/release_tasks.ex:227,5236C0F
+SQL.Query: SQL injection,lib/hexpm/repo.ex:137,52B6046
+XSS.Raw: XSS,lib/hexpm_web/templates/email/primary_email_changed.html.eex:15,53125F4
+XSS.Raw: XSS,lib/hexpm_web/templates/readme/show.html.heex:13,57C6BB9
+XSS.Raw: XSS,lib/hexpm_web/templates/email/api_key_revoked.html.eex:14,595BB7D
+XSS.Raw: XSS,lib/hexpm_web/views/blog_view.ex:28,6A78B8D
+SQL.Query: SQL injection,lib/hexpm/repo.ex:176,6BC2C68
+XSS.Raw: XSS,lib/hexpm_web/markdown_engine.ex:30,700DF56
+DOS.StringToAtom: Unsafe `String.to_atom`,lib/hexpm/accounts/users.ex:527,7CEF88F
+RCE.CodeModule: Code Execution in `Code.eval_file`,lib/hexpm/release_tasks.ex:250,7E79308
+XSS.Raw: XSS,lib/hexpm/repository/packages.ex:446,9D87A4
+XSS.Raw: XSS,lib/hexpm_web/templates/email/api_keys_all_revoked.html.eex:14,ABD0B8
+DOS.StringToAtom: Unsafe `String.to_atom`,lib/hexpm/accounts/users.ex:505,EBC452
