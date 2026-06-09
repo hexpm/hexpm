@@ -263,7 +263,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
       id={@id}
       phx-hook="ToggleGroup"
       data-target={@target_id}
-      class="inline-flex rounded-lg border border-grey-200 dark:border-grey-700 bg-grey-50 dark:bg-grey-900 p-0.5"
+      class="inline-flex w-fit max-w-full justify-self-start rounded-lg border border-grey-200 dark:border-grey-700 bg-grey-50 dark:bg-grey-900 p-0.5"
     >
       <.visibility_button value="private" active?={@visibility == "private"} disabled={!@paid?}>
         {icon(:heroicon, "lock-closed", class: "w-3.5 h-3.5", width: 14, height: 14)} Private
@@ -526,7 +526,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
       description="Hold back releases until they reach a minimum age."
       enabled?={present?(@cooldown_value)}
     >
-      <div class="flex flex-wrap items-center gap-2">
+      <div class="grid gap-2 sm:flex sm:flex-wrap sm:items-center">
         <input
           type="text"
           id={@cooldown_id}
@@ -540,7 +540,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
             "focus:outline-none focus:ring-1"
           ]}
         />
-        <span class="text-xs text-grey-500 dark:text-grey-300">
+        <span class="text-xs leading-5 text-grey-500 dark:text-grey-300">
           days (<code class="font-mono">d</code>) · weeks (<code class="font-mono">w</code>) · months (<code class="font-mono">mo</code>)
         </span>
       </div>
@@ -566,7 +566,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
       description="Block any release with an advisory at or above the selected severity."
       enabled?={!is_nil(@advisory_value)}
     >
-      <div class="flex flex-wrap items-center gap-2 text-sm text-grey-500 dark:text-grey-300">
+      <div class="grid gap-2 text-sm text-grey-500 dark:text-grey-300 sm:flex sm:flex-wrap sm:items-center">
         <span>Block releases with an advisory of</span>
         <.severity_select
           id={@advisory_id}
@@ -589,7 +589,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
       |> assign(:dot_class, severity_dot_class(assigns.value))
 
     ~H"""
-    <span class="relative inline-flex items-center" data-severity-select>
+    <span class="relative inline-flex w-full sm:w-auto items-center" data-severity-select>
       <span
         data-severity-dot
         class={["pointer-events-none absolute left-2.5 size-2 rounded-full", @dot_class]}
@@ -600,7 +600,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
         name={@name}
         data-severity-control
         class={[
-          "h-8 w-36 pl-6 pr-7 rounded-md border text-sm font-medium appearance-none",
+          "h-8 w-full sm:w-36 pl-6 pr-7 rounded-md border text-sm font-medium appearance-none",
           "bg-white dark:bg-grey-800 text-grey-900 dark:text-grey-100",
           "border-grey-200 focus:border-primary-600 focus:ring-primary-600 dark:border-grey-600",
           "focus:outline-none focus:ring-1"
@@ -641,7 +641,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
       disabled_text="Retired releases are allowed"
     >
       <input type="hidden" name={@retirement_name <> "[]"} value="" />
-      <div class="flex flex-wrap gap-2">
+      <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
         <.retirement_checkbox
           :for={{label, value, _subtitle} <- retirement_reason_options()}
           name={@retirement_name <> "[]"}
@@ -777,7 +777,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
     <div
       data-override-row
       class={[
-        "flex flex-wrap items-center gap-2 rounded-lg border bg-white dark:bg-grey-800 p-2",
+        "relative grid grid-cols-1 gap-2 rounded-lg border bg-white dark:bg-grey-800 p-3 sm:flex sm:flex-wrap sm:items-center sm:p-2",
         "border-grey-200 dark:border-grey-700 border-l-4",
         @tone_class
       ]}
@@ -786,14 +786,14 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
 
       <div
         data-decision
-        class="inline-flex rounded-md border border-grey-200 dark:border-grey-700 overflow-hidden"
+        class="inline-flex w-max max-w-[calc(100%-2.5rem)] sm:max-w-full rounded-md border border-grey-200 dark:border-grey-700 overflow-hidden"
       >
         <input type="hidden" data-decision-input name={@action_name} value={@action_value} />
         <.decision_button value="allow" label="Allow" active?={@action_value == "allow"} />
         <.decision_button value="deny" label="Deny" active?={@action_value == "deny"} />
       </div>
 
-      <div class="relative flex-1 min-w-[10rem]">
+      <div class="relative min-w-0 sm:flex-1 sm:min-w-[10rem]">
         <input
           type="text"
           data-override-package
@@ -816,7 +816,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
         >
         </div>
       </div>
-      <div class="relative flex-1 min-w-[10rem]">
+      <div class="relative min-w-0 sm:flex-1 sm:min-w-[10rem]">
         <input
           type="text"
           data-override-requirement
@@ -842,7 +842,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
       <button
         type="button"
         data-override-remove
-        class="size-9 flex items-center justify-center rounded text-grey-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors cursor-pointer"
+        class="absolute right-2 top-2 sm:static size-9 flex items-center justify-center rounded text-grey-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors cursor-pointer"
         aria-label="Remove override"
       >
         {icon(:heroicon, "trash", class: "w-4 h-4", width: 16, height: 16)}
@@ -865,7 +865,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
       data-decision-value={@value}
       data-active={@active? && "true"}
       class={[
-        "inline-flex items-center gap-1.5 px-3 h-9 text-sm font-medium cursor-pointer transition-colors",
+        "inline-flex items-center gap-1.5 px-2.5 sm:px-3 h-9 text-sm font-medium cursor-pointer transition-colors",
         "text-grey-600 dark:text-grey-300 bg-white dark:bg-grey-800 hover:bg-grey-50 dark:hover:bg-grey-700",
         @value == "allow" &&
           "data-[active=true]:bg-green-50 data-[active=true]:text-green-700 dark:data-[active=true]:bg-green-900/20 dark:data-[active=true]:text-green-300",
@@ -928,25 +928,30 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
     <div
       id={@id}
       phx-hook="RuleToggle"
-      class="grid grid-cols-1 md:grid-cols-[8rem_1fr] gap-3 py-2"
+      class="grid grid-cols-[1.25rem_1fr] md:grid-cols-[8rem_1fr] gap-x-3 gap-y-2 py-3"
     >
-      <label class="group/rule flex items-center gap-3 cursor-pointer min-h-9">
+      <label class="group/rule contents cursor-pointer md:flex md:items-center md:gap-3 md:min-h-9">
         <input type="checkbox" checked={@enabled?} class="sr-only peer" data-rule-enabled />
-        <span class="w-4 h-4 rounded border-[1.5px] flex items-center justify-center flex-shrink-0 transition-colors bg-white dark:bg-grey-800 border-grey-300 dark:border-grey-600 peer-checked:bg-blue-600 peer-checked:border-blue-600">
+        <span class="self-center w-4 h-4 rounded border-[1.5px] flex items-center justify-center flex-shrink-0 transition-colors bg-white dark:bg-grey-800 border-grey-300 dark:border-grey-600 peer-checked:bg-blue-600 peer-checked:border-blue-600">
           <span class="hidden group-has-[:checked]/rule:flex text-white">
             {icon(:heroicon, "check", class: "w-3 h-3", width: 12, height: 12)}
           </span>
         </span>
-        <span class="text-sm font-semibold text-grey-900 dark:text-white">{@title}</span>
+        <span class="min-h-9 flex items-center text-sm font-semibold text-grey-900 dark:text-white">
+          {@title}
+        </span>
       </label>
-      <div data-rule-body class={["min-h-9 flex items-center", !@enabled? && "hidden"]}>
+      <div
+        data-rule-body
+        class={["col-start-2 md:col-start-auto min-h-9 flex items-center", !@enabled? && "hidden"]}
+      >
         {render_slot(@inner_block)}
       </div>
       <div
         :if={@disabled_text}
         data-rule-disabled
         class={[
-          "min-h-9 items-center text-sm italic text-grey-500 dark:text-grey-300",
+          "col-start-2 md:col-start-auto min-h-9 items-center text-sm italic text-grey-500 dark:text-grey-300",
           @enabled? && "hidden",
           !@enabled? && "flex"
         ]}

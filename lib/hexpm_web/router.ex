@@ -31,6 +31,8 @@ defmodule HexpmWeb.Router do
         img_src: ~w('self' data: https://www.gravatar.com https://q.stripe.com),
         # Allow fonts from self and Google Fonts
         font_src: ~w('self' https://fonts.gstatic.com),
+        # App stylesheet from self, Google Fonts stylesheet, and nonced inline styles
+        style_src: ~w('self' https://fonts.googleapis.com),
         # hcaptcha iframe, asciinema iframe for blog embeds, Stripe Checkout + 3DS
         frame_src:
           ~w('self' https://hcaptcha.com https://*.hcaptcha.com https://asciinema.org https://*.stripe.com),
