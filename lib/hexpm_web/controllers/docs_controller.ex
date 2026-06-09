@@ -91,6 +91,17 @@ defmodule HexpmWeb.DocsController do
     )
   end
 
+  def dependency_policies(conn, _params) do
+    render(
+      conn,
+      "layout.html",
+      view: "dependency_policies.html",
+      view_name: :dependency_policies,
+      title: "Dependency policies and cooldowns",
+      container: "flex-1 flex flex-col"
+    )
+  end
+
   def coc(conn, _params) do
     render(
       conn,

@@ -33,4 +33,32 @@ defmodule HexpmWeb.Components.Badge do
   defp badge_variant("purple"), do: "bg-purple-100 text-purple-700"
   defp badge_variant("red"), do: "bg-red-100 text-red-700"
   defp badge_variant("yellow"), do: "bg-yellow-100 text-yellow-700"
+
+  @doc """
+  Renders a small colored dot, used inside pills, list items, and meta
+  rows to signal status.
+
+  ## Examples
+
+      <.status_dot variant="blue" />
+      <.status_dot variant="purple" />
+  """
+  attr :variant, :string,
+    default: "grey",
+    values: ~w(grey blue purple yellow red green)
+
+  attr :class, :string, default: "w-1.5 h-1.5"
+
+  def status_dot(assigns) do
+    ~H"""
+    <span class={["rounded-full", @class, dot_class(@variant)]}></span>
+    """
+  end
+
+  defp dot_class("blue"), do: "bg-blue-500"
+  defp dot_class("purple"), do: "bg-primary-600"
+  defp dot_class("yellow"), do: "bg-yellow-500"
+  defp dot_class("red"), do: "bg-red-500"
+  defp dot_class("green"), do: "bg-green-500"
+  defp dot_class(_), do: "bg-grey-400"
 end

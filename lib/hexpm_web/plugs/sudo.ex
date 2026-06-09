@@ -31,6 +31,9 @@ defmodule HexpmWeb.Plugs.Sudo do
   @impl Plug
   def call(conn, _opts) do
     cond do
+      disabled?() ->
+        conn
+
       sudo_active?(conn) ->
         conn
 
@@ -99,6 +102,11 @@ defmodule HexpmWeb.Plugs.Sudo do
   @spec sudo_timeout() :: Duration.t()
   defp sudo_timeout do
     Application.fetch_env!(:hexpm, :sudo_timeout)
+  end
+
+  @spec disabled?() :: boolean()
+  defp disabled? do
+    Application.get_env(:hexpm, :sudo, true) == false
   end
 
   @spec set_sudo_authenticated(Plug.Conn.t()) :: Plug.Conn.t()

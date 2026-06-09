@@ -170,6 +170,7 @@ defmodule HexpmWeb.Router do
     get "/docs/rebar3-private", DocsController, :rebar3_private
     get "/docs/rebar3-tasks", DocsController, :rebar3_tasks
     get "/docs/private", DocsController, :private
+    get "/docs/dependency-policies", DocsController, :dependency_policies
     get "/docs/faq", DocsController, :faq
     get "/docs/mirrors", DocsController, :mirrors
     get "/docs/public-keys", DocsController, :public_keys
@@ -293,6 +294,22 @@ defmodule HexpmWeb.Router do
     get "/orgs/:dashboard_org/invoices/:id", OrganizationController, :show_invoice
     post "/orgs/:dashboard_org/invoices/:id/pay", OrganizationController, :pay_invoice
     post "/orgs/:dashboard_org/profile", OrganizationController, :update_profile
+
+    get "/orgs/:dashboard_org/policies", OrganizationController, :policies
+    get "/orgs/:dashboard_org/policies/new", OrganizationController, :new_policy
+
+    get "/orgs/:dashboard_org/policies/package-suggestions",
+        OrganizationController,
+        :policy_package_suggestions
+
+    get "/orgs/:dashboard_org/policies/version-suggestions",
+        OrganizationController,
+        :policy_version_suggestions
+
+    post "/orgs/:dashboard_org/policies", OrganizationController, :create_policy
+    get "/orgs/:dashboard_org/policies/:name", OrganizationController, :edit_policy
+    post "/orgs/:dashboard_org/policies/:name", OrganizationController, :update_policy
+    delete "/orgs/:dashboard_org/policies/:name", OrganizationController, :delete_policy
 
     get "/keys", KeyController, :index
     delete "/keys", KeyController, :delete

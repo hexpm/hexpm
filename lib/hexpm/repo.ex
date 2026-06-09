@@ -32,6 +32,7 @@ defmodule Hexpm.Repo do
   defdelegate one(queryable, opts \\ []), to: RepoBase
   defdelegate preload(structs_or_struct_or_nil, preloads, opts \\ []), to: RepoBase
 
+  defwrite(advisory_xact_lock(key, opts \\ []))
   defwrite(try_advisory_xact_lock?(key, opts \\ []))
   defwrite(try_advisory_lock?(key, opts \\ []))
   defwrite(advisory_unlock(key, opts \\ []))
@@ -69,7 +70,8 @@ defmodule Hexpm.RepoBase do
 
   @advisory_locks %{
     registry: 1,
-    vulnerability_updater: 2
+    vulnerability_updater: 2,
+    policy: 3
   }
 
   def init(_reason, opts) do
@@ -135,6 +137,19 @@ defmodule Hexpm.RepoBase do
     query = ~s(REFRESH MATERIALIZED VIEW #{concurrently} "#{source}")
 
     {:ok, _} = Hexpm.Repo.query(query, [], opts)
+    :ok
+  end
+
+  def advisory_xact_lock(key, opts \\ []) do
+    unless skip_advisory_locks?() do
+      %Postgrex.Result{} =
+        query!(
+          "SELECT pg_advisory_xact_lock($1)",
+          [Map.fetch!(@advisory_locks, key)],
+          opts
+        )
+    end
+
     :ok
   end
 

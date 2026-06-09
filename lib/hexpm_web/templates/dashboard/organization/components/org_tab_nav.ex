@@ -16,23 +16,33 @@ defmodule HexpmWeb.Dashboard.Organization.Components.OrgTabNav do
     <div>
       <div class="border-b border-grey-200 dark:border-grey-800 mb-4 sm:mb-6">
         <nav
+          id="org-tab-nav"
+          phx-hook="ScrollActiveIntoView"
           class="-mb-px flex gap-1 overflow-x-auto scrollbar-hide touch-pan-x"
           aria-label="Organization tabs"
         >
           <%= for {label, path, _active?} = tab <- tabs(@organization, @current_user) do %>
             <a
               href={path}
+              data-active={active?(@conn, tab) && "true"}
               class={[
                 "whitespace-nowrap px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium border-b-2 transition-colors",
-                "min-h-[44px] flex items-center",
+                "min-h-[44px] flex items-center gap-2",
                 if(active?(@conn, tab),
-                  do: "border-purple-600 dark:border-purple-300 text-purple-600 dark:text-purple-300",
+                  do:
+                    "border-primary-600 dark:border-primary-300 text-primary-600 dark:text-primary-300",
                   else:
                     "border-transparent text-grey-500 dark:text-grey-300 hover:text-grey-700 dark:hover:text-grey-100 hover:border-grey-300 dark:hover:border-grey-700"
                 )
               ]}
             >
-              {label}
+              <span>{label}</span>
+              <span
+                :if={label == "Policies"}
+                class="inline-flex items-center px-1.5 py-[2px] rounded-full text-[9px] font-bold leading-none uppercase tracking-wider bg-primary-600 text-white"
+              >
+                NEW
+              </span>
             </a>
           <% end %>
         </nav>
@@ -52,6 +62,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.OrgTabNav do
        &String.starts_with?(&1, "/dashboard/orgs/#{name}/members")},
       {"Keys", "/dashboard/orgs/#{name}/keys",
        &String.starts_with?(&1, "/dashboard/orgs/#{name}/keys")},
+      {"Policies", "/dashboard/orgs/#{name}/policies",
+       &String.starts_with?(&1, "/dashboard/orgs/#{name}/policies")},
       {"Packages", "/dashboard/orgs/#{name}/packages",
        &String.starts_with?(&1, "/dashboard/orgs/#{name}/packages")},
       {"Activity", "/dashboard/orgs/#{name}/audit-logs",

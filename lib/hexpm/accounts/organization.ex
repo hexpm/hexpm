@@ -19,6 +19,7 @@ defmodule Hexpm.Accounts.Organization do
     has_many :users, through: [:organization_users, :user]
     has_many :keys, Key
     has_many :audit_logs, AuditLog, foreign_key: :organization_id
+    has_many :policies, Hexpm.Repository.OrganizationPolicy
   end
 
   @name_regex ~r"^[a-z0-9_]+$"
