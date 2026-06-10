@@ -98,4 +98,6 @@ config :ueberauth, Ueberauth,
     github: {Ueberauth.Strategy.Github, [default_scope: "user:email"]}
   ]
 
+config :mdex_native, syntax_highlighter: :lumis
+
 import_config "#{Mix.env()}.exs"
