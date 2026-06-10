@@ -417,6 +417,16 @@ defmodule Hexpm.Accounts.AuditLog do
     from(l in all_by(schema), select: count())
   end
 
+  def count_by_policies(%Hexpm.Accounts.Organization{} = organization) do
+    from(l in AuditLog,
+      where:
+        l.organization_id == ^organization.id and
+          l.action in ["policy.create", "policy.update", "policy.delete"],
+      group_by: fragment("? ->> 'name'", l.params),
+      select: {fragment("? ->> 'name'", l.params), count()}
+    )
+  end
+
   def all_by(%Hexpm.Repository.Package{} = package) do
     from(l in AuditLog,
       where: fragment("(? -> 'package' ->> 'id')::integer", l.params) == ^package.id

@@ -17,7 +17,6 @@ import { initializeTheme, syncReadmeFrameTheme, resolveTheme } from "./theme";
 import { SearchShortcut } from "./hooks/search_shortcut";
 import { SearchInputSync } from "./hooks/search_input_sync";
 import { ToggleGroup } from "./hooks/toggle_group";
-import { FocusFirstField, ScrollToTarget } from "./hooks/focus_first_field";
 import { RuleToggle } from "./hooks/rule_toggle";
 import { ScrollActiveIntoView } from "./hooks/scroll_active_into_view";
 import { OverrideList } from "./hooks/override_list";
@@ -43,8 +42,6 @@ let Hooks = {
   SearchShortcut,
   SearchInputSync,
   ToggleGroup,
-  FocusFirstField,
-  ScrollToTarget,
   RuleToggle,
   ScrollActiveIntoView,
   OverrideList,

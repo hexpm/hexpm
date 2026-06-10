@@ -102,6 +102,7 @@
                     policy={@policy}
                     changeset={@policy_changeset}
                     paid?={Hexpm.Accounts.Organization.billing_active?(@organization)}
+                    can_edit={@policy_admin?}
                     activity={@policy_activity}
                     rev={@policy_rev}
                   />

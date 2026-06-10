@@ -22,19 +22,60 @@ export const ToggleGroup = {
       : this.el;
     const panels = panelRoot ? panelRoot.querySelectorAll("[data-panel]") : [];
     const allowClear = this.el.dataset.allowClear === "true";
+    // When the group is an ARIA tablist, also drive aria-selected, a roving
+    // tabindex, and arrow-key navigation across the tabs.
+    const isTablist = this.el.getAttribute("role") === "tablist";
 
     const sync = () => {
       const current = target ? target.value : this.currentPanel;
 
       buttons.forEach((b) => {
-        b.dataset.active =
-          String(b.dataset.value) === String(current) ? "true" : "false";
+        const active = String(b.dataset.value) === String(current);
+        b.dataset.active = active ? "true" : "false";
+
+        if (isTablist) {
+          b.setAttribute("aria-selected", active ? "true" : "false");
+          b.tabIndex = active ? 0 : -1;
+        }
       });
 
       panels.forEach((panel) => {
         panel.hidden = String(panel.dataset.panel) !== String(current);
       });
     };
+
+    if (isTablist) {
+      this.el.addEventListener("keydown", (event) => {
+        const tabs = Array.from(buttons).filter((b) => !b.hidden);
+        const currentIndex = tabs.indexOf(document.activeElement);
+        if (currentIndex === -1) return;
+
+        let nextIndex;
+        switch (event.key) {
+          case "ArrowRight":
+          case "ArrowDown":
+            nextIndex = (currentIndex + 1) % tabs.length;
+            break;
+          case "ArrowLeft":
+          case "ArrowUp":
+            nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+            break;
+          case "Home":
+            nextIndex = 0;
+            break;
+          case "End":
+            nextIndex = tabs.length - 1;
+            break;
+          default:
+            return;
+        }
+
+        event.preventDefault();
+        const next = tabs[nextIndex];
+        next.focus();
+        next.click();
+      });
+    }
 
     if (!target && panels.length > 0) {
       const initial =

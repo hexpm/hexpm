@@ -96,6 +96,16 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
       assert html_response(conn, 400) =~ "at least 3"
       refute Policies.get(org, "ab")
     end
+
+    test "rejects a reserved name", %{user: user, organization: org} do
+      conn = build_conn() |> test_login(user)
+      params = %{"policy" => %{"name" => "new", "visibility" => "public"}}
+
+      conn = post(conn, "/dashboard/orgs/#{org.name}/policies", params)
+
+      assert html_response(conn, 400) =~ "is reserved"
+      refute Policies.get(org, "new")
+    end
   end
 
   describe "update" do
@@ -123,6 +133,29 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
       assert hexpm.cooldown == "7d"
       # the org tab survives the round-trip
       assert Enum.any?(updated.repositories, &(&1.repository == org.name))
+    end
+
+    test "ignores an attempt to rename the policy", %{user: user, organization: org} do
+      {:ok, %{policy: policy}} =
+        Policies.create(org, %{"name" => "polone", "visibility" => "public"},
+          audit: audit_data(user)
+        )
+
+      conn = build_conn() |> test_login(user)
+
+      params = %{
+        "policy" => %{
+          "name" => "renamed",
+          "visibility" => "public",
+          "repositories" => repository_params(policy, "hexpm", %{})
+        }
+      }
+
+      conn = post(conn, "/dashboard/orgs/#{org.name}/policies/#{policy.name}", params)
+
+      assert redirected_to(conn) =~ "/dashboard/orgs/#{org.name}/policies/polone"
+      assert Policies.get(org, "polone")
+      refute Policies.get(org, "renamed")
     end
   end
 
@@ -156,6 +189,39 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
       assert response =~ org.name
       refute response =~ "Allowed packages"
       refute response =~ "Allow all"
+    end
+
+    test "admin sees the save and delete affordances", %{user: user, organization: org} do
+      {:ok, %{policy: policy}} =
+        Policies.create(org, %{"name" => "strict-prod", "visibility" => "private"},
+          audit: audit_data(user)
+        )
+
+      conn = build_conn() |> test_login(user)
+      conn = get(conn, "/dashboard/orgs/#{org.name}/policies/#{policy.name}")
+
+      response = html_response(conn, 200)
+      assert response =~ "Save policy"
+      assert response =~ "delete-policy-header-btn"
+      refute response =~ "You need the admin role to edit this policy"
+    end
+
+    test "reader sees a read-only notice without save or delete", %{organization: org} do
+      reader = insert(:user)
+      insert(:organization_user, organization: org, user: reader, role: "read")
+
+      {:ok, %{policy: policy}} =
+        Policies.create(org, %{"name" => "strict-prod", "visibility" => "private"},
+          audit: audit_data(reader)
+        )
+
+      conn = build_conn() |> test_login(reader)
+      conn = get(conn, "/dashboard/orgs/#{org.name}/policies/#{policy.name}")
+
+      response = html_response(conn, 200)
+      assert response =~ "You need the admin role to edit this policy"
+      refute response =~ "Save policy"
+      refute response =~ "delete-policy-header-btn"
     end
 
     test "renders existing restrictions and overrides", %{user: user, organization: org} do

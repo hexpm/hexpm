@@ -6,6 +6,10 @@ defmodule Hexpm.Repository.OrganizationPolicy do
   @valid_visibilities ~w(public private)
   @name_format ~r/^[a-z0-9][a-z0-9_\-\.]*[a-z0-9]$/
 
+  # Names that would collide with the policy sub-routes under
+  # `/policies/:name` (see `HexpmWeb.Router`).
+  @reserved_names ~w(new package-suggestions version-suggestions)
+
   @retirement_reasons %{
     0 => "other",
     1 => "invalid",
@@ -37,14 +41,21 @@ defmodule Hexpm.Repository.OrganizationPolicy do
   @doc false
   def changeset(policy, attrs) do
     policy
-    |> cast(attrs, [:name, :description, :visibility])
+    |> cast(attrs, castable_fields(policy))
     |> cast_embed(:repositories)
     |> validate_required([:name, :visibility])
     |> validate_length(:name, min: 3, max: 64)
     |> validate_format(:name, @name_format)
+    |> validate_exclusion(:name, @reserved_names)
     |> validate_length(:description, max: 500)
     |> validate_inclusion(:visibility, @valid_visibilities)
     |> unique_constraint([:organization_id, :name])
     |> check_constraint(:visibility, name: :visibility_must_be_known)
   end
+
+  # The name is the key of the policy's signed bucket object, so it is fixed at
+  # creation and cannot be changed afterwards; an existing policy only casts the
+  # fields that are safe to edit in place.
+  defp castable_fields(%__MODULE__{id: nil}), do: [:name, :description, :visibility]
+  defp castable_fields(%__MODULE__{}), do: [:description, :visibility]
 end

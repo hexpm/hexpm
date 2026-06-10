@@ -106,5 +106,43 @@ defmodule Hexpm.Repository.OrganizationPolicyTest do
 
       refute changeset.valid?
     end
+
+    test "rejects reserved names that would shadow policy routes" do
+      for name <- ~w(new package-suggestions version-suggestions) do
+        changeset =
+          OrganizationPolicy.changeset(%OrganizationPolicy{}, %{
+            name: name,
+            visibility: "public"
+          })
+
+        refute changeset.valid?, "expected #{name} to be rejected"
+        assert errors_on(changeset).name == "is reserved"
+      end
+    end
+
+    test "does not allow renaming an existing policy" do
+      policy = %OrganizationPolicy{id: 1, name: "strict-prod", visibility: "public"}
+
+      changeset = OrganizationPolicy.changeset(policy, %{name: "renamed", visibility: "public"})
+
+      assert changeset.valid?
+      refute Map.has_key?(changeset.changes, :name)
+      assert Ecto.Changeset.apply_changes(changeset).name == "strict-prod"
+    end
+
+    test "still allows editing description and visibility of an existing policy" do
+      policy = %OrganizationPolicy{id: 1, name: "strict-prod", visibility: "public"}
+
+      changeset =
+        OrganizationPolicy.changeset(policy, %{
+          name: "renamed",
+          description: "updated",
+          visibility: "private"
+        })
+
+      assert changeset.valid?
+      assert changeset.changes.description == "updated"
+      assert changeset.changes.visibility == "private"
+    end
   end
 end

@@ -23,9 +23,10 @@ defmodule Hexpm.Repository.PolicyBuilder do
   Builds and uploads the policy to the repo bucket, then purges the
   Fastly surrogate key. Preloads `:organization` if needed.
 
-  Concurrent rebuilds of policies are serialized via a Postgres advisory
-  transaction lock so two dashboard edits can't race on the bucket
-  object.
+  Concurrent rebuilds of the same policy are serialized via a Postgres
+  advisory transaction lock scoped to the policy id, so two dashboard edits
+  of one policy can't race on the bucket object while edits to different
+  policies still run in parallel.
   """
   @spec rebuild(OrganizationPolicy.t()) :: :ok
   def rebuild(%OrganizationPolicy{} = policy) do
@@ -33,7 +34,7 @@ defmodule Hexpm.Repository.PolicyBuilder do
 
     {:ok, :ok} =
       Hexpm.Repo.transaction(fn ->
-        Hexpm.Repo.advisory_xact_lock(:policy)
+        Hexpm.Repo.advisory_xact_lock(:policy, sub_key: policy.id)
         contents = build(policy)
         cdn_key = cdn_key(policy)
         Storage.put_object(store_key(policy), contents, [cdn_key], cache_control(policy))

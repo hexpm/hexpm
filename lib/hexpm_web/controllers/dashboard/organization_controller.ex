@@ -908,6 +908,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     packages = organization_packages(organization)
     policy_action = opts[:policy_action]
     policy = opts[:policy]
+    policy_admin? = policy_admin?(conn, organization)
 
     {policies, policy_stats, policy_activity, policy_rev} =
       policy_assigns(organization, opts[:tab], policy_action, policy)
@@ -938,6 +939,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       new_organization_changeset: create_changeset(),
       policy_action: policy_action,
       policy: policy,
+      policy_admin?: policy_admin?,
       policy_changeset: opts[:policy_changeset],
       policies: policies,
       policy_stats: policy_stats,
@@ -951,7 +953,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   defp policy_assigns(organization, :policies, nil, _policy) do
     policies = Policies.all(organization)
-    stats = Map.new(policies, &{&1.id, %{rev: AuditLogs.count_by(&1)}})
+    revisions = AuditLogs.count_by_policies(organization)
+    stats = Map.new(policies, &{&1.id, %{rev: Map.get(revisions, &1.name, 0)}})
     {policies, stats, [], 0}
   end
 
@@ -966,6 +969,18 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   end
 
   defp policy_assigns(_organization, _tab, _action, _policy), do: {[], %{}, [], 0}
+
+  # Whether the current user may edit policies (create/update/delete are all
+  # admin-gated). Used to hide write affordances from readers who can still view
+  # the policy pages.
+  defp policy_admin?(conn, organization) do
+    user = conn.assigns[:current_user]
+
+    case user && Enum.find(organization.organization_users, &(&1.user_id == user.id)) do
+      nil -> false
+      repo_user -> repo_user.role in Organization.role_or_higher("admin")
+    end
+  end
 
   defp customer_assigns(nil, _organization) do
     [

@@ -38,6 +38,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
   attr :policy, :map, required: true
   attr :changeset, :any, required: true
   attr :paid?, :boolean, default: false
+  attr :can_edit, :boolean, default: true
   attr :activity, :list, default: []
   attr :rev, :integer, default: 0
 
@@ -69,6 +70,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
             organization={@organization}
             policy={@policy}
             paid?={@paid?}
+            can_edit={@can_edit}
             rev={@rev}
           />
 
@@ -78,7 +80,10 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
 
           <.repository_rules_section form={f} organization={@organization} />
 
-          <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div
+            :if={@can_edit}
+            class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+          >
             <div class="flex items-center gap-3">
               <.button type="submit" variant="primary">Save policy</.button>
               <a
@@ -97,6 +102,14 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
             >
               All changes saved
             </span>
+          </div>
+
+          <div
+            :if={!@can_edit}
+            class="bg-grey-50 dark:bg-grey-900 border border-grey-200 dark:border-grey-700 rounded-lg p-4 flex items-center gap-2 text-sm text-grey-600 dark:text-grey-300"
+          >
+            {icon(:heroicon, "lock-closed", class: "w-4 h-4 flex-shrink-0", width: 16, height: 16)}
+            <span>You need the admin role to edit this policy.</span>
           </div>
         </div>
       </.sudo_form>
@@ -127,6 +140,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
         <%= inputs_for @form, :repositories, fn rf -> %>
           <.repo_panel
             form={rf}
+            index={repo_index(rf)}
             active?={repo_index(rf) == 0}
             organization={@organization}
           />
@@ -140,13 +154,13 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
   attr :organization, :map, required: true
   attr :policy, :map, required: true
   attr :paid?, :boolean, required: true
+  attr :can_edit, :boolean, required: true
   attr :rev, :integer, required: true
 
   defp policy_header(assigns) do
     assigns =
       assigns
       |> assign(:visibility, visibility_value(assigns.form, assigns.policy))
-      |> assign(:name_errors, field_errors(assigns.form, :name))
       |> assign(:visibility_errors, field_errors(assigns.form, :visibility))
 
     ~H"""
@@ -166,19 +180,9 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
           )}
         </div>
         <div class="min-w-0 flex-1">
-          <input
-            id={Form.input_id(@form, :name)}
-            name={Form.input_name(@form, :name)}
-            value={Form.input_value(@form, :name)}
-            required
-            placeholder="strict-prod"
-            class={[
-              "w-full bg-transparent border-0 p-0 text-grey-900 dark:text-white",
-              "text-xl sm:text-2xl font-bold leading-none font-mono",
-              "focus:outline-none focus:ring-0 placeholder:text-grey-300 dark:placeholder:text-grey-500"
-            ]}
-          />
-          <.errors errors={@name_errors} />
+          <h2 class="text-xl sm:text-2xl font-bold leading-none font-mono text-grey-900 dark:text-white truncate">
+            {@policy.name}
+          </h2>
         </div>
 
         <div class="hidden sm:flex items-center gap-2 flex-shrink-0">
@@ -189,15 +193,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
             visibility={@visibility}
           />
           <.header_action
-            id="policy-rename-action"
-            class="rename-policy-btn"
-            phx-hook="FocusFirstField"
-            data-target="policy_name"
-            label="Rename"
-            icon="pencil"
-            variant="neutral"
-          />
-          <.header_action
+            :if={@can_edit}
             class="delete-policy-header-btn"
             phx-click={show_modal("delete-policy-modal")}
             label="Delete"
@@ -215,16 +211,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
           visibility={@visibility}
         />
       </div>
-      <div class="grid grid-cols-2 sm:hidden gap-2 mt-2">
-        <.header_action
-          id="policy-rename-action-mobile"
-          class="rename-policy-btn justify-center"
-          phx-hook="FocusFirstField"
-          data-target="policy_name"
-          label="Rename"
-          icon="pencil"
-          variant="neutral"
-        />
+      <div :if={@can_edit} class="grid grid-cols-1 sm:hidden gap-2 mt-2">
         <.header_action
           class="delete-policy-header-btn justify-center"
           phx-click={show_modal("delete-policy-modal")}
@@ -415,7 +402,11 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
       <button
         :for={{meta, index} <- @tabs}
         type="button"
+        id={"repo-tab-#{index}"}
         role="tab"
+        aria-selected={(index == 0 && "true") || "false"}
+        aria-controls={"repo-panel-#{index}"}
+        tabindex={(index == 0 && "0") || "-1"}
         data-value={meta.label}
         data-active={index == 0 && "true"}
         data-private-only={meta.kind == :org && "true"}
@@ -456,6 +447,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
   end
 
   attr :form, :any, required: true
+  attr :index, :integer, required: true
   attr :active?, :boolean, required: true
   attr :organization, :map, required: true
 
@@ -463,7 +455,15 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
     assigns = assign(assigns, :meta, repo_meta(Form.input_value(assigns.form, :repository)))
 
     ~H"""
-    <div data-panel={@meta.label} hidden={!@active?} class="space-y-4">
+    <div
+      id={"repo-panel-#{@index}"}
+      role="tabpanel"
+      aria-labelledby={"repo-tab-#{@index}"}
+      tabindex="0"
+      data-panel={@meta.label}
+      hidden={!@active?}
+      class="space-y-4"
+    >
       <%= for {name, value} <- repo_hidden_fields(@form) do %>
         <input type="hidden" name={name} value={value} />
       <% end %>

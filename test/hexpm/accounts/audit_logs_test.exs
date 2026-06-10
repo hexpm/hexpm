@@ -39,6 +39,52 @@ defmodule Hexpm.Accounts.AuditLogsTest do
     end
   end
 
+  describe "count_by_policies(organization)" do
+    test "returns a map of policy name to audit_log count" do
+      user = insert(:user)
+      org = insert(:organization)
+      insert(:organization_user, organization: org, user: user, role: "admin")
+      audit_data = audit_data(user)
+
+      {:ok, %{policy: policy}} =
+        Hexpm.Repository.Policies.create(org, %{"name" => "strict", "visibility" => "public"},
+          audit: audit_data
+        )
+
+      {:ok, _} =
+        Hexpm.Repository.Policies.update(policy, %{"visibility" => "public"}, audit: audit_data)
+
+      {:ok, _} =
+        Hexpm.Repository.Policies.create(org, %{"name" => "lenient", "visibility" => "public"},
+          audit: audit_data
+        )
+
+      assert AuditLogs.count_by_policies(org) == %{"strict" => 2, "lenient" => 1}
+    end
+
+    test "does not count other organizations' policies" do
+      user = insert(:user)
+      org = insert(:organization)
+      other_org = insert(:organization)
+      insert(:organization_user, organization: org, user: user, role: "admin")
+      insert(:organization_user, organization: other_org, user: user, role: "admin")
+
+      {:ok, _} =
+        Hexpm.Repository.Policies.create(org, %{"name" => "mine", "visibility" => "public"},
+          audit: audit_data(user)
+        )
+
+      {:ok, _} =
+        Hexpm.Repository.Policies.create(
+          other_org,
+          %{"name" => "theirs", "visibility" => "public"},
+          audit: audit_data(user)
+        )
+
+      assert AuditLogs.count_by_policies(org) == %{"mine" => 1}
+    end
+  end
+
   describe "all_by(package)" do
     test "returns audit_logs that have are created for this package" do
       this_package = insert(:package)

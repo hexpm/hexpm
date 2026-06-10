@@ -142,12 +142,16 @@ defmodule Hexpm.RepoBase do
 
   def advisory_xact_lock(key, opts \\ []) do
     unless skip_advisory_locks?() do
-      %Postgrex.Result{} =
-        query!(
-          "SELECT pg_advisory_xact_lock($1)",
-          [Map.fetch!(@advisory_locks, key)],
-          opts
-        )
+      {sub_key, opts} = Keyword.pop(opts, :sub_key)
+
+      {sql, params} =
+        if sub_key do
+          {"SELECT pg_advisory_xact_lock($1, $2)", [Map.fetch!(@advisory_locks, key), sub_key]}
+        else
+          {"SELECT pg_advisory_xact_lock($1)", [Map.fetch!(@advisory_locks, key)]}
+        end
+
+      %Postgrex.Result{} = query!(sql, params, opts)
     end
 
     :ok
