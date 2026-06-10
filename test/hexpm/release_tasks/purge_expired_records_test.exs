@@ -145,6 +145,43 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
 
       refute Repo.get(Hexpm.OAuth.Token, revoked.id)
     end
+
+    test "deletes records exceeding the batch size and keeps active ones" do
+      user = insert(:user)
+      client = insert(:oauth_client)
+
+      expired =
+        for i <- 1..5 do
+          Repo.insert!(%Hexpm.OAuth.Token{
+            jti: "expired-jti-#{i}",
+            token_type: "bearer",
+            scopes: ["api"],
+            expires_at: truncated_seconds_ago(60),
+            grant_type: "authorization_code",
+            user_id: user.id,
+            client_id: client.client_id
+          })
+        end
+
+      active =
+        Repo.insert!(%Hexpm.OAuth.Token{
+          jti: "active-jti",
+          token_type: "bearer",
+          scopes: ["api"],
+          expires_at: truncated_seconds_from_now(86400),
+          grant_type: "authorization_code",
+          user_id: user.id,
+          client_id: client.client_id
+        })
+
+      PurgeExpiredRecords.run(batch_size: 2)
+
+      for token <- expired do
+        refute Repo.get(Hexpm.OAuth.Token, token.id)
+      end
+
+      assert Repo.get(Hexpm.OAuth.Token, active.id)
+    end
   end
 
   describe "purge user sessions" do
