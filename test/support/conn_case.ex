@@ -47,6 +47,7 @@ defmodule HexpmWeb.ConnCase do
     alias Hexpm.UserSessions
 
     sudo = Keyword.get(opts, :sudo, true)
+    sudo_at = Keyword.get(opts, :sudo_at)
     audit_data = test_audit_data(user)
 
     {:ok, _session, session_token} =
@@ -55,14 +56,19 @@ defmodule HexpmWeb.ConnCase do
     session_data = %{"session_token" => Base.encode64(session_token)}
 
     session_data =
-      if sudo do
-        Map.put(
-          session_data,
-          "sudo_authenticated_at",
-          NaiveDateTime.utc_now() |> NaiveDateTime.to_iso8601()
-        )
-      else
-        session_data
+      cond do
+        sudo_at ->
+          Map.put(session_data, "sudo_authenticated_at", NaiveDateTime.to_iso8601(sudo_at))
+
+        sudo ->
+          Map.put(
+            session_data,
+            "sudo_authenticated_at",
+            NaiveDateTime.utc_now() |> NaiveDateTime.to_iso8601()
+          )
+
+        true ->
+          session_data
       end
 
     Plug.Test.init_test_session(conn, session_data)

@@ -333,6 +333,41 @@ defmodule HexpmWeb.SudoControllerTest do
     end
   end
 
+  describe "forced sudo re-prompt" do
+    defp put_session_values(conn, values) do
+      session = conn |> Plug.Conn.get_session() |> Map.merge(values)
+      Plug.Test.init_test_session(conn, session)
+    end
+
+    test "GET /sudo renders the form when sudo_force is set, even with active sudo" do
+      user = insert(:user)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> put_session_values(%{"sudo_force" => true})
+        |> get("/sudo")
+
+      assert html_response(conn, 200) =~ "Verify your identity"
+    end
+
+    test "successful re-auth clears sudo_force and redirects to return path" do
+      user = insert(:user)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> put_session_values(%{
+          "sudo_force" => true,
+          "sudo_return_to" => "/dashboard/delete-account"
+        })
+        |> post("/sudo", %{"type" => "password", "password" => "password"})
+
+      assert redirected_to(conn) == "/dashboard/delete-account"
+      refute Plug.Conn.get_session(conn, "sudo_force")
+    end
+  end
+
   describe "redirects to sudo_return_to on success" do
     test "redirects to stored path after password verification" do
       user = insert(:user)
