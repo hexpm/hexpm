@@ -17,7 +17,7 @@ defmodule Hexpm.EmailsTest do
                email.html_body
                |> Floki.parse_document!()
                |> Floki.find("a")
-               |> Enum.filter(&(&1 |> Floki.text() |> String.trim() == "hex.pm"))
+               |> Enum.filter(&(&1 |> Floki.text() |> String.trim() == "Hex"))
 
       attrs = Map.new(attrs)
       assert attrs["href"] == HexpmWeb.Endpoint.url() <> "/"
