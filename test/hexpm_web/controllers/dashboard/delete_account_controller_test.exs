@@ -189,6 +189,124 @@ defmodule HexpmWeb.Dashboard.DeleteAccountControllerTest do
     end
   end
 
+  describe "full lifecycle" do
+    test "maximal user deletes their account through the entire web flow" do
+      # user_with_tfa: TFA-enabled factory user; extra unverified secondary email
+      user =
+        insert(:user_with_tfa,
+          emails: [build(:email), build(:email, primary: false, public: false, verified: false)]
+        )
+
+      other_owner = insert(:user)
+      org_admin = insert(:user)
+
+      sole_package = insert(:package, package_owners: [build(:package_owner, user: user)])
+
+      co_package =
+        insert(:package,
+          package_owners: [
+            build(:package_owner, user: user),
+            build(:package_owner, user: other_owner, level: "full")
+          ]
+        )
+
+      release = insert(:release, package: sole_package, publisher: user)
+      co_release = insert(:release, package: co_package, publisher: user)
+
+      key = insert(:key, user: user)
+
+      organization = insert(:organization)
+      insert(:organization_user, user: org_admin, organization: organization, role: "admin")
+
+      org_membership =
+        insert(:organization_user, user: user, organization: organization, role: "write")
+
+      old_log =
+        insert(:audit_log,
+          user: user,
+          action: "user.update",
+          user_data: %{"id" => user.id, "username" => user.username}
+        )
+
+      username = user.username
+      email_ids = Enum.map(user.emails, & &1.id)
+
+      # 1. the warnings page lists the sole-owned package
+      conn = build_conn() |> test_login(user) |> get("/dashboard/delete-account")
+      assert response(conn, 200) =~ sole_package.name
+      refute response(conn, 200) =~ co_package.name
+
+      # 2. request deletion
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/delete-account", %{"username" => username})
+
+      assert redirected_to(conn) == "/dashboard/delete-account"
+      request = Repo.get_by!(AccountDeletionRequest, user_id: user.id)
+      assert_email_sent(subject: "Hex.pm - Account deletion request")
+
+      # 3. follow the emailed link
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/delete-account/confirm", %{"key" => request.key})
+
+      assert response(conn, 200) =~ "Delete my account"
+
+      # 4. final confirmation
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/delete-account/confirm", %{"key" => request.key})
+
+      assert redirected_to(conn) == "/"
+      assert_email_sent(subject: "Hex.pm - Your account has been deleted")
+
+      # user and credentials gone
+      refute Repo.get(User, user.id)
+      refute Repo.get(Hexpm.Accounts.Key, key.id)
+      refute Repo.get(Hexpm.Accounts.OrganizationUser, org_membership.id)
+      for email_id <- email_ids, do: refute(Repo.get(Hexpm.Accounts.Email, email_id))
+
+      # packages and releases preserved with nulled publisher
+      assert Repo.get(Hexpm.Repository.Package, sole_package.id)
+      assert Repo.get(Hexpm.Repository.Package, co_package.id)
+      assert Repo.get(Hexpm.Repository.Release, release.id).publisher_id == nil
+      assert Repo.get(Hexpm.Repository.Release, co_release.id).publisher_id == nil
+
+      # co-owned package keeps its other owner; sole-owned is orphaned
+      sole_reloaded = Repo.get(Hexpm.Repository.Package, sole_package.id)
+      co_reloaded = Repo.get(Hexpm.Repository.Package, co_package.id)
+      assert [%{user_id: other_id}] = Repo.all(Ecto.assoc(co_reloaded, :package_owners))
+      assert other_id == other_owner.id
+      assert Repo.all(Ecto.assoc(sole_reloaded, :package_owners)) == []
+
+      # organization survives with its admin
+      assert Repo.get(Hexpm.Accounts.Organization, organization.id)
+
+      # audit logs preserved; request + delete logs exist with snapshots
+      assert Repo.get(Hexpm.Accounts.AuditLog, old_log.id).user_id == nil
+      assert Repo.get(Hexpm.Accounts.AuditLog, old_log.id).user_data["username"] == username
+      assert Repo.get_by(Hexpm.Accounts.AuditLog, action: "user.delete.request")
+      assert Repo.get_by(Hexpm.Accounts.AuditLog, action: "user.delete")
+
+      # username reserved against user signup and org creation
+      params = %{"username" => username, "emails" => [%{"email" => Hexpm.Fake.sequence(:email)}]}
+      audit = %{user: nil, user_agent: "TEST", remote_ip: "127.0.0.1", auth_credential: nil}
+      assert {:error, _} = Users.add(params, audit: audit)
+
+      assert {:error, _} =
+               Hexpm.Accounts.Organizations.create(org_admin, %{"name" => username},
+                 audit: audit_data(org_admin)
+               )
+
+      # public pages: profile 404s, package page renders with nil publisher
+      assert build_conn() |> get("/users/#{username}") |> response(404)
+      assert build_conn() |> get("/packages/#{sole_package.name}") |> response(200)
+    end
+  end
+
   describe "POST /dashboard/delete-account/confirm" do
     test "deletes the account, logs out, redirects home", c do
       request = request_deletion(c.user)
