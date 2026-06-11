@@ -1,0 +1,81 @@
+<div class="bg-grey-50 dark:bg-grey-950 min-h-screen py-4 sm:py-8">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="flex flex-col gap-4 sm:gap-8 lg:flex-row">
+      <%!-- Left Sidebar --%>
+      <div class="w-full lg:w-64 flex-shrink-0">
+        {render(HexpmWeb.DashboardView, "_sidebar.html", assigns)}
+      </div>
+
+      <%!-- Right Content - Single White Card --%>
+      <div class="flex-1 min-w-0">
+        <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4 sm:p-8">
+          <h2 class="text-grey-900 dark:text-white text-xl font-semibold mb-8">
+            Delete account
+          </h2>
+
+          <%= case @eligibility do %>
+            <% {:error, :organization_account} -> %>
+              <p class="text-grey-700 dark:text-grey-200 mb-4">
+                Organization accounts cannot be deleted from the dashboard.
+              </p>
+            <% {:error, {:organizations, organizations}} -> %>
+              <p class="text-grey-700 dark:text-grey-200 mb-4">
+                Your account cannot be deleted because you are the last admin or only
+                member of the following organizations. Promote another admin, leave the
+                organization, or contact support to dissolve it first.
+              </p>
+              <ul class="list-disc pl-6 mb-4 text-grey-700 dark:text-grey-200">
+                <%= for organization <- organizations do %>
+                  <li>{organization.name}</li>
+                <% end %>
+              </ul>
+            <% {:ok, warnings} -> %>
+              <p class="text-grey-700 dark:text-grey-200 mb-4">
+                Deleting your account is permanent. Your username will be retired and can
+                never be registered again. Packages and versions you published stay
+                available, and your activity log is preserved without your account
+                attached to it.
+              </p>
+
+              <%= if warnings.sole_owned_packages != [] do %>
+                <p class="text-grey-700 dark:text-grey-200 mb-2 font-semibold">
+                  You are the only owner of the following packages. After deletion they
+                  will have no owner; new owners can only be assigned by the Hex team.
+                  Consider transferring ownership first.
+                </p>
+                <ul class="list-disc pl-6 mb-4 text-grey-700 dark:text-grey-200">
+                  <%= for package <- warnings.sole_owned_packages do %>
+                    <li>{package.name}</li>
+                  <% end %>
+                </ul>
+              <% end %>
+
+              <.sudo_form
+                current_user={@current_user}
+                action={~p"/dashboard/delete-account"}
+                id="delete-account-form"
+              >
+                <label
+                  for="delete-account-username"
+                  class="block text-grey-700 dark:text-grey-200 mb-2"
+                >
+                  Type your username <strong>{@current_user.username}</strong> to confirm:
+                </label>
+                <.text_input
+                  id="delete-account-username"
+                  name="username"
+                  autocomplete="off"
+                  required
+                  pattern={@current_user.username}
+                  title={"Please type '#{@current_user.username}' to confirm"}
+                />
+                <.button type="submit" variant="danger">
+                  Request account deletion
+                </.button>
+              </.sudo_form>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

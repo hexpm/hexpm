@@ -223,6 +223,20 @@ defmodule HexpmWeb.Plugs.Attack do
     )
   end
 
+  @spec account_delete_request_throttle(integer(), keyword()) ::
+          {:allow | :block, {:throttle, keyword()}}
+  def account_delete_request_throttle(user_id, opts \\ []) do
+    time = opts[:time] || System.system_time(:millisecond)
+
+    timed_throttle(
+      {:account_delete_request, user_id},
+      time: time,
+      storage: @storage,
+      limit: 3,
+      period: 60 * 60_000
+    )
+  end
+
   @spec sudo_password_throttle(integer(), keyword()) :: {:allow | :block, {:throttle, keyword()}}
   def sudo_password_throttle(user_id, opts \\ []) do
     time = opts[:time] || System.system_time(:millisecond)

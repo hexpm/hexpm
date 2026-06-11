@@ -302,6 +302,11 @@ defmodule HexpmWeb.Router do
     delete "/sessions", SessionController, :delete
 
     get "/audit-logs", AuditLogController, :index
+
+    get "/delete-account", DeleteAccountController, :show
+    post "/delete-account", DeleteAccountController, :create
+    get "/delete-account/confirm", DeleteAccountController, :confirm
+    post "/delete-account/confirm", DeleteAccountController, :confirm_delete
   end
 
   scope "/dashboard", HexpmWeb.Dashboard do
