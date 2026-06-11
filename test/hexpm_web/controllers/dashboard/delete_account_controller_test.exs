@@ -304,6 +304,10 @@ defmodule HexpmWeb.Dashboard.DeleteAccountControllerTest do
       # public pages: profile 404s, package page renders with nil publisher
       assert build_conn() |> get("/users/#{username}") |> response(404)
       assert build_conn() |> get("/packages/#{sole_package.name}") |> response(200)
+
+      assert build_conn()
+             |> get("/packages/#{sole_package.name}/#{release.version}")
+             |> response(200)
     end
   end
 
