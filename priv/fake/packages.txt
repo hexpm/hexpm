@@ -3262,7 +3262,6 @@ stationary
 statistics
 statix
 statman
-stats
 statsderl
 status_ku
 std_json_io
