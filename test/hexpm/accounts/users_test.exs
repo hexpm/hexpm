@@ -373,6 +373,162 @@ defmodule Hexpm.Accounts.UsersTest do
     end
   end
 
+  describe "delete_request/2 and delete_confirm/3" do
+    test "creates a request, emails the confirmation link, and confirm deletes the account" do
+      user = insert(:user)
+      username = user.username
+
+      assert :ok = Users.delete_request(user, audit: audit_data(user))
+
+      request = Repo.get_by!(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
+      user = Repo.preload(user, :emails)
+      assert_email_sent(Hexpm.Emails.account_deletion_request(user, request))
+
+      request_log = Repo.get_by(Hexpm.Accounts.AuditLog, action: "user.delete.request")
+      assert request_log.user_id == user.id
+
+      assert :ok = Users.delete_confirm(user, request.key, audit: audit_data(user))
+      refute Repo.get(User, user.id)
+      assert Repo.exists?(Hexpm.Accounts.ReservedUsername.by_name(username))
+      refute Repo.get(Hexpm.Accounts.AccountDeletionRequest, request.id)
+    end
+
+    test "a new request replaces the previous one" do
+      user = insert(:user)
+
+      assert :ok = Users.delete_request(user, audit: audit_data(user))
+      first = Repo.get_by!(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
+
+      assert :ok = Users.delete_request(user, audit: audit_data(user))
+      second = Repo.get_by!(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
+
+      assert first.id != second.id
+
+      assert {:error, :invalid_request} =
+               Users.delete_confirm(user, first.key, audit: audit_data(user))
+
+      assert Repo.get(User, user.id)
+    end
+
+    test "confirm rejects a wrong, expired, or foreign key" do
+      user = insert(:user)
+      attacker = insert(:user)
+
+      assert :ok = Users.delete_request(user, audit: audit_data(user))
+      request = Repo.get_by!(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
+
+      # wrong key
+      assert {:error, :invalid_request} =
+               Users.delete_confirm(user, "deadbeef", audit: audit_data(user))
+
+      # foreign key: attacker's own request used against user's account
+      assert :ok = Users.delete_request(attacker, audit: audit_data(attacker))
+      attacker_request = Repo.get_by!(Hexpm.Accounts.AccountDeletionRequest, user_id: attacker.id)
+
+      assert {:error, :invalid_request} =
+               Users.delete_confirm(user, attacker_request.key, audit: audit_data(user))
+
+      # expired key
+      Repo.update_all(Hexpm.Accounts.AccountDeletionRequest,
+        set: [inserted_at: DateTime.add(DateTime.utc_now(), -2, :day)]
+      )
+
+      assert {:error, :invalid_request} =
+               Users.delete_confirm(user, request.key, audit: audit_data(user))
+
+      assert Repo.get(User, user.id)
+    end
+
+    test "request is blocked for users failing eligibility" do
+      user = insert(:user)
+      organization = insert(:organization)
+      insert(:organization_user, user: user, organization: organization, role: "admin")
+
+      assert {:error, {:organizations, _}} = Users.delete_request(user, audit: audit_data(user))
+    end
+
+    test "changing the password deletes pending requests" do
+      user = insert(:user)
+      assert :ok = Users.delete_request(user, audit: audit_data(user))
+
+      {:ok, _} =
+        Users.update_password(
+          user,
+          %{
+            "password_current" => "password",
+            "password" => "new_password_123",
+            "password_confirmation" => "new_password_123"
+          },
+          audit: audit_data(user)
+        )
+
+      refute Repo.get_by(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
+    end
+
+    test "changing the primary email invalidates the pending request" do
+      user = insert(:user)
+      assert :ok = Users.delete_request(user, audit: audit_data(user))
+      request = Repo.get_by!(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
+
+      {:ok, user} = Users.add_email(user, %{email: "new@example.com"}, audit: audit_data(user))
+      new_email = Enum.find(user.emails, &(&1.email == "new@example.com"))
+      Repo.update!(Ecto.Changeset.change(new_email, verified: true))
+      user = Users.get_by_id(user.id, [:emails])
+      :ok = Users.primary_email(user, %{"email" => "new@example.com"}, audit: audit_data(user))
+
+      user = Users.get_by_id(user.id, [:emails])
+
+      assert {:error, :invalid_request} =
+               Users.delete_confirm(user, request.key, audit: audit_data(user))
+    end
+
+    test "password reset deletes pending requests" do
+      user = insert(:user)
+      assert :ok = Users.delete_request(user, audit: audit_data(user))
+
+      :ok = Users.password_reset_init(user.username, audit: audit_data(user))
+      user = Users.get_by_id(user.id, [:emails, :password_resets])
+      [reset] = user.password_resets
+
+      :ok =
+        Users.password_reset_finish(
+          user.username,
+          reset.key,
+          %{
+            "username" => user.username,
+            "password" => "new_password_123",
+            "password_confirmation" => "new_password_123"
+          },
+          false,
+          audit: audit_data(user)
+        )
+
+      refute Repo.get_by(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
+    end
+
+    test "confirm is blocked when eligibility changed after the request" do
+      user = insert(:user)
+      assert :ok = Users.delete_request(user, audit: audit_data(user))
+      request = Repo.get_by!(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
+
+      organization = insert(:organization)
+      insert(:organization_user, user: user, organization: organization, role: "admin")
+
+      assert {:error, {:organizations, _}} =
+               Users.delete_confirm(user, request.key, audit: audit_data(user))
+
+      assert Repo.get(User, user.id)
+    end
+
+    test "confirm rejects a nil key" do
+      user = insert(:user)
+      assert :ok = Users.delete_request(user, audit: audit_data(user))
+
+      assert {:error, :invalid_request} = Users.delete_confirm(user, nil, audit: audit_data(user))
+      assert Repo.get(User, user.id)
+    end
+  end
+
   describe "update_profile/3 when user is an organization" do
     test "updates full_name" do
       organization = insert(:organization, user: build(:user, full_name: "Old Full Name"))

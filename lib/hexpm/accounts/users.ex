@@ -163,6 +163,57 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
+  def delete_request(user, audit: audit_data) do
+    with {:ok, _warnings} <- delete_eligibility(user) do
+      user = Repo.preload(user, :emails)
+
+      changeset =
+        AccountDeletionRequest.changeset(
+          build_assoc(user, :account_deletion_requests),
+          user
+        )
+
+      result =
+        Multi.new()
+        |> Multi.delete_all(:existing_requests, assoc(user, :account_deletion_requests))
+        |> Multi.insert(:request, changeset)
+        |> audit(audit_data, "user.delete.request", user)
+        |> Repo.transaction()
+
+      case result do
+        {:ok, %{request: request}} ->
+          Emails.account_deletion_request(user, request)
+          |> Mailer.deliver!()
+
+          :ok
+
+        {:error, :request, _changeset, _} ->
+          :ok
+      end
+    end
+  end
+
+  def get_delete_request(user, key) when is_binary(key) do
+    user = Repo.preload(user, :emails)
+    request = Repo.get_by(AccountDeletionRequest, user_id: user.id)
+
+    if request && AccountDeletionRequest.can_confirm?(request, user, key) do
+      request
+    end
+  end
+
+  def get_delete_request(_user, _key), do: nil
+
+  def delete_confirm(user, key, audit: audit_data) do
+    if get_delete_request(user, key) do
+      with {:ok, _warnings} <- delete_eligibility(user) do
+        delete(user, audit: audit_data)
+      end
+    else
+      {:error, :invalid_request}
+    end
+  end
+
   def email_verification(%User{organization_id: id}, email) when not is_nil(id) do
     email
   end
@@ -276,6 +327,7 @@ defmodule Hexpm.Accounts.Users do
     multi =
       Multi.new()
       |> Multi.update(:user, User.update_password(user, params))
+      |> Multi.delete_all(:account_deletion_requests, assoc(user, :account_deletion_requests))
       |> audit(audit_data, "password.update", nil)
 
     case Repo.transaction(multi) do
@@ -418,6 +470,7 @@ defmodule Hexpm.Accounts.Users do
       Multi.new()
       |> Multi.update(:password, User.update_password_no_check(user, params))
       |> Multi.delete_all(:reset, assoc(user, :password_resets))
+      |> Multi.delete_all(:account_deletion_requests, assoc(user, :account_deletion_requests))
       |> Multi.update_all(:revoke_sessions, sessions_query, [])
       |> Multi.update_all(:revoke_tokens, tokens_query, [])
 

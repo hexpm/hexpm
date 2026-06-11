@@ -48,6 +48,15 @@ defmodule Hexpm.Emails do
     |> render_body(:security_password_reset)
   end
 
+  def account_deletion_request(user, request) do
+    base_email()
+    |> email_to(user)
+    |> subject("Hex.pm - Account deletion request")
+    |> assign(:username, user.username)
+    |> assign(:key, request.key)
+    |> render_body(:account_deletion_request)
+  end
+
   def account_deleted(user) do
     base_email()
     |> email_to(user)
