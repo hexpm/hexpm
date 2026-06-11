@@ -60,16 +60,33 @@
           >
             <tr>
               <td align="center" style="padding: 24px 0;">
-                <div style="display: flex; align-items: center; justify-content: center; gap: 12px;">
-                  <img
-                    src={logo_url}
-                    alt=""
-                    style="height: 32px; width: auto; flex-shrink: 0;"
-                  />
-                  <span style="color: white; font-size: 24px; font-weight: 600; font-family: 'Inter', system-ui, -apple-system, sans-serif;">
-                    hex.pm
-                  </span>
-                </div>
+                <table
+                  role="presentation"
+                  align="center"
+                  cellpadding="0"
+                  cellspacing="0"
+                  border="0"
+                >
+                  <tr>
+                    <td style="vertical-align: middle; padding-right: 12px;">
+                      <a href={url(~p"/")}>
+                        <img
+                          src={logo_url}
+                          alt=""
+                          style="display: block; height: 32px; width: auto;"
+                        />
+                      </a>
+                    </td>
+                    <td style="vertical-align: middle;">
+                      <a
+                        href={url(~p"/")}
+                        style="color: #ffffff; font-size: 24px; font-weight: 600; font-family: 'Inter', system-ui, -apple-system, sans-serif; text-decoration: none;"
+                      >
+                        hex.pm
+                      </a>
+                    </td>
+                  </tr>
+                </table>
               </td>
             </tr>
           </table>
