@@ -13,6 +13,7 @@ defmodule Hexpm.Shared do
         Accounts.Organizations,
         Accounts.OrganizationUser,
         Accounts.PasswordReset,
+        Accounts.ReservedUsername,
         Accounts.Session,
         Accounts.User,
         Accounts.UserHandles,

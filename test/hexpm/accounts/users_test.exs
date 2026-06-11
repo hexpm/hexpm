@@ -173,6 +173,36 @@ defmodule Hexpm.Accounts.UsersTest do
     assert %{optional_emails: _} = errors_on(changeset)
   end
 
+  describe "add/2 with reserved username" do
+    test "rejects a username in reserved_usernames" do
+      Repo.insert!(%Hexpm.Accounts.ReservedUsername{name: "graveyard"})
+
+      params = %{
+        "username" => "graveyard",
+        "emails" => [%{"email" => Hexpm.Fake.sequence(:email)}]
+      }
+
+      audit = %{user: nil, user_agent: "TEST", remote_ip: "127.0.0.1", auth_credential: nil}
+
+      assert {:error, changeset} = Users.add(params, audit: audit)
+      assert %{username: "has already been taken"} = errors_on(changeset)
+    end
+
+    test "comparison is case-insensitive" do
+      Repo.insert!(%Hexpm.Accounts.ReservedUsername{name: "GraveYard"})
+
+      params = %{
+        "username" => "graveyard",
+        "emails" => [%{"email" => Hexpm.Fake.sequence(:email)}]
+      }
+
+      audit = %{user: nil, user_agent: "TEST", remote_ip: "127.0.0.1", auth_credential: nil}
+
+      assert {:error, changeset} = Users.add(params, audit: audit)
+      assert %{username: "has already been taken"} = errors_on(changeset)
+    end
+  end
+
   describe "update_profile/3 when user is an organization" do
     test "updates full_name" do
       organization = insert(:organization, user: build(:user, full_name: "Old Full Name"))
