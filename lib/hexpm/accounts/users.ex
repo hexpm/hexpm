@@ -96,6 +96,48 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
+  def delete_eligibility(user) do
+    cond do
+      User.organization?(user) ->
+        {:error, :organization_account}
+
+      (organizations = organizations_blocking_delete(user)) != [] ->
+        {:error, {:organizations, organizations}}
+
+      true ->
+        {:ok, %{sole_owned_packages: sole_owned_packages(user)}}
+    end
+  end
+
+  defp organizations_blocking_delete(user) do
+    user = Repo.preload(user, organizations: :organization_users)
+
+    user.organizations
+    |> Enum.filter(fn organization ->
+      members = organization.organization_users
+      admins = Enum.filter(members, &(&1.role == "admin"))
+
+      length(members) == 1 or
+        (length(admins) == 1 and hd(admins).user_id == user.id)
+    end)
+    |> Enum.sort_by(& &1.name)
+  end
+
+  defp sole_owned_packages(user) do
+    owned = from(po in PackageOwner, where: po.user_id == ^user.id, select: po.package_id)
+
+    from(
+      p in Package,
+      join: po in PackageOwner,
+      on: po.package_id == p.id,
+      where: p.repository_id == 1 and p.id in subquery(owned),
+      group_by: p.id,
+      having: count(po.id) == 1,
+      order_by: p.name
+    )
+    |> Repo.all()
+  end
+
   def delete(user, audit: audit_data) do
     user = Repo.preload(user, :emails)
 

@@ -301,6 +301,78 @@ defmodule Hexpm.Accounts.UsersTest do
     end
   end
 
+  describe "delete_eligibility/1" do
+    test "ok with no warnings for a plain user" do
+      user = insert(:user)
+      assert {:ok, %{sole_owned_packages: []}} = Users.delete_eligibility(user)
+    end
+
+    test "warns about packages where the user is the sole owner" do
+      user = insert(:user)
+      other = insert(:user)
+
+      sole = insert(:package, package_owners: [build(:package_owner, user: user)])
+
+      _co =
+        insert(:package,
+          package_owners: [
+            build(:package_owner, user: user),
+            build(:package_owner, user: other)
+          ]
+        )
+
+      assert {:ok, %{sole_owned_packages: [package]}} = Users.delete_eligibility(user)
+      assert package.id == sole.id
+    end
+
+    test "blocks the last member of an organization" do
+      user = insert(:user)
+      organization = insert(:organization)
+      insert(:organization_user, user: user, organization: organization, role: "admin")
+
+      assert {:error, {:organizations, [blocked]}} = Users.delete_eligibility(user)
+      assert blocked.id == organization.id
+    end
+
+    test "blocks the last admin even when other members exist" do
+      user = insert(:user)
+      other = insert(:user)
+      organization = insert(:organization)
+      insert(:organization_user, user: user, organization: organization, role: "admin")
+      insert(:organization_user, user: other, organization: organization, role: "write")
+
+      assert {:error, {:organizations, [blocked]}} = Users.delete_eligibility(user)
+      assert blocked.id == organization.id
+    end
+
+    test "allows a non-last admin" do
+      user = insert(:user)
+      other = insert(:user)
+      organization = insert(:organization)
+      insert(:organization_user, user: user, organization: organization, role: "admin")
+      insert(:organization_user, user: other, organization: organization, role: "admin")
+
+      assert {:ok, _} = Users.delete_eligibility(user)
+    end
+
+    test "blocks organization service accounts" do
+      organization = insert(:organization)
+      assert {:error, :organization_account} = Users.delete_eligibility(organization.user)
+    end
+
+    test "does not warn about private repository packages" do
+      user = insert(:user)
+      repository = insert(:repository)
+
+      insert(:package,
+        repository_id: repository.id,
+        package_owners: [build(:package_owner, user: user)]
+      )
+
+      assert {:ok, %{sole_owned_packages: []}} = Users.delete_eligibility(user)
+    end
+  end
+
   describe "update_profile/3 when user is an organization" do
     test "updates full_name" do
       organization = insert(:organization, user: build(:user, full_name: "Old Full Name"))
