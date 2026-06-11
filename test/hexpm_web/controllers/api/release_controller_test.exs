@@ -523,7 +523,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
     test "create releases", %{user: user} do
       meta = %{
-        name: Fake.sequence(:package),
+        name: "test_" <> Fake.sequence(:package),
         app: "other",
         version: "0.0.1",
         description: "description"
