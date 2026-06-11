@@ -36,16 +36,8 @@ defmodule Hexpm.EmailsTest do
       assert src =~ "hex-full.png"
     end
 
-    test "footer wordmark is a link with explicit color and no underline" do
-      assert [{"a", attrs, _children}] =
-               package_published_email().html_body
-               |> Floki.parse_document!()
-               |> Floki.find("a")
-               |> Enum.filter(&(&1 |> Floki.text() |> String.trim() == "Hex.pm"))
-
-      attrs = Map.new(attrs)
-      assert attrs["style"] =~ "color: #304254"
-      assert attrs["style"] =~ "text-decoration: none"
+    test "does not include a signature footer" do
+      refute package_published_email().html_body =~ "Hex.pm"
     end
   end
 
