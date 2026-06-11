@@ -9,7 +9,15 @@ defmodule HexpmWeb.EmailView do
     def support_email(), do: "support@hex.pm"
 
     # Smart link wrapping - add <a> only for HTML format
-    def link(url, text, :html), do: safe_to_string(PhoenixHTMLHelpers.Link.link(text, to: url))
+    def link(url, text, :html) do
+      safe_to_string(
+        PhoenixHTMLHelpers.Link.link(text,
+          to: url,
+          style: "color: #0f59d8; text-decoration: none;"
+        )
+      )
+    end
+
     def link(url, _text, :text), do: url
 
     def support_link(:html), do: link("mailto:#{support_email()}", support_email(), :html)
