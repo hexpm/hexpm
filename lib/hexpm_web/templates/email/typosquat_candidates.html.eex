@@ -2,6 +2,10 @@
   Typosquat Candidates
 </h1>
 
-<div style="background-color: #1c2a3a; padding: 20px; margin: 16px 0; border-radius: 4px;">
-  <pre style="color: #f0f5f9; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 14px; line-height: 20px; margin: 0; white-space: pre-wrap;"><%= TyposquatCandidates.intro(@threshold) %><%= TyposquatCandidates.table(@candidates) %></pre>
-</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 16px 0; background-color: #1c2a3a; border-radius: 4px;">
+  <tr>
+    <td style="padding: 20px;">
+      <pre style="color: #f0f5f9; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 14px; line-height: 20px; margin: 0; white-space: pre-wrap;"><%= TyposquatCandidates.intro(@threshold) %><%= TyposquatCandidates.table(@candidates) %></pre>
+    </td>
+  </tr>
+</table>
