@@ -138,7 +138,9 @@ defmodule Hexpm.Accounts.Users do
     |> Repo.all()
   end
 
-  def delete(user, audit: audit_data) do
+  def delete(user, opts) do
+    audit_data = Keyword.fetch!(opts, :audit)
+    notify? = Keyword.get(opts, :notify, true)
     user = Repo.preload(user, :emails)
 
     multi =
@@ -151,7 +153,7 @@ defmodule Hexpm.Accounts.Users do
 
     case Repo.transaction(multi) do
       {:ok, _} ->
-        if User.email(user, :primary) do
+        if notify? && User.email(user, :primary) do
           Emails.account_deleted(user)
           |> Mailer.deliver!()
         end

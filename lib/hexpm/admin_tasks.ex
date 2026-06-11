@@ -182,7 +182,7 @@ defmodule Hexpm.AdminTasks do
         Repo.transaction(fn ->
           deleted = delete_sole_owned_packages(user)
 
-          case Users.delete(user, audit: AuditLogs.admin()) do
+          case Users.delete(user, audit: AuditLogs.admin(), notify: false) do
             :ok -> deleted
             {:error, reason} -> Repo.rollback(reason)
           end
@@ -196,7 +196,7 @@ defmodule Hexpm.AdminTasks do
             {:error, reason}
         end
       else
-        Users.delete(user, audit: AuditLogs.admin())
+        Users.delete(user, audit: AuditLogs.admin(), notify: false)
       end
     end
   end

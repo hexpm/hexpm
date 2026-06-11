@@ -1,5 +1,6 @@
 defmodule Hexpm.AdminTasksTest do
   use Hexpm.DataCase, async: true
+  import Swoosh.TestAssertions
 
   alias Hexpm.AdminTasks
   alias Hexpm.Accounts.{Organization, User}
@@ -94,6 +95,14 @@ defmodule Hexpm.AdminTasksTest do
       assert delete_log
       assert delete_log.params["username"] == username
       assert delete_log.user_agent == "ADMIN"
+    end
+
+    test "does not send a notification email when removing a user" do
+      user = insert(:user)
+
+      assert :ok = AdminTasks.remove_user(user.username)
+
+      refute_email_sent()
     end
 
     test "removes user with associated records" do
