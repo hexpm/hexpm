@@ -430,6 +430,8 @@ defmodule HexpmWeb.Router do
           get "/tarballs/:ball", TestController, :tarball
         end
       end
+
+      get "/repos/:repository/policies/:name", TestController, :policy
     end
 
     scope "/preview", HexpmWeb do

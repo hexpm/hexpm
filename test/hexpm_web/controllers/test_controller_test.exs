@@ -42,6 +42,17 @@ defmodule HexpmWeb.TestControllerTest do
     assert response(conn, 200) == "TARBALL"
   end
 
+  test "GET /repo/repos/:repository/policies/:name returns stored object" do
+    Hexpm.Store.put(:repo_bucket, "repos/acme/policies/strict-prod", "POLICY", [])
+    conn = get(build_conn(), "/repo/repos/acme/policies/strict-prod")
+    assert response(conn, 200) == "POLICY"
+  end
+
+  test "GET /repo/repos/:repository/policies/:name returns 404 when missing" do
+    conn = get(build_conn(), "/repo/repos/acme/policies/missing")
+    assert response(conn, 404) == ""
+  end
+
   test "POST /api/repo creates organization and returns 204" do
     user = insert(:user)
     org_name = "org_" <> Fake.sequence(:package)
