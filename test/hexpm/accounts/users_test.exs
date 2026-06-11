@@ -1,7 +1,9 @@
 defmodule Hexpm.Accounts.UsersTest do
   use Hexpm.DataCase, async: true
 
-  alias Hexpm.Accounts.{OptionalEmails, User, Users, UserProviders}
+  import Swoosh.TestAssertions
+
+  alias Hexpm.Accounts.{AuditLog, OptionalEmails, User, Users, UserProviders}
 
   describe "add_from_oauth_with_provider/6" do
     test "creates user and provider atomically" do
@@ -198,6 +200,89 @@ defmodule Hexpm.Accounts.UsersTest do
 
       audit = %{user: nil, user_agent: "TEST", remote_ip: "127.0.0.1", auth_credential: nil}
 
+      assert {:error, changeset} = Users.add(params, audit: audit)
+      assert %{username: "has already been taken"} = errors_on(changeset)
+    end
+  end
+
+  describe "delete/2" do
+    test "deletes the user, preserves packages/releases/audit logs, reserves the username" do
+      user = insert(:user)
+      other_owner = insert(:user)
+
+      sole_package = insert(:package, package_owners: [build(:package_owner, user: user)])
+
+      co_package =
+        insert(:package,
+          package_owners: [
+            build(:package_owner, user: user),
+            build(:package_owner, user: other_owner)
+          ]
+        )
+
+      release = insert(:release, package: sole_package, publisher: user)
+      key = insert(:key, user: user)
+      session = insert(:session, user_id: user.id)
+
+      organization = insert(:organization)
+      org_user = insert(:organization_user, user: user, organization: organization)
+
+      old_log =
+        insert(:audit_log, user: user, action: "user.update", user_data: %{"id" => user.id})
+
+      email_ids = Enum.map(user.emails, & &1.id)
+      username = user.username
+
+      assert :ok = Users.delete(user, audit: audit_data(user))
+
+      # user row gone
+      refute Repo.get(User, user.id)
+
+      # packages and releases preserved, publisher nulled
+      assert Repo.get(Hexpm.Repository.Package, sole_package.id)
+      assert Repo.get(Hexpm.Repository.Package, co_package.id)
+      assert Repo.get(Hexpm.Repository.Release, release.id).publisher_id == nil
+
+      # ownership rows gone; the co-owned package keeps its other owner
+      sole_reloaded = Repo.get(Hexpm.Repository.Package, sole_package.id)
+      co_reloaded = Repo.get(Hexpm.Repository.Package, co_package.id)
+      assert Repo.all(Ecto.assoc(sole_reloaded, :package_owners)) == []
+      assert [%{user_id: other_id}] = Repo.all(Ecto.assoc(co_reloaded, :package_owners))
+      assert other_id == other_owner.id
+
+      # credentials and memberships gone
+      refute Repo.get(Hexpm.Accounts.Key, key.id)
+      refute Repo.get(Hexpm.UserSession, session.id)
+      refute Repo.get(Hexpm.Accounts.OrganizationUser, org_user.id)
+      for email_id <- email_ids, do: refute(Repo.get(Hexpm.Accounts.Email, email_id))
+
+      # audit logs preserved with snapshot; a user.delete log was written
+      assert Repo.get(AuditLog, old_log.id).user_id == nil
+
+      delete_log = Repo.get_by(AuditLog, action: "user.delete")
+      assert delete_log
+      assert delete_log.user_id == nil
+      assert delete_log.user_data["username"] == username
+      assert delete_log.params["username"] == username
+
+      # username reserved
+      assert Repo.exists?(Hexpm.Accounts.ReservedUsername.by_name(username))
+
+      # notice sent to the former primary email
+      assert_email_sent(subject: "Hex.pm - Your account has been deleted")
+    end
+
+    test "re-registering a deleted username fails" do
+      user = insert(:user)
+      username = user.username
+      assert :ok = Users.delete(user, audit: audit_data(user))
+
+      params = %{
+        "username" => username,
+        "emails" => [%{"email" => Hexpm.Fake.sequence(:email)}]
+      }
+
+      audit = %{user: nil, user_agent: "TEST", remote_ip: "127.0.0.1", auth_credential: nil}
       assert {:error, changeset} = Users.add(params, audit: audit)
       assert %{username: "has already been taken"} = errors_on(changeset)
     end

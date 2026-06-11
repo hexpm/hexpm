@@ -96,6 +96,31 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
+  def delete(user, audit: audit_data) do
+    user = Repo.preload(user, :emails)
+
+    multi =
+      Multi.new()
+      |> audit(audit_data, "user.delete", user)
+      |> Multi.insert(:reserved_username, %ReservedUsername{name: user.username},
+        on_conflict: :nothing
+      )
+      |> Multi.delete(:user, user, stale_error_field: :id)
+
+    case Repo.transaction(multi) do
+      {:ok, _} ->
+        if User.email(user, :primary) do
+          Emails.account_deleted(user)
+          |> Mailer.deliver!()
+        end
+
+        :ok
+
+      {:error, _operation, changeset, _changes} ->
+        {:error, changeset}
+    end
+  end
+
   def email_verification(%User{organization_id: id}, email) when not is_nil(id) do
     email
   end

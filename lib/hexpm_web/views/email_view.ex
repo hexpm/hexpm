@@ -45,6 +45,18 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
+  defmodule AccountDeleted do
+    def title() do
+      "Your account has been deleted"
+    end
+
+    def message(username) do
+      "The Hex.pm account \"#{username}\" has been permanently deleted. " <>
+        "The username has been retired and cannot be registered again. " <>
+        "Packages and versions you published remain available to the community."
+    end
+  end
+
   defmodule BuildTools do
     def mix_hex_user_auth(), do: "mix hex.user auth"
     def rebar3_hex_user_auth(), do: "rebar3 hex user auth"
