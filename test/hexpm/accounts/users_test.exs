@@ -232,6 +232,7 @@ defmodule Hexpm.Accounts.UsersTest do
 
       email_ids = Enum.map(user.emails, & &1.id)
       username = user.username
+      primary_email = User.email(user, :primary)
 
       assert :ok = Users.delete(user, audit: audit_data(user))
 
@@ -269,7 +270,19 @@ defmodule Hexpm.Accounts.UsersTest do
       assert Repo.exists?(Hexpm.Accounts.ReservedUsername.by_name(username))
 
       # notice sent to the former primary email
-      assert_email_sent(subject: "Hex.pm - Your account has been deleted")
+      assert_email_sent(fn email ->
+        email.subject == "Hex.pm - Your account has been deleted" and
+          Enum.any?(email.to, fn {_name, address} -> address == primary_email end)
+      end)
+    end
+
+    test "deletes a user without a primary email and sends no email" do
+      user = insert(:user, emails: [])
+
+      assert :ok = Users.delete(user, audit: audit_data(user))
+
+      refute Repo.get(User, user.id)
+      refute_email_sent()
     end
 
     test "re-registering a deleted username fails" do

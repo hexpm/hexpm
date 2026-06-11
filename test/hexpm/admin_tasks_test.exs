@@ -82,6 +82,20 @@ defmodule Hexpm.AdminTasksTest do
       assert {:error, :user_not_found} = AdminTasks.remove_user("nonexistent")
     end
 
+    test "reserves the username and writes an audit log" do
+      user = insert(:user)
+      username = user.username
+
+      assert :ok = AdminTasks.remove_user(user.username)
+
+      assert Repo.exists?(Hexpm.Accounts.ReservedUsername.by_name(username))
+
+      delete_log = Repo.get_by(Hexpm.Accounts.AuditLog, action: "user.delete")
+      assert delete_log
+      assert delete_log.params["username"] == username
+      assert delete_log.user_agent == "ADMIN"
+    end
+
     test "removes user with associated records" do
       user = insert(:user)
       user_id = user.id

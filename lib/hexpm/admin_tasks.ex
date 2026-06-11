@@ -175,23 +175,29 @@ defmodule Hexpm.AdminTasks do
       iex> AdminTasks.remove_user("spammer", delete_packages: true)
       :ok
   """
-  @spec remove_user(String.t(), keyword()) :: :ok | {:error, atom()}
+  @spec remove_user(String.t(), keyword()) :: :ok | {:error, atom() | Ecto.Changeset.t()}
   def remove_user(username, opts \\ []) do
     with {:ok, user} <- find_user(username) do
       if Keyword.get(opts, :delete_packages, false) do
-        {:ok, deleted} =
-          Repo.transaction(fn ->
-            deleted = delete_sole_owned_packages(user)
-            Repo.delete!(user)
-            deleted
-          end)
+        Repo.transaction(fn ->
+          deleted = delete_sole_owned_packages(user)
 
-        Enum.each(deleted, &run_package_removal_side_effects/1)
+          case Users.delete(user, audit: AuditLogs.admin()) do
+            :ok -> deleted
+            {:error, reason} -> Repo.rollback(reason)
+          end
+        end)
+        |> case do
+          {:ok, deleted} ->
+            Enum.each(deleted, &run_package_removal_side_effects/1)
+            :ok
+
+          {:error, reason} ->
+            {:error, reason}
+        end
       else
-        Repo.delete!(user)
+        Users.delete(user, audit: AuditLogs.admin())
       end
-
-      :ok
     end
   end
 
