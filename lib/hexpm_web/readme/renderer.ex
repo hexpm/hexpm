@@ -24,6 +24,7 @@ defmodule HexpmWeb.Readme.Renderer do
   """
   def render(filename, content, package_name, version) do
     ext = Path.extname(filename) |> String.downcase()
+    content = scrub_invalid_utf8(content)
 
     html =
       case ext do
@@ -51,6 +52,25 @@ defmodule HexpmWeb.Readme.Renderer do
     |> Sanitizer.sanitize()
     |> URLRewriter.rewrite(package_name, version)
     |> Floki.raw_html()
+  end
+
+  # README files are extracted from package tarballs as raw bytes and may use
+  # legacy encodings. MDEx's native parser raises on invalid UTF-8.
+  defp scrub_invalid_utf8(content) do
+    if String.valid?(content) do
+      content
+    else
+      content
+      |> String.chunk(:valid)
+      |> Enum.map(fn chunk ->
+        if String.valid?(chunk) do
+          chunk
+        else
+          String.duplicate("�", byte_size(chunk))
+        end
+      end)
+      |> IO.iodata_to_binary()
+    end
   end
 
   defp protect_pre_whitespace(html) do
