@@ -465,7 +465,7 @@ defmodule Hexpm.Accounts.UsersTest do
       refute Repo.get_by(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
     end
 
-    test "changing the primary email invalidates the pending request" do
+    test "changing the primary email deletes the pending request" do
       user = insert(:user)
       assert :ok = Users.delete_request(user, audit: audit_data(user))
       request = Repo.get_by!(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
@@ -475,6 +475,8 @@ defmodule Hexpm.Accounts.UsersTest do
       Repo.update!(Ecto.Changeset.change(new_email, verified: true))
       user = Users.get_by_id(user.id, [:emails])
       :ok = Users.primary_email(user, %{"email" => "new@example.com"}, audit: audit_data(user))
+
+      refute Repo.get_by(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
 
       user = Users.get_by_id(user.id, [:emails])
 

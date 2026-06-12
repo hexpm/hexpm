@@ -551,6 +551,7 @@ defmodule Hexpm.Accounts.Users do
       Multi.new()
       |> email_flag_multi(user, params, :primary, opts)
       |> Multi.delete_all(:reset, assoc(user, :password_resets))
+      |> Multi.delete_all(:account_deletion_requests, assoc(user, :account_deletion_requests))
 
     case Repo.transaction(multi) do
       {:ok, _} ->
