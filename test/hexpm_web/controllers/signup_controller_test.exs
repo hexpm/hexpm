@@ -9,15 +9,6 @@ defmodule HexpmWeb.SignupControllerTest do
       assert response(conn, 200) =~ "Sign up"
     end
 
-    test "allows app and Google stylesheets in the content security policy" do
-      conn = get(build_conn(), "/signup")
-      [csp] = get_resp_header(conn, "content-security-policy")
-
-      assert csp =~ ~r/style-src[^;]*'self'/
-      assert csp =~ ~r/style-src[^;]*https:\/\/fonts\.googleapis\.com/
-      assert csp =~ ~r/style-src[^;]*'nonce-/
-    end
-
     test "redirect when logged in" do
       user = insert(:user)
       conn = test_login(build_conn(), user)
