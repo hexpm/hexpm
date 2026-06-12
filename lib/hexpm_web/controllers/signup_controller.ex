@@ -65,7 +65,7 @@ defmodule HexpmWeb.SignupController do
 
   defp normalize_email_params(%{} = emails) do
     emails
-    |> Enum.sort_by(fn {index, _email_params} -> index end)
+    |> Enum.sort_by(fn {index, _email_params} -> String.to_integer(index) end)
     |> Enum.map(fn {_index, email_params} -> email_params end)
     |> ensure_email_params()
   end
