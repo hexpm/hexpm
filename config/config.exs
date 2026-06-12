@@ -13,7 +13,7 @@ config :hexpm,
   billing_impl: Hexpm.Billing.Local,
   pwned_impl: Hexpm.Pwned.Local,
   sudo_timeout: Duration.new!(hour: 1),
-  sudo_force_timeout: Duration.new!(minute: 5)
+  sudo_force_timeout: Duration.new!(second: 30)
 
 config :hexpm, :features, package_reports: true
 

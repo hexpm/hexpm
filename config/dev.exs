@@ -3,7 +3,7 @@ import Config
 config :hexpm,
   billing_report: false,
   sudo_timeout: Duration.new!(minute: 60),
-  sudo_force_timeout: Duration.new!(minute: 5),
+  sudo_force_timeout: Duration.new!(second: 30),
   secret: "796f75666f756e64746865686578",
   jwt_signing_key: """
   -----BEGIN EC PRIVATE KEY-----
