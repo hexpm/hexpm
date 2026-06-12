@@ -52,7 +52,7 @@ Cooldown filters candidates at resolution time. The lockfile is trusted on insta
 
 ### Dependency policies
 
-A *policy* is a signed payload an organization admin publishes from the org's `Policies` dashboard. The Hex client honors the active policy set at resolution time. A policy is configured *per repository* — one tab for `hexpm` (public packages) and one for the organization's own repository — so public and private dependencies can be governed independently.
+A *policy* is a signed payload an organization admin publishes from the org's `Policies` dashboard. The Hex client honors the active policy at resolution time. A policy is configured *per repository* — one tab for `hexpm` (public packages) and one for the organization's own repository — so public and private dependencies can be governed independently.
 
 Public policies are free on hex.pm and may be referenced by any project. Private policies require a paid organization and are only visible to organization members.
 
@@ -87,38 +87,56 @@ Org admins create and edit policies under the `Policies` tab in the [organizatio
 
 #### Opting in
 
-A project opts in via one of three sources. All three compose via AND — no source can subtract policies contributed by another.
+A project has exactly one active policy. It is configured like any other Hex setting, with the usual precedence: the `HEX_POLICY` environment variable, then `mix.exs`, then the global config.
 
-In `mix.exs`:
+In `mix.exs`, with `org:` for a hexpm organization or `repo:` for any other configured repository:
 
 ```elixir
-# lib/<app>/mix.exs
+# mix.exs
 defp project() do
   [
     app: :my_app,
     version: "0.1.0",
     hex: [
-      policy: [repo: "myorg", name: "strict-prod"]
+      policy: [org: "myorg", name: "strict-prod"]
     ]
   ]
 end
 ```
 
-Via environment variable (comma-separated for multiple policies):
+Via environment variable, as a `REPO/NAME` pair. It overrides the other sources for the invocation, and an empty value disables the configured policy:
 
 ```nohighlight
-$ HEX_POLICY=myorg/strict-prod mix deps.get
+$ HEX_POLICY=hexpm:myorg/strict-prod mix deps.get
+$ HEX_POLICY= mix deps.get
 ```
 
 Via `mix hex.config`:
 
 ```nohighlight
-$ mix hex.config policy myorg/strict-prod
+$ mix hex.config policy hexpm:myorg/strict-prod
 ```
 
-#### Inspecting the active set
+Policies live under an organization repository (`hexpm:myorg`) or a self-hosted repository; the global `hexpm` repository itself has no policies.
 
-The `mix hex.policy` task summarizes the policies currently in effect:
+#### Resolution output
+
+After a successful resolution `mix deps.get` prints a summary with the active policy, the cooldown it imposes, and the candidate versions it hid, capped at the five newest per package:
+
+```nohighlight
+Active policy: hexpm:myorg/strict-prod
+Effective cooldown: 14d (hexpm:myorg/strict-prod)
+Policy hid 7 candidate versions:
+  phoenix 1.8.1 — cooldown 14d; eligible 2026-06-18
+  plug 1.18.0 — advisory ≥ high
+  ...and 5 more — run `mix hex.policy why plug`
+```
+
+When resolution fails and the policy hid versions of an involved package, the solver's error message is followed by a note attributing the hidden versions, so a "no compatible versions" failure explains itself.
+
+#### Inspecting the active policy
+
+The `mix hex.policy` task summarizes the policy currently in effect:
 
 ```nohighlight
 $ mix hex.policy
@@ -126,12 +144,14 @@ $ mix hex.policy show
 $ mix hex.policy why PACKAGE
 ```
 
-`show` (the default) prints the per-policy state — visibility, source, and the restriction and overrides configured for each repository — along with the effective cooldown across all policies plus local config. `why PACKAGE` walks every version of the named package in the registry and prints which versions are blocked, by which policy, and for what reason.
+`show` (the default) prints the active policy's visibility, the restriction and overrides configured for each repository, and the effective cooldown across the policy and local config. `why PACKAGE` (or `why REPO/PACKAGE`) walks every version of the named package in the registry and prints which versions are blocked and for what reason — the uncapped view of what the resolution summary reports.
 
-#### Caching and fail-open
+#### Caching and failure behavior
 
-Each policy is cached on disk independently. On fetch failure — network blip, registry outage, signature mismatch — Hex falls back to the last-known-good cached payload and prints a stale warning. A per-policy maximum staleness of 30 days hard-fails resolution for that policy, capping how long a network adversary could suppress a refresh.
+A policy is an enforcement feature, so Hex fails closed: a malformed policy configuration or a policy that cannot be loaded aborts resolution instead of resolving unenforced.
+
+Fetched policies are stored in the local registry cache. When a refresh fails — network error, registry outage — and a previously fetched copy is cached, Hex prints an error and continues with the cached copy; without a cached copy resolution aborts. In offline mode the cached copy is used directly.
 
 ### How cooldown and policies interact
 
-A project that uses both features gets the intersection. Policies that declare their own cooldown participate in the effective cooldown via strictest-wins — local config can only make it stricter, never weaker. Setting `HEX_COOLDOWN=0` only disables the local contribution and cannot override a cooldown imposed by an active policy.
+A project that uses both features gets the intersection. A policy that declares its own cooldown participates in the effective cooldown via strictest-wins — local config can only make it stricter, never weaker. Setting `HEX_COOLDOWN=0` only disables the local contribution and cannot override a cooldown imposed by an active policy.
