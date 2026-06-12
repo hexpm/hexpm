@@ -35,9 +35,25 @@
             id="confirm-delete-account-form"
           >
             <input type="hidden" name="key" value={@key} />
-            <.button type="submit" variant="danger">
-              Delete my account
-            </.button>
+            <label
+              for="confirm-delete-account-username"
+              class="block text-grey-700 dark:text-grey-200 mb-2"
+            >
+              Type your username <strong>{@current_user.username}</strong> to confirm:
+            </label>
+            <.text_input
+              id="confirm-delete-account-username"
+              name="username"
+              autocomplete="off"
+              required
+              pattern={username_pattern(@current_user.username)}
+              title={"Please type '#{@current_user.username}' to confirm"}
+            />
+            <div class="mt-6">
+              <.button type="submit" variant="danger">
+                Delete my account
+              </.button>
+            </div>
           </.sudo_form>
         </div>
       </div>

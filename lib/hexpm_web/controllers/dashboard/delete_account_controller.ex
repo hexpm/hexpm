@@ -70,6 +70,16 @@ defmodule HexpmWeb.Dashboard.DeleteAccountController do
   def confirm_delete(conn, params) do
     user = conn.assigns.current_user
 
+    if params["username"] != user.username do
+      conn
+      |> put_flash(:error, "Entered username does not match your username.")
+      |> redirect(to: ~p"/dashboard/delete-account/confirm?key=#{params["key"] || ""}")
+    else
+      do_confirm_delete(conn, user, params)
+    end
+  end
+
+  defp do_confirm_delete(conn, user, params) do
     case Users.delete_confirm(user, params["key"] || "", audit: audit_data(conn)) do
       :ok ->
         conn
