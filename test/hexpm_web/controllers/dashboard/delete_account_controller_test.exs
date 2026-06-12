@@ -30,6 +30,17 @@ defmodule HexpmWeb.Dashboard.DeleteAccountControllerTest do
       assert html =~ package.name
     end
 
+    test "escapes regex characters in the username confirmation pattern" do
+      user = insert(:user, username: "some.user")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/delete-account")
+
+      assert response(conn, 200) =~ ~s(pattern="some\\.user")
+    end
+
     test "renders blockers for last org admin", c do
       organization = insert(:organization)
       insert(:organization_user, user: c.user, organization: organization, role: "admin")

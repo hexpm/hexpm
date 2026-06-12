@@ -68,7 +68,7 @@
                   name="username"
                   autocomplete="off"
                   required
-                  pattern={@current_user.username}
+                  pattern={username_pattern(@current_user.username)}
                   title={"Please type '#{@current_user.username}' to confirm"}
                 />
                 <div class="mt-6">
