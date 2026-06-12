@@ -75,6 +75,51 @@ defmodule HexpmWeb.SignupControllerTest do
       assert response(conn, 400) =~ "Sign up"
       assert conn.resp_body =~ "Oops, something went wrong!"
     end
+
+    test "keeps email fields after validation errors" do
+      conn =
+        post(build_conn(), "/signup", %{
+          "user" => %{
+            "username" => "",
+            "emails" => %{"0" => %{"email" => "", "email_confirmation" => ""}},
+            "password" => "",
+            "password_confirmation" => "",
+            "full_name" => ""
+          },
+          "h-captcha-response" => "captcha"
+        })
+
+      html = response(conn, 400)
+      assert html =~ ~s(name="user[emails][0][email]")
+      assert html =~ ~s(name="user[emails][0][email_confirmation]")
+      assert html =~ "can&#39;t be blank"
+    end
+  end
+
+  test "POST /signup creates user when captcha is disabled" do
+    app_env(:hexpm, :hcaptcha, nil)
+
+    username = Fake.sequence(:username)
+    email = Fake.sequence(:email)
+
+    conn =
+      post(build_conn(), "/signup", %{
+        "user" => %{
+          "username" => username,
+          "emails" => %{
+            "0" => %{
+              "email" => email,
+              "email_confirmation" => email
+            }
+          },
+          "password" => "hunter42",
+          "password_confirmation" => "hunter42",
+          "full_name" => "José"
+        }
+      })
+
+    assert redirected_to(conn) == "/"
+    assert Users.get(username).username == username
   end
 
   test "POST /signup captha failed" do

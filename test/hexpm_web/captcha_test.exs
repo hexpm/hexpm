@@ -39,4 +39,9 @@ defmodule HexpmWeb.CaptchaTest do
     app_env(:hexpm, :hcaptcha, sitekey: nil)
     assert Captcha.verify("disabled")
   end
+
+  test "returns true with missing token when disabled" do
+    app_env(:hexpm, :hcaptcha, nil)
+    assert Captcha.verify(nil)
+  end
 end

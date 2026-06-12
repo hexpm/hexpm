@@ -8,25 +8,29 @@ defmodule HexpmWeb.Captcha do
     sitekey() != nil
   end
 
-  def verify(token) when is_binary(token) do
+  def verify(token) do
     if enabled?() do
-      headers = [{"content-type", "application/x-www-form-urlencoded"}]
-      params = %{response: token, secret: secret()}
-
-      case HTTP.impl().post(@verify_endpoint, headers, params) do
-        {:ok, 200, _headers, %{"success" => success}} ->
-          success
-
-        {:error, reason} ->
-          Logger.error("hcaptcha request failed: #{inspect(reason)}")
-          false
-      end
+      verify_token(token)
     else
       true
     end
   end
 
-  def verify(_token), do: false
+  defp verify_token(token) when is_binary(token) do
+    headers = [{"content-type", "application/x-www-form-urlencoded"}]
+    params = %{response: token, secret: secret()}
+
+    case HTTP.impl().post(@verify_endpoint, headers, params) do
+      {:ok, 200, _headers, %{"success" => success}} ->
+        success
+
+      {:error, reason} ->
+        Logger.error("hcaptcha request failed: #{inspect(reason)}")
+        false
+    end
+  end
+
+  defp verify_token(_token), do: false
 
   def sitekey() do
     Application.get_env(:hexpm, :hcaptcha, [])[:sitekey]
