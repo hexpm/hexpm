@@ -359,7 +359,7 @@ defmodule Hexpm.Accounts.AuditLog do
     do_serialize(client)
   end
 
-  defp serialize(%Hexpm.Repository.OrganizationPolicy{} = policy) do
+  defp serialize(%Hexpm.Repository.Policy{} = policy) do
     policy
     |> do_serialize()
     |> Map.update!(:repositories, &Enum.map(&1, fn rp -> serialize_repository_policy(rp) end))
@@ -397,7 +397,7 @@ defmodule Hexpm.Accounts.AuditLog do
   defp fields(%Organization{}), do: [:id, :name, :public, :active, :billing_active]
   defp fields(%User{}), do: [:id, :username]
 
-  defp fields(%Hexpm.Repository.OrganizationPolicy{}),
+  defp fields(%Hexpm.Repository.Policy{}),
     do: [:id, :name, :visibility, :description, :repositories, :organization_id]
 
   defp fields(%UserHandles{}),
@@ -441,7 +441,7 @@ defmodule Hexpm.Accounts.AuditLog do
     Ecto.assoc(user, :audit_logs)
   end
 
-  def all_by(%Hexpm.Repository.OrganizationPolicy{} = policy) do
+  def all_by(%Hexpm.Repository.Policy{} = policy) do
     from(l in AuditLog,
       where:
         l.organization_id == ^policy.organization_id and

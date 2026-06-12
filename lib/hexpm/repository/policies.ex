@@ -2,32 +2,32 @@ defmodule Hexpm.Repository.Policies do
   use Hexpm.Context
   import Ecto.Query
 
-  alias Hexpm.Repository.OrganizationPolicy
+  alias Hexpm.Repository.Policy
 
   def all(organization) do
-    OrganizationPolicy
+    Policy
     |> where([p], p.organization_id == ^organization.id)
     |> order_by([p], asc: p.name)
     |> Repo.all()
   end
 
   def get(organization, name) do
-    OrganizationPolicy
+    Policy
     |> where([p], p.organization_id == ^organization.id and p.name == ^name)
     |> Repo.one()
   end
 
-  def change(organization, %OrganizationPolicy{} = policy, params \\ %{}) do
+  def change(organization, %Policy{} = policy, params \\ %{}) do
     params = put_repositories(params, organization.name, policy.repositories)
-    OrganizationPolicy.changeset(policy, params)
+    Policy.changeset(policy, params)
   end
 
   def create(organization, params, audit: audit_data) do
     params = put_repositories(params, organization.name, [])
 
     changeset =
-      %OrganizationPolicy{organization_id: organization.id}
-      |> OrganizationPolicy.changeset(params)
+      %Policy{organization_id: organization.id}
+      |> Policy.changeset(params)
 
     Multi.new()
     |> Multi.insert(:policy, changeset)
@@ -36,10 +36,10 @@ defmodule Hexpm.Repository.Policies do
     |> tap(&maybe_rebuild/1)
   end
 
-  def update(%OrganizationPolicy{} = policy, params, audit: audit_data) do
+  def update(%Policy{} = policy, params, audit: audit_data) do
     policy = Repo.preload(policy, :organization)
     params = put_repositories(params, policy.organization.name, policy.repositories)
-    changeset = OrganizationPolicy.changeset(policy, params)
+    changeset = Policy.changeset(policy, params)
 
     Multi.new()
     |> Multi.update(:policy, changeset)
@@ -97,7 +97,7 @@ defmodule Hexpm.Repository.Policies do
     }
   end
 
-  def delete(%OrganizationPolicy{} = policy, audit: audit_data) do
+  def delete(%Policy{} = policy, audit: audit_data) do
     Multi.new()
     |> Multi.delete(:policy, policy)
     |> audit(audit_data, "policy.delete", policy)

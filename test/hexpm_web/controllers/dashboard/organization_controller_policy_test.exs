@@ -1,7 +1,7 @@
 defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
   use HexpmWeb.ConnCase, async: true
 
-  alias Hexpm.Repository.{OrganizationPolicy, Policies}
+  alias Hexpm.Repository.{Policy, Policies}
 
   defp mock_customer() do
     stub(Hexpm.Billing.Mock, :get, fn _token, _opts ->
@@ -340,8 +340,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
       organization: org
     } do
       policy =
-        %OrganizationPolicy{organization_id: org.id}
-        |> OrganizationPolicy.changeset(%{
+        %Policy{organization_id: org.id}
+        |> Policy.changeset(%{
           "name" => "public-only",
           "visibility" => "public",
           "repositories" => [%{"repository" => "hexpm"}]

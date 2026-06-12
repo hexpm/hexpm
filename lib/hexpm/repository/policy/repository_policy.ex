@@ -1,4 +1,4 @@
-defmodule Hexpm.Repository.OrganizationPolicy.RepositoryPolicy do
+defmodule Hexpm.Repository.Policy.RepositoryPolicy do
   @moduledoc """
   One tab of a policy: the configuration that applies to releases from a single
   repository (in practice `hexpm` and the organization's own repository).
@@ -10,8 +10,8 @@ defmodule Hexpm.Repository.OrganizationPolicy.RepositoryPolicy do
   use Hexpm.Schema
 
   alias Hexpm.Repository.Cooldown
-  alias Hexpm.Repository.OrganizationPolicy
-  alias Hexpm.Repository.OrganizationPolicy.Override
+  alias Hexpm.Repository.Policy
+  alias Hexpm.Repository.Policy.Override
 
   embedded_schema do
     field :repository, :string
@@ -42,7 +42,7 @@ defmodule Hexpm.Repository.OrganizationPolicy.RepositoryPolicy do
         changeset
 
       reasons when is_list(reasons) ->
-        valid = OrganizationPolicy.retirement_reasons()
+        valid = Policy.retirement_reasons()
 
         if Enum.all?(reasons, &Map.has_key?(valid, &1)) do
           changeset

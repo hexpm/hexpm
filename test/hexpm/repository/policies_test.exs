@@ -1,7 +1,7 @@
 defmodule Hexpm.Repository.PoliciesTest do
   use Hexpm.DataCase, async: false
 
-  alias Hexpm.Repository.{Policies, OrganizationPolicy}
+  alias Hexpm.Repository.{Policies, Policy}
 
   setup do
     user = insert(:user)
@@ -156,7 +156,7 @@ defmodule Hexpm.Repository.PoliciesTest do
       {:ok, %{policy: created}} =
         Policies.create(org, %{"name" => "pol1", "visibility" => "public"}, audit: audit_data)
 
-      assert %OrganizationPolicy{id: id} = Policies.get(org, "pol1")
+      assert %Policy{id: id} = Policies.get(org, "pol1")
       assert id == created.id
     end
 

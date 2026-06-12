@@ -1,7 +1,7 @@
-defmodule Hexpm.Repository.OrganizationPolicy do
+defmodule Hexpm.Repository.Policy do
   use Hexpm.Schema
 
-  alias Hexpm.Repository.OrganizationPolicy.RepositoryPolicy
+  alias Hexpm.Repository.Policy.RepositoryPolicy
 
   @valid_visibilities ~w(public private)
   @name_format ~r/^[a-z0-9][a-z0-9_\-\.]*[a-z0-9]$/
@@ -26,7 +26,7 @@ defmodule Hexpm.Repository.OrganizationPolicy do
   @doc "List of severity names indexed by their integer value (0..4)."
   def severity_names, do: @severity_names
 
-  schema "organization_policies" do
+  schema "policies" do
     field :name, :string
     field :description, :string
     field :visibility, :string

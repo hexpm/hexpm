@@ -1,18 +1,18 @@
 defmodule Hexpm.Repository.PolicyBuilder do
   @moduledoc """
-  Encodes, signs, uploads, and Fastly-purges an `OrganizationPolicy`
+  Encodes, signs, uploads, and Fastly-purges an `Policy`
   resource. Synchronous in-request (mirrors `RegistryBuilder.repository/1`).
   """
 
-  alias Hexpm.Repository.{OrganizationPolicy, Storage}
+  alias Hexpm.Repository.{Policy, Storage}
 
   @doc """
   Builds the signed, gzipped Policy payload (no upload).
 
   The policy must be preloaded with `:organization`.
   """
-  @spec build(OrganizationPolicy.t()) :: binary()
-  def build(%OrganizationPolicy{} = policy) do
+  @spec build(Policy.t()) :: binary()
+  def build(%Policy{} = policy) do
     policy
     |> to_protobuf_map()
     |> :hex_registry.encode_policy()
@@ -28,8 +28,8 @@ defmodule Hexpm.Repository.PolicyBuilder do
   of one policy can't race on the bucket object while edits to different
   policies still run in parallel.
   """
-  @spec rebuild(OrganizationPolicy.t()) :: :ok
-  def rebuild(%OrganizationPolicy{} = policy) do
+  @spec rebuild(Policy.t()) :: :ok
+  def rebuild(%Policy{} = policy) do
     policy = Hexpm.Repo.preload(policy, :organization)
 
     {:ok, :ok} =
@@ -49,8 +49,8 @@ defmodule Hexpm.Repository.PolicyBuilder do
   Deletes the bucket object and purges its CDN key. Used when a policy
   is deleted from the dashboard.
   """
-  @spec delete(OrganizationPolicy.t()) :: :ok
-  def delete(%OrganizationPolicy{} = policy) do
+  @spec delete(Policy.t()) :: :ok
+  def delete(%Policy{} = policy) do
     policy = Hexpm.Repo.preload(policy, :organization)
     Storage.delete_object(store_key(policy))
     Storage.purge([cdn_key(policy)])

@@ -1,7 +1,7 @@
-defmodule Hexpm.Repository.OrganizationPolicy.RepositoryPolicyTest do
+defmodule Hexpm.Repository.Policy.RepositoryPolicyTest do
   use Hexpm.DataCase, async: true
 
-  alias Hexpm.Repository.OrganizationPolicy.RepositoryPolicy
+  alias Hexpm.Repository.Policy.RepositoryPolicy
 
   defp changeset(attrs) do
     RepositoryPolicy.changeset(%RepositoryPolicy{}, attrs)

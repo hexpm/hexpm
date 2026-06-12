@@ -1,8 +1,8 @@
-defmodule Hexpm.Repo.Migrations.AddOrganizationPolicies do
+defmodule Hexpm.Repo.Migrations.AddPolicies do
   use Ecto.Migration
 
   def change do
-    create table(:organization_policies) do
+    create table(:policies) do
       add :organization_id, references(:organizations, on_delete: :delete_all), null: false
       add :name, :string, null: false
       add :description, :string
@@ -12,9 +12,9 @@ defmodule Hexpm.Repo.Migrations.AddOrganizationPolicies do
       timestamps()
     end
 
-    create unique_index(:organization_policies, [:organization_id, :name])
+    create unique_index(:policies, [:organization_id, :name])
 
-    create constraint(:organization_policies, :visibility_must_be_known,
+    create constraint(:policies, :visibility_must_be_known,
              check: "visibility IN ('public', 'private')"
            )
   end

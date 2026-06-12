@@ -1,11 +1,11 @@
-defmodule Hexpm.Repository.OrganizationPolicyTest do
+defmodule Hexpm.Repository.PolicyTest do
   use Hexpm.DataCase, async: true
 
-  alias Hexpm.Repository.OrganizationPolicy
+  alias Hexpm.Repository.Policy
 
   describe "changeset/2" do
     test "requires name, visibility" do
-      changeset = OrganizationPolicy.changeset(%OrganizationPolicy{}, %{})
+      changeset = Policy.changeset(%Policy{}, %{})
       refute changeset.valid?
       errors = errors_on(changeset)
       assert errors[:name] == "can't be blank"
@@ -14,7 +14,7 @@ defmodule Hexpm.Repository.OrganizationPolicyTest do
 
     test "validates name format" do
       changeset =
-        OrganizationPolicy.changeset(%OrganizationPolicy{}, %{
+        Policy.changeset(%Policy{}, %{
           name: "-bad-start",
           visibility: "public"
         })
@@ -25,14 +25,14 @@ defmodule Hexpm.Repository.OrganizationPolicyTest do
 
     test "validates name length 3..64" do
       assert errors_on(
-               OrganizationPolicy.changeset(%OrganizationPolicy{}, %{
+               Policy.changeset(%Policy{}, %{
                  name: "ab",
                  visibility: "public"
                })
              ).name == "should be at least 3 character(s)"
 
       assert errors_on(
-               OrganizationPolicy.changeset(%OrganizationPolicy{}, %{
+               Policy.changeset(%Policy{}, %{
                  name: String.duplicate("a", 65),
                  visibility: "public"
                })
@@ -41,7 +41,7 @@ defmodule Hexpm.Repository.OrganizationPolicyTest do
 
     test "validates visibility inclusion" do
       changeset =
-        OrganizationPolicy.changeset(%OrganizationPolicy{}, %{
+        Policy.changeset(%Policy{}, %{
           name: "ok-name",
           visibility: "weird"
         })
@@ -52,7 +52,7 @@ defmodule Hexpm.Repository.OrganizationPolicyTest do
 
     test "accepts a minimal valid policy" do
       changeset =
-        OrganizationPolicy.changeset(%OrganizationPolicy{}, %{
+        Policy.changeset(%Policy{}, %{
           name: "strict-prod",
           visibility: "public"
         })
@@ -62,7 +62,7 @@ defmodule Hexpm.Repository.OrganizationPolicyTest do
 
     test "casts repository tabs with restrictions and overrides" do
       changeset =
-        OrganizationPolicy.changeset(%OrganizationPolicy{}, %{
+        Policy.changeset(%Policy{}, %{
           "name" => "strict-prod",
           "visibility" => "public",
           "repositories" => [
@@ -98,7 +98,7 @@ defmodule Hexpm.Repository.OrganizationPolicyTest do
 
     test "surfaces nested restriction errors" do
       changeset =
-        OrganizationPolicy.changeset(%OrganizationPolicy{}, %{
+        Policy.changeset(%Policy{}, %{
           "name" => "strict-prod",
           "visibility" => "public",
           "repositories" => [%{"repository" => "hexpm", "cooldown" => "5x"}]
@@ -110,7 +110,7 @@ defmodule Hexpm.Repository.OrganizationPolicyTest do
     test "rejects reserved names that would shadow policy routes" do
       for name <- ~w(new package-suggestions version-suggestions) do
         changeset =
-          OrganizationPolicy.changeset(%OrganizationPolicy{}, %{
+          Policy.changeset(%Policy{}, %{
             name: name,
             visibility: "public"
           })
@@ -121,9 +121,9 @@ defmodule Hexpm.Repository.OrganizationPolicyTest do
     end
 
     test "does not allow renaming an existing policy" do
-      policy = %OrganizationPolicy{id: 1, name: "strict-prod", visibility: "public"}
+      policy = %Policy{id: 1, name: "strict-prod", visibility: "public"}
 
-      changeset = OrganizationPolicy.changeset(policy, %{name: "renamed", visibility: "public"})
+      changeset = Policy.changeset(policy, %{name: "renamed", visibility: "public"})
 
       assert changeset.valid?
       refute Map.has_key?(changeset.changes, :name)
@@ -131,10 +131,10 @@ defmodule Hexpm.Repository.OrganizationPolicyTest do
     end
 
     test "still allows editing description and visibility of an existing policy" do
-      policy = %OrganizationPolicy{id: 1, name: "strict-prod", visibility: "public"}
+      policy = %Policy{id: 1, name: "strict-prod", visibility: "public"}
 
       changeset =
-        OrganizationPolicy.changeset(policy, %{
+        Policy.changeset(policy, %{
           name: "renamed",
           description: "updated",
           visibility: "private"

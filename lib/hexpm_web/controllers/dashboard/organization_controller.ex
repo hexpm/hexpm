@@ -2,7 +2,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   use HexpmWeb, :controller
 
   alias Hexpm.Repository.{
-    OrganizationPolicy,
+    Policy,
     Packages,
     Policies,
     Releases,
@@ -227,7 +227,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       render_index(conn, organization,
         tab: :policies,
         policy_action: :new,
-        policy_changeset: OrganizationPolicy.changeset(%OrganizationPolicy{}, %{})
+        policy_changeset: Policy.changeset(%Policy{}, %{})
       )
     end)
   end
@@ -248,7 +248,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
           |> render_index(organization,
             tab: :policies,
             policy_action: :new,
-            policy_changeset: OrganizationPolicy.changeset(%OrganizationPolicy{}, params)
+            policy_changeset: Policy.changeset(%Policy{}, params)
           )
 
         {:error, :policy, changeset, _} ->

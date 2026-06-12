@@ -1,7 +1,7 @@
-defmodule Hexpm.Repository.OrganizationPolicy.OverrideTest do
+defmodule Hexpm.Repository.Policy.OverrideTest do
   use Hexpm.DataCase, async: true
 
-  alias Hexpm.Repository.OrganizationPolicy.Override
+  alias Hexpm.Repository.Policy.Override
 
   defp changeset(attrs) do
     Override.changeset(%Override{}, attrs)

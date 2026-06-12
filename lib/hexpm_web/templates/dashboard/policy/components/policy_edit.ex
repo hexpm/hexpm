@@ -15,7 +15,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
     router: HexpmWeb.Router,
     statics: HexpmWeb.static_paths()
 
-  alias Hexpm.Repository.OrganizationPolicy
+  alias Hexpm.Repository.Policy
   alias Phoenix.HTML.Form
 
   import HexpmWeb.Components.Buttons, only: [button: 1]
@@ -1119,7 +1119,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
 
   defp severity_select_options do
     for value <- 1..4 do
-      name = Enum.at(OrganizationPolicy.severity_names(), value)
+      name = Enum.at(Policy.severity_names(), value)
       {">= #{String.capitalize(name)}", value}
     end
   end
@@ -1136,7 +1136,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
 
   defp severity_word(value) do
     case Integer.parse(to_string(value)) do
-      {int, ""} -> Enum.at(OrganizationPolicy.severity_names(), int, "")
+      {int, ""} -> Enum.at(Policy.severity_names(), int, "")
       _ -> ""
     end
   end
@@ -1151,7 +1151,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
 
   defp retirement_reason_options do
     order = ["security", "invalid", "deprecated", "renamed", "other"]
-    reasons = OrganizationPolicy.retirement_reasons()
+    reasons = Policy.retirement_reasons()
     by_name = Map.new(reasons, fn {value, name} -> {name, value} end)
 
     Enum.map(order, fn name ->

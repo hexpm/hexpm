@@ -1,4 +1,4 @@
-defmodule Hexpm.Repository.OrganizationPolicy.Override do
+defmodule Hexpm.Repository.Policy.Override do
   @moduledoc """
   A per-package final say within a repository tab. An `allow` override permits
   every matching release and bypasses the tab's restriction; a `deny` override

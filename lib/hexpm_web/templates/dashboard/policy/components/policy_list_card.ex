@@ -11,7 +11,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyListCard do
     router: HexpmWeb.Router,
     statics: HexpmWeb.static_paths()
 
-  alias Hexpm.Repository.OrganizationPolicy
+  alias Hexpm.Repository.Policy
 
   import HexpmWeb.Components.Badge, only: [status_dot: 1]
   import HexpmWeb.Components.Buttons, only: [button_link: 1]
@@ -255,7 +255,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyListCard do
   defp description_text(value), do: value
 
   defp severity_label(value) when is_integer(value) do
-    Enum.at(OrganizationPolicy.severity_names(), value, to_string(value))
+    Enum.at(Policy.severity_names(), value, to_string(value))
   end
 
   defp severity_label(other), do: to_string(other)
