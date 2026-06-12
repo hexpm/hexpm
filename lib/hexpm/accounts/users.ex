@@ -169,33 +169,37 @@ defmodule Hexpm.Accounts.Users do
     with {:ok, _warnings} <- delete_eligibility(user) do
       user = Repo.preload(user, :emails)
 
-      changeset =
-        AccountDeletionRequest.changeset(
-          build_assoc(user, :account_deletion_requests),
-          user
-        )
+      if User.email(user, :primary) do
+        changeset =
+          AccountDeletionRequest.changeset(
+            build_assoc(user, :account_deletion_requests),
+            user
+          )
 
-      result =
-        Multi.new()
-        |> Multi.delete_all(:existing_requests, assoc(user, :account_deletion_requests))
-        |> Multi.insert(:request, changeset)
-        |> audit(audit_data, "user.delete.request", user)
-        |> Repo.transaction()
+        result =
+          Multi.new()
+          |> Multi.delete_all(:existing_requests, assoc(user, :account_deletion_requests))
+          |> Multi.insert(:request, changeset)
+          |> audit(audit_data, "user.delete.request", user)
+          |> Repo.transaction()
 
-      case result do
-        {:ok, %{request: request}} ->
-          Emails.account_deletion_request(user, request)
-          |> Mailer.deliver!()
-
-          :ok
-
-        {:error, :request, _changeset, _} ->
-          if request = Repo.get_by(AccountDeletionRequest, user_id: user.id) do
+        case result do
+          {:ok, %{request: request}} ->
             Emails.account_deletion_request(user, request)
             |> Mailer.deliver!()
-          end
 
-          :ok
+            :ok
+
+          {:error, :request, _changeset, _} ->
+            if request = Repo.get_by(AccountDeletionRequest, user_id: user.id) do
+              Emails.account_deletion_request(user, request)
+              |> Mailer.deliver!()
+            end
+
+            :ok
+        end
+      else
+        {:error, :no_primary_email}
       end
     end
   end

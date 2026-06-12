@@ -447,6 +447,13 @@ defmodule Hexpm.Accounts.UsersTest do
       assert {:error, {:organizations, _}} = Users.delete_request(user, audit: audit_data(user))
     end
 
+    test "request is rejected for users without a primary email" do
+      user = insert(:user, emails: [])
+
+      assert {:error, :no_primary_email} = Users.delete_request(user, audit: audit_data(user))
+      refute Repo.get_by(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
+    end
+
     test "changing the password deletes pending requests" do
       user = insert(:user)
       assert :ok = Users.delete_request(user, audit: audit_data(user))
