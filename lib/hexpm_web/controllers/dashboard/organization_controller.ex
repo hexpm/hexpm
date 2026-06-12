@@ -2,11 +2,10 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   use HexpmWeb, :controller
 
   alias Hexpm.Repository.{
-    Policy,
     Packages,
     Policies,
+    Policy,
     Releases,
-    Repositories,
     Repository
   }
 
@@ -853,10 +852,6 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   defp organization_packages(_), do: []
 
-  defp public_repository do
-    Repositories.get("hexpm") || Repository.hexpm()
-  end
-
   defp organization_repository(%{repository: %Ecto.Association.NotLoaded{}} = organization) do
     Hexpm.Repo.preload(organization, :repository).repository
   end
@@ -864,7 +859,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   defp organization_repository(%{repository: repository}), do: repository
   defp organization_repository(_organization), do: nil
 
-  defp policy_suggestion_repository(_organization, "hexpm"), do: public_repository()
+  defp policy_suggestion_repository(_organization, "hexpm"), do: Repository.hexpm()
 
   defp policy_suggestion_repository(%{name: name} = organization, repository)
        when repository == name do
