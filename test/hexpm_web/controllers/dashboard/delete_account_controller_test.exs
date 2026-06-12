@@ -22,8 +22,12 @@ defmodule HexpmWeb.Dashboard.DeleteAccountControllerTest do
         |> test_login(c.user)
         |> get("/dashboard/delete-account")
 
-      assert response(conn, 200) =~ "Delete account"
-      assert response(conn, 200) =~ package.name
+      html = conn |> response(200) |> String.replace(~r/\s+/, " ")
+      assert html =~ "Delete account"
+      assert html =~ "lose access to all resources associated with your account"
+      assert html =~ "you will no longer be able to publish packages"
+      assert html =~ "may be claimed by someone else in the future"
+      assert html =~ package.name
     end
 
     test "renders blockers for last org admin", c do

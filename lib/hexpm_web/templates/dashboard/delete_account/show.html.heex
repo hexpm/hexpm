@@ -31,10 +31,12 @@
               </ul>
             <% {:ok, warnings} -> %>
               <p class="text-grey-700 dark:text-grey-200 mb-4">
-                Deleting your account is permanent. Your username will be retired and can
-                never be registered again. Packages and versions you published stay
-                available, and your activity log is preserved without your account
-                attached to it.
+                Deleting your account is permanent. You will lose access to all resources
+                associated with your account, and you will no longer be able to publish
+                packages. Packages and versions you published stay available, and packages
+                left without an owner may be claimed by someone else in the future. Your
+                username will be retired and can never be registered again, and your
+                activity log is preserved without your account attached to it.
               </p>
 
               <%= if warnings.sole_owned_packages != [] do %>
@@ -69,9 +71,11 @@
                   pattern={@current_user.username}
                   title={"Please type '#{@current_user.username}' to confirm"}
                 />
-                <.button type="submit" variant="danger">
-                  Request account deletion
-                </.button>
+                <div class="mt-6">
+                  <.button type="submit" variant="danger">
+                    Request account deletion
+                  </.button>
+                </div>
               </.sudo_form>
           <% end %>
         </div>
