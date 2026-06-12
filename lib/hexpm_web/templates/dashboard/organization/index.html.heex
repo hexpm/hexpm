@@ -8,7 +8,7 @@
 
       <%!-- Right Content --%>
       <div class="flex-1 min-w-0">
-        <.org_tab_nav conn={@conn} current_user={@current_user} organization={@organization}>
+        <.org_tab_nav current_user={@current_user} organization={@organization} tab={@tab}>
           <%= case @tab do %>
             <% :profile -> %>
               <.profile_tab

@@ -5,9 +5,9 @@ defmodule HexpmWeb.Dashboard.Organization.Components.OrgTabNav do
   """
   use Phoenix.Component
 
-  attr :conn, :any, required: true
   attr :organization, :any, required: true
   attr :current_user, :any, required: true
+  attr :tab, :atom, required: true
 
   slot :inner_block, required: true
 
@@ -21,14 +21,14 @@ defmodule HexpmWeb.Dashboard.Organization.Components.OrgTabNav do
           class="-mb-px flex gap-1 overflow-x-auto scrollbar-hide touch-pan-x"
           aria-label="Organization tabs"
         >
-          <%= for {label, path, _active?} = tab <- tabs(@organization, @current_user) do %>
+          <%= for {tab, label, path} <- tabs(@organization, @current_user) do %>
             <a
               href={path}
-              data-active={active?(@conn, tab) && "true"}
+              data-active={@tab == tab && "true"}
               class={[
                 "whitespace-nowrap px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium border-b-2 transition-colors",
                 "min-h-[44px] flex items-center gap-2",
-                if(active?(@conn, tab),
+                if(@tab == tab,
                   do:
                     "border-primary-600 dark:border-primary-300 text-primary-600 dark:text-primary-300",
                   else:
@@ -57,34 +57,21 @@ defmodule HexpmWeb.Dashboard.Organization.Components.OrgTabNav do
     name = org.name
 
     core_tabs = [
-      {"Profile", "/dashboard/orgs/#{name}", &(&1 == "/dashboard/orgs/#{name}")},
-      {"Members", "/dashboard/orgs/#{name}/members",
-       &String.starts_with?(&1, "/dashboard/orgs/#{name}/members")},
-      {"Keys", "/dashboard/orgs/#{name}/keys",
-       &String.starts_with?(&1, "/dashboard/orgs/#{name}/keys")},
-      {"Policies", "/dashboard/orgs/#{name}/policies",
-       &String.starts_with?(&1, "/dashboard/orgs/#{name}/policies")},
-      {"Packages", "/dashboard/orgs/#{name}/packages",
-       &String.starts_with?(&1, "/dashboard/orgs/#{name}/packages")},
-      {"Activity", "/dashboard/orgs/#{name}/audit-logs",
-       &String.starts_with?(&1, "/dashboard/orgs/#{name}/audit-logs")},
-      {"Danger Zone", "/dashboard/orgs/#{name}/danger-zone",
-       &String.starts_with?(&1, "/dashboard/orgs/#{name}/danger-zone")}
+      {:profile, "Profile", "/dashboard/orgs/#{name}"},
+      {:members, "Members", "/dashboard/orgs/#{name}/members"},
+      {:keys, "Keys", "/dashboard/orgs/#{name}/keys"},
+      {:policies, "Policies", "/dashboard/orgs/#{name}/policies"},
+      {:packages, "Packages", "/dashboard/orgs/#{name}/packages"},
+      {:audit_logs, "Activity", "/dashboard/orgs/#{name}/audit-logs"},
+      {:danger_zone, "Danger Zone", "/dashboard/orgs/#{name}/danger-zone"}
     ]
 
     if organization_admin?(org, current_user) do
-      billing_tab =
-        {"Billing", "/dashboard/orgs/#{name}/billing",
-         &(String.starts_with?(&1, "/dashboard/orgs/#{name}/billing") or
-             String.starts_with?(&1, "/dashboard/orgs/#{name}/invoices"))}
-
-      List.insert_at(core_tabs, 5, billing_tab)
+      List.insert_at(core_tabs, 5, {:billing, "Billing", "/dashboard/orgs/#{name}/billing"})
     else
       core_tabs
     end
   end
-
-  defp active?(conn, {_label, _path, matcher}), do: matcher.(conn.request_path)
 
   defp organization_admin?(org, current_user) do
     Enum.any?(org.organization_users, fn organization_user ->
