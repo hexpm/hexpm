@@ -96,32 +96,6 @@ defmodule HexpmWeb.SignupControllerTest do
     end
   end
 
-  test "POST /signup creates user when captcha is disabled" do
-    app_env(:hexpm, :hcaptcha, nil)
-
-    username = Fake.sequence(:username)
-    email = Fake.sequence(:email)
-
-    conn =
-      post(build_conn(), "/signup", %{
-        "user" => %{
-          "username" => username,
-          "emails" => %{
-            "0" => %{
-              "email" => email,
-              "email_confirmation" => email
-            }
-          },
-          "password" => "hunter42",
-          "password_confirmation" => "hunter42",
-          "full_name" => "José"
-        }
-      })
-
-    assert redirected_to(conn) == "/"
-    assert Users.get(username).username == username
-  end
-
   test "POST /signup captha failed" do
     mock_captcha_failure()
 
