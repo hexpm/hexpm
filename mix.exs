@@ -57,7 +57,7 @@ defmodule Hexpm.MixProject do
       {:logster, "~> 1.0"},
       {:mdex, "~> 0.13"},
       {:mdex_gfm, "~> 0.1"},
-      {:lumis, "~> 0.5"},
+      {:lumis, "~> 0.6"},
       {:mox, "~> 1.0", only: :test},
       {:nimble_ownership, "~> 1.0"},
       {:stream_data, "~> 1.0", only: :test},
