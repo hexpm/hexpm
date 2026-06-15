@@ -110,8 +110,8 @@ defmodule HexpmWeb.Components.PackageLayout do
             >
               {HexpmWeb.ViewIcons.icon(:heroicon, "arrow-left", class: "size-3")} Packages
             </a>
-            <div class="flex items-end gap-4">
-              <h1 class="text-grey-900 dark:text-grey-100 text-2xl font-semibold">
+            <div class="flex min-w-0 flex-wrap items-end gap-4">
+              <h1 class="min-w-0 break-words text-grey-900 dark:text-grey-100 text-2xl font-semibold">
                 <a
                   href={ViewHelpers.path_for_package(@package)}
                   class="text-grey-900 dark:text-grey-100 hover:text-purple-600 dark:hover:text-primary-300 transition-colors"

@@ -4,44 +4,44 @@
   exact_match? && "hover:bg-green-100 dark:hover:bg-green-900/20",
   not exact_match? && "hover:bg-grey-50 dark:hover:bg-grey-700/60"
 ]}>
-  <div class="grid grid-cols-[1fr_auto] gap-4 md:gap-6 items-center">
+  <div class="flex flex-wrap items-baseline gap-2.5 min-w-0 mb-1">
+    <a
+      href={ViewHelpers.path_for_package(@package)}
+      class={[
+        "min-w-0 break-words text-xl font-semibold transition-colors",
+        exact_match? &&
+          "text-grey-900 dark:text-grey-100 hover:text-green-600 dark:hover:text-green-300",
+        not exact_match? &&
+          "text-grey-700 dark:text-grey-100 hover:text-primary-600 dark:hover:text-primary-300"
+      ]}
+    >
+      {ViewHelpers.package_name(@package)}
+    </a>
+    <%= if @package.latest_release do %>
+      <a
+        href={ViewHelpers.path_for_package(@package)}
+        class={[
+          "inline-flex shrink-0 items-center px-2 py-0.5 rounded text-xs font-medium transition-colors",
+          exact_match? &&
+            "bg-green-100 dark:bg-green-900/20 group-hover:bg-green-200 dark:group-hover:bg-green-900/30 text-green-700 dark:text-green-300 hover:text-green-800 dark:hover:text-green-200",
+          not exact_match? &&
+            "bg-grey-50 dark:bg-grey-700 border border-grey-100 dark:border-grey-600 text-grey-500 dark:text-grey-200 hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:text-primary-700 dark:hover:text-primary-200"
+        ]}
+      >
+        v{@package.latest_release.version}
+      </a>
+    <% end %>
+    <%= if assigns[:dependency_requirement] do %>
+      <span class="text-grey-400 dark:text-grey-500 text-xs">requires</span>
+      <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-mono bg-grey-50 dark:bg-grey-700 border border-grey-100 dark:border-grey-600 text-grey-500 dark:text-grey-200">
+        {@dependency_requirement}
+      </span>
+    <% end %>
+  </div>
+
+  <div class="grid grid-cols-[minmax(0,1fr)_auto] gap-4 md:gap-6 items-start">
     <%!-- Package Info --%>
     <div class="min-w-0">
-      <div class="flex items-baseline gap-2.5 mb-1">
-        <a
-          href={ViewHelpers.path_for_package(@package)}
-          class={[
-            "text-xl font-semibold transition-colors",
-            exact_match? &&
-              "text-grey-900 dark:text-grey-100 hover:text-green-600 dark:hover:text-green-300",
-            not exact_match? &&
-              "text-grey-700 dark:text-grey-100 hover:text-primary-600 dark:hover:text-primary-300"
-          ]}
-        >
-          {ViewHelpers.package_name(@package)}
-        </a>
-        <%= if @package.latest_release do %>
-          <a
-            href={ViewHelpers.path_for_package(@package)}
-            class={[
-              "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium transition-colors",
-              exact_match? &&
-                "bg-green-100 dark:bg-green-900/20 group-hover:bg-green-200 dark:group-hover:bg-green-900/30 text-green-700 dark:text-green-300 hover:text-green-800 dark:hover:text-green-200",
-              not exact_match? &&
-                "bg-grey-50 dark:bg-grey-700 border border-grey-100 dark:border-grey-600 text-grey-500 dark:text-grey-200 hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:text-primary-700 dark:hover:text-primary-200"
-            ]}
-          >
-            v{@package.latest_release.version}
-          </a>
-        <% end %>
-        <%= if assigns[:dependency_requirement] do %>
-          <span class="text-grey-400 dark:text-grey-500 text-xs">requires</span>
-          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-mono bg-grey-50 dark:bg-grey-700 border border-grey-100 dark:border-grey-600 text-grey-500 dark:text-grey-200">
-            {@dependency_requirement}
-          </span>
-        <% end %>
-      </div>
-
       <%= if @package.meta.description do %>
         <p class="text-grey-500 dark:text-grey-300 text-small leading-snug line-clamp-2 mb-1.5">
           {ViewHelpers.text_length(@package.meta.description, 200)}
@@ -56,7 +56,7 @@
     </div>
 
     <%!-- Download Stats --%>
-    <div class="text-right shrink-0 min-w-[120px] md:min-w-[180px]">
+    <div class="text-right shrink-0 w-fit">
       <div class="text-[22px] font-bold tracking-[-0.01em] text-grey-900 dark:text-grey-100 tabular-nums leading-none">
         {ViewHelpers.human_number_space(display_downloads(@package_downloads, @view) || 0)}
       </div>

@@ -75,4 +75,23 @@ defmodule HexpmWeb.PageControllerTest do
 
     assert html =~ ~r/(week|weeks|day|days|hour|hours|minute|minutes) ago/
   end
+
+  test "index renders long package names without overlapping version and time" do
+    long_name = "opentelemetry_semantic_conventions"
+
+    package =
+      insert(:package,
+        name: long_name,
+        inserted_at: NaiveDateTime.utc_now(),
+        updated_at: NaiveDateTime.utc_now(),
+        meta: build(:package_metadata, description: "Distributed shared dictionary")
+      )
+
+    insert(:release, package: package, version: "0.1.0", inserted_at: NaiveDateTime.utc_now())
+
+    html = build_conn() |> get("/") |> response(200)
+
+    assert html =~ long_name
+    assert html =~ "truncate"
+  end
 end
