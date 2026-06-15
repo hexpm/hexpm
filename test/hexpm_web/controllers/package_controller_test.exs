@@ -248,6 +248,32 @@ defmodule HexpmWeb.PackageControllerTest do
       assert [_ | _] = Floki.find(document, "details summary.package-tabs-mobile-trigger")
     end
 
+    test "show package with long name" do
+      long_name = "opentelemetry_semantic_conventions"
+
+      package =
+        insert(:package,
+          name: long_name,
+          meta: build(:package_metadata, description: "Test package for long name overflow")
+        )
+
+      insert(
+        :release,
+        package: package,
+        version: "0.1.0",
+        meta: build(:release_metadata, app: long_name)
+      )
+
+      conn = get(build_conn(), "/packages/#{long_name}")
+      html = response(conn, 200)
+
+      assert html =~ long_name
+      assert html =~ "min-w-0 break-words"
+
+      assert {:ok, document} = Floki.parse_document(html)
+      assert [_ | _] = Floki.find(document, "details summary.package-tabs-mobile-trigger")
+    end
+
     test "show package uses singular dependant label for one dependant", %{package1: package1} do
       add_dependant(package1, "single_dependant")
 

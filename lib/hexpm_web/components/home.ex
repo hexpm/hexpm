@@ -211,16 +211,17 @@ defmodule HexpmWeb.Components.Home do
     <li class="py-4 border-b border-grey-100 dark:border-grey-800 last:border-b-0">
       <div class="flex items-start justify-between gap-4">
         <div class="flex flex-col gap-1 min-w-0">
-          <div class="flex items-end gap-2">
+          <div class="flex items-end gap-2 min-w-0">
             <a
               href={~p"/packages/#{@package}"}
-              class="text-grey-900 dark:text-grey-100 font-medium text-lg hover:text-primary-600 dark:hover:text-primary-300 transition-colors"
+              title={@package}
+              class="min-w-0 truncate text-grey-900 dark:text-grey-100 font-medium text-lg hover:text-primary-600 dark:hover:text-primary-300 transition-colors"
             >
               {@package}
             </a>
             <span
               :if={@version}
-              class="text-grey-500 dark:text-grey-300 text-xs bg-grey-50 dark:bg-grey-800 p-1 rounded-md"
+              class="text-grey-500 dark:text-grey-300 text-xs bg-grey-50 dark:bg-grey-800 p-1 rounded-md shrink-0"
             >
               {@version}
             </span>
