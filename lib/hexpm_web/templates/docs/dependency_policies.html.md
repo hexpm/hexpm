@@ -6,7 +6,7 @@ The two features compose. A project can use either on its own, or both at once.
 
 ### Dependency cooldown
 
-The `cooldown` setting tells Hex to ignore releases that haven't been visible long enough for the community to flag them as malicious or broken. Newly-published versions only become eligible for resolution once they reach the configured minimum age.
+The `cooldown` setting tells Hex to ignore releases until they have been available for a configured amount of time. This creates a review window in which suspicious or broken releases may be reported before they are selected by dependency resolution.
 
 #### Configuration
 

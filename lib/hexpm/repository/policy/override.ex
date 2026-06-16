@@ -12,7 +12,7 @@ defmodule Hexpm.Repository.Policy.Override do
   @package_format ~r/^[a-z0-9][a-z0-9_\-\.]*[a-z0-9]$/
 
   embedded_schema do
-    field :action, :string
+    field :action, Ecto.Enum, values: [:allow, :deny]
     field :package, :string
     field :requirement, :string
   end

@@ -5,7 +5,7 @@ defmodule Hexpm.Repo.Migrations.AddPolicies do
     create table(:policies) do
       add :organization_id, references(:organizations, on_delete: :delete_all), null: false
       add :name, :string, null: false
-      add :description, :string
+      add :description, :text
       add :visibility, :string, null: false
       add :repositories, {:array, :jsonb}, null: false, default: []
 
