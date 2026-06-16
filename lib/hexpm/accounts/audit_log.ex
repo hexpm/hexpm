@@ -18,7 +18,7 @@ defmodule Hexpm.Accounts.AuditLog do
   end
 
   def build(%{user: nil} = audit_data, action, params)
-      when action in ~w(password.reset.init password.reset.finish user_provider.create) do
+      when action in ~w(password.reset.init password.reset.finish user_provider.create user.delete) do
     params = extract_params(action, params)
 
     {key, oauth_token} = extract_auth_credential(audit_data.auth_credential)
@@ -226,6 +226,8 @@ defmodule Hexpm.Accounts.AuditLog do
     do: %{old_email: serialize(old_email), new_email: serialize(new_email)}
 
   defp extract_params("user.create", user), do: serialize(user)
+  defp extract_params("user.delete", user), do: serialize(user)
+  defp extract_params("user.delete.request", user), do: serialize(user)
   defp extract_params("user.update", user), do: serialize(user)
   defp extract_params("security.update", user), do: serialize(user)
   defp extract_params("security.rotate_recovery_codes", user), do: serialize(user)

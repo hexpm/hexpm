@@ -2,6 +2,7 @@ defmodule Hexpm.Shared do
   defmacro __using__(_opts) do
     quote do
       alias Hexpm.{
+        Accounts.AccountDeletionRequest,
         Accounts.AuditLog,
         Accounts.AuditLogs,
         Accounts.Auth,
@@ -13,6 +14,7 @@ defmodule Hexpm.Shared do
         Accounts.Organizations,
         Accounts.OrganizationUser,
         Accounts.PasswordReset,
+        Accounts.ReservedUsername,
         Accounts.Session,
         Accounts.User,
         Accounts.UserHandles,

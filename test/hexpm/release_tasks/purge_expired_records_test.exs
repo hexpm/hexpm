@@ -295,6 +295,33 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
     end
   end
 
+  describe "purge account deletion requests" do
+    test "deletes requests older than 90 days" do
+      user1 = insert(:user)
+      user2 = insert(:user)
+
+      old =
+        Repo.insert!(%Hexpm.Accounts.AccountDeletionRequest{
+          key: "old-key",
+          primary_email: "old@example.com",
+          user_id: user1.id,
+          inserted_at: days_ago(91)
+        })
+
+      recent =
+        Repo.insert!(%Hexpm.Accounts.AccountDeletionRequest{
+          key: "new-key",
+          primary_email: "new@example.com",
+          user_id: user2.id
+        })
+
+      PurgeExpiredRecords.run()
+
+      refute Repo.get(Hexpm.Accounts.AccountDeletionRequest, old.id)
+      assert Repo.get(Hexpm.Accounts.AccountDeletionRequest, recent.id)
+    end
+  end
+
   describe "purge keys" do
     test "deletes keys revoked more than 90 days ago" do
       user = insert(:user)

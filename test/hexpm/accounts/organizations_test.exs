@@ -31,6 +31,18 @@ defmodule Hexpm.Accounts.OrganizationsTest do
     end
   end
 
+  describe "create/3 with reserved username" do
+    test "rejects an organization name in reserved_usernames" do
+      Repo.insert!(%Hexpm.Accounts.ReservedUsername{name: "graveyard"})
+      user = insert(:user)
+
+      assert {:error, changeset} =
+               Organizations.create(user, %{"name" => "graveyard"}, audit: audit_data(user))
+
+      assert %{username: "has already been taken"} = errors_on(changeset)
+    end
+  end
+
   describe "remove_member/3" do
     test "cannot remove last member" do
       user = insert(:user)

@@ -181,12 +181,14 @@ defmodule HexpmWeb.AuthControllerTest do
         |> Plug.Conn.assign(:current_user, user)
         |> put_session("sudo_verification", true)
         |> put_session("sudo_return_to", "/dashboard/keys")
+        |> put_session("sudo_force", true)
         |> HexpmWeb.AuthController.callback(%{})
 
       assert redirected_to(conn) == "/dashboard/keys"
       assert HexpmWeb.Plugs.Sudo.sudo_active?(conn)
       refute get_session(conn, "sudo_verification")
       refute get_session(conn, "sudo_return_to")
+      refute get_session(conn, "sudo_force")
     end
 
     test "OAuth callback with mismatched provider_uid shows error" do

@@ -24,7 +24,8 @@ defmodule HexpmWeb.DashboardView do
       email: {"Emails", ~p"/dashboard/email"},
       keys: {"Keys", ~p"/dashboard/keys"},
       sessions: {"Sessions", ~p"/dashboard/sessions"},
-      audit_logs: {"Recent Activities", ~p"/dashboard/audit-logs"}
+      audit_logs: {"Recent Activities", ~p"/dashboard/audit-logs"},
+      delete_account: {"Delete account", ~p"/dashboard/delete-account"}
     ]
   end
 
@@ -56,6 +57,11 @@ defmodule HexpmWeb.DashboardView do
   defp icon_for_setting(:audit_logs, selected?) do
     color = if selected?, do: "text-purple-600", else: "text-grey-600"
     icon(:heroicon, "clock", class: "w-5 h-5 #{color}")
+  end
+
+  defp icon_for_setting(:delete_account, selected?) do
+    color = if selected?, do: "text-purple-600", else: "text-grey-600"
+    icon(:heroicon, "trash", class: "w-5 h-5 #{color}")
   end
 
   defp selected_setting(conn, id) do

@@ -274,6 +274,7 @@ defmodule HexpmWeb.AuthController do
       conn
       |> HexpmWeb.Plugs.Sudo.set_sudo_authenticated()
       |> delete_session("sudo_return_to")
+      |> delete_session("sudo_force")
       |> redirect(to: return_to)
     else
       conn
