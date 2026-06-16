@@ -4,13 +4,15 @@ With an organization you can publish and fetch private packages from Hex.pm and 
 
 ### Add an organization to Mix
 
-The organization's packages are namespaced under the organization's repository. Only members of the organization have access to the repository's packages, to get access in Mix you need to authorize the organization with the `mix hex.organization` task. Run the following command to do so:
+The organization's packages are namespaced under the organization's repository. Only members of the organization have access to the repository's packages. For development, authenticate as a user and you will automatically have access to the repositories of all organizations you are a member of:
 
 ```nohighlight
-$ mix hex.organization auth acme
+$ mix hex.user auth
 ```
 
-To run this command you need to have an authenticated user on your local machine, run `$ mix hex.user register` to register or `$ mix hex.user auth` to authenticate with an existing user.
+Run `$ mix hex.user register` to register first if you do not have a user yet.
+
+> **Deprecated:** Authorizing a single organization with `mix hex.organization auth acme` (without `--key`) is deprecated and will be removed. Authenticate as a user with `mix hex.user auth` for development, or generate an organization key for CI as described below.
 
 ### Publishing a private package
 
