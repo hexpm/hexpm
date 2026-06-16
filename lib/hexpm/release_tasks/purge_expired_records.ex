@@ -122,7 +122,7 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
         repo,
         Hexpm.Accounts.AccountDeletionRequest,
         from(r in Hexpm.Accounts.AccountDeletionRequest,
-          where: r.inserted_at < fragment("NOW() - make_interval(days => ?)", @retention_days)
+          where: r.inserted_at < ago(@retention_days, "day")
         ),
         batch_size
       )
