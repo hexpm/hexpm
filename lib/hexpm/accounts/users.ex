@@ -149,6 +149,15 @@ defmodule Hexpm.Accounts.Users do
       |> Multi.insert(:reserved_username, %ReservedUsername{name: user.username},
         on_conflict: :nothing
       )
+      # Keys and OAuth tokens cascade when the user is deleted, but audit logs
+      # reference both them and the user with ON DELETE SET NULL. Deleting them
+      # in their own statements first keeps the cascade from hitting a foreign
+      # key trigger ordering issue that can otherwise fail the deletion.
+      |> Multi.delete_all(:keys, assoc(user, :keys))
+      |> Multi.delete_all(
+        :oauth_tokens,
+        from(t in Hexpm.OAuth.Token, where: t.user_id == ^user.id)
+      )
       |> Multi.delete(:user, user, stale_error_field: :id)
 
     case Repo.transaction(multi) do

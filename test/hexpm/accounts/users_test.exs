@@ -285,9 +285,11 @@ defmodule Hexpm.Accounts.UsersTest do
       refute_email_sent()
     end
 
-    test "an audit log referencing the user's key does not block deletion" do
+    test "audit logs referencing the user's key and token do not block deletion" do
       user = insert(:user)
       key = insert(:key, user: user)
+      client = insert(:oauth_client)
+      token = insert(:oauth_token, user: user, client_id: client.client_id)
 
       key_log =
         insert(:audit_log,
@@ -298,16 +300,28 @@ defmodule Hexpm.Accounts.UsersTest do
           key_data: %{"id" => key.id, "name" => key.name}
         )
 
+      token_log =
+        insert(:audit_log,
+          user: user,
+          oauth_token: token,
+          action: "key.generate",
+          user_data: %{"id" => user.id, "username" => user.username}
+        )
+
       assert :ok = Users.delete(user, audit: audit_data(user))
 
       refute Repo.get(User, user.id)
       refute Repo.get(Hexpm.Accounts.Key, key.id)
+      refute Repo.get(Hexpm.OAuth.Token, token.id)
 
-      # the key_id FK is ON DELETE SET NULL, so cascading the key deletion
-      # nulls the reference instead of restricting the user deletion
+      # the references are ON DELETE SET NULL, so the audit logs survive with
+      # their snapshots and the foreign keys nulled
       key_log_reloaded = Repo.get(AuditLog, key_log.id)
       assert key_log_reloaded.key_id == nil
       assert key_log_reloaded.key_data["name"] == key.name
+
+      token_log_reloaded = Repo.get(AuditLog, token_log.id)
+      assert token_log_reloaded.oauth_token_id == nil
     end
 
     test "re-registering a deleted username fails" do
