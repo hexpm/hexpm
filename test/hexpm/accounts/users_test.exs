@@ -285,6 +285,31 @@ defmodule Hexpm.Accounts.UsersTest do
       refute_email_sent()
     end
 
+    test "an audit log referencing the user's key does not block deletion" do
+      user = insert(:user)
+      key = insert(:key, user: user)
+
+      key_log =
+        insert(:audit_log,
+          user: user,
+          key: key,
+          action: "key.generate",
+          user_data: %{"id" => user.id, "username" => user.username},
+          key_data: %{"id" => key.id, "name" => key.name}
+        )
+
+      assert :ok = Users.delete(user, audit: audit_data(user))
+
+      refute Repo.get(User, user.id)
+      refute Repo.get(Hexpm.Accounts.Key, key.id)
+
+      # the key_id FK is ON DELETE SET NULL, so cascading the key deletion
+      # nulls the reference instead of restricting the user deletion
+      key_log_reloaded = Repo.get(AuditLog, key_log.id)
+      assert key_log_reloaded.key_id == nil
+      assert key_log_reloaded.key_data["name"] == key.name
+    end
+
     test "re-registering a deleted username fails" do
       user = insert(:user)
       username = user.username
