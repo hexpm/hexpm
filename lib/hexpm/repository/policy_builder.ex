@@ -114,8 +114,8 @@ defmodule Hexpm.Repository.PolicyBuilder do
   defp visibility_to_enum("public"), do: :VISIBILITY_PUBLIC
   defp visibility_to_enum("private"), do: :VISIBILITY_PRIVATE
 
-  defp action_to_enum("allow"), do: :OVERRIDE_ACTION_ALLOW
-  defp action_to_enum("deny"), do: :OVERRIDE_ACTION_DENY
+  defp action_to_enum(:allow), do: :OVERRIDE_ACTION_ALLOW
+  defp action_to_enum(:deny), do: :OVERRIDE_ACTION_DENY
 
   defp store_key(policy),
     do: "repos/#{policy.organization.name}/policies/#{policy.name}"

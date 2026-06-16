@@ -89,7 +89,7 @@ defmodule Hexpm.Repository.PolicyTest do
       assert hexpm.advisory_min_severity == 3
       assert hexpm.retirement_reasons == [1, 2]
       assert [deny, allow] = hexpm.overrides
-      assert deny.action == "deny"
+      assert deny.action == :deny
       assert deny.package == "badlib"
       assert allow.requirement == "== 1.7.10"
       assert myorg.repository == "myorg"

@@ -718,7 +718,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
           <%= inputs_for @form, :overrides, fn of -> %>
             <.override_row
               action_name={Form.input_name(of, :action)}
-              action_value={Form.input_value(of, :action) || "allow"}
+              action_value={to_string(Form.input_value(of, :action) || "allow")}
               package_name={Form.input_name(of, :package)}
               package_value={Form.input_value(of, :package)}
               requirement_name={Form.input_name(of, :requirement)}

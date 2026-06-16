@@ -8,7 +8,6 @@ defmodule Hexpm.Repository.Policy.Override do
   """
   use Hexpm.Schema
 
-  @valid_actions ~w(allow deny)
   @package_format ~r/^[a-z0-9][a-z0-9_\-\.]*[a-z0-9]$/
 
   embedded_schema do
@@ -22,7 +21,6 @@ defmodule Hexpm.Repository.Policy.Override do
     |> cast(attrs, [:action, :package, :requirement])
     |> update_change(:requirement, &nilify_blank/1)
     |> validate_required([:action, :package])
-    |> validate_inclusion(:action, @valid_actions)
     |> validate_format(:package, @package_format)
     |> validate_requirement()
   end
