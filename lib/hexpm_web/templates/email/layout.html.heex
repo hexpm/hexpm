@@ -49,7 +49,7 @@
       <tr>
         <td align="center" style="padding: 0;">
           <%!-- Header - Full width dark background --%>
-          <% logo_url = url(~p"/images/hex-full.svg") %>
+          <% logo_url = url(~p"/images/hex-full.png") %>
           <table
             role="presentation"
             width="100%"
@@ -60,16 +60,33 @@
           >
             <tr>
               <td align="center" style="padding: 24px 0;">
-                <div style="display: flex; align-items: center; justify-content: center; gap: 12px;">
-                  <img
-                    src={logo_url}
-                    alt=""
-                    style="height: 32px; width: auto; flex-shrink: 0;"
-                  />
-                  <span style="color: white; font-size: 24px; font-weight: 600; font-family: 'Inter', system-ui, -apple-system, sans-serif;">
-                    hex.pm
-                  </span>
-                </div>
+                <table
+                  role="presentation"
+                  align="center"
+                  cellpadding="0"
+                  cellspacing="0"
+                  border="0"
+                >
+                  <tr>
+                    <td style="vertical-align: middle; padding-right: 12px;">
+                      <a href={url(~p"/")}>
+                        <img
+                          src={logo_url}
+                          alt="hex logo"
+                          style="display: block; height: 32px; width: auto;"
+                        />
+                      </a>
+                    </td>
+                    <td style="vertical-align: middle;">
+                      <a
+                        href={url(~p"/")}
+                        style="color: #ffffff; font-size: 24px; line-height: 32px; font-weight: 700; letter-spacing: -0.025em; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; text-decoration: none;"
+                      >
+                        Hex
+                      </a>
+                    </td>
+                  </tr>
+                </table>
               </td>
             </tr>
           </table>
@@ -101,16 +118,6 @@
                     </td>
                   </tr>
                 </table>
-              </td>
-            </tr>
-
-            <%!-- Footer --%>
-            <tr>
-              <td
-                style="padding: 24px 32px; background-color: #f7f5f9; color: #304254; font-size: 16px; line-height: 24px;"
-                class="content-padding"
-              >
-                --<br /> Hex.pm
               </td>
             </tr>
           </table>

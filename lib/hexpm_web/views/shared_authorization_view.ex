@@ -98,35 +98,40 @@ defmodule HexpmWeb.SharedAuthorizationView do
     ~H"""
     <%= if @style == :oauth do %>
       <li class="scope-item">
-        <label class="scope-label">
+        <label class={[
+          "scope-label flex items-start gap-3",
+          @disabled && "cursor-not-allowed",
+          !@disabled && "cursor-pointer",
+          @disabled && !@required && "opacity-60"
+        ]}>
           <input
             type="checkbox"
             name="selected_scopes[]"
             value={@scope}
             checked={@checked}
             disabled={@disabled}
-            class="scope-checkbox"
+            class="scope-checkbox mt-1 h-4 w-4 rounded border-grey-300 dark:border-grey-600 bg-white dark:bg-grey-900 text-primary-600 focus:ring-primary-500 dark:focus:ring-primary-400"
           />
           <input :if={@required} type="hidden" name="selected_scopes[]" value={@scope} />
-          <div class="scope-content">
-            <div class="scope-header">
-              <code class="scope-name">
+          <div class="scope-content min-w-0 flex-1">
+            <div class="scope-header flex flex-wrap items-center gap-2">
+              <code class="scope-name text-sm font-semibold text-grey-900 dark:text-grey-100">
                 {@scope}
               </code>
               <span
                 :if={@required}
-                class="scope-required"
+                class="scope-required inline-flex items-center rounded-full bg-grey-100 dark:bg-grey-700 px-2 py-0.5 text-xs font-medium text-grey-700 dark:text-grey-200"
               >
                 Required
               </span>
               <span
                 :if={@requires_2fa}
-                class="scope-requires-2fa"
+                class="scope-requires-2fa inline-flex items-center rounded-full bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:text-yellow-200"
               >
                 <i class="fa fa-shield"></i> Requires 2FA
               </span>
             </div>
-            <span class="scope-description">
+            <span class="scope-description text-sm text-grey-600 dark:text-grey-300">
               {@description}
             </span>
           </div>

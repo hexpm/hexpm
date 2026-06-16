@@ -12,8 +12,13 @@ defmodule HexpmWeb.Plugs.Sudo do
   sudo or a valid form token, so form submissions work even if sudo expires
   between page load and form submit.
 
+  Pass `force: true` to require a fresh authentication (`:hexpm, :sudo_force_timeout`)
+  regardless of the rolling sudo window — used for destructive pages like account
+  deletion. The signed form token still covers non-GET submissions.
+
   Usage in controllers:
       plug HexpmWeb.Plugs.Sudo
+      plug HexpmWeb.Plugs.Sudo, force: true
   """
 
   use HexpmWeb, :verified_routes
@@ -29,12 +34,14 @@ defmodule HexpmWeb.Plugs.Sudo do
   def init(opts), do: opts
 
   @impl Plug
-  def call(conn, _opts) do
+  def call(conn, opts) do
+    force? = Keyword.get(opts, :force, false)
+
     cond do
       disabled?() ->
         conn
 
-      sudo_active?(conn) ->
+      sudo_satisfied?(conn, force?) ->
         conn
 
       conn.method != "GET" and valid_form_token?(conn) ->
@@ -47,10 +54,19 @@ defmodule HexpmWeb.Plugs.Sudo do
           end
 
         conn
+        |> put_force_flag(force?)
         |> redirect_to_sudo(return_to)
         |> halt()
     end
   end
+
+  @spec sudo_satisfied?(Plug.Conn.t(), boolean()) :: boolean()
+  defp sudo_satisfied?(conn, false), do: sudo_active?(conn)
+  defp sudo_satisfied?(conn, true), do: sudo_fresh?(conn)
+
+  @spec put_force_flag(Plug.Conn.t(), boolean()) :: Plug.Conn.t()
+  defp put_force_flag(conn, true), do: put_session(conn, "sudo_force", true)
+  defp put_force_flag(conn, false), do: conn
 
   @doc """
   Redirects to the sudo verification page with a return URL.
@@ -83,6 +99,16 @@ defmodule HexpmWeb.Plugs.Sudo do
 
   @spec sudo_active?(Plug.Conn.t()) :: boolean()
   def sudo_active?(conn) do
+    authenticated_within?(conn, sudo_timeout())
+  end
+
+  @spec sudo_fresh?(Plug.Conn.t()) :: boolean()
+  def sudo_fresh?(conn) do
+    authenticated_within?(conn, sudo_force_timeout())
+  end
+
+  @spec authenticated_within?(Plug.Conn.t(), Duration.t()) :: boolean()
+  defp authenticated_within?(conn, duration) do
     case get_session(conn, "sudo_authenticated_at") do
       nil ->
         false
@@ -90,7 +116,7 @@ defmodule HexpmWeb.Plugs.Sudo do
       timestamp_string ->
         case NaiveDateTime.from_iso8601(timestamp_string) do
           {:ok, authenticated_at} ->
-            expires_at = NaiveDateTime.shift(authenticated_at, sudo_timeout())
+            expires_at = NaiveDateTime.shift(authenticated_at, duration)
             NaiveDateTime.compare(NaiveDateTime.utc_now(), expires_at) == :lt
 
           _ ->
@@ -107,6 +133,11 @@ defmodule HexpmWeb.Plugs.Sudo do
   @spec disabled?() :: boolean()
   defp disabled? do
     Application.get_env(:hexpm, :sudo, true) == false
+  end
+
+  @spec sudo_force_timeout() :: Duration.t()
+  defp sudo_force_timeout do
+    Application.fetch_env!(:hexpm, :sudo_force_timeout)
   end
 
   @spec set_sudo_authenticated(Plug.Conn.t()) :: Plug.Conn.t()

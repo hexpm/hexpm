@@ -155,6 +155,38 @@ defmodule HexpmWeb.PackageViewTest do
       assert result =~ package.name
       assert result =~ "v1.0.0"
     end
+
+    test "renders long package name with break-words and without truncate" do
+      long_name = "opentelemetry_semantic_conventions"
+
+      package =
+        build(:package,
+          name: long_name,
+          repository_id: 1,
+          repository: build(:repository, id: 1, name: "hexpm"),
+          inserted_at: ~U[2025-01-01 00:00:00Z]
+        )
+
+      package = %{
+        package
+        | latest_release: %Hexpm.Repository.Release{
+            version: Version.parse!("1.27.0"),
+            inserted_at: ~N[2025-01-01 00:00:00]
+          }
+      }
+
+      result =
+        render_to_string(PackageView, "_package.html",
+          package: package,
+          package_downloads: %{"all" => 1000, "recent" => 100},
+          view: :recent_downloads
+        )
+
+      assert result =~ long_name
+      assert result =~ "v1.27.0"
+      assert result =~ "break-words"
+      refute result =~ "truncate"
+    end
   end
 
   describe "retirement_message/1" do

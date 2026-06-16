@@ -20,6 +20,19 @@ Hexpm.Repo.transaction(fn ->
     allowed_scopes: ["api", "api:read", "api:write", "repositories"]
   )
 
+  insert(:oauth_client,
+    name: "Bob",
+    client_id: "b0b00000-0000-4000-8000-000000000b0b",
+    client_type: "confidential",
+    client_secret: "dev_secret_for_testing",
+    allowed_grant_types: ["authorization_code", "refresh_token"],
+    allowed_scopes: ["api:read"],
+    redirect_uris: [
+      "https://bob.hex.pm/oauth/callback",
+      "http://localhost:4003/oauth/callback"
+    ]
+  )
+
   insert(
     :key,
     user_id: Users.get("hexdocs").id,

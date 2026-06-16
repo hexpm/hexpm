@@ -108,6 +108,69 @@ defmodule HexpmWeb.Plugs.SudoTest do
       assert redirected_to(conn) == "/sudo"
       refute get_session(conn, "sudo_return_to")
     end
+
+    test "stale-but-active sudo + force: halts and redirects, sets flag; same sudo passes default mode" do
+      user = insert(:user)
+      stale_sudo_at = NaiveDateTime.add(NaiveDateTime.utc_now(), -10, :minute)
+
+      conn =
+        build_conn()
+        |> test_login(user, sudo_at: stale_sudo_at)
+        |> fetch_flash()
+        |> Sudo.call(force: true)
+
+      assert conn.halted
+      assert redirected_to(conn) == "/sudo"
+      assert get_session(conn, "sudo_force") == true
+
+      conn2 =
+        build_conn()
+        |> test_login(user, sudo_at: stale_sudo_at)
+        |> Sudo.call([])
+
+      refute conn2.halted
+    end
+
+    test "fresh sudo + force: not halted" do
+      user = insert(:user)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> Sudo.call(force: true)
+
+      refute conn.halted
+    end
+
+    test "non-GET with valid form token, stale sudo, force: not halted" do
+      user = insert(:user)
+      path = "/dashboard/delete-account"
+      token = Sudo.generate_form_token(user.id, "POST", path)
+      stale_sudo_at = NaiveDateTime.add(NaiveDateTime.utc_now(), -10, :minute)
+
+      conn =
+        build_conn(:post, path, %{"_sudo_token" => token})
+        |> test_login(user, sudo_at: stale_sudo_at)
+        |> Plug.Conn.assign(:current_user, user)
+        |> Sudo.call(force: true)
+
+      refute conn.halted
+    end
+
+    test "default mode redirect does not set sudo_force flag" do
+      user = insert(:user)
+      expired_sudo_at = NaiveDateTime.add(NaiveDateTime.utc_now(), -3601, :second)
+
+      conn =
+        build_conn()
+        |> test_login(user, sudo_at: expired_sudo_at)
+        |> fetch_flash()
+        |> Sudo.call([])
+
+      assert conn.halted
+      assert redirected_to(conn) == "/sudo"
+      assert get_session(conn, "sudo_force") == nil
+    end
   end
 
   describe "form token" do

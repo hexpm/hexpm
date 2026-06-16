@@ -9,7 +9,15 @@ defmodule HexpmWeb.EmailView do
     def support_email(), do: "support@hex.pm"
 
     # Smart link wrapping - add <a> only for HTML format
-    def link(url, text, :html), do: safe_to_string(PhoenixHTMLHelpers.Link.link(text, to: url))
+    def link(url, text, :html) do
+      safe_to_string(
+        PhoenixHTMLHelpers.Link.link(text,
+          to: url,
+          style: "color: #0f59d8; text-decoration: none;"
+        )
+      )
+    end
+
     def link(url, _text, :text), do: url
 
     def support_link(:html), do: link("mailto:#{support_email()}", support_email(), :html)
@@ -34,6 +42,35 @@ defmodule HexpmWeb.EmailView do
 
     def follow_link_instruction(url, :text) do
       "You can do so by following this link:\n\n#{url}"
+    end
+  end
+
+  defmodule AccountDeletionRequest do
+    def title() do
+      "Confirm account deletion"
+    end
+
+    def message(username) do
+      "We received a request to permanently delete the Hex.pm account \"#{username}\". " <>
+        "To proceed, open the link below while logged in and confirm the deletion. " <>
+        "The link is valid for 24 hours and can only be used once."
+    end
+
+    def warning() do
+      "If you did not request this, change your password immediately. " <>
+        "Changing your password cancels this deletion request."
+    end
+  end
+
+  defmodule AccountDeleted do
+    def title() do
+      "Your account has been deleted"
+    end
+
+    def message(username) do
+      "The Hex.pm account \"#{username}\" has been permanently deleted. " <>
+        "The username has been retired and cannot be registered again. " <>
+        "Packages and versions you published remain available to the community."
     end
   end
 

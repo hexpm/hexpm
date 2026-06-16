@@ -1,0 +1,62 @@
+<div class="bg-grey-50 dark:bg-grey-950 min-h-screen py-4 sm:py-8">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="flex flex-col gap-4 sm:gap-8 lg:flex-row">
+      <%!-- Left Sidebar --%>
+      <div class="w-full lg:w-64 flex-shrink-0">
+        {render(HexpmWeb.DashboardView, "_sidebar.html", assigns)}
+      </div>
+
+      <%!-- Right Content - Single White Card --%>
+      <div class="flex-1 min-w-0">
+        <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4 sm:p-8">
+          <h2 class="text-grey-900 dark:text-white text-xl font-semibold mb-8">
+            Confirm account deletion
+          </h2>
+
+          <p class="text-grey-700 dark:text-grey-200 mb-4">
+            This is the final step. Deleting the account <strong>{@current_user.username}</strong>
+            is permanent and cannot be undone.
+          </p>
+
+          <%= if @warnings.sole_owned_packages != [] do %>
+            <p class="text-grey-700 dark:text-grey-200 mb-2 font-semibold">
+              These packages will be left without an owner:
+            </p>
+            <ul class="list-disc pl-6 mb-4 text-grey-700 dark:text-grey-200">
+              <%= for package <- @warnings.sole_owned_packages do %>
+                <li>{package.name}</li>
+              <% end %>
+            </ul>
+          <% end %>
+
+          <.sudo_form
+            current_user={@current_user}
+            action={~p"/dashboard/delete-account/confirm"}
+            id="confirm-delete-account-form"
+          >
+            <input type="hidden" name="key" value={@key} />
+            <label
+              for="confirm-delete-account-username"
+              class="block text-grey-700 dark:text-grey-200 mb-2"
+            >
+              Type your username <strong>{@current_user.username}</strong> to confirm:
+            </label>
+            <.text_input
+              id="confirm-delete-account-username"
+              name="username"
+              autocomplete="off"
+              required
+              pattern={username_pattern(@current_user.username)}
+              title={"Please type '#{@current_user.username}' to confirm"}
+            />
+            <div class="mt-6">
+              <.button type="submit" variant="danger">
+                Delete my account
+              </.button>
+            </div>
+          </.sudo_form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,10 @@
+<%
+confirm_url = url(~p"/dashboard/delete-account/confirm?key=#{@key}")
+%>
+<%= AccountDeletionRequest.title() %>
+
+<%= AccountDeletionRequest.message(@username) %>
+
+<%= confirm_url %>
+
+<%= AccountDeletionRequest.warning() %>

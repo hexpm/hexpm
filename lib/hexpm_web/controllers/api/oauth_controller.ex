@@ -168,10 +168,14 @@ defmodule HexpmWeb.API.OAuthController do
            validate_refresh_token(safe_param(params, "refresh_token"), client.client_id) do
       usage_info = build_usage_info(conn)
 
+      # Refresh from the originally granted scopes so dynamic scopes
+      # ("repositories") are re-expanded against current organization
+      # memberships, instead of carrying the expansion frozen at session
+      # creation for the session's whole lifetime.
       case Tokens.revoke_and_create_token(
              token,
              client.client_id,
-             token.scopes,
+             token.granted_scopes,
              "refresh_token",
              params["refresh_token"],
              with_refresh_token: true,

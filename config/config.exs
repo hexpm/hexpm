@@ -12,7 +12,8 @@ config :hexpm,
   cdn_impl: Hexpm.CDN.Local,
   billing_impl: Hexpm.Billing.Local,
   pwned_impl: Hexpm.Pwned.Local,
-  sudo_timeout: Duration.new!(hour: 1)
+  sudo_timeout: Duration.new!(hour: 1),
+  sudo_force_timeout: Duration.new!(second: 30)
 
 config :hexpm, :features, package_reports: true
 
@@ -97,5 +98,7 @@ config :ueberauth, Ueberauth,
   providers: [
     github: {Ueberauth.Strategy.Github, [default_scope: "user:email"]}
   ]
+
+config :mdex_native, syntax_highlighter: :lumis
 
 import_config "#{Mix.env()}.exs"

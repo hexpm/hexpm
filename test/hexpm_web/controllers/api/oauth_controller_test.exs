@@ -311,6 +311,41 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       refute response["refresh_token"] == refresh_token
     end
 
+    test "re-expands repositories scope against current memberships", %{client: client} do
+      user = insert(:user)
+      org_left = insert(:organization)
+      org_user = insert(:organization_user, organization: org_left, user: user)
+
+      {:ok, token} =
+        Tokens.create_and_insert_for_user(
+          user,
+          client.client_id,
+          ["api", "repositories"],
+          "authorization_code",
+          nil,
+          with_refresh_token: true
+        )
+
+      assert token.granted_scopes == ["api", "repositories"]
+      assert "repository:#{org_left.name}" in token.scopes
+
+      org_joined = insert(:organization)
+      insert(:organization_user, organization: org_joined, user: user)
+      Repo.delete!(org_user)
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "refresh_token",
+          "refresh_token" => token.refresh_token,
+          "client_id" => client.client_id
+        })
+
+      response = json_response(conn, 200)
+      scopes = String.split(response["scope"], " ")
+      assert "repository:#{org_joined.name}" in scopes
+      refute "repository:#{org_left.name}" in scopes
+    end
+
     test "returns error for missing refresh_token", %{client: client} do
       conn =
         post(build_conn(), ~p"/api/oauth/token", %{

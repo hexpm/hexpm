@@ -243,7 +243,7 @@ defmodule HexpmWeb.ReadmeControllerTest do
         |> get("/#{package.name}/1.0.0")
 
       assert conn.status == 200
-      assert conn.resp_body =~ ~s|class="constant">&#39;div&#39;|
+      assert conn.resp_body =~ ~s|class="l-constant">&#39;div&#39;|
     end
 
     test "preserves newlines in unhighlighted code blocks", %{package: package} do

@@ -1,7 +1,9 @@
 defmodule Hexpm.Accounts.UsersTest do
   use Hexpm.DataCase, async: true
 
-  alias Hexpm.Accounts.{OptionalEmails, User, Users, UserProviders}
+  import Swoosh.TestAssertions
+
+  alias Hexpm.Accounts.{AuditLog, OptionalEmails, User, Users, UserProviders}
 
   describe "add_from_oauth_with_provider/6" do
     test "creates user and provider atomically" do
@@ -171,6 +173,408 @@ defmodule Hexpm.Accounts.UsersTest do
       User.optional_emails_changeset(user, %{"unknown_pref" => true})
 
     assert %{optional_emails: _} = errors_on(changeset)
+  end
+
+  describe "add/2 with reserved username" do
+    test "rejects a username in reserved_usernames" do
+      Repo.insert!(%Hexpm.Accounts.ReservedUsername{name: "graveyard"})
+
+      params = %{
+        "username" => "graveyard",
+        "emails" => [%{"email" => Hexpm.Fake.sequence(:email)}]
+      }
+
+      audit = %{user: nil, user_agent: "TEST", remote_ip: "127.0.0.1", auth_credential: nil}
+
+      assert {:error, changeset} = Users.add(params, audit: audit)
+      assert %{username: "has already been taken"} = errors_on(changeset)
+    end
+
+    test "comparison is case-insensitive" do
+      Repo.insert!(%Hexpm.Accounts.ReservedUsername{name: "GraveYard"})
+
+      params = %{
+        "username" => "graveyard",
+        "emails" => [%{"email" => Hexpm.Fake.sequence(:email)}]
+      }
+
+      audit = %{user: nil, user_agent: "TEST", remote_ip: "127.0.0.1", auth_credential: nil}
+
+      assert {:error, changeset} = Users.add(params, audit: audit)
+      assert %{username: "has already been taken"} = errors_on(changeset)
+    end
+  end
+
+  describe "delete/2" do
+    test "deletes the user, preserves packages/releases/audit logs, reserves the username" do
+      user = insert(:user)
+      other_owner = insert(:user)
+
+      sole_package = insert(:package, package_owners: [build(:package_owner, user: user)])
+
+      co_package =
+        insert(:package,
+          package_owners: [
+            build(:package_owner, user: user),
+            build(:package_owner, user: other_owner)
+          ]
+        )
+
+      release = insert(:release, package: sole_package, publisher: user)
+      key = insert(:key, user: user)
+      session = insert(:session, user_id: user.id)
+
+      organization = insert(:organization)
+      org_user = insert(:organization_user, user: user, organization: organization)
+
+      old_log =
+        insert(:audit_log, user: user, action: "user.update", user_data: %{"id" => user.id})
+
+      email_ids = Enum.map(user.emails, & &1.id)
+      username = user.username
+      primary_email = User.email(user, :primary)
+
+      assert :ok = Users.delete(user, audit: audit_data(user))
+
+      # user row gone
+      refute Repo.get(User, user.id)
+
+      # packages and releases preserved, publisher nulled
+      assert Repo.get(Hexpm.Repository.Package, sole_package.id)
+      assert Repo.get(Hexpm.Repository.Package, co_package.id)
+      assert Repo.get(Hexpm.Repository.Release, release.id).publisher_id == nil
+
+      # ownership rows gone; the co-owned package keeps its other owner
+      sole_reloaded = Repo.get(Hexpm.Repository.Package, sole_package.id)
+      co_reloaded = Repo.get(Hexpm.Repository.Package, co_package.id)
+      assert Repo.all(Ecto.assoc(sole_reloaded, :package_owners)) == []
+      assert [%{user_id: other_id}] = Repo.all(Ecto.assoc(co_reloaded, :package_owners))
+      assert other_id == other_owner.id
+
+      # credentials and memberships gone
+      refute Repo.get(Hexpm.Accounts.Key, key.id)
+      refute Repo.get(Hexpm.UserSession, session.id)
+      refute Repo.get(Hexpm.Accounts.OrganizationUser, org_user.id)
+      for email_id <- email_ids, do: refute(Repo.get(Hexpm.Accounts.Email, email_id))
+
+      # audit logs preserved with snapshot; a user.delete log was written
+      assert Repo.get(AuditLog, old_log.id).user_id == nil
+
+      delete_log = Repo.get_by(AuditLog, action: "user.delete")
+      assert delete_log
+      assert delete_log.user_id == nil
+      assert delete_log.user_data["username"] == username
+      assert delete_log.params["username"] == username
+
+      # username reserved
+      assert Repo.exists?(Hexpm.Accounts.ReservedUsername.by_name(username))
+
+      # notice sent to the former primary email
+      assert_email_sent(fn email ->
+        email.subject == "Hex.pm - Your account has been deleted" and
+          Enum.any?(email.to, fn {_name, address} -> address == primary_email end)
+      end)
+    end
+
+    test "deletes a user without a primary email and sends no email" do
+      user = insert(:user, emails: [])
+
+      assert :ok = Users.delete(user, audit: audit_data(user))
+
+      refute Repo.get(User, user.id)
+      refute_email_sent()
+    end
+
+    test "audit logs referencing the user's key and token do not block deletion" do
+      user = insert(:user)
+      key = insert(:key, user: user)
+      client = insert(:oauth_client)
+      token = insert(:oauth_token, user: user, client_id: client.client_id)
+
+      key_log =
+        insert(:audit_log,
+          user: user,
+          key: key,
+          action: "key.generate",
+          user_data: %{"id" => user.id, "username" => user.username},
+          key_data: %{"id" => key.id, "name" => key.name}
+        )
+
+      token_log =
+        insert(:audit_log,
+          user: user,
+          oauth_token: token,
+          action: "key.generate",
+          user_data: %{"id" => user.id, "username" => user.username}
+        )
+
+      assert :ok = Users.delete(user, audit: audit_data(user))
+
+      refute Repo.get(User, user.id)
+      refute Repo.get(Hexpm.Accounts.Key, key.id)
+      refute Repo.get(Hexpm.OAuth.Token, token.id)
+
+      # the references are ON DELETE SET NULL, so the audit logs survive with
+      # their snapshots and the foreign keys nulled
+      key_log_reloaded = Repo.get(AuditLog, key_log.id)
+      assert key_log_reloaded.key_id == nil
+      assert key_log_reloaded.key_data["name"] == key.name
+
+      token_log_reloaded = Repo.get(AuditLog, token_log.id)
+      assert token_log_reloaded.oauth_token_id == nil
+    end
+
+    test "re-registering a deleted username fails" do
+      user = insert(:user)
+      username = user.username
+      assert :ok = Users.delete(user, audit: audit_data(user))
+
+      params = %{
+        "username" => username,
+        "emails" => [%{"email" => Hexpm.Fake.sequence(:email)}]
+      }
+
+      audit = %{user: nil, user_agent: "TEST", remote_ip: "127.0.0.1", auth_credential: nil}
+      assert {:error, changeset} = Users.add(params, audit: audit)
+      assert %{username: "has already been taken"} = errors_on(changeset)
+    end
+  end
+
+  describe "delete_eligibility/1" do
+    test "ok with no warnings for a plain user" do
+      user = insert(:user)
+      assert {:ok, %{sole_owned_packages: []}} = Users.delete_eligibility(user)
+    end
+
+    test "warns about packages where the user is the sole owner" do
+      user = insert(:user)
+      other = insert(:user)
+
+      sole = insert(:package, package_owners: [build(:package_owner, user: user)])
+
+      _co =
+        insert(:package,
+          package_owners: [
+            build(:package_owner, user: user),
+            build(:package_owner, user: other)
+          ]
+        )
+
+      assert {:ok, %{sole_owned_packages: [package]}} = Users.delete_eligibility(user)
+      assert package.id == sole.id
+    end
+
+    test "blocks the last member of an organization" do
+      user = insert(:user)
+      organization = insert(:organization)
+      insert(:organization_user, user: user, organization: organization, role: "admin")
+
+      assert {:error, {:organizations, [blocked]}} = Users.delete_eligibility(user)
+      assert blocked.id == organization.id
+    end
+
+    test "blocks the last admin even when other members exist" do
+      user = insert(:user)
+      other = insert(:user)
+      organization = insert(:organization)
+      insert(:organization_user, user: user, organization: organization, role: "admin")
+      insert(:organization_user, user: other, organization: organization, role: "write")
+
+      assert {:error, {:organizations, [blocked]}} = Users.delete_eligibility(user)
+      assert blocked.id == organization.id
+    end
+
+    test "allows a non-last admin" do
+      user = insert(:user)
+      other = insert(:user)
+      organization = insert(:organization)
+      insert(:organization_user, user: user, organization: organization, role: "admin")
+      insert(:organization_user, user: other, organization: organization, role: "admin")
+
+      assert {:ok, _} = Users.delete_eligibility(user)
+    end
+
+    test "blocks organization service accounts" do
+      organization = insert(:organization)
+      assert {:error, :organization_account} = Users.delete_eligibility(organization.user)
+    end
+
+    test "does not warn about private repository packages" do
+      user = insert(:user)
+      repository = insert(:repository)
+
+      insert(:package,
+        repository_id: repository.id,
+        package_owners: [build(:package_owner, user: user)]
+      )
+
+      assert {:ok, %{sole_owned_packages: []}} = Users.delete_eligibility(user)
+    end
+  end
+
+  describe "delete_request/2 and delete_confirm/3" do
+    test "creates a request, emails the confirmation link, and confirm deletes the account" do
+      user = insert(:user)
+      username = user.username
+
+      assert :ok = Users.delete_request(user, audit: audit_data(user))
+
+      request = Repo.get_by!(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
+      user = Repo.preload(user, :emails)
+      assert_email_sent(Hexpm.Emails.account_deletion_request(user, request))
+
+      request_log = Repo.get_by(Hexpm.Accounts.AuditLog, action: "user.delete.request")
+      assert request_log.user_id == user.id
+
+      assert :ok = Users.delete_confirm(user, request.key, audit: audit_data(user))
+      refute Repo.get(User, user.id)
+      assert Repo.exists?(Hexpm.Accounts.ReservedUsername.by_name(username))
+      refute Repo.get(Hexpm.Accounts.AccountDeletionRequest, request.id)
+    end
+
+    test "a new request replaces the previous one" do
+      user = insert(:user)
+
+      assert :ok = Users.delete_request(user, audit: audit_data(user))
+      first = Repo.get_by!(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
+
+      assert :ok = Users.delete_request(user, audit: audit_data(user))
+      second = Repo.get_by!(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
+
+      assert first.id != second.id
+
+      assert {:error, :invalid_request} =
+               Users.delete_confirm(user, first.key, audit: audit_data(user))
+
+      assert Repo.get(User, user.id)
+    end
+
+    test "confirm rejects a wrong, expired, or foreign key" do
+      user = insert(:user)
+      attacker = insert(:user)
+
+      assert :ok = Users.delete_request(user, audit: audit_data(user))
+      request = Repo.get_by!(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
+
+      # wrong key
+      assert {:error, :invalid_request} =
+               Users.delete_confirm(user, "deadbeef", audit: audit_data(user))
+
+      # foreign key: attacker's own request used against user's account
+      assert :ok = Users.delete_request(attacker, audit: audit_data(attacker))
+      attacker_request = Repo.get_by!(Hexpm.Accounts.AccountDeletionRequest, user_id: attacker.id)
+
+      assert {:error, :invalid_request} =
+               Users.delete_confirm(user, attacker_request.key, audit: audit_data(user))
+
+      # expired key
+      Repo.update_all(Hexpm.Accounts.AccountDeletionRequest,
+        set: [inserted_at: DateTime.add(DateTime.utc_now(), -2, :day)]
+      )
+
+      assert {:error, :invalid_request} =
+               Users.delete_confirm(user, request.key, audit: audit_data(user))
+
+      assert Repo.get(User, user.id)
+    end
+
+    test "request is blocked for users failing eligibility" do
+      user = insert(:user)
+      organization = insert(:organization)
+      insert(:organization_user, user: user, organization: organization, role: "admin")
+
+      assert {:error, {:organizations, _}} = Users.delete_request(user, audit: audit_data(user))
+    end
+
+    test "request is rejected for users without a primary email" do
+      user = insert(:user, emails: [])
+
+      assert {:error, :no_primary_email} = Users.delete_request(user, audit: audit_data(user))
+      refute Repo.get_by(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
+    end
+
+    test "changing the password deletes pending requests" do
+      user = insert(:user)
+      assert :ok = Users.delete_request(user, audit: audit_data(user))
+
+      {:ok, _} =
+        Users.update_password(
+          user,
+          %{
+            "password_current" => "password",
+            "password" => "new_password_123",
+            "password_confirmation" => "new_password_123"
+          },
+          audit: audit_data(user)
+        )
+
+      refute Repo.get_by(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
+    end
+
+    test "changing the primary email deletes the pending request" do
+      user = insert(:user)
+      assert :ok = Users.delete_request(user, audit: audit_data(user))
+      request = Repo.get_by!(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
+
+      {:ok, user} = Users.add_email(user, %{email: "new@example.com"}, audit: audit_data(user))
+      new_email = Enum.find(user.emails, &(&1.email == "new@example.com"))
+      Repo.update!(Ecto.Changeset.change(new_email, verified: true))
+      user = Users.get_by_id(user.id, [:emails])
+      :ok = Users.primary_email(user, %{"email" => "new@example.com"}, audit: audit_data(user))
+
+      refute Repo.get_by(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
+
+      user = Users.get_by_id(user.id, [:emails])
+
+      assert {:error, :invalid_request} =
+               Users.delete_confirm(user, request.key, audit: audit_data(user))
+    end
+
+    test "password reset deletes pending requests" do
+      user = insert(:user)
+      assert :ok = Users.delete_request(user, audit: audit_data(user))
+
+      :ok = Users.password_reset_init(user.username, audit: audit_data(user))
+      user = Users.get_by_id(user.id, [:emails, :password_resets])
+      [reset] = user.password_resets
+
+      :ok =
+        Users.password_reset_finish(
+          user.username,
+          reset.key,
+          %{
+            "username" => user.username,
+            "password" => "new_password_123",
+            "password_confirmation" => "new_password_123"
+          },
+          false,
+          audit: audit_data(user)
+        )
+
+      refute Repo.get_by(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
+    end
+
+    test "confirm is blocked when eligibility changed after the request" do
+      user = insert(:user)
+      assert :ok = Users.delete_request(user, audit: audit_data(user))
+      request = Repo.get_by!(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
+
+      organization = insert(:organization)
+      insert(:organization_user, user: user, organization: organization, role: "admin")
+
+      assert {:error, {:organizations, _}} =
+               Users.delete_confirm(user, request.key, audit: audit_data(user))
+
+      assert Repo.get(User, user.id)
+    end
+
+    test "confirm rejects a nil key" do
+      user = insert(:user)
+      assert :ok = Users.delete_request(user, audit: audit_data(user))
+
+      assert {:error, :invalid_request} = Users.delete_confirm(user, nil, audit: audit_data(user))
+      assert Repo.get(User, user.id)
+    end
   end
 
   describe "update_profile/3 when user is an organization" do

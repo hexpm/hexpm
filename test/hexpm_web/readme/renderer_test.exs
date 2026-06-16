@@ -45,4 +45,20 @@ defmodule HexpmWeb.Readme.RendererTest do
     assert result =~ ~s[href="#fn-note"]
     assert result =~ ~s[<li id="fn-note">]
   end
+
+  test "invalid UTF-8 bytes are replaced with the replacement character" do
+    content = "the \x91simple form\x92 that is used by Xmerl"
+
+    result = render(content)
+
+    assert result =~ "the �simple form� that is used by Xmerl"
+  end
+
+  test "invalid UTF-8 bytes in plain text readmes are replaced" do
+    content = "caf\xE9 au lait"
+
+    result = Renderer.render("README", content, "my_package", "1.0.0")
+
+    assert result =~ "<pre>caf� au lait</pre>"
+  end
 end

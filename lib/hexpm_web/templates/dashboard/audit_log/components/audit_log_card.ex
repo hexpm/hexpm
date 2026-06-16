@@ -478,6 +478,14 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
     "Deleted policy #{name}"
   end
 
+  defp humanize_action(%AuditLog{action: "user.delete.request"}) do
+    "Requested account deletion"
+  end
+
+  defp humanize_action(%AuditLog{action: "user.delete"}) do
+    "Deleted user account"
+  end
+
   defp humanize_action(%AuditLog{action: action}) do
     action
     |> String.replace(".", " ")

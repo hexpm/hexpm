@@ -27,6 +27,7 @@ defmodule Hexpm.Accounts.User do
     has_many :organizations, through: [:organization_users, :organization]
     has_many :keys, Key
     has_many :audit_logs, AuditLog
+    has_many :account_deletion_requests, AccountDeletionRequest
     has_many :password_resets, PasswordReset
     has_many :package_reports, Hexpm.Repository.PackageReport, foreign_key: :author_id
     has_many :user_providers, UserProvider
@@ -48,8 +49,21 @@ defmodule Hexpm.Accounts.User do
     |> validate_format(:username, @username_reject_regex)
     |> validate_exclusion(:username, @reserved_names)
     |> unique_constraint(:username, name: "users_username_idx")
+    |> validate_username_not_reserved()
     |> ensure_optional_email_preferences()
     |> validate_password()
+  end
+
+  defp validate_username_not_reserved(changeset) do
+    prepare_changes(changeset, fn changeset ->
+      username = get_field(changeset, :username)
+
+      if username && changeset.repo.exists?(ReservedUsername.by_name(username)) do
+        add_error(changeset, :username, "has already been taken")
+      else
+        changeset
+      end
+    end)
   end
 
   defp validate_password(changeset) do
@@ -87,6 +101,7 @@ defmodule Hexpm.Accounts.User do
     |> validate_format(:username, @username_regex)
     |> validate_exclusion(:username, @reserved_names)
     |> unique_constraint(:username, name: "users_username_idx")
+    |> validate_username_not_reserved()
   end
 
   def to_organization(user, organization) do
