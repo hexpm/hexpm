@@ -1,5 +1,5 @@
 import Hexpm.Factory
-alias Hexpm.Accounts.Users
+alias Hexpm.Accounts.{AuditLog, Users}
 alias Hexpm.OAuth.Client
 alias Hexpm.Repository.{PackageDownload, ReleaseDownload}
 
@@ -898,6 +898,41 @@ Hexpm.Repo.transaction(fn ->
 
   Hexpm.Repo.refresh_view(PackageDownload, concurrently: false)
   Hexpm.Repo.refresh_view(ReleaseDownload, concurrently: false)
+
+  # Seed audit log entries for the audit-log IP geography UI.
+  # IPs are mirrored in config/dev.exs :geo_local_lookups so Hexpm.Geo.Local
+  # resolves them to the listed countries at render time.
+  now = DateTime.utc_now()
+  user_data = %{id: eric.id, username: eric.username, handles: nil, emails: []}
+
+  Hexpm.Repo.insert_all(
+    AuditLog,
+    Enum.map(
+      [
+        {"8.8.8.8", "Chrome on macOS", -1},
+        {"91.198.174.192", "Firefox on Ubuntu", -3},
+        {"195.135.220.3", "Safari on iOS", -5},
+        {"158.69.27.27", "Edge on Windows 11", -8},
+        {"203.0.113.42", "Chrome on Android", -12},
+        {"198.51.100.10", "Firefox on macOS", -18},
+        {"192.0.2.5", "Safari on macOS", -24},
+        {"13.228.0.1", "Chrome on ChromeOS", -30}
+      ],
+      fn {ip, name, hours_ago} ->
+        %{
+          user_id: eric.id,
+          organization_id: nil,
+          user_data: user_data,
+          key_data: nil,
+          user_agent: name,
+          remote_ip: ip,
+          action: "session.create",
+          params: %{"type" => "browser", "name" => name, "id" => :rand.uniform(1_000_000)},
+          inserted_at: DateTime.add(now, hours_ago, :hour)
+        }
+      end
+    )
+  )
 end)
 
 Hexpm.Repository.PackageDependants.backfill()

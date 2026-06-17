@@ -3,6 +3,7 @@ import Config
 config :hexpm,
   billing_impl: Hexpm.Billing.Hexpm,
   cdn_impl: Hexpm.CDN.Fastly,
+  geo_impl: Hexpm.Geo.Geolix,
   pwned_impl: Hexpm.Pwned.HaveIBeenPwned,
   tmp_dir: "tmp"
 

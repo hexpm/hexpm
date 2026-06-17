@@ -36,6 +36,15 @@ COPY lib lib
 RUN mix assets.deploy
 RUN mix compile
 
+# Bundle the IP geolocation database into the release (priv/geoip/country.mmdb).
+# The build fails if the download fails — no silent fallback to a missing file.
+# If the current month's file isn't published yet (DB-IP releases in the first
+# few days), the task automatically retries with the previous month.
+# Pass --build-arg GEOIP_MONTH=YYYY-MM to pin a specific release and bust the
+# Docker layer cache.
+ARG GEOIP_MONTH
+RUN mix download_geoip${GEOIP_MONTH:+ --month ${GEOIP_MONTH}}
+
 # build release
 COPY rel rel
 RUN mix do sentry.package_source_code, release

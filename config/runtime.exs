@@ -73,4 +73,32 @@ if config_env() == :prod do
   config :ueberauth, Ueberauth.Strategy.Github.OAuth,
     client_id: System.fetch_env!("HEXPM_GITHUB_CLIENT_ID"),
     client_secret: System.fetch_env!("HEXPM_GITHUB_CLIENT_SECRET")
+
+  # IP geolocation database for audit-log locations. Resolution order:
+  #
+  #   1. HEXPM_GEOIP_COUNTRY_PATH, if set.
+  #   2. priv/geoip/country.mmdb, which the Docker image bakes in at build time
+  #      (mix download_geoip) — so the official image works with zero config.
+  #
+  # Fail-soft: if no database is found, geolix logs an info message and returns
+  # nil for all lookups; the app boots normally and location fields are simply
+  # omitted until a database is provisioned.
+  default_geoip_path =
+    case :code.priv_dir(:hexpm) do
+      {:error, _} -> nil
+      priv_dir -> Path.join(to_string(priv_dir), "geoip/country.mmdb")
+    end
+
+  geoip_country_path = System.get_env("HEXPM_GEOIP_COUNTRY_PATH") || default_geoip_path
+
+  if geoip_country_path do
+    config :geolix,
+      databases: [
+        %{
+          id: :country,
+          adapter: Geolix.Adapter.MMDB2,
+          source: geoip_country_path
+        }
+      ]
+  end
 end

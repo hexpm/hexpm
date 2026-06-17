@@ -30,6 +30,7 @@ config :hexpm,
   fastly_purge_wait: 200,
   billing_impl: Hexpm.Billing.Mock,
   pwned_impl: Hexpm.Pwned.Mock,
+  geo_impl: Hexpm.Geo.Mock,
   http_impl: Hexpm.HTTP.Mock,
   cache_enabled: false,
   skip_advisory_locks: true

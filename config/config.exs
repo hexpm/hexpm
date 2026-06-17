@@ -12,6 +12,7 @@ config :hexpm,
   cdn_impl: Hexpm.CDN.Local,
   billing_impl: Hexpm.Billing.Local,
   pwned_impl: Hexpm.Pwned.Local,
+  geo_impl: Hexpm.Geo.Local,
   sudo_timeout: Duration.new!(hour: 1),
   sudo_force_timeout: Duration.new!(second: 30)
 
