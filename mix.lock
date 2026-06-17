@@ -23,7 +23,7 @@
   "fine": {:hex, :fine, "0.1.6", "4bf7151493443c454aac9f2fa2f34f5fefd0346a83fb5586a016c4a135c63247", [:mix], [], "hexpm", "5638eb4495488e885ebec167fa57973e5c35e1a50c344eb7666c90ec1c4e3b12"},
   "floki": {:hex, :floki, "0.38.3", "40d291831d93f49aa360f09447cf2e2a902e33d8711e5fb22a75f3f333e9d063", [:mix], [], "hexpm", "025aa1f5f24a70cb31bfbc7011419228596f3b062d7feda617238ba4926f83cb"},
   "goth": {:hex, :goth, "1.4.5", "ee37f96e3519bdecd603f20e7f10c758287088b6d77c0147cd5ee68cf224aade", [:mix], [{:finch, "~> 0.17", [hex: :finch, repo: "hexpm", optional: false]}, {:jason, "~> 1.1", [hex: :jason, repo: "hexpm", optional: false]}, {:jose, "~> 1.11", [hex: :jose, repo: "hexpm", optional: false]}], "hexpm", "0fc2dce5bd710651ed179053d0300ce3a5d36afbdde11e500d57f05f398d5ed5"},
-  "hex_core": {:git, "https://github.com/hexpm/hex_core.git", "0f47da2e44d71f72f289128916f1ee618ebdfbb7", [branch: "policy-rules"]},
+  "hex_core": {:git, "https://github.com/hexpm/hex_core.git", "19001bbdfc38274165e30150c784cfe9b14a34b7", []},
   "hpax": {:hex, :hpax, "1.0.3", "ed67ef51ad4df91e75cc6a1494f851850c0bd98ebc0be6e81b026e765ee535aa", [:mix], [], "hexpm", "8eab6e1cfa8d5918c2ce4ba43588e894af35dbd8e91e6e55c817bca5847df34a"},
   "idna": {:hex, :idna, "7.1.0", "1067a13043538129602d2f2ce6899d8713125c7d19734aa557ce2e3ea55bd4f1", [:rebar3], [], "hexpm", "6ae959a025bf36df61a8cab8508d9654891b5426a84c44d82deaffd6ddf8c71f"},
   "jason": {:hex, :jason, "1.4.5", "2e3a008590b0b8d7388c20293e9dcc9cf3e5d642fd2a114e4cbbb52e595d940a", [:mix], [{:decimal, "~> 1.0 or ~> 2.0 or ~> 3.0", [hex: :decimal, repo: "hexpm", optional: true]}], "hexpm", "b0c823996102bcd0239b3c2444eb00409b72f6a140c1950bc8b457d836b30684"},
