@@ -56,6 +56,19 @@ defmodule HexpmWeb.Plugs.SudoTest do
       refute conn.halted
     end
 
+    test "allows request when sudo is disabled" do
+      app_env(:hexpm, :sudo, false)
+      user = insert(:user)
+
+      conn =
+        build_conn()
+        |> test_login(user, sudo: false)
+        |> Sudo.call([])
+
+      refute conn.halted
+      refute Sudo.sudo_active?(conn)
+    end
+
     test "redirects GET to /sudo when not active" do
       user = insert(:user)
 

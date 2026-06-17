@@ -38,6 +38,11 @@ defmodule HexpmWeb.TestController do
     |> send_object(conn)
   end
 
+  def policy(conn, %{"repository" => repository, "name" => name}) do
+    Hexpm.Store.get(:repo_bucket, "repos/#{repository}/policies/#{name}", [])
+    |> send_object(conn)
+  end
+
   def repo(conn, params) do
     {:ok, organization} =
       Organizations.create(conn.assigns.current_user, params,

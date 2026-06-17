@@ -57,6 +57,22 @@
               </li>
               <li>
                 <a
+                  href={~p"/docs/dependency-policies"}
+                  class={[
+                    "block px-3 py-1.5 text-sm rounded transition-colors",
+                    if(@view_name == :dependency_policies,
+                      do:
+                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
+                      else:
+                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-800"
+                    )
+                  ]}
+                >
+                  Dependency policies
+                </a>
+              </li>
+              <li>
+                <a
                   target="_blank"
                   rel="noopener"
                   href="https://hexdocs.pm/hex"

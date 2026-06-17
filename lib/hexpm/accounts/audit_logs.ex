@@ -24,6 +24,16 @@ defmodule Hexpm.Accounts.AuditLogs do
     |> Repo.one()
   end
 
+  @doc """
+  Return a map of policy name -> audit_log count for every policy in the
+  organization, in a single grouped query.
+  """
+  def count_by_policies(organization) do
+    AuditLog.count_by_policies(organization)
+    |> Repo.all()
+    |> Map.new()
+  end
+
   def admin() do
     %{
       user: Hexpm.Accounts.Users.get("admin"),

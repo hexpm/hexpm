@@ -38,6 +38,9 @@ defmodule HexpmWeb.Plugs.Sudo do
     force? = Keyword.get(opts, :force, false)
 
     cond do
+      disabled?() ->
+        conn
+
       sudo_satisfied?(conn, force?) ->
         conn
 
@@ -125,6 +128,11 @@ defmodule HexpmWeb.Plugs.Sudo do
   @spec sudo_timeout() :: Duration.t()
   defp sudo_timeout do
     Application.fetch_env!(:hexpm, :sudo_timeout)
+  end
+
+  @spec disabled?() :: boolean()
+  defp disabled? do
+    Application.get_env(:hexpm, :sudo, true) == false
   end
 
   @spec sudo_force_timeout() :: Duration.t()

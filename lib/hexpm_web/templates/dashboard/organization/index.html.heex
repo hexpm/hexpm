@@ -8,7 +8,7 @@
 
       <%!-- Right Content --%>
       <div class="flex-1 min-w-0">
-        <.org_tab_nav conn={@conn} current_user={@current_user} organization={@organization}>
+        <.org_tab_nav current_user={@current_user} organization={@organization} tab={@tab}>
           <%= case @tab do %>
             <% :profile -> %>
               <.profile_tab
@@ -86,6 +86,34 @@
               />
             <% :danger_zone -> %>
               <.danger_zone_tab current_user={@current_user} organization={@organization} />
+            <% :policies -> %>
+              <%= case @policy_action do %>
+                <% :new -> %>
+                  <.policy_new
+                    current_user={@current_user}
+                    organization={@organization}
+                    changeset={@policy_changeset}
+                    paid?={Hexpm.Accounts.Organization.billing_active?(@organization)}
+                  />
+                <% :edit -> %>
+                  <.policy_edit
+                    current_user={@current_user}
+                    organization={@organization}
+                    policy={@policy}
+                    changeset={@policy_changeset}
+                    paid?={Hexpm.Accounts.Organization.billing_active?(@organization)}
+                    can_edit={@policy_admin?}
+                    activity={@policy_activity}
+                    rev={@policy_rev}
+                  />
+                <% _ -> %>
+                  <.policies_tab
+                    current_user={@current_user}
+                    organization={@organization}
+                    policies={@policies}
+                    policy_stats={@policy_stats}
+                  />
+              <% end %>
             <% _ -> %>
           <% end %>
         </.org_tab_nav>

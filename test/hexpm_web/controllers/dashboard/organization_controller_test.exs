@@ -20,6 +20,17 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     end)
   end
 
+  defp active_org_tab(html) do
+    {:ok, document} = Floki.parse_document(html)
+
+    [active_tab] = Floki.find(document, ~s(#org-tab-nav [data-active="true"]))
+
+    active_tab
+    |> Floki.text(sep: " ")
+    |> String.replace(~r/\s+/, " ")
+    |> String.trim()
+  end
+
   setup do
     repository = insert(:repository)
 
@@ -375,10 +386,12 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
           "organization_user" => params
         })
 
-      response(conn, 400)
+      html = html_response(conn, 400)
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
                "Not enough seats in organization to add member."
+
+      assert active_org_tab(html) == "Members"
     end
 
     test "remove member from organization", %{user: user, organization: organization} do

@@ -89,6 +89,121 @@ defmodule HexpmWeb.Components.Input do
   end
 
   @doc """
+  Renders a textarea field with optional label and errors.
+
+  ## Examples
+
+      <.textarea_input id="bio" name="bio" />
+      <.textarea_input field={@form[:description]} label="Description" rows="3" />
+  """
+  attr :class, :string, default: ""
+  attr :errors, :list, default: []
+  attr :field, Phoenix.HTML.FormField, default: nil
+  attr :id, :string, default: nil
+  attr :label, :string, default: nil
+  attr :label_class, :string, default: ""
+  attr :name, :string, default: nil
+  attr :placeholder, :string, default: ""
+  attr :required, :boolean, default: false
+  attr :rows, :string, default: "3"
+  attr :value, :string, default: nil
+
+  attr :show_errors, :boolean,
+    default: nil,
+    doc:
+      "Controls error display: nil (default - show all), true (always show), false (never show)"
+
+  attr :rest, :global, doc: "Additional HTML attributes to pass to the textarea element"
+
+  def textarea_input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
+    errors =
+      case assigns[:show_errors] do
+        false -> []
+        _ -> field.errors
+      end
+
+    assigns
+    |> assign(:field, nil)
+    |> assign(:errors, Enum.map(errors, &translate_error/1))
+    |> assign(:id, field.id)
+    |> assign(:name, field.name)
+    |> assign(:value, assigns[:value] || field.value)
+    |> textarea_input()
+  end
+
+  def textarea_input(assigns) do
+    ~H"""
+    <div>
+      <.label :if={@label} for={@id} label={@label} required={@required} class={@label_class} />
+      <textarea
+        id={@id}
+        name={@name}
+        rows={@rows}
+        placeholder={@placeholder}
+        class={[
+          "w-full px-3 py-2.5 border rounded text-sm",
+          "bg-white dark:bg-grey-800 text-grey-900 dark:text-grey-100",
+          "placeholder:text-grey-300 dark:placeholder:text-grey-400",
+          "focus:outline-none focus:ring-1",
+          @errors != [] &&
+            "border-red-300 focus:border-red-600 focus:ring-red-600 dark:border-red-700",
+          @errors == [] &&
+            "border-grey-200 focus:border-primary-600 focus:ring-primary-600 dark:border-grey-600",
+          @class
+        ]}
+        {@rest}
+      ><%= @value %></textarea>
+      <.errors errors={@errors} />
+    </div>
+    """
+  end
+
+  @doc """
+  Renders an accessible toggle switch backed by a hidden checkbox.
+
+  The label and helper text live in the calling template; this component
+  only renders the switch itself.
+
+  ## Examples
+
+      <.toggle_switch name="settings[notify]" value="1" checked={@notify?} />
+  """
+  attr :checked, :boolean, default: false
+  attr :class, :string, default: ""
+  attr :disabled, :boolean, default: false
+  attr :id, :string, default: nil
+  attr :name, :string, default: nil
+  attr :hidden_value, :string, default: nil, doc: "Hidden input value submitted when unchecked"
+  attr :value, :string, default: "1"
+  attr :rest, :global
+
+  def toggle_switch(assigns) do
+    ~H"""
+    <label class={[
+      "relative inline-flex items-center flex-shrink-0",
+      if(@disabled, do: "cursor-not-allowed opacity-50", else: "cursor-pointer"),
+      @class
+    ]}>
+      <input :if={@hidden_value && @name} type="hidden" name={@name} value={@hidden_value} />
+      <input
+        type="checkbox"
+        id={@id}
+        name={@name}
+        value={@value}
+        checked={@checked}
+        disabled={@disabled}
+        class="sr-only peer"
+        {@rest}
+      />
+      <span class="w-11 h-6 bg-grey-200 dark:bg-grey-700 rounded-full peer-checked:bg-primary-600 peer-focus-visible:ring-2 peer-focus-visible:ring-primary-500 peer-focus-visible:ring-offset-2 transition-colors">
+      </span>
+      <span class="absolute left-0.5 top-0.5 w-5 h-5 bg-white dark:bg-grey-100 rounded-full shadow transition-transform pointer-events-none peer-checked:translate-x-5">
+      </span>
+    </label>
+    """
+  end
+
+  @doc """
   Renders a select dropdown with optional label and errors.
 
   ## Examples
@@ -465,13 +580,33 @@ defmodule HexpmWeb.Components.Input do
     |> JS.toggle_class("hidden", to: "##{input_id}-eye-slash-icon")
   end
 
-  defp translate_error({msg, opts}) do
+  @doc """
+  Translates a changeset error tuple `{msg, opts}` into a flat string,
+  interpolating `%{key}` placeholders from `opts`.
+  """
+  def translate_error({msg, opts}) do
     Enum.reduce(opts, msg, fn {key, value}, acc ->
       String.replace(acc, "%{#{key}}", to_string(value))
     end)
   end
 
-  defp translate_error(msg) when is_binary(msg), do: msg
+  def translate_error(msg) when is_binary(msg), do: msg
+
+  @doc """
+  Returns the translated errors associated with `field` on the given
+  form. Returns `[]` when the form is not backed by a changeset.
+  """
+  def field_errors(form, field) do
+    case form.source do
+      %Ecto.Changeset{} = changeset ->
+        changeset.errors
+        |> Keyword.get_values(field)
+        |> Enum.map(&translate_error/1)
+
+      _ ->
+        []
+    end
+  end
 
   # Helper function to determine border classes based on variant and error state
   defp select_border_classes("light", errors) when errors != [] do

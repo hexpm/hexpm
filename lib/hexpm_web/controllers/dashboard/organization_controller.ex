@@ -1,7 +1,18 @@
 defmodule HexpmWeb.Dashboard.OrganizationController do
   use HexpmWeb, :controller
+
+  alias Hexpm.Repository.{
+    Packages,
+    Policies,
+    Policy,
+    Releases,
+    Repository
+  }
+
   alias HexpmWeb.Dashboard.KeyController
   alias HexpmWeb.Dashboard.Organization.Components.BillingHelpers
+
+  @policy_suggestion_limit 8
 
   plug :requires_login
 
@@ -31,7 +42,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
               :delete_key,
               :show_invoice,
               :pay_invoice,
-              :update_profile
+              :update_profile,
+              :policies,
+              :new_policy,
+              :create_policy,
+              :edit_policy,
+              :update_policy,
+              :delete_policy
             ]
 
   def redirect_repo(conn, params) do
@@ -197,6 +214,177 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       render_index(conn, organization, tab: :danger_zone)
     end)
   end
+
+  def policies(conn, %{"dashboard_org" => organization}) do
+    access_organization(conn, organization, "read", fn organization ->
+      render_index(conn, organization, tab: :policies)
+    end)
+  end
+
+  def new_policy(conn, %{"dashboard_org" => organization}) do
+    access_organization(conn, organization, "admin", fn organization ->
+      render_index(conn, organization,
+        tab: :policies,
+        policy_action: :new,
+        policy_changeset: Policy.changeset(%Policy{}, %{})
+      )
+    end)
+  end
+
+  def create_policy(conn, %{"dashboard_org" => organization, "policy" => params}) do
+    access_organization(conn, organization, "admin", fn organization ->
+      with :ok <- check_policy_tier(organization, params),
+           {:ok, %{policy: policy}} <-
+             Policies.create(organization, params, audit: audit_data(conn)) do
+        conn
+        |> put_flash(:info, "Policy #{policy.name} was created.")
+        |> redirect(to: ~p"/dashboard/orgs/#{organization}/policies/#{policy.name}")
+      else
+        {:error, :tier, message} ->
+          conn
+          |> put_status(400)
+          |> put_flash(:error, message)
+          |> render_index(organization,
+            tab: :policies,
+            policy_action: :new,
+            policy_changeset: Policy.changeset(%Policy{}, params)
+          )
+
+        {:error, :policy, changeset, _} ->
+          conn
+          |> put_status(400)
+          |> render_index(organization,
+            tab: :policies,
+            policy_action: :new,
+            policy_changeset: changeset
+          )
+      end
+    end)
+  end
+
+  def edit_policy(conn, %{"dashboard_org" => organization, "name" => name}) do
+    access_organization(conn, organization, "read", fn organization ->
+      case Policies.get(organization, name) do
+        nil ->
+          not_found(conn)
+
+        policy ->
+          render_index(conn, organization,
+            tab: :policies,
+            policy_action: :edit,
+            policy: policy,
+            policy_changeset: Policies.change(organization, policy)
+          )
+      end
+    end)
+  end
+
+  def policy_package_suggestions(conn, %{"dashboard_org" => organization} = params) do
+    access_organization(conn, organization, "read", fn organization ->
+      repository = policy_suggestion_repository(organization, params["repository"])
+      term = params["term"] || ""
+
+      items =
+        if repository do
+          repository
+          |> Packages.suggest(term, @policy_suggestion_limit)
+          |> Enum.map(fn package ->
+            %{
+              name: package.name,
+              latest_version: version_string(package.latest_version)
+            }
+          end)
+        else
+          []
+        end
+
+      json(conn, %{items: items})
+    end)
+  end
+
+  def policy_version_suggestions(conn, %{"dashboard_org" => organization} = params) do
+    access_organization(conn, organization, "read", fn organization ->
+      repository = policy_suggestion_repository(organization, params["repository"])
+      package_name = String.trim(to_string(params["package"] || ""))
+      term = String.trim(to_string(params["term"] || ""))
+
+      items =
+        if repository && package_name != "" do
+          repository
+          |> Packages.get(package_name)
+          |> version_suggestions(term)
+        else
+          []
+        end
+
+      json(conn, %{items: items})
+    end)
+  end
+
+  def update_policy(conn, %{"dashboard_org" => organization, "name" => name, "policy" => params}) do
+    access_organization(conn, organization, "admin", fn organization ->
+      case Policies.get(organization, name) do
+        nil ->
+          not_found(conn)
+
+        policy ->
+          with :ok <- check_policy_tier(organization, params),
+               {:ok, %{policy: updated}} <-
+                 Policies.update(policy, params, audit: audit_data(conn)) do
+            conn
+            |> put_flash(:info, "Policy #{updated.name} was updated.")
+            |> redirect(to: ~p"/dashboard/orgs/#{organization}/policies/#{updated.name}")
+          else
+            {:error, :tier, message} ->
+              conn
+              |> put_status(400)
+              |> put_flash(:error, message)
+              |> render_index(organization,
+                tab: :policies,
+                policy_action: :edit,
+                policy: policy,
+                policy_changeset: Policies.change(organization, policy, params)
+              )
+
+            {:error, :policy, changeset, _} ->
+              conn
+              |> put_status(400)
+              |> render_index(organization,
+                tab: :policies,
+                policy_action: :edit,
+                policy: policy,
+                policy_changeset: changeset
+              )
+          end
+      end
+    end)
+  end
+
+  def delete_policy(conn, %{"dashboard_org" => organization, "name" => name}) do
+    access_organization(conn, organization, "admin", fn organization ->
+      case Policies.get(organization, name) do
+        nil ->
+          not_found(conn)
+
+        policy ->
+          {:ok, _} = Policies.delete(policy, audit: audit_data(conn))
+
+          conn
+          |> put_flash(:info, "Policy #{name} was deleted.")
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}/policies")
+      end
+    end)
+  end
+
+  defp check_policy_tier(organization, %{"visibility" => "private"}) do
+    if Hexpm.Accounts.Organization.billing_active?(organization) do
+      :ok
+    else
+      {:error, :tier, "private policies require a paid plan"}
+    end
+  end
+
+  defp check_policy_tier(_organization, _params), do: :ok
 
   def leave(conn, %{
         "dashboard_org" => organization,
@@ -664,6 +852,39 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   defp organization_packages(_), do: []
 
+  defp organization_repository(%{repository: %Ecto.Association.NotLoaded{}} = organization) do
+    Hexpm.Repo.preload(organization, :repository).repository
+  end
+
+  defp organization_repository(%{repository: repository}), do: repository
+  defp organization_repository(_organization), do: nil
+
+  defp policy_suggestion_repository(_organization, "hexpm"), do: Repository.hexpm()
+
+  defp policy_suggestion_repository(%{name: name} = organization, repository)
+       when repository == name do
+    organization_repository(organization)
+  end
+
+  defp policy_suggestion_repository(_organization, _repository), do: nil
+
+  defp version_suggestions(nil, _term), do: []
+
+  defp version_suggestions(package, term) do
+    package
+    |> Releases.all()
+    |> Enum.map(&to_string(&1.version))
+    |> Enum.filter(&version_matches?(&1, term))
+    |> Enum.take(@policy_suggestion_limit)
+    |> Enum.map(&%{version: &1})
+  end
+
+  defp version_matches?(_version, ""), do: true
+  defp version_matches?(version, term), do: String.contains?(version, term)
+
+  defp version_string(nil), do: nil
+  defp version_string(version), do: to_string(version)
+
   defp render_index(conn, organization, opts \\ []) do
     user = organization.user
     public_email = user && Enum.find(user.emails, & &1.public)
@@ -680,6 +901,12 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     delete_key_path = ~p"/dashboard/orgs/#{organization}/keys"
     create_key_path = ~p"/dashboard/orgs/#{organization}/keys"
     packages = organization_packages(organization)
+    policy_action = opts[:policy_action]
+    policy = opts[:policy]
+    policy_admin? = policy_admin?(conn, organization)
+
+    {policies, policy_stats, policy_activity, policy_rev} =
+      policy_assigns(organization, opts[:tab], policy_action, policy)
 
     assigns = [
       title: "Dashboard - Organization",
@@ -704,11 +931,50 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       key_changeset: opts[:key_changeset] || key_changeset(),
       packages: packages,
       add_member_changeset: opts[:add_member_changeset] || add_member_changeset(),
-      new_organization_changeset: create_changeset()
+      new_organization_changeset: create_changeset(),
+      policy_action: policy_action,
+      policy: policy,
+      policy_admin?: policy_admin?,
+      policy_changeset: opts[:policy_changeset],
+      policies: policies,
+      policy_stats: policy_stats,
+      policy_activity: policy_activity,
+      policy_rev: policy_rev
     ]
 
     assigns = Keyword.merge(assigns, customer_assigns(customer, organization))
     render(conn, "index.html", assigns)
+  end
+
+  defp policy_assigns(organization, :policies, nil, _policy) do
+    policies = Policies.all(organization)
+    revisions = AuditLogs.count_by_policies(organization)
+    stats = Map.new(policies, &{&1.id, %{rev: Map.get(revisions, &1.name, 0)}})
+    {policies, stats, [], 0}
+  end
+
+  defp policy_assigns(_organization, :policies, :edit, policy) when not is_nil(policy) do
+    activity =
+      Hexpm.Accounts.AuditLog.all_by(policy)
+      |> Hexpm.Accounts.AuditLog.newest_first()
+      |> Ecto.Query.limit(10)
+      |> Hexpm.Repo.all()
+
+    {[], %{}, activity, AuditLogs.count_by(policy)}
+  end
+
+  defp policy_assigns(_organization, _tab, _action, _policy), do: {[], %{}, [], 0}
+
+  # Whether the current user may edit policies (create/update/delete are all
+  # admin-gated). Used to hide write affordances from readers who can still view
+  # the policy pages.
+  defp policy_admin?(conn, organization) do
+    user = conn.assigns[:current_user]
+
+    case user && Enum.find(organization.organization_users, &(&1.user_id == user.id)) do
+      nil -> false
+      repo_user -> repo_user.role in Organization.role_or_higher("admin")
+    end
   end
 
   defp customer_assigns(nil, _organization) do

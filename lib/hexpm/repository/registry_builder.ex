@@ -2,7 +2,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
   import Ecto.Query, only: [from: 2]
   require Hexpm.Repo
   require Logger
-  alias Hexpm.Repository.{Package, Release, Repository, Requirement}
+  alias Hexpm.Repository.{Package, Release, Repository, Requirement, Storage}
   alias Hexpm.Repo
 
   def full(repository) do
@@ -93,7 +93,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
 
       Hexpm.Store.delete_many(:repo_bucket, old_keys -- new_keys)
 
-      Hexpm.CDN.purge_key(:fastly_hexrepo, [
+      Storage.purge([
         "registry",
         repository_cdn_key(repository, "registry")
       ])
@@ -109,7 +109,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
       versions = build_versions(repository, packages, release_map)
       upload_files(repository, {names, versions, []})
 
-      Hexpm.CDN.purge_key(:fastly_hexrepo, [
+      Storage.purge([
         "registry-index",
         repository_cdn_key(repository, "registry-index")
       ])
@@ -126,7 +126,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
 
       upload_files(repository, {nil, nil, packages})
 
-      Hexpm.CDN.purge_key(:fastly_hexrepo, [
+      Storage.purge([
         "registry-package-#{package.name}",
         repository_cdn_key(repository, "registry-package", package.name)
       ])
@@ -137,12 +137,9 @@ defmodule Hexpm.Repository.RegistryBuilder do
     log(:package_delete, fn ->
       repository = package.repository
 
-      Hexpm.Store.delete(
-        :repo_bucket,
-        repository_store_key(repository, "packages/#{package.name}")
-      )
+      Storage.delete_object(repository_store_key(repository, "packages/#{package.name}"))
 
-      Hexpm.CDN.purge_key(:fastly_hexrepo, [
+      Storage.purge([
         "registry-package-#{package.name}",
         repository_cdn_key(repository, "registry-package", package.name)
       ])
@@ -174,11 +171,6 @@ defmodule Hexpm.Repository.RegistryBuilder do
     end
   end
 
-  defp sign_protobuf(contents) do
-    private_key = Application.fetch_env!(:hexpm, :private_key)
-    :hex_registry.sign_protobuf(contents, private_key)
-  end
-
   defp build_all(repository, packages, releases) do
     release_map = Map.new(releases)
 
@@ -205,8 +197,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
 
     %{packages: packages, repository: repository.name}
     |> :hex_registry.encode_names()
-    |> sign_protobuf()
-    |> :zlib.gzip()
+    |> Storage.sign_and_gzip()
   end
 
   defp build_versions(repository, packages, release_map) do
@@ -222,8 +213,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
 
     %{packages: packages, repository: repository.name}
     |> :hex_registry.encode_versions()
-    |> sign_protobuf()
-    |> :zlib.gzip()
+    |> Storage.sign_and_gzip()
   end
 
   defp build_retired_indexes(name, versions, release_map) do
@@ -305,8 +295,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
       advisories: Enum.map(package_advisories, &build_advisory/1)
     }
     |> :hex_registry.encode_package()
-    |> sign_protobuf()
-    |> :zlib.gzip()
+    |> Storage.sign_and_gzip()
   end
 
   defp build_advisory(%{
@@ -346,14 +335,10 @@ defmodule Hexpm.Repository.RegistryBuilder do
   defp retirement_reason("renamed"), do: :RETIRED_RENAMED
 
   defp upload_files(repository, objects) do
-    upload_objects(objects(objects, repository))
-  end
-
-  defp upload_objects(objects) do
     Task.async_stream(
-      objects,
-      fn {key, data, opts} ->
-        Hexpm.Store.put(:repo_bucket, key, data, opts)
+      objects(objects, repository),
+      fn {key, data, surrogate_keys} ->
+        Storage.put_object(key, data, surrogate_keys, cache_control(repository))
       end,
       max_concurrency: 10,
       timeout: 60_000
@@ -374,47 +359,25 @@ defmodule Hexpm.Repository.RegistryBuilder do
   end
 
   defp index_objects(names, versions, repository) do
-    surrogate_key =
-      Enum.join(
-        [
-          repository_cdn_key(repository, "registry"),
-          repository_cdn_key(repository, "registry-index")
-        ],
-        " "
-      )
-
-    meta = [
-      {"surrogate-key", surrogate_key},
-      {"surrogate-control", "public, max-age=604800"}
+    surrogate_keys = [
+      repository_cdn_key(repository, "registry"),
+      repository_cdn_key(repository, "registry-index")
     ]
 
-    opts = [cache_control: cache_control(repository), meta: meta]
-    index_opts = Keyword.put(opts, :meta, meta)
-
-    names_object = {repository_store_key(repository, "names"), names, index_opts}
-    versions_object = {repository_store_key(repository, "versions"), versions, index_opts}
-
-    [names_object, versions_object]
+    [
+      {repository_store_key(repository, "names"), names, surrogate_keys},
+      {repository_store_key(repository, "versions"), versions, surrogate_keys}
+    ]
   end
 
   defp package_objects(packages, repository) do
     Enum.map(packages, fn {name, contents} ->
-      surrogate_key =
-        Enum.join(
-          [
-            repository_cdn_key(repository, "registry"),
-            repository_cdn_key(repository, "registry-package", name)
-          ],
-          " "
-        )
-
-      meta = [
-        {"surrogate-key", surrogate_key},
-        {"surrogate-control", "public, max-age=604800"}
+      surrogate_keys = [
+        repository_cdn_key(repository, "registry"),
+        repository_cdn_key(repository, "registry-package", name)
       ]
 
-      opts = [cache_control: cache_control(repository), meta: meta]
-      {repository_store_key(repository, "packages/#{name}"), contents, opts}
+      {repository_store_key(repository, "packages/#{name}"), contents, surrogate_keys}
     end)
   end
 
