@@ -45,17 +45,6 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyListCard do
         </div>
       </div>
 
-      <div class="flex items-start gap-2 rounded-lg border border-blue-300 dark:border-blue-700 bg-blue-100/70 dark:bg-blue-900/30 p-3 text-sm text-blue-900 dark:text-blue-100">
-        {icon(:heroicon, "information-circle",
-          class: "w-4 h-4 flex-shrink-0 mt-0.5",
-          width: 16,
-          height: 16
-        )}
-        <span>
-          Dependency policies are enforced by Hex v2.5, which has not been released yet. Policies you create now will take effect once you have updated to Hex v2.5 and configured it to use the policy.
-        </span>
-      </div>
-
       <div
         :if={@policies == []}
         class="rounded-lg border border-dashed border-grey-300 dark:border-grey-700 bg-white dark:bg-grey-800 min-h-[360px] flex items-center justify-center px-6 py-12"
