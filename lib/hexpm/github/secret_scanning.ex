@@ -96,7 +96,7 @@ defmodule Hexpm.GitHub.SecretScanning do
       case revoke_token(token) do
         {:ok, key, user} ->
           if user do
-            Hexpm.Emails.key_leaked(user, key, url) |> Hexpm.Emails.Mailer.deliver_later()
+            Hexpm.Emails.key_leaked(user, key, url) |> Hexpm.Emails.Mailer.deliver!()
           end
 
           %{"token_raw" => token, "token_type" => "hexpm_api_token", "label" => "true_positive"}
