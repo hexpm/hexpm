@@ -3,7 +3,7 @@ defmodule HexpmWeb.API.GitHubSecretScanningControllerTest do
 
   import Ecto.Query
   import Mox
-  import Bamboo.Test
+  import Swoosh.TestAssertions
 
   alias Hexpm.Accounts.{Key, Keys}
   alias Hexpm.GitHub.SecretScanning
@@ -98,7 +98,7 @@ defmodule HexpmWeb.API.GitHubSecretScanningControllerTest do
 
       # Keys.create now sends an api_key_created security notification;
       # consume it so it doesn't shadow the key_leaked assertion below.
-      assert_email_delivered_with(subject: ~r/new API key.*created/i)
+      assert_email_sent(subject: ~r/new API key.*created/i)
 
       post_alert(
         conn,
@@ -113,7 +113,7 @@ defmodule HexpmWeb.API.GitHubSecretScanningControllerTest do
         ec_priv
       )
 
-      assert_email_delivered_with(
+      assert_email_sent(
         subject: ~r/ci-key.*revoked/i,
         html_body: ~r|https://github\.com/example/repo|,
         text_body: ~r|https://github\.com/example/repo|
@@ -318,6 +318,10 @@ defmodule HexpmWeb.API.GitHubSecretScanningControllerTest do
       {:ok, %{key: key}} =
         Keys.create(organization, %{"name" => "org-key"}, audit: audit_data(organization))
 
+      # Consume the api_key_created security notification sent by Keys.create
+      # so the assertion below only covers the revocation flow.
+      assert_email_sent(subject: ~r/new API key.*created/i)
+
       conn =
         post_alert(
           conn,
@@ -334,7 +338,7 @@ defmodule HexpmWeb.API.GitHubSecretScanningControllerTest do
 
       assert [%{"label" => "true_positive"}] = json_response(conn, 200)
       assert Repo.get!(Key, key.id).revoke_at != nil
-      assert [] = Bamboo.SentEmail.all()
+      assert_no_email_sent()
     end
 
     test "refreshes public keys when an unknown key_identifier is received", %{
@@ -430,6 +434,11 @@ defmodule HexpmWeb.API.GitHubSecretScanningControllerTest do
     } do
       stub.()
       {:ok, %{key: key}} = Keys.create(user, %{"name" => "old"}, audit: audit_data(user))
+
+      # Consume the api_key_created security notification sent by Keys.create
+      # so the assertion below only covers the revocation flow.
+      assert_email_sent(subject: ~r/new API key.*created/i)
+
       # Stamp the key as revoked a day ago using raw SQL to avoid any timing ambiguity
       # between Elixir's DateTime.utc_now() and PostgreSQL's NOW() in the sandbox.
       Repo.update_all(
@@ -453,7 +462,7 @@ defmodule HexpmWeb.API.GitHubSecretScanningControllerTest do
         )
 
       assert [%{"label" => "false_positive"}] = json_response(conn, 200)
-      assert [] = Bamboo.SentEmail.all()
+      assert_no_email_sent()
     end
   end
 end
