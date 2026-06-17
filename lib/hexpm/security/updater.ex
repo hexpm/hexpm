@@ -49,7 +49,8 @@ defmodule Hexpm.Security.Updater do
     case Req.get(
            url: @advisory_download_url,
            headers: headers,
-           receive_timeout: @http_receive_timeout
+           receive_timeout: @http_receive_timeout,
+           decoders: [:zip]
          ) do
       {:ok, %Req.Response{status: 304} = response} ->
         {:noreply, %__MODULE__{state | etag: response_etag(response) || etag}, update_interval}

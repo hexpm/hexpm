@@ -86,7 +86,7 @@ defmodule Hexpm.MixProject do
       {:ueberauth, "~> 0.10"},
       {:ueberauth_github, "~> 0.8"},
       {:lazy_html, ">= 0.1.0", only: :test},
-      {:req, "~> 0.5.6"}
+      {:req, "~> 0.6.1"}
     ]
   end
 
