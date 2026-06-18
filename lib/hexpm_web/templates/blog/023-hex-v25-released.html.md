@@ -53,7 +53,7 @@ An organization admin creates a named policy from the hex.pm dashboard. A policy
 
 A restriction can block releases that carry a security advisory at or above a chosen severity, are retired for one of a chosen set of reasons, or are newer than a release-age cooldown window. Overrides handle the exceptions. An allow override exempts a specific package, or a specific version range of it, from the restriction; a deny override blocks one outright.
 
-Policies are signed and served through the organization's repository, the same trusted channel as the package registry itself, so the client can verify them. Once published, a policy's name is immutable.
+Policies are signed and served through the organization's repository, the same trusted channel as the package registry itself, so the client can verify them.
 
 A project opts into a single policy with the `policy` setting, using the same precedence as every other Hex option:
 
@@ -78,10 +78,6 @@ And `mix hex.policy why PACKAGE` walks every version of a package and shows exac
 <img src="/images/blog/023_policy_why.png" srcset="/images/blog/023_policy_why.png 2x" alt="mix hex.policy why phoenix_live_view output">
 
 During a normal `mix deps.get`, policy filtering is reported alongside the cooldown summary, with a per-version listing of what was hidden. If a restriction blocks every version a direct dependency could resolve to, resolution fails with a focused note explaining which versions the policy hid, so the cause is never a mystery.
-
-### How the layers fit together
-
-The three features are independent but reinforce each other, and they compose by taking the strictest rule. A local cooldown and a policy cooldown combine to the longer of the two, and a policy sets a floor that local configuration cannot lower. Locked versions are always trusted, and known-unsafe locked versions always have an escape route. The result is a defense you can adopt incrementally: surface advisories for free, turn on a cooldown for yourself today, and roll out an organization-wide policy when you are ready.
 
 ### Upgrading
 
