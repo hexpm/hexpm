@@ -246,6 +246,61 @@ defmodule Hexpm.Repository.ReleasesTest do
     end
   end
 
+  describe "retire/3" do
+    test "retires every active release and updates the registry", %{
+      package: package,
+      release: release,
+      user: user
+    } do
+      insert(:release,
+        package: package,
+        version: "0.2.0",
+        retirement: %Hexpm.Repository.ReleaseRetirement{
+          reason: "security",
+          message: "Existing retirement"
+        }
+      )
+
+      insert(:release, package: package, version: "0.3.0")
+
+      assert :ok =
+               Releases.retire(
+                 package,
+                 %{"reason" => "deprecated", "message" => "No longer maintained"},
+                 audit: audit_data(user)
+               )
+
+      assert Releases.get(package, release.version).retirement.reason == "deprecated"
+
+      previously_retired = Releases.get(package, "0.2.0")
+      assert previously_retired.retirement.reason == "security"
+      assert previously_retired.retirement.message == "Existing retirement"
+
+      assert registry = Hexpm.Store.get(:repo_bucket, "packages/#{package.name}", [])
+
+      retirements =
+        registry
+        |> decode_registry_package()
+        |> Map.fetch!(:releases)
+        |> Map.new(&{&1.version, &1.retired})
+
+      assert retirements["0.1.0"] == %{
+               reason: :RETIRED_DEPRECATED,
+               message: "No longer maintained"
+             }
+
+      assert retirements["0.2.0"] == %{
+               reason: :RETIRED_SECURITY,
+               message: "Existing retirement"
+             }
+
+      assert retirements["0.3.0"] == %{
+               reason: :RETIRED_DEPRECATED,
+               message: "No longer maintained"
+             }
+    end
+  end
+
   defp decode_registry_package(registry) do
     assert {:ok, releases} =
              registry

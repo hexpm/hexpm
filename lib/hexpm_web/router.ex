@@ -389,6 +389,7 @@ defmodule HexpmWeb.Router do
         get "/packages/:name/releases/:version", ReleaseController, :show
         delete "/packages/:name/releases/:version", ReleaseController, :delete
 
+        post "/packages/:name/retire", RetirementController, :create_package
         post "/packages/:name/releases/:version/retire", RetirementController, :create
         delete "/packages/:name/releases/:version/retire", RetirementController, :delete
 

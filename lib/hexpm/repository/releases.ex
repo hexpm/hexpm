@@ -119,6 +119,38 @@ defmodule Hexpm.Repository.Releases do
     |> retire_result()
   end
 
+  def retire(package, params, audit: audit_data) do
+    params = %{"retirement" => params}
+
+    Multi.new()
+    |> Multi.run(:repository, fn _, _ -> {:ok, package.repository} end)
+    |> Multi.update(:package, Ecto.Changeset.change(package, []), force: true)
+    |> Multi.run(:retirement, fn _, _ -> validate_retirement(params) end)
+    |> Multi.run(:releases, fn repo, _ ->
+      releases =
+        from(r in assoc(package, :releases),
+          where: is_nil(r.retirement),
+          lock: "FOR UPDATE"
+        )
+        |> repo.all()
+
+      {:ok, releases}
+    end)
+    |> Multi.merge(fn %{releases: releases} ->
+      Enum.reduce(releases, Multi.new(), fn release, multi ->
+        key = {:release, release.id}
+
+        multi
+        |> Multi.update(key, Release.retire(release, params))
+        |> audit(audit_data, "release.retire", fn changes ->
+          {package, Map.fetch!(changes, key)}
+        end)
+      end)
+    end)
+    |> Repo.transaction(timeout: @publish_timeout)
+    |> retire_result()
+  end
+
   def unretire(package, release, audit: audit_data) do
     Multi.new()
     |> Multi.run(:repository, fn _, _ -> {:ok, package.repository} end)
@@ -147,6 +179,16 @@ defmodule Hexpm.Repository.Releases do
   end
 
   defp retire_result(result), do: result
+
+  defp validate_retirement(params) do
+    changeset = Release.retire(%Release{}, params)
+
+    if changeset.valid? do
+      {:ok, params}
+    else
+      {:error, changeset}
+    end
+  end
 
   defp revert_result({:ok, %{package: package, release: release, release_count: 0}}) do
     remove_package_from_registry(package)
