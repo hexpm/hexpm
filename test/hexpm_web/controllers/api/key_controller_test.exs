@@ -263,6 +263,40 @@ defmodule HexpmWeb.API.KeyControllerTest do
     end
   end
 
+  describe "POST /api/keys (token format)" do
+    test "new key has hex_ prefixed secret and v2 token_format", c do
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/json")
+        |> put_req_header("authorization", basic_auth(c.eric))
+        |> post("/api/keys", %{name: "mykey"})
+
+      assert conn.status == 201
+      body = json_response(conn, 201)
+      assert String.starts_with?(body["secret"], "hex_")
+      assert body["token_format"] == "v2"
+    end
+
+    test "v2 key authenticates with Bearer hex_ prefix", c do
+      key = Key.build(c.eric, %{name: "ci"}) |> Repo.insert!()
+      assert String.starts_with?(key.user_secret, "hex_")
+
+      build_conn()
+      |> put_req_header("authorization", "Bearer " <> key.user_secret)
+      |> get("/api/keys")
+      |> json_response(200)
+    end
+
+    test "whitespace in raw token header is trimmed", c do
+      key = Key.build(c.eric, %{name: "ci"}) |> Repo.insert!()
+
+      build_conn()
+      |> put_req_header("authorization", " " <> key.user_secret <> " ")
+      |> get("/api/keys")
+      |> json_response(200)
+    end
+  end
+
   describe "DELETE /api/keys" do
     test "delete all keys", c do
       key_a = Key.build(c.eric, %{name: "key_a"}) |> Repo.insert!()

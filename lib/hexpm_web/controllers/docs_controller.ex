@@ -146,6 +146,17 @@ defmodule HexpmWeb.DocsController do
     )
   end
 
+  def leaked_keys(conn, _params) do
+    render(
+      conn,
+      "layout.html",
+      view: "leaked_keys.html",
+      view_name: :leaked_keys,
+      title: "Leaked API keys",
+      container: "flex-1 flex flex-col"
+    )
+  end
+
   def self_hosting(conn, _params) do
     render(
       conn,

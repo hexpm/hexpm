@@ -83,7 +83,9 @@ defmodule HexpmWeb.PackageLayoutAssigns do
   defp resolve_current_release(release, _releases), do: release
 
   defp daily_graph(package_or_release) do
-    last_day = Hexpm.Cache.fetch(:last_download_day, &Downloads.last_day/0) || Date.utc_today()
+    last_day =
+      Hexpm.Cache.fetch(:last_download_day, &Downloads.last_day/0, 3600) || Date.utc_today()
+
     start_day = Date.add(last_day, -30)
 
     by_day =

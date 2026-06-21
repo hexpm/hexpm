@@ -19,6 +19,7 @@ defmodule HexpmWeb.API.KeyView do
       name: key.name,
       authing_key: !!(authing_key && key.id == authing_key.id),
       secret: key.user_secret,
+      token_format: key.token_format,
       permissions: render_many(key.permissions, KeyPermissionView, "show.json"),
       revoke_at: key.revoke_at,
       inserted_at: key.inserted_at,
