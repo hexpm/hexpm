@@ -88,6 +88,47 @@ defmodule HexpmWeb.API.RetirementControllerTest do
       assert Enum.sort(Enum.map(logs, & &1.params["release"]["version"])) == ["1.0.0", "3.0.0"]
     end
 
+    test "replaces existing retirements when requested", %{user: user, package: package} do
+      params = %{
+        "reason" => "deprecated",
+        "message" => "No longer maintained",
+        "replace" => true
+      }
+
+      build_conn()
+      |> put_req_header("authorization", key_for(user))
+      |> post("/api/packages/#{package.name}/retire", params)
+      |> response(204)
+
+      for version <- ["1.0.0", "2.0.0"] do
+        retirement = Hexpm.Repository.Releases.get(package, version).retirement
+        assert retirement.reason == "deprecated"
+        assert retirement.message == "No longer maintained"
+      end
+
+      logs =
+        package
+        |> Hexpm.Accounts.AuditLogs.all_by()
+        |> Enum.filter(&(&1.action == "release.retire"))
+
+      assert Enum.sort(Enum.map(logs, & &1.params["release"]["version"])) == ["1.0.0", "2.0.0"]
+    end
+
+    test "accepts replace as a query-style string", %{user: user, package: package} do
+      build_conn()
+      |> put_req_header("authorization", key_for(user))
+      |> post("/api/packages/#{package.name}/retire", %{
+        "reason" => "deprecated",
+        "message" => "No longer maintained",
+        "replace" => "true"
+      })
+      |> response(204)
+
+      retirement = Hexpm.Repository.Releases.get(package, "2.0.0").retirement
+      assert retirement.reason == "deprecated"
+      assert retirement.message == "No longer maintained"
+    end
+
     test "validates the retirement", %{user: user, package: package} do
       params = %{"reason" => "unknown"}
 

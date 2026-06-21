@@ -8,7 +8,12 @@ defmodule HexpmWeb.API.RetirementController do
 
   def create_package(conn, params) do
     if package = conn.assigns.package do
-      case Releases.retire(package, params, audit: audit_data(conn)) do
+      {replace?, params} = Map.pop(params, "replace", false)
+
+      case Releases.retire(package, params,
+             audit: audit_data(conn),
+             replace: replace? in [true, "true"]
+           ) do
         :ok ->
           conn
           |> api_cache(:private)

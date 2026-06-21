@@ -119,7 +119,9 @@ defmodule Hexpm.Repository.Releases do
     |> retire_result()
   end
 
-  def retire(package, params, audit: audit_data) do
+  def retire(package, params, opts) do
+    audit_data = Keyword.fetch!(opts, :audit)
+    replace? = Keyword.get(opts, :replace, false)
     params = %{"retirement" => params}
 
     Multi.new()
@@ -127,14 +129,10 @@ defmodule Hexpm.Repository.Releases do
     |> Multi.update(:package, Ecto.Changeset.change(package, []), force: true)
     |> Multi.run(:retirement, fn _, _ -> validate_retirement(params) end)
     |> Multi.run(:releases, fn repo, _ ->
-      releases =
-        from(r in assoc(package, :releases),
-          where: is_nil(r.retirement),
-          lock: "FOR UPDATE"
-        )
-        |> repo.all()
+      query = from(r in assoc(package, :releases), lock: "FOR UPDATE")
+      query = if replace?, do: query, else: from(r in query, where: is_nil(r.retirement))
 
-      {:ok, releases}
+      {:ok, repo.all(query)}
     end)
     |> Multi.merge(fn %{releases: releases} ->
       Enum.reduce(releases, Multi.new(), fn release, multi ->
