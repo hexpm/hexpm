@@ -1,0 +1,26 @@
+# Sobelow configuration (auto-loaded by `mix sobelow`).
+#
+# This file documents the security findings we have reviewed and intentionally
+# suppress. The remaining (lower-confidence) findings are fingerprint-baselined
+# in `.sobelow-skips`; the entries here are findings that cannot be annotated
+# with an inline `# sobelow_skip` comment because they are not function-scoped.
+[
+  # Architectural false positives — these checks fire on every run and can never
+  # be true positives given hexpm's setup, so they are disabled globally rather
+  # than fingerprint-baselined (which would silently break if router lines move):
+  #
+  #   Config.CSP   - The Content-Security-Policy is set by custom plugs
+  #                  (HexpmWeb.Plugs.ContentSecurityPolicy on the :browser pipeline
+  #                  and HexpmWeb.Plugs.ReadmeContentSecurityPolicy on :readme).
+  #                  Sobelow only recognizes a CSP passed literally to
+  #                  put_secure_browser_headers, so it cannot see ours.
+  #   Config.HTTPS - TLS is terminated at the load balancer / CDN edge, not in the
+  #                  BEAM app, so `force_ssl` is intentionally absent. config/prod.exs
+  #                  declares `url: [scheme: "https", port: 443]`.
+  ignore: ["Config.CSP", "Config.HTTPS"],
+
+  # config/hex.exs is the test/CI config. Its "secrets" are throwaway fixtures
+  # (e.g. `password: "postgres"`, a hex-encoded "youfoundthehex" string), not real
+  # credentials — production secrets are read from environment variables.
+  ignore_files: ["config/hex.exs"]
+]

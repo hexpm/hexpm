@@ -52,6 +52,9 @@ jobs:
       - name: Check formatting
         run: mix format --check-formatted
 
+      - name: Security analysis (sobelow)
+        run: mix sobelow --skip --exit Low
+
       - name: Verify seeds
         run: mix ecto.setup
 
