@@ -593,8 +593,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
       <span
         data-severity-dot
         class={["pointer-events-none absolute left-2.5 size-2 rounded-full", @dot_class]}
-      >
-      </span>
+      ></span>
       <select
         id={@id}
         name={@name}
@@ -877,8 +876,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
         "size-1.5 rounded-full",
         @value == "allow" && "bg-green-600 dark:bg-green-300",
         @value == "deny" && "bg-red-600 dark:bg-red-300"
-      ]}>
-      </span>
+      ]}></span>
       {@label}
     </button>
     """
