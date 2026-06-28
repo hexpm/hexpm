@@ -142,6 +142,9 @@ defmodule HexpmWeb.BlogView do
               max-width: 100%;
               display: block;
             }
+            .blog-content img.blog-img-dark {
+              display: none;
+            }
             .blog-content .subtitle {
               color: var(--color-grey-500);
               font-size: 0.875rem;
@@ -186,6 +189,12 @@ defmodule HexpmWeb.BlogView do
             }
             html[data-theme="dark"] .blog-content .subtitle {
               color: var(--color-grey-400);
+            }
+            html[data-theme="dark"] .blog-content img.blog-img-light {
+              display: none;
+            }
+            html[data-theme="dark"] .blog-content img.blog-img-dark {
+              display: block;
             }
           </style>
           #{strip_header(content_string)}
