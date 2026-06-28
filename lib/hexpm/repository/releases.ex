@@ -138,11 +138,19 @@ defmodule Hexpm.Repository.Releases do
       Enum.reduce(releases, Multi.new(), fn release, multi ->
         key = {:release, release.id}
 
-        multi
-        |> Multi.update(key, Release.retire(release, params))
-        |> audit(audit_data, "release.retire", fn changes ->
-          {package, Map.fetch!(changes, key)}
-        end)
+        Multi.update(multi, key, Release.retire(release, params))
+      end)
+      |> Multi.merge(fn changes ->
+        retirements =
+          Enum.map(releases, fn release ->
+            {package, Map.fetch!(changes, {:release, release.id})}
+          end)
+
+        if retirements == [] do
+          Multi.new()
+        else
+          audit_many(Multi.new(), audit_data, "release.retire", retirements)
+        end
       end)
     end)
     |> Repo.transaction(timeout: @publish_timeout)

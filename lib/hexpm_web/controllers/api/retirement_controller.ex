@@ -1,12 +1,12 @@
 defmodule HexpmWeb.API.RetirementController do
   use HexpmWeb, :controller
 
-  plug :maybe_fetch_package when action in [:create_package]
+  plug :maybe_fetch_package when action in [:create_all]
   plug :maybe_fetch_release when action in [:create, :delete]
 
   plug :authorize, domains: [{"api", "write"}, "package"], fun: {AuthHelpers, :package_owner}
 
-  def create_package(conn, params) do
+  def create_all(conn, params) do
     if package = conn.assigns.package do
       {replace?, params} = Map.pop(params, "replace", false)
 
