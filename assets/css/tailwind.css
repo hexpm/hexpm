@@ -448,6 +448,13 @@ html[data-theme="dark"] .form-error {
   display: none;
 }
 
+/* Flag emojis are hidden on Windows outside of Firefox, which is the only
+   Windows browser that bundles its own emoji font (Twemoji). The class is
+   applied by an inline script in root.html.heex at page load. */
+html.no-flag-emoji .flag-emoji {
+  display: none;
+}
+
 /* Hide scrollbar for horizontal scrolling tabs on mobile */
 .scrollbar-hide {
   -ms-overflow-style: none;  /* IE and Edge */

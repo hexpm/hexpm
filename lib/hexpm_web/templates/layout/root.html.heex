@@ -30,6 +30,10 @@
         document.documentElement.setAttribute("data-theme", theme);
         document.documentElement.setAttribute("data-theme-preference", preference);
         document.documentElement.style.colorScheme = theme;
+
+        if (/Windows/.test(navigator.userAgent) && !/Firefox/.test(navigator.userAgent)) {
+          document.documentElement.classList.add("no-flag-emoji");
+        }
       })();
     </script>
 

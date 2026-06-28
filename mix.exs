@@ -48,6 +48,8 @@ defmodule Hexpm.MixProject do
       {:ex_machina, "~> 2.0"},
       {:finch, "~> 0.22.0"},
       {:floki, "~> 0.37"},
+      {:geolix, "~> 2.0"},
+      {:geolix_adapter_mmdb2, "~> 0.6"},
       {:goth, "~> 1.4"},
       {:hex_core, "~> 0.18", hex_core_opts()},
       {:jason, "~> 1.0"},

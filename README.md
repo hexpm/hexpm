@@ -82,6 +82,40 @@ mix phx.server
 
 Hexpm will be available at [http://localhost:4000/](http://localhost:4000/).
 
+### IP Geolocation (Audit Log Locations)
+
+The dashboard audit log (`/dashboard/audit-logs`) shows the country of each
+entry's IP, resolved at render time via the `:geo_impl` implementation:
+
+- **dev / test** use `Hexpm.Geo.Local` — no database required. It resolves IPs
+  from the `:geo_local_lookups` map in `config/dev.exs` (localhost is mapped by
+  default); add entries there to exercise other countries.
+- **production** uses `Hexpm.Geo.Geolix`, which reads an MMDB IP-to-country
+  database via [`geolix`](https://hex.pm/packages/geolix).
+
+The production database is the free
+[DB-IP IP-to-Country Lite](https://db-ip.com/db/download/ip-to-country-lite) file
+(CC BY 4.0 — attribution is rendered on the page; any MaxMind-compatible MMDB
+also works).
+
+**Docker (default): nothing to do.** The image fetches the database at build
+time and bakes it into the release, and the app finds it automatically —
+geolocation works out of the box. Each image build re-fetches the current file
+(DB-IP refreshes monthly), so routine rebuilds keep it reasonably fresh.
+
+**Other deployments / custom location:** download it and point Hexpm at the file:
+
+```shell
+mix download_geoip                            # -> priv/geoip/country.mmdb
+export HEXPM_GEOIP_COUNTRY_PATH=priv/geoip/country.mmdb
+```
+
+Re-run the task and restart (or call `Geolix.reload_databases/0`) to update.
+
+> **Fail-soft:** if no database is found the app boots normally and audit log
+> locations are simply omitted until one is provisioned. `HEXPM_GEOIP_COUNTRY_PATH`
+> overrides the baked-in default.
+
 ### Billing Integration Tests
 
 Integration tests exercise the full chain: hexpm -> hexpm_billing -> Stripe. They are excluded from regular `mix test` runs and require additional setup.
