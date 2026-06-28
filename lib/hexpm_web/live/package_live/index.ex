@@ -224,8 +224,7 @@ defmodule HexpmWeb.PackageLive.Index do
                     <span
                       :if={total_pages > 1}
                       class="inline-block w-[3px] h-[3px] rounded-full bg-grey-300 dark:bg-grey-500 align-middle mx-2"
-                    >
-                    </span>
+                    ></span>
                     <span :if={total_pages > 1}>
                       Page {@page} of {total_pages}
                     </span>

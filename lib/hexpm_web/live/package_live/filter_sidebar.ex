@@ -54,8 +54,7 @@ defmodule HexpmWeb.PackageLive.FilterSidebar do
         aria-label="Close filters"
         class="flex-1 bg-grey-900/45"
         phx-click={close_sheet()}
-      >
-      </button>
+      ></button>
       <div class="bg-white dark:bg-grey-800 rounded-t-[20px] shadow-[0_-8px_24px_rgba(3,9,19,0.16)] pt-2 pb-6 flex flex-col max-h-[85%]">
         <div class="w-9 h-1 rounded-full bg-grey-200 dark:bg-grey-600 mx-auto mt-1.5 mb-1"></div>
         <div class="flex items-center justify-between px-4 pt-2.5 pb-3.5 border-b border-grey-100 dark:border-grey-700">
