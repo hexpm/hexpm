@@ -14,7 +14,11 @@ Hex has long warned about retired packages. It now does the same for packages wi
 
 This requires no configuration and applies to every project. Advisories that are aliased across multiple databases are now deduplicated, so a single vulnerability is reported once rather than several times.
 
-The `mix deps.get` and `mix deps.update` warnings are informational and do not fail the build. For a hard check, run `mix hex.audit`. It inspects your lockfile and exits with a non-zero status if any dependency carries an advisory or has been retired, which makes it a natural step to add to CI.
+The `mix deps.get` and `mix deps.update` warnings are informational and do not fail the build by default. You can make them stricter in two ways:
+
+  * Set a policy and/or cooldown periods that will restrict adding any new dependencies during `mix deps.get` or `mix deps.update`
+
+  * Run `mix hex.audit` to inspect your lockfile and exit with a non-zero status if any existing dependency carries an advisory or has been retired, which makes it a natural step to add to CI
 
 ### Release-age cooldown
 
