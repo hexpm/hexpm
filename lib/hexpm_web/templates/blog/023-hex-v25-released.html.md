@@ -1,6 +1,6 @@
 ## Hex v2.5 released
 
-<div class="subtitle"><time datetime="2026-06-17T00:00:00Z">17 June, 2026</time> · by Eric Meadows-Jönsson</div>
+<div class="subtitle"><time datetime="2026-06-29T00:00:00Z">29 June, 2026</time> · by Eric Meadows-Jönsson</div>
 
 Hex 2.5 is focused on making it harder for a malicious or compromised release to reach your system. Supply chain attacks on package registries have become routine, and the pattern is familiar across every ecosystem. An attacker compromises a maintainer account or a build pipeline, publishes a tampered release, and automated tooling pulls it into thousands of projects within hours, long before anyone notices.
 
