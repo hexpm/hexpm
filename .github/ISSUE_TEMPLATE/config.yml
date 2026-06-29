@@ -1,0 +1,9 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: Report a security vulnerability
+    url: mailto:security@hex.pm
+    about: Privately report auth, billing, API, package publishing, or other security vulnerabilities.
+  - name: Hex.pm Documentation
+    url: https://hex.pm/docs
+    about: Read the docs before opening an issue.

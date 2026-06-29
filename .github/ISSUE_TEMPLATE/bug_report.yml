@@ -1,0 +1,83 @@
+name: Bug Report
+description: Report a bug, regression, or unexpected behavior.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve Hex.pm. Please include enough detail for maintainers to reproduce the issue.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Describe the bug clearly and briefly.
+    validations:
+      required: true
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: What happened?
+      description: Tell us what you observed.
+    validations:
+      required: true
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: What did you expect?
+      description: Describe the expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: List the exact steps needed to reproduce the issue.
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: dropdown
+    id: trigger-type
+    attributes:
+      label: Area
+      description: Where did the issue occur?
+      options:
+        - Website
+        - API
+        - Authentication
+        - Package publishing
+        - Organizations
+        - Billing
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        Please redact private data before posting. Do not include API keys, session tokens, email addresses, billing details, or other sensitive account information.
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment / context
+      description: Share the relevant package, organization, account, browser, OS, API client, or permissions context.
+      placeholder: |
+        Package:
+        Organization:
+        API endpoint or client:
+        Browser:
+        OS:
+        Recent permission or account changes:
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: Paste logs, error messages, screenshots, or relevant run output here.
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add anything else that may help reproduce the issue.
