@@ -59,6 +59,8 @@ A restriction can block releases that carry a security advisory at or above a ch
 
 Policies are signed and served through the organization's repository, the same trusted channel as the package registry itself, so the client can verify them.
 
+Policies are not limited to private organizations. A public organization can publish one too, so an open source project can enforce its own rules across every contributor who builds it. A public organization's policy is itself public, since it exists to protect everyone working on the project.
+
 A project opts into a single policy with the `policy` setting, using the same precedence as every other Hex option:
 
 ```elixir
