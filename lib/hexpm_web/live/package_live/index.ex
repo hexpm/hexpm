@@ -118,7 +118,8 @@ defmodule HexpmWeb.PackageLive.Index do
             </span>
           </button>
           <div class="flex-1"></div>
-          <form phx-change="sort_change" class="inline-flex">
+          <%!-- phx-auto-recover stops reconnects from re-firing sort_change and resetting the page --%>
+          <form phx-change="sort_change" phx-auto-recover="ignore" class="inline-flex">
             <label for="sort-select-mobile" class="sr-only">Sort</label>
             <div class="relative">
               <select
@@ -237,7 +238,8 @@ defmodule HexpmWeb.PackageLive.Index do
                   >
                     Sort by
                   </label>
-                  <form phx-change="sort_change">
+                  <%!-- phx-auto-recover stops reconnects from re-firing sort_change and resetting the page --%>
+                  <form phx-change="sort_change" phx-auto-recover="ignore">
                     <div class="relative min-w-[200px]">
                       <select
                         id="sort-select"
