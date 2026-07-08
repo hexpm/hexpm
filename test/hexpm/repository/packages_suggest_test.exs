@@ -136,6 +136,20 @@ defmodule Hexpm.Repository.PackagesSuggestTest do
       assert is_list(Packages.suggest(repository, "my%package"))
     end
 
+    test "handles trailing backslash in search term", %{repository: repository} do
+      package =
+        insert(:package,
+          name: "abc_package",
+          repository_id: repository.id,
+          meta: build(:package_metadata, description: "abc utilities")
+        )
+
+      insert(:release, package: package)
+
+      assert "abc_package" in names(Packages.suggest(repository, "abc\\"))
+      assert "abc_package" in names(Packages.suggest(repository, "abc\\\\\\"))
+    end
+
     test "includes package metadata in results", %{repository: repository} do
       package =
         insert(:package,
