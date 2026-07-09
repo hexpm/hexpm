@@ -142,6 +142,18 @@ defmodule HexpmWeb.API.KeyControllerTest do
       assert %{"name" => "macbook"} = log.params
     end
 
+    test "create key without authentication returns 401" do
+      body = %{name: "macbook"}
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/json")
+        |> post("/api/keys", body)
+
+      body = json_response(conn, 401)
+      assert body["message"] == "missing authentication information"
+    end
+
     test "create repository key", c do
       body = %{
         name: "macbook",
