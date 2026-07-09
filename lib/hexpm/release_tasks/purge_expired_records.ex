@@ -34,7 +34,8 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
         repo,
         Hexpm.OAuth.AuthorizationCode,
         from(ac in Hexpm.OAuth.AuthorizationCode,
-          where: ac.expires_at < fragment("NOW()")
+          where: ac.expires_at < fragment("NOW()"),
+          order_by: ac.expires_at
         ),
         batch_size
       )
@@ -48,7 +49,8 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
         repo,
         Hexpm.OAuth.DeviceCode,
         from(dc in Hexpm.OAuth.DeviceCode,
-          where: dc.expires_at < fragment("NOW()")
+          where: dc.expires_at < fragment("NOW()"),
+          order_by: dc.expires_at
         ),
         batch_size
       )
@@ -62,7 +64,8 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
         repo,
         Hexpm.OAuth.Token,
         from(t in Hexpm.OAuth.Token,
-          where: t.expires_at < fragment("NOW()") or not is_nil(t.revoked_at)
+          where: t.expires_at < fragment("NOW()") or not is_nil(t.revoked_at),
+          order_by: t.expires_at
         ),
         batch_size
       )
@@ -78,7 +81,8 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
         from(us in Hexpm.UserSession,
           where:
             (not is_nil(us.expires_at) and us.expires_at < fragment("NOW()")) or
-              not is_nil(us.revoked_at)
+              not is_nil(us.revoked_at),
+          order_by: us.expires_at
         ),
         batch_size
       )
@@ -94,7 +98,8 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
         from(s in Hexpm.PlugSession,
           where:
             s.updated_at <
-              fragment("NOW() - make_interval(days => ?)", @plug_session_retention_days)
+              fragment("NOW() - make_interval(days => ?)", @plug_session_retention_days),
+          order_by: s.updated_at
         ),
         batch_size
       )
@@ -108,7 +113,8 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
         repo,
         Hexpm.Accounts.PasswordReset,
         from(pr in Hexpm.Accounts.PasswordReset,
-          where: pr.inserted_at < fragment("NOW() - make_interval(days => ?)", @retention_days)
+          where: pr.inserted_at < fragment("NOW() - make_interval(days => ?)", @retention_days),
+          order_by: pr.inserted_at
         ),
         batch_size
       )
@@ -122,7 +128,8 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
         repo,
         Hexpm.Accounts.AccountDeletionRequest,
         from(r in Hexpm.Accounts.AccountDeletionRequest,
-          where: r.inserted_at < ago(@retention_days, "day")
+          where: r.inserted_at < ago(@retention_days, "day"),
+          order_by: r.inserted_at
         ),
         batch_size
       )
@@ -138,7 +145,8 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
         from(k in Hexpm.Accounts.Key,
           where:
             not is_nil(k.revoke_at) and
-              k.revoke_at < fragment("NOW() - make_interval(days => ?)", @retention_days)
+              k.revoke_at < fragment("NOW() - make_interval(days => ?)", @retention_days),
+          order_by: k.revoke_at
         ),
         batch_size
       )
@@ -146,6 +154,8 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
     Logger.info("[task] Purged #{count} revoked keys")
   end
 
+  # Queries order by their filtered timestamp column so the id lookup scans that
+  # column's index; an unordered LIMIT tempts the planner into a seq scan per batch.
   defp delete_in_batches(repo, schema, query, batch_size, total \\ 0) do
     ids = from(r in query, select: r.id, limit: ^batch_size)
     {count, _} = repo.delete_all(from(r in schema, where: r.id in subquery(ids)))
