@@ -74,7 +74,6 @@ defmodule HexpmWeb do
       import HexpmWeb.Components.Form
       import HexpmWeb.Components.Input
       import HexpmWeb.Components.Modal
-      import HexpmWeb.Components.Package
 
       # Import security dashboard components
       import HexpmWeb.Templates.Dashboard.Security.Components.ConnectedAccountsCard
@@ -104,7 +103,6 @@ defmodule HexpmWeb do
       import HexpmWeb.Components.Buttons
       import HexpmWeb.Components.Input
       import HexpmWeb.Components.Modal
-      import HexpmWeb.Components.Package
       alias HexpmWeb.ViewHelpers
       use Hexpm.Shared
 
