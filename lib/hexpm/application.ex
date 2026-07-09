@@ -46,11 +46,20 @@ defmodule Hexpm.Application do
 
   def sentry_before_send(%Sentry.Event{original_exception: exception} = event) do
     cond do
+      websocket_protocol_error?(event) -> nil
       Plug.Exception.status(exception) < 500 -> nil
       Sentry.DefaultEventFilter.exclude_exception?(exception, event.source) -> nil
       true -> event
     end
   end
+
+  # Bandit stops the websocket connection process with a non-shutdown reason when a
+  # client sends invalid frames, which gets logged as a crash even though the client
+  # was correctly rejected
+  defp websocket_protocol_error?(%Sentry.Event{extra: %{crash_reason: "{:deserializing," <> _}}),
+    do: true
+
+  defp websocket_protocol_error?(%Sentry.Event{}), do: false
 
   # Make sure we exit after hex client tests are finished running
   if Mix.env() == :hex do
