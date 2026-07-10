@@ -5,6 +5,11 @@ defmodule HexpmWeb.Router do
 
   @accepted_formats ~w(json elixir erlang)
 
+  pipeline :accepts_json do
+    plug :accepts, ["json"]
+    plug HexpmWeb.Plugs.Attack
+  end
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -174,6 +179,7 @@ defmodule HexpmWeb.Router do
     get "/docs/faq", DocsController, :faq
     get "/docs/mirrors", DocsController, :mirrors
     get "/docs/public-keys", DocsController, :public_keys
+    get "/docs/leaked-keys", DocsController, :leaked_keys
     get "/docs/self-hosting", DocsController, :self_hosting
 
     get "/policies/codeofconduct", PolicyController, :coc
@@ -339,6 +345,15 @@ defmodule HexpmWeb.Router do
     get "/hexsearch.xml", OpenSearchController, :opensearch
     get "/installs/hex.ez", InstallController, :archive
     get "/feeds/blog.xml", FeedsController, :blog
+  end
+
+  # GitHub secret scanning alert endpoint — no auth, exempt from Plugs.Attack
+  # throttling per the partner program agreement. Signature verification is
+  # handled in the controller.
+  scope "/api/github", HexpmWeb.API, as: :api_github do
+    pipe_through [:accepts_json]
+
+    post "/secret-scanning", GitHubSecretScanningController, :create
   end
 
   scope "/api", HexpmWeb.API, as: :api do

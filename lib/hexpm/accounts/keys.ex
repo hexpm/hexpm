@@ -1,6 +1,8 @@
 defmodule Hexpm.Accounts.Keys do
   use Hexpm.Context
 
+  require Logger
+
   alias Hexpm.Accounts.Organization
 
   def all(user_or_organization) do
@@ -60,6 +62,37 @@ defmodule Hexpm.Accounts.Keys do
       result
     else
       {:error, :not_found}
+    end
+  end
+
+  @doc """
+  Atomically revokes the active key matching `secret_first` and returns it
+  with the owning user (and their emails) preloaded. Used by the GitHub
+  secret scanning revocation flow where we only have the raw token, not the
+  owner identity.
+
+  Returns `{:ok, key, user}` (where `user` is `nil` for organization-owned
+  keys), or `:not_found` when no active key matches.
+  """
+  def revoke_by_secret_first(secret_first) do
+    revoke_at = DateTime.add(DateTime.utc_now(), -1, :second)
+
+    query =
+      from(k in Key,
+        where: k.secret_first == ^secret_first,
+        where: is_nil(k.revoke_at) or k.revoke_at > fragment("NOW()"),
+        select: k,
+        update: [set: [revoke_at: ^revoke_at, updated_at: ^DateTime.utc_now()]]
+      )
+
+    case Repo.update_all(query, []) do
+      {1, [key]} ->
+        key = Repo.preload(key, user: :emails)
+        Logger.info("Automated key revocation: key_id=#{key.id}")
+        {:ok, key, key.user}
+
+      {0, _} ->
+        :not_found
     end
   end
 

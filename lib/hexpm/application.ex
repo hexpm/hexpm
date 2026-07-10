@@ -9,6 +9,10 @@ defmodule Hexpm.Application do
     Hexpm.BlockAddress.start()
     setup_tmp_dir()
 
+    if Application.fetch_env!(:hexpm, :cache_enabled) do
+      Hexpm.Cache.start()
+    end
+
     children =
       [
         Hexpm.RepoBase,
@@ -20,10 +24,6 @@ defmodule Hexpm.Application do
         HexpmWeb.RateLimitPubSub,
         {PlugAttack.Storage.Ets, name: HexpmWeb.Plugs.Attack.Storage, clean_period: 60_000},
         {Hexpm.Billing.Report, name: Hexpm.Billing.Report, interval: 60_000},
-        {Hexpm.Cache,
-         name: Hexpm.Cache,
-         interval: 3_600_000,
-         enabled: Application.fetch_env!(:hexpm, :cache_enabled)},
         goth_spec(),
         setup(),
         load_caches(),

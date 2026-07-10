@@ -13,6 +13,10 @@ defmodule HexpmWeb.Plugs.Attack do
     allow(conn.remote_ip == {127, 0, 0, 1})
   end
 
+  rule "allow github secret scanning", conn do
+    allow(conn.request_path == "/api/github/secret-scanning")
+  end
+
   rule "allow addresses", conn do
     BlockAddress.try_reload()
     allow(BlockAddress.allowed?(ip_string(conn.remote_ip)))
@@ -76,10 +80,10 @@ defmodule HexpmWeb.Plugs.Attack do
 
   defp throttled_user(conn) do
     cond do
-      user = conn.assigns.current_user ->
+      user = conn.assigns[:current_user] ->
         "user #{user.id}"
 
-      organization = conn.assigns.current_organization ->
+      organization = conn.assigns[:current_organization] ->
         "organization #{organization.id}"
 
       true ->
