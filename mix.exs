@@ -46,7 +46,7 @@ defmodule Hexpm.MixProject do
       {:ex_aws_s3, "~> 2.0"},
       {:ex_aws, "~> 2.0"},
       {:ex_machina, "~> 2.0"},
-      {:finch, "~> 0.22.0"},
+      {:finch, "~> 0.23.0"},
       {:floki, "~> 0.37"},
       {:goth, "~> 1.4"},
       {:hex_core, "~> 0.18", hex_core_opts()},
