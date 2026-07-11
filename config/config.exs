@@ -19,6 +19,11 @@ config :hexpm, :features, package_reports: true
 
 config :hexpm, ecto_repos: [Hexpm.RepoBase]
 
+config :hexpm, Oban,
+  repo: Hexpm.RepoBase,
+  queues: [periodic: 2],
+  shutdown_grace_period: 300_000
+
 config :ex_aws,
   json_codec: Jason,
   http_client: ExAws.Request.Req

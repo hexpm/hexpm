@@ -1,5 +1,6 @@
 defmodule Hexpm.Billing.ReportTest do
   use Hexpm.DataCase
+  use Oban.Testing, repo: Hexpm.RepoBase
   alias Ecto.Adapters.SQL.Sandbox
   alias Hexpm.{Billing, RepoBase}
   alias Hexpm.Accounts.Organizations
@@ -23,9 +24,7 @@ defmodule Hexpm.Billing.ReportTest do
       ]
     end)
 
-    {:ok, pid} = Billing.Report.start_link(interval: 60_000)
-    send(pid, :update)
-    :sys.get_state(pid)
+    assert :ok = perform_job(Billing.Report, %{})
 
     assert Organizations.get(organization1.name).billing_active
     refute Organizations.get(organization2.name).billing_active
@@ -44,9 +43,7 @@ defmodule Hexpm.Billing.ReportTest do
 
     stub(Billing.Mock, :report, fn -> [] end)
 
-    {:ok, pid} = Billing.Report.start_link(interval: 60_000)
-    send(pid, :update)
-    :sys.get_state(pid)
+    assert :ok = perform_job(Billing.Report, %{})
 
     refute Organizations.get(organization1.name).billing_active
     refute Organizations.get(organization2.name).billing_active
@@ -62,9 +59,7 @@ defmodule Hexpm.Billing.ReportTest do
 
     stub(Billing.Mock, :report, fn -> [] end)
 
-    {:ok, pid} = Billing.Report.start_link(interval: 60_000)
-    send(pid, :update)
-    :sys.get_state(pid)
+    assert :ok = perform_job(Billing.Report, %{})
 
     assert Organizations.get(organization1.name).billing_active
     refute Organizations.get(organization2.name).billing_active
@@ -87,9 +82,7 @@ defmodule Hexpm.Billing.ReportTest do
       ]
     end)
 
-    {:ok, pid} = Billing.Report.start_link(interval: 60_000)
-    send(pid, :update)
-    :sys.get_state(pid)
+    assert :ok = perform_job(Billing.Report, %{})
 
     assert Organizations.get(organization1.name).billing_active
     refute Organizations.get(organization2.name).billing_active
@@ -98,30 +91,6 @@ defmodule Hexpm.Billing.ReportTest do
     # Check seats are updated
     assert Organizations.get(organization2.name).billing_seats == 7
     assert Organizations.get(organization4.name).billing_seats == 6
-  end
-
-  test "backward compatibility - old report format (list of strings)" do
-    organization1 = insert(:organization, billing_active: false)
-    organization2 = insert(:organization, billing_active: true)
-    organization3 = insert(:organization, billing_active: false)
-
-    # Old format: just a list of organization names (strings)
-    stub(Billing.Mock, :report, fn ->
-      [organization1.name, organization3.name]
-    end)
-
-    {:ok, pid} = Billing.Report.start_link(interval: 60_000)
-    send(pid, :update)
-    :sys.get_state(pid)
-
-    # Check billing_active is updated correctly
-    assert Organizations.get(organization1.name).billing_active
-    refute Organizations.get(organization2.name).billing_active
-    assert Organizations.get(organization3.name).billing_active
-
-    # Check billing_seats is not updated (stays nil with old format)
-    assert Organizations.get(organization1.name).billing_seats == nil
-    assert Organizations.get(organization3.name).billing_seats == nil
   end
 
   test "revokes excess sessions when seats are reduced via billing report" do
@@ -151,9 +120,7 @@ defmodule Hexpm.Billing.ReportTest do
       [%{"token" => organization.name, "quantity" => 5}]
     end)
 
-    {:ok, pid} = Billing.Report.start_link(interval: 60_000)
-    send(pid, :update)
-    :sys.get_state(pid)
+    assert :ok = perform_job(Billing.Report, %{})
 
     # Check seats were updated
     updated_org = Organizations.get(organization.name)
@@ -161,5 +128,13 @@ defmodule Hexpm.Billing.ReportTest do
 
     # Check excess sessions were revoked (should only have 5 now)
     assert Hexpm.UserSessions.count_for_user(organization) == 5
+  end
+
+  test "raises when the billing request fails so Oban retries the job" do
+    stub(Billing.Mock, :report, fn -> raise "unavailable" end)
+
+    assert_raise RuntimeError, "unavailable", fn ->
+      perform_job(Billing.Report, %{})
+    end
   end
 end

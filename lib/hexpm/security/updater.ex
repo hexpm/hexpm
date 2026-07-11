@@ -1,7 +1,13 @@
 defmodule Hexpm.Security.Updater do
   @moduledoc false
 
-  use GenServer
+  use Oban.Worker,
+    queue: :periodic,
+    max_attempts: 5,
+    unique: [
+      period: :infinity,
+      states: :incomplete
+    ]
 
   require Logger
 
@@ -13,70 +19,21 @@ defmodule Hexpm.Security.Updater do
   @reference_url_schemes ~w(http https)
   @reference_url_max_length 2000
 
-  @enforce_keys [:update_interval]
-  defstruct [:update_interval, etag: nil]
-
-  @start_opts [
-    :timeout,
-    :debug,
-    :spawn_opt,
-    name: __MODULE__,
-    hibernate_after: to_timeout(second: 1)
-  ]
-  @start_keys [:start, :timeout, :debug, :spawn_opt, :hibernate_after]
-  @init_opts [update_interval: to_timeout(minute: 30)]
-
-  @spec start_link(opts :: Keyword.t()) :: GenServer.on_start()
-  def start_link(opts) do
-    {start_opts, init_opts} = Keyword.split(opts, @start_keys)
-
-    with {:ok, start_opts} <- Keyword.validate(start_opts, @start_opts),
-         {:ok, init_opts} <- Keyword.validate(init_opts, @init_opts) do
-      GenServer.start_link(__MODULE__, init_opts, start_opts)
+  @impl Oban.Worker
+  def perform(%Oban.Job{args: %{}}) do
+    case Hexpm.HTTP.impl().get(@advisory_download_url, [], receive_timeout: @http_receive_timeout) do
+      {:ok, 200, _headers, archive} -> unzip_and_process(archive)
+      {:ok, status, _headers, _body} -> {:error, {:unexpected_status, status}}
+      {:error, reason} -> {:error, {:request_failed, reason}}
     end
   end
 
-  @impl GenServer
-  def init(opts) do
-    update_interval = Keyword.fetch!(opts, :update_interval)
-    {:ok, %__MODULE__{update_interval: update_interval}, {:continue, :update}}
-  end
-
-  @impl GenServer
-  def handle_continue(:update, %__MODULE__{etag: etag, update_interval: update_interval} = state) do
-    headers = if etag, do: [{"If-None-Match", etag}], else: []
-
-    case Req.get(
-           url: @advisory_download_url,
-           headers: headers,
-           receive_timeout: @http_receive_timeout,
-           decoders: [:zip]
-         ) do
-      {:ok, %Req.Response{status: 304} = response} ->
-        {:noreply, %__MODULE__{state | etag: response_etag(response) || etag}, update_interval}
-
-      {:ok, %Req.Response{status: 200, body: body} = response} ->
-        :ok = process_advisories(body)
-        {:noreply, %__MODULE__{state | etag: response_etag(response) || etag}, update_interval}
-
-      {:ok, %Req.Response{status: status}} ->
-        Logger.warning("Advisory feed returned unexpected status: #{status}")
-        {:noreply, state, update_interval}
-
-      {:error, reason} ->
-        Logger.warning("Advisory feed request failed: #{inspect(reason)}")
-        {:noreply, state, update_interval}
+  defp unzip_and_process(archive) do
+    case :zip.unzip(archive, [:memory]) do
+      {:ok, files} -> process_advisories(files)
+      {:error, reason} -> {:error, {:invalid_archive, reason}}
     end
   end
-
-  @impl GenServer
-  def handle_info(:timeout, state), do: {:noreply, state, {:continue, :update}}
-
-  @impl GenServer
-  def handle_cast(:update, state), do: {:noreply, state, {:continue, :update}}
-
-  @spec update(server :: GenServer.server()) :: :ok
-  def update(server \\ __MODULE__), do: GenServer.cast(server, :update)
 
   @doc """
   Parses the OSV advisory archive into normalized advisory records and
@@ -100,20 +57,9 @@ defmodule Hexpm.Security.Updater do
       {:ok, _changes} ->
         :ok
 
-      {:error, :lock, :not_leader, _changes} ->
-        Logger.info("Another node is updating advisories, skipping")
-        :ok
-
       {:error, step, value, _changes} ->
         Logger.error("Advisory upsert failed at #{inspect(step)}: #{inspect(value)}")
-        :ok
-    end
-  end
-
-  defp response_etag(%Req.Response{} = response) do
-    case Req.Response.get_header(response, "etag") do
-      [etag | _] -> etag
-      _ -> nil
+        {:error, {step, value}}
     end
   end
 
