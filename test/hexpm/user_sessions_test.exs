@@ -476,17 +476,19 @@ defmodule Hexpm.UserSessionsTest do
   describe "session expiration" do
     test "browser sessions are created with 30-day expiration" do
       user = insert(:user)
+      earliest_expires_at = DateTime.add(DateTime.utc_now(), 30 * 24 * 60 * 60, :second)
 
       {:ok, session, _token} =
         UserSessions.create_browser_session(user, name: "Test Session", audit: audit_data(user))
 
-      expected_expires_at = DateTime.add(DateTime.utc_now(), 30 * 24 * 60 * 60, :second)
-      assert DateTime.diff(session.expires_at, expected_expires_at, :second) |> abs() <= 2
+      latest_expires_at = DateTime.add(DateTime.utc_now(), 30 * 24 * 60 * 60, :second)
+      assert_datetime_between(session.expires_at, earliest_expires_at, latest_expires_at)
     end
 
     test "OAuth sessions are created with 30-day expiration" do
       user = insert(:user)
       client = insert(:oauth_client)
+      earliest_expires_at = DateTime.add(DateTime.utc_now(), 30 * 24 * 60 * 60, :second)
 
       {:ok, session} =
         UserSessions.create_oauth_session(user, client.client_id,
@@ -494,8 +496,8 @@ defmodule Hexpm.UserSessionsTest do
           audit: audit_data(user)
         )
 
-      expected_expires_at = DateTime.add(DateTime.utc_now(), 30 * 24 * 60 * 60, :second)
-      assert DateTime.diff(session.expires_at, expected_expires_at, :second) |> abs() <= 2
+      latest_expires_at = DateTime.add(DateTime.utc_now(), 30 * 24 * 60 * 60, :second)
+      assert_datetime_between(session.expires_at, earliest_expires_at, latest_expires_at)
     end
 
     test "get_browser_session_by_token returns nil for expired session" do
@@ -700,9 +702,6 @@ defmodule Hexpm.UserSessionsTest do
       # Preload user for revoke_and_create_token
       token = Repo.preload(token, :user)
 
-      # Wait a moment
-      :timer.sleep(10)
-
       # Refresh the token
       {:ok, new_token} =
         Hexpm.OAuth.Tokens.revoke_and_create_token(
@@ -740,9 +739,6 @@ defmodule Hexpm.UserSessionsTest do
       # Preload user for revoke_and_create_token
       token = Repo.preload(token, :user)
 
-      # Wait a moment
-      :timer.sleep(10)
-
       # Refresh the token
       {:ok, _new_token} =
         Hexpm.OAuth.Tokens.revoke_and_create_token(
@@ -768,10 +764,12 @@ defmodule Hexpm.UserSessionsTest do
       {:ok, session, _token} =
         UserSessions.create_browser_session(user, name: "Test", audit: audit_data(user))
 
+      earliest_revoked_at = DateTime.utc_now()
       {:ok, revoked_session} = UserSessions.revoke(session)
+      latest_revoked_at = DateTime.utc_now()
 
       assert revoked_session.revoked_at != nil
-      assert DateTime.diff(DateTime.utc_now(), revoked_session.revoked_at, :second) <= 1
+      assert_datetime_between(revoked_session.revoked_at, earliest_revoked_at, latest_revoked_at)
     end
 
     test "revoke/1 for OAuth session sets revoked_at" do
@@ -784,10 +782,12 @@ defmodule Hexpm.UserSessionsTest do
           audit: audit_data(user)
         )
 
+      earliest_revoked_at = DateTime.utc_now()
       {:ok, %{session: revoked_session, tokens: _}} = UserSessions.revoke(session)
+      latest_revoked_at = DateTime.utc_now()
 
       assert revoked_session.revoked_at != nil
-      assert DateTime.diff(DateTime.utc_now(), revoked_session.revoked_at, :second) <= 1
+      assert_datetime_between(revoked_session.revoked_at, earliest_revoked_at, latest_revoked_at)
     end
 
     test "revoke/1 for OAuth session also revokes all associated tokens" do
@@ -934,7 +934,7 @@ defmodule Hexpm.UserSessionsTest do
 
       {:ok, updated_session} = UserSessions.update_last_use(session, usage_info)
 
-      assert DateTime.diff(updated_session.last_use.used_at, used_at, :second) == 0
+      assert updated_session.last_use.used_at == used_at
     end
   end
 

@@ -705,6 +705,8 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       api_key: api_key,
       user: user
     } do
+      earliest_expires_at = DateTime.add(DateTime.utc_now(), 30 * 60, :second)
+
       conn =
         post(build_conn(), ~p"/api/oauth/token", %{
           "grant_type" => "client_credentials",
@@ -720,13 +722,9 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert length(sessions) == 1
       [session] = sessions
 
-      # Session should expire within ~30 minutes (allow some margin)
-      now = DateTime.utc_now()
-      expires_in_seconds = DateTime.diff(session.expires_at, now, :second)
-      # At least 25 minutes
-      assert expires_in_seconds > 25 * 60
-      # At most 30 minutes
-      assert expires_in_seconds <= 30 * 60
+      latest_expires_at = DateTime.add(DateTime.utc_now(), 30 * 60, :second)
+      assert DateTime.compare(session.expires_at, earliest_expires_at) in [:eq, :gt]
+      assert DateTime.compare(session.expires_at, latest_expires_at) in [:eq, :lt]
     end
 
     test "returns error for missing client_secret", %{client: client} do

@@ -90,11 +90,15 @@ defmodule Hexpm.TmpDirTest do
   test "cleanup only removes paths for calling process" do
     test_pid = self()
 
-    Task.start(fn ->
-      other_file = Hexpm.TmpDir.tmp_file("other")
-      send(test_pid, {:other_path, other_file})
-      Process.sleep(:infinity)
-    end)
+    {:ok, task_pid} =
+      Task.start(fn ->
+        other_file = Hexpm.TmpDir.tmp_file("other")
+        send(test_pid, {:other_path, other_file})
+
+        receive do
+          :stop -> :ok
+        end
+      end)
 
     assert_receive {:other_path, other_file}, @receive_timeout
 
@@ -103,6 +107,10 @@ defmodule Hexpm.TmpDirTest do
 
     refute File.exists?(file)
     assert File.exists?(other_file)
+
+    send(task_pid, :stop)
+    Hexpm.TmpDir.await_cleanup(task_pid)
+    refute File.exists?(other_file)
   end
 
   test "paths persist while process is alive" do

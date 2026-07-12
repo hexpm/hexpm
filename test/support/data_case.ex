@@ -64,4 +64,9 @@ defmodule Hexpm.DataCase do
   def errors_on(%Ecto.Changeset{} = changeset) do
     HexpmWeb.ControllerHelpers.translate_errors(changeset)
   end
+
+  def assert_datetime_between(datetime, earliest, latest) do
+    assert DateTime.compare(datetime, earliest) in [:eq, :gt]
+    assert DateTime.compare(datetime, latest) in [:eq, :lt]
+  end
 end

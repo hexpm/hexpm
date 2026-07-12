@@ -41,28 +41,32 @@ defmodule Hexpm.UtilsTest do
   end
 
   describe "within_last_day?/1" do
-    test "returns true for current time" do
-      assert Utils.within_last_day?(NaiveDateTime.utc_now())
+    setup do
+      %{now: ~N[2026-07-11 12:00:00]}
     end
 
-    test "returns true for timestamp less than 24 hours ago" do
-      timestamp = NaiveDateTime.add(NaiveDateTime.utc_now(), -23 * 60 * 60, :second)
-      assert Utils.within_last_day?(timestamp)
+    test "returns true for current time", %{now: now} do
+      assert Utils.within_last_day?(now, now)
     end
 
-    test "returns false for timestamp more than 24 hours ago" do
-      timestamp = NaiveDateTime.add(NaiveDateTime.utc_now(), -25 * 60 * 60, :second)
-      refute Utils.within_last_day?(timestamp)
+    test "returns true for timestamp less than 24 hours ago", %{now: now} do
+      timestamp = NaiveDateTime.add(now, -23 * 60 * 60, :second)
+      assert Utils.within_last_day?(timestamp, now)
     end
 
-    test "returns false for timestamp exactly 24 hours ago" do
-      timestamp = NaiveDateTime.add(NaiveDateTime.utc_now(), -86_400, :second)
-      refute Utils.within_last_day?(timestamp)
+    test "returns false for timestamp more than 24 hours ago", %{now: now} do
+      timestamp = NaiveDateTime.add(now, -25 * 60 * 60, :second)
+      refute Utils.within_last_day?(timestamp, now)
     end
 
-    test "returns false for timestamp many days ago" do
-      timestamp = NaiveDateTime.add(NaiveDateTime.utc_now(), -1_000_000, :second)
-      refute Utils.within_last_day?(timestamp)
+    test "returns false for timestamp exactly 24 hours ago", %{now: now} do
+      timestamp = NaiveDateTime.add(now, -86_400, :second)
+      refute Utils.within_last_day?(timestamp, now)
+    end
+
+    test "returns false for timestamp many days ago", %{now: now} do
+      timestamp = NaiveDateTime.add(now, -1_000_000, :second)
+      refute Utils.within_last_day?(timestamp, now)
     end
   end
 

@@ -1285,6 +1285,9 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     test "create org key with expires_in sets revoke_at", c do
       insert(:organization_user, organization: c.organization, user: c.user, role: "admin")
 
+      earliest_revoke_at =
+        DateTime.utc_now() |> DateTime.add(30, :day) |> DateTime.truncate(:second)
+
       conn =
         build_conn()
         |> test_login(c.user)
@@ -1296,8 +1299,12 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       key = Hexpm.Repo.one!(Hexpm.Accounts.Key.get(c.organization, "org-temp"))
       assert key.revoke_at != nil
-      diff = DateTime.diff(key.revoke_at, DateTime.utc_now(), :day)
-      assert diff >= 29 and diff <= 30
+
+      latest_revoke_at =
+        DateTime.utc_now() |> DateTime.add(30, :day) |> DateTime.truncate(:second)
+
+      assert DateTime.compare(key.revoke_at, earliest_revoke_at) in [:eq, :gt]
+      assert DateTime.compare(key.revoke_at, latest_revoke_at) in [:eq, :lt]
     end
 
     test "create org key with custom expiry date sets revoke_at", c do

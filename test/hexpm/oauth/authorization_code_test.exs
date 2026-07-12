@@ -102,11 +102,13 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
   describe "mark_as_used/1" do
     test "creates changeset with used_at timestamp" do
       auth_code = %AuthorizationCode{}
+      earliest_used_at = DateTime.utc_now() |> DateTime.truncate(:second)
       changeset = AuthorizationCode.mark_as_used(auth_code)
+      latest_used_at = DateTime.utc_now() |> DateTime.truncate(:second)
 
       used_at = get_field(changeset, :used_at)
       assert used_at
-      assert DateTime.diff(DateTime.utc_now(), used_at, :second) <= 1
+      assert_datetime_between(used_at, earliest_used_at, latest_used_at)
     end
   end
 end
