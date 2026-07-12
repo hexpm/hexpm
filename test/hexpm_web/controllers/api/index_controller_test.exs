@@ -5,5 +5,6 @@ defmodule HexpmWeb.API.IndexControllerTest do
     conn = get(build_conn(), "/api")
 
     assert json_response(conn, 200)["package_url"] =~ "/api/packages/{name}"
+    assert json_response(conn, 200)["package_retirement_url"] =~ "/api/packages/{name}/retire"
   end
 end
