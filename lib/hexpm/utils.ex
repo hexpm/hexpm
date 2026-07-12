@@ -111,10 +111,12 @@ defmodule Hexpm.Utils do
   @doc """
   Determine if a given timestamp is less than a day (86400 seconds) old
   """
-  def within_last_day?(nil), do: false
+  def within_last_day?(timestamp, now \\ NaiveDateTime.utc_now())
 
-  def within_last_day?(a) do
-    NaiveDateTime.diff(NaiveDateTime.utc_now(), a, :second) < 24 * 60 * 60
+  def within_last_day?(nil, _now), do: false
+
+  def within_last_day?(timestamp, now) do
+    NaiveDateTime.diff(now, timestamp, :second) < 24 * 60 * 60
   end
 
   def binarify(term, opts \\ [])

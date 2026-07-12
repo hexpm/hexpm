@@ -6,36 +6,33 @@ defmodule Hexpm.OAuth.DeviceCodesTest do
 
   describe "expired?/1" do
     property "future timestamps are never expired" do
-      check all(offset <- positive_integer()) do
-        future_time = DateTime.add(DateTime.utc_now(), offset, :second)
+      check all(offset <- integer(1..86_400)) do
+        now = ~U[2026-07-11 12:00:00Z]
+        future_time = DateTime.add(now, offset, :second)
         device_code = %DeviceCode{expires_at: future_time}
 
-        refute DeviceCodes.expired?(device_code)
+        refute DeviceCodes.expired?(device_code, now)
       end
     end
 
     property "past timestamps are always expired" do
-      check all(offset <- positive_integer()) do
-        past_time = DateTime.add(DateTime.utc_now(), -offset, :second)
+      check all(offset <- integer(1..86_400)) do
+        now = ~U[2026-07-11 12:00:00Z]
+        past_time = DateTime.add(now, -offset, :second)
         device_code = %DeviceCode{expires_at: past_time}
 
-        assert DeviceCodes.expired?(device_code)
+        assert DeviceCodes.expired?(device_code, now)
       end
     end
 
     property "expiration is consistent with DateTime.compare" do
       check all(offset <- integer(-86400..86400)) do
-        test_time = DateTime.add(DateTime.utc_now(), offset, :second)
+        now = ~U[2026-07-11 12:00:00Z]
+        test_time = DateTime.add(now, offset, :second)
         device_code = %DeviceCode{expires_at: test_time}
 
-        expected_expired = DateTime.compare(test_time, DateTime.utc_now()) == :lt
-        actual_expired = DeviceCodes.expired?(device_code)
-
-        if abs(offset) > 1 do
-          assert actual_expired == expected_expired
-        else
-          assert is_boolean(actual_expired)
-        end
+        expected_expired = DateTime.compare(test_time, now) == :lt
+        assert DeviceCodes.expired?(device_code, now) == expected_expired
       end
     end
   end

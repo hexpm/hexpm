@@ -2,7 +2,7 @@ defmodule HexpmWeb.Plugs.AttackTest do
   use ExUnit.Case
   import Plug.{Conn, Test}
   import Hexpm.Factory
-  alias HexpmWeb.RateLimitPubSub
+  alias HexpmWeb.{Plugs.Attack, RateLimitPubSub}
 
   defmodule Hello do
     # need to use Phoenix.Controller because RateLimit.Plug uses ErrorView
@@ -43,13 +43,11 @@ defmodule HexpmWeb.Plugs.AttackTest do
       time = System.system_time(:millisecond)
       Phoenix.PubSub.broadcast!(Hexpm.PubSub, "ratelimit", {:throttle, {:user, user.id}, time})
       Phoenix.PubSub.broadcast!(Hexpm.PubSub, "ratelimit", {:throttle, {:user, -1}, time})
-      Process.sleep(100)
       :sys.get_state(RateLimitPubSub)
 
-      conn = request_user(user)
-      assert conn.status == 200
-      assert get_resp_header(conn, "x-ratelimit-limit") == ["500"]
-      assert get_resp_header(conn, "x-ratelimit-remaining") == ["498"]
+      assert {:allow, {:throttle, data}} = Attack.user_throttle(user.id, time: time)
+      assert data[:limit] == 500
+      assert data[:remaining] == 498
     end
 
     test "broadcasts ip rate limits" do
@@ -57,13 +55,11 @@ defmodule HexpmWeb.Plugs.AttackTest do
       time = System.system_time(:millisecond)
       Phoenix.PubSub.broadcast!(Hexpm.PubSub, "ratelimit", {:throttle, {:ip, {3, 3, 3, 3}}, time})
       Phoenix.PubSub.broadcast!(Hexpm.PubSub, "ratelimit", {:throttle, {:ip, {4, 4, 4, 4}}, time})
-      Process.sleep(100)
       :sys.get_state(RateLimitPubSub)
 
-      conn = request_ip({3, 3, 3, 3})
-      assert conn.status == 200
-      assert get_resp_header(conn, "x-ratelimit-limit") == ["100"]
-      assert get_resp_header(conn, "x-ratelimit-remaining") == ["98"]
+      assert {:allow, {:throttle, data}} = Attack.ip_throttle({3, 3, 3, 3}, time: time)
+      assert data[:limit] == 100
+      assert data[:remaining] == 98
     end
 
     test "halts requests when ip limit is exceeded" do

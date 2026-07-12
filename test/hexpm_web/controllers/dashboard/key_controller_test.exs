@@ -99,6 +99,9 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
 
   describe "POST /dashboard/keys with expiry" do
     test "create key with expires_in sets revoke_at", c do
+      earliest_revoke_at =
+        DateTime.utc_now() |> DateTime.add(30, :day) |> DateTime.truncate(:second)
+
       conn =
         build_conn()
         |> test_login(c.user)
@@ -109,9 +112,11 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
       key = Hexpm.Repo.one!(Hexpm.Accounts.Key.get(c.user, "temp-key"))
       assert key.revoke_at != nil
 
-      # revoke_at should be approximately 30 days from now
-      diff = DateTime.diff(key.revoke_at, DateTime.utc_now(), :day)
-      assert diff >= 29 and diff <= 30
+      latest_revoke_at =
+        DateTime.utc_now() |> DateTime.add(30, :day) |> DateTime.truncate(:second)
+
+      assert DateTime.compare(key.revoke_at, earliest_revoke_at) in [:eq, :gt]
+      assert DateTime.compare(key.revoke_at, latest_revoke_at) in [:eq, :lt]
     end
 
     test "create key with expires_in none leaves revoke_at nil", c do

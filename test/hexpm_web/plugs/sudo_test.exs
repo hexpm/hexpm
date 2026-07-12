@@ -1,5 +1,5 @@
 defmodule HexpmWeb.Plugs.SudoTest do
-  use HexpmWeb.ConnCase, async: true
+  use HexpmWeb.ConnCase, async: false
 
   alias HexpmWeb.Plugs.Sudo
 

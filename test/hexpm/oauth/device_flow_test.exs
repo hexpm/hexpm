@@ -29,17 +29,19 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
     test "creates device code with default parameters" do
       client = create_test_client()
       conn = create_mock_conn()
+      earliest_expires_at = DateTime.add(DateTime.utc_now(), 600, :second)
 
       assert {:ok, response} =
                DeviceCodes.initiate_device_authorization(conn, client.client_id, ["api"])
+
+      latest_expires_at = DateTime.add(DateTime.utc_now(), 600, :second)
 
       assert response.device_code
       assert response.user_code
       assert response.verification_uri
       assert response.verification_uri_complete
 
-      expires_in = DateTime.diff(response.expires_at, DateTime.utc_now())
-      assert expires_in >= 595 && expires_in <= 600
+      assert_datetime_between(response.expires_at, earliest_expires_at, latest_expires_at)
       assert response.interval == 5
 
       assert response.client_id == client.client_id

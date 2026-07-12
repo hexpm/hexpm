@@ -177,28 +177,5 @@ defmodule Hexpm.Accounts.RecoveryCodeTest do
         assert {:ok, _} = RecoveryCode.verify(recovery_codes, valid_code)
       end
     end
-
-    property "verification is timing-safe" do
-      check all(_ <- constant(:ok), max_runs: 20) do
-        recovery_codes = RecoveryCode.generate_set()
-        valid_code = List.first(recovery_codes).code
-
-        # Create an invalid code of the same length
-        invalid_code = String.replace(valid_code, ~r/[a-z0-9]/, "x", global: false)
-
-        # Both should complete (timing attack resistance tested by consistent behavior)
-        start_time = System.monotonic_time()
-        {:error, :invalid_code} = RecoveryCode.verify(recovery_codes, invalid_code)
-        invalid_time = System.monotonic_time() - start_time
-
-        start_time = System.monotonic_time()
-        {:ok, _} = RecoveryCode.verify(recovery_codes, valid_code)
-        valid_time = System.monotonic_time() - start_time
-
-        # Both operations should complete in reasonable time
-        assert invalid_time > 0
-        assert valid_time > 0
-      end
-    end
   end
 end

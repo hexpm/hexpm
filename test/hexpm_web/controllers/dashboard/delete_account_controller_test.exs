@@ -215,10 +215,15 @@ defmodule HexpmWeb.Dashboard.DeleteAccountControllerTest do
       other_owner = insert(:user)
       org_admin = insert(:user)
 
-      sole_package = insert(:package, package_owners: [build(:package_owner, user: user)])
+      sole_package =
+        insert(:package,
+          name: "sole-owned-delete-account-package",
+          package_owners: [build(:package_owner, user: user)]
+        )
 
       co_package =
         insert(:package,
+          name: "co-owned-delete-account-package",
           package_owners: [
             build(:package_owner, user: user),
             build(:package_owner, user: other_owner, level: "full")
