@@ -37,3 +37,16 @@ config :phoenix, :serve_endpoints, true
 config :logger, level: :info
 
 config :logger, :default_formatter, metadata: [:request_id]
+
+config :hexpm, Oban,
+  peer: Oban.Peers.Database,
+  plugins: [
+    {Oban.Plugins.Cron,
+     crontab: [
+       {"* * * * *", Hexpm.Billing.Report},
+       {"*/30 * * * *", Hexpm.Security.Updater}
+     ],
+     timezone: "Etc/UTC"},
+    {Oban.Plugins.Pruner, max_age: 7 * 24 * 60 * 60},
+    Oban.Plugins.Lifeline
+  ]

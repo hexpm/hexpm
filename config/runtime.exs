@@ -1,62 +1,23 @@
 import Config
 
-config :hexpm,
-  advisory_updater_enabled: System.get_env("HEXPM_ADVISORY_UPDATER") == "1"
-
 if config_env() == :prod do
+  mode =
+    case System.get_env("HEXPM_MODE") do
+      value when value in [nil, "", "web"] -> :web
+      "worker" -> :worker
+      value -> raise "invalid HEXPM_MODE #{inspect(value)}; expected \"web\" or \"worker\""
+    end
+
   config :hexpm,
-    host: System.fetch_env!("HEXPM_HOST"),
-    secret: System.fetch_env!("HEXPM_SECRET"),
     private_key: System.fetch_env!("HEXPM_SIGNING_KEY"),
     repo_bucket: System.fetch_env!("HEXPM_REPO_BUCKET"),
     logs_bucket: System.fetch_env!("HEXPM_LOGS_BUCKET"),
     docs_bucket: System.fetch_env!("HEXPM_DOCS_BUCKET"),
-    docs_url: System.fetch_env!("HEXPM_DOCS_URL"),
-    private_docs_url: System.fetch_env!("HEXPM_PRIVATE_DOCS_URL"),
-    diff_url: System.fetch_env!("HEXPM_DIFF_URL"),
-    preview_url: System.fetch_env!("HEXPM_PREVIEW_URL"),
     cdn_url: System.fetch_env!("HEXPM_CDN_URL"),
-    email_host: System.fetch_env!("HEXPM_EMAIL_HOST"),
     fastly_key: System.fetch_env!("HEXPM_FASTLY_KEY"),
     fastly_hexrepo: System.fetch_env!("HEXPM_FASTLY_HEXREPO"),
     billing_key: System.fetch_env!("HEXPM_BILLING_KEY"),
-    billing_url: System.fetch_env!("HEXPM_BILLING_URL"),
-    levenshtein_threshold: System.fetch_env!("HEXPM_LEVENSHTEIN_THRESHOLD"),
-    dashboard_user: System.fetch_env!("HEXPM_DASHBOARD_USER"),
-    dashboard_password: System.fetch_env!("HEXPM_DASHBOARD_PASSWORD"),
-    jwt_signing_key: System.fetch_env!("HEXPM_JWT_SIGNING_KEY"),
-    img_url: System.fetch_env!("HEXPM_IMG_URL"),
-    img_proxy_secret: System.fetch_env!("HEXPM_IMG_PROXY_SECRET"),
-    readme_host: System.fetch_env!("HEXPM_README_HOST"),
-    readme_url: System.fetch_env!("HEXPM_README_URL")
-
-  config :hexpm, Hexpm.Emails.Mailer, api_key: System.fetch_env!("HEXPM_SENDGRID_API_KEY")
-
-  config :hexpm, :hcaptcha,
-    sitekey: System.fetch_env!("HEXPM_HCAPTCHA_SITEKEY"),
-    secret: System.fetch_env!("HEXPM_HCAPTCHA_SECRET")
-
-  hexpm_port =
-    case System.get_env("HEXPM_PORT") do
-      port when port not in [nil, ""] -> String.to_integer(port)
-      _ -> nil
-    end
-
-  endpoint_config = [
-    url: [host: System.fetch_env!("HEXPM_HOST")],
-    secret_key_base: System.fetch_env!("HEXPM_SECRET_KEY_BASE"),
-    live_view: [signing_salt: System.fetch_env!("HEXPM_LIVE_VIEW_SIGNING_SALT")],
-    check_origin: ["//#{System.fetch_env!("HEXPM_HOST")}"]
-  ]
-
-  endpoint_config =
-    if hexpm_port do
-      [{:http, [port: hexpm_port]} | endpoint_config]
-    else
-      [{:server, false} | endpoint_config]
-    end
-
-  config :hexpm, HexpmWeb.Endpoint, endpoint_config
+    billing_url: System.fetch_env!("HEXPM_BILLING_URL")
 
   config :ex_aws,
     access_key_id: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_ID"),
@@ -66,11 +27,58 @@ if config_env() == :prod do
     dsn: System.fetch_env!("HEXPM_SENTRY_DSN"),
     environment_name: System.fetch_env!("HEXPM_ENV")
 
-  config :kernel,
-    inet_dist_listen_min: String.to_integer(System.fetch_env!("BEAM_PORT")),
-    inet_dist_listen_max: String.to_integer(System.fetch_env!("BEAM_PORT"))
+  if mode == :web do
+    config :hexpm,
+      host: System.fetch_env!("HEXPM_HOST"),
+      secret: System.fetch_env!("HEXPM_SECRET"),
+      docs_url: System.fetch_env!("HEXPM_DOCS_URL"),
+      private_docs_url: System.fetch_env!("HEXPM_PRIVATE_DOCS_URL"),
+      diff_url: System.fetch_env!("HEXPM_DIFF_URL"),
+      preview_url: System.fetch_env!("HEXPM_PREVIEW_URL"),
+      email_host: System.fetch_env!("HEXPM_EMAIL_HOST"),
+      levenshtein_threshold: System.fetch_env!("HEXPM_LEVENSHTEIN_THRESHOLD"),
+      dashboard_user: System.fetch_env!("HEXPM_DASHBOARD_USER"),
+      dashboard_password: System.fetch_env!("HEXPM_DASHBOARD_PASSWORD"),
+      jwt_signing_key: System.fetch_env!("HEXPM_JWT_SIGNING_KEY"),
+      img_url: System.fetch_env!("HEXPM_IMG_URL"),
+      img_proxy_secret: System.fetch_env!("HEXPM_IMG_PROXY_SECRET"),
+      readme_host: System.fetch_env!("HEXPM_README_HOST"),
+      readme_url: System.fetch_env!("HEXPM_README_URL")
 
-  config :ueberauth, Ueberauth.Strategy.Github.OAuth,
-    client_id: System.fetch_env!("HEXPM_GITHUB_CLIENT_ID"),
-    client_secret: System.fetch_env!("HEXPM_GITHUB_CLIENT_SECRET")
+    config :hexpm, Hexpm.Emails.Mailer, api_key: System.fetch_env!("HEXPM_SENDGRID_API_KEY")
+
+    config :hexpm, :hcaptcha,
+      sitekey: System.fetch_env!("HEXPM_HCAPTCHA_SITEKEY"),
+      secret: System.fetch_env!("HEXPM_HCAPTCHA_SECRET")
+
+    hexpm_port =
+      case System.get_env("HEXPM_PORT") do
+        port when port not in [nil, ""] -> String.to_integer(port)
+        _ -> nil
+      end
+
+    endpoint_config = [
+      url: [host: System.fetch_env!("HEXPM_HOST")],
+      secret_key_base: System.fetch_env!("HEXPM_SECRET_KEY_BASE"),
+      live_view: [signing_salt: System.fetch_env!("HEXPM_LIVE_VIEW_SIGNING_SALT")],
+      check_origin: ["//#{System.fetch_env!("HEXPM_HOST")}"]
+    ]
+
+    endpoint_config =
+      if hexpm_port do
+        [{:http, [port: hexpm_port]} | endpoint_config]
+      else
+        [{:server, false} | endpoint_config]
+      end
+
+    config :hexpm, HexpmWeb.Endpoint, endpoint_config
+
+    config :kernel,
+      inet_dist_listen_min: String.to_integer(System.fetch_env!("BEAM_PORT")),
+      inet_dist_listen_max: String.to_integer(System.fetch_env!("BEAM_PORT"))
+
+    config :ueberauth, Ueberauth.Strategy.Github.OAuth,
+      client_id: System.fetch_env!("HEXPM_GITHUB_CLIENT_ID"),
+      client_secret: System.fetch_env!("HEXPM_GITHUB_CLIENT_SECRET")
+  end
 end

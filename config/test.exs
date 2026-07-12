@@ -43,6 +43,8 @@ config :hexpm, HexpmWeb.Endpoint,
 config :hexpm, Hexpm.Emails.Mailer, adapter: Swoosh.Adapters.Test
 config :swoosh, :api_client, false
 
+config :hexpm, Oban, testing: :manual, queues: false, plugins: false
+
 config :hexpm, Hexpm.RepoBase,
   username: "postgres",
   password: "postgres",

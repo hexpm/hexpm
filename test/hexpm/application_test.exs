@@ -1,6 +1,8 @@
 defmodule Hexpm.ApplicationTest do
   use ExUnit.Case, async: true
 
+  alias Hexpm.Application
+
   describe "sentry_before_send/1" do
     test "drops websocket frame deserialization crash reports" do
       event =
@@ -36,5 +38,71 @@ defmodule Hexpm.ApplicationTest do
 
       assert Hexpm.Application.sentry_before_send(event) == nil
     end
+  end
+
+  describe "mode supervision" do
+    test "web and worker select distinct role children and all is their union" do
+      web_ids = child_ids(Application.children(:web))
+      worker_ids = child_ids(Application.children(:worker))
+      all_ids = child_ids(Application.children(:all))
+
+      assert HexpmWeb.Endpoint in web_ids
+      assert Oban not in web_ids
+      assert Oban in worker_ids
+      refute HexpmWeb.Endpoint in worker_ids
+      assert MapSet.union(web_ids, worker_ids) == all_ids
+    end
+
+    test "production defaults to web and validates explicit modes" do
+      assert Application.mode(:prod, nil) == :web
+      assert Application.mode(:prod, "web") == :web
+      assert Application.mode(:prod, "worker") == :worker
+
+      assert_raise ArgumentError, ~r/invalid HEXPM_MODE/, fn ->
+        Application.mode(:prod, "invalid")
+      end
+    end
+
+    test "development and test always run all children" do
+      assert Application.mode(:dev, "worker") == :all
+      assert Application.mode(:test, "web") == :all
+    end
+
+    test "worker runtime configuration does not require web settings" do
+      elixir = System.find_executable("elixir")
+      erl = System.find_executable("erl")
+      path = [Path.dirname(elixir), Path.dirname(erl), "/usr/bin", "/bin"] |> Enum.uniq()
+
+      env = [
+        "PATH=#{Enum.join(path, ":")}",
+        "HEXPM_MODE=worker",
+        "HEXPM_SIGNING_KEY=key",
+        "HEXPM_REPO_BUCKET=repo",
+        "HEXPM_LOGS_BUCKET=logs",
+        "HEXPM_DOCS_BUCKET=docs",
+        "HEXPM_CDN_URL=cdn",
+        "HEXPM_FASTLY_KEY=fastly-key",
+        "HEXPM_FASTLY_HEXREPO=fastly-service",
+        "HEXPM_BILLING_KEY=billing-key",
+        "HEXPM_BILLING_URL=billing-url",
+        "HEXPM_AWS_ACCESS_KEY_ID=aws-key",
+        "HEXPM_AWS_ACCESS_KEY_SECRET=aws-secret",
+        "HEXPM_SENTRY_DSN=sentry-dsn",
+        "HEXPM_ENV=prod"
+      ]
+
+      expression =
+        ~S|Config.Reader.read!("config/runtime.exs", env: :prod); IO.write("configured")|
+
+      assert {"configured", 0} =
+               System.cmd(
+                 System.find_executable("env"),
+                 ["-i" | env] ++ [elixir, "-e", expression]
+               )
+    end
+  end
+
+  defp child_ids(children) do
+    MapSet.new(children, fn child -> Supervisor.child_spec(child, []).id end)
   end
 end

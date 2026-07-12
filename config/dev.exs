@@ -71,6 +71,8 @@ config :hexpm, Hexpm.RepoBase,
 
 config :hexpm, Hexpm.Emails.Mailer, adapter: Swoosh.Adapters.Local
 
+config :hexpm, Oban, plugins: []
+
 config :ueberauth, Ueberauth.Strategy.Github.OAuth,
   client_id: System.get_env("HEXPM_GITHUB_CLIENT_ID"),
   client_secret: System.get_env("HEXPM_GITHUB_CLIENT_SECRET")

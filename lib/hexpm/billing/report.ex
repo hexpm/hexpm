@@ -1,64 +1,35 @@
 defmodule Hexpm.Billing.Report do
-  use GenServer
+  use Oban.Worker,
+    queue: :periodic,
+    max_attempts: 5,
+    unique: [
+      period: :infinity,
+      states: :incomplete
+    ]
+
   import Ecto.Query, only: [from: 2]
   alias Hexpm.Repo
   alias Hexpm.Accounts.Organization
 
-  @report_timeout 20_000
+  @impl Oban.Worker
+  def timeout(_job), do: 20_000
 
-  def start_link(opts \\ []) do
-    GenServer.start_link(__MODULE__, opts, opts)
-  end
-
-  def init(opts) do
-    Process.send_after(self(), :update, opts[:interval])
-    {:ok, opts}
-  end
-
-  def handle_info(:update, opts) do
+  @impl Oban.Worker
+  def perform(%Oban.Job{args: %{}}) do
     if Application.fetch_env!(:hexpm, :billing_report) and Repo.write_mode?() do
-      report_data = report_request()
-      {report_tokens, report_map} = parse_report(report_data)
-      organizations = organizations()
-
-      updates = to_update(organizations, report_tokens, report_map)
+      report_data = Hexpm.Billing.report()
+      report_map = Map.new(report_data, &{&1["token"], &1["quantity"]})
+      report_tokens = MapSet.new(report_map, fn {token, _quantity} -> token end)
+      updates = to_update(organizations(), report_tokens, report_map)
 
       {set_active, set_inactive} =
         Enum.split_with(updates, fn {_name, active?, _old_seats, _new_seats} -> active? end)
 
       do_update(set_active, true)
       do_update(set_inactive, false)
+    else
+      :ok
     end
-
-    Process.send_after(self(), :update, opts[:interval])
-    {:noreply, opts}
-  end
-
-  defp parse_report(report_data) do
-    # Support both old format (list of strings) and new format (list of maps)
-    # Old format: ["org1", "org2"]
-    # New format: [%{"token" => "org1", "quantity" => 5}, ...]
-
-    case report_data do
-      [first | _] when is_binary(first) ->
-        # Old format: list of strings
-        {MapSet.new(report_data), %{}}
-
-      [first | _] when is_map(first) ->
-        # New format: list of maps with token and quantity
-        report_tokens = MapSet.new(report_data, & &1["token"])
-        report_map = Map.new(report_data, &{&1["token"], &1["quantity"]})
-        {report_tokens, report_map}
-
-      [] ->
-        # Empty report
-        {MapSet.new(), %{}}
-    end
-  end
-
-  defp report_request() do
-    Task.async(fn -> Hexpm.Billing.report() end)
-    |> Task.await(@report_timeout)
   end
 
   defp organizations() do
@@ -103,10 +74,8 @@ defmodule Hexpm.Billing.Report do
       from(r in Organization, where: r.name in ^names)
       |> Repo.update_all(set: [billing_active: boolean, billing_seats: new_billing_seats])
 
-      # Revoke excess sessions for organizations with reduced seats
       if new_billing_seats do
         Enum.each(updates, fn {name, _active?, old_seats, new_seats} ->
-          # Only revoke if seats were reduced (and both values are present)
           if is_integer(old_seats) and is_integer(new_seats) and new_seats < old_seats do
             organization = Hexpm.Accounts.Organizations.get(name)
 

@@ -1,37 +1,17 @@
 defmodule Hexpm.Application do
   use Application
 
+  @environment Mix.env()
+
   def start(_type, _args) do
     :logger.add_handler(:sentry_handler, Sentry.LoggerHandler, %{})
 
-    topologies = cluster_topologies()
     read_only_mode()
-    Hexpm.BlockAddress.start()
     setup_tmp_dir()
 
-    children =
-      [
-        Hexpm.RepoBase,
-        {Finch, name: Hexpm.Finch},
-        Hexpm.TmpDir,
-        {Task.Supervisor, name: Hexpm.Tasks},
-        {Cluster.Supervisor, [topologies, [name: Hexpm.ClusterSupervisor]]},
-        {Phoenix.PubSub, name: Hexpm.PubSub, adapter: Phoenix.PubSub.PG2},
-        HexpmWeb.RateLimitPubSub,
-        {PlugAttack.Storage.Ets, name: HexpmWeb.Plugs.Attack.Storage, clean_period: 60_000},
-        {Hexpm.Billing.Report, name: Hexpm.Billing.Report, interval: 60_000},
-        {Hexpm.Cache,
-         name: Hexpm.Cache,
-         interval: 3_600_000,
-         enabled: Application.fetch_env!(:hexpm, :cache_enabled)},
-        goth_spec(),
-        setup(),
-        load_caches(),
-        HexpmWeb.Telemetry,
-        HexpmWeb.Endpoint,
-        advisory_updater()
-      ]
-      |> Enum.reject(&is_nil/1)
+    mode = mode()
+    if web_mode?(mode), do: Hexpm.BlockAddress.start()
+    children = children(mode)
 
     shutdown_on_eof()
 
@@ -40,9 +20,32 @@ defmodule Hexpm.Application do
   end
 
   def config_change(changed, _new, removed) do
-    HexpmWeb.Endpoint.config_change(changed, removed)
+    if Process.whereis(HexpmWeb.Endpoint) do
+      HexpmWeb.Endpoint.config_change(changed, removed)
+    end
+
     :ok
   end
+
+  def mode(value \\ System.get_env("HEXPM_MODE")), do: mode(@environment, value)
+
+  def mode(:prod, value) when value in [nil, "", "web"], do: :web
+  def mode(:prod, "worker"), do: :worker
+
+  def mode(:prod, value) do
+    raise ArgumentError,
+          "invalid HEXPM_MODE #{inspect(value)}; expected \"web\" or \"worker\""
+  end
+
+  def mode(environment, _value) when environment in [:dev, :test, :hex], do: :all
+
+  def children(mode) when mode in [:web, :worker, :all] do
+    common_children() ++
+      if(mode in [:web, :all], do: web_children(), else: []) ++
+      if(mode in [:worker, :all], do: worker_children(), else: [])
+  end
+
+  defp web_mode?(mode), do: mode in [:web, :all]
 
   def sentry_before_send(%Sentry.Event{original_exception: exception} = event) do
     cond do
@@ -118,6 +121,36 @@ defmodule Hexpm.Application do
     end
   end
 
+  defp common_children do
+    [
+      Hexpm.RepoBase,
+      {Finch, name: Hexpm.Finch},
+      Hexpm.TmpDir,
+      {Task.Supervisor, name: Hexpm.Tasks},
+      goth_spec(),
+      setup(),
+      HexpmWeb.Telemetry
+    ]
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp web_children do
+    [
+      {Cluster.Supervisor, [cluster_topologies(), [name: Hexpm.ClusterSupervisor]]},
+      {Phoenix.PubSub, name: Hexpm.PubSub, adapter: Phoenix.PubSub.PG2},
+      HexpmWeb.RateLimitPubSub,
+      {PlugAttack.Storage.Ets, name: HexpmWeb.Plugs.Attack.Storage, clean_period: 60_000},
+      {Hexpm.Cache,
+       name: Hexpm.Cache,
+       interval: 3_600_000,
+       enabled: Application.fetch_env!(:hexpm, :cache_enabled)},
+      load_caches(),
+      HexpmWeb.Endpoint
+    ]
+  end
+
+  defp worker_children, do: [{Oban, Application.fetch_env!(:hexpm, Oban)}]
+
   if Mix.env() == :prod do
     defp goth_spec() do
       credentials =
@@ -130,11 +163,5 @@ defmodule Hexpm.Application do
     end
   else
     defp goth_spec, do: nil
-  end
-
-  defp advisory_updater do
-    if Application.get_env(:hexpm, :advisory_updater_enabled, false) do
-      Hexpm.Security.Updater
-    end
   end
 end
