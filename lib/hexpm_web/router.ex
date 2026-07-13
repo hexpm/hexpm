@@ -364,7 +364,6 @@ defmodule HexpmWeb.Router do
     get "/users/:name", UserController, :show
     # NOTE: Deprecated (2018-05-21)
     get "/users/:name/test", UserController, :test
-    post "/users/:name/reset", UserController, :reset
 
     get "/orgs", OrganizationController, :index
     get "/orgs/:organization", OrganizationController, :show
