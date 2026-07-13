@@ -18,6 +18,15 @@ defmodule Hexpm.Store.S3 do
     end
   end
 
+  def get_to_file(bucket, key, destination, _opts) do
+    S3.download_file(bucket(bucket), key, destination)
+    |> ExAws.request(region: region(bucket))
+    |> case do
+      {:ok, _result} -> :ok
+      {:error, {:http_error, 404, _}} -> nil
+    end
+  end
+
   def put(bucket, key, blob, opts) do
     S3.put_object(bucket(bucket), key, blob, opts)
     |> ExAws.request!(region: region(bucket))

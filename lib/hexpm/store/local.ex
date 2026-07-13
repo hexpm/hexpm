@@ -27,6 +27,15 @@ defmodule Hexpm.Store.Local do
     end
   end
 
+  def get_to_file(bucket, key, destination, _opts) do
+    path = safe_path!(bucket, key)
+
+    if File.regular?(path) do
+      File.cp!(path, destination)
+      :ok
+    end
+  end
+
   def put(bucket, key, blob, _opts) do
     path = safe_path!(bucket, key)
     File.mkdir_p!(Path.dirname(path))

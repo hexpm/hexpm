@@ -49,7 +49,10 @@ defmodule Hexpm.ApplicationTest do
       assert HexpmWeb.Endpoint in web_ids
       assert Oban not in web_ids
       assert Oban in worker_ids
+      assert Hexpm.Hexdocs.Queue in worker_ids
+      assert Hexpm.Hexdocs.Debouncer in worker_ids
       refute HexpmWeb.Endpoint in worker_ids
+      refute Hexpm.Hexdocs.Queue in web_ids
       assert MapSet.union(web_ids, worker_ids) == all_ids
     end
 
@@ -88,7 +91,19 @@ defmodule Hexpm.ApplicationTest do
         "HEXPM_AWS_ACCESS_KEY_ID=aws-key",
         "HEXPM_AWS_ACCESS_KEY_SECRET=aws-secret",
         "HEXPM_SENTRY_DSN=sentry-dsn",
-        "HEXPM_ENV=prod"
+        "HEXPM_ENV=prod",
+        "HEXDOCS_DOCS_PRIVATE_BUCKET=private-docs",
+        "HEXDOCS_QUEUE_ID=queue",
+        "HEXDOCS_TYPESENSE_URL=https://typesense.example",
+        "HEXDOCS_TYPESENSE_API_KEY=typesense-key",
+        "HEXDOCS_TYPESENSE_COLLECTION=hexdocs",
+        "HEXDOCS_GITHUB_USER=hexpm",
+        "HEXDOCS_GITHUB_TOKEN=github-token",
+        "HEXDOCS_HOST=hexdocs.pm",
+        "HEXDOCS_PRIVATE_HOST=hexorgs.pm",
+        "HEXDOCS_FASTLY_KEY=docs-fastly-key",
+        "HEXDOCS_FASTLY_HEXDOCS=public-docs-service",
+        "HEXDOCS_FASTLY_HEXDOCS_PRIVATE=private-docs-service"
       ]
 
       expression =

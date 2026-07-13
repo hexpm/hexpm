@@ -62,6 +62,20 @@ defmodule Hexpm.Store.LocalTest do
     end
   end
 
+  describe "get_to_file/4" do
+    @tag :tmp_dir
+    test "copies found files and returns nil for missing files", %{tmp_dir: tmp_dir} do
+      bucket_dir = Path.join([tmp_dir, "store", "bucket"])
+      File.mkdir_p!(bucket_dir)
+      File.write!(Path.join(bucket_dir, "source.txt"), "content")
+      destination = Path.join(tmp_dir, "destination.txt")
+
+      assert :ok = Local.get_to_file("bucket", "source.txt", destination, [])
+      assert File.read!(destination) == "content"
+      assert Local.get_to_file("bucket", "missing.txt", destination, []) == nil
+    end
+  end
+
   describe "delete/2" do
     @tag :tmp_dir
     test "works for valid paths", %{tmp_dir: tmp_dir} do

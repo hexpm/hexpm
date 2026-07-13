@@ -20,17 +20,22 @@ defmodule Hexpm.Store do
     impl.list(bucket, prefix)
   end
 
-  def get(bucket, key, opts) do
+  def get(bucket, key, opts \\ []) do
     {impl, bucket} = impl_bucket(bucket)
     impl.get(bucket, key, opts)
   end
 
-  def put(bucket, key, body, opts) do
+  def get_to_file(bucket, key, destination, opts \\ []) do
+    {impl, bucket} = impl_bucket(bucket)
+    impl.get_to_file(bucket, key, destination, opts)
+  end
+
+  def put(bucket, key, body, opts \\ []) do
     {impl, bucket} = impl_bucket(bucket)
     impl.put(bucket, key, body, opts)
   end
 
-  def put_file(bucket, key, path, opts) do
+  def put_file(bucket, key, path, opts \\ []) do
     {impl, bucket} = impl_bucket(bucket)
     impl.put_file(bucket, key, path, opts)
   end

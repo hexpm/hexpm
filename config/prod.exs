@@ -3,6 +3,9 @@ import Config
 config :hexpm,
   billing_impl: Hexpm.Billing.Hexpm,
   cdn_impl: Hexpm.CDN.Fastly,
+  hexdocs_search_impl: Hexpm.Hexdocs.Search.Typesense,
+  hexdocs_queue_producer: BroadwaySQS.Producer,
+  hexdocs_gcs_put_debounce: 3000,
   pwned_impl: Hexpm.Pwned.HaveIBeenPwned,
   tmp_dir: "tmp"
 
@@ -40,6 +43,7 @@ config :logger, :default_formatter, metadata: [:request_id]
 
 config :hexpm, Oban,
   peer: Oban.Peers.Database,
+  queues: [periodic: 2, heavy: 3],
   plugins: [
     {Oban.Plugins.Cron,
      crontab: [
@@ -48,5 +52,5 @@ config :hexpm, Oban,
      ],
      timezone: "Etc/UTC"},
     {Oban.Plugins.Pruner, max_age: 7 * 24 * 60 * 60},
-    Oban.Plugins.Lifeline
+    {Oban.Plugins.Lifeline, interval: 60_000, rescue_after: 360_000}
   ]

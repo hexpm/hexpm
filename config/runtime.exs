@@ -13,9 +13,8 @@ if config_env() == :prod do
     repo_bucket: System.fetch_env!("HEXPM_REPO_BUCKET"),
     logs_bucket: System.fetch_env!("HEXPM_LOGS_BUCKET"),
     docs_bucket: System.fetch_env!("HEXPM_DOCS_BUCKET"),
+    docs_public_bucket: System.fetch_env!("HEXPM_DOCS_BUCKET"),
     cdn_url: System.fetch_env!("HEXPM_CDN_URL"),
-    fastly_key: System.fetch_env!("HEXPM_FASTLY_KEY"),
-    fastly_hexrepo: System.fetch_env!("HEXPM_FASTLY_HEXREPO"),
     billing_key: System.fetch_env!("HEXPM_BILLING_KEY"),
     billing_url: System.fetch_env!("HEXPM_BILLING_URL")
 
@@ -43,7 +42,9 @@ if config_env() == :prod do
       img_url: System.fetch_env!("HEXPM_IMG_URL"),
       img_proxy_secret: System.fetch_env!("HEXPM_IMG_PROXY_SECRET"),
       readme_host: System.fetch_env!("HEXPM_README_HOST"),
-      readme_url: System.fetch_env!("HEXPM_README_URL")
+      readme_url: System.fetch_env!("HEXPM_README_URL"),
+      fastly_key: System.fetch_env!("HEXPM_FASTLY_KEY"),
+      fastly_hexrepo: System.fetch_env!("HEXPM_FASTLY_HEXREPO")
 
     config :hexpm, Hexpm.Emails.Mailer, api_key: System.fetch_env!("HEXPM_SENDGRID_API_KEY")
 
@@ -80,5 +81,25 @@ if config_env() == :prod do
     config :ueberauth, Ueberauth.Strategy.Github.OAuth,
       client_id: System.fetch_env!("HEXPM_GITHUB_CLIENT_ID"),
       client_secret: System.fetch_env!("HEXPM_GITHUB_CLIENT_SECRET")
+  end
+
+  if mode == :worker do
+    heavy_concurrency = if System.fetch_env!("HEXPM_ENV") == "staging", do: 1, else: 3
+
+    config :hexpm, Oban, queues: [periodic: 2, heavy: heavy_concurrency]
+
+    config :hexpm,
+      docs_private_bucket: "gcs," <> System.fetch_env!("HEXDOCS_DOCS_PRIVATE_BUCKET"),
+      hexdocs_queue_id: System.fetch_env!("HEXDOCS_QUEUE_ID"),
+      hexdocs_typesense_url: System.fetch_env!("HEXDOCS_TYPESENSE_URL"),
+      hexdocs_typesense_api_key: System.fetch_env!("HEXDOCS_TYPESENSE_API_KEY"),
+      hexdocs_typesense_collection: System.fetch_env!("HEXDOCS_TYPESENSE_COLLECTION"),
+      hexdocs_github_user: System.fetch_env!("HEXDOCS_GITHUB_USER"),
+      hexdocs_github_token: System.fetch_env!("HEXDOCS_GITHUB_TOKEN"),
+      hexdocs_host: System.fetch_env!("HEXDOCS_HOST"),
+      hexdocs_private_host: System.fetch_env!("HEXDOCS_PRIVATE_HOST"),
+      fastly_docs_key: System.fetch_env!("HEXDOCS_FASTLY_KEY"),
+      fastly_hexdocs: System.fetch_env!("HEXDOCS_FASTLY_HEXDOCS"),
+      fastly_hexdocs_private: System.fetch_env!("HEXDOCS_FASTLY_HEXDOCS_PRIVATE")
   end
 end
