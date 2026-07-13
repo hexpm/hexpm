@@ -39,5 +39,28 @@ defmodule HexpmWeb.TFARecoveryControllerTest do
 
       assert redirected_to(conn) == "/"
     end
+
+    test "with valid code and non-path return falls back to user profile", c do
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> put_session("tfa_user_id", %{
+          "uid" => c.user.id,
+          "return" => "https://example.com"
+        })
+        |> post("/tfa/recovery", %{"code" => "1234-1234-1234-1234"})
+
+      assert redirected_to(conn) == "/users/#{c.user.username}"
+    end
+
+    test "with valid code and protocol-relative return falls back to user profile", c do
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> put_session("tfa_user_id", %{"uid" => c.user.id, "return" => "//example.com"})
+        |> post("/tfa/recovery", %{"code" => "1234-1234-1234-1234"})
+
+      assert redirected_to(conn) == "/users/#{c.user.username}"
+    end
   end
 end
