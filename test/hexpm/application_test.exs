@@ -92,18 +92,18 @@ defmodule Hexpm.ApplicationTest do
         "HEXPM_AWS_ACCESS_KEY_SECRET=aws-secret",
         "HEXPM_SENTRY_DSN=sentry-dsn",
         "HEXPM_ENV=prod",
-        "HEXDOCS_DOCS_PRIVATE_BUCKET=private-docs",
-        "HEXDOCS_QUEUE_ID=queue",
-        "HEXDOCS_TYPESENSE_URL=https://typesense.example",
-        "HEXDOCS_TYPESENSE_API_KEY=typesense-key",
-        "HEXDOCS_TYPESENSE_COLLECTION=hexdocs",
-        "HEXDOCS_GITHUB_USER=hexpm",
-        "HEXDOCS_GITHUB_TOKEN=github-token",
-        "HEXDOCS_HOST=hexdocs.pm",
-        "HEXDOCS_PRIVATE_HOST=hexorgs.pm",
-        "HEXDOCS_FASTLY_KEY=docs-fastly-key",
-        "HEXDOCS_FASTLY_HEXDOCS=public-docs-service",
-        "HEXDOCS_FASTLY_HEXDOCS_PRIVATE=private-docs-service"
+        "HEXPM_DOCS_PRIVATE_BUCKET=private-docs",
+        "HEXPM_DOCS_QUEUE_ID=queue",
+        "HEXPM_DOCS_TYPESENSE_URL=https://typesense.example",
+        "HEXPM_DOCS_TYPESENSE_API_KEY=typesense-key",
+        "HEXPM_DOCS_TYPESENSE_COLLECTION=hexdocs",
+        "HEXPM_DOCS_GITHUB_USER=hexpm",
+        "HEXPM_DOCS_GITHUB_TOKEN=github-token",
+        "HEXPM_DOCS_HOST=hexdocs.pm",
+        "HEXPM_PRIVATE_DOCS_HOST=hexorgs.pm",
+        "HEXPM_FASTLY_DOCS_KEY=docs-fastly-key",
+        "HEXPM_FASTLY_DOCS=public-docs-service",
+        "HEXPM_FASTLY_PRIVATE_DOCS=private-docs-service"
       ]
 
       expression =

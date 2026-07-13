@@ -89,17 +89,17 @@ if config_env() == :prod do
     config :hexpm, Oban, queues: [periodic: 2, heavy: heavy_concurrency]
 
     config :hexpm,
-      docs_private_bucket: "gcs," <> System.fetch_env!("HEXDOCS_DOCS_PRIVATE_BUCKET"),
-      hexdocs_queue_id: System.fetch_env!("HEXDOCS_QUEUE_ID"),
-      hexdocs_typesense_url: System.fetch_env!("HEXDOCS_TYPESENSE_URL"),
-      hexdocs_typesense_api_key: System.fetch_env!("HEXDOCS_TYPESENSE_API_KEY"),
-      hexdocs_typesense_collection: System.fetch_env!("HEXDOCS_TYPESENSE_COLLECTION"),
-      hexdocs_github_user: System.fetch_env!("HEXDOCS_GITHUB_USER"),
-      hexdocs_github_token: System.fetch_env!("HEXDOCS_GITHUB_TOKEN"),
-      hexdocs_host: System.fetch_env!("HEXDOCS_HOST"),
-      hexdocs_private_host: System.fetch_env!("HEXDOCS_PRIVATE_HOST"),
-      fastly_docs_key: System.fetch_env!("HEXDOCS_FASTLY_KEY"),
-      fastly_hexdocs: System.fetch_env!("HEXDOCS_FASTLY_HEXDOCS"),
-      fastly_hexdocs_private: System.fetch_env!("HEXDOCS_FASTLY_HEXDOCS_PRIVATE")
+      docs_private_bucket: "gcs," <> System.fetch_env!("HEXPM_DOCS_PRIVATE_BUCKET"),
+      hexdocs_queue_id: System.fetch_env!("HEXPM_DOCS_QUEUE_ID"),
+      hexdocs_typesense_url: System.fetch_env!("HEXPM_DOCS_TYPESENSE_URL"),
+      hexdocs_typesense_api_key: System.fetch_env!("HEXPM_DOCS_TYPESENSE_API_KEY"),
+      hexdocs_typesense_collection: System.fetch_env!("HEXPM_DOCS_TYPESENSE_COLLECTION"),
+      hexdocs_github_user: System.fetch_env!("HEXPM_DOCS_GITHUB_USER"),
+      hexdocs_github_token: System.fetch_env!("HEXPM_DOCS_GITHUB_TOKEN"),
+      hexdocs_host: System.fetch_env!("HEXPM_DOCS_HOST"),
+      hexdocs_private_host: System.fetch_env!("HEXPM_PRIVATE_DOCS_HOST"),
+      fastly_docs_key: System.fetch_env!("HEXPM_FASTLY_DOCS_KEY"),
+      fastly_hexdocs: System.fetch_env!("HEXPM_FASTLY_DOCS"),
+      fastly_hexdocs_private: System.fetch_env!("HEXPM_FASTLY_PRIVATE_DOCS")
   end
 end
