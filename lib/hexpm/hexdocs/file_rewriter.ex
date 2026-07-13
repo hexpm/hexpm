@@ -20,6 +20,13 @@ defmodule Hexpm.Hexdocs.FileRewriter do
     |> add_nofollow(path)
   end
 
+  def rewrite_files(dir, files) do
+    Enum.each(files, fn path ->
+      full_path = Path.join(dir, path)
+      File.write!(full_path, run(path, File.read!(full_path)))
+    end)
+  end
+
   defp rewrite_canonical_links(content, path) do
     if String.ends_with?(path, ".html") do
       Regex.replace(@canonical_tag_re, content, fn tag ->

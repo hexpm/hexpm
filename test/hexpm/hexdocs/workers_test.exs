@@ -26,7 +26,83 @@ defmodule Hexpm.Hexdocs.WorkersTest do
     key = "docs/#{package.name}-#{release.version}.tar.gz"
     Hexpm.Store.put(:repo_bucket, key, Tar.create([{"index.html", "docs"}]))
 
-    assert :ok = perform_job(Workers.Search, %{key: key})
+    use_search_mock(fn ->
+      expect(Hexpm.Hexdocs.Search.Mock, :delete, fn name, version ->
+        assert name == package.name
+        assert version == release.version
+        :ok
+      end)
+
+      assert :ok = perform_job(Workers.Search, %{key: key})
+    end)
+  end
+
+  test "search removes stale entries when replacement search data is empty" do
+    package = insert(:package, name: "empty_search_docs")
+    release = insert(:release, package: package, version: "1.0.0", has_docs: true)
+    key = "docs/#{package.name}-#{release.version}.tar.gz"
+
+    Hexpm.Store.put(
+      :repo_bucket,
+      key,
+      Tar.create([{"search_data-#{package.name}.js", ~s(searchData={"items":[]})}])
+    )
+
+    use_search_mock(fn ->
+      expect(Hexpm.Hexdocs.Search.Mock, :delete, fn name, version ->
+        assert name == package.name
+        assert version == release.version
+        :ok
+      end)
+
+      assert :ok = perform_job(Workers.Search, %{key: key})
+    end)
+  end
+
+  test "search preserves existing entries when replacement search data is malformed" do
+    package = insert(:package, name: "malformed_search_docs")
+    release = insert(:release, package: package, version: "1.0.0", has_docs: true)
+    key = "docs/#{package.name}-#{release.version}.tar.gz"
+
+    Hexpm.Store.put(
+      :repo_bucket,
+      key,
+      Tar.create([{"search_data-#{package.name}.js", "searchData=not-json"}])
+    )
+
+    use_search_mock(fn ->
+      assert_raise RuntimeError, ~r/Failed to decode search data json/, fn ->
+        perform_job(Workers.Search, %{key: key})
+      end
+    end)
+  end
+
+  test "deleting latest docs promotes rewritten fallback docs" do
+    package = insert(:package, name: "promoted_docs", docs_updated_at: DateTime.utc_now())
+    fallback = insert(:release, package: package, version: "1.0.0", has_docs: true)
+    removed = insert(:release, package: package, version: "2.0.0", has_docs: false)
+    fallback_key = "docs/#{package.name}-#{fallback.version}.tar.gz"
+    removed_key = "docs/#{package.name}-#{removed.version}.tar.gz"
+
+    html = ~s(<html><head><meta name="robots" content="noindex"></head></html>)
+    Hexpm.Store.put(:repo_bucket, fallback_key, Tar.create([{"index.html", html}]))
+    Hexpm.Store.put(:docs_public_bucket, "#{package.name}/index.html", "removed latest")
+
+    assert :ok = perform_job(Workers.Delete, %{key: removed_key})
+    promoted = Hexpm.Store.get(:docs_public_bucket, "#{package.name}/index.html")
+    assert promoted =~ "plausible"
+    refute promoted =~ ~s(content="noindex")
+  end
+
+  test "deleting latest docs retries when the fallback archive is missing" do
+    package = insert(:package, name: "missing_fallback", docs_updated_at: DateTime.utc_now())
+    insert(:release, package: package, version: "1.0.0", has_docs: true)
+    removed = insert(:release, package: package, version: "2.0.0", has_docs: false)
+    removed_key = "docs/#{package.name}-#{removed.version}.tar.gz"
+
+    assert_raise RuntimeError, ~r/Hexdocs archive not found in store/, fn ->
+      perform_job(Workers.Delete, %{key: removed_key})
+    end
   end
 
   test "sitemap extracts html pages from the archive" do
@@ -47,6 +123,17 @@ defmodule Hexpm.Hexdocs.WorkersTest do
 
     assert_raise Hexpm.Hexdocs.Tar.UnpackError, fn ->
       perform_job(Workers.Search, %{key: key})
+    end
+  end
+
+  defp use_search_mock(fun) do
+    previous = Application.fetch_env!(:hexpm, :hexdocs_search_impl)
+    Application.put_env(:hexpm, :hexdocs_search_impl, Hexpm.Hexdocs.Search.Mock)
+
+    try do
+      fun.()
+    after
+      Application.put_env(:hexpm, :hexdocs_search_impl, previous)
     end
   end
 end

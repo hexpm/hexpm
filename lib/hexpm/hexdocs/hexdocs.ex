@@ -14,7 +14,7 @@ defmodule Hexpm.Hexdocs do
 
     {version, all_versions, retired_versions} = versions(repository, package, version)
     {dir, files} = download_and_unpack!(key, repository, package, version)
-    rewrite_files(dir, files)
+    FileRewriter.rewrite_files(dir, files)
     Bucket.upload(repository, package, version, all_versions, retired_versions, dir, files)
 
     if Utils.latest_version?(package, version, all_versions) do
@@ -55,6 +55,7 @@ defmodule Hexpm.Hexdocs do
           Search.index(package, version, proglang, items)
 
         nil ->
+          Search.delete(package, version)
           Logger.info("SKIPPING SEARCH INDEX #{key} (invalid or missing search items)")
       end
     else
@@ -145,13 +146,6 @@ defmodule Hexpm.Hexdocs do
       nil ->
         raise "Hexdocs archive not found in store: #{key}"
     end
-  end
-
-  defp rewrite_files(dir, files) do
-    Enum.each(files, fn path ->
-      full_path = Path.join(dir, path)
-      File.write!(full_path, FileRewriter.run(path, File.read!(full_path)))
-    end)
   end
 
   defp update_index_sitemap("hexpm", key) do

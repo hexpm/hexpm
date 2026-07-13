@@ -1,7 +1,7 @@
 defmodule Hexpm.Hexdocs.Bucket do
   require Logger
 
-  alias Hexpm.Hexdocs.{Debouncer, Utils}
+  alias Hexpm.Hexdocs.{Debouncer, FileRewriter, Utils}
 
   @special_package_names Map.keys(Application.compile_env!(:hexpm, :hexdocs_special_packages))
   @gcs_put_debounce Application.compile_env!(:hexpm, :hexdocs_gcs_put_debounce)
@@ -110,6 +110,7 @@ defmodule Hexpm.Hexdocs.Bucket do
                 version: new_latest
               )
 
+            FileRewriter.rewrite_files(dir, files)
             uploads = list_upload_files(repository, package, new_latest, dir, files, :both)
             paths = MapSet.new(uploads, &elem(&1, 0))
             versions = [version, new_latest]
@@ -118,7 +119,7 @@ defmodule Hexpm.Hexdocs.Bucket do
             purge_hexdocs_cache(repository, package, versions, :both)
 
           nil ->
-            Logger.error("Failed to get tarball #{repository}/#{package} #{new_latest}")
+            raise "Hexdocs archive not found in store: #{key}"
         end
 
       deleting_latest? ->
