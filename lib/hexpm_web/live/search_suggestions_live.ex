@@ -130,10 +130,12 @@ defmodule HexpmWeb.SearchSuggestionsLive do
   def render(%{variant: "nav"} = assigns) do
     ~H"""
     <form
+      id="nav-search-form"
       method="get"
       action={~p"/packages"}
       role="search"
       class="min-w-0 flex-1"
+      phx-change="suggest"
       phx-submit="submit"
       autocomplete="off"
     >
@@ -161,7 +163,6 @@ defmodule HexpmWeb.SearchSuggestionsLive do
           aria-expanded={if @open, do: "true", else: "false"}
           aria-controls={listbox_id(@variant)}
           aria-activedescendant={active_id(@variant, @active)}
-          phx-change="suggest"
           phx-keydown="keydown"
           phx-debounce="100"
           phx-hook="SearchShortcut"
@@ -182,9 +183,11 @@ defmodule HexpmWeb.SearchSuggestionsLive do
   def render(assigns) do
     ~H"""
     <form
+      id="search-suggestions-form"
       method="get"
       action={~p"/packages"}
       role="search"
+      phx-change="suggest"
       phx-submit="submit"
       autocomplete="off"
     >
@@ -204,7 +207,6 @@ defmodule HexpmWeb.SearchSuggestionsLive do
           aria-expanded={if @open, do: "true", else: "false"}
           aria-controls={listbox_id(@variant)}
           aria-activedescendant={active_id(@variant, @active)}
-          phx-change="suggest"
           phx-keydown="keydown"
           phx-debounce="100"
           phx-hook="SearchShortcut"
