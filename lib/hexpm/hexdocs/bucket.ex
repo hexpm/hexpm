@@ -22,7 +22,7 @@ defmodule Hexpm.Hexdocs.Bucket do
       meta: [{"surrogate-key", key}]
     ]
 
-    Hexpm.Store.put(:docs_public_bucket, path, content, opts)
+    Hexpm.Store.put(:docs_bucket, path, content, opts)
     purge("hexpm", [key])
   end
 
@@ -74,7 +74,11 @@ defmodule Hexpm.Hexdocs.Bucket do
 
     versions =
       Enum.map(versions, fn entry ->
-        value = %{version: "v#{entry}", url: Utils.hexdocs_url(repository, package, "/#{entry}")}
+        value = %{
+          version: "v#{entry}",
+          url: Hexpm.Utils.docs_html_url(repository, package, "/#{entry}")
+        }
+
         value = if latest == entry, do: Map.put(value, :latest, true), else: value
         if entry in retired, do: Map.put(value, :retired, true), else: value
       end)
@@ -239,7 +243,7 @@ defmodule Hexpm.Hexdocs.Bucket do
     end
   end
 
-  defp bucket(true), do: :docs_public_bucket
+  defp bucket(true), do: :docs_bucket
   defp bucket(false), do: :docs_private_bucket
   defp repository_path("hexpm", path), do: path
   defp repository_path(repository, path), do: repository <> "/" <> path

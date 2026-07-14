@@ -60,7 +60,7 @@ defmodule Hexpm.Store.GCS do
     |> Task.async_stream(
       &delete(bucket, &1),
       max_concurrency: 10,
-      timeout: 10_000
+      timeout: 60_000
     )
     |> Stream.each(fn
       {:ok, _result} -> :ok

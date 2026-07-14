@@ -9,6 +9,16 @@ defmodule Hexpm.Repository.Packages do
     Repo.one!(Package.count())
   end
 
+  def public_names() do
+    from(package in Package,
+      join: repository in assoc(package, :repository),
+      where: repository.name == "hexpm",
+      order_by: package.name,
+      select: package.name
+    )
+    |> Repo.all()
+  end
+
   def count(repositories, filter) do
     Repo.one!(Package.count(repositories, filter))
   end

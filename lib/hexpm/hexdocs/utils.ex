@@ -3,29 +3,6 @@ defmodule Hexpm.Hexdocs.Utils do
 
   @special_package_names Map.keys(Application.compile_env!(:hexpm, :hexdocs_special_packages))
 
-  def hexdocs_url(repository, package, path) do
-    "/" <> _ = path
-
-    if repository == "hexpm" do
-      host = Application.fetch_env!(:hexpm, :hexdocs_host)
-      scheme = if host == "hexdocs.pm", do: "https", else: "http"
-      URI.encode("#{scheme}://#{name_to_subdomain(package)}.#{host}#{path}")
-    else
-      host = Application.fetch_env!(:hexpm, :hexdocs_private_host)
-      scheme = if host in ["hexdocs.pm", "hexorgs.pm"], do: "https", else: "http"
-      URI.encode("#{scheme}://#{name_to_subdomain(repository)}.#{host}/#{package}#{path}")
-    end
-  end
-
-  def name_to_subdomain(name), do: String.replace(name, "_", "-")
-
-  def hexdocs_apex_url(path) do
-    "/" <> _ = path
-    host = Application.fetch_env!(:hexpm, :hexdocs_host)
-    scheme = if host == "hexdocs.pm", do: "https", else: "http"
-    URI.encode("#{scheme}://#{host}#{path}")
-  end
-
   def latest_version(versions) do
     Enum.find(versions, &(&1.pre == [])) || List.first(versions)
   end

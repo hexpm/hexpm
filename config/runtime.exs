@@ -13,8 +13,9 @@ if config_env() == :prod do
     repo_bucket: System.fetch_env!("HEXPM_REPO_BUCKET"),
     logs_bucket: System.fetch_env!("HEXPM_LOGS_BUCKET"),
     docs_bucket: System.fetch_env!("HEXPM_DOCS_BUCKET"),
-    docs_public_bucket: System.fetch_env!("HEXPM_DOCS_BUCKET"),
     cdn_url: System.fetch_env!("HEXPM_CDN_URL"),
+    docs_url: System.fetch_env!("HEXPM_DOCS_URL"),
+    private_docs_url: System.fetch_env!("HEXPM_PRIVATE_DOCS_URL"),
     billing_key: System.fetch_env!("HEXPM_BILLING_KEY"),
     billing_url: System.fetch_env!("HEXPM_BILLING_URL")
 
@@ -30,8 +31,6 @@ if config_env() == :prod do
     config :hexpm,
       host: System.fetch_env!("HEXPM_HOST"),
       secret: System.fetch_env!("HEXPM_SECRET"),
-      docs_url: System.fetch_env!("HEXPM_DOCS_URL"),
-      private_docs_url: System.fetch_env!("HEXPM_PRIVATE_DOCS_URL"),
       diff_url: System.fetch_env!("HEXPM_DIFF_URL"),
       preview_url: System.fetch_env!("HEXPM_PREVIEW_URL"),
       email_host: System.fetch_env!("HEXPM_EMAIL_HOST"),
@@ -96,8 +95,6 @@ if config_env() == :prod do
       hexdocs_typesense_collection: System.fetch_env!("HEXPM_DOCS_TYPESENSE_COLLECTION"),
       hexdocs_github_user: System.fetch_env!("HEXPM_DOCS_GITHUB_USER"),
       hexdocs_github_token: System.fetch_env!("HEXPM_DOCS_GITHUB_TOKEN"),
-      hexdocs_host: System.fetch_env!("HEXPM_DOCS_HOST"),
-      hexdocs_private_host: System.fetch_env!("HEXPM_PRIVATE_DOCS_HOST"),
       fastly_docs_key: System.fetch_env!("HEXPM_FASTLY_DOCS_KEY"),
       fastly_hexdocs: System.fetch_env!("HEXPM_FASTLY_DOCS"),
       fastly_hexdocs_private: System.fetch_env!("HEXPM_FASTLY_PRIVATE_DOCS")

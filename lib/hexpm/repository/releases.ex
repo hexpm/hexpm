@@ -35,6 +35,24 @@ defmodule Hexpm.Repository.Releases do
     |> Enum.into(%{})
   end
 
+  def docs_versions(repository, package) do
+    from(r in Release,
+      join: p in Package,
+      on: p.id == r.package_id,
+      join: repository in Repository,
+      on: repository.id == p.repository_id,
+      where: repository.name == ^repository and p.name == ^package and r.has_docs,
+      select: {r.version, r.retirement}
+    )
+    |> Repo.all()
+    |> Enum.map(fn {version, retirement} -> {parse_version(version), retirement} end)
+    |> then(fn releases ->
+      versions = releases |> Enum.map(&elem(&1, 0)) |> Enum.sort({:desc, Version})
+      retired = for {version, retirement} <- releases, retirement, into: MapSet.new(), do: version
+      {versions, retired}
+    end)
+  end
+
   def preload(release, keys) do
     preload = Enum.map(keys, &preload_field(release, &1))
     Repo.preload(release, preload)
@@ -388,6 +406,9 @@ defmodule Hexpm.Repository.Releases do
   end
 
   defp normalize_requirements(requirements), do: requirements
+
+  defp parse_version(%Version{} = version), do: version
+  defp parse_version(version), do: Version.parse!(version)
 
   defp preload_field(release, :requirements), do: {:requirements, Release.requirements(release)}
   defp preload_field(release, :downloads), do: {:downloads, ReleaseDownload.release(release)}

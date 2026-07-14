@@ -66,23 +66,8 @@ defmodule Hexpm.Hexdocs.Search.Typesense do
     end
   end
 
-  def collection, do: Application.fetch_env!(:hexpm, :hexdocs_typesense_collection)
-  def api_key, do: Application.fetch_env!(:hexpm, :hexdocs_typesense_api_key)
-
-  def collection_schema(collection \\ collection()) do
-    %{
-      "fields" => [
-        %{"facet" => true, "name" => "proglang", "type" => "string"},
-        %{"facet" => true, "name" => "type", "type" => "string"},
-        %{"name" => "title", "type" => "string", "token_separators" => separators()},
-        %{"name" => "doc", "type" => "string", "token_separators" => separators()},
-        %{"facet" => true, "name" => "package", "type" => "string"}
-      ],
-      "name" => collection
-    }
-  end
-
-  defp separators, do: [".", "_", "-", "*", "`", ":", "@", "/"]
+  defp collection, do: Application.fetch_env!(:hexpm, :hexdocs_typesense_collection)
+  defp api_key, do: Application.fetch_env!(:hexpm, :hexdocs_typesense_api_key)
   defp url(path), do: Path.join(Application.fetch_env!(:hexpm, :hexdocs_typesense_url), path)
 
   defp request(url, fun) do

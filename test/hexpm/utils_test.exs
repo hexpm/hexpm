@@ -138,4 +138,16 @@ defmodule Hexpm.UtilsTest do
       refute url =~ "my_org"
     end
   end
+
+  describe "docs_html_url/3 with repository and package names" do
+    test "builds public package URLs from the shared docs URL" do
+      assert Utils.docs_html_url("hexpm", "phoenix_live_view", "/1.0.0") ==
+               "http://phoenix-live-view.localhost:5002/1.0.0"
+    end
+
+    test "builds private package URLs from the shared private docs URL" do
+      assert Utils.docs_html_url("my_org", "secret", "/1.0.0") ==
+               "http://my-org.localhost:5002/secret/1.0.0"
+    end
+  end
 end
