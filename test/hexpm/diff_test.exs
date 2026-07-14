@@ -164,6 +164,57 @@ defmodule Hexpm.DiffTest do
     refute recached_job.id in [hd(jobs).id, replacement_job.id]
   end
 
+  test "bounds incomplete jobs and gives Diff work lower priority", %{package: package} do
+    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+
+    assert Ecto.Changeset.get_field(Worker.new(Request.to_args(request)), :priority) == 3
+
+    for cache_version <- 100..119 do
+      request
+      |> Request.to_args()
+      |> Map.put(:cache_version, cache_version)
+      |> Worker.new()
+      |> Oban.insert!()
+    end
+
+    assert {:error, :overloaded} = Hexpm.Diff.enqueue(request)
+  end
+
+  test "serializes concurrent admission at the incomplete job limit", %{package: package} do
+    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+
+    for cache_version <- 100..118 do
+      request
+      |> Request.to_args()
+      |> Map.put(:cache_version, cache_version)
+      |> Worker.new()
+      |> Oban.insert!()
+    end
+
+    previous = Application.fetch_env!(:hexpm, :skip_advisory_locks)
+    Application.put_env(:hexpm, :skip_advisory_locks, false)
+    on_exit(fn -> Application.put_env(:hexpm, :skip_advisory_locks, previous) end)
+
+    results =
+      [200, 201]
+      |> Task.async_stream(fn cache_version ->
+        Hexpm.Diff.enqueue(%{request | cache_version: cache_version})
+      end)
+      |> Enum.map(fn {:ok, result} -> result end)
+
+    assert Enum.count(results, &match?({:ok, %Oban.Job{}}, &1)) == 1
+    assert Enum.count(results, &(&1 == {:error, :overloaded})) == 1
+
+    assert Repo.aggregate(
+             from(job in Oban.Job,
+               where:
+                 job.worker == "Hexpm.Diff.Worker" and
+                   job.state in ["suspended", "available", "scheduled", "executing", "retryable"]
+             ),
+             :count
+           ) == 20
+  end
+
   test "reports domain job states without exposing Oban to callers", %{package: package} do
     {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
     {:ok, job} = Hexpm.Diff.enqueue(request)

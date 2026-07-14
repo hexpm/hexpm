@@ -1,6 +1,8 @@
 defmodule HexpmWeb.DiffLive do
   use HexpmWeb, :live_view
 
+  require Logger
+
   alias HexpmWeb.Plugs.{Attack, Forwarded}
 
   @batch_size 5
@@ -59,7 +61,18 @@ defmodule HexpmWeb.DiffLive do
   end
 
   def handle_event("retry", _params, socket) do
-    {:noreply, enqueue(socket)}
+    case Hexpm.Diff.prepare(
+           socket.assigns.package,
+           socket.assigns.from,
+           socket.assigns.to,
+           ignore_whitespace: socket.assigns.ignore_whitespace
+         ) do
+      {:ok, request} ->
+        {:noreply, socket |> assign(request: request) |> load_or_enqueue_socket()}
+
+      {:error, reason} ->
+        {:noreply, assign(socket, error: error_message(reason))}
+    end
   end
 
   @impl Phoenix.LiveView
@@ -88,15 +101,19 @@ defmodule HexpmWeb.DiffLive do
   def handle_info({:poll_job, _stale_job_id}, socket), do: {:noreply, socket}
 
   defp load_or_enqueue(socket) do
+    {:ok, load_or_enqueue_socket(socket)}
+  end
+
+  defp load_or_enqueue_socket(socket) do
     case Hexpm.Diff.fetch(socket.assigns.request) do
       {:ok, metadata, pieces} ->
-        {:ok, show_ready(socket, metadata, pieces)}
+        show_ready(socket, metadata, pieces)
 
       :miss ->
-        {:ok, enqueue(socket)}
+        enqueue(socket)
 
       {:error, reason} ->
-        {:ok, assign(socket, error: storage_error(reason))}
+        assign(socket, error: storage_error(reason))
     end
   end
 
@@ -131,7 +148,7 @@ defmodule HexpmWeb.DiffLive do
         {:error, reason} -> {:error, reason}
       end
 
-    {piece.id, content}
+    {Hexpm.Diff.piece_id(piece), content}
   end
 
   defp parse_piece({:too_large, file}), do: {:ok, {:too_large, file}}
@@ -152,25 +169,42 @@ defmodule HexpmWeb.DiffLive do
   end
 
   defp enqueue(socket) do
+    case Hexpm.Diff.pending_job(socket.assigns.request) do
+      {:ok, job_id, job_state} ->
+        track_job(socket, job_id, job_state)
+
+      :none ->
+        throttle_and_enqueue(socket)
+    end
+  end
+
+  defp throttle_and_enqueue(socket) do
     case Attack.diff_throttle(socket.assigns.diff_identity) do
       {:allow, _data} ->
         case Hexpm.Diff.enqueue(socket.assigns.request) do
           {:ok, job} ->
-            socket
-            |> assign(
-              job_id: job.id,
-              job_state: Hexpm.Diff.job_status(job),
-              error: nil
-            )
-            |> schedule_poll()
+            track_job(socket, job.id, Hexpm.Diff.job_status(job))
+
+          {:error, :read_only} ->
+            assign(socket, error: "Diff generation is unavailable during maintenance.")
+
+          {:error, :overloaded} ->
+            assign(socket, error: "The diff generation queue is full. Try again later.")
 
           {:error, reason} ->
-            assign(socket, error: "Could not enqueue diff: #{inspect(reason)}")
+            Logger.error("Could not enqueue diff: #{inspect(reason)}")
+            assign(socket, error: "Could not enqueue diff. Try again later.")
         end
 
       {:block, _data} ->
         assign(socket, error: "Too many diff generation requests. Try again later.")
     end
+  end
+
+  defp track_job(socket, job_id, job_state) do
+    socket
+    |> assign(job_id: job_id, job_state: job_state, error: nil)
+    |> schedule_poll()
   end
 
   defp diff_identity(socket) do
@@ -232,7 +266,10 @@ defmodule HexpmWeb.DiffLive do
   defp error_message(:no_releases), do: "This package has no releases"
   defp error_message(_), do: "Invalid diff request"
 
-  defp storage_error(reason), do: "Could not load diff cache: #{inspect(reason)}"
+  defp storage_error(reason) do
+    Logger.error("Could not load diff cache: #{inspect(reason)}")
+    "Could not load diff cache. Try again later."
+  end
 
   def diff_path(package, from, to, ignore_whitespace) do
     query = if ignore_whitespace, do: [w: 1], else: []

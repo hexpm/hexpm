@@ -12,6 +12,20 @@ defmodule Hexpm.Diff.UnavailableStore do
   def fetch(_bucket, _key, _opts), do: {:error, :unavailable}
 end
 
+defmodule Hexpm.Diff.RaisingStore do
+  @behaviour Hexpm.Store.Behaviour
+
+  defdelegate list(bucket, prefix), to: Hexpm.Store.Memory
+  defdelegate get(bucket, key, opts), to: Hexpm.Store.Memory
+  defdelegate get_to_file(bucket, key, destination, opts), to: Hexpm.Store.Memory
+  defdelegate put(bucket, key, body, opts), to: Hexpm.Store.Memory
+  defdelegate put_file(bucket, key, path, opts), to: Hexpm.Store.Memory
+  defdelegate delete(bucket, key), to: Hexpm.Store.Memory
+  defdelegate delete_many(bucket, keys), to: Hexpm.Store.Memory
+
+  def fetch(_bucket, _key, _opts), do: raise("storage unavailable")
+end
+
 defmodule HexpmWeb.DiffLiveTest do
   use HexpmWeb.ConnCase, async: false
   use Oban.Testing, repo: Hexpm.RepoBase
@@ -83,8 +97,19 @@ defmodule HexpmWeb.DiffLiveTest do
     {:ok, _view, html} = live(build_conn(), "/diff/#{package.name}/1.0.0..2.0.0")
     assert html =~ "Diff queued"
 
+    {:ok, _reconnected_view, _html} =
+      live(build_conn(), "/diff/#{package.name}/1.0.0..2.0.0")
+
     jobs = Repo.all(from job in Oban.Job, where: job.worker == "Hexpm.Diff.Worker")
     assert length(jobs) == 1
+
+    identity = {:ip, {127, 0, 0, 1}}
+
+    assert [{{:throttle, {:diff, ^identity}, _bucket}, 1, _expires_at}] =
+             :ets.match_object(
+               HexpmWeb.Plugs.Attack.Storage,
+               {{:throttle, {:diff, identity}, :_}, :_, :_}
+             )
   end
 
   test "a non-JavaScript request enqueues and renders the pending state", %{package: package} do
@@ -103,7 +128,31 @@ defmodule HexpmWeb.DiffLiveTest do
     {:ok, _view, html} = live(build_conn(), "/diff/#{package.name}/1.0.0..2.0.0")
 
     assert html =~ "Could not load diff cache"
-    assert html =~ "unavailable"
+
+    assert Repo.aggregate(from(job in Oban.Job, where: job.worker == "Hexpm.Diff.Worker"), :count) ==
+             0
+  end
+
+  test "storage exceptions render an error without crashing or enqueueing", %{package: package} do
+    original_bucket = Application.fetch_env!(:hexpm, :diff_bucket)
+    Application.put_env(:hexpm, :diff_bucket, {Hexpm.Diff.RaisingStore, "diff_bucket"})
+    on_exit(fn -> Application.put_env(:hexpm, :diff_bucket, original_bucket) end)
+
+    {:ok, _view, html} = live(build_conn(), "/diff/#{package.name}/1.0.0..2.0.0")
+
+    assert html =~ "Could not load diff cache"
+
+    assert Repo.aggregate(from(job in Oban.Job, where: job.worker == "Hexpm.Diff.Worker"), :count) ==
+             0
+  end
+
+  test "read-only mode rejects generation without inserting a job", %{package: package} do
+    Application.put_env(:hexpm, :read_only_mode, true)
+    on_exit(fn -> Application.put_env(:hexpm, :read_only_mode, false) end)
+
+    {:ok, _view, html} = live(build_conn(), "/diff/#{package.name}/1.0.0..2.0.0")
+
+    assert html =~ "Diff generation is unavailable during maintenance"
 
     assert Repo.aggregate(from(job in Oban.Job, where: job.worker == "Hexpm.Diff.Worker"), :count) ==
              0
@@ -169,6 +218,22 @@ defmodule HexpmWeb.DiffLiveTest do
     set_job_state(completed_job, "completed")
     send(completed_view.pid, {:poll_job, completed_job.id})
     assert render(completed_view) =~ "completed without a readable cache entry"
+  end
+
+  test "manual retry refreshes release checksums", %{package: package, releases: releases} do
+    {:ok, view, _html} = live(build_conn(), "/diff/#{package.name}/1.0.0..2.0.0")
+    old_job = Repo.one!(from job in Oban.Job, where: job.worker == "Hexpm.Diff.Worker")
+    set_job_state(old_job, "discarded")
+
+    replacement_checksum = :crypto.hash(:sha256, "replacement")
+    release = Enum.find(releases, &(to_string(&1.version) == "2.0.0"))
+    release |> Ecto.Changeset.change(outer_checksum: replacement_checksum) |> Repo.update!()
+
+    render_click(view, "retry")
+
+    new_job = Repo.one!(from job in Oban.Job, order_by: [desc: job.id], limit: 1)
+    refute new_job.id == old_job.id
+    assert new_job.args["to_checksum"] == Base.encode16(replacement_checksum, case: :lower)
   end
 
   test "completed job loads metadata and pieces", %{package: package} do

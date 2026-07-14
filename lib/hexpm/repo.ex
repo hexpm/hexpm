@@ -71,7 +71,8 @@ defmodule Hexpm.RepoBase do
   @advisory_locks %{
     registry: 1,
     vulnerability_updater: 2,
-    policy: 3
+    policy: 3,
+    diff: 4
   }
 
   def init(_reason, opts) do

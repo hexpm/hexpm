@@ -186,7 +186,7 @@ defmodule Hexpm.Diff.Generator do
     |> :crypto.hash_final()
   end
 
-  def sanitize_utf8(content) when is_binary(content) do
+  defp sanitize_utf8(content) when is_binary(content) do
     content
     |> String.chunk(:valid)
     |> Enum.map(fn chunk ->
