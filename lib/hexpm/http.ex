@@ -1,7 +1,7 @@
 defmodule Hexpm.HTTP.Interface do
   @type url() :: String.t() | URI.t()
   @type headers() :: Mint.Types.headers()
-  @type params() :: binary() | map()
+  @type params() :: iodata() | map()
   @type opts() :: Keyword.t()
   @type response() ::
           {:ok, Mint.Types.status(), Mint.Types.headers(), binary()} | {:error, Exception.t()}
@@ -12,6 +12,7 @@ defmodule Hexpm.HTTP.Interface do
   @callback post(url(), headers(), params(), opts()) :: response()
   @callback put(url(), headers(), params()) :: response()
   @callback put(url(), headers(), params(), opts()) :: response()
+  @callback put_file(url(), headers(), Path.t(), opts()) :: response()
   @callback patch(url(), headers(), params()) :: response()
   @callback patch(url(), headers(), params(), opts()) :: response()
   @callback delete(url(), headers()) :: response()
@@ -22,8 +23,8 @@ defmodule Hexpm.HTTP do
   require Logger
 
   @behaviour Hexpm.HTTP.Interface
-  @max_retry_times 3
-  @base_sleep_time 100
+  @default_attempts 3
+  @default_base_delay 100
   @request_opts [:pool_timeout, :receive_timeout, :request_timeout]
 
   def impl() do
@@ -38,6 +39,11 @@ defmodule Hexpm.HTTP do
 
   @impl Hexpm.HTTP.Interface
   def put(url, headers, body, opts \\ []), do: do_request(:put, url, headers, body, opts)
+
+  @impl Hexpm.HTTP.Interface
+  def put_file(url, headers, path, opts \\ []) do
+    do_request(:put, url, headers, {:stream, File.stream!(path, 65_536)}, opts)
+  end
 
   @impl Hexpm.HTTP.Interface
   def patch(url, headers, body, opts \\ []), do: do_request(:patch, url, headers, body, opts)
@@ -58,6 +64,10 @@ defmodule Hexpm.HTTP do
   defp encode_params(body, _headers) when is_binary(body) or is_nil(body) do
     body
   end
+
+  defp encode_params({:stream, _enumerable} = body, _headers), do: body
+
+  defp encode_params(body, _headers) when is_list(body), do: body
 
   defp encode_params(body, headers) when is_map(body) do
     case List.keyfind(headers, "content-type", 0) do
@@ -83,25 +93,46 @@ defmodule Hexpm.HTTP do
     {:error, reason}
   end
 
-  def retry(fun, name) do
-    retry(fun, name, 0)
+  def retry(fun, name, opts \\ []) do
+    attempts = Keyword.get(opts, :attempts, Keyword.get(opts, :max_attempts, @default_attempts))
+    base_delay = Keyword.get(opts, :base_delay, @default_base_delay)
+    statuses = Keyword.get(opts, :statuses, Keyword.get(opts, :retryable_statuses, []))
+    retry(fun, name, attempts, base_delay, statuses, 0)
   end
 
-  defp retry(fun, name, times) do
+  defp retry(fun, name, attempts, base_delay, statuses, times) do
     case fun.() do
-      {:error, reason} ->
-        Logger.warning("#{name} API ERROR: #{inspect(reason)}")
-
-        if times + 1 < @max_retry_times do
-          sleep = trunc(:math.pow(3, times) * @base_sleep_time)
-          :timer.sleep(sleep)
-          retry(fun, name, times + 1)
+      {:ok, status, _headers, _body} = result ->
+        if retryable_status?(status, statuses) do
+          do_retry(fun, name, attempts, base_delay, statuses, times, "status #{status}")
         else
-          {:error, reason}
+          result
         end
+
+      {:error, reason} ->
+        do_retry(fun, name, attempts, base_delay, statuses, times, reason)
 
       result ->
         result
     end
+  end
+
+  defp do_retry(fun, name, attempts, base_delay, statuses, times, reason) do
+    Logger.warning("#{name} API ERROR: #{inspect(reason)}")
+
+    if times + 1 < attempts do
+      sleep = trunc(:math.pow(3, times) * base_delay)
+      if sleep > 0, do: Process.sleep(sleep)
+      retry(fun, name, attempts, base_delay, statuses, times + 1)
+    else
+      {:error, reason}
+    end
+  end
+
+  defp retryable_status?(status, statuses) do
+    Enum.any?(statuses, fn
+      %Range{} = range -> status in range
+      expected -> status == expected
+    end)
   end
 end

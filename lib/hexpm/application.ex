@@ -149,7 +149,13 @@ defmodule Hexpm.Application do
     ]
   end
 
-  defp worker_children, do: [{Oban, Application.fetch_env!(:hexpm, Oban)}]
+  defp worker_children do
+    [
+      {Oban, Application.fetch_env!(:hexpm, Oban)},
+      {Hexpm.Hexdocs.Debouncer, name: Hexpm.Hexdocs.Debouncer},
+      Hexpm.Hexdocs.Queue
+    ]
+  end
 
   if Mix.env() == :prod do
     defp goth_spec() do

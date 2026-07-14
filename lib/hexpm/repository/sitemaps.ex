@@ -1,5 +1,20 @@
 defmodule Hexpm.Repository.Sitemaps do
   use Hexpm.Context
+  require EEx
+
+  docs_template = ~S"""
+  <?xml version="1.0" encoding="utf-8"?>
+  <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <%= for {name, docs_updated_at} <- packages do %>
+    <sitemap>
+      <loc><%= Hexpm.Utils.docs_html_apex_url(name) <> "sitemap.xml" %></loc><%= if docs_updated_at do %>
+      <lastmod><%= Hexpm.Utils.binarify(docs_updated_at) %></lastmod><% end %>
+    </sitemap>
+  <% end %>
+  </sitemapindex>
+  """
+
+  EEx.function_from_string(:def, :render_docs, docs_template, [:packages])
 
   def packages() do
     from(

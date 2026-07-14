@@ -4,7 +4,7 @@ defmodule Hexpm.Store.GCS do
 
   @behaviour Hexpm.Store.Behaviour
 
-  @gs_xml_url "https://storage.googleapis.com"
+  @default_gs_xml_url "https://storage.googleapis.com"
 
   def list(bucket, prefix) do
     list_stream(bucket, prefix)
@@ -13,17 +13,32 @@ defmodule Hexpm.Store.GCS do
   def get(bucket, key, _opts) do
     url = url(bucket, key)
 
-    case Hexpm.HTTP.retry(fn -> Hexpm.HTTP.get(url, headers()) end, "gcs") do
+    case Hexpm.HTTP.retry(fn -> Hexpm.HTTP.impl().get(url, headers()) end, "gcs") do
       {:ok, 200, _headers, body} -> body
       _ -> nil
     end
   end
 
-  def put_file(_bucket, _key, _path, _opts) do
-    raise "not implemented"
+  def get_to_file(bucket, key, destination, opts) do
+    case get(bucket, key, opts) do
+      nil -> nil
+      body -> File.write!(destination, body)
+    end
+  end
+
+  def put_file(bucket, key, path, opts) do
+    upload(bucket, key, opts, fn url, headers ->
+      Hexpm.HTTP.impl().put_file(url, headers, path, [])
+    end)
   end
 
   def put(bucket, key, blob, opts) do
+    upload(bucket, key, opts, fn url, headers ->
+      Hexpm.HTTP.impl().put(url, headers, blob)
+    end)
+  end
+
+  defp upload(bucket, key, opts, fun) do
     headers =
       headers() ++
         meta_headers(Keyword.fetch!(opts, :meta)) ++
@@ -35,8 +50,7 @@ defmodule Hexpm.Store.GCS do
     url = url(bucket, key)
     headers = filter_nil_values(headers)
 
-    {:ok, 200, _headers, _body} =
-      Hexpm.HTTP.retry(fn -> Hexpm.HTTP.put(url, headers, blob) end, "gcs")
+    {:ok, 200, _headers, _body} = retry(url, fn -> fun.(url, headers) end)
 
     :ok
   end
@@ -48,16 +62,19 @@ defmodule Hexpm.Store.GCS do
       max_concurrency: 10,
       timeout: 10_000
     )
+    |> Stream.each(fn
+      {:ok, _result} -> :ok
+      {:exit, reason} -> exit(reason)
+    end)
     |> Stream.run()
   end
 
   def delete(bucket, key) do
     url = url(bucket, key)
 
-    {:ok, 204, _headers, _body} =
-      Hexpm.HTTP.retry(fn -> Hexpm.HTTP.delete(url, headers()) end, "gcs")
-
-    :ok
+    case retry(url, fn -> Hexpm.HTTP.impl().delete(url, headers()) end) do
+      {:ok, status, _headers, _body} when status in [204, 404] -> :ok
+    end
   end
 
   defp list_stream(bucket, prefix) do
@@ -77,9 +94,10 @@ defmodule Hexpm.Store.GCS do
   end
 
   defp do_list(bucket, prefix, marker) do
-    url = url(bucket) <> "?prefix=#{prefix}&marker=#{marker}"
+    query = URI.encode_query(%{"prefix" => prefix, "marker" => marker || ""})
+    url = url(bucket) <> "?" <> query
 
-    {:ok, 200, _headers, body} = Hexpm.HTTP.retry(fn -> Hexpm.HTTP.get(url, headers()) end, "gcs")
+    {:ok, 200, _headers, body} = retry(url, fn -> Hexpm.HTTP.impl().get(url, headers()) end)
 
     doc = SweetXml.parse(body)
     marker = SweetXml.xpath(doc, ~x"/ListBucketResult/NextMarker/text()"s)
@@ -94,8 +112,14 @@ defmodule Hexpm.Store.GCS do
   end
 
   defp headers() do
-    token = Goth.fetch!(Hexpm.Goth)
-    [{"authorization", "#{token.type} #{token.token}"}]
+    case Application.get_env(:hexpm, :gcs_auth) do
+      nil ->
+        token = Goth.fetch!(Hexpm.Goth)
+        [{"authorization", "#{token.type} #{token.token}"}]
+
+      {module, function} ->
+        apply(module, function, [])
+    end
   end
 
   defp meta_headers(meta) do
@@ -105,10 +129,19 @@ defmodule Hexpm.Store.GCS do
   end
 
   defp url(bucket) do
-    @gs_xml_url <> "/" <> bucket
+    Application.get_env(:hexpm, :gcs_url, @default_gs_xml_url) <> "/" <> bucket
   end
 
   defp url(bucket, key) do
-    url(bucket) <> "/" <> key
+    encoded = URI.encode(key, &(&1 == ?/ or URI.char_unreserved?(&1)))
+    url(bucket) <> "/" <> encoded
+  end
+
+  defp retry(url, fun) do
+    Hexpm.HTTP.retry(fun, "gcs #{url}",
+      attempts: 5,
+      base_delay: 200,
+      statuses: [429, 500..599]
+    )
   end
 end

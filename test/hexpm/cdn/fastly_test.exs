@@ -28,6 +28,22 @@ defmodule Hexpm.CDN.FastlyTest do
       assert_receive :purged, @receive_timeout
       assert_receive :purged, @receive_timeout
     end
+
+    test "uses the docs credential for docs services" do
+      test_pid = self()
+
+      expect(Hexpm.HTTP.Mock, :post, 3, fn url, headers, _body ->
+        assert url == "https://api.fastly.com/service/fastly_hexdocs/purge"
+        assert {"fastly-key", "fastly_docs_key"} in headers
+        send(test_pid, :purged)
+        {:ok, 200, [], ""}
+      end)
+
+      assert Fastly.purge_key(:fastly_hexdocs, "docs-key") == :ok
+      assert_receive :purged, @receive_timeout
+      assert_receive :purged, @receive_timeout
+      assert_receive :purged, @receive_timeout
+    end
   end
 
   describe "public_ips/0" do

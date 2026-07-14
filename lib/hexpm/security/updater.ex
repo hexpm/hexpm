@@ -20,6 +20,9 @@ defmodule Hexpm.Security.Updater do
   @reference_url_max_length 2000
 
   @impl Oban.Worker
+  def timeout(_job), do: 300_000
+
+  @impl Oban.Worker
   def perform(%Oban.Job{args: %{}}) do
     case Hexpm.HTTP.impl().get(@advisory_download_url, [], receive_timeout: @http_receive_timeout) do
       {:ok, 200, _headers, archive} -> unzip_and_process(archive)

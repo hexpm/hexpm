@@ -11,13 +11,13 @@ defmodule Hexpm.CDN.Fastly do
     service_id = Application.get_env(:hexpm, service)
     sleep_time = div(Application.get_env(:hexpm, :fastly_purge_wait, @fastly_purge_wait), 2)
 
-    {:ok, 200, _, _} = post("service/#{service_id}/purge", body)
+    {:ok, 200, _, _} = post(service, "service/#{service_id}/purge", body)
 
     Task.Supervisor.start_child(Hexpm.Tasks, fn ->
       Process.sleep(sleep_time)
-      {:ok, 200, _, _} = post("service/#{service_id}/purge", body)
+      {:ok, 200, _, _} = post(service, "service/#{service_id}/purge", body)
       Process.sleep(sleep_time)
-      {:ok, 200, _, _} = post("service/#{service_id}/purge", body)
+      {:ok, 200, _, _} = post(service, "service/#{service_id}/purge", body)
     end)
 
     :ok
@@ -28,26 +28,33 @@ defmodule Hexpm.CDN.Fastly do
     Enum.map(body["addresses"], &Hexpm.Utils.parse_ip_mask/1)
   end
 
-  defp auth() do
-    Application.get_env(:hexpm, :fastly_key)
-  end
+  defp auth(service) when service in [:fastly_hexdocs, :fastly_hexdocs_private],
+    do: Application.get_env(:hexpm, :fastly_docs_key)
 
-  defp post(url, body) do
+  defp auth(_service), do: Application.get_env(:hexpm, :fastly_key)
+
+  defp post(service, url, body) do
     url = @fastly_url <> url
 
     headers = [
-      {"fastly-key", auth()},
+      {"fastly-key", auth(service)},
       {"accept", "application/json"},
       {"content-type", "application/json"}
     ]
 
-    fn -> HTTP.impl().post(url, headers, body) end
-    |> HTTP.retry("fastly")
+    opts =
+      if service in [:fastly_hexdocs, :fastly_hexdocs_private] do
+        [attempts: 5, base_delay: 200, statuses: [429, 500..599]]
+      else
+        []
+      end
+
+    HTTP.retry(fn -> HTTP.impl().post(url, headers, body) end, "fastly", opts)
   end
 
   defp get(url) do
     url = @fastly_url <> url
-    headers = [{"fastly-key", auth()}, {"accept", "application/json"}]
+    headers = [{"fastly-key", auth(:fastly_hexrepo)}, {"accept", "application/json"}]
 
     fn -> HTTP.impl().get(url, headers) end
     |> HTTP.retry("fastly")
