@@ -1,14 +1,16 @@
 defmodule Hexpm.Preview do
   require Logger
 
-  alias Hexpm.Preview.{Bucket, Data, Sitemaps}
+  alias Hexpm.Preview.{Bucket, Sitemaps}
+  alias Hexpm.Repository.{Releases, Repository}
+  alias Hexpm.Repository.Sitemaps, as: RepositorySitemaps
 
   def upload(key) do
     {package, version} = key_components!(key)
     start = System.monotonic_time(:millisecond)
     Logger.info("UPLOAD #{key}")
 
-    if Data.release_exists?(package, version) do
+    if release_exists?(package, version) do
       {dir, file_paths, checksum} = download_and_unpack!(package, version)
       Bucket.put_files(package, version, dir, file_paths)
 
@@ -28,7 +30,7 @@ defmodule Hexpm.Preview do
     start = System.monotonic_time(:millisecond)
     Logger.info("DELETE #{key}")
 
-    if Data.release_exists?(package, version) do
+    if release_exists?(package, version) do
       upload(key)
     else
       delete_contents(package, version)
@@ -108,9 +110,9 @@ defmodule Hexpm.Preview do
       if relative == "hex_metadata.config" do
         []
       else
-        case safe_path(Path.split(relative), []) do
-          {:ok, path} ->
-            [Path.join(path)]
+        case Path.safe_relative(relative) do
+          {:ok, path} when path != "" ->
+            [path]
 
           :error ->
             Logger.error("Unsafe path from #{package} #{version}: #{relative}")
@@ -141,7 +143,7 @@ defmodule Hexpm.Preview do
   end
 
   defp latest_version?(package, version) do
-    case Data.latest_version(package) do
+    case latest_version(package) do
       nil -> false
       latest -> Version.compare(latest, version) == :eq
     end
@@ -156,14 +158,14 @@ defmodule Hexpm.Preview do
 
     update_index_sitemap()
 
-    if Data.release_exists?(package, version) do
+    if release_exists?(package, version) do
       upload("tarballs/#{package}-#{version}.tar")
     end
   end
 
   defp reconcile_uploaded_release(package, version, file_paths, checksum) do
     cond do
-      not Data.release_exists?(package, version) ->
+      not release_exists?(package, version) ->
         delete_contents(package, version)
 
       not tarball_current?(package, version, checksum) ->
@@ -182,7 +184,7 @@ defmodule Hexpm.Preview do
 
   defp reconcile_latest_after_publish(package, version, checksum) do
     cond do
-      not Data.release_exists?(package, version) ->
+      not release_exists?(package, version) ->
         delete_contents(package, version)
 
       not tarball_current?(package, version, checksum) ->
@@ -197,7 +199,7 @@ defmodule Hexpm.Preview do
   end
 
   defp reconcile_latest(package) do
-    case Data.latest_version(package) do
+    case latest_version(package) do
       nil ->
         Bucket.delete_latest_version(package)
 
@@ -207,7 +209,7 @@ defmodule Hexpm.Preview do
         Bucket.put_files(package, latest, dir, file_paths)
 
         cond do
-          not Data.release_exists?(package, latest) ->
+          not release_exists?(package, latest) ->
             Bucket.delete_files(package, latest)
             reconcile_latest(package)
 
@@ -250,7 +252,10 @@ defmodule Hexpm.Preview do
 
   defp update_index_sitemap do
     preview_url = Application.fetch_env!(:hexpm, :preview_url)
-    Bucket.upload_index_sitemap(Sitemaps.render_index(preview_url, Data.packages()))
+
+    Bucket.upload_index_sitemap(
+      Sitemaps.render_index(preview_url, RepositorySitemaps.public_packages())
+    )
   end
 
   defp update_package_sitemap(package, file_paths) do
@@ -270,10 +275,14 @@ defmodule Hexpm.Preview do
     ])
   end
 
-  defp safe_path(["." | rest], acc), do: safe_path(rest, acc)
-  defp safe_path([".." | rest], [_previous | acc]), do: safe_path(rest, acc)
-  defp safe_path([".." | _rest], []), do: :error
-  defp safe_path([path | rest], acc), do: safe_path(rest, [path | acc])
-  defp safe_path([], []), do: :error
-  defp safe_path([], acc), do: {:ok, Enum.reverse(acc)}
+  defp release_exists?(package, version) do
+    Releases.exists?(Repository.hexpm(recursive: false), package, version)
+  end
+
+  defp latest_version(package) do
+    Releases.latest_version(Repository.hexpm(recursive: false), package,
+      only_stable: true,
+      unstable_fallback: true
+    )
+  end
 end

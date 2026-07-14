@@ -28,16 +28,7 @@ defmodule Hexpm.Preview.Bucket do
       max_concurrency: 10,
       timeout: 60_000
     )
-    |> Stream.each(fn
-      {:ok, _result} ->
-        :ok
-
-      {:exit, {_error, stacktrace} = reason} ->
-        reraise(Exception.format_exit(reason), stacktrace)
-
-      {:exit, reason} ->
-        exit(reason)
-    end)
+    |> Hexpm.Utils.raise_async_stream_error()
     |> Stream.run()
 
     file_list_key = Path.join("file_lists", "#{package}-#{version}.json")

@@ -16,7 +16,7 @@ defmodule Hexpm.Repository.Sitemaps do
 
   EEx.function_from_string(:def, :render_docs, docs_template, [:packages])
 
-  def packages() do
+  def public_packages() do
     from(
       p in Package,
       where: p.repository_id == 1,

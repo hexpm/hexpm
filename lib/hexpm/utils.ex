@@ -49,6 +49,14 @@ defmodule Hexpm.Utils do
     Enum.map(tasks, &Task.await(&1, @timeout))
   end
 
+  def raise_async_stream_error(stream) do
+    Stream.each(stream, fn
+      {:ok, _result} -> :ok
+      {:exit, {_error, stacktrace} = reason} -> reraise(Exception.format_exit(reason), stacktrace)
+      {:exit, reason} -> exit(reason)
+    end)
+  end
+
   def utc_yesterday() do
     utc_days_ago(1)
   end
