@@ -13,9 +13,13 @@ if config_env() == :prod do
     repo_bucket: System.fetch_env!("HEXPM_REPO_BUCKET"),
     logs_bucket: System.fetch_env!("HEXPM_LOGS_BUCKET"),
     docs_bucket: System.fetch_env!("HEXPM_DOCS_BUCKET"),
+    preview_bucket: System.fetch_env!("HEXPM_PREVIEW_BUCKET"),
     cdn_url: System.fetch_env!("HEXPM_CDN_URL"),
     docs_url: System.fetch_env!("HEXPM_DOCS_URL"),
     private_docs_url: System.fetch_env!("HEXPM_PRIVATE_DOCS_URL"),
+    preview_url: System.fetch_env!("HEXPM_PREVIEW_URL"),
+    fastly_key: System.fetch_env!("HEXPM_FASTLY_KEY"),
+    fastly_hexrepo: System.fetch_env!("HEXPM_FASTLY_HEXREPO"),
     billing_key: System.fetch_env!("HEXPM_BILLING_KEY"),
     billing_url: System.fetch_env!("HEXPM_BILLING_URL")
 
@@ -32,7 +36,6 @@ if config_env() == :prod do
       host: System.fetch_env!("HEXPM_HOST"),
       secret: System.fetch_env!("HEXPM_SECRET"),
       diff_url: System.fetch_env!("HEXPM_DIFF_URL"),
-      preview_url: System.fetch_env!("HEXPM_PREVIEW_URL"),
       email_host: System.fetch_env!("HEXPM_EMAIL_HOST"),
       levenshtein_threshold: System.fetch_env!("HEXPM_LEVENSHTEIN_THRESHOLD"),
       dashboard_user: System.fetch_env!("HEXPM_DASHBOARD_USER"),
@@ -41,9 +44,7 @@ if config_env() == :prod do
       img_url: System.fetch_env!("HEXPM_IMG_URL"),
       img_proxy_secret: System.fetch_env!("HEXPM_IMG_PROXY_SECRET"),
       readme_host: System.fetch_env!("HEXPM_README_HOST"),
-      readme_url: System.fetch_env!("HEXPM_README_URL"),
-      fastly_key: System.fetch_env!("HEXPM_FASTLY_KEY"),
-      fastly_hexrepo: System.fetch_env!("HEXPM_FASTLY_HEXREPO")
+      readme_url: System.fetch_env!("HEXPM_README_URL")
 
     config :hexpm, Hexpm.Emails.Mailer, api_key: System.fetch_env!("HEXPM_SENDGRID_API_KEY")
 
@@ -89,6 +90,7 @@ if config_env() == :prod do
 
     config :hexpm,
       docs_private_bucket: "gcs," <> System.fetch_env!("HEXPM_DOCS_PRIVATE_BUCKET"),
+      preview_queue_id: System.fetch_env!("HEXPM_PREVIEW_QUEUE_ID"),
       hexdocs_queue_id: System.fetch_env!("HEXPM_DOCS_QUEUE_ID"),
       hexdocs_typesense_url: System.fetch_env!("HEXPM_DOCS_TYPESENSE_URL"),
       hexdocs_typesense_api_key: System.fetch_env!("HEXPM_DOCS_TYPESENSE_API_KEY"),

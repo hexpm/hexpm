@@ -51,8 +51,10 @@ defmodule Hexpm.ApplicationTest do
       assert Oban in worker_ids
       assert Hexpm.Hexdocs.Queue in worker_ids
       assert Hexpm.Hexdocs.Debouncer in worker_ids
+      assert Hexpm.Preview.Queue in worker_ids
       refute HexpmWeb.Endpoint in worker_ids
       refute Hexpm.Hexdocs.Queue in web_ids
+      refute Hexpm.Preview.Queue in web_ids
       assert MapSet.union(web_ids, worker_ids) == all_ids
     end
 
@@ -83,6 +85,8 @@ defmodule Hexpm.ApplicationTest do
         "HEXPM_REPO_BUCKET=repo",
         "HEXPM_LOGS_BUCKET=logs",
         "HEXPM_DOCS_BUCKET=docs",
+        "HEXPM_PREVIEW_BUCKET=preview",
+        "HEXPM_PREVIEW_URL=https://preview.hex.pm",
         "HEXPM_CDN_URL=cdn",
         "HEXPM_DOCS_URL=https://hexdocs.pm",
         "HEXPM_PRIVATE_DOCS_URL=https://hexorgs.pm",
@@ -96,6 +100,7 @@ defmodule Hexpm.ApplicationTest do
         "HEXPM_ENV=prod",
         "HEXPM_DOCS_PRIVATE_BUCKET=private-docs",
         "HEXPM_DOCS_QUEUE_ID=queue",
+        "HEXPM_PREVIEW_QUEUE_ID=preview-queue",
         "HEXPM_DOCS_TYPESENSE_URL=https://typesense.example",
         "HEXPM_DOCS_TYPESENSE_API_KEY=typesense-key",
         "HEXPM_DOCS_TYPESENSE_COLLECTION=hexdocs",
