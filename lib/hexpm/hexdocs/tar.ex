@@ -10,12 +10,6 @@ defmodule Hexpm.Hexdocs.Tar do
     end
   end
 
-  def create(files) do
-    files = for {path, contents} <- files, do: {String.to_charlist(path), contents}
-    {:ok, tarball} = :hex_tarball.create_docs(files)
-    tarball
-  end
-
   def unpack_to_dir!({:file, path}, opts \\ []) do
     repository = Keyword.get(opts, :repository, "UNKNOWN")
     package = Keyword.get(opts, :package, "UNKNOWN")

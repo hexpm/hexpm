@@ -160,6 +160,20 @@ defmodule Hexpm.Utils do
   Returns a url to a resource on the docs site from a list of path components.
   """
   @spec docs_html_url(Repository.t(), Package.t(), Release.t() | nil) :: String.t()
+  @spec docs_html_url(String.t(), String.t(), String.t()) :: String.t()
+  def docs_html_url(repository, package, "/" <> _ = path)
+      when is_binary(repository) and is_binary(package) do
+    {config, host, path} =
+      if repository == "hexpm" do
+        {:docs_url, name_to_subdomain(package), path}
+      else
+        {:private_docs_url, name_to_subdomain(repository), "/#{package}#{path}"}
+      end
+
+    uri = URI.parse(Application.fetch_env!(:hexpm, config))
+    URI.to_string(%{uri | host: "#{host}.#{uri.host}", path: path})
+  end
+
   def docs_html_url(%Repository{id: 1}, package, release) do
     docs_url = URI.parse(Application.get_env(:hexpm, :docs_url))
     docs_url = %{docs_url | host: "#{name_to_subdomain(package.name)}.#{docs_url.host}"}
@@ -197,7 +211,7 @@ defmodule Hexpm.Utils do
   # hexdocs.pm packages the Fastly Compute subdomain handler reverses the
   # mapping before building the GCS bucket key; for hexorgs.pm orgs the
   # hexdocs app reverses it.
-  defp name_to_subdomain(name), do: String.replace(name, "_", "-")
+  def name_to_subdomain(name), do: String.replace(name, "_", "-")
 
   @doc """
   Sidebar docs URL for a package given the currently-displayed release and the

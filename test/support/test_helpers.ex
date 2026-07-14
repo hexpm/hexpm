@@ -32,6 +32,12 @@ defmodule Hexpm.TestHelpers do
     File.read!(path)
   end
 
+  def create_docs_tar(files) do
+    files = for {path, contents} <- files, do: {String.to_charlist(path), contents}
+    {:ok, tarball} = :hex_tarball.create_docs(files)
+    tarball
+  end
+
   def rel_meta(params) do
     params = params(params)
 

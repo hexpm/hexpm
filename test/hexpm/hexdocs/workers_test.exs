@@ -2,29 +2,34 @@ defmodule Hexpm.Hexdocs.WorkersTest do
   use Hexpm.DataCase, async: false
   use Oban.Testing, repo: Hexpm.RepoBase
 
-  alias Hexpm.Hexdocs.{Tar, Workers}
+  alias Hexpm.Hexdocs.Workers
 
   test "upload and delete are repeatable for public documentation" do
     package = insert(:package, name: "worker_docs", docs_updated_at: DateTime.utc_now())
     release = insert(:release, package: package, version: "1.0.0", has_docs: true)
     key = "docs/#{package.name}-#{release.version}.tar.gz"
-    Hexpm.Store.put(:repo_bucket, key, Tar.create([{"index.html", "<html><head></head></html>"}]))
+
+    Hexpm.Store.put(
+      :repo_bucket,
+      key,
+      create_docs_tar([{"index.html", "<html><head></head></html>"}])
+    )
 
     assert :ok = perform_job(Workers.Upload, %{key: key})
     assert :ok = perform_job(Workers.Upload, %{key: key})
-    assert Hexpm.Store.get(:docs_public_bucket, "#{package.name}/index.html") =~ "plausible"
-    assert Hexpm.Store.get(:docs_public_bucket, "#{package.name}/1.0.0/index.html") =~ "plausible"
+    assert Hexpm.Store.get(:docs_bucket, "#{package.name}/index.html") =~ "plausible"
+    assert Hexpm.Store.get(:docs_bucket, "#{package.name}/1.0.0/index.html") =~ "plausible"
 
     assert :ok = perform_job(Workers.Delete, %{key: key})
     assert :ok = perform_job(Workers.Delete, %{key: key})
-    assert Hexpm.Store.get(:docs_public_bucket, "#{package.name}/index.html") == nil
+    assert Hexpm.Store.get(:docs_bucket, "#{package.name}/index.html") == nil
   end
 
   test "search succeeds for archives without search data" do
     package = insert(:package, name: "search_docs")
     release = insert(:release, package: package, version: "1.0.0", has_docs: true)
     key = "docs/#{package.name}-#{release.version}.tar.gz"
-    Hexpm.Store.put(:repo_bucket, key, Tar.create([{"index.html", "docs"}]))
+    Hexpm.Store.put(:repo_bucket, key, create_docs_tar([{"index.html", "docs"}]))
 
     use_search_mock(fn ->
       expect(Hexpm.Hexdocs.Search.Mock, :delete, fn name, version ->
@@ -45,7 +50,7 @@ defmodule Hexpm.Hexdocs.WorkersTest do
     Hexpm.Store.put(
       :repo_bucket,
       key,
-      Tar.create([{"search_data-#{package.name}.js", ~s(searchData={"items":[]})}])
+      create_docs_tar([{"search_data-#{package.name}.js", ~s(searchData={"items":[]})}])
     )
 
     use_search_mock(fn ->
@@ -67,7 +72,7 @@ defmodule Hexpm.Hexdocs.WorkersTest do
     Hexpm.Store.put(
       :repo_bucket,
       key,
-      Tar.create([{"search_data-#{package.name}.js", "searchData=not-json"}])
+      create_docs_tar([{"search_data-#{package.name}.js", "searchData=not-json"}])
     )
 
     use_search_mock(fn ->
@@ -85,11 +90,11 @@ defmodule Hexpm.Hexdocs.WorkersTest do
     removed_key = "docs/#{package.name}-#{removed.version}.tar.gz"
 
     html = ~s(<html><head><meta name="robots" content="noindex"></head></html>)
-    Hexpm.Store.put(:repo_bucket, fallback_key, Tar.create([{"index.html", html}]))
-    Hexpm.Store.put(:docs_public_bucket, "#{package.name}/index.html", "removed latest")
+    Hexpm.Store.put(:repo_bucket, fallback_key, create_docs_tar([{"index.html", html}]))
+    Hexpm.Store.put(:docs_bucket, "#{package.name}/index.html", "removed latest")
 
     assert :ok = perform_job(Workers.Delete, %{key: removed_key})
-    promoted = Hexpm.Store.get(:docs_public_bucket, "#{package.name}/index.html")
+    promoted = Hexpm.Store.get(:docs_bucket, "#{package.name}/index.html")
     assert promoted =~ "plausible"
     refute promoted =~ ~s(content="noindex")
   end
@@ -109,10 +114,15 @@ defmodule Hexpm.Hexdocs.WorkersTest do
     package = insert(:package, name: "sitemap_docs", docs_updated_at: DateTime.utc_now())
     release = insert(:release, package: package, version: "1.0.0", has_docs: true)
     key = "docs/#{package.name}-#{release.version}.tar.gz"
-    Hexpm.Store.put(:repo_bucket, key, Tar.create([{"index.html", "docs"}, {"asset.js", "js"}]))
+
+    Hexpm.Store.put(
+      :repo_bucket,
+      key,
+      create_docs_tar([{"index.html", "docs"}, {"asset.js", "js"}])
+    )
 
     assert :ok = perform_job(Workers.Sitemap, %{key: key})
-    sitemap = Hexpm.Store.get(:docs_public_bucket, "#{package.name}/sitemap.xml")
+    sitemap = Hexpm.Store.get(:docs_bucket, "#{package.name}/sitemap.xml")
     assert sitemap =~ "#{package.name}/index.html"
     refute sitemap =~ "asset.js"
   end

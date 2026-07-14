@@ -71,7 +71,7 @@ defmodule Hexpm.ApplicationTest do
       assert Application.mode(:test, "web") == :all
     end
 
-    test "worker runtime configuration does not require web settings" do
+    test "worker runtime configuration requires only shared and worker settings" do
       elixir = System.find_executable("elixir")
       erl = System.find_executable("erl")
       path = [Path.dirname(elixir), Path.dirname(erl), "/usr/bin", "/bin"] |> Enum.uniq()
@@ -84,6 +84,8 @@ defmodule Hexpm.ApplicationTest do
         "HEXPM_LOGS_BUCKET=logs",
         "HEXPM_DOCS_BUCKET=docs",
         "HEXPM_CDN_URL=cdn",
+        "HEXPM_DOCS_URL=https://hexdocs.pm",
+        "HEXPM_PRIVATE_DOCS_URL=https://hexorgs.pm",
         "HEXPM_FASTLY_KEY=fastly-key",
         "HEXPM_FASTLY_HEXREPO=fastly-service",
         "HEXPM_BILLING_KEY=billing-key",
@@ -99,8 +101,6 @@ defmodule Hexpm.ApplicationTest do
         "HEXPM_DOCS_TYPESENSE_COLLECTION=hexdocs",
         "HEXPM_DOCS_GITHUB_USER=hexpm",
         "HEXPM_DOCS_GITHUB_TOKEN=github-token",
-        "HEXPM_DOCS_HOST=hexdocs.pm",
-        "HEXPM_PRIVATE_DOCS_HOST=hexorgs.pm",
         "HEXPM_FASTLY_DOCS_KEY=docs-fastly-key",
         "HEXPM_FASTLY_DOCS=public-docs-service",
         "HEXPM_FASTLY_PRIVATE_DOCS=private-docs-service"

@@ -24,6 +24,29 @@ defmodule Hexpm.Repository.ReleasesTest do
     }
   end
 
+  test "docs_versions/2 returns documented versions and retirements in descending order" do
+    package = insert(:package, name: "documented")
+    insert(:release, package: package, version: "1.0.0", has_docs: true)
+
+    insert(:release,
+      package: package,
+      version: "2.0.0",
+      has_docs: true,
+      retirement: %Hexpm.Repository.ReleaseRetirement{
+        reason: "other",
+        message: "retired release"
+      }
+    )
+
+    insert(:release, package: package, version: "3.0.0", has_docs: false)
+
+    version_2 = Version.parse!("2.0.0")
+    version_1 = Version.parse!("1.0.0")
+
+    assert {[version_2, version_1], MapSet.new([version_2])} ==
+             Releases.docs_versions("hexpm", package.name)
+  end
+
   describe "publish/7" do
     test "publish package pushes artifacts", %{hexpm: hexpm, user: user, body_path: body_path} do
       name = Fake.sequence(:package)

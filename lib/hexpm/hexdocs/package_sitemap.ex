@@ -9,7 +9,7 @@ defmodule Hexpm.Hexdocs.PackageSitemap do
       xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
   <%= for page <- pages do %>
     <url>
-      <loc><%= Hexpm.Hexdocs.Utils.hexdocs_apex_url("/#{package_name}/#{page}") %></loc>
+      <loc><%= Hexpm.Utils.docs_html_apex_url(package_name) <> page %></loc>
       <lastmod><%= format_datetime updated_at %></lastmod>
       <changefreq>daily</changefreq>
       <priority>0.8</priority>

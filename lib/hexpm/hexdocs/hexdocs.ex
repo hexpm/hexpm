@@ -1,7 +1,8 @@
 defmodule Hexpm.Hexdocs do
   require Logger
 
-  alias Hexpm.Hexdocs.{Bucket, Data, FileRewriter, PackageSitemap, Search, SourceRepo, Tar, Utils}
+  alias Hexpm.Hexdocs.{Bucket, FileRewriter, PackageSitemap, Search, SourceRepo, Tar, Utils}
+  alias Hexpm.Repository.{Packages, Releases, Sitemaps}
 
   @special_packages Application.compile_env!(:hexpm, :hexdocs_special_packages)
   @special_package_names Map.keys(@special_packages)
@@ -72,7 +73,7 @@ defmodule Hexpm.Hexdocs do
       :ok
     else
       version = Version.parse!(version)
-      {all_versions, _retired_versions} = Data.versions(repository, package)
+      {all_versions, _retired_versions} = Releases.docs_versions(repository, package)
       Bucket.delete(repository, package, version, all_versions)
       update_index_sitemap(repository, key)
       if repository == "hexpm", do: Search.delete(package, version)
@@ -128,7 +129,7 @@ defmodule Hexpm.Hexdocs do
   end
 
   defp versions(repository, package, version) do
-    {all_versions, retired_versions} = Data.versions(repository, package)
+    {all_versions, retired_versions} = Releases.docs_versions(repository, package)
     {Version.parse!(version), all_versions, retired_versions}
   end
 
@@ -155,7 +156,7 @@ defmodule Hexpm.Hexdocs do
       Hexpm.Hexdocs.Debouncer,
       :sitemap_index,
       @gcs_put_debounce,
-      fn -> Bucket.upload_index_sitemap(Data.docs_sitemap()) end
+      fn -> Bucket.upload_index_sitemap(Sitemaps.render_docs(Sitemaps.packages_with_docs())) end
     )
   end
 
@@ -173,7 +174,7 @@ defmodule Hexpm.Hexdocs do
   defp update_package_sitemap(_repository, _key, _package, _files), do: :ok
 
   defp update_package_names_csv("hexpm") do
-    names = Enum.sort(@special_package_names) ++ Data.public_package_names()
+    names = Enum.sort(@special_package_names) ++ Packages.public_names()
     Bucket.upload_package_names_csv(for name <- names, do: [name, "\n"])
   end
 

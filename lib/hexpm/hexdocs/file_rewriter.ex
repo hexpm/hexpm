@@ -31,7 +31,7 @@ defmodule Hexpm.Hexdocs.FileRewriter do
     if String.ends_with?(path, ".html") do
       Regex.replace(@canonical_tag_re, content, fn tag ->
         Regex.replace(@hexdocs_link_re, tag, fn _match, package ->
-          "https://#{Hexpm.Hexdocs.Utils.name_to_subdomain(package)}.hexdocs.pm"
+          "https://#{Hexpm.Utils.name_to_subdomain(package)}.hexdocs.pm"
         end)
       end)
     else
@@ -50,7 +50,7 @@ defmodule Hexpm.Hexdocs.FileRewriter do
   defp add_analytics(content, path) do
     if String.ends_with?(path, ".html") do
       String.replace(content, "</head>", fn match ->
-        host = Application.fetch_env!(:hexpm, :hexdocs_host)
+        host = Application.fetch_env!(:hexpm, :docs_url) |> URI.parse() |> Map.fetch!(:host)
         String.replace(@analytics_addition, "${DOMAIN}", host) <> match
       end)
     else
