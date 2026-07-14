@@ -41,8 +41,10 @@ defmodule Hexpm.Application do
 
   def children(mode) when mode in [:web, :worker, :all] do
     common_children() ++
-      if(mode in [:web, :all], do: web_children(), else: []) ++
-      if(mode in [:worker, :all], do: worker_children(), else: [])
+      if(mode in [:worker, :all], do: worker_before_oban_children(), else: []) ++
+      [oban_child()] ++
+      if(mode in [:worker, :all], do: worker_after_oban_children(), else: []) ++
+      if(mode in [:web, :all], do: web_children(), else: [])
   end
 
   defp web_mode?(mode), do: mode in [:web, :all]
@@ -134,6 +136,8 @@ defmodule Hexpm.Application do
     |> Enum.reject(&is_nil/1)
   end
 
+  defp oban_child, do: {Oban, Application.fetch_env!(:hexpm, Oban)}
+
   defp web_children do
     [
       {Cluster.Supervisor, [cluster_topologies(), [name: Hexpm.ClusterSupervisor]]},
@@ -149,14 +153,10 @@ defmodule Hexpm.Application do
     ]
   end
 
-  defp worker_children do
-    [
-      {Oban, Application.fetch_env!(:hexpm, Oban)},
-      {Hexpm.Hexdocs.Debouncer, name: Hexpm.Hexdocs.Debouncer},
-      Hexpm.Hexdocs.Queue,
-      Hexpm.Preview.Queue
-    ]
-  end
+  defp worker_before_oban_children,
+    do: [{Hexpm.Hexdocs.Debouncer, name: Hexpm.Hexdocs.Debouncer}]
+
+  defp worker_after_oban_children, do: [Hexpm.Hexdocs.Queue, Hexpm.Preview.Queue]
 
   if Mix.env() == :prod do
     defp goth_spec() do

@@ -24,6 +24,8 @@ defmodule Hexpm.Store.LocalTest do
       File.write!(Path.join(bucket_dir, "file.txt"), "content")
 
       assert Local.get("bucket", "file.txt", []) == "content"
+      assert Hexpm.Store.fetch({Local, "bucket"}, "file.txt") == {:ok, "content"}
+      assert Hexpm.Store.fetch({Local, "bucket"}, "missing.txt") == :not_found
     end
 
     @tag :tmp_dir

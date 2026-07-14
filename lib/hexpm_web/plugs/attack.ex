@@ -8,6 +8,8 @@ defmodule HexpmWeb.Plugs.Attack do
   alias HexpmWeb.RateLimitPubSub
 
   @storage {PlugAttack.Storage.Ets, HexpmWeb.Plugs.Attack.Storage}
+  @diff_limit 20
+  @diff_period 60_000
 
   rule "allow local", conn do
     allow(conn.remote_ip == {127, 0, 0, 1})
@@ -130,6 +132,20 @@ defmodule HexpmWeb.Plugs.Attack do
       storage: @storage,
       limit: 100,
       period: 60_000
+    )
+  end
+
+  def diff_throttle(identity, opts \\ []) do
+    key = {:diff, identity}
+    time = opts[:time] || System.system_time(:millisecond)
+    unless opts[:time], do: RateLimitPubSub.broadcast(key, time)
+
+    timed_throttle(
+      key,
+      time: time,
+      storage: @storage,
+      limit: @diff_limit,
+      period: @diff_period
     )
   end
 

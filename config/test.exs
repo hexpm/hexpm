@@ -6,6 +6,8 @@ config :hexpm,
   docs_bucket: {Hexpm.Store.Memory, "docs_bucket"},
   docs_private_bucket: {Hexpm.Store.Memory, "docs_private_bucket"},
   preview_bucket: {Hexpm.Store.Memory, "preview_bucket"},
+  diff_bucket: {Hexpm.Store.Memory, "diff_bucket"},
+  diff_cache_version: 1,
   secret: "796f75666f756e64746865686578",
   jwt_signing_key: """
   -----BEGIN EC PRIVATE KEY-----

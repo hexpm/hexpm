@@ -21,6 +21,7 @@ defmodule Hexpm.ObanConfigTest do
     assert Hexpm.Security.Updater.timeout(%Oban.Job{}) == 300_000
 
     for worker <- [
+          Hexpm.Diff.Worker,
           Hexpm.Hexdocs.Workers.Upload,
           Hexpm.Hexdocs.Workers.Search,
           Hexpm.Hexdocs.Workers.Delete,

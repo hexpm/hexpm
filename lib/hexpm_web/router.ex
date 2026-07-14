@@ -198,6 +198,7 @@ defmodule HexpmWeb.Router do
 
     live_session :packages, on_mount: {HexpmWeb.Live.InitAssigns, :default} do
       live "/packages", PackageLive.Index, :index
+      live "/diff/:package/:versions", DiffLive, :show
     end
 
     get "/preview/:package", PreviewRedirectController, :latest
