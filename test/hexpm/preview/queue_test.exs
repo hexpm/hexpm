@@ -57,6 +57,37 @@ defmodule Hexpm.Preview.QueueTest do
     assert length(all_enqueued()) == 2
   end
 
+  test "uses each available object generation field before the message id" do
+    records = [
+      record("ObjectCreated:Put", %{
+        "key" => "tarballs/demo-1.0.0.tar",
+        "versionId" => "version-id"
+      }),
+      record("ObjectCreated:Put", %{
+        "key" => "tarballs/demo-2.0.0.tar",
+        "eTag" => "etag"
+      }),
+      record("ObjectCreated:Put", %{"key" => "tarballs/demo-3.0.0.tar"})
+    ]
+
+    assert %{status: :ok} = handle(%{"Records" => records})
+
+    assert_enqueued(
+      worker: Workers.Upload,
+      args: %{key: "tarballs/demo-1.0.0.tar", generation: "version-id"}
+    )
+
+    assert_enqueued(
+      worker: Workers.Upload,
+      args: %{key: "tarballs/demo-2.0.0.tar", generation: "etag"}
+    )
+
+    assert_enqueued(
+      worker: Workers.Upload,
+      args: %{key: "tarballs/demo-3.0.0.tar", generation: "message-1"}
+    )
+  end
+
   test "does not insert any jobs when one record is malformed" do
     data = %{"Records" => [created("tarballs/demo-1.0.0.tar"), %{"eventName" => "unknown"}]}
 
@@ -77,6 +108,14 @@ defmodule Hexpm.Preview.QueueTest do
 
   test "acknowledges unrelated object keys without inserting jobs" do
     assert %{status: :ok} = handle(%{"Records" => [created("docs/demo-1.0.0.tar.gz")]})
+    assert %{status: :ok} = handle(%{"preview:sitemap" => "docs/demo-1.0.0.tar.gz"})
+    assert all_enqueued() == []
+  end
+
+  test "fails malformed S3 object payloads" do
+    data = %{"Records" => [%{"eventName" => "ObjectCreated:Put", "s3" => %{"object" => %{}}}]}
+
+    assert %{status: {:failed, {:malformed_s3_object, _s3}}} = handle(data)
     assert all_enqueued() == []
   end
 
@@ -101,9 +140,13 @@ defmodule Hexpm.Preview.QueueTest do
   defp removed(key, generation \\ "0001"), do: record("ObjectRemoved:Delete", key, generation)
 
   defp record(event, key, generation) do
+    record(event, %{"key" => key, "sequencer" => generation})
+  end
+
+  defp record(event, object) do
     %{
       "eventName" => event,
-      "s3" => %{"object" => %{"key" => key, "sequencer" => generation}}
+      "s3" => %{"object" => object}
     }
   end
 end

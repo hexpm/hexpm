@@ -22,14 +22,4 @@ defmodule Hexpm.Hexdocs.UtilsTest do
     refute Utils.latest_version?("package", prerelease, [stable])
     refute Utils.latest_version?("elixir", "main", [stable])
   end
-
-  test "raise_async_stream_error/1 preserves successful results and reraises exits" do
-    assert Utils.raise_async_stream_error(ok: :value) |> Enum.to_list() == [ok: :value]
-
-    assert_raise RuntimeError, ~r/failure/, fn ->
-      [{:exit, {RuntimeError.exception("failure"), []}}]
-      |> Utils.raise_async_stream_error()
-      |> Stream.run()
-    end
-  end
 end

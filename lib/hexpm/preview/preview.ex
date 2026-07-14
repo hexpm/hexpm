@@ -2,7 +2,7 @@ defmodule Hexpm.Preview do
   require Logger
 
   alias Hexpm.Preview.{Bucket, Sitemaps}
-  alias Hexpm.Repository.{Releases, Repository}
+  alias Hexpm.Repository.Releases
   alias Hexpm.Repository.Sitemaps, as: RepositorySitemaps
 
   def upload(key) do
@@ -276,11 +276,11 @@ defmodule Hexpm.Preview do
   end
 
   defp release_exists?(package, version) do
-    Releases.exists?(Repository.hexpm(recursive: false), package, version)
+    Releases.exists?("hexpm", package, version)
   end
 
   defp latest_version(package) do
-    Releases.latest_version(Repository.hexpm(recursive: false), package,
+    Releases.latest_version("hexpm", package,
       only_stable: true,
       unstable_fallback: true
     )

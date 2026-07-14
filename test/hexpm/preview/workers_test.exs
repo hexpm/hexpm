@@ -62,6 +62,13 @@ defmodule Hexpm.Preview.WorkersTest do
     end
   end
 
+  defmodule FailingCDN do
+    @behaviour Hexpm.CDN
+
+    def purge_key(_service, _key), do: raise("simulated CDN failure")
+    def public_ips, do: []
+  end
+
   test "upload is repeatable and updates latest files and sitemaps" do
     package = insert(:package, name: "worker_preview")
     release = insert(:release, package: package, version: "1.0.0")
@@ -117,6 +124,57 @@ defmodule Hexpm.Preview.WorkersTest do
 
     assert Hexpm.Store.get(:preview_bucket, "files/#{package.name}/1.0.0/old.txt") == nil
     assert Hexpm.Store.get(:preview_bucket, "files/#{package.name}/1.0.0/new.txt") == "new"
+  end
+
+  test "upload ignores private repository releases and removes stale public Preview files" do
+    repository = insert(:repository)
+    package = insert(:package, repository_id: repository.id, name: "private_preview")
+    release = insert(:release, package: package, version: "1.0.0")
+    key = "tarballs/#{package.name}-#{release.version}.tar"
+    file_key = "files/#{package.name}/#{release.version}/README.md"
+    put_tarball(key, package.name, to_string(release.version), [{"README.md", "private"}])
+    Hexpm.Store.put(:preview_bucket, file_key, "stale")
+
+    assert :ok = perform_job(Workers.Upload, %{key: key})
+    assert Hexpm.Store.get(:preview_bucket, file_key) == nil
+    assert Hexpm.Store.get(:preview_bucket, "latest_versions/#{package.name}") == nil
+  end
+
+  test "upload normalizes safe archive paths" do
+    package = insert(:package, name: "normalized_preview")
+    release = insert(:release, package: package, version: "1.0.0")
+    key = "tarballs/#{package.name}-#{release.version}.tar"
+
+    put_tarball(key, package.name, to_string(release.version), [
+      {"lib/../safe.txt", "safe"},
+      {"./dot.txt", "dot"}
+    ])
+
+    assert :ok = perform_job(Workers.Upload, %{key: key})
+
+    assert Jason.decode!(
+             Hexpm.Store.get(:preview_bucket, "file_lists/#{package.name}-1.0.0.json")
+           ) == ["dot.txt", "safe.txt"]
+  end
+
+  test "CDN failures retry cleanly" do
+    package = insert(:package, name: "cdn_failure_preview")
+    release = insert(:release, package: package, version: "1.0.0")
+    key = "tarballs/#{package.name}-#{release.version}.tar"
+    put_tarball(key, package.name, to_string(release.version), [{"README.md", "readme"}])
+    original_cdn = Application.fetch_env!(:hexpm, :cdn_impl)
+    Application.put_env(:hexpm, :cdn_impl, FailingCDN)
+
+    try do
+      assert_raise RuntimeError, ~r/simulated CDN failure/, fn ->
+        perform_job(Workers.Upload, %{key: key})
+      end
+    after
+      Application.put_env(:hexpm, :cdn_impl, original_cdn)
+    end
+
+    assert :ok = perform_job(Workers.Upload, %{key: key})
+    assert Hexpm.Store.get(:preview_bucket, "files/#{package.name}/1.0.0/README.md") == "readme"
   end
 
   test "upload retries when the source tarball changes while files are uploading" do
@@ -338,6 +396,20 @@ defmodule Hexpm.Preview.WorkersTest do
 
     assert_raise RuntimeError, ~r/Failed to unpack Preview tarball/, fn ->
       perform_job(Workers.Upload, %{key: "tarballs/malformed-1.0.0.tar"})
+    end
+  end
+
+  test "sitemap and stale delete jobs retry when their tarballs are missing" do
+    package = insert(:package, name: "missing_other_workers")
+    insert(:release, package: package, version: "1.0.0")
+    key = "tarballs/#{package.name}-1.0.0.tar"
+
+    assert_raise RuntimeError, ~r/Preview tarball not found/, fn ->
+      perform_job(Workers.Sitemap, %{key: key})
+    end
+
+    assert_raise RuntimeError, ~r/Preview tarball not found/, fn ->
+      perform_job(Workers.Delete, %{key: key})
     end
   end
 
