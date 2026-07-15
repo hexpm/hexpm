@@ -1,53 +1,168 @@
-<main class="bg-white dark:bg-grey-950 min-h-dvh py-10">
-  <div class="max-w-7xl mx-auto px-4">
-    <div class="mb-8">
-      <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h1 class="text-h2 font-bold tracking-[-0.02em] text-grey-900 dark:text-grey-100 m-0">
-          <.link navigate={~p"/packages/#{@package}"} class="hover:text-primary-600">
-            {@package}
+<.package_layout
+  {@package_layout}
+  active_tab={:files}
+  version_pinned?={true}
+  wide?={true}
+  source_filename={@filename}
+>
+  <:inner_content>
+    <div class="space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex min-w-0 items-center gap-2 font-mono text-xs text-grey-500 dark:text-grey-300">
+          <.link
+            patch={~p"/packages/#{@package_name}/#{@version}/files"}
+            class="shrink-0 font-semibold text-grey-800 hover:text-primary-600 dark:text-grey-100 dark:hover:text-primary-300"
+          >
+            {@package_name}
           </.link>
-        </h1>
-        <span class="font-mono text-body text-grey-500 dark:text-grey-300">{@version}</span>
+          <%= for part <- Path.split(@filename) do %>
+            {icon(:heroicon, "chevron-right", class: "size-3 shrink-0 text-grey-300")}
+            <span class="min-w-0 truncate last:font-semibold last:text-grey-800 dark:last:text-grey-100">
+              {part}
+            </span>
+          <% end %>
+        </div>
+
+        <div class="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            phx-click={show_modal("preview-files-modal")}
+            class="inline-flex items-center gap-2 rounded-lg border border-grey-200 bg-white px-3 py-2 text-sm font-medium text-grey-700 shadow-sm transition-colors hover:border-grey-300 hover:bg-grey-50 dark:border-grey-700 dark:bg-grey-800 dark:text-grey-100 dark:hover:bg-grey-700 lg:hidden"
+          >
+            {icon(:heroicon, "folder-open", class: "size-4")} Files
+          </button>
+          <button
+            type="button"
+            phx-click={show_modal("preview-files-modal")}
+            class="hidden items-center gap-2 rounded-lg border border-grey-200 bg-white px-3 py-2 text-sm font-medium text-grey-700 shadow-sm transition-colors hover:border-grey-300 hover:bg-grey-50 dark:border-grey-700 dark:bg-grey-800 dark:text-grey-100 dark:hover:bg-grey-700 lg:inline-flex"
+          >
+            {icon(:heroicon, "magnifying-glass", class: "size-4")} Find file…
+          </button>
+          <a
+            href={@raw_url}
+            class="inline-flex items-center gap-2 rounded-lg border border-grey-200 bg-white px-3 py-2 text-sm font-medium text-grey-700 shadow-sm transition-colors hover:border-grey-300 hover:bg-grey-50 dark:border-grey-700 dark:bg-grey-800 dark:text-grey-100 dark:hover:bg-grey-700"
+          >
+            {icon(:heroicon, "arrow-top-right-on-square", class: "size-4")} Raw
+          </a>
+        </div>
       </div>
-      <p class="mt-2 text-body text-grey-500 dark:text-grey-300">
-        Browse the source files included in this package release.
-      </p>
+
+      <div class="grid min-w-0 gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
+        <aside class="hidden min-w-0 lg:block">
+          <div class="sticky top-4 overflow-hidden rounded-lg border border-grey-200 bg-white dark:border-grey-700 dark:bg-grey-800">
+            <div class="border-b border-grey-200 p-3 dark:border-grey-700">
+              <form id="preview-tree-search" phx-change="filter_files">
+                <label for="preview-tree-query" class="sr-only">Search package files</label>
+                <div class="relative">
+                  {icon(:heroicon, "magnifying-glass",
+                    class:
+                      "pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-grey-400"
+                  )}
+                  <input
+                    id="preview-tree-query"
+                    type="search"
+                    name="query"
+                    value={@query}
+                    phx-debounce="100"
+                    placeholder="Search files"
+                    autocomplete="off"
+                    class="w-full rounded-lg border border-grey-200 bg-grey-50 py-2 pl-9 pr-3 text-sm text-grey-900 outline-none transition-colors placeholder:text-grey-400 focus:border-primary-500 dark:border-grey-700 dark:bg-grey-900 dark:text-grey-100"
+                  />
+                </div>
+              </form>
+              <p class="mt-2 text-[10px] font-medium uppercase tracking-wide text-grey-400 dark:text-grey-300">
+                {length(@files)} files
+              </p>
+            </div>
+            <nav class="max-h-[70vh] overflow-auto p-2" aria-label="Package files">
+              <.source_tree
+                :if={@query == ""}
+                nodes={@file_tree}
+                filename={@filename}
+                package_name={@package_name}
+                version={@version}
+              />
+              <.source_results
+                :if={@query != ""}
+                files={@filtered_files}
+                filename={@filename}
+                package_name={@package_name}
+                version={@version}
+              />
+              <p
+                :if={@query != "" && @filtered_files == []}
+                class="px-2 py-6 text-center text-sm text-grey-500 dark:text-grey-300"
+              >
+                No matching files
+              </p>
+            </nav>
+          </div>
+        </aside>
+
+        <section class="min-w-0 overflow-hidden rounded-lg border border-grey-200 bg-white dark:border-grey-700 dark:bg-grey-800">
+          <header class="flex items-center justify-between gap-3 border-b border-grey-200 bg-grey-50 px-4 py-3 dark:border-grey-700 dark:bg-grey-900">
+            <h2 class="m-0 min-w-0 truncate font-mono text-sm font-semibold text-grey-800 dark:text-grey-100">
+              {@filename}
+            </h2>
+          </header>
+
+          <div
+            :if={@highlighted}
+            id="preview-source"
+            class="preview-source overflow-auto"
+            phx-hook="PreviewLineHighlight"
+          >
+            {raw(@highlighted)}
+          </div>
+          <div
+            :if={@message}
+            class="flex min-h-48 items-center justify-center px-6 py-12 text-center"
+          >
+            <div>
+              {icon(:heroicon, "document", class: "mx-auto mb-3 size-8 text-grey-300")}
+              <p class="m-0 text-sm text-grey-600 dark:text-grey-300">{@message}</p>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
 
-    <form id="preview-file-form" phx-change="select_file" class="mb-4 max-w-2xl">
-      <label
-        for="preview-file"
-        class="block mb-1.5 text-tiny font-semibold uppercase tracking-wider text-grey-500 dark:text-grey-300"
-      >
-        File
-      </label>
-      <select
-        id="preview-file"
-        name="file"
-        class="w-full rounded-lg border border-grey-200 dark:border-grey-600 bg-white dark:bg-grey-800 px-3 py-2 font-mono text-small text-grey-900 dark:text-grey-100 focus:border-primary-500"
-      >
-        <option :for={file <- @files} value={file} selected={file == @filename}>{file}</option>
-      </select>
-    </form>
+    <.modal id="preview-files-modal" title="Package files" max_width="3xl">
+      <form id="preview-file-finder" phx-change="filter_files" class="mb-3">
+        <label for="preview-file-query" class="sr-only">Find a package file</label>
+        <div class="relative">
+          {icon(:heroicon, "magnifying-glass",
+            class:
+              "pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-grey-400"
+          )}
+          <input
+            id="preview-file-query"
+            type="search"
+            name="query"
+            value={@query}
+            phx-debounce="100"
+            placeholder="Find a file by path…"
+            autocomplete="off"
+            class="w-full rounded-lg border border-grey-200 bg-grey-50 py-2.5 pl-9 pr-3 font-mono text-sm text-grey-900 outline-none transition-colors placeholder:text-grey-400 focus:border-primary-500 dark:border-grey-700 dark:bg-grey-900 dark:text-grey-100"
+          />
+        </div>
+      </form>
 
-    <section class="overflow-hidden rounded-lg border border-grey-200 dark:border-grey-700 bg-grey-50 dark:bg-grey-900">
-      <header class="flex items-center border-b border-grey-200 dark:border-grey-700 px-4 py-3">
-        <h2 class="m-0 break-all font-mono text-small font-semibold text-grey-800 dark:text-grey-100">
-          {@filename}
-        </h2>
-      </header>
-
-      <div
-        :if={@highlighted}
-        id="preview-source"
-        class="preview-source overflow-auto"
-        phx-hook="PreviewLineHighlight"
-      >
-        {raw(@highlighted)}
-      </div>
-      <p :if={@message} class="m-0 px-4 py-8 text-body text-grey-600 dark:text-grey-300">
-        {@message}
-      </p>
-    </section>
-  </div>
-</main>
+      <nav class="max-h-[60vh] overflow-auto" aria-label="Find a package file">
+        <.source_results
+          files={@filtered_files}
+          filename={@filename}
+          package_name={@package_name}
+          version={@version}
+          close_modal?={true}
+        />
+        <p
+          :if={@filtered_files == []}
+          class="px-2 py-8 text-center text-sm text-grey-500 dark:text-grey-300"
+        >
+          No matching files
+        </p>
+      </nav>
+    </.modal>
+  </:inner_content>
+</.package_layout>

@@ -11,11 +11,26 @@ defmodule HexpmWeb.PreviewRedirectControllerTest do
     assert redirected_to(conn, 301) == "http://localhost:5000/preview/sitemap.xml"
   end
 
-  test "preserves Preview paths and query strings" do
+  test "redirects Preview host file paths directly to package files" do
     conn = request("/preview/package/1.0.0/show/lib/file.ex?line=1")
 
     assert redirected_to(conn, 301) ==
-             "http://localhost:5000/preview/package/1.0.0/show/lib/file.ex?line=1"
+             "http://localhost:5000/packages/package/1.0.0/files/lib/file.ex?line=1"
+  end
+
+  test "redirects legacy Hexpm Preview file paths" do
+    conn = get(build_conn(), "/preview/package/1.0.0/show/lib/file.ex")
+
+    assert redirected_to(conn, 301) ==
+             "http://localhost:5000/packages/package/1.0.0/files/lib/file.ex"
+  end
+
+  test "resolves legacy latest Preview paths to a pinned version" do
+    Hexpm.Store.put(:preview_bucket, "latest_versions/package", "2.0.0")
+    conn = get(build_conn(), "/preview/package/show/README.md")
+
+    assert redirected_to(conn, 301) ==
+             "http://localhost:5000/packages/package/2.0.0/files/README.md"
   end
 
   test "normalizes historical versioned package sitemap paths" do

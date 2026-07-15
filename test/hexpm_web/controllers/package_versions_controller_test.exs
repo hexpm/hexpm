@@ -67,7 +67,10 @@ defmodule HexpmWeb.PackageVersionsControllerTest do
 
       for version <- ~w(0.0.1 0.0.2 0.0.3-dev) do
         assert [_ | _] =
-                 Floki.find(document, ~s(a[href="/preview/#{package1.name}/#{version}"]))
+                 Floki.find(
+                   document,
+                   ~s(a[href="/packages/#{package1.name}/#{version}/files"])
+                 )
       end
     end
 

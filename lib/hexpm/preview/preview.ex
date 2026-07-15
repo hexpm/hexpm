@@ -10,7 +10,7 @@ defmodule Hexpm.Preview do
 
   def source(package, version, requested_filename \\ nil) do
     with [_ | _] = files <- Bucket.get_file_list(package, version),
-         filename <- selected_file(files, requested_filename),
+         filename when is_binary(filename) <- selected_file(files, requested_filename),
          size when is_integer(size) <- Bucket.file_size(package, version, filename),
          result when is_map(result) <- source_result(package, version, filename, size) do
       {:ok, Map.merge(result, %{files: files, filename: filename})}
@@ -43,7 +43,7 @@ defmodule Hexpm.Preview do
     with %DateTime{} = updated_at <- RepositorySitemaps.public_package_updated_at(package),
          version when is_binary(version) <- Bucket.get_latest_version(package),
          [_ | _] = files <- Bucket.get_file_list(package, version) do
-      {:ok, Sitemaps.render_package(base_url, package, files, updated_at)}
+      {:ok, Sitemaps.render_package(base_url, package, version, files, updated_at)}
     else
       _ -> :error
     end
@@ -293,8 +293,10 @@ defmodule Hexpm.Preview do
     )
   end
 
+  defp selected_file(files, nil), do: default_file(files)
+
   defp selected_file(files, requested_filename) do
-    if requested_filename in files, do: requested_filename, else: default_file(files)
+    if requested_filename in files, do: requested_filename
   end
 
   defp source_result(_package, _version, _filename, size) when size > @max_file_size do

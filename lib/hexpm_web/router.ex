@@ -198,11 +198,14 @@ defmodule HexpmWeb.Router do
       live "/packages", PackageLive.Index, :index
     end
 
+    get "/preview/:package", PreviewRedirectController, :latest
+    get "/preview/:package/show/*filename", PreviewRedirectController, :latest_file
+    get "/preview/:package/:version", PreviewRedirectController, :version
+    get "/preview/:package/:version/show/*filename", PreviewRedirectController, :version_file
+
     live_session :preview, on_mount: {HexpmWeb.Live.InitAssigns, :default} do
-      live "/preview/:package", PreviewLive, :latest
-      live "/preview/:package/show/*filename", PreviewLive, :latest
-      live "/preview/:package/:version", PreviewLive, :version
-      live "/preview/:package/:version/show/*filename", PreviewLive, :version
+      live "/packages/:package/:version/files", PreviewLive, :files
+      live "/packages/:package/:version/files/*filename", PreviewLive, :files
     end
 
     get "/packages/:name/owners", PackageOwnerController, :index

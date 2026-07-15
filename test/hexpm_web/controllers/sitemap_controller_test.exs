@@ -72,7 +72,7 @@ defmodule HexpmWeb.SitemapControllerTest do
 
     body = response(conn, 200)
 
-    assert body =~ "/preview/#{package.name}/show/README.md"
+    assert body =~ "/packages/#{package.name}/0.1.0/files/README.md"
     assert body =~ "docs/a%20%26%20%23%3C.html"
     refute body =~ "docs/a & #<.html"
     assert get_resp_header(conn, "cache-control") == ["public, max-age=300"]

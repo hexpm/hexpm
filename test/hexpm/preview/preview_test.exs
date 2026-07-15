@@ -3,7 +3,7 @@ defmodule Hexpm.PreviewTest do
 
   alias Hexpm.Preview
 
-  test "source selects known files and defaults invalid paths to the README" do
+  test "source selects known files and rejects invalid paths" do
     put_release("source_package", "1.0.0", [
       {"mix.exs", "mix"},
       {"README.md", "readme"},
@@ -15,9 +15,7 @@ defmodule Hexpm.PreviewTest do
     assert source.contents == "source"
     assert source.type == :text
 
-    assert {:ok, source} = Preview.source("source_package", "1.0.0", "../other/file")
-    assert source.filename == "README.md"
-    assert source.contents == "readme"
+    assert Preview.source("source_package", "1.0.0", "../other/file") == :error
   end
 
   test "source reports binary and oversized files without returning their contents" do
