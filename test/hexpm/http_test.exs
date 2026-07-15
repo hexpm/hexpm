@@ -17,6 +17,17 @@ defmodule Hexpm.HTTPTest do
     assert {:ok, 200, _headers, "respbody"} = HTTP.get(lasso_url(lasso, "/get"), [])
   end
 
+  test "head/2", %{lasso: lasso} do
+    Lasso.expect_once(lasso, "HEAD", "/head", fn conn ->
+      conn
+      |> Conn.put_resp_header("content-length", "8")
+      |> Conn.resp(200, "")
+    end)
+
+    assert {:ok, 200, headers, ""} = HTTP.head(lasso_url(lasso, "/head"), [])
+    assert {"content-length", "8"} in headers
+  end
+
   test "post/3", %{lasso: lasso} do
     Lasso.expect_once(lasso, "POST", "/post", fn conn ->
       {:ok, reqbody, conn} = Conn.read_body(conn)

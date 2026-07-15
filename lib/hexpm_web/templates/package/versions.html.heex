@@ -125,7 +125,7 @@ version_rows =
                 </a>
               <% end %>
               <a
-                href={Hexpm.Utils.preview_html_url(@package.name, row.release.version)}
+                href={~p"/preview/#{@package.name}/#{to_string(row.release.version)}"}
                 title="Preview"
                 class="text-grey-400 dark:text-grey-300 hover:text-purple-600 dark:hover:text-primary-300 transition-colors"
               >
@@ -258,7 +258,7 @@ version_rows =
                     </a>
                   <% end %>
                   <a
-                    href={Hexpm.Utils.preview_html_url(@package.name, row.release.version)}
+                    href={~p"/preview/#{@package.name}/#{to_string(row.release.version)}"}
                     title="Preview"
                     class="text-grey-400 dark:text-grey-300 hover:text-purple-600 dark:hover:text-primary-300 transition-colors"
                   >

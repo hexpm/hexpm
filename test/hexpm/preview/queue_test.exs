@@ -10,7 +10,7 @@ defmodule Hexpm.Preview.QueueTest do
     assert all_enqueued() == []
   end
 
-  test "inserts create, removal, and custom sitemap jobs" do
+  test "inserts create and removal jobs" do
     assert %{status: :ok} = handle(%{"Records" => [created("tarballs%2Fdemo-1.0.0.tar")]})
 
     assert_enqueued(
@@ -23,13 +23,6 @@ defmodule Hexpm.Preview.QueueTest do
     assert_enqueued(
       worker: Workers.Delete,
       args: %{key: "tarballs/demo-1.0.0.tar", generation: "0001"}
-    )
-
-    assert %{status: :ok} = handle(%{"preview:sitemap" => "tarballs/demo-1.0.0.tar"})
-
-    assert_enqueued(
-      worker: Workers.Sitemap,
-      args: %{key: "tarballs/demo-1.0.0.tar", generation: "message-1"}
     )
   end
 
@@ -108,7 +101,6 @@ defmodule Hexpm.Preview.QueueTest do
 
   test "acknowledges unrelated object keys without inserting jobs" do
     assert %{status: :ok} = handle(%{"Records" => [created("docs/demo-1.0.0.tar.gz")]})
-    assert %{status: :ok} = handle(%{"preview:sitemap" => "docs/demo-1.0.0.tar.gz"})
     assert all_enqueued() == []
   end
 
@@ -122,6 +114,9 @@ defmodule Hexpm.Preview.QueueTest do
   test "fails malformed JSON and unsupported messages" do
     assert %{status: {:failed, %Jason.DecodeError{}}} = handle_raw("not-json")
     assert %{status: {:failed, {:unsupported_preview_message, %{}}}} = handle(%{})
+
+    assert %{status: {:failed, {:unsupported_preview_message, _message}}} =
+             handle(%{"preview:sitemap" => "tarballs/demo-1.0.0.tar"})
   end
 
   defp handle(data), do: data |> Jason.encode!() |> handle_raw()

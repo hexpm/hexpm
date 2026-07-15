@@ -58,12 +58,6 @@ defmodule Hexpm.Preview.Queue do
     end)
   end
 
-  defp jobs_for(%{"preview:sitemap" => key}, message_id) when is_binary(key) do
-    if Hexpm.Preview.key_components(key) == :error,
-      do: {:ok, []},
-      else: {:ok, [{Workers.Sitemap, job_args(key, message_id)}]}
-  end
-
   defp jobs_for(data, _message_id), do: {:error, {:unsupported_preview_message, data}}
 
   defp jobs_for_record(%{"eventName" => "ObjectCreated:" <> _, "s3" => s3}, message_id) do

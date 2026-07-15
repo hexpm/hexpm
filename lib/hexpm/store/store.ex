@@ -25,6 +25,11 @@ defmodule Hexpm.Store do
     impl.get(bucket, key, opts)
   end
 
+  def size(bucket, key) do
+    {impl, bucket} = impl_bucket(bucket)
+    impl.size(bucket, key)
+  end
+
   def get_to_file(bucket, key, destination, opts \\ []) do
     {impl, bucket} = impl_bucket(bucket)
     impl.get_to_file(bucket, key, destination, opts)

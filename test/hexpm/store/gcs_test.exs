@@ -53,4 +53,22 @@ defmodule Hexpm.Store.GCSTest do
 
     assert :ok = GCS.delete("bucket", "docs/missing.html")
   end
+
+  test "reads object sizes without downloading contents" do
+    expect(Hexpm.HTTP.Mock, :head, fn url, headers ->
+      assert url == "https://storage.example/bucket/docs/file.html"
+      assert headers == [{"authorization", "Bearer token"}]
+      {:ok, 200, [{"content-length", "1234"}], ""}
+    end)
+
+    assert GCS.size("bucket", "docs/file.html") == 1234
+  end
+
+  test "returns nil for missing object sizes" do
+    expect(Hexpm.HTTP.Mock, :head, fn _url, _headers ->
+      {:ok, 404, [], ""}
+    end)
+
+    assert GCS.size("bucket", "missing") == nil
+  end
 end

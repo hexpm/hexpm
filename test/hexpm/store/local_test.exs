@@ -76,6 +76,18 @@ defmodule Hexpm.Store.LocalTest do
     end
   end
 
+  describe "size/2" do
+    @tag :tmp_dir
+    test "returns the byte size or nil", %{tmp_dir: tmp_dir} do
+      bucket_dir = Path.join([tmp_dir, "store", "bucket"])
+      File.mkdir_p!(bucket_dir)
+      File.write!(Path.join(bucket_dir, "source.txt"), "content")
+
+      assert Local.size("bucket", "source.txt") == 7
+      assert Local.size("bucket", "missing.txt") == nil
+    end
+  end
+
   describe "delete/2" do
     @tag :tmp_dir
     test "works for valid paths", %{tmp_dir: tmp_dir} do

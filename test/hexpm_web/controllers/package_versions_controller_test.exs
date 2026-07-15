@@ -62,6 +62,13 @@ defmodule HexpmWeb.PackageVersionsControllerTest do
       assert result =~ "0.0.2"
       assert result =~ "0.0.3-dev"
       assert result =~ package1.name
+
+      assert {:ok, document} = Floki.parse_document(result)
+
+      for version <- ~w(0.0.1 0.0.2 0.0.3-dev) do
+        assert [_ | _] =
+                 Floki.find(document, ~s(a[href="/preview/#{package1.name}/#{version}"]))
+      end
     end
 
     test "list private package versions", %{

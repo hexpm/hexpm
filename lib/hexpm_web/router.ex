@@ -96,12 +96,24 @@ defmodule HexpmWeb.Router do
     forward "/dev/mailbox", Plug.Swoosh.MailboxPreview
   end
 
+  scope "/", HexpmWeb, host: "preview." do
+    get "/", PreviewRedirectController, :index
+    get "/sitemap.xml", PreviewRedirectController, :sitemap
+    get "/preview/:package/:version/sitemap.xml", PreviewRedirectController, :package_sitemap
+    get "/*path", PreviewRedirectController, :path
+  end
+
   scope "/", HexpmWeb, host: "readme." do
     pipe_through :readme
 
     get "/:name/:version", ReadmeController, :show
     get "/:name", ReadmeController, :show
     match :*, "/*path", ReadmeController, :not_found
+  end
+
+  scope "/", HexpmWeb do
+    get "/preview/sitemap.xml", SitemapController, :preview_index
+    get "/preview/:package/sitemap.xml", SitemapController, :preview_package
   end
 
   scope "/", HexpmWeb do
@@ -184,6 +196,13 @@ defmodule HexpmWeb.Router do
 
     live_session :packages, on_mount: {HexpmWeb.Live.InitAssigns, :default} do
       live "/packages", PackageLive.Index, :index
+    end
+
+    live_session :preview, on_mount: {HexpmWeb.Live.InitAssigns, :default} do
+      live "/preview/:package", PreviewLive, :latest
+      live "/preview/:package/show/*filename", PreviewLive, :latest
+      live "/preview/:package/:version", PreviewLive, :version
+      live "/preview/:package/:version/show/*filename", PreviewLive, :version
     end
 
     get "/packages/:name/owners", PackageOwnerController, :index
@@ -335,7 +354,6 @@ defmodule HexpmWeb.Router do
   scope "/", HexpmWeb do
     get "/sitemap.xml", SitemapController, :main
     get "/docs_sitemap.xml", SitemapController, :docs
-    get "/preview_sitemap.xml", SitemapController, :preview
     get "/hexsearch.xml", OpenSearchController, :opensearch
     get "/installs/hex.ez", InstallController, :archive
     get "/feeds/blog.xml", FeedsController, :blog
@@ -435,14 +453,6 @@ defmodule HexpmWeb.Router do
       end
 
       get "/repos/:repository/policies/:name", TestController, :policy
-    end
-
-    scope "/preview", HexpmWeb do
-      get "/:package/:version/*filename", TestController, :preview_file
-    end
-
-    scope "/preview-files", HexpmWeb do
-      get "/:file", TestController, :preview_file_list
     end
 
     scope "/api", HexpmWeb do

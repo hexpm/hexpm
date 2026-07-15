@@ -237,6 +237,9 @@ defmodule HexpmWeb.PackageControllerTest do
       assert link_text(document, "/packages/#{package1.name}/dependencies") == "0 Dependencies"
       assert link_text(document, "/packages/#{package1.name}/versions") == "3 Versions"
 
+      assert [_ | _] =
+               Floki.find(document, ~s(a[href="/preview/#{package1.name}/0.0.2"]))
+
       assert package_tab_hrefs(document, package1.name) == [
                "/packages/#{package1.name}",
                "/packages/#{package1.name}/versions",

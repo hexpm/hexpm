@@ -15,38 +15,21 @@ defmodule HexpmWeb.ReadmeControllerTest do
   end
 
   defp mock_file_list_and_readme(package_name, version, filename, content) do
-    file_list = Jason.encode!([filename])
+    Hexpm.Store.put(
+      :preview_bucket,
+      "file_lists/#{package_name}-#{version}.json",
+      Jason.encode!([filename])
+    )
 
-    Mox.expect(Hexpm.HTTP.Mock, :get, 2, fn url, _headers ->
-      cond do
-        String.contains?(url, "/preview-files/#{package_name}-#{version}.json") ->
-          {:ok, 200, [], file_list}
-
-        String.ends_with?(url, "/#{filename}") ->
-          {:ok, 200, [], content}
-
-        true ->
-          {:ok, 404, [], ""}
-      end
-    end)
+    Hexpm.Store.put(:preview_bucket, "files/#{package_name}/#{version}/#{filename}", content)
   end
 
   defp mock_file_list(package_name, version, files) do
-    file_list = Jason.encode!(files)
-
-    Mox.expect(Hexpm.HTTP.Mock, :get, fn url, _headers ->
-      if String.contains?(url, "/preview-files/#{package_name}-#{version}.json") do
-        {:ok, 200, [], file_list}
-      else
-        {:ok, 404, [], ""}
-      end
-    end)
-  end
-
-  defp mock_no_file_list do
-    Mox.expect(Hexpm.HTTP.Mock, :get, fn _url, _headers ->
-      {:ok, 404, [], ""}
-    end)
+    Hexpm.Store.put(
+      :preview_bucket,
+      "file_lists/#{package_name}-#{version}.json",
+      Jason.encode!(files)
+    )
   end
 
   describe "show/2" do
@@ -125,8 +108,6 @@ defmodule HexpmWeb.ReadmeControllerTest do
     end
 
     test "shows no README when no file list exists", %{package: package} do
-      mock_no_file_list()
-
       conn =
         build_conn()
         |> Map.put(:host, "readme.localhost")

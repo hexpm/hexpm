@@ -8,6 +8,8 @@ defmodule Hexpm.HTTP.Interface do
 
   @callback get(url(), headers()) :: response()
   @callback get(url(), headers(), opts()) :: response()
+  @callback head(url(), headers()) :: response()
+  @callback head(url(), headers(), opts()) :: response()
   @callback post(url(), headers(), params()) :: response()
   @callback post(url(), headers(), params(), opts()) :: response()
   @callback put(url(), headers(), params()) :: response()
@@ -33,6 +35,9 @@ defmodule Hexpm.HTTP do
 
   @impl Hexpm.HTTP.Interface
   def get(url, headers, opts \\ []), do: do_request(:get, url, headers, nil, opts)
+
+  @impl Hexpm.HTTP.Interface
+  def head(url, headers, opts \\ []), do: do_request(:head, url, headers, nil, opts)
 
   @impl Hexpm.HTTP.Interface
   def post(url, headers, body, opts \\ []), do: do_request(:post, url, headers, body, opts)

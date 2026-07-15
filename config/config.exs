@@ -21,7 +21,6 @@ config :hexpm,
   preview_queue_id: "test",
   preview_queue_producer: Broadway.DummyProducer,
   preview_queue_concurrency: 1,
-  preview_url: "http://localhost:5005",
   hexdocs_special_packages: %{
     "eex" => "elixir-lang/elixir",
     "elixir" => "elixir-lang/elixir",

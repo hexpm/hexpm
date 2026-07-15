@@ -457,3 +457,47 @@ html[data-theme="dark"] .form-error {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;  /* Chrome, Safari and Opera */
 }
+
+.preview-source .lumis {
+  min-width: max-content;
+  margin: 0;
+  border-radius: 0;
+  padding: 1rem 0;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.8125rem;
+  line-height: 1.5rem;
+}
+
+.preview-source .l-line {
+  display: block;
+  min-height: 1.5rem;
+  padding-right: 1rem;
+  cursor: pointer;
+}
+
+.preview-source .l-line::before {
+  content: attr(data-line);
+  display: inline-block;
+  width: 4rem;
+  margin-right: 1rem;
+  padding-right: 1rem;
+  color: var(--color-grey-400);
+  text-align: right;
+  user-select: none;
+  border-right: 1px solid var(--color-grey-200);
+}
+
+.preview-source .l-line:hover,
+.preview-source .l-line.l-highlighted {
+  background-color: var(--color-yellow-100);
+}
+
+html[data-theme="dark"] .preview-source .l-line::before {
+  color: var(--color-grey-500);
+  border-right-color: var(--color-grey-700);
+}
+
+html[data-theme="dark"] .preview-source .l-line:hover,
+html[data-theme="dark"] .preview-source .l-line.l-highlighted {
+  background-color: var(--color-grey-800);
+}

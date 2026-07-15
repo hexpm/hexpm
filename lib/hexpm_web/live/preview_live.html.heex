@@ -1,0 +1,53 @@
+<main class="bg-white dark:bg-grey-950 min-h-dvh py-10">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="mb-8">
+      <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <h1 class="text-h2 font-bold tracking-[-0.02em] text-grey-900 dark:text-grey-100 m-0">
+          <.link navigate={~p"/packages/#{@package}"} class="hover:text-primary-600">
+            {@package}
+          </.link>
+        </h1>
+        <span class="font-mono text-body text-grey-500 dark:text-grey-300">{@version}</span>
+      </div>
+      <p class="mt-2 text-body text-grey-500 dark:text-grey-300">
+        Browse the source files included in this package release.
+      </p>
+    </div>
+
+    <form id="preview-file-form" phx-change="select_file" class="mb-4 max-w-2xl">
+      <label
+        for="preview-file"
+        class="block mb-1.5 text-tiny font-semibold uppercase tracking-wider text-grey-500 dark:text-grey-300"
+      >
+        File
+      </label>
+      <select
+        id="preview-file"
+        name="file"
+        class="w-full rounded-lg border border-grey-200 dark:border-grey-600 bg-white dark:bg-grey-800 px-3 py-2 font-mono text-small text-grey-900 dark:text-grey-100 focus:border-primary-500"
+      >
+        <option :for={file <- @files} value={file} selected={file == @filename}>{file}</option>
+      </select>
+    </form>
+
+    <section class="overflow-hidden rounded-lg border border-grey-200 dark:border-grey-700 bg-grey-50 dark:bg-grey-900">
+      <header class="flex items-center border-b border-grey-200 dark:border-grey-700 px-4 py-3">
+        <h2 class="m-0 break-all font-mono text-small font-semibold text-grey-800 dark:text-grey-100">
+          {@filename}
+        </h2>
+      </header>
+
+      <div
+        :if={@highlighted}
+        id="preview-source"
+        class="preview-source overflow-auto"
+        phx-hook="PreviewLineHighlight"
+      >
+        {raw(@highlighted)}
+      </div>
+      <p :if={@message} class="m-0 px-4 py-8 text-body text-grey-600 dark:text-grey-300">
+        {@message}
+      </p>
+    </section>
+  </div>
+</main>

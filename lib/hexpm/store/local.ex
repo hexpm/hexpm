@@ -27,6 +27,15 @@ defmodule Hexpm.Store.Local do
     end
   end
 
+  def size(bucket, key) do
+    path = safe_path!(bucket, key)
+
+    case File.stat(path) do
+      {:ok, stat} -> stat.size
+      {:error, :enoent} -> nil
+    end
+  end
+
   def get_to_file(bucket, key, destination, _opts) do
     path = safe_path!(bucket, key)
 

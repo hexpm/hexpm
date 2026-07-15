@@ -51,12 +51,21 @@ defmodule Hexpm.Preview.Bucket do
     Hexpm.Store.delete_many(:preview_bucket, [file_list_key | Enum.to_list(keys)])
   end
 
-  def upload_index_sitemap(sitemap) do
-    upload_sitemap("sitemaps/sitemap.xml", "preview/sitemap", sitemap)
+  def get_file_list(package, version) do
+    key = Path.join("file_lists", "#{package}-#{version}.json")
+
+    case Hexpm.Store.get(:preview_bucket, key) do
+      nil -> nil
+      json -> json |> Jason.decode!() |> Enum.uniq()
+    end
   end
 
-  def upload_package_sitemap(package, sitemap) do
-    upload_sitemap("sitemaps/#{package}.xml", "preview/package/#{package}", sitemap)
+  def get_file(package, version, filename) do
+    Hexpm.Store.get(:preview_bucket, Path.join(["files", package, version, filename]))
+  end
+
+  def file_size(package, version, filename) do
+    Hexpm.Store.size(:preview_bucket, Path.join(["files", package, version, filename]))
   end
 
   def update_latest_version(package, version) do
@@ -73,14 +82,7 @@ defmodule Hexpm.Preview.Bucket do
   end
 
   def delete_latest_version(package) do
-    Hexpm.Store.delete_many(:preview_bucket, [
-      Path.join("latest_versions", package),
-      "sitemaps/#{package}.xml"
-    ])
-  end
-
-  defp upload_sitemap(path, key, sitemap) do
-    Hexpm.Store.put(:preview_bucket, path, sitemap, put_opts(key))
+    Hexpm.Store.delete(:preview_bucket, Path.join("latest_versions", package))
   end
 
   defp put_opts(package, version) do
