@@ -70,9 +70,9 @@ defmodule Hexpm.Hexdocs.Tar do
 
   defp fix_paths(files, repository, package, version) do
     Enum.flat_map(files, fn path ->
-      case safe_path(Path.split(path), []) do
-        {:ok, parts} ->
-          [Path.join(parts)]
+      case Path.safe_relative(path) do
+        {:ok, path} when path != "" ->
+          [path]
 
         :error ->
           Logger.error("Unsafe path from #{repository}/#{package} #{version}: #{path}")
@@ -80,11 +80,4 @@ defmodule Hexpm.Hexdocs.Tar do
       end
     end)
   end
-
-  defp safe_path(["." | rest], acc), do: safe_path(rest, acc)
-  defp safe_path([".." | rest], [_previous | acc]), do: safe_path(rest, acc)
-  defp safe_path([".." | _rest], []), do: :error
-  defp safe_path([part | rest], acc), do: safe_path(rest, [part | acc])
-  defp safe_path([], []), do: :error
-  defp safe_path([], acc), do: {:ok, Enum.reverse(acc)}
 end

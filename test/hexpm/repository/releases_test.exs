@@ -47,6 +47,51 @@ defmodule Hexpm.Repository.ReleasesTest do
              Releases.docs_versions("hexpm", package.name)
   end
 
+  describe "exists?/3" do
+    test "checks a release by repository, package, and version", %{
+      repository: repository,
+      package: package,
+      release: release
+    } do
+      assert Releases.exists?("hexpm", package.name, release.version)
+      refute Releases.exists?("hexpm", package.name, "9.9.9")
+      refute Releases.exists?(repository.name, package.name, release.version)
+
+      private_package = insert(:package, repository_id: repository.id, name: package.name)
+      private_release = insert(:release, package: private_package, version: release.version)
+
+      assert Releases.exists?(repository.name, private_package.name, private_release.version)
+    end
+  end
+
+  describe "latest_version/3" do
+    test "prefers stable releases and falls back to prereleases" do
+      stable_package = insert(:package, name: "stable_preview")
+
+      insert(:release,
+        package: stable_package,
+        version: "1.0.0",
+        retirement: %Hexpm.Repository.ReleaseRetirement{reason: "other", message: "retired"}
+      )
+
+      insert(:release, package: stable_package, version: "2.0.0-rc.1")
+
+      assert Releases.latest_version("hexpm", stable_package.name,
+               only_stable: true,
+               unstable_fallback: true
+             ) == Version.parse!("1.0.0")
+
+      prerelease_package = insert(:package, name: "prerelease_preview")
+      insert(:release, package: prerelease_package, version: "1.0.0-rc.1")
+      insert(:release, package: prerelease_package, version: "1.0.0-rc.2")
+
+      assert Releases.latest_version("hexpm", prerelease_package.name,
+               only_stable: true,
+               unstable_fallback: true
+             ) == Version.parse!("1.0.0-rc.2")
+    end
+  end
+
   describe "publish/7" do
     test "publish package pushes artifacts", %{hexpm: hexpm, user: user, body_path: body_path} do
       name = Fake.sequence(:package)

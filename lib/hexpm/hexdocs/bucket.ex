@@ -194,7 +194,7 @@ defmodule Hexpm.Hexdocs.Bucket do
       max_concurrency: 10,
       timeout: 60_000
     )
-    |> Utils.raise_async_stream_error()
+    |> Hexpm.Utils.raise_async_stream_error()
     |> Stream.run()
   end
 

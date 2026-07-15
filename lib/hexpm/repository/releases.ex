@@ -29,6 +29,32 @@ defmodule Hexpm.Repository.Releases do
     package && get(package, version)
   end
 
+  def exists?(repository, package, version) when is_binary(repository) and is_binary(package) do
+    from(r in Release,
+      join: p in assoc(r, :package),
+      join: repository in assoc(p, :repository),
+      where: repository.name == ^repository and p.name == ^package and r.version == ^version,
+      select: true
+    )
+    |> Repo.exists?()
+  end
+
+  def latest_version(repository, package, opts)
+      when is_binary(repository) and is_binary(package) do
+    from(r in Release,
+      join: p in assoc(r, :package),
+      join: repository in assoc(p, :repository),
+      where: repository.name == ^repository and p.name == ^package,
+      select: struct(r, [:version, :has_docs])
+    )
+    |> Repo.all()
+    |> Release.latest_version(opts)
+    |> case do
+      nil -> nil
+      release -> release.version
+    end
+  end
+
   def package_versions(packages) do
     Release.package_versions(packages)
     |> Repo.all()

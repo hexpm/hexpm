@@ -6,6 +6,7 @@ config :hexpm,
   hexdocs_search_impl: Hexpm.Hexdocs.Search.Typesense,
   hexdocs_queue_producer: BroadwaySQS.Producer,
   hexdocs_gcs_put_debounce: 3000,
+  preview_queue_producer: BroadwaySQS.Producer,
   pwned_impl: Hexpm.Pwned.HaveIBeenPwned,
   tmp_dir: "tmp"
 

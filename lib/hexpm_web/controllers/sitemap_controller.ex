@@ -5,7 +5,7 @@ defmodule HexpmWeb.SitemapController do
     conn
     |> put_resp_content_type("text/xml")
     |> put_resp_header("cache-control", "public, max-age=300")
-    |> render("packages_sitemap.xml", packages: Sitemaps.packages())
+    |> render("packages_sitemap.xml", packages: Sitemaps.public_packages())
   end
 
   def docs(conn, _params) do

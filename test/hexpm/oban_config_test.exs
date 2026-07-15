@@ -24,7 +24,10 @@ defmodule Hexpm.ObanConfigTest do
           Hexpm.Hexdocs.Workers.Upload,
           Hexpm.Hexdocs.Workers.Search,
           Hexpm.Hexdocs.Workers.Delete,
-          Hexpm.Hexdocs.Workers.Sitemap
+          Hexpm.Hexdocs.Workers.Sitemap,
+          Hexpm.Preview.Workers.Upload,
+          Hexpm.Preview.Workers.Delete,
+          Hexpm.Preview.Workers.Sitemap
         ] do
       assert worker.__opts__()[:queue] == :heavy
       assert worker.__opts__()[:max_attempts] == 5

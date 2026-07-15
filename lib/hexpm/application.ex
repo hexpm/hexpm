@@ -153,7 +153,8 @@ defmodule Hexpm.Application do
     [
       {Oban, Application.fetch_env!(:hexpm, Oban)},
       {Hexpm.Hexdocs.Debouncer, name: Hexpm.Hexdocs.Debouncer},
-      Hexpm.Hexdocs.Queue
+      Hexpm.Hexdocs.Queue,
+      Hexpm.Preview.Queue
     ]
   end
 

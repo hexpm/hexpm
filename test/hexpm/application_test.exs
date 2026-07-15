@@ -51,8 +51,10 @@ defmodule Hexpm.ApplicationTest do
       assert Oban in worker_ids
       assert Hexpm.Hexdocs.Queue in worker_ids
       assert Hexpm.Hexdocs.Debouncer in worker_ids
+      assert Hexpm.Preview.Queue in worker_ids
       refute HexpmWeb.Endpoint in worker_ids
       refute Hexpm.Hexdocs.Queue in web_ids
+      refute Hexpm.Preview.Queue in web_ids
       assert MapSet.union(web_ids, worker_ids) == all_ids
     end
 
@@ -72,17 +74,14 @@ defmodule Hexpm.ApplicationTest do
     end
 
     test "worker runtime configuration requires only shared and worker settings" do
-      elixir = System.find_executable("elixir")
-      erl = System.find_executable("erl")
-      path = [Path.dirname(elixir), Path.dirname(erl), "/usr/bin", "/bin"] |> Enum.uniq()
-
       env = [
-        "PATH=#{Enum.join(path, ":")}",
         "HEXPM_MODE=worker",
         "HEXPM_SIGNING_KEY=key",
         "HEXPM_REPO_BUCKET=repo",
         "HEXPM_LOGS_BUCKET=logs",
         "HEXPM_DOCS_BUCKET=docs",
+        "HEXPM_PREVIEW_BUCKET=preview",
+        "HEXPM_PREVIEW_URL=https://preview.hex.pm",
         "HEXPM_CDN_URL=cdn",
         "HEXPM_DOCS_URL=https://hexdocs.pm",
         "HEXPM_PRIVATE_DOCS_URL=https://hexorgs.pm",
@@ -96,6 +95,7 @@ defmodule Hexpm.ApplicationTest do
         "HEXPM_ENV=prod",
         "HEXPM_DOCS_PRIVATE_BUCKET=private-docs",
         "HEXPM_DOCS_QUEUE_ID=queue",
+        "HEXPM_PREVIEW_QUEUE_ID=preview-queue",
         "HEXPM_DOCS_TYPESENSE_URL=https://typesense.example",
         "HEXPM_DOCS_TYPESENSE_API_KEY=typesense-key",
         "HEXPM_DOCS_TYPESENSE_COLLECTION=hexdocs",
@@ -106,15 +106,65 @@ defmodule Hexpm.ApplicationTest do
         "HEXPM_FASTLY_PRIVATE_DOCS=private-docs-service"
       ]
 
-      expression =
-        ~S|Config.Reader.read!("config/runtime.exs", env: :prod); IO.write("configured")|
-
-      assert {"configured", 0} =
-               System.cmd(
-                 System.find_executable("env"),
-                 ["-i" | env] ++ [elixir, "-e", expression]
-               )
+      assert {"configured", 0} = runtime_config(env)
     end
+
+    test "web runtime configuration does not require worker settings" do
+      env = [
+        "HEXPM_MODE=web",
+        "HEXPM_SIGNING_KEY=key",
+        "HEXPM_REPO_BUCKET=repo",
+        "HEXPM_LOGS_BUCKET=logs",
+        "HEXPM_DOCS_BUCKET=docs",
+        "HEXPM_PREVIEW_URL=https://preview.hex.pm",
+        "HEXPM_CDN_URL=cdn",
+        "HEXPM_FASTLY_KEY=fastly-key",
+        "HEXPM_FASTLY_HEXREPO=fastly-service",
+        "HEXPM_BILLING_KEY=billing-key",
+        "HEXPM_BILLING_URL=billing-url",
+        "HEXPM_AWS_ACCESS_KEY_ID=aws-key",
+        "HEXPM_AWS_ACCESS_KEY_SECRET=aws-secret",
+        "HEXPM_SENTRY_DSN=sentry-dsn",
+        "HEXPM_ENV=prod",
+        "HEXPM_HOST=hex.pm",
+        "HEXPM_SECRET=secret",
+        "HEXPM_DOCS_URL=https://hexdocs.pm",
+        "HEXPM_PRIVATE_DOCS_URL=https://hexdocs.example",
+        "HEXPM_DIFF_URL=https://diff.hex.pm",
+        "HEXPM_EMAIL_HOST=hex.pm",
+        "HEXPM_LEVENSHTEIN_THRESHOLD=1",
+        "HEXPM_DASHBOARD_USER=dashboard",
+        "HEXPM_DASHBOARD_PASSWORD=password",
+        "HEXPM_JWT_SIGNING_KEY=jwt-key",
+        "HEXPM_IMG_URL=https://img.hex.pm",
+        "HEXPM_IMG_PROXY_SECRET=img-secret",
+        "HEXPM_README_HOST=readme.hex.pm",
+        "HEXPM_README_URL=https://readme.hex.pm",
+        "HEXPM_SENDGRID_API_KEY=sendgrid-key",
+        "HEXPM_HCAPTCHA_SITEKEY=hcaptcha-sitekey",
+        "HEXPM_HCAPTCHA_SECRET=hcaptcha-secret",
+        "HEXPM_SECRET_KEY_BASE=secret-key-base",
+        "HEXPM_LIVE_VIEW_SIGNING_SALT=signing-salt",
+        "BEAM_PORT=9100",
+        "HEXPM_GITHUB_CLIENT_ID=github-client",
+        "HEXPM_GITHUB_CLIENT_SECRET=github-secret"
+      ]
+
+      assert {"configured", 0} = runtime_config(env)
+    end
+  end
+
+  defp runtime_config(env) do
+    elixir = System.find_executable("elixir")
+    erl = System.find_executable("erl")
+    path = [Path.dirname(elixir), Path.dirname(erl), "/usr/bin", "/bin"] |> Enum.uniq()
+    env = ["PATH=#{Enum.join(path, ":")}" | env]
+    expression = ~S|Config.Reader.read!("config/runtime.exs", env: :prod); IO.write("configured")|
+
+    System.cmd(
+      System.find_executable("env"),
+      ["-i" | env] ++ [elixir, "-e", expression]
+    )
   end
 
   defp child_ids(children) do

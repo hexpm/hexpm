@@ -29,11 +29,4 @@ defmodule Hexpm.Hexdocs.Utils do
         Version.compare(version, latest) in [:eq, :gt]
     end
   end
-
-  def raise_async_stream_error(stream) do
-    Stream.each(stream, fn
-      {:ok, _result} -> :ok
-      {:exit, {_error, stacktrace} = reason} -> reraise(Exception.format_exit(reason), stacktrace)
-    end)
-  end
 end
