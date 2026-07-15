@@ -165,6 +165,17 @@ defmodule Hexpm.HTTPTest do
     assert {:ok, 200, _headers, %{"key" => "value"}} = HTTP.get(lasso_url(lasso, "/get"), [])
   end
 
+  test "get/3 can return a raw json response", %{lasso: lasso} do
+    Lasso.expect_once(lasso, "GET", "/raw-json", fn conn ->
+      conn
+      |> Conn.put_resp_header("content-type", "application/json")
+      |> Conn.resp(200, ~s({"key":"value"}))
+    end)
+
+    assert {:ok, 200, _headers, ~s({"key":"value"})} =
+             HTTP.get(lasso_url(lasso, "/raw-json"), [], decode_body: false)
+  end
+
   test "passes receive_timeout, pool_timeout, and request_timeout to Finch.request/3", %{
     lasso: lasso
   } do

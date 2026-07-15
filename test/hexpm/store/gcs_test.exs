@@ -22,6 +22,52 @@ defmodule Hexpm.Store.GCSTest do
 
   def auth_headers, do: [{"authorization", "Bearer token"}]
 
+  test "reads object bodies without decoding json" do
+    expect(Hexpm.HTTP.Mock, :get, fn url, headers, opts ->
+      assert url == "https://storage.example/bucket/files/package/1.0.0/data.json"
+      assert headers == [{"authorization", "Bearer token"}]
+      assert opts == [decode_body: false]
+      {:ok, 200, [{"content-type", "application/json"}], ~s({"key":"value"})}
+    end)
+
+    assert GCS.get("bucket", "files/package/1.0.0/data.json", []) == ~s({"key":"value"})
+  end
+
+  test "returns nil only for missing objects" do
+    expect(Hexpm.HTTP.Mock, :get, fn _url, _headers, decode_body: false ->
+      {:ok, 404, [], ""}
+    end)
+
+    assert GCS.get("bucket", "missing", []) == nil
+  end
+
+  test "retries transient object read failures" do
+    expect(Hexpm.HTTP.Mock, :get, 2, fn _url, _headers, decode_body: false ->
+      attempt = Process.get(:gcs_get_attempt, 0)
+      Process.put(:gcs_get_attempt, attempt + 1)
+
+      if attempt == 0 do
+        {:ok, 503, [], "unavailable"}
+      else
+        {:ok, 200, [], "contents"}
+      end
+    end)
+
+    assert GCS.get("bucket", "file", []) == "contents"
+  end
+
+  test "raises for terminal object read failures" do
+    expect(Hexpm.HTTP.Mock, :get, fn _url, _headers, decode_body: false ->
+      {:ok, 403, [], "forbidden"}
+    end)
+
+    assert_raise RuntimeError,
+                 "GCS GET https://storage.example/bucket/file returned status 403",
+                 fn ->
+                   GCS.get("bucket", "file", [])
+                 end
+  end
+
   @tag :tmp_dir
   test "streams files to encoded object paths while preserving slashes", %{tmp_dir: tmp_dir} do
     path = Path.join(tmp_dir, "upload")

@@ -13,9 +13,11 @@ defmodule Hexpm.Store.GCS do
   def get(bucket, key, _opts) do
     url = url(bucket, key)
 
-    case Hexpm.HTTP.retry(fn -> Hexpm.HTTP.impl().get(url, headers()) end, "gcs") do
+    case retry(url, fn -> Hexpm.HTTP.impl().get(url, headers(), decode_body: false) end) do
       {:ok, 200, _headers, body} -> body
-      _ -> nil
+      {:ok, 404, _headers, _body} -> nil
+      {:ok, status, _headers, _body} -> raise "GCS GET #{url} returned status #{status}"
+      {:error, reason} -> raise "GCS GET #{url} failed: #{inspect(reason)}"
     end
   end
 

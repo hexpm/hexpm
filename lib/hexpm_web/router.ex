@@ -113,6 +113,7 @@ defmodule HexpmWeb.Router do
   end
 
   scope "/", HexpmWeb do
+    get "/preview_sitemap.xml", PreviewRedirectController, :sitemap
     get "/preview/sitemap.xml", SitemapController, :preview_index
     get "/preview/:package/sitemap.xml", SitemapController, :preview_package
   end

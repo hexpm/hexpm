@@ -11,6 +11,11 @@ defmodule HexpmWeb.PreviewRedirectControllerTest do
     assert redirected_to(conn, 301) == "http://localhost:5000/preview/sitemap.xml"
   end
 
+  test "redirects the legacy Hexpm Preview sitemap" do
+    conn = get(build_conn(), "/preview_sitemap.xml")
+    assert redirected_to(conn, 301) == "http://localhost:5000/preview/sitemap.xml"
+  end
+
   test "redirects Preview host file paths directly to package files" do
     conn = request("/preview/package/1.0.0/show/lib/file.ex?line=1")
 
