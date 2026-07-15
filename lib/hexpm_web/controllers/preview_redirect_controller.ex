@@ -19,8 +19,8 @@ defmodule HexpmWeb.PreviewRedirectController do
     redirect_latest(conn, package, filename)
   end
 
-  def version(conn, %{"package" => package, "version" => version}) do
-    redirect_source(conn, package, version, nil)
+  def version(conn, %{"package" => package, "version" => version} = params) do
+    redirect_source(conn, package, version, params["filename"])
   end
 
   def version_file(conn, %{
@@ -39,12 +39,12 @@ defmodule HexpmWeb.PreviewRedirectController do
     redirect_latest(conn, package, filename)
   end
 
-  def path(conn, %{"path" => ["preview", package, version]}) do
-    redirect_source(conn, package, version, nil)
+  def path(conn, %{"path" => ["preview", package, version]} = params) do
+    redirect_source(conn, package, version, params["filename"])
   end
 
-  def path(conn, %{"path" => ["preview", package]}) do
-    redirect_latest(conn, package, nil)
+  def path(conn, %{"path" => ["preview", package]} = params) do
+    redirect_latest(conn, package, params["filename"])
   end
 
   def path(conn, _params), do: redirect_to(conn, conn.request_path)
@@ -59,15 +59,24 @@ defmodule HexpmWeb.PreviewRedirectController do
   defp redirect_source(conn, package, version, filename) do
     path =
       case filename do
-        [_ | _] -> ~p"/packages/#{package}/#{version}/files/#{filename}"
-        _ -> ~p"/packages/#{package}/#{version}/files"
+        [_ | _] ->
+          ~p"/packages/#{package}/#{version}/files/#{filename}"
+
+        filename when is_binary(filename) and filename != "" ->
+          ~p"/packages/#{package}/#{version}/files/#{Path.split(filename)}"
+
+        _ ->
+          ~p"/packages/#{package}/#{version}/files"
       end
 
-    redirect_to(conn, path)
+    query_string = conn.query_params |> Map.delete("filename") |> URI.encode_query()
+    redirect_to(conn, path, query_string)
   end
 
-  defp redirect_to(conn, path) do
-    query = if conn.query_string == "", do: "", else: "?#{conn.query_string}"
+  defp redirect_to(conn, path), do: redirect_to(conn, path, conn.query_string)
+
+  defp redirect_to(conn, path, query_string) do
+    query = if query_string == "", do: "", else: "?#{query_string}"
 
     conn
     |> put_status(:moved_permanently)

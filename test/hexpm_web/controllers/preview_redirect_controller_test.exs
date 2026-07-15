@@ -18,6 +18,13 @@ defmodule HexpmWeb.PreviewRedirectControllerTest do
              "http://localhost:5000/packages/package/1.0.0/files/lib/file.ex?line=1"
   end
 
+  test "redirects Preview host filename query links directly to package files" do
+    conn = request("/preview/package/1.0.0?filename=include%2Fheader.hrl")
+
+    assert redirected_to(conn, 301) ==
+             "http://localhost:5000/packages/package/1.0.0/files/include/header.hrl"
+  end
+
   test "redirects legacy Hexpm Preview file paths" do
     conn = get(build_conn(), "/preview/package/1.0.0/show/lib/file.ex")
 
@@ -35,6 +42,11 @@ defmodule HexpmWeb.PreviewRedirectControllerTest do
 
   test "normalizes historical versioned package sitemap paths" do
     conn = request("/preview/package/1.0.0/sitemap.xml")
+    assert redirected_to(conn, 301) == "http://localhost:5000/preview/package/sitemap.xml"
+  end
+
+  test "redirects Preview package sitemaps to their Hexpm paths" do
+    conn = request("/preview/package/sitemap.xml")
     assert redirected_to(conn, 301) == "http://localhost:5000/preview/package/sitemap.xml"
   end
 
