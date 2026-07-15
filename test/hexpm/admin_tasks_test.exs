@@ -3,7 +3,7 @@ defmodule Hexpm.AdminTasksTest do
   import Swoosh.TestAssertions
 
   alias Hexpm.AdminTasks
-  alias Hexpm.Accounts.{Organization, User}
+  alias Hexpm.Accounts.{Organization, OrganizationUser, User}
   alias Hexpm.Repository.{Package, Release}
 
   describe "change_password/3" do
@@ -238,6 +238,69 @@ defmodule Hexpm.AdminTasksTest do
 
     test "returns error for nonexistent user" do
       assert {:error, :user_not_found} = AdminTasks.rename_user("nonexistent", "newname")
+    end
+  end
+
+  describe "remove_organization_member/2" do
+    test "removes an organization member and writes an admin audit log" do
+      organization = insert(:organization)
+      insert(:organization_user, organization: organization, user: insert(:user))
+      user = insert(:user)
+      organization_user = insert(:organization_user, organization: organization, user: user)
+
+      assert :ok = AdminTasks.remove_organization_member(organization.name, user.username)
+
+      refute Repo.get(OrganizationUser, organization_user.id)
+
+      audit_log = Repo.get_by(Hexpm.Accounts.AuditLog, action: "organization.member.remove")
+      assert audit_log.user_agent == "ADMIN"
+      assert audit_log.params["organization"]["name"] == organization.name
+      assert audit_log.params["user"]["username"] == user.username
+    end
+
+    test "finds a member by email" do
+      organization = insert(:organization)
+      insert(:organization_user, organization: organization, user: insert(:user))
+      email = Fake.sequence(:email)
+      user = insert(:user, emails: [build(:email, email: email)])
+      organization_user = insert(:organization_user, organization: organization, user: user)
+
+      assert :ok = AdminTasks.remove_organization_member(organization.name, email)
+
+      refute Repo.get(OrganizationUser, organization_user.id)
+    end
+
+    test "does not remove the last member" do
+      organization = insert(:organization)
+      user = insert(:user)
+      organization_user = insert(:organization_user, organization: organization, user: user)
+
+      assert {:error, :last_member} =
+               AdminTasks.remove_organization_member(organization.name, user.username)
+
+      assert Repo.get(OrganizationUser, organization_user.id)
+    end
+
+    test "returns an error for a nonexistent organization" do
+      user = insert(:user)
+
+      assert {:error, :organization_not_found} =
+               AdminTasks.remove_organization_member("nonexistent", user.username)
+    end
+
+    test "returns an error for a nonexistent user" do
+      organization = insert(:organization)
+
+      assert {:error, :user_not_found} =
+               AdminTasks.remove_organization_member(organization.name, "nonexistent")
+    end
+
+    test "returns an error when the user is not a member" do
+      organization = insert(:organization)
+      user = insert(:user)
+
+      assert {:error, :member_not_found} =
+               AdminTasks.remove_organization_member(organization.name, user.username)
     end
   end
 

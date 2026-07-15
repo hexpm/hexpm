@@ -32,6 +32,10 @@ defmodule Hexpm.AdminTasks do
       iex> AdminTasks.add_owner("phoenix", "jose", level: "full")
       {:ok, %PackageOwner{}}
 
+      # Remove a member from an organization
+      iex> AdminTasks.remove_organization_member("acme", "jose")
+      :ok
+
       # Remove a package
       iex> AdminTasks.remove_package("hexpm", "malicious_pkg")
       :ok
@@ -446,6 +450,34 @@ defmodule Hexpm.AdminTasks do
     user = Users.get(username_or_email, [:emails])
 
     Owners.remove(package, user, audit: AuditLogs.admin())
+  end
+
+  @doc """
+  Removes a member from an organization.
+
+  ## Arguments
+
+  - `organization_name` - The name of the organization
+  - `username_or_email` - The username or email of the member to remove
+
+  ## Examples
+
+      iex> AdminTasks.remove_organization_member("acme", "jose")
+      :ok
+
+      iex> AdminTasks.remove_organization_member("acme", "nonexistent")
+      {:error, :user_not_found}
+  """
+  @spec remove_organization_member(String.t(), String.t()) :: :ok | {:error, atom()}
+  def remove_organization_member(organization_name, username_or_email) do
+    with {:ok, organization} <- find_organization(organization_name),
+         {:ok, user} <- find_user(username_or_email) do
+      if Organizations.get_role(organization, user) do
+        Organizations.remove_member(organization, user, audit: AuditLogs.admin())
+      else
+        {:error, :member_not_found}
+      end
+    end
   end
 
   @doc """
