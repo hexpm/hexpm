@@ -335,6 +335,19 @@ defmodule Hexpm.UserSessions do
   end
 
   @doc """
+  Revokes the OAuth session associated with a token.
+  """
+  def revoke_for_oauth_token(%Token{user_session_id: user_session_id})
+      when not is_nil(user_session_id) do
+    case Repo.get(UserSession, user_session_id) do
+      nil -> {:error, :session_not_found}
+      session -> revoke(session)
+    end
+  end
+
+  def revoke_for_oauth_token(%Token{}), do: {:error, :session_not_found}
+
+  @doc """
   Revokes all sessions for a user (both browser and OAuth).
   Returns a query suitable for use in Multi.update_all.
   For OAuth sessions, associated tokens will also be revoked.

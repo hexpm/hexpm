@@ -3,6 +3,7 @@ defmodule HexpmWeb.API.OAuthController do
 
   import HexpmWeb.RequestHelpers, only: [build_usage_info: 1]
 
+  alias Hexpm.UserSessions
   alias Hexpm.OAuth.{Clients, Tokens, AuthorizationCodes, DeviceCodes}
 
   defp safe_param(params, key), do: safe_string(params[key])
@@ -80,8 +81,8 @@ defmodule HexpmWeb.API.OAuthController do
   end
 
   @doc """
-  Token revocation endpoint using refresh token hash.
-  Allows revocation when the actual token value is not available.
+  OAuth session revocation endpoint using a refresh token hash.
+  Allows revocation of the session and all its tokens when the actual token value is not available.
   """
   def revoke_by_hash(conn, params) do
     case revoke_token_by_hash(params) do
@@ -332,7 +333,7 @@ defmodule HexpmWeb.API.OAuthController do
        when is_binary(token_hash) and token_hash != "" do
     case Tokens.lookup_by_refresh_token_hash(token_hash) do
       {:ok, token} ->
-        case Tokens.revoke(token) do
+        case UserSessions.revoke_for_oauth_token(token) do
           {:ok, _} -> :ok
           {:error, _} -> {:error, :revocation_failed}
         end
