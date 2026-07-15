@@ -1441,13 +1441,16 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       %{
         hash_user: user,
         hash_client: client,
+        hash_session: session,
         hash_token: token,
         hash_refresh_token: token.refresh_token,
         hash_refresh_token_hash: token.refresh_token_hash
       }
     end
 
-    test "successfully revokes token using valid hash", %{
+    test "successfully revokes session using valid hash", %{
+      hash_user: user,
+      hash_session: session,
       hash_token: token,
       hash_refresh_token_hash: hash
     } do
@@ -1456,7 +1459,37 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       |> response(200)
 
       updated_token = Repo.get(Token, token.id)
+      updated_session = Repo.get(Hexpm.UserSession, session.id)
+
       assert Tokens.revoked?(updated_token)
+      assert updated_session.revoked_at
+      assert Hexpm.UserSessions.all_for_user(user) == []
+    end
+
+    test "revokes the current token when given a rotated token hash", %{
+      hash_client: client,
+      hash_token: token,
+      hash_refresh_token_hash: hash
+    } do
+      token = Repo.preload(token, :user)
+
+      {:ok, current_token} =
+        Tokens.revoke_and_create_token(
+          token,
+          client.client_id,
+          token.granted_scopes,
+          "refresh_token",
+          token.refresh_token,
+          with_refresh_token: true,
+          user_session_id: token.user_session_id
+        )
+
+      build_conn()
+      |> post(~p"/api/oauth/revoke_by_hash", %{token_hash: hash})
+      |> response(200)
+
+      assert Repo.get(Token, current_token.id) |> Tokens.revoked?()
+      assert Repo.get(Hexpm.UserSession, token.user_session_id).revoked_at
     end
 
     test "accepts uppercase hash", %{hash_token: token, hash_refresh_token_hash: hash} do
@@ -1486,7 +1519,8 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       |> response(200)
     end
 
-    test "handles revocation of already revoked token", %{
+    test "revokes the session for an already revoked token", %{
+      hash_session: session,
       hash_token: token,
       hash_refresh_token_hash: hash
     } do
@@ -1495,6 +1529,8 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       build_conn()
       |> post(~p"/api/oauth/revoke_by_hash", %{token_hash: hash})
       |> response(200)
+
+      assert Repo.get(Hexpm.UserSession, session.id).revoked_at
     end
 
     test "hash is computed correctly for new tokens", %{hash_refresh_token: refresh_token} do
