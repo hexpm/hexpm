@@ -97,7 +97,7 @@
   <%!-- Getting Started Section --%>
   <div class="bg-white dark:bg-grey-950 py-4">
     <div class="max-w-7xl mx-auto px-4">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <.feature_card icon="cloud-arrow-down" title="Getting started" href={~p"/docs/usage"}>
           Fetch dependencies from Hex without creating an account. Hex is usable out of the box in Elixir with
           <.text_link href={~p"/docs/usage"} variant="purple">Mix</.text_link>
@@ -121,9 +121,19 @@
 
         <.feature_card icon="shield-check" title="Private packages" href={~p"/pricing"}>
           Publish private packages by <.text_link href={~p"/dashboard/orgs"} variant="purple">creating an organization</.text_link>.
-          Your private packages will get the same features as public packages such as fast dependency fetching, HexDocs, and run on the same reliable infrastructure that serves millions of packages daily. See our
+          Private packages cost $7 / user / month after a free 30-day trial and include fast dependency fetching and HexDocs on the same reliable infrastructure that serves millions of packages daily. See our
           <.text_link href={~p"/pricing"} variant="purple">pricing page</.text_link>
           for more details.
+        </.feature_card>
+
+        <.feature_card
+          icon="adjustments-horizontal"
+          title="Dependency policies"
+          href={~p"/docs/dependency-policies"}
+        >
+          Keep dependency rules consistent across projects with signed, organization-managed policies. Free organizations can publish public policies for public Hex packages. Paid organizations can also publish private policies covering public and private packages, visible only to organization members. See the
+          <.text_link href={~p"/docs/dependency-policies"} variant="purple">policy guide</.text_link>
+          for details.
         </.feature_card>
       </div>
     </div>
@@ -263,7 +273,7 @@
           </.button_link>
           <div class="text-center">
             <.text_link href={~p"/pricing"} variant="primary">
-              Private Packages @ $7/month
+              Private Packages @ $7 / user / month
             </.text_link>
           </div>
         </div>
@@ -290,7 +300,7 @@
               Get Started for FREE
             </.button_link>
             <.text_link href={~p"/pricing"} variant="primary">
-              Private Packages @ $7/month
+              Private Packages @ $7 / user / month
             </.text_link>
           </div>
         </div>

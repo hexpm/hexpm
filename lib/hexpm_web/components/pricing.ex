@@ -37,6 +37,7 @@ defmodule HexpmWeb.Components.Pricing do
   attr :description, :string, required: true
   attr :icon_bg, :string, required: true, values: ["blue", "green", "purple"]
   attr :icon_src, :string, required: true
+  attr :per_user, :boolean, default: false
   attr :price_monthly, :integer, default: nil
   attr :price_yearly, :integer, default: nil
   attr :price_text, :string, default: nil
@@ -68,14 +69,18 @@ defmodule HexpmWeb.Components.Pricing do
             <span class="text-grey-900 dark:text-white text-5xl font-bold">
               ${@price_monthly}
             </span>
-            <span class="text-grey-500 dark:text-grey-300">/mo</span>
+            <span class="text-grey-500 dark:text-grey-300">
+              {if @per_user, do: "/ user / month", else: "/mo"}
+            </span>
           </div>
           <%!-- Yearly Price --%>
           <div class="price-display hidden items-baseline gap-2 mb-4">
             <span class="text-grey-900 dark:text-white text-5xl font-bold">
               ${@price_yearly}
             </span>
-            <span class="text-grey-500 dark:text-grey-300">/yr</span>
+            <span class="text-grey-500 dark:text-grey-300">
+              {if @per_user, do: "/ user / year", else: "/yr"}
+            </span>
           </div>
         <% end %>
       </div>

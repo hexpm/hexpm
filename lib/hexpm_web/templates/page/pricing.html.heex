@@ -18,6 +18,7 @@
     <.pricing_card
       icon_src={~p"/images/pricing/open-source-icon.svg"}
       icon_bg="blue"
+      per_user={true}
       price_monthly={0}
       price_yearly={0}
       title="Open Source"
@@ -28,12 +29,14 @@
       <:feature>Unlimited number of public packages</:feature>
       <:feature>Public Packages Documentation</:feature>
       <:feature>Multiple Package Owners</:feature>
+      <:feature>Public Dependency Policies</:feature>
     </.pricing_card>
 
     <%!-- Private Packages Card --%>
     <.pricing_card
       icon_src={~p"/images/pricing/lock-icon.svg"}
       icon_bg="green"
+      per_user={true}
       price_monthly={7}
       price_yearly={70}
       title="Private Packages"
@@ -44,6 +47,7 @@
       <:feature>Unlimited Private Packages</:feature>
       <:feature>Private Packages Documentation</:feature>
       <:feature>Republish and Delete Packages</:feature>
+      <:feature>Private Dependency Policies</:feature>
     </.pricing_card>
 
     <%!-- Enterprise Card --%>
@@ -109,6 +113,22 @@
               </p>
               <p>
                 Organizations on the annual plan are billed each year from the day the subscription was started. The subscription is invoiced and charged in advance when the next billing period starts. Changes in the number of open seats in the plan are pro-rated and charged when the number of seats change.
+              </p>
+            </:answer>
+          </.faq_item>
+
+          <.faq_item>
+            <:question>
+              How do dependency policies work for free and paid organizations?
+            </:question>
+            <:answer>
+              <p>
+                Every organization can publish public policies for public Hex packages, and any project can opt into them. Paid organizations can also publish private policies that are visible only to organization members and govern both public Hex packages and packages in the organization's private repository. See the
+                <a
+                  href={~p"/docs/dependency-policies"}
+                  class="text-blue-500 dark:text-blue-300 underline"
+                >dependency policy guide</a>
+                for details.
               </p>
             </:answer>
           </.faq_item>
