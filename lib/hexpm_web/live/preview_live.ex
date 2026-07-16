@@ -31,6 +31,7 @@ defmodule HexpmWeb.PreviewLive do
        message: nil,
        raw_url: nil,
        title: "Package files",
+       page_title: "Package files | Hex",
        description: nil,
        canonical_url: nil,
        container: "container"
@@ -123,6 +124,7 @@ defmodule HexpmWeb.PreviewLive do
       message: message,
       raw_url: raw_url(package, version, filename),
       title: "#{filename} - #{package} #{version}",
+      page_title: "#{filename} - #{package} #{version} | Hex",
       description: description(package, version, filename),
       canonical_url: canonical_url(package, version, filename)
     )

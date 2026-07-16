@@ -20,6 +20,7 @@ defmodule HexpmWeb.PreviewLiveTest do
     assert html =~ "1.0.0"
     assert html =~ "PreviewLineHighlight"
     assert html =~ "l-line"
+    assert page_title(view) == "lib/live_preview.ex - live_preview 1.0.0 | Hex"
     assert has_element?(view, ~s(a[aria-current="page"]), "live_preview.ex")
     assert has_element?(view, "h2", "lib/live_preview.ex")
 
@@ -59,6 +60,7 @@ defmodule HexpmWeb.PreviewLiveTest do
     |> render_click()
 
     assert_patch(view, "/packages/select_preview/1.0.0/files/mix.exs")
+    assert page_title(view) == "mix.exs - select_preview 1.0.0 | Hex"
     assert has_element?(view, "h2", "mix.exs")
 
     assert_raise HexpmWeb.PreviewLive.NotFoundError, fn ->
