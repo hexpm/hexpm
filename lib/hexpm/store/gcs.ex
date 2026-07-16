@@ -24,7 +24,7 @@ defmodule Hexpm.Store.GCS do
   def size(bucket, key) do
     url = url(bucket, key)
 
-    case retry(url, fn -> Hexpm.HTTP.impl().head(url, headers()) end) do
+    case retry(url, fn -> Hexpm.HTTP.impl().head(url, headers(), decode_body: false) end) do
       {:ok, 200, response_headers, _body} -> content_length!(response_headers)
       {:ok, 404, _headers, _body} -> nil
     end

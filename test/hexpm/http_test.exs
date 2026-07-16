@@ -28,6 +28,17 @@ defmodule Hexpm.HTTPTest do
     assert {"content-length", "8"} in headers
   end
 
+  test "head/3 can return an empty raw json response", %{lasso: lasso} do
+    Lasso.expect_once(lasso, "HEAD", "/raw-json", fn conn ->
+      conn
+      |> Conn.put_resp_header("content-type", "application/json")
+      |> Conn.resp(200, "")
+    end)
+
+    assert {:ok, 200, _headers, ""} =
+             HTTP.head(lasso_url(lasso, "/raw-json"), [], decode_body: false)
+  end
+
   test "post/3", %{lasso: lasso} do
     Lasso.expect_once(lasso, "POST", "/post", fn conn ->
       {:ok, reqbody, conn} = Conn.read_body(conn)

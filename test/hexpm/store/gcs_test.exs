@@ -101,9 +101,10 @@ defmodule Hexpm.Store.GCSTest do
   end
 
   test "reads object sizes without downloading contents" do
-    expect(Hexpm.HTTP.Mock, :head, fn url, headers ->
+    expect(Hexpm.HTTP.Mock, :head, fn url, headers, opts ->
       assert url == "https://storage.example/bucket/docs/file.html"
       assert headers == [{"authorization", "Bearer token"}]
+      assert opts == [decode_body: false]
       {:ok, 200, [{"content-length", "1234"}], ""}
     end)
 
@@ -111,7 +112,7 @@ defmodule Hexpm.Store.GCSTest do
   end
 
   test "returns nil for missing object sizes" do
-    expect(Hexpm.HTTP.Mock, :head, fn _url, _headers ->
+    expect(Hexpm.HTTP.Mock, :head, fn _url, _headers, decode_body: false ->
       {:ok, 404, [], ""}
     end)
 
