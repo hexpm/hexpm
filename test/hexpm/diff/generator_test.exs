@@ -3,6 +3,7 @@ defmodule Hexpm.Diff.FailingStore do
 
   defdelegate list(bucket, prefix), to: Hexpm.Store.Memory
   defdelegate get(bucket, key, opts), to: Hexpm.Store.Memory
+  defdelegate size(bucket, key), to: Hexpm.Store.Memory
   defdelegate get_to_file(bucket, key, destination, opts), to: Hexpm.Store.Memory
   defdelegate put_file(bucket, key, path, opts), to: Hexpm.Store.Memory
   defdelegate delete(bucket, key), to: Hexpm.Store.Memory
@@ -25,7 +26,7 @@ defmodule Hexpm.Diff.GeneratorTest do
 
   import Hexpm.DiffHelpers
 
-  alias Hexpm.Diff.{Generator, Storage, Worker}
+  alias Hexpm.Diff.{Cache, Generator, Worker}
 
   test "generates stored diffs from verified tarballs with all supported file cases" do
     package = insert(:package, name: "generator_cases")
@@ -102,7 +103,7 @@ defmodule Hexpm.Diff.GeneratorTest do
 
     assert {:error, :checksum_mismatch} = Generator.generate(request)
     assert :miss = Hexpm.Diff.fetch(request)
-    refute cache_object(Storage.metadata_key(request, request.canonical_hash))
+    refute cache_object(Cache.metadata_key(request, request.canonical_hash))
   end
 
   test "piece storage failure leaves no completion marker and retry overwrites partial pieces" do
@@ -122,19 +123,19 @@ defmodule Hexpm.Diff.GeneratorTest do
 
     Process.put(:fail_diff_key, "-diff-1.json")
     assert {:error, {%RuntimeError{}, _stacktrace}} = Generator.generate(request)
-    assert cache_object(Storage.diff_key(request, request.canonical_hash, 0))
-    refute cache_object(Storage.metadata_key(request, request.canonical_hash))
+    assert cache_object(Cache.diff_key(request, request.canonical_hash, 0))
+    refute cache_object(Cache.metadata_key(request, request.canonical_hash))
 
     Hexpm.Store.Memory.put(
       "diff_bucket",
-      Storage.diff_key(request, request.canonical_hash, 0),
+      Cache.diff_key(request, request.canonical_hash, 0),
       "partial",
       []
     )
 
     Process.delete(:fail_diff_key)
     assert :ok = Generator.generate(request)
-    refute cache_object(Storage.diff_key(request, request.canonical_hash, 0)) == "partial"
+    refute cache_object(Cache.diff_key(request, request.canonical_hash, 0)) == "partial"
     assert {:ok, %{total_diffs: 2}, [_, _]} = Hexpm.Diff.fetch(request)
   end
 
@@ -157,8 +158,8 @@ defmodule Hexpm.Diff.GeneratorTest do
     Process.put(:fail_diff_result, {:error, :unavailable})
     assert {:error, {%RuntimeError{}, _stacktrace}} = Generator.generate(request)
     assert :miss = Hexpm.Diff.fetch(request)
-    assert cache_object(Storage.diff_key(request, request.canonical_hash, 0))
-    refute cache_object(Storage.metadata_key(request, request.canonical_hash))
+    assert cache_object(Cache.diff_key(request, request.canonical_hash, 0))
+    refute cache_object(Cache.metadata_key(request, request.canonical_hash))
   end
 
   test "missing and invalid tarballs fail without writing metadata" do

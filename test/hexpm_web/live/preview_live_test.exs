@@ -18,7 +18,7 @@ defmodule HexpmWeb.PreviewLiveTest do
 
     assert html =~ "live_preview"
     assert html =~ "1.0.0"
-    assert html =~ "PreviewLineHighlight"
+    assert html =~ "LineHighlight"
     assert html =~ "l-line"
     assert page_title(view) == "lib/live_preview.ex - live_preview 1.0.0 | Hex"
     assert has_element?(view, ~s(a[aria-current="page"]), "live_preview.ex")

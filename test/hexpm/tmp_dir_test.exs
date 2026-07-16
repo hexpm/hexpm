@@ -1,6 +1,8 @@
 defmodule Hexpm.TmpDirTest do
   use ExUnit.Case, async: true
 
+  import Bitwise
+
   @receive_timeout 1000
 
   test "tmp_file/1 creates a file" do
@@ -119,5 +121,21 @@ defmodule Hexpm.TmpDirTest do
 
     assert File.exists?(file)
     assert File.dir?(dir)
+  end
+
+  test "ensure_readable/1 repairs unreadable extracted files and directories" do
+    dir = Hexpm.TmpDir.tmp_dir("permissions")
+    nested = Path.join(dir, "nested")
+    file = Path.join(nested, "file.txt")
+    File.mkdir!(nested)
+    File.write!(file, "contents")
+    File.chmod!(nested, 0o300)
+    File.chmod!(file, 0o200)
+
+    Hexpm.TmpDir.ensure_readable(dir)
+
+    assert band(File.stat!(nested).mode, 0o777) == 0o755
+    assert band(File.stat!(file).mode, 0o777) == 0o644
+    assert File.read!(file) == "contents"
   end
 end

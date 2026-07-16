@@ -2,7 +2,7 @@ defmodule Hexpm.Preview do
   require Logger
 
   alias Hexpm.Preview.{Bucket, Sitemaps}
-  alias Hexpm.Repository.Releases
+  alias Hexpm.Repository.{Assets, Releases}
   alias Hexpm.Repository.Sitemaps, as: RepositorySitemaps
 
   @max_file_size 2 * 1000 * 1000
@@ -118,12 +118,12 @@ defmodule Hexpm.Preview do
 
         case :hex_tarball.unpack({:file, to_charlist(tarball_path)}, to_charlist(output_dir)) do
           {:ok, _metadata} ->
-            ensure_readable(output_dir)
+            Hexpm.TmpDir.ensure_readable(output_dir)
 
             {
               output_dir,
               file_paths(output_dir, package, version),
-              file_checksum(tarball_path)
+              Assets.file_checksum(tarball_path)
             }
 
           {:error, reason} ->
@@ -158,24 +158,6 @@ defmodule Hexpm.Preview do
     end)
     |> Enum.uniq()
     |> Enum.sort()
-  end
-
-  defp ensure_readable(dir) do
-    dir
-    |> Path.join("**")
-    |> Path.wildcard(match_dot: true)
-    |> Enum.each(fn path ->
-      case File.stat(path) do
-        {:ok, %{type: :directory, access: access}} when access in [:none, :write] ->
-          File.chmod(path, 0o755)
-
-        {:ok, %{type: :regular, access: access}} when access in [:none, :write] ->
-          File.chmod(path, 0o644)
-
-        _other ->
-          :ok
-      end
-    end)
   end
 
   defp latest_version?(package, version) do
@@ -261,18 +243,9 @@ defmodule Hexpm.Preview do
 
   defp tarball_current?(package, version, checksum) do
     case Bucket.get_tarball_to_file(package, version) do
-      {:ok, path} -> file_checksum(path) == checksum
+      {:ok, path} -> Assets.file_checksum(path) == checksum
       :error -> false
     end
-  end
-
-  defp file_checksum(path) do
-    hash =
-      path
-      |> File.stream!([], 64 * 1024)
-      |> Enum.reduce(:crypto.hash_init(:sha256), &:crypto.hash_update(&2, &1))
-
-    :crypto.hash_final(hash)
   end
 
   defp purge(package, version) do

@@ -104,6 +104,13 @@ defmodule HexpmWeb.Router do
     get "/*path", PreviewRedirectController, :path
   end
 
+  scope "/", HexpmWeb, host: "diff." do
+    get "/", DiffRedirectController, :index
+    get "/diff/:package/:versions", DiffRedirectController, :show
+    get "/diffs", DiffRedirectController, :index
+    get "/*path", DiffRedirectController, :path
+  end
+
   scope "/", HexpmWeb, host: "readme." do
     pipe_through :readme
 

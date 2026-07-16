@@ -2,7 +2,7 @@ defmodule Hexpm.DiffTest do
   use Hexpm.DataCase, async: false
   use Oban.Testing, repo: Hexpm.RepoBase
 
-  alias Hexpm.Diff.{Request, Storage, Worker}
+  alias Hexpm.Diff.{Cache, Request, Worker}
 
   setup do
     package = insert(:package, name: "diff_context")
@@ -13,6 +13,10 @@ defmodule Hexpm.DiffTest do
 
   test "prepares canonical and legacy standalone cache hashes", %{package: package} do
     assert {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+
+    assert request.package_record.id == package.id
+    assert MapSet.new(request.versions) == MapSet.new(["1.0.0", "2.0.0"])
+    assert request.versions == Enum.map(request.releases, &to_string(&1.version))
 
     assert request.canonical_hash == :erlang.phash2({1, [<<1::256>>, <<2::256>>]})
     assert request.legacy_hash == :erlang.phash2({1, [<<2::256>>, <<1::256>>]})
@@ -33,14 +37,14 @@ defmodule Hexpm.DiffTest do
 
     Hexpm.Store.put(
       :diff_bucket,
-      Storage.metadata_key(request, request.legacy_hash),
+      Cache.metadata_key(request, request.legacy_hash),
       Jason.encode!(legacy_metadata),
       []
     )
 
     Hexpm.Store.put(
       :diff_bucket,
-      Storage.diff_key(request, request.legacy_hash, 0),
+      Cache.diff_key(request, request.legacy_hash, 0),
       Jason.encode!(legacy_piece),
       []
     )
@@ -53,7 +57,7 @@ defmodule Hexpm.DiffTest do
 
     Hexpm.Store.put(
       :diff_bucket,
-      Storage.metadata_key(request, request.canonical_hash),
+      Cache.metadata_key(request, request.canonical_hash),
       Jason.encode!(canonical_metadata),
       []
     )
@@ -65,7 +69,7 @@ defmodule Hexpm.DiffTest do
     {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
 
     piece =
-      Storage.put_piece!(request, 4, %{
+      Cache.put_piece!(request, 4, %{
         "diff" => "diff --git a/a b/a\n",
         "path_from" => "/tmp/from",
         "path_to" => "/tmp/to"
@@ -77,14 +81,14 @@ defmodule Hexpm.DiffTest do
     assert {:ok, {:diff, "diff --git a/a b/a\n", "/tmp/from", "/tmp/to"}} =
              Hexpm.Diff.fetch_piece(piece)
 
-    Storage.put_metadata!(request, %{
+    Cache.put_metadata!(request, %{
       total_diffs: 0,
       total_additions: 0,
       total_deletions: 0,
       files_changed: 0
     })
 
-    assert Storage.metadata_key(request, request.canonical_hash) ==
+    assert Cache.metadata_key(request, request.canonical_hash) ==
              "metadata/#{package.name}-1.0.0-2.0.0-#{request.canonical_hash}.json"
   end
 
@@ -242,14 +246,14 @@ defmodule Hexpm.DiffTest do
 
     Hexpm.Store.put(
       :diff_bucket,
-      Storage.metadata_key(request, request.canonical_hash),
+      Cache.metadata_key(request, request.canonical_hash),
       Jason.encode!(%{total_diffs: -1}),
       []
     )
 
     assert {:error, :invalid_metadata} = Hexpm.Diff.fetch(request)
 
-    Storage.put_metadata!(request, %{
+    Cache.put_metadata!(request, %{
       total_diffs: 1,
       total_additions: 0,
       total_deletions: 0,

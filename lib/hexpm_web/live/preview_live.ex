@@ -8,7 +8,6 @@ defmodule HexpmWeb.PreviewLive do
   alias Hexpm.Repository.{Packages, Releases}
   alias HexpmWeb.PackageLayoutAssigns
 
-  @highlight_timeout 1_000
   @finder_limit 100
 
   defmodule NotFoundError do
@@ -167,35 +166,11 @@ defmodule HexpmWeb.PreviewLive do
   end
 
   defp highlight(package, version, filename, contents) do
-    task =
-      Task.Supervisor.async_nolink(Hexpm.Tasks, fn ->
-        Lumis.highlight!(contents, formatter: {:html_linked, language: filename})
-      end)
-
-    case Task.yield(task, @highlight_timeout) || Task.shutdown(task, :brutal_kill) do
-      {:ok, highlighted} ->
-        highlighted
-
-      result ->
-        Logger.warning(
-          "Failed to highlight package file #{package} #{version} #{filename}: #{inspect(result)}"
-        )
-
-        plain_source(contents)
-    end
-  end
-
-  defp plain_source(contents) do
-    lines =
-      contents
-      |> String.split("\n")
-      |> Enum.with_index(1)
-      |> Enum.map_join(fn {line, number} ->
-        escaped = line |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
-        ~s(<div class="l-line" data-line="#{number}">#{escaped}</div>)
-      end)
-
-    ~s(<pre class="lumis"><code>#{lines}</code></pre>)
+    HexpmWeb.SyntaxHighlight.highlight(
+      contents,
+      filename,
+      "package file #{package} #{version} #{filename}"
+    )
   end
 
   defp filename([_ | _] = parts), do: Path.join(parts)

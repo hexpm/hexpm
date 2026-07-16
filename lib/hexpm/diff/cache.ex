@@ -1,4 +1,4 @@
-defmodule Hexpm.Diff.Storage do
+defmodule Hexpm.Diff.Cache do
   alias Hexpm.Diff.{Piece, Request}
 
   @put_options [

@@ -1,7 +1,7 @@
 defmodule Hexpm.Diff do
   import Ecto.Query
 
-  alias Hexpm.Diff.{Request, Storage, Worker}
+  alias Hexpm.Diff.{Cache, Request, Worker}
 
   @max_incomplete_jobs 20
 
@@ -15,8 +15,8 @@ defmodule Hexpm.Diff do
   end
 
   defdelegate prepare(package, from, to, opts), to: Request
-  defdelegate fetch(request), to: Storage
-  defdelegate fetch_piece(piece), to: Storage
+  defdelegate fetch(request), to: Cache
+  defdelegate fetch_piece(piece), to: Cache
   def piece_id(%Piece{id: id}), do: id
 
   def pending_job(%Request{} = request) do

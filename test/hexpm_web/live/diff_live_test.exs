@@ -2,28 +2,26 @@ defmodule Hexpm.Diff.UnavailableStore do
   @behaviour Hexpm.Store.Behaviour
 
   defdelegate list(bucket, prefix), to: Hexpm.Store.Memory
-  defdelegate get(bucket, key, opts), to: Hexpm.Store.Memory
+  def get(_bucket, _key, _opts), do: throw(:unavailable)
+  defdelegate size(bucket, key), to: Hexpm.Store.Memory
   defdelegate get_to_file(bucket, key, destination, opts), to: Hexpm.Store.Memory
   defdelegate put(bucket, key, body, opts), to: Hexpm.Store.Memory
   defdelegate put_file(bucket, key, path, opts), to: Hexpm.Store.Memory
   defdelegate delete(bucket, key), to: Hexpm.Store.Memory
   defdelegate delete_many(bucket, keys), to: Hexpm.Store.Memory
-
-  def fetch(_bucket, _key, _opts), do: {:error, :unavailable}
 end
 
 defmodule Hexpm.Diff.RaisingStore do
   @behaviour Hexpm.Store.Behaviour
 
   defdelegate list(bucket, prefix), to: Hexpm.Store.Memory
-  defdelegate get(bucket, key, opts), to: Hexpm.Store.Memory
+  def get(_bucket, _key, _opts), do: raise("storage unavailable")
+  defdelegate size(bucket, key), to: Hexpm.Store.Memory
   defdelegate get_to_file(bucket, key, destination, opts), to: Hexpm.Store.Memory
   defdelegate put(bucket, key, body, opts), to: Hexpm.Store.Memory
   defdelegate put_file(bucket, key, path, opts), to: Hexpm.Store.Memory
   defdelegate delete(bucket, key), to: Hexpm.Store.Memory
   defdelegate delete_many(bucket, keys), to: Hexpm.Store.Memory
-
-  def fetch(_bucket, _key, _opts), do: raise("storage unavailable")
 end
 
 defmodule HexpmWeb.DiffLiveTest do
@@ -32,7 +30,7 @@ defmodule HexpmWeb.DiffLiveTest do
 
   import Phoenix.LiveViewTest
 
-  alias Hexpm.Diff.Storage
+  alias Hexpm.Diff.Cache
   alias HexpmWeb.Plugs.Attack
 
   setup do
@@ -60,10 +58,15 @@ defmodule HexpmWeb.DiffLiveTest do
     {:ok, view, html} = live(build_conn(), "/diff/#{package.name}/1.0.0..7.0.0")
 
     {:ok, document} = Floki.parse_document(html)
-    assert Floki.find(document, ".diff-stat-files strong") |> Floki.text() |> String.trim() == "6"
 
-    assert Floki.find(document, ".diff-stat-files span") |> Floki.text() |> String.trim() ==
+    assert Floki.find(document, "#diff-files-changed strong") |> Floki.text() |> String.trim() ==
+             "6"
+
+    assert Floki.find(document, "#diff-files-changed span") |> Floki.text() |> String.trim() ==
              "files changed"
+
+    assert Floki.find(document, "a.border-primary-default") |> Floki.text() =~ "Versions"
+    assert html =~ ~s(phx-hook="LineHighlight")
 
     assert html =~ "file-4.bin"
     refute html =~ "file-5.bin"
@@ -79,10 +82,45 @@ defmodule HexpmWeb.DiffLiveTest do
     refute html =~ ~s(id="diff-loading-trigger")
   end
 
+  test "cached patches are highlighted through Lumis with stable line anchors", %{
+    package: package
+  } do
+    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+
+    Cache.put_piece!(request, 0, %{
+      "diff" => """
+      diff --git a/lib/app.ex b/lib/app.ex
+      index 3367afd..646f620 100644
+      --- a/lib/app.ex
+      +++ b/lib/app.ex
+      @@ -1 +1 @@
+      -old = 1
+      +value = <script>
+      """,
+      "path_from" => "/",
+      "path_to" => "/"
+    })
+
+    Cache.put_metadata!(request, %{
+      total_diffs: 1,
+      total_additions: 1,
+      total_deletions: 1,
+      files_changed: 1
+    })
+
+    {:ok, _view, html} = live(build_conn(), "/diff/#{package.name}/1.0.0..2.0.0")
+
+    assert html =~ ~s(id="diff-0-L1-0")
+    assert html =~ ~s(id="diff-0-L0-1")
+    assert html =~ ~s(class="l-variable")
+    assert html =~ "&lt;"
+    refute html =~ "<script>"
+  end
+
   test "missing cache pieces render an in-page file error", %{package: package} do
     {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
 
-    Storage.put_metadata!(request, %{
+    Cache.put_metadata!(request, %{
       total_diffs: 1,
       total_additions: 1,
       total_deletions: 1,
@@ -297,7 +335,10 @@ defmodule HexpmWeb.DiffLiveTest do
     put_ready_cache(latest_request, 0)
 
     {:ok, _view, html} = live(build_conn(), "/diff/#{package.name}/1.0.0..")
-    assert html =~ "1.0.0 → 7.0.0"
+    assert html =~ "#{package.name} 1.0.0..7.0.0 diff"
+
+    assert html =~
+             ~s(href="http://localhost:5000/diff/#{package.name}/1.0.0..7.0.0" rel="canonical")
 
     {:ok, _view, html} = live(build_conn(), "/diff/#{package.name}/bad..2.0.0")
     assert html =~ "Invalid version"
@@ -325,10 +366,10 @@ defmodule HexpmWeb.DiffLiveTest do
 
   defp put_ready_cache(request, count) do
     for index <- zero_based_range(count) do
-      Storage.put_piece!(request, index, %{type: "too_large", file: "file-#{index}.bin"})
+      Cache.put_piece!(request, index, %{type: "too_large", file: "file-#{index}.bin"})
     end
 
-    Storage.put_metadata!(request, %{
+    Cache.put_metadata!(request, %{
       total_diffs: count,
       total_additions: count,
       total_deletions: count,

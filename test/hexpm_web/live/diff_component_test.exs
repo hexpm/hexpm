@@ -24,12 +24,22 @@ defmodule HexpmWeb.DiffComponentTest do
       ]
     }
 
-    html = render_component(&DiffComponent.diff/1, diff: diff, id: "diff-0")
+    highlights = %{
+      "diff-0-L0-1" =>
+        ~s(<span class="l-variable">value</span> <span class="l-operator">=</span> &lt;script&gt;)
+    }
+
+    html =
+      render_component(&DiffComponent.diff/1,
+        diff: diff,
+        id: "diff-0",
+        highlights: highlights
+      )
 
     assert html =~ "ghd-file-status-changed"
     assert html =~ "lib/app.ex"
-    assert html =~ ~s(id="#{:erlang.phash2({"lib/app.ex", "lib/app.ex"})}--1")
-    assert html =~ "class=\"n\""
+    assert html =~ ~s(id="diff-0-L0-1")
+    assert html =~ "class=\"l-variable\""
     assert html =~ "&lt;"
     refute html =~ "<script>"
   end
@@ -40,7 +50,12 @@ defmodule HexpmWeb.DiffComponentTest do
           {"old.txt", nil, "removed"}
         ] do
       diff = %GitDiff.Patch{from: from, to: to, chunks: []}
-      assert render_component(&DiffComponent.diff/1, diff: diff, id: status) =~ status
+
+      assert render_component(&DiffComponent.diff/1,
+               diff: diff,
+               id: status,
+               highlights: %{}
+             ) =~ status
     end
 
     assert render_component(&DiffComponent.too_large/1, file: "large.bin") =~

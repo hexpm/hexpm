@@ -3,12 +3,12 @@ defmodule HexpmWeb.PreviewRedirectController do
 
   alias Hexpm.Preview
 
-  def index(conn, _params), do: redirect_to(conn, "/packages")
+  def index(conn, _params), do: permanent_redirect(conn, "/packages")
 
-  def sitemap(conn, _params), do: redirect_to(conn, "/preview/sitemap.xml")
+  def sitemap(conn, _params), do: permanent_redirect(conn, "/preview/sitemap.xml")
 
   def package_sitemap(conn, %{"package" => package}) do
-    redirect_to(conn, "/preview/#{URI.encode(package)}/sitemap.xml")
+    permanent_redirect(conn, "/preview/#{URI.encode(package)}/sitemap.xml")
   end
 
   def latest(conn, %{"package" => package} = params) do
@@ -47,7 +47,7 @@ defmodule HexpmWeb.PreviewRedirectController do
     redirect_latest(conn, package, params["filename"])
   end
 
-  def path(conn, _params), do: redirect_to(conn, conn.request_path)
+  def path(conn, _params), do: permanent_redirect(conn, conn.request_path)
 
   defp redirect_latest(conn, package, filename) do
     case Preview.get_latest_version(package) do
@@ -70,16 +70,6 @@ defmodule HexpmWeb.PreviewRedirectController do
       end
 
     query_string = conn.query_params |> Map.delete("filename") |> URI.encode_query()
-    redirect_to(conn, path, query_string)
-  end
-
-  defp redirect_to(conn, path), do: redirect_to(conn, path, conn.query_string)
-
-  defp redirect_to(conn, path, query_string) do
-    query = if query_string == "", do: "", else: "?#{query_string}"
-
-    conn
-    |> put_status(:moved_permanently)
-    |> redirect(external: HexpmWeb.Endpoint.url() <> path <> query)
+    permanent_redirect(conn, path, query_string)
   end
 end

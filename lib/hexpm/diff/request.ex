@@ -1,6 +1,7 @@
 defmodule Hexpm.Diff.Request do
   @enforce_keys [
     :package,
+    :package_record,
     :from,
     :to,
     :from_release,
@@ -11,6 +12,7 @@ defmodule Hexpm.Diff.Request do
     :ignore_whitespace,
     :canonical_hash,
     :legacy_hash,
+    :releases,
     :versions
   ]
   defstruct @enforce_keys
@@ -40,6 +42,7 @@ defmodule Hexpm.Diff.Request do
       {:ok,
        %__MODULE__{
          package: package.name,
+         package_record: package,
          from: from,
          to: to,
          from_release: %{from_release | package: package},
@@ -51,6 +54,7 @@ defmodule Hexpm.Diff.Request do
          canonical_hash:
            cache_hash(cache_version, [from_checksum, to_checksum], ignore_whitespace),
          legacy_hash: cache_hash(cache_version, [to_checksum, from_checksum], ignore_whitespace),
+         releases: releases,
          versions: Enum.map(releases, &to_string(&1.version))
        }}
     else

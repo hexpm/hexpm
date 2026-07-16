@@ -3,6 +3,10 @@ defmodule HexpmWeb.DiffLive do
 
   require Logger
 
+  import HexpmWeb.Components.PackageLayout
+
+  alias Hexpm.Repository.Releases
+  alias HexpmWeb.PackageLayoutAssigns
   alias HexpmWeb.Plugs.{Attack, Forwarded}
 
   @batch_size 5
@@ -17,8 +21,26 @@ defmodule HexpmWeb.DiffLive do
     with {:ok, from, to} <- parse_versions(versions),
          {:ok, request} <-
            Hexpm.Diff.prepare(package, from, to, ignore_whitespace: ignore_whitespace) do
+      release =
+        Releases.preload(request.to_release, [
+          :requirements,
+          :downloads,
+          :publisher,
+          :security_advisories
+        ])
+
+      layout_assigns =
+        PackageLayoutAssigns.for_package(socket.assigns.current_user, request.package_record,
+          releases: request.releases,
+          current_release: release,
+          graph_release: release,
+          sidebar?: false
+        )
+
       socket =
-        assign(socket,
+        socket
+        |> assign(layout_assigns)
+        |> assign(
           request: request,
           package: request.package,
           from: request.from,
@@ -27,7 +49,11 @@ defmodule HexpmWeb.DiffLive do
           selected_from: request.from,
           selected_to: request.to,
           ignore_whitespace: ignore_whitespace,
-          page_title: "#{request.package} #{request.from}..#{request.to} diff"
+          page_title: "#{request.package} #{request.from}..#{request.to} diff",
+          description: "Compare #{request.package} #{request.from} with #{request.to} on Hex.",
+          canonical_url:
+            canonical_url(request.package, request.from, request.to, ignore_whitespace),
+          container: "container"
         )
 
       load_or_enqueue(socket)
@@ -140,26 +166,48 @@ defmodule HexpmWeb.DiffLive do
   end
 
   defp load_piece(piece) do
+    id = Hexpm.Diff.piece_id(piece)
+
     content =
       with {:ok, stored} <- Hexpm.Diff.fetch_piece(piece),
-           {:ok, parsed} <- parse_piece(stored) do
+           {:ok, parsed} <- parse_piece(stored, id) do
         parsed
       else
         {:error, reason} -> {:error, reason}
       end
 
-    {Hexpm.Diff.piece_id(piece), content}
+    {id, content}
   end
 
-  defp parse_piece({:too_large, file}), do: {:ok, {:too_large, file}}
+  defp parse_piece({:too_large, file}, _id), do: {:ok, {:too_large, file}}
 
-  defp parse_piece({:diff, raw_diff, from_path, to_path}) do
+  defp parse_piece({:diff, raw_diff, from_path, to_path}, id) do
     case GitDiff.parse_patch(raw_diff, relative_from: from_path, relative_to: to_path) do
-      {:ok, [diff | _]} -> {:ok, {:diff, diff}}
+      {:ok, [diff | _]} -> {:ok, {:diff, diff, highlight_diff(diff, id)}}
       {:ok, []} -> {:error, :empty_diff}
       {:error, reason} -> {:error, {:invalid_diff, reason}}
     end
   end
+
+  defp highlight_diff(diff, id) do
+    lines = for chunk <- diff.chunks, line <- chunk.lines, do: line
+    source = Enum.map(lines, &source_text/1)
+    language = diff.to || diff.from
+
+    highlighted =
+      HexpmWeb.SyntaxHighlight.highlight_lines(
+        source,
+        language,
+        "package diff #{language}"
+      )
+
+    lines
+    |> Enum.zip(highlighted)
+    |> Map.new(fn {line, html} -> {HexpmWeb.DiffComponent.line_id(id, line), html} end)
+  end
+
+  defp source_text(%{text: <<prefix, text::binary>>}) when prefix in [?+, ?-, ?\s], do: text
+  defp source_text(%{text: text}), do: text
 
   defp schedule_poll(socket) do
     if connected?(socket),
@@ -274,6 +322,11 @@ defmodule HexpmWeb.DiffLive do
   def diff_path(package, from, to, ignore_whitespace) do
     query = if ignore_whitespace, do: [w: 1], else: []
     ~p"/diff/#{package}/#{from <> ".." <> to}?#{query}"
+  end
+
+  defp canonical_url(package, from, to, ignore_whitespace) do
+    url(~p"/diff/#{package}/#{from <> ".." <> to}") <>
+      if(ignore_whitespace, do: "?w=1", else: "")
   end
 
   def job_state_title(:running), do: "Generating diff"

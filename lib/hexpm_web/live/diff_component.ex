@@ -1,14 +1,15 @@
 defmodule HexpmWeb.DiffComponent do
   use Phoenix.Component
 
+  import Phoenix.HTML, only: [raw: 1]
+
   alias Phoenix.LiveView.JS
 
   attr :diff, GitDiff.Patch, required: true
   attr :id, :string, required: true
+  attr :highlights, :map, required: true
 
   def diff(assigns) do
-    assigns = assign(assigns, :lexer, lexer_for(assigns.diff))
-
     ~H"""
     <div class="ghd-file">
       <button
@@ -37,17 +38,15 @@ defmodule HexpmWeb.DiffComponent do
                 <td class="ghd-text"><span class="ghd-text-internal">{chunk.header}</span></td>
               </tr>
               <%= for line <- chunk.lines do %>
-                <tr id={line_id(@diff, line)} class={["ghd-line", "ghd-line-type-#{line.type}"]}>
+                <tr id={line_id(@id, line)} class={["ghd-line", "ghd-line-type-#{line.type}"]}>
                   <td class="ghd-line-number">
                     <span>{line_number(line.from_line_number)}</span>
                     <span>{line_number(line.to_line_number)}</span>
                   </td>
                   <td class="ghd-text">
-                    <span class="ghd-text-user highlight">
+                    <span class="ghd-text-user">
                       <span class="ghd-line-status">{line_prefix(line.text)}</span>
-                      <%= for token <- highlighted_line(line.text, @lexer) do %>
-                        <span class={token.class}>{token.text}</span>
-                      <% end %>
+                      {raw(Map.fetch!(@highlights, line_id(@id, line)))}
                     </span>
                   </td>
                 </tr>
@@ -83,59 +82,13 @@ defmodule HexpmWeb.DiffComponent do
 
   defp line_number(number), do: to_string(number)
 
-  defp line_id(diff, line) do
-    hash = :erlang.phash2({diff.from, diff.to})
-    "#{hash}-#{line.from_line_number}-#{line.to_line_number}"
+  def line_id(id, line) do
+    "#{id}-L#{line_number_id(line.from_line_number)}-#{line_number_id(line.to_line_number)}"
   end
+
+  defp line_number_id(number) when number in [nil, ""], do: "0"
+  defp line_number_id(number), do: to_string(number)
 
   defp line_prefix(<<prefix, _::binary>>) when prefix in [?+, ?-, ?\s], do: <<prefix, ?\s>>
   defp line_prefix(_), do: ""
-
-  defp highlighted_line(<<prefix, text::binary>>, lexer) when prefix in [?+, ?-, ?\s] do
-    highlight(text, lexer)
-  end
-
-  defp highlighted_line(text, lexer), do: highlight(text, lexer)
-
-  defp highlight(text, nil), do: [%{class: nil, text: text}]
-  defp highlight("", _lexer), do: [%{class: nil, text: ""}]
-
-  defp highlight(text, {lexer, opts}) do
-    Enum.map(lexer.lex(text, opts), fn {type, _meta, value} ->
-      %{
-        class: Makeup.Token.Utils.css_class_for_token_type(type),
-        text: IO.iodata_to_binary(value)
-      }
-    end)
-  rescue
-    _ -> [%{class: nil, text: text}]
-  end
-
-  defp lexer_for(%{from: nil, to: path}), do: lexer_for_path(path)
-  defp lexer_for(%{to: nil, from: path}), do: lexer_for_path(path)
-  defp lexer_for(%{to: path}), do: lexer_for_path(path)
-
-  defp lexer_for_path(path) do
-    filename = Path.basename(path)
-
-    cond do
-      filename in ["rebar.config", "rebar.config.script"] ->
-        {Makeup.Lexers.ErlangLexer, []}
-
-      String.ends_with?(filename, ".app.src") ->
-        {Makeup.Lexers.ErlangLexer, []}
-
-      true ->
-        case Path.extname(filename) do
-          "." <> extension ->
-            case Makeup.Registry.fetch_lexer_by_extension(extension) do
-              {:ok, lexer} -> lexer
-              :error -> nil
-            end
-
-          _ ->
-            nil
-        end
-    end
-  end
 end

@@ -28,37 +28,3 @@ export const InfiniteScroll = {
     });
   },
 };
-
-export const DiffList = {
-  mounted() {
-    this.el.addEventListener("click", (event) => {
-      const lineNumber = event.target.closest(".ghd-line-number");
-      const line = lineNumber?.closest(".ghd-line");
-      if (!line?.id) return;
-
-      this.select(line);
-      history.replaceState(null, "", `#${line.id}`);
-    });
-    this.selectHash();
-  },
-
-  updated() {
-    this.selectHash();
-  },
-
-  select(line) {
-    this.el.querySelectorAll(".ghd-line.selected").forEach((element) => {
-      element.classList.remove("selected");
-    });
-    line.classList.add("selected");
-  },
-
-  selectHash() {
-    if (!location.hash) return;
-    const line = document.getElementById(location.hash.slice(1));
-    if (line) {
-      this.select(line);
-      line.scrollIntoView({ block: "center" });
-    }
-  },
-};

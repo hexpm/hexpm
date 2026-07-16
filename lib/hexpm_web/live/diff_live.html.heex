@@ -1,126 +1,164 @@
-<div class="mx-auto flex w-full max-w-screen-2xl flex-col px-4 py-8 sm:px-6 lg:px-8">
-  <%= if @error do %>
-    <div class="diff-empty-state" role="alert">
+<%= if @error do %>
+  <div class="mx-auto flex min-h-64 w-full max-w-7xl flex-col px-4 py-8 sm:px-6 lg:px-8">
+    <div class="flex min-h-64 flex-col items-center justify-center text-center" role="alert">
       <h1>Unable to show diff</h1>
       <p>{@error}</p>
     </div>
-  <% else %>
-    <div class="mb-6 flex flex-col gap-4 border-b border-grey-100 pb-6 dark:border-grey-700">
-      <div>
-        <p class="text-caption font-semibold uppercase tracking-wide text-grey-400">
-          Package diff
-        </p>
-        <h1 class="mt-1 text-h5 font-bold text-grey-800 dark:text-grey-100">
-          {@package} <span class="font-mono text-body text-grey-500">{@from} → {@to}</span>
-        </h1>
+  </div>
+<% else %>
+  <.package_layout
+    {@package_layout}
+    active_tab={:versions}
+    version_pinned?={true}
+    wide?={true}
+  >
+    <:inner_content>
+      <div class="mb-6 border-b border-grey-100 pb-6 dark:border-grey-700">
+        <form
+          id="version-selector"
+          phx-change="select-versions"
+          phx-submit="view-diff"
+          class="flex flex-wrap items-end gap-3"
+        >
+          <label class="flex flex-col gap-1 text-caption font-medium text-grey-500">
+            From
+            <select
+              name="versions[from]"
+              class="min-w-36 rounded-lg border border-grey-200 bg-white py-2 pl-3 pr-8 font-mono text-sm text-grey-700 outline-none focus:border-primary-500 dark:border-grey-700 dark:bg-grey-900 dark:text-grey-200"
+            >
+              <option
+                :for={version <- @versions}
+                value={version}
+                selected={version == @selected_from}
+                disabled={version == @selected_to}
+              >
+                {version}
+              </option>
+            </select>
+          </label>
+          <label class="flex flex-col gap-1 text-caption font-medium text-grey-500">
+            To
+            <select
+              name="versions[to]"
+              class="min-w-36 rounded-lg border border-grey-200 bg-white py-2 pl-3 pr-8 font-mono text-sm text-grey-700 outline-none focus:border-primary-500 dark:border-grey-700 dark:bg-grey-900 dark:text-grey-200"
+            >
+              <option
+                :for={version <- @versions}
+                value={version}
+                selected={version == @selected_to}
+                disabled={version == @selected_from}
+              >
+                {version}
+              </option>
+            </select>
+          </label>
+          <.button
+            type="submit"
+            size="sm"
+            disabled={@selected_from == @selected_to}
+          >
+            View diff
+          </.button>
+          <span :if={@selector_error} class="text-caption text-red-600">{@selector_error}</span>
+        </form>
       </div>
 
-      <form
-        id="version-selector"
-        phx-change="select-versions"
-        phx-submit="view-diff"
-        class="flex flex-wrap items-end gap-3"
-      >
-        <label class="flex flex-col gap-1 text-caption font-medium text-grey-500">
-          From
-          <select name="versions[from]" class="diff-version-select">
-            <option
-              :for={version <- @versions}
-              value={version}
-              selected={version == @selected_from}
-              disabled={version == @selected_to}
-            >
-              {version}
-            </option>
-          </select>
-        </label>
-        <label class="flex flex-col gap-1 text-caption font-medium text-grey-500">
-          To
-          <select name="versions[to]" class="diff-version-select">
-            <option
-              :for={version <- @versions}
-              value={version}
-              selected={version == @selected_to}
-              disabled={version == @selected_from}
-            >
-              {version}
-            </option>
-          </select>
-        </label>
-        <.button
-          type="submit"
-          size="sm"
-          disabled={@selected_from == @selected_to}
-        >
-          View diff
-        </.button>
-        <span :if={@selector_error} class="text-caption text-red-600">{@selector_error}</span>
-      </form>
-    </div>
-
-    <%= if @job_state == :ready do %>
-      <div class="diff-summary">
-        <div class="diff-stat diff-stat-files">
-          <strong>{@metadata.files_changed}</strong>
-          <span>{if @metadata.files_changed == 1, do: "file changed", else: "files changed"}</span>
-        </div>
-        <div class="diff-stat diff-stat-additions">
-          <strong>+{@metadata.total_additions}</strong>
-          <span>{if @metadata.total_additions == 1, do: "addition", else: "additions"}</span>
-        </div>
-        <div class="diff-stat diff-stat-deletions">
-          <strong>-{@metadata.total_deletions}</strong>
-          <span>{if @metadata.total_deletions == 1, do: "deletion", else: "deletions"}</span>
-        </div>
-        <.link
-          id="whitespace-toggle"
-          navigate={diff_path(@package, @from, @to, not @ignore_whitespace)}
-          class="ml-auto text-caption font-semibold text-primary-700 hover:text-primary-500 dark:text-primary-300"
-        >
-          {if @ignore_whitespace, do: "Show whitespace changes", else: "Hide whitespace changes"}
-        </.link>
-      </div>
-
-      <div id="diff-list" class="ghd-container" phx-hook="DiffList">
-        <div :for={{id, content} <- @loaded_pieces} id={"#{id}-container"}>
-          <%= case content do %>
-            <% {:diff, diff} -> %>
-              <HexpmWeb.DiffComponent.diff id={id} diff={diff} />
-            <% {:too_large, file} -> %>
-              <HexpmWeb.DiffComponent.too_large file={file} />
-            <% {:error, _reason} -> %>
-              <div class="ghd-diff-error">Failed to load diff</div>
-          <% end %>
+      <%= if @job_state == :ready do %>
+        <div class="mb-4 flex flex-wrap items-center gap-3">
+          <div
+            id="diff-files-changed"
+            class="flex items-center gap-1.5 rounded-md border border-grey-200 bg-grey-50 px-3 py-1.5 text-caption dark:border-grey-700 dark:bg-grey-900"
+          >
+            <strong class="font-mono text-small">{@metadata.files_changed}</strong>
+            <span>{if @metadata.files_changed == 1, do: "file changed", else: "files changed"}</span>
+          </div>
+          <div
+            id="diff-additions"
+            class="flex items-center gap-1.5 rounded-md border border-green-200 bg-green-50 px-3 py-1.5 text-caption text-green-700 dark:border-green-700 dark:bg-green-900 dark:text-green-300"
+          >
+            <strong class="font-mono text-small">+{@metadata.total_additions}</strong>
+            <span>{if @metadata.total_additions == 1, do: "addition", else: "additions"}</span>
+          </div>
+          <div
+            id="diff-deletions"
+            class="flex items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-caption text-red-700 dark:border-red-700 dark:bg-red-900 dark:text-red-300"
+          >
+            <strong class="font-mono text-small">-{@metadata.total_deletions}</strong>
+            <span>{if @metadata.total_deletions == 1, do: "deletion", else: "deletions"}</span>
+          </div>
+          <.link
+            id="whitespace-toggle"
+            navigate={diff_path(@package, @from, @to, not @ignore_whitespace)}
+            class="ml-auto text-caption font-semibold text-primary-700 hover:text-primary-500 dark:text-primary-300"
+          >
+            {if @ignore_whitespace, do: "Show whitespace changes", else: "Hide whitespace changes"}
+          </.link>
         </div>
 
         <div
-          :if={@remaining_pieces != []}
-          id="diff-loading-trigger"
-          class="diff-loading"
-          role="status"
-          phx-hook="InfiniteScroll"
-          data-loaded={length(@loaded_pieces)}
+          id="diff-list"
+          class="ghd-container"
+          phx-hook="LineHighlight"
+          data-line-selector=".ghd-line"
+          data-selected-class="selected"
         >
-          Loading more files…
-        </div>
+          <div :for={{id, content} <- @loaded_pieces} id={"#{id}-container"}>
+            <%= case content do %>
+              <% {:diff, diff, highlights} -> %>
+                <HexpmWeb.DiffComponent.diff id={id} diff={diff} highlights={highlights} />
+              <% {:too_large, file} -> %>
+                <HexpmWeb.DiffComponent.too_large file={file} />
+              <% {:error, _reason} -> %>
+                <div class="ghd-diff-error">Failed to load diff</div>
+            <% end %>
+          </div>
 
-        <div :if={@metadata.total_diffs == 0} class="diff-empty-state">
-          <h2>No changes</h2>
-          <p>These releases have no file changes for the selected whitespace mode.</p>
+          <div
+            :if={@remaining_pieces != []}
+            id="diff-loading-trigger"
+            class="flex h-16 items-center justify-center text-sm text-grey-400"
+            role="status"
+            phx-hook="InfiniteScroll"
+            data-loaded={length(@loaded_pieces)}
+          >
+            Loading more files…
+          </div>
+
+          <div
+            :if={@metadata.total_diffs == 0}
+            class="flex min-h-64 flex-col items-center justify-center text-center text-grey-400"
+          >
+            <h2 class="mb-2 text-h6 font-semibold text-grey-700 dark:text-grey-200">
+              No changes
+            </h2>
+            <p>These releases have no file changes for the selected whitespace mode.</p>
+          </div>
         </div>
-      </div>
-    <% else %>
-      <div class="diff-empty-state" role="status" aria-live="polite">
-        <%= if @job_state in [:discarded, :cancelled, :missing, :completed_without_metadata] do %>
-          <h2>Diff generation did not complete</h2>
-          <p>{job_state_message(@job_state)}</p>
-          <.button type="button" size="sm" class="mt-4" phx-click="retry">Try again</.button>
-        <% else %>
-          <div class="diff-spinner" aria-hidden="true"></div>
-          <h2>{job_state_title(@job_state)}</h2>
-          <p>This page updates automatically.</p>
-        <% end %>
-      </div>
-    <% end %>
-  <% end %>
-</div>
+      <% else %>
+        <div
+          class="flex min-h-64 flex-col items-center justify-center text-center text-grey-400"
+          role="status"
+          aria-live="polite"
+        >
+          <%= if @job_state in [:discarded, :cancelled, :missing, :completed_without_metadata] do %>
+            <h2 class="mb-2 text-h6 font-semibold text-grey-700 dark:text-grey-200">
+              Diff generation did not complete
+            </h2>
+            <p>{job_state_message(@job_state)}</p>
+            <.button type="button" size="sm" class="mt-4" phx-click="retry">Try again</.button>
+          <% else %>
+            <div
+              class="mb-4 size-6 animate-spin rounded-full border-2 border-grey-100 border-t-primary-500 dark:border-grey-700 dark:border-t-primary-300"
+              aria-hidden="true"
+            >
+            </div>
+            <h2 class="mb-2 text-h6 font-semibold text-grey-700 dark:text-grey-200">
+              {job_state_title(@job_state)}
+            </h2>
+            <p>This page updates automatically.</p>
+          <% end %>
+        </div>
+      <% end %>
+    </:inner_content>
+  </.package_layout>
+<% end %>

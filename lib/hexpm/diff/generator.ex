@@ -1,5 +1,5 @@
 defmodule Hexpm.Diff.Generator do
-  alias Hexpm.Diff.{Request, Storage}
+  alias Hexpm.Diff.{Cache, Request}
   alias Hexpm.Repository.Assets
 
   @max_file_size 1024 * 1024
@@ -10,7 +10,7 @@ defmodule Hexpm.Diff.Generator do
          {:ok, from_dir} <- unpack(from_path, request, request.from),
          {:ok, to_dir} <- unpack(to_path, request, request.to),
          {:ok, metadata} <- generate_pieces(request, from_dir, to_dir) do
-      Storage.put_metadata!(request, metadata)
+      Cache.put_metadata!(request, metadata)
       :ok
     end
   rescue
@@ -27,7 +27,7 @@ defmodule Hexpm.Diff.Generator do
         {:error, :tarball_not_found}
 
       _ ->
-        if file_checksum(path) == expected_checksum do
+        if Assets.file_checksum(path) == expected_checksum do
           {:ok, path}
         else
           {:error, :checksum_mismatch}
@@ -40,7 +40,7 @@ defmodule Hexpm.Diff.Generator do
 
     case :hex_tarball.unpack({:file, to_charlist(tarball)}, to_charlist(path)) do
       {:ok, _} ->
-        ensure_readable(path)
+        Hexpm.TmpDir.ensure_readable(path)
         {:ok, path}
 
       {:error, reason} ->
@@ -80,7 +80,7 @@ defmodule Hexpm.Diff.Generator do
 
     cond do
       too_large?(from_path) or too_large?(to_path) ->
-        Storage.put_piece!(request, index, %{type: "too_large", file: sanitize_utf8(file)})
+        Cache.put_piece!(request, index, %{type: "too_large", file: sanitize_utf8(file)})
         {:ok, metadata_update(0, 0)}
 
       true ->
@@ -91,7 +91,7 @@ defmodule Hexpm.Diff.Generator do
           {:ok, raw_diff} ->
             raw_diff = sanitize_utf8(raw_diff)
 
-            Storage.put_piece!(request, index, %{
+            Cache.put_piece!(request, index, %{
               "diff" => raw_diff,
               "path_from" => sanitize_utf8(from_dir),
               "path_to" => sanitize_utf8(to_dir)
@@ -159,31 +159,6 @@ defmodule Hexpm.Diff.Generator do
     |> Path.wildcard(match_dot: true)
     |> Enum.filter(&File.regular?(&1, raw: true))
     |> Enum.map(&Path.relative_to(&1, directory))
-  end
-
-  defp ensure_readable(dir) do
-    dir
-    |> Path.join("**")
-    |> Path.wildcard(match_dot: true)
-    |> Enum.each(fn path ->
-      case File.stat(path) do
-        {:ok, %{type: :directory, access: access}} when access in [:none, :write] ->
-          File.chmod!(path, 0o755)
-
-        {:ok, %{type: :regular, access: access}} when access in [:none, :write] ->
-          File.chmod!(path, 0o644)
-
-        _ ->
-          :ok
-      end
-    end)
-  end
-
-  defp file_checksum(path) do
-    path
-    |> File.stream!([], 64 * 1024)
-    |> Enum.reduce(:crypto.hash_init(:sha256), &:crypto.hash_update(&2, &1))
-    |> :crypto.hash_final()
   end
 
   defp sanitize_utf8(content) when is_binary(content) do
