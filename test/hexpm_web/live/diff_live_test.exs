@@ -68,9 +68,22 @@ defmodule HexpmWeb.DiffLiveTest do
     assert Floki.find(document, "a.border-primary-default") |> Floki.text() =~ "Versions"
     assert html =~ ~s(phx-hook="LineHighlight")
 
-    assert html =~ "file-4.bin"
-    refute html =~ "file-5.bin"
-    assert html =~ "Hide whitespace changes"
+    actions = Floki.find(document, "#diff-page-actions")
+    refute Floki.text(actions) =~ package.name
+    refute Floki.text(actions) =~ "1.0.0..7.0.0"
+
+    assert [find_file_button] = Floki.find(actions, "button")
+    assert find_file_button |> Floki.text() |> String.trim() == "Find file"
+
+    assert "lg:hidden" in (Floki.attribute(find_file_button, "class")
+                           |> List.first()
+                           |> String.split())
+
+    assert has_element?(view, "#diff-4-container", "file-4.bin")
+    refute has_element?(view, "#diff-5-container")
+    assert html =~ "Hide whitespace"
+    assert html =~ ~s(aria-label="Changed files")
+    assert html =~ ~s(id="diff-files-tree-search")
     assert html =~ ~s(id="diff-loading-trigger")
 
     assert Floki.attribute(document, "#whitespace-toggle", "href") == [
@@ -78,8 +91,32 @@ defmodule HexpmWeb.DiffLiveTest do
            ]
 
     html = render_hook(view, "load-more")
-    assert html =~ "file-5.bin"
+    assert has_element?(view, "#diff-5-container", "file-5.bin")
     refute html =~ ~s(id="diff-loading-trigger")
+  end
+
+  test "changed-file selector filters and loads through an unloaded file", %{package: package} do
+    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "7.0.0", [])
+    put_ready_cache(request, 7)
+
+    {:ok, view, _html} = live(build_conn(), "/diff/#{package.name}/1.0.0..7.0.0")
+    refute has_element?(view, "#diff-6-container")
+
+    html =
+      view
+      |> element("#diff-files-tree-search")
+      |> render_change(%{"query" => "file-6"})
+
+    assert html =~ "file-6.bin"
+    refute html =~ "file-5.bin"
+
+    view
+    |> element("#diff-files-tree button", "file-6.bin")
+    |> render_click()
+
+    assert has_element?(view, "#diff-6-container", "file-6.bin")
+    assert has_element?(view, ~s(button[aria-current="true"]), "file-6.bin")
+    refute has_element?(view, "#diff-loading-trigger")
   end
 
   test "cached patches are highlighted through Lumis with stable line anchors", %{
@@ -299,7 +336,7 @@ defmodule HexpmWeb.DiffLiveTest do
     put_ready_cache(request, 0)
     {:ok, view, html} = live(build_conn(), "/diff/#{package.name}/1.0.0..2.0.0?w=1")
 
-    assert html =~ "Show whitespace changes"
+    assert html =~ "Show whitespace"
     assert html =~ "View diff"
     assert html =~ ~s(data-phx-link="redirect")
     {:ok, document} = Floki.parse_document(html)
@@ -353,7 +390,7 @@ defmodule HexpmWeb.DiffLiveTest do
     assert html =~ "Invalid diff route"
   end
 
-  test "existing package version links continue to use the standalone Diff URL", %{
+  test "package version links use the integrated Diff route", %{
     package: package
   } do
     html =
@@ -361,7 +398,8 @@ defmodule HexpmWeb.DiffLiveTest do
       |> get("/packages/#{package.name}/versions")
       |> response(200)
 
-    assert html =~ "http://localhost:5004/diff/#{package.name}/"
+    assert html =~ ~s(href="/diff/#{package.name}/1.0.0..2.0.0")
+    refute html =~ "http://localhost:5004/diff/"
   end
 
   defp put_ready_cache(request, count) do
@@ -373,7 +411,8 @@ defmodule HexpmWeb.DiffLiveTest do
       total_diffs: count,
       total_additions: count,
       total_deletions: count,
-      files_changed: count
+      files_changed: count,
+      files: Enum.map(zero_based_range(count), &"file-#{&1}.bin")
     })
   end
 

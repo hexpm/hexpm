@@ -66,7 +66,11 @@ defmodule Hexpm.Diff.Cache do
         []
       else
         for index <- 0..(metadata.total_diffs - 1) do
-          %Piece{id: "diff-#{index}", key: diff_key(request, hash, index)}
+          %Piece{
+            id: "diff-#{index}",
+            key: diff_key(request, hash, index),
+            file: Map.get(metadata, :files) && Enum.at(metadata.files, index)
+          }
         end
       end
 
@@ -78,14 +82,16 @@ defmodule Hexpm.Diff.Cache do
          {:ok, total_diffs} <- non_negative_integer(metadata["total_diffs"]),
          {:ok, total_additions} <- non_negative_integer(metadata["total_additions"]),
          {:ok, total_deletions} <- non_negative_integer(metadata["total_deletions"]),
-         {:ok, files_changed} <- non_negative_integer(metadata["files_changed"]) do
-      {:ok,
-       %{
-         total_diffs: total_diffs,
-         total_additions: total_additions,
-         total_deletions: total_deletions,
-         files_changed: files_changed
-       }}
+         {:ok, files_changed} <- non_negative_integer(metadata["files_changed"]),
+         {:ok, files} <- files(metadata["files"], total_diffs) do
+      metadata = %{
+        total_diffs: total_diffs,
+        total_additions: total_additions,
+        total_deletions: total_deletions,
+        files_changed: files_changed
+      }
+
+      {:ok, if(files, do: Map.put(metadata, :files, files), else: metadata)}
     else
       _ -> {:error, :invalid_metadata}
     end
@@ -107,6 +113,14 @@ defmodule Hexpm.Diff.Cache do
 
   defp non_negative_integer(value) when is_integer(value) and value >= 0, do: {:ok, value}
   defp non_negative_integer(_), do: :error
+
+  defp files(nil, _total_diffs), do: {:ok, nil}
+
+  defp files(files, total_diffs) when is_list(files) and length(files) == total_diffs do
+    if Enum.all?(files, &(is_binary(&1) and &1 != "")), do: {:ok, files}, else: :error
+  end
+
+  defp files(_files, _total_diffs), do: :error
 
   defp put!(key, body) do
     case Hexpm.Store.put(:diff_bucket, key, body, @put_options) do

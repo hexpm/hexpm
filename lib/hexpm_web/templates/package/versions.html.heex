@@ -14,13 +14,30 @@ version_rows =
           else: nil
         )
     }
-  end) %>
+  end)
+
+compare_path =
+  case {ViewHelpers.main_repository?(@package), versions} do
+    {true, [version, previous_version | _]} ->
+      ViewHelpers.path_for_diff(@package, version, previous_version)
+
+    _ ->
+      nil
+  end %>
 
 <.package_layout {@package_layout} active_tab={:versions}>
   <:inner_content>
     <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden">
-      <div class="px-5 py-4 border-b border-grey-200 dark:border-grey-700">
+      <div class="flex items-center justify-between gap-4 px-5 py-4 border-b border-grey-200 dark:border-grey-700">
         <h2 class="text-grey-900 dark:text-grey-100 text-xl font-semibold">Versions</h2>
+        <a
+          :if={compare_path}
+          id="compare-versions"
+          href={compare_path}
+          class="inline-flex items-center gap-2 rounded-lg border border-grey-200 bg-white px-3 py-1.5 text-sm font-medium text-grey-700 shadow-sm transition-colors hover:border-grey-300 hover:bg-grey-50 dark:border-grey-700 dark:bg-grey-800 dark:text-grey-100 dark:hover:bg-grey-700"
+        >
+          {HexpmWeb.ViewIcons.icon(:heroicon, "arrows-right-left", class: "size-4")} Compare versions
+        </a>
       </div>
 
       <div class="divide-y divide-grey-100 dark:divide-grey-700 md:hidden">
@@ -112,8 +129,8 @@ version_rows =
               <%= if row.previous_version && ViewHelpers.main_repository?(@package) do %>
                 <a
                   href={
-                    Hexpm.Utils.diff_html_url(
-                      @package.name,
+                    ViewHelpers.path_for_diff(
+                      @package,
                       row.release.version,
                       row.previous_version
                     )
@@ -247,8 +264,8 @@ version_rows =
                   <%= if row.previous_version && ViewHelpers.main_repository?(@package) do %>
                     <a
                       href={
-                        Hexpm.Utils.diff_html_url(
-                          @package.name,
+                        ViewHelpers.path_for_diff(
+                          @package,
                           row.release.version,
                           row.previous_version
                         )

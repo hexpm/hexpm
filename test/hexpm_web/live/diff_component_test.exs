@@ -42,6 +42,10 @@ defmodule HexpmWeb.DiffComponentTest do
     assert html =~ "class=\"l-variable\""
     assert html =~ "&lt;"
     refute html =~ "<script>"
+
+    document = Floki.parse_document!(html)
+    assert Floki.text(Floki.find(document, ".ghd-line-status")) == "+ "
+    assert [_] = Floki.find(document, ".ghd-line-code")
   end
 
   test "renders added, removed, and oversized files" do
@@ -59,6 +63,6 @@ defmodule HexpmWeb.DiffComponentTest do
     end
 
     assert render_component(&DiffComponent.too_large/1, file: "large.bin") =~
-             "CANNOT RENDER FILES LARGER THAN 1MB"
+             "File is too large to be displayed (1 MiB limit)."
   end
 end

@@ -6,9 +6,8 @@ defmodule HexpmWeb.PreviewLive do
   import HexpmWeb.Components.PackageLayout
 
   alias Hexpm.Repository.{Packages, Releases}
+  alias HexpmWeb.Components.FileSelector
   alias HexpmWeb.PackageLayoutAssigns
-
-  @finder_limit 100
 
   defmodule NotFoundError do
     defexception message: "Package file not found", plug_status: 404
@@ -73,7 +72,7 @@ defmodule HexpmWeb.PreviewLive do
     {:noreply,
      assign(socket,
        query: query,
-       filtered_files: filter_files(socket.assigns.files, query)
+       filtered_files: FileSelector.filter(socket.assigns.files, query)
      )}
   end
 
@@ -117,7 +116,7 @@ defmodule HexpmWeb.PreviewLive do
       files: source.files,
       file_tree: build_file_tree(source.files),
       filename: filename,
-      filtered_files: Enum.take(source.files, @finder_limit),
+      filtered_files: FileSelector.filter(source.files, ""),
       query: "",
       highlighted: highlighted,
       message: message,
@@ -224,37 +223,6 @@ defmodule HexpmWeb.PreviewLive do
         %{type: :directory, name: name, path: path, children: tree_nodes(children, path)}
     end)
     |> Enum.sort_by(fn node -> {if(node.type == :directory, do: 0, else: 1), node.name} end)
-  end
-
-  defp filter_files(files, query) do
-    query = query |> String.trim() |> String.downcase()
-
-    files
-    |> Enum.filter(&fuzzy_match?(String.downcase(&1), query))
-    |> Enum.sort_by(&file_score(String.downcase(&1), query))
-    |> Enum.take(@finder_limit)
-  end
-
-  defp fuzzy_match?(_file, ""), do: true
-
-  defp fuzzy_match?(file, query) do
-    String.contains?(file, query) || subsequence?(String.graphemes(file), String.graphemes(query))
-  end
-
-  defp subsequence?(_file, []), do: true
-  defp subsequence?([], _query), do: false
-  defp subsequence?([character | file], [character | query]), do: subsequence?(file, query)
-  defp subsequence?([_character | file], query), do: subsequence?(file, query)
-
-  defp file_score(file, query) do
-    cond do
-      query == "" -> {0, file}
-      file == query -> {0, file}
-      String.starts_with?(file, query) -> {1, file}
-      String.contains?(file, "/#{query}") -> {2, file}
-      String.contains?(file, query) -> {3, file}
-      true -> {4, file}
-    end
   end
 
   attr :nodes, :list, required: true

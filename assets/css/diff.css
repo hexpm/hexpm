@@ -5,7 +5,6 @@
   --diff-addition-number-bg: var(--color-green-100);
   --diff-deletion-bg: var(--color-red-50);
   --diff-deletion-number-bg: var(--color-red-100);
-  margin-bottom: 3rem;
   color: var(--color-grey-700);
   font-family: var(--font-mono);
   font-size: 0.8125rem;
@@ -15,7 +14,7 @@
   overflow: clip;
   margin-bottom: 1rem;
   border: 1px solid var(--color-grey-200);
-  border-radius: 0.375rem;
+  border-radius: 0.5rem;
   background: white;
 }
 
@@ -28,10 +27,12 @@
   align-items: center;
   justify-content: space-between;
   border: 0;
-  border-bottom: 1px solid var(--color-grey-100);
-  background: white;
-  padding: 0.625rem;
+  border-bottom: 1px solid var(--color-grey-200);
+  background: var(--color-grey-50);
+  padding: 0.75rem 1rem;
   color: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
   text-align: left;
   cursor: pointer;
 }
@@ -62,6 +63,7 @@ div.ghd-diff { overflow-x: auto; }
 table.ghd-diff { width: 100%; min-width: max-content; border-collapse: collapse; }
 
 .ghd-chunk-header { color: var(--color-grey-400); background: var(--diff-chunk-bg); }
+.ghd-chunk-header .ghd-line-number { background: var(--diff-chunk-bg); }
 .ghd-line-number {
   position: absolute;
   display: flex;
@@ -73,8 +75,10 @@ table.ghd-diff { width: 100%; min-width: max-content; border-collapse: collapse;
 }
 
 .ghd-line-number span { width: 2.5rem; padding: 0 0.5rem; }
-.ghd-text-internal,
-.ghd-text-user { display: block; padding: 0 5.625rem; white-space: pre; }
+.ghd-text-internal { display: block; padding: 0 5.625rem; white-space: pre; }
+.ghd-text-user { display: flex; padding: 0 5.625rem; }
+.ghd-line-status,
+.ghd-line-code { white-space: pre; }
 .ghd-line-status { user-select: none; }
 .ghd-line.selected .ghd-line-number,
 .ghd-line.selected .ghd-text { background: var(--diff-selection-bg); }
@@ -93,9 +97,10 @@ table.ghd-diff { width: 100%; min-width: max-content; border-collapse: collapse;
   --diff-deletion-number-bg: var(--color-red-800);
   color: var(--color-grey-200);
 }
-[data-theme=dark] .ghd-file { background: var(--color-grey-900); border-color: var(--color-grey-700); }
+[data-theme=dark] .ghd-file { background: var(--color-grey-800); border-color: var(--color-grey-700); }
 [data-theme=dark] .ghd-file-header { background: var(--color-grey-900); border-color: var(--color-grey-700); }
 [data-theme=dark] .ghd-line-number { background: var(--color-grey-900); color: var(--color-grey-500); }
+[data-theme=dark] .ghd-chunk-header .ghd-line-number { background: var(--diff-chunk-bg); }
 [data-theme=dark] .ghd-file-status-added { color: var(--color-green-300); background: var(--color-green-900); border-color: var(--color-green-700); }
 [data-theme=dark] .ghd-file-status-removed { color: var(--color-red-300); background: var(--color-red-900); border-color: var(--color-red-700); }
 [data-theme=dark] .ghd-file-status-changed { color: var(--color-primary-300); background: var(--color-primary-900); border-color: var(--color-primary-700); }

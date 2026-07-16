@@ -24,20 +24,7 @@
         </div>
 
         <div class="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            phx-click={show_modal("preview-files-modal")}
-            class="inline-flex items-center gap-2 rounded-lg border border-grey-200 bg-white px-3 py-2 text-sm font-medium text-grey-700 shadow-sm transition-colors hover:border-grey-300 hover:bg-grey-50 dark:border-grey-700 dark:bg-grey-800 dark:text-grey-100 dark:hover:bg-grey-700 lg:hidden"
-          >
-            {icon(:heroicon, "folder-open", class: "size-4")} Files
-          </button>
-          <button
-            type="button"
-            phx-click={show_modal("preview-files-modal")}
-            class="hidden items-center gap-2 rounded-lg border border-grey-200 bg-white px-3 py-2 text-sm font-medium text-grey-700 shadow-sm transition-colors hover:border-grey-300 hover:bg-grey-50 dark:border-grey-700 dark:bg-grey-800 dark:text-grey-100 dark:hover:bg-grey-700 lg:inline-flex"
-          >
-            {icon(:heroicon, "magnifying-glass", class: "size-4")} Find file…
-          </button>
+          <HexpmWeb.Components.FileSelector.file_selector_buttons modal_id="preview-files-modal" />
           <a
             href={@raw_url}
             class="inline-flex items-center gap-2 rounded-lg border border-grey-200 bg-white px-3 py-2 text-sm font-medium text-grey-700 shadow-sm transition-colors hover:border-grey-300 hover:bg-grey-50 dark:border-grey-700 dark:bg-grey-800 dark:text-grey-100 dark:hover:bg-grey-700"
@@ -48,56 +35,42 @@
       </div>
 
       <div class="grid min-w-0 items-start gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
-        <aside class="hidden min-w-0 lg:block">
-          <div class="sticky top-4 overflow-hidden rounded-lg border border-grey-200 bg-white dark:border-grey-700 dark:bg-grey-800">
-            <div class="border-b border-grey-200 p-3 dark:border-grey-700">
-              <form id="preview-tree-search" phx-change="filter_files">
-                <label for="preview-tree-query" class="sr-only">Search package files</label>
-                <div class="relative">
-                  {icon(:heroicon, "magnifying-glass",
-                    class:
-                      "pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-grey-400"
-                  )}
-                  <input
-                    id="preview-tree-query"
-                    type="search"
-                    name="query"
-                    value={@query}
-                    phx-debounce="100"
-                    placeholder="Search files"
-                    autocomplete="off"
-                    class="w-full rounded-lg border border-grey-200 bg-grey-50 py-2 pl-9 pr-3 text-sm text-grey-900 outline-none transition-colors placeholder:text-grey-400 focus:border-primary-500 dark:border-grey-700 dark:bg-grey-900 dark:text-grey-100"
-                  />
-                </div>
-              </form>
-              <p class="mt-2 text-[10px] font-medium uppercase tracking-wide text-grey-400 dark:text-grey-300">
-                {length(@files)} files
-              </p>
-            </div>
-            <nav class="max-h-[70vh] overflow-auto p-2" aria-label="Package files">
-              <.source_tree
-                :if={@query == ""}
-                nodes={@file_tree}
-                filename={@filename}
-                package_name={@package_name}
-                version={@version}
-              />
-              <.source_results
-                :if={@query != ""}
-                files={@filtered_files}
-                filename={@filename}
-                package_name={@package_name}
-                version={@version}
-              />
-              <p
-                :if={@query != "" && @filtered_files == []}
-                class="px-2 py-6 text-center text-sm text-grey-500 dark:text-grey-300"
-              >
-                No matching files
-              </p>
-            </nav>
-          </div>
-        </aside>
+        <HexpmWeb.Components.FileSelector.file_selector
+          id="preview-files"
+          query={@query}
+          file_count={length(@files)}
+          title="Package files"
+          sidebar_label="Package files"
+          search_label="Find a package file"
+          tree_form_id="preview-tree-search"
+          tree_query_id="preview-tree-query"
+          finder_form_id="preview-file-finder"
+          finder_query_id="preview-file-query"
+        >
+          <:tree>
+            <.source_tree
+              nodes={@file_tree}
+              filename={@filename}
+              package_name={@package_name}
+              version={@version}
+            />
+          </:tree>
+          <:results :let={selector}>
+            <.source_results
+              files={@filtered_files}
+              filename={@filename}
+              package_name={@package_name}
+              version={@version}
+              close_modal?={selector.close_modal?}
+            />
+            <p
+              :if={@filtered_files == []}
+              class="px-2 py-8 text-center text-sm text-grey-500 dark:text-grey-300"
+            >
+              No matching files
+            </p>
+          </:results>
+        </HexpmWeb.Components.FileSelector.file_selector>
 
         <section class="min-w-0 overflow-hidden rounded-lg border border-grey-200 bg-white dark:border-grey-700 dark:bg-grey-800">
           <header class="flex items-center justify-between gap-3 border-b border-grey-200 bg-grey-50 px-4 py-3 dark:border-grey-700 dark:bg-grey-900">
@@ -126,43 +99,5 @@
         </section>
       </div>
     </div>
-
-    <.modal id="preview-files-modal" title="Package files" max_width="3xl">
-      <form id="preview-file-finder" phx-change="filter_files" class="mb-3">
-        <label for="preview-file-query" class="sr-only">Find a package file</label>
-        <div class="relative">
-          {icon(:heroicon, "magnifying-glass",
-            class:
-              "pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-grey-400"
-          )}
-          <input
-            id="preview-file-query"
-            type="search"
-            name="query"
-            value={@query}
-            phx-debounce="100"
-            placeholder="Find a file by path…"
-            autocomplete="off"
-            class="w-full rounded-lg border border-grey-200 bg-grey-50 py-2.5 pl-9 pr-3 font-mono text-sm text-grey-900 outline-none transition-colors placeholder:text-grey-400 focus:border-primary-500 dark:border-grey-700 dark:bg-grey-900 dark:text-grey-100"
-          />
-        </div>
-      </form>
-
-      <nav class="max-h-[60vh] overflow-auto" aria-label="Find a package file">
-        <.source_results
-          files={@filtered_files}
-          filename={@filename}
-          package_name={@package_name}
-          version={@version}
-          close_modal?={true}
-        />
-        <p
-          :if={@filtered_files == []}
-          class="px-2 py-8 text-center text-sm text-grey-500 dark:text-grey-300"
-        >
-          No matching files
-        </p>
-      </nav>
-    </.modal>
   </:inner_content>
 </.package_layout>

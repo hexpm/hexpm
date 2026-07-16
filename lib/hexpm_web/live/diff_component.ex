@@ -46,7 +46,7 @@ defmodule HexpmWeb.DiffComponent do
                   <td class="ghd-text">
                     <span class="ghd-text-user">
                       <span class="ghd-line-status">{line_prefix(line.text)}</span>
-                      {raw(Map.fetch!(@highlights, line_id(@id, line)))}
+                      <span class="ghd-line-code">{raw(Map.fetch!(@highlights, line_id(@id, line)))}</span>
                     </span>
                   </td>
                 </tr>
@@ -67,7 +67,7 @@ defmodule HexpmWeb.DiffComponent do
       <div class="ghd-file-header ghd-file-header-static">
         <span><span class="ghd-file-status">unknown</span>{@file}</span>
       </div>
-      <div class="ghd-diff ghd-diff-error">CANNOT RENDER FILES LARGER THAN 1MB</div>
+      <div class="ghd-diff ghd-diff-error">File is too large to be displayed (1 MiB limit).</div>
     </div>
     """
   end

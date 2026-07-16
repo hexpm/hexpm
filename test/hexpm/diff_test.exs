@@ -92,6 +92,31 @@ defmodule Hexpm.DiffTest do
              "metadata/#{package.name}-1.0.0-2.0.0-#{request.canonical_hash}.json"
   end
 
+  test "reads optional file manifests and rejects malformed manifests", %{package: package} do
+    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+
+    Cache.put_metadata!(request, %{
+      total_diffs: 1,
+      total_additions: 1,
+      total_deletions: 0,
+      files_changed: 1,
+      files: ["lib/example.ex"]
+    })
+
+    assert {:ok, %{files: ["lib/example.ex"]}, [piece]} = Hexpm.Diff.fetch(request)
+    assert Hexpm.Diff.piece_file(piece) == "lib/example.ex"
+
+    Cache.put_metadata!(request, %{
+      total_diffs: 1,
+      total_additions: 1,
+      total_deletions: 0,
+      files_changed: 1,
+      files: []
+    })
+
+    assert {:error, :invalid_metadata} = Hexpm.Diff.fetch(request)
+  end
+
   test "validates public packages, releases, routes, and identical versions", %{package: package} do
     private_repository = insert(:repository)
 

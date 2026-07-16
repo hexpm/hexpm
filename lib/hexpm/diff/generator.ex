@@ -52,7 +52,13 @@ defmodule Hexpm.Diff.Generator do
     files = Enum.sort(Enum.uniq(tree_files(from_dir) ++ tree_files(to_dir)))
 
     initial =
-      {%{total_diffs: 0, total_additions: 0, total_deletions: 0, files_changed: 0}, 0}
+      {%{
+         total_diffs: 0,
+         total_additions: 0,
+         total_deletions: 0,
+         files_changed: 0,
+         files: []
+       }, 0}
 
     Enum.reduce_while(files, {:ok, initial}, fn file, {:ok, {metadata, index}} ->
       case generate_piece(request, from_dir, to_dir, file, index) do
@@ -80,8 +86,9 @@ defmodule Hexpm.Diff.Generator do
 
     cond do
       too_large?(from_path) or too_large?(to_path) ->
-        Cache.put_piece!(request, index, %{type: "too_large", file: sanitize_utf8(file)})
-        {:ok, metadata_update(0, 0)}
+        file = sanitize_utf8(file)
+        Cache.put_piece!(request, index, %{type: "too_large", file: file})
+        {:ok, metadata_update(file, 0, 0)}
 
       true ->
         case git_diff(from_path, to_path, request.ignore_whitespace) do
@@ -98,7 +105,7 @@ defmodule Hexpm.Diff.Generator do
             })
 
             {additions, deletions} = count_changes(raw_diff)
-            {:ok, metadata_update(additions, deletions)}
+            {:ok, metadata_update(sanitize_utf8(file), additions, deletions)}
 
           {:error, reason} ->
             {:error, {:git_diff, reason}}
@@ -142,12 +149,24 @@ defmodule Hexpm.Diff.Generator do
     end)
   end
 
-  defp metadata_update(additions, deletions) do
-    %{total_diffs: 1, total_additions: additions, total_deletions: deletions, files_changed: 1}
+  defp metadata_update(file, additions, deletions) do
+    %{
+      total_diffs: 1,
+      total_additions: additions,
+      total_deletions: deletions,
+      files_changed: 1,
+      files: [file]
+    }
   end
 
   defp merge_metadata(left, right) do
-    Map.new(left, fn {key, value} -> {key, value + Map.fetch!(right, key)} end)
+    %{
+      total_diffs: left.total_diffs + right.total_diffs,
+      total_additions: left.total_additions + right.total_additions,
+      total_deletions: left.total_deletions + right.total_deletions,
+      files_changed: left.files_changed + right.files_changed,
+      files: left.files ++ right.files
+    }
   end
 
   defp too_large?("/dev/null"), do: false

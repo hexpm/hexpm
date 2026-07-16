@@ -9,15 +9,16 @@ defmodule Hexpm.Diff do
     @moduledoc false
 
     @enforce_keys [:id, :key]
-    defstruct @enforce_keys
+    defstruct @enforce_keys ++ [file: nil]
 
-    @opaque t :: %__MODULE__{id: String.t(), key: String.t()}
+    @opaque t :: %__MODULE__{id: String.t(), key: String.t(), file: String.t() | nil}
   end
 
   defdelegate prepare(package, from, to, opts), to: Request
   defdelegate fetch(request), to: Cache
   defdelegate fetch_piece(piece), to: Cache
   def piece_id(%Piece{id: id}), do: id
+  def piece_file(%Piece{file: file}), do: file
 
   def pending_job(%Request{} = request) do
     case get_incomplete_job(request) do

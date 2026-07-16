@@ -57,6 +57,18 @@ defmodule Hexpm.Diff.GeneratorTest do
     assert metadata.total_additions >= 3
     assert metadata.total_deletions >= 3
 
+    assert metadata.files == [
+             "added.txt",
+             "changed.ex",
+             "hex_metadata.config",
+             "huge.bin",
+             "invalid.bin",
+             "mode.sh",
+             "removed.txt"
+           ]
+
+    assert Enum.map(pieces, &Hexpm.Diff.piece_file/1) == metadata.files
+
     loaded = Enum.map(pieces, &Hexpm.Diff.fetch_piece/1)
     assert Enum.any?(loaded, &match?({:ok, {:too_large, "huge.bin"}}, &1))
 

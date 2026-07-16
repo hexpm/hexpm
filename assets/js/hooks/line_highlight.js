@@ -15,6 +15,15 @@ const LineHighlight = {
     this.onHashChange = () => this.highlightLine();
     this.el.addEventListener("click", this.onClick);
     window.addEventListener("hashchange", this.onHashChange);
+    this.handleEvent("scroll-to-file", ({ id }) => {
+      requestAnimationFrame(() => {
+        const file = document.getElementById(id);
+        if (file && this.el.contains(file)) {
+          window.history.replaceState(null, "", `#${id}`);
+          file.scrollIntoView({ block: "start" });
+        }
+      });
+    });
     this.prepareLines();
   },
 

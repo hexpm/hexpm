@@ -52,6 +52,11 @@ defmodule HexpmWeb.ViewHelpers do
     ~p"/packages/#{package.repository}/#{package}/versions"
   end
 
+  def path_for_diff(%Package{repository_id: 1} = package, version, previous_version) do
+    versions = "#{previous_version}..#{version}"
+    ~p"/diff/#{package}/#{versions}"
+  end
+
   def path_for_owners(%Package{repository_id: 1} = package) do
     ~p"/packages/#{package}/owners"
   end
