@@ -97,9 +97,20 @@
               id="diff-files"
               query={@query}
               file_count={length(@files)}
+              total_file_count={@metadata.total_diffs}
               title="Changed files"
               sidebar_label="Changed files"
               search_label="Find a changed file"
+              search_placeholder={
+                if length(@files) < @metadata.total_diffs,
+                  do: "Search loaded files",
+                  else: "Search files"
+              }
+              finder_placeholder={
+                if length(@files) < @metadata.total_diffs,
+                  do: "Find a loaded file by path…",
+                  else: "Find a file by path…"
+              }
             >
               <:results :let={selector}>
                 <.diff_file_results

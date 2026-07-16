@@ -611,6 +611,18 @@ defmodule HexpmWeb.PackageControllerTest do
       assert result =~ "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
       assert result =~ "&gt;= 0.0.1 and &lt; 0.0.2"
       assert result =~ "https://example.com/advisory"
+
+      assert {:ok, document} = Floki.parse_document(result)
+
+      assert package_tab_hrefs(document, package1.name) == [
+               "/packages/#{package1.name}",
+               "/packages/#{package1.name}/versions",
+               "/packages/#{package1.name}/dependencies",
+               "/packages/#{package1.name}/dependents",
+               "/packages/#{package1.name}/advisories",
+               "/packages/#{package1.name}/0.0.2/files",
+               "/packages/#{package1.name}/audit-logs"
+             ]
     end
 
     test "groups advisories sharing aliases for display", %{package1: package1} do

@@ -235,12 +235,31 @@ defmodule HexpmWeb.DiffLive do
   end
 
   defp add_loaded_pieces(socket, pieces) do
+    newly_loaded = Enum.map(pieces, &load_piece/1)
+
     loaded =
-      (socket.assigns.loaded_pieces ++ Enum.map(pieces, &load_piece/1))
+      (socket.assigns.loaded_pieces ++ newly_loaded)
       |> Enum.sort_by(fn {id, _content} -> Map.fetch!(socket.assigns.piece_order, id) end)
 
-    assign(socket, loaded_pieces: loaded)
+    files =
+      (socket.assigns.files ++ Enum.flat_map(newly_loaded, &loaded_file/1))
+      |> Enum.uniq_by(& &1.id)
+      |> Enum.sort_by(&Map.fetch!(socket.assigns.piece_order, &1.id))
+
+    assign(socket,
+      loaded_pieces: loaded,
+      files: files,
+      filtered_files: filter_diff_files(files, socket.assigns.query)
+    )
   end
+
+  defp loaded_file({id, {:too_large, file}}), do: [%{id: id, path: file}]
+
+  defp loaded_file({id, {:diff, diff, _highlights}}) do
+    [%{id: id, path: diff.to || diff.from || id}]
+  end
+
+  defp loaded_file({_id, {:error, _reason}}), do: []
 
   defp filter_diff_files(files, query) do
     FileSelector.filter_by(files, & &1.path, query)

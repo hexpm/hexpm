@@ -35,14 +35,12 @@
   font-weight: 600;
   text-align: left;
   cursor: pointer;
-  list-style: none;
 }
 
-.ghd-file-header::-webkit-details-marker { display: none; }
 .ghd-file-header:focus-visible { outline: 2px solid var(--color-primary-500); outline-offset: -2px; }
 .ghd-file-header-static { cursor: default; }
 .ghd-file-header .show-hide-diff { width: 0.625rem; fill: var(--color-grey-400); }
-.ghd-file:not([open]) .show-hide-diff { transform: rotate(180deg); }
+.ghd-file:has(.hidden) .show-hide-diff { transform: rotate(180deg); }
 
 .ghd-file-status {
   display: inline-block;
@@ -60,7 +58,7 @@
 .ghd-file-status-added { color: var(--color-green-700); background: var(--color-green-50); border-color: var(--color-green-300); }
 .ghd-file-status-removed { color: var(--color-red-700); background: var(--color-red-50); border-color: var(--color-red-300); }
 .ghd-file-status-changed { color: var(--color-primary-700); background: var(--color-primary-50); border-color: var(--color-primary-300); }
-.ghd-file-status-too-large { color: var(--color-grey-700); background: var(--color-grey-100); border-color: var(--color-grey-400); }
+.ghd-file-status-unknown { color: var(--color-grey-700); background: var(--color-grey-100); border-color: var(--color-grey-400); }
 
 div.ghd-diff { overflow-x: auto; }
 .ghd-diff.hidden { display: none; }
@@ -109,4 +107,4 @@ table.ghd-diff { width: 100%; min-width: max-content; border-collapse: collapse;
 [data-theme=dark] .ghd-file-status-added { color: var(--color-green-300); background: var(--color-green-900); border-color: var(--color-green-700); }
 [data-theme=dark] .ghd-file-status-removed { color: var(--color-red-300); background: var(--color-red-900); border-color: var(--color-red-700); }
 [data-theme=dark] .ghd-file-status-changed { color: var(--color-primary-300); background: var(--color-primary-900); border-color: var(--color-primary-700); }
-[data-theme=dark] .ghd-file-status-too-large { color: var(--color-grey-200); background: var(--color-grey-800); border-color: var(--color-grey-500); }
+[data-theme=dark] .ghd-file-status-unknown { color: var(--color-grey-200); background: var(--color-grey-800); border-color: var(--color-grey-500); }

@@ -1,4 +1,6 @@
 defmodule Hexpm.Diff do
+  use Hexpm.Context
+
   import Ecto.Query
 
   alias Hexpm.Diff.{Cache, Request, Worker}
@@ -29,8 +31,8 @@ defmodule Hexpm.Diff do
 
   def enqueue(%Request{} = request) do
     if Hexpm.Repo.write_mode?() do
-      case Hexpm.Repo.transaction(fn ->
-             Hexpm.Repo.advisory_xact_lock(:diff)
+      case Repo.transaction(fn ->
+             Repo.advisory_xact_lock(:diff)
              insert_job(request)
            end) do
         {:ok, result} -> result
@@ -44,7 +46,7 @@ defmodule Hexpm.Diff do
   def job_status(%Oban.Job{state: state}), do: job_status_from_state(state)
 
   def job_status(job_id) when is_integer(job_id) do
-    case Hexpm.Repo.get(Oban.Job, job_id) do
+    case Repo.get(Oban.Job, job_id) do
       nil -> :missing
       job -> job_status(job)
     end
@@ -66,7 +68,7 @@ defmodule Hexpm.Diff do
           |> Worker.new()
           |> Oban.insert()
         else
-          Hexpm.Repo.rollback(:overloaded)
+          Repo.rollback(:overloaded)
         end
 
       job ->
@@ -81,12 +83,12 @@ defmodule Hexpm.Diff do
     |> where([job], job.args == ^args)
     |> order_by([job], desc: job.id)
     |> limit(1)
-    |> Hexpm.Repo.one()
+    |> Repo.one()
   end
 
   defp incomplete_job_count do
     incomplete_jobs_query()
-    |> Hexpm.Repo.aggregate(:count)
+    |> Repo.aggregate(:count)
   end
 
   defp incomplete_jobs_query do

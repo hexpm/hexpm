@@ -46,17 +46,12 @@ defmodule HexpmWeb.DiffLiveTest do
     refute Floki.text(actions) =~ package.name
     refute Floki.text(actions) =~ "1.0.0..7.0.0"
 
-    assert [files_button, find_file_button] = Floki.find(actions, "button")
-    assert files_button |> Floki.text() |> String.trim() == "Files"
-    assert find_file_button |> Floki.text() |> String.trim() == "Find file…"
+    assert [find_file_button] = Floki.find(actions, "button")
+    assert find_file_button |> Floki.text() |> String.trim() == "Find file"
 
-    assert "lg:hidden" in (Floki.attribute(files_button, "class")
+    assert "lg:hidden" in (Floki.attribute(find_file_button, "class")
                            |> List.first()
                            |> String.split())
-
-    assert "lg:inline-flex" in (Floki.attribute(find_file_button, "class")
-                                |> List.first()
-                                |> String.split())
 
     assert has_element?(view, "#diff-4-container", "file-4.bin")
     refute has_element?(view, "#diff-5-container")
@@ -101,7 +96,17 @@ defmodule HexpmWeb.DiffLiveTest do
     assert has_element?(view, "#diff-loading-trigger")
   end
 
-  test "legacy metadata remains bounded and can load a deep-linked piece", %{package: package} do
+  test "legacy metadata populates the file selector without eagerly fetching every piece", %{
+    package: package
+  } do
+    original_bucket = Application.fetch_env!(:hexpm, :diff_bucket)
+    Application.put_env(:hexpm, :diff_bucket, {Hexpm.Diff.TestStore, "diff_bucket"})
+
+    on_exit(fn ->
+      Application.put_env(:hexpm, :diff_bucket, original_bucket)
+      Application.delete_env(:hexpm, :diff_test_store_get)
+    end)
+
     {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "7.0.0", [])
 
     for index <- 0..6 do
@@ -115,15 +120,26 @@ defmodule HexpmWeb.DiffLiveTest do
       files_changed: 7
     })
 
-    {:ok, view, html} = live(build_conn(), "/diff/#{package.name}/1.0.0..7.0.0")
+    Application.put_env(:hexpm, :diff_test_store_get, {:notify, self()})
+    piece_5_key = Cache.diff_key(request, request.canonical_hash, 5)
+    piece_6_key = Cache.diff_key(request, request.canonical_hash, 6)
 
-    assert html =~ "legacy-4.bin"
-    refute html =~ "legacy-5.bin"
-    refute has_element?(view, "#diff-files-tree")
+    {:ok, view, _html} = live(build_conn(), "/diff/#{package.name}/1.0.0..7.0.0")
+
+    assert has_element?(view, "#diff-4-container", "legacy-4.bin")
+    refute has_element?(view, "#diff-5-container")
+    assert has_element?(view, "#diff-files-tree button", "legacy-4.bin")
+    refute has_element?(view, "#diff-files-tree button", "legacy-6.bin")
+    assert has_element?(view, "#diff-files-tree-query[placeholder='Search loaded files']")
+    assert has_element?(view, "#diff-files-query[placeholder='Find a loaded file by path…']")
+    assert render(view) =~ "5 of 7 files loaded"
+    refute_received {:diff_store_get, ^piece_5_key}
+    refute_received {:diff_store_get, ^piece_6_key}
 
     render_hook(view, "load-piece", %{"id" => "diff-6"})
 
     assert has_element?(view, "#diff-6-container", "legacy-6.bin")
+    assert has_element?(view, "#diff-files-tree button", "legacy-6.bin")
     refute has_element?(view, "#diff-5-container")
     assert has_element?(view, "#diff-loading-trigger")
   end

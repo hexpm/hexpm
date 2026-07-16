@@ -590,8 +590,8 @@ defmodule HexpmWeb.Components.PackageLayout do
           path: dependents_path(assigns.package)
         }
       ] ++
-      files_tab(assigns) ++
       advisories_tab(assigns) ++
+      files_tab(assigns) ++
       [
         %{
           active: assigns.active_tab == :activity,

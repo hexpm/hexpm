@@ -22,6 +22,7 @@ defmodule HexpmWeb.Components.FileSelector do
   attr :id, :string, required: true
   attr :query, :string, required: true
   attr :file_count, :integer, required: true
+  attr :total_file_count, :integer, default: nil
   attr :filter_event, :string, default: "filter_files"
   attr :title, :string, required: true
   attr :sidebar_label, :string, required: true
@@ -69,7 +70,7 @@ defmodule HexpmWeb.Components.FileSelector do
             </div>
           </form>
           <p class="mt-2 text-[10px] font-medium uppercase tracking-wide text-grey-400 dark:text-grey-300">
-            {@file_count} {if @file_count == 1, do: "file", else: "files"}
+            {file_count_label(@file_count, @total_file_count)}
           </p>
         </div>
         <nav
@@ -127,14 +128,7 @@ defmodule HexpmWeb.Components.FileSelector do
       phx-click={show_modal(@modal_id)}
       class="inline-flex items-center gap-2 rounded-lg border border-grey-200 bg-white px-3 py-2 text-sm font-medium text-grey-700 shadow-sm transition-colors hover:border-grey-300 hover:bg-grey-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:border-grey-700 dark:bg-grey-800 dark:text-grey-100 dark:hover:bg-grey-700 lg:hidden"
     >
-      {icon(:heroicon, "folder-open", class: "size-4")} Files
-    </button>
-    <button
-      type="button"
-      phx-click={show_modal(@modal_id)}
-      class="hidden items-center gap-2 rounded-lg border border-grey-200 bg-white px-3 py-2 text-sm font-medium text-grey-700 shadow-sm transition-colors hover:border-grey-300 hover:bg-grey-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:border-grey-700 dark:bg-grey-800 dark:text-grey-100 dark:hover:bg-grey-700 lg:inline-flex"
-    >
-      {icon(:heroicon, "magnifying-glass", class: "size-4")} Find file…
+      {icon(:heroicon, "magnifying-glass", class: "size-4")} Find file
     </button>
     """
   end
@@ -165,6 +159,13 @@ defmodule HexpmWeb.Components.FileSelector do
         "text-grey-600 hover:bg-grey-100 hover:text-grey-900 dark:text-grey-300 dark:hover:bg-grey-700/60 dark:hover:text-white"
     ]
   end
+
+  defp file_count_label(count, total) when is_integer(total) and count < total do
+    "#{count} of #{total} files loaded"
+  end
+
+  defp file_count_label(1, _total), do: "1 file"
+  defp file_count_label(count, _total), do: "#{count} files"
 
   defp fuzzy_match?(_file, ""), do: true
 
