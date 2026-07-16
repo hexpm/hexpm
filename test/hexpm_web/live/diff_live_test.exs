@@ -321,6 +321,14 @@ defmodule HexpmWeb.DiffLiveTest do
     assert render(view) =~ "Generation failed after all retry attempts"
     assert render(view) =~ "Try again"
 
+    {:ok, reconnected_view, _html} =
+      live(build_conn(), "/diff/#{package.name}/1.0.0..2.0.0")
+
+    assert render(reconnected_view) =~ "Generation failed after all retry attempts"
+
+    assert Repo.aggregate(from(job in Oban.Job, where: job.worker == "Hexpm.Diff.Worker"), :count) ==
+             1
+
     render_click(view, "retry")
 
     assert Repo.aggregate(from(job in Oban.Job, where: job.worker == "Hexpm.Diff.Worker"), :count) ==

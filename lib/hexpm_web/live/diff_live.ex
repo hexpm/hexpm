@@ -127,7 +127,7 @@ defmodule HexpmWeb.DiffLive do
            ignore_whitespace: socket.assigns.ignore_whitespace
          ) do
       {:ok, request} ->
-        {:noreply, socket |> assign(request: request) |> load_or_enqueue_socket()}
+        {:noreply, socket |> assign(request: request) |> throttle_and_enqueue()}
 
       {:error, reason} ->
         {:noreply, assign(socket, error: error_message(reason))}

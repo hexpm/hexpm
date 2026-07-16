@@ -23,7 +23,7 @@ defmodule Hexpm.Diff do
   def piece_file(%Piece{file: file}), do: file
 
   def pending_job(%Request{} = request) do
-    case get_incomplete_job(request) do
+    case get_latest_job(request) do
       nil -> :none
       job -> {:ok, job.id, job_status(job)}
     end
@@ -77,13 +77,28 @@ defmodule Hexpm.Diff do
   end
 
   defp get_incomplete_job(request) do
-    args = Request.to_args(request)
-
-    incomplete_jobs_query()
-    |> where([job], job.args == ^args)
+    request
+    |> jobs_query()
+    |> where([job], job.state in ^incomplete_states())
     |> order_by([job], desc: job.id)
     |> limit(1)
     |> Repo.one()
+  end
+
+  defp get_latest_job(request) do
+    request
+    |> jobs_query()
+    |> order_by([job], desc: job.id)
+    |> limit(1)
+    |> Repo.one()
+  end
+
+  defp jobs_query(request) do
+    args = Request.to_args(request)
+
+    Oban.Job
+    |> where([job], job.worker == ^Oban.Worker.to_string(Worker))
+    |> where([job], job.args == ^args)
   end
 
   defp incomplete_job_count do
@@ -92,10 +107,10 @@ defmodule Hexpm.Diff do
   end
 
   defp incomplete_jobs_query do
-    states = Oban.Job.unique_states(:incomplete) |> Enum.map(&Atom.to_string/1)
-
     Oban.Job
     |> where([job], job.worker == ^Oban.Worker.to_string(Worker))
-    |> where([job], job.state in ^states)
+    |> where([job], job.state in ^incomplete_states())
   end
+
+  defp incomplete_states, do: Oban.Job.unique_states(:incomplete) |> Enum.map(&Atom.to_string/1)
 end
