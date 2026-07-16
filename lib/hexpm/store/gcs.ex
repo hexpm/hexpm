@@ -13,9 +13,20 @@ defmodule Hexpm.Store.GCS do
   def get(bucket, key, _opts) do
     url = url(bucket, key)
 
-    case Hexpm.HTTP.retry(fn -> Hexpm.HTTP.impl().get(url, headers()) end, "gcs") do
+    case retry(url, fn -> Hexpm.HTTP.impl().get(url, headers(), decode_body: false) end) do
       {:ok, 200, _headers, body} -> body
-      _ -> nil
+      {:ok, 404, _headers, _body} -> nil
+      {:ok, status, _headers, _body} -> raise "GCS GET #{url} returned status #{status}"
+      {:error, reason} -> raise "GCS GET #{url} failed: #{inspect(reason)}"
+    end
+  end
+
+  def size(bucket, key) do
+    url = url(bucket, key)
+
+    case retry(url, fn -> Hexpm.HTTP.impl().head(url, headers(), decode_body: false) end) do
+      {:ok, 200, response_headers, _body} -> content_length!(response_headers)
+      {:ok, 404, _headers, _body} -> nil
     end
   end
 
@@ -109,6 +120,13 @@ defmodule Hexpm.Store.GCS do
 
   defp filter_nil_values(keyword) do
     Enum.reject(keyword, fn {_key, value} -> is_nil(value) end)
+  end
+
+  defp content_length!(headers) do
+    case Enum.find(headers, fn {key, _value} -> String.downcase(key) == "content-length" end) do
+      {_key, value} -> String.to_integer(value)
+      nil -> raise "GCS response is missing content-length"
+    end
   end
 
   defp headers() do

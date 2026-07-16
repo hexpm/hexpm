@@ -26,6 +26,15 @@ defmodule Hexpm.Repository.Sitemaps do
     |> Repo.all()
   end
 
+  def public_package_updated_at(name) do
+    from(
+      p in Package,
+      where: p.repository_id == 1 and p.name == ^name,
+      select: p.updated_at
+    )
+    |> Repo.one()
+  end
+
   def packages_with_docs() do
     packages =
       from(
@@ -47,22 +56,5 @@ defmodule Hexpm.Repository.Sitemaps do
       |> Repo.all()
 
     [{"elixir", nil}, {"hex", nil} | packages]
-  end
-
-  def packages_for_preview() do
-    releases_query = from(Release, select: [:version, :retirement])
-
-    query =
-      from(Package,
-        order_by: :name,
-        where: [repository_id: 1],
-        select: [:id, :name, :updated_at],
-        preload: [releases: ^releases_query]
-      )
-
-    for package <- Repo.all(query) do
-      version = Release.latest_version(package.releases, only_stable: false).version
-      {package.name, version, package.updated_at}
-    end
   end
 end

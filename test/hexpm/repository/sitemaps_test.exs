@@ -18,4 +18,14 @@ defmodule Hexpm.Repository.SitemapsTest do
     assert Enum.find_index(packages, &(elem(&1, 0) == earlier.name)) <
              Enum.find_index(packages, &(elem(&1, 0) == later.name))
   end
+
+  test "public_package_updated_at/1 only returns public package timestamps" do
+    public = insert(:package, name: "public_sitemap_package")
+    private_repository = insert(:repository)
+    insert(:package, repository_id: private_repository.id, name: "private_sitemap_package")
+
+    assert Sitemaps.public_package_updated_at(public.name) == public.updated_at
+    assert Sitemaps.public_package_updated_at("private_sitemap_package") == nil
+    assert Sitemaps.public_package_updated_at("missing_sitemap_package") == nil
+  end
 end

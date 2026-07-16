@@ -15,7 +15,6 @@ config :hexpm,
   docs_url: "http://localhost:4043",
   private_docs_url: "http://localhost:4043",
   diff_url: "http://localhost:4004",
-  preview_url: "http://localhost:4005",
   cdn_url: "http://localhost:4043"
 
 config :hexpm, HexpmWeb.Endpoint,

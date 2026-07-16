@@ -44,6 +44,8 @@ defmodule HexpmWeb.Components.PackageLayout do
   # Per-page assigns
   attr :active_tab, :atom, required: true
   attr :version_pinned?, :boolean, default: false
+  attr :wide?, :boolean, default: false
+  attr :source_filename, :string, default: nil
 
   # Dependants tab data — only loaded on the dependants page
   attr :dependants, :list, default: []
@@ -135,7 +137,7 @@ defmodule HexpmWeb.Components.PackageLayout do
                   <div class="absolute right-0 top-full z-20 mt-2 max-h-80 w-52 max-w-[calc(100vw-2rem)] overflow-y-auto overflow-x-hidden rounded-lg border border-grey-200 bg-white shadow-lg sm:left-0 sm:right-auto sm:w-64 dark:border-grey-700 dark:bg-grey-800">
                     <%= for release <- @all_releases do %>
                       <a
-                        href={path_for_tab(@active_tab, @package, release)}
+                        href={path_for_tab(@active_tab, @package, release, @source_filename)}
                         class={version_item_class(@current_release.version == release.version)}
                       >
                         <span class="font-mono text-sm">{release.version}</span>
@@ -183,15 +185,6 @@ defmodule HexpmWeb.Components.PackageLayout do
               >
                 {HexpmWeb.ViewIcons.icon(:heroicon, "book-open", class: "size-4 shrink-0")}
                 <span class="truncate">HexDocs</span>
-              </a>
-            <% end %>
-            <%= if @current_release do %>
-              <a
-                href={Hexpm.Utils.preview_html_url(@package.name, @current_release.version)}
-                class="bg-grey-100 dark:bg-grey-800 flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-2 py-2.5 text-xs font-medium text-grey-800 transition-colors hover:bg-grey-200 dark:text-grey-100 dark:hover:bg-grey-700 sm:gap-2 sm:px-3 sm:text-sm lg:px-4"
-              >
-                {HexpmWeb.ViewIcons.icon(:heroicon, "code-bracket", class: "size-4 shrink-0")}
-                <span class="truncate">HexPreview</span>
               </a>
             <% end %>
             <%= if @package_reports_enabled do %>
@@ -268,7 +261,7 @@ defmodule HexpmWeb.Components.PackageLayout do
             <% end %>
           </div>
 
-          <div class="flex flex-col lg:flex-row gap-5">
+          <div class={unless(@wide?, do: "flex flex-col lg:flex-row gap-5")}>
             <%!-- Left: Content Area --%>
             <div class="flex-1 min-w-0">
               <%!-- Tab Content --%>
@@ -278,7 +271,7 @@ defmodule HexpmWeb.Components.PackageLayout do
             </div>
 
             <%!-- Right: Sidebar — identical on every tab --%>
-            <div class="w-full lg:w-[373px] shrink-0 flex flex-col gap-6">
+            <div :if={!@wide?} class="w-full lg:w-[373px] shrink-0 flex flex-col gap-6">
               <%!-- Checksum Card --%>
               <%= if @current_release do %>
                 <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-5">
@@ -597,6 +590,7 @@ defmodule HexpmWeb.Components.PackageLayout do
           path: dependents_path(assigns.package)
         }
       ] ++
+      files_tab(assigns) ++
       advisories_tab(assigns) ++
       [
         %{
@@ -606,6 +600,23 @@ defmodule HexpmWeb.Components.PackageLayout do
           path: audit_logs_path(assigns.package)
         }
       ] ++ owners_tab(assigns)
+  end
+
+  defp files_tab(%{current_release: nil}), do: []
+
+  defp files_tab(assigns) do
+    if ViewHelpers.main_repository?(assigns.package) do
+      [
+        %{
+          active: assigns.active_tab == :files,
+          icon: "code-bracket",
+          label: "Files",
+          path: files_path(assigns)
+        }
+      ]
+    else
+      []
+    end
   end
 
   defp owners_tab(assigns) do
@@ -679,6 +690,16 @@ defmodule HexpmWeb.Components.PackageLayout do
   defp dependencies_tab_path(%{package: package}),
     do: ViewHelpers.path_for_dependencies(package)
 
+  defp files_path(%{current_release: nil, package: package}),
+    do: ViewHelpers.path_for_package(package)
+
+  defp files_path(%{package: package, current_release: release, source_filename: filename})
+       when is_binary(filename),
+       do: source_path(package, release, filename)
+
+  defp files_path(%{package: package, current_release: release}),
+    do: source_path(package, release)
+
   defp tab_class(true),
     do:
       "flex items-center gap-1 px-[15px] py-3 text-grey-900 dark:text-white font-medium border-b-2 border-primary-default dark:border-white -mb-px whitespace-nowrap"
@@ -698,11 +719,29 @@ defmodule HexpmWeb.Components.PackageLayout do
   defp pluralize(1, singular, _plural), do: singular
   defp pluralize(_count, _singular, plural), do: plural
 
-  defp path_for_tab(:dependencies, package, release),
+  defp path_for_tab(:dependencies, package, release, _filename),
     do: ViewHelpers.path_for_dependencies(package, release)
 
-  defp path_for_tab(_tab, package, release),
+  defp path_for_tab(:files, package, release, filename) when is_binary(filename),
+    do: source_version_path(package, release, filename)
+
+  defp path_for_tab(:files, package, release, _filename),
+    do: source_path(package, release)
+
+  defp path_for_tab(_tab, package, release, _filename),
     do: ViewHelpers.path_for_release(package, release)
+
+  defp source_path(package, release) do
+    ~p"/packages/#{package.name}/#{to_string(release.version)}/files"
+  end
+
+  defp source_path(package, release, filename) do
+    ~p"/packages/#{package.name}/#{to_string(release.version)}/files/#{Path.split(filename)}"
+  end
+
+  defp source_version_path(package, release, filename) do
+    ~p"/packages/#{package.name}/#{to_string(release.version)}/files/#{Path.split(filename)}?fallback=default"
+  end
 
   defp version_item_class(true),
     do:

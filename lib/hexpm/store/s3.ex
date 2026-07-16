@@ -18,6 +18,15 @@ defmodule Hexpm.Store.S3 do
     end
   end
 
+  def size(bucket, key) do
+    S3.head_object(bucket(bucket), key)
+    |> ExAws.request(region: region(bucket))
+    |> case do
+      {:ok, %{headers: headers}} -> content_length!(headers)
+      {:error, {:http_error, 404, _}} -> nil
+    end
+  end
+
   def get_to_file(bucket, key, destination, _opts) do
     S3.download_file(bucket(bucket), key, destination)
     |> ExAws.request(region: region(bucket))
@@ -60,5 +69,15 @@ defmodule Hexpm.Store.S3 do
 
   defp region(binary) when is_binary(binary) do
     Enum.at(String.split(binary, ",", parts: 2), 0)
+  end
+
+  defp content_length!(headers) do
+    headers
+    |> Enum.find(fn {key, _value} -> String.downcase(key) == "content-length" end)
+    |> case do
+      {_key, value} when is_binary(value) -> String.to_integer(value)
+      {_key, [value | _]} -> String.to_integer(value)
+      nil -> raise "S3 response is missing content-length"
+    end
   end
 end

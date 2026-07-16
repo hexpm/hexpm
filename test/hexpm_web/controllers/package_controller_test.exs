@@ -242,6 +242,7 @@ defmodule HexpmWeb.PackageControllerTest do
                "/packages/#{package1.name}/versions",
                "/packages/#{package1.name}/dependencies",
                "/packages/#{package1.name}/dependents",
+               "/packages/#{package1.name}/0.0.2/files",
                "/packages/#{package1.name}/audit-logs"
              ]
 
@@ -868,6 +869,7 @@ defmodule HexpmWeb.PackageControllerTest do
   defp package_tab_hrefs(document, package_name) do
     package_paths = [
       "/packages/#{package_name}",
+      "/packages/#{package_name}/0.0.2/files",
       "/packages/#{package_name}/versions",
       "/packages/#{package_name}/dependencies",
       "/packages/#{package_name}/dependents",

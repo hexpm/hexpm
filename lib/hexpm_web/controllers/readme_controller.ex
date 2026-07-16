@@ -1,9 +1,8 @@
 defmodule HexpmWeb.ReadmeController do
   use HexpmWeb, :controller
 
+  alias Hexpm.Preview
   alias HexpmWeb.Readme.Renderer
-
-  @readme_filenames ~w(README.md readme.md README.markdown readme.markdown README.txt readme.txt README readme)
 
   plug :put_root_layout, false
   plug :put_layout, false
@@ -59,7 +58,7 @@ defmodule HexpmWeb.ReadmeController do
   defp serve_readme(conn, package, release) do
     version = to_string(release.version)
 
-    case fetch_readme(package.name, version) do
+    case Preview.readme(package.name, version) do
       {:ok, filename, content} ->
         html = render_readme(filename, content, package.name, version)
 
@@ -70,36 +69,6 @@ defmodule HexpmWeb.ReadmeController do
       :error ->
         send_no_readme(conn)
     end
-  end
-
-  defp fetch_readme(package_name, version) do
-    cdn_url = Application.fetch_env!(:hexpm, :cdn_url)
-    file_list_url = "#{cdn_url}/preview-files/#{package_name}-#{version}.json"
-
-    case Hexpm.HTTP.impl().get(file_list_url, []) do
-      {:ok, 200, _headers, json} ->
-        files = Jason.decode!(json)
-
-        case find_readme_file(files) do
-          nil ->
-            :error
-
-          filename ->
-            readme_url = "#{cdn_url}/preview/#{package_name}/#{version}/#{filename}"
-
-            case Hexpm.HTTP.impl().get(readme_url, []) do
-              {:ok, 200, _headers, content} -> {:ok, filename, content}
-              _ -> :error
-            end
-        end
-
-      _ ->
-        :error
-    end
-  end
-
-  defp find_readme_file(files) do
-    Enum.find(@readme_filenames, &(&1 in files))
   end
 
   defp render_readme(filename, content, package_name, version) do

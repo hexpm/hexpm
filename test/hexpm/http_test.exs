@@ -17,6 +17,28 @@ defmodule Hexpm.HTTPTest do
     assert {:ok, 200, _headers, "respbody"} = HTTP.get(lasso_url(lasso, "/get"), [])
   end
 
+  test "head/2", %{lasso: lasso} do
+    Lasso.expect_once(lasso, "HEAD", "/head", fn conn ->
+      conn
+      |> Conn.put_resp_header("content-length", "8")
+      |> Conn.resp(200, "")
+    end)
+
+    assert {:ok, 200, headers, ""} = HTTP.head(lasso_url(lasso, "/head"), [])
+    assert {"content-length", "8"} in headers
+  end
+
+  test "head/3 can return an empty raw json response", %{lasso: lasso} do
+    Lasso.expect_once(lasso, "HEAD", "/raw-json", fn conn ->
+      conn
+      |> Conn.put_resp_header("content-type", "application/json")
+      |> Conn.resp(200, "")
+    end)
+
+    assert {:ok, 200, _headers, ""} =
+             HTTP.head(lasso_url(lasso, "/raw-json"), [], decode_body: false)
+  end
+
   test "post/3", %{lasso: lasso} do
     Lasso.expect_once(lasso, "POST", "/post", fn conn ->
       {:ok, reqbody, conn} = Conn.read_body(conn)
@@ -152,6 +174,17 @@ defmodule Hexpm.HTTPTest do
     end)
 
     assert {:ok, 200, _headers, %{"key" => "value"}} = HTTP.get(lasso_url(lasso, "/get"), [])
+  end
+
+  test "get/3 can return a raw json response", %{lasso: lasso} do
+    Lasso.expect_once(lasso, "GET", "/raw-json", fn conn ->
+      conn
+      |> Conn.put_resp_header("content-type", "application/json")
+      |> Conn.resp(200, ~s({"key":"value"}))
+    end)
+
+    assert {:ok, 200, _headers, ~s({"key":"value"})} =
+             HTTP.get(lasso_url(lasso, "/raw-json"), [], decode_body: false)
   end
 
   test "passes receive_timeout, pool_timeout, and request_timeout to Finch.request/3", %{

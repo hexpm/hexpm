@@ -9,6 +9,7 @@ defmodule Hexpm.Preview.WorkersTest do
 
     defdelegate list(bucket, prefix), to: Hexpm.Store.Memory
     defdelegate get(bucket, key, opts), to: Hexpm.Store.Memory
+    defdelegate size(bucket, key), to: Hexpm.Store.Memory
     defdelegate get_to_file(bucket, key, path, opts), to: Hexpm.Store.Memory
     defdelegate put(bucket, key, body, opts), to: Hexpm.Store.Memory
     defdelegate delete(bucket, key), to: Hexpm.Store.Memory
@@ -28,6 +29,7 @@ defmodule Hexpm.Preview.WorkersTest do
     @action_key {__MODULE__, :action}
 
     defdelegate get(bucket, key, opts), to: Hexpm.Store.Memory
+    defdelegate size(bucket, key), to: Hexpm.Store.Memory
     defdelegate get_to_file(bucket, key, path, opts), to: Hexpm.Store.Memory
     defdelegate put(bucket, key, body, opts), to: Hexpm.Store.Memory
     defdelegate delete(bucket, key), to: Hexpm.Store.Memory
@@ -69,7 +71,7 @@ defmodule Hexpm.Preview.WorkersTest do
     def public_ips, do: []
   end
 
-  test "upload is repeatable and updates latest files and sitemaps" do
+  test "upload is repeatable and updates latest files" do
     package = insert(:package, name: "worker_preview")
     release = insert(:release, package: package, version: "1.0.0")
     key = "tarballs/#{package.name}-#{release.version}.tar"
@@ -91,12 +93,6 @@ defmodule Hexpm.Preview.WorkersTest do
              "defmodule Foo"
 
     assert Hexpm.Store.get(:preview_bucket, "latest_versions/#{package.name}") == "1.0.0"
-
-    assert Hexpm.Store.get(:preview_bucket, "sitemaps/#{package.name}.xml") =~
-             "http://localhost:5005/preview/#{package.name}/show/lib/foo.ex"
-
-    assert Hexpm.Store.get(:preview_bucket, "sitemaps/sitemap.xml") =~
-             "http://localhost:5005/preview/#{package.name}/sitemap.xml"
   end
 
   test "nonlatest uploads do not replace latest metadata" do
@@ -109,7 +105,6 @@ defmodule Hexpm.Preview.WorkersTest do
     assert :ok = perform_job(Workers.Upload, %{key: key})
     assert Hexpm.Store.get(:preview_bucket, "files/#{package.name}/1.0.0/README.md") == "old"
     assert Hexpm.Store.get(:preview_bucket, "latest_versions/#{package.name}") == nil
-    assert Hexpm.Store.get(:preview_bucket, "sitemaps/#{package.name}.xml") == nil
   end
 
   test "upload removes stale files" do
@@ -249,7 +244,6 @@ defmodule Hexpm.Preview.WorkersTest do
     assert Hexpm.Store.get(:preview_bucket, "file_lists/#{package.name}-1.0.0.json") == nil
     assert Hexpm.Store.get(:preview_bucket, "files/#{package.name}/1.0.0/README.md") == nil
     assert Hexpm.Store.get(:preview_bucket, "latest_versions/#{package.name}") == nil
-    assert Hexpm.Store.get(:preview_bucket, "sitemaps/#{package.name}.xml") == nil
   end
 
   test "deleting the latest release promotes the current database latest release" do
@@ -266,10 +260,7 @@ defmodule Hexpm.Preview.WorkersTest do
 
     assert :ok = perform_job(Workers.Delete, %{key: latest_key})
     assert Hexpm.Store.get(:preview_bucket, "latest_versions/#{package.name}") == "1.0.0"
-    assert Hexpm.Store.get(:preview_bucket, "sitemaps/#{package.name}.xml") =~ "old.txt"
-
-    assert Hexpm.Store.get(:preview_bucket, "sitemaps/#{package.name}.xml") =~
-             "/preview/#{package.name}/show/old.txt"
+    assert Hexpm.Store.get(:preview_bucket, "files/#{package.name}/1.0.0/old.txt") == "old"
   end
 
   test "latest promotion skips a fallback deleted while it is uploading" do
@@ -290,7 +281,6 @@ defmodule Hexpm.Preview.WorkersTest do
 
     assert :ok = perform_job(Workers.Delete, %{key: latest_key})
     assert Hexpm.Store.get(:preview_bucket, "latest_versions/#{package.name}") == nil
-    assert Hexpm.Store.get(:preview_bucket, "sitemaps/#{package.name}.xml") == nil
     assert Hexpm.Store.get(:preview_bucket, "files/#{package.name}/1.0.0/old.txt") == nil
   end
 
@@ -360,28 +350,6 @@ defmodule Hexpm.Preview.WorkersTest do
     assert Hexpm.Store.get(:preview_bucket, "files/#{package}/#{version}/partial.txt") == nil
   end
 
-  test "custom sitemap regeneration extracts the current file list" do
-    package = insert(:package, name: "sitemap_preview")
-    release = insert(:release, package: package, version: "1.0.0")
-    key = "tarballs/#{package.name}-#{release.version}.tar"
-    put_tarball(key, package.name, to_string(release.version), [{"README.md", "readme"}])
-
-    assert :ok = perform_job(Workers.Sitemap, %{key: key})
-    assert Hexpm.Store.get(:preview_bucket, "sitemaps/#{package.name}.xml") =~ "README.md"
-  end
-
-  test "package sitemaps encode file paths" do
-    package = insert(:package, name: "encoded_sitemap_preview")
-    release = insert(:release, package: package, version: "1.0.0")
-    key = "tarballs/#{package.name}-#{release.version}.tar"
-    put_tarball(key, package.name, to_string(release.version), [{"docs/a & #<.html", "docs"}])
-
-    assert :ok = perform_job(Workers.Upload, %{key: key})
-    sitemap = Hexpm.Store.get(:preview_bucket, "sitemaps/#{package.name}.xml")
-    assert sitemap =~ "docs/a%20%26%20%23%3C.html"
-    refute sitemap =~ "docs/a & #<.html"
-  end
-
   test "missing and malformed tarballs fail so Oban can retry" do
     package = insert(:package, name: "missing")
     insert(:release, package: package, version: "1.0.0")
@@ -399,14 +367,10 @@ defmodule Hexpm.Preview.WorkersTest do
     end
   end
 
-  test "sitemap and stale delete jobs retry when their tarballs are missing" do
+  test "stale delete jobs retry when their tarballs are missing" do
     package = insert(:package, name: "missing_other_workers")
     insert(:release, package: package, version: "1.0.0")
     key = "tarballs/#{package.name}-1.0.0.tar"
-
-    assert_raise RuntimeError, ~r/Preview tarball not found/, fn ->
-      perform_job(Workers.Sitemap, %{key: key})
-    end
 
     assert_raise RuntimeError, ~r/Preview tarball not found/, fn ->
       perform_job(Workers.Delete, %{key: key})

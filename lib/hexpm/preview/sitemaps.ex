@@ -9,7 +9,7 @@ defmodule Hexpm.Preview.Sitemaps do
       xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
   <%= for file <- files do %>
     <url>
-      <loc><%= xml_escape(preview_url <> "/preview/" <> package <> "/show/" <> encode_path(file)) %></loc>
+      <loc><%= xml_escape(preview_url <> "/packages/" <> encode_path(package) <> "/" <> encode_path(version) <> "/files/" <> encode_path(file)) %></loc>
       <lastmod><%= format_datetime(updated_at) %></lastmod>
       <changefreq>daily</changefreq>
       <priority>0.8</priority>
@@ -21,6 +21,7 @@ defmodule Hexpm.Preview.Sitemaps do
   EEx.function_from_string(:def, :render_package, package_template, [
     :preview_url,
     :package,
+    :version,
     :files,
     :updated_at
   ])

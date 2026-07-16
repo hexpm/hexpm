@@ -5,6 +5,50 @@ defmodule Hexpm.Preview do
   alias Hexpm.Repository.Releases
   alias Hexpm.Repository.Sitemaps, as: RepositorySitemaps
 
+  @max_file_size 2 * 1000 * 1000
+  @readme_filenames ~w(README.md readme.md README.markdown readme.markdown README.txt readme.txt README readme)
+
+  def source(package, version, requested_filename \\ nil) do
+    with [_ | _] = files <- Bucket.get_file_list(package, version),
+         filename when is_binary(filename) <- selected_file(files, requested_filename),
+         size when is_integer(size) <- Bucket.file_size(package, version, filename),
+         result when is_map(result) <- source_result(package, version, filename, size) do
+      {:ok, Map.merge(result, %{files: files, filename: filename})}
+    else
+      _ -> :error
+    end
+  end
+
+  def readme(package, version) do
+    with files when is_list(files) <- Bucket.get_file_list(package, version),
+         filename when is_binary(filename) <- Enum.find(@readme_filenames, &(&1 in files)),
+         contents when is_binary(contents) <- Bucket.get_file(package, version, filename) do
+      {:ok, filename, contents}
+    else
+      _ -> :error
+    end
+  end
+
+  def get_latest_version(package), do: Bucket.get_latest_version(package)
+
+  defp default_file(files) do
+    Enum.min_by(files, &default_file_priority/1)
+  end
+
+  def index_sitemap(base_url) do
+    Sitemaps.render_index(base_url, RepositorySitemaps.public_packages())
+  end
+
+  def package_sitemap(base_url, package) do
+    with %DateTime{} = updated_at <- RepositorySitemaps.public_package_updated_at(package),
+         version when is_binary(version) <- Bucket.get_latest_version(package),
+         [_ | _] = files <- Bucket.get_file_list(package, version) do
+      {:ok, Sitemaps.render_package(base_url, package, version, files, updated_at)}
+    else
+      _ -> :error
+    end
+  end
+
   def upload(key) do
     {package, version} = key_components!(key)
     start = System.monotonic_time(:millisecond)
@@ -14,7 +58,7 @@ defmodule Hexpm.Preview do
       {dir, file_paths, checksum} = download_and_unpack!(package, version)
       Bucket.put_files(package, version, dir, file_paths)
 
-      reconcile_uploaded_release(package, version, file_paths, checksum)
+      reconcile_uploaded_release(package, version, checksum)
     else
       delete_contents(package, version)
     end
@@ -39,14 +83,6 @@ defmodule Hexpm.Preview do
 
     elapsed = System.monotonic_time(:millisecond) - start
     Logger.info("FINISHED DELETING PREVIEW #{key} #{elapsed}ms")
-    :ok
-  end
-
-  def sitemap(key) do
-    {package, version} = key_components!(key)
-    {_dir, file_paths, checksum} = download_and_unpack!(package, version)
-    update_package_sitemap(package, file_paths)
-    ensure_tarball_current!(package, version, checksum)
     :ok
   end
 
@@ -156,14 +192,12 @@ defmodule Hexpm.Preview do
       reconcile_latest(package)
     end
 
-    update_index_sitemap()
-
     if release_exists?(package, version) do
       upload("tarballs/#{package}-#{version}.tar")
     end
   end
 
-  defp reconcile_uploaded_release(package, version, file_paths, checksum) do
+  defp reconcile_uploaded_release(package, version, checksum) do
     cond do
       not release_exists?(package, version) ->
         delete_contents(package, version)
@@ -173,8 +207,6 @@ defmodule Hexpm.Preview do
 
       latest_version?(package, version) ->
         Bucket.update_latest_version(package, version)
-        update_package_sitemap(package, file_paths)
-        update_index_sitemap()
         reconcile_latest_after_publish(package, version, checksum)
 
       true ->
@@ -221,16 +253,9 @@ defmodule Hexpm.Preview do
 
           true ->
             Bucket.update_latest_version(package, latest)
-            update_package_sitemap(package, file_paths)
             purge(package, latest)
             reconcile_latest_after_publish(package, latest, checksum)
         end
-    end
-  end
-
-  defp ensure_tarball_current!(package, version, checksum) do
-    unless tarball_current?(package, version, checksum) do
-      raise "Preview tarball changed while processing: tarballs/#{package}-#{version}.tar"
     end
   end
 
@@ -250,26 +275,8 @@ defmodule Hexpm.Preview do
     :crypto.hash_final(hash)
   end
 
-  defp update_index_sitemap do
-    preview_url = Application.fetch_env!(:hexpm, :preview_url)
-
-    Bucket.upload_index_sitemap(
-      Sitemaps.render_index(preview_url, RepositorySitemaps.public_packages())
-    )
-  end
-
-  defp update_package_sitemap(package, file_paths) do
-    preview_url = Application.fetch_env!(:hexpm, :preview_url)
-
-    Bucket.upload_package_sitemap(
-      package,
-      Sitemaps.render_package(preview_url, package, file_paths, DateTime.utc_now())
-    )
-  end
-
   defp purge(package, version) do
     Hexpm.CDN.purge_key(:fastly_hexrepo, [
-      "preview/sitemap",
       "preview/package/#{package}",
       "preview/package/#{package}/version/#{version}"
     ])
@@ -284,5 +291,42 @@ defmodule Hexpm.Preview do
       only_stable: true,
       unstable_fallback: true
     )
+  end
+
+  defp selected_file(files, nil), do: default_file(files)
+
+  defp selected_file(files, requested_filename) do
+    if requested_filename in files, do: requested_filename
+  end
+
+  defp source_result(_package, _version, _filename, size) when size > @max_file_size do
+    %{contents: nil, type: {:too_large, size}}
+  end
+
+  defp source_result(package, version, filename, _size) do
+    case Bucket.get_file(package, version, filename) do
+      nil -> :error
+      contents when is_binary(contents) -> source_contents(contents)
+    end
+  end
+
+  defp source_contents(contents) do
+    if String.valid?(contents) do
+      %{contents: contents, type: :text}
+    else
+      %{contents: nil, type: :binary}
+    end
+  end
+
+  @default_file_priority ["mix.exs", "rebar.config", "Makefile"]
+                         |> Enum.with_index(2)
+                         |> Map.new()
+
+  defp default_file_priority(file) do
+    if file |> String.downcase() |> String.starts_with?("readme") do
+      1
+    else
+      Map.get(@default_file_priority, file, 1000)
+    end
   end
 end

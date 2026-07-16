@@ -8,7 +8,7 @@
     <meta name="sogou_site_verification" content="GrtyJPARqi" />
     <meta name="color-scheme" content="light dark" />
 
-    <title>{title(assigns)}</title>
+    <.live_title default="Hex">{assigns[:page_title] || title(assigns)}</.live_title>
 
     <script nonce={assigns[:script_src_nonce]}>
       (() => {

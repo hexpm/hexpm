@@ -7,6 +7,7 @@ defmodule Hexpm.Store.Behaviour do
 
   @callback list(bucket, prefix) :: [key]
   @callback get(bucket, key, opts) :: body | nil
+  @callback size(bucket, key) :: non_neg_integer() | nil
   @callback get_to_file(bucket, key, Path.t(), opts) :: :ok | nil
   @callback put(bucket, key, body, opts) :: term
   @callback put_file(bucket, key, Path.t(), opts) :: term

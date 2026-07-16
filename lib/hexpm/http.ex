@@ -8,6 +8,8 @@ defmodule Hexpm.HTTP.Interface do
 
   @callback get(url(), headers()) :: response()
   @callback get(url(), headers(), opts()) :: response()
+  @callback head(url(), headers()) :: response()
+  @callback head(url(), headers(), opts()) :: response()
   @callback post(url(), headers(), params()) :: response()
   @callback post(url(), headers(), params(), opts()) :: response()
   @callback put(url(), headers(), params()) :: response()
@@ -35,6 +37,9 @@ defmodule Hexpm.HTTP do
   def get(url, headers, opts \\ []), do: do_request(:get, url, headers, nil, opts)
 
   @impl Hexpm.HTTP.Interface
+  def head(url, headers, opts \\ []), do: do_request(:head, url, headers, nil, opts)
+
+  @impl Hexpm.HTTP.Interface
   def post(url, headers, body, opts \\ []), do: do_request(:post, url, headers, body, opts)
 
   @impl Hexpm.HTTP.Interface
@@ -52,13 +57,14 @@ defmodule Hexpm.HTTP do
   def delete(url, headers, opts \\ []), do: do_request(:delete, url, headers, nil, opts)
 
   defp do_request(method, url, headers, body, opts) do
+    {decode_body?, opts} = Keyword.pop(opts, :decode_body, true)
     {request_opts, build_opts} = Keyword.split(opts, @request_opts)
     params = encode_params(body, headers)
 
     method
     |> Finch.build(url, headers, params, build_opts)
     |> Finch.request(Hexpm.Finch, request_opts)
-    |> read_response()
+    |> read_response(decode_body?)
   end
 
   defp encode_params(body, _headers) when is_binary(body) or is_nil(body) do
@@ -84,12 +90,16 @@ defmodule Hexpm.HTTP do
     end
   end
 
-  defp read_response({:ok, %Finch.Response{status: status, headers: headers, body: body}}) do
+  defp read_response({:ok, %Finch.Response{status: status, headers: headers, body: body}}, true) do
     params = decode_body(body, headers)
     {:ok, status, headers, params}
   end
 
-  defp read_response({:error, reason}) do
+  defp read_response({:ok, %Finch.Response{status: status, headers: headers, body: body}}, false) do
+    {:ok, status, headers, body}
+  end
+
+  defp read_response({:error, reason}, _decode_body?) do
     {:error, reason}
   end
 

@@ -40,6 +40,13 @@ defmodule Hexpm.Store.Memory do
     end
   end
 
+  def size(bucket, key) do
+    case get(bucket, key, []) do
+      nil -> nil
+      body -> byte_size(body)
+    end
+  end
+
   def get_to_file(bucket, key, destination, opts) do
     case get(bucket, key, opts) do
       nil -> nil

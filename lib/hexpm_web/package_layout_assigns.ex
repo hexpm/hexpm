@@ -31,12 +31,15 @@ defmodule HexpmWeb.PackageLayoutAssigns do
       `nil` the chart shows package-wide downloads
     * `:docs_html_url` — override the computed docs URL when the page
       has special docs link logic (e.g. the package show page)
+    * `:sidebar?` — load download and chart data for the package sidebar;
+      defaults to `true`
   """
-  def for_package(conn, package, opts \\ []) do
-    current_user = conn.assigns.current_user
+  def for_package(conn_or_user, package, opts \\ []) do
+    current_user = current_user(conn_or_user)
     releases = opts[:releases] || Releases.all(package)
     current_release = resolve_current_release(opts[:current_release], releases)
     graph_release = opts[:graph_release]
+    sidebar? = Keyword.get(opts, :sidebar?, true)
 
     repositories =
       current_user
@@ -63,8 +66,8 @@ defmodule HexpmWeb.PackageLayoutAssigns do
       current_release: current_release,
       versions_count: Enum.count(releases),
       owners: Owners.all(package, user: [:emails, :organization]),
-      downloads: Downloads.package(package),
-      daily_graph: daily_graph(graph_release || package),
+      downloads: if(sidebar?, do: Downloads.package(package), else: %{}),
+      daily_graph: if(sidebar?, do: daily_graph(graph_release || package), else: []),
       graph_release: graph_release,
       docs_html_url: docs_html_url,
       dependants_count: Packages.count_dependants(repositories, package)
@@ -72,6 +75,9 @@ defmodule HexpmWeb.PackageLayoutAssigns do
 
     [{:package_layout, Map.new(layout)} | layout]
   end
+
+  defp current_user(%Plug.Conn{} = conn), do: conn.assigns.current_user
+  defp current_user(user), do: user
 
   defp resolve_current_release(nil, releases) do
     case Release.latest_version(releases, only_stable: true, unstable_fallback: true) do
