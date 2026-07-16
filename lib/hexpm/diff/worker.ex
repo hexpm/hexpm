@@ -20,6 +20,7 @@ defmodule Hexpm.Diff.Worker do
 
   defp generate(request) do
     case Generator.generate(request) do
+      {:error, :tarball_not_found} -> {:discard, :tarball_not_found}
       {:error, :checksum_mismatch} -> {:discard, :checksum_mismatch}
       {:error, {:invalid_tarball, _reason} = reason} -> {:discard, reason}
       result -> result

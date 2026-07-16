@@ -203,6 +203,10 @@ defmodule Hexpm.Diff.GeneratorTest do
 
     {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
     assert {:error, :tarball_not_found} = Generator.generate(request)
+
+    assert {:discard, :tarball_not_found} =
+             perform_job(Worker, Hexpm.Diff.Request.to_args(request))
+
     assert :miss = Hexpm.Diff.fetch(request)
 
     Hexpm.Store.put(

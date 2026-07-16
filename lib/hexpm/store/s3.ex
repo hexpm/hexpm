@@ -28,11 +28,18 @@ defmodule Hexpm.Store.S3 do
   end
 
   def get_to_file(bucket, key, destination, _opts) do
-    S3.download_file(bucket(bucket), key, destination)
-    |> ExAws.request(region: region(bucket))
-    |> case do
-      {:ok, _result} -> :ok
-      {:error, {:http_error, 404, _}} -> nil
+    case size(bucket, key) do
+      nil ->
+        nil
+
+      _size ->
+        S3.download_file(bucket(bucket), key, destination)
+        |> ExAws.request(region: region(bucket))
+        |> case do
+          {:ok, _result} -> :ok
+          {:error, exception} when is_exception(exception) -> raise exception
+          {:error, reason} -> raise "S3 download failed: #{inspect(reason)}"
+        end
     end
   end
 
