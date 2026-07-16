@@ -38,7 +38,6 @@ if config_env() == :prod do
     config :hexpm,
       host: System.fetch_env!("HEXPM_HOST"),
       secret: System.fetch_env!("HEXPM_SECRET"),
-      diff_url: System.fetch_env!("HEXPM_DIFF_URL"),
       email_host: System.fetch_env!("HEXPM_EMAIL_HOST"),
       levenshtein_threshold: System.fetch_env!("HEXPM_LEVENSHTEIN_THRESHOLD"),
       dashboard_user: System.fetch_env!("HEXPM_DASHBOARD_USER"),

@@ -3,20 +3,14 @@ defmodule HexpmWeb.DiffComponent do
 
   import Phoenix.HTML, only: [raw: 1]
 
-  alias Phoenix.LiveView.JS
-
   attr :diff, GitDiff.Patch, required: true
   attr :id, :string, required: true
   attr :highlights, :map, required: true
 
   def diff(assigns) do
     ~H"""
-    <div class="ghd-file">
-      <button
-        type="button"
-        class="ghd-file-header"
-        phx-click={JS.toggle_class("hidden", to: "##{@id}-body")}
-      >
+    <details class="ghd-file" open>
+      <summary class="ghd-file-header">
         <span>
           <span class={["ghd-file-status", "ghd-file-status-#{diff_status(@diff)}"]}>
             {diff_status(@diff)}
@@ -26,7 +20,7 @@ defmodule HexpmWeb.DiffComponent do
         <svg class="show-hide-diff" viewBox="0 0 10 16" aria-hidden="true">
           <path fill-rule="evenodd" d="M10 10l-1.5 1.5L5 7.75 1.5 11.5 0 10l5-5 5 5z" />
         </svg>
-      </button>
+      </summary>
       <div class="ghd-diff" id={"#{@id}-body"}>
         <table class="ghd-diff">
           <tbody>
@@ -39,7 +33,7 @@ defmodule HexpmWeb.DiffComponent do
               </tr>
               <%= for line <- chunk.lines do %>
                 <tr id={line_id(@id, line)} class={["ghd-line", "ghd-line-type-#{line.type}"]}>
-                  <td class="ghd-line-number">
+                  <td class="ghd-line-number" tabindex="0" role="link" aria-label="Link to line">
                     <span>{line_number(line.from_line_number)}</span>
                     <span>{line_number(line.to_line_number)}</span>
                   </td>
@@ -55,7 +49,7 @@ defmodule HexpmWeb.DiffComponent do
           </tbody>
         </table>
       </div>
-    </div>
+    </details>
     """
   end
 
@@ -65,7 +59,7 @@ defmodule HexpmWeb.DiffComponent do
     ~H"""
     <div class="ghd-file">
       <div class="ghd-file-header ghd-file-header-static">
-        <span><span class="ghd-file-status">unknown</span>{@file}</span>
+        <span><span class="ghd-file-status ghd-file-status-too-large">too large</span>{@file}</span>
       </div>
       <div class="ghd-diff ghd-diff-error">File is too large to be displayed (1 MiB limit).</div>
     </div>

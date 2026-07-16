@@ -28,14 +28,14 @@ defmodule Hexpm.TmpDir do
   defp ensure_readable_path(path) do
     case File.lstat(path) do
       {:ok, %{type: :directory, mode: mode}} ->
-        if band(mode, 0o500) != 0o500, do: File.chmod!(path, 0o755)
+        if band(mode, 0o500) != 0o500, do: File.chmod!(path, bor(band(mode, 0o7777), 0o500))
 
         path
         |> File.ls!()
         |> Enum.each(&ensure_readable_path(Path.join(path, &1)))
 
       {:ok, %{type: :regular, mode: mode}} ->
-        if band(mode, 0o400) == 0, do: File.chmod!(path, 0o644)
+        if band(mode, 0o400) == 0, do: File.chmod!(path, bor(band(mode, 0o7777), 0o400))
 
       {:ok, _other} ->
         :ok

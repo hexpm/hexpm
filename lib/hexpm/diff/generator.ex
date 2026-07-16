@@ -1,4 +1,6 @@
 defmodule Hexpm.Diff.Generator do
+  import Bitwise
+
   alias Hexpm.Diff.{Cache, Request}
   alias Hexpm.Repository.Assets
 
@@ -83,9 +85,13 @@ defmodule Hexpm.Diff.Generator do
     to_path = Path.join(to_dir, file)
     from_path = if File.regular?(from_path, raw: true), do: from_path, else: "/dev/null"
     to_path = if File.regular?(to_path, raw: true), do: to_path, else: "/dev/null"
+    same_contents? = same_contents?(from_path, to_path)
 
     cond do
-      too_large?(from_path) or too_large?(to_path) ->
+      same_contents? and same_executable_mode?(from_path, to_path) ->
+        :unchanged
+
+      not same_contents? and (too_large?(from_path) or too_large?(to_path)) ->
         file = sanitize_utf8(file)
         Cache.put_piece!(request, index, %{type: "too_large", file: file})
         {:ok, metadata_update(file, 0, 0)}
@@ -171,6 +177,26 @@ defmodule Hexpm.Diff.Generator do
 
   defp too_large?("/dev/null"), do: false
   defp too_large?(path), do: File.stat!(path).size > @max_file_size
+
+  defp same_contents?("/dev/null", _path), do: false
+  defp same_contents?(_path, "/dev/null"), do: false
+
+  defp same_contents?(left, right) do
+    left_stat = File.stat!(left)
+    right_stat = File.stat!(right)
+
+    left_stat.size == right_stat.size and
+      left
+      |> File.stream!([], 64 * 1024)
+      |> Stream.zip(File.stream!(right, [], 64 * 1024))
+      |> Enum.all?(fn {left_chunk, right_chunk} -> left_chunk == right_chunk end)
+  end
+
+  defp same_executable_mode?(left, right) do
+    executable?(File.stat!(left).mode) == executable?(File.stat!(right).mode)
+  end
+
+  defp executable?(mode), do: band(mode, 0o111) != 0
 
   defp tree_files(directory) do
     directory

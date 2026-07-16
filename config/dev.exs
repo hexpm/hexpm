@@ -14,10 +14,11 @@ config :hexpm,
   -----END EC PRIVATE KEY-----
   """,
   tmp_dir: Path.expand("../tmp/dev", __DIR__),
+  local_store_dir:
+    System.get_env("HEXPM_LOCAL_STORE_DIR") || Path.join(System.tmp_dir!(), "hexpm-dev/store"),
   private_key: Path.expand("../test/fixtures/private.pem", __DIR__) |> File.read!(),
   docs_url: "http://localhost:4002",
   private_docs_url: "http://localhost:4002",
-  diff_url: "http://localhost:4004",
   cdn_url: "http://localhost:4000",
   img_url: "http://localhost:4000/img",
   img_proxy_secret: "dev_img_proxy_secret_key_for_hmac",

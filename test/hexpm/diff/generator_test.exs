@@ -1,25 +1,3 @@
-defmodule Hexpm.Diff.FailingStore do
-  @behaviour Hexpm.Store.Behaviour
-
-  defdelegate list(bucket, prefix), to: Hexpm.Store.Memory
-  defdelegate get(bucket, key, opts), to: Hexpm.Store.Memory
-  defdelegate size(bucket, key), to: Hexpm.Store.Memory
-  defdelegate get_to_file(bucket, key, destination, opts), to: Hexpm.Store.Memory
-  defdelegate put_file(bucket, key, path, opts), to: Hexpm.Store.Memory
-  defdelegate delete(bucket, key), to: Hexpm.Store.Memory
-  defdelegate delete_many(bucket, keys), to: Hexpm.Store.Memory
-
-  def put(bucket, key, body, opts) do
-    if marker = Process.get(:fail_diff_key) do
-      if String.contains?(key, marker),
-        do: Process.get(:fail_diff_result),
-        else: Hexpm.Store.Memory.put(bucket, key, body, opts)
-    else
-      Hexpm.Store.Memory.put(bucket, key, body, opts)
-    end
-  end
-end
-
 defmodule Hexpm.Diff.GeneratorTest do
   use Hexpm.DataCase, async: false
   use Oban.Testing, repo: Hexpm.RepoBase
@@ -51,7 +29,6 @@ defmodule Hexpm.Diff.GeneratorTest do
     assert :ok = Generator.generate(request)
 
     assert {:ok, metadata, pieces} = Hexpm.Diff.fetch(request)
-    # metadata.config also changes because the package file list changed.
     assert metadata.files_changed == 7
     assert metadata.total_diffs == 7
     assert metadata.total_additions >= 3
@@ -105,6 +82,30 @@ defmodule Hexpm.Diff.GeneratorTest do
     assert {:ok, %{total_diffs: 0, files_changed: 0}, []} = Hexpm.Diff.fetch(ignored)
   end
 
+  test "identical oversized files are unchanged" do
+    package = insert(:package, name: "generator_identical_oversized")
+    contents = String.duplicate("same", 1024 * 1024)
+    insert_tarball_release(package, "1.0.0", %{"huge.bin" => contents})
+    insert_tarball_release(package, "2.0.0", %{"huge.bin" => contents})
+
+    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    assert :ok = Generator.generate(request)
+    assert {:ok, %{total_diffs: 0, files_changed: 0}, []} = Hexpm.Diff.fetch(request)
+  end
+
+  test "mode changes retain nonstandard executable bits" do
+    package = insert(:package, name: "generator_unreadable_mode")
+    insert_tarball_release(package, "1.0.0", %{"script" => {"same\n", 0o511}})
+    insert_tarball_release(package, "2.0.0", %{"script" => {"same\n", 0o644}})
+
+    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    assert :ok = Generator.generate(request)
+    assert {:ok, %{total_diffs: 1}, [piece]} = Hexpm.Diff.fetch(request)
+    assert {:ok, {:diff, diff, _, _}} = Hexpm.Diff.fetch_piece(piece)
+    assert diff =~ "old mode 100755"
+    assert diff =~ "new mode 100644"
+  end
+
   test "checksum failures never write completion metadata" do
     package = insert(:package, name: "generator_checksum")
     insert_tarball_release(package, "1.0.0", %{"same" => "one"})
@@ -125,15 +126,14 @@ defmodule Hexpm.Diff.GeneratorTest do
     {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
 
     original_bucket = Application.fetch_env!(:hexpm, :diff_bucket)
-    Application.put_env(:hexpm, :diff_bucket, {Hexpm.Diff.FailingStore, "diff_bucket"})
+    Application.put_env(:hexpm, :diff_bucket, {Hexpm.Diff.TestStore, "diff_bucket"})
 
     on_exit(fn ->
       Application.put_env(:hexpm, :diff_bucket, original_bucket)
-      Process.delete(:fail_diff_key)
-      Process.delete(:fail_diff_result)
+      Application.delete_env(:hexpm, :diff_test_store_put)
     end)
 
-    Process.put(:fail_diff_key, "-diff-1.json")
+    Application.put_env(:hexpm, :diff_test_store_put, {"-diff-1.json", nil})
     assert {:error, {%RuntimeError{}, _stacktrace}} = Generator.generate(request)
     assert cache_object(Cache.diff_key(request, request.canonical_hash, 0))
     refute cache_object(Cache.metadata_key(request, request.canonical_hash))
@@ -145,7 +145,7 @@ defmodule Hexpm.Diff.GeneratorTest do
       []
     )
 
-    Process.delete(:fail_diff_key)
+    Application.delete_env(:hexpm, :diff_test_store_put)
     assert :ok = Generator.generate(request)
     refute cache_object(Cache.diff_key(request, request.canonical_hash, 0)) == "partial"
     assert {:ok, %{total_diffs: 2}, [_, _]} = Hexpm.Diff.fetch(request)
@@ -158,16 +158,19 @@ defmodule Hexpm.Diff.GeneratorTest do
     {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
 
     original_bucket = Application.fetch_env!(:hexpm, :diff_bucket)
-    Application.put_env(:hexpm, :diff_bucket, {Hexpm.Diff.FailingStore, "diff_bucket"})
+    Application.put_env(:hexpm, :diff_bucket, {Hexpm.Diff.TestStore, "diff_bucket"})
 
     on_exit(fn ->
       Application.put_env(:hexpm, :diff_bucket, original_bucket)
-      Process.delete(:fail_diff_key)
-      Process.delete(:fail_diff_result)
+      Application.delete_env(:hexpm, :diff_test_store_put)
     end)
 
-    Process.put(:fail_diff_key, "metadata/")
-    Process.put(:fail_diff_result, {:error, :unavailable})
+    Application.put_env(
+      :hexpm,
+      :diff_test_store_put,
+      {"metadata/", {:error, :unavailable}}
+    )
+
     assert {:error, {%RuntimeError{}, _stacktrace}} = Generator.generate(request)
     assert :miss = Hexpm.Diff.fetch(request)
     assert cache_object(Cache.diff_key(request, request.canonical_hash, 0))
@@ -250,6 +253,36 @@ defmodule Hexpm.Diff.GeneratorTest do
     assert {:ok, %{total_diffs: 1, total_additions: 1, total_deletions: 1}, [_]} =
              Hexpm.Diff.fetch(request)
 
-    assert {:error, :invalid_args} = perform_job(Worker, %{"package" => package.name})
+    assert {:discard, :invalid_args} = perform_job(Worker, %{"package" => package.name})
+  end
+
+  test "worker discards stale checksums" do
+    package = insert(:package, name: "generator_worker_discard")
+    insert_tarball_release(package, "1.0.0", %{"a" => "old"})
+    insert_tarball_release(package, "2.0.0", %{"a" => "new"})
+    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+
+    stale_args =
+      request
+      |> Hexpm.Diff.Request.to_args()
+      |> Map.put(:from_checksum, Base.encode16(<<0::256>>, case: :lower))
+
+    assert {:discard, :checksum_mismatch} = perform_job(Worker, stale_args)
+  end
+
+  test "worker discards invalid tarballs" do
+    package = insert(:package, name: "generator_worker_invalid")
+    invalid = "not a tarball"
+    checksum = :crypto.hash(:sha256, invalid)
+
+    for version <- ["1.0.0", "2.0.0"] do
+      insert(:release, package: package, version: version, outer_checksum: checksum)
+      Hexpm.Store.put(:repo_bucket, "tarballs/#{package.name}-#{version}.tar", invalid, [])
+    end
+
+    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+
+    assert {:discard, {:invalid_tarball, _reason}} =
+             perform_job(Worker, Hexpm.Diff.Request.to_args(request))
   end
 end

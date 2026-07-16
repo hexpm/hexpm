@@ -47,12 +47,13 @@
           finder_form_id="preview-file-finder"
           finder_query_id="preview-file-query"
         >
-          <:tree>
+          <:tree :let={selector}>
             <.source_tree
               nodes={@file_tree}
               filename={@filename}
               package_name={@package_name}
               version={@version}
+              modal_id={selector.modal_id}
             />
           </:tree>
           <:results :let={selector}>
@@ -62,6 +63,7 @@
               package_name={@package_name}
               version={@version}
               close_modal?={selector.close_modal?}
+              modal_id={selector.modal_id}
             />
             <p
               :if={@filtered_files == []}

@@ -203,7 +203,9 @@ defmodule HexpmWeb.Router do
     get "/policies/copyright", PolicyController, :copyright
     get "/policies/dispute", PolicyController, :dispute
 
-    live_session :packages, on_mount: {HexpmWeb.Live.InitAssigns, :default} do
+    live_session :packages,
+      on_mount: {HexpmWeb.Live.InitAssigns, :default},
+      session: {HexpmWeb.Live.InitAssigns, :session, []} do
       live "/packages", PackageLive.Index, :index
       live "/diff/:package/:versions", DiffLive, :show
     end

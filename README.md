@@ -32,6 +32,8 @@ This is located in the "postgresql-contrib" package, however the package name ca
 
 By default, Hexpm connects to a localhost PostgreSQL database `hexpm_dev` using the username `postgres` with the password `postgres`.
 
+Development object storage is shared across worktrees under the operating system's temporary directory. Set `HEXPM_LOCAL_STORE_DIR` to use a different shared location.
+
 Create the database and user 'postgres' if not already done:
 
 ```sh

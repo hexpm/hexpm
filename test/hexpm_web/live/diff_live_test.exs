@@ -1,29 +1,3 @@
-defmodule Hexpm.Diff.UnavailableStore do
-  @behaviour Hexpm.Store.Behaviour
-
-  defdelegate list(bucket, prefix), to: Hexpm.Store.Memory
-  def get(_bucket, _key, _opts), do: throw(:unavailable)
-  defdelegate size(bucket, key), to: Hexpm.Store.Memory
-  defdelegate get_to_file(bucket, key, destination, opts), to: Hexpm.Store.Memory
-  defdelegate put(bucket, key, body, opts), to: Hexpm.Store.Memory
-  defdelegate put_file(bucket, key, path, opts), to: Hexpm.Store.Memory
-  defdelegate delete(bucket, key), to: Hexpm.Store.Memory
-  defdelegate delete_many(bucket, keys), to: Hexpm.Store.Memory
-end
-
-defmodule Hexpm.Diff.RaisingStore do
-  @behaviour Hexpm.Store.Behaviour
-
-  defdelegate list(bucket, prefix), to: Hexpm.Store.Memory
-  def get(_bucket, _key, _opts), do: raise("storage unavailable")
-  defdelegate size(bucket, key), to: Hexpm.Store.Memory
-  defdelegate get_to_file(bucket, key, destination, opts), to: Hexpm.Store.Memory
-  defdelegate put(bucket, key, body, opts), to: Hexpm.Store.Memory
-  defdelegate put_file(bucket, key, path, opts), to: Hexpm.Store.Memory
-  defdelegate delete(bucket, key), to: Hexpm.Store.Memory
-  defdelegate delete_many(bucket, keys), to: Hexpm.Store.Memory
-end
-
 defmodule HexpmWeb.DiffLiveTest do
   use HexpmWeb.ConnCase, async: false
   use Oban.Testing, repo: Hexpm.RepoBase
@@ -72,12 +46,17 @@ defmodule HexpmWeb.DiffLiveTest do
     refute Floki.text(actions) =~ package.name
     refute Floki.text(actions) =~ "1.0.0..7.0.0"
 
-    assert [find_file_button] = Floki.find(actions, "button")
-    assert find_file_button |> Floki.text() |> String.trim() == "Find file"
+    assert [files_button, find_file_button] = Floki.find(actions, "button")
+    assert files_button |> Floki.text() |> String.trim() == "Files"
+    assert find_file_button |> Floki.text() |> String.trim() == "Find file…"
 
-    assert "lg:hidden" in (Floki.attribute(find_file_button, "class")
+    assert "lg:hidden" in (Floki.attribute(files_button, "class")
                            |> List.first()
                            |> String.split())
+
+    assert "lg:inline-flex" in (Floki.attribute(find_file_button, "class")
+                                |> List.first()
+                                |> String.split())
 
     assert has_element?(view, "#diff-4-container", "file-4.bin")
     refute has_element?(view, "#diff-5-container")
@@ -95,7 +74,9 @@ defmodule HexpmWeb.DiffLiveTest do
     refute html =~ ~s(id="diff-loading-trigger")
   end
 
-  test "changed-file selector filters and loads through an unloaded file", %{package: package} do
+  test "changed-file selector filters and loads only the selected unloaded file", %{
+    package: package
+  } do
     {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "7.0.0", [])
     put_ready_cache(request, 7)
 
@@ -116,7 +97,35 @@ defmodule HexpmWeb.DiffLiveTest do
 
     assert has_element?(view, "#diff-6-container", "file-6.bin")
     assert has_element?(view, ~s(button[aria-current="true"]), "file-6.bin")
-    refute has_element?(view, "#diff-loading-trigger")
+    refute has_element?(view, "#diff-5-container")
+    assert has_element?(view, "#diff-loading-trigger")
+  end
+
+  test "legacy metadata remains bounded and can load a deep-linked piece", %{package: package} do
+    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "7.0.0", [])
+
+    for index <- 0..6 do
+      Cache.put_piece!(request, index, %{type: "too_large", file: "legacy-#{index}.bin"})
+    end
+
+    Cache.put_metadata!(request, %{
+      total_diffs: 7,
+      total_additions: 0,
+      total_deletions: 0,
+      files_changed: 7
+    })
+
+    {:ok, view, html} = live(build_conn(), "/diff/#{package.name}/1.0.0..7.0.0")
+
+    assert html =~ "legacy-4.bin"
+    refute html =~ "legacy-5.bin"
+    refute has_element?(view, "#diff-files-tree")
+
+    render_hook(view, "load-piece", %{"id" => "diff-6"})
+
+    assert has_element?(view, "#diff-6-container", "legacy-6.bin")
+    refute has_element?(view, "#diff-5-container")
+    assert has_element?(view, "#diff-loading-trigger")
   end
 
   test "cached patches are highlighted through Lumis with stable line anchors", %{
@@ -195,10 +204,31 @@ defmodule HexpmWeb.DiffLiveTest do
              1
   end
 
+  test "a disconnected request is throttled by its real remote address", %{package: package} do
+    remote_ip = {203, 0, 113, 42}
+    conn = %{build_conn() | remote_ip: remote_ip}
+
+    conn = get(conn, "/diff/#{package.name}/1.0.0..2.0.0")
+    assert html_response(conn, 200) =~ "Diff queued"
+
+    identity = {:ip, remote_ip}
+
+    assert [{{:throttle, {:diff, ^identity}, _bucket}, 1, _expires_at}] =
+             :ets.match_object(
+               HexpmWeb.Plugs.Attack.Storage,
+               {{:throttle, {:diff, identity}, :_}, :_, :_}
+             )
+  end
+
   test "storage failures render an error without enqueueing regeneration", %{package: package} do
     original_bucket = Application.fetch_env!(:hexpm, :diff_bucket)
-    Application.put_env(:hexpm, :diff_bucket, {Hexpm.Diff.UnavailableStore, "diff_bucket"})
-    on_exit(fn -> Application.put_env(:hexpm, :diff_bucket, original_bucket) end)
+    Application.put_env(:hexpm, :diff_bucket, {Hexpm.Diff.TestStore, "diff_bucket"})
+    Application.put_env(:hexpm, :diff_test_store_get, :throw)
+
+    on_exit(fn ->
+      Application.put_env(:hexpm, :diff_bucket, original_bucket)
+      Application.delete_env(:hexpm, :diff_test_store_get)
+    end)
 
     {:ok, _view, html} = live(build_conn(), "/diff/#{package.name}/1.0.0..2.0.0")
 
@@ -210,8 +240,13 @@ defmodule HexpmWeb.DiffLiveTest do
 
   test "storage exceptions render an error without crashing or enqueueing", %{package: package} do
     original_bucket = Application.fetch_env!(:hexpm, :diff_bucket)
-    Application.put_env(:hexpm, :diff_bucket, {Hexpm.Diff.RaisingStore, "diff_bucket"})
-    on_exit(fn -> Application.put_env(:hexpm, :diff_bucket, original_bucket) end)
+    Application.put_env(:hexpm, :diff_bucket, {Hexpm.Diff.TestStore, "diff_bucket"})
+    Application.put_env(:hexpm, :diff_test_store_get, :raise)
+
+    on_exit(fn ->
+      Application.put_env(:hexpm, :diff_bucket, original_bucket)
+      Application.delete_env(:hexpm, :diff_test_store_get)
+    end)
 
     {:ok, _view, html} = live(build_conn(), "/diff/#{package.name}/1.0.0..2.0.0")
 

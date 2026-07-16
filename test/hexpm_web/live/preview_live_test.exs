@@ -23,6 +23,8 @@ defmodule HexpmWeb.PreviewLiveTest do
     assert page_title(view) == "lib/live_preview.ex - live_preview 1.0.0 | Hex"
     assert has_element?(view, ~s(a[aria-current="page"]), "live_preview.ex")
     assert has_element?(view, "h2", "lib/live_preview.ex")
+    assert has_element?(view, ~s(button.lg\\:hidden), "Files")
+    assert has_element?(view, ~s(button.lg\\:inline-flex), "Find file…")
 
     assert has_element?(
              view,

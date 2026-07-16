@@ -8,15 +8,15 @@ defmodule HexpmWeb.DiffLive do
   alias Hexpm.Repository.Releases
   alias HexpmWeb.Components.FileSelector
   alias HexpmWeb.PackageLayoutAssigns
-  alias HexpmWeb.Plugs.{Attack, Forwarded}
+  alias HexpmWeb.Plugs.Attack
 
   @batch_size 5
   @poll_interval 1_000
 
   @impl Phoenix.LiveView
-  def mount(%{"package" => package, "versions" => versions} = params, _session, socket) do
+  def mount(%{"package" => package, "versions" => versions} = params, session, socket) do
     socket = assign(socket, base_assigns())
-    socket = assign(socket, diff_identity: diff_identity(socket))
+    socket = assign(socket, diff_identity: diff_identity(socket, session))
     ignore_whitespace = params["w"] == "1"
 
     with {:ok, from, to} <- parse_versions(versions),
@@ -87,6 +87,14 @@ defmodule HexpmWeb.DiffLive do
         |> push_event("scroll-to-file", %{id: "#{id}-container"})
 
       {:noreply, socket}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def handle_event("load-piece", %{"id" => id}, socket) do
+    if Enum.any?(socket.assigns.all_pieces, &(Hexpm.Diff.piece_id(&1) == id)) do
+      {:noreply, load_piece_by_id(socket, id)}
     else
       {:noreply, socket}
     end
@@ -169,12 +177,23 @@ defmodule HexpmWeb.DiffLive do
   end
 
   defp show_ready(socket, metadata, pieces) do
-    pieces = assign_piece_files(pieces)
-    files = Enum.map(pieces, &%{id: Hexpm.Diff.piece_id(&1), path: Hexpm.Diff.piece_file(&1)})
+    files =
+      for piece <- pieces,
+          file = Hexpm.Diff.piece_file(piece),
+          is_binary(file) do
+        %{id: Hexpm.Diff.piece_id(piece), path: file}
+      end
+
+    piece_order =
+      pieces
+      |> Enum.with_index()
+      |> Map.new(fn {piece, index} -> {Hexpm.Diff.piece_id(piece), index} end)
 
     socket
     |> assign(
       metadata: metadata,
+      all_pieces: pieces,
+      piece_order: piece_order,
       remaining_pieces: pieces,
       loaded_pieces: [],
       files: files,
@@ -189,66 +208,42 @@ defmodule HexpmWeb.DiffLive do
 
   defp load_next_batch(%{assigns: %{remaining_pieces: remaining}} = socket) do
     {batch, remaining} = Enum.split(remaining, @batch_size)
-    loaded = Enum.map(batch, &load_piece/1)
 
-    assign(socket,
-      loaded_pieces: socket.assigns.loaded_pieces ++ loaded,
-      remaining_pieces: remaining
-    )
+    socket
+    |> assign(remaining_pieces: remaining)
+    |> add_loaded_pieces(batch)
   end
 
   defp load_through_piece(%{assigns: %{loaded_pieces: loaded}} = socket, id) do
     if Enum.any?(loaded, &(elem(&1, 0) == id)) do
       socket
     else
-      case Enum.find_index(socket.assigns.remaining_pieces, &(Hexpm.Diff.piece_id(&1) == id)) do
-        nil ->
-          socket
-
-        index ->
-          {pieces, remaining} = Enum.split(socket.assigns.remaining_pieces, index + 1)
-
-          assign(socket,
-            loaded_pieces: loaded ++ Enum.map(pieces, &load_piece/1),
-            remaining_pieces: remaining
-          )
-      end
+      load_piece_by_id(socket, id)
     end
   end
 
-  defp assign_piece_files(pieces) do
-    Enum.map(pieces, fn piece ->
-      if Hexpm.Diff.piece_file(piece) do
-        piece
-      else
-        %{piece | file: legacy_piece_file(piece)}
-      end
-    end)
+  defp load_piece_by_id(socket, id) do
+    case Enum.find(socket.assigns.remaining_pieces, &(Hexpm.Diff.piece_id(&1) == id)) do
+      nil ->
+        socket
+
+      piece ->
+        socket
+        |> assign(remaining_pieces: List.delete(socket.assigns.remaining_pieces, piece))
+        |> add_loaded_pieces([piece])
+    end
   end
 
-  defp legacy_piece_file(piece) do
-    case Hexpm.Diff.fetch_piece(piece) do
-      {:ok, {:too_large, file}} ->
-        file
+  defp add_loaded_pieces(socket, pieces) do
+    loaded =
+      (socket.assigns.loaded_pieces ++ Enum.map(pieces, &load_piece/1))
+      |> Enum.sort_by(fn {id, _content} -> Map.fetch!(socket.assigns.piece_order, id) end)
 
-      {:ok, {:diff, raw_diff, from_path, to_path}} ->
-        case GitDiff.parse_patch(raw_diff, relative_from: from_path, relative_to: to_path) do
-          {:ok, [diff | _]} -> diff.to || diff.from || Hexpm.Diff.piece_id(piece)
-          _ -> Hexpm.Diff.piece_id(piece)
-        end
-
-      _ ->
-        Hexpm.Diff.piece_id(piece)
-    end
+    assign(socket, loaded_pieces: loaded)
   end
 
   defp filter_diff_files(files, query) do
-    files_by_path = Map.new(files, &{&1.path, &1})
-
-    files
-    |> Enum.map(& &1.path)
-    |> FileSelector.filter(query)
-    |> Enum.map(&Map.fetch!(files_by_path, &1))
+    FileSelector.filter_by(files, & &1.path, query)
   end
 
   defp load_piece(piece) do
@@ -341,24 +336,11 @@ defmodule HexpmWeb.DiffLive do
     |> schedule_poll()
   end
 
-  defp diff_identity(socket) do
+  defp diff_identity(socket, session) do
     case socket.assigns.current_user do
       %{id: id} -> {:user, id}
-      nil -> {:ip, remote_ip(socket)}
+      nil -> {:ip, Map.fetch!(session, "remote_ip")}
     end
-  end
-
-  defp remote_ip(socket) do
-    default =
-      case get_connect_info(socket, :peer_data) do
-        %{address: address} -> address
-        _ -> {0, 0, 0, 0}
-      end
-
-    forwarded_for =
-      for {"x-forwarded-for", value} <- get_connect_info(socket, :x_headers) || [], do: value
-
-    Forwarded.remote_ip(default, forwarded_for)
   end
 
   defp parse_versions(versions) when is_binary(versions) do
@@ -383,6 +365,8 @@ defmodule HexpmWeb.DiffLive do
       diff_identity: nil,
       ignore_whitespace: false,
       metadata: nil,
+      all_pieces: [],
+      piece_order: %{},
       remaining_pieces: [],
       loaded_pieces: [],
       files: [],
@@ -433,28 +417,26 @@ defmodule HexpmWeb.DiffLive do
   attr :files, :list, required: true
   attr :selected_file, :string, default: nil
   attr :close_modal?, :boolean, default: false
+  attr :modal_id, :string, default: nil
 
   def diff_file_results(assigns) do
     ~H"""
-    <ul class="space-y-1">
-      <li :for={file <- @files}>
+    <HexpmWeb.Components.FileSelector.file_results
+      items={@files}
+      selected={&(&1.id == @selected_file)}
+    >
+      <:item :let={result}>
         <button
           type="button"
-          phx-click={select_file(file.id, @close_modal?)}
-          aria-current={if file.id == @selected_file, do: "true"}
-          class={[
-            "flex w-full items-center gap-2 rounded px-2 py-2 text-left font-mono text-xs transition-colors",
-            file.id == @selected_file &&
-              "bg-primary-50 font-semibold text-primary-700 dark:bg-grey-700 dark:text-white",
-            file.id != @selected_file &&
-              "text-grey-600 hover:bg-grey-100 hover:text-grey-900 dark:text-grey-300 dark:hover:bg-grey-700/60 dark:hover:text-white"
-          ]}
+          phx-click={select_file(result.item.id, @close_modal?, @modal_id)}
+          aria-current={if result.item.id == @selected_file, do: "true"}
+          class={result.class}
         >
           {icon(:heroicon, "document", class: "size-3.5 shrink-0 text-grey-400")}
-          <span class="truncate">{file.path}</span>
+          <span class="truncate">{result.item.path}</span>
         </button>
-      </li>
-    </ul>
+      </:item>
+    </HexpmWeb.Components.FileSelector.file_results>
     <p
       :if={@files == []}
       class="px-2 py-8 text-center text-sm text-grey-500 dark:text-grey-300"
@@ -464,8 +446,8 @@ defmodule HexpmWeb.DiffLive do
     """
   end
 
-  defp select_file(id, close_modal?) do
+  defp select_file(id, close_modal?, modal_id) do
     js = Phoenix.LiveView.JS.push("select-file", value: %{id: id})
-    if close_modal?, do: hide_modal(js, "diff-files-modal"), else: js
+    if close_modal?, do: hide_modal(js, modal_id), else: js
   end
 end

@@ -7,11 +7,15 @@ defmodule HexpmWeb.Components.FileSelector do
   @finder_limit 100
 
   def filter(files, query) do
+    filter_by(files, & &1, query)
+  end
+
+  def filter_by(items, path, query) when is_function(path, 1) do
     query = query |> String.trim() |> String.downcase()
 
-    files
-    |> Enum.filter(&fuzzy_match?(String.downcase(&1), query))
-    |> Enum.sort_by(&file_score(String.downcase(&1), query))
+    items
+    |> Enum.filter(&fuzzy_match?(String.downcase(path.(&1)), query))
+    |> Enum.sort_by(&file_score(String.downcase(path.(&1)), query))
     |> Enum.take(@finder_limit)
   end
 
@@ -73,9 +77,11 @@ defmodule HexpmWeb.Components.FileSelector do
           class="max-h-[70vh] overflow-auto p-2"
           aria-label={@sidebar_label}
         >
-          <div :if={@query == "" && @tree != []}>{render_slot(@tree)}</div>
+          <div :if={@query == "" && @tree != []}>
+            {render_slot(@tree, %{modal_id: "#{@id}-modal"})}
+          </div>
           <div :if={@query != "" || @tree == []}>
-            {render_slot(@results, %{close_modal?: false})}
+            {render_slot(@results, %{close_modal?: false, modal_id: "#{@id}-modal"})}
           </div>
         </nav>
       </div>
@@ -106,7 +112,7 @@ defmodule HexpmWeb.Components.FileSelector do
         class="max-h-[60vh] overflow-auto"
         aria-label={@search_label}
       >
-        {render_slot(@results, %{close_modal?: true})}
+        {render_slot(@results, %{close_modal?: true, modal_id: "#{@id}-modal"})}
       </nav>
     </.modal>
     """
@@ -119,11 +125,45 @@ defmodule HexpmWeb.Components.FileSelector do
     <button
       type="button"
       phx-click={show_modal(@modal_id)}
-      class="inline-flex items-center gap-2 rounded-lg border border-grey-200 bg-white px-3 py-2 text-sm font-medium text-grey-700 shadow-sm transition-colors hover:border-grey-300 hover:bg-grey-50 dark:border-grey-700 dark:bg-grey-800 dark:text-grey-100 dark:hover:bg-grey-700 lg:hidden"
+      class="inline-flex items-center gap-2 rounded-lg border border-grey-200 bg-white px-3 py-2 text-sm font-medium text-grey-700 shadow-sm transition-colors hover:border-grey-300 hover:bg-grey-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:border-grey-700 dark:bg-grey-800 dark:text-grey-100 dark:hover:bg-grey-700 lg:hidden"
     >
-      {icon(:heroicon, "magnifying-glass", class: "size-4")} Find file
+      {icon(:heroicon, "folder-open", class: "size-4")} Files
+    </button>
+    <button
+      type="button"
+      phx-click={show_modal(@modal_id)}
+      class="hidden items-center gap-2 rounded-lg border border-grey-200 bg-white px-3 py-2 text-sm font-medium text-grey-700 shadow-sm transition-colors hover:border-grey-300 hover:bg-grey-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:border-grey-700 dark:bg-grey-800 dark:text-grey-100 dark:hover:bg-grey-700 lg:inline-flex"
+    >
+      {icon(:heroicon, "magnifying-glass", class: "size-4")} Find file…
     </button>
     """
+  end
+
+  attr :items, :list, required: true
+  attr :selected, :any, required: true
+  slot :item, required: true
+
+  def file_results(assigns) do
+    ~H"""
+    <ul class="space-y-1">
+      <li :for={item <- @items}>
+        {render_slot(@item, %{
+          item: item,
+          class: result_class(@selected.(item))
+        })}
+      </li>
+    </ul>
+    """
+  end
+
+  defp result_class(selected?) do
+    [
+      "flex w-full items-center gap-2 rounded px-2 py-2 text-left font-mono text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1",
+      selected? &&
+        "bg-primary-50 font-semibold text-primary-700 dark:bg-grey-700 dark:text-white",
+      not selected? &&
+        "text-grey-600 hover:bg-grey-100 hover:text-grey-900 dark:text-grey-300 dark:hover:bg-grey-700/60 dark:hover:text-white"
+    ]
   end
 
   defp fuzzy_match?(_file, ""), do: true

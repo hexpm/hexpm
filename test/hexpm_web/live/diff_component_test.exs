@@ -44,6 +44,8 @@ defmodule HexpmWeb.DiffComponentTest do
     refute html =~ "<script>"
 
     document = Floki.parse_document!(html)
+    assert [_] = Floki.find(document, "details[open] > summary.ghd-file-header")
+    assert [_] = Floki.find(document, ~s(.ghd-line-number[tabindex="0"][role="link"]))
     assert Floki.text(Floki.find(document, ".ghd-line-status")) == "+ "
     assert [_] = Floki.find(document, ".ghd-line-code")
   end
@@ -62,7 +64,8 @@ defmodule HexpmWeb.DiffComponentTest do
              ) =~ status
     end
 
-    assert render_component(&DiffComponent.too_large/1, file: "large.bin") =~
-             "File is too large to be displayed (1 MiB limit)."
+    oversized = render_component(&DiffComponent.too_large/1, file: "large.bin")
+    assert oversized =~ "File is too large to be displayed (1 MiB limit)."
+    assert oversized =~ "ghd-file-status-too-large"
   end
 end

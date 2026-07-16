@@ -9,6 +9,8 @@ defmodule HexpmWeb.Live.InitAssigns do
   alias Hexpm.UserSessions
   alias Hexpm.Accounts.Users
 
+  def session(conn), do: %{"remote_ip" => conn.remote_ip}
+
   def on_mount(:default, _params, session, socket) do
     user = resolve_user(session)
 

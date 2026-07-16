@@ -117,7 +117,6 @@ defmodule Hexpm.ApplicationTest do
             "HEXPM_SECRET=secret",
             "HEXPM_DOCS_URL=https://hexdocs.pm",
             "HEXPM_PRIVATE_DOCS_URL=https://private.hexdocs.pm",
-            "HEXPM_DIFF_URL=https://diff.hex.pm",
             "HEXPM_EMAIL_HOST=hex.pm",
             "HEXPM_LEVENSHTEIN_THRESHOLD=0.8",
             "HEXPM_DASHBOARD_USER=user",

@@ -12,8 +12,17 @@ defmodule Hexpm.Diff.Worker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) do
-    with {:ok, request} <- Request.from_args(args) do
-      Generator.generate(request)
+    case Request.from_args(args) do
+      {:ok, request} -> generate(request)
+      {:error, reason} -> {:discard, reason}
+    end
+  end
+
+  defp generate(request) do
+    case Generator.generate(request) do
+      {:error, :checksum_mismatch} -> {:discard, :checksum_mismatch}
+      {:error, {:invalid_tarball, _reason} = reason} -> {:discard, reason}
+      result -> result
     end
   end
 end
