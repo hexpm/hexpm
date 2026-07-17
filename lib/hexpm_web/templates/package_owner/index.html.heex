@@ -52,13 +52,13 @@
                   icon="pencil-square"
                   variant="default"
                   aria-label={"Edit role for #{owner.user.username}"}
-                  phx-click={show_modal("edit-role-#{owner.user.username}")}
+                  phx-click={show_modal("edit-role-#{owner.user.id}")}
                 />
                 <.icon_button
                   icon="x-mark"
                   variant="danger"
                   aria-label={"Remove #{owner.user.username}"}
-                  phx-click={show_modal("remove-owner-#{owner.user.username}")}
+                  phx-click={show_modal("remove-owner-#{owner.user.id}")}
                 />
               <% end %>
             </div>
@@ -69,12 +69,12 @@
 
     <%!-- Edit role + Remove modals (one per owner, only when more than one) --%>
     <%= for owner <- @owners, length(@owners) > 1 do %>
-      <.modal id={"edit-role-#{owner.user.username}"} title="Change role" max_width="md">
+      <.modal id={"edit-role-#{owner.user.id}"} title="Change role" max_width="md">
         <.sudo_form
           current_user={@current_user}
           action={HexpmWeb.ViewHelpers.path_for_owner(@package, owner.user.username)}
           method="put"
-          id={"role-form-#{owner.user.username}"}
+          id={"role-form-#{owner.user.id}"}
         >
           <p class="text-sm text-grey-600 dark:text-grey-300 mb-4">
             Update the role for
@@ -86,14 +86,14 @@
 
           <div>
             <label
-              for={"role-select-#{owner.user.username}"}
+              for={"role-select-#{owner.user.id}"}
               class="block text-small font-medium text-grey-900 dark:text-grey-100 mb-[6px]"
             >
               Role
             </label>
             <div class="relative">
               <select
-                id={"role-select-#{owner.user.username}"}
+                id={"role-select-#{owner.user.id}"}
                 name="level"
                 class="w-full h-10 text-sm bg-white dark:bg-grey-700 border border-grey-200 dark:border-grey-600 rounded-lg pl-3 pr-8 text-grey-800 dark:text-white cursor-pointer appearance-none focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
@@ -112,7 +112,7 @@
             <.button
               type="button"
               variant="secondary"
-              phx-click={hide_modal("edit-role-#{owner.user.username}")}
+              phx-click={hide_modal("edit-role-#{owner.user.id}")}
             >
               Cancel
             </.button>
@@ -121,7 +121,7 @@
         </.sudo_form>
       </.modal>
 
-      <.modal id={"remove-owner-#{owner.user.username}"} title="Remove owner?" max_width="md">
+      <.modal id={"remove-owner-#{owner.user.id}"} title="Remove owner?" max_width="md">
         <%= if owner.user.id == @current_user.id do %>
           <p class="text-sm text-grey-600 dark:text-grey-300">
             You are about to remove
@@ -143,13 +143,13 @@
           current_user={@current_user}
           action={HexpmWeb.ViewHelpers.path_for_owner(@package, owner.user.username)}
           method="delete"
-          id={"remove-form-#{owner.user.username}"}
+          id={"remove-form-#{owner.user.id}"}
         >
           <div class="flex justify-end gap-3 mt-6">
             <.button
               type="button"
               variant="secondary"
-              phx-click={hide_modal("remove-owner-#{owner.user.username}")}
+              phx-click={hide_modal("remove-owner-#{owner.user.id}")}
             >
               Cancel
             </.button>
