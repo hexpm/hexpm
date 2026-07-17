@@ -27,3 +27,14 @@
     </td>
   </tr>
 </table>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 16px 0; background-color: #1c2a3a; border-radius: 4px;">
+  <tr>
+    <td style="padding: 20px;">
+      <p style="color: #f0f5f9; font-size: 20px; line-height: 28px; font-weight: 500; margin: 0 0 8px 0;">
+        <%= Common.for_gleam_label() %>
+      </p>
+      <pre style="color: #f0f5f9; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 14px; line-height: 20px; margin: 0; white-space: pre-wrap;"><%= PackagePublished.gleam_code(@package, @version) %></pre>
+    </td>
+  </tr>
+</table>

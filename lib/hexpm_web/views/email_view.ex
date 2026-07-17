@@ -34,6 +34,7 @@ defmodule HexpmWeb.EmailView do
     # Common labels for build tools
     def for_mix_label(), do: "For mix:"
     def for_rebar3_label(), do: "For rebar3:"
+    def for_gleam_label(), do: "For gleam:"
 
     # URL follow pattern for verification/reset emails
     def follow_link_instruction(url, :html) do
@@ -293,6 +294,14 @@ defmodule HexpmWeb.EmailView do
       cd #{package}; rebar3 hex publish --revert #{version}
       # or
       rebar3 hex retire #{package} #{version} security --message "Not published by owners"
+      """
+    end
+
+    def gleam_code(package, version) do
+      """
+      gleam hex revert --package #{package} --version #{version}
+      # or
+      gleam hex retire --package #{package} --version #{version} security --message "Not published by owners"
       """
     end
   end
