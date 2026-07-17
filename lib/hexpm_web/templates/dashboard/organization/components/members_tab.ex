@@ -86,7 +86,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                   <.sudo_form
                     current_user={@current_user}
                     action={~p"/dashboard/orgs/#{@organization}"}
-                    id={"change-role-form-#{org_user.user.username}"}
+                    id={"change-role-form-#{org_user.user.id}"}
                     phx-hook="AutoSubmit"
                   >
                     <input type="hidden" name="action" value="change_role" />
@@ -96,7 +96,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                       value={org_user.user.username}
                     />
                     <.select_input
-                      id={"role-#{org_user.user.username}"}
+                      id={"role-#{org_user.user.id}"}
                       name="organization_user[role]"
                       value={org_user.role}
                       options={role_options()}
@@ -111,7 +111,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                       icon="x-mark"
                       variant="danger"
                       aria-label="Remove member"
-                      phx-click={show_modal("remove-member-#{org_user.user.username}")}
+                      phx-click={show_modal("remove-member-#{org_user.user.id}")}
                     />
                   <% end %>
                 <% else %>
@@ -131,7 +131,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
       <%!-- Remove member confirmation modals (one per removable member) --%>
       <%= if admin?(@current_user, @organization) do %>
         <%= for org_user <- @organization.organization_users, org_user.user.id != @current_user.id do %>
-          <.modal id={"remove-member-#{org_user.user.username}"} title="Remove member?" max_width="sm">
+          <.modal id={"remove-member-#{org_user.user.id}"} title="Remove member?" max_width="sm">
             <p class="text-sm text-grey-600 dark:text-grey-300">
               Are you sure you want to remove
               <strong class="font-semibold text-grey-900 dark:text-white">
@@ -145,14 +145,14 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
               <.button
                 type="button"
                 variant="secondary"
-                phx-click={hide_modal("remove-member-#{org_user.user.username}")}
+                phx-click={hide_modal("remove-member-#{org_user.user.id}")}
               >
                 Cancel
               </.button>
               <.sudo_form
                 current_user={@current_user}
                 action={~p"/dashboard/orgs/#{@organization}"}
-                id={"remove-member-form-#{org_user.user.username}"}
+                id={"remove-member-form-#{org_user.user.id}"}
               >
                 <input type="hidden" name="action" value="remove_member" />
                 <input

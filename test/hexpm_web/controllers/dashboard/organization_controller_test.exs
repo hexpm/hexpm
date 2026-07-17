@@ -147,6 +147,41 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert response(conn, 200) =~ "Members"
     end
 
+    test "uses selector-safe modal IDs for members with dots in their usernames", %{
+      user: user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      member = insert(:user, username: "member.with.dots")
+      insert(:organization_user, organization: organization, user: member)
+      mock_customer(organization)
+
+      html =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/members")
+        |> html_response(200)
+
+      {:ok, document} = Floki.parse_document(html)
+      modal_id = "remove-member-#{member.id}"
+
+      assert [_role_form] = Floki.find(document, "#change-role-form-#{member.id}")
+      assert [_role_select] = Floki.find(document, "#role-#{member.id}")
+      assert [_modal] = Floki.find(document, "##{modal_id}")
+
+      assert [remove_button] =
+               Floki.find(document, ~s(button[aria-label="Remove member"]))
+
+      assert Floki.attribute(remove_button, "phx-click")
+             |> List.first()
+             |> String.contains?("##{modal_id}")
+
+      assert ["member.with.dots"] =
+               document
+               |> Floki.find(~s(##{modal_id} input[name="organization_user[username]"]))
+               |> Floki.attribute("value")
+    end
+
     test "returns 404 for non-members", %{user: user, organization: organization} do
       conn =
         build_conn()
