@@ -1,5 +1,18 @@
 const loadedGapChains = new Set();
-let lastGapLoadAt = 0;
+let gapLoadLocked = false;
+let gapLoadUnlockTimer;
+
+function lockGapLoading() {
+  gapLoadLocked = true;
+  clearTimeout(gapLoadUnlockTimer);
+  gapLoadUnlockTimer = setTimeout(() => {
+    gapLoadLocked = false;
+  }, 150);
+}
+
+function extendGapLoadLock() {
+  if (gapLoadLocked) lockGapLoading();
+}
 
 function gapChain(el) {
   const boundary =
@@ -19,12 +32,13 @@ export const InfiniteScroll = {
     this.onScroll = () => {
       const scrollY = window.scrollY;
       const delta = scrollY - this.lastScrollY;
+      extendGapLoadLock();
 
       if (
         this.blocked &&
         this.intersecting &&
         !this.pending &&
-        Date.now() - lastGapLoadAt > 300 &&
+        !gapLoadLocked &&
         ((this.el.dataset.direction === "backward" && delta < -50) ||
           (this.el.dataset.direction === "forward" && delta > 50))
       ) {
@@ -38,6 +52,16 @@ export const InfiniteScroll = {
       }
     };
 
+    this.onGapLoad = ({ detail }) => {
+      this.lastScrollY = window.scrollY;
+
+      if (detail?.id === this.el.id && !this.pending) {
+        this.blocked = false;
+        this.pending = true;
+        this.loadGap();
+      }
+    };
+
     this.onFileScroll = () => {
       this.blocked = true;
       loadedGapChains.add(this.chain);
@@ -45,6 +69,7 @@ export const InfiniteScroll = {
     };
 
     window.addEventListener("scroll", this.onScroll, { passive: true });
+    window.addEventListener("hexpm:load-diff-gap", this.onGapLoad);
     window.addEventListener("hexpm:scroll-to-diff", this.onFileScroll);
     this.observer = new IntersectionObserver(
       ([entry]) => {
@@ -66,6 +91,7 @@ export const InfiniteScroll = {
   destroyed() {
     this.observer?.disconnect();
     window.removeEventListener("scroll", this.onScroll);
+    window.removeEventListener("hexpm:load-diff-gap", this.onGapLoad);
     window.removeEventListener("hexpm:scroll-to-diff", this.onFileScroll);
   },
 
@@ -77,7 +103,7 @@ export const InfiniteScroll = {
   },
 
   loadGap() {
-    lastGapLoadAt = Date.now();
+    lockGapLoading();
     loadedGapChains.add(this.chain);
     this.pushEvent("load-gap", {
       start: this.el.dataset.start,
