@@ -156,27 +156,39 @@
                 data-line-selector=".ghd-line"
                 data-selected-class="selected"
               >
-                <div :for={{id, content} <- @loaded_pieces} id={"#{id}-container"}>
-                  <%= case content do %>
-                    <% {:diff, diff, highlights} -> %>
-                      <HexpmWeb.DiffComponent.diff id={id} diff={diff} highlights={highlights} />
-                    <% {:too_large, file} -> %>
-                      <HexpmWeb.DiffComponent.too_large file={file} />
-                    <% {:error, _reason} -> %>
-                      <div class="ghd-diff-error">Failed to load diff</div>
+                <%= for entry <- diff_entries(@all_pieces, @loaded_pieces, @piece_order, @selected_file) do %>
+                  <%= case entry do %>
+                    <% {:piece, id, content} -> %>
+                      <div id={"#{id}-container"}>
+                        <%= case content do %>
+                          <% {:diff, diff, highlights} -> %>
+                            <HexpmWeb.DiffComponent.diff
+                              id={id}
+                              diff={diff}
+                              highlights={highlights}
+                            />
+                          <% {:too_large, file} -> %>
+                            <HexpmWeb.DiffComponent.too_large file={file} />
+                          <% {:error, _reason} -> %>
+                            <div class="ghd-diff-error">Failed to load diff</div>
+                        <% end %>
+                      </div>
+                    <% {:gap, start, last, direction} -> %>
+                      <div
+                        id={"diff-gap-#{start}-#{last}"}
+                        class="flex h-16 items-center justify-center rounded-lg border border-grey-200 bg-white text-sm text-grey-400 dark:border-grey-700 dark:bg-grey-800"
+                        role="status"
+                        phx-hook="InfiniteScroll"
+                        data-start={start}
+                        data-last={last}
+                        data-direction={direction}
+                      >
+                        {if direction == :backward,
+                          do: "Loading previous files…",
+                          else: "Loading more files…"}
+                      </div>
                   <% end %>
-                </div>
-
-                <div
-                  :if={@remaining_pieces != []}
-                  id="diff-loading-trigger"
-                  class="flex h-16 items-center justify-center rounded-lg border border-grey-200 bg-white text-sm text-grey-400 dark:border-grey-700 dark:bg-grey-800"
-                  role="status"
-                  phx-hook="InfiniteScroll"
-                  data-loaded={length(@loaded_pieces)}
-                >
-                  Loading more files…
-                </div>
+                <% end %>
 
                 <div
                   :if={@metadata.total_diffs == 0}

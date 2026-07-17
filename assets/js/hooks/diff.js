@@ -5,7 +5,7 @@ export const InfiniteScroll = {
       ([entry]) => {
         if (entry.isIntersecting && !this.pending) {
           this.pending = true;
-          this.pushEvent("load-more", {});
+          this.loadGap();
         }
       },
       { rootMargin: "100px", threshold: 0.1 },
@@ -20,11 +20,19 @@ export const InfiniteScroll = {
   updated() {
     this.pending = false;
     requestAnimationFrame(() => {
-      const visible = this.el.getBoundingClientRect().top <= window.innerHeight;
+      const rect = this.el.getBoundingClientRect();
+      const visible = rect.top <= window.innerHeight + 100 && rect.bottom >= -100;
       if (visible && !this.pending) {
         this.pending = true;
-        this.pushEvent("load-more", {});
+        this.loadGap();
       }
+    });
+  },
+
+  loadGap() {
+    this.pushEvent("load-gap", {
+      start: this.el.dataset.start,
+      last: this.el.dataset.last,
     });
   },
 };
