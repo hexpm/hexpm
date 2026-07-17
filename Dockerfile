@@ -45,7 +45,7 @@ FROM debian:${DEBIAN_VERSION} AS app
 
 RUN apt update && \
     apt upgrade -y && \
-    apt install --no-install-recommends -y bash openssl ca-certificates && \
+    apt install --no-install-recommends -y bash openssl ca-certificates git && \
     apt clean -y && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir /app

@@ -6,10 +6,8 @@ defmodule HexpmWeb.PreviewLive do
   import HexpmWeb.Components.PackageLayout
 
   alias Hexpm.Repository.{Packages, Releases}
+  alias HexpmWeb.Components.FileSelector
   alias HexpmWeb.PackageLayoutAssigns
-
-  @highlight_timeout 1_000
-  @finder_limit 100
 
   defmodule NotFoundError do
     defexception message: "Package file not found", plug_status: 404
@@ -74,7 +72,7 @@ defmodule HexpmWeb.PreviewLive do
     {:noreply,
      assign(socket,
        query: query,
-       filtered_files: filter_files(socket.assigns.files, query)
+       filtered_files: FileSelector.filter(socket.assigns.files, query)
      )}
   end
 
@@ -118,7 +116,7 @@ defmodule HexpmWeb.PreviewLive do
       files: source.files,
       file_tree: build_file_tree(source.files),
       filename: filename,
-      filtered_files: Enum.take(source.files, @finder_limit),
+      filtered_files: FileSelector.filter(source.files, ""),
       query: "",
       highlighted: highlighted,
       message: message,
@@ -167,35 +165,11 @@ defmodule HexpmWeb.PreviewLive do
   end
 
   defp highlight(package, version, filename, contents) do
-    task =
-      Task.Supervisor.async_nolink(Hexpm.Tasks, fn ->
-        Lumis.highlight!(contents, formatter: {:html_linked, language: filename})
-      end)
-
-    case Task.yield(task, @highlight_timeout) || Task.shutdown(task, :brutal_kill) do
-      {:ok, highlighted} ->
-        highlighted
-
-      result ->
-        Logger.warning(
-          "Failed to highlight package file #{package} #{version} #{filename}: #{inspect(result)}"
-        )
-
-        plain_source(contents)
-    end
-  end
-
-  defp plain_source(contents) do
-    lines =
-      contents
-      |> String.split("\n")
-      |> Enum.with_index(1)
-      |> Enum.map_join(fn {line, number} ->
-        escaped = line |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
-        ~s(<div class="l-line" data-line="#{number}">#{escaped}</div>)
-      end)
-
-    ~s(<pre class="lumis"><code>#{lines}</code></pre>)
+    HexpmWeb.SyntaxHighlight.highlight(
+      contents,
+      filename,
+      "package file #{package} #{version} #{filename}"
+    )
   end
 
   defp filename([_ | _] = parts), do: Path.join(parts)
@@ -251,42 +225,12 @@ defmodule HexpmWeb.PreviewLive do
     |> Enum.sort_by(fn node -> {if(node.type == :directory, do: 0, else: 1), node.name} end)
   end
 
-  defp filter_files(files, query) do
-    query = query |> String.trim() |> String.downcase()
-
-    files
-    |> Enum.filter(&fuzzy_match?(String.downcase(&1), query))
-    |> Enum.sort_by(&file_score(String.downcase(&1), query))
-    |> Enum.take(@finder_limit)
-  end
-
-  defp fuzzy_match?(_file, ""), do: true
-
-  defp fuzzy_match?(file, query) do
-    String.contains?(file, query) || subsequence?(String.graphemes(file), String.graphemes(query))
-  end
-
-  defp subsequence?(_file, []), do: true
-  defp subsequence?([], _query), do: false
-  defp subsequence?([character | file], [character | query]), do: subsequence?(file, query)
-  defp subsequence?([_character | file], query), do: subsequence?(file, query)
-
-  defp file_score(file, query) do
-    cond do
-      query == "" -> {0, file}
-      file == query -> {0, file}
-      String.starts_with?(file, query) -> {1, file}
-      String.contains?(file, "/#{query}") -> {2, file}
-      String.contains?(file, query) -> {3, file}
-      true -> {4, file}
-    end
-  end
-
   attr :nodes, :list, required: true
   attr :filename, :string, required: true
   attr :package_name, :string, required: true
   attr :version, :string, required: true
   attr :close_modal?, :boolean, default: false
+  attr :modal_id, :string, default: nil
 
   def source_tree(assigns) do
     ~H"""
@@ -308,6 +252,7 @@ defmodule HexpmWeb.PreviewLive do
                 package_name={@package_name}
                 version={@version}
                 close_modal?={@close_modal?}
+                modal_id={@modal_id}
               />
             </div>
           </details>
@@ -315,7 +260,7 @@ defmodule HexpmWeb.PreviewLive do
         <li :if={node.type == :file}>
           <.link
             patch={~p"/packages/#{@package_name}/#{@version}/files/#{Path.split(node.path)}"}
-            phx-click={if @close_modal?, do: hide_modal("preview-files-modal")}
+            phx-click={if @close_modal?, do: hide_modal(@modal_id)}
             aria-current={if node.path == @filename, do: "page"}
             class={[
               "flex items-center gap-1.5 rounded px-2 py-1.5 font-mono text-xs transition-colors",
@@ -339,28 +284,26 @@ defmodule HexpmWeb.PreviewLive do
   attr :package_name, :string, required: true
   attr :version, :string, required: true
   attr :close_modal?, :boolean, default: false
+  attr :modal_id, :string, default: nil
 
   def source_results(assigns) do
     ~H"""
-    <ul class="space-y-1">
-      <li :for={file <- @files}>
+    <HexpmWeb.Components.FileSelector.file_results
+      items={@files}
+      selected={&(&1 == @filename)}
+    >
+      <:item :let={result}>
         <.link
-          patch={~p"/packages/#{@package_name}/#{@version}/files/#{Path.split(file)}"}
-          phx-click={if @close_modal?, do: hide_modal("preview-files-modal")}
-          aria-current={if file == @filename, do: "page"}
-          class={[
-            "flex items-center gap-2 rounded px-2 py-2 font-mono text-xs transition-colors",
-            file == @filename &&
-              "bg-primary-50 font-semibold text-primary-700 dark:bg-grey-700 dark:text-white",
-            file != @filename &&
-              "text-grey-600 hover:bg-grey-100 hover:text-grey-900 dark:text-grey-300 dark:hover:bg-grey-700/60 dark:hover:text-white"
-          ]}
+          patch={~p"/packages/#{@package_name}/#{@version}/files/#{Path.split(result.item)}"}
+          phx-click={if @close_modal?, do: hide_modal(@modal_id)}
+          aria-current={if result.item == @filename, do: "page"}
+          class={result.class}
         >
           {icon(:heroicon, "document", class: "size-3.5 shrink-0 text-grey-400")}
-          <span class="truncate">{file}</span>
+          <span class="truncate">{result.item}</span>
         </.link>
-      </li>
-    </ul>
+      </:item>
+    </HexpmWeb.Components.FileSelector.file_results>
     """
   end
 end

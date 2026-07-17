@@ -1,6 +1,8 @@
 defmodule Hexpm.TmpDir do
   use GenServer
 
+  import Bitwise
+
   @table __MODULE__
 
   def start_link(opts \\ []) do
@@ -19,6 +21,28 @@ defmodule Hexpm.TmpDir do
     File.mkdir_p!(path)
     track(path)
     path
+  end
+
+  def ensure_readable(path), do: ensure_readable_path(path)
+
+  defp ensure_readable_path(path) do
+    case File.lstat(path) do
+      {:ok, %{type: :directory, mode: mode}} ->
+        if band(mode, 0o500) != 0o500, do: File.chmod!(path, bor(band(mode, 0o7777), 0o500))
+
+        path
+        |> File.ls!()
+        |> Enum.each(&ensure_readable_path(Path.join(path, &1)))
+
+      {:ok, %{type: :regular, mode: mode}} ->
+        if band(mode, 0o400) == 0, do: File.chmod!(path, bor(band(mode, 0o7777), 0o400))
+
+      {:ok, _other} ->
+        :ok
+
+      {:error, reason} ->
+        raise File.Error, reason: reason, action: "read file information", path: path
+    end
   end
 
   def cleanup do

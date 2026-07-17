@@ -21,7 +21,9 @@ defmodule HexpmWeb.Endpoint do
     gzip: true,
     only: HexpmWeb.static_paths()
 
-  socket("/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]])
+  socket("/live", Phoenix.LiveView.Socket,
+    websocket: [connect_info: [:peer_data, :x_headers, session: @session_options]]
+  )
 
   if Code.ensure_loaded?(Tidewave) do
     plug Tidewave

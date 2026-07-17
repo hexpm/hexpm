@@ -94,7 +94,7 @@ defmodule HexpmWeb.Components.Modal do
     ~H"""
     <div
       id={@id}
-      class={["relative z-50", unless(@show, do: "hidden"), @class]}
+      class={["fixed inset-0 z-50", unless(@show, do: "hidden"), @class]}
       aria-labelledby={"#{@id}-title"}
     >
       <%!-- Backdrop --%>

@@ -24,6 +24,21 @@ defmodule Hexpm.Store.LocalTest do
       File.write!(Path.join(bucket_dir, "file.txt"), "content")
 
       assert Local.get("bucket", "file.txt", []) == "content"
+      assert Hexpm.Store.fetch({Local, "bucket"}, "file.txt") == {:ok, "content"}
+      assert Hexpm.Store.fetch({Local, "bucket"}, "missing.txt") == :not_found
+    end
+
+    @tag :tmp_dir
+    test "uses the configured store shared by development worktrees", %{tmp_dir: tmp_dir} do
+      local_store_dir = Path.join(tmp_dir, "shared-store")
+      Application.put_env(:hexpm, :local_store_dir, local_store_dir)
+      on_exit(fn -> Application.delete_env(:hexpm, :local_store_dir) end)
+
+      bucket_dir = Path.join(local_store_dir, "bucket")
+      File.mkdir_p!(bucket_dir)
+      File.write!(Path.join(bucket_dir, "file.txt"), "content")
+
+      assert Local.get("bucket", "file.txt", []) == "content"
     end
 
     @tag :tmp_dir

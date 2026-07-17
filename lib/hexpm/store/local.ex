@@ -77,7 +77,7 @@ defmodule Hexpm.Store.Local do
   end
 
   defp dir() do
-    Application.get_env(:hexpm, :tmp_dir)
-    |> Path.join("store")
+    Application.get_env(:hexpm, :local_store_dir) ||
+      Path.join(Application.fetch_env!(:hexpm, :tmp_dir), "store")
   end
 end

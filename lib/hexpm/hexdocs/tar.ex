@@ -18,7 +18,7 @@ defmodule Hexpm.Hexdocs.Tar do
 
     case :hex_tarball.unpack_docs({:file, to_charlist(path)}, to_charlist(output_dir)) do
       :ok ->
-        ensure_readable(output_dir)
+        Hexpm.TmpDir.ensure_readable(output_dir)
 
         files =
           output_dir
@@ -38,24 +38,6 @@ defmodule Hexpm.Hexdocs.Tar do
           version: version,
           reason: inspect(reason)
     end
-  end
-
-  defp ensure_readable(dir) do
-    dir
-    |> Path.join("**")
-    |> Path.wildcard(match_dot: true)
-    |> Enum.each(fn path ->
-      case File.stat(path) do
-        {:ok, %{type: :directory, access: access}} when access in [:none, :write] ->
-          File.chmod(path, 0o755)
-
-        {:ok, %{type: :regular, access: access}} when access in [:none, :write] ->
-          File.chmod(path, 0o644)
-
-        _ ->
-          :ok
-      end
-    end)
   end
 
   defp check_version_dirs!(repository, package, version, files) do

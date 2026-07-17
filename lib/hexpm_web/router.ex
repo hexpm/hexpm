@@ -104,6 +104,13 @@ defmodule HexpmWeb.Router do
     get "/*path", PreviewRedirectController, :path
   end
 
+  scope "/", HexpmWeb, host: "diff." do
+    get "/", DiffRedirectController, :index
+    get "/diff/:package/:versions", DiffRedirectController, :show
+    get "/diffs", DiffRedirectController, :index
+    get "/*path", DiffRedirectController, :path
+  end
+
   scope "/", HexpmWeb, host: "readme." do
     pipe_through :readme
 
@@ -196,8 +203,11 @@ defmodule HexpmWeb.Router do
     get "/policies/copyright", PolicyController, :copyright
     get "/policies/dispute", PolicyController, :dispute
 
-    live_session :packages, on_mount: {HexpmWeb.Live.InitAssigns, :default} do
+    live_session :packages,
+      on_mount: {HexpmWeb.Live.InitAssigns, :default},
+      session: {HexpmWeb.Live.InitAssigns, :session, []} do
       live "/packages", PackageLive.Index, :index
+      live "/diff/:package/:versions", DiffLive, :show
     end
 
     get "/preview/:package", PreviewRedirectController, :latest

@@ -14,6 +14,8 @@ if config_env() == :prod do
     logs_bucket: System.fetch_env!("HEXPM_LOGS_BUCKET"),
     docs_bucket: System.fetch_env!("HEXPM_DOCS_BUCKET"),
     preview_bucket: System.fetch_env!("HEXPM_PREVIEW_BUCKET"),
+    diff_bucket: System.fetch_env!("HEXPM_DIFF_BUCKET"),
+    diff_cache_version: System.fetch_env!("HEXPM_DIFF_CACHE_VERSION") |> String.to_integer(),
     cdn_url: System.fetch_env!("HEXPM_CDN_URL"),
     docs_url: System.fetch_env!("HEXPM_DOCS_URL"),
     private_docs_url: System.fetch_env!("HEXPM_PRIVATE_DOCS_URL"),
@@ -31,10 +33,11 @@ if config_env() == :prod do
     environment_name: System.fetch_env!("HEXPM_ENV")
 
   if mode == :web do
+    config :hexpm, Oban, queues: false, plugins: false, peer: false
+
     config :hexpm,
       host: System.fetch_env!("HEXPM_HOST"),
       secret: System.fetch_env!("HEXPM_SECRET"),
-      diff_url: System.fetch_env!("HEXPM_DIFF_URL"),
       email_host: System.fetch_env!("HEXPM_EMAIL_HOST"),
       levenshtein_threshold: System.fetch_env!("HEXPM_LEVENSHTEIN_THRESHOLD"),
       dashboard_user: System.fetch_env!("HEXPM_DASHBOARD_USER"),

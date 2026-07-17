@@ -30,4 +30,9 @@ defmodule HexpmWeb.RateLimitPubSub do
     Attack.ip_throttle(ip, time: time)
     {:noreply, []}
   end
+
+  def handle_info({:throttle, {:diff, identity}, time}, []) do
+    Attack.diff_throttle(identity, time: time)
+    {:noreply, []}
+  end
 end

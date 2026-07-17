@@ -22,7 +22,8 @@ import { ScrollActiveIntoView } from "./hooks/scroll_active_into_view";
 import { OverrideList } from "./hooks/override_list";
 import { PrivateRepoTabs } from "./hooks/private_repo_tabs";
 import { PolicyDirtyState } from "./hooks/policy_dirty_state";
-import PreviewLineHighlight from "./hooks/preview_line_highlight";
+import LineHighlight from "./hooks/line_highlight";
+import { InfiniteScroll } from "./hooks/diff";
 
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")
@@ -48,7 +49,8 @@ let Hooks = {
   OverrideList,
   PrivateRepoTabs,
   PolicyDirtyState,
-  PreviewLineHighlight,
+  LineHighlight,
+  InfiniteScroll,
 };
 let liveSocket = new LiveSocket("/live", Socket, {
   params: { _csrf_token: csrfToken },

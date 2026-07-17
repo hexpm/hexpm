@@ -23,6 +23,15 @@ defmodule HexpmWeb.ControllerHelpers do
     cache(conn, control, vary)
   end
 
+  def permanent_redirect(conn, path, query_string \\ nil) do
+    query_string = if is_nil(query_string), do: conn.query_string, else: query_string
+    query = if query_string == "", do: "", else: "?#{query_string}"
+
+    conn
+    |> put_status(:moved_permanently)
+    |> redirect(external: HexpmWeb.Endpoint.url() <> path <> query)
+  end
+
   defp logged_in_privacy(conn, :logged_in) do
     if conn.assigns.current_user, do: :private, else: :public
   end
