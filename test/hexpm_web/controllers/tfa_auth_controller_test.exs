@@ -1,5 +1,5 @@
 defmodule HexpmWeb.TFAAuthControllerTest do
-  use HexpmWeb.ConnCase, async: true
+  use HexpmWeb.ConnCase
 
   setup do
     %{user: insert(:user_with_tfa)}
