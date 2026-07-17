@@ -96,7 +96,7 @@
               :if={@files != []}
               id="diff-files"
               query={@query}
-              file_count={length(@files)}
+              file_count={length(@loaded_pieces)}
               total_file_count={@metadata.total_diffs}
               title="Changed files"
               sidebar_label="Changed files"

@@ -58,6 +58,7 @@ defmodule HexpmWeb.DiffLiveTest do
     assert html =~ "Hide whitespace"
     assert html =~ ~s(aria-label="Changed files")
     assert html =~ ~s(id="diff-files-tree-search")
+    assert html =~ "5 of 6 files loaded"
     assert html =~ ~s(id="diff-gap-5-5")
     assert has_element?(view, "#diff-gap-5-5[data-direction='forward']")
 
@@ -67,6 +68,7 @@ defmodule HexpmWeb.DiffLiveTest do
 
     html = render_hook(view, "load-gap", %{"start" => "5", "last" => "5"})
     assert has_element?(view, "#diff-5-container", "file-5.bin")
+    assert html =~ "6 of 6 files loaded"
     refute html =~ ~s(id="diff-gap-")
   end
 
@@ -95,6 +97,7 @@ defmodule HexpmWeb.DiffLiveTest do
     assert has_element?(view, ~s(button[aria-current="true"]), "file-6.bin")
     refute has_element?(view, "#diff-5-container")
     assert has_element?(view, "#diff-gap-5-5[data-direction='backward']")
+    assert render(view) =~ "6 of 7 files loaded"
   end
 
   test "sidebar jumps create ordered gaps that load toward the selected file", %{
@@ -123,6 +126,7 @@ defmodule HexpmWeb.DiffLiveTest do
 
     assert diff_container_ids(view) == Enum.map(0..11, &"diff-#{&1}-container")
     refute has_element?(view, "[id^='diff-gap-']")
+    assert render(view) =~ "12 of 12 files loaded"
   end
 
   test "backward gaps load at most five files nearest the selected file", %{
