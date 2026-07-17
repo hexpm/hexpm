@@ -58,15 +58,18 @@ defmodule HexpmWeb.DiffLiveTest do
     assert html =~ "Hide whitespace"
     assert html =~ ~s(aria-label="Changed files")
     assert html =~ ~s(id="diff-files-tree-search")
-    assert html =~ ~s(id="diff-loading-trigger")
+    assert html =~ "5 of 6 files loaded"
+    assert html =~ ~s(id="diff-gap-5-5")
+    assert has_element?(view, "#diff-gap-5-5[data-direction='forward']")
 
     assert Floki.attribute(document, "#whitespace-toggle", "href") == [
              "/diff/#{package.name}/1.0.0..7.0.0?w=1"
            ]
 
-    html = render_hook(view, "load-more")
+    html = render_hook(view, "load-gap", %{"start" => "5", "last" => "5"})
     assert has_element?(view, "#diff-5-container", "file-5.bin")
-    refute html =~ ~s(id="diff-loading-trigger")
+    assert html =~ "6 of 6 files loaded"
+    refute html =~ ~s(id="diff-gap-")
   end
 
   test "changed-file selector filters and loads only the selected unloaded file", %{
@@ -93,7 +96,76 @@ defmodule HexpmWeb.DiffLiveTest do
     assert has_element?(view, "#diff-6-container", "file-6.bin")
     assert has_element?(view, ~s(button[aria-current="true"]), "file-6.bin")
     refute has_element?(view, "#diff-5-container")
-    assert has_element?(view, "#diff-loading-trigger")
+    assert has_element?(view, "#diff-gap-5-5[data-direction='backward']")
+    assert render(view) =~ "6 of 7 files loaded"
+  end
+
+  test "sidebar jumps create ordered gaps that load toward the selected file", %{
+    package: package
+  } do
+    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "7.0.0", [])
+    put_ready_cache(request, 12)
+
+    {:ok, view, _html} = live(build_conn(), "/diff/#{package.name}/1.0.0..7.0.0")
+
+    view
+    |> element("#diff-files-tree button", "file-11.bin")
+    |> render_click()
+
+    assert has_element?(view, "#diff-gap-5-10[data-direction='backward']")
+
+    view
+    |> element("#diff-files-tree button", "file-8.bin")
+    |> render_click()
+
+    assert has_element?(view, "#diff-gap-5-7[data-direction='backward']")
+    assert has_element?(view, "#diff-gap-9-10[data-direction='forward']")
+
+    render_hook(view, "load-gap", %{"start" => "5", "last" => "7"})
+    render_hook(view, "load-gap", %{"start" => "9", "last" => "10"})
+
+    assert diff_container_ids(view) == Enum.map(0..11, &"diff-#{&1}-container")
+    refute has_element?(view, "[id^='diff-gap-']")
+    assert render(view) =~ "12 of 12 files loaded"
+  end
+
+  test "backward gaps load at most five files nearest the selected file", %{
+    package: package
+  } do
+    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "7.0.0", [])
+    put_ready_cache(request, 12)
+
+    {:ok, view, _html} = live(build_conn(), "/diff/#{package.name}/1.0.0..7.0.0")
+
+    view
+    |> element("#diff-files-tree button", "file-11.bin")
+    |> render_click()
+
+    render_hook(view, "load-gap", %{"start" => "5", "last" => "10"})
+
+    refute has_element?(view, "#diff-5-container")
+
+    for index <- 6..11 do
+      assert has_element?(view, "#diff-#{index}-container")
+    end
+
+    assert has_element?(view, "#diff-gap-5-5[data-direction='backward']")
+  end
+
+  test "stale and invalid gap events do not load pieces", %{package: package} do
+    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "7.0.0", [])
+    put_ready_cache(request, 7)
+
+    {:ok, view, _html} = live(build_conn(), "/diff/#{package.name}/1.0.0..7.0.0")
+
+    render_hook(view, "load-gap", %{"start" => "0", "last" => "6"})
+    render_hook(view, "load-gap", %{"start" => "invalid", "last" => "6"})
+    render_hook(view, "load-gap", %{})
+
+    assert has_element?(view, "#diff-4-container")
+    refute has_element?(view, "#diff-5-container")
+    refute has_element?(view, "#diff-6-container")
+    assert has_element?(view, "#diff-gap-5-6[data-direction='forward']")
   end
 
   test "legacy metadata populates the file selector without eagerly fetching every piece", %{
@@ -141,7 +213,7 @@ defmodule HexpmWeb.DiffLiveTest do
     assert has_element?(view, "#diff-6-container", "legacy-6.bin")
     assert has_element?(view, "#diff-files-tree button", "legacy-6.bin")
     refute has_element?(view, "#diff-5-container")
-    assert has_element?(view, "#diff-loading-trigger")
+    assert has_element?(view, "#diff-gap-5-5[data-direction='forward']")
   end
 
   test "cached patches are highlighted through Lumis with stable line anchors", %{
@@ -477,6 +549,14 @@ defmodule HexpmWeb.DiffLiveTest do
 
   defp zero_based_range(0), do: []
   defp zero_based_range(count), do: 0..(count - 1)
+
+  defp diff_container_ids(view) do
+    view
+    |> render()
+    |> Floki.parse_fragment!()
+    |> Floki.find("#diff-list > [id$='-container']")
+    |> Floki.attribute("id")
+  end
 
   defp set_job_state(job, state) do
     job

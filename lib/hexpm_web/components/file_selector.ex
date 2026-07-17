@@ -160,7 +160,7 @@ defmodule HexpmWeb.Components.FileSelector do
     ]
   end
 
-  defp file_count_label(count, total) when is_integer(total) and count < total do
+  defp file_count_label(count, total) when is_integer(total) do
     "#{count} of #{total} files loaded"
   end
 

@@ -64,9 +64,17 @@ defmodule HexpmWeb.DiffLive do
   end
 
   @impl Phoenix.LiveView
-  def handle_event("load-more", _params, socket) do
-    {:noreply, load_next_batch(socket)}
+  def handle_event("load-gap", %{"start" => start, "last" => last}, socket) do
+    with {:ok, start} <- parse_index(start),
+         {:ok, last} <- parse_index(last),
+         true <- start >= 0 and start <= last do
+      {:noreply, load_gap(socket, start, last)}
+    else
+      _ -> {:noreply, socket}
+    end
   end
+
+  def handle_event("load-gap", _params, socket), do: {:noreply, socket}
 
   def handle_event("filter_files", %{"query" => query}, socket) do
     files = socket.assigns.files
@@ -82,7 +90,7 @@ defmodule HexpmWeb.DiffLive do
     if Enum.any?(socket.assigns.files, &(&1.id == id)) do
       socket =
         socket
-        |> load_through_piece(id)
+        |> ensure_piece_loaded(id)
         |> assign(selected_file: id)
         |> push_event("scroll-to-file", %{id: "#{id}-container"})
 
@@ -214,7 +222,44 @@ defmodule HexpmWeb.DiffLive do
     |> add_loaded_pieces(batch)
   end
 
-  defp load_through_piece(%{assigns: %{loaded_pieces: loaded}} = socket, id) do
+  defp load_gap(socket, start, last) do
+    case current_gap_direction(socket, start, last) do
+      nil ->
+        socket
+
+      direction ->
+        pieces =
+          socket.assigns.remaining_pieces
+          |> Enum.filter(fn piece ->
+            index = Map.fetch!(socket.assigns.piece_order, Hexpm.Diff.piece_id(piece))
+            index >= start and index <= last
+          end)
+          |> take_gap_batch(direction)
+
+        socket
+        |> assign(
+          remaining_pieces:
+            Enum.reject(socket.assigns.remaining_pieces, &Enum.member?(pieces, &1))
+        )
+        |> add_loaded_pieces(pieces)
+    end
+  end
+
+  defp take_gap_batch(pieces, :backward), do: Enum.take(pieces, -@batch_size)
+  defp take_gap_batch(pieces, :forward), do: Enum.take(pieces, @batch_size)
+
+  defp parse_index(index) when is_integer(index), do: {:ok, index}
+
+  defp parse_index(index) when is_binary(index) do
+    case Integer.parse(index) do
+      {index, ""} -> {:ok, index}
+      _ -> :error
+    end
+  end
+
+  defp parse_index(_index), do: :error
+
+  defp ensure_piece_loaded(%{assigns: %{loaded_pieces: loaded}} = socket, id) do
     if Enum.any?(loaded, &(elem(&1, 0) == id)) do
       socket
     else
@@ -251,6 +296,45 @@ defmodule HexpmWeb.DiffLive do
       files: files,
       filtered_files: filter_diff_files(files, socket.assigns.query)
     )
+  end
+
+  defp diff_entries(all_pieces, loaded_pieces, piece_order, selected_file) do
+    loaded_pieces = Map.new(loaded_pieces)
+    selected_index = Map.get(piece_order, selected_file)
+
+    all_pieces
+    |> Enum.chunk_by(&Map.has_key?(loaded_pieces, Hexpm.Diff.piece_id(&1)))
+    |> Enum.flat_map(fn pieces ->
+      if Map.has_key?(loaded_pieces, pieces |> hd() |> Hexpm.Diff.piece_id()) do
+        Enum.map(pieces, fn piece ->
+          id = Hexpm.Diff.piece_id(piece)
+          {:piece, id, Map.fetch!(loaded_pieces, id)}
+        end)
+      else
+        start = pieces |> hd() |> Hexpm.Diff.piece_id() |> then(&Map.fetch!(piece_order, &1))
+
+        last =
+          pieces |> List.last() |> Hexpm.Diff.piece_id() |> then(&Map.fetch!(piece_order, &1))
+
+        direction =
+          if is_integer(selected_index) and last < selected_index, do: :backward, else: :forward
+
+        [{:gap, start, last, direction}]
+      end
+    end)
+  end
+
+  defp current_gap_direction(socket, start, last) do
+    socket.assigns.all_pieces
+    |> diff_entries(
+      socket.assigns.loaded_pieces,
+      socket.assigns.piece_order,
+      socket.assigns.selected_file
+    )
+    |> Enum.find_value(fn
+      {:gap, ^start, ^last, direction} -> direction
+      _entry -> nil
+    end)
   end
 
   defp loaded_file({id, {:too_large, file}}), do: [%{id: id, path: file}]

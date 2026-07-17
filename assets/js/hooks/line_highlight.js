@@ -33,8 +33,18 @@ const LineHighlight = {
       requestAnimationFrame(() => {
         const file = document.getElementById(id);
         if (file && this.el.contains(file)) {
+          const previous = file.previousElementSibling;
+          const gapOffset = previous?.id.startsWith("diff-gap-")
+            ? previous.getBoundingClientRect().height
+            : 0;
+
+          window.dispatchEvent(new Event("hexpm:scroll-to-diff"));
           window.history.replaceState(null, "", `#${id}`);
-          file.scrollIntoView({ block: "start" });
+          window.scrollTo({
+            top:
+              file.getBoundingClientRect().top + window.scrollY - gapOffset,
+            behavior: "instant",
+          });
         }
       });
     });
