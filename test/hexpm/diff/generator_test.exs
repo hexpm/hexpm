@@ -14,7 +14,7 @@ defmodule Hexpm.Diff.GeneratorTest do
       "removed.txt" => "removed\n",
       "invalid.bin" => <<"old", 0xFF, "\n">>,
       "mode.sh" => {"echo same\n", 0o644},
-      "huge.bin" => String.duplicate("a", 1024 * 1024 + 1)
+      "huge.bin" => String.duplicate("a", 200_001)
     })
 
     insert_tarball_release(package, "2.0.0", %{
@@ -22,7 +22,7 @@ defmodule Hexpm.Diff.GeneratorTest do
       "added.txt" => "added\n",
       "invalid.bin" => <<"new", 0xFE, "\n">>,
       "mode.sh" => {"echo same\n", 0o755},
-      "huge.bin" => String.duplicate("b", 1024 * 1024 + 1)
+      "huge.bin" => String.duplicate("b", 200_001)
     })
 
     {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])

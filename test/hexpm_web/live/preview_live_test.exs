@@ -73,7 +73,7 @@ defmodule HexpmWeb.PreviewLiveTest do
   test "renders binary and oversized file messages", %{conn: conn} do
     put_release("message_preview", "1.0.0", [
       {"binary.bin", <<0xFF>>},
-      {"large.txt", String.duplicate("x", 2_000_001)}
+      {"large.txt", String.duplicate("x", 200_001)}
     ])
 
     {:ok, _view, html} =
@@ -82,7 +82,7 @@ defmodule HexpmWeb.PreviewLiveTest do
     assert html =~ "Contents for binary files are not shown."
 
     {:ok, _view, html} = live(conn, "/packages/message_preview/1.0.0/files/large.txt")
-    assert html =~ "File is too large to be displayed (2.0 MB)."
+    assert html =~ "File is too large to be displayed (0.2 MB)."
   end
 
   test "searches a manifest containing hundreds of files", %{conn: conn} do

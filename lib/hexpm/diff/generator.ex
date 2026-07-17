@@ -4,7 +4,7 @@ defmodule Hexpm.Diff.Generator do
   alias Hexpm.Diff.{Cache, Request}
   alias Hexpm.Repository.Assets
 
-  @max_file_size 1024 * 1024
+  @max_file_size 200 * 1000
 
   def generate(%Request{} = request) do
     with {:ok, from_path} <- download(request.from_release, request.from_checksum),
