@@ -60,7 +60,7 @@ defmodule HexpmWeb.DiffLiveTest do
     assert html =~ ~s(id="diff-files-tree-search")
     assert html =~ "5 of 6 files loaded"
     assert html =~ ~s(id="diff-gap-5-5")
-    assert has_element?(view, "#diff-gap-5-5[data-direction='forward']")
+    assert has_element?(view, "#diff-gap-5-5.mb-4[data-direction='forward']")
 
     assert Floki.attribute(document, "#whitespace-toggle", "href") == [
              "/diff/#{package.name}/1.0.0..7.0.0?w=1"
@@ -96,7 +96,7 @@ defmodule HexpmWeb.DiffLiveTest do
     assert has_element?(view, "#diff-6-container", "file-6.bin")
     assert has_element?(view, ~s(button[aria-current="true"]), "file-6.bin")
     refute has_element?(view, "#diff-5-container")
-    assert has_element?(view, "#diff-gap-5-5[data-direction='backward']")
+    assert has_element?(view, "#diff-gap-5-5.mb-4[data-direction='backward']")
     assert render(view) =~ "6 of 7 files loaded"
   end
 

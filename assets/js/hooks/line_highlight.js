@@ -33,18 +33,17 @@ const LineHighlight = {
       requestAnimationFrame(() => {
         const file = document.getElementById(id);
         if (file && this.el.contains(file)) {
-          const previous = file.previousElementSibling;
-          const gapOffset = previous?.id.startsWith("diff-gap-")
-            ? previous.getBoundingClientRect().height
-            : 0;
-
-          window.dispatchEvent(new Event("hexpm:scroll-to-diff"));
           window.history.replaceState(null, "", `#${id}`);
-          window.scrollTo({
-            top:
-              file.getBoundingClientRect().top + window.scrollY - gapOffset,
-            behavior: "instant",
-          });
+          const gap = this.scrollToFile(file, true);
+
+          if (gap) {
+            this.pendingScroll = { fileId: id, gapId: gap.id };
+            window.dispatchEvent(
+              new CustomEvent("hexpm:load-diff-gap", {
+                detail: { id: gap.id },
+              }),
+            );
+          }
         }
       });
     });
@@ -55,6 +54,19 @@ const LineHighlight = {
   updated() {
     this.prepareLines();
     this.requestHashTarget();
+
+    if (this.pendingScroll) {
+      requestAnimationFrame(() => {
+        const { fileId, gapId } = this.pendingScroll;
+        const file = document.getElementById(fileId);
+        const previous = file?.previousElementSibling;
+
+        if (file && previous?.id !== gapId) {
+          this.pendingScroll = null;
+          this.scrollToFile(file, false);
+        }
+      });
+    }
   },
 
   destroyed() {
@@ -66,6 +78,24 @@ const LineHighlight = {
   selectLine(line) {
     window.history.replaceState(null, "", `#${line.id}`);
     this.highlightLine();
+  },
+
+  scrollToFile(file, showGap) {
+    const previous = file.previousElementSibling;
+    const gap = previous?.id.startsWith("diff-gap-") ? previous : null;
+    const gapOffset =
+      showGap && gap
+        ? gap.getBoundingClientRect().height +
+          Number.parseFloat(getComputedStyle(gap).marginBottom)
+        : 0;
+
+    window.dispatchEvent(new Event("hexpm:scroll-to-diff"));
+    window.scrollTo({
+      top: file.getBoundingClientRect().top + window.scrollY - gapOffset,
+      behavior: "instant",
+    });
+
+    return gap;
   },
 
   requestHashTarget() {
