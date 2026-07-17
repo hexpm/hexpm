@@ -21,7 +21,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.CreateOrganizationModal do
       <p class="text-sm text-grey-500 dark:text-grey-300 mb-6">
         With organizations you can manage public packages with fine-grained
         access control for your members. Private packages are available on
-        paid plans at <strong class="text-grey-700 dark:text-grey-100">$7.00 per user / month</strong>.
+        paid plans at <strong class="text-grey-700 dark:text-grey-100">$9.00 per user / month</strong>.
       </p>
 
       <.sudo_form current_user={@current_user} action="/dashboard/orgs" id="create-org-form">

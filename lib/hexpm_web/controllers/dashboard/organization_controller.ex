@@ -983,6 +983,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       checkout_html: nil,
       billing_email: nil,
       plan_id: "organization-monthly",
+      plan_unit_amount: nil,
+      pending_plan_unit_amount: nil,
+      plan_price_change_at: nil,
       subscription: nil,
       monthly_cost: nil,
       amount_with_tax: nil,
@@ -1010,6 +1013,10 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       checkout_html: customer["checkout_html"],
       billing_email: customer["email"],
       plan_id: customer["plan_id"],
+      plan_unit_amount:
+        customer["plan_unit_amount"] || legacy_plan_unit_amount(customer["plan_id"]),
+      pending_plan_unit_amount: customer["pending_plan_unit_amount"],
+      plan_price_change_at: customer["plan_price_change_at"],
       proration_amount: customer["proration_amount"],
       proration_days: customer["proration_days"],
       subscription: customer["subscription"],
@@ -1028,6 +1035,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       stripe_publishable_key: customer["stripe_publishable_key"]
     ]
   end
+
+  defp legacy_plan_unit_amount("organization-annually"), do: 7_000
+  defp legacy_plan_unit_amount(_plan_id), do: 700
 
   defp access_organization(conn, organization, role, fun) do
     user = conn.assigns.current_user

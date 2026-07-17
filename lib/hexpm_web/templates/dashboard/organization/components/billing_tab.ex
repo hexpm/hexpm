@@ -17,6 +17,9 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingTab do
   attr :billing_started?, :boolean, default: false
   attr :billing_email, :string, default: nil
   attr :plan_id, :string, default: nil
+  attr :plan_unit_amount, :integer, default: nil
+  attr :pending_plan_unit_amount, :integer, default: nil
+  attr :plan_price_change_at, :any, default: nil
   attr :quantity, :integer, default: nil
   attr :max_period_quantity, :integer, default: nil
   attr :subscription, :map, default: nil
@@ -50,6 +53,9 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingTab do
           current_user={@current_user}
           organization={@organization}
           plan_id={@plan_id}
+          plan_unit_amount={@plan_unit_amount}
+          pending_plan_unit_amount={@pending_plan_unit_amount}
+          plan_price_change_at={@plan_price_change_at}
           quantity={@quantity}
           member_count={@member_count}
           subscription={@subscription}
@@ -108,7 +114,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingTab do
         <p class="text-sm text-amber-800 dark:text-amber-100">
           Add a payment method to continue using organizations after the trial.
           Subscription cost is
-          <strong class="text-amber-900 dark:text-amber-50">$7.00 per user / month</strong>
+          <strong class="text-amber-900 dark:text-amber-50">$9.00 per user / month</strong>
           + local VAT when applicable.
           Enter your billing information below to enable the payment method form.
         </p>
@@ -121,7 +127,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingTab do
         </p>
         <p class="text-sm text-amber-800 dark:text-amber-100">
           Subscription cost is
-          <strong class="text-amber-900 dark:text-amber-50">$7.00 per user / month</strong>
+          <strong class="text-amber-900 dark:text-amber-50">$9.00 per user / month</strong>
           + local VAT when applicable.
           Enter your billing information below to enable the payment method form.
         </p>

@@ -81,6 +81,20 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingHelpersTest do
     end
   end
 
+  describe "plan pricing" do
+    test "uses the current catalog price for new subscriptions and plan switches" do
+      assert BillingHelpers.plan_price("organization-monthly") == "$9.00"
+      assert BillingHelpers.plan_price("organization-annually") == "$90.00"
+    end
+
+    test "uses the API-provided effective amount for an existing subscription" do
+      assert BillingHelpers.plan_price("organization-monthly", 700) == "$7.00"
+
+      assert BillingHelpers.plan("organization-monthly", 700) ==
+               "Organization, monthly billed ($7.00 per user / month)"
+    end
+  end
+
   describe "subscription_badge_label/1" do
     test "active non-cancelling subscription" do
       assert BillingHelpers.subscription_badge_label(%{
