@@ -5,7 +5,7 @@ defmodule Hexpm.Preview do
   alias Hexpm.Repository.{Assets, Releases}
   alias Hexpm.Repository.Sitemaps, as: RepositorySitemaps
 
-  @max_file_size 2 * 1000 * 1000
+  @max_file_size 200 * 1000
   @readme_filenames ~w(README.md readme.md README.markdown readme.markdown README.txt readme.txt README readme)
 
   def source(package, version, requested_filename \\ nil) do

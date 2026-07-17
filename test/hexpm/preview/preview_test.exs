@@ -21,13 +21,13 @@ defmodule Hexpm.PreviewTest do
   test "source reports binary and oversized files without returning their contents" do
     put_release("special_files", "1.0.0", [
       {"binary.bin", <<0xFF, 0xFE>>},
-      {"large.txt", String.duplicate("x", 2_000_001)}
+      {"large.txt", String.duplicate("x", 200_001)}
     ])
 
     assert {:ok, %{type: :binary, contents: nil}} =
              Preview.source("special_files", "1.0.0", "binary.bin")
 
-    assert {:ok, %{type: {:too_large, 2_000_001}, contents: nil}} =
+    assert {:ok, %{type: {:too_large, 200_001}, contents: nil}} =
              Preview.source("special_files", "1.0.0", "large.txt")
   end
 
