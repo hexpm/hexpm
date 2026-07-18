@@ -58,7 +58,7 @@ defmodule Hexpm.MixProject do
       {:lasso, "~> 0.1.4", only: :test},
       {:libcluster, "~> 3.0"},
       {:logster, "~> 1.0"},
-      {:git_diff, github: "ericmj/git_diff", ref: "e4ee06cfd139b8a911d07e42d0ff3b15eee2b740"},
+      {:git_diff, github: "ericmj/git_diff", ref: "d47473d661ff0073ce4080ae04db1a439d78a62b"},
       {:mdex, "~> 0.13"},
       {:mdex_gfm, "~> 0.1"},
       {:lumis, "~> 0.6"},
