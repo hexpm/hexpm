@@ -38,6 +38,23 @@ defmodule Hexpm.TestHelpers do
     tarball
   end
 
+  def create_docs_tar(files, mode) do
+    path = Path.join(@tmp, "docs-#{Base.encode16(:crypto.strong_rand_bytes(4))}.tar")
+    {:ok, tar} = :hex_erl_tar.open(String.to_charlist(path), [:write])
+
+    try do
+      Enum.each(files, fn {name, contents} ->
+        :ok = :hex_erl_tar.add(tar, contents, String.to_charlist(name), mode: mode)
+      end)
+    after
+      :ok = :hex_erl_tar.close(tar)
+    end
+
+    tarball = path |> File.read!() |> :zlib.gzip()
+    File.rm!(path)
+    tarball
+  end
+
   def rel_meta(params) do
     params = params(params)
 

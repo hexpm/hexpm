@@ -585,4 +585,46 @@ defmodule Hexpm.AdminTasksTest do
       assert updated_key.revoke_at != nil
     end
   end
+
+  describe "retry_oban_jobs/1" do
+    alias Hexpm.Hexdocs.Workers
+
+    test "retries discarded jobs" do
+      discarded = insert_discarded_job(Workers.Upload, %{key: "docs/retried-1.0.0.tar.gz"})
+      {:ok, available} = Oban.insert(Workers.Upload.new(%{key: "docs/untouched-1.0.0.tar.gz"}))
+
+      assert {:ok, 1} = AdminTasks.retry_oban_jobs()
+
+      discarded = Repo.get!(Oban.Job, discarded.id)
+      assert discarded.state == "available"
+      assert discarded.max_attempts == 6
+      assert Repo.get!(Oban.Job, available.id).state == "available"
+    end
+
+    test "retries only the given worker" do
+      upload = insert_discarded_job(Workers.Upload, %{key: "docs/filtered-1.0.0.tar.gz"})
+      search = insert_discarded_job(Workers.Search, %{key: "docs/filtered-1.0.0.tar.gz"})
+
+      assert {:ok, 1} = AdminTasks.retry_oban_jobs(worker: "Hexpm.Hexdocs.Workers.Upload")
+
+      assert Repo.get!(Oban.Job, upload.id).state == "available"
+      assert Repo.get!(Oban.Job, search.id).state == "discarded"
+    end
+  end
+
+  defp insert_discarded_job(worker, args) do
+    {:ok, job} = Oban.insert(worker.new(args))
+
+    {1, _} =
+      from(j in Oban.Job, where: j.id == ^job.id)
+      |> Repo.update_all(
+        set: [
+          state: "discarded",
+          attempt: job.max_attempts,
+          discarded_at: DateTime.utc_now()
+        ]
+      )
+
+    job
+  end
 end

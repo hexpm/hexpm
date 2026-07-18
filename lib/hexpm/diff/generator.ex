@@ -42,7 +42,7 @@ defmodule Hexpm.Diff.Generator do
 
     case :hex_tarball.unpack({:file, to_charlist(tarball)}, to_charlist(path)) do
       {:ok, _} ->
-        Hexpm.TmpDir.ensure_readable(path)
+        Hexpm.TmpDir.ensure_accessible(path)
         {:ok, path}
 
       {:error, reason} ->

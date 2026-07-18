@@ -118,7 +118,7 @@ defmodule Hexpm.Preview do
 
         case :hex_tarball.unpack({:file, to_charlist(tarball_path)}, to_charlist(output_dir)) do
           {:ok, _metadata} ->
-            Hexpm.TmpDir.ensure_readable(output_dir)
+            Hexpm.TmpDir.ensure_accessible(output_dir)
 
             {
               output_dir,
