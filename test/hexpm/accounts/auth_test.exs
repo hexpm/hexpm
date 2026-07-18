@@ -2,6 +2,7 @@ defmodule Hexpm.Accounts.AuthTest do
   use Hexpm.DataCase, async: true
 
   alias Hexpm.Accounts.{Auth, Key}
+  alias Hexpm.OAuth.{JWT, MachineToken}
 
   setup do
     user = insert(:user, password: Auth.gen_password("password"))
@@ -120,6 +121,62 @@ defmodule Hexpm.Accounts.AuthTest do
     test "fails with malformed JWT token" do
       auth_result = Auth.oauth_token_auth("not-a-jwt", %{})
       assert auth_result == :error
+    end
+
+    test "authenticates a machine token against its live API key", %{user: user} do
+      key = insert(:key, user: user)
+      {:ok, token, _jti} = JWT.generate_machine_token(user.username, "user", ["api:read"], key.id)
+
+      assert {:ok, auth_context} = Auth.oauth_token_auth(token, %{})
+      assert auth_context.user.id == user.id
+
+      assert %MachineToken{id: key_id, key: auth_key, scopes: ["api:read"]} =
+               auth_context.auth_credential
+
+      assert key_id == key.id
+      assert auth_key.id == key.id
+    end
+
+    test "rejects a machine token after its API key is revoked", %{user: user} do
+      key = insert(:key, user: user)
+      {:ok, token, _jti} = JWT.generate_machine_token(user.username, "user", ["api"], key.id)
+      Repo.update!(Key.revoke(key))
+
+      assert Auth.oauth_token_auth(token, %{}) == :error
+    end
+
+    test "rejects a machine token whose subject does not own the API key", %{user: user} do
+      other_user = insert(:user)
+      key = insert(:key, user: user)
+
+      {:ok, token, _jti} =
+        JWT.generate_machine_token(other_user.username, "user", ["api"], key.id)
+
+      assert Auth.oauth_token_auth(token, %{}) == :error
+    end
+
+    test "rejects repository-only and unknown token uses", %{user: user} do
+      {:ok, repository_token, _jti} =
+        JWT.generate_access_token(user.username, "user", ["repository:hexpm"],
+          claims: %{"token_use" => "repository_read_only"}
+        )
+
+      {:ok, unknown_token, _jti} =
+        JWT.generate_access_token(user.username, "user", ["api"],
+          claims: %{"token_use" => "unknown"}
+        )
+
+      assert Auth.oauth_token_auth(repository_token, %{}) == :error
+      assert Auth.oauth_token_auth(unknown_token, %{}) == :error
+    end
+
+    test "rejects malformed machine claims", %{user: user} do
+      {:ok, token, _jti} =
+        JWT.generate_access_token(user.username, "user", ["api"],
+          claims: %{"token_use" => "machine", "key_id" => "not-an-integer"}
+        )
+
+      assert Auth.oauth_token_auth(token, %{}) == :error
     end
 
     test "regression test: documents correct JWT sub format for authentication" do

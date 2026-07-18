@@ -118,6 +118,36 @@ defmodule Hexpm.UserSessionsTest do
       end)
     end
 
+    test "rolls back eviction when API key session creation fails" do
+      user = insert(:user)
+
+      sessions =
+        for i <- 1..5 do
+          {:ok, session, _token} =
+            UserSessions.create_browser_session(user,
+              name: "Browser #{i}",
+              audit: audit_data(user)
+            )
+
+          session
+        end
+
+      assert_raise Ecto.ConstraintError, fn ->
+        Hexpm.OAuth.Tokens.create_session_and_token_for_api_key(
+          user,
+          Ecto.UUID.generate(),
+          ["api"],
+          audit: audit_data(user)
+        )
+      end
+
+      assert UserSessions.count_for_user(user) == 5
+
+      Enum.each(sessions, fn session ->
+        assert Repo.get!(Hexpm.UserSession, session.id).revoked_at == nil
+      end)
+    end
+
     test "revokes least recently used session based on last_use" do
       user = insert(:user)
 

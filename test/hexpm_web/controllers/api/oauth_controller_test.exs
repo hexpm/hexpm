@@ -311,10 +311,41 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       refute response["refresh_token"] == refresh_token
     end
 
-    test "re-expands repositories scope against current memberships", %{client: client} do
+    test "rejects refresh when the client no longer allows the granted scopes", %{
+      client: client,
+      refresh_token: refresh_token
+    } do
+      {:ok, token} = Tokens.lookup(refresh_token, :refresh, validate: false, preload: [])
+
+      client
+      |> Ecto.Changeset.change(allowed_scopes: ["api:read"])
+      |> Repo.update!()
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "refresh_token",
+          "refresh_token" => refresh_token,
+          "client_id" => client.client_id
+        })
+
+      assert json_response(conn, 400)["error"] == "invalid_scope"
+      assert Repo.get!(Token, token.id).revoked_at == nil
+    end
+
+    test "re-expands repositories scope against current memberships" do
       user = insert(:user)
       org_left = insert(:organization)
       org_user = insert(:organization_user, organization: org_left, user: user)
+
+      client =
+        Client.build(%{
+          client_id: Clients.generate_client_id(),
+          name: "Repository refresh client",
+          client_type: "public",
+          allowed_grant_types: ["refresh_token"],
+          allowed_scopes: ["api", "repositories"]
+        })
+        |> Repo.insert!()
 
       {:ok, token} =
         Tokens.create_and_insert_for_user(
@@ -672,6 +703,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
       %{
         user: user,
+        key: key,
         api_key: key.user_secret,
         client: client
       }
@@ -698,6 +730,35 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert response["scope"] == "api"
       # No refresh token for client_credentials
       refute response["refresh_token"]
+
+      assert {:ok, claims} = Hexpm.OAuth.JWT.verify_and_decode(response["access_token"])
+      refute claims["token_use"]
+      token = Repo.get_by!(Token, jti: claims["jti"])
+      assert token.grant_reference == nil
+    end
+
+    test "rate limits exchanges per API key", %{client: client, key: key, api_key: api_key} do
+      time = System.system_time(:millisecond)
+
+      Enum.each(1..100, fn _ ->
+        assert {:allow, _data} =
+                 HexpmWeb.Plugs.Attack.machine_token_exchange_throttle(key.id, time: time)
+      end)
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "api"
+        })
+
+      response = json_response(conn, 429)
+      assert response["error"] == "slow_down"
+      assert get_resp_header(conn, "x-ratelimit-limit") == ["100"]
+      assert get_resp_header(conn, "x-ratelimit-remaining") == ["0"]
+      assert [retry_after] = get_resp_header(conn, "retry-after")
+      assert String.to_integer(retry_after) in 1..60
     end
 
     test "creates session with access token expiration", %{
@@ -717,14 +778,13 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
       assert json_response(conn, 200)
 
-      # Verify session was created with short expiration
-      sessions = Hexpm.UserSessions.all_for_user(user)
-      assert length(sessions) == 1
-      [session] = sessions
-
+      [session] = Hexpm.UserSessions.all_for_user(user)
       latest_expires_at = DateTime.add(DateTime.utc_now(), 30 * 60, :second)
       assert DateTime.compare(session.expires_at, earliest_expires_at) in [:eq, :gt]
       assert DateTime.compare(session.expires_at, latest_expires_at) in [:eq, :lt]
+
+      token = Repo.get_by!(Token, user_id: user.id, grant_type: "client_credentials")
+      assert token.user_session_id == session.id
     end
 
     test "returns error for missing client_secret", %{client: client} do
@@ -807,6 +867,28 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert response["error"] == "invalid_scope"
     end
 
+    test "returns error for a scope disallowed by the OAuth client", %{api_key: api_key} do
+      client =
+        Client.build(%{
+          client_id: Clients.generate_client_id(),
+          name: "Read-only client",
+          client_type: "public",
+          allowed_grant_types: ["client_credentials"],
+          allowed_scopes: ["api:read"]
+        })
+        |> Repo.insert!()
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 400)["error"] == "invalid_scope"
+    end
+
     test "supports custom name parameter", %{
       client: client,
       api_key: api_key,
@@ -824,10 +906,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
         })
 
       assert json_response(conn, 200)
-
-      # Verify session was created with the custom name
-      sessions = Hexpm.UserSessions.all_for_user(user)
-      [session] = sessions
+      [session] = Hexpm.UserSessions.all_for_user(user)
       assert session.name == name
     end
 
@@ -836,21 +915,21 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       api_key: api_key,
       user: user
     } do
-      # Create 5 sessions via client credentials
       for i <- 1..5 do
-        post(build_conn(), ~p"/api/oauth/token", %{
-          "grant_type" => "client_credentials",
-          "client_id" => client.client_id,
-          "client_secret" => api_key,
-          "scope" => "api",
-          "name" => "Session #{i}"
-        })
+        conn =
+          post(build_conn(), ~p"/api/oauth/token", %{
+            "grant_type" => "client_credentials",
+            "client_id" => client.client_id,
+            "client_secret" => api_key,
+            "scope" => "api",
+            "name" => "Session #{i}"
+          })
+
+        assert json_response(conn, 200)
       end
 
-      # Verify we have 5 sessions
       assert Hexpm.UserSessions.count_for_user(user) == 5
 
-      # Create a 6th session
       conn =
         post(build_conn(), ~p"/api/oauth/token", %{
           "grant_type" => "client_credentials",
@@ -861,8 +940,6 @@ defmodule HexpmWeb.API.OAuthControllerTest do
         })
 
       assert json_response(conn, 200)
-
-      # Verify we still only have 5 sessions (oldest was revoked)
       assert Hexpm.UserSessions.count_for_user(user) == 5
     end
 
@@ -1214,7 +1291,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert response["scope"] == "api"
     end
 
-    test "succeeds when api-only key requests 'repositories' scope", %{
+    test "rejects 'repositories' scope for an api-only key", %{
       user: user,
       client: client
     } do
@@ -1233,7 +1310,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
           "scope" => "repositories"
         })
 
-      assert json_response(conn, 200)
+      assert json_response(conn, 400)["error"] == "invalid_scope"
     end
 
     test "succeeds for organization key requesting 'repositories' scope", %{client: client} do
@@ -1260,6 +1337,27 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert response["scope"] == "repository:#{org.name}"
     end
 
+    test "rejects repository scopes for an organization without billing access", %{client: client} do
+      org = insert(:organization, billing_active: false, trial_end: DateTime.utc_now())
+
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          org,
+          %{name: "org_key", permissions: [%{domain: "repository", resource: org.name}]},
+          audit: audit_data(org)
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "repository:#{org.name}"
+        })
+
+      assert json_response(conn, 400)["error"] == "invalid_scope"
+    end
+
     test "org key creates session with organization_id", %{client: client} do
       org = insert(:organization)
 
@@ -1277,16 +1375,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
         "scope" => "repositories"
       })
 
-      session =
-        Hexpm.Repo.one(
-          from(s in Hexpm.UserSession,
-            where: s.organization_id == ^org.id,
-            order_by: [desc: s.inserted_at],
-            limit: 1
-          )
-        )
-
-      assert session
+      session = Repo.get_by!(Hexpm.UserSession, organization_id: org.id)
       assert session.organization_id == org.id
       assert is_nil(session.user_id)
     end
@@ -1308,16 +1397,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
         "scope" => "repositories"
       })
 
-      token =
-        Hexpm.Repo.one(
-          from(t in Hexpm.OAuth.Token,
-            where: t.organization_id == ^org.id,
-            order_by: [desc: t.inserted_at],
-            limit: 1
-          )
-        )
-
-      assert token
+      token = Repo.get_by!(Token, organization_id: org.id, grant_type: "client_credentials")
       assert token.organization_id == org.id
       assert is_nil(token.user_id)
     end
@@ -1332,17 +1412,18 @@ defmodule HexpmWeb.API.OAuthControllerTest do
           audit: audit_data(org)
         )
 
-      # Create max_sessions (5) sessions
       for _ <- 1..5 do
-        post(build_conn(), ~p"/api/oauth/token", %{
-          "grant_type" => "client_credentials",
-          "client_id" => client.client_id,
-          "client_secret" => key.user_secret,
-          "scope" => "repositories"
-        })
+        conn =
+          post(build_conn(), ~p"/api/oauth/token", %{
+            "grant_type" => "client_credentials",
+            "client_id" => client.client_id,
+            "client_secret" => key.user_secret,
+            "scope" => "repositories"
+          })
+
+        assert json_response(conn, 200)
       end
 
-      # 6th should succeed but oldest should be revoked
       conn =
         post(build_conn(), ~p"/api/oauth/token", %{
           "grant_type" => "client_credentials",
@@ -1354,7 +1435,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert json_response(conn, 200)
 
       active_count =
-        Hexpm.Repo.one(
+        Repo.one(
           from(s in Hexpm.UserSession,
             where:
               s.organization_id == ^org.id and is_nil(s.revoked_at) and

@@ -5,7 +5,7 @@ defmodule HexpmWeb.AuthHelpers do
   alias Hexpm.Accounts.{Auth, Organization, Organizations, User, TFA}
   alias Hexpm.Permissions
   alias Hexpm.Repository.{Package, Packages, PackageOwner, Repository}
-  alias Hexpm.OAuth.Token
+  alias Hexpm.OAuth.{MachineToken, Token}
   alias HexpmWeb.Plugs.Attack
 
   def authorize(conn, opts) do
@@ -98,6 +98,23 @@ defmodule HexpmWeb.AuthHelpers do
 
   # TOTP validation for write operations
   defp validate_totp_for_write_access(conn, %User{} = user, %Token{} = _token, domains) do
+    validate_oauth_totp(conn, user, domains)
+  end
+
+  defp validate_totp_for_write_access(
+         conn,
+         %User{} = user,
+         %MachineToken{} = _token,
+         domains
+       ) do
+    validate_oauth_totp(conn, user, domains)
+  end
+
+  defp validate_totp_for_write_access(_conn, _user_or_org, _auth_credential, _domains) do
+    nil
+  end
+
+  defp validate_oauth_totp(conn, %User{} = user, domains) do
     if requires_write_access?(domains) do
       if not User.tfa_enabled?(user) do
         {:error, :tfa_not_enabled}
@@ -107,11 +124,6 @@ defmodule HexpmWeb.AuthHelpers do
     else
       nil
     end
-  end
-
-  defp validate_totp_for_write_access(_conn, _user_or_org, _auth_credential, _domains) do
-    # Not an OAuth token, skip validation
-    nil
   end
 
   defp requires_write_access?(domains) do

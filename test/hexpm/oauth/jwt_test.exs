@@ -80,6 +80,21 @@ defmodule Hexpm.OAuth.JWTTest do
     end
   end
 
+  describe "row-less access tokens" do
+    test "machine token identifies its API key" do
+      {:ok, token, jti} = JWT.generate_machine_token("testuser", "user", ["api:read"], 123)
+
+      assert {:ok, claims} = JWT.verify_and_decode(token)
+      assert claims["jti"] == jti
+      assert claims["sub"] == "user:testuser"
+      assert claims["scope"] == "api:read"
+      assert claims["token_use"] == "machine"
+      assert claims["key_id"] == 123
+      assert claims["iss"] == "hexpm"
+      assert claims["aud"] == "hexpm:api"
+    end
+  end
+
   describe "verify_and_decode/1" do
     test "successfully decodes valid JWT with correct sub format" do
       {:ok, token, _jti} = JWT.generate_access_token("testuser", "user", ["api:read"])

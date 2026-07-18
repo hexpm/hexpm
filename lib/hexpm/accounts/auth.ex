@@ -3,7 +3,8 @@ defmodule Hexpm.Accounts.Auth do
   import HexpmWeb.RequestHelpers, only: [parse_ip: 1, parse_user_agent: 1]
 
   alias Hexpm.Accounts.{Key, Keys, Organization, Organizations, User, Users, UserProviders}
-  alias Hexpm.OAuth.{Tokens, JWT}
+  alias Hexpm.OAuth.{JWT, MachineToken, Tokens}
+  alias Hexpm.Permissions
 
   def key_auth(user_secret, usage_info, opts \\ []) do
     app_secret = Application.get_env(:hexpm, :secret)
@@ -97,17 +98,58 @@ defmodule Hexpm.Accounts.Auth do
   def gen_password(password), do: Bcrypt.hash_pwd_salt(password)
 
   def oauth_token_auth(jwt_token, _usage_info) do
-    with {:ok, claims} <- JWT.verify_and_decode(jwt_token),
-         subject when not is_nil(subject) <- Map.get(claims, "sub"),
+    with {:ok, claims} <- JWT.verify_and_decode(jwt_token) do
+      authenticate_oauth_claims(jwt_token, claims)
+    else
+      _ -> :error
+    end
+  end
+
+  defp authenticate_oauth_claims(_jwt_token, %{"token_use" => "machine"} = claims) do
+    with key_id when is_integer(key_id) <- Map.get(claims, "key_id"),
+         scope when is_binary(scope) <- Map.get(claims, "scope"),
+         scopes = String.split(scope, " ", trim: true),
+         :ok <- Permissions.validate_scopes(scopes),
+         subject when is_binary(subject) <- Map.get(claims, "sub"),
          {:ok, subject_type, subject_id} <- parse_subject(subject),
          {:ok, entity} <- load_entity(subject_type, subject_id),
-         valid_auth when valid_auth == true <- validate_entity_auth(entity),
+         true <- validate_entity_auth(entity),
+         %Key{} = key <- Keys.get(key_id),
+         false <- Key.revoked?(key),
+         true <- key_owner?(key, entity) do
+      build_auth_result(entity, MachineToken.new(key, scopes))
+    else
+      _ -> :error
+    end
+  end
+
+  defp authenticate_oauth_claims(jwt_token, claims) do
+    if Map.has_key?(claims, "token_use") do
+      :error
+    else
+      authenticate_persisted_oauth_token(jwt_token, claims)
+    end
+  end
+
+  defp authenticate_persisted_oauth_token(jwt_token, claims) do
+    with subject when is_binary(subject) <- Map.get(claims, "sub"),
+         {:ok, subject_type, subject_id} <- parse_subject(subject),
+         {:ok, entity} <- load_entity(subject_type, subject_id),
+         true <- validate_entity_auth(entity),
          {:ok, oauth_token} <- Tokens.lookup(jwt_token, :access, preload: []) do
       build_auth_result(entity, oauth_token)
     else
       _ -> :error
     end
   end
+
+  defp key_owner?(%Key{user_id: user_id}, %User{id: user_id}) when not is_nil(user_id), do: true
+
+  defp key_owner?(%Key{organization_id: organization_id}, %Organization{id: organization_id})
+       when not is_nil(organization_id),
+       do: true
+
+  defp key_owner?(_key, _entity), do: false
 
   defp parse_subject(subject) when is_binary(subject) do
     case String.split(subject, ":", parts: 2) do
