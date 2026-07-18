@@ -8,7 +8,7 @@ defmodule Hexpm.Permissions do
   """
 
   alias Hexpm.Accounts.{Key, KeyPermission, User, Users, Organization}
-  alias Hexpm.OAuth.Token
+  alias Hexpm.OAuth.{MachineToken, Token}
   alias Hexpm.Repository.Package
 
   # Consolidated scope definitions - single source of truth
@@ -186,6 +186,10 @@ defmodule Hexpm.Permissions do
 
   def verify_access?(%Token{} = token, domain, resource) do
     verify_access?(token.scopes, domain, resource)
+  end
+
+  def verify_access?(%MachineToken{key: key, scopes: scopes}, domain, resource) do
+    verify_access?(scopes, domain, resource) and verify_access?(key, domain, resource)
   end
 
   @doc """
@@ -389,74 +393,63 @@ defmodule Hexpm.Permissions do
       iex> expand_repositories_scope(user, ["api:read"])
       ["api:read"]
   """
-  def expand_repositories_scope(user, scopes, api_key \\ nil)
+  def expand_repositories_scope(user_or_org, scopes, api_key \\ nil)
 
-  def expand_repositories_scope(%Organization{} = org, scopes, api_key) do
-    if "repositories" in scopes do
-      allowed_repos = get_allowed_repositories_from_key(api_key.permissions)
-
-      repo_scopes =
-        if :all in allowed_repos or org.name in allowed_repos do
-          ["repository:#{org.name}"]
-        else
-          []
-        end
+  def expand_repositories_scope(user_or_org, scopes, api_key)
+      when is_list(scopes) do
+    if Enum.any?(scopes, &repository_scope?/1) do
+      eligible_repositories = eligible_repositories(user_or_org)
+      allowed_repositories = allowed_repositories(api_key)
 
       scopes
-      |> Enum.reject(&(&1 == "repositories"))
-      |> Kernel.++(repo_scopes)
+      |> Enum.flat_map(fn
+        "repositories" ->
+          eligible_repositories
+          |> Enum.filter(&repository_allowed?(&1, allowed_repositories))
+          |> Enum.map(&"repository:#{&1}")
+
+        "repository:" <> repository = scope ->
+          if repository in eligible_repositories and
+               repository_allowed?(repository, allowed_repositories) do
+            [scope]
+          else
+            []
+          end
+
+        scope ->
+          [scope]
+      end)
+      |> Enum.uniq()
     else
       scopes
     end
   end
 
-  def expand_repositories_scope(%User{} = user, scopes, nil) do
-    if "repositories" in scopes do
-      # Ensure organizations are preloaded
-      user = Hexpm.Repo.preload(user, :organizations)
-
-      # Get all organizations the user has access to
-      organizations = Users.all_organizations(user)
-
-      # Create individual repository scopes
-      repo_scopes = Enum.map(organizations, fn org -> "repository:#{org.name}" end)
-
-      # Replace "repositories" with individual scopes
-      scopes
-      |> Enum.reject(&(&1 == "repositories"))
-      |> Kernel.++(repo_scopes)
-    else
-      scopes
-    end
+  defp eligible_repositories(%User{} = user) do
+    user
+    |> Hexpm.Repo.preload(:organizations)
+    |> Users.all_organizations()
+    |> Enum.filter(&Organization.billing_active?/1)
+    |> Enum.map(& &1.name)
   end
 
-  def expand_repositories_scope(%User{} = user, scopes, api_key) do
-    if "repositories" in scopes do
-      # Ensure organizations are preloaded
-      user = Hexpm.Repo.preload(user, :organizations)
+  defp eligible_repositories(%Organization{} = organization) do
+    if Organization.billing_active?(organization), do: [organization.name], else: []
+  end
 
-      # Get all organizations the user has access to
-      organizations = Users.all_organizations(user)
+  defp allowed_repositories(nil), do: :all
 
-      # Filter organizations based on API key permissions
-      allowed_repos = get_allowed_repositories_from_key(api_key.permissions)
+  defp allowed_repositories(%Key{} = api_key),
+    do: get_allowed_repositories_from_key(api_key.permissions)
 
-      repo_scopes =
-        organizations
-        |> Enum.map(fn org -> org.name end)
-        |> Enum.filter(fn org_name ->
-          # Allow if key has "repositories" permission or specific "repository:org_name" permission
-          :all in allowed_repos or org_name in allowed_repos
-        end)
-        |> Enum.map(fn org_name -> "repository:#{org_name}" end)
+  defp repository_scope?("repositories"), do: true
+  defp repository_scope?("repository:" <> _repository), do: true
+  defp repository_scope?(_scope), do: false
 
-      # Replace "repositories" with individual scopes
-      scopes
-      |> Enum.reject(&(&1 == "repositories"))
-      |> Kernel.++(repo_scopes)
-    else
-      scopes
-    end
+  defp repository_allowed?(_repository, :all), do: true
+
+  defp repository_allowed?(repository, allowed_repositories) do
+    :all in allowed_repositories or repository in allowed_repositories
   end
 
   defp get_allowed_repositories_from_key(permissions) do

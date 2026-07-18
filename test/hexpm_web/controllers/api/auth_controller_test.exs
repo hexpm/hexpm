@@ -134,6 +134,93 @@ defmodule HexpmWeb.API.AuthControllerTest do
       |> response(204)
     end
 
+    test "with a machine token", %{user: user, user_full_key: key} do
+      {:ok, token, _jti} =
+        Hexpm.OAuth.JWT.generate_machine_token(user.username, "user", ["api:read"], key.id)
+
+      build_conn()
+      |> put_req_header("authorization", "Bearer #{token}")
+      |> get("/api/auth", domain: "api", resource: "read")
+      |> response(204)
+
+      build_conn()
+      |> put_req_header("authorization", "Bearer #{token}")
+      |> get("/api/auth", domain: "api", resource: "write")
+      |> response(401)
+    end
+
+    test "machine token uses current key revocation state", %{user: user, user_full_key: key} do
+      {:ok, token, _jti} =
+        Hexpm.OAuth.JWT.generate_machine_token(user.username, "user", ["api"], key.id)
+
+      Repo.update!(Hexpm.Accounts.Key.revoke(key))
+
+      build_conn()
+      |> put_req_header("authorization", "Bearer #{token}")
+      |> get("/api/auth", domain: "api")
+      |> response(401)
+    end
+
+    test "machine token uses current key permissions", %{user: user, user_full_key: key} do
+      {:ok, token, _jti} =
+        Hexpm.OAuth.JWT.generate_machine_token(user.username, "user", ["api"], key.id)
+
+      permissions =
+        Enum.map(key.permissions, fn
+          %Hexpm.Accounts.KeyPermission{domain: "api"} = permission ->
+            Ecto.Changeset.change(permission, resource: "read")
+
+          permission ->
+            Ecto.Changeset.change(permission)
+        end)
+
+      key
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_embed(:permissions, permissions)
+      |> Repo.update!()
+
+      reloaded_key = Repo.get!(Hexpm.Accounts.Key, key.id)
+      assert Hexpm.Permissions.verify_access?(reloaded_key, "api", "read")
+      refute Hexpm.Permissions.verify_access?(reloaded_key, "api", "write")
+
+      build_conn()
+      |> put_req_header("authorization", "Bearer #{token}")
+      |> get("/api/auth", domain: "api", resource: "read")
+      |> response(204)
+
+      build_conn()
+      |> put_req_header("authorization", "Bearer #{token}")
+      |> get("/api/auth", domain: "api", resource: "write")
+      |> response(401)
+    end
+
+    test "machine token uses current organization membership", %{
+      user: user,
+      user_full_key: key,
+      owned_org: organization
+    } do
+      {:ok, token, _jti} =
+        Hexpm.OAuth.JWT.generate_machine_token(
+          user.username,
+          "user",
+          ["repository:#{organization.name}"],
+          key.id
+        )
+
+      membership =
+        Repo.get_by!(Hexpm.Accounts.OrganizationUser,
+          user_id: user.id,
+          organization_id: organization.id
+        )
+
+      Repo.delete!(membership)
+
+      build_conn()
+      |> put_req_header("authorization", "Bearer #{token}")
+      |> get("/api/auth", domain: "repository", resource: organization.name)
+      |> response(403)
+    end
+
     test "authenticate full user key", %{
       user_full_key: key,
       owned_org: owned_org,

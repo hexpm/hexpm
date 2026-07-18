@@ -29,8 +29,9 @@ defmodule Hexpm.UserSessions do
   require Ecto.Query
   import Hexpm.Accounts.AuditLog, only: [audit: 4]
 
-  alias Hexpm.UserSession
+  alias Hexpm.Accounts.{Organization, User}
   alias Hexpm.OAuth.Token
+  alias Hexpm.UserSession
 
   @max_user_sessions 5
   @min_org_sessions 5
@@ -59,8 +60,6 @@ defmodule Hexpm.UserSessions do
   Requires audit data for security logging.
   """
   def create_browser_session(user, opts) do
-    enforce_session_limit(user)
-
     session_token = :crypto.strong_rand_bytes(32)
     name = Keyword.get(opts, :name, "Browser Session")
     expires_at = DateTime.add(DateTime.utc_now(), @default_session_expires_in, :second)
@@ -76,7 +75,7 @@ defmodule Hexpm.UserSessions do
     changeset = UserSession.changeset(%UserSession{}, attrs)
 
     multi =
-      Ecto.Multi.new()
+      build_session_limit_multi(user)
       |> Ecto.Multi.insert(:session, changeset)
       |> audit(Keyword.fetch!(opts, :audit), "session.create", fn %{session: session} ->
         session
@@ -94,8 +93,6 @@ defmodule Hexpm.UserSessions do
   Requires audit data for security logging.
   """
   def create_oauth_session(user, client_id, opts) do
-    enforce_session_limit(user)
-
     expires_at = DateTime.add(DateTime.utc_now(), @default_session_expires_in, :second)
 
     attrs = %{
@@ -109,7 +106,7 @@ defmodule Hexpm.UserSessions do
     changeset = UserSession.changeset(%UserSession{}, attrs)
 
     multi =
-      Ecto.Multi.new()
+      build_session_limit_multi(user)
       |> Ecto.Multi.insert(:session, changeset)
       |> Ecto.Multi.run(:preload, fn _repo, %{session: session} ->
         {:ok, Repo.preload(session, :client)}
@@ -143,7 +140,6 @@ defmodule Hexpm.UserSessions do
       end
 
     owner = user || organization
-    enforce_session_limit(owner, max_sessions)
 
     owner_attrs =
       if user do
@@ -163,7 +159,7 @@ defmodule Hexpm.UserSessions do
     changeset = UserSession.changeset(%UserSession{}, attrs)
 
     multi =
-      Ecto.Multi.new()
+      build_session_limit_multi(owner, max_sessions)
       |> Ecto.Multi.insert(:session, changeset)
       |> Ecto.Multi.run(:preload, fn _repo, %{session: session} ->
         {:ok, Repo.preload(session, :client)}
@@ -197,14 +193,16 @@ defmodule Hexpm.UserSessions do
         DateTime.add(DateTime.utc_now(), @default_session_expires_in, :second)
       )
 
-    %{
+    attrs = %{
       user_id: user.id,
       type: "oauth",
       client_id: client_id,
       name: Keyword.get(opts, :name),
       expires_at: expires_at
     }
-    |> build_session_multi(opts)
+
+    build_session_limit_multi(user)
+    |> build_session_multi(attrs, opts)
   end
 
   @doc """
@@ -216,6 +214,15 @@ defmodule Hexpm.UserSessions do
   Returns the Multi (caller is responsible for executing the transaction).
   """
   def build_api_key_session_multi(user, organization, client_id, expires_at, opts) do
+    owner = user || organization
+
+    max_sessions =
+      if organization do
+        get_organization_session_limit(organization)
+      else
+        @max_user_sessions
+      end
+
     owner_attrs =
       if user do
         %{user_id: user.id}
@@ -223,16 +230,19 @@ defmodule Hexpm.UserSessions do
         %{organization_id: organization.id}
       end
 
-    Map.merge(owner_attrs, %{
-      type: "oauth",
-      client_id: client_id,
-      name: Keyword.get(opts, :name),
-      expires_at: expires_at
-    })
-    |> build_session_multi(opts)
+    attrs =
+      Map.merge(owner_attrs, %{
+        type: "oauth",
+        client_id: client_id,
+        name: Keyword.get(opts, :name),
+        expires_at: expires_at
+      })
+
+    build_session_limit_multi(owner, max_sessions)
+    |> build_session_multi(attrs, opts)
   end
 
-  defp build_session_multi(attrs, opts) do
+  defp build_session_multi(multi, attrs, opts) do
     changeset = UserSession.changeset(%UserSession{}, attrs)
 
     changeset =
@@ -242,7 +252,7 @@ defmodule Hexpm.UserSessions do
         changeset
       end
 
-    multi = Ecto.Multi.new() |> Ecto.Multi.insert(:session, changeset)
+    multi = Ecto.Multi.insert(multi, :session, changeset)
 
     if audit_data = Keyword.get(opts, :audit) do
       audit(multi, audit_data, "session.create", fn %{session: session} -> session end)
@@ -397,7 +407,14 @@ defmodule Hexpm.UserSessions do
   The max_sessions parameter allows overriding the default limit (e.g., for organizations).
   """
   def enforce_session_limit(user_or_org, max_sessions \\ @max_user_sessions) do
-    revoke_lru_sessions(owner_filter(user_or_org), max_sessions - 1)
+    case Repo.transaction(build_session_limit_multi(user_or_org, max_sessions)) do
+      {:ok, _changes} -> :ok
+      {:error, _operation, reason, _changes} -> {:error, reason}
+    end
+  end
+
+  def build_session_limit_multi(user_or_org, max_sessions \\ @max_user_sessions) do
+    build_keep_sessions_multi(user_or_org, max_sessions - 1)
   end
 
   @doc """
@@ -406,7 +423,20 @@ defmodule Hexpm.UserSessions do
   """
   def revoke_excess_sessions_for_organization(organization, new_seat_limit) do
     max_sessions = max(@min_org_sessions, new_seat_limit)
-    revoke_lru_sessions(owner_filter(organization), max_sessions)
+
+    case Repo.transaction(build_keep_sessions_multi(organization, max_sessions)) do
+      {:ok, _changes} -> :ok
+      {:error, _operation, reason, _changes} -> {:error, reason}
+    end
+  end
+
+  defp build_keep_sessions_multi(user_or_org, keep_count) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.run(:session_limit, fn _repo, _changes ->
+      lock_session_owner(user_or_org)
+      revoke_lru_sessions(owner_filter(user_or_org), keep_count)
+      {:ok, nil}
+    end)
   end
 
   # Revokes any active sessions beyond `keep_count`, ranked most-recently-used first.
@@ -415,43 +445,50 @@ defmodule Hexpm.UserSessions do
   # `Tokens.revoke_and_create_token`, which locks the old token before
   # touching its session (FK insert and last_use update). Acquiring the
   # locks in the same order across both flows avoids circular waits.
-  # The `is_nil(revoked_at)` filter on each update keeps concurrent
-  # enforcers idempotent without needing a SELECT FOR UPDATE.
+  # The owner row lock serializes session-limit enforcement and creation.
   defp revoke_lru_sessions(owner_filter, keep_count) do
     now = DateTime.utc_now()
 
-    Repo.transaction(fn ->
-      session_ids =
+    session_ids =
+      from(s in UserSession,
+        where: ^owner_filter,
+        where: is_nil(s.revoked_at) and s.expires_at > ^now,
+        order_by: [
+          desc_nulls_last: fragment("(last_use->>'used_at')::timestamptz"),
+          desc: s.inserted_at
+        ],
+        offset: ^keep_count,
+        select: s.id
+      )
+      |> Repo.all()
+
+    if session_ids != [] do
+      Repo.update_all(
+        from(t in Token,
+          where: t.user_session_id in ^session_ids and is_nil(t.revoked_at)
+        ),
+        set: [revoked_at: now, updated_at: now]
+      )
+
+      Repo.update_all(
         from(s in UserSession,
-          where: ^owner_filter,
-          where: is_nil(s.revoked_at) and s.expires_at > ^now,
-          order_by: [
-            desc_nulls_last: fragment("(last_use->>'used_at')::timestamptz"),
-            desc: s.inserted_at
-          ],
-          offset: ^keep_count,
-          select: s.id
-        )
-        |> Repo.all()
-
-      if session_ids != [] do
-        Repo.update_all(
-          from(t in Token,
-            where: t.user_session_id in ^session_ids and is_nil(t.revoked_at)
-          ),
-          set: [revoked_at: now, updated_at: now]
-        )
-
-        Repo.update_all(
-          from(s in UserSession,
-            where: s.id in ^session_ids and is_nil(s.revoked_at)
-          ),
-          set: [revoked_at: now, updated_at: now]
-        )
-      end
-    end)
+          where: s.id in ^session_ids and is_nil(s.revoked_at)
+        ),
+        set: [revoked_at: now, updated_at: now]
+      )
+    end
 
     :ok
+  end
+
+  defp lock_session_owner(%User{id: id}) do
+    from(user in User, where: user.id == ^id, lock: "FOR UPDATE")
+    |> Repo.one!()
+  end
+
+  defp lock_session_owner(%Organization{id: id}) do
+    from(organization in Organization, where: organization.id == ^id, lock: "FOR UPDATE")
+    |> Repo.one!()
   end
 
   defp owner_filter(%Hexpm.Accounts.User{} = user) do

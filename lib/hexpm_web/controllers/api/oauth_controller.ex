@@ -4,7 +4,8 @@ defmodule HexpmWeb.API.OAuthController do
   import HexpmWeb.RequestHelpers, only: [build_usage_info: 1]
 
   alias Hexpm.UserSessions
-  alias Hexpm.OAuth.{Clients, Tokens, AuthorizationCodes, DeviceCodes}
+  alias Hexpm.OAuth.{AuthorizationCodes, Clients, DeviceCodes, Tokens}
+  alias HexpmWeb.Plugs.Attack
 
   defp safe_param(params, key), do: safe_string(params[key])
 
@@ -15,13 +16,13 @@ defmodule HexpmWeb.API.OAuthController do
   def token(conn, params) do
     case get_grant_type(params) do
       "authorization_code" ->
-        handle_authorization_code_grant(conn, params)
+        with_write_mode(conn, fn -> handle_authorization_code_grant(conn, params) end)
 
       "urn:ietf:params:oauth:grant-type:device_code" ->
-        handle_device_code_grant(conn, params)
+        with_write_mode(conn, fn -> handle_device_code_grant(conn, params) end)
 
       "refresh_token" ->
-        handle_refresh_token_grant(conn, params)
+        with_write_mode(conn, fn -> handle_refresh_token_grant(conn, params) end)
 
       "client_credentials" ->
         handle_client_credentials_grant(conn, params)
@@ -39,45 +40,47 @@ defmodule HexpmWeb.API.OAuthController do
   Device authorization endpoint for device flow.
   """
   def device_authorization(conn, params) do
-    with {:ok, client} <- validate_client(safe_param(params, "client_id")),
-         :ok <-
-           validate_client_supports_grant(client, "urn:ietf:params:oauth:grant-type:device_code"),
-         {:ok, scopes} <- validate_scopes(client, params["scope"]) do
-      case DeviceCodes.initiate_device_authorization(conn, client.client_id, scopes,
-             name: safe_param(params, "name")
-           ) do
-        {:ok, response} ->
-          render(conn, :device_authorization, device_response: response)
+    with_write_mode(conn, fn ->
+      with {:ok, client} <- validate_client(safe_param(params, "client_id")),
+           :ok <-
+             validate_client_supports_grant(
+               client,
+               "urn:ietf:params:oauth:grant-type:device_code"
+             ),
+           {:ok, scopes} <- validate_scopes(client, params["scope"]) do
+        case DeviceCodes.initiate_device_authorization(conn, client.client_id, scopes,
+               name: safe_param(params, "name")
+             ) do
+          {:ok, response} ->
+            render(conn, :device_authorization, device_response: response)
 
-        {:error, reason} ->
-          render_oauth_error(
-            conn,
-            :server_error,
-            "Failed to initiate device authorization: #{reason}"
-          )
+          {:error, reason} ->
+            render_oauth_error(
+              conn,
+              :server_error,
+              "Failed to initiate device authorization: #{reason}"
+            )
+        end
+      else
+        {:error, error, description} ->
+          render_oauth_error(conn, error, description)
+
+        {:error, error} ->
+          render_oauth_error(conn, :invalid_client, error)
       end
-    else
-      {:error, error, description} ->
-        render_oauth_error(conn, error, description)
-
-      {:error, error} ->
-        render_oauth_error(conn, :invalid_client, error)
-    end
+    end)
   end
 
   @doc """
   OAuth 2.0 token revocation endpoint (RFC 7009).
   """
   def revoke(conn, params) do
-    case revoke_token(params) do
-      :ok ->
-        # RFC 7009 specifies 200 OK for successful revocation
-        send_resp(conn, 200, "")
-
-      {:error, _reason} ->
-        # RFC 7009 specifies 200 OK even for invalid tokens (security)
-        send_resp(conn, 200, "")
-    end
+    with_write_mode(conn, fn ->
+      case revoke_token(params) do
+        :ok -> send_resp(conn, 200, "")
+        {:error, _reason} -> send_resp(conn, 200, "")
+      end
+    end)
   end
 
   @doc """
@@ -85,14 +88,12 @@ defmodule HexpmWeb.API.OAuthController do
   Allows revocation of the session and all its tokens when the actual token value is not available.
   """
   def revoke_by_hash(conn, params) do
-    case revoke_token_by_hash(params) do
-      :ok ->
-        send_resp(conn, 200, "")
-
-      {:error, _reason} ->
-        # Return 200 OK even for invalid tokens (security per RFC 7009)
-        send_resp(conn, 200, "")
-    end
+    with_write_mode(conn, fn ->
+      case revoke_token_by_hash(params) do
+        :ok -> send_resp(conn, 200, "")
+        {:error, _reason} -> send_resp(conn, 200, "")
+      end
+    end)
   end
 
   defp get_grant_type(%{"grant_type" => grant_type}), do: grant_type
@@ -166,33 +167,9 @@ defmodule HexpmWeb.API.OAuthController do
     with {:ok, client} <- authenticate_client(params),
          :ok <- validate_client_supports_grant(client, "refresh_token"),
          {:ok, token} <-
-           validate_refresh_token(safe_param(params, "refresh_token"), client.client_id) do
-      usage_info = build_usage_info(conn)
-
-      # Refresh from the originally granted scopes so dynamic scopes
-      # ("repositories") are re-expanded against current organization
-      # memberships, instead of carrying the expansion frozen at session
-      # creation for the session's whole lifetime.
-      case Tokens.revoke_and_create_token(
-             token,
-             client.client_id,
-             token.granted_scopes,
-             "refresh_token",
-             params["refresh_token"],
-             with_refresh_token: true,
-             user_session_id: token.user_session_id,
-             usage_info: usage_info
-           ) do
-        {:ok, new_token} ->
-          render(conn, :token, token: new_token)
-
-        {:error, changeset} ->
-          render_oauth_error(
-            conn,
-            :server_error,
-            "Failed to create token: #{inspect(changeset.errors)}"
-          )
-      end
+           validate_refresh_token(safe_param(params, "refresh_token"), client.client_id),
+         :ok <- validate_client_supports_scopes(client, token.granted_scopes) do
+      refresh_token(conn, params, client, token)
     else
       {:error, error, description} ->
         render_oauth_error(conn, error, description)
@@ -202,32 +179,42 @@ defmodule HexpmWeb.API.OAuthController do
   defp handle_client_credentials_grant(conn, params) do
     with {:ok, client} <- validate_client(safe_param(params, "client_id")),
          :ok <- validate_client_supports_grant(client, "client_credentials"),
+         :ok <- validate_client_supports_scopes(client, params["scope"]),
          {:ok, api_key_secret} <- validate_api_key_secret(safe_param(params, "client_secret")),
          {:ok, auth_info} <- authenticate_api_key(api_key_secret, conn),
+         {:ok, conn} <- throttle_machine_token_exchange(conn, auth_info.auth_credential.id),
          {:ok, scopes} <- expand_and_validate_scopes(params["scope"], auth_info) do
-      usage_info = build_usage_info(conn)
-
-      # Determine user or organization from the API key
       user_or_org = auth_info.user || auth_info.organization
 
-      # Build audit data with the authenticated user/org
-      audit_data = %{
-        user: user_or_org,
-        auth_credential: auth_info.auth_credential,
-        user_agent: conn.assigns.user_agent,
-        remote_ip: HexpmWeb.RequestHelpers.parse_ip(conn.remote_ip)
-      }
+      result =
+        if Hexpm.Repo.write_mode?() do
+          usage_info = build_usage_info(conn)
 
-      case Tokens.create_session_and_token_for_api_key(
-             user_or_org,
-             client.client_id,
-             scopes,
-             "client_credentials",
-             api_key_secret,
-             name: safe_param(params, "name"),
-             usage_info: usage_info,
-             audit: audit_data
-           ) do
+          audit_data = %{
+            user: user_or_org,
+            auth_credential: auth_info.auth_credential,
+            user_agent: conn.assigns.user_agent,
+            remote_ip: HexpmWeb.RequestHelpers.parse_ip(conn.remote_ip)
+          }
+
+          Tokens.create_session_and_token_for_api_key(
+            user_or_org,
+            client.client_id,
+            scopes,
+            name: safe_param(params, "name"),
+            usage_info: usage_info,
+            audit: audit_data
+          )
+        else
+          Tokens.create_machine_token(
+            user_or_org,
+            client.client_id,
+            scopes,
+            auth_info.auth_credential.id
+          )
+        end
+
+      case result do
         {:ok, token} ->
           render(conn, :token, token: token)
 
@@ -239,6 +226,9 @@ defmodule HexpmWeb.API.OAuthController do
           )
       end
     else
+      {:error, :rate_limited, conn} ->
+        render_oauth_error(conn, :slow_down, "API key token exchange rate limit exceeded")
+
       {:error, error} when is_atom(error) ->
         render_oauth_error(conn, error, error_description(error))
 
@@ -256,6 +246,85 @@ defmodule HexpmWeb.API.OAuthController do
     else
       {:error, :unauthorized_client, "Client not authorized for this grant type"}
     end
+  end
+
+  defp refresh_token(conn, params, client, token) do
+    usage_info = build_usage_info(conn)
+
+    case Tokens.revoke_and_create_token(
+           token,
+           client.client_id,
+           token.granted_scopes,
+           "refresh_token",
+           params["refresh_token"],
+           with_refresh_token: true,
+           user_session_id: token.user_session_id,
+           usage_info: usage_info
+         ) do
+      {:ok, new_token} ->
+        render(conn, :token, token: new_token)
+
+      {:error, changeset} ->
+        render_oauth_error(
+          conn,
+          :server_error,
+          "Failed to create token: #{inspect(changeset.errors)}"
+        )
+    end
+  end
+
+  defp throttle_machine_token_exchange(conn, key_id) do
+    case Attack.machine_token_exchange_throttle(key_id) do
+      {:allow, {:throttle, data}} ->
+        {:ok, Attack.put_throttling_headers(conn, data)}
+
+      {:block, {:throttle, data}} ->
+        retry_after =
+          max(div(data[:expires_at] - System.system_time(:millisecond) + 999, 1000), 1)
+
+        conn =
+          conn
+          |> Attack.put_throttling_headers(data)
+          |> put_resp_header("retry-after", Integer.to_string(retry_after))
+
+        {:error, :rate_limited, conn}
+    end
+  end
+
+  defp validate_client_supports_scopes(client, scope_string)
+       when is_binary(scope_string) or is_nil(scope_string) do
+    scopes = String.split(scope_string || "", " ", trim: true)
+
+    with :ok <- Hexpm.Permissions.validate_scopes(scopes),
+         true <- Clients.supports_scopes?(client, scopes) do
+      :ok
+    else
+      _ -> {:error, :invalid_scope, "Invalid scope"}
+    end
+  end
+
+  defp validate_client_supports_scopes(client, scopes) when is_list(scopes) do
+    if Clients.supports_scopes?(client, scopes) do
+      :ok
+    else
+      {:error, :invalid_scope, "Invalid scope"}
+    end
+  end
+
+  defp validate_client_supports_scopes(_client, _scopes) do
+    {:error, :invalid_scope, "Invalid scope"}
+  end
+
+  defp with_write_mode(conn, fun) do
+    if Hexpm.Repo.write_mode?(), do: fun.(), else: temporarily_unavailable(conn)
+  end
+
+  defp temporarily_unavailable(conn) do
+    render_oauth_error(
+      conn,
+      :temporarily_unavailable,
+      "OAuth operation unavailable while the service is read-only"
+    )
   end
 
   defp validate_api_key_secret(nil), do: {:error, :invalid_request}
@@ -286,7 +355,8 @@ defmodule HexpmWeb.API.OAuthController do
 
     # Final validation: check that all requested scopes are allowed
     # This validates non-repository scopes (like "api")
-    if validate_scopes_against_key(expanded_scopes, api_key.permissions) do
+    if expanded_scopes != [] and
+         validate_scopes_against_key(expanded_scopes, api_key.permissions) do
       {:ok, expanded_scopes}
     else
       {:error, :invalid_scope, "Requested scopes exceed API key permissions"}
@@ -496,6 +566,8 @@ defmodule HexpmWeb.API.OAuthController do
   defp error_status(:invalid_scope), do: 400
   defp error_status(:access_denied), do: 403
   defp error_status(:server_error), do: 500
+  defp error_status(:temporarily_unavailable), do: 503
+  defp error_status(:slow_down), do: 429
   defp error_status(:authorization_pending), do: 400
   defp error_status(:expired_token), do: 400
   defp error_status(_), do: 400

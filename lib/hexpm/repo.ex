@@ -215,3 +215,8 @@ defmodule Hexpm.WriteInReadOnlyMode do
     "tried to write in read-only mode"
   end
 end
+
+defimpl Plug.Exception, for: Hexpm.WriteInReadOnlyMode do
+  def status(_exception), do: 503
+  def actions(_exception), do: []
+end

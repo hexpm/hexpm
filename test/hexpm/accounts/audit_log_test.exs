@@ -2,6 +2,7 @@ defmodule Hexpm.Accounts.AuditLogTest do
   use Hexpm.DataCase, async: true
 
   alias Hexpm.Accounts.AuditLog
+  alias Hexpm.OAuth.MachineToken
 
   setup do
     user = build(:user)
@@ -69,6 +70,27 @@ defmodule Hexpm.Accounts.AuditLogTest do
       assert audit.params.user.id == user.id
       assert audit.params.user.username == user.username
       assert audit.params.user.handles.github == user.handles.github
+    end
+
+    test "machine token actions are attributed to the API key", %{
+      user: user,
+      key: key,
+      package: package
+    } do
+      user = %{user | handles: build(:user_handles, github: user.username)}
+
+      audit_data = %{
+        user: user,
+        auth_credential: MachineToken.new(key, ["api"]),
+        user_agent: "user_agent",
+        remote_ip: "127.0.0.1"
+      }
+
+      audit = AuditLog.build(audit_data, "owner.add", {package, "full", user})
+
+      assert audit.key == key
+      assert audit.key_data.id == key.id
+      assert audit.oauth_token == nil
     end
 
     test "action organization.create", %{user: user, key: key} do
