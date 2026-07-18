@@ -24,6 +24,7 @@ import { PrivateRepoTabs } from "./hooks/private_repo_tabs";
 import { PolicyDirtyState } from "./hooks/policy_dirty_state";
 import LineHighlight from "./hooks/line_highlight";
 import { InfiniteScroll } from "./hooks/diff";
+import { FormSync } from "./hooks/form_sync";
 
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")
@@ -51,6 +52,7 @@ let Hooks = {
   PolicyDirtyState,
   LineHighlight,
   InfiniteScroll,
+  FormSync,
 };
 let liveSocket = new LiveSocket("/live", Socket, {
   params: { _csrf_token: csrfToken },

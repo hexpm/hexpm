@@ -118,8 +118,14 @@ defmodule HexpmWeb.PackageLive.Index do
             </span>
           </button>
           <div class="flex-1"></div>
-          <%!-- phx-auto-recover stops reconnects from re-firing sort_change and resetting the page --%>
-          <form phx-change="sort_change" phx-auto-recover="ignore" class="inline-flex">
+          <form
+            id="sort-form-mobile"
+            phx-change="sort_change"
+            phx-auto-recover="ignore"
+            phx-hook="FormSync"
+            data-sync-to="sort-form"
+            class="inline-flex"
+          >
             <label for="sort-select-mobile" class="sr-only">Sort</label>
             <div class="relative">
               <select
@@ -238,8 +244,12 @@ defmodule HexpmWeb.PackageLive.Index do
                   >
                     Sort by
                   </label>
-                  <%!-- phx-auto-recover stops reconnects from re-firing sort_change and resetting the page --%>
-                  <form phx-change="sort_change" phx-auto-recover="ignore">
+                  <form
+                    id="sort-form"
+                    phx-change="sort_change"
+                    phx-hook="FormSync"
+                    data-sync-to="sort-form-mobile"
+                  >
                     <div class="relative min-w-[200px]">
                       <select
                         id="sort-select"
@@ -332,7 +342,11 @@ defmodule HexpmWeb.PackageLive.Index do
         updated_after: updated_after
     }
 
-    {:noreply, push_query(socket, new_query)}
+    if new_query == socket.assigns.search_query do
+      {:noreply, socket}
+    else
+      {:noreply, push_query(socket, new_query)}
+    end
   end
 
   @impl true
@@ -354,12 +368,16 @@ defmodule HexpmWeb.PackageLive.Index do
   end
 
   @impl true
-  def handle_event("sort_change", %{"sort" => sort}, socket) do
-    url_params =
-      %{sort: sort, search: socket.assigns.search}
-      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+  def handle_event("sort_change", %{"sort" => sort_param}, socket) do
+    if sort(sort_param) == socket.assigns.sort do
+      {:noreply, socket}
+    else
+      url_params =
+        %{sort: sort_param, search: socket.assigns.search}
+        |> Enum.reject(fn {_k, v} -> is_nil(v) end)
 
-    {:noreply, push_patch(socket, to: ~p"/packages?#{url_params}")}
+      {:noreply, push_patch(socket, to: ~p"/packages?#{url_params}")}
+    end
   end
 
   @impl true

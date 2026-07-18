@@ -28,6 +28,7 @@ defmodule HexpmWeb.PackageLive.FilterSidebar do
           id="filter-form"
           query={@query}
           build_tools={@build_tools}
+          sync_to="filter-form-mobile"
         />
         <.filter_actions />
       </div>
@@ -74,6 +75,8 @@ defmodule HexpmWeb.PackageLive.FilterSidebar do
             id="filter-form-mobile"
             query={@query}
             build_tools={@build_tools}
+            auto_recover="ignore"
+            sync_to="filter-form"
           />
         </div>
 
@@ -129,11 +132,21 @@ defmodule HexpmWeb.PackageLive.FilterSidebar do
   attr :id, :string, required: true
   attr :query, SearchQuery, required: true
   attr :build_tools, :list, required: true
+  attr :auto_recover, :string, default: nil
+
+  attr :sync_to, :string,
+    default: nil,
+    doc: "The ID of the parallel form that this form should sync its input values to client-side."
 
   defp filter_form(assigns) do
     ~H"""
-    <%!-- phx-auto-recover stops reconnects from re-firing filter_change and resetting the page --%>
-    <form phx-change="filter_change" id={@id} phx-auto-recover="ignore">
+    <form
+      id={@id}
+      phx-change="filter_change"
+      phx-auto-recover={@auto_recover}
+      phx-hook={@sync_to && "FormSync"}
+      data-sync-to={@sync_to}
+    >
       <div class="mb-[18px]">
         <label
           class="flex items-center justify-between gap-2 text-small font-semibold text-grey-600 dark:text-grey-200 mb-1.5"
