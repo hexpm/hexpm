@@ -25,6 +25,21 @@ defmodule Hexpm.Hexdocs.WorkersTest do
     assert Hexpm.Store.get(:docs_bucket, "#{package.name}/index.html") == nil
   end
 
+  test "upload succeeds for archives with write-protected file modes" do
+    package = insert(:package, name: "readonly_docs", docs_updated_at: DateTime.utc_now())
+    release = insert(:release, package: package, version: "1.0.0", has_docs: true)
+    key = "docs/#{package.name}-#{release.version}.tar.gz"
+
+    Hexpm.Store.put(
+      :repo_bucket,
+      key,
+      create_docs_tar([{"index.html", "<html><head></head></html>"}], 0o000)
+    )
+
+    assert :ok = perform_job(Workers.Upload, %{key: key})
+    assert Hexpm.Store.get(:docs_bucket, "#{package.name}/index.html") =~ "plausible"
+  end
+
   test "search succeeds for archives without search data" do
     package = insert(:package, name: "search_docs")
     release = insert(:release, package: package, version: "1.0.0", has_docs: true)
