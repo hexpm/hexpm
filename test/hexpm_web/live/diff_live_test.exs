@@ -251,6 +251,32 @@ defmodule HexpmWeb.DiffLiveTest do
     refute html =~ "<script>"
   end
 
+  test "mode-only changes render as changed files", %{package: package} do
+    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+
+    Cache.put_piece!(request, 0, %{
+      "diff" => """
+      diff --git a/tmp/diff-live_diff-1.0.0-AAAAAAAA/bin/run b/tmp/diff-live_diff-2.0.0-BBBBBBBB/bin/run
+      old mode 100644
+      new mode 100755
+      """,
+      "path_from" => "/tmp/diff-live_diff-1.0.0-AAAAAAAA",
+      "path_to" => "/tmp/diff-live_diff-2.0.0-BBBBBBBB"
+    })
+
+    Cache.put_metadata!(request, %{
+      total_diffs: 1,
+      total_additions: 0,
+      total_deletions: 0,
+      files_changed: 1
+    })
+
+    {:ok, _view, html} = live(build_conn(), "/diff/#{package.name}/1.0.0..2.0.0")
+
+    assert html =~ "ghd-file-status-changed"
+    assert html =~ "bin/run"
+  end
+
   test "missing cache pieces render an in-page file error", %{package: package} do
     {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
 

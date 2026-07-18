@@ -25,7 +25,7 @@
   "fine": {:hex, :fine, "0.1.6", "4bf7151493443c454aac9f2fa2f34f5fefd0346a83fb5586a016c4a135c63247", [:mix], [], "hexpm", "5638eb4495488e885ebec167fa57973e5c35e1a50c344eb7666c90ec1c4e3b12"},
   "floki": {:hex, :floki, "0.38.4", "10f98971e892aed2c2f1b3a0f928e488e3797e1c6dd3dfd98db40b14e9a78bcf", [:mix], [], "hexpm", "bdb34645eee8e79845c7edaca2d4099a52804ee4d4a3ecc683a69451f0244973"},
   "gen_stage": {:hex, :gen_stage, "1.3.2", "7c77e5d1e97de2c6c2f78f306f463bca64bf2f4c3cdd606affc0100b89743b7b", [:mix], [], "hexpm", "0ffae547fa777b3ed889a6b9e1e64566217413d018cabd825f786e843ffe63e7"},
-  "git_diff": {:git, "https://github.com/ericmj/git_diff.git", "e4ee06cfd139b8a911d07e42d0ff3b15eee2b740", [ref: "e4ee06cfd139b8a911d07e42d0ff3b15eee2b740"]},
+  "git_diff": {:git, "https://github.com/ericmj/git_diff.git", "d47473d661ff0073ce4080ae04db1a439d78a62b", [ref: "d47473d661ff0073ce4080ae04db1a439d78a62b"]},
   "goth": {:hex, :goth, "1.4.5", "ee37f96e3519bdecd603f20e7f10c758287088b6d77c0147cd5ee68cf224aade", [:mix], [{:finch, "~> 0.17", [hex: :finch, repo: "hexpm", optional: false]}, {:jason, "~> 1.1", [hex: :jason, repo: "hexpm", optional: false]}, {:jose, "~> 1.11", [hex: :jose, repo: "hexpm", optional: false]}], "hexpm", "0fc2dce5bd710651ed179053d0300ce3a5d36afbdde11e500d57f05f398d5ed5"},
   "hex_core": {:git, "https://github.com/hexpm/hex_core.git", "19001bbdfc38274165e30150c784cfe9b14a34b7", []},
   "hpax": {:hex, :hpax, "1.0.4", "777de5d433b0fbdc7c418159c8055910faa8047ffdb3d6b31098d2a46cd7685c", [:mix], [], "hexpm", "afc7cb142ebcc2d01ce7816190b98ce5dd49e799111b24249f3443d730f377ca"},
