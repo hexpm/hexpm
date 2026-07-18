@@ -49,7 +49,7 @@ defmodule HexpmWeb.Plugs.Attack do
   end
 
   def allow_action(conn, {:throttle, data}, _opts) do
-    add_throttling_headers(conn, data)
+    put_throttling_headers(conn, data)
   end
 
   def allow_action(conn, _data, _opts) do
@@ -58,7 +58,7 @@ defmodule HexpmWeb.Plugs.Attack do
 
   def block_action(conn, {:throttle, data}, _opts) do
     conn
-    |> add_throttling_headers(data)
+    |> put_throttling_headers(data)
     |> render_error(429, message: "API rate limit exceeded for #{throttled_user(conn)}")
   end
 
@@ -66,7 +66,7 @@ defmodule HexpmWeb.Plugs.Attack do
     render_error(conn, 403, message: "Blocked")
   end
 
-  defp add_throttling_headers(conn, data) do
+  def put_throttling_headers(conn, data) do
     # The expires_at value is a unix time in milliseconds, we want to return one
     # in seconds
     reset = div(data[:expires_at], 1_000)
@@ -118,6 +118,20 @@ defmodule HexpmWeb.Plugs.Attack do
       time: time,
       storage: @storage,
       limit: 500,
+      period: 60_000
+    )
+  end
+
+  def machine_token_exchange_throttle(key_id, opts \\ []) do
+    key = {:machine_token_exchange, key_id}
+    time = opts[:time] || System.system_time(:millisecond)
+    unless opts[:time], do: RateLimitPubSub.broadcast(key, time)
+
+    timed_throttle(
+      key,
+      time: time,
+      storage: @storage,
+      limit: 100,
       period: 60_000
     )
   end

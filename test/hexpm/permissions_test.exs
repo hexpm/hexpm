@@ -2,7 +2,7 @@ defmodule Hexpm.PermissionsTest do
   use Hexpm.DataCase, async: true
 
   alias Hexpm.Permissions
-  alias Hexpm.OAuth.Token
+  alias Hexpm.OAuth.{MachineToken, Token}
   alias Hexpm.Repository.Package
 
   describe "validate_scopes/1" do
@@ -274,6 +274,61 @@ defmodule Hexpm.PermissionsTest do
       assert Permissions.verify_access?(key, "api", "write")
       refute Permissions.verify_access?(key, "repository", "foo")
       refute Permissions.verify_access?(key, "repositories", nil)
+    end
+
+    test "machine tokens require both signed scopes and current key permissions" do
+      read_key =
+        build(:key, permissions: [build(:key_permission, domain: "api", resource: "read")])
+
+      broad_token = MachineToken.new(read_key, ["api:read", "api:write"])
+      assert Permissions.verify_access?(broad_token, "api", "read")
+      refute Permissions.verify_access?(broad_token, "api", "write")
+
+      full_key = build(:key, permissions: [build(:key_permission, domain: "api")])
+      narrow_token = MachineToken.new(full_key, ["api:read"])
+      assert Permissions.verify_access?(narrow_token, "api", "read")
+      refute Permissions.verify_access?(narrow_token, "api", "write")
+    end
+  end
+
+  describe "expand_repositories_scope/3" do
+    test "intersects explicit repository scopes with current membership and key permissions" do
+      user = insert(:user)
+      current = insert(:organization)
+      former = insert(:organization)
+      insert(:organization_user, user: user, organization: current)
+
+      key =
+        build(:key,
+          user: user,
+          permissions: [build(:key_permission, domain: "repositories")]
+        )
+
+      assert Permissions.expand_repositories_scope(
+               user,
+               ["repository:#{current.name}", "repository:#{former.name}"],
+               key
+             ) == ["repository:#{current.name}"]
+    end
+
+    test "omits repositories without active billing eligibility" do
+      user = insert(:user)
+      organization = insert(:organization, billing_active: false, trial_end: DateTime.utc_now())
+      insert(:organization_user, user: user, organization: organization)
+
+      key =
+        build(:key,
+          user: user,
+          permissions: [
+            build(:key_permission, domain: "repository", resource: organization.name)
+          ]
+        )
+
+      assert Permissions.expand_repositories_scope(
+               user,
+               ["repositories", "repository:#{organization.name}"],
+               key
+             ) == []
     end
   end
 

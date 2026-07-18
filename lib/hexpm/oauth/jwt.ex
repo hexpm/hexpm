@@ -18,6 +18,23 @@ defmodule Hexpm.OAuth.JWT do
   Generates a JWT access token for a subject (user or organization) with the given scopes.
   """
   def generate_access_token(subject_name, subject_type, scopes, opts \\ []) do
+    generate_token(subject_name, subject_type, scopes, opts)
+  end
+
+  @doc """
+  Generates a row-less access token tied to an API key.
+  """
+  def generate_machine_token(subject_name, subject_type, scopes, key_id, opts \\ []) do
+    opts =
+      Keyword.put(opts, :claims, %{
+        "token_use" => "machine",
+        "key_id" => key_id
+      })
+
+    generate_token(subject_name, subject_type, scopes, opts)
+  end
+
+  defp generate_token(subject_name, subject_type, scopes, opts) do
     jti = generate_jti()
     now = unix_now()
 
@@ -28,6 +45,8 @@ defmodule Hexpm.OAuth.JWT do
       "nbf" => now - 30,
       "scope" => Enum.join(scopes, " ")
     }
+
+    extra_claims = Map.merge(Keyword.get(opts, :claims, %{}), extra_claims)
 
     expires_in = Keyword.get(opts, :expires_in, 30 * 60)
 

@@ -77,7 +77,8 @@ defmodule Hexpm.OAuth.Clients do
   def supports_scopes?(%Client{allowed_scopes: allowed_scopes}, requested_scopes) do
     Enum.all?(requested_scopes, fn scope ->
       scope in allowed_scopes or api_scope_allowed_by_full_api?(scope, allowed_scopes) or
-        resource_scope_allowed_by_base?(scope, allowed_scopes)
+        resource_scope_allowed_by_base?(scope, allowed_scopes) or
+        repository_scope_allowed_by_wildcard?(scope, allowed_scopes)
     end)
   end
 
@@ -95,6 +96,12 @@ defmodule Hexpm.OAuth.Clients do
       false
     end
   end
+
+  defp repository_scope_allowed_by_wildcard?("repository:" <> _repository, allowed_scopes) do
+    "repositories" in allowed_scopes
+  end
+
+  defp repository_scope_allowed_by_wildcard?(_scope, _allowed_scopes), do: false
 
   @doc """
   Validates that the redirect URI is allowed for this client.

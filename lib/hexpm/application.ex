@@ -78,8 +78,8 @@ defmodule Hexpm.Application do
   end
 
   defp read_only_mode() do
-    mode = System.get_env("HEXPM_READ_ONLY_MODE") == "1"
-    Application.put_env(:hexpm, :read_only_mode, mode)
+    read_only? = System.get_env("HEXPM_READ_ONLY_MODE") == "1"
+    Hexpm.OAuth.ReadOnly.configure!(read_only?)
   end
 
   defp setup_tmp_dir() do

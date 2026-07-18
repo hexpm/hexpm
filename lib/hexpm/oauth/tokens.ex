@@ -3,6 +3,7 @@ defmodule Hexpm.OAuth.Tokens do
 
   alias Hexpm.Accounts.{Organization, User}
   alias Hexpm.UserSessions
+  alias Hexpm.Accounts.{Organization, User}
   alias Hexpm.OAuth.{Token, JWT}
   alias Hexpm.Permissions
 
@@ -184,55 +185,34 @@ defmodule Hexpm.OAuth.Tokens do
 
   @doc """
   Creates a session and token for an API key.
-
-  Unlike user tokens, API key tokens:
-  - Have session lifetime matching access token lifetime (no long-lived session)
-  - Do not include refresh tokens (client can exchange API key again)
-  - Use the API key's user/organization for authentication
   """
   def create_session_and_token_for_api_key(
         user_or_org,
         client_id,
         scopes,
-        grant_type,
-        grant_reference \\ nil,
         opts \\ []
       ) do
-    # For API key tokens, session expires with the access token (30 minutes)
     expires_in = Keyword.get(opts, :expires_in, @default_expires_in)
     session_expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)
 
     {user, organization} =
       case user_or_org do
-        %Hexpm.Accounts.User{} = u -> {u, nil}
-        %Hexpm.Accounts.Organization{} = o -> {nil, o}
+        %User{} = user -> {user, nil}
+        %Organization{} = organization -> {nil, organization}
       end
 
-    max_sessions =
-      if organization do
-        UserSessions.get_organization_session_limit(organization)
-      else
-        UserSessions.max_user_sessions()
-      end
-
-    # Enforce session limit outside transaction
-    UserSessions.enforce_session_limit(user_or_org, max_sessions)
-
-    # Pre-compute JWT outside the transaction (CPU-intensive ES256 signing)
-    token_opts =
-      Keyword.merge(opts, expires_in: expires_in, with_refresh_token: false)
+    token_opts = Keyword.merge(opts, expires_in: expires_in, with_refresh_token: false)
 
     token_changeset =
       create_for_user_or_org(
         user_or_org,
         client_id,
         scopes,
-        grant_type,
-        grant_reference,
+        "client_credentials",
+        nil,
         token_opts
       )
 
-    # Build flat Multi (no nested transactions, last_use folded into INSERT)
     UserSessions.build_api_key_session_multi(user, organization, client_id, session_expires_at,
       name: Keyword.get(opts, :name),
       usage_info: Keyword.get(opts, :usage_info)
@@ -250,6 +230,40 @@ defmodule Hexpm.OAuth.Tokens do
   end
 
   @doc """
+  Creates a row-less access token tied to an API key.
+  """
+  def create_machine_token(user_or_org, client_id, scopes, key_id, opts \\ []) do
+    expires_in = Keyword.get(opts, :expires_in, @default_expires_in)
+    expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)
+
+    {subject_name, subject_type} = subject(user_or_org)
+    owner_attrs = principal_id(user_or_org)
+
+    {:ok, access_token, jti} =
+      JWT.generate_machine_token(subject_name, subject_type, scopes, key_id,
+        expires_in: expires_in
+      )
+
+    %{
+      jti: jti,
+      access_token: access_token,
+      scopes: scopes,
+      granted_scopes: scopes,
+      expires_at: expires_at,
+      grant_type: "client_credentials",
+      client_id: client_id
+    }
+    |> Map.merge(owner_attrs)
+    |> build_rowless_token()
+  end
+
+  defp build_rowless_token(attrs) do
+    %Token{}
+    |> Token.changeset(attrs)
+    |> Ecto.Changeset.apply_action(:insert)
+  end
+
+  @doc """
   Creates a session and token for a user atomically within a transaction.
   """
   def create_session_and_token_for_user(
@@ -260,9 +274,6 @@ defmodule Hexpm.OAuth.Tokens do
         grant_reference \\ nil,
         opts \\ []
       ) do
-    # Enforce session limit outside transaction
-    UserSessions.enforce_session_limit(user)
-
     # Compute session expiration upfront (used for both session and refresh token)
     session_expires_at =
       DateTime.add(DateTime.utc_now(), UserSessions.default_session_expires_in(), :second)

@@ -50,4 +50,9 @@ defmodule HexpmWeb.RateLimitPubSub do
     Attack.sso_callback_ip_throttle(ip, time: time)
     {:noreply, []}
   end
+
+  def handle_info({:throttle, {:machine_token_exchange, key_id}, time}, []) do
+    Attack.machine_token_exchange_throttle(key_id, time: time)
+    {:noreply, []}
+  end
 end
