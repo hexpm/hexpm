@@ -367,8 +367,19 @@ defmodule HexpmWeb.PackageControllerTest do
         |> test_login(user1)
         |> get("/packages/#{repository1.name}/#{package3.name}")
 
-      assert response(conn, 200) =~
+      body = response(conn, 200)
+
+      assert body =~
                escape(~s({:#{package3.name}, "~> 0.0.1", organization: "#{repository1.name}"}))
+
+      assert [readme_url] =
+               body
+               |> Floki.parse_document!()
+               |> Floki.attribute("#readme-frame", "src")
+
+      assert readme_url =~ "/#{repository1.name}/#{package3.name}/0.0.1?token="
+      [_url, token] = String.split(readme_url, "token=")
+      assert :ok = HexpmWeb.ReadmeToken.verify(token, repository1.name, package3.name, "0.0.1")
     end
 
     test "dont show private package", %{

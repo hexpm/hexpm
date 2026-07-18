@@ -10,7 +10,7 @@
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex min-w-0 items-center gap-2 font-mono text-xs text-grey-500 dark:text-grey-300">
           <.link
-            patch={~p"/packages/#{@package_name}/#{@version}/files"}
+            patch={files_path(@repository, @package_name, @version)}
             class="shrink-0 font-semibold text-grey-800 hover:text-primary-600 dark:text-grey-100 dark:hover:text-primary-300"
           >
             {@package_name}
@@ -51,6 +51,7 @@
             <.source_tree
               nodes={@file_tree}
               filename={@filename}
+              repository={@repository}
               package_name={@package_name}
               version={@version}
               expanded_paths={@expanded_paths}
@@ -61,6 +62,7 @@
             <.source_results
               files={@filtered_files}
               filename={@filename}
+              repository={@repository}
               package_name={@package_name}
               version={@version}
               close_modal?={selector.close_modal?}

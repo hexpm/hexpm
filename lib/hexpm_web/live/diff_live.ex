@@ -9,19 +9,23 @@ defmodule HexpmWeb.DiffLive do
   alias HexpmWeb.Components.FileSelector
   alias HexpmWeb.PackageLayoutAssigns
   alias HexpmWeb.Plugs.Attack
+  alias HexpmWeb.RepositoryAccess
 
   @batch_size 5
   @poll_interval 1_000
 
   @impl Phoenix.LiveView
   def mount(%{"package" => package, "versions" => versions} = params, session, socket) do
+    repository = params["repository"] || "hexpm"
     socket = assign(socket, base_assigns())
     socket = assign(socket, diff_identity: diff_identity(socket, session))
     ignore_whitespace = params["w"] == "1"
 
     with {:ok, from, to} <- parse_versions(versions),
+         {:ok, _repository} <-
+           fetch_repository(socket.assigns.current_user, repository),
          {:ok, request} <-
-           Hexpm.Diff.prepare(package, from, to, ignore_whitespace: ignore_whitespace) do
+           Hexpm.Diff.prepare(repository, package, from, to, ignore_whitespace: ignore_whitespace) do
       release = Releases.preload(request.to_release, [:requirements])
 
       layout_assigns =
@@ -38,6 +42,7 @@ defmodule HexpmWeb.DiffLive do
         |> assign(layout_assigns)
         |> assign(
           request: request,
+          repository: repository,
           package: request.package,
           from: request.from,
           to: request.to,
@@ -48,7 +53,13 @@ defmodule HexpmWeb.DiffLive do
           page_title: "#{request.package} #{request.from}..#{request.to} diff",
           description: "Compare #{request.package} #{request.from} with #{request.to} on Hex.",
           canonical_url:
-            canonical_url(request.package, request.from, request.to, ignore_whitespace),
+            canonical_url(
+              repository,
+              request.package,
+              request.from,
+              request.to,
+              ignore_whitespace
+            ),
           container: "container"
         )
 
@@ -117,13 +128,21 @@ defmodule HexpmWeb.DiffLive do
     else
       {:noreply,
        push_navigate(socket,
-         to: diff_path(socket.assigns.package, from, to, socket.assigns.ignore_whitespace)
+         to:
+           diff_path(
+             socket.assigns.repository,
+             socket.assigns.package,
+             from,
+             to,
+             socket.assigns.ignore_whitespace
+           )
        )}
     end
   end
 
   def handle_event("retry", _params, socket) do
     case Hexpm.Diff.prepare(
+           socket.assigns.repository,
            socket.assigns.package,
            socket.assigns.from,
            socket.assigns.to,
@@ -441,6 +460,13 @@ defmodule HexpmWeb.DiffLive do
     end
   end
 
+  defp fetch_repository(current_user, repository) do
+    case RepositoryAccess.fetch_repository(current_user, repository) do
+      {:ok, repository} -> {:ok, repository}
+      :error -> {:error, :package_not_found}
+    end
+  end
+
   defp parse_versions(versions) when is_binary(versions) do
     case String.split(versions, "..", parts: 2) do
       [from, to] when from != "" -> {:ok, from, to}
@@ -453,6 +479,7 @@ defmodule HexpmWeb.DiffLive do
   defp base_assigns do
     [
       request: nil,
+      repository: nil,
       package: nil,
       from: nil,
       to: nil,
@@ -491,14 +518,23 @@ defmodule HexpmWeb.DiffLive do
     "Could not load diff cache. Try again later."
   end
 
-  def diff_path(package, from, to, ignore_whitespace) do
+  def diff_path(repository, package, from, to, ignore_whitespace) do
     query = if ignore_whitespace, do: [w: 1], else: []
-    ~p"/diff/#{package}/#{from <> ".." <> to}?#{query}"
+
+    case repository do
+      "hexpm" -> ~p"/diff/#{package}/#{from <> ".." <> to}?#{query}"
+      _other -> ~p"/diff/#{repository}/#{package}/#{from <> ".." <> to}?#{query}"
+    end
   end
 
-  defp canonical_url(package, from, to, ignore_whitespace) do
-    url(~p"/diff/#{package}/#{from <> ".." <> to}") <>
-      if(ignore_whitespace, do: "?w=1", else: "")
+  defp canonical_url(repository, package, from, to, ignore_whitespace) do
+    url =
+      case repository do
+        "hexpm" -> url(~p"/diff/#{package}/#{from <> ".." <> to}")
+        _other -> url(~p"/diff/#{repository}/#{package}/#{from <> ".." <> to}")
+      end
+
+    url <> if(ignore_whitespace, do: "?w=1", else: "")
   end
 
   def job_state_title(:running), do: "Generating diff"

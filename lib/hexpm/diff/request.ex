@@ -1,5 +1,6 @@
 defmodule Hexpm.Diff.Request do
   @enforce_keys [
+    :repository,
     :package,
     :package_record,
     :from,
@@ -17,19 +18,20 @@ defmodule Hexpm.Diff.Request do
   ]
   defstruct @enforce_keys
 
-  alias Hexpm.Repository.{Package, Packages, Release, Releases, Repository}
+  alias Hexpm.Repository.{Package, Packages, Release, Releases}
 
-  def prepare(package_name, from, to, opts) when is_binary(package_name) and is_list(opts) do
+  def prepare(repository, package_name, from, to, opts)
+      when is_binary(repository) and is_binary(package_name) and is_list(opts) do
     cache_version = Application.fetch_env!(:hexpm, :diff_cache_version)
-    prepare(package_name, from, to, opts, cache_version)
+    prepare(repository, package_name, from, to, opts, cache_version)
   end
 
-  def prepare(_, _, _, _), do: {:error, :invalid_request}
+  def prepare(_, _, _, _, _), do: {:error, :invalid_request}
 
-  defp prepare(package_name, from, to, opts, cache_version) do
+  defp prepare(repository, package_name, from, to, opts, cache_version) do
     with {:ok, from} <- parse_version(from),
          {:ok, to} <- parse_optional_version(to),
-         {:ok, package} <- fetch_package(package_name),
+         {:ok, package} <- fetch_package(repository, package_name),
          {:ok, releases} <- fetch_releases(package),
          {:ok, to} <- resolve_to(to, releases),
          :ok <- ensure_distinct(from, to),
@@ -41,6 +43,7 @@ defmodule Hexpm.Diff.Request do
 
       {:ok,
        %__MODULE__{
+         repository: repository,
          package: package.name,
          package_record: package,
          from: from,
@@ -63,6 +66,7 @@ defmodule Hexpm.Diff.Request do
   end
 
   def from_args(%{
+        "repository" => repository,
         "package" => package,
         "from" => from,
         "to" => to,
@@ -71,13 +75,14 @@ defmodule Hexpm.Diff.Request do
         "cache_version" => cache_version,
         "ignore_whitespace" => ignore_whitespace
       })
-      when is_binary(package) and is_binary(from) and is_binary(to) and
+      when is_binary(repository) and is_binary(package) and is_binary(from) and is_binary(to) and
              is_binary(from_checksum) and is_binary(to_checksum) and is_integer(cache_version) and
              is_boolean(ignore_whitespace) do
     with {:ok, decoded_from} <- Base.decode16(from_checksum, case: :mixed),
          {:ok, decoded_to} <- Base.decode16(to_checksum, case: :mixed),
          {:ok, request} <-
            prepare(
+             repository,
              package,
              from,
              to,
@@ -103,6 +108,7 @@ defmodule Hexpm.Diff.Request do
 
   def to_args(%__MODULE__{} = request) do
     %{
+      repository: request.repository,
       package: request.package,
       from: request.from,
       to: request.to,
@@ -143,8 +149,8 @@ defmodule Hexpm.Diff.Request do
   defp ensure_distinct(version, version), do: {:error, :identical_versions}
   defp ensure_distinct(_, _), do: :ok
 
-  defp fetch_package(package_name) do
-    case Packages.get(Repository.hexpm(), package_name) do
+  defp fetch_package(repository, package_name) do
+    case Packages.get(repository, package_name) do
       %Package{} = package -> {:ok, package}
       nil -> {:error, :package_not_found}
     end

@@ -1,6 +1,7 @@
 defmodule Hexpm.Hexdocs.Workers.Upload do
   use Oban.Worker,
     queue: :heavy,
+    priority: 3,
     max_attempts: 5,
     unique: [period: :infinity, states: :incomplete, fields: [:worker, :args]]
 
@@ -14,6 +15,7 @@ end
 defmodule Hexpm.Hexdocs.Workers.Search do
   use Oban.Worker,
     queue: :heavy,
+    priority: 3,
     max_attempts: 5,
     unique: [period: :infinity, states: :incomplete, fields: [:worker, :args]]
 
@@ -27,6 +29,7 @@ end
 defmodule Hexpm.Hexdocs.Workers.Delete do
   use Oban.Worker,
     queue: :heavy,
+    priority: 3,
     max_attempts: 5,
     unique: [period: :infinity, states: :incomplete, fields: [:worker, :args]]
 
@@ -40,6 +43,7 @@ end
 defmodule Hexpm.Hexdocs.Workers.Sitemap do
   use Oban.Worker,
     queue: :heavy,
+    priority: 3,
     max_attempts: 5,
     unique: [period: :infinity, states: :incomplete, fields: [:worker, :args]]
 

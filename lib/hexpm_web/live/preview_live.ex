@@ -3,9 +3,10 @@ defmodule HexpmWeb.PreviewLive do
 
   import HexpmWeb.Components.PackageLayout
 
-  alias Hexpm.Repository.{Packages, Releases}
+  alias Hexpm.Repository.Releases
   alias HexpmWeb.Components.FileSelector
   alias HexpmWeb.PackageLayoutAssigns
+  alias HexpmWeb.RepositoryAccess
 
   defmodule NotFoundError do
     defexception message: "Package file not found", plug_status: 404
@@ -15,6 +16,7 @@ defmodule HexpmWeb.PreviewLive do
   def mount(params, _session, socket) do
     {:ok,
      assign(socket,
+       repository: nil,
        package: nil,
        package_name: params["package"],
        version: nil,
@@ -37,24 +39,27 @@ defmodule HexpmWeb.PreviewLive do
 
   @impl true
   def handle_params(params, _uri, socket) do
+    repository = params["repository"] || "hexpm"
     package_name = params["package"]
     version = params["version"]
     requested_filename = filename(params["filename"])
 
-    with package when not is_nil(package) <- Packages.get("hexpm", package_name),
+    with {:ok, package} <-
+           RepositoryAccess.fetch_package(socket.assigns.current_user, repository, package_name),
          [_ | _] = releases <- Releases.all(package),
          release when not is_nil(release) <- find_release(releases, version),
          {:ok, source, replace_path?} <-
-           source(package_name, version, requested_filename, params["fallback"]) do
+           source(repository, package_name, version, requested_filename, params["fallback"]) do
       socket =
         socket
+        |> assign(repository: repository)
         |> assign_package(package, release, releases)
-        |> assign_source(package_name, version, source)
+        |> assign_source(repository, package_name, version, source)
 
       socket =
         if replace_path? do
           push_patch(socket,
-            to: ~p"/packages/#{package_name}/#{version}/files/#{Path.split(source.filename)}",
+            to: files_path(repository, package_name, version, source.filename),
             replace: true
           )
         else
@@ -87,6 +92,22 @@ defmodule HexpmWeb.PreviewLive do
     {:noreply, assign(socket, expanded_paths: expanded_paths)}
   end
 
+  def files_path("hexpm", package, version) do
+    ~p"/packages/#{package}/#{version}/files"
+  end
+
+  def files_path(repository, package, version) do
+    ~p"/packages/#{repository}/#{package}/#{version}/files"
+  end
+
+  def files_path("hexpm", package, version, filename) do
+    ~p"/packages/#{package}/#{version}/files/#{Path.split(filename)}"
+  end
+
+  def files_path(repository, package, version, filename) do
+    ~p"/packages/#{repository}/#{package}/#{version}/files/#{Path.split(filename)}"
+  end
+
   defp assign_package(socket, package, release, releases) do
     version = to_string(release.version)
 
@@ -112,7 +133,7 @@ defmodule HexpmWeb.PreviewLive do
     end
   end
 
-  defp assign_source(socket, package, version, source) do
+  defp assign_source(socket, repository, package, version, source) do
     {highlighted, message} = render_contents(package, version, source)
     filename = source.filename
 
@@ -127,11 +148,11 @@ defmodule HexpmWeb.PreviewLive do
       query: "",
       highlighted: highlighted,
       message: message,
-      raw_url: raw_url(package, version, filename),
+      raw_url: raw_url(repository, package, version, filename),
       title: "#{filename} - #{package} #{version}",
       page_title: "#{filename} - #{package} #{version} | Hex",
       description: description(package, version, filename),
-      canonical_url: canonical_url(package, version, filename)
+      canonical_url: HexpmWeb.Endpoint.url() <> files_path(repository, package, version, filename)
     )
   end
 
@@ -141,13 +162,13 @@ defmodule HexpmWeb.PreviewLive do
 
   defp find_release(_releases, _version), do: nil
 
-  defp source(package, version, requested_filename, fallback) do
-    case Hexpm.Preview.source(package, version, requested_filename) do
+  defp source(repository, package, version, requested_filename, fallback) do
+    case Hexpm.Preview.source(repository, package, version, requested_filename) do
       {:ok, source} ->
         {:ok, source, fallback == "default"}
 
       :error when fallback == "default" ->
-        case Hexpm.Preview.source(package, version) do
+        case Hexpm.Preview.source(repository, package, version) do
           {:ok, source} -> {:ok, source, true}
           :error -> :error
         end
@@ -180,11 +201,7 @@ defmodule HexpmWeb.PreviewLive do
   defp filename([_ | _] = parts), do: Path.join(parts)
   defp filename(_filename), do: nil
 
-  defp canonical_url(package, version, filename) do
-    url(~p"/packages/#{package}/#{version}/files/#{Path.split(filename)}")
-  end
-
-  defp raw_url(package, version, filename) do
+  defp raw_url("hexpm", package, version, filename) do
     Application.fetch_env!(:hexpm, :cdn_url) <>
       "/preview/" <>
       encode_path(package) <>
@@ -192,6 +209,10 @@ defmodule HexpmWeb.PreviewLive do
       encode_path(version) <>
       "/" <>
       encode_path(filename)
+  end
+
+  defp raw_url(repository, package, version, filename) do
+    ~p"/packages/#{repository}/#{package}/#{version}/raw/#{Path.split(filename)}"
   end
 
   defp encode_path(path) do
@@ -240,6 +261,7 @@ defmodule HexpmWeb.PreviewLive do
 
   attr :nodes, :list, required: true
   attr :filename, :string, required: true
+  attr :repository, :string, required: true
   attr :package_name, :string, required: true
   attr :version, :string, required: true
   attr :expanded_paths, :any, required: true
@@ -271,6 +293,7 @@ defmodule HexpmWeb.PreviewLive do
             <.source_tree
               nodes={node.children}
               filename={@filename}
+              repository={@repository}
               package_name={@package_name}
               version={@version}
               expanded_paths={@expanded_paths}
@@ -281,7 +304,7 @@ defmodule HexpmWeb.PreviewLive do
         </li>
         <li :if={node.type == :file}>
           <.link
-            patch={~p"/packages/#{@package_name}/#{@version}/files/#{Path.split(node.path)}"}
+            patch={files_path(@repository, @package_name, @version, node.path)}
             phx-click={if @close_modal?, do: hide_modal(@modal_id)}
             aria-current={if node.path == @filename, do: "page"}
             class={[
@@ -303,6 +326,7 @@ defmodule HexpmWeb.PreviewLive do
 
   attr :files, :list, required: true
   attr :filename, :string, required: true
+  attr :repository, :string, required: true
   attr :package_name, :string, required: true
   attr :version, :string, required: true
   attr :close_modal?, :boolean, default: false
@@ -316,7 +340,7 @@ defmodule HexpmWeb.PreviewLive do
     >
       <:item :let={result}>
         <.link
-          patch={~p"/packages/#{@package_name}/#{@version}/files/#{Path.split(result.item)}"}
+          patch={files_path(@repository, @package_name, @version, result.item)}
           phx-click={if @close_modal?, do: hide_modal(@modal_id)}
           aria-current={if result.item == @filename, do: "page"}
           class={result.class}

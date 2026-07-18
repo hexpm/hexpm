@@ -26,7 +26,7 @@ defmodule HexpmWeb.DiffLiveTest do
   test "cache hit renders five pieces initially and lazy-loads the next batch", %{
     package: package
   } do
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "7.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "7.0.0", [])
     put_ready_cache(request, 6)
 
     {:ok, view, html} = live(build_conn(), "/diff/#{package.name}/1.0.0..7.0.0")
@@ -75,7 +75,7 @@ defmodule HexpmWeb.DiffLiveTest do
   test "changed-file selector filters and loads only the selected unloaded file", %{
     package: package
   } do
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "7.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "7.0.0", [])
     put_ready_cache(request, 7)
 
     {:ok, view, _html} = live(build_conn(), "/diff/#{package.name}/1.0.0..7.0.0")
@@ -103,7 +103,7 @@ defmodule HexpmWeb.DiffLiveTest do
   test "sidebar jumps create ordered gaps that load toward the selected file", %{
     package: package
   } do
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "7.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "7.0.0", [])
     put_ready_cache(request, 12)
 
     {:ok, view, _html} = live(build_conn(), "/diff/#{package.name}/1.0.0..7.0.0")
@@ -132,7 +132,7 @@ defmodule HexpmWeb.DiffLiveTest do
   test "backward gaps load at most five files nearest the selected file", %{
     package: package
   } do
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "7.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "7.0.0", [])
     put_ready_cache(request, 12)
 
     {:ok, view, _html} = live(build_conn(), "/diff/#{package.name}/1.0.0..7.0.0")
@@ -153,7 +153,7 @@ defmodule HexpmWeb.DiffLiveTest do
   end
 
   test "stale and invalid gap events do not load pieces", %{package: package} do
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "7.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "7.0.0", [])
     put_ready_cache(request, 7)
 
     {:ok, view, _html} = live(build_conn(), "/diff/#{package.name}/1.0.0..7.0.0")
@@ -179,7 +179,7 @@ defmodule HexpmWeb.DiffLiveTest do
       Application.delete_env(:hexpm, :diff_test_store_get)
     end)
 
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "7.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "7.0.0", [])
 
     for index <- 0..6 do
       Cache.put_piece!(request, index, %{type: "too_large", file: "legacy-#{index}.bin"})
@@ -219,7 +219,7 @@ defmodule HexpmWeb.DiffLiveTest do
   test "cached patches are highlighted through Lumis with stable line anchors", %{
     package: package
   } do
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
 
     Cache.put_piece!(request, 0, %{
       "diff" => """
@@ -252,7 +252,7 @@ defmodule HexpmWeb.DiffLiveTest do
   end
 
   test "mode-only changes render as changed files", %{package: package} do
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
 
     Cache.put_piece!(request, 0, %{
       "diff" => """
@@ -278,7 +278,7 @@ defmodule HexpmWeb.DiffLiveTest do
   end
 
   test "missing cache pieces render an in-page file error", %{package: package} do
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
 
     Cache.put_metadata!(request, %{
       total_diffs: 1,
@@ -472,7 +472,7 @@ defmodule HexpmWeb.DiffLiveTest do
     path = "/diff/#{package.name}/3.0.0..4.0.0"
     {:ok, view, _html} = live(build_conn(), path)
     job = Repo.one!(from job in Oban.Job, where: job.worker == "Hexpm.Diff.Worker")
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "3.0.0", "4.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "3.0.0", "4.0.0", [])
     put_ready_cache(request, 1)
     set_job_state(job, "completed")
 
@@ -488,7 +488,7 @@ defmodule HexpmWeb.DiffLiveTest do
          package: package
        } do
     {:ok, request} =
-      Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", ignore_whitespace: true)
+      Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", ignore_whitespace: true)
 
     put_ready_cache(request, 0)
     {:ok, view, html} = live(build_conn(), "/diff/#{package.name}/1.0.0..2.0.0?w=1")
@@ -510,7 +510,7 @@ defmodule HexpmWeb.DiffLiveTest do
   end
 
   test "selector rejects a crafted identical pair", %{package: package} do
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
     put_ready_cache(request, 0)
     {:ok, view, _html} = live(build_conn(), "/diff/#{package.name}/1.0.0..2.0.0")
 
@@ -525,7 +525,7 @@ defmodule HexpmWeb.DiffLiveTest do
   test "blank target resolves latest and invalid requests render in-page errors", %{
     package: package
   } do
-    {:ok, latest_request} = Hexpm.Diff.prepare(package.name, "1.0.0", "", [])
+    {:ok, latest_request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "", [])
     put_ready_cache(latest_request, 0)
 
     {:ok, _view, html} = live(build_conn(), "/diff/#{package.name}/1.0.0..")
@@ -557,6 +557,73 @@ defmodule HexpmWeb.DiffLiveTest do
 
     assert html =~ ~s(href="/diff/#{package.name}/1.0.0..2.0.0")
     refute html =~ "http://localhost:5004/diff/"
+  end
+
+  test "renders private package diffs for organization members" do
+    %{repository: repository, package: package, user: user} =
+      private_package("private_live_diff")
+
+    {:ok, request} = Hexpm.Diff.prepare(repository.name, package.name, "1.0.0", "2.0.0", [])
+    put_ready_cache(request, 2)
+
+    {:ok, _view, html} =
+      build_conn()
+      |> test_login(user)
+      |> live("/diff/#{repository.name}/#{package.name}/1.0.0..2.0.0")
+
+    assert html =~ "#{package.name} 1.0.0..2.0.0 diff"
+    assert html =~ ~s(href="/diff/#{repository.name}/#{package.name}/1.0.0..2.0.0?w=1")
+  end
+
+  test "private package diffs are not found for non-members and anonymous users" do
+    %{repository: repository, package: package} = private_package("private_denied_diff")
+    other_user = insert(:user)
+
+    {:ok, _view, html} =
+      live(build_conn(), "/diff/#{repository.name}/#{package.name}/1.0.0..2.0.0")
+
+    assert html =~ "Package not found"
+
+    {:ok, _view, html} =
+      build_conn()
+      |> test_login(other_user)
+      |> live("/diff/#{repository.name}/#{package.name}/1.0.0..2.0.0")
+
+    assert html =~ "Package not found"
+
+    {:ok, _view, html} = live(build_conn(), "/diff/#{package.name}/1.0.0..2.0.0")
+    assert html =~ "Package not found"
+  end
+
+  test "private package version links use repository-scoped diff and files routes" do
+    %{repository: repository, package: package, user: user} =
+      private_package("private_versions_diff")
+
+    html =
+      build_conn()
+      |> test_login(user)
+      |> get("/packages/#{repository.name}/#{package.name}/versions")
+      |> response(200)
+
+    assert html =~ ~s(href="/diff/#{repository.name}/#{package.name}/1.0.0..2.0.0")
+    assert html =~ ~s(href="/packages/#{repository.name}/#{package.name}/2.0.0/files")
+  end
+
+  defp private_package(name) do
+    repository = insert(:repository)
+    user = insert(:user)
+    insert(:organization_user, user: user, organization: repository.organization)
+    package = insert(:package, repository_id: repository.id, name: name)
+
+    for major <- 1..2 do
+      insert(:release,
+        package: package,
+        version: "#{major}.0.0",
+        outer_checksum: :crypto.hash(:sha256, "#{name}-#{major}")
+      )
+    end
+
+    %{repository: repository, package: package, user: user}
   end
 
   defp put_ready_cache(request, count) do

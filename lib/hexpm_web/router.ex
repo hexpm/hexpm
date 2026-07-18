@@ -114,6 +114,7 @@ defmodule HexpmWeb.Router do
   scope "/", HexpmWeb, host: "readme." do
     pipe_through :readme
 
+    get "/:repository/:name/:version", ReadmeController, :show
     get "/:name/:version", ReadmeController, :show
     get "/:name", ReadmeController, :show
     match :*, "/*path", ReadmeController, :not_found
@@ -208,6 +209,7 @@ defmodule HexpmWeb.Router do
       session: {HexpmWeb.Live.InitAssigns, :session, []} do
       live "/packages", PackageLive.Index, :index
       live "/diff/:package/:versions", DiffLive, :show
+      live "/diff/:repository/:package/:versions", DiffLive, :show
     end
 
     get "/diffs", DiffController, :index
@@ -220,6 +222,8 @@ defmodule HexpmWeb.Router do
     live_session :preview, on_mount: {HexpmWeb.Live.InitAssigns, :default} do
       live "/packages/:package/:version/files", PreviewLive, :files
       live "/packages/:package/:version/files/*filename", PreviewLive, :files
+      live "/packages/:repository/:package/:version/files", PreviewLive, :files
+      live "/packages/:repository/:package/:version/files/*filename", PreviewLive, :files
     end
 
     get "/packages/:name/owners", PackageOwnerController, :index
@@ -243,6 +247,12 @@ defmodule HexpmWeb.Router do
     get "/packages/:repository/:name/versions", PackageController, :versions
     get "/packages/:repository/:name/advisories", PackageController, :advisories
     get "/packages/:repository/:name/:version/dependencies", PackageController, :dependencies
+    get "/packages/:repository/:name/:version/raw/*filename", PreviewRawController, :show
+
+    get "/packages/:repository/:name/:version/readme-image/*filename",
+        PreviewImageController,
+        :show
+
     get "/packages/:repository/:name/:version", PackageController, :show
 
     get "/blog", BlogController, :index

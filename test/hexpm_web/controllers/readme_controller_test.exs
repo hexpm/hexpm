@@ -32,6 +32,82 @@ defmodule HexpmWeb.ReadmeControllerTest do
     )
   end
 
+  describe "show/2 for private packages" do
+    setup do
+      repository = insert(:repository)
+      package = insert(:package, repository_id: repository.id, name: "private_readme")
+
+      insert(
+        :release,
+        package: package,
+        version: "1.0.0",
+        meta: build(:release_metadata, app: package.name)
+      )
+
+      Hexpm.Store.put(
+        :preview_bucket,
+        "repos/#{repository.name}/file_lists/#{package.name}-1.0.0.json",
+        Jason.encode!(["README.md"])
+      )
+
+      Hexpm.Store.put(
+        :preview_bucket,
+        "repos/#{repository.name}/files/#{package.name}/1.0.0/README.md",
+        "# Private Package"
+      )
+
+      %{repository: repository, private_package: package}
+    end
+
+    test "renders README with a valid token", %{
+      repository: repository,
+      private_package: package
+    } do
+      token = HexpmWeb.ReadmeToken.sign(repository.name, package.name, "1.0.0")
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{repository.name}/#{package.name}/1.0.0?token=#{token}")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "Private Package"
+      assert get_resp_header(conn, "cache-control") == ["private, no-store"]
+    end
+
+    test "shows no README for missing, mismatched, or expired tokens", %{
+      repository: repository,
+      private_package: package
+    } do
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{repository.name}/#{package.name}/1.0.0")
+
+      assert conn.status == 404
+
+      other_token = HexpmWeb.ReadmeToken.sign(repository.name, "other_package", "1.0.0")
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{repository.name}/#{package.name}/1.0.0?token=#{other_token}")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "readme-not-found"
+      assert get_resp_header(conn, "cache-control") == ["private, no-store"]
+
+      version_token = HexpmWeb.ReadmeToken.sign(repository.name, package.name, "2.0.0")
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{repository.name}/#{package.name}/1.0.0?token=#{version_token}")
+
+      assert conn.resp_body =~ "readme-not-found"
+    end
+  end
+
   describe "show/2" do
     test "renders README for package with version", %{package: package} do
       mock_file_list_and_readme(

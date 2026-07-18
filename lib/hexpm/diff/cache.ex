@@ -36,12 +36,15 @@ defmodule Hexpm.Diff.Cache do
   end
 
   def metadata_key(%Request{} = request, hash) do
-    "metadata/#{request.package}-#{request.from}-#{request.to}-#{hash}.json"
+    "#{repo_prefix(request)}metadata/#{request.package}-#{request.from}-#{request.to}-#{hash}.json"
   end
 
   def diff_key(%Request{} = request, hash, index) when is_integer(index) do
-    "diffs/#{request.package}-#{request.from}-#{request.to}-#{hash}-diff-#{index}.json"
+    "#{repo_prefix(request)}diffs/#{request.package}-#{request.from}-#{request.to}-#{hash}-diff-#{index}.json"
   end
+
+  defp repo_prefix(%Request{repository: "hexpm"}), do: ""
+  defp repo_prefix(%Request{repository: repository}), do: "repos/#{repository}/"
 
   defp fetch_legacy(%Request{canonical_hash: hash, legacy_hash: hash}), do: :miss
 

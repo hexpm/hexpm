@@ -95,7 +95,18 @@ defmodule HexpmWeb.PackageVersionsControllerTest do
       assert result =~ "0.1.0"
       assert result =~ "1.0.0"
       assert result =~ package2.name
-      refute result =~ ~s(id="compare-versions")
+
+      assert {:ok, document} = Floki.parse_document(result)
+
+      assert Floki.attribute(document, "#compare-versions", "href") == [
+               "/diff/#{repository1.name}/#{package2.name}/0.1.0..1.0.0"
+             ]
+
+      assert [_ | _] =
+               Floki.find(
+                 document,
+                 ~s(a[href="/packages/#{repository1.name}/#{package2.name}/1.0.0/files"])
+               )
     end
 
     test "hides compare action when the package has one version" do

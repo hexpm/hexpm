@@ -16,7 +16,7 @@ defmodule Hexpm.Diff do
     @opaque t :: %__MODULE__{id: String.t(), key: String.t(), file: String.t() | nil}
   end
 
-  defdelegate prepare(package, from, to, opts), to: Request
+  defdelegate prepare(repository, package, from, to, opts), to: Request
   defdelegate fetch(request), to: Cache
   defdelegate fetch_piece(piece), to: Cache
   def piece_id(%Piece{id: id}), do: id

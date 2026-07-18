@@ -17,8 +17,8 @@ version_rows =
   end)
 
 compare_path =
-  case {ViewHelpers.main_repository?(@package), versions} do
-    {true, [version, previous_version | _]} ->
+  case versions do
+    [version, previous_version | _] ->
       ViewHelpers.path_for_diff(@package, version, previous_version)
 
     _ ->
@@ -126,7 +126,7 @@ compare_path =
                   {HexpmWeb.ViewIcons.icon(:heroicon, "cloud-arrow-down", class: "size-4")}
                 </a>
               <% end %>
-              <%= if row.previous_version && ViewHelpers.main_repository?(@package) do %>
+              <%= if row.previous_version do %>
                 <a
                   href={
                     ViewHelpers.path_for_diff(
@@ -141,15 +141,13 @@ compare_path =
                   {HexpmWeb.ViewIcons.icon(:heroicon, "arrows-right-left", class: "size-4")}
                 </a>
               <% end %>
-              <%= if ViewHelpers.main_repository?(@package) do %>
-                <a
-                  href={~p"/packages/#{@package.name}/#{to_string(row.release.version)}/files"}
-                  title="Browse files"
-                  class="text-grey-400 dark:text-grey-300 hover:text-purple-600 dark:hover:text-primary-300 transition-colors"
-                >
-                  {HexpmWeb.ViewIcons.icon(:heroicon, "code-bracket", class: "size-4")}
-                </a>
-              <% end %>
+              <a
+                href={ViewHelpers.path_for_files(@package, to_string(row.release.version))}
+                title="Browse files"
+                class="text-grey-400 dark:text-grey-300 hover:text-purple-600 dark:hover:text-primary-300 transition-colors"
+              >
+                {HexpmWeb.ViewIcons.icon(:heroicon, "code-bracket", class: "size-4")}
+              </a>
             </div>
           </div>
         <% end %>
@@ -261,7 +259,7 @@ compare_path =
                       {HexpmWeb.ViewIcons.icon(:heroicon, "cloud-arrow-down", class: "size-4")}
                     </a>
                   <% end %>
-                  <%= if row.previous_version && ViewHelpers.main_repository?(@package) do %>
+                  <%= if row.previous_version do %>
                     <a
                       href={
                         ViewHelpers.path_for_diff(
@@ -276,17 +274,13 @@ compare_path =
                       {HexpmWeb.ViewIcons.icon(:heroicon, "arrows-right-left", class: "size-4")}
                     </a>
                   <% end %>
-                  <%= if ViewHelpers.main_repository?(@package) do %>
-                    <a
-                      href={
-                        ~p"/packages/#{@package.name}/#{to_string(row.release.version)}/files"
-                      }
-                      title="Browse files"
-                      class="text-grey-400 dark:text-grey-300 hover:text-purple-600 dark:hover:text-primary-300 transition-colors"
-                    >
-                      {HexpmWeb.ViewIcons.icon(:heroicon, "code-bracket", class: "size-4")}
-                    </a>
-                  <% end %>
+                  <a
+                    href={ViewHelpers.path_for_files(@package, to_string(row.release.version))}
+                    title="Browse files"
+                    class="text-grey-400 dark:text-grey-300 hover:text-purple-600 dark:hover:text-primary-300 transition-colors"
+                  >
+                    {HexpmWeb.ViewIcons.icon(:heroicon, "code-bracket", class: "size-4")}
+                  </a>
                 </div>
               </td>
             </tr>

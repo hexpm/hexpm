@@ -207,17 +207,16 @@ defmodule HexpmWeb.PackageController do
 
   defp access_package(conn, params, fun) do
     %{"repository" => repository, "name" => name} = params
-    organizations = Users.all_organizations(conn.assigns.current_user)
-    repositories = Map.new(organizations, &{&1.repository.name, &1.repository})
 
-    if repository = repositories[repository] do
-      package = repository && Packages.get(repository, name)
-
-      # Should have access even though organization does not have active billing
-      if package do
+    # Should have access even though organization does not have active billing
+    case HexpmWeb.RepositoryAccess.fetch_package(conn.assigns.current_user, repository, name) do
+      {:ok, package} ->
+        organizations = Users.all_organizations(conn.assigns.current_user)
         fun.(package, Enum.map(organizations, & &1.repository))
-      end
-    end || not_found(conn)
+
+      :error ->
+        not_found(conn)
+    end
   end
 
   defp matching_release(releases, version) do
