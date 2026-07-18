@@ -52,6 +52,6 @@ config :hexpm, Oban,
        {"*/30 * * * *", Hexpm.Security.Updater}
      ],
      timezone: "Etc/UTC"},
-    {Oban.Plugins.Pruner, max_age: 7 * 24 * 60 * 60},
+    {Oban.Plugins.Pruner, max_age: 30 * 24 * 60 * 60},
     {Oban.Plugins.Lifeline, interval: 60_000, rescue_after: 360_000}
   ]

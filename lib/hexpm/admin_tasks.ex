@@ -656,4 +656,29 @@ defmodule Hexpm.AdminTasks do
 
     :ok
   end
+
+  @doc """
+  Retries discarded Oban jobs, optionally filtered by worker.
+
+  ## Examples
+
+      iex> AdminTasks.retry_oban_jobs()
+      {:ok, 3}
+
+      iex> AdminTasks.retry_oban_jobs(worker: "Hexpm.Hexdocs.Workers.Upload")
+      {:ok, 1}
+  """
+  @spec retry_oban_jobs(keyword()) :: {:ok, non_neg_integer()}
+  def retry_oban_jobs(opts \\ []) do
+    query = from(j in Oban.Job, where: j.state == "discarded")
+
+    query =
+      if worker = opts[:worker] do
+        from(j in query, where: j.worker == ^worker)
+      else
+        query
+      end
+
+    Oban.retry_all_jobs(query)
+  end
 end
