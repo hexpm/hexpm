@@ -44,7 +44,6 @@ config :logger, :default_formatter, metadata: [:request_id]
 
 config :hexpm, Oban,
   peer: Oban.Peers.Database,
-  queues: [periodic: 2, heavy: 3],
   plugins: [
     {Oban.Plugins.Cron,
      crontab: [
