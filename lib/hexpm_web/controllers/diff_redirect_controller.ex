@@ -1,7 +1,25 @@
 defmodule HexpmWeb.DiffRedirectController do
   use HexpmWeb, :controller
 
-  def index(conn, params), do: redirect_comparison_or_packages(conn, params)
+  alias HexpmWeb.DiffController
+
+  def index(conn, params) do
+    case DiffController.comparisons(params) do
+      [] ->
+        permanent_redirect(conn, "/packages", "")
+
+      [{package, from, to}] ->
+        permanent_redirect(conn, ~p"/diff/#{package}/#{from <> ".." <> to}", extra_query(params))
+
+      comparisons ->
+        query =
+          comparisons
+          |> Enum.map(fn {package, from, to} -> {"diffs[]", "#{package}:#{from}:#{to}"} end)
+          |> URI.encode_query()
+
+        permanent_redirect(conn, ~p"/diffs", join_query(query, extra_query(params)))
+    end
+  end
 
   def show(conn, %{"package" => package, "versions" => versions}) do
     permanent_redirect(conn, ~p"/diff/#{package}/#{versions}")
@@ -9,37 +27,12 @@ defmodule HexpmWeb.DiffRedirectController do
 
   def path(conn, _params), do: permanent_redirect(conn, "/packages", "")
 
-  defp redirect_comparison_or_packages(conn, params) do
-    case first_comparison(params) do
-      {package, from, to} ->
-        query_string =
-          params
-          |> Map.drop(["diff", "diffs"])
-          |> URI.encode_query()
-
-        permanent_redirect(conn, ~p"/diff/#{package}/#{from <> ".." <> to}", query_string)
-
-      nil ->
-        permanent_redirect(conn, "/packages", "")
-    end
-  end
-
-  defp first_comparison(params) do
+  defp extra_query(params) do
     params
-    |> Map.get("diffs", Map.get(params, "diff", []))
-    |> List.wrap()
-    |> Enum.find_value(&parse_comparison/1)
+    |> Map.drop(["diff", "diffs"])
+    |> URI.encode_query()
   end
 
-  defp parse_comparison(comparison) when is_binary(comparison) do
-    case String.split(comparison, ":", parts: 3) do
-      [package, from, to] when package != "" and from != "" and to != "" ->
-        {package, from, to}
-
-      _other ->
-        nil
-    end
-  end
-
-  defp parse_comparison(_comparison), do: nil
+  defp join_query(query, ""), do: query
+  defp join_query(query, extra), do: query <> "&" <> extra
 end
