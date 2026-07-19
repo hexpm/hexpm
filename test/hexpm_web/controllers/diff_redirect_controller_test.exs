@@ -20,9 +20,17 @@ defmodule HexpmWeb.DiffRedirectControllerTest do
              "http://localhost:5000/diff/ecto/3.0.0..3.1.0"
   end
 
-  test "redirects legacy comparison lists to the first supported comparison" do
+  test "redirects legacy comparison lists to the diffs index with all comparisons" do
     conn =
       request("/diffs?diffs[]=ecto%3A3.0.0%3A3.1.0&diffs[]=plug%3A1.0.0%3A1.1.0&w=1")
+
+    assert redirected_to(conn, 301) ==
+             "http://localhost:5000/diffs?" <>
+               "diffs%5B%5D=ecto%3A3.0.0%3A3.1.0&diffs%5B%5D=plug%3A1.0.0%3A1.1.0&w=1"
+  end
+
+  test "redirects a single legacy comparison straight to its diff" do
+    conn = request("/diffs?diffs[]=ecto%3A3.0.0%3A3.1.0&w=1")
 
     assert redirected_to(conn, 301) ==
              "http://localhost:5000/diff/ecto/3.0.0..3.1.0?w=1"

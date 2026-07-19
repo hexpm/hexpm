@@ -210,6 +210,8 @@ defmodule HexpmWeb.Router do
       live "/diff/:package/:versions", DiffLive, :show
     end
 
+    get "/diffs", DiffController, :index
+
     get "/preview/:package", PreviewRedirectController, :latest
     get "/preview/:package/show/*filename", PreviewRedirectController, :latest_file
     get "/preview/:package/:version", PreviewRedirectController, :version
