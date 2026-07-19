@@ -60,6 +60,5 @@ defmodule Hexpm.ObanConfigTest do
 
     assert {Oban.Plugins.Pruner, [max_age: 2_592_000]} in oban[:plugins]
     assert {Oban.Plugins.Lifeline, [interval: 60_000, rescue_after: 360_000]} in oban[:plugins]
-    assert oban[:queues] == [periodic: 2, heavy: 3]
   end
 end

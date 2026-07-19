@@ -86,9 +86,11 @@ if config_env() == :prod do
   end
 
   if mode == :worker do
-    heavy_concurrency = if System.fetch_env!("HEXPM_ENV") == "staging", do: 1, else: 3
-
-    config :hexpm, Oban, queues: [periodic: 2, heavy: heavy_concurrency]
+    config :hexpm, Oban,
+      queues: [
+        periodic: String.to_integer(System.fetch_env!("HEXPM_OBAN_PERIODIC_CONCURRENCY")),
+        heavy: String.to_integer(System.fetch_env!("HEXPM_OBAN_HEAVY_CONCURRENCY"))
+      ]
 
     config :hexpm,
       docs_private_bucket: "gcs," <> System.fetch_env!("HEXPM_DOCS_PRIVATE_BUCKET"),
