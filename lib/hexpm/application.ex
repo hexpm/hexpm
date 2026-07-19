@@ -126,7 +126,7 @@ defmodule Hexpm.Application do
   defp common_children do
     [
       Hexpm.RepoBase,
-      {Finch, name: Hexpm.Finch},
+      {Finch, name: Hexpm.Finch, pools: finch_pools()},
       Hexpm.TmpDir,
       {Task.Supervisor, name: Hexpm.Tasks},
       goth_spec(),
@@ -137,6 +137,11 @@ defmodule Hexpm.Application do
   end
 
   defp oban_child, do: {Oban, Application.fetch_env!(:hexpm, Oban)}
+
+  defp finch_pools() do
+    gcs_url = Application.get_env(:hexpm, :gcs_url, "https://storage.googleapis.com")
+    %{gcs_url => [size: 50, count: 2]}
+  end
 
   defp web_children do
     [
