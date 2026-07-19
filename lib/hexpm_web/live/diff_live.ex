@@ -22,20 +22,15 @@ defmodule HexpmWeb.DiffLive do
     with {:ok, from, to} <- parse_versions(versions),
          {:ok, request} <-
            Hexpm.Diff.prepare(package, from, to, ignore_whitespace: ignore_whitespace) do
-      release =
-        Releases.preload(request.to_release, [
-          :requirements,
-          :downloads,
-          :publisher,
-          :security_advisories
-        ])
+      release = Releases.preload(request.to_release, [:requirements])
 
       layout_assigns =
         PackageLayoutAssigns.for_package(socket.assigns.current_user, request.package_record,
           releases: request.releases,
           current_release: release,
           graph_release: release,
-          sidebar?: false
+          sidebar?: false,
+          dependants_count?: false
         )
 
       socket =

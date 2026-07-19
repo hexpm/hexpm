@@ -585,8 +585,7 @@ defmodule HexpmWeb.Components.PackageLayout do
         %{
           active: assigns.active_tab == :dependants,
           icon: "puzzle-piece",
-          label:
-            "#{assigns.dependants_count} #{pluralize(assigns.dependants_count, "Dependant", "Dependants")}",
+          label: dependants_label(assigns.dependants_count),
           path: dependents_path(assigns.package)
         }
       ] ++
@@ -718,6 +717,11 @@ defmodule HexpmWeb.Components.PackageLayout do
 
   defp pluralize(1, singular, _plural), do: singular
   defp pluralize(_count, _singular, plural), do: plural
+
+  defp dependants_label(nil), do: "Dependants"
+
+  defp dependants_label(count),
+    do: "#{count} #{pluralize(count, "Dependant", "Dependants")}"
 
   defp path_for_tab(:dependencies, package, release, _filename),
     do: ViewHelpers.path_for_dependencies(package, release)

@@ -33,6 +33,8 @@ defmodule HexpmWeb.PackageLayoutAssigns do
       has special docs link logic (e.g. the package show page)
     * `:sidebar?` — load download and chart data for the package sidebar;
       defaults to `true`
+    * `:dependants_count?` — load the dependant count used in the tab label;
+      defaults to `true`
   """
   def for_package(conn_or_user, package, opts \\ []) do
     current_user = current_user(conn_or_user)
@@ -40,11 +42,21 @@ defmodule HexpmWeb.PackageLayoutAssigns do
     current_release = resolve_current_release(opts[:current_release], releases)
     graph_release = opts[:graph_release]
     sidebar? = Keyword.get(opts, :sidebar?, true)
+    dependants_count? = Keyword.get(opts, :dependants_count?, true)
+
+    owners =
+      cond do
+        sidebar? -> Owners.all(package, user: [:emails, :organization])
+        current_user -> Owners.all(package)
+        true -> []
+      end
 
     repositories =
-      current_user
-      |> Users.all_organizations()
-      |> Enum.map(& &1.repository)
+      if dependants_count? do
+        current_user
+        |> Users.all_organizations()
+        |> Enum.map(& &1.repository)
+      end
 
     docs_html_url =
       Keyword.get_lazy(opts, :docs_html_url, fn ->
@@ -65,12 +77,13 @@ defmodule HexpmWeb.PackageLayoutAssigns do
       all_releases: releases,
       current_release: current_release,
       versions_count: Enum.count(releases),
-      owners: Owners.all(package, user: [:emails, :organization]),
+      owners: owners,
       downloads: if(sidebar?, do: Downloads.package(package), else: %{}),
       daily_graph: if(sidebar?, do: daily_graph(graph_release || package), else: []),
       graph_release: graph_release,
       docs_html_url: docs_html_url,
-      dependants_count: Packages.count_dependants(repositories, package)
+      dependants_count:
+        if(dependants_count?, do: Packages.count_dependants(repositories, package))
     ]
 
     [{:package_layout, Map.new(layout)} | layout]
