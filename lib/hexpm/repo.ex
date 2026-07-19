@@ -79,51 +79,16 @@ defmodule Hexpm.RepoBase do
     if url = System.get_env("HEXPM_DATABASE_URL") do
       pool_size_env = System.get_env("HEXPM_DATABASE_POOL_SIZE")
       pool_size = if pool_size_env, do: String.to_integer(pool_size_env), else: opts[:pool_size]
-      ca_cert = System.get_env("HEXPM_DATABASE_CA_CERT")
-      client_key = System.get_env("HEXPM_DATABASE_CLIENT_KEY")
-      client_cert = System.get_env("HEXPM_DATABASE_CLIENT_CERT")
-
-      ssl_opts =
-        if ca_cert do
-          [
-            verify: :verify_peer,
-            cacerts: [decode_cert(ca_cert)],
-            key: decode_key(client_key),
-            cert: decode_cert(client_cert),
-            # Cloud SQL's server certificate (GOOGLE_MANAGED_INTERNAL_CA) has a Common
-            # Name but no Subject Alternative Name. OTP's TLS hostname verification
-            # requires a SAN and rejects such certificates with
-            # {:bad_cert, {:hostname_check_failed, :missing_subject_altnames}}, so we use
-            # verify-CA semantics: the certificate chain is still validated against the
-            # pinned instance CA above and the mTLS client certificate is still presented,
-            # but the hostname is not matched. (customize_hostname_check does not help —
-            # the missing-SAN check short-circuits before the match_fun runs.)
-            server_name_indication: :disable
-          ]
-        end
 
       opts =
         opts
         |> Keyword.put(:url, url)
         |> Keyword.put(:pool_size, pool_size)
-        |> then(fn opts ->
-          if ssl_opts, do: Keyword.put(opts, :ssl, ssl_opts), else: opts
-        end)
 
       {:ok, opts}
     else
       {:ok, opts}
     end
-  end
-
-  defp decode_cert(cert) do
-    [{:Certificate, der, _}] = :public_key.pem_decode(cert)
-    der
-  end
-
-  defp decode_key(cert) do
-    [{:RSAPrivateKey, key, :not_encrypted}] = :public_key.pem_decode(cert)
-    {:RSAPrivateKey, key}
   end
 
   def refresh_view(schema, opts \\ [])
