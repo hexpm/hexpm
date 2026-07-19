@@ -118,4 +118,27 @@ defmodule Hexpm.Store.GCSTest do
 
     assert GCS.size("bucket", "missing") == nil
   end
+
+  test "lists object keys with their sizes" do
+    expect(Hexpm.HTTP.Mock, :get, fn url, headers ->
+      uri = URI.parse(url)
+      assert uri.path == "/bucket"
+      assert URI.decode_query(uri.query) == %{"marker" => "", "prefix" => "files/package/"}
+      assert headers == [{"authorization", "Bearer token"}]
+
+      body = """
+      <ListBucketResult>
+        <Contents><Key>files/package/README.md</Key><Size>12</Size></Contents>
+        <Contents><Key>files/package/lib/code.ex</Key><Size>34</Size></Contents>
+      </ListBucketResult>
+      """
+
+      {:ok, 200, [], body}
+    end)
+
+    assert Enum.to_list(GCS.list_with_sizes("bucket", "files/package/")) == [
+             {"files/package/README.md", 12},
+             {"files/package/lib/code.ex", 34}
+           ]
+  end
 end

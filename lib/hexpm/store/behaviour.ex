@@ -6,6 +6,7 @@ defmodule Hexpm.Store.Behaviour do
   @type opts :: Keyword.t()
 
   @callback list(bucket, prefix) :: [key]
+  @callback list_with_sizes(bucket, prefix) :: [{key, non_neg_integer()}]
   @callback get(bucket, key, opts) :: body | nil
   @callback size(bucket, key) :: non_neg_integer() | nil
   @callback get_to_file(bucket, key, Path.t(), opts) :: :ok | nil

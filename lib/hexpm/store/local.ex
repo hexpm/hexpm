@@ -18,6 +18,10 @@ defmodule Hexpm.Store.Local do
     end)
   end
 
+  def list_with_sizes(bucket, prefix) do
+    Enum.map(list(bucket, prefix), fn key -> {key, size(bucket, key)} end)
+  end
+
   def get(bucket, key, _opts) do
     path = safe_path!(bucket, key)
 

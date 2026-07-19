@@ -8,6 +8,7 @@ defmodule Hexpm.Preview.WorkersTest do
     @behaviour Hexpm.Store.Behaviour
 
     defdelegate list(bucket, prefix), to: Hexpm.Store.Memory
+    defdelegate list_with_sizes(bucket, prefix), to: Hexpm.Store.Memory
     defdelegate get(bucket, key, opts), to: Hexpm.Store.Memory
     defdelegate size(bucket, key), to: Hexpm.Store.Memory
     defdelegate get_to_file(bucket, key, path, opts), to: Hexpm.Store.Memory
@@ -34,6 +35,7 @@ defmodule Hexpm.Preview.WorkersTest do
     defdelegate put(bucket, key, body, opts), to: Hexpm.Store.Memory
     defdelegate delete(bucket, key), to: Hexpm.Store.Memory
     defdelegate delete_many(bucket, keys), to: Hexpm.Store.Memory
+    defdelegate list_with_sizes(bucket, prefix), to: Hexpm.Store.Memory
 
     def list(bucket, prefix) do
       run_action(:list, prefix)
@@ -84,10 +86,10 @@ defmodule Hexpm.Preview.WorkersTest do
     assert :ok = perform_job(Workers.Upload, %{key: key})
     assert :ok = perform_job(Workers.Upload, %{key: key})
 
-    assert Jason.decode!(
-             Hexpm.Store.get(:preview_bucket, "file_lists/#{package.name}-1.0.0.json")
-           ) ==
-             ["lib/foo.ex"]
+    assert Hexpm.Preview.Bucket.get_manifest(package.name, "1.0.0") == %{
+             files: ["lib/foo.ex"],
+             sizes: %{"lib/foo.ex" => 20}
+           }
 
     assert Hexpm.Store.get(:preview_bucket, "files/#{package.name}/1.0.0/lib/foo.ex") =~
              "defmodule Foo"
@@ -147,9 +149,10 @@ defmodule Hexpm.Preview.WorkersTest do
 
     assert :ok = perform_job(Workers.Upload, %{key: key})
 
-    assert Jason.decode!(
-             Hexpm.Store.get(:preview_bucket, "file_lists/#{package.name}-1.0.0.json")
-           ) == ["dot.txt", "safe.txt"]
+    assert Hexpm.Preview.Bucket.get_manifest(package.name, "1.0.0") == %{
+             files: ["dot.txt", "safe.txt"],
+             sizes: %{"dot.txt" => 3, "safe.txt" => 4}
+           }
   end
 
   test "CDN failures retry cleanly" do
@@ -193,10 +196,10 @@ defmodule Hexpm.Preview.WorkersTest do
     assert Hexpm.Store.get(:preview_bucket, "files/#{package.name}/1.0.0/old.txt") == nil
     assert Hexpm.Store.get(:preview_bucket, "files/#{package.name}/1.0.0/new.txt") == "new"
 
-    assert Jason.decode!(
-             Hexpm.Store.get(:preview_bucket, "file_lists/#{package.name}-1.0.0.json")
-           ) ==
-             ["new.txt"]
+    assert Hexpm.Preview.Bucket.get_manifest(package.name, "1.0.0") == %{
+             files: ["new.txt"],
+             sizes: %{"new.txt" => 3}
+           }
   end
 
   test "upload publishes the file list after all files succeed" do
@@ -206,8 +209,8 @@ defmodule Hexpm.Preview.WorkersTest do
 
     Hexpm.Store.put(
       :preview_bucket,
-      "file_lists/#{package.name}-1.0.0.json",
-      Jason.encode!(["old.txt"])
+      "file_manifests/#{package.name}-1.0.0.json",
+      preview_manifest([{"old.txt", "old"}])
     )
 
     put_tarball(key, package.name, to_string(release.version), [{"fail.txt", "failure"}])
@@ -225,10 +228,10 @@ defmodule Hexpm.Preview.WorkersTest do
       Process.flag(:trap_exit, trap_exit?)
     end
 
-    assert Jason.decode!(
-             Hexpm.Store.get(:preview_bucket, "file_lists/#{package.name}-1.0.0.json")
-           ) ==
-             ["old.txt"]
+    assert Hexpm.Preview.Bucket.get_manifest(package.name, "1.0.0") == %{
+             files: ["old.txt"],
+             sizes: %{"old.txt" => 3}
+           }
   end
 
   test "delete is repeatable" do
@@ -241,7 +244,7 @@ defmodule Hexpm.Preview.WorkersTest do
 
     assert :ok = perform_job(Workers.Delete, %{key: key})
     assert :ok = perform_job(Workers.Delete, %{key: key})
-    assert Hexpm.Store.get(:preview_bucket, "file_lists/#{package.name}-1.0.0.json") == nil
+    assert Hexpm.Store.get(:preview_bucket, "file_manifests/#{package.name}-1.0.0.json") == nil
     assert Hexpm.Store.get(:preview_bucket, "files/#{package.name}/1.0.0/README.md") == nil
     assert Hexpm.Store.get(:preview_bucket, "latest_versions/#{package.name}") == nil
   end
@@ -293,7 +296,7 @@ defmodule Hexpm.Preview.WorkersTest do
     Ecto.Changeset.change(release) |> Repo.delete!()
 
     assert :ok = perform_job(Workers.Upload, %{key: key})
-    assert Hexpm.Store.get(:preview_bucket, "file_lists/#{package.name}-1.0.0.json") == nil
+    assert Hexpm.Store.get(:preview_bucket, "file_manifests/#{package.name}-1.0.0.json") == nil
     assert Hexpm.Store.get(:preview_bucket, "latest_versions/#{package.name}") == nil
   end
 
@@ -332,10 +335,10 @@ defmodule Hexpm.Preview.WorkersTest do
     assert Hexpm.Store.get(:preview_bucket, "files/#{package.name}/1.0.0/old.txt") == nil
     assert Hexpm.Store.get(:preview_bucket, "files/#{package.name}/1.0.0/new.txt") == "new"
 
-    assert Jason.decode!(
-             Hexpm.Store.get(:preview_bucket, "file_lists/#{package.name}-1.0.0.json")
-           ) ==
-             ["new.txt"]
+    assert Hexpm.Preview.Bucket.get_manifest(package.name, "1.0.0") == %{
+             files: ["new.txt"],
+             sizes: %{"new.txt" => 3}
+           }
 
     assert Hexpm.Store.get(:preview_bucket, "latest_versions/#{package.name}") == "2.0.0"
   end

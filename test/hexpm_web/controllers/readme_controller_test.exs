@@ -17,8 +17,8 @@ defmodule HexpmWeb.ReadmeControllerTest do
   defp mock_file_list_and_readme(package_name, version, filename, content) do
     Hexpm.Store.put(
       :preview_bucket,
-      "file_lists/#{package_name}-#{version}.json",
-      Jason.encode!([filename])
+      "file_manifests/#{package_name}-#{version}.json",
+      preview_manifest([{filename, content}])
     )
 
     Hexpm.Store.put(:preview_bucket, "files/#{package_name}/#{version}/#{filename}", content)
@@ -27,8 +27,8 @@ defmodule HexpmWeb.ReadmeControllerTest do
   defp mock_file_list(package_name, version, files) do
     Hexpm.Store.put(
       :preview_bucket,
-      "file_lists/#{package_name}-#{version}.json",
-      Jason.encode!(files)
+      "file_manifests/#{package_name}-#{version}.json",
+      preview_manifest(files)
     )
   end
 

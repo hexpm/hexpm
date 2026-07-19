@@ -95,6 +95,17 @@ defmodule HexpmWeb.PreviewLiveTest do
     put_release("large_manifest", "1.0.0", files)
     {:ok, view, _html} = live(conn, "/packages/large_manifest/1.0.0/files")
 
+    assert has_element?(view, ~s(button[phx-value-path="lib"]))
+    refute has_element?(view, ~s(aside a[href$="file_1.ex"]))
+
+    view |> element(~s(button[phx-value-path="lib"])) |> render_click()
+    assert has_element?(view, ~s(button[phx-value-path="lib/generated"]))
+    refute has_element?(view, ~s(aside a[href$="file_1.ex"]))
+
+    view |> element(~s(button[phx-value-path="lib/generated"])) |> render_click()
+    view |> element(~s(button[phx-value-path="lib/generated/deep"])) |> render_click()
+    assert has_element?(view, ~s(aside a[href$="file_1.ex"]))
+
     view
     |> element("#preview-tree-search")
     |> render_change(%{"query" => "deep499"})
@@ -149,7 +160,12 @@ defmodule HexpmWeb.PreviewLiveTest do
 
     package = insert(:package, name: "empty_preview")
     insert(:release, package: package, version: "1.0.0")
-    Hexpm.Store.put(:preview_bucket, "file_lists/empty_preview-1.0.0.json", Jason.encode!([]))
+
+    Hexpm.Store.put(
+      :preview_bucket,
+      "file_manifests/empty_preview-1.0.0.json",
+      preview_manifest([])
+    )
 
     assert_raise HexpmWeb.PreviewLive.NotFoundError, fn ->
       live(conn, "/packages/empty_preview/1.0.0/files")
@@ -162,8 +178,8 @@ defmodule HexpmWeb.PreviewLiveTest do
 
     Hexpm.Store.put(
       :preview_bucket,
-      "file_lists/#{package_name}-#{version}.json",
-      Jason.encode!(Enum.map(files, &elem(&1, 0)))
+      "file_manifests/#{package_name}-#{version}.json",
+      preview_manifest(files)
     )
 
     for {filename, contents} <- files do

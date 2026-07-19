@@ -18,6 +18,11 @@ defmodule Hexpm.Preview.Bucket do
         {Path.join(["files", package, version, filename]), filename}
       end)
 
+    manifest_entries =
+      Enum.map(file_paths, fn filename ->
+        %{path: filename, size: File.stat!(Path.join(dir, filename)).size}
+      end)
+
     file_entries
     |> Task.async_stream(
       fn {key, filename} ->
@@ -31,41 +36,45 @@ defmodule Hexpm.Preview.Bucket do
     |> Hexpm.Utils.raise_async_stream_error()
     |> Stream.run()
 
-    file_list_key = Path.join("file_lists", "#{package}-#{version}.json")
+    put_manifest(package, version, manifest_entries)
 
-    Hexpm.Store.put(
-      :preview_bucket,
-      file_list_key,
-      Jason.encode!(file_paths),
-      put_opts(package, version)
-    )
+    Hexpm.Preview.Cache.invalidate(package, version)
 
     new_keys = Enum.map(file_entries, &elem(&1, 0))
     Hexpm.Store.delete_many(:preview_bucket, Enum.to_list(original_file_list) -- new_keys)
   end
 
   def delete_files(package, version) do
-    file_list_key = Path.join("file_lists", "#{package}-#{version}.json")
+    manifest_key = manifest_key(package, version)
+    legacy_manifest_key = legacy_manifest_key(package, version)
     prefix = Path.join(["files", package, version]) <> "/"
     keys = Hexpm.Store.list(:preview_bucket, prefix)
-    Hexpm.Store.delete_many(:preview_bucket, [file_list_key | Enum.to_list(keys)])
+
+    Hexpm.Store.delete_many(
+      :preview_bucket,
+      [manifest_key, legacy_manifest_key | Enum.to_list(keys)]
+    )
+
+    Hexpm.Preview.Cache.invalidate(package, version)
   end
 
-  def get_file_list(package, version) do
-    key = Path.join("file_lists", "#{package}-#{version}.json")
-
-    case Hexpm.Store.get(:preview_bucket, key) do
+  def get_manifest(package, version) do
+    case Hexpm.Store.get(:preview_bucket, manifest_key(package, version)) do
       nil -> nil
-      json -> json |> Jason.decode!() |> Enum.uniq()
+      json -> json |> Jason.decode!() |> decode_manifest()
+    end
+  end
+
+  def migrate_manifest(package, version) do
+    if Hexpm.Store.get(:preview_bucket, manifest_key(package, version)) do
+      :current
+    else
+      migrate_legacy_manifest(package, version)
     end
   end
 
   def get_file(package, version, filename) do
     Hexpm.Store.get(:preview_bucket, Path.join(["files", package, version, filename]))
-  end
-
-  def file_size(package, version, filename) do
-    Hexpm.Store.size(:preview_bucket, Path.join(["files", package, version, filename]))
   end
 
   def update_latest_version(package, version) do
@@ -104,5 +113,55 @@ defmodule Hexpm.Preview.Bucket do
       "." <> extension -> [content_type: MIME.type(extension)]
       "" -> []
     end
+  end
+
+  defp migrate_legacy_manifest(package, version) do
+    case Hexpm.Store.get(:preview_bucket, legacy_manifest_key(package, version)) do
+      nil ->
+        :missing
+
+      json ->
+        files = json |> Jason.decode!() |> Enum.uniq()
+        prefix = Path.join(["files", package, version]) <> "/"
+
+        sizes =
+          :preview_bucket
+          |> Hexpm.Store.list_with_sizes(prefix)
+          |> Map.new(fn {key, size} -> {Path.relative_to(key, prefix), size} end)
+
+        entries = Enum.map(files, &%{path: &1, size: Map.fetch!(sizes, &1)})
+        put_manifest(package, version, entries)
+        Hexpm.Preview.Cache.invalidate(package, version)
+        :migrated
+    end
+  end
+
+  defp put_manifest(package, version, entries) do
+    Hexpm.Store.put(
+      :preview_bucket,
+      manifest_key(package, version),
+      Jason.encode!(%{files: entries}),
+      put_opts(package, version)
+    )
+  end
+
+  defp manifest_key(package, version) do
+    Path.join("file_manifests", "#{package}-#{version}.json")
+  end
+
+  defp legacy_manifest_key(package, version) do
+    Path.join("file_lists", "#{package}-#{version}.json")
+  end
+
+  defp decode_manifest(%{"files" => entries}) when is_list(entries) do
+    entries =
+      entries
+      |> Enum.map(fn %{"path" => path, "size" => size}
+                     when is_binary(path) and is_integer(size) and size >= 0 ->
+        {path, size}
+      end)
+      |> Enum.uniq_by(&elem(&1, 0))
+
+    %{files: Enum.map(entries, &elem(&1, 0)), sizes: Map.new(entries)}
   end
 end

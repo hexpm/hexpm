@@ -2,6 +2,7 @@ defmodule Hexpm.PreviewTest do
   use Hexpm.DataCase, async: true
 
   alias Hexpm.Preview
+  alias Hexpm.Preview.Bucket
 
   test "source selects known files and rejects invalid paths" do
     put_release("source_package", "1.0.0", [
@@ -37,8 +38,8 @@ defmodule Hexpm.PreviewTest do
 
     Hexpm.Store.put(
       :preview_bucket,
-      "file_lists/incomplete-1.0.0.json",
-      Jason.encode!(["README.md"])
+      "file_manifests/incomplete-1.0.0.json",
+      preview_manifest(["README.md"])
     )
 
     assert Preview.source("incomplete", "1.0.0") == :error
@@ -53,6 +54,26 @@ defmodule Hexpm.PreviewTest do
 
     assert Preview.readme("readme_package", "1.0.0") ==
              {:ok, "README.md", "preferred"}
+  end
+
+  test "migrates legacy file lists to manifests with sizes" do
+    Hexpm.Store.put(
+      :preview_bucket,
+      "file_lists/legacy-1.0.0.json",
+      Jason.encode!(["README.md", "lib/legacy.ex"])
+    )
+
+    Hexpm.Store.put(:preview_bucket, "files/legacy/1.0.0/README.md", "readme")
+    Hexpm.Store.put(:preview_bucket, "files/legacy/1.0.0/lib/legacy.ex", "legacy")
+
+    assert Bucket.migrate_manifest("legacy", "1.0.0") == :migrated
+
+    assert Bucket.get_manifest("legacy", "1.0.0") == %{
+             files: ["README.md", "lib/legacy.ex"],
+             sizes: %{"README.md" => 6, "lib/legacy.ex" => 6}
+           }
+
+    assert Bucket.migrate_manifest("legacy", "1.0.0") == :current
   end
 
   test "source defaults to README, mix, rebar, Makefile, and the first file in order" do
@@ -73,12 +94,10 @@ defmodule Hexpm.PreviewTest do
   end
 
   defp put_release(package, version, files) do
-    filenames = Enum.map(files, &elem(&1, 0))
-
     Hexpm.Store.put(
       :preview_bucket,
-      "file_lists/#{package}-#{version}.json",
-      Jason.encode!(filenames)
+      "file_manifests/#{package}-#{version}.json",
+      preview_manifest(files)
     )
 
     for {filename, contents} <- files do

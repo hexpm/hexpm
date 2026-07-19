@@ -2,6 +2,7 @@ defmodule Hexpm.Diff.TestStore do
   @behaviour Hexpm.Store.Behaviour
 
   defdelegate list(bucket, prefix), to: Hexpm.Store.Memory
+  defdelegate list_with_sizes(bucket, prefix), to: Hexpm.Store.Memory
   defdelegate size(bucket, key), to: Hexpm.Store.Memory
   defdelegate get_to_file(bucket, key, destination, opts), to: Hexpm.Store.Memory
   defdelegate put_file(bucket, key, path, opts), to: Hexpm.Store.Memory

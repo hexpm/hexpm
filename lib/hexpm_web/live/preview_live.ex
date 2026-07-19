@@ -1,10 +1,9 @@
 defmodule HexpmWeb.PreviewLive do
   use HexpmWeb, :live_view
 
-  require Logger
-
   import HexpmWeb.Components.PackageLayout
 
+  alias Hexpm.Preview.Cache
   alias Hexpm.Repository.{Packages, Releases}
   alias HexpmWeb.Components.FileSelector
   alias HexpmWeb.PackageLayoutAssigns
@@ -22,6 +21,7 @@ defmodule HexpmWeb.PreviewLive do
        version: nil,
        files: [],
        file_tree: [],
+       expanded_paths: MapSet.new(),
        filename: nil,
        filtered_files: [],
        query: "",
@@ -43,12 +43,13 @@ defmodule HexpmWeb.PreviewLive do
     requested_filename = filename(params["filename"])
 
     with package when not is_nil(package) <- Packages.get("hexpm", package_name),
-         release when not is_nil(release) <- find_release(package, version),
+         [_ | _] = releases <- Releases.all(package),
+         release when not is_nil(release) <- find_release(releases, version),
          {:ok, source, replace_path?} <-
            source(package_name, version, requested_filename, params["fallback"]) do
       socket =
         socket
-        |> assign_package(package, release)
+        |> assign_package(package, release, releases)
         |> assign_source(package_name, version, source)
 
       socket =
@@ -76,7 +77,18 @@ defmodule HexpmWeb.PreviewLive do
      )}
   end
 
-  defp assign_package(socket, package, release) do
+  def handle_event("toggle_directory", %{"path" => path}, socket) do
+    expanded_paths =
+      if MapSet.member?(socket.assigns.expanded_paths, path) do
+        MapSet.delete(socket.assigns.expanded_paths, path)
+      else
+        MapSet.put(socket.assigns.expanded_paths, path)
+      end
+
+    {:noreply, assign(socket, expanded_paths: expanded_paths)}
+  end
+
+  defp assign_package(socket, package, release, releases) do
     version = to_string(release.version)
 
     if socket.assigns.package &&
@@ -84,22 +96,15 @@ defmodule HexpmWeb.PreviewLive do
          socket.assigns.version == version do
       socket
     else
-      releases = Releases.all(package)
-
-      release =
-        Releases.preload(release, [
-          :requirements,
-          :downloads,
-          :publisher,
-          :security_advisories
-        ])
+      release = Releases.preload(release, [:requirements])
 
       layout_assigns =
         PackageLayoutAssigns.for_package(socket.assigns.current_user, package,
           releases: releases,
           current_release: release,
           graph_release: release,
-          sidebar?: false
+          sidebar?: false,
+          dependants_count?: false
         )
 
       socket
@@ -112,9 +117,15 @@ defmodule HexpmWeb.PreviewLive do
     {highlighted, message} = render_contents(package, version, source)
     filename = source.filename
 
+    file_tree =
+      Cache.fetch({:file_tree, package, version}, fn -> build_file_tree(source.files) end)
+
+    expanded_paths = MapSet.union(socket.assigns.expanded_paths, parent_paths(filename))
+
     assign(socket,
       files: source.files,
-      file_tree: build_file_tree(source.files),
+      file_tree: file_tree,
+      expanded_paths: expanded_paths,
       filename: filename,
       filtered_files: FileSelector.filter(source.files, ""),
       query: "",
@@ -128,24 +139,18 @@ defmodule HexpmWeb.PreviewLive do
     )
   end
 
-  defp find_release(package, version) when is_binary(version) do
-    package
-    |> Releases.all()
-    |> Enum.find(&(to_string(&1.version) == version))
+  defp find_release(releases, version) when is_binary(version) do
+    Enum.find(releases, &(to_string(&1.version) == version))
   end
 
-  defp find_release(_package, _version), do: nil
+  defp find_release(_releases, _version), do: nil
 
   defp source(package, version, requested_filename, fallback) do
-    case Hexpm.Preview.source(package, version, requested_filename) do
+    opts = if fallback == "default", do: [fallback: :default], else: []
+
+    case Hexpm.Preview.source(package, version, requested_filename, opts) do
       {:ok, source} ->
         {:ok, source, fallback == "default"}
-
-      :error when fallback == "default" ->
-        case Hexpm.Preview.source(package, version) do
-          {:ok, source} -> {:ok, source, true}
-          :error -> :error
-        end
 
       :error ->
         :error
@@ -203,6 +208,14 @@ defmodule HexpmWeb.PreviewLive do
     |> tree_nodes("")
   end
 
+  defp parent_paths(filename) do
+    filename
+    |> Path.split()
+    |> Enum.drop(-1)
+    |> Enum.scan(&Path.join(&2, &1))
+    |> MapSet.new()
+  end
+
   defp insert_file(tree, [name], file), do: Map.put(tree, name, {:file, file})
 
   defp insert_file(tree, [directory | rest], file) do
@@ -229,6 +242,7 @@ defmodule HexpmWeb.PreviewLive do
   attr :filename, :string, required: true
   attr :package_name, :string, required: true
   attr :version, :string, required: true
+  attr :expanded_paths, :any, required: true
   attr :close_modal?, :boolean, default: false
   attr :modal_id, :string, default: nil
 
@@ -237,25 +251,33 @@ defmodule HexpmWeb.PreviewLive do
     <ul class="space-y-0.5">
       <%= for node <- @nodes do %>
         <li :if={node.type == :directory}>
-          <details class="group" open={String.starts_with?(@filename, node.path <> "/")}>
-            <summary class="flex cursor-pointer list-none items-center gap-1.5 rounded px-2 py-1.5 text-sm font-medium text-grey-700 hover:bg-grey-100 dark:text-grey-200 dark:hover:bg-grey-700/60 [&::-webkit-details-marker]:hidden">
-              {icon(:heroicon, "chevron-right",
-                class: "size-3.5 shrink-0 transition-transform group-open:rotate-90"
-              )}
-              {icon(:heroicon, "folder", class: "size-4 shrink-0 text-grey-400")}
-              <span class="truncate">{node.name}</span>
-            </summary>
-            <div class="ml-3 border-l border-grey-200 pl-2 dark:border-grey-700">
-              <.source_tree
-                nodes={node.children}
-                filename={@filename}
-                package_name={@package_name}
-                version={@version}
-                close_modal?={@close_modal?}
-                modal_id={@modal_id}
-              />
-            </div>
-          </details>
+          <% expanded? = MapSet.member?(@expanded_paths, node.path) %>
+          <button
+            type="button"
+            phx-click="toggle_directory"
+            phx-value-path={node.path}
+            aria-expanded={expanded?}
+            class="flex w-full cursor-pointer items-center gap-1.5 rounded px-2 py-1.5 text-left text-sm font-medium text-grey-700 hover:bg-grey-100 dark:text-grey-200 dark:hover:bg-grey-700/60"
+          >
+            {icon(:heroicon, "chevron-right",
+              class:
+                "size-3.5 shrink-0 transition-transform" <>
+                  if(expanded?, do: " rotate-90", else: "")
+            )}
+            {icon(:heroicon, "folder", class: "size-4 shrink-0 text-grey-400")}
+            <span class="truncate">{node.name}</span>
+          </button>
+          <div :if={expanded?} class="ml-3 border-l border-grey-200 pl-2 dark:border-grey-700">
+            <.source_tree
+              nodes={node.children}
+              filename={@filename}
+              package_name={@package_name}
+              version={@version}
+              expanded_paths={@expanded_paths}
+              close_modal?={@close_modal?}
+              modal_id={@modal_id}
+            />
+          </div>
         </li>
         <li :if={node.type == :file}>
           <.link

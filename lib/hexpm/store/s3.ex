@@ -9,6 +9,12 @@ defmodule Hexpm.Store.S3 do
     |> Stream.map(&Map.get(&1, :key))
   end
 
+  def list_with_sizes(bucket, prefix) do
+    S3.list_objects(bucket(bucket), prefix: prefix)
+    |> ExAws.stream!(region: region(bucket))
+    |> Stream.map(&{Map.fetch!(&1, :key), Map.fetch!(&1, :size)})
+  end
+
   def get(bucket, key, opts) do
     S3.get_object(bucket(bucket), key, opts)
     |> ExAws.request(region: region(bucket))

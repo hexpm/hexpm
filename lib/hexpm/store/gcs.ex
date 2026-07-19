@@ -7,7 +7,11 @@ defmodule Hexpm.Store.GCS do
   @default_gs_xml_url "https://storage.googleapis.com"
 
   def list(bucket, prefix) do
-    list_stream(bucket, prefix)
+    list_stream(bucket, prefix, :keys)
+  end
+
+  def list_with_sizes(bucket, prefix) do
+    list_stream(bucket, prefix, :keys_with_sizes)
   end
 
   def get(bucket, key, _opts) do
@@ -88,7 +92,7 @@ defmodule Hexpm.Store.GCS do
     end
   end
 
-  defp list_stream(bucket, prefix) do
+  defp list_stream(bucket, prefix, format) do
     start_fun = fn -> nil end
     after_fun = fn _ -> nil end
 
@@ -97,14 +101,14 @@ defmodule Hexpm.Store.GCS do
         {:halt, nil}
 
       marker ->
-        {items, marker} = do_list(bucket, prefix, marker)
+        {items, marker} = do_list(bucket, prefix, marker, format)
         {items, marker || :halt}
     end
 
     Stream.resource(start_fun, next_fun, after_fun)
   end
 
-  defp do_list(bucket, prefix, marker) do
+  defp do_list(bucket, prefix, marker, format) do
     query = URI.encode_query(%{"prefix" => prefix, "marker" => marker || ""})
     url = url(bucket) <> "?" <> query
 
@@ -112,10 +116,18 @@ defmodule Hexpm.Store.GCS do
 
     doc = SweetXml.parse(body)
     marker = SweetXml.xpath(doc, ~x"/ListBucketResult/NextMarker/text()"s)
-    items = SweetXml.xpath(doc, ~x"/ListBucketResult/Contents/Key/text()"ls)
+    keys = SweetXml.xpath(doc, ~x"/ListBucketResult/Contents/Key/text()"ls)
+    sizes = SweetXml.xpath(doc, ~x"/ListBucketResult/Contents/Size/text()"ls)
+    items = format_list_items(keys, sizes, format)
     marker = if marker != "", do: marker
 
     {items, marker}
+  end
+
+  defp format_list_items(keys, _sizes, :keys), do: keys
+
+  defp format_list_items(keys, sizes, :keys_with_sizes) do
+    Enum.zip_with(keys, sizes, fn key, size -> {key, String.to_integer(size)} end)
   end
 
   defp filter_nil_values(keyword) do
