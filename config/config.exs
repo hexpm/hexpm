@@ -39,17 +39,6 @@ config :hexpm,
 
 config :hexpm, :features, package_reports: true
 
-config :hexpm, Hexpm.Preview.Cache,
-  enabled: true,
-  max_entries: 512,
-  ttl: :timer.hours(1)
-
-config :hexpm, HexpmWeb.SyntaxHighlight,
-  max_children: 2,
-  max_size: 200_000,
-  max_lines: 5_000,
-  timeout: 1_000
-
 config :hexpm, ecto_repos: [Hexpm.RepoBase]
 
 config :hexpm, Oban,

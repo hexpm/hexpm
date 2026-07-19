@@ -268,9 +268,7 @@ defmodule Hexpm.Preview do
   end
 
   defp manifest(package, version) do
-    Hexpm.Preview.Cache.fetch({:manifest, package, version}, fn ->
-      Bucket.get_manifest(package, version)
-    end)
+    Bucket.get_manifest(package, version)
   end
 
   defp selected_file(files, nil, _fallback?), do: default_file(files)

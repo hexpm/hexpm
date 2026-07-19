@@ -45,8 +45,6 @@ config :hexpm, HexpmWeb.Endpoint,
   secret_key_base: "38K8orQfRHMC6ZWXIdgItQEiumeY+L2Ls0fvYfTMt4AoG5+DSFsLG6vMajNcd5Td",
   live_view: [signing_salt: "2UTSB72sZsF9KTlxefkIrFFPXTO7d+Ep"]
 
-config :hexpm, Hexpm.Preview.Cache, enabled: false, max_entries: 0, ttl: 0
-
 config :hexpm, Hexpm.Emails.Mailer, adapter: Swoosh.Adapters.Test
 config :swoosh, :api_client, false
 

@@ -3,7 +3,6 @@ defmodule HexpmWeb.PreviewLive do
 
   import HexpmWeb.Components.PackageLayout
 
-  alias Hexpm.Preview.Cache
   alias Hexpm.Repository.{Packages, Releases}
   alias HexpmWeb.Components.FileSelector
   alias HexpmWeb.PackageLayoutAssigns
@@ -117,14 +116,11 @@ defmodule HexpmWeb.PreviewLive do
     {highlighted, message} = render_contents(package, version, source)
     filename = source.filename
 
-    file_tree =
-      Cache.fetch({:file_tree, package, version}, fn -> build_file_tree(source.files) end)
-
     expanded_paths = MapSet.union(socket.assigns.expanded_paths, parent_paths(filename))
 
     assign(socket,
       files: source.files,
-      file_tree: file_tree,
+      file_tree: build_file_tree(source.files),
       expanded_paths: expanded_paths,
       filename: filename,
       filtered_files: FileSelector.filter(source.files, ""),

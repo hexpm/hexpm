@@ -38,8 +38,6 @@ defmodule Hexpm.Preview.Bucket do
 
     put_manifest(package, version, manifest_entries)
 
-    Hexpm.Preview.Cache.invalidate(package, version)
-
     new_keys = Enum.map(file_entries, &elem(&1, 0))
     Hexpm.Store.delete_many(:preview_bucket, Enum.to_list(original_file_list) -- new_keys)
   end
@@ -54,8 +52,6 @@ defmodule Hexpm.Preview.Bucket do
       :preview_bucket,
       [manifest_key, legacy_manifest_key | Enum.to_list(keys)]
     )
-
-    Hexpm.Preview.Cache.invalidate(package, version)
   end
 
   def get_manifest(package, version) do
@@ -131,7 +127,6 @@ defmodule Hexpm.Preview.Bucket do
 
         entries = Enum.map(files, &%{path: &1, size: Map.fetch!(sizes, &1)})
         put_manifest(package, version, entries)
-        Hexpm.Preview.Cache.invalidate(package, version)
         :migrated
     end
   end
