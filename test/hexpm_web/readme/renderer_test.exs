@@ -4,7 +4,7 @@ defmodule HexpmWeb.Readme.RendererTest do
   alias HexpmWeb.Readme.Renderer
 
   defp render(content) do
-    Renderer.render("README.md", content, "my_package", "1.0.0")
+    Renderer.render("hexpm", "README.md", content, "my_package", "1.0.0")
   end
 
   test "author fragment links resolve to the anchored heading id" do
@@ -57,7 +57,7 @@ defmodule HexpmWeb.Readme.RendererTest do
   test "invalid UTF-8 bytes in plain text readmes are replaced" do
     content = "caf\xE9 au lait"
 
-    result = Renderer.render("README", content, "my_package", "1.0.0")
+    result = Renderer.render("hexpm", "README", content, "my_package", "1.0.0")
 
     assert result =~ "<pre>caf� au lait</pre>"
   end

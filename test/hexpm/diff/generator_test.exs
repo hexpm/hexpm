@@ -25,7 +25,7 @@ defmodule Hexpm.Diff.GeneratorTest do
       "huge.bin" => String.duplicate("b", 200_001)
     })
 
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
     assert :ok = Generator.generate(request)
 
     assert {:ok, metadata, pieces} = Hexpm.Diff.fetch(request)
@@ -67,13 +67,38 @@ defmodule Hexpm.Diff.GeneratorTest do
     assert Enum.map(repeated_pieces, & &1.key) == Enum.map(pieces, & &1.key)
   end
 
+  test "generates diffs for private repository releases from namespaced tarballs" do
+    repository = insert(:repository)
+    package = insert(:package, repository_id: repository.id, name: "generator_private")
+
+    insert_tarball_release(package, "1.0.0", %{"lib.ex" => "old = 1\n"},
+      repository: repository.name
+    )
+
+    insert_tarball_release(package, "2.0.0", %{"lib.ex" => "new = 2\n"},
+      repository: repository.name
+    )
+
+    {:ok, request} = Hexpm.Diff.prepare(repository.name, package.name, "1.0.0", "2.0.0", [])
+    assert :ok = perform_job(Worker, Hexpm.Diff.Request.to_args(request))
+
+    assert {:ok, metadata, pieces} = Hexpm.Diff.fetch(request)
+    assert metadata.files == ["lib.ex"]
+
+    assert Enum.all?(pieces, fn piece ->
+             String.starts_with?(piece.key, "repos/#{repository.name}/diffs/")
+           end)
+  end
+
   test "whitespace mode has a distinct cache and suppresses whitespace-only changes" do
     package = insert(:package, name: "generator_whitespace")
     insert_tarball_release(package, "1.0.0", %{"space.ex" => "value = 1\n"})
     insert_tarball_release(package, "2.0.0", %{"space.ex" => "value    =    1\n"})
 
-    {:ok, normal} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
-    {:ok, ignored} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", ignore_whitespace: true)
+    {:ok, normal} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
+
+    {:ok, ignored} =
+      Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", ignore_whitespace: true)
 
     assert :ok = Generator.generate(normal)
     assert {:ok, %{total_diffs: 1}, [_]} = Hexpm.Diff.fetch(normal)
@@ -88,7 +113,7 @@ defmodule Hexpm.Diff.GeneratorTest do
     insert_tarball_release(package, "1.0.0", %{"huge.bin" => contents})
     insert_tarball_release(package, "2.0.0", %{"huge.bin" => contents})
 
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
     assert :ok = Generator.generate(request)
     assert {:ok, %{total_diffs: 0, files_changed: 0}, []} = Hexpm.Diff.fetch(request)
   end
@@ -98,7 +123,7 @@ defmodule Hexpm.Diff.GeneratorTest do
     insert_tarball_release(package, "1.0.0", %{"script" => {"same\n", 0o511}})
     insert_tarball_release(package, "2.0.0", %{"script" => {"same\n", 0o644}})
 
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
     assert :ok = Generator.generate(request)
     assert {:ok, %{total_diffs: 1}, [piece]} = Hexpm.Diff.fetch(request)
     assert {:ok, {:diff, diff, _, _}} = Hexpm.Diff.fetch_piece(piece)
@@ -111,7 +136,7 @@ defmodule Hexpm.Diff.GeneratorTest do
     insert_tarball_release(package, "1.0.0", %{"same" => "one"})
     insert_tarball_release(package, "2.0.0", %{"same" => "two"})
 
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
     request = %{request | from_checksum: <<0::256>>}
 
     assert {:error, :checksum_mismatch} = Generator.generate(request)
@@ -123,7 +148,7 @@ defmodule Hexpm.Diff.GeneratorTest do
     package = insert(:package, name: "generator_retry")
     insert_tarball_release(package, "1.0.0", %{"a.txt" => "old a", "b.txt" => "old b"})
     insert_tarball_release(package, "2.0.0", %{"a.txt" => "new a", "b.txt" => "new b"})
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
 
     original_bucket = Application.fetch_env!(:hexpm, :diff_bucket)
     Application.put_env(:hexpm, :diff_bucket, {Hexpm.Diff.TestStore, "diff_bucket"})
@@ -155,7 +180,7 @@ defmodule Hexpm.Diff.GeneratorTest do
     package = insert(:package, name: "generator_metadata_failure")
     insert_tarball_release(package, "1.0.0", %{"a.txt" => "old"})
     insert_tarball_release(package, "2.0.0", %{"a.txt" => "new"})
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
 
     original_bucket = Application.fetch_env!(:hexpm, :diff_bucket)
     Application.put_env(:hexpm, :diff_bucket, {Hexpm.Diff.TestStore, "diff_bucket"})
@@ -201,7 +226,7 @@ defmodule Hexpm.Diff.GeneratorTest do
       []
     )
 
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
     assert {:error, :tarball_not_found} = Generator.generate(request)
 
     assert {:discard, :tarball_not_found} =
@@ -235,7 +260,7 @@ defmodule Hexpm.Diff.GeneratorTest do
     package = insert(:package, name: "generator_cache_version")
     insert_tarball_release(package, "1.0.0", %{"a" => "old"})
     insert_tarball_release(package, "2.0.0", %{"a" => "new"})
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
     args = Hexpm.Diff.Request.to_args(request)
 
     original_cache_version = Application.fetch_env!(:hexpm, :diff_cache_version)
@@ -250,7 +275,7 @@ defmodule Hexpm.Diff.GeneratorTest do
     package = insert(:package, name: "generator_worker")
     insert_tarball_release(package, "1.0.0", %{"a" => "old"})
     insert_tarball_release(package, "2.0.0", %{"a" => "new"})
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
 
     assert :ok = perform_job(Worker, Hexpm.Diff.Request.to_args(request))
 
@@ -264,7 +289,7 @@ defmodule Hexpm.Diff.GeneratorTest do
     package = insert(:package, name: "generator_worker_discard")
     insert_tarball_release(package, "1.0.0", %{"a" => "old"})
     insert_tarball_release(package, "2.0.0", %{"a" => "new"})
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
 
     stale_args =
       request
@@ -284,7 +309,7 @@ defmodule Hexpm.Diff.GeneratorTest do
       Hexpm.Store.put(:repo_bucket, "tarballs/#{package.name}-#{version}.tar", invalid, [])
     end
 
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
 
     assert {:discard, {:invalid_tarball, _reason}} =
              perform_job(Worker, Hexpm.Diff.Request.to_args(request))

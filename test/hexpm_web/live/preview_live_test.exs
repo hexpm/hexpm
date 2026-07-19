@@ -172,6 +172,75 @@ defmodule HexpmWeb.PreviewLiveTest do
     end
   end
 
+  test "renders private package files for organization members", %{conn: conn} do
+    %{repository: repository, user: user} = private_release("private_live_preview", "1.0.0")
+
+    {:ok, view, _html} =
+      conn
+      |> test_login(user)
+      |> live("/packages/#{repository.name}/private_live_preview/1.0.0/files/mix.exs")
+
+    assert has_element?(view, "h2", "mix.exs")
+
+    assert has_element?(
+             view,
+             ~s(a[href="/packages/#{repository.name}/private_live_preview/1.0.0/files/lib/private.ex"]),
+             "private.ex"
+           )
+
+    assert has_element?(
+             view,
+             ~s(a[href="/packages/#{repository.name}/private_live_preview/1.0.0/raw/mix.exs"]),
+             "Raw"
+           )
+  end
+
+  test "returns 404 for private packages to non-members and anonymous users", %{conn: conn} do
+    %{repository: repository} = private_release("private_denied_preview", "1.0.0")
+    other_user = insert(:user)
+
+    assert_raise HexpmWeb.PreviewLive.NotFoundError, fn ->
+      live(conn, "/packages/#{repository.name}/private_denied_preview/1.0.0/files")
+    end
+
+    assert_raise HexpmWeb.PreviewLive.NotFoundError, fn ->
+      conn
+      |> test_login(other_user)
+      |> live("/packages/#{repository.name}/private_denied_preview/1.0.0/files")
+    end
+
+    assert_raise HexpmWeb.PreviewLive.NotFoundError, fn ->
+      live(conn, "/packages/private_denied_preview/1.0.0/files")
+    end
+  end
+
+  defp private_release(package_name, version) do
+    repository = insert(:repository)
+    user = insert(:user)
+    insert(:organization_user, user: user, organization: repository.organization)
+    package = insert(:package, repository_id: repository.id, name: package_name)
+    insert(:release, package: package, version: version)
+
+    files = [{"mix.exs", "mix"}, {"lib/private.ex", "private"}]
+    prefix = "repos/#{repository.name}/"
+
+    Hexpm.Store.put(
+      :preview_bucket,
+      "#{prefix}file_lists/#{package_name}-#{version}.json",
+      Jason.encode!(Enum.map(files, &elem(&1, 0)))
+    )
+
+    for {filename, contents} <- files do
+      Hexpm.Store.put(
+        :preview_bucket,
+        "#{prefix}files/#{package_name}/#{version}/#{filename}",
+        contents
+      )
+    end
+
+    %{repository: repository, user: user, package: package}
+  end
+
   defp put_release(package_name, version, files, package \\ nil) do
     package = package || insert(:package, name: package_name)
     insert(:release, package: package, version: version)

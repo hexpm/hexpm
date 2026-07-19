@@ -50,7 +50,7 @@ defmodule HexpmWeb.PreviewRedirectController do
   def path(conn, _params), do: permanent_redirect(conn, conn.request_path)
 
   defp redirect_latest(conn, package, filename) do
-    case Preview.get_latest_version(package) do
+    case Preview.get_latest_version("hexpm", package) do
       version when is_binary(version) -> redirect_source(conn, package, version, filename)
       _ -> send_resp(conn, 404, "Not Found")
     end

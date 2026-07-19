@@ -28,7 +28,7 @@
             />
             <.link
               id="whitespace-toggle"
-              navigate={diff_path(@package, @from, @to, not @ignore_whitespace)}
+              navigate={diff_path(@repository, @package, @from, @to, not @ignore_whitespace)}
               class="inline-flex items-center gap-2 rounded-lg border border-grey-200 bg-white px-3 py-2 text-sm font-medium text-grey-700 shadow-sm transition-colors hover:border-grey-300 hover:bg-grey-50 dark:border-grey-700 dark:bg-grey-800 dark:text-grey-100 dark:hover:bg-grey-700"
             >
               {icon(:heroicon, "arrows-right-left", class: "size-4")}

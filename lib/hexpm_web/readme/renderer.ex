@@ -22,7 +22,7 @@ defmodule HexpmWeb.Readme.Renderer do
   @doc """
   Converts README content to sanitized, URL-rewritten HTML.
   """
-  def render(filename, content, package_name, version) do
+  def render(repository, filename, content, package_name, version) do
     ext = Path.extname(filename) |> String.downcase()
     content = scrub_invalid_utf8(content)
 
@@ -50,7 +50,7 @@ defmodule HexpmWeb.Readme.Renderer do
     |> protect_pre_whitespace()
     |> Floki.parse_document!()
     |> Sanitizer.sanitize()
-    |> URLRewriter.rewrite(package_name, version)
+    |> URLRewriter.rewrite(repository, package_name, version)
     |> Floki.raw_html()
   end
 

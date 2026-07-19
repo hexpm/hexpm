@@ -1,7 +1,7 @@
 defmodule Hexpm.Diff.Worker do
   use Oban.Worker,
     queue: :heavy,
-    priority: 3,
+    priority: 1,
     max_attempts: 5,
     unique: [period: :infinity, states: :incomplete, fields: [:worker, :args]]
 

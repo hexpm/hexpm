@@ -658,15 +658,20 @@ defmodule Hexpm.AdminTasks do
   end
 
   @doc """
-  Retries discarded Oban jobs, optionally filtered by worker.
+  Retries discarded Oban jobs at priority 8, optionally filtered by worker.
+
+  ## Options
+
+  - `:worker` - Only retry discarded jobs for this worker
+  - `:uniq` - Retry only one job per worker and args (default: `false`)
 
   ## Examples
 
       iex> AdminTasks.retry_oban_jobs()
-      {:ok, 3}
+      {:ok, 12}
 
-      iex> AdminTasks.retry_oban_jobs(worker: "Hexpm.Hexdocs.Workers.Upload")
-      {:ok, 1}
+      iex> AdminTasks.retry_oban_jobs(worker: "Hexpm.Diff.Worker", uniq: true)
+      {:ok, 3}
   """
   @spec retry_oban_jobs(keyword()) :: {:ok, non_neg_integer()}
   def retry_oban_jobs(opts \\ []) do
@@ -675,6 +680,15 @@ defmodule Hexpm.AdminTasks do
     query =
       if worker = opts[:worker] do
         from(j in query, where: j.worker == ^worker)
+      else
+        query
+      end
+
+    Repo.update_all(query, set: [priority: 8])
+
+    query =
+      if opts[:uniq] do
+        from(j in query, distinct: [j.worker, j.args])
       else
         query
       end

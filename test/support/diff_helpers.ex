@@ -1,5 +1,6 @@
 defmodule Hexpm.DiffHelpers do
-  def insert_tarball_release(package, version, files) do
+  def insert_tarball_release(package, version, files, opts \\ []) do
+    repository = Keyword.get(opts, :repository, "hexpm")
     root = Hexpm.TmpDir.tmp_dir("diff-fixture")
 
     tarball_files =
@@ -35,7 +36,7 @@ defmodule Hexpm.DiffHelpers do
 
     Hexpm.Store.put(
       :repo_bucket,
-      "tarballs/#{package.name}-#{version}.tar",
+      "#{repo_prefix(repository)}tarballs/#{package.name}-#{version}.tar",
       result.tarball,
       []
     )
@@ -44,6 +45,9 @@ defmodule Hexpm.DiffHelpers do
   end
 
   def cache_object(key), do: Hexpm.Store.get(:diff_bucket, key)
+
+  defp repo_prefix("hexpm"), do: ""
+  defp repo_prefix(repository), do: "repos/#{repository}/"
 
   defp normalize_file({content, mode}), do: {content, mode}
   defp normalize_file(content), do: {content, 0o644}

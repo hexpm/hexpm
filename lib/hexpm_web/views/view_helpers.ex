@@ -57,6 +57,27 @@ defmodule HexpmWeb.ViewHelpers do
     ~p"/diff/#{package}/#{versions}"
   end
 
+  def path_for_diff(%Package{} = package, version, previous_version) do
+    versions = "#{previous_version}..#{version}"
+    ~p"/diff/#{package.repository}/#{package}/#{versions}"
+  end
+
+  def path_for_files(%Package{repository_id: 1} = package, version) do
+    ~p"/packages/#{package}/#{version}/files"
+  end
+
+  def path_for_files(%Package{} = package, version) do
+    ~p"/packages/#{package.repository}/#{package}/#{version}/files"
+  end
+
+  def path_for_file(%Package{repository_id: 1} = package, version, filename) do
+    ~p"/packages/#{package}/#{version}/files/#{Path.split(filename)}"
+  end
+
+  def path_for_file(%Package{} = package, version, filename) do
+    ~p"/packages/#{package.repository}/#{package}/#{version}/files/#{Path.split(filename)}"
+  end
+
   def path_for_owners(%Package{repository_id: 1} = package) do
     ~p"/packages/#{package}/owners"
   end
@@ -530,9 +551,17 @@ defmodule HexpmWeb.ViewHelpers do
   def main_repository?(%{repository_id: 1}), do: true
   def main_repository?(_), do: false
 
-  def readme_url(package_name, version) do
+  def readme_url(%Package{repository_id: 1} = package, version) do
     readme_url = Application.fetch_env!(:hexpm, :readme_url)
-    "#{readme_url}/#{package_name}/#{version}"
+    "#{readme_url}/#{package.name}/#{version}"
+  end
+
+  def readme_url(%Package{} = package, version) do
+    readme_url = Application.fetch_env!(:hexpm, :readme_url)
+    repository = package.repository.name
+    version = to_string(version)
+    token = HexpmWeb.ReadmeToken.sign(repository, package.name, version)
+    "#{readme_url}/#{repository}/#{package.name}/#{version}?token=#{token}"
   end
 
   def safe_url(url) when is_binary(url) do

@@ -1,5 +1,6 @@
 defmodule Hexpm.AdminTasksTest do
   use Hexpm.DataCase, async: true
+  use Oban.Testing, repo: Hexpm.RepoBase
   import Swoosh.TestAssertions
 
   alias Hexpm.AdminTasks
@@ -589,42 +590,75 @@ defmodule Hexpm.AdminTasksTest do
   describe "retry_oban_jobs/1" do
     alias Hexpm.Hexdocs.Workers
 
-    test "retries discarded jobs" do
+    test "retries discarded jobs at priority 8" do
       discarded = insert_discarded_job(Workers.Upload, %{key: "docs/retried-1.0.0.tar.gz"})
       {:ok, available} = Oban.insert(Workers.Upload.new(%{key: "docs/untouched-1.0.0.tar.gz"}))
 
       assert {:ok, 1} = AdminTasks.retry_oban_jobs()
 
-      discarded = Repo.get!(Oban.Job, discarded.id)
-      assert discarded.state == "available"
-      assert discarded.max_attempts == 6
+      retried = Repo.get!(Oban.Job, discarded.id)
+      assert retried.state == "available"
+      assert retried.priority == 8
+
+      # A job that was never discarded is left alone.
       assert Repo.get!(Oban.Job, available.id).state == "available"
     end
 
+    test "with uniq: true retries one job per worker and args" do
+      insert_discarded_job(Workers.Upload, %{key: "docs/dup-1.0.0.tar.gz"})
+      insert_discarded_job(Workers.Upload, %{key: "docs/dup-1.0.0.tar.gz"})
+
+      assert {:ok, 1} = AdminTasks.retry_oban_jobs(uniq: true)
+
+      assert Repo.aggregate(available_uploads(), :count) == 1
+      assert Repo.aggregate(discarded_uploads(), :count) == 1
+    end
+
+    test "without uniq retries every discarded job" do
+      insert_discarded_job(Workers.Upload, %{key: "docs/dup-1.0.0.tar.gz"})
+      insert_discarded_job(Workers.Upload, %{key: "docs/dup-1.0.0.tar.gz"})
+
+      assert {:ok, 2} = AdminTasks.retry_oban_jobs()
+
+      assert Repo.aggregate(available_uploads(), :count) == 2
+    end
+
     test "retries only the given worker" do
-      upload = insert_discarded_job(Workers.Upload, %{key: "docs/filtered-1.0.0.tar.gz"})
+      insert_discarded_job(Workers.Upload, %{key: "docs/filtered-1.0.0.tar.gz"})
       search = insert_discarded_job(Workers.Search, %{key: "docs/filtered-1.0.0.tar.gz"})
 
       assert {:ok, 1} = AdminTasks.retry_oban_jobs(worker: "Hexpm.Hexdocs.Workers.Upload")
 
-      assert Repo.get!(Oban.Job, upload.id).state == "available"
+      assert Repo.aggregate(available_uploads(), :count) == 1
       assert Repo.get!(Oban.Job, search.id).state == "discarded"
     end
-  end
 
-  defp insert_discarded_job(worker, args) do
-    {:ok, job} = Oban.insert(worker.new(args))
+    defp insert_discarded_job(worker, args) do
+      {:ok, job} = Oban.insert(worker.new(args))
 
-    {1, _} =
-      from(j in Oban.Job, where: j.id == ^job.id)
-      |> Repo.update_all(
-        set: [
-          state: "discarded",
-          attempt: job.max_attempts,
-          discarded_at: DateTime.utc_now()
-        ]
+      {1, _} =
+        from(j in Oban.Job, where: j.id == ^job.id)
+        |> Repo.update_all(
+          set: [
+            state: "discarded",
+            attempt: job.max_attempts,
+            discarded_at: DateTime.utc_now()
+          ]
+        )
+
+      job
+    end
+
+    defp available_uploads do
+      from(j in Oban.Job,
+        where: j.worker == "Hexpm.Hexdocs.Workers.Upload" and j.state == "available"
       )
+    end
 
-    job
+    defp discarded_uploads do
+      from(j in Oban.Job,
+        where: j.worker == "Hexpm.Hexdocs.Workers.Upload" and j.state == "discarded"
+      )
+    end
   end
 end

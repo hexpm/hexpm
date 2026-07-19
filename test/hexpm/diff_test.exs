@@ -12,7 +12,7 @@ defmodule Hexpm.DiffTest do
   end
 
   test "prepares canonical and legacy standalone cache hashes", %{package: package} do
-    assert {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    assert {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
 
     assert request.package_record.id == package.id
     assert MapSet.new(request.versions) == MapSet.new(["1.0.0", "2.0.0"])
@@ -22,7 +22,7 @@ defmodule Hexpm.DiffTest do
     assert request.legacy_hash == :erlang.phash2({1, [<<2::256>>, <<1::256>>]})
 
     assert {:ok, whitespace} =
-             Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", ignore_whitespace: true)
+             Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", ignore_whitespace: true)
 
     assert whitespace.canonical_hash ==
              :erlang.phash2({{1, [<<1::256>>, <<2::256>>]}, [ignore_whitespace: true]})
@@ -31,7 +31,7 @@ defmodule Hexpm.DiffTest do
   end
 
   test "reads canonical cache objects before reversed legacy objects", %{package: package} do
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
     legacy_metadata = %{total_diffs: 1, total_additions: 3, total_deletions: 2, files_changed: 1}
     legacy_piece = %{"type" => "too_large", "file" => "legacy.bin"}
 
@@ -66,7 +66,7 @@ defmodule Hexpm.DiffTest do
   end
 
   test "keeps standalone object names and raw JSON format", %{package: package} do
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
 
     piece =
       Cache.put_piece!(request, 4, %{
@@ -92,8 +92,37 @@ defmodule Hexpm.DiffTest do
              "metadata/#{package.name}-1.0.0-2.0.0-#{request.canonical_hash}.json"
   end
 
+  test "namespaces private repository requests and cache objects" do
+    repository = insert(:repository)
+    package = insert(:package, repository_id: repository.id, name: "private_diff_cache")
+    insert(:release, package: package, version: "1.0.0", outer_checksum: <<1::256>>)
+    insert(:release, package: package, version: "2.0.0", outer_checksum: <<2::256>>)
+
+    assert {:ok, request} =
+             Hexpm.Diff.prepare(repository.name, package.name, "1.0.0", "2.0.0", [])
+
+    assert request.repository == repository.name
+    assert request.package_record.id == package.id
+
+    assert Cache.metadata_key(request, request.canonical_hash) ==
+             "repos/#{repository.name}/metadata/#{package.name}-1.0.0-2.0.0-#{request.canonical_hash}.json"
+
+    assert Cache.diff_key(request, request.canonical_hash, 0) ==
+             "repos/#{repository.name}/diffs/#{package.name}-1.0.0-2.0.0-#{request.canonical_hash}-diff-0.json"
+
+    args = Request.to_args(request)
+    assert args.repository == repository.name
+
+    args = args |> Jason.encode!() |> Jason.decode!()
+    assert {:ok, rebuilt} = Request.from_args(args)
+    assert rebuilt.repository == repository.name
+    assert rebuilt.canonical_hash == request.canonical_hash
+
+    assert {:error, :invalid_args} = Request.from_args(Map.delete(args, "repository"))
+  end
+
   test "reads optional file manifests and rejects malformed manifests", %{package: package} do
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
 
     Cache.put_metadata!(request, %{
       total_diffs: 1,
@@ -126,43 +155,45 @@ defmodule Hexpm.DiffTest do
     insert(:release, package: private_package, version: "1.0.0")
 
     assert {:error, :package_not_found} =
-             Hexpm.Diff.prepare(private_package.name, "1.0.0", "2.0.0", [])
+             Hexpm.Diff.prepare("hexpm", private_package.name, "1.0.0", "2.0.0", [])
 
-    assert {:error, :package_not_found} = Hexpm.Diff.prepare("missing", "1.0.0", "2.0.0", [])
+    assert {:error, :package_not_found} =
+             Hexpm.Diff.prepare("hexpm", "missing", "1.0.0", "2.0.0", [])
 
     assert {:error, :release_not_found} =
-             Hexpm.Diff.prepare(package.name, "0.1.0", "2.0.0", [])
+             Hexpm.Diff.prepare("hexpm", package.name, "0.1.0", "2.0.0", [])
 
-    assert {:error, :invalid_version} = Hexpm.Diff.prepare(package.name, "bad", "2.0.0", [])
+    assert {:error, :invalid_version} =
+             Hexpm.Diff.prepare("hexpm", package.name, "bad", "2.0.0", [])
 
     assert {:error, :identical_versions} =
-             Hexpm.Diff.prepare(package.name, "1.0.0", "1.0.0", [])
+             Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "1.0.0", [])
   end
 
   test "blank target resolves to latest stable with unstable fallback", %{package: package} do
     insert(:release, package: package, version: "2.1.0-rc.1")
 
-    assert {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "", [])
+    assert {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "", [])
     assert request.to == "2.0.0"
 
     unstable = insert(:package, name: "unstable_only")
     insert(:release, package: unstable, version: "0.1.0-rc.1")
     insert(:release, package: unstable, version: "0.2.0-rc.1")
 
-    assert {:ok, request} = Hexpm.Diff.prepare(unstable.name, "0.1.0-rc.1", "", [])
+    assert {:ok, request} = Hexpm.Diff.prepare("hexpm", unstable.name, "0.1.0-rc.1", "", [])
     assert request.to == "0.2.0-rc.1"
   end
 
   test "rejects packages without releases" do
     package = insert(:package, name: "diff_without_releases")
-    assert {:error, :no_releases} = Hexpm.Diff.prepare(package.name, "1.0.0", "", [])
+    assert {:error, :no_releases} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "", [])
   end
 
   test "enqueues one incomplete job and includes all cache identity arguments", %{
     package: package,
     to: to
   } do
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
 
     jobs =
       1..4
@@ -180,7 +211,7 @@ defmodule Hexpm.DiffTest do
 
     replacement_checksum = <<3::256>>
     to |> Ecto.Changeset.change(outer_checksum: replacement_checksum) |> Repo.update!()
-    {:ok, replacement} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    {:ok, replacement} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
     assert {:ok, replacement_job} = Hexpm.Diff.enqueue(replacement)
     refute replacement_job.id == hd(jobs).id
 
@@ -188,15 +219,17 @@ defmodule Hexpm.DiffTest do
     Application.put_env(:hexpm, :diff_cache_version, old_cache_version + 1)
     on_exit(fn -> Application.put_env(:hexpm, :diff_cache_version, old_cache_version) end)
 
-    {:ok, recached} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    {:ok, recached} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
     assert {:ok, recached_job} = Hexpm.Diff.enqueue(recached)
     refute recached_job.id in [hd(jobs).id, replacement_job.id]
   end
 
-  test "bounds incomplete jobs and gives Diff work lower priority", %{package: package} do
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+  test "bounds incomplete jobs and prioritizes Diff work above background jobs", %{
+    package: package
+  } do
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
 
-    assert Ecto.Changeset.get_field(Worker.new(Request.to_args(request)), :priority) == 3
+    assert Ecto.Changeset.get_field(Worker.new(Request.to_args(request)), :priority) == 1
 
     for cache_version <- 100..119 do
       request
@@ -210,7 +243,7 @@ defmodule Hexpm.DiffTest do
   end
 
   test "serializes concurrent admission at the incomplete job limit", %{package: package} do
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
 
     for cache_version <- 100..118 do
       request
@@ -245,7 +278,7 @@ defmodule Hexpm.DiffTest do
   end
 
   test "reports domain job states without exposing Oban to callers", %{package: package} do
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
     {:ok, job} = Hexpm.Diff.enqueue(request)
 
     assert Hexpm.Diff.job_status(job) == :queued
@@ -267,7 +300,7 @@ defmodule Hexpm.DiffTest do
   end
 
   test "rejects malformed cache metadata and pieces", %{package: package} do
-    {:ok, request} = Hexpm.Diff.prepare(package.name, "1.0.0", "2.0.0", [])
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
 
     Hexpm.Store.put(
       :diff_bucket,

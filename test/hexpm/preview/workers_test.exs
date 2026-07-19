@@ -121,9 +121,55 @@ defmodule Hexpm.Preview.WorkersTest do
     assert Hexpm.Store.get(:preview_bucket, "files/#{package.name}/1.0.0/new.txt") == "new"
   end
 
-  test "upload ignores private repository releases and removes stale public Preview files" do
+  test "upload builds private repository previews under the repository prefix" do
     repository = insert(:repository)
     package = insert(:package, repository_id: repository.id, name: "private_preview")
+    release = insert(:release, package: package, version: "1.0.0")
+    key = "repos/#{repository.name}/tarballs/#{package.name}-#{release.version}.tar"
+    put_tarball(key, package.name, to_string(release.version), [{"README.md", "private"}])
+
+    assert :ok = perform_job(Workers.Upload, %{key: key})
+
+    prefix = "repos/#{repository.name}/"
+
+    assert Jason.decode!(
+             Hexpm.Store.get(:preview_bucket, "#{prefix}file_lists/#{package.name}-1.0.0.json")
+           ) == ["README.md"]
+
+    assert Hexpm.Store.get(:preview_bucket, "#{prefix}files/#{package.name}/1.0.0/README.md") ==
+             "private"
+
+    assert Hexpm.Store.get(:preview_bucket, "#{prefix}latest_versions/#{package.name}") == "1.0.0"
+
+    assert Hexpm.Store.get(:preview_bucket, "file_lists/#{package.name}-1.0.0.json") == nil
+    assert Hexpm.Store.get(:preview_bucket, "latest_versions/#{package.name}") == nil
+  end
+
+  test "delete removes private repository previews under the repository prefix" do
+    repository = insert(:repository)
+    package = insert(:package, repository_id: repository.id, name: "private_delete_preview")
+    release = insert(:release, package: package, version: "1.0.0")
+    key = "repos/#{repository.name}/tarballs/#{package.name}-#{release.version}.tar"
+    put_tarball(key, package.name, to_string(release.version), [{"README.md", "private"}])
+    assert :ok = perform_job(Workers.Upload, %{key: key})
+    Ecto.Changeset.change(release) |> Repo.delete!()
+
+    assert :ok = perform_job(Workers.Delete, %{key: key})
+
+    prefix = "repos/#{repository.name}/"
+
+    assert Hexpm.Store.get(:preview_bucket, "#{prefix}file_lists/#{package.name}-1.0.0.json") ==
+             nil
+
+    assert Hexpm.Store.get(:preview_bucket, "#{prefix}files/#{package.name}/1.0.0/README.md") ==
+             nil
+
+    assert Hexpm.Store.get(:preview_bucket, "#{prefix}latest_versions/#{package.name}") == nil
+  end
+
+  test "upload with a public key for a private-only package removes stale public Preview files" do
+    repository = insert(:repository)
+    package = insert(:package, repository_id: repository.id, name: "private_stale_preview")
     release = insert(:release, package: package, version: "1.0.0")
     key = "tarballs/#{package.name}-#{release.version}.tar"
     file_key = "files/#{package.name}/#{release.version}/README.md"

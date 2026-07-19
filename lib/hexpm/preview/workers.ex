@@ -1,6 +1,7 @@
 defmodule Hexpm.Preview.Workers.Upload do
   use Oban.Worker,
     queue: :heavy,
+    priority: 3,
     max_attempts: 5,
     unique: [period: :infinity, states: :incomplete, fields: [:worker, :args]]
 
@@ -14,6 +15,7 @@ end
 defmodule Hexpm.Preview.Workers.Delete do
   use Oban.Worker,
     queue: :heavy,
+    priority: 3,
     max_attempts: 5,
     unique: [period: :infinity, states: :incomplete, fields: [:worker, :args]]
 

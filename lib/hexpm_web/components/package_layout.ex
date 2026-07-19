@@ -604,18 +604,14 @@ defmodule HexpmWeb.Components.PackageLayout do
   defp files_tab(%{current_release: nil}), do: []
 
   defp files_tab(assigns) do
-    if ViewHelpers.main_repository?(assigns.package) do
-      [
-        %{
-          active: assigns.active_tab == :files,
-          icon: "code-bracket",
-          label: "Files",
-          path: files_path(assigns)
-        }
-      ]
-    else
-      []
-    end
+    [
+      %{
+        active: assigns.active_tab == :files,
+        icon: "code-bracket",
+        label: "Files",
+        path: files_path(assigns)
+      }
+    ]
   end
 
   defp owners_tab(assigns) do
@@ -736,15 +732,16 @@ defmodule HexpmWeb.Components.PackageLayout do
     do: ViewHelpers.path_for_release(package, release)
 
   defp source_path(package, release) do
-    ~p"/packages/#{package.name}/#{to_string(release.version)}/files"
+    ViewHelpers.path_for_files(package, to_string(release.version))
   end
 
   defp source_path(package, release, filename) do
-    ~p"/packages/#{package.name}/#{to_string(release.version)}/files/#{Path.split(filename)}"
+    ViewHelpers.path_for_file(package, to_string(release.version), filename)
   end
 
   defp source_version_path(package, release, filename) do
-    ~p"/packages/#{package.name}/#{to_string(release.version)}/files/#{Path.split(filename)}?fallback=default"
+    ViewHelpers.path_for_file(package, to_string(release.version), filename) <>
+      "?fallback=default"
   end
 
   defp version_item_class(true),

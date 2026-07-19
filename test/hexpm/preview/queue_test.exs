@@ -99,8 +99,22 @@ defmodule Hexpm.Preview.QueueTest do
     assert all_enqueued() == []
   end
 
+  test "inserts create and removal jobs for private repository keys" do
+    key = "repos/acme/tarballs/demo-1.0.0.tar"
+
+    assert %{status: :ok} =
+             handle(%{"Records" => [created("repos%2Facme%2Ftarballs%2Fdemo-1.0.0.tar")]})
+
+    assert_enqueued(worker: Workers.Upload, args: %{key: key, generation: "0001"})
+
+    assert %{status: :ok} = handle(%{"Records" => [removed(key)]})
+    assert_enqueued(worker: Workers.Delete, args: %{key: key, generation: "0001"})
+  end
+
   test "acknowledges unrelated object keys without inserting jobs" do
     assert %{status: :ok} = handle(%{"Records" => [created("docs/demo-1.0.0.tar.gz")]})
+    assert %{status: :ok} = handle(%{"Records" => [created("repos/acme/docs/demo-1.0.0.tar.gz")]})
+    assert %{status: :ok} = handle(%{"Records" => [created("repos/acme/demo-1.0.0.tar")]})
     assert all_enqueued() == []
   end
 
