@@ -31,19 +31,6 @@ defmodule Hexpm.Store.Memory do
     end)
   end
 
-  def list_with_sizes(bucket, prefix) do
-    owner = owner_pid()
-
-    :ets.match_object(@table, {{owner, bucket, :_}, :_})
-    |> Enum.flat_map(fn {{_, _, key}, value} ->
-      if String.starts_with?(key, prefix) do
-        [{key, byte_size(value)}]
-      else
-        []
-      end
-    end)
-  end
-
   def get(bucket, key, _opts) do
     owner = owner_pid()
 

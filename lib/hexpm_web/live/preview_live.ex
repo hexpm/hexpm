@@ -142,11 +142,15 @@ defmodule HexpmWeb.PreviewLive do
   defp find_release(_releases, _version), do: nil
 
   defp source(package, version, requested_filename, fallback) do
-    opts = if fallback == "default", do: [fallback: :default], else: []
-
-    case Hexpm.Preview.source(package, version, requested_filename, opts) do
+    case Hexpm.Preview.source(package, version, requested_filename) do
       {:ok, source} ->
         {:ok, source, fallback == "default"}
+
+      :error when fallback == "default" ->
+        case Hexpm.Preview.source(package, version) do
+          {:ok, source} -> {:ok, source, true}
+          :error -> :error
+        end
 
       :error ->
         :error

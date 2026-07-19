@@ -1,5 +1,5 @@
 defmodule Hexpm.ReleaseTasks do
-  alias Hexpm.ReleaseTasks.{CheckNames, MigratePreviewManifests, PurgeExpiredRecords, Stats}
+  alias Hexpm.ReleaseTasks.{CheckNames, PurgeExpiredRecords, Stats}
   require Logger
 
   @start_apps [
@@ -93,17 +93,6 @@ defmodule Hexpm.ReleaseTasks do
     monitor("hexpm-purge-expired-records", "0 2 * * *", &PurgeExpiredRecords.run/0)
 
     Logger.info("[task] Finished purge_expired_records")
-    stop()
-  end
-
-  def migrate_preview_manifests() do
-    start_apps(@start_apps)
-    Logger.info("[task] Running migrate_preview_manifests")
-    start_app()
-
-    task(&MigratePreviewManifests.run/0)
-
-    Logger.info("[task] Finished migrate_preview_manifests")
     stop()
   end
 

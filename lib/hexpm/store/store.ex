@@ -20,11 +20,6 @@ defmodule Hexpm.Store do
     impl.list(bucket, prefix)
   end
 
-  def list_with_sizes(bucket, prefix) do
-    {impl, bucket} = impl_bucket(bucket)
-    impl.list_with_sizes(bucket, prefix)
-  end
-
   def get(bucket, key, opts \\ []) do
     {impl, bucket} = impl_bucket(bucket)
     impl.get(bucket, key, opts)

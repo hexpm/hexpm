@@ -163,8 +163,8 @@ defmodule HexpmWeb.PreviewLiveTest do
 
     Hexpm.Store.put(
       :preview_bucket,
-      "file_manifests/empty_preview-1.0.0.json",
-      preview_manifest([])
+      "file_lists/empty_preview-1.0.0.json",
+      Jason.encode!([])
     )
 
     assert_raise HexpmWeb.PreviewLive.NotFoundError, fn ->
@@ -178,8 +178,8 @@ defmodule HexpmWeb.PreviewLiveTest do
 
     Hexpm.Store.put(
       :preview_bucket,
-      "file_manifests/#{package_name}-#{version}.json",
-      preview_manifest(files)
+      "file_lists/#{package_name}-#{version}.json",
+      Jason.encode!(Enum.map(files, &elem(&1, 0)))
     )
 
     for {filename, contents} <- files do

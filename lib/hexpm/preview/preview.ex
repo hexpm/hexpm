@@ -8,11 +8,10 @@ defmodule Hexpm.Preview do
   @max_file_size 200 * 1000
   @readme_filenames ~w(README.md readme.md README.markdown readme.markdown README.txt readme.txt README readme)
 
-  def source(package, version, requested_filename \\ nil, opts \\ []) do
-    with %{files: [_ | _] = files, sizes: sizes} <- manifest(package, version),
-         filename when is_binary(filename) <-
-           selected_file(files, requested_filename, opts[:fallback] == :default),
-         size when is_integer(size) <- sizes[filename],
+  def source(package, version, requested_filename \\ nil) do
+    with [_ | _] = files <- Bucket.get_file_list(package, version),
+         filename when is_binary(filename) <- selected_file(files, requested_filename),
+         size when is_integer(size) <- Bucket.file_size(package, version, filename),
          result when is_map(result) <- source_result(package, version, filename, size) do
       {:ok, Map.merge(result, %{files: files, filename: filename})}
     else
@@ -21,7 +20,7 @@ defmodule Hexpm.Preview do
   end
 
   def readme(package, version) do
-    with %{files: files} when is_list(files) <- manifest(package, version),
+    with files when is_list(files) <- Bucket.get_file_list(package, version),
          filename when is_binary(filename) <- Enum.find(@readme_filenames, &(&1 in files)),
          contents when is_binary(contents) <- Bucket.get_file(package, version, filename) do
       {:ok, filename, contents}
@@ -43,7 +42,7 @@ defmodule Hexpm.Preview do
   def package_sitemap(base_url, package) do
     with %DateTime{} = updated_at <- RepositorySitemaps.public_package_updated_at(package),
          version when is_binary(version) <- Bucket.get_latest_version(package),
-         %{files: [_ | _] = files} <- manifest(package, version) do
+         [_ | _] = files <- Bucket.get_file_list(package, version) do
       {:ok, Sitemaps.render_package(base_url, package, version, files, updated_at)}
     else
       _ -> :error
@@ -267,18 +266,10 @@ defmodule Hexpm.Preview do
     )
   end
 
-  defp manifest(package, version) do
-    Bucket.get_manifest(package, version)
-  end
+  defp selected_file(files, nil), do: default_file(files)
 
-  defp selected_file(files, nil, _fallback?), do: default_file(files)
-
-  defp selected_file(files, requested_filename, fallback?) do
-    cond do
-      requested_filename in files -> requested_filename
-      fallback? -> default_file(files)
-      true -> nil
-    end
+  defp selected_file(files, requested_filename) do
+    if requested_filename in files, do: requested_filename
   end
 
   defp source_result(_package, _version, _filename, size) when size > @max_file_size do

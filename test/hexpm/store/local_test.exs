@@ -174,16 +174,4 @@ defmodule Hexpm.Store.LocalTest do
       assert Enum.sort(result) == ["prefix_file1.txt", "prefix_file2.txt"]
     end
   end
-
-  describe "list_with_sizes/2" do
-    @tag :tmp_dir
-    test "returns matching paths with byte sizes", %{tmp_dir: tmp_dir} do
-      bucket_dir = Path.join([tmp_dir, "store", "bucket"])
-      File.mkdir_p!(bucket_dir)
-      File.write!(Path.join(bucket_dir, "prefix_file.txt"), "content")
-      File.write!(Path.join(bucket_dir, "other.txt"), "other")
-
-      assert Local.list_with_sizes("bucket", "prefix_") == [{"prefix_file.txt", 7}]
-    end
-  end
 end

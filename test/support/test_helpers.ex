@@ -122,16 +122,6 @@ defmodule Hexpm.TestHelpers do
     |> File.read!()
   end
 
-  def preview_manifest(files) do
-    entries =
-      Enum.map(files, fn
-        {path, contents} -> %{path: path, size: byte_size(contents)}
-        path when is_binary(path) -> %{path: path, size: 0}
-      end)
-
-    Jason.encode!(%{files: entries})
-  end
-
   def audit_data(user, opts \\ [])
 
   def audit_data(%Hexpm.Accounts.Organization{user: user}, opts) do
