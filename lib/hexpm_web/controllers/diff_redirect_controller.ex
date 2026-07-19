@@ -8,13 +8,15 @@ defmodule HexpmWeb.DiffRedirectController do
       [] ->
         permanent_redirect(conn, "/packages", "")
 
-      [{package, from, to}] ->
-        permanent_redirect(conn, ~p"/diff/#{package}/#{from <> ".." <> to}", extra_query(params))
+      [{repository, package, from, to}] ->
+        permanent_redirect(conn, diff_path(repository, package, from, to), extra_query(params))
 
       comparisons ->
         query =
           comparisons
-          |> Enum.map(fn {package, from, to} -> {"diffs[]", "#{package}:#{from}:#{to}"} end)
+          |> Enum.map(fn {repository, package, from, to} ->
+            {"diffs[]", encode_comparison(repository, package, from, to)}
+          end)
           |> URI.encode_query()
 
         permanent_redirect(conn, ~p"/diffs", join_query(query, extra_query(params)))
@@ -26,6 +28,19 @@ defmodule HexpmWeb.DiffRedirectController do
   end
 
   def path(conn, _params), do: permanent_redirect(conn, "/packages", "")
+
+  defp diff_path(nil, package, from, to) do
+    ~p"/diff/#{package}/#{from <> ".." <> to}"
+  end
+
+  defp diff_path(repository, package, from, to) do
+    ~p"/diff/#{repository}/#{package}/#{from <> ".." <> to}"
+  end
+
+  defp encode_comparison(nil, package, from, to), do: "#{package}:#{from}:#{to}"
+
+  defp encode_comparison(repository, package, from, to),
+    do: "#{repository}/#{package}:#{from}:#{to}"
 
   defp extra_query(params) do
     params

@@ -21,7 +21,10 @@ defmodule HexpmWeb.DiffController do
   defp parse_comparison(comparison) when is_binary(comparison) do
     case String.split(comparison, ":", parts: 3) do
       [package, from, to] when package != "" and from != "" and to != "" ->
-        [{package, from, to}]
+        case parse_package(package) do
+          {:ok, repository, package} -> [{repository, package, from, to}]
+          :error -> []
+        end
 
       _other ->
         []
@@ -29,4 +32,12 @@ defmodule HexpmWeb.DiffController do
   end
 
   defp parse_comparison(_comparison), do: []
+
+  defp parse_package(package) do
+    case String.split(package, "/") do
+      [package] -> {:ok, nil, package}
+      [repository, package] when repository != "" and package != "" -> {:ok, repository, package}
+      _other -> :error
+    end
+  end
 end

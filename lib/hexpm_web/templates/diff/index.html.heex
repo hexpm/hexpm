@@ -18,22 +18,30 @@
           </td>
         </tr>
         <tr
-          :for={{package, from, to} <- @diffs}
+          :for={{repository, package, from, to} <- @diffs}
           class="transition-colors hover:bg-grey-50 dark:hover:bg-grey-700/40"
         >
           <td class="px-6 py-3">
             <a
-              href={~p"/packages/#{package}/#{to}"}
+              href={
+                if repository,
+                  do: ~p"/packages/#{repository}/#{package}/#{to}",
+                  else: ~p"/packages/#{package}/#{to}"
+              }
               class="font-mono font-semibold text-primary-700 transition-colors hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-300"
             >
-              {package}
+              {if repository, do: "#{repository}/#{package}", else: package}
             </a>
           </td>
           <td class="px-4 py-3 font-mono text-xs text-grey-500 dark:text-grey-300">{from}</td>
           <td class="px-4 py-3 font-mono text-xs text-grey-500 dark:text-grey-300">{to}</td>
           <td class="px-4 py-3 text-right">
             <a
-              href={~p"/diff/#{package}/#{from <> ".." <> to}"}
+              href={
+                if repository,
+                  do: ~p"/diff/#{repository}/#{package}/#{from <> ".." <> to}",
+                  else: ~p"/diff/#{package}/#{from <> ".." <> to}"
+              }
               class="inline-flex items-center rounded-md bg-primary-600 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-primary-700"
             >
               View diff
