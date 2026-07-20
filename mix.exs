@@ -62,7 +62,7 @@ defmodule Hexpm.MixProject do
       {:mdex, "~> 0.13"},
       {:mdex_gfm, "~> 0.1"},
       {:lumis, github: "leandrocp/lumis", sparse: "packages/elixir/lumis", override: true},
-      {:rustler, ">= 0.0.0", optional: true},
+      {:rustler, ">= 0.0.0"},
       {:mox, "~> 1.0", only: :test},
       {:nimble_ownership, "~> 1.0"},
       {:oban, "~> 2.23"},
