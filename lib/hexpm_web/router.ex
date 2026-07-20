@@ -8,6 +8,7 @@ defmodule HexpmWeb.Router do
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
+    plug :migrate_session
     plug :fetch_flash
     plug :put_root_layout, {HexpmWeb.LayoutView, :root}
     plug :put_layout, {HexpmWeb.LayoutView, :app}
@@ -72,6 +73,7 @@ defmodule HexpmWeb.Router do
   pipeline :browser_api do
     plug :accepts, ["json"]
     plug :fetch_session
+    plug :migrate_session
     plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug :user_agent, required: false

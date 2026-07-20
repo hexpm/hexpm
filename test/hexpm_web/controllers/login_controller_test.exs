@@ -17,7 +17,7 @@ defmodule HexpmWeb.LoginControllerTest do
     assert redirected_to(conn) == "/users/#{c.user.username}"
 
     assert get_session(conn, "session_token")
-    refute last_session().data["user_id"]
+    refute get_session(conn, "user_id")
   end
 
   @tag :focus

@@ -6,6 +6,14 @@ defmodule HexpmWeb.Plugs do
   alias Hexpm.UserSessions
   alias HexpmWeb.ControllerHelpers
 
+  def migrate_session(conn, _opts) do
+    if get_session(conn, HexpmWeb.Session.Transition.legacy_marker()) do
+      delete_session(conn, HexpmWeb.Session.Transition.legacy_marker())
+    else
+      conn
+    end
+  end
+
   # Max filesize: 20MB
   # Min upload speed: ~10kb/s
   # Read 100kb every 10s

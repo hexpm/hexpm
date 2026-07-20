@@ -226,6 +226,18 @@ defmodule HexpmWeb.AuthControllerTest do
   end
 
   describe "GET /auth/complete-signup - Username selection form" do
+    test "redirects to signup when pending oauth is stale" do
+      stale =
+        NaiveDateTime.utc_now() |> NaiveDateTime.shift(minute: -31) |> NaiveDateTime.to_iso8601()
+
+      conn =
+        build_conn()
+        |> Plug.Test.init_test_session(%{"pending_oauth" => %{"at" => stale}})
+        |> get("/auth/complete-signup")
+
+      assert redirected_to(conn) == "/signup"
+    end
+
     test "shows form with suggested username" do
       email = Hexpm.Fake.sequence(:email)
       username = Hexpm.Fake.sequence(:username)
@@ -236,6 +248,7 @@ defmodule HexpmWeb.AuthControllerTest do
         build_conn()
         |> Plug.Test.init_test_session(%{
           "pending_oauth" => %{
+            "at" => NaiveDateTime.to_iso8601(NaiveDateTime.utc_now()),
             "provider" => "github",
             "provider_uid" => "12345",
             "provider_email" => email,
@@ -271,6 +284,7 @@ defmodule HexpmWeb.AuthControllerTest do
         build_conn()
         |> Plug.Test.init_test_session(%{
           "pending_oauth" => %{
+            "at" => NaiveDateTime.to_iso8601(NaiveDateTime.utc_now()),
             "provider" => "github",
             "provider_uid" => "12345",
             "provider_email" => email,
@@ -316,6 +330,7 @@ defmodule HexpmWeb.AuthControllerTest do
         build_conn()
         |> Plug.Test.init_test_session(%{
           "pending_oauth" => %{
+            "at" => NaiveDateTime.to_iso8601(NaiveDateTime.utc_now()),
             "provider" => "github",
             "provider_uid" => "12345",
             "provider_email" => email,
@@ -348,6 +363,7 @@ defmodule HexpmWeb.AuthControllerTest do
         build_conn()
         |> Plug.Test.init_test_session(%{
           "pending_oauth" => %{
+            "at" => NaiveDateTime.to_iso8601(NaiveDateTime.utc_now()),
             "provider" => "github",
             "provider_uid" => "12345",
             "provider_email" => email,
@@ -374,6 +390,7 @@ defmodule HexpmWeb.AuthControllerTest do
         build_conn()
         |> Plug.Test.init_test_session(%{
           "pending_oauth" => %{
+            "at" => NaiveDateTime.to_iso8601(NaiveDateTime.utc_now()),
             "provider" => "github",
             "provider_uid" => "12345",
             "provider_email" => email,

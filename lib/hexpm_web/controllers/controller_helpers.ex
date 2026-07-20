@@ -389,6 +389,7 @@ defmodule HexpmWeb.ControllerHelpers do
     |> configure_session(renew: true)
     |> put_session("tfa_user_id", %{
       "uid" => user.id,
+      "at" => NaiveDateTime.utc_now() |> NaiveDateTime.to_iso8601(),
       "return" => return,
       "session_token" => Base.encode64(session_token)
     })

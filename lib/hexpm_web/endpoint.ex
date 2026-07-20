@@ -6,7 +6,9 @@ defmodule HexpmWeb.Endpoint do
 
   @session_options [
     signing_salt: "NOcCmerj",
-    store: HexpmWeb.Session,
+    encryption_salt: "Zb5cCLE7",
+    store: HexpmWeb.Session.Transition,
+    serializer: HexpmWeb.Session.JSON,
     key: "_hexpm_key",
     max_age: 60 * 60 * 24 * 30
   ]
