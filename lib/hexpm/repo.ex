@@ -53,7 +53,7 @@ defmodule Hexpm.Repo do
   defwrite(update(changeset, opts \\ []))
 
   def write_mode?() do
-    not Application.get_env(:hexpm, :read_only_mode, false)
+    not Hexpm.OAuth.ReadOnly.enabled?()
   end
 
   def write_mode!() do

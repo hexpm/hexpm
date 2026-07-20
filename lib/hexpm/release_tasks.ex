@@ -32,7 +32,9 @@ defmodule Hexpm.ReleaseTasks do
     Logger.info("[task] Running check_names")
     start_app()
 
-    monitor("hexpm-check-names", "30 0 * * *", &CheckNames.run/0)
+    monitor("hexpm-check-names", "30 0 * * *", fn ->
+      run_scheduled("check_names", &CheckNames.run/0)
+    end)
 
     Logger.info("[task] Finished check_names")
     stop()
@@ -79,7 +81,7 @@ defmodule Hexpm.ReleaseTasks do
     Logger.info("[task] Running stats")
     start_app()
 
-    monitor("hexpm-stats", "0 1 * * *", &Stats.run/0)
+    monitor("hexpm-stats", "0 1 * * *", fn -> run_scheduled("stats", &Stats.run/0) end)
 
     Logger.info("[task] Finished stats")
     stop()
@@ -90,7 +92,9 @@ defmodule Hexpm.ReleaseTasks do
     Logger.info("[task] Running purge_expired_records")
     start_repo()
 
-    monitor("hexpm-purge-expired-records", "0 2 * * *", &PurgeExpiredRecords.run/0)
+    monitor("hexpm-purge-expired-records", "0 2 * * *", fn ->
+      run_scheduled("purge_expired_records", &PurgeExpiredRecords.run/0)
+    end)
 
     Logger.info("[task] Finished purge_expired_records")
     stop()
@@ -122,6 +126,19 @@ defmodule Hexpm.ReleaseTasks do
 
     status
   end
+
+  @doc false
+  def run_scheduled(name, fun) when is_binary(name) and is_function(fun, 0) do
+    run_scheduled(name, fun, System.get_env("HEXPM_READ_ONLY_MODE") == "1")
+  end
+
+  @doc false
+  def run_scheduled(name, _fun, true) when is_binary(name) do
+    Logger.info("[task] Skipping #{name} in read-only mode")
+    :skipped
+  end
+
+  def run_scheduled(_name, fun, false) when is_function(fun, 0), do: fun.()
 
   defp task(fun) do
     Process.flag(:trap_exit, true)

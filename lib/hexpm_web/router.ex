@@ -11,14 +11,11 @@ defmodule HexpmWeb.Router do
     plug :fetch_flash
     plug :put_root_layout, {HexpmWeb.LayoutView, :root}
     plug :put_layout, {HexpmWeb.LayoutView, :app}
-    plug :protect_from_forgery
+
     plug :put_secure_browser_headers
     plug :user_agent, required: false
     plug :validate_url
     plug HexpmWeb.Plugs.Attack
-    plug :login
-    plug :disable_deactivated
-    plug :default_repository
 
     plug HexpmWeb.Plugs.ContentSecurityPolicy,
       nonces_for: [:script_src, :style_src],
@@ -45,10 +42,23 @@ defmodule HexpmWeb.Router do
         # Disallow embedding this site in frames (clickjacking protection)
         frame_ancestors: ~w('none')
       }
+
+    plug HexpmWeb.Plugs.ReadOnly,
+      allowed_routes: [{"POST", "/logout"}],
+      write_routes: [
+        {"GET", "/auth/:provider/callback"},
+        {"GET", "/email/verify"}
+      ]
+
+    plug :protect_from_forgery
+    plug :login
+    plug :disable_deactivated
+    plug :default_repository
   end
 
   pipeline :upload do
     plug :accepts, @accepted_formats
+    plug HexpmWeb.Plugs.ReadOnly
     plug :user_agent
     plug :authenticate
     plug :disable_deactivated
@@ -60,6 +70,15 @@ defmodule HexpmWeb.Router do
 
   pipeline :api do
     plug :accepts, @accepted_formats
+
+    plug HexpmWeb.Plugs.ReadOnly,
+      allowed_routes: [
+        {"POST", "/api/oauth/token"},
+        {"POST", "/api/oauth/device_authorization"},
+        {"POST", "/api/oauth/revoke"},
+        {"POST", "/api/oauth/revoke_by_hash"}
+      ]
+
     plug :user_agent
     plug :authenticate
     plug :disable_deactivated
@@ -72,11 +91,12 @@ defmodule HexpmWeb.Router do
   pipeline :browser_api do
     plug :accepts, ["json"]
     plug :fetch_session
-    plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug :user_agent, required: false
     plug :validate_url
     plug HexpmWeb.Plugs.Attack
+    plug HexpmWeb.Plugs.ReadOnly
+    plug :protect_from_forgery
     plug :login
     plug :disable_deactivated
     plug :default_repository

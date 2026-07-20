@@ -38,6 +38,12 @@ defmodule Hexpm.ApplicationTest do
 
       assert Hexpm.Application.sentry_before_send(event) == nil
     end
+
+    test "keeps unexpected read-only write exceptions" do
+      event = Sentry.Event.create_event(exception: %Hexpm.WriteInReadOnlyMode{})
+
+      assert Hexpm.Application.sentry_before_send(event) == event
+    end
   end
 
   describe "mode supervision" do
@@ -79,6 +85,18 @@ defmodule Hexpm.ApplicationTest do
     test "development and test always run all children" do
       assert Application.mode(:dev, "worker") == :all
       assert Application.mode(:test, "web") == :all
+    end
+
+    test "read-only mode keeps web reads available and quiesces write workers" do
+      children = Application.children(:all, false)
+      ids = child_ids(children)
+
+      assert HexpmWeb.Endpoint in ids
+      refute :task_setup in ids
+      refute Oban in ids
+      refute Hexpm.Hexdocs.Queue in ids
+      refute Hexpm.Hexdocs.Debouncer in ids
+      refute Hexpm.Preview.Queue in ids
     end
   end
 

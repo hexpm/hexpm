@@ -5,7 +5,7 @@ defmodule HexpmWeb.API.OAuthController do
 
   alias Hexpm.UserSessions
   alias Hexpm.OAuth.{AuthorizationCodes, Clients, DeviceCodes, Tokens}
-  alias HexpmWeb.Plugs.Attack
+  alias HexpmWeb.Plugs.{Attack, ReadOnly}
 
   defp safe_param(params, key), do: safe_string(params[key])
 
@@ -14,6 +14,8 @@ defmodule HexpmWeb.API.OAuthController do
   Handles multiple grant types: authorization_code, device_code, refresh_token, client_credentials.
   """
   def token(conn, params) do
+    conn = ReadOnly.prevent_caching(conn)
+
     case get_grant_type(params) do
       "authorization_code" ->
         with_write_mode(conn, fn -> handle_authorization_code_grant(conn, params) end)
@@ -40,6 +42,8 @@ defmodule HexpmWeb.API.OAuthController do
   Device authorization endpoint for device flow.
   """
   def device_authorization(conn, params) do
+    conn = ReadOnly.prevent_caching(conn)
+
     with_write_mode(conn, fn ->
       with {:ok, client} <- validate_client(safe_param(params, "client_id")),
            :ok <-
@@ -320,8 +324,9 @@ defmodule HexpmWeb.API.OAuthController do
   end
 
   defp temporarily_unavailable(conn) do
-    render_oauth_error(
-      conn,
+    conn
+    |> ReadOnly.prepare_unavailable()
+    |> render_oauth_error(
       :temporarily_unavailable,
       "OAuth operation unavailable while the service is read-only"
     )

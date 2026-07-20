@@ -381,9 +381,13 @@ defmodule Hexpm.UserSessions do
   Updates the last use information for a session.
   """
   def update_last_use(%UserSession{} = session, usage_info) do
-    session
-    |> UserSession.update_last_use(usage_info)
-    |> Repo.update()
+    if Repo.write_mode?() do
+      session
+      |> UserSession.update_last_use(usage_info)
+      |> Repo.update()
+    else
+      {:ok, session}
+    end
   end
 
   @doc """

@@ -11,7 +11,7 @@ defmodule Hexpm.Application do
 
     mode = mode()
     if web_mode?(mode), do: Hexpm.BlockAddress.start()
-    children = children(mode)
+    children = children(mode, Hexpm.Repo.write_mode?())
 
     shutdown_on_eof()
 
@@ -40,10 +40,18 @@ defmodule Hexpm.Application do
   def mode(environment, _value) when environment in [:dev, :test, :hex], do: :all
 
   def children(mode) when mode in [:web, :worker, :all] do
-    common_children() ++
-      if(mode in [:worker, :all], do: worker_before_oban_children(), else: []) ++
-      [oban_child()] ++
-      if(mode in [:worker, :all], do: worker_after_oban_children(), else: []) ++
+    children(mode, Hexpm.Repo.write_mode?())
+  end
+
+  @doc false
+  def children(mode, write_mode?)
+      when mode in [:web, :worker, :all] and is_boolean(write_mode?) do
+    worker_mode? = mode in [:worker, :all] and write_mode?
+
+    common_children(write_mode?) ++
+      if(worker_mode?, do: worker_before_oban_children(), else: []) ++
+      if(write_mode?, do: [oban_child()], else: []) ++
+      if(worker_mode?, do: worker_after_oban_children(), else: []) ++
       if(mode in [:web, :all], do: web_children(), else: [])
   end
 
@@ -123,14 +131,14 @@ defmodule Hexpm.Application do
     end
   end
 
-  defp common_children do
+  defp common_children(write_mode?) do
     [
       Hexpm.RepoBase,
       {Finch, name: Hexpm.Finch, pools: finch_pools()},
       Hexpm.TmpDir,
       {Task.Supervisor, name: Hexpm.Tasks},
       goth_spec(),
-      setup(),
+      if(write_mode?, do: setup()),
       HexpmWeb.Telemetry
     ]
     |> Enum.reject(&is_nil/1)

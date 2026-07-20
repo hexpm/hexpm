@@ -29,6 +29,11 @@ defmodule HexpmWeb.ErrorViewTest do
     assert render_to_string(HexpmWeb.ErrorView, "422.html", assigns()) =~ "Validation error(s)"
   end
 
+  test "renders 503.html" do
+    assert render_to_string(HexpmWeb.ErrorView, "503.html", assigns()) =~
+             "temporarily read-only for maintenance"
+  end
+
   test "render 500.html" do
     assert render_to_string(HexpmWeb.ErrorView, "500.html", assigns()) =~
              "Internal server error"

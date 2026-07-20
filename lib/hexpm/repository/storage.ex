@@ -5,6 +5,8 @@ defmodule Hexpm.Repository.Storage do
   the matching Fastly surrogate keys.
   """
 
+  alias Hexpm.Repo
+
   @doc """
   Signs the given encoded protobuf payload with the configured private
   key and returns the gzipped result.
@@ -25,6 +27,8 @@ defmodule Hexpm.Repository.Storage do
   """
   @spec put_object(String.t(), iodata(), [String.t()], String.t()) :: term()
   def put_object(key, contents, surrogate_keys, cache_control) do
+    Repo.write_mode!()
+
     meta = [
       {"surrogate-key", Enum.join(surrogate_keys, " ")},
       {"surrogate-control", "public, max-age=604800"}
@@ -39,6 +43,7 @@ defmodule Hexpm.Repository.Storage do
   """
   @spec delete_object(String.t()) :: term()
   def delete_object(key) do
+    Repo.write_mode!()
     Hexpm.Store.delete(:repo_bucket, key)
   end
 
@@ -47,6 +52,7 @@ defmodule Hexpm.Repository.Storage do
   """
   @spec purge(String.t() | [String.t()]) :: term()
   def purge(surrogate_keys) do
+    Repo.write_mode!()
     Hexpm.CDN.purge_key(:fastly_hexrepo, surrogate_keys)
   end
 end

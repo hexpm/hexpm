@@ -20,6 +20,8 @@ defmodule Hexpm.Repository.OrgNamesPublisher do
   """
   @spec publish() :: :ok
   def publish do
+    Repo.write_mode!()
+
     names = list_org_names()
     csv = Enum.map_intersperse(names, "\n", & &1)
 
