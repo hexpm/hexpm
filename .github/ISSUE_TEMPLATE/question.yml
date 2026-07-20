@@ -1,0 +1,43 @@
+name: Question
+description: Ask a question about using Hex.pm.
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For usage help, please check the Hex.pm documentation first: https://hex.pm/docs
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What would you like to know?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What are you trying to do on Hex.pm or with a package?
+    validations:
+      required: true
+  - type: textarea
+    id: attempted
+    attributes:
+      label: What have you tried?
+      description: Share any steps you already attempted.
+  - type: textarea
+    id: relevant-details
+    attributes:
+      label: Relevant details
+      description: Share relevant package, organization, API client, logs, or screenshots. This question is public, so redact secrets, tokens, account identifiers, and other sensitive data before posting.
+      placeholder: |
+        Package:
+        Organization:
+        API endpoint or client:
+        Relevant logs or screenshots:
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Anything else that would help answer the question.
