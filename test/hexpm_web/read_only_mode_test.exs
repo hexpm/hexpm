@@ -10,7 +10,7 @@ defmodule HexpmWeb.ReadOnlyModeTest do
     build_conn()
     |> put_req_header("authorization", key.user_secret)
     |> get("/api/auth", domain: "api")
-    |> response(204)
+    |> response(200)
   after
     Application.put_env(:hexpm, :read_only_mode, false)
   end
