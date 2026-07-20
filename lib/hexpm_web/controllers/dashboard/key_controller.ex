@@ -48,7 +48,6 @@ defmodule HexpmWeb.Dashboard.KeyController do
   defp render_index(conn, changeset \\ changeset(), generated_key \\ nil) do
     user = Hexpm.Repo.preload(conn.assigns.current_user, :owned_packages)
     keys = Keys.all(user)
-    organizations = Organizations.all_by_user(user)
 
     packages =
       user.owned_packages
@@ -61,7 +60,6 @@ defmodule HexpmWeb.Dashboard.KeyController do
       title: "Dashboard - User keys",
       container: "container page dashboard",
       keys: keys,
-      organizations: organizations,
       packages: packages,
       delete_key_path: ~p"/dashboard/keys",
       create_key_path: ~p"/dashboard/keys",
