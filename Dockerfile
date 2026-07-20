@@ -9,8 +9,12 @@ ENV LANG=C.UTF-8
 # install build dependencies
 RUN apt update && \
     apt upgrade -y && \
-    apt install -y --no-install-recommends git build-essential && \
+    apt install -y --no-install-recommends git build-essential curl ca-certificates && \
     apt clean -y && rm -rf /var/lib/apt/lists/*
+
+# install rust, the lumis NIF is built from source
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 # prepare build dir
 RUN mkdir /app
