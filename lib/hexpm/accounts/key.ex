@@ -188,6 +188,12 @@ defmodule Hexpm.Accounts.Key do
     not is_nil(key.revoke_at) and DateTime.compare(key.revoke_at, DateTime.utc_now()) == :lt
   end
 
+  def user_repository_key?(%Key{user_id: nil}), do: false
+
+  def user_repository_key?(%Key{} = key) do
+    Enum.any?(key.permissions, &(&1.domain in ["repository", "repositories"]))
+  end
+
   def associate_owner(nil, _owner), do: nil
   def associate_owner(%Key{} = key, %User{} = user), do: %{key | user: user, organization: nil}
 

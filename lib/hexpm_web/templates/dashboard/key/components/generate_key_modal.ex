@@ -9,7 +9,6 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
   attr :form, :map, required: true
   attr :current_user, :map, required: true
   attr :create_key_path, :string, required: true
-  attr :organizations, :list, required: true
   attr :packages, :list, required: true
   attr :organization, :map, default: nil
 
@@ -123,43 +122,6 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
                   Organization repository
                 </span>
               </label>
-            </div>
-          <% else %>
-            <div
-              class="mb-4"
-              phx-hook="PermissionGroup"
-              id="repositories-permission-group"
-              data-parent="repositories-parent"
-            >
-              <label class="flex items-center mb-2">
-                <input
-                  type="checkbox"
-                  id="repositories-parent"
-                  name="key[permissions][repositories]"
-                  value="on"
-                  class="rounded border-grey-300 text-purple-600 focus:ring-purple-500"
-                />
-                <span class="ml-2 text-sm text-grey-700 dark:text-grey-300 font-medium">
-                  All Repositories
-                </span>
-              </label>
-              <%= if @organizations != [] do %>
-                <div class="ml-6 space-y-2">
-                  <%= for organization <- @organizations do %>
-                    <label class="flex items-center">
-                      <input
-                        type="checkbox"
-                        name={"key[permissions][repository][#{organization.name}]"}
-                        value="on"
-                        class="child-checkbox rounded border-grey-300 text-purple-600 focus:ring-purple-500"
-                      />
-                      <span class="ml-2 text-sm text-grey-700 dark:text-grey-300">
-                        Repository: {organization.name}
-                      </span>
-                    </label>
-                  <% end %>
-                </div>
-              <% end %>
             </div>
           <% end %>
 

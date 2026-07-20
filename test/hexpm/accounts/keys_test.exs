@@ -78,6 +78,39 @@ defmodule Hexpm.Accounts.KeysTest do
       assert {:ok, _} = Base.decode16(key.user_secret, case: :lower)
     end
 
+    test "user repository permissions are not allowed", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user)
+
+      params = %{
+        "name" => "keyname",
+        "permissions" => [%{"domain" => "repository", "resource" => organization.name}]
+      }
+
+      assert {:error, :key, changeset, _} = Keys.create(user, params, audit: audit_data(user))
+
+      assert errors_on(changeset)[:permissions][:domain] ==
+               "user keys cannot have repository permissions, generate an organization key instead"
+
+      params = %{"name" => "keyname", "permissions" => [%{"domain" => "repositories"}]}
+
+      assert {:error, :key, changeset, _} = Keys.create(user, params, audit: audit_data(user))
+
+      assert errors_on(changeset)[:permissions][:domain] ==
+               "user keys cannot have repository permissions, generate an organization key instead"
+    end
+
+    test "organization repository permissions", %{organization: organization} do
+      params = %{
+        "name" => "keyname",
+        "permissions" => [%{"domain" => "repository", "resource" => organization.name}]
+      }
+
+      assert {:ok, %{key: key}} =
+               Keys.create(organization, params, audit: audit_data(organization))
+
+      assert key.organization_id == organization.id
+    end
+
     test "user package permissions", %{user: user, package: package} do
       params = %{
         "name" => "keyname",

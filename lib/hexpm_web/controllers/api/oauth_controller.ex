@@ -205,6 +205,7 @@ defmodule HexpmWeb.API.OAuthController do
          {:ok, api_key_secret} <- validate_api_key_secret(safe_param(params, "client_secret")),
          {:ok, auth_info} <- authenticate_api_key(api_key_secret, conn),
          {:ok, scopes} <- expand_and_validate_scopes(params["scope"], auth_info) do
+      conn = maybe_warn_user_repository_key(conn, auth_info.auth_credential, scopes)
       usage_info = build_usage_info(conn)
 
       # Determine user or organization from the API key
@@ -249,6 +250,19 @@ defmodule HexpmWeb.API.OAuthController do
         render_oauth_error(conn, :invalid_client, error)
     end
   end
+
+  defp maybe_warn_user_repository_key(conn, %Key{} = key, scopes) do
+    repository_scope? =
+      Enum.any?(scopes, &(&1 == "repositories" or String.starts_with?(&1, "repository:")))
+
+    if repository_scope? and Key.user_repository_key?(key) do
+      put_user_repository_key_warning(conn)
+    else
+      conn
+    end
+  end
+
+  defp maybe_warn_user_repository_key(conn, _auth_credential, _scopes), do: conn
 
   defp validate_client_supports_grant(client, grant_type) do
     if Clients.supports_grant_type?(client, grant_type) do

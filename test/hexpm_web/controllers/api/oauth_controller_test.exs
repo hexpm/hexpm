@@ -873,12 +873,8 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       org = insert(:organization)
       insert(:organization_user, organization: org, user: user)
 
-      {:ok, %{key: key}} =
-        Hexpm.Accounts.Keys.create(
-          user,
-          %{name: "repo_key", permissions: [%{domain: "repositories"}]},
-          audit: audit_data(user)
-        )
+      key =
+        insert(:key, user: user, permissions: [build(:key_permission, domain: "repositories")])
 
       api_key = key.user_secret
 
@@ -905,14 +901,10 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       org = insert(:organization)
       insert(:organization_user, organization: org, user: user)
 
-      {:ok, %{key: key}} =
-        Hexpm.Accounts.Keys.create(
-          user,
-          %{
-            name: "specific_repo_key",
-            permissions: [%{domain: "repository", resource: org.name}]
-          },
-          audit: audit_data(user)
+      key =
+        insert(:key,
+          user: user,
+          permissions: [build(:key_permission, domain: "repository", resource: org.name)]
         )
 
       api_key = key.user_secret
@@ -941,14 +933,10 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       insert(:organization_user, organization: org2, user: user)
 
       # API key only has access to org1, not org2
-      {:ok, %{key: key}} =
-        Hexpm.Accounts.Keys.create(
-          user,
-          %{
-            name: "limited_repo_key",
-            permissions: [%{domain: "repository", resource: org1.name}]
-          },
-          audit: audit_data(user)
+      key =
+        insert(:key,
+          user: user,
+          permissions: [build(:key_permission, domain: "repository", resource: org1.name)]
         )
 
       api_key = key.user_secret
@@ -981,17 +969,13 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       insert(:organization_user, organization: org3, user: user)
 
       # API key has access to org1 and org2, but not org3
-      {:ok, %{key: key}} =
-        Hexpm.Accounts.Keys.create(
-          user,
-          %{
-            name: "multi_repo_key",
-            permissions: [
-              %{domain: "repository", resource: org1.name},
-              %{domain: "repository", resource: org2.name}
-            ]
-          },
-          audit: audit_data(user)
+      key =
+        insert(:key,
+          user: user,
+          permissions: [
+            build(:key_permission, domain: "repository", resource: org1.name),
+            build(:key_permission, domain: "repository", resource: org2.name)
+          ]
         )
 
       api_key = key.user_secret
@@ -1023,17 +1007,13 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       org = insert(:organization)
       insert(:organization_user, organization: org, user: user)
 
-      {:ok, %{key: key}} =
-        Hexpm.Accounts.Keys.create(
-          user,
-          %{
-            name: "mixed_key",
-            permissions: [
-              %{domain: "api"},
-              %{domain: "repositories"}
-            ]
-          },
-          audit: audit_data(user)
+      key =
+        insert(:key,
+          user: user,
+          permissions: [
+            build(:key_permission, domain: "api"),
+            build(:key_permission, domain: "repositories")
+          ]
         )
 
       api_key = key.user_secret
@@ -1405,6 +1385,69 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       response = json_response(conn, 200)
       assert response["access_token"]
       assert response["scope"] == "repository:#{org.name}"
+    end
+
+    test "user key with repository permissions warns about deprecation", %{
+      client: client,
+      user: user
+    } do
+      org = insert(:organization)
+      insert(:organization_user, organization: org, user: user)
+
+      key =
+        insert(:key, user: user, permissions: [build(:key_permission, domain: "repositories")])
+
+      date = Application.fetch_env!(:hexpm, :user_repository_keys_disable_date)
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "repositories"
+        })
+
+      assert json_response(conn, 200)
+
+      assert get_resp_header(conn, "x-hex-message") == [
+               "\"User API keys with repository permissions are deprecated and will stop " <>
+                 "working on #{date}. Use mix hex.user auth for development or an organization " <>
+                 "key (mix hex.organization key ORGANIZATION generate) for CI\";level=warn"
+             ]
+    end
+
+    test "organization key does not warn about deprecation", %{client: client} do
+      org = insert(:organization)
+
+      key =
+        insert(:key,
+          organization: org,
+          permissions: [build(:key_permission, domain: "repository", resource: org.name)]
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "repositories"
+        })
+
+      assert json_response(conn, 200)
+      assert get_resp_header(conn, "x-hex-message") == []
+    end
+
+    test "user api key does not warn about deprecation", %{client: client, api_key: api_key} do
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "repositories"
+        })
+
+      assert json_response(conn, 200)
+      assert get_resp_header(conn, "x-hex-message") == []
     end
   end
 

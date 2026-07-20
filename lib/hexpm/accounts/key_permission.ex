@@ -13,10 +13,26 @@ defmodule Hexpm.Accounts.KeyPermission do
   def changeset(struct, user_or_organization, params) do
     cast(struct, params, ~w(domain resource)a)
     |> validate_inclusion(:domain, Permissions.valid_domains())
+    |> validate_user_key_domain(user_or_organization)
     |> normalize_resource()
     |> validate_resource()
     |> validate_permission(user_or_organization)
   end
+
+  defp validate_user_key_domain(changeset, %User{}) do
+    validate_change(changeset, :domain, fn _, domain ->
+      if domain in ["repository", "repositories"] do
+        [
+          domain:
+            "user keys cannot have repository permissions, generate an organization key instead"
+        ]
+      else
+        []
+      end
+    end)
+  end
+
+  defp validate_user_key_domain(changeset, _user_or_organization), do: changeset
 
   defp validate_resource(changeset) do
     validate_change(changeset, :resource, fn _, resource ->
