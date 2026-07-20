@@ -58,10 +58,12 @@ defmodule Hexpm.MixProject do
       {:lasso, "~> 0.1.4", only: :test},
       {:libcluster, "~> 3.0"},
       {:logster, "~> 1.0"},
-      {:git_diff, github: "ericmj/git_diff", ref: "d47473d661ff0073ce4080ae04db1a439d78a62b"},
+      {:git_diff,
+       github: "ericmj/git_diff", ref: "d47473d661ff0073ce4080ae04db1a439d78a62b", depth: 1},
       {:mdex, "~> 0.13"},
       {:mdex_gfm, "~> 0.1"},
-      {:lumis, github: "leandrocp/lumis", sparse: "packages/elixir/lumis", override: true},
+      {:lumis,
+       github: "leandrocp/lumis", sparse: "packages/elixir/lumis", depth: 1, override: true},
       {:rustler, ">= 0.0.0"},
       {:mox, "~> 1.0", only: :test},
       {:nimble_ownership, "~> 1.0"},
@@ -102,7 +104,7 @@ defmodule Hexpm.MixProject do
     else
       # TODO: revert to the published `{:hex_core, "~> 0.19"}` dependency once a
       # hex_core release ships the per-repository policy model
-      [github: "hexpm/hex_core"]
+      [github: "hexpm/hex_core", depth: 1]
     end
   end
 
