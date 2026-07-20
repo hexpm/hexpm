@@ -142,7 +142,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInfoForms do
 
   attr :active, :boolean, default: false
   attr :id, :string, required: true
-  attr :rest, :global, include: ~w(phx-click)
+  attr :rest, :global
   slot :inner_block, required: true
 
   defp billing_tab_btn(assigns) do
