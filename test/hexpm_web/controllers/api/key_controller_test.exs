@@ -154,24 +154,26 @@ defmodule HexpmWeb.API.KeyControllerTest do
       assert body["message"] == "missing authentication information"
     end
 
-    test "create repository key", c do
+    test "create user repository key is not allowed", c do
       body = %{
         name: "macbook",
         permissions: [%{domain: "repository", resource: c.organization.name}]
       }
 
-      build_conn()
-      |> put_req_header("content-type", "application/json")
-      |> put_req_header("authorization", basic_auth(c.eric))
-      |> post("/api/keys", body)
-      |> json_response(201)
+      result =
+        build_conn()
+        |> put_req_header("content-type", "application/json")
+        |> put_req_header("authorization", basic_auth(c.eric))
+        |> post("/api/keys", body)
+        |> json_response(422)
 
-      key = Repo.one!(Key.get(c.eric, "macbook"))
-      repo_name = c.organization.name
-      assert [%KeyPermission{domain: "repository", resource: ^repo_name}] = key.permissions
+      assert result["errors"]["permissions"]["domain"] ==
+               "user keys cannot have repository permissions, generate an organization key instead"
+
+      refute Repo.one(Key.get(c.eric, "macbook"))
     end
 
-    test "create repository key with api key", c do
+    test "create user repository key with api key is not allowed", c do
       key = Key.build(c.eric, %{name: "computer"}) |> Repo.insert!()
 
       body = %{
@@ -183,9 +185,26 @@ defmodule HexpmWeb.API.KeyControllerTest do
       |> put_req_header("content-type", "application/json")
       |> put_req_header("authorization", key.user_secret)
       |> post("/api/keys", body)
+      |> json_response(422)
+
+      refute Repo.one(Key.get(c.eric, "macbook"))
+    end
+
+    test "create organization repository key", c do
+      org_key = Key.build(c.organization, %{name: "computer"}) |> Repo.insert!()
+
+      body = %{
+        name: "macbook",
+        permissions: [%{domain: "repository", resource: c.organization.name}]
+      }
+
+      build_conn()
+      |> put_req_header("content-type", "application/json")
+      |> put_req_header("authorization", org_key.user_secret)
+      |> post("/api/orgs/#{c.organization.name}/keys", body)
       |> json_response(201)
 
-      key = Repo.one!(Key.get(c.eric, "macbook"))
+      key = Repo.one!(Key.get(c.organization, "macbook"))
       repo_name = c.organization.name
       assert [%KeyPermission{domain: "repository", resource: ^repo_name}] = key.permissions
     end
@@ -246,17 +265,20 @@ defmodule HexpmWeb.API.KeyControllerTest do
       refute Repo.one(Key.get(c.eric, "expired"))
     end
 
-    test "create repositories key", c do
+    test "create user repositories key is not allowed", c do
       body = %{name: "macbook", permissions: [%{domain: "repositories"}]}
 
-      build_conn()
-      |> put_req_header("content-type", "application/json")
-      |> put_req_header("authorization", basic_auth(c.eric))
-      |> post("/api/keys", body)
-      |> json_response(201)
+      result =
+        build_conn()
+        |> put_req_header("content-type", "application/json")
+        |> put_req_header("authorization", basic_auth(c.eric))
+        |> post("/api/keys", body)
+        |> json_response(422)
 
-      key = Repo.one!(Key.get(c.eric, "macbook"))
-      assert [%KeyPermission{domain: "repositories", resource: nil}] = key.permissions
+      assert result["errors"]["permissions"]["domain"] ==
+               "user keys cannot have repository permissions, generate an organization key instead"
+
+      refute Repo.one(Key.get(c.eric, "macbook"))
     end
 
     test "create repositories key with resource returns 422", c do

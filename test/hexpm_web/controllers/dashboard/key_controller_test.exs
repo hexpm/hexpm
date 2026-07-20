@@ -57,6 +57,18 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
       assert_email_sent(Hexpm.Emails.api_key_created(user, key))
     end
 
+    test "cannot generate key with repository permissions", c do
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> post("/dashboard/keys", %{
+          key: %{name: "repo-key", expires_in: "30", permissions: %{"repositories" => "on"}}
+        })
+
+      assert response(conn, 400)
+      refute Hexpm.Repo.one(Hexpm.Accounts.Key.get(c.user, "repo-key"))
+    end
+
     test "shows validation errors when name is missing", c do
       conn =
         build_conn()

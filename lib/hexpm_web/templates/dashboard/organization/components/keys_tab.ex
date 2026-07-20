@@ -26,7 +26,6 @@ defmodule HexpmWeb.Dashboard.Organization.Components.KeysTab do
       key_changeset={@key_changeset}
       keys={@keys}
       organization={@organization}
-      organizations={[]}
       packages={@packages}
     />
     """
