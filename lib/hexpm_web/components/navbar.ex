@@ -223,10 +223,14 @@ defmodule HexpmWeb.Components.Navbar do
     <div id="mobile-search-bar" class="hidden lg:hidden! bg-grey-800 pb-4">
       <div class="flex items-center gap-2">
         <form
+          id="mobile-search-bar-form"
           role="search"
           action={~p"/packages"}
           class="flex-1"
+          phx-change={if @live_search, do: "search_change"}
           phx-submit={@live_search && "search_submit"}
+          phx-hook={@live_search && "FormSync"}
+          data-sync-to={@live_search && "mobile-menu-search-form"}
         >
           <div class="relative">
             <div class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -237,7 +241,6 @@ defmodule HexpmWeb.Components.Navbar do
               name="search"
               type="text"
               value={@search}
-              phx-change={if @live_search, do: "search_change"}
               phx-debounce={if @live_search, do: "300"}
               placeholder="Find packages..."
               class="w-full bg-grey-800 border border-grey-600 rounded-lg px-3 pl-10 py-[11px] text-white text-base font-medium leading-4 placeholder:text-grey-300 focus:outline-none focus:border-grey-500 focus:shadow-[inset_0px_0px_6px_0px_rgba(255,255,255,0.3)]"
@@ -269,10 +272,15 @@ defmodule HexpmWeb.Components.Navbar do
       <div class="flex flex-col">
         <div :if={@show_search} class="flex items-center gap-2 pb-4">
           <form
+            id="mobile-menu-search-form"
             role="search"
             action={~p"/packages"}
             class="flex-1"
+            phx-change={if @live_search, do: "search_change"}
             phx-submit={@live_search && "search_submit"}
+            phx-hook={@live_search && "FormSync"}
+            data-sync-to={@live_search && "mobile-search-bar-form"}
+            phx-auto-recover={if @live_search, do: "ignore"}
           >
             <div class="relative">
               <div class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -282,7 +290,6 @@ defmodule HexpmWeb.Components.Navbar do
                 name="search"
                 type="text"
                 value={@search}
-                phx-change={if @live_search, do: "search_change"}
                 phx-debounce={if @live_search, do: "300"}
                 placeholder="Find packages..."
                 class="w-full bg-grey-800 border border-grey-600 rounded-lg px-3 pl-10 py-[11px] text-white text-base font-medium leading-4 placeholder:text-grey-300 focus:outline-none focus:border-grey-500 focus:shadow-[inset_0px_0px_6px_0px_rgba(255,255,255,0.3)]"
