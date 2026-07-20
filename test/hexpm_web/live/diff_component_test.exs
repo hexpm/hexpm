@@ -70,7 +70,7 @@ defmodule HexpmWeb.DiffComponentTest do
     end
 
     oversized = render_component(&DiffComponent.too_large/1, file: "large.bin")
-    assert oversized =~ "File is too large to be displayed (200 KB limit)."
+    assert oversized =~ "File is too large to be displayed (100 KB limit)."
     assert oversized =~ "unknown"
     assert oversized =~ "ghd-file-status-unknown"
     refute oversized =~ "ghd-file-status-too-large"

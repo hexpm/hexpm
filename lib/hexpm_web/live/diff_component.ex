@@ -70,7 +70,7 @@ defmodule HexpmWeb.DiffComponent do
       <div class="ghd-file-header ghd-file-header-static">
         <span><span class="ghd-file-status ghd-file-status-unknown">unknown</span>{@file}</span>
       </div>
-      <div class="ghd-diff ghd-diff-error">File is too large to be displayed (200 KB limit).</div>
+      <div class="ghd-diff ghd-diff-error">File is too large to be displayed (100 KB limit).</div>
     </div>
     """
   end
