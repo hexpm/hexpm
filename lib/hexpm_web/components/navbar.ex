@@ -249,7 +249,7 @@ defmodule HexpmWeb.Components.Navbar do
           type="button"
           phx-click={show_modal("search-cheatsheet")}
           aria-label="Search filter cheatsheet"
-          class="px-2 py-1 text-grey-200 hover:text-white border border-grey-600 rounded text-sm cursor-pointer"
+          class="flex items-center justify-center w-[43px] self-stretch shrink-0 text-grey-200 hover:text-white border border-grey-600 rounded-lg text-sm font-medium cursor-pointer"
         >
           ?
         </button>
@@ -448,6 +448,9 @@ defmodule HexpmWeb.Components.Navbar do
         {"transition-all ease-in duration-150 transform", "opacity-100 translate-y-0",
          "opacity-0 -translate-y-2"}
     )
+    |> JS.hide(to: "#navbar-mobile")
+    |> JS.show(to: "#menu-open-icon")
+    |> JS.hide(to: "#menu-close-icon")
     |> JS.focus(to: "#mobile-search-input")
   end
 
@@ -490,6 +493,7 @@ defmodule HexpmWeb.Components.Navbar do
     )
     |> JS.toggle(to: "#menu-open-icon")
     |> JS.toggle(to: "#menu-close-icon")
+    |> JS.hide(to: "#mobile-search-bar")
   end
 
   @doc """
