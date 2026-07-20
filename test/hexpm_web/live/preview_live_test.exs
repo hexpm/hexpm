@@ -141,16 +141,24 @@ defmodule HexpmWeb.PreviewLiveTest do
              "2.0.0"
            )
 
-    assert {:error, {:live_redirect, %{to: "/packages/versioned_preview/2.0.0/files/README.md"}}} =
-             live(
-               conn,
-               "/packages/versioned_preview/2.0.0/files/lib/shared.ex?fallback=default"
-             )
+    {:ok, direct_view, _html} =
+      live(conn, "/packages/versioned_preview/1.0.0/files/lib/shared.ex?fallback=default")
 
-    {:ok, fallback_view, _html} =
-      live(conn, "/packages/versioned_preview/2.0.0/files/README.md")
+    assert has_element?(direct_view, "h2", "shared.ex")
+
+    conn = get(conn, "/packages/versioned_preview/2.0.0/files/lib/shared.ex?fallback=default")
+
+    assert html_response(conn, 200) =~
+             HexpmWeb.Endpoint.url() <>
+               ~s(/packages/versioned_preview/2.0.0/files/README.md" rel="canonical")
+
+    {:ok, fallback_view, _html} = live(conn)
 
     assert has_element?(fallback_view, "h2", "README.md")
+
+    render_patch(view, "/packages/versioned_preview/2.0.0/files/lib/shared.ex?fallback=default")
+    assert_patch(view, "/packages/versioned_preview/2.0.0/files/README.md")
+    assert has_element?(view, "h2", "README.md")
   end
 
   test "returns 404 when package or file data is missing", %{conn: conn} do
