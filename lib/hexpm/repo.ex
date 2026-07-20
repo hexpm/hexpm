@@ -56,7 +56,7 @@ defmodule Hexpm.Repo do
   defwrite(update(changeset, opts \\ []))
 
   def write_mode?() do
-    not Application.get_env(:hexpm, :read_only_mode, false)
+    not Hexpm.WriteMode.enabled?()
   end
 
   def write_mode!() do
@@ -196,7 +196,7 @@ defmodule Hexpm.RepoBase do
 end
 
 defmodule Hexpm.WriteInReadOnlyMode do
-  defexception []
+  defexception plug_status: 503
 
   def message(_) do
     "tried to write in read-only mode"
