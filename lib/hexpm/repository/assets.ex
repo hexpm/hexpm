@@ -2,6 +2,8 @@ defmodule Hexpm.Repository.Assets do
   alias Hexpm.Repository.Repository
 
   def push_release(release, body_path) do
+    Hexpm.Repo.write_mode!()
+
     meta = [
       {"surrogate-key", tarball_cdn_key(release)},
       {"surrogate-control", "public, max-age=604800"}
@@ -15,12 +17,16 @@ defmodule Hexpm.Repository.Assets do
   end
 
   def revert_release(release) do
+    Hexpm.Repo.write_mode!()
+
     Hexpm.CDN.purge_key(:fastly_hexrepo, tarball_cdn_key(release))
     Hexpm.Store.delete(:repo_bucket, tarball_store_key(release))
     revert_docs(release)
   end
 
   def push_docs(release, body_path) do
+    Hexpm.Repo.write_mode!()
+
     meta = [
       {"surrogate-key", docs_cdn_key(release)},
       {"surrogate-control", "public, max-age=604800"}
@@ -34,6 +40,8 @@ defmodule Hexpm.Repository.Assets do
   end
 
   def revert_docs(release) do
+    Hexpm.Repo.write_mode!()
+
     if release.has_docs do
       Hexpm.Store.delete(:repo_bucket, docs_store_key(release))
       Hexpm.CDN.purge_key(:fastly_hexrepo, docs_cdn_key(release))

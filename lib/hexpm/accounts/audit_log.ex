@@ -464,6 +464,10 @@ defmodule Hexpm.Accounts.AuditLog do
     {nil, token}
   end
 
+  defp extract_auth_credential(%Hexpm.OAuth.MachineToken{key: key}) do
+    {key, nil}
+  end
+
   defp extract_auth_credential(_) do
     {nil, nil}
   end

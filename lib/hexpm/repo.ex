@@ -53,7 +53,7 @@ defmodule Hexpm.Repo do
   defwrite(update(changeset, opts \\ []))
 
   def write_mode?() do
-    not Application.get_env(:hexpm, :read_only_mode, false)
+    not Hexpm.OAuth.ReadOnly.enabled?()
   end
 
   def write_mode!() do
@@ -179,4 +179,9 @@ defmodule Hexpm.WriteInReadOnlyMode do
   def message(_) do
     "tried to write in read-only mode"
   end
+end
+
+defimpl Plug.Exception, for: Hexpm.WriteInReadOnlyMode do
+  def status(_exception), do: 503
+  def actions(_exception), do: []
 end

@@ -86,6 +86,36 @@ defmodule HexpmWeb.Plugs.AttackTest do
       assert {:block, _data} = Attack.diff_throttle(identity, time: time)
     end
 
+    test "broadcasts machine token exchange rate limits" do
+      align_to_throttle_bucket()
+      time = System.system_time(:millisecond)
+
+      Phoenix.PubSub.broadcast!(
+        Hexpm.PubSub,
+        "ratelimit",
+        {:throttle, {:machine_token_exchange, 123}, time}
+      )
+
+      :sys.get_state(RateLimitPubSub)
+
+      assert {:allow, {:throttle, data}} =
+               Attack.machine_token_exchange_throttle(123, time: time)
+
+      assert data[:limit] == 100
+      assert data[:remaining] == 98
+    end
+
+    test "limits machine token exchanges per API key" do
+      time = System.system_time(:millisecond)
+
+      Enum.each(1..100, fn _ ->
+        assert {:allow, _data} = Attack.machine_token_exchange_throttle(456, time: time)
+      end)
+
+      assert {:block, _data} = Attack.machine_token_exchange_throttle(456, time: time)
+      assert {:allow, _data} = Attack.machine_token_exchange_throttle(789, time: time)
+    end
+
     test "halts requests when ip limit is exceeded" do
       align_to_throttle_bucket()
 
