@@ -60,7 +60,7 @@ defmodule HexpmWeb.Components.Form do
   attr :for, :any, default: %{}
   attr :method, :string, default: "post"
   attr :as, :atom, default: nil
-  attr :rest, :global, include: ~w(id class phx-hook)
+  attr :rest, :global
   slot :inner_block, required: true
 
   def sudo_form(assigns) do

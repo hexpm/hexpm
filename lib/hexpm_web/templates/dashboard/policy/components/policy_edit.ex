@@ -886,7 +886,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
   attr :label, :string, required: true
   attr :icon, :string, required: true
   attr :variant, :string, default: "neutral", values: ~w(neutral danger)
-  attr :rest, :global, include: ~w(phx-click phx-hook data-target)
+  attr :rest, :global
 
   defp header_action(assigns) do
     ~H"""
