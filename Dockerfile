@@ -16,6 +16,11 @@ RUN apt update && \
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
 ENV PATH="/root/.cargo/bin:${PATH}"
 
+# tree-sitter grammars generated with CLI < 0.26.4 ship an array.h whose
+# macros violate strict aliasing, which gcc -O2 miscompiles into heap
+# corruption (tree-sitter/tree-sitter-haskell#144)
+ENV CFLAGS="-fno-strict-aliasing"
+
 # prepare build dir
 RUN mkdir /app
 WORKDIR /app
