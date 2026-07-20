@@ -22,7 +22,7 @@ defmodule HexpmWeb.Endpoint do
     only: HexpmWeb.static_paths()
 
   socket("/live", Phoenix.LiveView.Socket,
-    websocket: [connect_info: [:peer_data, :x_headers, session: @session_options]]
+    websocket: [compress: true, connect_info: [:peer_data, :x_headers, session: @session_options]]
   )
 
   if Code.ensure_loaded?(Tidewave) do
