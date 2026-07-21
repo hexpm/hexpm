@@ -57,7 +57,7 @@ defmodule HexpmWeb.PreviewLive do
         |> assign_source(repository, package_name, version, source)
 
       socket =
-        if replace_path? do
+        if replace_path? and connected?(socket) do
           push_patch(socket,
             to: files_path(repository, package_name, version, source.filename),
             replace: true
@@ -165,7 +165,7 @@ defmodule HexpmWeb.PreviewLive do
   defp source(repository, package, version, requested_filename, fallback) do
     case Hexpm.Preview.source(repository, package, version, requested_filename) do
       {:ok, source} ->
-        {:ok, source, fallback == "default"}
+        {:ok, source, false}
 
       :error when fallback == "default" ->
         case Hexpm.Preview.source(repository, package, version) do
