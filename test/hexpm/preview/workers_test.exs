@@ -84,9 +84,7 @@ defmodule Hexpm.Preview.WorkersTest do
     assert :ok = perform_job(Workers.Upload, %{key: key})
     assert :ok = perform_job(Workers.Upload, %{key: key})
 
-    assert Jason.decode!(
-             Hexpm.Store.get(:preview_bucket, "file_lists/#{package.name}-1.0.0.json")
-           ) ==
+    assert JSON.decode!(Hexpm.Store.get(:preview_bucket, "file_lists/#{package.name}-1.0.0.json")) ==
              ["lib/foo.ex"]
 
     assert Hexpm.Store.get(:preview_bucket, "files/#{package.name}/1.0.0/lib/foo.ex") =~
@@ -132,7 +130,7 @@ defmodule Hexpm.Preview.WorkersTest do
 
     prefix = "repos/#{repository.name}/"
 
-    assert Jason.decode!(
+    assert JSON.decode!(
              Hexpm.Store.get(:preview_bucket, "#{prefix}file_lists/#{package.name}-1.0.0.json")
            ) == ["README.md"]
 
@@ -193,9 +191,8 @@ defmodule Hexpm.Preview.WorkersTest do
 
     assert :ok = perform_job(Workers.Upload, %{key: key})
 
-    assert Jason.decode!(
-             Hexpm.Store.get(:preview_bucket, "file_lists/#{package.name}-1.0.0.json")
-           ) == ["dot.txt", "safe.txt"]
+    assert JSON.decode!(Hexpm.Store.get(:preview_bucket, "file_lists/#{package.name}-1.0.0.json")) ==
+             ["dot.txt", "safe.txt"]
   end
 
   test "CDN failures retry cleanly" do
@@ -239,9 +236,7 @@ defmodule Hexpm.Preview.WorkersTest do
     assert Hexpm.Store.get(:preview_bucket, "files/#{package.name}/1.0.0/old.txt") == nil
     assert Hexpm.Store.get(:preview_bucket, "files/#{package.name}/1.0.0/new.txt") == "new"
 
-    assert Jason.decode!(
-             Hexpm.Store.get(:preview_bucket, "file_lists/#{package.name}-1.0.0.json")
-           ) ==
+    assert JSON.decode!(Hexpm.Store.get(:preview_bucket, "file_lists/#{package.name}-1.0.0.json")) ==
              ["new.txt"]
   end
 
@@ -253,7 +248,7 @@ defmodule Hexpm.Preview.WorkersTest do
     Hexpm.Store.put(
       :preview_bucket,
       "file_lists/#{package.name}-1.0.0.json",
-      Jason.encode!(["old.txt"])
+      JSON.encode!(["old.txt"])
     )
 
     put_tarball(key, package.name, to_string(release.version), [{"fail.txt", "failure"}])
@@ -271,9 +266,7 @@ defmodule Hexpm.Preview.WorkersTest do
       Process.flag(:trap_exit, trap_exit?)
     end
 
-    assert Jason.decode!(
-             Hexpm.Store.get(:preview_bucket, "file_lists/#{package.name}-1.0.0.json")
-           ) ==
+    assert JSON.decode!(Hexpm.Store.get(:preview_bucket, "file_lists/#{package.name}-1.0.0.json")) ==
              ["old.txt"]
   end
 
@@ -378,9 +371,7 @@ defmodule Hexpm.Preview.WorkersTest do
     assert Hexpm.Store.get(:preview_bucket, "files/#{package.name}/1.0.0/old.txt") == nil
     assert Hexpm.Store.get(:preview_bucket, "files/#{package.name}/1.0.0/new.txt") == "new"
 
-    assert Jason.decode!(
-             Hexpm.Store.get(:preview_bucket, "file_lists/#{package.name}-1.0.0.json")
-           ) ==
+    assert JSON.decode!(Hexpm.Store.get(:preview_bucket, "file_lists/#{package.name}-1.0.0.json")) ==
              ["new.txt"]
 
     assert Hexpm.Store.get(:preview_bucket, "latest_versions/#{package.name}") == "2.0.0"

@@ -30,6 +30,6 @@ defmodule Hexpm.Version do
   def equal?(left, right), do: Version.compare(left, right) == :eq
 end
 
-defimpl Jason.Encoder, for: Version do
-  def encode(version, _), do: ~s("#{version}")
+defimpl JSON.Encoder, for: Version do
+  def encode(version, encoder), do: encoder.(to_string(version), encoder)
 end

@@ -423,12 +423,12 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         {:ok, _} ->
           conn
           |> put_resp_header("content-type", "application/json")
-          |> send_resp(200, Jason.encode!(%{}))
+          |> send_resp(200, JSON.encode!(%{}))
 
         {:error, reason} ->
           conn
           |> put_resp_header("content-type", "application/json")
-          |> send_resp(422, Jason.encode!(reason))
+          |> send_resp(422, JSON.encode!(reason))
       end
     end)
   end
@@ -578,7 +578,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
               |> put_resp_content_type("application/json")
               |> send_resp(
                 402,
-                Jason.encode!(%{
+                JSON.encode!(%{
                   requires_action: true,
                   client_secret: body["client_secret"],
                   invoice_id: body["invoice_id"],

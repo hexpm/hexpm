@@ -126,14 +126,14 @@ defmodule Hexpm.Preview.QueueTest do
   end
 
   test "fails malformed JSON and unsupported messages" do
-    assert %{status: {:failed, %Jason.DecodeError{}}} = handle_raw("not-json")
+    assert %{status: {:failed, {:invalid_byte, 1, ?o}}} = handle_raw("not-json")
     assert %{status: {:failed, {:unsupported_preview_message, %{}}}} = handle(%{})
 
     assert %{status: {:failed, {:unsupported_preview_message, _message}}} =
              handle(%{"preview:sitemap" => "tarballs/demo-1.0.0.tar"})
   end
 
-  defp handle(data), do: data |> Jason.encode!() |> handle_raw()
+  defp handle(data), do: data |> JSON.encode!() |> handle_raw()
 
   defp handle_raw(data) do
     message = %Broadway.Message{

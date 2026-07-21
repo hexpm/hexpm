@@ -38,7 +38,7 @@ defmodule Hexpm.Preview.Bucket do
     Hexpm.Store.put(
       :preview_bucket,
       file_list_key(repository, package, version),
-      Jason.encode!(file_paths),
+      JSON.encode!(file_paths),
       put_opts(repository, package, version)
     )
 
@@ -59,7 +59,7 @@ defmodule Hexpm.Preview.Bucket do
   def get_file_list(repository, package, version) do
     case Hexpm.Store.get(:preview_bucket, file_list_key(repository, package, version)) do
       nil -> nil
-      json -> json |> Jason.decode!() |> Enum.uniq()
+      json -> json |> JSON.decode!() |> Enum.uniq()
     end
   end
 

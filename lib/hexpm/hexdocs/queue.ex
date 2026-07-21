@@ -26,7 +26,7 @@ defmodule Hexpm.Hexdocs.Queue do
 
   @impl Broadway
   def handle_message(_processor, %Broadway.Message{} = message, _context) do
-    with {:ok, data} <- Jason.decode(message.data),
+    with {:ok, data} <- JSON.decode(message.data),
          {:ok, jobs} <- jobs_for(data),
          {:ok, _inserted} <- insert_jobs(jobs) do
       message

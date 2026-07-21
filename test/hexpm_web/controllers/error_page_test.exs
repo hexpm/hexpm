@@ -54,7 +54,7 @@ defmodule HexpmWeb.ErrorPageTest do
       |> get("/nothing-here")
       |> response(404)
 
-    assert Jason.decode!(body) == %{"message" => "Page not found", "status" => 404}
+    assert JSON.decode!(body) == %{"message" => "Page not found", "status" => 404}
     refute body =~ ~s(<nav id="main-navbar")
     refute body =~ ~s(<!DOCTYPE html>)
   end

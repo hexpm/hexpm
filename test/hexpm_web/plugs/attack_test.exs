@@ -99,7 +99,7 @@ defmodule HexpmWeb.Plugs.AttackTest do
       assert conn.status == 429
 
       assert conn.resp_body ==
-               Jason.encode!(%{status: 429, message: "API rate limit exceeded for IP 1.1.1.1"})
+               JSON.encode!(%{status: 429, message: "API rate limit exceeded for IP 1.1.1.1"})
     end
 
     test "halts requests when user limit is exceeded", %{user: user} do
@@ -115,7 +115,7 @@ defmodule HexpmWeb.Plugs.AttackTest do
       assert conn.status == 429
 
       assert conn.resp_body ==
-               Jason.encode!(%{
+               JSON.encode!(%{
                  status: 429,
                  message: "API rate limit exceeded for user #{user.id}"
                })
@@ -167,7 +167,7 @@ defmodule HexpmWeb.Plugs.AttackTest do
 
       conn = request_ip({10, 1, 1, 1})
       assert conn.status == 403
-      assert conn.resp_body == Jason.encode!(%{status: 403, message: "Blocked"})
+      assert conn.resp_body == JSON.encode!(%{status: 403, message: "Blocked"})
     end
 
     test "halts requests from IPs that are blocked outside of /api" do
@@ -176,7 +176,7 @@ defmodule HexpmWeb.Plugs.AttackTest do
 
       conn = %{request_ip({10, 1, 1, 1}) | request_path: "/"}
       assert conn.status == 403
-      assert conn.resp_body == Jason.encode!(%{status: 403, message: "Blocked"})
+      assert conn.resp_body == JSON.encode!(%{status: 403, message: "Blocked"})
     end
 
     test "halts requests from IP masks that are blocked" do
@@ -185,15 +185,15 @@ defmodule HexpmWeb.Plugs.AttackTest do
 
       conn = request_ip({10, 1, 1, 1})
       assert conn.status == 403
-      assert conn.resp_body == Jason.encode!(%{status: 403, message: "Blocked"})
+      assert conn.resp_body == JSON.encode!(%{status: 403, message: "Blocked"})
 
       conn = request_ip({10, 1, 1, 127})
       assert conn.status == 403
-      assert conn.resp_body == Jason.encode!(%{status: 403, message: "Blocked"})
+      assert conn.resp_body == JSON.encode!(%{status: 403, message: "Blocked"})
 
       conn = request_ip({10, 1, 1, 255})
       assert conn.status == 403
-      assert conn.resp_body == Jason.encode!(%{status: 403, message: "Blocked"})
+      assert conn.resp_body == JSON.encode!(%{status: 403, message: "Blocked"})
 
       conn = request_ip({10, 1, 2, 0})
       assert conn.status == 200
@@ -208,7 +208,7 @@ defmodule HexpmWeb.Plugs.AttackTest do
 
       conn = request_ip({20, 2, 2, 2})
       assert conn.status == 403
-      assert conn.resp_body == Jason.encode!(%{status: 403, message: "Blocked"})
+      assert conn.resp_body == JSON.encode!(%{status: 403, message: "Blocked"})
 
       Hexpm.Repo.delete!(blocked_address)
       Hexpm.BlockAddress.reload()

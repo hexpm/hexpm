@@ -14,7 +14,7 @@ defmodule Hexpm.Hexdocs.Search.Typesense do
           |> Map.update("doc", "", &(&1 || ""))
           |> Map.put("package", full_package)
           |> Map.put("proglang", proglang)
-          |> Jason.encode!()
+          |> JSON.encode!()
 
         [json, ?\n]
       end)
@@ -31,7 +31,7 @@ defmodule Hexpm.Hexdocs.Search.Typesense do
         |> String.split("\n", trim: true)
         |> Enum.zip(search_items)
         |> Enum.each(fn {response, item} ->
-          case Jason.decode!(response) do
+          case JSON.decode!(response) do
             %{"success" => true} ->
               :ok
 

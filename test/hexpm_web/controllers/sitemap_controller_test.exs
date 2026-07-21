@@ -62,7 +62,7 @@ defmodule HexpmWeb.SitemapControllerTest do
     Hexpm.Store.put(
       :preview_bucket,
       "file_lists/#{package.name}-0.1.0.json",
-      Jason.encode!(["README.md", "docs/a & #<.html"])
+      JSON.encode!(["README.md", "docs/a & #<.html"])
     )
 
     conn =

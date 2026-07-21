@@ -38,7 +38,7 @@ defmodule Hexpm.PreviewTest do
     Hexpm.Store.put(
       :preview_bucket,
       "file_lists/incomplete-1.0.0.json",
-      Jason.encode!(["README.md"])
+      JSON.encode!(["README.md"])
     )
 
     assert Preview.source("hexpm", "incomplete", "1.0.0") == :error
@@ -127,7 +127,7 @@ defmodule Hexpm.PreviewTest do
     Hexpm.Store.put(
       :preview_bucket,
       "#{prefix}file_lists/#{package}-#{version}.json",
-      Jason.encode!(filenames)
+      JSON.encode!(filenames)
     )
 
     for {filename, contents} <- files do

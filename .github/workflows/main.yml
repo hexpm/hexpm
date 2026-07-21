@@ -41,7 +41,7 @@ jobs:
           path: |
             deps
             _build
-          key: ${{ runner.os }}-elixir-${{ env.elixir }}-otp-${{ env.otp }}-${{ hashFiles('**/mix.lock') }}
+          key: ${{ runner.os }}-elixir-${{ env.elixir }}-otp-${{ env.otp }}-${{ hashFiles('mix.lock', 'config/config.exs') }}
 
       - name: Install dependencies
         run: mix do deps.get + deps.compile
@@ -90,7 +90,7 @@ jobs:
           path: |
             deps
             _build
-          key: ${{ runner.os }}-elixir-${{ env.elixir }}-otp-${{ env.otp }}-${{ hashFiles('**/mix.lock') }}
+          key: ${{ runner.os }}-elixir-${{ env.elixir }}-otp-${{ env.otp }}-${{ hashFiles('mix.lock', 'config/config.exs') }}
 
       - name: Install dependencies
         run: mix do deps.get + deps.compile
@@ -156,7 +156,7 @@ jobs:
           path: |
             deps
             _build
-          key: ${{ runner.os }}-elixir-${{ matrix.elixir }}-otp-${{ matrix.otp }}-${{ hashFiles('**/mix.lock') }}
+          key: ${{ runner.os }}-elixir-${{ matrix.elixir }}-otp-${{ matrix.otp }}-${{ hashFiles('mix.lock', 'config/config.exs') }}
 
       - name: Install hexpm dependencies
         run: |

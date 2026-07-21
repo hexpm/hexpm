@@ -48,7 +48,7 @@ defmodule Hexpm.Security.UpdaterTest do
   defp zip_body(advisories) do
     files =
       Enum.map(advisories, fn advisory ->
-        {String.to_charlist("#{advisory["id"]}.json"), Jason.encode!(advisory)}
+        {String.to_charlist("#{advisory["id"]}.json"), JSON.encode!(advisory)}
       end)
 
     {:ok, {_, zip}} = :zip.create(~c"all.zip", files, [:memory])
