@@ -10,7 +10,10 @@ defmodule HexpmWeb.TFAAuthControllerTest do
       conn =
         build_conn()
         |> test_login(c.user)
-        |> put_session("tfa_user_id", c.user.id)
+        |> put_session("tfa_user_id", %{
+          "uid" => c.user.id,
+          "at" => NaiveDateTime.to_iso8601(NaiveDateTime.utc_now())
+        })
         |> get("/tfa")
 
       result = response(conn, 200)
@@ -25,6 +28,19 @@ defmodule HexpmWeb.TFAAuthControllerTest do
 
       assert redirected_to(conn) == "/"
     end
+
+    test "redirects to homepage if the tfa session is stale", c do
+      stale =
+        NaiveDateTime.utc_now() |> NaiveDateTime.shift(minute: -16) |> NaiveDateTime.to_iso8601()
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> put_session("tfa_user_id", %{"uid" => c.user.id, "at" => stale})
+        |> get("/tfa")
+
+      assert redirected_to(conn) == "/"
+    end
   end
 
   describe "post /tfa" do
@@ -32,7 +48,11 @@ defmodule HexpmWeb.TFAAuthControllerTest do
       conn =
         build_conn()
         |> test_login(c.user)
-        |> put_session("tfa_user_id", %{"uid" => c.user.id, "return" => "/"})
+        |> put_session("tfa_user_id", %{
+          "uid" => c.user.id,
+          "return" => "/",
+          "at" => NaiveDateTime.to_iso8601(NaiveDateTime.utc_now())
+        })
         |> post("/tfa", %{"code" => "000000"})
 
       assert response(conn, 200) =~
@@ -45,7 +65,11 @@ defmodule HexpmWeb.TFAAuthControllerTest do
       conn =
         build_conn()
         |> test_login(c.user)
-        |> put_session("tfa_user_id", %{"uid" => c.user.id, "return" => "/"})
+        |> put_session("tfa_user_id", %{
+          "uid" => c.user.id,
+          "return" => "/",
+          "at" => NaiveDateTime.to_iso8601(NaiveDateTime.utc_now())
+        })
         |> post("/tfa", %{"code" => token})
 
       assert redirected_to(conn) == "/"
@@ -59,6 +83,7 @@ defmodule HexpmWeb.TFAAuthControllerTest do
         |> test_login(c.user)
         |> put_session("tfa_user_id", %{
           "uid" => c.user.id,
+          "at" => NaiveDateTime.to_iso8601(NaiveDateTime.utc_now()),
           "return" => "https%3A%2F%2Fhex.pm%2Foauth%2Fauthorize%3Fclient_id%3Dabc"
         })
         |> post("/tfa", %{"code" => token})
@@ -72,7 +97,11 @@ defmodule HexpmWeb.TFAAuthControllerTest do
       conn =
         build_conn()
         |> test_login(c.user)
-        |> put_session("tfa_user_id", %{"uid" => c.user.id, "return" => "//evil.com"})
+        |> put_session("tfa_user_id", %{
+          "uid" => c.user.id,
+          "return" => "//evil.com",
+          "at" => NaiveDateTime.to_iso8601(NaiveDateTime.utc_now())
+        })
         |> post("/tfa", %{"code" => token})
 
       assert redirected_to(conn) == "/users/#{c.user.username}"
@@ -81,7 +110,11 @@ defmodule HexpmWeb.TFAAuthControllerTest do
     test "redirects to login after too many failed attempts", c do
       PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
 
-      session_data = %{"uid" => c.user.id, "return" => "/"}
+      session_data = %{
+        "uid" => c.user.id,
+        "return" => "/",
+        "at" => NaiveDateTime.to_iso8601(NaiveDateTime.utc_now())
+      }
 
       # Exhaust rate limit using the throttle function directly (this is the real test)
       Enum.each(1..5, fn _ ->
