@@ -21,7 +21,13 @@ defmodule HexpmWeb.PreviewLiveTest do
     assert html =~ "LineHighlight"
     assert html =~ "l-line"
     assert page_title(view) == "lib/live_preview.ex - live_preview 1.0.0 | Hex"
-    assert has_element?(view, ~s(a[aria-current="page"]), "live_preview.ex")
+    assert has_element?(view, ~s(a[data-path="lib/live_preview.ex"]), "live_preview.ex")
+
+    assert has_element?(
+             view,
+             ~s(aside[phx-hook="FileFinder"][data-active-path="lib/live_preview.ex"])
+           )
+
     assert has_element?(view, "h2", "lib/live_preview.ex")
     assert has_element?(view, ~s(button.lg\\:hidden), "Find file")
     refute has_element?(view, ~s(button.lg\\:inline-flex))
@@ -85,7 +91,7 @@ defmodule HexpmWeb.PreviewLiveTest do
     assert html =~ "File is too large to be displayed (0.2 MB)."
   end
 
-  test "searches a manifest containing hundreds of files", %{conn: conn} do
+  test "renders the full tree with collapsible directories and finder scaffolding", %{conn: conn} do
     files =
       [{"README.md", "readme"}] ++
         for index <- 1..500 do
@@ -95,27 +101,33 @@ defmodule HexpmWeb.PreviewLiveTest do
     put_release("large_manifest", "1.0.0", files)
     {:ok, view, _html} = live(conn, "/packages/large_manifest/1.0.0/files")
 
-    assert has_element?(view, ~s(button[phx-value-path="lib"]))
-    refute has_element?(view, ~s(aside a[href$="file_1.ex"]))
-
-    view |> element(~s(button[phx-value-path="lib"])) |> render_click()
-    assert has_element?(view, ~s(button[phx-value-path="lib/generated"]))
-    refute has_element?(view, ~s(aside a[href$="file_1.ex"]))
-
-    view |> element(~s(button[phx-value-path="lib/generated"])) |> render_click()
-    view |> element(~s(button[phx-value-path="lib/generated/deep"])) |> render_click()
-    assert has_element?(view, ~s(aside a[href$="file_1.ex"]))
-
-    view
-    |> element("#preview-tree-search")
-    |> render_change(%{"query" => "deep499"})
+    assert has_element?(view, "aside details summary", "lib")
+    assert has_element?(view, "aside details details details summary", "deep")
 
     assert has_element?(
              view,
-             ~s(a[href="/packages/large_manifest/1.0.0/files/lib/generated/deep/file_499.ex"])
+             ~s(aside a[href$="file_1.ex"][data-path="lib/generated/deep/file_1.ex"])
            )
 
-    refute has_element?(view, ~s(a[href$="file_498.ex"]), "file_498.ex")
+    assert has_element?(view, ~s(aside a[href$="file_500.ex"]))
+
+    assert has_element?(view, ~s(template[data-finder-item]))
+    assert has_element?(view, ~s(aside[phx-hook="FileFinder"][data-tree-version="1.0.0"]))
+    refute has_element?(view, ~s(form#preview-tree-search[phx-change]))
+    refute has_element?(view, ~s(form#preview-file-finder[phx-change]))
+
+    view
+    |> element(~s(aside a[href$="file_499.ex"]))
+    |> render_click()
+
+    assert_patch(view, "/packages/large_manifest/1.0.0/files/lib/generated/deep/file_499.ex")
+
+    assert has_element?(
+             view,
+             ~s(aside[data-active-path="lib/generated/deep/file_499.ex"])
+           )
+
+    refute has_element?(view, ~s(aside a[aria-current]))
   end
 
   test "version picker preserves the selected filename", %{conn: conn} do

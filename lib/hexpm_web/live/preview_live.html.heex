@@ -37,7 +37,9 @@
       <div class="grid min-w-0 items-start gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
         <HexpmWeb.Components.FileSelector.file_selector
           id="preview-files"
-          query={@query}
+          client_finder={true}
+          active_path={@filename}
+          tree_version={@version}
           file_count={length(@files)}
           title="Package files"
           sidebar_label="Package files"
@@ -47,34 +49,14 @@
           finder_form_id="preview-file-finder"
           finder_query_id="preview-file-query"
         >
-          <:tree :let={selector}>
+          <:tree :let={_selector}>
             <.source_tree
               nodes={@file_tree}
-              filename={@filename}
               repository={@repository}
               package_name={@package_name}
               version={@version}
-              expanded_paths={@expanded_paths}
-              modal_id={selector.modal_id}
             />
           </:tree>
-          <:results :let={selector}>
-            <.source_results
-              files={@filtered_files}
-              filename={@filename}
-              repository={@repository}
-              package_name={@package_name}
-              version={@version}
-              close_modal?={selector.close_modal?}
-              modal_id={selector.modal_id}
-            />
-            <p
-              :if={@filtered_files == []}
-              class="px-2 py-8 text-center text-sm text-grey-500 dark:text-grey-300"
-            >
-              No matching files
-            </p>
-          </:results>
         </HexpmWeb.Components.FileSelector.file_selector>
 
         <section class="min-w-0 overflow-hidden rounded-lg border border-grey-200 bg-white dark:border-grey-700 dark:bg-grey-800">

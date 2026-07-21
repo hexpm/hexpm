@@ -20,10 +20,17 @@ defmodule HexpmWeb.Components.FileSelector do
   end
 
   attr :id, :string, required: true
-  attr :query, :string, required: true
+  attr :query, :string, default: ""
   attr :file_count, :integer, required: true
   attr :total_file_count, :integer, default: nil
   attr :filter_event, :string, default: "filter_files"
+
+  attr :client_finder, :boolean,
+    default: false,
+    doc: "filter and render results on the client from the tree's data-path links"
+
+  attr :active_path, :string, default: nil
+  attr :tree_version, :string, default: nil
   attr :title, :string, required: true
   attr :sidebar_label, :string, required: true
   attr :search_label, :string, required: true
@@ -35,7 +42,7 @@ defmodule HexpmWeb.Components.FileSelector do
   attr :finder_query_id, :string, default: nil
 
   slot :tree
-  slot :results, required: true
+  slot :results
 
   def file_selector(assigns) do
     assigns =
@@ -47,10 +54,34 @@ defmodule HexpmWeb.Components.FileSelector do
       )
 
     ~H"""
-    <aside class="hidden min-w-0 lg:block">
+    <aside
+      id={"#{@id}-selector"}
+      class="hidden min-w-0 lg:block"
+      phx-hook={@client_finder && "FileFinder"}
+      data-active-path={@client_finder && @active_path}
+      data-tree-version={@client_finder && @tree_version}
+      data-tree-id={@client_finder && "#{@id}-tree"}
+      data-sidebar-input={@client_finder && @tree_query_id}
+      data-modal-input={@client_finder && @finder_query_id}
+      data-modal-id={@client_finder && "#{@id}-modal"}
+      data-modal-results={@client_finder && "#{@id}-results"}
+    >
+      <template :if={@client_finder} data-finder-item>
+        <li>
+          <a
+            href="#"
+            data-phx-link="patch"
+            data-phx-link-state="push"
+            class="flex w-full items-center gap-2 rounded px-2 py-2 text-left font-mono text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 text-grey-600 hover:bg-grey-100 hover:text-grey-900 dark:text-grey-300 dark:hover:bg-grey-700/60 dark:hover:text-white aria-[current=page]:bg-primary-50 aria-[current=page]:font-semibold aria-[current=page]:text-primary-700 dark:aria-[current=page]:bg-grey-700 dark:aria-[current=page]:text-white"
+          >
+            {icon(:heroicon, "document", class: "size-3.5 shrink-0 text-grey-400")}
+            <span data-name class="truncate"></span>
+          </a>
+        </li>
+      </template>
       <div class="sticky top-4 overflow-hidden rounded-lg border border-grey-200 bg-white dark:border-grey-700 dark:bg-grey-800">
         <div class="border-b border-grey-200 p-3 dark:border-grey-700">
-          <form id={@tree_form_id} phx-change={@filter_event}>
+          <form id={@tree_form_id} phx-change={!@client_finder && @filter_event}>
             <label for={@tree_query_id} class="sr-only">{@search_label}</label>
             <div class="relative">
               {icon(:heroicon, "magnifying-glass",
@@ -78,18 +109,33 @@ defmodule HexpmWeb.Components.FileSelector do
           class="max-h-[70vh] overflow-auto p-2"
           aria-label={@sidebar_label}
         >
-          <div :if={@query == "" && @tree != []}>
-            {render_slot(@tree, %{modal_id: "#{@id}-modal"})}
-          </div>
-          <div :if={@query != "" || @tree == []}>
-            {render_slot(@results, %{close_modal?: false, modal_id: "#{@id}-modal"})}
-          </div>
+          <%= if @client_finder do %>
+            <div data-tree-container>
+              {render_slot(@tree, %{modal_id: "#{@id}-modal"})}
+            </div>
+            <div data-results-container class="hidden">
+              <ul data-results class="space-y-1"></ul>
+              <p
+                data-empty
+                class="hidden px-2 py-8 text-center text-sm text-grey-500 dark:text-grey-300"
+              >
+                No matching files
+              </p>
+            </div>
+          <% else %>
+            <div :if={@query == "" && @tree != []}>
+              {render_slot(@tree, %{modal_id: "#{@id}-modal"})}
+            </div>
+            <div :if={@query != "" || @tree == []}>
+              {render_slot(@results, %{close_modal?: false, modal_id: "#{@id}-modal"})}
+            </div>
+          <% end %>
         </nav>
       </div>
     </aside>
 
     <.modal id={"#{@id}-modal"} title={@title} max_width="3xl">
-      <form id={@finder_form_id} phx-change={@filter_event} class="mb-3">
+      <form id={@finder_form_id} phx-change={!@client_finder && @filter_event} class="mb-3">
         <label for={@finder_query_id} class="sr-only">{@search_label}</label>
         <div class="relative">
           {icon(:heroicon, "magnifying-glass",
@@ -113,7 +159,14 @@ defmodule HexpmWeb.Components.FileSelector do
         class="max-h-[60vh] overflow-auto"
         aria-label={@search_label}
       >
-        {render_slot(@results, %{close_modal?: true, modal_id: "#{@id}-modal"})}
+        <%= if @client_finder do %>
+          <ul data-results class="space-y-1"></ul>
+          <p data-empty class="hidden px-2 py-8 text-center text-sm text-grey-500 dark:text-grey-300">
+            No matching files
+          </p>
+        <% else %>
+          {render_slot(@results, %{close_modal?: true, modal_id: "#{@id}-modal"})}
+        <% end %>
       </nav>
     </.modal>
     """

@@ -4,7 +4,6 @@ defmodule HexpmWeb.PreviewLive do
   import HexpmWeb.Components.PackageLayout
 
   alias Hexpm.Repository.Releases
-  alias HexpmWeb.Components.FileSelector
   alias HexpmWeb.PackageLayoutAssigns
   alias HexpmWeb.RepositoryAccess
 
@@ -22,10 +21,7 @@ defmodule HexpmWeb.PreviewLive do
        version: nil,
        files: [],
        file_tree: [],
-       expanded_paths: MapSet.new(),
        filename: nil,
-       filtered_files: [],
-       query: "",
        highlighted: nil,
        message: nil,
        raw_url: nil,
@@ -70,26 +66,6 @@ defmodule HexpmWeb.PreviewLive do
     else
       _ -> raise NotFoundError
     end
-  end
-
-  @impl true
-  def handle_event("filter_files", %{"query" => query}, socket) do
-    {:noreply,
-     assign(socket,
-       query: query,
-       filtered_files: FileSelector.filter(socket.assigns.files, query)
-     )}
-  end
-
-  def handle_event("toggle_directory", %{"path" => path}, socket) do
-    expanded_paths =
-      if MapSet.member?(socket.assigns.expanded_paths, path) do
-        MapSet.delete(socket.assigns.expanded_paths, path)
-      else
-        MapSet.put(socket.assigns.expanded_paths, path)
-      end
-
-    {:noreply, assign(socket, expanded_paths: expanded_paths)}
   end
 
   def files_path("hexpm", package, version) do
@@ -137,15 +113,10 @@ defmodule HexpmWeb.PreviewLive do
     {highlighted, message} = render_contents(package, version, source)
     filename = source.filename
 
-    expanded_paths = MapSet.union(socket.assigns.expanded_paths, parent_paths(filename))
-
     assign(socket,
       files: source.files,
       file_tree: build_file_tree(source.files),
-      expanded_paths: expanded_paths,
       filename: filename,
-      filtered_files: FileSelector.filter(source.files, ""),
-      query: "",
       highlighted: highlighted,
       message: message,
       raw_url: raw_url(repository, package, version, filename),
@@ -229,14 +200,6 @@ defmodule HexpmWeb.PreviewLive do
     |> tree_nodes("")
   end
 
-  defp parent_paths(filename) do
-    filename
-    |> Path.split()
-    |> Enum.drop(-1)
-    |> Enum.scan(&Path.join(&2, &1))
-    |> MapSet.new()
-  end
-
   defp insert_file(tree, [name], file), do: Map.put(tree, name, {:file, file})
 
   defp insert_file(tree, [directory | rest], file) do
@@ -260,60 +223,38 @@ defmodule HexpmWeb.PreviewLive do
   end
 
   attr :nodes, :list, required: true
-  attr :filename, :string, required: true
   attr :repository, :string, required: true
   attr :package_name, :string, required: true
   attr :version, :string, required: true
-  attr :expanded_paths, :any, required: true
-  attr :close_modal?, :boolean, default: false
-  attr :modal_id, :string, default: nil
 
   def source_tree(assigns) do
     ~H"""
     <ul class="space-y-0.5">
       <%= for node <- @nodes do %>
         <li :if={node.type == :directory}>
-          <% expanded? = MapSet.member?(@expanded_paths, node.path) %>
-          <button
-            type="button"
-            phx-click="toggle_directory"
-            phx-value-path={node.path}
-            aria-expanded={expanded?}
-            class="flex w-full cursor-pointer items-center gap-1.5 rounded px-2 py-1.5 text-left text-sm font-medium text-grey-700 hover:bg-grey-100 dark:text-grey-200 dark:hover:bg-grey-700/60"
-          >
-            {icon(:heroicon, "chevron-right",
-              class:
-                "size-3.5 shrink-0 transition-transform" <>
-                  if(expanded?, do: " rotate-90", else: "")
-            )}
-            {icon(:heroicon, "folder", class: "size-4 shrink-0 text-grey-400")}
-            <span class="truncate">{node.name}</span>
-          </button>
-          <div :if={expanded?} class="ml-3 border-l border-grey-200 pl-2 dark:border-grey-700">
-            <.source_tree
-              nodes={node.children}
-              filename={@filename}
-              repository={@repository}
-              package_name={@package_name}
-              version={@version}
-              expanded_paths={@expanded_paths}
-              close_modal?={@close_modal?}
-              modal_id={@modal_id}
-            />
-          </div>
+          <details>
+            <summary class="flex w-full cursor-pointer list-none items-center gap-1.5 rounded px-2 py-1.5 text-left text-sm font-medium text-grey-700 hover:bg-grey-100 dark:text-grey-200 dark:hover:bg-grey-700/60 [&::-webkit-details-marker]:hidden">
+              {icon(:heroicon, "chevron-right",
+                class: "size-3.5 shrink-0 transition-transform [details[open]>summary_&]:rotate-90"
+              )}
+              {icon(:heroicon, "folder", class: "size-4 shrink-0 text-grey-400")}
+              <span class="truncate">{node.name}</span>
+            </summary>
+            <div class="ml-3 border-l border-grey-200 pl-2 dark:border-grey-700">
+              <.source_tree
+                nodes={node.children}
+                repository={@repository}
+                package_name={@package_name}
+                version={@version}
+              />
+            </div>
+          </details>
         </li>
         <li :if={node.type == :file}>
           <.link
             patch={files_path(@repository, @package_name, @version, node.path)}
-            phx-click={if @close_modal?, do: hide_modal(@modal_id)}
-            aria-current={if node.path == @filename, do: "page"}
-            class={[
-              "flex items-center gap-1.5 rounded px-2 py-1.5 font-mono text-xs transition-colors",
-              node.path == @filename &&
-                "bg-primary-50 font-semibold text-primary-700 dark:bg-grey-700 dark:text-white",
-              node.path != @filename &&
-                "text-grey-600 hover:bg-grey-100 hover:text-grey-900 dark:text-grey-300 dark:hover:bg-grey-700/60 dark:hover:text-white"
-            ]}
+            data-path={node.path}
+            class="flex items-center gap-1.5 rounded px-2 py-1.5 font-mono text-xs transition-colors text-grey-600 hover:bg-grey-100 hover:text-grey-900 dark:text-grey-300 dark:hover:bg-grey-700/60 dark:hover:text-white aria-[current=page]:bg-primary-50 aria-[current=page]:font-semibold aria-[current=page]:text-primary-700 dark:aria-[current=page]:bg-grey-700 dark:aria-[current=page]:text-white"
           >
             {icon(:heroicon, "document", class: "ml-5 size-3.5 shrink-0 text-grey-400")}
             <span class="truncate">{node.name}</span>
@@ -321,35 +262,6 @@ defmodule HexpmWeb.PreviewLive do
         </li>
       <% end %>
     </ul>
-    """
-  end
-
-  attr :files, :list, required: true
-  attr :filename, :string, required: true
-  attr :repository, :string, required: true
-  attr :package_name, :string, required: true
-  attr :version, :string, required: true
-  attr :close_modal?, :boolean, default: false
-  attr :modal_id, :string, default: nil
-
-  def source_results(assigns) do
-    ~H"""
-    <HexpmWeb.Components.FileSelector.file_results
-      items={@files}
-      selected={&(&1 == @filename)}
-    >
-      <:item :let={result}>
-        <.link
-          patch={files_path(@repository, @package_name, @version, result.item)}
-          phx-click={if @close_modal?, do: hide_modal(@modal_id)}
-          aria-current={if result.item == @filename, do: "page"}
-          class={result.class}
-        >
-          {icon(:heroicon, "document", class: "size-3.5 shrink-0 text-grey-400")}
-          <span class="truncate">{result.item}</span>
-        </.link>
-      </:item>
-    </HexpmWeb.Components.FileSelector.file_results>
     """
   end
 end
