@@ -106,7 +106,7 @@ defmodule Hexpm.Billing.Hexpm do
 
   defp post(url, body) do
     url = Application.get_env(:hexpm, :billing_url) <> url
-    body = Jason.encode!(body)
+    body = JSON.encode!(body)
 
     headers = [
       {"authorization", auth()},
@@ -119,7 +119,7 @@ defmodule Hexpm.Billing.Hexpm do
 
   defp patch(url, body) do
     url = Application.get_env(:hexpm, :billing_url) <> url
-    body = Jason.encode!(body)
+    body = JSON.encode!(body)
 
     headers = [
       {"authorization", auth()},

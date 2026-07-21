@@ -28,6 +28,6 @@ defmodule Hexpm.VersionRequirement do
   def embed_as(_format), do: :self
 end
 
-defimpl Jason.Encoder, for: Version.Requirement do
-  def encode(version_requirement, _), do: ~s("#{version_requirement}")
+defimpl JSON.Encoder, for: Version.Requirement do
+  def encode(version_requirement, encoder), do: encoder.(to_string(version_requirement), encoder)
 end

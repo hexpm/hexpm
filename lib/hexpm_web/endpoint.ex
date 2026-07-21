@@ -51,7 +51,7 @@ defmodule HexpmWeb.Endpoint do
   plug Plug.Parsers,
     parsers: [:urlencoded, :json, HexpmWeb.PlugParser],
     pass: ["*/*"],
-    json_decoder: Jason
+    json_decoder: JSON
 
   plug Sentry.PlugContext
   plug Plug.MethodOverride

@@ -17,7 +17,7 @@ defmodule HexpmWeb.PreviewImageControllerTest do
     Hexpm.Store.put(
       :preview_bucket,
       "#{prefix}file_lists/#{package.name}-1.0.0.json",
-      Jason.encode!(Enum.map(files, &elem(&1, 0)))
+      JSON.encode!(Enum.map(files, &elem(&1, 0)))
     )
 
     for {filename, contents} <- files do

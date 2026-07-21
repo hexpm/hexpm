@@ -20,7 +20,7 @@ defmodule Hexpm.Hexdocs.Search do
     search_data =
       case search_data_js do
         "searchData=" <> json ->
-          case Jason.decode(json) do
+          case JSON.decode(json) do
             {:ok, data} ->
               data
 

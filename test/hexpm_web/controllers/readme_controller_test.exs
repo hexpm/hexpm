@@ -18,7 +18,7 @@ defmodule HexpmWeb.ReadmeControllerTest do
     Hexpm.Store.put(
       :preview_bucket,
       "file_lists/#{package_name}-#{version}.json",
-      Jason.encode!([filename])
+      JSON.encode!([filename])
     )
 
     Hexpm.Store.put(:preview_bucket, "files/#{package_name}/#{version}/#{filename}", content)
@@ -28,7 +28,7 @@ defmodule HexpmWeb.ReadmeControllerTest do
     Hexpm.Store.put(
       :preview_bucket,
       "file_lists/#{package_name}-#{version}.json",
-      Jason.encode!(files)
+      JSON.encode!(files)
     )
   end
 
@@ -47,7 +47,7 @@ defmodule HexpmWeb.ReadmeControllerTest do
       Hexpm.Store.put(
         :preview_bucket,
         "repos/#{repository.name}/file_lists/#{package.name}-1.0.0.json",
-        Jason.encode!(["README.md"])
+        JSON.encode!(["README.md"])
       )
 
       Hexpm.Store.put(

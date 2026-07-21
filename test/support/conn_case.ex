@@ -93,7 +93,7 @@ defmodule HexpmWeb.ConnCase do
   def json_post(conn, path, params) do
     conn
     |> Plug.Conn.put_req_header("content-type", "application/json")
-    |> Phoenix.ConnTest.dispatch(HexpmWeb.Endpoint, :post, path, Jason.encode!(params))
+    |> Phoenix.ConnTest.dispatch(HexpmWeb.Endpoint, :post, path, JSON.encode!(params))
   end
 
   def mock_captcha_success(_context \\ %{}) do

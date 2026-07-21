@@ -35,6 +35,6 @@ defmodule Hexpm.Hexdocs.SourceRepo.GitHub do
     end
   end
 
-  defp decode(body) when is_binary(body), do: Jason.decode!(body)
+  defp decode(body) when is_binary(body), do: JSON.decode!(body)
   defp decode(body), do: body
 end

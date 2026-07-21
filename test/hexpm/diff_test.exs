@@ -38,14 +38,14 @@ defmodule Hexpm.DiffTest do
     Hexpm.Store.put(
       :diff_bucket,
       Cache.metadata_key(request, request.legacy_hash),
-      Jason.encode!(legacy_metadata),
+      JSON.encode!(legacy_metadata),
       []
     )
 
     Hexpm.Store.put(
       :diff_bucket,
       Cache.diff_key(request, request.legacy_hash, 0),
-      Jason.encode!(legacy_piece),
+      JSON.encode!(legacy_piece),
       []
     )
 
@@ -58,7 +58,7 @@ defmodule Hexpm.DiffTest do
     Hexpm.Store.put(
       :diff_bucket,
       Cache.metadata_key(request, request.canonical_hash),
-      Jason.encode!(canonical_metadata),
+      JSON.encode!(canonical_metadata),
       []
     )
 
@@ -113,7 +113,7 @@ defmodule Hexpm.DiffTest do
     args = Request.to_args(request)
     assert args.repository == repository.name
 
-    args = args |> Jason.encode!() |> Jason.decode!()
+    args = args |> JSON.encode!() |> JSON.decode!()
     assert {:ok, rebuilt} = Request.from_args(args)
     assert rebuilt.repository == repository.name
     assert rebuilt.canonical_hash == request.canonical_hash
@@ -305,7 +305,7 @@ defmodule Hexpm.DiffTest do
     Hexpm.Store.put(
       :diff_bucket,
       Cache.metadata_key(request, request.canonical_hash),
-      Jason.encode!(%{total_diffs: -1}),
+      JSON.encode!(%{total_diffs: -1}),
       []
     )
 
@@ -319,7 +319,7 @@ defmodule Hexpm.DiffTest do
     })
 
     [piece] = elem(Hexpm.Diff.fetch(request), 2)
-    Hexpm.Store.put(:diff_bucket, piece.key, Jason.encode!(%{unexpected: true}), [])
+    Hexpm.Store.put(:diff_bucket, piece.key, JSON.encode!(%{unexpected: true}), [])
     assert {:error, :invalid_piece} = Hexpm.Diff.fetch_piece(piece)
   end
 end

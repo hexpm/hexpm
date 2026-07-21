@@ -168,7 +168,7 @@ defmodule Hexpm.Application do
       credentials =
         "HEXPM_GCP_CREDENTIALS"
         |> System.fetch_env!()
-        |> Jason.decode!()
+        |> JSON.decode!()
 
       options = [scope: "https://www.googleapis.com/auth/devstorage.read_write"]
       {Goth, name: Hexpm.Goth, source: {:service_account, credentials, options}}

@@ -45,7 +45,7 @@ defmodule Hexpm.Security.Updater do
   def process_advisories(body) do
     records =
       body
-      |> Enum.map(fn {_filename, content} -> Jason.decode!(content) end)
+      |> Enum.map(fn {_filename, content} -> JSON.decode!(content) end)
       |> Enum.map(&parse_advisory/1)
       |> Enum.reject(&is_nil/1)
 

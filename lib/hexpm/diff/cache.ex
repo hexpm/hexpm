@@ -25,14 +25,14 @@ defmodule Hexpm.Diff.Cache do
 
   def put_piece!(%Request{} = request, index, data) do
     key = diff_key(request, request.canonical_hash, index)
-    put!(key, Jason.encode!(data))
+    put!(key, JSON.encode!(data))
     %Piece{id: "diff-#{index}", key: key}
   end
 
   def put_metadata!(%Request{} = request, metadata) do
     request
     |> metadata_key(request.canonical_hash)
-    |> put!(Jason.encode!(metadata))
+    |> put!(JSON.encode!(metadata))
   end
 
   def metadata_key(%Request{} = request, hash) do
@@ -81,7 +81,7 @@ defmodule Hexpm.Diff.Cache do
   end
 
   defp decode_metadata(body) do
-    with {:ok, metadata} <- Jason.decode(body),
+    with {:ok, metadata} <- JSON.decode(body),
          {:ok, total_diffs} <- non_negative_integer(metadata["total_diffs"]),
          {:ok, total_additions} <- non_negative_integer(metadata["total_additions"]),
          {:ok, total_deletions} <- non_negative_integer(metadata["total_deletions"]),
@@ -101,7 +101,7 @@ defmodule Hexpm.Diff.Cache do
   end
 
   defp decode_piece(body) do
-    case Jason.decode(body) do
+    case JSON.decode(body) do
       {:ok, %{"type" => "too_large", "file" => file}} when is_binary(file) ->
         {:ok, {:too_large, file}}
 

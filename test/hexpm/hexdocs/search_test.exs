@@ -5,7 +5,7 @@ defmodule Hexpm.Hexdocs.SearchTest do
 
   test "extracts explicit search language and items" do
     items = [%{"type" => "module", "title" => "Example", "ref" => "Example.html"}]
-    data = "searchData=" <> Jason.encode!(%{"proglang" => "gleam", "items" => items})
+    data = "searchData=" <> JSON.encode!(%{"proglang" => "gleam", "items" => items})
 
     assert Search.find_search_items("package", "1.0.0", [{"search_data-package.js", data}]) ==
              {"gleam", items}
@@ -44,12 +44,12 @@ defmodule Hexpm.Hexdocs.SearchTest do
       Search.find_search_items(
         "package",
         "1.0.0",
-        [{"search_data-package.js", "searchData=" <> Jason.encode!(%{})}]
+        [{"search_data-package.js", "searchData=" <> JSON.encode!(%{})}]
       )
     end
   end
 
   defp search_file(items) do
-    [{"search_data-package.js", "searchData=" <> Jason.encode!(%{"items" => items})}]
+    [{"search_data-package.js", "searchData=" <> JSON.encode!(%{"items" => items})}]
   end
 end

@@ -42,7 +42,7 @@ defmodule Hexpm.Hexdocs.Search.TypesenseTest do
                body
                |> IO.iodata_to_binary()
                |> String.split("\n", trim: true)
-               |> Enum.map(&Jason.decode!/1)
+               |> Enum.map(&JSON.decode!/1)
 
       assert document == %{
                "type" => "module",

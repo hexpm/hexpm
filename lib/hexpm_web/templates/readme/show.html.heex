@@ -22,7 +22,7 @@
     </article>
     <script nonce={@script_src_nonce}>
       document.addEventListener('DOMContentLoaded', function() {
-        var origins = <%= raw(Jason.encode!(@parent_origins)) %>;
+        var origins = <%= raw(JSON.encode!(@parent_origins)) %>;
         function isAllowedOrigin(origin) {
           return origins[0] === "*" || origins.indexOf(origin) >= 0;
         }

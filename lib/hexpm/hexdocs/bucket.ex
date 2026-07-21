@@ -87,9 +87,9 @@ defmodule Hexpm.Hexdocs.Bucket do
 
     data = [
       "var versionNodes = ",
-      Jason.encode_to_iodata!(versions),
+      JSON.encode_to_iodata!(versions),
       ";\n",
-      if(search, do: ["var searchNodes = ", Jason.encode_to_iodata!(search), ";"], else: [])
+      if(search, do: ["var searchNodes = ", JSON.encode_to_iodata!(search), ";"], else: [])
     ]
 
     path = repository_path(repository, Path.join(package, "docs_config.js"))

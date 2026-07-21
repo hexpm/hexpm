@@ -78,14 +78,14 @@ defmodule Hexpm.HTTP do
   defp encode_params(body, headers) when is_map(body) do
     case List.keyfind(headers, "content-type", 0) do
       {_, "application/x-www-form-urlencoded"} -> URI.encode_query(body)
-      {_, "application/json"} -> Jason.encode!(body)
+      {_, "application/json"} -> JSON.encode!(body)
       nil -> body
     end
   end
 
   defp decode_body(body, headers) do
     case List.keyfind(headers, "content-type", 0) do
-      {_, "application/json" <> _} -> Jason.decode!(body)
+      {_, "application/json" <> _} -> JSON.decode!(body)
       _ -> body
     end
   end

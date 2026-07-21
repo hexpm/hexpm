@@ -47,10 +47,14 @@ config :hexpm, Oban,
   shutdown_grace_period: 300_000
 
 config :ex_aws,
-  json_codec: Jason,
+  json_codec: JSON,
   http_client: ExAws.Request.Req
 
-config :sentry, client: Hexpm.SentryClient
+config :sentry,
+  client: Hexpm.SentryClient,
+  json_library: JSON
+
+config :postgrex, :json_library, JSON
 
 config :bcrypt_elixir, log_rounds: 4
 
@@ -72,6 +76,7 @@ config :hexpm, Hexpm.RepoBase,
 
 config :swoosh, :api_client, Swoosh.ApiClient.Finch
 config :swoosh, :finch_name, Hexpm.Finch
+config :swoosh, :json_library, JSON
 
 config :hexpm, Hexpm.Emails.Mailer, adapter: Swoosh.Adapters.Sendgrid
 
@@ -86,9 +91,9 @@ config :phoenix, :generators,
 config :phoenix, :format_encoders,
   elixir: HexpmWeb.ElixirFormat,
   erlang: HexpmWeb.ErlangFormat,
-  json: Jason
+  json: JSON
 
-config :phoenix, :json_library, Jason
+config :phoenix, :json_library, JSON
 
 config :mime,
   types: %{

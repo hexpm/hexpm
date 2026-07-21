@@ -141,7 +141,7 @@ defmodule Hexpm.HTTPTest do
   test "post/3 encode json", %{lasso: lasso} do
     Lasso.expect_once(lasso, "POST", "/post", fn conn ->
       {:ok, reqbody, conn} = Conn.read_body(conn)
-      assert Jason.decode(reqbody) == {:ok, %{"key" => "value"}}
+      assert JSON.decode(reqbody) == {:ok, %{"key" => "value"}}
       Conn.resp(conn, 200, "respbody")
     end)
 
@@ -170,7 +170,7 @@ defmodule Hexpm.HTTPTest do
     Lasso.expect_once(lasso, "GET", "/get", fn conn ->
       conn
       |> Conn.put_resp_header("content-type", "application/json")
-      |> Conn.resp(200, Jason.encode!(%{"key" => "value"}))
+      |> Conn.resp(200, JSON.encode!(%{"key" => "value"}))
     end)
 
     assert {:ok, 200, _headers, %{"key" => "value"}} = HTTP.get(lasso_url(lasso, "/get"), [])

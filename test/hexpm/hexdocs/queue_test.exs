@@ -57,7 +57,7 @@ defmodule Hexpm.Hexdocs.QueueTest do
 
   defp handle(data) do
     message = %Broadway.Message{
-      data: Jason.encode!(data),
+      data: JSON.encode!(data),
       acknowledger: {Broadway.NoopAcknowledger, nil, nil}
     }
 

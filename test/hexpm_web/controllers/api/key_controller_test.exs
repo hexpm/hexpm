@@ -286,7 +286,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
         |> delete("/api/keys")
 
       assert conn.status == 200
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert body["name"] == key_a.name
       assert body["revoke_at"]
       assert body["updated_at"]
@@ -319,7 +319,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
         |> get("/api/keys")
 
       assert conn.status == 401
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert %{"message" => "API key revoked", "status" => 401} == body
     end
 
@@ -348,7 +348,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
         |> get("/api/keys/macbook")
 
       assert conn.status == 200
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert body["name"] == "macbook"
       assert body["secret"] == nil
       assert body["url"] =~ "/api/keys/macbook"
@@ -374,7 +374,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
         |> delete("/api/keys/computer")
 
       assert conn.status == 200
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert body["name"] == "computer"
       assert body["revoke_at"]
       assert body["updated_at"]
@@ -401,7 +401,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
         |> delete("/api/keys/current")
 
       assert conn.status == 200
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert body["name"] == "current"
       assert body["revoke_at"]
       assert body["updated_at"]
@@ -423,7 +423,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
         |> get("/api/keys")
 
       assert conn.status == 401
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert %{"message" => "API key revoked", "status" => 401} == body
     end
   end
