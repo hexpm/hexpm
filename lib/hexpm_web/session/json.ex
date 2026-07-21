@@ -4,14 +4,13 @@ defmodule HexpmWeb.Session.JSON do
   # JSON-representable values survive a roundtrip.
 
   def encode(term) do
-    case Jason.encode(term) do
-      {:ok, binary} -> {:ok, binary}
-      {:error, _} -> :error
-    end
+    {:ok, Elixir.JSON.encode!(term)}
+  rescue
+    _ -> :error
   end
 
   def decode(binary) do
-    case Jason.decode(binary) do
+    case Elixir.JSON.decode(binary) do
       {:ok, term} -> {:ok, term}
       {:error, _} -> :error
     end
