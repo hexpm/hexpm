@@ -661,4 +661,45 @@ defmodule Hexpm.AdminTasksTest do
       )
     end
   end
+
+  describe "send_email/3" do
+    test "sends a separate email to each recipient" do
+      assert {:ok, 2} =
+               AdminTasks.send_email(
+                 ["bob@example.com", "jane@example.com"],
+                 "Hex.pm - Service update",
+                 "First paragraph.\n\nSecond paragraph."
+               )
+
+      assert_email_sent(fn email ->
+        assert email.to == [{"", "bob@example.com"}]
+        assert email.subject == "Hex.pm - Service update"
+        assert email.text_body =~ "First paragraph."
+        assert email.text_body =~ "Second paragraph."
+        assert email.html_body =~ "Service update"
+        assert email.html_body =~ "<p"
+      end)
+
+      assert_email_sent(fn email -> assert email.to == [{"", "jane@example.com"}] end)
+    end
+
+    test "only sends once to duplicate recipients" do
+      assert {:ok, 1} =
+               AdminTasks.send_email(
+                 ["bob@example.com", "bob@example.com"],
+                 "Hex.pm - Service update",
+                 "Body"
+               )
+    end
+
+    test "escapes the body in the html email" do
+      assert {:ok, 1} =
+               AdminTasks.send_email(["bob@example.com"], "Subject", "<script>alert(1)</script>")
+
+      assert_email_sent(fn email ->
+        refute email.html_body =~ "<script>"
+        assert email.html_body =~ "&lt;script&gt;"
+      end)
+    end
+  end
 end

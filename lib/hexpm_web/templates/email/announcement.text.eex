@@ -1,0 +1,3 @@
+<%= Announcement.title(@subject) %>
+
+<%= @body %>

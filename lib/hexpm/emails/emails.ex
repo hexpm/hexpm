@@ -201,6 +201,15 @@ defmodule Hexpm.Emails do
     |> render_body(:report_state_changed)
   end
 
+  def announcement(receiver, subject, body) do
+    base_email()
+    |> email_to(receiver)
+    |> subject(subject)
+    |> assign(:subject, subject)
+    |> assign(:body, body)
+    |> render_body(:announcement)
+  end
+
   defp email_to(email, to) do
     recipients =
       to
