@@ -22,11 +22,11 @@ defmodule HexpmWeb.API.AuthController do
       # 2. User-level: Check if the authenticated user/organization actually owns/has access to the resource
       case Hexpm.Permissions.verify_user_access(user_or_organization, domain, resource) do
         {:ok, nil} ->
-          send_resp(conn, 204, "")
+          success(conn)
 
         {:ok, repository} ->
           case organization_billing_active(repository, user_or_organization) do
-            :ok -> send_resp(conn, 204, "")
+            :ok -> success(conn)
             error -> error(conn, error)
           end
 
@@ -35,6 +35,13 @@ defmodule HexpmWeb.API.AuthController do
       end
     else
       error(conn, {:error, :domain})
+    end
+  end
+
+  defp success(conn) do
+    case conn.assigns.auth_credential do
+      %Key{} = key -> render(conn, :show, key: key)
+      _ -> send_resp(conn, 204, "")
     end
   end
 end
