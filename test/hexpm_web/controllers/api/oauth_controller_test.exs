@@ -866,35 +866,39 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert Hexpm.UserSessions.count_for_user(user) == 5
     end
 
-    test "expands 'repositories' scope for API key with generic repositories permission", %{
-      client: client,
-      user: user
-    } do
+    test "returns error for user key with repositories permission requesting 'repositories' scope",
+         %{
+           client: client,
+           user: user
+         } do
       org = insert(:organization)
       insert(:organization_user, organization: org, user: user)
 
       key =
         insert(:key, user: user, permissions: [build(:key_permission, domain: "repositories")])
 
-      api_key = key.user_secret
-
       conn =
         post(build_conn(), ~p"/api/oauth/token", %{
           "grant_type" => "client_credentials",
           "client_id" => client.client_id,
-          "client_secret" => api_key,
+          "client_secret" => key.user_secret,
           "scope" => "repositories"
         })
 
-      assert json_response(conn, 200)
-      response = json_response(conn, 200)
-      assert response["access_token"]
-      # Should include all repositories the user has access to
-      scopes = String.split(response["scope"], " ")
-      assert "repository:#{org.name}" in scopes
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_scope"
+
+      assert response["error_description"] ==
+               "user keys no longer grant repository access, use an organization key"
+
+      assert get_resp_header(conn, "x-hex-message") == [
+               "\"User API keys no longer grant repository access. Use mix hex.user auth for " <>
+                 "development or an organization key (mix hex.organization key ORGANIZATION " <>
+                 "generate) for CI\";level=fatal"
+             ]
     end
 
-    test "expands 'repositories' scope for API key with specific repository permission", %{
+    test "returns error for user key requesting specific 'repository:' scope", %{
       client: client,
       user: user
     } do
@@ -907,100 +911,22 @@ defmodule HexpmWeb.API.OAuthControllerTest do
           permissions: [build(:key_permission, domain: "repository", resource: org.name)]
         )
 
-      api_key = key.user_secret
-
       conn =
         post(build_conn(), ~p"/api/oauth/token", %{
           "grant_type" => "client_credentials",
           "client_id" => client.client_id,
-          "client_secret" => api_key,
-          "scope" => "repositories"
+          "client_secret" => key.user_secret,
+          "scope" => "repository:#{org.name}"
         })
 
-      assert json_response(conn, 200)
-      response = json_response(conn, 200)
-      assert response["access_token"]
-      assert response["scope"] == "repository:#{org.name}"
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_scope"
+      assert [message] = get_resp_header(conn, "x-hex-message")
+      assert message =~ "User API keys no longer grant repository access"
+      assert message =~ ";level=fatal"
     end
 
-    test "constrains 'repositories' expansion to API key's specific repository permissions", %{
-      client: client,
-      user: user
-    } do
-      org1 = insert(:organization)
-      org2 = insert(:organization)
-      insert(:organization_user, organization: org1, user: user)
-      insert(:organization_user, organization: org2, user: user)
-
-      # API key only has access to org1, not org2
-      key =
-        insert(:key,
-          user: user,
-          permissions: [build(:key_permission, domain: "repository", resource: org1.name)]
-        )
-
-      api_key = key.user_secret
-
-      # Request "repositories" scope - should only expand to org1, not org2
-      conn =
-        post(build_conn(), ~p"/api/oauth/token", %{
-          "grant_type" => "client_credentials",
-          "client_id" => client.client_id,
-          "client_secret" => api_key,
-          "scope" => "repositories"
-        })
-
-      assert json_response(conn, 200)
-      response = json_response(conn, 200)
-      assert response["access_token"]
-      # Should only expand to org1, not org2
-      assert response["scope"] == "repository:#{org1.name}"
-    end
-
-    test "constrains to multiple specific repositories when key has multiple permissions", %{
-      client: client,
-      user: user
-    } do
-      org1 = insert(:organization)
-      org2 = insert(:organization)
-      org3 = insert(:organization)
-      insert(:organization_user, organization: org1, user: user)
-      insert(:organization_user, organization: org2, user: user)
-      insert(:organization_user, organization: org3, user: user)
-
-      # API key has access to org1 and org2, but not org3
-      key =
-        insert(:key,
-          user: user,
-          permissions: [
-            build(:key_permission, domain: "repository", resource: org1.name),
-            build(:key_permission, domain: "repository", resource: org2.name)
-          ]
-        )
-
-      api_key = key.user_secret
-
-      # Request "repositories" scope - should expand to org1 and org2, not org3
-      conn =
-        post(build_conn(), ~p"/api/oauth/token", %{
-          "grant_type" => "client_credentials",
-          "client_id" => client.client_id,
-          "client_secret" => api_key,
-          "scope" => "repositories"
-        })
-
-      assert json_response(conn, 200)
-      response = json_response(conn, 200)
-      assert response["access_token"]
-      # Should expand to both org1 and org2
-      scopes = String.split(response["scope"], " ")
-      assert "repository:#{org1.name}" in scopes
-      assert "repository:#{org2.name}" in scopes
-      refute "repository:#{org3.name}" in scopes
-      assert length(scopes) == 2
-    end
-
-    test "supports mixed scopes with repositories", %{
+    test "returns error for user key with mixed scopes including repositories", %{
       client: client,
       user: user
     } do
@@ -1016,23 +942,48 @@ defmodule HexpmWeb.API.OAuthControllerTest do
           ]
         )
 
-      api_key = key.user_secret
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "api repositories"
+        })
+
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_scope"
+      assert [message] = get_resp_header(conn, "x-hex-message")
+      assert message =~ ";level=fatal"
+    end
+
+    test "user key with api and repositories permissions can exchange for 'api' scope", %{
+      client: client,
+      user: user
+    } do
+      org = insert(:organization)
+      insert(:organization_user, organization: org, user: user)
+
+      key =
+        insert(:key,
+          user: user,
+          permissions: [
+            build(:key_permission, domain: "api"),
+            build(:key_permission, domain: "repositories")
+          ]
+        )
 
       conn =
         post(build_conn(), ~p"/api/oauth/token", %{
           "grant_type" => "client_credentials",
           "client_id" => client.client_id,
-          "client_secret" => api_key,
-          "scope" => "api repositories"
+          "client_secret" => key.user_secret,
+          "scope" => "api"
         })
 
-      assert json_response(conn, 200)
       response = json_response(conn, 200)
       assert response["access_token"]
-      # Should include api scope and all repository scopes
-      scopes = String.split(response["scope"], " ")
-      assert "api" in scopes
-      assert "repository:#{org.name}" in scopes
+      assert response["scope"] == "api"
+      assert get_resp_header(conn, "x-hex-message") == []
     end
 
     test "returns error when api:read key requests 'api' scope (CVE-2026-21621)", %{
@@ -1194,7 +1145,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert response["scope"] == "api"
     end
 
-    test "succeeds when api-only key requests 'repositories' scope", %{
+    test "returns error when api-only user key requests 'repositories' scope", %{
       user: user,
       client: client
     } do
@@ -1213,7 +1164,10 @@ defmodule HexpmWeb.API.OAuthControllerTest do
           "scope" => "repositories"
         })
 
-      assert json_response(conn, 200)
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_scope"
+      assert [message] = get_resp_header(conn, "x-hex-message")
+      assert message =~ ";level=fatal"
     end
 
     test "succeeds for organization key requesting 'repositories' scope", %{client: client} do
@@ -1387,36 +1341,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert response["scope"] == "repository:#{org.name}"
     end
 
-    test "user key with repository permissions warns about deprecation", %{
-      client: client,
-      user: user
-    } do
-      org = insert(:organization)
-      insert(:organization_user, organization: org, user: user)
-
-      key =
-        insert(:key, user: user, permissions: [build(:key_permission, domain: "repositories")])
-
-      date = Application.fetch_env!(:hexpm, :user_repository_keys_disable_date)
-
-      conn =
-        post(build_conn(), ~p"/api/oauth/token", %{
-          "grant_type" => "client_credentials",
-          "client_id" => client.client_id,
-          "client_secret" => key.user_secret,
-          "scope" => "repositories"
-        })
-
-      assert json_response(conn, 200)
-
-      assert get_resp_header(conn, "x-hex-message") == [
-               "\"User API keys with repository permissions are deprecated and will stop " <>
-                 "working on #{date}. Use mix hex.user auth for development or an organization " <>
-                 "key (mix hex.organization key ORGANIZATION generate) for CI\";level=warn"
-             ]
-    end
-
-    test "organization key does not warn about deprecation", %{client: client} do
+    test "organization key exchanges for 'repositories' scope without message", %{client: client} do
       org = insert(:organization)
 
       key =
@@ -1433,20 +1358,25 @@ defmodule HexpmWeb.API.OAuthControllerTest do
           "scope" => "repositories"
         })
 
-      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+      assert response["scope"] == "repository:#{org.name}"
       assert get_resp_header(conn, "x-hex-message") == []
     end
 
-    test "user api key does not warn about deprecation", %{client: client, api_key: api_key} do
+    test "user api key exchanges for 'api' scope without message", %{
+      client: client,
+      api_key: api_key
+    } do
       conn =
         post(build_conn(), ~p"/api/oauth/token", %{
           "grant_type" => "client_credentials",
           "client_id" => client.client_id,
           "client_secret" => api_key,
-          "scope" => "repositories"
+          "scope" => "api"
         })
 
-      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+      assert response["scope"] == "api"
       assert get_resp_header(conn, "x-hex-message") == []
     end
   end

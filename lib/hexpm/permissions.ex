@@ -180,6 +180,11 @@ defmodule Hexpm.Permissions do
     check_access?(normalized_permissions, domain, resource)
   end
 
+  def verify_access?(%Key{user_id: user_id}, domain, _resource)
+      when not is_nil(user_id) and domain in ["repository", "repositories"] do
+    false
+  end
+
   def verify_access?(%Key{} = key, domain, resource) do
     verify_access?(key.permissions, domain, resource)
   end

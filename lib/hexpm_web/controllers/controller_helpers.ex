@@ -23,15 +23,13 @@ defmodule HexpmWeb.ControllerHelpers do
     cache(conn, control, vary)
   end
 
-  def put_user_repository_key_warning(conn) do
-    date = Application.fetch_env!(:hexpm, :user_repository_keys_disable_date)
-
+  def put_user_repository_key_error(conn) do
     message =
-      "User API keys with repository permissions are deprecated and will stop working on " <>
-        "#{date}. Use mix hex.user auth for development or an organization key " <>
-        "(mix hex.organization key ORGANIZATION generate) for CI"
+      "User API keys no longer grant repository access. Use mix hex.user auth for " <>
+        "development or an organization key (mix hex.organization key ORGANIZATION generate) " <>
+        "for CI"
 
-    put_resp_header(conn, "x-hex-message", ~s("#{message}";level=warn))
+    put_resp_header(conn, "x-hex-message", ~s("#{message}";level=fatal))
   end
 
   def permanent_redirect(conn, path, query_string \\ nil) do
