@@ -82,6 +82,10 @@ defmodule Hexpm.ReleaseTasks.Stats do
               |> Enum.each(&Repo.insert_all(Download, &1))
             end)
 
+            # Scoped to this transaction; the default 4MB makes the view
+            # aggregations over the downloads table spill to disk
+            Repo.query!("SET LOCAL work_mem = '128MB'")
+
             time_log("refresh PackageDownload view", fn ->
               Repo.refresh_view(PackageDownload, timeout: 60_000)
             end)
