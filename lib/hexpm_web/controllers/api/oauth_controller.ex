@@ -204,8 +204,8 @@ defmodule HexpmWeb.API.OAuthController do
          :ok <- validate_client_supports_grant(client, "client_credentials"),
          {:ok, api_key_secret} <- validate_api_key_secret(safe_param(params, "client_secret")),
          {:ok, auth_info} <- authenticate_api_key(api_key_secret, conn),
+         :ok <- validate_user_key_repository_scopes(params["scope"], auth_info.auth_credential),
          {:ok, scopes} <- expand_and_validate_scopes(params["scope"], auth_info) do
-      conn = maybe_warn_user_repository_key(conn, auth_info.auth_credential, scopes)
       usage_info = build_usage_info(conn)
 
       # Determine user or organization from the API key
@@ -240,6 +240,14 @@ defmodule HexpmWeb.API.OAuthController do
           )
       end
     else
+      {:error, :user_repository_key} ->
+        conn
+        |> put_user_repository_key_error()
+        |> render_oauth_error(
+          :invalid_scope,
+          "user keys no longer grant repository access, use an organization key"
+        )
+
       {:error, error} when is_atom(error) ->
         render_oauth_error(conn, error, error_description(error))
 
@@ -251,18 +259,21 @@ defmodule HexpmWeb.API.OAuthController do
     end
   end
 
-  defp maybe_warn_user_repository_key(conn, %Key{} = key, scopes) do
+  defp validate_user_key_repository_scopes(scope_string, %Key{user_id: user_id})
+       when not is_nil(user_id) and (is_binary(scope_string) or is_nil(scope_string)) do
     repository_scope? =
-      Enum.any?(scopes, &(&1 == "repositories" or String.starts_with?(&1, "repository:")))
+      (scope_string || "")
+      |> String.split(" ", trim: true)
+      |> Enum.any?(&(&1 == "repositories" or String.starts_with?(&1, "repository:")))
 
-    if repository_scope? and Key.user_repository_key?(key) do
-      put_user_repository_key_warning(conn)
+    if repository_scope? do
+      {:error, :user_repository_key}
     else
-      conn
+      :ok
     end
   end
 
-  defp maybe_warn_user_repository_key(conn, _auth_credential, _scopes), do: conn
+  defp validate_user_key_repository_scopes(_scope_string, _auth_credential), do: :ok
 
   defp validate_client_supports_grant(client, grant_type) do
     if Clients.supports_grant_type?(client, grant_type) do

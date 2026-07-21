@@ -147,7 +147,7 @@ defmodule HexpmWeb.API.AuthControllerTest do
       build_conn()
       |> put_req_header("authorization", key.user_secret)
       |> get("/api/auth", domain: "repository", resource: owned_org.name)
-      |> response(204)
+      |> response(401)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
@@ -313,22 +313,22 @@ defmodule HexpmWeb.API.AuthControllerTest do
       build_conn()
       |> put_req_header("authorization", key.user_secret)
       |> get("/api/auth", domain: "repositories")
-      |> response(204)
+      |> response(401)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
       |> get("/api/auth", domain: "repository", resource: owned_org.name)
-      |> response(204)
+      |> response(401)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
       |> get("/api/auth", domain: "repository", resource: unowned_org.name)
-      |> response(403)
+      |> response(401)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
       |> get("/api/auth", domain: "repository", resource: "BADREPO")
-      |> response(403)
+      |> response(401)
     end
 
     test "authenticate docs key", %{user: user, owned_org: owned_org} do
@@ -353,7 +353,7 @@ defmodule HexpmWeb.API.AuthControllerTest do
       build_conn()
       |> put_req_header("authorization", key.user_secret)
       |> get("/api/auth", domain: "repository", resource: unowned_org.name)
-      |> response(403)
+      |> response(401)
     end
 
     test "authenticate user repository key without active billing", %{user: user} do
@@ -370,7 +370,7 @@ defmodule HexpmWeb.API.AuthControllerTest do
       build_conn()
       |> put_req_header("authorization", key.user_secret)
       |> get("/api/auth", domain: "repository", resource: organization.name)
-      |> response(403)
+      |> response(401)
     end
 
     test "authenticate organization repository key without active billing" do
@@ -389,39 +389,37 @@ defmodule HexpmWeb.API.AuthControllerTest do
       |> response(403)
     end
 
-    test "user repository key warns about deprecation", %{
+    test "user repository key is rejected with fatal message", %{
       user_repo_key: key,
       owned_org: owned_org
     } do
-      date = Application.fetch_env!(:hexpm, :user_repository_keys_disable_date)
-
       conn =
         build_conn()
         |> put_req_header("authorization", key.user_secret)
         |> get("/api/auth", domain: "repository", resource: owned_org.name)
 
-      assert conn.status == 204
+      assert json_response(conn, 401)["message"] == "key not authorized for this action"
 
       assert get_resp_header(conn, "x-hex-message") == [
-               "\"User API keys with repository permissions are deprecated and will stop " <>
-                 "working on #{date}. Use mix hex.user auth for development or an organization " <>
-                 "key (mix hex.organization key ORGANIZATION generate) for CI\";level=warn"
+               "\"User API keys no longer grant repository access. Use mix hex.user auth for " <>
+                 "development or an organization key (mix hex.organization key ORGANIZATION " <>
+                 "generate) for CI\";level=fatal"
              ]
     end
 
-    test "user repositories key warns about deprecation", %{user_all_repos_key: key} do
+    test "user repositories key is rejected with fatal message", %{user_all_repos_key: key} do
       conn =
         build_conn()
         |> put_req_header("authorization", key.user_secret)
         |> get("/api/auth", domain: "repositories")
 
-      assert conn.status == 204
+      assert conn.status == 401
       assert [message] = get_resp_header(conn, "x-hex-message")
-      assert message =~ "User API keys with repository permissions are deprecated"
-      assert message =~ ";level=warn"
+      assert message =~ "User API keys no longer grant repository access"
+      assert message =~ ";level=fatal"
     end
 
-    test "user key does not warn for api domain", %{user_full_key: key} do
+    test "user key with api permission succeeds for api domain", %{user_full_key: key} do
       conn =
         build_conn()
         |> put_req_header("authorization", key.user_secret)
@@ -431,7 +429,7 @@ defmodule HexpmWeb.API.AuthControllerTest do
       assert get_resp_header(conn, "x-hex-message") == []
     end
 
-    test "organization repository key does not warn", %{
+    test "organization repository key succeeds without message", %{
       organization_repo_key: key,
       owned_org: owned_org
     } do
@@ -444,7 +442,7 @@ defmodule HexpmWeb.API.AuthControllerTest do
       assert get_resp_header(conn, "x-hex-message") == []
     end
 
-    test "oauth token with repository scope does not warn", %{
+    test "oauth token with repository scope succeeds without message", %{
       user: user,
       owned_org: owned_org
     } do

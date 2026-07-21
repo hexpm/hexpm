@@ -8,7 +8,7 @@ defmodule HexpmWeb.API.AuthController do
     auth_credential = conn.assigns.auth_credential
     user_or_organization = conn.assigns.current_user || conn.assigns.current_organization
     resource = params["resource"]
-    conn = maybe_warn_user_repository_key(conn, auth_credential, domain)
+    conn = maybe_put_user_repository_key_error(conn, auth_credential, domain)
 
     # Two-level permission check:
     # 1. API-level: Check if the API key/OAuth token has the required scopes/permissions
@@ -39,14 +39,14 @@ defmodule HexpmWeb.API.AuthController do
     end
   end
 
-  defp maybe_warn_user_repository_key(conn, %Key{} = key, domain)
+  defp maybe_put_user_repository_key_error(conn, %Key{} = key, domain)
        when domain in ["repository", "repositories"] do
     if Key.user_repository_key?(key) do
-      put_user_repository_key_warning(conn)
+      put_user_repository_key_error(conn)
     else
       conn
     end
   end
 
-  defp maybe_warn_user_repository_key(conn, _auth_credential, _domain), do: conn
+  defp maybe_put_user_repository_key_error(conn, _auth_credential, _domain), do: conn
 end

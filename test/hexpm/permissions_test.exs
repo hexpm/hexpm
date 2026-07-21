@@ -224,6 +224,40 @@ defmodule Hexpm.PermissionsTest do
       refute Permissions.verify_access?(key, "repositories", nil)
     end
 
+    test "denies repository access for user-owned keys" do
+      user = insert(:user)
+
+      key =
+        insert(:key, user: user, permissions: [build(:key_permission, domain: "repositories")])
+
+      refute Permissions.verify_access?(key, "repository", "foo")
+      refute Permissions.verify_access?(key, "repositories", nil)
+
+      key =
+        insert(:key,
+          user: user,
+          permissions: [
+            build(:key_permission, domain: "api"),
+            build(:key_permission, domain: "repository", resource: "foo")
+          ]
+        )
+
+      refute Permissions.verify_access?(key, "repository", "foo")
+      assert Permissions.verify_access?(key, "api", "read")
+
+      organization = insert(:organization)
+
+      key =
+        insert(:key,
+          organization: organization,
+          permissions: [
+            build(:key_permission, domain: "repository", resource: organization.name)
+          ]
+        )
+
+      assert Permissions.verify_access?(key, "repository", organization.name)
+    end
+
     test "verifies docs permissions" do
       key = build(:key, permissions: [build(:key_permission, domain: "docs", resource: "foo")])
       refute Permissions.verify_access?(key, "api", "read")

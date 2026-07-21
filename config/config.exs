@@ -39,8 +39,6 @@ config :hexpm,
 
 config :hexpm, :features, package_reports: true
 
-config :hexpm, :user_repository_keys_disable_date, ~D[2026-12-31]
-
 config :hexpm, ecto_repos: [Hexpm.RepoBase]
 
 config :hexpm, Oban,
