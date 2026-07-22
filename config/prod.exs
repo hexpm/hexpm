@@ -48,7 +48,10 @@ config :hexpm, Oban,
     {Oban.Plugins.Cron,
      crontab: [
        {"* * * * *", Hexpm.Billing.Report},
-       {"*/30 * * * *", Hexpm.Security.Updater}
+       {"*/30 * * * *", Hexpm.Security.Updater},
+       {"30 0 * * *", Hexpm.ReleaseTasks.CheckNames},
+       {"0 1 * * *", Hexpm.ReleaseTasks.Stats},
+       {"0 2 * * *", Hexpm.ReleaseTasks.PurgeExpiredRecords}
      ],
      timezone: "Etc/UTC"},
     {Oban.Plugins.Pruner, max_age: 30 * 24 * 60 * 60},

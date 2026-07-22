@@ -1,5 +1,4 @@
 defmodule Hexpm.ReleaseTasks do
-  alias Hexpm.ReleaseTasks.{CheckNames, PurgeExpiredRecords, Stats}
   require Logger
 
   @start_apps [
@@ -24,17 +23,6 @@ defmodule Hexpm.ReleaseTasks do
     task(fn -> run_script(args) end)
 
     Logger.info("[task] Finished script")
-    stop()
-  end
-
-  def check_names() do
-    start_apps(@start_apps)
-    Logger.info("[task] Running check_names")
-    start_app()
-
-    monitor("hexpm-check-names", "30 0 * * *", &CheckNames.run/0)
-
-    Logger.info("[task] Finished check_names")
     stop()
   end
 
@@ -72,55 +60,6 @@ defmodule Hexpm.ReleaseTasks do
 
     Logger.info("[task] Finished seed")
     stop()
-  end
-
-  def stats() do
-    start_apps(@start_apps)
-    Logger.info("[task] Running stats")
-    start_app()
-
-    monitor("hexpm-stats", "0 1 * * *", &Stats.run/0)
-
-    Logger.info("[task] Finished stats")
-    stop()
-  end
-
-  def purge_expired_records() do
-    start_apps(@start_apps)
-    Logger.info("[task] Running purge_expired_records")
-    start_repo()
-
-    monitor("hexpm-purge-expired-records", "0 2 * * *", &PurgeExpiredRecords.run/0)
-
-    Logger.info("[task] Finished purge_expired_records")
-    stop()
-  end
-
-  # Wraps a task in a Sentry cron check-in so failures and missed runs surface
-  # in Sentry. `slug` identifies the monitor and `schedule` is its crontab (UTC),
-  # matching the Kubernetes CronJob that invokes the task.
-  @doc false
-  def monitor(slug, schedule, fun) do
-    check_in_id =
-      case Sentry.capture_check_in(
-             status: :in_progress,
-             monitor_slug: slug,
-             monitor_config: [
-               schedule: [type: :crontab, value: schedule],
-               timezone: "Etc/UTC"
-             ]
-           ) do
-        {:ok, check_in_id} -> check_in_id
-        _ -> nil
-      end
-
-    status = task(fun)
-
-    opts = [status: status, monitor_slug: slug]
-    opts = if check_in_id, do: [{:check_in_id, check_in_id} | opts], else: opts
-    Sentry.capture_check_in(opts)
-
-    status
   end
 
   defp task(fun) do

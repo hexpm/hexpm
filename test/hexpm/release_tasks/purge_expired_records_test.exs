@@ -1,7 +1,44 @@
 defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
-  use Hexpm.DataCase, async: true
+  use Hexpm.DataCase
+  use Oban.Testing, repo: Hexpm.RepoBase
 
+  alias Hexpm.CronMonitor.SentryMock
   alias Hexpm.ReleaseTasks.PurgeExpiredRecords
+
+  setup :verify_on_exit!
+
+  test "runs as a monitored worker" do
+    app_env(:hexpm, :sentry_impl, SentryMock)
+
+    expect(SentryMock, :capture_check_in, fn opts ->
+      assert opts[:status] == :in_progress
+      assert opts[:monitor_slug] == "hexpm-purge-expired-records"
+
+      assert opts[:monitor_config] == [
+               schedule: [type: :crontab, value: "0 2 * * *"],
+               timezone: "Etc/UTC"
+             ]
+
+      {:ok, "check-in-id"}
+    end)
+
+    expect(SentryMock, :capture_check_in, fn opts ->
+      assert opts == [
+               check_in_id: "check-in-id",
+               status: :ok,
+               monitor_slug: "hexpm-purge-expired-records"
+             ]
+
+      :ignored
+    end)
+
+    assert :ok = perform_job(PurgeExpiredRecords, %{})
+  end
+
+  test "rejects arguments because purging always processes all eligible records" do
+    assert {:cancel, {:invalid_args, %{"date" => "2026-07-20"}}} =
+             perform_job(PurgeExpiredRecords, %{"date" => "2026-07-20"})
+  end
 
   defp seconds_ago(seconds) do
     DateTime.add(DateTime.utc_now(), -seconds, :second)
@@ -174,6 +211,7 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
           client_id: client.client_id
         })
 
+      PurgeExpiredRecords.run(batch_size: 2)
       PurgeExpiredRecords.run(batch_size: 2)
 
       for token <- expired do

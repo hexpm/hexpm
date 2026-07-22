@@ -1,6 +1,17 @@
 defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
+  use Oban.Worker,
+    queue: :periodic,
+    max_attempts: 5,
+    unique: [
+      period: :infinity,
+      states: :incomplete,
+      fields: [:worker]
+    ]
+
   import Ecto.Query, only: [from: 2]
   require Logger
+
+  alias Hexpm.CronMonitor
 
   @repos Application.compile_env!(:hexpm, :ecto_repos)
   @retention_days 90
@@ -9,6 +20,18 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
   # Deletes run in batches so each statement stays well below the query timeout
   # regardless of how many rows have accumulated.
   @batch_size 10_000
+  @monitor_slug "hexpm-purge-expired-records"
+  @monitor_schedule "0 2 * * *"
+
+  @impl Oban.Worker
+  def timeout(_job), do: 1_800_000
+
+  @impl Oban.Worker
+  def perform(%Oban.Job{args: args}) when map_size(args) == 0 do
+    CronMonitor.run(@monitor_slug, @monitor_schedule, &run/0)
+  end
+
+  def perform(%Oban.Job{args: args}), do: {:cancel, {:invalid_args, args}}
 
   def run(opts \\ []) do
     batch_size = Keyword.get(opts, :batch_size, @batch_size)
