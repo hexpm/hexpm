@@ -36,7 +36,15 @@ ENV MIX_ENV=prod
 COPY mix.exs mix.lock ./
 COPY config config
 RUN mix deps.get
-RUN mix deps.compile
+# Compiling dependencies across multiple OS processes
+# https://mix.hexdocs.pm/Mix.Tasks.Deps.Compile.html#module-compiling-dependencies-across-multiple-os-processes
+RUN <<EOF
+  CORES=$(nproc 2>/dev/null || echo 2)
+  PARTITIONS=$(( CORES / 2 ))
+  [ "$PARTITIONS" -lt 1 ] && PARTITIONS=1
+  [ "$PARTITIONS" -gt 4 ] && PARTITIONS=4
+  MIX_OS_DEPS_COMPILE_PARTITION_COUNT=$PARTITIONS mix deps.compile
+EOF
 
 # build project and assets
 COPY priv priv

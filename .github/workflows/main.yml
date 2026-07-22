@@ -5,6 +5,13 @@ on: [push, pull_request]
 permissions:
   contents: read
 
+env:
+  # Compile dependencies across multiple OS processes
+  # https://mix.hexdocs.pm/Mix.Tasks.Deps.Compile.html#module-compiling-dependencies-across-multiple-os-processes
+  # Standard GitHub-hosted Linux runners have 4 cores, so we use 2 partitions (cores / 2).
+  # https://docs.github.com/en/actions/reference/runners/github-hosted-runners#standard-github-hosted-runners-for-public-repositories
+  MIX_OS_DEPS_COMPILE_PARTITION_COUNT: 2
+
 jobs:
   format:
     name: Format
