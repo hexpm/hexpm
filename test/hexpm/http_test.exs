@@ -17,6 +17,70 @@ defmodule Hexpm.HTTPTest do
     assert {:ok, 200, _headers, "respbody"} = HTTP.get(lasso_url(lasso, "/get"), [])
   end
 
+  test "get/3 can stop reading an oversized response", %{lasso: lasso} do
+    Lasso.expect_once(lasso, "GET", "/oversized", fn conn ->
+      Conn.resp(conn, 200, String.duplicate("x", 100))
+    end)
+
+    assert {:error, :response_too_large} =
+             HTTP.get(lasso_url(lasso, "/oversized"), [], max_body_bytes: 10)
+  end
+
+  test "get/3 can connect to a pinned address while preserving the hostname", %{lasso: lasso} do
+    Lasso.expect_once(lasso, "GET", "/pinned", fn conn ->
+      assert Conn.get_req_header(conn, "host") == ["localhost:#{lasso.port}"]
+      Conn.resp(conn, 200, "pinned-response")
+    end)
+
+    assert {:ok, 200, _headers, "pinned-response"} =
+             HTTP.get(lasso_url(lasso, "/pinned"), [],
+               connect_address: {127, 0, 0, 1},
+               connect_hostname: "localhost",
+               receive_timeout: 5_000,
+               request_timeout: 5_000
+             )
+  end
+
+  test "get/3 validates the original hostname over a pinned HTTPS connection" do
+    {url, cacerts, server} = open_tls_server()
+
+    assert {:ok, 200, _headers, "tls-response"} =
+             HTTP.get(url, [],
+               connect_address: {127, 0, 0, 1},
+               connect_hostname: URI.parse(url).host,
+               connect_cacerts: cacerts,
+               receive_timeout: 5_000,
+               request_timeout: 5_000
+             )
+
+    assert :ok = Task.await(server)
+  end
+
+  test "get/3 rejects a certificate for a different hostname over a pinned connection" do
+    {url, cacerts, server} = open_tls_server()
+
+    assert {:error, %Mint.TransportError{reason: {:tls_alert, _reason}}} =
+             HTTP.get(url, [],
+               connect_address: {127, 0, 0, 1},
+               connect_hostname: "wrong.example.com",
+               connect_cacerts: cacerts,
+               receive_timeout: 5_000,
+               request_timeout: 5_000
+             )
+
+    assert :ok = Task.await(server)
+  end
+
+  test "get/3 normalizes and closes a pinned Mint request error", %{lasso: lasso} do
+    assert {:error, _reason} =
+             HTTP.get(lasso_url(lasso, "/invalid-request"), [{"bad\nheader", "value"}],
+               connect_address: {127, 0, 0, 1},
+               connect_hostname: "localhost",
+               receive_timeout: 5_000,
+               request_timeout: 5_000
+             )
+  end
+
   test "head/2", %{lasso: lasso} do
     Lasso.expect_once(lasso, "HEAD", "/head", fn conn ->
       conn
@@ -200,6 +264,48 @@ defmodule Hexpm.HTTPTest do
                pool_timeout: 5_000,
                request_timeout: 5_000
              )
+  end
+
+  defp open_tls_server do
+    certificate_options = [key: {:rsa, 2048, 65_537}, digest: :sha256]
+
+    certificate =
+      :public_key.pkix_test_data(%{
+        root: certificate_options,
+        peer: certificate_options
+      })
+
+    {:ok, listener} =
+      :ssl.listen(0,
+        cert: certificate[:cert],
+        key: certificate[:key],
+        active: false,
+        reuseaddr: true
+      )
+
+    {:ok, {_address, port}} = :ssl.sockname(listener)
+    hostname = :net_adm.localhost() |> to_string()
+
+    server =
+      Task.async(fn ->
+        with {:ok, socket} <- :ssl.transport_accept(listener),
+             {:ok, socket} <- :ssl.handshake(socket, 5_000) do
+          {:ok, _request} = :ssl.recv(socket, 0, 5_000)
+
+          :ok =
+            :ssl.send(
+              socket,
+              "HTTP/1.1 200 OK\r\nContent-Length: 12\r\nConnection: close\r\n\r\ntls-response"
+            )
+
+          :ssl.close(socket)
+        end
+
+        :ssl.close(listener)
+        :ok
+      end)
+
+    {"https://#{hostname}:#{port}/pinned", certificate[:cacerts], server}
   end
 
   defp lasso_url(lasso, path) do

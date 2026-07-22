@@ -66,5 +66,10 @@ config :hexpm, :hcaptcha,
   sitekey: "sitekey",
   secret: "secret"
 
+config :hexpm, :organization_sso,
+  mode: :off,
+  beta_organizations: [],
+  oidc_impl: Hexpm.Accounts.SSO.OIDC.Mock
+
 # Don't sleep waiting for Sentry to flush in tests.
 config :hexpm, sentry_flush_ms: 0

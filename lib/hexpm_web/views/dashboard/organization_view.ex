@@ -13,4 +13,5 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
   import HexpmWeb.Dashboard.Policy.Components.PolicyEdit, only: [policy_edit: 1]
   import HexpmWeb.Dashboard.Policy.Components.PolicyNew, only: [policy_new: 1]
   import HexpmWeb.Dashboard.Organization.Components.ProfileTab, only: [profile_tab: 1]
+  import HexpmWeb.Dashboard.Organization.Components.SSOTab, only: [sso_tab: 1]
 end

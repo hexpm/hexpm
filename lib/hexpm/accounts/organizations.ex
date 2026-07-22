@@ -135,7 +135,12 @@ defmodule Hexpm.Accounts.Organizations do
       if organization_user do
         {:ok, _result} =
           Multi.new()
+          |> Hexpm.Accounts.SSO.lock_member_removal(organization, user)
           |> Multi.delete(:organization_user, organization_user)
+          |> Hexpm.Accounts.SSO.delete_member_transactions(organization, user)
+          |> Hexpm.Accounts.SSO.enqueue_member_unlink_notification(organization, user)
+          |> Hexpm.Accounts.SSO.delete_member_identities(organization, user)
+          |> Hexpm.Accounts.SSO.delete_member_notifications(organization, user)
           |> delete_package_owners(organization, user)
           |> audit(audit_data, "organization.member.remove", {organization, user})
           |> Repo.transaction()
@@ -160,6 +165,7 @@ defmodule Hexpm.Accounts.Organizations do
       true ->
         multi =
           Multi.new()
+          |> Hexpm.Accounts.SSO.lock_member_removal(organization, user)
           |> Multi.update(:organization_user, Organization.change_role(organization_user, params))
           |> audit(audit_data, "organization.member.role", {organization, user, params["role"]})
 

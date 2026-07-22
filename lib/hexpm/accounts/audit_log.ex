@@ -252,6 +252,21 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("organization.member.role", {organization, user, role}),
     do: %{organization: serialize(organization), user: serialize(user), role: role}
 
+  defp extract_params(action, {organization, params})
+       when action in [
+              "sso.connection.configure",
+              "sso.connection.test",
+              "sso.connection.enable",
+              "sso.connection.disable",
+              "sso.connection.rotation.start",
+              "sso.connection.rotation.complete",
+              "sso.identity.link",
+              "sso.identity.unlink",
+              "sso.login"
+            ] do
+    Map.put(params, :organization, serialize(organization))
+  end
+
   defp extract_params("password.reset.init", nil), do: %{}
   defp extract_params("password.reset.finish", nil), do: %{}
   defp extract_params("password.update", nil), do: %{}

@@ -30,6 +30,8 @@ defmodule Hexpm.Accounts.User do
     has_many :account_deletion_requests, AccountDeletionRequest
     has_many :password_resets, PasswordReset
     has_many :package_reports, Hexpm.Repository.PackageReport, foreign_key: :author_id
+    has_many :organization_sso_identities, Hexpm.Accounts.SSO.Identity
+    has_many :organization_sso_notifications, Hexpm.Accounts.SSO.Notification
     has_many :user_providers, UserProvider
   end
 

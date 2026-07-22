@@ -1,5 +1,24 @@
 import Config
 
+sso_mode =
+  case System.get_env("HEXPM_SSO_MODE", "off") do
+    "off" -> :off
+    "beta" -> :beta
+    "enabled" -> :enabled
+    value -> raise "invalid HEXPM_SSO_MODE #{inspect(value)}; expected off, beta, or enabled"
+  end
+
+sso_beta_organizations =
+  System.get_env("HEXPM_SSO_BETA_ORGANIZATIONS", "")
+  |> String.split(",", trim: true)
+  |> Enum.map(&String.trim/1)
+  |> Enum.reject(&(&1 == ""))
+  |> Enum.uniq()
+
+config :hexpm, :organization_sso,
+  mode: sso_mode,
+  beta_organizations: sso_beta_organizations
+
 if config_env() == :prod do
   mode =
     case System.get_env("HEXPM_MODE") do

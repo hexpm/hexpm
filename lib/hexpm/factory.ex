@@ -125,6 +125,36 @@ defmodule Hexpm.Factory do
     }
   end
 
+  def organization_sso_connection_factory() do
+    %Hexpm.Accounts.SSO.Connection{
+      issuer: "https://identity.example.com/oauth2/default",
+      client_id: "client-id",
+      client_secret: "client-secret",
+      discovery_document: %{},
+      jwks_document: %{"keys" => []},
+      discovery_expires_at: DateTime.add(DateTime.utc_now(), 3_600, :second),
+      jwks_expires_at: DateTime.add(DateTime.utc_now(), 3_600, :second),
+      metadata_expires_at: DateTime.add(DateTime.utc_now(), 3_600, :second)
+    }
+  end
+
+  def organization_sso_identity_factory() do
+    %Hexpm.Accounts.SSO.Identity{
+      issuer: "https://identity.example.com/oauth2/default",
+      subject: "00u123",
+      provider_email: Fake.sequence(:email)
+    }
+  end
+
+  def organization_sso_notification_factory() do
+    %Hexpm.Accounts.SSO.Notification{
+      kind: "identity_linked",
+      organization_name: Fake.sequence(:package),
+      username: Fake.sequence(:username),
+      recipients: %{"emails" => [Fake.sequence(:email)]}
+    }
+  end
+
   def release_factory() do
     %Hexpm.Repository.Release{
       version: "1.0.0",

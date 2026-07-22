@@ -5,6 +5,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.OrgTabNav do
   """
   use Phoenix.Component
 
+  alias Hexpm.Accounts.SSO
+
   attr :organization, :any, required: true
   attr :current_user, :any, required: true
   attr :tab, :atom, required: true
@@ -67,7 +69,14 @@ defmodule HexpmWeb.Dashboard.Organization.Components.OrgTabNav do
     ]
 
     if organization_admin?(org, current_user) do
-      List.insert_at(core_tabs, 5, {:billing, "Billing", "/dashboard/orgs/#{name}/billing"})
+      admin_tabs =
+        if SSO.enabled?(org) do
+          List.insert_at(core_tabs, 5, {:sso, "SSO", "/dashboard/orgs/#{name}/sso"})
+        else
+          core_tabs
+        end
+
+      List.insert_at(admin_tabs, 5, {:billing, "Billing", "/dashboard/orgs/#{name}/billing"})
     else
       core_tabs
     end

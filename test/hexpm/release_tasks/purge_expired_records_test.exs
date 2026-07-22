@@ -375,4 +375,42 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
       assert Repo.get(Hexpm.Accounts.Key, active.id)
     end
   end
+
+  describe "purge organization SSO transactions" do
+    test "deletes expired transactions and retains active transactions" do
+      connection =
+        insert(:organization_sso_connection,
+          organization: insert(:organization)
+        )
+
+      expired =
+        Repo.insert!(%Hexpm.Accounts.SSO.Transaction{
+          connection_id: connection.id,
+          state_hash: :crypto.hash(:sha256, "expired-state"),
+          kind: "login",
+          secret_slot: "active",
+          connection_version: connection.version,
+          secret_version: connection.version,
+          redirect_uri: "https://hex.pm/sso/callback",
+          expires_at: days_ago(1)
+        })
+
+      active =
+        Repo.insert!(%Hexpm.Accounts.SSO.Transaction{
+          connection_id: connection.id,
+          state_hash: :crypto.hash(:sha256, "active-state"),
+          kind: "login",
+          secret_slot: "active",
+          connection_version: connection.version,
+          secret_version: connection.version,
+          redirect_uri: "https://hex.pm/sso/callback",
+          expires_at: DateTime.add(DateTime.utc_now(), 600, :second)
+        })
+
+      PurgeExpiredRecords.run()
+
+      refute Repo.get(Hexpm.Accounts.SSO.Transaction, expired.id)
+      assert Repo.get(Hexpm.Accounts.SSO.Transaction, active.id)
+    end
+  end
 end

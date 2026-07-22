@@ -1,6 +1,7 @@
 defmodule HexpmWeb.AuthController do
   use HexpmWeb, :controller
   plug :check_oauth_config when action in [:request]
+  plug :store_oauth_return when action in [:request]
   plug Ueberauth
 
   alias Hexpm.Accounts.{Auth, Users, UserProviders}
@@ -30,6 +31,13 @@ defmodule HexpmWeb.AuthController do
     conn
   end
 
+  def store_oauth_return(conn, _opts) do
+    case safe_return_path(conn.params["return"]) do
+      nil -> conn
+      return -> put_session(conn, "oauth_return", return)
+    end
+  end
+
   def callback(%{assigns: %{ueberauth_failure: _fails}} = conn, _params) do
     conn
     |> put_flash(:error, "Failed to authenticate with GitHub.")
@@ -44,6 +52,9 @@ defmodule HexpmWeb.AuthController do
       # Check if this is a sudo verification flow
       get_session(conn, "sudo_verification") ->
         handle_sudo_verification(conn, provider, provider_uid)
+
+      get_session(conn, "pending_sso_link") ->
+        handle_sso_link_auth(conn, provider, provider_uid)
 
       logged_in?(conn) ->
         # User is already logged in - try to link this provider
@@ -71,7 +82,11 @@ defmodule HexpmWeb.AuthController do
   end
 
   defp handle_existing_user_login(conn, user) do
-    return = safe_return_path(conn.params["return"])
+    return =
+      safe_return_path(conn.params["return"]) ||
+        safe_return_path(get_session(conn, "oauth_return"))
+
+    conn = delete_session(conn, "oauth_return")
 
     if User.tfa_enabled?(user) do
       conn
@@ -80,8 +95,26 @@ defmodule HexpmWeb.AuthController do
     else
       conn
       |> start_session_internal(user)
+      |> prove_pending_sso_link(user)
       |> HexpmWeb.Plugs.Sudo.set_sudo_authenticated()
-      |> redirect(to: return || ~p"/users/#{user}")
+      |> then(fn conn ->
+        redirect(conn, to: pending_sso_link_return(conn, return) || ~p"/users/#{user}")
+      end)
+    end
+  end
+
+  defp handle_sso_link_auth(conn, provider, provider_uid) do
+    case Auth.provider_auth(provider, provider_uid) do
+      {:ok, %{user: user}} ->
+        handle_existing_user_login(conn, user)
+
+      :error ->
+        conn
+        |> put_flash(
+          :error,
+          "That GitHub account is not connected to a Hexpm account. Log in with your Hexpm credentials or connect GitHub before retrying."
+        )
+        |> redirect(to: ~p"/login?return=/sso/link")
     end
   end
 
