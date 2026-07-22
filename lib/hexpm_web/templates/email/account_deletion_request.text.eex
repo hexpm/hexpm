@@ -1,5 +1,5 @@
 <%
-confirm_url = url(~p"/dashboard/delete-account/confirm?key=#{@key}")
+confirm_url = url(email_uri(), ~p"/dashboard/delete-account/confirm?key=#{@key}")
 %>
 <%= AccountDeletionRequest.title() %>
 

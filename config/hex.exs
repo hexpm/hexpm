@@ -12,6 +12,7 @@ config :hexpm,
   tmp_dir: Path.expand("tmp/hex"),
   private_key: File.read!("test/fixtures/private.pem"),
   user_confirm: false,
+  email_base_url: "http://localhost:4043",
   docs_url: "http://localhost:4043",
   private_docs_url: "http://localhost:4043",
   cdn_url: "http://localhost:4043"

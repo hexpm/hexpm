@@ -1,5 +1,5 @@
 defmodule Hexpm.EmailsTest do
-  use Hexpm.DataCase, async: true
+  use Hexpm.DataCase, async: false
 
   alias Hexpm.Accounts.Organization
   alias Hexpm.Emails
@@ -22,7 +22,7 @@ defmodule Hexpm.EmailsTest do
                |> Enum.filter(&(&1 |> Floki.text() |> String.trim() == "Hex"))
 
       attrs = Map.new(attrs)
-      assert attrs["href"] == HexpmWeb.Endpoint.url() <> "/"
+      assert attrs["href"] == Application.fetch_env!(:hexpm, :email_base_url) <> "/"
       assert attrs["style"] =~ "color: #ffffff"
       assert attrs["style"] =~ "text-decoration: none"
     end
@@ -38,6 +38,19 @@ defmodule Hexpm.EmailsTest do
 
     test "does not include a signature footer" do
       refute package_published_email().html_body =~ "Hex.pm"
+    end
+
+    test "renders without endpoint runtime state" do
+      endpoint_key = {Phoenix.Endpoint, HexpmWeb.Endpoint}
+      endpoint_state = :persistent_term.get(endpoint_key)
+      :persistent_term.erase(endpoint_key)
+
+      on_exit(fn -> :persistent_term.put(endpoint_key, endpoint_state) end)
+
+      email = Emails.password_reset_request(build(:user), %{key: "abc"})
+
+      assert email.html_body =~ "http://localhost:5000/images/hex-full.png"
+      assert email.html_body =~ "http://localhost:5000/password/new"
     end
   end
 

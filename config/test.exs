@@ -8,6 +8,7 @@ config :hexpm,
   preview_bucket: {Hexpm.Store.Memory, "preview_bucket"},
   diff_bucket: {Hexpm.Store.Memory, "diff_bucket"},
   diff_cache_version: 1,
+  email_base_url: "http://localhost:5000",
   secret: "796f75666f756e64746865686578",
   jwt_signing_key: """
   -----BEGIN EC PRIVATE KEY-----
