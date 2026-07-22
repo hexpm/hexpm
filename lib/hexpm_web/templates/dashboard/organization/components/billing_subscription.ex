@@ -18,6 +18,9 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
   attr :current_user, :map, required: true
   attr :organization, :map, required: true
   attr :plan_id, :string, default: nil
+  attr :plan_unit_amount, :integer, default: nil
+  attr :pending_plan_unit_amount, :integer, default: nil
+  attr :plan_price_change_at, :any, default: nil
   attr :quantity, :integer, default: nil
   attr :member_count, :integer, default: 0
   attr :subscription, :map, default: nil
@@ -61,13 +64,23 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
 
       <div class="px-6 py-5">
         <%= if @subscription do %>
+          <%= if @pending_plan_unit_amount && @plan_price_change_at do %>
+            <div class="mb-5 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-100">
+              Your price will change to {BillingHelpers.plan_price(
+                @plan_id,
+                @pending_plan_unit_amount
+              )} per user / {BillingHelpers.plan_interval(@plan_id)} on {BillingHelpers.payment_date(
+                @plan_price_change_at
+              )}.
+            </div>
+          <% end %>
           <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <dt class="text-xs font-medium text-grey-500 dark:text-grey-300 uppercase tracking-wider mb-1">
                 Plan
               </dt>
               <dd class="text-sm text-grey-900 dark:text-white">
-                <p>{BillingHelpers.plan(@plan_id)}</p>
+                <p>{BillingHelpers.plan(@plan_id, @plan_unit_amount)}</p>
                 <div class="mt-2">
                   <.button
                     type="button"
@@ -110,7 +123,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
                 {if @plan_id == "organization-annually", do: "Annual cost", else: "Monthly cost"}
               </dt>
               <dd class="text-sm text-grey-900 dark:text-white">
-                {BillingHelpers.plan_price(@plan_id)} x {@safe_quantity} user(s)
+                {BillingHelpers.plan_price(@plan_id, @plan_unit_amount)} x {@safe_quantity} user(s)
                 <%= if @tax_rate && @tax_rate != 0 do %>
                   x {@tax_rate}% VAT
                 <% end %>
@@ -211,6 +224,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
             current_user={@current_user}
             organization={@organization}
             plan_id={@plan_id}
+            plan_unit_amount={@plan_unit_amount}
             quantity={@safe_quantity}
             member_count={@member_count}
             proration_amount={@proration_amount}
@@ -223,6 +237,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
             quantity={@safe_quantity}
             member_count={@member_count}
             plan_id={@plan_id}
+            plan_unit_amount={@plan_unit_amount}
           />
           <.change_plan_modal
             current_user={@current_user}
@@ -363,7 +378,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
           </p>
           <p class="text-sm text-grey-600 dark:text-grey-300 mb-6">
             Subscription cost is
-            <strong class="text-grey-900 dark:text-white">$7.00 per user / month</strong>
+            <strong class="text-grey-900 dark:text-white">$9.00 per user / month</strong>
             + local VAT when applicable.
           </p>
           <script nonce={@script_src_nonce}>
@@ -463,6 +478,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
   attr :current_user, :map, required: true
   attr :organization, :map, required: true
   attr :plan_id, :string, default: nil
+  attr :plan_unit_amount, :integer, default: nil
   attr :quantity, :integer, default: 0
   attr :member_count, :integer, default: 0
   attr :proration_amount, :integer, default: 0
@@ -502,7 +518,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
               class="w-24 h-10 px-3 border border-grey-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-600"
             />
             <span class="text-sm text-grey-600 dark:text-grey-300">
-              seat(s) @ {BillingHelpers.plan_price(@plan_id)}
+              seat(s) @ {BillingHelpers.plan_price(@plan_id, @plan_unit_amount)}
             </span>
           </div>
         </div>
@@ -535,6 +551,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
   attr :quantity, :integer, default: 0
   attr :member_count, :integer, default: 0
   attr :plan_id, :string, default: nil
+  attr :plan_unit_amount, :integer, default: nil
 
   defp remove_seats_modal(assigns) do
     ~H"""
@@ -568,7 +585,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
                 <% end %>
               </select>
               <span class="text-sm text-grey-600 dark:text-grey-300">
-                seat(s) @ {BillingHelpers.plan_price(@plan_id)}
+                seat(s) @ {BillingHelpers.plan_price(@plan_id, @plan_unit_amount)}
               </span>
             </div>
           </div>

@@ -543,6 +543,131 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert response(conn, 200) =~ "Billing"
     end
 
+    test "shows the effective legacy price and upcoming price change", %{
+      user: user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      stub(Hexpm.Billing.Mock, :get, fn token, _opts ->
+        assert organization.name == token
+
+        %{
+          "checkout_html" => "",
+          "invoices" => [],
+          "subscription" => %{
+            "status" => "active",
+            "current_period_end" => "2026-09-30T00:00:00Z",
+            "cancel_at_period_end" => false
+          },
+          "plan_id" => "organization-monthly",
+          "plan_unit_amount" => 700,
+          "pending_plan_unit_amount" => 900,
+          "plan_price_change_at" => "2026-09-30T00:00:00Z",
+          "amount_with_tax" => 1_400,
+          "quantity" => 2,
+          "max_period_quantity" => 2,
+          "proration_amount" => 0,
+          "proration_days" => 0,
+          "tax_rate" => 0
+        }
+      end)
+
+      body =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/billing")
+        |> response(200)
+
+      text =
+        body |> Floki.parse_document!() |> Floki.text(sep: " ") |> String.replace(~r/\s+/, " ")
+
+      assert text =~ "Organization, monthly billed ($7.00 per user / month)"
+      assert text =~ "$7.00 x 2 user(s)"
+      assert text =~ "Your price will change to $9.00 per user / month on September 30, 2026."
+      assert text =~ "Switch to the annual plan and save with $90.00 per user / year"
+    end
+
+    test "uses the legacy rate when an older billing instance omits the additive amount field", %{
+      user: user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      stub(Hexpm.Billing.Mock, :get, fn _token, _opts ->
+        %{
+          "checkout_html" => "",
+          "invoices" => [],
+          "subscription" => %{
+            "status" => "active",
+            "current_period_end" => "2026-09-30T00:00:00Z",
+            "cancel_at_period_end" => false
+          },
+          "plan_id" => "organization-monthly",
+          "amount_with_tax" => 1_400,
+          "quantity" => 2,
+          "max_period_quantity" => 2,
+          "proration_amount" => 0,
+          "proration_days" => 0,
+          "tax_rate" => 0
+        }
+      end)
+
+      text =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/billing")
+        |> response(200)
+        |> Floki.parse_document!()
+        |> Floki.text(sep: " ")
+        |> String.replace(~r/\s+/, " ")
+
+      assert text =~ "Organization, monthly billed ($7.00 per user / month)"
+      assert text =~ "$7.00 x 2 user(s)"
+    end
+
+    test "shows an annual effective rate and annual upcoming-price notice", %{
+      user: user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      stub(Hexpm.Billing.Mock, :get, fn _token, _opts ->
+        %{
+          "checkout_html" => "",
+          "invoices" => [],
+          "subscription" => %{
+            "status" => "active",
+            "current_period_end" => "2027-01-15T00:00:00Z",
+            "cancel_at_period_end" => false
+          },
+          "plan_id" => "organization-annually",
+          "plan_unit_amount" => 7_000,
+          "pending_plan_unit_amount" => 9_000,
+          "plan_price_change_at" => "2027-01-15T00:00:00Z",
+          "amount_with_tax" => 14_000,
+          "quantity" => 2,
+          "max_period_quantity" => 2,
+          "proration_amount" => 0,
+          "proration_days" => 0,
+          "tax_rate" => 0
+        }
+      end)
+
+      text =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/billing")
+        |> response(200)
+        |> Floki.parse_document!()
+        |> Floki.text(sep: " ")
+        |> String.replace(~r/\s+/, " ")
+
+      assert text =~ "Organization, annually billed ($70.00 per user / year)"
+      assert text =~ "$70.00 x 2 user(s)"
+      assert text =~ "Your price will change to $90.00 per user / year on January 15, 2027."
+    end
+
     test "returns 400 for non-admin member", %{user: user, organization: organization} do
       mock_customer(organization)
       insert(:organization_user, organization: organization, user: user, role: "read")

@@ -39,9 +39,15 @@ defmodule Hexpm.AdminTasks do
       # Remove a package
       iex> AdminTasks.remove_package("hexpm", "malicious_pkg")
       :ok
+
+      # Send an email
+      iex> AdminTasks.send_email(["bob@example.com"], "Hex.pm - Subject", "Body")
+      {:ok, 1}
   """
 
   use Hexpm.Context
+
+  require Logger
 
   defp find_user(username_or_email) do
     case Users.get(username_or_email, [:emails]) do
@@ -694,5 +700,46 @@ defmodule Hexpm.AdminTasks do
       end
 
     Oban.retry_all_jobs(query)
+  end
+
+  @doc """
+  Sends an email with an arbitrary subject and body.
+
+  Every recipient gets a separate email so addresses are not disclosed between
+  recipients. Duplicate addresses are only sent to once. Failed deliveries are
+  logged and do not stop the remaining sends, the returned count is the number
+  of emails delivered.
+
+  ## Arguments
+
+  - `recipients` - Email addresses to send to
+  - `subject` - Subject line, a leading `"Hex.pm - "` is dropped from the heading
+  - `body` - Plain text body, blank lines separate paragraphs
+
+  ## Examples
+
+      iex> AdminTasks.send_email(["bob@example.com"], "Hex.pm - Service update", "We are ...")
+      {:ok, 1}
+  """
+  @spec send_email([String.t()], String.t(), String.t()) :: {:ok, non_neg_integer()}
+  def send_email(recipients, subject, body) do
+    sent =
+      recipients
+      |> List.wrap()
+      |> Enum.uniq()
+      |> Enum.count(&deliver_email(&1, subject, body))
+
+    {:ok, sent}
+  end
+
+  defp deliver_email(recipient, subject, body) do
+    case Mailer.deliver(Emails.announcement(recipient, subject, body)) do
+      {:ok, _} ->
+        true
+
+      {:error, reason} ->
+        Logger.error("Could not send email to #{recipient}: #{inspect(reason)}")
+        false
+    end
   end
 end

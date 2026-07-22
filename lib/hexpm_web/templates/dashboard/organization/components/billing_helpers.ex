@@ -2,13 +2,29 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingHelpers do
   import Phoenix.HTML, only: [raw: 1]
   import HexpmWeb.ViewHelpers, only: [pretty_date: 1]
 
-  def plan("organization-monthly"), do: "Organization, monthly billed ($7.00 per user / month)"
-  def plan("organization-annually"), do: "Organization, annually billed ($70.00 per user / year)"
-  def plan(_), do: "Organization, monthly billed ($7.00 per user / month)"
+  def plan(plan_id, unit_amount \\ nil)
 
-  def plan_price("organization-monthly"), do: "$7.00"
-  def plan_price("organization-annually"), do: "$70.00"
-  def plan_price(_), do: "$7.00"
+  def plan("organization-monthly", unit_amount),
+    do:
+      "Organization, monthly billed (#{plan_price("organization-monthly", unit_amount)} per user / month)"
+
+  def plan("organization-annually", unit_amount),
+    do:
+      "Organization, annually billed (#{plan_price("organization-annually", unit_amount)} per user / year)"
+
+  def plan(_, unit_amount), do: plan("organization-monthly", unit_amount)
+
+  def plan_price(plan_id, unit_amount \\ nil)
+
+  def plan_price(_plan_id, unit_amount) when is_integer(unit_amount),
+    do: dollar_money(unit_amount)
+
+  def plan_price("organization-monthly", nil), do: "$9.00"
+  def plan_price("organization-annually", nil), do: "$90.00"
+  def plan_price(_, nil), do: "$9.00"
+
+  def plan_interval("organization-annually"), do: "year"
+  def plan_interval(_), do: "month"
 
   def payment_date(nil), do: ""
 

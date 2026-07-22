@@ -68,7 +68,7 @@ defmodule HexpmWeb.PageControllerTest do
     assert package2.latest_release.version == "0.0.2"
 
     html = response(conn, 200)
-    assert html =~ "$7 / user / month"
+    assert html =~ "$9 / user / month"
     assert html =~ "Free organizations can publish public policies for public Hex packages"
 
     assert html =~
@@ -90,12 +90,12 @@ defmodule HexpmWeb.PageControllerTest do
 
     assert prices(document, ".monthly-active") == [
              "$0 / user / month",
-             "$7 / user / month"
+             "$9 / user / month"
            ]
 
     assert prices(document, ".price-display.hidden") == [
              "$0 / user / year",
-             "$70 / user / year"
+             "$90 / user / year"
            ]
 
     assert html =~ "Private Dependency Policies"

@@ -75,6 +75,18 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
+  defmodule Announcement do
+    def title("Hex.pm - " <> title), do: title
+    def title(subject), do: subject
+
+    def paragraphs(body) do
+      body
+      |> String.split(~r/\n\s*\n/, trim: true)
+      |> Enum.map(&String.trim/1)
+      |> Enum.reject(&(&1 == ""))
+    end
+  end
+
   defmodule BuildTools do
     def mix_hex_user_auth(), do: "mix hex.user auth"
     def rebar3_hex_user_auth(), do: "rebar3 hex user auth"

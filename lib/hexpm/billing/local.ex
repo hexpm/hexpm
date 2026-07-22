@@ -12,7 +12,7 @@ defmodule Hexpm.Billing.Local do
     # used in dev (see config/config.exs). Production uses Billing.Hexpm.
     # Note: create/1 and update/2 are no-ops, so form submissions don't persist locally.
     now = DateTime.utc_now()
-    period_end = now |> DateTime.add(30, :day) |> DateTime.to_unix()
+    period_end = now |> DateTime.add(60, :day) |> DateTime.to_unix()
     last_month = now |> DateTime.add(-30, :day) |> DateTime.to_unix()
 
     %{
@@ -20,6 +20,9 @@ defmodule Hexpm.Billing.Local do
       "monthly_cost" => 700,
       "email" => "billing@example.com",
       "plan_id" => "organization-monthly",
+      "plan_unit_amount" => 700,
+      "pending_plan_unit_amount" => 900,
+      "plan_price_change_at" => period_end,
       "quantity" => 1,
       "subscription" => %{
         "status" => "active",
