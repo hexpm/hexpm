@@ -5,7 +5,7 @@ defmodule Hexpm.Accounts.SSO.Features do
     case config()[:mode] do
       :off -> false
       :beta -> name in config()[:beta_organizations]
-      :enabled -> Organization.billing_active?(organization)
+      :enabled -> config()[:all_organizations] || Organization.billing_active?(organization)
     end
   end
 

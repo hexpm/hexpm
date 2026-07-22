@@ -61,6 +61,22 @@ defmodule Hexpm.Accounts.SSOTest do
                  trial_end: ~U[2020-01-01 00:00:00Z]
              })
     end
+
+    test "enabled mode can be available to all organizations", %{organization: organization} do
+      config = Application.fetch_env!(:hexpm, :organization_sso)
+
+      Application.put_env(
+        :hexpm,
+        :organization_sso,
+        Keyword.merge(config, mode: :enabled, all_organizations: true)
+      )
+
+      assert Features.enabled?(%{
+               organization
+               | billing_active: false,
+                 trial_end: ~U[2020-01-01 00:00:00Z]
+             })
+    end
   end
 
   describe "connection lifecycle" do

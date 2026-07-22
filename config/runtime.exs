@@ -1,7 +1,9 @@
 import Config
 
+default_sso_mode = if config_env() == :dev, do: "enabled", else: "off"
+
 sso_mode =
-  case System.get_env("HEXPM_SSO_MODE", "off") do
+  case System.get_env("HEXPM_SSO_MODE", default_sso_mode) do
     "off" -> :off
     "beta" -> :beta
     "enabled" -> :enabled
