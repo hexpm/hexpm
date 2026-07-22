@@ -32,13 +32,18 @@ if config_env() == :prod do
     dsn: System.fetch_env!("HEXPM_SENTRY_DSN"),
     environment_name: System.fetch_env!("HEXPM_ENV")
 
+  config :hexpm,
+    email_base_url: "https://#{System.fetch_env!("HEXPM_HOST")}",
+    email_host: System.fetch_env!("HEXPM_EMAIL_HOST")
+
+  config :hexpm, Hexpm.Emails.Mailer, api_key: System.fetch_env!("HEXPM_SENDGRID_API_KEY")
+
   if mode == :web do
     config :hexpm, Oban, queues: false, plugins: false, peer: false
 
     config :hexpm,
       host: System.fetch_env!("HEXPM_HOST"),
       secret: System.fetch_env!("HEXPM_SECRET"),
-      email_host: System.fetch_env!("HEXPM_EMAIL_HOST"),
       levenshtein_threshold: System.fetch_env!("HEXPM_LEVENSHTEIN_THRESHOLD"),
       dashboard_user: System.fetch_env!("HEXPM_DASHBOARD_USER"),
       dashboard_password: System.fetch_env!("HEXPM_DASHBOARD_PASSWORD"),
@@ -47,8 +52,6 @@ if config_env() == :prod do
       img_proxy_secret: System.fetch_env!("HEXPM_IMG_PROXY_SECRET"),
       readme_host: System.fetch_env!("HEXPM_README_HOST"),
       readme_url: System.fetch_env!("HEXPM_README_URL")
-
-    config :hexpm, Hexpm.Emails.Mailer, api_key: System.fetch_env!("HEXPM_SENDGRID_API_KEY")
 
     config :hexpm, :hcaptcha,
       sitekey: System.fetch_env!("HEXPM_HCAPTCHA_SITEKEY"),

@@ -1,6 +1,15 @@
 defmodule HexpmWeb.EmailView do
   use HexpmWeb, :view
 
+  def email_uri() do
+    Application.fetch_env!(:hexpm, :email_base_url)
+    |> URI.new!()
+  end
+
+  def email_url(path) do
+    Phoenix.VerifiedRoutes.unverified_url(email_uri(), path)
+  end
+
   defmodule Common do
     import Phoenix.HTML, only: [safe_to_string: 1]
 

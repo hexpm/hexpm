@@ -1,6 +1,6 @@
 <%
-org_url = url(~p"/dashboard/orgs/#{@organization}")
-docs_url = url(~p"/docs/private")
+org_url = url(email_uri(), ~p"/dashboard/orgs/#{@organization}")
+docs_url = url(email_uri(), ~p"/docs/private")
 %>
 
 <h1 style="color: #030913; font-size: 24px; line-height: 32px; font-weight: 600; margin: 0 0 24px 0; text-align: center;">
