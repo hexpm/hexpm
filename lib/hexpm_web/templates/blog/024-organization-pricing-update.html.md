@@ -10,9 +10,10 @@ Private packages first entered beta in 2017, and when organizations went live th
 following year the price was $7 per user / month. Since then, we have added private
 HexDocs, organization-owned keys for CI, annual billing, management of public packages,
 organization audit logs, and signed dependency policies. We are also about to ship
-file previews and package diffs for private packages. Throughout this time, we have
-continued to develop Hex and operate the package infrastructure used by the Erlang,
-Elixir, and Gleam communities.
+file previews and package diffs for private packages, and we are actively working on
+single sign-on for organizations. Throughout this time, we have continued to develop
+Hex and operate the package infrastructure used by the Erlang, Elixir, and Gleam
+communities.
 
 ### What is changing
 
