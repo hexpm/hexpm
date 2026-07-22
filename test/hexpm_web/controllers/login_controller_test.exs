@@ -12,6 +12,23 @@ defmodule HexpmWeb.LoginControllerTest do
     assert response(conn, 200) =~ "Log in"
   end
 
+  test "show redirects a signed-in user without a pending SSO link", c do
+    conn = build_conn() |> test_login(c.user) |> get("/login")
+
+    assert redirected_to(conn) == "/users/#{c.user.username}"
+  end
+
+  test "show requires fresh proof when a signed-in user has a pending SSO link", c do
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> put_session("pending_sso_link", %{"transaction_id" => 123, "token" => "link-token"})
+      |> get("/login", %{return: "/sso/link"})
+
+    assert response(conn, 200) =~ "Log in"
+    assert response(conn, 200) =~ ~s(value="/sso/link")
+  end
+
   test "log in with correct password", c do
     conn = post(build_conn(), "/login", %{username: c.user.username, password: "password"})
     assert redirected_to(conn) == "/users/#{c.user.username}"
