@@ -651,17 +651,29 @@ defmodule Hexpm.Accounts.SSO do
     from(failure in Failure,
       where: failure.connection_id == ^connection.id,
       order_by: [desc: failure.inserted_at],
-      limit: @diagnostic_limit
+      limit: @diagnostic_limit,
+      preload: [:user]
     )
     |> Repo.all()
   end
 
   def record_failure(%Connection{} = connection, %Error{} = error) do
+    do_record_failure(connection, error, nil)
+  end
+
+  def record_failure(%Connection{} = connection, stage, code, user \\ nil) do
+    do_record_failure(connection, %Error{stage: stage, code: stable_failure_code(code)}, user)
+  end
+
+  defp do_record_failure(%Connection{} = connection, %Error{} = error, user) do
+    code = stable_failure_code(error.code)
+
     attrs = %{
       connection_id: connection.id,
       stage: to_string(stable_failure_code(error.stage)),
-      code: to_string(stable_failure_code(error.code)),
-      details: redact_details(error.details)
+      code: to_string(code),
+      details: redact_details(error.details),
+      user_id: failure_user_id(code, user)
     }
 
     with {:ok, failure} <- Repo.insert(Failure.changeset(%Failure{}, attrs)) do
@@ -670,9 +682,11 @@ defmodule Hexpm.Accounts.SSO do
     end
   end
 
-  def record_failure(%Connection{} = connection, stage, code) do
-    record_failure(connection, %Error{stage: stage, code: stable_failure_code(code)})
-  end
+  # Only post-proof codes attach the failing user (known there and admin-actionable); others stay redacted.
+  defp failure_user_id(code, user) when code in [:not_member, :identity_conflict],
+    do: user && user.id
+
+  defp failure_user_id(_code, _user), do: nil
 
   def failure_message(%Failure{code: code}), do: failure_message(code)
 
@@ -753,7 +767,7 @@ defmodule Hexpm.Accounts.SSO do
           {:login, identity.user, notify_email_mismatch?, claims.email, transaction.return_path}
         else
           Repo.delete_all(from(candidate in Identity, where: candidate.id == ^identity.id))
-          record_failure(connection, :login, :not_member)
+          record_failure(connection, :login, :not_member, identity.user)
           consume_transaction!(transaction, %{})
           {:reject, :not_member}
         end

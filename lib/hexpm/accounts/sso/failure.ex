@@ -9,13 +9,14 @@ defmodule Hexpm.Accounts.SSO.Failure do
     field :details, :map, default: %{}
 
     belongs_to :connection, Hexpm.Accounts.SSO.Connection
+    belongs_to :user, User
 
     timestamps(updated_at: false)
   end
 
   def changeset(failure, attrs) do
     failure
-    |> cast(attrs, [:connection_id, :stage, :code, :details])
+    |> cast(attrs, [:connection_id, :stage, :code, :details, :user_id])
     |> validate_required([:connection_id, :stage, :code, :details])
   end
 end

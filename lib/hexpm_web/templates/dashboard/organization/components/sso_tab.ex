@@ -178,6 +178,9 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
                 "%Y-%m-%d %H:%M UTC"
               )}
             </div>
+            <div :if={failure.user} class="mt-1 text-grey-700 dark:text-grey-200">
+              {failure.user.username}
+            </div>
           </li>
         </ul>
       </section>

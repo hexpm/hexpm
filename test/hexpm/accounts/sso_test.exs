@@ -1181,6 +1181,39 @@ defmodule Hexpm.Accounts.SSOTest do
     end
   end
 
+  describe "failure diagnostics" do
+    test "records the failing user only for post-proof codes", context do
+      connection = configured_and_tested_connection(context)
+      member = insert(:user)
+
+      assert {:ok, not_member} = SSO.record_failure(connection, :link, :not_member, member)
+      assert not_member.user_id == member.id
+
+      assert {:ok, conflict} =
+               SSO.record_failure(
+                 connection,
+                 :link,
+                 {:identity_conflict, %Ecto.Changeset{}},
+                 member
+               )
+
+      assert conflict.user_id == member.id
+
+      assert {:ok, redacted} = SSO.record_failure(connection, :callback, :issuer_mismatch, member)
+      assert is_nil(redacted.user_id)
+    end
+
+    test "exposes the linked user on user-bearing failures", context do
+      connection = configured_and_tested_connection(context)
+      member = insert(:user)
+
+      assert {:ok, _failure} = SSO.record_failure(connection, :link, :not_member, member)
+
+      assert [%{code: "not_member", user: %{username: username}}] = SSO.failures(connection)
+      assert username == member.username
+    end
+  end
+
   defp configure_connection(context) do
     SSO.configure(
       context.organization,

@@ -143,7 +143,7 @@ defmodule HexpmWeb.SSOController do
             )
 
           {:error, reason} ->
-            SSO.record_failure(transaction.connection, :link, reason)
+            SSO.record_failure(transaction.connection, :link, reason, user)
 
             conn
             |> delete_session("pending_sso_link")
