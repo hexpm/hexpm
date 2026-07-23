@@ -381,21 +381,6 @@ defmodule HexpmWeb.PackageLive.Index do
   end
 
   @impl true
-  def handle_event("search_change", %{"search" => search}, socket) do
-    search = nil_if_empty(search)
-
-    if search == socket.assigns.search do
-      {:noreply, socket}
-    else
-      url_params =
-        %{sort: socket.assigns.sort, search: search}
-        |> Enum.reject(fn {_k, v} -> is_nil(v) end)
-
-      {:noreply, push_patch(socket, to: ~p"/packages?#{url_params}")}
-    end
-  end
-
-  @impl true
   def handle_event("search_submit", %{"search" => search}, socket) do
     search = nil_if_empty(search)
 
