@@ -149,6 +149,14 @@ defmodule HexpmWeb.Plugs.Sudo do
     )
   end
 
+  def clear_sudo_authentication(conn) do
+    Enum.reduce(
+      ~w(sudo_authenticated_at sudo_force sudo_verification sudo_return_to),
+      conn,
+      &delete_session(&2, &1)
+    )
+  end
+
   @doc """
   Generates a signed sudo form token for the given method and action.
 

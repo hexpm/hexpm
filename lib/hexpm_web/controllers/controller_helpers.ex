@@ -4,7 +4,7 @@ defmodule HexpmWeb.ControllerHelpers do
   import Plug.Conn
   import Phoenix.Controller
 
-  alias Hexpm.Accounts.{Auth, Organizations}
+  alias Hexpm.Accounts.{Auth, Organizations, SSO}
   alias Hexpm.UserSessions
   alias Hexpm.Repository.{Packages, Releases, Repositories}
 
@@ -378,6 +378,100 @@ defmodule HexpmWeb.ControllerHelpers do
     |> put_session("session_token", Base.encode64(session_token))
   end
 
+  def prove_pending_sso_link(conn, user) do
+    case {SSO.available?(), get_session(conn, "pending_sso_link")} do
+      {false, %{"transaction_id" => transaction_id, "token" => token}} ->
+        SSO.cancel_link(transaction_id, token)
+
+        conn
+        |> delete_session("pending_sso_link")
+        |> delete_session("oauth_return")
+
+      {false, _pending_link} ->
+        conn
+
+      {true, %{"transaction_id" => transaction_id, "token" => token}} ->
+        transaction = SSO.get_pending_link(transaction_id, token)
+
+        case SSO.prove_link(transaction_id, token, user) do
+          {:ok, _transaction} ->
+            assign(conn, :pending_sso_link_proof, :ok)
+
+          {:error, reason} ->
+            if transaction do
+              SSO.record_failure(transaction.connection, :link, reason, user)
+            end
+
+            SSO.cancel_link(transaction_id, token)
+
+            conn
+            |> delete_session("pending_sso_link")
+            |> assign(:pending_sso_link_proof, :error)
+            |> put_flash(
+              :error,
+              sso_link_error_message(reason)
+            )
+        end
+
+      {true, _pending_link} ->
+        conn
+    end
+  end
+
+  def pending_sso_link?(conn) do
+    SSO.available?() and
+      match?(
+        %{"transaction_id" => transaction_id, "token" => token}
+        when is_integer(transaction_id) and is_binary(token),
+        get_session(conn, "pending_sso_link")
+      )
+  end
+
+  def sso_link_error_message(:not_member),
+    do:
+      "This Hexpm account is not a member of the organization. Ask an administrator to add it before retrying SSO."
+
+  def sso_link_error_message({:identity_conflict, _changeset}),
+    do: "That SSO identity or Hexpm account is already linked."
+
+  def sso_link_error_message(_reason),
+    do:
+      "The SSO account-link request is no longer valid. You are signed in, but no SSO identity was connected."
+
+  def pending_sso_link_return(conn, "/sso/link") do
+    if conn.assigns[:pending_sso_link_proof] == :ok, do: "/sso/link"
+  end
+
+  def pending_sso_link_return(_conn, return), do: return
+
+  def remember_sso_state(conn, state) when is_binary(state) do
+    states =
+      [state | List.wrap(get_session(conn, "sso_states"))]
+      |> Enum.uniq()
+      |> Enum.take(5)
+
+    put_session(conn, "sso_states", states)
+  end
+
+  def valid_sso_state?(conn, state) when is_binary(state) do
+    Enum.any?(List.wrap(get_session(conn, "sso_states")), &secure_compare(&1, state))
+  end
+
+  def valid_sso_state?(_conn, _state), do: false
+
+  def forget_sso_state(conn, state) do
+    states =
+      conn
+      |> get_session("sso_states")
+      |> List.wrap()
+      |> Enum.reject(&secure_compare(&1, state))
+
+    case states do
+      [] -> delete_session(conn, "sso_states")
+      states -> put_session(conn, "sso_states", states)
+    end
+  end
+
   def start_tfa_session(conn, user, return) do
     {:ok, _user_session, session_token} =
       UserSessions.create_browser_session(user,
@@ -394,6 +488,12 @@ defmodule HexpmWeb.ControllerHelpers do
       "session_token" => Base.encode64(session_token)
     })
   end
+
+  defp secure_compare(left, right)
+       when is_binary(left) and is_binary(right) and byte_size(left) == byte_size(right),
+       do: Plug.Crypto.secure_compare(left, right)
+
+  defp secure_compare(_left, _right), do: false
 
   defp detect_browser(conn) do
     user_agent = get_req_header(conn, "user-agent") |> List.first()

@@ -71,6 +71,7 @@ defmodule Hexpm.MixProject do
       {:mox, "~> 1.0", only: :test},
       {:nimble_ownership, "~> 1.0"},
       {:oban, "~> 2.23"},
+      {:oidcc, "~> 3.7"},
       {:stream_data, "~> 1.0", only: :test},
       {:phoenix_ecto, "~> 4.0"},
       {:phoenix_html, "~> 4.0"},

@@ -55,7 +55,10 @@ defmodule HexpmWeb.Endpoint do
     pass: ["*/*"],
     json_decoder: JSON
 
-  plug Sentry.PlugContext
+  plug Sentry.PlugContext,
+    body_scrubber: {HexpmWeb.SentryScrubber, :scrub_body},
+    url_scrubber: {HexpmWeb.SentryScrubber, :scrub_url}
+
   plug Plug.MethodOverride
   plug Plug.Head
   plug HexpmWeb.Plugs.Vary, ["accept-encoding"]

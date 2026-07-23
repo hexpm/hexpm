@@ -87,6 +87,15 @@
                 subscription={@subscription}
                 tax_rate={@tax_rate}
               />
+            <% :sso -> %>
+              <.sso_tab
+                callback_url={@sso_callback_url}
+                connection={@sso_connection}
+                failures={@sso_failures}
+                identities={@sso_identities}
+                login_url={@sso_login_url}
+                organization={@organization}
+              />
             <% :danger_zone -> %>
               <.danger_zone_tab current_user={@current_user} organization={@organization} />
             <% :policies -> %>

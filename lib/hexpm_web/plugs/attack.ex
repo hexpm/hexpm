@@ -10,6 +10,7 @@ defmodule HexpmWeb.Plugs.Attack do
   @storage {PlugAttack.Storage.Ets, HexpmWeb.Plugs.Attack.Storage}
   @diff_limit 20
   @diff_period 60_000
+  @sso_period 10 * 60_000
 
   rule "allow local", conn do
     allow(conn.remote_ip == {127, 0, 0, 1})
@@ -188,6 +189,46 @@ defmodule HexpmWeb.Plugs.Attack do
       storage: @storage,
       limit: 10,
       period: 15 * 60_000
+    )
+  end
+
+  def sso_start_ip_throttle(ip, opts \\ []) do
+    time = opts[:time] || System.system_time(:millisecond)
+    unless opts[:time], do: RateLimitPubSub.broadcast({:sso_start_ip, ip}, time)
+
+    timed_throttle(
+      {:sso_start_ip, ip},
+      time: time,
+      storage: @storage,
+      limit: 30,
+      period: @sso_period
+    )
+  end
+
+  def sso_start_organization_throttle(organization_id, ip, opts \\ []) do
+    time = opts[:time] || System.system_time(:millisecond)
+    key = {:sso_start_organization, organization_id, ip}
+    unless opts[:time], do: RateLimitPubSub.broadcast(key, time)
+
+    timed_throttle(
+      key,
+      time: time,
+      storage: @storage,
+      limit: 20,
+      period: @sso_period
+    )
+  end
+
+  def sso_callback_ip_throttle(ip, opts \\ []) do
+    time = opts[:time] || System.system_time(:millisecond)
+    unless opts[:time], do: RateLimitPubSub.broadcast({:sso_callback_ip, ip}, time)
+
+    timed_throttle(
+      {:sso_callback_ip, ip},
+      time: time,
+      storage: @storage,
+      limit: 50,
+      period: @sso_period
     )
   end
 

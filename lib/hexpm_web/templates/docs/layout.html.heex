@@ -183,6 +183,22 @@
           <div>
             <h3 class="text-sm font-semibold text-grey-900 dark:text-grey-100 mb-2">Hex</h3>
             <ul class="space-y-1">
+              <li :if={Hexpm.Accounts.SSO.available?()}>
+                <a
+                  href={~p"/docs/organization-sso"}
+                  class={[
+                    "block px-3 py-1.5 text-sm rounded transition-colors",
+                    if(@view_name == :organization_sso,
+                      do:
+                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
+                      else:
+                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-700"
+                    )
+                  ]}
+                >
+                  Organization SSO
+                </a>
+              </li>
               <li>
                 <a
                   href={~p"/docs/faq"}

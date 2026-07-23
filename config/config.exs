@@ -40,6 +40,12 @@ config :hexpm,
 
 config :hexpm, :features, package_reports: true
 
+config :hexpm, :organization_sso,
+  mode: :off,
+  beta_organizations: [],
+  all_organizations: false,
+  oidc_impl: Hexpm.Accounts.SSO.OIDC.Oidcc
+
 config :hexpm, ecto_repos: [Hexpm.RepoBase]
 
 config :hexpm, Oban,
