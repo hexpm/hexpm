@@ -631,6 +631,36 @@ defmodule Hexpm.Accounts.SSOTest do
       end
     end
 
+    test "the same issuer and subject cannot map to a second account on one connection",
+         context do
+      connection = configured_and_tested_connection(context)
+
+      insert(:organization_sso_identity,
+        connection: connection,
+        organization: context.organization,
+        user: context.admin,
+        issuer: connection.issuer,
+        subject: "shared-subject"
+      )
+
+      member = insert(:user)
+      insert(:organization_user, organization: context.organization, user: member, role: "read")
+
+      changeset =
+        Identity.changeset(%Identity{}, %{
+          connection_id: connection.id,
+          organization_id: context.organization.id,
+          user_id: member.id,
+          issuer: connection.issuer,
+          subject: "shared-subject"
+        })
+
+      assert {:error, changeset} = Repo.insert(changeset)
+      assert {"has already been taken", metadata} = changeset.errors[:connection_id]
+      assert metadata[:constraint_name] == "organization_sso_identities_external_identity_index"
+      assert Repo.aggregate(Identity, :count) == 1
+    end
+
     test "the same issuer and subject remain isolated across organization connections", context do
       connection = configured_and_tested_connection(context)
 
