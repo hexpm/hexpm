@@ -5,8 +5,19 @@ defmodule HexpmWeb.SSOController do
   alias Hexpm.Accounts.SSO.Error
   alias HexpmWeb.Plugs.Attack
 
+  plug :require_sso_available
   plug :requires_login when action in [:link, :confirm_link, :cancel_link]
   plug :rate_limit_callback when action in [:callback]
+
+  defp require_sso_available(conn, _opts) do
+    if SSO.available?() do
+      conn
+    else
+      conn
+      |> not_found()
+      |> halt()
+    end
+  end
 
   def start(conn, %{"organization" => name} = params) do
     organization = Organizations.get(name)

@@ -7,7 +7,7 @@ defmodule HexpmWeb.LoginController do
   plug :nillify_params, ["return"]
 
   def show(conn, _params) do
-    if logged_in?(conn) and is_nil(get_session(conn, "pending_sso_link")) do
+    if logged_in?(conn) and not pending_sso_link?(conn) do
       redirect_return(conn, conn.assigns.current_user, safe_string(conn.params["return"]))
     else
       render_show(conn)
@@ -88,7 +88,8 @@ defmodule HexpmWeb.LoginController do
       "show.html",
       title: "Log in",
       container: "container page page-xs login",
-      return: safe_string(conn.params["return"])
+      return: safe_string(conn.params["return"]),
+      pending_sso_link?: pending_sso_link?(conn)
     )
   end
 

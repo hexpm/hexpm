@@ -27,6 +27,36 @@ defmodule HexpmWeb.SSOControllerTest do
     %{connection: connection, member: member, organization: organization}
   end
 
+  test "an empty beta allowlist hides every public SSO route", context do
+    config = Application.fetch_env!(:hexpm, :organization_sso)
+
+    app_env(
+      :hexpm,
+      :organization_sso,
+      Keyword.merge(config, mode: :beta, beta_organizations: [])
+    )
+
+    build_conn()
+    |> get("/sso/#{context.organization.name}")
+    |> response(404)
+
+    build_conn()
+    |> get("/sso/callback", %{state: "unknown", code: "code"})
+    |> response(404)
+
+    build_conn()
+    |> get("/sso/link")
+    |> response(404)
+
+    build_conn()
+    |> post("/sso/link")
+    |> response(404)
+
+    build_conn()
+    |> post("/sso/link/cancel")
+    |> response(404)
+  end
+
   test "does not log callback authorization parameters", _context do
     state = "router-log-state-value"
     code = "router-log-code-value"
@@ -208,11 +238,32 @@ defmodule HexpmWeb.SSOControllerTest do
     assert_stale_link_is_cleared_after_password(conn, context)
   end
 
-  test "a feature disabled before password proof clears the stale link", context do
+  test "a feature disabled before password proof clears the stale link without exposing SSO",
+       context do
     conn = begin_pending_link(context)
+    %{"transaction_id" => transaction_id} = get_session(conn, "pending_sso_link")
     config = Application.fetch_env!(:hexpm, :organization_sso)
     Application.put_env(:hexpm, :organization_sso, Keyword.put(config, :mode, :off))
-    assert_stale_link_is_cleared_after_password(conn, context)
+    mock_pwned()
+
+    conn =
+      conn
+      |> recycle()
+      |> post("/login", %{
+        username: context.member.username,
+        password: "password",
+        return: "/sso/link"
+      })
+
+    assert redirected_to(conn) == "/users/#{context.member.username}"
+    assert get_session(conn, "session_token")
+    refute get_session(conn, "pending_sso_link")
+    refute Phoenix.Flash.get(conn.assigns.flash, :error)
+
+    transaction = Repo.get!(SSO.Transaction, transaction_id)
+    assert transaction.cancelled_at
+    assert transaction.provider_email == nil
+    assert SSO.failures(context.connection) == []
   end
 
   test "callback state is bound to the browser that started the transaction", context do

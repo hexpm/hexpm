@@ -379,8 +379,18 @@ defmodule HexpmWeb.ControllerHelpers do
   end
 
   def prove_pending_sso_link(conn, user) do
-    case get_session(conn, "pending_sso_link") do
-      %{"transaction_id" => transaction_id, "token" => token} ->
+    case {SSO.available?(), get_session(conn, "pending_sso_link")} do
+      {false, %{"transaction_id" => transaction_id, "token" => token}} ->
+        SSO.cancel_link(transaction_id, token)
+
+        conn
+        |> delete_session("pending_sso_link")
+        |> delete_session("oauth_return")
+
+      {false, _pending_link} ->
+        conn
+
+      {true, %{"transaction_id" => transaction_id, "token" => token}} ->
         transaction = SSO.get_pending_link(transaction_id, token)
 
         case SSO.prove_link(transaction_id, token, user) do
@@ -403,9 +413,18 @@ defmodule HexpmWeb.ControllerHelpers do
             )
         end
 
-      _other ->
+      {true, _pending_link} ->
         conn
     end
+  end
+
+  def pending_sso_link?(conn) do
+    SSO.available?() and
+      match?(
+        %{"transaction_id" => transaction_id, "token" => token}
+        when is_integer(transaction_id) and is_binary(token),
+        get_session(conn, "pending_sso_link")
+      )
   end
 
   def sso_link_error_message(:not_member),
@@ -420,7 +439,7 @@ defmodule HexpmWeb.ControllerHelpers do
       "The SSO account-link request is no longer valid. You are signed in, but no SSO identity was connected."
 
   def pending_sso_link_return(conn, "/sso/link") do
-    if conn.assigns[:pending_sso_link_proof] == :error, do: nil, else: "/sso/link"
+    if conn.assigns[:pending_sso_link_proof] == :ok, do: "/sso/link"
   end
 
   def pending_sso_link_return(_conn, return), do: return

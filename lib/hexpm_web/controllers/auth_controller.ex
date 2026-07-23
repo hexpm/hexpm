@@ -32,9 +32,10 @@ defmodule HexpmWeb.AuthController do
   end
 
   def store_oauth_return(conn, _opts) do
-    case safe_return_path(conn.params["return"]) do
-      nil -> conn
-      return -> put_session(conn, "oauth_return", return)
+    if pending_sso_link?(conn) and safe_return_path(conn.params["return"]) == "/sso/link" do
+      put_session(conn, "oauth_return", "/sso/link")
+    else
+      delete_session(conn, "oauth_return")
     end
   end
 
@@ -53,7 +54,7 @@ defmodule HexpmWeb.AuthController do
       get_session(conn, "sudo_verification") ->
         handle_sudo_verification(conn, provider, provider_uid)
 
-      get_session(conn, "pending_sso_link") ->
+      pending_sso_link?(conn) ->
         handle_sso_link_auth(conn, provider, provider_uid)
 
       logged_in?(conn) ->
@@ -84,7 +85,7 @@ defmodule HexpmWeb.AuthController do
   defp handle_existing_user_login(conn, user) do
     return =
       safe_return_path(conn.params["return"]) ||
-        safe_return_path(get_session(conn, "oauth_return"))
+        sso_oauth_return(conn)
 
     conn = delete_session(conn, "oauth_return")
 
@@ -101,6 +102,10 @@ defmodule HexpmWeb.AuthController do
         redirect(conn, to: pending_sso_link_return(conn, return) || ~p"/users/#{user}")
       end)
     end
+  end
+
+  defp sso_oauth_return(conn) do
+    if pending_sso_link?(conn), do: safe_return_path(get_session(conn, "oauth_return"))
   end
 
   defp handle_sso_link_auth(conn, provider, provider_uid) do
