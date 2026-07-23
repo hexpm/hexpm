@@ -48,7 +48,7 @@ config :hexpm, Oban,
     {Oban.Plugins.Cron,
      crontab: [
        {"* * * * *", Hexpm.Billing.Report},
-       {"* * * * *", Hexpm.Emails.SSONotificationReconciler},
+       {"* * * * *", Hexpm.Emails.OutboxReconciler},
        {"*/30 * * * *", Hexpm.Security.Updater},
        {"30 0 * * *", Hexpm.ReleaseTasks.CheckNames},
        {"0 1 * * *", Hexpm.ReleaseTasks.Stats},

@@ -1,14 +1,23 @@
 defmodule Hexpm.Accounts.SSO do
   use Hexpm.Context
 
-  alias Hexpm.Accounts.SSO.{Connection, Error, Failure, Features, Identity, Notification, OIDC}
+  alias Hexpm.Accounts.SSO.{Connection, Error, Failure, Features, Identity, OIDC}
   alias Hexpm.Accounts.SSO.SafeURL
   alias Hexpm.Accounts.SSO.Transaction, as: SSOTransaction
   alias Hexpm.Accounts.OrganizationUser
-  alias Hexpm.Emails.SSONotificationWorker
+  alias Hexpm.Emails
+  alias Hexpm.Emails.{Outbox, OutboxEntry, OutboxLock}
 
   @transaction_lifetime_seconds 10 * 60
   @diagnostic_limit 20
+  @identity_linked_email_category "sso.identity_linked"
+  @identity_unlinked_email_category "sso.identity_unlinked"
+  @email_mismatch_category "sso.email_mismatch"
+  @cancelled_notification_categories [
+    @identity_linked_email_category,
+    @email_mismatch_category
+  ]
+  @notification_retention_seconds 30 * 24 * 60 * 60
 
   def available?, do: Features.available?()
   def enabled?(organization), do: Features.enabled?(organization)
@@ -630,16 +639,37 @@ defmodule Hexpm.Accounts.SSO do
         multi
 
       connection ->
-        Multi.delete_all(
-          multi,
-          :organization_sso_notifications,
-          from(notification in Notification,
-            where: notification.connection_id == ^connection.id,
-            where: notification.user_id == ^user.id,
-            where: notification.kind in ["email_mismatch", "identity_linked"]
+        ordering_key = notification_ordering_key(connection, user)
+
+        multi
+        |> Multi.run(:organization_sso_email_outbox_lock, fn _repo, _changes ->
+          OutboxLock.acquire!(ordering_key)
+          {:ok, :locked}
+        end)
+        |> Multi.delete_all(
+          :organization_sso_email_outbox,
+          from(entry in OutboxEntry,
+            where: entry.ordering_key == ^ordering_key,
+            where: entry.category in @cancelled_notification_categories
           )
         )
     end
+  end
+
+  def delete_user_notifications(multi, user) do
+    Multi.delete_all(
+      multi,
+      :organization_sso_email_outbox,
+      from(entry in OutboxEntry,
+        where: entry.scope_key == ^notification_scope_key(user),
+        where:
+          entry.category in [
+            @identity_linked_email_category,
+            @identity_unlinked_email_category,
+            @email_mismatch_category
+          ]
+      )
+    )
   end
 
   def identities(%Connection{} = connection) do
@@ -1042,31 +1072,48 @@ defmodule Hexpm.Accounts.SSO do
   defp enqueue_sso_notification!(kind, connection, user, provider_email \\ nil) do
     recipients = Repo.all(from(email in assoc(user, :emails), select: email.email))
 
-    notification =
-      %Notification{}
-      |> Notification.changeset(%{
-        connection_id: connection.id,
-        user_id: user.id,
-        kind: kind,
-        organization_name: connection.organization.name,
-        username: user.username,
-        recipients: %{emails: recipients},
-        provider_email: provider_email
-      })
-      |> Repo.insert!(log: false)
+    {category, email} =
+      case kind do
+        "identity_linked" ->
+          {@identity_linked_email_category,
+           Emails.sso_identity_linked(connection.organization.name, user.username, recipients)}
 
-    SSONotificationWorker.enqueue!(notification.id)
+        "identity_unlinked" ->
+          {@identity_unlinked_email_category,
+           Emails.sso_identity_unlinked(connection.organization.name, user.username, recipients)}
+
+        "email_mismatch" ->
+          {@email_mismatch_category,
+           Emails.sso_email_mismatch(
+             connection.organization.name,
+             user.username,
+             recipients,
+             provider_email
+           )}
+      end
+
+    Outbox.enqueue!(email,
+      category: category,
+      ordering_key: notification_ordering_key(connection, user),
+      scope_key: notification_scope_key(user),
+      expires_at: DateTime.add(DateTime.utc_now(), @notification_retention_seconds, :second)
+    )
   end
 
   defp delete_notifications!(connection, user) do
+    ordering_key = notification_ordering_key(connection, user)
+    OutboxLock.acquire!(ordering_key)
+
     Repo.delete_all(
-      from(notification in Notification,
-        where: notification.connection_id == ^connection.id,
-        where: notification.user_id == ^user.id,
-        where: notification.kind in ["email_mismatch", "identity_linked"]
+      from(entry in OutboxEntry,
+        where: entry.ordering_key == ^ordering_key,
+        where: entry.category in @cancelled_notification_categories
       )
     )
   end
+
+  defp notification_ordering_key(connection, user), do: "sso:#{connection.id}:#{user.id}"
+  defp notification_scope_key(user), do: "sso:user:#{user.id}"
 
   defp keep_recent_failures(connection) do
     recent_ids =

@@ -5,8 +5,8 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
   import ExUnit.CaptureLog
 
   alias Hexpm.Accounts.{AuditLogs, SSO}
-  alias Hexpm.Accounts.SSO.{Connection, Error, Notification, OIDC}
-  alias Hexpm.Emails.SSONotificationWorker
+  alias Hexpm.Accounts.SSO.{Connection, Error, OIDC}
+  alias Hexpm.Emails.{OutboxEntry, OutboxWorker}
 
   setup :verify_on_exit!
 
@@ -335,18 +335,15 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
       )
 
     linked_notification =
-      insert(:organization_sso_notification,
-        connection: connection,
-        user: context.member,
-        kind: "identity_linked"
+      insert(:email_outbox_entry,
+        ordering_key: sso_ordering_key(connection, context.member),
+        category: "sso.identity_linked"
       )
 
     mismatch_notification =
-      insert(:organization_sso_notification,
-        connection: connection,
-        user: context.member,
-        kind: "email_mismatch",
-        provider_email: "renamed@identity.example.com"
+      insert(:email_outbox_entry,
+        ordering_key: sso_ordering_key(connection, context.member),
+        category: "sso.email_mismatch"
       )
 
     conn =
@@ -357,11 +354,17 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
       })
 
     refute Repo.get(Hexpm.Accounts.SSO.Identity, identity.id)
-    refute Repo.get(Notification, linked_notification.id)
-    refute Repo.get(Notification, mismatch_notification.id)
+    refute Repo.get(OutboxEntry, linked_notification.id)
+    refute Repo.get(OutboxEntry, mismatch_notification.id)
     assert redirected_to(conn) == "/dashboard/orgs/#{context.organization.name}/sso"
-    assert_enqueued(worker: SSONotificationWorker)
-    assert %Notification{kind: "identity_unlinked"} = Repo.one!(Notification)
+    assert_enqueued(worker: OutboxWorker)
+
+    assert %OutboxEntry{
+             category: "sso.identity_unlinked",
+             ordering_key: ordering_key
+           } = Repo.one!(OutboxEntry)
+
+    assert ordering_key == sso_ordering_key(connection, context.member)
 
     unlink_log =
       Enum.find(AuditLogs.all_by(context.organization), &(&1.action == "sso.identity.unlink"))
@@ -385,8 +388,10 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
       })
 
     assert response(conn, 404)
-    refute_enqueued(worker: SSONotificationWorker)
+    refute_enqueued(worker: OutboxWorker)
   end
+
+  defp sso_ordering_key(connection, user), do: "sso:#{connection.id}:#{user.id}"
 
   test "diagnostics are capped, stable, and redact all supplied details", context do
     connection =

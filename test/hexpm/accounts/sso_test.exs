@@ -4,7 +4,8 @@ defmodule Hexpm.Accounts.SSOTest do
   import ExUnit.CaptureLog
 
   alias Hexpm.Accounts.{AuditLogs, Organizations, SSO}
-  alias Hexpm.Accounts.SSO.{Connection, Features, Identity, Notification, OIDC}
+  alias Hexpm.Accounts.SSO.{Connection, Features, Identity, OIDC}
+  alias Hexpm.Emails.OutboxEntry
 
   setup :verify_on_exit!
 
@@ -972,18 +973,15 @@ defmodule Hexpm.Accounts.SSOTest do
         )
 
       linked_notification =
-        insert(:organization_sso_notification,
-          connection: connection,
-          user: member,
-          kind: "identity_linked"
+        insert(:email_outbox_entry,
+          ordering_key: sso_ordering_key(connection, member),
+          category: "sso.identity_linked"
         )
 
       mismatch_notification =
-        insert(:organization_sso_notification,
-          connection: connection,
-          user: member,
-          kind: "email_mismatch",
-          provider_email: "renamed@identity.example.com"
+        insert(:email_outbox_entry,
+          ordering_key: sso_ordering_key(connection, member),
+          category: "sso.email_mismatch"
         )
 
       assert :ok =
@@ -993,9 +991,15 @@ defmodule Hexpm.Accounts.SSOTest do
 
       refute Repo.get(Identity, identity.id)
       refute Organizations.access?(context.organization, member, "read")
-      refute Repo.get(Notification, linked_notification.id)
-      refute Repo.get(Notification, mismatch_notification.id)
-      assert %Notification{kind: "identity_unlinked"} = Repo.one!(Notification)
+      refute Repo.get(OutboxEntry, linked_notification.id)
+      refute Repo.get(OutboxEntry, mismatch_notification.id)
+
+      assert %OutboxEntry{
+               category: "sso.identity_unlinked",
+               ordering_key: ordering_key
+             } = Repo.one!(OutboxEntry)
+
+      assert ordering_key == sso_ordering_key(connection, member)
     end
 
     test "member removal invalidates a proved pending link", context do
@@ -1139,6 +1143,8 @@ defmodule Hexpm.Accounts.SSOTest do
       assert [%{stage: "login", code: "not_member"}] = SSO.failures(connection)
     end
   end
+
+  defp sso_ordering_key(connection, user), do: "sso:#{connection.id}:#{user.id}"
 
   describe "return paths" do
     test "allows only the selected organization dashboard", context do

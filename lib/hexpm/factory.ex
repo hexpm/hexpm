@@ -146,12 +146,23 @@ defmodule Hexpm.Factory do
     }
   end
 
-  def organization_sso_notification_factory() do
-    %Hexpm.Accounts.SSO.Notification{
-      kind: "identity_linked",
-      organization_name: Fake.sequence(:package),
-      username: Fake.sequence(:username),
-      recipients: %{"emails" => [Fake.sequence(:email)]}
+  def email_outbox_entry_factory() do
+    %Hexpm.Emails.OutboxEntry{
+      category: "test.email",
+      ordering_key: "test:#{Fake.sequence(:word)}",
+      email: %{
+        "version" => 1,
+        "subject" => "Test email",
+        "from" => %{"name" => "Hex.pm", "address" => "noreply@hex.pm"},
+        "to" => [%{"name" => "", "address" => Fake.sequence(:email)}],
+        "cc" => [],
+        "bcc" => [],
+        "reply_to" => nil,
+        "text_body" => "Test email",
+        "html_body" => "<p>Test email</p>",
+        "headers" => %{},
+        "provider_options" => %{}
+      }
     }
   end
 

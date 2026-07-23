@@ -100,26 +100,6 @@ defmodule Hexpm.RepoBase.Migrations.CreateOrganizationSsoTables do
              check: "secret_slot IN ('active', 'pending')"
            )
 
-    create table(:organization_sso_notifications) do
-      add :connection_id, references(:organization_sso_connections, on_delete: :delete_all),
-        null: false
-
-      add :user_id, references(:users, on_delete: :delete_all), null: false
-      add :kind, :text, null: false
-      add :organization_name, :text, null: false
-      add :username, :text, null: false
-      add :recipients, :map, null: false
-      add :provider_email, :text
-
-      timestamps(type: :utc_datetime_usec, updated_at: false)
-    end
-
-    create index(:organization_sso_notifications, [:connection_id, :user_id])
-
-    create constraint(:organization_sso_notifications, :organization_sso_notification_kind,
-             check: "kind IN ('identity_linked', 'identity_unlinked', 'email_mismatch')"
-           )
-
     create table(:organization_sso_failures) do
       add :connection_id, references(:organization_sso_connections, on_delete: :delete_all),
         null: false

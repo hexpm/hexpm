@@ -5,8 +5,8 @@ defmodule HexpmWeb.SSOControllerTest do
   import ExUnit.CaptureLog
 
   alias Hexpm.Accounts.{AuditLogs, SSO}
-  alias Hexpm.Accounts.SSO.{Identity, Notification, OIDC}
-  alias Hexpm.Emails.SSONotificationWorker
+  alias Hexpm.Accounts.SSO.{Identity, OIDC}
+  alias Hexpm.Emails.{OutboxEntry, OutboxWorker}
   alias HexpmWeb.Plugs.Attack
 
   setup :verify_on_exit!
@@ -120,8 +120,25 @@ defmodule HexpmWeb.SSOControllerTest do
 
     assert user_id == context.member.id
     assert organization_id == context.organization.id
-    assert_enqueued(worker: SSONotificationWorker)
-    assert %Notification{kind: "identity_linked"} = Repo.one!(Notification)
+    assert_enqueued(worker: OutboxWorker)
+
+    assert %OutboxEntry{
+             category: "sso.identity_linked",
+             scope_key: scope_key,
+             expires_at: expires_at
+           } = entry = Repo.one!(OutboxEntry)
+
+    assert scope_key == "sso:user:#{context.member.id}"
+
+    assert DateTime.diff(expires_at, DateTime.utc_now(), :second) in (30 * 24 * 60 * 60 - 60)..(30 *
+                                                                                                  24 *
+                                                                                                  60 *
+                                                                                                  60)
+
+    assert %{to: recipients, text_body: body} = OutboxEntry.to_email(entry)
+    assert recipients == Enum.map(context.member.emails, &{"", &1.email})
+    assert body =~ context.organization.name
+    assert body =~ context.member.username
 
     link_log =
       Enum.find(AuditLogs.all_by(context.organization), &(&1.action == "sso.identity.link"))
@@ -502,8 +519,24 @@ defmodule HexpmWeb.SSOControllerTest do
     refute get_session(conn, "sudo_force")
     refute get_session(conn, "sudo_verification")
     refute get_session(conn, "sudo_return_to")
-    assert_enqueued(worker: SSONotificationWorker)
-    assert %Notification{kind: "email_mismatch"} = Repo.one!(Notification)
+    assert_enqueued(worker: OutboxWorker)
+
+    assert %OutboxEntry{
+             category: "sso.email_mismatch",
+             scope_key: scope_key,
+             expires_at: %DateTime{}
+           } = entry = Repo.one!(OutboxEntry)
+
+    assert scope_key == "sso:user:#{context.member.id}"
+    assert %{to: recipients, text_body: body} = OutboxEntry.to_email(entry)
+
+    assert MapSet.new(recipients) ==
+             MapSet.new([
+               {"", List.first(context.member.emails).email},
+               {"", "renamed@identity.example.com"}
+             ])
+
+    assert body =~ "renamed@identity.example.com"
 
     identity = Repo.one!(Identity)
     assert identity.provider_email == "renamed@identity.example.com"

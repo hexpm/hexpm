@@ -37,13 +37,15 @@ defmodule Hexpm.ObanConfigTest do
       assert worker.timeout(%Oban.Job{}) == timeout
     end
 
-    assert Hexpm.Emails.SSONotificationReconciler.__opts__()[:queue] == :periodic
-    assert Hexpm.Emails.SSONotificationReconciler.__opts__()[:max_attempts] == 10
+    assert Hexpm.Emails.OutboxReconciler.__opts__()[:queue] == :periodic
+    assert Hexpm.Emails.OutboxReconciler.__opts__()[:max_attempts] == 10
 
-    assert Hexpm.Emails.SSONotificationReconciler.__opts__()[:unique] == [
+    assert Hexpm.Emails.OutboxReconciler.__opts__()[:unique] == [
              period: :infinity,
              states: :incomplete
            ]
+
+    assert Hexpm.Emails.OutboxWorker.timeout(%Oban.Job{}) == 30_000
 
     for worker <- [
           Hexpm.Diff.Worker,
@@ -80,7 +82,7 @@ defmodule Hexpm.ObanConfigTest do
 
     assert cron_opts[:crontab] == [
              {"* * * * *", Hexpm.Billing.Report},
-             {"* * * * *", Hexpm.Emails.SSONotificationReconciler},
+             {"* * * * *", Hexpm.Emails.OutboxReconciler},
              {"*/30 * * * *", Hexpm.Security.Updater},
              {"30 0 * * *", Hexpm.ReleaseTasks.CheckNames},
              {"0 1 * * *", Hexpm.ReleaseTasks.Stats},

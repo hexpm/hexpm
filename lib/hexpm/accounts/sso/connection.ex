@@ -23,7 +23,6 @@ defmodule Hexpm.Accounts.SSO.Connection do
     belongs_to :configured_by_user, User
     has_many :identities, Hexpm.Accounts.SSO.Identity
     has_many :transactions, Hexpm.Accounts.SSO.Transaction
-    has_many :notifications, Hexpm.Accounts.SSO.Notification
     has_many :failures, Hexpm.Accounts.SSO.Failure
 
     timestamps()

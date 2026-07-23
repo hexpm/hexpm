@@ -4,6 +4,7 @@ defmodule Hexpm.Accounts.UsersTest do
   import Swoosh.TestAssertions
 
   alias Hexpm.Accounts.{AuditLog, OptionalEmails, User, Users, UserProviders}
+  alias Hexpm.Emails.OutboxEntry
 
   describe "add_from_oauth_with_provider/6" do
     test "creates user and provider atomically" do
@@ -206,6 +207,31 @@ defmodule Hexpm.Accounts.UsersTest do
   end
 
   describe "delete/2" do
+    test "purges every SSO notification scoped to the deleted account" do
+      user = insert(:user)
+      scope_key = "sso:user:#{user.id}"
+
+      entries =
+        for category <- [
+              "sso.identity_linked",
+              "sso.email_mismatch",
+              "sso.identity_unlinked"
+            ] do
+          insert(:email_outbox_entry, category: category, scope_key: scope_key)
+        end
+
+      unrelated =
+        insert(:email_outbox_entry,
+          category: "account.deleted",
+          scope_key: "account:#{user.id}"
+        )
+
+      assert :ok = Users.delete(user, audit: audit_data(user), notify: false)
+
+      Enum.each(entries, &refute(Repo.get(OutboxEntry, &1.id)))
+      assert Repo.get(OutboxEntry, unrelated.id)
+    end
+
     test "deletes the user, preserves packages/releases/audit logs, reserves the username" do
       user = insert(:user)
       other_owner = insert(:user)
