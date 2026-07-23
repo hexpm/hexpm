@@ -50,6 +50,55 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "permission"
   end
 
+  test "shows enabled and disabled status in the provider configuration header", context do
+    connection =
+      insert(:organization_sso_connection,
+        organization: context.organization,
+        tested_at: nil,
+        enabled_at: nil
+      )
+
+    status = connection_status(context)
+
+    assert Floki.text(status) |> String.trim() == "Disabled"
+
+    connection
+    |> Ecto.Changeset.change(enabled_at: DateTime.utc_now())
+    |> Repo.update!()
+
+    status = connection_status(context)
+
+    assert Floki.text(status) |> String.trim() == "Enabled"
+  end
+
+  test "links linked accounts to user profiles", context do
+    connection =
+      insert(:organization_sso_connection,
+        organization: context.organization,
+        enabled_at: DateTime.utc_now()
+      )
+
+    insert(:organization_sso_identity,
+      connection: connection,
+      organization: context.organization,
+      user: context.member
+    )
+
+    html =
+      build_conn()
+      |> test_login(context.admin)
+      |> get("/dashboard/orgs/#{context.organization.name}/sso")
+      |> html_response(200)
+
+    {:ok, document} = Floki.parse_document(html)
+
+    assert [_link] =
+             Floki.find(
+               document,
+               ~s(#sso-linked-accounts a[href="/users/#{context.member.username}"])
+             )
+  end
+
   test "the runtime gate hides setup and action routes", context do
     config = Application.fetch_env!(:hexpm, :organization_sso)
     Application.put_env(:hexpm, :organization_sso, Keyword.put(config, :mode, :off))
@@ -279,6 +328,18 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
       :organization_sso,
       Keyword.merge(config, mode: :beta, beta_organizations: [organization.name])
     )
+  end
+
+  defp connection_status(context) do
+    html =
+      build_conn()
+      |> test_login(context.admin)
+      |> get("/dashboard/orgs/#{context.organization.name}/sso")
+      |> html_response(200)
+
+    {:ok, document} = Floki.parse_document(html)
+    [status] = Floki.find(document, "section > div:first-child > #sso-connection-status")
+    status
   end
 
   defp metadata(issuer) do

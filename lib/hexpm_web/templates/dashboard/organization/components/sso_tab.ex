@@ -27,7 +27,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
       </div>
 
       <section class="rounded-lg border border-grey-200 dark:border-grey-800 bg-white dark:bg-grey-900 p-5">
-        <h3 class="font-semibold text-grey-900 dark:text-grey-100">Provider configuration</h3>
+        <div class="flex items-start justify-between gap-4">
+          <h3 class="font-semibold text-grey-900 dark:text-grey-100">Provider configuration</h3>
+          <span :if={@connection} id="sso-connection-status" class={status_class(@connection)}>
+            {status_label(@connection)}
+          </span>
+        </div>
         <div class="mt-4 grid gap-4">
           <.readonly_value label="Redirect URI" value={@callback_url} />
           <.readonly_value label="Required scopes" value="openid email" />
@@ -74,8 +79,6 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
         </.form>
 
         <div :if={@connection} class="mt-5 flex flex-wrap items-center gap-3">
-          <span class={status_class(@connection)}>{status_label(@connection)}</span>
-
           <.form for={%{}} action={~p"/dashboard/orgs/#{@organization}/sso/test"}>
             <input type="hidden" name="secret_slot" value="active" />
             <.button type="submit" variant="secondary">Test connection</.button>
@@ -142,6 +145,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
 
       <section
         :if={@connection}
+        id="sso-linked-accounts"
         class="rounded-lg border border-grey-200 dark:border-grey-800 bg-white dark:bg-grey-900 p-5"
       >
         <h3 class="font-semibold text-grey-900 dark:text-grey-100">Linked accounts</h3>
@@ -150,7 +154,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
         </p>
         <ul :if={@identities != []} class="mt-3 divide-y divide-grey-200 dark:divide-grey-800">
           <li :for={identity <- @identities} class="flex items-center justify-between gap-4 py-3">
-            <span class="text-sm font-medium text-grey-900 dark:text-grey-100">{identity.user.username}</span>
+            <a
+              href={~p"/users/#{identity.user}"}
+              class="text-sm font-medium text-grey-900 transition-colors hover:text-primary-600 dark:text-grey-100"
+            >
+              {identity.user.username}
+            </a>
             <.form for={%{}} action={~p"/dashboard/orgs/#{@organization}/sso/unlink"}>
               <input type="hidden" name="user_id" value={identity.user_id} />
               <.button type="submit" variant="danger" size="sm">Unlink</.button>
@@ -200,8 +209,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
     """
   end
 
-  defp status_label(%Connection{enabled_at: nil, tested_at: nil}), do: "Not tested"
-  defp status_label(%Connection{enabled_at: nil}), do: "Tested, disabled"
+  defp status_label(%Connection{enabled_at: nil}), do: "Disabled"
   defp status_label(%Connection{}), do: "Enabled"
 
   defp status_class(%Connection{enabled_at: nil}) do
