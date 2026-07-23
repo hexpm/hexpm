@@ -20,6 +20,23 @@ defmodule Hexpm.ObanConfigTest do
     assert Hexpm.Billing.Report.timeout(%Oban.Job{}) == 20_000
     assert Hexpm.Security.Updater.timeout(%Oban.Job{}) == 300_000
 
+    for {worker, queue, timeout} <- [
+          {Hexpm.ReleaseTasks.CheckNames, :periodic, 600_000},
+          {Hexpm.ReleaseTasks.Stats, :heavy, 3_600_000},
+          {Hexpm.ReleaseTasks.PurgeExpiredRecords, :periodic, 1_800_000}
+        ] do
+      assert worker.__opts__()[:queue] == queue
+      assert worker.__opts__()[:max_attempts] == 5
+
+      assert worker.__opts__()[:unique] == [
+               period: :infinity,
+               states: :incomplete,
+               fields: [:worker]
+             ]
+
+      assert worker.timeout(%Oban.Job{}) == timeout
+    end
+
     for worker <- [
           Hexpm.Diff.Worker,
           Hexpm.Hexdocs.Workers.Upload,
@@ -55,7 +72,10 @@ defmodule Hexpm.ObanConfigTest do
 
     assert cron_opts[:crontab] == [
              {"* * * * *", Hexpm.Billing.Report},
-             {"*/30 * * * *", Hexpm.Security.Updater}
+             {"*/30 * * * *", Hexpm.Security.Updater},
+             {"30 0 * * *", Hexpm.ReleaseTasks.CheckNames},
+             {"0 1 * * *", Hexpm.ReleaseTasks.Stats},
+             {"0 2 * * *", Hexpm.ReleaseTasks.PurgeExpiredRecords}
            ]
 
     assert {Oban.Plugins.Pruner, [max_age: 2_592_000]} in oban[:plugins]

@@ -1,7 +1,16 @@
 defmodule Hexpm.ReleaseTasks.Stats do
+  use Oban.Worker,
+    queue: :heavy,
+    max_attempts: 5,
+    unique: [
+      period: :infinity,
+      states: :incomplete,
+      fields: [:worker]
+    ]
+
   require Logger
   import Ecto.Query, only: [from: 2]
-  alias Hexpm.{Repo, Store, Utils}
+  alias Hexpm.{CronMonitor, Repo, Store, Utils}
 
   alias Hexpm.Repository.{
     Download,
@@ -32,6 +41,22 @@ defmodule Hexpm.ReleaseTasks.Stats do
   >x
 
   @ets __MODULE__
+  @monitor_slug "hexpm-stats"
+  @monitor_schedule "0 1 * * *"
+
+  @impl Oban.Worker
+  def timeout(_job), do: 3_600_000
+
+  @impl Oban.Worker
+  def perform(job) do
+    case date(job) do
+      {:ok, date} ->
+        CronMonitor.run(@monitor_slug, @monitor_schedule, fn -> run(date) end)
+
+      {:error, reason} ->
+        {:cancel, reason}
+    end
+  end
 
   def run(date \\ Utils.utc_yesterday(), dryrun? \\ false) do
     {time, size} =
@@ -102,7 +127,7 @@ defmodule Hexpm.ReleaseTasks.Stats do
     after
       :ets.delete(@ets)
     end
-  catch
+  rescue
     exception ->
       Logger.error("[stats] failed")
       reraise exception, __STACKTRACE__
@@ -128,7 +153,8 @@ defmodule Hexpm.ReleaseTasks.Stats do
   end
 
   defp process_keys(bucket, keys) do
-    Task.async_stream(
+    Hexpm.Tasks
+    |> Task.Supervisor.async_stream_nolink(
       keys,
       fn key ->
         Store.get(bucket, key, [])
@@ -138,7 +164,16 @@ defmodule Hexpm.ReleaseTasks.Stats do
       max_concurrency: 10,
       timeout: 600_000
     )
-    |> Stream.run()
+    |> Enum.each(fn
+      {:ok, _result} ->
+        :ok
+
+      {:exit, {exception, stacktrace}} when is_exception(exception) ->
+        reraise exception, stacktrace
+
+      {:exit, reason} ->
+        exit(reason)
+    end)
   end
 
   defp process_file(file) do
@@ -203,4 +238,24 @@ defmodule Hexpm.ReleaseTasks.Stats do
     Logger.info("[stats] completed \"#{action}\" in #{time / 1000}ms")
     result
   end
+
+  defp date(%Oban.Job{args: args, scheduled_at: scheduled_at}) when map_size(args) == 0 do
+    case scheduled_at do
+      %DateTime{} -> {:ok, scheduled_at |> DateTime.to_date() |> Date.add(-1)}
+      _other -> {:error, :missing_scheduled_at}
+    end
+  end
+
+  defp date(%Oban.Job{args: %{"date" => date} = args})
+       when map_size(args) == 1 and is_binary(date) do
+    case Date.from_iso8601(date) do
+      {:ok, date} -> {:ok, date}
+      {:error, _reason} -> {:error, {:invalid_date, date}}
+    end
+  end
+
+  defp date(%Oban.Job{args: %{"date" => date} = args}) when map_size(args) == 1,
+    do: {:error, {:invalid_date, date}}
+
+  defp date(%Oban.Job{args: args}), do: {:error, {:invalid_args, args}}
 end

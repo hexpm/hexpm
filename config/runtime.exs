@@ -34,7 +34,8 @@ if config_env() == :prod do
 
   config :hexpm,
     email_base_url: "https://#{System.fetch_env!("HEXPM_HOST")}",
-    email_host: System.fetch_env!("HEXPM_EMAIL_HOST")
+    email_host: System.fetch_env!("HEXPM_EMAIL_HOST"),
+    levenshtein_threshold: System.fetch_env!("HEXPM_LEVENSHTEIN_THRESHOLD")
 
   config :hexpm, Hexpm.Emails.Mailer, api_key: System.fetch_env!("HEXPM_SENDGRID_API_KEY")
 
@@ -44,7 +45,6 @@ if config_env() == :prod do
     config :hexpm,
       host: System.fetch_env!("HEXPM_HOST"),
       secret: System.fetch_env!("HEXPM_SECRET"),
-      levenshtein_threshold: System.fetch_env!("HEXPM_LEVENSHTEIN_THRESHOLD"),
       dashboard_user: System.fetch_env!("HEXPM_DASHBOARD_USER"),
       dashboard_password: System.fetch_env!("HEXPM_DASHBOARD_PASSWORD"),
       jwt_signing_key: System.fetch_env!("HEXPM_JWT_SIGNING_KEY"),

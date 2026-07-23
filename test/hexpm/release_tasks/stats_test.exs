@@ -1,9 +1,13 @@
 defmodule Hexpm.ReleaseTasks.StatsTest do
   use Hexpm.DataCase
+  use Oban.Testing, repo: Hexpm.RepoBase
 
+  alias Hexpm.CronMonitor.SentryMock
   alias Hexpm.Repository.Download
   alias Hexpm.Store
   alias Hexpm.ReleaseTasks.Stats
+
+  setup :verify_on_exit!
 
   setup do
     repository1 = insert(:repository)
@@ -77,7 +81,9 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
       []
     )
 
-    Stats.run(~D[2013-11-01])
+    expect_monitor(:ok)
+    assert :ok = perform_job(Stats, %{"date" => "2013-11-01"})
+    assert :ok = Stats.run(~D[2013-11-01])
 
     rel1 = Repo.get_by!(assoc(package1, :releases), version: "0.0.1")
     rel2 = Repo.get_by!(assoc(package1, :releases), version: "0.0.2")
@@ -93,6 +99,84 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
     assert Enum.find(downloads, &(&1.release_id == rel3.id)).downloads == 1
     assert Enum.find(downloads, &(&1.release_id == rel5.id)).downloads == 1
     refute Enum.find(downloads, &(&1.release_id == rel4.id))
+  end
+
+  test "scheduled jobs process the previous UTC date", %{package1: package1} do
+    release = Repo.get_by!(assoc(package1, :releases), version: "0.0.1")
+
+    target =
+      insert(:download,
+        package: package1,
+        release: release,
+        day: ~D[2013-11-01],
+        downloads: 10
+      )
+
+    other =
+      insert(:download,
+        package: package1,
+        release: release,
+        day: ~D[2013-11-02],
+        downloads: 20
+      )
+
+    expect_monitor(:ok)
+
+    assert :ok =
+             perform_job(Stats, %{},
+               scheduled_at: DateTime.new!(~D[2013-11-02], ~T[01:00:00], "Etc/UTC")
+             )
+
+    refute Repo.get(Download, target.id)
+    assert Repo.get(Download, other.id)
+  end
+
+  test "invalid dates cancel without retrying" do
+    assert {:cancel, {:invalid_date, "not-a-date"}} =
+             perform_job(Stats, %{"date" => "not-a-date"})
+  end
+
+  test "processing failures propagate for Oban retries and report an error check-in" do
+    Store.put(
+      :logs_bucket,
+      "fastly_hex/2013-11-01T14:00:00.000-invalid.log.gz",
+      "not gzip data",
+      []
+    )
+
+    expect_monitor(:error)
+
+    assert_raise Oban.CrashError, fn ->
+      perform_job(Stats, %{},
+        scheduled_at: DateTime.new!(~D[2013-11-02], ~T[01:00:00], "Etc/UTC")
+      )
+    end
+  end
+
+  defp expect_monitor(final_status) do
+    app_env(:hexpm, :sentry_impl, SentryMock)
+
+    expect(SentryMock, :capture_check_in, fn opts ->
+      assert opts[:status] == :in_progress
+      assert opts[:monitor_slug] == "hexpm-stats"
+
+      assert opts[:monitor_config] == [
+               schedule: [type: :crontab, value: "0 1 * * *"],
+               timezone: "Etc/UTC"
+             ]
+
+      {:ok, "check-in-id"}
+    end)
+
+    expect(SentryMock, :capture_check_in, fn opts ->
+      assert opts == [
+               check_in_id: "check-in-id",
+               status: final_status,
+               monitor_slug: "hexpm-stats"
+             ]
+
+      :ignored
+    end)
   end
 
   defp read_log(path, replaces) do
