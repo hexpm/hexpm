@@ -238,7 +238,7 @@ defmodule HexpmWeb.Components.Navbar do
             <input
               id="mobile-search-input"
               name="search"
-              type="text"
+              type="search"
               value={@search}
               autocomplete="off"
               autocapitalize="none"
@@ -289,7 +289,7 @@ defmodule HexpmWeb.Components.Navbar do
               </div>
               <input
                 name="search"
-                type="text"
+                type="search"
                 value={@search}
                 autocomplete="off"
                 autocapitalize="none"
