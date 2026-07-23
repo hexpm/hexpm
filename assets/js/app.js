@@ -64,6 +64,11 @@ let liveSocket = new LiveSocket("/live", Socket, {
 liveSocket.connect();
 initializeTheme();
 
+// Blur the active element on demand
+window.addEventListener("blur-active", () => {
+  document.activeElement?.blur();
+});
+
 // Focus username, 2FA or search field
 if (document.getElementById("username")) {
   document.getElementById("username").focus();
