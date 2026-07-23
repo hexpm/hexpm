@@ -40,7 +40,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.OrgTabNav do
             >
               <span>{label}</span>
               <span
-                :if={label == "Policies"}
+                :if={tab in [:policies, :sso]}
                 class="inline-flex items-center px-1.5 py-[2px] rounded-full text-[9px] font-bold leading-none uppercase tracking-wider bg-primary-600 text-white"
               >
                 NEW

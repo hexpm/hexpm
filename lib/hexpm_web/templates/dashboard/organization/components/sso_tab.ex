@@ -2,7 +2,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
   use Phoenix.Component
   use HexpmWeb, :verified_routes
 
-  import HexpmWeb.Components.Buttons, only: [button: 1]
+  import HexpmWeb.Components.Buttons, only: [button: 1, button_link: 1]
   import HexpmWeb.Components.Input, only: [password_input: 1, text_input: 1]
 
   alias Hexpm.Accounts.SSO
@@ -18,12 +18,19 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
   def sso_tab(assigns) do
     ~H"""
     <div class="space-y-6">
-      <div>
-        <h2 class="text-xl font-semibold text-grey-900 dark:text-grey-100">Single sign-on</h2>
-        <p class="mt-2 text-sm text-grey-600 dark:text-grey-300">
-          Configure a standards-based OpenID Connect provider. Okta is the documented pilot integration, and
-          conventional Hexpm login remains available.
-        </p>
+      <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div class="min-w-0 flex-1">
+          <h2 class="text-xl font-semibold text-grey-900 dark:text-grey-100">Single sign-on</h2>
+          <p class="mt-2 text-sm text-grey-600 dark:text-grey-300">
+            Configure a standards-based OpenID Connect provider. Okta is the documented pilot integration, and
+            conventional Hexpm login remains available.
+          </p>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
+          <.button_link href={~p"/docs/organization-sso"} variant="outline" size="sm">
+            Documentation
+          </.button_link>
+        </div>
       </div>
 
       <section class="rounded-lg border border-grey-200 dark:border-grey-800 bg-white dark:bg-grey-900 p-5">
@@ -209,7 +216,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
     """
   end
 
-  defp status_label(%Connection{enabled_at: nil}), do: "Disabled"
+  defp status_label(%Connection{enabled_at: nil, tested_at: nil}), do: "Not tested"
+  defp status_label(%Connection{enabled_at: nil}), do: "Tested, disabled"
   defp status_label(%Connection{}), do: "Enabled"
 
   defp status_class(%Connection{enabled_at: nil}) do

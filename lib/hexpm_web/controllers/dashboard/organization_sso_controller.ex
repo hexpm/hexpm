@@ -167,6 +167,11 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
   defp configuration_error(_reason), do: "The SSO configuration could not be changed."
 
   defp test_error(%Error{code: code}), do: "SSO connection test could not start (#{code})."
+
+  defp test_error(:configuration_admin_required),
+    do:
+      "The administrator who saved the configuration must complete its connection test. If that administrator is unavailable, disable SSO if needed and have a current administrator save the configuration again."
+
   defp test_error(:rotation_not_started), do: "Save a replacement secret before testing it."
   defp test_error(reason), do: configuration_error(reason)
 

@@ -41,6 +41,51 @@ defmodule Hexpm.HTTPTest do
              )
   end
 
+  test "get/3 bounds a response from a pinned address", %{lasso: lasso} do
+    Lasso.expect_once(lasso, "GET", "/pinned-oversized", fn conn ->
+      Conn.resp(conn, 200, String.duplicate("x", 100))
+    end)
+
+    assert {:error, :response_too_large} =
+             HTTP.get(lasso_url(lasso, "/pinned-oversized"), [],
+               connect_address: {127, 0, 0, 1},
+               connect_hostname: "localhost",
+               max_body_bytes: 10,
+               receive_timeout: 5_000,
+               request_timeout: 5_000
+             )
+  end
+
+  test "get/3 times out a pinned request", %{lasso: lasso} do
+    test_process = self()
+
+    Lasso.expect_once(lasso, "GET", "/pinned-timeout", fn conn ->
+      send(test_process, {:pinned_request_received, self()})
+
+      receive do
+        :finish_request ->
+          conn = Conn.resp(conn, 200, "late-response")
+          send(test_process, :pinned_request_finished)
+          conn
+      end
+    end)
+
+    request =
+      Task.async(fn ->
+        HTTP.get(lasso_url(lasso, "/pinned-timeout"), [],
+          connect_address: {127, 0, 0, 1},
+          connect_hostname: "localhost",
+          receive_timeout: 250,
+          request_timeout: 250
+        )
+      end)
+
+    assert_receive {:pinned_request_received, request_process}, 1_000
+    assert {:error, :timeout} = Task.await(request, 1_000)
+    send(request_process, :finish_request)
+    assert_receive :pinned_request_finished, 1_000
+  end
+
   test "get/3 validates the original hostname over a pinned HTTPS connection" do
     {url, cacerts, server} = open_tls_server()
 

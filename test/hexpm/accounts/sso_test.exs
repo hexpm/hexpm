@@ -29,6 +29,7 @@ defmodule Hexpm.Accounts.SSOTest do
   describe "feature gating" do
     test "requires both beta mode and the organization allowlist", %{organization: organization} do
       assert Features.enabled?(organization)
+      assert SSO.available?()
 
       config = Application.fetch_env!(:hexpm, :organization_sso)
 
@@ -39,6 +40,7 @@ defmodule Hexpm.Accounts.SSOTest do
       )
 
       refute Features.enabled?(organization)
+      refute SSO.available?()
 
       Application.put_env(
         :hexpm,
@@ -47,6 +49,7 @@ defmodule Hexpm.Accounts.SSOTest do
       )
 
       refute Features.enabled?(organization)
+      refute SSO.available?()
     end
 
     test "enabled mode is limited to paid organizations", %{organization: organization} do
@@ -304,6 +307,51 @@ defmodule Hexpm.Accounts.SSOTest do
       assert "sso.connection.test" in actions
       assert "sso.connection.enable" in actions
       assert "sso.connection.disable" in actions
+    end
+
+    test "binds an active connection test to the configuring administrator", context do
+      stub_discovery()
+      assert {:ok, connection} = configure_connection(context)
+      assert connection.configured_by_user_id == context.admin.id
+
+      second_admin = insert(:user)
+
+      insert(:organization_user,
+        organization: context.organization,
+        user: second_admin,
+        role: "admin"
+      )
+
+      assert {:error, :configuration_admin_required} =
+               SSO.start_test(
+                 context.organization,
+                 second_admin,
+                 :active,
+                 "https://hex.pm/sso/callback"
+               )
+
+      stub_authorization_uri()
+
+      assert {:ok, transaction, _uri} =
+               SSO.start_test(
+                 context.organization,
+                 context.admin,
+                 :active,
+                 "https://hex.pm/sso/callback"
+               )
+
+      transaction = SSO.get_transaction_by_state(transaction.raw_state)
+
+      assert {:error, :test_user_mismatch} =
+               SSO.complete_callback(
+                 transaction,
+                 valid_claims(),
+                 second_admin,
+                 audit_data(second_admin)
+               )
+
+      refute SSO.get_connection(context.organization).tested_at
+      refute Repo.get!(SSO.Transaction, transaction.id).consumed_at
     end
 
     test "tests a pending secret before completing an overlap rotation", context do
@@ -1189,6 +1237,9 @@ defmodule Hexpm.Accounts.SSOTest do
       assert {:ok, not_member} = SSO.record_failure(connection, :link, :not_member, member)
       assert not_member.user_id == member.id
 
+      assert SSO.failure_message(not_member) ==
+               "The Hexpm account is not a member of the organization"
+
       assert {:ok, conflict} =
                SSO.record_failure(
                  connection,
@@ -1198,6 +1249,9 @@ defmodule Hexpm.Accounts.SSOTest do
                )
 
       assert conflict.user_id == member.id
+
+      assert SSO.failure_message(conflict) ==
+               "The SSO identity or Hexpm account is already linked"
 
       assert {:ok, redacted} = SSO.record_failure(connection, :callback, :issuer_mismatch, member)
       assert is_nil(redacted.user_id)

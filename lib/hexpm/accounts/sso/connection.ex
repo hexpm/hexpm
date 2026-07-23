@@ -20,6 +20,7 @@ defmodule Hexpm.Accounts.SSO.Connection do
     field :enabled_at, :utc_datetime_usec
 
     belongs_to :organization, Organization
+    belongs_to :configured_by_user, User
     has_many :identities, Hexpm.Accounts.SSO.Identity
     has_many :transactions, Hexpm.Accounts.SSO.Transaction
     has_many :notifications, Hexpm.Accounts.SSO.Notification
@@ -49,6 +50,7 @@ defmodule Hexpm.Accounts.SSO.Connection do
       :discovery_expires_at,
       :jwks_expires_at,
       :metadata_expires_at,
+      :configured_by_user_id,
       :version,
       :pending_client_secret_version,
       :tested_at,

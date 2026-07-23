@@ -9,6 +9,14 @@ defmodule Hexpm.Accounts.SSO.Features do
     end
   end
 
+  def available? do
+    case config()[:mode] do
+      :off -> false
+      :beta -> config()[:beta_organizations] != []
+      :enabled -> true
+    end
+  end
+
   def mode, do: config()[:mode]
 
   defp config do

@@ -365,6 +365,24 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
              )
   end
 
+  test "rejects an ID token with an authorized party for another client", context do
+    id_token =
+      signed_id_token(context.key, "key-1", context.transaction, %{
+        "azp" => "another-client"
+      })
+
+    expect_token_response(id_token)
+
+    assert {:error, %Error{stage: :token, code: :id_token_invalid}} =
+             Oidcc.exchange_code(
+               context.connection,
+               context.transaction,
+               "authorization-code",
+               context.transaction.redirect_uri,
+               context.connection.client_secret
+             )
+  end
+
   test "rejects invalid signatures, nonce, expiry, issuer, and issued-at values", context do
     now = DateTime.utc_now() |> DateTime.to_unix()
 

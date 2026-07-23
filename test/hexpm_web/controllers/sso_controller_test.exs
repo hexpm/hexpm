@@ -4,7 +4,7 @@ defmodule HexpmWeb.SSOControllerTest do
 
   import ExUnit.CaptureLog
 
-  alias Hexpm.Accounts.SSO
+  alias Hexpm.Accounts.{AuditLogs, SSO}
   alias Hexpm.Accounts.SSO.{Identity, Notification, OIDC}
   alias Hexpm.Emails.SSONotificationWorker
   alias HexpmWeb.Plugs.Attack
@@ -92,6 +92,55 @@ defmodule HexpmWeb.SSOControllerTest do
     assert organization_id == context.organization.id
     assert_enqueued(worker: SSONotificationWorker)
     assert %Notification{kind: "identity_linked"} = Repo.one!(Notification)
+
+    link_log =
+      Enum.find(AuditLogs.all_by(context.organization), &(&1.action == "sso.identity.link"))
+
+    assert link_log.user_id == context.member.id
+    assert link_log.params["user_id"] == context.member.id
+  end
+
+  test "a nonmember account proof is rejected with actionable user diagnostics", context do
+    outsider = insert(:user)
+    conn = begin_pending_link(context)
+    %{"transaction_id" => transaction_id} = get_session(conn, "pending_sso_link")
+    mock_pwned()
+
+    conn =
+      conn
+      |> recycle()
+      |> post("/login", %{
+        username: outsider.username,
+        password: "password",
+        return: "/sso/link"
+      })
+
+    assert redirected_to(conn) == "/users/#{outsider.username}"
+    assert get_session(conn, "session_token")
+    refute get_session(conn, "pending_sso_link")
+    assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "not a member"
+    assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "Ask an administrator"
+
+    transaction = Repo.get!(SSO.Transaction, transaction_id)
+    assert transaction.cancelled_at
+    assert transaction.subject == nil
+    assert transaction.provider_email == nil
+
+    assert [%{stage: "link", code: "not_member", user: failure_user}] =
+             SSO.failures(context.connection)
+
+    assert failure_user.id == outsider.id
+
+    stub(Hexpm.Billing.Mock, :get, fn _organization, _opts -> nil end)
+
+    html =
+      build_conn()
+      |> test_login(context.member)
+      |> get("/dashboard/orgs/#{context.organization.name}/sso")
+      |> html_response(200)
+
+    assert html =~ "The Hexpm account is not a member of the organization"
+    assert html =~ outsider.username
   end
 
   test "an existing browser session does not satisfy first-link account proof", context do
@@ -279,6 +328,47 @@ defmodule HexpmWeb.SSOControllerTest do
     assert Repo.get!(SSO.Transaction, pending["transaction_id"]).user_id == context.member.id
   end
 
+  test "a nonmember GitHub account proof is rejected with actionable user diagnostics", context do
+    outsider = insert(:user)
+
+    insert(:user_provider,
+      user: outsider,
+      provider: "github",
+      provider_uid: "sso-github-outsider"
+    )
+
+    conn = begin_pending_link(context)
+    pending = get_session(conn, "pending_sso_link")
+
+    conn =
+      build_conn()
+      |> mock_github_auth_success(
+        "sso-github-outsider",
+        List.first(outsider.emails).email
+      )
+      |> init_test_session(%{
+        "pending_sso_link" => pending,
+        "oauth_return" => "/sso/link"
+      })
+      |> HexpmWeb.AuthController.callback(%{})
+
+    assert redirected_to(conn) == "/users/#{outsider.username}"
+    assert get_session(conn, "session_token")
+    refute get_session(conn, "pending_sso_link")
+    assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "not a member"
+    assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "Ask an administrator"
+
+    transaction = Repo.get!(SSO.Transaction, pending["transaction_id"])
+    assert transaction.cancelled_at
+    assert transaction.subject == nil
+    assert transaction.provider_email == nil
+
+    assert [%{stage: "link", code: "not_member", user: failure_user}] =
+             SSO.failures(context.connection)
+
+    assert failure_user.id == outsider.id
+  end
+
   test "an unlinked GitHub account cannot create or select a Hexpm account for linking",
        context do
     expect_authorization_request(context.connection)
@@ -367,6 +457,10 @@ defmodule HexpmWeb.SSOControllerTest do
     identity = Repo.one!(Identity)
     assert identity.provider_email == "renamed@identity.example.com"
     refute List.first(context.member.emails).email == identity.provider_email
+
+    login_log = Enum.find(AuditLogs.all_by(context.organization), &(&1.action == "sso.login"))
+    assert login_log.user_id == context.member.id
+    assert login_log.params["user_id"] == context.member.id
   end
 
   test "does not expose an organization login route when the feature is off", context do

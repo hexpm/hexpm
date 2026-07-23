@@ -201,6 +201,7 @@ defmodule HexpmWeb.Router do
     get "/docs/rebar3-tasks", DocsController, :rebar3_tasks
     get "/docs/private", DocsController, :private
     get "/docs/dependency-policies", DocsController, :dependency_policies
+    get "/docs/organization-sso", DocsController, :organization_sso
     get "/docs/faq", DocsController, :faq
     get "/docs/mirrors", DocsController, :mirrors
     get "/docs/public-keys", DocsController, :public_keys

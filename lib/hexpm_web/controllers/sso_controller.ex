@@ -147,7 +147,7 @@ defmodule HexpmWeb.SSOController do
 
             conn
             |> delete_session("pending_sso_link")
-            |> put_flash(:error, link_error_message(reason))
+            |> put_flash(:error, sso_link_error_message(reason))
             |> redirect(to: ~p"/login")
         end
     end
@@ -237,14 +237,4 @@ defmodule HexpmWeb.SSOController do
   defp start_error_message(:connection_disabled), do: "SSO is not enabled for that organization."
   defp start_error_message(:not_configured), do: "SSO is not configured for that organization."
   defp start_error_message(_reason), do: "SSO login could not be started."
-
-  defp link_error_message(:not_member),
-    do:
-      "This Hexpm account is not a member of the organization. Ask an administrator to add it before retrying SSO."
-
-  defp link_error_message({:identity_conflict, _changeset}),
-    do: "That SSO identity or Hexpm account is already linked."
-
-  defp link_error_message(_reason),
-    do: "The SSO identity could not be linked. Start the login again."
 end

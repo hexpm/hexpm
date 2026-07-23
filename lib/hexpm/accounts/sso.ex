@@ -10,6 +10,7 @@ defmodule Hexpm.Accounts.SSO do
   @transaction_lifetime_seconds 10 * 60
   @diagnostic_limit 20
 
+  def available?, do: Features.available?()
   def enabled?(organization), do: Features.enabled?(organization)
 
   def get_connection(organization, preload \\ []) do
@@ -79,6 +80,7 @@ defmodule Hexpm.Accounts.SSO do
           issuer: desired.issuer,
           client_id: desired.client_id,
           client_secret: supplied_secret || connection.client_secret,
+          configured_by_user_id: audit_data.user.id,
           version: connection.version + 1,
           tested_at: nil,
           pending_client_secret: nil,
@@ -297,6 +299,7 @@ defmodule Hexpm.Accounts.SSO do
     with :ok <- require_feature(organization),
          :ok <- require_admin(organization, user),
          %Connection{} = connection <- get_connection(organization),
+         :ok <- require_configuration_admin(connection, user, secret_slot),
          {:ok, connection} <- refresh_metadata_if_expired(connection),
          {:ok, {transaction, uri}} <-
            Repo.transaction(fn ->
@@ -304,6 +307,7 @@ defmodule Hexpm.Accounts.SSO do
 
              with :ok <- require_feature(connection.organization),
                   :ok <- require_locked_admin(connection.organization, user),
+                  :ok <- require_configuration_admin(connection, user, secret_slot),
                   {:ok, client_secret} <- secret_for_slot(connection, secret_slot),
                   {:ok, transaction, state} <-
                     create_transaction(
@@ -687,6 +691,21 @@ defmodule Hexpm.Accounts.SSO do
     do: user && user.id
 
   defp failure_user_id(_code, _user), do: nil
+
+  defp require_configuration_admin(_connection, _user, "pending"), do: :ok
+
+  defp require_configuration_admin(
+         %Connection{configured_by_user_id: user_id},
+         %{id: user_id},
+         "active"
+       )
+       when not is_nil(user_id),
+       do: :ok
+
+  defp require_configuration_admin(_connection, _user, "active"),
+    do: {:error, :configuration_admin_required}
+
+  defp require_configuration_admin(_connection, _user, _secret_slot), do: :ok
 
   def failure_message(%Failure{code: code}), do: failure_message(code)
 
@@ -1090,7 +1109,9 @@ defmodule Hexpm.Accounts.SSO do
         "The provider does not support client secret authentication",
       "connection_disabled" => "The SSO connection is disabled",
       "id_token_invalid" => "The provider returned an invalid identity token",
+      "identity_conflict" => "The SSO identity or Hexpm account is already linked",
       "issuer_mismatch" => "The provider issuer did not match the configured issuer",
+      "not_member" => "The Hexpm account is not a member of the organization",
       "pkce_s256_unsupported" => "The provider does not support PKCE with S256",
       "token_endpoint_rejected_request" => "The provider rejected the authorization code",
       "token_endpoint_unavailable" => "The provider token endpoint could not be reached"

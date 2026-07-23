@@ -389,7 +389,7 @@ defmodule HexpmWeb.ControllerHelpers do
 
           {:error, reason} ->
             if transaction do
-              SSO.record_failure(transaction.connection, :link, reason)
+              SSO.record_failure(transaction.connection, :link, reason, user)
             end
 
             SSO.cancel_link(transaction_id, token)
@@ -399,7 +399,7 @@ defmodule HexpmWeb.ControllerHelpers do
             |> assign(:pending_sso_link_proof, :error)
             |> put_flash(
               :error,
-              "The SSO account-link request is no longer valid. You are signed in, but no SSO identity was connected."
+              sso_link_error_message(reason)
             )
         end
 
@@ -407,6 +407,17 @@ defmodule HexpmWeb.ControllerHelpers do
         conn
     end
   end
+
+  def sso_link_error_message(:not_member),
+    do:
+      "This Hexpm account is not a member of the organization. Ask an administrator to add it before retrying SSO."
+
+  def sso_link_error_message({:identity_conflict, _changeset}),
+    do: "That SSO identity or Hexpm account is already linked."
+
+  def sso_link_error_message(_reason),
+    do:
+      "The SSO account-link request is no longer valid. You are signed in, but no SSO identity was connected."
 
   def pending_sso_link_return(conn, "/sso/link") do
     if conn.assigns[:pending_sso_link_proof] == :error, do: nil, else: "/sso/link"

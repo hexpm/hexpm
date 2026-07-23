@@ -4,7 +4,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
 
   import ExUnit.CaptureLog
 
-  alias Hexpm.Accounts.SSO
+  alias Hexpm.Accounts.{AuditLogs, SSO}
   alias Hexpm.Accounts.SSO.{Connection, Error, Notification, OIDC}
   alias Hexpm.Emails.SSONotificationWorker
 
@@ -41,6 +41,19 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     assert html =~ "openid email"
     refute html =~ "stored-client-secret"
 
+    {:ok, document} = Floki.parse_document(html)
+
+    assert [_link] =
+             Floki.find(document, ~s(a[href="/docs/organization-sso"]))
+
+    for path <- [
+          "/dashboard/orgs/#{context.organization.name}/policies",
+          "/dashboard/orgs/#{context.organization.name}/sso"
+        ] do
+      assert [tab] = Floki.find(document, ~s(#org-tab-nav a[href="#{path}"]))
+      assert Floki.text(tab) =~ "NEW"
+    end
+
     conn =
       build_conn()
       |> test_login(context.member)
@@ -50,17 +63,28 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "permission"
   end
 
-  test "shows enabled and disabled status in the provider configuration header", context do
+  test "shows the connection test and enabled status in the provider configuration header",
+       context do
     connection =
       insert(:organization_sso_connection,
         organization: context.organization,
+        configured_by_user_id: context.admin.id,
         tested_at: nil,
         enabled_at: nil
       )
 
     status = connection_status(context)
 
-    assert Floki.text(status) |> String.trim() == "Disabled"
+    assert Floki.text(status) |> String.trim() == "Not tested"
+
+    connection =
+      connection
+      |> Ecto.Changeset.change(tested_at: DateTime.utc_now())
+      |> Repo.update!()
+
+    status = connection_status(context)
+
+    assert Floki.text(status) |> String.trim() == "Tested, disabled"
 
     connection
     |> Ecto.Changeset.change(enabled_at: DateTime.utc_now())
@@ -116,6 +140,42 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     |> response(404)
   end
 
+  test "an empty beta allowlist keeps every organization SSO surface hidden", context do
+    config = Application.fetch_env!(:hexpm, :organization_sso)
+
+    app_env(
+      :hexpm,
+      :organization_sso,
+      Keyword.merge(config, mode: :beta, beta_organizations: [])
+    )
+
+    html =
+      build_conn()
+      |> test_login(context.admin)
+      |> get("/dashboard/orgs/#{context.organization.name}")
+      |> html_response(200)
+
+    {:ok, document} = Floki.parse_document(html)
+
+    assert Floki.find(
+             document,
+             ~s(#org-tab-nav a[href="/dashboard/orgs/#{context.organization.name}/sso"])
+           ) == []
+
+    build_conn()
+    |> test_login(context.admin)
+    |> get("/dashboard/orgs/#{context.organization.name}/sso")
+    |> response(404)
+
+    build_conn()
+    |> get("/sso/#{context.organization.name}")
+    |> response(404)
+
+    build_conn()
+    |> get("/docs/organization-sso")
+    |> response(404)
+  end
+
   test "configures a provider-neutral connection", context do
     expect(OIDC.Mock, :discover, fn issuer ->
       assert issuer == "https://identity.example.com/oauth2/default"
@@ -167,6 +227,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     connection =
       insert(:organization_sso_connection,
         organization: context.organization,
+        configured_by_user_id: context.admin.id,
         tested_at: nil,
         enabled_at: nil
       )
@@ -228,6 +289,37 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "disabled immediately"
   end
 
+  test "only the configuring administrator can start the active connection test", context do
+    insert(:organization_sso_connection,
+      organization: context.organization,
+      configured_by_user_id: context.admin.id,
+      tested_at: nil,
+      enabled_at: nil
+    )
+
+    second_admin = insert(:user)
+
+    insert(:organization_user,
+      organization: context.organization,
+      user: second_admin,
+      role: "admin"
+    )
+
+    conn =
+      build_conn()
+      |> test_login(second_admin)
+      |> post("/dashboard/orgs/#{context.organization.name}/sso/test", %{
+        secret_slot: "active"
+      })
+
+    assert redirected_to(conn) == "/dashboard/orgs/#{context.organization.name}/sso"
+
+    assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+             "The administrator who saved the configuration must complete its connection test. If that administrator is unavailable, disable SSO if needed and have a current administrator save the configuration again."
+
+    refute Repo.one(SSO.Transaction)
+  end
+
   test "an administrator can unlink an identity and notify the member", context do
     connection =
       insert(:organization_sso_connection,
@@ -270,6 +362,12 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     assert redirected_to(conn) == "/dashboard/orgs/#{context.organization.name}/sso"
     assert_enqueued(worker: SSONotificationWorker)
     assert %Notification{kind: "identity_unlinked"} = Repo.one!(Notification)
+
+    unlink_log =
+      Enum.find(AuditLogs.all_by(context.organization), &(&1.action == "sso.identity.unlink"))
+
+    assert unlink_log.user_id == context.admin.id
+    assert unlink_log.params["user_id"] == context.member.id
   end
 
   test "an unlink request without an organization identity does not notify another user",
