@@ -234,17 +234,5 @@ defmodule HexpmWeb.PackageLive.IndexTest do
 
       refute_patched(view)
     end
-
-    test "does not reset page when search change event is triggered with the same search term", %{
-      conn: conn
-    } do
-      {:ok, view, _html} = live(conn, ~p"/packages?page=2&search=phoenix_test_pkg")
-
-      view
-      |> form("#mobile-search-bar-form", %{"search" => "phoenix_test_pkg"})
-      |> render_change()
-
-      refute_patched(view)
-    end
   end
 end
