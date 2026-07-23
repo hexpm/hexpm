@@ -13,6 +13,11 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
     end
   end
 
+  defmodule MixedResolver do
+    def getaddrs(_host, :inet), do: {:ok, [{1, 1, 1, 1}]}
+    def getaddrs(_host, :inet6), do: {:ok, [{0, 0, 0, 0, 0, 0, 0, 1}]}
+  end
+
   @issuer "https://1.1.1.1/oauth2/default"
   @authorization_endpoint "https://1.1.1.1/oauth2/v1/authorize"
   @token_endpoint "https://1.1.1.1/oauth2/v1/token"
@@ -165,6 +170,59 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
 
     assert {:error, %Error{stage: :url_validation, code: :private_address_not_allowed}} =
              SafeURL.validate("https://198.51.100.1/oauth2/default")
+  end
+
+  test "rejects special-use IPv6 issuer URLs before making a request" do
+    addresses = [
+      "1fff:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
+      "2001::",
+      "2001:1ff:ffff:ffff:ffff:ffff:ffff:ffff",
+      "2001:db8::",
+      "2001:db8:ffff:ffff:ffff:ffff:ffff:ffff",
+      "2002::",
+      "2002:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
+      "3ffe::",
+      "3ffe:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
+      "3fff::",
+      "3fff:fff:ffff:ffff:ffff:ffff:ffff:ffff",
+      "4000::",
+      "::ffff:127.0.0.1",
+      "::8.8.8.8"
+    ]
+
+    for address <- addresses do
+      assert {:error, %Error{stage: :url_validation, code: :private_address_not_allowed}} =
+               SafeURL.validate("https://[#{address}]/oauth2/default")
+    end
+  end
+
+  test "accepts ordinary global-unicast IPv6 issuer URLs" do
+    addresses = [
+      "2001:200::",
+      "2001:db7:ffff:ffff:ffff:ffff:ffff:ffff",
+      "2001:db9::",
+      "2003::",
+      "2606:4700:4700::1111",
+      "3fff:1000::",
+      "::ffff:8.8.8.8"
+    ]
+
+    for address <- addresses do
+      assert {:ok, %URI{host: ^address}} =
+               SafeURL.validate("https://[#{address}]/oauth2/default")
+    end
+  end
+
+  test "rejects a hostname when any resolved address is not public" do
+    original_resolver = Application.get_env(:hexpm, :sso_dns_resolver)
+    Application.put_env(:hexpm, :sso_dns_resolver, MixedResolver)
+
+    on_exit(fn ->
+      restore_env(:sso_dns_resolver, original_resolver)
+    end)
+
+    assert {:error, %Error{stage: :url_validation, code: :private_address_not_allowed}} =
+             SafeURL.validate("https://mixed.example/oauth2/default")
   end
 
   test "ignores optional PAR metadata instead of making an uncontrolled server request",

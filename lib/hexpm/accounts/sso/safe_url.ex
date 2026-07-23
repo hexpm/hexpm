@@ -4,6 +4,14 @@ defmodule Hexpm.Accounts.SSO.SafeURL do
   alias Hexpm.Accounts.SSO.Error
 
   @dns_timeout 5_000
+  @public_ipv6_prefix {{0x2000, 0, 0, 0, 0, 0, 0, 0}, 3}
+  @non_public_ipv6_prefixes [
+    {{0x2001, 0, 0, 0, 0, 0, 0, 0}, 23},
+    {{0x2001, 0x0DB8, 0, 0, 0, 0, 0, 0}, 32},
+    {{0x2002, 0, 0, 0, 0, 0, 0, 0}, 16},
+    {{0x3FFE, 0, 0, 0, 0, 0, 0, 0}, 16},
+    {{0x3FFF, 0, 0, 0, 0, 0, 0, 0}, 20}
+  ]
 
   def validate(value) do
     with {:ok, uri, _addresses} <- resolve(value) do
@@ -104,13 +112,22 @@ defmodule Hexpm.Accounts.SSO.SafeURL do
 
   defp public_address?({0, 0, 0, 0, 0, 0, _high, _low}), do: false
 
-  defp public_address?({a, b, c, d, e, f, g, h}) do
-    (a &&& 0xE000) == 0x2000 and
-      not ({a, b, c, d, e, f, g, h} in [{0, 0, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 1}] or
-             (a &&& 0xFE00) == 0xFC00 or
-             (a &&& 0xFFC0) == 0xFE80 or
-             (a &&& 0xFF00) == 0xFF00 or
-             (a == 0x2001 and b == 0x0DB8))
+  defp public_address?({_a, _b, _c, _d, _e, _f, _g, _h} = address) do
+    in_ipv6_prefix?(address, @public_ipv6_prefix) and
+      Enum.all?(@non_public_ipv6_prefixes, fn prefix ->
+        not in_ipv6_prefix?(address, prefix)
+      end)
+  end
+
+  defp in_ipv6_prefix?(address, {prefix, prefix_length}) do
+    shift = 128 - prefix_length
+    ipv6_to_integer(address) >>> shift == ipv6_to_integer(prefix) >>> shift
+  end
+
+  defp ipv6_to_integer(address) do
+    address
+    |> Tuple.to_list()
+    |> Enum.reduce(0, fn part, acc -> acc <<< 16 ||| part end)
   end
 
   defp error(code), do: {:error, %Error{stage: :url_validation, code: code}}
