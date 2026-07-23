@@ -59,6 +59,13 @@ defmodule Hexpm.OAuth.ClientsTest do
       assert Clients.supports_scopes?(client, ["docs:some-organization"])
     end
 
+    test "treats repositories as allowing narrower repository scopes" do
+      client = %Client{allowed_scopes: ["repositories"]}
+
+      assert Clients.supports_scopes?(client, ["repository:acme"])
+      assert Clients.supports_scopes?(client, ["repositories", "repository:acme"])
+    end
+
     test "returns true for multiple resource-specific scopes" do
       client = %Client{allowed_scopes: ["docs", "repository"]}
 

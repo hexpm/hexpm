@@ -190,6 +190,22 @@ defmodule HexpmWeb.API.KeyControllerTest do
       assert [%KeyPermission{domain: "repository", resource: ^repo_name}] = key.permissions
     end
 
+    test "machine token preserves OAuth TOTP requirements", c do
+      key = Key.build(c.eric, %{name: "computer"}) |> Repo.insert!()
+
+      {:ok, token, _jti} =
+        Hexpm.OAuth.JWT.generate_machine_token(c.eric.username, "user", ["api:write"], key.id)
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/json")
+        |> put_req_header("authorization", "Bearer #{token}")
+        |> post("/api/keys", %{name: "macbook"})
+
+      assert json_response(conn, 403)["message"] ==
+               "Two-factor authentication must be enabled for API write access"
+    end
+
     test "create repository key for unknown repository is not allowed", c do
       body = %{
         name: "macbook",
