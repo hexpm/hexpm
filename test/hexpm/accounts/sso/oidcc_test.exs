@@ -276,6 +276,19 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
     refute params["code_challenge"] == context.transaction.code_verifier
   end
 
+  test "does not hide authorization setup exceptions", context do
+    connection = %{context.connection | client_id: nil}
+
+    assert_raise FunctionClauseError, fn ->
+      Oidcc.authorization_uri(
+        connection,
+        context.transaction,
+        context.transaction.redirect_uri,
+        context.connection.client_secret
+      )
+    end
+  end
+
   test "exchanges a code and validates signed ID-token claims", context do
     now = DateTime.utc_now() |> DateTime.to_unix()
 
@@ -440,6 +453,70 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
              )
   end
 
+  test "normalizes exceptions from malformed ID tokens at the OIDCC boundary", context do
+    attach_token_validation_exception_handler()
+
+    for id_token <- ["..", "a.b.c"] do
+      expect_token_response(id_token)
+
+      assert {:error, %Error{stage: :token, code: :id_token_invalid}} =
+               Oidcc.exchange_code(
+                 context.connection,
+                 context.transaction,
+                 "authorization-code",
+                 context.transaction.redirect_uri,
+                 context.connection.client_secret
+               )
+
+      assert_receive {:token_validation_exception, %{count: 1}, metadata}
+      assert metadata.phase == :initial
+      assert metadata.exception in [CaseClauseError, Jason.DecodeError]
+      assert Map.keys(metadata) |> Enum.sort() == [:exception, :phase]
+    end
+  end
+
+  test "normalizes exceptions after refreshing JWKS", context do
+    attach_token_validation_exception_handler()
+
+    replacement_key = JOSE.JWK.generate_key({:rsa, 1_024})
+    {_, public_key} = JOSE.JWK.to_public_map(replacement_key)
+    refreshed_jwks = %{"keys" => [Map.put(public_key, "kid", "key-2")]}
+
+    id_token =
+      signed_id_token(replacement_key, "key-2", context.transaction, %{"exp" => "not-an-integer"})
+
+    expect_token_response(id_token)
+    expect_json_get(@jwks_uri, refreshed_jwks)
+
+    assert {:error, %Error{stage: :token, code: :id_token_invalid_after_jwks_refresh}} =
+             Oidcc.exchange_code(
+               context.connection,
+               context.transaction,
+               "authorization-code",
+               context.transaction.redirect_uri,
+               context.connection.client_secret
+             )
+
+    assert_receive {:token_validation_exception, %{count: 1},
+                    %{exception: ArithmeticError, phase: :jwks_refresh}}
+  end
+
+  test "does not hide exceptions outside OIDCC token validation", context do
+    expect(Hexpm.HTTP.Mock, :post, fn _url, _headers, _body, _opts ->
+      raise "HTTP adapter failure"
+    end)
+
+    assert_raise RuntimeError, "HTTP adapter failure", fn ->
+      Oidcc.exchange_code(
+        context.connection,
+        context.transaction,
+        "authorization-code",
+        context.transaction.redirect_uri,
+        context.connection.client_secret
+      )
+    end
+  end
+
   test "bounds provider subject and email claims before persistence", context do
     valid_subject = String.duplicate("s", 255)
 
@@ -497,6 +574,23 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
       assert opts[:connect_hostname] == "1.1.1.1"
       {:ok, 200, [{"content-type", "application/json"}], JSON.encode!(%{"id_token" => id_token})}
     end)
+  end
+
+  defp attach_token_validation_exception_handler do
+    handler_id = {__MODULE__, self(), make_ref()}
+    test_pid = self()
+
+    :ok =
+      :telemetry.attach(
+        handler_id,
+        [:hexpm, :sso, :oidc, :token_validation_exception],
+        fn _event, measurements, metadata, pid ->
+          send(pid, {:token_validation_exception, measurements, metadata})
+        end,
+        test_pid
+      )
+
+    on_exit(fn -> :telemetry.detach(handler_id) end)
   end
 
   defp signed_id_token(key, kid, transaction, overrides \\ %{}) do

@@ -56,8 +56,6 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
       {:error, %Error{} = error} -> {:error, error}
       {:error, _reason} -> error(:authorization, :authorization_url_failed)
     end
-  rescue
-    _exception -> error(:authorization, :authorization_url_failed)
   end
 
   @impl true
@@ -87,8 +85,6 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
          jwks_expires_at: refreshed_jwks_expiry
        }}
     end
-  rescue
-    _exception -> error(:token, :token_validation_failed)
   end
 
   defp request_token(configuration, connection, code, redirect_uri, opts) do
@@ -151,7 +147,7 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
   defp validate_id_token(id_token, client_context, transaction, connection) do
     opts = %{nonce: transaction.nonce, trusted_audiences: [], validate_azp: :client_id}
 
-    case Oidcc.Token.validate_id_token(id_token, client_context, opts) do
+    case oidcc_validate_id_token(id_token, client_context, opts, :initial) do
       {:ok, claims} ->
         {:ok, claims, nil, nil}
 
@@ -170,13 +166,27 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
          {:ok, jwks_document, expiry} <- fetch_json(jwks_uri, :jwks),
          {:ok, jwks} <- decode_jwks(jwks_document),
          refreshed_context <- %{client_context | jwks: jwks},
-         {:ok, claims} <- Oidcc.Token.validate_id_token(id_token, refreshed_context, opts),
+         {:ok, claims} <-
+           oidcc_validate_id_token(id_token, refreshed_context, opts, :jwks_refresh),
          :ok <- validate_claims(claims, transaction, connection) do
       {:ok, claims, jwks_document, expiry}
     else
       {:error, %Error{} = error} -> {:error, error}
       {:error, _reason} -> error(:token, :id_token_invalid_after_jwks_refresh)
     end
+  end
+
+  defp oidcc_validate_id_token(id_token, client_context, opts, phase) do
+    Oidcc.Token.validate_id_token(id_token, client_context, opts)
+  rescue
+    exception ->
+      :telemetry.execute(
+        [:hexpm, :sso, :oidc, :token_validation_exception],
+        %{count: 1},
+        %{exception: exception.__struct__, phase: phase}
+      )
+
+      {:error, :token_validation_exception}
   end
 
   defp validate_claims(claims, transaction, connection) do
