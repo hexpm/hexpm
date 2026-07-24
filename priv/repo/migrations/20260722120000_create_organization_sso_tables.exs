@@ -4,6 +4,7 @@ defmodule Hexpm.RepoBase.Migrations.CreateOrganizationSsoTables do
   def change do
     create table(:organization_sso_connections) do
       add :organization_id, references(:organizations, on_delete: :delete_all), null: false
+      add :configured_by_user_id, references(:users, on_delete: :nilify_all)
       add :issuer, :text, null: false
       add :client_id, :text, null: false
       add :client_secret, :text, null: false
