@@ -72,7 +72,8 @@ defmodule Hexpm.RepoBase do
     registry: 1,
     vulnerability_updater: 2,
     policy: 3,
-    diff: 4
+    diff: 4,
+    email_outbox: 5
   }
 
   def init(_reason, opts) do

@@ -1,0 +1,7 @@
+Organization SSO Connected
+
+<%= Common.greeting(@username) %>
+
+Your Hex.pm account is now connected to single sign-on for the <%= @organization %> organization.
+
+<%= Common.unauthorized_change_notice(:text) %>

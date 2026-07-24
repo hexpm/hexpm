@@ -47,6 +47,7 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
       purge_plug_sessions(repo, batch_size)
       purge_password_resets(repo, batch_size)
       purge_account_deletion_requests(repo, batch_size)
+      purge_sso_transactions(repo, batch_size)
       purge_keys(repo, batch_size)
     end)
   end
@@ -158,6 +159,21 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
       )
 
     Logger.info("[task] Purged #{count} expired account deletion requests")
+  end
+
+  defp purge_sso_transactions(repo, batch_size) do
+    count =
+      delete_in_batches(
+        repo,
+        Hexpm.Accounts.SSO.Transaction,
+        from(transaction in Hexpm.Accounts.SSO.Transaction,
+          where: transaction.expires_at < fragment("NOW()"),
+          order_by: transaction.expires_at
+        ),
+        batch_size
+      )
+
+    Logger.info("[task] Purged #{count} expired organization SSO transactions")
   end
 
   defp purge_keys(repo, batch_size) do

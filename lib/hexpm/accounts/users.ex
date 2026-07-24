@@ -159,6 +159,7 @@ defmodule Hexpm.Accounts.Users do
         from(t in Hexpm.OAuth.Token, where: t.user_id == ^user.id)
       )
       |> Multi.delete(:user, user, stale_error_field: :id)
+      |> Hexpm.Accounts.SSO.delete_user_notifications(user)
 
     case Repo.transaction(multi) do
       {:ok, _} ->

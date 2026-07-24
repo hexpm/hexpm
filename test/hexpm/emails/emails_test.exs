@@ -1,7 +1,7 @@
 defmodule Hexpm.EmailsTest do
   use Hexpm.DataCase, async: false
 
-  alias Hexpm.Accounts.Organization
+  alias Hexpm.Accounts.{Organization, User}
   alias Hexpm.Emails
   alias HexpmWeb.EmailView.Common
 
@@ -81,6 +81,44 @@ defmodule Hexpm.EmailsTest do
       assert Enum.any?(Floki.find(document, "a"), fn {"a", attrs, _children} ->
                (Map.new(attrs)["href"] || "") =~ "/password/new"
              end)
+    end
+  end
+
+  describe "SSO security notifications" do
+    setup do
+      user = insert(:user)
+
+      insert(:email,
+        user: user,
+        email: "secondary@example.com",
+        primary: false,
+        public: false,
+        gravatar: false
+      )
+
+      %{
+        organization: build(:organization, name: "acme"),
+        user: Hexpm.Repo.preload(user, :emails, force: true)
+      }
+    end
+
+    test "link and unlink notifications go to every account email", context do
+      for email <- [
+            Emails.sso_identity_linked(context.organization, context.user),
+            Emails.sso_identity_unlinked(context.organization, context.user)
+          ] do
+        assert Enum.sort(Enum.map(email.to, &elem(&1, 1))) ==
+                 Enum.sort(["secondary@example.com", User.email(context.user, :primary)])
+
+        assert email.text_body =~ "acme"
+      end
+    end
+
+    test "email mismatch identifies the provider address", context do
+      email = Emails.sso_email_mismatch(context.organization, context.user, "person@idp.example")
+
+      assert email.text_body =~ "person@idp.example"
+      assert email.text_body =~ "no account email was changed"
     end
   end
 

@@ -1,5 +1,25 @@
 import Config
 
+debug_errors =
+  case System.get_env("HEXPM_DEV_DEBUG_ERRORS", "true") do
+    "true" -> true
+    "false" -> false
+    value -> raise "invalid HEXPM_DEV_DEBUG_ERRORS #{inspect(value)}; expected true or false"
+  end
+
+log_level =
+  case System.get_env("HEXPM_DEV_LOG_LEVEL", "debug") do
+    "debug" -> :debug
+    "info" -> :info
+    "notice" -> :notice
+    "warning" -> :warning
+    "error" -> :error
+    "critical" -> :critical
+    "alert" -> :alert
+    "emergency" -> :emergency
+    value -> raise "invalid HEXPM_DEV_LOG_LEVEL #{inspect(value)}"
+  end
+
 config :hexpm,
   billing_report: false,
   sudo: false,
@@ -31,7 +51,7 @@ config :hexpm,
 
 config :hexpm, HexpmWeb.Endpoint,
   http: [port: 4000],
-  debug_errors: true,
+  debug_errors: debug_errors,
   code_reloader: true,
   cache_static_lookup: false,
   check_origin: false,
@@ -56,6 +76,7 @@ config :phoenix_live_view,
   debug_heex_annotations: true,
   debug_attributes: true
 
+config :logger, level: log_level
 config :logger, :default_formatter, format: "[$level] $message\n"
 
 config :phoenix, :stacktrace_depth, 20
@@ -72,6 +93,8 @@ config :hexpm, Hexpm.RepoBase,
 config :hexpm, Hexpm.Emails.Mailer, adapter: Swoosh.Adapters.Local
 
 config :hexpm, Oban, plugins: []
+
+config :hexpm, :organization_sso, all_organizations: true
 
 config :ueberauth, Ueberauth.Strategy.Github.OAuth,
   client_id: System.get_env("HEXPM_GITHUB_CLIENT_ID"),

@@ -1,0 +1,15 @@
+<h1 style="color: #030913; font-size: 24px; line-height: 32px; font-weight: 600; margin: 0 0 24px 0; text-align: center;">
+  Organization SSO Email Differs
+</h1>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= Common.greeting(@username) %>,
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  You signed in to the <strong><%= @organization %></strong> organization using <strong><%= @provider_email %></strong>, which is not a verified email address on your Hex.pm account. Your existing organization link was used; no account email was changed.
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  If you do not recognize this sign-in, reset your Hex.pm password and ask an organization administrator to disconnect your SSO identity.
+</p>

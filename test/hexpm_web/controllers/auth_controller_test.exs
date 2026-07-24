@@ -8,6 +8,36 @@ defmodule HexpmWeb.AuthControllerTest do
     :ok
   end
 
+  test "does not preserve ordinary OAuth return paths" do
+    conn =
+      build_conn()
+      |> init_test_session(%{"oauth_return" => "/stale"})
+      |> Map.put(:params, %{"return" => "/dashboard"})
+      |> HexpmWeb.AuthController.store_oauth_return([])
+
+    refute get_session(conn, "oauth_return")
+  end
+
+  test "preserves the return only for an available pending SSO link" do
+    config = Application.fetch_env!(:hexpm, :organization_sso)
+
+    app_env(
+      :hexpm,
+      :organization_sso,
+      Keyword.merge(config, mode: :beta, beta_organizations: ["pilot"])
+    )
+
+    conn =
+      build_conn()
+      |> init_test_session(%{
+        "pending_sso_link" => %{"transaction_id" => 123, "token" => "link-token"}
+      })
+      |> Map.put(:params, %{"return" => "/sso/link"})
+      |> HexpmWeb.AuthController.store_oauth_return([])
+
+    assert get_session(conn, "oauth_return") == "/sso/link"
+  end
+
   describe "GET /auth/github/callback - GitHub signup (new user)" do
     test "redirects to username selection form" do
       email = Hexpm.Fake.sequence(:email)

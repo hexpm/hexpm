@@ -14,8 +14,15 @@ defmodule HexpmWeb.TFARecoveryController do
       conn
       |> delete_session("tfa_user_id")
       |> start_session_internal(updated_user)
+      |> prove_pending_sso_link(updated_user)
       |> HexpmWeb.Plugs.Sudo.set_sudo_authenticated()
-      |> redirect(to: safe_return_path(session["return"]) || ~p"/users/#{updated_user}")
+      |> then(fn conn ->
+        return = safe_return_path(session["return"])
+
+        redirect(conn,
+          to: pending_sso_link_return(conn, return) || ~p"/users/#{updated_user}"
+        )
+      end)
     else
       _ ->
         render_show_error(conn)

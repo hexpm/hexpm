@@ -86,6 +86,36 @@ defmodule HexpmWeb.Plugs.AttackTest do
       assert {:block, _data} = Attack.diff_throttle(identity, time: time)
     end
 
+    test "broadcasts SSO rate limits" do
+      align_to_throttle_bucket()
+      time = System.system_time(:millisecond)
+      ip = {6, 6, 6, 6}
+      organization_id = 123
+
+      for key <- [
+            {:sso_start_ip, ip},
+            {:sso_start_organization, organization_id, ip},
+            {:sso_callback_ip, ip}
+          ] do
+        Phoenix.PubSub.broadcast!(Hexpm.PubSub, "ratelimit", {:throttle, key, time})
+      end
+
+      :sys.get_state(RateLimitPubSub)
+
+      assert {:allow, {:throttle, start_data}} =
+               Attack.sso_start_ip_throttle(ip, time: time)
+
+      assert {:allow, {:throttle, organization_data}} =
+               Attack.sso_start_organization_throttle(organization_id, ip, time: time)
+
+      assert {:allow, {:throttle, callback_data}} =
+               Attack.sso_callback_ip_throttle(ip, time: time)
+
+      assert start_data[:remaining] == 28
+      assert organization_data[:remaining] == 18
+      assert callback_data[:remaining] == 48
+    end
+
     test "halts requests when ip limit is exceeded" do
       align_to_throttle_bucket()
 

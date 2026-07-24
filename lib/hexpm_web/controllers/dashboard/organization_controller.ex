@@ -11,6 +11,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   alias HexpmWeb.Dashboard.KeyController
   alias HexpmWeb.Dashboard.Organization.Components.BillingHelpers
+  alias Hexpm.Accounts.SSO
 
   @policy_suggestion_limit 8
 
@@ -28,6 +29,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
               :danger_zone,
               :update,
               :audit_logs,
+              :sso,
               :leave,
               :billing_token,
               :cancel_billing,
@@ -200,6 +202,16 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         page: page,
         per_page: per_page
       )
+    end)
+  end
+
+  def sso(conn, %{"dashboard_org" => organization}) do
+    access_organization(conn, organization, "admin", fn organization ->
+      if SSO.enabled?(organization) do
+        render_index(conn, organization, tab: :sso)
+      else
+        not_found(conn)
+      end
     end)
   end
 
@@ -908,39 +920,40 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     {policies, policy_stats, policy_activity, policy_rev} =
       policy_assigns(organization, opts[:tab], policy_action, policy)
 
-    assigns = [
-      title: "Dashboard - Organization",
-      container: "container page dashboard",
-      tab: opts[:tab] || :profile,
-      changeset: user && User.update_profile(user, %{}),
-      public_email: public_email && public_email.email,
-      gravatar_email: gravatar_email && gravatar_email.email,
-      organization: organization,
-      repository: organization.repository,
-      keys: keys,
-      audit_logs: audit_logs,
-      audit_logs_total_count: audit_logs_total_count,
-      page: page,
-      per_page: per_page,
-      audit_logs_path_fn: &~p"/dashboard/orgs/#{organization}/audit-logs?#{&1}",
-      params: opts[:params],
-      errors: opts[:errors],
-      delete_key_path: delete_key_path,
-      create_key_path: create_key_path,
-      generated_key: opts[:generated_key],
-      key_changeset: opts[:key_changeset] || key_changeset(),
-      packages: packages,
-      add_member_changeset: opts[:add_member_changeset] || add_member_changeset(),
-      new_organization_changeset: create_changeset(),
-      policy_action: policy_action,
-      policy: policy,
-      policy_admin?: policy_admin?,
-      policy_changeset: opts[:policy_changeset],
-      policies: policies,
-      policy_stats: policy_stats,
-      policy_activity: policy_activity,
-      policy_rev: policy_rev
-    ]
+    assigns =
+      [
+        title: "Dashboard - Organization",
+        container: "container page dashboard",
+        tab: opts[:tab] || :profile,
+        changeset: user && User.update_profile(user, %{}),
+        public_email: public_email && public_email.email,
+        gravatar_email: gravatar_email && gravatar_email.email,
+        organization: organization,
+        repository: organization.repository,
+        keys: keys,
+        audit_logs: audit_logs,
+        audit_logs_total_count: audit_logs_total_count,
+        page: page,
+        per_page: per_page,
+        audit_logs_path_fn: &~p"/dashboard/orgs/#{organization}/audit-logs?#{&1}",
+        params: opts[:params],
+        errors: opts[:errors],
+        delete_key_path: delete_key_path,
+        create_key_path: create_key_path,
+        generated_key: opts[:generated_key],
+        key_changeset: opts[:key_changeset] || key_changeset(),
+        packages: packages,
+        add_member_changeset: opts[:add_member_changeset] || add_member_changeset(),
+        new_organization_changeset: create_changeset(),
+        policy_action: policy_action,
+        policy: policy,
+        policy_admin?: policy_admin?,
+        policy_changeset: opts[:policy_changeset],
+        policies: policies,
+        policy_stats: policy_stats,
+        policy_activity: policy_activity,
+        policy_rev: policy_rev
+      ] ++ sso_assigns(organization, opts[:tab])
 
     assigns = Keyword.merge(assigns, customer_assigns(customer, organization))
     render(conn, "index.html", assigns)
@@ -964,6 +977,20 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   end
 
   defp policy_assigns(_organization, _tab, _action, _policy), do: {[], %{}, [], 0}
+
+  defp sso_assigns(organization, :sso) do
+    connection = SSO.get_connection(organization)
+
+    [
+      sso_connection: connection,
+      sso_identities: if(connection, do: SSO.identities(connection), else: []),
+      sso_failures: if(connection, do: SSO.failures(connection), else: []),
+      sso_callback_url: url(~p"/sso/callback"),
+      sso_login_url: url(~p"/sso/#{organization}")
+    ]
+  end
+
+  defp sso_assigns(_organization, _tab), do: []
 
   # Whether the current user may edit policies (create/update/delete are all
   # admin-gated). Used to hide write affordances from readers who can still view

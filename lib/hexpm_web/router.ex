@@ -164,6 +164,12 @@ defmodule HexpmWeb.Router do
     get "/auth/:provider", AuthController, :request
     get "/auth/:provider/callback", AuthController, :callback
 
+    get "/sso/callback", SSOController, :callback, log: false
+    get "/sso/link", SSOController, :link, log: false
+    post "/sso/link", SSOController, :confirm_link, log: false
+    post "/sso/link/cancel", SSOController, :cancel_link, log: false
+    get "/sso/:organization", SSOController, :start, log: false
+
     get "/sudo", SudoController, :show
     post "/sudo", SudoController, :create
     get "/sudo/github", SudoController, :github
@@ -195,6 +201,7 @@ defmodule HexpmWeb.Router do
     get "/docs/rebar3-tasks", DocsController, :rebar3_tasks
     get "/docs/private", DocsController, :private
     get "/docs/dependency-policies", DocsController, :dependency_policies
+    get "/docs/organization-sso", DocsController, :organization_sso
     get "/docs/faq", DocsController, :faq
     get "/docs/mirrors", DocsController, :mirrors
     get "/docs/public-keys", DocsController, :public_keys
@@ -325,6 +332,14 @@ defmodule HexpmWeb.Router do
     get "/orgs/:dashboard_org/keys", OrganizationController, :keys
     get "/orgs/:dashboard_org/packages", OrganizationController, :packages
     get "/orgs/:dashboard_org/audit-logs", OrganizationController, :audit_logs
+    get "/orgs/:dashboard_org/sso", OrganizationController, :sso, log: false
+    post "/orgs/:dashboard_org/sso", OrganizationSSOController, :configure, log: false
+    post "/orgs/:dashboard_org/sso/test", OrganizationSSOController, :test, log: false
+    post "/orgs/:dashboard_org/sso/enable", OrganizationSSOController, :enable, log: false
+    post "/orgs/:dashboard_org/sso/disable", OrganizationSSOController, :disable, log: false
+    post "/orgs/:dashboard_org/sso/rotate", OrganizationSSOController, :rotate, log: false
+    post "/orgs/:dashboard_org/sso/promote", OrganizationSSOController, :promote, log: false
+    post "/orgs/:dashboard_org/sso/unlink", OrganizationSSOController, :unlink, log: false
     get "/orgs/:dashboard_org/billing", OrganizationController, :billing
     get "/orgs/:dashboard_org/danger-zone", OrganizationController, :danger_zone
     post "/orgs/:dashboard_org/leave", OrganizationController, :leave

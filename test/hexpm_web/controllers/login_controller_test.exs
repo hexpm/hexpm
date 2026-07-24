@@ -12,6 +12,42 @@ defmodule HexpmWeb.LoginControllerTest do
     assert response(conn, 200) =~ "Log in"
   end
 
+  test "ordinary return paths do not change the GitHub login destination" do
+    html =
+      build_conn()
+      |> get("/login", %{return: "/dashboard"})
+      |> html_response(200)
+
+    assert html =~ ~s(href="/auth/github")
+    refute html =~ ~s(href="/auth/github?return=)
+  end
+
+  test "show redirects a signed-in user without a pending SSO link", c do
+    conn = build_conn() |> test_login(c.user) |> get("/login")
+
+    assert redirected_to(conn) == "/users/#{c.user.username}"
+  end
+
+  test "show requires fresh proof when a signed-in user has a pending SSO link", c do
+    config = Application.fetch_env!(:hexpm, :organization_sso)
+
+    app_env(
+      :hexpm,
+      :organization_sso,
+      Keyword.merge(config, mode: :beta, beta_organizations: ["pilot"])
+    )
+
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> put_session("pending_sso_link", %{"transaction_id" => 123, "token" => "link-token"})
+      |> get("/login", %{return: "/sso/link"})
+
+    assert response(conn, 200) =~ "Log in"
+    assert response(conn, 200) =~ ~s(value="/sso/link")
+    assert response(conn, 200) =~ ~s(href="/auth/github?return=/sso/link")
+  end
+
   test "log in with correct password", c do
     conn = post(build_conn(), "/login", %{username: c.user.username, password: "password"})
     assert redirected_to(conn) == "/users/#{c.user.username}"
