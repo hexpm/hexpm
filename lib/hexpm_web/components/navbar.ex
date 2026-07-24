@@ -227,7 +227,7 @@ defmodule HexpmWeb.Components.Navbar do
           role="search"
           action={~p"/packages"}
           class="flex-1"
-          phx-submit={@live_search && "search_submit"}
+          phx-submit={@live_search && search_submit()}
           phx-hook={@live_search && "FormSync"}
           data-sync-to={@live_search && "mobile-menu-search-form"}
         >
@@ -274,7 +274,7 @@ defmodule HexpmWeb.Components.Navbar do
             role="search"
             action={~p"/packages"}
             class="flex-1"
-            phx-submit={@live_search && "search_submit"}
+            phx-submit={@live_search && search_submit()}
             phx-hook={@live_search && "FormSync"}
             data-sync-to={@live_search && "mobile-search-bar-form"}
             phx-auto-recover={if @live_search, do: "ignore"}
@@ -455,6 +455,11 @@ defmodule HexpmWeb.Components.Navbar do
     |> JS.show(to: "#menu-open-icon")
     |> JS.hide(to: "#menu-close-icon")
     |> JS.focus(to: "#mobile-search-input")
+  end
+
+  defp search_submit do
+    JS.dispatch("blur-active")
+    |> JS.push("search_submit")
   end
 
   @doc """
