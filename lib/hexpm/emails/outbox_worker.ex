@@ -6,7 +6,7 @@ defmodule Hexpm.Emails.OutboxWorker do
 
   import Ecto.Query, only: [from: 2]
 
-  alias Hexpm.Emails.{Mailer, OutboxEntry, OutboxLock}
+  alias Hexpm.Emails.{Mailer, OutboxEntry, OutboxEnvelope, OutboxLock}
   alias Hexpm.Repo
 
   def enqueue_if_head!(%OutboxEntry{ordering_key: nil} = entry), do: enqueue!(entry.id)
@@ -158,8 +158,8 @@ defmodule Hexpm.Emails.OutboxWorker do
   end
 
   defp deliver!(entry) do
-    entry
-    |> OutboxEntry.to_email()
+    entry.email
+    |> OutboxEnvelope.load!()
     |> Mailer.deliver!()
   end
 end

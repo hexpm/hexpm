@@ -6,7 +6,7 @@ defmodule HexpmWeb.SSOControllerTest do
 
   alias Hexpm.Accounts.{AuditLogs, SSO}
   alias Hexpm.Accounts.SSO.{Identity, OIDC}
-  alias Hexpm.Emails.{OutboxEntry, OutboxWorker}
+  alias Hexpm.Emails.{OutboxEntry, OutboxEnvelope, OutboxWorker}
   alias HexpmWeb.Plugs.Attack
 
   setup :verify_on_exit!
@@ -135,7 +135,7 @@ defmodule HexpmWeb.SSOControllerTest do
                                                                                                   60 *
                                                                                                   60)
 
-    assert %{to: recipients, text_body: body} = OutboxEntry.to_email(entry)
+    assert %{to: recipients, text_body: body} = OutboxEnvelope.load!(entry.email)
     assert recipients == Enum.map(context.member.emails, &{"", &1.email})
     assert body =~ context.organization.name
     assert body =~ context.member.username
@@ -528,7 +528,7 @@ defmodule HexpmWeb.SSOControllerTest do
            } = entry = Repo.one!(OutboxEntry)
 
     assert scope_key == "sso:user:#{context.member.id}"
-    assert %{to: recipients, text_body: body} = OutboxEntry.to_email(entry)
+    assert %{to: recipients, text_body: body} = OutboxEnvelope.load!(entry.email)
 
     assert MapSet.new(recipients) ==
              MapSet.new([

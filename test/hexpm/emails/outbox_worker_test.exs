@@ -6,7 +6,7 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
   import Swoosh.TestAssertions
 
   alias Hexpm.Emails
-  alias Hexpm.Emails.{Outbox, OutboxEntry, OutboxReconciler, OutboxWorker}
+  alias Hexpm.Emails.{Outbox, OutboxEntry, OutboxEnvelope, OutboxReconciler, OutboxWorker}
 
   setup do
     mailer_config = Application.fetch_env!(:hexpm, Emails.Mailer)
@@ -19,7 +19,7 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
 
     email = rendered_email("Rendered email")
     entry = Outbox.enqueue!(email, category: "test.rendered")
-    persisted_email = OutboxEntry.to_email(entry)
+    persisted_email = OutboxEnvelope.load!(entry.email)
 
     assert persisted_email == %{email | private: %{}, assigns: %{}}
     assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: entry.id})
@@ -56,7 +56,7 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
   test "a Swoosh adapter error keeps the rendered email retryable", context do
     email = rendered_email("Retry this email")
     entry = Outbox.enqueue!(email, category: "test.retry")
-    persisted_email = OutboxEntry.to_email(entry)
+    persisted_email = OutboxEnvelope.load!(entry.email)
 
     Application.put_env(
       :hexpm,
@@ -393,7 +393,7 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
     user = insert(:user)
     email = Emails.account_deleted(user)
     entry = Outbox.enqueue!(email, category: "account.deleted")
-    persisted_email = OutboxEntry.to_email(entry)
+    persisted_email = OutboxEnvelope.load!(entry.email)
     recipient = Hexpm.Accounts.User.email(user, :primary)
 
     Repo.delete!(user)
@@ -404,40 +404,26 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
     refute Repo.get(OutboxEntry, entry.id)
   end
 
-  test "rejects unsupported or malformed email fields and redacts the persisted envelope" do
+  test "rejects emails that are not safely deliverable and redacts the persisted envelope" do
     email =
       rendered_email("Attachment")
       |> attachment(%Swoosh.Attachment{filename: "secret.txt", data: "secret"})
 
-    changeset =
-      OutboxEntry.changeset(%OutboxEntry{}, email, %{
-        category: "test.attachment"
-      })
-
-    refute changeset.valid?
-    assert {"attachments are not supported", _} = changeset.errors[:email]
-
-    invalid_email =
-      new()
-      |> Swoosh.Email.from("noreply@hex.pm")
-      |> text_body("No recipients")
-
-    invalid_changeset =
-      OutboxEntry.changeset(%OutboxEntry{}, invalid_email, %{category: "test.invalid"})
-
-    refute invalid_changeset.valid?
-    assert {"requires at least one valid recipient", _} = invalid_changeset.errors[:email]
-
     for {email, message} <- [
-          {%{rendered_email("Subject") | subject: nil}, "requires a valid subject"},
-          {%{rendered_email("Body") | html_body: %{invalid: true}}, "contains an invalid body"},
-          {%{rendered_email("Headers") | headers: [:invalid]}, "contains invalid headers"},
+          {email, "email outbox does not support attachments"},
+          {%{rendered_email("Sender") | from: nil}, "email outbox requires a sender"},
+          {%{rendered_email("Recipient") | to: [], cc: [], bcc: []},
+           "email outbox requires a recipient"},
+          {%{rendered_email("Rendering") | text_body: nil, html_body: nil},
+           "email outbox requires a rendered body"},
           {%{rendered_email("Private") | private: %{client_options: [receive_timeout: 10_000]}},
-           "contains unsupported private delivery options"}
+           "email outbox does not support private delivery options"},
+          {%{rendered_email("Provider") | provider_options: %{unknown: true}},
+           "email outbox does not support these provider options"}
         ] do
-      changeset = OutboxEntry.changeset(%OutboxEntry{}, email, %{category: "test.invalid"})
-      refute changeset.valid?
-      assert {^message, _} = changeset.errors[:email]
+      assert_raise ArgumentError, message, fn ->
+        Outbox.enqueue!(email, category: "test.invalid")
+      end
     end
 
     assert :email in OutboxEntry.__schema__(:redact_fields)
