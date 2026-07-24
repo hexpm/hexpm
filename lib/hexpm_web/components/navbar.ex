@@ -240,6 +240,10 @@ defmodule HexpmWeb.Components.Navbar do
               name="search"
               type="text"
               value={@search}
+              autocomplete="off"
+              autocapitalize="none"
+              autocorrect="off"
+              spellcheck="false"
               placeholder="Find packages..."
               class="w-full bg-grey-800 border border-grey-600 rounded-lg px-3 pl-10 py-[11px] text-white text-base font-medium leading-4 placeholder:text-grey-300 focus:outline-none focus:border-grey-500 focus:shadow-[inset_0px_0px_6px_0px_rgba(255,255,255,0.3)]"
             />
@@ -287,6 +291,10 @@ defmodule HexpmWeb.Components.Navbar do
                 name="search"
                 type="text"
                 value={@search}
+                autocomplete="off"
+                autocapitalize="none"
+                autocorrect="off"
+                spellcheck="false"
                 placeholder="Find packages..."
                 class="w-full bg-grey-800 border border-grey-600 rounded-lg px-3 pl-10 py-[11px] text-white text-base font-medium leading-4 placeholder:text-grey-300 focus:outline-none focus:border-grey-500 focus:shadow-[inset_0px_0px_6px_0px_rgba(255,255,255,0.3)]"
               />
