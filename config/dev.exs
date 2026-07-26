@@ -94,6 +94,8 @@ config :hexpm, Hexpm.Emails.Mailer, adapter: Swoosh.Adapters.Local
 
 config :hexpm, Oban, plugins: []
 
+config :hexpm, metrics_port: 9568
+
 config :hexpm, :organization_sso, all_organizations: true
 
 config :ueberauth, Ueberauth.Strategy.Github.OAuth,

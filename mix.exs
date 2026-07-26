@@ -87,6 +87,7 @@ defmodule Hexpm.MixProject do
       {:plug, "~> 1.7"},
       {:postgrex, "~> 0.14"},
       {:pot, "~> 1.0"},
+      {:prom_ex, "~> 1.11"},
       {:sentry, "~> 13.0"},
       {:tailwind, "~> 0.4", runtime: Mix.env() == :dev},
       {:tidewave, "~> 0.5", only: :dev},

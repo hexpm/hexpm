@@ -53,6 +53,13 @@ config :hexpm, Oban,
   queues: [periodic: 2, heavy: 1],
   shutdown_grace_period: 300_000
 
+# Metrics are served by a standalone Bandit listener (see Hexpm.Application)
+# on :metrics_port instead of PromEx's built-in cowboy server
+config :hexpm, Hexpm.PromEx,
+  disabled: false,
+  metrics_server: :disabled,
+  grafana: :disabled
+
 config :ex_aws,
   json_codec: JSON,
   http_client: ExAws.Request.Req
