@@ -10,7 +10,8 @@ defmodule Hexpm.PromEx do
       Plugins.Beam,
       {Plugins.Phoenix, router: HexpmWeb.Router, endpoint: HexpmWeb.Endpoint},
       {Plugins.Ecto, repos: [Hexpm.RepoBase]},
-      Plugins.Oban
+      Plugins.Oban,
+      Hexpm.PromEx.Plugins.Hexpm
     ]
   end
 

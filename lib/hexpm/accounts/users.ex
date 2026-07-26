@@ -89,6 +89,7 @@ defmodule Hexpm.Accounts.Users do
         Emails.verification(user, email)
         |> Mailer.deliver!()
 
+        :telemetry.execute([:hexpm, :accounts, :user_created], %{count: 1}, %{})
         {:ok, user}
 
       {:error, :user, changeset, _} ->

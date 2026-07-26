@@ -112,11 +112,15 @@ defmodule Hexpm.Repository.Releases do
     package_changeset = Ecto.Changeset.change(release.package, docs_updated_at: now)
 
     {:ok, _} =
+      result =
       Multi.new()
       |> Multi.update(:release, release_changeset)
       |> Multi.update(:package, package_changeset)
       |> audit(audit_data, "docs.publish", {package, release})
       |> Repo.transaction()
+
+    :telemetry.execute([:hexpm, :repository, :publish_docs], %{count: 1}, %{})
+    result
   end
 
   def revert(package, release, audit: audit_data) do
@@ -217,6 +221,7 @@ defmodule Hexpm.Repository.Releases do
     Assets.push_release(release, body)
     update_package_in_registry(package)
     email_package_owners(package, release, user)
+    :telemetry.execute([:hexpm, :repository, :publish], %{count: 1}, %{})
 
     {:ok, %{result | release: release, package: package}}
   end
