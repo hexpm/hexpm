@@ -450,7 +450,7 @@ defmodule Hexpm.Accounts.SSOTest do
 
   describe "identity linking and login" do
     setup context do
-      connection = configured_and_tested_connection(context)
+      configured_and_tested_connection(context)
 
       assert {:ok, _connection} =
                SSO.enable(context.organization, audit: audit_data(context.admin))
@@ -496,16 +496,30 @@ defmodule Hexpm.Accounts.SSOTest do
       refute Repo.exists?(SSO.OrgSession)
 
       user = Repo.preload(context.member, :emails)
+      user_session = browser_session(context.member)
 
-      assert {:ok, identity} =
-               SSO.complete_link(transaction_id, link_token, user, audit_data(user))
+      assert {:ok, {identity, org_session}} =
+               SSO.complete_link(
+                 transaction_id,
+                 link_token,
+                 user,
+                 user_session.id,
+                 audit_data(user)
+               )
 
       assert identity.user_id == context.member.id
       assert identity.issuer == "https://identity.example.com/oauth2/default"
       assert identity.subject == "00u123"
 
+      # Consent completes an authentication, so it unlocks the organization.
+      assert org_session.identity_id == identity.id
+
+      assert SSO.current_org_session(user_session.id, context.organization.id).id ==
+               org_session.id
+
       actions = context.organization |> AuditLogs.all_by() |> Enum.map(& &1.action)
       assert "sso.identity.link" in actions
+      assert "sso.login" in actions
     end
 
     test "an unlinked subject refuses a nonmember and creates nothing", context do
@@ -622,7 +636,10 @@ defmodule Hexpm.Accounts.SSOTest do
       assert [%{stage: "login", code: "not_member"}] = SSO.failures(context.connection)
     end
 
-    test "concurrent callbacks yield at most one success", context do
+    # Ecto's sandbox hands both tasks one connection, so this asserts that a
+    # second callback on a consumed transaction fails rather than that the locks
+    # work. Real concurrency is a controlled-harness row in the runbook.
+    test "a second callback on the same transaction cannot also succeed", context do
       link_identity(context, context.member)
       user_session = browser_session(context.member)
       transaction = start_transaction(context, context.member)
@@ -656,6 +673,7 @@ defmodule Hexpm.Accounts.SSOTest do
       results = Enum.map(tasks, &Task.await/1)
 
       assert Enum.count(results, &match?({:ok, {:login, _user, _session, _return}}, &1)) == 1
+      assert Enum.count(results, &match?({:error, :transaction_already_used}, &1)) == 1
       assert Repo.aggregate(SSO.OrgSession, :count) == 1
     end
 
@@ -685,6 +703,88 @@ defmodule Hexpm.Accounts.SSOTest do
 
       refute SSO.current_org_session(user_session.id, context.organization.id)
       assert Repo.get!(SSO.OrgSession, org_session.id).revoked_at
+    end
+
+    test "an organization access session dies when the parent is revoked in bulk", context do
+      # revoke_all/2 does a raw update_all on user_sessions and never touches
+      # organization_sso_sessions, so the parent check in current_org_session/2
+      # is the only thing enforcing this. Password reset uses this path.
+      link_identity(context, context.member)
+      user_session = browser_session(context.member)
+
+      assert {:ok, {:login, _user, org_session, _return}} =
+               context
+               |> start_transaction(context.member)
+               |> complete(valid_claims(), context.member, user_session.id)
+
+      assert SSO.current_org_session(user_session.id, context.organization.id)
+
+      {sessions, tokens} = Hexpm.UserSessions.revoke_all(context.member)
+      Repo.update_all(sessions, [])
+      Repo.update_all(tokens, [])
+
+      refute SSO.current_org_session(user_session.id, context.organization.id)
+      assert Repo.get!(SSO.OrgSession, org_session.id).revoked_at == nil
+    end
+
+    test "an organization access session dies when the parent expires", context do
+      link_identity(context, context.member)
+      user_session = browser_session(context.member)
+
+      assert {:ok, {:login, _user, _org_session, _return}} =
+               context
+               |> start_transaction(context.member)
+               |> complete(valid_claims(), context.member, user_session.id)
+
+      Repo.update_all(
+        from(session in Hexpm.UserSession, where: session.id == ^user_session.id),
+        set: [expires_at: DateTime.add(DateTime.utc_now(), -1, :second)]
+      )
+
+      refute SSO.current_org_session(user_session.id, context.organization.id)
+    end
+
+    test "an organization access session is scoped to its own organization", context do
+      other_organization = insert(:organization)
+      insert(:organization_user, organization: other_organization, user: context.member)
+
+      link_identity(context, context.member)
+      user_session = browser_session(context.member)
+
+      assert {:ok, {:login, _user, _org_session, _return}} =
+               context
+               |> start_transaction(context.member)
+               |> complete(valid_claims(), context.member, user_session.id)
+
+      assert SSO.current_org_session(user_session.id, context.organization.id)
+      refute SSO.current_org_session(user_session.id, other_organization.id)
+    end
+
+    test "a second browser session does not inherit the first one's access", context do
+      link_identity(context, context.member)
+      first = browser_session(context.member)
+
+      assert {:ok, {:login, _user, _org_session, _return}} =
+               context
+               |> start_transaction(context.member)
+               |> complete(valid_claims(), context.member, first.id)
+
+      second = browser_session(context.member)
+
+      assert SSO.current_org_session(first.id, context.organization.id)
+      refute SSO.current_org_session(second.id, context.organization.id)
+    end
+
+    test "deleting an identity row cascades its organization access sessions", context do
+      # The application deletes these explicitly, but the foreign key is what
+      # actually guarantees it. Assert the constraint, not the caller.
+      identity = link_identity(context, context.member)
+      user_session = browser_session(context.member)
+      SSO.establish_org_session!(identity, user_session.id)
+
+      assert Repo.exists?(SSO.OrgSession)
+      Repo.delete_all(from(candidate in Identity, where: candidate.id == ^identity.id))
+      refute Repo.exists?(SSO.OrgSession)
     end
 
     test "an expired organization access session is no longer current", context do

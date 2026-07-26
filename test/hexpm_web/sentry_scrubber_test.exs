@@ -17,17 +17,15 @@ defmodule HexpmWeb.SentryScrubberTest do
     assert SentryScrubber.scrub_body(conn) == %{}
   end
 
-  test "removes third-party initiation and confirmation parameters from diagnostics" do
+  test "removes third-party initiation parameters from diagnostics" do
     for path <- [
           "/sso/acme?iss=https%3A%2F%2Fidp.example&login_hint=private%40example.com&target_link_uri=https%3A%2F%2Fhex.pm%2Fdashboard%2Forgs%2Facme",
-          "/sso/confirm?code=ABCDEFG234",
-          "/sso/discover?email=private%40example.com"
+          "/sso/org/acme?iss=https%3A%2F%2Fidp.example&login_hint=private%40example.com"
         ] do
       conn = conn(:get, path)
       scrubbed = SentryScrubber.scrub_url(conn)
 
       refute scrubbed =~ "private"
-      refute scrubbed =~ "ABCDEFG234"
       refute scrubbed =~ "target_link_uri"
       assert URI.parse(scrubbed).query == nil
       assert SentryScrubber.scrub_body(conn) == %{}

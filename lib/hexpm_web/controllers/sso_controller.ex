@@ -179,43 +179,63 @@ defmodule HexpmWeb.SSOController do
   end
 
   def callback(conn, %{"state" => state, "error" => _provider_error}) do
-    if valid_sso_state?(conn, state) do
-      case SSO.get_transaction_by_state(state) do
-        nil -> callback_error(conn, nil, :authorization, :invalid_state)
-        transaction -> callback_error(conn, transaction, :authorization, :provider_error)
-      end
-    else
-      callback_error(conn, nil, :authorization, :invalid_state)
+    case bound_transaction(conn, state) do
+      nil -> callback_error(conn, nil, :invalid_state)
+      transaction -> abandon(conn, transaction, :authorization, :provider_error)
     end
   end
 
   def callback(conn, %{"state" => state, "code" => code})
       when is_binary(code) and byte_size(code) <= 4_096 do
-    with true <- valid_sso_state?(conn, state),
-         %{} = transaction <- SSO.get_transaction_by_state(state),
-         {:ok, user, user_session_id} <- account_session(conn, transaction),
-         {:ok, claims} <- SSO.exchange_code(transaction, code, callback_url()),
-         {:ok, result} <-
-           SSO.complete_callback(transaction, claims, user, user_session_id, audit_data(conn)) do
-      conn
-      |> forget_sso_state(state)
-      |> handle_callback_result(transaction, result)
-    else
-      false -> callback_error(conn, nil, :callback, :invalid_state)
-      nil -> callback_error(conn, nil, :callback, :invalid_state)
-      {:error, :account_session_required} -> account_session_required(conn)
-      {:error, %Error{} = error} -> callback_error(conn, state, error.stage, error.code)
-      {:error, reason} -> callback_error(conn, state, :callback, reason)
+    case bound_transaction(conn, state) do
+      nil ->
+        callback_error(conn, nil, :invalid_state)
+
+      transaction ->
+        conn
+        |> forget_sso_state(state)
+        |> exchange_and_complete(transaction, code)
     end
   end
 
   def callback(conn, params) do
-    transaction =
-      if params["state"] && valid_sso_state?(conn, params["state"]) do
-        SSO.get_transaction_by_state(params["state"])
-      end
+    case bound_transaction(conn, params["state"]) do
+      nil -> callback_error(conn, nil, :invalid_response)
+      transaction -> abandon(conn, transaction, :callback, :invalid_response)
+    end
+  end
 
-    callback_error(conn, transaction, :callback, :invalid_response)
+  defp exchange_and_complete(conn, transaction, code) do
+    with {:ok, user, user_session_id} <- account_session(conn, transaction),
+         {:ok, claims} <- SSO.exchange_code(transaction, code, callback_url()),
+         {:ok, result} <-
+           SSO.complete_callback(transaction, claims, user, user_session_id, audit_data(conn)) do
+      handle_callback_result(conn, transaction, result)
+    else
+      # account_session/2 and complete_callback/5 record their own failures.
+      {:error, :account_session_required} ->
+        account_session_required(conn)
+
+      {:error, %Error{} = error} ->
+        abandon(conn, transaction, error.stage, error.code)
+
+      {:error, reason} ->
+        callback_error(conn, transaction, reason)
+    end
+  end
+
+  defp bound_transaction(conn, state) do
+    if is_binary(state) and valid_sso_state?(conn, state) do
+      SSO.get_transaction_by_state(state)
+    end
+  end
+
+  # The provider never got past authorization, or returned something unusable.
+  # Consume the transaction so the still-valid authorization code and the state
+  # left in the browser cannot be replayed.
+  defp abandon(conn, transaction, stage, code) do
+    SSO.abandon_login(transaction, stage, code)
+    callback_error(conn, transaction, code)
   end
 
   # The account session is what the callback authenticates against, so losing it
@@ -278,8 +298,14 @@ defmodule HexpmWeb.SSOController do
         %{"token" => token} = get_session(conn, "pending_sso_link")
         user = Hexpm.Repo.preload(conn.assigns.current_user, :emails)
 
-        case SSO.complete_link(transaction.id, token, user, audit_data(conn)) do
-          {:ok, _identity} ->
+        case SSO.complete_link(
+               transaction.id,
+               token,
+               user,
+               conn.assigns.current_session.id,
+               audit_data(conn)
+             ) do
+          {:ok, {_identity, _org_session}} ->
             organization = transaction.connection.organization
 
             conn
@@ -341,18 +367,9 @@ defmodule HexpmWeb.SSOController do
     )
   end
 
-  defp callback_error(conn, transaction_or_state, stage, code) do
-    transaction =
-      case transaction_or_state do
-        %Hexpm.Accounts.SSO.Transaction{} = transaction -> transaction
-        state when is_binary(state) -> SSO.get_transaction_by_state(state)
-        _other -> nil
-      end
-
-    if transaction do
-      SSO.record_failure(transaction.connection, stage, code)
-    end
-
+  # Rendering only. Every caller has already recorded its own diagnostic, either
+  # through `abandon/4` or inside the context.
+  defp callback_error(conn, transaction, code) do
     destination =
       cond do
         transaction && transaction.kind == "test" ->

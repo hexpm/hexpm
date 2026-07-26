@@ -31,10 +31,6 @@ defmodule Hexpm.Accounts.SSO do
   def available?, do: Features.available?()
   def enabled?(organization), do: Features.enabled?(organization)
 
-  def throttle_hash(value) when is_binary(value) do
-    :crypto.mac(:hmac, :sha256, Application.fetch_env!(:hexpm, :secret), "sso-throttle:" <> value)
-  end
-
   def get_connection(organization, preload \\ []) do
     Repo.get_by(Connection, organization_id: organization.id)
     |> Repo.preload(preload)
@@ -449,8 +445,18 @@ defmodule Hexpm.Accounts.SSO do
       end)
 
     case result do
-      {:ok, {:reject, reason}} -> {:error, reason}
-      result -> result
+      # A rejection commits: it consumed the transaction and recorded its own
+      # failure, so the caller must not record a second one.
+      {:ok, {:reject, reason}} ->
+        {:error, reason}
+
+      # A rollback left nothing behind, so the diagnostic has to be written here.
+      {:error, reason} ->
+        record_failure(transaction.connection, :callback, reason)
+        {:error, reason}
+
+      result ->
+        result
     end
   end
 
@@ -474,7 +480,16 @@ defmodule Hexpm.Accounts.SSO do
     :ok
   end
 
-  def complete_link(transaction_id, raw_link_token, user, audit_data) do
+  @doc """
+  Adopts a pending subject for the signed-in account and unlocks the
+  organization.
+
+  Consent completes an SSO authentication that is seconds old, so it produces an
+  organization access session in its own right. Without that the member would
+  have to run the whole provider round trip a second time to reach the
+  organization they just linked.
+  """
+  def complete_link(transaction_id, raw_link_token, user, user_session_id, audit_data) do
     Repo.transaction(fn ->
       transaction =
         Repo.get(SSOTransaction, transaction_id) || Hexpm.RepoBase.rollback(:invalid_link)
@@ -517,8 +532,19 @@ defmodule Hexpm.Accounts.SSO do
                 %{user_id: user.id, entrypoint: transaction.entrypoint}
               })
 
+              org_session = establish_org_session!(identity, user_session_id)
+
+              insert_audit!(%{audit_data | user: user}, "sso.login", {
+                organization,
+                %{
+                  user_id: user.id,
+                  entrypoint: transaction.entrypoint,
+                  expires_at: org_session.expires_at
+                }
+              })
+
               enqueue_sso_notification!("identity_linked", connection, user)
-              identity
+              {identity, org_session}
 
             {:error, changeset} ->
               Hexpm.RepoBase.rollback({:identity_conflict, changeset})
@@ -835,8 +861,10 @@ defmodule Hexpm.Accounts.SSO do
     now = DateTime.utc_now()
 
     from(session in OrgSession,
+      join: user_session in assoc(session, :user_session),
       where: session.identity_id in ^identity_ids,
       where: is_nil(session.revoked_at) and session.expires_at > ^now,
+      where: is_nil(user_session.revoked_at) and user_session.expires_at > ^now,
       order_by: [desc: session.authenticated_at]
     )
     |> Repo.all()
@@ -878,8 +906,9 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   # Only post-proof codes attach the failing user (known there and admin-actionable); others stay redacted.
-  defp failure_user_id(code, user) when code in [:not_member, :identity_conflict],
-    do: user && user.id
+  defp failure_user_id(code, user)
+       when code in [:not_member, :identity_conflict, :session_user_mismatch],
+       do: user && user.id
 
   defp failure_user_id(_code, _user), do: nil
 
@@ -953,6 +982,7 @@ defmodule Hexpm.Accounts.SSO do
 
     cond do
       transaction.user_id != current_user.id ->
+        record_failure(connection, :login, :session_user_mismatch, current_user)
         consume_transaction!(transaction, %{})
         {:reject, :session_user_mismatch}
 
@@ -960,6 +990,7 @@ defmodule Hexpm.Accounts.SSO do
         begin_link!(transaction, connection, claims, current_user)
 
       identity.user_id != current_user.id ->
+        record_failure(connection, :login, :session_user_mismatch, current_user)
         consume_transaction!(transaction, %{})
         {:reject, :session_user_mismatch}
 
@@ -1004,6 +1035,7 @@ defmodule Hexpm.Accounts.SSO do
 
     cond do
       conflicting_identity ->
+        record_failure(connection, :login, :identity_conflict, current_user)
         consume_transaction!(transaction, %{})
         {:reject, :identity_conflict}
 

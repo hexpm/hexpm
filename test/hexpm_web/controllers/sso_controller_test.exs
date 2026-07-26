@@ -2,6 +2,7 @@ defmodule HexpmWeb.SSOControllerTest do
   use HexpmWeb.ConnCase
   use Oban.Testing, repo: Hexpm.RepoBase
 
+  import ExUnit.CaptureIO
   import ExUnit.CaptureLog
 
   alias Hexpm.Accounts.{AuditLogs, SSO}
@@ -29,19 +30,48 @@ defmodule HexpmWeb.SSOControllerTest do
   end
 
   describe "no SSO path establishes an account session" do
-    test "the SSO namespace never calls the session-minting function" do
-      sso_modules = [
-        HexpmWeb.SSOController,
-        HexpmWeb.Dashboard.OrganizationSSOController
-      ]
+    # The acceptance criterion in sso.md is an effect, not a function name, so
+    # these assert the effect. The structural test below is a supplement that
+    # catches a reintroduction earlier, at the call site.
+    test "a successful login callback leaves the account session untouched", context do
+      identity =
+        insert(:organization_sso_identity,
+          connection: context.connection,
+          organization: context.organization,
+          user: context.member
+        )
 
-      for module <- sso_modules do
-        {:ok, {^module, [{:abstract_code, {:raw_abstract_v1, abstract_code}}]}} =
-          module |> :code.which() |> :beam_lib.chunks([:abstract_code])
+      %{conn: conn, state: state} = begin_login(context)
+      before = account_session_fingerprint(conn, context.member)
 
-        refute calls_start_session_internal?(abstract_code),
-               "#{inspect(module)} calls start_session_internal/2"
-      end
+      conn = complete_callback(conn, state, identity.provider_email)
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{context.organization.name}"
+      assert account_session_fingerprint(conn, context.member) == before
+    end
+
+    test "a callback handing off to link consent leaves the account session untouched",
+         context do
+      %{conn: conn, state: state} = begin_login(context)
+      before = account_session_fingerprint(conn, context.member)
+
+      conn = complete_callback(conn, state)
+
+      assert redirected_to(conn) == "/sso/link"
+      assert account_session_fingerprint(conn, context.member) == before
+    end
+
+    test "consenting to a link leaves the account session untouched", context do
+      %{conn: conn, state: state} = begin_login(context)
+      conn = complete_callback(conn, state)
+
+      conn = conn |> recycle() |> test_login(context.member)
+      before = account_session_fingerprint(conn, context.member)
+
+      conn = post(conn, "/sso/link")
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{context.organization.name}"
+      assert account_session_fingerprint(conn, context.member) == before
     end
 
     test "a callback for a linked identity in a session-less browser mints nothing", context do
@@ -52,6 +82,7 @@ defmodule HexpmWeb.SSOControllerTest do
       )
 
       %{conn: conn, state: state} = begin_login(context)
+      sessions_before = Repo.aggregate(Hexpm.UserSession, :count)
 
       conn =
         conn
@@ -61,6 +92,64 @@ defmodule HexpmWeb.SSOControllerTest do
       assert redirected_to(conn) == "/login"
       refute get_session(conn, "session_token")
       refute Repo.exists?(OrgSession)
+      assert Repo.aggregate(Hexpm.UserSession, :count) == sessions_before
+    end
+
+    test "the SSO namespace never calls the session-minting function" do
+      for module <- sso_modules() do
+        {:ok, {^module, [{:abstract_code, {:raw_abstract_v1, abstract_code}}]}} =
+          module |> :code.which() |> :beam_lib.chunks([:abstract_code])
+
+        refute mints_account_session?(abstract_code),
+               "#{inspect(module)} reaches a session-minting function"
+      end
+    end
+
+    test "the structural check detects every reintroduction shape it claims to" do
+      # A detector nobody has tried to fool is a detector that passes for free.
+      # These are the shapes a regression would plausibly take.
+      previous = Code.get_compiler_option(:debug_info)
+      Code.put_compiler_option(:debug_info, true)
+      on_exit(fn -> Code.put_compiler_option(:debug_info, previous) end)
+
+      caught? = fn body ->
+        module = :"Elixir.SSOProbe#{System.unique_integer([:positive])}"
+
+        # Probes are deliberately odd shapes; their warnings are noise.
+        {[{^module, binary}], _warnings} =
+          with_io(:stderr, fn ->
+            Code.compile_string("""
+            defmodule #{inspect(module)} do
+              import HexpmWeb.ControllerHelpers, only: [start_session_internal: 2]
+              @helpers HexpmWeb.ControllerHelpers
+              def run(conn, user) do
+                _ = {conn, user, @helpers}
+                #{body}
+              end
+            end
+            """)
+          end)
+
+        {:ok, {^module, [{:abstract_code, {:raw_abstract_v1, code}}]}} =
+          :beam_lib.chunks(binary, [:abstract_code])
+
+        :code.purge(module)
+        :code.delete(module)
+        mints_account_session?(code)
+      end
+
+      assert caught?.("start_session_internal(conn, user)")
+      assert caught?.("HexpmWeb.ControllerHelpers.start_session_internal(conn, user)")
+      assert caught?.("apply(HexpmWeb.ControllerHelpers, :start_session_internal, [conn, user])")
+      assert caught?.("apply(@helpers, :start_session_internal, [conn, user])")
+      assert caught?.("(&HexpmWeb.ControllerHelpers.start_session_internal/2).(conn, user)")
+
+      assert caught?.("""
+             {:ok, _s, token} = Hexpm.UserSessions.create_browser_session(user, audit: nil)
+             Plug.Conn.put_session(conn, "session_token", Base.encode64(token))
+             """)
+
+      refute caught?.("Plug.Conn.put_session(conn, \"unrelated\", user.id)")
     end
   end
 
@@ -150,7 +239,12 @@ defmodule HexpmWeb.SSOControllerTest do
       identity = Repo.one!(Identity)
       assert identity.user_id == context.member.id
       assert identity.connection_id == context.connection.id
-      refute Repo.exists?(OrgSession)
+
+      # Consent completes an authentication seconds old, so it unlocks the
+      # organization rather than making the member do the round trip twice.
+      org_session = Repo.one!(OrgSession)
+      assert org_session.identity_id == identity.id
+      assert org_session.user_id == context.member.id
     end
 
     test "a nonmember is refused and nothing is created", context do
@@ -261,8 +355,20 @@ defmodule HexpmWeb.SSOControllerTest do
       assert [%Identity{} = unchanged] = Repo.all(Identity)
       assert unchanged.id == identity.id
       assert unchanged.user_id == other.id
+      assert unchanged.subject == identity.subject
+      assert unchanged.provider_email == identity.provider_email
       refute Repo.exists?(OrgSession)
-      refute get_session(conn, "session_token") == nil
+
+      # An admin needs to see this one; it is how a claimed subject is diagnosed.
+      assert [%{stage: "login", code: "session_user_mismatch", user_id: user_id}] =
+               SSO.failures(context.connection)
+
+      assert user_id == context.member.id
+
+      refute Enum.any?(
+               AuditLogs.all_by(context.organization, 1, 100),
+               &(&1.action == "sso.login")
+             )
     end
 
     test "the signed-in account holding a different subject refuses", context do
@@ -280,6 +386,11 @@ defmodule HexpmWeb.SSOControllerTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "identity_conflict"
       assert [%Identity{subject: "00u-original"}] = Repo.all(Identity)
       refute Repo.exists?(OrgSession)
+
+      assert [%{stage: "login", code: "identity_conflict", user_id: user_id}] =
+               SSO.failures(context.connection)
+
+      assert user_id == context.member.id
     end
 
     test "signing in as a different account mid-flow refuses", context do
@@ -618,11 +729,14 @@ defmodule HexpmWeb.SSOControllerTest do
       refute Repo.one!(SSO.Transaction).consumed_at
     end
 
-    test "rejects unknown and replayed state", context do
+    test "a consumed state cannot be replayed", context do
       %{conn: conn, state: state} = begin_login(context)
       conn = complete_callback(conn, state)
       assert redirected_to(conn) == "/sso/link"
+      assert Repo.one!(SSO.Transaction).consumed_at
 
+      # forget_sso_state/2 dropped the binding, so the replay cannot even reach
+      # the transaction; it must not be mistaken for a live one.
       replayed =
         conn
         |> recycle()
@@ -630,6 +744,23 @@ defmodule HexpmWeb.SSOControllerTest do
         |> get("/sso/callback", %{state: state, code: "authorization-code"})
 
       assert redirected_to(replayed) == "/dashboard"
+      assert Phoenix.Flash.get(replayed.assigns.flash, :error) =~ "invalid_state"
+      assert Repo.aggregate(Identity, :count) == 0
+    end
+
+    test "a provider error consumes the transaction and records the reason", context do
+      %{conn: conn, state: state} = begin_login(context)
+
+      conn =
+        conn
+        |> recycle()
+        |> get("/sso/callback", %{state: state, error: "access_denied"})
+
+      assert redirected_to(conn) == "/dashboard"
+      assert Repo.one!(SSO.Transaction).consumed_at
+
+      assert [%{stage: "authorization", code: "provider_error"}] =
+               SSO.failures(context.connection)
     end
   end
 
@@ -729,31 +860,91 @@ defmodule HexpmWeb.SSOControllerTest do
     assert get_resp_header(conn, "cache-control") == ["no-store"]
   end
 
-  # Walks the compiled abstract code for a remote or imported call to
-  # start_session_internal/2, which is the only function that mints an account
-  # session. This is the mechanical form of the Phase 1 acceptance criterion.
-  defp calls_start_session_internal?(abstract_code) do
-    abstract_code
-    |> :erlang.term_to_binary()
-    |> :erlang.binary_to_term()
-    |> find_call(:start_session_internal)
+  # The list is derived, not hardcoded: a new module under the SSO namespace is
+  # covered the day it is created.
+  defp sso_modules do
+    {:ok, modules} = :application.get_key(:hexpm, :modules)
+
+    Enum.filter(modules, fn module ->
+      name = Atom.to_string(module)
+
+      String.starts_with?(name, "Elixir.Hexpm.Accounts.SSO") or
+        String.starts_with?(name, "Elixir.HexpmWeb.SSO") or
+        String.starts_with?(name, "Elixir.HexpmWeb.Dashboard.OrganizationSSO")
+    end)
   end
 
-  defp find_call({:call, _anno, {:atom, _, :start_session_internal}, _args}, _name), do: true
+  # Anything that would hand the browser an account session: the helper itself,
+  # however it is reached, or the two primitives it is built from.
+  @minting_functions [:start_session_internal, :create_browser_session]
 
-  defp find_call(
-         {:call, _anno, {:remote, _, _mod, {:atom, _, :start_session_internal}}, _args},
-         _name
-       ),
+  defp mints_account_session?(abstract_code) do
+    find_minting_call(abstract_code) or writes_session_token?(abstract_code)
+  end
+
+  # Direct or imported call.
+  defp find_minting_call({:call, _anno, {:atom, _, name}, _args})
+       when name in @minting_functions,
        do: true
 
-  defp find_call(term, name) when is_tuple(term) do
-    term |> Tuple.to_list() |> find_call(name)
+  # Remote call through a module name or an alias.
+  defp find_minting_call({:call, _anno, {:remote, _, _mod, {:atom, _, name}}, _args})
+       when name in @minting_functions,
+       do: true
+
+  # apply/3, whether the module is a literal or a variable.
+  defp find_minting_call(
+         {:call, _anno, {:remote, _, {:atom, _, :erlang}, {:atom, _, :apply}},
+          [_mod, {:atom, _, name}, _args]}
+       )
+       when name in @minting_functions,
+       do: true
+
+  # Captured function, &Mod.fun/2.
+  defp find_minting_call({:fun, _anno, {:function, _mod, {:atom, _, name}, _arity}})
+       when name in @minting_functions,
+       do: true
+
+  defp find_minting_call(term) when is_tuple(term),
+    do: term |> Tuple.to_list() |> find_minting_call()
+
+  defp find_minting_call(list) when is_list(list),
+    do: Enum.any?(list, &find_minting_call/1)
+
+  defp find_minting_call(_term), do: false
+
+  # The primitives can be inlined; writing the session key is the giveaway.
+  defp writes_session_token?({:bin, _anno, segments} = term) do
+    segments
+    |> Enum.map(fn
+      {:bin_element, _, {:string, _, chars}, _, _} -> List.to_string(chars)
+      _other -> ""
+    end)
+    |> Enum.join()
+    |> Kernel.==("session_token")
+    |> Kernel.or(deep_any?(term, &writes_session_token?/1))
   end
 
-  defp find_call(list, name) when is_list(list) do
-    Enum.any?(list, &find_call(&1, name))
-  end
+  defp writes_session_token?(term) when is_tuple(term) or is_list(term),
+    do: deep_any?(term, &writes_session_token?/1)
 
-  defp find_call(_term, _name), do: false
+  defp writes_session_token?(_term), do: false
+
+  defp deep_any?(term, fun) when is_tuple(term), do: term |> Tuple.to_list() |> deep_any?(fun)
+  defp deep_any?(list, fun) when is_list(list), do: Enum.any?(list, fun)
+  defp deep_any?(_term, _fun), do: false
+
+  # A stable summary of everything that would change if SSO touched the account
+  # session: the cookie value, the row count, and the sudo timestamp.
+  defp account_session_fingerprint(conn, user) do
+    %{
+      session_token: get_session(conn, "session_token"),
+      sudo_at: get_session(conn, "sudo_authenticated_at"),
+      session_count:
+        Repo.aggregate(
+          from(session in Hexpm.UserSession, where: session.user_id == ^user.id),
+          :count
+        )
+    }
+  end
 end

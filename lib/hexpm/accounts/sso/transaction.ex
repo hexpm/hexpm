@@ -75,8 +75,7 @@ defmodule Hexpm.Accounts.SSO.Transaction do
       :linked_at,
       :cancelled_at,
       :nonce,
-      :code_verifier,
-      :user_id
+      :code_verifier
     ])
   end
 end

@@ -260,13 +260,6 @@ defmodule Hexpm.Accounts.AuditLog do
               "sso.connection.disable",
               "sso.connection.rotation.start",
               "sso.connection.rotation.complete",
-              "sso.domain.add",
-              "sso.domain.verify",
-              "sso.domain.reverify",
-              "sso.domain.policy",
-              "sso.domain.delete",
-              "sso.domain.invalidate",
-              "sso.domain.expire",
               "sso.identity.link",
               "sso.identity.unlink",
               "sso.login"
