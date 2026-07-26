@@ -120,6 +120,24 @@ defmodule Hexpm.EmailsTest do
       assert email.text_body =~ "person@idp.example"
       assert email.text_body =~ "no account email was changed"
     end
+
+    test "confirmation codes go only to the selected primary address", context do
+      primary = User.email(context.user, :primary)
+
+      email =
+        Emails.sso_confirmation_code(
+          context.organization.name,
+          context.user.username,
+          primary,
+          "ABCDEFG234"
+        )
+
+      assert email.to == [{"", primary}]
+      assert email.text_body =~ "ABCDEFG234"
+      assert email.text_body =~ "expires in 10 minutes"
+      assert email.text_body =~ "only in the browser"
+      refute email.text_body =~ "secondary@example.com"
+    end
   end
 
   describe "links" do

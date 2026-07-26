@@ -44,7 +44,10 @@ config :hexpm, :organization_sso,
   mode: :off,
   beta_organizations: [],
   all_organizations: false,
-  oidc_impl: Hexpm.Accounts.SSO.OIDC.Oidcc
+  oidc_impl: Hexpm.Accounts.SSO.OIDC.Oidcc,
+  domain_resolver: Hexpm.Accounts.SSO.DomainResolver.Inet
+
+config :domainatrex, fetch_latest: false
 
 config :hexpm, ecto_repos: [Hexpm.RepoBase]
 

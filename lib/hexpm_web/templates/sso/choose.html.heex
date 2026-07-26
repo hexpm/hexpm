@@ -1,0 +1,27 @@
+<.auth_layout
+  title="Choose your organization"
+  subtitle="More than one organization uses this email domain"
+>
+  <div class="space-y-3">
+    <.form
+      :for={organization <- @organizations}
+      for={%{}}
+      action={~p"/sso/discover/choose"}
+      id={"sso-discovery-choice-#{organization.id}"}
+    >
+      <input type="hidden" name="domain" value={@domain} />
+      <input type="hidden" name="organization" value={organization.name} />
+      <.button type="submit" full_width>
+        {organization.name}
+      </.button>
+    </.form>
+  </div>
+
+  <:footer_links>
+    <p class="text-small text-center mt-8">
+      <.text_link href={~p"/sso/discover"} variant="secondary">
+        Use a different email
+      </.text_link>
+    </p>
+  </:footer_links>
+</.auth_layout>

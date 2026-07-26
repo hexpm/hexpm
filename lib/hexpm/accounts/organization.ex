@@ -21,6 +21,7 @@ defmodule Hexpm.Accounts.Organization do
     has_many :audit_logs, AuditLog, foreign_key: :organization_id
     has_many :policies, Hexpm.Repository.Policy
     has_one :sso_connection, Hexpm.Accounts.SSO.Connection
+    has_many :sso_domains, Hexpm.Accounts.SSO.Domain
     has_many :sso_identities, Hexpm.Accounts.SSO.Identity
   end
 

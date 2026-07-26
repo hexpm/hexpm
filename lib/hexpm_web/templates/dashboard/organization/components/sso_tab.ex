@@ -10,6 +10,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
 
   attr :organization, :any, required: true
   attr :connection, :any, required: true
+  attr :domains, :list, required: true
   attr :identities, :list, required: true
   attr :failures, :list, required: true
   attr :callback_url, :string, required: true
@@ -45,10 +46,15 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
           <.readonly_value label="Required scopes" value="openid email" />
           <.readonly_value
             :if={@connection && Connection.enabled?(@connection)}
-            label="Organization login URL"
+            label="Organization / Initiate Login URI"
             value={@login_url}
           />
         </div>
+        <p class="mt-4 text-sm text-grey-600 dark:text-grey-300">
+          For Okta, use the organization issuer such as <code>https://example.okta.com</code>,
+          not the <code>/oauth2/default</code> authorization-server issuer. For Microsoft Entra,
+          use the tenant-specific v2 issuer ending in <code>/&lt;tenant-id&gt;/v2.0</code>.
+        </p>
 
         <.form
           :if={!@connection || !Connection.enabled?(@connection)}
@@ -105,6 +111,138 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
             action={~p"/dashboard/orgs/#{@organization}/sso/disable"}
           >
             <.button type="submit" variant="danger">Disable SSO login</.button>
+          </.form>
+        </div>
+      </section>
+
+      <section class="rounded-lg border border-grey-200 dark:border-grey-800 bg-white dark:bg-grey-900 p-5">
+        <h3 class="font-semibold text-grey-900 dark:text-grey-100">Verified domains</h3>
+        <p class="mt-2 text-sm text-grey-600 dark:text-grey-300">
+          Verify a domain through DNS before using it for SSO discovery or confirmed account linking.
+          Domain trust expires unless DNS is successfully rechecked within seven days.
+        </p>
+
+        <.form
+          for={%{}}
+          action={~p"/dashboard/orgs/#{@organization}/sso/domains"}
+          as={:domain}
+          class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end"
+        >
+          <div class="flex-1">
+            <.text_input
+              id="sso-domain"
+              name="domain[domain]"
+              label="Domain"
+              placeholder="example.com"
+              required
+            />
+          </div>
+          <.button type="submit" variant="secondary">Add domain</.button>
+        </.form>
+
+        <p :if={@domains == []} class="mt-4 text-sm text-grey-600 dark:text-grey-300">
+          No domains have been configured.
+        </p>
+
+        <div
+          :for={domain <- @domains}
+          class="mt-5 rounded-md border border-grey-200 dark:border-grey-800 p-4"
+        >
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div class="font-medium text-grey-900 dark:text-grey-100">{domain.domain}</div>
+              <div class="mt-1 text-xs text-grey-500 dark:text-grey-400">
+                {domain_status(domain)}
+              </div>
+            </div>
+            <.form
+              for={%{}}
+              action={~p"/dashboard/orgs/#{@organization}/sso/domains/#{domain.id}/delete"}
+            >
+              <.button type="submit" variant="danger" size="sm">Remove</.button>
+            </.form>
+          </div>
+
+          <div class="mt-4 grid gap-3">
+            <.readonly_value label="TXT name" value={"_hexpm-sso.#{domain.domain}"} />
+            <.readonly_value label="TXT value" value={domain.challenge} />
+          </div>
+
+          <div :if={domain.state == "pending"} class="mt-4 flex flex-wrap gap-3">
+            <.form
+              for={%{}}
+              action={~p"/dashboard/orgs/#{@organization}/sso/domains/#{domain.id}/verify"}
+            >
+              <.button type="submit" variant="primary" size="sm">Verify domain</.button>
+            </.form>
+          </div>
+
+          <div :if={domain.state == "invalid"} class="mt-4">
+            <.form
+              for={%{}}
+              action={~p"/dashboard/orgs/#{@organization}/sso/domains/#{domain.id}/reverify"}
+            >
+              <.button type="submit" variant="secondary" size="sm">
+                Generate new challenge
+              </.button>
+            </.form>
+          </div>
+
+          <.form
+            :if={domain.state == "verified"}
+            for={%{}}
+            action={~p"/dashboard/orgs/#{@organization}/sso/domains/#{domain.id}/policy"}
+            as={:domain}
+            class="mt-4 space-y-3"
+          >
+            <label class="flex items-start gap-3 text-sm text-grey-700 dark:text-grey-200">
+              <input type="hidden" name="domain[discovery_enabled]" value="false" />
+              <input
+                type="checkbox"
+                name="domain[discovery_enabled]"
+                value="true"
+                checked={domain.discovery_enabled}
+                class="mt-1"
+              />
+              <span>
+                <span class="font-medium">Email discovery</span>
+                <span class="block text-grey-500 dark:text-grey-400">
+                  Allow this domain to route people to this organization's SSO connection.
+                </span>
+              </span>
+            </label>
+            <label
+              :if={!domain.discovery_enabled}
+              class="flex items-start gap-3 text-sm text-grey-700 dark:text-grey-200"
+            >
+              <input
+                type="checkbox"
+                name="domain[discovery_disclosure_acknowledged]"
+                value="true"
+                class="mt-1"
+              />
+              <span>
+                I understand that discovery can show this organization's name to anyone who
+                submits an address at this domain, including when the domain is shared.
+              </span>
+            </label>
+            <label class="flex items-start gap-3 text-sm text-grey-700 dark:text-grey-200">
+              <input type="hidden" name="domain[automatic_linking_enabled]" value="false" />
+              <input
+                type="checkbox"
+                name="domain[automatic_linking_enabled]"
+                value="true"
+                checked={domain.automatic_linking_enabled}
+                class="mt-1"
+              />
+              <span>
+                <span class="font-medium">Confirmed account linking</span>
+                <span class="block text-grey-500 dark:text-grey-400">
+                  Offer a code sent to the matching verified primary Hexpm address on first login.
+                </span>
+              </span>
+            </label>
+            <.button type="submit" variant="secondary" size="sm">Save domain policy</.button>
           </.form>
         </div>
       </section>
@@ -227,4 +365,11 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
   defp status_class(%Connection{}) do
     "rounded-full bg-green-100 dark:bg-green-950 px-3 py-1 text-xs font-medium text-green-800 dark:text-green-200"
   end
+
+  defp domain_status(%{state: "verified", valid_until: valid_until}) do
+    "Verified through #{Calendar.strftime(valid_until, "%Y-%m-%d %H:%M UTC")}"
+  end
+
+  defp domain_status(%{state: "invalid"}), do: "Invalid — a new challenge is required"
+  defp domain_status(_domain), do: "Pending verification"
 end

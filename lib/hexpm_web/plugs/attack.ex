@@ -219,6 +219,63 @@ defmodule HexpmWeb.Plugs.Attack do
     )
   end
 
+  def sso_discovery_ip_throttle(ip, opts \\ []) do
+    time = opts[:time] || System.system_time(:millisecond)
+    key = {:sso_discovery_ip, ip}
+    unless opts[:time], do: RateLimitPubSub.broadcast(key, time)
+
+    timed_throttle(
+      key,
+      time: time,
+      storage: @storage,
+      limit: 20,
+      period: @sso_period
+    )
+  end
+
+  def sso_discovery_domain_throttle(domain_hash, ip, opts \\ []) do
+    time = opts[:time] || System.system_time(:millisecond)
+    key = {:sso_discovery_domain, domain_hash, ip}
+    unless opts[:time], do: RateLimitPubSub.broadcast(key, time)
+
+    timed_throttle(
+      key,
+      time: time,
+      storage: @storage,
+      limit: 15,
+      period: @sso_period
+    )
+  end
+
+  def sso_link_ip_throttle(ip, opts \\ []) do
+    sso_link_throttle({:sso_link_ip, ip}, 20, opts)
+  end
+
+  def sso_link_organization_throttle(organization_id, opts \\ []) do
+    sso_link_throttle({:sso_link_organization, organization_id}, 100, opts)
+  end
+
+  def sso_link_subject_throttle(subject_hash, opts \\ []) do
+    sso_link_throttle({:sso_link_subject, subject_hash}, 10, opts)
+  end
+
+  def sso_link_email_throttle(email_hash, opts \\ []) do
+    sso_link_throttle({:sso_link_email, email_hash}, 10, opts)
+  end
+
+  defp sso_link_throttle(key, limit, opts) do
+    time = opts[:time] || System.system_time(:millisecond)
+    unless opts[:time], do: RateLimitPubSub.broadcast(key, time)
+
+    timed_throttle(
+      key,
+      time: time,
+      storage: @storage,
+      limit: limit,
+      period: @sso_period
+    )
+  end
+
   def sso_callback_ip_throttle(ip, opts \\ []) do
     time = opts[:time] || System.system_time(:millisecond)
     unless opts[:time], do: RateLimitPubSub.broadcast({:sso_callback_ip, ip}, time)

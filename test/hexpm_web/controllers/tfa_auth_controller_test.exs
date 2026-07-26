@@ -27,6 +27,7 @@ defmodule HexpmWeb.TFAAuthControllerTest do
         |> get("/tfa")
 
       assert redirected_to(conn) == "/"
+      assert get_session(conn, "sudo_authenticated_at")
     end
 
     test "redirects to homepage if the tfa session is stale", c do

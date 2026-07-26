@@ -120,6 +120,123 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
     end)
   end
 
+  def add_domain(conn, %{"dashboard_org" => name, "domain" => %{"domain" => domain}}) do
+    with_organization(conn, name, fn organization ->
+      case SSO.add_domain(organization, domain, audit: audit_data(conn)) do
+        {:ok, _domain} ->
+          redirect_with_flash(
+            conn,
+            organization,
+            :info,
+            "The domain was added. Publish its DNS challenge, then verify it."
+          )
+
+        {:error, reason} ->
+          redirect_with_flash(conn, organization, :error, domain_error(reason))
+      end
+    end)
+  end
+
+  def add_domain(conn, %{"dashboard_org" => name}) do
+    with_organization(conn, name, fn organization ->
+      redirect_with_flash(conn, organization, :error, "Enter a valid registrable domain.")
+    end)
+  end
+
+  def verify_domain(conn, %{"dashboard_org" => name, "id" => id}) do
+    with_organization(conn, name, fn organization ->
+      case SSO.verify_domain(organization, safe_to_integer(id), audit: audit_data(conn)) do
+        {:ok, {:verified, _domain}} ->
+          redirect_with_flash(conn, organization, :info, "The domain was verified.")
+
+        {:ok, {:not_verified, _domain}} ->
+          redirect_with_flash(
+            conn,
+            organization,
+            :error,
+            "The exact DNS challenge was not found."
+          )
+
+        {:ok, {:transient, _reason, _domain}} ->
+          redirect_with_flash(
+            conn,
+            organization,
+            :error,
+            "DNS could not be checked. The current domain state was left unchanged."
+          )
+
+        {:ok, :stale} ->
+          redirect_with_flash(
+            conn,
+            organization,
+            :error,
+            "The domain challenge changed while DNS was being checked."
+          )
+
+        {:error, reason} ->
+          redirect_with_flash(conn, organization, :error, domain_error(reason))
+      end
+    end)
+  end
+
+  def reverify_domain(conn, %{"dashboard_org" => name, "id" => id}) do
+    with_organization(conn, name, fn organization ->
+      case SSO.rotate_domain(organization, safe_to_integer(id), audit: audit_data(conn)) do
+        {:ok, _domain} ->
+          redirect_with_flash(
+            conn,
+            organization,
+            :info,
+            "A new DNS challenge was generated. Publish it before verifying."
+          )
+
+        {:error, reason} ->
+          redirect_with_flash(conn, organization, :error, domain_error(reason))
+      end
+    end)
+  end
+
+  def update_domain_policy(
+        conn,
+        %{"dashboard_org" => name, "id" => id} = params
+      ) do
+    with_organization(conn, name, fn organization ->
+      policy = params["domain"] || %{}
+
+      attrs = %{
+        "discovery_enabled" => Map.get(policy, "discovery_enabled", "false"),
+        "automatic_linking_enabled" => Map.get(policy, "automatic_linking_enabled", "false"),
+        "discovery_disclosure_acknowledged" =>
+          Map.get(policy, "discovery_disclosure_acknowledged", "false")
+      }
+
+      case SSO.update_domain_policy(
+             organization,
+             safe_to_integer(id),
+             attrs,
+             audit: audit_data(conn)
+           ) do
+        {:ok, _domain} ->
+          redirect_with_flash(conn, organization, :info, "The domain policy was updated.")
+
+        {:error, reason} ->
+          redirect_with_flash(conn, organization, :error, domain_error(reason))
+      end
+    end)
+  end
+
+  def delete_domain(conn, %{"dashboard_org" => name, "id" => id}) do
+    with_organization(conn, name, fn organization ->
+      case SSO.delete_domain(organization, safe_to_integer(id), audit: audit_data(conn)) do
+        {:ok, _domain} ->
+          redirect_with_flash(conn, organization, :info, "The domain was removed.")
+
+        {:error, reason} ->
+          redirect_with_flash(conn, organization, :error, domain_error(reason))
+      end
+    end)
+  end
+
   defp with_organization(conn, name, fun) do
     user = conn.assigns.current_user
     organization = Organizations.get(name)
@@ -185,4 +302,17 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
 
   defp rotation_error(%Ecto.Changeset{}), do: "Enter a valid replacement client secret."
   defp rotation_error(reason), do: configuration_error(reason)
+
+  defp domain_error(:domain_not_found), do: "The SSO domain was not found."
+  defp domain_error(:domain_not_verified), do: "Verify the domain before enabling its policies."
+
+  defp domain_error(:discovery_disclosure_acknowledgement_required),
+    do: "Acknowledge the organization-name disclosure before enabling email discovery."
+
+  defp domain_error(:reverification_required),
+    do: "Generate a new DNS challenge before re-verifying this domain."
+
+  defp domain_error(:invalid_domain), do: "Enter a valid registrable domain."
+  defp domain_error(%Ecto.Changeset{}), do: "That domain is already configured."
+  defp domain_error(reason), do: configuration_error(reason)
 end

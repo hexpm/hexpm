@@ -1,0 +1,42 @@
+<.auth_layout
+  title="Confirm organization SSO"
+  subtitle={"Enter the code sent to your primary Hexpm email for #{@organization.name}"}
+>
+  <p class="text-small text-grey-700 mb-6">
+    By continuing, you accept that future organization SSO authentication can sign in to your
+    Hexpm account without prompting for your personal Hexpm two-factor authentication code.
+    Hexpm can still require conventional account proof for sudo-protected settings and actions
+    after sign-in.
+  </p>
+
+  <.form for={%{}} action={~p"/sso/confirm"} id="sso-confirmation-form" class="space-y-6">
+    <.text_input
+      id="code"
+      name="code"
+      type="text"
+      label="Confirmation Code"
+      minlength="10"
+      maxlength="10"
+      autocomplete="one-time-code"
+      required
+    />
+
+    <.button type="submit" full_width class="mt-8">
+      Confirm
+    </.button>
+  </.form>
+
+  <div class="flex flex-col items-center gap-3 text-small mt-6">
+    <.form for={%{}} action={~p"/sso/confirm/resend"} id="sso-confirmation-resend">
+      <.button type="submit" variant="secondary">
+        Send a new code
+      </.button>
+    </.form>
+
+    <.form for={%{}} action={~p"/sso/confirm/cancel"} id="sso-confirmation-cancel">
+      <.button type="submit" variant="secondary">
+        Cancel
+      </.button>
+    </.form>
+  </div>
+</.auth_layout>

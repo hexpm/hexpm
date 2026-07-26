@@ -213,6 +213,16 @@ defmodule Hexpm.Emails do
     |> render_body(:sso_email_mismatch)
   end
 
+  def sso_confirmation_code(organization, username, recipient, code) do
+    base_email()
+    |> email_to(recipient)
+    |> subject("Hex.pm - Confirm organization SSO")
+    |> assign(:organization, organization)
+    |> assign(:username, username)
+    |> assign(:code, code)
+    |> render_body(:sso_confirmation_code)
+  end
+
   def package_published(owners, publisher, name, version) do
     base_email()
     |> email_to(owners)

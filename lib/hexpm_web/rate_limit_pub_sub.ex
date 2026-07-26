@@ -46,6 +46,36 @@ defmodule HexpmWeb.RateLimitPubSub do
     {:noreply, []}
   end
 
+  def handle_info({:throttle, {:sso_discovery_ip, ip}, time}, []) do
+    Attack.sso_discovery_ip_throttle(ip, time: time)
+    {:noreply, []}
+  end
+
+  def handle_info({:throttle, {:sso_discovery_domain, domain_hash, ip}, time}, []) do
+    Attack.sso_discovery_domain_throttle(domain_hash, ip, time: time)
+    {:noreply, []}
+  end
+
+  def handle_info({:throttle, {:sso_link_ip, ip}, time}, []) do
+    Attack.sso_link_ip_throttle(ip, time: time)
+    {:noreply, []}
+  end
+
+  def handle_info({:throttle, {:sso_link_organization, organization_id}, time}, []) do
+    Attack.sso_link_organization_throttle(organization_id, time: time)
+    {:noreply, []}
+  end
+
+  def handle_info({:throttle, {:sso_link_subject, subject_hash}, time}, []) do
+    Attack.sso_link_subject_throttle(subject_hash, time: time)
+    {:noreply, []}
+  end
+
+  def handle_info({:throttle, {:sso_link_email, email_hash}, time}, []) do
+    Attack.sso_link_email_throttle(email_hash, time: time)
+    {:noreply, []}
+  end
+
   def handle_info({:throttle, {:sso_callback_ip, ip}, time}, []) do
     Attack.sso_callback_ip_throttle(ip, time: time)
     {:noreply, []}

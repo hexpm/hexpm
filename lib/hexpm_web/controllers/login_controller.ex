@@ -1,6 +1,7 @@
 defmodule HexpmWeb.LoginController do
   use HexpmWeb, :controller
   require Logger
+  alias Hexpm.Accounts.SSO.Features
   alias Hexpm.UserSessions
   alias HexpmWeb.Plugs.Attack
 
@@ -59,6 +60,8 @@ defmodule HexpmWeb.LoginController do
     end
 
     conn
+    |> cancel_pending_sso_confirmation()
+    |> cancel_pending_sso_login()
     |> clear_session()
     |> redirect(to: ~p"/")
   end
@@ -89,7 +92,8 @@ defmodule HexpmWeb.LoginController do
       title: "Log in",
       container: "container page page-xs login",
       return: safe_string(conn.params["return"]),
-      pending_sso_link?: pending_sso_link?(conn)
+      pending_sso_link?: pending_sso_link?(conn),
+      sso_discovery?: Features.mode() == :enabled
     )
   end
 

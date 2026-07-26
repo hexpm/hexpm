@@ -223,6 +223,37 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     refute log =~ client_secret
   end
 
+  test "the settings page allows the provider origin in form-action", context do
+    insert(:organization_sso_connection,
+      organization: context.organization,
+      configured_by_user_id: context.admin.id,
+      tested_at: nil,
+      enabled_at: nil
+    )
+
+    conn =
+      build_conn()
+      |> test_login(context.admin)
+      |> get("/dashboard/orgs/#{context.organization.name}/sso")
+
+    assert html_response(conn, 200)
+
+    [csp] = get_resp_header(conn, "content-security-policy")
+    assert csp =~ "form-action 'self' https://identity.example.com"
+  end
+
+  test "the settings page keeps form-action closed without a connection", context do
+    conn =
+      build_conn()
+      |> test_login(context.admin)
+      |> get("/dashboard/orgs/#{context.organization.name}/sso")
+
+    assert html_response(conn, 200)
+
+    [csp] = get_resp_header(conn, "content-security-policy")
+    assert csp =~ "form-action 'self';"
+  end
+
   test "tests, enables, and immediately disables a connection", context do
     connection =
       insert(:organization_sso_connection,

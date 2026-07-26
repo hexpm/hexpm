@@ -21,7 +21,7 @@ defmodule Hexpm.Accounts.OrganizationsTest do
       refute String.starts_with?(csv, "hexpm")
     end
 
-    test "rejects reserved package names" do
+    test "rejects reserved organization names" do
       user = insert(:user)
 
       for name <- ~w(elixir mix kernel api docs phoenix acme) do

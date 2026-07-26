@@ -20,6 +20,17 @@ defmodule Hexpm.ObanConfigTest do
     assert Hexpm.Billing.Report.timeout(%Oban.Job{}) == 20_000
     assert Hexpm.Security.Updater.timeout(%Oban.Job{}) == 300_000
 
+    assert Hexpm.Accounts.SSO.DomainRevalidator.__opts__()[:queue] == :periodic
+    assert Hexpm.Accounts.SSO.DomainRevalidator.__opts__()[:max_attempts] == 5
+
+    assert Hexpm.Accounts.SSO.DomainRevalidator.__opts__()[:unique] == [
+             period: :infinity,
+             states: :incomplete,
+             fields: [:worker]
+           ]
+
+    assert Hexpm.Accounts.SSO.DomainRevalidator.timeout(%Oban.Job{}) == 600_000
+
     for {worker, queue, timeout} <- [
           {Hexpm.ReleaseTasks.CheckNames, :periodic, 600_000},
           {Hexpm.ReleaseTasks.Stats, :heavy, 3_600_000},
@@ -84,6 +95,8 @@ defmodule Hexpm.ObanConfigTest do
              {"* * * * *", Hexpm.Billing.Report},
              {"* * * * *", Hexpm.Emails.OutboxReconciler},
              {"*/30 * * * *", Hexpm.Security.Updater},
+             {"15 3 * * *", Hexpm.Accounts.SSO.DomainRevalidator},
+             {"* * * * *", Hexpm.Accounts.SSO.ConfirmationPruner},
              {"30 0 * * *", Hexpm.ReleaseTasks.CheckNames},
              {"0 1 * * *", Hexpm.ReleaseTasks.Stats},
              {"0 2 * * *", Hexpm.ReleaseTasks.PurgeExpiredRecords}

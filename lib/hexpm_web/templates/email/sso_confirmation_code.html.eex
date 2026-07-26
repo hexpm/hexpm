@@ -1,0 +1,15 @@
+<h1>Confirm Organization SSO</h1>
+
+<p><%= Common.greeting(@username) %>,</p>
+
+<p>
+  Use this code to confirm connecting your Hex.pm account to single sign-on for the
+  <strong><%= @organization %></strong> organization:
+</p>
+
+<p><strong><%= @code %></strong></p>
+
+<p>
+  This code expires in 10 minutes. It works only in the browser where the SSO sign-in began.
+  If you did not request this, you can ignore this email.
+</p>

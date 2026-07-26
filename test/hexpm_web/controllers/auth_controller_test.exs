@@ -120,7 +120,10 @@ defmodule HexpmWeb.AuthControllerTest do
       tfa_data = get_session(conn, "tfa_user_id")
       assert tfa_data["uid"] == user.id
       assert tfa_data["return"] == nil
-      assert tfa_data["session_token"]
+      assert tfa_data["origin"] == "conventional"
+      refute tfa_data["session_token"]
+      refute get_session(conn, "session_token")
+      refute Repo.exists?(from(session in Hexpm.UserSession, where: session.user_id == ^user.id))
     end
   end
 

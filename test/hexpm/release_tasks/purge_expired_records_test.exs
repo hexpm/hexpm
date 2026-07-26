@@ -377,7 +377,7 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
   end
 
   describe "purge organization SSO transactions" do
-    test "deletes expired transactions and retains active transactions" do
+    test "deletes expired transactions and retains active and in-flight confirmations" do
       connection =
         insert(:organization_sso_connection,
           organization: insert(:organization)
@@ -407,10 +407,44 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
           expires_at: DateTime.add(DateTime.utc_now(), 600, :second)
         })
 
+      in_flight_confirmation =
+        Repo.insert!(%Hexpm.Accounts.SSO.Transaction{
+          connection_id: connection.id,
+          state_hash: :crypto.hash(:sha256, "in-flight-confirmation-state"),
+          kind: "login",
+          secret_slot: "active",
+          connection_version: connection.version,
+          secret_version: connection.version,
+          redirect_uri: "https://hex.pm/sso/callback",
+          expires_at: days_ago(1),
+          consumed_at: DateTime.utc_now(),
+          link_method: "confirmed_primary_email",
+          confirmation_verified_at: DateTime.utc_now(),
+          confirmation_expires_at: DateTime.add(DateTime.utc_now(), 600, :second),
+          browser_capability_hash: :crypto.hash(:sha256, "browser-capability")
+        })
+
+      cancelled_confirmation =
+        Repo.insert!(%Hexpm.Accounts.SSO.Transaction{
+          connection_id: connection.id,
+          state_hash: :crypto.hash(:sha256, "cancelled-confirmation-state"),
+          kind: "login",
+          secret_slot: "active",
+          connection_version: connection.version,
+          secret_version: connection.version,
+          redirect_uri: "https://hex.pm/sso/callback",
+          expires_at: days_ago(1),
+          consumed_at: DateTime.utc_now(),
+          link_method: "confirmed_primary_email",
+          cancelled_at: DateTime.utc_now()
+        })
+
       PurgeExpiredRecords.run()
 
       refute Repo.get(Hexpm.Accounts.SSO.Transaction, expired.id)
+      refute Repo.get(Hexpm.Accounts.SSO.Transaction, cancelled_confirmation.id)
       assert Repo.get(Hexpm.Accounts.SSO.Transaction, active.id)
+      assert Repo.get(Hexpm.Accounts.SSO.Transaction, in_flight_confirmation.id)
     end
   end
 end

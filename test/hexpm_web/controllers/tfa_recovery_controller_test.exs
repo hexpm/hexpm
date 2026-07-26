@@ -32,6 +32,7 @@ defmodule HexpmWeb.TFARecoveryControllerTest do
         |> get("/tfa/recovery")
 
       assert redirected_to(conn) == "/"
+      assert get_session(conn, "sudo_authenticated_at")
     end
   end
 

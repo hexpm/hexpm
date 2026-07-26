@@ -367,6 +367,13 @@ defmodule HexpmWeb.ControllerHelpers do
   end
 
   def start_session_internal(conn, user) do
+    conn =
+      conn
+      |> cancel_pending_sso_confirmation()
+      |> cancel_pending_sso_login()
+      |> delete_session("pending_sso_confirmation")
+      |> delete_session("pending_sso_login")
+
     {:ok, _user_session, session_token} =
       UserSessions.create_browser_session(user,
         name: detect_browser(conn),
@@ -418,6 +425,58 @@ defmodule HexpmWeb.ControllerHelpers do
     end
   end
 
+  def prove_pending_sso_confirmation(conn, user, %{"origin" => "sso_confirmation"}) do
+    case {SSO.available?(), get_session(conn, "pending_sso_confirmation")} do
+      {false, %{"transaction_id" => transaction_id, "capability" => capability}} ->
+        SSO.cancel_confirmation(transaction_id, capability)
+
+        conn
+        |> delete_session("pending_sso_confirmation")
+        |> pending_sso_confirmation_error()
+
+      {false, _pending_confirmation} ->
+        pending_sso_confirmation_error(conn)
+
+      {true, %{"transaction_id" => transaction_id, "capability" => capability}}
+      when is_integer(transaction_id) and is_binary(capability) ->
+        case SSO.complete_confirmed_link_after_tfa(
+               transaction_id,
+               capability,
+               user,
+               audit_data(conn)
+             ) do
+          {:ok, {:confirmed, _identity, _user, _organization, return_path}} ->
+            conn
+            |> delete_session("pending_sso_confirmation")
+            |> assign(:pending_sso_confirmation_proof, :ok)
+            |> assign(:pending_sso_confirmation_return, return_path)
+            |> put_flash(
+              :info,
+              "Organization SSO has been connected to your Hexpm account."
+            )
+
+          {:error, _reason} ->
+            SSO.cancel_confirmation(transaction_id, capability)
+
+            conn
+            |> delete_session("pending_sso_confirmation")
+            |> pending_sso_confirmation_error()
+        end
+
+      {true, _pending_confirmation} ->
+        pending_sso_confirmation_error(conn)
+    end
+  end
+
+  def prove_pending_sso_confirmation(conn, _user, _session_data) do
+    conn
+    |> cancel_pending_sso_confirmation()
+    |> delete_session("pending_sso_confirmation")
+  end
+
+  def sso_confirmation_tfa?(%{"origin" => "sso_confirmation"}), do: true
+  def sso_confirmation_tfa?(_session_data), do: false
+
   def pending_sso_link?(conn) do
     SSO.available?() and
       match?(
@@ -425,6 +484,30 @@ defmodule HexpmWeb.ControllerHelpers do
         when is_integer(transaction_id) and is_binary(token),
         get_session(conn, "pending_sso_link")
       )
+  end
+
+  def cancel_pending_sso_confirmation(conn) do
+    case get_session(conn, "pending_sso_confirmation") do
+      %{"transaction_id" => transaction_id, "capability" => capability}
+      when is_integer(transaction_id) and is_binary(capability) ->
+        SSO.cancel_confirmation(transaction_id, capability)
+        conn
+
+      _other ->
+        conn
+    end
+  end
+
+  def cancel_pending_sso_login(conn) do
+    case get_session(conn, "pending_sso_login") do
+      %{"transaction_id" => transaction_id, "capability" => capability}
+      when is_integer(transaction_id) and is_binary(capability) ->
+        SSO.cancel_pending_login(transaction_id, capability)
+        conn
+
+      _other ->
+        conn
+    end
   end
 
   def sso_link_error_message(:not_member),
@@ -443,6 +526,18 @@ defmodule HexpmWeb.ControllerHelpers do
   end
 
   def pending_sso_link_return(_conn, return), do: return
+
+  def pending_sso_confirmation_return(conn, return) do
+    conn.assigns[:pending_sso_confirmation_return] || return
+  end
+
+  def set_tfa_sudo_authentication(conn, %{"origin" => "sso_confirmation"}) do
+    HexpmWeb.Plugs.Sudo.clear_sudo_authentication(conn)
+  end
+
+  def set_tfa_sudo_authentication(conn, _session_data) do
+    HexpmWeb.Plugs.Sudo.set_sudo_authenticated(conn)
+  end
 
   def remember_sso_state(conn, state) when is_binary(state) do
     states =
@@ -472,21 +567,44 @@ defmodule HexpmWeb.ControllerHelpers do
     end
   end
 
-  def start_tfa_session(conn, user, return) do
-    {:ok, _user_session, session_token} =
-      UserSessions.create_browser_session(user,
-        name: detect_browser(conn),
-        audit: %{audit_data(conn) | user: user}
-      )
+  def start_tfa_session(conn, user, return, opts \\ []) do
+    preserve_confirmation? = Keyword.get(opts, :preserve_pending_sso_confirmation, false)
+
+    authenticated_at =
+      Keyword.get_lazy(opts, :authenticated_at, fn ->
+        NaiveDateTime.utc_now() |> NaiveDateTime.to_iso8601()
+      end)
+
+    conn =
+      if preserve_confirmation? do
+        conn
+        |> cancel_pending_sso_login()
+        |> delete_session("pending_sso_login")
+      else
+        conn
+        |> cancel_pending_sso_confirmation()
+        |> cancel_pending_sso_login()
+        |> delete_session("pending_sso_confirmation")
+        |> delete_session("pending_sso_login")
+      end
 
     conn
     |> configure_session(renew: true)
     |> put_session("tfa_user_id", %{
       "uid" => user.id,
-      "at" => NaiveDateTime.utc_now() |> NaiveDateTime.to_iso8601(),
+      "at" => authenticated_at,
       "return" => return,
-      "session_token" => Base.encode64(session_token)
+      "origin" => if(preserve_confirmation?, do: "sso_confirmation", else: "conventional")
     })
+  end
+
+  defp pending_sso_confirmation_error(conn) do
+    conn
+    |> assign(:pending_sso_confirmation_proof, :error)
+    |> put_flash(
+      :error,
+      "Organization SSO could not be connected. Start a fresh SSO login to try again."
+    )
   end
 
   defp secure_compare(left, right)

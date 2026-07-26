@@ -208,11 +208,25 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   def sso(conn, %{"dashboard_org" => organization}) do
     access_organization(conn, organization, "admin", fn organization ->
       if SSO.enabled?(organization) do
-        render_index(conn, organization, tab: :sso)
+        conn
+        |> allow_provider_form_action(organization)
+        |> render_index(organization, tab: :sso)
       else
         not_found(conn)
       end
     end)
+  end
+
+  # Testing a connection submits a form whose response redirects to the provider,
+  # and Chrome applies form-action to that redirect.
+  defp allow_provider_form_action(conn, organization) do
+    case SSO.get_connection(organization) do
+      nil ->
+        conn
+
+      connection ->
+        HexpmWeb.Plugs.ContentSecurityPolicy.allow_form_action(conn, connection.issuer)
+    end
   end
 
   def billing(conn, %{"dashboard_org" => organization}) do
@@ -983,10 +997,11 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
     [
       sso_connection: connection,
+      sso_domains: SSO.domains(organization),
       sso_identities: if(connection, do: SSO.identities(connection), else: []),
       sso_failures: if(connection, do: SSO.failures(connection), else: []),
       sso_callback_url: url(~p"/sso/callback"),
-      sso_login_url: url(~p"/sso/#{organization}")
+      sso_login_url: url(~p"/sso/org/#{organization}")
     ]
   end
 

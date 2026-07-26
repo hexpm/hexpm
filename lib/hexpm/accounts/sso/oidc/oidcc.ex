@@ -2,6 +2,7 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
   @behaviour Hexpm.Accounts.SSO.OIDC
 
   alias Hexpm.Accounts.SSO.{Connection, Error, SafeURL, Transaction}
+  alias Hexpm.Accounts.SSO.OIDC.Issuer
 
   @allowed_signing_algorithms ~w(RS256 RS384 RS512 PS256 PS384 PS512 ES256 ES384 ES512 EdDSA)
   @allowed_token_auth_methods ~w(client_secret_basic client_secret_post)
@@ -14,7 +15,7 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
   def discover(issuer) do
     discovery_url = String.trim_trailing(issuer, "/") <> "/.well-known/openid-configuration"
 
-    with {:ok, _uri} <- SafeURL.validate(issuer),
+    with {:ok, _uri} <- Issuer.validate(issuer),
          {:ok, discovery_document, discovery_expiry} <- fetch_json(discovery_url, :discovery),
          {:ok, configuration} <- decode_configuration(discovery_document, issuer),
          :ok <- validate_configuration(configuration),
@@ -41,6 +42,12 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
         redirect_uri,
         client_secret
       ) do
+    url_extension =
+      case transaction.login_hint do
+        login_hint when is_binary(login_hint) -> [{"login_hint", login_hint}]
+        _other -> []
+      end
+
     with {:ok, client_context} <- client_context(connection, client_secret),
          {:ok, uri} <-
            Oidcc.Authorization.create_redirect_url(client_context, %{
@@ -49,7 +56,8 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
              state: transaction.raw_state,
              nonce: transaction.nonce,
              pkce_verifier: transaction.code_verifier,
-             require_pkce: true
+             require_pkce: true,
+             url_extension: url_extension
            }) do
       {:ok, to_string(uri)}
     else
@@ -206,7 +214,8 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
   end
 
   defp client_context(connection, client_secret) do
-    with {:ok, configuration} <-
+    with {:ok, _uri} <- Issuer.validate_syntax(connection.issuer),
+         {:ok, configuration} <-
            decode_configuration(connection.discovery_document, connection.issuer),
          :ok <- validate_configuration(configuration),
          {:ok, jwks} <- decode_jwks(connection.jwks_document) do

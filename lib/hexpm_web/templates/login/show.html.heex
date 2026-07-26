@@ -32,6 +32,12 @@
     </.button>
   </.form>
 
+  <div :if={@sso_discovery?} class="text-center mt-6">
+    <.text_link navigate={~p"/sso/discover"} variant="primary" class="font-semibold">
+      Continue with organization SSO
+    </.text_link>
+  </div>
+
   <%!-- Footer Links --%>
   <:footer_links>
     <p class="text-small text-center mt-8">

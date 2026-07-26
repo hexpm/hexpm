@@ -3,7 +3,7 @@ defmodule Hexpm.Accounts.SSOTest do
 
   import ExUnit.CaptureLog
 
-  alias Hexpm.Accounts.{AuditLogs, Organizations, SSO}
+  alias Hexpm.Accounts.{AuditLogs, Organizations, SSO, Users}
   alias Hexpm.Accounts.SSO.{Connection, Features, Identity, OIDC}
   alias Hexpm.Emails.OutboxEntry
 
@@ -113,6 +113,32 @@ defmodule Hexpm.Accounts.SSOTest do
                )
 
       assert connection.issuer == "https://identity.example.com/oauth2/default"
+    end
+
+    test "rejects query and fragment components at the configuration boundary", context do
+      assert {:error, %SSO.Error{stage: :url_validation, code: :query_not_allowed}} =
+               SSO.configure(
+                 context.organization,
+                 %{
+                   issuer: "https://identity.example.com/tenant?configuration=other",
+                   client_id: "client-id",
+                   client_secret: "client-secret"
+                 },
+                 audit: audit_data(context.admin)
+               )
+
+      assert {:error, %SSO.Error{stage: :url_validation, code: :fragment_not_allowed}} =
+               SSO.configure(
+                 context.organization,
+                 %{
+                   issuer: "https://identity.example.com/tenant#other",
+                   client_id: "client-id",
+                   client_secret: "client-secret"
+                 },
+                 audit: audit_data(context.admin)
+               )
+
+      refute SSO.get_connection(context.organization)
     end
 
     test "rechecks administrator access after provider discovery", context do
@@ -230,7 +256,7 @@ defmodule Hexpm.Accounts.SSOTest do
       assert reconfigured.id == connection.id
     end
 
-    test "requires old identities to be unlinked before changing issuer", context do
+    test "requires old identities to be unlinked before changing issuer or client ID", context do
       connection = configured_and_tested_connection(context)
 
       insert(:organization_sso_identity,
@@ -245,6 +271,17 @@ defmodule Hexpm.Accounts.SSOTest do
                  %{
                    issuer: "https://other-identity.example.com",
                    client_id: "other-client",
+                   client_secret: "other-secret"
+                 },
+                 audit: audit_data(context.admin)
+               )
+
+      assert {:error, :connection_has_identities} =
+               SSO.configure(
+                 context.organization,
+                 %{
+                   issuer: connection.issuer,
+                   client_id: "replacement-client-id",
                    client_secret: "other-secret"
                  },
                  audit: audit_data(context.admin)
@@ -292,7 +329,10 @@ defmodule Hexpm.Accounts.SSOTest do
                  transaction,
                  valid_claims(),
                  context.admin,
-                 audit_data(context.admin)
+                 audit_data(context.admin),
+                 automatic_linking: fn ->
+                   flunk("connection tests must not consume automatic-link throttles")
+                 end
                )
 
       assert {:ok, connection} =
@@ -926,7 +966,7 @@ defmodule Hexpm.Accounts.SSOTest do
                })
     end
 
-    test "logs in by connection, issuer, and subject after linking", context do
+    test "continues login by connection, issuer, and subject after linking", context do
       connection = configured_and_tested_connection(context)
 
       assert {:ok, _connection} =
@@ -951,13 +991,22 @@ defmodule Hexpm.Accounts.SSOTest do
       email = List.first(context.admin.emails).email
       return_path = "/dashboard/orgs/#{context.organization.name}/packages"
 
-      assert {:ok, {:login, user, false, ^email, ^return_path}} =
+      assert {:ok, {:continue, transaction_id, capability, ^return_path}} =
                SSO.complete_callback(transaction, valid_claims(email), nil, %{
                  audit_data(context.admin)
                  | user: nil
                })
 
+      assert {:ok, {:login, user, organization, ^return_path}} =
+               SSO.complete_pending_login(
+                 transaction_id,
+                 capability,
+                 nil,
+                 %{audit_data(context.admin) | user: nil}
+               )
+
       assert user.id == context.admin.id
+      assert organization.id == context.organization.id
     end
 
     test "member removal purges the organization-scoped identity", context do
@@ -1032,6 +1081,99 @@ defmodule Hexpm.Accounts.SSOTest do
 
       refute Repo.get(SSO.Transaction, transaction_id)
       assert Repo.all(Identity) == []
+    end
+
+    test "member removal clears pending primary-email confirmation and its queued code",
+         context do
+      configured_and_tested_connection(context)
+
+      assert {:ok, _connection} =
+               SSO.enable(context.organization, audit: audit_data(context.admin))
+
+      member = insert(:user)
+      insert(:organization_user, organization: context.organization, user: member, role: "read")
+      email = List.first(member.emails).email
+      {:ok, domain_name} = SSO.discovery_domain(email)
+
+      insert(:organization_sso_domain,
+        organization: context.organization,
+        domain: domain_name,
+        state: "verified",
+        verified_at: DateTime.utc_now(),
+        last_checked_at: DateTime.utc_now(),
+        valid_until: DateTime.add(DateTime.utc_now(), 6 * 24 * 60 * 60, :second),
+        automatic_linking_enabled: true
+      )
+
+      stub_authorization_uri()
+
+      assert {:ok, transaction, _uri} =
+               SSO.start_login(context.organization, nil, "https://hex.pm/sso/callback")
+
+      transaction = SSO.get_transaction_by_state(transaction.raw_state)
+
+      assert {:ok, {:confirm, transaction_id, _capability, _return_path}} =
+               SSO.complete_callback(transaction, valid_claims(email), nil, %{
+                 audit_data(context.admin)
+                 | user: nil
+               })
+
+      assert Repo.exists?(
+               from(entry in OutboxEntry, where: entry.category == "sso.confirmation_code")
+             )
+
+      assert :ok =
+               Organizations.remove_member(context.organization, member,
+                 audit: audit_data(context.admin)
+               )
+
+      refute Repo.get(SSO.Transaction, transaction_id)
+
+      refute Repo.exists?(
+               from(entry in OutboxEntry, where: entry.category == "sso.confirmation_code")
+             )
+    end
+
+    test "user deletion clears pending primary-email confirmation and its queued code", context do
+      configured_and_tested_connection(context)
+
+      assert {:ok, _connection} =
+               SSO.enable(context.organization, audit: audit_data(context.admin))
+
+      member = insert(:user)
+      insert(:organization_user, organization: context.organization, user: member, role: "read")
+      email = List.first(member.emails).email
+      {:ok, domain_name} = SSO.discovery_domain(email)
+
+      insert(:organization_sso_domain,
+        organization: context.organization,
+        domain: domain_name,
+        state: "verified",
+        verified_at: DateTime.utc_now(),
+        last_checked_at: DateTime.utc_now(),
+        valid_until: DateTime.add(DateTime.utc_now(), 6 * 24 * 60 * 60, :second),
+        automatic_linking_enabled: true
+      )
+
+      stub_authorization_uri()
+
+      assert {:ok, transaction, _uri} =
+               SSO.start_login(context.organization, nil, "https://hex.pm/sso/callback")
+
+      transaction = SSO.get_transaction_by_state(transaction.raw_state)
+
+      assert {:ok, {:confirm, transaction_id, _capability, _return_path}} =
+               SSO.complete_callback(transaction, valid_claims(email), nil, %{
+                 audit_data(context.admin)
+                 | user: nil
+               })
+
+      assert :ok = Users.delete(member, audit: audit_data(member), notify: false)
+      refute Repo.get(SSO.Transaction, transaction_id)
+
+      refute Repo.exists?(
+               from(entry in OutboxEntry, where: entry.category == "sso.confirmation_code")
+             )
     end
 
     test "concurrent link completion and member removal cannot leave identity data", context do

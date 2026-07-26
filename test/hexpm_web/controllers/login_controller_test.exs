@@ -12,6 +12,31 @@ defmodule HexpmWeb.LoginControllerTest do
     assert response(conn, 200) =~ "Log in"
   end
 
+  test "shows public SSO discovery only in fully enabled mode" do
+    config = Application.fetch_env!(:hexpm, :organization_sso)
+
+    refute build_conn() |> get("/login") |> html_response(200) =~
+             "Continue with organization SSO"
+
+    app_env(
+      :hexpm,
+      :organization_sso,
+      Keyword.merge(config, mode: :beta, beta_organizations: ["pilot"])
+    )
+
+    refute build_conn() |> get("/login") |> html_response(200) =~
+             "Continue with organization SSO"
+
+    Application.put_env(
+      :hexpm,
+      :organization_sso,
+      Keyword.put(config, :mode, :enabled)
+    )
+
+    assert build_conn() |> get("/login") |> html_response(200) =~
+             "Continue with organization SSO"
+  end
+
   test "ordinary return paths do not change the GitHub login destination" do
     html =
       build_conn()
@@ -65,7 +90,10 @@ defmodule HexpmWeb.LoginControllerTest do
     tfa_data = get_session(conn, "tfa_user_id")
     assert tfa_data["uid"] == user.id
     assert tfa_data["return"] == nil
-    assert tfa_data["session_token"]
+    assert tfa_data["origin"] == "conventional"
+    refute tfa_data["session_token"]
+    refute get_session(conn, "session_token")
+    refute Repo.exists?(from(session in Hexpm.UserSession, where: session.user_id == ^user.id))
   end
 
   test "log in keeps you logged in", c do

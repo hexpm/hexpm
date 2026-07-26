@@ -12,7 +12,10 @@ defmodule HexpmWeb.DocsControllerTest do
     assert html =~ "Organization single sign-on"
     assert html =~ "Create the Okta application"
     assert html =~ "existing Hexpm account"
-    assert html =~ "does not support an Okta dashboard tile"
+    assert html =~ "Custom Okta dashboard tiles"
+    assert html =~ "remain unavailable until their external validation"
+    assert html =~ "tenant-specific v2 issuer"
+    assert html =~ "Verify a domain"
 
     {:ok, document} = Floki.parse_document(html)
     assert [link] = Floki.find(document, ~s(a[href="/docs/organization-sso"]))

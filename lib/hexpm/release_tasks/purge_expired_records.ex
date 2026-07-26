@@ -168,6 +168,11 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
         Hexpm.Accounts.SSO.Transaction,
         from(transaction in Hexpm.Accounts.SSO.Transaction,
           where: transaction.expires_at < fragment("NOW()"),
+          where:
+            is_nil(transaction.link_method) or
+              transaction.link_method != "confirmed_primary_email" or
+              not is_nil(transaction.linked_at) or
+              not is_nil(transaction.cancelled_at),
           order_by: transaction.expires_at
         ),
         batch_size
