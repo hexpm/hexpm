@@ -40,6 +40,7 @@ defmodule Hexpm.Repo do
   defwrite(delete!(struct_or_changeset, opts \\ []))
   defwrite(delete(struct_or_changeset, opts \\ []))
   defwrite(insert_all(schema_or_source, entries_or_query, opts \\ []))
+  defwrite(insert_or_update!(changeset, opts \\ []))
   defwrite(insert_or_update(changeset, opts \\ []))
   defwrite(insert!(struct_or_changeset, opts \\ []))
   defwrite(insert(struct_or_changeset, opts \\ []))

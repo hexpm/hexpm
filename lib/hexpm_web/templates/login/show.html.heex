@@ -3,11 +3,7 @@
   subtitle="Use your credentials to log in to your account"
   show_oauth={true}
   oauth_provider="GitHub"
-  oauth_href={
-    if @pending_sso_link? and @return == "/sso/link",
-      do: ~p"/auth/github?return=/sso/link",
-      else: ~p"/auth/github"
-  }
+  oauth_href={~p"/auth/github"}
 >
   <%!-- Form --%>
   <.form for={%{}} action={~p"/login"} id="login-form" class="space-y-6">
@@ -31,12 +27,6 @@
       Log In
     </.button>
   </.form>
-
-  <div :if={@sso_discovery?} class="text-center mt-6">
-    <.text_link navigate={~p"/sso/discover"} variant="primary" class="font-semibold">
-      Continue with organization SSO
-    </.text_link>
-  </div>
 
   <%!-- Footer Links --%>
   <:footer_links>

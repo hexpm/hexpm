@@ -7,7 +7,6 @@ defmodule Hexpm.Accounts.SSO.Identity do
     field :issuer, :string
     field :subject, :string, redact: true
     field :provider_email, :string, redact: true
-    field :link_method, :string, default: "conventional"
 
     belongs_to :organization, Organization
     belongs_to :connection, Hexpm.Accounts.SSO.Connection
@@ -24,13 +23,11 @@ defmodule Hexpm.Accounts.SSO.Identity do
       :user_id,
       :issuer,
       :subject,
-      :provider_email,
-      :link_method
+      :provider_email
     ])
     |> validate_required([:organization_id, :connection_id, :user_id, :issuer, :subject])
     |> validate_length(:subject, max: 255)
     |> validate_length(:provider_email, max: 320)
-    |> validate_inclusion(:link_method, ~w(conventional confirmed_primary_email))
     |> unique_constraint([:connection_id, :issuer, :subject],
       name: :organization_sso_identities_external_identity_index
     )

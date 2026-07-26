@@ -319,6 +319,7 @@ defmodule Hexpm.UserSessions do
     multi =
       Ecto.Multi.new()
       |> Ecto.Multi.update(:session, changeset)
+      |> Hexpm.Accounts.SSO.revoke_org_sessions_for_user_session(session, revoke_at)
 
     # Add audit if provided
     multi =

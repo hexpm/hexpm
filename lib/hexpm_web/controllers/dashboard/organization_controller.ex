@@ -966,7 +966,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         policies: policies,
         policy_stats: policy_stats,
         policy_activity: policy_activity,
-        policy_rev: policy_rev
+        policy_rev: policy_rev,
+        sso_org_session: current_org_session(conn, organization)
       ] ++ sso_assigns(organization, opts[:tab])
 
     assigns = Keyword.merge(assigns, customer_assigns(customer, organization))
@@ -994,11 +995,12 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   defp sso_assigns(organization, :sso) do
     connection = SSO.get_connection(organization)
+    identities = if connection, do: SSO.identities(connection), else: []
 
     [
       sso_connection: connection,
-      sso_domains: SSO.domains(organization),
-      sso_identities: if(connection, do: SSO.identities(connection), else: []),
+      sso_identities: identities,
+      sso_authentications: last_sso_authentications(identities),
       sso_failures: if(connection, do: SSO.failures(connection), else: []),
       sso_callback_url: url(~p"/sso/callback"),
       sso_login_url: url(~p"/sso/org/#{organization}")
@@ -1006,6 +1008,22 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   end
 
   defp sso_assigns(_organization, _tab), do: []
+
+  defp current_org_session(conn, organization) do
+    if SSO.enabled?(organization) && conn.assigns[:current_session] do
+      SSO.current_org_session(conn.assigns.current_session.id, organization.id)
+    end
+  end
+
+  defp last_sso_authentications(identities) do
+    identities
+    |> Enum.map(& &1.id)
+    |> SSO.org_sessions_for_identities()
+    |> Enum.group_by(& &1.identity_id, & &1.authenticated_at)
+    |> Map.new(fn {identity_id, authenticated_at} ->
+      {identity_id, Enum.max(authenticated_at, DateTime)}
+    end)
+  end
 
   # Whether the current user may edit policies (create/update/delete are all
   # admin-gated). Used to hide write affordances from readers who can still view

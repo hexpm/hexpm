@@ -161,7 +161,6 @@ defmodule Hexpm.Accounts.Users do
       )
       |> Hexpm.Accounts.SSO.lock_user_removal(user)
       |> Hexpm.Accounts.SSO.delete_user_transactions(user)
-      |> Hexpm.Accounts.SSO.lock_user_confirmation_notifications(user)
       |> Multi.delete(:user, user, stale_error_field: :id)
       |> Hexpm.Accounts.SSO.delete_user_notifications(user)
 

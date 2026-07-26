@@ -83,8 +83,6 @@ defmodule HexpmWeb.Dashboard.DeleteAccountController do
     case Users.delete_confirm(user, params["key"] || "", audit: audit_data(conn)) do
       :ok ->
         conn
-        |> cancel_pending_sso_confirmation()
-        |> cancel_pending_sso_login()
         |> clear_session()
         |> configure_session(renew: true)
         |> put_flash(:info, "Your account has been permanently deleted.")

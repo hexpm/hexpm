@@ -168,16 +168,6 @@ defmodule HexpmWeb.Router do
     get "/sso/link", SSOController, :link, log: false
     post "/sso/link", SSOController, :confirm_link, log: false
     post "/sso/link/cancel", SSOController, :cancel_link, log: false
-    get "/sso/confirm", SSOController, :confirm, log: false
-    post "/sso/confirm", SSOController, :submit_confirmation, log: false
-    post "/sso/confirm/resend", SSOController, :resend_confirmation, log: false
-    post "/sso/confirm/cancel", SSOController, :cancel_confirmation, log: false
-    get "/sso/continue", SSOController, :continue_login, log: false
-    post "/sso/continue", SSOController, :complete_login, log: false
-    post "/sso/continue/cancel", SSOController, :cancel_login, log: false
-    get "/sso/discover", SSOController, :discover, log: false
-    post "/sso/discover", SSOController, :submit_discovery, log: false
-    post "/sso/discover/choose", SSOController, :choose_discovery, log: false
     get "/sso/org/:organization", SSOController, :start, log: false
     get "/sso/:organization", SSOController, :start, log: false
 
@@ -351,27 +341,6 @@ defmodule HexpmWeb.Router do
     post "/orgs/:dashboard_org/sso/rotate", OrganizationSSOController, :rotate, log: false
     post "/orgs/:dashboard_org/sso/promote", OrganizationSSOController, :promote, log: false
     post "/orgs/:dashboard_org/sso/unlink", OrganizationSSOController, :unlink, log: false
-    post "/orgs/:dashboard_org/sso/domains", OrganizationSSOController, :add_domain, log: false
-
-    post "/orgs/:dashboard_org/sso/domains/:id/verify",
-         OrganizationSSOController,
-         :verify_domain,
-         log: false
-
-    post "/orgs/:dashboard_org/sso/domains/:id/reverify",
-         OrganizationSSOController,
-         :reverify_domain,
-         log: false
-
-    post "/orgs/:dashboard_org/sso/domains/:id/policy",
-         OrganizationSSOController,
-         :update_domain_policy,
-         log: false
-
-    post "/orgs/:dashboard_org/sso/domains/:id/delete",
-         OrganizationSSOController,
-         :delete_domain,
-         log: false
 
     get "/orgs/:dashboard_org/billing", OrganizationController, :billing
     get "/orgs/:dashboard_org/danger-zone", OrganizationController, :danger_zone

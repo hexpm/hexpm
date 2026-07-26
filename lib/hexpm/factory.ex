@@ -146,15 +146,6 @@ defmodule Hexpm.Factory do
     }
   end
 
-  def organization_sso_domain_factory() do
-    %Hexpm.Accounts.SSO.Domain{
-      domain: "#{Fake.sequence(:word)}.example.com",
-      challenge: "hexpm-sso-verification=test-#{System.unique_integer([:positive, :monotonic])}",
-      challenge_generation: 1,
-      state: "pending"
-    }
-  end
-
   def email_outbox_entry_factory() do
     %Hexpm.Emails.OutboxEntry{
       category: "test.email",

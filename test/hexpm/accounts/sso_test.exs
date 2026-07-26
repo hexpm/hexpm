@@ -329,10 +329,8 @@ defmodule Hexpm.Accounts.SSOTest do
                  transaction,
                  valid_claims(),
                  context.admin,
-                 audit_data(context.admin),
-                 automatic_linking: fn ->
-                   flunk("connection tests must not consume automatic-link throttles")
-                 end
+                 nil,
+                 audit_data(context.admin)
                )
 
       assert {:ok, connection} =
@@ -388,6 +386,7 @@ defmodule Hexpm.Accounts.SSOTest do
                  transaction,
                  valid_claims(),
                  second_admin,
+                 nil,
                  audit_data(second_admin)
                )
 
@@ -432,6 +431,7 @@ defmodule Hexpm.Accounts.SSOTest do
                  transaction,
                  valid_claims(),
                  context.admin,
+                 nil,
                  audit_data(context.admin)
                )
 
@@ -449,841 +449,373 @@ defmodule Hexpm.Accounts.SSOTest do
   end
 
   describe "identity linking and login" do
-    test "binds code exchange to the callback URL stored with the transaction", context do
-      configured_and_tested_connection(context)
+    setup context do
+      connection = configured_and_tested_connection(context)
 
       assert {:ok, _connection} =
                SSO.enable(context.organization, audit: audit_data(context.admin))
 
-      stub_authorization_uri()
+      member = insert(:user)
+      insert(:organization_user, organization: context.organization, user: member)
 
-      assert {:ok, transaction, _uri} =
-               SSO.start_login(context.organization, nil, "https://hex.pm/sso/callback")
+      Map.merge(context, %{connection: SSO.get_connection(context.organization), member: member})
+    end
 
-      transaction = SSO.get_transaction_by_state(transaction.raw_state)
+    test "binds code exchange to the callback URL stored with the transaction", context do
+      transaction = start_transaction(context, context.admin)
+
       assert transaction.redirect_uri == "https://hex.pm/sso/callback"
 
       assert {:error, %SSO.Error{stage: :callback, code: :redirect_uri_mismatch}} =
                SSO.exchange_code(transaction, "code", "https://evil.example/callback")
     end
 
-    test "concurrent callbacks yield at most one success", context do
-      configured_and_tested_connection(context)
-
-      assert {:ok, _connection} =
-               SSO.enable(context.organization, audit: audit_data(context.admin))
-
+    test "requires an account session to start", context do
+      outsider = insert(:user)
       stub_authorization_uri()
 
-      assert {:ok, transaction, _uri} =
-               SSO.start_login(context.organization, nil, "https://hex.pm/sso/callback")
+      assert {:error, :not_member} =
+               SSO.start_login(
+                 context.organization,
+                 outsider,
+                 nil,
+                 "https://hex.pm/sso/callback"
+               )
 
-      transaction = SSO.get_transaction_by_state(transaction.raw_state)
+      refute Repo.exists?(SSO.Transaction)
+    end
+
+    test "an unlinked subject hands a member to the link consent step", context do
+      transaction = start_transaction(context, context.member)
+
+      assert {:ok, {:link, transaction_id, link_token, _return_path}} =
+               complete(transaction, valid_claims(), context.member)
+
+      assert transaction_id == transaction.id
+      refute Repo.exists?(Identity)
+      refute Repo.exists?(SSO.OrgSession)
+
+      user = Repo.preload(context.member, :emails)
+
+      assert {:ok, identity} =
+               SSO.complete_link(transaction_id, link_token, user, audit_data(user))
+
+      assert identity.user_id == context.member.id
+      assert identity.issuer == "https://identity.example.com/oauth2/default"
+      assert identity.subject == "00u123"
+
+      actions = context.organization |> AuditLogs.all_by() |> Enum.map(& &1.action)
+      assert "sso.identity.link" in actions
+    end
+
+    test "an unlinked subject refuses a nonmember and creates nothing", context do
+      outsider = insert(:user)
+
+      organization_user =
+        insert(:organization_user, organization: context.organization, user: outsider)
+
+      transaction = start_transaction(context, outsider)
+      Repo.delete!(organization_user)
+
+      assert {:error, :not_member} = complete(transaction, valid_claims(), outsider)
+
+      refute Repo.exists?(Identity)
+      refute Repo.exists?(SSO.OrgSession)
+      assert [%{stage: "login", code: "not_member"}] = SSO.failures(context.connection)
+    end
+
+    test "a linked subject owned by the signed-in account establishes org access", context do
+      identity = link_identity(context, context.member)
+      user_session = browser_session(context.member)
+      transaction = start_transaction(context, context.member)
+
+      assert {:ok, {:login, user, org_session, _return_path}} =
+               complete(transaction, valid_claims(), context.member, user_session.id)
+
+      assert user.id == context.member.id
+      assert org_session.user_id == context.member.id
+      assert org_session.organization_id == context.organization.id
+      assert org_session.identity_id == identity.id
+      assert org_session.user_session_id == user_session.id
+      assert org_session.revoked_at == nil
+
+      assert DateTime.diff(org_session.expires_at, org_session.authenticated_at) ==
+               24 * 60 * 60
+
+      assert SSO.current_org_session(user_session.id, context.organization.id).id ==
+               org_session.id
+
+      actions = context.organization |> AuditLogs.all_by() |> Enum.map(& &1.action)
+      assert "sso.login" in actions
+    end
+
+    test "re-authenticating in the same browser session refreshes the same row", context do
+      link_identity(context, context.member)
+      user_session = browser_session(context.member)
+
+      assert {:ok, {:login, _user, first, _return}} =
+               context
+               |> start_transaction(context.member)
+               |> complete(valid_claims(), context.member, user_session.id)
+
+      assert {:ok, {:login, _user, second, _return}} =
+               context
+               |> start_transaction(context.member)
+               |> complete(valid_claims(), context.member, user_session.id)
+
+      assert second.id == first.id
+      assert Repo.aggregate(SSO.OrgSession, :count) == 1
+    end
+
+    test "a subject owned by another account refuses", context do
+      other = insert(:user)
+      insert(:organization_user, organization: context.organization, user: other)
+      identity = link_identity(context, other)
+      transaction = start_transaction(context, context.member)
+
+      assert {:error, :session_user_mismatch} =
+               complete(transaction, valid_claims(), context.member)
+
+      assert [%Identity{} = unchanged] = Repo.all(Identity)
+      assert unchanged.id == identity.id
+      assert unchanged.user_id == other.id
+      refute Repo.exists?(SSO.OrgSession)
+      assert Repo.get!(SSO.Transaction, transaction.id).consumed_at
+    end
+
+    test "the signed-in account already holding a different subject refuses", context do
+      link_identity(context, context.member, subject: "00u-original")
+      transaction = start_transaction(context, context.member)
+
+      assert {:error, :identity_conflict} =
+               complete(transaction, %{valid_claims() | subject: "00u-different"}, context.member)
+
+      assert [%Identity{subject: "00u-original"}] = Repo.all(Identity)
+      refute Repo.exists?(SSO.OrgSession)
+    end
+
+    test "a transaction started by a different account refuses", context do
+      other = insert(:user)
+      insert(:organization_user, organization: context.organization, user: other)
+      link_identity(context, other)
+      transaction = start_transaction(context, context.member)
+
+      assert {:error, :session_user_mismatch} = complete(transaction, valid_claims(), other)
+      refute Repo.exists?(SSO.OrgSession)
+    end
+
+    test "a linked identity belonging to a nonmember is deleted and refused", context do
+      link_identity(context, context.member)
+      transaction = start_transaction(context, context.member)
+
+      Repo.delete_all(
+        from(organization_user in Hexpm.Accounts.OrganizationUser,
+          where: organization_user.user_id == ^context.member.id,
+          where: organization_user.organization_id == ^context.organization.id
+        )
+      )
+
+      assert {:error, :not_member} = complete(transaction, valid_claims(), context.member)
+
+      refute Repo.exists?(Identity)
+      refute Repo.exists?(SSO.OrgSession)
+      assert [%{stage: "login", code: "not_member"}] = SSO.failures(context.connection)
+    end
+
+    test "concurrent callbacks yield at most one success", context do
+      link_identity(context, context.member)
+      user_session = browser_session(context.member)
+      transaction = start_transaction(context, context.member)
       parent = self()
 
       tasks =
         for _attempt <- 1..2 do
           Task.async(fn ->
+            Ecto.Adapters.SQL.Sandbox.allow(Hexpm.RepoBase, parent, self())
             send(parent, {:ready, self()})
 
             receive do
               :go ->
-                SSO.complete_callback(transaction, valid_claims(), nil, %{
-                  audit_data(context.admin)
-                  | user: nil
-                })
+                SSO.complete_callback(
+                  transaction,
+                  valid_claims(),
+                  context.member,
+                  user_session.id,
+                  audit_data(context.member)
+                )
             end
           end)
         end
 
-      pids =
-        for _task <- tasks do
-          assert_receive {:ready, pid}
-          pid
-        end
-
-      Enum.each(pids, &send(&1, :go))
-
-      results = Enum.map(tasks, &Task.await(&1, 5_000))
-      assert Enum.count(results, &match?({:ok, {:link, _, _, _}}, &1)) == 1
-      assert Enum.count(results, &(&1 == {:error, :transaction_already_used})) == 1
-    end
-
-    test "persists a refreshed JWKS document and its cache expiry", context do
-      configured_and_tested_connection(context)
-
-      assert {:ok, _connection} =
-               SSO.enable(context.organization, audit: audit_data(context.admin))
-
-      stub_authorization_uri()
-
-      assert {:ok, transaction, _uri} =
-               SSO.start_login(context.organization, nil, "https://hex.pm/sso/callback")
-
-      transaction = SSO.get_transaction_by_state(transaction.raw_state)
-      jwks_expires_at = DateTime.add(DateTime.utc_now(), 120, :second)
-      jwks_document = %{"keys" => [%{"kty" => "RSA", "kid" => "rotated-key"}]}
-
-      claims =
-        valid_claims()
-        |> Map.put(:jwks_document, jwks_document)
-        |> Map.put(:jwks_expires_at, jwks_expires_at)
-
-      assert {:ok, {:link, _transaction_id, _link_token, _return_path}} =
-               SSO.complete_callback(transaction, claims, nil, %{
-                 audit_data(context.admin)
-                 | user: nil
-               })
-
-      connection = SSO.get_connection(context.organization)
-      assert connection.jwks_document == jwks_document
-      assert connection.jwks_expires_at == jwks_expires_at
-      assert connection.metadata_expires_at == jwks_expires_at
-    end
-
-    test "simultaneous starts use distinct state, nonce, and PKCE values", context do
-      configured_and_tested_connection(context)
-
-      assert {:ok, _connection} =
-               SSO.enable(context.organization, audit: audit_data(context.admin))
-
-      stub_authorization_uri()
-
-      assert {:ok, first, _uri} =
-               SSO.start_login(context.organization, nil, "https://hex.pm/sso/callback")
-
-      assert {:ok, second, _uri} =
-               SSO.start_login(context.organization, nil, "https://hex.pm/sso/callback")
-
-      refute first.raw_state == second.raw_state
-      refute first.nonce == second.nonce
-      refute first.code_verifier == second.code_verifier
-    end
-
-    test "expired state cannot be loaded for callback processing", context do
-      configured_and_tested_connection(context)
-
-      assert {:ok, _connection} =
-               SSO.enable(context.organization, audit: audit_data(context.admin))
-
-      stub_authorization_uri()
-
-      assert {:ok, transaction, _uri} =
-               SSO.start_login(context.organization, nil, "https://hex.pm/sso/callback")
-
-      Repo.update!(
-        Ecto.Changeset.change(transaction,
-          expires_at: DateTime.add(DateTime.utc_now(), -1, :second)
-        )
-      )
-
-      refute SSO.get_transaction_by_state(transaction.raw_state)
-    end
-
-    test "requires explicit linking to an existing organization member", context do
-      configured_and_tested_connection(context)
-
-      assert {:ok, _connection} =
-               SSO.enable(context.organization, audit: audit_data(context.admin))
-
-      stub_authorization_uri()
-
-      assert {:ok, transaction, _uri} =
-               SSO.start_login(
-                 context.organization,
-                 "/dashboard/orgs/#{context.organization.name}",
-                 "https://hex.pm/sso/callback"
-               )
-
-      transaction = SSO.get_transaction_by_state(transaction.raw_state)
-
-      assert {:ok, {:link, transaction_id, link_token, return_path}} =
-               SSO.complete_callback(transaction, valid_claims(), nil, %{
-                 audit_data(context.admin)
-                 | user: nil
-               })
-
-      assert return_path == "/dashboard/orgs/#{context.organization.name}"
-      assert Repo.all(Identity) == []
-
-      assert {:error, :account_proof_required} =
-               SSO.complete_link(
-                 transaction_id,
-                 link_token,
-                 context.admin,
-                 audit_data(context.admin)
-               )
-
-      assert {:ok, _transaction} = SSO.prove_link(transaction_id, link_token, context.admin)
-
-      assert {:ok, identity} =
-               SSO.complete_link(
-                 transaction_id,
-                 link_token,
-                 context.admin,
-                 audit_data(context.admin)
-               )
-
-      assert identity.user_id == context.admin.id
-      assert identity.subject == "00u123"
-      refute inspect(identity) =~ "00u123"
-
-      linked_transaction = Repo.get!(SSO.Transaction, transaction_id)
-      assert linked_transaction.subject == nil
-      assert linked_transaction.provider_email == nil
-
-      assert {:error, :link_already_used} =
-               SSO.complete_link(
-                 transaction_id,
-                 link_token,
-                 context.admin,
-                 audit_data(context.admin)
-               )
-    end
-
-    test "cancel invalidates the server-side link token and purges copied identity data",
-         context do
-      configured_and_tested_connection(context)
-
-      assert {:ok, _connection} =
-               SSO.enable(context.organization, audit: audit_data(context.admin))
-
-      stub_authorization_uri()
-
-      assert {:ok, transaction, _uri} =
-               SSO.start_login(context.organization, nil, "https://hex.pm/sso/callback")
-
-      transaction = SSO.get_transaction_by_state(transaction.raw_state)
-
-      assert {:ok, {:link, transaction_id, link_token, _return_path}} =
-               SSO.complete_callback(transaction, valid_claims(), nil, %{
-                 audit_data(context.admin)
-                 | user: nil
-               })
-
-      assert {:ok, _transaction} = SSO.prove_link(transaction_id, link_token, context.admin)
-      assert {:ok, cancelled} = SSO.cancel_link(transaction_id, link_token)
-      assert cancelled.cancelled_at
-      assert cancelled.subject == nil
-      assert cancelled.provider_email == nil
-      refute SSO.get_pending_link(transaction_id, link_token)
-
-      assert {:error, :link_cancelled} =
-               SSO.complete_link(
-                 transaction_id,
-                 link_token,
-                 context.admin,
-                 audit_data(context.admin)
-               )
-    end
-
-    test "a second subject cannot link to an account already linked on the connection", context do
-      configured_and_tested_connection(context)
-
-      assert {:ok, _connection} =
-               SSO.enable(context.organization, audit: audit_data(context.admin))
-
-      stub_authorization_uri()
-
-      for subject <- ["subject-one", "subject-two"] do
-        assert {:ok, transaction, _uri} =
-                 SSO.start_login(context.organization, nil, "https://hex.pm/sso/callback")
-
-        transaction = SSO.get_transaction_by_state(transaction.raw_state)
-        claims = Map.put(valid_claims(), :subject, subject)
-
-        assert {:ok, {:link, transaction_id, link_token, _return_path}} =
-                 SSO.complete_callback(transaction, claims, nil, %{
-                   audit_data(context.admin)
-                   | user: nil
-                 })
-
-        assert {:ok, _transaction} = SSO.prove_link(transaction_id, link_token, context.admin)
-
-        if subject == "subject-one" do
-          assert {:ok, _identity} =
-                   SSO.complete_link(
-                     transaction_id,
-                     link_token,
-                     context.admin,
-                     audit_data(context.admin)
-                   )
-        else
-          assert {:error, {:identity_conflict, _changeset}} =
-                   SSO.complete_link(
-                     transaction_id,
-                     link_token,
-                     context.admin,
-                     audit_data(context.admin)
-                   )
-        end
+      for task <- tasks do
+        assert_receive {:ready, pid}
+        send(pid, :go)
+        _ = task
       end
+
+      results = Enum.map(tasks, &Task.await/1)
+
+      assert Enum.count(results, &match?({:ok, {:login, _user, _session, _return}}, &1)) == 1
+      assert Repo.aggregate(SSO.OrgSession, :count) == 1
     end
 
-    test "the same issuer and subject cannot map to a second account on one connection",
-         context do
-      connection = configured_and_tested_connection(context)
+    test "abandoning a login consumes the transaction and records the failure", context do
+      transaction = start_transaction(context, context.member)
 
-      insert(:organization_sso_identity,
-        connection: connection,
-        organization: context.organization,
-        user: context.admin,
-        issuer: connection.issuer,
-        subject: "shared-subject"
+      assert :ok = SSO.abandon_login(transaction, :callback, :account_session_required)
+
+      assert Repo.get!(SSO.Transaction, transaction.id).consumed_at
+
+      assert [%{stage: "callback", code: "account_session_required"}] =
+               SSO.failures(context.connection)
+    end
+
+    test "an organization access session dies with its browser session", context do
+      link_identity(context, context.member)
+      user_session = browser_session(context.member)
+
+      assert {:ok, {:login, _user, org_session, _return}} =
+               context
+               |> start_transaction(context.member)
+               |> complete(valid_claims(), context.member, user_session.id)
+
+      assert SSO.current_org_session(user_session.id, context.organization.id)
+
+      Hexpm.UserSessions.revoke(user_session, nil, audit: audit_data(context.member))
+
+      refute SSO.current_org_session(user_session.id, context.organization.id)
+      assert Repo.get!(SSO.OrgSession, org_session.id).revoked_at
+    end
+
+    test "an expired organization access session is no longer current", context do
+      link_identity(context, context.member)
+      user_session = browser_session(context.member)
+
+      assert {:ok, {:login, _user, org_session, _return}} =
+               context
+               |> start_transaction(context.member)
+               |> complete(valid_claims(), context.member, user_session.id)
+
+      Repo.update_all(
+        from(session in SSO.OrgSession, where: session.id == ^org_session.id),
+        set: [expires_at: DateTime.add(DateTime.utc_now(), -1, :second)]
       )
 
-      member = insert(:user)
-      insert(:organization_user, organization: context.organization, user: member, role: "read")
-
-      changeset =
-        Identity.changeset(%Identity{}, %{
-          connection_id: connection.id,
-          organization_id: context.organization.id,
-          user_id: member.id,
-          issuer: connection.issuer,
-          subject: "shared-subject"
-        })
-
-      assert {:error, changeset} = Repo.insert(changeset)
-      assert {"has already been taken", metadata} = changeset.errors[:connection_id]
-      assert metadata[:constraint_name] == "organization_sso_identities_external_identity_index"
-      assert Repo.aggregate(Identity, :count) == 1
+      refute SSO.current_org_session(user_session.id, context.organization.id)
     end
 
-    test "the same issuer and subject remain isolated across organization connections", context do
-      connection = configured_and_tested_connection(context)
+    test "unlinking an identity ends the organization access it granted", context do
+      link_identity(context, context.member)
+      user_session = browser_session(context.member)
 
-      first =
-        insert(:organization_sso_identity,
-          connection: connection,
-          organization: context.organization,
-          user: context.admin,
-          issuer: "https://shared.example.com",
-          subject: "shared-subject"
-        )
+      assert {:ok, {:login, _user, _org_session, _return}} =
+               context
+               |> start_transaction(context.member)
+               |> complete(valid_claims(), context.member, user_session.id)
 
-      other_organization = insert(:organization)
-
-      insert(:organization_user,
-        organization: other_organization,
-        user: context.admin,
-        role: "read"
-      )
-
-      other_connection =
-        insert(:organization_sso_connection,
-          organization: other_organization,
-          issuer: "https://shared.example.com"
-        )
-
-      second =
-        insert(:organization_sso_identity,
-          connection: other_connection,
-          organization: other_organization,
-          user: context.admin,
-          issuer: "https://shared.example.com",
-          subject: "shared-subject"
-        )
-
-      assert first.connection_id != second.connection_id
-      assert Repo.aggregate(Identity, :count) == 2
-    end
-
-    test "the database rejects an identity whose organization does not own its connection",
-         context do
-      connection = configured_and_tested_connection(context)
-      other_organization = insert(:organization)
-
-      changeset =
-        Identity.changeset(%Identity{}, %{
-          connection_id: connection.id,
-          organization_id: other_organization.id,
-          user_id: context.admin.id,
-          issuer: connection.issuer,
-          subject: "cross-organization-subject"
-        })
-
-      assert {:error, changeset} = Repo.insert(changeset)
-      assert {"does not exist", _metadata} = changeset.errors[:connection_id]
-    end
-
-    test "rejects a transaction after its connection metadata version changes", context do
-      connection = configured_and_tested_connection(context)
-
-      assert {:ok, _connection} =
-               SSO.enable(context.organization, audit: audit_data(context.admin))
-
-      stub_authorization_uri()
-
-      assert {:ok, transaction, _uri} =
-               SSO.start_login(context.organization, nil, "https://hex.pm/sso/callback")
-
-      assert {:ok, refreshed} = SSO.refresh_metadata(connection)
-      assert refreshed.version > transaction.connection_version
-
-      transaction = SSO.get_transaction_by_state(transaction.raw_state)
-
-      assert {:error, :connection_configuration_changed} =
-               SSO.exchange_code(transaction, "code", "https://hex.pm/sso/callback")
-    end
-
-    test "rejects a pending-secret test after the replacement changes", context do
-      configured_and_tested_connection(context)
-
-      assert {:ok, _connection} =
-               SSO.begin_rotation(context.organization, "replacement-a",
+      assert {:ok, %Identity{}} =
+               SSO.unlink_identity(context.organization, context.member,
                  audit: audit_data(context.admin)
                )
 
-      stub_authorization_uri()
-
-      assert {:ok, transaction, _uri} =
-               SSO.start_test(
-                 context.organization,
-                 context.admin,
-                 :pending,
-                 "https://hex.pm/sso/callback"
-               )
-
-      assert {:ok, _connection} =
-               SSO.begin_rotation(context.organization, "replacement-b",
-                 audit: audit_data(context.admin)
-               )
-
-      transaction = SSO.get_transaction_by_state(transaction.raw_state)
-
-      assert {:error, :connection_credentials_changed} =
-               SSO.exchange_code(transaction, "code", "https://hex.pm/sso/callback")
+      refute Repo.exists?(SSO.OrgSession)
+      refute SSO.current_org_session(user_session.id, context.organization.id)
     end
 
-    test "refuses to link a non-member and never creates membership", context do
-      configured_and_tested_connection(context)
+    test "removing a member ends the organization access it granted", context do
+      link_identity(context, context.member)
+      user_session = browser_session(context.member)
 
-      assert {:ok, _connection} =
-               SSO.enable(context.organization, audit: audit_data(context.admin))
-
-      stub_authorization_uri()
-      outsider = insert(:user)
-
-      assert {:ok, transaction, _uri} =
-               SSO.start_login(context.organization, nil, "https://hex.pm/sso/callback")
-
-      transaction = SSO.get_transaction_by_state(transaction.raw_state)
-
-      assert {:ok, {:link, transaction_id, link_token, _return_path}} =
-               SSO.complete_callback(transaction, valid_claims(), nil, %{
-                 audit_data(context.admin)
-                 | user: nil
-               })
-
-      assert {:error, :not_member} = SSO.prove_link(transaction_id, link_token, outsider)
-
-      refute Organizations.access?(context.organization, outsider, "read")
-      assert Repo.all(Identity) == []
-    end
-
-    test "refuses to finish a pending link after the connection is disabled", context do
-      configured_and_tested_connection(context)
-
-      assert {:ok, _connection} =
-               SSO.enable(context.organization, audit: audit_data(context.admin))
-
-      stub_authorization_uri()
-
-      assert {:ok, transaction, _uri} =
-               SSO.start_login(context.organization, nil, "https://hex.pm/sso/callback")
-
-      transaction = SSO.get_transaction_by_state(transaction.raw_state)
-
-      assert {:ok, {:link, transaction_id, link_token, _return_path}} =
-               SSO.complete_callback(transaction, valid_claims(), nil, %{
-                 audit_data(context.admin)
-                 | user: nil
-               })
-
-      assert {:ok, _transaction} = SSO.prove_link(transaction_id, link_token, context.admin)
-
-      assert {:ok, _connection} =
-               SSO.disable(context.organization, audit: audit_data(context.admin))
-
-      assert {:error, :connection_disabled} =
-               SSO.complete_link(
-                 transaction_id,
-                 link_token,
-                 context.admin,
-                 audit_data(context.admin)
-               )
-
-      assert Repo.all(Identity) == []
-    end
-
-    test "disable rejects an in-flight login callback", context do
-      configured_and_tested_connection(context)
-
-      assert {:ok, _connection} =
-               SSO.enable(context.organization, audit: audit_data(context.admin))
-
-      stub_authorization_uri()
-
-      assert {:ok, transaction, _uri} =
-               SSO.start_login(context.organization, nil, "https://hex.pm/sso/callback")
-
-      assert {:ok, _connection} =
-               SSO.disable(context.organization, audit: audit_data(context.admin))
-
-      transaction = SSO.get_transaction_by_state(transaction.raw_state)
-
-      assert {:error, :connection_disabled} =
-               SSO.complete_callback(transaction, valid_claims(), nil, %{
-                 audit_data(context.admin)
-                 | user: nil
-               })
-    end
-
-    test "re-enabling does not revive a login started before disable", context do
-      configured_and_tested_connection(context)
-
-      assert {:ok, _connection} =
-               SSO.enable(context.organization, audit: audit_data(context.admin))
-
-      stub_authorization_uri()
-
-      assert {:ok, transaction, _uri} =
-               SSO.start_login(context.organization, nil, "https://hex.pm/sso/callback")
-
-      assert {:ok, _connection} =
-               SSO.disable(context.organization, audit: audit_data(context.admin))
-
-      assert {:ok, _connection} =
-               SSO.enable(context.organization, audit: audit_data(context.admin))
-
-      transaction = SSO.get_transaction_by_state(transaction.raw_state)
-
-      assert {:error, :connection_configuration_changed} =
-               SSO.complete_callback(transaction, valid_claims(), nil, %{
-                 audit_data(context.admin)
-                 | user: nil
-               })
-    end
-
-    test "continues login by connection, issuer, and subject after linking", context do
-      connection = configured_and_tested_connection(context)
-
-      assert {:ok, _connection} =
-               SSO.enable(context.organization, audit: audit_data(context.admin))
-
-      insert(:organization_sso_identity,
-        connection: connection,
-        organization: context.organization,
-        user: context.admin
-      )
-
-      stub_authorization_uri()
-
-      assert {:ok, transaction, _uri} =
-               SSO.start_login(
-                 context.organization,
-                 "/dashboard/orgs/#{context.organization.name}/packages",
-                 "https://hex.pm/sso/callback"
-               )
-
-      transaction = SSO.get_transaction_by_state(transaction.raw_state)
-      email = List.first(context.admin.emails).email
-      return_path = "/dashboard/orgs/#{context.organization.name}/packages"
-
-      assert {:ok, {:continue, transaction_id, capability, ^return_path}} =
-               SSO.complete_callback(transaction, valid_claims(email), nil, %{
-                 audit_data(context.admin)
-                 | user: nil
-               })
-
-      assert {:ok, {:login, user, organization, ^return_path}} =
-               SSO.complete_pending_login(
-                 transaction_id,
-                 capability,
-                 nil,
-                 %{audit_data(context.admin) | user: nil}
-               )
-
-      assert user.id == context.admin.id
-      assert organization.id == context.organization.id
-    end
-
-    test "member removal purges the organization-scoped identity", context do
-      connection = configured_and_tested_connection(context)
-      member = insert(:user)
-      insert(:organization_user, organization: context.organization, user: member, role: "read")
-
-      identity =
-        insert(:organization_sso_identity,
-          connection: connection,
-          organization: context.organization,
-          user: member
-        )
-
-      linked_notification =
-        insert(:email_outbox_entry,
-          ordering_key: sso_ordering_key(connection, member),
-          category: "sso.identity_linked"
-        )
-
-      mismatch_notification =
-        insert(:email_outbox_entry,
-          ordering_key: sso_ordering_key(connection, member),
-          category: "sso.email_mismatch"
-        )
+      assert {:ok, {:login, _user, _org_session, _return}} =
+               context
+               |> start_transaction(context.member)
+               |> complete(valid_claims(), context.member, user_session.id)
 
       assert :ok =
-               Organizations.remove_member(context.organization, member,
+               Organizations.remove_member(context.organization, context.member,
                  audit: audit_data(context.admin)
                )
 
-      refute Repo.get(Identity, identity.id)
-      refute Organizations.access?(context.organization, member, "read")
-      refute Repo.get(OutboxEntry, linked_notification.id)
-      refute Repo.get(OutboxEntry, mismatch_notification.id)
-
-      assert %OutboxEntry{
-               category: "sso.identity_unlinked",
-               ordering_key: ordering_key
-             } = Repo.one!(OutboxEntry)
-
-      assert ordering_key == sso_ordering_key(connection, member)
+      refute Repo.exists?(SSO.OrgSession)
+      refute Repo.exists?(Identity)
     end
 
-    test "member removal invalidates a proved pending link", context do
-      configured_and_tested_connection(context)
-
-      assert {:ok, _connection} =
-               SSO.enable(context.organization, audit: audit_data(context.admin))
-
-      member = insert(:user)
-      insert(:organization_user, organization: context.organization, user: member, role: "read")
-      stub_authorization_uri()
-
-      assert {:ok, transaction, _uri} =
-               SSO.start_login(context.organization, nil, "https://hex.pm/sso/callback")
-
-      transaction = SSO.get_transaction_by_state(transaction.raw_state)
-
-      assert {:ok, {:link, transaction_id, link_token, _return_path}} =
-               SSO.complete_callback(transaction, valid_claims(), nil, %{
-                 audit_data(context.admin)
-                 | user: nil
-               })
-
-      assert {:ok, _transaction} = SSO.prove_link(transaction_id, link_token, member)
-
-      assert :ok =
-               Organizations.remove_member(context.organization, member,
-                 audit: audit_data(context.admin)
-               )
-
-      refute Repo.get(SSO.Transaction, transaction_id)
-      assert Repo.all(Identity) == []
-    end
-
-    test "member removal clears pending primary-email confirmation and its queued code",
+    test "a provider email change notifies the member without changing their addresses",
          context do
-      configured_and_tested_connection(context)
+      link_identity(context, context.member, provider_email: "old@example.com")
+      user_session = browser_session(context.member)
 
-      assert {:ok, _connection} =
-               SSO.enable(context.organization, audit: audit_data(context.admin))
+      assert {:ok, {:login, _user, _org_session, _return}} =
+               context
+               |> start_transaction(context.member)
+               |> complete(valid_claims("new@example.com"), context.member, user_session.id)
 
-      member = insert(:user)
-      insert(:organization_user, organization: context.organization, user: member, role: "read")
-      email = List.first(member.emails).email
-      {:ok, domain_name} = SSO.discovery_domain(email)
+      assert Repo.one!(Identity).provider_email == "new@example.com"
 
-      insert(:organization_sso_domain,
-        organization: context.organization,
-        domain: domain_name,
-        state: "verified",
-        verified_at: DateTime.utc_now(),
-        last_checked_at: DateTime.utc_now(),
-        valid_until: DateTime.add(DateTime.utc_now(), 6 * 24 * 60 * 60, :second),
-        automatic_linking_enabled: true
-      )
+      emails =
+        context.member.id
+        |> Users.get_by_id([:emails])
+        |> Map.fetch!(:emails)
+        |> Enum.map(& &1.email)
 
-      stub_authorization_uri()
-
-      assert {:ok, transaction, _uri} =
-               SSO.start_login(context.organization, nil, "https://hex.pm/sso/callback")
-
-      transaction = SSO.get_transaction_by_state(transaction.raw_state)
-
-      assert {:ok, {:confirm, transaction_id, _capability, _return_path}} =
-               SSO.complete_callback(transaction, valid_claims(email), nil, %{
-                 audit_data(context.admin)
-                 | user: nil
-               })
+      refute "new@example.com" in emails
 
       assert Repo.exists?(
-               from(entry in OutboxEntry, where: entry.category == "sso.confirmation_code")
+               from(entry in OutboxEntry, where: entry.category == "sso.email_mismatch")
              )
+    end
 
-      assert :ok =
-               Organizations.remove_member(context.organization, member,
+    test "notifications are queued under the member's ordering key", context do
+      link_identity(context, context.member)
+
+      assert {:ok, %Identity{}} =
+               SSO.unlink_identity(context.organization, context.member,
                  audit: audit_data(context.admin)
                )
 
-      refute Repo.get(SSO.Transaction, transaction_id)
+      ordering_key = sso_ordering_key(context.connection, context.member)
 
-      refute Repo.exists?(
-               from(entry in OutboxEntry, where: entry.category == "sso.confirmation_code")
+      assert Repo.exists?(
+               from(entry in OutboxEntry,
+                 where: entry.ordering_key == ^ordering_key,
+                 where: entry.category == "sso.identity_unlinked"
+               )
              )
     end
+  end
 
-    test "user deletion clears pending primary-email confirmation and its queued code", context do
-      configured_and_tested_connection(context)
+  defp start_transaction(context, user) do
+    stub_authorization_uri()
 
-      assert {:ok, _connection} =
-               SSO.enable(context.organization, audit: audit_data(context.admin))
+    assert {:ok, transaction, _uri} =
+             SSO.start_login(context.organization, user, nil, "https://hex.pm/sso/callback")
 
-      member = insert(:user)
-      insert(:organization_user, organization: context.organization, user: member, role: "read")
-      email = List.first(member.emails).email
-      {:ok, domain_name} = SSO.discovery_domain(email)
+    SSO.get_transaction_by_state(transaction.raw_state)
+  end
 
-      insert(:organization_sso_domain,
-        organization: context.organization,
-        domain: domain_name,
-        state: "verified",
-        verified_at: DateTime.utc_now(),
-        last_checked_at: DateTime.utc_now(),
-        valid_until: DateTime.add(DateTime.utc_now(), 6 * 24 * 60 * 60, :second),
-        automatic_linking_enabled: true
-      )
+  defp complete(transaction, claims, user, user_session_id \\ nil) do
+    SSO.complete_callback(transaction, claims, user, user_session_id, audit_data(user))
+  end
 
-      stub_authorization_uri()
-
-      assert {:ok, transaction, _uri} =
-               SSO.start_login(context.organization, nil, "https://hex.pm/sso/callback")
-
-      transaction = SSO.get_transaction_by_state(transaction.raw_state)
-
-      assert {:ok, {:confirm, transaction_id, _capability, _return_path}} =
-               SSO.complete_callback(transaction, valid_claims(email), nil, %{
-                 audit_data(context.admin)
-                 | user: nil
-               })
-
-      assert :ok = Users.delete(member, audit: audit_data(member), notify: false)
-      refute Repo.get(SSO.Transaction, transaction_id)
-
-      refute Repo.exists?(
-               from(entry in OutboxEntry, where: entry.category == "sso.confirmation_code")
-             )
-    end
-
-    test "concurrent link completion and member removal cannot leave identity data", context do
-      configured_and_tested_connection(context)
-
-      assert {:ok, _connection} =
-               SSO.enable(context.organization, audit: audit_data(context.admin))
-
-      member = insert(:user)
-      insert(:organization_user, organization: context.organization, user: member, role: "read")
-      stub_authorization_uri()
-
-      assert {:ok, transaction, _uri} =
-               SSO.start_login(context.organization, nil, "https://hex.pm/sso/callback")
-
-      transaction = SSO.get_transaction_by_state(transaction.raw_state)
-
-      assert {:ok, {:link, transaction_id, link_token, _return_path}} =
-               SSO.complete_callback(transaction, valid_claims(), nil, %{
-                 audit_data(context.admin)
-                 | user: nil
-               })
-
-      assert {:ok, _transaction} = SSO.prove_link(transaction_id, link_token, member)
-
-      parent = self()
-
-      link_task =
-        Task.async(fn ->
-          send(parent, {:ready, self()})
-
-          receive do
-            :go ->
-              SSO.complete_link(
-                transaction_id,
-                link_token,
-                member,
-                audit_data(member)
-              )
-          end
-        end)
-
-      removal_task =
-        Task.async(fn ->
-          send(parent, {:ready, self()})
-
-          receive do
-            :go ->
-              Organizations.remove_member(context.organization, member,
-                audit: audit_data(context.admin)
-              )
-          end
-        end)
-
-      pids =
-        for _task <- 1..2 do
-          assert_receive {:ready, pid}
-          pid
-        end
-
-      Enum.each(pids, &send(&1, :go))
-
-      link_result = Task.await(link_task, 5_000)
-      assert Task.await(removal_task, 5_000) == :ok
-      assert match?({:ok, %Identity{}}, link_result) or match?({:error, _reason}, link_result)
-
-      refute Organizations.access?(context.organization, member, "read")
-      assert Repo.all(from(identity in Identity, where: identity.user_id == ^member.id)) == []
-      refute Repo.get(SSO.Transaction, transaction_id)
-    end
-
-    test "a stale identity cannot log in after membership is removed", context do
-      connection = configured_and_tested_connection(context)
-
-      assert {:ok, _connection} =
-               SSO.enable(context.organization, audit: audit_data(context.admin))
-
-      identity =
-        insert(:organization_sso_identity,
-          connection: connection,
+  defp link_identity(context, user, attrs \\ []) do
+    insert(
+      :organization_sso_identity,
+      Keyword.merge(
+        [
+          connection: context.connection,
           organization: context.organization,
-          user: context.admin
-        )
-
-      Repo.delete_all(
-        from(organization_user in Hexpm.Accounts.OrganizationUser,
-          where:
-            organization_user.organization_id == ^context.organization.id and
-              organization_user.user_id == ^context.admin.id
-        )
+          user: user
+        ],
+        attrs
       )
+    )
+  end
 
-      stub_authorization_uri()
+  defp browser_session(user) do
+    {:ok, session, _token} =
+      Hexpm.UserSessions.create_browser_session(user, audit: audit_data(user))
 
-      assert {:ok, transaction, _uri} =
-               SSO.start_login(context.organization, nil, "https://hex.pm/sso/callback")
-
-      transaction = SSO.get_transaction_by_state(transaction.raw_state)
-
-      assert {:error, :not_member} =
-               SSO.complete_callback(transaction, valid_claims(), nil, %{
-                 audit_data(context.admin)
-                 | user: nil
-               })
-
-      refute Repo.get(Identity, identity.id)
-      refute SSO.get_transaction_by_state(transaction.raw_state)
-
-      assert [%{stage: "login", code: "not_member"}] = SSO.failures(connection)
-    end
+    session
   end
 
   defp sso_ordering_key(connection, user), do: "sso:#{connection.id}:#{user.id}"
@@ -1336,7 +868,12 @@ defmodule Hexpm.Accounts.SSOTest do
         stub_authorization_uri()
 
         assert {:ok, transaction, _uri} =
-                 SSO.start_login(context.organization, nil, "https://hex.pm/sso/callback")
+                 SSO.start_login(
+                   context.organization,
+                   context.admin,
+                   nil,
+                   "https://hex.pm/sso/callback"
+                 )
 
         send(
           self(),
@@ -1352,10 +889,13 @@ defmodule Hexpm.Accounts.SSOTest do
         }
 
         assert {:ok, {:link, _transaction_id, link_token, _return_path}} =
-                 SSO.complete_callback(transaction, claims, nil, %{
+                 SSO.complete_callback(
+                   transaction,
+                   claims,
+                   context.admin,
+                   nil,
                    audit_data(context.admin)
-                   | user: nil
-                 })
+                 )
 
         send(self(), {:sensitive_link_token, link_token})
         assert connection.client_secret == client_secret

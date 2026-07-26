@@ -12,31 +12,6 @@ defmodule HexpmWeb.LoginControllerTest do
     assert response(conn, 200) =~ "Log in"
   end
 
-  test "shows public SSO discovery only in fully enabled mode" do
-    config = Application.fetch_env!(:hexpm, :organization_sso)
-
-    refute build_conn() |> get("/login") |> html_response(200) =~
-             "Continue with organization SSO"
-
-    app_env(
-      :hexpm,
-      :organization_sso,
-      Keyword.merge(config, mode: :beta, beta_organizations: ["pilot"])
-    )
-
-    refute build_conn() |> get("/login") |> html_response(200) =~
-             "Continue with organization SSO"
-
-    Application.put_env(
-      :hexpm,
-      :organization_sso,
-      Keyword.put(config, :mode, :enabled)
-    )
-
-    assert build_conn() |> get("/login") |> html_response(200) =~
-             "Continue with organization SSO"
-  end
-
   test "ordinary return paths do not change the GitHub login destination" do
     html =
       build_conn()
@@ -51,26 +26,6 @@ defmodule HexpmWeb.LoginControllerTest do
     conn = build_conn() |> test_login(c.user) |> get("/login")
 
     assert redirected_to(conn) == "/users/#{c.user.username}"
-  end
-
-  test "show requires fresh proof when a signed-in user has a pending SSO link", c do
-    config = Application.fetch_env!(:hexpm, :organization_sso)
-
-    app_env(
-      :hexpm,
-      :organization_sso,
-      Keyword.merge(config, mode: :beta, beta_organizations: ["pilot"])
-    )
-
-    conn =
-      build_conn()
-      |> test_login(c.user)
-      |> put_session("pending_sso_link", %{"transaction_id" => 123, "token" => "link-token"})
-      |> get("/login", %{return: "/sso/link"})
-
-    assert response(conn, 200) =~ "Log in"
-    assert response(conn, 200) =~ ~s(value="/sso/link")
-    assert response(conn, 200) =~ ~s(href="/auth/github?return=/sso/link")
   end
 
   test "log in with correct password", c do
@@ -90,7 +45,6 @@ defmodule HexpmWeb.LoginControllerTest do
     tfa_data = get_session(conn, "tfa_user_id")
     assert tfa_data["uid"] == user.id
     assert tfa_data["return"] == nil
-    assert tfa_data["origin"] == "conventional"
     refute tfa_data["session_token"]
     refute get_session(conn, "session_token")
     refute Repo.exists?(from(session in Hexpm.UserSession, where: session.user_id == ^user.id))

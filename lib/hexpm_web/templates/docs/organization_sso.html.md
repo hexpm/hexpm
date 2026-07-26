@@ -2,7 +2,14 @@
 
 Organization single sign-on (SSO) lets members sign in to an organization through an OpenID Connect (OIDC) identity provider. Customer-created Okta applications are the supported and documented integration. Microsoft Entra interoperability and Okta Integration Network distribution remain private validation targets until their live provider test matrices are complete.
 
-Organization SSO and its domain-based features are currently available only to organizations enabled by Hexpm's runtime SSO gate. It is optional and scoped to one Hexpm organization, so conventional Hexpm login remains available. It does not create accounts, add organization members, or assign roles.
+Organization SSO is currently available only to organizations enabled by Hexpm's runtime SSO gate. It is optional and scoped to one Hexpm organization. It does not create accounts, add organization members, or assign roles.
+
+SSO is not a way to sign in to Hexpm. Two separate sessions carry the split, and only the first is a login:
+
+* The **account session** is the person's login to Hexpm, established by a password, GitHub, or another credential the account itself owns, together with the account's own two-factor authentication where enrolled. An identity provider never establishes it.
+* The **organization access session** is what an SSO authentication produces. It is scoped to one organization, lasts 24 hours, and governs whether the account may reach that organization.
+
+So the shape of the flow is: sign in to Hexpm as yourself, then authenticate to the organization's provider to unlock that organization.
 
 ### Before you begin
 
@@ -12,7 +19,6 @@ You need:
 * Administrator access to your OIDC provider.
 * A Hexpm account for every person who will use SSO.
 * Existing organization membership for every person who will link an SSO identity.
-* Control of public DNS for each domain that will use email discovery or confirmed account linking.
 
 Open the Hexpm organization dashboard, select **SSO**, and keep the **Redirect URI** shown there available while configuring Okta.
 
@@ -29,7 +35,7 @@ In the Okta Admin Console, follow Okta's [OIDC app-integration instructions](htt
 7. Assign only the people or groups who should be able to use the Hexpm integration.
 8. Save the application, then copy its **Client ID** and **Client secret**.
 
-The application must allow the `openid` and `email` scopes. Hexpm uses the provider subject as the stable identity. The email claim can locate a possible existing account for confirmed first-login linking and is used for notifications; it never proves account ownership or grants organization membership.
+The application must allow the `openid` and `email` scopes. Hexpm uses the provider subject as the stable identity. The email claim is display data and is used for notifications; it never proves account ownership or grants organization membership.
 
 ### Configure Hexpm
 
@@ -67,41 +73,31 @@ For an approved private validation:
 3. Configure the application's client ID and client secret in Hexpm, test the connection, and enable it only for the validation organization.
 4. Assign only the managed and guest test users included in the validation.
 
-Hexpm uses the exact issuer and stable OIDC subject as the identity key. A missing `email` claim follows the conventional account-proof flow; Hexpm does not substitute `preferred_username` or UPN as an email address.
-
-### Verify a domain
-
-Domain verification is required only for email discovery and confirmed account linking. It is not required for the organization's direct SSO login URL.
-
-1. Add the registrable domain under **Verified domains**.
-2. Publish the exact challenge as a TXT record at `_hexpm-sso.{domain}`. Each organization receives a distinct challenge, including organizations that share a domain.
-3. Select **Verify domain**.
-4. After verification, enable **Email discovery**, **Confirmed account linking**, or both.
-
-Email discovery can disclose the names of participating organizations to anyone who submits an address at the domain. Hexpm requires an administrator to acknowledge that disclosure before enabling discovery. Domain trust is rechecked daily and expires seven days after the last successful DNS check. A missing or malformed record invalidates trust; an administrator must generate a new challenge before the domain can be trusted again.
-
-When the runtime SSO mode is fully enabled, the general login page links to email discovery. During a beta, enabled organizations can test the discovery route directly without exposing the control on the public login page. Discovery retains only the canonical email domain, never looks up accounts or memberships, and may present a chooser when more than one eligible organization shares the domain.
+Hexpm uses the exact issuer and stable OIDC subject as the identity key. Hexpm does not substitute `preferred_username` or UPN as an email address.
 
 ### Link a member's account
 
+Following the organization login URL requires a Hexpm account session. Without one, Hexpm sends the member to conventional login first and resumes afterwards, so the same URL works signed in or signed out.
+
 The first time a member uses the organization login URL:
 
-1. The member signs in through the configured identity provider.
-2. If confirmed account linking is enabled and the provider email exactly matches the member's current verified primary Hexpm email on the verified domain, Hexpm sends a short-lived confirmation code to that stored primary address.
-3. The member enters the code in the same browser that started the login.
-4. If the Hexpm account has personal two-factor authentication enabled, the member must complete it before the identity is linked.
-5. The confirmation explains that later organization SSO logins do not prompt for the account's personal Hexpm two-factor authentication code.
-6. If confirmed linking is not available, Hexpm asks the member to prove control of an existing Hexpm account with its password or an already-linked GitHub account, plus Hexpm two-factor authentication when enabled.
+1. The member signs in to Hexpm with their own credential, completing their personal two-factor authentication if they have it enrolled.
+2. The member authenticates through the configured identity provider.
+3. Hexpm asks the member to confirm the link between the returned provider identity and the account they are signed in as.
 
-The Hexpm account must already be a member of the organization. If it is not, an organization administrator must add it before the member retries.
+Being signed in is the proof, so there is no confirmation code and no email matching. The Hexpm account must already be a member of the organization. If it is not, an organization administrator must add it before the member retries.
 
-A provider email never establishes durable identity, creates an account, grants membership, or changes a Hexpm email address. Secondary, unverified, missing, malformed, nonmember, and conflicting matches use the same conventional account-proof flow. After linking, the connection, exact issuer, and stable provider subject are the identity key.
+A provider email never establishes durable identity, selects an account, creates one, grants membership, or changes a Hexpm email address. After linking, the connection, exact issuer, and stable provider subject are the identity key. The account's email addresses are notified when the link is created.
 
-After linking, later uses of the organization login URL sign the member in directly. Members can continue to use conventional Hexpm login.
+After linking, later uses of the organization login URL establish a 24-hour organization access session for that browser session. Signing out of Hexpm, or revoking the browser session, ends the organization access with it.
+
+### MFA and step-up
+
+The two MFA policies do not compete, because they protect different things. The organization's provider enforces the organization's policy on every organization access session. Hexpm's own two-factor authentication enforces the account holder's policy on every account login. A member with both completes both, at different moments, and neither substitutes for the other.
+
+An SSO authentication never suppresses a personal Hexpm two-factor prompt, because it never establishes the account session in the first place. It also never satisfies step-up re-authentication (sudo), which stays on credentials the account itself owns: password, GitHub, or a recovery code. Configure the required MFA and conditional-access policy for organization access in your provider.
 
 Okta controls authentication to the SSO application. Hexpm remains the source of truth for organization membership and roles. Removing an Okta assignment does not remove the member from Hexpm. Remove the member in Hexpm to revoke organization access.
-
-Later SSO authentication does not prompt for the member's Hexpm password or Hexpm two-factor authentication. Hexpm can still require conventional account proof after sign-in before a sudo-protected dashboard destination or sensitive action. Configure the required MFA and conditional-access policy in Okta.
 
 ### Rotate the client secret
 
@@ -120,7 +116,9 @@ The active secret continues serving logins until the tested replacement is promo
 
 Select **Disable SSO login** to stop new SSO logins immediately. This does not remove the saved configuration or linked accounts, and conventional Hexpm login remains available.
 
-Organization administrators can unlink an account from the **Linked accounts** section. Removing a member from the organization also removes that organization's SSO link. If the person is added again later, they must link again.
+Organization administrators can unlink an account from the **Linked accounts** section, which also ends that member's current organization access. Removing a member from the organization does the same and removes the SSO link. If the person is added again later, they must link again.
+
+**Linked accounts** shows when each member last authenticated through the connection.
 
 ### Troubleshooting
 
@@ -132,11 +130,12 @@ The SSO dashboard shows recent failures using stable stage and error codes. Chec
 * **The connection test fails:** restart it from the same browser while signed in as the Hexpm administrator who saved the configuration and initiated the test. If that administrator is unavailable, disable SSO if it is enabled, have a current administrator save the existing configuration again, then test and re-enable it. Leaving the client secret blank while re-saving keeps the current secret.
 * **Account linking says the account is not a member:** add the existing Hexpm account to the organization, then restart from the organization login URL.
 * **A linked identity conflicts:** unlink the existing organization link before attempting to connect the same provider identity or Hexpm account again.
+* **The login says you are signed in as the wrong account:** the provider identity belongs to a different Hexpm account. Sign in as that account, or ask an administrator to unlink it.
 
 Do not send client secrets, authorization codes, tokens, cookies, or raw callback URLs to support. The stage and error code from **Recent failures**, the organization name, and the approximate time are sufficient for investigation.
 
 ### Release scope
 
-Enabled Phase 2 organizations can use the organization login URL, verified-domain email discovery, and confirmed primary-email account linking. Custom Okta dashboard tiles, a public Okta Integration Network listing, and general Microsoft Entra support remain unavailable until their external validation and release gates are complete.
+Enabled organizations can use the organization login URL and third-party-initiated login. Custom Okta dashboard tiles, a public Okta Integration Network listing, and general Microsoft Entra support remain unavailable until their external validation and release gates are complete.
 
-This release does not support SAML, account creation, invitations, just-in-time membership, SCIM, group or role synchronization, required SSO enforcement, or OIDC logout.
+Nothing yet requires an organization access session. This release does not support SAML, account creation, invitations, just-in-time membership, domain verification, SCIM, group or role synchronization, required SSO enforcement, or OIDC logout.

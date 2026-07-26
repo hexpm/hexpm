@@ -4,7 +4,3 @@ Mox.defmock(Hexpm.HTTP.Mock, for: Hexpm.HTTP.Interface)
 Mox.defmock(Hexpm.Hexdocs.Search.Mock, for: Hexpm.Hexdocs.Search)
 Mox.defmock(Hexpm.CronMonitor.SentryMock, for: Hexpm.CronMonitor.Sentry)
 Mox.defmock(Hexpm.Accounts.SSO.OIDC.Mock, for: Hexpm.Accounts.SSO.OIDC)
-
-Mox.defmock(Hexpm.Accounts.SSO.DomainResolver.Mock,
-  for: Hexpm.Accounts.SSO.DomainResolver
-)

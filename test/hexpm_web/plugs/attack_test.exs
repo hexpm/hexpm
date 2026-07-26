@@ -91,19 +91,10 @@ defmodule HexpmWeb.Plugs.AttackTest do
       time = System.system_time(:millisecond)
       ip = {6, 6, 6, 6}
       organization_id = 123
-      domain_hash = :crypto.hash(:sha256, "example.com")
-      subject_hash = :crypto.hash(:sha256, "subject")
-      email_hash = :crypto.hash(:sha256, "email@example.com")
 
       for key <- [
             {:sso_start_ip, ip},
             {:sso_start_organization, organization_id, ip},
-            {:sso_discovery_ip, ip},
-            {:sso_discovery_domain, domain_hash, ip},
-            {:sso_link_ip, ip},
-            {:sso_link_organization, organization_id},
-            {:sso_link_subject, subject_hash},
-            {:sso_link_email, email_hash},
             {:sso_callback_ip, ip}
           ] do
         Phoenix.PubSub.broadcast!(Hexpm.PubSub, "ratelimit", {:throttle, key, time})
@@ -117,35 +108,11 @@ defmodule HexpmWeb.Plugs.AttackTest do
       assert {:allow, {:throttle, organization_data}} =
                Attack.sso_start_organization_throttle(organization_id, ip, time: time)
 
-      assert {:allow, {:throttle, discovery_ip_data}} =
-               Attack.sso_discovery_ip_throttle(ip, time: time)
-
-      assert {:allow, {:throttle, discovery_domain_data}} =
-               Attack.sso_discovery_domain_throttle(domain_hash, ip, time: time)
-
-      assert {:allow, {:throttle, link_ip_data}} =
-               Attack.sso_link_ip_throttle(ip, time: time)
-
-      assert {:allow, {:throttle, link_organization_data}} =
-               Attack.sso_link_organization_throttle(organization_id, time: time)
-
-      assert {:allow, {:throttle, link_subject_data}} =
-               Attack.sso_link_subject_throttle(subject_hash, time: time)
-
-      assert {:allow, {:throttle, link_email_data}} =
-               Attack.sso_link_email_throttle(email_hash, time: time)
-
       assert {:allow, {:throttle, callback_data}} =
                Attack.sso_callback_ip_throttle(ip, time: time)
 
       assert start_data[:remaining] == 28
       assert organization_data[:remaining] == 18
-      assert discovery_ip_data[:remaining] == 18
-      assert discovery_domain_data[:remaining] == 13
-      assert link_ip_data[:remaining] == 18
-      assert link_organization_data[:remaining] == 98
-      assert link_subject_data[:remaining] == 8
-      assert link_email_data[:remaining] == 8
       assert callback_data[:remaining] == 48
     end
 

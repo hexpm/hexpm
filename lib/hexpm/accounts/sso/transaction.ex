@@ -21,24 +21,12 @@ defmodule Hexpm.Accounts.SSO.Transaction do
     field :subject, :string, redact: true
     field :provider_email, :string, redact: true
     field :link_token_hash, :binary, redact: true
-    field :domain_challenge_generation, :integer
-    field :candidate_connection_version, :integer
     field :entrypoint, :string, default: "organization"
-    field :link_method, :string
-    field :confirmation_code_hash, :binary, redact: true
-    field :confirmation_expires_at, :utc_datetime_usec
-    field :confirmation_verified_at, :utc_datetime_usec
-    field :confirmation_attempts, :integer, default: 0
-    field :confirmation_sends, :integer, default: 0
-    field :browser_capability_hash, :binary, redact: true
     field :linked_at, :utc_datetime_usec
     field :cancelled_at, :utc_datetime_usec
 
     belongs_to :connection, Hexpm.Accounts.SSO.Connection
     belongs_to :user, User
-    belongs_to :candidate_user, User
-    belongs_to :candidate_email, Hexpm.Accounts.Email
-    belongs_to :domain, Hexpm.Accounts.SSO.Domain
 
     timestamps()
   end
@@ -86,18 +74,6 @@ defmodule Hexpm.Accounts.SSO.Transaction do
       :link_token_hash,
       :linked_at,
       :cancelled_at,
-      :candidate_user_id,
-      :candidate_email_id,
-      :domain_id,
-      :domain_challenge_generation,
-      :candidate_connection_version,
-      :link_method,
-      :confirmation_code_hash,
-      :confirmation_expires_at,
-      :confirmation_verified_at,
-      :confirmation_attempts,
-      :confirmation_sends,
-      :browser_capability_hash,
       :nonce,
       :code_verifier,
       :user_id

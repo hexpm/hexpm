@@ -48,8 +48,6 @@ defmodule HexpmWeb.PasswordController do
         breached? = Hexpm.Pwned.password_breached?(params["password"])
 
         conn
-        |> cancel_pending_sso_confirmation()
-        |> cancel_pending_sso_login()
         |> clear_session()
         |> configure_session(renew: true)
         |> maybe_put_flash(breached?)

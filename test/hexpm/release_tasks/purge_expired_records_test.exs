@@ -377,7 +377,7 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
   end
 
   describe "purge organization SSO transactions" do
-    test "deletes expired transactions and retains active and in-flight confirmations" do
+    test "deletes expired transactions and retains active ones" do
       connection =
         insert(:organization_sso_connection,
           organization: insert(:organization)
@@ -407,44 +407,58 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
           expires_at: DateTime.add(DateTime.utc_now(), 600, :second)
         })
 
-      in_flight_confirmation =
-        Repo.insert!(%Hexpm.Accounts.SSO.Transaction{
-          connection_id: connection.id,
-          state_hash: :crypto.hash(:sha256, "in-flight-confirmation-state"),
-          kind: "login",
-          secret_slot: "active",
-          connection_version: connection.version,
-          secret_version: connection.version,
-          redirect_uri: "https://hex.pm/sso/callback",
-          expires_at: days_ago(1),
-          consumed_at: DateTime.utc_now(),
-          link_method: "confirmed_primary_email",
-          confirmation_verified_at: DateTime.utc_now(),
-          confirmation_expires_at: DateTime.add(DateTime.utc_now(), 600, :second),
-          browser_capability_hash: :crypto.hash(:sha256, "browser-capability")
-        })
-
-      cancelled_confirmation =
-        Repo.insert!(%Hexpm.Accounts.SSO.Transaction{
-          connection_id: connection.id,
-          state_hash: :crypto.hash(:sha256, "cancelled-confirmation-state"),
-          kind: "login",
-          secret_slot: "active",
-          connection_version: connection.version,
-          secret_version: connection.version,
-          redirect_uri: "https://hex.pm/sso/callback",
-          expires_at: days_ago(1),
-          consumed_at: DateTime.utc_now(),
-          link_method: "confirmed_primary_email",
-          cancelled_at: DateTime.utc_now()
-        })
-
       PurgeExpiredRecords.run()
 
       refute Repo.get(Hexpm.Accounts.SSO.Transaction, expired.id)
-      refute Repo.get(Hexpm.Accounts.SSO.Transaction, cancelled_confirmation.id)
       assert Repo.get(Hexpm.Accounts.SSO.Transaction, active.id)
-      assert Repo.get(Hexpm.Accounts.SSO.Transaction, in_flight_confirmation.id)
     end
   end
+
+  describe "purge organization SSO sessions" do
+    test "deletes expired and revoked organization access sessions" do
+      organization = insert(:organization)
+      user = insert(:user)
+      insert(:organization_user, organization: organization, user: user)
+      connection = insert(:organization_sso_connection, organization: organization)
+
+      identity =
+        insert(:organization_sso_identity,
+          organization: organization,
+          connection: connection,
+          user: user
+        )
+
+      active = insert_org_session(organization, user, identity, expires_at: hours_from_now(1))
+      expired = insert_org_session(organization, user, identity, expires_at: days_ago(1))
+
+      revoked =
+        insert_org_session(organization, user, identity,
+          expires_at: hours_from_now(1),
+          revoked_at: DateTime.utc_now()
+        )
+
+      PurgeExpiredRecords.run()
+
+      assert Repo.get(Hexpm.Accounts.SSO.OrgSession, active.id)
+      refute Repo.get(Hexpm.Accounts.SSO.OrgSession, expired.id)
+      refute Repo.get(Hexpm.Accounts.SSO.OrgSession, revoked.id)
+    end
+  end
+
+  defp insert_org_session(organization, user, identity, attrs) do
+    {:ok, user_session, _token} =
+      Hexpm.UserSessions.create_browser_session(user, audit: audit_data(user))
+
+    Repo.insert!(%Hexpm.Accounts.SSO.OrgSession{
+      user_id: user.id,
+      organization_id: organization.id,
+      user_session_id: user_session.id,
+      identity_id: identity.id,
+      authenticated_at: DateTime.utc_now(),
+      expires_at: Keyword.fetch!(attrs, :expires_at),
+      revoked_at: Keyword.get(attrs, :revoked_at)
+    })
+  end
+
+  defp hours_from_now(hours), do: DateTime.add(DateTime.utc_now(), hours * 3600, :second)
 end
