@@ -125,15 +125,25 @@ defmodule Hexpm.Application do
 
   defp common_children do
     [
+      Hexpm.PromEx,
       Hexpm.RepoBase,
       {Finch, name: Hexpm.Finch, pools: finch_pools()},
       Hexpm.TmpDir,
       {Task.Supervisor, name: Hexpm.Tasks},
       goth_spec(),
       setup(),
-      HexpmWeb.Telemetry
+      HexpmWeb.Telemetry,
+      metrics_server_spec()
     ]
     |> Enum.reject(&is_nil/1)
+  end
+
+  # Serves Prometheus metrics on a port separate from the main endpoint so that
+  # worker pods, which run no Phoenix endpoint, can be scraped too
+  defp metrics_server_spec() do
+    if port = Application.get_env(:hexpm, :metrics_port) do
+      {Bandit, plug: {PromEx.Plug, prom_ex_module: Hexpm.PromEx}, port: port}
+    end
   end
 
   defp oban_child, do: {Oban, Application.fetch_env!(:hexpm, Oban)}

@@ -51,6 +51,8 @@ config :swoosh, :api_client, false
 
 config :hexpm, Oban, testing: :manual, queues: false, plugins: false
 
+config :hexpm, Hexpm.PromEx, disabled: true
+
 config :hexpm, Hexpm.RepoBase,
   username: "postgres",
   password: "postgres",

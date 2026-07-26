@@ -60,6 +60,11 @@ if config_env() == :prod do
 
   config :hexpm, Hexpm.Emails.Mailer, api_key: System.fetch_env!("HEXPM_SENDGRID_API_KEY")
 
+  # Set on both web and worker deployments so Prometheus can scrape all pods
+  if metrics_port = System.get_env("HEXPM_METRICS_PORT") do
+    config :hexpm, metrics_port: String.to_integer(metrics_port)
+  end
+
   if mode == :web do
     config :hexpm, Oban, queues: false, plugins: false, peer: false
 
