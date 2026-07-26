@@ -169,7 +169,6 @@ defmodule HexpmWeb.Router do
     post "/sso/link", SSOController, :confirm_link, log: false
     post "/sso/link/cancel", SSOController, :cancel_link, log: false
     get "/sso/org/:organization", SSOController, :start, log: false
-    get "/sso/:organization", SSOController, :start, log: false
 
     get "/sudo", SudoController, :show
     post "/sudo", SudoController, :create

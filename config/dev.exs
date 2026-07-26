@@ -86,7 +86,7 @@ config :phoenix, :plug_init_mode, :runtime
 config :hexpm, Hexpm.RepoBase,
   username: "postgres",
   password: "postgres",
-  database: System.get_env("HEXPM_DEV_DATABASE", "hexpm_dev"),
+  database: "hexpm_dev",
   hostname: "localhost",
   pool_size: 5
 

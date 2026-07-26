@@ -265,11 +265,7 @@ defmodule Hexpm.Accounts.SSO do
     end
   end
 
-  def start_login(organization, user, return_path, redirect_uri) do
-    start_login(organization, user, return_path, redirect_uri, [])
-  end
-
-  def start_login(organization, user, return_path, redirect_uri, opts) do
+  def start_login(organization, user, return_path, redirect_uri, opts \\ []) do
     entrypoint = Keyword.get(opts, :entrypoint, "organization")
     login_hint = Keyword.get(opts, :login_hint)
 

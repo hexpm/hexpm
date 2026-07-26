@@ -657,12 +657,22 @@ defmodule HexpmWeb.SSOControllerTest do
       build_conn() |> post("/sso/link/cancel") |> response(404)
     end
 
-    test "the discovery, confirmation and continue routes are gone", context do
+    test "the removed and legacy routes are gone", context do
       conn = test_login(build_conn(), context.member)
 
-      for path <- ["/sso/discover", "/sso/confirm", "/sso/continue"] do
+      for path <- [
+            "/sso/discover",
+            "/sso/confirm",
+            "/sso/continue",
+            "/sso/#{context.organization.name}"
+          ] do
         assert response(get(conn, path), 404)
       end
+
+      # The organization link is only ever the /org/ form.
+      expect_authorization_request(context.connection)
+      conn = get(conn, "/sso/org/#{context.organization.name}")
+      assert redirected_to(conn) =~ "https://identity.example.com/authorize"
     end
 
     test "does not log callback authorization parameters", _context do

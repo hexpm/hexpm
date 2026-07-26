@@ -744,6 +744,37 @@ defmodule Hexpm.Accounts.SSOTest do
       refute SSO.current_org_session(user_session.id, context.organization.id)
     end
 
+    test "re-authenticating restores access after the session was revoked", context do
+      # establish_org_session!/2 clears revoked_at on the row it reuses. That is
+      # intended: a revoked organization access session means "authenticate
+      # again", and doing so must grant access again. Pinned so the enforcement
+      # phase does not "fix" it into a permanent block, which is what unlinking
+      # and member removal are for.
+      link_identity(context, context.member)
+      user_session = browser_session(context.member)
+
+      assert {:ok, {:login, _user, org_session, _return}} =
+               context
+               |> start_transaction(context.member)
+               |> complete(valid_claims(), context.member, user_session.id)
+
+      Repo.update_all(
+        from(session in SSO.OrgSession, where: session.id == ^org_session.id),
+        set: [revoked_at: DateTime.utc_now()]
+      )
+
+      refute SSO.current_org_session(user_session.id, context.organization.id)
+
+      assert {:ok, {:login, _user, restored, _return}} =
+               context
+               |> start_transaction(context.member)
+               |> complete(valid_claims(), context.member, user_session.id)
+
+      assert restored.id == org_session.id
+      assert restored.revoked_at == nil
+      assert SSO.current_org_session(user_session.id, context.organization.id)
+    end
+
     test "an organization access session is scoped to its own organization", context do
       other_organization = insert(:organization)
       insert(:organization_user, organization: other_organization, user: context.member)
