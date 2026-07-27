@@ -140,6 +140,24 @@ defmodule Hexpm.Accounts.UsersTest do
 
       refute Users.get(username)
     end
+
+    test "counts the new account" do
+      ref = :telemetry_test.attach_event_handlers(self(), [[:hexpm, :accounts, :user_created]])
+
+      {:ok, _user} =
+        Users.add_from_oauth_with_provider(
+          Hexpm.Fake.sequence(:username),
+          Hexpm.Fake.sequence(:full_name),
+          Hexpm.Fake.sequence(:email),
+          "github",
+          "12345",
+          audit: %{user: nil, user_agent: "TEST", remote_ip: "127.0.0.1", auth_credential: nil}
+        )
+
+      assert_received {[:hexpm, :accounts, :user_created], ^ref, %{count: 1}, %{}}
+
+      :telemetry.detach(ref)
+    end
   end
 
   test "new users default to optional email preferences" do

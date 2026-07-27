@@ -750,6 +750,7 @@ defmodule Hexpm.Accounts.Users do
           |> Mailer.deliver!()
         end
 
+        :telemetry.execute([:hexpm, :accounts, :user_created], %{count: 1}, %{})
         {:ok, user}
 
       {:error, :user, changeset, _} ->
