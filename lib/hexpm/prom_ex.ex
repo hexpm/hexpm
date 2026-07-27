@@ -11,7 +11,8 @@ defmodule Hexpm.PromEx do
       {Plugins.Phoenix, router: HexpmWeb.Router, endpoint: HexpmWeb.Endpoint},
       {Plugins.Ecto, repos: [Hexpm.RepoBase]},
       Plugins.Oban,
-      Hexpm.PromEx.Plugins.Hexpm
+      Hexpm.PromEx.Plugins.Hexpm,
+      Hexpm.PromEx.Plugins.OutboundHttp
     ]
   end
 

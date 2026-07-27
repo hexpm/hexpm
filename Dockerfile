@@ -78,3 +78,13 @@ USER nobody
 
 ENV HOME=/app
 ENV LANG=C.UTF-8
+
+# Declared here, in the last stage, so a new commit does not invalidate the
+# build cache for everything above it. PromEx reads these to report which
+# revision is running.
+# Defaulted, because PromEx treats an empty variable as present and would
+# label the metric with a blank rather than saying it is unknown.
+ARG GIT_SHA=unknown
+ARG GIT_AUTHOR=unknown
+ENV GIT_SHA=${GIT_SHA}
+ENV GIT_AUTHOR=${GIT_AUTHOR}
