@@ -69,7 +69,7 @@ defmodule Hexpm.ObanConfigTest do
     end
   end
 
-  test "production schedules periodic work and retains completed jobs for thirty days" do
+  test "production schedules periodic work and keeps failures far longer than successes" do
     prod = Config.Reader.read!("config/prod.exs", env: :prod)
     oban = prod[:hexpm][Oban]
 
@@ -89,7 +89,10 @@ defmodule Hexpm.ObanConfigTest do
              {"0 2 * * *", Hexpm.ReleaseTasks.PurgeExpiredRecords}
            ]
 
-    assert {Oban.Plugins.Pruner, [max_age: 2_592_000]} in oban[:plugins]
+    assert {Hexpm.Oban.Pruner, [max_age: 259_200, discarded_max_age: 31_536_000]} in oban[
+             :plugins
+           ]
+
     assert {Oban.Plugins.Lifeline, [interval: 60_000, rescue_after: 360_000]} in oban[:plugins]
   end
 end
