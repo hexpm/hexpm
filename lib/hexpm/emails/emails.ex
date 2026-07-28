@@ -318,7 +318,9 @@ defmodule Hexpm.Emails do
   defp account_emails(%User{emails: %Ecto.Association.NotLoaded{}} = user), do: [user]
 
   defp account_emails(%User{emails: emails} = user) do
-    Enum.map(emails, &%{&1 | user: user})
+    emails
+    |> Enum.filter(&(&1.primary and &1.verified))
+    |> Enum.map(&%{&1 | user: user})
   end
 
   defp display_name(%User{username: username}), do: username

@@ -102,16 +102,30 @@ defmodule Hexpm.EmailsTest do
       }
     end
 
-    test "link and unlink notifications go to every account email", context do
+    test "link and unlink notifications go only to the verified primary email", context do
       for email <- [
             Emails.sso_identity_linked(context.organization, context.user),
             Emails.sso_identity_unlinked(context.organization, context.user)
           ] do
-        assert Enum.sort(Enum.map(email.to, &elem(&1, 1))) ==
-                 Enum.sort(["secondary@example.com", User.email(context.user, :primary)])
-
+        assert Enum.map(email.to, &elem(&1, 1)) == [User.email(context.user, :primary)]
         assert email.text_body =~ "acme"
       end
+    end
+
+    test "notifications skip an unverified address attached to the account", context do
+      insert(:email,
+        user: context.user,
+        email: "attacker-supplied@example.com",
+        primary: false,
+        verified: false,
+        public: false,
+        gravatar: false
+      )
+
+      user = Hexpm.Repo.preload(context.user, :emails, force: true)
+      email = Emails.sso_identity_linked(context.organization, user)
+
+      refute "attacker-supplied@example.com" in Enum.map(email.to, &elem(&1, 1))
     end
 
     test "email mismatch identifies the provider address", context do

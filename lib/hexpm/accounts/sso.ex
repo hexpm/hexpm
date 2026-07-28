@@ -1321,8 +1321,23 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   defp enqueue_sso_notification!(kind, connection, user, provider_email \\ nil) do
-    recipients = Repo.all(from(email in assoc(user, :emails), select: email.email))
+    # The verified primary address only. Any address can be attached to an
+    # account unverified, so sending to all of them would let an account holder
+    # mail an address they do not own.
+    recipients =
+      Repo.all(
+        from(email in assoc(user, :emails),
+          where: email.primary and email.verified,
+          select: email.email
+        )
+      )
 
+    enqueue_sso_notification!(kind, connection, user, provider_email, recipients)
+  end
+
+  defp enqueue_sso_notification!(_kind, _connection, _user, _provider_email, []), do: :ok
+
+  defp enqueue_sso_notification!(kind, connection, user, provider_email, recipients) do
     {category, email} =
       case kind do
         "identity_linked" ->
