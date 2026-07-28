@@ -30,7 +30,7 @@ defmodule Hexpm.Accounts.SSO.SafeURL do
     uri = URI.parse(value)
 
     cond do
-      uri.scheme != "https" -> error(:https_required)
+      uri.scheme != "https" and not exempt_host?(uri.host) -> error(:https_required)
       is_nil(uri.host) or uri.host == "" -> error(:host_required)
       uri.userinfo -> error(:userinfo_not_allowed)
       uri.fragment -> error(:fragment_not_allowed)
@@ -40,9 +40,18 @@ defmodule Hexpm.Accounts.SSO.SafeURL do
 
   def validate_syntax(_value), do: error(:invalid_url)
 
+  # Hosts listed here skip the HTTPS and public-address requirements so a test
+  # harness can serve an issuer over plain HTTP on loopback. The list is empty
+  # unless configured, and config/runtime.exs refuses to populate it in prod.
+  defp exempt_host?(host) when is_binary(host) do
+    host in Application.get_env(:hexpm, :sso_exempt_issuer_hosts, [])
+  end
+
+  defp exempt_host?(_host), do: false
+
   defp validated_addresses(host) do
     case :inet.parse_address(String.to_charlist(host)) do
-      {:ok, address} -> validate_public_addresses([address])
+      {:ok, address} -> validate_public_addresses([address], host)
       {:error, :einval} -> resolve_and_validate(host)
     end
   end
@@ -65,7 +74,7 @@ defmodule Hexpm.Accounts.SSO.SafeURL do
         error(:dns_resolution_failed)
 
       {:ok, addresses} ->
-        validate_public_addresses(addresses)
+        validate_public_addresses(addresses, host)
 
       {:exit, _reason} ->
         error(:dns_resolution_failed)
@@ -84,8 +93,8 @@ defmodule Hexpm.Accounts.SSO.SafeURL do
     Application.get_env(:hexpm, :sso_dns_timeout, @dns_timeout)
   end
 
-  defp validate_public_addresses(addresses) do
-    if Enum.all?(addresses, &public_address?/1) do
+  defp validate_public_addresses(addresses, host) do
+    if exempt_host?(host) or Enum.all?(addresses, &public_address?/1) do
       {:ok, addresses}
     else
       error(:private_address_not_allowed)
