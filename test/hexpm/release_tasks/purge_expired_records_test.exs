@@ -162,6 +162,50 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
       assert Repo.get(Hexpm.OAuth.Token, active.id)
     end
 
+    test "keeps expired tokens whose refresh token is still valid" do
+      user = insert(:user)
+      client = insert(:oauth_client)
+
+      token =
+        Repo.insert!(%Hexpm.OAuth.Token{
+          jti: "expired-access-jti",
+          refresh_jti: "live-refresh-jti",
+          token_type: "bearer",
+          scopes: ["api"],
+          expires_at: truncated_seconds_ago(60),
+          refresh_token_expires_at: truncated_seconds_from_now(86400),
+          grant_type: "authorization_code",
+          user_id: user.id,
+          client_id: client.client_id
+        })
+
+      PurgeExpiredRecords.run()
+
+      assert Repo.get(Hexpm.OAuth.Token, token.id)
+    end
+
+    test "deletes tokens whose refresh token has also expired" do
+      user = insert(:user)
+      client = insert(:oauth_client)
+
+      token =
+        Repo.insert!(%Hexpm.OAuth.Token{
+          jti: "expired-access-jti",
+          refresh_jti: "expired-refresh-jti",
+          token_type: "bearer",
+          scopes: ["api"],
+          expires_at: truncated_seconds_ago(86400),
+          refresh_token_expires_at: truncated_seconds_ago(60),
+          grant_type: "authorization_code",
+          user_id: user.id,
+          client_id: client.client_id
+        })
+
+      PurgeExpiredRecords.run()
+
+      refute Repo.get(Hexpm.OAuth.Token, token.id)
+    end
+
     test "deletes any revoked token" do
       user = insert(:user)
       client = insert(:oauth_client)
@@ -174,6 +218,29 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
           expires_at: truncated_seconds_from_now(86400),
           revoked_at: truncated_seconds_ago(60),
           grant_type: "authorization_code",
+          user_id: user.id,
+          client_id: client.client_id
+        })
+
+      PurgeExpiredRecords.run()
+
+      refute Repo.get(Hexpm.OAuth.Token, revoked.id)
+    end
+
+    test "deletes revoked tokens whose refresh token has not expired" do
+      user = insert(:user)
+      client = insert(:oauth_client)
+
+      revoked =
+        Repo.insert!(%Hexpm.OAuth.Token{
+          jti: "rotated-jti",
+          refresh_jti: "rotated-refresh-jti",
+          token_type: "bearer",
+          scopes: ["api"],
+          expires_at: truncated_seconds_ago(60),
+          refresh_token_expires_at: truncated_seconds_from_now(86400),
+          revoked_at: truncated_seconds_ago(60),
+          grant_type: "refresh_token",
           user_id: user.id,
           client_id: client.client_id
         })
