@@ -83,7 +83,7 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
          {:ok, id_token} <- fetch_id_token(token_response),
          {:ok, claims, refreshed_jwks, refreshed_jwks_expiry} <-
            validate_id_token(id_token, client_context, transaction, connection),
-         :ok <- validate_claims(claims, transaction, connection) do
+         :ok <- validate_claims(claims, connection) do
       {:ok,
        %{
          issuer: claims["iss"],
@@ -160,14 +160,14 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
         {:ok, claims, nil, nil}
 
       {:error, {:no_matching_key_with_kid, _kid}} ->
-        refresh_and_validate_id_token(id_token, client_context, transaction, connection, opts)
+        refresh_and_validate_id_token(id_token, client_context, connection, opts)
 
       {:error, _reason} ->
         error(:token, :id_token_invalid)
     end
   end
 
-  defp refresh_and_validate_id_token(id_token, client_context, transaction, connection, opts) do
+  defp refresh_and_validate_id_token(id_token, client_context, connection, opts) do
     jwks_uri = client_context.provider_configuration.jwks_uri
 
     with {:ok, _uri} <- SafeURL.validate(jwks_uri),
@@ -176,7 +176,7 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
          refreshed_context <- %{client_context | jwks: jwks},
          {:ok, claims} <-
            oidcc_validate_id_token(id_token, refreshed_context, opts, :jwks_refresh),
-         :ok <- validate_claims(claims, transaction, connection) do
+         :ok <- validate_claims(claims, connection) do
       {:ok, claims, jwks_document, expiry}
     else
       {:error, %Error{} = error} -> {:error, error}
@@ -197,9 +197,13 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
       {:error, :token_validation_exception}
   end
 
-  defp validate_claims(claims, transaction, connection) do
+  # There is no lower bound on iat. Microsoft Entra stamps the authentication
+  # instant rather than the response instant, so a token minted from an existing
+  # provider session is legitimately older than the transaction that asked for
+  # it. The nonce binds the token to this transaction and exp bounds its life,
+  # which is what stops replay.
+  defp validate_claims(claims, connection) do
     now = DateTime.utc_now() |> DateTime.to_unix()
-    transaction_started = DateTime.to_unix(transaction.inserted_at)
     issued_at = claims["iat"]
 
     cond do
@@ -207,7 +211,6 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
       not valid_subject?(claims["sub"]) -> error(:claims, :subject_invalid)
       not valid_provider_email?(claims["email"]) -> error(:claims, :provider_email_invalid)
       not is_integer(issued_at) -> error(:claims, :issued_at_invalid)
-      issued_at < transaction_started - @clock_skew_seconds -> error(:claims, :issued_at_too_old)
       issued_at > now + @clock_skew_seconds -> error(:claims, :issued_at_in_future)
       true -> :ok
     end
@@ -267,7 +270,7 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
       "authorization_code" not in configuration.grant_types_supported ->
         error(:discovery, :authorization_code_grant_unsupported)
 
-      "S256" not in List.wrap(configuration.code_challenge_methods_supported) ->
+      not pkce_s256_permitted?(configuration.code_challenge_methods_supported) ->
         error(:discovery, :pkce_s256_unsupported)
 
       signing_algorithms == [] ->
@@ -281,10 +284,21 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
     end
   end
 
+  # Advertising code_challenge_methods_supported is optional, and Microsoft
+  # Entra omits it while accepting S256 anyway. Silence means unstated, so only
+  # an explicit list that leaves S256 out is a refusal. Once past this check the
+  # hardened configuration asserts S256, which keeps require_pkce meaningful:
+  # the challenge is always sent, never quietly dropped.
+  defp pkce_s256_permitted?(:undefined), do: true
+  defp pkce_s256_permitted?(nil), do: true
+  defp pkce_s256_permitted?([]), do: true
+  defp pkce_s256_permitted?(methods), do: "S256" in List.wrap(methods)
+
   defp harden_configuration(configuration) do
     %{
       configuration
       | id_token_signing_alg_values_supported: allowed_signing_algorithms(configuration),
+        code_challenge_methods_supported: ["S256"],
         pushed_authorization_request_endpoint: :undefined,
         require_pushed_authorization_requests: false,
         request_parameter_supported: false,

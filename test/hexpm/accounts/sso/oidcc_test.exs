@@ -325,6 +325,44 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
              Oidcc.discover(@issuer)
   end
 
+  test "accepts a provider that does not advertise code challenge methods", context do
+    # Microsoft Entra omits code_challenge_methods_supported and accepts S256
+    # anyway, so an absent list must not be read as a refusal.
+    document = Map.delete(context.discovery_document, "code_challenge_methods_supported")
+
+    expect_json_get(@issuer <> "/.well-known/openid-configuration", document)
+    expect_json_get(@jwks_uri, context.jwks_document)
+
+    assert {:ok, metadata} = Oidcc.discover(@issuer)
+    assert metadata.discovery_document == document
+  end
+
+  test "still sends an S256 challenge to a provider that advertises nothing", context do
+    document = Map.delete(context.discovery_document, "code_challenge_methods_supported")
+    connection = %{context.connection | discovery_document: document}
+
+    assert {:ok, authorization_uri} =
+             Oidcc.authorization_uri(
+               connection,
+               context.transaction,
+               context.transaction.redirect_uri,
+               connection.client_secret
+             )
+
+    query = URI.decode_query(URI.parse(authorization_uri).query)
+    assert query["code_challenge_method"] == "S256"
+    assert is_binary(query["code_challenge"])
+  end
+
+  test "rejects a provider that advertises code challenge methods without S256", context do
+    document = Map.put(context.discovery_document, "code_challenge_methods_supported", ["plain"])
+
+    expect_json_get(@issuer <> "/.well-known/openid-configuration", document)
+
+    assert {:error, %Error{stage: :discovery, code: :pkce_s256_unsupported}} =
+             Oidcc.discover(@issuer)
+  end
+
   test "bounds DNS resolution time" do
     original_resolver = Application.get_env(:hexpm, :sso_dns_resolver)
     original_timeout = Application.get_env(:hexpm, :sso_dns_timeout)
@@ -570,7 +608,6 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
       {:wrong_nonce, context.key, %{"nonce" => "wrong"}},
       {:expired, context.key, %{"exp" => now - 300}},
       {:wrong_issuer, context.key, %{"iss" => "https://other.example.com"}},
-      {:old_iat, context.key, %{"iat" => now - 600}},
       {:future_iat, context.key, %{"iat" => now + 600}},
       {:invalid_signature, JOSE.JWK.generate_key({:rsa, 1_024}), %{}}
     ]
@@ -588,6 +625,26 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
                  context.connection.client_secret
                )
     end
+  end
+
+  test "accepts a token issued before the transaction started", context do
+    now = DateTime.utc_now() |> DateTime.to_unix()
+
+    id_token =
+      signed_id_token(context.key, "key-1", context.transaction, %{"iat" => now - 7_200})
+
+    expect_token_response(id_token)
+
+    assert {:ok, claims} =
+             Oidcc.exchange_code(
+               context.connection,
+               context.transaction,
+               "authorization-code",
+               context.transaction.redirect_uri,
+               context.connection.client_secret
+             )
+
+    assert claims.subject == "00u123"
   end
 
   test "rejects a token signed with a disallowed symmetric algorithm", context do
