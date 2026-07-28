@@ -115,7 +115,13 @@ defmodule HexpmWeb.PackageController do
       total_count = Enum.count(releases)
       page = Hexpm.Utils.safe_page(page_param, total_count, per_page)
       current_release = current_release(releases)
-      paginated_releases = paginate_list(releases, page, per_page)
+
+      # The versions table marks every vulnerable row, but only the page being
+      # shown, not all of a package's releases.
+      paginated_releases =
+        releases
+        |> paginate_list(page, per_page)
+        |> Releases.mark_vulnerable()
 
       render(
         conn,
