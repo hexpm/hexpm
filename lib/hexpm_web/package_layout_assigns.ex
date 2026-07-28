@@ -92,14 +92,19 @@ defmodule HexpmWeb.PackageLayoutAssigns do
   defp current_user(%Plug.Conn{} = conn), do: conn.assigns.current_user
   defp current_user(user), do: user
 
+  # The layout shows a security banner for the release on screen, so that one
+  # release needs its vulnerable? flag and none of the others do.
   defp resolve_current_release(nil, releases) do
     case Release.latest_version(releases, only_stable: true, unstable_fallback: true) do
       nil -> nil
       release -> Releases.preload(release, [:requirements, :downloads, :publisher])
     end
+    |> Releases.mark_vulnerable_one()
   end
 
-  defp resolve_current_release(release, _releases), do: release
+  defp resolve_current_release(release, _releases) do
+    Releases.mark_vulnerable_one(release)
+  end
 
   defp daily_graph(package_or_release) do
     last_day = Hexpm.Cache.fetch(:last_download_day, &Downloads.last_day/0) || Date.utc_today()
