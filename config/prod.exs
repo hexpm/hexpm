@@ -55,6 +55,8 @@ config :hexpm, Oban,
        {"0 2 * * *", Hexpm.ReleaseTasks.PurgeExpiredRecords}
      ],
      timezone: "Etc/UTC"},
-    {Oban.Plugins.Pruner, max_age: 30 * 24 * 60 * 60},
+    # Successful jobs are read by nobody and are the bulk of the table, which
+    # Oban's queue length metric counts on a timer. Failures are worth keeping.
+    {Hexpm.Oban.Pruner, max_age: 3 * 24 * 60 * 60, discarded_max_age: 365 * 24 * 60 * 60},
     {Oban.Plugins.Lifeline, interval: 60_000, rescue_after: 360_000}
   ]

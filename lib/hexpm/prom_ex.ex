@@ -10,7 +10,10 @@ defmodule Hexpm.PromEx do
       Plugins.Beam,
       {Plugins.Phoenix, router: HexpmWeb.Router, endpoint: HexpmWeb.Endpoint},
       {Plugins.Ecto, repos: [Hexpm.RepoBase]},
-      Plugins.Oban,
+      # Queue lengths come from counting the jobs table, which every node does
+      # on its own timer, so the default five seconds is a scan per node per
+      # five seconds for a number that does not move that fast.
+      {Plugins.Oban, poll_rate: :timer.minutes(1)},
       Hexpm.PromEx.Plugins.Hexpm,
       Hexpm.PromEx.Plugins.OutboundHttp
     ]
