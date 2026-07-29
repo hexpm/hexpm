@@ -258,6 +258,19 @@ defmodule Hexpm.Accounts.SSO do
             saved =
               Repo.update!(change(connection, enabled_at: nil, version: connection.version + 1))
 
+            # Disabling is what an administrator reaches for when the provider
+            # is compromised, so the access it already granted goes too rather
+            # than lasting out its 24 hours.
+            now = DateTime.utc_now()
+
+            Repo.update_all(
+              from(session in OrgSession,
+                where: session.organization_id == ^organization.id,
+                where: is_nil(session.revoked_at)
+              ),
+              set: [revoked_at: now, updated_at: now]
+            )
+
             insert_audit!(audit_data, "sso.connection.disable", {organization, %{}})
             saved
 
@@ -1057,6 +1070,15 @@ defmodule Hexpm.Accounts.SSO do
 
       true ->
         Repo.delete_all(from(candidate in Identity, where: candidate.id == ^identity.id))
+
+        # Audited like an administrator unlink, because the effect is the same
+        # and sso.md requires the log to keep who was unlinked and when.
+        insert_audit!(
+          audit_data,
+          "sso.identity.unlink",
+          {organization, %{user_id: identity.user_id}}
+        )
+
         record_failure(connection, :login, :not_member, identity.user)
         consume_transaction!(transaction, %{})
         {:reject, :not_member}

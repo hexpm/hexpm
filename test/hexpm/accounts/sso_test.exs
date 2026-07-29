@@ -601,6 +601,41 @@ defmodule Hexpm.Accounts.SSOTest do
       assert [%{stage: "login", code: "not_member"}] = SSO.failures(context.connection)
     end
 
+    test "disabling revokes the organization access it already granted", context do
+      identity = link_identity(context, context.member)
+      user_session = browser_session(context.member)
+      transaction = start_transaction(context, context.member)
+
+      assert {:ok, {:login, _user, org_session, _return_path}} =
+               complete(transaction, valid_claims(), context.member, user_session.id)
+
+      assert org_session.identity_id == identity.id
+      assert SSO.current_org_session(user_session.id, context.organization.id)
+
+      assert {:ok, _disabled} =
+               SSO.disable(context.organization, audit: audit_data(context.admin))
+
+      refute SSO.current_org_session(user_session.id, context.organization.id)
+    end
+
+    test "purging a linked identity whose owner left is audited as an unlink", context do
+      former = insert(:user)
+
+      organization_user =
+        insert(:organization_user, organization: context.organization, user: former)
+
+      link_identity(context, former)
+      transaction = start_transaction(context, former)
+      Repo.delete!(organization_user)
+
+      assert {:error, :not_member} = complete(transaction, valid_claims(), former)
+
+      refute Repo.exists?(Identity)
+
+      actions = context.organization |> AuditLogs.all_by() |> Enum.map(& &1.action)
+      assert "sso.identity.unlink" in actions
+    end
+
     test "a linked subject owned by the signed-in account establishes org access", context do
       identity = link_identity(context, context.member)
       user_session = browser_session(context.member)
