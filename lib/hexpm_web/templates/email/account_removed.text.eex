@@ -6,4 +6,4 @@
 
 <%= @reason %>
 
-<%= AccountRemoved.questions_notice(:text) %>
+<%= AccountRemoved.terms_notice(:text) %>

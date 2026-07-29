@@ -44,6 +44,13 @@ defmodule HexpmWeb.EmailView do
       "If you have any questions about why this action was taken, please contact support at #{support_link(format)}."
     end
 
+    def terms_notice(format) do
+      url = HexpmWeb.EmailView.email_url("/policies/termsofservice")
+
+      "This action was taken under our #{link(url, "Terms of Service", format)}. " <>
+        "If you have any questions, contact support at #{support_link(format)}."
+    end
+
     def reason_heading(), do: "Reason:"
 
     def paragraphs(body) do
@@ -99,7 +106,7 @@ defmodule HexpmWeb.EmailView do
 
   defmodule AccountRemoved do
     defdelegate reason_heading(), to: Common
-    defdelegate questions_notice(format), to: Common
+    defdelegate terms_notice(format), to: Common
     defdelegate paragraphs(reason), to: Common
 
     def title() do
@@ -459,7 +466,7 @@ defmodule HexpmWeb.EmailView do
 
   defmodule PackageRemoved do
     defdelegate reason_heading(), to: Common
-    defdelegate questions_notice(format), to: Common
+    defdelegate terms_notice(format), to: Common
     defdelegate paragraphs(reason), to: Common
 
     def title(package) do
@@ -474,7 +481,7 @@ defmodule HexpmWeb.EmailView do
 
   defmodule ReleaseRemoved do
     defdelegate reason_heading(), to: Common
-    defdelegate questions_notice(format), to: Common
+    defdelegate terms_notice(format), to: Common
     defdelegate paragraphs(reason), to: Common
 
     def title(package, version) do

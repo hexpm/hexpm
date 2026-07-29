@@ -349,10 +349,12 @@ defmodule Hexpm.AdminTasksTest do
         assert email.text_body =~ "Reason:"
         assert email.text_body =~ "Because of a thing."
         assert email.text_body =~ "contact support at support@hex.pm"
+        assert email.text_body =~ "/policies/termsofservice"
 
         assert email.html_body =~ "Reason:"
         assert email.html_body =~ "Because of a thing."
         assert email.html_body =~ "mailto:support@hex.pm"
+        assert email.html_body =~ "/policies/termsofservice"
       end
     end
 
