@@ -348,6 +348,69 @@ defmodule Hexpm.Accounts.SSOTest do
       assert "sso.connection.disable" in actions
     end
 
+    test "deleting a disabled connection removes everything reaching it", context do
+      stub_discovery()
+      assert {:ok, connection} = configure_connection(context)
+
+      assert {:ok, _deleted} =
+               SSO.delete_connection(context.organization, audit: audit_data(context.admin))
+
+      refute Repo.get(Connection, connection.id)
+
+      actions = context.organization |> AuditLogs.all_by() |> Enum.map(& &1.action)
+      assert "sso.connection.delete" in actions
+    end
+
+    test "an enabled connection cannot be deleted", context do
+      stub_discovery()
+      assert {:ok, _connection} = configure_connection(context)
+      stub_authorization_uri()
+
+      assert {:ok, transaction, _uri} =
+               SSO.start_test(
+                 context.organization,
+                 context.admin,
+                 :active,
+                 "https://hex.pm/sso/callback"
+               )
+
+      transaction = SSO.get_transaction_by_state(transaction.raw_state)
+
+      assert {:ok, :test} =
+               SSO.complete_callback(
+                 transaction,
+                 valid_claims(),
+                 context.admin,
+                 nil,
+                 audit_data(context.admin)
+               )
+
+      assert {:ok, _enabled} = SSO.enable(context.organization, audit: audit_data(context.admin))
+
+      assert {:error, :connection_enabled} =
+               SSO.delete_connection(context.organization, audit: audit_data(context.admin))
+
+      assert Repo.exists?(Connection)
+    end
+
+    test "a non-administrator cannot delete the connection", context do
+      stub_discovery()
+      assert {:ok, _connection} = configure_connection(context)
+
+      member = insert(:user)
+
+      insert(:organization_user,
+        organization: context.organization,
+        user: member,
+        role: "write"
+      )
+
+      assert {:error, :admin_required} =
+               SSO.delete_connection(context.organization, audit: audit_data(member))
+
+      assert Repo.exists?(Connection)
+    end
+
     test "binds an active connection test to the configuring administrator", context do
       stub_discovery()
       assert {:ok, connection} = configure_connection(context)

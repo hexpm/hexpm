@@ -337,6 +337,7 @@ defmodule HexpmWeb.Router do
     post "/orgs/:dashboard_org/sso/test", OrganizationSSOController, :test, log: false
     post "/orgs/:dashboard_org/sso/enable", OrganizationSSOController, :enable, log: false
     post "/orgs/:dashboard_org/sso/disable", OrganizationSSOController, :disable, log: false
+    post "/orgs/:dashboard_org/sso/delete", OrganizationSSOController, :delete, log: false
     post "/orgs/:dashboard_org/sso/rotate", OrganizationSSOController, :rotate, log: false
     post "/orgs/:dashboard_org/sso/promote", OrganizationSSOController, :promote, log: false
     post "/orgs/:dashboard_org/sso/unlink", OrganizationSSOController, :unlink, log: false

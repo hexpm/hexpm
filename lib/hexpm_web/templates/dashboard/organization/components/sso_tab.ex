@@ -113,6 +113,18 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
             <.button type="submit" variant="danger">Disable SSO login</.button>
           </.form>
         </div>
+
+        <div :if={@connection && !Connection.enabled?(@connection)} class="mt-5">
+          <p class="text-sm text-grey-600 dark:text-grey-300">
+            Removing the configuration deletes the stored client secret and every account
+            linked through this connection. Members keep their Hexpm accounts and their
+            membership of {@organization.name}.
+          </p>
+
+          <.form for={%{}} action={~p"/dashboard/orgs/#{@organization}/sso/delete"} class="mt-3">
+            <.button type="submit" variant="danger">Remove SSO configuration</.button>
+          </.form>
+        </div>
       </section>
 
       <section

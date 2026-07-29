@@ -265,6 +265,38 @@ defmodule Hexpm.Accounts.SSO do
     end
   end
 
+  @doc """
+  Removes the connection and everything reaching it: identities, transactions,
+  failures, and the organization access sessions the identities own. The
+  connection must be disabled first, so the members it covers have already lost
+  SSO before their links go.
+  """
+  def delete_connection(organization, audit: audit_data) do
+    with :ok <- require_feature(organization),
+         :ok <- require_admin(organization, audit_data.user) do
+      Repo.transaction(fn ->
+        case locked_connection_for_organization(organization) do
+          %Connection{} = connection ->
+            if require_locked_admin(organization, audit_data.user) != :ok do
+              Hexpm.RepoBase.rollback(:admin_required)
+            end
+
+            if Connection.enabled?(connection) do
+              Hexpm.RepoBase.rollback(:connection_enabled)
+            end
+
+            insert_audit!(audit_data, "sso.connection.delete", {organization, %{}})
+            Repo.delete!(connection)
+
+          nil ->
+            Hexpm.RepoBase.rollback(:not_configured)
+        end
+      end)
+    else
+      {:error, _reason} = error -> error
+    end
+  end
+
   def start_login(organization, user, return_path, redirect_uri, opts \\ []) do
     entrypoint = Keyword.get(opts, :entrypoint, "organization")
     login_hint = Keyword.get(opts, :login_hint)

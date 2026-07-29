@@ -64,6 +64,23 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
     end)
   end
 
+  def delete(conn, %{"dashboard_org" => name}) do
+    with_organization(conn, name, fn organization ->
+      case SSO.delete_connection(organization, audit: audit_data(conn)) do
+        {:ok, _connection} ->
+          redirect_with_flash(
+            conn,
+            organization,
+            :info,
+            "The SSO configuration was removed, along with every account linked through it."
+          )
+
+        {:error, reason} ->
+          redirect_with_flash(conn, organization, :error, delete_error(reason))
+      end
+    end)
+  end
+
   def rotate(conn, %{"dashboard_org" => name, "sso" => %{"client_secret" => secret}}) do
     with_organization(conn, name, fn organization ->
       case SSO.begin_rotation(organization, secret, audit: audit_data(conn)) do
@@ -179,6 +196,12 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
     do: "Complete a successful connection test before enabling SSO."
 
   defp enable_error(reason), do: configuration_error(reason)
+
+  defp delete_error(:connection_enabled),
+    do: "Disable SSO login before removing the configuration."
+
+  defp delete_error(:not_configured), do: "There is no SSO configuration to remove."
+  defp delete_error(reason), do: configuration_error(reason)
 
   defp rotation_error(:rotation_not_ready),
     do: "Test the replacement secret before completing rotation."
