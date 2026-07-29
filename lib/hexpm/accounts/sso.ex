@@ -1453,6 +1453,18 @@ defmodule Hexpm.Accounts.SSO do
       scope_key: notification_scope_key(user),
       expires_at: DateTime.add(DateTime.utc_now(), @notification_retention_seconds, :second)
     )
+  rescue
+    # Rendering and envelope validation run inside the transaction that links an
+    # identity or removes a member. Letting them raise would roll that back, so a
+    # broken notification loses the mail rather than the security action. The
+    # audit log is the durable record either way.
+    exception ->
+      Sentry.capture_exception(exception,
+        stacktrace: __STACKTRACE__,
+        extra: %{sso_notification: kind, organization: connection.organization.name}
+      )
+
+      :ok
   end
 
   defp delete_notifications!(connection, user) do

@@ -951,6 +951,28 @@ defmodule Hexpm.Accounts.SSOTest do
       refute SSO.current_org_session(user_session.id, context.organization.id)
     end
 
+    test "a notification that cannot be built does not roll back the unlink", context do
+      link_identity(context, context.member)
+
+      # An account with no verified primary address cannot produce a recipient,
+      # which is the shape that used to raise out of the envelope and take the
+      # surrounding transaction with it.
+      Repo.update_all(
+        from(email in Hexpm.Accounts.Email, where: email.user_id == ^context.member.id),
+        set: [verified: false, primary: false]
+      )
+
+      assert {:ok, %Identity{}} =
+               SSO.unlink_identity(context.organization, context.member,
+                 audit: audit_data(context.admin)
+               )
+
+      refute Repo.exists?(Identity)
+
+      actions = context.organization |> AuditLogs.all_by() |> Enum.map(& &1.action)
+      assert "sso.identity.unlink" in actions
+    end
+
     test "removing a member ends the organization access it granted", context do
       link_identity(context, context.member)
       user_session = browser_session(context.member)
