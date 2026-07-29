@@ -780,17 +780,36 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   def delete_user_notifications(multi, user) do
-    Multi.delete_all(
-      multi,
+    scope_key = notification_scope_key(user)
+
+    categories = [
+      @identity_linked_email_category,
+      @identity_unlinked_email_category,
+      @email_mismatch_category
+    ]
+
+    multi
+    # delete_member_notifications takes this lock for its one ordering key. This
+    # path spans every key the account touches, so it takes them all, in a sorted
+    # order so two callers deleting overlapping rows cannot deadlock.
+    |> Multi.run(:organization_sso_email_outbox_lock, fn repo, _changes ->
+      from(entry in OutboxEntry,
+        where: entry.scope_key == ^scope_key,
+        where: entry.category in ^categories,
+        select: entry.ordering_key,
+        distinct: true,
+        order_by: entry.ordering_key
+      )
+      |> repo.all()
+      |> Enum.each(&OutboxLock.acquire!/1)
+
+      {:ok, :locked}
+    end)
+    |> Multi.delete_all(
       :organization_sso_email_outbox,
       from(entry in OutboxEntry,
-        where: entry.scope_key == ^notification_scope_key(user),
-        where:
-          entry.category in [
-            @identity_linked_email_category,
-            @identity_unlinked_email_category,
-            @email_mismatch_category
-          ]
+        where: entry.scope_key == ^scope_key,
+        where: entry.category in ^categories
       )
     )
   end
@@ -911,14 +930,17 @@ defmodule Hexpm.Accounts.SSO do
     )
   end
 
-  def org_sessions_for_identities(identity_ids) when is_list(identity_ids) do
-    now = DateTime.utc_now()
+  @doc """
+  Every organization access session these identities have earned.
 
+  Deliberately unfiltered by revocation or expiry: the administrator view built
+  from this reports when a member last authenticated, and a member who
+  authenticated last week has still authenticated. Filtering to live sessions
+  made that indistinguishable from never having authenticated at all.
+  """
+  def org_sessions_for_identities(identity_ids) when is_list(identity_ids) do
     from(session in OrgSession,
-      join: user_session in assoc(session, :user_session),
       where: session.identity_id in ^identity_ids,
-      where: is_nil(session.revoked_at) and session.expires_at > ^now,
-      where: is_nil(user_session.revoked_at) and user_session.expires_at > ^now,
       order_by: [desc: session.authenticated_at]
     )
     |> Repo.all()
@@ -1495,7 +1517,27 @@ defmodule Hexpm.Accounts.SSO do
       "not_member" => "The Hexpm account is not a member of the organization",
       "pkce_s256_unsupported" => "The provider does not support PKCE with S256",
       "token_endpoint_rejected_request" => "The provider rejected the authorization code",
-      "token_endpoint_unavailable" => "The provider token endpoint could not be reached"
+      "token_endpoint_unavailable" => "The provider token endpoint could not be reached",
+      "account_session_required" =>
+        "The person was signed out of Hexpm before the login finished",
+      "session_user_mismatch" =>
+        "The provider identity belongs to a different Hexpm account. Unlink it to move it",
+      "connection_configuration_changed" =>
+        "The connection was reconfigured while the login was in flight",
+      "connection_credentials_changed" =>
+        "The client secret changed while the login was in flight",
+      "transaction_expired" => "The login took longer than ten minutes and expired",
+      "transaction_already_used" => "The login was already completed or replayed",
+      "redirect_uri_mismatch" => "The callback did not match the configured redirect URI",
+      "subject_invalid" => "The provider sent no usable subject claim",
+      "provider_email_invalid" => "The provider sent an unusable email claim",
+      "issued_at_invalid" => "The provider identity token had no usable issued-at claim",
+      "issued_at_in_future" => "The provider clock is ahead of ours by more than a minute",
+      "id_token_missing" => "The provider returned no identity token",
+      "id_token_invalid_after_jwks_refresh" =>
+        "The identity token failed validation even after refreshing the signing keys",
+      "invalid_response" => "The provider response could not be read",
+      "provider_error" => "The provider returned an error instead of an authorization code"
     }
   end
 

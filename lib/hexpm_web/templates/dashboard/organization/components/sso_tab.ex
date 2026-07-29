@@ -251,7 +251,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
     "rounded-full bg-green-100 dark:bg-green-950 px-3 py-1 text-xs font-medium text-green-800 dark:text-green-200"
   end
 
-  defp last_authenticated(nil), do: "No current organization access"
+  defp last_authenticated(nil), do: "Never authenticated through this connection"
 
   defp last_authenticated(authenticated_at) do
     "Last authenticated #{Calendar.strftime(authenticated_at, "%Y-%m-%d %H:%M UTC")}"
