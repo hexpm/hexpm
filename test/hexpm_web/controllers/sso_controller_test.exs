@@ -149,6 +149,18 @@ defmodule HexpmWeb.SSOControllerTest do
              Plug.Conn.put_session(conn, "session_token", Base.encode64(token))
              """)
 
+      # The claim has a second half: no SSO path may satisfy sudo either.
+      assert caught?.("HexpmWeb.Plugs.Sudo.set_sudo_authenticated(conn)")
+      assert caught?.("apply(HexpmWeb.Plugs.Sudo, :set_sudo_authenticated, [conn])")
+
+      assert caught?.("""
+             Plug.Conn.put_session(
+               conn,
+               "sudo_authenticated_at",
+               NaiveDateTime.to_iso8601(NaiveDateTime.utc_now())
+             )
+             """)
+
       refute caught?.("Plug.Conn.put_session(conn, \"unrelated\", user.id)")
     end
   end
@@ -350,7 +362,9 @@ defmodule HexpmWeb.SSOControllerTest do
       conn = complete_callback(conn, state, identity.provider_email)
 
       assert redirected_to(conn) == "/dashboard"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "session_user_mismatch"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+               "linked to a different Hexpm account"
 
       assert [%Identity{} = unchanged] = Repo.all(Identity)
       assert unchanged.id == identity.id
@@ -383,7 +397,10 @@ defmodule HexpmWeb.SSOControllerTest do
       conn = complete_callback(conn, state, nil, "00u-different")
 
       assert redirected_to(conn) == "/dashboard"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "identity_conflict"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+               "already linked to a different provider identity"
+
       assert [%Identity{subject: "00u-original"}] = Repo.all(Identity)
       refute Repo.exists?(OrgSession)
 
@@ -406,7 +423,10 @@ defmodule HexpmWeb.SSOControllerTest do
         |> get("/sso/callback", %{state: state, code: "authorization-code"})
 
       assert redirected_to(conn) == "/dashboard"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "session_user_mismatch"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+               "linked to a different Hexpm account"
+
       refute Repo.exists?(Identity)
       refute Repo.exists?(OrgSession)
     end
@@ -884,9 +904,15 @@ defmodule HexpmWeb.SSOControllerTest do
     end)
   end
 
-  # Anything that would hand the browser an account session: the helper itself,
-  # however it is reached, or the two primitives it is built from.
-  @minting_functions [:start_session_internal, :create_browser_session]
+  # Anything that would hand the browser account authority. The claim has two
+  # halves, an account session and sudo, so this covers both: the session helper
+  # however it is reached, the two primitives it is built from, and the function
+  # that satisfies sudo.
+  @minting_functions [:start_session_internal, :create_browser_session, :set_sudo_authenticated]
+
+  # Those primitives can be inlined, in which case writing one of the session
+  # keys directly is the giveaway.
+  @session_keys ["session_token", "sudo_authenticated_at"]
 
   defp mints_account_session?(abstract_code) do
     find_minting_call(abstract_code) or writes_session_token?(abstract_code)
@@ -923,7 +949,6 @@ defmodule HexpmWeb.SSOControllerTest do
 
   defp find_minting_call(_term), do: false
 
-  # The primitives can be inlined; writing the session key is the giveaway.
   defp writes_session_token?({:bin, _anno, segments} = term) do
     segments
     |> Enum.map(fn
@@ -931,7 +956,7 @@ defmodule HexpmWeb.SSOControllerTest do
       _other -> ""
     end)
     |> Enum.join()
-    |> Kernel.==("session_token")
+    |> Kernel.in(@session_keys)
     |> Kernel.or(deep_any?(term, &writes_session_token?/1))
   end
 

@@ -389,6 +389,22 @@ defmodule HexpmWeb.ControllerHelpers do
     do:
       "The SSO account-link request is no longer valid. You are signed in, but no SSO identity was connected."
 
+  def sso_callback_error_message(:not_member),
+    do:
+      "This Hexpm account is not a member of the organization. Ask an administrator to add it before retrying SSO."
+
+  def sso_callback_error_message(:session_user_mismatch),
+    do:
+      "That provider identity is already linked to a different Hexpm account. Sign in as that account, or ask an organization administrator to unlink it."
+
+  def sso_callback_error_message(:identity_conflict),
+    do:
+      "This Hexpm account is already linked to a different provider identity in this organization. Unlink it before linking another."
+
+  # The code stays for anything without dedicated copy, since it is what an
+  # administrator quotes to support.
+  def sso_callback_error_message(code), do: "SSO authentication failed (#{code})."
+
   def remember_sso_state(conn, state) when is_binary(state) do
     states =
       [state | List.wrap(get_session(conn, "sso_states"))]

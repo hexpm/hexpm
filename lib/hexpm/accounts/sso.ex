@@ -137,9 +137,14 @@ defmodule Hexpm.Accounts.SSO do
       Repo.transaction(fn ->
         current = locked_connection!(connection.id)
 
+        # Refreshing metadata deliberately leaves version alone. Transactions
+        # pin themselves to it, so bumping here would refuse every login that
+        # was already in flight, on every discovery cache expiry. The guard
+        # still catches a configure landing while discovery was being fetched,
+        # because configure does bump it.
         if current.version == connection.version and current.issuer == connection.issuer do
           current
-          |> Connection.configuration_changeset(Map.put(metadata, :version, current.version + 1))
+          |> Connection.configuration_changeset(metadata)
           |> Repo.update!()
         else
           Hexpm.RepoBase.rollback(:connection_configuration_changed)
@@ -496,6 +501,11 @@ defmodule Hexpm.Accounts.SSO do
   """
   def abandon_login(%SSOTransaction{} = transaction, stage, code) do
     Repo.transaction(fn ->
+      # Connection before transaction, matching complete_callback. Recording a
+      # failure takes a share lock on the connection through its foreign key, so
+      # taking the transaction first would invert the order against a concurrent
+      # callback and deadlock.
+      locked_connection!(transaction.connection_id)
       transaction = locked_transaction!(transaction.id)
 
       if is_nil(transaction.consumed_at) do
@@ -863,6 +873,9 @@ defmodule Hexpm.Accounts.SSO do
       join: user_session in assoc(session, :user_session),
       where: session.user_session_id == ^user_session_id,
       where: session.organization_id == ^organization_id,
+      # user_id is denormalised onto the session, so assert it agrees with the
+      # browser session rather than trusting the copy on the read path.
+      where: session.user_id == user_session.user_id,
       where: is_nil(session.revoked_at) and session.expires_at > ^now,
       where: is_nil(user_session.revoked_at) and user_session.expires_at > ^now
     )

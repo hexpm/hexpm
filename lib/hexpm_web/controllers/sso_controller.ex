@@ -383,7 +383,7 @@ defmodule HexpmWeb.SSOController do
       end
 
     conn
-    |> put_flash(:error, "SSO authentication failed (#{code}).")
+    |> put_flash(:error, sso_callback_error_message(code))
     |> redirect(to: destination)
   end
 

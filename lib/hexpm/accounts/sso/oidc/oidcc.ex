@@ -285,13 +285,14 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
   end
 
   # Advertising code_challenge_methods_supported is optional, and Microsoft
-  # Entra omits it while accepting S256 anyway. Silence means unstated, so only
-  # an explicit list that leaves S256 out is a refusal. Once past this check the
-  # hardened configuration asserts S256, which keeps require_pkce meaningful:
-  # the challenge is always sent, never quietly dropped.
+  # Entra omits it while accepting S256 anyway. Silence means unstated, so only a
+  # present list that leaves S256 out is a refusal. An empty list is present: it
+  # says the provider supports no methods at all. Hexpm always sends an S256
+  # challenge either way, since the hardened configuration asserts it, but a
+  # provider that ignores the challenge offers no protection and nothing here can
+  # tell that it did.
   defp pkce_s256_permitted?(:undefined), do: true
   defp pkce_s256_permitted?(nil), do: true
-  defp pkce_s256_permitted?([]), do: true
   defp pkce_s256_permitted?(methods), do: "S256" in List.wrap(methods)
 
   defp harden_configuration(configuration) do
