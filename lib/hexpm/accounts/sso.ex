@@ -342,7 +342,12 @@ defmodule Hexpm.Accounts.SSO do
                       return_path,
                       entrypoint
                     ),
-                  transaction = %{transaction | raw_state: state, login_hint: login_hint},
+                  transaction = %{
+                    transaction
+                    | raw_state: state,
+                      login_hint: login_hint,
+                      connection: connection
+                  },
                   {:ok, uri} <-
                     OIDC.impl().authorization_uri(
                       connection,
@@ -398,7 +403,7 @@ defmodule Hexpm.Accounts.SSO do
                       nil,
                       "organization"
                     ),
-                  transaction = %{transaction | raw_state: state},
+                  transaction = %{transaction | raw_state: state, connection: connection},
                   {:ok, uri} <-
                     OIDC.impl().authorization_uri(
                       connection,

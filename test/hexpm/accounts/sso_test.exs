@@ -775,6 +775,84 @@ defmodule Hexpm.Accounts.SSOTest do
       assert Repo.aggregate(SSO.OrgSession, :count) == 1
     end
 
+    test "turning the gate off mid-flow refuses the callback", context do
+      link_identity(context, context.member)
+      user_session = browser_session(context.member)
+      transaction = start_transaction(context, context.member)
+
+      config = Application.fetch_env!(:hexpm, :organization_sso)
+      Application.put_env(:hexpm, :organization_sso, Keyword.put(config, :mode, :off))
+
+      assert {:error, :feature_disabled} =
+               complete(transaction, valid_claims(), context.member, user_session.id)
+
+      refute Repo.exists?(SSO.OrgSession)
+      assert [%{stage: "callback", code: "feature_disabled"}] = SSO.failures(context.connection)
+    end
+
+    test "disabling the connection mid-flow refuses the callback", context do
+      link_identity(context, context.member)
+      user_session = browser_session(context.member)
+      transaction = start_transaction(context, context.member)
+
+      assert {:ok, _connection} =
+               SSO.disable(context.organization, audit: audit_data(context.admin))
+
+      assert {:error, :connection_disabled} =
+               complete(transaction, valid_claims(), context.member, user_session.id)
+
+      refute Repo.exists?(SSO.OrgSession)
+
+      assert [%{stage: "callback", code: "connection_disabled"}] =
+               SSO.failures(context.connection)
+    end
+
+    test "reconfiguring the connection mid-flow refuses the callback", context do
+      link_identity(context, context.member)
+      user_session = browser_session(context.member)
+      transaction = start_transaction(context, context.member)
+
+      Repo.update!(
+        Ecto.Changeset.change(context.connection, version: context.connection.version + 1)
+      )
+
+      assert {:error, :connection_configuration_changed} =
+               complete(transaction, valid_claims(), context.member, user_session.id)
+
+      refute Repo.exists?(SSO.OrgSession)
+
+      assert [%{stage: "callback", code: "connection_configuration_changed"}] =
+               SSO.failures(context.connection)
+    end
+
+    test "replacing the pending secret mid-flow refuses the test callback", context do
+      assert {:ok, _connection} =
+               SSO.begin_rotation(context.organization, "first-replacement",
+                 audit: audit_data(context.admin)
+               )
+
+      stub_authorization_uri()
+
+      assert {:ok, transaction, _uri} =
+               SSO.start_test(
+                 context.organization,
+                 context.admin,
+                 "pending",
+                 "https://hex.pm/sso/callback"
+               )
+
+      assert {:ok, _connection} =
+               SSO.begin_rotation(context.organization, "second-replacement",
+                 audit: audit_data(context.admin)
+               )
+
+      assert {:error, :connection_credentials_changed} =
+               complete(transaction, valid_claims(), context.admin)
+
+      assert [%{stage: "callback", code: "connection_credentials_changed"}] =
+               SSO.failures(context.connection)
+    end
+
     test "abandoning a login consumes the transaction and records the failure", context do
       transaction = start_transaction(context, context.member)
 
