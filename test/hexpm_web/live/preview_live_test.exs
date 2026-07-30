@@ -14,6 +14,8 @@ defmodule HexpmWeb.PreviewLiveTest do
     inner
   end
 
+  # The payload holds route-ready paths, so it is decoded back to names here to
+  # keep assertions readable.
   defp file_paths(html) do
     html
     |> template_html("file-paths")
@@ -23,6 +25,7 @@ defmodule HexpmWeb.PreviewLiveTest do
     |> String.replace("&gt;", ">")
     |> String.replace("&amp;", "&")
     |> JSON.decode!()
+    |> Enum.map(&URI.decode/1)
   end
 
   test "renders package files inside the package layout", %{conn: conn} do
@@ -111,7 +114,7 @@ defmodule HexpmWeb.PreviewLiveTest do
 
   test "renders only the top level of the tree and every path for the client", %{conn: conn} do
     files =
-      [{"README.md", "readme"}] ++
+      [{"README.md", "readme"}, {"lib/tricky/d'x(1)!.ex", "punctuation"}] ++
         for index <- 1..500 do
           {"lib/generated/deep/file_#{index}.ex", "value = #{index}\n"}
         end
@@ -131,7 +134,13 @@ defmodule HexpmWeb.PreviewLiveTest do
     paths = file_paths(html)
     assert "lib/generated/deep/file_1.ex" in paths
     assert "lib/generated/deep/file_500.ex" in paths
-    assert length(paths) == 501
+    assert length(paths) == 502
+
+    # Encoded by the router's own rule, so a link is the base plus one of these
+    # and the client never spells the encoding out a second time.
+    raw = template_html(html, "file-paths")
+    assert raw =~ "lib/tricky/d%27x%281%29%21.ex"
+    refute raw =~ "d'x(1)!.ex"
 
     # The client clones these, so they carry the attributes it fills in and the
     # ones LiveView needs for patch navigation.

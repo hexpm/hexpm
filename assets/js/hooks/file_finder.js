@@ -105,18 +105,12 @@ export const FileFinder = {
   buildIndex() {
     this.treeVersion = this.el.dataset.treeVersion;
     const payload = this.treeContainer.querySelector("template[data-file-paths]");
-    const paths = payload ? JSON.parse(payload.content.textContent) : [];
+    const encoded = payload ? JSON.parse(payload.content.textContent) : [];
 
-    this.index = paths.map((path) => ({
-      path,
-      lower: path.toLowerCase(),
-      href: this.hrefFor(path),
-    }));
-  },
-
-  hrefFor(path) {
-    const encoded = path.split("/").map(encodeSegment).join("/");
-    return `${this.hrefBase}/${encoded}`;
+    this.index = encoded.map((encodedPath) => {
+      const path = decodePath(encodedPath);
+      return { path, lower: path.toLowerCase(), href: `${this.hrefBase}/${encodedPath}` };
+    });
   },
 
   /**
@@ -337,14 +331,12 @@ export const FileFinder = {
   },
 };
 
-// Phoenix builds paths with URI.char_unreserved?/1, which percent-encodes these
-// five where encodeURIComponent leaves them alone. Matching it keeps one URL per
-// file whether the link came from the server or from here.
-function encodeSegment(segment) {
-  return encodeURIComponent(segment).replace(
-    /[!'()*]/g,
-    (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
-  );
+// The payload is encoded the way the router encodes, so links are a string
+// append and only the name has to be recovered. Decoding is the exact inverse of
+// percent-encoding, unlike encoding, where JavaScript and Elixir disagree about
+// which characters are reserved.
+function decodePath(encodedPath) {
+  return encodedPath.split("/").map(decodeURIComponent).join("/");
 }
 
 function fuzzyMatch(file, query) {

@@ -357,13 +357,20 @@ defmodule HexpmWeb.PreviewLive do
   Markup the client clones when it fills a directory, and every path in the
   package so it can build those children and run the file finder without the
   tree being in the document.
+
+  Paths go over already encoded, the same way the router encodes them, so the
+  client appends one to the base to get a link and percent-decodes it to get the
+  name back. Sending them raw would mean writing the encoding rule a second time
+  in JavaScript, and the two spellings disagreed on `!'()*` when it was.
   """
   def tree_templates(assigns) do
+    assigns = assign(assigns, :encoded_files, Enum.map(assigns.files, &encode_path/1))
+
     ~H"""
     <template data-tree-file><.tree_file path="" name="" href="#" /></template>
     <template data-tree-dir><.tree_directory path="" name="" /></template>
     <template data-tree-more><.tree_more /></template>
-    <template data-file-paths>{JSON.encode!(@files)}</template>
+    <template data-file-paths>{JSON.encode!(@encoded_files)}</template>
     """
   end
 
