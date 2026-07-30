@@ -195,6 +195,30 @@ defmodule HexpmWeb.PreviewLiveTest do
     refute has_element?(view, ~s(aside a[data-path="lib/other/hidden.ex"]))
   end
 
+  test "caps how many children a wide directory renders", %{conn: conn} do
+    limit = HexpmWeb.PreviewLive.children_limit()
+    wide = for index <- 1..(limit * 3), do: {"lib/model/file_#{index}.ex", "v\n"}
+
+    put_release("wide_manifest", "1.0.0", [{"README.md", "readme"} | wide])
+
+    {:ok, view, html} = live(conn, "/packages/wide_manifest/1.0.0/files/lib/model/file_1.ex")
+
+    rendered = length(Regex.scan(~r/data-path="lib\/model\//, hd(String.split(html, "l-line"))))
+    assert rendered == limit
+
+    # Not filled, so the client rebuilds the directory and pages through the rest.
+    refute has_element?(view, ~s(details[data-dir-path="lib/model"] > div[data-filled="true"]))
+
+    # It still has every path to page through, and the control to do it with.
+    assert length(file_paths(html)) == limit * 3 + 1
+    assert template_html(html, "tree-more") =~ "data-tree-more-button"
+
+    assert has_element?(
+             view,
+             ~s(aside[data-children-limit="#{limit}"])
+           )
+  end
+
   test "marks an open directory filled and leaves a closed one for the client", %{conn: conn} do
     put_release("filled_manifest", "1.0.0", [
       {"README.md", "readme"},

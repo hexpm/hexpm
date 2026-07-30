@@ -95,7 +95,11 @@ export const FileFinder = {
     this.treeContainer = this.treeEl.querySelector("[data-tree-container]");
     this.fileTemplate = this.treeContainer.querySelector("template[data-tree-file]");
     this.dirTemplate = this.treeContainer.querySelector("template[data-tree-dir]");
+    this.moreTemplate = this.treeContainer.querySelector("template[data-tree-more]");
     this.hrefBase = this.el.dataset.fileHrefBase || "";
+    // Page by whatever the server rendered per directory, so a partly rendered
+    // directory continues where it left off instead of overlapping or skipping.
+    this.limit = Number(this.el.dataset.childrenLimit) || RESULT_LIMIT;
   },
 
   buildIndex() {
@@ -117,9 +121,11 @@ export const FileFinder = {
 
   /**
    * Builds the immediate children of an open directory. Names that have
-   * anything below them become directories, the rest become file links.
+   * anything below them become directories, the rest become file links. Only
+   * `limit` are added at a time, with a button for the next page, because a
+   * generated client can hold hundreds of files in one directory.
    */
-  fill(details) {
+  fill(details, ensure) {
     const holder = details.querySelector("[data-children]");
     if (!holder || holder.dataset.filled === "true") return;
 
@@ -143,20 +149,65 @@ export const FileFinder = {
     // put two nodes on the client where the server renders one.
     const files = candidates.filter((file) => !directories.has(file.name));
 
+    // Keyed so a page can be stretched to reach a particular child, which is how
+    // the file on screen gets rendered when it sorts past the first page.
+    const children = [
+      ...[...directories.keys()].sort(compare).map((name) => ({
+        key: directories.get(name),
+        build: () => this.buildDirectory(name, directories.get(name)),
+      })),
+      ...files.sort((a, b) => compare(a.name, b.name)).map((file) => ({
+        key: file.entry.path,
+        build: () => this.buildFile(file.name, file.entry),
+      })),
+    ];
+
     const list = document.createElement("ul");
     list.className = "space-y-0.5";
-
-    const names = [...directories.keys()].sort(compare);
-    for (const name of names) {
-      list.appendChild(this.buildDirectory(name, directories.get(name)));
-    }
-    for (const file of files.sort((a, b) => compare(a.name, b.name))) {
-      list.appendChild(this.buildFile(file.name, file.entry));
-    }
 
     holder.textContent = "";
     holder.appendChild(list);
     holder.dataset.filled = "true";
+
+    this.addPage(list, children, 0, ensure);
+  },
+
+  /**
+   * Appends one page of children, then a button for the next page if any remain.
+   * Runs on past the page boundary when `ensure` sits beyond it.
+   */
+  addPage(list, children, from, ensure) {
+    let to = Math.min(from + this.limit, children.length);
+
+    if (ensure) {
+      const index = children.findIndex((child) => child.key === ensure);
+      if (index >= to) {
+        to = Math.min(children.length, Math.ceil((index + 1) / this.limit) * this.limit);
+      }
+    }
+
+    for (let index = from; index < to; index++) list.appendChild(children[index].build());
+
+    const remaining = children.length - to;
+    if (remaining === 0) return;
+
+    const item = document.createElement("li");
+    const button = this.moreTemplate.content.firstElementChild.cloneNode(true);
+    const next = Math.min(this.limit, remaining);
+    button.querySelector("[data-name]").textContent =
+      `Show ${next} more (${remaining} remaining)`;
+
+    button.addEventListener(
+      "click",
+      () => {
+        item.remove();
+        this.addPage(list, children, to);
+      },
+      { once: true },
+    );
+
+    item.appendChild(button);
+    list.appendChild(item);
   },
 
   buildDirectory(name, path) {
@@ -186,14 +237,17 @@ export const FileFinder = {
     const parts = path.split("/");
     let prefix = "";
 
-    for (const part of parts.slice(0, -1)) {
-      prefix = prefix === "" ? part : `${prefix}/${part}`;
+    for (let level = 0; level < parts.length - 1; level++) {
+      prefix = level === 0 ? parts[0] : `${prefix}/${parts[level]}`;
       const details = this.treeContainer.querySelector(
         `details[data-dir-path="${CSS.escape(prefix)}"]`,
       );
       if (!details) break;
       details.open = true;
-      this.fill(details);
+      // Whatever has to exist for the next lap: the directory below, or the file.
+      const needed =
+        level === parts.length - 2 ? path : parts.slice(0, level + 2).join("/");
+      this.fill(details, needed);
     }
 
     return this.treeContainer.querySelector(`a[data-path="${CSS.escape(path)}"]`);

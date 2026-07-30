@@ -41,6 +41,7 @@
           active_path={@filename}
           tree_version={"#{@repository}/#{@package_name}/#{@version}"}
           file_href_base={files_path(@repository, @package_name, @version)}
+          children_limit={children_limit()}
           file_count={length(@files)}
           title="Package files"
           sidebar_label="Package files"

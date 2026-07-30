@@ -36,6 +36,10 @@ defmodule HexpmWeb.Components.FileSelector do
     default: nil,
     doc: "path the client appends a file's path to when it builds a tree link"
 
+  attr :children_limit, :integer,
+    default: nil,
+    doc: "how many children the server rendered per directory, so the client pages by the same"
+
   attr :title, :string, required: true
   attr :sidebar_label, :string, required: true
   attr :search_label, :string, required: true
@@ -67,6 +71,7 @@ defmodule HexpmWeb.Components.FileSelector do
       data-tree-version={@client_finder && @tree_version}
       data-tree-id={@client_finder && "#{@id}-tree"}
       data-file-href-base={@client_finder && @file_href_base}
+      data-children-limit={@client_finder && @children_limit}
       data-sidebar-input={@client_finder && @tree_query_id}
       data-modal-input={@client_finder && @finder_query_id}
       data-modal-id={@client_finder && "#{@id}-modal"}

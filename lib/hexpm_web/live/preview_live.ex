@@ -11,6 +11,15 @@ defmodule HexpmWeb.PreviewLive do
     defexception message: "Package file not found", plug_status: 404
   end
 
+  # Generated clients keep nearly everything in one directory: ory_client has 384
+  # of its 408 files in lib/ory/model, mailslurp 235 of 270. Rendering a whole
+  # directory to show one file in it puts those packages back where they started,
+  # so a directory renders this many children and the client pages through the
+  # rest. The client reads the same number off the DOM.
+  @children_limit 100
+
+  def children_limit, do: @children_limit
+
   @impl true
   def mount(params, _session, socket) do
     {:ok,
@@ -235,17 +244,29 @@ defmodule HexpmWeb.PreviewLive do
         {_files, [_ | _] = descendants} ->
           path = if parent == "", do: name, else: Path.join(parent, name)
           open? = MapSet.member?(open, path)
+          {children, rest} = open_children(descendants, path, open, open?)
 
           %{
             type: :directory,
             name: name,
             path: path,
             open?: open?,
-            children: if(open?, do: child_nodes(descendants, path, open), else: [])
+            children: children,
+            # Only claim the directory is done when every child is on the page.
+            # Otherwise the client rebuilds it and takes over paging.
+            filled?: open? and rest == []
           }
       end
     end)
     |> Enum.sort_by(fn node -> {if(node.type == :directory, do: 0, else: 1), node.name} end)
+  end
+
+  defp open_children(_descendants, _path, _open, false), do: {[], []}
+
+  defp open_children(descendants, path, open, true) do
+    descendants
+    |> child_nodes(path, open)
+    |> Enum.split(@children_limit)
   end
 
   attr :nodes, :list, required: true
@@ -258,7 +279,12 @@ defmodule HexpmWeb.PreviewLive do
     <ul class="space-y-0.5">
       <%= for node <- @nodes do %>
         <li :if={node.type == :directory}>
-          <.tree_directory path={node.path} name={node.name} open?={node.open?}>
+          <.tree_directory
+            path={node.path}
+            name={node.name}
+            open?={node.open?}
+            filled?={node.filled?}
+          >
             <.source_tree
               nodes={node.children}
               repository={@repository}
@@ -282,6 +308,7 @@ defmodule HexpmWeb.PreviewLive do
   attr :path, :string, required: true
   attr :name, :string, required: true
   attr :open?, :boolean, default: false
+  attr :filled?, :boolean, default: false
   slot :inner_block
 
   def tree_directory(assigns) do
@@ -297,7 +324,7 @@ defmodule HexpmWeb.PreviewLive do
       <div
         class="ml-3 border-l border-grey-200 pl-2 dark:border-grey-700"
         data-children
-        data-filled={@open? && "true"}
+        data-filled={@filled? && "true"}
       >
         {render_slot(@inner_block)}
       </div>
@@ -335,7 +362,21 @@ defmodule HexpmWeb.PreviewLive do
     ~H"""
     <template data-tree-file><.tree_file path="" name="" href="#" /></template>
     <template data-tree-dir><.tree_directory path="" name="" /></template>
+    <template data-tree-more><.tree_more /></template>
     <template data-file-paths>{JSON.encode!(@files)}</template>
+    """
+  end
+
+  def tree_more(assigns) do
+    ~H"""
+    <button
+      type="button"
+      data-tree-more-button
+      class="flex w-full items-center gap-1.5 rounded px-2 py-1.5 text-left text-xs font-medium text-primary-700 transition-colors hover:bg-grey-100 dark:text-primary-300 dark:hover:bg-grey-700/60"
+    >
+      {icon(:heroicon, "chevron-down", class: "ml-5 size-3.5 shrink-0")}
+      <span data-name class="truncate"></span>
+    </button>
     """
   end
 end
