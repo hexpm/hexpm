@@ -31,6 +31,11 @@ defmodule HexpmWeb.Components.FileSelector do
 
   attr :active_path, :string, default: nil
   attr :tree_version, :string, default: nil
+
+  attr :file_href_base, :string,
+    default: nil,
+    doc: "path the client appends a file's path to when it builds a tree link"
+
   attr :title, :string, required: true
   attr :sidebar_label, :string, required: true
   attr :search_label, :string, required: true
@@ -61,6 +66,7 @@ defmodule HexpmWeb.Components.FileSelector do
       data-active-path={@client_finder && @active_path}
       data-tree-version={@client_finder && @tree_version}
       data-tree-id={@client_finder && "#{@id}-tree"}
+      data-file-href-base={@client_finder && @file_href_base}
       data-sidebar-input={@client_finder && @tree_query_id}
       data-modal-input={@client_finder && @finder_query_id}
       data-modal-id={@client_finder && "#{@id}-modal"}
@@ -110,7 +116,17 @@ defmodule HexpmWeb.Components.FileSelector do
           aria-label={@sidebar_label}
         >
           <%= if @client_finder do %>
-            <div data-tree-container>
+            <%!-- The client owns this subtree once it is rendered: it fills in
+                  directories as they are opened and moves the active marker, and
+                  a re-render would throw that away. Keying the id on the tree's
+                  identity gets a fresh one when it changes. The id can contain
+                  slashes and dots, so it is not usable as a CSS selector
+                  unescaped; nothing targets it that way. --%>
+            <div
+              id={"#{@id}-tree-root-#{@tree_version}"}
+              data-tree-container
+              phx-update="ignore"
+            >
               {render_slot(@tree, %{modal_id: "#{@id}-modal"})}
             </div>
             <div data-results-container class="hidden">

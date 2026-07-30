@@ -39,7 +39,8 @@
           id="preview-files"
           client_finder={true}
           active_path={@filename}
-          tree_version={@version}
+          tree_version={"#{@repository}/#{@package_name}/#{@version}"}
+          file_href_base={files_path(@repository, @package_name, @version)}
           file_count={length(@files)}
           title="Package files"
           sidebar_label="Package files"
@@ -50,6 +51,7 @@
           finder_query_id="preview-file-query"
         >
           <:tree :let={_selector}>
+            <.tree_templates files={@files} />
             <.source_tree
               nodes={@file_tree}
               repository={@repository}

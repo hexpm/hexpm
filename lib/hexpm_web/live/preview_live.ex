@@ -113,9 +113,16 @@ defmodule HexpmWeb.PreviewLive do
     {highlighted, message} = render_contents(package, version, source)
     filename = source.filename
 
+    # Opening the path to the file only matters on the render the browser keeps.
+    # Once connected the client owns the tree and discards what is pushed to it,
+    # so a tree that varies per file would be rebuilt, diffed and sent on every
+    # navigation for nothing. Holding it at the top level keeps it identical
+    # across navigations, and change tracking then sends none of it.
+    open_to = if connected?(socket), do: nil, else: filename
+
     assign(socket,
       files: source.files,
-      file_tree: build_file_tree(source.files),
+      file_tree: build_visible_tree(source.files, open_to),
       filename: filename,
       highlighted: highlighted,
       message: message,
@@ -194,30 +201,49 @@ defmodule HexpmWeb.PreviewLive do
     "View #{filename} from #{package} #{version} on Hex."
   end
 
-  defp build_file_tree(files) do
+  # Directories render collapsed, so building the whole tree emits markup nobody
+  # sees. Only the top level and the path to the shown file are built; the client
+  # has every path and fills a directory in when it is opened.
+  defp build_visible_tree(files, filename) do
+    child_nodes(files, "", open_directories(filename))
+  end
+
+  defp open_directories(nil), do: MapSet.new()
+
+  defp open_directories(filename) do
+    filename
+    |> Path.split()
+    |> Enum.drop(-1)
+    |> Enum.scan(&Path.join(&2, &1))
+    |> MapSet.new()
+  end
+
+  defp child_nodes(files, parent, open) do
+    depth = if parent == "", do: 0, else: length(Path.split(parent))
+
     files
-    |> Enum.reduce(%{}, fn file, tree -> insert_file(tree, Path.split(file), file) end)
-    |> tree_nodes("")
-  end
+    |> Enum.group_by(&Enum.at(Path.split(&1), depth))
+    |> Enum.reject(fn {name, _group} -> is_nil(name) end)
+    |> Enum.map(fn {name, group} ->
+      # A name with anything below it is a directory even if a file shares the
+      # name, and a file keeps the path it was stored under rather than one
+      # rebuilt from its segments, which need not join back to the same string.
+      case Enum.split_with(group, &(length(Path.split(&1)) == depth + 1)) do
+        {[file | _], []} ->
+          %{type: :file, name: name, path: file}
 
-  defp insert_file(tree, [name], file), do: Map.put(tree, name, {:file, file})
+        {_files, [_ | _] = descendants} ->
+          path = if parent == "", do: name, else: Path.join(parent, name)
+          open? = MapSet.member?(open, path)
 
-  defp insert_file(tree, [directory | rest], file) do
-    Map.update(tree, directory, {:directory, insert_file(%{}, rest, file)}, fn
-      {:directory, children} -> {:directory, insert_file(children, rest, file)}
-      {:file, _file} -> {:directory, insert_file(%{}, rest, file)}
-    end)
-  end
-
-  defp tree_nodes(tree, parent) do
-    tree
-    |> Enum.map(fn
-      {name, {:file, file}} ->
-        %{type: :file, name: name, path: file}
-
-      {name, {:directory, children}} ->
-        path = if parent == "", do: name, else: Path.join(parent, name)
-        %{type: :directory, name: name, path: path, children: tree_nodes(children, path)}
+          %{
+            type: :directory,
+            name: name,
+            path: path,
+            open?: open?,
+            children: if(open?, do: child_nodes(descendants, path, open), else: [])
+          }
+      end
     end)
     |> Enum.sort_by(fn node -> {if(node.type == :directory, do: 0, else: 1), node.name} end)
   end
@@ -232,36 +258,84 @@ defmodule HexpmWeb.PreviewLive do
     <ul class="space-y-0.5">
       <%= for node <- @nodes do %>
         <li :if={node.type == :directory}>
-          <details>
-            <summary class="flex w-full cursor-pointer list-none items-center gap-1.5 rounded px-2 py-1.5 text-left text-sm font-medium text-grey-700 hover:bg-grey-100 dark:text-grey-200 dark:hover:bg-grey-700/60 [&::-webkit-details-marker]:hidden">
-              {icon(:heroicon, "chevron-right",
-                class: "size-3.5 shrink-0 transition-transform [details[open]>summary_&]:rotate-90"
-              )}
-              {icon(:heroicon, "folder", class: "size-4 shrink-0 text-grey-400")}
-              <span class="truncate">{node.name}</span>
-            </summary>
-            <div class="ml-3 border-l border-grey-200 pl-2 dark:border-grey-700">
-              <.source_tree
-                nodes={node.children}
-                repository={@repository}
-                package_name={@package_name}
-                version={@version}
-              />
-            </div>
-          </details>
+          <.tree_directory path={node.path} name={node.name} open?={node.open?}>
+            <.source_tree
+              nodes={node.children}
+              repository={@repository}
+              package_name={@package_name}
+              version={@version}
+            />
+          </.tree_directory>
         </li>
         <li :if={node.type == :file}>
-          <.link
-            patch={files_path(@repository, @package_name, @version, node.path)}
-            data-path={node.path}
-            class="flex items-center gap-1.5 rounded px-2 py-1.5 font-mono text-xs transition-colors text-grey-600 hover:bg-grey-100 hover:text-grey-900 dark:text-grey-300 dark:hover:bg-grey-700/60 dark:hover:text-white aria-[current=page]:bg-primary-50 aria-[current=page]:font-semibold aria-[current=page]:text-primary-700 dark:aria-[current=page]:bg-grey-700 dark:aria-[current=page]:text-white"
-          >
-            {icon(:heroicon, "document", class: "ml-5 size-3.5 shrink-0 text-grey-400")}
-            <span class="truncate">{node.name}</span>
-          </.link>
+          <.tree_file
+            path={node.path}
+            name={node.name}
+            href={files_path(@repository, @package_name, @version, node.path)}
+          />
         </li>
       <% end %>
     </ul>
+    """
+  end
+
+  attr :path, :string, required: true
+  attr :name, :string, required: true
+  attr :open?, :boolean, default: false
+  slot :inner_block
+
+  def tree_directory(assigns) do
+    ~H"""
+    <details open={@open?} data-dir-path={@path}>
+      <summary class="flex w-full cursor-pointer list-none items-center gap-1.5 rounded px-2 py-1.5 text-left text-sm font-medium text-grey-700 hover:bg-grey-100 dark:text-grey-200 dark:hover:bg-grey-700/60 [&::-webkit-details-marker]:hidden">
+        {icon(:heroicon, "chevron-right",
+          class: "size-3.5 shrink-0 transition-transform [details[open]>summary_&]:rotate-90"
+        )}
+        {icon(:heroicon, "folder", class: "size-4 shrink-0 text-grey-400")}
+        <span data-name class="truncate">{@name}</span>
+      </summary>
+      <div
+        class="ml-3 border-l border-grey-200 pl-2 dark:border-grey-700"
+        data-children
+        data-filled={@open? && "true"}
+      >
+        {render_slot(@inner_block)}
+      </div>
+    </details>
+    """
+  end
+
+  attr :path, :string, required: true
+  attr :name, :string, required: true
+  attr :href, :string, required: true
+
+  def tree_file(assigns) do
+    ~H"""
+    <a
+      href={@href}
+      data-phx-link="patch"
+      data-phx-link-state="push"
+      data-path={@path}
+      class="flex items-center gap-1.5 rounded px-2 py-1.5 font-mono text-xs transition-colors text-grey-600 hover:bg-grey-100 hover:text-grey-900 dark:text-grey-300 dark:hover:bg-grey-700/60 dark:hover:text-white aria-[current=page]:bg-primary-50 aria-[current=page]:font-semibold aria-[current=page]:text-primary-700 dark:aria-[current=page]:bg-grey-700 dark:aria-[current=page]:text-white"
+    >
+      {icon(:heroicon, "document", class: "ml-5 size-3.5 shrink-0 text-grey-400")}
+      <span data-name class="truncate">{@name}</span>
+    </a>
+    """
+  end
+
+  attr :files, :list, required: true
+
+  @doc """
+  Markup the client clones when it fills a directory, and every path in the
+  package so it can build those children and run the file finder without the
+  tree being in the document.
+  """
+  def tree_templates(assigns) do
+    ~H"""
+    <template data-tree-file><.tree_file path="" name="" href="#" /></template>
+    <template data-tree-dir><.tree_directory path="" name="" /></template>
+    <template data-file-paths>{JSON.encode!(@files)}</template>
     """
   end
 end
