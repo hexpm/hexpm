@@ -6,14 +6,9 @@ defmodule Hexpm.Emails.OutboxWorker do
 
   import Ecto.Query, only: [from: 2]
 
-  alias Hexpm.Emails.{Mailer, OutboxEntry, OutboxEnvelope, OutboxLock}
+  alias Hexpm.Emails.{Mailer, OutboxEntry, OutboxEnvelope}
   alias Hexpm.Repo
-
-  def enqueue_if_head!(%OutboxEntry{ordering_key: nil} = entry), do: enqueue!(entry.id)
-
-  def enqueue_if_head!(%OutboxEntry{} = entry) do
-    unless earlier_entry?(entry), do: enqueue!(entry.id)
-  end
+  alias Swoosh.Email
 
   def enqueue!(outbox_entry_id) do
     %{outbox_entry_id: outbox_entry_id}
@@ -40,27 +35,14 @@ defmodule Hexpm.Emails.OutboxWorker do
 
   defp perform_entry(outbox_entry_id) do
     Repo.transaction(fn ->
-      case Repo.get(OutboxEntry, outbox_entry_id) do
+      case locked_entry(outbox_entry_id) do
         nil ->
           :ok
 
-        target ->
-          OutboxLock.acquire!(target.ordering_key)
-          entry = target |> oldest_entry_query() |> Repo.one()
-
-          case entry do
-            %OutboxEntry{id: id} when id == target.id ->
-              deliver_or_expire!(entry)
-              Repo.delete!(entry)
-              enqueue_next!(entry)
-              :ok
-
-            %OutboxEntry{} ->
-              :ok
-
-            nil ->
-              :ok
-          end
+        entry ->
+          deliver_or_expire!(entry)
+          Repo.delete!(entry)
+          :ok
       end
     end)
     |> case do
@@ -69,71 +51,27 @@ defmodule Hexpm.Emails.OutboxWorker do
     end
   end
 
-  defp oldest_entry_query(%OutboxEntry{ordering_key: nil, id: id}) do
+  # Delivery runs inside the transaction so that a failed commit leaves the entry
+  # to be retried rather than dropped. The row lock is held across it, which is
+  # why cancellation skips locked rows instead of waiting for them.
+  defp locked_entry(outbox_entry_id) do
     from(entry in OutboxEntry,
-      where: entry.id == ^id,
+      where: entry.id == ^outbox_entry_id,
       lock: "FOR UPDATE"
-    )
-  end
-
-  defp oldest_entry_query(%OutboxEntry{ordering_key: ordering_key}) do
-    from(entry in OutboxEntry,
-      where: entry.ordering_key == ^ordering_key,
-      order_by: [asc: entry.id],
-      limit: 1,
-      lock: "FOR UPDATE"
-    )
-  end
-
-  defp earlier_entry?(entry) do
-    Repo.exists?(
-      from(candidate in OutboxEntry,
-        where: candidate.ordering_key == ^entry.ordering_key,
-        where: candidate.id < ^entry.id
-      )
-    )
-  end
-
-  defp enqueue_next!(%OutboxEntry{ordering_key: nil}), do: :ok
-
-  defp enqueue_next!(%OutboxEntry{ordering_key: ordering_key}) do
-    from(entry in OutboxEntry,
-      where: entry.ordering_key == ^ordering_key,
-      order_by: [asc: entry.id],
-      limit: 1
     )
     |> Repo.one()
-    |> case do
-      nil -> :ok
-      entry -> enqueue!(entry.id)
-    end
   end
 
   defp discard_entry(outbox_entry_id) do
     discarded =
       Repo.transaction(fn ->
-        Repo.get(OutboxEntry, outbox_entry_id)
-        |> case do
+        case locked_entry(outbox_entry_id) do
           nil ->
             nil
 
-          target ->
-            OutboxLock.acquire!(target.ordering_key)
-
-            from(entry in OutboxEntry,
-              where: entry.id == ^outbox_entry_id,
-              lock: "FOR UPDATE"
-            )
-            |> Repo.one()
-            |> case do
-              nil ->
-                nil
-
-              entry ->
-                Repo.delete!(entry)
-                enqueue_next!(entry)
-                %{category: entry.category, outbox_entry_id: entry.id}
-            end
+          entry ->
+            Repo.delete!(entry)
+            %{category: entry.category, outbox_entry_id: entry.id}
         end
       end)
 
@@ -158,8 +96,24 @@ defmodule Hexpm.Emails.OutboxWorker do
   end
 
   defp deliver!(entry) do
-    entry.email
-    |> OutboxEnvelope.load!()
+    email = OutboxEnvelope.load!(entry.email)
+
+    email
+    |> Email.header("Message-ID", message_id(entry, email))
     |> Mailer.deliver!()
+  end
+
+  # SendGrid has no idempotency key, so a retry after it accepted the mail but
+  # the transaction failed to commit sends the same mail again. A Message-ID
+  # tied to the entry is the only thing that lets the receiving server drop it.
+  defp message_id(entry, %Email{from: {_name, address}}) do
+    "<outbox-#{entry.id}@#{sender_domain(address)}>"
+  end
+
+  defp sender_domain(address) do
+    case String.split(address, "@", parts: 2) do
+      [_local, domain] -> domain
+      [local] -> local
+    end
   end
 end

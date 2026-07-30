@@ -367,13 +367,13 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
 
     linked_notification =
       insert(:email_outbox_entry,
-        ordering_key: sso_ordering_key(connection, context.member),
+        group_key: sso_group_key(connection, context.member),
         category: "sso.identity_linked"
       )
 
     mismatch_notification =
       insert(:email_outbox_entry,
-        ordering_key: sso_ordering_key(connection, context.member),
+        group_key: sso_group_key(connection, context.member),
         category: "sso.email_mismatch"
       )
 
@@ -392,10 +392,10 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
 
     assert %OutboxEntry{
              category: "sso.identity_unlinked",
-             ordering_key: ordering_key
+             group_key: group_key
            } = Repo.one!(OutboxEntry)
 
-    assert ordering_key == sso_ordering_key(connection, context.member)
+    assert group_key == sso_group_key(connection, context.member)
 
     unlink_log =
       Enum.find(AuditLogs.all_by(context.organization), &(&1.action == "sso.identity.unlink"))
@@ -422,7 +422,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     refute_enqueued(worker: OutboxWorker)
   end
 
-  defp sso_ordering_key(connection, user), do: "sso:#{connection.id}:#{user.id}"
+  defp sso_group_key(connection, user), do: "sso:#{connection.id}:#{user.id}"
 
   test "diagnostics are capped, stable, and redact all supplied details", context do
     connection =

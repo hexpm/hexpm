@@ -1016,7 +1016,7 @@ defmodule Hexpm.Accounts.SSOTest do
              )
     end
 
-    test "notifications are queued under the member's ordering key", context do
+    test "notifications are queued under the member's group key", context do
       link_identity(context, context.member)
 
       assert {:ok, %Identity{}} =
@@ -1024,11 +1024,11 @@ defmodule Hexpm.Accounts.SSOTest do
                  audit: audit_data(context.admin)
                )
 
-      ordering_key = sso_ordering_key(context.connection, context.member)
+      group_key = sso_group_key(context.connection, context.member)
 
       assert Repo.exists?(
                from(entry in OutboxEntry,
-                 where: entry.ordering_key == ^ordering_key,
+                 where: entry.group_key == ^group_key,
                  where: entry.category == "sso.identity_unlinked"
                )
              )
@@ -1069,7 +1069,7 @@ defmodule Hexpm.Accounts.SSOTest do
     session
   end
 
-  defp sso_ordering_key(connection, user), do: "sso:#{connection.id}:#{user.id}"
+  defp sso_group_key(connection, user), do: "sso:#{connection.id}:#{user.id}"
 
   describe "return paths" do
     test "allows only the selected organization dashboard", context do

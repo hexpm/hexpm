@@ -2,7 +2,7 @@ defmodule Hexpm.Emails.Outbox do
   alias Hexpm.Emails.{OutboxEntry, OutboxEnvelope, OutboxLock, OutboxWorker}
   alias Hexpm.Repo
 
-  @allowed_options [:category, :ordering_key, :scope_key, :expires_at]
+  @allowed_options [:category, :group_key, :scope_key, :expires_at]
 
   def enqueue!(%Swoosh.Email{} = email, opts) do
     attrs = Map.new(opts)
@@ -11,14 +11,14 @@ defmodule Hexpm.Emails.Outbox do
 
     {:ok, entry} =
       Repo.transaction(fn ->
-        OutboxLock.acquire!(attrs[:ordering_key])
+        OutboxLock.acquire!(attrs[:group_key])
 
         entry =
           %OutboxEntry{}
           |> OutboxEntry.changeset(attrs)
           |> Repo.insert!(log: false)
 
-        OutboxWorker.enqueue_if_head!(entry)
+        OutboxWorker.enqueue!(entry.id)
         entry
       end)
 

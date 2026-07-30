@@ -23,7 +23,7 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
 
     assert persisted_email == %{email | private: %{}, assigns: %{}}
     assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: entry.id})
-    assert_email_sent(persisted_email)
+    assert_email_sent(delivered(persisted_email, entry))
     refute Repo.get(OutboxEntry, entry.id)
   end
 
@@ -40,7 +40,7 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
              "person@idp.example"
            ), "sso.email_mismatch", "Hex.pm - Organization SSO email differs"}
         ] do
-      entry = Outbox.enqueue!(email, category: category, ordering_key: "sso:1:2")
+      entry = Outbox.enqueue!(email, category: category, group_key: "sso:1:2")
 
       assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: entry.id})
 
@@ -53,10 +53,10 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
     end
   end
 
-  test "a Swoosh adapter error keeps the rendered email retryable", context do
+  test "a retry repeats the delivery under the same Message-ID", context do
     email = rendered_email("Retry this email")
     entry = Outbox.enqueue!(email, category: "test.retry")
-    persisted_email = OutboxEnvelope.load!(entry.email)
+    delivered_email = delivered(OutboxEnvelope.load!(entry.email), entry)
 
     Application.put_env(
       :hexpm,
@@ -70,33 +70,32 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
       perform_job(OutboxWorker, %{outbox_entry_id: entry.id})
     end
 
-    assert_receive {:delivery_attempt, ^persisted_email}
+    assert_receive {:delivery_attempt, ^delivered_email}
     assert Repo.get!(OutboxEntry, entry.id)
 
     Application.put_env(:hexpm, Emails.Mailer, context.mailer_config)
 
     assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: entry.id})
-    assert_email_sent(persisted_email)
+    assert_email_sent(delivered_email)
+    assert delivered_email.headers["Message-ID"] == "<outbox-#{entry.id}@hex.pm>"
     refute Repo.get(OutboxEntry, entry.id)
   end
 
-  test "only the stream head has a job and failures never skip it", context do
+  test "a failing entry does not hold up another entry in its group", context do
     linked =
       Outbox.enqueue!(rendered_email("Linked"),
         category: "sso.identity_linked",
-        ordering_key: "sso:1:2"
+        group_key: "sso:1:2"
       )
 
     unlinked =
       Outbox.enqueue!(rendered_email("Unlinked"),
         category: "sso.identity_unlinked",
-        ordering_key: "sso:1:2"
+        group_key: "sso:1:2"
       )
 
-    refute delivery_job(unlinked)
-
-    assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: unlinked.id})
-    refute_email_sent()
+    assert delivery_job(linked)
+    assert delivery_job(unlinked)
 
     Application.put_env(
       :hexpm,
@@ -112,20 +111,16 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
 
     assert_receive {:delivery_attempt, %Swoosh.Email{subject: "Linked"}}
     assert Repo.get(OutboxEntry, linked.id)
-    assert Repo.get(OutboxEntry, unlinked.id)
-    refute_receive {:delivery_attempt, %Swoosh.Email{subject: "Unlinked"}}
 
     Application.put_env(:hexpm, Emails.Mailer, context.mailer_config)
-
-    assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: linked.id})
-    assert_email_sent(subject: "Linked")
-    refute Repo.get(OutboxEntry, linked.id)
-    assert Repo.get(OutboxEntry, unlinked.id)
-    assert delivery_job(unlinked)
 
     assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: unlinked.id})
     assert_email_sent(subject: "Unlinked")
     refute Repo.get(OutboxEntry, unlinked.id)
+
+    assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: linked.id})
+    assert_email_sent(subject: "Linked")
+    refute Repo.get(OutboxEntry, linked.id)
   end
 
   test "missing and expired entries are harmless" do
@@ -143,40 +138,40 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
     refute_email_sent()
   end
 
-  test "reconciliation purges an expired entry behind a blocked head" do
-    head =
-      Outbox.enqueue!(rendered_email("Blocked"),
-        category: "test.blocked",
-        ordering_key: "blocked:1"
+  test "reconciliation purges an expired entry and leaves its group alone" do
+    live =
+      Outbox.enqueue!(rendered_email("Live"),
+        category: "test.live",
+        group_key: "purged:1"
       )
 
     expired =
       Outbox.enqueue!(rendered_email("Expired later"),
         category: "test.expired",
-        ordering_key: "blocked:1",
+        group_key: "purged:1",
         expires_at: DateTime.add(DateTime.utc_now(), -1, :second)
       )
 
-    assert Repo.get(OutboxEntry, head.id)
+    assert Repo.get(OutboxEntry, live.id)
     assert Repo.get(OutboxEntry, expired.id)
 
     assert :ok = perform_job(OutboxReconciler, %{})
 
-    assert Repo.get(OutboxEntry, head.id)
+    assert Repo.get(OutboxEntry, live.id)
     refute Repo.get(OutboxEntry, expired.id)
   end
 
-  test "the final failed attempt discards the head and unblocks the stream", context do
-    head =
+  test "the final failed attempt discards the entry", context do
+    permanent =
       Outbox.enqueue!(rendered_email("Permanent failure"),
         category: "test.permanent",
-        ordering_key: "failed:1"
+        group_key: "failed:1"
       )
 
     next =
       Outbox.enqueue!(rendered_email("Next"),
         category: "test.next",
-        ordering_key: "failed:1"
+        group_key: "failed:1"
       )
 
     Application.put_env(
@@ -190,12 +185,12 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
     assert_raise Swoosh.DeliveryError, fn ->
       perform_job(
         OutboxWorker,
-        %{outbox_entry_id: head.id},
+        %{outbox_entry_id: permanent.id},
         attempt: OutboxWorker.__opts__()[:max_attempts]
       )
     end
 
-    refute Repo.get(OutboxEntry, head.id)
+    refute Repo.get(OutboxEntry, permanent.id)
     assert Repo.get(OutboxEntry, next.id)
     assert delivery_job(next)
 
@@ -230,7 +225,7 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
     assert Repo.get(OutboxEntry, entry.id)
   end
 
-  test "reconciliation discards a terminal entry and enqueues the next stream entry" do
+  test "reconciliation discards a terminal entry" do
     for id <- 1..500 do
       job =
         %{outbox_entry_id: -id}
@@ -249,13 +244,13 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
     terminal =
       Outbox.enqueue!(rendered_email("Terminal"),
         category: "test.terminal",
-        ordering_key: "terminal:1"
+        group_key: "terminal:1"
       )
 
     next =
       Outbox.enqueue!(rendered_email("After terminal"),
         category: "test.after_terminal",
-        ordering_key: "terminal:1"
+        group_key: "terminal:1"
       )
 
     terminal_job = delivery_job(terminal)
@@ -283,7 +278,7 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
     assert delivery_job(entry).id == existing.id
   end
 
-  test "suspended jobs do not starve heads with missing jobs during reconciliation" do
+  test "suspended jobs do not starve entries with missing jobs during reconciliation" do
     for id <- 1..500 do
       entry = Outbox.enqueue!(rendered_email("Suspended #{id}"), category: "test.suspended")
 
@@ -340,7 +335,7 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
            )
   end
 
-  test "serializes producers that share an ordering key" do
+  test "serializes producers that share a group key" do
     original = Application.fetch_env!(:hexpm, :skip_advisory_locks)
     Application.put_env(:hexpm, :skip_advisory_locks, false)
     on_exit(fn -> Application.put_env(:hexpm, :skip_advisory_locks, original) end)
@@ -352,7 +347,7 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
 
         Outbox.enqueue!(rendered_email("First producer"),
           category: "test.first",
-          ordering_key: "shared"
+          group_key: "shared"
         )
 
         send(parent, :first_enqueued)
@@ -373,7 +368,7 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
 
         Outbox.enqueue!(rendered_email("Second producer"),
           category: "test.second",
-          ordering_key: "shared"
+          group_key: "shared"
         )
 
         send(parent, :second_enqueued)
@@ -399,7 +394,7 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
     Repo.delete!(user)
 
     assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: entry.id})
-    assert_email_sent(persisted_email)
+    assert_email_sent(delivered(persisted_email, entry))
     assert {_name, ^recipient} = List.first(persisted_email.to)
     refute Repo.get(OutboxEntry, entry.id)
   end
@@ -440,6 +435,10 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
         order_key: "misspelled"
       )
     end
+  end
+
+  defp delivered(email, entry) do
+    header(email, "Message-ID", "<outbox-#{entry.id}@hex.pm>")
   end
 
   defp delivery_job(entry) do
