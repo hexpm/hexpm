@@ -163,7 +163,9 @@ When running the command to publish a package, Hex will create a tar file of all
 
 ### Publishing from CI
 
-You can automate publishing packages from tools such as CI. You need a key with permissions to publish packages. Generate one on the [keys page](/dashboard/keys) of your dashboard:
+Prefer [trusted publishers](/docs/trusted-publishers) when your CI runs on GitHub Actions: Hex exchanges a short-lived OIDC identity token for a package-scoped publish token, so you do not store a long-lived API key in CI secrets. The package must already exist; trusted publishers cannot create a package or its first release.
+
+You can also automate publishing with a key that has permissions to publish packages:
 
 1. Select "Generate New Key".
 2. Enter a key name, such as `publish-ci`.

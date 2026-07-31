@@ -19,6 +19,7 @@ defmodule Hexpm.Repository.Package do
     has_many :owners, through: [:package_owners, :user]
     has_many :downloads, PackageDownload
     has_many :package_reports, PackageReport
+    has_many :trusted_publishers, Hexpm.TrustedPublishers.TrustedPublisher
 
     many_to_many :security_advisories, Hexpm.Security.Advisory,
       join_through: "security_advisory_affected_packages",

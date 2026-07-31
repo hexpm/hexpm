@@ -2,6 +2,7 @@ defmodule HexpmWeb.DocsController do
   use HexpmWeb, :controller
 
   alias Hexpm.Accounts.SSO
+  alias Hexpm.TrustedPublishers
 
   def index(conn, _params) do
     redirect(conn, to: ~p"/docs/usage")
@@ -112,6 +113,21 @@ defmodule HexpmWeb.DocsController do
         view: "organization_sso.html",
         view_name: :organization_sso,
         title: "Organization single sign-on",
+        container: "flex-1 flex flex-col"
+      )
+    else
+      not_found(conn)
+    end
+  end
+
+  def trusted_publishers(conn, _params) do
+    if TrustedPublishers.enabled?() do
+      render(
+        conn,
+        "layout.html",
+        view: "trusted_publishers.html",
+        view_name: :trusted_publishers,
+        title: "Trusted publishers",
         container: "flex-1 flex flex-col"
       )
     else

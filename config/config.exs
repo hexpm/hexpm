@@ -38,7 +38,9 @@ config :hexpm,
   sudo_timeout: Duration.new!(hour: 1),
   sudo_force_timeout: Duration.new!(second: 30)
 
-config :hexpm, :features, package_reports: true
+config :hexpm, :features, package_reports: true, trusted_publishers: true
+
+config :hexpm, :trusted_publisher_oauth_client_id, "a1111111-1111-4111-8111-111111111111"
 
 config :hexpm, :organization_sso,
   mode: :off,
