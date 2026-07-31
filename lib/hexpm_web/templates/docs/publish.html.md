@@ -163,15 +163,15 @@ When running the command to publish a package, Hex will create a tar file of all
 
 ### Publishing from CI
 
-You can automate publishing packages from tools such as CI. You need a key with permissions to publish packages:
+You can automate publishing packages from tools such as CI. You need a key with permissions to publish packages. Generate one on the [keys page](/dashboard/keys) of your dashboard:
 
-```nohighlight
-$ mix hex.user key generate --key-name publish-ci --permission api:write
-Username:
-Account password:
-Generating key...
-f48ac236bca15c3271e077c15c5320c4
-```
+1. Select "Generate New Key".
+2. Enter a key name, such as `publish-ci`.
+3. Choose an expiration.
+4. Under "Key permissions", check "Write" beneath "API".
+5. Select "Generate Key".
+
+The key is shown once, when you generate it.
 
 If you are publishing a package for your organization it is recommended to use a key for the organization instead of a personal key:
 
