@@ -65,6 +65,34 @@ defmodule Hexpm.Emails do
     |> render_body(:account_deleted)
   end
 
+  def account_removed(user, reason) do
+    base_email()
+    |> email_to(user)
+    |> subject("Hex.pm - Your account has been removed")
+    |> assign(:username, user.username)
+    |> assign(:reason, reason)
+    |> render_body(:account_removed)
+  end
+
+  def package_removed(owners, package, reason) do
+    base_email()
+    |> email_to(owners)
+    |> subject("Hex.pm - Package #{package} has been removed")
+    |> assign(:package, package)
+    |> assign(:reason, reason)
+    |> render_body(:package_removed)
+  end
+
+  def release_removed(owners, package, version, reason) do
+    base_email()
+    |> email_to(owners)
+    |> subject("Hex.pm - Package #{package} v#{version} has been removed")
+    |> assign(:package, package)
+    |> assign(:version, version)
+    |> assign(:reason, reason)
+    |> render_body(:release_removed)
+  end
+
   def password_changed(user) do
     base_email()
     |> email_to(user)
