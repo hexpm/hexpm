@@ -104,14 +104,16 @@ defmodule Hexpm.Hexdocs.WorkersTest do
     fallback_key = "docs/#{package.name}-#{fallback.version}.tar.gz"
     removed_key = "docs/#{package.name}-#{removed.version}.tar.gz"
 
-    html = ~s(<html><head><meta name="robots" content="noindex"></head></html>)
+    html =
+      ~s(<html><head><link rel="canonical" href="https://hexdocs.pm/promoted_docs/"></head></html>)
+
     Hexpm.Store.put(:repo_bucket, fallback_key, create_docs_tar([{"index.html", html}]))
     Hexpm.Store.put(:docs_bucket, "#{package.name}/index.html", "removed latest")
 
     assert :ok = perform_job(Workers.Delete, %{key: removed_key})
     promoted = Hexpm.Store.get(:docs_bucket, "#{package.name}/index.html")
     assert promoted =~ "plausible"
-    refute promoted =~ ~s(content="noindex")
+    refute promoted =~ "canonical"
   end
 
   test "deleting latest docs retries when the fallback archive is missing" do
@@ -125,7 +127,7 @@ defmodule Hexpm.Hexdocs.WorkersTest do
     end
   end
 
-  test "sitemap extracts html pages from the archive" do
+  test "sitemap lists indexable html pages at the package subdomain" do
     package = insert(:package, name: "sitemap_docs", docs_updated_at: DateTime.utc_now())
     release = insert(:release, package: package, version: "1.0.0", has_docs: true)
     key = "docs/#{package.name}-#{release.version}.tar.gz"
@@ -133,13 +135,20 @@ defmodule Hexpm.Hexdocs.WorkersTest do
     Hexpm.Store.put(
       :repo_bucket,
       key,
-      create_docs_tar([{"index.html", "docs"}, {"asset.js", "js"}])
+      create_docs_tar([
+        {"index.html", "docs"},
+        {"asset.js", "js"},
+        {"404.html", "missing"},
+        {"search.html", "search"}
+      ])
     )
 
     assert :ok = perform_job(Workers.Sitemap, %{key: key})
     sitemap = Hexpm.Store.get(:docs_bucket, "#{package.name}/sitemap.xml")
-    assert sitemap =~ "#{package.name}/index.html"
+    assert sitemap =~ "http://sitemap-docs.localhost:5002/index.html"
     refute sitemap =~ "asset.js"
+    refute sitemap =~ "404.html"
+    refute sitemap =~ "search.html"
   end
 
   test "malformed archives fail so Oban can retry" do

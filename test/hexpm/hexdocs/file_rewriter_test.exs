@@ -3,33 +3,30 @@ defmodule Hexpm.Hexdocs.FileRewriterTest do
 
   alias Hexpm.Hexdocs.FileRewriter
 
-  test "adds analytics and removes noindex from HTML" do
+  test "adds analytics to HTML and keeps noindex" do
     rewritten =
       FileRewriter.run(
-        "index.html",
+        "search.html",
         ~s(<html><head><meta name="robots" content="noindex"></head></html>)
       )
 
     assert rewritten =~ ~s(src="https://s.localhost/js/script.js")
-    refute rewritten =~ ~s(content="noindex")
+    assert rewritten =~ ~s(content="noindex")
   end
 
-  test "rewrites canonical package URLs to package subdomains" do
-    input =
-      ~s|<link rel="canonical" href="https://hexdocs.pm/phoenix_html/1.0.0/Phoenix.HTML.html"/>|
-
-    assert FileRewriter.run("index.html", input) ==
-             ~s|<link rel="canonical" href="https://phoenix-html.hexdocs.pm/1.0.0/Phoenix.HTML.html"/>|
-  end
-
-  test "does not rewrite body links, apex files, or existing subdomains" do
+  test "removes canonical tags whatever the author pointed them at" do
     for input <- [
-          ~s|<a href="https://hexdocs.pm/jason/Jason.html">Jason</a>|,
-          ~s|<link rel="canonical" href="https://hexdocs.pm/sitemap.xml"/>|,
-          ~s|<link rel="canonical" href="https://jason.hexdocs.pm/Jason.html"/>|
+          ~s|<link rel="canonical" href="https://hexdocs.pm/phoenix_html/1.0.0/Phoenix.HTML.html"/>|,
+          ~s|<link rel="canonical" href="http://hexdocs.pm/jason/Jason.html" />|,
+          ~s|<link rel='canonical' href='https://jason.hexdocs.pm/Jason.html'>|
         ] do
-      assert FileRewriter.run("index.html", input) == input
+      refute FileRewriter.run("index.html", ~s|<body>#{input}</body>|) =~ "canonical"
     end
+  end
+
+  test "leaves body links to hexdocs alone" do
+    input = ~s|<a href="https://hexdocs.pm/jason/Jason.html">Jason</a>|
+    assert FileRewriter.run("index.html", input) == input
   end
 
   test "adds nofollow only to external links and remains idempotent" do
