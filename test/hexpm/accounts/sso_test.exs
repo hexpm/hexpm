@@ -1,8 +1,6 @@
 defmodule Hexpm.Accounts.SSOTest do
   use Hexpm.DataCase
 
-  import ExUnit.CaptureLog
-
   alias Hexpm.Accounts.{AuditLogs, Organizations, SSO, Users}
   alias Hexpm.Accounts.SSO.{Connection, Features, Identity, OIDC}
   alias Hexpm.Emails.OutboxEntry
@@ -352,10 +350,36 @@ defmodule Hexpm.Accounts.SSOTest do
       stub_discovery()
       assert {:ok, connection} = configure_connection(context)
 
+      member = insert(:user)
+      insert(:organization_user, organization: context.organization, user: member)
+
+      identity =
+        insert(:organization_sso_identity,
+          connection: connection,
+          organization: context.organization,
+          user: member
+        )
+
+      {:ok, user_session, _token} =
+        Hexpm.UserSessions.create_browser_session(member, audit: audit_data(member))
+
+      org_session = SSO.establish_org_session!(identity, user_session.id)
+      assert {:ok, failure} = SSO.record_failure(connection, :login, :not_member, member)
+
       assert {:ok, _deleted} =
                SSO.delete_connection(context.organization, audit: audit_data(context.admin))
 
       refute Repo.get(Connection, connection.id)
+      refute Repo.get(Identity, identity.id)
+      refute Repo.get(SSO.OrgSession, org_session.id)
+      refute Repo.get(SSO.Failure, failure.id)
+
+      # The people keep their accounts and their membership.
+      assert Repo.get(Hexpm.Accounts.User, member.id)
+
+      assert Repo.exists?(
+               from(ou in Hexpm.Accounts.OrganizationUser, where: ou.user_id == ^member.id)
+             )
 
       actions = context.organization |> AuditLogs.all_by() |> Enum.map(& &1.action)
       assert "sso.connection.delete" in actions
@@ -670,12 +694,28 @@ defmodule Hexpm.Accounts.SSOTest do
                |> start_transaction(context.member)
                |> complete(valid_claims(), context.member, user_session.id)
 
+      # Backdate the row so the refresh is observable. Without this both
+      # authentications land in the same instant and dropping authenticated_at
+      # and expires_at from the reuse path would go unnoticed, leaving a member
+      # who re-authenticates locked out when the original window lapses.
+      Repo.update_all(
+        from(session in SSO.OrgSession, where: session.id == ^first.id),
+        set: [
+          authenticated_at: DateTime.add(first.authenticated_at, -3600, :second),
+          expires_at: DateTime.add(first.expires_at, -3600, :second)
+        ]
+      )
+
+      backdated = Repo.get!(SSO.OrgSession, first.id)
+
       assert {:ok, {:login, _user, second, _return}} =
                context
                |> start_transaction(context.member)
                |> complete(valid_claims(), context.member, user_session.id)
 
       assert second.id == first.id
+      assert DateTime.compare(second.authenticated_at, backdated.authenticated_at) == :gt
+      assert DateTime.compare(second.expires_at, backdated.expires_at) == :gt
       assert Repo.aggregate(SSO.OrgSession, :count) == 1
     end
 
@@ -851,6 +891,200 @@ defmodule Hexpm.Accounts.SSOTest do
 
       assert [%{stage: "callback", code: "connection_credentials_changed"}] =
                SSO.failures(context.connection)
+    end
+
+    test "cancelling a pending link purges the copied identity data and the token", context do
+      {transaction_id, link_token} = pending_link(context, context.member)
+
+      assert {:ok, _transaction} = SSO.cancel_link(transaction_id, link_token)
+
+      transaction = Repo.get!(SSO.Transaction, transaction_id)
+      assert transaction.cancelled_at
+      refute transaction.link_token_hash
+      refute transaction.issuer
+      refute transaction.subject
+      refute transaction.provider_email
+
+      refute SSO.get_pending_link(transaction_id, link_token)
+    end
+
+    test "a cancelled link cannot be completed afterwards", context do
+      {transaction_id, link_token} = pending_link(context, context.member)
+      assert {:ok, _transaction} = SSO.cancel_link(transaction_id, link_token)
+
+      assert {:error, :link_cancelled} =
+               complete_pending_link(context, transaction_id, link_token)
+
+      refute Repo.exists?(Identity)
+      refute Repo.exists?(SSO.OrgSession)
+    end
+
+    test "a link token is single use", context do
+      {transaction_id, link_token} = pending_link(context, context.member)
+
+      assert {:ok, {%Identity{}, _org_session}} =
+               complete_pending_link(context, transaction_id, link_token)
+
+      assert {:error, :link_already_used} =
+               complete_pending_link(context, transaction_id, link_token)
+
+      assert Repo.aggregate(Identity, :count) == 1
+    end
+
+    test "a link token that does not match the stored hash is refused", context do
+      {transaction_id, link_token} = pending_link(context, context.member)
+
+      assert {:error, :invalid_link} =
+               complete_pending_link(context, transaction_id, link_token <> "x")
+
+      refute Repo.exists?(Identity)
+      # The real token still works, so the refusal was the comparison and not
+      # some other part of the flow having already failed.
+      assert {:ok, {%Identity{}, _org_session}} =
+               complete_pending_link(context, transaction_id, link_token)
+    end
+
+    test "an expired link cannot be completed", context do
+      {transaction_id, link_token} = pending_link(context, context.member)
+
+      Repo.update_all(
+        from(transaction in SSO.Transaction, where: transaction.id == ^transaction_id),
+        set: [expires_at: DateTime.add(DateTime.utc_now(), -1, :second)]
+      )
+
+      assert {:error, :link_expired} = complete_pending_link(context, transaction_id, link_token)
+      refute Repo.exists?(Identity)
+    end
+
+    test "disabling the connection mid-consent refuses the link", context do
+      {transaction_id, link_token} = pending_link(context, context.member)
+
+      assert {:ok, _connection} =
+               SSO.disable(context.organization, audit: audit_data(context.admin))
+
+      assert {:error, :connection_disabled} =
+               complete_pending_link(context, transaction_id, link_token)
+
+      refute Repo.exists?(Identity)
+      refute Repo.exists?(SSO.OrgSession)
+    end
+
+    test "turning the feature off mid-consent refuses the link", context do
+      {transaction_id, link_token} = pending_link(context, context.member)
+
+      config = Application.fetch_env!(:hexpm, :organization_sso)
+      Application.put_env(:hexpm, :organization_sso, Keyword.put(config, :mode, :off))
+
+      assert {:error, :feature_disabled} =
+               complete_pending_link(context, transaction_id, link_token)
+
+      refute Repo.exists?(Identity)
+    end
+
+    test "reconfiguring the connection mid-consent refuses the link", context do
+      {transaction_id, link_token} = pending_link(context, context.member)
+
+      Repo.update_all(
+        from(connection in Connection, where: connection.id == ^context.connection.id),
+        inc: [version: 1]
+      )
+
+      assert {:error, :connection_configuration_changed} =
+               complete_pending_link(context, transaction_id, link_token)
+
+      refute Repo.exists?(Identity)
+    end
+
+    test "losing membership mid-consent refuses the link", context do
+      {transaction_id, link_token} = pending_link(context, context.member)
+
+      Repo.delete_all(
+        from(organization_user in Hexpm.Accounts.OrganizationUser,
+          where: organization_user.user_id == ^context.member.id
+        )
+      )
+
+      assert {:error, :not_member} = complete_pending_link(context, transaction_id, link_token)
+      refute Repo.exists?(Identity)
+    end
+
+    test "an expired state cannot be loaded for the callback", context do
+      stub_authorization_uri()
+
+      assert {:ok, transaction, _uri} =
+               SSO.start_login(
+                 context.organization,
+                 context.member,
+                 nil,
+                 "https://hex.pm/sso/callback"
+               )
+
+      assert SSO.get_transaction_by_state(transaction.raw_state)
+
+      Repo.update_all(
+        from(row in SSO.Transaction, where: row.id == ^transaction.id),
+        set: [expires_at: DateTime.add(DateTime.utc_now(), -1, :second)]
+      )
+
+      # The nightly purge is a separate mechanism on a separate schedule; the
+      # lookup has to refuse a lapsed state on its own.
+      refute SSO.get_transaction_by_state(transaction.raw_state)
+    end
+
+    test "refreshing metadata leaves a login that is already in flight alone", context do
+      link_identity(context, context.member)
+      user_session = browser_session(context.member)
+      transaction = start_transaction(context, context.member)
+
+      stub_discovery()
+      assert {:ok, refreshed} = SSO.refresh_metadata(context.connection)
+
+      # Bumping the version here would refuse every in-flight login on every
+      # discovery cache expiry.
+      assert refreshed.version == context.connection.version
+
+      assert {:ok, {:login, _user, _org_session, _return}} =
+               complete(transaction, valid_claims(), context.member, user_session.id)
+    end
+
+    test "refreshing metadata is refused when the configuration moved underneath it", context do
+      stale = context.connection
+
+      Repo.update_all(
+        from(connection in Connection, where: connection.id == ^stale.id),
+        inc: [version: 1]
+      )
+
+      stub_discovery()
+
+      assert {:error, :connection_configuration_changed} = SSO.refresh_metadata(stale)
+    end
+
+    test "a callback that refreshed the JWKS persists it and its cache expiry", context do
+      link_identity(context, context.member)
+      user_session = browser_session(context.member)
+      transaction = start_transaction(context, context.member)
+
+      refreshed = %{"keys" => [%{"kty" => "RSA", "kid" => "rotated-key"}]}
+
+      jwks_expires_at = DateTime.add(DateTime.utc_now(), 120, :second)
+
+      claims =
+        Map.merge(valid_claims(), %{
+          jwks_document: refreshed,
+          jwks_expires_at: jwks_expires_at
+        })
+
+      assert {:ok, {:login, _user, _org_session, _return}} =
+               complete(transaction, claims, context.member, user_session.id)
+
+      connection = Repo.get!(Connection, context.connection.id)
+      assert connection.jwks_document == refreshed
+      assert DateTime.compare(connection.jwks_expires_at, jwks_expires_at) == :eq
+
+      # The metadata cache is the earlier of the two, so a JWKS expiring sooner
+      # than discovery has to pull the whole refresh forward.
+      assert DateTime.compare(connection.metadata_expires_at, jwks_expires_at) == :eq
     end
 
     test "abandoning a login consumes the transaction and records the failure", context do
@@ -1094,6 +1328,36 @@ defmodule Hexpm.Accounts.SSOTest do
              )
     end
 
+    test "notifications reach the verified primary address and nothing else", context do
+      # Any address can be attached to an account unverified, so an account
+      # holder must not be able to make Hexpm mail an address they do not own.
+      insert(:email,
+        user: context.member,
+        email: "attacker-supplied@example.com",
+        primary: false,
+        verified: false,
+        public: false,
+        gravatar: false
+      )
+
+      link_identity(context, context.member)
+
+      assert {:ok, %Identity{}} =
+               SSO.unlink_identity(context.organization, context.member,
+                 audit: audit_data(context.admin)
+               )
+
+      entry =
+        Repo.one!(from(entry in OutboxEntry, where: entry.category == "sso.identity_unlinked"))
+
+      primary =
+        context.member.id
+        |> Users.get_by_id([:emails])
+        |> Hexpm.Accounts.User.email(:primary)
+
+      assert Enum.map(entry.email["to"], & &1["address"]) == [primary]
+    end
+
     test "notifications are queued under the member's group key", context do
       link_identity(context, context.member)
 
@@ -1147,6 +1411,27 @@ defmodule Hexpm.Accounts.SSOTest do
     session
   end
 
+  defp pending_link(context, user) do
+    transaction = start_transaction(context, user)
+
+    assert {:ok, {:link, transaction_id, link_token, _return_path}} =
+             complete(transaction, valid_claims(), user)
+
+    {transaction_id, link_token}
+  end
+
+  defp complete_pending_link(context, transaction_id, link_token) do
+    user = Repo.preload(context.member, :emails)
+
+    SSO.complete_link(
+      transaction_id,
+      link_token,
+      user,
+      browser_session(user).id,
+      audit_data(user)
+    )
+  end
+
   defp sso_group_key(connection, user), do: "sso:#{connection.id}:#{user.id}"
 
   describe "return paths" do
@@ -1174,7 +1459,7 @@ defmodule Hexpm.Accounts.SSOTest do
     provider_email = "query-log-provider@example.com"
 
     log =
-      capture_log([level: :debug], fn ->
+      capture_debug_log(fn ->
         stub_discovery()
 
         assert {:ok, connection} =
@@ -1233,6 +1518,10 @@ defmodule Hexpm.Accounts.SSOTest do
     assert_receive {:sensitive_transaction_values, state, nonce, verifier}
     assert_receive {:sensitive_link_token, link_token}
 
+    # The queries have to have been logged at all, or the refutes below are
+    # asserting about an empty string.
+    assert log =~ "organization_sso_connections"
+
     for value <- [
           client_secret,
           provider_subject,
@@ -1247,7 +1536,7 @@ defmodule Hexpm.Accounts.SSOTest do
   end
 
   describe "failure diagnostics" do
-    test "records the failing user only for post-proof codes", context do
+    test "records the failing user only for codes that identify one", context do
       connection = configured_and_tested_connection(context)
       member = insert(:user)
 

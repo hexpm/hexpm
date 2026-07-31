@@ -5,10 +5,21 @@ defmodule Hexpm.Emails.Outbox do
   @allowed_options [:category, :group_key, :scope_key, :expires_at]
 
   def enqueue!(%Swoosh.Email{} = email, opts) do
+    email
+    |> prepare!(opts)
+    |> insert!()
+  end
+
+  # Split from insert!/1 so a caller enqueueing inside its own transaction can
+  # put the part that raises on a malformed email before the part that issues
+  # SQL, and rescue only the first.
+  def prepare!(%Swoosh.Email{} = email, opts) do
     attrs = Map.new(opts)
     validate_options!(attrs)
-    attrs = Map.put(attrs, :email, OutboxEnvelope.dump!(email))
+    Map.put(attrs, :email, OutboxEnvelope.dump!(email))
+  end
 
+  def insert!(attrs) do
     {:ok, entry} =
       Repo.transaction(fn ->
         OutboxLock.acquire!(attrs[:group_key])

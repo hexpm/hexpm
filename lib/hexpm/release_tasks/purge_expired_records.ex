@@ -177,19 +177,25 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
     Logger.info("[task] Purged #{count} expired organization SSO transactions")
   end
 
+  # Kept for the retention window rather than deleted the moment they lapse. The
+  # administrator's linked-accounts view reports when each member last
+  # authenticated and reads these rows without filtering to live ones, so
+  # purging on expiry made everyone who had not authenticated in the last day
+  # read as never having authenticated. A revoked session carries an expiry too,
+  # so one predicate covers both cases and can use the expires_at index.
   defp purge_sso_sessions(repo, batch_size) do
     count =
       delete_in_batches(
         repo,
         Hexpm.Accounts.SSO.OrgSession,
         from(session in Hexpm.Accounts.SSO.OrgSession,
-          where: session.expires_at < fragment("NOW()") or not is_nil(session.revoked_at),
+          where: session.expires_at < ago(@retention_days, "day"),
           order_by: session.expires_at
         ),
         batch_size
       )
 
-    Logger.info("[task] Purged #{count} expired/revoked organization SSO sessions")
+    Logger.info("[task] Purged #{count} organization SSO sessions past retention")
   end
 
   defp purge_keys(repo, batch_size) do

@@ -82,7 +82,7 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
            ),
          {:ok, id_token} <- fetch_id_token(token_response),
          {:ok, claims, refreshed_jwks, refreshed_jwks_expiry} <-
-           validate_id_token(id_token, client_context, transaction, connection),
+           validate_id_token(id_token, client_context, transaction),
          :ok <- validate_claims(claims, connection) do
       {:ok,
        %{
@@ -152,7 +152,7 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
      Map.merge(body, %{"client_id" => connection.client_id, "client_secret" => client_secret})}
   end
 
-  defp validate_id_token(id_token, client_context, transaction, connection) do
+  defp validate_id_token(id_token, client_context, transaction) do
     opts = %{nonce: transaction.nonce, trusted_audiences: [], validate_azp: :client_id}
 
     case oidcc_validate_id_token(id_token, client_context, opts, :initial) do
@@ -160,14 +160,14 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
         {:ok, claims, nil, nil}
 
       {:error, {:no_matching_key_with_kid, _kid}} ->
-        refresh_and_validate_id_token(id_token, client_context, connection, opts)
+        refresh_and_validate_id_token(id_token, client_context, opts)
 
       {:error, _reason} ->
         error(:token, :id_token_invalid)
     end
   end
 
-  defp refresh_and_validate_id_token(id_token, client_context, connection, opts) do
+  defp refresh_and_validate_id_token(id_token, client_context, opts) do
     jwks_uri = client_context.provider_configuration.jwks_uri
 
     with {:ok, _uri} <- SafeURL.validate(jwks_uri),
@@ -175,8 +175,7 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
          {:ok, jwks} <- decode_jwks(jwks_document),
          refreshed_context <- %{client_context | jwks: jwks},
          {:ok, claims} <-
-           oidcc_validate_id_token(id_token, refreshed_context, opts, :jwks_refresh),
-         :ok <- validate_claims(claims, connection) do
+           oidcc_validate_id_token(id_token, refreshed_context, opts, :jwks_refresh) do
       {:ok, claims, jwks_document, expiry}
     else
       {:error, %Error{} = error} -> {:error, error}
@@ -292,7 +291,6 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
   # provider that ignores the challenge offers no protection and nothing here can
   # tell that it did.
   defp pkce_s256_permitted?(:undefined), do: true
-  defp pkce_s256_permitted?(nil), do: true
   defp pkce_s256_permitted?(methods), do: "S256" in List.wrap(methods)
 
   defp harden_configuration(configuration) do

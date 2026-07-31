@@ -18,7 +18,8 @@ defmodule Hexpm.RepoBase.Migrations.AddOrganizationSsoPhase2 do
     end
 
     create unique_index(:organization_sso_sessions, [:user_session_id, :organization_id])
-    create index(:organization_sso_sessions, [:user_id, :organization_id])
+    create index(:organization_sso_sessions, [:organization_id, :user_id])
+    create index(:organization_sso_sessions, [:identity_id])
     create index(:organization_sso_sessions, [:expires_at])
 
     alter table(:organization_sso_transactions) do

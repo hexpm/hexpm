@@ -1,7 +1,11 @@
 defmodule Hexpm.Emails.OutboxReconciler do
+  # One attempt, because the next cron tick is the retry. Retrying in place
+  # leaves the job retryable, which the uniqueness rule counts as incomplete, so
+  # cron cannot insert a replacement and the sweep stops for the whole backoff.
+  # By a tenth attempt that is hours with no reconciliation.
   use Oban.Worker,
     queue: :periodic,
-    max_attempts: 10,
+    max_attempts: 1,
     unique: [period: :infinity, states: :incomplete]
 
   import Ecto.Query, only: [from: 2]

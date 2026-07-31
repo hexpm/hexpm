@@ -367,8 +367,9 @@ defmodule HexpmWeb.SSOController do
     )
   end
 
-  # Rendering only. Every caller has already recorded its own diagnostic, either
-  # through `abandon/4` or inside the context.
+  # Rendering only. Callers that found a transaction have already recorded their
+  # diagnostic, either through `abandon/4` or inside the context. The ones that
+  # pass `nil` have no connection to record it against.
   defp callback_error(conn, transaction, code) do
     destination =
       cond do

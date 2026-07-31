@@ -6,19 +6,39 @@ defmodule Hexpm.Accounts.SSO.UserRemovalTest do
   alias Hexpm.Accounts.SSO.{Identity, OrgSession}
 
   test "user deletion locks memberships before deleting SSO transactions" do
+    organization = insert(:organization)
     user = insert(:user)
+    insert(:organization_user, organization: organization, user: user)
+    connection = insert(:organization_sso_connection, organization: organization)
+    transaction = insert_transaction(connection, user)
 
-    operations =
+    multi =
       Multi.new()
       |> SSO.lock_user_removal(user)
       |> SSO.delete_user_transactions(user)
-      |> Multi.to_list()
-      |> Enum.map(&elem(&1, 0))
 
-    assert operations == [
+    assert multi |> Multi.to_list() |> Enum.map(&elem(&1, 0)) == [
              :organization_sso_user_removal_locks,
              :organization_sso_user_transactions
            ]
+
+    assert {:ok, changes} = Repo.transaction(multi)
+    assert changes.organization_sso_user_removal_locks == :locked
+    refute Repo.get(SSO.Transaction, transaction.id)
+  end
+
+  defp insert_transaction(connection, user) do
+    Repo.insert!(%SSO.Transaction{
+      user_id: user.id,
+      connection_id: connection.id,
+      state_hash: :crypto.hash(:sha256, "state-#{System.unique_integer([:positive])}"),
+      kind: "login",
+      secret_slot: "active",
+      connection_version: connection.version,
+      secret_version: connection.version,
+      redirect_uri: "https://hex.pm/sso/callback",
+      expires_at: DateTime.add(DateTime.utc_now(), 600, :second)
+    })
   end
 
   test "member removal deletes organization access sessions before their identities" do

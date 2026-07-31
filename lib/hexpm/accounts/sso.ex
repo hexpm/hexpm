@@ -459,8 +459,14 @@ defmodule Hexpm.Accounts.SSO do
         client_secret
       )
     else
-      false -> {:error, %Error{stage: :callback, code: :redirect_uri_mismatch}}
-      error -> error
+      false ->
+        {:error, %Error{stage: :callback, code: :redirect_uri_mismatch}}
+
+      # The gates answer with a bare code. Wrapping it is what routes the refusal
+      # through abandon/4, so the administrator gets a diagnostic and the
+      # authorization code the provider still honours is consumed.
+      {:error, code} ->
+        {:error, %Error{stage: :callback, code: code}}
     end
   end
 
@@ -606,7 +612,7 @@ defmodule Hexpm.Accounts.SSO do
               Hexpm.RepoBase.rollback({:identity_conflict, changeset})
           end
         else
-          false -> Hexpm.RepoBase.rollback(:account_proof_required)
+          false -> Hexpm.RepoBase.rollback(:session_user_mismatch)
           {:error, reason} -> Hexpm.RepoBase.rollback(reason)
         end
       else
@@ -1005,7 +1011,7 @@ defmodule Hexpm.Accounts.SSO do
     end
   end
 
-  # Only post-proof codes attach the failing user (known there and admin-actionable); others stay redacted.
+  # Only codes where we already know which account failed attach it; others stay redacted.
   defp failure_user_id(code, user)
        when code in [:not_member, :identity_conflict, :session_user_mismatch],
        do: user && user.id
@@ -1058,8 +1064,8 @@ defmodule Hexpm.Accounts.SSO do
     end
   end
 
-  # The four outcomes every login callback resolves to. `current_user` is the
-  # account session the flow began from; SSO never establishes one.
+  # The outcomes every login callback resolves to. `current_user` is the account
+  # session the flow began from; SSO never establishes one.
   defp complete_login!(
          transaction,
          connection,
@@ -1451,44 +1457,52 @@ defmodule Hexpm.Accounts.SSO do
   defp enqueue_sso_notification!(_kind, _connection, _user, _provider_email, []), do: :ok
 
   defp enqueue_sso_notification!(kind, connection, user, provider_email, recipients) do
+    case prepare_sso_notification(kind, connection, user, provider_email, recipients) do
+      {:ok, attrs} -> Outbox.insert!(attrs)
+      :error -> :ok
+    end
+  end
+
+  # Rendering and envelope validation run inside the transaction that links an
+  # identity or removes a member. Letting them raise would roll that back, so a
+  # broken notification loses the mail rather than the security action. The
+  # audit log is the durable record either way. The insert stays outside the
+  # rescue because it writes through that same transaction: once Postgres has
+  # aborted it there is no security action left to save, and swallowing the
+  # exception would only hide the rollback from the caller.
+  defp prepare_sso_notification(kind, connection, user, provider_email, recipients) do
+    organization = connection.organization.name
+
     {category, email} =
       case kind do
         "identity_linked" ->
           {@identity_linked_email_category,
-           Emails.sso_identity_linked(connection.organization.name, user.username, recipients)}
+           Emails.sso_identity_linked(organization, user.username, recipients)}
 
         "identity_unlinked" ->
           {@identity_unlinked_email_category,
-           Emails.sso_identity_unlinked(connection.organization.name, user.username, recipients)}
+           Emails.sso_identity_unlinked(organization, user.username, recipients)}
 
         "email_mismatch" ->
           {@email_mismatch_category,
-           Emails.sso_email_mismatch(
-             connection.organization.name,
-             user.username,
-             recipients,
-             provider_email
-           )}
+           Emails.sso_email_mismatch(organization, user.username, recipients, provider_email)}
       end
 
-    Outbox.enqueue!(email,
-      category: category,
-      group_key: notification_group_key(connection, user),
-      scope_key: notification_scope_key(user),
-      expires_at: DateTime.add(DateTime.utc_now(), @notification_retention_seconds, :second)
-    )
+    {:ok,
+     Outbox.prepare!(email,
+       category: category,
+       group_key: notification_group_key(connection, user),
+       scope_key: notification_scope_key(user),
+       expires_at: DateTime.add(DateTime.utc_now(), @notification_retention_seconds, :second)
+     )}
   rescue
-    # Rendering and envelope validation run inside the transaction that links an
-    # identity or removes a member. Letting them raise would roll that back, so a
-    # broken notification loses the mail rather than the security action. The
-    # audit log is the durable record either way.
     exception ->
       Sentry.capture_exception(exception,
         stacktrace: __STACKTRACE__,
-        extra: %{sso_notification: kind, organization: connection.organization.name}
+        extra: %{sso_notification: kind, organization_id: connection.organization_id}
       )
 
-      :ok
+      :error
   end
 
   defp delete_notifications!(connection, user) do

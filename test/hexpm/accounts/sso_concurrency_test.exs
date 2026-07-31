@@ -50,7 +50,7 @@ defmodule Hexpm.Accounts.SSOConcurrencyTest do
 
       assert Enum.count(results, &match?({:ok, {:login, _user, _session, _return}}, &1)) == 1
       assert Enum.count(results, &match?({:error, :transaction_already_used}, &1)) == 1
-      assert Repo.aggregate(OrgSession, :count) == 1
+      assert committed_count(context, OrgSession) == 1
     end)
   end
 
@@ -73,7 +73,7 @@ defmodule Hexpm.Accounts.SSOConcurrencyTest do
         end)
 
       assert Enum.count(results, &match?({:ok, {:login, _user, _session, _return}}, &1)) == 2
-      assert Repo.aggregate(OrgSession, :count) == 1
+      assert committed_count(context, OrgSession) == 1
     end)
   end
 
@@ -97,7 +97,7 @@ defmodule Hexpm.Accounts.SSOConcurrencyTest do
 
       assert Enum.count(results, &match?({:ok, {%Identity{}, %OrgSession{}}}, &1)) == 1
       assert Enum.count(results, &match?({:error, {:identity_conflict, _changeset}}, &1)) == 1
-      assert Repo.aggregate(Identity, :count) == 1
+      assert committed_count(context, Identity) == 1
     end)
   end
 
@@ -208,23 +208,42 @@ defmodule Hexpm.Accounts.SSOConcurrencyTest do
           {schema, Hexpm.RepoBase.aggregate(schema, :max, :id) || 0}
         end)
 
-      try do
-        fun.(build_context())
-      after
-        # users and organizations reference each other, so one side has to let
-        # go before either can be deleted.
-        Hexpm.RepoBase.update_all(
-          from(user in User, where: user.id > ^Map.fetch!(high_water_marks, User)),
-          set: [organization_id: nil]
-        )
+      # on_exit rather than try/after: race/1 links its tasks, so a task that
+      # crashes on the regression these tests exist to catch kills the test
+      # process outright and an after block never runs. The rows are committed,
+      # so skipping cleanup once leaks them into every later run.
+      on_exit(fn ->
+        Sandbox.unboxed_run(Hexpm.RepoBase, fn -> delete_committed(high_water_marks) end)
+      end)
 
-        Enum.each(@committed_schemas, fn schema ->
-          Hexpm.RepoBase.delete_all(
-            from(row in schema, where: row.id > ^Map.fetch!(high_water_marks, schema))
-          )
-        end)
-      end
+      build_context()
+      |> Map.put(:high_water_marks, high_water_marks)
+      |> fun.()
     end)
+  end
+
+  defp delete_committed(high_water_marks) do
+    # users and organizations reference each other, so one side has to let go
+    # before either can be deleted.
+    Hexpm.RepoBase.update_all(
+      from(user in User, where: user.id > ^Map.fetch!(high_water_marks, User)),
+      set: [organization_id: nil]
+    )
+
+    Enum.each(@committed_schemas, fn schema ->
+      Hexpm.RepoBase.delete_all(
+        from(row in schema, where: row.id > ^Map.fetch!(high_water_marks, schema))
+      )
+    end)
+  end
+
+  # Counting the whole table would fail on any row a previous run leaked or a
+  # developer's database already holds.
+  defp committed_count(context, schema) do
+    Hexpm.RepoBase.aggregate(
+      from(row in schema, where: row.id > ^Map.fetch!(context.high_water_marks, schema)),
+      :count
+    )
   end
 
   defp build_context do
@@ -295,7 +314,9 @@ defmodule Hexpm.Accounts.SSOConcurrencyTest do
       end)
 
     for _task <- tasks do
-      assert_receive {:ready, pid}
+      # Each task checks out a real connection before reporting ready, which the
+      # 100ms default is not enough for on a loaded machine.
+      assert_receive {:ready, pid}, 15_000
       pid
     end
     |> Enum.each(&send(&1, :go))

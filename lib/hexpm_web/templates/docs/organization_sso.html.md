@@ -7,9 +7,9 @@ Organization SSO is currently available only to organizations enabled by Hexpm's
 SSO is not a way to sign in to Hexpm. Two separate sessions carry the split, and only the first is a login:
 
 * The **account session** is the person's login to Hexpm, established by a password, GitHub, or another credential the account itself owns, together with the account's own two-factor authentication where enrolled. An identity provider never establishes it.
-* The **organization access session** is what an SSO authentication produces. It is scoped to one organization, lasts 24 hours, and governs whether the account may reach that organization.
+* The **organization access session** is what an SSO authentication produces. It is scoped to one organization and lasts 24 hours. It records that the provider authenticated the member. Nothing at Hexpm requires one yet, so it does not currently gate access to the organization.
 
-So the shape of the flow is: sign in to Hexpm as yourself, then authenticate to the organization's provider to unlock that organization.
+So the shape of the flow is: sign in to Hexpm as yourself, then authenticate to the organization's provider.
 
 ### Before you begin
 
@@ -31,7 +31,7 @@ In the Okta Admin Console, follow Okta's [OIDC app-integration instructions](htt
 3. Select the **Authorization Code** grant type.
 4. Add the exact **Redirect URI** from the Hexpm SSO dashboard as a sign-in redirect URI. Do not use a wildcard.
 5. Leave the sign-out redirect URIs empty. This release does not use OIDC logout.
-6. Select **App Only**. Custom provider-initiated settings remain limited to Hexpm's private validation.
+6. Under **Login initiated by**, select **App Only** if members will always start from the organization login URL. To let them start from Okta instead, select **Either Okta or App** and set the **Initiate login URI** described below. Custom Okta dashboard tiles are not supported either way.
 7. Assign only the people or groups who should be able to use the Hexpm integration.
 8. Save the application, then copy its **Client ID** and **Client secret**.
 
@@ -87,7 +87,7 @@ The first time a member uses the organization login URL:
 
 Being signed in is the proof, so there is no confirmation code and no email matching. The Hexpm account must already be a member of the organization. If it is not, an organization administrator must add it before the member retries.
 
-A provider email never establishes durable identity, selects an account, creates one, grants membership, or changes a Hexpm email address. After linking, the connection, exact issuer, and stable provider subject are the identity key. The account's email addresses are notified when the link is created.
+A provider email never establishes durable identity, selects an account, creates one, grants membership, or changes a Hexpm email address. After linking, the connection, exact issuer, and stable provider subject are the identity key. The account's verified primary address is notified when the link is created; an account with no verified primary address is not notified at all.
 
 After linking, later uses of the organization login URL establish a 24-hour organization access session for that browser session. Signing out of Hexpm, or revoking the browser session, ends the organization access with it.
 
@@ -112,11 +112,13 @@ On the Hexpm SSO dashboard:
 
 The active secret continues serving logins until the tested replacement is promoted.
 
-### Disable SSO or unlink an account
+### Disable SSO, unlink an account, or remove the configuration
 
-Select **Disable SSO login** to stop new SSO logins immediately. This does not remove the saved configuration or linked accounts, and conventional Hexpm login remains available.
+Select **Disable SSO login** to stop new SSO logins immediately and revoke every organization access session the connection has granted. This does not remove the saved configuration or linked accounts, and conventional Hexpm login remains available.
 
 Organization administrators can unlink an account from the **Linked accounts** section, which also ends that member's current organization access. Removing a member from the organization does the same and removes the SSO link. If the person is added again later, they must link again.
+
+**Remove SSO configuration** deletes the connection itself, with the stored client secret, every linked account, and the recorded failures. SSO has to be disabled first. Members keep their Hexpm accounts and their organization membership, and anyone who wants SSO afterwards links again against a newly saved configuration.
 
 **Linked accounts** shows when each member last authenticated through the connection.
 

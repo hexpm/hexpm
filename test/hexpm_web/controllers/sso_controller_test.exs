@@ -3,7 +3,6 @@ defmodule HexpmWeb.SSOControllerTest do
   use Oban.Testing, repo: Hexpm.RepoBase
 
   import ExUnit.CaptureIO
-  import ExUnit.CaptureLog
 
   alias Hexpm.Accounts.{AuditLogs, SSO}
   alias Hexpm.Accounts.SSO.{Identity, OIDC, OrgSession}
@@ -96,6 +95,10 @@ defmodule HexpmWeb.SSOControllerTest do
     end
 
     test "the SSO namespace never calls the session-minting function" do
+      # Renaming the modules out from under the prefix filter would otherwise
+      # leave this iterating an empty list and passing.
+      assert length(sso_modules()) >= 3
+
       for module <- sso_modules() do
         {:ok, {^module, [{:abstract_code, {:raw_abstract_v1, abstract_code}}]}} =
           module |> :code.which() |> :beam_lib.chunks([:abstract_code])
@@ -317,6 +320,18 @@ defmodule HexpmWeb.SSOControllerTest do
       conn = complete_callback(conn, state, context.identity.provider_email)
       first = Repo.one!(OrgSession)
 
+      # Backdate the row so the refresh is observable; both authentications
+      # otherwise land in the same instant.
+      Repo.update_all(
+        from(session in OrgSession, where: session.id == ^first.id),
+        set: [
+          authenticated_at: DateTime.add(first.authenticated_at, -3600, :second),
+          expires_at: DateTime.add(first.expires_at, -3600, :second)
+        ]
+      )
+
+      backdated = Repo.get!(OrgSession, first.id)
+
       expect_authorization_request(context.connection)
       conn = conn |> recycle() |> get("/sso/org/#{context.organization.name}")
       assert_receive {:sso_state, state, redirect_uri}
@@ -328,7 +343,8 @@ defmodule HexpmWeb.SSOControllerTest do
 
       second = Repo.one!(OrgSession)
       assert second.id == first.id
-      assert DateTime.compare(second.authenticated_at, first.authenticated_at) != :lt
+      assert DateTime.compare(second.authenticated_at, backdated.authenticated_at) == :gt
+      assert DateTime.compare(second.expires_at, backdated.expires_at) == :gt
     end
 
     test "the dashboard shows the current authentication and its expiry", context do
@@ -383,6 +399,28 @@ defmodule HexpmWeb.SSOControllerTest do
                AuditLogs.all_by(context.organization, 1, 100),
                &(&1.action == "sso.login")
              )
+    end
+
+    test "a token endpoint rejection consumes the transaction and records the stage", context do
+      %{conn: conn, state: state} = begin_login(context)
+
+      expect(OIDC.Mock, :exchange_code, fn _connection, _transaction, _code, _uri, _secret ->
+        {:error, %SSO.Error{stage: :token, code: :token_endpoint_rejected_request}}
+      end)
+
+      conn = get(conn |> recycle(), "/sso/callback", %{state: state, code: "authorization-code"})
+
+      assert redirected_to(conn) == "/dashboard"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error)
+
+      assert [%{stage: "token", code: "token_endpoint_rejected_request"}] =
+               SSO.failures(context.connection)
+
+      # The authorization code is still live at the provider, so the transaction
+      # has to be spent whether or not the exchange worked.
+      assert Repo.one!(SSO.Transaction).consumed_at
+      refute Repo.exists?(Identity)
+      refute Repo.exists?(OrgSession)
     end
 
     test "the signed-in account holding a different subject refuses", context do
@@ -700,12 +738,15 @@ defmodule HexpmWeb.SSOControllerTest do
       code = "router-log-code-value"
 
       log =
-        capture_log([level: :debug], fn ->
+        capture_debug_log(fn ->
           build_conn()
           |> get("/sso/callback", %{state: state, code: code})
           |> response(302)
         end)
 
+      # Something has to have been logged, or the refutes below are asserting
+      # about an empty string.
+      assert log =~ "/sso/callback"
       refute log =~ state
       refute log =~ code
     end
@@ -728,6 +769,37 @@ defmodule HexpmWeb.SSOControllerTest do
 
       assert response(conn, 429) =~ "Too many SSO login attempts"
       refute Repo.exists?(SSO.Transaction)
+    end
+
+    test "rate limits starts per organization without locking out another IP", context do
+      ip = {198, 51, 100, 44}
+      time = System.system_time(:millisecond)
+
+      for _attempt <- 1..20 do
+        assert {:allow, _data} =
+                 Attack.sso_start_organization_throttle(context.organization.id, ip, time: time)
+      end
+
+      conn =
+        build_conn()
+        |> Map.put(:remote_ip, ip)
+        |> test_login(context.member)
+        |> get("/sso/org/#{context.organization.name}")
+
+      assert response(conn, 429) =~ "Too many SSO login attempts"
+      refute Repo.exists?(SSO.Transaction)
+
+      # The counter is per organization and IP, so exhausting one IP must not
+      # keep the rest of the organization out.
+      expect_authorization_request(context.connection)
+
+      conn =
+        build_conn()
+        |> Map.put(:remote_ip, {198, 51, 100, 45})
+        |> test_login(context.member)
+        |> get("/sso/org/#{context.organization.name}")
+
+      assert redirected_to(conn) =~ "https://identity.example.com/authorize"
     end
 
     test "rate limits callbacks before state lookup or token exchange" do

@@ -385,6 +385,10 @@ defmodule HexpmWeb.ControllerHelpers do
   def sso_link_error_message({:identity_conflict, _changeset}),
     do: "That SSO identity or Hexpm account is already linked."
 
+  def sso_link_error_message(:session_user_mismatch),
+    do:
+      "That SSO authentication belongs to a different Hexpm account. Sign in as that account and start SSO again."
+
   def sso_link_error_message(_reason),
     do:
       "The SSO account-link request is no longer valid. You are signed in, but no SSO identity was connected."

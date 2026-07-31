@@ -160,14 +160,6 @@ defmodule Hexpm.Emails do
     |> render_body(:organization_invite)
   end
 
-  def sso_identity_linked(organization, user) do
-    sso_identity_linked(
-      organization.name,
-      user.username,
-      Enum.map(account_emails(user), &recipient_email/1)
-    )
-  end
-
   def sso_identity_linked(organization, username, recipients) do
     base_email()
     |> email_to(recipients)
@@ -177,14 +169,6 @@ defmodule Hexpm.Emails do
     |> render_body(:sso_identity_linked)
   end
 
-  def sso_identity_unlinked(organization, user) do
-    sso_identity_unlinked(
-      organization.name,
-      user.username,
-      Enum.map(account_emails(user), &recipient_email/1)
-    )
-  end
-
   def sso_identity_unlinked(organization, username, recipients) do
     base_email()
     |> email_to(recipients)
@@ -192,15 +176,6 @@ defmodule Hexpm.Emails do
     |> assign(:organization, organization)
     |> assign(:username, username)
     |> render_body(:sso_identity_unlinked)
-  end
-
-  def sso_email_mismatch(organization, user, provider_email) do
-    sso_email_mismatch(
-      organization.name,
-      user.username,
-      Enum.map(account_emails(user), &recipient_email/1),
-      provider_email
-    )
   end
 
   def sso_email_mismatch(organization, username, recipients, provider_email) do
@@ -313,14 +288,6 @@ defmodule Hexpm.Emails do
     else
       admins
     end
-  end
-
-  defp account_emails(%User{emails: %Ecto.Association.NotLoaded{}} = user), do: [user]
-
-  defp account_emails(%User{emails: emails} = user) do
-    emails
-    |> Enum.filter(&(&1.primary and &1.verified))
-    |> Enum.map(&%{&1 | user: user})
   end
 
   defp display_name(%User{username: username}), do: username

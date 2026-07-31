@@ -2,8 +2,6 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
   use HexpmWeb.ConnCase
   use Oban.Testing, repo: Hexpm.RepoBase
 
-  import ExUnit.CaptureLog
-
   alias Hexpm.Accounts.{AuditLogs, SSO}
   alias Hexpm.Accounts.SSO.{Connection, Error, OIDC}
   alias Hexpm.Emails.{OutboxEntry, OutboxWorker}
@@ -207,7 +205,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     expect(OIDC.Mock, :discover, fn issuer -> {:ok, metadata(issuer)} end)
 
     log =
-      capture_log([level: :debug], fn ->
+      capture_debug_log(fn ->
         build_conn()
         |> test_login(context.admin)
         |> post("/dashboard/orgs/#{context.organization.name}/sso", %{
@@ -220,6 +218,9 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
         |> response(302)
       end)
 
+    # Something has to have been logged, or the refute below is asserting about
+    # an empty string.
+    assert log =~ "organization_sso_connections"
     refute log =~ client_secret
   end
 
