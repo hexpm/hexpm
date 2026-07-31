@@ -168,13 +168,15 @@ defmodule HexpmWeb.Plugs do
          auth_credential: auth_credential,
          user: user,
          organization: organization,
-         email: email
+         email: email,
+         trusted_publisher: trusted_publisher
        }} ->
         conn
         |> assign(:auth_credential, auth_credential)
         |> assign(:current_user, user)
         |> assign(:current_organization, organization)
         |> assign(:email, email)
+        |> assign(:trusted_publisher, trusted_publisher)
 
       {:error, :missing} ->
         conn
@@ -182,6 +184,7 @@ defmodule HexpmWeb.Plugs do
         |> assign(:current_user, nil)
         |> assign(:current_organization, nil)
         |> assign(:email, nil)
+        |> assign(:trusted_publisher, nil)
 
       {:error, _} = error ->
         HexpmWeb.AuthHelpers.error(conn, error)
