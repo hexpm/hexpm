@@ -338,16 +338,29 @@ defmodule HexpmWeb.PreviewLiveTest do
 
     assert has_element?(direct_view, "h2", "shared.ex")
 
-    conn = get(conn, "/packages/versioned_preview/2.0.0/files/lib/shared.ex?fallback=default")
+    # A release without the file sends the request to the file it does show,
+    # rather than answering under a path it does not have.
+    redirected =
+      get(conn, "/packages/versioned_preview/2.0.0/files/lib/shared.ex?fallback=default")
 
-    assert html_response(conn, 200) =~
-             HexpmWeb.Endpoint.url() <>
-               ~s(/packages/versioned_preview/2.0.0/files/README.md" rel="canonical")
+    assert redirected_to(redirected) ==
+             "/packages/versioned_preview/2.0.0/files/README.md"
 
-    {:ok, fallback_view, _html} = live(conn)
+    assert {:error, {:redirect, %{to: "/packages/versioned_preview/2.0.0/files/README.md"}}} =
+             live(conn, "/packages/versioned_preview/2.0.0/files/lib/shared.ex?fallback=default")
 
-    assert has_element?(fallback_view, "h2", "README.md")
+    # Any path the release does not have lands on that same page, so following
+    # the picker never opens a page per path.
+    assert redirected_to(
+             get(conn, "/packages/versioned_preview/2.0.0/files/made/up/path.ex?fallback=default")
+           ) == "/packages/versioned_preview/2.0.0/files/README.md"
 
+    # Without the parameter the path is simply not found.
+    assert_raise HexpmWeb.PreviewLive.NotFoundError, fn ->
+      get(conn, "/packages/versioned_preview/2.0.0/files/made/up/path.ex")
+    end
+
+    # An already connected view patches in place instead of reloading.
     render_patch(view, "/packages/versioned_preview/2.0.0/files/lib/shared.ex?fallback=default")
     assert_patch(view, "/packages/versioned_preview/2.0.0/files/README.md")
     assert has_element?(view, "h2", "README.md")
