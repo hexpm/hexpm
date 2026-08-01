@@ -83,13 +83,20 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
     Logger.info("[task] Purged #{count} expired device codes")
   end
 
+  # A row has a reachable refresh token iff refresh_jti is set, since that is
+  # what refresh lookups resolve by, and every path that sets it also sets
+  # refresh_token_expires_at. The row is unreachable once both timestamps have
+  # passed, not once the access token alone has.
   defp purge_oauth_tokens(repo, batch_size) do
     count =
       delete_in_batches(
         repo,
         Hexpm.OAuth.Token,
         from(t in Hexpm.OAuth.Token,
-          where: t.expires_at < fragment("NOW()") or not is_nil(t.revoked_at),
+          where:
+            (t.expires_at < fragment("NOW()") and
+               (is_nil(t.refresh_jti) or t.refresh_token_expires_at < fragment("NOW()"))) or
+              not is_nil(t.revoked_at),
           order_by: t.expires_at
         ),
         batch_size

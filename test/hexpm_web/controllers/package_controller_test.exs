@@ -226,6 +226,17 @@ defmodule HexpmWeb.PackageControllerTest do
   end
 
   describe "GET /packages/:name" do
+    test "banners the release on screen when an advisory affects it", %{package1: package1} do
+      advise(package1, "GHSA-current-release", "0.0.2")
+
+      # 0.0.2 is the latest stable, so it is what the package page opens on.
+      assert response(get(build_conn(), "/packages/#{package1.name}"), 200) =~
+               "This version has known vulnerabilities"
+
+      refute response(get(build_conn(), "/packages/#{package1.name}/0.0.1"), 200) =~
+               "This version has known vulnerabilities"
+    end
+
     test "show package", %{package1: package1} do
       conn = get(build_conn(), "/packages/#{package1.name}")
       html = response(conn, 200)
@@ -556,6 +567,16 @@ defmodule HexpmWeb.PackageControllerTest do
       assert response(conn, 404)
     end
 
+    test "marks the versions an advisory affects", %{package1: package1, package2: package2} do
+      advise(package1, "GHSA-versions-page", "0.0.1")
+
+      assert response(get(build_conn(), "/packages/#{package1.name}/versions"), 200) =~
+               "Vulnerable"
+
+      refute response(get(build_conn(), "/packages/#{package2.name}/versions"), 200) =~
+               "Vulnerable"
+    end
+
     test "returns 404 for private package without auth", %{
       package3: package3,
       repository1: repository1
@@ -858,6 +879,24 @@ defmodule HexpmWeb.PackageControllerTest do
   defp escape(html) do
     {:safe, safe} = Phoenix.HTML.html_escape(html)
     IO.iodata_to_binary(safe)
+  end
+
+  defp advise(package, id, version) do
+    record = %{
+      id: id,
+      summary: "summary",
+      aliases: [],
+      published_at: ~U[2024-01-01 00:00:00Z],
+      modified_at: ~U[2024-01-01 00:00:00Z],
+      withdrawn_at: nil,
+      cvss_vector: nil,
+      cvss_score: nil,
+      cvss_rating: nil,
+      references: [],
+      affected: [%{package: package.name, requirements: [], versions: [version]}]
+    }
+
+    {:ok, _} = Hexpm.Security.Advisories.upsert([record], %{package.name => package.id})
   end
 
   defp add_dependant(package, name) do

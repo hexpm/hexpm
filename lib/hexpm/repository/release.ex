@@ -238,29 +238,23 @@ defmodule Hexpm.Repository.Release do
   defp to_version(version) when is_binary(version), do: Version.parse!(version)
 
   def all(package) do
-    package
-    |> assoc(:releases)
-    |> with_vulnerable()
+    assoc(package, :releases)
   end
 
   def sort(releases) do
     Enum.sort(releases, &(Version.compare(&1.version, &2.version) == :gt))
   end
 
-  def with_vulnerable(query) do
-    from(release in query,
-      as: :release,
-      select_merge: %{
-        vulnerable?:
-          exists(
-            from(saar in "security_advisory_affected_releases",
-              join: a in Hexpm.Security.Advisory,
-              on: a.id == saar.advisory_id,
-              where: saar.release_id == parent_as(:release).id and is_nil(a.withdrawn_at),
-              select: 1
-            )
-          )
-      }
+  @doc """
+  The ids, among the given ones, that a published advisory affects.
+  """
+  def vulnerable_ids(release_ids) do
+    from(saar in "security_advisory_affected_releases",
+      join: a in Hexpm.Security.Advisory,
+      on: a.id == saar.advisory_id,
+      where: saar.release_id in ^release_ids and is_nil(a.withdrawn_at),
+      distinct: true,
+      select: saar.release_id
     )
   end
 

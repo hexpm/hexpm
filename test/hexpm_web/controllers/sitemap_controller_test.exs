@@ -76,6 +76,10 @@ defmodule HexpmWeb.SitemapControllerTest do
     assert body =~ "docs/a%20%26%20%23%3C.html"
     refute body =~ "docs/a & #<.html"
     assert get_resp_header(conn, "cache-control") == ["public, max-age=300"]
+
+    # The URLs pin a version, so their contents never change.
+    assert body =~ "<changefreq>yearly</changefreq>"
+    refute body =~ "<changefreq>daily</changefreq>"
   end
 
   test "GET /preview/:package/sitemap.xml returns 404 without Preview files", %{package: package} do

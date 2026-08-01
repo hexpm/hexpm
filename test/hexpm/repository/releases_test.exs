@@ -64,6 +64,79 @@ defmodule Hexpm.Repository.ReleasesTest do
     end
   end
 
+  describe "mark_vulnerable/1" do
+    setup do
+      package = insert(:package, name: "advised")
+      affected = insert(:release, package: package, version: "1.0.0")
+      unaffected = insert(:release, package: package, version: "1.0.1")
+      withdrawn = insert(:release, package: package, version: "1.0.2")
+
+      # One upsert for both: it treats an advisory missing from the records it
+      # is given as gone from the feed and deletes it.
+      advise(package, [
+        {"GHSA-published", "1.0.0", nil},
+        {"GHSA-withdrawn", "1.0.2", ~U[2024-01-01 00:00:00Z]}
+      ])
+
+      %{package: package, affected: affected, unaffected: unaffected, withdrawn: withdrawn}
+    end
+
+    test "flags the releases a published advisory affects", %{
+      package: package,
+      affected: affected,
+      unaffected: unaffected
+    } do
+      flags = vulnerable_by_id(package)
+
+      assert flags[affected.id]
+      refute flags[unaffected.id]
+    end
+
+    test "leaves a release only a withdrawn advisory affects alone", %{
+      package: package,
+      withdrawn: withdrawn
+    } do
+      refute vulnerable_by_id(package)[withdrawn.id]
+    end
+
+    test "all/1 on its own reports nothing vulnerable", %{
+      package: package,
+      affected: affected
+    } do
+      release = Enum.find(Releases.all(package), &(&1.id == affected.id))
+
+      refute release.vulnerable?
+    end
+  end
+
+  defp vulnerable_by_id(package) do
+    package
+    |> Releases.all()
+    |> Releases.mark_vulnerable()
+    |> Map.new(&{&1.id, &1.vulnerable?})
+  end
+
+  defp advise(package, advisories) do
+    records =
+      Enum.map(advisories, fn {id, version, withdrawn_at} ->
+        %{
+          id: id,
+          summary: "summary",
+          aliases: [],
+          published_at: ~U[2024-01-01 00:00:00Z],
+          modified_at: ~U[2024-01-01 00:00:00Z],
+          withdrawn_at: withdrawn_at,
+          cvss_vector: nil,
+          cvss_score: nil,
+          cvss_rating: nil,
+          references: [],
+          affected: [%{package: package.name, requirements: [], versions: [version]}]
+        }
+      end)
+
+    {:ok, _} = Hexpm.Security.Advisories.upsert(records, %{package.name => package.id})
+  end
+
   describe "latest_version/3" do
     test "prefers stable releases and falls back to prereleases" do
       stable_package = insert(:package, name: "stable_preview")

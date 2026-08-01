@@ -1,6 +1,8 @@
 defmodule Hexpm.Preview.Sitemaps do
   require EEx
 
+  # These URLs pin a version, so a file's contents never change once it is
+  # published and there is nothing for a crawler to come back for.
   package_template = ~S"""
   <?xml version="1.0" encoding="utf-8"?>
   <urlset
@@ -11,7 +13,7 @@ defmodule Hexpm.Preview.Sitemaps do
     <url>
       <loc><%= xml_escape(preview_url <> "/packages/" <> encode_path(package) <> "/" <> encode_path(version) <> "/files/" <> encode_path(file)) %></loc>
       <lastmod><%= format_datetime(updated_at) %></lastmod>
-      <changefreq>daily</changefreq>
+      <changefreq>yearly</changefreq>
       <priority>0.8</priority>
     </url>
   <% end %>

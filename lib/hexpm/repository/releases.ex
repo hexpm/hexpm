@@ -11,6 +11,30 @@ defmodule Hexpm.Repository.Releases do
     |> Release.sort()
   end
 
+  @doc """
+  Sets `vulnerable?` on the given releases.
+
+  Only the pages that display the flag call this, and only for the releases they
+  display. Asking per release inside the query that loads them costs an index
+  probe each, which is most of that query's work and answers no for all but one
+  release in a hundred.
+  """
+  def mark_vulnerable([]), do: []
+
+  def mark_vulnerable(releases) do
+    vulnerable =
+      releases
+      |> Enum.map(& &1.id)
+      |> Release.vulnerable_ids()
+      |> Repo.all()
+      |> MapSet.new()
+
+    Enum.map(releases, &%{&1 | vulnerable?: MapSet.member?(vulnerable, &1.id)})
+  end
+
+  def mark_vulnerable_one(nil), do: nil
+  def mark_vulnerable_one(release), do: hd(mark_vulnerable([release]))
+
   def count() do
     Repo.one!(Release.count())
   end
