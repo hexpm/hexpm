@@ -39,15 +39,11 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
 
   @doc false
   def mint_success_tags(metadata) do
-    %{provider: stringify(Map.get(metadata, :provider, "unknown"))}
+    %{provider: Map.get(metadata, :provider, "unknown")}
   end
 
   @doc false
   def mint_failure_tags(metadata) do
-    %{reason: stringify(Map.get(metadata, :reason, "unknown"))}
+    %{reason: Map.get(metadata, :reason, "unknown")}
   end
-
-  defp stringify(value) when is_atom(value), do: Atom.to_string(value)
-  defp stringify(value) when is_binary(value), do: value
-  defp stringify(_value), do: "unknown"
 end

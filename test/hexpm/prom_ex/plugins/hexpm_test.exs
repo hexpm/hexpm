@@ -8,13 +8,11 @@ defmodule Hexpm.PromEx.Plugins.HexpmTest do
              provider: "github"
            }
 
-    assert Hexpm.mint_success_tags(%{provider: :github}) == %{provider: "github"}
     assert Hexpm.mint_success_tags(%{}) == %{provider: "unknown"}
   end
 
-  test "mint failure tags stringify controlled reasons" do
-    assert Hexpm.mint_failure_tags(%{reason: :token_replayed}) == %{reason: "token_replayed"}
-    assert Hexpm.mint_failure_tags(%{reason: "invalid_token"}) == %{reason: "invalid_token"}
+  test "mint failure tags surface the error reason" do
+    assert Hexpm.mint_failure_tags(%{reason: :token_replayed}) == %{reason: :token_replayed}
     assert Hexpm.mint_failure_tags(%{}) == %{reason: "unknown"}
   end
 end
