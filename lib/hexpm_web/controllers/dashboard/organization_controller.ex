@@ -96,32 +96,28 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     username = params["username"]
 
     access_organization(conn, organization, "admin", fn organization ->
-      user_count = Organizations.user_count(organization)
-      customer = Hexpm.Billing.get(organization.name)
+      if user = Users.public_get(username, [:emails]) do
+        case Organizations.add_member(organization, user, params, audit: audit_data(conn)) do
+          {:ok, _} ->
+            conn
+            |> put_flash(:info, "User #{username} has been added to the organization.")
+            |> redirect(to: ~p"/dashboard/orgs/#{organization}/members")
 
-      if !customer["subscription"] || customer["quantity"] > user_count do
-        if user = Users.public_get(username, [:emails]) do
-          case Organizations.add_member(organization, user, params, audit: audit_data(conn)) do
-            {:ok, _} ->
-              conn
-              |> put_flash(:info, "User #{username} has been added to the organization.")
-              |> redirect(to: ~p"/dashboard/orgs/#{organization}/members")
+          {:error, :seats_exhausted} ->
+            conn
+            |> put_status(400)
+            |> put_flash(:error, "Not enough seats in organization to add member.")
+            |> render_index(organization, tab: :members)
 
-            {:error, changeset} ->
-              conn
-              |> put_status(400)
-              |> render_index(organization, tab: :members, add_member_changeset: changeset)
-          end
-        else
-          conn
-          |> put_status(400)
-          |> put_flash(:error, "Unknown user #{username}.")
-          |> render_index(organization, tab: :members)
+          {:error, changeset} ->
+            conn
+            |> put_status(400)
+            |> render_index(organization, tab: :members, add_member_changeset: changeset)
         end
       else
         conn
         |> put_status(400)
-        |> put_flash(:error, "Not enough seats in organization to add member.")
+        |> put_flash(:error, "Unknown user #{username}.")
         |> render_index(organization, tab: :members)
       end
     end)
@@ -561,16 +557,14 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   def create_billing(conn, %{"dashboard_org" => organization} = params) do
     access_organization(conn, organization, "admin", fn organization ->
-      user_count = Organizations.user_count(organization)
-
-      params =
-        params
-        |> Map.put("token", organization.name)
-        |> Map.put("quantity", user_count)
-
+      params = Map.put(params, "token", organization.name)
       audit = %{audit_data: audit_data(conn), organization: organization}
 
-      update_billing(conn, organization, params, &Hexpm.Billing.create(&1, audit: audit))
+      update_billing(conn, organization, params, fn customer_params ->
+        Seats.update_quantity(organization, :member_count, fn quantity ->
+          Hexpm.Billing.create(Map.put(customer_params, "quantity", quantity), audit: audit)
+        end)
+      end)
     end)
   end
 
@@ -586,42 +580,44 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         |> put_flash(:error, "Invalid seat numbers.")
         |> redirect(to: ~p"/dashboard/orgs/#{organization}/billing")
       else
-        user_count = Organizations.user_count(organization)
+        audit = %{audit_data: audit_data(conn), organization: organization}
         seats = current_seats + add_seats_val
 
-        if seats >= user_count do
-          audit = %{audit_data: audit_data(conn), organization: organization}
-          billing_params = %{"quantity" => seats, "nonce" => params["nonce"]}
+        result =
+          Seats.update_quantity(organization, seats, fn quantity ->
+            billing_params = %{"quantity" => quantity, "nonce" => params["nonce"]}
+            Hexpm.Billing.update(organization.name, billing_params, audit: audit)
+          end)
 
-          case Hexpm.Billing.update(organization.name, billing_params, audit: audit) do
-            {:ok, _customer} ->
-              conn
-              |> put_flash(:info, "The number of open seats have been increased.")
-              |> redirect(to: ~p"/dashboard/orgs/#{organization}/billing")
+        case result do
+          {:ok, _customer} ->
+            conn
+            |> put_flash(:info, "The number of open seats have been increased.")
+            |> redirect(to: ~p"/dashboard/orgs/#{organization}/billing")
 
-            {:requires_action, body} ->
-              conn
-              |> put_resp_content_type("application/json")
-              |> send_resp(
-                402,
-                JSON.encode!(%{
-                  requires_action: true,
-                  client_secret: body["client_secret"],
-                  invoice_id: body["invoice_id"],
-                  stripe_publishable_key: body["stripe_publishable_key"]
-                })
-              )
+          {:requires_action, body} ->
+            conn
+            |> put_resp_content_type("application/json")
+            |> send_resp(
+              402,
+              JSON.encode!(%{
+                requires_action: true,
+                client_secret: body["client_secret"],
+                invoice_id: body["invoice_id"],
+                stripe_publishable_key: body["stripe_publishable_key"]
+              })
+            )
 
-            {:error, reason} ->
-              conn
-              |> put_flash(:error, reason["errors"] || "Failed to update billing information.")
-              |> redirect(to: ~p"/dashboard/orgs/#{organization}/billing")
-          end
-        else
-          conn
-          |> put_status(400)
-          |> put_flash(:error, @not_enough_seats)
-          |> render_index(organization, tab: :billing)
+          {:error, {:seats_below_members, _used}} ->
+            conn
+            |> put_status(400)
+            |> put_flash(:error, @not_enough_seats)
+            |> render_index(organization, tab: :billing)
+
+          {:error, reason} ->
+            conn
+            |> put_flash(:error, reason["errors"] || "Failed to update billing information.")
+            |> redirect(to: ~p"/dashboard/orgs/#{organization}/billing")
         end
       end
     end)
@@ -636,27 +632,29 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         |> put_flash(:error, "Invalid seat number.")
         |> redirect(to: ~p"/dashboard/orgs/#{organization}/billing")
       else
-        user_count = Organizations.user_count(organization)
+        audit = %{audit_data: audit_data(conn), organization: organization}
 
-        if seats >= user_count do
-          audit = %{audit_data: audit_data(conn), organization: organization}
+        result =
+          Seats.update_quantity(organization, seats, fn quantity ->
+            Hexpm.Billing.update(organization.name, %{"quantity" => quantity}, audit: audit)
+          end)
 
-          case Hexpm.Billing.update(organization.name, %{"quantity" => seats}, audit: audit) do
-            {:ok, _customer} ->
-              conn
-              |> put_flash(:info, "The number of open seats have been reduced.")
-              |> redirect(to: ~p"/dashboard/orgs/#{organization}/billing")
+        case result do
+          {:ok, _customer} ->
+            conn
+            |> put_flash(:info, "The number of open seats have been reduced.")
+            |> redirect(to: ~p"/dashboard/orgs/#{organization}/billing")
 
-            {:error, reason} ->
-              conn
-              |> put_flash(:error, reason["errors"] || "Failed to update billing information.")
-              |> redirect(to: ~p"/dashboard/orgs/#{organization}/billing")
-          end
-        else
-          conn
-          |> put_status(400)
-          |> put_flash(:error, @not_enough_seats)
-          |> render_index(organization, tab: :billing)
+          {:error, {:seats_below_members, _used}} ->
+            conn
+            |> put_status(400)
+            |> put_flash(:error, @not_enough_seats)
+            |> render_index(organization, tab: :billing)
+
+          {:error, reason} ->
+            conn
+            |> put_flash(:error, reason["errors"] || "Failed to update billing information.")
+            |> redirect(to: ~p"/dashboard/orgs/#{organization}/billing")
         end
       end
     end)

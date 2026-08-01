@@ -408,6 +408,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         }
       end)
 
+      organization = seats(organization, 1)
       insert(:organization_user, organization: organization, user: user, role: "admin")
       new_user = insert(:user)
       add_email(new_user, "new@mail.com")

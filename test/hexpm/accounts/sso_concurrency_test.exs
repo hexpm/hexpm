@@ -1,18 +1,12 @@
 defmodule Hexpm.Accounts.SSOConcurrencyTest do
-  # The sandbox hands every process the same connection, so a test written
-  # against it cannot tell a lock that works from a lock that is never
-  # contended. These run unboxed on real connections and clean up after
-  # themselves.
   use Hexpm.DataCase
+  import Hexpm.ConcurrencyCase
 
-  alias Ecto.Adapters.SQL.Sandbox
-  alias Hexpm.Accounts.{AuditLog, Email, Organization, OrganizationUser, SSO, User}
-  alias Hexpm.Accounts.SSO.{Connection, Failure, Identity, OIDC, OrgSession}
-  alias Hexpm.Accounts.SSO.Transaction, as: SSOTransaction
+  alias Hexpm.Accounts.SSO
+  alias Hexpm.Accounts.SSO.{Identity, OIDC, OrgSession}
   alias Hexpm.Emails
   alias Hexpm.Emails.Outbox
   alias Hexpm.Emails.{OutboxEntry, OutboxWorker}
-  alias Hexpm.UserSession
 
   @redirect_uri "https://hex.pm/sso/callback"
 
@@ -217,69 +211,7 @@ defmodule Hexpm.Accounts.SSOConcurrencyTest do
     end)
   end
 
-  # Nothing here is rolled back, so the rows these tests commit have to be
-  # removed by hand. Anything above the high-water mark is ours; the fixtures
-  # test_helper.exs installs at id 1 sit below it and must survive.
-  @committed_schemas [
-    OrgSession,
-    Identity,
-    SSOTransaction,
-    Failure,
-    Connection,
-    OutboxEntry,
-    Oban.Job,
-    AuditLog,
-    UserSession,
-    OrganizationUser,
-    Organization,
-    Email,
-    User
-  ]
-
-  defp committed(fun) do
-    Sandbox.unboxed_run(Hexpm.RepoBase, fn ->
-      high_water_marks =
-        Map.new(@committed_schemas, fn schema ->
-          {schema, Hexpm.RepoBase.aggregate(schema, :max, :id) || 0}
-        end)
-
-      # on_exit rather than try/after: race/1 links its tasks, so a task that
-      # crashes on the regression these tests exist to catch kills the test
-      # process outright and an after block never runs. The rows are committed,
-      # so skipping cleanup once leaks them into every later run.
-      on_exit(fn ->
-        Sandbox.unboxed_run(Hexpm.RepoBase, fn -> delete_committed(high_water_marks) end)
-      end)
-
-      build_context()
-      |> Map.put(:high_water_marks, high_water_marks)
-      |> fun.()
-    end)
-  end
-
-  defp delete_committed(high_water_marks) do
-    # users and organizations reference each other, so one side has to let go
-    # before either can be deleted.
-    Hexpm.RepoBase.update_all(
-      from(user in User, where: user.id > ^Map.fetch!(high_water_marks, User)),
-      set: [organization_id: nil]
-    )
-
-    Enum.each(@committed_schemas, fn schema ->
-      Hexpm.RepoBase.delete_all(
-        from(row in schema, where: row.id > ^Map.fetch!(high_water_marks, schema))
-      )
-    end)
-  end
-
-  # Counting the whole table would fail on any row a previous run leaked or a
-  # developer's database already holds.
-  defp committed_count(context, schema) do
-    Hexpm.RepoBase.aggregate(
-      from(row in schema, where: row.id > ^Map.fetch!(context.high_water_marks, schema)),
-      :count
-    )
-  end
+  defp committed(fun), do: committed(&build_context/0, fun)
 
   defp build_context do
     organization = insert(:organization)
@@ -313,50 +245,6 @@ defmodule Hexpm.Accounts.SSOConcurrencyTest do
       other_member: other_member,
       connection: connection
     }
-  end
-
-  # Each task takes its own connection, which is the whole point: two sandbox
-  # processes share one and would serialize before reaching the lock.
-  defp unboxed_task(fun) do
-    Task.async(fn ->
-      :ok = Sandbox.checkout(Hexpm.RepoBase, sandbox: false)
-      fun.()
-    end)
-  end
-
-  defp race(count, fun) when is_integer(count) do
-    fun |> List.duplicate(count) |> race()
-  end
-
-  defp race(arguments, fun) when is_list(arguments) do
-    arguments
-    |> Enum.map(fn argument -> fn -> fun.(argument) end end)
-    |> race()
-  end
-
-  defp race(funs) when is_list(funs) do
-    parent = self()
-
-    tasks =
-      Enum.map(funs, fn fun ->
-        unboxed_task(fn ->
-          send(parent, {:ready, self()})
-
-          receive do
-            :go -> fun.()
-          end
-        end)
-      end)
-
-    for _task <- tasks do
-      # Each task checks out a real connection before reporting ready, which the
-      # 100ms default is not enough for on a loaded machine.
-      assert_receive {:ready, pid}, 15_000
-      pid
-    end
-    |> Enum.each(&send(&1, :go))
-
-    Enum.map(tasks, &Task.await(&1, 15_000))
   end
 
   defp link_identity(context, user) do

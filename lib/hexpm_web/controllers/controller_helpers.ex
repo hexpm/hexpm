@@ -601,8 +601,10 @@ defmodule HexpmWeb.ControllerHelpers do
   def safe_return_path(_), do: nil
 
   @doc """
-  Safely parses a string to integer. Returns nil for non-string or invalid input.
+  Safely parses a string to integer. Returns nil for invalid input.
   """
+  def safe_to_integer(value) when is_integer(value), do: value
+
   def safe_to_integer(value) when is_binary(value) do
     case Integer.parse(value) do
       {int, ""} -> int
