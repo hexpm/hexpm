@@ -187,6 +187,47 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
              Oidcc.discover(@issuer)
   end
 
+  test "rejects a discovery document that is not JSON" do
+    expect(Hexpm.HTTP.Mock, :get, fn _url, _headers, _opts ->
+      {:ok, 200, [{"content-type", "application/json"}], "{\"issuer\": "}
+    end)
+
+    assert {:error, %Error{stage: :discovery, code: :invalid_json}} = Oidcc.discover(@issuer)
+  end
+
+  test "rejects a discovery document served as another media type" do
+    expect(Hexpm.HTTP.Mock, :get, fn _url, _headers, _opts ->
+      {:ok, 200, [{"content-type", "text/html"}], "<html></html>"}
+    end)
+
+    assert {:error, %Error{stage: :discovery, code: :invalid_content_type}} =
+             Oidcc.discover(@issuer)
+  end
+
+  test "rejects a provider that publishes no signing keys", context do
+    expect_json_get(
+      @issuer <> "/.well-known/openid-configuration",
+      context.discovery_document
+    )
+
+    expect_json_get(@jwks_uri, %{"keys" => []})
+
+    assert {:error, %Error{stage: :jwks, code: :invalid_document}} = Oidcc.discover(@issuer)
+  end
+
+  test "reports an oversized JWKS separately from a transport failure", context do
+    expect_json_get(
+      @issuer <> "/.well-known/openid-configuration",
+      context.discovery_document
+    )
+
+    expect(Hexpm.HTTP.Mock, :get, fn @jwks_uri, _headers, _opts ->
+      {:error, :response_too_large}
+    end)
+
+    assert {:error, %Error{stage: :jwks, code: :response_too_large}} = Oidcc.discover(@issuer)
+  end
+
   test "rejects private-network issuer URLs before making a request" do
     assert {:error, %Error{stage: :url_validation, code: :private_address_not_allowed}} =
              SafeURL.validate("https://127.0.0.1/oauth2/default")
@@ -461,10 +502,16 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
       assert url == @token_endpoint
       assert {"authorization", authorization} = List.keyfind(headers, "authorization", 0)
       assert String.starts_with?(authorization, "Basic ")
-      refute Map.has_key?(body, "client_secret")
-      assert body["code"] == "authorization-code"
-      assert body["code_verifier"] == context.transaction.code_verifier
-      assert body["redirect_uri"] == context.transaction.redirect_uri
+
+      assert List.keyfind(headers, "content-type", 0) ==
+               {"content-type", "application/x-www-form-urlencoded"}
+
+      params = URI.decode_query(body)
+      refute Map.has_key?(params, "client_secret")
+      assert params["grant_type"] == "authorization_code"
+      assert params["code"] == "authorization-code"
+      assert params["code_verifier"] == context.transaction.code_verifier
+      assert params["redirect_uri"] == context.transaction.redirect_uri
       assert opts[:decode_body] == false
 
       {:ok, 200, [{"content-type", "application/json"}], JSON.encode!(%{"id_token" => id_token})}
@@ -562,6 +609,53 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
     assert claims.subject == "00u123"
     assert claims.jwks_document == refreshed_jwks
     assert %DateTime{} = claims.jwks_expires_at
+  end
+
+  test "separates an unreachable token endpoint from an invalid ID token", context do
+    expect(Hexpm.HTTP.Mock, :post, fn _url, _headers, _body, _opts ->
+      {:error, %Mint.TransportError{reason: :timeout}}
+    end)
+
+    assert {:error, %Error{stage: :token, code: :token_endpoint_unavailable}} =
+             Oidcc.exchange_code(
+               context.connection,
+               context.transaction,
+               "authorization-code",
+               context.transaction.redirect_uri,
+               context.connection.client_secret
+             )
+  end
+
+  test "rejects a token response that the provider refused", context do
+    expect(Hexpm.HTTP.Mock, :post, fn _url, _headers, _body, _opts ->
+      {:ok, 400, [{"content-type", "application/json"}],
+       JSON.encode!(%{"error" => "invalid_grant"})}
+    end)
+
+    assert {:error, %Error{stage: :token, code: :token_endpoint_rejected_request}} =
+             Oidcc.exchange_code(
+               context.connection,
+               context.transaction,
+               "authorization-code",
+               context.transaction.redirect_uri,
+               context.connection.client_secret
+             )
+  end
+
+  test "rejects a token response without an ID token", context do
+    expect(Hexpm.HTTP.Mock, :post, fn _url, _headers, _body, _opts ->
+      {:ok, 200, [{"content-type", "application/json"}],
+       JSON.encode!(%{"access_token" => "opaque", "token_type" => "Bearer"})}
+    end)
+
+    assert {:error, %Error{stage: :token, code: :id_token_missing}} =
+             Oidcc.exchange_code(
+               context.connection,
+               context.transaction,
+               "authorization-code",
+               context.transaction.redirect_uri,
+               context.connection.client_secret
+             )
   end
 
   test "rejects an ID token issued for another audience", context do
