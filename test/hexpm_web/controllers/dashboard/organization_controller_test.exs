@@ -2,7 +2,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
   use HexpmWeb.ConnCase, async: true
   import Swoosh.TestAssertions
 
-  alias Hexpm.Accounts.{Organizations, Users, AuditLogs}
+  alias Hexpm.Accounts.{AuditLogs, OrganizationInvitations, Organizations, Users}
 
   defp add_email(user, email) do
     {:ok, user} = Users.add_email(user, %{email: email}, audit: audit_data(user))
@@ -428,6 +428,104 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
                "Not enough seats in organization to add member."
 
       assert active_org_tab(html) == "Members"
+    end
+
+    test "invite by email", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      mock_customer(organization)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}", %{
+          "action" => "invite_member",
+          "organization_invitation" => %{"email" => "newcomer@example.com", "role" => "write"}
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}/members"
+
+      assert [invitation] = OrganizationInvitations.all_pending(organization)
+      assert invitation.email == "newcomer@example.com"
+      assert invitation.role == "write"
+      assert_email_sent(fn email -> email.to == [{"", "newcomer@example.com"}] end)
+    end
+
+    test "inviting an address that already belongs to a member is refused", %{
+      user: user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      email = Repo.preload(user, :emails).emails |> hd() |> Map.fetch!(:email)
+      mock_customer(organization)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}", %{
+          "action" => "invite_member",
+          "organization_invitation" => %{"email" => email, "role" => "read"}
+        })
+
+      assert html_response(conn, 400)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "That address already belongs to a member of this organization."
+
+      assert OrganizationInvitations.all_pending(organization) == []
+    end
+
+    test "revoke a pending invitation", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      mock_customer(organization)
+
+      {:ok, invitation} =
+        OrganizationInvitations.invite(
+          organization,
+          %{"email" => "newcomer@example.com", "role" => "read"},
+          user,
+          audit: audit_data(user)
+        )
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}", %{
+          "action" => "revoke_invitation",
+          "organization_invitation" => %{"id" => to_string(invitation.id)}
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}/members"
+      assert OrganizationInvitations.all_pending(organization) == []
+      refute OrganizationInvitations.get_pending_by_token(invitation.raw_token)
+    end
+
+    test "cannot touch an invitation belonging to another organization", %{
+      user: user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      other = insert(:organization)
+      insert(:organization_user, organization: other, user: user, role: "admin")
+      mock_customer(organization)
+
+      {:ok, invitation} =
+        OrganizationInvitations.invite(
+          other,
+          %{"email" => "newcomer@example.com", "role" => "read"},
+          user,
+          audit: audit_data(user)
+        )
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}", %{
+          "action" => "revoke_invitation",
+          "organization_invitation" => %{"id" => to_string(invitation.id)}
+        })
+
+      assert html_response(conn, 400)
+      assert [_invitation] = OrganizationInvitations.all_pending(other)
     end
 
     test "remove member from organization", %{user: user, organization: organization} do

@@ -1,0 +1,28 @@
+<.auth_layout
+  title="Organization invitation"
+  subtitle={"Join #{@invitation.organization.name} on Hex.pm"}
+  show_oauth={false}
+>
+  <div class="space-y-5 text-sm text-grey-700 dark:text-grey-200">
+    <p>
+      You have been invited to join <strong>{@invitation.organization.name}</strong>
+      as {@invitation.role}.
+    </p>
+    <p>
+      Accepting adds <strong>{@current_user.username}</strong>, the account you are signed in as, to the
+      organization and takes one of its seats. If that is not the account you want to join with, sign in
+      as the other one and follow the link again.
+    </p>
+  </div>
+
+  <div :if={@token} class="mt-8 flex gap-3">
+    <.form for={%{}} action={~p"/invites/#{@token}"} class="flex-1">
+      <.button type="submit" variant="primary" full_width>
+        Join {@invitation.organization.name}
+      </.button>
+    </.form>
+    <.link href={~p"/dashboard"} class="flex-1">
+      <.button type="button" variant="secondary" full_width>Not now</.button>
+    </.link>
+  </div>
+</.auth_layout>

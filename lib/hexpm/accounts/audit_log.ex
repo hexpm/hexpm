@@ -252,6 +252,18 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("organization.member.role", {organization, user, role}),
     do: %{organization: serialize(organization), user: serialize(user), role: role}
 
+  defp extract_params(action, {organization, %OrganizationInvitation{} = invitation})
+       when action in [
+              "organization.invitation.create",
+              "organization.invitation.accept",
+              "organization.invitation.revoke"
+            ] do
+    %{
+      organization: serialize(organization),
+      invitation: %{id: invitation.id, email: invitation.email, role: invitation.role}
+    }
+  end
+
   defp extract_params(action, {organization, params})
        when action in [
               "sso.connection.configure",

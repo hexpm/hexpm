@@ -184,6 +184,58 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end)
   end
 
+  def update(conn, %{
+        "dashboard_org" => organization,
+        "action" => "invite_member",
+        "organization_invitation" => params
+      }) do
+    access_organization(conn, organization, "admin", fn organization ->
+      case OrganizationInvitations.invite(organization, params, conn.assigns.current_user,
+             audit: audit_data(conn)
+           ) do
+        {:ok, invitation} ->
+          conn
+          |> put_flash(:info, "An invitation has been sent to #{invitation.email}.")
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}/members")
+
+        {:error, :already_member} ->
+          conn
+          |> put_status(400)
+          |> put_flash(:error, "That address already belongs to a member of this organization.")
+          |> render_index(organization, tab: :members)
+
+        {:error, changeset} ->
+          conn
+          |> put_status(400)
+          |> render_index(organization, tab: :members, invite_changeset: changeset)
+      end
+    end)
+  end
+
+  def update(conn, %{
+        "dashboard_org" => organization,
+        "action" => "revoke_invitation",
+        "organization_invitation" => %{"id" => id}
+      }) do
+    access_organization(conn, organization, "admin", fn organization ->
+      case OrganizationInvitations.get_pending(organization, safe_to_integer(id) || 0) do
+        nil ->
+          conn
+          |> put_status(400)
+          |> put_flash(:error, "That invitation is no longer pending.")
+          |> render_index(organization, tab: :members)
+
+        invitation ->
+          {:ok, invitation} =
+            OrganizationInvitations.revoke(organization, invitation, audit: audit_data(conn))
+
+          conn
+          |> put_flash(:info, "The invitation for #{invitation.email} has been revoked.")
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}/members")
+      end
+    end)
+  end
+
   def audit_logs(conn, %{"dashboard_org" => organization} = params) do
     access_organization(conn, organization, "read", fn organization ->
       per_page = 20
@@ -966,7 +1018,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         policy_activity: policy_activity,
         policy_rev: policy_rev,
         sso_org_session: current_org_session(conn, organization)
-      ] ++ sso_assigns(organization, opts[:tab])
+      ] ++
+        sso_assigns(organization, opts[:tab]) ++
+        member_assigns(organization, opts[:tab], opts)
 
     assigns = Keyword.merge(assigns, customer_assigns(customer, organization))
     render(conn, "index.html", assigns)
@@ -1005,6 +1059,17 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   end
 
   defp sso_assigns(_organization, _tab), do: []
+
+  defp member_assigns(organization, :members, opts) do
+    [
+      invitations: OrganizationInvitations.all_pending(organization),
+      invite_changeset: opts[:invite_changeset] || invite_changeset()
+    ]
+  end
+
+  defp member_assigns(_organization, _tab, _opts) do
+    [invitations: [], invite_changeset: invite_changeset()]
+  end
 
   defp current_org_session(conn, organization) do
     if SSO.enabled?(organization) && conn.assigns[:current_session] do
@@ -1118,6 +1183,10 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   defp add_member_changeset() do
     Organization.add_member(%OrganizationUser{}, %{"role" => "read"})
+  end
+
+  defp invite_changeset() do
+    OrganizationInvitation.changeset(%OrganizationInvitation{}, %{"role" => "read"})
   end
 
   defp create_changeset() do

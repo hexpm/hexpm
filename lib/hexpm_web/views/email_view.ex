@@ -287,6 +287,27 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
+  defmodule OrganizationInvitation do
+    def intro(organization, role) do
+      "You have been invited to join the #{organization} organization on Hex.pm as #{article(role)} #{role} member."
+    end
+
+    def sign_in_notice() do
+      "Accepting adds the Hex account you are signed in as to the organization. If you do not have one yet you can create it first, then follow the link again."
+    end
+
+    def expiry(expires_at) do
+      "This invitation expires on #{Calendar.strftime(expires_at, "%B %-d, %Y")}."
+    end
+
+    def ignore_notice() do
+      "If you were not expecting this invitation you can ignore this email and nothing will happen."
+    end
+
+    defp article("admin"), do: "an"
+    defp article(_role), do: "a"
+  end
+
   defmodule OrganizationInvite do
     def access_organization() do
       "You can access organization packages after authenticating in your shell:"

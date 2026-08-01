@@ -49,6 +49,7 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
       purge_account_deletion_requests(repo, batch_size)
       purge_sso_transactions(repo, batch_size)
       purge_sso_sessions(repo, batch_size)
+      purge_organization_invitations(repo, batch_size)
       purge_keys(repo, batch_size)
     end)
   end
@@ -201,6 +202,24 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
       )
 
     Logger.info("[task] Purged #{count} expired organization SSO sessions")
+  end
+
+  # Accepted and revoked invitations carry an expiry too, so they are collected
+  # within the week rather than needing a predicate that no index can serve.
+  # What they recorded is already in the audit log.
+  defp purge_organization_invitations(repo, batch_size) do
+    count =
+      delete_in_batches(
+        repo,
+        Hexpm.Accounts.OrganizationInvitation,
+        from(invitation in Hexpm.Accounts.OrganizationInvitation,
+          where: invitation.expires_at < fragment("NOW()"),
+          order_by: invitation.expires_at
+        ),
+        batch_size
+      )
+
+    Logger.info("[task] Purged #{count} expired organization invitations")
   end
 
   defp purge_keys(repo, batch_size) do

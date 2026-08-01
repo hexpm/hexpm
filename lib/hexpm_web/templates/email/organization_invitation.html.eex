@@ -1,0 +1,31 @@
+<%
+accept_url = url(email_uri(), ~p"/invites/#{@token}")
+%>
+
+<h1 style="color: #030913; font-size: 24px; line-height: 32px; font-weight: 600; margin: 0 0 24px 0; text-align: center;">
+  Organization Invitation
+</h1>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= OrganizationInvitation.intro(@organization, @role) %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= raw(Common.follow_link_instruction(accept_url, :html)) %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <a href="<%= accept_url %>" style="color: #0f59d8; text-decoration: none; word-break: break-all;"><%= accept_url %></a>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= OrganizationInvitation.sign_in_notice() %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= OrganizationInvitation.expiry(@expires_at) %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= OrganizationInvitation.ignore_notice() %>
+</p>

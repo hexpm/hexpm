@@ -11,6 +11,8 @@ defmodule Hexpm.Shared do
         Accounts.KeyPermission,
         Accounts.Keys,
         Accounts.Organization,
+        Accounts.OrganizationInvitation,
+        Accounts.OrganizationInvitations,
         Accounts.Organizations,
         Accounts.OrganizationUser,
         Accounts.PasswordReset,
