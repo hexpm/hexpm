@@ -8,6 +8,10 @@ defmodule Hexpm.Hexdocs do
   @special_package_names Map.keys(@special_packages)
   @gcs_put_debounce Application.compile_env!(:hexpm, :hexdocs_gcs_put_debounce)
 
+  # ExDoc marks these `noindex`, so listing them asks a crawler to fetch a page
+  # it has been told not to keep.
+  @noindex_pages ~w(404.html search.html)
+
   def upload(key) do
     {repository, package, version} = key_components!(key)
     start = System.monotonic_time(:millisecond)
@@ -163,7 +167,11 @@ defmodule Hexpm.Hexdocs do
   defp update_index_sitemap(_repository, _key), do: :ok
 
   defp update_package_sitemap("hexpm", _key, package, files) do
-    pages = for path <- files, Path.extname(path) == ".html", do: path
+    pages =
+      for path <- files,
+          Path.extname(path) == ".html",
+          path not in @noindex_pages,
+          do: path
 
     Bucket.upload_package_sitemap(
       package,

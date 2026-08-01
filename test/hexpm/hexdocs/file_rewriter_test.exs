@@ -3,30 +3,36 @@ defmodule Hexpm.Hexdocs.FileRewriterTest do
 
   alias Hexpm.Hexdocs.FileRewriter
 
-  test "adds analytics and removes noindex from HTML" do
-    rewritten =
-      FileRewriter.run(
-        "index.html",
-        ~s(<html><head><meta name="robots" content="noindex"></head></html>)
-      )
+  test "adds analytics to HTML and keeps noindex" do
+    for path <- ~w(search.html 404.html api-reference.html) do
+      rewritten =
+        FileRewriter.run(
+          path,
+          ~s(<html><head><meta name="robots" content="noindex"></head></html>)
+        )
 
-    assert rewritten =~ ~s(src="https://s.localhost/js/script.js")
-    refute rewritten =~ ~s(content="noindex")
+      assert rewritten =~ ~s(src="https://s.localhost/js/script.js")
+      assert rewritten =~ ~s(content="noindex")
+    end
   end
 
-  test "rewrites canonical package URLs to package subdomains" do
-    input =
-      ~s|<link rel="canonical" href="https://hexdocs.pm/phoenix_html/1.0.0/Phoenix.HTML.html"/>|
-
-    assert FileRewriter.run("index.html", input) ==
-             ~s|<link rel="canonical" href="https://phoenix-html.hexdocs.pm/1.0.0/Phoenix.HTML.html"/>|
+  test "removes canonical tags whatever the author pointed them at" do
+    for input <- [
+          ~s|<link rel="canonical" href="https://hexdocs.pm/phoenix_html/1.0.0/Phoenix.HTML.html"/>|,
+          ~s|<link rel="canonical" href="http://hexdocs.pm/jason/Jason.html" />|,
+          ~s|<link rel='canonical' href='https://jason.hexdocs.pm/Jason.html'>|,
+          ~s|<link\n  href="https://hexdocs.pm/jason/Jason.html"\n  rel="canonical">|
+        ] do
+      assert FileRewriter.run("index.html", ~s|<body>#{input}<p>Jason</p></body>|) ==
+               "<body><p>Jason</p></body>"
+    end
   end
 
-  test "does not rewrite body links, apex files, or existing subdomains" do
+  test "leaves other link tags and body links alone" do
     for input <- [
           ~s|<a href="https://hexdocs.pm/jason/Jason.html">Jason</a>|,
-          ~s|<link rel="canonical" href="https://hexdocs.pm/sitemap.xml"/>|,
-          ~s|<link rel="canonical" href="https://jason.hexdocs.pm/Jason.html"/>|
+          ~s|<link rel="stylesheet" href="dist/canonical-ABC123.css"/>|,
+          ~s|<link rel="icon" href="/favicon.ico">|
         ] do
       assert FileRewriter.run("index.html", input) == input
     end

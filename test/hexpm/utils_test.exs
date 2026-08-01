@@ -159,5 +159,19 @@ defmodule Hexpm.UtilsTest do
       assert Utils.docs_html_url("my_org", "secret", "/1.0.0") ==
                "http://my-org.localhost:5002/secret/1.0.0"
     end
+
+    # The docs CDN routes search.hexdocs.pm to the search backend, so the
+    # package of that name is served from the apex and nowhere else.
+    test "keeps packages named after a reserved subdomain on the apex" do
+      assert Utils.docs_html_url("hexpm", "search", "/Search.html") ==
+               "http://localhost:5002/search/Search.html"
+
+      hexpm = %Hexpm.Repository.Repository{id: 1, name: "hexpm"}
+      package = %Hexpm.Repository.Package{name: "search", repository: hexpm}
+      release = %Hexpm.Repository.Release{version: Version.parse!("0.3.0")}
+
+      assert Utils.docs_html_url(hexpm, package, release) ==
+               "http://localhost:5002/search/0.3.0/"
+    end
   end
 end

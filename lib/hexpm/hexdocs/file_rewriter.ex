@@ -6,8 +6,7 @@ defmodule Hexpm.Hexdocs.FileRewriter do
   ]
   @analytics_addition "<script async defer src=\"https://s.${DOMAIN}/js/script.js\"></script><script>window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};plausible.init({endpoint:\"https://s.${DOMAIN}/api/event\"})</script>"
   @official_domains ~w(hex.pm hexdocs.pm hexorgs.pm elixir-lang.org erlang.org)
-  @canonical_tag_re ~r{<link[^>]*\brel=["']canonical["'][^>]*>}i
-  @hexdocs_link_re ~r{https?://hexdocs\.pm/([a-z][a-z0-9_]*)(?![a-zA-Z0-9_.-])}
+  @canonical_tag_re ~r{<link[^>]*\brel=["']canonical["'][^>]*>\s*}i
   @a_tag_re ~r/<a\s[^>]*href="https?:\/\/[^"]*"[^>]*>/
   @href_re ~r/href="(https?:\/\/[^"]*)"/
 
@@ -15,8 +14,7 @@ defmodule Hexpm.Hexdocs.FileRewriter do
     content
     |> add_elixir_org_link(path)
     |> add_analytics(path)
-    |> remove_noindex(path)
-    |> rewrite_canonical_links(path)
+    |> remove_canonical_links(path)
     |> add_nofollow(path)
   end
 
@@ -27,13 +25,14 @@ defmodule Hexpm.Hexdocs.FileRewriter do
     end)
   end
 
-  defp rewrite_canonical_links(content, path) do
+  # The docs CDN sets `Link: rel="canonical"` on every page it serves, pointing
+  # at the same page under the package's unversioned subdomain. A tag left in
+  # the markup is a second answer to the same question: authors set it to a base
+  # URL of their choosing, so it can name a pinned version, the apex host, or on
+  # private docs a public hexdocs.pm URL the package does not own.
+  defp remove_canonical_links(content, path) do
     if String.ends_with?(path, ".html") do
-      Regex.replace(@canonical_tag_re, content, fn tag ->
-        Regex.replace(@hexdocs_link_re, tag, fn _match, package ->
-          "https://#{Hexpm.Utils.name_to_subdomain(package)}.hexdocs.pm"
-        end)
-      end)
+      Regex.replace(@canonical_tag_re, content, "")
     else
       content
     end
@@ -53,14 +52,6 @@ defmodule Hexpm.Hexdocs.FileRewriter do
         host = Application.fetch_env!(:hexpm, :docs_url) |> URI.parse() |> Map.fetch!(:host)
         String.replace(@analytics_addition, "${DOMAIN}", host) <> match
       end)
-    else
-      content
-    end
-  end
-
-  defp remove_noindex(content, path) do
-    if String.ends_with?(path, ".html") do
-      String.replace(content, ~s|<meta name="robots" content="noindex">|, "")
     else
       content
     end
