@@ -43,8 +43,8 @@ defmodule Hexpm.AdminTasks.Reasons do
       id: :typosquatting,
       scopes: [:package, :release, :user],
       text:
-        "The name closely imitated an existing Hex.pm package. Names chosen to " <>
-          "be mistaken for another package are not allowed."
+        "Package names chosen to be mistaken for an existing Hex.pm package are " <>
+          "not allowed."
     },
     %{
       id: :copyright,
@@ -93,17 +93,31 @@ defmodule Hexpm.AdminTasks.Reasons do
     for reason <- @reasons, scope in reason.scopes, do: {reason.id, reason.text}
   end
 
+  def all(scope), do: raise(ArgumentError, bad_scope(scope))
+
   @doc """
   Resolves a `:reason` value to the text that goes in the email.
 
   A string is its own text. An id has to be one the scope allows, and an
   unknown id is an error rather than a silent fallback: the removal tasks
   resolve the reason before they delete anything, so a typo costs nothing.
+
+  Two strings are refused rather than sent. A string that spells a known id
+  is a quoted atom, not a sentence somebody wrote: every other argument to
+  the removal tasks is a string, so `reason: "malware"` is the one mistake
+  the id lookup cannot catch, and it would otherwise be delivered as the
+  entire body of an accusation. A blank string would render a `Reason:`
+  heading with nothing under it.
   """
   @spec fetch(:package | :release | :user, atom() | String.t()) ::
-          {:ok, String.t()} | {:error, {:unknown_reason, term()}}
+          {:ok, String.t()}
+          | {:error, {:unknown_reason, term()} | {:quoted_reason_id, String.t()} | :blank_reason}
   def fetch(scope, text) when scope in @scopes and is_binary(text) do
-    {:ok, text}
+    cond do
+      String.trim(text) == "" -> {:error, :blank_reason}
+      Enum.any?(@reasons, &(Atom.to_string(&1.id) == text)) -> {:error, {:quoted_reason_id, text}}
+      true -> {:ok, text}
+    end
   end
 
   def fetch(scope, id) when scope in @scopes do
@@ -111,5 +125,11 @@ defmodule Hexpm.AdminTasks.Reasons do
       nil -> {:error, {:unknown_reason, id}}
       reason -> {:ok, reason.text}
     end
+  end
+
+  def fetch(scope, _reason), do: raise(ArgumentError, bad_scope(scope))
+
+  defp bad_scope(scope) do
+    "unknown scope #{inspect(scope)}, expected one of #{inspect(@scopes)}"
   end
 end

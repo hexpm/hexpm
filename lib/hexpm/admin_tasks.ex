@@ -55,7 +55,13 @@ defmodule Hexpm.AdminTasks do
   `remove_package/3`, `remove_release/4` and `remove_user/2` take a `:reason`
   and stay silent without one. A reason is either an id from `reasons/1` or
   your own text, and it is resolved before anything is deleted, so a
-  misremembered id fails without touching the database.
+  misremembered id fails without touching the database. `reason: "seo_spam"`
+  is refused too, since a string spelling an id is a quoted atom rather than
+  something somebody wrote.
+
+  The removal itself never depends on the mail. If the notice cannot be sent,
+  because delivery failed or because nobody reachable is left to send it to,
+  that is logged as an error and the removal still reports `:ok`.
   """
 
   use Hexpm.Context
@@ -205,14 +211,29 @@ defmodule Hexpm.AdminTasks do
       iex> AdminTasks.remove_user("spammer", reason: :spam_account)
       :ok
   """
-  @spec remove_user(String.t(), keyword()) :: :ok | {:error, term() | Ecto.Changeset.t()}
+  @spec remove_user(String.t(), keyword()) :: :ok | {:error, term()}
   def remove_user(username, opts \\ []) do
+    deleted_packages? = Keyword.get(opts, :delete_packages, false)
+
     with {:ok, user} <- find_user(username),
          {:ok, reason} <- resolve_reason(:user, opts),
          :ok <- delete_user(user, opts) do
-      notify_removal(reason, user.username, &Emails.account_removed(user, &1))
+      notify_removal(
+        reason,
+        "user #{user.username}",
+        &Emails.account_removed(verified_only(user), deleted_packages?, &1)
+      )
+
       :ok
     end
+  end
+
+  # A removal notice accuses somebody. An unverified address was never proved to
+  # belong to this account, and on an abuse removal it is as likely as not to be
+  # a bystander's, so it gets dropped and notify_removal logs that nobody was
+  # reachable.
+  defp verified_only(user) do
+    %{user | emails: Enum.filter(user.emails, & &1.verified)}
   end
 
   defp delete_user(user, opts) do
@@ -363,7 +384,7 @@ defmodule Hexpm.AdminTasks do
   def remove_package(repo, package_name, opts \\ []) do
     with {:ok, package} <- find_package(repo, package_name),
          {:ok, reason} <- resolve_reason(:package, opts) do
-      owners = owner_recipients(package)
+      owners = reason && removal_recipients(package)
 
       {:ok, {releases, package}} =
         Repo.transaction(fn ->
@@ -383,10 +404,27 @@ defmodule Hexpm.AdminTasks do
   end
 
   # Read before the package goes, otherwise there is nobody left to write to.
-  defp owner_recipients(package) do
-    assoc(package, :owners)
-    |> Repo.all()
-    |> Repo.preload([:emails, organization: [organization_users: [user: :emails]]])
+  defp removal_recipients(package) do
+    case Repo.all(assoc(package, :owners)) do
+      [] ->
+        organization_recipients(package)
+
+      owners ->
+        Repo.preload(owners, [:emails, organization: [organization_users: [user: :emails]]])
+    end
+  end
+
+  # A package published into an organization repository has no package_owners
+  # row at all: access there is decided by membership, and Package.put_first_owner
+  # only writes an owner for repository 1. Without this fallback every removal
+  # in a private repository would notify nobody.
+  defp organization_recipients(%{repository: %Repository{id: 1}}), do: []
+
+  defp organization_recipients(package) do
+    package.repository
+    |> Repo.preload(organization: [organization_users: [user: :emails]])
+    |> Map.fetch!(:organization)
+    |> List.wrap()
   end
 
   defp remove_package_db(package) do
@@ -441,7 +479,7 @@ defmodule Hexpm.AdminTasks do
     with {:ok, package} <- find_package(repo, package_name),
          {:ok, release} <- find_release(package, version),
          {:ok, reason} <- resolve_reason(:release, opts) do
-      owners = owner_recipients(package)
+      owners = reason && removal_recipients(package)
 
       Release.delete(release, force: true)
       |> Repo.delete!()
@@ -450,10 +488,12 @@ defmodule Hexpm.AdminTasks do
       RegistryBuilder.package(package)
       RegistryBuilder.repository(package.repository)
 
+      remaining = Repo.aggregate(assoc(package, :releases), :count)
+
       notify_removal(
         reason,
         "owners of #{package.name}",
-        &Emails.release_removed(owners, package.name, version, &1)
+        &Emails.release_removed(owners, package.name, version, remaining, &1)
       )
 
       :ok
@@ -479,12 +519,21 @@ defmodule Hexpm.AdminTasks do
   end
 
   # A delivery failure is logged and not raised, the deletion already happened
-  # and the caller has no way to undo it.
+  # and the caller has no way to undo it. Having nobody to write to is logged
+  # for the same reason: the removal is done either way, and an admin who asked
+  # for a reason to be sent should not have to infer from a bare :ok that it
+  # never went anywhere.
   defp notify_removal(nil, _description, _build_email), do: :ok
 
   defp notify_removal(reason, description, build_email) do
-    email = build_email.(reason)
-    if email.to != [], do: deliver(email, description)
+    case build_email.(reason) do
+      %{to: []} ->
+        Logger.error("Removed with a reason but found no address for #{description}")
+
+      email ->
+        deliver(email, description)
+    end
+
     :ok
   end
 
