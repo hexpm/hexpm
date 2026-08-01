@@ -126,32 +126,32 @@ defmodule HexpmWeb.API.TrustedPublisherController do
   # Body field "repository" means the GitHub repository and must not shadow the
   # Hex repository path/default param used by maybe_fetch_package/1.
   # Only body_params are consulted — never merged path/default params.
+  #
+  # The reset to the Hex repository must happen whenever the body carries a
+  # "repository" key at all, not only when "repository_owner" is also present —
+  # otherwise a partial body silently shadows the Hex org lookup and surfaces
+  # as an unrelated 404 instead of a validation error on the missing field.
   defp rewrite_github_repository_param(conn, _opts) do
     body = conn.body_params || %{}
 
-    github_repository =
-      cond do
-        is_binary(body["github_repository"]) and body["github_repository"] != "" ->
-          body["github_repository"]
+    if Map.has_key?(body, "repository") do
+      github_repository =
+        case body do
+          %{"github_repository" => value} when is_binary(value) and value != "" -> value
+          %{"repository" => value} when is_binary(value) -> value
+          _ -> nil
+        end
 
-        is_binary(body["repository"]) and is_binary(body["repository_owner"]) and
-            body["repository_owner"] != "" ->
-          body["repository"]
-
-        true ->
-          nil
-      end
-
-    if github_repository do
       hex_repository = Map.get(conn.path_params, "repository") || "hexpm"
 
-      %{
-        conn
-        | params:
-            conn.params
-            |> Map.put("github_repository", github_repository)
-            |> Map.put("repository", hex_repository)
-      }
+      params = Map.put(conn.params, "repository", hex_repository)
+
+      params =
+        if github_repository,
+          do: Map.put(params, "github_repository", github_repository),
+          else: params
+
+      %{conn | params: params}
     else
       conn
     end
