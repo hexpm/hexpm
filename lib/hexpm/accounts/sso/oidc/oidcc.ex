@@ -2,37 +2,36 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
   @behaviour Hexpm.Accounts.SSO.OIDC
 
   alias Hexpm.Accounts.SSO.{Connection, Error, SafeURL, Transaction}
-  alias Hexpm.Accounts.SSO.OIDC.Issuer
+  alias Hexpm.Accounts.SSO.OIDC.{HTTPAdapter, Issuer}
 
   @allowed_signing_algorithms ~w(RS256 RS384 RS512 PS256 PS384 PS512 ES256 ES384 ES512 EdDSA)
   @allowed_token_auth_methods ~w(client_secret_basic client_secret_post)
+  @preferred_token_auth_methods [:client_secret_basic, :client_secret_post]
   @fallback_cache_seconds 3_600
   @http_timeout 5_000
-  @max_response_bytes 1_000_000
   @clock_skew_seconds 60
 
   @impl true
   def discover(issuer) do
-    discovery_url = String.trim_trailing(issuer, "/") <> "/.well-known/openid-configuration"
-
-    with {:ok, _uri} <- Issuer.validate(issuer),
-         {:ok, discovery_document, discovery_expiry} <- fetch_json(discovery_url, :discovery),
-         {:ok, configuration} <- decode_configuration(discovery_document, issuer),
-         :ok <- validate_configuration(configuration),
-         {:ok, _uri} <- SafeURL.validate(configuration.authorization_endpoint),
-         {:ok, _uri} <- SafeURL.validate(configuration.token_endpoint),
-         {:ok, _uri} <- SafeURL.validate(configuration.jwks_uri),
-         {:ok, jwks_document, jwks_expiry} <- fetch_json(configuration.jwks_uri, :jwks),
-         {:ok, _jwks} <- decode_jwks(jwks_document) do
-      {:ok,
-       %{
-         discovery_document: discovery_document,
-         jwks_document: jwks_document,
-         discovery_expires_at: discovery_expiry,
-         jwks_expires_at: jwks_expiry,
-         metadata_expires_at: earliest(discovery_expiry, jwks_expiry)
-       }}
-    end
+    with_adapter(fn ref ->
+      with {:ok, _uri} <- Issuer.validate(issuer),
+           {:ok, configuration, discovery_document, discovery_expires_at} <-
+             load_configuration(issuer, ref),
+           :ok <- validate_configuration(configuration),
+           {:ok, _uri} <- SafeURL.validate(configuration.authorization_endpoint),
+           {:ok, _uri} <- SafeURL.validate(configuration.token_endpoint),
+           {:ok, _jwks, jwks_document, jwks_expires_at} <-
+             load_jwks(configuration.jwks_uri, ref) do
+        {:ok,
+         %{
+           discovery_document: discovery_document,
+           jwks_document: jwks_document,
+           discovery_expires_at: discovery_expires_at,
+           jwks_expires_at: jwks_expires_at,
+           metadata_expires_at: earliest(discovery_expires_at, jwks_expires_at)
+         }}
+      end
+    end)
   end
 
   @impl true
@@ -48,22 +47,30 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
         _other -> []
       end
 
-    with {:ok, client_context} <- client_context(connection, client_secret),
-         {:ok, uri} <-
-           Oidcc.Authorization.create_redirect_url(client_context, %{
-             redirect_uri: redirect_uri,
-             scopes: ["openid", "email"],
-             state: transaction.raw_state,
-             nonce: transaction.nonce,
-             pkce_verifier: transaction.code_verifier,
-             require_pkce: true,
-             url_extension: url_extension
-           }) do
-      {:ok, to_string(uri)}
-    else
-      {:error, %Error{} = error} -> {:error, error}
-      {:error, _reason} -> error(:authorization, :authorization_url_failed)
-    end
+    # Building the redirect URL makes no request today, because the hardened
+    # configuration has no pushed authorization endpoint and oidcc short-circuits
+    # on that. It goes through the adapter anyway: the alternative is that one
+    # struct field three functions away is what keeps this off raw httpc, which
+    # follows redirects and has no address pinning or body cap.
+    with_adapter(fn ref ->
+      with {:ok, client_context} <- client_context(connection, client_secret),
+           {:ok, uri} <-
+             Oidcc.Authorization.create_redirect_url(client_context, %{
+               redirect_uri: redirect_uri,
+               scopes: ["openid", "email"],
+               state: transaction.raw_state,
+               nonce: transaction.nonce,
+               pkce_verifier: transaction.code_verifier,
+               require_pkce: true,
+               url_extension: url_extension,
+               request_opts: HTTPAdapter.request_opts(ref, @http_timeout)
+             }) do
+        {:ok, to_string(uri)}
+      else
+        {:error, %Error{} = error} -> {:error, error}
+        {:error, _reason} -> error(:authorization, :authorization_url_failed)
+      end
+    end)
   end
 
   @impl true
@@ -74,126 +81,188 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
         redirect_uri,
         client_secret
       ) do
-    with {:ok, client_context} <- client_context(connection, client_secret),
-         {:ok, token_response} <-
-           request_token(client_context.provider_configuration, connection, code, redirect_uri,
-             code_verifier: transaction.code_verifier,
-             client_secret: client_secret
-           ),
-         {:ok, id_token} <- fetch_id_token(token_response),
-         {:ok, claims, refreshed_jwks, refreshed_jwks_expiry} <-
-           validate_id_token(id_token, client_context, transaction),
-         :ok <- validate_claims(claims, connection) do
-      {:ok,
-       %{
-         issuer: claims["iss"],
-         subject: claims["sub"],
-         email: optional_binary(claims["email"]),
-         jwks_document: refreshed_jwks,
-         jwks_expires_at: refreshed_jwks_expiry
-       }}
+    with_adapter(fn ref ->
+      with {:ok, client_context} <- client_context(connection, client_secret),
+           {:ok, claims} <-
+             retrieve_token(code, client_context, transaction, redirect_uri, ref),
+           :ok <- validate_claims(claims, connection) do
+        {refreshed_jwks, refreshed_jwks_expires_at} = refreshed_jwks(ref)
+
+        {:ok,
+         %{
+           issuer: claims["iss"],
+           subject: claims["sub"],
+           email: optional_binary(claims["email"]),
+           jwks_document: refreshed_jwks,
+           jwks_expires_at: refreshed_jwks_expires_at
+         }}
+      end
+    end)
+  end
+
+  defp with_adapter(fun) do
+    ref = HTTPAdapter.open()
+
+    try do
+      result = fun.(ref)
+      HTTPAdapter.reraise_client_exception!(ref)
+      result
+    after
+      HTTPAdapter.close(ref)
     end
   end
 
-  defp request_token(configuration, connection, code, redirect_uri, opts) do
-    method = select_token_auth_method(configuration.token_endpoint_auth_methods_supported)
-    client_secret = Keyword.fetch!(opts, :client_secret)
+  defp load_configuration(issuer, ref) do
+    case Oidcc.ProviderConfiguration.load_configuration(issuer, provider_opts(ref)) do
+      {:ok, {configuration, _expiry}} ->
+        with {:ok, document, expires_at} <- captured_document(ref, :discovery) do
+          {:ok, configuration, document, expires_at}
+        end
 
-    body = %{
-      "grant_type" => "authorization_code",
-      "code" => code,
-      "redirect_uri" => redirect_uri,
-      "code_verifier" => Keyword.fetch!(opts, :code_verifier)
+      {:error, reason} ->
+        discovery_error(reason)
+    end
+  rescue
+    _exception -> error(:discovery, :invalid_json)
+  end
+
+  defp load_jwks(jwks_uri, ref) do
+    case Oidcc.ProviderConfiguration.load_jwks(jwks_uri, provider_opts(ref)) do
+      {:ok, {jwks, _expiry}} ->
+        with {:ok, document, expires_at} <- captured_document(ref, :jwks),
+             :ok <- validate_jwks_document(document) do
+          {:ok, jwks, document, expires_at}
+        end
+
+      {:error, reason} ->
+        jwks_error(reason)
+    end
+  rescue
+    _exception -> error(:jwks, :invalid_document)
+  end
+
+  defp retrieve_token(code, client_context, transaction, redirect_uri, ref) do
+    opts = %{
+      redirect_uri: redirect_uri,
+      pkce_verifier: transaction.code_verifier,
+      require_pkce: true,
+      nonce: transaction.nonce,
+      trusted_audiences: [],
+      validate_azp: :client_id,
+      preferred_auth_methods: @preferred_token_auth_methods,
+      refresh_jwks: refresh_jwks_fun(client_context, ref),
+      request_opts: HTTPAdapter.request_opts(ref, @http_timeout)
     }
 
-    {headers, body} = token_request_auth(method, connection, client_secret, body)
-
-    with {:ok, uri, addresses} <- SafeURL.resolve(configuration.token_endpoint),
-         {:ok, 200, response_headers, response_body} <-
-           Hexpm.HTTP.impl().post(configuration.token_endpoint, headers, body,
-             decode_body: false,
-             connect_address: List.first(addresses),
-             connect_hostname: uri.host,
-             max_body_bytes: @max_response_bytes,
-             receive_timeout: @http_timeout,
-             request_timeout: @http_timeout
-           ),
-         {:ok, response} <- decode_json_response(response_headers, response_body, :token) do
-      {:ok, response}
-    else
-      {:ok, _status, _headers, _body} -> error(:token, :token_endpoint_rejected_request)
-      {:error, :response_too_large} -> error(:token, :response_too_large)
-      {:error, %Error{} = error} -> {:error, error}
-      {:error, _reason} -> error(:token, :token_endpoint_unavailable)
+    case oidcc_retrieve(code, client_context, opts, ref) do
+      {:ok, %Oidcc.Token{id: %Oidcc.Token.Id{claims: claims}}} -> {:ok, claims}
+      {:ok, %Oidcc.Token{}} -> error(:token, :id_token_missing)
+      {:error, reason} -> token_error(reason, ref)
     end
   end
 
-  defp token_request_auth("client_secret_basic", connection, client_secret, body) do
-    credentials =
-      URI.encode_www_form(connection.client_id) <>
-        ":" <> URI.encode_www_form(client_secret)
-
-    headers = [
-      {"accept", "application/json"},
-      {"authorization", "Basic " <> Base.encode64(credentials)},
-      {"content-type", "application/x-www-form-urlencoded"}
-    ]
-
-    {headers, body}
-  end
-
-  defp token_request_auth("client_secret_post", connection, client_secret, body) do
-    headers = [
-      {"accept", "application/json"},
-      {"content-type", "application/x-www-form-urlencoded"}
-    ]
-
-    {headers,
-     Map.merge(body, %{"client_id" => connection.client_id, "client_secret" => client_secret})}
-  end
-
-  defp validate_id_token(id_token, client_context, transaction) do
-    opts = %{nonce: transaction.nonce, trusted_audiences: [], validate_azp: :client_id}
-
-    case oidcc_validate_id_token(id_token, client_context, opts, :initial) do
-      {:ok, claims} ->
-        {:ok, claims, nil, nil}
-
-      {:error, {:no_matching_key_with_kid, _kid}} ->
-        refresh_and_validate_id_token(id_token, client_context, opts)
-
-      {:error, _reason} ->
-        error(:token, :id_token_invalid)
-    end
-  end
-
-  defp refresh_and_validate_id_token(id_token, client_context, opts) do
-    jwks_uri = client_context.provider_configuration.jwks_uri
-
-    with {:ok, _uri} <- SafeURL.validate(jwks_uri),
-         {:ok, jwks_document, expiry} <- fetch_json(jwks_uri, :jwks),
-         {:ok, jwks} <- decode_jwks(jwks_document),
-         refreshed_context <- %{client_context | jwks: jwks},
-         {:ok, claims} <-
-           oidcc_validate_id_token(id_token, refreshed_context, opts, :jwks_refresh) do
-      {:ok, claims, jwks_document, expiry}
-    else
-      {:error, %Error{} = error} -> {:error, error}
-      {:error, _reason} -> error(:token, :id_token_invalid_after_jwks_refresh)
-    end
-  end
-
-  defp oidcc_validate_id_token(id_token, client_context, opts, phase) do
-    Oidcc.Token.validate_id_token(id_token, client_context, opts)
+  defp oidcc_retrieve(code, client_context, opts, ref) do
+    Oidcc.Token.retrieve(code, client_context, opts)
   rescue
     exception ->
       :telemetry.execute(
         [:hexpm, :sso, :oidc, :token_validation_exception],
         %{count: 1},
-        %{exception: exception.__struct__, phase: phase}
+        %{exception: exception.__struct__, phase: token_phase(ref)}
       )
 
       {:error, :token_validation_exception}
+  end
+
+  # oidcc retries validation itself once the refreshed keys come back, so the
+  # fetch only has to hand the raw document on for persistence.
+  defp refresh_jwks_fun(client_context, ref) do
+    jwks_uri = client_context.provider_configuration.jwks_uri
+
+    fn _jwks, _kid ->
+      case load_jwks(jwks_uri, ref) do
+        {:ok, jwks, document, expires_at} ->
+          HTTPAdapter.put(ref, :refreshed_jwks, {document, expires_at})
+          {:ok, JOSE.JWK.to_record(jwks)}
+
+        {:error, error} ->
+          {:error, error}
+      end
+    end
+  end
+
+  defp refreshed_jwks(ref) do
+    case HTTPAdapter.get(ref, :refreshed_jwks) do
+      {document, expires_at} -> {document, expires_at}
+      nil -> {nil, nil}
+    end
+  end
+
+  defp token_phase(ref) do
+    if HTTPAdapter.get(ref, :refreshed_jwks), do: :jwks_refresh, else: :initial
+  end
+
+  defp provider_opts(ref) do
+    %{request_opts: HTTPAdapter.request_opts(ref, @http_timeout)}
+  end
+
+  defp captured_document(ref, stage) do
+    case HTTPAdapter.get(ref, :response) do
+      %{headers: headers, body: body} ->
+        case JSON.decode(body) do
+          {:ok, document} when is_map(document) -> {:ok, document, cache_expiry(headers)}
+          _other -> error(stage, :invalid_json)
+        end
+
+      nil ->
+        error(stage, :unavailable)
+    end
+  end
+
+  defp discovery_error(%Error{} = error), do: {:error, error}
+  defp discovery_error({:issuer_mismatch, _issuer}), do: error(:discovery, :issuer_mismatch)
+  defp discovery_error({:http_error, _status, _body}), do: error(:discovery, :http_status)
+  defp discovery_error(:invalid_content_type), do: error(:discovery, :invalid_content_type)
+  defp discovery_error({:missing_config_property, _key}), do: error(:discovery, :invalid_document)
+
+  defp discovery_error({:invalid_config_property, _property}),
+    do: error(:discovery, :invalid_document)
+
+  defp discovery_error({:transport, :response_too_large}),
+    do: error(:discovery, :response_too_large)
+
+  defp discovery_error(_reason), do: error(:discovery, :unavailable)
+
+  defp jwks_error(%Error{} = error), do: {:error, error}
+  defp jwks_error({:http_error, _status, _body}), do: error(:jwks, :http_status)
+  defp jwks_error(:invalid_content_type), do: error(:jwks, :invalid_content_type)
+  defp jwks_error({:transport, :response_too_large}), do: error(:jwks, :response_too_large)
+  defp jwks_error(_reason), do: error(:jwks, :unavailable)
+
+  defp token_error(%Error{} = error, _ref), do: {:error, error}
+
+  defp token_error({:http_error, _status, _body}, _ref),
+    do: error(:token, :token_endpoint_rejected_request)
+
+  defp token_error(:invalid_content_type, _ref), do: error(:token, :invalid_content_type)
+
+  # oidcc turns any non-2xx carrying a dpop-nonce header into this rather than
+  # an http_error, and retries once. Reaching here means the endpoint refused
+  # twice; blaming the ID token would send an administrator to their signing
+  # keys for a problem at the token endpoint.
+  defp token_error({:use_dpop_nonce, _nonce, _body}, _ref),
+    do: error(:token, :token_endpoint_rejected_request)
+
+  defp token_error({:transport, :response_too_large}, _ref),
+    do: error(:token, :response_too_large)
+
+  defp token_error({:transport, _reason}, _ref), do: error(:token, :token_endpoint_unavailable)
+
+  defp token_error(_reason, ref) do
+    case token_phase(ref) do
+      :jwks_refresh -> error(:token, :id_token_invalid_after_jwks_refresh)
+      :initial -> error(:token, :id_token_invalid)
+    end
   end
 
   # There is no lower bound on iat. Microsoft Entra stamps the authentication
@@ -304,7 +373,12 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
         require_signed_request_object: false,
         request_object_signing_alg_values_supported: :undefined,
         request_object_encryption_alg_values_supported: :undefined,
-        request_object_encryption_enc_values_supported: :undefined
+        request_object_encryption_enc_values_supported: :undefined,
+        # Hexpm does not accept an encrypted identity token, and saying so keeps
+        # oidcc off the branch that returns the claims of a decrypted token
+        # without a signature check.
+        id_token_encryption_alg_values_supported: :undefined,
+        id_token_encryption_enc_values_supported: :undefined
     }
   end
 
@@ -319,62 +393,8 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
     Enum.find(@allowed_token_auth_methods, &(&1 in List.wrap(methods)))
   end
 
-  defp fetch_id_token(%{"id_token" => id_token}) when is_binary(id_token) and id_token != "",
-    do: {:ok, id_token}
-
-  defp fetch_id_token(_response), do: error(:token, :id_token_missing)
-
-  defp fetch_json(url, stage) do
-    with {:ok, uri, addresses} <- SafeURL.resolve(url),
-         {:ok, 200, headers, body} <-
-           Hexpm.HTTP.impl().get(url, [{"accept", "application/json"}],
-             decode_body: false,
-             connect_address: List.first(addresses),
-             connect_hostname: uri.host,
-             max_body_bytes: @max_response_bytes,
-             receive_timeout: @http_timeout,
-             request_timeout: @http_timeout
-           ),
-         {:ok, document} <- decode_json_response(headers, body, stage) do
-      {:ok, document, cache_expiry(headers)}
-    else
-      {:ok, _status, _headers, _body} -> error(stage, :http_status)
-      {:error, :response_too_large} -> error(stage, :response_too_large)
-      {:error, %Error{} = error} -> {:error, error}
-      {:error, _reason} -> error(stage, :unavailable)
-    end
-  end
-
-  defp decode_json_response(headers, body, stage)
-       when is_binary(body) and byte_size(body) <= @max_response_bytes do
-    if json_content_type?(headers) do
-      case JSON.decode(body) do
-        {:ok, document} when is_map(document) -> {:ok, document}
-        _other -> error(stage, :invalid_json)
-      end
-    else
-      error(stage, :invalid_content_type)
-    end
-  end
-
-  defp decode_json_response(_headers, _body, stage), do: error(stage, :response_too_large)
-
-  defp json_content_type?(headers) do
-    Enum.any?(headers, fn {name, value} ->
-      media_type =
-        value
-        |> to_string()
-        |> String.split(";", parts: 2)
-        |> List.first()
-        |> String.trim()
-        |> String.downcase()
-
-      String.downcase(to_string(name)) == "content-type" and
-        (media_type == "application/json" or
-           (String.starts_with?(media_type, "application/") and
-              String.ends_with?(media_type, "+json")))
-    end)
-  end
+  defp validate_jwks_document(%{"keys" => keys}) when is_list(keys) and keys != [], do: :ok
+  defp validate_jwks_document(_document), do: error(:jwks, :invalid_document)
 
   defp decode_jwks(%{"keys" => keys} = document) when is_list(keys) and keys != [] do
     {:ok, JOSE.JWK.from_map(document)}
