@@ -15,13 +15,18 @@ defmodule Hexpm.Accounts.SSO do
   alias Hexpm.Accounts.SSO.Transaction, as: SSOTransaction
   alias Hexpm.Accounts.OrganizationUser
   alias Hexpm.Emails
-  alias Hexpm.Emails.{Outbox, OutboxEntry, OutboxLock}
+  alias Hexpm.Emails.Outbox
 
   @transaction_lifetime_seconds 10 * 60
   @diagnostic_limit 20
   @identity_linked_email_category "sso.identity_linked"
   @identity_unlinked_email_category "sso.identity_unlinked"
   @email_mismatch_category "sso.email_mismatch"
+  @notification_categories [
+    @identity_linked_email_category,
+    @identity_unlinked_email_category,
+    @email_mismatch_category
+  ]
   @cancelled_notification_categories [
     @identity_linked_email_category,
     @email_mismatch_category
@@ -767,81 +772,28 @@ defmodule Hexpm.Accounts.SSO do
     end
   end
 
+  # Only the categories that describe a state the caller is about to undo. An
+  # unlink notification stands whatever else happens.
   def delete_member_notifications(multi, organization, user) do
     case get_connection(organization) do
       nil ->
         multi
 
       connection ->
-        group_key = notification_group_key(connection, user)
-
-        multi
-        |> Multi.run(:organization_sso_email_outbox_cancellable, fn repo, _changes ->
-          OutboxLock.acquire!(group_key)
-
-          {:ok,
-           cancellable_notifications(
-             repo,
-             from(entry in OutboxEntry, where: entry.group_key == ^group_key),
-             @cancelled_notification_categories
-           )}
-        end)
-        |> Multi.delete_all(:organization_sso_email_outbox, fn changes ->
-          from(entry in OutboxEntry,
-            where: entry.id in ^changes.organization_sso_email_outbox_cancellable
-          )
-        end)
+        Outbox.cancel(multi, :organization_sso_email_outbox,
+          group_key: notification_group_key(connection, user),
+          categories: @cancelled_notification_categories
+        )
     end
   end
 
+  # The account is going away, so every notification about it goes with it,
+  # across every organization it was linked to.
   def delete_user_notifications(multi, user) do
-    scope_key = notification_scope_key(user)
-
-    categories = [
-      @identity_linked_email_category,
-      @identity_unlinked_email_category,
-      @email_mismatch_category
-    ]
-
-    multi
-    # delete_member_notifications takes this lock for its one group key. This
-    # path spans every key the account touches, so it takes them all, in a sorted
-    # order so two callers deleting overlapping rows cannot deadlock.
-    |> Multi.run(:organization_sso_email_outbox_cancellable, fn repo, _changes ->
-      from(entry in OutboxEntry,
-        where: entry.scope_key == ^scope_key,
-        where: entry.category in ^categories,
-        select: entry.group_key,
-        distinct: true,
-        order_by: entry.group_key
-      )
-      |> repo.all()
-      |> Enum.each(&OutboxLock.acquire!/1)
-
-      {:ok,
-       cancellable_notifications(
-         repo,
-         from(entry in OutboxEntry, where: entry.scope_key == ^scope_key),
-         categories
-       )}
-    end)
-    |> Multi.delete_all(:organization_sso_email_outbox, fn changes ->
-      from(entry in OutboxEntry,
-        where: entry.id in ^changes.organization_sso_email_outbox_cancellable
-      )
-    end)
-  end
-
-  # A delivery holds the entry's row lock across the call to the mail provider,
-  # so waiting for it would stall the security action behind SendGrid. Mail that
-  # is already on its way out cannot be cancelled in any case.
-  defp cancellable_notifications(repo, query, categories) do
-    from(entry in query,
-      where: entry.category in ^categories,
-      select: entry.id,
-      lock: "FOR UPDATE SKIP LOCKED"
+    Outbox.cancel(multi, :organization_sso_email_outbox,
+      scope_key: notification_scope_key(user),
+      categories: @notification_categories
     )
-    |> repo.all()
   end
 
   def lock_user_removal(multi, user) do
@@ -1506,17 +1458,10 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   defp delete_notifications!(connection, user) do
-    group_key = notification_group_key(connection, user)
-    OutboxLock.acquire!(group_key)
-
-    ids =
-      cancellable_notifications(
-        Repo,
-        from(entry in OutboxEntry, where: entry.group_key == ^group_key),
-        @cancelled_notification_categories
-      )
-
-    Repo.delete_all(from(entry in OutboxEntry, where: entry.id in ^ids))
+    Outbox.cancel!(
+      group_key: notification_group_key(connection, user),
+      categories: @cancelled_notification_categories
+    )
   end
 
   defp notification_group_key(connection, user), do: "sso:#{connection.id}:#{user.id}"

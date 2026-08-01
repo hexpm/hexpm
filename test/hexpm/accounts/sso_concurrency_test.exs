@@ -10,6 +10,7 @@ defmodule Hexpm.Accounts.SSOConcurrencyTest do
   alias Hexpm.Accounts.SSO.{Connection, Failure, Identity, OIDC, OrgSession}
   alias Hexpm.Accounts.SSO.Transaction, as: SSOTransaction
   alias Hexpm.Emails
+  alias Hexpm.Emails.Outbox
   alias Hexpm.Emails.{OutboxEntry, OutboxWorker}
   alias Hexpm.UserSession
 
@@ -132,6 +133,35 @@ defmodule Hexpm.Accounts.SSOConcurrencyTest do
           |> race()
 
         assert length(results) == 10
+      end
+    end)
+  end
+
+  test "two scope cancellations sharing groups never deadlock" do
+    committed(fn context ->
+      # Two accounts whose notifications sit in the same two groups. Each
+      # cancellation takes a lock per group, so acquiring them in insertion
+      # order rather than sorted order deadlocks within a round or two.
+      groups = ["sso:#{context.connection.id}:b", "sso:#{context.connection.id}:a"]
+      scopes = ["sso:user:#{context.member.id}", "sso:user:#{context.other_member.id}"]
+
+      for _round <- 1..4 do
+        for scope <- scopes, group <- groups do
+          insert(:email_outbox_entry,
+            category: "sso.identity_linked",
+            group_key: group,
+            scope_key: scope
+          )
+        end
+
+        results =
+          race(scopes, fn scope ->
+            Hexpm.RepoBase.transaction(fn ->
+              Outbox.cancel!(scope_key: scope, categories: ["sso.identity_linked"])
+            end)
+          end)
+
+        assert Enum.all?(results, &match?({:ok, 2}, &1))
       end
     end)
   end
