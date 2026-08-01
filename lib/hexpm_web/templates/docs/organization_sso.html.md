@@ -1,6 +1,6 @@
 ## Organization single sign-on
 
-Organization single sign-on (SSO) lets members sign in to an organization through an OpenID Connect (OIDC) identity provider. Customer-created Okta applications are the supported and documented integration. Microsoft Entra interoperability and Okta Integration Network distribution remain private validation targets until their live provider test matrices are complete.
+Organization single sign-on (SSO) lets members sign in to an organization through an OpenID Connect (OIDC) identity provider. Customer-created Okta applications are the supported and documented integration. Microsoft Entra has been validated privately against the same connector but is not a supported provider, and there is no Okta Integration Network listing to install the integration from.
 
 Organization SSO is currently available only to organizations enabled by Hexpm's runtime SSO gate. It is optional and scoped to one Hexpm organization. It does not create accounts, add organization members, or assign roles.
 
@@ -60,13 +60,13 @@ The **Organization / Initiate Login URI** is organization-bound; Hexpm never per
 * `target_link_uri` is optional and must use Hexpm's configured origin and an allowlisted location within that organization's dashboard.
 * Unknown parameters are ignored.
 
-Every accepted initiation creates fresh state, nonce, and PKCE values. Custom Okta dashboard tiles, OIN Wizard-generated instances, and public OIN listings are not supported launch claims until Hexpm completes the separate live validation and release prerequisites.
+Every accepted initiation creates fresh state, nonce, and PKCE values. Custom Okta dashboard tiles, OIN Wizard-generated instances, and public OIN listings are not supported launch claims. Hexpm has exercised all three, so this is a decision about what Hexpm will document and answer for, not a gap in what has been tried.
 
 ### Microsoft Entra private validation
 
-Microsoft Entra uses the same provider-neutral OIDC connection, but it is not a generally available provider claim until Hexpm completes its live managed-user, guest-user, error, secret-rotation, and signing-key-rotation matrix.
+Microsoft Entra uses the same provider-neutral OIDC connection. Hexpm has validated it privately across managed users, guest users, missing and unexpected claims, secret rotation, and signing-key rotation. That validation is not a support claim: supporting a second provider is a separate decision covering documentation, fixtures, and what Hexpm will answer for when a customer's provider misbehaves, and it has not been taken.
 
-For an approved private validation:
+The steps below describe an approved private validation, not general use:
 
 1. Register a Web application with the exact Hexpm redirect URI.
 2. Use the tenant-specific v2 issuer, `https://login.microsoftonline.com/{tenant-id}/v2.0`. Do not use `common`, `organizations`, or a tenant-independent issuer.
@@ -138,6 +138,6 @@ Do not send client secrets, authorization codes, tokens, cookies, or raw callbac
 
 ### Release scope
 
-Enabled organizations can use the organization login URL and third-party-initiated login. Custom Okta dashboard tiles, a public Okta Integration Network listing, and general Microsoft Entra support remain unavailable until their external validation and release gates are complete.
+Enabled organizations can use the organization login URL and third-party-initiated login. Custom Okta dashboard tiles, a public Okta Integration Network listing, and general Microsoft Entra support are unavailable. None of the three is waiting on validation, which is complete for all of them: the OIN integration was built and exercised but never submitted for review, and supporting Entra or dashboard tiles is an open release decision rather than an untested path.
 
 Nothing yet requires an organization access session. This release does not support SAML, account creation, invitations, just-in-time membership, domain verification, SCIM, group or role synchronization, required SSO enforcement, or OIDC logout.

@@ -1,4 +1,4 @@
-defmodule Hexpm.RepoBase.Migrations.AddOrganizationSsoPhase2 do
+defmodule Hexpm.RepoBase.Migrations.AddOrganizationSsoSessions do
   use Ecto.Migration
 
   def change do

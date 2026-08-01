@@ -13,7 +13,12 @@ defmodule HexpmWeb.DocsControllerTest do
     assert html =~ "Create the Okta application"
     assert html =~ "existing Hexpm account"
     assert html =~ "Custom Okta dashboard tiles"
-    assert html =~ "remain unavailable until their external validation"
+
+    # What is unsupported is a decision, not a pending test run. Tying the copy
+    # to validation status went stale the moment the matrices finished.
+    assert html =~ "None of the three is waiting on validation"
+    refute html =~ "until their external validation"
+    refute html =~ "until their live provider test matrices are complete"
     assert html =~ "tenant-specific v2 issuer"
     assert html =~ "organization access session"
     assert html =~ "never suppresses a personal Hexpm two-factor prompt"
