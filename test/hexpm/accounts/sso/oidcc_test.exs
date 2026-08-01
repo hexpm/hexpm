@@ -13,6 +13,10 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
     end
   end
 
+  defmodule EmptyResolver do
+    def getaddrs(_host, _family), do: {:ok, []}
+  end
+
   defmodule MixedResolver do
     def getaddrs(_host, :inet), do: {:ok, [{1, 1, 1, 1}]}
     def getaddrs(_host, :inet6), do: {:ok, [{0, 0, 0, 0, 0, 0, 0, 1}]}
@@ -281,6 +285,20 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
       assert {:ok, %URI{host: ^address}} =
                SafeURL.validate("https://[#{address}]/oauth2/default")
     end
+  end
+
+  test "makes no request at all for a hostname that resolves to nothing" do
+    original_resolver = Application.get_env(:hexpm, :sso_dns_resolver)
+    Application.put_env(:hexpm, :sso_dns_resolver, EmptyResolver)
+
+    on_exit(fn -> restore_env(:sso_dns_resolver, original_resolver) end)
+
+    # No Hexpm.HTTP.Mock expectation: with no address there is nothing to pin
+    # to, and an unpinned request would resolve the hostname again at connect
+    # time, which is the rebinding this guard exists to stop. verify_on_exit!
+    # fails the test if a request is made anyway.
+    assert {:error, %Error{stage: :url_validation, code: :dns_resolution_failed}} =
+             Oidcc.discover("https://nowhere.example/oauth2/default")
   end
 
   test "rejects a hostname when any resolved address is not public" do
@@ -609,6 +627,24 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
     assert claims.subject == "00u123"
     assert claims.jwks_document == refreshed_jwks
     assert %DateTime{} = claims.jwks_expires_at
+  end
+
+  test "reports a token endpoint that keeps asking for a DPoP nonce as a refusal", context do
+    # oidcc turns any non-2xx carrying this header into use_dpop_nonce and
+    # retries once, so both attempts have to answer the same way.
+    expect(Hexpm.HTTP.Mock, :post, 2, fn _url, _headers, _body, _opts ->
+      {:ok, 400, [{"content-type", "application/json"}, {"dpop-nonce", "nonce-value"}],
+       JSON.encode!(%{"error" => "invalid_grant"})}
+    end)
+
+    assert {:error, %Error{stage: :token, code: :token_endpoint_rejected_request}} =
+             Oidcc.exchange_code(
+               context.connection,
+               context.transaction,
+               "authorization-code",
+               context.transaction.redirect_uri,
+               context.connection.client_secret
+             )
   end
 
   test "separates an unreachable token endpoint from an invalid ID token", context do

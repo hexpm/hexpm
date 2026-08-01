@@ -47,22 +47,30 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
         _other -> []
       end
 
-    with {:ok, client_context} <- client_context(connection, client_secret),
-         {:ok, uri} <-
-           Oidcc.Authorization.create_redirect_url(client_context, %{
-             redirect_uri: redirect_uri,
-             scopes: ["openid", "email"],
-             state: transaction.raw_state,
-             nonce: transaction.nonce,
-             pkce_verifier: transaction.code_verifier,
-             require_pkce: true,
-             url_extension: url_extension
-           }) do
-      {:ok, to_string(uri)}
-    else
-      {:error, %Error{} = error} -> {:error, error}
-      {:error, _reason} -> error(:authorization, :authorization_url_failed)
-    end
+    # Building the redirect URL makes no request today, because the hardened
+    # configuration has no pushed authorization endpoint and oidcc short-circuits
+    # on that. It goes through the adapter anyway: the alternative is that one
+    # struct field three functions away is what keeps this off raw httpc, which
+    # follows redirects and has no address pinning or body cap.
+    with_adapter(fn ref ->
+      with {:ok, client_context} <- client_context(connection, client_secret),
+           {:ok, uri} <-
+             Oidcc.Authorization.create_redirect_url(client_context, %{
+               redirect_uri: redirect_uri,
+               scopes: ["openid", "email"],
+               state: transaction.raw_state,
+               nonce: transaction.nonce,
+               pkce_verifier: transaction.code_verifier,
+               require_pkce: true,
+               url_extension: url_extension,
+               request_opts: HTTPAdapter.request_opts(ref, @http_timeout)
+             }) do
+        {:ok, to_string(uri)}
+      else
+        {:error, %Error{} = error} -> {:error, error}
+        {:error, _reason} -> error(:authorization, :authorization_url_failed)
+      end
+    end)
   end
 
   @impl true
@@ -238,6 +246,13 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
 
   defp token_error(:invalid_content_type, _ref), do: error(:token, :invalid_content_type)
 
+  # oidcc turns any non-2xx carrying a dpop-nonce header into this rather than
+  # an http_error, and retries once. Reaching here means the endpoint refused
+  # twice; blaming the ID token would send an administrator to their signing
+  # keys for a problem at the token endpoint.
+  defp token_error({:use_dpop_nonce, _nonce, _body}, _ref),
+    do: error(:token, :token_endpoint_rejected_request)
+
   defp token_error({:transport, :response_too_large}, _ref),
     do: error(:token, :response_too_large)
 
@@ -358,7 +373,12 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
         require_signed_request_object: false,
         request_object_signing_alg_values_supported: :undefined,
         request_object_encryption_alg_values_supported: :undefined,
-        request_object_encryption_enc_values_supported: :undefined
+        request_object_encryption_enc_values_supported: :undefined,
+        # Hexpm does not accept an encrypted identity token, and saying so keeps
+        # oidcc off the branch that returns the claims of a decrypted token
+        # without a signature check.
+        id_token_encryption_alg_values_supported: :undefined,
+        id_token_encryption_enc_values_supported: :undefined
     }
   end
 

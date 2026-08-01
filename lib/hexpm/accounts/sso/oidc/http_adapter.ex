@@ -51,10 +51,14 @@ defmodule Hexpm.Accounts.SSO.OIDC.HTTPAdapter do
     url = request_url(request)
     timeout = timeout(http_options)
 
-    with {:ok, uri, addresses} <- SafeURL.resolve(url) do
+    # Matching a non-empty list rather than taking List.first: a nil address
+    # makes Hexpm.HTTP fall back to an unpinned request that resolves the
+    # hostname again at connect time, so an empty result has to refuse here
+    # instead of quietly turning the pin off.
+    with {:ok, uri, [address | _rest]} <- SafeURL.resolve(url) do
       opts = [
         decode_body: false,
-        connect_address: List.first(addresses),
+        connect_address: address,
         connect_hostname: uri.host,
         max_body_bytes: @max_response_bytes,
         receive_timeout: timeout,
@@ -64,6 +68,9 @@ defmodule Hexpm.Accounts.SSO.OIDC.HTTPAdapter do
       method
       |> dispatch(url, request, opts)
       |> handle_response(ref)
+    else
+      {:error, _reason} = error -> error
+      _no_address -> {:error, {:transport, :dns_resolution_failed}}
     end
   end
 
