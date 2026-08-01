@@ -4,29 +4,38 @@ defmodule Hexpm.Hexdocs.FileRewriterTest do
   alias Hexpm.Hexdocs.FileRewriter
 
   test "adds analytics to HTML and keeps noindex" do
-    rewritten =
-      FileRewriter.run(
-        "search.html",
-        ~s(<html><head><meta name="robots" content="noindex"></head></html>)
-      )
+    for path <- ~w(search.html 404.html api-reference.html) do
+      rewritten =
+        FileRewriter.run(
+          path,
+          ~s(<html><head><meta name="robots" content="noindex"></head></html>)
+        )
 
-    assert rewritten =~ ~s(src="https://s.localhost/js/script.js")
-    assert rewritten =~ ~s(content="noindex")
+      assert rewritten =~ ~s(src="https://s.localhost/js/script.js")
+      assert rewritten =~ ~s(content="noindex")
+    end
   end
 
   test "removes canonical tags whatever the author pointed them at" do
     for input <- [
           ~s|<link rel="canonical" href="https://hexdocs.pm/phoenix_html/1.0.0/Phoenix.HTML.html"/>|,
           ~s|<link rel="canonical" href="http://hexdocs.pm/jason/Jason.html" />|,
-          ~s|<link rel='canonical' href='https://jason.hexdocs.pm/Jason.html'>|
+          ~s|<link rel='canonical' href='https://jason.hexdocs.pm/Jason.html'>|,
+          ~s|<link\n  href="https://hexdocs.pm/jason/Jason.html"\n  rel="canonical">|
         ] do
-      refute FileRewriter.run("index.html", ~s|<body>#{input}</body>|) =~ "canonical"
+      assert FileRewriter.run("index.html", ~s|<body>#{input}<p>Jason</p></body>|) ==
+               "<body><p>Jason</p></body>"
     end
   end
 
-  test "leaves body links to hexdocs alone" do
-    input = ~s|<a href="https://hexdocs.pm/jason/Jason.html">Jason</a>|
-    assert FileRewriter.run("index.html", input) == input
+  test "leaves other link tags and body links alone" do
+    for input <- [
+          ~s|<a href="https://hexdocs.pm/jason/Jason.html">Jason</a>|,
+          ~s|<link rel="stylesheet" href="dist/canonical-ABC123.css"/>|,
+          ~s|<link rel="icon" href="/favicon.ico">|
+        ] do
+      assert FileRewriter.run("index.html", input) == input
+    end
   end
 
   test "adds nofollow only to external links and remains idempotent" do

@@ -171,22 +171,18 @@ defmodule Hexpm.Utils do
   @spec docs_html_url(String.t(), String.t(), String.t()) :: String.t()
   def docs_html_url(repository, package, "/" <> _ = path)
       when is_binary(repository) and is_binary(package) do
-    {config, host, path} =
-      if repository == "hexpm" do
-        {:docs_url, name_to_subdomain(package), path}
-      else
-        {:private_docs_url, name_to_subdomain(repository), "/#{package}#{path}"}
-      end
-
-    uri = URI.parse(Application.fetch_env!(:hexpm, config))
-    URI.to_string(%{uri | host: "#{host}.#{uri.host}", path: path})
+    if repository == "hexpm" do
+      public_docs_url(package, path)
+    else
+      uri = URI.parse(Application.fetch_env!(:hexpm, :private_docs_url))
+      host = "#{name_to_subdomain(repository)}.#{uri.host}"
+      URI.to_string(%{uri | host: host, path: "/#{package}#{path}"})
+    end
   end
 
   def docs_html_url(%Repository{id: 1}, package, release) do
-    docs_url = URI.parse(Application.get_env(:hexpm, :docs_url))
-    docs_url = %{docs_url | host: "#{name_to_subdomain(package.name)}.#{docs_url.host}"}
     version = release && "#{release.version}/"
-    "#{docs_url}/#{version}"
+    public_docs_url(package.name, "/#{version}")
   end
 
   def docs_html_url(%Repository{} = repository, package, release) do
@@ -197,15 +193,29 @@ defmodule Hexpm.Utils do
     "#{docs_url}/#{package}/#{version}"
   end
 
+  # A handful of packages predate the subdomain scheme and carry a name the
+  # docs CDN routes somewhere else, `search` to the search backend and the rest
+  # to their own services. The apex serves those packages directly instead of
+  # redirecting, so it is the only address they have.
+  @reserved_docs_subdomains ~w(api assets docs preview search staging stats static)
+
+  defp public_docs_url(package, "/" <> _ = path) do
+    uri = URI.parse(Application.fetch_env!(:hexpm, :docs_url))
+
+    if package in @reserved_docs_subdomains do
+      URI.to_string(%{uri | path: "/#{package}#{path}"})
+    else
+      URI.to_string(%{uri | host: "#{name_to_subdomain(package)}.#{uri.host}", path: path})
+    end
+  end
+
   @doc """
   Apex-form docs URL for a hexpm-repo package: `<docs_url>/<package>/`.
 
-  Used by `docs_sitemap.xml`, which lists per-package sitemap index
-  entries. Sitemap consumers (Googlebot) require all listed URLs to
-  share a common host with the sitemap file, so even after package
-  docs move to `<package>.hexdocs.pm`, the index keeps emitting
-  `hexdocs.pm/<package>/...` and lets the apex 301 deliver the
-  canonical URL to the crawler.
+  Used by `docs_sitemap.xml`, which lists per-package sitemap index entries.
+  Sitemap consumers require the sitemaps an index lists to share its host, and
+  the apex 301 takes the crawler on to `<package>.hexdocs.pm/sitemap.xml`,
+  whose own entries name that subdomain.
   """
   @spec docs_html_apex_url(String.t()) :: String.t()
   def docs_html_apex_url(package_name) do
