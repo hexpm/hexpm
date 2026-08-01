@@ -334,6 +334,7 @@ defmodule HexpmWeb.DiffLiveTest do
              )
   end
 
+  @tag :capture_log
   test "storage failures render an error without enqueueing regeneration", %{package: package} do
     original_bucket = Application.fetch_env!(:hexpm, :diff_bucket)
     Application.put_env(:hexpm, :diff_bucket, {Hexpm.Diff.TestStore, "diff_bucket"})
@@ -352,6 +353,7 @@ defmodule HexpmWeb.DiffLiveTest do
              0
   end
 
+  @tag :capture_log
   test "storage exceptions render an error without crashing or enqueueing", %{package: package} do
     original_bucket = Application.fetch_env!(:hexpm, :diff_bucket)
     Application.put_env(:hexpm, :diff_bucket, {Hexpm.Diff.TestStore, "diff_bucket"})

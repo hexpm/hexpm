@@ -3,6 +3,14 @@ defmodule HexpmWeb.SyntaxHighlightTest do
 
   alias HexpmWeb.SyntaxHighlight
 
+  # Without this the assertions below race the highlighter's first load, and a
+  # loaded machine loses: `highlight/3` gives up after @timeout and answers with
+  # escaped plain source, which looks like a highlighting bug.
+  setup do
+    assert SyntaxHighlight.warm() == :ok
+    :ok
+  end
+
   test "highlights documents and line fragments with Lumis" do
     document = SyntaxHighlight.highlight("value = <script>", "lib/app.ex", "test document")
 
