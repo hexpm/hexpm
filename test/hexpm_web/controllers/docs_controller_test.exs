@@ -12,7 +12,16 @@ defmodule HexpmWeb.DocsControllerTest do
     assert html =~ "Organization single sign-on"
     assert html =~ "Create the Okta application"
     assert html =~ "existing Hexpm account"
-    assert html =~ "does not support an Okta dashboard tile"
+    assert html =~ "Custom Okta dashboard tiles"
+
+    # The load-bearing fact about the OIN listing, rather than the sentence
+    # carrying it. An earlier version asserted the exact wording and refuted two
+    # phrasings that no longer exist anywhere, which breaks on a copy edit and
+    # catches nothing.
+    assert html =~ "never submitted for review"
+    assert html =~ "tenant-specific v2 issuer"
+    assert html =~ "organization access session"
+    assert html =~ "never suppresses a personal Hexpm two-factor prompt"
 
     {:ok, document} = Floki.parse_document(html)
     assert [link] = Floki.find(document, ~s(a[href="/docs/organization-sso"]))

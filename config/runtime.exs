@@ -17,6 +17,19 @@ sso_beta_organizations =
   |> Enum.reject(&(&1 == ""))
   |> Enum.uniq()
 
+sso_exempt_issuer_hosts =
+  if config_env() == :prod do
+    []
+  else
+    System.get_env("HEXPM_SSO_EXEMPT_ISSUER_HOSTS", "")
+    |> String.split(",", trim: true)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.uniq()
+  end
+
+config :hexpm, sso_exempt_issuer_hosts: sso_exempt_issuer_hosts
+
 config :hexpm, :organization_sso,
   mode: sso_mode,
   beta_organizations: sso_beta_organizations

@@ -45,10 +45,15 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
           <.readonly_value label="Required scopes" value="openid email" />
           <.readonly_value
             :if={@connection && Connection.enabled?(@connection)}
-            label="Organization login URL"
+            label="Organization / Initiate Login URI"
             value={@login_url}
           />
         </div>
+        <p class="mt-4 text-sm text-grey-600 dark:text-grey-300">
+          For Okta, use the organization issuer such as <code>https://example.okta.com</code>,
+          not the <code>/oauth2/default</code> authorization-server issuer. For Microsoft Entra,
+          use the tenant-specific v2 issuer ending in <code>/&lt;tenant-id&gt;/v2.0</code>.
+        </p>
 
         <.form
           :if={!@connection || !Connection.enabled?(@connection)}
@@ -107,6 +112,18 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
             <.button type="submit" variant="danger">Disable SSO login</.button>
           </.form>
         </div>
+
+        <div :if={@connection && !Connection.enabled?(@connection)} class="mt-5">
+          <p class="text-sm text-grey-600 dark:text-grey-300">
+            Removing the configuration deletes the stored client secret and every account
+            linked through this connection. Members keep their Hexpm accounts and their
+            membership of {@organization.name}.
+          </p>
+
+          <.form for={%{}} action={~p"/dashboard/orgs/#{@organization}/sso/delete"} class="mt-3">
+            <.button type="submit" variant="danger">Remove SSO configuration</.button>
+          </.form>
+        </div>
       </section>
 
       <section
@@ -161,12 +178,17 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
         </p>
         <ul :if={@identities != []} class="mt-3 divide-y divide-grey-200 dark:divide-grey-800">
           <li :for={identity <- @identities} class="flex items-center justify-between gap-4 py-3">
-            <a
-              href={~p"/users/#{identity.user}"}
-              class="text-sm font-medium text-grey-900 transition-colors hover:text-primary-600 dark:text-grey-100"
-            >
-              {identity.user.username}
-            </a>
+            <div class="min-w-0">
+              <a
+                href={~p"/users/#{identity.user}"}
+                class="text-sm font-medium text-grey-900 transition-colors hover:text-primary-600 dark:text-grey-100"
+              >
+                {identity.user.username}
+              </a>
+              <div class="mt-1 text-xs text-grey-500 dark:text-grey-400">
+                {last_authenticated(identity.last_authenticated_at)}
+              </div>
+            </div>
             <.form for={%{}} action={~p"/dashboard/orgs/#{@organization}/sso/unlink"}>
               <input type="hidden" name="user_id" value={identity.user_id} />
               <.button type="submit" variant="danger" size="sm">Unlink</.button>
@@ -226,5 +248,11 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
 
   defp status_class(%Connection{}) do
     "rounded-full bg-green-100 dark:bg-green-950 px-3 py-1 text-xs font-medium text-green-800 dark:text-green-200"
+  end
+
+  defp last_authenticated(nil), do: "Never authenticated through this connection"
+
+  defp last_authenticated(authenticated_at) do
+    "Last authenticated #{Calendar.strftime(authenticated_at, "%Y-%m-%d %H:%M UTC")}"
   end
 end

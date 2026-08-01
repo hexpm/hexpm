@@ -159,6 +159,8 @@ defmodule Hexpm.Accounts.Users do
         :oauth_tokens,
         from(t in Hexpm.OAuth.Token, where: t.user_id == ^user.id)
       )
+      |> Hexpm.Accounts.SSO.lock_user_removal(user)
+      |> Hexpm.Accounts.SSO.delete_user_transactions(user)
       |> Multi.delete(:user, user, stale_error_field: :id)
       |> Hexpm.Accounts.SSO.delete_user_notifications(user)
 

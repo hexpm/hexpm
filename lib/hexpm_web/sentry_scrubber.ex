@@ -7,15 +7,21 @@ defmodule HexpmWeb.SentryScrubber do
     end
   end
 
-  def scrub_url(%{request_path: "/sso/callback"} = conn) do
+  def scrub_url(conn) do
+    if sso_path?(conn.request_path) do
+      scrub_sso_url(conn)
+    else
+      Sentry.PlugContext.default_url_scrubber(conn)
+    end
+  end
+
+  defp scrub_sso_url(conn) do
     conn
     |> Sentry.PlugContext.default_url_scrubber()
     |> URI.parse()
     |> Map.put(:query, nil)
     |> URI.to_string()
   end
-
-  def scrub_url(conn), do: Sentry.PlugContext.default_url_scrubber(conn)
 
   defp sso_path?(path) do
     path

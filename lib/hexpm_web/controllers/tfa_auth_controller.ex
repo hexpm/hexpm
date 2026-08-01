@@ -13,24 +13,11 @@ defmodule HexpmWeb.TFAAuthController do
     secret = user.tfa.secret
 
     if Hexpm.Accounts.TFA.token_valid?(secret, code) do
-      # Use pre-created session token if available, otherwise create new one
-      conn =
-        if session_token = session_data["session_token"] do
-          conn
-          |> configure_session(renew: true)
-          |> put_session("session_token", session_token)
-        else
-          start_session_internal(conn, user)
-        end
-
       conn
       |> delete_session("tfa_user_id")
-      |> prove_pending_sso_link(user)
+      |> start_session_internal(user)
       |> HexpmWeb.Plugs.Sudo.set_sudo_authenticated()
-      |> then(fn conn ->
-        return = safe_return_path(session_data["return"])
-        redirect(conn, to: pending_sso_link_return(conn, return) || ~p"/users/#{user}")
-      end)
+      |> redirect(to: safe_return_path(session_data["return"]) || ~p"/users/#{user}")
     else
       Logger.warning("Failed 2FA attempt",
         user_id: uid,

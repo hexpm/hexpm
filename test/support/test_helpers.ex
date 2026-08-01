@@ -1,6 +1,25 @@
 defmodule Hexpm.TestHelpers do
   @tmp Application.compile_env(:hexpm, :tmp_dir)
 
+  @doc """
+  Captures logs down to debug, including Ecto's query log.
+
+  `capture_log/2`'s `:level` option filters what it keeps; it does not lower
+  `Logger.level/0`, and the test environment runs at `:error`. Passing
+  `level: :debug` to `capture_log/2` alone therefore returns an empty string,
+  and a test asserting a secret is absent from it passes on nothing.
+  """
+  def capture_debug_log(fun) do
+    level = Logger.level()
+    Logger.configure(level: :debug)
+
+    try do
+      ExUnit.CaptureLog.capture_log(fun)
+    after
+      Logger.configure(level: level)
+    end
+  end
+
   def create_tar(meta, files \\ [{"mix.exs", "mix.exs"}]) do
     meta =
       meta

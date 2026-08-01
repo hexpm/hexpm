@@ -6,6 +6,7 @@ defmodule Hexpm.Accounts.SSO.Transaction do
   schema "organization_sso_transactions" do
     field :state_hash, :binary, redact: true
     field :raw_state, :string, virtual: true, redact: true
+    field :login_hint, :string, virtual: true, redact: true
     field :nonce, :string, redact: true
     field :code_verifier, :string, redact: true
     field :kind, :string
@@ -20,6 +21,7 @@ defmodule Hexpm.Accounts.SSO.Transaction do
     field :subject, :string, redact: true
     field :provider_email, :string, redact: true
     field :link_token_hash, :binary, redact: true
+    field :entrypoint, :string, default: "organization"
     field :linked_at, :utc_datetime_usec
     field :cancelled_at, :utc_datetime_usec
 
@@ -43,7 +45,8 @@ defmodule Hexpm.Accounts.SSO.Transaction do
       :secret_version,
       :redirect_uri,
       :return_path,
-      :expires_at
+      :expires_at,
+      :entrypoint
     ])
     |> validate_required([
       :connection_id,
@@ -72,8 +75,7 @@ defmodule Hexpm.Accounts.SSO.Transaction do
       :linked_at,
       :cancelled_at,
       :nonce,
-      :code_verifier,
-      :user_id
+      :code_verifier
     ])
   end
 end

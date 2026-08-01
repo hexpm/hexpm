@@ -4,7 +4,7 @@ defmodule HexpmWeb.ControllerHelpers do
   import Plug.Conn
   import Phoenix.Controller
 
-  alias Hexpm.Accounts.{Auth, Organizations, SSO}
+  alias Hexpm.Accounts.{Auth, Organizations}
   alias Hexpm.UserSessions
   alias Hexpm.Repository.{Packages, Releases, Repositories}
 
@@ -378,55 +378,6 @@ defmodule HexpmWeb.ControllerHelpers do
     |> put_session("session_token", Base.encode64(session_token))
   end
 
-  def prove_pending_sso_link(conn, user) do
-    case {SSO.available?(), get_session(conn, "pending_sso_link")} do
-      {false, %{"transaction_id" => transaction_id, "token" => token}} ->
-        SSO.cancel_link(transaction_id, token)
-
-        conn
-        |> delete_session("pending_sso_link")
-        |> delete_session("oauth_return")
-
-      {false, _pending_link} ->
-        conn
-
-      {true, %{"transaction_id" => transaction_id, "token" => token}} ->
-        transaction = SSO.get_pending_link(transaction_id, token)
-
-        case SSO.prove_link(transaction_id, token, user) do
-          {:ok, _transaction} ->
-            assign(conn, :pending_sso_link_proof, :ok)
-
-          {:error, reason} ->
-            if transaction do
-              SSO.record_failure(transaction.connection, :link, reason, user)
-            end
-
-            SSO.cancel_link(transaction_id, token)
-
-            conn
-            |> delete_session("pending_sso_link")
-            |> assign(:pending_sso_link_proof, :error)
-            |> put_flash(
-              :error,
-              sso_link_error_message(reason)
-            )
-        end
-
-      {true, _pending_link} ->
-        conn
-    end
-  end
-
-  def pending_sso_link?(conn) do
-    SSO.available?() and
-      match?(
-        %{"transaction_id" => transaction_id, "token" => token}
-        when is_integer(transaction_id) and is_binary(token),
-        get_session(conn, "pending_sso_link")
-      )
-  end
-
   def sso_link_error_message(:not_member),
     do:
       "This Hexpm account is not a member of the organization. Ask an administrator to add it before retrying SSO."
@@ -434,15 +385,29 @@ defmodule HexpmWeb.ControllerHelpers do
   def sso_link_error_message({:identity_conflict, _changeset}),
     do: "That SSO identity or Hexpm account is already linked."
 
+  def sso_link_error_message(:session_user_mismatch),
+    do:
+      "That SSO authentication belongs to a different Hexpm account. Sign in as that account and start SSO again."
+
   def sso_link_error_message(_reason),
     do:
       "The SSO account-link request is no longer valid. You are signed in, but no SSO identity was connected."
 
-  def pending_sso_link_return(conn, "/sso/link") do
-    if conn.assigns[:pending_sso_link_proof] == :ok, do: "/sso/link"
-  end
+  def sso_callback_error_message(:not_member),
+    do:
+      "This Hexpm account is not a member of the organization. Ask an administrator to add it before retrying SSO."
 
-  def pending_sso_link_return(_conn, return), do: return
+  def sso_callback_error_message(:session_user_mismatch),
+    do:
+      "That provider identity is already linked to a different Hexpm account. Sign in as that account, or ask an organization administrator to unlink it."
+
+  def sso_callback_error_message(:identity_conflict),
+    do:
+      "This Hexpm account is already linked to a different provider identity in this organization. Unlink it before linking another."
+
+  # The code stays for anything without dedicated copy, since it is what an
+  # administrator quotes to support.
+  def sso_callback_error_message(code), do: "SSO authentication failed (#{code})."
 
   def remember_sso_state(conn, state) when is_binary(state) do
     states =
@@ -473,19 +438,12 @@ defmodule HexpmWeb.ControllerHelpers do
   end
 
   def start_tfa_session(conn, user, return) do
-    {:ok, _user_session, session_token} =
-      UserSessions.create_browser_session(user,
-        name: detect_browser(conn),
-        audit: %{audit_data(conn) | user: user}
-      )
-
     conn
     |> configure_session(renew: true)
     |> put_session("tfa_user_id", %{
       "uid" => user.id,
       "at" => NaiveDateTime.utc_now() |> NaiveDateTime.to_iso8601(),
-      "return" => return,
-      "session_token" => Base.encode64(session_token)
+      "return" => return
     })
   end
 

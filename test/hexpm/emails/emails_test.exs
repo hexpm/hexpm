@@ -1,7 +1,7 @@
 defmodule Hexpm.EmailsTest do
   use Hexpm.DataCase, async: false
 
-  alias Hexpm.Accounts.{Organization, User}
+  alias Hexpm.Accounts.Organization
   alias Hexpm.Emails
   alias HexpmWeb.EmailView.Common
 
@@ -84,38 +84,28 @@ defmodule Hexpm.EmailsTest do
     end
   end
 
+  # Recipient selection lives in Hexpm.Accounts.SSO, which passes an already
+  # filtered list; these cover the rendering only.
   describe "SSO security notifications" do
-    setup do
-      user = insert(:user)
-
-      insert(:email,
-        user: user,
-        email: "secondary@example.com",
-        primary: false,
-        public: false,
-        gravatar: false
-      )
-
-      %{
-        organization: build(:organization, name: "acme"),
-        user: Hexpm.Repo.preload(user, :emails, force: true)
-      }
-    end
-
-    test "link and unlink notifications go to every account email", context do
+    test "link and unlink notifications address the recipients they are given" do
       for email <- [
-            Emails.sso_identity_linked(context.organization, context.user),
-            Emails.sso_identity_unlinked(context.organization, context.user)
+            Emails.sso_identity_linked("acme", "eric", ["primary@example.com"]),
+            Emails.sso_identity_unlinked("acme", "eric", ["primary@example.com"])
           ] do
-        assert Enum.sort(Enum.map(email.to, &elem(&1, 1))) ==
-                 Enum.sort(["secondary@example.com", User.email(context.user, :primary)])
-
+        assert Enum.map(email.to, &elem(&1, 1)) == ["primary@example.com"]
         assert email.text_body =~ "acme"
+        assert email.text_body =~ "eric"
       end
     end
 
-    test "email mismatch identifies the provider address", context do
-      email = Emails.sso_email_mismatch(context.organization, context.user, "person@idp.example")
+    test "email mismatch identifies the provider address" do
+      email =
+        Emails.sso_email_mismatch(
+          "acme",
+          "eric",
+          ["primary@example.com"],
+          "person@idp.example"
+        )
 
       assert email.text_body =~ "person@idp.example"
       assert email.text_body =~ "no account email was changed"

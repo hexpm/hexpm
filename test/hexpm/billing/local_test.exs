@@ -14,12 +14,21 @@ defmodule Hexpm.Billing.LocalTest do
     organization = insert(:organization, billing_seats: nil)
     other_organization = insert(:organization, billing_seats: nil)
 
-    assert %{"quantity" => 1} = Local.get(organization.name)
-    assert %{"quantity" => 1} = Local.get(other_organization.name)
+    assert %{"quantity" => 100} = Local.get(organization.name)
+    assert %{"quantity" => 100} = Local.get(other_organization.name)
 
     assert {:ok, %{"quantity" => 3}} = Local.update(organization.name, %{"quantity" => 3})
     assert %{"quantity" => 3} = Local.get(organization.name)
-    assert %{"quantity" => 1} = Local.get(other_organization.name)
+    assert %{"quantity" => 100} = Local.get(other_organization.name)
     assert Organizations.get(organization.name).billing_seats == 3
+  end
+
+  test "an organization with no seat count does not block adding members" do
+    organization = insert(:organization, billing_seats: nil)
+    insert(:organization_user, organization: organization, user: insert(:user), role: "admin")
+
+    customer = Local.get(organization.name)
+
+    assert customer["quantity"] > Organizations.user_count(organization)
   end
 end

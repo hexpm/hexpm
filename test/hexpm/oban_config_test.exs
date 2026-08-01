@@ -38,7 +38,11 @@ defmodule Hexpm.ObanConfigTest do
     end
 
     assert Hexpm.Emails.OutboxReconciler.__opts__()[:queue] == :periodic
-    assert Hexpm.Emails.OutboxReconciler.__opts__()[:max_attempts] == 10
+
+    # One attempt paired with incomplete uniqueness: a retryable job counts as
+    # incomplete, so retrying in place would stop cron inserting the next tick
+    # for the whole backoff and the outbox would go unswept for hours.
+    assert Hexpm.Emails.OutboxReconciler.__opts__()[:max_attempts] == 1
 
     assert Hexpm.Emails.OutboxReconciler.__opts__()[:unique] == [
              period: :infinity,

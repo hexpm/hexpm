@@ -48,6 +48,7 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
       purge_password_resets(repo, batch_size)
       purge_account_deletion_requests(repo, batch_size)
       purge_sso_transactions(repo, batch_size)
+      purge_sso_sessions(repo, batch_size)
       purge_keys(repo, batch_size)
     end)
   end
@@ -181,6 +182,25 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
       )
 
     Logger.info("[task] Purged #{count} expired organization SSO transactions")
+  end
+
+  # One predicate rather than `expires_at < NOW() OR revoked_at IS NOT NULL`,
+  # which could use neither index. A revoked session carries an expiry too, so
+  # it is collected within the day. Nothing durable is lost: when a member last
+  # authenticated lives on the identity, not here.
+  defp purge_sso_sessions(repo, batch_size) do
+    count =
+      delete_in_batches(
+        repo,
+        Hexpm.Accounts.SSO.OrgSession,
+        from(session in Hexpm.Accounts.SSO.OrgSession,
+          where: session.expires_at < fragment("NOW()"),
+          order_by: session.expires_at
+        ),
+        batch_size
+      )
+
+    Logger.info("[task] Purged #{count} expired organization SSO sessions")
   end
 
   defp purge_keys(repo, batch_size) do

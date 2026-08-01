@@ -5,19 +5,17 @@
 >
   <div class="space-y-5 text-sm text-grey-700 dark:text-grey-200">
     <p>
-      You authenticated with the organization's identity provider and then proved control of the Hexpm account <strong>{@current_user.username}</strong>.
+      You are signed in as <strong>{@current_user.username}</strong>
+      and have just authenticated with {@organization.name}'s identity provider.
     </p>
     <p :if={@provider_email}>
       The identity provider reported <strong>{@provider_email}</strong>. This address is shown for confirmation only;
       it is not used to match accounts or grant membership.
     </p>
     <p>
-      After linking, this organization SSO connection becomes another login method for your Hexpm account. It does
-      not create an account, add organization membership, or replace your Hexpm email addresses.
-    </p>
-    <p>
-      SSO login does not prompt for your personal Hexpm TFA code. Continue only if you trust this organization's
-      identity provider to authenticate you.
+      Linking records that {@organization.name}'s provider authenticated you. Nothing at Hexpm requires it yet, and
+      when that changes it will decide whether you can reach {@organization.name}. It cannot sign you in to Hexpm,
+      act on your account, or stand in for your password or two-factor authentication. An administrator of {@organization.name} can revoke it at any time.
     </p>
   </div>
 

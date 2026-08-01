@@ -168,7 +168,7 @@ defmodule HexpmWeb.Router do
     get "/sso/link", SSOController, :link, log: false
     post "/sso/link", SSOController, :confirm_link, log: false
     post "/sso/link/cancel", SSOController, :cancel_link, log: false
-    get "/sso/:organization", SSOController, :start, log: false
+    get "/sso/org/:organization", SSOController, :start, log: false
 
     get "/sudo", SudoController, :show
     post "/sudo", SudoController, :create
@@ -337,9 +337,11 @@ defmodule HexpmWeb.Router do
     post "/orgs/:dashboard_org/sso/test", OrganizationSSOController, :test, log: false
     post "/orgs/:dashboard_org/sso/enable", OrganizationSSOController, :enable, log: false
     post "/orgs/:dashboard_org/sso/disable", OrganizationSSOController, :disable, log: false
+    post "/orgs/:dashboard_org/sso/delete", OrganizationSSOController, :delete, log: false
     post "/orgs/:dashboard_org/sso/rotate", OrganizationSSOController, :rotate, log: false
     post "/orgs/:dashboard_org/sso/promote", OrganizationSSOController, :promote, log: false
     post "/orgs/:dashboard_org/sso/unlink", OrganizationSSOController, :unlink, log: false
+
     get "/orgs/:dashboard_org/billing", OrganizationController, :billing
     get "/orgs/:dashboard_org/danger-zone", OrganizationController, :danger_zone
     post "/orgs/:dashboard_org/leave", OrganizationController, :leave

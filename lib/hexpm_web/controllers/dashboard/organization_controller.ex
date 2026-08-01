@@ -208,11 +208,25 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   def sso(conn, %{"dashboard_org" => organization}) do
     access_organization(conn, organization, "admin", fn organization ->
       if SSO.enabled?(organization) do
-        render_index(conn, organization, tab: :sso)
+        conn
+        |> allow_provider_form_action(organization)
+        |> render_index(organization, tab: :sso)
       else
         not_found(conn)
       end
     end)
+  end
+
+  # Testing a connection submits a form whose response redirects to the provider,
+  # and Chrome applies form-action to that redirect.
+  defp allow_provider_form_action(conn, organization) do
+    case SSO.get_connection(organization) do
+      nil ->
+        conn
+
+      connection ->
+        HexpmWeb.Plugs.ContentSecurityPolicy.allow_form_action(conn, connection.issuer)
+    end
   end
 
   def billing(conn, %{"dashboard_org" => organization}) do
@@ -952,7 +966,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         policies: policies,
         policy_stats: policy_stats,
         policy_activity: policy_activity,
-        policy_rev: policy_rev
+        policy_rev: policy_rev,
+        sso_org_session: current_org_session(conn, organization)
       ] ++ sso_assigns(organization, opts[:tab])
 
     assigns = Keyword.merge(assigns, customer_assigns(customer, organization))
@@ -980,17 +995,24 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   defp sso_assigns(organization, :sso) do
     connection = SSO.get_connection(organization)
+    identities = if connection, do: SSO.identities(connection), else: []
 
     [
       sso_connection: connection,
-      sso_identities: if(connection, do: SSO.identities(connection), else: []),
+      sso_identities: identities,
       sso_failures: if(connection, do: SSO.failures(connection), else: []),
       sso_callback_url: url(~p"/sso/callback"),
-      sso_login_url: url(~p"/sso/#{organization}")
+      sso_login_url: url(~p"/sso/org/#{organization}")
     ]
   end
 
   defp sso_assigns(_organization, _tab), do: []
+
+  defp current_org_session(conn, organization) do
+    if SSO.enabled?(organization) && conn.assigns[:current_session] do
+      SSO.current_org_session(conn.assigns.current_session.id, organization.id)
+    end
+  end
 
   # Whether the current user may edit policies (create/update/delete are all
   # admin-gated). Used to hide write affordances from readers who can still view

@@ -7,7 +7,7 @@ defmodule HexpmWeb.LoginController do
   plug :nillify_params, ["return"]
 
   def show(conn, _params) do
-    if logged_in?(conn) and not pending_sso_link?(conn) do
+    if logged_in?(conn) do
       redirect_return(conn, conn.assigns.current_user, safe_string(conn.params["return"]))
     else
       render_show(conn)
@@ -66,16 +66,12 @@ defmodule HexpmWeb.LoginController do
   defp start_session(conn, user, return) do
     conn
     |> start_session_internal(user)
-    |> prove_pending_sso_link(user)
     |> HexpmWeb.Plugs.Sudo.set_sudo_authenticated()
     |> redirect_return(user, return)
   end
 
-  defp redirect_return(conn, user, "/" <> _ = return) do
-    case pending_sso_link_return(conn, return) do
-      nil -> redirect(conn, to: ~p"/users/#{user}")
-      return -> redirect(conn, to: return)
-    end
+  defp redirect_return(conn, _user, "/" <> _ = return) do
+    redirect(conn, to: return)
   end
 
   defp redirect_return(conn, user, _return) do
@@ -88,8 +84,7 @@ defmodule HexpmWeb.LoginController do
       "show.html",
       title: "Log in",
       container: "container page page-xs login",
-      return: safe_string(conn.params["return"]),
-      pending_sso_link?: pending_sso_link?(conn)
+      return: safe_string(conn.params["return"])
     )
   end
 

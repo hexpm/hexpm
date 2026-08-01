@@ -86,6 +86,35 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
              Oidcc.discover(@issuer)
   end
 
+  test "rejects nonconforming issuer components before discovery" do
+    assert {:error, %Error{stage: :url_validation, code: :query_not_allowed}} =
+             Oidcc.discover(@issuer <> "?tenant=other")
+
+    assert {:error, %Error{stage: :url_validation, code: :fragment_not_allowed}} =
+             Oidcc.discover(@issuer <> "#other")
+  end
+
+  test "rejects a nonconforming stored issuer before authorization or token exchange", context do
+    connection = %{context.connection | issuer: @issuer <> "?tenant=other"}
+
+    assert {:error, %Error{stage: :url_validation, code: :query_not_allowed}} =
+             Oidcc.authorization_uri(
+               connection,
+               context.transaction,
+               context.transaction.redirect_uri,
+               connection.client_secret
+             )
+
+    assert {:error, %Error{stage: :url_validation, code: :query_not_allowed}} =
+             Oidcc.exchange_code(
+               connection,
+               context.transaction,
+               "authorization-code",
+               context.transaction.redirect_uri,
+               connection.client_secret
+             )
+  end
+
   test "honors provider no-cache metadata policy", context do
     expect_json_get(
       @issuer <> "/.well-known/openid-configuration",
@@ -296,6 +325,44 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
              Oidcc.discover(@issuer)
   end
 
+  test "accepts a provider that does not advertise code challenge methods", context do
+    # Microsoft Entra omits code_challenge_methods_supported and accepts S256
+    # anyway, so an absent list must not be read as a refusal.
+    document = Map.delete(context.discovery_document, "code_challenge_methods_supported")
+
+    expect_json_get(@issuer <> "/.well-known/openid-configuration", document)
+    expect_json_get(@jwks_uri, context.jwks_document)
+
+    assert {:ok, metadata} = Oidcc.discover(@issuer)
+    assert metadata.discovery_document == document
+  end
+
+  test "still sends an S256 challenge to a provider that advertises nothing", context do
+    document = Map.delete(context.discovery_document, "code_challenge_methods_supported")
+    connection = %{context.connection | discovery_document: document}
+
+    assert {:ok, authorization_uri} =
+             Oidcc.authorization_uri(
+               connection,
+               context.transaction,
+               context.transaction.redirect_uri,
+               connection.client_secret
+             )
+
+    query = URI.decode_query(URI.parse(authorization_uri).query)
+    assert query["code_challenge_method"] == "S256"
+    assert is_binary(query["code_challenge"])
+  end
+
+  test "rejects a provider that advertises code challenge methods without S256", context do
+    document = Map.put(context.discovery_document, "code_challenge_methods_supported", ["plain"])
+
+    expect_json_get(@issuer <> "/.well-known/openid-configuration", document)
+
+    assert {:error, %Error{stage: :discovery, code: :pkce_s256_unsupported}} =
+             Oidcc.discover(@issuer)
+  end
+
   test "bounds DNS resolution time" do
     original_resolver = Application.get_env(:hexpm, :sso_dns_resolver)
     original_timeout = Application.get_env(:hexpm, :sso_dns_timeout)
@@ -332,6 +399,31 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
     assert params["nonce"] == "nonce"
     assert params["code_challenge_method"] == "S256"
     refute params["code_challenge"] == context.transaction.code_verifier
+  end
+
+  test "passes an ephemeral login hint only when one is present", context do
+    transaction = %{context.transaction | login_hint: "person@example.com"}
+
+    assert {:ok, authorization_uri} =
+             Oidcc.authorization_uri(
+               context.connection,
+               transaction,
+               transaction.redirect_uri,
+               context.connection.client_secret
+             )
+
+    assert URI.decode_query(URI.parse(authorization_uri).query)["login_hint"] ==
+             "person@example.com"
+
+    assert {:ok, authorization_uri} =
+             Oidcc.authorization_uri(
+               context.connection,
+               context.transaction,
+               context.transaction.redirect_uri,
+               context.connection.client_secret
+             )
+
+    refute URI.decode_query(URI.parse(authorization_uri).query)["login_hint"]
   end
 
   test "does not hide authorization setup exceptions", context do
@@ -392,6 +484,61 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
     assert claims.email == "member@example.com"
     refute Map.has_key?(claims, :id_token)
     refute Map.has_key?(claims, :access_token)
+  end
+
+  test "uses stable Entra subjects and never substitutes guest usernames for a missing email",
+       context do
+    entra_issuer =
+      "https://login.microsoftonline.com/11111111-2222-3333-4444-555555555555/v2.0"
+
+    connection = %{
+      context.connection
+      | issuer: entra_issuer,
+        discovery_document: Map.put(context.connection.discovery_document, "issuer", entra_issuer)
+    }
+
+    guest_token =
+      signed_id_token(context.key, "key-1", context.transaction, %{
+        "iss" => entra_issuer,
+        "sub" => "stable-guest-subject",
+        "email" => "guest_external.example#EXT#@tenant.onmicrosoft.com",
+        "preferred_username" => "guest@example.net",
+        "tid" => "11111111-2222-3333-4444-555555555555"
+      })
+
+    expect_token_response(guest_token)
+
+    assert {:ok,
+            %{
+              subject: "stable-guest-subject",
+              email: "guest_external.example#EXT#@tenant.onmicrosoft.com"
+            }} =
+             Oidcc.exchange_code(
+               connection,
+               context.transaction,
+               "authorization-code",
+               context.transaction.redirect_uri,
+               connection.client_secret
+             )
+
+    missing_email_token =
+      signed_id_token_without_email(context.key, "key-1", context.transaction, %{
+        "iss" => entra_issuer,
+        "sub" => "stable-guest-subject",
+        "preferred_username" => "renamed-guest@example.net",
+        "upn" => "renamed-guest@example.net"
+      })
+
+    expect_token_response(missing_email_token)
+
+    assert {:ok, %{subject: "stable-guest-subject", email: nil}} =
+             Oidcc.exchange_code(
+               connection,
+               context.transaction,
+               "authorization-code",
+               context.transaction.redirect_uri,
+               connection.client_secret
+             )
   end
 
   test "refreshes JWKS once for an unknown key ID and keeps strict validation", context do
@@ -461,7 +608,6 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
       {:wrong_nonce, context.key, %{"nonce" => "wrong"}},
       {:expired, context.key, %{"exp" => now - 300}},
       {:wrong_issuer, context.key, %{"iss" => "https://other.example.com"}},
-      {:old_iat, context.key, %{"iat" => now - 600}},
       {:future_iat, context.key, %{"iat" => now + 600}},
       {:invalid_signature, JOSE.JWK.generate_key({:rsa, 1_024}), %{}}
     ]
@@ -479,6 +625,26 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
                  context.connection.client_secret
                )
     end
+  end
+
+  test "accepts a token issued before the transaction started", context do
+    now = DateTime.utc_now() |> DateTime.to_unix()
+
+    id_token =
+      signed_id_token(context.key, "key-1", context.transaction, %{"iat" => now - 7_200})
+
+    expect_token_response(id_token)
+
+    assert {:ok, claims} =
+             Oidcc.exchange_code(
+               context.connection,
+               context.transaction,
+               "authorization-code",
+               context.transaction.redirect_uri,
+               context.connection.client_secret
+             )
+
+    assert claims.subject == "00u123"
   end
 
   test "rejects a token signed with a disallowed symmetric algorithm", context do
@@ -652,23 +818,40 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
   end
 
   defp signed_id_token(key, kid, transaction, overrides \\ %{}) do
+    claims =
+      transaction
+      |> default_id_token_claims()
+      |> Map.merge(overrides)
+
+    sign_id_token(key, kid, claims)
+  end
+
+  defp signed_id_token_without_email(key, kid, transaction, overrides) do
+    claims =
+      transaction
+      |> default_id_token_claims()
+      |> Map.delete("email")
+      |> Map.merge(overrides)
+
+    sign_id_token(key, kid, claims)
+  end
+
+  defp default_id_token_claims(transaction) do
     now = DateTime.utc_now() |> DateTime.to_unix()
 
-    claims =
-      Map.merge(
-        %{
-          "iss" => @issuer,
-          "sub" => "00u123",
-          "aud" => "client-id",
-          "azp" => "client-id",
-          "nonce" => transaction.nonce,
-          "iat" => now,
-          "exp" => now + 300,
-          "email" => "member@example.com"
-        },
-        overrides
-      )
+    %{
+      "iss" => @issuer,
+      "sub" => "00u123",
+      "aud" => "client-id",
+      "azp" => "client-id",
+      "nonce" => transaction.nonce,
+      "iat" => now,
+      "exp" => now + 300,
+      "email" => "member@example.com"
+    }
+  end
 
+  defp sign_id_token(key, kid, claims) do
     key
     |> JOSE.JWT.sign(%{"alg" => "RS256", "kid" => kid}, claims)
     |> JOSE.JWS.compact()

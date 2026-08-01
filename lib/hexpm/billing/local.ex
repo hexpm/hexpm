@@ -109,7 +109,9 @@ defmodule Hexpm.Billing.Local do
   defp quantity(organization) do
     case Organizations.get(organization) do
       %{billing_seats: quantity} when is_integer(quantity) -> quantity
-      _organization -> 1
+      # An organization with no explicit seat count is not seat-limited locally.
+      # The members dialog compares purchased seats against current members.
+      _organization -> 100
     end
   end
 end

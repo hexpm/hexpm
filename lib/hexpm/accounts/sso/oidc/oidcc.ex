@@ -2,6 +2,7 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
   @behaviour Hexpm.Accounts.SSO.OIDC
 
   alias Hexpm.Accounts.SSO.{Connection, Error, SafeURL, Transaction}
+  alias Hexpm.Accounts.SSO.OIDC.Issuer
 
   @allowed_signing_algorithms ~w(RS256 RS384 RS512 PS256 PS384 PS512 ES256 ES384 ES512 EdDSA)
   @allowed_token_auth_methods ~w(client_secret_basic client_secret_post)
@@ -14,7 +15,7 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
   def discover(issuer) do
     discovery_url = String.trim_trailing(issuer, "/") <> "/.well-known/openid-configuration"
 
-    with {:ok, _uri} <- SafeURL.validate(issuer),
+    with {:ok, _uri} <- Issuer.validate(issuer),
          {:ok, discovery_document, discovery_expiry} <- fetch_json(discovery_url, :discovery),
          {:ok, configuration} <- decode_configuration(discovery_document, issuer),
          :ok <- validate_configuration(configuration),
@@ -41,6 +42,12 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
         redirect_uri,
         client_secret
       ) do
+    url_extension =
+      case transaction.login_hint do
+        login_hint when is_binary(login_hint) -> [{"login_hint", login_hint}]
+        _other -> []
+      end
+
     with {:ok, client_context} <- client_context(connection, client_secret),
          {:ok, uri} <-
            Oidcc.Authorization.create_redirect_url(client_context, %{
@@ -49,7 +56,8 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
              state: transaction.raw_state,
              nonce: transaction.nonce,
              pkce_verifier: transaction.code_verifier,
-             require_pkce: true
+             require_pkce: true,
+             url_extension: url_extension
            }) do
       {:ok, to_string(uri)}
     else
@@ -74,8 +82,8 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
            ),
          {:ok, id_token} <- fetch_id_token(token_response),
          {:ok, claims, refreshed_jwks, refreshed_jwks_expiry} <-
-           validate_id_token(id_token, client_context, transaction, connection),
-         :ok <- validate_claims(claims, transaction, connection) do
+           validate_id_token(id_token, client_context, transaction),
+         :ok <- validate_claims(claims, connection) do
       {:ok,
        %{
          issuer: claims["iss"],
@@ -144,7 +152,7 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
      Map.merge(body, %{"client_id" => connection.client_id, "client_secret" => client_secret})}
   end
 
-  defp validate_id_token(id_token, client_context, transaction, connection) do
+  defp validate_id_token(id_token, client_context, transaction) do
     opts = %{nonce: transaction.nonce, trusted_audiences: [], validate_azp: :client_id}
 
     case oidcc_validate_id_token(id_token, client_context, opts, :initial) do
@@ -152,14 +160,14 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
         {:ok, claims, nil, nil}
 
       {:error, {:no_matching_key_with_kid, _kid}} ->
-        refresh_and_validate_id_token(id_token, client_context, transaction, connection, opts)
+        refresh_and_validate_id_token(id_token, client_context, opts)
 
       {:error, _reason} ->
         error(:token, :id_token_invalid)
     end
   end
 
-  defp refresh_and_validate_id_token(id_token, client_context, transaction, connection, opts) do
+  defp refresh_and_validate_id_token(id_token, client_context, opts) do
     jwks_uri = client_context.provider_configuration.jwks_uri
 
     with {:ok, _uri} <- SafeURL.validate(jwks_uri),
@@ -167,8 +175,7 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
          {:ok, jwks} <- decode_jwks(jwks_document),
          refreshed_context <- %{client_context | jwks: jwks},
          {:ok, claims} <-
-           oidcc_validate_id_token(id_token, refreshed_context, opts, :jwks_refresh),
-         :ok <- validate_claims(claims, transaction, connection) do
+           oidcc_validate_id_token(id_token, refreshed_context, opts, :jwks_refresh) do
       {:ok, claims, jwks_document, expiry}
     else
       {:error, %Error{} = error} -> {:error, error}
@@ -189,9 +196,13 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
       {:error, :token_validation_exception}
   end
 
-  defp validate_claims(claims, transaction, connection) do
+  # There is no lower bound on iat. Microsoft Entra stamps the authentication
+  # instant rather than the response instant, so a token minted from an existing
+  # provider session is legitimately older than the transaction that asked for
+  # it. The nonce binds the token to this transaction and exp bounds its life,
+  # which is what stops replay.
+  defp validate_claims(claims, connection) do
     now = DateTime.utc_now() |> DateTime.to_unix()
-    transaction_started = DateTime.to_unix(transaction.inserted_at)
     issued_at = claims["iat"]
 
     cond do
@@ -199,14 +210,14 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
       not valid_subject?(claims["sub"]) -> error(:claims, :subject_invalid)
       not valid_provider_email?(claims["email"]) -> error(:claims, :provider_email_invalid)
       not is_integer(issued_at) -> error(:claims, :issued_at_invalid)
-      issued_at < transaction_started - @clock_skew_seconds -> error(:claims, :issued_at_too_old)
       issued_at > now + @clock_skew_seconds -> error(:claims, :issued_at_in_future)
       true -> :ok
     end
   end
 
   defp client_context(connection, client_secret) do
-    with {:ok, configuration} <-
+    with {:ok, _uri} <- Issuer.validate_syntax(connection.issuer),
+         {:ok, configuration} <-
            decode_configuration(connection.discovery_document, connection.issuer),
          :ok <- validate_configuration(configuration),
          {:ok, jwks} <- decode_jwks(connection.jwks_document) do
@@ -258,7 +269,7 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
       "authorization_code" not in configuration.grant_types_supported ->
         error(:discovery, :authorization_code_grant_unsupported)
 
-      "S256" not in List.wrap(configuration.code_challenge_methods_supported) ->
+      not pkce_s256_permitted?(configuration.code_challenge_methods_supported) ->
         error(:discovery, :pkce_s256_unsupported)
 
       signing_algorithms == [] ->
@@ -272,10 +283,21 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
     end
   end
 
+  # Advertising code_challenge_methods_supported is optional, and Microsoft
+  # Entra omits it while accepting S256 anyway. Silence means unstated, so only a
+  # present list that leaves S256 out is a refusal. An empty list is present: it
+  # says the provider supports no methods at all. Hexpm always sends an S256
+  # challenge either way, since the hardened configuration asserts it, but a
+  # provider that ignores the challenge offers no protection and nothing here can
+  # tell that it did.
+  defp pkce_s256_permitted?(:undefined), do: true
+  defp pkce_s256_permitted?(methods), do: "S256" in List.wrap(methods)
+
   defp harden_configuration(configuration) do
     %{
       configuration
       | id_token_signing_alg_values_supported: allowed_signing_algorithms(configuration),
+        code_challenge_methods_supported: ["S256"],
         pushed_authorization_request_endpoint: :undefined,
         require_pushed_authorization_requests: false,
         request_parameter_supported: false,

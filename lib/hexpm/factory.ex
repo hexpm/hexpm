@@ -149,7 +149,7 @@ defmodule Hexpm.Factory do
   def email_outbox_entry_factory() do
     %Hexpm.Emails.OutboxEntry{
       category: "test.email",
-      ordering_key: "test:#{Fake.sequence(:word)}",
+      group_key: "test:#{Fake.sequence(:word)}",
       email: %{
         "version" => 1,
         "subject" => "Test email",

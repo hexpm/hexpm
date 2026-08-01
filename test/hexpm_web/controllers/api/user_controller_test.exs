@@ -214,8 +214,8 @@ defmodule HexpmWeb.API.UserControllerTest do
         |> put_req_header("authorization", key_for(data.user1))
         |> get("/api/users/#{data.user1.username}")
 
-      assert response(conn, 200) =~ data.package1.name
-      assert response(conn, 200) =~ data.package2.name
+      both = Enum.sort([data.package1.name, data.package2.name])
+      assert listed_packages(conn) == {both, both}
     end
 
     test "show owned packages as user from the same organization", data do
@@ -224,8 +224,8 @@ defmodule HexpmWeb.API.UserControllerTest do
         |> put_req_header("authorization", key_for(data.user2))
         |> get("/api/users/#{data.user1.username}")
 
-      assert response(conn, 200) =~ data.package1.name
-      assert response(conn, 200) =~ data.package2.name
+      both = Enum.sort([data.package1.name, data.package2.name])
+      assert listed_packages(conn) == {both, both}
     end
 
     test "show owned packages as other user", data do
@@ -234,8 +234,7 @@ defmodule HexpmWeb.API.UserControllerTest do
         |> put_req_header("authorization", key_for(data.user3))
         |> get("/api/users/#{data.user1.username}")
 
-      assert response(conn, 200) =~ data.package1.name
-      refute response(conn, 200) =~ data.package2.name
+      assert listed_packages(conn) == {[data.package1.name], [data.package1.name]}
     end
   end
 
@@ -273,5 +272,18 @@ defmodule HexpmWeb.API.UserControllerTest do
 
       assert conn.status == 401
     end
+  end
+
+  # Matching names against the raw body makes any package name that happens to
+  # be a substring of a username, an email or another name a false result. A
+  # generated username of "xenolinguist" against a package called "linguist" is
+  # what turned this red on CI.
+  defp listed_packages(conn) do
+    body = json_response(conn, 200)
+
+    {
+      body |> Map.fetch!("packages") |> Enum.map(& &1["name"]) |> Enum.sort(),
+      body |> Map.fetch!("owned_packages") |> Map.keys() |> Enum.sort()
+    }
   end
 end

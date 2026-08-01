@@ -8,6 +8,17 @@
 
       <%!-- Right Content --%>
       <div class="flex-1 min-w-0">
+        <div
+          :if={@sso_org_session}
+          id="sso-org-session"
+          class="mb-4 sm:mb-6 rounded-md border border-green-200 dark:border-green-900 bg-green-50 dark:bg-green-950 px-4 py-3 text-sm text-green-900 dark:text-green-100"
+        >
+          Authenticated to {@organization.name} through single sign-on until {Calendar.strftime(
+            @sso_org_session.expires_at,
+            "%Y-%m-%d %H:%M UTC"
+          )}.
+        </div>
+
         <.org_tab_nav current_user={@current_user} organization={@organization} tab={@tab}>
           <%= case @tab do %>
             <% :profile -> %>

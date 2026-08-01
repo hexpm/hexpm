@@ -3,9 +3,9 @@ defmodule Hexpm.Emails.OutboxLock do
 
   def acquire!(nil), do: :ok
 
-  def acquire!(ordering_key) do
+  def acquire!(group_key) do
     Repo.advisory_xact_lock(:email_outbox,
-      sub_key: :erlang.phash2(ordering_key, 2_147_483_647)
+      sub_key: :erlang.phash2(group_key, 2_147_483_647)
     )
   end
 end

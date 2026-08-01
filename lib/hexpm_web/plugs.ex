@@ -112,13 +112,13 @@ defmodule HexpmWeb.Plugs do
 
     session_token = get_session(conn, "session_token")
 
-    user =
+    {session, user} =
       if session_token do
         case Base.decode64(session_token) do
           {:ok, decoded_token} ->
             case UserSessions.get_browser_session_by_token(decoded_token) do
               nil ->
-                nil
+                {nil, nil}
 
               session ->
                 # Update last_use for browser sessions (throttled to once per 5 minutes)
@@ -136,17 +136,19 @@ defmodule HexpmWeb.Plugs do
                   UserSessions.update_last_use(session, usage_info)
                 end
 
-                Users.get_by_id(session.user_id, [:emails, organizations: :repository])
+                {session, Users.get_by_id(session.user_id, [:emails, organizations: :repository])}
             end
 
           _ ->
-            nil
+            {nil, nil}
         end
       else
-        nil
+        {nil, nil}
       end
 
-    assign(conn, :current_user, user)
+    conn
+    |> assign(:current_user, user)
+    |> assign(:current_session, session)
   end
 
   def disable_deactivated(conn, _opts) do

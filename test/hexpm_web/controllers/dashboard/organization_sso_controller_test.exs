@@ -2,8 +2,6 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
   use HexpmWeb.ConnCase
   use Oban.Testing, repo: Hexpm.RepoBase
 
-  import ExUnit.CaptureLog
-
   alias Hexpm.Accounts.{AuditLogs, SSO}
   alias Hexpm.Accounts.SSO.{Connection, Error, OIDC}
   alias Hexpm.Emails.{OutboxEntry, OutboxWorker}
@@ -207,7 +205,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     expect(OIDC.Mock, :discover, fn issuer -> {:ok, metadata(issuer)} end)
 
     log =
-      capture_log([level: :debug], fn ->
+      capture_debug_log(fn ->
         build_conn()
         |> test_login(context.admin)
         |> post("/dashboard/orgs/#{context.organization.name}/sso", %{
@@ -220,7 +218,41 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
         |> response(302)
       end)
 
+    # Something has to have been logged, or the refute below is asserting about
+    # an empty string.
+    assert log =~ "organization_sso_connections"
     refute log =~ client_secret
+  end
+
+  test "the settings page allows the provider origin in form-action", context do
+    insert(:organization_sso_connection,
+      organization: context.organization,
+      configured_by_user_id: context.admin.id,
+      tested_at: nil,
+      enabled_at: nil
+    )
+
+    conn =
+      build_conn()
+      |> test_login(context.admin)
+      |> get("/dashboard/orgs/#{context.organization.name}/sso")
+
+    assert html_response(conn, 200)
+
+    [csp] = get_resp_header(conn, "content-security-policy")
+    assert csp =~ "form-action 'self' https://identity.example.com"
+  end
+
+  test "the settings page keeps form-action closed without a connection", context do
+    conn =
+      build_conn()
+      |> test_login(context.admin)
+      |> get("/dashboard/orgs/#{context.organization.name}/sso")
+
+    assert html_response(conn, 200)
+
+    [csp] = get_resp_header(conn, "content-security-policy")
+    assert csp =~ "form-action 'self';"
   end
 
   test "tests, enables, and immediately disables a connection", context do
@@ -336,13 +368,13 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
 
     linked_notification =
       insert(:email_outbox_entry,
-        ordering_key: sso_ordering_key(connection, context.member),
+        group_key: sso_group_key(connection, context.member),
         category: "sso.identity_linked"
       )
 
     mismatch_notification =
       insert(:email_outbox_entry,
-        ordering_key: sso_ordering_key(connection, context.member),
+        group_key: sso_group_key(connection, context.member),
         category: "sso.email_mismatch"
       )
 
@@ -361,10 +393,10 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
 
     assert %OutboxEntry{
              category: "sso.identity_unlinked",
-             ordering_key: ordering_key
+             group_key: group_key
            } = Repo.one!(OutboxEntry)
 
-    assert ordering_key == sso_ordering_key(connection, context.member)
+    assert group_key == sso_group_key(connection, context.member)
 
     unlink_log =
       Enum.find(AuditLogs.all_by(context.organization), &(&1.action == "sso.identity.unlink"))
@@ -391,7 +423,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     refute_enqueued(worker: OutboxWorker)
   end
 
-  defp sso_ordering_key(connection, user), do: "sso:#{connection.id}:#{user.id}"
+  defp sso_group_key(connection, user), do: "sso:#{connection.id}:#{user.id}"
 
   test "diagnostics are capped, stable, and redact all supplied details", context do
     connection =
