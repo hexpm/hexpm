@@ -415,7 +415,7 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
   end
 
   describe "purge organization SSO sessions" do
-    test "keeps lapsed organization access sessions until they pass retention" do
+    test "deletes lapsed organization access sessions" do
       organization = insert(:organization)
       user = insert(:user)
       insert(:organization_user, organization: organization, user: user)
@@ -437,16 +437,11 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
           revoked_at: DateTime.utc_now()
         )
 
-      stale = insert_org_session(organization, user, identity, expires_at: days_ago(91))
-
       PurgeExpiredRecords.run()
 
-      # The administrator view reports when a member last authenticated from
-      # these rows, so lapsing is not on its own a reason to delete one.
       assert Repo.get(Hexpm.Accounts.SSO.OrgSession, active.id)
-      assert Repo.get(Hexpm.Accounts.SSO.OrgSession, expired.id)
-      assert Repo.get(Hexpm.Accounts.SSO.OrgSession, revoked.id)
-      refute Repo.get(Hexpm.Accounts.SSO.OrgSession, stale.id)
+      refute Repo.get(Hexpm.Accounts.SSO.OrgSession, expired.id)
+      refute Repo.get(Hexpm.Accounts.SSO.OrgSession, revoked.id)
     end
   end
 

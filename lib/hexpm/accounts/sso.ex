@@ -851,6 +851,11 @@ defmodule Hexpm.Accounts.SSO do
   def establish_org_session!(%Identity{} = identity, user_session_id) do
     now = DateTime.utc_now()
 
+    Repo.update_all(
+      from(row in Identity, where: row.id == ^identity.id),
+      set: [last_authenticated_at: now, updated_at: now]
+    )
+
     current =
       from(session in OrgSession,
         where: session.user_session_id == ^user_session_id,
@@ -910,22 +915,6 @@ defmodule Hexpm.Accounts.SSO do
       ),
       set: [revoked_at: revoke_at, updated_at: now]
     )
-  end
-
-  @doc """
-  Every organization access session these identities have earned.
-
-  Deliberately unfiltered by revocation or expiry: the administrator view built
-  from this reports when a member last authenticated, and a member who
-  authenticated last week has still authenticated. Filtering to live sessions
-  made that indistinguishable from never having authenticated at all.
-  """
-  def org_sessions_for_identities(identity_ids) when is_list(identity_ids) do
-    from(session in OrgSession,
-      where: session.identity_id in ^identity_ids,
-      order_by: [desc: session.authenticated_at]
-    )
-    |> Repo.all()
   end
 
   def failures(%Connection{} = connection) do

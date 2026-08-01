@@ -1000,7 +1000,6 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     [
       sso_connection: connection,
       sso_identities: identities,
-      sso_authentications: last_sso_authentications(identities),
       sso_failures: if(connection, do: SSO.failures(connection), else: []),
       sso_callback_url: url(~p"/sso/callback"),
       sso_login_url: url(~p"/sso/org/#{organization}")
@@ -1013,16 +1012,6 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     if SSO.enabled?(organization) && conn.assigns[:current_session] do
       SSO.current_org_session(conn.assigns.current_session.id, organization.id)
     end
-  end
-
-  defp last_sso_authentications(identities) do
-    identities
-    |> Enum.map(& &1.id)
-    |> SSO.org_sessions_for_identities()
-    |> Enum.group_by(& &1.identity_id, & &1.authenticated_at)
-    |> Map.new(fn {identity_id, authenticated_at} ->
-      {identity_id, Enum.max(authenticated_at, DateTime)}
-    end)
   end
 
   # Whether the current user may edit policies (create/update/delete are all

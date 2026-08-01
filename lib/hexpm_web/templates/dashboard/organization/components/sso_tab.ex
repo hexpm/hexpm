@@ -11,7 +11,6 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
   attr :organization, :any, required: true
   attr :connection, :any, required: true
   attr :identities, :list, required: true
-  attr :authentications, :map, required: true
   attr :failures, :list, required: true
   attr :callback_url, :string, required: true
   attr :login_url, :string, required: true
@@ -187,7 +186,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
                 {identity.user.username}
               </a>
               <div class="mt-1 text-xs text-grey-500 dark:text-grey-400">
-                {last_authenticated(@authentications[identity.id])}
+                {last_authenticated(identity.last_authenticated_at)}
               </div>
             </div>
             <.form for={%{}} action={~p"/dashboard/orgs/#{@organization}/sso/unlink"}>

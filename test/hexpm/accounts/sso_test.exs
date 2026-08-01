@@ -1098,6 +1098,29 @@ defmodule Hexpm.Accounts.SSOTest do
                SSO.failures(context.connection)
     end
 
+    test "the last authentication outlives the session that produced it", context do
+      identity = link_identity(context, context.member)
+      refute identity.last_authenticated_at
+
+      user_session = browser_session(context.member)
+
+      assert {:ok, {:login, _user, _org_session, _return}} =
+               context
+               |> start_transaction(context.member)
+               |> complete(valid_claims(), context.member, user_session.id)
+
+      assert authenticated_at = Repo.get!(Identity, identity.id).last_authenticated_at
+
+      # Logging out revokes the browser session, and the nightly purge then
+      # deletes it and cascades to the organization access session. The
+      # administrator's linked-accounts view has to survive that.
+      Hexpm.UserSessions.revoke(user_session, nil, audit: audit_data(context.member))
+      Hexpm.ReleaseTasks.PurgeExpiredRecords.run()
+
+      refute Repo.exists?(SSO.OrgSession)
+      assert Repo.get!(Identity, identity.id).last_authenticated_at == authenticated_at
+    end
+
     test "an organization access session dies with its browser session", context do
       link_identity(context, context.member)
       user_session = browser_session(context.member)
