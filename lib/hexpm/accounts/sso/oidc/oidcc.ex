@@ -93,6 +93,7 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
            issuer: claims["iss"],
            subject: claims["sub"],
            email: optional_binary(claims["email"]),
+           email_verified: claims["email_verified"] == true,
            jwks_document: refreshed_jwks,
            jwks_expires_at: refreshed_jwks_expires_at
          }}

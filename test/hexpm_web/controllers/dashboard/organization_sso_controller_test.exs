@@ -6,6 +6,10 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
   alias Hexpm.Accounts.SSO.{Connection, Error, OIDC}
   alias Hexpm.Emails.{OutboxEntry, OutboxWorker}
 
+  defmodule EmptyResolver do
+    def lookup(_domain), do: []
+  end
+
   setup :verify_on_exit!
 
   setup do
@@ -514,6 +518,10 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     end
 
     test "says what to do when the record is not published yet", context do
+      # Stubbed rather than left to real DNS: another test file swaps this
+      # resolver globally, and the answer has to be "the resolver said no",
+      # not "the resolver did not answer".
+      app_env(:hexpm, :domain_dns_resolver, EmptyResolver)
       {:ok, domain} = add_domain(context, "example.com")
 
       conn =

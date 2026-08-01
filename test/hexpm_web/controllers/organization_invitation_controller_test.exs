@@ -20,7 +20,7 @@ defmodule HexpmWeb.OrganizationInvitationControllerTest do
   end
 
   test "sends an anonymous visitor to log in first", %{invitation: invitation} do
-    conn = get(build_conn(), "/invites/#{invitation.raw_token}")
+    conn = get(build_conn(), "/invites?token=#{invitation.raw_token}")
 
     assert redirected_to(conn) =~ "/login"
   end
@@ -31,7 +31,7 @@ defmodule HexpmWeb.OrganizationInvitationControllerTest do
     conn =
       build_conn()
       |> test_login(newcomer)
-      |> get("/invites/#{invitation.raw_token}")
+      |> get("/invites?token=#{invitation.raw_token}")
 
     html = html_response(conn, 200)
     assert html =~ invitation.organization.name
@@ -45,19 +45,19 @@ defmodule HexpmWeb.OrganizationInvitationControllerTest do
     conn =
       build_conn()
       |> test_login(newcomer)
-      |> post("/invites/#{invitation.raw_token}")
+      |> post("/invites?token=#{invitation.raw_token}")
 
     assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
     assert Organizations.get_role(organization, newcomer) == "write"
   end
 
   test "refuses a token that has already been used", %{invitation: invitation} do
-    build_conn() |> test_login(insert(:user)) |> post("/invites/#{invitation.raw_token}")
+    build_conn() |> test_login(insert(:user)) |> post("/invites?token=#{invitation.raw_token}")
 
     conn =
       build_conn()
       |> test_login(insert(:user))
-      |> post("/invites/#{invitation.raw_token}")
+      |> post("/invites?token=#{invitation.raw_token}")
 
     assert redirected_to(conn) == "/dashboard"
     assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "no longer valid"
@@ -67,7 +67,7 @@ defmodule HexpmWeb.OrganizationInvitationControllerTest do
     conn =
       build_conn()
       |> test_login(insert(:user))
-      |> get("/invites/nonsense")
+      |> get("/invites?token=nonsense")
 
     assert redirected_to(conn) == "/dashboard"
   end
@@ -87,7 +87,7 @@ defmodule HexpmWeb.OrganizationInvitationControllerTest do
     conn =
       build_conn()
       |> test_login(insert(:user))
-      |> post("/invites/#{invitation.raw_token}")
+      |> post("/invites?token=#{invitation.raw_token}")
 
     assert html_response(conn, 400)
     assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "no seats left"

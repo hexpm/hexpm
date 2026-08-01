@@ -203,6 +203,14 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
             "No matching TXT record was found for #{domain.domain}. DNS changes can take a while to propagate."
           )
 
+        {:error, :lookup_failed} ->
+          redirect_with_flash(
+            conn,
+            organization,
+            :error,
+            "The DNS lookup for #{domain.domain} did not answer. Try again in a moment."
+          )
+
         {:error, _reason} ->
           redirect_with_flash(
             conn,

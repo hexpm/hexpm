@@ -104,18 +104,23 @@ defmodule Hexpm.Accounts.OrganizationDomains do
   def verify(organization, domain, audit: audit_data) do
     now = DateTime.utc_now()
 
-    if published?(domain) do
-      Multi.new()
-      |> Multi.update(:domain, OrganizationDomain.verified_changeset(domain, now))
-      |> audit(audit_data, "organization.domain.verify", {organization, domain})
-      |> Repo.transaction()
-      |> case do
-        {:ok, %{domain: domain}} -> {:ok, domain}
-        {:error, :domain, changeset, _changes} -> {:error, changeset}
-      end
-    else
-      Repo.update!(change(domain, last_checked_at: now))
-      {:error, :record_not_found}
+    case published?(domain) do
+      {:ok, true} ->
+        Multi.new()
+        |> Multi.update(:domain, OrganizationDomain.verified_changeset(domain, now))
+        |> audit(audit_data, "organization.domain.verify", {organization, domain})
+        |> Repo.transaction()
+        |> case do
+          {:ok, %{domain: domain}} -> {:ok, domain}
+          {:error, :domain, changeset, _changes} -> {:error, changeset}
+        end
+
+      {:ok, false} ->
+        Repo.update!(change(domain, last_checked_at: now))
+        {:error, :record_not_found}
+
+      :error ->
+        {:error, :lookup_failed}
     end
   end
 
@@ -136,39 +141,56 @@ defmodule Hexpm.Accounts.OrganizationDomains do
     |> Enum.count(&recheck(&1, now))
   end
 
+  # A resolver that cannot answer is not the same as a record that is gone.
+  # Treating them alike would let one bad minute of DNS unverify every domain
+  # hexpm knows, and nothing re-checks a domain once it is cleared, so every
+  # organization would need a human. A failed lookup leaves both the
+  # verification and `last_checked_at` alone, so the next run tries again.
   defp recheck(domain, now) do
-    if published?(domain) do
-      Repo.update!(change(domain, last_checked_at: now))
-      false
-    else
-      Repo.transaction(fn ->
-        Repo.update!(OrganizationDomain.unverified_changeset(domain, now))
+    case published?(domain) do
+      :error ->
+        Logger.warning("[domains] could not look up #{domain.domain}, leaving it verified")
+        false
 
-        Repo.insert!(
-          AuditLog.build(
-            AuditLogs.system(domain.organization),
-            "organization.domain.unverify",
-            {domain.organization, domain}
-          )
-        )
-      end)
+      {:ok, true} ->
+        Repo.update!(change(domain, last_checked_at: now))
+        false
 
-      Logger.warning(
-        "[domains] #{domain.domain} no longer verifies for #{domain.organization.name}"
-      )
-
-      true
+      {:ok, false} ->
+        unverify(domain, now)
     end
+  end
+
+  defp unverify(domain, now) do
+    Repo.transaction(fn ->
+      Repo.update!(OrganizationDomain.unverified_changeset(domain, now))
+
+      Repo.insert!(
+        AuditLog.build(
+          AuditLogs.system(domain.organization),
+          "organization.domain.unverify",
+          {domain.organization, domain}
+        )
+      )
+    end)
+
+    Logger.warning(
+      "[domains] #{domain.domain} no longer verifies for #{domain.organization.name}"
+    )
+
+    true
   end
 
   defp published?(domain) do
     expected = OrganizationDomain.record_value(domain)
 
-    Enum.any?(txt_records(domain.domain), fn record ->
-      Plug.Crypto.secure_compare(record, expected)
-    end)
+    with {:ok, records} <- txt_records(domain.domain) do
+      {:ok, Enum.any?(records, &Plug.Crypto.secure_compare(&1, expected))}
+    end
   end
 
+  # `:error` means the resolver did not answer. An empty list means it answered
+  # and there is no matching record, which is a real absence.
   defp txt_records(domain) do
     task =
       Task.Supervisor.async_nolink(Hexpm.Tasks, fn ->
@@ -177,14 +199,14 @@ defmodule Hexpm.Accounts.OrganizationDomains do
 
     case Task.yield(task, dns_timeout()) do
       {:ok, records} when is_list(records) ->
-        records
+        {:ok, records}
 
       {:exit, _reason} ->
-        []
+        :error
 
       nil ->
         Task.shutdown(task, :brutal_kill)
-        []
+        :error
     end
   end
 
@@ -202,11 +224,28 @@ defmodule Hexpm.Accounts.OrganizationDomains do
 end
 
 defmodule Hexpm.Accounts.OrganizationDomains.Resolver do
-  # A TXT record longer than 255 bytes arrives split into several strings that
-  # have to be joined back together before comparing.
+  @doc """
+  TXT records for the domain, or a raise when the resolver could not answer.
+
+  `:inet_res.lookup/3` cannot be used here: it flattens a timeout, SERVFAIL and
+  "no such record" into the same empty list, and the caller has to tell the last
+  one apart from the first two. The trailing dot makes the query absolute, so a
+  resolver search list cannot turn `example.com` into a lookup of some
+  `example.com.internal`.
+  """
   def lookup(domain) do
-    domain
-    |> :inet_res.lookup(:in, :txt)
-    |> Enum.map(&IO.iodata_to_binary/1)
+    case :inet_res.resolve(domain ++ ~c".", :in, :txt) do
+      {:ok, message} ->
+        # A TXT record longer than 255 bytes arrives split into several strings
+        # that have to be joined back together before comparing.
+        for {:dns_rr, _, :txt, :in, _, _, strings, _, _, _} <- :inet_dns.msg(message, :anlist),
+            do: IO.iodata_to_binary(strings)
+
+      {:error, {:nxdomain, _message}} ->
+        []
+
+      {:error, reason} ->
+        raise "DNS lookup for #{domain} failed: #{inspect(reason)}"
+    end
   end
 end

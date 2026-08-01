@@ -129,8 +129,13 @@ defmodule Hexpm.Accounts.Seats do
                                                                                 result)) ::
           result | {:error, {:seats_below_members, non_neg_integer()}}
         when result: term()
+  def update_quantity(organization, quantity, _fun)
+      when is_integer(quantity) and quantity < 0 do
+    {:error, {:seats_below_members, used(organization)}}
+  end
+
   def update_quantity(organization, quantity, fun)
-      when quantity == :member_count or (is_integer(quantity) and quantity >= 0) do
+      when quantity == :member_count or is_integer(quantity) do
     case reserve_quantity(organization, quantity) do
       {:ok, {resolved, previous}} ->
         result = fun.(resolved)

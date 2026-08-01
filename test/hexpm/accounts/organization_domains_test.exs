@@ -5,7 +5,14 @@ defmodule Hexpm.Accounts.OrganizationDomainsTest do
 
   defmodule Resolver do
     def lookup(domain) do
-      Agent.get(__MODULE__, &Map.get(&1, to_string(domain), []))
+      case Agent.get(__MODULE__, &Map.get(&1, to_string(domain), [])) do
+        :unreachable -> raise "resolver did not answer"
+        records -> records
+      end
+    end
+
+    def break(domain) do
+      Agent.update(__MODULE__, &Map.put(&1, domain, :unreachable))
     end
 
     def start(records) do
@@ -88,6 +95,16 @@ defmodule Hexpm.Accounts.OrganizationDomainsTest do
       assert {:ok, domain} = verify(organization, domain, admin)
       assert OrganizationDomain.verified?(domain)
       assert domain.last_checked_at
+    end
+
+    test "says the lookup failed rather than that the record is missing", %{
+      organization: organization,
+      admin: admin
+    } do
+      {:ok, domain} = add(organization, admin, "example.com")
+      Resolver.break("example.com")
+
+      assert {:error, :lookup_failed} = verify(organization, domain, admin)
     end
 
     test "refuses when the record is missing", %{organization: organization, admin: admin} do
@@ -191,6 +208,25 @@ defmodule Hexpm.Accounts.OrganizationDomainsTest do
                AuditLogs.all_by(organization),
                &(&1.action == "organization.domain.unverify")
              )
+    end
+
+    test "leaves a domain verified when the resolver does not answer", %{
+      organization: organization,
+      admin: admin
+    } do
+      {:ok, domain} = add(organization, admin, "example.com")
+      Resolver.publish("example.com", OrganizationDomain.record_value(domain))
+      {:ok, domain} = verify(organization, domain, admin)
+
+      age_out(domain)
+      Resolver.break("example.com")
+
+      # A resolver that cannot answer is not a record that is gone. Clearing on
+      # this would take every organization's domains down with one bad minute
+      # of DNS, and nothing re-checks a cleared domain.
+      assert OrganizationDomains.recheck_all() == 0
+      assert OrganizationDomain.verified?(Repo.get!(OrganizationDomain, domain.id))
+      refute Repo.get!(OrganizationDomain, domain.id).last_checked_at == nil
     end
 
     test "leaves a domain whose record is still there", %{

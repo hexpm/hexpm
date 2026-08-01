@@ -16,7 +16,7 @@
   </div>
 
   <div :if={@token} class="mt-8 flex gap-3">
-    <.form for={%{}} action={~p"/invites/#{@token}"} class="flex-1">
+    <.form for={%{}} action={~p"/invites?token=#{@token}"} class="flex-1">
       <.button type="submit" variant="primary" full_width>
         Join {@invitation.organization.name}
       </.button>

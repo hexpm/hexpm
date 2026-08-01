@@ -287,6 +287,27 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
+  defmodule SSOSeats do
+    def heading("seats_exhausted"), do: "Organization Has No Seats Left"
+    def heading("expansion_failed"), do: "A Seat Could Not Be Added"
+
+    def body("seats_exhausted", organization) do
+      "Someone authenticated to the #{organization} organization through your identity provider and would have been added as a member, but there were no seats left. They were turned away and nothing was billed."
+    end
+
+    def body("expansion_failed", organization) do
+      "Someone authenticated to the #{organization} organization through your identity provider and would have been added as a member, but the seat could not be purchased. They were turned away and nothing was billed."
+    end
+
+    def next_step("seats_exhausted") do
+      "Add seats from the organization billing page and ask them to sign in again. Further attempts are recorded on the SSO settings page, but this notice is only sent once an hour."
+    end
+
+    def next_step("expansion_failed") do
+      "Check the payment method on the organization billing page. Until it works, further logins are turned away without retrying the purchase."
+    end
+  end
+
   defmodule OrganizationInvitation do
     def intro(organization, role) do
       "You have been invited to join the #{organization} organization on Hex.pm as #{article(role)} #{role} member."

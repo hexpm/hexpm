@@ -88,6 +88,17 @@ defmodule Hexpm.Accounts.SeatsTest do
       assert reload(organization).billing_seats == 2
     end
 
+    test "refuses a negative quantity rather than raising" do
+      organization = insert(:organization, billing_seats: 3)
+
+      assert {:error, {:seats_below_members, 0}} =
+               Seats.update_quantity(organization, -1, fn _quantity ->
+                 flunk("billing must not be called for a negative quantity")
+               end)
+
+      assert reload(organization).billing_seats == 3
+    end
+
     test "refuses to drop below the current members" do
       organization = insert(:organization, billing_seats: 3)
       insert(:organization_user, organization: organization, user: insert(:user))

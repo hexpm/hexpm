@@ -1,0 +1,5 @@
+<%= SSOSeats.heading(@kind) %>
+
+<%= SSOSeats.body(@kind, @organization) %>
+
+<%= SSOSeats.next_step(@kind) %>

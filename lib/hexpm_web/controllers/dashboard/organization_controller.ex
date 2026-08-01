@@ -132,19 +132,24 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     username = params["username"]
 
     access_organization(conn, organization, "admin", fn organization ->
-      user = Users.public_get(username)
+      if user = Users.public_get(username) do
+        case Organizations.remove_member(organization, user, audit: audit_data(conn)) do
+          :ok ->
+            conn
+            |> put_flash(:info, "User #{username} has been removed from the organization.")
+            |> redirect(to: ~p"/dashboard/orgs/#{organization}/members")
 
-      case Organizations.remove_member(organization, user, audit: audit_data(conn)) do
-        :ok ->
-          conn
-          |> put_flash(:info, "User #{username} has been removed from the organization.")
-          |> redirect(to: ~p"/dashboard/orgs/#{organization}/members")
-
-        {:error, :last_member} ->
-          conn
-          |> put_status(400)
-          |> put_flash(:error, "Cannot remove last member from organization.")
-          |> render_index(organization, tab: :members)
+          {:error, :last_member} ->
+            conn
+            |> put_status(400)
+            |> put_flash(:error, "Cannot remove last member from organization.")
+            |> render_index(organization, tab: :members)
+        end
+      else
+        conn
+        |> put_status(400)
+        |> put_flash(:error, "Unknown user #{username}.")
+        |> render_index(organization, tab: :members)
       end
     end)
   end

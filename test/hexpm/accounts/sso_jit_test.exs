@@ -153,6 +153,16 @@ defmodule Hexpm.Accounts.SSOJITTest do
       refute Organizations.get_role(context.organization, newcomer)
     end
 
+    test "an address the provider did not confirm is turned away", context do
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
+
+      assert {:error, :provider_email_unverified} =
+               complete(transaction, claims("newcomer@example.com", false), newcomer)
+
+      refute Organizations.get_role(context.organization, newcomer)
+    end
+
     test "a subdomain of a verified domain does not count", context do
       newcomer = insert(:user)
       transaction = start_login(context, newcomer)
@@ -268,7 +278,7 @@ defmodule Hexpm.Accounts.SSOJITTest do
         {:ok, %{"quantity" => params["quantity"]}}
       end)
 
-      assert :ok = SSO.maybe_expand_seats(transaction, newcomer, "newcomer@example.com")
+      assert :ok = SSO.maybe_expand_seats(transaction, newcomer, claims("newcomer@example.com"))
       assert Repo.get!(Hexpm.Accounts.Organization, context.organization.id).billing_seats == 4
 
       assert {:ok, {:link, _id, _token, _return}} =
@@ -283,7 +293,7 @@ defmodule Hexpm.Accounts.SSOJITTest do
         flunk("billing must not be called when a seat is free")
       end)
 
-      assert :ok = SSO.maybe_expand_seats(transaction, newcomer, "newcomer@example.com")
+      assert :ok = SSO.maybe_expand_seats(transaction, newcomer, claims("newcomer@example.com"))
     end
 
     test "buys nothing for someone who is already a member", context do
@@ -296,7 +306,7 @@ defmodule Hexpm.Accounts.SSOJITTest do
         flunk("billing must not be called for an existing member")
       end)
 
-      assert :ok = SSO.maybe_expand_seats(transaction, member, "member@example.com")
+      assert :ok = SSO.maybe_expand_seats(transaction, member, claims("member@example.com"))
     end
 
     test "buys nothing when the address is not on a verified domain", context do
@@ -308,7 +318,44 @@ defmodule Hexpm.Accounts.SSOJITTest do
         flunk("billing must not be called for an unverified domain")
       end)
 
-      assert :ok = SSO.maybe_expand_seats(transaction, newcomer, "newcomer@elsewhere.com")
+      assert :ok = SSO.maybe_expand_seats(transaction, newcomer, claims("newcomer@elsewhere.com"))
+    end
+
+    test "does not buy a seat for an address the provider did not confirm", context do
+      fill_seats(context.organization)
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
+
+      Mox.stub(Hexpm.Billing.Mock, :update, fn _name, _params ->
+        flunk("billing must not be called for an unverified address")
+      end)
+
+      assert :ok =
+               SSO.maybe_expand_seats(
+                 transaction,
+                 newcomer,
+                 claims("newcomer@example.com", false)
+               )
+    end
+
+    test "does not retry a purchase that already failed", context do
+      fill_seats(context.organization)
+      calls = :counters.new(1, [])
+
+      Mox.stub(Hexpm.Billing.Mock, :update, fn _name, _params ->
+        :counters.add(calls, 1, 1)
+        {:error, %{"errors" => "card declined"}}
+      end)
+
+      for _attempt <- 1..3 do
+        newcomer = insert(:user)
+        transaction = start_login(context, newcomer)
+        assert :ok = SSO.maybe_expand_seats(transaction, newcomer, claims())
+      end
+
+      # A card that needs attention must not turn every login into another
+      # charge attempt.
+      assert :counters.get(calls, 1) == 1
     end
 
     test "a failed purchase does not admit anyone", context do
@@ -320,7 +367,7 @@ defmodule Hexpm.Accounts.SSOJITTest do
         {:error, %{"errors" => "card declined"}}
       end)
 
-      assert :ok = SSO.maybe_expand_seats(transaction, newcomer, "newcomer@example.com")
+      assert :ok = SSO.maybe_expand_seats(transaction, newcomer, claims("newcomer@example.com"))
 
       assert {:error, :seats_exhausted} =
                complete(transaction, claims("newcomer@example.com"), newcomer)
@@ -387,11 +434,12 @@ defmodule Hexpm.Accounts.SSOJITTest do
     end)
   end
 
-  defp claims(email \\ "newcomer@example.com") do
+  defp claims(email \\ "newcomer@example.com", email_verified \\ true) do
     %{
       issuer: "https://identity.example.com/oauth2/default",
       subject: "00u123",
       email: email,
+      email_verified: email_verified,
       jwks_document: nil
     }
   end

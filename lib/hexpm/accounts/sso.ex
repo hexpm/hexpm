@@ -36,7 +36,7 @@ defmodule Hexpm.Accounts.SSO do
     @email_mismatch_category
   ]
   @notification_retention_seconds 30 * 24 * 60 * 60
-  @seats_exhausted_notice_seconds 60 * 60
+  @seats_notice_seconds 60 * 60
 
   def available?, do: Features.available?()
   def enabled?(organization), do: Features.enabled?(organization)
@@ -580,19 +580,21 @@ defmodule Hexpm.Accounts.SSO do
   expansion is not a reason to refuse a login, it just means the claim inside
   the callback rejects and the person is told the organization is full.
   """
-  def maybe_expand_seats(%SSOTransaction{} = transaction, user, provider_email) do
+  def maybe_expand_seats(%SSOTransaction{} = transaction, user, claims) do
     connection = Repo.get(Connection, transaction.connection_id) |> Repo.preload(:organization)
 
-    if connection && connection.jit_seat_policy == "expand" &&
-         jit_available(connection, provider_email) == :ok &&
+    if connection && transaction.kind == "login" && connection.jit_seat_policy == "expand" &&
+         jit_admissible(connection, claims) == :ok &&
          is_nil(Organizations.get_role(connection.organization, user)) do
-      expand_seats(connection.organization)
+      expand_seats(connection)
     end
 
     :ok
   end
 
-  defp expand_seats(organization) do
+  defp expand_seats(connection) do
+    organization = connection.organization
+
     # The target is absolute rather than one more than whatever is subscribed
     # now, so two first logins at once compute the same number, one wins the
     # claim, and the other expands again on its next attempt instead of both
@@ -601,14 +603,35 @@ defmodule Hexpm.Accounts.SSO do
            {Seats.claim(organization, unknown: :deny), Seats.used(organization)}
          end) do
       {:ok, {{:error, :seats_exhausted}, used}} ->
-        Seats.update_quantity(organization, used + 1, fn quantity ->
-          Hexpm.Billing.update(organization.name, %{"quantity" => quantity},
-            audit: %{audit_data: AuditLogs.system(organization), organization: organization}
-          )
-        end)
+        purchase_seat(connection, organization, used + 1)
 
       _other ->
         :ok
+    end
+  end
+
+  # A billing call that did not take effect must not be repeated on the next
+  # login, or a card that needs confirming turns every retry into another
+  # charge attempt. The refusal is recorded like any other, which is also what
+  # rate-limits the notice to the administrators.
+  defp purchase_seat(connection, organization, quantity) do
+    if recent_failure?(connection, "expansion_failed") do
+      :ok
+    else
+      organization
+      |> Seats.update_quantity(quantity, fn quantity ->
+        Hexpm.Billing.update(organization.name, %{"quantity" => quantity},
+          audit: %{audit_data: AuditLogs.system(organization), organization: organization}
+        )
+      end)
+      |> case do
+        {:ok, _customer} ->
+          :ok
+
+        _other ->
+          record_failure(connection, :login, :expansion_failed)
+          enqueue_seats_notice!(connection, "expansion_failed")
+      end
     end
   end
 
@@ -1049,7 +1072,8 @@ defmodule Hexpm.Accounts.SSO do
               :identity_conflict,
               :session_user_mismatch,
               :seats_exhausted,
-              :seat_limit_unknown
+              :seat_limit_unknown,
+              :provider_email_unverified
             ],
        do: user && user.id
 
@@ -1225,7 +1249,7 @@ defmodule Hexpm.Accounts.SSO do
   # a membership created now would outlive an abandoned consent screen. What
   # this buys is not offering a screen that cannot be honoured.
   defp begin_jit_link!(transaction, connection, claims, current_user) do
-    case jit_available(connection, claims.email) do
+    case jit_admissible(connection, claims) do
       :ok ->
         case Seats.claim(connection.organization, unknown: :deny) do
           {:ok, _usage} ->
@@ -1235,10 +1259,18 @@ defmodule Hexpm.Accounts.SSO do
             reject_jit(transaction, connection, current_user, reason)
         end
 
-      {:error, _reason} ->
-        reject_jit(transaction, connection, current_user, :not_member)
+      {:error, reason} ->
+        reject_jit(transaction, connection, current_user, rejection_code(reason))
     end
   end
+
+  # The person authenticated through the organization's own provider, so
+  # telling them their address was not confirmed is useful and gives nothing
+  # away. Whether the organization runs just-in-time membership, or which
+  # domains it has verified, is its own business: both come back as not a
+  # member, which is also the truth.
+  defp rejection_code(:provider_email_unverified), do: :provider_email_unverified
+  defp rejection_code(_reason), do: :not_member
 
   defp reject_jit(transaction, connection, current_user, reason) do
     # Before recording, so the failure this attempt is about to write does not
@@ -1289,6 +1321,28 @@ defmodule Hexpm.Accounts.SSO do
     end
   end
 
+  # An `email` claim is whatever the provider chose to assert. `email_verified`
+  # is the provider saying it checked, and OIDC has it precisely because the
+  # address alone is not authoritative. Membership turns on the address here, so
+  # an unverified one is not enough. Checked wherever the ID token is in hand;
+  # by the time a link is completed, the transaction only exists because this
+  # already passed.
+  defp jit_admissible(connection, claims) do
+    cond do
+      not Connection.jit_enabled?(connection) ->
+        {:error, :jit_disabled}
+
+      Map.get(claims, :email_verified) != true ->
+        {:error, :provider_email_unverified}
+
+      not OrganizationDomains.verified_for_email?(connection.organization, claims.email) ->
+        {:error, :domain_not_verified}
+
+      true ->
+        :ok
+    end
+  end
+
   # Whether this connection would admit the address, ignoring seats.
   defp jit_available(connection, provider_email) do
     cond do
@@ -1305,35 +1359,55 @@ defmodule Hexpm.Accounts.SSO do
 
   # A login loop must not mail the administrators on every attempt, so the
   # failures already being recorded double as the rate limit.
-  defp maybe_notify_seats_exhausted(connection, :seats_exhausted) do
-    cutoff = DateTime.add(DateTime.utc_now(), -@seats_exhausted_notice_seconds, :second)
-
-    recent? =
-      Repo.exists?(
-        from(failure in Failure,
-          where: failure.connection_id == ^connection.id,
-          where: failure.code == "seats_exhausted",
-          where: failure.inserted_at > ^cutoff
-        )
-      )
-
-    unless recent? do
-      enqueue_seats_exhausted_notice!(connection)
-    end
-
+  defp maybe_notify_seats_exhausted(connection, reason)
+       when reason in [:seats_exhausted, :seat_limit_unknown] do
+    enqueue_seats_notice!(connection, "seats_exhausted")
     :ok
   end
 
   defp maybe_notify_seats_exhausted(_connection, _reason), do: :ok
 
-  defp enqueue_seats_exhausted_notice!(connection) do
+  defp recent_failure?(connection, code) do
+    cutoff = DateTime.add(DateTime.utc_now(), -@seats_notice_seconds, :second)
+
+    Repo.exists?(
+      from(failure in Failure,
+        where: failure.connection_id == ^connection.id,
+        where: failure.code == ^code,
+        where: failure.inserted_at > ^cutoff
+      )
+    )
+  end
+
+  # Rate-limited on the outbox rather than on the failure log: failures are a
+  # 20-row ring buffer per connection, and with just-in-time membership on
+  # anyone signed in can start a login and fill it, which would reset the
+  # window at will. Outbox entries are kept for a month and are not evicted.
+  defp enqueue_seats_notice!(connection, kind) do
+    group_key = "#{@seats_exhausted_category}:#{kind}:#{connection.id}"
+    cutoff = DateTime.add(DateTime.utc_now(), -@seats_notice_seconds, :second)
+
+    recent? =
+      Repo.exists?(
+        from(entry in Hexpm.Emails.OutboxEntry,
+          where: entry.group_key == ^group_key,
+          where: entry.inserted_at > ^cutoff
+        )
+      )
+
+    unless recent?, do: send_seats_notice!(connection, kind, group_key)
+
+    :ok
+  end
+
+  defp send_seats_notice!(connection, kind, group_key) do
     organization = connection.organization
 
     recipients =
       Repo.all(
         from(organization_user in OrganizationUser,
-          join: email in assoc(organization_user, :user),
-          join: address in assoc(email, :emails),
+          join: member in assoc(organization_user, :user),
+          join: address in assoc(member, :emails),
           where: organization_user.organization_id == ^organization.id,
           where: organization_user.role == "admin",
           where: address.primary and address.verified,
@@ -1346,12 +1420,12 @@ defmodule Hexpm.Accounts.SSO do
         :ok
 
       recipients ->
-        email = Emails.sso_seats_exhausted(organization.name, recipients)
+        email = Emails.sso_seats(organization.name, kind, recipients)
 
         Outbox.insert!(
           Outbox.prepare!(email,
             category: @seats_exhausted_category,
-            group_key: "#{@seats_exhausted_category}:#{connection.id}",
+            group_key: group_key,
             scope_key: "sso:organization:#{organization.id}",
             expires_at: DateTime.add(DateTime.utc_now(), @notification_retention_seconds, :second)
           )
@@ -1775,6 +1849,9 @@ defmodule Hexpm.Accounts.SSO do
       "issuer_mismatch" => "The provider issuer did not match the configured issuer",
       "not_member" => "The Hexpm account is not a member of the organization",
       "seats_exhausted" => "The organization has no seats left for a new member",
+      "expansion_failed" => "A seat could not be purchased for a new member",
+      "provider_email_unverified" =>
+        "The provider did not confirm the email address, so no member was added",
       "seat_limit_unknown" =>
         "The organization's seat count could not be read, so no member was added",
       "pkce_s256_unsupported" => "The provider does not support PKCE with S256",

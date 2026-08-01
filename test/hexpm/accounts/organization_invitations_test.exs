@@ -77,6 +77,28 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
       assert {:ok, _invitation} = invite(organization, admin, "newcomer@example.com")
     end
 
+    test "re-inviting an address whose invitation expired reissues it", %{
+      organization: organization,
+      admin: admin
+    } do
+      {:ok, first} = invite(organization, admin, "newcomer@example.com")
+
+      first
+      |> Ecto.Changeset.change(expires_at: DateTime.add(DateTime.utc_now(), -1, :second))
+      |> Repo.update!()
+
+      # The expired row still holds the one-per-address slot and no read path
+      # shows it, so refusing here would be a dead end with nothing to act on.
+      assert OrganizationInvitations.all_pending(organization) == []
+      assert {:ok, second} = invite(organization, admin, "newcomer@example.com")
+
+      assert second.id == first.id
+      refute second.raw_token == first.raw_token
+      refute OrganizationInvitations.get_pending_by_token(first.raw_token)
+      assert OrganizationInvitations.get_pending_by_token(second.raw_token)
+      assert [_invitation] = OrganizationInvitations.all_pending(organization)
+    end
+
     test "rejects an address that is not one", %{organization: organization, admin: admin} do
       assert {:error, changeset} = invite(organization, admin, "not-an-address")
       assert errors_on(changeset).email == "is not a valid email"

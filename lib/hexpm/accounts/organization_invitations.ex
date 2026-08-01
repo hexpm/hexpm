@@ -52,6 +52,25 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
 
   def invite(organization, params, invited_by, audit: audit_data) do
     email = OrganizationInvitation.normalize_email(params["email"] || "")
+
+    cond do
+      member?(organization, email) ->
+        {:error, :already_member}
+
+      lapsed = lapsed_invitation(organization, email) ->
+        # The unique index that stops two live invitations for one address
+        # cannot exclude expired rows, because a partial index predicate has to
+        # be immutable and expiry is a comparison against now. So an expired
+        # invitation still holds the slot, and no read path shows it. Reissuing
+        # it is what the administrator meant by inviting the address again.
+        reissue(organization, %{lapsed | role: params["role"] || lapsed.role}, audit_data)
+
+      true ->
+        insert(organization, invited_by, email, params["role"], audit_data)
+    end
+  end
+
+  defp insert(organization, invited_by, email, role, audit_data) do
     raw_token = random_token()
 
     changeset =
@@ -59,20 +78,43 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
         "organization_id" => organization.id,
         "invited_by_user_id" => invited_by.id,
         "email" => email,
-        "role" => params["role"],
+        "role" => role,
         "token_hash" => hash(raw_token),
         "expires_at" => expires_at()
       })
 
-    if member?(organization, email) do
-      {:error, :already_member}
-    else
-      Multi.new()
-      |> Multi.insert(:invitation, changeset)
-      |> audit(audit_data, "organization.invitation.create", &{organization, &1.invitation})
-      |> Repo.transaction()
-      |> deliver(organization, raw_token)
-    end
+    Multi.new()
+    |> Multi.insert(:invitation, changeset)
+    |> audit(audit_data, "organization.invitation.create", &{organization, &1.invitation})
+    |> Repo.transaction()
+    |> deliver(organization, raw_token)
+  end
+
+  defp lapsed_invitation(organization, email) do
+    Repo.one(
+      from(invitation in OrganizationInvitation,
+        where: invitation.organization_id == ^organization.id,
+        where: invitation.email == ^email,
+        where: is_nil(invitation.accepted_at),
+        where: is_nil(invitation.revoked_at),
+        where: invitation.expires_at <= ^DateTime.utc_now()
+      )
+    )
+  end
+
+  # An expired invitation still holds the one-per-address slot, so inviting
+  # that address again reissues the row rather than being refused.
+  defp reissue(organization, invitation, audit_data) do
+    raw_token = random_token()
+
+    Multi.new()
+    |> Multi.update(
+      :invitation,
+      OrganizationInvitation.reissue_changeset(invitation, hash(raw_token), expires_at())
+    )
+    |> audit(audit_data, "organization.invitation.create", &{organization, &1.invitation})
+    |> Repo.transaction()
+    |> deliver(organization, raw_token)
   end
 
   def revoke(organization, invitation, audit: audit_data) do

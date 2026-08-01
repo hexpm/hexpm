@@ -129,6 +129,10 @@ defmodule Hexpm.Accounts.Organizations do
     end
   end
 
+  def remove_member(_organization, nil = _user, audit: _audit_data) do
+    :ok
+  end
+
   def remove_member(organization, user, audit: audit_data) do
     multi =
       Multi.new()

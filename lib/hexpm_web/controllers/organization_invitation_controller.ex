@@ -3,6 +3,9 @@ defmodule HexpmWeb.OrganizationInvitationController do
 
   plug :requires_login
 
+  # The token rides in the query string, not the path: both loggers on the
+  # endpoint record `conn.request_path`, so a token in the path would be
+  # written to stdout on every click and would outlive the click by a week.
   def show(conn, %{"token" => token}) do
     case OrganizationInvitations.get_pending_by_token(token) do
       nil ->

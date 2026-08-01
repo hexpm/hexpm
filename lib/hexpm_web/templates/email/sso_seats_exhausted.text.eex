@@ -1,5 +1,0 @@
-Organization Has No Seats Left
-
-Someone authenticated to the <%= @organization %> organization through your identity provider and would have been added as a member, but there were no seats left. They were turned away and nothing was billed.
-
-Add seats from the organization billing page and ask them to sign in again. Further attempts are recorded on the SSO settings page, but this notice is only sent once an hour.
