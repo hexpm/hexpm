@@ -137,6 +137,39 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
     end)
   end
 
+  def configure_jit(conn, %{"dashboard_org" => name} = params) do
+    with_organization(conn, name, fn organization ->
+      case SSO.configure_jit(organization, params["jit"] || %{}, audit: audit_data(conn)) do
+        {:ok, connection} ->
+          redirect_with_flash(conn, organization, :info, jit_message(connection))
+
+        {:error, reason} ->
+          redirect_with_flash(conn, organization, :error, jit_error(reason))
+      end
+    end)
+  end
+
+  defp jit_message(%{jit_seat_policy: nil}),
+    do: "Just-in-time membership is off. Members have to be added or invited."
+
+  defp jit_message(%{jit_seat_policy: "block", jit_role: role}),
+    do:
+      "Just-in-time membership is on. New members join as #{role}, and logins are refused once the seats run out."
+
+  defp jit_message(%{jit_seat_policy: "expand", jit_role: role}),
+    do:
+      "Just-in-time membership is on. New members join as #{role}, and the subscription grows by a seat when it needs to."
+
+  defp jit_error(:domain_required),
+    do: "Verify a domain before turning on just-in-time membership."
+
+  defp jit_error(:not_configured), do: "Configure SSO before turning on just-in-time membership."
+
+  defp jit_error(%Ecto.Changeset{}),
+    do: "Choose what happens when the seats run out, and a role for new members."
+
+  defp jit_error(reason), do: configuration_error(reason)
+
   def add_domain(conn, %{"dashboard_org" => name, "domain" => params}) do
     with_organization(conn, name, fn organization ->
       case OrganizationDomains.add(organization, params, conn.assigns.current_user,

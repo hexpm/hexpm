@@ -573,6 +573,66 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     end
   end
 
+  describe "just-in-time membership" do
+    test "will not turn on without a verified domain", context do
+      insert(:organization_sso_connection, organization: context.organization)
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/jit", %{
+          "jit" => %{"jit_seat_policy" => "block", "jit_role" => "read"}
+        })
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "Verify a domain"
+      refute Connection.jit_enabled?(SSO.get_connection(context.organization))
+    end
+
+    test "turns on once a domain is verified and says what it will do", context do
+      insert(:organization_sso_connection, organization: context.organization)
+      verify_domain(context)
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/jit", %{
+          "jit" => %{"jit_seat_policy" => "expand", "jit_role" => "write"}
+        })
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "grows by a seat"
+
+      connection = SSO.get_connection(context.organization)
+      assert connection.jit_seat_policy == "expand"
+      assert connection.jit_role == "write"
+    end
+
+    test "a read member cannot change it", context do
+      insert(:organization_sso_connection, organization: context.organization)
+      verify_domain(context)
+
+      conn =
+        build_conn()
+        |> test_login(context.member)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/jit", %{
+          "jit" => %{"jit_seat_policy" => "block", "jit_role" => "read"}
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{context.organization.name}"
+      refute Connection.jit_enabled?(SSO.get_connection(context.organization))
+    end
+  end
+
+  defp verify_domain(context) do
+    {:ok, domain} =
+      OrganizationDomains.add(context.organization, %{"domain" => "example.com"}, context.admin,
+        audit: audit_data(context.admin)
+      )
+
+    domain
+    |> Ecto.Changeset.change(verified_at: DateTime.utc_now())
+    |> Hexpm.Repo.update!()
+  end
+
   defp add_domain(context, domain) do
     OrganizationDomains.add(context.organization, %{"domain" => domain}, context.admin,
       audit: audit_data(context.admin)

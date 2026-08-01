@@ -3,7 +3,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
   use HexpmWeb, :verified_routes
 
   import HexpmWeb.Components.Buttons, only: [button: 1, button_link: 1]
-  import HexpmWeb.Components.Input, only: [password_input: 1, text_input: 1]
+  import HexpmWeb.Components.Input, only: [password_input: 1, select_input: 1, text_input: 1]
 
   alias Hexpm.Accounts.OrganizationDomain
   alias Hexpm.Accounts.SSO
@@ -231,6 +231,63 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
             />
           </div>
           <.button type="submit" variant="secondary">Add domain</.button>
+        </.form>
+      </section>
+
+      <section
+        :if={@connection}
+        id="sso-jit"
+        class="rounded-lg border border-grey-200 dark:border-grey-800 bg-white dark:bg-grey-900 p-5"
+      >
+        <h3 class="font-semibold text-grey-900 dark:text-grey-100">Just-in-time membership</h3>
+        <p class="mt-2 text-sm text-grey-600 dark:text-grey-300">
+          Adds an existing Hex account to the organization the first time it authenticates through
+          your provider with an address on a verified domain. It never creates a Hex account, and
+          people without one are reached with an invitation instead.
+        </p>
+        <p
+          :if={@domains == [] or Enum.all?(@domains, &(!OrganizationDomain.verified?(&1)))}
+          class="mt-3 text-sm text-grey-600 dark:text-grey-300"
+        >
+          Verify a domain first.
+        </p>
+        <p
+          :if={Connection.jit_enabled?(@connection)}
+          class="mt-3 text-sm text-grey-600 dark:text-grey-300"
+        >
+          While this is on, removing a member does not keep them out: their next login re-admits
+          them. Remove their access at the identity provider instead.
+        </p>
+
+        <.form
+          for={%{}}
+          action={~p"/dashboard/orgs/#{@organization}/sso/jit"}
+          as={:jit}
+          class="mt-4 grid gap-4 sm:grid-cols-2"
+        >
+          <.select_input
+            id="sso-jit-seat-policy"
+            name="jit[jit_seat_policy]"
+            label="When the seats run out"
+            value={@connection.jit_seat_policy}
+            options={[
+              {"Off, do not add members automatically", ""},
+              {"Refuse the login and notify administrators", "block"},
+              {"Add a seat to the subscription", "expand"}
+            ]}
+            variant="light"
+          />
+          <.select_input
+            id="sso-jit-role"
+            name="jit[jit_role]"
+            label="Role for new members"
+            value={@connection.jit_role}
+            options={[{"Read", "read"}, {"Write", "write"}, {"Admin", "admin"}]}
+            variant="light"
+          />
+          <div class="sm:col-span-2">
+            <.button type="submit" variant="secondary">Save</.button>
+          </div>
         </.form>
       </section>
 

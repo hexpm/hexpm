@@ -285,7 +285,8 @@ defmodule Hexpm.Accounts.AuditLog do
               "sso.connection.rotation.complete",
               "sso.identity.link",
               "sso.identity.unlink",
-              "sso.login"
+              "sso.login",
+              "sso.jit.configure"
             ] do
     Map.put(params, :organization, serialize(organization))
   end

@@ -1,0 +1,11 @@
+<h1 style="color: #030913; font-size: 24px; line-height: 32px; font-weight: 600; margin: 0 0 24px 0; text-align: center;">
+  Organization Has No Seats Left
+</h1>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  Someone authenticated to the <strong><%= @organization %></strong> organization through your identity provider and would have been added as a member, but there were no seats left. They were turned away and nothing was billed.
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  Add seats from the organization billing page and ask them to sign in again. Further attempts are recorded on the SSO settings page, but this notice is only sent once an hour.
+</p>

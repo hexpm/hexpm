@@ -221,6 +221,14 @@ defmodule Hexpm.Emails do
     |> render_body(:sso_identity_unlinked)
   end
 
+  def sso_seats_exhausted(organization, recipients) do
+    base_email()
+    |> email_to(recipients)
+    |> subject("Hex.pm - #{organization} has no seats left")
+    |> assign(:organization, organization)
+    |> render_body(:sso_seats_exhausted)
+  end
+
   def sso_email_mismatch(organization, username, recipients, provider_email) do
     base_email()
     |> email_to(recipients)
