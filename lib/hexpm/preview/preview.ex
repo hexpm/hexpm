@@ -8,10 +8,28 @@ defmodule Hexpm.Preview do
   @max_file_size 100 * 1000
   @readme_filenames ~w(README.md readme.md README.markdown readme.markdown README.txt readme.txt README readme)
 
+  @doc """
+  Reads the file a request asked for.
+
+  Returns `{:missing, filename}` when the release has no such file, naming the
+  file it shows when none is asked for, so a caller can send the request there
+  without reading anything more.
+  """
   def source(repository, package, version, requested_filename \\ nil) do
-    with [_ | _] = files <- Bucket.get_file_list(repository, package, version),
-         filename when is_binary(filename) <- selected_file(files, requested_filename),
-         size when is_integer(size) <- Bucket.file_size(repository, package, version, filename),
+    case Bucket.get_file_list(repository, package, version) do
+      [_ | _] = files ->
+        case selected_file(files, requested_filename) do
+          nil -> {:missing, default_file(files)}
+          filename -> read_source(repository, package, version, files, filename)
+        end
+
+      _ ->
+        :error
+    end
+  end
+
+  defp read_source(repository, package, version, files, filename) do
+    with size when is_integer(size) <- Bucket.file_size(repository, package, version, filename),
          result when is_map(result) <-
            source_result(repository, package, version, filename, size) do
       {:ok, Map.merge(result, %{files: files, filename: filename})}

@@ -53,7 +53,7 @@ defmodule HexpmWeb.PreviewLive do
            RepositoryAccess.fetch_package(socket.assigns.current_user, repository, package_name),
          [_ | _] = releases <- Releases.all(package),
          release when not is_nil(release) <- find_release(releases, version),
-         {:ok, source, replace_path?} <-
+         {:ok, source} <-
            source(repository, package_name, version, requested_filename, params["fallback"]) do
       socket =
         socket
@@ -61,19 +61,24 @@ defmodule HexpmWeb.PreviewLive do
         |> assign_package(package, release, releases)
         |> assign_source(repository, package_name, version, source)
 
-      socket =
-        if replace_path? and connected?(socket) do
-          push_patch(socket,
-            to: files_path(repository, package_name, version, source.filename),
-            replace: true
-          )
-        else
-          socket
-        end
-
       {:noreply, socket}
     else
-      _ -> raise NotFoundError
+      # The version picker links the file being read in every release of the
+      # package, so a release that never had that file gets asked for it. The
+      # answer is the file the release does show, at that file's own address:
+      # rendering it here would serve a 200 under a path the release does not
+      # have, and every path it does not have would be a page of its own.
+      {:missing, filename} ->
+        to = files_path(repository, package_name, version, filename)
+
+        if connected?(socket) do
+          {:noreply, push_patch(socket, to: to, replace: true)}
+        else
+          {:noreply, redirect(socket, to: to)}
+        end
+
+      _ ->
+        raise NotFoundError
     end
   end
 
@@ -151,17 +156,9 @@ defmodule HexpmWeb.PreviewLive do
 
   defp source(repository, package, version, requested_filename, fallback) do
     case Hexpm.Preview.source(repository, package, version, requested_filename) do
-      {:ok, source} ->
-        {:ok, source, false}
-
-      :error when fallback == "default" ->
-        case Hexpm.Preview.source(repository, package, version) do
-          {:ok, source} -> {:ok, source, true}
-          :error -> :error
-        end
-
-      :error ->
-        :error
+      {:ok, source} -> {:ok, source}
+      {:missing, filename} when fallback == "default" -> {:missing, filename}
+      _ -> :error
     end
   end
 
