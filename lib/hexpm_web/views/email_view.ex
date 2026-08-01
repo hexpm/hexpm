@@ -106,9 +106,15 @@ defmodule HexpmWeb.EmailView do
       "Your account has been removed"
     end
 
-    def message(username) do
+    def message(username, false) do
       "The Hex.pm account \"#{username}\" has been removed by the Hex.pm team. " <>
         "The username has been retired and cannot be registered again."
+    end
+
+    def message(username, true) do
+      "The Hex.pm account \"#{username}\" has been removed by the Hex.pm team, " <>
+        "along with the packages it was the only owner of. The username has " <>
+        "been retired and cannot be registered again."
     end
   end
 
@@ -372,7 +378,13 @@ defmodule HexpmWeb.EmailView do
       "#{package} v#{version} has been removed"
     end
 
-    def message(package, version) do
+    def message(package, version, 0) do
+      "Version #{version} of the package #{package} has been removed from Hex.pm " <>
+        "by the Hex.pm team. It was the only version, so the package no longer " <>
+        "has any releases."
+    end
+
+    def message(package, version, _remaining) do
       "Version #{version} of the package #{package} has been removed from Hex.pm " <>
         "by the Hex.pm team. Other versions of the package are unaffected."
     end

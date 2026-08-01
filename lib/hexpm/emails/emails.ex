@@ -65,11 +65,12 @@ defmodule Hexpm.Emails do
     |> render_body(:account_deleted)
   end
 
-  def account_removed(user, reason) do
+  def account_removed(user, packages_deleted?, reason) do
     base_email()
     |> email_to(user)
     |> subject("Hex.pm - Your account has been removed")
     |> assign(:username, user.username)
+    |> assign(:packages_deleted, packages_deleted?)
     |> assign(:reason, reason)
     |> render_body(:account_removed)
   end
@@ -83,12 +84,13 @@ defmodule Hexpm.Emails do
     |> render_body(:package_removed)
   end
 
-  def release_removed(owners, package, version, reason) do
+  def release_removed(owners, package, version, remaining, reason) do
     base_email()
     |> email_to(owners)
     |> subject("Hex.pm - Package #{package} v#{version} has been removed")
     |> assign(:package, package)
     |> assign(:version, version)
+    |> assign(:remaining, remaining)
     |> assign(:reason, reason)
     |> render_body(:release_removed)
   end
@@ -299,11 +301,11 @@ defmodule Hexpm.Emails do
     [user]
   end
 
-  defp expand_organization(%User{organization: organization}) do
-    organization.organization_users
-    |> Enum.filter(&(&1.role == "admin"))
-    |> Enum.map(&User.email(&1.user, :primary))
-  end
+  # Same rule whichever side the organization arrives from. Filtering to admins
+  # here without the fallback below meant an organization with no admin member
+  # resolved to nobody and the mail was simply not sent.
+  defp expand_organization(%User{organization: organization}),
+    do: expand_organization(organization)
 
   defp expand_organization(%Organization{organization_users: org_users}) do
     admins =
