@@ -498,9 +498,12 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
       active = insert_org_session(organization, user, identity, expires_at: hours_from_now(1))
       expired = insert_org_session(organization, user, identity, expires_at: days_ago(1))
 
+      # Revoked but not yet expired. The purge collects on expiry alone, so this
+      # one has to survive; with `days_ago(1)` it was deleted for the same
+      # reason `expired` was and covered nothing.
       revoked =
         insert_org_session(organization, user, identity,
-          expires_at: days_ago(1),
+          expires_at: hours_from_now(1),
           revoked_at: DateTime.utc_now()
         )
 
@@ -508,7 +511,7 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
 
       assert Repo.get(Hexpm.Accounts.SSO.OrgSession, active.id)
       refute Repo.get(Hexpm.Accounts.SSO.OrgSession, expired.id)
-      refute Repo.get(Hexpm.Accounts.SSO.OrgSession, revoked.id)
+      assert Repo.get(Hexpm.Accounts.SSO.OrgSession, revoked.id)
     end
   end
 

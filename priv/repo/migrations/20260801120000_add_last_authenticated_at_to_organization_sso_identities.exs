@@ -6,6 +6,10 @@ defmodule Hexpm.RepoBase.Migrations.AddLastAuthenticatedAtToOrganizationSsoIdent
       add :last_authenticated_at, :utc_datetime_usec
     end
 
+    # organization_sso_sessions is collected on expiry, so this recovers only
+    # what is still live. Running up, down and up again therefore loses the
+    # history for anyone who has not authenticated in the last day or so; the
+    # sso.login audit entries are the only other record.
     execute("""
     UPDATE organization_sso_identities AS identity
     SET last_authenticated_at = latest.authenticated_at

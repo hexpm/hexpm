@@ -127,11 +127,20 @@ defmodule Hexpm.Emails.OutboxTest do
       assert held_outbox_locks() == 0
     end
 
-    # classid 5 is the :email_outbox advisory lock class in Hexpm.Repo.
+    # classid 5 is the :email_outbox advisory lock class in Hexpm.Repo. pg_locks
+    # is cluster-wide, so this has to be scoped to our own backend: a dev server
+    # on the same cluster mid-cancellation would otherwise be counted, and so
+    # would a sibling database under `mix test --partitions`.
     defp held_outbox_locks do
       %{rows: [[count]]} =
         Repo.query!(
-          "SELECT count(*) FROM pg_locks WHERE locktype = 'advisory' AND classid = 5",
+          """
+          SELECT count(*) FROM pg_locks
+          WHERE locktype = 'advisory'
+            AND classid = 5
+            AND pid = pg_backend_pid()
+            AND database = (SELECT oid FROM pg_database WHERE datname = current_database())
+          """,
           []
         )
 

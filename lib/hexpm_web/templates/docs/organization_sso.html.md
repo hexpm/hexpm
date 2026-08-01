@@ -41,7 +41,7 @@ The application must allow the `openid` and `email` scopes. Hexpm uses the provi
 
 On the organization's **SSO** dashboard:
 
-1. Enter the exact Okta organization **Issuer URL**, `https://{yourOktaDomain}`. Do not use `/oauth2/default`; the organization issuer is what the dashboard integration expects. Hexpm requires an HTTPS issuer with no query or fragment and requires the provider discovery document to return that exact issuer.
+1. Enter the exact Okta organization **Issuer URL**, `https://{yourOktaDomain}`. Use the organization issuer rather than a custom authorization server such as `/oauth2/default`; Hexpm is tested and documented against the organization issuer. Hexpm requires an HTTPS issuer with no query or fragment and requires the provider discovery document to return that exact issuer.
 2. Enter the application's **Client ID** and **Client secret**.
 3. Select **Save configuration**.
 4. Select **Test connection** and complete the Okta sign-in as the same Hexpm administrator who saved the configuration.
