@@ -136,6 +136,7 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
              perform_job(Stats, %{"date" => "not-a-date"})
   end
 
+  @tag :capture_log
   test "processing failures propagate for Oban retries and report an error check-in" do
     Store.put(
       :logs_bucket,

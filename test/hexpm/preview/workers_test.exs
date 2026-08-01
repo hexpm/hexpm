@@ -240,6 +240,7 @@ defmodule Hexpm.Preview.WorkersTest do
              ["new.txt"]
   end
 
+  @tag :capture_log
   test "upload publishes the file list after all files succeed" do
     package = insert(:package, name: "manifest_preview")
     release = insert(:release, package: package, version: "1.0.0")
