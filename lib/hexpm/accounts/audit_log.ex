@@ -252,6 +252,16 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("organization.member.role", {organization, user, role}),
     do: %{organization: serialize(organization), user: serialize(user), role: role}
 
+  defp extract_params(action, {organization, %OrganizationDomain{} = domain})
+       when action in [
+              "organization.domain.add",
+              "organization.domain.remove",
+              "organization.domain.verify",
+              "organization.domain.unverify"
+            ] do
+    %{organization: serialize(organization), domain: domain.domain}
+  end
+
   defp extract_params(action, {organization, %OrganizationInvitation{} = invitation})
        when action in [
               "organization.invitation.create",

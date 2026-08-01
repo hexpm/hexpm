@@ -5,6 +5,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
   import HexpmWeb.Components.Buttons, only: [button: 1, button_link: 1]
   import HexpmWeb.Components.Input, only: [password_input: 1, text_input: 1]
 
+  alias Hexpm.Accounts.OrganizationDomain
   alias Hexpm.Accounts.SSO
   alias Hexpm.Accounts.SSO.Connection
 
@@ -14,6 +15,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
   attr :failures, :list, required: true
   attr :callback_url, :string, required: true
   attr :login_url, :string, required: true
+  attr :domains, :list, default: []
 
   def sso_tab(assigns) do
     ~H"""
@@ -168,6 +170,71 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
       </section>
 
       <section
+        id="sso-domains"
+        class="rounded-lg border border-grey-200 dark:border-grey-800 bg-white dark:bg-grey-900 p-5"
+      >
+        <h3 class="font-semibold text-grey-900 dark:text-grey-100">Verified domains</h3>
+        <p class="mt-2 text-sm text-grey-600 dark:text-grey-300">
+          Proving you control a domain lets the organization admit people whose provider address is on
+          it. Verification is re-checked daily, so a record that is taken down stops verifying.
+        </p>
+
+        <ul :if={@domains != []} class="mt-4 divide-y divide-grey-200 dark:divide-grey-800">
+          <li :for={domain <- @domains} class="py-3">
+            <div class="flex items-center justify-between gap-4">
+              <div class="min-w-0">
+                <div class="text-sm font-medium text-grey-900 dark:text-grey-100">
+                  {domain.domain}
+                </div>
+                <div class="mt-1 text-xs text-grey-500 dark:text-grey-400">
+                  {domain_status(domain)}
+                </div>
+              </div>
+              <div class="flex flex-shrink-0 items-center gap-2">
+                <.form
+                  :if={!OrganizationDomain.verified?(domain)}
+                  for={%{}}
+                  action={~p"/dashboard/orgs/#{@organization}/sso/domains/verify"}
+                >
+                  <input type="hidden" name="domain_id" value={domain.id} />
+                  <.button type="submit" variant="secondary" size="sm">Verify</.button>
+                </.form>
+                <.form for={%{}} action={~p"/dashboard/orgs/#{@organization}/sso/domains/remove"}>
+                  <input type="hidden" name="domain_id" value={domain.id} />
+                  <.button type="submit" variant="danger" size="sm">Remove</.button>
+                </.form>
+              </div>
+            </div>
+
+            <div :if={!OrganizationDomain.verified?(domain)} class="mt-3 grid gap-3">
+              <.readonly_value label="TXT record name" value={OrganizationDomain.record_name(domain)} />
+              <.readonly_value
+                label="TXT record value"
+                value={OrganizationDomain.record_value(domain)}
+              />
+            </div>
+          </li>
+        </ul>
+
+        <.form
+          for={%{}}
+          action={~p"/dashboard/orgs/#{@organization}/sso/domains"}
+          class="mt-4 flex flex-wrap items-end gap-3"
+        >
+          <div class="min-w-0 flex-1">
+            <.text_input
+              id="sso-domain"
+              name="domain[domain]"
+              label="Domain"
+              placeholder="example.com"
+              value=""
+            />
+          </div>
+          <.button type="submit" variant="secondary">Add domain</.button>
+        </.form>
+      </section>
+
+      <section
         :if={@connection}
         id="sso-linked-accounts"
         class="rounded-lg border border-grey-200 dark:border-grey-800 bg-white dark:bg-grey-900 p-5"
@@ -236,6 +303,14 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
       <code class="mt-1 block overflow-x-auto rounded-md bg-grey-50 dark:bg-grey-950 px-3 py-2 text-sm text-grey-900 dark:text-grey-100">{@value}</code>
     </div>
     """
+  end
+
+  defp domain_status(%OrganizationDomain{verified_at: nil}) do
+    "Not verified yet. Publish the TXT record below, then verify."
+  end
+
+  defp domain_status(%OrganizationDomain{verified_at: verified_at}) do
+    "Verified on #{Calendar.strftime(verified_at, "%Y-%m-%d")}"
   end
 
   defp status_label(%Connection{enabled_at: nil, tested_at: nil}), do: "Not tested"

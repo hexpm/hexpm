@@ -52,7 +52,8 @@ config :hexpm, Oban,
        {"*/30 * * * *", Hexpm.Security.Updater},
        {"30 0 * * *", Hexpm.ReleaseTasks.CheckNames},
        {"0 1 * * *", Hexpm.ReleaseTasks.Stats},
-       {"0 2 * * *", Hexpm.ReleaseTasks.PurgeExpiredRecords}
+       {"0 2 * * *", Hexpm.ReleaseTasks.PurgeExpiredRecords},
+       {"15 3 * * *", Hexpm.Accounts.OrganizationDomains.RecheckWorker}
      ],
      timezone: "Etc/UTC"},
     # Successful jobs are read by nobody and are the bulk of the table, which

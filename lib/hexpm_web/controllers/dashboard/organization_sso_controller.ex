@@ -137,6 +137,75 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
     end)
   end
 
+  def add_domain(conn, %{"dashboard_org" => name, "domain" => params}) do
+    with_organization(conn, name, fn organization ->
+      case OrganizationDomains.add(organization, params, conn.assigns.current_user,
+             audit: audit_data(conn)
+           ) do
+        {:ok, domain} ->
+          redirect_with_flash(
+            conn,
+            organization,
+            :info,
+            "#{domain.domain} was added. Publish the TXT record below, then verify it."
+          )
+
+        {:error, changeset} ->
+          redirect_with_flash(conn, organization, :error, domain_error(changeset))
+      end
+    end)
+  end
+
+  def verify_domain(conn, %{"dashboard_org" => name, "domain_id" => id}) do
+    with_domain(conn, name, id, fn organization, domain ->
+      case OrganizationDomains.verify(organization, domain, audit: audit_data(conn)) do
+        {:ok, domain} ->
+          redirect_with_flash(conn, organization, :info, "#{domain.domain} is verified.")
+
+        {:error, :record_not_found} ->
+          redirect_with_flash(
+            conn,
+            organization,
+            :error,
+            "No matching TXT record was found for #{domain.domain}. DNS changes can take a while to propagate."
+          )
+
+        {:error, _reason} ->
+          redirect_with_flash(
+            conn,
+            organization,
+            :error,
+            "#{domain.domain} could not be verified."
+          )
+      end
+    end)
+  end
+
+  def remove_domain(conn, %{"dashboard_org" => name, "domain_id" => id}) do
+    with_domain(conn, name, id, fn organization, domain ->
+      {:ok, _domain} =
+        OrganizationDomains.remove(organization, domain, audit: audit_data(conn))
+
+      redirect_with_flash(conn, organization, :info, "#{domain.domain} was removed.")
+    end)
+  end
+
+  defp with_domain(conn, name, id, fun) do
+    with_organization(conn, name, fn organization ->
+      case OrganizationDomains.get(organization, safe_to_integer(id) || 0) do
+        nil -> not_found(conn)
+        domain -> fun.(organization, domain)
+      end
+    end)
+  end
+
+  defp domain_error(%Ecto.Changeset{} = changeset) do
+    case translate_errors(changeset)[:domain] do
+      nil -> "The domain could not be added."
+      message -> "Domain #{message}."
+    end
+  end
+
   defp with_organization(conn, name, fun) do
     user = conn.assigns.current_user
     organization = Organizations.get(name)
