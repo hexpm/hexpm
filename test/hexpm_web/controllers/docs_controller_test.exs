@@ -14,11 +14,11 @@ defmodule HexpmWeb.DocsControllerTest do
     assert html =~ "existing Hexpm account"
     assert html =~ "Custom Okta dashboard tiles"
 
-    # What is unsupported is a decision, not a pending test run. Tying the copy
-    # to validation status went stale the moment the matrices finished.
-    assert html =~ "None of the three is waiting on validation"
-    refute html =~ "until their external validation"
-    refute html =~ "until their live provider test matrices are complete"
+    # The load-bearing fact about the OIN listing, rather than the sentence
+    # carrying it. An earlier version asserted the exact wording and refuted two
+    # phrasings that no longer exist anywhere, which breaks on a copy edit and
+    # catches nothing.
+    assert html =~ "never submitted for review"
     assert html =~ "tenant-specific v2 issuer"
     assert html =~ "organization access session"
     assert html =~ "never suppresses a personal Hexpm two-factor prompt"

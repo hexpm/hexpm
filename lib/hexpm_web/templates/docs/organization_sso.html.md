@@ -31,7 +31,7 @@ In the Okta Admin Console, follow Okta's [OIDC app-integration instructions](htt
 3. Select the **Authorization Code** grant type.
 4. Add the exact **Redirect URI** from the Hexpm SSO dashboard as a sign-in redirect URI. Do not use a wildcard.
 5. Leave the sign-out redirect URIs empty. This release does not use OIDC logout.
-6. Under **Login initiated by**, select **App Only** if members will always start from the organization login URL. To let them start from Okta instead, select **Either Okta or App** and set the **Initiate login URI** described below. Custom Okta dashboard tiles are not supported either way.
+6. Under **Login initiated by**, select **App Only** if members will always start from the organization login URL. To let them start from Okta instead, select **Either Okta or App** and set the **Initiate login URI** described below. The URI appears on the Hexpm SSO dashboard only after SSO login is enabled, so this step needs a second pass through Okta once setup is finished.
 7. Assign only the people or groups who should be able to use the Hexpm integration.
 8. Save the application, then copy its **Client ID** and **Client secret**.
 
@@ -41,7 +41,7 @@ The application must allow the `openid` and `email` scopes. Hexpm uses the provi
 
 On the organization's **SSO** dashboard:
 
-1. Enter the exact Okta organization **Issuer URL**, `https://{yourOktaDomain}`. Do not use `/oauth2/default` for the supported dashboard and future OIN integration. Hexpm requires an HTTPS issuer with no query or fragment and requires the provider discovery document to return that exact issuer.
+1. Enter the exact Okta organization **Issuer URL**, `https://{yourOktaDomain}`. Do not use `/oauth2/default`; the organization issuer is what the dashboard integration expects. Hexpm requires an HTTPS issuer with no query or fragment and requires the provider discovery document to return that exact issuer.
 2. Enter the application's **Client ID** and **Client secret**.
 3. Select **Save configuration**.
 4. Select **Test connection** and complete the Okta sign-in as the same Hexpm administrator who saved the configuration.
@@ -60,7 +60,7 @@ The **Organization / Initiate Login URI** is organization-bound; Hexpm never per
 * `target_link_uri` is optional and must use Hexpm's configured origin and an allowlisted location within that organization's dashboard.
 * Unknown parameters are ignored.
 
-Every accepted initiation creates fresh state, nonce, and PKCE values. Custom Okta dashboard tiles, OIN Wizard-generated instances, and public OIN listings are not supported launch claims. Hexpm has exercised all three, so this is a decision about what Hexpm will document and answer for, not a gap in what has been tried.
+Every accepted initiation creates fresh state, nonce, and PKCE values. Custom Okta dashboard tiles, OIN Wizard-generated instances, and public OIN listings are not supported launch claims. Tiles and a Wizard-generated instance both work and have been exercised, so for those this is a decision about what Hexpm will document and answer for rather than a gap in what has been tried. A public listing has never been submitted for review, so it does not exist.
 
 ### Microsoft Entra private validation
 
@@ -95,7 +95,7 @@ After linking, later uses of the organization login URL establish a 24-hour orga
 
 The two MFA policies do not compete, because they protect different things. The organization's provider enforces the organization's policy on every organization access session. Hexpm's own two-factor authentication enforces the account holder's policy on every account login. A member with both completes both, at different moments, and neither substitutes for the other.
 
-An SSO authentication never suppresses a personal Hexpm two-factor prompt, because it never establishes the account session in the first place. It also never satisfies step-up re-authentication (sudo), which stays on credentials the account itself owns: password, GitHub, or a recovery code. Configure the required MFA and conditional-access policy for organization access in your provider.
+An SSO authentication never suppresses a personal Hexpm two-factor prompt, because it never establishes the account session in the first place. It also never satisfies step-up re-authentication (sudo), which stays on credentials the account itself owns: password, GitHub, an authenticator code, or a recovery code. Configure the required MFA and conditional-access policy for organization access in your provider.
 
 Okta controls authentication to the SSO application. Hexpm remains the source of truth for organization membership and roles. Removing an Okta assignment does not remove the member from Hexpm. Remove the member in Hexpm to revoke organization access.
 
@@ -138,6 +138,6 @@ Do not send client secrets, authorization codes, tokens, cookies, or raw callbac
 
 ### Release scope
 
-Enabled organizations can use the organization login URL and third-party-initiated login. Custom Okta dashboard tiles, a public Okta Integration Network listing, and general Microsoft Entra support are unavailable. None of the three is waiting on validation, which is complete for all of them: the OIN integration was built and exercised but never submitted for review, and supporting Entra or dashboard tiles is an open release decision rather than an untested path.
+Enabled organizations can use the organization login URL and third-party-initiated login. Custom Okta dashboard tiles and Microsoft Entra are not supported, and there is no public Okta Integration Network listing. Tiles and Entra both work and have been exercised privately; supporting them is an open release decision rather than an untested path. The OIN listing is different in kind: the integration was built and exercised, but it was never submitted for review, so no listing exists to install from.
 
-Nothing yet requires an organization access session. This release does not support SAML, account creation, invitations, just-in-time membership, domain verification, SCIM, group or role synchronization, required SSO enforcement, or OIDC logout.
+This release does not support SAML, account creation, invitations, just-in-time membership, domain verification, SCIM, group or role synchronization, required SSO enforcement, or OIDC logout.

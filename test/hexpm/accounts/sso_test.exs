@@ -1269,9 +1269,13 @@ defmodule Hexpm.Accounts.SSOTest do
       # An account with no verified primary address cannot produce a recipient,
       # which is the shape that used to raise out of the envelope and take the
       # surrounding transaction with it.
+      # Left primary on purpose. An address that is neither primary nor
+      # verified cannot distinguish the two halves of the recipient filter;
+      # an unverified address that is still primary fails this test if the
+      # `verified` half is dropped.
       Repo.update_all(
         from(email in Hexpm.Accounts.Email, where: email.user_id == ^context.member.id),
-        set: [verified: false, primary: false]
+        set: [verified: false]
       )
 
       assert {:ok, %Identity{}} =
@@ -1280,6 +1284,10 @@ defmodule Hexpm.Accounts.SSOTest do
                )
 
       refute Repo.exists?(Identity)
+
+      # Dropping the `verified` half of the recipient filter would mail this
+      # unverified address rather than sending nothing at all.
+      refute Repo.exists?(OutboxEntry)
 
       actions = context.organization |> AuditLogs.all_by() |> Enum.map(& &1.action)
       assert "sso.identity.unlink" in actions
@@ -1329,13 +1337,15 @@ defmodule Hexpm.Accounts.SSOTest do
     end
 
     test "notifications reach the verified primary address and nothing else", context do
-      # Any address can be attached to an account unverified, so an account
-      # holder must not be able to make Hexpm mail an address they do not own.
+      # Verified but not primary. An address that is neither verified nor
+      # primary cannot tell the two halves of `primary and verified` apart;
+      # this one fails the test if the `primary` half is dropped. The
+      # `verified` half is covered by the unverified-primary test above.
       insert(:email,
         user: context.member,
-        email: "attacker-supplied@example.com",
+        email: "second@example.com",
         primary: false,
-        verified: false,
+        verified: true,
         public: false,
         gravatar: false
       )

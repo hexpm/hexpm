@@ -85,9 +85,63 @@ defmodule Hexpm.Emails.OutboxTest do
     end
   end
 
+  describe "cancel!/1 locking" do
+    setup do
+      skip = Application.fetch_env!(:hexpm, :skip_advisory_locks)
+      Application.put_env(:hexpm, :skip_advisory_locks, false)
+      on_exit(fn -> Application.put_env(:hexpm, :skip_advisory_locks, skip) end)
+      :ok
+    end
+
+    # The rest of the suite runs with skip_advisory_locks, so without this the
+    # lock acquisition could be deleted outright and nothing would notice.
+    test "takes one advisory lock per group the scope reaches" do
+      for group <- ["sso:1:9", "sso:2:9", "sso:3:9"] do
+        insert(:email_outbox_entry,
+          scope_key: "sso:user:9",
+          group_key: group,
+          category: "sso.identity_linked"
+        )
+      end
+
+      assert held_outbox_locks() == 0
+      Outbox.cancel!(scope_key: "sso:user:9", categories: ["sso.identity_linked"])
+      assert held_outbox_locks() == 3
+    end
+
+    test "takes exactly one advisory lock for a group cancellation" do
+      insert(:email_outbox_entry, group_key: "sso:1:2", category: "sso.identity_linked")
+
+      Outbox.cancel!(group_key: "sso:1:2", categories: ["sso.identity_linked"])
+      assert held_outbox_locks() == 1
+    end
+
+    test "takes no lock for a group the categories do not reach" do
+      insert(:email_outbox_entry,
+        scope_key: "sso:user:9",
+        group_key: "sso:1:9",
+        category: "account.deleted"
+      )
+
+      Outbox.cancel!(scope_key: "sso:user:9", categories: ["sso.identity_linked"])
+      assert held_outbox_locks() == 0
+    end
+
+    # classid 5 is the :email_outbox advisory lock class in Hexpm.Repo.
+    defp held_outbox_locks do
+      %{rows: [[count]]} =
+        Repo.query!(
+          "SELECT count(*) FROM pg_locks WHERE locktype = 'advisory' AND classid = 5",
+          []
+        )
+
+      count
+    end
+  end
+
   describe "cancel!/1 argument handling" do
     test "requires exactly one of group key and scope key" do
-      assert_raise ArgumentError, ~r/group_key or scope_key/, fn ->
+      assert_raise ArgumentError, ~r/requires group_key or scope_key/, fn ->
         Outbox.cancel!(categories: ["sso.identity_linked"])
       end
 

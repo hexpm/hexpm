@@ -137,11 +137,15 @@ defmodule Hexpm.Accounts.SSOConcurrencyTest do
     end)
   end
 
-  test "two scope cancellations sharing groups never deadlock" do
+  # This does NOT prove the lock ordering. Both racers run the same distinct
+  # query over the same two group keys, so they compute the same order whether
+  # or not it is sorted, and no ABBA pair can form. Producing one on demand
+  # needs the planner to disagree with itself between two queries, which is not
+  # something a test can pin down. What this does cover is that two concurrent
+  # scope cancellations over shared groups both complete and each deletes only
+  # its own rows, which is worth having and is why it stays.
+  test "concurrent scope cancellations over shared groups each delete their own rows" do
     committed(fn context ->
-      # Two accounts whose notifications sit in the same two groups. Each
-      # cancellation takes a lock per group, so acquiring them in insertion
-      # order rather than sorted order deadlocks within a round or two.
       groups = ["sso:#{context.connection.id}:b", "sso:#{context.connection.id}:a"]
       scopes = ["sso:user:#{context.member.id}", "sso:user:#{context.other_member.id}"]
 
@@ -162,6 +166,7 @@ defmodule Hexpm.Accounts.SSOConcurrencyTest do
           end)
 
         assert Enum.all?(results, &match?({:ok, 2}, &1))
+        assert committed_count(context, OutboxEntry) == 0
       end
     end)
   end

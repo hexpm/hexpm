@@ -95,9 +95,13 @@ defmodule HexpmWeb.SSOControllerTest do
     end
 
     test "the SSO namespace never calls the session-minting function" do
-      # Renaming the modules out from under the prefix filter would otherwise
-      # leave this iterating an empty list and passing.
-      assert length(sso_modules()) >= 3
+      # Renaming a module out from under the prefix filter would otherwise drop
+      # it from the scan silently. The controller is the one that could
+      # plausibly mint a session, so name it rather than counting.
+      modules = sso_modules()
+      assert HexpmWeb.SSOController in modules
+      assert Hexpm.Accounts.SSO in modules
+      assert HexpmWeb.Dashboard.OrganizationSSOController in modules
 
       for module <- sso_modules() do
         {:ok, {^module, [{:abstract_code, {:raw_abstract_v1, abstract_code}}]}} =
