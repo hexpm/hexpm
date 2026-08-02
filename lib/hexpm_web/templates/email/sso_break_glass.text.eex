@@ -1,0 +1,9 @@
+Billing Or SSO Settings Reached Without Single Sign-On
+
+<%= SSOBreakGlass.intro(@organization, @username) %>
+
+<%= SSOBreakGlass.why() %>
+
+<%= SSOBreakGlass.scope() %>
+
+<%= SSOBreakGlass.action() %>

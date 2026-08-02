@@ -54,6 +54,23 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
               :delete_policy
             ]
 
+  plug HexpmWeb.Plugs.OrganizationSSO,
+    except: [
+      :billing,
+      :billing_token,
+      :cancel_billing,
+      :resume_billing,
+      :update_billing,
+      :create_billing,
+      :add_seats,
+      :remove_seats,
+      :void_invoice,
+      :change_plan,
+      :show_invoice,
+      :pay_invoice,
+      :sso
+    ]
+
   def redirect_repo(conn, params) do
     glob = params["glob"] || []
     path = ~p"/dashboard/orgs" <> "/" <> Enum.join(glob, "/")

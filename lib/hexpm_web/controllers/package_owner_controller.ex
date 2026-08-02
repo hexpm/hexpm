@@ -6,6 +6,7 @@ defmodule HexpmWeb.PackageOwnerController do
   plug :requires_login
   plug :fetch_package
   plug :requires_full_owner
+  plug :requires_sso
   plug HexpmWeb.Plugs.Sudo
 
   def index(conn, _params) do
@@ -171,6 +172,18 @@ defmodule HexpmWeb.PackageOwnerController do
       conn
       |> render_error(403, message: "You must be a full owner of this package")
       |> halt()
+    end
+  end
+
+  defp requires_sso(conn, _opts) do
+    organization = conn.assigns.repository.organization
+
+    case HexpmWeb.SSOEnforcement.check(conn, organization, conn.assigns.current_user) do
+      :ok ->
+        conn
+
+      {:error, refusal} ->
+        HexpmWeb.SSOEnforcement.refuse(conn, refusal, organization)
     end
   end
 

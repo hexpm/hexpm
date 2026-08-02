@@ -344,6 +344,24 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
+  defmodule SSOBreakGlass do
+    def intro(organization, username) do
+      "#{username} opened the billing or single sign-on settings for the #{organization} organization on Hex.pm without a current single sign-on session."
+    end
+
+    def why() do
+      "Those two screens are the only ones enforcement leaves open. An organization whose provider stops working, or whose administrator is deactivated in it by mistake, still has to be able to repair the connection and keep paying, and it could not if those screens sat behind the same gate."
+    end
+
+    def scope() do
+      "Nothing else was reachable. Private packages, members, keys and every other organization page were refused as usual."
+    end
+
+    def action() do
+      "If this was not one of your administrators, review the organization's members and audit log."
+    end
+  end
+
   defmodule OrganizationInvitation do
     def intro(organization, role) do
       "You have been invited to join the #{organization} organization on Hex.pm as #{article(role)} #{role} member."

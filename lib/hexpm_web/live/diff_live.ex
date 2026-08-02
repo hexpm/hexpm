@@ -10,6 +10,7 @@ defmodule HexpmWeb.DiffLive do
   alias HexpmWeb.PackageLayoutAssigns
   alias HexpmWeb.Plugs.Attack
   alias HexpmWeb.RepositoryAccess
+  alias HexpmWeb.SSOEnforcement
 
   @batch_size 5
   @poll_interval 1_000
@@ -22,8 +23,7 @@ defmodule HexpmWeb.DiffLive do
     ignore_whitespace = params["w"] == "1"
 
     with {:ok, from, to} <- parse_versions(versions),
-         {:ok, _repository} <-
-           fetch_repository(socket.assigns.current_user, repository),
+         {:ok, _repository} <- fetch_repository(socket, repository),
          {:ok, request} <-
            Hexpm.Diff.prepare(repository, package, from, to, ignore_whitespace: ignore_whitespace) do
       release = Releases.preload(request.to_release, [:requirements])
@@ -65,7 +65,12 @@ defmodule HexpmWeb.DiffLive do
 
       load_or_enqueue(socket)
     else
-      {:error, reason} -> {:ok, assign(socket, error: error_message(reason))}
+      {:sso_required, organization} ->
+        return_to = diff_path(repository, package, versions, ignore_whitespace)
+        {:ok, redirect(socket, to: SSOEnforcement.login_path(organization, return_to))}
+
+      {:error, reason} ->
+        {:ok, assign(socket, error: error_message(reason))}
     end
   end
 
@@ -460,10 +465,11 @@ defmodule HexpmWeb.DiffLive do
     end
   end
 
-  defp fetch_repository(current_user, repository) do
-    case RepositoryAccess.fetch_repository(current_user, repository) do
+  defp fetch_repository(socket, repository) do
+    case RepositoryAccess.fetch_repository(socket, repository) do
       {:ok, repository} -> {:ok, repository}
-      :error -> {:error, :package_not_found}
+      {:error, :sso_required, organization} -> {:sso_required, organization}
+      _ -> {:error, :package_not_found}
     end
   end
 
@@ -519,11 +525,15 @@ defmodule HexpmWeb.DiffLive do
   end
 
   def diff_path(repository, package, from, to, ignore_whitespace) do
+    diff_path(repository, package, from <> ".." <> to, ignore_whitespace)
+  end
+
+  def diff_path(repository, package, versions, ignore_whitespace) do
     query = if ignore_whitespace, do: [w: 1], else: []
 
     case repository do
-      "hexpm" -> ~p"/diff/#{package}/#{from <> ".." <> to}?#{query}"
-      _other -> ~p"/diff/#{repository}/#{package}/#{from <> ".." <> to}?#{query}"
+      "hexpm" -> ~p"/diff/#{package}/#{versions}?#{query}"
+      _other -> ~p"/diff/#{repository}/#{package}/#{versions}?#{query}"
     end
   end
 

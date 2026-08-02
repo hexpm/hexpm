@@ -90,6 +90,16 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
 
       assert Enforcement.warn_pending() == 0
     end
+
+    test "goes away with the account it was addressed to", context do
+      require_sso(context, DateTime.add(DateTime.utc_now(), 3 * 24 * 60 * 60, :second))
+
+      assert Enforcement.warn_pending() == 1
+
+      :ok = Hexpm.Accounts.Users.delete(context.member, audit: audit_data(context.member))
+
+      assert pending_entries() == []
+    end
   end
 
   describe "sweep_personal_keys/0" do

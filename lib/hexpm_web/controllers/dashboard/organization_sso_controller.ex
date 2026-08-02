@@ -6,6 +6,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
 
   plug :requires_login
   plug HexpmWeb.Plugs.Sudo
+  plug HexpmWeb.Plugs.OrganizationSSO, except: :all
 
   def configure(conn, %{"dashboard_org" => name, "sso" => params}) do
     with_organization(conn, name, fn organization ->

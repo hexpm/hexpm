@@ -179,29 +179,27 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
     end
   end
 
-  describe "blocked_organization_ids/2" do
-    test "is empty for a member of an optional organization", context do
+  describe "check/4" do
+    test "passes a member of an optional organization", context do
       session = browser_session(context.member)
 
-      assert Enforcement.blocked_organization_ids(context.member, session.id)
-             |> Enum.empty?()
+      assert Enforcement.check(context.organization, context.member, nil, session.id) == :ok
     end
 
-    test "names an organization a governed member has not authenticated for", context do
+    test "refuses a governed member who has not authenticated", context do
       {:ok, _connection} = require_sso(context)
       session = browser_session(context.member)
 
-      assert Enforcement.blocked_organization_ids(context.member, session.id) ==
-               MapSet.new([context.organization.id])
+      assert Enforcement.check(context.organization, context.member, nil, session.id) ==
+               {:error, :sso_required}
     end
 
-    test "is empty once the member has a current session for it", context do
+    test "passes once the member has authenticated on that session", context do
       {:ok, _connection} = require_sso(context)
       session = browser_session(context.member)
       authenticate(context, context.member, session)
 
-      assert Enforcement.blocked_organization_ids(context.member, session.id)
-             |> Enum.empty?()
+      assert Enforcement.check(context.organization, context.member, nil, session.id) == :ok
     end
 
     test "is per browser session, not per account", context do
@@ -210,11 +208,10 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
       other = browser_session(context.member)
       authenticate(context, context.member, authenticated)
 
-      assert Enforcement.blocked_organization_ids(context.member, authenticated.id)
-             |> Enum.empty?()
+      assert Enforcement.check(context.organization, context.member, nil, authenticated.id) == :ok
 
-      assert Enforcement.blocked_organization_ids(context.member, other.id) ==
-               MapSet.new([context.organization.id])
+      assert Enforcement.check(context.organization, context.member, nil, other.id) ==
+               {:error, :sso_required}
     end
 
     test "treats an expired session as no session", context do
@@ -226,17 +223,50 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
       |> Ecto.Changeset.change(expires_at: DateTime.add(DateTime.utc_now(), -1, :second))
       |> Repo.update!()
 
-      assert Enforcement.blocked_organization_ids(context.member, session.id) ==
-               MapSet.new([context.organization.id])
+      assert Enforcement.check(context.organization, context.member, nil, session.id) ==
+               {:error, :sso_required}
     end
 
-    test "blocks everything governed when there is no session to check", context do
+    test "reads an OAuth token's own session rather than the browser's", context do
+      {:ok, _connection} = require_sso(context)
+      browser = browser_session(context.member)
+      oauth = oauth_session(context.member)
+      authenticate(context, context.member, oauth)
+
+      # The browser session is the one in hand and is not authenticated. The
+      # token carries its own, which is.
+      assert Enforcement.check(context.organization, context.member, token(oauth), browser.id) ==
+               :ok
+
+      assert Enforcement.check(context.organization, context.member, token(browser), browser.id) ==
+               {:error, :sso_required}
+    end
+
+    test "refuses a credential that holds no session at all", context do
       {:ok, _connection} = require_sso(context)
 
-      # A static credential cannot hold an organization access session, so every
-      # governed organization is out of reach for it.
-      assert Enforcement.blocked_organization_ids(context.member, nil) ==
-               MapSet.new([context.organization.id])
+      # Basic auth has nothing for an organization access session to attach to.
+      assert Enforcement.check(context.organization, context.member) ==
+               {:error, :sso_required}
+    end
+
+    test "leaves a personal key alone where the organization allows them", context do
+      link_identity(context, context.admin)
+
+      {:ok, _connection} =
+        configure(context, %{"enforcement_mode" => "required", "personal_keys" => "allow"})
+
+      assert Enforcement.check(
+               context.organization,
+               context.member,
+               personal_key(context.member)
+             ) == :ok
+    end
+
+    test "never governs an organization-owned credential", context do
+      {:ok, _connection} = require_sso(context)
+
+      assert Enforcement.check(context.organization, context.organization) == :ok
     end
 
     test "skips an exempt member", context do
@@ -247,21 +277,148 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
           audit: audit_data(context.admin)
         )
 
-      session = browser_session(context.member)
-
-      assert Enforcement.blocked_organization_ids(context.member, session.id)
-             |> Enum.empty?()
+      assert Enforcement.check(context.organization, context.member) == :ok
     end
 
-    test "is empty for a user with no organizations" do
-      user = insert(:user)
-      session = browser_session(user)
+    test "passes for nobody", context do
+      {:ok, _connection} = require_sso(context)
 
-      assert Enforcement.blocked_organization_ids(user, session.id) |> Enum.empty?()
+      assert Enforcement.check(context.organization, nil) == :ok
     end
 
-    test "is empty for nobody" do
-      assert Enforcement.blocked_organization_ids(nil, nil) |> Enum.empty?()
+    test "refuses a personal key and names a credential that works", context do
+      {:ok, _connection} = require_sso(context)
+
+      assert Enforcement.check(
+               context.organization,
+               context.member,
+               personal_key(context.member)
+             ) == {:error, :personal_key}
+
+      message = Enforcement.refusal_message(:personal_key, context.organization)
+      assert message =~ "does not accept personal API keys"
+      assert message =~ "organization key"
+      assert message =~ "mix hex.user auth"
+    end
+
+    test "points a refused member at their provider", context do
+      message = Enforcement.refusal_message(:sso_required, context.organization)
+
+      assert message =~ "/sso/org/#{context.organization.name}"
+    end
+
+    test "never governs the public repository", context do
+      {:ok, _connection} = require_sso(context)
+
+      assert Enforcement.check(Hexpm.Repository.Repository.hexpm().organization, context.member) ==
+               :ok
+    end
+
+    test "never governs a service account", context do
+      {:ok, _connection} = require_sso(context)
+      service = insert(:user, service: true)
+      insert(:organization_user, organization: context.organization, user: service, role: "read")
+
+      assert Enforcement.check(context.organization, service) == :ok
+    end
+
+    test "leaves an organization the caller is not a member of alone", context do
+      {:ok, _connection} = require_sso(context)
+
+      assert Enforcement.check(context.organization, insert(:user)) == :ok
+    end
+  end
+
+  describe "personal_key_refused/1" do
+    test "names the organizations that turn personal keys away", context do
+      {:ok, _connection} = require_sso(context)
+
+      assert [organization] = Enforcement.personal_key_refused(context.member)
+      assert organization.id == context.organization.id
+    end
+
+    test "is empty while the organization allows them", context do
+      link_identity(context, context.admin)
+
+      {:ok, _connection} =
+        configure(context, %{"enforcement_mode" => "required", "personal_keys" => "allow"})
+
+      assert Enforcement.personal_key_refused(context.member) == []
+    end
+
+    test "is empty during the grace period", context do
+      link_identity(context, context.admin)
+
+      {:ok, _connection} =
+        configure(context, %{
+          "enforcement_mode" => "required",
+          "required_at" => DateTime.add(DateTime.utc_now(), 3_600, :second),
+          "personal_keys" => "block"
+        })
+
+      assert Enforcement.personal_key_refused(context.member) == []
+    end
+
+    test "is empty for an organization", context do
+      assert Enforcement.personal_key_refused(context.organization) == []
+    end
+  end
+
+  describe "break_glass/3" do
+    test "audits and mails the administrators once an hour", context do
+      {:ok, _connection} = require_sso(context)
+
+      for _ <- 1..3 do
+        Enforcement.break_glass(
+          context.organization,
+          context.member,
+          :billing,
+          audit_data(context.member)
+        )
+      end
+
+      logs =
+        Hexpm.Accounts.AuditLogs.all_by(context.organization)
+        |> Enum.filter(&(&1.action == "sso.break_glass"))
+
+      assert [log] = logs
+      assert log.params["screen"] == "billing"
+
+      assert [entry] =
+               Repo.all(
+                 from(e in Hexpm.Emails.OutboxEntry, where: e.category == "sso.break_glass")
+               )
+
+      assert entry.scope_key == "sso:organization:#{context.organization.id}"
+    end
+
+    test "audits again once the window has passed", context do
+      {:ok, _connection} = require_sso(context)
+
+      Enforcement.break_glass(
+        context.organization,
+        context.member,
+        :sso,
+        audit_data(context.member)
+      )
+
+      Repo.update_all(
+        from(log in Hexpm.Accounts.AuditLog, where: log.action == "sso.break_glass"),
+        set: [inserted_at: DateTime.add(DateTime.utc_now(), -2 * 60 * 60, :second)]
+      )
+
+      Enforcement.break_glass(
+        context.organization,
+        context.member,
+        :sso,
+        audit_data(context.member)
+      )
+
+      logs =
+        Hexpm.Accounts.AuditLogs.all_by(context.organization)
+        |> Enum.filter(&(&1.action == "sso.break_glass"))
+
+      assert length(logs) == 2
     end
   end
 
@@ -438,6 +595,22 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
       user: user,
       expires_at: DateTime.add(DateTime.utc_now(), 30 * 24 * 60 * 60, :second)
     )
+  end
+
+  defp oauth_session(user) do
+    insert(:session,
+      user: user,
+      type: "oauth",
+      expires_at: DateTime.add(DateTime.utc_now(), 30 * 24 * 60 * 60, :second)
+    )
+  end
+
+  defp token(session) do
+    %Hexpm.OAuth.Token{user_session_id: session.id}
+  end
+
+  defp personal_key(user) do
+    insert(:key, user: user, organization: nil)
   end
 
   defp authenticate(context, user, session) do

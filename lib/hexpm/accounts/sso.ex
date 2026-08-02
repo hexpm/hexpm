@@ -25,11 +25,11 @@ defmodule Hexpm.Accounts.SSO do
   @email_mismatch_category "sso.email_mismatch"
   @seats_exhausted_category "sso.seats_exhausted"
   @notification_categories [
-    @identity_linked_email_category,
-    @identity_unlinked_email_category,
-    @email_mismatch_category,
-    @seats_exhausted_category
-  ]
+                             @identity_linked_email_category,
+                             @identity_unlinked_email_category,
+                             @email_mismatch_category,
+                             @seats_exhausted_category
+                           ] ++ Enforcement.member_notification_categories()
   # A seat notice is about the organization, not about the member who happened
   # to trip it, so unlinking that member must not cancel it.
   @cancelled_notification_categories [
