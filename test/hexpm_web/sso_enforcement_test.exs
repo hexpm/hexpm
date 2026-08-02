@@ -2,6 +2,7 @@ defmodule HexpmWeb.SSOEnforcementTest do
   use HexpmWeb.ConnCase, async: false
 
   alias Hexpm.Accounts.SSO
+  alias Hexpm.Accounts.SSO.Enforcement
   alias Hexpm.Emails.OutboxEntry
 
   setup do
@@ -328,16 +329,137 @@ defmodule HexpmWeb.SSOEnforcementTest do
 
     test "leaves an OAuth token to its scopes", context do
       require_sso(context)
-      token = oauth_token(context.member, ["api:read", "repository:#{context.organization.name}"])
+      session = oauth_session(context.member)
+      authenticate(context, context.member, session)
 
-      # The scope is minted against a live organization access session when the
-      # token is refreshed, so this endpoint does not decide it a second time.
+      token =
+        oauth_token(
+          context.member,
+          ["api:read", "repository:#{context.organization.name}"],
+          session
+        )
+
+      # The scope was minted against a live organization access session, so this
+      # endpoint does not decide it a second time.
       conn =
         build_conn()
         |> put_req_header("authorization", "Bearer #{token.access_token}")
         |> get("/api/auth", domain: "repository", resource: context.organization.name)
 
       assert response(conn, 204)
+    end
+  end
+
+  describe "OAuth scopes" do
+    test "carry the organizations the session has authenticated for", context do
+      require_sso(context)
+      session = oauth_session(context.member)
+      authenticate(context, context.member, session)
+
+      token = oauth_token(context.member, ["api:read", "repositories"], session)
+
+      assert "repository:#{context.organization.name}" in token.scopes
+      assert token.sso_reauth_required == []
+    end
+
+    test "drop the ones it has not, and name them", context do
+      require_sso(context)
+
+      token = oauth_token(context.member, ["api:read", "repositories"])
+
+      refute "repository:#{context.organization.name}" in token.scopes
+      assert token.sso_reauth_required == [context.organization.name]
+    end
+
+    test "drop a docs scope the same way a repository scope goes", context do
+      require_sso(context)
+      name = context.organization.name
+
+      token = oauth_token(context.member, ["api:read", "docs:#{name}", "repository:#{name}"])
+
+      assert token.scopes == ["api:read"]
+      assert token.sso_reauth_required == [name]
+    end
+
+    test "are unaffected while the organization does not enforce", context do
+      token = oauth_token(context.member, ["api:read", "repositories"])
+
+      assert "repository:#{context.organization.name}" in token.scopes
+      assert token.sso_reauth_required == []
+    end
+
+    test "are re-derived on refresh, and the flag reaches the client", context do
+      require_sso(context)
+      session = oauth_session(context.member)
+      authenticate(context, context.member, session)
+
+      token = oauth_token(context.member, ["api:read", "repositories"], session)
+      assert "repository:#{context.organization.name}" in token.scopes
+
+      expire_org_sessions(session)
+      body = refresh(token, session)
+
+      refute body["scope"] =~ "repository:#{context.organization.name}"
+      assert body["sso_reauth_required"] == [context.organization.name]
+    end
+
+    test "leave an organization the member was removed from unnamed", context do
+      require_sso(context)
+      session = oauth_session(context.member)
+      authenticate(context, context.member, session)
+
+      token = oauth_token(context.member, ["api:read", "repositories"], session)
+      assert "repository:#{context.organization.name}" in token.scopes
+
+      Repo.delete_all(
+        from(m in Hexpm.Accounts.OrganizationUser, where: m.user_id == ^context.member.id)
+      )
+
+      body = refresh(token, session)
+
+      # Dropped, like a lapsed session, but not named: authenticating would not
+      # give it back and the client has nothing to act on.
+      refute body["scope"] =~ "repository:#{context.organization.name}"
+      refute Map.has_key?(body, "sso_reauth_required")
+    end
+
+    test "say nothing to a client that has nothing to fix", context do
+      session = oauth_session(context.member)
+      token = oauth_token(context.member, ["api:read"], session)
+
+      refute Map.has_key?(refresh(token, session), "sso_reauth_required")
+    end
+  end
+
+  describe "authorizing a client" do
+    test "carries the browser's organization access onto the new session", context do
+      require_sso(context)
+      {_conn, browser} = login(context.member)
+      authenticate(context, context.member, browser)
+
+      oauth = oauth_session(context.member)
+      SSO.grant_org_sessions!(browser.id, oauth.id, context.member.id)
+
+      assert Enforcement.check(context.organization, context.member, nil, oauth.id) == :ok
+    end
+
+    test "does not restart the clock the administrator set", context do
+      require_sso(context)
+      {_conn, browser} = login(context.member)
+      source = authenticate(context, context.member, browser)
+
+      oauth = oauth_session(context.member)
+      assert [granted] = SSO.grant_org_sessions!(browser.id, oauth.id, context.member.id)
+
+      assert DateTime.compare(granted.expires_at, source.expires_at) == :eq
+    end
+
+    test "carries nothing when the browser had nothing", context do
+      require_sso(context)
+      {_conn, browser} = login(context.member)
+      oauth = oauth_session(context.member)
+
+      assert SSO.grant_org_sessions!(browser.id, oauth.id, context.member.id) == []
     end
   end
 
@@ -465,21 +587,36 @@ defmodule HexpmWeb.SSOEnforcementTest do
     )
   end
 
-  defp oauth_token(user, scopes) do
+  defp oauth_session(user) do
     client = insert(:oauth_client)
-    session = insert(:oauth_session, user: user, client_id: client.client_id)
+    insert(:oauth_session, user: user, client_id: client.client_id)
+  end
+
+  defp oauth_token(user, scopes, session \\ nil) do
+    session = session || oauth_session(user)
 
     {:ok, token} =
       Hexpm.OAuth.Tokens.create_and_insert_for_user(
         user,
-        client.client_id,
+        session.client_id,
         scopes,
         "authorization_code",
-        "test_grant_ref",
-        user_session_id: session.id
+        "test_grant_ref-#{System.unique_integer([:positive])}",
+        user_session_id: session.id,
+        with_refresh_token: true
       )
 
     token
+  end
+
+  defp refresh(token, session) do
+    build_conn()
+    |> post("/api/oauth/token", %{
+      "grant_type" => "refresh_token",
+      "refresh_token" => token.refresh_token,
+      "client_id" => session.client_id
+    })
+    |> json_response(200)
   end
 
   defp api_write, do: [%{domain: "api", resource: "write"}]
@@ -494,6 +631,13 @@ defmodule HexpmWeb.SSOEnforcementTest do
   end
 
   defp otp(user), do: Hexpm.Accounts.TFA.time_based_token(user.tfa.secret)
+
+  defp expire_org_sessions(session) do
+    Repo.update_all(
+      from(s in Hexpm.Accounts.SSO.OrgSession, where: s.user_session_id == ^session.id),
+      set: [expires_at: DateTime.add(DateTime.utc_now(), -1, :second)]
+    )
+  end
 
   defp repository_permission(context) do
     [%{domain: "repository", resource: context.organization.name}]

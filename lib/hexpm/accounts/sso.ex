@@ -1091,6 +1091,43 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   @doc """
+  Gives a session the organization access the session that authorized it is
+  currently carrying.
+
+  Approving a device, or consenting to an OAuth client, happens in a browser
+  that has already authenticated for these organizations, so this is that same
+  authentication reaching the session it just approved rather than a new one.
+  It inherits the expiry too: restarting the clock here would let a member who
+  authorized a client just before their own session lapsed walk away with twice
+  the window the administrator set.
+  """
+  def grant_org_sessions!(from_user_session_id, to_user_session_id, user_id)
+      when is_integer(from_user_session_id) and is_integer(to_user_session_id) do
+    now = DateTime.utc_now()
+
+    from(session in OrgSession,
+      where: session.user_session_id == ^from_user_session_id,
+      where: session.user_id == ^user_id,
+      where: is_nil(session.revoked_at) and session.expires_at > ^now
+    )
+    |> Repo.all()
+    |> Enum.map(fn source ->
+      %OrgSession{}
+      |> OrgSession.changeset(%{
+        user_id: source.user_id,
+        organization_id: source.organization_id,
+        user_session_id: to_user_session_id,
+        identity_id: source.identity_id,
+        authenticated_at: source.authenticated_at,
+        expires_at: source.expires_at
+      })
+      |> Repo.insert!()
+    end)
+  end
+
+  def grant_org_sessions!(_from_user_session_id, _to_user_session_id, _user_id), do: []
+
+  @doc """
   The organization access session for a browser session, or nil.
 
   The account session is checked alongside it so that revoking or expiring a

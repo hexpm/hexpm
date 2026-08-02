@@ -271,6 +271,15 @@ defmodule Hexpm.OAuth.DeviceCodes do
             audit: audit_data
           )
         end)
+        |> Ecto.Multi.run(:organization_sso_sessions, fn _repo, %{session: session} ->
+          # Before the token, because minting its scopes reads them.
+          {:ok,
+           Hexpm.Accounts.SSO.grant_org_sessions!(
+             Keyword.get(opts, :browser_session_id),
+             session.id,
+             user.id
+           )}
+        end)
         |> Ecto.Multi.run(:token, fn _repo, %{session: session} ->
           changeset =
             Tokens.create_for_user(

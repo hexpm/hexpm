@@ -207,7 +207,8 @@ defmodule HexpmWeb.DeviceController do
 
             true ->
               case DeviceCodes.authorize_device(user_code, user, selected_scopes,
-                     audit: audit_data(conn)
+                     audit: audit_data(conn),
+                     browser_session_id: conn.assigns.current_session.id
                    ) do
                 {:ok, _device_code} ->
                   conn

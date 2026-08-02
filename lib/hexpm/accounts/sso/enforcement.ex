@@ -116,6 +116,35 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   def check(_organization, _principal, _credential, _user_session_id), do: :ok
 
   @doc """
+  Which of these organizations the member is governed by and has no current
+  organization access session for on `user_session_id`.
+
+  A removed member's organization is not in the answer, because they are not a
+  member of it and nothing here would give it back. Only someone whose one
+  missing piece is the authentication is named, which is what makes it safe to
+  tell a client to go and get it.
+  """
+  @spec sso_required(term(), [String.t()], integer() | nil) :: [String.t()]
+  def sso_required(principal, organization_names, user_session_id)
+
+  def sso_required(_principal, [], _user_session_id), do: []
+
+  def sso_required(%User{service: true}, _organization_names, _user_session_id), do: []
+
+  def sso_required(%User{} = user, organization_names, user_session_id) do
+    if Features.available?() do
+      user
+      |> governed_memberships({:names, organization_names})
+      |> unauthenticated(user, user_session_id)
+      |> Enum.map(fn {organization, _connection, _member_enforcement} -> organization.name end)
+    else
+      []
+    end
+  end
+
+  def sso_required(_principal, _organization_names, _user_session_id), do: []
+
+  @doc """
   The organizations this user belongs to that turn personal API keys away.
 
   A key is a static credential with no session to check and nothing to expire
@@ -178,6 +207,13 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
 
   defp restrict_organizations(query, :all), do: query
 
+  defp restrict_organizations(query, {:names, names}) do
+    from(member in query,
+      join: organization in assoc(member, :organization),
+      where: organization.name in ^names
+    )
+  end
+
   defp restrict_organizations(query, organization_ids) do
     from(member in query, where: member.organization_id in ^organization_ids)
   end
@@ -192,7 +228,9 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
       end)
       |> refusals(:personal_key)
     else
-      unauthenticated(governed, user, session_id(credential, user_session_id))
+      governed
+      |> unauthenticated(user, session_id(credential, user_session_id))
+      |> refusals(:sso_required)
     end
   end
 
@@ -206,7 +244,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
 
   defp session_id(nil, browser_session_id), do: browser_session_id
 
-  defp unauthenticated(governed, _user, nil), do: refusals(governed, :sso_required)
+  defp unauthenticated(governed, _user, nil), do: governed
 
   defp unauthenticated(governed, user, user_session_id) do
     organization_ids = Enum.map(governed, fn {organization, _, _} -> organization.id end)
@@ -224,11 +262,9 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
       |> Repo.all()
       |> MapSet.new()
 
-    governed
-    |> Enum.reject(fn {organization, _, _} ->
+    Enum.reject(governed, fn {organization, _, _} ->
       MapSet.member?(authenticated, organization.id)
     end)
-    |> refusals(:sso_required)
   end
 
   defp refusals(governed, refusal) do

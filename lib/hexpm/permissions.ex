@@ -8,6 +8,7 @@ defmodule Hexpm.Permissions do
   """
 
   alias Hexpm.Accounts.{Key, KeyPermission, User, Users, Organization}
+  alias Hexpm.Accounts.SSO.Enforcement
   alias Hexpm.OAuth.Token
   alias Hexpm.Repository.Package
 
@@ -456,6 +457,57 @@ defmodule Hexpm.Permissions do
       |> Kernel.++(repo_scopes)
     else
       scopes
+    end
+  end
+
+  # Scopes naming one organization, which enforcement can take away and give
+  # back. `repositories` is not one of them: it is expanded into these before
+  # this runs.
+  @organization_scope_domains ~w(repository docs)
+
+  @doc """
+  Drops the organization scopes this session is not currently authenticated for,
+  and names the organizations that authenticating would give back.
+
+  This is where enforcement reaches the credential path. A token's scopes are a
+  capability the edge verifies without a database lookup, so the decision has to
+  be taken when they are minted rather than when they are used, and they are
+  minted on every grant including refresh.
+
+  The ordering falls out: a removed member's organization is not in
+  `all_organizations/1` at all, so it is dropped without ever being named, while
+  a member whose only missing piece is a live organization access session is
+  dropped and named. A client can act on the second and has nothing to act on
+  for the first.
+  """
+  @spec filter_sso_scopes(term(), [String.t()], integer() | nil) ::
+          {[String.t()], [String.t()]}
+  def filter_sso_scopes(principal, scopes, user_session_id)
+
+  def filter_sso_scopes(%User{} = user, scopes, user_session_id) do
+    case Enforcement.sso_required(user, organization_scope_names(scopes), user_session_id) do
+      [] -> {scopes, []}
+      required -> {Enum.reject(scopes, &names_organization?(&1, required)), required}
+    end
+  end
+
+  def filter_sso_scopes(_principal, scopes, _user_session_id), do: {scopes, []}
+
+  defp organization_scope_names(scopes) do
+    scopes
+    |> Enum.flat_map(fn scope ->
+      case String.split(scope, ":", parts: 2) do
+        [domain, name] when domain in @organization_scope_domains -> [name]
+        _other -> []
+      end
+    end)
+    |> Enum.uniq()
+  end
+
+  defp names_organization?(scope, names) do
+    case String.split(scope, ":", parts: 2) do
+      [domain, name] when domain in @organization_scope_domains -> name in names
+      _other -> false
     end
   end
 

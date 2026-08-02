@@ -72,6 +72,20 @@ defmodule Hexpm.OAuth.Tokens do
     # This allows edge verification without database lookups
     expanded_scopes = Permissions.expand_repositories_scope(user, scopes)
 
+    # Then drop the organizations this session has not authenticated for. The
+    # access token is verified at the edge without a database lookup, so the
+    # scope it carries is the decision.
+    #
+    # `sso_session_id` is for the authorization code grant, where the session
+    # this token belongs to does not exist yet and the browser that consented
+    # holds the organization access it is about to inherit.
+    {expanded_scopes, sso_reauth_required} =
+      Permissions.filter_sso_scopes(
+        user,
+        expanded_scopes,
+        Keyword.get(opts, :sso_session_id) || Keyword.get(opts, :user_session_id)
+      )
+
     jwt_opts = [
       session_id: Keyword.get(opts, :user_session_id),
       expires_in: expires_in
@@ -90,7 +104,8 @@ defmodule Hexpm.OAuth.Tokens do
       grant_reference: grant_reference,
       user_id: user.id,
       client_id: client_id,
-      user_session_id: Keyword.get(opts, :user_session_id)
+      user_session_id: Keyword.get(opts, :user_session_id),
+      sso_reauth_required: sso_reauth_required
     }
 
     attrs =
@@ -277,8 +292,13 @@ defmodule Hexpm.OAuth.Tokens do
     session_expires_at =
       DateTime.add(DateTime.utc_now(), UserSessions.default_session_expires_in(), :second)
 
+    browser_session_id = Keyword.get(opts, :browser_session_id)
+
     # Pre-compute JWT outside the transaction (CPU-intensive ES256 signing)
-    token_opts = Keyword.put(opts, :refresh_token_expires_at, session_expires_at)
+    token_opts =
+      opts
+      |> Keyword.put(:refresh_token_expires_at, session_expires_at)
+      |> Keyword.put(:sso_session_id, browser_session_id)
 
     token_changeset =
       create_for_user(user, client_id, scopes, grant_type, grant_reference, token_opts)
@@ -290,6 +310,9 @@ defmodule Hexpm.OAuth.Tokens do
       usage_info: Keyword.get(opts, :usage_info),
       audit: Keyword.fetch!(opts, :audit)
     )
+    |> Ecto.Multi.run(:organization_sso_sessions, fn _repo, %{session: session} ->
+      {:ok, Hexpm.Accounts.SSO.grant_org_sessions!(browser_session_id, session.id, user.id)}
+    end)
     |> Ecto.Multi.run(:token, fn _repo, %{session: session} ->
       token_changeset
       |> Ecto.Changeset.put_change(:user_session_id, session.id)

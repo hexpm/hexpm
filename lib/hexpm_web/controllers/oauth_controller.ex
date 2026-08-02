@@ -95,7 +95,8 @@ defmodule HexpmWeb.OAuthController do
              redirect_uri,
              selected_scopes,
              code_challenge: params["code_challenge"],
-             code_challenge_method: params["code_challenge_method"]
+             code_challenge_method: params["code_challenge_method"],
+             user_session_id: conn.assigns.current_session && conn.assigns.current_session.id
            ) do
         {:ok, auth_code} ->
           success_params = %{
