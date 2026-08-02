@@ -1,4 +1,4 @@
-Billing Or SSO Settings Reached Without Single Sign-On
+Billing or SSO Settings Reached Without Single Sign-On
 
 <%= SSOBreakGlass.intro(@organization, @username) %>
 

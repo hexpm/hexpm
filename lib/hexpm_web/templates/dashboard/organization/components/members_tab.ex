@@ -380,6 +380,9 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
   defp member_label(1), do: "member"
   defp member_label(_), do: "members"
 
+  defp reach_label(1), do: "reaches"
+  defp reach_label(_), do: "reach"
+
   defp role_badge_class("admin"), do: "bg-purple-100 text-purple-700"
   defp role_badge_class("write"), do: "bg-blue-100 text-blue-700"
   defp role_badge_class(_), do: "bg-grey-100 text-grey-600"
@@ -404,7 +407,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
         "Nobody is exempt. Every member authenticates through your provider to reach this organization."
 
       count ->
-        "#{count} #{member_label(count)} reach this organization's private packages on a Hexpm password alone. This list bounds what SSO enforcement can claim, so keep it short and review it."
+        "#{count} #{member_label(count)} #{reach_label(count)} this organization's private packages on a Hexpm password alone. This list bounds what SSO enforcement can claim, so keep it short and review it."
     end
   end
 end

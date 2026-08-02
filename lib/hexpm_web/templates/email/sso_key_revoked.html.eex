@@ -7,7 +7,7 @@
 </p>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
-  <%= SSOKeyRevoked.rest_of_key() %>
+  <%= SSOKeyRevoked.rest_of_key(@key_names) %>
 </p>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
