@@ -29,6 +29,6 @@ defmodule Hexpm.Billing.LocalTest do
 
     customer = Local.get(organization.name)
 
-    assert customer["quantity"] > Organizations.user_count(organization)
+    assert customer["quantity"] > Hexpm.Accounts.Seats.used(organization)
   end
 end

@@ -330,6 +330,55 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
     "Changed #{username}'s role to #{role} in #{org}"
   end
 
+  defp humanize_action(%AuditLog{
+         action: "organization.invitation.create",
+         params: %{"invitation" => %{"email" => email}, "organization" => %{"name" => org}}
+       }) do
+    "Invited #{email} to #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "organization.invitation.accept",
+         params: %{"invitation" => %{"email" => email}, "organization" => %{"name" => org}}
+       }) do
+    "Accepted the invitation for #{email} to #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "organization.invitation.revoke",
+         params: %{"invitation" => %{"email" => email}, "organization" => %{"name" => org}}
+       }) do
+    "Revoked the invitation for #{email} to #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "organization.domain.add",
+         params: %{"domain" => domain, "organization" => %{"name" => org}}
+       }) do
+    "Added the domain #{domain} to #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "organization.domain.remove",
+         params: %{"domain" => domain, "organization" => %{"name" => org}}
+       }) do
+    "Removed the domain #{domain} from #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "organization.domain.verify",
+         params: %{"domain" => domain, "organization" => %{"name" => org}}
+       }) do
+    "Verified the domain #{domain} for #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "organization.domain.unverify",
+         params: %{"domain" => domain, "organization" => %{"name" => org}}
+       }) do
+    "The domain #{domain} no longer verifies for #{org}"
+  end
+
   defp humanize_action(%AuditLog{action: "password.reset.init"}) do
     "Requested a password reset"
   end

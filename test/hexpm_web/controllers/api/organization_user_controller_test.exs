@@ -97,6 +97,7 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
       user1: user1,
       organization: organization
     } do
+      organization = seats(organization, 2)
       user2 = insert(:user)
       user3 = insert(:user)
       insert(:organization_user, organization: organization, user: user1, role: "admin")

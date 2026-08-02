@@ -137,6 +137,116 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
     end)
   end
 
+  def configure_jit(conn, %{"dashboard_org" => name} = params) do
+    with_organization(conn, name, fn organization ->
+      case SSO.configure_jit(organization, params["jit"] || %{}, audit: audit_data(conn)) do
+        {:ok, connection} ->
+          redirect_with_flash(conn, organization, :info, jit_message(connection))
+
+        {:error, reason} ->
+          redirect_with_flash(conn, organization, :error, jit_error(reason))
+      end
+    end)
+  end
+
+  defp jit_message(%{jit_seat_policy: nil}),
+    do: "Just-in-time membership is off. Members have to be added or invited."
+
+  defp jit_message(%{jit_seat_policy: "block", jit_role: role}),
+    do:
+      "Just-in-time membership is on. New members join as #{role}, and logins are refused once the seats run out."
+
+  defp jit_message(%{jit_seat_policy: "expand", jit_role: role}),
+    do:
+      "Just-in-time membership is on. New members join as #{role}, and the subscription grows by a seat when it needs to."
+
+  defp jit_error(:domain_required),
+    do: "Verify a domain before turning on just-in-time membership."
+
+  defp jit_error(:not_configured), do: "Configure SSO before turning on just-in-time membership."
+
+  defp jit_error(%Ecto.Changeset{}),
+    do: "Choose what happens when the seats run out, and a role for new members."
+
+  defp jit_error(reason), do: configuration_error(reason)
+
+  def add_domain(conn, %{"dashboard_org" => name, "domain" => params}) do
+    with_organization(conn, name, fn organization ->
+      case OrganizationDomains.add(organization, params, conn.assigns.current_user,
+             audit: audit_data(conn)
+           ) do
+        {:ok, domain} ->
+          redirect_with_flash(
+            conn,
+            organization,
+            :info,
+            "#{domain.domain} was added. Publish the TXT record below, then verify it."
+          )
+
+        {:error, changeset} ->
+          redirect_with_flash(conn, organization, :error, domain_error(changeset))
+      end
+    end)
+  end
+
+  def verify_domain(conn, %{"dashboard_org" => name, "domain_id" => id}) do
+    with_domain(conn, name, id, fn organization, domain ->
+      case OrganizationDomains.verify(organization, domain, audit: audit_data(conn)) do
+        {:ok, domain} ->
+          redirect_with_flash(conn, organization, :info, "#{domain.domain} is verified.")
+
+        {:error, :record_not_found} ->
+          redirect_with_flash(
+            conn,
+            organization,
+            :error,
+            "No matching TXT record was found for #{domain.domain}. DNS changes can take a while to propagate."
+          )
+
+        {:error, :lookup_failed} ->
+          redirect_with_flash(
+            conn,
+            organization,
+            :error,
+            "The DNS lookup for #{domain.domain} did not answer. Try again in a moment."
+          )
+
+        {:error, _reason} ->
+          redirect_with_flash(
+            conn,
+            organization,
+            :error,
+            "#{domain.domain} could not be verified."
+          )
+      end
+    end)
+  end
+
+  def remove_domain(conn, %{"dashboard_org" => name, "domain_id" => id}) do
+    with_domain(conn, name, id, fn organization, domain ->
+      {:ok, _domain} =
+        OrganizationDomains.remove(organization, domain, audit: audit_data(conn))
+
+      redirect_with_flash(conn, organization, :info, "#{domain.domain} was removed.")
+    end)
+  end
+
+  defp with_domain(conn, name, id, fun) do
+    with_organization(conn, name, fn organization ->
+      case OrganizationDomains.get(organization, safe_to_integer(id) || 0) do
+        nil -> not_found(conn)
+        domain -> fun.(organization, domain)
+      end
+    end)
+  end
+
+  defp domain_error(%Ecto.Changeset{} = changeset) do
+    case translate_errors(changeset)[:domain] do
+      nil -> "The domain could not be added."
+      message -> "Domain #{message}."
+    end
+  end
+
   defp with_organization(conn, name, fun) do
     user = conn.assigns.current_user
     organization = Organizations.get(name)

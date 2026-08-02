@@ -190,6 +190,19 @@ defmodule Hexpm.Emails do
     |> render_body(:organization_invite)
   end
 
+  def organization_invitation(invitation) do
+    base_email()
+    |> email_to(invitation.email)
+    |> subject(
+      "Hex.pm - You have been invited to the #{invitation.organization.name} organization"
+    )
+    |> assign(:organization, invitation.organization.name)
+    |> assign(:role, invitation.role)
+    |> assign(:token, invitation.raw_token)
+    |> assign(:expires_at, invitation.expires_at)
+    |> render_body(:organization_invitation)
+  end
+
   def sso_identity_linked(organization, username, recipients) do
     base_email()
     |> email_to(recipients)
@@ -207,6 +220,20 @@ defmodule Hexpm.Emails do
     |> assign(:username, username)
     |> render_body(:sso_identity_unlinked)
   end
+
+  def sso_seats(organization, kind, recipients) do
+    base_email()
+    |> email_to(recipients)
+    |> subject("Hex.pm - #{sso_seats_subject(kind, organization)}")
+    |> assign(:organization, organization)
+    |> assign(:kind, kind)
+    |> render_body(:sso_seats)
+  end
+
+  defp sso_seats_subject("seats_exhausted", organization), do: "#{organization} has no seats left"
+
+  defp sso_seats_subject("expansion_failed", organization),
+    do: "#{organization} could not add a seat"
 
   def sso_email_mismatch(organization, username, recipients, provider_email) do
     base_email()

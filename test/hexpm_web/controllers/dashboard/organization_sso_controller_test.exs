@@ -2,9 +2,13 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
   use HexpmWeb.ConnCase
   use Oban.Testing, repo: Hexpm.RepoBase
 
-  alias Hexpm.Accounts.{AuditLogs, SSO}
+  alias Hexpm.Accounts.{AuditLogs, OrganizationDomain, OrganizationDomains, SSO}
   alias Hexpm.Accounts.SSO.{Connection, Error, OIDC}
   alias Hexpm.Emails.{OutboxEntry, OutboxWorker}
+
+  defmodule EmptyResolver do
+    def lookup(_domain), do: []
+  end
 
   setup :verify_on_exit!
 
@@ -475,6 +479,172 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     {:ok, document} = Floki.parse_document(html)
     [status] = Floki.find(document, "section > div:first-child > #sso-connection-status")
     status
+  end
+
+  describe "verified domains" do
+    test "adds a domain and shows the record to publish", context do
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/domains", %{
+          "domain" => %{"domain" => "Example.com"}
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{context.organization.name}/sso"
+
+      assert [domain] = OrganizationDomains.all(context.organization)
+      assert domain.domain == "example.com"
+
+      html =
+        build_conn()
+        |> test_login(context.admin)
+        |> get("/dashboard/orgs/#{context.organization.name}/sso")
+        |> html_response(200)
+
+      assert html =~ "example.com"
+      assert html =~ OrganizationDomain.record_value(domain)
+    end
+
+    test "rejects a domain that is not one", context do
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/domains", %{
+          "domain" => %{"domain" => "not a domain"}
+        })
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "is not a valid domain name"
+      assert OrganizationDomains.all(context.organization) == []
+    end
+
+    test "says what to do when the record is not published yet", context do
+      # Stubbed rather than left to real DNS: another test file swaps this
+      # resolver globally, and the answer has to be "the resolver said no",
+      # not "the resolver did not answer".
+      app_env(:hexpm, :domain_dns_resolver, EmptyResolver)
+      {:ok, domain} = add_domain(context, "example.com")
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/domains/verify", %{
+          "domain_id" => to_string(domain.id)
+        })
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "No matching TXT record"
+      refute OrganizationDomain.verified?(Hexpm.Repo.get!(OrganizationDomain, domain.id))
+    end
+
+    test "removes a domain", context do
+      {:ok, domain} = add_domain(context, "example.com")
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/domains/remove", %{
+          "domain_id" => to_string(domain.id)
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{context.organization.name}/sso"
+      assert OrganizationDomains.all(context.organization) == []
+    end
+
+    test "will not touch another organization's domain", context do
+      other = insert(:organization)
+      insert(:organization_user, organization: other, user: context.admin, role: "admin")
+
+      {:ok, domain} =
+        OrganizationDomains.add(other, %{"domain" => "example.com"}, context.admin,
+          audit: audit_data(context.admin)
+        )
+
+      build_conn()
+      |> test_login(context.admin)
+      |> post("/dashboard/orgs/#{context.organization.name}/sso/domains/remove", %{
+        "domain_id" => to_string(domain.id)
+      })
+      |> response(404)
+
+      assert [_domain] = OrganizationDomains.all(other)
+    end
+
+    test "a read member cannot add a domain", context do
+      conn =
+        build_conn()
+        |> test_login(context.member)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/domains", %{
+          "domain" => %{"domain" => "example.com"}
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{context.organization.name}"
+      assert OrganizationDomains.all(context.organization) == []
+    end
+  end
+
+  describe "just-in-time membership" do
+    test "will not turn on without a verified domain", context do
+      insert(:organization_sso_connection, organization: context.organization)
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/jit", %{
+          "jit" => %{"jit_seat_policy" => "block", "jit_role" => "read"}
+        })
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "Verify a domain"
+      refute Connection.jit_enabled?(SSO.get_connection(context.organization))
+    end
+
+    test "turns on once a domain is verified and says what it will do", context do
+      insert(:organization_sso_connection, organization: context.organization)
+      verify_domain(context)
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/jit", %{
+          "jit" => %{"jit_seat_policy" => "expand", "jit_role" => "write"}
+        })
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "grows by a seat"
+
+      connection = SSO.get_connection(context.organization)
+      assert connection.jit_seat_policy == "expand"
+      assert connection.jit_role == "write"
+    end
+
+    test "a read member cannot change it", context do
+      insert(:organization_sso_connection, organization: context.organization)
+      verify_domain(context)
+
+      conn =
+        build_conn()
+        |> test_login(context.member)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/jit", %{
+          "jit" => %{"jit_seat_policy" => "block", "jit_role" => "read"}
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{context.organization.name}"
+      refute Connection.jit_enabled?(SSO.get_connection(context.organization))
+    end
+  end
+
+  defp verify_domain(context) do
+    {:ok, domain} =
+      OrganizationDomains.add(context.organization, %{"domain" => "example.com"}, context.admin,
+        audit: audit_data(context.admin)
+      )
+
+    domain
+    |> Ecto.Changeset.change(verified_at: DateTime.utc_now())
+    |> Hexpm.Repo.update!()
+  end
+
+  defp add_domain(context, domain) do
+    OrganizationDomains.add(context.organization, %{"domain" => domain}, context.admin,
+      audit: audit_data(context.admin)
+    )
   end
 
   defp metadata(issuer) do

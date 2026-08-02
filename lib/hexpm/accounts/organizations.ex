@@ -107,11 +107,13 @@ defmodule Hexpm.Accounts.Organizations do
   end
 
   def add_member(organization, %User{organization_id: nil} = user, params, audit: audit_data) do
-    organization_user = %OrganizationUser{organization_id: organization.id, user_id: user.id}
-
     multi =
       Multi.new()
-      |> Multi.insert(:organization_user, Organization.add_member(organization_user, params))
+      |> Seats.claim(:seats, organization)
+      |> Multi.insert(:organization_user, fn _changes ->
+        organization_user = %OrganizationUser{organization_id: organization.id, user_id: user.id}
+        Organization.add_member(organization_user, params)
+      end)
       |> audit(audit_data, "organization.member.add", {organization, user})
 
     case Repo.transaction(multi) do
@@ -119,68 +121,81 @@ defmodule Hexpm.Accounts.Organizations do
         send_invite_email(organization, user)
         {:ok, result.organization_user}
 
+      {:error, :seats, reason, _} ->
+        {:error, reason}
+
       {:error, :organization_user, changeset, _} ->
         {:error, changeset}
     end
   end
 
-  def remove_member(organization, user, audit: audit_data) do
-    count = Repo.aggregate(assoc(organization, :organization_users), :count)
+  def remove_member(_organization, nil = _user, audit: _audit_data) do
+    :ok
+  end
 
-    if count == 1 do
+  def remove_member(organization, user, audit: audit_data) do
+    multi =
+      Multi.new()
+      |> Hexpm.Accounts.SSO.lock_member_removal(organization, user)
+      |> Seats.lock(:seats, organization)
+      |> Multi.run(:member, fn _repo, _changes -> member_to_remove(organization, user) end)
+      |> Multi.delete(:organization_user, & &1.member)
+      |> Hexpm.Accounts.SSO.delete_member_transactions(organization, user)
+      |> Hexpm.Accounts.SSO.enqueue_member_unlink_notification(organization, user)
+      |> Hexpm.Accounts.SSO.delete_member_identities(organization, user)
+      |> Hexpm.Accounts.SSO.delete_member_notifications(organization, user)
+      |> delete_package_owners(organization, user)
+      |> audit(audit_data, "organization.member.remove", {organization, user})
+
+    case Repo.transaction(multi) do
+      {:ok, _result} -> :ok
+      {:error, :member, :not_member, _} -> :ok
+      {:error, :member, :last_member, _} -> {:error, :last_member}
+    end
+  end
+
+  defp member_to_remove(organization, user) do
+    if Seats.used(organization) == 1 do
       {:error, :last_member}
     else
-      organization_user = Repo.get_by(assoc(organization, :organization_users), user_id: user.id)
-
-      if organization_user do
-        {:ok, _result} =
-          Multi.new()
-          |> Hexpm.Accounts.SSO.lock_member_removal(organization, user)
-          |> Multi.delete(:organization_user, organization_user)
-          |> Hexpm.Accounts.SSO.delete_member_transactions(organization, user)
-          |> Hexpm.Accounts.SSO.enqueue_member_unlink_notification(organization, user)
-          |> Hexpm.Accounts.SSO.delete_member_identities(organization, user)
-          |> Hexpm.Accounts.SSO.delete_member_notifications(organization, user)
-          |> delete_package_owners(organization, user)
-          |> audit(audit_data, "organization.member.remove", {organization, user})
-          |> Repo.transaction()
+      case Repo.get_by(assoc(organization, :organization_users), user_id: user.id) do
+        nil -> {:error, :not_member}
+        organization_user -> {:ok, organization_user}
       end
-
-      :ok
     end
   end
 
   def change_role(organization, user, params, audit: audit_data) do
+    multi =
+      Multi.new()
+      |> Hexpm.Accounts.SSO.lock_member_removal(organization, user)
+      |> Seats.lock(:seats, organization)
+      |> Multi.run(:member, fn _repo, _changes -> member_to_change(organization, user) end)
+      |> Multi.update(:organization_user, &Organization.change_role(&1.member, params))
+      |> audit(audit_data, "organization.member.role", {organization, user, params["role"]})
+
+    case Repo.transaction(multi) do
+      {:ok, result} ->
+        {:ok, result.organization_user}
+
+      {:error, :member, reason, _} ->
+        {:error, reason}
+
+      {:error, :organization_user, changeset, _} ->
+        {:error, changeset}
+    end
+  end
+
+  defp member_to_change(organization, user) do
     organization_users = Repo.all(assoc(organization, :organization_users))
     organization_user = Enum.find(organization_users, &(&1.user_id == user.id))
     number_admins = Enum.count(organization_users, &(&1.role == "admin"))
 
     cond do
-      !organization_user ->
-        {:error, :unknown_user}
-
-      organization_user.role == "admin" and number_admins == 1 ->
-        {:error, :last_admin}
-
-      true ->
-        multi =
-          Multi.new()
-          |> Hexpm.Accounts.SSO.lock_member_removal(organization, user)
-          |> Multi.update(:organization_user, Organization.change_role(organization_user, params))
-          |> audit(audit_data, "organization.member.role", {organization, user, params["role"]})
-
-        case Repo.transaction(multi) do
-          {:ok, result} ->
-            {:ok, result.organization_user}
-
-          {:error, :organization_user, changeset, _} ->
-            {:error, changeset}
-        end
+      !organization_user -> {:error, :unknown_user}
+      organization_user.role == "admin" and number_admins == 1 -> {:error, :last_admin}
+      true -> {:ok, organization_user}
     end
-  end
-
-  def user_count(organization) do
-    Repo.aggregate(assoc(organization, :organization_users), :count)
   end
 
   defp delete_package_owners(multi, organization, user) do

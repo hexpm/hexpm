@@ -76,8 +76,11 @@ defmodule HexpmWeb.DashboardView do
   end
 
   defp selected_organization(conn, name) do
-    if Enum.take(conn.path_info, -2) == ["orgs", name] do
-      "selected"
+    # Matching the last two segments only highlighted the organization on its
+    # own page, so every tab under it lost the highlight.
+    case conn.path_info do
+      ["dashboard", "orgs", ^name | _tab] -> "selected"
+      _other -> nil
     end
   end
 

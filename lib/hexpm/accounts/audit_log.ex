@@ -252,6 +252,28 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("organization.member.role", {organization, user, role}),
     do: %{organization: serialize(organization), user: serialize(user), role: role}
 
+  defp extract_params(action, {organization, %OrganizationDomain{} = domain})
+       when action in [
+              "organization.domain.add",
+              "organization.domain.remove",
+              "organization.domain.verify",
+              "organization.domain.unverify"
+            ] do
+    %{organization: serialize(organization), domain: domain.domain}
+  end
+
+  defp extract_params(action, {organization, %OrganizationInvitation{} = invitation})
+       when action in [
+              "organization.invitation.create",
+              "organization.invitation.accept",
+              "organization.invitation.revoke"
+            ] do
+    %{
+      organization: serialize(organization),
+      invitation: %{id: invitation.id, email: invitation.email, role: invitation.role}
+    }
+  end
+
   defp extract_params(action, {organization, params})
        when action in [
               "sso.connection.configure",
@@ -263,7 +285,8 @@ defmodule Hexpm.Accounts.AuditLog do
               "sso.connection.rotation.complete",
               "sso.identity.link",
               "sso.identity.unlink",
-              "sso.login"
+              "sso.login",
+              "sso.jit.configure"
             ] do
     Map.put(params, :organization, serialize(organization))
   end

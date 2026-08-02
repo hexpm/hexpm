@@ -28,6 +28,7 @@ defmodule Hexpm.Repo do
   defdelegate get_by(queryable, clauses, opts \\ []), to: RepoBase
   defdelegate get!(queryable, id, opts \\ []), to: RepoBase
   defdelegate get(queryable, id, opts \\ []), to: RepoBase
+  defdelegate in_transaction?(), to: RepoBase
   defdelegate one!(queryable, opts \\ []), to: RepoBase
   defdelegate one(queryable, opts \\ []), to: RepoBase
   defdelegate preload(structs_or_struct_or_nil, preloads, opts \\ []), to: RepoBase

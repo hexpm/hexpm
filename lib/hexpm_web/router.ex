@@ -170,6 +170,9 @@ defmodule HexpmWeb.Router do
     post "/sso/link/cancel", SSOController, :cancel_link, log: false
     get "/sso/org/:organization", SSOController, :start, log: false
 
+    get "/invites", OrganizationInvitationController, :show, log: false
+    post "/invites", OrganizationInvitationController, :accept, log: false
+
     get "/sudo", SudoController, :show
     post "/sudo", SudoController, :create
     get "/sudo/github", SudoController, :github
@@ -341,6 +344,10 @@ defmodule HexpmWeb.Router do
     post "/orgs/:dashboard_org/sso/rotate", OrganizationSSOController, :rotate, log: false
     post "/orgs/:dashboard_org/sso/promote", OrganizationSSOController, :promote, log: false
     post "/orgs/:dashboard_org/sso/unlink", OrganizationSSOController, :unlink, log: false
+    post "/orgs/:dashboard_org/sso/jit", OrganizationSSOController, :configure_jit
+    post "/orgs/:dashboard_org/sso/domains", OrganizationSSOController, :add_domain
+    post "/orgs/:dashboard_org/sso/domains/verify", OrganizationSSOController, :verify_domain
+    post "/orgs/:dashboard_org/sso/domains/remove", OrganizationSSOController, :remove_domain
 
     get "/orgs/:dashboard_org/billing", OrganizationController, :billing
     get "/orgs/:dashboard_org/danger-zone", OrganizationController, :danger_zone

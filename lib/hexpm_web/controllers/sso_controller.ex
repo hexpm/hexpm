@@ -208,6 +208,7 @@ defmodule HexpmWeb.SSOController do
   defp exchange_and_complete(conn, transaction, code) do
     with {:ok, user, user_session_id} <- account_session(conn, transaction),
          {:ok, claims} <- SSO.exchange_code(transaction, code, callback_url()),
+         :ok <- SSO.maybe_expand_seats(transaction, user, claims),
          {:ok, result} <-
            SSO.complete_callback(transaction, claims, user, user_session_id, audit_data(conn)) do
       handle_callback_result(conn, transaction, result)

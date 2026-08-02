@@ -22,16 +22,21 @@ defmodule Hexpm.Accounts.SSO do
   @identity_linked_email_category "sso.identity_linked"
   @identity_unlinked_email_category "sso.identity_unlinked"
   @email_mismatch_category "sso.email_mismatch"
+  @seats_exhausted_category "sso.seats_exhausted"
   @notification_categories [
     @identity_linked_email_category,
     @identity_unlinked_email_category,
-    @email_mismatch_category
+    @email_mismatch_category,
+    @seats_exhausted_category
   ]
+  # A seat notice is about the organization, not about the member who happened
+  # to trip it, so unlinking that member must not cancel it.
   @cancelled_notification_categories [
     @identity_linked_email_category,
     @email_mismatch_category
   ]
   @notification_retention_seconds 30 * 24 * 60 * 60
+  @seats_notice_seconds 60 * 60
 
   def available?, do: Features.available?()
   def enabled?(organization), do: Features.enabled?(organization)
@@ -326,9 +331,9 @@ defmodule Hexpm.Accounts.SSO do
 
     with :ok <- require_entrypoint(entrypoint),
          :ok <- require_feature(organization),
-         :ok <- require_member(organization, user),
-         %Connection{} = connection <- get_connection(organization),
+         %Connection{} = connection <- get_connection(organization) |> Repo.preload(:organization),
          true <- Connection.enabled?(connection),
+         :ok <- require_member_or_jit(connection, user),
          {:ok, connection} <- refresh_metadata_if_expired(connection),
          {:ok, {transaction, uri}} <-
            Repo.transaction(fn ->
@@ -336,7 +341,7 @@ defmodule Hexpm.Accounts.SSO do
 
              with :ok <- require_feature(connection.organization),
                   :ok <- require_connection_enabled(connection),
-                  :ok <- require_locked_member(connection.organization, user),
+                  :ok <- require_locked_member_or_jit(connection, user),
                   {:ok, transaction, state} <-
                     create_transaction(
                       connection,
@@ -523,6 +528,114 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   @doc """
+  Turns just-in-time membership on or off.
+
+  Turning it on needs a verified domain, because otherwise the organization
+  would be admitting anyone whose provider happens to return any address at all.
+  """
+  def configure_jit(organization, params, audit: audit_data) do
+    Repo.transaction(fn ->
+      connection =
+        locked_connection_for_organization(organization) ||
+          Hexpm.RepoBase.rollback(:not_configured)
+
+      changeset = Connection.jit_changeset(connection, params)
+
+      with :ok <- require_feature(organization),
+           :ok <- require_verified_domain(organization, changeset) do
+        case Repo.update(changeset) do
+          {:ok, connection} ->
+            insert_audit!(audit_data, "sso.jit.configure", {
+              organization,
+              %{jit_seat_policy: connection.jit_seat_policy, jit_role: connection.jit_role}
+            })
+
+            connection
+
+          {:error, changeset} ->
+            Hexpm.RepoBase.rollback(changeset)
+        end
+      else
+        {:error, reason} -> Hexpm.RepoBase.rollback(reason)
+      end
+    end)
+  end
+
+  defp require_verified_domain(organization, changeset) do
+    policy = Ecto.Changeset.get_field(changeset, :jit_seat_policy)
+
+    if is_nil(policy) or OrganizationDomains.all_verified(organization) != [] do
+      :ok
+    else
+      {:error, :domain_required}
+    end
+  end
+
+  @doc """
+  Buys the seat a just-in-time join is about to need, when the organization
+  chose to auto-expand.
+
+  Runs before `complete_callback/5` rather than inside it, because a billing
+  request cannot sit in a database transaction. Always returns `:ok`: a failed
+  expansion is not a reason to refuse a login, it just means the claim inside
+  the callback rejects and the person is told the organization is full.
+  """
+  def maybe_expand_seats(%SSOTransaction{} = transaction, user, claims) do
+    connection = Repo.get(Connection, transaction.connection_id) |> Repo.preload(:organization)
+
+    if connection && transaction.kind == "login" && connection.jit_seat_policy == "expand" &&
+         jit_admissible(connection, claims) == :ok &&
+         is_nil(Organizations.get_role(connection.organization, user)) do
+      expand_seats(connection)
+    end
+
+    :ok
+  end
+
+  defp expand_seats(connection) do
+    organization = connection.organization
+
+    # The target is absolute rather than one more than whatever is subscribed
+    # now, so two first logins at once compute the same number, one wins the
+    # claim, and the other expands again on its next attempt instead of both
+    # buying a seat.
+    case Repo.transaction(fn ->
+           {Seats.claim(organization, unknown: :deny), Seats.used(organization)}
+         end) do
+      {:ok, {{:error, :seats_exhausted}, used}} ->
+        purchase_seat(connection, organization, used + 1)
+
+      _other ->
+        :ok
+    end
+  end
+
+  # A billing call that did not take effect must not be repeated on the next
+  # login, or a card that needs confirming turns every retry into another
+  # charge attempt. The refusal is recorded like any other, which is also what
+  # rate-limits the notice to the administrators.
+  defp purchase_seat(connection, organization, quantity) do
+    if recent_failure?(connection, "expansion_failed") do
+      :ok
+    else
+      organization
+      |> Seats.update_quantity(quantity, fn quantity ->
+        Hexpm.Billing.update(organization.name, %{"quantity" => quantity},
+          audit: %{audit_data: AuditLogs.system(organization), organization: organization}
+        )
+      end)
+      |> case do
+        {:ok, _customer} ->
+          :ok
+
+        _other ->
+          record_failure(connection, :login, :expansion_failed)
+          enqueue_seats_notice!(connection, "expansion_failed")
+      end
+    end
+  end
+
+  @doc """
   Ends a login attempt that cannot be completed and records why.
 
   Consuming the transaction here is what stops a replay: the authorization code
@@ -565,13 +678,13 @@ defmodule Hexpm.Accounts.SSO do
       organization = connection.organization
 
       with :ok <- require_feature(organization),
-           :ok <- require_connection_enabled(connection),
-           :ok <- require_locked_member(organization, user) do
+           :ok <- require_connection_enabled(connection) do
         transaction = locked_transaction!(transaction_id, :invalid_link)
 
         with :ok <- link_available?(transaction, raw_link_token),
              :ok <- transaction_configuration_available?(transaction, connection),
-             true <- transaction.user_id == user.id do
+             true <- transaction.user_id == user.id,
+             :ok <- admit_member(connection, transaction, user, audit_data) do
           identity =
             Identity.changeset(%Identity{}, %{
               organization_id: organization.id,
@@ -954,7 +1067,14 @@ defmodule Hexpm.Accounts.SSO do
 
   # Only codes where we already know which account failed attach it; others stay redacted.
   defp failure_user_id(code, user)
-       when code in [:not_member, :identity_conflict, :session_user_mismatch],
+       when code in [
+              :not_member,
+              :identity_conflict,
+              :session_user_mismatch,
+              :seats_exhausted,
+              :seat_limit_unknown,
+              :provider_email_unverified
+            ],
        do: user && user.id
 
   defp failure_user_id(_code, _user), do: nil
@@ -1041,25 +1161,24 @@ defmodule Hexpm.Accounts.SSO do
         consume_transaction!(transaction, %{})
         {:reject, :session_user_mismatch}
 
-      not is_nil(locked_member(organization, identity.user)) ->
-        notify_email_mismatch? = update_identity_email(identity, claims.email)
-        consume_transaction!(transaction, %{})
-        org_session = establish_org_session!(identity, user_session_id)
+      # Membership is gone but the identity is still bound to this account. With
+      # JIT on there is no consent left to ask for, so re-admit rather than
+      # unlinking and making them start over.
+      is_nil(locked_member(organization, identity.user)) and
+          jit_available(connection, claims.email) == :ok ->
+        case join_member(connection, organization, identity.user, audit_data) do
+          :ok ->
+            login!(transaction, connection, identity, claims, user_session_id, audit_data)
 
-        insert_audit!(%{audit_data | user: identity.user}, "sso.login", {
-          organization,
-          %{
-            user_id: identity.user.id,
-            entrypoint: transaction.entrypoint,
-            expires_at: org_session.expires_at
-          }
-        })
-
-        if notify_email_mismatch? do
-          enqueue_sso_notification!("email_mismatch", connection, identity.user, claims.email)
+          {:error, reason} ->
+            maybe_notify_seats_exhausted(connection, reason)
+            record_failure(connection, :login, reason, identity.user)
+            consume_transaction!(transaction, %{})
+            {:reject, reason}
         end
 
-        {:login, identity.user, org_session, transaction.return_path}
+      not is_nil(locked_member(organization, identity.user)) ->
+        login!(transaction, connection, identity, claims, user_session_id, audit_data)
 
       true ->
         Repo.delete_all(from(candidate in Identity, where: candidate.id == ^identity.id))
@@ -1078,8 +1197,31 @@ defmodule Hexpm.Accounts.SSO do
     end
   end
 
-  # A subject nobody has claimed. The signed-in account may adopt it, but only
-  # if it already holds an identity-free membership of this organization.
+  defp login!(transaction, connection, identity, claims, user_session_id, audit_data) do
+    organization = connection.organization
+    notify_email_mismatch? = update_identity_email(identity, claims.email)
+    consume_transaction!(transaction, %{})
+    org_session = establish_org_session!(identity, user_session_id)
+
+    insert_audit!(%{audit_data | user: identity.user}, "sso.login", {
+      organization,
+      %{
+        user_id: identity.user.id,
+        entrypoint: transaction.entrypoint,
+        expires_at: org_session.expires_at
+      }
+    })
+
+    if notify_email_mismatch? do
+      enqueue_sso_notification!("email_mismatch", connection, identity.user, claims.email)
+    end
+
+    {:login, identity.user, org_session, transaction.return_path}
+  end
+
+  # A subject nobody has claimed. The signed-in account may adopt it if it
+  # already holds an identity-free membership, or if just-in-time membership is
+  # on and would admit it.
   defp begin_link!(transaction, connection, claims, current_user) do
     conflicting_identity =
       from(identity in Identity,
@@ -1095,13 +1237,199 @@ defmodule Hexpm.Accounts.SSO do
         consume_transaction!(transaction, %{})
         {:reject, :identity_conflict}
 
-      is_nil(locked_member(connection.organization, current_user)) ->
-        record_failure(connection, :login, :not_member, current_user)
-        consume_transaction!(transaction, %{})
-        {:reject, :not_member}
+      not is_nil(locked_member(connection.organization, current_user)) ->
+        begin_conventional_link!(transaction, claims)
 
       true ->
-        begin_conventional_link!(transaction, claims)
+        begin_jit_link!(transaction, connection, claims, current_user)
+    end
+  end
+
+  # The seat is only checked here, not taken. Consent has not been given yet, so
+  # a membership created now would outlive an abandoned consent screen. What
+  # this buys is not offering a screen that cannot be honoured.
+  defp begin_jit_link!(transaction, connection, claims, current_user) do
+    case jit_admissible(connection, claims) do
+      :ok ->
+        case Seats.claim(connection.organization, unknown: :deny) do
+          {:ok, _usage} ->
+            begin_conventional_link!(transaction, claims)
+
+          {:error, reason} ->
+            reject_jit(transaction, connection, current_user, reason)
+        end
+
+      {:error, reason} ->
+        reject_jit(transaction, connection, current_user, rejection_code(reason))
+    end
+  end
+
+  # The person authenticated through the organization's own provider, so
+  # telling them their address was not confirmed is useful and gives nothing
+  # away. Whether the organization runs just-in-time membership, or which
+  # domains it has verified, is its own business: both come back as not a
+  # member, which is also the truth.
+  defp rejection_code(:provider_email_unverified), do: :provider_email_unverified
+  defp rejection_code(_reason), do: :not_member
+
+  defp reject_jit(transaction, connection, current_user, reason) do
+    # Before recording, so the failure this attempt is about to write does not
+    # count as the recent one that suppresses the notice.
+    maybe_notify_seats_exhausted(connection, reason)
+    record_failure(connection, :login, reason, current_user)
+    consume_transaction!(transaction, %{})
+    {:reject, reason}
+  end
+
+  # Membership is created here rather than when the consent screen was offered,
+  # so abandoning that screen leaves nothing behind. Runs after the link token
+  # has been checked, which keeps the lock order connection, transaction,
+  # member, organization seat.
+  defp admit_member(connection, transaction, user, audit_data) do
+    organization = connection.organization
+
+    cond do
+      not is_nil(locked_member(organization, user)) ->
+        :ok
+
+      jit_available(connection, transaction.provider_email) != :ok ->
+        {:error, :not_member}
+
+      true ->
+        join_member(connection, organization, user, audit_data)
+    end
+  end
+
+  defp join_member(connection, organization, user, audit_data) do
+    with {:ok, _usage} <- Seats.claim(organization, unknown: :deny) do
+      organization_user = %OrganizationUser{organization_id: organization.id, user_id: user.id}
+
+      case Repo.insert(
+             Organization.add_member(organization_user, %{"role" => connection.jit_role})
+           ) do
+        {:ok, _organization_user} ->
+          insert_audit!(%{audit_data | user: user}, "organization.member.add", {
+            organization,
+            user
+          })
+
+          :ok
+
+        {:error, _changeset} ->
+          {:error, :not_member}
+      end
+    end
+  end
+
+  # An `email` claim is whatever the provider chose to assert. `email_verified`
+  # is the provider saying it checked, and OIDC has it precisely because the
+  # address alone is not authoritative. Membership turns on the address here, so
+  # an unverified one is not enough. Checked wherever the ID token is in hand;
+  # by the time a link is completed, the transaction only exists because this
+  # already passed.
+  defp jit_admissible(connection, claims) do
+    cond do
+      not Connection.jit_enabled?(connection) ->
+        {:error, :jit_disabled}
+
+      Map.get(claims, :email_verified) != true ->
+        {:error, :provider_email_unverified}
+
+      not OrganizationDomains.verified_for_email?(connection.organization, claims.email) ->
+        {:error, :domain_not_verified}
+
+      true ->
+        :ok
+    end
+  end
+
+  # Whether this connection would admit the address, ignoring seats.
+  defp jit_available(connection, provider_email) do
+    cond do
+      not Connection.jit_enabled?(connection) ->
+        {:error, :jit_disabled}
+
+      not OrganizationDomains.verified_for_email?(connection.organization, provider_email) ->
+        {:error, :domain_not_verified}
+
+      true ->
+        :ok
+    end
+  end
+
+  # A login loop must not mail the administrators on every attempt, so the
+  # failures already being recorded double as the rate limit.
+  defp maybe_notify_seats_exhausted(connection, reason)
+       when reason in [:seats_exhausted, :seat_limit_unknown] do
+    enqueue_seats_notice!(connection, "seats_exhausted")
+    :ok
+  end
+
+  defp maybe_notify_seats_exhausted(_connection, _reason), do: :ok
+
+  defp recent_failure?(connection, code) do
+    cutoff = DateTime.add(DateTime.utc_now(), -@seats_notice_seconds, :second)
+
+    Repo.exists?(
+      from(failure in Failure,
+        where: failure.connection_id == ^connection.id,
+        where: failure.code == ^code,
+        where: failure.inserted_at > ^cutoff
+      )
+    )
+  end
+
+  # Rate-limited on the outbox rather than on the failure log: failures are a
+  # 20-row ring buffer per connection, and with just-in-time membership on
+  # anyone signed in can start a login and fill it, which would reset the
+  # window at will. Outbox entries are kept for a month and are not evicted.
+  defp enqueue_seats_notice!(connection, kind) do
+    group_key = "#{@seats_exhausted_category}:#{kind}:#{connection.id}"
+    cutoff = DateTime.add(DateTime.utc_now(), -@seats_notice_seconds, :second)
+
+    recent? =
+      Repo.exists?(
+        from(entry in Hexpm.Emails.OutboxEntry,
+          where: entry.group_key == ^group_key,
+          where: entry.inserted_at > ^cutoff
+        )
+      )
+
+    unless recent?, do: send_seats_notice!(connection, kind, group_key)
+
+    :ok
+  end
+
+  defp send_seats_notice!(connection, kind, group_key) do
+    organization = connection.organization
+
+    recipients =
+      Repo.all(
+        from(organization_user in OrganizationUser,
+          join: member in assoc(organization_user, :user),
+          join: address in assoc(member, :emails),
+          where: organization_user.organization_id == ^organization.id,
+          where: organization_user.role == "admin",
+          where: address.primary and address.verified,
+          select: address.email
+        )
+      )
+
+    case recipients do
+      [] ->
+        :ok
+
+      recipients ->
+        email = Emails.sso_seats(organization.name, kind, recipients)
+
+        Outbox.insert!(
+          Outbox.prepare!(email,
+            category: @seats_exhausted_category,
+            group_key: group_key,
+            scope_key: "sso:organization:#{organization.id}",
+            expires_at: DateTime.add(DateTime.utc_now(), @notification_retention_seconds, :second)
+          )
+        )
     end
   end
 
@@ -1365,6 +1693,25 @@ defmodule Hexpm.Accounts.SSO do
     if locked_member(organization, user), do: :ok, else: {:error, :not_member}
   end
 
+  # A login has to be allowed to start before the provider has said anything, so
+  # the domain cannot be checked here. Being turned away happens at the callback,
+  # once there is an address to check.
+  defp require_member_or_jit(connection, user) do
+    if Connection.jit_enabled?(connection) do
+      :ok
+    else
+      require_member(connection.organization, user)
+    end
+  end
+
+  defp require_locked_member_or_jit(connection, user) do
+    if Connection.jit_enabled?(connection) do
+      :ok
+    else
+      require_locked_member(connection.organization, user)
+    end
+  end
+
   defp locked_member(organization, user) do
     from(organization_user in OrganizationUser,
       where: organization_user.organization_id == ^organization.id,
@@ -1501,6 +1848,12 @@ defmodule Hexpm.Accounts.SSO do
       "identity_conflict" => "The SSO identity or Hexpm account is already linked",
       "issuer_mismatch" => "The provider issuer did not match the configured issuer",
       "not_member" => "The Hexpm account is not a member of the organization",
+      "seats_exhausted" => "The organization has no seats left for a new member",
+      "expansion_failed" => "A seat could not be purchased for a new member",
+      "provider_email_unverified" =>
+        "The provider did not confirm the email address, so no member was added",
+      "seat_limit_unknown" =>
+        "The organization's seat count could not be read, so no member was added",
       "pkce_s256_unsupported" => "The provider does not support PKCE with S256",
       "token_endpoint_rejected_request" => "The provider rejected the authorization code",
       "token_endpoint_unavailable" => "The provider token endpoint could not be reached",

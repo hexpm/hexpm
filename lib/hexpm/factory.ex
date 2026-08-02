@@ -125,6 +125,20 @@ defmodule Hexpm.Factory do
     }
   end
 
+  def organization_invitation_factory() do
+    %Hexpm.Accounts.OrganizationInvitation{
+      email: Fake.sequence(:email),
+      role: "read",
+      token_hash: :crypto.hash(:sha256, Fake.sequence(:username)),
+      expires_at:
+        DateTime.add(
+          DateTime.utc_now(),
+          Hexpm.Accounts.OrganizationInvitation.lifetime_seconds(),
+          :second
+        )
+    }
+  end
+
   def organization_sso_connection_factory() do
     %Hexpm.Accounts.SSO.Connection{
       issuer: "https://identity.example.com/oauth2/default",

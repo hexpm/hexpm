@@ -41,33 +41,30 @@ defmodule HexpmWeb.API.OrganizationUserController do
 
   def create(conn, %{"organization" => name, "name" => username} = params) do
     organization = Organizations.get(name)
-    user_count = Organizations.user_count(organization)
-    customer = Hexpm.Billing.get(organization.name)
 
-    if customer["quantity"] > user_count do
-      if user = Users.public_get(username, [:emails]) do
-        params = %{"role" => params["role"]}
+    if user = Users.public_get(username, [:emails]) do
+      params = %{"role" => params["role"]}
 
-        case Organizations.add_member(organization, user, params, audit: audit_data(conn)) do
-          {:ok, organization_user} ->
-            location = ~p"/api/orgs/#{organization}/members/#{user}"
+      case Organizations.add_member(organization, user, params, audit: audit_data(conn)) do
+        {:ok, organization_user} ->
+          location = ~p"/api/orgs/#{organization}/members/#{user}"
 
-            conn
-            |> api_cache(:private)
-            |> put_resp_header("location", location)
-            |> render(:show, user: user, role: organization_user.role)
+          conn
+          |> api_cache(:private)
+          |> put_resp_header("location", location)
+          |> render(:show, user: user, role: organization_user.role)
 
-          {:error, :organization_user} ->
-            validation_failed(conn, "cannot add an organization as member to an organization")
+        {:error, :seats_exhausted} ->
+          validation_failed(conn, "not enough seats to add member")
 
-          {:error, changeset} ->
-            validation_failed(conn, changeset)
-        end
-      else
-        validation_failed(conn, %{"name" => "unknown user"})
+        {:error, :organization_user} ->
+          validation_failed(conn, "cannot add an organization as member to an organization")
+
+        {:error, changeset} ->
+          validation_failed(conn, changeset)
       end
     else
-      validation_failed(conn, "not enough seats to add member")
+      validation_failed(conn, %{"name" => "unknown user"})
     end
   end
 

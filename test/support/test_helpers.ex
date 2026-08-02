@@ -179,4 +179,14 @@ defmodule Hexpm.TestHelpers do
 
     package
   end
+
+  @doc """
+  Gives the organization a paid seat count, which is what `Hexpm.Accounts.Seats`
+  reads. The factory leaves it unset, which reports the limit as unknown.
+  """
+  def seats(organization, seats) do
+    organization
+    |> Ecto.Changeset.change(billing_seats: seats)
+    |> Hexpm.Repo.update!()
+  end
 end
