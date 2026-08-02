@@ -147,6 +147,8 @@ CI is unaffected. It authenticates with an organization API key, which is the or
 A personal API key is a static credential. There is no session behind it, nothing expires it unless its owner set an expiry, and your provider never sees it used. So an organization that requires SSO has to say what happens to them, and Hexpm makes the choice explicit rather than picking one:
 
 * **Block** removes this organization's permissions from members' personal keys on the required-by date, and refuses new ones. Their owners are emailed, and the rest of each key keeps working. Members publishing by hand run `mix hex.user auth` instead, and automation moves to an organization key.
+
+    Blocking follows the same members enforcement does. A pilot turns personal keys away for the members you marked enforced and for nobody else, and it refuses new ones rather than removing what is already there, so a pilot shows you what required mode will do without taking anything away yet. An exempt member's keys are never touched.
 * **Allow** leaves them alone. This is a supported answer, not a misconfiguration, and it is the right one if your publishing workflow depends on them. It means required mode has a standing exception: those keys reach the organization with no session, no expiry, and no exposure to your provider's conditional-access policy.
 
 Either way the SSO dashboard lists the members holding personal keys that reach the organization, and when each was last used, before you turn enforcement on. For a key whose permissions name the organization the list is exact. For one carrying every repository, or plain API access, it says the key could reach the organization rather than that it did; Hexpm records when a key was used and not what it was used against.
@@ -162,6 +164,8 @@ Two screens stay reachable for a governed member with no current organization ac
 They stay open because an organization whose client secret expired, or whose administrator was deactivated in the provider by mistake, has to be able to repair the connection and keep paying. If those screens sat behind the gate they are the only way to unlock, nothing could ever fix it. So while the provider is down, a required organization can fix its connection and keep its subscription, and cannot publish or fetch privately until the provider is back.
 
 Reaching either screen that way is recorded in the organization's audit log and emailed to its administrators, at most once an hour per member.
+
+The SSO screen is reachable so the connection can be repaired, and turning enforcement off for the organization counts as repairing it. Exempting individual members does not: it outlives the outage and leaves the organization reading as enforced, so that control needs a current organization access session like everything else.
 
 ### The residual bypasses
 
