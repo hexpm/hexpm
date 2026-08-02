@@ -6,7 +6,28 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
 
   plug :requires_login
   plug HexpmWeb.Plugs.Sudo
-  plug HexpmWeb.Plugs.OrganizationSSO, except: :all
+  # Repairing the connection is what break-glass is for, and turning enforcement
+  # off is part of repairing it: it is one switch, organization-wide, audited,
+  # and visible on the screen that shows it. Exempting a single member is not.
+  # It outlives the outage, leaves the organization reading as enforced, and an
+  # administrator locked out by their own provider could quietly write
+  # themselves out of enforcement with it.
+  plug HexpmWeb.Plugs.OrganizationSSO,
+    except: [
+      :configure,
+      :test,
+      :enable,
+      :disable,
+      :delete,
+      :rotate,
+      :promote,
+      :unlink,
+      :configure_jit,
+      :configure_enforcement,
+      :add_domain,
+      :verify_domain,
+      :remove_domain
+    ]
 
   def configure(conn, %{"dashboard_org" => name, "sso" => params}) do
     with_organization(conn, name, fn organization ->
@@ -222,17 +243,33 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
           not_found(conn)
 
         user ->
-          {:ok, _member} =
-            SSO.set_member_enforcement(organization, user, params["sso_enforcement"],
-              audit: audit_data(conn)
-            )
+          case SSO.set_member_enforcement(organization, user, params["sso_enforcement"],
+                 audit: audit_data(conn)
+               ) do
+            {:ok, _member} ->
+              redirect_with_flash(
+                conn,
+                organization,
+                :info,
+                member_enforcement_message(user, params["sso_enforcement"])
+              )
 
-          redirect_with_flash(
-            conn,
-            organization,
-            :info,
-            member_enforcement_message(user, params["sso_enforcement"])
-          )
+            {:error, :not_member} ->
+              redirect_with_flash(
+                conn,
+                organization,
+                :error,
+                "#{user.username} is not a member of this organization."
+              )
+
+            {:error, _changeset} ->
+              redirect_with_flash(
+                conn,
+                organization,
+                :error,
+                "That is not an enforcement setting."
+              )
+          end
       end
     end)
   end

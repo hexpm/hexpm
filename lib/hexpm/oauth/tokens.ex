@@ -83,7 +83,8 @@ defmodule Hexpm.OAuth.Tokens do
       Permissions.filter_sso_scopes(
         user,
         expanded_scopes,
-        Keyword.get(opts, :sso_session_id) || Keyword.get(opts, :user_session_id)
+        Keyword.get(opts, :sso_session_id) || Keyword.get(opts, :user_session_id),
+        Keyword.get(opts, :credential)
       )
 
     jwt_opts = [

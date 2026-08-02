@@ -186,6 +186,56 @@ defmodule HexpmWeb.SSOEnforcementTest do
 
       assert break_glass_logs(context) == []
     end
+
+    test "says so rather than falling over on an enforcement change it cannot make", context do
+      require_sso(context)
+      {conn, session} = login(context.admin)
+      authenticate(context, context.admin, session)
+      path = "/dashboard/orgs/#{context.organization.name}/sso/enforcement/member"
+
+      outsider =
+        post(conn, path, %{"user_id" => insert(:user).id, "sso_enforcement" => "exempt"})
+
+      assert Phoenix.Flash.get(outsider.assigns.flash, :error) =~ "not a member"
+
+      nonsense =
+        post(conn, path, %{"user_id" => context.member.id, "sso_enforcement" => "maybe"})
+
+      assert Phoenix.Flash.get(nonsense.assigns.flash, :error) =~ "not an enforcement setting"
+    end
+
+    test "does not reach into exempting a member", context do
+      require_sso(context)
+      {conn, _session} = login(context.admin)
+
+      conn =
+        post(conn, "/dashboard/orgs/#{context.organization.name}/sso/enforcement/member", %{
+          "user_id" => context.admin.id,
+          "sso_enforcement" => "exempt"
+        })
+
+      assert redirected_to(conn) =~ "/sso/org/#{context.organization.name}"
+
+      assert Repo.get_by!(Hexpm.Accounts.OrganizationUser,
+               organization_id: context.organization.id,
+               user_id: context.admin.id
+             ).sso_enforcement == nil
+    end
+
+    test "still turns enforcement off for the whole organization", context do
+      require_sso(context)
+      {conn, _session} = login(context.admin)
+
+      conn =
+        post(conn, "/dashboard/orgs/#{context.organization.name}/sso/enforcement", %{
+          "enforcement" => %{"enforcement_mode" => "optional"}
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{context.organization.name}/sso"
+
+      assert Repo.get!(Hexpm.Accounts.SSO.Connection, context.connection.id).enforcement_mode ==
+               "optional"
+    end
   end
 
   describe "the organization API" do
@@ -661,6 +711,85 @@ defmodule HexpmWeb.SSOEnforcementTest do
     end
   end
 
+  describe "package listings" do
+    test "leave a governed organization's packages out of the API index", context do
+      require_sso(context)
+      key = insert(:key, user: context.member, organization: nil)
+
+      body =
+        build_conn()
+        |> put_req_header("authorization", key.user_secret)
+        |> get("/api/packages")
+        |> json_response(200)
+
+      refute context.package.name in Enum.map(body, & &1["name"])
+    end
+
+    test "put them back once the session has authenticated", context do
+      require_sso(context)
+      session = oauth_session(context.member)
+      authenticate(context, context.member, session)
+      token = oauth_token(context.member, ["api:read", "repositories"], session)
+
+      body =
+        build_conn()
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> get("/api/packages")
+        |> json_response(200)
+
+      assert context.package.name in Enum.map(body, & &1["name"])
+    end
+
+    test "leave them off the owner's profile", context do
+      insert(:package_owner, package: context.package, user: context.member)
+      require_sso(context)
+      {conn, _session} = login(context.member)
+
+      refute get(conn, "/users/#{context.member.username}") |> response(200) =~
+               context.package.name
+    end
+
+    test "leave them out of search", context do
+      {conn, session} = login(context.member)
+      path = "/packages?search=#{context.package.name}"
+
+      assert get(conn, path) |> response(200) =~
+               "#{context.repository.name}/#{context.package.name}"
+
+      require_sso(context)
+
+      refute get(conn, path) |> response(200) =~
+               "#{context.repository.name}/#{context.package.name}"
+
+      authenticate(context, context.member, session)
+
+      assert get(conn, path) |> response(200) =~
+               "#{context.repository.name}/#{context.package.name}"
+    end
+  end
+
+  describe "a token exchanged from a personal key" do
+    test "keeps the organizations that accept personal keys", context do
+      require_sso(context, "allow")
+      key = insert(:key, user: context.member, organization: nil, permissions: repository_all())
+
+      body = client_credentials(key, "repositories")
+
+      assert body["scope"] =~ "repository:#{context.organization.name}"
+      refute body["sso_reauth_required"]
+    end
+
+    test "loses the ones that do not, and is told nothing to fix", context do
+      require_sso(context)
+      key = insert(:key, user: context.member, organization: nil, permissions: repository_all())
+
+      body = client_credentials(key, "repositories")
+
+      refute body["scope"] =~ "repository:#{context.organization.name}"
+      assert body["sso_reauth_required"] in [nil, []]
+    end
+  end
+
   describe "a member of two governed organizations" do
     test "resolves them one at a time on the web", context do
       require_sso(context)
@@ -808,6 +937,29 @@ defmodule HexpmWeb.SSOEnforcementTest do
   end
 
   defp api_write, do: [%{domain: "api", resource: "write"}]
+
+  defp repository_all, do: [build(:key_permission, domain: "repositories", resource: nil)]
+
+  defp client_credentials(key, scope) do
+    {:ok, client} =
+      Hexpm.OAuth.Client.build(%{
+        client_id: Hexpm.OAuth.Clients.generate_client_id(),
+        name: "Test OAuth Client",
+        client_type: "public",
+        allowed_grant_types: ["client_credentials"],
+        allowed_scopes: ["api", "api:read", "repositories"]
+      })
+      |> Repo.insert()
+
+    build_conn()
+    |> post("/api/oauth/token", %{
+      "grant_type" => "client_credentials",
+      "client_id" => client.client_id,
+      "client_secret" => key.user_secret,
+      "scope" => scope
+    })
+    |> json_response(200)
+  end
 
   defp enable_tfa(user) do
     user

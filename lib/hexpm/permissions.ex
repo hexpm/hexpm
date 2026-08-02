@@ -479,19 +479,35 @@ defmodule Hexpm.Permissions do
   a member whose only missing piece is a live organization access session is
   dropped and named. A client can act on the second and has nothing to act on
   for the first.
-  """
-  @spec filter_sso_scopes(term(), [String.t()], integer() | nil) ::
-          {[String.t()], [String.t()]}
-  def filter_sso_scopes(principal, scopes, user_session_id)
 
-  def filter_sso_scopes(%User{} = user, scopes, user_session_id) do
+  A token exchanged from a personal API key is the exception: it holds the
+  key's standing rather than a session's, because it is minted with no refresh
+  token and its session dies with it, so there is never an organization access
+  session for it to carry. It keeps the organizations that accept personal keys
+  and loses the ones that do not, and names neither, since a browser visit does
+  not change what a static credential may reach.
+  """
+  @spec filter_sso_scopes(term(), [String.t()], integer() | nil, Key.t() | nil) ::
+          {[String.t()], [String.t()]}
+  def filter_sso_scopes(principal, scopes, user_session_id, credential \\ nil)
+
+  def filter_sso_scopes(%User{} = user, scopes, _user_session_id, %Key{}) do
+    refused =
+      user
+      |> Enforcement.personal_key_refused()
+      |> Enum.map(& &1.name)
+
+    {Enum.reject(scopes, &names_organization?(&1, refused)), []}
+  end
+
+  def filter_sso_scopes(%User{} = user, scopes, user_session_id, _credential) do
     case Enforcement.sso_required(user, organization_scope_names(scopes), user_session_id) do
       [] -> {scopes, []}
       required -> {Enum.reject(scopes, &names_organization?(&1, required)), required}
     end
   end
 
-  def filter_sso_scopes(_principal, scopes, _user_session_id), do: {scopes, []}
+  def filter_sso_scopes(_principal, scopes, _user_session_id, _credential), do: {scopes, []}
 
   defp organization_scope_names(scopes) do
     scopes

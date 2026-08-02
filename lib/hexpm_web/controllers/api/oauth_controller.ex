@@ -227,6 +227,7 @@ defmodule HexpmWeb.API.OAuthController do
              api_key_secret,
              name: safe_param(params, "name"),
              usage_info: usage_info,
+             credential: auth_info.auth_credential,
              audit: audit_data
            ) do
         {:ok, token} ->

@@ -47,7 +47,9 @@ defmodule HexpmWeb.API.UserController do
 
   def show(conn, %{"name" => name}) do
     user = Users.public_get(name, [:emails, owned_packages: :repository])
-    accessible_packages = Packages.accessible_user_owned_packages(user, conn.assigns.current_user)
+
+    accessible_packages =
+      Packages.accessible_user_owned_packages(user, reachable_organizations(conn))
 
     user = user && %{user | owned_packages: accessible_packages}
 
@@ -72,5 +74,9 @@ defmodule HexpmWeb.API.UserController do
     else
       params
     end
+  end
+
+  defp reachable_organizations(conn) do
+    HexpmWeb.SSOEnforcement.reachable_organizations(conn, conn.assigns.current_user)
   end
 end

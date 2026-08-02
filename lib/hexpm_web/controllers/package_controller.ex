@@ -217,7 +217,9 @@ defmodule HexpmWeb.PackageController do
     # Should have access even though organization does not have active billing
     case HexpmWeb.RepositoryAccess.fetch_package(conn, repository, name) do
       {:ok, package} ->
-        organizations = Users.all_organizations(conn.assigns.current_user)
+        organizations =
+          HexpmWeb.SSOEnforcement.reachable_organizations(conn, conn.assigns.current_user)
+
         fun.(package, Enum.map(organizations, & &1.repository))
 
       {:error, :sso_required, organization} ->

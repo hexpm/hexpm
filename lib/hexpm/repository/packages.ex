@@ -237,8 +237,8 @@ defmodule Hexpm.Repository.Packages do
     []
   end
 
-  def accessible_user_owned_packages(user, for_user) do
-    repositories = Enum.map(Users.all_organizations(for_user), & &1.repository)
+  def accessible_user_owned_packages(user, organizations) do
+    repositories = Enum.map(organizations, & &1.repository)
     repository_ids = Enum.map(repositories, & &1.id)
 
     # Atoms sort before strings

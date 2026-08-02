@@ -116,6 +116,33 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   def check(_organization, _principal, _credential, _user_session_id), do: :ok
 
   @doc """
+  Which of these organizations this credential currently reaches.
+
+  The same decision `check/4` takes, over a set: a listing has no one resource
+  to refuse for, so enforcement takes the organizations out of the list instead.
+  """
+  @spec reachable([Organization.t()], term(), credential(), integer() | nil) :: [Organization.t()]
+  def reachable(organizations, principal, credential \\ nil, user_session_id \\ nil)
+
+  def reachable(organizations, %User{service: true}, _credential, _user_session_id),
+    do: organizations
+
+  def reachable(organizations, %User{} = user, credential, user_session_id) do
+    if Features.available?() do
+      refused =
+        user
+        |> governed_memberships(Enum.map(organizations, & &1.id))
+        |> refuse(user, credential, user_session_id)
+
+      Enum.reject(organizations, &Map.has_key?(refused, &1.id))
+    else
+      organizations
+    end
+  end
+
+  def reachable(organizations, _principal, _credential, _user_session_id), do: organizations
+
+  @doc """
   Which of these organizations the member is governed by and has no current
   organization access session for on `user_session_id`.
 

@@ -14,6 +14,7 @@ defmodule HexpmWeb.SSOEnforcement do
   import Phoenix.Controller, only: [redirect: 2]
 
   alias Hexpm.Accounts.SSO.Enforcement
+  alias Hexpm.Accounts.Users
 
   @doc """
   Whether this request may reach the organization with the credential it
@@ -25,6 +26,23 @@ defmodule HexpmWeb.SSOEnforcement do
   def check(conn_or_socket, organization, principal) do
     Enforcement.check(
       organization,
+      principal,
+      credential(conn_or_socket),
+      session_id(conn_or_socket)
+    )
+  end
+
+  @doc """
+  The organizations this request reaches, out of the ones the person belongs to.
+
+  A listing resolves no single repository, so enforcement filters the set rather
+  than refusing: an organization the person has not authenticated for is absent
+  the same way one they do not belong to is. Refusing the whole page instead
+  would take the public packages down with it.
+  """
+  def reachable_organizations(conn_or_socket, principal) do
+    Enforcement.reachable(
+      Users.all_organizations(principal),
       principal,
       credential(conn_or_socket),
       session_id(conn_or_socket)
