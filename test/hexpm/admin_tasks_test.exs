@@ -581,6 +581,7 @@ defmodule Hexpm.AdminTasksTest do
       end)
     end
 
+    @tag :capture_log
     test "sends no email when the package has no owners" do
       package = insert(:package)
 

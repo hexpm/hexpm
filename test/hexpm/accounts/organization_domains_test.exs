@@ -97,6 +97,7 @@ defmodule Hexpm.Accounts.OrganizationDomainsTest do
       assert domain.last_checked_at
     end
 
+    @tag :capture_log
     test "says the lookup failed rather than that the record is missing", %{
       organization: organization,
       admin: admin
@@ -210,6 +211,7 @@ defmodule Hexpm.Accounts.OrganizationDomainsTest do
              )
     end
 
+    @tag :capture_log
     test "leaves a domain verified when the resolver does not answer", %{
       organization: organization,
       admin: admin
