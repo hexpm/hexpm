@@ -145,6 +145,29 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   def sso_required(_principal, _organization_names, _user_session_id), do: []
 
   @doc """
+  Which of these organizations enforcement governs this member's access to,
+  whether or not they have authenticated for them yet.
+  """
+  @spec governed(term(), [String.t()]) :: [Organization.t()]
+  def governed(principal, organization_names)
+
+  def governed(_principal, []), do: []
+
+  def governed(%User{service: true}, _organization_names), do: []
+
+  def governed(%User{} = user, organization_names) do
+    if Features.available?() do
+      user
+      |> governed_memberships({:names, organization_names})
+      |> Enum.map(fn {organization, _connection, _member_enforcement} -> organization end)
+    else
+      []
+    end
+  end
+
+  def governed(_principal, _organization_names), do: []
+
+  @doc """
   The organizations this user belongs to that turn personal API keys away.
 
   A key is a static credential with no session to check and nothing to expire

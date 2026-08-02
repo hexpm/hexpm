@@ -2,6 +2,7 @@ defmodule Hexpm.Accounts.SSO do
   use Hexpm.Context
 
   alias Hexpm.Accounts.SSO.{
+    Authorization,
     Connection,
     Enforcement,
     Error,
@@ -19,6 +20,8 @@ defmodule Hexpm.Accounts.SSO do
   alias Hexpm.Emails.Outbox
 
   @transaction_lifetime_seconds 10 * 60
+  @authorization_lifetime_seconds 10 * 60
+  @authorization_organization_limit 20
   @diagnostic_limit 20
   @identity_linked_email_category "sso.identity_linked"
   @identity_unlinked_email_category "sso.identity_unlinked"
@@ -329,6 +332,7 @@ defmodule Hexpm.Accounts.SSO do
   def start_login(organization, user, return_path, redirect_uri, opts \\ []) do
     entrypoint = Keyword.get(opts, :entrypoint, "organization")
     login_hint = Keyword.get(opts, :login_hint)
+    target_user_session_id = Keyword.get(opts, :target_user_session_id)
 
     with :ok <- require_entrypoint(entrypoint),
          :ok <- require_feature(organization),
@@ -344,14 +348,10 @@ defmodule Hexpm.Accounts.SSO do
                   :ok <- require_connection_enabled(connection),
                   :ok <- require_locked_member_or_jit(connection, user),
                   {:ok, transaction, state} <-
-                    create_transaction(
-                      connection,
-                      user,
-                      "login",
-                      "active",
-                      redirect_uri,
-                      return_path,
-                      entrypoint
+                    create_transaction(connection, user, "login", "active", redirect_uri,
+                      return_path: return_path,
+                      entrypoint: entrypoint,
+                      target_user_session_id: target_user_session_id
                     ),
                   transaction = %{
                     transaction
@@ -405,15 +405,7 @@ defmodule Hexpm.Accounts.SSO do
                   :ok <- require_configuration_admin(connection, user, secret_slot),
                   {:ok, client_secret} <- secret_for_slot(connection, secret_slot),
                   {:ok, transaction, state} <-
-                    create_transaction(
-                      connection,
-                      user,
-                      "test",
-                      secret_slot,
-                      redirect_uri,
-                      nil,
-                      "organization"
-                    ),
+                    create_transaction(connection, user, "test", secret_slot, redirect_uri),
                   transaction = %{transaction | raw_state: state, connection: connection},
                   {:ok, uri} <-
                     OIDC.impl().authorization_uri(
@@ -805,7 +797,11 @@ defmodule Hexpm.Accounts.SSO do
                 %{user_id: user.id, entrypoint: transaction.entrypoint}
               })
 
-              org_session = establish_org_session!(identity, user_session_id)
+              org_session =
+                establish_org_session!(
+                  identity,
+                  authenticated_session(transaction, user_session_id)
+                )
 
               insert_audit!(%{audit_data | user: user}, "sso.login", {
                 organization,
@@ -1127,6 +1123,144 @@ defmodule Hexpm.Accounts.SSO do
 
   def grant_org_sessions!(_from_user_session_id, _to_user_session_id, _user_id), do: []
 
+  # Which session an authentication lands on. A transaction started from a
+  # terminal names the session it is for; everything else means the browser
+  # that started it.
+  defp authenticated_session(%SSOTransaction{target_user_session_id: nil}, user_session_id),
+    do: user_session_id
+
+  defp authenticated_session(%SSOTransaction{target_user_session_id: target}, _user_session_id),
+    do: target
+
+  @doc """
+  Opens a re-authorization for a session that has lost its organization access.
+
+  The session doing the asking is the one being authorized. Its owner completes
+  the provider round trip in a browser, and the organization access session that
+  produces is written against the asking session, so a lapsed terminal costs a
+  browser visit rather than a new device authorization and a new refresh token.
+  """
+  @spec request_authorization(User.t(), integer(), term()) ::
+          {:ok, Authorization.t()} | {:error, atom()}
+  def request_authorization(%User{} = user, user_session_id, organization_names)
+      when is_integer(user_session_id) do
+    with {:ok, names} <- authorization_names(organization_names),
+         {:ok, organizations} <- authorization_organizations(user, names) do
+      code = random_token()
+
+      authorization =
+        %Authorization{}
+        |> Authorization.changeset(%{
+          user_id: user.id,
+          user_session_id: user_session_id,
+          code_hash: hash(code),
+          organization_ids: Enum.map(organizations, & &1.id),
+          expires_at: DateTime.add(DateTime.utc_now(), @authorization_lifetime_seconds, :second)
+        })
+        |> Repo.insert!(log: false)
+
+      {:ok, %{authorization | raw_code: code}}
+    end
+  end
+
+  defp authorization_names(names) when is_list(names) and names != [] do
+    names = Enum.uniq(names)
+
+    if length(names) <= @authorization_organization_limit and
+         Enum.all?(names, &(is_binary(&1) and &1 != "" and byte_size(&1) <= 100)) do
+      {:ok, names}
+    else
+      {:error, :invalid_organizations}
+    end
+  end
+
+  defp authorization_names(_names), do: {:error, :invalid_organizations}
+
+  # Every name has to resolve, so a client cannot open a request that is only
+  # half honourable and then be told at the browser which half it was.
+  defp authorization_organizations(user, names) do
+    organizations = Enforcement.governed(user, names)
+
+    if MapSet.new(organizations, & &1.name) == MapSet.new(names) do
+      {:ok, organizations}
+    else
+      {:error, :not_governed}
+    end
+  end
+
+  @doc """
+  The open re-authorization this code names, for this account.
+
+  A revoked or expired target session takes its authorization with it: there is
+  nothing left to authorize, and saying so is the same answer as a bad code.
+  """
+  def get_authorization(code, %User{} = user) when is_binary(code) and byte_size(code) <= 512 do
+    now = DateTime.utc_now()
+
+    from(authorization in Authorization,
+      join: user_session in assoc(authorization, :user_session),
+      where: authorization.code_hash == ^hash(code),
+      where: authorization.user_id == ^user.id,
+      where: authorization.user_id == user_session.user_id,
+      where: is_nil(authorization.consumed_at),
+      where: authorization.expires_at > ^now,
+      where: is_nil(user_session.revoked_at) and user_session.expires_at > ^now,
+      preload: [user_session: user_session]
+    )
+    |> Repo.one(log: false)
+  end
+
+  def get_authorization(_code, _user), do: nil
+
+  @doc """
+  The organizations a re-authorization covers, and whether the session it is for
+  is currently authenticated to each.
+  """
+  @spec authorization_status(Authorization.t()) :: [{Organization.t(), boolean()}]
+  def authorization_status(%Authorization{} = authorization) do
+    now = DateTime.utc_now()
+
+    organizations =
+      from(organization in Organization,
+        where: organization.id in ^authorization.organization_ids,
+        order_by: organization.name
+      )
+      |> Repo.all()
+
+    authenticated =
+      from(session in OrgSession,
+        where: session.user_session_id == ^authorization.user_session_id,
+        where: session.user_id == ^authorization.user_id,
+        where: session.organization_id in ^authorization.organization_ids,
+        where: is_nil(session.revoked_at) and session.expires_at > ^now,
+        select: session.organization_id
+      )
+      |> Repo.all()
+      |> MapSet.new()
+
+    Enum.map(organizations, fn organization ->
+      {organization, MapSet.member?(authenticated, organization.id)}
+    end)
+  end
+
+  @doc """
+  Closes a re-authorization once it has nothing left to do, so the verification
+  URI cannot be replayed to renew the session again later.
+  """
+  def consume_authorization!(%Authorization{} = authorization) do
+    now = DateTime.utc_now()
+
+    Repo.update_all(
+      from(row in Authorization,
+        where: row.id == ^authorization.id,
+        where: is_nil(row.consumed_at)
+      ),
+      set: [consumed_at: now, updated_at: now]
+    )
+
+    :ok
+  end
+
   @doc """
   The organization access session for a browser session, or nil.
 
@@ -1338,7 +1472,9 @@ defmodule Hexpm.Accounts.SSO do
     organization = connection.organization
     notify_email_mismatch? = update_identity_email(identity, claims.email)
     consume_transaction!(transaction, %{})
-    org_session = establish_org_session!(identity, user_session_id)
+
+    org_session =
+      establish_org_session!(identity, authenticated_session(transaction, user_session_id))
 
     insert_audit!(%{audit_data | user: identity.user}, "sso.login", {
       organization,
@@ -1583,20 +1719,13 @@ defmodule Hexpm.Accounts.SSO do
     {:link, transaction.id, link_token, transaction.return_path}
   end
 
-  defp create_transaction(
-         connection,
-         user,
-         kind,
-         secret_slot,
-         redirect_uri,
-         return_path,
-         entrypoint
-       ) do
+  defp create_transaction(connection, user, kind, secret_slot, redirect_uri, opts \\ []) do
     state = random_token()
 
     attrs = %{
       connection_id: connection.id,
       user_id: user && user.id,
+      target_user_session_id: Keyword.get(opts, :target_user_session_id),
       state_hash: hash(state),
       nonce: random_token(),
       code_verifier: random_token(),
@@ -1605,8 +1734,8 @@ defmodule Hexpm.Accounts.SSO do
       connection_version: connection.version,
       secret_version: secret_version(connection, secret_slot),
       redirect_uri: redirect_uri,
-      return_path: allowed_return_path(connection.organization, return_path),
-      entrypoint: entrypoint,
+      return_path: allowed_return_path(connection.organization, Keyword.get(opts, :return_path)),
+      entrypoint: Keyword.get(opts, :entrypoint, "organization"),
       expires_at: DateTime.add(DateTime.utc_now(), @transaction_lifetime_seconds, :second)
     }
 
@@ -1616,7 +1745,7 @@ defmodule Hexpm.Accounts.SSO do
     end
   end
 
-  defp require_entrypoint(entrypoint) when entrypoint in ~w(organization third_party), do: :ok
+  defp require_entrypoint(entrypoint) when entrypoint in ~w(organization third_party cli), do: :ok
   defp require_entrypoint(_entrypoint), do: {:error, :invalid_entrypoint}
 
   defp locked_transaction!(id, reason \\ :invalid_transaction) do

@@ -870,6 +870,186 @@ defmodule HexpmWeb.SSOControllerTest do
     end
   end
 
+  describe "re-authorizing a session" do
+    test "hands back a verification URI for the organizations it names", context do
+      require_sso(context)
+      %{token: token} = cli_session(context)
+
+      body =
+        build_conn()
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> post("/api/oauth/sso_authorization", %{
+          "organizations" => [context.organization.name]
+        })
+        |> json_response(201)
+
+      assert body["verification_uri"] =~ "/sso/authorize/"
+      assert body["expires_in"] > 0
+    end
+
+    test "refuses a credential that cannot hold organization access", context do
+      require_sso(context)
+      key = insert(:key, user: context.member)
+
+      body =
+        build_conn()
+        |> put_req_header("authorization", key.user_secret)
+        |> post("/api/oauth/sso_authorization", %{
+          "organizations" => [context.organization.name]
+        })
+        |> json_response(422)
+
+      assert body["message"] =~ "OAuth session"
+    end
+
+    test "refuses an organization the caller is not governed by", context do
+      require_sso(context)
+      %{token: token} = cli_session(context)
+      other = insert(:organization)
+
+      body =
+        build_conn()
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> post("/api/oauth/sso_authorization", %{"organizations" => [other.name]})
+        |> json_response(422)
+
+      assert body["message"] =~ "not required"
+      refute Repo.exists?(SSO.Authorization)
+    end
+
+    test "refuses the whole request when one organization does not resolve", context do
+      require_sso(context)
+      %{token: token} = cli_session(context)
+
+      build_conn()
+      |> put_req_header("authorization", "Bearer #{token.access_token}")
+      |> post("/api/oauth/sso_authorization", %{
+        "organizations" => [context.organization.name, "no-such-organization"]
+      })
+      |> json_response(422)
+
+      refute Repo.exists?(SSO.Authorization)
+    end
+
+    test "authenticates the session that asked, not the browser", context do
+      require_sso(context)
+      link_member(context)
+      %{session: session} = cli_session(context)
+      code = request_authorization(context, session)
+
+      conn = build_conn() |> test_login(context.member) |> get("/sso/authorize/#{code}")
+      assert html_response(conn, 200) =~ context.organization.name
+
+      conn = authorize_through_provider(context, code)
+      assert redirected_to(conn) == "/sso/authorize/#{code}"
+
+      assert [org_session] = Repo.all(OrgSession)
+      assert org_session.user_session_id == session.id
+      assert org_session.organization_id == context.organization.id
+    end
+
+    test "is consumed once it has nothing left to do, and cannot be replayed", context do
+      require_sso(context)
+      link_member(context)
+      %{session: session} = cli_session(context)
+      code = request_authorization(context, session)
+
+      conn =
+        context
+        |> authorize_through_provider(code)
+        |> recycle()
+        |> test_login(context.member)
+        |> get("/sso/authorize/#{code}")
+
+      assert redirected_to(conn) == "/dashboard"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ context.organization.name
+      assert Repo.one!(SSO.Authorization).consumed_at
+
+      replayed =
+        conn
+        |> recycle()
+        |> test_login(context.member)
+        |> get("/sso/authorize/#{code}")
+
+      assert redirected_to(replayed) == "/dashboard"
+      assert Phoenix.Flash.get(replayed.assigns.flash, :error) =~ "no longer open"
+    end
+
+    test "the session's next refresh carries the scope it was missing", context do
+      require_sso(context)
+      %{session: session, token: token} = cli_session(context, ["api:read", "repositories"])
+
+      refute "repository:#{context.organization.name}" in token.scopes
+      assert token.sso_reauth_required == [context.organization.name]
+
+      code = request_authorization(context, session)
+      authorize_through_provider(context, code)
+
+      body =
+        build_conn()
+        |> post("/api/oauth/token", %{
+          "grant_type" => "refresh_token",
+          "refresh_token" => token.refresh_token,
+          "client_id" => session.client_id
+        })
+        |> json_response(200)
+
+      assert body["scope"] =~ "repository:#{context.organization.name}"
+      refute Map.has_key?(body, "sso_reauth_required")
+    end
+
+    test "the page belongs to the account that asked for it", context do
+      require_sso(context)
+      %{session: session} = cli_session(context)
+      code = request_authorization(context, session)
+
+      conn =
+        build_conn()
+        |> test_login(insert(:user))
+        |> get("/sso/authorize/#{code}")
+
+      assert redirected_to(conn) == "/dashboard"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "no longer open"
+      refute Repo.one!(SSO.Authorization).consumed_at
+    end
+
+    test "an organization the session already holds asks for nothing", context do
+      require_sso(context)
+      identity = link_member(context)
+      %{session: session} = cli_session(context)
+      SSO.establish_org_session!(identity, session.id)
+
+      code = request_authorization(context, session)
+
+      conn =
+        build_conn()
+        |> test_login(context.member)
+        |> get("/sso/authorize/#{code}")
+
+      assert redirected_to(conn) == "/dashboard"
+      assert Repo.one!(SSO.Authorization).consumed_at
+    end
+
+    test "a revoked session has nothing left to authorize", context do
+      require_sso(context)
+      %{session: session} = cli_session(context)
+      code = request_authorization(context, session)
+
+      Repo.update_all(
+        from(s in Hexpm.UserSession, where: s.id == ^session.id),
+        set: [revoked_at: DateTime.utc_now()]
+      )
+
+      conn =
+        build_conn()
+        |> test_login(context.member)
+        |> get("/sso/authorize/#{code}")
+
+      assert redirected_to(conn) == "/dashboard"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "no longer open"
+    end
+  end
+
   # A browser that still holds the SSO state binding but no account session,
   # which is what signing out mid-flow leaves behind.
   defp session_less_conn(conn) do
@@ -1047,6 +1227,68 @@ defmodule HexpmWeb.SSOControllerTest do
 
   # A stable summary of everything that would change if SSO touched the account
   # session: the cookie value, the row count, and the sudo timestamp.
+  defp require_sso(context) do
+    link_member(context)
+
+    {:ok, connection} =
+      SSO.configure_enforcement(
+        context.organization,
+        %{"enforcement_mode" => "required", "personal_keys" => "allow"},
+        audit: audit_data(context.member)
+      )
+
+    connection
+  end
+
+  # The member the CLI belongs to is the organization's only administrator, so
+  # this is both what activation safety needs and what makes the callback
+  # authenticate rather than hand off to link consent.
+  defp link_member(context) do
+    Repo.get_by(Identity, connection_id: context.connection.id, user_id: context.member.id) ||
+      insert(:organization_sso_identity,
+        connection: context.connection,
+        organization: context.organization,
+        user: context.member
+      )
+  end
+
+  defp cli_session(context, scopes \\ ["api:read"]) do
+    client = insert(:oauth_client)
+    session = insert(:oauth_session, user: context.member, client_id: client.client_id)
+
+    {:ok, token} =
+      Hexpm.OAuth.Tokens.create_and_insert_for_user(
+        context.member,
+        session.client_id,
+        scopes,
+        "urn:ietf:params:oauth:grant-type:device_code",
+        "grant-#{System.unique_integer([:positive])}",
+        user_session_id: session.id,
+        with_refresh_token: true
+      )
+
+    %{session: session, token: token}
+  end
+
+  defp authorize_through_provider(context, code) do
+    expect_authorization_request(context.connection)
+
+    conn =
+      build_conn()
+      |> test_login(context.member)
+      |> post("/sso/authorize/#{code}", %{"organization" => context.organization.name})
+
+    assert_receive {:sso_state, state, _redirect_uri}
+    complete_callback(conn, state)
+  end
+
+  defp request_authorization(context, session) do
+    {:ok, authorization} =
+      SSO.request_authorization(context.member, session.id, [context.organization.name])
+
+    authorization.raw_code
+  end
+
   defp account_session_fingerprint(conn, user) do
     %{
       session_token: get_session(conn, "session_token"),

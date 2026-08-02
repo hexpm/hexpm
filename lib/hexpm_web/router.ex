@@ -169,6 +169,8 @@ defmodule HexpmWeb.Router do
     post "/sso/link", SSOController, :confirm_link, log: false
     post "/sso/link/cancel", SSOController, :cancel_link, log: false
     get "/sso/org/:organization", SSOController, :start, log: false
+    get "/sso/authorize/:code", SSOController, :authorize, log: false
+    post "/sso/authorize/:code", SSOController, :authorize_organization, log: false
 
     get "/invites", OrganizationInvitationController, :show, log: false
     post "/invites", OrganizationInvitationController, :accept, log: false
@@ -499,6 +501,7 @@ defmodule HexpmWeb.Router do
     post "/oauth/device_authorization", OAuthController, :device_authorization
     post "/oauth/revoke", OAuthController, :revoke
     post "/oauth/revoke_by_hash", OAuthController, :revoke_by_hash
+    post "/oauth/sso_authorization", SSOAuthorizationController, :create
   end
 
   if Mix.env() in [:dev, :test, :hex] do
