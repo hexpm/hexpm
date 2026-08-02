@@ -516,11 +516,13 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
     Calendar.strftime(required_at, "%Y-%m-%d")
   end
 
-  defp personal_keys_heading(%Connection{personal_keys: "block"}),
-    do: "Personal API keys that lose access to this organization"
-
-  defp personal_keys_heading(%Connection{}),
-    do: "Personal API keys that reach this organization"
+  defp personal_keys_heading(%Connection{} = connection) do
+    if Connection.blocks_personal_keys?(connection) do
+      "Personal API keys that lose access to this organization"
+    else
+      "Personal API keys that reach this organization"
+    end
+  end
 
   # A key whose permission names the organization definitely reaches it. One
   # carrying every repository, or plain API access, might not have been used

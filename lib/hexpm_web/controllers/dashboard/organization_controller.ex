@@ -12,7 +12,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   alias HexpmWeb.Dashboard.KeyController
   alias HexpmWeb.Dashboard.Organization.Components.BillingHelpers
   alias Hexpm.Accounts.SSO
-  alias Hexpm.Accounts.SSO.Enforcement
+  alias Hexpm.Accounts.SSO.{Connection, Enforcement}
 
   @policy_suggestion_limit 8
 
@@ -278,7 +278,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   def sso(conn, %{"dashboard_org" => organization}) do
     access_organization(conn, organization, "admin", fn organization ->
-      if SSO.enabled?(organization) do
+      if SSO.reachable?(organization) do
         conn
         |> allow_provider_form_action(organization)
         |> render_index(organization, tab: :sso)
@@ -1081,12 +1081,24 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       sso_callback_url: url(~p"/sso/callback"),
       sso_login_url: url(~p"/sso/org/#{organization}"),
       sso_domains: OrganizationDomains.all(organization),
-      sso_personal_keys:
-        if(connection, do: Keys.personal_reaching_organization(organization), else: [])
+      sso_personal_keys: sso_personal_keys(organization, connection)
     ]
   end
 
   defp sso_assigns(_organization, _tab), do: []
+
+  # Under "block" the table is a list of what enforcement takes away, so it
+  # names the keys enforcement reaches. Under "allow" it is a standing list of
+  # what still gets in, which is every member's.
+  defp sso_personal_keys(_organization, nil), do: []
+
+  defp sso_personal_keys(organization, connection) do
+    if Connection.blocks_personal_keys?(connection) do
+      Enforcement.blocked_personal_keys(organization, connection)
+    else
+      Keys.personal_reaching_organization(organization)
+    end
+  end
 
   defp member_assigns(organization, :members, opts) do
     [
@@ -1100,7 +1112,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   end
 
   defp current_org_session(conn, organization) do
-    if SSO.enabled?(organization) && conn.assigns[:current_session] do
+    if SSO.reachable?(organization) && conn.assigns[:current_session] do
       SSO.current_org_session(conn.assigns.current_session.id, organization.id)
     end
   end

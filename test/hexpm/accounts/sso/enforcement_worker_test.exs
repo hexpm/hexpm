@@ -55,6 +55,19 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
       assert length(pending_entries()) == 1
     end
 
+    test "says nothing twice once the mail has gone out", context do
+      require_sso(context, DateTime.add(DateTime.utc_now(), 3 * 24 * 60 * 60, :second))
+
+      assert Enforcement.warn_pending() == 1
+
+      # The outbox row is the mail waiting to be sent, and the worker deletes it
+      # on delivery. Tomorrow's tick has only the audit entry to go on.
+      Enum.each(pending_entries(), &Repo.delete!/1)
+
+      assert Enforcement.warn_pending() == 0
+      assert pending_entries() == []
+    end
+
     test "leaves a linked member alone", context do
       insert(:organization_sso_identity,
         connection: context.connection,
@@ -191,7 +204,7 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
       assert Enforcement.sweep_personal_keys() == 1
 
       assert [entry] = Repo.all(from(e in OutboxEntry, where: e.category == "sso.key_revoked"))
-      assert entry.group_key =~ to_string(key.id)
+      assert entry.group_key =~ to_string(context.member.id)
 
       log =
         Hexpm.Accounts.AuditLogs.all_by(context.member)
@@ -200,6 +213,60 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
       assert log.params["key"]["name"] == key.name
       assert log.params["removed_permissions"] == ["repository:#{context.organization.name}"]
     end
+  end
+
+  describe "the sweep and the members it governs" do
+    test "leaves an exempt member's key alone", context do
+      key = personal_key(context, [%{domain: "repository", resource: context.organization.name}])
+      require_sso(context, DateTime.add(DateTime.utc_now(), -60, :second))
+      exempt(context, context.member)
+
+      assert Enforcement.sweep_personal_keys() == 0
+      assert Repo.get!(Hexpm.Accounts.Key, key.id).permissions == key.permissions
+      assert Repo.all(from(e in OutboxEntry, where: e.category == "sso.key_revoked")) == []
+    end
+
+    test "takes a key that expires later but has not expired yet", context do
+      key =
+        personal_key(context, [%{domain: "repository", resource: context.organization.name}])
+        |> Ecto.Changeset.change(revoke_at: DateTime.add(DateTime.utc_now(), 86_400, :second))
+        |> Repo.update!()
+
+      require_sso(context, DateTime.add(DateTime.utc_now(), -60, :second))
+
+      assert Enforcement.sweep_personal_keys() == 1
+      assert Repo.get!(Hexpm.Accounts.Key, key.id).permissions == []
+    end
+
+    test "leaves a key that has already expired", context do
+      key = personal_key(context, [%{domain: "repository", resource: context.organization.name}])
+
+      Repo.update_all(
+        from(k in Hexpm.Accounts.Key, where: k.id == ^key.id),
+        set: [revoke_at: DateTime.add(DateTime.utc_now(), -60, :second)]
+      )
+
+      require_sso(context, DateTime.add(DateTime.utc_now(), -60, :second))
+
+      assert Enforcement.sweep_personal_keys() == 0
+    end
+
+    test "tells an owner about all their keys at once", context do
+      personal_key(context, [%{domain: "repository", resource: context.organization.name}])
+      personal_key(context, [%{domain: "docs", resource: context.organization.name}])
+      require_sso(context, DateTime.add(DateTime.utc_now(), -60, :second))
+
+      assert Enforcement.sweep_personal_keys() == 2
+
+      assert [_one] = Repo.all(from(e in OutboxEntry, where: e.category == "sso.key_revoked"))
+    end
+  end
+
+  defp exempt(context, user) do
+    {:ok, _member} =
+      SSO.set_member_enforcement(context.organization, user, "exempt",
+        audit: audit_data(context.admin)
+      )
   end
 
   defp require_sso(context, required_at) do

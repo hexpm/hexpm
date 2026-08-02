@@ -402,6 +402,13 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
   end
 
   defp humanize_action(%AuditLog{
+         action: "sso.enforcement.warned",
+         params: %{"user" => %{"username" => username}, "organization" => %{"name" => org}}
+       }) do
+    "Told #{username} that #{org} is about to require SSO"
+  end
+
+  defp humanize_action(%AuditLog{
          action: "sso.key.revoke",
          params: %{"key" => %{"name" => name}, "organization" => %{"name" => org}}
        }) do

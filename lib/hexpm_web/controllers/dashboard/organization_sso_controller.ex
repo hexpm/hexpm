@@ -331,7 +331,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
       is_nil(organization) ->
         not_found(conn)
 
-      not SSO.enabled?(organization) ->
+      not SSO.reachable?(organization) ->
         not_found(conn)
 
       Organizations.get_role(organization, user) != "admin" ->

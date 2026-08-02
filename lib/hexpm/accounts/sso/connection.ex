@@ -153,7 +153,7 @@ defmodule Hexpm.Accounts.SSO.Connection do
   defp normalize_required_at(%{"required_at" => value} = attrs) when is_binary(value) do
     case Date.from_iso8601(String.trim(value)) do
       {:ok, date} -> Map.put(attrs, "required_at", DateTime.new!(date, ~T[00:00:00], "Etc/UTC"))
-      :error -> Map.put(attrs, "required_at", nil)
+      {:error, _reason} -> attrs
     end
   end
 
@@ -202,11 +202,18 @@ defmodule Hexpm.Accounts.SSO.Connection do
 
   def enforcement_mode(%__MODULE__{enforcement_mode: mode}, _now), do: mode
 
+  @doc """
+  Whether this organization turns personal API keys away. Which members that
+  applies to is their own enforcement to decide, so a pilot turns them away for
+  the members it pilots and for nobody else.
+  """
   def blocks_personal_keys?(%__MODULE__{personal_keys: "block"} = connection) do
-    enforcement_mode(connection) == "required"
+    enforcement_mode(connection) in ["pilot", "required"]
   end
 
   def blocks_personal_keys?(%__MODULE__{}), do: false
+
+  def blocks_personal_keys?(nil), do: false
 
   defp nilify_blank(value) when is_binary(value) do
     case String.trim(value) do

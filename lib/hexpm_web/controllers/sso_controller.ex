@@ -33,7 +33,7 @@ defmodule HexpmWeb.SSOController do
   def start(conn, %{"organization" => name} = params) do
     organization = Organizations.get(name)
 
-    if organization && SSO.enabled?(organization) && allow_start?(conn, organization) do
+    if organization && SSO.reachable?(organization) && allow_start?(conn, organization) do
       with {:ok, return_path, opts} <- initiation_options(conn, organization, params),
            {:ok, transaction, uri} <-
              SSO.start_login(
@@ -53,7 +53,7 @@ defmodule HexpmWeb.SSOController do
           |> redirect(to: ~p"/dashboard")
       end
     else
-      if organization && SSO.enabled?(organization) do
+      if organization && SSO.reachable?(organization) do
         conn
         |> put_status(:too_many_requests)
         |> text("Too many SSO login attempts. Try again later.")

@@ -479,6 +479,19 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
       assert Enforcement.mode(context.organization, connection) == :required
     end
 
+    test "refuses a required-by date it cannot read", context do
+      link_identity(context, context.admin)
+
+      assert {:error, changeset} =
+               configure(context, %{
+                 "enforcement_mode" => "required",
+                 "personal_keys" => "block",
+                 "required_at" => "01/09/2026"
+               })
+
+      assert errors_on(changeset).required_at =~ "expected type utc_datetime"
+    end
+
     test "clears required_at on the way back down", context do
       link_identity(context, context.admin)
 
@@ -570,6 +583,72 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
                  audit: audit_data(context.admin)
                )
     end
+  end
+
+  describe "a pilot that blocks personal keys" do
+    test "turns away the members it pilots", context do
+      link_identity(context, context.admin)
+
+      {:ok, _connection} =
+        configure(context, %{"enforcement_mode" => "pilot", "personal_keys" => "block"})
+
+      {:ok, _member} =
+        SSO.set_member_enforcement(context.organization, context.member, "enforced",
+          audit: audit_data(context.admin)
+        )
+
+      assert Enforcement.check(
+               context.organization,
+               context.member,
+               personal_key(context.member)
+             ) ==
+               {:error, :personal_key}
+
+      assert Enforcement.personal_key_refused(context.member) != []
+    end
+
+    test "leaves the members it does not", context do
+      link_identity(context, context.admin)
+
+      {:ok, _connection} =
+        configure(context, %{"enforcement_mode" => "pilot", "personal_keys" => "block"})
+
+      assert Enforcement.check(
+               context.organization,
+               context.member,
+               personal_key(context.member)
+             ) == :ok
+
+      assert Enforcement.personal_key_refused(context.member) == []
+    end
+  end
+
+  describe "a subscription that has lapsed" do
+    test "does not turn enforcement off", context do
+      {:ok, connection} = require_sso(context)
+      organization = lapse_billing(context)
+
+      refute Hexpm.Accounts.SSO.Features.enabled?(organization)
+      assert Enforcement.mode(organization, connection) == :required
+      assert Enforcement.check(organization, context.member) == {:error, :sso_required}
+    end
+  end
+
+  defp lapse_billing(context) do
+    config = Application.fetch_env!(:hexpm, :organization_sso)
+
+    Application.put_env(
+      :hexpm,
+      :organization_sso,
+      Keyword.merge(config, mode: :enabled, all_organizations: false)
+    )
+
+    Repo.update_all(
+      from(o in Hexpm.Accounts.Organization, where: o.id == ^context.organization.id),
+      set: [billing_active: false]
+    )
+
+    Repo.get!(Hexpm.Accounts.Organization, context.organization.id)
   end
 
   defp configure(context, params) do

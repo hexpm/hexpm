@@ -293,6 +293,14 @@ defmodule Hexpm.Accounts.AuditLog do
     Map.put(params, :organization, serialize(organization))
   end
 
+  defp extract_params("sso.enforcement.warned", {organization, user, required_at}) do
+    %{
+      organization: serialize(organization),
+      user: serialize(user),
+      required_at: required_at
+    }
+  end
+
   defp extract_params("sso.enforcement.member", {organization, user, enforcement}) do
     %{
       organization: serialize(organization),

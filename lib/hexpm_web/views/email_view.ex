@@ -327,12 +327,18 @@ defmodule HexpmWeb.EmailView do
   end
 
   defmodule SSOKeyRevoked do
-    def intro(organization, key_name) do
-      "The #{organization} organization on Hex.pm now requires single sign-on, and chose not to allow personal API keys. Your key #{key_name} has had its access to that organization removed."
+    def intro(organization, key_names) do
+      "The #{organization} organization on Hex.pm now requires single sign-on, and chose not to allow personal API keys. #{keys(key_names)} had its access to that organization removed."
     end
 
     def rest_of_key() do
-      "The key still works for everything else it could reach. Only the permissions naming this organization were removed."
+      "The keys still work for everything else they could reach. Only the permissions naming this organization were removed."
+    end
+
+    defp keys([key_name]), do: "Your key #{key_name} has"
+
+    defp keys(key_names) do
+      "Your keys #{Enum.join(key_names, ", ")} have"
     end
 
     def alternatives() do

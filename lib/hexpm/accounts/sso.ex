@@ -45,6 +45,19 @@ defmodule Hexpm.Accounts.SSO do
   def available?, do: Features.available?()
   def enabled?(organization), do: Features.enabled?(organization)
 
+  @doc """
+  Whether this organization reaches the SSO screens and can authenticate
+  against them.
+
+  Configuring SSO takes an active subscription; keeping what you configured
+  does not. A lapsed card must not leave a broken connection with no screen to
+  repair it on, or leave members enforced with no way to sign in.
+  """
+  def reachable?(organization) do
+    Features.enabled?(organization) or
+      (Features.active?(organization) and not is_nil(get_connection(organization)))
+  end
+
   def get_connection(organization, preload \\ []) do
     Repo.get_by(Connection, organization_id: organization.id)
     |> Repo.preload(preload)
@@ -335,7 +348,7 @@ defmodule Hexpm.Accounts.SSO do
     target_user_session_id = Keyword.get(opts, :target_user_session_id)
 
     with :ok <- require_entrypoint(entrypoint),
-         :ok <- require_feature(organization),
+         :ok <- require_active(organization),
          %Connection{} = connection <- get_connection(organization) |> Repo.preload(:organization),
          true <- Connection.enabled?(connection),
          :ok <- require_member_or_jit(connection, user),
@@ -344,7 +357,7 @@ defmodule Hexpm.Accounts.SSO do
            Repo.transaction(fn ->
              connection = locked_connection!(connection.id)
 
-             with :ok <- require_feature(connection.organization),
+             with :ok <- require_active(connection.organization),
                   :ok <- require_connection_enabled(connection),
                   :ok <- require_locked_member_or_jit(connection, user),
                   {:ok, transaction, state} <-
@@ -1804,7 +1817,7 @@ defmodule Hexpm.Accounts.SSO do
 
   defp callback_available?(%SSOTransaction{connection: connection, kind: kind}) do
     cond do
-      not Features.enabled?(connection.organization) -> {:error, :feature_disabled}
+      not Features.active?(connection.organization) -> {:error, :feature_disabled}
       kind == "login" and not Connection.enabled?(connection) -> {:error, :connection_disabled}
       true -> :ok
     end
@@ -1930,6 +1943,13 @@ defmodule Hexpm.Accounts.SSO do
 
   defp require_feature(organization) do
     if Features.enabled?(organization), do: :ok, else: {:error, :feature_disabled}
+  end
+
+  # Authenticating against a connection that already exists, which enforcement
+  # can be holding people to. Gating it on billing would lock an organization's
+  # members out of their own private packages over a failed card.
+  defp require_active(organization) do
+    if Features.active?(organization), do: :ok, else: {:error, :feature_disabled}
   end
 
   defp require_connection_enabled(connection) do

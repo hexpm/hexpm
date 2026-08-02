@@ -43,7 +43,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   def mode(organization, connection, now \\ DateTime.utc_now())
 
   def mode(%Organization{} = organization, %Connection{} = connection, now) do
-    if Features.enabled?(organization) and Connection.enabled?(connection) do
+    if Features.active?(organization) and Connection.enabled?(connection) do
       connection |> Connection.enforcement_mode(now) |> String.to_existing_atom()
     else
       :optional
@@ -300,8 +300,8 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   Mails members who will lose access when their organization starts requiring
   SSO and have not linked an identity yet.
 
-  Only fires inside the window before the date, and the outbox group key means a
-  member is told once per organization rather than once per tick.
+  Only fires inside the window before the date, and a member is told once per
+  organization rather than once per tick.
   """
   @spec warn_pending() :: non_neg_integer()
   def warn_pending do
@@ -316,7 +316,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
       select: {connection, organization}
     )
     |> Repo.all()
-    |> Enum.filter(fn {_connection, organization} -> Features.enabled?(organization) end)
+    |> Enum.filter(fn {_connection, organization} -> Features.active?(organization) end)
     |> Enum.map(fn {connection, organization} -> warn_organization(connection, organization) end)
     |> Enum.sum()
   end
@@ -333,23 +333,54 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
       where: is_nil(member.sso_enforcement) or member.sso_enforcement == "enforced",
       where: is_nil(identity.id),
       where: address.primary and address.verified,
-      select: {member.user_id, address.email}
+      select: {user, address.email}
     )
     |> Repo.all()
-    |> Enum.map(fn {user_id, email} ->
-      enqueue_once(
-        Emails.sso_enforcement_pending(
-          organization.name,
-          connection.required_at,
-          HexpmWeb.Endpoint.url() <> "/sso/org/#{organization.name}",
-          [email]
-        ),
-        category: @pending_category,
-        group_key: "#{@pending_category}:#{organization.id}:#{user_id}",
-        scope_key: "sso:user:#{user_id}"
-      )
-    end)
+    |> Enum.map(fn {user, email} -> warn_member(connection, organization, user, email) end)
     |> Enum.count(&(&1 == :sent))
+  end
+
+  # The audit entry is the durable record, so the "once" hangs off it rather
+  # than off the mail: the outbox row is deleted as soon as it is delivered,
+  # and a member would be told again on every tick.
+  defp warn_member(connection, organization, user, email) do
+    if warned?(organization, user) do
+      :skipped
+    else
+      %{user: user, auth_credential: nil, user_agent: "hexpm", remote_ip: nil}
+      |> AuditLog.build(
+        "sso.enforcement.warned",
+        {organization, user, connection.required_at}
+      )
+      |> Repo.insert!()
+
+      Outbox.insert!(
+        Outbox.prepare!(
+          Emails.sso_enforcement_pending(
+            organization.name,
+            connection.required_at,
+            HexpmWeb.Endpoint.url() <> "/sso/org/#{organization.name}",
+            [email]
+          ),
+          category: @pending_category,
+          group_key: "#{@pending_category}:#{organization.id}:#{user.id}",
+          scope_key: "sso:user:#{user.id}",
+          expires_at: DateTime.add(DateTime.utc_now(), @notice_retention_seconds, :second)
+        )
+      )
+
+      :sent
+    end
+  end
+
+  defp warned?(organization, user) do
+    Repo.exists?(
+      from(log in AuditLog,
+        where: log.organization_id == ^organization.id,
+        where: log.user_id == ^user.id,
+        where: log.action == "sso.enforcement.warned"
+      )
+    )
   end
 
   @doc """
@@ -371,17 +402,57 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     )
     |> Repo.all()
     |> Enum.filter(fn {connection, organization} ->
-      Features.enabled?(organization) and Connection.blocks_personal_keys?(connection)
+      mode(organization, connection) == :required and Connection.blocks_personal_keys?(connection)
     end)
-    |> Enum.map(fn {_connection, organization} -> sweep_organization(organization) end)
+    |> Enum.map(fn {connection, organization} -> sweep_organization(organization, connection) end)
     |> Enum.sum()
   end
 
-  defp sweep_organization(organization) do
-    organization
-    |> Keys.personal_reaching_organization()
-    |> Enum.map(&strip_key(&1, organization))
-    |> Enum.count(&(&1 == :stripped))
+  defp sweep_organization(organization, connection) do
+    stripped =
+      organization
+      |> blocked_personal_keys(connection)
+      |> Enum.filter(&(strip_key(&1, organization) == :stripped))
+
+    # One notice per owner rather than per key: a member with a key for each of
+    # their projects should hear about it once.
+    stripped
+    |> Enum.group_by(& &1.user_id)
+    |> Enum.each(fn {_user_id, keys} -> notify_key_owner(organization, keys) end)
+
+    length(stripped)
+  end
+
+  @doc """
+  The personal API keys this organization turns away, which are the ones its
+  governed members hold.
+
+  An exempt member is not governed, so their key reaches the organization on
+  the same terms as before and nothing here takes it away.
+  """
+  @spec blocked_personal_keys(Organization.t(), Connection.t() | nil) :: [Key.t()]
+  def blocked_personal_keys(organization, connection) do
+    if Connection.blocks_personal_keys?(connection) do
+      governed = governed_member_ids(organization, connection)
+
+      organization
+      |> Keys.personal_reaching_organization()
+      |> Enum.filter(&MapSet.member?(governed, &1.user_id))
+    else
+      []
+    end
+  end
+
+  defp governed_member_ids(organization, connection) do
+    from(member in OrganizationUser,
+      where: member.organization_id == ^organization.id,
+      select: {member.user_id, member.sso_enforcement}
+    )
+    |> Repo.all()
+    |> Enum.filter(fn {_user_id, member_enforcement} ->
+      governed?(organization, connection, member_enforcement)
+    end)
+    |> MapSet.new(fn {user_id, _member_enforcement} -> user_id end)
   end
 
   defp strip_key(key, organization) do
@@ -398,7 +469,6 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
         )
 
         audit_key_revoke(key, organization, removed)
-        notify_key_owner(key, organization)
 
         :stripped
     end
@@ -410,7 +480,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     |> Repo.insert!()
   end
 
-  defp notify_key_owner(%Key{user: user} = key, organization) do
+  defp notify_key_owner(organization, [%Key{user: user} | _] = keys) do
     recipients =
       from(address in Hexpm.Accounts.Email,
         where: address.user_id == ^user.id,
@@ -421,9 +491,9 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
 
     if recipients != [] do
       enqueue_once(
-        Emails.sso_key_revoked(organization.name, key.name, recipients),
+        Emails.sso_key_revoked(organization.name, Enum.map(keys, & &1.name), recipients),
         category: @key_revoked_category,
-        group_key: "#{@key_revoked_category}:#{organization.id}:#{key.id}",
+        group_key: "#{@key_revoked_category}:#{organization.id}:#{user.id}",
         scope_key: "sso:user:#{user.id}"
       )
     end
@@ -499,7 +569,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   defp enqueue_once(email, opts) do
     group_key = Keyword.fetch!(opts, :group_key)
 
-    if recent_entry?(group_key, nil) do
+    if pending_entry?(group_key) do
       :skipped
     else
       Outbox.insert!(
@@ -515,18 +585,9 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     end
   end
 
-  defp recent_entry?(group_key, nil) do
+  # An entry is deleted once it is delivered, so this only collapses a notice
+  # that has not gone out yet.
+  defp pending_entry?(group_key) do
     Repo.exists?(from(entry in Hexpm.Emails.OutboxEntry, where: entry.group_key == ^group_key))
-  end
-
-  defp recent_entry?(group_key, seconds) do
-    cutoff = DateTime.add(DateTime.utc_now(), -seconds, :second)
-
-    Repo.exists?(
-      from(entry in Hexpm.Emails.OutboxEntry,
-        where: entry.group_key == ^group_key,
-        where: entry.inserted_at > ^cutoff
-      )
-    )
   end
 end
