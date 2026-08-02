@@ -1,0 +1,9 @@
+API Key Access Removed
+
+<%= SSOKeyRevoked.intro(@organization, @key_name) %>
+
+<%= SSOKeyRevoked.rest_of_key() %>
+
+<%= SSOKeyRevoked.alternatives() %>
+
+<%= SSOKeyRevoked.why() %>

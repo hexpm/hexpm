@@ -308,6 +308,42 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
+  defmodule SSOEnforcementPending do
+    def intro(organization, required_at) do
+      "From #{Calendar.strftime(required_at, "%B %-d, %Y")}, reaching the #{organization} organization on Hex.pm will require signing in through its identity provider."
+    end
+
+    def not_linked() do
+      "Your Hex account is not connected to that provider yet. Connect it before then and nothing about your day changes. Leave it until after and you lose access to the organization's private packages until you do."
+    end
+
+    def account_notice() do
+      "This does not affect your Hex account itself, your own packages, or any other organization you belong to. You keep signing in to Hex.pm exactly as you do now."
+    end
+
+    def cli_notice() do
+      "Command line access is included. Once enforcement starts, mix will ask you to authenticate in a browser the first time it needs a package from this organization, and again whenever the organization's authentication window lapses."
+    end
+  end
+
+  defmodule SSOKeyRevoked do
+    def intro(organization, key_name) do
+      "The #{organization} organization on Hex.pm now requires single sign-on, and chose not to allow personal API keys. Your key #{key_name} has had its access to that organization removed."
+    end
+
+    def rest_of_key() do
+      "The key still works for everything else it could reach. Only the permissions naming this organization were removed."
+    end
+
+    def alternatives() do
+      "For your own work, run mix hex.user auth and sign in, which authenticates you through the provider when the organization asks for it. For continuous integration, use an organization key, which authenticates as the organization rather than as a person and is unaffected."
+    end
+
+    def why() do
+      "A personal key is a static credential. There is nothing for the organization's provider to check when it is used, and nothing that expires it, which is why an organization requiring SSO can choose to turn them away."
+    end
+  end
+
   defmodule OrganizationInvitation do
     def intro(organization, role) do
       "You have been invited to join the #{organization} organization on Hex.pm as #{article(role)} #{role} member."
