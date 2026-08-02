@@ -169,8 +169,11 @@ defmodule HexpmWeb.Router do
     post "/sso/link", SSOController, :confirm_link, log: false
     post "/sso/link/cancel", SSOController, :cancel_link, log: false
     get "/sso/org/:organization", SSOController, :start, log: false
-    get "/sso/authorize/:code", SSOController, :authorize, log: false
-    post "/sso/authorize/:code", SSOController, :authorize_organization, log: false
+    # The code rides in the query string, not the path: both loggers on the
+    # endpoint record `conn.request_path`, so a code in the path would be
+    # written to stdout and to Sentry on every visit.
+    get "/sso/authorize", SSOController, :authorize, log: false
+    post "/sso/authorize", SSOController, :authorize_organization, log: false
 
     get "/invites", OrganizationInvitationController, :show, log: false
     post "/invites", OrganizationInvitationController, :accept, log: false

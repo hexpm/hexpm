@@ -883,7 +883,7 @@ defmodule HexpmWeb.SSOControllerTest do
         })
         |> json_response(201)
 
-      assert body["verification_uri"] =~ "/sso/authorize/"
+      assert body["verification_uri"] =~ "/sso/authorize?code="
       assert body["expires_in"] > 0
     end
 
@@ -931,17 +931,44 @@ defmodule HexpmWeb.SSOControllerTest do
       refute Repo.exists?(SSO.Authorization)
     end
 
+    test "asks the person to confirm who they are first", context do
+      require_sso(context)
+      link_member(context)
+      %{session: session} = cli_session(context)
+      code = request_authorization(context, session)
+
+      conn =
+        build_conn()
+        |> test_login(context.member, sudo: false)
+        |> get("/sso/authorize?code=#{code}")
+
+      assert redirected_to(conn) =~ "/sudo"
+      refute Repo.exists?(OrgSession)
+    end
+
+    test "keeps the verification code out of the path it is logged from", context do
+      require_sso(context)
+      link_member(context)
+      %{session: session} = cli_session(context)
+      code = request_authorization(context, session)
+
+      conn = build_conn() |> test_login(context.member) |> get("/sso/authorize?code=#{code}")
+
+      assert conn.request_path == "/sso/authorize"
+      refute conn.request_path =~ code
+    end
+
     test "authenticates the session that asked, not the browser", context do
       require_sso(context)
       link_member(context)
       %{session: session} = cli_session(context)
       code = request_authorization(context, session)
 
-      conn = build_conn() |> test_login(context.member) |> get("/sso/authorize/#{code}")
+      conn = build_conn() |> test_login(context.member) |> get("/sso/authorize?code=#{code}")
       assert html_response(conn, 200) =~ context.organization.name
 
       conn = authorize_through_provider(context, code)
-      assert redirected_to(conn) == "/sso/authorize/#{code}"
+      assert redirected_to(conn) == "/sso/authorize?code=#{code}"
 
       assert [org_session] = Repo.all(OrgSession)
       assert org_session.user_session_id == session.id
@@ -959,7 +986,7 @@ defmodule HexpmWeb.SSOControllerTest do
         |> authorize_through_provider(code)
         |> recycle()
         |> test_login(context.member)
-        |> get("/sso/authorize/#{code}")
+        |> get("/sso/authorize?code=#{code}")
 
       assert redirected_to(conn) == "/dashboard"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ context.organization.name
@@ -969,7 +996,7 @@ defmodule HexpmWeb.SSOControllerTest do
         conn
         |> recycle()
         |> test_login(context.member)
-        |> get("/sso/authorize/#{code}")
+        |> get("/sso/authorize?code=#{code}")
 
       assert redirected_to(replayed) == "/dashboard"
       assert Phoenix.Flash.get(replayed.assigns.flash, :error) =~ "no longer open"
@@ -1006,7 +1033,7 @@ defmodule HexpmWeb.SSOControllerTest do
       conn =
         build_conn()
         |> test_login(insert(:user))
-        |> get("/sso/authorize/#{code}")
+        |> get("/sso/authorize?code=#{code}")
 
       assert redirected_to(conn) == "/dashboard"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "no longer open"
@@ -1024,7 +1051,7 @@ defmodule HexpmWeb.SSOControllerTest do
       conn =
         build_conn()
         |> test_login(context.member)
-        |> get("/sso/authorize/#{code}")
+        |> get("/sso/authorize?code=#{code}")
 
       assert redirected_to(conn) == "/dashboard"
       assert Repo.one!(SSO.Authorization).consumed_at
@@ -1043,7 +1070,7 @@ defmodule HexpmWeb.SSOControllerTest do
       conn =
         build_conn()
         |> test_login(context.member)
-        |> get("/sso/authorize/#{code}")
+        |> get("/sso/authorize?code=#{code}")
 
       assert redirected_to(conn) == "/dashboard"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "no longer open"
@@ -1276,7 +1303,7 @@ defmodule HexpmWeb.SSOControllerTest do
     conn =
       build_conn()
       |> test_login(context.member)
-      |> post("/sso/authorize/#{code}", %{"organization" => context.organization.name})
+      |> post("/sso/authorize", %{"code" => code, "organization" => context.organization.name})
 
     assert_receive {:sso_state, state, _redirect_uri}
     complete_callback(conn, state)

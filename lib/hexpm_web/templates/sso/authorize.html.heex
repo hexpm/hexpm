@@ -8,6 +8,12 @@
       You are signed in as <strong>{@current_user.username}</strong>. Completing this authenticates <strong>{@session.name || "an unnamed session"}</strong>, not this browser.
     </p>
 
+    <p class="text-grey-600 dark:text-grey-300">
+      That session was named by whatever created it. It signed in on {session_started(@session)} and last reached Hex.pm {session_last_used(
+        @session
+      )}. If none of that is yours, close this page and revoke the session from your dashboard.
+    </p>
+
     <ul class="list-none space-y-2">
       <li
         :for={{organization, authenticated?} <- @organizations}
@@ -17,12 +23,8 @@
         <span :if={authenticated?} class="text-sm text-grey-600 dark:text-grey-300">
           Authenticated
         </span>
-        <.form
-          :if={!authenticated?}
-          for={%{}}
-          action={~p"/sso/authorize/#{@code}"}
-          class="shrink-0"
-        >
+        <.form :if={!authenticated?} for={%{}} action={~p"/sso/authorize"} class="shrink-0">
+          <input type="hidden" name="code" value={@code} />
           <input type="hidden" name="organization" value={organization.name} />
           <.button type="submit" variant="primary">Authenticate</.button>
         </.form>

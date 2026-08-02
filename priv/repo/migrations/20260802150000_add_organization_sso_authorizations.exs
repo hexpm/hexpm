@@ -29,10 +29,14 @@ defmodule Hexpm.RepoBase.Migrations.AddOrganizationSsoAuthorizations do
 
     create unique_index(:organization_sso_authorizations, [:code_hash])
     create index(:organization_sso_authorizations, [:expires_at])
+    create index(:organization_sso_authorizations, [:user_id])
+    create index(:organization_sso_authorizations, [:user_session_id])
   end
 
   def down do
     drop table(:organization_sso_authorizations)
+
+    execute("DELETE FROM organization_sso_transactions WHERE entrypoint = 'cli'")
 
     drop constraint(:organization_sso_transactions, :organization_sso_transaction_entrypoint)
 

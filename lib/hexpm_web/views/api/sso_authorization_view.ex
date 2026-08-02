@@ -5,7 +5,7 @@ defmodule HexpmWeb.API.SSOAuthorizationView do
     expires_in = DateTime.diff(authorization.expires_at, DateTime.utc_now())
 
     %{
-      verification_uri: url(~p"/sso/authorize/#{authorization.raw_code}"),
+      verification_uri: url(~p"/sso/authorize?#{[code: authorization.raw_code]}"),
       expires_in: max(expires_in, 0)
     }
   end

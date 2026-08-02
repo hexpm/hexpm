@@ -18,6 +18,11 @@ defmodule HexpmWeb.SSOController do
               :authorize_organization
             ]
 
+  # The same bar device approval sets, for the same reason: this hands a
+  # capability to a session that is not the browser doing the clicking, and a
+  # stolen access token is enough to ask for the page.
+  plug HexpmWeb.Plugs.Sudo when action in [:authorize, :authorize_organization]
+
   plug :rate_limit_callback when action in [:callback]
 
   defp require_sso_available(conn, _opts) do
@@ -386,7 +391,7 @@ defmodule HexpmWeb.SSOController do
           # answer is, and re-rendering it says nothing a second request would
           # not have said anyway.
           nil ->
-            redirect(conn, to: ~p"/sso/authorize/#{code}")
+            redirect(conn, to: ~p"/sso/authorize?#{[code: code]}")
 
           organization ->
             if allow_start?(conn, organization) do
@@ -414,7 +419,7 @@ defmodule HexpmWeb.SSOController do
       {:error, reason} ->
         conn
         |> put_flash(:error, start_error_message(reason))
-        |> redirect(to: ~p"/sso/authorize/#{code}")
+        |> redirect(to: ~p"/sso/authorize?#{[code: code]}")
     end
   end
 
@@ -489,7 +494,7 @@ defmodule HexpmWeb.SSOController do
   # left to do, not to the organization's dashboard.
   defp authorization_path(conn, %{target_user_session_id: target}) when not is_nil(target) do
     case get_session(conn, "sso_authorization") do
-      code when is_binary(code) -> ~p"/sso/authorize/#{code}"
+      code when is_binary(code) -> ~p"/sso/authorize?#{[code: code]}"
       _other -> nil
     end
   end
