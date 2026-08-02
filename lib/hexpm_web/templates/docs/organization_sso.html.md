@@ -128,6 +128,20 @@ When one lapses in the browser you are sent to the provider and back, and unless
 
 Shorter is stricter and more interruptive. The lifetime is what bounds how long someone your provider has deactivated keeps reaching the organization, so it is the number to pick deliberately.
 
+### The Hex CLI
+
+When a CLI session's authentication lapses, the next `mix deps.get` asks:
+
+```
+acme requires SSO authentication. Authenticate now? [Yn]
+```
+
+It names only the organizations the project actually depends on. Hex knows the whole set before it fetches anything, because a published package's dependencies can only come from the public repository or from that package's own organization, so a member of ten SSO organizations who depends on two is asked about two and asked once.
+
+Saying yes opens a page bound to the CLI session you are already signed in on. Completing SSO there renews that session: the same session, the same refresh token, and resolution carries on. Saying no continues without the organization's packages.
+
+CI is unaffected. It authenticates with an organization API key, which is the organization rather than a person, so there is nobody for your provider to vouch for and nothing to lapse.
+
 ### Personal API keys
 
 A personal API key is a static credential. There is no session behind it, nothing expires it unless its owner set an expiry, and your provider never sees it used. So an organization that requires SSO has to say what happens to them, and Hexpm makes the choice explicit rather than picking one:
