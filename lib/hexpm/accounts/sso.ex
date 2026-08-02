@@ -3,6 +3,7 @@ defmodule Hexpm.Accounts.SSO do
 
   alias Hexpm.Accounts.SSO.{
     Connection,
+    Enforcement,
     Error,
     Failure,
     Features,
@@ -572,6 +573,98 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   @doc """
+  Sets the enforcement mode, its start date, the organization access session
+  lifetime, and what happens to personal API keys.
+  """
+  def configure_enforcement(organization, params, audit: audit_data) do
+    Repo.transaction(fn ->
+      connection =
+        locked_connection_for_organization(organization) ||
+          Hexpm.RepoBase.rollback(:not_configured)
+
+      changeset = Connection.enforcement_changeset(connection, params)
+
+      with :ok <- require_feature(organization),
+           :ok <- require_reachable_admin(organization, changeset) do
+        case Repo.update(changeset) do
+          {:ok, connection} ->
+            insert_audit!(audit_data, "sso.enforcement.configure", {
+              organization,
+              %{
+                enforcement_mode: connection.enforcement_mode,
+                required_at: connection.required_at,
+                session_lifetime_seconds: connection.session_lifetime_seconds,
+                personal_keys: connection.personal_keys
+              }
+            })
+
+            connection
+
+          {:error, changeset} ->
+            Hexpm.RepoBase.rollback(changeset)
+        end
+      else
+        {:error, reason} -> Hexpm.RepoBase.rollback(reason)
+      end
+    end)
+  end
+
+  # Required mode with nobody able to administer the organization is a lockout
+  # the carve-out cannot undo, so it is refused while the admin can still act.
+  defp require_reachable_admin(organization, changeset) do
+    if Ecto.Changeset.get_field(changeset, :enforcement_mode) == "required" do
+      reachable =
+        from(
+          member in OrganizationUser,
+          left_join: identity in Identity,
+          on:
+            identity.organization_id == member.organization_id and
+              identity.user_id == member.user_id,
+          where: member.organization_id == ^organization.id,
+          where: member.role == "admin",
+          where: member.sso_enforcement == "exempt" or not is_nil(identity.id),
+          select: count(member.id)
+        )
+        |> Repo.one()
+
+      if reachable > 0, do: :ok, else: {:error, :no_reachable_admin}
+    else
+      :ok
+    end
+  end
+
+  @doc """
+  Sets whether SSO is enforced for one member regardless of the organization's
+  mode. Nil follows the mode, "enforced" always does, "exempt" never does.
+  """
+  def set_member_enforcement(organization, user, enforcement, audit: audit_data) do
+    Repo.transaction(fn ->
+      member =
+        Repo.get_by(OrganizationUser,
+          organization_id: organization.id,
+          user_id: user.id
+        ) || Hexpm.RepoBase.rollback(:not_member)
+
+      changeset =
+        OrganizationUser.enforcement_changeset(member, %{"sso_enforcement" => enforcement})
+
+      case Repo.update(changeset) do
+        {:ok, member} ->
+          insert_audit!(audit_data, "sso.enforcement.member", {
+            organization,
+            user,
+            member.sso_enforcement
+          })
+
+          member
+
+        {:error, changeset} ->
+          Hexpm.RepoBase.rollback(changeset)
+      end
+    end)
+  end
+
+  @doc """
   Buys the seat a just-in-time join is about to need, when the organization
   chose to auto-expand.
 
@@ -969,6 +1062,13 @@ defmodule Hexpm.Accounts.SSO do
       set: [last_authenticated_at: now, updated_at: now]
     )
 
+    lifetime =
+      from(connection in Connection,
+        where: connection.organization_id == ^identity.organization_id
+      )
+      |> Repo.one()
+      |> Enforcement.session_lifetime()
+
     current =
       from(session in OrgSession,
         where: session.user_session_id == ^user_session_id,
@@ -984,7 +1084,7 @@ defmodule Hexpm.Accounts.SSO do
       user_session_id: user_session_id,
       identity_id: identity.id,
       authenticated_at: now,
-      expires_at: DateTime.add(now, OrgSession.lifetime_seconds(), :second),
+      expires_at: DateTime.add(now, lifetime, :second),
       revoked_at: nil
     })
     |> Repo.insert_or_update!()

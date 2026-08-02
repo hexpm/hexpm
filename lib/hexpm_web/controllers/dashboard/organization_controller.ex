@@ -12,6 +12,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   alias HexpmWeb.Dashboard.KeyController
   alias HexpmWeb.Dashboard.Organization.Components.BillingHelpers
   alias Hexpm.Accounts.SSO
+  alias Hexpm.Accounts.SSO.Enforcement
 
   @policy_suggestion_limit 8
 
@@ -1022,7 +1023,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         policy_stats: policy_stats,
         policy_activity: policy_activity,
         policy_rev: policy_rev,
-        sso_org_session: current_org_session(conn, organization)
+        sso_org_session: current_org_session(conn, organization),
+        sso_mode: sso_mode(organization),
+        sso_enforcing: sso_mode(organization) != :optional
       ] ++
         sso_assigns(organization, opts[:tab]) ++
         member_assigns(organization, opts[:tab], opts)
@@ -1060,7 +1063,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       sso_failures: if(connection, do: SSO.failures(connection), else: []),
       sso_callback_url: url(~p"/sso/callback"),
       sso_login_url: url(~p"/sso/org/#{organization}"),
-      sso_domains: OrganizationDomains.all(organization)
+      sso_domains: OrganizationDomains.all(organization),
+      sso_personal_keys:
+        if(connection, do: Keys.personal_reaching_organization(organization), else: [])
     ]
   end
 
@@ -1081,6 +1086,10 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     if SSO.enabled?(organization) && conn.assigns[:current_session] do
       SSO.current_org_session(conn.assigns.current_session.id, organization.id)
     end
+  end
+
+  defp sso_mode(organization) do
+    Enforcement.mode(organization, SSO.get_connection(organization))
   end
 
   # Whether the current user may edit policies (create/update/delete are all

@@ -170,6 +170,81 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
 
   defp jit_error(reason), do: configuration_error(reason)
 
+  def configure_enforcement(conn, %{"dashboard_org" => name} = params) do
+    with_organization(conn, name, fn organization ->
+      case SSO.configure_enforcement(organization, params["enforcement"] || %{},
+             audit: audit_data(conn)
+           ) do
+        {:ok, connection} ->
+          redirect_with_flash(conn, organization, :info, enforcement_message(connection))
+
+        {:error, reason} ->
+          redirect_with_flash(conn, organization, :error, enforcement_error(reason))
+      end
+    end)
+  end
+
+  defp enforcement_message(%{enforcement_mode: "optional"}),
+    do: "SSO is optional. Members reach the organization with or without it."
+
+  defp enforcement_message(%{enforcement_mode: "pilot"}),
+    do: "SSO is in pilot. Only the members you marked as enforced need it."
+
+  defp enforcement_message(%{enforcement_mode: "required", required_at: required_at}) do
+    if DateTime.compare(DateTime.utc_now(), required_at) == :lt do
+      "SSO becomes required on #{HexpmWeb.ViewHelpers.pretty_date(required_at)}. Until then only the members you marked as enforced need it."
+    else
+      "SSO is required. Every member except the exemptions needs it."
+    end
+  end
+
+  defp enforcement_error(:no_reachable_admin),
+    do:
+      "At least one administrator has to have linked their identity, or be exempt, before SSO can be required."
+
+  defp enforcement_error(:not_configured), do: "Configure SSO before setting enforcement."
+
+  defp enforcement_error(%Ecto.Changeset{} = changeset) do
+    case translate_errors(changeset) do
+      %{personal_keys: message} -> "Personal API keys #{message}."
+      %{session_lifetime_seconds: message} -> "Session lifetime #{message}."
+      _ -> "The enforcement settings could not be saved."
+    end
+  end
+
+  defp enforcement_error(reason), do: configuration_error(reason)
+
+  def set_member_enforcement(conn, %{"dashboard_org" => name, "user_id" => user_id} = params) do
+    with_organization(conn, name, fn organization ->
+      case Users.get_by_id(safe_to_integer(user_id) || 0) do
+        nil ->
+          not_found(conn)
+
+        user ->
+          {:ok, _member} =
+            SSO.set_member_enforcement(organization, user, params["sso_enforcement"],
+              audit: audit_data(conn)
+            )
+
+          redirect_with_flash(
+            conn,
+            organization,
+            :info,
+            member_enforcement_message(user, params["sso_enforcement"])
+          )
+      end
+    end)
+  end
+
+  defp member_enforcement_message(user, "enforced"),
+    do: "#{user.username} now needs SSO whatever the mode is."
+
+  defp member_enforcement_message(user, "exempt"),
+    do: "#{user.username} is exempt from SSO. Exemptions are listed for administrators to review."
+
+  defp member_enforcement_message(user, _enforcement),
+    do: "#{user.username} now follows the organization's enforcement mode."
+
   def add_domain(conn, %{"dashboard_org" => name, "domain" => params}) do
     with_organization(conn, name, fn organization ->
       case OrganizationDomains.add(organization, params, conn.assigns.current_user,

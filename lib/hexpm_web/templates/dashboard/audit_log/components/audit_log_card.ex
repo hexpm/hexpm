@@ -379,6 +379,42 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
     "The domain #{domain} no longer verifies for #{org}"
   end
 
+  defp humanize_action(%AuditLog{
+         action: "sso.enforcement.configure",
+         params: %{"enforcement_mode" => mode, "organization" => %{"name" => org}}
+       }) do
+    "Set SSO enforcement for #{org} to #{mode}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "sso.enforcement.member",
+         params: %{
+           "sso_enforcement" => enforcement,
+           "user" => %{"username" => username},
+           "organization" => %{"name" => org}
+         }
+       }) do
+    case enforcement do
+      "enforced" -> "Enforced SSO for #{username} in #{org}"
+      "exempt" -> "Exempted #{username} from SSO in #{org}"
+      _ -> "#{username} now follows #{org}'s SSO enforcement mode"
+    end
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "sso.key.revoke",
+         params: %{"key" => %{"name" => name}, "organization" => %{"name" => org}}
+       }) do
+    "Removed #{org} access from the API key #{name} because #{org} requires SSO"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "sso.break_glass",
+         params: %{"organization" => %{"name" => org}}
+       }) do
+    "Reached #{org}'s billing or SSO settings without a current SSO session"
+  end
+
   defp humanize_action(%AuditLog{action: "password.reset.init"}) do
     "Requested a password reset"
   end
