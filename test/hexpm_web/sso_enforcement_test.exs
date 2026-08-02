@@ -461,6 +461,126 @@ defmodule HexpmWeb.SSOEnforcementTest do
 
       assert SSO.grant_org_sessions!(browser.id, oauth.id, context.member.id) == []
     end
+
+    test "a device approved in an authenticated browser starts out authenticated", context do
+      require_sso(context)
+      {conn, browser} = login(context.member)
+      authenticate(context, context.member, browser)
+
+      client = insert(:oauth_client)
+
+      {:ok, response} =
+        Hexpm.OAuth.DeviceCodes.initiate_device_authorization(
+          build_conn(),
+          client.client_id,
+          ["api:read", "repositories"]
+        )
+
+      conn =
+        conn
+        |> Plug.Conn.put_session("device_code_verified", %{
+          "user_code" => response.user_code,
+          "verified_at" => NaiveDateTime.to_iso8601(NaiveDateTime.utc_now())
+        })
+        |> post("/oauth/device/authorize", %{
+          "action" => "authorize",
+          "selected_scopes" => ["api:read", "repositories"]
+        })
+
+      assert redirected_to(conn) == "/"
+
+      body =
+        build_conn()
+        |> post("/api/oauth/token", %{
+          "grant_type" => "urn:ietf:params:oauth:grant-type:device_code",
+          "device_code" => response.device_code,
+          "client_id" => client.client_id
+        })
+        |> json_response(200)
+
+      assert body["scope"] =~ "repository:#{context.organization.name}"
+      refute Map.has_key?(body, "sso_reauth_required")
+    end
+
+    # The flow hexdocs uses, and the one that carries a docs scope rather than
+    # the CLI's repositories.
+    test "a client consented to in an authenticated browser starts out authenticated", context do
+      require_sso(context)
+      {conn, browser} = login(context.member)
+      authenticate(context, context.member, browser)
+
+      name = context.organization.name
+      client = insert(:oauth_client, allowed_scopes: ["api:read", "docs"])
+      verifier = "code-verifier-#{System.unique_integer([:positive])}"
+      challenge = :sha256 |> :crypto.hash(verifier) |> Base.url_encode64(padding: false)
+
+      conn =
+        post(conn, "/oauth/authorize", %{
+          "client_id" => client.client_id,
+          "redirect_uri" => hd(client.redirect_uris),
+          "action" => "approve",
+          "scope" => "docs:#{name}",
+          "selected_scopes" => ["docs:#{name}"],
+          "state" => "opaque-state",
+          "code_challenge" => challenge,
+          "code_challenge_method" => "S256"
+        })
+
+      %URI{query: query} = conn |> redirected_to() |> URI.parse()
+
+      body =
+        build_conn()
+        |> post("/api/oauth/token", %{
+          "grant_type" => "authorization_code",
+          "code" => URI.decode_query(query)["code"],
+          "client_id" => client.client_id,
+          "redirect_uri" => hd(client.redirect_uris),
+          "code_verifier" => verifier
+        })
+        |> json_response(200)
+
+      assert body["scope"] =~ "docs:#{name}"
+      refute Map.has_key?(body, "sso_reauth_required")
+    end
+
+    test "a device approved in a browser that has not authenticated says so", context do
+      require_sso(context)
+      {conn, _browser} = login(context.member)
+
+      client = insert(:oauth_client)
+
+      {:ok, response} =
+        Hexpm.OAuth.DeviceCodes.initiate_device_authorization(
+          build_conn(),
+          client.client_id,
+          ["api:read", "repositories"]
+        )
+
+      conn
+      |> Plug.Conn.put_session("device_code_verified", %{
+        "user_code" => response.user_code,
+        "verified_at" => NaiveDateTime.to_iso8601(NaiveDateTime.utc_now())
+      })
+      |> post("/oauth/device/authorize", %{
+        "action" => "authorize",
+        "selected_scopes" => ["api:read", "repositories"]
+      })
+
+      body =
+        build_conn()
+        |> post("/api/oauth/token", %{
+          "grant_type" => "urn:ietf:params:oauth:grant-type:device_code",
+          "device_code" => response.device_code,
+          "client_id" => client.client_id
+        })
+        |> json_response(200)
+
+      # Approval is not refused: repositories reaches every organization the
+      # member belongs to, so the grant takes what the browser holds and names
+      # what it could not.
+      refute body["scope"] =~ "repository:#{context.organization.name}"
+      assert body["sso_reauth_required"] == [context.organization.name]
+    end
   end
 
   describe "creating a personal key" do

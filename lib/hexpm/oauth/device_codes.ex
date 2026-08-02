@@ -368,11 +368,15 @@ defmodule Hexpm.OAuth.DeviceCodes do
     end
   end
 
+  # From the granted scopes rather than the expanded ones, so "repositories"
+  # is re-expanded against current membership and organization access the same
+  # way the refresh grant does it. Rotating the expansion instead would freeze
+  # whatever the approving browser happened to hold.
   defp rotation_changeset(old_token) do
     Tokens.create_for_user(
       old_token.user,
       old_token.client_id,
-      old_token.scopes,
+      old_token.granted_scopes,
       "urn:ietf:params:oauth:grant-type:device_code",
       old_token.grant_reference,
       expires_in: DateTime.diff(old_token.expires_at, DateTime.utc_now()),
