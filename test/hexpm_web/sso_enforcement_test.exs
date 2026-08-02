@@ -661,6 +661,34 @@ defmodule HexpmWeb.SSOEnforcementTest do
     end
   end
 
+  describe "a member of two governed organizations" do
+    test "resolves them one at a time on the web", context do
+      require_sso(context)
+      other = second_organization(context)
+      {conn, session} = login(context.member)
+      authenticate(other, context.member, session)
+
+      assert response(get(conn, "/packages/#{other.repository.name}/#{other.package.name}"), 200) =~
+               other.package.name
+
+      unresolved = get(conn, "/packages/#{context.repository.name}/#{context.package.name}")
+      assert redirected_to(unresolved) =~ "/sso/org/#{context.organization.name}?return="
+    end
+
+    test "keeps the scope it has and names only the one it is missing", context do
+      require_sso(context)
+      other = second_organization(context)
+      session = oauth_session(context.member)
+      authenticate(other, context.member, session)
+
+      token = oauth_token(context.member, ["api:read", "repositories"], session)
+
+      assert "repository:#{other.organization.name}" in token.scopes
+      refute "repository:#{context.organization.name}" in token.scopes
+      assert token.sso_reauth_required == [context.organization.name]
+    end
+  end
+
   defp require_sso(context, personal_keys \\ "block") do
     {:ok, connection} =
       SSO.configure_enforcement(
@@ -670,6 +698,46 @@ defmodule HexpmWeb.SSOEnforcementTest do
       )
 
     connection
+  end
+
+  defp second_organization(context) do
+    organization = insert(:organization)
+    repository = insert(:repository, organization: organization, name: organization.name)
+    package = insert(:package, repository_id: repository.id)
+    insert(:release, package: package, version: "1.0.0")
+    insert(:organization_user, organization: organization, user: context.admin, role: "admin")
+    insert(:organization_user, organization: organization, user: context.member, role: "write")
+
+    config = Application.fetch_env!(:hexpm, :organization_sso)
+
+    Application.put_env(
+      :hexpm,
+      :organization_sso,
+      Keyword.put(config, :beta_organizations, [context.organization.name, organization.name])
+    )
+
+    connection =
+      insert(:organization_sso_connection,
+        organization: organization,
+        tested_at: DateTime.utc_now(),
+        enabled_at: DateTime.utc_now()
+      )
+
+    link(connection, organization, context.admin)
+
+    {:ok, connection} =
+      SSO.configure_enforcement(
+        organization,
+        %{"enforcement_mode" => "required", "personal_keys" => "block"},
+        audit: audit_data(context.admin)
+      )
+
+    %{
+      organization: organization,
+      repository: repository,
+      package: package,
+      connection: connection
+    }
   end
 
   defp login(user) do
