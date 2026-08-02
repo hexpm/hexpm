@@ -37,7 +37,9 @@ defmodule Hexpm.Repository.Packages do
   end
 
   def get(repository, name) when is_binary(repository) do
-    repository = Repositories.get(repository)
+    # The organization comes along because `owner_with_access?/3` falls back to
+    # organization-level access, which reads it off the repository.
+    repository = Repositories.get(repository, [:organization])
     repository && get(repository, name)
   end
 
