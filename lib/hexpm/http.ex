@@ -142,49 +142,62 @@ defmodule Hexpm.HTTP do
   defp maybe_put_cacerts(transport_opts, cacerts),
     do: Keyword.put(transport_opts, :cacerts, cacerts)
 
+  # This runs in the caller's process, so it matches on this connection's socket
+  # rather than on any message. A catch-all receive here empties the caller's
+  # mailbox of whatever else it was waiting for.
   defp receive_pinned_response(connection, request_ref, max_body_bytes, deadline, response) do
     remaining = max(deadline - System.monotonic_time(:millisecond), 0)
+    socket = Mint.HTTP.get_socket(connection)
 
     receive do
-      message ->
-        case Mint.HTTP.stream(connection, message) do
-          {:ok, connection, messages} ->
-            case reduce_pinned_messages(messages, request_ref, max_body_bytes, response) do
-              {:cont, response} ->
-                receive_pinned_response(
-                  connection,
-                  request_ref,
-                  max_body_bytes,
-                  deadline,
-                  response
-                )
+      {tag, ^socket, _payload} = message when tag in [:ssl, :tcp, :ssl_error, :tcp_error] ->
+        stream_pinned_message(
+          connection,
+          message,
+          request_ref,
+          max_body_bytes,
+          deadline,
+          response
+        )
 
-              {:done, response} ->
-                {:ok, connection,
-                 %Finch.Response{
-                   status: response.status,
-                   headers: response.headers,
-                   body: response.body |> Enum.reverse() |> IO.iodata_to_binary()
-                 }}
-
-              {:error, reason} ->
-                {:error, connection, reason}
-            end
-
-          {:error, connection, reason, _messages} ->
-            {:error, connection, reason}
-
-          :unknown ->
-            receive_pinned_response(
-              connection,
-              request_ref,
-              max_body_bytes,
-              deadline,
-              response
-            )
-        end
+      {tag, ^socket} = message when tag in [:ssl_closed, :tcp_closed] ->
+        stream_pinned_message(
+          connection,
+          message,
+          request_ref,
+          max_body_bytes,
+          deadline,
+          response
+        )
     after
       remaining -> {:error, connection, :timeout}
+    end
+  end
+
+  defp stream_pinned_message(connection, message, request_ref, max_body_bytes, deadline, response) do
+    case Mint.HTTP.stream(connection, message) do
+      {:ok, connection, messages} ->
+        case reduce_pinned_messages(messages, request_ref, max_body_bytes, response) do
+          {:cont, response} ->
+            receive_pinned_response(connection, request_ref, max_body_bytes, deadline, response)
+
+          {:done, response} ->
+            {:ok, connection,
+             %Finch.Response{
+               status: response.status,
+               headers: response.headers,
+               body: response.body |> Enum.reverse() |> IO.iodata_to_binary()
+             }}
+
+          {:error, reason} ->
+            {:error, connection, reason}
+        end
+
+      {:error, connection, reason, _messages} ->
+        {:error, connection, reason}
+
+      :unknown ->
+        receive_pinned_response(connection, request_ref, max_body_bytes, deadline, response)
     end
   end
 

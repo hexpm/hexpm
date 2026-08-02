@@ -4,6 +4,9 @@ defmodule Hexpm.HTTPTest do
   alias Hexpm.HTTP
   alias Plug.Conn
 
+  @server_step_timeout 10_000
+  @server_await_timeout 30_000
+
   setup do
     lasso = Lasso.open()
     {:ok, lasso: lasso}
@@ -98,7 +101,7 @@ defmodule Hexpm.HTTPTest do
                request_timeout: 5_000
              )
 
-    assert :ok = Task.await(server)
+    assert :ok = Task.await(server, @server_await_timeout)
   end
 
   test "get/3 rejects a certificate for a different hostname over a pinned connection" do
@@ -113,7 +116,25 @@ defmodule Hexpm.HTTPTest do
                request_timeout: 5_000
              )
 
-    assert :ok = Task.await(server)
+    assert {:error, _reason} = Task.await(server, @server_await_timeout)
+  end
+
+  test "get/3 leaves the caller's own messages in its mailbox", %{lasso: lasso} do
+    Lasso.expect_once(lasso, "GET", "/mailbox", fn conn ->
+      Conn.resp(conn, 200, "ok")
+    end)
+
+    send(self(), :not_for_the_http_client)
+
+    assert {:ok, 200, _headers, "ok"} =
+             HTTP.get(lasso_url(lasso, "/mailbox"), [],
+               connect_address: {127, 0, 0, 1},
+               connect_hostname: "localhost",
+               receive_timeout: 5_000,
+               request_timeout: 5_000
+             )
+
+    assert_received :not_for_the_http_client
   end
 
   test "get/3 normalizes and closes a pinned Mint request error", %{lasso: lasso} do
@@ -331,23 +352,22 @@ defmodule Hexpm.HTTPTest do
     {:ok, {_address, port}} = :ssl.sockname(listener)
     hostname = :net_adm.localhost() |> to_string()
 
+    # The task serves one request and nothing else. Closing the accepted socket
+    # here would make the await wait on the peer's close_notify, and the
+    # response is framed by Content-Length so the client does not need the
+    # close. Sockets go with the processes that own them.
+    on_exit(fn -> :ssl.close(listener) end)
+
     server =
       Task.async(fn ->
-        with {:ok, socket} <- :ssl.transport_accept(listener),
-             {:ok, socket} <- :ssl.handshake(socket, 5_000) do
-          {:ok, _request} = :ssl.recv(socket, 0, 5_000)
-
-          :ok =
-            :ssl.send(
-              socket,
-              "HTTP/1.1 200 OK\r\nContent-Length: 12\r\nConnection: close\r\n\r\ntls-response"
-            )
-
-          :ssl.close(socket)
+        with {:ok, socket} <- :ssl.transport_accept(listener, @server_step_timeout),
+             {:ok, socket} <- :ssl.handshake(socket, @server_step_timeout),
+             {:ok, _request} <- :ssl.recv(socket, 0, @server_step_timeout) do
+          :ssl.send(
+            socket,
+            "HTTP/1.1 200 OK\r\nContent-Length: 12\r\nConnection: close\r\n\r\ntls-response"
+          )
         end
-
-        :ssl.close(listener)
-        :ok
       end)
 
     {"https://#{hostname}:#{port}/pinned", certificate[:cacerts], server}
