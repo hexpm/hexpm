@@ -189,6 +189,12 @@ SCIM closes the second one and is not in this release. Until it ships, the sessi
 
 Removing the member in Hexpm is what revokes access. Removing their provider assignment is not.
 
+### Seats and billing
+
+Configuring SSO takes an active subscription. Being governed by it does not. If a payment fails, enforcement stays exactly as you set it: an organization that requires SSO keeps requiring it, and its members keep being able to authenticate. A lapsed card does not quietly turn your access control off, and does not lock your team out either. The SSO settings and billing screens stay reachable throughout, which is the same break-glass path described above.
+
+Just-in-time membership is the only part of SSO that can change a seat count. If it is on and a member is admitted when the seats are full, the organization either adds a seat to the subscription or refuses the admission, depending on which you chose under **When the seats run out** on the SSO tab. Enforcement on its own never adds, removes, or bills a seat.
+
 ### Before you turn on required mode
 
 1. Link the administrators, or exempt at least one.

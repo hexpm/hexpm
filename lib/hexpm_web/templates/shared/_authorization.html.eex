@@ -7,6 +7,22 @@
       <%= assigns[:auth_description] || "The application" %> <strong class="font-semibold text-grey-900 dark:text-white"><%= @client_name %></strong> would like to access your Hex account.
     </p>
 
+    <%= if assigns[:sso_pending] not in [nil, []] do %>
+      <div class="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 p-4 space-y-2">
+        <h3 class="text-lg font-semibold text-grey-900 dark:text-grey-100">Authenticate to finish the job</h3>
+        <p class="text-sm text-grey-700 dark:text-grey-300">
+          These organizations require single sign-on and this browser has not authenticated for them. You can approve now, and the token will work for everything except them until you do.
+        </p>
+        <ul class="space-y-1">
+          <%= for name <- @sso_pending do %>
+            <li>
+              <%= link "Authenticate to #{name}", to: HexpmWeb.SSOEnforcement.login_path(name, assigns[:sso_return_path]), class: "text-primary-600 dark:text-primary-300 font-medium hover:underline" %>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
     <h3 class="text-lg font-semibold text-grey-900 dark:text-grey-100">Requested permissions</h3>
 
     <%= form_tag @form_action, method: "post", id: "authorization-form" do %>

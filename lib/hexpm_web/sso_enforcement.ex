@@ -15,6 +15,7 @@ defmodule HexpmWeb.SSOEnforcement do
 
   alias Hexpm.Accounts.SSO.Enforcement
   alias Hexpm.Accounts.Users
+  alias Hexpm.Permissions
 
   @doc """
   Whether this request may reach the organization with the credential it
@@ -47,6 +48,22 @@ defmodule HexpmWeb.SSOEnforcement do
       credential(conn_or_socket),
       session_id(conn_or_socket)
     )
+  end
+
+  @doc """
+  The organizations in a consent request the browser has not authenticated for.
+
+  Approving would mint a token whose scope silently omits them, so the consent
+  page names them instead. `repositories` is expanded first, because that is
+  what the token grant does before deciding.
+  """
+  def unauthenticated_organizations(conn_or_socket, principal, scopes) do
+    expanded = Permissions.expand_repositories_scope(principal, scopes)
+
+    {_scopes, required} =
+      Permissions.filter_sso_scopes(principal, expanded, session_id(conn_or_socket))
+
+    required
   end
 
   def login_path(organization, return_path \\ nil)

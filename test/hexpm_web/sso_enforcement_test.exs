@@ -593,6 +593,55 @@ defmodule HexpmWeb.SSOEnforcementTest do
       refute Map.has_key?(body, "sso_reauth_required")
     end
 
+    test "the device approval page names the organizations still to authenticate", context do
+      require_sso(context)
+      {conn, _browser} = login(context.member)
+
+      client = insert(:oauth_client)
+
+      {:ok, response} =
+        Hexpm.OAuth.DeviceCodes.initiate_device_authorization(
+          build_conn(),
+          client.client_id,
+          ["api:read", "repositories"]
+        )
+
+      body =
+        conn
+        |> Plug.Conn.put_session("device_code_verified", %{
+          "user_code" => response.user_code,
+          "verified_at" => NaiveDateTime.to_iso8601(NaiveDateTime.utc_now())
+        })
+        |> get("/oauth/device/authorize")
+        |> html_response(200)
+
+      assert body =~ "Authenticate to #{context.organization.name}"
+      assert body =~ "/sso/org/#{context.organization.name}"
+    end
+
+    test "the consent page names the organizations still to authenticate", context do
+      require_sso(context)
+      {conn, _browser} = login(context.member)
+
+      client = insert(:oauth_client, allowed_scopes: ["api:read", "repositories"])
+
+      body =
+        conn
+        |> get("/oauth/authorize", %{
+          "client_id" => client.client_id,
+          "redirect_uri" => hd(client.redirect_uris),
+          "response_type" => "code",
+          "scope" => "repositories",
+          "state" => "state",
+          "code_challenge" => "VeRkYllVqy6XLHXPgfpoJxXX_3dxEB2Nb7eJZ5T4aIA",
+          "code_challenge_method" => "S256"
+        })
+        |> html_response(200)
+
+      assert body =~ "Authenticate to #{context.organization.name}"
+      assert body =~ "/sso/org/#{context.organization.name}"
+    end
+
     test "a device approved in a browser that has not authenticated says so", context do
       require_sso(context)
       {conn, _browser} = login(context.member)
