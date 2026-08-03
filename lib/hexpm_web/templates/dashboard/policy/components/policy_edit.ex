@@ -137,7 +137,8 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
       <h3 class="sr-only">Repository rules</h3>
       <div id="repo-config" phx-hook="PrivateRepoTabs" class="space-y-4">
         <.repo_tabs repositories={@repositories} private?={@private?} />
-        <%= inputs_for @form, :repositories, fn rf -> %>
+        <%!-- The panel renders the embed id itself, see `repo_hidden_fields/1`. --%>
+        <%= inputs_for @form, :repositories, [skip_hidden: true], fn rf -> %>
           <.repo_panel
             form={rf}
             index={repo_index(rf)}
@@ -660,7 +661,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
   defp overrides_card(assigns) do
     assigns =
       assigns
-      |> assign(:overrides, Form.input_value(assigns.form, :overrides) || [])
+      |> assign(:overrides, rendered_overrides(assigns.form))
       |> assign(:override_name, Form.input_name(assigns.form, :overrides))
       |> assign(:override_id, Form.input_id(assigns.form, :overrides))
 
@@ -714,7 +715,9 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
         </div>
 
         <div data-override-rows class="space-y-2">
-          <%= inputs_for @form, :overrides, fn of -> %>
+          <%!-- The row renders the embed id itself. `inputs_for` would render a
+                second one outside the row, which removing the row leaves behind. --%>
+          <%= inputs_for @form, :overrides, [skip_hidden: true], fn of -> %>
             <.override_row
               action_name={Form.input_name(of, :action)}
               action_value={to_string(Form.input_value(of, :action) || "allow")}
@@ -848,6 +851,18 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
       </button>
     </div>
     """
+  end
+
+  # `inputs_for` skips embeds the changeset marks for replacement, so the empty
+  # state has to count the same rows the form renders.
+  defp rendered_overrides(form) do
+    case Form.input_value(form, :overrides) do
+      list when is_list(list) ->
+        Enum.reject(list, &match?(%Ecto.Changeset{action: :replace}, &1))
+
+      _ ->
+        []
+    end
   end
 
   defp override_row_tone("deny"), do: "border-l-red-500"
