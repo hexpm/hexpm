@@ -16,7 +16,6 @@ defmodule HexpmWeb.PackageLayoutAssigns do
   and every tab gets it.
   """
 
-  alias Hexpm.Accounts.Users
   alias Hexpm.Repository.{Downloads, Owners, Packages, Release, Releases}
 
   @doc """
@@ -51,10 +50,12 @@ defmodule HexpmWeb.PackageLayoutAssigns do
         true -> []
       end
 
+    # The count is an aggregate over private packages, so it follows the same
+    # enforcement filter the dependants list does.
     repositories =
       if dependants_count? do
-        current_user
-        |> Users.all_organizations()
+        conn_or_user
+        |> HexpmWeb.SSOEnforcement.reachable_organizations(current_user)
         |> Enum.map(& &1.repository)
       end
 

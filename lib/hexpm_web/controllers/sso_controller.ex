@@ -383,6 +383,10 @@ defmodule HexpmWeb.SSOController do
     end
   end
 
+  # The code moved out of the path, so both actions can now be reached without
+  # one. Say the same thing a stale code says rather than raising.
+  def authorize(conn, _params), do: expired_authorization(conn)
+
   def authorize_organization(conn, %{"code" => code, "organization" => name}) do
     case SSO.get_authorization(code, conn.assigns.current_user) do
       nil ->
@@ -407,6 +411,12 @@ defmodule HexpmWeb.SSOController do
         end
     end
   end
+
+  def authorize_organization(conn, %{"code" => code}) do
+    redirect(conn, to: ~p"/sso/authorize?#{[code: code]}")
+  end
+
+  def authorize_organization(conn, _params), do: expired_authorization(conn)
 
   # Each button on the page submits to an action that redirects to that
   # organization's provider, and Chrome applies form-action to the redirect.

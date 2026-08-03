@@ -163,7 +163,7 @@ defmodule HexpmWeb.SSOEnforcementTest do
       assert [_log] = break_glass_logs(context)
     end
 
-    test "records one break-glass and one notice however many pages are opened", context do
+    test "records every break-glass and notifies once however many pages are opened", context do
       require_sso(context)
 
       for _ <- 1..3 do
@@ -171,7 +171,10 @@ defmodule HexpmWeb.SSOEnforcementTest do
         assert response(get(conn, "/dashboard/orgs/#{context.organization.name}/billing"), 200)
       end
 
-      assert [_log] = break_glass_logs(context)
+      # The audit entry is the only record that an action was taken without a
+      # session, so suppressing the later ones would make a sequence of repairs
+      # read like an administrator who authenticated normally.
+      assert length(break_glass_logs(context)) == 3
 
       assert [_entry] =
                Repo.all(from(e in OutboxEntry, where: e.category == "sso.break_glass"))
@@ -772,6 +775,38 @@ defmodule HexpmWeb.SSOEnforcementTest do
         |> json_response(200)
 
       refute context.package.name in Enum.map(body, & &1["name"])
+    end
+
+    test "leave them out of the caller's own API profile", context do
+      insert(:package_owner, package: context.package, user: context.member)
+      require_sso(context)
+      key = insert(:key, user: context.member, organization: nil)
+
+      body =
+        build_conn()
+        |> put_req_header("authorization", key.user_secret)
+        |> get("/api/users/me")
+        |> json_response(200)
+
+      refute context.package.name in Map.keys(body["owned_packages"] || %{})
+      refute context.package.name in (body["packages"] || [])
+    end
+
+    test "leave them out of a dependant count", context do
+      dependency = insert(:package, repository_id: 1)
+      insert(:release, package: dependency, version: "1.0.0")
+
+      insert(:release,
+        package: context.package,
+        version: "2.0.0",
+        requirements: [build(:requirement, requirement: "~> 1.0", dependency: dependency)]
+      )
+
+      require_sso(context)
+      {conn, _session} = login(context.member)
+
+      refute get(conn, "/packages/#{dependency.name}/dependents") |> response(200) =~
+               "Dependants (1)"
     end
 
     test "put them back once the session has authenticated", context do

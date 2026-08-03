@@ -25,6 +25,11 @@ defmodule HexpmWeb.API.UserController do
 
   def me(conn, _params) do
     if user = conn.assigns.current_user do
+      accessible_packages =
+        Packages.accessible_user_owned_packages(user, reachable_organizations(conn))
+
+      user = %{user | owned_packages: accessible_packages}
+
       when_stale(conn, user, fn conn ->
         conn
         |> api_cache(:private)

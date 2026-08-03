@@ -9,9 +9,9 @@
 
     <%= if assigns[:sso_pending] not in [nil, []] do %>
       <div class="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 p-4 space-y-2">
-        <h3 class="text-lg font-semibold text-grey-900 dark:text-grey-100">Authenticate to finish the job</h3>
+        <h3 class="text-lg font-semibold text-grey-900 dark:text-grey-100">Authenticate first</h3>
         <p class="text-sm text-grey-700 dark:text-grey-300">
-          These organizations require single sign-on and this browser has not authenticated for them. You can approve now, and the token will work for everything except them until you do.
+          These organizations require single sign-on and this browser has not authenticated for them. Approving now issues a token that cannot reach them, and authenticating afterwards does not change a token that has already been issued.
         </p>
         <ul class="space-y-1">
           <%= for name <- @sso_pending do %>

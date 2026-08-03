@@ -111,6 +111,7 @@ defmodule HexpmWeb.SSOEnforcement do
   end
 
   defp credential(%{assigns: assigns}), do: assigns[:auth_credential]
+  defp credential(_principal_without_assigns), do: nil
 
   defp session_id(%{assigns: %{current_session: %{id: id}}}), do: id
   defp session_id(_conn_or_socket), do: nil

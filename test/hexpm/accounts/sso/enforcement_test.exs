@@ -365,14 +365,14 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
   end
 
   describe "break_glass/3" do
-    test "audits and mails the administrators once an hour", context do
+    test "audits every reach and mails the administrators once an hour", context do
       {:ok, _connection} = require_sso(context)
 
-      for _ <- 1..3 do
+      for screen <- [:billing, :sso, :add_seats] do
         Enforcement.break_glass(
           context.organization,
           context.member,
-          :billing,
+          screen,
           audit_data(context.member)
         )
       end
@@ -381,8 +381,10 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
         Hexpm.Accounts.AuditLogs.all_by(context.organization)
         |> Enum.filter(&(&1.action == "sso.break_glass"))
 
-      assert [log] = logs
-      assert log.params["screen"] == "billing"
+      # Each entry names its own screen. Keeping only the first would leave the
+      # later actions indistinguishable from an administrator with a session.
+      assert length(logs) == 3
+      assert Enum.map(logs, & &1.params["screen"]) |> Enum.sort() == ~w(add_seats billing sso)
 
       assert [entry] =
                Repo.all(

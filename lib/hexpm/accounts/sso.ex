@@ -2183,12 +2183,29 @@ defmodule Hexpm.Accounts.SSO do
     organization_path = "/dashboard/orgs/#{organization.name}"
 
     if is_nil(uri.scheme) and is_nil(uri.host) and is_nil(uri.userinfo) and is_nil(uri.fragment) and
-         allowed_organization_path?(uri.path, organization_path) do
+         (allowed_organization_path?(uri.path, organization_path) or
+            consent_path?(uri.path)) do
       value
     end
   end
 
   def allowed_return_path(_organization, _value), do: nil
+
+  # A consent screen sends the member here to authenticate for an organization
+  # in the scope it is about to grant, and the point is to land back on it. The
+  # two routes are fixed, so they are matched exactly rather than by prefix.
+  @consent_paths ["/oauth/authorize", "/oauth/device/authorize"]
+
+  defp consent_path?(path) when is_binary(path) do
+    case fully_decode_path(path) do
+      decoded_path when is_binary(decoded_path) -> decoded_path in @consent_paths
+      nil -> false
+    end
+  rescue
+    _exception -> false
+  end
+
+  defp consent_path?(_path), do: false
 
   defp allowed_organization_path?(path, organization_path) when is_binary(path) do
     case fully_decode_path(path) do

@@ -537,20 +537,25 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   """
   @spec break_glass(Organization.t(), User.t(), atom(), map()) :: :ok
   def break_glass(%Organization{} = organization, %User{} = user, screen, audit_data) do
-    unless recent_break_glass?(organization, user) do
-      audit_data
-      |> AuditLog.build("sso.break_glass", {organization, %{screen: to_string(screen)}})
-      |> Repo.insert!()
+    recent? = recent_break_glass?(organization, user)
 
+    audit_data
+    |> AuditLog.build("sso.break_glass", {organization, %{screen: to_string(screen)}})
+    |> Repo.insert!()
+
+    # Only the mail is rate limited. The audit entry is the one record that says
+    # an action was taken without a session, so suppressing it would make a
+    # sequence of repairs indistinguishable from an administrator who
+    # authenticated normally.
+    unless recent? do
       notify_admins_of_break_glass(organization, user)
     end
 
     :ok
   end
 
-  # The audit entry is the durable record and is always written, so the window
-  # hangs off it rather than off the mail, which an organization with no
-  # confirmed administrator address never gets.
+  # The window hangs off the audit entry rather than off the mail, which an
+  # organization with no confirmed administrator address never gets.
   defp recent_break_glass?(organization, user) do
     cutoff = DateTime.add(DateTime.utc_now(), -@break_glass_notice_seconds, :second)
 

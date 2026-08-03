@@ -328,7 +328,7 @@ defmodule HexpmWeb.EmailView do
 
   defmodule SSOKeyRevoked do
     def intro(organization, key_names) do
-      "The #{organization} organization on Hex.pm now requires single sign-on, and chose not to allow personal API keys. #{keys(key_names)} had its access to that organization removed."
+      "The #{organization} organization on Hex.pm now requires single sign-on, and chose not to allow personal API keys. #{keys(key_names)} to that organization removed."
     end
 
     def rest_of_key([_key_name]) do
@@ -339,10 +339,10 @@ defmodule HexpmWeb.EmailView do
       "The keys still work for everything else they could reach. Only the permissions naming this organization were removed."
     end
 
-    defp keys([key_name]), do: "Your key #{key_name} has"
+    defp keys([key_name]), do: "Your key #{key_name} has had its access"
 
     defp keys(key_names) do
-      "Your keys #{Enum.join(key_names, ", ")} have"
+      "Your keys #{Enum.join(key_names, ", ")} have had their access"
     end
 
     def alternatives() do
@@ -364,7 +364,7 @@ defmodule HexpmWeb.EmailView do
     end
 
     def scope() do
-      "Nothing else was reachable. Private packages, members, keys and every other organization page were refused as usual."
+      "Private packages, publishing and every other organization page were refused as usual. The SSO settings screen does show the accounts linked to your provider, the personal API keys that reach this organization, and recent login failures, so treat those as seen."
     end
 
     def action() do
