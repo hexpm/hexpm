@@ -251,6 +251,33 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
       assert Enforcement.sweep_personal_keys() == 0
     end
 
+    test "revokes a key stripping leaves with nothing", context do
+      key = personal_key(context, [%{domain: "repository", resource: context.organization.name}])
+      require_sso(context, DateTime.add(DateTime.utc_now(), -60, :second))
+
+      assert Enforcement.sweep_personal_keys() == 1
+
+      key = Repo.get!(Hexpm.Accounts.Key, key.id)
+      assert key.permissions == []
+      assert key.revoke_at
+    end
+
+    test "leaves a key that still carries something else alive", context do
+      key =
+        personal_key(context, [
+          %{domain: "repository", resource: context.organization.name},
+          %{domain: "api", resource: "read"}
+        ])
+
+      require_sso(context, DateTime.add(DateTime.utc_now(), -60, :second))
+
+      assert Enforcement.sweep_personal_keys() == 1
+
+      key = Repo.get!(Hexpm.Accounts.Key, key.id)
+      assert Enum.map(key.permissions, & &1.domain) == ["api"]
+      refute key.revoke_at
+    end
+
     test "tells an owner about all their keys at once", context do
       personal_key(context, [%{domain: "repository", resource: context.organization.name}])
       personal_key(context, [%{domain: "docs", resource: context.organization.name}])

@@ -17,6 +17,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
   attr :login_url, :string, required: true
   attr :domains, :list, default: []
   attr :personal_keys, :list, default: []
+  attr :pending_personal_keys, :list, default: []
 
   def sso_tab(assigns) do
     ~H"""
@@ -411,6 +412,37 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
             </tbody>
           </table>
         </div>
+
+        <div :if={@pending_personal_keys != []} class="mt-6">
+          <h4 class="text-sm font-semibold text-grey-900 dark:text-grey-100">
+            {pending_keys_heading(@connection)}
+          </h4>
+          <p class="mt-1 text-sm text-grey-600 dark:text-grey-300">
+            These members follow the organization's mode rather than a per-member setting, so they
+            keep their access until the date above and lose it on it.
+          </p>
+          <table class="mt-2 w-full text-sm">
+            <thead class="text-left text-grey-500 dark:text-grey-400">
+              <tr>
+                <th class="py-1 font-medium">Member</th>
+                <th class="py-1 font-medium">Key</th>
+                <th class="py-1 font-medium">Reaches this organization</th>
+                <th class="py-1 font-medium">Last used</th>
+              </tr>
+            </thead>
+            <tbody class="text-grey-700 dark:text-grey-200">
+              <tr
+                :for={key <- @pending_personal_keys}
+                class="border-t border-grey-100 dark:border-grey-800"
+              >
+                <td class="py-1">{key.user.username}</td>
+                <td class="py-1">{key.name}</td>
+                <td class="py-1">{reach_description(key)}</td>
+                <td class="py-1">{last_used(key)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section
@@ -518,10 +550,14 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
 
   defp personal_keys_heading(%Connection{} = connection) do
     if Connection.blocks_personal_keys?(connection) do
-      "Personal API keys that lose access to this organization"
+      "Personal API keys this organization already turns away"
     else
       "Personal API keys that reach this organization"
     end
+  end
+
+  defp pending_keys_heading(%Connection{required_at: required_at}) when not is_nil(required_at) do
+    "Personal API keys that lose access on " <> Calendar.strftime(required_at, "%Y-%m-%d")
   end
 
   # A key whose permission names the organization definitely reaches it. One

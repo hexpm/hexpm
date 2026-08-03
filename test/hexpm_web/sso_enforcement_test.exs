@@ -180,6 +180,33 @@ defmodule HexpmWeb.SSOEnforcementTest do
                Repo.all(from(e in OutboxEntry, where: e.category == "sso.break_glass"))
     end
 
+    test "keeps leaving the organization reachable", context do
+      require_sso(context)
+      {conn, _session} = login(context.member)
+
+      conn =
+        post(conn, "/dashboard/orgs/#{context.organization.name}/leave", %{
+          "organization_name" => context.organization.name
+        })
+
+      assert redirected_to(conn) == "/dashboard/profile"
+    end
+
+    test "takes a fresh password before replacing the provider", context do
+      require_sso(context)
+
+      # Inside the rolling sudo window that login grants, outside the short one
+      # the destructive actions ask for.
+      {conn, _session} = login(context.admin, sudo_at: minutes_ago(5))
+
+      assert conn
+             |> post("/dashboard/orgs/#{context.organization.name}/sso/disable", %{})
+             |> redirected_to() =~ "/sudo"
+
+      # The reachable-while-locked-out screens still open on the same session.
+      assert response(get(conn, "/dashboard/orgs/#{context.organization.name}/billing"), 200)
+    end
+
     test "records nothing while the admin has a session", context do
       require_sso(context)
       {conn, session} = login(context.admin)
@@ -953,20 +980,26 @@ defmodule HexpmWeb.SSOEnforcementTest do
     }
   end
 
-  defp login(user) do
+  defp login(user, opts \\ []) do
     {:ok, session, token} =
       Hexpm.UserSessions.create_browser_session(user,
         name: "Test Browser Session",
         audit: test_audit_data(user)
       )
 
+    sudo_at = Keyword.get(opts, :sudo_at, NaiveDateTime.utc_now())
+
     conn =
       Plug.Test.init_test_session(build_conn(), %{
         "session_token" => Base.encode64(token),
-        "sudo_authenticated_at" => NaiveDateTime.to_iso8601(NaiveDateTime.utc_now())
+        "sudo_authenticated_at" => NaiveDateTime.to_iso8601(sudo_at)
       })
 
     {conn, session}
+  end
+
+  defp minutes_ago(minutes) do
+    NaiveDateTime.add(NaiveDateTime.utc_now(), -minutes * 60, :second)
   end
 
   defp authenticate(context, user, session) do

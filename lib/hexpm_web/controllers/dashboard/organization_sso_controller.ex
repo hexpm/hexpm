@@ -5,7 +5,18 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
   alias Hexpm.Accounts.SSO.Error
 
   plug :requires_login
+
+  # These are carved out of the SSO gate, so a stolen account session reaches
+  # them without ever touching the provider. Chained, they replace the
+  # organization's provider with one the attacker controls: disable, unlink
+  # every identity, point the connection at another issuer, enable, link. Each
+  # step takes a fresh password rather than the rolling window login grants.
+  plug HexpmWeb.Plugs.Sudo,
+       [force: true]
+       when action in [:configure, :enable, :disable, :delete, :rotate, :promote, :unlink]
+
   plug HexpmWeb.Plugs.Sudo
+
   # Repairing the connection is what break-glass is for, and turning enforcement
   # off is part of repairing it: it is one switch, organization-wide, audited,
   # and visible on the screen that shows it. Exempting a single member is not.

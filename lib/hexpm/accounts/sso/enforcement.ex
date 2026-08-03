@@ -55,9 +55,10 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   @doc """
   Whether this member's access to this organization is subject to enforcement.
   """
-  @spec governed?(Organization.t(), Connection.t() | nil, String.t() | nil) :: boolean()
-  def governed?(organization, connection, member_enforcement) do
-    case mode(organization, connection) do
+  @spec governed?(Organization.t(), Connection.t() | nil, String.t() | nil, DateTime.t()) ::
+          boolean()
+  def governed?(organization, connection, member_enforcement, now \\ DateTime.utc_now()) do
+    case mode(organization, connection, now) do
       :optional -> false
       :pilot -> member_enforcement == "enforced"
       :required -> member_enforcement != "exempt"
@@ -439,12 +440,17 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     stripped =
       organization
       |> blocked_personal_keys(connection)
-      |> Enum.filter(&(strip_key(&1, organization) == :stripped))
+      |> Enum.flat_map(fn key ->
+        case strip_key(key, organization) do
+          {:stripped, outcome} -> [{key, outcome}]
+          :kept -> []
+        end
+      end)
 
     # One notice per owner rather than per key: a member with a key for each of
     # their projects should hear about it once.
     stripped
-    |> Enum.group_by(& &1.user_id)
+    |> Enum.group_by(fn {key, _outcome} -> key.user_id end)
     |> Enum.each(fn {_user_id, keys} -> notify_key_owner(organization, keys) end)
 
     length(stripped)
@@ -460,7 +466,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   @spec blocked_personal_keys(Organization.t(), Connection.t() | nil) :: [Key.t()]
   def blocked_personal_keys(organization, connection) do
     if Connection.blocks_personal_keys?(connection) do
-      governed = governed_member_ids(organization, connection)
+      governed = governed_member_ids(organization, connection, DateTime.utc_now())
 
       organization
       |> Keys.personal_reaching_organization()
@@ -470,14 +476,42 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     end
   end
 
-  defp governed_member_ids(organization, connection) do
+  @doc """
+  The personal API keys a future required-by date will turn away, and which the
+  organization is not turning away yet.
+
+  During a grace period the connection blocks personal keys but only governs the
+  members already marked enforced, so the list an administrator reviews before
+  the date would otherwise omit exactly the people the date is for.
+  """
+  @spec pending_personal_keys(Organization.t(), Connection.t() | nil) :: [Key.t()]
+  def pending_personal_keys(%Organization{} = organization, %Connection{} = connection) do
+    required_at = connection.required_at
+
+    if Connection.blocks_personal_keys?(connection) and not is_nil(required_at) and
+         DateTime.compare(DateTime.utc_now(), required_at) == :lt do
+      now = governed_member_ids(organization, connection, DateTime.utc_now())
+      later = governed_member_ids(organization, connection, required_at)
+      pending = MapSet.difference(later, now)
+
+      organization
+      |> Keys.personal_reaching_organization()
+      |> Enum.filter(&MapSet.member?(pending, &1.user_id))
+    else
+      []
+    end
+  end
+
+  def pending_personal_keys(%Organization{}, nil), do: []
+
+  defp governed_member_ids(organization, connection, now) do
     from(member in OrganizationUser,
       where: member.organization_id == ^organization.id,
       select: {member.user_id, member.sso_enforcement}
     )
     |> Repo.all()
     |> Enum.filter(fn {_user_id, member_enforcement} ->
-      governed?(organization, connection, member_enforcement)
+      governed?(organization, connection, member_enforcement, now)
     end)
     |> MapSet.new(fn {user_id, _member_enforcement} -> user_id end)
   end
@@ -488,16 +522,26 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
         :kept
 
       removed ->
+        remaining = key.permissions -- removed
+        now = DateTime.utc_now()
+
+        # A key with nothing left authenticates but authorizes nothing, and its
+        # owner would get a 401 naming neither SSO nor this organization. Revoke
+        # it instead of leaving an inert credential in their key list.
+        fields =
+          if remaining == [] do
+            [permissions: remaining, revoke_at: now, updated_at: now]
+          else
+            [permissions: remaining, updated_at: now]
+          end
+
         # The embed is declared `on_replace: :raise`, which is the right default
         # for a key's own edit form and in the way of removing entries here.
-        Repo.update_all(
-          from(row in Key, where: row.id == ^key.id),
-          set: [permissions: key.permissions -- removed, updated_at: DateTime.utc_now()]
-        )
+        Repo.update_all(from(row in Key, where: row.id == ^key.id), set: fields)
 
         audit_key_revoke(key, organization, removed)
 
-        :stripped
+        if remaining == [], do: {:stripped, :revoked}, else: {:stripped, :trimmed}
     end
   end
 
@@ -507,7 +551,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     |> Repo.insert!()
   end
 
-  defp notify_key_owner(organization, [%Key{user: user} | _] = keys) do
+  defp notify_key_owner(organization, [{%Key{user: user}, _outcome} | _] = keys) do
     recipients =
       from(address in Hexpm.Accounts.Email,
         where: address.user_id == ^user.id,
@@ -517,8 +561,11 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
       |> Repo.all()
 
     if recipients != [] do
+      revoked = for {key, :revoked} <- keys, do: key.name
+      trimmed = for {key, :trimmed} <- keys, do: key.name
+
       enqueue_once(
-        Emails.sso_key_revoked(organization.name, Enum.map(keys, & &1.name), recipients),
+        Emails.sso_key_revoked(organization.name, revoked, trimmed, recipients),
         category: @key_revoked_category,
         group_key: "#{@key_revoked_category}:#{organization.id}:#{user.id}",
         scope_key: "sso:user:#{user.id}"

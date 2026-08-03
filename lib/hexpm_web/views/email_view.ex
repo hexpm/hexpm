@@ -327,17 +327,38 @@ defmodule HexpmWeb.EmailView do
   end
 
   defmodule SSOKeyRevoked do
-    def intro(organization, key_names) do
-      "The #{organization} organization on Hex.pm now requires single sign-on, and chose not to allow personal API keys. #{keys(key_names)} to that organization removed."
+    def intro(organization, revoked, trimmed) do
+      "The #{organization} organization on Hex.pm now requires single sign-on, and chose not to allow personal API keys. #{keys(revoked ++ trimmed)} to that organization removed."
     end
 
-    def rest_of_key([_key_name]) do
-      "The key still works for everything else it could reach. Only the permissions naming this organization were removed."
+    # A key whose only permission named this organization has nothing left to
+    # authorize, so it is revoked rather than left inert.
+    def rest_of_key([], trimmed), do: kept(trimmed)
+
+    def rest_of_key(revoked, []) do
+      "#{subject(revoked)} nothing else, so #{pronoun(revoked)} been revoked. Delete #{object(revoked)} from your dashboard when convenient."
     end
 
-    def rest_of_key(_key_names) do
-      "The keys still work for everything else they could reach. Only the permissions naming this organization were removed."
+    def rest_of_key(revoked, trimmed) do
+      "#{subject(revoked)} nothing else, so #{pronoun(revoked)} been revoked. #{kept(trimmed)}"
     end
+
+    defp kept([key_name]),
+      do:
+        "The key #{key_name} still works for everything else it could reach. Only the permissions naming this organization were removed."
+
+    defp kept(key_names) do
+      "The keys #{Enum.join(key_names, ", ")} still work for everything else they could reach. Only the permissions naming this organization were removed."
+    end
+
+    defp subject([key_name]), do: "The key #{key_name} carried"
+    defp subject(key_names), do: "The keys #{Enum.join(key_names, ", ")} carried"
+
+    defp pronoun([_key_name]), do: "it has"
+    defp pronoun(_key_names), do: "they have"
+
+    defp object([_key_name]), do: "it"
+    defp object(_key_names), do: "them"
 
     defp keys([key_name]), do: "Your key #{key_name} has had its access"
 

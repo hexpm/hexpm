@@ -245,12 +245,13 @@ defmodule Hexpm.Emails do
     |> render_body(:sso_enforcement_pending)
   end
 
-  def sso_key_revoked(organization, key_names, recipients) do
+  def sso_key_revoked(organization, revoked, trimmed, recipients) do
     base_email()
     |> email_to(recipients)
     |> subject("Hex.pm - #{organization} access removed from an API key")
     |> assign(:organization, organization)
-    |> assign(:key_names, key_names)
+    |> assign(:revoked, revoked)
+    |> assign(:trimmed, trimmed)
     |> render_body(:sso_key_revoked)
   end
 

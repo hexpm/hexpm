@@ -112,6 +112,7 @@
                 login_url={@sso_login_url}
                 organization={@organization}
                 personal_keys={@sso_personal_keys}
+                pending_personal_keys={@sso_pending_personal_keys}
               />
             <% :danger_zone -> %>
               <.danger_zone_tab current_user={@current_user} organization={@organization} />

@@ -634,6 +634,70 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
       assert Enforcement.mode(organization, connection) == :required
       assert Enforcement.check(organization, context.member) == {:error, :sso_required}
     end
+
+    test "still lets the organization turn it off", context do
+      {:ok, _connection} = require_sso(context)
+      organization = lapse_billing(context)
+
+      assert {:ok, connection} =
+               Hexpm.Accounts.SSO.configure_enforcement(
+                 organization,
+                 %{"enforcement_mode" => "optional"},
+                 audit: audit_data(context.admin)
+               )
+
+      assert Enforcement.mode(organization, connection) == :optional
+    end
+
+    test "still lets the organization disable and delete the connection", context do
+      {:ok, _connection} = require_sso(context)
+      organization = lapse_billing(context)
+
+      assert {:ok, _connection} =
+               Hexpm.Accounts.SSO.disable(organization, audit: audit_data(context.admin))
+
+      assert {:ok, _connection} =
+               Hexpm.Accounts.SSO.delete_connection(organization,
+                 audit: audit_data(context.admin)
+               )
+    end
+  end
+
+  describe "a required-by date that has not passed" do
+    test "names the keys the date will turn away, not only the ones already refused", context do
+      link_identity(context, context.admin)
+
+      {:ok, connection} =
+        configure(context, %{
+          "enforcement_mode" => "required",
+          "personal_keys" => "block",
+          "required_at" => Date.utc_today() |> Date.add(9) |> Date.to_iso8601()
+        })
+
+      follows_mode = insert(:user)
+      insert(:organization_user, organization: context.organization, user: follows_mode)
+
+      key =
+        insert(:key,
+          user: follows_mode,
+          organization: nil,
+          permissions: [
+            build(:key_permission, domain: "repository", resource: context.organization.name)
+          ]
+        )
+
+      # Governed by the mode rather than by a per-member flag, so nothing turns
+      # them away yet and the sweep will on the date.
+      assert Enforcement.blocked_personal_keys(context.organization, connection) == []
+      assert [pending] = Enforcement.pending_personal_keys(context.organization, connection)
+      assert pending.id == key.id
+    end
+
+    test "is empty once the date has passed", context do
+      {:ok, connection} = require_sso(context)
+
+      assert Enforcement.pending_personal_keys(context.organization, connection) == []
+    end
   end
 
   defp lapse_billing(context) do

@@ -68,7 +68,11 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       :change_plan,
       :show_invoice,
       :pay_invoice,
-      :sso
+      :sso,
+      # Removes the member's own access rather than granting any, and it is the
+      # only lever someone deactivated at the provider has. Gating it leaves
+      # them unable to authenticate, unable to leave, and still a billed seat.
+      :leave
     ]
 
   def redirect_repo(conn, params) do
@@ -1081,7 +1085,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       sso_callback_url: url(~p"/sso/callback"),
       sso_login_url: url(~p"/sso/org/#{organization}"),
       sso_domains: OrganizationDomains.all(organization),
-      sso_personal_keys: sso_personal_keys(organization, connection)
+      sso_personal_keys: sso_personal_keys(organization, connection),
+      sso_pending_personal_keys: Enforcement.pending_personal_keys(organization, connection)
     ]
   end
 

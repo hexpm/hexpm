@@ -181,7 +181,7 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   def begin_rotation(organization, client_secret, audit: audit_data) do
-    with :ok <- require_feature(organization),
+    with :ok <- require_active(organization),
          :ok <- require_admin(organization, audit_data.user),
          secret when not is_nil(secret) <- present(client_secret) do
       Repo.transaction(fn ->
@@ -216,7 +216,7 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   def promote_rotation(organization, audit: audit_data) do
-    with :ok <- require_feature(organization),
+    with :ok <- require_active(organization),
          :ok <- require_admin(organization, audit_data.user) do
       Repo.transaction(fn ->
         connection = locked_connection_for_organization(organization)
@@ -273,7 +273,7 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   def disable(organization, audit: audit_data) do
-    with :ok <- require_feature(organization),
+    with :ok <- require_active(organization),
          :ok <- require_admin(organization, audit_data.user) do
       Repo.transaction(fn ->
         case locked_connection_for_organization(organization) do
@@ -317,7 +317,7 @@ defmodule Hexpm.Accounts.SSO do
   SSO before their links go.
   """
   def delete_connection(organization, audit: audit_data) do
-    with :ok <- require_feature(organization),
+    with :ok <- require_active(organization),
          :ok <- require_admin(organization, audit_data.user) do
       Repo.transaction(fn ->
         case locked_connection_for_organization(organization) do
@@ -404,7 +404,7 @@ defmodule Hexpm.Accounts.SSO do
   def start_test(organization, user, secret_slot, redirect_uri) do
     secret_slot = to_string(secret_slot)
 
-    with :ok <- require_feature(organization),
+    with :ok <- require_active(organization),
          :ok <- require_admin(organization, user),
          %Connection{} = connection <- get_connection(organization),
          :ok <- require_configuration_admin(connection, user, secret_slot),
@@ -413,7 +413,7 @@ defmodule Hexpm.Accounts.SSO do
            Repo.transaction(fn ->
              connection = locked_connection!(connection.id)
 
-             with :ok <- require_feature(connection.organization),
+             with :ok <- require_active(connection.organization),
                   :ok <- require_locked_admin(connection.organization, user),
                   :ok <- require_configuration_admin(connection, user, secret_slot),
                   {:ok, client_secret} <- secret_for_slot(connection, secret_slot),
@@ -589,7 +589,7 @@ defmodule Hexpm.Accounts.SSO do
 
       changeset = Connection.enforcement_changeset(connection, params)
 
-      with :ok <- require_feature(organization),
+      with :ok <- require_active(organization),
            :ok <- require_reachable_admin(organization, changeset) do
         case Repo.update(changeset) do
           {:ok, connection} ->
@@ -775,7 +775,7 @@ defmodule Hexpm.Accounts.SSO do
       connection = locked_connection!(transaction.connection_id)
       organization = connection.organization
 
-      with :ok <- require_feature(organization),
+      with :ok <- require_active(organization),
            :ok <- require_connection_enabled(connection) do
         transaction = locked_transaction!(transaction_id, :invalid_link)
 
@@ -875,7 +875,7 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   def unlink_identity(organization, user, audit: audit_data) do
-    with :ok <- require_feature(organization),
+    with :ok <- require_active(organization),
          :ok <- require_admin(organization, audit_data.user) do
       Repo.transaction(fn ->
         case locked_connection_for_organization(organization) do
@@ -1941,13 +1941,17 @@ defmodule Hexpm.Accounts.SSO do
     mismatch?
   end
 
+  # Taking the feature up: a first connection, turning login on, and expanding
+  # the subscription for just-in-time members. Those cost money, so they take a
+  # subscription.
   defp require_feature(organization) do
     if Features.enabled?(organization), do: :ok, else: {:error, :feature_disabled}
   end
 
-  # Authenticating against a connection that already exists, which enforcement
-  # can be holding people to. Gating it on billing would lock an organization's
-  # members out of their own private packages over a failed card.
+  # Authenticating against a connection that already exists, and repairing or
+  # removing one. Enforcement follows the connection, so gating these on billing
+  # would leave an organization enforcing a provider it can no longer fix and
+  # members locked out of their own private packages over a failed card.
   defp require_active(organization) do
     if Features.active?(organization), do: :ok, else: {:error, :feature_disabled}
   end
