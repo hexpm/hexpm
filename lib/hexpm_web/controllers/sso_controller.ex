@@ -4,6 +4,7 @@ defmodule HexpmWeb.SSOController do
   alias Hexpm.Accounts.SSO
   alias Hexpm.Accounts.SSO.Error
   alias HexpmWeb.Plugs.Attack
+  alias HexpmWeb.Plugs.ContentSecurityPolicy
 
   plug :put_no_store
   plug :require_sso_available
@@ -368,7 +369,9 @@ defmodule HexpmWeb.SSOController do
               |> put_flash(:info, authorized_message(authorization, status))
               |> redirect(to: ~p"/dashboard")
             else
-              render(conn, "authorize.html",
+              conn
+              |> allow_provider_form_actions(status)
+              |> render("authorize.html",
                 title: "Authenticate a session",
                 container: "container page page-xs",
                 code: code,
@@ -403,6 +406,21 @@ defmodule HexpmWeb.SSOController do
             end
         end
     end
+  end
+
+  # Each button on the page submits to an action that redirects to that
+  # organization's provider, and Chrome applies form-action to the redirect.
+  defp allow_provider_form_actions(conn, status) do
+    Enum.reduce(status, conn, fn
+      {_organization, true}, conn ->
+        conn
+
+      {organization, false}, conn ->
+        case SSO.get_connection(organization) do
+          nil -> conn
+          connection -> ContentSecurityPolicy.allow_form_action(conn, connection.issuer)
+        end
+    end)
   end
 
   defp start_authorization(conn, authorization, organization, code) do

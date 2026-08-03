@@ -958,6 +958,22 @@ defmodule HexpmWeb.SSOControllerTest do
       refute conn.request_path =~ code
     end
 
+    test "allows the provider origin in form-action", context do
+      require_sso(context)
+      link_member(context)
+      %{session: session} = cli_session(context)
+      code = request_authorization(context, session)
+
+      conn = build_conn() |> test_login(context.member) |> get("/sso/authorize?code=#{code}")
+
+      assert html_response(conn, 200)
+
+      # Submitting the button redirects to the provider, and Chrome applies
+      # form-action to the redirect rather than only to the form's own action.
+      [csp] = get_resp_header(conn, "content-security-policy")
+      assert csp =~ "form-action 'self' https://identity.example.com"
+    end
+
     test "authenticates the session that asked, not the browser", context do
       require_sso(context)
       link_member(context)
