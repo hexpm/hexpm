@@ -96,6 +96,7 @@ defmodule Hexpm.MixProject do
       {:sweet_xml, "~> 0.5"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
+      {:toml, "~> 0.7", runtime: false},
       {:ueberauth, "~> 0.10"},
       {:ueberauth_github, "~> 0.8"},
       {:lazy_html, ">= 0.1.0", only: :test},

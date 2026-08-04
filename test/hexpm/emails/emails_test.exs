@@ -112,6 +112,73 @@ defmodule Hexpm.EmailsTest do
     end
   end
 
+  describe "secrets detected" do
+    defp secrets_detected_email(findings) do
+      Emails.secrets_detected([build(:user)], "cowboy", "2.16.1", findings)
+    end
+
+    defp finding(attrs \\ []) do
+      struct(
+        %Hexpm.SecretScan.Finding{
+          rule: "aws-access-token",
+          file_path: "config/prod.exs",
+          line: 12,
+          byte_offset: 340,
+          preview: "AKIA************WXYZ"
+        },
+        attrs
+      )
+    end
+
+    test "names the package, the location and the masked value" do
+      email = secrets_detected_email([finding()])
+
+      assert email.subject == "Hex.pm - Possible credentials found in cowboy v2.16.1"
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ "cowboy v2.16.1"
+        assert body =~ "config/prod.exs:12"
+        assert body =~ "aws-access-token"
+        assert body =~ "AKIA************WXYZ"
+        assert body =~ "revoke and reissue"
+      end
+    end
+
+    test "lists every finding" do
+      findings = [
+        finding(),
+        finding(rule: "github-pat", file_path: ".env", line: 3, preview: "ghp_************OU7Q")
+      ]
+
+      for body <- [
+            secrets_detected_email(findings).html_body,
+            secrets_detected_email(findings).text_body
+          ] do
+        assert body =~ "config/prod.exs:12"
+        assert body =~ ".env:3"
+        assert body =~ "2 values"
+      end
+    end
+
+    test "reads as singular for one finding" do
+      email = secrets_detected_email([finding()])
+      assert email.text_body =~ "a value that looks like"
+      refute email.text_body =~ "1 values"
+    end
+
+    test "falls back to a byte offset when a file has no usable line" do
+      email = secrets_detected_email([finding(line: 0)])
+      assert email.text_body =~ "config/prod.exs@340"
+    end
+
+    test "says hex.pm did nothing else and stores nothing" do
+      email = secrets_detected_email([finding()])
+
+      assert email.text_body =~ "taken no other action"
+      assert email.text_body =~ "never the value itself"
+    end
+  end
+
   describe "links" do
     test "Common.link emits anchors with explicit styles" do
       html = Common.link("https://example.com", "click", :html)

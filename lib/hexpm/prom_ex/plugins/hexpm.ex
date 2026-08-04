@@ -21,6 +21,22 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
       counter("hexpm.accounts.user_created.total",
         event_name: [:hexpm, :accounts, :user_created],
         description: "New user accounts created."
+      ),
+      counter("hexpm.secret_scan.scan.total",
+        event_name: [:hexpm, :secret_scan, :scan],
+        description: "Release tarballs scanned for credentials."
+      ),
+      sum("hexpm.secret_scan.scan.findings.total",
+        event_name: [:hexpm, :secret_scan, :scan],
+        measurement: :findings,
+        description: "Credentials found across scanned releases."
+      ),
+      distribution("hexpm.secret_scan.scan.duration.milliseconds",
+        event_name: [:hexpm, :secret_scan, :scan],
+        measurement: :duration,
+        unit: {:native, :millisecond},
+        reporter_options: [buckets: [10, 50, 100, 500, 1000, 5000, 30_000]],
+        description: "Time spent matching a release's files."
       )
     ])
   end

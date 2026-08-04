@@ -52,6 +52,7 @@ EOF
 
 # build project and assets
 COPY priv priv
+COPY data data
 COPY assets assets
 COPY lib lib
 RUN mix assets.deploy

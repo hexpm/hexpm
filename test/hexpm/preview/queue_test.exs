@@ -18,6 +18,12 @@ defmodule Hexpm.Preview.QueueTest do
       args: %{key: "tarballs/demo-1.0.0.tar", generation: "0001"}
     )
 
+    # A create also enqueues an independent secret scan of the same tarball.
+    assert_enqueued(
+      worker: Hexpm.SecretScan.Worker,
+      args: %{key: "tarballs/demo-1.0.0.tar", generation: "0001"}
+    )
+
     assert %{status: :ok} = handle(%{"Records" => [removed("tarballs/demo-1.0.0.tar")]})
 
     assert_enqueued(
@@ -36,7 +42,8 @@ defmodule Hexpm.Preview.QueueTest do
 
     assert %{status: :ok} = handle(data)
     assert %{status: :ok} = handle(data)
-    assert length(all_enqueued()) == 2
+    # Two create records, each an upload and a scan.
+    assert length(all_enqueued()) == 4
   end
 
   test "keeps distinct object generations for the same key" do
@@ -47,7 +54,7 @@ defmodule Hexpm.Preview.QueueTest do
 
     assert_enqueued(worker: Workers.Upload, args: %{key: key, generation: "0001"})
     assert_enqueued(worker: Workers.Upload, args: %{key: key, generation: "0002"})
-    assert length(all_enqueued()) == 2
+    assert length(all_enqueued()) == 4
   end
 
   test "uses each available object generation field before the message id" do
