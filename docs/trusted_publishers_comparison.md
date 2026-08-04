@@ -114,6 +114,13 @@ PyPI's many-to-many exists because a monorepo can back several projects with one
 builders (`release-linux.yml`, `release-macos.yml`). npm chose the simpler
 one-per-package model and lets you edit it.
 
+Hex follows PyPI and supports both directions. Publisher configurations are
+per-package rows with uniqueness scoped to the package, so the same repository +
+workflow can be attached to any number of packages (the RabbitMQ-style monorepo
+case), and a package can hold several publisher configurations. A monorepo
+workflow run mints once per package, with a fresh OIDC token for each mint,
+since a minted OIDC `jti` cannot be reused.
+
 ### 2.4 Anti-resurrection (the critical security detail)
 
 Usernames and repo names can be renamed and reclaimed. If a config only matched
