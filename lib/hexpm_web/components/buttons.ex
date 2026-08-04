@@ -256,7 +256,7 @@ defmodule HexpmWeb.Components.Buttons do
 
   # Text link variants
   defp text_link_variant("primary") do
-    "text-blue-600 hover:text-blue-500 focus:ring-blue-500 font-medium"
+    "text-blue-600 hover:text-blue-500 focus:ring-blue-500 font-medium dark:text-blue-300 dark:hover:text-blue-200"
   end
 
   defp text_link_variant("secondary") do
