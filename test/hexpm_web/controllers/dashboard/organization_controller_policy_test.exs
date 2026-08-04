@@ -334,6 +334,49 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
       refute Floki.attribute([empty], "class") |> List.first() =~ "hidden"
     end
 
+    test "renders the errors of a rejected save", %{user: user, organization: org} do
+      {:ok, %{policy: policy}} =
+        Policies.create(org, %{"name" => "polone", "visibility" => "public"},
+          audit: audit_data(user)
+        )
+
+      conn = build_conn() |> test_login(user)
+
+      for {tab_attrs, message} <- [
+            {%{"cooldown" => "notaduration"}, "is invalid"},
+            {%{"overrides" => %{"0" => %{"action" => "deny", "package" => "Bad Name"}}},
+             "has invalid format"},
+            {%{
+               "overrides" => %{
+                 "0" => %{"action" => "deny", "package" => "ecto", "requirement" => "nope"}
+               }
+             }, "is invalid"},
+            {%{"overrides" => %{"0" => %{"action" => "deny", "package" => ""}}},
+             "can&#39;t be blank"},
+            {%{
+               "overrides" => %{
+                 "0" => %{"action" => "deny", "package" => "ecto"},
+                 "1" => %{"action" => "allow", "package" => "ecto"}
+               }
+             }, "list the same package more than once"}
+          ] do
+        params = %{
+          "policy" => %{
+            "visibility" => "public",
+            "repositories" => repository_params(policy, "hexpm", tab_attrs)
+          }
+        }
+
+        conn = post(conn, "/dashboard/orgs/#{org.name}/policies/#{policy.name}", params)
+
+        response = html_response(conn, 400)
+        assert response =~ message
+
+        {:ok, document} = Floki.parse_document(response)
+        assert [_ | _] = Floki.find(document, "p.text-small.text-red-600")
+      end
+    end
+
     test "ignores an attempt to rename the policy", %{user: user, organization: org} do
       {:ok, %{policy: policy}} =
         Policies.create(org, %{"name" => "polone", "visibility" => "public"},
@@ -471,6 +514,49 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
         |> Enum.filter(&String.match?(&1, ~r/^policy\[repositories\]\[\d+\]\[id\]$/))
 
       assert length(tab_ids) == 2
+    end
+
+    test "points each suggestions combobox at its own listbox",
+         %{user: user, organization: org} do
+      {:ok, %{policy: policy}} =
+        Policies.create(
+          org,
+          %{
+            "name" => "strict-prod",
+            "visibility" => "public",
+            "repositories" => [
+              %{
+                "repository" => "hexpm",
+                "overrides" => [%{"action" => "deny", "package" => "badlib"}]
+              }
+            ]
+          },
+          audit: audit_data(user)
+        )
+
+      conn = build_conn() |> test_login(user)
+      conn = get(conn, "/dashboard/orgs/#{org.name}/policies/#{policy.name}")
+
+      {:ok, document} = Floki.parse_document(html_response(conn, 200))
+
+      for {input_selector, menu_selector} <- [
+            {"input[data-override-package]", ~s([data-override-suggestions="package"])},
+            {"input[data-override-requirement]", ~s([data-override-suggestions="version"])}
+          ] do
+        controls =
+          document
+          |> Floki.find("[data-override-row] " <> input_selector)
+          |> Floki.attribute("aria-controls")
+
+        menus = document |> Floki.find("[data-override-row] " <> menu_selector)
+        ids = Floki.attribute(menus, "id")
+
+        # One rendered row plus the blank row each tab keeps in its template.
+        assert length(ids) == 3
+        assert controls == ids
+        assert ids == Enum.uniq(ids)
+        assert Floki.attribute(menus, "role") == ["listbox", "listbox", "listbox"]
+      end
     end
 
     test "renders existing restrictions and overrides", %{user: user, organization: org} do
