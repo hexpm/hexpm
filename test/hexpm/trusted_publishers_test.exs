@@ -74,6 +74,49 @@ defmodule Hexpm.TrustedPublishersTest do
       assert log.params["subject"] == "trusted_publisher:#{tp.id}"
     end
 
+    test "mints per package when one repository config backs several packages", %{
+      package: package,
+      trusted_publisher: tp
+    } do
+      other_package = insert(:package)
+
+      insert(:trusted_publisher,
+        package: other_package,
+        repository_owner: tp.repository_owner,
+        repository_owner_id: tp.repository_owner_id,
+        repository_id: tp.repository_id,
+        repository: tp.repository,
+        workflow: tp.workflow
+      )
+
+      first_oidc =
+        TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
+
+      second_oidc =
+        TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
+
+      assert {:ok, first} =
+               TrustedPublishers.verify_and_mint(first_oidc,
+                 repository: "hexpm",
+                 package: package.name
+               )
+
+      assert {:ok, second} =
+               TrustedPublishers.verify_and_mint(second_oidc,
+                 repository: "hexpm",
+                 package: other_package.name
+               )
+
+      assert first.scopes == ["package:hexpm/#{package.name}"]
+      assert second.scopes == ["package:hexpm/#{other_package.name}"]
+
+      assert {:error, :token_replayed} =
+               TrustedPublishers.verify_and_mint(first_oidc,
+                 repository: "hexpm",
+                 package: other_package.name
+               )
+    end
+
     test "rejects replayed OIDC jti", %{package: package} do
       claims = TrustedPublisherHelpers.github_claims() |> Map.put("jti", "fixed-jti-1")
       token = TrustedPublisherHelpers.sign_oidc_claims(claims)
@@ -215,6 +258,35 @@ defmodule Hexpm.TrustedPublishersTest do
       assert publisher.workflow == "release.yml"
       assert publisher.repository_owner_id == "42"
       assert publisher.repository_id == "99"
+    end
+
+    test "allows the same configuration on several packages", %{user: user} do
+      params = %{
+        "provider" => "github",
+        "repository_owner" => "acme",
+        "repository" => "widget",
+        "workflow" => "release.yml"
+      }
+
+      packages =
+        for _ <- 1..2 do
+          insert(:package,
+            package_owners: [build(:package_owner, user: user, level: "full")]
+          )
+        end
+
+      expect(Hexpm.HTTP.Mock, :get, 4, fn
+        "https://api.github.com/users/acme", _, _ -> {:ok, 200, [], %{"id" => 42}}
+        "https://api.github.com/repos/acme/widget", _, _ -> {:ok, 200, [], %{"id" => 99}}
+      end)
+
+      for package <- packages do
+        assert {:ok, publisher} =
+                 TrustedPublishers.create(package, params, audit: audit_data(user))
+
+        assert publisher.package_id == package.id
+        assert publisher.repository == "acme/widget"
+      end
     end
   end
 end

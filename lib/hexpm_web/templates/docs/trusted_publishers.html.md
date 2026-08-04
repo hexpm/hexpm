@@ -78,7 +78,7 @@ $ curl -X DELETE https://hex.pm/api/packages/PACKAGE/trusted_publishers/ID \
   -H "authorization: KEY"
 ```
 
-A package may have multiple publishers (for example several workflows or repositories). The same GitHub repository and workflow may be attached to several packages as separate rows, which covers monorepos.
+A package may have multiple publishers (for example several workflows or repositories). The same GitHub repository and workflow may be attached to several packages as separate rows, which covers monorepos that release several packages from one repository. When a single workflow run publishes several packages, mint once per package and request a fresh OIDC token for each mint, because an OIDC token can only be minted once.
 
 ### GitHub Actions workflow
 
