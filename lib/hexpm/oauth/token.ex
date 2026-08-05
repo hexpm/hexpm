@@ -17,7 +17,6 @@ defmodule Hexpm.OAuth.Token do
     field :revoked_at, :utc_datetime
     field :grant_type, :string
     field :grant_reference, :string
-    field :oidc_claims, :map
 
     # Virtual fields for JWT tokens (not persisted)
     field :access_token, :string, virtual: true
@@ -28,6 +27,8 @@ defmodule Hexpm.OAuth.Token do
     belongs_to :trusted_publisher, Hexpm.TrustedPublishers.TrustedPublisher
     belongs_to :client, Hexpm.OAuth.Client, references: :client_id, type: :binary_id
     belongs_to :user_session, UserSession
+
+    embeds_one :oidc_claims, Hexpm.TrustedPublishers.ClaimsSnapshot, on_replace: :delete
 
     timestamps()
   end
@@ -48,7 +49,6 @@ defmodule Hexpm.OAuth.Token do
       :revoked_at,
       :grant_type,
       :grant_reference,
-      :oidc_claims,
       :user_session_id,
       :user_id,
       :organization_id,
@@ -57,6 +57,7 @@ defmodule Hexpm.OAuth.Token do
       :access_token,
       :refresh_token
     ])
+    |> cast_embed(:oidc_claims)
     |> validate_required([
       :jti,
       :token_type,

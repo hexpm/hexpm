@@ -47,7 +47,8 @@ defmodule Hexpm.TrustedPublishers.Provider.GitHub do
 
   @impl true
   def claims_snapshot(claims) when is_map(claims) do
-    Map.take(claims, [
+    claims
+    |> Map.take([
       "repository",
       "repository_id",
       "repository_owner",
@@ -65,6 +66,7 @@ defmodule Hexpm.TrustedPublishers.Provider.GitHub do
       "actor_id",
       "event_name"
     ])
+    |> Map.new(fn {key, value} -> {key, to_string_or_nil(value)} end)
   end
 
   defp repository_id_matches?(%{repository_id: nil}, _token_repository_id), do: true

@@ -78,7 +78,7 @@ defmodule HexpmWeb.API.TrustedPublisherPublishTest do
 
     release = Hexpm.Repo.get_by!(Release, package_id: package.id)
     assert release.trusted_publisher_id == tp.id
-    assert release.oidc_claims["workflow_ref"] =~ "acme/widget/.github/workflows/release.yml"
+    assert release.oidc_claims.workflow_ref =~ "acme/widget/.github/workflows/release.yml"
 
     log = Hexpm.Repo.get_by!(AuditLog, action: "release.publish")
     assert log.user_id == nil
@@ -98,7 +98,7 @@ defmodule HexpmWeb.API.TrustedPublisherPublishTest do
 
     release = Hexpm.Repo.get_by!(Release, package_id: package.id)
     assert release.trusted_publisher_id == nil
-    assert release.oidc_claims["repository"] == "acme/widget"
+    assert release.oidc_claims.repository == "acme/widget"
   end
 
   test "one repository config publishes several packages", %{

@@ -67,10 +67,9 @@ defmodule Hexpm.TrustedPublishersTest do
 
       reloaded = Repo.get(Hexpm.OAuth.Token, access_token.id)
 
-      assert reloaded.oidc_claims["repository"] == "acme/widget"
-      assert reloaded.oidc_claims["workflow_ref"] =~ "acme/widget/.github/workflows/release.yml"
-      refute Map.has_key?(reloaded.oidc_claims, "jti")
-      refute Map.has_key?(reloaded.oidc_claims, "aud")
+      assert %Hexpm.TrustedPublishers.ClaimsSnapshot{} = reloaded.oidc_claims
+      assert reloaded.oidc_claims.repository == "acme/widget"
+      assert reloaded.oidc_claims.workflow_ref =~ "acme/widget/.github/workflows/release.yml"
     end
 
     test "writes a mint audit log", %{package: package, trusted_publisher: tp} do

@@ -13,7 +13,6 @@ defmodule Hexpm.Repository.Release do
     field :outer_checksum, :binary
     field :has_docs, :boolean, default: false
     field :vulnerable?, :boolean, virtual: true, default: false
-    field :oidc_claims, :map
     timestamps()
 
     belongs_to :package, Package
@@ -29,6 +28,7 @@ defmodule Hexpm.Repository.Release do
 
     embeds_one :meta, ReleaseMetadata, on_replace: :delete
     embeds_one :retirement, ReleaseRetirement, on_replace: :delete
+    embeds_one :oidc_claims, Hexpm.TrustedPublishers.ClaimsSnapshot, on_replace: :delete
   end
 
   defp changeset(
@@ -83,12 +83,12 @@ defmodule Hexpm.Repository.Release do
         %{trusted_publisher_id: trusted_publisher_id, oidc_claims: oidc_claims} ->
           changeset
           |> put_change(:trusted_publisher_id, trusted_publisher_id)
-          |> put_change(:oidc_claims, oidc_claims)
+          |> put_embed(:oidc_claims, oidc_claims)
 
         nil ->
           changeset
           |> put_change(:trusted_publisher_id, nil)
-          |> put_change(:oidc_claims, nil)
+          |> put_embed(:oidc_claims, nil)
       end
     end)
     |> Requirement.build_all(package)
