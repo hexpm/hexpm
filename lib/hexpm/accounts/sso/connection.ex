@@ -127,9 +127,9 @@ defmodule Hexpm.Accounts.SSO.Connection do
   Sets the enforcement mode, when required mode starts biting, how long an
   organization access session lasts, and what happens to personal API keys.
 
-  `personal_keys` is required to reach required mode and has no default. A
-  personal key is a static credential with nothing to expire it, so an
-  organization either closes that path or knows it left it open.
+  `personal_keys` defaults to allowing them. Blocking breaks publishing
+  workflows that only the organization can weigh, and SCIM will close the
+  offboarding half of what blocking is for.
   """
   def enforcement_changeset(connection, attrs) do
     connection
@@ -144,7 +144,6 @@ defmodule Hexpm.Accounts.SSO.Connection do
     |> validate_inclusion(:enforcement_mode, @enforcement_modes)
     |> validate_inclusion(:personal_keys, @personal_key_policies)
     |> validate_inclusion(:session_lifetime_seconds, @session_lifetimes)
-    |> validate_personal_keys_chosen()
     |> validate_required_at()
   end
 
@@ -158,15 +157,6 @@ defmodule Hexpm.Accounts.SSO.Connection do
   end
 
   defp normalize_required_at(attrs), do: attrs
-
-  defp validate_personal_keys_chosen(changeset) do
-    if get_field(changeset, :enforcement_mode) == "required" and
-         is_nil(get_field(changeset, :personal_keys)) do
-      add_error(changeset, :personal_keys, "must be chosen before requiring SSO")
-    else
-      changeset
-    end
-  end
 
   defp validate_required_at(changeset) do
     mode = get_field(changeset, :enforcement_mode)

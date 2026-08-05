@@ -425,11 +425,36 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
   end
 
   describe "configure_enforcement/3" do
-    test "cannot require SSO without saying what happens to personal keys", context do
+    test "requires SSO without saying anything about personal keys", context do
       link_identity(context, context.admin)
 
-      assert {:error, changeset} = configure(context, %{"enforcement_mode" => "required"})
-      assert errors_on(changeset).personal_keys == "must be chosen before requiring SSO"
+      assert {:ok, connection} = configure(context, %{"enforcement_mode" => "required"})
+      assert connection.enforcement_mode == "required"
+      assert is_nil(connection.personal_keys)
+      refute SSO.Connection.blocks_personal_keys?(connection)
+    end
+
+    test "leaves personal keys alone for a required organization that said nothing", context do
+      link_identity(context, context.admin)
+
+      key =
+        insert(:key,
+          user: context.member,
+          organization: nil,
+          permissions: [
+            build(:key_permission, domain: "repository", resource: context.organization.name)
+          ]
+        )
+
+      {:ok, _connection} =
+        configure(context, %{
+          "enforcement_mode" => "required",
+          "required_at" => DateTime.add(DateTime.utc_now(), -60, :second)
+        })
+
+      assert Enforcement.personal_key_refused(context.member) == []
+      assert Enforcement.sweep_personal_keys() == 0
+      assert Repo.get!(Hexpm.Accounts.Key, key.id).permissions == key.permissions
     end
 
     test "requires an administrator who can still get in", context do

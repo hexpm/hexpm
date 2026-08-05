@@ -115,7 +115,7 @@ The credential decides, not the account, and each one answers differently:
 | Hex CLI (`mix hex.user auth`) | The session established when you authorized the CLI carries organization access. Hexpm asks you to re-authenticate in a browser when it lapses. |
 | hexdocs and other OAuth clients | Same, established when you approve the client. |
 | Organization API key | Never enforced. It authenticates as the organization rather than as a person, so there is no one for the provider to vouch for. |
-| Personal API key | The organization chooses whether one may reach it at all. |
+| Personal API key | Allowed unless the organization chose to block them. |
 | Username and password against the API | Refused. There is nothing for an organization access session to attach to. |
 
 Enforcement is per organization and evaluated against the resource. Your Hexpm account, your own packages, the public repository, and every other organization you belong to are unaffected.
@@ -144,12 +144,14 @@ CI is unaffected. It authenticates with an organization API key, which is the or
 
 ### Personal API keys
 
-A personal API key is a static credential. There is no session behind it, nothing expires it unless its owner set an expiry, and your provider never sees it used. So an organization that requires SSO has to say what happens to them, and Hexpm makes the choice explicit rather than picking one:
+A personal API key is a static credential. There is no session behind it, nothing expires it unless its owner set an expiry, and your provider never sees it used. Whether one may reach an enforced organization is the organization's choice, and the default is to allow them:
 
 * **Block** removes this organization's permissions from members' personal keys on the required-by date, and refuses new ones. Their owners are emailed, and the rest of each key keeps working. Members publishing by hand run `mix hex.user auth` instead, and automation moves to an organization key.
 
     Blocking follows the same members enforcement does. A pilot turns personal keys away for the members you marked enforced and for nobody else, and it refuses new ones rather than removing what is already there, so a pilot shows you what required mode will do without taking anything away yet. An exempt member's keys are never touched.
-* **Allow** leaves them alone. This is a supported answer, not a misconfiguration, and it is the right one if your publishing workflow depends on them. It means required mode has a standing exception: those keys reach the organization with no session, no expiry, and no exposure to your provider's conditional-access policy.
+* **Allow** leaves them alone, and is what you get if you change nothing. It is the right answer if your publishing workflow depends on them. It means required mode has a standing exception: those keys reach the organization with no session, no expiry, and no exposure to your provider's conditional-access policy. A key still stops working when its owner is removed from the organization here, because its permissions are checked against current membership on every request; it does not stop working when they are deactivated only in your provider, which is what SCIM will change.
+
+    An organization API key has the same properties and is never enforced at all, so allowing personal keys widens a path that is already open rather than opening a new one. What blocking buys that removing the member does not is your provider's conditional-access policy, which no static credential evaluates.
 
 Either way the SSO dashboard lists the members holding personal keys that reach the organization, and when each was last used, before you turn enforcement on. For a key whose permissions name the organization the list is exact. For one carrying every repository, or plain API access, it says the key could reach the organization rather than that it did; Hexpm records when a key was used and not what it was used against.
 
@@ -173,7 +175,7 @@ A required organization has exactly four ways in that do not involve its identit
 
 1. **Exemptions**, one per member, listed on the members tab.
 2. **Organization API keys**, which authenticate as the organization. This is the audited automation exception; enforcement constrains and monitors it but cannot close it.
-3. **Personal API keys**, if the organization chose to allow them.
+3. **Personal API keys**, unless the organization chose to block them.
 4. **Break-glass** on the billing and SSO settings screens, audited and mailed.
 
 There is no fifth. If you are evaluating Hexpm against a compliance requirement, this is the list.
@@ -199,7 +201,7 @@ Just-in-time membership is the only part of SSO that can change a seat count. If
 
 1. Link the administrators, or exempt at least one.
 2. Review the members tab and decide who, if anyone, is exempt.
-3. Check the personal-key list and decide whether to block or allow them.
+3. Check the personal-key list and decide whether to leave them allowed or block them.
 4. Pick a session lifetime.
 5. Set a required-by date far enough out for the grace-period email to reach people.
 

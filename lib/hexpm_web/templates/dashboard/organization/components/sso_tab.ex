@@ -323,11 +323,10 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
             id="sso-enforcement-personal-keys"
             name="enforcement[personal_keys]"
             label="Personal API keys"
-            value={@connection.personal_keys}
+            value={@connection.personal_keys || "allow"}
             options={[
-              {"Choose before requiring SSO", ""},
-              {"Block them from reaching this organization", "block"},
-              {"Allow them, and list them below", "allow"}
+              {"Allow them, and list them below", "allow"},
+              {"Block them from reaching this organization", "block"}
             ]}
             variant="light"
           />
@@ -374,11 +373,11 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
               continuous integration work, so SSO never applies to them. Revoke the key to revoke
               the access.
             </li>
-            <li :if={@connection.personal_keys == "allow"}>
+            <li :if={@connection.personal_keys != "block"}>
               <span class="font-medium">Personal API keys.</span>
-              You chose to allow them. They are static credentials with nothing to expire them and
-              nothing for your provider's policy to evaluate, and they keep reaching this
-              organization regardless of enforcement.
+              They are static credentials with nothing to expire them and nothing for your
+              provider's policy to evaluate, and they keep reaching this organization regardless of
+              enforcement. Removing the member here still takes their keys with it.
             </li>
             <li>
               <span class="font-medium">Offboarding takes time.</span>
