@@ -191,6 +191,7 @@ Errors use OAuth-style bodies (`error`, `error_description`), for example missin
 * Matching requires the configured repository, workflow basename from a workflow ref inside that repository, immutable `repository_owner_id`, and optional environment. Cross-repository reusable workflow basenames alone cannot satisfy the workflow match.
 * Minted tokens are short-lived (15 minutes), single-package, and attributed as a package-scoped trusted-publisher principal (release publisher user is unset; audit logs record the mint and publish).
 * Configuring or removing a publisher requires full package ownership and `api:write`. Two-factor authentication is not required for CI mint/publish because the trusted-publisher grant has no interactive user.
+* Hex records an allowlisted snapshot of the verified OIDC claims (repository, workflow ref, commit SHA, run id, and similar) on the minted token and attaches it to the release published with that token. The release API exposes this as `oidc_claims`, so consumers can see that a release was published via trusted publishing and which workflow produced it.
 
 ### Limitations
 

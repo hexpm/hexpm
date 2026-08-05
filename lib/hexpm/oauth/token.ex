@@ -17,6 +17,7 @@ defmodule Hexpm.OAuth.Token do
     field :revoked_at, :utc_datetime
     field :grant_type, :string
     field :grant_reference, :string
+    field :oidc_claims, :map
 
     # Virtual fields for JWT tokens (not persisted)
     field :access_token, :string, virtual: true
@@ -47,6 +48,7 @@ defmodule Hexpm.OAuth.Token do
       :revoked_at,
       :grant_type,
       :grant_reference,
+      :oidc_claims,
       :user_session_id,
       :user_id,
       :organization_id,

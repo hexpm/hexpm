@@ -149,6 +149,8 @@ unique identifier"). Hex should follow PyPI here.
 | Automatic provenance | Yes, by default when publishing via OIDC from GitHub/GitLab, for **public** repo + **public** package (not CircleCI, not private repos) | Digital attestations (PEP 740) with Sigstore |
 | Opt out | `NPM_CONFIG_PROVENANCE=false`, `.npmrc`, or `publishConfig.provenance` | n/a |
 
+Hex defers full provenance/attestations, but stores an allowlisted snapshot of the verified OIDC claims at mint time and attaches it to the published release, so the API and UI can show that a release came from trusted publishing and which workflow produced it.
+
 ### 2.7 Hardening around tokens
 
 | | npm | PyPI |

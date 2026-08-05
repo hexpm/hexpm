@@ -45,6 +45,28 @@ defmodule Hexpm.TrustedPublishers.Provider.GitHub do
       environment_matches?(publisher, environment)
   end
 
+  @impl true
+  def claims_snapshot(claims) when is_map(claims) do
+    Map.take(claims, [
+      "repository",
+      "repository_id",
+      "repository_owner",
+      "repository_owner_id",
+      "workflow_ref",
+      "job_workflow_ref",
+      "environment",
+      "sha",
+      "ref",
+      "ref_type",
+      "run_id",
+      "run_number",
+      "run_attempt",
+      "actor",
+      "actor_id",
+      "event_name"
+    ])
+  end
+
   defp repository_id_matches?(%{repository_id: nil}, _token_repository_id), do: true
 
   defp repository_id_matches?(%{repository_id: expected}, actual),

@@ -35,7 +35,8 @@ defmodule HexpmWeb.API.ReleaseView do
         elixir: release.meta.elixir
       },
       downloads: downloads(release.downloads),
-      publisher: render_one(release.publisher, UserView, "minimal.json")
+      publisher: render_one(release.publisher, UserView, "minimal.json"),
+      oidc_claims: release.oidc_claims
     }
     |> ViewHelpers.include_if_loaded(
       :security_advisories,

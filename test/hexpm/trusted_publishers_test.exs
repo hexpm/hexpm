@@ -53,6 +53,26 @@ defmodule Hexpm.TrustedPublishersTest do
       refute claims["scope"] =~ "api:write"
     end
 
+    test "stores an allowlisted snapshot of the OIDC claims on the minted token", %{
+      package: package
+    } do
+      token =
+        TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
+
+      assert {:ok, access_token} =
+               TrustedPublishers.verify_and_mint(token,
+                 repository: "hexpm",
+                 package: package.name
+               )
+
+      reloaded = Repo.get(Hexpm.OAuth.Token, access_token.id)
+
+      assert reloaded.oidc_claims["repository"] == "acme/widget"
+      assert reloaded.oidc_claims["workflow_ref"] =~ "acme/widget/.github/workflows/release.yml"
+      refute Map.has_key?(reloaded.oidc_claims, "jti")
+      refute Map.has_key?(reloaded.oidc_claims, "aud")
+    end
+
     test "writes a mint audit log", %{package: package, trusted_publisher: tp} do
       token =
         TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())

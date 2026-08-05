@@ -17,6 +17,7 @@ defmodule Hexpm.TrustedPublishers.Provider do
   @callback supported_claims() :: [atom()]
   @callback resolve_immutable_ids(map()) :: {:ok, immutable_ids()} | {:error, term()}
   @callback match?(TrustedPublisher.t(), claims()) :: boolean()
+  @callback claims_snapshot(claims()) :: map()
 
   @providers %{
     "github" => Hexpm.TrustedPublishers.Provider.GitHub

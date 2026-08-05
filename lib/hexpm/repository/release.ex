@@ -13,10 +13,12 @@ defmodule Hexpm.Repository.Release do
     field :outer_checksum, :binary
     field :has_docs, :boolean, default: false
     field :vulnerable?, :boolean, virtual: true, default: false
+    field :oidc_claims, :map
     timestamps()
 
     belongs_to :package, Package
     belongs_to(:publisher, User, on_replace: :nilify)
+    belongs_to :trusted_publisher, Hexpm.TrustedPublishers.TrustedPublisher
     has_many :requirements, Requirement, on_replace: :delete
     has_many :daily_downloads, Download
     has_one :downloads, ReleaseDownload
@@ -37,7 +39,8 @@ defmodule Hexpm.Repository.Release do
          publisher,
          inner_checksum,
          outer_checksum,
-         replace?
+         replace?,
+         trusted_publisher_context
        ) do
     changeset(
       release,
@@ -47,7 +50,8 @@ defmodule Hexpm.Repository.Release do
       publisher,
       inner_checksum,
       outer_checksum,
-      replace?
+      replace?,
+      trusted_publisher_context
     )
     |> unique_constraint(
       :version,
@@ -64,7 +68,8 @@ defmodule Hexpm.Repository.Release do
          publisher,
          inner_checksum,
          outer_checksum,
-         replace?
+         replace?,
+         trusted_publisher_context
        ) do
     cast(release, params, ~w(version)a)
     |> cast_embed(:meta, required: true)
@@ -73,15 +78,53 @@ defmodule Hexpm.Repository.Release do
     |> put_change(:inner_checksum, inner_checksum)
     |> put_change(:outer_checksum, outer_checksum)
     |> put_assoc(:publisher, publisher)
+    |> then(fn changeset ->
+      case trusted_publisher_context do
+        %{trusted_publisher_id: trusted_publisher_id, oidc_claims: oidc_claims} ->
+          changeset
+          |> put_change(:trusted_publisher_id, trusted_publisher_id)
+          |> put_change(:oidc_claims, oidc_claims)
+
+        nil ->
+          changeset
+          |> put_change(:trusted_publisher_id, nil)
+          |> put_change(:oidc_claims, nil)
+      end
+    end)
     |> Requirement.build_all(package)
   end
 
-  def build(package, publisher, params, inner_checksum, outer_checksum, replace? \\ true) do
+  def build(
+        package,
+        publisher,
+        params,
+        inner_checksum,
+        outer_checksum,
+        replace? \\ true,
+        trusted_publisher_context \\ nil
+      ) do
     build_assoc(package, :releases)
-    |> changeset(:create, params, package, publisher, inner_checksum, outer_checksum, replace?)
+    |> changeset(
+      :create,
+      params,
+      package,
+      publisher,
+      inner_checksum,
+      outer_checksum,
+      replace?,
+      trusted_publisher_context
+    )
   end
 
-  def update(release, publisher, params, inner_checksum, outer_checksum, replace? \\ true) do
+  def update(
+        release,
+        publisher,
+        params,
+        inner_checksum,
+        outer_checksum,
+        replace? \\ true,
+        trusted_publisher_context \\ nil
+      ) do
     changeset(
       release,
       :update,
@@ -90,7 +133,8 @@ defmodule Hexpm.Repository.Release do
       publisher,
       inner_checksum,
       outer_checksum,
-      replace?
+      replace?,
+      trusted_publisher_context
     )
   end
 

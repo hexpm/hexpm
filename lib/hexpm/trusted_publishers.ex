@@ -116,7 +116,7 @@ defmodule Hexpm.TrustedPublishers do
          {:ok, claims} <- OIDC.verify(oidc_token, issuer),
          {:ok, package} <- fetch_package(repository, package_name),
          {:ok, trusted_publisher} <- find_matching_publisher(package, provider, claims),
-         {:ok, token} <- mint_token(trusted_publisher, package, claims, audit_data) do
+         {:ok, token} <- mint_token(trusted_publisher, package, claims, audit_data, provider) do
       :telemetry.execute([:hexpm, :trusted_publishers, :mint, :success], %{count: 1}, %{
         provider: provider.name(),
         package_id: package.id
@@ -203,7 +203,7 @@ defmodule Hexpm.TrustedPublishers do
     end
   end
 
-  defp mint_token(trusted_publisher, package, claims, audit_data) do
+  defp mint_token(trusted_publisher, package, claims, audit_data, provider) do
     client_id = client_id()
     scope = package_scope(package)
     expires_in = @mint_expires_in
@@ -229,7 +229,8 @@ defmodule Hexpm.TrustedPublishers do
         grant_type: "trusted_publisher",
         grant_reference: jti_oidc,
         client_id: client.client_id,
-        trusted_publisher_id: trusted_publisher.id
+        trusted_publisher_id: trusted_publisher.id,
+        oidc_claims: provider.claims_snapshot(claims)
       }
 
       multi =

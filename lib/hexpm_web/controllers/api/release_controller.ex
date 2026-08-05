@@ -66,7 +66,8 @@ defmodule HexpmWeb.API.ReleaseController do
           inner_checksum,
           outer_checksum,
           audit: audit_data(conn),
-          replace: replace?
+          replace: replace?,
+          trusted_publisher: trusted_publisher_context(conn)
         )
 
       {:error, errors} ->
@@ -162,7 +163,8 @@ defmodule HexpmWeb.API.ReleaseController do
               inner_checksum,
               outer_checksum,
               audit: audit_data(conn),
-              replace: replace?
+              replace: replace?,
+              trusted_publisher: trusted_publisher_context(conn)
             )
         end
 
@@ -249,6 +251,16 @@ defmodule HexpmWeb.API.ReleaseController do
       Map.get(conn.assigns, :trusted_publisher) -> nil
       conn.assigns.current_user -> conn.assigns.current_user
       conn.assigns.current_organization -> conn.assigns.current_organization.user
+    end
+  end
+
+  defp trusted_publisher_context(conn) do
+    case Map.get(conn.assigns, :trusted_publisher) do
+      %Hexpm.TrustedPublishers.TrustedPublisher{} = tp ->
+        %{trusted_publisher_id: tp.id, oidc_claims: conn.assigns.auth_credential.oidc_claims}
+
+      _ ->
+        nil
     end
   end
 end

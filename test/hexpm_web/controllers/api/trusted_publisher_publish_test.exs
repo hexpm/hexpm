@@ -72,12 +72,33 @@ defmodule HexpmWeb.API.TrustedPublisherPublishTest do
     result = json_response(conn, 201)
     assert result["url"] =~ "api/packages/#{package.name}/releases/1.0.0"
     assert is_nil(result["publisher"])
+    assert result["oidc_claims"]["repository"] == "acme/widget"
 
     assert Hexpm.Repo.get_by!(Package, name: package.name).meta.description == "from CI"
+
+    release = Hexpm.Repo.get_by!(Release, package_id: package.id)
+    assert release.trusted_publisher_id == tp.id
+    assert release.oidc_claims["workflow_ref"] =~ "acme/widget/.github/workflows/release.yml"
 
     log = Hexpm.Repo.get_by!(AuditLog, action: "release.publish")
     assert log.user_id == nil
     assert log.user_data["trusted_publisher_id"] == tp.id
+  end
+
+  test "deleting the trusted publisher keeps the claims snapshot on the release", %{
+    package: package,
+    trusted_publisher: tp,
+    user: user
+  } do
+    token = mint_token(package)
+    conn = publish_release(token, package)
+    assert json_response(conn, 201)
+
+    assert {:ok, _} = Hexpm.TrustedPublishers.delete(tp, audit: audit_data(user))
+
+    release = Hexpm.Repo.get_by!(Release, package_id: package.id)
+    assert release.trusted_publisher_id == nil
+    assert release.oidc_claims["repository"] == "acme/widget"
   end
 
   test "one repository config publishes several packages", %{
