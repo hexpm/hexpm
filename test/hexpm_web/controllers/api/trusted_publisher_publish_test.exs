@@ -80,6 +80,42 @@ defmodule HexpmWeb.API.TrustedPublisherPublishTest do
     assert log.user_data["trusted_publisher_id"] == tp.id
   end
 
+  test "one repository config publishes several packages", %{
+    package: package,
+    other: other,
+    trusted_publisher: tp
+  } do
+    insert(:trusted_publisher,
+      package: other,
+      repository_owner: tp.repository_owner,
+      repository_owner_id: tp.repository_owner_id,
+      repository_id: tp.repository_id,
+      repository: tp.repository,
+      workflow: tp.workflow
+    )
+
+    for pkg <- [package, other] do
+      oidc = TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
+
+      mint_conn =
+        build_conn()
+        |> put_req_header("content-type", "application/json")
+        |> post("/api/oidc/mint-token", %{"token" => oidc, "package" => pkg.name})
+
+      minted = json_response(mint_conn, 200)
+      meta = %{name: pkg.name, version: "1.0.0", description: "from CI"}
+
+      publish_conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", "Bearer #{minted["token"]}")
+        |> post("/api/publish", create_tar(meta))
+
+      result = json_response(publish_conn, 201)
+      assert result["url"] =~ "api/packages/#{pkg.name}/releases/1.0.0"
+    end
+  end
+
   test "minted token cannot publish a different package", %{package: package, other: other} do
     token = mint_token(package)
     meta = %{name: other.name, version: "1.0.0", description: "nope"}
