@@ -20,6 +20,36 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     end)
   end
 
+  defp capture_audit_log_reads(fun) do
+    test = self()
+    handler = {__MODULE__, System.unique_integer()}
+
+    :telemetry.attach(
+      handler,
+      [:hexpm, :repo_base, :query],
+      fn _event, _measurements, %{query: query}, _config ->
+        if query =~ ~s(FROM "audit_logs"), do: send(test, {handler, query})
+      end,
+      nil
+    )
+
+    try do
+      fun.()
+    after
+      :telemetry.detach(handler)
+    end
+
+    collect_messages(handler, [])
+  end
+
+  defp collect_messages(handler, acc) do
+    receive do
+      {^handler, query} -> collect_messages(handler, [query | acc])
+    after
+      0 -> Enum.reverse(acc)
+    end
+  end
+
   defp active_org_tab(html) do
     {:ok, document} = Floki.parse_document(html)
 
@@ -310,6 +340,31 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> get("/dashboard/orgs/#{organization.name}/audit-logs")
 
       assert response(conn, 200) =~ "Recent Activities"
+    end
+
+    test "queries audit_logs only on the audit logs tab", %{
+      user: user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user)
+      mock_customer(organization)
+
+      audit_logs_tab =
+        capture_audit_log_reads(fn ->
+          build_conn()
+          |> test_login(user)
+          |> get("/dashboard/orgs/#{organization.name}/audit-logs")
+        end)
+
+      profile_tab =
+        capture_audit_log_reads(fn ->
+          build_conn()
+          |> test_login(user)
+          |> get("/dashboard/orgs/#{organization.name}")
+        end)
+
+      assert audit_logs_tab != []
+      assert profile_tab == []
     end
   end
 
