@@ -219,7 +219,7 @@ jobs:
           workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
       - name: Docker Auth
         id: docker-auth
-        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         if: ${{ github.event_name != 'pull_request' && env.SERVICE_ACCOUNT != '' }}
         with:
           registry: gcr.io
