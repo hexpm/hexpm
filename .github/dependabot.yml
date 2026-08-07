@@ -17,7 +17,7 @@ updates:
       interval: "weekly"
     cooldown:
       default-days: 7
-    mix:
-      actions:
+    groups:
+      mix:
         patterns:
           - "*"
