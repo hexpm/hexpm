@@ -43,15 +43,16 @@ defmodule Hexpm.SecretScan.Scanner do
 
     state =
       file_paths
+      # Unordered so a file that runs to its timeout doesn't hold every result
+      # behind it: the deadline below can only look at the clock when a result
+      # arrives, and nothing here cares what order they arrive in.
       |> Task.async_stream(&scan_file(dir, &1, opts),
         max_concurrency: System.schedulers_online(),
         timeout: file_timeout(),
-        on_timeout: :kill_task
+        on_timeout: :kill_task,
+        ordered: false,
+        zip_input_on_exit: true
       )
-      # Lazily: `Enum.zip/2` would drain the whole stream before the deadline
-      # below ever got to look at the clock, which is the difference between a
-      # minute of CPU and however long the release feels like taking.
-      |> Stream.zip(file_paths)
       |> Enum.reduce_while(empty, fn result, state ->
         if System.monotonic_time(:millisecond) > deadline do
           {:halt, %{state | halted: true}}
@@ -71,15 +72,15 @@ defmodule Hexpm.SecretScan.Scanner do
   # The accumulator is capped as it grows rather than at the end. A release of
   # small files each holding thousands of matches would otherwise build the
   # whole list before the cap ever applied — 3 GB of heap to report one finding.
-  defp accumulate({{:ok, found}, _path}, state) do
+  defp accumulate({:ok, found}, state) do
     %{state | kept: cap(state.kept ++ found), total: state.total + length(found)}
   end
 
-  defp accumulate({{:exit, :timeout}, _path}, state) do
+  defp accumulate({:exit, {_path, :timeout}}, state) do
     %{state | timeouts: state.timeouts + 1}
   end
 
-  defp accumulate({{:exit, reason}, path}, state) do
+  defp accumulate({:exit, {path, reason}}, state) do
     Logger.warning("Secret scan died on #{path}: #{inspect(reason)}")
     %{state | timeouts: state.timeouts + 1}
   end
