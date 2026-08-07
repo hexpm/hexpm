@@ -60,17 +60,19 @@ defmodule Hexpm.Preview.Queue do
 
   defp jobs_for(data, _message_id), do: {:error, {:unsupported_preview_message, data}}
 
+  # A new tarball drives both the preview and, independently, a lower-priority
+  # secret scan of the same content.
   defp jobs_for_record(%{"eventName" => "ObjectCreated:" <> _, "s3" => s3}, message_id) do
-    job_for_object(Workers.Upload, s3, message_id)
+    jobs_for_object([Workers.Upload, Hexpm.SecretScan.Worker], s3, message_id)
   end
 
   defp jobs_for_record(%{"eventName" => "ObjectRemoved:" <> _, "s3" => s3}, message_id) do
-    job_for_object(Workers.Delete, s3, message_id)
+    jobs_for_object([Workers.Delete], s3, message_id)
   end
 
   defp jobs_for_record(record, _message_id), do: {:error, {:unsupported_s3_record, record}}
 
-  defp job_for_object(worker, %{"object" => %{"key" => encoded_key} = object}, message_id) do
+  defp jobs_for_object(workers, %{"object" => %{"key" => encoded_key} = object}, message_id) do
     key = URI.decode_www_form(encoded_key)
 
     if Hexpm.Preview.key_components(key) == :error do
@@ -78,11 +80,11 @@ defmodule Hexpm.Preview.Queue do
     else
       args = job_args(key, object_generation(object) || message_id)
 
-      {:ok, [{worker, args}]}
+      {:ok, Enum.map(workers, &{&1, args})}
     end
   end
 
-  defp job_for_object(_worker, s3, _message_id), do: {:error, {:malformed_s3_object, s3}}
+  defp jobs_for_object(_workers, s3, _message_id), do: {:error, {:malformed_s3_object, s3}}
 
   defp job_args(key, nil), do: %{key: key}
   defp job_args(key, generation), do: %{key: key, generation: generation}

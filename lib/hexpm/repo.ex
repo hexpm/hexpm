@@ -75,7 +75,8 @@ defmodule Hexpm.RepoBase do
     vulnerability_updater: 2,
     policy: 3,
     diff: 4,
-    email_outbox: 5
+    email_outbox: 5,
+    secret_scan: 6
   }
 
   def init(_reason, opts) do
