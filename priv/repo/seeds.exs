@@ -33,6 +33,19 @@ Hexpm.Repo.transaction(fn ->
     ]
   )
 
+  trusted_publisher_client_id = "a1111111-1111-4111-8111-111111111111"
+
+  unless Hexpm.Repo.get(Hexpm.OAuth.Client, trusted_publisher_client_id) do
+    insert(:oauth_client,
+      name: "Trusted Publisher",
+      client_id: trusted_publisher_client_id,
+      client_type: "public",
+      allowed_grant_types: ["trusted_publisher"],
+      allowed_scopes: ["package"],
+      redirect_uris: []
+    )
+  end
+
   insert(
     :key,
     user_id: Users.get("hexdocs").id,

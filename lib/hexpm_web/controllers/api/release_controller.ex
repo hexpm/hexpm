@@ -15,9 +15,18 @@ defmodule HexpmWeb.API.ReleaseController do
        [
          authentication: :required,
          domains: [{"api", "write"}, "package"],
+         allow_trusted_publisher: true,
          fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
        ]
-       when action in [:create, :delete]
+       when action in [:create]
+
+  plug :authorize,
+       [
+         authentication: :required,
+         domains: [{"api", "write"}, "package"],
+         fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
+       ]
+       when action in [:delete]
 
   plug :handle_100_continue, [max_size: @tarball_max_size] when action in [:create, :publish]
   plug :parse_tarball when action in [:publish]
@@ -27,6 +36,7 @@ defmodule HexpmWeb.API.ReleaseController do
        [
          authentication: :required,
          domains: [{"api", "write"}, "package"],
+         allow_trusted_publisher: true,
          fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
        ]
        when action in [:publish]
@@ -50,7 +60,7 @@ defmodule HexpmWeb.API.ReleaseController do
         Releases.publish(
           conn.assigns.repository,
           conn.assigns.package,
-          conn.assigns.current_user || conn.assigns.current_organization.user,
+          publisher_for(conn),
           body_path,
           meta,
           inner_checksum,
@@ -70,7 +80,7 @@ defmodule HexpmWeb.API.ReleaseController do
       conn,
       conn.assigns.repository,
       conn.assigns.package,
-      conn.assigns.current_user || conn.assigns.current_organization.user,
+      publisher_for(conn),
       body_path
     )
   end
@@ -231,6 +241,14 @@ defmodule HexpmWeb.API.ReleaseController do
 
       {:error, reason} ->
         {:error, List.to_string(:hex_tarball.format_error(reason))}
+    end
+  end
+
+  defp publisher_for(conn) do
+    cond do
+      Map.get(conn.assigns, :trusted_publisher) -> nil
+      conn.assigns.current_user -> conn.assigns.current_user
+      conn.assigns.current_organization -> conn.assigns.current_organization.user
     end
   end
 end

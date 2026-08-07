@@ -19,7 +19,7 @@ defmodule Hexpm.OAuth.Client do
   end
 
   @valid_client_types ~w(public confidential)
-  @valid_grant_types ~w(authorization_code urn:ietf:params:oauth:grant-type:device_code refresh_token client_credentials)
+  @valid_grant_types ~w(authorization_code urn:ietf:params:oauth:grant-type:device_code refresh_token client_credentials trusted_publisher)
 
   def valid_grant_types, do: @valid_grant_types
 

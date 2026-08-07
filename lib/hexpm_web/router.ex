@@ -205,6 +205,7 @@ defmodule HexpmWeb.Router do
     get "/docs/private", DocsController, :private
     get "/docs/dependency-policies", DocsController, :dependency_policies
     get "/docs/organization-sso", DocsController, :organization_sso
+    get "/docs/trusted-publishers", DocsController, :trusted_publishers
     get "/docs/faq", DocsController, :faq
     get "/docs/mirrors", DocsController, :mirrors
     get "/docs/public-keys", DocsController, :public_keys
@@ -490,6 +491,18 @@ defmodule HexpmWeb.Router do
     post "/oauth/device_authorization", OAuthController, :device_authorization
     post "/oauth/revoke", OAuthController, :revoke
     post "/oauth/revoke_by_hash", OAuthController, :revoke_by_hash
+
+    get "/oidc/audience", OIDCController, :audience
+    post "/oidc/mint-token", OIDCController, :mint_token
+
+    for prefix <- ["/", "/repos/:repository"] do
+      scope prefix do
+        get "/packages/:name/trusted_publishers", TrustedPublisherController, :index
+        get "/packages/:name/trusted_publishers/:id", TrustedPublisherController, :show
+        post "/packages/:name/trusted_publishers", TrustedPublisherController, :create
+        delete "/packages/:name/trusted_publishers/:id", TrustedPublisherController, :delete
+      end
+    end
   end
 
   if Mix.env() in [:dev, :test, :hex] do

@@ -1,8 +1,8 @@
 defmodule Hexpm.PromEx.Plugins.Hexpm do
   @moduledoc """
   PromEx plugin for hex.pm business metrics, counting the domain events
-  emitted from the contexts (see `Hexpm.Repository.Releases` and
-  `Hexpm.Accounts.Users`).
+  emitted from the contexts (see `Hexpm.Repository.Releases`,
+  `Hexpm.Accounts.Users`, and `Hexpm.TrustedPublishers`).
   """
 
   use PromEx.Plugin
@@ -21,7 +21,29 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
       counter("hexpm.accounts.user_created.total",
         event_name: [:hexpm, :accounts, :user_created],
         description: "New user accounts created."
+      ),
+      counter("hexpm.trusted_publishers.mint.success.total",
+        event_name: [:hexpm, :trusted_publishers, :mint, :success],
+        description: "Trusted publisher OIDC tokens successfully exchanged for Hex tokens.",
+        tags: [:provider],
+        tag_values: &__MODULE__.mint_success_tags/1
+      ),
+      counter("hexpm.trusted_publishers.mint.failure.total",
+        event_name: [:hexpm, :trusted_publishers, :mint, :failure],
+        description: "Trusted publisher mint attempts that failed.",
+        tags: [:reason],
+        tag_values: &__MODULE__.mint_failure_tags/1
       )
     ])
+  end
+
+  @doc false
+  def mint_success_tags(metadata) do
+    %{provider: Map.get(metadata, :provider, "unknown")}
+  end
+
+  @doc false
+  def mint_failure_tags(metadata) do
+    %{reason: Map.get(metadata, :reason, "unknown")}
   end
 end

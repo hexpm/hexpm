@@ -285,6 +285,23 @@ defmodule Hexpm.Factory do
     }
   end
 
+  def trusted_publisher_factory() do
+    package = build(:package)
+    n = System.unique_integer([:positive])
+
+    %Hexpm.TrustedPublishers.TrustedPublisher{
+      package: package,
+      provider: "github",
+      issuer: Hexpm.TrustedPublishers.TrustedPublisher.github_issuer(),
+      repository_owner: "acme",
+      repository_owner_id: "12345",
+      repository_id: "67890",
+      repository: "acme/widget-#{n}",
+      workflow: "release-#{n}.yml",
+      environment: ""
+    }
+  end
+
   def session_factory() do
     user = build(:user)
 

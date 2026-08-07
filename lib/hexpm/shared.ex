@@ -52,7 +52,9 @@ defmodule Hexpm.Shared do
         Repository.Repositories,
         Repository.Repository,
         Repository.Requirement,
-        Repository.Sitemaps
+        Repository.Sitemaps,
+        TrustedPublishers,
+        TrustedPublishers.TrustedPublisher
       }
     end
   end

@@ -50,4 +50,9 @@ defmodule HexpmWeb.RateLimitPubSub do
     Attack.sso_callback_ip_throttle(ip, time: time)
     {:noreply, []}
   end
+
+  def handle_info({:throttle, {:trusted_publisher_mint_ip, ip}, time}, []) do
+    Attack.trusted_publisher_mint_ip_throttle(ip, time: time)
+    {:noreply, []}
+  end
 end
