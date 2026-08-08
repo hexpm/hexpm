@@ -4,12 +4,17 @@ defmodule Hexpm.Accounts.Key do
   @derive HexpmWeb.Stale
   @derive {Phoenix.Param, key: :name}
 
+  @token_prefix "hex_"
+
+  def token_prefix(), do: @token_prefix
+
   schema "keys" do
     field :name, :string
     field :secret_first, :string
     field :secret_second, :string
     field :public, :boolean, default: true
     field :revoke_at, :utc_datetime_usec
+    field :token_format, :string, default: "v1"
     timestamps()
 
     embeds_one :last_use, Use, on_replace: :delete do
@@ -120,11 +125,12 @@ defmodule Hexpm.Accounts.Key do
   end
 
   def gen_key() do
-    user_secret = Auth.gen_key()
+    raw_secret = Auth.gen_key()
+    user_secret = @token_prefix <> raw_secret
     app_secret = Application.get_env(:hexpm, :secret)
 
     <<first::binary-size(32), second::binary-size(32)>> =
-      :crypto.mac(:hmac, :sha256, app_secret, user_secret)
+      :crypto.mac(:hmac, :sha256, app_secret, raw_secret)
       |> Base.encode16(case: :lower)
 
     {user_secret, first, second}
@@ -136,6 +142,8 @@ defmodule Hexpm.Accounts.Key do
     |> put_embed(:last_use, struct(Key.Use, params))
   end
 
+  defp add_keys(%{valid?: false} = changeset), do: changeset
+
   defp add_keys(changeset) do
     {user_secret, first, second} = gen_key()
 
@@ -143,6 +151,7 @@ defmodule Hexpm.Accounts.Key do
     |> put_change(:user_secret, user_secret)
     |> put_change(:secret_first, first)
     |> put_change(:secret_second, second)
+    |> put_change(:token_format, "v2")
   end
 
   defp unique_name(changeset) do

@@ -207,19 +207,29 @@ defmodule HexpmWeb.AuthHelpers do
     end
   end
 
+  @token_prefix Hexpm.Accounts.Key.token_prefix()
+
   def authenticate(conn) do
     case get_req_header(conn, "authorization") do
       ["Basic " <> credentials] ->
         basic_auth(credentials)
 
       ["Bearer " <> token] ->
-        oauth_token_auth(token, conn)
+        bearer_auth(token, conn)
 
       [key] ->
-        key_auth(key, conn)
+        key_auth(String.trim(key), conn)
 
       _ ->
         {:error, :missing}
+    end
+  end
+
+  defp bearer_auth(token, conn) do
+    if String.starts_with?(token, @token_prefix) do
+      key_auth(token, conn)
+    else
+      oauth_token_auth(token, conn)
     end
   end
 
