@@ -1,6 +1,7 @@
 defmodule Hexpm.Accounts.KeyPermission do
   use Hexpm.Schema
 
+  alias Hexpm.Accounts.SSO.Enforcement
   alias Hexpm.Permissions
 
   @derive HexpmWeb.Stale
@@ -16,6 +17,7 @@ defmodule Hexpm.Accounts.KeyPermission do
     |> normalize_resource()
     |> validate_resource()
     |> validate_permission(user_or_organization)
+    |> validate_personal_key_reach(user_or_organization)
   end
 
   defp validate_resource(changeset) do
@@ -57,6 +59,31 @@ defmodule Hexpm.Accounts.KeyPermission do
       changeset
     end
   end
+
+  # The key has nowhere to hang an organization access session, so refusing it
+  # here rather than at the request means the member finds out while they are
+  # still on the form and can pick a credential that works.
+  defp validate_personal_key_reach(changeset, user_or_organization) do
+    with true <- changeset.valid?,
+         reach when not is_nil(reach) <-
+           reach(get_field(changeset, :domain), get_field(changeset, :resource)),
+         organization when not is_nil(organization) <-
+           Enum.find(Enforcement.personal_key_refused(user_or_organization), &reached?(&1, reach)) do
+      add_error(changeset, :resource, Enforcement.refusal_message(:personal_key, organization))
+    else
+      _ -> changeset
+    end
+  end
+
+  # An `api` permission names no organization, so nothing here can be stripped
+  # from it and the request that uses it is refused where it is authorized.
+  defp reach(domain, name) when domain in ["repository", "docs"] and is_binary(name), do: name
+  defp reach("repositories", nil), do: :every
+  defp reach("package", resource) when is_binary(resource), do: hd(String.split(resource, "/"))
+  defp reach(_domain, _resource), do: nil
+
+  defp reached?(_organization, :every), do: true
+  defp reached?(organization, name), do: organization.name == name
 
   defp normalize_resource(changeset) do
     update_change(changeset, :resource, fn resource ->

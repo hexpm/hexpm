@@ -16,6 +16,11 @@ defmodule Hexpm.OAuth.AuthorizationCode do
     belongs_to :user, User
     belongs_to :client, Hexpm.OAuth.Client, references: :client_id, type: :binary_id
 
+    # The browser session that consented. The token grant is a back-channel call
+    # with no browser, so this is how the organization access the consenting
+    # session was carrying reaches the session the grant creates.
+    belongs_to :user_session, Hexpm.UserSession
+
     timestamps()
   end
 
@@ -32,7 +37,8 @@ defmodule Hexpm.OAuth.AuthorizationCode do
       :code_challenge,
       :code_challenge_method,
       :user_id,
-      :client_id
+      :client_id,
+      :user_session_id
     ])
     |> validate_required([
       :code,

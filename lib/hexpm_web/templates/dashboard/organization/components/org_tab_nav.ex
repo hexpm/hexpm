@@ -70,7 +70,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.OrgTabNav do
 
     if organization_admin?(org, current_user) do
       admin_tabs =
-        if SSO.enabled?(org) do
+        if SSO.reachable?(org) do
           List.insert_at(core_tabs, 5, {:sso, "SSO", "/dashboard/orgs/#{name}/sso"})
         else
           core_tabs

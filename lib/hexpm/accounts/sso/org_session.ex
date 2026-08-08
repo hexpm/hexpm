@@ -3,8 +3,6 @@ defmodule Hexpm.Accounts.SSO.OrgSession do
 
   @type t :: %__MODULE__{}
 
-  @lifetime_seconds 24 * 60 * 60
-
   schema "organization_sso_sessions" do
     field :authenticated_at, :utc_datetime_usec
     field :expires_at, :utc_datetime_usec
@@ -17,8 +15,6 @@ defmodule Hexpm.Accounts.SSO.OrgSession do
 
     timestamps()
   end
-
-  def lifetime_seconds, do: @lifetime_seconds
 
   def changeset(session, attrs) do
     session

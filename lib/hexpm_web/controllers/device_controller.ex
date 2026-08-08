@@ -207,7 +207,8 @@ defmodule HexpmWeb.DeviceController do
 
             true ->
               case DeviceCodes.authorize_device(user_code, user, selected_scopes,
-                     audit: audit_data(conn)
+                     audit: audit_data(conn),
+                     browser_session_id: conn.assigns.current_session.id
                    ) do
                 {:ok, _device_code} ->
                   conn
@@ -292,7 +293,23 @@ defmodule HexpmWeb.DeviceController do
       container: "container page page-xs device",
       device_code: device_code,
       error_message: error_message,
-      current_user: conn.assigns[:current_user]
+      current_user: conn.assigns[:current_user],
+      sso_pending: unauthenticated_organizations(conn, device_code),
+      sso_return_path: current_path(conn)
     )
+  end
+
+  defp unauthenticated_organizations(conn, device_code) do
+    case conn.assigns[:current_user] do
+      nil ->
+        []
+
+      user ->
+        HexpmWeb.SSOEnforcement.unauthenticated_organizations(
+          conn,
+          user,
+          device_code.scopes || []
+        )
+    end
   end
 end

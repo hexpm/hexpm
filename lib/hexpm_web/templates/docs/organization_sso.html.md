@@ -7,7 +7,7 @@ Organization SSO is currently available only to organizations enabled by Hexpm's
 SSO is not a way to sign in to Hexpm. Two separate sessions carry the split, and only the first is a login:
 
 * The **account session** is the person's login to Hexpm, established by a password, GitHub, or another credential the account itself owns, together with the account's own two-factor authentication where enrolled. An identity provider never establishes it.
-* The **organization access session** is what an SSO authentication produces. It is scoped to one organization and lasts 24 hours. It records that the provider authenticated the member. Nothing at Hexpm requires one yet, so it does not currently gate access to the organization.
+* The **organization access session** is what an SSO authentication produces. It is scoped to one organization and records that the provider authenticated the member. An organization decides whether reaching it requires one, and how long one lasts.
 
 So the shape of the flow is: sign in to Hexpm as yourself, then authenticate to the organization's provider.
 
@@ -89,7 +89,123 @@ Being signed in is the proof, so there is no confirmation code and no email matc
 
 A provider email never establishes durable identity, selects an account, creates one, grants membership, or changes a Hexpm email address. After linking, the connection, exact issuer, and stable provider subject are the identity key. The account's verified primary address is notified when the link is created; an account with no verified primary address is not notified at all.
 
-After linking, later uses of the organization login URL establish a 24-hour organization access session for that browser session. Signing out of Hexpm, or revoking the browser session, ends the organization access with it.
+After linking, later uses of the organization login URL establish an organization access session for that browser session. Signing out of Hexpm, or revoking the browser session, ends the organization access with it.
+
+### Require SSO to reach the organization
+
+Enforcement is set on the organization's **SSO** dashboard and has three modes:
+
+* **Optional** is the default. Members can authenticate through the provider and nothing changes if they do not.
+* **Pilot** enforces only the members an administrator marks as enforced, one at a time, so a team can try it on itself before turning it on for everyone.
+* **Required** enforces every member except the ones marked exempt, from a date you pick.
+
+The per-member control has three states in both modes: enforced, exempt, and following the organization. Moving from pilot to required does not reassign anybody. The people you piloted with stay enforced, the people you never touched start being enforced because the organization now is, and only an explicit exemption opts anyone out.
+
+Setting a required-by date is a grace period, not a reminder. Until it passes the organization behaves exactly as it does in pilot. Members who have not linked an identity are emailed in the two weeks before the date, once each.
+
+Hexpm refuses to switch an organization to required unless at least one administrator is exempt or has already linked an identity, so a misconfigured provider cannot lock every administrator out of the settings that would fix it.
+
+### Which credentials work under enforcement
+
+The credential decides, not the account, and each one answers differently:
+
+| Credential | Under enforcement |
+| --- | --- |
+| Browser session | Needs a current organization access session for the organization. Hexpm sends you to the provider and back to the page you asked for. |
+| Hex CLI (`mix hex.user auth`) | The session established when you authorized the CLI carries organization access. Hexpm asks you to re-authenticate in a browser when it lapses. |
+| hexdocs and other OAuth clients | Same, established when you approve the client. |
+| Organization API key | Never enforced. It authenticates as the organization rather than as a person, so there is no one for the provider to vouch for. |
+| Personal API key | Allowed unless the organization chose to block them. |
+| Username and password against the API | Refused. There is nothing for an organization access session to attach to. |
+
+Enforcement is per organization and evaluated against the resource. Your Hexpm account, your own packages, the public repository, and every other organization you belong to are unaffected.
+
+### The organization access session
+
+An administrator sets how long one lasts: one hour, eight hours, one day (the default), one week, or thirty days. The same number governs every path. A browser session and a CLI session that have both authenticated expire on the same clock, so the setting means what it says rather than being the shorter half of two different windows.
+
+When one lapses in the browser you are sent to the provider and back, and unless the provider asks you something the round trip is invisible. At the terminal, `mix` asks you to authenticate in a browser and then carries on with the same CLI session; you do not have to run `mix hex.user auth` again.
+
+Shorter is stricter and more interruptive. The lifetime is what bounds how long someone your provider has deactivated keeps reaching the organization, so it is the number to pick deliberately.
+
+### The Hex CLI
+
+When a CLI session's authentication lapses, the next `mix deps.get` asks:
+
+```
+acme requires SSO authentication. Authenticate now? [Yn]
+```
+
+It names only the organizations the project actually depends on. Hex knows the whole set before it fetches anything, because a published package's dependencies can only come from the public repository or from that package's own organization, so a member of ten SSO organizations who depends on two is asked about two and asked once.
+
+Saying yes opens a page bound to the CLI session you are already signed in on. Completing SSO there renews that session: the same session, the same refresh token, and resolution carries on. Saying no continues without the organization's packages.
+
+CI is unaffected. It authenticates with an organization API key, which is the organization rather than a person, so there is nobody for your provider to vouch for and nothing to lapse.
+
+### Personal API keys
+
+A personal API key is a static credential. There is no session behind it, nothing expires it unless its owner set an expiry, and your provider never sees it used. Whether one may reach an enforced organization is the organization's choice, and the default is to allow them:
+
+* **Block** removes this organization's permissions from members' personal keys on the required-by date, and refuses new ones. Their owners are emailed, and the rest of each key keeps working. Members publishing by hand run `mix hex.user auth` instead, and automation moves to an organization key.
+
+    Blocking follows the same members enforcement does. A pilot turns personal keys away for the members you marked enforced and for nobody else, and it refuses new ones rather than removing what is already there, so a pilot shows you what required mode will do without taking anything away yet. An exempt member's keys are never touched.
+* **Allow** leaves them alone, and is what you get if you change nothing. It is the right answer if your publishing workflow depends on them. It means required mode has a standing exception: those keys reach the organization with no session, no expiry, and no exposure to your provider's conditional-access policy. A key still stops working when its owner is removed from the organization here, because its permissions are checked against current membership on every request; it does not stop working when they are deactivated only in your provider, which is what SCIM will change.
+
+    An organization API key has the same properties and is never enforced at all, so allowing personal keys widens a path that is already open rather than opening a new one. What blocking buys that removing the member does not is your provider's conditional-access policy, which no static credential evaluates.
+
+Either way the SSO dashboard lists the members holding personal keys that reach the organization, and when each was last used, before you turn enforcement on. For a key whose permissions name the organization the list is exact. For one carrying every repository, or plain API access, it says the key could reach the organization rather than that it did; Hexpm records when a key was used and not what it was used against.
+
+### Exemptions
+
+An exempt member reaches the organization on their Hexpm credential alone. That is the point of the setting and it is also worth being blunt about: a required organization with exemptions has an enumerated set of accounts that your provider's policy does not cover. The members tab names every one of them and states how many there are, so the list can be reviewed rather than discovered.
+
+### Break-glass
+
+Two screens stay reachable for a governed member with no current organization access session: **Billing** and the **SSO** settings themselves. Everything else on the organization dashboard, and every private package, is refused as usual.
+
+They stay open because an organization whose client secret expired, or whose administrator was deactivated in the provider by mistake, has to be able to repair the connection and keep paying. If those screens sat behind the gate they are the only way to unlock, nothing could ever fix it. So while the provider is down, a required organization can fix its connection and keep its subscription, and cannot publish or fetch privately until the provider is back.
+
+Reaching either screen that way is recorded in the organization's audit log and emailed to its administrators, at most once an hour per member.
+
+The SSO screen is reachable so the connection can be repaired, and turning enforcement off for the organization counts as repairing it. Exempting individual members does not: it outlives the outage and leaves the organization reading as enforced, so that control needs a current organization access session like everything else.
+
+### The residual bypasses
+
+A required organization has exactly four ways in that do not involve its identity provider, and they are all deliberate:
+
+1. **Exemptions**, one per member, listed on the members tab.
+2. **Organization API keys**, which authenticate as the organization. This is the audited automation exception; enforcement constrains and monitors it but cannot close it.
+3. **Personal API keys**, unless the organization chose to block them.
+4. **Break-glass** on the billing and SSO settings screens, audited and mailed.
+
+There is no fifth. If you are evaluating Hexpm against a compliance requirement, this is the list.
+
+### Offboarding
+
+Two windows, and they are different:
+
+* **Removing a member in Hexpm** takes effect within thirty minutes. The CLI's access token is a capability the edge verifies without a database lookup, so it keeps its scopes until it is next refreshed. Web access ends immediately.
+* **Deactivating someone in your provider only** takes effect when their organization access session expires, which is the lifetime you set. Hexpm does not learn about a provider-side deactivation until then.
+
+SCIM closes the second one and is not in this release. Until it ships, the session lifetime is what bounds it, which is the reason to pick that number deliberately rather than take the default.
+
+Removing the member in Hexpm is what revokes access. Removing their provider assignment is not.
+
+### Seats and billing
+
+Configuring SSO takes an active subscription. Being governed by it does not. If a payment fails, enforcement stays exactly as you set it: an organization that requires SSO keeps requiring it, and its members keep being able to authenticate. A lapsed card does not quietly turn your access control off, and does not lock your team out either. The SSO settings and billing screens stay reachable throughout, which is the same break-glass path described above.
+
+Just-in-time membership is the only part of SSO that can change a seat count. If it is on and a member is admitted when the seats are full, the organization either adds a seat to the subscription or refuses the admission, depending on which you chose under **When the seats run out** on the SSO tab. Enforcement on its own never adds, removes, or bills a seat.
+
+### Before you turn on required mode
+
+1. Link the administrators, or exempt at least one.
+2. Review the members tab and decide who, if anyone, is exempt.
+3. Check the personal-key list and decide whether to leave them allowed or block them.
+4. Pick a session lifetime.
+5. Set a required-by date far enough out for the grace-period email to reach people.
+
+Turning enforcement on revokes nothing that already exists. Organization access sessions run out their lifetime and access tokens keep their scopes until they are next refreshed.
 
 ### MFA and step-up
 
@@ -140,4 +256,4 @@ Do not send client secrets, authorization codes, tokens, cookies, or raw callbac
 
 Enabled organizations can use the organization login URL and third-party-initiated login. Custom Okta dashboard tiles and Microsoft Entra are not supported, and there is no public Okta Integration Network listing. Tiles and Entra both work and have been exercised privately; supporting them is an open release decision rather than an untested path. The OIN listing is different in kind: the integration was built and exercised, but it was never submitted for review, so no listing exists to install from.
 
-This release does not support SAML, account creation, invitations, just-in-time membership, domain verification, SCIM, group or role synchronization, required SSO enforcement, or OIDC logout.
+This release does not support SAML, account creation, SCIM, group or role synchronization, or OIDC logout.

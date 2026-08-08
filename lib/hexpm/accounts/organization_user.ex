@@ -1,12 +1,37 @@
 defmodule Hexpm.Accounts.OrganizationUser do
   use Hexpm.Schema
 
+  @enforcements ~w(enforced exempt)
+
   schema "organization_users" do
     field :role, :string
+    field :sso_enforcement, :string
 
     belongs_to :organization, Organization
     belongs_to :user, User
 
     timestamps()
   end
+
+  def enforcements, do: @enforcements
+
+  @doc """
+  Sets whether SSO is enforced for this member regardless of the organization's
+  mode. Nil follows the mode, "enforced" always does, "exempt" never does.
+  """
+  def enforcement_changeset(organization_user, attrs) do
+    organization_user
+    |> cast(attrs, [:sso_enforcement])
+    |> update_change(:sso_enforcement, &nilify_blank/1)
+    |> validate_inclusion(:sso_enforcement, @enforcements)
+  end
+
+  defp nilify_blank(value) when is_binary(value) do
+    case String.trim(value) do
+      "" -> nil
+      trimmed -> trimmed
+    end
+  end
+
+  defp nilify_blank(value), do: value
 end

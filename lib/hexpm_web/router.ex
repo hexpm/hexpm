@@ -169,6 +169,11 @@ defmodule HexpmWeb.Router do
     post "/sso/link", SSOController, :confirm_link, log: false
     post "/sso/link/cancel", SSOController, :cancel_link, log: false
     get "/sso/org/:organization", SSOController, :start, log: false
+    # The code rides in the query string, not the path: both loggers on the
+    # endpoint record `conn.request_path`, so a code in the path would be
+    # written to stdout and to Sentry on every visit.
+    get "/sso/authorize", SSOController, :authorize, log: false
+    post "/sso/authorize", SSOController, :authorize_organization, log: false
 
     get "/invites", OrganizationInvitationController, :show, log: false
     post "/invites", OrganizationInvitationController, :accept, log: false
@@ -345,6 +350,15 @@ defmodule HexpmWeb.Router do
     post "/orgs/:dashboard_org/sso/promote", OrganizationSSOController, :promote, log: false
     post "/orgs/:dashboard_org/sso/unlink", OrganizationSSOController, :unlink, log: false
     post "/orgs/:dashboard_org/sso/jit", OrganizationSSOController, :configure_jit
+
+    post "/orgs/:dashboard_org/sso/enforcement",
+         OrganizationSSOController,
+         :configure_enforcement
+
+    post "/orgs/:dashboard_org/sso/enforcement/member",
+         OrganizationSSOController,
+         :set_member_enforcement
+
     post "/orgs/:dashboard_org/sso/domains", OrganizationSSOController, :add_domain
     post "/orgs/:dashboard_org/sso/domains/verify", OrganizationSSOController, :verify_domain
     post "/orgs/:dashboard_org/sso/domains/remove", OrganizationSSOController, :remove_domain
@@ -490,6 +504,7 @@ defmodule HexpmWeb.Router do
     post "/oauth/device_authorization", OAuthController, :device_authorization
     post "/oauth/revoke", OAuthController, :revoke
     post "/oauth/revoke_by_hash", OAuthController, :revoke_by_hash
+    post "/oauth/sso_authorization", SSOAuthorizationController, :create
   end
 
   if Mix.env() in [:dev, :test, :hex] do

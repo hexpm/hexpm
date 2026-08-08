@@ -118,7 +118,8 @@ defmodule HexpmWeb.API.OAuthController do
              name: safe_param(params, "name"),
              with_refresh_token: true,
              usage_info: usage_info,
-             audit: audit
+             audit: audit,
+             browser_session_id: used_auth_code.user_session_id
            ) do
         {:ok, token} ->
           render(conn, :token, token: token)
@@ -226,6 +227,7 @@ defmodule HexpmWeb.API.OAuthController do
              api_key_secret,
              name: safe_param(params, "name"),
              usage_info: usage_info,
+             credential: auth_info.auth_credential,
              audit: audit_data
            ) do
         {:ok, token} ->

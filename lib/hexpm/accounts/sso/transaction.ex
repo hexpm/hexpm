@@ -28,6 +28,11 @@ defmodule Hexpm.Accounts.SSO.Transaction do
     belongs_to :connection, Hexpm.Accounts.SSO.Connection
     belongs_to :user, User
 
+    # The session this authentication is for, when it is not the browser doing
+    # it. A terminal cannot complete a provider round trip itself, so it sends
+    # its owner to one and the organization access lands here instead.
+    belongs_to :target_user_session, Hexpm.UserSession
+
     timestamps()
   end
 
@@ -36,6 +41,7 @@ defmodule Hexpm.Accounts.SSO.Transaction do
     |> cast(attrs, [
       :connection_id,
       :user_id,
+      :target_user_session_id,
       :state_hash,
       :nonce,
       :code_verifier,
@@ -61,6 +67,7 @@ defmodule Hexpm.Accounts.SSO.Transaction do
       :expires_at
     ])
     |> validate_inclusion(:kind, ~w(login test))
+    |> validate_inclusion(:entrypoint, ~w(organization third_party cli))
     |> validate_inclusion(:secret_slot, ~w(active pending))
     |> unique_constraint(:state_hash)
   end
