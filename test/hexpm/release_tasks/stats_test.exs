@@ -180,6 +180,27 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
     end)
   end
 
+  describe "vacuum_downloads/0" do
+    # The sandboxed tests above run with skip_maintenance_vacuum on, because
+    # VACUUM cannot run inside the transaction wrapping them. This one goes
+    # unboxed on a real connection so the statement is genuinely issued.
+    test "runs against a real connection" do
+      app_env(:hexpm, :skip_maintenance_vacuum, false)
+
+      task = Hexpm.ConcurrencyCase.unboxed_task(fn -> Stats.vacuum_downloads() end)
+
+      assert Task.await(task, 15_000) == :ok
+    end
+
+    test "issues no statement when disabled" do
+      app_env(:hexpm, :skip_maintenance_vacuum, true)
+
+      queries = capture_queries(fn -> assert Stats.vacuum_downloads() == :ok end)
+
+      refute Enum.any?(queries, &(&1 =~ "VACUUM"))
+    end
+  end
+
   defp read_log(path, replaces) do
     Enum.reduce(replaces, read_fixture(path), fn {key, value}, file ->
       String.replace(file, "{#{key}}", value)
