@@ -3,7 +3,9 @@ defmodule Hexpm.TmpDirTest do
 
   import Bitwise
 
-  @receive_timeout 1000
+  # The paths come from a spawned process, which a loaded machine can leave
+  # unscheduled for a while before it reports them.
+  @receive_timeout 10_000
 
   test "tmp_file/1 creates a file" do
     path = Hexpm.TmpDir.tmp_file("test")

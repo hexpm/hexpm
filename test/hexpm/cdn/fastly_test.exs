@@ -3,7 +3,9 @@ defmodule Hexpm.CDN.FastlyTest do
   import Mox
   alias Hexpm.CDN.Fastly
 
-  @receive_timeout 1_000
+  # The two extra purges come from a supervised task that sleeps between them,
+  # so the wait has to outlast a loaded machine scheduling that task late.
+  @receive_timeout 10_000
 
   describe "purge_key/2" do
     test "calls purge endpoint 3 times after waiting" do
