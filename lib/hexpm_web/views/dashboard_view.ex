@@ -2,7 +2,6 @@ defmodule HexpmWeb.DashboardView do
   use HexpmWeb, :view
   alias Hexpm.Accounts.OptionalEmails
   import HexpmWeb.Components.Modal, only: [show_modal: 1]
-  import HexpmWeb.Dashboard.Key.Components.KeyManagementCard
 
   import HexpmWeb.Dashboard.Organization.Components.CreateOrganizationModal,
     only: [create_organization_modal: 1]
