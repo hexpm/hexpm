@@ -11,7 +11,7 @@ defmodule HexpmWeb.UserController do
       Users.get_by_username(username, [
         :emails,
         :organization,
-        owned_packages: [:repository, :downloads]
+        owned_packages: [:repository]
       ])
 
     if user do
@@ -36,10 +36,7 @@ defmodule HexpmWeb.UserController do
     sort_by = Map.get(params, "sort", "popular")
     page = Hexpm.Utils.safe_int(params["page"]) || 1
 
-    all_packages =
-      Packages.accessible_user_owned_packages(user, conn.assigns.current_user)
-      |> Packages.attach_latest_releases()
-
+    all_packages = Packages.accessible_user_owned_packages(user, conn.assigns.current_user)
     downloads = Downloads.packages_all_views(all_packages)
 
     total_downloads =
@@ -50,7 +47,11 @@ defmodule HexpmWeb.UserController do
 
     # Paginate the sorted packages
     total_count = length(sorted_packages)
-    paginated_packages = paginate_list(sorted_packages, page, @packages_per_page)
+
+    paginated_packages =
+      sorted_packages
+      |> paginate_list(page, @packages_per_page)
+      |> Packages.attach_latest_releases()
 
     public_email = User.email(user, :public)
     gravatar_email = User.email(user, :gravatar)
@@ -80,7 +81,7 @@ defmodule HexpmWeb.UserController do
            Users.get_by_username(username, [
              :emails,
              :organization,
-             owned_packages: [:repository, :downloads]
+             owned_packages: [:repository]
            ]) do
       all_packages =
         user

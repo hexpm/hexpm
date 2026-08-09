@@ -226,6 +226,25 @@ defmodule HexpmWeb.PackageControllerTest do
   end
 
   describe "GET /packages/:name" do
+    test "does not query data the page never renders", %{package1: package1} do
+      queries = capture_queries(fn -> get(build_conn(), "/packages/#{package1.name}") end)
+
+      refute Enum.any?(queries, &(&1 =~ ~s(FROM "audit_logs")))
+
+      # The dependants tab label needs a count. Listing them is the dependents page.
+      assert Enum.count(queries, &(&1 =~ ~s(FROM "package_dependants"))) == 1
+    end
+
+    test "counts dependants once on the dependents page", %{package1: package1} do
+      queries =
+        capture_queries(fn -> get(build_conn(), "/packages/#{package1.name}/dependents") end)
+
+      counts =
+        Enum.count(queries, &(&1 =~ "count(*)" and &1 =~ ~s(FROM "package_dependants")))
+
+      assert counts == 1
+    end
+
     test "banners the release on screen when an advisory affects it", %{package1: package1} do
       advise(package1, "GHSA-current-release", "0.0.2")
 

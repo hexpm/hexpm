@@ -189,4 +189,40 @@ defmodule Hexpm.TestHelpers do
     |> Ecto.Changeset.change(billing_seats: seats)
     |> Hexpm.Repo.update!()
   end
+
+  @doc """
+  Returns every SQL statement `fun` ran in the calling process.
+
+  The telemetry handler is global, so it compares against the caller to keep
+  queries from concurrently running async tests out of the result.
+  """
+  def capture_queries(fun) do
+    test = self()
+    handler = {__MODULE__, System.unique_integer()}
+
+    :telemetry.attach(
+      handler,
+      [:hexpm, :repo_base, :query],
+      fn _event, _measurements, %{query: query}, _config ->
+        if self() == test, do: send(test, {handler, query})
+      end,
+      nil
+    )
+
+    try do
+      fun.()
+    after
+      :telemetry.detach(handler)
+    end
+
+    collect_queries(handler, [])
+  end
+
+  defp collect_queries(handler, acc) do
+    receive do
+      {^handler, query} -> collect_queries(handler, [query | acc])
+    after
+      0 -> Enum.reverse(acc)
+    end
+  end
 end

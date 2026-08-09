@@ -927,11 +927,29 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     )
   end
 
+  # The packages tab renders a version and a download total per package; the keys
+  # tab only needs the names to build its permission checkboxes.
+  defp packages_assign(organization, :packages) do
+    organization
+    |> organization_packages()
+    |> Hexpm.Repo.preload(:downloads)
+    |> Packages.attach_latest_releases()
+  end
+
+  defp packages_assign(organization, :keys), do: organization_packages(organization)
+  defp packages_assign(_organization, _tab), do: []
+
   defp organization_packages(%{repository: %{packages: packages}}) when is_list(packages) do
-    Packages.attach_latest_releases(packages)
+    packages
   end
 
   defp organization_packages(_), do: []
+
+  defp customer(conn, organization, tab) when tab in [:billing, :members] do
+    Hexpm.Billing.get(organization.name, script_nonce: conn.assigns[:script_src_nonce])
+  end
+
+  defp customer(_conn, _organization, _tab), do: nil
 
   defp organization_repository(%{repository: %Ecto.Association.NotLoaded{}} = organization) do
     Hexpm.Repo.preload(organization, :repository).repository
@@ -971,13 +989,11 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     public_email = user && Enum.find(user.emails, & &1.public)
     gravatar_email = user && Enum.find(user.emails, & &1.gravatar)
 
-    customer =
-      Hexpm.Billing.get(organization.name, script_nonce: conn.assigns[:script_src_nonce])
-
-    keys = Keys.all(organization)
+    customer = customer(conn, organization, opts[:tab])
+    keys = if opts[:tab] == :keys, do: Keys.all(organization), else: []
     delete_key_path = ~p"/dashboard/orgs/#{organization}/keys"
     create_key_path = ~p"/dashboard/orgs/#{organization}/keys"
-    packages = organization_packages(organization)
+    packages = packages_assign(organization, opts[:tab])
     policy_action = opts[:policy_action]
     policy = opts[:policy]
     policy_admin? = policy_admin?(conn, organization)

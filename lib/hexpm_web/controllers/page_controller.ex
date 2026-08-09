@@ -26,8 +26,9 @@ defmodule HexpmWeb.PageController do
   defp process_new_packages(results) do
     packages =
       results
-      |> Enum.map(fn {name, inserted_at, meta, downloads} ->
+      |> Enum.map(fn {id, name, inserted_at, meta, downloads} ->
         %Hexpm.Repository.Package{
+          id: id,
           name: name,
           inserted_at: inserted_at,
           meta: meta,
@@ -36,7 +37,7 @@ defmodule HexpmWeb.PageController do
       end)
       |> Packages.attach_latest_releases()
 
-    Enum.zip_with(packages, results, fn package, {_name, inserted_at, meta, downloads} ->
+    Enum.zip_with(packages, results, fn package, {_id, _name, inserted_at, meta, downloads} ->
       version = if package.latest_release, do: package.latest_release.version, else: nil
       {package.name, inserted_at, meta, version, downloads}
     end)
