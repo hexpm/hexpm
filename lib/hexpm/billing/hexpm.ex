@@ -1,4 +1,5 @@
 defmodule Hexpm.Billing.Hexpm do
+  require Logger
   alias Hexpm.HTTP
 
   @behaviour Hexpm.Billing.Behaviour
@@ -65,8 +66,21 @@ defmodule Hexpm.Billing.Hexpm do
 
   def change_plan(organization, params) do
     case post("/api/customers/#{organization}/plan", params) do
-      {:ok, 204, _headers, _body} -> :ok
-      {:ok, 422, _headers, body} -> {:error, body}
+      {:ok, 204, _headers, _body} ->
+        :ok
+
+      {:ok, 422, _headers, body} ->
+        {:error, body}
+
+      other ->
+        Logger.error([
+          "billing change_plan failed for ",
+          organization,
+          ": ",
+          inspect(other)
+        ])
+
+        {:error, %{}}
     end
   end
 
