@@ -975,10 +975,6 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       Hexpm.Billing.get(organization.name, script_nonce: conn.assigns[:script_src_nonce])
 
     keys = Keys.all(organization)
-    per_page = opts[:per_page] || 30
-    page = opts[:page] || 1
-    audit_logs = opts[:audit_logs] || AuditLogs.all_by(organization, page, per_page)
-    audit_logs_total_count = opts[:audit_logs_total_count] || AuditLogs.count_by(organization)
     delete_key_path = ~p"/dashboard/orgs/#{organization}/keys"
     create_key_path = ~p"/dashboard/orgs/#{organization}/keys"
     packages = organization_packages(organization)
@@ -1000,10 +996,6 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         organization: organization,
         repository: organization.repository,
         keys: keys,
-        audit_logs: audit_logs,
-        audit_logs_total_count: audit_logs_total_count,
-        page: page,
-        per_page: per_page,
         audit_logs_path_fn: &~p"/dashboard/orgs/#{organization}/audit-logs?#{&1}",
         params: opts[:params],
         errors: opts[:errors],
@@ -1024,11 +1016,28 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         policy_rev: policy_rev,
         sso_org_session: current_org_session(conn, organization)
       ] ++
+        audit_log_assigns(organization, opts[:tab], opts) ++
         sso_assigns(organization, opts[:tab]) ++
         member_assigns(organization, opts[:tab], opts)
 
     assigns = Keyword.merge(assigns, customer_assigns(customer, organization))
     render(conn, "index.html", assigns)
+  end
+
+  defp audit_log_assigns(organization, :audit_logs, opts) do
+    per_page = opts[:per_page] || 30
+    page = opts[:page] || 1
+
+    [
+      audit_logs: opts[:audit_logs] || AuditLogs.all_by(organization, page, per_page),
+      audit_logs_total_count: opts[:audit_logs_total_count] || AuditLogs.count_by(organization),
+      page: page,
+      per_page: per_page
+    ]
+  end
+
+  defp audit_log_assigns(_organization, _tab, _opts) do
+    [audit_logs: [], audit_logs_total_count: 0, page: 1, per_page: 30]
   end
 
   defp policy_assigns(organization, :policies, nil, _policy) do
