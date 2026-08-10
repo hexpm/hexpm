@@ -39,39 +39,85 @@ defmodule Hexpm.SecretScan.Scanner do
   """
   def scan_files(dir, file_paths, opts \\ []) do
     deadline = System.monotonic_time(:millisecond) + release_timeout()
-    empty = %{kept: [], total: 0, halted: false, timeouts: 0}
     # Compile the package's ignore globs once, not once per file.
     opts = Keyword.update(opts, :ignore, [], &compile_globs/1)
 
-    state =
-      file_paths
-      # Unordered so a file that runs to its timeout doesn't hold every result
-      # behind it: the deadline below can only look at the clock when a result
-      # arrives, and nothing here cares what order they arrive in.
-      |> Task.async_stream(&scan_file(dir, &1, opts),
-        max_concurrency: System.schedulers_online(),
-        timeout: file_timeout(),
-        on_timeout: :kill_task,
-        ordered: false,
-        zip_input_on_exit: true
-      )
-      # The budget is read when a result arrives, so a file consumed just before
-      # the deadline can still be followed by one that runs its full timeout:
-      # 40s worst case against the worker's 270s.
-      |> Enum.reduce_while(empty, fn result, state ->
-        if System.monotonic_time(:millisecond) > deadline do
-          {:halt, %{state | halted: true}}
-        else
-          {:cont, accumulate(result, state)}
-        end
-      end)
+    state = scan_all(dir, file_paths, opts, deadline)
 
     log_incomplete(dir, state)
     {findings, dropped_locations?} = dedupe(state.kept)
 
     {cap(findings),
-     state.halted or state.timeouts > 0 or dropped_locations? or
+     state.halted != false or state.timeouts > 0 or dropped_locations? or
        state.total > @max_findings or length(findings) > @max_findings}
+  end
+
+  # The stream is consumed in a process of its own so the budget is a deadline
+  # rather than a suggestion. Reducing over it here would only let us read the
+  # clock when a result arrived, so a file that stalled just before the deadline
+  # took a whole file timeout more on top of it. It also contains a crash: the
+  # tasks are linked to the collector, and `Task.async_stream` propagates a task
+  # that raises or exits to whoever is consuming it, so run here that would take
+  # the release's scan and the job with it.
+  defp scan_all(dir, file_paths, opts, deadline) do
+    parent = self()
+    ref = make_ref()
+
+    {collector, monitor} =
+      spawn_monitor(fn ->
+        file_paths
+        # Unordered so a file that runs to its timeout doesn't hold every result
+        # behind it; nothing here cares what order they arrive in.
+        |> Task.async_stream(&scan_file(dir, &1, opts),
+          max_concurrency: System.schedulers_online(),
+          timeout: file_timeout(),
+          on_timeout: :kill_task,
+          ordered: false,
+          zip_input_on_exit: true
+        )
+        |> Enum.each(&send(parent, {ref, &1}))
+
+        send(parent, {ref, :done})
+      end)
+
+    state =
+      collect(dir, ref, monitor, %{kept: [], total: 0, halted: false, timeouts: 0}, deadline)
+
+    # Killing the collector kills whatever it still had running.
+    Process.exit(collector, :kill)
+    Process.demonitor(monitor, [:flush])
+    flush(ref)
+    state
+  end
+
+  defp collect(dir, ref, monitor, state, deadline) do
+    case deadline - System.monotonic_time(:millisecond) do
+      remaining when remaining <= 0 ->
+        %{state | halted: :budget}
+
+      remaining ->
+        receive do
+          {^ref, :done} ->
+            state
+
+          {^ref, result} ->
+            collect(dir, ref, monitor, accumulate(result, state), deadline)
+
+          {:DOWN, ^monitor, :process, _pid, reason} ->
+            Logger.warning("Secret scan of #{dir} crashed: #{inspect(reason)}")
+            %{state | halted: :crash}
+        after
+          remaining -> %{state | halted: :budget}
+        end
+    end
+  end
+
+  defp flush(ref) do
+    receive do
+      {^ref, _result} -> flush(ref)
+    after
+      0 -> :ok
+    end
   end
 
   # The accumulator is capped as it grows rather than at the end. A release of
@@ -81,12 +127,9 @@ defmodule Hexpm.SecretScan.Scanner do
     %{state | kept: cap(state.kept ++ found), total: state.total + length(found)}
   end
 
+  # The only exit the stream yields. A task that raises or exits takes the
+  # collector down instead, which `collect/5` sees as a monitor message.
   defp accumulate({:exit, {_path, :timeout}}, state) do
-    %{state | timeouts: state.timeouts + 1}
-  end
-
-  defp accumulate({:exit, {path, reason}}, state) do
-    Logger.warning("Secret scan died on #{path}: #{inspect(reason)}")
     %{state | timeouts: state.timeouts + 1}
   end
 
@@ -105,10 +148,13 @@ defmodule Hexpm.SecretScan.Scanner do
   # count doesn't.
   defp log_incomplete(_dir, %{halted: false, timeouts: 0}), do: :ok
 
+  # The crash already logged itself, with the reason.
+  defp log_incomplete(_dir, %{halted: :crash}), do: :ok
+
   defp log_incomplete(dir, state) do
     Logger.warning(
       "Secret scan of #{dir} incomplete: #{state.timeouts} files timed out" <>
-        if(state.halted, do: ", hit the #{release_timeout()}ms budget", else: "")
+        if(state.halted == :budget, do: ", hit the #{release_timeout()}ms budget", else: "")
     )
   end
 
@@ -185,9 +231,9 @@ defmodule Hexpm.SecretScan.Scanner do
         []
     end
   rescue
-    # A task raising here would leave the stream as an exit, which the caller's
-    # rescue cannot catch, so one unreadable file would kill the whole release's
-    # scan and take the preview job with it.
+    # One unreadable file is not the release. A task raising here takes the
+    # collector in `scan_all/4` with it, which costs every other file still
+    # running and whatever was still queued behind them.
     exception ->
       Logger.warning("Secret scan could not read #{path}: #{Exception.message(exception)}")
       []
