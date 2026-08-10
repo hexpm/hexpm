@@ -58,6 +58,52 @@ defmodule HexpmWeb.LoginControllerTest do
     assert get_session(conn, "session_token")
   end
 
+  # Browsers strip tab, LF and CR while parsing a URL, so a return path like
+  # "/<TAB>/evil.com" passes a naive "does it start with a single slash" check
+  # but resolves as the scheme-relative "//evil.com" (CVE-2026-64941).
+  for {label, return} <- [
+        {"absolute URL", "https://evil.com"},
+        {"absolute http URL", "http://evil.com/dashboard"},
+        {"javascript scheme", "javascript:alert(1)"},
+        {"data scheme", "data:text/html,x"},
+        {"protocol-relative", "//evil.com"},
+        {"protocol-relative with path", "//evil.com/dashboard"},
+        {"backslash", "/\\evil.com"},
+        {"encoded slash", "/%2fevil.com"},
+        {"encoded backslash", "/%5cevil.com"},
+        {"bare host", "evil.com"},
+        {"tab", "/\t/evil.com"},
+        {"encoded tab", "/%09/evil.com"},
+        {"line feed", "/\n/evil.com"},
+        {"carriage return", "/\r/evil.com"},
+        {"CRLF", "/\r\n/evil.com"},
+        {"header injection", "/dashboard\r\nSet-Cookie: x=1"}
+      ] do
+    test "log in refuses to redirect off-site via a #{label} return path", c do
+      conn =
+        post(build_conn(), "/login", %{
+          username: c.user.username,
+          password: "password",
+          return: unquote(return)
+        })
+
+      assert redirected_to(conn) == "/users/#{c.user.username}"
+    end
+  end
+
+  for return <- ["/", "/dashboard", "/packages?search=ecto"] do
+    test "log in honours the on-site return path #{inspect(return)}", c do
+      conn =
+        post(build_conn(), "/login", %{
+          username: c.user.username,
+          password: "password",
+          return: unquote(return)
+        })
+
+      assert redirected_to(conn) == unquote(return)
+    end
+  end
+
   test "log in with wrong password", c do
     PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
 
