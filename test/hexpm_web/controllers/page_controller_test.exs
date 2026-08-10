@@ -75,6 +75,19 @@ defmodule HexpmWeb.PageControllerTest do
              "Paid organizations can also publish private policies covering public and private packages"
   end
 
+  test "index resolves the latest version of each new package", c do
+    conn = get(build_conn(), "/")
+
+    versions =
+      Map.new(conn.assigns.package_new, fn {name, _inserted_at, _meta, version, _downloads} ->
+        {name, version && to_string(version)}
+      end)
+
+    assert versions[c.package1.name] == "0.1.0"
+    assert versions[c.package2.name] == "0.0.2"
+    assert versions[c.package3.name] == "0.0.1"
+  end
+
   test "index renders relative time for new and recently updated packages" do
     html = build_conn() |> get("/") |> response(200)
 

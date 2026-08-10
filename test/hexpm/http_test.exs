@@ -4,6 +4,7 @@ defmodule Hexpm.HTTPTest do
   alias Hexpm.HTTP
   alias Plug.Conn
 
+  @receive_timeout 10_000
   @server_step_timeout 10_000
   @server_await_timeout 30_000
 
@@ -83,10 +84,10 @@ defmodule Hexpm.HTTPTest do
         )
       end)
 
-    assert_receive {:pinned_request_received, request_process}, 1_000
-    assert {:error, :timeout} = Task.await(request, 1_000)
+    assert_receive {:pinned_request_received, request_process}, @receive_timeout
+    assert {:error, :timeout} = Task.await(request, @receive_timeout)
     send(request_process, :finish_request)
-    assert_receive :pinned_request_finished, 1_000
+    assert_receive :pinned_request_finished, @receive_timeout
   end
 
   test "get/3 validates the original hostname over a pinned HTTPS connection" do

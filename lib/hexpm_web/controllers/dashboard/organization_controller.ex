@@ -927,11 +927,29 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     )
   end
 
+  # The packages tab renders a version and a download total per package; the keys
+  # tab only needs the names to build its permission checkboxes.
+  defp packages_assign(organization, :packages) do
+    organization
+    |> organization_packages()
+    |> Hexpm.Repo.preload(:downloads)
+    |> Packages.attach_latest_releases()
+  end
+
+  defp packages_assign(organization, :keys), do: organization_packages(organization)
+  defp packages_assign(_organization, _tab), do: []
+
   defp organization_packages(%{repository: %{packages: packages}}) when is_list(packages) do
-    Packages.attach_latest_releases(packages)
+    packages
   end
 
   defp organization_packages(_), do: []
+
+  defp customer(conn, organization, tab) when tab in [:billing, :members] do
+    Hexpm.Billing.get(organization.name, script_nonce: conn.assigns[:script_src_nonce])
+  end
+
+  defp customer(_conn, _organization, _tab), do: nil
 
   defp organization_repository(%{repository: %Ecto.Association.NotLoaded{}} = organization) do
     Hexpm.Repo.preload(organization, :repository).repository
@@ -971,17 +989,11 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     public_email = user && Enum.find(user.emails, & &1.public)
     gravatar_email = user && Enum.find(user.emails, & &1.gravatar)
 
-    customer =
-      Hexpm.Billing.get(organization.name, script_nonce: conn.assigns[:script_src_nonce])
-
-    keys = Keys.all(organization)
-    per_page = opts[:per_page] || 30
-    page = opts[:page] || 1
-    audit_logs = opts[:audit_logs] || AuditLogs.all_by(organization, page, per_page)
-    audit_logs_total_count = opts[:audit_logs_total_count] || AuditLogs.count_by(organization)
+    customer = customer(conn, organization, opts[:tab])
+    keys = if opts[:tab] == :keys, do: Keys.all(organization), else: []
     delete_key_path = ~p"/dashboard/orgs/#{organization}/keys"
     create_key_path = ~p"/dashboard/orgs/#{organization}/keys"
-    packages = organization_packages(organization)
+    packages = packages_assign(organization, opts[:tab])
     policy_action = opts[:policy_action]
     policy = opts[:policy]
     policy_admin? = policy_admin?(conn, organization)
@@ -1000,10 +1012,6 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         organization: organization,
         repository: organization.repository,
         keys: keys,
-        audit_logs: audit_logs,
-        audit_logs_total_count: audit_logs_total_count,
-        page: page,
-        per_page: per_page,
         audit_logs_path_fn: &~p"/dashboard/orgs/#{organization}/audit-logs?#{&1}",
         params: opts[:params],
         errors: opts[:errors],
@@ -1024,11 +1032,28 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         policy_rev: policy_rev,
         sso_org_session: current_org_session(conn, organization)
       ] ++
+        audit_log_assigns(organization, opts[:tab], opts) ++
         sso_assigns(organization, opts[:tab]) ++
         member_assigns(organization, opts[:tab], opts)
 
     assigns = Keyword.merge(assigns, customer_assigns(customer, organization))
     render(conn, "index.html", assigns)
+  end
+
+  defp audit_log_assigns(organization, :audit_logs, opts) do
+    per_page = opts[:per_page] || 30
+    page = opts[:page] || 1
+
+    [
+      audit_logs: opts[:audit_logs] || AuditLogs.all_by(organization, page, per_page),
+      audit_logs_total_count: opts[:audit_logs_total_count] || AuditLogs.count_by(organization),
+      page: page,
+      per_page: per_page
+    ]
+  end
+
+  defp audit_log_assigns(_organization, _tab, _opts) do
+    [audit_logs: [], audit_logs_total_count: 0, page: 1, per_page: 30]
   end
 
   defp policy_assigns(organization, :policies, nil, _policy) do

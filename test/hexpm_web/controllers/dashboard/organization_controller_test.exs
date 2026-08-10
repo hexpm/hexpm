@@ -36,7 +36,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
     %{
       user: insert(:user),
-      organization: repository.organization
+      organization: repository.organization,
+      repository: repository
     }
   end
 
@@ -310,6 +311,67 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> get("/dashboard/orgs/#{organization.name}/audit-logs")
 
       assert response(conn, 200) =~ "Recent Activities"
+    end
+
+    test "queries audit_logs only on the audit logs tab", %{
+      user: user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user)
+      mock_customer(organization)
+
+      audit_logs_tab =
+        capture_queries(fn ->
+          build_conn()
+          |> test_login(user)
+          |> get("/dashboard/orgs/#{organization.name}/audit-logs")
+        end)
+
+      profile_tab =
+        capture_queries(fn ->
+          build_conn()
+          |> test_login(user)
+          |> get("/dashboard/orgs/#{organization.name}")
+        end)
+
+      assert Enum.any?(audit_logs_tab, &(&1 =~ ~s(FROM "audit_logs")))
+      refute Enum.any?(profile_tab, &(&1 =~ ~s(FROM "audit_logs")))
+    end
+
+    test "queries keys only on the keys tab", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      mock_customer(organization)
+
+      keys_tab =
+        capture_queries(fn ->
+          build_conn() |> test_login(user) |> get("/dashboard/orgs/#{organization.name}/keys")
+        end)
+
+      profile_tab =
+        capture_queries(fn ->
+          build_conn() |> test_login(user) |> get("/dashboard/orgs/#{organization.name}")
+        end)
+
+      assert Enum.any?(keys_tab, &(&1 =~ ~s(FROM "keys")))
+      refute Enum.any?(profile_tab, &(&1 =~ ~s(FROM "keys")))
+    end
+
+    test "calls the billing service only on tabs that show billing data", %{
+      user: user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      # No stub: Mox raises if the profile tab reaches the billing service.
+      conn = build_conn() |> test_login(user) |> get("/dashboard/orgs/#{organization.name}")
+      assert response(conn, 200)
+
+      mock_customer(organization)
+
+      conn =
+        build_conn() |> test_login(user) |> get("/dashboard/orgs/#{organization.name}/billing")
+
+      assert response(conn, 200)
     end
   end
 
@@ -1639,6 +1701,30 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> get("/dashboard/orgs/#{c.organization.name}/packages")
 
       assert response(conn, 200) =~ "Packages"
+    end
+
+    test "shows the download total for each package", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "read")
+      mock_customer(c.organization)
+
+      package = insert(:package, repository_id: c.repository.id)
+      release = insert(:release, package: package, version: "1.0.0")
+
+      insert(:download,
+        package: package,
+        release: release,
+        downloads: 4321,
+        day: Date.utc_today()
+      )
+
+      Repo.refresh_view(Hexpm.Repository.PackageDownload)
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> get("/dashboard/orgs/#{c.organization.name}/packages")
+
+      assert response(conn, 200) =~ "4 321"
     end
 
     test "returns 404 for non-members", c do

@@ -271,7 +271,7 @@ defmodule Hexpm.Repository.Package do
       on: d.package_id == p.id and d.view == "recent",
       order_by: [desc: p.inserted_at],
       limit: ^count,
-      select: {p.name, p.inserted_at, p.meta, d.downloads}
+      select: {p.id, p.name, p.inserted_at, p.meta, d.downloads}
     )
   end
 

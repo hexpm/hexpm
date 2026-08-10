@@ -83,7 +83,11 @@ defmodule HexpmWeb.PackageLayoutAssigns do
       graph_release: graph_release,
       docs_html_url: docs_html_url,
       dependants_count:
-        if(dependants_count?, do: Packages.count_dependants(repositories, package))
+        if dependants_count? do
+          Keyword.get_lazy(opts, :dependants_count, fn ->
+            Packages.count_dependants(repositories, package)
+          end)
+        end
     ]
 
     [{:package_layout, Map.new(layout)} | layout]

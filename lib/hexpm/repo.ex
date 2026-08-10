@@ -76,8 +76,11 @@ defmodule Hexpm.RepoBase do
     policy: 3,
     diff: 4,
     email_outbox: 5,
-    secret_scan: 6
+    migrate: 6,
+    secret_scan: 7
   }
+
+  def advisory_lock_key(key), do: Map.fetch!(@advisory_locks, key)
 
   def init(_reason, opts) do
     if url = System.get_env("HEXPM_DATABASE_URL") do

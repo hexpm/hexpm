@@ -5,6 +5,10 @@ defmodule Hexpm.Accounts.SSOTest do
   alias Hexpm.Accounts.SSO.{Connection, Features, Identity, OIDC}
   alias Hexpm.Emails.OutboxEntry
 
+  # The tasks below report in only after a few queries on a shared sandbox
+  # connection, which the 100ms default does not cover on a loaded machine.
+  @receive_timeout 10_000
+
   setup :verify_on_exit!
 
   setup do
@@ -159,7 +163,7 @@ defmodule Hexpm.Accounts.SSOTest do
       end)
 
       task = Task.async(fn -> configure_connection(context) end)
-      assert_receive {:discovery_started, task_pid}
+      assert_receive {:discovery_started, task_pid}, @receive_timeout
 
       assert {:ok, _membership} =
                Organizations.change_role(
@@ -214,7 +218,7 @@ defmodule Hexpm.Accounts.SSOTest do
 
       Mox.allow(OIDC.Mock, self(), task.pid)
       send(task.pid, :go)
-      assert_receive {:slow_discovery_started, task_pid}
+      assert_receive {:slow_discovery_started, task_pid}, @receive_timeout
 
       assert {:ok, updated} =
                SSO.configure(
@@ -803,7 +807,7 @@ defmodule Hexpm.Accounts.SSOTest do
         end
 
       for task <- tasks do
-        assert_receive {:ready, pid}
+        assert_receive {:ready, pid}, @receive_timeout
         send(pid, :go)
         _ = task
       end

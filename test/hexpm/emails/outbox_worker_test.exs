@@ -8,6 +8,10 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
   alias Hexpm.Emails
   alias Hexpm.Emails.{Outbox, OutboxEntry, OutboxEnvelope, OutboxReconciler, OutboxWorker}
 
+  # The producers report in from a task that checks out a connection and takes
+  # an advisory lock first, which the 100ms default does not cover.
+  @receive_timeout 10_000
+
   setup do
     mailer_config = Application.fetch_env!(:hexpm, Emails.Mailer)
     on_exit(fn -> Application.put_env(:hexpm, Emails.Mailer, mailer_config) end)
@@ -359,7 +363,7 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
         Ecto.Adapters.SQL.Sandbox.checkin(Hexpm.RepoBase)
       end)
 
-    assert_receive :first_enqueued
+    assert_receive :first_enqueued, @receive_timeout
 
     second =
       Task.async(fn ->
@@ -375,12 +379,12 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
         Ecto.Adapters.SQL.Sandbox.checkin(Hexpm.RepoBase)
       end)
 
-    assert_receive :second_started
+    assert_receive :second_started, @receive_timeout
     refute_receive :second_enqueued, 100
 
     send(first.pid, :release)
     assert :ok = Task.await(first)
-    assert_receive :second_enqueued
+    assert_receive :second_enqueued, @receive_timeout
     assert :ok = Task.await(second)
   end
 

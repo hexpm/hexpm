@@ -15,6 +15,7 @@ defmodule Hexpm.PromEx do
       # five seconds for a number that does not move that fast.
       {Plugins.Oban, poll_rate: :timer.minutes(1)},
       Hexpm.PromEx.Plugins.Hexpm,
+      Hexpm.PromEx.Plugins.EctoLatency,
       Hexpm.PromEx.Plugins.OutboundHttp
     ]
   end
