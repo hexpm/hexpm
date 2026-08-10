@@ -22,8 +22,6 @@ defmodule HexpmWeb.Components.PackageLayout do
   alias Hexpm.Security.Advisories
   alias HexpmWeb.ViewHelpers
 
-  @package_reports_enabled Application.compile_env!(:hexpm, [:features, :package_reports])
-
   # All assigns below (except per-page ones) come from
   # `HexpmWeb.PackageLayoutAssigns.for_package/3`. Use that helper in every
   # controller action that renders this layout — missing assigns will fail
@@ -79,7 +77,6 @@ defmodule HexpmWeb.Components.PackageLayout do
         (assigns.current_release && assigns.current_release.meta.build_tools) || []
       )
       |> assign(:this_version_downloads, version_downloads(assigns))
-      |> assign(:package_reports_enabled, @package_reports_enabled)
       |> assign(
         :dependency_count,
         assigns.current_release && Enum.count(assigns.current_release.requirements || [])
@@ -185,15 +182,6 @@ defmodule HexpmWeb.Components.PackageLayout do
               >
                 {HexpmWeb.ViewIcons.icon(:heroicon, "book-open", class: "size-4 shrink-0")}
                 <span class="truncate">HexDocs</span>
-              </a>
-            <% end %>
-            <%= if @package_reports_enabled do %>
-              <a
-                href={"/reports/new?package=#{@package.name}&repository=#{@package.repository.name}"}
-                class="bg-grey-100 dark:bg-grey-800 flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-2 py-2.5 text-xs font-medium text-grey-800 transition-colors hover:bg-grey-200 dark:text-grey-100 dark:hover:bg-grey-700 sm:gap-2 sm:px-3 sm:text-sm lg:px-4"
-              >
-                {HexpmWeb.ViewIcons.icon(:heroicon, "flag", class: "size-4 shrink-0")}
-                <span class="truncate">Report</span>
               </a>
             <% end %>
           </div>

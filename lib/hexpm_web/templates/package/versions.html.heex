@@ -57,20 +57,11 @@ compare_path =
                 </a>
                 <%= if row.retired? do %>
                   <% label =
-                    if row.release.retirement.reason == "report",
-                      do: "reported",
-                      else:
-                        Hexpm.Repository.ReleaseRetirement.reason_text(
-                          row.release.retirement.reason
-                        ) || "retired" %>
-                  <% {pill_class, tooltip_class} =
-                    if row.release.retirement.reason == "report",
-                      do:
-                        {"bg-red-100 text-red-900 ring-red-300 dark:bg-red-900/30 dark:text-red-100 dark:ring-red-700/60",
-                         "bg-grey-900 dark:bg-grey-100"},
-                      else:
-                        {"bg-yellow-100 text-yellow-900 ring-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-100 dark:ring-yellow-700/60",
-                         "bg-grey-900 dark:bg-grey-100"} %>
+                    Hexpm.Repository.ReleaseRetirement.reason_text(row.release.retirement.reason) ||
+                      "retired" %>
+                  <% pill_class =
+                    "bg-yellow-100 text-yellow-900 ring-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-100 dark:ring-yellow-700/60" %>
+                  <% tooltip_class = "bg-grey-900 dark:bg-grey-100" %>
                   <%= if row.retirement_message do %>
                     <span
                       tabindex="0"
@@ -201,26 +192,17 @@ compare_path =
                 <div class="flex flex-col gap-1.5">
                   <%= if row.retired? do %>
                     <% label =
-                      if row.release.retirement.reason == "report",
-                        do: "reported",
-                        else:
-                          Hexpm.Repository.ReleaseRetirement.reason_text(
-                            row.release.retirement.reason
-                          ) || "retired" %>
-                    <% {pill_class, message_class} =
-                      if row.release.retirement.reason == "report",
-                        do:
-                          {"border-red-300 bg-red-100 text-red-900 dark:border-red-700/60 dark:bg-red-900/30 dark:text-red-100",
-                           "text-red-800 dark:text-red-200"},
-                        else:
-                          {"border-yellow-300 bg-yellow-100 text-yellow-900 dark:border-yellow-700/60 dark:bg-yellow-900/30 dark:text-yellow-100",
-                           "text-yellow-800 dark:text-yellow-200"} %>
+                      Hexpm.Repository.ReleaseRetirement.reason_text(
+                        row.release.retirement.reason
+                      ) || "retired" %>
                     <div class="flex items-center gap-2">
-                      <span class={"inline-flex shrink-0 items-center justify-center rounded border px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide #{pill_class}"}>
+                      <span class="inline-flex shrink-0 items-center justify-center rounded border border-yellow-300 bg-yellow-100 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-yellow-900 dark:border-yellow-700/60 dark:bg-yellow-900/30 dark:text-yellow-100">
                         {label}
                       </span>
                       <%= if row.retirement_message do %>
-                        <span class={message_class}>{row.retirement_message}</span>
+                        <span class="text-yellow-800 dark:text-yellow-200">
+                          {row.retirement_message}
+                        </span>
                       <% end %>
                     </div>
                   <% end %>
