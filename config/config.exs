@@ -50,6 +50,12 @@ config :hexpm, :organization_sso,
   all_organizations: false,
   oidc_impl: Hexpm.Accounts.SSO.OIDC.Oidcc
 
+config :hexpm, :varsel_impl, Hexpm.PackageReports.Varsel.Client
+
+config :hexpm, :varsel,
+  report_url: "https://cna.erlef.org/api/hex/reports",
+  audience: "https://cna.erlef.org/api/hex/reports"
+
 config :hexpm, ecto_repos: [Hexpm.RepoBase]
 
 config :hexpm, Oban,

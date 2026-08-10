@@ -78,5 +78,8 @@ config :hexpm, :organization_sso,
   beta_organizations: [],
   oidc_impl: Hexpm.Accounts.SSO.OIDC.Mock
 
+config :hexpm, :varsel_impl, Hexpm.PackageReports.Varsel.Mock
+config :hexpm, :varsel, key_id: "hexpm-test"
+
 # Don't sleep waiting for Sentry to flush in tests.
 config :hexpm, sentry_flush_ms: 0

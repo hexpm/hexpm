@@ -517,6 +517,14 @@ defmodule HexpmWeb.Components.PackageLayout do
                   </div>
                 <% end %>
               <% end %>
+
+              <a
+                id="report-package-link"
+                href={Hexpm.PackageReports.report_path(@package)}
+                class="flex items-center justify-center gap-2 text-sm font-medium text-grey-500 hover:text-red-700 dark:text-grey-300 dark:hover:text-red-300 transition-colors"
+              >
+                {HexpmWeb.ViewIcons.icon(:heroicon, "flag", class: "size-4")} Report package
+              </a>
             </div>
           </div>
         </div>
