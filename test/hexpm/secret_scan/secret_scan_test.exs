@@ -122,10 +122,11 @@ defmodule Hexpm.SecretScanTest do
 
     scan(package, "1.0.0", dir, paths)
 
-    assert [env, prod] = SecretScan.findings(release)
-    assert env.file_path == ".env"
-    assert prod.file_path == "config/prod.exs"
-    assert env.fingerprint == prod.fingerprint
+    # Ordered by file_path in SQL, so which one comes back first is the
+    # database's collation to decide, not ours.
+    assert [_, _] = findings = SecretScan.findings(release)
+    assert findings |> Enum.map(& &1.file_path) |> Enum.sort() == [".env", "config/prod.exs"]
+    assert findings |> Enum.map(& &1.fingerprint) |> Enum.uniq() |> length() == 1
     assert Repo.get_by(Scan, release_id: release.id).finding_count == 2
 
     # One credential, so one mail, listing both places.
