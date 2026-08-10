@@ -38,8 +38,6 @@ config :hexpm,
   sudo_timeout: Duration.new!(hour: 1),
   sudo_force_timeout: Duration.new!(second: 30)
 
-config :hexpm, :features, package_reports: true
-
 config :hexpm, :organization_sso,
   mode: :off,
   beta_organizations: [],

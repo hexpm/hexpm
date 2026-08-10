@@ -17,8 +17,6 @@ defmodule Hexpm.Repository.Release do
     belongs_to(:publisher, User, on_replace: :nilify)
     has_many :requirements, Requirement, on_replace: :delete
     has_many :daily_downloads, Download
-    has_many :package_report_releases, PackageReportRelease
-    has_many :package_reports, through: [:package_report_releases, :package_report]
     has_one :downloads, ReleaseDownload
 
     many_to_many :security_advisories, Hexpm.Security.Advisory,
@@ -102,29 +100,8 @@ defmodule Hexpm.Repository.Release do
   end
 
   def retire(release, params) do
-    cast_embed(
-      cast(release, params, []),
-      :retirement,
-      required: true,
-      with: &ReleaseRetirement.changeset(&1, &2, public: true)
-    )
-  end
-
-  def reported_retire(release) do
-    change(
-      release,
-      %{
-        retirement: %{
-          reason: "report",
-          message: "security vulnerability reported"
-        }
-      }
-    )
-    |> cast_embed(
-      :retirement,
-      required: true,
-      with: &ReleaseRetirement.changeset(&1, &2, public: false)
-    )
+    cast(release, params, [])
+    |> cast_embed(:retirement, required: true)
   end
 
   def unretire(release) do
