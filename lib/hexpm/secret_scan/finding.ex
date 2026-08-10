@@ -56,6 +56,7 @@ defmodule Hexpm.SecretScan.Finding do
 
   defp display_path(path) do
     path
+    |> String.replace_invalid()
     |> String.replace(~r/[[:cntrl:]]/u, "�")
     |> String.slice(0, @max_path)
   end

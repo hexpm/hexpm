@@ -53,6 +53,9 @@ defmodule Hexpm.SecretScan.Scanner do
         ordered: false,
         zip_input_on_exit: true
       )
+      # The budget is read when a result arrives, so a file consumed just before
+      # the deadline can still be followed by one that runs its full timeout:
+      # 40s worst case against the worker's 270s.
       |> Enum.reduce_while(empty, fn result, state ->
         if System.monotonic_time(:millisecond) > deadline do
           {:halt, %{state | halted: true}}
@@ -138,7 +141,25 @@ defmodule Hexpm.SecretScan.Scanner do
   asked to suppress).
   """
   def scan_file(dir, path, opts \\ []) do
-    scan(path, fn -> dir |> Path.join(path) |> stream_windows() end, opts)
+    # `hex_tarball` rejects an escaping entry and `Hexpm.Preview` filters the
+    # unpacked tree again, so the paths that reach here are already safe. Check
+    # anyway: this opens whatever it is handed, and the cost is one lstat.
+    with {:ok, relative} <- Path.safe_relative(path, dir),
+         full = Path.join(dir, relative),
+         true <- File.regular?(full) do
+      scan(path, fn -> stream_windows(full) end, opts)
+    else
+      :error ->
+        Logger.warning(
+          "Secret scan could not read #{path}: not a relative path inside the release"
+        )
+
+        []
+
+      false ->
+        Logger.warning("Secret scan could not read #{path}: not a regular file")
+        []
+    end
   rescue
     # A task raising here would leave the stream as an exit, which the caller's
     # rescue cannot catch, so one unreadable file would kill the whole release's
@@ -170,11 +191,11 @@ defmodule Hexpm.SecretScan.Scanner do
 
       # Stop once this one file has produced more than a whole release is
       # allowed to report. A file of one repeated credential yields a match
-      # every twenty bytes, and both the finding list and the `seen` set would
-      # otherwise grow with the file rather than with the answer.
+      # every twenty bytes, and the finding list would otherwise grow with the
+      # file rather than with the answer.
       {findings, _state} =
         Enum.reduce_while(windows.(), {[], MapSet.new()}, fn window, {found, seen} ->
-          {new, seen} = scan_window(window, path, rules, seen)
+          {new, seen} = scan_window(window, path, rules, forget_passed(seen, window))
           found = found ++ new
 
           # One over the cap, so the caller can still tell it was truncated.
@@ -189,6 +210,18 @@ defmodule Hexpm.SecretScan.Scanner do
     end
   end
 
+  # `seen` exists to stop the overlap between two windows reporting the same
+  # match twice, so it only has to remember the part of the file the next window
+  # will read again. Every match puts a key in it whether or not it survives the
+  # entropy floor and the allowlists, and only survivors count towards the cap
+  # that stops the file, so without this a file of dense low-entropy matches
+  # grows the set with the file rather than with the answer. Bounded now by the
+  # matches in one window, the same order as the list `Regex.scan/3` builds for
+  # a single rule.
+  defp forget_passed(seen, {_content, offset, _first?, _last?, _newlines}) do
+    MapSet.filter(seen, fn {_rule, position} -> position >= offset end)
+  end
+
   # A path the package's `secret_scan: [ignore: [...]]` metadata asked us to
   # skip. `patterns` are already-compiled regexes (see `compile_globs/1`).
   defp ignored?(_path, []), do: false
@@ -197,14 +230,17 @@ defmodule Hexpm.SecretScan.Scanner do
 
   # `**` spans directory separators, `*` stays within a segment, `?` is one
   # non-separator character. A malformed glob is dropped rather than crashing
-  # the scan.
+  # the scan. `a/**/b` matches `a/b` as well as `a/x/b`, and `**/b` matches a
+  # `b` at the root, the way shells and gitignore read them.
   defp compile_globs(globs), do: Enum.flat_map(globs, &compile_glob/1)
 
   defp compile_glob(glob) when is_binary(glob) do
     pattern =
       glob
-      |> String.split(~r/(\*\*|\*|\?)/, include_captures: true, trim: true)
+      |> String.split(~r{(\A\*\*/|/\*\*/|\*\*|\*|\?)}, include_captures: true, trim: true)
       |> Enum.map_join(fn
+        "**/" -> "(?:.*/)?"
+        "/**/" -> "(?:/.*/|/)"
         "**" -> ".*"
         "*" -> "[^/]*"
         "?" -> "[^/]"
@@ -224,14 +260,14 @@ defmodule Hexpm.SecretScan.Scanner do
     for rule <- Rules.path_rules(scope), Regex.match?(rule.path, path) do
       %{
         rule: rule.id,
-        file_path: path,
+        file_path: printable(path),
         line: 1,
         byte_offset: 0,
         # Domain separated: a path finding and a content finding whose secret
         # happens to be that path must not collapse into one another through
         # the fingerprint they are deduped on.
         fingerprint: fingerprint("path:" <> path),
-        preview: Path.basename(path)
+        preview: printable(Path.basename(path))
       }
     end
   end
@@ -370,7 +406,7 @@ defmodule Hexpm.SecretScan.Scanner do
          false <- Rules.allowed?(Rules.global_allowlists(), targets) do
       %{
         rule: rule.id,
-        file_path: path,
+        file_path: printable(path),
         line: newlines_before + count_newlines(binary_part(content, 0, match.start)) + 1,
         byte_offset: offset + match.start,
         fingerprint: fingerprint(secret),
@@ -433,8 +469,8 @@ defmodule Hexpm.SecretScan.Scanner do
   """
   def redact(secret) do
     size = byte_size(secret)
-    # Never show more than a sixth from each end. The row also carries an
-    # unsalted sha256 of the value, so on a ten character secret the old fixed
+    # Never show more than a sixth from each end. The row also carries a sha256
+    # HMAC of the value, so on a ten character secret the old fixed
     # four-and-four left two unknown characters and the hash to check them
     # against, which is not redaction.
     keep = if size < 12, do: 0, else: min(4, div(size, 6))
@@ -442,8 +478,20 @@ defmodule Hexpm.SecretScan.Scanner do
     if keep == 0 do
       String.duplicate("*", min(size, @preview_stars))
     else
-      binary_part(secret, 0, keep) <>
-        String.duplicate("*", @preview_stars) <> binary_part(secret, size - keep, keep)
+      printable(binary_part(secret, 0, keep)) <>
+        String.duplicate("*", @preview_stars) <>
+        printable(binary_part(secret, size - keep, keep))
     end
+  end
+
+  # Rules run over binary files and paths come from tar entry names, so both a
+  # match and a file name can hold bytes that are not text. They land in a
+  # Postgres text column, which rejects a NUL outright, and in a plain text
+  # email, where an escape sequence lets a publisher write their own paragraph
+  # into mail that arrives from hex.pm.
+  defp printable(binary) do
+    binary
+    |> String.replace_invalid()
+    |> String.replace(~r/[[:cntrl:]]/u, "�")
   end
 end

@@ -94,6 +94,26 @@ defmodule Hexpm.SecretScanTest do
     assert Repo.get_by(Scan, release_id: release.id).finding_count == 0
   end
 
+  test "a rescan moves a finding it still sees onto the new tarball", %{
+    dir: dir,
+    package: package
+  } do
+    release = insert(:release, package: package, version: "1.0.0")
+    scan(package, "1.0.0", dir, [write(dir, ".env", "T=#{@github_token}\n")])
+    assert [finding] = SecretScan.findings(release)
+    assert finding.tarball_checksum == @checksum
+
+    File.rm!(Path.join(dir, ".env"))
+    moved = write(dir, "config/prod.exs", ~s|t = "#{@github_token}"\n|)
+    scan(package, "1.0.0", dir, [moved], <<9>>)
+
+    assert [rescanned] = SecretScan.findings(release)
+    assert rescanned.id == finding.id
+    assert rescanned.tarball_checksum == <<9>>
+    assert rescanned.file_path == "config/prod.exs"
+    assert outbox_count() == 1
+  end
+
   test "honours the package's secret_scan ignore metadata", %{package: package} do
     token = @github_token
     other = @other_token

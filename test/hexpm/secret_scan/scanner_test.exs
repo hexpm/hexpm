@@ -4,6 +4,7 @@ defmodule Hexpm.SecretScan.ScannerTest do
   alias Hexpm.SecretScan.Scanner
 
   @github_token "ghp_" <> "016Cq2mKvXbNzR8dLpWyTuAeH3jFgS4iOU7Q"
+  @other_token "ghp_" <> "9zXwVuTsRqPoNmLkJiHgFeDcBa87654321Zy"
   @slack_token "xoxb-" <> "2839471028374-2938471029384-KdmSlwoeIrufJdnPqoWzLamx"
   @chunk_size 262_144
   @carry_size 65_536
@@ -203,6 +204,37 @@ defmodule Hexpm.SecretScan.ScannerTest do
 
       assert log =~ "could not read adirectory"
     end
+
+    test "refuses a path that leaves the release", %{dir: dir} do
+      log =
+        Hexpm.TestHelpers.capture_debug_log(fn ->
+          assert Scanner.scan_file(dir, "../../../etc/passwd") == []
+        end)
+
+      assert log =~ "not a relative path inside the release"
+    end
+  end
+
+  describe "values that are not text" do
+    test "a preview never carries a control byte or a broken code point" do
+      secret = <<0, 1, 0xFF, 0xFE>> <> String.duplicate("a", 20) <> <<9, 0, 0xC3, 0x28>>
+      preview = Scanner.redact(secret)
+
+      assert String.valid?(preview)
+      refute preview =~ ~r/[[:cntrl:]]/u
+    end
+
+    test "a file name with a newline in it cannot write its own email line", %{dir: dir} do
+      # The name comes from a tar entry the publisher chose and the finding goes
+      # into a plain text mail to the owners.
+      path = "ke\nystore.p12"
+      write(dir, path, "not really a keystore")
+
+      assert {[finding], _} = Scanner.scan_files(dir, [path], scope: :all)
+      assert finding.rule == "pkcs12-file"
+      assert finding.file_path == "ke�ystore.p12"
+      assert finding.preview == "ke�ystore.p12"
+    end
   end
 
   describe "ignore globs and scope" do
@@ -216,6 +248,32 @@ defmodule Hexpm.SecretScan.ScannerTest do
                )
 
       assert finding.file_path == "lib/app.ex"
+    end
+
+    test "a /**/ glob matches the directory it names as well", %{dir: dir} do
+      write(dir, "src/a.env", "T=#{@github_token}\n")
+      write(dir, "src/nested/b.env", "T=#{@slack_token}\n")
+      write(dir, "lib/c.env", "T=#{@other_token}\n")
+
+      assert {[finding], _} =
+               Scanner.scan_files(dir, ["src/a.env", "src/nested/b.env", "lib/c.env"],
+                 ignore: ["src/**/*.env"]
+               )
+
+      assert finding.file_path == "lib/c.env"
+    end
+
+    test "a leading **/ glob reaches the root as well", %{dir: dir} do
+      write(dir, "a.pem", "T=#{@github_token}\n")
+      write(dir, "priv/certs/b.pem", "T=#{@slack_token}\n")
+      write(dir, "c.env", "T=#{@other_token}\n")
+
+      assert {[finding], _} =
+               Scanner.scan_files(dir, ["a.pem", "priv/certs/b.pem", "c.env"],
+                 ignore: ["**/*.pem"]
+               )
+
+      assert finding.file_path == "c.env"
     end
 
     test "a notify finding survives truncation ahead of non-notify noise", %{dir: dir} do
@@ -297,9 +355,9 @@ defmodule Hexpm.SecretScan.ScannerTest do
 
   describe "redact/1" do
     test "keeps the ends and fixes the width of the mask" do
-      # Nothing at all from a short secret: the row also carries an unsalted
-      # sha256, so revealing both ends of a ten character value leaves two
-      # characters to brute force against it.
+      # Nothing at all from a short secret: the row also carries a sha256 HMAC,
+      # so revealing both ends of a ten character value leaves two characters
+      # to brute force against it.
       assert Scanner.redact("short") == "*****"
       assert Scanner.redact("123456789") == "*********"
       assert Scanner.redact("0123456789ab") == "01************ab"

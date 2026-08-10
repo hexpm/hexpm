@@ -168,7 +168,17 @@ defmodule Hexpm.SecretScan do
       )
     )
 
-    do_insert_findings(repo, release, findings, tarball_checksum)
+    # Whatever survived the delete is in the new tarball too, so its row gets
+    # rewritten below rather than left pointing at the checksum, path and line
+    # of content that is no longer there. It is still not news: the caller sends
+    # mail for what this returns, and these were reported the first time round.
+    reported =
+      from(f in Finding, where: f.release_id == ^release.id, select: f.fingerprint)
+      |> repo.all()
+      |> MapSet.new()
+
+    {:ok, inserted} = do_insert_findings(repo, release, findings, tarball_checksum)
+    {:ok, Enum.reject(inserted, &MapSet.member?(reported, &1.fingerprint))}
   end
 
   defp do_insert_findings(_repo, _release, [], _tarball_checksum), do: {:ok, []}
@@ -190,7 +200,7 @@ defmodule Hexpm.SecretScan do
 
     {_count, inserted} =
       repo.insert_all(Finding, entries,
-        on_conflict: :nothing,
+        on_conflict: {:replace, [:tarball_checksum, :rule, :file_path, :line, :byte_offset]},
         conflict_target: [:release_id, :fingerprint],
         returning: true
       )
