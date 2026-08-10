@@ -88,12 +88,34 @@ defmodule Hexpm.SecretScan.ScannerTest do
       assert finding.rule == "github-pat"
     end
 
-    test "reports one finding for a credential pasted into several files", %{dir: dir} do
+    test "names every file a credential was pasted into", %{dir: dir} do
       write(dir, ".env", "GITHUB_TOKEN=#{@github_token}\n")
       write(dir, "config/prod.exs", "token = \"#{@github_token}\"\n")
 
-      assert {[finding], false} = Scanner.scan_files(dir, [".env", "config/prod.exs"])
-      assert finding.file_path == ".env"
+      assert {findings, false} = Scanner.scan_files(dir, [".env", "config/prod.exs"])
+      assert Enum.map(findings, & &1.file_path) == [".env", "config/prod.exs"]
+      assert findings |> Enum.map(& &1.fingerprint) |> Enum.uniq() |> length() == 1
+    end
+
+    test "one credential in one file stays one finding", %{dir: dir} do
+      write(dir, ".env", String.duplicate("GITHUB_TOKEN=#{@github_token}\n", 50))
+
+      assert {[finding], false} = Scanner.scan_files(dir, [".env"])
+      assert finding.line == 1
+    end
+
+    test "stops at ten files and says the report is partial", %{dir: dir} do
+      paths =
+        for n <- 1..14 do
+          path = "config/#{String.pad_leading("#{n}", 2, "0")}.exs"
+          write(dir, path, "token = \"#{@github_token}\"\n")
+          path
+        end
+
+      assert {findings, true} = Scanner.scan_files(dir, paths)
+      assert length(findings) == 10
+      assert List.first(findings).file_path == "config/01.exs"
+      assert List.last(findings).file_path == "config/10.exs"
     end
 
     test "scans bytes that are not text", %{dir: dir} do

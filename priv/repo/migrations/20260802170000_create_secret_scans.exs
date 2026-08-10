@@ -34,7 +34,9 @@ defmodule Hexpm.RepoBase.Migrations.CreateSecretScans do
       timestamps(type: :utc_datetime_usec, updated_at: false)
     end
 
-    create unique_index(:secret_findings, [:release_id, :fingerprint])
+    # One row per credential per file. The same value pasted into six files is
+    # six rows, because the owner has to find all six.
+    create unique_index(:secret_findings, [:release_id, :fingerprint, :file_path])
 
     # Notification dedupes per package, not per release, so republishing the
     # same secret across ten versions is one email.

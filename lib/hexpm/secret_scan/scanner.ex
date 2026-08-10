@@ -16,6 +16,8 @@ defmodule Hexpm.SecretScan.Scanner do
   @chunk_size 262_144
   @carry_size 65_536
   @max_findings 100
+  @max_locations 10
+  @max_path 255
   @file_timeout 10_000
   @release_timeout 30_000
   @line_context 4_096
@@ -65,11 +67,11 @@ defmodule Hexpm.SecretScan.Scanner do
       end)
 
     log_incomplete(dir, state)
-    findings = dedupe(state.kept)
+    {findings, dropped_locations?} = dedupe(state.kept)
 
     {cap(findings),
-     state.halted or state.timeouts > 0 or state.total > @max_findings or
-       length(findings) > @max_findings}
+     state.halted or state.timeouts > 0 or dropped_locations? or
+       state.total > @max_findings or length(findings) > @max_findings}
   end
 
   # The accumulator is capped as it grows rather than at the end. A release of
@@ -110,14 +112,36 @@ defmodule Hexpm.SecretScan.Scanner do
     )
   end
 
-  # One leaked credential is one finding, however many rules recognised it and
-  # however many files it was pasted into. The specific rule wins over the
-  # catch-all, and the earliest occurrence is the one worth pointing at.
+  # One row per credential per file, and within a file the first occurrence: a
+  # value repeated on six thousand lines is one thing to rotate, but a value
+  # sitting in six files needs all six named or the owner deletes the one we
+  # told them about and thinks they are done. The specific rule wins over the
+  # catch-all where both matched.
   defp dedupe(findings) do
     findings
     |> Enum.sort_by(&{&1.rule == @catch_all_rule, &1.file_path, &1.line, &1.rule})
-    |> Enum.uniq_by(& &1.fingerprint)
+    |> Enum.uniq_by(&{&1.fingerprint, &1.file_path})
     |> Enum.sort_by(&{&1.file_path, &1.line, &1.rule})
+    |> take_locations()
+  end
+
+  # Past #{@max_locations} copies the list has stopped being a checklist, and
+  # the remedy was never per file anyway. Marks the release truncated so the
+  # row says the report is partial.
+  defp take_locations(findings) do
+    {kept, {_counts, dropped?}} =
+      Enum.flat_map_reduce(findings, {%{}, false}, fn finding, {counts, dropped?} ->
+        seen = Map.get(counts, finding.fingerprint, 0)
+        counts = Map.put(counts, finding.fingerprint, seen + 1)
+
+        if seen < @max_locations do
+          {[finding], {counts, dropped?}}
+        else
+          {[], {counts, true}}
+        end
+      end)
+
+    {kept, dropped?}
   end
 
   # Findings that can send email survive truncation first. A vendored bundle
@@ -260,7 +284,7 @@ defmodule Hexpm.SecretScan.Scanner do
     for rule <- Rules.path_rules(scope), Regex.match?(rule.path, path) do
       %{
         rule: rule.id,
-        file_path: printable(path),
+        file_path: stored_path(path),
         line: 1,
         byte_offset: 0,
         # Domain separated: a path finding and a content finding whose secret
@@ -406,7 +430,7 @@ defmodule Hexpm.SecretScan.Scanner do
          false <- Rules.allowed?(Rules.global_allowlists(), targets) do
       %{
         rule: rule.id,
-        file_path: printable(path),
+        file_path: stored_path(path),
         line: newlines_before + count_newlines(binary_part(content, 0, match.start)) + 1,
         byte_offset: offset + match.start,
         fingerprint: fingerprint(secret),
@@ -494,4 +518,9 @@ defmodule Hexpm.SecretScan.Scanner do
     |> String.replace_invalid()
     |> String.replace(~r/[[:cntrl:]]/u, "�")
   end
+
+  # The path is part of the unique index on findings and a btree entry has to
+  # fit in a page. Tar carries names of any length through its GNU extensions,
+  # and the name is the publisher's to choose, so cut it before it gets there.
+  defp stored_path(path), do: path |> printable() |> String.slice(0, @max_path)
 end

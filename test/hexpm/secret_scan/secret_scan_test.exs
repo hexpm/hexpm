@@ -79,7 +79,9 @@ defmodule Hexpm.SecretScanTest do
     # transaction, rather than short-circuiting at the already-scanned check.
     scan(package, "1.0.0", dir, [path], <<5, 5>>)
     assert outbox_count() == 1
-    assert length(SecretScan.findings(release)) == 1
+    assert [rescanned] = SecretScan.findings(release)
+    assert rescanned.id == finding.id
+    assert rescanned.tarball_checksum == <<5, 5>>
   end
 
   test "a rescan drops findings the new tarball no longer has", %{dir: dir, package: package} do
@@ -94,7 +96,7 @@ defmodule Hexpm.SecretScanTest do
     assert Repo.get_by(Scan, release_id: release.id).finding_count == 0
   end
 
-  test "a rescan moves a finding it still sees onto the new tarball", %{
+  test "a rescan follows a credential that moved to another file", %{
     dir: dir,
     package: package
   } do
@@ -108,10 +110,30 @@ defmodule Hexpm.SecretScanTest do
     scan(package, "1.0.0", dir, [moved], <<9>>)
 
     assert [rescanned] = SecretScan.findings(release)
-    assert rescanned.id == finding.id
-    assert rescanned.tarball_checksum == <<9>>
     assert rescanned.file_path == "config/prod.exs"
+    assert rescanned.tarball_checksum == <<9>>
     assert outbox_count() == 1
+  end
+
+  test "records the credential once per file it is in", %{dir: dir, package: package} do
+    release = insert(:release, package: package, version: "1.0.0")
+    paths = [write(dir, ".env", "T=#{@github_token}\n")]
+    paths = paths ++ [write(dir, "config/prod.exs", ~s|t = "#{@github_token}"\n|)]
+
+    scan(package, "1.0.0", dir, paths)
+
+    assert [env, prod] = SecretScan.findings(release)
+    assert env.file_path == ".env"
+    assert prod.file_path == "config/prod.exs"
+    assert env.fingerprint == prod.fingerprint
+    assert Repo.get_by(Scan, release_id: release.id).finding_count == 2
+
+    # One credential, so one mail, listing both places.
+    assert outbox_count() == 1
+    assert [entry] = Repo.all(Hexpm.Emails.OutboxEntry)
+    assert entry.email["text_body"] =~ ".env:1"
+    assert entry.email["text_body"] =~ "config/prod.exs:1"
+    assert entry.email["text_body"] =~ "a value that looks like"
   end
 
   test "honours the package's secret_scan ignore metadata", %{package: package} do

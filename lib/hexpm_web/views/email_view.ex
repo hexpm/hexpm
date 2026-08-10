@@ -196,7 +196,9 @@ defmodule HexpmWeb.EmailView do
   defmodule SecretsDetected do
     def title(), do: "Possible credentials in a published package"
 
-    def intro(package, version, count) do
+    def intro(package, version, findings) do
+      count = length(groups(findings))
+
       "A scan of #{package} v#{version} found #{credentials(count)} that #{look(count)} like " <>
         "credentials. Anyone who downloads the package can read #{them(count)}."
     end
@@ -217,8 +219,24 @@ defmodule HexpmWeb.EmailView do
 
     def found_heading(), do: "What was found:"
 
-    def entry(finding) do
-      "#{Hexpm.SecretScan.Finding.location(finding)}  #{finding.rule}  #{finding.preview}"
+    # One block per credential, listing every file it was found in. The same
+    # value in five files is one thing to revoke, but the owner has to delete
+    # all five copies, so naming only the first would send them away half done.
+    def groups(findings) do
+      findings
+      |> Enum.group_by(& &1.fingerprint)
+      |> Enum.map(fn {_fingerprint, [first | _] = group} ->
+        %{
+          rule: first.rule,
+          preview: first.preview,
+          locations: Enum.map(group, &Hexpm.SecretScan.Finding.location/1)
+        }
+      end)
+      |> Enum.sort_by(& &1.locations)
+    end
+
+    def entry(group) do
+      Enum.join(["#{group.rule}  #{group.preview}" | group.locations], "\n    ")
     end
 
     def no_action_taken() do

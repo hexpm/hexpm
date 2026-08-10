@@ -159,23 +159,19 @@ defmodule Hexpm.SecretScan do
   # reported still count as reported: the package-level dedup in `notify/3`
   # reads other releases, which this does not touch.
   defp insert_findings(repo, release, findings, tarball_checksum) do
-    fingerprints = Enum.map(findings, & &1.fingerprint)
+    existing = repo.all(from(f in Finding, where: f.release_id == ^release.id))
+    # A finding is identified by the credential and the file it sits in, the
+    # same as the unique index, so a value that moved between files is a
+    # different row. Capped at a hundred, so this is a small list.
+    current = MapSet.new(findings, &{&1.fingerprint, &1.file_path})
+    stale = for f <- existing, not MapSet.member?(current, {f.fingerprint, f.file_path}), do: f.id
 
-    repo.delete_all(
-      from(f in Finding,
-        where: f.release_id == ^release.id,
-        where: f.fingerprint not in ^fingerprints
-      )
-    )
+    repo.delete_all(from(f in Finding, where: f.id in ^stale))
 
-    # Whatever survived the delete is in the new tarball too, so its row gets
-    # rewritten below rather than left pointing at the checksum, path and line
-    # of content that is no longer there. It is still not news: the caller sends
-    # mail for what this returns, and these were reported the first time round.
-    reported =
-      from(f in Finding, where: f.release_id == ^release.id, select: f.fingerprint)
-      |> repo.all()
-      |> MapSet.new()
+    # Whatever was on the release before this scan is not news, whichever file
+    # it is in now. The caller mails what this returns, and the credential was
+    # reported the first time round.
+    reported = MapSet.new(existing, & &1.fingerprint)
 
     {:ok, inserted} = do_insert_findings(repo, release, findings, tarball_checksum)
     {:ok, Enum.reject(inserted, &MapSet.member?(reported, &1.fingerprint))}
@@ -200,8 +196,8 @@ defmodule Hexpm.SecretScan do
 
     {_count, inserted} =
       repo.insert_all(Finding, entries,
-        on_conflict: {:replace, [:tarball_checksum, :rule, :file_path, :line, :byte_offset]},
-        conflict_target: [:release_id, :fingerprint],
+        on_conflict: {:replace, [:tarball_checksum, :rule, :line, :byte_offset]},
+        conflict_target: [:release_id, :fingerprint, :file_path],
         returning: true
       )
 

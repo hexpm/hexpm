@@ -32,7 +32,7 @@ defmodule Hexpm.SecretScan.Finding do
     finding
     |> cast(attrs, @fields)
     |> validate_required(@fields)
-    |> unique_constraint([:release_id, :fingerprint])
+    |> unique_constraint([:release_id, :fingerprint, :file_path])
   end
 
   @max_path 120

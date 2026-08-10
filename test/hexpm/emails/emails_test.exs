@@ -124,6 +124,7 @@ defmodule Hexpm.EmailsTest do
           file_path: "config/prod.exs",
           line: 12,
           byte_offset: 340,
+          fingerprint: <<0xAA>>,
           preview: "AKIA************WXYZ"
         },
         attrs
@@ -147,7 +148,13 @@ defmodule Hexpm.EmailsTest do
     test "lists every finding" do
       findings = [
         finding(),
-        finding(rule: "github-pat", file_path: ".env", line: 3, preview: "ghp_************OU7Q")
+        finding(
+          rule: "github-pat",
+          file_path: ".env",
+          line: 3,
+          fingerprint: <<0xBB>>,
+          preview: "ghp_************OU7Q"
+        )
       ]
 
       for body <- [
@@ -157,6 +164,27 @@ defmodule Hexpm.EmailsTest do
         assert body =~ "config/prod.exs:12"
         assert body =~ ".env:3"
         assert body =~ "2 values"
+      end
+    end
+
+    test "one credential in several files is one entry with every place listed" do
+      findings = [
+        finding(),
+        finding(file_path: "lib/app.ex", line: 4),
+        finding(file_path: "test/support.ex", line: 9)
+      ]
+
+      for body <- [
+            secrets_detected_email(findings).html_body,
+            secrets_detected_email(findings).text_body
+          ] do
+        assert body =~ "a value that looks like"
+        assert body =~ "config/prod.exs:12"
+        assert body =~ "lib/app.ex:4"
+        assert body =~ "test/support.ex:9"
+        # The rule and the masked value belong to the credential, not to each
+        # place it turned up in.
+        assert body |> String.split("AKIA************WXYZ") |> length() == 2
       end
     end
 
