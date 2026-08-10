@@ -40,7 +40,10 @@ config :hexpm,
   pwned_impl: Hexpm.Pwned.Mock,
   http_impl: Hexpm.HTTP.Mock,
   cache_enabled: false,
-  skip_advisory_locks: true
+  skip_advisory_locks: true,
+  # VACUUM cannot run inside the sandbox transaction that wraps each test.
+  # Hexpm.ReleaseTasks.StatsTest covers it unboxed.
+  skip_maintenance_vacuum: true
 
 config :hexpm, HexpmWeb.Endpoint,
   http: [port: 5000],
