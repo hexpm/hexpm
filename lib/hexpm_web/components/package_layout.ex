@@ -184,6 +184,14 @@ defmodule HexpmWeb.Components.PackageLayout do
                 <span class="truncate">HexDocs</span>
               </a>
             <% end %>
+            <a
+              id="report-package-link"
+              href={Hexpm.PackageReports.report_path(@package)}
+              class="bg-grey-100 dark:bg-grey-800 flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-2 py-2.5 text-xs font-medium text-grey-800 transition-colors hover:bg-grey-200 dark:text-grey-100 dark:hover:bg-grey-700 sm:gap-2 sm:px-3 sm:text-sm lg:px-4"
+            >
+              {HexpmWeb.ViewIcons.icon(:heroicon, "flag", class: "size-4 shrink-0")}
+              <span class="truncate">Report package</span>
+            </a>
           </div>
         </div>
       </div>
@@ -517,14 +525,6 @@ defmodule HexpmWeb.Components.PackageLayout do
                   </div>
                 <% end %>
               <% end %>
-
-              <a
-                id="report-package-link"
-                href={Hexpm.PackageReports.report_path(@package)}
-                class="flex items-center justify-center gap-2 text-sm font-medium text-grey-500 hover:text-red-700 dark:text-grey-300 dark:hover:text-red-300 transition-colors"
-              >
-                {HexpmWeb.ViewIcons.icon(:heroicon, "flag", class: "size-4")} Report package
-              </a>
             </div>
           </div>
         </div>

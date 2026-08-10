@@ -264,6 +264,7 @@ defmodule HexpmWeb.PackageControllerTest do
 
       assert {:ok, document} = Floki.parse_document(html)
       assert link_text(document, "/packages/#{package1.name}/report") == "Report package"
+      assert [_report_link] = Floki.find(document, ".grid > #report-package-link.bg-grey-100")
       assert link_text(document, "/packages/#{package1.name}/dependents") == "0 Dependants"
       assert link_text(document, "/packages/#{package1.name}/dependencies") == "0 Dependencies"
       assert link_text(document, "/packages/#{package1.name}/versions") == "3 Versions"
