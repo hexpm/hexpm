@@ -38,6 +38,10 @@ config :hexpm,
   sudo_timeout: Duration.new!(hour: 1),
   sudo_force_timeout: Duration.new!(second: 30)
 
+# Detection and recording are always on. Mail stays off until the corpus scan
+# has settled which rules are precise enough to notify strangers about.
+config :hexpm, secret_scan_notify: false
+
 config :hexpm, :organization_sso,
   mode: :off,
   beta_organizations: [],

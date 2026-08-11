@@ -56,7 +56,8 @@ if config_env() == :prod do
     fastly_key: System.fetch_env!("HEXPM_FASTLY_KEY"),
     fastly_hexrepo: System.fetch_env!("HEXPM_FASTLY_HEXREPO"),
     billing_key: System.fetch_env!("HEXPM_BILLING_KEY"),
-    billing_url: System.fetch_env!("HEXPM_BILLING_URL")
+    billing_url: System.fetch_env!("HEXPM_BILLING_URL"),
+    secret_scan_notify: System.get_env("HEXPM_SECRET_SCAN_NOTIFY") == "true"
 
   config :ex_aws,
     access_key_id: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_ID"),

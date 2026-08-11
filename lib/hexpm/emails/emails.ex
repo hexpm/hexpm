@@ -255,6 +255,16 @@ defmodule Hexpm.Emails do
     |> render_body(:package_published)
   end
 
+  def secrets_detected(recipients, name, version, findings) do
+    base_email()
+    |> email_to(recipients)
+    |> subject("Hex.pm - Possible credentials found in #{name} v#{version}")
+    |> assign(:package, name)
+    |> assign(:version, version)
+    |> assign(:findings, findings)
+    |> render_body(:secrets_detected)
+  end
+
   def announcement(receiver, subject, body) do
     base_email()
     |> email_to(receiver)
