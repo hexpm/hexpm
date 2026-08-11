@@ -13,9 +13,12 @@ defmodule HexpmWeb.API.RepositoryController do
 
   def index(conn, _params) do
     repositories =
-      Repositories.all_public() ++
-        all_by_user(conn.assigns.current_user) ++
-        all_by_organization(conn.assigns.current_organization)
+      (Repositories.all_public() ++
+         all_by_user(conn.assigns.current_user) ++
+         all_by_organization(conn.assigns.current_organization))
+      |> Enum.sort_by(fn repository ->
+        if repository.id == 1, do: {0, nil}, else: {1, repository.name}
+      end)
 
     when_stale(conn, repositories, [modified: false], fn conn ->
       conn

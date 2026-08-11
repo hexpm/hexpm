@@ -34,7 +34,6 @@ defmodule HexpmWeb.API.KeyControllerTest do
         |> put_req_header("authorization", key.user_secret)
         |> get("/api/keys")
         |> json_response(200)
-        |> Enum.sort_by(fn %{"name" => name} -> name end)
 
       assert length(body) == 2
       [a, b] = body

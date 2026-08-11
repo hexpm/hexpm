@@ -31,6 +31,63 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
       conn = get(build_conn(), "/dashboard/keys")
       assert redirected_to(conn) == "/login?return=%2Fdashboard%2Fkeys"
     end
+
+    test "sorts keys, organizations, and packages by name", c do
+      zulu_organization = insert(:organization, name: "zulu_org")
+      alpha_organization = insert(:organization, name: "alpha_org")
+
+      insert(:organization_user, organization: zulu_organization, user: c.user)
+      insert(:organization_user, organization: alpha_organization, user: c.user)
+
+      insert(:package,
+        name: "zulu_package",
+        package_owners: [build(:package_owner, user: c.user)]
+      )
+
+      insert(:package,
+        name: "alpha_package",
+        package_owners: [build(:package_owner, user: c.user)]
+      )
+
+      insert(:key, user: c.user, name: "zulu_key")
+      insert(:key, user: c.user, name: "alpha_key")
+
+      document =
+        build_conn()
+        |> test_login(c.user)
+        |> get("/dashboard/keys")
+        |> html_response(200)
+        |> Floki.parse_document!()
+
+      key_names =
+        document
+        |> Floki.find("table tbody tr td:first-child span")
+        |> Enum.map(&(&1 |> Floki.text() |> String.trim()))
+
+      organization_inputs =
+        document
+        |> Floki.find(
+          ~s(#repositories-permission-group input[name^="key[permissions][repository]"])
+        )
+        |> Enum.map(&(Floki.attribute(&1, "name") |> List.first()))
+
+      package_inputs =
+        document
+        |> Floki.find(~s(#generate-key-modal input[name^="key[permissions][package]"]))
+        |> Enum.map(&(Floki.attribute(&1, "name") |> List.first()))
+
+      assert key_names == ["alpha_key", "zulu_key"]
+
+      assert organization_inputs == [
+               "key[permissions][repository][alpha_org]",
+               "key[permissions][repository][zulu_org]"
+             ]
+
+      assert package_inputs == [
+               "key[permissions][package][alpha_package]",
+               "key[permissions][package][zulu_package]"
+             ]
+    end
   end
 
   describe "POST /dashboard/keys" do

@@ -21,8 +21,9 @@ defmodule HexpmWeb.API.OrganizationController do
 
   def index(conn, _params) do
     organizations =
-      all_organizations_by_user(conn.assigns.current_user) ++
-        current_organization(conn.assigns.current_organization)
+      (all_organizations_by_user(conn.assigns.current_user) ++
+         current_organization(conn.assigns.current_organization))
+      |> Enum.sort_by(& &1.name)
 
     conn
     |> api_cache(:private)

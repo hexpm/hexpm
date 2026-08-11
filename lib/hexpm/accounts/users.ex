@@ -64,7 +64,7 @@ defmodule Hexpm.Accounts.Users do
   def get_maybe_unverified_email(_, _), do: nil
 
   def all_organizations(%User{organizations: organizations}) when is_list(organizations) do
-    [Organization.hexpm() | organizations]
+    [Organization.hexpm() | Enum.sort_by(organizations, & &1.name)]
   end
 
   def all_organizations(nil) do

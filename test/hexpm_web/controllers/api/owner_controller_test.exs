@@ -6,8 +6,8 @@ defmodule HexpmWeb.API.OwnerControllerTest do
   alias Hexpm.Repository.{Owners, PackageOwner}
 
   setup do
-    user1 = insert(:user)
-    user2 = insert(:user)
+    user1 = insert(:user, username: "zulu_owner")
+    user2 = insert(:user, username: "alpha_owner")
     repository = insert(:repository)
     package = insert(:package, package_owners: [build(:package_owner, user: user1)])
 
@@ -43,8 +43,8 @@ defmodule HexpmWeb.API.OwnerControllerTest do
         |> get("/api/packages/#{package.name}/owners")
 
       [first, second] = json_response(conn, 200)
-      assert first["username"] in [user1.username, user2.username]
-      assert second["username"] in [user1.username, user2.username]
+      assert first["username"] == user2.username
+      assert second["username"] == user1.username
     end
   end
 
