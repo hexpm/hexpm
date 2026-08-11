@@ -199,7 +199,7 @@ Published packages are scanned for leaked credentials such as cloud keys, API to
 
 A credential in a published package is exposed the moment it ships, because the release is downloadable and mirrored, so rotating the credential is the fix even after the package is corrected.
 
-If a package deliberately ships secret-like values, such as test fixtures, suppress those paths with the `:secret_scan` package option:
+If a package deliberately ships secret-like values, such as test fixtures, suppress those paths with the `:secret_scan` package option. Publishing this metadata requires Hex 2.5.2 or later:
 
 ```elixir
 def project do

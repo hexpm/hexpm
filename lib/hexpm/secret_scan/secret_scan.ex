@@ -15,7 +15,8 @@ defmodule Hexpm.SecretScan do
   alias Hexpm.Accounts.User
   alias Hexpm.Emails.Outbox
   alias Hexpm.Preview
-  alias Hexpm.SecretScan.{Finding, Rules, Scan, Scanner}
+  alias Hexpm.SecretScan.{Finding, Scan}
+  alias SecretScan, as: SecretScanner
 
   @category "secret_scan.findings"
 
@@ -30,12 +31,10 @@ defmodule Hexpm.SecretScan do
     with true <- Repo.write_mode?(),
          {:ok, repository, package, version} <- Preview.key_components(key),
          true <- Releases.exists?(repository, package, version) do
-      {dir, file_paths, checksum, metadata} =
+      {dir, _file_paths, checksum, metadata} =
         Preview.download_and_unpack!(repository, package, version)
 
-      scan(repository, package, version, dir, file_paths, checksum,
-        ignore: ignore_globs(metadata)
-      )
+      scan(repository, package, version, dir, checksum, ignore: ignore_globs(metadata))
     else
       _ -> :ok
     end
@@ -56,22 +55,22 @@ defmodule Hexpm.SecretScan do
   @doc """
   Scans an unpacked release and records what it finds.
 
-  `dir` and `file_paths` are the temp directory and relative paths from the
-  unpack. `tarball_checksum` is what makes a re-run free: a re-delivered upload
-  event or a manual rerun arrives here with the same checksum and is skipped.
+  `dir` is the temp directory containing the unpacked package.
+  `tarball_checksum` is what makes a re-run free: a re-delivered upload event
+  or a manual rerun arrives here with the same checksum and is skipped.
   """
-  def scan(repository, package_name, version, dir, file_paths, tarball_checksum, opts \\ []) do
+  def scan(repository, package_name, version, dir, tarball_checksum, opts \\ []) do
     # Oban runs against Hexpm.RepoBase, which does not go through the facade's
     # read-only guard, so preview jobs keep running during maintenance. There
     # is no point spending a CPU-bound scan on a transaction that will raise.
     if Repo.write_mode?() do
-      scan_release(repository, package_name, version, dir, file_paths, tarball_checksum, opts)
+      scan_release(repository, package_name, version, dir, tarball_checksum, opts)
     else
       :ok
     end
   end
 
-  defp scan_release(repository, package_name, version, dir, file_paths, tarball_checksum, opts) do
+  defp scan_release(repository, package_name, version, dir, tarball_checksum, opts) do
     case Releases.get(repository, package_name, version) do
       nil ->
         # Removed while the job was running.
@@ -83,7 +82,7 @@ defmodule Hexpm.SecretScan do
         if scanned?(release, tarball_checksum) do
           :ok
         else
-          run(release, dir, file_paths, tarball_checksum, opts)
+          run(release, dir, tarball_checksum, opts)
         end
     end
   end
@@ -116,9 +115,9 @@ defmodule Hexpm.SecretScan do
     |> Repo.exists?()
   end
 
-  defp run(release, dir, file_paths, tarball_checksum, opts) do
+  defp run(release, dir, tarball_checksum, opts) do
     started = System.monotonic_time()
-    {findings, truncated?} = Scanner.scan_files(dir, file_paths, opts)
+    {findings, truncated?} = SecretScanner.scan(dir, scanner_opts(opts))
 
     :telemetry.execute(
       [:hexpm, :secret_scan, :scan],
@@ -219,13 +218,43 @@ defmodule Hexpm.SecretScan do
   defp notify(repo, release, %{findings: findings}) do
     fresh =
       findings
-      |> Enum.filter(&Rules.notify?(&1.rule))
+      |> Enum.filter(&(&1.rule in SecretScanner.rule_ids(:hexpm)))
       |> reject_already_reported(repo, release)
 
     cond do
       fresh == [] -> {:ok, :nothing_to_report}
       not notify?() -> {:ok, :notification_disabled}
       true -> send_email(repo, release, fresh)
+    end
+  end
+
+  defp scanner_opts(opts) do
+    opts
+    |> ignore_hex_metadata()
+    |> Keyword.put_new(:rules, :hexpm)
+    |> Keyword.put_new(:priority_rules, :hexpm)
+    |> Keyword.put_new(:occurrences, :first_per_file)
+    |> Keyword.put_new(:preview, :redacted)
+    |> Keyword.put_new(:max_concurrency, System.schedulers_online())
+    |> Keyword.put_new(:max_findings, 100)
+    |> Keyword.put_new(:max_locations, 10)
+    |> Keyword.put_new(:max_path_length, 255)
+    |> Keyword.put_new(:fingerprint_key, Application.fetch_env!(:hexpm, :secret))
+    |> put_timeout(:file_timeout, :secret_scan_file_timeout)
+    |> put_timeout(:scan_timeout, :secret_scan_release_timeout)
+  end
+
+  defp ignore_hex_metadata(opts) do
+    Keyword.update(opts, :ignore, ["hex_metadata.config"], fn
+      ignore when is_list(ignore) -> ["hex_metadata.config" | ignore]
+      ignore -> ignore
+    end)
+  end
+
+  defp put_timeout(opts, option, env) do
+    case Application.get_env(:hexpm, env) do
+      nil -> opts
+      timeout -> Keyword.put_new(opts, option, timeout)
     end
   end
 
@@ -327,7 +356,7 @@ defmodule Hexpm.SecretScan do
   end
 
   # A publisher who has since lost access does not get told what is in a
-  # private package. Rescans happen — a ruleset bump, a preview re-upload — and
+  # private package. Rescans happen after a ruleset bump or preview re-upload, and
   # each one would otherwise mail file paths from an organization's package to
   # someone removed from that organization, possibly for cause.
   defp publisher(_repo, %{publisher_id: nil}, _preloads), do: []

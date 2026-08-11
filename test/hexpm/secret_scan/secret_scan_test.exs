@@ -32,21 +32,22 @@ defmodule Hexpm.SecretScanTest do
     path
   end
 
-  defp scan(package, version, dir, paths, checksum \\ @checksum) do
-    SecretScan.scan("hexpm", package.name, version, dir, paths, checksum)
+  defp scan(package, version, dir, checksum \\ @checksum) do
+    SecretScan.scan("hexpm", package.name, version, dir, checksum)
   end
 
   test "records findings and the scan itself", %{dir: dir, package: package} do
     release = insert(:release, package: package, version: "1.0.0")
-    path = write(dir, ".env", "GITHUB_TOKEN=#{@github_token}\n")
+    write(dir, ".env", "GITHUB_TOKEN=#{@github_token}\n")
 
-    assert scan(package, "1.0.0", dir, [path]) == :ok
+    assert scan(package, "1.0.0", dir) == :ok
 
     assert [finding] = SecretScan.findings(release)
     assert finding.rule == "github-pat"
     assert finding.file_path == ".env"
     assert finding.package_id == package.id
     assert finding.tarball_checksum == @checksum
+    assert finding.preview == "ghp_************OU7Q"
     refute finding.preview =~ @github_token
 
     assert scan_row = Repo.get_by(Scan, release_id: release.id)
@@ -55,11 +56,24 @@ defmodule Hexpm.SecretScanTest do
     refute is_nil(scan_row.notified_at)
   end
 
+  test "records the first occurrence of a credential in each file", %{
+    dir: dir,
+    package: package
+  } do
+    release = insert(:release, package: package, version: "1.0.0")
+    write(dir, ".env", String.duplicate("GITHUB_TOKEN=#{@github_token}\n", 3))
+
+    assert scan(package, "1.0.0", dir) == :ok
+
+    assert [%{line: 1}] = SecretScan.findings(release)
+    assert Repo.get_by(Scan, release_id: release.id).finding_count == 1
+  end
+
   test "records a clean release so it is not rescanned", %{dir: dir, package: package} do
     release = insert(:release, package: package, version: "1.0.0")
-    path = write(dir, "lib/app.ex", "defmodule App do\nend\n")
+    write(dir, "lib/app.ex", "defmodule App do\nend\n")
 
-    assert scan(package, "1.0.0", dir, [path]) == :ok
+    assert scan(package, "1.0.0", dir) == :ok
 
     assert scan_row = Repo.get_by(Scan, release_id: release.id)
     assert scan_row.finding_count == 0
@@ -69,15 +83,15 @@ defmodule Hexpm.SecretScanTest do
 
   test "mails the owners once, not on every rerun", %{dir: dir, package: package, user: user} do
     release = insert(:release, package: package, version: "1.0.0")
-    path = write(dir, ".env", "GITHUB_TOKEN=#{@github_token}\n")
+    write(dir, ".env", "GITHUB_TOKEN=#{@github_token}\n")
 
-    scan(package, "1.0.0", dir, [path])
+    scan(package, "1.0.0", dir)
     assert [finding] = SecretScan.findings(release)
     assert_outbox_email(package, "1.0.0", [finding], [user])
 
     # A second scan under a different checksum actually re-enters the
     # transaction, rather than short-circuiting at the already-scanned check.
-    scan(package, "1.0.0", dir, [path], <<5, 5>>)
+    scan(package, "1.0.0", dir, <<5, 5>>)
     assert outbox_count() == 1
     assert [rescanned] = SecretScan.findings(release)
     assert rescanned.id == finding.id
@@ -86,11 +100,13 @@ defmodule Hexpm.SecretScanTest do
 
   test "a rescan drops findings the new tarball no longer has", %{dir: dir, package: package} do
     release = insert(:release, package: package, version: "1.0.0")
-    scan(package, "1.0.0", dir, [write(dir, ".env", "T=#{@github_token}\n")])
+    write(dir, ".env", "T=#{@github_token}\n")
+    scan(package, "1.0.0", dir)
     assert [_finding] = SecretScan.findings(release)
 
     File.rm!(Path.join(dir, ".env"))
-    scan(package, "1.0.0", dir, [write(dir, "lib/app.ex", "defmodule App do\nend\n")], <<2>>)
+    write(dir, "lib/app.ex", "defmodule App do\nend\n")
+    scan(package, "1.0.0", dir, <<2>>)
 
     assert SecretScan.findings(release) == []
     assert Repo.get_by(Scan, release_id: release.id).finding_count == 0
@@ -101,13 +117,14 @@ defmodule Hexpm.SecretScanTest do
     package: package
   } do
     release = insert(:release, package: package, version: "1.0.0")
-    scan(package, "1.0.0", dir, [write(dir, ".env", "T=#{@github_token}\n")])
+    write(dir, ".env", "T=#{@github_token}\n")
+    scan(package, "1.0.0", dir)
     assert [finding] = SecretScan.findings(release)
     assert finding.tarball_checksum == @checksum
 
     File.rm!(Path.join(dir, ".env"))
-    moved = write(dir, "config/prod.exs", ~s|t = "#{@github_token}"\n|)
-    scan(package, "1.0.0", dir, [moved], <<9>>)
+    write(dir, "config/prod.exs", ~s|t = "#{@github_token}"\n|)
+    scan(package, "1.0.0", dir, <<9>>)
 
     assert [rescanned] = SecretScan.findings(release)
     assert rescanned.file_path == "config/prod.exs"
@@ -117,10 +134,10 @@ defmodule Hexpm.SecretScanTest do
 
   test "records the credential once per file it is in", %{dir: dir, package: package} do
     release = insert(:release, package: package, version: "1.0.0")
-    paths = [write(dir, ".env", "T=#{@github_token}\n")]
-    paths = paths ++ [write(dir, "config/prod.exs", ~s|t = "#{@github_token}"\n|)]
+    write(dir, ".env", "T=#{@github_token}\n")
+    write(dir, "config/prod.exs", ~s|t = "#{@github_token}"\n|)
 
-    scan(package, "1.0.0", dir, paths)
+    scan(package, "1.0.0", dir)
 
     # Ordered by file_path in SQL, so which one comes back first is the
     # database's collation to decide, not ours.
@@ -159,6 +176,16 @@ defmodule Hexpm.SecretScanTest do
     assert finding.file_path == "lib/app.ex"
   end
 
+  test "does not scan the unpacked Hex metadata", %{dir: dir, package: package} do
+    release = insert(:release, package: package, version: "1.0.0")
+    write(dir, "hex_metadata.config", "token=#{@github_token}\n")
+
+    scan(package, "1.0.0", dir)
+
+    assert SecretScan.findings(release) == []
+    assert Repo.get_by(Scan, release_id: release.id).finding_count == 0
+  end
+
   test "a package with no reachable owner records the scan and skips the mail", %{
     dir: dir,
     package: package
@@ -168,7 +195,8 @@ defmodule Hexpm.SecretScanTest do
 
     log =
       Hexpm.TestHelpers.capture_debug_log(fn ->
-        scan(package, "1.0.0", dir, [write(dir, ".env", "T=#{@github_token}\n")])
+        write(dir, ".env", "T=#{@github_token}\n")
+        scan(package, "1.0.0", dir)
       end)
 
     assert log =~ "no reachable owner"
@@ -179,22 +207,22 @@ defmodule Hexpm.SecretScanTest do
 
   test "notified_at survives a rescan", %{dir: dir, package: package} do
     release = insert(:release, package: package, version: "1.0.0")
-    path = write(dir, ".env", "T=#{@github_token}\n")
+    write(dir, ".env", "T=#{@github_token}\n")
 
-    scan(package, "1.0.0", dir, [path])
+    scan(package, "1.0.0", dir)
     notified_at = Repo.get_by(Scan, release_id: release.id).notified_at
     refute is_nil(notified_at)
 
-    scan(package, "1.0.0", dir, [path], <<3>>)
+    scan(package, "1.0.0", dir, <<3>>)
     assert Repo.get_by(Scan, release_id: release.id).notified_at == notified_at
   end
 
   test "does nothing at all in read-only mode", %{dir: dir, package: package} do
     insert(:release, package: package, version: "1.0.0")
-    path = write(dir, ".env", "T=#{@github_token}\n")
+    write(dir, ".env", "T=#{@github_token}\n")
 
     Hexpm.TestHelpers.app_env(:hexpm, :read_only_mode, true)
-    assert scan(package, "1.0.0", dir, [path]) == :ok
+    assert scan(package, "1.0.0", dir) == :ok
 
     assert Repo.all(Scan) == []
     assert Repo.all(Finding) == []
@@ -205,12 +233,12 @@ defmodule Hexpm.SecretScanTest do
     package: package
   } do
     insert(:release, package: package, version: "1.0.0")
-    path = write(dir, ".env", "GITHUB_TOKEN=#{@github_token}\n")
-    scan(package, "1.0.0", dir, [path])
+    write(dir, ".env", "GITHUB_TOKEN=#{@github_token}\n")
+    scan(package, "1.0.0", dir)
     assert outbox_count() == 1
 
     second = insert(:release, package: package, version: "1.0.1")
-    scan(package, "1.0.1", dir, [path], <<9, 9, 9>>)
+    scan(package, "1.0.1", dir, <<9, 9, 9>>)
 
     # Recorded against the new release, but not mailed twice.
     assert [_finding] = SecretScan.findings(second)
@@ -219,20 +247,24 @@ defmodule Hexpm.SecretScanTest do
 
   test "mails again when a later version leaks something new", %{dir: dir, package: package} do
     insert(:release, package: package, version: "1.0.0")
-    scan(package, "1.0.0", dir, [write(dir, ".env", "T=#{@github_token}\n")])
+    write(dir, ".env", "T=#{@github_token}\n")
+    scan(package, "1.0.0", dir)
     assert outbox_count() == 1
 
     insert(:release, package: package, version: "1.0.1")
-    scan(package, "1.0.1", dir, [write(dir, ".env", "T=#{@other_token}\n")], <<9>>)
+    write(dir, ".env", "T=#{@other_token}\n")
+    scan(package, "1.0.1", dir, <<9>>)
     assert outbox_count() == 2
   end
 
   test "rescans when the tarball changed under the same version", %{dir: dir, package: package} do
     release = insert(:release, package: package, version: "1.0.0")
-    scan(package, "1.0.0", dir, [write(dir, "lib/app.ex", "defmodule App do\nend\n")])
+    write(dir, "lib/app.ex", "defmodule App do\nend\n")
+    scan(package, "1.0.0", dir)
     assert SecretScan.findings(release) == []
 
-    scan(package, "1.0.0", dir, [write(dir, ".env", "T=#{@github_token}\n")], <<7, 7>>)
+    write(dir, ".env", "T=#{@github_token}\n")
+    scan(package, "1.0.0", dir, <<7, 7>>)
     assert [_finding] = SecretScan.findings(release)
   end
 
@@ -240,7 +272,8 @@ defmodule Hexpm.SecretScanTest do
     Application.put_env(:hexpm, :secret_scan_notify, false)
     release = insert(:release, package: package, version: "1.0.0")
 
-    scan(package, "1.0.0", dir, [write(dir, ".env", "T=#{@github_token}\n")])
+    write(dir, ".env", "T=#{@github_token}\n")
+    scan(package, "1.0.0", dir)
 
     assert [_finding] = SecretScan.findings(release)
     assert outbox_count() == 0
@@ -251,9 +284,9 @@ defmodule Hexpm.SecretScanTest do
     release = insert(:release, package: package, version: "1.0.0")
     # A generic-api-key match, which is record-only and so not scanned in
     # production. The release records clean, not a silent finding.
-    path = write(dir, "lib/app.ex", ~s|password = "123456789abcdefgh"\n|)
+    write(dir, "lib/app.ex", ~s|password = "123456789abcdefgh"\n|)
 
-    scan(package, "1.0.0", dir, [path])
+    scan(package, "1.0.0", dir)
 
     assert SecretScan.findings(release) == []
     assert Repo.get_by(Scan, release_id: release.id).finding_count == 0
@@ -264,7 +297,8 @@ defmodule Hexpm.SecretScanTest do
     publisher = insert(:user)
     insert(:release, package: package, version: "1.0.0", publisher: publisher)
 
-    scan(package, "1.0.0", dir, [write(dir, ".env", "T=#{@github_token}\n")])
+    write(dir, ".env", "T=#{@github_token}\n")
+    scan(package, "1.0.0", dir)
 
     assert [entry] = Repo.all(Hexpm.Emails.OutboxEntry)
     addresses = Enum.map(entry.email["to"], & &1["address"])
@@ -292,13 +326,13 @@ defmodule Hexpm.SecretScanTest do
       )
 
     insert(:release, package: package, version: "1.0.0", publisher: member)
+    write(dir, ".env", "T=#{@github_token}\n")
 
     SecretScan.scan(
       repository.name,
       package.name,
       "1.0.0",
       dir,
-      [write(dir, ".env", "T=#{@github_token}\n")],
       @checksum
     )
 
@@ -318,7 +352,8 @@ defmodule Hexpm.SecretScanTest do
 
     insert(:release, package: package, version: "1.0.0")
 
-    scan(package, "1.0.0", dir, [write(dir, ".env", "T=#{@github_token}\n")])
+    write(dir, ".env", "T=#{@github_token}\n")
+    scan(package, "1.0.0", dir)
 
     assert [entry] = Repo.all(Hexpm.Emails.OutboxEntry)
     addresses = Enum.map(entry.email["to"], & &1["address"])
@@ -329,7 +364,8 @@ defmodule Hexpm.SecretScanTest do
     insert(:release, package: package, version: "1.0.0")
     ref = :telemetry_test.attach_event_handlers(self(), [[:hexpm, :secret_scan, :scan]])
 
-    scan(package, "1.0.0", dir, [write(dir, ".env", "T=#{@github_token}\n")])
+    write(dir, ".env", "T=#{@github_token}\n")
+    scan(package, "1.0.0", dir)
 
     assert_received {[:hexpm, :secret_scan, :scan], ^ref, measurements, %{truncated: false}}
     assert measurements.findings == 1
@@ -337,16 +373,17 @@ defmodule Hexpm.SecretScanTest do
   end
 
   test "does nothing for a release that has gone", %{dir: dir, package: package} do
-    assert scan(package, "9.9.9", dir, [write(dir, ".env", "T=#{@github_token}\n")]) == :ok
+    write(dir, ".env", "T=#{@github_token}\n")
+    assert scan(package, "9.9.9", dir) == :ok
     assert Repo.all(Scan) == []
     assert Repo.all(Finding) == []
   end
 
   test "keeps the credential out of the email and the log", %{dir: dir, package: package} do
     insert(:release, package: package, version: "1.0.0")
-    path = write(dir, ".env", "GITHUB_TOKEN=#{@github_token}\n")
+    write(dir, ".env", "GITHUB_TOKEN=#{@github_token}\n")
 
-    log = Hexpm.TestHelpers.capture_debug_log(fn -> scan(package, "1.0.0", dir, [path]) end)
+    log = Hexpm.TestHelpers.capture_debug_log(fn -> scan(package, "1.0.0", dir) end)
     refute log =~ @github_token
 
     assert [entry] = Repo.all(Hexpm.Emails.OutboxEntry)
