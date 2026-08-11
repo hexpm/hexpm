@@ -10,8 +10,6 @@ config :hexpm,
   pwned_impl: Hexpm.Pwned.HaveIBeenPwned,
   tmp_dir: "tmp"
 
-config :hexpm, :features, package_reports: false
-
 config :hexpm, HexpmWeb.Endpoint,
   url: [scheme: "https", port: 443],
   cache_static_manifest: "priv/static/cache_manifest.json"

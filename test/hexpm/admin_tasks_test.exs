@@ -136,14 +136,6 @@ defmodule Hexpm.AdminTasksTest do
 
       organization = insert(:organization)
       org_user = insert(:organization_user, user: user, organization: organization)
-      report = insert(:package_report, author: user, package: package, description: "test report")
-
-      comment =
-        Repo.insert!(%Hexpm.Repository.PackageReportComment{
-          text: "test comment",
-          author_id: user.id,
-          package_report_id: report.id
-        })
 
       password_reset =
         Repo.insert!(%Hexpm.Accounts.PasswordReset{
@@ -180,8 +172,6 @@ defmodule Hexpm.AdminTasksTest do
       assert audit_log_with_key_reloaded.key_id == nil
       assert audit_log_with_key_reloaded.user_data["username"] == user.username
       assert audit_log_with_key_reloaded.key_data["name"] == key.name
-      assert Repo.get(Hexpm.Repository.PackageReport, report.id).author_id == nil
-      assert Repo.get(Hexpm.Repository.PackageReportComment, comment.id).author_id == nil
       assert Repo.get(Release, release.id).publisher_id == nil
     end
   end
