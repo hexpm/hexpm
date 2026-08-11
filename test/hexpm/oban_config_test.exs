@@ -98,6 +98,29 @@ defmodule Hexpm.ObanConfigTest do
              :plugins
            ]
 
-    assert {Oban.Plugins.Lifeline, [interval: 60_000, rescue_after: 360_000]} in oban[:plugins]
+    assert {Oban.Plugins.Lifeline, [interval: 60_000, rescue_after: 5_400_000]} in oban[:plugins]
+  end
+
+  test "orphan rescue waits longer than any worker may legitimately run" do
+    prod = Config.Reader.read!("config/prod.exs", env: :prod)
+
+    assert {Oban.Plugins.Lifeline, lifeline} =
+             Enum.find(prod[:hexpm][Oban][:plugins], &match?({Oban.Plugins.Lifeline, _}, &1))
+
+    workers =
+      :hexpm
+      |> Application.spec(:modules)
+      |> Enum.filter(&(Code.ensure_loaded?(&1) and function_exported?(&1, :__opts__, 0)))
+      |> Enum.map(&{&1, &1.timeout(%Oban.Job{})})
+      |> Enum.filter(&is_integer(elem(&1, 1)))
+
+    assert {Hexpm.ReleaseTasks.Stats, 3_600_000} in workers
+
+    for {worker, timeout} <- workers do
+      assert lifeline[:rescue_after] > timeout,
+             "#{inspect(worker)} may run for #{timeout}ms, but Lifeline returns a job to " <>
+               "available after #{lifeline[:rescue_after]}ms whether or not it is still " <>
+               "running, so it would be picked up a second time mid-flight"
+    end
   end
 end

@@ -57,5 +57,8 @@ config :hexpm, Oban,
     # Successful jobs are read by nobody and are the bulk of the table, which
     # Oban's queue length metric counts on a timer. Failures are worth keeping.
     {Hexpm.Oban.Pruner, max_age: 3 * 24 * 60 * 60, discarded_max_age: 365 * 24 * 60 * 60},
-    {Oban.Plugins.Lifeline, interval: 60_000, rescue_after: 360_000}
+    # Lifeline rescues on elapsed time alone and does not check whether the job
+    # is still running, so a window shorter than a worker's timeout hands a live
+    # job to a second node and runs it twice. Stats declares an hour.
+    {Oban.Plugins.Lifeline, interval: 60_000, rescue_after: :timer.minutes(90)}
   ]
