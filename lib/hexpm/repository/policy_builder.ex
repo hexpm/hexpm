@@ -102,6 +102,9 @@ defmodule Hexpm.Repository.PolicyBuilder do
       action: action_to_enum(override.action),
       ref: maybe_put(%{package: override.package}, :requirement, override.requirement)
     }
+    |> maybe_put(:advisory_id, override.advisory_id)
+    |> maybe_put(:retirement_reason, override.retirement_reason)
+    |> maybe_put(:comment, override.comment)
   end
 
   defp maybe_put(map, _key, nil), do: map
@@ -116,6 +119,9 @@ defmodule Hexpm.Repository.PolicyBuilder do
 
   defp action_to_enum(:allow), do: :OVERRIDE_ACTION_ALLOW
   defp action_to_enum(:deny), do: :OVERRIDE_ACTION_DENY
+  defp action_to_enum(:advisory), do: :OVERRIDE_ACTION_ADVISORY
+  defp action_to_enum(:retirement), do: :OVERRIDE_ACTION_RETIREMENT
+  defp action_to_enum(:cooldown), do: :OVERRIDE_ACTION_COOLDOWN
 
   defp store_key(policy),
     do: "repos/#{policy.organization.name}/policies/#{policy.name}"

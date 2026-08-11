@@ -26,6 +26,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
     only: [
       errors: 1,
       field_errors: 2,
+      select_input: 1,
       text_input: 1,
       textarea_input: 1
     ]
@@ -143,6 +144,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
             form={rf}
             index={repo_index(rf)}
             active?={repo_index(rf) == 0}
+            private?={@private?}
             organization={@organization}
           />
         <% end %>
@@ -204,17 +206,16 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:hidden gap-2 mt-4">
+      <div class="mt-4 flex items-center justify-between gap-2 sm:hidden">
         <.visibility_control
           id="policy-visibility-tabs-mobile"
           target_id={Form.input_id(@form, :visibility)}
           paid?={@paid?}
           visibility={@visibility}
         />
-      </div>
-      <div :if={@can_edit} class="grid grid-cols-1 sm:hidden gap-2 mt-2">
         <.header_action
-          class="delete-policy-header-btn justify-center"
+          :if={@can_edit}
+          class="delete-policy-header-btn shrink-0"
           phx-click={show_modal("delete-policy-modal")}
           label="Delete"
           icon="trash"
@@ -333,12 +334,12 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
       <div class="px-4 pb-4 border-t border-grey-100 dark:border-grey-700 pt-4 bg-white dark:bg-grey-800">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <.flow_step number="1" title="Overrides" tone="primary">
-            Checked first. <strong>Allow</strong>
-            installs the release and skips the restriction; <strong>Deny</strong>
-            blocks it. The most specific version requirement wins.
+            <strong>Allow</strong>
+            accepts a release and skips every policy restriction. <strong>Deny</strong>
+            rejects it. CVE and retirement overrides bypass only the selected CVE or retirement reason. Cooldown overrides bypass only the policy cooldown.
           </.flow_step>
-          <.flow_step number="2" title="Restriction" tone="grey">
-            Every other release must clear the cooldown, advisory, and retirement limits set for the repository.
+          <.flow_step number="2" title="Restrictions" tone="grey">
+            Every remaining finding must clear the cooldown, advisory, and retirement limits set for the repository.
           </.flow_step>
         </div>
         <p class="text-xs text-grey-500 dark:text-grey-300 mt-3">
@@ -397,6 +398,8 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
       id="repo-tabs"
       phx-hook="ToggleGroup"
       data-panel-container="#repo-config"
+      data-private-policy-context
+      hidden={!@private?}
       class="grid grid-cols-1 lg:grid-cols-2 gap-3"
       role="tablist"
     >
@@ -450,6 +453,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
   attr :form, :any, required: true
   attr :index, :integer, required: true
   attr :active?, :boolean, required: true
+  attr :private?, :boolean, required: true
   attr :organization, :map, required: true
 
   defp repo_panel(assigns) do
@@ -469,7 +473,11 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
         <input type="hidden" name={name} value={value} />
       <% end %>
 
-      <div class="flex items-start gap-2 text-sm text-grey-500 dark:text-grey-300">
+      <div
+        data-private-policy-context
+        hidden={!@private?}
+        class="flex items-start gap-2 text-sm text-grey-500 dark:text-grey-300"
+      >
         {icon(:heroicon, repo_icon(@meta.kind), class: "w-4 h-4 mt-0.5", width: 16, height: 16)}
         <span>
           Settings for <code class="font-mono">{@meta.label}</code>. {@meta.desc}.
@@ -477,7 +485,11 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
       </div>
 
       <.restrictions_card form={@form} repo={@meta.label} />
-      <.overrides_card form={@form} repo={@meta.label} organization={@organization} />
+      <.overrides_card
+        form={@form}
+        repo={@meta.label}
+        organization={@organization}
+      />
     </div>
     """
   end
@@ -495,7 +507,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
         <div>
           <h4 class="text-grey-900 dark:text-white text-base font-semibold">Restrictions</h4>
           <p class="text-sm text-grey-500 dark:text-grey-300 mt-0.5">
-            Limits applied to every release from <code class="font-mono">{@repo}</code>. Overrides skip them.
+            Limits applied to releases from <code class="font-mono">{@repo}</code>. Matching overrides can bypass one or all of them.
           </p>
         </div>
       </div>
@@ -527,6 +539,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
       icon_color="text-grey-500"
       description="Hold back releases until they reach a minimum age."
       enabled?={present?(@cooldown_value)}
+      disabled_text="New releases are allowed immediately"
     >
       <div class="w-full">
         <div class="grid gap-2 sm:flex sm:flex-wrap sm:items-center">
@@ -572,6 +585,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
       icon_color="text-yellow-500"
       description="Block any release with an advisory at or above the selected severity."
       enabled?={!is_nil(@advisory_value)}
+      disabled_text="Releases with advisories are allowed"
     >
       <div class="w-full">
         <div class="grid gap-2 text-sm text-grey-500 dark:text-grey-300 sm:flex sm:flex-wrap sm:items-center">
@@ -706,80 +720,570 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
           {icon(:heroicon, "shield-check", class: "w-4 h-4", width: 14, height: 14)}
         </span>
         <div>
-          <h4 class="text-grey-900 dark:text-white text-base font-semibold inline-flex items-center gap-2">
-            Overrides
-            <span class="text-[11px] font-semibold uppercase tracking-wide text-yellow-900 dark:text-yellow-200 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-800 rounded px-1.5 py-0.5">
-              skips restrictions
-            </span>
-          </h4>
+          <h4 class="text-grey-900 dark:text-white text-base font-semibold">Overrides</h4>
           <p class="text-sm text-grey-500 dark:text-grey-300 mt-0.5">
-            Allow or deny single packages. Overrides take priority over the restrictions above.
+            Accept or reject matching releases, or bypass one policy restriction.
           </p>
         </div>
       </div>
 
       <div class="p-4 sm:p-6">
-        <div class="flex items-start gap-2 rounded-lg border border-yellow-300 dark:border-yellow-700 bg-yellow-100/70 dark:bg-yellow-900/30 p-3 mb-4 text-sm text-yellow-900 dark:text-yellow-100">
-          {icon(:heroicon, "exclamation-triangle",
-            class: "w-4 h-4 flex-shrink-0 mt-0.5",
-            width: 16,
-            height: 16
-          )}
-          <span>
-            An <strong>Allow</strong>
-            with no version lets every release through with no cooldown, advisory, or retirement checks. Add a version requirement to limit it. Each package can be listed once.
-          </span>
-        </div>
-
         <.errors errors={@override_errors} />
 
-        <div data-override-rows class="space-y-2">
-          <%!-- The row renders the embed id itself. `inputs_for` would render a
+        <div class="flex flex-col gap-2">
+          <div
+            data-override-empty
+            class={["text-sm text-grey-500 dark:text-grey-400 py-2", @overrides != [] && "hidden"]}
+          >
+            No overrides.
+          </div>
+          <div data-override-rows class="contents">
+            <%!-- The row renders the embed id itself. `inputs_for` would render a
                 second one outside the row, which removing the row leaves behind. --%>
-          <%= inputs_for @form, :overrides, [skip_hidden: true], fn of -> %>
+            <%= inputs_for @form, :overrides, [skip_hidden: true], fn of -> %>
+              <%= if override_action(Form.input_value(of, :action)) in [:allow, :deny] do %>
+                <.override_row
+                  action_name={Form.input_name(of, :action)}
+                  action_value={to_string(override_action(Form.input_value(of, :action)) || :allow)}
+                  package_name={Form.input_name(of, :package)}
+                  package_value={Form.input_value(of, :package)}
+                  package_errors={field_errors(of, :package)}
+                  requirement_name={Form.input_name(of, :requirement)}
+                  requirement_value={Form.input_value(of, :requirement)}
+                  requirement_errors={field_errors(of, :requirement)}
+                  comment_name={Form.input_name(of, :comment)}
+                  comment_value={Form.input_value(of, :comment)}
+                  comment_errors={field_errors(of, :comment)}
+                  id_name={Form.input_name(of, :id)}
+                  id_value={Form.input_value(of, :id)}
+                />
+              <% end %>
+            <% end %>
+          </div>
+
+          <template data-override-template>
             <.override_row
-              action_name={Form.input_name(of, :action)}
-              action_value={to_string(Form.input_value(of, :action) || "allow")}
-              package_name={Form.input_name(of, :package)}
-              package_value={Form.input_value(of, :package)}
-              package_errors={field_errors(of, :package)}
-              requirement_name={Form.input_name(of, :requirement)}
-              requirement_value={Form.input_value(of, :requirement)}
-              requirement_errors={field_errors(of, :requirement)}
-              id_name={Form.input_name(of, :id)}
-              id_value={Form.input_value(of, :id)}
+              action_name={@override_name <> "[__INDEX__][action]"}
+              action_value="allow"
+              package_name={@override_name <> "[__INDEX__][package]"}
+              package_value={nil}
+              requirement_name={@override_name <> "[__INDEX__][requirement]"}
+              requirement_value={nil}
+              comment_name={@override_name <> "[__INDEX__][comment]"}
+              comment_value={nil}
+              id_name={nil}
+              id_value={nil}
+            />
+          </template>
+
+          <.scoped_overrides_section
+            form={@form}
+            override_name={@override_name}
+            repo={@repo}
+            organization={@organization}
+          />
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  attr :form, :any, required: true
+  attr :override_name, :string, required: true
+  attr :repo, :string, required: true
+  attr :organization, :map, required: true
+
+  defp scoped_overrides_section(assigns) do
+    assigns =
+      assigns
+      |> assign(:override_id, Form.input_id(assigns.form, :overrides) <> "-scoped")
+      |> assign(
+        :advisory_suggestions_url,
+        ~p"/dashboard/orgs/#{assigns.organization}/policies/advisory-suggestions?#{[repository: assigns.repo]}"
+      )
+
+    ~H"""
+    <div
+      id={@override_id}
+      phx-hook="PolicyExceptionList"
+      data-advisory-suggestions-url={@advisory_suggestions_url}
+      class="contents"
+    >
+      <div data-exception-rows class="contents">
+        <%= inputs_for @form, :overrides, [skip_hidden: true], fn ef -> %>
+          <%= if override_action(Form.input_value(ef, :action)) == :retirement do %>
+            <.retirement_exception_row
+              action_name={Form.input_name(ef, :action)}
+              package_name={Form.input_name(ef, :package)}
+              package_value={Form.input_value(ef, :package)}
+              package_errors={field_errors(ef, :package)}
+              requirement_name={Form.input_name(ef, :requirement)}
+              requirement_value={Form.input_value(ef, :requirement)}
+              requirement_errors={field_errors(ef, :requirement)}
+              retirement_name={Form.input_name(ef, :retirement_reason)}
+              retirement_value={Form.input_value(ef, :retirement_reason)}
+              retirement_errors={field_errors(ef, :retirement_reason)}
+              comment_name={Form.input_name(ef, :comment)}
+              comment_value={Form.input_value(ef, :comment)}
+              comment_errors={field_errors(ef, :comment)}
+              id_name={Form.input_name(ef, :id)}
+              id_value={Form.input_value(ef, :id)}
             />
           <% end %>
-        </div>
-
-        <div
-          data-override-empty
-          class={["text-sm text-grey-500 dark:text-grey-400 py-2", @overrides != [] && "hidden"]}
-        >
-          No overrides. Packages resolve through the restrictions above.
-        </div>
-
-        <template data-override-template>
-          <.override_row
-            action_name={@override_name <> "[__INDEX__][action]"}
-            action_value="allow"
-            package_name={@override_name <> "[__INDEX__][package]"}
-            package_value={nil}
-            requirement_name={@override_name <> "[__INDEX__][requirement]"}
-            requirement_value={nil}
-            id_name={nil}
-            id_value={nil}
-          />
-        </template>
-
-        <button
-          type="button"
-          data-override-add
-          class="mt-4 inline-flex items-center gap-1 px-3 h-9 text-sm font-medium rounded border border-grey-200 dark:border-grey-700 bg-white dark:bg-grey-800 text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-700 transition-colors cursor-pointer"
-        >
-          {icon(:heroicon, "plus", class: "w-4 h-4", width: 16, height: 16)} Add override
-        </button>
+          <%= if override_action(Form.input_value(ef, :action)) == :advisory do %>
+            <.advisory_exception_row
+              action_name={Form.input_name(ef, :action)}
+              advisory_name={Form.input_name(ef, :advisory_id)}
+              advisory_value={Form.input_value(ef, :advisory_id)}
+              advisory_errors={field_errors(ef, :advisory_id)}
+              package_name={Form.input_name(ef, :package)}
+              package_value={Form.input_value(ef, :package)}
+              package_errors={field_errors(ef, :package)}
+              requirement_name={Form.input_name(ef, :requirement)}
+              requirement_value={Form.input_value(ef, :requirement)}
+              requirement_errors={field_errors(ef, :requirement)}
+              comment_name={Form.input_name(ef, :comment)}
+              comment_value={Form.input_value(ef, :comment)}
+              comment_errors={field_errors(ef, :comment)}
+              id_name={Form.input_name(ef, :id)}
+              id_value={Form.input_value(ef, :id)}
+            />
+          <% end %>
+          <%= if override_action(Form.input_value(ef, :action)) == :cooldown do %>
+            <.cooldown_override_row
+              action_name={Form.input_name(ef, :action)}
+              package_name={Form.input_name(ef, :package)}
+              package_value={Form.input_value(ef, :package)}
+              package_errors={field_errors(ef, :package)}
+              requirement_name={Form.input_name(ef, :requirement)}
+              requirement_value={Form.input_value(ef, :requirement)}
+              requirement_errors={field_errors(ef, :requirement)}
+              comment_name={Form.input_name(ef, :comment)}
+              comment_value={Form.input_value(ef, :comment)}
+              comment_errors={field_errors(ef, :comment)}
+              id_name={Form.input_name(ef, :id)}
+              id_value={Form.input_value(ef, :id)}
+            />
+          <% end %>
+        <% end %>
       </div>
+
+      <template data-exception-template="advisory">
+        <.advisory_exception_row
+          action_name={@override_name <> "[__INDEX__][action]"}
+          advisory_name={@override_name <> "[__INDEX__][advisory_id]"}
+          advisory_value={nil}
+          package_name={@override_name <> "[__INDEX__][package]"}
+          package_value={nil}
+          requirement_name={@override_name <> "[__INDEX__][requirement]"}
+          requirement_value={nil}
+          comment_name={@override_name <> "[__INDEX__][comment]"}
+          comment_value={nil}
+          id_name={nil}
+          id_value={nil}
+        />
+      </template>
+
+      <template data-exception-template="retirement">
+        <.retirement_exception_row
+          action_name={@override_name <> "[__INDEX__][action]"}
+          package_name={@override_name <> "[__INDEX__][package]"}
+          package_value={nil}
+          requirement_name={@override_name <> "[__INDEX__][requirement]"}
+          requirement_value={nil}
+          retirement_name={@override_name <> "[__INDEX__][retirement_reason]"}
+          retirement_value="0"
+          comment_name={@override_name <> "[__INDEX__][comment]"}
+          comment_value={nil}
+          id_name={nil}
+          id_value={nil}
+        />
+      </template>
+
+      <template data-exception-template="cooldown">
+        <.cooldown_override_row
+          action_name={@override_name <> "[__INDEX__][action]"}
+          package_name={@override_name <> "[__INDEX__][package]"}
+          package_value={nil}
+          requirement_name={@override_name <> "[__INDEX__][requirement]"}
+          requirement_value={nil}
+          comment_name={@override_name <> "[__INDEX__][comment]"}
+          comment_value={nil}
+          id_name={nil}
+          id_value={nil}
+        />
+      </template>
+
+      <div class="mt-1 flex flex-wrap gap-2">
+        <.override_add_button kind="decision">
+          {icon(:heroicon, "plus", class: "w-4 h-4", width: 16, height: 16)} Add Allow/Deny override
+        </.override_add_button>
+        <.override_add_button kind="advisory">
+          {icon(:heroicon, "plus", class: "w-4 h-4", width: 16, height: 16)} Add CVE override
+        </.override_add_button>
+        <.override_add_button kind="retirement">
+          {icon(:heroicon, "plus", class: "w-4 h-4", width: 16, height: 16)} Add retirement override
+        </.override_add_button>
+        <.override_add_button kind="cooldown">
+          {icon(:heroicon, "plus", class: "w-4 h-4", width: 16, height: 16)} Add cooldown override
+        </.override_add_button>
+      </div>
+    </div>
+    """
+  end
+
+  attr :kind, :string, required: true, values: ["decision", "advisory", "retirement", "cooldown"]
+  slot :inner_block, required: true
+
+  defp override_add_button(assigns) do
+    ~H"""
+    <button
+      type="button"
+      data-override-add={if @kind == "decision", do: ""}
+      data-exception-add={if @kind != "decision", do: @kind}
+      class="inline-flex h-9 w-full items-center gap-1 rounded border border-grey-200 px-3 text-sm font-medium text-grey-700 hover:bg-grey-50 dark:border-grey-700 dark:text-grey-200 dark:hover:bg-grey-700 sm:w-auto cursor-pointer"
+    >
+      {render_slot(@inner_block)}
+    </button>
+    """
+  end
+
+  attr :action_name, :string, required: true
+  attr :advisory_name, :string, required: true
+  attr :advisory_value, :any, required: true
+  attr :advisory_errors, :list, default: []
+  attr :package_name, :string, required: true
+  attr :package_value, :any, required: true
+  attr :package_errors, :list, default: []
+  attr :requirement_name, :string, required: true
+  attr :requirement_value, :any, required: true
+  attr :requirement_errors, :list, default: []
+  attr :comment_name, :string, required: true
+  attr :comment_value, :any, required: true
+  attr :comment_errors, :list, default: []
+  attr :id_name, :any, required: true
+  attr :id_value, :any, required: true
+
+  defp advisory_exception_row(assigns) do
+    assigns = assign(assigns, :menu_id, assigns.advisory_name <> "-suggestions")
+
+    ~H"""
+    <div
+      data-exception-row
+      data-exception-type="advisory"
+      class="rounded-lg border border-l-4 border-grey-200 border-l-primary-500 dark:border-grey-700 p-3"
+    >
+      <input :if={@id_name} type="hidden" name={@id_name} value={@id_value} />
+      <input type="hidden" name={@action_name} value="advisory" />
+      <input data-exception-advisory-id type="hidden" name={@advisory_name} value={@advisory_value} />
+      <input data-exception-package type="hidden" name={@package_name} value={@package_value} />
+      <input
+        data-exception-requirement
+        type="hidden"
+        name={@requirement_name}
+        value={@requirement_value}
+      />
+
+      <.override_row_header
+        label="CVE override"
+        remove_label="Remove CVE override"
+        remove_kind="exception"
+      />
+
+      <div class="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-12">
+        <div class="relative lg:col-span-6">
+          <label
+            for={@menu_id <> "-input"}
+            class="block text-xs font-semibold text-grey-700 dark:text-grey-200 mb-1"
+          >
+            Advisory
+          </label>
+          <div data-exception-control class="relative">
+            <input
+              id={@menu_id <> "-input"}
+              type="text"
+              data-exception-search
+              value={@advisory_value}
+              readonly={@advisory_value not in [nil, ""]}
+              hidden={@advisory_value not in [nil, ""]}
+              placeholder="Search CVE, advisory, summary, or package"
+              autocomplete="off"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded="false"
+              aria-controls={@menu_id}
+              aria-invalid={@advisory_errors != [] && "true"}
+              class={[
+                "w-full px-3 py-2 border rounded text-sm",
+                "bg-white dark:bg-grey-800 text-grey-900 dark:text-grey-100",
+                input_border_class(@advisory_errors)
+              ]}
+            />
+            <button
+              type="button"
+              data-exception-selected
+              data-exception-reselect
+              hidden={@advisory_value in [nil, ""]}
+              aria-label="Change selected advisory"
+              class={[
+                "flex h-[38px] min-w-0 items-center justify-between gap-2 rounded border px-3 text-xs sm:text-sm",
+                "w-full bg-white dark:bg-grey-800 text-grey-900 dark:text-grey-100 cursor-pointer",
+                "hover:border-primary-500 dark:hover:border-primary-400",
+                input_border_class(@advisory_errors)
+              ]}
+            >
+              <span class="min-w-0 truncate">
+                <strong data-exception-selected-id class="font-mono">{@advisory_value}</strong>
+                <span class="text-grey-500 dark:text-grey-300"> for </span>
+                <code data-exception-selected-package>{@package_value}</code>
+              </span>
+              <span class="shrink-0 text-grey-400 dark:text-grey-300">
+                {icon(:heroicon, "chevron-down", class: "w-4 h-4", width: 16, height: 16)}
+              </span>
+            </button>
+            <div
+              id={@menu_id}
+              data-exception-suggestions
+              role="listbox"
+              aria-label="Advisory suggestions"
+              class="absolute inset-x-0 top-full z-50 mt-1 max-h-80 overflow-y-auto rounded-md border border-grey-200 dark:border-grey-600 bg-white dark:bg-grey-800 shadow-lg"
+              hidden
+            >
+            </div>
+            <div
+              data-exception-status
+              role="status"
+              aria-live="polite"
+              class="absolute inset-x-0 top-full z-50 mt-1 rounded-md border border-grey-200 bg-white px-3 py-2 text-xs text-grey-500 shadow-lg dark:border-grey-600 dark:bg-grey-800 dark:text-grey-300"
+              hidden
+            >
+            </div>
+          </div>
+          <.errors errors={@advisory_errors} />
+          <.errors errors={@requirement_errors} />
+        </div>
+
+        <div class="lg:col-span-6">
+          <.exception_text_field
+            label="Comment (optional)"
+            name={@comment_name}
+            value={@comment_value}
+            errors={@comment_errors}
+            placeholder="Reason for accepting this finding"
+          />
+        </div>
+      </div>
+      <.errors errors={@package_errors} />
+    </div>
+    """
+  end
+
+  attr :action_name, :string, required: true
+  attr :package_name, :string, required: true
+  attr :package_value, :any, required: true
+  attr :package_errors, :list, default: []
+  attr :requirement_name, :string, required: true
+  attr :requirement_value, :any, required: true
+  attr :requirement_errors, :list, default: []
+  attr :retirement_name, :string, required: true
+  attr :retirement_value, :any, required: true
+  attr :retirement_errors, :list, default: []
+  attr :comment_name, :string, required: true
+  attr :comment_value, :any, required: true
+  attr :comment_errors, :list, default: []
+  attr :id_name, :any, required: true
+  attr :id_value, :any, required: true
+
+  defp retirement_exception_row(assigns) do
+    ~H"""
+    <div
+      data-exception-row
+      data-exception-type="retirement"
+      class="rounded-lg border border-l-4 border-grey-200 border-l-primary-500 dark:border-grey-700 p-3"
+    >
+      <input :if={@id_name} type="hidden" name={@id_name} value={@id_value} />
+      <input type="hidden" name={@action_name} value="retirement" />
+      <.override_row_header
+        label="Retirement override"
+        remove_label="Remove retirement override"
+        remove_kind="exception"
+      />
+      <div class="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-12">
+        <div class="lg:col-span-3">
+          <.exception_text_field
+            label="Package"
+            name={@package_name}
+            value={@package_value}
+            errors={@package_errors}
+            placeholder="package name"
+            mono
+          />
+        </div>
+        <div class="lg:col-span-3">
+          <.exception_text_field
+            label="Version requirement (optional)"
+            name={@requirement_name}
+            value={@requirement_value}
+            errors={@requirement_errors}
+            placeholder="any version, or e.g. ~> 1.7"
+            mono
+          />
+        </div>
+        <div class="lg:col-span-3">
+          <label
+            for={@retirement_name}
+            class="block text-xs font-semibold text-grey-700 dark:text-grey-200 mb-1"
+          >
+            Retirement reason
+          </label>
+          <.select_input
+            id={@retirement_name}
+            name={@retirement_name}
+            value={@retirement_value}
+            options={retirement_select_options()}
+            errors={@retirement_errors}
+            size="compact"
+            variant="light"
+            aria-label="Retirement reason"
+          />
+        </div>
+        <div class="lg:col-span-3">
+          <.exception_text_field
+            label="Comment (optional)"
+            name={@comment_name}
+            value={@comment_value}
+            errors={@comment_errors}
+            placeholder="Reason for accepting this finding"
+          />
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  attr :action_name, :string, required: true
+  attr :package_name, :string, required: true
+  attr :package_value, :any, required: true
+  attr :package_errors, :list, default: []
+  attr :requirement_name, :string, required: true
+  attr :requirement_value, :any, required: true
+  attr :requirement_errors, :list, default: []
+  attr :comment_name, :string, required: true
+  attr :comment_value, :any, required: true
+  attr :comment_errors, :list, default: []
+  attr :id_name, :any, required: true
+  attr :id_value, :any, required: true
+
+  defp cooldown_override_row(assigns) do
+    ~H"""
+    <div
+      data-exception-row
+      data-exception-type="cooldown"
+      class="rounded-lg border border-l-4 border-grey-200 border-l-primary-500 dark:border-grey-700 p-3"
+    >
+      <input :if={@id_name} type="hidden" name={@id_name} value={@id_value} />
+      <input type="hidden" name={@action_name} value="cooldown" />
+      <.override_row_header
+        label="Cooldown override"
+        remove_label="Remove cooldown override"
+        remove_kind="exception"
+      />
+      <div class="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-12">
+        <div class="lg:col-span-3">
+          <.exception_text_field
+            label="Package"
+            name={@package_name}
+            value={@package_value}
+            errors={@package_errors}
+            placeholder="package name"
+            mono
+          />
+        </div>
+        <div class="lg:col-span-3">
+          <.exception_text_field
+            label="Version requirement (optional)"
+            name={@requirement_name}
+            value={@requirement_value}
+            errors={@requirement_errors}
+            placeholder="any version, or e.g. == 1.7.10"
+            mono
+          />
+        </div>
+        <div class="md:col-span-2 lg:col-span-6">
+          <.exception_text_field
+            label="Comment (optional)"
+            name={@comment_name}
+            value={@comment_value}
+            errors={@comment_errors}
+            placeholder="Reason for bypassing the policy cooldown"
+          />
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  attr :label, :string, required: true
+  attr :remove_label, :string, required: true
+  attr :remove_kind, :string, required: true, values: ["override", "exception"]
+  attr :dynamic_label, :boolean, default: false
+  slot :controls
+
+  defp override_row_header(assigns) do
+    ~H"""
+    <div class="mb-2 flex min-h-8 items-center justify-between gap-2">
+      <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+        <span
+          data-override-kind={@dynamic_label && ""}
+          class="inline-flex shrink-0 rounded-md bg-primary-50 px-2 py-0.5 text-xs font-semibold text-primary-700 dark:bg-primary-900/30 dark:text-primary-200"
+        >
+          {@label}
+        </span>
+        <div :if={@controls != []}>{render_slot(@controls)}</div>
+      </div>
+      <button
+        type="button"
+        data-override-remove={@remove_kind == "override" && ""}
+        data-exception-remove={@remove_kind == "exception" && ""}
+        class="size-8 shrink-0 flex items-center justify-center rounded text-grey-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors cursor-pointer"
+        aria-label={@remove_label}
+      >
+        {icon(:heroicon, "trash", class: "w-4 h-4", width: 16, height: 16)}
+      </button>
+    </div>
+    """
+  end
+
+  attr :label, :string, required: true
+  attr :name, :string, required: true
+  attr :value, :any, required: true
+  attr :errors, :list, default: []
+  attr :placeholder, :string, default: nil
+  attr :mono, :boolean, default: false
+
+  defp exception_text_field(assigns) do
+    ~H"""
+    <div>
+      <label
+        for={@name}
+        class="block text-xs font-semibold text-grey-700 dark:text-grey-200 mb-1"
+      >
+        {@label}
+      </label>
+      <input
+        id={@name}
+        type="text"
+        name={@name}
+        value={@value}
+        placeholder={@placeholder}
+        aria-invalid={@errors != [] && "true"}
+        class={[
+          "w-full px-3 py-2 border rounded text-sm bg-white dark:bg-grey-800 text-grey-900 dark:text-grey-100",
+          @mono && "font-mono",
+          input_border_class(@errors)
+        ]}
+      />
+      <.errors errors={@errors} />
     </div>
     """
   end
@@ -792,130 +1296,153 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
   attr :requirement_name, :string, required: true
   attr :requirement_value, :any, required: true
   attr :requirement_errors, :list, default: []
+  attr :comment_name, :string, required: true
+  attr :comment_value, :any, required: true
+  attr :comment_errors, :list, default: []
   attr :id_name, :any, required: true
   attr :id_value, :any, required: true
 
   defp override_row(assigns) do
     assigns =
       assigns
-      |> assign(:tone_class, override_row_tone(assigns.action_value))
+      |> assign(
+        :kind_label,
+        if(assigns.action_value == "deny", do: "Deny override", else: "Allow override")
+      )
       |> assign(:package_menu_id, assigns.package_name <> "-suggestions")
       |> assign(:requirement_menu_id, assigns.requirement_name <> "-suggestions")
 
     ~H"""
     <div
       data-override-row
-      class={[
-        "relative grid grid-cols-1 gap-2 rounded-lg border bg-white dark:bg-grey-800 p-3 sm:flex sm:flex-wrap sm:items-center sm:p-2",
-        "border-grey-200 dark:border-grey-700 border-l-4",
-        @tone_class
-      ]}
+      class="rounded-lg border border-l-4 border-grey-200 border-l-primary-500 bg-white dark:border-grey-700 dark:bg-grey-800 p-3"
     >
       <input :if={@id_name} type="hidden" name={@id_name} value={@id_value} />
 
-      <div
-        data-decision
-        class="inline-flex w-max max-w-[calc(100%-2.5rem)] sm:max-w-full rounded-md border border-grey-200 dark:border-grey-700 overflow-hidden"
+      <.override_row_header
+        label={@kind_label}
+        remove_label="Remove Allow/Deny override"
+        remove_kind="override"
+        dynamic_label
       >
-        <input type="hidden" data-decision-input name={@action_name} value={@action_value} />
-        <.decision_button value="allow" label="Allow" active?={@action_value == "allow"} />
-        <.decision_button value="deny" label="Deny" active?={@action_value == "deny"} />
-      </div>
+        <:controls>
+          <div
+            data-decision
+            class="inline-flex w-max rounded-md border border-grey-200 dark:border-grey-700 overflow-hidden"
+          >
+            <input type="hidden" data-decision-input name={@action_name} value={@action_value} />
+            <.decision_button value="allow" label="Allow" active?={@action_value == "allow"} />
+            <.decision_button value="deny" label="Deny" active?={@action_value == "deny"} />
+          </div>
+        </:controls>
+      </.override_row_header>
 
-      <div class="relative min-w-0 sm:flex-1 sm:min-w-[10rem]">
-        <input
-          type="text"
-          data-override-package
-          name={@package_name}
-          value={@package_value}
-          placeholder="package name"
-          autocomplete="off"
-          autocapitalize="none"
-          autocorrect="off"
-          spellcheck="false"
-          role="combobox"
-          aria-autocomplete="list"
-          aria-expanded="false"
-          aria-controls={@package_menu_id}
-          aria-invalid={@package_errors != [] && "true"}
-          class={[
-            "w-full px-3 py-2 border rounded text-sm font-mono",
-            "bg-white dark:bg-grey-800 text-grey-900 dark:text-grey-100",
-            "focus:outline-none focus:ring-1",
-            input_border_class(@package_errors)
-          ]}
-        />
-        <div
-          id={@package_menu_id}
-          data-override-suggestions="package"
-          role="listbox"
-          aria-label="Package suggestions"
-          class="absolute inset-x-0 top-full z-50 mt-1 max-h-56 overflow-y-auto rounded-md border border-grey-200 dark:border-grey-600 bg-white dark:bg-grey-800 shadow-lg"
-          hidden
-        >
+      <div class="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-12">
+        <div class="relative min-w-0 lg:col-span-3">
+          <label
+            for={@package_name}
+            class="block text-xs font-semibold text-grey-700 dark:text-grey-200 mb-1"
+          >
+            Package
+          </label>
+          <input
+            id={@package_name}
+            type="text"
+            data-override-package
+            name={@package_name}
+            value={@package_value}
+            placeholder="package name"
+            autocomplete="off"
+            autocapitalize="none"
+            autocorrect="off"
+            spellcheck="false"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded="false"
+            aria-controls={@package_menu_id}
+            aria-invalid={@package_errors != [] && "true"}
+            class={[
+              "w-full px-3 py-2 border rounded text-sm font-mono",
+              "bg-white dark:bg-grey-800 text-grey-900 dark:text-grey-100",
+              "focus:outline-none focus:ring-1",
+              input_border_class(@package_errors)
+            ]}
+          />
+          <div
+            id={@package_menu_id}
+            data-override-suggestions="package"
+            role="listbox"
+            aria-label="Package suggestions"
+            class="absolute inset-x-0 top-full z-50 mt-1 max-h-56 overflow-y-auto rounded-md border border-grey-200 dark:border-grey-600 bg-white dark:bg-grey-800 shadow-lg"
+            hidden
+          >
+          </div>
+          <.errors errors={@package_errors} />
         </div>
-        <.errors errors={@package_errors} />
-      </div>
-      <div class="relative min-w-0 sm:flex-1 sm:min-w-[10rem]">
-        <input
-          type="text"
-          data-override-requirement
-          name={@requirement_name}
-          value={@requirement_value}
-          placeholder="any version, or e.g. ~> 1.7"
-          autocomplete="off"
-          autocapitalize="none"
-          autocorrect="off"
-          spellcheck="false"
-          role="combobox"
-          aria-autocomplete="list"
-          aria-expanded="false"
-          aria-controls={@requirement_menu_id}
-          aria-invalid={@requirement_errors != [] && "true"}
-          class={[
-            "w-full px-3 py-2 border rounded text-sm font-mono",
-            "bg-white dark:bg-grey-800 text-grey-900 dark:text-grey-100",
-            "focus:outline-none focus:ring-1",
-            input_border_class(@requirement_errors)
-          ]}
-        />
-        <div
-          id={@requirement_menu_id}
-          data-override-suggestions="version"
-          role="listbox"
-          aria-label="Version suggestions"
-          class="absolute inset-x-0 top-full z-50 mt-1 max-h-56 overflow-y-auto rounded-md border border-grey-200 dark:border-grey-600 bg-white dark:bg-grey-800 shadow-lg"
-          hidden
-        >
+        <div class="relative min-w-0 lg:col-span-3">
+          <label
+            for={@requirement_name}
+            class="block text-xs font-semibold text-grey-700 dark:text-grey-200 mb-1"
+          >
+            Version requirement (optional)
+          </label>
+          <input
+            id={@requirement_name}
+            type="text"
+            data-override-requirement
+            name={@requirement_name}
+            value={@requirement_value}
+            placeholder="any version, or e.g. ~> 1.7"
+            autocomplete="off"
+            autocapitalize="none"
+            autocorrect="off"
+            spellcheck="false"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded="false"
+            aria-controls={@requirement_menu_id}
+            aria-invalid={@requirement_errors != [] && "true"}
+            class={[
+              "w-full px-3 py-2 border rounded text-sm font-mono",
+              "bg-white dark:bg-grey-800 text-grey-900 dark:text-grey-100",
+              "focus:outline-none focus:ring-1",
+              input_border_class(@requirement_errors)
+            ]}
+          />
+          <div
+            id={@requirement_menu_id}
+            data-override-suggestions="version"
+            role="listbox"
+            aria-label="Version suggestions"
+            class="absolute inset-x-0 top-full z-50 mt-1 max-h-56 overflow-y-auto rounded-md border border-grey-200 dark:border-grey-600 bg-white dark:bg-grey-800 shadow-lg"
+            hidden
+          >
+          </div>
+          <.errors errors={@requirement_errors} />
         </div>
-        <.errors errors={@requirement_errors} />
+        <div class="min-w-0 md:col-span-2 lg:col-span-6">
+          <.exception_text_field
+            label="Comment (optional)"
+            name={@comment_name}
+            value={@comment_value}
+            errors={@comment_errors}
+            placeholder="Reason for this override"
+          />
+        </div>
       </div>
-      <button
-        type="button"
-        data-override-remove
-        class="absolute right-2 top-2 sm:static size-9 flex items-center justify-center rounded text-grey-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors cursor-pointer"
-        aria-label="Remove override"
-      >
-        {icon(:heroicon, "trash", class: "w-4 h-4", width: 16, height: 16)}
-      </button>
     </div>
     """
   end
 
-  # `inputs_for` skips embeds the changeset marks for replacement, so the empty
-  # state has to count the same rows the form renders.
-  defp rendered_overrides(form) do
-    case Form.input_value(form, :overrides) do
-      list when is_list(list) ->
-        Enum.reject(list, &match?(%Ecto.Changeset{action: :replace}, &1))
+  defp override_action(action) when action in [:allow, :deny, :advisory, :retirement, :cooldown],
+    do: action
 
-      _ ->
-        []
-    end
-  end
-
-  defp override_row_tone("deny"), do: "border-l-red-500"
-  defp override_row_tone(_), do: "border-l-green-500"
+  defp override_action("allow"), do: :allow
+  defp override_action("deny"), do: :deny
+  defp override_action("advisory"), do: :advisory
+  defp override_action("retirement"), do: :retirement
+  defp override_action("cooldown"), do: :cooldown
+  defp override_action(_action), do: nil
 
   defp input_border_class([]),
     do: "border-grey-200 focus:border-primary-600 focus:ring-primary-600 dark:border-grey-600"
@@ -934,7 +1461,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
       data-decision-value={@value}
       data-active={@active? && "true"}
       class={[
-        "inline-flex items-center gap-1.5 px-2.5 sm:px-3 h-9 text-sm font-medium cursor-pointer transition-colors",
+        "inline-flex h-7 items-center gap-1 px-2 text-xs font-medium cursor-pointer transition-colors",
         "text-grey-600 dark:text-grey-300 bg-white dark:bg-grey-800 hover:bg-grey-50 dark:hover:bg-grey-700",
         @value == "allow" &&
           "data-[active=true]:bg-green-50 data-[active=true]:text-green-700 dark:data-[active=true]:bg-green-900/20 dark:data-[active=true]:text-green-300",
@@ -996,7 +1523,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
     <div
       id={@id}
       phx-hook="RuleToggle"
-      class="grid grid-cols-[1.25rem_1fr] md:grid-cols-[8rem_1fr] gap-x-3 gap-y-2 py-3"
+      class="grid grid-cols-[1rem_6.5rem_minmax(0,1fr)] items-start gap-x-3 py-2 md:grid-cols-[8rem_1fr] md:items-stretch md:gap-y-2 md:py-3"
     >
       <label class="group/rule contents cursor-pointer md:flex md:items-center md:gap-3 md:min-h-9">
         <input type="checkbox" checked={@enabled?} class="sr-only peer" data-rule-enabled />
@@ -1005,13 +1532,16 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
             {icon(:heroicon, "check", class: "w-3 h-3", width: 12, height: 12)}
           </span>
         </span>
-        <span class="min-h-9 flex items-center text-sm font-semibold text-grey-900 dark:text-white">
+        <span class="flex min-h-7 items-center text-sm font-semibold text-grey-900 dark:text-white md:min-h-9">
           {@title}
         </span>
       </label>
       <div
         data-rule-body
-        class={["col-start-2 md:col-start-auto min-h-9 flex items-center", !@enabled? && "hidden"]}
+        class={[
+          "col-start-3 row-start-1 flex min-h-7 items-center md:col-start-auto md:row-start-auto md:min-h-9",
+          !@enabled? && "hidden"
+        ]}
       >
         {render_slot(@inner_block)}
       </div>
@@ -1019,7 +1549,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
         :if={@disabled_text}
         data-rule-disabled
         class={[
-          "col-start-2 md:col-start-auto min-h-9 items-center text-sm italic text-grey-500 dark:text-grey-300",
+          "col-start-3 row-start-1 min-h-7 items-center text-sm italic text-grey-500 dark:text-grey-300 md:col-start-auto md:row-start-auto md:min-h-9",
           @enabled? && "hidden",
           !@enabled? && "flex"
         ]}
@@ -1226,6 +1756,20 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
       {String.capitalize(name), Map.fetch!(by_name, name),
        Map.fetch!(@retirement_subtitles, name)}
     end)
+  end
+
+  defp retirement_select_options do
+    Enum.map(retirement_reason_options(), fn {label, value, _subtitle} -> {label, value} end)
+  end
+
+  defp rendered_overrides(form) do
+    case Form.input_value(form, :overrides) do
+      list when is_list(list) ->
+        Enum.reject(list, &match?(%Ecto.Changeset{action: :replace}, &1))
+
+      _other ->
+        []
+    end
   end
 
   defp selected_retirement_reasons(form) do

@@ -1,10 +1,10 @@
-// Shows or hides the organization's own repository tab based on the policy's
-// visibility. A public policy only publishes rules for the public `hexpm`
-// repository, so its org tab is hidden; toggling the visibility control to
-// private reveals it immediately.
+// Shows repository context and the organization's repository tab for private
+// policies. Public policies only publish rules for `hexpm`, so the single-tab
+// selector and its repository summary stay hidden.
 //
 // The container opts in via phx-hook="PrivateRepoTabs" and holds the repo
-// tablist; the private-only tab buttons are marked [data-private-only]. The
+// tablist; private-only tab buttons use [data-private-only] and context that is
+// redundant for public policies uses [data-private-policy-context]. The
 // visibility input (#policy_visibility) lives elsewhere in the form.
 export const PrivateRepoTabs = {
   mounted() {
@@ -12,6 +12,9 @@ export const PrivateRepoTabs = {
     if (!visibility) return;
 
     const privateOnly = this.el.querySelectorAll("[data-private-only]");
+    const privateContext = this.el.querySelectorAll(
+      "[data-private-policy-context]"
+    );
 
     const sync = () => {
       const isPrivate =
@@ -20,6 +23,9 @@ export const PrivateRepoTabs = {
           : visibility.value === "private";
 
       privateOnly.forEach((el) => {
+        el.hidden = !isPrivate;
+      });
+      privateContext.forEach((el) => {
         el.hidden = !isPrivate;
       });
 

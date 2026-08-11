@@ -229,6 +229,7 @@ defmodule HexpmWeb.Components.Input do
   attr :prompt, :string, default: nil, doc: "Optional prompt text for the first option"
   attr :required, :boolean, default: false
   attr :rest, :global, include: ~w(disabled multiple)
+  attr :size, :string, default: "default", values: ["default", "compact"]
 
   attr :show_errors, :boolean,
     default: nil,
@@ -273,10 +274,11 @@ defmodule HexpmWeb.Components.Input do
           id={@id}
           name={@name}
           class={[
-            "w-full h-12 pl-4 pr-10 bg-white border rounded-lg dark:bg-grey-800",
-            "text-grey-900 font-medium cursor-pointer dark:text-grey-100",
+            "w-full pr-10 bg-white border dark:bg-grey-800",
+            "text-grey-900 cursor-pointer dark:text-grey-100",
             "focus:outline-none focus:ring-2 dark:focus:ring-offset-grey-800",
             "appearance-none",
+            select_size_classes(@size),
             select_border_classes(@variant, @errors),
             @class
           ]}
@@ -621,4 +623,7 @@ defmodule HexpmWeb.Components.Input do
   defp select_border_classes("default", _errors) do
     "border-grey-300 focus:border-primary-600 focus:ring-primary-600 focus:ring-opacity-20 dark:border-grey-600 dark:focus:border-primary-400 dark:focus:ring-primary-400"
   end
+
+  defp select_size_classes("default"), do: "h-12 pl-4 rounded-lg font-medium"
+  defp select_size_classes("compact"), do: "h-[38px] pl-3 rounded text-sm font-normal"
 end

@@ -1,16 +1,29 @@
-## Dependency policies and cooldowns
+## Dependency security
 
-Two related features help organizations and projects defend against supply-chain attacks by gating which package versions Hex considers during dependency resolution. **Cooldown** is purely temporal — a minimum age a release must have before it becomes eligible. **Policies** are signed, org-published rules that can additionally block releases based on security advisories or retirement reasons.
+Hex has three controls for dependency risk: project settings, dependency policies, and lockfile audits. Project settings apply to one project. A dependency policy is a signed set of organization-managed rules. `mix hex.audit` checks the complete lockfile for security advisories and retired releases.
 
-The two features compose. A project can use either on its own, or both at once.
+### Which dependencies each command checks
 
-### Dependency cooldown
+`mix deps.get` and `mix deps.update` resolve dependencies that need to change. They filter candidate releases through the project cooldown and the active dependency policy. After resolution, their advisory and retirement warnings cover dependencies listed as new, upgraded, downgraded, or unchanged by that resolution. Dependencies that remain trusted from the existing lock aren't re-evaluated as candidates.
 
-The `cooldown` setting tells Hex to ignore releases until they have been available for a configured amount of time. This creates a review window in which suspicious or broken releases may be reported before they are selected by dependency resolution.
+`mix hex.audit` reads every Hex dependency in `mix.lock`, including dependencies that didn't change in the last resolution. Use it in CI when the complete lockfile needs to be checked against newly published advisories or retirement metadata.
 
-#### Configuration
+| Command | Default behavior | Effect of an active policy |
+| --- | --- | --- |
+| `mix deps.get` and `mix deps.update` | Resolve dependencies that need to change, filter their candidate releases through the project cooldown, and report advisory or retirement findings for the resulting dependency changes. | Policy restrictions filter candidates during resolution. Matching Allow, advisory, and retirement overrides suppress the corresponding dependency-change warnings. |
+| `mix hex.audit` | Check every Hex dependency in `mix.lock` for advisories and retirements. The policy doesn't change this default mode. | None unless a policy flag is passed. |
+| `mix hex.audit --policy-overrides` | Start with all advisory and retirement findings in the lockfile. | Report findings unless a matching Allow, advisory, or retirement override accepts them. |
+| `mix hex.audit --policy` | Start with all advisory and retirement findings in the lockfile. | Report only findings rejected by the policy's advisory threshold, retirement reasons, and overrides. |
 
-Set the `cooldown` key in your `mix.exs`, via the `HEX_COOLDOWN` environment variable, or with `mix hex.config`. Valid values are durations like `"7d"`, `"2w"`, `"1mo"`, or `"0d"` (the default — no cooldown).
+Both policy audit flags require an active policy and can't be used together. Policy-accepted findings and project-ignored findings appear in separate output sections. Active findings produce a non-zero exit status. Audit modes don't check cooldown eligibility or general lockfile validity because locked releases are trusted.
+
+### Project controls
+
+#### Release cooldown
+
+The `cooldown` setting excludes releases from dependency resolution until they have been available for a configured amount of time. This creates time for a suspicious or broken release to be reported before Hex selects it.
+
+Set `cooldown` in `mix.exs`, with `HEX_COOLDOWN`, or with `mix hex.config`. Valid durations include `"7d"`, `"2w"`, `"1mo"`, and `"0d"`. The default is `"0d"`, which disables the project cooldown.
 
 ```elixir
 # mix.exs
@@ -23,15 +36,10 @@ end
 
 ```nohighlight
 $ HEX_COOLDOWN=14d mix deps.get
-```
-
-```nohighlight
 $ mix hex.config cooldown 7d
 ```
 
-#### Excluding repositories
-
-The `cooldown_exclude_repos` setting lists repositories that bypass cooldown entirely — useful when an organization publishes hotfixes to its own repository and wants to consume them without delay.
+`cooldown_exclude_repos` lists repositories that don't use the project cooldown. This can be used when an organization needs to consume releases from its own repository without delay.
 
 ```elixir
 # mix.exs
@@ -46,50 +54,78 @@ end
 $ HEX_COOLDOWN_EXCLUDE_REPOS=hexpm:myorg mix deps.get
 ```
 
-#### Behavior
+Cooldown filters candidate releases during resolution. Existing locked releases aren't filtered. Versions excluded by cooldown are reported in the resolution summary.
 
-Cooldown filters candidates at resolution time. The lockfile is trusted on install — versions in the lockfile are not re-filtered. Versions held back by cooldown are reported in the resolution summary, so it is always clear which versions were filtered and why.
+#### Ignoring findings in one project
+
+Use `ignore_advisories` and `ignore_retirements` when a finding has been reviewed for one project. These settings suppress matching warnings from `mix deps.get`, `mix deps.update`, and `mix hex.audit`. They are applied after policy evaluation, so they remain effective in both policy audit modes.
+
+```elixir
+# mix.exs
+defp project() do
+  [
+    hex: [
+      ignore_advisories: ["CVE-2026-32686"],
+      ignore_retirements: [:decimal, phoenix: "1.0.0"]
+    ]
+  ]
+end
+```
+
+`ignore_advisories` matches an advisory's primary ID or any alias without regard to case. `ignore_retirements` accepts a package name or a package and exact version. An unused entry produces a warning during `mix hex.audit` so stale acknowledgements can be removed.
+
+The same settings can be supplied as comma-separated environment variables. Retirement entries use `NAME` or `NAME@VERSION`.
+
+```nohighlight
+$ HEX_IGNORE_ADVISORIES=CVE-2026-32686 mix hex.audit
+$ HEX_IGNORE_RETIREMENTS=decimal,phoenix@1.0.0 mix hex.audit
+```
 
 ### Dependency policies
 
-A *policy* is a signed payload an organization admin publishes from the org's `Policies` dashboard. The Hex client honors the active policy at resolution time. A policy is configured *per repository* — one tab for `hexpm` (public packages) and one for the organization's own repository — so public and private dependencies can be governed independently.
+A dependency policy is a signed payload published by an organization admin from the organization's `Policies` dashboard. Hex applies the active policy during dependency resolution. Each policy has a tab for public `hexpm` packages and a tab for the organization's repository, so they can use different rules.
 
-Public policies are free on hex.pm and may be referenced by any project. Private policies require a paid organization and are only visible to organization members.
+Public policies are free on hex.pm and can be selected by any project. Private policies require a paid organization and are available only to organization members.
 
-#### What a policy can declare
+#### Restrictions
 
-A policy has a **visibility** (`public` so any project can opt in, or `private` for organization members only). For each repository it governs, the policy carries a **restriction** and a list of **overrides**.
+A repository tab can declare these restrictions:
 
-The **restriction** applies to every release from that repository:
+  * **Advisory severity:** block releases affected by an advisory at or above `low`, `medium`, `high`, or `critical`.
+  * **Retirement reasons:** block releases retired as `security`, `invalid`, `deprecated`, `renamed`, or `other`.
+  * **Policy cooldown:** require releases to have reached a minimum age.
 
-  * **Advisory rule** — block releases with a security advisory at or above a chosen severity (`low`, `medium`, `high`, `critical`).
-  * **Retirement rule** — block releases retired for any of the selected reasons (`security`, `invalid`, `deprecated`, `renamed`, `other`).
-  * **Cooldown** — a minimum release age contributed by the policy.
+When a project and its active policy both configure a cooldown, Hex uses the stricter duration. A project can increase a policy cooldown but can't reduce it. `HEX_COOLDOWN=0` disables the project contribution only.
 
-**Overrides** are the final say for individual packages and take priority over the restriction:
+#### Overrides
 
-  * An **allow** override installs the package and skips the restriction entirely. With no version requirement it lets every release through, so add a requirement (e.g. `== 1.7.10`) to limit it to specific releases.
-  * A **deny** override blocks the package.
-  * When several overrides match a release, the one with the most specific version requirement wins.
+Overrides are package-scoped policy decisions. Allow, Deny, Retirement, and Cooldown overrides can include a version requirement. Every override can include an optional comment. Comments in public policies are included in the public signed policy.
 
-#### How a release is resolved
+  * **Allow** accepts matching releases without applying the policy restriction.
+  * **Deny** rejects matching releases.
+  * **Advisory** accepts one matching advisory for matching releases. The selected CVE or advisory ID matches the advisory's primary ID and aliases without regard to case. Its version scope is copied from the advisory when the override is created, so later expansions of the same advisory remain blocked outside the recorded scope.
+  * **Retirement** accepts one retirement reason for matching releases.
+  * **Cooldown** bypasses the policy cooldown for matching releases. It doesn't bypass a project cooldown.
 
-For each candidate release, the matching repository tab is evaluated in order:
+Advisory version scopes use Hex version-requirement syntax. A range uses `and` between its bounds, separate ranges use `or`, and `and` binds before `or`. Parentheses aren't supported.
 
-  1. **Overrides** — an allow override installs the release and skips the restriction; a deny override blocks it.
-  2. **Restriction** — any release not settled by an override must clear the cooldown, advisory, and retirement limits.
+Allow and Deny are evaluated first. When several matching Allow or Deny overrides exist, one with a version requirement is preferred over one without a requirement. When neither decides the release, advisory, retirement, and cooldown overrides remove only the restriction they name. Every other restriction still applies.
 
-Releases already in a project's lockfile are trusted and are never filtered.
+For example, an advisory override for `CVE-2026-4242` and package `decimal` accepts that advisory within the affected version ranges recorded when the override was created. If that CVE later expands to another version, the new range remains blocked. If `CVE-2026-4243` affects an already accepted version, the new advisory also remains active and the release is rejected when it meets the policy's advisory threshold.
+
+A retirement override also matches the retirement reason. If a release changes from `deprecated` to `security`, an override for `deprecated` no longer accepts it. Editing the retirement message without changing its reason doesn't invalidate the override.
+
+Malformed or unknown overrides are ignored. They can't accept a release. Older Hex clients keep applying field 3 Allow and Deny rules, but ignore unknown actions and selector fields, so newer advisory, retirement, and cooldown overrides remain fail-closed.
 
 #### Creating a policy
 
-Org admins create and edit policies under the `Policies` tab in the [organization dashboard](/dashboard). Each repository is configured on its own tab. Every change is recorded in the org's audit log and re-uploaded as a signed payload that travels with every developer who opts in.
+Organization admins create and edit policies under the `Policies` tab in the [organization dashboard](/dashboard). Each change is recorded in the organization's audit log and published as a new signed policy revision.
 
-#### Opting in
+#### Selecting a policy
 
-A project has exactly one active policy. It is configured like any other Hex setting, with the usual precedence: the `HEX_POLICY` environment variable, then `mix.exs`, then the global config.
+A project has at most one active policy. Configuration precedence is `HEX_POLICY`, then `mix.exs`, then global Hex configuration.
 
-In `mix.exs`, with `org:` for a hexpm organization or `repo:` for any other configured repository:
+In `mix.exs`, use `org:` for a hex.pm organization or `repo:` for another configured repository:
 
 ```elixir
 # mix.exs
@@ -104,39 +140,32 @@ defp project() do
 end
 ```
 
-Via environment variable, as a `REPO/NAME` pair. It overrides the other sources for the invocation, and an empty value disables the configured policy:
+`HEX_POLICY` uses a `REPO/NAME` value. An empty value disables the configured policy for that invocation.
 
 ```nohighlight
 $ HEX_POLICY=hexpm:myorg/strict-prod mix deps.get
 $ HEX_POLICY= mix deps.get
-```
-
-Via `mix hex.config`:
-
-```nohighlight
 $ mix hex.config policy hexpm:myorg/strict-prod
 ```
 
-Policies live under an organization repository (`hexpm:myorg`) or a self-hosted repository; the global `hexpm` repository itself has no policies.
+Policies are stored under an organization repository such as `hexpm:myorg`, or under a self-hosted repository. The public `hexpm` repository doesn't own policies.
 
 #### Resolution output
 
-After a successful resolution `mix deps.get` prints a summary with the active policy, the cooldown it imposes, and the candidate versions it hid, capped at the five newest per package:
+After dependency resolution, Hex prints the active policy, its cooldown contribution, and candidate versions excluded by the policy. The summary shows at most the five newest excluded versions for each package.
 
 ```nohighlight
 Active policy: hexpm:myorg/strict-prod
 Effective cooldown: 14d (hexpm:myorg/strict-prod)
 Policy hid 7 candidate versions:
-  phoenix 1.8.1 — cooldown 14d; eligible 2026-06-18
-  plug 1.18.0 — advisory ≥ high
-  ...and 5 more — run `mix hex.policy why plug`
+  phoenix 1.8.1 - cooldown 14d; eligible 2026-06-18
+  plug 1.18.0 - advisory >= high
+  ...and 5 more - run `mix hex.policy why plug`
 ```
 
-When resolution fails and the policy hid versions of an involved package, the solver's error message is followed by a note attributing the hidden versions, so a "no compatible versions" failure explains itself.
+If resolution fails because the policy excluded compatible versions, the solver error includes the relevant policy reasons.
 
 #### Inspecting the active policy
-
-The `mix hex.policy` task summarizes the policy currently in effect:
 
 ```nohighlight
 $ mix hex.policy
@@ -144,14 +173,8 @@ $ mix hex.policy show
 $ mix hex.policy why PACKAGE
 ```
 
-`show` (the default) prints the active policy's visibility, the restriction and overrides configured for each repository, and the effective cooldown across the policy and local config. `why PACKAGE` (or `why REPO/PACKAGE`) walks every version of the named package in the registry and prints which versions are blocked and for what reason — the uncapped view of what the resolution summary reports.
+`show`, which is the default, prints the policy visibility, restrictions, overrides, comments, and effective cooldown. `why PACKAGE` or `why REPO/PACKAGE` evaluates every known version of the package and explains each policy decision.
 
-#### Caching and failure behavior
+#### Caching and failures
 
-A policy is an enforcement feature, so Hex fails closed: a malformed policy configuration or a policy that cannot be loaded aborts resolution instead of resolving unenforced.
-
-Fetched policies are stored in the local registry cache. When a refresh fails — network error, registry outage — and a previously fetched copy is cached, Hex prints an error and continues with the cached copy; without a cached copy resolution aborts. In offline mode the cached copy is used directly.
-
-### How cooldown and policies interact
-
-A project that uses both features gets the intersection. A policy that declares its own cooldown participates in the effective cooldown via strictest-wins — local config can only make it stricter, never weaker. Setting `HEX_COOLDOWN=0` only disables the local contribution and cannot override a cooldown imposed by an active policy.
+Hex aborts resolution when an active policy is malformed or can't be loaded. If refreshing a policy fails and a previously fetched copy is cached, Hex reports the refresh failure and uses the cached copy. Without a cached copy, resolution aborts. Offline mode uses the cached copy.

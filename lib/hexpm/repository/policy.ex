@@ -8,7 +8,7 @@ defmodule Hexpm.Repository.Policy do
 
   # Names that would collide with the policy sub-routes under
   # `/policies/:name` (see `HexpmWeb.Router`).
-  @reserved_names ~w(new package-suggestions version-suggestions)
+  @reserved_names ~w(new package-suggestions version-suggestions advisory-suggestions)
 
   @retirement_reasons %{
     0 => "other",

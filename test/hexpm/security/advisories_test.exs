@@ -287,6 +287,163 @@ defmodule Hexpm.Security.AdvisoriesTest do
     assert cve_alias.url == nil
   end
 
+  test "policy suggestions group aliases and return one entry per affected package", %{
+    package: package
+  } do
+    other = insert(:package, name: "other_package")
+
+    first =
+      record("EEF-2026-0001", package.name,
+        summary: "unsafe parser",
+        aliases: ["CVE-2026-0001", "GHSA-abcd-1111-2222"],
+        requirements: [Version.parse_requirement!("< 3.0.1")]
+      )
+
+    duplicate =
+      record("GHSA-abcd-1111-2222", other.name,
+        summary: "duplicate parser report",
+        aliases: ["CVE-2026-0001"],
+        requirements: [
+          Version.parse_requirement!(">= 1.0.0 and < 2.0.0"),
+          Version.parse_requirement!(">= 2.1.0 and < 2.2.0")
+        ]
+      )
+
+    assert {:ok, _} =
+             Advisories.upsert([first, duplicate], %{
+               package.name => package.id,
+               other.name => other.id
+             })
+
+    suggestions = Advisories.policy_suggestions(Hexpm.Repository.Repository.hexpm(), "parser", 8)
+
+    assert Enum.map(suggestions, &{&1.identifier, &1.package}) == [
+             {"CVE-2026-0001", "oidcc"},
+             {"CVE-2026-0001", "other_package"}
+           ]
+
+    other_suggestion = Enum.find(suggestions, &(&1.package == "other_package"))
+    oidcc_suggestion = Enum.find(suggestions, &(&1.package == "oidcc"))
+
+    assert oidcc_suggestion.requirements == ["< 3.0.1"]
+
+    assert other_suggestion.requirements == [
+             ">= 1.0.0 and < 2.0.0",
+             ">= 2.1.0 and < 2.2.0"
+           ]
+
+    assert [%{identifier: "CVE-2026-0001"}] =
+             Advisories.policy_suggestions(Hexpm.Repository.Repository.hexpm(), "ghsa-abcd", 8)
+             |> Enum.filter(&(&1.package == "oidcc"))
+
+    assert Enum.map(
+             Advisories.policy_suggestions(
+               Hexpm.Repository.Repository.hexpm(),
+               "unsafe parser",
+               8
+             ),
+             & &1.package
+           ) == ["oidcc", "other_package"]
+
+    assert Advisories.valid_policy_exception?("hexpm", "other_package", "ghsa-abcd-1111-2222")
+  end
+
+  test "policy suggestions include advisories defined by exact versions", %{package: package} do
+    exact =
+      record("GHSA-exact-versions", package.name,
+        aliases: ["CVE-2026-0010"],
+        versions: ["3.0.0", "3.0.2"]
+      )
+
+    assert {:ok, _} = Advisories.upsert([exact], %{package.name => package.id})
+
+    assert [suggestion] =
+             Advisories.policy_suggestions(
+               Hexpm.Repository.Repository.hexpm(),
+               "CVE-2026-0010",
+               8
+             )
+
+    assert suggestion.package == package.name
+    assert suggestion.requirements == ["== 3.0.0", "== 3.0.2"]
+    assert Advisories.valid_policy_exception?("hexpm", package.name, "cve-2026-0010")
+  end
+
+  test "policy suggestions search package names, exclude withdrawn records, and honor limits", %{
+    package: package
+  } do
+    active =
+      record("GHSA-active", package.name, requirements: [Version.parse_requirement!("< 4.0.0")])
+
+    withdrawn =
+      record("GHSA-withdrawn", package.name,
+        withdrawn_at: ~U[2026-02-01 00:00:00Z],
+        requirements: [Version.parse_requirement!("< 4.0.0")]
+      )
+
+    assert {:ok, _} = Advisories.upsert([active, withdrawn], %{package.name => package.id})
+
+    assert [%{identifier: "GHSA-active", package: "oidcc"}] =
+             Advisories.policy_suggestions(Hexpm.Repository.Repository.hexpm(), "oidcc", 1)
+
+    refute Advisories.valid_policy_exception?("hexpm", "oidcc", "GHSA-withdrawn")
+  end
+
+  test "policy suggestion limits count grouped advisories", %{package: package} do
+    duplicates =
+      for index <- 1..33 do
+        record("EEF-duplicate-#{String.pad_leading(to_string(index), 2, "0")}", package.name,
+          aliases: ["CVE-2026-0099"],
+          requirements: [Version.parse_requirement!("< 4.0.0")]
+        )
+      end
+
+    visible =
+      record("ZZZ-visible", package.name,
+        aliases: ["CVE-2026-0100"],
+        requirements: [Version.parse_requirement!("< 4.0.0")]
+      )
+
+    assert {:ok, _} = Advisories.upsert(duplicates ++ [visible], %{package.name => package.id})
+
+    assert Enum.map(
+             Advisories.policy_suggestions(
+               Hexpm.Repository.Repository.hexpm(),
+               package.name,
+               8
+             ),
+             & &1.identifier
+           ) == ["CVE-2026-0099", "CVE-2026-0100"]
+  end
+
+  test "policy suggestions preserve case-sensitive display grouping for CVE aliases", %{
+    package: package
+  } do
+    advisory =
+      record("GHSA-lowercase-cve", package.name,
+        aliases: ["cve-2026-0200"],
+        requirements: [Version.parse_requirement!("< 4.0.0")]
+      )
+
+    assert {:ok, _} = Advisories.upsert([advisory], %{package.name => package.id})
+
+    assert [%{identifier: "cve-2026-0200", package: "oidcc"}] =
+             Advisories.policy_suggestions(
+               Hexpm.Repository.Repository.hexpm(),
+               "cve-2026-0200",
+               8
+             )
+  end
+
+  test "policy suggestions reject malformed search and validation strings" do
+    repository = Hexpm.Repository.Repository.hexpm()
+
+    assert Advisories.policy_suggestions(repository, %{"value" => "bad"}, 8) == []
+    assert Advisories.policy_suggestions(repository, <<255>>, 8) == []
+    refute Advisories.valid_policy_exception?("hexpm", "oidcc", <<255>>)
+    refute Advisories.valid_policy_exception?("hexpm", <<255>>, "CVE-2026-0200")
+  end
+
   test "upsert skips sync for unchanged advisories", %{package: package} do
     record =
       record("GHSA-skip", "oidcc",

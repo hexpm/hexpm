@@ -12,6 +12,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   alias HexpmWeb.Dashboard.KeyController
   alias HexpmWeb.Dashboard.Organization.Components.BillingHelpers
   alias Hexpm.Accounts.SSO
+  alias Hexpm.Security.Advisories
 
   @policy_suggestion_limit 8
 
@@ -392,6 +393,22 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
           repository
           |> Packages.get(package_name)
           |> version_suggestions(term)
+        else
+          []
+        end
+
+      json(conn, %{items: items})
+    end)
+  end
+
+  def policy_advisory_suggestions(conn, %{"dashboard_org" => organization} = params) do
+    access_organization(conn, organization, "read", fn organization ->
+      repository = policy_suggestion_repository(organization, params["repository"])
+      term = params["term"] || ""
+
+      items =
+        if repository do
+          Advisories.policy_suggestions(repository, term, @policy_suggestion_limit)
         else
           []
         end

@@ -5,7 +5,7 @@ defmodule Hexpm.Repository.Policy.RepositoryPolicy do
 
   A tab holds an optional restriction — a baseline cooldown, advisory severity
   threshold, and retirement reasons applied to every release in the repository
-  — and a list of overrides that take priority over the restriction.
+  — and a list of package-scoped overrides.
   """
   use Hexpm.Schema
 
@@ -23,9 +23,18 @@ defmodule Hexpm.Repository.Policy.RepositoryPolicy do
   end
 
   def changeset(repository_policy, attrs) do
-    repository_policy
-    |> cast(attrs, [:repository, :cooldown, :advisory_min_severity, :retirement_reasons])
-    |> cast_embed(:overrides)
+    changeset =
+      cast(repository_policy, attrs, [
+        :repository,
+        :cooldown,
+        :advisory_min_severity,
+        :retirement_reasons
+      ])
+
+    repository = get_field(changeset, :repository)
+
+    changeset
+    |> cast_embed(:overrides, with: &Override.changeset(&1, &2, repository))
     |> validate_required([:repository])
     |> validate_number(:advisory_min_severity,
       greater_than_or_equal_to: 0,
@@ -33,7 +42,7 @@ defmodule Hexpm.Repository.Policy.RepositoryPolicy do
     )
     |> validate_retirement_reasons()
     |> validate_cooldown()
-    |> validate_unique_override_packages()
+    |> validate_unique_final_override_packages()
   end
 
   defp validate_retirement_reasons(changeset) do
@@ -68,14 +77,18 @@ defmodule Hexpm.Repository.Policy.RepositoryPolicy do
     end
   end
 
-  defp validate_unique_override_packages(changeset) do
-    overrides = get_field(changeset, :overrides) || []
-    packages = Enum.map(overrides, & &1.package) |> Enum.reject(&is_nil/1)
+  defp validate_unique_final_override_packages(changeset) do
+    packages =
+      changeset
+      |> get_field(:overrides, [])
+      |> Enum.filter(&(Map.get(&1, :action) in [:allow, :deny]))
+      |> Enum.map(&Map.get(&1, :package))
+      |> Enum.reject(&is_nil/1)
 
     if length(packages) == length(Enum.uniq(packages)) do
       changeset
     else
-      add_error(changeset, :overrides, "list the same package more than once")
+      add_error(changeset, :overrides, "include only one Allow or Deny override per package")
     end
   end
 end

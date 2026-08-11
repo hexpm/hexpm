@@ -367,6 +367,10 @@ defmodule HexpmWeb.Router do
         OrganizationController,
         :policy_version_suggestions
 
+    get "/orgs/:dashboard_org/policies/advisory-suggestions",
+        OrganizationController,
+        :policy_advisory_suggestions
+
     post "/orgs/:dashboard_org/policies", OrganizationController, :create_policy
     get "/orgs/:dashboard_org/policies/:name", OrganizationController, :edit_policy
     post "/orgs/:dashboard_org/policies/:name", OrganizationController, :update_policy

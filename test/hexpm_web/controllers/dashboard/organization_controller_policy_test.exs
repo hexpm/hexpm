@@ -2,6 +2,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
   use HexpmWeb.ConnCase, async: true
 
   alias Hexpm.Repository.{Policy, Policies}
+  alias Hexpm.Security.Advisory
+  alias Hexpm.Security.AdvisoryAffectedVersion
 
   defp mock_customer() do
     stub(Hexpm.Billing.Mock, :get, fn _token, _opts ->
@@ -356,9 +358,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
             {%{
                "overrides" => %{
                  "0" => %{"action" => "deny", "package" => "ecto"},
-                 "1" => %{"action" => "allow", "package" => "ecto"}
+                 "1" => %{
+                   "action" => "allow",
+                   "package" => "ecto",
+                   "comment" => "two\nlines"
+                 }
                }
-             }, "list the same package more than once"}
+             }, "contains invalid control, format, or separator characters"}
           ] do
         params = %{
           "policy" => %{
@@ -399,6 +405,152 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
       assert Policies.get(org, "polone")
       refute Policies.get(org, "renamed")
     end
+
+    test "stores advisory, retirement, and cooldown overrides and removes omitted rows", %{
+      user: user,
+      organization: org
+    } do
+      package = insert(:package, name: "policy_vulnerable")
+
+      insert_policy_advisory("GHSA-policy-store", package,
+        aliases: ["CVE-2026-5000"],
+        requirements: ["< 2.0.0"]
+      )
+
+      {:ok, %{policy: policy}} =
+        Policies.create(org, %{"name" => "polone", "visibility" => "public"},
+          audit: audit_data(user)
+        )
+
+      params = %{
+        "policy" => %{
+          "visibility" => "public",
+          "repositories" =>
+            repository_params(policy, "hexpm", %{
+              "overrides" => %{
+                "0" => %{
+                  "action" => "advisory",
+                  "package" => package.name,
+                  "advisory_id" => "CVE-2026-5000",
+                  "requirement" => ">= 1.0.0 and < 2.0.0",
+                  "comment" => "migration window"
+                },
+                "1" => %{
+                  "action" => "retirement",
+                  "package" => "retired_package",
+                  "retirement_reason" => "2",
+                  "comment" => "accepted retirement"
+                },
+                "2" => %{
+                  "action" => "cooldown",
+                  "package" => "fresh_package",
+                  "requirement" => "== 1.0.0",
+                  "comment" => "release provenance verified"
+                }
+              }
+            })
+        }
+      }
+
+      conn =
+        post(
+          build_conn() |> test_login(user),
+          "/dashboard/orgs/#{org.name}/policies/#{policy.name}",
+          params
+        )
+
+      assert redirected_to(conn) =~ "/policies/polone"
+
+      updated = Policies.get(org, "polone")
+      hexpm = Enum.find(updated.repositories, &(&1.repository == "hexpm"))
+
+      assert Enum.map(
+               hexpm.overrides,
+               &{&1.action, &1.advisory_id, &1.retirement_reason, &1.comment}
+             ) == [
+               {:advisory, "CVE-2026-5000", nil, "migration window"},
+               {:retirement, nil, 2, "accepted retirement"},
+               {:cooldown, nil, nil, "release provenance verified"}
+             ]
+
+      clear_params = %{
+        "policy" => %{
+          "visibility" => "public",
+          "repositories" => repository_params(updated, "hexpm", %{})
+        }
+      }
+
+      conn =
+        post(
+          build_conn() |> test_login(user),
+          "/dashboard/orgs/#{org.name}/policies/#{policy.name}",
+          clear_params
+        )
+
+      assert redirected_to(conn) =~ "/policies/polone"
+
+      cleared = Policies.get(org, "polone")
+      assert Enum.find(cleared.repositories, &(&1.repository == "hexpm")).overrides == []
+    end
+
+    test "recovers scoped override inputs after rejected validation", %{
+      user: user,
+      organization: org
+    } do
+      package = insert(:package, name: "recovery_vulnerable")
+      insert_policy_advisory("GHSA-policy-recovery", package, aliases: ["CVE-2026-5001"])
+
+      {:ok, %{policy: policy}} =
+        Policies.create(org, %{"name" => "polone", "visibility" => "public"},
+          audit: audit_data(user)
+        )
+
+      params = %{
+        "policy" => %{
+          "visibility" => "public",
+          "repositories" =>
+            repository_params(policy, "hexpm", %{
+              "overrides" => %{
+                "0" => %{
+                  "action" => "advisory",
+                  "package" => package.name,
+                  "advisory_id" => "CVE-2026-5001",
+                  "requirement" => "bad requirement",
+                  "comment" => "keep this explanation"
+                }
+              }
+            })
+        }
+      }
+
+      conn =
+        post(
+          build_conn() |> test_login(user),
+          "/dashboard/orgs/#{org.name}/policies/#{policy.name}",
+          params
+        )
+
+      response = html_response(conn, 400)
+      assert response =~ "bad requirement"
+      assert response =~ "keep this explanation"
+      assert response =~ "CVE-2026-5001"
+      assert response =~ "recovery_vulnerable"
+
+      {:ok, document} = Floki.parse_document(response)
+
+      assert [_row] =
+               Floki.find(
+                 document,
+                 ~s([data-exception-rows] > [data-exception-row][data-exception-type="advisory"])
+               )
+
+      assert ["bad requirement"] =
+               document
+               |> Floki.find(
+                 ~s([data-exception-rows] > [data-exception-row][data-exception-type="advisory"] input[name$="[requirement]"])
+               )
+               |> Floki.attribute("value")
+    end
   end
 
   defp override_id_inputs(document, selector) do
@@ -433,11 +585,20 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
       response = html_response(conn, 200)
       assert response =~ "Repository rules"
       assert response =~ "How resolution works"
+
+      assert response =~
+               "CVE and retirement overrides bypass only the selected CVE or retirement reason."
+
       assert response =~ "Overrides"
       assert response =~ "hexpm"
       assert response =~ org.name
+      assert response =~ "New releases are allowed immediately"
+      assert response =~ "Releases with advisories are allowed"
       refute response =~ "Allowed packages"
       refute response =~ "Allow all"
+
+      {:ok, document} = Floki.parse_document(response)
+      assert Floki.attribute(Floki.find(document, "#repo-tabs"), "hidden") == []
     end
 
     test "admin sees the save and delete affordances", %{user: user, organization: org} do
@@ -604,6 +765,176 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
       refute response =~ "<datalist"
     end
 
+    test "renders one override panel with every override type", %{
+      user: user,
+      organization: org
+    } do
+      {:ok, %{policy: policy}} =
+        Policies.create(
+          org,
+          %{
+            "name" => "strict-prod",
+            "visibility" => "public",
+            "repositories" => [
+              %{
+                "repository" => "hexpm",
+                "overrides" => [
+                  %{
+                    "action" => "retirement",
+                    "package" => "retired_package",
+                    "requirement" => "~> 1.0",
+                    "retirement_reason" => 2,
+                    "comment" => "accepted temporarily"
+                  }
+                ]
+              }
+            ]
+          },
+          audit: audit_data(user)
+        )
+
+      conn =
+        get(
+          build_conn() |> test_login(user),
+          "/dashboard/orgs/#{org.name}/policies/#{policy.name}"
+        )
+
+      response = html_response(conn, 200)
+
+      assert response =~ "Overrides"
+      refute response =~ "Restriction overrides"
+      assert response =~ "Add Allow/Deny override"
+      assert response =~ "Add CVE override"
+      assert response =~ "Add retirement override"
+      assert response =~ "Add cooldown override"
+      assert response =~ "accepted temporarily"
+      refute response =~ "This comment will be public in the signed policy."
+      refute response =~ "A cooldown configured in the project can still exclude the release."
+      refute response =~ "Add package rule"
+
+      {:ok, document} = Floki.parse_document(response)
+      assert [scoped | _] = Floki.find(document, ~s([phx-hook="PolicyExceptionList"]))
+      assert [url] = Floki.attribute(scoped, "data-advisory-suggestions-url")
+      assert url =~ "/policies/advisory-suggestions"
+      assert [_ | _] = Floki.find(document, "[data-exception-row]")
+
+      [repo_panel | _] = Floki.find(document, ~s([data-panel="hexpm"]))
+      assert length(Floki.find(repo_panel, ~s([phx-hook="OverrideList"]))) == 1
+
+      assert [_ | _] =
+               Floki.find(repo_panel, "[data-override-row].border-l-4.border-l-primary-500")
+
+      add_buttons =
+        Floki.find(repo_panel, "[data-override-add]") ++
+          Floki.find(repo_panel, "[data-exception-add]")
+
+      assert length(add_buttons) == 4
+
+      assert Enum.all?(add_buttons, fn {"button", attributes, _children} ->
+               {"class", class} = List.keyfind(attributes, "class", 0)
+               classes = String.split(class)
+               "w-full" in classes and "sm:w-auto" in classes
+             end)
+
+      for type <- ["advisory", "retirement", "cooldown"] do
+        assert [_ | _] =
+                 Floki.find(
+                   repo_panel,
+                   ~s([data-exception-type="#{type}"].border-l-primary-500)
+                 )
+      end
+
+      for label <- ["Allow override", "CVE override", "Retirement override", "Cooldown override"] do
+        assert response =~ label
+      end
+
+      assert [_ | _] =
+               Floki.find(
+                 repo_panel,
+                 "[data-exception-control] > [data-exception-selected]"
+               )
+
+      assert [_ | _] =
+               Floki.find(
+                 repo_panel,
+                 ~s([data-exception-type="advisory"] > input[data-exception-requirement][type="hidden"])
+               )
+
+      refute Floki.find(
+               repo_panel,
+               ~s([data-exception-type="advisory"] input[data-exception-requirement][type="text"])
+             ) != []
+
+      assert [_ | _] =
+               Floki.find(
+                 repo_panel,
+                 ~s(button[data-exception-selected][data-exception-reselect][aria-label="Change selected advisory"])
+               )
+
+      assert [_ | _] =
+               Floki.find(
+                 repo_panel,
+                 ~s([data-exception-status][role="status"][hidden])
+               )
+
+      assert [retirement_reason] =
+               Floki.find(
+                 repo_panel,
+                 ~s([data-exception-rows] > [data-exception-type="retirement"] select[aria-label="Retirement reason"])
+               )
+
+      retirement_reason_classes =
+        Floki.attribute(retirement_reason, "class") |> hd() |> String.split()
+
+      assert "border-grey-200" in retirement_reason_classes
+      refute "border-grey-300" in retirement_reason_classes
+
+      refute response =~
+               "with no version skips every policy restriction for every release of the package"
+
+      override_rows =
+        Floki.find(repo_panel, "[data-override-row], [data-exception-row]")
+
+      assert Enum.all?(override_rows, fn row ->
+               row
+               |> Floki.find(".grid")
+               |> Enum.any?(fn {_, attributes, _} ->
+                 {"class", class} = List.keyfind(attributes, "class", 0)
+                 "lg:grid-cols-12" in String.split(class)
+               end)
+             end)
+
+      refute Floki.find(repo_panel, "[data-exception-selected].md\\:col-span-2") != []
+
+      remove_buttons =
+        Floki.find(repo_panel, "[data-override-remove]") ++
+          Floki.find(repo_panel, "[data-exception-remove]")
+
+      assert Enum.all?(remove_buttons, fn {"button", attributes, _children} ->
+               {"class", class} = List.keyfind(attributes, "class", 0)
+               "absolute" not in String.split(class)
+             end)
+
+      assert [_] =
+               Floki.find(
+                 repo_panel,
+                 ~s([phx-hook="OverrideList"] [phx-hook="PolicyExceptionList"].contents)
+               )
+
+      assert [_] =
+               repo_panel
+               |> Floki.find(~s([data-exception-type="retirement"] select.appearance-none))
+               |> Enum.reject(fn {"select", attributes, _children} ->
+                 case List.keyfind(attributes, "id", 0) do
+                   {"id", id} -> String.contains?(id, "__INDEX__")
+                   nil -> false
+                 end
+               end)
+
+      refute Floki.find(repo_panel, ".pr-12") != []
+      refute Floki.find(repo_panel, ".sm\\:pr-10") != []
+    end
+
     test "suggests override packages with the existing bounded package search", %{
       user: user,
       organization: org
@@ -670,6 +1001,108 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
                json_response(conn, 200)["items"]
     end
 
+    test "suggests grouped active advisories by identifier, summary, and package", %{
+      user: user,
+      organization: org
+    } do
+      first = insert(:package, name: "first_vulnerable")
+      second = insert(:package, name: "second_vulnerable")
+
+      insert_policy_advisory("EEF-2026-4242", first,
+        aliases: ["CVE-2026-4242", "GHSA-aaaa-bbbb-cccc"],
+        summary: "unsafe archive extraction",
+        requirements: ["< 2.0.0"]
+      )
+
+      insert_policy_advisory("GHSA-aaaa-bbbb-cccc", second,
+        aliases: ["CVE-2026-4242"],
+        summary: "duplicate archive report",
+        requirements: [">= 1.0.0 and < 1.2.0", ">= 1.3.0 and < 1.4.0"]
+      )
+
+      conn = build_conn() |> test_login(user)
+
+      for term <- ["cve-2026-4242", "GHSA-AAAA", "unsafe archive", "second_vulnerable"] do
+        response =
+          get(
+            conn,
+            "/dashboard/orgs/#{org.name}/policies/advisory-suggestions?repository=hexpm&term=#{URI.encode(term)}"
+          )
+
+        assert json_response(response, 200)["items"] != []
+      end
+
+      response =
+        get(
+          conn,
+          "/dashboard/orgs/#{org.name}/policies/advisory-suggestions?repository=hexpm&term=4242"
+        )
+
+      assert [first_item, second_item] = json_response(response, 200)["items"]
+      assert first_item["identifier"] == "CVE-2026-4242"
+      assert first_item["package"] == "first_vulnerable"
+      assert second_item["identifier"] == "CVE-2026-4242"
+      assert second_item["package"] == "second_vulnerable"
+
+      assert second_item["requirements"] == [
+               ">= 1.0.0 and < 1.2.0",
+               ">= 1.3.0 and < 1.4.0"
+             ]
+    end
+
+    test "advisory suggestions exclude withdrawn records and cap results", %{
+      user: user,
+      organization: org
+    } do
+      for index <- 1..9 do
+        package = insert(:package, name: "bounded_vulnerable_#{index}")
+        insert_policy_advisory("GHSA-bounded-#{index}", package, summary: "bounded result")
+      end
+
+      withdrawn = insert(:package, name: "withdrawn_vulnerable")
+
+      insert_policy_advisory("GHSA-withdrawn-policy", withdrawn,
+        summary: "bounded result",
+        withdrawn_at: ~U[2026-05-01 00:00:00Z]
+      )
+
+      conn = build_conn() |> test_login(user)
+
+      conn =
+        get(
+          conn,
+          "/dashboard/orgs/#{org.name}/policies/advisory-suggestions?repository=hexpm&term=bounded"
+        )
+
+      items = json_response(conn, 200)["items"]
+      assert length(items) == 8
+      refute Enum.any?(items, &(&1["identifier"] == "GHSA-withdrawn-policy"))
+    end
+
+    test "advisory suggestions require login and organization access", %{
+      organization: org
+    } do
+      path =
+        "/dashboard/orgs/#{org.name}/policies/advisory-suggestions?repository=hexpm&term=CVE"
+
+      assert redirected_to(get(build_conn(), path)) =~ "/login"
+
+      outsider = insert(:user)
+      assert response(get(build_conn() |> test_login(outsider), path), 404)
+    end
+
+    test "advisory suggestions reject malformed search terms", %{user: user, organization: org} do
+      base =
+        "/dashboard/orgs/#{org.name}/policies/advisory-suggestions?repository=hexpm&"
+
+      conn = get(build_conn() |> test_login(user), base <> "term[value]=bad")
+      assert json_response(conn, 200)["items"] == []
+
+      assert_raise Plug.Conn.InvalidQueryError, fn ->
+        get(build_conn() |> test_login(user), base <> "term=%FF")
+      end
+    end
+
     test "renders the org repository tab for policies missing it", %{
       user: user,
       organization: org
@@ -690,6 +1123,10 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
 
       assert [tablist] = Floki.find(document, "#repo-tabs")
       assert Floki.attribute(tablist, "data-panel-container") == ["#repo-config"]
+      refute Floki.attribute(tablist, "hidden") == []
+
+      assert [intro | _] = Floki.find(document, ~s([data-private-policy-context]))
+      refute Floki.attribute(intro, "hidden") == []
 
       assert [tab] = Floki.find(document, ~s(#repo-tabs [data-value="#{org.name}"]))
       assert Floki.attribute(tab, "data-private-only") == ["true"]
@@ -753,5 +1190,31 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
       assert html_response(conn, 400) =~ "private policies require a paid plan"
       assert Policies.get(free_org, "pol1").visibility == "public"
     end
+  end
+
+  defp insert_policy_advisory(id, package, opts) do
+    advisory =
+      Repo.insert!(%Advisory{
+        id: id,
+        summary: opts[:summary] || "policy advisory",
+        aliases: opts[:aliases] || [],
+        published_at: ~U[2026-01-01 00:00:00Z],
+        modified_at: ~U[2026-01-01 00:00:00Z],
+        withdrawn_at: opts[:withdrawn_at]
+      })
+
+    for requirement <- opts[:requirements] || ["< 2.0.0"] do
+      Repo.insert!(%AdvisoryAffectedVersion{
+        advisory_id: advisory.id,
+        package_id: package.id,
+        requirement: Version.parse_requirement!(requirement)
+      })
+    end
+
+    Repo.insert_all("security_advisory_affected_packages", [
+      %{advisory_id: advisory.id, package_id: package.id}
+    ])
+
+    advisory
   end
 end

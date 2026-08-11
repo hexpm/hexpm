@@ -39,18 +39,34 @@ defmodule Hexpm.Repository.Policy.RepositoryPolicyTest do
     assert Ecto.Changeset.apply_changes(cs).cooldown == nil
   end
 
-  test "rejects the same override package listed twice" do
+  test "allows multiple scoped decisions for the same package" do
     cs =
       changeset(%{
         "repository" => "hexpm",
         "overrides" => [
           %{"action" => "allow", "package" => "phoenix"},
-          %{"action" => "deny", "package" => "phoenix"}
+          %{"action" => "retirement", "package" => "phoenix", "retirement_reason" => 2},
+          %{"action" => "cooldown", "package" => "phoenix", "requirement" => "~> 1.7"}
+        ]
+      })
+
+    assert cs.valid?
+  end
+
+  test "rejects multiple Allow or Deny overrides for the same package" do
+    cs =
+      changeset(%{
+        "repository" => "hexpm",
+        "overrides" => [
+          %{"action" => "allow", "package" => "phoenix", "requirement" => "~> 1.7"},
+          %{"action" => "deny", "package" => "phoenix", "requirement" => ">= 2.0.0"}
         ]
       })
 
     refute cs.valid?
-    assert errors_on(cs).overrides == "list the same package more than once"
+
+    assert errors_on(cs).overrides ==
+             "include only one Allow or Deny override per package"
   end
 
   test "allows the same package across different repository tabs" do
