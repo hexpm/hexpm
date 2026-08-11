@@ -5,6 +5,8 @@ defmodule Hexpm.Security.Advisories do
 
   alias Hexpm.Repository.Package
   alias Hexpm.Repository.RegistryWorker
+  alias Hexpm.Repository.Repositories
+  alias Hexpm.Repository.Repository
   alias Hexpm.Security.Advisory
   alias Hexpm.Security.AdvisoryAffectedVersion
 
@@ -26,6 +28,205 @@ defmodule Hexpm.Security.Advisories do
     |> Enum.map(&display_group_key/1)
     |> Enum.uniq()
     |> Enum.map(fn key -> merge_display_group(Map.fetch!(groups, key)) end)
+  end
+
+  def policy_suggestions(%Repository{} = repository, term, limit) do
+    if is_binary(term) and String.valid?(term) do
+      group_keys = policy_advisory_group_keys(repository, term, limit)
+
+      repository
+      |> policy_advisories(group_keys)
+      |> policy_suggestion_items(repository)
+      |> Enum.filter(&policy_suggestion_matches?(&1, term))
+      |> Enum.take(limit)
+      |> Enum.map(&Map.take(&1, [:identifier, :summary, :package, :requirements]))
+    else
+      []
+    end
+  end
+
+  def valid_policy_exception?(repository_name, package, identifier)
+      when is_binary(repository_name) and is_binary(package) and is_binary(identifier) do
+    if String.valid?(repository_name) and String.valid?(package) and String.valid?(identifier) do
+      case Repositories.get(repository_name) do
+        nil ->
+          false
+
+        repository ->
+          identifier = identifier |> String.trim() |> String.downcase()
+
+          repository
+          |> policy_advisory_scope()
+          |> where(
+            [a, _ap, p],
+            p.name == ^package and
+              fragment(
+                "(lower(?) = ? OR EXISTS (SELECT 1 FROM unnest(?) AS alias WHERE lower(alias) = ?))",
+                a.id,
+                ^identifier,
+                a.aliases,
+                ^identifier
+              )
+          )
+          |> Repo.exists?()
+      end
+    else
+      false
+    end
+  end
+
+  def valid_policy_exception?(_repository_name, _package, _identifier), do: false
+
+  defp policy_suggestion_items(advisories, repository) do
+    grouped = Enum.group_by(advisories, &display_group_key/1)
+
+    advisories
+    |> Enum.map(&display_group_key/1)
+    |> Enum.uniq()
+    |> Enum.map(fn key ->
+      {merge_display_group(Map.fetch!(grouped, key)), Map.fetch!(grouped, key)}
+    end)
+    |> Enum.flat_map(fn {advisory, group} ->
+      identifiers = group |> Enum.flat_map(&display_identifiers/1) |> Enum.uniq()
+      identifier = preferred_identifier(identifiers, advisory.id)
+      summaries = group |> Enum.map(& &1.summary) |> Enum.reject(&is_nil/1) |> Enum.uniq()
+
+      group
+      |> Enum.flat_map(&policy_affected_requirements(&1, repository.id))
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+      |> Enum.map(fn {package, requirements} ->
+        requirements = requirements |> Enum.uniq() |> Enum.sort()
+
+        %{
+          identifier: identifier,
+          identifiers: identifiers,
+          summary: advisory.summary,
+          summaries: summaries,
+          package: package,
+          requirements: requirements
+        }
+      end)
+    end)
+    |> Enum.uniq_by(&{&1.identifier, &1.package})
+    |> Enum.sort_by(&{&1.identifier, &1.package})
+  end
+
+  defp policy_advisory_group_keys(repository, term, limit) do
+    term = term |> to_string() |> String.trim() |> String.downcase()
+
+    query =
+      repository
+      |> policy_advisory_scope()
+
+    query =
+      if term == "" do
+        query
+      else
+        where(
+          query,
+          [a, _ap, p],
+          fragment("strpos(lower(?), ?) > 0", a.id, ^term) or
+            fragment("strpos(lower(?), ?) > 0", a.summary, ^term) or
+            fragment("strpos(lower(?), ?) > 0", p.name, ^term) or
+            fragment(
+              "EXISTS (SELECT 1 FROM unnest(?) AS alias WHERE strpos(lower(alias), ?) > 0)",
+              a.aliases,
+              ^term
+            )
+        )
+      end
+
+    query
+    |> select(
+      [a],
+      fragment(
+        "CASE WHEN ? LIKE 'CVE-%' THEN ? ELSE COALESCE((SELECT alias FROM unnest(?) WITH ORDINALITY AS aliases(alias, position) WHERE alias LIKE 'CVE-%' ORDER BY position LIMIT 1), ?) END",
+        a.id,
+        a.id,
+        a.aliases,
+        a.id
+      )
+    )
+    |> distinct(true)
+    |> order_by(
+      [a],
+      asc:
+        fragment(
+          "CASE WHEN ? LIKE 'CVE-%' THEN ? ELSE COALESCE((SELECT alias FROM unnest(?) WITH ORDINALITY AS aliases(alias, position) WHERE alias LIKE 'CVE-%' ORDER BY position LIMIT 1), ?) END",
+          a.id,
+          a.id,
+          a.aliases,
+          a.id
+        )
+    )
+    |> limit(^limit)
+    |> Repo.all()
+  end
+
+  defp policy_advisories(_repository, []), do: []
+
+  defp policy_advisories(repository, group_keys) do
+    repository
+    |> policy_advisory_scope()
+    |> where(
+      [a],
+      a.id in ^group_keys or
+        fragment("? && ?", a.aliases, type(^group_keys, {:array, :string}))
+    )
+    |> distinct(true)
+    |> Repo.all()
+    |> Enum.filter(&(display_group_key(&1) in group_keys))
+    |> Repo.preload(affected_versions: :package, affected_releases: :package)
+  end
+
+  defp policy_advisory_scope(repository) do
+    from(a in Advisory,
+      join: ap in "security_advisory_affected_packages",
+      on: ap.advisory_id == a.id,
+      join: p in Package,
+      on: p.id == ap.package_id,
+      where: p.repository_id == ^repository.id and is_nil(a.withdrawn_at)
+    )
+  end
+
+  defp policy_affected_requirements(advisory, repository_id) do
+    affected_versions =
+      advisory.affected_versions
+      |> loaded_assoc()
+      |> Enum.filter(&(&1.package.repository_id == repository_id))
+
+    ranges =
+      affected_versions
+      |> Enum.map(&{&1.package.name, to_string(&1.requirement)})
+
+    versions =
+      advisory.affected_releases
+      |> loaded_assoc()
+      |> Enum.filter(&(&1.package.repository_id == repository_id))
+      |> Enum.reject(fn release ->
+        Enum.any?(affected_versions, fn affected_version ->
+          affected_version.package_id == release.package_id and
+            Version.match?(release.version, affected_version.requirement)
+        end)
+      end)
+      |> Enum.map(&{&1.package.name, "== #{&1.version}"})
+
+    ranges ++ versions
+  end
+
+  defp policy_suggestion_matches?(_item, term) when term in [nil, ""], do: true
+
+  defp policy_suggestion_matches?(item, term) do
+    term = term |> to_string() |> String.trim() |> String.downcase()
+
+    Enum.any?(
+      item.identifiers ++ item.summaries ++ [item.package],
+      &String.contains?(String.downcase(&1), term)
+    )
+  end
+
+  defp preferred_identifier(identifiers, fallback) do
+    Enum.find(identifiers, &String.starts_with?(String.upcase(&1), "CVE-")) || fallback
   end
 
   def upsert(records, package_ids) do
