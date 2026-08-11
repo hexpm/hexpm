@@ -940,7 +940,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   defp packages_assign(_organization, _tab), do: []
 
   defp organization_packages(%{repository: %{packages: packages}}) when is_list(packages) do
-    packages
+    Enum.sort_by(packages, & &1.name)
   end
 
   defp organization_packages(_), do: []
@@ -1188,13 +1188,16 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     organization =
       Organizations.get(organization, [
         :user,
-        :organization_users,
         user: :emails,
-        users: :emails,
         repository: [packages: :repository]
       ])
 
     if organization do
+      organization = %{
+        organization
+        | organization_users: Organizations.all_members(organization, user: :emails)
+      }
+
       if repo_user = Enum.find(organization.organization_users, &(&1.user_id == user.id)) do
         if repo_user.role in Organization.role_or_higher(role) do
           fun.(organization)

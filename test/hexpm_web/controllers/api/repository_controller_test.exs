@@ -36,6 +36,29 @@ defmodule HexpmWeb.API.RepositoryControllerTest do
 
       assert length(result) == 2
     end
+
+    test "sorts organization repositories by name after the public repository", %{
+      repo_user: repo_user
+    } do
+      zulu_organization = insert(:organization, name: "zulu_repo")
+      alpha_organization = insert(:organization, name: "alpha_repo")
+      insert(:repository, name: "zulu_repo", organization: zulu_organization)
+      insert(:repository, name: "alpha_repo", organization: alpha_organization)
+      insert(:organization_user, user: repo_user, organization: zulu_organization)
+      insert(:organization_user, user: repo_user, organization: alpha_organization)
+
+      names =
+        build_conn()
+        |> put_req_header("authorization", key_for(repo_user))
+        |> get("/api/repos")
+        |> json_response(200)
+        |> Enum.map(& &1["name"])
+
+      assert hd(names) == "hexpm"
+      assert names == ["hexpm" | Enum.sort(tl(names))]
+      assert "alpha_repo" in names
+      assert "zulu_repo" in names
+    end
   end
 
   describe "GET /api/repos/:repository" do

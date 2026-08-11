@@ -63,7 +63,8 @@ defmodule Hexpm.Accounts.Key do
     from(
       k in assoc(user_or_organization, :keys),
       where: not query_revoked(k),
-      where: k.public
+      where: k.public,
+      order_by: k.name
     )
   end
 

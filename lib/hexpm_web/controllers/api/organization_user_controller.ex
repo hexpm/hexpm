@@ -18,11 +18,12 @@ defmodule HexpmWeb.API.OrganizationUserController do
        when action in [:create, :update, :delete]
 
   def index(conn, %{"organization" => name}) do
-    organization = Organizations.get(name, users: :emails)
+    organization = Organizations.get(name)
+    organization_users = Organizations.all_members(organization, user: :emails)
 
     conn
     |> api_cache(:private)
-    |> render(:index, organization_users: organization.organization_users)
+    |> render(:index, organization_users: organization_users)
   end
 
   def show(conn, %{"organization" => name, "name" => username}) do

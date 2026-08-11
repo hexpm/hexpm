@@ -6,6 +6,24 @@ defmodule Hexpm.Accounts.UsersTest do
   alias Hexpm.Accounts.{AuditLog, OptionalEmails, User, Users, UserProviders}
   alias Hexpm.Emails.OutboxEntry
 
+  describe "all_organizations/1" do
+    test "keeps the public organization first and sorts the rest by name" do
+      user =
+        build(:user,
+          organizations: [
+            build(:organization, name: "zulu_org"),
+            build(:organization, name: "alpha_org")
+          ]
+        )
+
+      assert Enum.map(Users.all_organizations(user), & &1.name) == [
+               "hexpm",
+               "alpha_org",
+               "zulu_org"
+             ]
+    end
+  end
+
   describe "add_from_oauth_with_provider/6" do
     test "creates user and provider atomically" do
       username = Hexpm.Fake.sequence(:username)
