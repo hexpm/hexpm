@@ -124,23 +124,6 @@ defmodule HexpmWeb.API.UserControllerTest do
       |> json_response(401)
     end
 
-    test "sorts organizations by name" do
-      user = insert(:user)
-      zulu = insert(:organization, name: "zulu_org")
-      alpha = insert(:organization, name: "alpha_org")
-      insert(:organization_user, organization: zulu, user: user)
-      insert(:organization_user, organization: alpha, user: user)
-
-      organizations =
-        build_conn()
-        |> put_req_header("authorization", key_for(user))
-        |> get("/api/users/me")
-        |> json_response(200)
-        |> Map.fetch!("organizations")
-
-      assert Enum.map(organizations, & &1["name"]) == ["alpha_org", "zulu_org"]
-    end
-
     test "return 404 for organization keys" do
       organization = insert(:organization)
 

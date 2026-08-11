@@ -83,9 +83,7 @@ defmodule HexpmWeb.API.UserView do
   defp repository_sort(%Package{repository: %Repository{name: name}}), do: name
 
   defp organizations(user) do
-    user.organization_users
-    |> Enum.sort_by(& &1.organization.name)
-    |> Enum.map(fn ru ->
+    Enum.map(user.organization_users, fn ru ->
       %{
         name: ru.organization.name,
         role: ru.role
