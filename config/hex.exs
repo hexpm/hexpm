@@ -17,6 +17,8 @@ config :hexpm,
   private_docs_url: "http://localhost:4043",
   cdn_url: "http://localhost:4043"
 
+config :hexpm, HexpmWeb.BasicAuth, schedule_enabled: false
+
 config :hexpm, HexpmWeb.Endpoint,
   http: [port: 4043],
   debug_errors: false,
