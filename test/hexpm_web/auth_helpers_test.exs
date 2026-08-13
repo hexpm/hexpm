@@ -28,7 +28,10 @@ defmodule HexpmWeb.AuthHelpersTest do
              AuthHelpers.authenticate_at(conn, ~U[2026-11-01 00:00:00Z])
 
     conn = AuthHelpers.error(conn, {:error, :basic_auth_disabled})
-    assert json_response(conn, 401)["message"] == "Basic authentication is disabled"
+
+    assert json_response(conn, 401)["message"] ==
+             "Basic authentication is disabled. Update your client to use OAuth or an API key."
+
     assert get_resp_header(conn, "www-authenticate") == [~s(Bearer realm="hex")]
   end
 

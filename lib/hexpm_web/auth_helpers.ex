@@ -167,7 +167,10 @@ defmodule HexpmWeb.AuthHelpers do
       {:error, :basic_auth_disabled} ->
         conn
         |> put_resp_header("www-authenticate", ~s(Bearer realm="hex"))
-        |> render_error(401, message: "Basic authentication is disabled")
+        |> render_error(401,
+          message:
+            "Basic authentication is disabled. Update your client to use OAuth or an API key."
+        )
 
       {:error, :key} ->
         unauthorized(conn, "invalid API key")
