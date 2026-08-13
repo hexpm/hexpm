@@ -100,7 +100,9 @@ defmodule Hexpm.MixProject do
       {:ueberauth, "~> 0.10"},
       {:ueberauth_github, "~> 0.8"},
       {:lazy_html, ">= 0.1.0", only: :test},
-      {:req, "~> 0.7.2"}
+      # ExAws signs empty-body GET requests that Req 0.7 rewrites as POST.
+      # https://github.com/ex-aws/ex_aws/issues/1246
+      {:req, "0.6.3"}
     ]
   end
 
