@@ -138,8 +138,7 @@ defmodule Hexpm.Application do
       goth_spec(),
       setup(),
       HexpmWeb.Telemetry,
-      metrics_server_spec(),
-      {Task, &HexpmWeb.SyntaxHighlight.warm/0}
+      metrics_server_spec()
     ]
     |> Enum.reject(&is_nil/1)
   end
