@@ -1,0 +1,167 @@
+<div class="max-w-3xl mx-auto py-10 px-4">
+  <a
+    href={@package_path}
+    class="inline-flex items-center gap-1.5 text-sm font-medium text-grey-500 hover:text-primary-700 dark:text-grey-300 dark:hover:text-primary-300 transition-colors mb-6"
+  >
+    {icon(:heroicon, "arrow-left", class: "size-4")} Back to {@package_identifier}
+  </a>
+
+  <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-6 sm:p-8">
+    <%= if @result do %>
+      <div id="package-report-success" class="text-center py-6">
+        <div class="mx-auto size-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
+          {icon(:heroicon, "check", class: "size-7 text-green-700 dark:text-green-300")}
+        </div>
+        <h1 class="text-2xl font-semibold text-grey-900 dark:text-white mb-3">
+          Report submitted
+        </h1>
+        <%= if @result.kind == :vulnerability do %>
+          <p class="text-grey-600 dark:text-grey-300 mb-6">
+            The Erlang Ecosystem Foundation CNA received your vulnerability report.
+          </p>
+          <.button_link href={@result.url} variant="primary">
+            View report {icon(:heroicon, "arrow-top-right-on-square", class: "size-4")}
+          </.button_link>
+        <% else %>
+          <p class="text-grey-600 dark:text-grey-300">
+            The report was sent to support@hex.pm. A copy was sent to your primary email address.
+          </p>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="mb-7">
+        <p class="text-xs font-semibold uppercase tracking-wide text-primary-700 dark:text-primary-300 mb-2">
+          {@package_identifier}
+        </p>
+        <h1 class="text-2xl sm:text-3xl font-semibold text-grey-900 dark:text-white mb-3">
+          Report package
+        </h1>
+        <p class="text-grey-600 dark:text-grey-300">
+          Vulnerability reports go to the Erlang Ecosystem Foundation CNA. All other reports go to Hex support, with a copy sent to you.
+        </p>
+      </div>
+
+      <.form
+        for={@form}
+        id="package-report-form"
+        phx-change="validate"
+        phx-submit="submit"
+        class="space-y-6"
+      >
+        <.select_input
+          field={@form[:reason]}
+          label="Reason"
+          options={Report.reason_options()}
+          required
+        />
+
+        <.text_input
+          field={@form[:summary]}
+          label="Summary"
+          placeholder="One-line description of the issue"
+          required
+        />
+
+        <.textarea_input
+          field={@form[:description]}
+          label="Report details"
+          placeholder="Describe the issue and include any relevant evidence or links."
+          rows="12"
+          required
+        />
+
+        <fieldset
+          :if={@form[:reason].value in [:vulnerability, "vulnerability"]}
+          id="vulnerability-confirmations"
+          class="border border-grey-200 dark:border-grey-700 rounded-lg p-4"
+        >
+          <legend class="px-2 text-sm font-semibold text-grey-900 dark:text-grey-100">
+            Vulnerability criteria
+          </legend>
+
+          <label class="flex items-start gap-3 cursor-pointer">
+            <input type="hidden" name={@form[:confirms_criteria].name} value="false" />
+            <input
+              type="checkbox"
+              id={@form[:confirms_criteria].id}
+              name={@form[:confirms_criteria].name}
+              value="true"
+              checked={
+                Phoenix.HTML.Form.normalize_value("checkbox", @form[:confirms_criteria].value)
+              }
+              class="mt-1 size-4 rounded border-grey-300 text-primary-600 focus:ring-primary-500 dark:border-grey-600 dark:bg-grey-800"
+            />
+            <span class="text-sm text-grey-700 dark:text-grey-200">
+              I confirm this report matches the <a
+                href="https://cna.erlef.org/cve-criteria"
+                target="_blank"
+                rel="noopener"
+                class="text-primary-700 underline dark:text-primary-300"
+              >CVE criteria</a>.
+              <span
+                :for={error <- @form[:confirms_criteria].errors}
+                class="block text-red-600 dark:text-red-400 mt-1"
+              >
+                {translate_error(error)}
+              </span>
+            </span>
+          </label>
+
+          <label class="mt-4 flex items-start gap-3 cursor-pointer">
+            <input type="hidden" name={@form[:confirms_in_scope].name} value="false" />
+            <input
+              type="checkbox"
+              id={@form[:confirms_in_scope].id}
+              name={@form[:confirms_in_scope].name}
+              value="true"
+              checked={
+                Phoenix.HTML.Form.normalize_value("checkbox", @form[:confirms_in_scope].value)
+              }
+              class="mt-1 size-4 rounded border-grey-300 text-primary-600 focus:ring-primary-500 dark:border-grey-600 dark:bg-grey-800"
+            />
+            <span class="text-sm text-grey-700 dark:text-grey-200">
+              I confirm this vulnerability is in
+              <a
+                href="https://cna.erlef.org/scope"
+                target="_blank"
+                rel="noopener"
+                class="text-primary-700 underline dark:text-primary-300"
+              >scope</a>
+              of the CNA.
+              <span
+                :for={error <- @form[:confirms_in_scope].errors}
+                class="block text-red-600 dark:text-red-400 mt-1"
+              >
+                {translate_error(error)}
+              </span>
+            </span>
+          </label>
+        </fieldset>
+
+        <div :if={HexpmWeb.Captcha.enabled?()}>
+          <div
+            id="package-report-captcha"
+            phx-hook="HCaptcha"
+            phx-update="ignore"
+            data-sitekey={HexpmWeb.Captcha.sitekey()}
+          >
+          </div>
+          <p
+            :if={@captcha_error}
+            id="package-report-captcha-error"
+            class="mt-2 flex items-center gap-1 text-sm text-red-600 dark:text-red-400"
+          >
+            {icon(:heroicon, "exclamation-circle", class: "size-4")}
+            <span>{@captcha_error}</span>
+          </p>
+        </div>
+
+        <div class="flex justify-end">
+          <.button type="submit" variant="primary" phx-disable-with="Submitting…">
+            Submit report
+          </.button>
+        </div>
+      </.form>
+    <% end %>
+  </div>
+</div>

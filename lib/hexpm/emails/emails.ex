@@ -181,6 +181,23 @@ defmodule Hexpm.Emails do
     |> render_body(:typosquat_candidates)
   end
 
+  def package_report(package, package_url, report, reporter) do
+    reporter_recipient = {reporter.name, reporter.email}
+
+    base_email()
+    |> email_to(Application.fetch_env!(:hexpm, :support_email))
+    |> Swoosh.Email.cc(reporter_recipient)
+    |> Swoosh.Email.reply_to(reporter_recipient)
+    |> subject("Hex.pm package report: #{report.summary}")
+    |> assign(:package, package)
+    |> assign(:package_url, package_url)
+    |> assign(:reason, Hexpm.PackageReports.Report.reason_label(report.reason))
+    |> assign(:summary, report.summary)
+    |> assign(:description, report.description)
+    |> assign(:reporter, reporter)
+    |> render_body(:package_report)
+  end
+
   def organization_invite(organization, user) do
     base_email()
     |> email_to(user)

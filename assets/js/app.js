@@ -26,6 +26,7 @@ import LineHighlight from "./hooks/line_highlight";
 import { InfiniteScroll } from "./hooks/diff";
 import { FormSync } from "./hooks/form_sync";
 import { FileFinder } from "./hooks/file_finder";
+import { HCaptcha } from "./hooks/hcaptcha";
 
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")
@@ -55,6 +56,7 @@ let Hooks = {
   InfiniteScroll,
   FormSync,
   FileFinder,
+  HCaptcha,
 };
 let liveSocket = new LiveSocket("/live", Socket, {
   params: { _csrf_token: csrfToken },

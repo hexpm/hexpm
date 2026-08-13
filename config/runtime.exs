@@ -82,6 +82,12 @@ if config_env() == :prod do
   if mode == :web do
     config :hexpm, Oban, queues: false, plugins: false, peer: false
 
+    config :hexpm, :varsel,
+      report_url: System.fetch_env!("HEXPM_VARSEL_REPORT_URL"),
+      audience: System.fetch_env!("HEXPM_VARSEL_JWT_AUDIENCE"),
+      signing_key: System.fetch_env!("HEXPM_VARSEL_SIGNING_KEY"),
+      key_id: System.fetch_env!("HEXPM_VARSEL_KEY_ID")
+
     config :hexpm,
       host: System.fetch_env!("HEXPM_HOST"),
       secret: System.fetch_env!("HEXPM_SECRET"),

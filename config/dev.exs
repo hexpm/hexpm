@@ -98,6 +98,8 @@ config :hexpm, metrics_port: 9568
 
 config :hexpm, :organization_sso, all_organizations: true
 
+config :hexpm, :varsel, key_id: "hexpm-dev"
+
 config :ueberauth, Ueberauth.Strategy.Github.OAuth,
   client_id: System.get_env("HEXPM_GITHUB_CLIENT_ID"),
   client_secret: System.get_env("HEXPM_GITHUB_CLIENT_SECRET")

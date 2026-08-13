@@ -220,6 +220,8 @@ defmodule HexpmWeb.Router do
       on_mount: {HexpmWeb.Live.InitAssigns, :default},
       session: {HexpmWeb.Live.InitAssigns, :session, []} do
       live "/packages", PackageLive.Index, :index
+      live "/packages/:name/report", PackageReportLive, :new
+      live "/packages/:repository/:name/report", PackageReportLive, :new
       live "/diff/:package/:versions", DiffLive, :show
       live "/diff/:repository/:package/:versions", DiffLive, :show
     end
