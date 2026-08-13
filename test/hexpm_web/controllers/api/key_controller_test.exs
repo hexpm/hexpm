@@ -277,7 +277,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
       conn =
         build_conn()
         |> put_req_header("content-type", "application/json")
-        |> put_req_header("authorization", basic_auth(c.eric))
+        |> put_req_header("authorization", key_for(c.eric))
         |> post("/api/keys", %{name: "mykey"})
 
       assert conn.status == 201
