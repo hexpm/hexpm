@@ -3,6 +3,12 @@ defmodule HexpmWeb.BasicAuthTest do
 
   alias HexpmWeb.BasicAuth
 
+  test "disables the schedule in the Hex integration environment" do
+    config = Config.Reader.read!("config/hex.exs", env: :hex)
+
+    refute config[:hexpm][BasicAuth][:schedule_enabled]
+  end
+
   test "allows Basic authentication before the first brownout" do
     refute BasicAuth.disabled?(~U[2026-09-30 23:59:59.999999Z])
   end

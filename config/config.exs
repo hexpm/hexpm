@@ -42,6 +42,8 @@ config :hexpm,
 # has settled which rules are precise enough to notify strangers about.
 config :hexpm, secret_scan_notify: false
 
+config :hexpm, HexpmWeb.BasicAuth, schedule_enabled: true
+
 config :hexpm, :organization_sso,
   mode: :off,
   beta_organizations: [],

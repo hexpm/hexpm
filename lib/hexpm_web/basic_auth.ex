@@ -1,6 +1,7 @@
 defmodule HexpmWeb.BasicAuth do
   @moduledoc false
 
+  @schedule_enabled Application.compile_env!(:hexpm, [__MODULE__, :schedule_enabled])
   @permanent_cutoff ~U[2026-11-01 00:00:00Z]
   @brownout_windows %{
     1 => [{0, 1}, {12, 13}],
@@ -37,6 +38,10 @@ defmodule HexpmWeb.BasicAuth do
   }
 
   def disabled?(datetime \\ DateTime.utc_now()) do
+    @schedule_enabled and disabled_at?(datetime)
+  end
+
+  defp disabled_at?(datetime) do
     datetime = datetime |> DateTime.to_unix(:microsecond) |> DateTime.from_unix!(:microsecond)
 
     cond do
