@@ -29,6 +29,7 @@ defmodule HexpmWeb.AuthHelpersTest do
 
     conn = AuthHelpers.error(conn, {:error, :basic_auth_disabled})
     assert json_response(conn, 401)["message"] == "Basic authentication is disabled"
+    assert get_resp_header(conn, "www-authenticate") == [~s(Bearer realm="hex")]
   end
 
   test "does not affect API key or OAuth authentication during a brownout", %{user: user} do

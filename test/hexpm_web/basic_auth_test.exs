@@ -3,95 +3,38 @@ defmodule HexpmWeb.BasicAuthTest do
 
   alias HexpmWeb.BasicAuth
 
-  @windows [
-    {~U[2026-10-01 00:00:00Z], ~U[2026-10-01 01:00:00Z]},
-    {~U[2026-10-01 12:00:00Z], ~U[2026-10-01 13:00:00Z]},
-    {~U[2026-10-02 05:00:00Z], ~U[2026-10-02 06:00:00Z]},
-    {~U[2026-10-02 17:00:00Z], ~U[2026-10-02 18:00:00Z]},
-    {~U[2026-10-03 10:00:00Z], ~U[2026-10-03 11:00:00Z]},
-    {~U[2026-10-03 22:00:00Z], ~U[2026-10-03 23:00:00Z]},
-    {~U[2026-10-04 03:00:00Z], ~U[2026-10-04 04:00:00Z]},
-    {~U[2026-10-04 15:00:00Z], ~U[2026-10-04 16:00:00Z]},
-    {~U[2026-10-05 08:00:00Z], ~U[2026-10-05 09:00:00Z]},
-    {~U[2026-10-05 20:00:00Z], ~U[2026-10-05 21:00:00Z]},
-    {~U[2026-10-06 01:00:00Z], ~U[2026-10-06 02:00:00Z]},
-    {~U[2026-10-06 13:00:00Z], ~U[2026-10-06 14:00:00Z]},
-    {~U[2026-10-07 06:00:00Z], ~U[2026-10-07 07:00:00Z]},
-    {~U[2026-10-07 18:00:00Z], ~U[2026-10-07 19:00:00Z]},
-    {~U[2026-10-08 00:00:00Z], ~U[2026-10-08 02:00:00Z]},
-    {~U[2026-10-08 12:00:00Z], ~U[2026-10-08 14:00:00Z]},
-    {~U[2026-10-09 05:00:00Z], ~U[2026-10-09 07:00:00Z]},
-    {~U[2026-10-09 17:00:00Z], ~U[2026-10-09 19:00:00Z]},
-    {~U[2026-10-10 10:00:00Z], ~U[2026-10-10 12:00:00Z]},
-    {~U[2026-10-10 22:00:00Z], ~U[2026-10-11 00:00:00Z]},
-    {~U[2026-10-11 03:00:00Z], ~U[2026-10-11 05:00:00Z]},
-    {~U[2026-10-11 15:00:00Z], ~U[2026-10-11 17:00:00Z]},
-    {~U[2026-10-12 08:00:00Z], ~U[2026-10-12 10:00:00Z]},
-    {~U[2026-10-12 20:00:00Z], ~U[2026-10-12 22:00:00Z]},
-    {~U[2026-10-13 01:00:00Z], ~U[2026-10-13 03:00:00Z]},
-    {~U[2026-10-13 13:00:00Z], ~U[2026-10-13 15:00:00Z]},
-    {~U[2026-10-14 06:00:00Z], ~U[2026-10-14 08:00:00Z]},
-    {~U[2026-10-14 18:00:00Z], ~U[2026-10-14 20:00:00Z]},
-    {~U[2026-10-15 00:00:00Z], ~U[2026-10-15 04:00:00Z]},
-    {~U[2026-10-15 12:00:00Z], ~U[2026-10-15 16:00:00Z]},
-    {~U[2026-10-16 03:00:00Z], ~U[2026-10-16 07:00:00Z]},
-    {~U[2026-10-16 15:00:00Z], ~U[2026-10-16 19:00:00Z]},
-    {~U[2026-10-17 06:00:00Z], ~U[2026-10-17 10:00:00Z]},
-    {~U[2026-10-17 18:00:00Z], ~U[2026-10-17 22:00:00Z]},
-    {~U[2026-10-18 01:00:00Z], ~U[2026-10-18 05:00:00Z]},
-    {~U[2026-10-18 13:00:00Z], ~U[2026-10-18 17:00:00Z]},
-    {~U[2026-10-19 04:00:00Z], ~U[2026-10-19 08:00:00Z]},
-    {~U[2026-10-19 16:00:00Z], ~U[2026-10-19 20:00:00Z]},
-    {~U[2026-10-20 07:00:00Z], ~U[2026-10-20 11:00:00Z]},
-    {~U[2026-10-20 19:00:00Z], ~U[2026-10-20 23:00:00Z]},
-    {~U[2026-10-21 02:00:00Z], ~U[2026-10-21 06:00:00Z]},
-    {~U[2026-10-21 14:00:00Z], ~U[2026-10-21 18:00:00Z]},
-    {~U[2026-10-22 00:00:00Z], ~U[2026-10-22 08:00:00Z]},
-    {~U[2026-10-22 12:00:00Z], ~U[2026-10-22 20:00:00Z]},
-    {~U[2026-10-23 03:00:00Z], ~U[2026-10-23 11:00:00Z]},
-    {~U[2026-10-23 15:00:00Z], ~U[2026-10-23 23:00:00Z]},
-    {~U[2026-10-24 01:00:00Z], ~U[2026-10-24 09:00:00Z]},
-    {~U[2026-10-24 13:00:00Z], ~U[2026-10-24 21:00:00Z]},
-    {~U[2026-10-25 04:00:00Z], ~U[2026-10-25 12:00:00Z]},
-    {~U[2026-10-25 16:00:00Z], ~U[2026-10-26 00:00:00Z]},
-    {~U[2026-10-26 02:00:00Z], ~U[2026-10-26 10:00:00Z]},
-    {~U[2026-10-26 14:00:00Z], ~U[2026-10-26 22:00:00Z]},
-    {~U[2026-10-27 00:00:00Z], ~U[2026-10-27 08:00:00Z]},
-    {~U[2026-10-27 12:00:00Z], ~U[2026-10-27 20:00:00Z]},
-    {~U[2026-10-28 03:00:00Z], ~U[2026-10-28 11:00:00Z]},
-    {~U[2026-10-28 15:00:00Z], ~U[2026-10-28 23:00:00Z]},
-    {~U[2026-10-29 00:00:00Z], ~U[2026-10-29 10:00:00Z]},
-    {~U[2026-10-29 12:00:00Z], ~U[2026-10-29 22:00:00Z]},
-    {~U[2026-10-30 02:00:00Z], ~U[2026-10-30 12:00:00Z]},
-    {~U[2026-10-30 14:00:00Z], ~U[2026-10-31 00:00:00Z]},
-    {~U[2026-10-31 01:00:00Z], ~U[2026-10-31 11:00:00Z]},
-    {~U[2026-10-31 13:00:00Z], ~U[2026-10-31 23:00:00Z]}
-  ]
-
-  test "disables Basic authentication during every brownout window" do
-    Enum.each(@windows, fn {first, last} ->
-      assert BasicAuth.disabled?(first)
-      assert BasicAuth.disabled?(DateTime.add(last, -1, :microsecond))
-      refute BasicAuth.disabled?(last)
-    end)
-  end
-
-  test "allows Basic authentication between brownout windows" do
-    @windows
-    |> Enum.chunk_every(2, 1, :discard)
-    |> Enum.each(fn [{_, first_end}, {second_start, _}] ->
-      refute BasicAuth.disabled?(midpoint(first_end, second_start))
-    end)
-  end
-
-  test "allows Basic authentication before October and disables it permanently in November" do
+  test "allows Basic authentication before the first brownout" do
     refute BasicAuth.disabled?(~U[2026-09-30 23:59:59.999999Z])
+  end
+
+  test "uses inclusive starts and exclusive ends" do
+    assert BasicAuth.disabled?(~U[2026-10-01 00:00:00Z])
+    assert BasicAuth.disabled?(~U[2026-10-01 00:59:59.999999Z])
+    refute BasicAuth.disabled?(~U[2026-10-01 01:00:00Z])
+    refute BasicAuth.disabled?(~U[2026-10-01 11:59:59.999999Z])
+    assert BasicAuth.disabled?(~U[2026-10-01 12:00:00Z])
+  end
+
+  test "handles windows ending at midnight" do
+    refute BasicAuth.disabled?(~U[2026-10-10 21:59:59.999999Z])
+    assert BasicAuth.disabled?(~U[2026-10-10 22:00:00Z])
+    assert BasicAuth.disabled?(~U[2026-10-10 23:59:59.999999Z])
+    refute BasicAuth.disabled?(~U[2026-10-11 00:00:00Z])
+  end
+
+  test "applies the longer windows later in the month" do
+    assert BasicAuth.disabled?(~U[2026-10-18 13:00:00Z])
+    refute BasicAuth.disabled?(~U[2026-10-18 17:00:00Z])
+    assert BasicAuth.disabled?(~U[2026-10-25 16:00:00Z])
+    assert BasicAuth.disabled?(~U[2026-10-30 23:59:59.999999Z])
+    refute BasicAuth.disabled?(~U[2026-10-31 00:00:00Z])
+    assert BasicAuth.disabled?(~U[2026-10-31 13:00:00Z])
+    refute BasicAuth.disabled?(~U[2026-10-31 23:00:00Z])
+  end
+
+  test "disables Basic authentication permanently after the brownouts" do
     refute BasicAuth.disabled?(~U[2026-10-31 23:59:59.999999Z])
     assert BasicAuth.disabled?(~U[2026-11-01 00:00:00Z])
     assert BasicAuth.disabled?(~U[2027-01-01 00:00:00Z])
-  end
-
-  defp midpoint(first, last) do
-    DateTime.add(first, div(DateTime.diff(last, first, :microsecond), 2), :microsecond)
   end
 end

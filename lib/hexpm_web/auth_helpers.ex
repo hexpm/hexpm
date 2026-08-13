@@ -165,7 +165,9 @@ defmodule HexpmWeb.AuthHelpers do
         unauthorized(conn, "invalid username and password combination")
 
       {:error, :basic_auth_disabled} ->
-        unauthorized(conn, "Basic authentication is disabled")
+        conn
+        |> put_resp_header("www-authenticate", ~s(Bearer realm="hex"))
+        |> render_error(401, message: "Basic authentication is disabled")
 
       {:error, :key} ->
         unauthorized(conn, "invalid API key")
