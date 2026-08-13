@@ -14,6 +14,7 @@ defmodule Hexpm.Application do
     children = children(mode)
 
     shutdown_on_eof()
+    load_lumis()
 
     opts = [strategy: :one_for_one, name: Hexpm.Supervisor]
     Supervisor.start_link(children, opts)
@@ -75,6 +76,10 @@ defmodule Hexpm.Application do
     end
   else
     def shutdown_on_eof(), do: nil
+  end
+
+  defp load_lumis do
+    Lumis.Languages.async_load(~w(markdown comment erlang elixir))
   end
 
   defp read_only_mode() do
