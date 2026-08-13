@@ -122,7 +122,7 @@ defmodule HexpmWeb.PackageReportLiveTest do
     assert render(view) =~ "The report couldn&#39;t be submitted. Please try again later."
     assert has_element?(view, ~s(input[name="report[summary]"][value="Preserved summary"]))
     assert has_element?(view, "textarea", "Preserved details")
-    assert Repo.one!(Report).status == "failed"
+    assert Repo.one!(Report).status == :failed
   end
 
   test "emails non-vulnerability reports to support and shows confirmation", context do

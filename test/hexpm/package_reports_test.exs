@@ -97,7 +97,7 @@ defmodule Hexpm.PackageReportsTest do
       assert saved_report.reason == :vulnerability
       assert saved_report.summary == "Unsafe parsing"
       assert saved_report.description == "A crafted document can execute code."
-      assert saved_report.status == "submitted"
+      assert saved_report.status == :submitted
       assert saved_report.package_id == package.id
       assert saved_report.reporter_id == reporter.id
       assert saved_report.external_id == "report-id"
@@ -128,7 +128,7 @@ defmodule Hexpm.PackageReportsTest do
 
       assert %Report{
                reason: :vulnerability,
-               status: "failed",
+               status: :failed,
                package_id: package_id,
                reporter_id: reporter_id,
                external_id: nil
@@ -155,7 +155,7 @@ defmodule Hexpm.PackageReportsTest do
       reporter_email = Hexpm.Accounts.User.email(reporter, :primary)
 
       assert saved_report.reason == :spam
-      assert saved_report.status == "submitted"
+      assert saved_report.status == :submitted
       assert saved_report.package_id == package.id
       assert saved_report.reporter_id == reporter.id
       assert entry.category == "package.report"

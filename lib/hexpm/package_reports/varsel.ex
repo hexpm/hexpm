@@ -119,7 +119,5 @@ defmodule Hexpm.PackageReports.Varsel.Client do
   end
 
   defp effective_port(%URI{port: port}) when is_integer(port), do: port
-  defp effective_port(%URI{scheme: "https"}), do: 443
-  defp effective_port(%URI{scheme: "http"}), do: 80
-  defp effective_port(_uri), do: nil
+  defp effective_port(%URI{scheme: scheme}), do: URI.default_port(scheme)
 end

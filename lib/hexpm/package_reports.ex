@@ -33,7 +33,7 @@ defmodule Hexpm.PackageReports do
     case result do
       {:ok, external_report} ->
         update_report(report,
-          status: "submitted",
+          status: :submitted,
           external_id: external_report.id,
           external_url: external_report.url,
           external_sign_in_url: external_report.sign_in_url
@@ -42,7 +42,7 @@ defmodule Hexpm.PackageReports do
         result
 
       {:error, :unavailable} ->
-        update_report(report, status: "failed")
+        update_report(report, status: :failed)
         result
     end
   end
@@ -65,13 +65,13 @@ defmodule Hexpm.PackageReports do
 
     Repo.transaction(fn ->
       Outbox.insert!(outbox_attrs)
-      update_report(report, status: "submitted")
+      update_report(report, status: :submitted)
     end)
 
     {:ok, :email}
   rescue
     error ->
-      update_report(report, status: "failed")
+      update_report(report, status: :failed)
       Logger.error("Package report email enqueue failed: #{inspect(error.__struct__)}")
       {:error, :unavailable}
   end
@@ -79,7 +79,7 @@ defmodule Hexpm.PackageReports do
   defp insert_report(report, package, user) do
     report
     |> Ecto.Changeset.change(
-      status: "pending",
+      status: :pending,
       package_id: package.id,
       reporter_id: user.id
     )

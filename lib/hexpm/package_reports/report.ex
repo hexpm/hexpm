@@ -6,7 +6,7 @@ defmodule Hexpm.PackageReports.Report do
 
     field :summary, :string, redact: true
     field :description, :string, redact: true
-    field :status, :string, default: "pending"
+    field :status, Ecto.Enum, values: ~w(pending submitted failed)a
     field :external_id, :string
     field :external_url, :string
     field :external_sign_in_url, :string
