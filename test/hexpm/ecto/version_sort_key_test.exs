@@ -69,6 +69,17 @@ defmodule Hexpm.VersionSortKeyTest do
     end
   end
 
+  test "stores release sort fields in generated columns" do
+    assert %{rows: [["semver_sort_key", "s"], ["semver_stable", "s"]]} =
+             Repo.query!("""
+             SELECT attname, attgenerated
+             FROM pg_catalog.pg_attribute
+             WHERE attrelid = 'releases'::regclass
+               AND attname IN ('semver_sort_key', 'semver_stable')
+             ORDER BY attname
+             """)
+  end
+
   property "sort key comparison matches Version.compare/2" do
     check all(left <- version(), right <- version()) do
       assert compare_keys(Hexpm.Version.sort_key(left), Hexpm.Version.sort_key(right)) ==
@@ -129,9 +140,8 @@ defmodule Hexpm.VersionSortKeyTest do
              Repo.query!(
                """
                INSERT INTO releases
-                 (package_id, version, inner_checksum, has_docs, meta, inserted_at, updated_at,
-                  semver_sort_key, semver_stable)
-               VALUES ($1, $2, $3, false, '{}'::jsonb, now(), now(), decode('00', 'hex'), false)
+                 (package_id, version, inner_checksum, has_docs, meta, inserted_at, updated_at)
+               VALUES ($1, $2, $3, false, '{}'::jsonb, now(), now())
                RETURNING semver_sort_key, semver_stable
                """,
                [package.id, "1.0.0+abc-def", <<0::256>>]

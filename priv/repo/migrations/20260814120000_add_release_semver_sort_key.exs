@@ -2,15 +2,6 @@ defmodule Hexpm.Repo.Migrations.AddReleaseSemverSortKey do
   use Ecto.Migration
 
   def up do
-    execute("SET LOCAL lock_timeout TO '5s'")
-
-    alter table(:releases) do
-      add :semver_sort_key, :binary
-      add :semver_stable, :boolean
-    end
-
-    flush()
-
     execute("""
     CREATE FUNCTION public.hexpm_semver_sort_key(value text)
     RETURNS bytea
@@ -91,38 +82,28 @@ defmodule Hexpm.Repo.Migrations.AddReleaseSemverSortKey do
     $$
     """)
 
-    execute("""
-    CREATE FUNCTION public.set_release_semver_sort_key()
-    RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-    BEGIN
-      NEW.semver_sort_key := public.hexpm_semver_sort_key(NEW.version);
-      NEW.semver_stable :=
-        pg_catalog.strpos(pg_catalog.split_part(NEW.version, '+', 1), '-') = 0;
-
-      RETURN NEW;
-    END;
-    $$
-    """)
+    execute("SET LOCAL lock_timeout TO '5s'")
 
     execute("""
-    CREATE TRIGGER releases_set_semver_sort_key
-    BEFORE INSERT OR UPDATE OF version, semver_sort_key, semver_stable ON releases
-    FOR EACH ROW
-    EXECUTE FUNCTION public.set_release_semver_sort_key()
+    ALTER TABLE public.releases
+    ADD COLUMN semver_sort_key bytea
+      GENERATED ALWAYS AS (public.hexpm_semver_sort_key(version)) STORED NOT NULL,
+    ADD COLUMN semver_stable boolean
+      GENERATED ALWAYS AS (
+        pg_catalog.strpos(pg_catalog.split_part(version, '+', 1), '-') = 0
+      ) STORED NOT NULL
     """)
   end
 
   def down do
     execute("SET LOCAL lock_timeout TO '5s'")
-    execute("DROP TRIGGER releases_set_semver_sort_key ON releases")
-    execute("DROP FUNCTION public.set_release_semver_sort_key()")
-    execute("DROP FUNCTION public.hexpm_semver_sort_key(text)")
 
-    alter table(:releases) do
-      remove :semver_sort_key
-      remove :semver_stable
-    end
+    execute("""
+    ALTER TABLE public.releases
+    DROP COLUMN semver_sort_key,
+    DROP COLUMN semver_stable
+    """)
+
+    execute("DROP FUNCTION public.hexpm_semver_sort_key(text)")
   end
 end
