@@ -49,8 +49,8 @@ defmodule Hexpm.Repo.Migrations.AddReleaseSemverSortKey do
       END IF;
 
       FOREACH component IN ARRAY pg_catalog.string_to_array(core, '.') LOOP
-        IF component::numeric > 9223372036854775807 THEN
-          RAISE EXCEPTION 'SemVer numeric components must be at most 9223372036854775807';
+        IF component::numeric > 99999999999999 THEN
+          RAISE EXCEPTION 'SemVer numeric components must be at most 99999999999999';
         END IF;
 
         result := result || pg_catalog.int8send(component::bigint);
@@ -70,8 +70,8 @@ defmodule Hexpm.Repo.Migrations.AddReleaseSemverSortKey do
 
       FOREACH identifier IN ARRAY identifiers LOOP
         IF pg_catalog.translate(identifier, '0123456789', '') = '' THEN
-          IF identifier::numeric > 9223372036854775807 THEN
-            RAISE EXCEPTION 'SemVer numeric components must be at most 9223372036854775807';
+          IF identifier::numeric > 99999999999999 THEN
+            RAISE EXCEPTION 'SemVer numeric components must be at most 99999999999999';
           END IF;
 
           result := result ||

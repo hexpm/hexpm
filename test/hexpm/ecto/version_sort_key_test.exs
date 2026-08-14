@@ -27,8 +27,8 @@ defmodule Hexpm.VersionSortKeyTest do
   test "accepts values at the sort key limits" do
     version =
       Version.parse!(
-        "9223372036854775807.9223372036854775807.9223372036854775807-" <>
-          "9223372036854775807." <> String.duplicate("a", 44)
+        "99999999999999.99999999999999.99999999999999-" <>
+          "99999999999999." <> String.duplicate("a", 44)
       )
 
     assert :ok = Hexpm.Version.validate(version)
@@ -39,13 +39,18 @@ defmodule Hexpm.VersionSortKeyTest do
     assert key == Hexpm.Version.sort_key(version)
   end
 
-  test "rejects numeric components above bigint" do
-    for version <- ["9223372036854775808.0.0", "1.0.0-9223372036854775808"] do
-      parsed = Version.parse!(version)
-      message = "numeric components must be at most 9223372036854775807"
+  test "rejects numeric components above the configured limit" do
+    versions = [
+      {%Version{major: 100_000_000_000_000, minor: 0, patch: 0}, "100000000000000.0.0"},
+      {%Version{major: 1, minor: 0, patch: 0, pre: [100_000_000_000_000]},
+       "1.0.0-100000000000000"}
+    ]
+
+    for {parsed, version} <- versions do
+      message = "numeric components must be at most 99999999999999"
 
       assert {:error, ^message} = Hexpm.Version.validate(parsed)
-      assert_sql_error(version, "SemVer numeric components must be at most 9223372036854775807")
+      assert_sql_error(version, "SemVer numeric components must be at most 99999999999999")
     end
   end
 
@@ -137,9 +142,9 @@ defmodule Hexpm.VersionSortKeyTest do
 
   defp version do
     gen all(
-          major <- integer(0..9_223_372_036_854_775_807),
-          minor <- integer(0..9_223_372_036_854_775_807),
-          patch <- integer(0..9_223_372_036_854_775_807),
+          major <- integer(0..99_999_999_999_999),
+          minor <- integer(0..99_999_999_999_999),
+          patch <- integer(0..99_999_999_999_999),
           pre <- prerelease(),
           build <- build_metadata()
         ) do
@@ -150,7 +155,7 @@ defmodule Hexpm.VersionSortKeyTest do
   defp prerelease do
     one_of([
       constant([]),
-      list_of(one_of([integer(0..9_223_372_036_854_775_807), alphanumeric_identifier()]),
+      list_of(one_of([integer(0..99_999_999_999_999), alphanumeric_identifier()]),
         min_length: 1,
         max_length: 4
       )

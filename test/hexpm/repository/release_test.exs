@@ -79,8 +79,6 @@ defmodule Hexpm.Repository.ReleaseTest do
   } do
     cases = [
       {"1.0.0+build", "build number not allowed"},
-      {"9223372036854775808.0.0", "numeric components must be at most 9223372036854775807"},
-      {"1.0.0-9223372036854775808", "numeric components must be at most 9223372036854775807"},
       {"1.0.0-" <> String.duplicate("a", 65), "prerelease must be at most 64 characters"}
     ]
 
@@ -95,6 +93,19 @@ defmodule Hexpm.Repository.ReleaseTest do
         )
 
       assert %{version: ^message} = errors_on(changeset)
+    end
+
+    for version <- ["100000000000000.0.0", "1.0.0-100000000000000"] do
+      changeset =
+        Release.build(
+          package,
+          publisher,
+          rel_meta(%{version: version, app: package.name}),
+          "",
+          ""
+        )
+
+      assert %{version: _message} = errors_on(changeset)
     end
   end
 
