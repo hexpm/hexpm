@@ -193,6 +193,19 @@ defmodule Hexpm.Repository.ReleasesTest do
       empty = insert(:package, name: "latest_empty")
       assert Releases.latest_version("hexpm", empty.name, only_stable: false) == nil
     end
+
+    test "filters documented releases before prerelease fallback" do
+      package = insert(:package, name: "documented_preview")
+      insert(:release, package: package, version: "1.0.0", has_docs: false)
+      insert(:release, package: package, version: "2.0.0-rc.1", has_docs: true)
+      insert(:release, package: package, version: "2.0.0-rc.2", has_docs: true)
+
+      assert Releases.latest_version("hexpm", package.name,
+               only_stable: true,
+               unstable_fallback: true,
+               with_docs: true
+             ) == Version.parse!("2.0.0-rc.2")
+    end
   end
 
   describe "publish/7" do

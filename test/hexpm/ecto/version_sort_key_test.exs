@@ -25,10 +25,13 @@ defmodule Hexpm.VersionSortKeyTest do
   end
 
   test "accepts values at the sort key limits" do
+    prerelease = "99999999999999." <> String.duplicate("a", 49)
+    assert byte_size(prerelease) == 64
+
     version =
       Version.parse!(
         "99999999999999.99999999999999.99999999999999-" <>
-          "99999999999999." <> String.duplicate("a", 44)
+          prerelease
       )
 
     assert :ok = Hexpm.Version.validate(version)

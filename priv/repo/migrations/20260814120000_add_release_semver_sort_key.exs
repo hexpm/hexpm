@@ -72,7 +72,7 @@ defmodule Hexpm.Repo.Migrations.AddReleaseSemverSortKey do
         ELSE
           result := result ||
             pg_catalog.decode('02', 'hex') ||
-            pg_catalog.convert_to(identifier, 'UTF8') ||
+            identifier::bytea ||
             pg_catalog.decode('00', 'hex');
         END IF;
       END LOOP;
