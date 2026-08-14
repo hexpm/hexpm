@@ -7,7 +7,6 @@ defmodule Hexpm.Utils do
 
   import Ecto.Query, only: [from: 2]
   alias Hexpm.Repository.{Package, Release, Repository}
-  require Logger
 
   def secure_check(left, right) do
     if byte_size(left) == byte_size(right) do

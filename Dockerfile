@@ -1,6 +1,6 @@
-ARG ELIXIR_VERSION=1.19.5
-ARG ERLANG_VERSION=28.5.0.4
-ARG DEBIAN_VERSION=trixie-20260713-slim
+ARG ELIXIR_VERSION=1.20.3
+ARG ERLANG_VERSION=29.0.5
+ARG DEBIAN_VERSION=trixie-20260803-slim
 
 FROM hexpm/elixir:${ELIXIR_VERSION}-erlang-${ERLANG_VERSION}-debian-${DEBIAN_VERSION} AS build
 
@@ -59,7 +59,7 @@ RUN mix compile
 
 # build release
 COPY rel rel
-RUN mix do sentry.package_source_code, release
+RUN mix do sentry.package_source_code + release
 
 # prepare release image
 FROM debian:${DEBIAN_VERSION} AS app

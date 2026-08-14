@@ -92,7 +92,6 @@ defmodule Hexpm.Repository.Policies do
   defp override_row?(override) when is_map(override), do: Map.has_key?(override, "package")
   defp override_row?(_override), do: false
 
-  defp submitted_repositories(nil), do: []
   defp submitted_repositories(list) when is_list(list), do: list
 
   defp submitted_repositories(map) when is_map(map) do

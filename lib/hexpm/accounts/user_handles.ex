@@ -1,7 +1,7 @@
 defmodule Hexpm.Accounts.UserHandles do
   use Hexpm.Schema
 
-  @derive HexpmWeb.Stale
+  @derive {HexpmWeb.Stale, last_modified: nil}
 
   embedded_schema do
     field :twitter, :string

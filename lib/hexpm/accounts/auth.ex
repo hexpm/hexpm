@@ -120,7 +120,7 @@ defmodule Hexpm.Accounts.Auth do
   defp load_entity(:user, username), do: load_user_from_username(username)
   defp load_entity(:organization, org_name), do: load_organization_from_name(org_name)
 
-  defp validate_entity_auth(%User{} = user), do: user && not User.organization?(user)
+  defp validate_entity_auth(%User{} = user), do: not User.organization?(user)
   defp validate_entity_auth(%Organization{} = _organization), do: true
 
   defp build_auth_result(%User{} = user, oauth_token) do

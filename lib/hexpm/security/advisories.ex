@@ -3,8 +3,6 @@ defmodule Hexpm.Security.Advisories do
 
   import Ecto.Query
 
-  require Logger
-
   alias Hexpm.Repository.Package
   alias Hexpm.Repository.RegistryBuilder
   alias Hexpm.Security.Advisory

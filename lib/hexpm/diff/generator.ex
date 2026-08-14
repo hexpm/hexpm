@@ -187,8 +187,8 @@ defmodule Hexpm.Diff.Generator do
 
     left_stat.size == right_stat.size and
       left
-      |> File.stream!([], 64 * 1024)
-      |> Stream.zip(File.stream!(right, [], 64 * 1024))
+      |> File.stream!(64 * 1024, [])
+      |> Stream.zip(File.stream!(right, 64 * 1024, []))
       |> Enum.all?(fn {left_chunk, right_chunk} -> left_chunk == right_chunk end)
   end
 
