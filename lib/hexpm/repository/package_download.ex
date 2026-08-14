@@ -1,7 +1,7 @@
 defmodule Hexpm.Repository.PackageDownload do
   use Hexpm.Schema
 
-  @derive HexpmWeb.Stale
+  @derive {HexpmWeb.Stale, last_modified: nil}
   @primary_key false
 
   schema "package_downloads" do

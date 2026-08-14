@@ -43,7 +43,7 @@ docker-compose up -d db
 Now you are fine to create the `hexpm_dev` database and run the ecto migrations:
 
 ```shell
-mix do ecto.create, ecto.migrate
+mix do ecto.create + ecto.migrate
 ```
 
 ### Sample Data

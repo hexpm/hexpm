@@ -300,10 +300,8 @@ defmodule HexpmWeb.API.OAuthController do
     end)
   end
 
-  defp error_description(:unauthorized_client), do: "Client not authorized for this grant type"
   defp error_description(:invalid_request), do: "Missing or invalid client_secret"
   defp error_description(:invalid_client), do: "Invalid API key"
-  defp error_description(_), do: "An error occurred"
 
   defp revoke_token(%{"token" => token_value, "client_id" => client_id})
        when is_binary(token_value) and is_binary(client_id) do

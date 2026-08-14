@@ -681,9 +681,6 @@ defmodule HexpmWeb.Components.PackageLayout do
   defp dependencies_tab_path(%{package: package}),
     do: ViewHelpers.path_for_dependencies(package)
 
-  defp files_path(%{current_release: nil, package: package}),
-    do: ViewHelpers.path_for_package(package)
-
   defp files_path(%{package: package, current_release: release, source_filename: filename})
        when is_binary(filename),
        do: source_path(package, release, filename)

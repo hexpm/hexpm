@@ -1,6 +1,5 @@
 defmodule Hexpm.Repository.RegistryBuilder do
   import Ecto.Query, only: [from: 2]
-  require Hexpm.Repo
   require Logger
   alias Hexpm.Repository.{Package, Release, Repository, Requirement, Storage}
   alias Hexpm.Repo
