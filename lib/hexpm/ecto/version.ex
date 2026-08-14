@@ -3,7 +3,7 @@ defmodule Hexpm.Version do
 
   @numeric_identifier 1
   @alphanumeric_identifier 2
-  @max_numeric_component 9_223_372_036_854_775_807
+  @max_numeric_component 99_999_999_999_999
   @max_prerelease_length 64
 
   def type(), do: :string
