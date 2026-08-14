@@ -48,6 +48,56 @@ defmodule Hexpm.Repository.ReleaseTest do
            ] = Release.all(package) |> Hexpm.Repo.all() |> Release.sort()
   end
 
+  test "stores the SemVer sort key", %{publisher: publisher, packages: [package, _, _]} do
+    version = Version.parse!("10.20.30-beta.2.alpha")
+
+    release =
+      Release.build(
+        package,
+        publisher,
+        rel_meta(%{version: to_string(version), app: package.name}),
+        "",
+        ""
+      )
+      |> Hexpm.Repo.insert!()
+
+    assert {key, stable?} =
+             Hexpm.Repo.one!(
+               from(r in Release,
+                 where: r.id == ^release.id,
+                 select: {r.semver_sort_key, r.semver_stable}
+               )
+             )
+
+    assert key == Hexpm.Version.sort_key(version)
+    refute stable?
+  end
+
+  test "validates SemVer limits", %{
+    publisher: publisher,
+    packages: [package, _, _]
+  } do
+    cases = [
+      {"1.0.0+build", "build number not allowed"},
+      {"9223372036854775808.0.0", "numeric components must be at most 9223372036854775807"},
+      {"1.0.0-9223372036854775808", "numeric components must be at most 9223372036854775807"},
+      {"1.0.0-" <> String.duplicate("a", 65), "prerelease must be at most 64 characters"}
+    ]
+
+    for {version, message} <- cases do
+      changeset =
+        Release.build(
+          package,
+          publisher,
+          rel_meta(%{version: version, app: package.name}),
+          "",
+          ""
+        )
+
+      assert %{version: ^message} = errors_on(changeset)
+    end
+  end
+
   test "create release and set its publisher", %{publisher: publisher, packages: [package, _, _]} do
     release =
       Release.build(

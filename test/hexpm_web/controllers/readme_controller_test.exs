@@ -201,6 +201,14 @@ defmodule HexpmWeb.ReadmeControllerTest do
 
       assert conn.status == 200
       assert conn.resp_body =~ "readme-not-found"
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/nonexistent_package")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "readme-not-found"
     end
 
     test "shows no README for nonexistent version", %{package: package} do

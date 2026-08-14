@@ -98,28 +98,29 @@ defmodule Hexpm.Repository.Packages do
   def attach_latest_releases(packages) do
     package_ids = Enum.map(packages, & &1.id)
 
+    latest_release =
+      from(r in Release,
+        where: r.package_id == parent_as(:package).id,
+        select: struct(r, [:package_id, :version, :inserted_at])
+      )
+      |> Release.latest_query(only_stable: true, unstable_fallback: true)
+
     releases =
-      from(
-        r in Release,
-        where: r.package_id in ^package_ids,
-        group_by: r.package_id,
-        select:
-          {r.package_id,
-           {fragment("array_agg(?)", r.version), fragment("array_agg(?)", r.inserted_at)}}
+      from(p in Package,
+        as: :package,
+        where: p.id in ^package_ids,
+        inner_lateral_join: r in subquery(latest_release),
+        on: true,
+        select: r
       )
       |> Repo.all()
-      |> Map.new(fn {package_id, {versions, inserted_ats}} ->
-        {package_id,
-         Enum.zip_with(versions, inserted_ats, fn version, inserted_at ->
-           %Release{version: version, inserted_at: inserted_at}
-         end)}
+      |> Map.new(fn release ->
+        release = %{release | version: to_string(release.version)}
+        {release.package_id, release}
       end)
 
     Enum.map(packages, fn package ->
-      release =
-        Release.latest_version(releases[package.id], only_stable: true, unstable_fallback: true)
-
-      %{package | latest_release: release}
+      %{package | latest_release: releases[package.id]}
     end)
   end
 

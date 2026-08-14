@@ -7,6 +7,8 @@ defmodule Hexpm.Repository.Release do
 
   schema "releases" do
     field :version, Hexpm.Version
+    field :semver_sort_key, :binary, load_in_query: false
+    field :semver_stable, :boolean, load_in_query: false
     field :inner_checksum, :binary
     field :outer_checksum, :binary
     field :has_docs, :boolean, default: false
@@ -66,7 +68,7 @@ defmodule Hexpm.Repository.Release do
        ) do
     cast(release, params, ~w(version)a)
     |> cast_embed(:meta, required: true)
-    |> validate_version(:version)
+    |> validate_version()
     |> validate_editable(:update, false, replace?)
     |> put_change(:inner_checksum, inner_checksum)
     |> put_change(:outer_checksum, outer_checksum)
@@ -90,6 +92,22 @@ defmodule Hexpm.Repository.Release do
       outer_checksum,
       replace?
     )
+  end
+
+  defp validate_version(changeset) do
+    case fetch_change(changeset, :version) do
+      {:ok, %Version{} = version} ->
+        case Hexpm.Version.validate(version) do
+          :ok ->
+            changeset
+
+          {:error, message} ->
+            add_error(changeset, :version, message)
+        end
+
+      :error ->
+        changeset
+    end
   end
 
   def delete(release, opts \\ []) do
@@ -220,6 +238,38 @@ defmodule Hexpm.Repository.Release do
 
   def sort(releases) do
     Enum.sort(releases, &(Version.compare(&1.version, &2.version) == :gt))
+  end
+
+  def latest_query(query, opts) do
+    query =
+      if Keyword.get(opts, :with_docs, false) do
+        from(r in query, where: r.has_docs)
+      else
+        query
+      end
+
+    query =
+      case {Keyword.fetch!(opts, :only_stable), Keyword.get(opts, :unstable_fallback, false)} do
+        {true, true} ->
+          order_by_latest(query)
+
+        {true, false} ->
+          query = from(r in query, where: r.semver_stable)
+          order_by_version(query)
+
+        {false, _} ->
+          order_by_version(query)
+      end
+
+    from(r in query, limit: 1)
+  end
+
+  defp order_by_latest(query) do
+    from(r in query, order_by: [desc: r.semver_stable, desc: r.semver_sort_key])
+  end
+
+  defp order_by_version(query) do
+    from(r in query, order_by: [desc: r.semver_sort_key])
   end
 
   @doc """
