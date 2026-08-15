@@ -39,6 +39,12 @@ defmodule HexpmWeb.ConnCase do
   setup do
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(Hexpm.RepoBase)
     Hexpm.Store.Memory.checkout()
+
+    # Safe default for the shared audit-log card (rendered on the audit-log and
+    # organization audit-log pages), which calls Hexpm.Geo.lookup_country/1.
+    # Tests that assert on resolved locations override this stub.
+    Mox.stub(Hexpm.Geo.Mock, :lookup_country, fn _ip -> nil end)
+
     :ok
   end
 

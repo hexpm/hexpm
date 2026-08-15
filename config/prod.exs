@@ -3,6 +3,7 @@ import Config
 config :hexpm,
   billing_impl: Hexpm.Billing.Hexpm,
   cdn_impl: Hexpm.CDN.Fastly,
+  geo_impl: Hexpm.Geo.Geolix,
   hexdocs_search_impl: Hexpm.Hexdocs.Search.Typesense,
   hexdocs_queue_producer: BroadwaySQS.Producer,
   hexdocs_gcs_put_debounce: 3000,

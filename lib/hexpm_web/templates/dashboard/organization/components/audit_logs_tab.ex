@@ -6,13 +6,15 @@ defmodule HexpmWeb.Dashboard.Organization.Components.AuditLogsTab do
   """
   use Phoenix.Component
 
-  import HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard, only: [audit_log_card: 1]
+  import HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard,
+    only: [audit_log_card: 1, dbip_attribution: 1]
 
   attr :audit_logs, :list, required: true
 
   def audit_logs_tab(assigns) do
     ~H"""
     <.audit_log_card audit_logs={@audit_logs} />
+    <.dbip_attribution />
     """
   end
 end
