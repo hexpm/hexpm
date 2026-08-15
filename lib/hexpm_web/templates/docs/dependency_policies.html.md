@@ -115,7 +115,7 @@ For example, an advisory override for `CVE-2026-4242` and package `decimal` acce
 
 A retirement override also matches the retirement reason. If a release changes from `deprecated` to `security`, an override for `deprecated` no longer accepts it. Editing the retirement message without changing its reason doesn't invalidate the override.
 
-Malformed or unknown overrides are ignored. They can't accept a release. Older Hex clients keep applying field 3 Allow and Deny rules, but ignore unknown actions and selector fields, so newer advisory, retirement, and cooldown overrides remain fail-closed.
+Malformed or unknown overrides are ignored. They can't accept a release. Hex warns when a loaded policy contains override actions the installed client doesn't support. `mix hex.policy show` lists the affected package, version scope, and numeric action. Older Hex clients keep applying field 3 Allow and Deny rules, but ignore unknown actions and selector fields, so newer advisory, retirement, and cooldown overrides remain fail-closed.
 
 #### Creating a policy
 
