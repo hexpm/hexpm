@@ -107,6 +107,30 @@ defmodule HexpmWeb.API.PackageControllerTest do
       assert hd(result)["name"] == package1.name
     end
 
+    test "returns releases in descending SemVer order" do
+      package = insert(:package, name: "api_semver_order")
+
+      for version <- ["1.0.0-rc.10", "20.0.0-rc.1", "10.0.0", "1.0.0-rc.2", "2.0.0"] do
+        insert(:release, package: package, version: version)
+      end
+
+      [result] =
+        build_conn()
+        |> get("/api/packages?search=#{package.name}")
+        |> json_response(200)
+
+      assert Enum.map(result["releases"], & &1["version"]) ==
+               ~w(20.0.0-rc.1 10.0.0 2.0.0 1.0.0-rc.10 1.0.0-rc.2)
+
+      result =
+        build_conn()
+        |> get("/api/packages/#{package.name}")
+        |> json_response(200)
+
+      assert result["latest_version"] == "20.0.0-rc.1"
+      assert result["latest_stable_version"] == "10.0.0"
+    end
+
     test "per page" do
       conn = get(build_conn(), "/api/packages?per_page=1")
       result = json_response(conn, 200)

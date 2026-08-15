@@ -5,19 +5,6 @@ defmodule Hexpm.Changeset do
 
   import Ecto.Changeset
 
-  @doc """
-  Checks if a version is valid semver.
-  """
-  def validate_version(changeset, field) do
-    validate_change(changeset, field, fn
-      _, %Version{build: nil} ->
-        []
-
-      _, %Version{} ->
-        [{field, "build number not allowed"}]
-    end)
-  end
-
   def validate_list_required(changeset, field, opts \\ []) do
     validate_change(changeset, field, fn
       _, [] ->

@@ -65,18 +65,23 @@ defmodule Hexpm.Repository.Releases do
 
   def latest_version(repository, package, opts)
       when is_binary(repository) and is_binary(package) do
-    from(r in Release,
-      join: p in assoc(r, :package),
-      join: repository in assoc(p, :repository),
+    latest_release =
+      from(r in Release,
+        where: r.package_id == parent_as(:package).id,
+        select: struct(r, [:version, :has_docs])
+      )
+      |> Release.latest_query(opts)
+
+    from(p in Package,
+      as: :package,
+      join: repository in Repository,
+      on: repository.id == p.repository_id,
       where: repository.name == ^repository and p.name == ^package,
-      select: struct(r, [:version, :has_docs])
+      inner_lateral_join: release in subquery(latest_release),
+      on: true,
+      select: release.version
     )
-    |> Repo.all()
-    |> Release.latest_version(opts)
-    |> case do
-      nil -> nil
-      release -> release.version
-    end
+    |> Repo.one()
   end
 
   def package_versions(packages) do

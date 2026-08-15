@@ -588,6 +588,19 @@ defmodule HexpmWeb.PackageControllerTest do
       assert response(conn, 404)
     end
 
+    test "renders releases in descending SemVer order" do
+      package = insert(:package, name: "web_semver_order")
+
+      for version <- ["1.0.0-rc.10", "10.0.0", "1.0.0-rc.2", "2.0.0"] do
+        insert(:release, package: package, version: version)
+      end
+
+      body = response(get(build_conn(), "/packages/#{package.name}/versions"), 200)
+
+      assert body =~
+               ~r/10\.0\.0.*2\.0\.0.*1\.0\.0-rc\.10.*1\.0\.0-rc\.2/s
+    end
+
     test "marks the versions an advisory affects", %{package1: package1, package2: package2} do
       advise(package1, "GHSA-versions-page", "0.0.1")
 

@@ -163,6 +163,49 @@ defmodule Hexpm.Repository.ReleasesTest do
                unstable_fallback: true
              ) == Version.parse!("1.0.0-rc.2")
     end
+
+    test "applies SemVer, stability, docs, retirement, and empty-package rules" do
+      package = insert(:package, name: "latest_options")
+
+      insert(:release, package: package, version: "0.9.0", has_docs: true)
+
+      insert(:release,
+        package: package,
+        version: "10.0.0",
+        has_docs: false,
+        retirement: %{reason: "other", message: "retired"}
+      )
+
+      insert(:release, package: package, version: "20.0.0-rc.2", has_docs: true)
+      insert(:release, package: package, version: "20.0.0-rc.10", has_docs: true)
+
+      assert Releases.latest_version("hexpm", package.name, only_stable: false) ==
+               Version.parse!("20.0.0-rc.10")
+
+      assert Releases.latest_version("hexpm", package.name, only_stable: true) ==
+               Version.parse!("10.0.0")
+
+      assert Releases.latest_version("hexpm", package.name,
+               only_stable: true,
+               with_docs: true
+             ) == Version.parse!("0.9.0")
+
+      empty = insert(:package, name: "latest_empty")
+      assert Releases.latest_version("hexpm", empty.name, only_stable: false) == nil
+    end
+
+    test "filters documented releases before prerelease fallback" do
+      package = insert(:package, name: "documented_preview")
+      insert(:release, package: package, version: "1.0.0", has_docs: false)
+      insert(:release, package: package, version: "2.0.0-rc.1", has_docs: true)
+      insert(:release, package: package, version: "2.0.0-rc.2", has_docs: true)
+
+      assert Releases.latest_version("hexpm", package.name,
+               only_stable: true,
+               unstable_fallback: true,
+               with_docs: true
+             ) == Version.parse!("2.0.0-rc.2")
+    end
   end
 
   describe "publish/7" do
