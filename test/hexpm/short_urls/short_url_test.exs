@@ -67,6 +67,11 @@ defmodule Hexpm.ShortURLs.ShortURLTest do
       assert %{valid?: false} = ShortURL.changeset(%{url: "data://hex.pm/foo"})
     end
 
+    test "rejects URLs without a host" do
+      assert %{valid?: false, errors: errors} = ShortURL.changeset(%{url: "https:/packages/ecto"})
+      assert errors == [url: {"must include a host", []}]
+    end
+
     test "where host is not on hex.pm" do
       assert %{valid?: false, errors: errors} =
                ShortURL.changeset(%{url: "https://supersimple.org?spoof=hex.pm"})

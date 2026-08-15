@@ -1,5 +1,25 @@
 import Config
 
+debug_errors =
+  case System.get_env("HEXPM_DEV_DEBUG_ERRORS", "true") do
+    "true" -> true
+    "false" -> false
+    value -> raise "invalid HEXPM_DEV_DEBUG_ERRORS #{inspect(value)}; expected true or false"
+  end
+
+log_level =
+  case System.get_env("HEXPM_DEV_LOG_LEVEL", "debug") do
+    "debug" -> :debug
+    "info" -> :info
+    "notice" -> :notice
+    "warning" -> :warning
+    "error" -> :error
+    "critical" -> :critical
+    "alert" -> :alert
+    "emergency" -> :emergency
+    value -> raise "invalid HEXPM_DEV_LOG_LEVEL #{inspect(value)}"
+  end
+
 config :hexpm,
   billing_report: false,
   sudo: false,
@@ -14,11 +34,11 @@ config :hexpm,
   -----END EC PRIVATE KEY-----
   """,
   tmp_dir: Path.expand("../tmp/dev", __DIR__),
+  local_store_dir:
+    System.get_env("HEXPM_LOCAL_STORE_DIR") || Path.join(System.tmp_dir!(), "hexpm-dev/store"),
   private_key: Path.expand("../test/fixtures/private.pem", __DIR__) |> File.read!(),
   docs_url: "http://localhost:4002",
   private_docs_url: "http://localhost:4002",
-  diff_url: "http://localhost:4004",
-  preview_url: "http://localhost:4000",
   cdn_url: "http://localhost:4000",
   img_url: "http://localhost:4000/img",
   img_proxy_secret: "dev_img_proxy_secret_key_for_hmac",
@@ -43,7 +63,7 @@ config :hexpm,
 
 config :hexpm, HexpmWeb.Endpoint,
   http: [port: 4000],
-  debug_errors: true,
+  debug_errors: debug_errors,
   code_reloader: true,
   cache_static_lookup: false,
   check_origin: false,
@@ -68,6 +88,7 @@ config :phoenix_live_view,
   debug_heex_annotations: true,
   debug_attributes: true
 
+config :logger, level: log_level
 config :logger, :default_formatter, format: "[$level] $message\n"
 
 config :phoenix, :stacktrace_depth, 20
@@ -82,6 +103,14 @@ config :hexpm, Hexpm.RepoBase,
   pool_size: 5
 
 config :hexpm, Hexpm.Emails.Mailer, adapter: Swoosh.Adapters.Local
+
+config :hexpm, Oban, plugins: []
+
+config :hexpm, metrics_port: 9568
+
+config :hexpm, :organization_sso, all_organizations: true
+
+config :hexpm, :varsel, key_id: "hexpm-dev"
 
 config :ueberauth, Ueberauth.Strategy.Github.OAuth,
   client_id: System.get_env("HEXPM_GITHUB_CLIENT_ID"),

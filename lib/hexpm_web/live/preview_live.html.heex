@@ -1,0 +1,93 @@
+<.package_layout
+  {@package_layout}
+  active_tab={:files}
+  version_pinned?={true}
+  wide?={true}
+  source_filename={@filename}
+>
+  <:inner_content>
+    <div class="space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex min-w-0 items-center gap-2 font-mono text-xs text-grey-500 dark:text-grey-300">
+          <.link
+            patch={files_path(@repository, @package_name, @version)}
+            class="shrink-0 font-semibold text-grey-800 hover:text-primary-600 dark:text-grey-100 dark:hover:text-primary-300"
+          >
+            {@package_name}
+          </.link>
+          <%= for part <- Path.split(@filename) do %>
+            {icon(:heroicon, "chevron-right", class: "size-3 shrink-0 text-grey-300")}
+            <span class="min-w-0 truncate last:font-semibold last:text-grey-800 dark:last:text-grey-100">
+              {part}
+            </span>
+          <% end %>
+        </div>
+
+        <div class="flex shrink-0 items-center gap-2">
+          <HexpmWeb.Components.FileSelector.file_selector_buttons modal_id="preview-files-modal" />
+          <a
+            href={@raw_url}
+            class="inline-flex items-center gap-2 rounded-lg border border-grey-200 bg-white px-3 py-2 text-sm font-medium text-grey-700 shadow-sm transition-colors hover:border-grey-300 hover:bg-grey-50 dark:border-grey-700 dark:bg-grey-800 dark:text-grey-100 dark:hover:bg-grey-700"
+          >
+            {icon(:heroicon, "arrow-top-right-on-square", class: "size-4")} Raw
+          </a>
+        </div>
+      </div>
+
+      <div class="grid min-w-0 items-start gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
+        <HexpmWeb.Components.FileSelector.file_selector
+          id="preview-files"
+          client_finder={true}
+          active_path={@filename}
+          tree_version={"#{@repository}/#{@package_name}/#{@version}"}
+          file_href_base={files_path(@repository, @package_name, @version)}
+          children_limit={children_limit()}
+          file_count={length(@files)}
+          title="Package files"
+          sidebar_label="Package files"
+          search_label="Find a package file"
+          tree_form_id="preview-tree-search"
+          tree_query_id="preview-tree-query"
+          finder_form_id="preview-file-finder"
+          finder_query_id="preview-file-query"
+        >
+          <:tree :let={_selector}>
+            <.tree_templates files={@files} />
+            <.source_tree
+              nodes={@file_tree}
+              repository={@repository}
+              package_name={@package_name}
+              version={@version}
+            />
+          </:tree>
+        </HexpmWeb.Components.FileSelector.file_selector>
+
+        <section class="min-w-0 overflow-hidden rounded-lg border border-grey-200 bg-white dark:border-grey-700 dark:bg-grey-800">
+          <header class="flex items-center justify-between gap-3 border-b border-grey-200 bg-grey-50 px-4 py-3 dark:border-grey-700 dark:bg-grey-900">
+            <h2 class="m-0 min-w-0 truncate font-mono text-sm font-semibold text-grey-800 dark:text-grey-100">
+              {@filename}
+            </h2>
+          </header>
+
+          <div
+            :if={@highlighted}
+            id="preview-source"
+            class="preview-source overflow-auto"
+            phx-hook="LineHighlight"
+          >
+            {raw(@highlighted)}
+          </div>
+          <div
+            :if={@message}
+            class="flex min-h-48 items-center justify-center px-6 py-12 text-center"
+          >
+            <div>
+              {icon(:heroicon, "document", class: "mx-auto mb-3 size-8 text-grey-300")}
+              <p class="m-0 text-sm text-grey-600 dark:text-grey-300">{@message}</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </:inner_content>
+</.package_layout>

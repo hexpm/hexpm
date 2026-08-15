@@ -132,6 +132,9 @@ defmodule Hexpm.OAuth.AuthorizationCodesTest do
     end
 
     test "sets custom expiration time", %{user: user} do
+      earliest_expires_at =
+        DateTime.utc_now() |> DateTime.add(300, :second) |> DateTime.truncate(:second)
+
       changeset =
         AuthorizationCodes.create_for_user(
           user,
@@ -143,9 +146,11 @@ defmodule Hexpm.OAuth.AuthorizationCodesTest do
         )
 
       expires_at = get_field(changeset, :expires_at)
-      expected_time = DateTime.add(DateTime.utc_now(), 300, :second)
 
-      assert DateTime.diff(expires_at, expected_time, :second) |> abs() <= 1
+      latest_expires_at =
+        DateTime.utc_now() |> DateTime.add(300, :second) |> DateTime.truncate(:second)
+
+      assert_datetime_between(expires_at, earliest_expires_at, latest_expires_at)
     end
 
     test "adds PKCE challenge with default S256 method", %{user: user} do

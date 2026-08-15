@@ -137,7 +137,8 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
       <h3 class="sr-only">Repository rules</h3>
       <div id="repo-config" phx-hook="PrivateRepoTabs" class="space-y-4">
         <.repo_tabs repositories={@repositories} private?={@private?} />
-        <%= inputs_for @form, :repositories, fn rf -> %>
+        <%!-- The panel renders the embed id itself, see `repo_hidden_fields/1`. --%>
+        <%= inputs_for @form, :repositories, [skip_hidden: true], fn rf -> %>
           <.repo_panel
             form={rf}
             index={repo_index(rf)}
@@ -516,6 +517,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
       |> assign(:cooldown_id, Form.input_id(assigns.form, :cooldown))
       |> assign(:cooldown_name, Form.input_name(assigns.form, :cooldown))
       |> assign(:cooldown_value, Form.input_value(assigns.form, :cooldown))
+      |> assign(:cooldown_errors, field_errors(assigns.form, :cooldown))
 
     ~H"""
     <.rule_block
@@ -526,23 +528,27 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
       description="Hold back releases until they reach a minimum age."
       enabled?={present?(@cooldown_value)}
     >
-      <div class="grid gap-2 sm:flex sm:flex-wrap sm:items-center">
-        <input
-          type="text"
-          id={@cooldown_id}
-          name={@cooldown_name}
-          value={@cooldown_value}
-          placeholder="14d"
-          class={[
-            "h-9 px-3 border rounded text-sm font-mono w-28",
-            "bg-white dark:bg-grey-800 text-grey-900 dark:text-grey-100",
-            "border-grey-200 focus:border-primary-600 focus:ring-primary-600 dark:border-grey-600",
-            "focus:outline-none focus:ring-1"
-          ]}
-        />
-        <span class="text-xs leading-5 text-grey-500 dark:text-grey-300">
-          days (<code class="font-mono">d</code>) · weeks (<code class="font-mono">w</code>) · months (<code class="font-mono">mo</code>)
-        </span>
+      <div class="w-full">
+        <div class="grid gap-2 sm:flex sm:flex-wrap sm:items-center">
+          <input
+            type="text"
+            id={@cooldown_id}
+            name={@cooldown_name}
+            value={@cooldown_value}
+            placeholder="14d"
+            aria-invalid={@cooldown_errors != [] && "true"}
+            class={[
+              "h-9 px-3 border rounded text-sm font-mono w-28",
+              "bg-white dark:bg-grey-800 text-grey-900 dark:text-grey-100",
+              "focus:outline-none focus:ring-1",
+              input_border_class(@cooldown_errors)
+            ]}
+          />
+          <span class="text-xs leading-5 text-grey-500 dark:text-grey-300">
+            days (<code class="font-mono">d</code>) · weeks (<code class="font-mono">w</code>) · months (<code class="font-mono">mo</code>)
+          </span>
+        </div>
+        <.errors errors={@cooldown_errors} />
       </div>
     </.rule_block>
     """
@@ -556,6 +562,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
       |> assign(:advisory_id, Form.input_id(assigns.form, :advisory_min_severity))
       |> assign(:advisory_name, Form.input_name(assigns.form, :advisory_min_severity))
       |> assign(:advisory_value, Form.input_value(assigns.form, :advisory_min_severity))
+      |> assign(:advisory_errors, field_errors(assigns.form, :advisory_min_severity))
 
     ~H"""
     <.rule_block
@@ -566,13 +573,17 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
       description="Block any release with an advisory at or above the selected severity."
       enabled?={!is_nil(@advisory_value)}
     >
-      <div class="grid gap-2 text-sm text-grey-500 dark:text-grey-300 sm:flex sm:flex-wrap sm:items-center">
-        <span>Block releases with an advisory of</span>
-        <.severity_select
-          id={@advisory_id}
-          name={@advisory_name}
-          value={@advisory_value}
-        />
+      <div class="w-full">
+        <div class="grid gap-2 text-sm text-grey-500 dark:text-grey-300 sm:flex sm:flex-wrap sm:items-center">
+          <span>Block releases with an advisory of</span>
+          <.severity_select
+            id={@advisory_id}
+            name={@advisory_name}
+            value={@advisory_value}
+            errors={@advisory_errors}
+          />
+        </div>
+        <.errors errors={@advisory_errors} />
       </div>
     </.rule_block>
     """
@@ -581,6 +592,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
   attr :id, :string, required: true
   attr :name, :string, required: true
   attr :value, :any, required: true
+  attr :errors, :list, default: []
 
   defp severity_select(assigns) do
     assigns =
@@ -593,17 +605,17 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
       <span
         data-severity-dot
         class={["pointer-events-none absolute left-2.5 size-2 rounded-full", @dot_class]}
-      >
-      </span>
+      ></span>
       <select
         id={@id}
         name={@name}
         data-severity-control
+        aria-invalid={@errors != [] && "true"}
         class={[
           "h-8 w-full sm:w-36 pl-6 pr-7 rounded-md border text-sm font-medium appearance-none",
           "bg-white dark:bg-grey-800 text-grey-900 dark:text-grey-100",
-          "border-grey-200 focus:border-primary-600 focus:ring-primary-600 dark:border-grey-600",
-          "focus:outline-none focus:ring-1"
+          "focus:outline-none focus:ring-1",
+          input_border_class(@errors)
         ]}
       >
         <option value="" selected={@value_string == ""}>Severity</option>
@@ -629,6 +641,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
       assigns
       |> assign(:retirement_name, Form.input_name(assigns.form, :retirement_reasons))
       |> assign(:selected, selected_retirement_reasons(assigns.form))
+      |> assign(:retirement_errors, field_errors(assigns.form, :retirement_reasons))
 
     ~H"""
     <.rule_block
@@ -641,14 +654,17 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
       disabled_text="Retired releases are allowed"
     >
       <input type="hidden" name={@retirement_name <> "[]"} value="" />
-      <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-        <.retirement_checkbox
-          :for={{label, value, _subtitle} <- retirement_reason_options()}
-          name={@retirement_name <> "[]"}
-          label={label}
-          value={value}
-          active?={value in @selected}
-        />
+      <div class="w-full">
+        <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+          <.retirement_checkbox
+            :for={{label, value, _subtitle} <- retirement_reason_options()}
+            name={@retirement_name <> "[]"}
+            label={label}
+            value={value}
+            active?={value in @selected}
+          />
+        </div>
+        <.errors errors={@retirement_errors} />
       </div>
     </.rule_block>
     """
@@ -661,9 +677,10 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
   defp overrides_card(assigns) do
     assigns =
       assigns
-      |> assign(:overrides, Form.input_value(assigns.form, :overrides) || [])
+      |> assign(:overrides, rendered_overrides(assigns.form))
       |> assign(:override_name, Form.input_name(assigns.form, :overrides))
       |> assign(:override_id, Form.input_id(assigns.form, :overrides))
+      |> assign(:override_errors, field_errors(assigns.form, :overrides))
 
     assigns =
       assigns
@@ -714,15 +731,21 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
           </span>
         </div>
 
+        <.errors errors={@override_errors} />
+
         <div data-override-rows class="space-y-2">
-          <%= inputs_for @form, :overrides, fn of -> %>
+          <%!-- The row renders the embed id itself. `inputs_for` would render a
+                second one outside the row, which removing the row leaves behind. --%>
+          <%= inputs_for @form, :overrides, [skip_hidden: true], fn of -> %>
             <.override_row
               action_name={Form.input_name(of, :action)}
               action_value={to_string(Form.input_value(of, :action) || "allow")}
               package_name={Form.input_name(of, :package)}
               package_value={Form.input_value(of, :package)}
+              package_errors={field_errors(of, :package)}
               requirement_name={Form.input_name(of, :requirement)}
               requirement_value={Form.input_value(of, :requirement)}
+              requirement_errors={field_errors(of, :requirement)}
               id_name={Form.input_name(of, :id)}
               id_value={Form.input_value(of, :id)}
             />
@@ -765,13 +788,19 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
   attr :action_value, :string, required: true
   attr :package_name, :string, required: true
   attr :package_value, :any, required: true
+  attr :package_errors, :list, default: []
   attr :requirement_name, :string, required: true
   attr :requirement_value, :any, required: true
+  attr :requirement_errors, :list, default: []
   attr :id_name, :any, required: true
   attr :id_value, :any, required: true
 
   defp override_row(assigns) do
-    assigns = assign(assigns, :tone_class, override_row_tone(assigns.action_value))
+    assigns =
+      assigns
+      |> assign(:tone_class, override_row_tone(assigns.action_value))
+      |> assign(:package_menu_id, assigns.package_name <> "-suggestions")
+      |> assign(:requirement_menu_id, assigns.requirement_name <> "-suggestions")
 
     ~H"""
     <div
@@ -807,14 +836,25 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
           role="combobox"
           aria-autocomplete="list"
           aria-expanded="false"
-          class="w-full px-3 py-2 border rounded text-sm font-mono bg-white dark:bg-grey-800 text-grey-900 dark:text-grey-100 border-grey-200 dark:border-grey-600 focus:outline-none focus:ring-1 focus:border-primary-600 focus:ring-primary-600"
+          aria-controls={@package_menu_id}
+          aria-invalid={@package_errors != [] && "true"}
+          class={[
+            "w-full px-3 py-2 border rounded text-sm font-mono",
+            "bg-white dark:bg-grey-800 text-grey-900 dark:text-grey-100",
+            "focus:outline-none focus:ring-1",
+            input_border_class(@package_errors)
+          ]}
         />
         <div
+          id={@package_menu_id}
           data-override-suggestions="package"
+          role="listbox"
+          aria-label="Package suggestions"
           class="absolute inset-x-0 top-full z-50 mt-1 max-h-56 overflow-y-auto rounded-md border border-grey-200 dark:border-grey-600 bg-white dark:bg-grey-800 shadow-lg"
           hidden
         >
         </div>
+        <.errors errors={@package_errors} />
       </div>
       <div class="relative min-w-0 sm:flex-1 sm:min-w-[10rem]">
         <input
@@ -830,14 +870,25 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
           role="combobox"
           aria-autocomplete="list"
           aria-expanded="false"
-          class="w-full px-3 py-2 border rounded text-sm font-mono bg-white dark:bg-grey-800 text-grey-900 dark:text-grey-100 border-grey-200 dark:border-grey-600 focus:outline-none focus:ring-1 focus:border-primary-600 focus:ring-primary-600"
+          aria-controls={@requirement_menu_id}
+          aria-invalid={@requirement_errors != [] && "true"}
+          class={[
+            "w-full px-3 py-2 border rounded text-sm font-mono",
+            "bg-white dark:bg-grey-800 text-grey-900 dark:text-grey-100",
+            "focus:outline-none focus:ring-1",
+            input_border_class(@requirement_errors)
+          ]}
         />
         <div
+          id={@requirement_menu_id}
           data-override-suggestions="version"
+          role="listbox"
+          aria-label="Version suggestions"
           class="absolute inset-x-0 top-full z-50 mt-1 max-h-56 overflow-y-auto rounded-md border border-grey-200 dark:border-grey-600 bg-white dark:bg-grey-800 shadow-lg"
           hidden
         >
         </div>
+        <.errors errors={@requirement_errors} />
       </div>
       <button
         type="button"
@@ -851,8 +902,26 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
     """
   end
 
+  # `inputs_for` skips embeds the changeset marks for replacement, so the empty
+  # state has to count the same rows the form renders.
+  defp rendered_overrides(form) do
+    case Form.input_value(form, :overrides) do
+      list when is_list(list) ->
+        Enum.reject(list, &match?(%Ecto.Changeset{action: :replace}, &1))
+
+      _ ->
+        []
+    end
+  end
+
   defp override_row_tone("deny"), do: "border-l-red-500"
   defp override_row_tone(_), do: "border-l-green-500"
+
+  defp input_border_class([]),
+    do: "border-grey-200 focus:border-primary-600 focus:ring-primary-600 dark:border-grey-600"
+
+  defp input_border_class(_errors),
+    do: "border-red-300 focus:border-red-600 focus:ring-red-600 dark:border-red-700"
 
   attr :value, :string, required: true
   attr :label, :string, required: true
@@ -877,8 +946,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
         "size-1.5 rounded-full",
         @value == "allow" && "bg-green-600 dark:bg-green-300",
         @value == "deny" && "bg-red-600 dark:bg-red-300"
-      ]}>
-      </span>
+      ]}></span>
       {@label}
     </button>
     """
@@ -888,7 +956,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
   attr :label, :string, required: true
   attr :icon, :string, required: true
   attr :variant, :string, default: "neutral", values: ~w(neutral danger)
-  attr :rest, :global, include: ~w(phx-click phx-hook data-target)
+  attr :rest, :global
 
   defp header_action(assigns) do
     ~H"""

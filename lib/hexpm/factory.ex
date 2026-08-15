@@ -111,17 +111,64 @@ defmodule Hexpm.Factory do
     %Hexpm.Repository.PackageOwner{level: "full"}
   end
 
-  def package_report_factory() do
-    %Hexpm.Repository.PackageReport{}
-  end
-
-  def package_report_release_factory() do
-    %Hexpm.Repository.PackageReportRelease{}
-  end
-
   def organization_user_factory() do
     %Hexpm.Accounts.OrganizationUser{
       role: "read"
+    }
+  end
+
+  def organization_invitation_factory() do
+    %Hexpm.Accounts.OrganizationInvitation{
+      email: Fake.sequence(:email),
+      role: "read",
+      token_hash: :crypto.hash(:sha256, Fake.sequence(:username)),
+      expires_at:
+        DateTime.add(
+          DateTime.utc_now(),
+          Hexpm.Accounts.OrganizationInvitation.lifetime_seconds(),
+          :second
+        )
+    }
+  end
+
+  def organization_sso_connection_factory() do
+    %Hexpm.Accounts.SSO.Connection{
+      issuer: "https://identity.example.com/oauth2/default",
+      client_id: "client-id",
+      client_secret: "client-secret",
+      discovery_document: %{},
+      jwks_document: %{"keys" => []},
+      discovery_expires_at: DateTime.add(DateTime.utc_now(), 3_600, :second),
+      jwks_expires_at: DateTime.add(DateTime.utc_now(), 3_600, :second),
+      metadata_expires_at: DateTime.add(DateTime.utc_now(), 3_600, :second)
+    }
+  end
+
+  def organization_sso_identity_factory() do
+    %Hexpm.Accounts.SSO.Identity{
+      issuer: "https://identity.example.com/oauth2/default",
+      subject: "00u123",
+      provider_email: Fake.sequence(:email)
+    }
+  end
+
+  def email_outbox_entry_factory() do
+    %Hexpm.Emails.OutboxEntry{
+      category: "test.email",
+      group_key: "test:#{Fake.sequence(:word)}",
+      email: %{
+        "version" => 1,
+        "subject" => "Test email",
+        "from" => %{"name" => "Hex.pm", "address" => "noreply@hex.pm"},
+        "to" => [%{"name" => "", "address" => Fake.sequence(:email)}],
+        "cc" => [],
+        "bcc" => [],
+        "reply_to" => nil,
+        "text_body" => "Test email",
+        "html_body" => "<p>Test email</p>",
+        "headers" => %{},
+        "provider_options" => %{}
+      }
     }
   end
 

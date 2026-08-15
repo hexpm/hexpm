@@ -6,6 +6,10 @@ updates:
       interval: "weekly"
     cooldown:
       default-days: 7
+    groups:
+      actions:
+        patterns:
+          - "*"
 
   - package-ecosystem: "mix"
     directory: "/"
@@ -13,3 +17,7 @@ updates:
       interval: "weekly"
     cooldown:
       default-days: 7
+    groups:
+      mix:
+        patterns:
+          - "*"

@@ -158,4 +158,4 @@ We will keep all your data for a minimum of 90 days. You can contact
 #### Can I pay annually instead of monthly?
 
 Yes, we offer an annual plan that is billed once a year and includes a 2 month discount over the
-monthly plan for a price of $70 / per user / per year.
+monthly plan for a price of $90 / per user / per year.

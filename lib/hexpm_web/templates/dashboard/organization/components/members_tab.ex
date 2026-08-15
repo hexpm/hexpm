@@ -19,6 +19,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
 
   attr :add_member_changeset, :any, required: true
   attr :current_user, :map, required: true
+  attr :invitations, :list, default: []
+  attr :invite_changeset, :any, default: nil
   attr :organization, :map, required: true
   attr :quantity, :integer, default: nil
 
@@ -40,14 +42,24 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
             </p>
           </div>
           <%= if admin?(@current_user, @organization) do %>
-            <.button
-              variant="outline"
-              size="sm"
-              class="border-dashed"
-              phx-click={show_modal(add_member_modal_id())}
-            >
-              {HexpmWeb.ViewIcons.icon(:heroicon, "plus", class: "w-4 h-4")} Add member
-            </.button>
+            <div class="flex items-center gap-2">
+              <.button
+                variant="outline"
+                size="sm"
+                class="border-dashed"
+                phx-click={show_modal(invite_modal_id())}
+              >
+                {HexpmWeb.ViewIcons.icon(:heroicon, "envelope", class: "w-4 h-4")} Invite by email
+              </.button>
+              <.button
+                variant="outline"
+                size="sm"
+                class="border-dashed"
+                phx-click={show_modal(add_member_modal_id())}
+              >
+                {HexpmWeb.ViewIcons.icon(:heroicon, "plus", class: "w-4 h-4")} Add member
+              </.button>
+            </div>
           <% end %>
         </div>
 
@@ -86,7 +98,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                   <.sudo_form
                     current_user={@current_user}
                     action={~p"/dashboard/orgs/#{@organization}"}
-                    id={"change-role-form-#{org_user.user.username}"}
+                    id={"change-role-form-#{org_user.user.id}"}
                     phx-hook="AutoSubmit"
                   >
                     <input type="hidden" name="action" value="change_role" />
@@ -96,7 +108,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                       value={org_user.user.username}
                     />
                     <.select_input
-                      id={"role-#{org_user.user.username}"}
+                      id={"role-#{org_user.user.id}"}
                       name="organization_user[role]"
                       value={org_user.role}
                       options={role_options()}
@@ -111,7 +123,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                       icon="x-mark"
                       variant="danger"
                       aria-label="Remove member"
-                      phx-click={show_modal("remove-member-#{org_user.user.username}")}
+                      phx-click={show_modal("remove-member-#{org_user.user.id}")}
                     />
                   <% end %>
                 <% else %>
@@ -128,10 +140,49 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
         </ul>
       </div>
 
+      <%!-- Pending invitations (admin only, hidden when there are none) --%>
+      <div
+        :if={admin?(@current_user, @organization) and @invitations != []}
+        class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden"
+      >
+        <div class="px-6 py-5 border-b border-grey-200 dark:border-grey-700">
+          <h2 class="text-grey-900 dark:text-white text-lg font-semibold">Pending invitations</h2>
+          <p class="text-grey-500 dark:text-grey-300 text-sm mt-1">
+            A seat is taken when an invitation is accepted, not when it is sent.
+          </p>
+        </div>
+
+        <ul class="divide-y divide-grey-100 dark:divide-grey-700">
+          <li :for={invitation <- @invitations} class="flex items-center justify-between px-6 py-4">
+            <div>
+              <p class="text-sm font-medium text-grey-900 dark:text-white">{invitation.email}</p>
+              <p class="text-xs text-grey-500 dark:text-grey-300">
+                Invited as {invitation.role}, expires {Calendar.strftime(
+                  invitation.expires_at,
+                  "%Y-%m-%d"
+                )}
+              </p>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <.sudo_form
+                current_user={@current_user}
+                action={~p"/dashboard/orgs/#{@organization}"}
+                id={"revoke-invitation-form-#{invitation.id}"}
+              >
+                <input type="hidden" name="action" value="revoke_invitation" />
+                <input type="hidden" name="organization_invitation[id]" value={invitation.id} />
+                <.icon_button icon="x-mark" variant="danger" aria-label="Revoke invitation" />
+              </.sudo_form>
+            </div>
+          </li>
+        </ul>
+      </div>
+
       <%!-- Remove member confirmation modals (one per removable member) --%>
       <%= if admin?(@current_user, @organization) do %>
         <%= for org_user <- @organization.organization_users, org_user.user.id != @current_user.id do %>
-          <.modal id={"remove-member-#{org_user.user.username}"} title="Remove member?" max_width="sm">
+          <.modal id={"remove-member-#{org_user.user.id}"} title="Remove member?" max_width="sm">
             <p class="text-sm text-grey-600 dark:text-grey-300">
               Are you sure you want to remove
               <strong class="font-semibold text-grey-900 dark:text-white">
@@ -145,14 +196,14 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
               <.button
                 type="button"
                 variant="secondary"
-                phx-click={hide_modal("remove-member-#{org_user.user.username}")}
+                phx-click={hide_modal("remove-member-#{org_user.user.id}")}
               >
                 Cancel
               </.button>
               <.sudo_form
                 current_user={@current_user}
                 action={~p"/dashboard/orgs/#{@organization}"}
-                id={"remove-member-form-#{org_user.user.username}"}
+                id={"remove-member-form-#{org_user.user.id}"}
               >
                 <input type="hidden" name="action" value="remove_member" />
                 <input
@@ -214,11 +265,56 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
           </div>
         </.modal>
       <% end %>
+      <%!-- Invite by email modal (admin only) --%>
+      <%= if admin?(@current_user, @organization) do %>
+        <.modal id={invite_modal_id()} title="Invite by email" max_width="sm">
+          <div class="px-1">
+            <p class="text-sm text-grey-500 dark:text-grey-300 mb-6">
+              Send an invitation to someone who is not a member yet. They accept with their own Hex
+              account, creating one first if they need to, and the seat is taken then.
+            </p>
+
+            <.sudo_form
+              :let={f}
+              current_user={@current_user}
+              for={@invite_changeset}
+              as={:organization_invitation}
+              action={~p"/dashboard/orgs/#{@organization}"}
+            >
+              <input type="hidden" name="action" value="invite_member" />
+              <div class="space-y-4">
+                <.text_input
+                  field={f[:email]}
+                  label="Email address"
+                  placeholder="person@example.com"
+                  required
+                />
+                <.select_input
+                  field={f[:role]}
+                  label="Role"
+                  options={role_options()}
+                  variant="light"
+                />
+              </div>
+              <div class="flex justify-end gap-3 mt-6">
+                <.button type="button" variant="secondary" phx-click={hide_modal(invite_modal_id())}>
+                  Cancel
+                </.button>
+                <.button type="submit" variant="primary">
+                  Send invitation
+                </.button>
+              </div>
+            </.sudo_form>
+          </div>
+        </.modal>
+      <% end %>
     </div>
     """
   end
 
   defp add_member_modal_id, do: "add-member-modal"
+
+  defp invite_modal_id, do: "invite-member-modal"
 
   defp role_options, do: [{"Read", "read"}, {"Write", "write"}, {"Admin", "admin"}]
 

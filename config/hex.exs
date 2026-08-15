@@ -12,11 +12,12 @@ config :hexpm,
   tmp_dir: Path.expand("tmp/hex"),
   private_key: File.read!("test/fixtures/private.pem"),
   user_confirm: false,
+  email_base_url: "http://localhost:4043",
   docs_url: "http://localhost:4043",
   private_docs_url: "http://localhost:4043",
-  diff_url: "http://localhost:4004",
-  preview_url: "http://localhost:4005",
   cdn_url: "http://localhost:4043"
+
+config :hexpm, HexpmWeb.BasicAuth, schedule_enabled: false
 
 config :hexpm, HexpmWeb.Endpoint,
   http: [port: 4043],

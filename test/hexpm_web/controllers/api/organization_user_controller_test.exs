@@ -45,6 +45,28 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
       assert user["username"] == user1.username
       assert user["role"] == "read"
     end
+
+    test "sorts organization members by username", %{
+      user1: user1,
+      organization: organization
+    } do
+      zulu = insert(:user, username: "zulu_member")
+      alpha = insert(:user, username: "alpha_member")
+      insert(:organization_user, organization: organization, user: user1)
+      insert(:organization_user, organization: organization, user: zulu)
+      insert(:organization_user, organization: organization, user: alpha)
+
+      usernames =
+        build_conn()
+        |> put_req_header("authorization", key_for(user1))
+        |> get("/api/orgs/#{organization.name}/members")
+        |> json_response(200)
+        |> Enum.map(& &1["username"])
+
+      assert usernames == Enum.sort(usernames)
+      assert "alpha_member" in usernames
+      assert "zulu_member" in usernames
+    end
   end
 
   describe "POST /api/orgs/:organization/members" do
@@ -97,6 +119,7 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
       user1: user1,
       organization: organization
     } do
+      organization = seats(organization, 2)
       user2 = insert(:user)
       user3 = insert(:user)
       insert(:organization_user, organization: organization, user: user1, role: "admin")

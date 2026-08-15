@@ -7,14 +7,13 @@ defmodule HexpmWeb.PackageController do
   @packages_per_page 30
   @versions_per_page 100
   @activity_per_page 100
-  @audit_logs_preview_count 10
 
   def show(conn, params) do
     # TODO: Show flash if private package and organization does not have active billing
 
     params = fixup_params(params)
 
-    access_package(conn, params, fn package, repositories ->
+    access_package(conn, params, fn package, _repositories ->
       releases = Releases.all(package)
 
       {release, type} =
@@ -25,7 +24,7 @@ defmodule HexpmWeb.PackageController do
         end
 
       if release do
-        package(conn, repositories, package, releases, release, type)
+        package(conn, package, releases, release, type)
       else
         not_found(conn)
       end
@@ -101,7 +100,8 @@ defmodule HexpmWeb.PackageController do
         ] ++
           PackageLayoutAssigns.for_package(conn, package,
             releases: releases,
-            current_release: current_release
+            current_release: current_release,
+            dependants_count: dependants_count
           )
       )
     end)
@@ -115,7 +115,13 @@ defmodule HexpmWeb.PackageController do
       total_count = Enum.count(releases)
       page = Hexpm.Utils.safe_page(page_param, total_count, per_page)
       current_release = current_release(releases)
-      paginated_releases = paginate_list(releases, page, per_page)
+
+      # The versions table marks every vulnerable row, but only the page being
+      # shown, not all of a package's releases.
+      paginated_releases =
+        releases
+        |> paginate_list(page, per_page)
+        |> Releases.mark_vulnerable()
 
       render(
         conn,
@@ -207,24 +213,23 @@ defmodule HexpmWeb.PackageController do
 
   defp access_package(conn, params, fun) do
     %{"repository" => repository, "name" => name} = params
-    organizations = Users.all_organizations(conn.assigns.current_user)
-    repositories = Map.new(organizations, &{&1.repository.name, &1.repository})
 
-    if repository = repositories[repository] do
-      package = repository && Packages.get(repository, name)
-
-      # Should have access even though organization does not have active billing
-      if package do
+    # Should have access even though organization does not have active billing
+    case HexpmWeb.RepositoryAccess.fetch_package(conn.assigns.current_user, repository, name) do
+      {:ok, package} ->
+        organizations = Users.all_organizations(conn.assigns.current_user)
         fun.(package, Enum.map(organizations, & &1.repository))
-      end
-    end || not_found(conn)
+
+      :error ->
+        not_found(conn)
+    end
   end
 
   defp matching_release(releases, version) do
     Enum.find(releases, &(to_string(&1.version) == version))
   end
 
-  defp package(conn, repositories, package, releases, release, type) do
+  defp package(conn, package, releases, release, type) do
     release =
       Releases.preload(release, [:requirements, :downloads, :publisher, :security_advisories])
 
@@ -233,11 +238,6 @@ defmodule HexpmWeb.PackageController do
         :package -> nil
         :release -> release
       end
-
-    dependants =
-      Packages.dependants(repositories, package, 1, 20, :recent_downloads, [:name, :repository_id])
-
-    audit_logs = AuditLogs.all_by(package, 1, @audit_logs_preview_count)
 
     render(
       conn,
@@ -249,8 +249,6 @@ defmodule HexpmWeb.PackageController do
         canonical_url: ~p"/packages/#{package}",
         releases: releases,
         version_pinned?: type == :release,
-        dependants: dependants,
-        audit_logs: audit_logs,
         type: type
       ] ++
         PackageLayoutAssigns.for_package(conn, package,

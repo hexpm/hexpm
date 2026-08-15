@@ -29,7 +29,7 @@ defmodule Hexpm.Accounts.User do
     has_many :audit_logs, AuditLog
     has_many :account_deletion_requests, AccountDeletionRequest
     has_many :password_resets, PasswordReset
-    has_many :package_reports, Hexpm.Repository.PackageReport, foreign_key: :author_id
+    has_many :organization_sso_identities, Hexpm.Accounts.SSO.Identity
     has_many :user_providers, UserProvider
   end
 
@@ -155,30 +155,40 @@ defmodule Hexpm.Accounts.User do
   defp email(email), do: email.email
 
   def get(username_or_email, preload \\ []) do
+    if email?(username_or_email) do
+      from(
+        u in Hexpm.Accounts.User,
+        join: e in assoc(u, :emails),
+        where: e.email == ^username_or_email and e.verified,
+        preload: ^preload
+      )
+    else
+      by_username(username_or_email, preload)
+    end
+  end
+
+  def public_get(username_or_email, preload \\ []) do
+    if email?(username_or_email) do
+      from(
+        u in Hexpm.Accounts.User,
+        join: e in assoc(u, :emails),
+        where: e.email == ^username_or_email and e.verified and e.public,
+        preload: ^preload
+      )
+    else
+      by_username(username_or_email, preload)
+    end
+  end
+
+  defp by_username(username, preload) do
     from(
       u in Hexpm.Accounts.User,
-      where:
-        u.username == ^username_or_email or
-          ^username_or_email in fragment(
-            "SELECT emails.email FROM emails WHERE emails.user_id = ? and emails.verified",
-            u.id
-          ),
+      where: u.username == ^username,
       preload: ^preload
     )
   end
 
-  def public_get(username_or_email, preload \\ []) do
-    from(
-      u in Hexpm.Accounts.User,
-      where:
-        u.username == ^username_or_email or
-          ^username_or_email in fragment(
-            "SELECT emails.email FROM emails WHERE emails.user_id = ? and emails.verified and emails.public",
-            u.id
-          ),
-      preload: ^preload
-    )
-  end
+  defp email?(username_or_email), do: String.contains?(username_or_email, "@")
 
   def get_by_role(role, preload \\ []) do
     from(

@@ -8,6 +8,7 @@ defmodule HexpmWeb.Router do
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
+    plug :migrate_session
     plug :fetch_flash
     plug :put_root_layout, {HexpmWeb.LayoutView, :root}
     plug :put_layout, {HexpmWeb.LayoutView, :app}
@@ -72,6 +73,7 @@ defmodule HexpmWeb.Router do
   pipeline :browser_api do
     plug :accepts, ["json"]
     plug :fetch_session
+    plug :migrate_session
     plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug :user_agent, required: false
@@ -96,12 +98,34 @@ defmodule HexpmWeb.Router do
     forward "/dev/mailbox", Plug.Swoosh.MailboxPreview
   end
 
+  scope "/", HexpmWeb, host: "preview." do
+    get "/", PreviewRedirectController, :index
+    get "/sitemap.xml", PreviewRedirectController, :sitemap
+    get "/preview/:package/sitemap.xml", PreviewRedirectController, :package_sitemap
+    get "/preview/:package/:version/sitemap.xml", PreviewRedirectController, :package_sitemap
+    get "/*path", PreviewRedirectController, :path
+  end
+
+  scope "/", HexpmWeb, host: "diff." do
+    get "/", DiffRedirectController, :index
+    get "/diff/:package/:versions", DiffRedirectController, :show
+    get "/diffs", DiffRedirectController, :index
+    get "/*path", DiffRedirectController, :path
+  end
+
   scope "/", HexpmWeb, host: "readme." do
     pipe_through :readme
 
+    get "/:repository/:name/:version", ReadmeController, :show
     get "/:name/:version", ReadmeController, :show
     get "/:name", ReadmeController, :show
     match :*, "/*path", ReadmeController, :not_found
+  end
+
+  scope "/", HexpmWeb do
+    get "/preview_sitemap.xml", PreviewRedirectController, :sitemap
+    get "/preview/sitemap.xml", SitemapController, :preview_index
+    get "/preview/:package/sitemap.xml", SitemapController, :preview_package
   end
 
   scope "/", HexpmWeb do
@@ -140,6 +164,15 @@ defmodule HexpmWeb.Router do
     get "/auth/:provider", AuthController, :request
     get "/auth/:provider/callback", AuthController, :callback
 
+    get "/sso/callback", SSOController, :callback, log: false
+    get "/sso/link", SSOController, :link, log: false
+    post "/sso/link", SSOController, :confirm_link, log: false
+    post "/sso/link/cancel", SSOController, :cancel_link, log: false
+    get "/sso/org/:organization", SSOController, :start, log: false
+
+    get "/invites", OrganizationInvitationController, :show, log: false
+    post "/invites", OrganizationInvitationController, :accept, log: false
+
     get "/sudo", SudoController, :show
     post "/sudo", SudoController, :create
     get "/sudo/github", SudoController, :github
@@ -171,6 +204,7 @@ defmodule HexpmWeb.Router do
     get "/docs/rebar3-tasks", DocsController, :rebar3_tasks
     get "/docs/private", DocsController, :private
     get "/docs/dependency-policies", DocsController, :dependency_policies
+    get "/docs/organization-sso", DocsController, :organization_sso
     get "/docs/faq", DocsController, :faq
     get "/docs/mirrors", DocsController, :mirrors
     get "/docs/public-keys", DocsController, :public_keys
@@ -182,8 +216,28 @@ defmodule HexpmWeb.Router do
     get "/policies/copyright", PolicyController, :copyright
     get "/policies/dispute", PolicyController, :dispute
 
-    live_session :packages, on_mount: {HexpmWeb.Live.InitAssigns, :default} do
+    live_session :packages,
+      on_mount: {HexpmWeb.Live.InitAssigns, :default},
+      session: {HexpmWeb.Live.InitAssigns, :session, []} do
       live "/packages", PackageLive.Index, :index
+      live "/packages/:name/report", PackageReportLive, :new
+      live "/packages/:repository/:name/report", PackageReportLive, :new
+      live "/diff/:package/:versions", DiffLive, :show
+      live "/diff/:repository/:package/:versions", DiffLive, :show
+    end
+
+    get "/diffs", DiffController, :index
+
+    get "/preview/:package", PreviewRedirectController, :latest
+    get "/preview/:package/show/*filename", PreviewRedirectController, :latest_file
+    get "/preview/:package/:version", PreviewRedirectController, :version
+    get "/preview/:package/:version/show/*filename", PreviewRedirectController, :version_file
+
+    live_session :preview, on_mount: {HexpmWeb.Live.InitAssigns, :default} do
+      live "/packages/:package/:version/files", PreviewLive, :files
+      live "/packages/:package/:version/files/*filename", PreviewLive, :files
+      live "/packages/:repository/:package/:version/files", PreviewLive, :files
+      live "/packages/:repository/:package/:version/files/*filename", PreviewLive, :files
     end
 
     get "/packages/:name/owners", PackageOwnerController, :index
@@ -207,25 +261,18 @@ defmodule HexpmWeb.Router do
     get "/packages/:repository/:name/versions", PackageController, :versions
     get "/packages/:repository/:name/advisories", PackageController, :advisories
     get "/packages/:repository/:name/:version/dependencies", PackageController, :dependencies
+    get "/packages/:repository/:name/:version/raw/*filename", PreviewRawController, :show
+
+    get "/packages/:repository/:name/:version/readme-image/*filename",
+        PreviewImageController,
+        :show
+
     get "/packages/:repository/:name/:version", PackageController, :show
 
     get "/blog", BlogController, :index
     get "/blog/:slug", BlogController, :show
 
     get "/l/:short_code", ShortURLController, :show
-
-    if Application.compile_env!(:hexpm, [:features, :package_reports]) do
-      get "/reports", PackageReportController, :index
-      post "/reports", PackageReportController, :create
-      get "/reports/new", PackageReportController, :new
-
-      get "/reports/:id", PackageReportController, :show
-      post "/reports/:id/accept", PackageReportController, :accept
-      post "/reports/:id/reject", PackageReportController, :reject
-      post "/reports/:id/solve", PackageReportController, :solve
-      post "/reports/:id/unresolve", PackageReportController, :unresolve
-      post "/reports/:id/comment", PackageReportController, :comment
-    end
   end
 
   scope "/dashboard", HexpmWeb.Dashboard do
@@ -277,6 +324,20 @@ defmodule HexpmWeb.Router do
     get "/orgs/:dashboard_org/keys", OrganizationController, :keys
     get "/orgs/:dashboard_org/packages", OrganizationController, :packages
     get "/orgs/:dashboard_org/audit-logs", OrganizationController, :audit_logs
+    get "/orgs/:dashboard_org/sso", OrganizationController, :sso, log: false
+    post "/orgs/:dashboard_org/sso", OrganizationSSOController, :configure, log: false
+    post "/orgs/:dashboard_org/sso/test", OrganizationSSOController, :test, log: false
+    post "/orgs/:dashboard_org/sso/enable", OrganizationSSOController, :enable, log: false
+    post "/orgs/:dashboard_org/sso/disable", OrganizationSSOController, :disable, log: false
+    post "/orgs/:dashboard_org/sso/delete", OrganizationSSOController, :delete, log: false
+    post "/orgs/:dashboard_org/sso/rotate", OrganizationSSOController, :rotate, log: false
+    post "/orgs/:dashboard_org/sso/promote", OrganizationSSOController, :promote, log: false
+    post "/orgs/:dashboard_org/sso/unlink", OrganizationSSOController, :unlink, log: false
+    post "/orgs/:dashboard_org/sso/jit", OrganizationSSOController, :configure_jit
+    post "/orgs/:dashboard_org/sso/domains", OrganizationSSOController, :add_domain
+    post "/orgs/:dashboard_org/sso/domains/verify", OrganizationSSOController, :verify_domain
+    post "/orgs/:dashboard_org/sso/domains/remove", OrganizationSSOController, :remove_domain
+
     get "/orgs/:dashboard_org/billing", OrganizationController, :billing
     get "/orgs/:dashboard_org/danger-zone", OrganizationController, :danger_zone
     post "/orgs/:dashboard_org/leave", OrganizationController, :leave
@@ -335,7 +396,6 @@ defmodule HexpmWeb.Router do
   scope "/", HexpmWeb do
     get "/sitemap.xml", SitemapController, :main
     get "/docs_sitemap.xml", SitemapController, :docs
-    get "/preview_sitemap.xml", SitemapController, :preview
     get "/hexsearch.xml", OpenSearchController, :opensearch
     get "/installs/hex.ez", InstallController, :archive
     get "/feeds/blog.xml", FeedsController, :blog
@@ -364,7 +424,6 @@ defmodule HexpmWeb.Router do
     get "/users/:name", UserController, :show
     # NOTE: Deprecated (2018-05-21)
     get "/users/:name/test", UserController, :test
-    post "/users/:name/reset", UserController, :reset
 
     get "/orgs", OrganizationController, :index
     get "/orgs/:organization", OrganizationController, :show
@@ -389,6 +448,7 @@ defmodule HexpmWeb.Router do
         get "/packages/:name/releases/:version", ReleaseController, :show
         delete "/packages/:name/releases/:version", ReleaseController, :delete
 
+        post "/packages/:name/retire", RetirementController, :create_all
         post "/packages/:name/releases/:version/retire", RetirementController, :create
         delete "/packages/:name/releases/:version/retire", RetirementController, :delete
 
@@ -435,14 +495,6 @@ defmodule HexpmWeb.Router do
       end
 
       get "/repos/:repository/policies/:name", TestController, :policy
-    end
-
-    scope "/preview", HexpmWeb do
-      get "/:package/:version/*filename", TestController, :preview_file
-    end
-
-    scope "/preview-files", HexpmWeb do
-      get "/:file", TestController, :preview_file_list
     end
 
     scope "/api", HexpmWeb do

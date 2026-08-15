@@ -1,0 +1,7 @@
+Organization SSO Email Differs
+
+<%= Common.greeting(@username) %>
+
+You signed in to the <%= @organization %> organization using <%= @provider_email %>, which is not a verified email address on your Hex.pm account. Your existing organization link was used; no account email was changed.
+
+If you do not recognize this sign-in, reset your Hex.pm password and ask an organization administrator to disconnect your SSO identity.

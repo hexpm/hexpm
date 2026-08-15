@@ -1,0 +1,30 @@
+<.auth_layout
+  title="Connect organization SSO"
+  subtitle={"Link your Hexpm account to #{@organization.name}'s identity provider"}
+  show_oauth={false}
+>
+  <div class="space-y-5 text-sm text-grey-700 dark:text-grey-200">
+    <p>
+      You are signed in as <strong>{@current_user.username}</strong>
+      and have just authenticated with {@organization.name}'s identity provider.
+    </p>
+    <p :if={@provider_email}>
+      The identity provider reported <strong>{@provider_email}</strong>. This address is shown for confirmation only;
+      it is not used to match accounts or grant membership.
+    </p>
+    <p>
+      Linking records that {@organization.name}'s provider authenticated you. Nothing at Hexpm requires it yet, and
+      when that changes it will decide whether you can reach {@organization.name}. It cannot sign you in to Hexpm,
+      act on your account, or stand in for your password or two-factor authentication. An administrator of {@organization.name} can revoke it at any time.
+    </p>
+  </div>
+
+  <div class="mt-8 flex gap-3">
+    <.form for={%{}} action={~p"/sso/link"} class="flex-1">
+      <.button type="submit" variant="primary" full_width>Connect SSO</.button>
+    </.form>
+    <.form for={%{}} action={~p"/sso/link/cancel"} class="flex-1">
+      <.button type="submit" variant="secondary" full_width>Cancel</.button>
+    </.form>
+  </div>
+</.auth_layout>

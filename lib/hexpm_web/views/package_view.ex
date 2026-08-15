@@ -133,9 +133,7 @@ defmodule HexpmWeb.PackageView do
     retirement_head(:html, reason) ++ retirement_body(:html, reason_text, message)
   end
 
-  defp retirement_head(:message, "report"), do: ["Marked package"]
   defp retirement_head(:message, _reason), do: ["Retired package"]
-  defp retirement_head(:html, "report"), do: [content_tag(:strong, "Marked package:")]
   defp retirement_head(:html, _reason), do: [content_tag(:strong, "Retired package:")]
 
   defp retirement_body(:message, nil, nil), do: []

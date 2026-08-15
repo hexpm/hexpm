@@ -151,8 +151,10 @@ defmodule Hexpm.OAuth.DeviceCodes do
   @doc """
   Checks if a device code is expired.
   """
-  def expired?(%DeviceCode{expires_at: expires_at}) do
-    DateTime.compare(DateTime.utc_now(), expires_at) == :gt
+  def expired?(device_code, now \\ DateTime.utc_now())
+
+  def expired?(%DeviceCode{expires_at: expires_at}, now) do
+    DateTime.compare(now, expires_at) == :gt
   end
 
   @doc """

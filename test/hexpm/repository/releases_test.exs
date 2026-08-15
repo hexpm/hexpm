@@ -24,6 +24,147 @@ defmodule Hexpm.Repository.ReleasesTest do
     }
   end
 
+  test "docs_versions/2 returns documented versions and retirements in descending order" do
+    package = insert(:package, name: "documented")
+    insert(:release, package: package, version: "1.0.0", has_docs: true)
+
+    insert(:release,
+      package: package,
+      version: "2.0.0",
+      has_docs: true,
+      retirement: %Hexpm.Repository.ReleaseRetirement{
+        reason: "other",
+        message: "retired release"
+      }
+    )
+
+    insert(:release, package: package, version: "3.0.0", has_docs: false)
+
+    version_2 = Version.parse!("2.0.0")
+    version_1 = Version.parse!("1.0.0")
+
+    assert {[version_2, version_1], MapSet.new([version_2])} ==
+             Releases.docs_versions("hexpm", package.name)
+  end
+
+  describe "exists?/3" do
+    test "checks a release by repository, package, and version", %{
+      repository: repository,
+      package: package,
+      release: release
+    } do
+      assert Releases.exists?("hexpm", package.name, release.version)
+      refute Releases.exists?("hexpm", package.name, "9.9.9")
+      refute Releases.exists?(repository.name, package.name, release.version)
+
+      private_package = insert(:package, repository_id: repository.id, name: package.name)
+      private_release = insert(:release, package: private_package, version: release.version)
+
+      assert Releases.exists?(repository.name, private_package.name, private_release.version)
+    end
+  end
+
+  describe "mark_vulnerable/1" do
+    setup do
+      package = insert(:package, name: "advised")
+      affected = insert(:release, package: package, version: "1.0.0")
+      unaffected = insert(:release, package: package, version: "1.0.1")
+      withdrawn = insert(:release, package: package, version: "1.0.2")
+
+      # One upsert for both: it treats an advisory missing from the records it
+      # is given as gone from the feed and deletes it.
+      advise(package, [
+        {"GHSA-published", "1.0.0", nil},
+        {"GHSA-withdrawn", "1.0.2", ~U[2024-01-01 00:00:00Z]}
+      ])
+
+      %{package: package, affected: affected, unaffected: unaffected, withdrawn: withdrawn}
+    end
+
+    test "flags the releases a published advisory affects", %{
+      package: package,
+      affected: affected,
+      unaffected: unaffected
+    } do
+      flags = vulnerable_by_id(package)
+
+      assert flags[affected.id]
+      refute flags[unaffected.id]
+    end
+
+    test "leaves a release only a withdrawn advisory affects alone", %{
+      package: package,
+      withdrawn: withdrawn
+    } do
+      refute vulnerable_by_id(package)[withdrawn.id]
+    end
+
+    test "all/1 on its own reports nothing vulnerable", %{
+      package: package,
+      affected: affected
+    } do
+      release = Enum.find(Releases.all(package), &(&1.id == affected.id))
+
+      refute release.vulnerable?
+    end
+  end
+
+  defp vulnerable_by_id(package) do
+    package
+    |> Releases.all()
+    |> Releases.mark_vulnerable()
+    |> Map.new(&{&1.id, &1.vulnerable?})
+  end
+
+  defp advise(package, advisories) do
+    records =
+      Enum.map(advisories, fn {id, version, withdrawn_at} ->
+        %{
+          id: id,
+          summary: "summary",
+          aliases: [],
+          published_at: ~U[2024-01-01 00:00:00Z],
+          modified_at: ~U[2024-01-01 00:00:00Z],
+          withdrawn_at: withdrawn_at,
+          cvss_vector: nil,
+          cvss_score: nil,
+          cvss_rating: nil,
+          references: [],
+          affected: [%{package: package.name, requirements: [], versions: [version]}]
+        }
+      end)
+
+    {:ok, _} = Hexpm.Security.Advisories.upsert(records, %{package.name => package.id})
+  end
+
+  describe "latest_version/3" do
+    test "prefers stable releases and falls back to prereleases" do
+      stable_package = insert(:package, name: "stable_preview")
+
+      insert(:release,
+        package: stable_package,
+        version: "1.0.0",
+        retirement: %Hexpm.Repository.ReleaseRetirement{reason: "other", message: "retired"}
+      )
+
+      insert(:release, package: stable_package, version: "2.0.0-rc.1")
+
+      assert Releases.latest_version("hexpm", stable_package.name,
+               only_stable: true,
+               unstable_fallback: true
+             ) == Version.parse!("1.0.0")
+
+      prerelease_package = insert(:package, name: "prerelease_preview")
+      insert(:release, package: prerelease_package, version: "1.0.0-rc.1")
+      insert(:release, package: prerelease_package, version: "1.0.0-rc.2")
+
+      assert Releases.latest_version("hexpm", prerelease_package.name,
+               only_stable: true,
+               unstable_fallback: true
+             ) == Version.parse!("1.0.0-rc.2")
+    end
+  end
+
   describe "publish/7" do
     test "publish package pushes artifacts", %{hexpm: hexpm, user: user, body_path: body_path} do
       name = Fake.sequence(:package)
@@ -243,6 +384,101 @@ defmodule Hexpm.Repository.ReleasesTest do
                decode_registry_package(registry).releases,
                &match?(%{version: "0.2.0"}, &1)
              )
+    end
+  end
+
+  describe "retire/3" do
+    test "retires every active release and updates the registry", %{
+      package: package,
+      release: release,
+      user: user
+    } do
+      insert(:release,
+        package: package,
+        version: "0.2.0",
+        retirement: %Hexpm.Repository.ReleaseRetirement{
+          reason: "security",
+          message: "Existing retirement"
+        }
+      )
+
+      insert(:release, package: package, version: "0.3.0")
+
+      assert :ok =
+               Releases.retire(
+                 package,
+                 %{"reason" => "deprecated", "message" => "No longer maintained"},
+                 audit: audit_data(user)
+               )
+
+      assert Releases.get(package, release.version).retirement.reason == "deprecated"
+
+      previously_retired = Releases.get(package, "0.2.0")
+      assert previously_retired.retirement.reason == "security"
+      assert previously_retired.retirement.message == "Existing retirement"
+
+      assert registry = Hexpm.Store.get(:repo_bucket, "packages/#{package.name}", [])
+
+      retirements =
+        registry
+        |> decode_registry_package()
+        |> Map.fetch!(:releases)
+        |> Map.new(&{&1.version, &1.retired})
+
+      assert retirements["0.1.0"] == %{
+               reason: :RETIRED_DEPRECATED,
+               message: "No longer maintained"
+             }
+
+      assert retirements["0.2.0"] == %{
+               reason: :RETIRED_SECURITY,
+               message: "Existing retirement"
+             }
+
+      assert retirements["0.3.0"] == %{
+               reason: :RETIRED_DEPRECATED,
+               message: "No longer maintained"
+             }
+    end
+
+    test "replaces existing retirements when requested", %{
+      package: package,
+      user: user
+    } do
+      insert(:release,
+        package: package,
+        version: "0.2.0",
+        retirement: %Hexpm.Repository.ReleaseRetirement{
+          reason: "security",
+          message: "Existing retirement"
+        }
+      )
+
+      assert :ok =
+               Releases.retire(
+                 package,
+                 %{"reason" => "deprecated", "message" => "No longer maintained"},
+                 audit: audit_data(user),
+                 replace: true
+               )
+
+      assert registry = Hexpm.Store.get(:repo_bucket, "packages/#{package.name}", [])
+
+      retirements =
+        registry
+        |> decode_registry_package()
+        |> Map.fetch!(:releases)
+        |> Map.new(&{&1.version, &1.retired})
+
+      assert retirements["0.1.0"] == %{
+               reason: :RETIRED_DEPRECATED,
+               message: "No longer maintained"
+             }
+
+      assert retirements["0.2.0"] == %{
+               reason: :RETIRED_DEPRECATED,
+               message: "No longer maintained"
+             }
     end
   end
 

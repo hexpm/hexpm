@@ -66,14 +66,6 @@ defmodule HexpmWeb.API.UserController do
     show(conn, params)
   end
 
-  def reset(conn, %{"name" => name}) do
-    Users.password_reset_init(name, audit: audit_data(conn))
-
-    conn
-    |> api_cache(:private)
-    |> send_resp(204, "")
-  end
-
   defp email_param(params) do
     if email = params["email"] do
       Map.put_new(params, "emails", [%{"email" => email}])

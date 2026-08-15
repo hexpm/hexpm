@@ -31,17 +31,32 @@ defmodule HexpmWeb.PackageLayoutAssigns do
       `nil` the chart shows package-wide downloads
     * `:docs_html_url` — override the computed docs URL when the page
       has special docs link logic (e.g. the package show page)
+    * `:sidebar?` — load download and chart data for the package sidebar;
+      defaults to `true`
+    * `:dependants_count?` — load the dependant count used in the tab label;
+      defaults to `true`
   """
-  def for_package(conn, package, opts \\ []) do
-    current_user = conn.assigns.current_user
+  def for_package(conn_or_user, package, opts \\ []) do
+    current_user = current_user(conn_or_user)
     releases = opts[:releases] || Releases.all(package)
     current_release = resolve_current_release(opts[:current_release], releases)
     graph_release = opts[:graph_release]
+    sidebar? = Keyword.get(opts, :sidebar?, true)
+    dependants_count? = Keyword.get(opts, :dependants_count?, true)
+
+    owners =
+      cond do
+        sidebar? -> Owners.all(package, user: [:emails, :organization])
+        current_user -> Owners.all(package)
+        true -> []
+      end
 
     repositories =
-      current_user
-      |> Users.all_organizations()
-      |> Enum.map(& &1.repository)
+      if dependants_count? do
+        current_user
+        |> Users.all_organizations()
+        |> Enum.map(& &1.repository)
+      end
 
     docs_html_url =
       Keyword.get_lazy(opts, :docs_html_url, fn ->
@@ -62,25 +77,38 @@ defmodule HexpmWeb.PackageLayoutAssigns do
       all_releases: releases,
       current_release: current_release,
       versions_count: Enum.count(releases),
-      owners: Owners.all(package, user: [:emails, :organization]),
-      downloads: Downloads.package(package),
-      daily_graph: daily_graph(graph_release || package),
+      owners: owners,
+      downloads: if(sidebar?, do: Downloads.package(package), else: %{}),
+      daily_graph: if(sidebar?, do: daily_graph(graph_release || package), else: []),
       graph_release: graph_release,
       docs_html_url: docs_html_url,
-      dependants_count: Packages.count_dependants(repositories, package)
+      dependants_count:
+        if dependants_count? do
+          Keyword.get_lazy(opts, :dependants_count, fn ->
+            Packages.count_dependants(repositories, package)
+          end)
+        end
     ]
 
     [{:package_layout, Map.new(layout)} | layout]
   end
 
+  defp current_user(%Plug.Conn{} = conn), do: conn.assigns.current_user
+  defp current_user(user), do: user
+
+  # The layout shows a security banner for the release on screen, so that one
+  # release needs its vulnerable? flag and none of the others do.
   defp resolve_current_release(nil, releases) do
     case Release.latest_version(releases, only_stable: true, unstable_fallback: true) do
       nil -> nil
       release -> Releases.preload(release, [:requirements, :downloads, :publisher])
     end
+    |> Releases.mark_vulnerable_one()
   end
 
-  defp resolve_current_release(release, _releases), do: release
+  defp resolve_current_release(release, _releases) do
+    Releases.mark_vulnerable_one(release)
+  end
 
   defp daily_graph(package_or_release) do
     last_day = Hexpm.Cache.fetch(:last_download_day, &Downloads.last_day/0) || Date.utc_today()

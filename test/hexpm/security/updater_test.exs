@@ -1,5 +1,6 @@
 defmodule Hexpm.Security.UpdaterTest do
   use Hexpm.DataCase
+  use Oban.Testing, repo: Hexpm.RepoBase
 
   alias Hexpm.Security.Advisory
   alias Hexpm.Security.AdvisoryAffectedVersion
@@ -7,6 +8,7 @@ defmodule Hexpm.Security.UpdaterTest do
   alias Hexpm.Security.Updater
 
   setup do
+    Mox.set_mox_global()
     package = insert(:package, name: "oidcc")
     insert(:release, package: package, version: "3.0.0")
     insert(:release, package: package, version: "3.0.1")
@@ -15,10 +17,38 @@ defmodule Hexpm.Security.UpdaterTest do
     %{package: package}
   end
 
+  test "fetches and imports the advisory archive" do
+    expect(Hexpm.HTTP.Mock, :get, fn url, [], opts ->
+      assert url == "https://osv-vulnerabilities.storage.googleapis.com/Hex/all.zip"
+      assert opts == [receive_timeout: 60_000]
+      {:ok, 200, [], zip_body([])}
+    end)
+
+    assert :ok = perform_job(Updater, %{})
+  end
+
+  test "returns an error for an unexpected response status" do
+    expect(Hexpm.HTTP.Mock, :get, fn _url, [], _opts -> {:ok, 503, [], "unavailable"} end)
+
+    assert {:error, {:unexpected_status, 503}} = perform_job(Updater, %{})
+  end
+
+  test "returns an error for a transport failure" do
+    expect(Hexpm.HTTP.Mock, :get, fn _url, [], _opts -> {:error, :timeout} end)
+
+    assert {:error, {:request_failed, :timeout}} = perform_job(Updater, %{})
+  end
+
+  test "returns an error for a malformed archive" do
+    expect(Hexpm.HTTP.Mock, :get, fn _url, [], _opts -> {:ok, 200, [], "not a zip"} end)
+
+    assert {:error, {:invalid_archive, _reason}} = perform_job(Updater, %{})
+  end
+
   defp zip_body(advisories) do
     files =
       Enum.map(advisories, fn advisory ->
-        {String.to_charlist("#{advisory["id"]}.json"), Jason.encode!(advisory)}
+        {String.to_charlist("#{advisory["id"]}.json"), JSON.encode!(advisory)}
       end)
 
     {:ok, {_, zip}} = :zip.create(~c"all.zip", files, [:memory])
@@ -267,5 +297,21 @@ defmodule Hexpm.Security.UpdaterTest do
     assert Repo.get(Advisory, "GHSA-keep")
     refute Repo.get(Advisory, "GHSA-drop")
     assert package.id
+  end
+
+  test "repeated imports are idempotent" do
+    advisory = %{
+      "id" => "GHSA-repeat",
+      "summary" => "Repeat",
+      "modified" => "2024-04-05T01:28:39Z",
+      "published" => "2024-04-03T16:46:30Z",
+      "affected" => [
+        %{"package" => %{"name" => "oidcc", "ecosystem" => "Hex"}, "versions" => ["3.0.0"]}
+      ]
+    }
+
+    assert :ok = process([advisory])
+    assert :ok = process([advisory])
+    assert Repo.aggregate(Advisory, :count) == 1
   end
 end

@@ -1,0 +1,9 @@
+<%= OrganizationInvitation.intro(@organization, @role) %>
+
+<%= Common.follow_link_instruction(url(email_uri(), ~p"/invites?token=#{@token}"), :text) %>
+
+<%= OrganizationInvitation.sign_in_notice() %>
+
+<%= OrganizationInvitation.expiry(@expires_at) %>
+
+<%= OrganizationInvitation.ignore_notice() %>

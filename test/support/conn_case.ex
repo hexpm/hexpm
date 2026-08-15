@@ -89,17 +89,10 @@ defmodule HexpmWeb.ConnCase do
     }
   end
 
-  def last_session() do
-    import Ecto.Query
-
-    from(s in Hexpm.PlugSession, order_by: [desc: s.id], limit: 1)
-    |> Hexpm.Repo.one()
-  end
-
   def json_post(conn, path, params) do
     conn
     |> Plug.Conn.put_req_header("content-type", "application/json")
-    |> Phoenix.ConnTest.dispatch(HexpmWeb.Endpoint, :post, path, Jason.encode!(params))
+    |> Phoenix.ConnTest.dispatch(HexpmWeb.Endpoint, :post, path, JSON.encode!(params))
   end
 
   def mock_captcha_success(_context \\ %{}) do

@@ -1,5 +1,4 @@
 defmodule Hexpm.ReleaseTasks do
-  alias Hexpm.ReleaseTasks.{CheckNames, PurgeExpiredRecords, Stats}
   require Logger
 
   @start_apps [
@@ -24,17 +23,6 @@ defmodule Hexpm.ReleaseTasks do
     task(fn -> run_script(args) end)
 
     Logger.info("[task] Finished script")
-    stop()
-  end
-
-  def check_names() do
-    start_apps(@start_apps)
-    Logger.info("[task] Running check_names")
-    start_app()
-
-    monitor("hexpm-check-names", "30 0 * * *", &CheckNames.run/0)
-
-    Logger.info("[task] Finished check_names")
     stop()
   end
 
@@ -72,55 +60,6 @@ defmodule Hexpm.ReleaseTasks do
 
     Logger.info("[task] Finished seed")
     stop()
-  end
-
-  def stats() do
-    start_apps(@start_apps)
-    Logger.info("[task] Running stats")
-    start_app()
-
-    monitor("hexpm-stats", "0 1 * * *", &Stats.run/0)
-
-    Logger.info("[task] Finished stats")
-    stop()
-  end
-
-  def purge_expired_records() do
-    start_apps(@start_apps)
-    Logger.info("[task] Running purge_expired_records")
-    start_repo()
-
-    monitor("hexpm-purge-expired-records", "0 2 * * *", &PurgeExpiredRecords.run/0)
-
-    Logger.info("[task] Finished purge_expired_records")
-    stop()
-  end
-
-  # Wraps a task in a Sentry cron check-in so failures and missed runs surface
-  # in Sentry. `slug` identifies the monitor and `schedule` is its crontab (UTC),
-  # matching the Kubernetes CronJob that invokes the task.
-  @doc false
-  def monitor(slug, schedule, fun) do
-    check_in_id =
-      case Sentry.capture_check_in(
-             status: :in_progress,
-             monitor_slug: slug,
-             monitor_config: [
-               schedule: [type: :crontab, value: schedule],
-               timezone: "Etc/UTC"
-             ]
-           ) do
-        {:ok, check_in_id} -> check_in_id
-        _ -> nil
-      end
-
-    status = task(fun)
-
-    opts = [status: status, monitor_slug: slug]
-    opts = if check_in_id, do: [{:check_in_id, check_in_id} | opts], else: opts
-    Sentry.capture_check_in(opts)
-
-    status
   end
 
   defp task(fun) do
@@ -184,14 +123,49 @@ defmodule Hexpm.ReleaseTasks do
       app = Keyword.get(repo.config(), :otp_app)
       Logger.info("[task] Running migrations for #{app}")
 
-      case args do
-        ["--step", n] -> migrate(repo, :up, step: String.to_integer(n))
-        ["-n", n] -> migrate(repo, :up, step: String.to_integer(n))
-        ["--to", to] -> migrate(repo, :up, to: to)
-        ["--all"] -> migrate(repo, :up, all: true)
-        [] -> migrate(repo, :up, all: true)
-      end
+      with_migration_lock(repo, fn ->
+        case args do
+          ["--step", n] -> migrate(repo, :up, step: String.to_integer(n))
+          ["-n", n] -> migrate(repo, :up, step: String.to_integer(n))
+          ["--to", to] -> migrate(repo, :up, to: to)
+          ["--all"] -> migrate(repo, :up, all: true)
+          [] -> migrate(repo, :up, all: true)
+        end
+      end)
     end)
+  end
+
+  @doc false
+  # Every app pod runs migrate() at boot, so they race. Ecto's own migration
+  # lock cannot serialize them here: it holds a transaction for the duration,
+  # and CREATE INDEX CONCURRENTLY waits for concurrent transactions to finish,
+  # so the two deadlock. A session level advisory lock on its own connection
+  # holds no transaction, and the lock is released when that connection ends,
+  # including when the pod dies mid-migration.
+  def with_migration_lock(repo, fun) do
+    key = Hexpm.RepoBase.advisory_lock_key(:migrate)
+
+    opts =
+      Keyword.take(repo.config(), [
+        :hostname,
+        :port,
+        :username,
+        :password,
+        :database,
+        :socket_options,
+        :ssl
+      ])
+
+    {:ok, conn} = Postgrex.start_link(opts)
+
+    try do
+      Logger.info("[task] Waiting for migration lock")
+      Postgrex.query!(conn, "SELECT pg_advisory_lock($1)", [key], timeout: :infinity)
+      Logger.info("[task] Acquired migration lock")
+      fun.()
+    after
+      GenServer.stop(conn)
+    end
   end
 
   defp run_rollback(args) do

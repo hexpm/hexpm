@@ -1,0 +1,9 @@
+<h1 style="color: #030913; font-size: 24px; line-height: 32px; font-weight: 600; margin: 0 0 24px 0; text-align: center;">
+  <%= Announcement.title(@subject) %>
+</h1>
+
+<%= for paragraph <- Announcement.paragraphs(@body) do %>
+  <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+    <%= paragraph %>
+  </p>
+<% end %>

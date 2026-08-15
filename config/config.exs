@@ -5,26 +5,81 @@ config :hexpm,
   user_agent_req: true,
   billing_report: true,
   cache_enabled: true,
+  email_base_url: "http://localhost:4000",
   support_email: "support@hex.pm",
   repo_bucket: {Hexpm.Store.Local, "repo_bucket"},
   logs_bucket: {Hexpm.Store.Local, "logs_bucket"},
   docs_bucket: {Hexpm.Store.Local, "docs_bucket"},
+  docs_private_bucket: {Hexpm.Store.Local, "docs_private_bucket"},
+  preview_bucket: {Hexpm.Store.Local, "preview_bucket"},
+  diff_bucket: {Hexpm.Store.Local, "diff_bucket"},
+  diff_cache_version: 1,
   cdn_impl: Hexpm.CDN.Local,
+  hexdocs_search_impl: Hexpm.Hexdocs.Search.Local,
+  hexdocs_source_repo_impl: Hexpm.Hexdocs.SourceRepo.GitHub,
+  hexdocs_queue_id: "test",
+  hexdocs_queue_producer: Broadway.DummyProducer,
+  hexdocs_queue_concurrency: 1,
+  hexdocs_gcs_put_debounce: 0,
+  preview_queue_id: "test",
+  preview_queue_producer: Broadway.DummyProducer,
+  preview_queue_concurrency: 1,
+  hexdocs_special_packages: %{
+    "eex" => "elixir-lang/elixir",
+    "elixir" => "elixir-lang/elixir",
+    "ex_unit" => "elixir-lang/elixir",
+    "iex" => "elixir-lang/elixir",
+    "logger" => "elixir-lang/elixir",
+    "mix" => "elixir-lang/elixir",
+    "hex" => "hexpm/hex"
+  },
   billing_impl: Hexpm.Billing.Local,
   pwned_impl: Hexpm.Pwned.Local,
   geo_impl: Hexpm.Geo.Local,
   sudo_timeout: Duration.new!(hour: 1),
   sudo_force_timeout: Duration.new!(second: 30)
 
-config :hexpm, :features, package_reports: true
+# Detection and recording are always on. Mail stays off until the corpus scan
+# has settled which rules are precise enough to notify strangers about.
+config :hexpm, secret_scan_notify: false
+
+config :hexpm, HexpmWeb.BasicAuth, schedule_enabled: true
+
+config :hexpm, :organization_sso,
+  mode: :off,
+  beta_organizations: [],
+  all_organizations: false,
+  oidc_impl: Hexpm.Accounts.SSO.OIDC.Oidcc
+
+config :hexpm, :varsel_impl, Hexpm.PackageReports.Varsel.Client
+
+config :hexpm, :varsel,
+  report_url: "https://cna.erlef.org/api/hex/reports",
+  audience: "https://cna.erlef.org/api/hex/reports"
 
 config :hexpm, ecto_repos: [Hexpm.RepoBase]
 
+config :hexpm, Oban,
+  repo: Hexpm.RepoBase,
+  queues: [periodic: 2, heavy: 1],
+  shutdown_grace_period: 300_000
+
+# Metrics are served by a standalone Bandit listener (see Hexpm.Application)
+# on :metrics_port instead of PromEx's built-in cowboy server
+config :hexpm, Hexpm.PromEx,
+  disabled: false,
+  metrics_server: :disabled,
+  grafana: :disabled
+
 config :ex_aws,
-  json_codec: Jason,
+  json_codec: JSON,
   http_client: ExAws.Request.Req
 
-config :sentry, client: Hexpm.SentryClient
+config :sentry,
+  client: Hexpm.SentryClient,
+  json_library: JSON
+
+config :postgrex, :json_library, JSON
 
 config :bcrypt_elixir, log_rounds: 4
 
@@ -46,6 +101,7 @@ config :hexpm, Hexpm.RepoBase,
 
 config :swoosh, :api_client, Swoosh.ApiClient.Finch
 config :swoosh, :finch_name, Hexpm.Finch
+config :swoosh, :json_library, JSON
 
 config :hexpm, Hexpm.Emails.Mailer, adapter: Swoosh.Adapters.Sendgrid
 
@@ -60,9 +116,9 @@ config :phoenix, :generators,
 config :phoenix, :format_encoders,
   elixir: HexpmWeb.ElixirFormat,
   erlang: HexpmWeb.ErlangFormat,
-  json: Jason
+  json: JSON
 
-config :phoenix, :json_library, Jason
+config :phoenix, :json_library, JSON
 
 config :mime,
   types: %{
@@ -101,5 +157,8 @@ config :ueberauth, Ueberauth,
   ]
 
 config :mdex_native, syntax_highlighter: :lumis
+
+# The lumis git checkout has no precompiled NIF checksums, build from source
+System.put_env("LUMIS_BUILD", "1")
 
 import_config "#{Mix.env()}.exs"

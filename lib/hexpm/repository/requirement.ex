@@ -1,7 +1,5 @@
 defmodule Hexpm.Repository.Requirement do
   use Hexpm.Schema
-  require Logger
-
   @derive {HexpmWeb.Stale, last_modified: nil}
 
   schema "requirements" do

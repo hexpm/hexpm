@@ -18,6 +18,7 @@
     <.pricing_card
       icon_src={~p"/images/pricing/open-source-icon.svg"}
       icon_bg="blue"
+      per_user={true}
       price_monthly={0}
       price_yearly={0}
       title="Open Source"
@@ -28,14 +29,16 @@
       <:feature>Unlimited number of public packages</:feature>
       <:feature>Public Packages Documentation</:feature>
       <:feature>Multiple Package Owners</:feature>
+      <:feature>Public Dependency Policies</:feature>
     </.pricing_card>
 
     <%!-- Private Packages Card --%>
     <.pricing_card
       icon_src={~p"/images/pricing/lock-icon.svg"}
       icon_bg="green"
-      price_monthly={7}
-      price_yearly={70}
+      per_user={true}
+      price_monthly={9}
+      price_yearly={90}
       title="Private Packages"
       description="For Private Projects with teams of users"
       cta_text="Try FREE for 30 days"
@@ -44,6 +47,7 @@
       <:feature>Unlimited Private Packages</:feature>
       <:feature>Private Packages Documentation</:feature>
       <:feature>Republish and Delete Packages</:feature>
+      <:feature>Private Dependency Policies</:feature>
     </.pricing_card>
 
     <%!-- Enterprise Card --%>
@@ -114,6 +118,22 @@
           </.faq_item>
 
           <.faq_item>
+            <:question>
+              How do dependency policies work for free and paid organizations?
+            </:question>
+            <:answer>
+              <p>
+                Every organization can publish public policies for public Hex packages, and any project can opt into them. Paid organizations can also publish private policies that are visible only to organization members and govern both public Hex packages and packages in the organization's private repository. See the
+                <a
+                  href={~p"/docs/dependency-policies"}
+                  class="text-blue-500 dark:text-blue-300 underline"
+                >dependency policy guide</a>
+                for details.
+              </p>
+            </:answer>
+          </.faq_item>
+
+          <.faq_item>
             <:question>Do the listed prices include VAT?</:question>
             <:answer>
               <p>
@@ -151,7 +171,7 @@
             <:question>Can I pay annually instead of monthly?</:question>
             <:answer>
               <p>
-                Yes, we offer an annual plan that is billed once a year and includes a 2 month discount over the monthly plan for a price of $70 / per user / per year.
+                Yes, we offer an annual plan that is billed once a year and includes a 2 month discount over the monthly plan for a price of $90 / per user / per year.
               </p>
             </:answer>
           </.faq_item>

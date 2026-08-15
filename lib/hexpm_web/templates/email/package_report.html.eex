@@ -1,0 +1,23 @@
+<h1 style="color: #030913; font-size: 24px; line-height: 32px; font-weight: 600; margin: 0 0 24px 0; text-align: center;">
+  Package Report
+</h1>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <strong>Package:</strong>
+  <a href="<%= @package_url %>" style="color: #0f59d8; text-decoration: none;"><%= @package %></a>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <strong>Reason:</strong> <%= @reason %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <strong>Reporter:</strong> <%= @reporter.name %> (@<%= @reporter.username %>),
+  <a href="mailto:<%= @reporter.email %>" style="color: #0f59d8; text-decoration: none;"><%= @reporter.email %></a>
+</p>
+
+<h2 style="color: #030913; font-size: 18px; line-height: 26px; font-weight: 600; margin: 24px 0 8px 0;">
+  <%= @summary %>
+</h2>
+
+<div style="color: #304254; font-size: 16px; line-height: 24px; white-space: pre-wrap;"><%= @description %></div>

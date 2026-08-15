@@ -8,6 +8,17 @@
 
       <%!-- Right Content --%>
       <div class="flex-1 min-w-0">
+        <div
+          :if={@sso_org_session}
+          id="sso-org-session"
+          class="mb-4 sm:mb-6 rounded-md border border-green-200 dark:border-green-900 bg-green-50 dark:bg-green-950 px-4 py-3 text-sm text-green-900 dark:text-green-100"
+        >
+          Authenticated to {@organization.name} through single sign-on until {Calendar.strftime(
+            @sso_org_session.expires_at,
+            "%Y-%m-%d %H:%M UTC"
+          )}.
+        </div>
+
         <.org_tab_nav current_user={@current_user} organization={@organization} tab={@tab}>
           <%= case @tab do %>
             <% :profile -> %>
@@ -22,6 +33,8 @@
               <.members_tab
                 add_member_changeset={@add_member_changeset}
                 current_user={@current_user}
+                invitations={@invitations}
+                invite_changeset={@invite_changeset}
                 organization={@organization}
                 quantity={@quantity}
               />
@@ -74,6 +87,9 @@
                 params={@params}
                 person={@person}
                 plan_id={@plan_id}
+                plan_unit_amount={@plan_unit_amount}
+                pending_plan_unit_amount={@pending_plan_unit_amount}
+                plan_price_change_at={@plan_price_change_at}
                 pending_action_html={@pending_action_html}
                 post_action={@post_action}
                 proration_amount={@proration_amount}
@@ -83,6 +99,16 @@
                 stripe_publishable_key={@stripe_publishable_key}
                 subscription={@subscription}
                 tax_rate={@tax_rate}
+              />
+            <% :sso -> %>
+              <.sso_tab
+                callback_url={@sso_callback_url}
+                connection={@sso_connection}
+                domains={@sso_domains}
+                failures={@sso_failures}
+                identities={@sso_identities}
+                login_url={@sso_login_url}
+                organization={@organization}
               />
             <% :danger_zone -> %>
               <.danger_zone_tab current_user={@current_user} organization={@organization} />

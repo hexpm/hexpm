@@ -64,7 +64,7 @@ defmodule Hexpm.Accounts.Users do
   def get_maybe_unverified_email(_, _), do: nil
 
   def all_organizations(%User{organizations: organizations}) when is_list(organizations) do
-    [Organization.hexpm() | organizations]
+    [Organization.hexpm() | Enum.sort_by(organizations, & &1.name)]
   end
 
   def all_organizations(nil) do
@@ -89,6 +89,7 @@ defmodule Hexpm.Accounts.Users do
         Emails.verification(user, email)
         |> Mailer.deliver!()
 
+        :telemetry.execute([:hexpm, :accounts, :user_created], %{count: 1}, %{})
         {:ok, user}
 
       {:error, :user, changeset, _} ->
@@ -158,7 +159,10 @@ defmodule Hexpm.Accounts.Users do
         :oauth_tokens,
         from(t in Hexpm.OAuth.Token, where: t.user_id == ^user.id)
       )
+      |> Hexpm.Accounts.SSO.lock_user_removal(user)
+      |> Hexpm.Accounts.SSO.delete_user_transactions(user)
       |> Multi.delete(:user, user, stale_error_field: :id)
+      |> Hexpm.Accounts.SSO.delete_user_notifications(user)
 
     case Repo.transaction(multi) do
       {:ok, _} ->
@@ -491,8 +495,8 @@ defmodule Hexpm.Accounts.Users do
       |> Multi.update(:password, User.update_password_no_check(user, params))
       |> Multi.delete_all(:reset, assoc(user, :password_resets))
       |> Multi.delete_all(:account_deletion_requests, assoc(user, :account_deletion_requests))
-      |> Multi.update_all(:revoke_sessions, sessions_query, [])
       |> Multi.update_all(:revoke_tokens, tokens_query, [])
+      |> Multi.update_all(:revoke_sessions, sessions_query, [])
 
     if revoke_all_access,
       do: Multi.update_all(multi, :keys, Key.revoke_all(user), []),
@@ -748,6 +752,7 @@ defmodule Hexpm.Accounts.Users do
           |> Mailer.deliver!()
         end
 
+        :telemetry.execute([:hexpm, :accounts, :user_created], %{count: 1}, %{})
         {:ok, user}
 
       {:error, :user, changeset, _} ->

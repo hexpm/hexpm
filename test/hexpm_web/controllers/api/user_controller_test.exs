@@ -124,6 +124,23 @@ defmodule HexpmWeb.API.UserControllerTest do
       |> json_response(401)
     end
 
+    test "sorts organizations by name" do
+      user = insert(:user)
+      zulu = insert(:organization, name: "zulu_org")
+      alpha = insert(:organization, name: "alpha_org")
+      insert(:organization_user, organization: zulu, user: user)
+      insert(:organization_user, organization: alpha, user: user)
+
+      organizations =
+        build_conn()
+        |> put_req_header("authorization", key_for(user))
+        |> get("/api/users/me")
+        |> json_response(200)
+        |> Map.fetch!("organizations")
+
+      assert Enum.map(organizations, & &1["name"]) == ["alpha_org", "zulu_org"]
+    end
+
     test "return 404 for organization keys" do
       organization = insert(:organization)
 
@@ -214,8 +231,8 @@ defmodule HexpmWeb.API.UserControllerTest do
         |> put_req_header("authorization", key_for(data.user1))
         |> get("/api/users/#{data.user1.username}")
 
-      assert response(conn, 200) =~ data.package1.name
-      assert response(conn, 200) =~ data.package2.name
+      both = Enum.sort([data.package1.name, data.package2.name])
+      assert listed_packages(conn) == {both, both}
     end
 
     test "show owned packages as user from the same organization", data do
@@ -224,8 +241,8 @@ defmodule HexpmWeb.API.UserControllerTest do
         |> put_req_header("authorization", key_for(data.user2))
         |> get("/api/users/#{data.user1.username}")
 
-      assert response(conn, 200) =~ data.package1.name
-      assert response(conn, 200) =~ data.package2.name
+      both = Enum.sort([data.package1.name, data.package2.name])
+      assert listed_packages(conn) == {both, both}
     end
 
     test "show owned packages as other user", data do
@@ -234,36 +251,22 @@ defmodule HexpmWeb.API.UserControllerTest do
         |> put_req_header("authorization", key_for(data.user3))
         |> get("/api/users/#{data.user1.username}")
 
-      assert response(conn, 200) =~ data.package1.name
-      refute response(conn, 200) =~ data.package2.name
+      assert listed_packages(conn) == {[data.package1.name], [data.package1.name]}
     end
   end
 
   describe "POST /api/users/:name/reset" do
-    test "email is sent with reset_token when password is reset" do
+    test "password reset endpoint is not available" do
       user = insert(:user)
 
-      # initiate reset requests
       conn = post(build_conn(), "/api/users/#{user.username}/reset", %{})
-      assert conn.status == 204
-
-      # initiate second reset request
-      conn = post(build_conn(), "/api/users/#{user.username}/reset", %{})
-      assert conn.status == 204
+      assert conn.status == 404
 
       user =
         Hexpm.Repo.get_by!(User, username: user.username)
         |> Hexpm.Repo.preload([:emails, :password_resets])
 
-      assert [reset1, reset2] = user.password_resets
-
-      # check email was sent with correct token
-      assert_email_sent(Hexpm.Emails.password_reset_request(user, reset1))
-      assert_email_sent(Hexpm.Emails.password_reset_request(user, reset2))
-
-      # check reset will succeed
-      assert User.can_reset_password?(user, reset1.key)
-      assert User.can_reset_password?(user, reset2.key)
+      assert user.password_resets == []
     end
   end
 
@@ -286,5 +289,18 @@ defmodule HexpmWeb.API.UserControllerTest do
 
       assert conn.status == 401
     end
+  end
+
+  # Matching names against the raw body makes any package name that happens to
+  # be a substring of a username, an email or another name a false result. A
+  # generated username of "xenolinguist" against a package called "linguist" is
+  # what turned this red on CI.
+  defp listed_packages(conn) do
+    body = json_response(conn, 200)
+
+    {
+      body |> Map.fetch!("packages") |> Enum.map(& &1["name"]) |> Enum.sort(),
+      body |> Map.fetch!("owned_packages") |> Map.keys() |> Enum.sort()
+    }
   end
 end

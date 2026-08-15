@@ -226,6 +226,36 @@ defmodule HexpmWeb.PackageControllerTest do
   end
 
   describe "GET /packages/:name" do
+    test "does not query data the page never renders", %{package1: package1} do
+      queries = capture_queries(fn -> get(build_conn(), "/packages/#{package1.name}") end)
+
+      refute Enum.any?(queries, &(&1 =~ ~s(FROM "audit_logs")))
+
+      # The dependants tab label needs a count. Listing them is the dependents page.
+      assert Enum.count(queries, &(&1 =~ ~s(FROM "package_dependants"))) == 1
+    end
+
+    test "counts dependants once on the dependents page", %{package1: package1} do
+      queries =
+        capture_queries(fn -> get(build_conn(), "/packages/#{package1.name}/dependents") end)
+
+      counts =
+        Enum.count(queries, &(&1 =~ "count(*)" and &1 =~ ~s(FROM "package_dependants")))
+
+      assert counts == 1
+    end
+
+    test "banners the release on screen when an advisory affects it", %{package1: package1} do
+      advise(package1, "GHSA-current-release", "0.0.2")
+
+      # 0.0.2 is the latest stable, so it is what the package page opens on.
+      assert response(get(build_conn(), "/packages/#{package1.name}"), 200) =~
+               "This version has known vulnerabilities"
+
+      refute response(get(build_conn(), "/packages/#{package1.name}/0.0.1"), 200) =~
+               "This version has known vulnerabilities"
+    end
+
     test "show package", %{package1: package1} do
       conn = get(build_conn(), "/packages/#{package1.name}")
       html = response(conn, 200)
@@ -233,6 +263,8 @@ defmodule HexpmWeb.PackageControllerTest do
       assert html =~ escape(~s({:#{package1.name}, "~> 0.0.2"}))
 
       assert {:ok, document} = Floki.parse_document(html)
+      assert link_text(document, "/packages/#{package1.name}/report") == "Report package"
+      assert [_report_link] = Floki.find(document, ".grid > #report-package-link.bg-grey-100")
       assert link_text(document, "/packages/#{package1.name}/dependents") == "0 Dependants"
       assert link_text(document, "/packages/#{package1.name}/dependencies") == "0 Dependencies"
       assert link_text(document, "/packages/#{package1.name}/versions") == "3 Versions"
@@ -242,6 +274,7 @@ defmodule HexpmWeb.PackageControllerTest do
                "/packages/#{package1.name}/versions",
                "/packages/#{package1.name}/dependencies",
                "/packages/#{package1.name}/dependents",
+               "/packages/#{package1.name}/0.0.2/files",
                "/packages/#{package1.name}/audit-logs"
              ]
 
@@ -366,8 +399,19 @@ defmodule HexpmWeb.PackageControllerTest do
         |> test_login(user1)
         |> get("/packages/#{repository1.name}/#{package3.name}")
 
-      assert response(conn, 200) =~
+      body = response(conn, 200)
+
+      assert body =~
                escape(~s({:#{package3.name}, "~> 0.0.1", organization: "#{repository1.name}"}))
+
+      assert [readme_url] =
+               body
+               |> Floki.parse_document!()
+               |> Floki.attribute("#readme-frame", "src")
+
+      assert readme_url =~ "/#{repository1.name}/#{package3.name}/0.0.1?token="
+      [_url, token] = String.split(readme_url, "token=")
+      assert :ok = HexpmWeb.ReadmeToken.verify(token, repository1.name, package3.name, "0.0.1")
     end
 
     test "dont show private package", %{
@@ -544,6 +588,16 @@ defmodule HexpmWeb.PackageControllerTest do
       assert response(conn, 404)
     end
 
+    test "marks the versions an advisory affects", %{package1: package1, package2: package2} do
+      advise(package1, "GHSA-versions-page", "0.0.1")
+
+      assert response(get(build_conn(), "/packages/#{package1.name}/versions"), 200) =~
+               "Vulnerable"
+
+      refute response(get(build_conn(), "/packages/#{package2.name}/versions"), 200) =~
+               "Vulnerable"
+    end
+
     test "returns 404 for private package without auth", %{
       package3: package3,
       repository1: repository1
@@ -610,6 +664,18 @@ defmodule HexpmWeb.PackageControllerTest do
       assert result =~ "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
       assert result =~ "&gt;= 0.0.1 and &lt; 0.0.2"
       assert result =~ "https://example.com/advisory"
+
+      assert {:ok, document} = Floki.parse_document(result)
+
+      assert package_tab_hrefs(document, package1.name) == [
+               "/packages/#{package1.name}",
+               "/packages/#{package1.name}/versions",
+               "/packages/#{package1.name}/dependencies",
+               "/packages/#{package1.name}/dependents",
+               "/packages/#{package1.name}/advisories",
+               "/packages/#{package1.name}/0.0.2/files",
+               "/packages/#{package1.name}/audit-logs"
+             ]
     end
 
     test "groups advisories sharing aliases for display", %{package1: package1} do
@@ -836,6 +902,24 @@ defmodule HexpmWeb.PackageControllerTest do
     IO.iodata_to_binary(safe)
   end
 
+  defp advise(package, id, version) do
+    record = %{
+      id: id,
+      summary: "summary",
+      aliases: [],
+      published_at: ~U[2024-01-01 00:00:00Z],
+      modified_at: ~U[2024-01-01 00:00:00Z],
+      withdrawn_at: nil,
+      cvss_vector: nil,
+      cvss_score: nil,
+      cvss_rating: nil,
+      references: [],
+      affected: [%{package: package.name, requirements: [], versions: [version]}]
+    }
+
+    {:ok, _} = Hexpm.Security.Advisories.upsert([record], %{package.name => package.id})
+  end
+
   defp add_dependant(package, name) do
     dependant = insert(:package, name: name, repository_id: package.repository_id)
 
@@ -868,9 +952,11 @@ defmodule HexpmWeb.PackageControllerTest do
   defp package_tab_hrefs(document, package_name) do
     package_paths = [
       "/packages/#{package_name}",
+      "/packages/#{package_name}/0.0.2/files",
       "/packages/#{package_name}/versions",
       "/packages/#{package_name}/dependencies",
       "/packages/#{package_name}/dependents",
+      "/packages/#{package_name}/advisories",
       "/packages/#{package_name}/audit-logs"
     ]
 

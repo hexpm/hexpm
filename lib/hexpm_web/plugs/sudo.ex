@@ -130,6 +130,15 @@ defmodule HexpmWeb.Plugs.Sudo do
     Application.fetch_env!(:hexpm, :sudo_timeout)
   end
 
+  # The form token only has to survive the gap between rendering a sudo-gated
+  # page and submitting it, so it expires with the sudo window. Without a bound
+  # any old copy of that page's HTML carries a token that works forever.
+  @spec sudo_timeout_seconds() :: non_neg_integer()
+  defp sudo_timeout_seconds do
+    now = NaiveDateTime.utc_now()
+    NaiveDateTime.diff(NaiveDateTime.shift(now, sudo_timeout()), now)
+  end
+
   @spec disabled?() :: boolean()
   defp disabled? do
     Application.get_env(:hexpm, :sudo, true) == false
@@ -164,7 +173,9 @@ defmodule HexpmWeb.Plugs.Sudo do
   defp valid_form_token?(conn) do
     case conn.params["_sudo_token"] do
       token when is_binary(token) ->
-        case Phoenix.Token.verify(HexpmWeb.Endpoint, @token_salt, token, max_age: :infinity) do
+        case Phoenix.Token.verify(HexpmWeb.Endpoint, @token_salt, token,
+               max_age: sudo_timeout_seconds()
+             ) do
           {:ok, {user_id, method, action}} ->
             user_id == conn.assigns.current_user.id and
               method == conn.method and

@@ -211,4 +211,28 @@ defmodule HexpmWeb.PackageLive.IndexTest do
       assert html =~ ~s(name="updated_after" value="2024-01-01")
     end
   end
+
+  describe "form recovery" do
+    test "does not reset page when sort form change event is triggered with the same sort option",
+         %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/packages?page=2&sort=recent_downloads")
+
+      view
+      |> form("#sort-form", %{"sort" => "recent_downloads"})
+      |> render_change()
+
+      refute_patched(view)
+    end
+
+    test "does not reset page when filter form change event is triggered with the same filter options",
+         %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/packages?page=2&search=build_tool%3Amix")
+
+      view
+      |> form("#filter-form", %{"build_tool" => "mix", "depends" => "", "updated_after" => ""})
+      |> render_change()
+
+      refute_patched(view)
+    end
+  end
 end

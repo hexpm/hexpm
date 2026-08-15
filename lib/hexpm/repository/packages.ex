@@ -9,6 +9,16 @@ defmodule Hexpm.Repository.Packages do
     Repo.one!(Package.count())
   end
 
+  def public_names() do
+    from(package in Package,
+      join: repository in assoc(package, :repository),
+      where: repository.name == "hexpm",
+      order_by: package.name,
+      select: package.name
+    )
+    |> Repo.all()
+  end
+
   def count(repositories, filter) do
     Repo.one!(Package.count(repositories, filter))
   end
@@ -343,7 +353,7 @@ defmodule Hexpm.Repository.Packages do
 
   defp add_suggest_order_by(query, pkg_part, prefix, substr) do
     # Name-match tiers are exclusive so each package falls into exactly one band:
-    #   exact       → 3.0  (name LIKE term)
+    #   exact       → 3.0  (name = term)
     #   prefix      → 2.0  (name LIKE term%)
     #   substr      → 1.0  (name LIKE %term%)
     #   desc-only   → 0.5  (matched via full-text search, not name)
@@ -356,7 +366,7 @@ defmodule Hexpm.Repository.Packages do
         fragment(
           """
           (CASE
-            WHEN ? LIKE ?           THEN 3.0
+            WHEN ? = ?              THEN 3.0
             WHEN ? LIKE ?           THEN 2.0
             WHEN ? LIKE ?           THEN 1.0
             ELSE 0.5

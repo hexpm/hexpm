@@ -6,7 +6,7 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
   defp rewrite(html, package, version) do
     html
     |> Floki.parse_document!()
-    |> URLRewriter.rewrite(package, version)
+    |> URLRewriter.rewrite("hexpm", package, version)
     |> Floki.raw_html()
   end
 
@@ -33,6 +33,48 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
       result = rewrite(html, "my_package", "1.0.0")
 
       assert result =~ "http://localhost:5000/preview/my_package/1.0.0/CHANGELOG.md"
+    end
+
+    test "resolves private package relative links to the raw endpoint" do
+      html = ~s[<a href="CHANGELOG.md">Changelog</a>]
+
+      result =
+        html
+        |> Floki.parse_document!()
+        |> URLRewriter.rewrite("acme", "my_package", "1.0.0")
+        |> Floki.raw_html()
+
+      assert result =~
+               HexpmWeb.Endpoint.url() <> "/packages/acme/my_package/1.0.0/raw/CHANGELOG.md"
+    end
+
+    test "resolves private package relative images to a tokenized image endpoint via the proxy" do
+      html = ~s[<img src="docs/logo.png">]
+
+      result =
+        html
+        |> Floki.parse_document!()
+        |> URLRewriter.rewrite("acme", "my_package", "1.0.0")
+        |> Floki.raw_html()
+
+      [proxied] =
+        result
+        |> Floki.parse_fragment!()
+        |> Floki.attribute("img", "src")
+
+      assert String.starts_with?(proxied, Application.fetch_env!(:hexpm, :img_url) <> "/fetch/")
+
+      encoded = proxied |> String.split("/") |> List.last()
+      decoded = Base.decode16!(encoded, case: :lower)
+
+      assert String.starts_with?(
+               decoded,
+               HexpmWeb.Endpoint.url() <>
+                 "/packages/acme/my_package/1.0.0/readme-image/docs/logo.png?token="
+             )
+
+      token = decoded |> String.split("token=") |> List.last()
+      assert HexpmWeb.ReadmeToken.verify(token, "acme", "my_package", "1.0.0") == :ok
     end
 
     test "prefixes fragment-only links with user-content-" do

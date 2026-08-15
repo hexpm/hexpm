@@ -14,7 +14,7 @@ defmodule HexpmWeb.Dashboard.BillingProxyController do
       billing_key = Application.get_env(:hexpm, :billing_key)
       url = billing_url <> "/" <> Enum.join(path, "/")
 
-      body = Jason.encode!(conn.body_params)
+      body = JSON.encode!(conn.body_params)
 
       headers = [
         {"authorization", billing_key},
@@ -31,7 +31,7 @@ defmodule HexpmWeb.Dashboard.BillingProxyController do
         {:error, reason} ->
           conn
           |> put_resp_content_type("application/json")
-          |> send_resp(502, Jason.encode!(%{"errors" => inspect(reason)}))
+          |> send_resp(502, JSON.encode!(%{"errors" => inspect(reason)}))
       end
     end)
   end
@@ -39,11 +39,11 @@ defmodule HexpmWeb.Dashboard.BillingProxyController do
   def proxy(conn, _params) do
     conn
     |> put_resp_content_type("application/json")
-    |> send_resp(404, Jason.encode!(%{"errors" => "Not found"}))
+    |> send_resp(404, JSON.encode!(%{"errors" => "Not found"}))
   end
 
   defp encode_body(body) when is_binary(body), do: body
-  defp encode_body(body), do: Jason.encode!(body)
+  defp encode_body(body), do: JSON.encode!(body)
 
   defp access_organization(conn, organization, role, fun) do
     user = conn.assigns.current_user
@@ -59,12 +59,12 @@ defmodule HexpmWeb.Dashboard.BillingProxyController do
       else
         conn
         |> put_resp_content_type("application/json")
-        |> send_resp(403, Jason.encode!(%{"errors" => "Forbidden"}))
+        |> send_resp(403, JSON.encode!(%{"errors" => "Forbidden"}))
       end
     else
       conn
       |> put_resp_content_type("application/json")
-      |> send_resp(404, Jason.encode!(%{"errors" => "Not found"}))
+      |> send_resp(404, JSON.encode!(%{"errors" => "Not found"}))
     end
   end
 end

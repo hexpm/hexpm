@@ -42,4 +42,12 @@ defmodule Hexpm.Accounts.AuditLogs do
       remote_ip: nil
     }
   end
+
+  @doc """
+  Audit data for something a background job did to an organization, with the
+  organization as the subject because no person acted.
+  """
+  def system(organization) do
+    %{user: organization, auth_credential: nil, user_agent: "SYSTEM", remote_ip: nil}
+  end
 end

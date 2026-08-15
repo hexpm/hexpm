@@ -62,6 +62,23 @@ defmodule HexpmWeb.PackageVersionsControllerTest do
       assert result =~ "0.0.2"
       assert result =~ "0.0.3-dev"
       assert result =~ package1.name
+
+      assert {:ok, document} = Floki.parse_document(result)
+
+      assert Floki.attribute(document, "#compare-versions", "href") == [
+               "/diff/#{package1.name}/0.0.2..0.0.3-dev"
+             ]
+
+      assert Floki.find(document, "#compare-versions") |> Floki.text() |> String.trim() ==
+               "Compare versions"
+
+      for version <- ~w(0.0.1 0.0.2 0.0.3-dev) do
+        assert [_ | _] =
+                 Floki.find(
+                   document,
+                   ~s(a[href="/packages/#{package1.name}/#{version}/files"])
+                 )
+      end
     end
 
     test "list private package versions", %{
@@ -78,6 +95,35 @@ defmodule HexpmWeb.PackageVersionsControllerTest do
       assert result =~ "0.1.0"
       assert result =~ "1.0.0"
       assert result =~ package2.name
+
+      assert {:ok, document} = Floki.parse_document(result)
+
+      assert Floki.attribute(document, "#compare-versions", "href") == [
+               "/diff/#{repository1.name}/#{package2.name}/0.1.0..1.0.0"
+             ]
+
+      assert [_ | _] =
+               Floki.find(
+                 document,
+                 ~s(a[href="/packages/#{repository1.name}/#{package2.name}/1.0.0/files"])
+               )
+    end
+
+    test "hides compare action when the package has one version" do
+      package = insert(:package, name: "single_version")
+
+      insert(:release,
+        package: package,
+        version: "1.0.0",
+        meta: build(:release_metadata, app: package.name)
+      )
+
+      result =
+        build_conn()
+        |> get("/packages/#{package.name}/versions")
+        |> response(200)
+
+      refute result =~ ~s(id="compare-versions")
     end
 
     test "paginates versions 100 per page and keeps previous-version diff links", %{
@@ -105,6 +151,7 @@ defmodule HexpmWeb.PackageVersionsControllerTest do
       refute "0.0.1" in first_page_versions
       assert first_page =~ "/packages/#{package1.name}/versions?page=2"
       assert first_page =~ "/diff/#{package1.name}/0.0.1..0.0.2"
+      refute first_page =~ "http://localhost:5004/diff/"
 
       second_page =
         build_conn()

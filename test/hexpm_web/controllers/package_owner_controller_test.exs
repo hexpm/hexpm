@@ -30,6 +30,44 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
       assert html_response(conn, 200) =~ "Current owners"
     end
 
+    test "uses selector-safe modal IDs for owners with dots in their usernames", %{
+      full_owner: full_owner,
+      package: package
+    } do
+      owner = insert(:user, username: "owner.with.dots")
+      insert(:package_owner, package: package, user: owner, level: "maintainer")
+
+      html =
+        build_conn()
+        |> test_login(full_owner)
+        |> get("/packages/#{package.name}/owners")
+        |> html_response(200)
+
+      {:ok, document} = Floki.parse_document(html)
+      edit_modal_id = "edit-role-#{owner.id}"
+      remove_modal_id = "remove-owner-#{owner.id}"
+
+      assert [_edit_modal] = Floki.find(document, "##{edit_modal_id}")
+      assert [_remove_modal] = Floki.find(document, "##{remove_modal_id}")
+      assert [_role_form] = Floki.find(document, "#role-form-#{owner.id}")
+      assert [_role_select] = Floki.find(document, "#role-select-#{owner.id}")
+      assert [_remove_form] = Floki.find(document, "#remove-form-#{owner.id}")
+
+      assert [edit_button] =
+               Floki.find(document, ~s(button[aria-label="Edit role for owner.with.dots"]))
+
+      assert Floki.attribute(edit_button, "phx-click")
+             |> List.first()
+             |> String.contains?("##{edit_modal_id}")
+
+      assert [remove_button] =
+               Floki.find(document, ~s(button[aria-label="Remove owner.with.dots"]))
+
+      assert Floki.attribute(remove_button, "phx-click")
+             |> List.first()
+             |> String.contains?("##{remove_modal_id}")
+    end
+
     test "redirects to /sudo when no sudo mode", %{full_owner: full_owner, package: package} do
       conn =
         build_conn()

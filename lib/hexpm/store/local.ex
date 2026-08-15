@@ -27,6 +27,24 @@ defmodule Hexpm.Store.Local do
     end
   end
 
+  def size(bucket, key) do
+    path = safe_path!(bucket, key)
+
+    case File.stat(path) do
+      {:ok, stat} -> stat.size
+      {:error, :enoent} -> nil
+    end
+  end
+
+  def get_to_file(bucket, key, destination, _opts) do
+    path = safe_path!(bucket, key)
+
+    if File.regular?(path) do
+      File.cp!(path, destination)
+      :ok
+    end
+  end
+
   def put(bucket, key, blob, _opts) do
     path = safe_path!(bucket, key)
     File.mkdir_p!(Path.dirname(path))
@@ -59,7 +77,7 @@ defmodule Hexpm.Store.Local do
   end
 
   defp dir() do
-    Application.get_env(:hexpm, :tmp_dir)
-    |> Path.join("store")
+    Application.get_env(:hexpm, :local_store_dir) ||
+      Path.join(Application.fetch_env!(:hexpm, :tmp_dir), "store")
   end
 end

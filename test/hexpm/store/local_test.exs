@@ -24,6 +24,21 @@ defmodule Hexpm.Store.LocalTest do
       File.write!(Path.join(bucket_dir, "file.txt"), "content")
 
       assert Local.get("bucket", "file.txt", []) == "content"
+      assert Hexpm.Store.fetch({Local, "bucket"}, "file.txt") == {:ok, "content"}
+      assert Hexpm.Store.fetch({Local, "bucket"}, "missing.txt") == :not_found
+    end
+
+    @tag :tmp_dir
+    test "uses the configured store shared by development worktrees", %{tmp_dir: tmp_dir} do
+      local_store_dir = Path.join(tmp_dir, "shared-store")
+      Application.put_env(:hexpm, :local_store_dir, local_store_dir)
+      on_exit(fn -> Application.delete_env(:hexpm, :local_store_dir) end)
+
+      bucket_dir = Path.join(local_store_dir, "bucket")
+      File.mkdir_p!(bucket_dir)
+      File.write!(Path.join(bucket_dir, "file.txt"), "content")
+
+      assert Local.get("bucket", "file.txt", []) == "content"
     end
 
     @tag :tmp_dir
@@ -59,6 +74,32 @@ defmodule Hexpm.Store.LocalTest do
       assert_raise ArgumentError, fn ->
         Local.put("bucket", "../evil.txt", "malicious", [])
       end
+    end
+  end
+
+  describe "get_to_file/4" do
+    @tag :tmp_dir
+    test "copies found files and returns nil for missing files", %{tmp_dir: tmp_dir} do
+      bucket_dir = Path.join([tmp_dir, "store", "bucket"])
+      File.mkdir_p!(bucket_dir)
+      File.write!(Path.join(bucket_dir, "source.txt"), "content")
+      destination = Path.join(tmp_dir, "destination.txt")
+
+      assert :ok = Local.get_to_file("bucket", "source.txt", destination, [])
+      assert File.read!(destination) == "content"
+      assert Local.get_to_file("bucket", "missing.txt", destination, []) == nil
+    end
+  end
+
+  describe "size/2" do
+    @tag :tmp_dir
+    test "returns the byte size or nil", %{tmp_dir: tmp_dir} do
+      bucket_dir = Path.join([tmp_dir, "store", "bucket"])
+      File.mkdir_p!(bucket_dir)
+      File.write!(Path.join(bucket_dir, "source.txt"), "content")
+
+      assert Local.size("bucket", "source.txt") == 7
+      assert Local.size("bucket", "missing.txt") == nil
     end
   end
 

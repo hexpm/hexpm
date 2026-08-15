@@ -138,14 +138,7 @@ Always grant the minimum permissions needed for the task:
 Before using `api` or `api:write` scopes, enable 2FA on your account for added security.
 
 #### 3. Use Resource-Specific Scopes
-When possible, use package-specific or repository-specific scopes instead of broad permissions:
-```bash
-# Instead of:
-$ mix hex.user key generate --key-name ci --permission api:write
-
-# Consider:
-$ mix hex.user key generate --key-name ci --permission package:myorg/myapp
-```
+When possible, use package-specific or repository-specific scopes instead of broad permissions. A key that manages one package needs `package:{org}/{name}` rather than `api:write`. Grant it by checking that package under "Packages" when you generate the key.
 
 #### 4. Rotate API Keys Regularly
 Regularly revoke old API keys and generate new ones, especially for CI/CD pipelines.
@@ -167,28 +160,23 @@ This allows you to revoke access for a specific purpose without affecting others
 
 #### Generate a New Key
 
-```bash
-# Interactive key generation (prompts for permissions)
-$ mix hex.user key generate
+Keys are generated on the [keys page](/dashboard/keys) of your dashboard:
 
-# Generate key with specific permissions
-$ mix hex.user key generate --key-name publish-ci --permission api:write
+1. Select "Generate New Key".
+2. Enter a key name, such as `publish-ci`.
+3. Choose an expiration.
+4. Under "Key permissions", check the scopes to grant. "Read" and "Write" sit beneath "API", private repositories beneath "All Repositories", and single packages beneath "Packages".
+5. Select "Generate Key".
 
-# Generate key for specific package
-$ mix hex.user key generate --key-name myapp-ci --permission package:myorg/myapp
-```
+The key is shown once, when you generate it.
 
 #### List Existing Keys
 
-```bash
-$ mix hex.user key list
-```
+The keys page lists every key on your account with its name, permissions, expiration, and last use.
 
 #### Revoke a Key
 
-```bash
-$ mix hex.user key revoke key-name
-```
+Select the revoke action in the key's row on the keys page.
 
 #### For Organization Keys
 
@@ -246,34 +234,28 @@ The `repositories` scope grants access to ALL private repositories you belong to
 
 #### Scenario 1: CI/CD Publishing Public Packages
 **Recommended Scopes:** `api:write`
-```bash
-$ mix hex.user key generate --key-name github-ci --permission api:write
-```
+
+Check "Write" beneath "API".
 
 #### Scenario 2: CI/CD Publishing to Private Repository
 **Recommended Scopes:** `api:write` (publishing) + `repositories` (fetching private dependencies)
-```bash
-# The CI needs to both fetch private deps and publish
-$ mix hex.user key generate --key-name github-ci --permission api:write,repositories
-```
+
+Check "Write" beneath "API", and check "All Repositories".
 
 #### Scenario 3: Development Machine Fetching Private Packages
 **Recommended Scopes:** `repositories` only
-```bash
-$ mix hex.user key generate --key-name laptop --permission repositories
-```
+
+Check "All Repositories", or a single organization beneath it.
 
 #### Scenario 4: Read-Only Monitoring Tool
 **Recommended Scopes:** `api:read`
-```bash
-$ mix hex.user key generate --key-name monitoring --permission api:read
-```
+
+Check "Read" beneath "API".
 
 #### Scenario 5: Single Package Management
 **Recommended Scopes:** `package:org/name`
-```bash
-$ mix hex.user key generate --key-name myapp-deploy --permission package:myorg/myapp
-```
+
+Check the package beneath "Packages".
 
 ---
 

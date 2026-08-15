@@ -36,6 +36,9 @@ defmodule Hexpm.OAuth.TokensTest do
     end
 
     test "sets custom expiration time", %{user: user} do
+      earliest_expires_at =
+        DateTime.utc_now() |> DateTime.add(7200, :second) |> DateTime.truncate(:second)
+
       changeset =
         Tokens.create_for_user(
           user,
@@ -47,9 +50,11 @@ defmodule Hexpm.OAuth.TokensTest do
         )
 
       expires_at = get_field(changeset, :expires_at)
-      expected_time = DateTime.add(DateTime.utc_now(), 7200, :second)
 
-      assert DateTime.diff(expires_at, expected_time, :second) |> abs() <= 1
+      latest_expires_at =
+        DateTime.utc_now() |> DateTime.add(7200, :second) |> DateTime.truncate(:second)
+
+      assert_datetime_between(expires_at, earliest_expires_at, latest_expires_at)
     end
 
     test "creates refresh token when requested", %{user: user} do
@@ -81,6 +86,11 @@ defmodule Hexpm.OAuth.TokensTest do
     end
 
     test "sets 30-day refresh token expiration for all scopes", %{user: user} do
+      earliest_expires_at =
+        DateTime.utc_now()
+        |> DateTime.add(30 * 24 * 60 * 60, :second)
+        |> DateTime.truncate(:second)
+
       changeset =
         Tokens.create_for_user(
           user,
@@ -92,9 +102,13 @@ defmodule Hexpm.OAuth.TokensTest do
         )
 
       refresh_expires_at = get_field(changeset, :refresh_token_expires_at)
-      expected_time = DateTime.add(DateTime.utc_now(), 30 * 24 * 60 * 60, :second)
 
-      assert DateTime.diff(refresh_expires_at, expected_time, :second) |> abs() <= 2
+      latest_expires_at =
+        DateTime.utc_now()
+        |> DateTime.add(30 * 24 * 60 * 60, :second)
+        |> DateTime.truncate(:second)
+
+      assert_datetime_between(refresh_expires_at, earliest_expires_at, latest_expires_at)
     end
 
     test "does not set refresh token expiration when refresh token not requested", %{user: user} do
@@ -169,11 +183,13 @@ defmodule Hexpm.OAuth.TokensTest do
   describe "revoke/1" do
     test "creates changeset with revoked_at timestamp" do
       token = %Token{}
+      earliest_revoked_at = DateTime.utc_now() |> DateTime.truncate(:second)
       changeset = Tokens.revoke_changeset(token)
+      latest_revoked_at = DateTime.utc_now() |> DateTime.truncate(:second)
 
       revoked_at = get_field(changeset, :revoked_at)
       assert revoked_at
-      assert DateTime.diff(DateTime.utc_now(), revoked_at, :second) <= 1
+      assert_datetime_between(revoked_at, earliest_revoked_at, latest_revoked_at)
     end
   end
 

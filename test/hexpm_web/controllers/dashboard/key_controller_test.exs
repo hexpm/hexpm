@@ -31,6 +31,63 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
       conn = get(build_conn(), "/dashboard/keys")
       assert redirected_to(conn) == "/login?return=%2Fdashboard%2Fkeys"
     end
+
+    test "sorts keys, organizations, and packages by name", c do
+      zulu_organization = insert(:organization, name: "zulu_org")
+      alpha_organization = insert(:organization, name: "alpha_org")
+
+      insert(:organization_user, organization: zulu_organization, user: c.user)
+      insert(:organization_user, organization: alpha_organization, user: c.user)
+
+      insert(:package,
+        name: "zulu_package",
+        package_owners: [build(:package_owner, user: c.user)]
+      )
+
+      insert(:package,
+        name: "alpha_package",
+        package_owners: [build(:package_owner, user: c.user)]
+      )
+
+      insert(:key, user: c.user, name: "zulu_key")
+      insert(:key, user: c.user, name: "alpha_key")
+
+      document =
+        build_conn()
+        |> test_login(c.user)
+        |> get("/dashboard/keys")
+        |> html_response(200)
+        |> Floki.parse_document!()
+
+      key_names =
+        document
+        |> Floki.find("table tbody tr td:first-child span")
+        |> Enum.map(&(&1 |> Floki.text() |> String.trim()))
+
+      organization_inputs =
+        document
+        |> Floki.find(
+          ~s(#repositories-permission-group input[name^="key[permissions][repository]"])
+        )
+        |> Enum.map(&(Floki.attribute(&1, "name") |> List.first()))
+
+      package_inputs =
+        document
+        |> Floki.find(~s(#generate-key-modal input[name^="key[permissions][package]"]))
+        |> Enum.map(&(Floki.attribute(&1, "name") |> List.first()))
+
+      assert key_names == ["alpha_key", "zulu_key"]
+
+      assert organization_inputs == [
+               "key[permissions][repository][alpha_org]",
+               "key[permissions][repository][zulu_org]"
+             ]
+
+      assert package_inputs == [
+               "key[permissions][package][alpha_package]",
+               "key[permissions][package][zulu_package]"
+             ]
+    end
   end
 
   describe "POST /dashboard/keys" do
@@ -99,6 +156,9 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
 
   describe "POST /dashboard/keys with expiry" do
     test "create key with expires_in sets revoke_at", c do
+      earliest_revoke_at =
+        DateTime.utc_now() |> DateTime.add(30, :day) |> DateTime.truncate(:second)
+
       conn =
         build_conn()
         |> test_login(c.user)
@@ -109,9 +169,11 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
       key = Hexpm.Repo.one!(Hexpm.Accounts.Key.get(c.user, "temp-key"))
       assert key.revoke_at != nil
 
-      # revoke_at should be approximately 30 days from now
-      diff = DateTime.diff(key.revoke_at, DateTime.utc_now(), :day)
-      assert diff >= 29 and diff <= 30
+      latest_revoke_at =
+        DateTime.utc_now() |> DateTime.add(30, :day) |> DateTime.truncate(:second)
+
+      assert DateTime.compare(key.revoke_at, earliest_revoke_at) in [:eq, :gt]
+      assert DateTime.compare(key.revoke_at, latest_revoke_at) in [:eq, :lt]
     end
 
     test "create key with expires_in none leaves revoke_at nil", c do

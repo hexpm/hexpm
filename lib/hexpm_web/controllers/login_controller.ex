@@ -70,12 +70,8 @@ defmodule HexpmWeb.LoginController do
     |> redirect_return(user, return)
   end
 
-  defp redirect_return(conn, _user, "/" <> _ = return) do
-    redirect(conn, to: return)
-  end
-
-  defp redirect_return(conn, user, _return) do
-    redirect(conn, to: ~p"/users/#{user}")
+  defp redirect_return(conn, user, return) do
+    redirect(conn, to: safe_return_path(return) || ~p"/users/#{user}")
   end
 
   defp render_show(conn) do

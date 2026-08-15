@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-<%= for {name, docs_updated_at} <- @packages do %>
-  <sitemap>
-    <loc><%= Hexpm.Utils.docs_html_apex_url(name) <> "sitemap.xml" %></loc><%= if docs_updated_at do %>
-    <lastmod><%= Hexpm.Utils.binarify(docs_updated_at) %></lastmod><% end %>
-  </sitemap>
-<% end %>
-</sitemapindex>

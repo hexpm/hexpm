@@ -705,6 +705,8 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       api_key: api_key,
       user: user
     } do
+      earliest_expires_at = DateTime.add(DateTime.utc_now(), 30 * 60, :second)
+
       conn =
         post(build_conn(), ~p"/api/oauth/token", %{
           "grant_type" => "client_credentials",
@@ -720,13 +722,9 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert length(sessions) == 1
       [session] = sessions
 
-      # Session should expire within ~30 minutes (allow some margin)
-      now = DateTime.utc_now()
-      expires_in_seconds = DateTime.diff(session.expires_at, now, :second)
-      # At least 25 minutes
-      assert expires_in_seconds > 25 * 60
-      # At most 30 minutes
-      assert expires_in_seconds <= 30 * 60
+      latest_expires_at = DateTime.add(DateTime.utc_now(), 30 * 60, :second)
+      assert DateTime.compare(session.expires_at, earliest_expires_at) in [:eq, :gt]
+      assert DateTime.compare(session.expires_at, latest_expires_at) in [:eq, :lt]
     end
 
     test "returns error for missing client_secret", %{client: client} do
@@ -1443,13 +1441,16 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       %{
         hash_user: user,
         hash_client: client,
+        hash_session: session,
         hash_token: token,
         hash_refresh_token: token.refresh_token,
         hash_refresh_token_hash: token.refresh_token_hash
       }
     end
 
-    test "successfully revokes token using valid hash", %{
+    test "successfully revokes session using valid hash", %{
+      hash_user: user,
+      hash_session: session,
       hash_token: token,
       hash_refresh_token_hash: hash
     } do
@@ -1458,7 +1459,37 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       |> response(200)
 
       updated_token = Repo.get(Token, token.id)
+      updated_session = Repo.get(Hexpm.UserSession, session.id)
+
       assert Tokens.revoked?(updated_token)
+      assert updated_session.revoked_at
+      assert Hexpm.UserSessions.all_for_user(user) == []
+    end
+
+    test "revokes the current token when given a rotated token hash", %{
+      hash_client: client,
+      hash_token: token,
+      hash_refresh_token_hash: hash
+    } do
+      token = Repo.preload(token, :user)
+
+      {:ok, current_token} =
+        Tokens.revoke_and_create_token(
+          token,
+          client.client_id,
+          token.granted_scopes,
+          "refresh_token",
+          token.refresh_token,
+          with_refresh_token: true,
+          user_session_id: token.user_session_id
+        )
+
+      build_conn()
+      |> post(~p"/api/oauth/revoke_by_hash", %{token_hash: hash})
+      |> response(200)
+
+      assert Repo.get(Token, current_token.id) |> Tokens.revoked?()
+      assert Repo.get(Hexpm.UserSession, token.user_session_id).revoked_at
     end
 
     test "accepts uppercase hash", %{hash_token: token, hash_refresh_token_hash: hash} do
@@ -1488,7 +1519,8 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       |> response(200)
     end
 
-    test "handles revocation of already revoked token", %{
+    test "revokes the session for an already revoked token", %{
+      hash_session: session,
       hash_token: token,
       hash_refresh_token_hash: hash
     } do
@@ -1497,6 +1529,8 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       build_conn()
       |> post(~p"/api/oauth/revoke_by_hash", %{token_hash: hash})
       |> response(200)
+
+      assert Repo.get(Hexpm.UserSession, session.id).revoked_at
     end
 
     test "hash is computed correctly for new tokens", %{hash_refresh_token: refresh_token} do

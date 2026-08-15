@@ -1,7 +1,16 @@
 defmodule Hexpm.ReleaseTasks.Stats do
+  use Oban.Worker,
+    queue: :heavy,
+    max_attempts: 5,
+    unique: [
+      period: :infinity,
+      states: :incomplete,
+      fields: [:worker]
+    ]
+
   require Logger
   import Ecto.Query, only: [from: 2]
-  alias Hexpm.{Repo, Store, Utils}
+  alias Hexpm.{CronMonitor, Repo, Store, Utils}
 
   alias Hexpm.Repository.{
     Download,
@@ -32,6 +41,22 @@ defmodule Hexpm.ReleaseTasks.Stats do
   >x
 
   @ets __MODULE__
+  @monitor_slug "hexpm-stats"
+  @monitor_schedule "0 1 * * *"
+
+  @impl Oban.Worker
+  def timeout(_job), do: 3_600_000
+
+  @impl Oban.Worker
+  def perform(job) do
+    case date(job) do
+      {:ok, date} ->
+        CronMonitor.run(@monitor_slug, @monitor_schedule, fn -> run(date) end)
+
+      {:error, reason} ->
+        {:cancel, reason}
+    end
+  end
 
   def run(date \\ Utils.utc_yesterday(), dryrun? \\ false) do
     {time, size} =
@@ -82,6 +107,10 @@ defmodule Hexpm.ReleaseTasks.Stats do
               |> Enum.each(&Repo.insert_all(Download, &1))
             end)
 
+            # Scoped to this transaction; the default 4MB makes the view
+            # aggregations over the downloads table spill to disk
+            Repo.query!("SET LOCAL work_mem = '128MB'")
+
             time_log("refresh PackageDownload view", fn ->
               Repo.refresh_view(PackageDownload, timeout: 60_000)
             end)
@@ -92,13 +121,15 @@ defmodule Hexpm.ReleaseTasks.Stats do
           end,
           timeout: 600_000
         )
+
+        vacuum_downloads()
       end
 
       num
     after
       :ets.delete(@ets)
     end
-  catch
+  rescue
     exception ->
       Logger.error("[stats] failed")
       reraise exception, __STACKTRACE__
@@ -124,7 +155,8 @@ defmodule Hexpm.ReleaseTasks.Stats do
   end
 
   defp process_keys(bucket, keys) do
-    Task.async_stream(
+    Hexpm.Tasks
+    |> Task.Supervisor.async_stream_nolink(
       keys,
       fn key ->
         Store.get(bucket, key, [])
@@ -134,7 +166,16 @@ defmodule Hexpm.ReleaseTasks.Stats do
       max_concurrency: 10,
       timeout: 600_000
     )
-    |> Stream.run()
+    |> Enum.each(fn
+      {:ok, _result} ->
+        :ok
+
+      {:exit, {exception, stacktrace}} when is_exception(exception) ->
+        reraise exception, stacktrace
+
+      {:exit, reason} ->
+        exit(reason)
+    end)
   end
 
   defp process_file(file) do
@@ -194,9 +235,47 @@ defmodule Hexpm.ReleaseTasks.Stats do
   defp copy(nil), do: nil
   defp copy(binary), do: :binary.copy(binary)
 
+  # Runs outside the transaction above, which VACUUM cannot run inside. This job
+  # is the only writer, so nothing else sets the visibility map bits the day's
+  # new pages need, and nothing else refreshes the day histogram that every read
+  # of this table filters on. Autovacuum does not reach it either: its insert
+  # threshold scales with the table, and this one is 43M rows and growing.
+  @doc false
+  def vacuum_downloads() do
+    if Application.get_env(:hexpm, :skip_maintenance_vacuum, false) do
+      :ok
+    else
+      time_log("vacuum downloads", fn ->
+        Repo.query!("VACUUM (ANALYZE) downloads", [], timeout: 600_000)
+      end)
+
+      :ok
+    end
+  end
+
   defp time_log(action, fun) do
     {time, result} = :timer.tc(fun)
     Logger.info("[stats] completed \"#{action}\" in #{time / 1000}ms")
     result
   end
+
+  defp date(%Oban.Job{args: args, scheduled_at: scheduled_at}) when map_size(args) == 0 do
+    case scheduled_at do
+      %DateTime{} -> {:ok, scheduled_at |> DateTime.to_date() |> Date.add(-1)}
+      _other -> {:error, :missing_scheduled_at}
+    end
+  end
+
+  defp date(%Oban.Job{args: %{"date" => date} = args})
+       when map_size(args) == 1 and is_binary(date) do
+    case Date.from_iso8601(date) do
+      {:ok, date} -> {:ok, date}
+      {:error, _reason} -> {:error, {:invalid_date, date}}
+    end
+  end
+
+  defp date(%Oban.Job{args: %{"date" => date} = args}) when map_size(args) == 1,
+    do: {:error, {:invalid_date, date}}
+
+  defp date(%Oban.Job{args: args}), do: {:error, {:invalid_args, args}}
 end

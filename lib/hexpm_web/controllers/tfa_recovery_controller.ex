@@ -15,7 +15,7 @@ defmodule HexpmWeb.TFARecoveryController do
       |> delete_session("tfa_user_id")
       |> start_session_internal(updated_user)
       |> HexpmWeb.Plugs.Sudo.set_sudo_authenticated()
-      |> redirect(to: session["return"] || ~p"/users/#{updated_user}")
+      |> redirect(to: safe_return_path(session["return"]) || ~p"/users/#{updated_user}")
     else
       _ ->
         render_show_error(conn)
@@ -41,11 +41,15 @@ defmodule HexpmWeb.TFARecoveryController do
 
   defp authenticate(conn, _opts) do
     case get_session(conn, "tfa_user_id") do
-      nil ->
-        conn |> redirect(to: "/") |> halt()
+      %{"at" => at} ->
+        if HexpmWeb.Session.TTL.within?(at, minute: 15) do
+          conn
+        else
+          conn |> delete_session("tfa_user_id") |> redirect(to: "/") |> halt()
+        end
 
       _ ->
-        conn
+        conn |> redirect(to: "/") |> halt()
     end
   end
 

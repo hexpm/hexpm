@@ -6,8 +6,8 @@ defmodule HexpmWeb.CaptchaTest do
 
   setup :verify_on_exit!
 
-  @failure Jason.decode!(~s/{"success":false,"error-codes":["invalid-input-response"]}/)
-  @success Jason.decode!(~s/{"success":true}/)
+  @failure JSON.decode!(~s/{"success":false,"error-codes":["invalid-input-response"]}/)
+  @success JSON.decode!(~s/{"success":true}/)
 
   test "returns false for non-success response" do
     expect(

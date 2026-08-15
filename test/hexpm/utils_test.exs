@@ -40,29 +40,43 @@ defmodule Hexpm.UtilsTest do
     end
   end
 
+  test "raise_async_stream_error/1 preserves successful results and reraises exits" do
+    assert Utils.raise_async_stream_error(ok: :value) |> Enum.to_list() == [ok: :value]
+
+    assert_raise RuntimeError, ~r/failure/, fn ->
+      [{:exit, {RuntimeError.exception("failure"), []}}]
+      |> Utils.raise_async_stream_error()
+      |> Stream.run()
+    end
+  end
+
   describe "within_last_day?/1" do
-    test "returns true for current time" do
-      assert Utils.within_last_day?(NaiveDateTime.utc_now())
+    setup do
+      %{now: ~N[2026-07-11 12:00:00]}
     end
 
-    test "returns true for timestamp less than 24 hours ago" do
-      timestamp = NaiveDateTime.add(NaiveDateTime.utc_now(), -23 * 60 * 60, :second)
-      assert Utils.within_last_day?(timestamp)
+    test "returns true for current time", %{now: now} do
+      assert Utils.within_last_day?(now, now)
     end
 
-    test "returns false for timestamp more than 24 hours ago" do
-      timestamp = NaiveDateTime.add(NaiveDateTime.utc_now(), -25 * 60 * 60, :second)
-      refute Utils.within_last_day?(timestamp)
+    test "returns true for timestamp less than 24 hours ago", %{now: now} do
+      timestamp = NaiveDateTime.add(now, -23 * 60 * 60, :second)
+      assert Utils.within_last_day?(timestamp, now)
     end
 
-    test "returns false for timestamp exactly 24 hours ago" do
-      timestamp = NaiveDateTime.add(NaiveDateTime.utc_now(), -86_400, :second)
-      refute Utils.within_last_day?(timestamp)
+    test "returns false for timestamp more than 24 hours ago", %{now: now} do
+      timestamp = NaiveDateTime.add(now, -25 * 60 * 60, :second)
+      refute Utils.within_last_day?(timestamp, now)
     end
 
-    test "returns false for timestamp many days ago" do
-      timestamp = NaiveDateTime.add(NaiveDateTime.utc_now(), -1_000_000, :second)
-      refute Utils.within_last_day?(timestamp)
+    test "returns false for timestamp exactly 24 hours ago", %{now: now} do
+      timestamp = NaiveDateTime.add(now, -86_400, :second)
+      refute Utils.within_last_day?(timestamp, now)
+    end
+
+    test "returns false for timestamp many days ago", %{now: now} do
+      timestamp = NaiveDateTime.add(now, -1_000_000, :second)
+      refute Utils.within_last_day?(timestamp, now)
     end
   end
 
@@ -132,6 +146,32 @@ defmodule Hexpm.UtilsTest do
 
       assert url =~ "//my-org."
       refute url =~ "my_org"
+    end
+  end
+
+  describe "docs_html_url/3 with repository and package names" do
+    test "builds public package URLs from the shared docs URL" do
+      assert Utils.docs_html_url("hexpm", "phoenix_live_view", "/1.0.0") ==
+               "http://phoenix-live-view.localhost:5002/1.0.0"
+    end
+
+    test "builds private package URLs from the shared private docs URL" do
+      assert Utils.docs_html_url("my_org", "secret", "/1.0.0") ==
+               "http://my-org.localhost:5002/secret/1.0.0"
+    end
+
+    # The docs CDN routes search.hexdocs.pm to the search backend, so the
+    # package of that name is served from the apex and nowhere else.
+    test "keeps packages named after a reserved subdomain on the apex" do
+      assert Utils.docs_html_url("hexpm", "search", "/Search.html") ==
+               "http://localhost:5002/search/Search.html"
+
+      hexpm = %Hexpm.Repository.Repository{id: 1, name: "hexpm"}
+      package = %Hexpm.Repository.Package{name: "search", repository: hexpm}
+      release = %Hexpm.Repository.Release{version: Version.parse!("0.3.0")}
+
+      assert Utils.docs_html_url(hexpm, package, release) ==
+               "http://localhost:5002/search/0.3.0/"
     end
   end
 end

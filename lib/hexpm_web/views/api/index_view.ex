@@ -5,6 +5,7 @@ defmodule HexpmWeb.API.IndexView do
     %{
       packages_url: url(~p"/api/packages"),
       package_url: fix_placeholder(url(~p"/api/packages/{name}")),
+      package_retirement_url: fix_placeholder(url(~p"/api/packages/{name}/retire")),
       package_release_url: fix_placeholder(url(~p"/api/packages/{name}/releases/{version}")),
       package_owners_url: fix_placeholder(url(~p"/api/packages/{name}/owners")),
       keys_url: url(~p"/api/keys"),

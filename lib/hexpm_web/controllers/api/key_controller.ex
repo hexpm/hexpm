@@ -7,7 +7,8 @@ defmodule HexpmWeb.API.KeyController do
        [
          domains: [{"api", "write"}],
          allow_unconfirmed: true,
-         fun: {AuthHelpers, :organization_access, [organization_role: "write"]}
+         fun: {AuthHelpers, :organization_access, [organization_role: "write"]},
+         authentication: :required
        ]
        when action == :create
 

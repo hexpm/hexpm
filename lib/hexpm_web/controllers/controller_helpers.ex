@@ -23,6 +23,15 @@ defmodule HexpmWeb.ControllerHelpers do
     cache(conn, control, vary)
   end
 
+  def permanent_redirect(conn, path, query_string \\ nil) do
+    query_string = if is_nil(query_string), do: conn.query_string, else: query_string
+    query = if query_string == "", do: "", else: "?#{query_string}"
+
+    conn
+    |> put_status(:moved_permanently)
+    |> redirect(external: HexpmWeb.Endpoint.url() <> path <> query)
+  end
+
   defp logged_in_privacy(conn, :logged_in) do
     if conn.assigns.current_user, do: :private, else: :public
   end
@@ -369,21 +378,80 @@ defmodule HexpmWeb.ControllerHelpers do
     |> put_session("session_token", Base.encode64(session_token))
   end
 
-  def start_tfa_session(conn, user, return) do
-    {:ok, _user_session, session_token} =
-      UserSessions.create_browser_session(user,
-        name: detect_browser(conn),
-        audit: %{audit_data(conn) | user: user}
-      )
+  def sso_link_error_message(:not_member),
+    do:
+      "This Hexpm account is not a member of the organization. Ask an administrator to add it before retrying SSO."
 
+  def sso_link_error_message({:identity_conflict, _changeset}),
+    do: "That SSO identity or Hexpm account is already linked."
+
+  def sso_link_error_message(:session_user_mismatch),
+    do:
+      "That SSO authentication belongs to a different Hexpm account. Sign in as that account and start SSO again."
+
+  def sso_link_error_message(_reason),
+    do:
+      "The SSO account-link request is no longer valid. You are signed in, but no SSO identity was connected."
+
+  def sso_callback_error_message(:not_member),
+    do:
+      "This Hexpm account is not a member of the organization. Ask an administrator to add it before retrying SSO."
+
+  def sso_callback_error_message(:session_user_mismatch),
+    do:
+      "That provider identity is already linked to a different Hexpm account. Sign in as that account, or ask an organization administrator to unlink it."
+
+  def sso_callback_error_message(:identity_conflict),
+    do:
+      "This Hexpm account is already linked to a different provider identity in this organization. Unlink it before linking another."
+
+  # The code stays for anything without dedicated copy, since it is what an
+  # administrator quotes to support.
+  def sso_callback_error_message(code), do: "SSO authentication failed (#{code})."
+
+  def remember_sso_state(conn, state) when is_binary(state) do
+    states =
+      [state | List.wrap(get_session(conn, "sso_states"))]
+      |> Enum.uniq()
+      |> Enum.take(5)
+
+    put_session(conn, "sso_states", states)
+  end
+
+  def valid_sso_state?(conn, state) when is_binary(state) do
+    Enum.any?(List.wrap(get_session(conn, "sso_states")), &secure_compare(&1, state))
+  end
+
+  def valid_sso_state?(_conn, _state), do: false
+
+  def forget_sso_state(conn, state) do
+    states =
+      conn
+      |> get_session("sso_states")
+      |> List.wrap()
+      |> Enum.reject(&secure_compare(&1, state))
+
+    case states do
+      [] -> delete_session(conn, "sso_states")
+      states -> put_session(conn, "sso_states", states)
+    end
+  end
+
+  def start_tfa_session(conn, user, return) do
     conn
     |> configure_session(renew: true)
     |> put_session("tfa_user_id", %{
       "uid" => user.id,
-      "return" => return,
-      "session_token" => Base.encode64(session_token)
+      "at" => NaiveDateTime.utc_now() |> NaiveDateTime.to_iso8601(),
+      "return" => return
     })
   end
+
+  defp secure_compare(left, right)
+       when is_binary(left) and is_binary(right) and byte_size(left) == byte_size(right),
+       do: Plug.Crypto.secure_compare(left, right)
+
+  defp secure_compare(_left, _right), do: false
 
   defp detect_browser(conn) do
     user_agent = get_req_header(conn, "user-agent") |> List.first()
@@ -522,19 +590,39 @@ defmodule HexpmWeb.ControllerHelpers do
   def safe_string(value) when is_binary(value), do: value
   def safe_string(_), do: nil
 
+  # A leading `//` starts an authority, so `//evil.com` leaves the site. The
+  # rest are spellings of that same trick that a naive "starts with a single
+  # slash" check would admit:
+  #
+  #   * `\` is treated as `/` by browsers, so `/\evil.com` is scheme-relative.
+  #   * tab, LF and CR are stripped while parsing a URL, so `/<TAB>/evil.com`
+  #     resolves as `//evil.com` (the bypass behind CVE-2026-64941). LF and CR
+  #     would also split a Location header.
+  #   * `%2f` and `%5c` are the encoded spellings, rejected so that a later
+  #     decoding step downstream cannot reintroduce the leading `//`.
+  @invalid_return_path_chars ["\\", "\t", "\n", "\r", "%09", "%2f", "%2F", "%5c", "%5C"]
+
   @doc """
-  Returns the value if it is a local path (starts with `/` but not `//`),
-  otherwise returns nil. Use to validate user-supplied redirect targets before
-  passing to `redirect(to: ...)`.
+  Returns the value if it is a local path, otherwise returns nil.
+
+  A local path starts with `/`, but not with `//`, and contains none of the
+  characters that let a path resolve off-site. Use to validate user-supplied
+  redirect targets before passing to `redirect(to: ...)`.
   """
   def safe_return_path("/"), do: "/"
   def safe_return_path("//" <> _), do: nil
-  def safe_return_path("/" <> _ = path), do: path
+
+  def safe_return_path("/" <> _ = path) do
+    if String.contains?(path, @invalid_return_path_chars), do: nil, else: path
+  end
+
   def safe_return_path(_), do: nil
 
   @doc """
-  Safely parses a string to integer. Returns nil for non-string or invalid input.
+  Safely parses a string to integer. Returns nil for invalid input.
   """
+  def safe_to_integer(value) when is_integer(value), do: value
+
   def safe_to_integer(value) when is_binary(value) do
     case Integer.parse(value) do
       {int, ""} -> int

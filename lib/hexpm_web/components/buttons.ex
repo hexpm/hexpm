@@ -23,14 +23,9 @@ defmodule HexpmWeb.Components.Buttons do
   attr :full_width, :boolean, default: false
   attr :loading, :boolean, default: false
 
-  # Global attributes:
-  # - phx-click, phx-target, phx-value-id: LiveView event handling
+  # In addition to standard global attributes:
   # - form: Associate button with a form element
-  # - data-input-id: Legacy jQuery integration for package pages
-  # - id: Required for phx-hook elements and form submissions
-  attr :rest, :global,
-    include:
-      ~w(phx-click phx-target phx-value-id form data-input-id id phx-hook data-copy-target data-print-target data-download-target data-confirm data-target)
+  attr :rest, :global, include: ~w(form)
 
   attr :size, :string, default: "md", values: ["sm", "md", "lg"]
   attr :type, :string, default: "button", values: ["button", "submit", "reset"]
@@ -198,7 +193,7 @@ defmodule HexpmWeb.Components.Buttons do
   attr :size, :integer, default: 16
   attr :type, :string, default: "button", values: ["button", "submit", "reset"]
   attr :variant, :string, default: "default", values: ["default", "danger", "primary"]
-  attr :rest, :global, include: ~w(phx-click phx-target phx-value-id id aria-label)
+  attr :rest, :global
 
   def icon_button(assigns) do
     ~H"""
@@ -261,7 +256,7 @@ defmodule HexpmWeb.Components.Buttons do
 
   # Text link variants
   defp text_link_variant("primary") do
-    "text-blue-600 hover:text-blue-500 focus:ring-blue-500 font-medium"
+    "text-blue-600 hover:text-blue-500 focus:ring-blue-500 font-medium dark:text-blue-300 dark:hover:text-blue-200"
   end
 
   defp text_link_variant("secondary") do

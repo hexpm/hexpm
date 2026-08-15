@@ -2,7 +2,7 @@ defmodule HexpmWeb.Plugs.AttackTest do
   use ExUnit.Case
   import Plug.{Conn, Test}
   import Hexpm.Factory
-  alias HexpmWeb.RateLimitPubSub
+  alias HexpmWeb.{Plugs.Attack, RateLimitPubSub}
 
   defmodule Hello do
     # need to use Phoenix.Controller because RateLimit.Plug uses ErrorView
@@ -43,13 +43,11 @@ defmodule HexpmWeb.Plugs.AttackTest do
       time = System.system_time(:millisecond)
       Phoenix.PubSub.broadcast!(Hexpm.PubSub, "ratelimit", {:throttle, {:user, user.id}, time})
       Phoenix.PubSub.broadcast!(Hexpm.PubSub, "ratelimit", {:throttle, {:user, -1}, time})
-      Process.sleep(100)
       :sys.get_state(RateLimitPubSub)
 
-      conn = request_user(user)
-      assert conn.status == 200
-      assert get_resp_header(conn, "x-ratelimit-limit") == ["500"]
-      assert get_resp_header(conn, "x-ratelimit-remaining") == ["498"]
+      assert {:allow, {:throttle, data}} = Attack.user_throttle(user.id, time: time)
+      assert data[:limit] == 500
+      assert data[:remaining] == 498
     end
 
     test "broadcasts ip rate limits" do
@@ -57,13 +55,65 @@ defmodule HexpmWeb.Plugs.AttackTest do
       time = System.system_time(:millisecond)
       Phoenix.PubSub.broadcast!(Hexpm.PubSub, "ratelimit", {:throttle, {:ip, {3, 3, 3, 3}}, time})
       Phoenix.PubSub.broadcast!(Hexpm.PubSub, "ratelimit", {:throttle, {:ip, {4, 4, 4, 4}}, time})
-      Process.sleep(100)
       :sys.get_state(RateLimitPubSub)
 
-      conn = request_ip({3, 3, 3, 3})
-      assert conn.status == 200
-      assert get_resp_header(conn, "x-ratelimit-limit") == ["100"]
-      assert get_resp_header(conn, "x-ratelimit-remaining") == ["98"]
+      assert {:allow, {:throttle, data}} = Attack.ip_throttle({3, 3, 3, 3}, time: time)
+      assert data[:limit] == 100
+      assert data[:remaining] == 98
+    end
+
+    test "broadcasts and bounds diff generation rate limits" do
+      align_to_throttle_bucket()
+      identity = {:ip, {5, 5, 5, 5}}
+      time = System.system_time(:millisecond)
+
+      Phoenix.PubSub.broadcast!(
+        Hexpm.PubSub,
+        "ratelimit",
+        {:throttle, {:diff, identity}, time}
+      )
+
+      :sys.get_state(RateLimitPubSub)
+
+      assert {:allow, {:throttle, data}} = Attack.diff_throttle(identity, time: time)
+      assert data[:limit] == 20
+      assert data[:remaining] == 18
+
+      for _ <- 1..18 do
+        assert {:allow, _data} = Attack.diff_throttle(identity, time: time)
+      end
+
+      assert {:block, _data} = Attack.diff_throttle(identity, time: time)
+    end
+
+    test "broadcasts SSO rate limits" do
+      align_to_throttle_bucket()
+      time = System.system_time(:millisecond)
+      ip = {6, 6, 6, 6}
+      organization_id = 123
+
+      for key <- [
+            {:sso_start_ip, ip},
+            {:sso_start_organization, organization_id, ip},
+            {:sso_callback_ip, ip}
+          ] do
+        Phoenix.PubSub.broadcast!(Hexpm.PubSub, "ratelimit", {:throttle, key, time})
+      end
+
+      :sys.get_state(RateLimitPubSub)
+
+      assert {:allow, {:throttle, start_data}} =
+               Attack.sso_start_ip_throttle(ip, time: time)
+
+      assert {:allow, {:throttle, organization_data}} =
+               Attack.sso_start_organization_throttle(organization_id, ip, time: time)
+
+      assert {:allow, {:throttle, callback_data}} =
+               Attack.sso_callback_ip_throttle(ip, time: time)
+
+      assert start_data[:remaining] == 28
+      assert organization_data[:remaining] == 18
+      assert callback_data[:remaining] == 48
     end
 
     test "halts requests when ip limit is exceeded" do
@@ -79,7 +129,7 @@ defmodule HexpmWeb.Plugs.AttackTest do
       assert conn.status == 429
 
       assert conn.resp_body ==
-               Jason.encode!(%{status: 429, message: "API rate limit exceeded for IP 1.1.1.1"})
+               JSON.encode!(%{status: 429, message: "API rate limit exceeded for IP 1.1.1.1"})
     end
 
     test "halts requests when user limit is exceeded", %{user: user} do
@@ -95,7 +145,7 @@ defmodule HexpmWeb.Plugs.AttackTest do
       assert conn.status == 429
 
       assert conn.resp_body ==
-               Jason.encode!(%{
+               JSON.encode!(%{
                  status: 429,
                  message: "API rate limit exceeded for user #{user.id}"
                })
@@ -147,7 +197,7 @@ defmodule HexpmWeb.Plugs.AttackTest do
 
       conn = request_ip({10, 1, 1, 1})
       assert conn.status == 403
-      assert conn.resp_body == Jason.encode!(%{status: 403, message: "Blocked"})
+      assert conn.resp_body == JSON.encode!(%{status: 403, message: "Blocked"})
     end
 
     test "halts requests from IPs that are blocked outside of /api" do
@@ -156,7 +206,7 @@ defmodule HexpmWeb.Plugs.AttackTest do
 
       conn = %{request_ip({10, 1, 1, 1}) | request_path: "/"}
       assert conn.status == 403
-      assert conn.resp_body == Jason.encode!(%{status: 403, message: "Blocked"})
+      assert conn.resp_body == JSON.encode!(%{status: 403, message: "Blocked"})
     end
 
     test "halts requests from IP masks that are blocked" do
@@ -165,15 +215,15 @@ defmodule HexpmWeb.Plugs.AttackTest do
 
       conn = request_ip({10, 1, 1, 1})
       assert conn.status == 403
-      assert conn.resp_body == Jason.encode!(%{status: 403, message: "Blocked"})
+      assert conn.resp_body == JSON.encode!(%{status: 403, message: "Blocked"})
 
       conn = request_ip({10, 1, 1, 127})
       assert conn.status == 403
-      assert conn.resp_body == Jason.encode!(%{status: 403, message: "Blocked"})
+      assert conn.resp_body == JSON.encode!(%{status: 403, message: "Blocked"})
 
       conn = request_ip({10, 1, 1, 255})
       assert conn.status == 403
-      assert conn.resp_body == Jason.encode!(%{status: 403, message: "Blocked"})
+      assert conn.resp_body == JSON.encode!(%{status: 403, message: "Blocked"})
 
       conn = request_ip({10, 1, 2, 0})
       assert conn.status == 200
@@ -188,7 +238,7 @@ defmodule HexpmWeb.Plugs.AttackTest do
 
       conn = request_ip({20, 2, 2, 2})
       assert conn.status == 403
-      assert conn.resp_body == Jason.encode!(%{status: 403, message: "Blocked"})
+      assert conn.resp_body == JSON.encode!(%{status: 403, message: "Blocked"})
 
       Hexpm.Repo.delete!(blocked_address)
       Hexpm.BlockAddress.reload()

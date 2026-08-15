@@ -7,7 +7,6 @@ defmodule Hexpm.Utils do
 
   import Ecto.Query, only: [from: 2]
   alias Hexpm.Repository.{Package, Release, Repository}
-  require Logger
 
   def secure_check(left, right) do
     if byte_size(left) == byte_size(right) do
@@ -47,6 +46,14 @@ defmodule Hexpm.Utils do
 
   def multi_await(tasks) do
     Enum.map(tasks, &Task.await(&1, @timeout))
+  end
+
+  def raise_async_stream_error(stream) do
+    Stream.each(stream, fn
+      {:ok, _result} -> :ok
+      {:exit, {_error, stacktrace} = reason} -> reraise(Exception.format_exit(reason), stacktrace)
+      {:exit, reason} -> exit(reason)
+    end)
   end
 
   def utc_yesterday() do
@@ -111,10 +118,12 @@ defmodule Hexpm.Utils do
   @doc """
   Determine if a given timestamp is less than a day (86400 seconds) old
   """
-  def within_last_day?(nil), do: false
+  def within_last_day?(timestamp, now \\ NaiveDateTime.utc_now())
 
-  def within_last_day?(a) do
-    NaiveDateTime.diff(NaiveDateTime.utc_now(), a, :second) < 24 * 60 * 60
+  def within_last_day?(nil, _now), do: false
+
+  def within_last_day?(timestamp, now) do
+    NaiveDateTime.diff(now, timestamp, :second) < 24 * 60 * 60
   end
 
   def binarify(term, opts \\ [])
@@ -158,11 +167,21 @@ defmodule Hexpm.Utils do
   Returns a url to a resource on the docs site from a list of path components.
   """
   @spec docs_html_url(Repository.t(), Package.t(), Release.t() | nil) :: String.t()
+  @spec docs_html_url(String.t(), String.t(), String.t()) :: String.t()
+  def docs_html_url(repository, package, "/" <> _ = path)
+      when is_binary(repository) and is_binary(package) do
+    if repository == "hexpm" do
+      public_docs_url(package, path)
+    else
+      uri = URI.parse(Application.fetch_env!(:hexpm, :private_docs_url))
+      host = "#{name_to_subdomain(repository)}.#{uri.host}"
+      URI.to_string(%{uri | host: host, path: "/#{package}#{path}"})
+    end
+  end
+
   def docs_html_url(%Repository{id: 1}, package, release) do
-    docs_url = URI.parse(Application.get_env(:hexpm, :docs_url))
-    docs_url = %{docs_url | host: "#{name_to_subdomain(package.name)}.#{docs_url.host}"}
     version = release && "#{release.version}/"
-    "#{docs_url}/#{version}"
+    public_docs_url(package.name, "/#{version}")
   end
 
   def docs_html_url(%Repository{} = repository, package, release) do
@@ -173,15 +192,29 @@ defmodule Hexpm.Utils do
     "#{docs_url}/#{package}/#{version}"
   end
 
+  # A handful of packages predate the subdomain scheme and carry a name the
+  # docs CDN routes somewhere else, `search` to the search backend and the rest
+  # to their own services. The apex serves those packages directly instead of
+  # redirecting, so it is the only address they have.
+  @reserved_docs_subdomains ~w(api assets docs preview search staging stats static)
+
+  defp public_docs_url(package, "/" <> _ = path) do
+    uri = URI.parse(Application.fetch_env!(:hexpm, :docs_url))
+
+    if package in @reserved_docs_subdomains do
+      URI.to_string(%{uri | path: "/#{package}#{path}"})
+    else
+      URI.to_string(%{uri | host: "#{name_to_subdomain(package)}.#{uri.host}", path: path})
+    end
+  end
+
   @doc """
   Apex-form docs URL for a hexpm-repo package: `<docs_url>/<package>/`.
 
-  Used by `docs_sitemap.xml`, which lists per-package sitemap index
-  entries. Sitemap consumers (Googlebot) require all listed URLs to
-  share a common host with the sitemap file, so even after package
-  docs move to `<package>.hexdocs.pm`, the index keeps emitting
-  `hexdocs.pm/<package>/...` and lets the apex 301 deliver the
-  canonical URL to the crawler.
+  Used by `docs_sitemap.xml`, which lists per-package sitemap index entries.
+  Sitemap consumers require the sitemaps an index lists to share its host, and
+  the apex 301 takes the crawler on to `<package>.hexdocs.pm/sitemap.xml`,
+  whose own entries name that subdomain.
   """
   @spec docs_html_apex_url(String.t()) :: String.t()
   def docs_html_apex_url(package_name) do
@@ -195,7 +228,7 @@ defmodule Hexpm.Utils do
   # hexdocs.pm packages the Fastly Compute subdomain handler reverses the
   # mapping before building the GCS bucket key; for hexorgs.pm orgs the
   # hexdocs app reverses it.
-  defp name_to_subdomain(name), do: String.replace(name, "_", "-")
+  def name_to_subdomain(name), do: String.replace(name, "_", "-")
 
   @doc """
   Sidebar docs URL for a package given the currently-displayed release and the
@@ -285,16 +318,6 @@ defmodule Hexpm.Utils do
       nil -> nil
       version_index -> Enum.at(all_versions, version_index + 1)
     end
-  end
-
-  def diff_html_url(package_name, version, previous_version) do
-    diff_url = Application.fetch_env!(:hexpm, :diff_url)
-    "#{diff_url}/diff/#{package_name}/#{previous_version}..#{version}"
-  end
-
-  def preview_html_url(package_name, version) do
-    preview_url = Application.fetch_env!(:hexpm, :preview_url)
-    "#{preview_url}/preview/#{package_name}/#{version}"
   end
 
   @doc """

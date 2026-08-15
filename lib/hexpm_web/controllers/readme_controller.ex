@@ -1,17 +1,36 @@
 defmodule HexpmWeb.ReadmeController do
   use HexpmWeb, :controller
 
+  alias Hexpm.Preview
   alias HexpmWeb.Readme.Renderer
-
-  @readme_filenames ~w(README.md readme.md README.markdown readme.markdown README.txt readme.txt README readme)
+  alias HexpmWeb.ReadmeToken
 
   plug :put_root_layout, false
   plug :put_layout, false
+
+  @private_cache_control "private, no-store"
 
   def not_found(conn, _params) do
     conn
     |> put_resp_content_type("text/plain")
     |> send_resp(404, "Not Found")
+  end
+
+  def show(conn, %{"repository" => repository, "version" => version, "token" => token} = params) do
+    name = params["name"]
+
+    with :ok <- ReadmeToken.verify(token, repository, name, version),
+         package when not is_nil(package) <- Packages.get(repository, name),
+         release when not is_nil(release) <-
+           Enum.find(Releases.all(package), &(to_string(&1.version) == version)) do
+      serve_readme(conn, repository, package, release, @private_cache_control)
+    else
+      _ -> send_no_readme(conn, @private_cache_control)
+    end
+  end
+
+  def show(conn, %{"repository" => _repository} = params) do
+    not_found(conn, params)
   end
 
   def show(conn, %{"version" => version} = params) do
@@ -22,7 +41,7 @@ defmodule HexpmWeb.ReadmeController do
       release = Enum.find(Releases.all(package), &(to_string(&1.version) == version))
 
       if release do
-        serve_readme(conn, package, release)
+        serve_readme(conn, "hexpm", package, release, "public, max-age=86400")
       else
         send_no_readme(conn)
       end
@@ -56,59 +75,29 @@ defmodule HexpmWeb.ReadmeController do
     end
   end
 
-  defp serve_readme(conn, package, release) do
+  defp serve_readme(conn, repository, package, release, cache_control) do
     version = to_string(release.version)
 
-    case fetch_readme(package.name, version) do
+    case Preview.readme(repository, package.name, version) do
       {:ok, filename, content} ->
-        html = render_readme(filename, content, package.name, version)
+        html = render_readme(repository, filename, content, package.name, version)
 
         conn
-        |> put_resp_header("cache-control", "public, max-age=86400")
+        |> put_resp_header("cache-control", cache_control)
         |> render(:show, readme_html: html, parent_origins: parent_origins())
 
       :error ->
-        send_no_readme(conn)
+        send_no_readme(conn, cache_control)
     end
   end
 
-  defp fetch_readme(package_name, version) do
-    cdn_url = Application.fetch_env!(:hexpm, :cdn_url)
-    file_list_url = "#{cdn_url}/preview-files/#{package_name}-#{version}.json"
-
-    case Hexpm.HTTP.impl().get(file_list_url, []) do
-      {:ok, 200, _headers, json} ->
-        files = Jason.decode!(json)
-
-        case find_readme_file(files) do
-          nil ->
-            :error
-
-          filename ->
-            readme_url = "#{cdn_url}/preview/#{package_name}/#{version}/#{filename}"
-
-            case Hexpm.HTTP.impl().get(readme_url, []) do
-              {:ok, 200, _headers, content} -> {:ok, filename, content}
-              _ -> :error
-            end
-        end
-
-      _ ->
-        :error
-    end
+  defp render_readme(repository, filename, content, package_name, version) do
+    Renderer.render(repository, filename, content, package_name, version)
   end
 
-  defp find_readme_file(files) do
-    Enum.find(@readme_filenames, &(&1 in files))
-  end
-
-  defp render_readme(filename, content, package_name, version) do
-    Renderer.render(filename, content, package_name, version)
-  end
-
-  defp send_no_readme(conn) do
+  defp send_no_readme(conn, cache_control \\ "public, max-age=3600") do
     conn
-    |> put_resp_header("cache-control", "public, max-age=3600")
+    |> put_resp_header("cache-control", cache_control)
     |> render(:no_readme, parent_origins: parent_origins())
   end
 

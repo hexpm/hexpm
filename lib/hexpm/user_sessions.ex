@@ -131,7 +131,9 @@ defmodule Hexpm.UserSessions do
   - Expire with the access token (short-lived, typically 30 minutes)
   - Can be for users or organizations
   - Organizations have dynamic limits based on seat count: max(5, seat_count)
-  Requires audit data for security logging.
+  - Are not audited, since the client exchanges its key for a token every 30
+    minutes and the key itself is already recorded in `keys` and audited by
+    `key.generate` and `key.remove`
   """
   def create_api_key_session(user, organization, client_id, expires_at, opts) do
     # Calculate session limit: use dynamic limit for orgs, default for users
@@ -160,22 +162,8 @@ defmodule Hexpm.UserSessions do
         expires_at: expires_at
       })
 
-    changeset = UserSession.changeset(%UserSession{}, attrs)
-
-    multi =
-      Ecto.Multi.new()
-      |> Ecto.Multi.insert(:session, changeset)
-      |> Ecto.Multi.run(:preload, fn _repo, %{session: session} ->
-        {:ok, Repo.preload(session, :client)}
-      end)
-      |> audit(Keyword.fetch!(opts, :audit), "session.create", fn %{preload: session} ->
-        session
-      end)
-
-    case Repo.transaction(multi) do
-      {:ok, %{session: session}} -> {:ok, session}
-      {:error, :session, changeset, _} -> {:error, changeset}
-    end
+    UserSession.changeset(%UserSession{}, attrs)
+    |> Repo.insert()
   end
 
   @doc """
@@ -211,7 +199,8 @@ defmodule Hexpm.UserSessions do
   Builds an Ecto.Multi for creating an API key session without executing a transaction.
 
   Similar to `build_oauth_session_multi/3` but supports both users and organizations,
-  and uses the provided `expires_at` directly (API key sessions have shorter lifetimes).
+  uses the provided `expires_at` directly (API key sessions have shorter lifetimes),
+  and does not audit. See `create_api_key_session/5` for why.
 
   Returns the Multi (caller is responsible for executing the transaction).
   """
@@ -229,7 +218,7 @@ defmodule Hexpm.UserSessions do
       name: Keyword.get(opts, :name),
       expires_at: expires_at
     })
-    |> build_session_multi(opts)
+    |> build_session_multi(Keyword.delete(opts, :audit))
   end
 
   defp build_session_multi(attrs, opts) do
@@ -319,6 +308,7 @@ defmodule Hexpm.UserSessions do
     multi =
       Ecto.Multi.new()
       |> Ecto.Multi.update(:session, changeset)
+      |> Hexpm.Accounts.SSO.revoke_org_sessions_for_user_session(session, revoke_at)
 
     # Add audit if provided
     multi =
@@ -333,6 +323,19 @@ defmodule Hexpm.UserSessions do
       {:error, :session, changeset, _} -> {:error, changeset}
     end
   end
+
+  @doc """
+  Revokes the OAuth session associated with a token.
+  """
+  def revoke_for_oauth_token(%Token{user_session_id: user_session_id})
+      when not is_nil(user_session_id) do
+    case Repo.get(UserSession, user_session_id) do
+      nil -> {:error, :session_not_found}
+      session -> revoke(session)
+    end
+  end
+
+  def revoke_for_oauth_token(%Token{}), do: {:error, :session_not_found}
 
   @doc """
   Revokes all sessions for a user (both browser and OAuth).

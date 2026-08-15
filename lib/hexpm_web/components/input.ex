@@ -195,10 +195,8 @@ defmodule HexpmWeb.Components.Input do
         class="sr-only peer"
         {@rest}
       />
-      <span class="w-11 h-6 bg-grey-200 dark:bg-grey-700 rounded-full peer-checked:bg-primary-600 peer-focus-visible:ring-2 peer-focus-visible:ring-primary-500 peer-focus-visible:ring-offset-2 transition-colors">
-      </span>
-      <span class="absolute left-0.5 top-0.5 w-5 h-5 bg-white dark:bg-grey-100 rounded-full shadow transition-transform pointer-events-none peer-checked:translate-x-5">
-      </span>
+      <span class="w-11 h-6 bg-grey-200 dark:bg-grey-700 rounded-full peer-checked:bg-primary-600 peer-focus-visible:ring-2 peer-focus-visible:ring-primary-500 peer-focus-visible:ring-offset-2 transition-colors"></span>
+      <span class="absolute left-0.5 top-0.5 w-5 h-5 bg-white dark:bg-grey-100 rounded-full shadow transition-transform pointer-events-none peer-checked:translate-x-5"></span>
     </label>
     """
   end
@@ -230,7 +228,7 @@ defmodule HexpmWeb.Components.Input do
   attr :options, :list, required: true, doc: "List of {label, value} tuples for select options"
   attr :prompt, :string, default: nil, doc: "Optional prompt text for the first option"
   attr :required, :boolean, default: false
-  attr :rest, :global, include: ~w(disabled multiple phx-hook)
+  attr :rest, :global, include: ~w(disabled multiple)
 
   attr :show_errors, :boolean,
     default: nil,
@@ -456,8 +454,7 @@ defmodule HexpmWeb.Components.Input do
             data-strength-label
             class="text-small font-medium min-w-[60px] dark:text-grey-200"
             aria-live="polite"
-          >
-          </span>
+          ></span>
         </div>
 
         <%!-- Requirements Checklist --%>

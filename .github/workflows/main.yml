@@ -5,13 +5,20 @@ on: [push, pull_request]
 permissions:
   contents: read
 
+env:
+  # Compile dependencies across multiple OS processes
+  # https://mix.hexdocs.pm/Mix.Tasks.Deps.Compile.html#module-compiling-dependencies-across-multiple-os-processes
+  # Standard GitHub-hosted Linux runners have 4 cores, so we use 2 partitions (cores / 2).
+  # https://docs.github.com/en/actions/reference/runners/github-hosted-runners#standard-github-hosted-runners-for-public-repositories
+  MIX_OS_DEPS_COMPILE_PARTITION_COUNT: 2
+
 jobs:
   format:
     name: Format
     runs-on: ubuntu-24.04
     env:
-      otp: 28.5
-      elixir: 1.19.5
+      otp: 29.0
+      elixir: 1.20.3
 
     services:
       postgres:
@@ -25,23 +32,23 @@ jobs:
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Install OTP and Elixir
-        uses: erlef/setup-beam@fc68ffb90438ef2936bbb3251622353b3dcb2f93 # v1.24.0
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
         with:
           otp-version: ${{ env.otp }}
           elixir-version: ${{ env.elixir }}
 
       - name: Cache dependencies
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             deps
             _build
-          key: ${{ runner.os }}-elixir-${{ env.elixir }}-otp-${{ env.otp }}-${{ hashFiles('**/mix.lock') }}
+          key: ${{ runner.os }}-elixir-${{ env.elixir }}-otp-${{ env.otp }}-${{ hashFiles('mix.lock', 'config/config.exs') }}
 
       - name: Install dependencies
         run: mix do deps.get + deps.compile
@@ -59,8 +66,8 @@ jobs:
     name: Test Hexpm
     runs-on: ubuntu-24.04
     env:
-      otp: 28.5
-      elixir: 1.19.5
+      otp: 29.0
+      elixir: 1.20.3
 
     services:
       postgres:
@@ -74,23 +81,23 @@ jobs:
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Install OTP and Elixir
-        uses: erlef/setup-beam@fc68ffb90438ef2936bbb3251622353b3dcb2f93 # v1.24.0
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
         with:
           otp-version: ${{ env.otp }}
           elixir-version: ${{ env.elixir }}
 
       - name: Cache dependencies
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             deps
             _build
-          key: ${{ runner.os }}-elixir-${{ env.elixir }}-otp-${{ env.otp }}-${{ hashFiles('**/mix.lock') }}
+          key: ${{ runner.os }}-elixir-${{ env.elixir }}-otp-${{ env.otp }}-${{ hashFiles('mix.lock', 'config/config.exs') }}
 
       - name: Install dependencies
         run: mix do deps.get + deps.compile
@@ -121,42 +128,42 @@ jobs:
       matrix:
         include:
           - hex-version: main
-            otp: 28.5
-            elixir: 1.19.5
+            otp: 29.0
+            elixir: 1.20.3
+          - hex-version: v2.5
+            otp: 29.0
+            elixir: 1.20.3
+          - hex-version: v2.4
+            otp: 29.0
+            elixir: 1.20.3
           - hex-version: v2.3
-            otp: 28.5
-            elixir: 1.19.5
+            otp: 29.0
+            elixir: 1.20.3
           - hex-version: v2.2
-            otp: 27.3
-            elixir: 1.19.5
-          - hex-version: v2.1
-            otp: 27.3
-            elixir: 1.19.5
-          - hex-version: v2.0
-            otp: 27.3
-            elixir: 1.19.5
+            otp: 29.0
+            elixir: 1.20.3
 
     env:
       HEXPM_PATH: ..
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Install OTP and Elixir
-        uses: erlef/setup-beam@fc68ffb90438ef2936bbb3251622353b3dcb2f93 # v1.24.0
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
         with:
           otp-version: ${{ matrix.otp }}
           elixir-version: ${{ matrix.elixir }}
 
       - name: Cache dependencies
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             deps
             _build
-          key: ${{ runner.os }}-elixir-${{ matrix.elixir }}-otp-${{ matrix.otp }}-${{ hashFiles('**/mix.lock') }}
+          key: ${{ runner.os }}-elixir-${{ matrix.elixir }}-otp-${{ matrix.otp }}-${{ hashFiles('mix.lock', 'config/config.exs') }}
 
       - name: Install hexpm dependencies
         run: |
@@ -168,7 +175,7 @@ jobs:
           git clone https://github.com/hexpm/hex hex -b ${{ matrix.hex-version }} --depth 1
 
       - name: Cache hex dependencies
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             hex/deps
@@ -194,13 +201,13 @@ jobs:
       SERVICE_ACCOUNT: ${{ secrets.GCLOUD_SERVICE_ACCOUNT }}
       WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCLOUD_WORKFLOW_IDENTITY_POOL_PROVIDER }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Set short git commit SHA
         run: echo "COMMIT_SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
       - name: Google auth
         id: auth
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 #v3.0.0
@@ -212,7 +219,7 @@ jobs:
           workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
       - name: Docker Auth
         id: docker-auth
-        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         if: ${{ github.event_name != 'pull_request' && env.SERVICE_ACCOUNT != '' }}
         with:
           registry: gcr.io
@@ -220,10 +227,13 @@ jobs:
           password: "${{ steps.auth.outputs.access_token }}"
       - name: Build and push
         id: build
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           platforms: linux/arm64
           tags: gcr.io/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}:${{ env.COMMIT_SHORT_SHA }}
+          build-args: |
+            GIT_SHA=${{ env.COMMIT_SHORT_SHA }}
+            GIT_AUTHOR=${{ github.event.head_commit.author.name }}
           push: ${{ github.event_name != 'pull_request' && env.SERVICE_ACCOUNT != '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

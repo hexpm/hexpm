@@ -21,8 +21,9 @@ defmodule HexpmWeb.API.OrganizationController do
 
   def index(conn, _params) do
     organizations =
-      all_organizations_by_user(conn.assigns.current_user) ++
-        current_organization(conn.assigns.current_organization)
+      (all_organizations_by_user(conn.assigns.current_user) ++
+         current_organization(conn.assigns.current_organization))
+      |> Enum.sort_by(& &1.name)
 
     conn
     |> api_cache(:private)
@@ -38,18 +39,29 @@ defmodule HexpmWeb.API.OrganizationController do
     |> render(:show, organization: organization, customer: customer)
   end
 
+  @not_enough_seats "number of seats cannot be less than number of members"
+
   def update(conn, %{"organization" => name} = params) do
     organization = Organizations.get(name)
-    user_count = Organizations.user_count(organization)
+    seats = safe_to_integer(params["seats"])
 
-    if params["seats"] >= user_count do
-      {:ok, customer} = Hexpm.Billing.update(organization.name, %{"quantity" => params["seats"]})
+    if seats do
+      result =
+        Seats.update_quantity(organization, seats, fn quantity ->
+          Hexpm.Billing.update(organization.name, %{"quantity" => quantity})
+        end)
 
-      conn
-      |> api_cache(:private)
-      |> render(:show, organization: organization, customer: customer)
+      case result do
+        {:ok, customer} ->
+          conn
+          |> api_cache(:private)
+          |> render(:show, organization: organization, customer: customer)
+
+        {:error, {:seats_below_members, _used}} ->
+          validation_failed(conn, @not_enough_seats)
+      end
     else
-      validation_failed(conn, "number of seats cannot be less than number of members")
+      validation_failed(conn, @not_enough_seats)
     end
   end
 

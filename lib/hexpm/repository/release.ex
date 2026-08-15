@@ -17,8 +17,6 @@ defmodule Hexpm.Repository.Release do
     belongs_to(:publisher, User, on_replace: :nilify)
     has_many :requirements, Requirement, on_replace: :delete
     has_many :daily_downloads, Download
-    has_many :package_report_releases, PackageReportRelease
-    has_many :package_reports, through: [:package_report_releases, :package_report]
     has_one :downloads, ReleaseDownload
 
     many_to_many :security_advisories, Hexpm.Security.Advisory,
@@ -102,29 +100,8 @@ defmodule Hexpm.Repository.Release do
   end
 
   def retire(release, params) do
-    cast_embed(
-      cast(release, params, []),
-      :retirement,
-      required: true,
-      with: &ReleaseRetirement.changeset(&1, &2, public: true)
-    )
-  end
-
-  def reported_retire(release) do
-    change(
-      release,
-      %{
-        retirement: %{
-          reason: "report",
-          message: "security vulnerability reported"
-        }
-      }
-    )
-    |> cast_embed(
-      :retirement,
-      required: true,
-      with: &ReleaseRetirement.changeset(&1, &2, public: false)
-    )
+    cast(release, params, [])
+    |> cast_embed(:retirement, required: true)
   end
 
   def unretire(release) do
@@ -238,29 +215,23 @@ defmodule Hexpm.Repository.Release do
   defp to_version(version) when is_binary(version), do: Version.parse!(version)
 
   def all(package) do
-    package
-    |> assoc(:releases)
-    |> with_vulnerable()
+    assoc(package, :releases)
   end
 
   def sort(releases) do
     Enum.sort(releases, &(Version.compare(&1.version, &2.version) == :gt))
   end
 
-  def with_vulnerable(query) do
-    from(release in query,
-      as: :release,
-      select_merge: %{
-        vulnerable?:
-          exists(
-            from(saar in "security_advisory_affected_releases",
-              join: a in Hexpm.Security.Advisory,
-              on: a.id == saar.advisory_id,
-              where: saar.release_id == parent_as(:release).id and is_nil(a.withdrawn_at),
-              select: 1
-            )
-          )
-      }
+  @doc """
+  The ids, among the given ones, that a published advisory affects.
+  """
+  def vulnerable_ids(release_ids) do
+    from(saar in "security_advisory_affected_releases",
+      join: a in Hexpm.Security.Advisory,
+      on: a.id == saar.advisory_id,
+      where: saar.release_id in ^release_ids and is_nil(a.withdrawn_at),
+      distinct: true,
+      select: saar.release_id
     )
   end
 

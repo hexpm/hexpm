@@ -49,7 +49,7 @@
       <tr>
         <td align="center" style="padding: 0;">
           <%!-- Header - Full width dark background --%>
-          <% logo_url = url(~p"/images/hex-full.png") %>
+          <% logo_url = email_url("/images/hex-full.png") %>
           <table
             role="presentation"
             width="100%"
@@ -69,7 +69,7 @@
                 >
                   <tr>
                     <td style="vertical-align: middle; padding-right: 12px;">
-                      <a href={url(~p"/")}>
+                      <a href={url(email_uri(), ~p"/")}>
                         <img
                           src={logo_url}
                           alt="hex logo"
@@ -79,7 +79,7 @@
                     </td>
                     <td style="vertical-align: middle;">
                       <a
-                        href={url(~p"/")}
+                        href={url(email_uri(), ~p"/")}
                         style="color: #ffffff; font-size: 24px; line-height: 32px; font-weight: 700; letter-spacing: -0.025em; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; text-decoration: none;"
                       >
                         Hex

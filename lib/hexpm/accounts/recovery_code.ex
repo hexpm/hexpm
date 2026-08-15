@@ -3,7 +3,7 @@ defmodule Hexpm.Accounts.RecoveryCode do
 
   alias Hexpm.Accounts.RecoveryCode
 
-  @derive {Jason.Encoder, only: []}
+  @derive {JSON.Encoder, only: []}
 
   @rand_bytes 10
   @part_size 4

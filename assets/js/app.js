@@ -22,6 +22,11 @@ import { ScrollActiveIntoView } from "./hooks/scroll_active_into_view";
 import { OverrideList } from "./hooks/override_list";
 import { PrivateRepoTabs } from "./hooks/private_repo_tabs";
 import { PolicyDirtyState } from "./hooks/policy_dirty_state";
+import LineHighlight from "./hooks/line_highlight";
+import { InfiniteScroll } from "./hooks/diff";
+import { FormSync } from "./hooks/form_sync";
+import { FileFinder } from "./hooks/file_finder";
+import { HCaptcha } from "./hooks/hcaptcha";
 
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")
@@ -47,6 +52,11 @@ let Hooks = {
   OverrideList,
   PrivateRepoTabs,
   PolicyDirtyState,
+  LineHighlight,
+  InfiniteScroll,
+  FormSync,
+  FileFinder,
+  HCaptcha,
 };
 let liveSocket = new LiveSocket("/live", Socket, {
   params: { _csrf_token: csrfToken },
@@ -55,6 +65,11 @@ let liveSocket = new LiveSocket("/live", Socket, {
 
 liveSocket.connect();
 initializeTheme();
+
+// Blur the active element on demand
+window.addEventListener("blur-active", () => {
+  document.activeElement?.blur();
+});
 
 // Focus username, 2FA or search field
 if (document.getElementById("username")) {

@@ -20,10 +20,6 @@ defmodule HexpmWeb.API.KeyControllerTest do
     }
   end
 
-  defp basic_auth(user) do
-    "Basic " <> Base.encode64("#{user.username}:password")
-  end
-
   describe "GET /api/keys" do
     test "all keys", c do
       Key.build(c.eric, %{name: "macbook"}) |> Repo.insert!()
@@ -34,7 +30,6 @@ defmodule HexpmWeb.API.KeyControllerTest do
         |> put_req_header("authorization", key.user_secret)
         |> get("/api/keys")
         |> json_response(200)
-        |> Enum.sort_by(fn %{"name" => name} -> name end)
 
       assert length(body) == 2
       [a, b] = body
@@ -129,7 +124,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
       conn =
         build_conn()
         |> put_req_header("content-type", "application/json")
-        |> put_req_header("authorization", basic_auth(c.eric))
+        |> put_req_header("authorization", key_for(c.eric))
         |> post("/api/keys", body)
 
       assert conn.status == 201
@@ -142,6 +137,18 @@ defmodule HexpmWeb.API.KeyControllerTest do
       assert %{"name" => "macbook"} = log.params
     end
 
+    test "create key without authentication returns 401" do
+      body = %{name: "macbook"}
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/json")
+        |> post("/api/keys", body)
+
+      body = json_response(conn, 401)
+      assert body["message"] == "missing authentication information"
+    end
+
     test "create repository key", c do
       body = %{
         name: "macbook",
@@ -150,7 +157,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
 
       build_conn()
       |> put_req_header("content-type", "application/json")
-      |> put_req_header("authorization", basic_auth(c.eric))
+      |> put_req_header("authorization", key_for(c.eric))
       |> post("/api/keys", body)
       |> json_response(201)
 
@@ -186,7 +193,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
 
       build_conn()
       |> put_req_header("content-type", "application/json")
-      |> put_req_header("authorization", basic_auth(c.eric))
+      |> put_req_header("authorization", key_for(c.eric))
       |> post("/api/keys", body)
       |> json_response(422)
 
@@ -205,7 +212,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
       conn =
         build_conn()
         |> put_req_header("content-type", "application/json")
-        |> put_req_header("authorization", basic_auth(c.eric))
+        |> put_req_header("authorization", key_for(c.eric))
         |> post("/api/keys", body)
 
       assert conn.status == 201
@@ -227,7 +234,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
 
       build_conn()
       |> put_req_header("content-type", "application/json")
-      |> put_req_header("authorization", basic_auth(c.eric))
+      |> put_req_header("authorization", key_for(c.eric))
       |> post("/api/keys", body)
       |> json_response(422)
 
@@ -239,7 +246,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
 
       build_conn()
       |> put_req_header("content-type", "application/json")
-      |> put_req_header("authorization", basic_auth(c.eric))
+      |> put_req_header("authorization", key_for(c.eric))
       |> post("/api/keys", body)
       |> json_response(201)
 
@@ -255,7 +262,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
 
       build_conn()
       |> put_req_header("content-type", "application/json")
-      |> put_req_header("authorization", basic_auth(c.eric))
+      |> put_req_header("authorization", key_for(c.eric))
       |> post("/api/keys", body)
       |> json_response(422)
 
@@ -274,7 +281,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
         |> delete("/api/keys")
 
       assert conn.status == 200
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert body["name"] == key_a.name
       assert body["revoke_at"]
       assert body["updated_at"]
@@ -307,7 +314,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
         |> get("/api/keys")
 
       assert conn.status == 401
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert %{"message" => "API key revoked", "status" => 401} == body
     end
 
@@ -336,7 +343,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
         |> get("/api/keys/macbook")
 
       assert conn.status == 200
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert body["name"] == "macbook"
       assert body["secret"] == nil
       assert body["url"] =~ "/api/keys/macbook"
@@ -362,7 +369,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
         |> delete("/api/keys/computer")
 
       assert conn.status == 200
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert body["name"] == "computer"
       assert body["revoke_at"]
       assert body["updated_at"]
@@ -389,7 +396,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
         |> delete("/api/keys/current")
 
       assert conn.status == 200
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert body["name"] == "current"
       assert body["revoke_at"]
       assert body["updated_at"]
@@ -411,7 +418,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
         |> get("/api/keys")
 
       assert conn.status == 401
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert %{"message" => "API key revoked", "status" => 401} == body
     end
   end

@@ -11,10 +11,15 @@ defmodule Hexpm.Shared do
         Accounts.KeyPermission,
         Accounts.Keys,
         Accounts.Organization,
+        Accounts.OrganizationDomain,
+        Accounts.OrganizationDomains,
+        Accounts.OrganizationInvitation,
+        Accounts.OrganizationInvitations,
         Accounts.Organizations,
         Accounts.OrganizationUser,
         Accounts.PasswordReset,
         Accounts.ReservedUsername,
+        Accounts.Seats,
         Accounts.Session,
         Accounts.User,
         Accounts.UserHandles,
@@ -33,10 +38,6 @@ defmodule Hexpm.Shared do
         Repository.PackageDownload,
         Repository.PackageMetadata,
         Repository.PackageOwner,
-        Repository.PackageReport,
-        Repository.PackageReportComment,
-        Repository.PackageReportRelease,
-        Repository.PackageReports,
         Repository.Packages,
         Repository.RegistryBuilder,
         Repository.Release,
@@ -47,7 +48,9 @@ defmodule Hexpm.Shared do
         Repository.Repositories,
         Repository.Repository,
         Repository.Requirement,
-        Repository.Sitemaps
+        Repository.Sitemaps,
+        SecretScan.Finding,
+        SecretScan.Scan
       }
     end
   end

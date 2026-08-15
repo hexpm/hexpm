@@ -1,0 +1,10 @@
+Package report
+
+Package: <%= @package %>
+Package URL: <%= @package_url %>
+Reason: <%= @reason %>
+Reporter: <%= @reporter.name %> (@<%= @reporter.username %>), <%= @reporter.email %>
+
+<%= @summary %>
+
+<%= @description %>

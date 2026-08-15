@@ -6,7 +6,9 @@ defmodule HexpmWeb.Endpoint do
 
   @session_options [
     signing_salt: "NOcCmerj",
-    store: HexpmWeb.Session,
+    encryption_salt: "Zb5cCLE7",
+    store: HexpmWeb.Session.Transition,
+    serializer: HexpmWeb.Session.JSON,
     key: "_hexpm_key",
     max_age: 60 * 60 * 24 * 30
   ]
@@ -21,7 +23,9 @@ defmodule HexpmWeb.Endpoint do
     gzip: true,
     only: HexpmWeb.static_paths()
 
-  socket("/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]])
+  socket("/live", Phoenix.LiveView.Socket,
+    websocket: [compress: true, connect_info: [:peer_data, :x_headers, session: @session_options]]
+  )
 
   if Code.ensure_loaded?(Tidewave) do
     plug Tidewave
@@ -43,15 +47,19 @@ defmodule HexpmWeb.Endpoint do
     cookie_key: "request_logger"
 
   plug Plug.RequestId
+  plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
   plug Logster.Plugs.ChangeLogLevel, to: :info
   plug Logster.Plugs.Logger, excludes: [:params]
 
   plug Plug.Parsers,
     parsers: [:urlencoded, :json, HexpmWeb.PlugParser],
     pass: ["*/*"],
-    json_decoder: Jason
+    json_decoder: JSON
 
-  plug Sentry.PlugContext
+  plug Sentry.PlugContext,
+    body_scrubber: {HexpmWeb.SentryScrubber, :scrub_body},
+    url_scrubber: {HexpmWeb.SentryScrubber, :scrub_url}
+
   plug Plug.MethodOverride
   plug Plug.Head
   plug HexpmWeb.Plugs.Vary, ["accept-encoding"]

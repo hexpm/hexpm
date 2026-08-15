@@ -15,38 +15,97 @@ defmodule HexpmWeb.ReadmeControllerTest do
   end
 
   defp mock_file_list_and_readme(package_name, version, filename, content) do
-    file_list = Jason.encode!([filename])
+    Hexpm.Store.put(
+      :preview_bucket,
+      "file_lists/#{package_name}-#{version}.json",
+      JSON.encode!([filename])
+    )
 
-    Mox.expect(Hexpm.HTTP.Mock, :get, 2, fn url, _headers ->
-      cond do
-        String.contains?(url, "/preview-files/#{package_name}-#{version}.json") ->
-          {:ok, 200, [], file_list}
-
-        String.ends_with?(url, "/#{filename}") ->
-          {:ok, 200, [], content}
-
-        true ->
-          {:ok, 404, [], ""}
-      end
-    end)
+    Hexpm.Store.put(:preview_bucket, "files/#{package_name}/#{version}/#{filename}", content)
   end
 
   defp mock_file_list(package_name, version, files) do
-    file_list = Jason.encode!(files)
-
-    Mox.expect(Hexpm.HTTP.Mock, :get, fn url, _headers ->
-      if String.contains?(url, "/preview-files/#{package_name}-#{version}.json") do
-        {:ok, 200, [], file_list}
-      else
-        {:ok, 404, [], ""}
-      end
-    end)
+    Hexpm.Store.put(
+      :preview_bucket,
+      "file_lists/#{package_name}-#{version}.json",
+      JSON.encode!(files)
+    )
   end
 
-  defp mock_no_file_list do
-    Mox.expect(Hexpm.HTTP.Mock, :get, fn _url, _headers ->
-      {:ok, 404, [], ""}
-    end)
+  describe "show/2 for private packages" do
+    setup do
+      repository = insert(:repository)
+      package = insert(:package, repository_id: repository.id, name: "private_readme")
+
+      insert(
+        :release,
+        package: package,
+        version: "1.0.0",
+        meta: build(:release_metadata, app: package.name)
+      )
+
+      Hexpm.Store.put(
+        :preview_bucket,
+        "repos/#{repository.name}/file_lists/#{package.name}-1.0.0.json",
+        JSON.encode!(["README.md"])
+      )
+
+      Hexpm.Store.put(
+        :preview_bucket,
+        "repos/#{repository.name}/files/#{package.name}/1.0.0/README.md",
+        "# Private Package"
+      )
+
+      %{repository: repository, private_package: package}
+    end
+
+    test "renders README with a valid token", %{
+      repository: repository,
+      private_package: package
+    } do
+      token = HexpmWeb.ReadmeToken.sign(repository.name, package.name, "1.0.0")
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{repository.name}/#{package.name}/1.0.0?token=#{token}")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "Private Package"
+      assert get_resp_header(conn, "cache-control") == ["private, no-store"]
+    end
+
+    test "shows no README for missing, mismatched, or expired tokens", %{
+      repository: repository,
+      private_package: package
+    } do
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{repository.name}/#{package.name}/1.0.0")
+
+      assert conn.status == 404
+
+      other_token = HexpmWeb.ReadmeToken.sign(repository.name, "other_package", "1.0.0")
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{repository.name}/#{package.name}/1.0.0?token=#{other_token}")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "readme-not-found"
+      assert get_resp_header(conn, "cache-control") == ["private, no-store"]
+
+      version_token = HexpmWeb.ReadmeToken.sign(repository.name, package.name, "2.0.0")
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{repository.name}/#{package.name}/1.0.0?token=#{version_token}")
+
+      assert conn.resp_body =~ "readme-not-found"
+    end
   end
 
   describe "show/2" do
@@ -125,8 +184,6 @@ defmodule HexpmWeb.ReadmeControllerTest do
     end
 
     test "shows no README when no file list exists", %{package: package} do
-      mock_no_file_list()
-
       conn =
         build_conn()
         |> Map.put(:host, "readme.localhost")

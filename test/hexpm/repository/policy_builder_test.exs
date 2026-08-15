@@ -135,6 +135,26 @@ defmodule Hexpm.Repository.PolicyBuilderTest do
                :hex_registry.unpack_policy(stored, org.name, "strict-prod", public_key)
     end
 
+    test "republishes a tab without the overrides an update removed",
+         %{organization: org, policy: policy, audit_data: audit_data} do
+      params = %{
+        "repositories" =>
+          Enum.map(policy.repositories, fn tab ->
+            %{"id" => tab.id, "repository" => tab.repository}
+          end)
+      }
+
+      {:ok, _} = Policies.update(policy, params, audit: audit_data)
+
+      stored = Hexpm.Store.get(:repo_bucket, "repos/#{org.name}/policies/strict-prod", [])
+      public_key = Application.fetch_env!(:hexpm, :public_key)
+
+      assert {:ok, %{repositories: repositories}} =
+               :hex_registry.unpack_policy(stored, org.name, "strict-prod", public_key)
+
+      assert Enum.find(repositories, &(&1.repository == "hexpm")).overrides == []
+    end
+
     test "acquires and releases the advisory lock cleanly",
          %{organization: org, policy: policy} do
       previous = Application.get_env(:hexpm, :skip_advisory_locks, false)

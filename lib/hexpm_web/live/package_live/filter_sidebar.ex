@@ -28,6 +28,7 @@ defmodule HexpmWeb.PackageLive.FilterSidebar do
           id="filter-form"
           query={@query}
           build_tools={@build_tools}
+          sync_to="filter-form-mobile"
         />
         <.filter_actions />
       </div>
@@ -54,8 +55,7 @@ defmodule HexpmWeb.PackageLive.FilterSidebar do
         aria-label="Close filters"
         class="flex-1 bg-grey-900/45"
         phx-click={close_sheet()}
-      >
-      </button>
+      ></button>
       <div class="bg-white dark:bg-grey-800 rounded-t-[20px] shadow-[0_-8px_24px_rgba(3,9,19,0.16)] pt-2 pb-6 flex flex-col max-h-[85%]">
         <div class="w-9 h-1 rounded-full bg-grey-200 dark:bg-grey-600 mx-auto mt-1.5 mb-1"></div>
         <div class="flex items-center justify-between px-4 pt-2.5 pb-3.5 border-b border-grey-100 dark:border-grey-700">
@@ -75,6 +75,8 @@ defmodule HexpmWeb.PackageLive.FilterSidebar do
             id="filter-form-mobile"
             query={@query}
             build_tools={@build_tools}
+            auto_recover="ignore"
+            sync_to="filter-form"
           />
         </div>
 
@@ -130,10 +132,21 @@ defmodule HexpmWeb.PackageLive.FilterSidebar do
   attr :id, :string, required: true
   attr :query, SearchQuery, required: true
   attr :build_tools, :list, required: true
+  attr :auto_recover, :string, default: nil
+
+  attr :sync_to, :string,
+    default: nil,
+    doc: "The ID of the parallel form that this form should sync its input values to client-side."
 
   defp filter_form(assigns) do
     ~H"""
-    <form phx-change="filter_change" id={@id}>
+    <form
+      id={@id}
+      phx-change="filter_change"
+      phx-auto-recover={@auto_recover}
+      phx-hook={@sync_to && "FormSync"}
+      data-sync-to={@sync_to}
+    >
       <div class="mb-[18px]">
         <label
           class="flex items-center justify-between gap-2 text-small font-semibold text-grey-600 dark:text-grey-200 mb-1.5"

@@ -3,6 +3,7 @@ defmodule HexpmWeb.API.OAuthController do
 
   import HexpmWeb.RequestHelpers, only: [build_usage_info: 1]
 
+  alias Hexpm.UserSessions
   alias Hexpm.OAuth.{Clients, Tokens, AuthorizationCodes, DeviceCodes}
 
   defp safe_param(params, key), do: safe_string(params[key])
@@ -80,8 +81,8 @@ defmodule HexpmWeb.API.OAuthController do
   end
 
   @doc """
-  Token revocation endpoint using refresh token hash.
-  Allows revocation when the actual token value is not available.
+  OAuth session revocation endpoint using a refresh token hash.
+  Allows revocation of the session and all its tokens when the actual token value is not available.
   """
   def revoke_by_hash(conn, params) do
     case revoke_token_by_hash(params) do
@@ -209,14 +210,6 @@ defmodule HexpmWeb.API.OAuthController do
       # Determine user or organization from the API key
       user_or_org = auth_info.user || auth_info.organization
 
-      # Build audit data with the authenticated user/org
-      audit_data = %{
-        user: user_or_org,
-        auth_credential: auth_info.auth_credential,
-        user_agent: conn.assigns.user_agent,
-        remote_ip: HexpmWeb.RequestHelpers.parse_ip(conn.remote_ip)
-      }
-
       case Tokens.create_session_and_token_for_api_key(
              user_or_org,
              client.client_id,
@@ -224,8 +217,7 @@ defmodule HexpmWeb.API.OAuthController do
              "client_credentials",
              api_key_secret,
              name: safe_param(params, "name"),
-             usage_info: usage_info,
-             audit: audit_data
+             usage_info: usage_info
            ) do
         {:ok, token} ->
           render(conn, :token, token: token)
@@ -308,10 +300,8 @@ defmodule HexpmWeb.API.OAuthController do
     end)
   end
 
-  defp error_description(:unauthorized_client), do: "Client not authorized for this grant type"
   defp error_description(:invalid_request), do: "Missing or invalid client_secret"
   defp error_description(:invalid_client), do: "Invalid API key"
-  defp error_description(_), do: "An error occurred"
 
   defp revoke_token(%{"token" => token_value, "client_id" => client_id})
        when is_binary(token_value) and is_binary(client_id) do
@@ -332,7 +322,7 @@ defmodule HexpmWeb.API.OAuthController do
        when is_binary(token_hash) and token_hash != "" do
     case Tokens.lookup_by_refresh_token_hash(token_hash) do
       {:ok, token} ->
-        case Tokens.revoke(token) do
+        case UserSessions.revoke_for_oauth_token(token) do
           {:ok, _} -> :ok
           {:error, _} -> {:error, :revocation_failed}
         end

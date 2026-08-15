@@ -118,7 +118,14 @@ defmodule HexpmWeb.PackageLive.Index do
             </span>
           </button>
           <div class="flex-1"></div>
-          <form phx-change="sort_change" class="inline-flex">
+          <form
+            id="sort-form-mobile"
+            phx-change="sort_change"
+            phx-auto-recover="ignore"
+            phx-hook="FormSync"
+            data-sync-to="sort-form"
+            class="inline-flex"
+          >
             <label for="sort-select-mobile" class="sr-only">Sort</label>
             <div class="relative">
               <select
@@ -224,8 +231,7 @@ defmodule HexpmWeb.PackageLive.Index do
                     <span
                       :if={total_pages > 1}
                       class="inline-block w-[3px] h-[3px] rounded-full bg-grey-300 dark:bg-grey-500 align-middle mx-2"
-                    >
-                    </span>
+                    ></span>
                     <span :if={total_pages > 1}>
                       Page {@page} of {total_pages}
                     </span>
@@ -238,7 +244,12 @@ defmodule HexpmWeb.PackageLive.Index do
                   >
                     Sort by
                   </label>
-                  <form phx-change="sort_change">
+                  <form
+                    id="sort-form"
+                    phx-change="sort_change"
+                    phx-hook="FormSync"
+                    data-sync-to="sort-form-mobile"
+                  >
                     <div class="relative min-w-[200px]">
                       <select
                         id="sort-select"
@@ -331,7 +342,11 @@ defmodule HexpmWeb.PackageLive.Index do
         updated_after: updated_after
     }
 
-    {:noreply, push_query(socket, new_query)}
+    if new_query == socket.assigns.search_query do
+      {:noreply, socket}
+    else
+      {:noreply, push_query(socket, new_query)}
+    end
   end
 
   @impl true
@@ -353,23 +368,16 @@ defmodule HexpmWeb.PackageLive.Index do
   end
 
   @impl true
-  def handle_event("sort_change", %{"sort" => sort}, socket) do
-    url_params =
-      %{sort: sort, search: socket.assigns.search}
-      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+  def handle_event("sort_change", %{"sort" => sort_param}, socket) do
+    if sort(sort_param) == socket.assigns.sort do
+      {:noreply, socket}
+    else
+      url_params =
+        %{sort: sort_param, search: socket.assigns.search}
+        |> Enum.reject(fn {_k, v} -> is_nil(v) end)
 
-    {:noreply, push_patch(socket, to: ~p"/packages?#{url_params}")}
-  end
-
-  @impl true
-  def handle_event("search_change", %{"search" => search}, socket) do
-    search = nil_if_empty(search)
-
-    url_params =
-      %{sort: socket.assigns.sort, search: search}
-      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
-
-    {:noreply, push_patch(socket, to: ~p"/packages?#{url_params}")}
+      {:noreply, push_patch(socket, to: ~p"/packages?#{url_params}")}
+    end
   end
 
   @impl true

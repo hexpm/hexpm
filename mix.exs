@@ -36,6 +36,8 @@ defmodule Hexpm.MixProject do
       {:phoenix_swoosh, "~> 1.0"},
       {:bandit, "~> 1.0"},
       {:bcrypt_elixir, "~> 3.0"},
+      {:broadway, "~> 1.0"},
+      {:broadway_sqs, "~> 0.7.0"},
       {:corsica, "~> 2.0"},
       {:cvss, "~> 0.1.0"},
       {:ecto_psql_extras, "~> 0.6"},
@@ -44,24 +46,35 @@ defmodule Hexpm.MixProject do
       {:ecto, "~> 3.0"},
       {:eqrcode, "~> 0.2.1"},
       {:ex_aws_s3, "~> 2.0"},
+      {:ex_aws_sqs, "~> 3.0"},
       {:ex_aws, "~> 2.0"},
       {:ex_machina, "~> 2.0"},
-      {:finch, "~> 0.22.0"},
+      {:finch, "~> 0.23.0"},
       {:floki, "~> 0.37"},
       {:geolix, "~> 2.0"},
       {:geolix_adapter_mmdb2, "~> 0.6"},
       {:goth, "~> 1.4"},
       {:hex_core, "~> 0.18", hex_core_opts()},
-      {:jason, "~> 1.0"},
+      {:secret_scan, "~> 0.1"},
       {:joken, "~> 2.6"},
       {:lasso, "~> 0.1.4", only: :test},
       {:libcluster, "~> 3.0"},
       {:logster, "~> 1.0"},
+      {:git_diff,
+       github: "ericmj/git_diff", ref: "d47473d661ff0073ce4080ae04db1a439d78a62b", depth: 1},
       {:mdex, "~> 0.13"},
       {:mdex_gfm, "~> 0.1"},
-      {:lumis, "~> 0.6"},
+      {:lumis,
+       github: "ericmj/lumis",
+       branch: "vendor-haskell-parser",
+       sparse: "packages/elixir/lumis",
+       depth: 1,
+       override: true},
+      {:rustler, ">= 0.0.0"},
       {:mox, "~> 1.0", only: :test},
       {:nimble_ownership, "~> 1.0"},
+      {:oban, "~> 2.23"},
+      {:oidcc, "~> 3.8"},
       {:stream_data, "~> 1.0", only: :test},
       {:phoenix_ecto, "~> 4.0"},
       {:phoenix_html, "~> 4.0"},
@@ -77,9 +90,10 @@ defmodule Hexpm.MixProject do
       {:plug, "~> 1.7"},
       {:postgrex, "~> 0.14"},
       {:pot, "~> 1.0"},
+      {:prom_ex, "~> 1.11"},
       {:sentry, "~> 13.0"},
       {:tailwind, "~> 0.4", runtime: Mix.env() == :dev},
-      {:tidewave, "~> 0.5", only: :dev},
+      {:tidewave, "~> 0.8.2", only: :dev},
       # Dependency is broken with mix due to missing dependency on :ssl application
       {:ssl_verify_fun, "~> 1.1", manager: :rebar3, override: true},
       {:sweet_xml, "~> 0.5"},
@@ -88,7 +102,9 @@ defmodule Hexpm.MixProject do
       {:ueberauth, "~> 0.10"},
       {:ueberauth_github, "~> 0.8"},
       {:lazy_html, ">= 0.1.0", only: :test},
-      {:req, "~> 0.6.1"}
+      # ExAws signs empty-body GET requests that Req 0.7 rewrites as POST.
+      # https://github.com/ex-aws/ex_aws/issues/1246
+      {:req, "0.6.3"}
     ]
   end
 
@@ -96,9 +112,9 @@ defmodule Hexpm.MixProject do
     if path = System.get_env("HEX_CORE_PATH") do
       [path: path]
     else
-      # TODO: revert to the published `{:hex_core, "~> 0.18"}` dependency once a
-      # hex_core release ships the per-repository policy model (policy-rules).
-      [github: "hexpm/hex_core", branch: "policy-rules"]
+      # TODO: revert to the published `{:hex_core, "~> 0.19"}` dependency once a
+      # hex_core release ships the per-repository policy model
+      [github: "hexpm/hex_core", depth: 1]
     end
   end
 

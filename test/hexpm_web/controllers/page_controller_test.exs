@@ -66,6 +66,26 @@ defmodule HexpmWeb.PageControllerTest do
     assert package1.latest_release.version == "0.1.0"
     assert package2.id == c.package2.id
     assert package2.latest_release.version == "0.0.2"
+
+    html = response(conn, 200)
+    assert html =~ "$9 / user / month"
+    assert html =~ "Free organizations can publish public policies for public Hex packages"
+
+    assert html =~
+             "Paid organizations can also publish private policies covering public and private packages"
+  end
+
+  test "index resolves the latest version of each new package", c do
+    conn = get(build_conn(), "/")
+
+    versions =
+      Map.new(conn.assigns.package_new, fn {name, _inserted_at, _meta, version, _downloads} ->
+        {name, version && to_string(version)}
+      end)
+
+    assert versions[c.package1.name] == "0.1.0"
+    assert versions[c.package2.name] == "0.0.2"
+    assert versions[c.package3.name] == "0.0.1"
   end
 
   test "index renders relative time for new and recently updated packages" do
@@ -74,6 +94,27 @@ defmodule HexpmWeb.PageControllerTest do
     refute html =~ ~r/<span[^>]*title="[^"]+">\s*<span[^>]*title="[^"]+">/
 
     assert html =~ ~r/(week|weeks|day|days|hour|hours|minute|minutes) ago/
+  end
+
+  test "pricing identifies per-user pricing and organization policy tiers" do
+    html = build_conn() |> get("/pricing") |> response(200)
+
+    document = Floki.parse_document!(html)
+
+    assert prices(document, ".monthly-active") == [
+             "$0 / user / month",
+             "$9 / user / month"
+           ]
+
+    assert prices(document, ".price-display.hidden") == [
+             "$0 / user / year",
+             "$90 / user / year"
+           ]
+
+    assert html =~ "Private Dependency Policies"
+    refute html =~ "Public and Private Dependency Policies"
+    assert html =~ "Every organization can publish public policies for public Hex packages"
+    assert html =~ "Paid organizations can also publish private policies"
   end
 
   test "index renders long package names without overlapping version and time" do
@@ -93,5 +134,16 @@ defmodule HexpmWeb.PageControllerTest do
 
     assert html =~ long_name
     assert html =~ "truncate"
+  end
+
+  defp prices(document, selector) do
+    document
+    |> Floki.find(selector)
+    |> Enum.map(fn element ->
+      element
+      |> Floki.text()
+      |> String.replace(~r/\s+/, " ")
+      |> String.trim()
+    end)
   end
 end

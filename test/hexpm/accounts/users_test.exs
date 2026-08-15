@@ -4,6 +4,25 @@ defmodule Hexpm.Accounts.UsersTest do
   import Swoosh.TestAssertions
 
   alias Hexpm.Accounts.{AuditLog, OptionalEmails, User, Users, UserProviders}
+  alias Hexpm.Emails.OutboxEntry
+
+  describe "all_organizations/1" do
+    test "keeps the public organization first and sorts the rest by name" do
+      user =
+        build(:user,
+          organizations: [
+            build(:organization, name: "zulu_org"),
+            build(:organization, name: "alpha_org")
+          ]
+        )
+
+      assert Enum.map(Users.all_organizations(user), & &1.name) == [
+               "hexpm",
+               "alpha_org",
+               "zulu_org"
+             ]
+    end
+  end
 
   describe "add_from_oauth_with_provider/6" do
     test "creates user and provider atomically" do
@@ -139,6 +158,24 @@ defmodule Hexpm.Accounts.UsersTest do
 
       refute Users.get(username)
     end
+
+    test "counts the new account" do
+      ref = :telemetry_test.attach_event_handlers(self(), [[:hexpm, :accounts, :user_created]])
+
+      {:ok, _user} =
+        Users.add_from_oauth_with_provider(
+          Hexpm.Fake.sequence(:username),
+          Hexpm.Fake.sequence(:full_name),
+          Hexpm.Fake.sequence(:email),
+          "github",
+          "12345",
+          audit: %{user: nil, user_agent: "TEST", remote_ip: "127.0.0.1", auth_credential: nil}
+        )
+
+      assert_received {[:hexpm, :accounts, :user_created], ^ref, %{count: 1}, %{}}
+
+      :telemetry.detach(ref)
+    end
   end
 
   test "new users default to optional email preferences" do
@@ -205,7 +242,96 @@ defmodule Hexpm.Accounts.UsersTest do
     end
   end
 
+  describe "get/2 and public_get/2" do
+    test "looks up by username" do
+      user = insert(:user)
+
+      assert Users.get(user.username).id == user.id
+      assert Users.public_get(user.username).id == user.id
+    end
+
+    test "username lookup is case-insensitive" do
+      user = insert(:user)
+
+      assert Users.get(String.upcase(user.username)).id == user.id
+      assert Users.public_get(String.upcase(user.username)).id == user.id
+    end
+
+    test "looks up by verified email" do
+      user = insert(:user, emails: [build(:email, verified: true, public: true)])
+      [email] = user.emails
+
+      assert Users.get(email.email).id == user.id
+      assert Users.public_get(email.email).id == user.id
+    end
+
+    test "email lookup is case-insensitive" do
+      user = insert(:user, emails: [build(:email, verified: true, public: true)])
+      [email] = user.emails
+
+      assert Users.get(String.upcase(email.email)).id == user.id
+      assert Users.public_get(String.upcase(email.email)).id == user.id
+    end
+
+    test "ignores unverified emails" do
+      user = insert(:user, emails: [build(:email, verified: false, public: true)])
+      [email] = user.emails
+
+      refute Users.get(email.email)
+      refute Users.public_get(email.email)
+    end
+
+    test "public_get/2 ignores non-public emails, get/2 does not" do
+      user = insert(:user, emails: [build(:email, verified: true, public: false)])
+      [email] = user.emails
+
+      assert Users.get(email.email).id == user.id
+      refute Users.public_get(email.email)
+    end
+
+    test "returns nil for an unknown username or email" do
+      refute Users.get("nosuchuser")
+      refute Users.public_get("nosuchuser")
+      refute Users.get("nosuch@example.com")
+      refute Users.public_get("nosuch@example.com")
+    end
+
+    test "preloads are applied for both lookup paths" do
+      user = insert(:user, emails: [build(:email, verified: true, public: true)])
+      [email] = user.emails
+
+      assert %Ecto.Association.NotLoaded{} = Users.get(user.username).emails
+      assert [_] = Users.get(user.username, [:emails]).emails
+      assert [_] = Users.get(email.email, [:emails]).emails
+    end
+  end
+
   describe "delete/2" do
+    test "purges every SSO notification scoped to the deleted account" do
+      user = insert(:user)
+      scope_key = "sso:user:#{user.id}"
+
+      entries =
+        for category <- [
+              "sso.identity_linked",
+              "sso.email_mismatch",
+              "sso.identity_unlinked"
+            ] do
+          insert(:email_outbox_entry, category: category, scope_key: scope_key)
+        end
+
+      unrelated =
+        insert(:email_outbox_entry,
+          category: "account.deleted",
+          scope_key: "account:#{user.id}"
+        )
+
+      assert :ok = Users.delete(user, audit: audit_data(user), notify: false)
+
+      Enum.each(entries, &refute(Repo.get(OutboxEntry, &1.id)))
+      assert Repo.get(OutboxEntry, unrelated.id)
+    end
+
     test "deletes the user, preserves packages/releases/audit logs, reserves the username" do
       user = insert(:user)
       other_owner = insert(:user)

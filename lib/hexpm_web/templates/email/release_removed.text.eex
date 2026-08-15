@@ -1,0 +1,9 @@
+<%= ReleaseRemoved.title(@package, @version) %>
+
+<%= ReleaseRemoved.message(@package, @version, @remaining) %>
+
+<%= ReleaseRemoved.reason_heading() %>
+
+<%= @reason %>
+
+<%= ReleaseRemoved.questions_notice(:text) %>

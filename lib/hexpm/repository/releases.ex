@@ -11,6 +11,30 @@ defmodule Hexpm.Repository.Releases do
     |> Release.sort()
   end
 
+  @doc """
+  Sets `vulnerable?` on the given releases.
+
+  Only the pages that display the flag call this, and only for the releases they
+  display. Asking per release inside the query that loads them costs an index
+  probe each, which is most of that query's work and answers no for all but one
+  release in a hundred.
+  """
+  def mark_vulnerable([]), do: []
+
+  def mark_vulnerable(releases) do
+    vulnerable =
+      releases
+      |> Enum.map(& &1.id)
+      |> Release.vulnerable_ids()
+      |> Repo.all()
+      |> MapSet.new()
+
+    Enum.map(releases, &%{&1 | vulnerable?: MapSet.member?(vulnerable, &1.id)})
+  end
+
+  def mark_vulnerable_one(nil), do: nil
+  def mark_vulnerable_one(release), do: hd(mark_vulnerable([release]))
+
   def count() do
     Repo.one!(Release.count())
   end
@@ -29,10 +53,54 @@ defmodule Hexpm.Repository.Releases do
     package && get(package, version)
   end
 
+  def exists?(repository, package, version) when is_binary(repository) and is_binary(package) do
+    from(r in Release,
+      join: p in assoc(r, :package),
+      join: repository in assoc(p, :repository),
+      where: repository.name == ^repository and p.name == ^package and r.version == ^version,
+      select: true
+    )
+    |> Repo.exists?()
+  end
+
+  def latest_version(repository, package, opts)
+      when is_binary(repository) and is_binary(package) do
+    from(r in Release,
+      join: p in assoc(r, :package),
+      join: repository in assoc(p, :repository),
+      where: repository.name == ^repository and p.name == ^package,
+      select: struct(r, [:version, :has_docs])
+    )
+    |> Repo.all()
+    |> Release.latest_version(opts)
+    |> case do
+      nil -> nil
+      release -> release.version
+    end
+  end
+
   def package_versions(packages) do
     Release.package_versions(packages)
     |> Repo.all()
     |> Enum.into(%{})
+  end
+
+  def docs_versions(repository, package) do
+    from(r in Release,
+      join: p in Package,
+      on: p.id == r.package_id,
+      join: repository in Repository,
+      on: repository.id == p.repository_id,
+      where: repository.name == ^repository and p.name == ^package and r.has_docs,
+      select: {r.version, r.retirement}
+    )
+    |> Repo.all()
+    |> Enum.map(fn {version, retirement} -> {parse_version(version), retirement} end)
+    |> then(fn releases ->
+      versions = releases |> Enum.map(&elem(&1, 0)) |> Enum.sort({:desc, Version})
+      retired = for {version, retirement} <- releases, retirement, into: MapSet.new(), do: version
+      {versions, retired}
+    end)
   end
 
   def preload(release, keys) do
@@ -68,11 +136,15 @@ defmodule Hexpm.Repository.Releases do
     package_changeset = Ecto.Changeset.change(release.package, docs_updated_at: now)
 
     {:ok, _} =
+      result =
       Multi.new()
       |> Multi.update(:release, release_changeset)
       |> Multi.update(:package, package_changeset)
       |> audit(audit_data, "docs.publish", {package, release})
       |> Repo.transaction()
+
+    :telemetry.execute([:hexpm, :repository, :publish_docs], %{count: 1}, %{})
+    result
   end
 
   def revert(package, release, audit: audit_data) do
@@ -119,6 +191,44 @@ defmodule Hexpm.Repository.Releases do
     |> retire_result()
   end
 
+  def retire(package, params, opts) do
+    audit_data = Keyword.fetch!(opts, :audit)
+    replace? = Keyword.get(opts, :replace, false)
+    params = %{"retirement" => params}
+
+    Multi.new()
+    |> Multi.run(:repository, fn _, _ -> {:ok, package.repository} end)
+    |> Multi.update(:package, Ecto.Changeset.change(package, []), force: true)
+    |> Multi.run(:retirement, fn _, _ -> validate_retirement(params) end)
+    |> Multi.run(:releases, fn repo, _ ->
+      query = from(r in assoc(package, :releases), lock: "FOR UPDATE")
+      query = if replace?, do: query, else: from(r in query, where: is_nil(r.retirement))
+
+      {:ok, repo.all(query)}
+    end)
+    |> Multi.merge(fn %{releases: releases} ->
+      Enum.reduce(releases, Multi.new(), fn release, multi ->
+        key = {:release, release.id}
+
+        Multi.update(multi, key, Release.retire(release, params))
+      end)
+      |> Multi.merge(fn changes ->
+        retirements =
+          Enum.map(releases, fn release ->
+            {package, Map.fetch!(changes, {:release, release.id})}
+          end)
+
+        if retirements == [] do
+          Multi.new()
+        else
+          audit_many(Multi.new(), audit_data, "release.retire", retirements)
+        end
+      end)
+    end)
+    |> Repo.transaction(timeout: @publish_timeout)
+    |> retire_result()
+  end
+
   def unretire(package, release, audit: audit_data) do
     Multi.new()
     |> Multi.run(:repository, fn _, _ -> {:ok, package.repository} end)
@@ -135,6 +245,7 @@ defmodule Hexpm.Repository.Releases do
     Assets.push_release(release, body)
     update_package_in_registry(package)
     email_package_owners(package, release, user)
+    :telemetry.execute([:hexpm, :repository, :publish], %{count: 1}, %{})
 
     {:ok, %{result | release: release, package: package}}
   end
@@ -147,6 +258,16 @@ defmodule Hexpm.Repository.Releases do
   end
 
   defp retire_result(result), do: result
+
+  defp validate_retirement(params) do
+    changeset = Release.retire(%Release{}, params)
+
+    if changeset.valid? do
+      {:ok, params}
+    else
+      {:error, changeset}
+    end
+  end
 
   defp revert_result({:ok, %{package: package, release: release, release_count: 0}}) do
     remove_package_from_registry(package)
@@ -340,6 +461,9 @@ defmodule Hexpm.Repository.Releases do
   end
 
   defp normalize_requirements(requirements), do: requirements
+
+  defp parse_version(%Version{} = version), do: version
+  defp parse_version(version), do: Version.parse!(version)
 
   defp preload_field(release, :requirements), do: {:requirements, Release.requirements(release)}
   defp preload_field(release, :downloads), do: {:downloads, ReleaseDownload.release(release)}

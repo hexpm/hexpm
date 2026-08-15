@@ -145,6 +145,7 @@ defmodule HexpmWeb.AuthController do
        ) do
     conn
     |> put_session("pending_oauth", %{
+      at: NaiveDateTime.utc_now() |> NaiveDateTime.to_iso8601(),
       provider: provider,
       provider_uid: provider_uid,
       provider_email: provider_email,
@@ -155,7 +156,7 @@ defmodule HexpmWeb.AuthController do
   end
 
   def show_username_form(conn, _params) do
-    case get_session(conn, "pending_oauth") do
+    case fetch_pending_oauth(conn) do
       nil ->
         conn
         |> put_flash(:error, "Session expired. Please try signing up again.")
@@ -174,7 +175,7 @@ defmodule HexpmWeb.AuthController do
   end
 
   def complete_signup(conn, %{"user" => %{"username" => username}}) do
-    case get_session(conn, "pending_oauth") do
+    case fetch_pending_oauth(conn) do
       nil ->
         conn
         |> put_flash(:error, "Session expired. Please try signing up again.")
@@ -182,6 +183,16 @@ defmodule HexpmWeb.AuthController do
 
       oauth_data ->
         create_user_from_oauth(conn, oauth_data, username)
+    end
+  end
+
+  defp fetch_pending_oauth(conn) do
+    case get_session(conn, "pending_oauth") do
+      %{"at" => at} = oauth_data ->
+        if HexpmWeb.Session.TTL.within?(at, minute: 30), do: oauth_data
+
+      _ ->
+        nil
     end
   end
 

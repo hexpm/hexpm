@@ -57,10 +57,13 @@ defmodule Hexpm.ShortURLs.ShortURL do
       url.scheme not in ["http", "https"] ->
         [url: "must use http or https scheme"]
 
+      url.host in [nil, ""] ->
+        [url: "must include a host"]
+
       url.host == "hex.pm" or String.ends_with?(url.host, [".hex.pm"]) ->
         []
 
-      String.ends_with?(url.host || "", [".hexdocs.pm", ".hexorgs.pm"]) ->
+      String.ends_with?(url.host, [".hexdocs.pm", ".hexorgs.pm"]) ->
         []
 
       url.host in ["hexdocs.pm", "staging.hex.pm"] and url.path in [nil, "/"] ->

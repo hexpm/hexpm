@@ -3,8 +3,6 @@ defmodule Hexpm.Security.Advisories do
 
   import Ecto.Query
 
-  require Logger
-
   alias Hexpm.Repository.Package
   alias Hexpm.Repository.RegistryBuilder
   alias Hexpm.Security.Advisory
@@ -32,13 +30,6 @@ defmodule Hexpm.Security.Advisories do
 
   def upsert(records, package_ids) do
     Multi.new()
-    |> Multi.run(:lock, fn repo, _ ->
-      if repo.try_advisory_xact_lock?(:vulnerability_updater) do
-        {:ok, :leader}
-      else
-        {:error, :not_leader}
-      end
-    end)
     |> upsert_advisories(records)
     |> prepare_changed(package_ids)
     |> sync_references()

@@ -4,7 +4,10 @@ defmodule Hexpm.Repository.Owners do
   alias Hexpm.Accounts.OptionalEmails
 
   def all(package, preload \\ []) do
-    assoc(package, :package_owners)
+    from(owner in assoc(package, :package_owners),
+      join: user in assoc(owner, :user),
+      order_by: user.username
+    )
     |> Repo.all()
     |> Repo.preload(preload)
   end

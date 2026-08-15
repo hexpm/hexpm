@@ -4,6 +4,11 @@ config :hexpm,
   repo_bucket: {Hexpm.Store.Memory, "repo_bucket"},
   logs_bucket: {Hexpm.Store.Memory, "logs_bucket"},
   docs_bucket: {Hexpm.Store.Memory, "docs_bucket"},
+  docs_private_bucket: {Hexpm.Store.Memory, "docs_private_bucket"},
+  preview_bucket: {Hexpm.Store.Memory, "preview_bucket"},
+  diff_bucket: {Hexpm.Store.Memory, "diff_bucket"},
+  diff_cache_version: 1,
+  email_base_url: "http://localhost:5000",
   secret: "796f75666f756e64746865686578",
   jwt_signing_key: """
   -----BEGIN EC PRIVATE KEY-----
@@ -19,21 +24,27 @@ config :hexpm,
   cdn_url: "http://localhost:5000",
   docs_url: "http://localhost:5002",
   private_docs_url: "http://localhost:5002",
-  diff_url: "http://localhost:5004",
-  preview_url: "http://localhost:5005",
   img_url: "http://localhost:5000/img",
   img_proxy_secret: "test_img_proxy_secret_key_for_hmac",
   readme_host: "readme.localhost",
   readme_url: "http://readme.localhost:5000",
   fastly_hexrepo: "fastly_hexrepo",
+  fastly_hexdocs: "fastly_hexdocs",
+  fastly_hexdocs_private: "fastly_hexdocs_private",
   fastly_key: "fastly_key",
+  fastly_docs_key: "fastly_docs_key",
   fastly_purge_wait: 200,
   billing_impl: Hexpm.Billing.Mock,
+  billing_url: "http://localhost:4001",
+  billing_key: "hex_billing_key",
   pwned_impl: Hexpm.Pwned.Mock,
   geo_impl: Hexpm.Geo.Mock,
   http_impl: Hexpm.HTTP.Mock,
   cache_enabled: false,
-  skip_advisory_locks: true
+  skip_advisory_locks: true,
+  # VACUUM cannot run inside the sandbox transaction that wraps each test.
+  # Hexpm.ReleaseTasks.StatsTest covers it unboxed.
+  skip_maintenance_vacuum: true
 
 config :hexpm, HexpmWeb.Endpoint,
   http: [port: 5000],
@@ -43,6 +54,10 @@ config :hexpm, HexpmWeb.Endpoint,
 
 config :hexpm, Hexpm.Emails.Mailer, adapter: Swoosh.Adapters.Test
 config :swoosh, :api_client, false
+
+config :hexpm, Oban, testing: :manual, queues: false, plugins: false
+
+config :hexpm, Hexpm.PromEx, disabled: true
 
 config :hexpm, Hexpm.RepoBase,
   username: "postgres",
@@ -58,6 +73,14 @@ config :logger, level: :error
 config :hexpm, :hcaptcha,
   sitekey: "sitekey",
   secret: "secret"
+
+config :hexpm, :organization_sso,
+  mode: :off,
+  beta_organizations: [],
+  oidc_impl: Hexpm.Accounts.SSO.OIDC.Mock
+
+config :hexpm, :varsel_impl, Hexpm.PackageReports.Varsel.Mock
+config :hexpm, :varsel, key_id: "hexpm-test"
 
 # Don't sleep waiting for Sentry to flush in tests.
 config :hexpm, sentry_flush_ms: 0

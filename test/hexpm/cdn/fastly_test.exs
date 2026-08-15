@@ -3,8 +3,14 @@ defmodule Hexpm.CDN.FastlyTest do
   import Mox
   alias Hexpm.CDN.Fastly
 
+  # The two extra purges come from a supervised task that sleeps between them,
+  # so the wait has to outlast a loaded machine scheduling that task late.
+  @receive_timeout 10_000
+
   describe "purge_key/2" do
     test "calls purge endpoint 3 times after waiting" do
+      test_pid = self()
+
       expect(Hexpm.HTTP.Mock, :post, 3, fn url, headers, body ->
         assert url == "https://api.fastly.com/service/fastly_hexrepo/purge"
         assert body == %{"surrogate_keys" => ["key1", "key2"]}
@@ -15,11 +21,30 @@ defmodule Hexpm.CDN.FastlyTest do
                  {"content-type", "application/json"}
                ]
 
+        send(test_pid, :purged)
         {:ok, 200, [], ""}
       end)
 
       assert Fastly.purge_key(:fastly_hexrepo, ["key1", "key2"]) == :ok
-      Process.sleep(300)
+      assert_receive :purged, @receive_timeout
+      assert_receive :purged, @receive_timeout
+      assert_receive :purged, @receive_timeout
+    end
+
+    test "uses the docs credential for docs services" do
+      test_pid = self()
+
+      expect(Hexpm.HTTP.Mock, :post, 3, fn url, headers, _body ->
+        assert url == "https://api.fastly.com/service/fastly_hexdocs/purge"
+        assert {"fastly-key", "fastly_docs_key"} in headers
+        send(test_pid, :purged)
+        {:ok, 200, [], ""}
+      end)
+
+      assert Fastly.purge_key(:fastly_hexdocs, "docs-key") == :ok
+      assert_receive :purged, @receive_timeout
+      assert_receive :purged, @receive_timeout
+      assert_receive :purged, @receive_timeout
     end
   end
 
