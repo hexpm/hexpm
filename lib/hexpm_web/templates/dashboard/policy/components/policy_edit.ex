@@ -724,6 +724,19 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
           <p class="text-sm text-grey-500 dark:text-grey-300 mt-0.5">
             Accept or reject matching releases, or bypass one policy restriction.
           </p>
+          <p
+            data-policy-override-compatibility
+            class="mt-2 flex items-start gap-1.5 text-xs text-grey-500 dark:text-grey-300"
+          >
+            {icon(:heroicon, "information-circle",
+              class: "mt-px h-4 w-4 flex-shrink-0",
+              width: 16,
+              height: 16
+            )}
+            <span>
+              CVE, retirement, and cooldown overrides require Hex 2.6.0 or newer.
+            </span>
+          </p>
         </div>
       </div>
 
