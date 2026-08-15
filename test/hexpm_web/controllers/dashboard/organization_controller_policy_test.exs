@@ -590,6 +590,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
                "CVE and retirement overrides bypass only the selected CVE or retirement reason."
 
       assert response =~ "Overrides"
+      assert response =~ "CVE, retirement, and cooldown overrides require Hex 2.6.0 or newer."
       assert response =~ "hexpm"
       assert response =~ org.name
       assert response =~ "New releases are allowed immediately"
@@ -599,6 +600,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
 
       {:ok, document} = Floki.parse_document(response)
       assert Floki.attribute(Floki.find(document, "#repo-tabs"), "hidden") == []
+
+      assert length(Floki.find(document, "[data-policy-override-compatibility]")) == 2
     end
 
     test "admin sees the save and delete affordances", %{user: user, organization: org} do
