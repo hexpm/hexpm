@@ -1,6 +1,17 @@
 defmodule HexpmWeb.DocsControllerTest do
   use HexpmWeb.ConnCase
 
+  test "renders dependency policy client compatibility behavior" do
+    html =
+      build_conn()
+      |> get("/docs/dependency-policies")
+      |> html_response(200)
+
+    assert html =~ "Hex warns when a loaded policy contains override actions"
+    assert html =~ "mix hex.policy show"
+    assert html =~ "newer advisory, retirement, and cooldown overrides remain fail-closed"
+  end
+
   test "renders the organization SSO setup guide in the docs navigation" do
     enable_sso_docs()
 
