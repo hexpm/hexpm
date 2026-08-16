@@ -293,17 +293,6 @@ html[data-theme-preference="system"] [data-theme-toggle] [data-theme-icon="syste
   display: inline-flex;
 }
 
-/* Highlight active choice in theme menu */
-[data-theme-menu] [data-theme-choice] {
-  font-weight: normal;
-}
-
-html[data-theme-preference="light"] [data-theme-menu] [data-theme-choice="light"],
-html[data-theme-preference="dark"] [data-theme-menu] [data-theme-choice="dark"],
-html[data-theme-preference="system"] [data-theme-menu] [data-theme-choice="system"] {
-  font-weight: 600;
-}
-
 /* ===== LEGACY UTILITY CLASSES ===== */
 /* Legacy utility classes still referenced by some templates/helpers. */
 

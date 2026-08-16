@@ -46,36 +46,23 @@ function setPreference(preference) {
   applyTheme(resolveTheme());
 }
 
-function closeAllMenus() {
-  document.querySelectorAll("[data-theme-menu]").forEach((menu) => {
-    menu.classList.add("hidden");
-  });
+const PREFERENCE_CYCLE = ["light", "dark", "system"];
+
+function nextPreference(preference) {
+  const index = PREFERENCE_CYCLE.indexOf(preference);
+  return PREFERENCE_CYCLE[(index + 1) % PREFERENCE_CYCLE.length];
 }
 
 export function initializeTheme() {
   applyTheme(resolveTheme());
 
-  // Toggle menu open/closed
+  // Clicking the icon cycles to the next theme
   document.addEventListener("click", (event) => {
     const toggle = event.target.closest("[data-theme-toggle]");
-    if (toggle) {
-      event.preventDefault();
-      const menu = toggle.parentElement.querySelector("[data-theme-menu]");
-      if (menu) menu.classList.toggle("hidden");
-      return;
-    }
+    if (!toggle) return;
 
-    // Handle choice selection
-    const choice = event.target.closest("[data-theme-choice]");
-    if (choice) {
-      event.preventDefault();
-      setPreference(choice.getAttribute("data-theme-choice"));
-      closeAllMenus();
-      return;
-    }
-
-    // Click outside closes menu
-    closeAllMenus();
+    event.preventDefault();
+    setPreference(nextPreference(currentPreference()));
   });
 
   // System theme changes

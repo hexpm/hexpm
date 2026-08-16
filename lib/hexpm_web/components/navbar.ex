@@ -161,7 +161,7 @@ defmodule HexpmWeb.Components.Navbar do
 
   defp theme_toggle(assigns) do
     ~H"""
-    <div class={["relative flex items-center", @class]}>
+    <div class={["flex items-center", @class]}>
       <button
         type="button"
         data-theme-toggle
@@ -171,7 +171,7 @@ defmodule HexpmWeb.Components.Navbar do
           !@compact && "h-5 w-5"
         ]}
         aria-label="Change theme"
-        aria-haspopup="true"
+        title="Change theme"
       >
         <span class="sr-only">Change color theme</span>
         <span data-theme-icon="light">
@@ -184,33 +184,6 @@ defmodule HexpmWeb.Components.Navbar do
           {icon(:heroicon, "computer-desktop", width: 18, height: 18)}
         </span>
       </button>
-
-      <div
-        data-theme-menu
-        class="hidden absolute right-0 top-full mt-2 w-36 bg-grey-700 border border-grey-600 rounded-lg shadow-lg py-1 z-50"
-      >
-        <button
-          type="button"
-          data-theme-choice="light"
-          class="w-full flex items-center gap-2 px-4 py-2 text-sm text-grey-200 hover:bg-grey-600 transition-colors cursor-pointer"
-        >
-          {icon(:heroicon, "sun", width: 16, height: 16)} Light
-        </button>
-        <button
-          type="button"
-          data-theme-choice="dark"
-          class="w-full flex items-center gap-2 px-4 py-2 text-sm text-grey-200 hover:bg-grey-600 transition-colors cursor-pointer"
-        >
-          {icon(:heroicon, "moon", width: 16, height: 16)} Dark
-        </button>
-        <button
-          type="button"
-          data-theme-choice="system"
-          class="w-full flex items-center gap-2 px-4 py-2 text-sm text-grey-200 hover:bg-grey-600 transition-colors cursor-pointer"
-        >
-          {icon(:heroicon, "computer-desktop", width: 16, height: 16)} System
-        </button>
-      </div>
     </div>
     """
   end
