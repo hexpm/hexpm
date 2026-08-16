@@ -14,6 +14,7 @@ import { AutoSubmit } from "./hooks/auto_submit";
 import { NavigateOnChange } from "./hooks/navigate_on_change";
 import { ConfirmSubmit } from "./hooks/confirm_submit";
 import { initializeTheme, syncReadmeFrameTheme, resolveTheme } from "./theme";
+import { initializeDocsNav } from "./docs_nav";
 import { SearchShortcut } from "./hooks/search_shortcut";
 import { SearchInputSync } from "./hooks/search_input_sync";
 import { ToggleGroup } from "./hooks/toggle_group";
@@ -63,6 +64,7 @@ let liveSocket = new LiveSocket("/live", Socket, {
 
 liveSocket.connect();
 initializeTheme();
+initializeDocsNav();
 
 // Blur the active element on demand
 window.addEventListener("blur-active", () => {
