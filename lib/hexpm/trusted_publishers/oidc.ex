@@ -28,15 +28,17 @@ defmodule Hexpm.TrustedPublishers.OIDC do
   @doc """
   Verifies an OIDC JWT against the given issuer.
 
-  Rejects `none` and symmetric algorithms, validates `nbf`/`exp`/`iat`, and
-  requires `aud` to equal `#{@audience}`.
+  Signature, `iss`, `aud`, `exp`, and `nbf` validation is delegated to
+  `Oidcc.Token.validate_jwt/3`. This module rejects `none` and symmetric
+  algorithms before handing the token over, and checks `jti` and an upper bound
+  on `iat` afterwards, neither of which the generic JWT validation covers.
   """
   def verify(token, issuer) when is_binary(token) and is_binary(issuer) do
     with {:ok, header} <- peek_header(token),
          :ok <- validate_alg(header),
          {:ok, jwks} <- get_jwks(issuer),
-         {:ok, claims} <- verify_signature(token, jwks, issuer),
-         :ok <- validate_claims(claims, issuer) do
+         {:ok, claims} <- validate_jwt(token, jwks, issuer),
+         :ok <- validate_claims(claims) do
       {:ok, claims}
     end
   end
@@ -101,38 +103,80 @@ defmodule Hexpm.TrustedPublishers.OIDC do
     :ok
   end
 
-  defp verify_signature(token, keys, issuer) when is_list(keys) do
-    case verify_with_keys(token, keys) do
+  defp validate_jwt(token, jwks, issuer) do
+    case oidcc_validate_jwt(token, jwks, issuer) do
       {:ok, claims} ->
         {:ok, claims}
 
-      {:error, :signature_invalid} ->
-        refresh_and_verify(token, issuer)
-    end
-  end
-
-  defp verify_with_keys(token, keys) do
-    Enum.find_value(keys, {:error, :signature_invalid}, fn key ->
-      try do
-        case JOSE.JWT.verify_strict(key, @allowed_algs, token) do
-          {true, %JOSE.JWT{fields: claims}, _jws} -> {:ok, claims}
-          _ -> nil
+      {:error, error} ->
+        if unknown_key?(error) do
+          refresh_and_validate_jwt(token, issuer, error)
+        else
+          {:error, translate_error(error)}
         end
-      rescue
-        _ -> nil
-      end
-    end)
-  end
-
-  defp refresh_and_verify(token, issuer) do
-    with :ok <- refresh_allowed?(issuer),
-         {:ok, keys} <- fetch_and_cache_jwks(issuer) do
-      verify_with_keys(token, keys)
-    else
-      :refresh_cooldown -> {:error, :signature_invalid}
-      _ -> {:error, :signature_invalid}
     end
   end
+
+  defp refresh_and_validate_jwt(token, issuer, error) do
+    with :ok <- refresh_allowed?(issuer),
+         {:ok, jwks} <- fetch_and_cache_jwks(issuer) do
+      case oidcc_validate_jwt(token, jwks, issuer) do
+        {:ok, claims} -> {:ok, claims}
+        {:error, refresh_error} -> {:error, translate_error(refresh_error)}
+      end
+    else
+      :refresh_cooldown -> {:error, translate_error(error)}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp oidcc_validate_jwt(token, jwks, issuer) do
+    Oidcc.Token.validate_jwt(token, client_context(jwks, issuer), %{
+      signing_algs: @allowed_algs,
+      trusted_audiences: :any
+    })
+  rescue
+    _exception -> {:error, :signature_invalid}
+  end
+
+  # GitHub is not an interactive OpenID provider: its discovery document carries
+  # no authorization endpoint, so it cannot be decoded with
+  # `Oidcc.ProviderConfiguration.decode_configuration/1`. Only the issuer is read
+  # back out during generic JWT validation.
+  defp client_context(jwks, issuer) do
+    configuration = %Oidcc.ProviderConfiguration{
+      issuer: issuer,
+      id_token_signing_alg_values_supported: @allowed_algs
+    }
+
+    Oidcc.ClientContext.from_manual(configuration, jwks, @audience, :unauthenticated)
+  end
+
+  defp unknown_key?(:no_matching_key), do: true
+  defp unknown_key?({:no_matching_key_with_kid, _kid}), do: true
+  defp unknown_key?(_error), do: false
+
+  defp translate_error(:token_expired), do: :token_expired
+  defp translate_error(:token_not_yet_valid), do: :token_not_yet_valid
+  defp translate_error(:none_alg_used), do: :algorithm_rejected
+  defp translate_error({:none_alg_used, _claims}), do: :algorithm_rejected
+
+  defp translate_error({:missing_claim, claim, _claims}),
+    do: translate_missing_claim(missing_claim_name(claim))
+
+  defp translate_error(reason) when reason in [:no_matching_key, :signature_invalid],
+    do: :signature_invalid
+
+  defp translate_error({:no_matching_key_with_kid, _kid}), do: :signature_invalid
+  defp translate_error(_reason), do: :invalid_token
+
+  defp missing_claim_name({name, _expected}), do: name
+  defp missing_claim_name(name), do: name
+
+  defp translate_missing_claim("iss"), do: :issuer_mismatch
+  defp translate_missing_claim("aud"), do: :audience_mismatch
+  defp translate_missing_claim("exp"), do: :token_expired
+  defp translate_missing_claim(_claim), do: :invalid_token
 
   defp refresh_allowed?(issuer) do
     case :persistent_term.get({__MODULE__, :jwks_refreshed_at, issuer}, nil) do
@@ -149,22 +193,10 @@ defmodule Hexpm.TrustedPublishers.OIDC do
     end
   end
 
-  defp validate_claims(claims, issuer) do
+  defp validate_claims(claims) do
     now = System.system_time(:second)
 
     cond do
-      claims["iss"] != issuer ->
-        {:error, :issuer_mismatch}
-
-      not audience_matches?(claims["aud"]) ->
-        {:error, :audience_mismatch}
-
-      not is_integer(claims["exp"]) or claims["exp"] < now - @clock_skew_seconds ->
-        {:error, :token_expired}
-
-      is_integer(claims["nbf"]) and claims["nbf"] > now + @clock_skew_seconds ->
-        {:error, :token_not_yet_valid}
-
       is_integer(claims["iat"]) and claims["iat"] > now + @clock_skew_seconds ->
         {:error, :issued_at_in_future}
 
@@ -175,10 +207,6 @@ defmodule Hexpm.TrustedPublishers.OIDC do
         :ok
     end
   end
-
-  defp audience_matches?(aud) when is_binary(aud), do: aud == @audience
-  defp audience_matches?(aud) when is_list(aud), do: @audience in aud
-  defp audience_matches?(_), do: false
 
   defp fetch_json(url) do
     case Hexpm.HTTP.impl().get(url, [{"accept", "application/json"}],
@@ -205,16 +233,7 @@ defmodule Hexpm.TrustedPublishers.OIDC do
   end
 
   defp decode_jwks(%{"keys" => keys}) when is_list(keys) and keys != [] do
-    decoded =
-      Enum.flat_map(keys, fn key ->
-        try do
-          [JOSE.JWK.from_map(key)]
-        rescue
-          _ -> []
-        end
-      end)
-
-    if decoded == [], do: {:error, :invalid_jwks}, else: {:ok, decoded}
+    {:ok, JOSE.JWK.from_map(%{"keys" => keys})}
   end
 
   defp decode_jwks(_), do: {:error, :invalid_jwks}

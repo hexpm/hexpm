@@ -111,6 +111,48 @@ defmodule Hexpm.TrustedPublishers.OIDCTest do
     assert {:error, :jti_missing} = OIDC.verify(token, @issuer)
   end
 
+  test "refetches the JWKS when the token is signed by a rotated key" do
+    assert {:ok, _} =
+             OIDC.verify(
+               TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims()),
+               @issuer
+             )
+
+    rotated = TrustedPublisherHelpers.rsa_jwk(:rotated)
+
+    TrustedPublisherHelpers.stub_oidc_discovery(
+      keys: [{TrustedPublisherHelpers.rsa_jwk(), "test-kid"}, {rotated, "rotated-kid"}],
+      clear_cache: false
+    )
+
+    :persistent_term.erase({OIDC, :jwks_refreshed_at, @issuer})
+
+    token =
+      TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims(),
+        jwk: rotated,
+        kid: "rotated-kid"
+      )
+
+    assert {:ok, claims} = OIDC.verify(token, @issuer)
+    assert claims["repository"] == "acme/widget"
+  end
+
+  test "keeps rejecting an unknown key while the refetch is on cooldown" do
+    assert {:ok, _} =
+             OIDC.verify(
+               TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims()),
+               @issuer
+             )
+
+    token =
+      TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims(),
+        jwk: TrustedPublisherHelpers.rsa_jwk(:rotated),
+        kid: "rotated-kid"
+      )
+
+    assert {:error, :signature_invalid} = OIDC.verify(token, @issuer)
+  end
+
   test "accepts aud as a list containing hexpm" do
     token =
       TrustedPublisherHelpers.sign_oidc_claims(

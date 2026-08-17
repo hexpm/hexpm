@@ -28,11 +28,11 @@ defmodule Hexpm.TrustedPublisherHelpers do
     end
   end
 
-  def rsa_jwk do
-    case :persistent_term.get({__MODULE__, :rsa_jwk}, :miss) do
+  def rsa_jwk(name \\ :default) do
+    case :persistent_term.get({__MODULE__, :rsa_jwk, name}, :miss) do
       :miss ->
         jwk = JOSE.JWK.generate_key({:rsa, 2048})
-        :persistent_term.put({__MODULE__, :rsa_jwk}, jwk)
+        :persistent_term.put({__MODULE__, :rsa_jwk, name}, jwk)
         jwk
 
       jwk ->
@@ -40,10 +40,9 @@ defmodule Hexpm.TrustedPublisherHelpers do
     end
   end
 
-  def stub_oidc_discovery do
-    public_jwk = JOSE.JWK.to_public(rsa_jwk())
-    {_, public_map} = JOSE.JWK.to_map(public_jwk)
-    jwks_document = %{"keys" => [Map.put(public_map, "kid", "test-kid")]}
+  def stub_oidc_discovery(opts \\ []) do
+    keys = Keyword.get(opts, :keys, [{rsa_jwk(), "test-kid"}])
+    jwks_document = %{"keys" => Enum.map(keys, &public_jwk_map/1)}
 
     discovery = %{
       "issuer" => @issuer,
@@ -65,17 +64,26 @@ defmodule Hexpm.TrustedPublisherHelpers do
       end
     end)
 
-    OIDC.clear_cache()
+    if Keyword.get(opts, :clear_cache, true), do: OIDC.clear_cache()
+
     :ok
   end
 
-  def sign_oidc_claims(claims) do
+  defp public_jwk_map({jwk, kid}) do
+    {_, public_map} = jwk |> JOSE.JWK.to_public() |> JOSE.JWK.to_map()
+    Map.put(public_map, "kid", kid)
+  end
+
+  def sign_oidc_claims(claims, opts \\ []) do
+    jwk = Keyword.get(opts, :jwk, rsa_jwk())
+    kid = Keyword.get(opts, :kid, "test-kid")
     now = System.system_time(:second)
 
     claims =
       Map.merge(
         %{
           "iss" => @issuer,
+          "sub" => "repo:acme/widget:ref:refs/heads/main",
           "aud" => OIDC.audience(),
           "iat" => now,
           "nbf" => now - 30,
@@ -85,7 +93,7 @@ defmodule Hexpm.TrustedPublisherHelpers do
         claims
       )
 
-    {_, signed} = JOSE.JWT.sign(rsa_jwk(), %{"alg" => "RS256", "kid" => "test-kid"}, claims)
+    {_, signed} = JOSE.JWT.sign(jwk, %{"alg" => "RS256", "kid" => kid}, claims)
     {_, compact} = JOSE.JWS.compact(signed)
     compact
   end
