@@ -45,6 +45,10 @@ config :hexpm, secret_scan_notify: false
 
 config :hexpm, HexpmWeb.BasicAuth, schedule_enabled: true
 
+config :hexpm, :features, trusted_publishers: true
+
+config :hexpm, :trusted_publisher_oauth_client_id, "a1111111-1111-4111-8111-111111111111"
+
 config :hexpm, :organization_sso,
   mode: :off,
   beta_organizations: [],

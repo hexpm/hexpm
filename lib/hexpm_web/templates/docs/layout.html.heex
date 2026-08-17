@@ -199,6 +199,22 @@
                   Organization SSO
                 </a>
               </li>
+              <li :if={Hexpm.TrustedPublishers.enabled?()}>
+                <a
+                  href={~p"/docs/trusted-publishers"}
+                  class={[
+                    "block px-3 py-1.5 text-sm rounded transition-colors",
+                    if(@view_name == :trusted_publishers,
+                      do:
+                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
+                      else:
+                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-700"
+                    )
+                  ]}
+                >
+                  Trusted publishers
+                </a>
+              </li>
               <li>
                 <a
                   href={~p"/docs/faq"}

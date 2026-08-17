@@ -24,13 +24,16 @@ defmodule Hexpm.OAuth.Token do
 
     belongs_to :user, User
     belongs_to :organization, Organization
+    belongs_to :trusted_publisher, Hexpm.TrustedPublishers.TrustedPublisher
     belongs_to :client, Hexpm.OAuth.Client, references: :client_id, type: :binary_id
     belongs_to :user_session, UserSession
+
+    embeds_one :oidc_claims, Hexpm.TrustedPublishers.ClaimsSnapshot, on_replace: :delete
 
     timestamps()
   end
 
-  @valid_grant_types ~w(authorization_code urn:ietf:params:oauth:grant-type:device_code refresh_token client_credentials)
+  @valid_grant_types ~w(authorization_code urn:ietf:params:oauth:grant-type:device_code refresh_token client_credentials trusted_publisher)
 
   def changeset(token, attrs) do
     token
@@ -49,10 +52,12 @@ defmodule Hexpm.OAuth.Token do
       :user_session_id,
       :user_id,
       :organization_id,
+      :trusted_publisher_id,
       :client_id,
       :access_token,
       :refresh_token
     ])
+    |> cast_embed(:oidc_claims)
     |> validate_required([
       :jti,
       :token_type,
@@ -62,6 +67,7 @@ defmodule Hexpm.OAuth.Token do
       :client_id
     ])
     |> validate_inclusion(:grant_type, @valid_grant_types)
+    |> validate_subject_present()
     |> validate_scopes()
     |> unique_constraint(:jti)
     |> unique_constraint(:refresh_jti)
@@ -70,11 +76,33 @@ defmodule Hexpm.OAuth.Token do
       name: :oauth_tokens_device_code_grant_reference_client_id_index,
       message: "a live token already exists for this device code"
     )
+    |> unique_constraint(:grant_reference,
+      name: :oauth_tokens_trusted_publisher_grant_reference_client_id_index,
+      message: "OIDC token has already been used"
+    )
   end
 
   def build(attrs) do
     %__MODULE__{}
     |> changeset(attrs)
+  end
+
+  def valid_grant_types, do: @valid_grant_types
+
+  defp validate_subject_present(changeset) do
+    user_id = get_field(changeset, :user_id)
+    organization_id = get_field(changeset, :organization_id)
+    trusted_publisher_id = get_field(changeset, :trusted_publisher_id)
+
+    if is_nil(user_id) and is_nil(organization_id) and is_nil(trusted_publisher_id) do
+      add_error(
+        changeset,
+        :trusted_publisher_id,
+        "user, organization, or trusted publisher required"
+      )
+    else
+      changeset
+    end
   end
 
   defp validate_scopes(changeset) do

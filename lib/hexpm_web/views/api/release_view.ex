@@ -35,7 +35,8 @@ defmodule HexpmWeb.API.ReleaseView do
         elixir: release.meta.elixir
       },
       downloads: downloads(release.downloads),
-      publisher: render_one(release.publisher, UserView, "minimal.json")
+      publisher: render_one(release.publisher, UserView, "minimal.json"),
+      oidc_claims: oidc_claims(release.oidc_claims)
     }
     |> ViewHelpers.include_if_loaded(
       :security_advisories,
@@ -53,6 +54,14 @@ defmodule HexpmWeb.API.ReleaseView do
       has_docs: release.has_docs,
       inserted_at: release.inserted_at
     }
+  end
+
+  defp oidc_claims(nil), do: nil
+
+  defp oidc_claims(%Hexpm.TrustedPublishers.ClaimsSnapshot{} = claims) do
+    claims
+    |> Map.from_struct()
+    |> Map.delete(:id)
   end
 
   defp requirements(requirements) do
