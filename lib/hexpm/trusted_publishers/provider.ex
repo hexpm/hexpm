@@ -13,25 +13,16 @@ defmodule Hexpm.TrustedPublishers.Provider do
 
   @callback name() :: String.t()
   @callback issuer() :: String.t()
-  @callback required_claims() :: [atom()]
-  @callback supported_claims() :: [atom()]
   @callback resolve_immutable_ids(map()) :: {:ok, immutable_ids()} | {:error, term()}
   @callback match?(TrustedPublisher.t(), claims()) :: boolean()
   @callback claims_snapshot(claims()) :: map()
 
-  @providers %{
-    "github" => Hexpm.TrustedPublishers.Provider.GitHub
-  }
+  @implementations [Hexpm.TrustedPublishers.Provider.GitHub]
 
-  @issuers %{
-    "https://token.actions.githubusercontent.com" => Hexpm.TrustedPublishers.Provider.GitHub
-  }
+  def get(name) when is_binary(name), do: Enum.find(@implementations, &(&1.name() == name))
 
-  def get(name) when is_binary(name), do: Map.get(@providers, name)
+  def get_by_issuer(issuer) when is_binary(issuer),
+    do: Enum.find(@implementations, &(&1.issuer() == issuer))
 
-  def get_by_issuer(issuer) when is_binary(issuer), do: Map.get(@issuers, issuer)
-
-  def known_issuers, do: Map.keys(@issuers)
-
-  def known_providers, do: Map.keys(@providers)
+  def known_issuers, do: Enum.map(@implementations, & &1.issuer())
 end

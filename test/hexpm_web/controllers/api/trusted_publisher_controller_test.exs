@@ -72,12 +72,8 @@ defmodule HexpmWeb.API.TrustedPublisherControllerTest do
 
   describe "POST /api/packages/:name/trusted_publishers" do
     test "creates a publisher after resolving GitHub ids", %{user: user, package: package} do
-      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/users/acme", _, _ ->
-        {:ok, 200, [], %{"id" => 11}}
-      end)
-
       expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
-        {:ok, 200, [], %{"id" => 22}}
+        {:ok, 200, [], %{"id" => 22, "owner" => %{"id" => 11}}}
       end)
 
       conn =
@@ -100,12 +96,8 @@ defmodule HexpmWeb.API.TrustedPublisherControllerTest do
       user: user,
       package: package
     } do
-      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/users/acme", _, _ ->
-        {:ok, 200, [], %{"id" => 11}}
-      end)
-
       expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
-        {:ok, 200, [], %{"id" => 22}}
+        {:ok, 200, [], %{"id" => 22, "owner" => %{"id" => 11}}}
       end)
 
       conn =
@@ -131,12 +123,8 @@ defmodule HexpmWeb.API.TrustedPublisherControllerTest do
         environment: ""
       )
 
-      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/users/acme", _, _ ->
-        {:ok, 200, [], %{"id" => 11}}
-      end)
-
       expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
-        {:ok, 200, [], %{"id" => 22}}
+        {:ok, 200, [], %{"id" => 22, "owner" => %{"id" => 11}}}
       end)
 
       conn =
@@ -152,10 +140,14 @@ defmodule HexpmWeb.API.TrustedPublisherControllerTest do
       assert json_response(conn, 422)["errors"]["repository"]
     end
 
-    test "returns validation error when GitHub owner resolution fails", %{
+    test "returns validation error when GitHub repository resolution fails", %{
       user: user,
       package: package
     } do
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/missing/widget", _, _ ->
+        {:ok, 404, [], %{}}
+      end)
+
       expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/users/missing", _, _ ->
         {:ok, 404, [], %{}}
       end)
@@ -170,7 +162,120 @@ defmodule HexpmWeb.API.TrustedPublisherControllerTest do
           "workflow" => "release.yml"
         })
 
-      assert json_response(conn, 422)["errors"]["repository_owner"]
+      assert json_response(conn, 422)["errors"]["github_repository"]
+      assert Hexpm.TrustedPublishers.list(package) == []
+    end
+
+    test "creates a publisher for a repository Hex cannot see when given its id", %{
+      user: user,
+      package: package
+    } do
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/private", _, _ ->
+        {:ok, 404, [], %{}}
+      end)
+
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/users/acme", _, _ ->
+        {:ok, 200, [], %{"id" => 11}}
+      end)
+
+      conn =
+        build_conn()
+        |> put_req_header("authorization", key_for(user))
+        |> post("/api/packages/#{package.name}/trusted_publishers", %{
+          "provider" => "github",
+          "repository_owner" => "acme",
+          "github_repository" => "private",
+          "workflow" => "release.yml",
+          "repository_id" => 22
+        })
+
+      assert json_response(conn, 201)["github_repository"] == "acme/private"
+
+      assert [%{repository_owner_id: "11", repository_id: "22"}] =
+               Hexpm.TrustedPublishers.list(package)
+    end
+
+    test "refuses a repository Hex cannot see without its id", %{user: user, package: package} do
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/private", _, _ ->
+        {:ok, 404, [], %{}}
+      end)
+
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/users/acme", _, _ ->
+        {:ok, 200, [], %{"id" => 11}}
+      end)
+
+      conn =
+        build_conn()
+        |> put_req_header("authorization", key_for(user))
+        |> post("/api/packages/#{package.name}/trusted_publishers", %{
+          "provider" => "github",
+          "repository_owner" => "acme",
+          "github_repository" => "private",
+          "workflow" => "release.yml"
+        })
+
+      assert json_response(conn, 422)["errors"]["repository_id"]
+      assert Hexpm.TrustedPublishers.list(package) == []
+    end
+
+    test "prefers the resolved repository id over a supplied one", %{
+      user: user,
+      package: package
+    } do
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
+        {:ok, 200, [], %{"id" => 22, "owner" => %{"id" => 11}}}
+      end)
+
+      conn =
+        build_conn()
+        |> put_req_header("authorization", key_for(user))
+        |> post("/api/packages/#{package.name}/trusted_publishers", %{
+          "provider" => "github",
+          "repository_owner" => "acme",
+          "github_repository" => "widget",
+          "workflow" => "release.yml",
+          "repository_id" => 99
+        })
+
+      assert json_response(conn, 201)
+      assert [%{repository_id: "22"}] = Hexpm.TrustedPublishers.list(package)
+    end
+
+    test "returns 503 when GitHub is unavailable", %{user: user, package: package} do
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
+        {:ok, 500, [], %{}}
+      end)
+
+      conn =
+        build_conn()
+        |> put_req_header("authorization", key_for(user))
+        |> post("/api/packages/#{package.name}/trusted_publishers", %{
+          "provider" => "github",
+          "repository_owner" => "acme",
+          "github_repository" => "widget",
+          "workflow" => "release.yml"
+        })
+
+      assert json_response(conn, 503)["message"] =~ "try again later"
+      assert Hexpm.TrustedPublishers.list(package) == []
+    end
+
+    test "returns 503 when GitHub cannot be reached", %{user: user, package: package} do
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
+        {:error, :timeout}
+      end)
+
+      conn =
+        build_conn()
+        |> put_req_header("authorization", key_for(user))
+        |> post("/api/packages/#{package.name}/trusted_publishers", %{
+          "provider" => "github",
+          "repository_owner" => "acme",
+          "github_repository" => "widget",
+          "workflow" => "release.yml"
+        })
+
+      assert json_response(conn, 503)
       assert Hexpm.TrustedPublishers.list(package) == []
     end
 

@@ -17,31 +17,28 @@ defmodule Hexpm.TrustedPublishers.Provider.GitHub do
   def issuer, do: @issuer
 
   @impl true
-  def required_claims, do: [:repository_owner, :repository, :workflow]
-
-  @impl true
-  def supported_claims, do: [:repository_owner, :repository, :workflow, :environment]
-
-  @impl true
-  def resolve_immutable_ids(%{repository_owner: owner, repository: repository}) do
-    with {:ok, owner_id} <- fetch_user_id(owner),
-         {:ok, repository_id} <- fetch_repository_id(repository, owner) do
-      {:ok, %{repository_owner_id: owner_id, repository_id: repository_id}}
+  def resolve_immutable_ids(%{repository: repository}) do
+    with {:ok, owner, name} <- split_repository(repository) do
+      fetch_repository_ids(owner, name)
     end
   end
 
+  # The GitHub namespace is case-insensitive, so owner and repository are
+  # compared case-insensitively and pinned by their immutable ids. Workflow and
+  # environment are matched exactly: git paths are case-sensitive, so
+  # `Release.yml` must not satisfy a publisher configured for `release.yml`.
   @impl true
   def match?(%TrustedPublisher{} = publisher, claims) when is_map(claims) do
     repository = downcase(claims["repository"])
     owner_id = to_string_or_nil(claims["repository_owner_id"])
     repository_id = to_string_or_nil(claims["repository_id"])
     workflow = workflow_filename(claims)
-    environment = downcase(claims["environment"] || "")
+    environment = claims["environment"] || ""
 
     repository == downcase(publisher.repository) and
       owner_id == publisher.repository_owner_id and
       repository_id_matches?(publisher, repository_id) and
-      downcase(workflow) == downcase(publisher.workflow) and
+      workflow_matches?(publisher, workflow) and
       environment_matches?(publisher, environment)
   end
 
@@ -69,15 +66,22 @@ defmodule Hexpm.TrustedPublishers.Provider.GitHub do
     |> Map.new(fn {key, value} -> {key, to_string_or_nil(value)} end)
   end
 
-  defp repository_id_matches?(%{repository_id: nil}, _token_repository_id), do: true
+  defp repository_id_matches?(%{repository_id: expected}, actual)
+       when is_binary(expected) and is_binary(actual),
+       do: expected == actual
 
-  defp repository_id_matches?(%{repository_id: expected}, actual),
-    do: expected == actual
+  defp repository_id_matches?(_publisher, _actual), do: false
 
-  defp environment_matches?(%{environment: ""}, _token_environment), do: true
+  defp workflow_matches?(%{workflow: expected}, actual)
+       when is_binary(expected) and is_binary(actual),
+       do: expected == actual
 
-  defp environment_matches?(%{environment: expected}, actual),
-    do: downcase(expected) == actual
+  defp workflow_matches?(_publisher, _actual), do: false
+
+  defp environment_matches?(%{environment: env}, _token_environment) when env in [nil, ""],
+    do: true
+
+  defp environment_matches?(%{environment: expected}, actual), do: expected == actual
 
   # Prefer workflow_ref (calling workflow, always in the trusted repo) over
   # job_workflow_ref (may point at a reusable workflow in another repository).
@@ -113,34 +117,11 @@ defmodule Hexpm.TrustedPublishers.Provider.GitHub do
 
   defp extract_workflow_filename(_, _), do: nil
 
-  defp fetch_user_id(owner) do
-    case github_get("/users/#{URI.encode(owner)}") do
-      {:ok, %{"id" => id}} when is_integer(id) -> {:ok, id}
-      {:ok, _} -> {:error, :repository_owner_not_found}
-      {:error, :not_found} -> {:error, :repository_owner_not_found}
-      {:error, reason} -> {:error, reason}
-    end
-  end
-
-  defp fetch_repository_id(repository, owner) do
-    full_name =
-      if String.contains?(repository, "/") do
-        repository
-      else
-        "#{owner}/#{repository}"
-      end
-
-    case String.split(full_name, "/") do
-      [owner_part, name] ->
-        if valid_repo_name?(name) do
-          path = "/repos/#{URI.encode(owner_part)}/#{URI.encode(name)}"
-
-          case github_get(path) do
-            {:ok, %{"id" => id}} when is_integer(id) -> {:ok, id}
-            {:ok, _} -> {:error, :repository_not_found}
-            {:error, :not_found} -> {:error, :repository_not_found}
-            {:error, reason} -> {:error, reason}
-          end
+  defp split_repository(repository) when is_binary(repository) do
+    case String.split(repository, "/") do
+      [owner, name] ->
+        if valid_owner?(owner) and valid_repo_name?(name) do
+          {:ok, owner, name}
         else
           {:error, :repository_not_found}
         end
@@ -149,6 +130,46 @@ defmodule Hexpm.TrustedPublishers.Provider.GitHub do
         {:error, :repository_not_found}
     end
   end
+
+  defp split_repository(_repository), do: {:error, :repository_not_found}
+
+  # One call covers a repository Hex can see. A private repository answers 404
+  # here while its owner's profile stays public, so the fallback resolves the
+  # owner id alone and returns no repository id for the caller to supply.
+  defp fetch_repository_ids(owner, name) do
+    case github_get("/repos/#{URI.encode(owner)}/#{URI.encode(name)}") do
+      {:ok, %{"id" => repository_id, "owner" => %{"id" => owner_id}}}
+      when is_integer(repository_id) and is_integer(owner_id) ->
+        {:ok, %{repository_owner_id: owner_id, repository_id: repository_id}}
+
+      {:ok, _body} ->
+        {:error, :invalid_github_response}
+
+      {:error, :not_found} ->
+        fetch_owner_id(owner)
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp fetch_owner_id(owner) do
+    case github_get("/users/#{URI.encode(owner)}") do
+      {:ok, %{"id" => owner_id}} when is_integer(owner_id) ->
+        {:ok, %{repository_owner_id: owner_id, repository_id: nil}}
+
+      {:ok, _body} ->
+        {:error, :invalid_github_response}
+
+      {:error, :not_found} ->
+        {:error, :repository_not_found}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp valid_owner?(owner), do: Regex.match?(~r/\A[A-Za-z0-9._-]+\z/, owner)
 
   defp valid_repo_name?(name), do: Regex.match?(~r/\A[A-Za-z0-9._-]+\z/, name)
 

@@ -37,6 +37,42 @@ defmodule Hexpm.TrustedPublishers.TrustedPublisherTest do
       assert Ecto.Changeset.get_field(changeset, :environment) == ""
     end
 
+    test "qualifies a bare repository with the owner", %{package: package} do
+      changeset =
+        TrustedPublisher.changeset(
+          %TrustedPublisher{},
+          %{
+            "provider" => "github",
+            "repository_owner" => "Acme",
+            "repository" => "Widget",
+            "workflow" => "release.yml"
+          },
+          package
+        )
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_field(changeset, :repository) == "acme/widget"
+    end
+
+    test "preserves workflow and environment casing", %{package: package} do
+      changeset =
+        TrustedPublisher.changeset(
+          %TrustedPublisher{},
+          %{
+            "provider" => "github",
+            "repository_owner" => "acme",
+            "repository" => "widget",
+            "workflow" => ".github/workflows/Release.yml",
+            "environment" => "Production"
+          },
+          package
+        )
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_field(changeset, :workflow) == "Release.yml"
+      assert Ecto.Changeset.get_field(changeset, :environment) == "Production"
+    end
+
     test "rejects repository owned by a different owner", %{package: package} do
       changeset =
         TrustedPublisher.changeset(

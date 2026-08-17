@@ -44,5 +44,6 @@ defmodule HexpmWeb.ErrorView do
   defp message("415"), do: "Unsupported media type"
   defp message("422"), do: "Validation error(s)"
   defp message("500"), do: "Internal server error"
+  defp message("503"), do: "Service unavailable"
   defp message(_), do: nil
 end

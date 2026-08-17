@@ -50,10 +50,7 @@ defmodule Hexpm.TrustedPublishers do
       changeset = TrustedPublisher.changeset(%TrustedPublisher{}, params, package)
 
       if changeset.valid? do
-        resolve_attrs = %{
-          repository_owner: Ecto.Changeset.get_field(changeset, :repository_owner),
-          repository: Ecto.Changeset.get_field(changeset, :repository)
-        }
+        resolve_attrs = %{repository: Ecto.Changeset.get_field(changeset, :repository)}
 
         case provider.resolve_immutable_ids(resolve_attrs) do
           {:ok, immutable_ids} ->
@@ -167,21 +164,18 @@ defmodule Hexpm.TrustedPublishers do
   end
 
   defp normalize_create_params(params, provider) do
-    params = Map.new(params, fn {k, v} -> {to_string(k), v} end)
-    owner = params["repository_owner"]
-    repository = params["repository"]
-
-    repository =
-      cond do
-        is_binary(repository) and String.contains?(repository, "/") -> repository
-        is_binary(repository) and is_binary(owner) -> "#{owner}/#{repository}"
-        true -> repository
-      end
-
     params
+    |> Map.new(fn {k, v} -> {to_string(k), v} end)
     |> Map.put("provider", provider.name())
-    |> Map.put("repository", repository)
+    |> stringify_repository_id()
   end
+
+  defp stringify_repository_id(%{"repository_id" => repository_id} = params)
+       when is_integer(repository_id) do
+    Map.put(params, "repository_id", Integer.to_string(repository_id))
+  end
+
+  defp stringify_repository_id(params), do: params
 
   defp fetch_package(repository, package_name) do
     case Hexpm.Repository.Packages.get(repository, package_name) do

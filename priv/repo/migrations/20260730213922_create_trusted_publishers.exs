@@ -8,7 +8,7 @@ defmodule Hexpm.Repo.Migrations.CreateTrustedPublishers do
       add :issuer, :string, null: false
       add :repository_owner, :string, null: false
       add :repository_owner_id, :string, null: false
-      add :repository_id, :string
+      add :repository_id, :string, null: false
       add :repository, :string, null: false
       add :workflow, :string, null: false
       add :environment, :string, null: false, default: ""

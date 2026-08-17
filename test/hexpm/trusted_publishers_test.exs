@@ -245,6 +245,34 @@ defmodule Hexpm.TrustedPublishersTest do
     end
   end
 
+  describe "verify_and_mint/2 repository id pinning" do
+    test "rejects a repository recreated under the same name", %{package: package} do
+      recreated =
+        TrustedPublisherHelpers.sign_oidc_claims(
+          TrustedPublisherHelpers.github_claims(repository_id: "99999")
+        )
+
+      assert {:error, :no_matching_publisher} =
+               TrustedPublishers.verify_and_mint(recreated,
+                 repository: "hexpm",
+                 package: package.name
+               )
+    end
+
+    test "rejects a token carrying no repository id", %{package: package} do
+      token =
+        TrustedPublisherHelpers.sign_oidc_claims(
+          Map.delete(TrustedPublisherHelpers.github_claims(), "repository_id")
+        )
+
+      assert {:error, :no_matching_publisher} =
+               TrustedPublishers.verify_and_mint(token,
+                 repository: "hexpm",
+                 package: package.name
+               )
+    end
+  end
+
   describe "create/3" do
     test "resolves immutable ids and stores publisher", %{user: user} do
       package =
@@ -252,12 +280,8 @@ defmodule Hexpm.TrustedPublishersTest do
           package_owners: [build(:package_owner, user: user, level: "full")]
         )
 
-      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/users/acme", _, _ ->
-        {:ok, 200, [], %{"id" => 42}}
-      end)
-
       expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
-        {:ok, 200, [], %{"id" => 99}}
+        {:ok, 200, [], %{"id" => 99, "owner" => %{"id" => 42}}}
       end)
 
       assert {:ok, publisher} =
@@ -274,7 +298,7 @@ defmodule Hexpm.TrustedPublishersTest do
 
       assert publisher.repository == "acme/widget"
       assert publisher.repository_owner == "acme"
-      assert publisher.workflow == "release.yml"
+      assert publisher.workflow == "Release.yml"
       assert publisher.repository_owner_id == "42"
       assert publisher.repository_id == "99"
     end
@@ -294,9 +318,9 @@ defmodule Hexpm.TrustedPublishersTest do
           )
         end
 
-      expect(Hexpm.HTTP.Mock, :get, 4, fn
-        "https://api.github.com/users/acme", _, _ -> {:ok, 200, [], %{"id" => 42}}
-        "https://api.github.com/repos/acme/widget", _, _ -> {:ok, 200, [], %{"id" => 99}}
+      expect(Hexpm.HTTP.Mock, :get, 2, fn
+        "https://api.github.com/repos/acme/widget", _, _ ->
+          {:ok, 200, [], %{"id" => 99, "owner" => %{"id" => 42}}}
       end)
 
       for package <- packages do

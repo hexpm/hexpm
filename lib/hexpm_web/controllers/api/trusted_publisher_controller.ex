@@ -15,8 +15,8 @@ defmodule HexpmWeb.API.TrustedPublisherController do
        ]
        when action in [:index, :show]
 
-  # Management is api:write only — package-scoped keys must not install durable
-  # trusted-publisher configs that survive key rotation.
+  # Management is api:write only, because package-scoped keys must not install
+  # durable trusted-publisher configs that survive key rotation.
   plug :authorize,
        [
          authentication: :required,
@@ -62,6 +62,7 @@ defmodule HexpmWeb.API.TrustedPublisherController do
         "provider" => params["provider"],
         "repository_owner" => params["repository_owner"],
         "repository" => params["github_repository"],
+        "repository_id" => params["repository_id"],
         "workflow" => params["workflow"],
         "environment" => params["environment"]
       }
@@ -79,16 +80,16 @@ defmodule HexpmWeb.API.TrustedPublisherController do
         {:error, :unknown_provider} ->
           validation_failed(conn, %{provider: "is invalid"})
 
-        {:error, :repository_owner_not_found} ->
-          validation_failed(conn, %{repository_owner: "could not be resolved on GitHub"})
-
         {:error, :repository_not_found} ->
           validation_failed(conn, %{github_repository: "could not be resolved on GitHub"})
 
-        {:error, _} ->
-          validation_failed(conn, %{
-            repository_owner: "could not be resolved; try again later"
-          })
+        # Everything else is a GitHub-side or transport failure rather than bad
+        # input. A 422 would tell the client its request was wrong, and clients
+        # do not retry those.
+        {:error, _reason} ->
+          render_error(conn, 503,
+            message: "GitHub could not be reached to resolve the repository, try again later"
+          )
       end
     else
       not_found(conn)
@@ -125,11 +126,11 @@ defmodule HexpmWeb.API.TrustedPublisherController do
 
   # Body field "repository" means the GitHub repository and must not shadow the
   # Hex repository path/default param used by maybe_fetch_package/1.
-  # Only body_params are consulted — never merged path/default params.
+  # Only body_params are consulted, never merged path/default params.
   #
   # The reset to the Hex repository must happen whenever the body carries a
-  # "repository" key at all, not only when "repository_owner" is also present —
-  # otherwise a partial body silently shadows the Hex org lookup and surfaces
+  # "repository" key at all, not only when "repository_owner" is also present.
+  # Otherwise a partial body silently shadows the Hex org lookup and surfaces
   # as an unrelated 404 instead of a validation error on the missing field.
   defp rewrite_github_repository_param(conn, _opts) do
     body = conn.body_params || %{}
