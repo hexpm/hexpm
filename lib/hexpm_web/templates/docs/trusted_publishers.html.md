@@ -55,18 +55,41 @@ Fields:
   <dt><code>provider</code></dt>
   <dd>Must be <code>github</code>.</dd>
   <dt><code>repository_owner</code></dt>
-  <dd>GitHub user or organization login that owns the repository (for example <code>acme</code>).</dd>
+  <dd>GitHub user or organization login that owns the repository (for example <code>acme</code>). Case-insensitive, because the GitHub namespace is.</dd>
   <dt><code>github_repository</code></dt>
-  <dd>Repository name (<code>widget</code>) or full name (<code>acme/widget</code>). Hex normalizes this to <code>owner/name</code>.</dd>
+  <dd>Repository name (<code>widget</code>) or full name (<code>acme/widget</code>). Hex normalizes this to <code>owner/name</code>. Case-insensitive.</dd>
   <dt><code>workflow</code></dt>
-  <dd>Workflow filename only, for example <code>release.yml</code> or <code>release.yaml</code>. Paths are stripped; matching uses the basename of the calling workflow in the trusted repository.</dd>
+  <dd>Workflow filename only, for example <code>release.yml</code> or <code>release.yaml</code>. Paths are stripped; matching uses the basename of the calling workflow in the trusted repository. <strong>Case-sensitive</strong>, so <code>Release.yml</code> and <code>release.yml</code> are different workflows.</dd>
   <dt><code>environment</code></dt>
-  <dd>Optional GitHub Actions environment name. When set, the OIDC token must include the same environment. When omitted, any environment (or none) is accepted.</dd>
+  <dd>GitHub Actions environment name. Optional, but strongly recommended: an environment is where GitHub lets you require reviewers, add a wait timer, or restrict which branches can deploy, so it is the only place you can put a gate in front of a publish. When set, the OIDC token must include the same environment, matched <strong>case-sensitively</strong>. When omitted, any environment (or none) is accepted.</dd>
+  <dt><code>repository_id</code></dt>
+  <dd>Numeric GitHub repository ID. Required only when Hex cannot see the repository, which is the case for private repositories. Omit it for public repositories and Hex resolves the ID itself; if Hex does resolve it, the resolved value wins over anything sent here.</dd>
 </dl>
 
 You may also send `repository` instead of `github_repository` in the JSON body; Hex treats that body field as the GitHub repository and does not confuse it with the Hex repository in the URL.
 
-On create, Hex resolves immutable GitHub IDs for the owner and repository. If GitHub cannot resolve them, creation fails. That binding prevents a deleted-and-recreated GitHub login or repository from inheriting the publisher.
+On create, Hex pins immutable GitHub IDs so that a deleted-and-recreated GitHub login or repository cannot inherit the publisher. Both the owner ID and the repository ID are always pinned, and creation fails if either is missing.
+
+The owner ID always comes from GitHub, because an owner's profile is public even when their repositories are not. The repository ID comes from GitHub for a repository Hex can see. For a private repository Hex gets a 404 and cannot read the ID, so you supply it in `repository_id`:
+
+```nohighlight
+$ gh api repos/OWNER/NAME --jq .id
+```
+
+```nohighlight
+$ curl -X POST https://hex.pm/api/repos/ORG/packages/PACKAGE/trusted_publishers \
+  -H "authorization: KEY" \
+  -H "content-type: application/json" \
+  -d '{
+    "provider": "github",
+    "repository_owner": "acme",
+    "github_repository": "widget",
+    "workflow": "release.yml",
+    "repository_id": 123456789
+  }'
+```
+
+Because the binding is by ID rather than by name, deleting and recreating the GitHub repository invalidates the publisher even under the same name. Delete the trusted publisher and create it again if that happens.
 
 List and delete:
 
@@ -188,7 +211,8 @@ Errors use OAuth-style bodies (`error`, `error_description`), for example missin
 ### Security model
 
 * Hex verifies the GitHub OIDC signature via discovery and JWKS, rejects `none` and HMAC algorithms, and checks `iss`, `aud`, `exp`, `nbf`, and `iat`.
-* Matching requires the configured repository, workflow basename from a workflow ref inside that repository, immutable `repository_owner_id`, and optional environment. Cross-repository reusable workflow basenames alone cannot satisfy the workflow match.
+* Matching requires the configured repository, workflow basename from a workflow ref inside that repository, the immutable `repository_owner_id` and `repository_id`, and optional environment. A token that carries no `repository_id` claim never matches. Workflow and environment are compared exactly, including casing; repository and owner are compared case-insensitively and pinned by their immutable GitHub IDs. Cross-repository reusable workflow basenames alone cannot satisfy the workflow match.
+* Pinning the repository ID as well as the owner ID matters inside an organization: if the trusted repository is deleted, anyone who can create a repository in that organization could otherwise recreate the name, add the configured workflow, and mint. The owner ID alone would not stop that.
 * Minted tokens are short-lived (15 minutes), single-package, and attributed as a package-scoped trusted-publisher principal (release publisher user is unset; audit logs record the mint and publish).
 * Configuring or removing a publisher requires full package ownership and `api:write`. Two-factor authentication is not required for CI mint/publish because the trusted-publisher grant has no interactive user.
 * Hex records an allowlisted snapshot of the verified OIDC claims (repository, workflow ref, commit SHA, run id, and similar) on the minted token and attaches it to the release published with that token. The release API exposes this as `oidc_claims`, so consumers can see that a release was published via trusted publishing and which workflow produced it.
@@ -203,8 +227,10 @@ Errors use OAuth-style bodies (`error`, `error_description`), for example missin
 
 ### Troubleshooting
 
-* **Create fails with repository owner / repository could not be resolved:** confirm the GitHub login and repository exist and are spelled correctly. Hex must reach the GitHub API at create time.
-* **Mint returns no matching trusted publisher:** check package name, Hex repository, GitHub `owner/repo`, workflow **filename**, and optional environment against the configured publisher. The workflow file that calls `mint-token` must live in the trusted repository.
+* **Create fails with 422 and `github_repository` could not be resolved:** the GitHub owner does not exist or is misspelled. Hex could read neither the repository nor the owner profile.
+* **Create fails with 422 and `repository_id` is required:** Hex could not see the repository, so it cannot pin the ID itself. For a private repository, send `repository_id`. For a public one, this usually means the repository name is misspelled, because GitHub answers 404 both for a repository that does not exist and for one Hex cannot see, which makes a typo indistinguishable from a private repository. Note that a wrong repository name combined with a supplied `repository_id` is created but never matches, and mint returns no matching trusted publisher.
+* **Create fails with 503:** GitHub was unreachable, rate-limited, or answered with something unexpected. Nothing was stored, so the same request can be retried.
+* **Mint returns no matching trusted publisher:** check package name, Hex repository, GitHub `owner/repo`, workflow **filename**, and optional environment against the configured publisher, including the exact casing of the workflow filename and environment. The workflow file that calls `mint-token` must live in the trusted repository.
 * **Mint rejects the OIDC token:** confirm `id-token: write`, audience `hexpm`, and that you are not reusing a JWT that was already minted.
 * **Publish fails with package ownership / scope errors:** the minted token only covers the package named at mint time; mint again for that package name.
 * **Endpoints return 404:** trusted publishers may be disabled on that Hex deployment.
