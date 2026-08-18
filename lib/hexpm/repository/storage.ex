@@ -21,9 +21,9 @@ defmodule Hexpm.Repository.Storage do
   @doc """
   Writes `contents` to `key` in the repo bucket along with the standard
   surrogate-key/surrogate-control metadata and the supplied
-  `cache_control` value.
+  `cache_control` value. Returns the object's ETag as the store reports it.
   """
-  @spec put_object(String.t(), iodata(), [String.t()], String.t()) :: term()
+  @spec put_object(String.t(), iodata(), [String.t()], String.t()) :: String.t()
   def put_object(key, contents, surrogate_keys, cache_control) do
     meta = [
       {"surrogate-key", Enum.join(surrogate_keys, " ")},
@@ -31,7 +31,8 @@ defmodule Hexpm.Repository.Storage do
     ]
 
     opts = [cache_control: cache_control, meta: meta]
-    Hexpm.Store.put(:repo_bucket, key, contents, opts)
+    {:ok, %{etag: etag}} = Hexpm.Store.put(:repo_bucket, key, contents, opts)
+    etag
   end
 
   @doc """
