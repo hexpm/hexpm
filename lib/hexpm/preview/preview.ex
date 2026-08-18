@@ -295,7 +295,8 @@ defmodule Hexpm.Preview do
   end
 
   defp purge(repository, package, version) do
-    Hexpm.CDN.purge_key(:fastly_hexrepo, Bucket.surrogate_keys(repository, package, version))
+    Hexpm.CDN.purge(:fastly_hexrepo, Bucket.surrogate_keys(repository, package, version))
+    :ok
   end
 
   defp release_exists?(repository, package, version) do

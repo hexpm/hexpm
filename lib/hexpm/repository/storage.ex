@@ -44,10 +44,13 @@ defmodule Hexpm.Repository.Storage do
   end
 
   @doc """
-  Purges the given surrogate keys on the hexrepo Fastly service.
+  Purges the given surrogate keys on the hexrepo Fastly service, twice with
+  `:purge_wait` between, and raises when Fastly does not accept a purge.
   """
-  @spec purge(String.t() | [String.t()]) :: term()
+  @spec purge(String.t() | [String.t()]) :: :ok
   def purge(surrogate_keys) do
-    Hexpm.CDN.purge_key(:fastly_hexrepo, surrogate_keys)
+    :ok = Hexpm.CDN.purge_key(:fastly_hexrepo, surrogate_keys)
+    Process.sleep(Application.fetch_env!(:hexpm, :purge_wait))
+    :ok = Hexpm.CDN.purge_key(:fastly_hexrepo, surrogate_keys)
   end
 end
