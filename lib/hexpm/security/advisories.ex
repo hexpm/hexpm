@@ -4,7 +4,7 @@ defmodule Hexpm.Security.Advisories do
   import Ecto.Query
 
   alias Hexpm.Repository.Package
-  alias Hexpm.Repository.RegistryBuilder
+  alias Hexpm.Repository.RegistryWorker
   alias Hexpm.Security.Advisory
   alias Hexpm.Security.AdvisoryAffectedVersion
 
@@ -38,8 +38,8 @@ defmodule Hexpm.Security.Advisories do
     |> sync_affected_releases()
     |> reconcile_advisories(records)
     |> rebuild_package_registries()
-    |> Repo.transaction(timeout: 60_000)
     |> rebuild_repository_registries()
+    |> Repo.transaction(timeout: 60_000)
   end
 
   defp upsert_advisories(multi, records) do
@@ -306,30 +306,26 @@ defmodule Hexpm.Security.Advisories do
           )
 
         packages = Enum.uniq_by(upserted_packages ++ reconciled_packages, & &1.id)
-        Enum.each(packages, &RegistryBuilder.package/1)
+        Enum.each(packages, fn package -> {:ok, _} = RegistryWorker.enqueue_package(package) end)
         {:ok, packages}
     end)
   end
 
-  defp rebuild_repository_registries({:ok, %{rebuild_package_registries: packages}} = result) do
-    metadata = Logger.metadata()
+  defp rebuild_repository_registries(multi) do
+    Multi.run(multi, :rebuild_repository_registries, fn
+      _repo, %{rebuild_package_registries: packages} ->
+        repositories =
+          packages
+          |> Enum.map(& &1.repository)
+          |> Enum.uniq_by(& &1.id)
 
-    repositories =
-      packages
-      |> Enum.map(& &1.repository)
-      |> Enum.uniq_by(& &1.id)
+        Enum.each(repositories, fn repository ->
+          {:ok, _} = RegistryWorker.enqueue_repository(repository)
+        end)
 
-    Hexpm.Tasks
-    |> Task.Supervisor.async_stream_nolink(repositories, fn repository ->
-      Logger.metadata(metadata)
-      RegistryBuilder.repository(repository)
+        {:ok, repositories}
     end)
-    |> Stream.run()
-
-    result
   end
-
-  defp rebuild_repository_registries(result), do: result
 
   defp reconcile_advisories(multi, records) do
     seen_ids = Enum.map(records, & &1.id)

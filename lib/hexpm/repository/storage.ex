@@ -1,8 +1,7 @@
 defmodule Hexpm.Repository.Storage do
   @moduledoc """
   Low-level helpers shared by registry and policy builders for signing
-  protobuf payloads, writing them to the repository bucket, and purging
-  the matching Fastly surrogate keys.
+  protobuf payloads and writing them to the repository bucket.
   """
 
   @doc """
@@ -41,16 +40,5 @@ defmodule Hexpm.Repository.Storage do
   @spec delete_object(String.t()) :: term()
   def delete_object(key) do
     Hexpm.Store.delete(:repo_bucket, key)
-  end
-
-  @doc """
-  Purges the given surrogate keys on the hexrepo Fastly service, twice with
-  `:purge_wait` between, and raises when Fastly does not accept a purge.
-  """
-  @spec purge(String.t() | [String.t()]) :: :ok
-  def purge(surrogate_keys) do
-    :ok = Hexpm.CDN.purge_key(:fastly_hexrepo, surrogate_keys)
-    Process.sleep(Application.fetch_env!(:hexpm, :purge_wait))
-    :ok = Hexpm.CDN.purge_key(:fastly_hexrepo, surrogate_keys)
   end
 end

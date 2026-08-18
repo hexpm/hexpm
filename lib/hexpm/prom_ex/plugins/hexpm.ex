@@ -1,8 +1,9 @@
 defmodule Hexpm.PromEx.Plugins.Hexpm do
   @moduledoc """
   PromEx plugin for hex.pm business metrics: the domain events emitted from
-  the contexts (see `Hexpm.Repository.Releases` and `Hexpm.Accounts.Users`)
-  and CDN purges (`Hexpm.CDN.PurgeWorker`, `Hexpm.CDN.Fastly`).
+  the contexts (see `Hexpm.Repository.Releases` and `Hexpm.Accounts.Users`),
+  registry builds (`Hexpm.Repository.RegistryWorker`) and CDN purges
+  (`Hexpm.CDN.PurgeWorker`, `Hexpm.CDN.Fastly`).
   """
 
   use PromEx.Plugin
@@ -38,6 +39,28 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
           unit: {:native, :millisecond},
           reporter_options: [buckets: [10, 50, 100, 500, 1000, 5000, 30_000]],
           description: "Time spent matching a release's files."
+        )
+      ]),
+      Event.build(:hexpm_registry_builder_event_metrics, [
+        counter("hexpm.registry_builder.build.total",
+          event_name: [:hexpm, :registry_builder, :build, :stop],
+          description: "Registry builds that finished, by type and result.",
+          tags: [:type, :result]
+        ),
+        distribution("hexpm.registry_builder.build.duration.milliseconds",
+          event_name: [:hexpm, :registry_builder, :build, :stop],
+          measurement: :duration,
+          description: "How long a registry build took, lock wait included.",
+          reporter_options: [
+            buckets: [50, 100, 250, 500, 1_000, 2_500, 5_000, 10_000, 30_000, 60_000, 300_000]
+          ],
+          tags: [:type],
+          unit: {:native, :millisecond}
+        ),
+        counter("hexpm.registry_builder.build.exception.total",
+          event_name: [:hexpm, :registry_builder, :build, :exception],
+          description: "Registry builds that raised.",
+          tags: [:type]
         )
       ]),
       Event.build(:hexpm_cdn_event_metrics, [

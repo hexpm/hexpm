@@ -231,6 +231,20 @@ defmodule Hexpm.Repository.ReleasesTest do
                  replace: false
                )
 
+      package = Packages.get(hexpm, name)
+
+      assert_enqueued(
+        worker: Hexpm.Repository.RegistryWorker,
+        args: %{"type" => "package", "package_id" => package.id}
+      )
+
+      assert_enqueued(
+        worker: Hexpm.Repository.RegistryWorker,
+        args: %{"type" => "repository", "repository_id" => hexpm.id}
+      )
+
+      Oban.drain_queue(queue: :registry)
+
       assert tarball = Hexpm.Store.get(:repo_bucket, "tarballs/#{name}-0.1.0.tar", [])
       assert registry = Hexpm.Store.get(:repo_bucket, "packages/#{name}", [])
 
@@ -400,6 +414,7 @@ defmodule Hexpm.Repository.ReleasesTest do
 
       audit = audit_data(user)
       assert Releases.revert(package, release, audit: audit) == :ok
+      Oban.drain_queue(queue: :registry)
 
       refute Hexpm.Store.get(:repo_bucket, "tarballs/#{package.name}-#{release.version}.tar", [])
       refute Hexpm.Store.get(:repo_bucket, "packages/#{package.name}", [])
@@ -429,6 +444,7 @@ defmodule Hexpm.Repository.ReleasesTest do
       Hexpm.Repository.RegistryBuilder.package(package)
 
       assert Releases.revert(package, release, audit: audit) == :ok
+      Oban.drain_queue(queue: :registry)
 
       refute Hexpm.Store.get(:repo_bucket, "tarballs/#{package.name}-0.2.0.tar", [])
       assert registry = Hexpm.Store.get(:repo_bucket, "packages/#{package.name}", [])
@@ -475,6 +491,7 @@ defmodule Hexpm.Repository.ReleasesTest do
       assert previously_retired.retirement.reason == "security"
       assert previously_retired.retirement.message == "Existing retirement"
 
+      Oban.drain_queue(queue: :registry)
       assert registry = Hexpm.Store.get(:repo_bucket, "packages/#{package.name}", [])
 
       retirements =
@@ -520,6 +537,7 @@ defmodule Hexpm.Repository.ReleasesTest do
                  replace: true
                )
 
+      Oban.drain_queue(queue: :registry)
       assert registry = Hexpm.Store.get(:repo_bucket, "packages/#{package.name}", [])
 
       retirements =
