@@ -4,13 +4,21 @@ defmodule Hexpm.Repository.RegistryWorker do
 
   Jobs come in four types: `package` (one `packages/<name>` object),
   `package_delete`, `repository` (`names` and `versions`) and `full`. A job
-  runs the build in a transaction that holds the `:registry` advisory lock,
-  so builds never interleave across nodes, and enqueues the CDN purge inside
-  that transaction, so the purge is only visible once the write is committed
-  and never runs while the lock is held. A job waits `:registry_lock_wait`
-  milliseconds for the lock and snoozes when it does not get it, so a build
-  queued behind a long full build neither holds a connection for minutes nor
-  spends its attempts on waiting.
+  runs the build in a transaction and enqueues the CDN purge inside it, so
+  the purge is only visible once the write is committed.
+
+  Builds of the same object must not interleave across nodes (the older read
+  would win the write), and a full build must not run beside anything that
+  writes the repository's objects (it deletes the package objects it did not
+  see). So a full build takes the `:registry` advisory lock exclusively for
+  its repository, and every other build takes it shared and then the
+  `:registry_object` lock, exclusively, for each object it writes, in sorted
+  order so two batches cannot deadlock. Package builds of different packages
+  and index builds run side by side, which is what makes a registry queue
+  concurrency above one do work. Each lock is waited for at most
+  `:registry_lock_wait` milliseconds; a job that does not get one snoozes,
+  so a build queued behind a long full build neither holds a connection for
+  minutes nor spends its attempts on waiting.
 
   Builds read the database when they run rather than carrying a change with
   them, so queued jobs are consolidated before the read, inside the
@@ -88,10 +96,12 @@ defmodule Hexpm.Repository.RegistryWorker do
   defp build(%Oban.Job{} = job) do
     Repo.transaction(
       fn ->
-        lock_registry(job)
+        set_lock_wait(job)
 
         with {:ok, work, consolidated} <- consolidate(job),
-             {:ok, purges} <- run(work) do
+             {:ok, loaded} <- load(work) do
+          lock_objects(loaded, job)
+          purges = run(loaded)
           keys = Enum.flat_map(purges, & &1.keys)
           verify = Enum.flat_map(purges, & &1.verify)
           if keys != [], do: Hexpm.CDN.purge(:fastly_hexrepo, keys, verify: verify)
@@ -111,73 +121,63 @@ defmodule Hexpm.Repository.RegistryWorker do
   rescue
     error in Postgrex.Error ->
       case error do
-        %{postgres: %{code: :lock_not_available}} -> {:snooze, @lock_snooze}
-        _other -> reraise error, __STACKTRACE__
+        %{postgres: %{code: code}} when code in [:lock_not_available, :deadlock_detected] ->
+          {:snooze, @lock_snooze}
+
+        _other ->
+          reraise error, __STACKTRACE__
       end
   end
 
   # lock_timeout is a session setting; SET LOCAL scopes it to this
-  # transaction, and it takes an integer of milliseconds.
-  defp lock_registry(job) do
+  # transaction, and it takes an integer of milliseconds. It bounds each
+  # lock acquisition on its own.
+  defp set_lock_wait(job) do
     wait = Application.fetch_env!(:hexpm, :registry_lock_wait)
     Repo.query!("SET LOCAL lock_timeout = #{wait}", [], timeout: timeout(job))
-    Repo.advisory_xact_lock(:registry, timeout: timeout(job))
   end
 
-  defp run({:packages, repository_id, ids}) do
-    with {:ok, repository} <- repository(repository_id) do
-      packages =
-        Repo.all(
-          from(p in Package,
-            where: p.id in ^ids and p.repository_id == ^repository_id,
-            order_by: p.id
-          )
-        )
+  # A full build excludes every other build of the repository; the rest
+  # share the repository and exclude each other per object.
+  defp lock_repository(:full, repository_id, job) do
+    Repo.advisory_xact_lock(:registry, sub_key: repository_id, timeout: timeout(job))
+  end
 
-      {:ok, if(packages == [], do: [], else: [RegistryBuilder.packages(repository, packages)])}
+  defp lock_repository(:shared, repository_id, job) do
+    Repo.advisory_xact_lock_shared(:registry, sub_key: repository_id, timeout: timeout(job))
+  end
+
+  defp lock_objects({:full, _repository}, _job), do: :ok
+
+  defp lock_objects(loaded, job) do
+    for key <- loaded |> objects() |> Enum.map(&object_lock_key/1) |> Enum.uniq() |> Enum.sort() do
+      Repo.advisory_xact_lock(:registry_object, sub_key: key, timeout: timeout(job))
     end
+
+    :ok
   end
 
-  # A package published again under the name after the delete was queued
-  # owns the object now; deleting it would undo that build.
-  defp run({:package_delete, repository_id, name}) do
-    with {:ok, repository} <- repository(repository_id) do
-      exists =
-        Repo.exists?(
-          from(p in Package, where: p.repository_id == ^repository_id and p.name == ^name)
-        )
+  defp objects({:packages, repository, packages}),
+    do: Enum.map(packages, &{repository.id, "packages/#{&1.name}"})
 
-      {:ok, if(exists, do: [], else: [RegistryBuilder.package_delete(repository, name)])}
-    end
-  end
+  defp objects({:package_delete, repository, name}), do: [{repository.id, "packages/#{name}"}]
+  defp objects({:repository, repository}), do: [{repository.id, :index}]
 
-  defp run({:repository, repository_id}) do
-    with {:ok, repository} <- repository(repository_id) do
-      {:ok, [RegistryBuilder.repository(repository)]}
-    end
-  end
-
-  defp run({:full, repository_id}) do
-    with {:ok, repository} <- repository(repository_id) do
-      {:ok, [RegistryBuilder.full(repository)]}
-    end
-  end
-
-  defp repository(id) do
-    case Repo.get(Repository, id) do
-      nil -> {:discard, :repository_not_found}
-      repository -> {:ok, repository}
-    end
-  end
+  @doc false
+  # The two-key advisory lock takes int4 sub keys.
+  def object_lock_key(object), do: :erlang.phash2(object, 2_147_483_648)
 
   # Returns what to build and how many queued jobs this one took over, or
-  # a discard when the job's subject is gone.
+  # a discard when the job's subject is gone. Takes the repository lock
+  # first, so a job that has to wait for it holds no sibling rows meanwhile.
   defp consolidate(%Oban.Job{args: %{"type" => "package", "package_id" => id}} = job) do
     case Repo.get(Package, id) do
       nil ->
         {:discard, :package_not_found}
 
       %Package{repository_id: repository_id} ->
+        lock_repository(:shared, repository_id, job)
+
         repository_packages =
           from(p in Package, where: p.repository_id == ^repository_id, select: p.id)
 
@@ -198,6 +198,7 @@ defmodule Hexpm.Repository.RegistryWorker do
   end
 
   defp consolidate(%Oban.Job{args: %{"type" => "full", "repository_id" => id}} = job) do
+    lock_repository(:full, id, job)
     package_ids = from(p in Package, where: p.repository_id == ^id, select: p.id)
 
     siblings =
@@ -215,6 +216,7 @@ defmodule Hexpm.Repository.RegistryWorker do
   end
 
   defp consolidate(%Oban.Job{args: %{"type" => "repository", "repository_id" => id}} = job) do
+    lock_repository(:shared, id, job)
     {:ok, {:repository, id}, cancel(same_args(job))}
   end
 
@@ -222,6 +224,7 @@ defmodule Hexpm.Repository.RegistryWorker do
          %Oban.Job{args: %{"type" => "package_delete", "repository_id" => id, "name" => name}} =
            job
        ) do
+    lock_repository(:shared, id, job)
     {:ok, {:package_delete, id, name}, cancel(same_args(job))}
   end
 
@@ -257,6 +260,59 @@ defmodule Hexpm.Repository.RegistryWorker do
       count + cancelled
     end)
   end
+
+  defp load({:packages, repository_id, ids}) do
+    with {:ok, repository} <- repository(repository_id) do
+      packages =
+        Repo.all(
+          from(p in Package,
+            where: p.id in ^ids and p.repository_id == ^repository_id,
+            order_by: p.id
+          )
+        )
+
+      {:ok, {:packages, repository, packages}}
+    end
+  end
+
+  defp load({:package_delete, repository_id, name}) do
+    with {:ok, repository} <- repository(repository_id),
+         do: {:ok, {:package_delete, repository, name}}
+  end
+
+  defp load({:repository, repository_id}) do
+    with {:ok, repository} <- repository(repository_id), do: {:ok, {:repository, repository}}
+  end
+
+  defp load({:full, repository_id}) do
+    with {:ok, repository} <- repository(repository_id), do: {:ok, {:full, repository}}
+  end
+
+  defp repository(id) do
+    case Repo.get(Repository, id) do
+      nil -> {:discard, :repository_not_found}
+      repository -> {:ok, repository}
+    end
+  end
+
+  defp run({:packages, _repository, []}), do: []
+
+  defp run({:packages, repository, packages}),
+    do: [RegistryBuilder.packages(repository, packages)]
+
+  # A package published again under the name after the delete was queued
+  # owns the object now; deleting it would undo that build.
+  defp run({:package_delete, repository, name}) do
+    exists =
+      Repo.exists?(
+        from(p in Package, where: p.repository_id == ^repository.id and p.name == ^name)
+      )
+
+    if exists, do: [], else: [RegistryBuilder.package_delete(repository, name)]
+  end
+
+  defp run({:repository, repository}), do: [RegistryBuilder.repository(repository)]
+  defp run({:full, repository}), do: [RegistryBuilder.full(repository)]
 
   defp log(%Oban.Job{id: id, args: args}, what, cancelled) do
     Logger.info(
