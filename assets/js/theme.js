@@ -1,5 +1,11 @@
 const THEME_STORAGE_KEY = "hexpm-theme";
 const THEME_MEDIA_QUERY = "(prefers-color-scheme: dark)";
+const PREFERENCE_CYCLE = ["light", "dark", "system"];
+
+function nextPreference(preference) {
+  const index = PREFERENCE_CYCLE.indexOf(preference);
+  return PREFERENCE_CYCLE[(index + 1) % PREFERENCE_CYCLE.length];
+}
 
 function getStoredPreference() {
   return window.localStorage.getItem(THEME_STORAGE_KEY);
@@ -21,6 +27,12 @@ function currentPreference() {
 
 function syncToggleState(preference) {
   document.documentElement.setAttribute("data-theme-preference", preference);
+
+  const label = `Switch to ${nextPreference(preference)} mode`;
+  document.querySelectorAll("[data-theme-toggle]").forEach((toggle) => {
+    toggle.setAttribute("title", label);
+    toggle.setAttribute("aria-label", label);
+  });
 }
 
 function syncReadmeFrameTheme(theme) {
@@ -44,13 +56,6 @@ function setPreference(preference) {
     window.localStorage.setItem(THEME_STORAGE_KEY, preference);
   }
   applyTheme(resolveTheme());
-}
-
-const PREFERENCE_CYCLE = ["light", "dark", "system"];
-
-function nextPreference(preference) {
-  const index = PREFERENCE_CYCLE.indexOf(preference);
-  return PREFERENCE_CYCLE[(index + 1) % PREFERENCE_CYCLE.length];
 }
 
 export function initializeTheme() {

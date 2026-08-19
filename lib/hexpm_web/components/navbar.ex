@@ -173,7 +173,6 @@ defmodule HexpmWeb.Components.Navbar do
         aria-label="Change theme"
         title="Change theme"
       >
-        <span class="sr-only">Change color theme</span>
         <span data-theme-icon="light">
           {icon(:heroicon, "sun", width: 18, height: 18)}
         </span>
