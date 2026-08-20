@@ -78,12 +78,13 @@ defmodule Hexpm.CDN.Fastly do
       fn {target, pop, headers} -> {target, pop, check(target, pop, headers)} end,
       max_concurrency: @verify_concurrency,
       timeout: @probe_timeout + 5_000,
-      on_timeout: :kill_task
+      on_timeout: :kill_task,
+      ordered: false,
+      zip_input_on_exit: true
     )
-    |> Enum.zip(checks)
     |> Enum.map(fn
-      {{:ok, result}, _check} -> result
-      {{:exit, reason}, {target, pop, _headers}} -> {target, pop, {:error, {:exit, reason}}}
+      {:ok, result} -> result
+      {:exit, {{target, pop, _headers}, reason}} -> {target, pop, {:error, {:exit, reason}}}
     end)
     |> Enum.group_by(fn {target, _pop, _result} -> target end)
     |> Enum.map(fn {target, results} -> {target, verdict(results)} end)
