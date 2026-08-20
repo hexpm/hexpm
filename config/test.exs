@@ -50,7 +50,11 @@ config :hexpm, HexpmWeb.Endpoint,
   http: [port: 5000],
   server: false,
   secret_key_base: "38K8orQfRHMC6ZWXIdgItQEiumeY+L2Ls0fvYfTMt4AoG5+DSFsLG6vMajNcd5Td",
-  live_view: [signing_salt: "2UTSB72sZsF9KTlxefkIrFFPXTO7d+Ep"]
+  live_view: [signing_salt: "2UTSB72sZsF9KTlxefkIrFFPXTO7d+Ep"],
+  cache_static_manifest_latest: %{
+    "assets/app.css" => "assets/app-11111111111111111111111111111111.css",
+    "assets/app.js" => "assets/app-22222222222222222222222222222222.js"
+  }
 
 config :hexpm, Hexpm.Emails.Mailer, adapter: Swoosh.Adapters.Test
 config :swoosh, :api_client, false
