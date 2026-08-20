@@ -127,8 +127,6 @@ defmodule Hexpm.Diff.Cache do
 
   defp put!(key, body) do
     case Hexpm.Store.put(:diff_bucket, key, body, @put_options) do
-      :ok -> :ok
-      true -> :ok
       {:ok, _result} -> :ok
       result -> raise "failed to store diff object #{key}: #{inspect(result)}"
     end

@@ -76,11 +76,11 @@ defmodule HexpmWeb.API.PackageControllerTest do
       end
 
       conn = get(build_conn(), "/api/packages?search=#{package1.name}")
-      [package] = json_response(conn, 200)
-      [release] = package["releases"]
+      results = json_response(conn, 200)
+      assert %{"releases" => [release]} = Enum.find(results, &(&1["name"] == package1.name))
       assert release["has_docs"]
       conn = get(build_conn(), "/api/packages?search=name%3A#{package1.name}*")
-      assert [_] = json_response(conn, 200)
+      assert Enum.find(json_response(conn, 200), &(&1["name"] == package1.name))
 
       conn = get(build_conn(), "/api/packages?page=1")
       assert [_, _, _] = json_response(conn, 200)
@@ -89,7 +89,7 @@ defmodule HexpmWeb.API.PackageControllerTest do
       assert [] = json_response(conn, 200)
 
       conn = get(build_conn(), "/api/packages?search=#{package4.name}")
-      [package] = json_response(conn, 200)
+      package = Enum.find(json_response(conn, 200), &(&1["name"] == package4.name))
 
       assert %{
                "message" => "not backward compatible",

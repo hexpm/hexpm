@@ -250,6 +250,24 @@ defmodule Hexpm.HTTPTest do
     assert Agent.get(counter, & &1) == 5
   end
 
+  test "retry returns the last response once the attempts are used up" do
+    {:ok, counter} = Agent.start_link(fn -> 0 end)
+
+    assert {:ok, 503, [], "unavailable"} =
+             HTTP.retry(
+               fn ->
+                 Agent.update(counter, &(&1 + 1))
+                 {:ok, 503, [], "unavailable"}
+               end,
+               "exhausted",
+               attempts: 3,
+               base_delay: 0,
+               statuses: [500..599]
+             )
+
+    assert Agent.get(counter, & &1) == 3
+  end
+
   test "patch/3", %{lasso: lasso} do
     Lasso.expect_once(lasso, "PATCH", "/patch", fn conn ->
       {:ok, reqbody, conn} = Conn.read_body(conn)

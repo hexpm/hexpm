@@ -61,7 +61,8 @@ defmodule Hexpm.Store.LocalTest do
       bucket_dir = Path.join([tmp_dir, "store", "bucket"])
       File.mkdir_p!(bucket_dir)
 
-      Local.put("bucket", "file.txt", "content", [])
+      assert {:ok, %{etag: ~s("9a0364b9e99bb480dd25e1f0284c8555")}} =
+               Local.put("bucket", "file.txt", "content", [])
 
       assert File.read!(Path.join(bucket_dir, "file.txt")) == "content"
     end

@@ -59,9 +59,9 @@ defmodule Hexpm.Store.GCS do
     url = url(bucket, key)
     headers = filter_nil_values(headers)
 
-    {:ok, 200, _headers, _body} = retry(url, fn -> fun.(url, headers) end)
+    {:ok, 200, response_headers, _body} = retry(url, fn -> fun.(url, headers) end)
 
-    :ok
+    {:ok, %{etag: header!(response_headers, "etag")}}
   end
 
   def delete_many(bucket, keys) do
@@ -120,10 +120,12 @@ defmodule Hexpm.Store.GCS do
     Enum.reject(keyword, fn {_key, value} -> is_nil(value) end)
   end
 
-  defp content_length!(headers) do
-    case Enum.find(headers, fn {key, _value} -> String.downcase(key) == "content-length" end) do
-      {_key, value} -> String.to_integer(value)
-      nil -> raise "GCS response is missing content-length"
+  defp content_length!(headers), do: headers |> header!("content-length") |> String.to_integer()
+
+  defp header!(headers, name) do
+    case Enum.find(headers, fn {key, _value} -> String.downcase(key) == name end) do
+      {_key, value} -> value
+      nil -> raise "GCS response is missing #{name}"
     end
   end
 
