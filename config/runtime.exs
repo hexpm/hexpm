@@ -43,6 +43,7 @@ if config_env() == :prod do
     end
 
   config :hexpm,
+    secret: System.fetch_env!("HEXPM_SECRET"),
     private_key: System.fetch_env!("HEXPM_SIGNING_KEY"),
     repo_bucket: System.fetch_env!("HEXPM_REPO_BUCKET"),
     logs_bucket: System.fetch_env!("HEXPM_LOGS_BUCKET"),
@@ -91,7 +92,6 @@ if config_env() == :prod do
 
     config :hexpm,
       host: System.fetch_env!("HEXPM_HOST"),
-      secret: System.fetch_env!("HEXPM_SECRET"),
       dashboard_user: System.fetch_env!("HEXPM_DASHBOARD_USER"),
       dashboard_password: System.fetch_env!("HEXPM_DASHBOARD_PASSWORD"),
       img_url: System.fetch_env!("HEXPM_IMG_URL"),
