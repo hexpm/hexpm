@@ -59,7 +59,28 @@ if config_env() == :prod do
     jwt_signing_key: System.fetch_env!("HEXPM_JWT_SIGNING_KEY"),
     billing_key: System.fetch_env!("HEXPM_BILLING_KEY"),
     billing_url: System.fetch_env!("HEXPM_BILLING_URL"),
+    host: System.fetch_env!("HEXPM_HOST"),
+    dashboard_user: System.fetch_env!("HEXPM_DASHBOARD_USER"),
+    dashboard_password: System.fetch_env!("HEXPM_DASHBOARD_PASSWORD"),
+    img_url: System.fetch_env!("HEXPM_IMG_URL"),
+    img_proxy_secret: System.fetch_env!("HEXPM_IMG_PROXY_SECRET"),
+    readme_host: System.fetch_env!("HEXPM_README_HOST"),
+    readme_url: System.fetch_env!("HEXPM_README_URL"),
     secret_scan_notify: System.get_env("HEXPM_SECRET_SCAN_NOTIFY") == "true"
+
+  config :hexpm, :varsel,
+    report_url: System.fetch_env!("HEXPM_VARSEL_REPORT_URL"),
+    audience: System.fetch_env!("HEXPM_VARSEL_JWT_AUDIENCE"),
+    signing_key: System.fetch_env!("HEXPM_VARSEL_SIGNING_KEY"),
+    key_id: System.fetch_env!("HEXPM_VARSEL_KEY_ID")
+
+  config :hexpm, :hcaptcha,
+    sitekey: System.fetch_env!("HEXPM_HCAPTCHA_SITEKEY"),
+    secret: System.fetch_env!("HEXPM_HCAPTCHA_SECRET")
+
+  config :ueberauth, Ueberauth.Strategy.Github.OAuth,
+    client_id: System.fetch_env!("HEXPM_GITHUB_CLIENT_ID"),
+    client_secret: System.fetch_env!("HEXPM_GITHUB_CLIENT_SECRET")
 
   config :ex_aws,
     access_key_id: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_ID"),
@@ -76,32 +97,45 @@ if config_env() == :prod do
 
   config :hexpm, Hexpm.Emails.Mailer, api_key: System.fetch_env!("HEXPM_SENDGRID_API_KEY")
 
+  # IP geolocation database for audit-log locations. Resolution order:
+  #
+  #   1. HEXPM_GEOIP_COUNTRY_PATH, if set.
+  #   2. priv/geoip/country.mmdb, which the Docker image bakes in at build time
+  #      (mix download_geoip) — so the official image works with zero config.
+  #
+  # Fail-soft: if no database is found, geolix logs an info message and returns
+  # nil for all lookups; the app boots normally and location fields are simply
+  # omitted until a database is provisioned.
+  default_geoip_path =
+    case :code.priv_dir(:hexpm) do
+      {:error, _} -> nil
+      priv_dir -> Path.join(to_string(priv_dir), "geoip/country.mmdb")
+    end
+
+  geoip_country_path = System.get_env("HEXPM_GEOIP_COUNTRY_PATH") || default_geoip_path
+
+  if geoip_country_path do
+    config :geolix,
+      databases: [
+        %{
+          id: :country,
+          adapter: Geolix.Adapter.MMDB2,
+          source: geoip_country_path
+        }
+      ]
+  end
+
   # Set on both web and worker deployments so Prometheus can scrape all pods
   if metrics_port = System.get_env("HEXPM_METRICS_PORT") do
     config :hexpm, metrics_port: String.to_integer(metrics_port)
   end
 
+  # Only the web server's own wiring may live in this block: everything else is
+  # shared, because Oban jobs read app config on worker pods too. The env vars
+  # below (HEXPM_PORT, HEXPM_SECRET_KEY_BASE, BEAM_PORT, ...) are the ones the
+  # worker deployment does not have to provide.
   if mode == :web do
     config :hexpm, Oban, queues: false, plugins: false, peer: false
-
-    config :hexpm, :varsel,
-      report_url: System.fetch_env!("HEXPM_VARSEL_REPORT_URL"),
-      audience: System.fetch_env!("HEXPM_VARSEL_JWT_AUDIENCE"),
-      signing_key: System.fetch_env!("HEXPM_VARSEL_SIGNING_KEY"),
-      key_id: System.fetch_env!("HEXPM_VARSEL_KEY_ID")
-
-    config :hexpm,
-      host: System.fetch_env!("HEXPM_HOST"),
-      dashboard_user: System.fetch_env!("HEXPM_DASHBOARD_USER"),
-      dashboard_password: System.fetch_env!("HEXPM_DASHBOARD_PASSWORD"),
-      img_url: System.fetch_env!("HEXPM_IMG_URL"),
-      img_proxy_secret: System.fetch_env!("HEXPM_IMG_PROXY_SECRET"),
-      readme_host: System.fetch_env!("HEXPM_README_HOST"),
-      readme_url: System.fetch_env!("HEXPM_README_URL")
-
-    config :hexpm, :hcaptcha,
-      sitekey: System.fetch_env!("HEXPM_HCAPTCHA_SITEKEY"),
-      secret: System.fetch_env!("HEXPM_HCAPTCHA_SECRET")
 
     hexpm_port =
       case System.get_env("HEXPM_PORT") do
@@ -128,38 +162,6 @@ if config_env() == :prod do
     config :kernel,
       inet_dist_listen_min: String.to_integer(System.fetch_env!("BEAM_PORT")),
       inet_dist_listen_max: String.to_integer(System.fetch_env!("BEAM_PORT"))
-
-    config :ueberauth, Ueberauth.Strategy.Github.OAuth,
-      client_id: System.fetch_env!("HEXPM_GITHUB_CLIENT_ID"),
-      client_secret: System.fetch_env!("HEXPM_GITHUB_CLIENT_SECRET")
-
-    # IP geolocation database for audit-log locations. Resolution order:
-    #
-    #   1. HEXPM_GEOIP_COUNTRY_PATH, if set.
-    #   2. priv/geoip/country.mmdb, which the Docker image bakes in at build time
-    #      (mix download_geoip) — so the official image works with zero config.
-    #
-    # Fail-soft: if no database is found, geolix logs an info message and returns
-    # nil for all lookups; the app boots normally and location fields are simply
-    # omitted until a database is provisioned.
-    default_geoip_path =
-      case :code.priv_dir(:hexpm) do
-        {:error, _} -> nil
-        priv_dir -> Path.join(to_string(priv_dir), "geoip/country.mmdb")
-      end
-
-    geoip_country_path = System.get_env("HEXPM_GEOIP_COUNTRY_PATH") || default_geoip_path
-
-    if geoip_country_path do
-      config :geolix,
-        databases: [
-          %{
-            id: :country,
-            adapter: Geolix.Adapter.MMDB2,
-            source: geoip_country_path
-          }
-        ]
-    end
   end
 
   if mode == :worker do

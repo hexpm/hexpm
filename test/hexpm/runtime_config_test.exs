@@ -19,15 +19,36 @@ defmodule Hexpm.RuntimeConfigTest do
     "HEXPM_JWT_SIGNING_KEY" => "jwt-signing-key",
     "HEXPM_BILLING_KEY" => "billing-key",
     "HEXPM_BILLING_URL" => "https://billing.example.com",
+    "HEXPM_HOST" => "hex.example.com",
+    "HEXPM_DASHBOARD_USER" => "dashboard-user",
+    "HEXPM_DASHBOARD_PASSWORD" => "dashboard-password",
+    "HEXPM_IMG_URL" => "https://img.example.com",
+    "HEXPM_IMG_PROXY_SECRET" => "img-proxy-secret",
+    "HEXPM_README_HOST" => "readme.hex.example.com",
+    "HEXPM_README_URL" => "https://readme.hex.example.com",
+    "HEXPM_VARSEL_REPORT_URL" => "https://cna.example.com/reports",
+    "HEXPM_VARSEL_JWT_AUDIENCE" => "https://cna.example.com/reports",
+    "HEXPM_VARSEL_SIGNING_KEY" => "varsel-signing-key",
+    "HEXPM_VARSEL_KEY_ID" => "varsel-key-id",
+    "HEXPM_HCAPTCHA_SITEKEY" => "hcaptcha-sitekey",
+    "HEXPM_HCAPTCHA_SECRET" => "hcaptcha-secret",
+    "HEXPM_GITHUB_CLIENT_ID" => "github-client-id",
+    "HEXPM_GITHUB_CLIENT_SECRET" => "github-client-secret",
     "HEXPM_AWS_ACCESS_KEY_ID" => "aws-id",
     "HEXPM_AWS_ACCESS_KEY_SECRET" => "aws-secret",
     "HEXPM_SENTRY_DSN" => "https://sentry.example.com/1",
     "HEXPM_ENV" => "prod",
-    "HEXPM_HOST" => "hex.example.com",
     "HEXPM_EMAIL_HOST" => "hex.example.com",
     "HEXPM_LEVENSHTEIN_THRESHOLD" => "2",
     "HEXPM_SENDGRID_API_KEY" => "sendgrid-key"
   }
+
+  @web_env Map.merge(@shared_env, %{
+             "HEXPM_MODE" => "web",
+             "HEXPM_SECRET_KEY_BASE" => "secret-key-base",
+             "HEXPM_LIVE_VIEW_SIGNING_SALT" => "live-view-salt",
+             "BEAM_PORT" => "14000"
+           })
 
   @worker_env Map.merge(@shared_env, %{
                 "HEXPM_MODE" => "worker",
@@ -59,6 +80,25 @@ defmodule Hexpm.RuntimeConfigTest do
     config = read_runtime(Map.put(@worker_env, "HEXPM_SECRET_SCAN_NOTIFY", "true"))
 
     assert config[:hexpm][:secret_scan_notify] == true
+  end
+
+  # Oban jobs read the same app config web requests do, so any key set only in
+  # web mode is a latent crash on worker pods. Web pods mount the shared config
+  # maps and nothing else, so the reverse split (the worker-only keys) is real
+  # and stays.
+  test "only the web server's own wiring is web-only" do
+    web = read_runtime(@web_env)
+    worker = read_runtime(@worker_env)
+
+    assert Keyword.keys(web) -- Keyword.keys(worker) == [:kernel]
+
+    web_only = Keyword.keys(web[:hexpm]) -- Keyword.keys(worker[:hexpm])
+
+    assert web_only == [HexpmWeb.Endpoint],
+           "these :hexpm keys are set only in web mode: #{inspect(web_only)}. " <>
+             "Worker pods mount every env var web pods do, so unless the key " <>
+             "configures the web server itself it belongs in the shared block, " <>
+             "where jobs can read it too."
   end
 
   defp read_runtime(env) do
