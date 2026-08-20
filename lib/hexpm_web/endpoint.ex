@@ -17,11 +17,15 @@ defmodule HexpmWeb.Endpoint do
   #
   # You should set gzip to true if you are running phoenix.digest
   # when deploying your static files in production.
+  #
+  # only_matching also serves the digested /favicon-<hash>.ico that
+  # ~p"/favicon.ico" resolves to when the static manifest is loaded.
   plug Plug.Static,
     at: "/",
     from: :hexpm,
     gzip: true,
-    only: HexpmWeb.static_paths()
+    only: HexpmWeb.static_paths(),
+    only_matching: ~w(favicon)
 
   socket("/live", Phoenix.LiveView.Socket,
     websocket: [compress: true, connect_info: [:peer_data, :x_headers, session: @session_options]]
