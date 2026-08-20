@@ -61,8 +61,27 @@ config :hexpm, ecto_repos: [Hexpm.RepoBase]
 
 config :hexpm, Oban,
   repo: Hexpm.RepoBase,
-  queues: [periodic: 2, heavy: 1],
+  queues: [periodic: 2, heavy: 1, purge: 5],
   shutdown_grace_period: 300_000
+
+# Fastly's own guidance is to purge twice, two seconds apart, to close the
+# window in which an edge refetches from a shield that has not seen the purge
+# yet. Verification waits another two seconds for propagation and gives a
+# purge five rounds before it is reported. The probe POPs are asked through
+# the Compute service's hex-cache-probe header: the IAD shield, which every
+# other POP fetches through, and one POP per other continent.
+config :hexpm,
+  purge_wait: 2000,
+  purge_verify_grace: 2000,
+  purge_verify_rounds: 5,
+  fastly_probe_pops: [
+    "iad-va-us",
+    "stockholm-bma",
+    "nrt-tokyo-jp",
+    "sydney-au",
+    "gru-saopaulo-br",
+    "jnb-johannesburg-za"
+  ]
 
 # Metrics are served by a standalone Bandit listener (see Hexpm.Application)
 # on :metrics_port instead of PromEx's built-in cowboy server

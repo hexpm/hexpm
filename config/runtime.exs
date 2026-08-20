@@ -55,6 +55,7 @@ if config_env() == :prod do
     private_docs_url: System.fetch_env!("HEXPM_PRIVATE_DOCS_URL"),
     fastly_key: System.fetch_env!("HEXPM_FASTLY_KEY"),
     fastly_hexrepo: System.fetch_env!("HEXPM_FASTLY_HEXREPO"),
+    jwt_signing_key: System.fetch_env!("HEXPM_JWT_SIGNING_KEY"),
     billing_key: System.fetch_env!("HEXPM_BILLING_KEY"),
     billing_url: System.fetch_env!("HEXPM_BILLING_URL"),
     secret_scan_notify: System.get_env("HEXPM_SECRET_SCAN_NOTIFY") == "true"
@@ -93,7 +94,6 @@ if config_env() == :prod do
       secret: System.fetch_env!("HEXPM_SECRET"),
       dashboard_user: System.fetch_env!("HEXPM_DASHBOARD_USER"),
       dashboard_password: System.fetch_env!("HEXPM_DASHBOARD_PASSWORD"),
-      jwt_signing_key: System.fetch_env!("HEXPM_JWT_SIGNING_KEY"),
       img_url: System.fetch_env!("HEXPM_IMG_URL"),
       img_proxy_secret: System.fetch_env!("HEXPM_IMG_PROXY_SECRET"),
       readme_host: System.fetch_env!("HEXPM_README_HOST"),
@@ -166,7 +166,8 @@ if config_env() == :prod do
     config :hexpm, Oban,
       queues: [
         periodic: String.to_integer(System.fetch_env!("HEXPM_OBAN_PERIODIC_CONCURRENCY")),
-        heavy: String.to_integer(System.fetch_env!("HEXPM_OBAN_HEAVY_CONCURRENCY"))
+        heavy: String.to_integer(System.fetch_env!("HEXPM_OBAN_HEAVY_CONCURRENCY")),
+        purge: String.to_integer(System.fetch_env!("HEXPM_OBAN_PURGE_CONCURRENCY"))
       ]
 
     config :hexpm,

@@ -802,8 +802,8 @@ defmodule Hexpm.AdminTasks do
       meta: [{"surrogate-key", "installs"}]
     ]
 
-    Hexpm.Store.put(:repo_bucket, "installs/list.csv", csv, store_opts)
-    Hexpm.CDN.purge_key(:fastly_hexrepo, "installs")
+    {:ok, _} = Hexpm.Store.put(:repo_bucket, "installs/list.csv", csv, store_opts)
+    Hexpm.CDN.purge(:fastly_hexrepo, "installs")
 
     :ok
   end

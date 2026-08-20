@@ -164,6 +164,15 @@ defmodule Hexpm.Utils do
   end
 
   @doc """
+  Returns a url to a resource at the root of the docs site, such as the
+  sitemap, from a list of path components.
+  """
+  @spec docs_url([String.t()] | String.t()) :: String.t()
+  def docs_url(path) do
+    Application.fetch_env!(:hexpm, :docs_url) <> "/" <> Path.join(List.wrap(path))
+  end
+
+  @doc """
   Returns a url to a resource on the docs site from a list of path components.
   """
   @spec docs_html_url(Repository.t(), Package.t(), Release.t() | nil) :: String.t()

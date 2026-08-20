@@ -1,5 +1,6 @@
 defmodule Hexpm.Repository.ReleasesTest do
   use Hexpm.DataCase, async: true
+  use Oban.Testing, repo: Hexpm.RepoBase
 
   alias Hexpm.Repository.Repository
   alias Hexpm.Repository.{Packages, Releases}
@@ -230,13 +231,27 @@ defmodule Hexpm.Repository.ReleasesTest do
                  replace: false
                )
 
-      assert Hexpm.Store.get(:repo_bucket, "tarballs/#{name}-0.1.0.tar", [])
+      assert tarball = Hexpm.Store.get(:repo_bucket, "tarballs/#{name}-0.1.0.tar", [])
       assert registry = Hexpm.Store.get(:repo_bucket, "packages/#{name}", [])
 
       assert Enum.any?(
                decode_registry_package(registry).releases,
                &match?(%{version: "0.1.0"}, &1)
              )
+
+      assert_enqueued(
+        worker: Hexpm.CDN.PurgeWorker,
+        args: %{
+          "service" => "fastly_hexrepo",
+          "keys" => ["tarballs/#{name}-0.1.0"],
+          "verify" => [
+            %{
+              "url" => "http://localhost:5000/tarballs/#{name}-0.1.0.tar",
+              "etag" => ~s("#{Base.encode16(:crypto.hash(:md5, tarball), case: :lower)}")
+            }
+          ]
+        }
+      )
     end
 
     test "publish private package with public dependency", %{
