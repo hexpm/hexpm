@@ -167,6 +167,7 @@ if config_env() == :prod do
       queues: [
         periodic: String.to_integer(System.fetch_env!("HEXPM_OBAN_PERIODIC_CONCURRENCY")),
         heavy: String.to_integer(System.fetch_env!("HEXPM_OBAN_HEAVY_CONCURRENCY")),
+        registry: String.to_integer(System.fetch_env!("HEXPM_OBAN_REGISTRY_CONCURRENCY")),
         purge: String.to_integer(System.fetch_env!("HEXPM_OBAN_PURGE_CONCURRENCY"))
       ]
 

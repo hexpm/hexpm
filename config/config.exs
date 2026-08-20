@@ -61,8 +61,10 @@ config :hexpm, ecto_repos: [Hexpm.RepoBase]
 
 config :hexpm, Oban,
   repo: Hexpm.RepoBase,
-  queues: [periodic: 2, heavy: 1, purge: 5],
+  queues: [periodic: 2, heavy: 1, registry: 1, purge: 5],
   shutdown_grace_period: 300_000
+
+config :hexpm, registry_lock_wait: 60_000
 
 # Fastly's own guidance is to purge twice, two seconds apart, to close the
 # window in which an edge refetches from a shield that has not seen the purge

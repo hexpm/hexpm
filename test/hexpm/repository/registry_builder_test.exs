@@ -366,12 +366,15 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
     end
   end
 
-  describe "package_delete/1" do
+  describe "package_delete/2" do
     test "remove package", %{packages: [_, _, p3]} do
       RegistryBuilder.full(Repository.hexpm())
       assert v2_map("packages/#{p3.name}", ["hexpm", p3.name])
 
-      RegistryBuilder.package_delete(p3)
+      assert %{keys: keys, verify: [%{etag: nil}]} =
+               RegistryBuilder.package_delete(Repository.hexpm(), p3.name)
+
+      assert "registry-package/#{p3.name}" in keys
       refute v2_map("packages/#{p3.name}", ["hexpm", p3.name])
     end
   end

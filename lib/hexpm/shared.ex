@@ -40,6 +40,7 @@ defmodule Hexpm.Shared do
         Repository.PackageOwner,
         Repository.Packages,
         Repository.RegistryBuilder,
+        Repository.RegistryWorker,
         Repository.Release,
         Repository.ReleaseDownload,
         Repository.ReleaseMetadata,
