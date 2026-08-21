@@ -135,13 +135,21 @@ defmodule Hexpm.ReleaseTasks do
     end)
   end
 
+  @migration_lock_poll_interval 1_000
+
   @doc false
   # Every app pod runs migrate() at boot, so they race. Ecto's own migration
   # lock cannot serialize them here: it holds a transaction for the duration,
   # and CREATE INDEX CONCURRENTLY waits for concurrent transactions to finish,
   # so the two deadlock. A session level advisory lock on its own connection
-  # holds no transaction, and the lock is released when that connection ends,
-  # including when the pod dies mid-migration.
+  # holds no transaction once acquired, and the lock is released when that
+  # connection ends, including when the pod dies mid-migration.
+  #
+  # Waiting for the lock must not hold a transaction either. A blocking
+  # pg_advisory_lock() call is a running statement with a snapshot for as long
+  # as it waits, and the holder's CREATE INDEX CONCURRENTLY waits for every
+  # older snapshot to go away, so the two would deadlock through the app.
+  # Polling pg_try_advisory_lock() leaves the connection idle between attempts.
   def with_migration_lock(repo, fun) do
     key = Hexpm.RepoBase.advisory_lock_key(:migrate)
 
@@ -160,11 +168,20 @@ defmodule Hexpm.ReleaseTasks do
 
     try do
       Logger.info("[task] Waiting for migration lock")
-      Postgrex.query!(conn, "SELECT pg_advisory_lock($1)", [key], timeout: :infinity)
+      acquire_migration_lock(conn, key)
       Logger.info("[task] Acquired migration lock")
       fun.()
     after
       GenServer.stop(conn)
+    end
+  end
+
+  defp acquire_migration_lock(conn, key) do
+    %{rows: [[locked?]]} = Postgrex.query!(conn, "SELECT pg_try_advisory_lock($1)", [key])
+
+    unless locked? do
+      Process.sleep(@migration_lock_poll_interval)
+      acquire_migration_lock(conn, key)
     end
   end
 

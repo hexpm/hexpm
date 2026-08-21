@@ -338,6 +338,13 @@ defmodule Hexpm.HTTP do
     {:error, reason}
   end
 
+  @doc """
+  Calls `fun` until it returns a response whose status is not in `:statuses`
+  or the attempts run out, sleeping `:base_delay` times 3^n between tries.
+  Transport errors are retried too. Once the attempts are used up the last
+  result is returned as is: the response, so the caller sees the status and
+  body it failed on, or the transport error.
+  """
   def retry(fun, name, opts \\ []) do
     attempts = Keyword.get(opts, :attempts, Keyword.get(opts, :max_attempts, @default_attempts))
     base_delay = Keyword.get(opts, :base_delay, @default_base_delay)
@@ -349,20 +356,20 @@ defmodule Hexpm.HTTP do
     case fun.() do
       {:ok, status, _headers, _body} = result ->
         if retryable_status?(status, statuses) do
-          do_retry(fun, name, attempts, base_delay, statuses, times, "status #{status}")
+          do_retry(fun, name, attempts, base_delay, statuses, times, "status #{status}", result)
         else
           result
         end
 
-      {:error, reason} ->
-        do_retry(fun, name, attempts, base_delay, statuses, times, reason)
+      {:error, reason} = result ->
+        do_retry(fun, name, attempts, base_delay, statuses, times, reason, result)
 
       result ->
         result
     end
   end
 
-  defp do_retry(fun, name, attempts, base_delay, statuses, times, reason) do
+  defp do_retry(fun, name, attempts, base_delay, statuses, times, reason, result) do
     Logger.warning("#{name} API ERROR: #{inspect(reason)}")
 
     if times + 1 < attempts do
@@ -370,7 +377,7 @@ defmodule Hexpm.HTTP do
       if sleep > 0, do: Process.sleep(sleep)
       retry(fun, name, attempts, base_delay, statuses, times + 1)
     else
-      {:error, reason}
+      result
     end
   end
 

@@ -183,12 +183,8 @@ defmodule Hexpm.Preview do
 
   defp file_paths(output_dir, repository, package, version) do
     output_dir
-    |> Path.join("**")
-    |> Path.wildcard(match_dot: true)
-    |> Enum.filter(&File.regular?(&1, raw: true))
-    |> Enum.flat_map(fn full_path ->
-      relative = Path.relative_to(full_path, output_dir)
-
+    |> Hexpm.Utils.tree_regular_files()
+    |> Enum.flat_map(fn relative ->
       if relative == "hex_metadata.config" do
         []
       else
@@ -295,7 +291,8 @@ defmodule Hexpm.Preview do
   end
 
   defp purge(repository, package, version) do
-    Hexpm.CDN.purge_key(:fastly_hexrepo, Bucket.surrogate_keys(repository, package, version))
+    Hexpm.CDN.purge(:fastly_hexrepo, Bucket.surrogate_keys(repository, package, version))
+    :ok
   end
 
   defp release_exists?(repository, package, version) do

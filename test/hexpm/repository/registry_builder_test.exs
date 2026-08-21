@@ -273,6 +273,21 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
 
       assert length(releases) == 1
     end
+
+    test "registry versions use ascending SemVer order" do
+      package = insert(:package, name: "registry_semver_order")
+
+      for version <- ["1.0.0-rc.10", "10.0.0", "1.0.0-rc.2", "2.0.0"] do
+        insert(:release, package: package, version: version)
+      end
+
+      RegistryBuilder.package(package |> Hexpm.Repo.preload(:repository))
+
+      releases = v2_map("packages/#{package.name}", ["hexpm", package.name]).releases
+
+      assert Enum.map(releases, & &1.version) ==
+               ~w(1.0.0-rc.2 1.0.0-rc.10 2.0.0 10.0.0)
+    end
   end
 
   describe "partial/1" do
@@ -351,12 +366,15 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
     end
   end
 
-  describe "package_delete/1" do
+  describe "package_delete/2" do
     test "remove package", %{packages: [_, _, p3]} do
       RegistryBuilder.full(Repository.hexpm())
       assert v2_map("packages/#{p3.name}", ["hexpm", p3.name])
 
-      RegistryBuilder.package_delete(p3)
+      assert %{keys: keys, verify: [%{etag: nil}]} =
+               RegistryBuilder.package_delete(Repository.hexpm(), p3.name)
+
+      assert "registry-package/#{p3.name}" in keys
       refute v2_map("packages/#{p3.name}", ["hexpm", p3.name])
     end
   end

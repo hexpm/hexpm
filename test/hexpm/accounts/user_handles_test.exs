@@ -82,6 +82,15 @@ defmodule Hexpm.Accounts.UserHandlesTest do
                ]
     end
 
+    test "Bluesky handles with DIDs" do
+      for did <- ["did:plc:z72i7hdynmk6r22z27h6tvur", "did:web:example.com"] do
+        user = build(:user, handles: build(:user_handles, bluesky: did))
+
+        assert UserHandles.render(user) ==
+                 [{"Bluesky", did, "https://bsky.app/profile/#{did}"}]
+      end
+    end
+
     test "handles with legacy twitter.com URLs" do
       user =
         build(:user,

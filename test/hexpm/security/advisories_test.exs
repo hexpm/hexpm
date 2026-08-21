@@ -496,6 +496,7 @@ defmodule Hexpm.Security.AdvisoriesTest do
     refute Hexpm.Store.get(:repo_bucket, "packages/#{package.name}", [])
 
     assert {:ok, _} = Advisories.upsert([record], %{"oidcc" => package.id})
+    Oban.drain_queue(queue: :registry)
 
     decoded = decode_package_registry(package.name)
     assert [%{id: "GHSA-rebuild"}] = decoded.advisories
@@ -505,6 +506,7 @@ defmodule Hexpm.Security.AdvisoriesTest do
 
     # Reconcile by omitting the advisory — registry should no longer flag as vulnerable
     assert {:ok, _} = Advisories.upsert([], %{})
+    Oban.drain_queue(queue: :registry)
 
     decoded = decode_package_registry(package.name)
     assert decoded.advisories == []

@@ -79,10 +79,10 @@ defmodule Hexpm.Store.GCSTest do
       assert {"x-goog-meta-surrogate-key", "docs"} in headers
       assert {"cache-control", "public, max-age=3600"} in headers
       assert {"content-type", "text/html"} in headers
-      {:ok, 200, [], ""}
+      {:ok, 200, [{"ETag", ~s("abc123")}], ""}
     end)
 
-    assert :ok =
+    assert {:ok, %{etag: ~s("abc123")}} =
              GCS.put_file("bucket", "docs/a b?#.html", path,
                meta: [{"surrogate-key", "docs"}],
                cache_control: "public, max-age=3600",

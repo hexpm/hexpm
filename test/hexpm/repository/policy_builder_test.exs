@@ -1,5 +1,6 @@
 defmodule Hexpm.Repository.PolicyBuilderTest do
   use Hexpm.DataCase, async: false
+  use Oban.Testing, repo: Hexpm.RepoBase
 
   alias Hexpm.Repository.{Policies, PolicyBuilder}
   alias Hexpm.Security.Advisory
@@ -180,7 +181,7 @@ defmodule Hexpm.Repository.PolicyBuilderTest do
   end
 
   describe "rebuild/1" do
-    test "uploads the payload to repo_bucket and is purgeable",
+    test "uploads the payload to repo_bucket and verifies a private policy with the repository token",
          %{organization: org, policy: policy} do
       policy = Hexpm.Repo.preload(policy, :organization)
       assert :ok = PolicyBuilder.rebuild(policy)
@@ -192,6 +193,44 @@ defmodule Hexpm.Repository.PolicyBuilderTest do
 
       assert {:ok, %{name: "strict-prod"}} =
                :hex_registry.unpack_policy(stored, org.name, "strict-prod", public_key)
+
+      etag = ~s("#{Base.encode16(:crypto.hash(:md5, stored), case: :lower)}")
+
+      assert_enqueued(
+        worker: Hexpm.CDN.PurgeWorker,
+        args: %{
+          "service" => "fastly_hexrepo",
+          "keys" => ["policy/#{org.name}/strict-prod"],
+          "verify" => [
+            %{
+              "url" => "http://localhost:5000/repos/#{org.name}/policies/strict-prod",
+              "etag" => etag,
+              "repository" => org.name
+            }
+          ]
+        }
+      )
+    end
+
+    test "verifies the purge of a public policy", %{organization: org, audit_data: audit_data} do
+      {:ok, _} =
+        Policies.create(org, %{"name" => "open-pol", "visibility" => "public"}, audit: audit_data)
+
+      stored = Hexpm.Store.get(:repo_bucket, "repos/#{org.name}/policies/open-pol", [])
+      etag = ~s("#{Base.encode16(:crypto.hash(:md5, stored), case: :lower)}")
+
+      assert_enqueued(
+        worker: Hexpm.CDN.PurgeWorker,
+        args: %{
+          "keys" => ["policy/#{org.name}/open-pol"],
+          "verify" => [
+            %{
+              "url" => "http://localhost:5000/repos/#{org.name}/policies/open-pol",
+              "etag" => etag
+            }
+          ]
+        }
+      )
     end
 
     test "republishes a tab without the overrides an update removed",

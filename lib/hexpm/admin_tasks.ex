@@ -444,13 +444,13 @@ defmodule Hexpm.AdminTasks do
     end)
 
     Repo.delete!(package)
+    {:ok, _} = RegistryWorker.enqueue_package_delete(package)
+    {:ok, _} = RegistryWorker.enqueue_repository(package.repository)
     {releases, package}
   end
 
-  defp run_package_removal_side_effects({releases, package}) do
+  defp run_package_removal_side_effects({releases, _package}) do
     Enum.each(releases, &Assets.revert_release/1)
-    RegistryBuilder.package_delete(package)
-    RegistryBuilder.repository(package.repository)
   end
 
   @doc """
@@ -485,8 +485,8 @@ defmodule Hexpm.AdminTasks do
       |> Repo.delete!()
 
       Assets.revert_release(release)
-      RegistryBuilder.package(package)
-      RegistryBuilder.repository(package.repository)
+      {:ok, _} = RegistryWorker.enqueue_package(package)
+      {:ok, _} = RegistryWorker.enqueue_repository(package.repository)
 
       remaining = Repo.aggregate(assoc(package, :releases), :count)
 
@@ -802,8 +802,8 @@ defmodule Hexpm.AdminTasks do
       meta: [{"surrogate-key", "installs"}]
     ]
 
-    Hexpm.Store.put(:repo_bucket, "installs/list.csv", csv, store_opts)
-    Hexpm.CDN.purge_key(:fastly_hexrepo, "installs")
+    {:ok, _} = Hexpm.Store.put(:repo_bucket, "installs/list.csv", csv, store_opts)
+    Hexpm.CDN.purge(:fastly_hexrepo, "installs")
 
     :ok
   end

@@ -10,9 +10,10 @@ defmodule Hexpm.Repository.PackageDependants do
   def recompute_for_package(repo, package) do
     take_lock(repo, package.id)
 
-    releases = repo.all(from(r in Release, where: r.package_id == ^package.id))
-
-    latest = Release.latest_version(releases, only_stable: true, unstable_fallback: true)
+    latest =
+      from(r in Release, where: r.package_id == ^package.id)
+      |> Release.latest_query(only_stable: true, unstable_fallback: true)
+      |> repo.one()
 
     sync_rows(repo, package, latest)
 

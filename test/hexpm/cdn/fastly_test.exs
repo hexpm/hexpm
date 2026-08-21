@@ -3,15 +3,11 @@ defmodule Hexpm.CDN.FastlyTest do
   import Mox
   alias Hexpm.CDN.Fastly
 
-  # The two extra purges come from a supervised task that sleeps between them,
-  # so the wait has to outlast a loaded machine scheduling that task late.
-  @receive_timeout 10_000
+  setup :verify_on_exit!
 
   describe "purge_key/2" do
-    test "calls purge endpoint 3 times after waiting" do
-      test_pid = self()
-
-      expect(Hexpm.HTTP.Mock, :post, 3, fn url, headers, body ->
+    test "sends one purge request for the keys" do
+      expect(Hexpm.HTTP.Mock, :post, fn url, headers, body ->
         assert url == "https://api.fastly.com/service/fastly_hexrepo/purge"
         assert body == %{"surrogate_keys" => ["key1", "key2"]}
 
@@ -21,30 +17,192 @@ defmodule Hexpm.CDN.FastlyTest do
                  {"content-type", "application/json"}
                ]
 
-        send(test_pid, :purged)
-        {:ok, 200, [], ""}
+        {:ok, 200, [], %{"key1" => "1-1", "key2" => "1-2"}}
       end)
 
       assert Fastly.purge_key(:fastly_hexrepo, ["key1", "key2"]) == :ok
-      assert_receive :purged, @receive_timeout
-      assert_receive :purged, @receive_timeout
-      assert_receive :purged, @receive_timeout
     end
 
     test "uses the docs credential for docs services" do
-      test_pid = self()
-
-      expect(Hexpm.HTTP.Mock, :post, 3, fn url, headers, _body ->
+      expect(Hexpm.HTTP.Mock, :post, fn url, headers, _body ->
         assert url == "https://api.fastly.com/service/fastly_hexdocs/purge"
         assert {"fastly-key", "fastly_docs_key"} in headers
-        send(test_pid, :purged)
         {:ok, 200, [], ""}
       end)
 
-      assert Fastly.purge_key(:fastly_hexdocs, "docs-key") == :ok
-      assert_receive :purged, @receive_timeout
-      assert_receive :purged, @receive_timeout
-      assert_receive :purged, @receive_timeout
+      assert Fastly.purge_key(:fastly_hexdocs, ["docs-key"]) == :ok
+    end
+
+    @tag :capture_log
+    test "retries 5xx and 429 before giving up with the status and body" do
+      expect(Hexpm.HTTP.Mock, :post, 5, fn _url, _headers, _body ->
+        {:ok, 503, [], %{"msg" => "unavailable"}}
+      end)
+
+      assert Fastly.purge_key(:fastly_hexrepo, ["key"]) ==
+               {:error, {:status, 503, %{"msg" => "unavailable"}}}
+    end
+
+    @tag :capture_log
+    test "returns the transport error after retries" do
+      expect(Hexpm.HTTP.Mock, :post, 5, fn _url, _headers, _body -> {:error, :closed} end)
+
+      assert Fastly.purge_key(:fastly_hexrepo, ["key"]) == {:error, :closed}
+    end
+
+    test "emits a purge_request event with the status" do
+      :telemetry.attach(
+        "purge-request-#{inspect(self())}",
+        [:hexpm, :cdn, :purge_request, :stop],
+        fn _event, _measurements, metadata, pid -> send(pid, {:purge_request, metadata}) end,
+        self()
+      )
+
+      expect(Hexpm.HTTP.Mock, :post, fn _url, _headers, _body -> {:ok, 200, [], ""} end)
+      assert Fastly.purge_key(:fastly_hexrepo, ["key"]) == :ok
+
+      assert_receive {:purge_request, %{service: :fastly_hexrepo, keys: ["key"], status: 200}}
+    end
+  end
+
+  describe "verify/2" do
+    test "checks every target at the nearest POP and every probed POP, batched" do
+      expect(Hexpm.HTTP.Mock, :head, 4, fn url, headers, _opts ->
+        assert url in ["https://repo.example/packages/foo", "https://repo.example/packages/bar"]
+
+        case List.keyfind(headers, "hex-cache-probe", 0) do
+          nil -> assert headers == []
+          {_, "nrt-tokyo-jp"} -> assert {"fastly-key", "fastly_key"} in headers
+        end
+
+        {:ok, 200, [{"ETag", ~s("abc")}], ""}
+      end)
+
+      foo = %{url: "https://repo.example/packages/foo", etag: ~s("abc")}
+      bar = %{url: "https://repo.example/packages/bar", etag: ~s("abc")}
+
+      assert Fastly.verify(:fastly_hexrepo, [foo, bar]) |> Enum.sort() ==
+               Enum.sort([{foo, :ok}, {bar, :ok}])
+    end
+
+    test "probes no POPs for the docs services" do
+      expect(Hexpm.HTTP.Mock, :head, fn "https://hexdocs.example/foo/index.html", [], _opts ->
+        {:ok, 200, [{"etag", ~s("abc")}], ""}
+      end)
+
+      target = %{url: "https://hexdocs.example/foo/index.html", etag: "abc"}
+      assert Fastly.verify(:fastly_hexdocs, [target]) == [{target, :ok}]
+    end
+
+    test "fetches a private repository's object with a repository token, probes included" do
+      expect(Hexpm.HTTP.Mock, :head, 2, fn url, headers, _opts ->
+        assert url == "https://repo.example/repos/acme/packages/foo"
+        assert {"authorization", "Bearer " <> token} = List.keyfind(headers, "authorization", 0)
+
+        assert {:ok, %{"scope" => "repository:acme", "sub" => "system:cdn-verify"}} =
+                 Hexpm.OAuth.JWT.verify_and_decode(token)
+
+        {:ok, 200, [{"etag", ~s("abc")}], ""}
+      end)
+
+      target = %{
+        url: "https://repo.example/repos/acme/packages/foo",
+        etag: "abc",
+        repository: "acme"
+      }
+
+      assert Fastly.verify(:fastly_hexrepo, [target]) == [{target, :ok}]
+    end
+
+    test "reports every POP still serving the old object with the caches that served it" do
+      expect(Hexpm.HTTP.Mock, :head, 2, fn _url, headers, _opts ->
+        case List.keyfind(headers, "hex-cache-probe", 0) do
+          nil ->
+            {:ok, 200, [{"etag", ~s("abc")}, {"x-cache-served-by", "cache-iad-1-IAD"}], ""}
+
+          {_, "nrt-tokyo-jp"} ->
+            {:ok, 200,
+             [{"etag", ~s("old")}, {"x-cache-served-by", "cache-iad-2-IAD, cache-nrt-1-NRT"}], ""}
+        end
+      end)
+
+      target = %{url: "https://repo.example/packages/foo", etag: "abc"}
+
+      assert Fastly.verify(:fastly_hexrepo, [target]) ==
+               [
+                 {target,
+                  {:error,
+                   {:stale,
+                    [
+                      %{
+                        pop: "nrt-tokyo-jp",
+                        etag: ~s("old"),
+                        served_by: "cache-iad-2-IAD, cache-nrt-1-NRT"
+                      }
+                    ]}}}
+               ]
+    end
+
+    test "a probe that fails does not fail the check" do
+      expect(Hexpm.HTTP.Mock, :head, 2, fn _url, headers, _opts ->
+        case List.keyfind(headers, "hex-cache-probe", 0) do
+          nil -> {:ok, 200, [{"etag", ~s("abc")}], ""}
+          _probe -> {:error, :timeout}
+        end
+      end)
+
+      target = %{url: "https://repo.example/packages/foo", etag: "abc"}
+      assert Fastly.verify(:fastly_hexrepo, [target]) == [{target, :ok}]
+    end
+
+    test "expects a 404 for a deleted object" do
+      expect(Hexpm.HTTP.Mock, :head, 2, fn _url, _headers, _opts -> {:ok, 404, [], ""} end)
+
+      target = %{url: "https://repo.example/tarballs/foo-1.0.0.tar", etag: nil}
+      assert Fastly.verify(:fastly_hexrepo, [target]) == [{target, :ok}]
+    end
+
+    test "returns the status when the nearest POP does not serve the object" do
+      expect(Hexpm.HTTP.Mock, :head, 2, fn _url, headers, _opts ->
+        case List.keyfind(headers, "hex-cache-probe", 0) do
+          nil -> {:ok, 503, [{"x-cache-served-by", "cache-bma-1-BMA"}], ""}
+          _probe -> {:ok, 200, [{"etag", ~s("abc")}], ""}
+        end
+      end)
+
+      target = %{url: "https://repo.example/packages/foo", etag: "abc"}
+
+      assert Fastly.verify(:fastly_hexrepo, [target]) ==
+               [{target, {:error, {:status, 503, "cache-bma-1-BMA"}}}]
+    end
+
+    test "emits telemetry per POP with the result" do
+      :telemetry.attach(
+        "verify-#{inspect(self())}",
+        [:hexpm, :cdn, :verify, :stop],
+        fn _event, _measurements, metadata, pid -> send(pid, {:verify, metadata}) end,
+        self()
+      )
+
+      expect(Hexpm.HTTP.Mock, :head, 2, fn _url, headers, _opts ->
+        case List.keyfind(headers, "hex-cache-probe", 0) do
+          nil -> {:ok, 200, [{"etag", ~s("abc")}], ""}
+          _probe -> {:ok, 200, [{"etag", ~s("old")}], ""}
+        end
+      end)
+
+      target = %{url: "https://repo.example/packages/foo", etag: "abc"}
+      assert [{^target, {:error, {:stale, _}}}] = Fastly.verify(:fastly_hexrepo, [target])
+
+      assert_receive {:verify,
+                      %{url: "https://repo.example/packages/foo", pop: :nearest, result: :ok}}
+
+      assert_receive {:verify,
+                      %{
+                        url: "https://repo.example/packages/foo",
+                        pop: "nrt-tokyo-jp",
+                        result: :stale
+                      }}
     end
   end
 

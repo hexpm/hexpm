@@ -49,7 +49,7 @@ defmodule HexpmWeb.BlogController do
       render(
         conn,
         "#{template}.html",
-        title: title(slug),
+        title: HexpmWeb.BlogView.post_title(template),
         container: "flex-1 flex flex-col",
         style_src_nonce: conn.assigns[:style_src_nonce],
         script_src_nonce: conn.assigns[:script_src_nonce]
@@ -57,11 +57,5 @@ defmodule HexpmWeb.BlogController do
     else
       not_found(conn)
     end
-  end
-
-  defp title(slug) do
-    slug
-    |> String.replace("-", " ")
-    |> String.capitalize()
   end
 end

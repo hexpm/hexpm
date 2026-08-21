@@ -29,7 +29,7 @@ defmodule Hexpm.Preview.Bucket do
         opts = put_opts(repository, package, version) ++ content_type(filename)
         Hexpm.Store.put_file(:preview_bucket, key, source, opts)
       end,
-      max_concurrency: 10,
+      max_concurrency: 32,
       timeout: 60_000
     )
     |> Hexpm.Utils.raise_async_stream_error()

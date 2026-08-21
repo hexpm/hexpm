@@ -217,7 +217,7 @@ defmodule HexpmWeb.Router do
     get "/policies/dispute", PolicyController, :dispute
 
     live_session :packages,
-      on_mount: {HexpmWeb.Live.InitAssigns, :default},
+      on_mount: [{HexpmWeb.Live.InitAssigns, :default}, HexpmWeb.Live.StaticReload],
       session: {HexpmWeb.Live.InitAssigns, :session, []} do
       live "/packages", PackageLive.Index, :index
       live "/packages/:name/report", PackageReportLive, :new
@@ -233,7 +233,8 @@ defmodule HexpmWeb.Router do
     get "/preview/:package/:version", PreviewRedirectController, :version
     get "/preview/:package/:version/show/*filename", PreviewRedirectController, :version_file
 
-    live_session :preview, on_mount: {HexpmWeb.Live.InitAssigns, :default} do
+    live_session :preview,
+      on_mount: [{HexpmWeb.Live.InitAssigns, :default}, HexpmWeb.Live.StaticReload] do
       live "/packages/:package/:version/files", PreviewLive, :files
       live "/packages/:package/:version/files/*filename", PreviewLive, :files
       live "/packages/:repository/:package/:version/files", PreviewLive, :files

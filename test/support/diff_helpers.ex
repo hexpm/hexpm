@@ -1,6 +1,7 @@
 defmodule Hexpm.DiffHelpers do
   def insert_tarball_release(package, version, files, opts \\ []) do
     repository = Keyword.get(opts, :repository, "hexpm")
+    symlinks = Keyword.get(opts, :symlinks, %{})
     root = Hexpm.TmpDir.tmp_dir("diff-fixture")
 
     tarball_files =
@@ -25,6 +26,13 @@ defmodule Hexpm.DiffHelpers do
     }
 
     {:ok, result} = :hex_tarball.create(metadata, tarball_files)
+
+    result =
+      if symlinks == %{} do
+        result
+      else
+        Map.merge(result, Hexpm.TarballHelpers.add_symlinks(result.tarball, symlinks))
+      end
 
     release =
       Hexpm.Factory.insert(:release,

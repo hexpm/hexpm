@@ -64,13 +64,6 @@ defmodule Hexpm.Preview.WorkersTest do
     end
   end
 
-  defmodule FailingCDN do
-    @behaviour Hexpm.CDN
-
-    def purge_key(_service, _key), do: raise("simulated CDN failure")
-    def public_ips, do: []
-  end
-
   test "upload is repeatable and updates latest files" do
     package = insert(:package, name: "worker_preview")
     release = insert(:release, package: package, version: "1.0.0")
@@ -195,24 +188,45 @@ defmodule Hexpm.Preview.WorkersTest do
              ["dot.txt", "safe.txt"]
   end
 
-  test "CDN failures retry cleanly" do
-    package = insert(:package, name: "cdn_failure_preview")
+  test "upload skips symlinks and link cycles do not multiply the file list" do
+    package = insert(:package, name: "symlink_preview")
+    release = insert(:release, package: package, version: "1.0.0")
+    key = "tarballs/#{package.name}-#{release.version}.tar"
+
+    put_tarball(
+      key,
+      package.name,
+      to_string(release.version),
+      [{"sub/real.txt", "real"}],
+      %{"sub/loop" => "..", "link.txt" => "sub/real.txt"}
+    )
+
+    assert :ok = perform_job(Workers.Upload, %{key: key})
+
+    assert JSON.decode!(Hexpm.Store.get(:preview_bucket, "file_lists/#{package.name}-1.0.0.json")) ==
+             ["sub/real.txt"]
+
+    assert Hexpm.Store.get(:preview_bucket, "files/#{package.name}/1.0.0/link.txt") == nil
+  end
+
+  test "upload enqueues the CDN purge for the package and version" do
+    package = insert(:package, name: "cdn_purge_preview")
     release = insert(:release, package: package, version: "1.0.0")
     key = "tarballs/#{package.name}-#{release.version}.tar"
     put_tarball(key, package.name, to_string(release.version), [{"README.md", "readme"}])
-    original_cdn = Application.fetch_env!(:hexpm, :cdn_impl)
-    Application.put_env(:hexpm, :cdn_impl, FailingCDN)
-
-    try do
-      assert_raise RuntimeError, ~r/simulated CDN failure/, fn ->
-        perform_job(Workers.Upload, %{key: key})
-      end
-    after
-      Application.put_env(:hexpm, :cdn_impl, original_cdn)
-    end
 
     assert :ok = perform_job(Workers.Upload, %{key: key})
-    assert Hexpm.Store.get(:preview_bucket, "files/#{package.name}/1.0.0/README.md") == "readme"
+
+    assert_enqueued(
+      worker: Hexpm.CDN.PurgeWorker,
+      args: %{
+        "service" => "fastly_hexrepo",
+        "keys" => [
+          "preview/package/#{package.name}",
+          "preview/package/#{package.name}/version/1.0.0"
+        ]
+      }
+    )
   end
 
   test "upload retries when the source tarball changes while files are uploading" do
@@ -415,15 +429,20 @@ defmodule Hexpm.Preview.WorkersTest do
     end
   end
 
-  defp put_tarball(key, package, version, files) do
-    Hexpm.Store.put(:repo_bucket, key, tarball(package, version, files))
+  defp put_tarball(key, package, version, files, symlinks \\ %{}) do
+    Hexpm.Store.put(:repo_bucket, key, tarball(package, version, files, symlinks))
   end
 
-  defp tarball(package, version, files) do
+  defp tarball(package, version, files, symlinks \\ %{}) do
     metadata = %{"name" => package, "version" => version}
     files = Enum.map(files, fn {path, contents} -> {String.to_charlist(path), contents} end)
     {:ok, %{tarball: tarball}} = :hex_tarball.create(metadata, files)
-    tarball
+
+    if symlinks == %{} do
+      tarball
+    else
+      Hexpm.TarballHelpers.add_symlinks(tarball, symlinks).tarball
+    end
   end
 
   defp use_action_store(key, action), do: use_action_store(:put_file, key, action)
