@@ -67,6 +67,35 @@ defmodule Hexpm.Diff.GeneratorTest do
     assert Enum.map(repeated_pieces, & &1.key) == Enum.map(pieces, & &1.key)
   end
 
+  test "symlinks in tarballs are skipped and link cycles do not multiply the tree" do
+    package = insert(:package, name: "generator_symlinks")
+
+    insert_tarball_release(
+      package,
+      "1.0.0",
+      %{"lib/a.ex" => "old = 1\n", "sub/real.txt" => "content\n"},
+      symlinks: %{"sub/loop" => "..", "link.ex" => "lib/a.ex"}
+    )
+
+    insert_tarball_release(package, "2.0.0", %{
+      "lib/a.ex" => "new = 2\n",
+      "sub/real.txt" => "content\n"
+    })
+
+    tarball = Hexpm.Store.get(:repo_bucket, "tarballs/#{package.name}-1.0.0.tar")
+    unpack_dir = Hexpm.TmpDir.tmp_dir("generator-symlinks")
+    {:ok, _} = :hex_tarball.unpack(tarball, to_charlist(unpack_dir))
+    assert File.lstat!(Path.join(unpack_dir, "sub/loop")).type == :symlink
+    assert File.lstat!(Path.join(unpack_dir, "link.ex")).type == :symlink
+
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
+    assert :ok = Generator.generate(request)
+
+    assert {:ok, metadata, [_piece]} = Hexpm.Diff.fetch(request)
+    assert metadata.total_diffs == 1
+    assert metadata.files == ["lib/a.ex"]
+  end
+
   test "generates diffs for private repository releases from namespaced tarballs" do
     repository = insert(:repository)
     package = insert(:package, repository_id: repository.id, name: "generator_private")

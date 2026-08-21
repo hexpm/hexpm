@@ -24,6 +24,31 @@ defmodule Hexpm.Utils do
     acc
   end
 
+  @doc """
+  Lists all regular files under `directory` as relative paths.
+
+  Symlinks are skipped entirely, both as entries and as directories to
+  descend into, so link cycles inside unpacked package tarballs cannot
+  multiply the tree.
+  """
+  def tree_regular_files(directory) do
+    tree_regular_files(directory, "")
+  end
+
+  defp tree_regular_files(directory, relative) do
+    full = if relative == "", do: directory, else: Path.join(directory, relative)
+
+    Enum.flat_map(File.ls!(full), fn name ->
+      entry = if relative == "", do: name, else: relative <> "/" <> name
+
+      case File.lstat!(Path.join(directory, entry)).type do
+        :regular -> [entry]
+        :directory -> tree_regular_files(directory, entry)
+        _other -> []
+      end
+    end)
+  end
+
   def multi_task(args, fun) do
     args
     |> multi_async(fun)

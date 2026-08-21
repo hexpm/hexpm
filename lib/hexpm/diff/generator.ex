@@ -51,7 +51,10 @@ defmodule Hexpm.Diff.Generator do
   end
 
   defp generate_pieces(request, from_dir, to_dir) do
-    files = Enum.sort(Enum.uniq(tree_files(from_dir) ++ tree_files(to_dir)))
+    files =
+      (Hexpm.Utils.tree_regular_files(from_dir) ++ Hexpm.Utils.tree_regular_files(to_dir))
+      |> Enum.uniq()
+      |> Enum.sort()
 
     initial =
       {%{
@@ -83,8 +86,8 @@ defmodule Hexpm.Diff.Generator do
   defp generate_piece(request, from_dir, to_dir, file, index) do
     from_path = Path.join(from_dir, file)
     to_path = Path.join(to_dir, file)
-    from_path = if File.regular?(from_path, raw: true), do: from_path, else: "/dev/null"
-    to_path = if File.regular?(to_path, raw: true), do: to_path, else: "/dev/null"
+    from_path = if regular_file?(from_path), do: from_path, else: "/dev/null"
+    to_path = if regular_file?(to_path), do: to_path, else: "/dev/null"
     same_contents? = same_contents?(from_path, to_path)
 
     cond do
@@ -198,12 +201,8 @@ defmodule Hexpm.Diff.Generator do
 
   defp executable?(mode), do: band(mode, 0o111) != 0
 
-  defp tree_files(directory) do
-    directory
-    |> Path.join("**")
-    |> Path.wildcard(match_dot: true)
-    |> Enum.filter(&File.regular?(&1, raw: true))
-    |> Enum.map(&Path.relative_to(&1, directory))
+  defp regular_file?(path) do
+    match?({:ok, %File.Stat{type: :regular}}, File.lstat(path))
   end
 
   defp sanitize_utf8(content) when is_binary(content) do

@@ -3,6 +3,20 @@ defmodule Hexpm.UtilsTest do
 
   alias Hexpm.Utils
 
+  describe "tree_regular_files/1" do
+    test "lists regular files and never follows symlinks" do
+      root = Path.join(System.tmp_dir!(), "tree-files-#{System.unique_integer([:positive])}")
+      File.mkdir_p!(Path.join(root, "sub/nested"))
+      File.write!(Path.join(root, "top.txt"), "top")
+      File.write!(Path.join(root, "sub/nested/deep.txt"), "deep")
+      File.ln_s!("..", Path.join(root, "sub/loop"))
+      File.ln_s!("top.txt", Path.join(root, "link.txt"))
+      on_exit(fn -> File.rm_rf!(root) end)
+
+      assert Enum.sort(Utils.tree_regular_files(root)) == ["sub/nested/deep.txt", "top.txt"]
+    end
+  end
+
   describe "datetime_to_rfc2822" do
     test "formats sample timestamps correctly" do
       assert Utils.datetime_to_rfc2822(~U[2002-09-07 09:42:31Z]) ==
