@@ -4,7 +4,7 @@ defmodule Hexpm.Accounts.KeyPermission do
   alias Hexpm.Accounts.SSO.Enforcement
   alias Hexpm.Permissions
 
-  @derive HexpmWeb.Stale
+  @derive {HexpmWeb.Stale, last_modified: nil}
 
   embedded_schema do
     field :domain, :string

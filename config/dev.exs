@@ -47,7 +47,19 @@ config :hexpm,
   billing_url: "http://localhost:4001",
   billing_key: "hex_billing_key",
   dashboard_user: "hex_user",
-  dashboard_password: "hex_password"
+  dashboard_password: "hex_password",
+  geo_local_lookups: %{
+    "127.0.0.1" => %{iso_code: "US", name: "United States"},
+    "::1" => %{iso_code: "US", name: "United States"},
+    "8.8.8.8" => %{iso_code: "US", name: "United States"},
+    "91.198.174.192" => %{iso_code: "NL", name: "Netherlands"},
+    "195.135.220.3" => %{iso_code: "DE", name: "Germany"},
+    "158.69.27.27" => %{iso_code: "CA", name: "Canada"},
+    "203.0.113.42" => %{iso_code: "JP", name: "Japan"},
+    "198.51.100.10" => %{iso_code: "BR", name: "Brazil"},
+    "192.0.2.5" => %{iso_code: "GB", name: "United Kingdom"},
+    "13.228.0.1" => %{iso_code: "SG", name: "Singapore"}
+  }
 
 config :hexpm, HexpmWeb.Endpoint,
   http: [port: 4000],
@@ -97,6 +109,8 @@ config :hexpm, Oban, plugins: []
 config :hexpm, metrics_port: 9568
 
 config :hexpm, :organization_sso, all_organizations: true
+
+config :hexpm, :varsel, key_id: "hexpm-dev"
 
 config :ueberauth, Ueberauth.Strategy.Github.OAuth,
   client_id: System.get_env("HEXPM_GITHUB_CLIENT_ID"),

@@ -353,8 +353,6 @@ defmodule Hexpm.Permissions do
     resource.repository.name == organization and resource.name == package
   end
 
-  defp match_package_resource?(_permission_resource, _resource), do: false
-
   @doc """
   Verifies if a user or organization has access to a specific domain and resource.
 

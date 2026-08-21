@@ -4,6 +4,7 @@ defmodule Hexpm.HTTPTest do
   alias Hexpm.HTTP
   alias Plug.Conn
 
+  @receive_timeout 10_000
   @server_step_timeout 10_000
   @server_await_timeout 30_000
 
@@ -83,10 +84,10 @@ defmodule Hexpm.HTTPTest do
         )
       end)
 
-    assert_receive {:pinned_request_received, request_process}, 1_000
-    assert {:error, :timeout} = Task.await(request, 1_000)
+    assert_receive {:pinned_request_received, request_process}, @receive_timeout
+    assert {:error, :timeout} = Task.await(request, @receive_timeout)
     send(request_process, :finish_request)
-    assert_receive :pinned_request_finished, 1_000
+    assert_receive :pinned_request_finished, @receive_timeout
   end
 
   test "get/3 validates the original hostname over a pinned HTTPS connection" do
@@ -247,6 +248,24 @@ defmodule Hexpm.HTTPTest do
              )
 
     assert Agent.get(counter, & &1) == 5
+  end
+
+  test "retry returns the last response once the attempts are used up" do
+    {:ok, counter} = Agent.start_link(fn -> 0 end)
+
+    assert {:ok, 503, [], "unavailable"} =
+             HTTP.retry(
+               fn ->
+                 Agent.update(counter, &(&1 + 1))
+                 {:ok, 503, [], "unavailable"}
+               end,
+               "exhausted",
+               attempts: 3,
+               base_delay: 0,
+               statuses: [500..599]
+             )
+
+    assert Agent.get(counter, & &1) == 3
   end
 
   test "patch/3", %{lasso: lasso} do

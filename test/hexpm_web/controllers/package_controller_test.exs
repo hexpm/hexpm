@@ -226,6 +226,25 @@ defmodule HexpmWeb.PackageControllerTest do
   end
 
   describe "GET /packages/:name" do
+    test "does not query data the page never renders", %{package1: package1} do
+      queries = capture_queries(fn -> get(build_conn(), "/packages/#{package1.name}") end)
+
+      refute Enum.any?(queries, &(&1 =~ ~s(FROM "audit_logs")))
+
+      # The dependants tab label needs a count. Listing them is the dependents page.
+      assert Enum.count(queries, &(&1 =~ ~s(FROM "package_dependants"))) == 1
+    end
+
+    test "counts dependants once on the dependents page", %{package1: package1} do
+      queries =
+        capture_queries(fn -> get(build_conn(), "/packages/#{package1.name}/dependents") end)
+
+      counts =
+        Enum.count(queries, &(&1 =~ "count(*)" and &1 =~ ~s(FROM "package_dependants")))
+
+      assert counts == 1
+    end
+
     test "banners the release on screen when an advisory affects it", %{package1: package1} do
       advise(package1, "GHSA-current-release", "0.0.2")
 
@@ -244,6 +263,8 @@ defmodule HexpmWeb.PackageControllerTest do
       assert html =~ escape(~s({:#{package1.name}, "~> 0.0.2"}))
 
       assert {:ok, document} = Floki.parse_document(html)
+      assert link_text(document, "/packages/#{package1.name}/report") == "Report package"
+      assert [_report_link] = Floki.find(document, ".grid > #report-package-link.bg-grey-100")
       assert link_text(document, "/packages/#{package1.name}/dependents") == "0 Dependants"
       assert link_text(document, "/packages/#{package1.name}/dependencies") == "0 Dependencies"
       assert link_text(document, "/packages/#{package1.name}/versions") == "3 Versions"
@@ -565,6 +586,19 @@ defmodule HexpmWeb.PackageControllerTest do
     test "returns 404 for unknown package" do
       conn = get(build_conn(), "/packages/nonexistent_package/versions")
       assert response(conn, 404)
+    end
+
+    test "renders releases in descending SemVer order" do
+      package = insert(:package, name: "web_semver_order")
+
+      for version <- ["1.0.0-rc.10", "10.0.0", "1.0.0-rc.2", "2.0.0"] do
+        insert(:release, package: package, version: version)
+      end
+
+      body = response(get(build_conn(), "/packages/#{package.name}/versions"), 200)
+
+      assert body =~
+               ~r/10\.0\.0.*2\.0\.0.*1\.0\.0-rc\.10.*1\.0\.0-rc\.2/s
     end
 
     test "marks the versions an advisory affects", %{package1: package1, package2: package2} do

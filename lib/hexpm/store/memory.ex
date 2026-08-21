@@ -57,6 +57,7 @@ defmodule Hexpm.Store.Memory do
   def put(bucket, key, body, _opts) do
     owner = owner_pid()
     :ets.insert(@table, {{owner, bucket, key}, body})
+    {:ok, %{etag: ~s("#{Base.encode16(:crypto.hash(:md5, body), case: :lower)}")}}
   end
 
   def put_file(bucket, key, path, opts) do

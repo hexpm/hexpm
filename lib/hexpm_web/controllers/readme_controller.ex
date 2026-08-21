@@ -52,26 +52,18 @@ defmodule HexpmWeb.ReadmeController do
 
   def show(conn, params) do
     name = params["name"]
-    package = Packages.get("hexpm", name)
 
-    if package do
-      releases = Releases.all(package)
+    case Releases.latest_version("hexpm", name,
+           only_stable: true,
+           unstable_fallback: true
+         ) do
+      nil ->
+        send_no_readme(conn)
 
-      release =
-        Hexpm.Repository.Release.latest_version(releases,
-          only_stable: true,
-          unstable_fallback: true
-        )
-
-      if release do
+      version ->
         conn
         |> put_resp_header("cache-control", "public, max-age=3600")
-        |> redirect(to: "/#{name}/#{release.version}")
-      else
-        send_no_readme(conn)
-      end
-    else
-      send_no_readme(conn)
+        |> redirect(to: "/#{name}/#{version}")
     end
   end
 

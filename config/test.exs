@@ -33,18 +33,32 @@ config :hexpm,
   fastly_hexdocs_private: "fastly_hexdocs_private",
   fastly_key: "fastly_key",
   fastly_docs_key: "fastly_docs_key",
-  fastly_purge_wait: 200,
+  purge_wait: 0,
+  purge_verify_grace: 0,
+  purge_verify_rounds: 3,
+  fastly_probe_pops: ["nrt-tokyo-jp"],
+  registry_lock_wait: 100,
   billing_impl: Hexpm.Billing.Mock,
+  billing_url: "http://localhost:4001",
+  billing_key: "hex_billing_key",
   pwned_impl: Hexpm.Pwned.Mock,
+  geo_impl: Hexpm.Geo.Mock,
   http_impl: Hexpm.HTTP.Mock,
   cache_enabled: false,
-  skip_advisory_locks: true
+  skip_advisory_locks: true,
+  # VACUUM cannot run inside the sandbox transaction that wraps each test.
+  # Hexpm.ReleaseTasks.StatsTest covers it unboxed.
+  skip_maintenance_vacuum: true
 
 config :hexpm, HexpmWeb.Endpoint,
   http: [port: 5000],
   server: false,
   secret_key_base: "38K8orQfRHMC6ZWXIdgItQEiumeY+L2Ls0fvYfTMt4AoG5+DSFsLG6vMajNcd5Td",
-  live_view: [signing_salt: "2UTSB72sZsF9KTlxefkIrFFPXTO7d+Ep"]
+  live_view: [signing_salt: "2UTSB72sZsF9KTlxefkIrFFPXTO7d+Ep"],
+  cache_static_manifest_latest: %{
+    "assets/app.css" => "assets/app-11111111111111111111111111111111.css",
+    "assets/app.js" => "assets/app-22222222222222222222222222222222.js"
+  }
 
 config :hexpm, Hexpm.Emails.Mailer, adapter: Swoosh.Adapters.Test
 config :swoosh, :api_client, false
@@ -72,6 +86,9 @@ config :hexpm, :organization_sso,
   mode: :off,
   beta_organizations: [],
   oidc_impl: Hexpm.Accounts.SSO.OIDC.Mock
+
+config :hexpm, :varsel_impl, Hexpm.PackageReports.Varsel.Mock
+config :hexpm, :varsel, key_id: "hexpm-test"
 
 # Don't sleep waiting for Sentry to flush in tests.
 config :hexpm, sentry_flush_ms: 0

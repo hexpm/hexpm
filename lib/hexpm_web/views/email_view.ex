@@ -193,6 +193,67 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
+  defmodule SecretsDetected do
+    def title(), do: "Possible credentials in a published package"
+
+    def intro(package, version, findings) do
+      count = length(groups(findings))
+
+      "A scan of #{package} v#{version} found #{credentials(count)} that #{look(count)} like " <>
+        "credentials. Anyone who downloads the package can read #{them(count)}."
+    end
+
+    defp credentials(1), do: "a value"
+    defp credentials(count), do: "#{count} values"
+
+    defp look(1), do: "looks"
+    defp look(_count), do: "look"
+
+    defp them(1), do: "it"
+    defp them(_count), do: "them"
+
+    def action() do
+      "If any of these are real, revoke and reissue them now. The release is public and " <>
+        "mirrors have already copied it, so removing the package does not undo the exposure."
+    end
+
+    def found_heading(), do: "What was found:"
+
+    # One block per credential, listing every file it was found in. The same
+    # value in five files is one thing to revoke, but the owner has to delete
+    # all five copies, so naming only the first would send them away half done.
+    def groups(findings) do
+      findings
+      |> Enum.group_by(& &1.fingerprint)
+      |> Enum.map(fn {_fingerprint, [first | _] = group} ->
+        %{
+          rule: first.rule,
+          preview: first.preview,
+          locations: Enum.map(group, &Hexpm.SecretScan.Finding.location/1)
+        }
+      end)
+      |> Enum.sort_by(& &1.locations)
+    end
+
+    def entry(group) do
+      Enum.join(["#{group.rule}  #{group.preview}" | group.locations], "\n    ")
+    end
+
+    def no_action_taken() do
+      "Hex.pm has taken no other action. The package is still published and its owners are " <>
+        "unchanged. We store only a hash of each value and the masked preview above, never " <>
+        "the value itself."
+    end
+
+    def false_positive() do
+      "Some of these may be test fixtures or example values, in which case there is nothing " <>
+        "to do. You can stop future scans reporting such paths with " <>
+        ~s(package: [secret_scan: [ignore: ["test/fixtures/**"]]] in mix.exs.)
+    end
+
+    defdelegate questions_notice(format), to: Common
+  end
+
   defmodule SecurityPasswordReset do
     def title() do
       "Your Hex.pm password has been reset"
@@ -514,49 +575,6 @@ defmodule HexpmWeb.EmailView do
     def message(package, version, _remaining) do
       "Version #{version} of the package #{package} has been removed from Hex.pm " <>
         "by the Hex.pm team. Other versions of the package are unaffected."
-    end
-  end
-
-  defmodule ReportState do
-    def state_explain("to_accept") do
-      """
-      The report has now state \"to_accept\".
-      This means that the vulnerability reported has to be reviewed by a moderator in order to be recognized or not as a real vulnerability.
-      Only the report author and moderators can see the report description.
-      """
-    end
-
-    def state_explain("accepted") do
-      """
-      The report has now state \"accepted\".
-      This means that the vulnerability reported has been recognized by a moderator as real.
-      A comments section has been enabled on the report for moderators, owners and the report author to discuss the vulnerability.
-      """
-    end
-
-    def state_explain("solved") do
-      """
-      The report has now state \"solved\".
-      This means that the vulnerability reported has been solved.
-      Now the report is public, so users other than the report author, moderators and the reported package owners can read the report description.
-      """
-    end
-
-    def state_explain("rejected") do
-      """
-      The report has now state \"rejected\".
-      This means that the vulnerability reported has not been recognized as such a vulnerability by a moderator.
-      The report will not be made public, so users other than the report author and moderators will not be able to read the report description or the comments section.
-      Moderators and the report author can still comment about the report on the report's comment section.
-      """
-    end
-
-    def state_explain("unresolved") do
-      """
-      The report has now state \"unresolved\".
-      This means the report has been on a revision state (\"accepted\") for too long.
-      Now the report is public, so users other than the report author, moderators and the reported package owners can read the report description.
-      """
     end
   end
 end

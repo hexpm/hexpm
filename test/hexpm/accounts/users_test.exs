@@ -6,6 +6,24 @@ defmodule Hexpm.Accounts.UsersTest do
   alias Hexpm.Accounts.{AuditLog, OptionalEmails, User, Users, UserProviders}
   alias Hexpm.Emails.OutboxEntry
 
+  describe "all_organizations/1" do
+    test "keeps the public organization first and sorts the rest by name" do
+      user =
+        build(:user,
+          organizations: [
+            build(:organization, name: "zulu_org"),
+            build(:organization, name: "alpha_org")
+          ]
+        )
+
+      assert Enum.map(Users.all_organizations(user), & &1.name) == [
+               "hexpm",
+               "alpha_org",
+               "zulu_org"
+             ]
+    end
+  end
+
   describe "add_from_oauth_with_provider/6" do
     test "creates user and provider atomically" do
       username = Hexpm.Fake.sequence(:username)
@@ -221,6 +239,70 @@ defmodule Hexpm.Accounts.UsersTest do
 
       assert {:error, changeset} = Users.add(params, audit: audit)
       assert %{username: "has already been taken"} = errors_on(changeset)
+    end
+  end
+
+  describe "get/2 and public_get/2" do
+    test "looks up by username" do
+      user = insert(:user)
+
+      assert Users.get(user.username).id == user.id
+      assert Users.public_get(user.username).id == user.id
+    end
+
+    test "username lookup is case-insensitive" do
+      user = insert(:user)
+
+      assert Users.get(String.upcase(user.username)).id == user.id
+      assert Users.public_get(String.upcase(user.username)).id == user.id
+    end
+
+    test "looks up by verified email" do
+      user = insert(:user, emails: [build(:email, verified: true, public: true)])
+      [email] = user.emails
+
+      assert Users.get(email.email).id == user.id
+      assert Users.public_get(email.email).id == user.id
+    end
+
+    test "email lookup is case-insensitive" do
+      user = insert(:user, emails: [build(:email, verified: true, public: true)])
+      [email] = user.emails
+
+      assert Users.get(String.upcase(email.email)).id == user.id
+      assert Users.public_get(String.upcase(email.email)).id == user.id
+    end
+
+    test "ignores unverified emails" do
+      user = insert(:user, emails: [build(:email, verified: false, public: true)])
+      [email] = user.emails
+
+      refute Users.get(email.email)
+      refute Users.public_get(email.email)
+    end
+
+    test "public_get/2 ignores non-public emails, get/2 does not" do
+      user = insert(:user, emails: [build(:email, verified: true, public: false)])
+      [email] = user.emails
+
+      assert Users.get(email.email).id == user.id
+      refute Users.public_get(email.email)
+    end
+
+    test "returns nil for an unknown username or email" do
+      refute Users.get("nosuchuser")
+      refute Users.public_get("nosuchuser")
+      refute Users.get("nosuch@example.com")
+      refute Users.public_get("nosuch@example.com")
+    end
+
+    test "preloads are applied for both lookup paths" do
+      user = insert(:user, emails: [build(:email, verified: true, public: true)])
+      [email] = user.emails
+
+      assert %Ecto.Association.NotLoaded{} = Users.get(user.username).emails
+      assert [_] = Users.get(user.username, [:emails]).emails
+      assert [_] = Users.get(email.email, [:emails]).emails
     end
   end
 

@@ -20,6 +20,53 @@ defmodule Hexpm.TestHelpers do
     end
   end
 
+  @doc """
+  Inserts a release whose tarball holds `files`, and puts it in the repo bucket.
+
+  `Hexpm.Factory.insert_with_tarball/1` hardcodes a generated `mix.exs`, which
+  is no use when the point of the test is what the files contain.
+  """
+  def insert_release_with_files(package, version, files, attrs \\ []) do
+    {extra_metadata, attrs} = Keyword.pop(attrs, :metadata, %{})
+
+    metadata =
+      Map.merge(
+        %{
+          "name" => package.name,
+          "version" => version,
+          "description" => "Fake package #{package.name}",
+          "licenses" => ["Apache-2.0"],
+          "files" => Enum.map(files, &elem(&1, 0)),
+          "requirements" => %{},
+          "app" => package.name,
+          "build_tools" => ["mix"]
+        },
+        extra_metadata
+      )
+
+    tar_files = Enum.map(files, fn {name, contents} -> {String.to_charlist(name), contents} end)
+
+    {:ok, %{tarball: tarball, inner_checksum: inner, outer_checksum: outer}} =
+      :hex_tarball.create(metadata, tar_files)
+
+    release =
+      Hexpm.Factory.insert(
+        :release,
+        [package: package, version: version, inner_checksum: inner, outer_checksum: outer] ++
+          attrs
+      )
+      |> Hexpm.Repo.preload(package: :repository)
+
+    Hexpm.Store.put(
+      :repo_bucket,
+      Hexpm.Repository.Assets.tarball_store_key(release),
+      tarball,
+      []
+    )
+
+    release
+  end
+
   def create_tar(meta, files \\ [{"mix.exs", "mix.exs"}]) do
     meta =
       meta
@@ -188,5 +235,41 @@ defmodule Hexpm.TestHelpers do
     organization
     |> Ecto.Changeset.change(billing_seats: seats)
     |> Hexpm.Repo.update!()
+  end
+
+  @doc """
+  Returns every SQL statement `fun` ran in the calling process.
+
+  The telemetry handler is global, so it compares against the caller to keep
+  queries from concurrently running async tests out of the result.
+  """
+  def capture_queries(fun) do
+    test = self()
+    handler = {__MODULE__, System.unique_integer()}
+
+    :telemetry.attach(
+      handler,
+      [:hexpm, :repo_base, :query],
+      fn _event, _measurements, %{query: query}, _config ->
+        if self() == test, do: send(test, {handler, query})
+      end,
+      nil
+    )
+
+    try do
+      fun.()
+    after
+      :telemetry.detach(handler)
+    end
+
+    collect_queries(handler, [])
+  end
+
+  defp collect_queries(handler, acc) do
+    receive do
+      {^handler, query} -> collect_queries(handler, [query | acc])
+    after
+      0 -> Enum.reverse(acc)
+    end
   end
 end

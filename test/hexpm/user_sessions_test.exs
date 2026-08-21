@@ -473,6 +473,73 @@ defmodule Hexpm.UserSessionsTest do
     end
   end
 
+  describe "session.create audit entries" do
+    test "browser sessions are audited" do
+      user = insert(:user)
+
+      {:ok, _session, _token} =
+        UserSessions.create_browser_session(user, name: "Browser", audit: audit_data(user))
+
+      assert [%AuditLog{action: "session.create"}] = AuditLogs.all_by(user)
+    end
+
+    test "OAuth sessions are audited" do
+      user = insert(:user)
+      client = insert(:oauth_client)
+
+      {:ok, _session} =
+        UserSessions.create_oauth_session(user, client.client_id,
+          name: "OAuth",
+          audit: audit_data(user)
+        )
+
+      assert [%AuditLog{action: "session.create"}] = AuditLogs.all_by(user)
+    end
+
+    test "API key sessions are not audited" do
+      user = insert(:user)
+      client = insert(:oauth_client)
+      expires_at = DateTime.add(DateTime.utc_now(), 30 * 60, :second)
+
+      {:ok, _session} =
+        UserSessions.create_api_key_session(user, nil, client.client_id, expires_at,
+          name: "API key",
+          audit: audit_data(user)
+        )
+
+      assert AuditLogs.all_by(user) == []
+    end
+
+    test "API key sessions built as a multi are not audited" do
+      user = insert(:user)
+      client = insert(:oauth_client)
+      expires_at = DateTime.add(DateTime.utc_now(), 30 * 60, :second)
+
+      {:ok, _changes} =
+        UserSessions.build_api_key_session_multi(user, nil, client.client_id, expires_at,
+          name: "API key",
+          audit: audit_data(user)
+        )
+        |> Hexpm.Repo.transaction()
+
+      assert AuditLogs.all_by(user) == []
+    end
+
+    test "organization API key sessions are not audited" do
+      organization = insert(:organization)
+      client = insert(:oauth_client)
+      expires_at = DateTime.add(DateTime.utc_now(), 30 * 60, :second)
+
+      {:ok, _session} =
+        UserSessions.create_api_key_session(nil, organization, client.client_id, expires_at,
+          name: "API key",
+          audit: audit_data(organization.user)
+        )
+
+      assert AuditLogs.all_by(organization) == []
+    end
+  end
+
   describe "session expiration" do
     test "browser sessions are created with 30-day expiration" do
       user = insert(:user)

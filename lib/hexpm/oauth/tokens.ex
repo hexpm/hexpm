@@ -260,8 +260,7 @@ defmodule Hexpm.OAuth.Tokens do
     # Build flat Multi (no nested transactions, last_use folded into INSERT)
     UserSessions.build_api_key_session_multi(user, organization, client_id, session_expires_at,
       name: Keyword.get(opts, :name),
-      usage_info: Keyword.get(opts, :usage_info),
-      audit: Keyword.fetch!(opts, :audit)
+      usage_info: Keyword.get(opts, :usage_info)
     )
     |> Ecto.Multi.run(:token, fn _repo, %{session: session} ->
       token_changeset

@@ -1,7 +1,7 @@
 defmodule Hexpm.Repository.Download do
   use Hexpm.Schema
 
-  @derive HexpmWeb.Stale
+  @derive {HexpmWeb.Stale, last_modified: nil}
 
   schema "downloads" do
     belongs_to :package, Package

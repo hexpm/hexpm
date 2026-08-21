@@ -211,14 +211,6 @@ defmodule HexpmWeb.API.OAuthController do
       # Determine user or organization from the API key
       user_or_org = auth_info.user || auth_info.organization
 
-      # Build audit data with the authenticated user/org
-      audit_data = %{
-        user: user_or_org,
-        auth_credential: auth_info.auth_credential,
-        user_agent: conn.assigns.user_agent,
-        remote_ip: HexpmWeb.RequestHelpers.parse_ip(conn.remote_ip)
-      }
-
       case Tokens.create_session_and_token_for_api_key(
              user_or_org,
              client.client_id,
@@ -227,8 +219,7 @@ defmodule HexpmWeb.API.OAuthController do
              api_key_secret,
              name: safe_param(params, "name"),
              usage_info: usage_info,
-             credential: auth_info.auth_credential,
-             audit: audit_data
+             credential: auth_info.auth_credential
            ) do
         {:ok, token} ->
           render(conn, :token, token: token)
@@ -311,10 +302,8 @@ defmodule HexpmWeb.API.OAuthController do
     end)
   end
 
-  defp error_description(:unauthorized_client), do: "Client not authorized for this grant type"
   defp error_description(:invalid_request), do: "Missing or invalid client_secret"
   defp error_description(:invalid_client), do: "Invalid API key"
-  defp error_description(_), do: "An error occurred"
 
   defp revoke_token(%{"token" => token_value, "client_id" => client_id})
        when is_binary(token_value) and is_binary(client_id) do

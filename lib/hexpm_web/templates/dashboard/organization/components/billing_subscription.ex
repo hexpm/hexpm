@@ -208,7 +208,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
               type="button"
               variant="danger-outline"
               size="sm"
-              disabled={!@subscription || @subscription["cancel_at_period_end"]}
+              disabled={@subscription["cancel_at_period_end"]}
               phx-click={show_modal("cancel-billing-modal")}
             >
               Cancel subscription

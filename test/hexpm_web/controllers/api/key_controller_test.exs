@@ -20,10 +20,6 @@ defmodule HexpmWeb.API.KeyControllerTest do
     }
   end
 
-  defp basic_auth(user) do
-    "Basic " <> Base.encode64("#{user.username}:password")
-  end
-
   describe "GET /api/keys" do
     test "all keys", c do
       Key.build(c.eric, %{name: "macbook"}) |> Repo.insert!()
@@ -34,7 +30,6 @@ defmodule HexpmWeb.API.KeyControllerTest do
         |> put_req_header("authorization", key.user_secret)
         |> get("/api/keys")
         |> json_response(200)
-        |> Enum.sort_by(fn %{"name" => name} -> name end)
 
       assert length(body) == 2
       [a, b] = body
@@ -129,7 +124,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
       conn =
         build_conn()
         |> put_req_header("content-type", "application/json")
-        |> put_req_header("authorization", basic_auth(c.eric))
+        |> put_req_header("authorization", key_for(c.eric))
         |> post("/api/keys", body)
 
       assert conn.status == 201
@@ -162,7 +157,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
 
       build_conn()
       |> put_req_header("content-type", "application/json")
-      |> put_req_header("authorization", basic_auth(c.eric))
+      |> put_req_header("authorization", key_for(c.eric))
       |> post("/api/keys", body)
       |> json_response(201)
 
@@ -198,7 +193,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
 
       build_conn()
       |> put_req_header("content-type", "application/json")
-      |> put_req_header("authorization", basic_auth(c.eric))
+      |> put_req_header("authorization", key_for(c.eric))
       |> post("/api/keys", body)
       |> json_response(422)
 
@@ -217,7 +212,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
       conn =
         build_conn()
         |> put_req_header("content-type", "application/json")
-        |> put_req_header("authorization", basic_auth(c.eric))
+        |> put_req_header("authorization", key_for(c.eric))
         |> post("/api/keys", body)
 
       assert conn.status == 201
@@ -239,7 +234,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
 
       build_conn()
       |> put_req_header("content-type", "application/json")
-      |> put_req_header("authorization", basic_auth(c.eric))
+      |> put_req_header("authorization", key_for(c.eric))
       |> post("/api/keys", body)
       |> json_response(422)
 
@@ -251,7 +246,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
 
       build_conn()
       |> put_req_header("content-type", "application/json")
-      |> put_req_header("authorization", basic_auth(c.eric))
+      |> put_req_header("authorization", key_for(c.eric))
       |> post("/api/keys", body)
       |> json_response(201)
 
@@ -267,7 +262,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
 
       build_conn()
       |> put_req_header("content-type", "application/json")
-      |> put_req_header("authorization", basic_auth(c.eric))
+      |> put_req_header("authorization", key_for(c.eric))
       |> post("/api/keys", body)
       |> json_response(422)
 

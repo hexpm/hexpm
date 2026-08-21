@@ -76,11 +76,11 @@ defmodule HexpmWeb.API.PackageControllerTest do
       end
 
       conn = get(build_conn(), "/api/packages?search=#{package1.name}")
-      [package] = json_response(conn, 200)
-      [release] = package["releases"]
+      results = json_response(conn, 200)
+      assert %{"releases" => [release]} = Enum.find(results, &(&1["name"] == package1.name))
       assert release["has_docs"]
       conn = get(build_conn(), "/api/packages?search=name%3A#{package1.name}*")
-      assert [_] = json_response(conn, 200)
+      assert Enum.find(json_response(conn, 200), &(&1["name"] == package1.name))
 
       conn = get(build_conn(), "/api/packages?page=1")
       assert [_, _, _] = json_response(conn, 200)
@@ -89,7 +89,7 @@ defmodule HexpmWeb.API.PackageControllerTest do
       assert [] = json_response(conn, 200)
 
       conn = get(build_conn(), "/api/packages?search=#{package4.name}")
-      [package] = json_response(conn, 200)
+      package = Enum.find(json_response(conn, 200), &(&1["name"] == package4.name))
 
       assert %{
                "message" => "not backward compatible",
@@ -105,6 +105,30 @@ defmodule HexpmWeb.API.PackageControllerTest do
       conn = get(build_conn(), "/api/packages?sort=inserted_at")
       result = json_response(conn, 200)
       assert hd(result)["name"] == package1.name
+    end
+
+    test "returns releases in descending SemVer order" do
+      package = insert(:package, name: "api_semver_order")
+
+      for version <- ["1.0.0-rc.10", "20.0.0-rc.1", "10.0.0", "1.0.0-rc.2", "2.0.0"] do
+        insert(:release, package: package, version: version)
+      end
+
+      [result] =
+        build_conn()
+        |> get("/api/packages?search=#{package.name}")
+        |> json_response(200)
+
+      assert Enum.map(result["releases"], & &1["version"]) ==
+               ~w(20.0.0-rc.1 10.0.0 2.0.0 1.0.0-rc.10 1.0.0-rc.2)
+
+      result =
+        build_conn()
+        |> get("/api/packages/#{package.name}")
+        |> json_response(200)
+
+      assert result["latest_version"] == "20.0.0-rc.1"
+      assert result["latest_stable_version"] == "10.0.0"
     end
 
     test "per page" do

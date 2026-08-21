@@ -181,6 +181,23 @@ defmodule Hexpm.Emails do
     |> render_body(:typosquat_candidates)
   end
 
+  def package_report(package, package_url, report, reporter) do
+    reporter_recipient = {reporter.name, reporter.email}
+
+    base_email()
+    |> email_to(Application.fetch_env!(:hexpm, :support_email))
+    |> Swoosh.Email.cc(reporter_recipient)
+    |> Swoosh.Email.reply_to(reporter_recipient)
+    |> subject("Hex.pm package report: #{report.summary}")
+    |> assign(:package, package)
+    |> assign(:package_url, package_url)
+    |> assign(:reason, Hexpm.PackageReports.Report.reason_label(report.reason))
+    |> assign(:summary, report.summary)
+    |> assign(:description, report.description)
+    |> assign(:reporter, reporter)
+    |> render_body(:package_report)
+  end
+
   def organization_invite(organization, user) do
     base_email()
     |> email_to(user)
@@ -284,35 +301,14 @@ defmodule Hexpm.Emails do
     |> render_body(:package_published)
   end
 
-  def report_submitted(receiver, author_name, package_name, report_id, inserted_at) do
+  def secrets_detected(recipients, name, version, findings) do
     base_email()
-    |> email_to(receiver)
-    |> subject("Hex.pm - Package report on #{package_name} published ")
-    |> assign(:package_name, package_name)
-    |> assign(:author_name, author_name)
-    |> assign(:report_id, report_id)
-    |> assign(:inserted_at, inserted_at)
-    |> render_body(:report_submitted)
-  end
-
-  def report_commented(receiver, author_name, report_id, inserted_at) do
-    base_email()
-    |> email_to(receiver)
-    |> subject("Hex.pm - New comment on package report ##{report_id}")
-    |> assign(:author_name, author_name)
-    |> assign(:report_id, report_id)
-    |> assign(:inserted_at, inserted_at)
-    |> render_body(:report_commented)
-  end
-
-  def report_state_changed(receiver, report_id, new_state, updated_at) do
-    base_email()
-    |> email_to(receiver)
-    |> subject("Hex.pm - Package report ##{report_id} has been reviewed by a moderator")
-    |> assign(:report_id, report_id)
-    |> assign(:new_state, new_state)
-    |> assign(:updated_at, updated_at)
-    |> render_body(:report_state_changed)
+    |> email_to(recipients)
+    |> subject("Hex.pm - Possible credentials found in #{name} v#{version}")
+    |> assign(:package, name)
+    |> assign(:version, version)
+    |> assign(:findings, findings)
+    |> render_body(:secrets_detected)
   end
 
   def announcement(receiver, subject, body) do

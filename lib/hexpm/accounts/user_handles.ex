@@ -1,7 +1,7 @@
 defmodule Hexpm.Accounts.UserHandles do
   use Hexpm.Schema
 
-  @derive HexpmWeb.Stale
+  @derive {HexpmWeb.Stale, last_modified: nil}
 
   embedded_schema do
     field :twitter, :string
@@ -64,6 +64,7 @@ defmodule Hexpm.Accounts.UserHandles do
     unuri(handle, "x.com", "/")
   end
 
+  def handle(:bluesky, "did:" <> _ = handle), do: handle
   def handle(:bluesky, handle), do: unuri(handle, "bsky.app", "/profile/")
   def handle(:github, handle), do: unuri(handle, "github.com", "/")
   def handle(:elixirforum, handle), do: unuri(handle, "elixirforum.com", "/u/")

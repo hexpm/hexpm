@@ -7,6 +7,7 @@ defmodule HexpmWeb.AuthHelpers do
   alias Hexpm.Permissions
   alias Hexpm.Repository.{Package, Packages, PackageOwner, Repository}
   alias Hexpm.OAuth.Token
+  alias HexpmWeb.BasicAuth
   alias HexpmWeb.Plugs.Attack
 
   def authorize(conn, opts) do
@@ -164,6 +165,14 @@ defmodule HexpmWeb.AuthHelpers do
       {:error, :password} ->
         unauthorized(conn, "invalid username and password combination")
 
+      {:error, :basic_auth_disabled} ->
+        conn
+        |> put_resp_header("www-authenticate", ~s(Bearer realm="hex"))
+        |> render_error(401,
+          message:
+            "Basic authentication is disabled. Update your client to use OAuth or an API key."
+        )
+
       {:error, :key} ->
         unauthorized(conn, "invalid API key")
 
@@ -209,9 +218,17 @@ defmodule HexpmWeb.AuthHelpers do
   end
 
   def authenticate(conn) do
+    authenticate_at(conn, DateTime.utc_now())
+  end
+
+  def authenticate_at(conn, now) do
     case get_req_header(conn, "authorization") do
       ["Basic " <> credentials] ->
-        basic_auth(credentials)
+        if BasicAuth.disabled?(now) do
+          {:error, :basic_auth_disabled}
+        else
+          basic_auth(credentials)
+        end
 
       ["Bearer " <> token] ->
         oauth_token_auth(token, conn)

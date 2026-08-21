@@ -86,7 +86,7 @@ defmodule Hexpm.Preview do
     Logger.info("UPLOAD #{key}")
 
     if release_exists?(repository, package, version) do
-      {dir, file_paths, checksum} = download_and_unpack!(repository, package, version)
+      {dir, file_paths, checksum, _metadata} = download_and_unpack!(repository, package, version)
       Bucket.put_files(repository, package, version, dir, file_paths)
 
       reconcile_uploaded_release(repository, package, version, checksum)
@@ -151,19 +151,25 @@ defmodule Hexpm.Preview do
     end
   end
 
-  defp download_and_unpack!(repository, package, version) do
+  @doc false
+  # Public so `Hexpm.SecretScan` reuses it and its worker sees the same file
+  # list the browser does. Both download from the repo bucket and unpack
+  # independently. Returns the hex metadata too, which the scanner reads for the
+  # package's ignore globs.
+  def download_and_unpack!(repository, package, version) do
     case Bucket.get_tarball_to_file(repository, package, version) do
       {:ok, tarball_path} ->
         output_dir = Hexpm.TmpDir.tmp_dir("preview-package")
 
         case :hex_tarball.unpack({:file, to_charlist(tarball_path)}, to_charlist(output_dir)) do
-          {:ok, _metadata} ->
+          {:ok, %{metadata: metadata}} ->
             Hexpm.TmpDir.ensure_accessible(output_dir)
 
             {
               output_dir,
               file_paths(output_dir, repository, package, version),
-              Assets.file_checksum(tarball_path)
+              Assets.file_checksum(tarball_path),
+              metadata
             }
 
           {:error, reason} ->
@@ -177,12 +183,8 @@ defmodule Hexpm.Preview do
 
   defp file_paths(output_dir, repository, package, version) do
     output_dir
-    |> Path.join("**")
-    |> Path.wildcard(match_dot: true)
-    |> Enum.filter(&File.regular?(&1, raw: true))
-    |> Enum.flat_map(fn full_path ->
-      relative = Path.relative_to(full_path, output_dir)
-
+    |> Hexpm.Utils.tree_regular_files()
+    |> Enum.flat_map(fn relative ->
       if relative == "hex_metadata.config" do
         []
       else
@@ -259,7 +261,7 @@ defmodule Hexpm.Preview do
 
       latest ->
         latest = to_string(latest)
-        {dir, file_paths, checksum} = download_and_unpack!(repository, package, latest)
+        {dir, file_paths, checksum, _metadata} = download_and_unpack!(repository, package, latest)
         Bucket.put_files(repository, package, latest, dir, file_paths)
 
         cond do
@@ -289,7 +291,8 @@ defmodule Hexpm.Preview do
   end
 
   defp purge(repository, package, version) do
-    Hexpm.CDN.purge_key(:fastly_hexrepo, Bucket.surrogate_keys(repository, package, version))
+    Hexpm.CDN.purge(:fastly_hexrepo, Bucket.surrogate_keys(repository, package, version))
+    :ok
   end
 
   defp release_exists?(repository, package, version) do

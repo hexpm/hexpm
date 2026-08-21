@@ -7,14 +7,13 @@ defmodule HexpmWeb.PackageController do
   @packages_per_page 30
   @versions_per_page 100
   @activity_per_page 100
-  @audit_logs_preview_count 10
 
   def show(conn, params) do
     # TODO: Show flash if private package and organization does not have active billing
 
     params = fixup_params(params)
 
-    access_package(conn, params, fn package, repositories ->
+    access_package(conn, params, fn package, _repositories ->
       releases = Releases.all(package)
 
       {release, type} =
@@ -25,7 +24,7 @@ defmodule HexpmWeb.PackageController do
         end
 
       if release do
-        package(conn, repositories, package, releases, release, type)
+        package(conn, package, releases, release, type)
       else
         not_found(conn)
       end
@@ -101,7 +100,8 @@ defmodule HexpmWeb.PackageController do
         ] ++
           PackageLayoutAssigns.for_package(conn, package,
             releases: releases,
-            current_release: current_release
+            current_release: current_release,
+            dependants_count: dependants_count
           )
       )
     end)
@@ -234,7 +234,7 @@ defmodule HexpmWeb.PackageController do
     Enum.find(releases, &(to_string(&1.version) == version))
   end
 
-  defp package(conn, repositories, package, releases, release, type) do
+  defp package(conn, package, releases, release, type) do
     release =
       Releases.preload(release, [:requirements, :downloads, :publisher, :security_advisories])
 
@@ -243,11 +243,6 @@ defmodule HexpmWeb.PackageController do
         :package -> nil
         :release -> release
       end
-
-    dependants =
-      Packages.dependants(repositories, package, 1, 20, :recent_downloads, [:name, :repository_id])
-
-    audit_logs = AuditLogs.all_by(package, 1, @audit_logs_preview_count)
 
     render(
       conn,
@@ -259,8 +254,6 @@ defmodule HexpmWeb.PackageController do
         canonical_url: ~p"/packages/#{package}",
         releases: releases,
         version_pinned?: type == :release,
-        dependants: dependants,
-        audit_logs: audit_logs,
         type: type
       ] ++
         PackageLayoutAssigns.for_package(conn, package,

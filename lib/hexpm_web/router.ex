@@ -222,9 +222,11 @@ defmodule HexpmWeb.Router do
     get "/policies/dispute", PolicyController, :dispute
 
     live_session :packages,
-      on_mount: {HexpmWeb.Live.InitAssigns, :default},
+      on_mount: [{HexpmWeb.Live.InitAssigns, :default}, HexpmWeb.Live.StaticReload],
       session: {HexpmWeb.Live.InitAssigns, :session, []} do
       live "/packages", PackageLive.Index, :index
+      live "/packages/:name/report", PackageReportLive, :new
+      live "/packages/:repository/:name/report", PackageReportLive, :new
       live "/diff/:package/:versions", DiffLive, :show
       live "/diff/:repository/:package/:versions", DiffLive, :show
     end
@@ -236,7 +238,8 @@ defmodule HexpmWeb.Router do
     get "/preview/:package/:version", PreviewRedirectController, :version
     get "/preview/:package/:version/show/*filename", PreviewRedirectController, :version_file
 
-    live_session :preview, on_mount: {HexpmWeb.Live.InitAssigns, :default} do
+    live_session :preview,
+      on_mount: [{HexpmWeb.Live.InitAssigns, :default}, HexpmWeb.Live.StaticReload] do
       live "/packages/:package/:version/files", PreviewLive, :files
       live "/packages/:package/:version/files/*filename", PreviewLive, :files
       live "/packages/:repository/:package/:version/files", PreviewLive, :files
@@ -276,19 +279,6 @@ defmodule HexpmWeb.Router do
     get "/blog/:slug", BlogController, :show
 
     get "/l/:short_code", ShortURLController, :show
-
-    if Application.compile_env!(:hexpm, [:features, :package_reports]) do
-      get "/reports", PackageReportController, :index
-      post "/reports", PackageReportController, :create
-      get "/reports/new", PackageReportController, :new
-
-      get "/reports/:id", PackageReportController, :show
-      post "/reports/:id/accept", PackageReportController, :accept
-      post "/reports/:id/reject", PackageReportController, :reject
-      post "/reports/:id/solve", PackageReportController, :solve
-      post "/reports/:id/unresolve", PackageReportController, :unresolve
-      post "/reports/:id/comment", PackageReportController, :comment
-    end
   end
 
   scope "/dashboard", HexpmWeb.Dashboard do

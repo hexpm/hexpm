@@ -1,4 +1,5 @@
 defmodule Hexpm.Billing.Hexpm do
+  require Logger
   alias Hexpm.HTTP
 
   @behaviour Hexpm.Billing.Behaviour
@@ -9,6 +10,7 @@ defmodule Hexpm.Billing.Hexpm do
     case post("/api/customers/#{organization}/payment_source", data) do
       {:ok, 204, _headers, body} -> {:ok, body}
       {:ok, 422, _headers, body} -> {:error, body}
+      other -> unexpected_response("checkout", organization, other)
     end
   end
 
@@ -42,6 +44,7 @@ defmodule Hexpm.Billing.Hexpm do
     case post("/api/customers", params) do
       {:ok, 200, _headers, body} -> {:ok, body}
       {:ok, 422, _headers, body} -> {:error, body}
+      other -> unexpected_response("create", params["token"], other)
     end
   end
 
@@ -51,6 +54,7 @@ defmodule Hexpm.Billing.Hexpm do
       {:ok, 402, _headers, body} -> {:requires_action, body}
       {:ok, 404, _headers, _body} -> {:ok, nil}
       {:ok, 422, _headers, body} -> {:error, body}
+      other -> unexpected_response("update", organization, other)
     end
   end
 
@@ -60,6 +64,7 @@ defmodule Hexpm.Billing.Hexpm do
          }) do
       {:ok, 204, _headers, _body} -> :ok
       {:ok, status, _headers, body} when status in 400..499 -> {:error, body}
+      other -> unexpected_response("void_invoice", organization, other)
     end
   end
 
@@ -67,6 +72,7 @@ defmodule Hexpm.Billing.Hexpm do
     case post("/api/customers/#{organization}/plan", params) do
       {:ok, 204, _headers, _body} -> :ok
       {:ok, 422, _headers, body} -> {:error, body}
+      other -> unexpected_response("change_plan", organization, other)
     end
   end
 
@@ -89,6 +95,7 @@ defmodule Hexpm.Billing.Hexpm do
     case result do
       {:ok, 204, _headers, _body} -> :ok
       {:ok, 422, _headers, body} -> {:error, body}
+      other -> unexpected_response("pay_invoice", id, other)
     end
   end
 
@@ -98,6 +105,21 @@ defmodule Hexpm.Billing.Hexpm do
       |> Hexpm.HTTP.retry("billing")
 
     body
+  end
+
+  # The billing service reports the underlying failure to Sentry, hexpm only
+  # needs enough to tie a customer report to a point in time
+  defp unexpected_response(operation, context, response) do
+    Logger.error([
+      "billing ",
+      operation,
+      " failed for ",
+      to_string(context),
+      ": ",
+      inspect(response)
+    ])
+
+    {:error, %{}}
   end
 
   defp auth() do

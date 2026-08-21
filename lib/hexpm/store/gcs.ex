@@ -1,7 +1,5 @@
 defmodule Hexpm.Store.GCS do
   import SweetXml, only: [sigil_x: 2]
-  require Logger
-
   @behaviour Hexpm.Store.Behaviour
 
   @default_gs_xml_url "https://storage.googleapis.com"
@@ -61,16 +59,16 @@ defmodule Hexpm.Store.GCS do
     url = url(bucket, key)
     headers = filter_nil_values(headers)
 
-    {:ok, 200, _headers, _body} = retry(url, fn -> fun.(url, headers) end)
+    {:ok, 200, response_headers, _body} = retry(url, fn -> fun.(url, headers) end)
 
-    :ok
+    {:ok, %{etag: header!(response_headers, "etag")}}
   end
 
   def delete_many(bucket, keys) do
     keys
     |> Task.async_stream(
       &delete(bucket, &1),
-      max_concurrency: 10,
+      max_concurrency: 32,
       timeout: 60_000
     )
     |> Stream.each(fn
@@ -122,10 +120,12 @@ defmodule Hexpm.Store.GCS do
     Enum.reject(keyword, fn {_key, value} -> is_nil(value) end)
   end
 
-  defp content_length!(headers) do
-    case Enum.find(headers, fn {key, _value} -> String.downcase(key) == "content-length" end) do
-      {_key, value} -> String.to_integer(value)
-      nil -> raise "GCS response is missing content-length"
+  defp content_length!(headers), do: headers |> header!("content-length") |> String.to_integer()
+
+  defp header!(headers, name) do
+    case Enum.find(headers, fn {key, _value} -> String.downcase(key) == name end) do
+      {_key, value} -> value
+      nil -> raise "GCS response is missing #{name}"
     end
   end
 

@@ -47,6 +47,7 @@ export const OverrideList = {
         .forEach((input) => {
           clearTimeout(input.suggestionTimer);
           input.setAttribute("aria-expanded", "false");
+          input.removeAttribute("aria-activedescendant");
           input.dataset.activeSuggestion = "-1";
           input.dataset.suggestionToken = "";
         });
@@ -102,6 +103,7 @@ export const OverrideList = {
 
             clearTimeout(input.suggestionTimer);
             input.setAttribute("aria-expanded", "false");
+            input.removeAttribute("aria-activedescendant");
             input.dataset.activeSuggestion = "-1";
             input.dataset.suggestionToken = "";
           });
@@ -124,12 +126,16 @@ export const OverrideList = {
       menu.replaceChildren();
       input.dataset.activeSuggestion = "-1";
       input.setAttribute("aria-expanded", items.length > 0 ? "true" : "false");
+      input.removeAttribute("aria-activedescendant");
       menu.hidden = items.length === 0;
 
       items.slice(0, suggestionLimit).forEach((item, index) => {
         const value = kind === "package" ? item.name : item.version;
         const button = document.createElement("button");
         button.type = "button";
+        button.id = `${menu.id}-option-${index}`;
+        button.setAttribute("role", "option");
+        button.setAttribute("aria-selected", "false");
         button.dataset.suggestionKind = kind;
         button.dataset.suggestionValue = value;
         button.dataset.suggestionIndex = String(index);
@@ -212,8 +218,11 @@ export const OverrideList = {
       const index = (nextIndex + buttons.length) % buttons.length;
       input.dataset.activeSuggestion = String(index);
       buttons.forEach((button, buttonIndex) => {
-        button.dataset.active = buttonIndex === index ? "true" : "false";
+        const active = buttonIndex === index;
+        button.dataset.active = active ? "true" : "false";
+        button.setAttribute("aria-selected", active ? "true" : "false");
       });
+      input.setAttribute("aria-activedescendant", buttons[index].id);
       buttons[index].scrollIntoView({ block: "nearest" });
     };
 
@@ -287,9 +296,22 @@ export const OverrideList = {
       const remove = event.target.closest("[data-override-remove]");
       if (!remove) return;
       const row = remove.closest("[data-override-row]");
-      if (row) row.remove();
+
+      // The button being clicked goes away with the row, so hand focus to the
+      // next remove button, or to the add button once the list is empty.
+      const nextFocus =
+        row?.nextElementSibling?.querySelector("[data-override-remove]") ||
+        row?.previousElementSibling?.querySelector("[data-override-remove]") ||
+        addButton;
+
+      if (row) {
+        closeSuggestions(row);
+        row.remove();
+      }
+
       refreshEmpty();
       notifyFormChanged();
+      nextFocus?.focus();
     };
 
     const onInput = (event) => {

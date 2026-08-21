@@ -65,18 +65,23 @@ defmodule Hexpm.Repository.Releases do
 
   def latest_version(repository, package, opts)
       when is_binary(repository) and is_binary(package) do
-    from(r in Release,
-      join: p in assoc(r, :package),
-      join: repository in assoc(p, :repository),
+    latest_release =
+      from(r in Release,
+        where: r.package_id == parent_as(:package).id,
+        select: struct(r, [:version, :has_docs])
+      )
+      |> Release.latest_query(opts)
+
+    from(p in Package,
+      as: :package,
+      join: repository in Repository,
+      on: repository.id == p.repository_id,
       where: repository.name == ^repository and p.name == ^package,
-      select: struct(r, [:version, :has_docs])
+      inner_lateral_join: release in subquery(latest_release),
+      on: true,
+      select: release.version
     )
-    |> Repo.all()
-    |> Release.latest_version(opts)
-    |> case do
-      nil -> nil
-      release -> release.version
-    end
+    |> Repo.one()
   end
 
   def package_versions(packages) do
@@ -154,8 +159,20 @@ defmodule Hexpm.Repository.Releases do
     |> Multi.run(:release_count, &release_count/2)
     |> Multi.run(:package, &maybe_delete_package/2)
     |> Multi.run(:package_dependants, &recompute_package_dependants/2)
+    |> Multi.run(:registry, &revert_registry/2)
+    |> Multi.run(:registry_index, fn _repo, %{release: release} ->
+      RegistryWorker.enqueue_repository(release.package.repository)
+    end)
     |> Repo.transaction(timeout: @publish_timeout)
     |> revert_result()
+  end
+
+  defp revert_registry(_repo, %{release_count: 0, package: package}) do
+    RegistryWorker.enqueue_package_delete(package)
+  end
+
+  defp revert_registry(_repo, %{package: package}) do
+    RegistryWorker.enqueue_package(package)
   end
 
   defp recompute_package_dependants(_repo, %{release_count: 0}), do: {:ok, :skipped}
@@ -187,6 +204,9 @@ defmodule Hexpm.Repository.Releases do
     |> Multi.update(:package, Ecto.Changeset.change(package, []), force: true)
     |> Multi.update(:release, Release.retire(release, params))
     |> audit_retire(audit_data, package)
+    |> Multi.run(:registry, fn _repo, %{package: package} ->
+      RegistryWorker.enqueue_package(package)
+    end)
     |> Repo.transaction()
     |> retire_result()
   end
@@ -225,6 +245,9 @@ defmodule Hexpm.Repository.Releases do
         end
       end)
     end)
+    |> Multi.run(:registry, fn _repo, %{package: package} ->
+      RegistryWorker.enqueue_package(package)
+    end)
     |> Repo.transaction(timeout: @publish_timeout)
     |> retire_result()
   end
@@ -235,15 +258,21 @@ defmodule Hexpm.Repository.Releases do
     |> Multi.update(:package, Ecto.Changeset.change(package, []), force: true)
     |> Multi.update(:release, Release.unretire(release))
     |> audit_unretire(audit_data, package)
+    |> Multi.run(:registry, fn _repo, %{package: package} ->
+      RegistryWorker.enqueue_package(package)
+    end)
     |> Repo.transaction()
     |> retire_result()
   end
 
+  # The registry build is enqueued after the tarball is in the store, so the
+  # registry never names a release whose tarball is not there yet.
   defp publish_result({:ok, %{package: package, release: release} = result}, user, body) do
     release = %{release | package: package}
 
     Assets.push_release(release, body)
-    update_package_in_registry(package)
+    {:ok, _} = RegistryWorker.enqueue_package(package)
+    {:ok, _} = RegistryWorker.enqueue_repository(result.repository)
     email_package_owners(package, release, user)
     :telemetry.execute([:hexpm, :repository, :publish], %{count: 1}, %{})
 
@@ -252,10 +281,7 @@ defmodule Hexpm.Repository.Releases do
 
   defp publish_result(result, _user, _body), do: result
 
-  defp retire_result({:ok, %{package: package}}) do
-    RegistryBuilder.package(package)
-    :ok
-  end
+  defp retire_result({:ok, _changes}), do: :ok
 
   defp retire_result(result), do: result
 
@@ -269,14 +295,7 @@ defmodule Hexpm.Repository.Releases do
     end
   end
 
-  defp revert_result({:ok, %{package: package, release: release, release_count: 0}}) do
-    remove_package_from_registry(package)
-    Assets.revert_release(release)
-    :ok
-  end
-
-  defp revert_result({:ok, %{package: package, release: release, release_count: _}}) do
-    update_package_in_registry(package)
+  defp revert_result({:ok, %{release: release}}) do
     Assets.revert_release(release)
     :ok
   end
@@ -367,38 +386,6 @@ defmodule Hexpm.Repository.Releases do
       owners
       |> Emails.package_published(publisher, package.name, release.version)
       |> Mailer.deliver!()
-    end
-  end
-
-  if Mix.env() == :test do
-    defp update_package_in_registry(package) do
-      RegistryBuilder.package(package)
-      RegistryBuilder.repository(package.repository)
-    end
-
-    defp remove_package_from_registry(package) do
-      RegistryBuilder.package_delete(package)
-      RegistryBuilder.repository(package.repository)
-    end
-  else
-    defp update_package_in_registry(package) do
-      RegistryBuilder.package(package)
-      metadata = Logger.metadata()
-
-      Task.Supervisor.start_child(Hexpm.Tasks, fn ->
-        Logger.metadata(metadata)
-        RegistryBuilder.repository(package.repository)
-      end)
-    end
-
-    defp remove_package_from_registry(package) do
-      RegistryBuilder.package_delete(package)
-      metadata = Logger.metadata()
-
-      Task.Supervisor.start_child(Hexpm.Tasks, fn ->
-        Logger.metadata(metadata)
-        RegistryBuilder.repository(package.repository)
-      end)
     end
   end
 

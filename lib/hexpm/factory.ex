@@ -111,14 +111,6 @@ defmodule Hexpm.Factory do
     %Hexpm.Repository.PackageOwner{level: "full"}
   end
 
-  def package_report_factory() do
-    %Hexpm.Repository.PackageReport{}
-  end
-
-  def package_report_release_factory() do
-    %Hexpm.Repository.PackageReportRelease{}
-  end
-
   def organization_user_factory() do
     %Hexpm.Accounts.OrganizationUser{
       role: "read"

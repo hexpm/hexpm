@@ -17,6 +17,14 @@ config :hexpm,
   private_docs_url: "http://localhost:4043",
   cdn_url: "http://localhost:4043"
 
+config :hexpm, HexpmWeb.BasicAuth, schedule_enabled: false
+
+# The hex client tests publish and resolve straight after, so background work
+# runs in the publishing request instead of a queue.
+config :hexpm, Oban, testing: :inline
+
+config :hexpm, purge_wait: 0, purge_verify_grace: 0
+
 config :hexpm, HexpmWeb.Endpoint,
   http: [port: 4043],
   debug_errors: false,

@@ -5,7 +5,17 @@ defmodule Hexpm.Accounts.Organizations do
   alias Hexpm.Repository.OrgNamesPublisher
 
   def all_by_user(user, preload \\ []) do
-    Repo.all(assoc(user, :organizations))
+    from(organization in assoc(user, :organizations), order_by: organization.name)
+    |> Repo.all()
+    |> Repo.preload(preload)
+  end
+
+  def all_members(organization, preload \\ []) do
+    from(organization_user in assoc(organization, :organization_users),
+      join: user in assoc(organization_user, :user),
+      order_by: user.username
+    )
+    |> Repo.all()
     |> Repo.preload(preload)
   end
 

@@ -34,6 +34,7 @@ defmodule Hexpm.Repo do
   defdelegate preload(structs_or_struct_or_nil, preloads, opts \\ []), to: RepoBase
 
   defwrite(advisory_xact_lock(key, opts \\ []))
+  defwrite(advisory_xact_lock_shared(key, opts \\ []))
   defwrite(try_advisory_xact_lock?(key, opts \\ []))
   defwrite(try_advisory_lock?(key, opts \\ []))
   defwrite(advisory_unlock(key, opts \\ []))
@@ -75,8 +76,13 @@ defmodule Hexpm.RepoBase do
     vulnerability_updater: 2,
     policy: 3,
     diff: 4,
-    email_outbox: 5
+    email_outbox: 5,
+    migrate: 6,
+    secret_scan: 7,
+    registry_object: 8
   }
+
+  def advisory_lock_key(key), do: Map.fetch!(@advisory_locks, key)
 
   def init(_reason, opts) do
     if url = System.get_env("HEXPM_DATABASE_URL") do
@@ -110,14 +116,27 @@ defmodule Hexpm.RepoBase do
   end
 
   def advisory_xact_lock(key, opts \\ []) do
+    xact_lock("pg_advisory_xact_lock", key, opts)
+  end
+
+  @doc """
+  Takes the shared form of the transaction lock: shared holders do not block
+  each other, an exclusive holder (`advisory_xact_lock/2` on the same key and
+  sub key) blocks them all and waits for them all.
+  """
+  def advisory_xact_lock_shared(key, opts \\ []) do
+    xact_lock("pg_advisory_xact_lock_shared", key, opts)
+  end
+
+  defp xact_lock(function, key, opts) do
     unless skip_advisory_locks?() do
       {sub_key, opts} = Keyword.pop(opts, :sub_key)
 
       {sql, params} =
         if sub_key do
-          {"SELECT pg_advisory_xact_lock($1, $2)", [Map.fetch!(@advisory_locks, key), sub_key]}
+          {"SELECT #{function}($1, $2)", [Map.fetch!(@advisory_locks, key), sub_key]}
         else
-          {"SELECT pg_advisory_xact_lock($1)", [Map.fetch!(@advisory_locks, key)]}
+          {"SELECT #{function}($1)", [Map.fetch!(@advisory_locks, key)]}
         end
 
       %Postgrex.Result{} = query!(sql, params, opts)

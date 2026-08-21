@@ -38,12 +38,9 @@ defmodule Hexpm.Shared do
         Repository.PackageDownload,
         Repository.PackageMetadata,
         Repository.PackageOwner,
-        Repository.PackageReport,
-        Repository.PackageReportComment,
-        Repository.PackageReportRelease,
-        Repository.PackageReports,
         Repository.Packages,
         Repository.RegistryBuilder,
+        Repository.RegistryWorker,
         Repository.Release,
         Repository.ReleaseDownload,
         Repository.ReleaseMetadata,
@@ -52,7 +49,9 @@ defmodule Hexpm.Shared do
         Repository.Repositories,
         Repository.Repository,
         Repository.Requirement,
-        Repository.Sitemaps
+        Repository.Sitemaps,
+        SecretScan.Finding,
+        SecretScan.Scan
       }
     end
   end

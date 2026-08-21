@@ -121,6 +121,8 @@ defmodule Hexpm.ReleaseTasks.Stats do
           end,
           timeout: 600_000
         )
+
+        vacuum_downloads()
       end
 
       num
@@ -232,6 +234,24 @@ defmodule Hexpm.ReleaseTasks.Stats do
 
   defp copy(nil), do: nil
   defp copy(binary), do: :binary.copy(binary)
+
+  # Runs outside the transaction above, which VACUUM cannot run inside. This job
+  # is the only writer, so nothing else sets the visibility map bits the day's
+  # new pages need, and nothing else refreshes the day histogram that every read
+  # of this table filters on. Autovacuum does not reach it either: its insert
+  # threshold scales with the table, and this one is 43M rows and growing.
+  @doc false
+  def vacuum_downloads() do
+    if Application.get_env(:hexpm, :skip_maintenance_vacuum, false) do
+      :ok
+    else
+      time_log("vacuum downloads", fn ->
+        Repo.query!("VACUUM (ANALYZE) downloads", [], timeout: 600_000)
+      end)
+
+      :ok
+    end
+  end
 
   defp time_log(action, fun) do
     {time, result} = :timer.tc(fun)

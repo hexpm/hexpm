@@ -1,7 +1,8 @@
 defmodule Hexpm.Repository.PolicyBuilder do
   @moduledoc """
-  Encodes, signs, uploads, and Fastly-purges an `Policy`
-  resource. Synchronous in-request (mirrors `RegistryBuilder.repository/1`).
+  Encodes, signs, uploads, and Fastly-purges a `Policy` resource. The
+  upload is synchronous in-request; the purge is a `Hexpm.CDN.PurgeWorker`
+  job enqueued in the same transaction.
   """
 
   alias Hexpm.Repository.{Policy, Storage}
@@ -20,8 +21,8 @@ defmodule Hexpm.Repository.PolicyBuilder do
   end
 
   @doc """
-  Builds and uploads the policy to the repo bucket, then purges the
-  Fastly surrogate key. Preloads `:organization` if needed.
+  Builds and uploads the policy to the repo bucket, then enqueues the
+  purge of its Fastly surrogate key. Preloads `:organization` if needed.
 
   Concurrent rebuilds of the same policy are serialized via a Postgres
   advisory transaction lock scoped to the policy id, so two dashboard edits
@@ -37,8 +38,8 @@ defmodule Hexpm.Repository.PolicyBuilder do
         Hexpm.Repo.advisory_xact_lock(:policy, sub_key: policy.id)
         contents = build(policy)
         cdn_key = cdn_key(policy)
-        Storage.put_object(store_key(policy), contents, [cdn_key], cache_control(policy))
-        Storage.purge([cdn_key])
+        etag = Storage.put_object(store_key(policy), contents, [cdn_key], cache_control(policy))
+        Hexpm.CDN.purge(:fastly_hexrepo, cdn_key, verify: verify_targets(policy, etag))
         :ok
       end)
 
@@ -46,15 +47,29 @@ defmodule Hexpm.Repository.PolicyBuilder do
   end
 
   @doc """
-  Deletes the bucket object and purges its CDN key. Used when a policy
-  is deleted from the dashboard.
+  Deletes the bucket object and enqueues the purge of its CDN key. Used
+  when a policy is deleted from the dashboard.
   """
   @spec delete(Policy.t()) :: :ok
   def delete(%Policy{} = policy) do
     policy = Hexpm.Repo.preload(policy, :organization)
     Storage.delete_object(store_key(policy))
-    Storage.purge([cdn_key(policy)])
+    Hexpm.CDN.purge(:fastly_hexrepo, cdn_key(policy), verify: verify_targets(policy, nil))
     :ok
+  end
+
+  defp verify_targets(%{visibility: "public"} = policy, etag) do
+    [%{url: Hexpm.Utils.cdn_url(store_key(policy)), etag: etag}]
+  end
+
+  defp verify_targets(policy, etag) do
+    [
+      %{
+        url: Hexpm.Utils.cdn_url(store_key(policy)),
+        etag: etag,
+        repository: policy.organization.name
+      }
+    ]
   end
 
   defp to_protobuf_map(policy) do

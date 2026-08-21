@@ -57,8 +57,11 @@ defmodule Hexpm.Repository.Policies do
   defp put_repositories(params, org_name, existing) do
     source =
       case params["repositories"] do
-        nil -> Enum.map(existing, &tab_to_params/1)
-        repositories -> submitted_repositories(repositories)
+        nil ->
+          Enum.map(existing, &tab_to_params/1)
+
+        repositories ->
+          repositories |> submitted_repositories() |> Enum.map(&put_overrides/1)
       end
 
     by_repository = Map.new(source, &{&1["repository"], &1})
@@ -71,7 +74,24 @@ defmodule Hexpm.Repository.Policies do
     Map.put(params, "repositories", repositories)
   end
 
-  defp submitted_repositories(nil), do: []
+  defp put_overrides(repository) do
+    Map.put(repository, "overrides", submitted_overrides(repository["overrides"]))
+  end
+
+  # A submitted tab carries its whole override list, and `cast_embed` reads a
+  # missing key as unchanged, so no key at all means every row was removed.
+  # Every rendered row submits its package, so an entry holding nothing but an
+  # id is the leftover of a row the page removed and drops out with it.
+  defp submitted_overrides(nil), do: []
+
+  defp submitted_overrides(list) when is_list(list), do: Enum.filter(list, &override_row?/1)
+
+  defp submitted_overrides(map) when is_map(map),
+    do: Map.filter(map, fn {_index, override} -> override_row?(override) end)
+
+  defp override_row?(override) when is_map(override), do: Map.has_key?(override, "package")
+  defp override_row?(_override), do: false
+
   defp submitted_repositories(list) when is_list(list), do: list
 
   defp submitted_repositories(map) when is_map(map) do

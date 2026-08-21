@@ -42,6 +42,21 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
     """
   end
 
+  def dbip_attribution(assigns) do
+    ~H"""
+    <p class="mt-4 text-xs text-grey-400 dark:text-grey-500">
+      IP geolocation by
+      <a href="https://db-ip.com" class="underline hover:text-grey-600 dark:hover:text-grey-300">
+        DB-IP
+      </a>
+      (<a
+        href="https://creativecommons.org/licenses/by/4.0/"
+        class="underline hover:text-grey-600 dark:hover:text-grey-300"
+      >CC BY 4.0</a>).
+    </p>
+    """
+  end
+
   attr :period_label, :string, required: true
   attr :entries, :list, required: true
 
@@ -70,7 +85,8 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
   defp timeline_item(assigns) do
     icon = icon_for_action(assigns.log.action)
     description = humanize_action(assigns.log)
-    assigns = assign(assigns, icon: icon, description: description)
+    geo = Hexpm.Geo.lookup_country(assigns.log.remote_ip)
+    assigns = assign(assigns, icon: icon, description: description, geo: geo)
 
     ~H"""
     <div class="flex gap-4 group">
@@ -96,6 +112,9 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
           title={ViewHelpers.pretty_datetime(@log.inserted_at)}
         >
           {ViewHelpers.pretty_date(@log.inserted_at, :short)}
+          <span :if={@geo} class="ml-2 text-grey-400 dark:text-grey-300">
+            <span class="flag-emoji">{Hexpm.Geo.flag_emoji(@geo.iso_code)}</span> {@geo.name}
+          </span>
         </p>
       </div>
     </div>

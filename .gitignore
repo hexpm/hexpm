@@ -18,6 +18,8 @@ erl_crash.dump
 
 /assets/vendor/css/lumis.css
 
+/priv/geoip/
+
 .tool-versions
 .elixir_ls
 .elixir_ls.nosync

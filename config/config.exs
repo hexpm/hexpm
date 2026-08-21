@@ -35,10 +35,15 @@ config :hexpm,
   },
   billing_impl: Hexpm.Billing.Local,
   pwned_impl: Hexpm.Pwned.Local,
+  geo_impl: Hexpm.Geo.Local,
   sudo_timeout: Duration.new!(hour: 1),
   sudo_force_timeout: Duration.new!(second: 30)
 
-config :hexpm, :features, package_reports: true
+# Detection and recording are always on. Mail stays off until the corpus scan
+# has settled which rules are precise enough to notify strangers about.
+config :hexpm, secret_scan_notify: false
+
+config :hexpm, HexpmWeb.BasicAuth, schedule_enabled: true
 
 config :hexpm, :organization_sso,
   mode: :off,
@@ -46,12 +51,39 @@ config :hexpm, :organization_sso,
   all_organizations: false,
   oidc_impl: Hexpm.Accounts.SSO.OIDC.Oidcc
 
+config :hexpm, :varsel_impl, Hexpm.PackageReports.Varsel.Client
+
+config :hexpm, :varsel,
+  report_url: "https://cna.erlef.org/api/hex/reports",
+  audience: "https://cna.erlef.org/api/hex/reports"
+
 config :hexpm, ecto_repos: [Hexpm.RepoBase]
 
 config :hexpm, Oban,
   repo: Hexpm.RepoBase,
-  queues: [periodic: 2, heavy: 1],
+  queues: [periodic: 2, heavy: 1, registry: 1, purge: 5],
   shutdown_grace_period: 300_000
+
+config :hexpm, registry_lock_wait: 60_000
+
+# Fastly's own guidance is to purge twice, two seconds apart, to close the
+# window in which an edge refetches from a shield that has not seen the purge
+# yet. Verification waits another two seconds for propagation and gives a
+# purge five rounds before it is reported. The probe POPs are asked through
+# the Compute service's hex-cache-probe header: the IAD shield, which every
+# other POP fetches through, and one POP per other continent.
+config :hexpm,
+  purge_wait: 2000,
+  purge_verify_grace: 2000,
+  purge_verify_rounds: 5,
+  fastly_probe_pops: [
+    "iad-va-us",
+    "stockholm-bma",
+    "nrt-tokyo-jp",
+    "sydney-au",
+    "gru-saopaulo-br",
+    "jnb-johannesburg-za"
+  ]
 
 # Metrics are served by a standalone Bandit listener (see Hexpm.Application)
 # on :metrics_port instead of PromEx's built-in cowboy server

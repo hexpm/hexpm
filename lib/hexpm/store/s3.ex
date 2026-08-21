@@ -22,7 +22,7 @@ defmodule Hexpm.Store.S3 do
     S3.head_object(bucket(bucket), key)
     |> ExAws.request(region: region(bucket))
     |> case do
-      {:ok, %{headers: headers}} -> content_length!(headers)
+      {:ok, %{headers: headers}} -> headers |> header!("content-length") |> String.to_integer()
       {:error, {:http_error, 404, _}} -> nil
     end
   end
@@ -44,15 +44,21 @@ defmodule Hexpm.Store.S3 do
   end
 
   def put(bucket, key, blob, opts) do
-    S3.put_object(bucket(bucket), key, blob, opts)
-    |> ExAws.request!(region: region(bucket))
+    %{headers: headers} =
+      S3.put_object(bucket(bucket), key, blob, opts)
+      |> ExAws.request!(region: region(bucket))
+
+    {:ok, %{etag: header!(headers, "etag")}}
   end
 
   def put_file(bucket, key, path, opts) do
-    path
-    |> S3.Upload.stream_file()
-    |> S3.upload(bucket(bucket), key, opts)
-    |> ExAws.request!(region: region(bucket))
+    %{body: %{etag: etag}} =
+      path
+      |> S3.Upload.stream_file()
+      |> S3.upload(bucket(bucket), key, opts)
+      |> ExAws.request!(region: region(bucket))
+
+    {:ok, %{etag: etag}}
   end
 
   def delete(bucket, key) do
@@ -70,21 +76,17 @@ defmodule Hexpm.Store.S3 do
     end)
   end
 
+  defp header!(headers, name) do
+    Enum.find_value(headers, fn {key, value} ->
+      if String.downcase(key) == name, do: List.wrap(value) |> hd()
+    end) || raise "S3 response is missing #{name}"
+  end
+
   defp bucket(binary) when is_binary(binary) do
     Enum.at(String.split(binary, ",", parts: 2), 1)
   end
 
   defp region(binary) when is_binary(binary) do
     Enum.at(String.split(binary, ",", parts: 2), 0)
-  end
-
-  defp content_length!(headers) do
-    headers
-    |> Enum.find(fn {key, _value} -> String.downcase(key) == "content-length" end)
-    |> case do
-      {_key, value} when is_binary(value) -> String.to_integer(value)
-      {_key, [value | _]} -> String.to_integer(value)
-      nil -> raise "S3 response is missing content-length"
-    end
   end
 end

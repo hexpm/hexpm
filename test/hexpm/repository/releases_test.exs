@@ -1,5 +1,6 @@
 defmodule Hexpm.Repository.ReleasesTest do
   use Hexpm.DataCase, async: true
+  use Oban.Testing, repo: Hexpm.RepoBase
 
   alias Hexpm.Repository.Repository
   alias Hexpm.Repository.{Packages, Releases}
@@ -163,6 +164,49 @@ defmodule Hexpm.Repository.ReleasesTest do
                unstable_fallback: true
              ) == Version.parse!("1.0.0-rc.2")
     end
+
+    test "applies SemVer, stability, docs, retirement, and empty-package rules" do
+      package = insert(:package, name: "latest_options")
+
+      insert(:release, package: package, version: "0.9.0", has_docs: true)
+
+      insert(:release,
+        package: package,
+        version: "10.0.0",
+        has_docs: false,
+        retirement: %{reason: "other", message: "retired"}
+      )
+
+      insert(:release, package: package, version: "20.0.0-rc.2", has_docs: true)
+      insert(:release, package: package, version: "20.0.0-rc.10", has_docs: true)
+
+      assert Releases.latest_version("hexpm", package.name, only_stable: false) ==
+               Version.parse!("20.0.0-rc.10")
+
+      assert Releases.latest_version("hexpm", package.name, only_stable: true) ==
+               Version.parse!("10.0.0")
+
+      assert Releases.latest_version("hexpm", package.name,
+               only_stable: true,
+               with_docs: true
+             ) == Version.parse!("0.9.0")
+
+      empty = insert(:package, name: "latest_empty")
+      assert Releases.latest_version("hexpm", empty.name, only_stable: false) == nil
+    end
+
+    test "filters documented releases before prerelease fallback" do
+      package = insert(:package, name: "documented_preview")
+      insert(:release, package: package, version: "1.0.0", has_docs: false)
+      insert(:release, package: package, version: "2.0.0-rc.1", has_docs: true)
+      insert(:release, package: package, version: "2.0.0-rc.2", has_docs: true)
+
+      assert Releases.latest_version("hexpm", package.name,
+               only_stable: true,
+               unstable_fallback: true,
+               with_docs: true
+             ) == Version.parse!("2.0.0-rc.2")
+    end
   end
 
   describe "publish/7" do
@@ -187,13 +231,41 @@ defmodule Hexpm.Repository.ReleasesTest do
                  replace: false
                )
 
-      assert Hexpm.Store.get(:repo_bucket, "tarballs/#{name}-0.1.0.tar", [])
+      package = Packages.get(hexpm, name)
+
+      assert_enqueued(
+        worker: Hexpm.Repository.RegistryWorker,
+        args: %{"type" => "package", "package_id" => package.id}
+      )
+
+      assert_enqueued(
+        worker: Hexpm.Repository.RegistryWorker,
+        args: %{"type" => "repository", "repository_id" => hexpm.id}
+      )
+
+      Oban.drain_queue(queue: :registry)
+
+      assert tarball = Hexpm.Store.get(:repo_bucket, "tarballs/#{name}-0.1.0.tar", [])
       assert registry = Hexpm.Store.get(:repo_bucket, "packages/#{name}", [])
 
       assert Enum.any?(
                decode_registry_package(registry).releases,
                &match?(%{version: "0.1.0"}, &1)
              )
+
+      assert_enqueued(
+        worker: Hexpm.CDN.PurgeWorker,
+        args: %{
+          "service" => "fastly_hexrepo",
+          "keys" => ["tarballs/#{name}-0.1.0"],
+          "verify" => [
+            %{
+              "url" => "http://localhost:5000/tarballs/#{name}-0.1.0.tar",
+              "etag" => ~s("#{Base.encode16(:crypto.hash(:md5, tarball), case: :lower)}")
+            }
+          ]
+        }
+      )
     end
 
     test "publish private package with public dependency", %{
@@ -342,6 +414,7 @@ defmodule Hexpm.Repository.ReleasesTest do
 
       audit = audit_data(user)
       assert Releases.revert(package, release, audit: audit) == :ok
+      Oban.drain_queue(queue: :registry)
 
       refute Hexpm.Store.get(:repo_bucket, "tarballs/#{package.name}-#{release.version}.tar", [])
       refute Hexpm.Store.get(:repo_bucket, "packages/#{package.name}", [])
@@ -371,6 +444,7 @@ defmodule Hexpm.Repository.ReleasesTest do
       Hexpm.Repository.RegistryBuilder.package(package)
 
       assert Releases.revert(package, release, audit: audit) == :ok
+      Oban.drain_queue(queue: :registry)
 
       refute Hexpm.Store.get(:repo_bucket, "tarballs/#{package.name}-0.2.0.tar", [])
       assert registry = Hexpm.Store.get(:repo_bucket, "packages/#{package.name}", [])
@@ -417,6 +491,7 @@ defmodule Hexpm.Repository.ReleasesTest do
       assert previously_retired.retirement.reason == "security"
       assert previously_retired.retirement.message == "Existing retirement"
 
+      Oban.drain_queue(queue: :registry)
       assert registry = Hexpm.Store.get(:repo_bucket, "packages/#{package.name}", [])
 
       retirements =
@@ -462,6 +537,7 @@ defmodule Hexpm.Repository.ReleasesTest do
                  replace: true
                )
 
+      Oban.drain_queue(queue: :registry)
       assert registry = Hexpm.Store.get(:repo_bucket, "packages/#{package.name}", [])
 
       retirements =

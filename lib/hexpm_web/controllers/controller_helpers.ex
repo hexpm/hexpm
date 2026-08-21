@@ -590,14 +590,32 @@ defmodule HexpmWeb.ControllerHelpers do
   def safe_string(value) when is_binary(value), do: value
   def safe_string(_), do: nil
 
+  # A leading `//` starts an authority, so `//evil.com` leaves the site. The
+  # rest are spellings of that same trick that a naive "starts with a single
+  # slash" check would admit:
+  #
+  #   * `\` is treated as `/` by browsers, so `/\evil.com` is scheme-relative.
+  #   * tab, LF and CR are stripped while parsing a URL, so `/<TAB>/evil.com`
+  #     resolves as `//evil.com` (the bypass behind CVE-2026-64941). LF and CR
+  #     would also split a Location header.
+  #   * `%2f` and `%5c` are the encoded spellings, rejected so that a later
+  #     decoding step downstream cannot reintroduce the leading `//`.
+  @invalid_return_path_chars ["\\", "\t", "\n", "\r", "%09", "%2f", "%2F", "%5c", "%5C"]
+
   @doc """
-  Returns the value if it is a local path (starts with `/` but not `//`),
-  otherwise returns nil. Use to validate user-supplied redirect targets before
-  passing to `redirect(to: ...)`.
+  Returns the value if it is a local path, otherwise returns nil.
+
+  A local path starts with `/`, but not with `//`, and contains none of the
+  characters that let a path resolve off-site. Use to validate user-supplied
+  redirect targets before passing to `redirect(to: ...)`.
   """
   def safe_return_path("/"), do: "/"
   def safe_return_path("//" <> _), do: nil
-  def safe_return_path("/" <> _ = path), do: path
+
+  def safe_return_path("/" <> _ = path) do
+    if String.contains?(path, @invalid_return_path_chars), do: nil, else: path
+  end
+
   def safe_return_path(_), do: nil
 
   @doc """

@@ -36,7 +36,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
     %{
       user: insert(:user),
-      organization: repository.organization
+      organization: repository.organization,
+      repository: repository
     }
   end
 
@@ -190,6 +191,31 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       assert response(conn, 404)
     end
+
+    test "sorts members by username", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      zulu = insert(:user, username: "zulu_member")
+      alpha = insert(:user, username: "alpha_member")
+      insert(:organization_user, organization: organization, user: zulu)
+      insert(:organization_user, organization: organization, user: alpha)
+      mock_customer(organization)
+
+      document =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/members")
+        |> html_response(200)
+        |> Floki.parse_document!()
+
+      usernames =
+        document
+        |> Floki.find(~s(form[id^="change-role-form-"] input[name="organization_user[username]"]))
+        |> Enum.map(&(Floki.attribute(&1, "value") |> List.first()))
+
+      assert usernames == Enum.sort(usernames)
+      assert "alpha_member" in usernames
+      assert "zulu_member" in usernames
+    end
   end
 
   describe "GET /dashboard/orgs/:dashboard_org/keys" do
@@ -237,6 +263,27 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> get("/dashboard/orgs/#{organization.name}/keys")
 
       assert response(conn, 200) =~ "mykey"
+    end
+
+    test "sorts package permissions by package name", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "write")
+      insert(:package, name: "zulu_package", repository_id: c.repository.id)
+      insert(:package, name: "alpha_package", repository_id: c.repository.id)
+      mock_customer(c.organization)
+
+      package_inputs =
+        build_conn()
+        |> test_login(c.user)
+        |> get("/dashboard/orgs/#{c.organization.name}/keys")
+        |> html_response(200)
+        |> Floki.parse_document!()
+        |> Floki.find(~s(#generate-key-modal input[name^="key[permissions][package]"]))
+        |> Enum.map(&(Floki.attribute(&1, "name") |> List.first()))
+
+      assert package_inputs == [
+               "key[permissions][package][#{c.organization.name}/alpha_package]",
+               "key[permissions][package][#{c.organization.name}/zulu_package]"
+             ]
     end
 
     test "shows incomplete subscription status", %{user: user, organization: organization} do
@@ -310,6 +357,67 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> get("/dashboard/orgs/#{organization.name}/audit-logs")
 
       assert response(conn, 200) =~ "Recent Activities"
+    end
+
+    test "queries audit_logs only on the audit logs tab", %{
+      user: user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user)
+      mock_customer(organization)
+
+      audit_logs_tab =
+        capture_queries(fn ->
+          build_conn()
+          |> test_login(user)
+          |> get("/dashboard/orgs/#{organization.name}/audit-logs")
+        end)
+
+      profile_tab =
+        capture_queries(fn ->
+          build_conn()
+          |> test_login(user)
+          |> get("/dashboard/orgs/#{organization.name}")
+        end)
+
+      assert Enum.any?(audit_logs_tab, &(&1 =~ ~s(FROM "audit_logs")))
+      refute Enum.any?(profile_tab, &(&1 =~ ~s(FROM "audit_logs")))
+    end
+
+    test "queries keys only on the keys tab", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      mock_customer(organization)
+
+      keys_tab =
+        capture_queries(fn ->
+          build_conn() |> test_login(user) |> get("/dashboard/orgs/#{organization.name}/keys")
+        end)
+
+      profile_tab =
+        capture_queries(fn ->
+          build_conn() |> test_login(user) |> get("/dashboard/orgs/#{organization.name}")
+        end)
+
+      assert Enum.any?(keys_tab, &(&1 =~ ~s(FROM "keys")))
+      refute Enum.any?(profile_tab, &(&1 =~ ~s(FROM "keys")))
+    end
+
+    test "calls the billing service only on tabs that show billing data", %{
+      user: user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      # No stub: Mox raises if the profile tab reaches the billing service.
+      conn = build_conn() |> test_login(user) |> get("/dashboard/orgs/#{organization.name}")
+      assert response(conn, 200)
+
+      mock_customer(organization)
+
+      conn =
+        build_conn() |> test_login(user) |> get("/dashboard/orgs/#{organization.name}/billing")
+
+      assert response(conn, 200)
     end
   end
 
@@ -1639,6 +1747,48 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> get("/dashboard/orgs/#{c.organization.name}/packages")
 
       assert response(conn, 200) =~ "Packages"
+    end
+
+    test "shows the download total for each package", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "read")
+      mock_customer(c.organization)
+
+      package = insert(:package, repository_id: c.repository.id)
+      release = insert(:release, package: package, version: "1.0.0")
+
+      insert(:download,
+        package: package,
+        release: release,
+        downloads: 4321,
+        day: Date.utc_today()
+      )
+
+      Repo.refresh_view(Hexpm.Repository.PackageDownload)
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> get("/dashboard/orgs/#{c.organization.name}/packages")
+
+      assert response(conn, 200) =~ "4 321"
+    end
+
+    test "sorts packages by name", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "read")
+      insert(:package, name: "zulu_package", repository_id: c.repository.id)
+      insert(:package, name: "alpha_package", repository_id: c.repository.id)
+      mock_customer(c.organization)
+
+      package_names =
+        build_conn()
+        |> test_login(c.user)
+        |> get("/dashboard/orgs/#{c.organization.name}/packages")
+        |> html_response(200)
+        |> Floki.parse_document!()
+        |> Floki.find("table tbody tr td:first-child span.font-medium")
+        |> Enum.map(&(&1 |> Floki.text() |> String.trim()))
+
+      assert package_names == ["alpha_package", "zulu_package"]
     end
 
     test "returns 404 for non-members", c do

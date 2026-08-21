@@ -25,6 +25,49 @@ defmodule Hexpm.Hexdocs.WorkersTest do
     assert Hexpm.Store.get(:docs_bucket, "#{package.name}/index.html") == nil
   end
 
+  test "upload and delete verify the purged pages through their index.html" do
+    package = insert(:package, name: "verified_docs", docs_updated_at: DateTime.utc_now())
+    release = insert(:release, package: package, version: "1.0.0", has_docs: true)
+    key = "docs/#{package.name}-#{release.version}.tar.gz"
+
+    Hexpm.Store.put(
+      :repo_bucket,
+      key,
+      create_docs_tar([{"index.html", "<html><head></head></html>"}, {"a.html", "a"}])
+    )
+
+    assert :ok = perform_job(Workers.Upload, %{key: key})
+
+    index = Hexpm.Store.get(:docs_bucket, "#{package.name}/1.0.0/index.html")
+    etag = ~s("#{Base.encode16(:crypto.hash(:md5, index), case: :lower)}")
+
+    assert_enqueued(
+      worker: Hexpm.CDN.PurgeWorker,
+      args: %{
+        "service" => "fastly_hexdocs",
+        "keys" => ["docspage/verified_docs", "docspage/verified_docs/1.0.0"],
+        "verify" => [
+          %{"url" => "http://verified-docs.localhost:5002/1.0.0/index.html", "etag" => etag},
+          %{"url" => "http://verified-docs.localhost:5002/index.html", "etag" => etag}
+        ]
+      }
+    )
+
+    assert :ok = perform_job(Workers.Delete, %{key: key})
+
+    assert_enqueued(
+      worker: Hexpm.CDN.PurgeWorker,
+      args: %{
+        "service" => "fastly_hexdocs",
+        "keys" => ["docspage/verified_docs", "docspage/verified_docs/1.0.0"],
+        "verify" => [
+          %{"url" => "http://verified-docs.localhost:5002/1.0.0/index.html", "etag" => nil},
+          %{"url" => "http://verified-docs.localhost:5002/index.html", "etag" => nil}
+        ]
+      }
+    )
+  end
+
   test "upload succeeds for archives with write-protected file modes" do
     package = insert(:package, name: "readonly_docs", docs_updated_at: DateTime.utc_now())
     release = insert(:release, package: package, version: "1.0.0", has_docs: true)
@@ -149,6 +192,17 @@ defmodule Hexpm.Hexdocs.WorkersTest do
     refute sitemap =~ "asset.js"
     refute sitemap =~ "404.html"
     refute sitemap =~ "search.html"
+
+    etag = ~s("#{Base.encode16(:crypto.hash(:md5, sitemap), case: :lower)}")
+
+    assert_enqueued(
+      worker: Hexpm.CDN.PurgeWorker,
+      args: %{
+        "service" => "fastly_hexdocs",
+        "keys" => ["sitemap/#{package.name}"],
+        "verify" => [%{"url" => "http://sitemap-docs.localhost:5002/sitemap.xml", "etag" => etag}]
+      }
+    )
   end
 
   test "malformed archives fail so Oban can retry" do
