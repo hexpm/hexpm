@@ -5,6 +5,8 @@ defmodule Hexpm.Diff.Generator do
   alias Hexpm.Repository.Assets
 
   @max_file_size 100 * 1000
+  @upload_concurrency 10
+  @upload_timeout 120_000
 
   def generate(%Request{} = request) do
     with {:ok, from_path} <- download(request.from_release, request.from_checksum),
@@ -56,34 +58,43 @@ defmodule Hexpm.Diff.Generator do
       |> Enum.uniq()
       |> Enum.sort()
 
-    initial =
-      {%{
-         total_diffs: 0,
-         total_additions: 0,
-         total_deletions: 0,
-         files_changed: 0,
-         files: []
-       }, 0}
+    initial = %{
+      total_diffs: 0,
+      total_additions: 0,
+      total_deletions: 0,
+      files_changed: 0,
+      files: []
+    }
 
-    Enum.reduce_while(files, {:ok, initial}, fn file, {:ok, {metadata, index}} ->
-      case generate_piece(request, from_dir, to_dir, file, index) do
-        :unchanged ->
-          {:cont, {:ok, {metadata, index}}}
+    metadata =
+      files
+      |> Stream.transform(0, fn file, index ->
+        case build_piece(request, from_dir, to_dir, file) do
+          :unchanged -> {[], index}
+          {update, data} -> {[{index, update, data}], index + 1}
+        end
+      end)
+      |> Task.async_stream(
+        fn {index, update, data} ->
+          try do
+            Cache.put_piece!(request, index, data)
+            update
+          rescue
+            exception -> {:piece_error, exception, __STACKTRACE__}
+          end
+        end,
+        max_concurrency: @upload_concurrency,
+        timeout: @upload_timeout
+      )
+      |> Enum.reduce(initial, fn
+        {:ok, {:piece_error, exception, stacktrace}}, _metadata -> reraise(exception, stacktrace)
+        {:ok, update}, metadata -> merge_metadata(metadata, update)
+      end)
 
-        {:ok, update} ->
-          {:cont, {:ok, {merge_metadata(metadata, update), index + 1}}}
-
-        {:error, reason} ->
-          {:halt, {:error, reason}}
-      end
-    end)
-    |> case do
-      {:ok, {metadata, _index}} -> {:ok, metadata}
-      error -> error
-    end
+    {:ok, metadata}
   end
 
-  defp generate_piece(request, from_dir, to_dir, file, index) do
+  defp build_piece(request, from_dir, to_dir, file) do
     from_path = Path.join(from_dir, file)
     to_path = Path.join(to_dir, file)
     from_path = if regular_file?(from_path), do: from_path, else: "/dev/null"
@@ -96,28 +107,24 @@ defmodule Hexpm.Diff.Generator do
 
       not same_contents? and (too_large?(from_path) or too_large?(to_path)) ->
         file = sanitize_utf8(file)
-        Cache.put_piece!(request, index, %{type: "too_large", file: file})
-        {:ok, metadata_update(file, 0, 0)}
+        {metadata_update(file, 0, 0), %{type: "too_large", file: file}}
 
       true ->
         case git_diff(from_path, to_path, request.ignore_whitespace) do
-          {:ok, nil} ->
+          nil ->
             :unchanged
 
-          {:ok, raw_diff} ->
+          raw_diff ->
             raw_diff = sanitize_utf8(raw_diff)
+            {additions, deletions} = count_changes(raw_diff)
 
-            Cache.put_piece!(request, index, %{
+            data = %{
               "diff" => raw_diff,
               "path_from" => sanitize_utf8(from_dir),
               "path_to" => sanitize_utf8(to_dir)
-            })
+            }
 
-            {additions, deletions} = count_changes(raw_diff)
-            {:ok, metadata_update(sanitize_utf8(file), additions, deletions)}
-
-          {:error, reason} ->
-            {:error, {:git_diff, reason}}
+            {metadata_update(sanitize_utf8(file), additions, deletions), data}
         end
     end
   end
@@ -135,9 +142,9 @@ defmodule Hexpm.Diff.Generator do
       ] ++ if(ignore_whitespace, do: ["-w"], else: []) ++ [from_path, to_path]
 
     case System.cmd("git", args, stderr_to_stdout: true) do
-      {"", 0} -> {:ok, nil}
-      {output, 1} -> {:ok, output}
-      other -> {:error, other}
+      {"", 0} -> nil
+      {output, 1} -> output
+      {output, status} -> raise "git diff exited with status #{status}: #{output}"
     end
   end
 
