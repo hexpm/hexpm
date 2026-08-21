@@ -67,6 +67,9 @@ defmodule Hexpm.AdminTasks do
   use Hexpm.Context
 
   alias Hexpm.AdminTasks.Reasons
+  alias Hexpm.Emails.Outbox
+
+  @announcement_category "admin.announcement"
 
   require Logger
 
@@ -851,15 +854,19 @@ defmodule Hexpm.AdminTasks do
   Sends an email with an arbitrary subject and body.
 
   Every recipient gets a separate email so addresses are not disclosed between
-  recipients. Duplicate addresses are only sent to once. Failed deliveries are
-  logged and do not stop the remaining sends, the returned count is the number
-  of emails delivered.
+  recipients. Duplicate addresses are only queued once. The emails go into the
+  outbox and are delivered by Oban, so a send survives the console it was
+  started from and a failed delivery is retried. The returned count is the
+  number queued, not the number delivered.
+
+  Addresses that fail to queue are logged and do not stop the rest.
 
   ## Arguments
 
-  - `recipients` - Email addresses to send to
+  - `recipients` - Email addresses to send to, see `Hexpm.Accounts.Users.all_notifiable_emails/0`
   - `subject` - Subject line, a leading `"Hex.pm - "` is dropped from the heading
-  - `body` - Plain text body, blank lines separate paragraphs
+  - `body` - Plain text body, blank lines separate paragraphs and bare URLs
+    become links in the HTML part
 
   ## Examples
 
@@ -868,13 +875,25 @@ defmodule Hexpm.AdminTasks do
   """
   @spec send_email([String.t()], String.t(), String.t()) :: {:ok, non_neg_integer()}
   def send_email(recipients, subject, body) do
-    sent =
+    queued =
       recipients
       |> List.wrap()
       |> Enum.uniq()
-      |> Enum.count(&deliver(Emails.announcement(&1, subject, body), &1))
+      |> Enum.count(&queue_announcement(&1, subject, body))
 
-    {:ok, sent}
+    {:ok, queued}
+  end
+
+  defp queue_announcement(recipient, subject, body) do
+    recipient
+    |> Emails.announcement(subject, body)
+    |> Outbox.enqueue!(category: @announcement_category)
+
+    true
+  rescue
+    error ->
+      Logger.error("Could not queue email to #{recipient}: #{inspect(error.__struct__)}")
+      false
   end
 
   defp deliver(email, description) do
