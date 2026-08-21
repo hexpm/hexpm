@@ -5,10 +5,23 @@ defmodule Hexpm.Diff.Generator do
   alias Hexpm.Repository.Assets
 
   @max_file_size 100 * 1000
+  @upload_concurrency 32
+  @upload_timeout 120_000
 
   def generate(%Request{} = request) do
-    with {:ok, from_path} <- download(request.from_release, request.from_checksum),
-         {:ok, to_path} <- download(request.to_release, request.to_checksum),
+    # TmpDir tracks the calling process, so the paths must be created here
+    # rather than in the download tasks.
+    from_path = Hexpm.TmpDir.tmp_file("diff-tarball")
+    to_path = Hexpm.TmpDir.tmp_file("diff-tarball")
+
+    [from_download, to_download] =
+      Hexpm.Utils.multi_task([
+        fn -> download(from_path, request.from_release, request.from_checksum) end,
+        fn -> download(to_path, request.to_release, request.to_checksum) end
+      ])
+
+    with :ok <- from_download,
+         :ok <- to_download,
          {:ok, from_dir} <- unpack(from_path, request, request.from),
          {:ok, to_dir} <- unpack(to_path, request, request.to),
          {:ok, metadata} <- generate_pieces(request, from_dir, to_dir) do
@@ -21,16 +34,14 @@ defmodule Hexpm.Diff.Generator do
     kind, reason -> {:error, {kind, reason}}
   end
 
-  defp download(release, expected_checksum) do
-    path = Hexpm.TmpDir.tmp_file("diff-tarball")
-
+  defp download(path, release, expected_checksum) do
     case Hexpm.Store.get_to_file(:repo_bucket, Assets.tarball_store_key(release), path) do
       nil ->
         {:error, :tarball_not_found}
 
       _ ->
         if Assets.file_checksum(path) == expected_checksum do
-          {:ok, path}
+          :ok
         else
           {:error, :checksum_mismatch}
         end
@@ -51,40 +62,52 @@ defmodule Hexpm.Diff.Generator do
   end
 
   defp generate_pieces(request, from_dir, to_dir) do
-    files = Enum.sort(Enum.uniq(tree_files(from_dir) ++ tree_files(to_dir)))
+    files =
+      (Hexpm.Utils.tree_regular_files(from_dir) ++ Hexpm.Utils.tree_regular_files(to_dir))
+      |> Enum.uniq()
+      |> Enum.sort()
 
-    initial =
-      {%{
-         total_diffs: 0,
-         total_additions: 0,
-         total_deletions: 0,
-         files_changed: 0,
-         files: []
-       }, 0}
+    initial = %{
+      total_diffs: 0,
+      total_additions: 0,
+      total_deletions: 0,
+      files_changed: 0,
+      files: []
+    }
 
-    Enum.reduce_while(files, {:ok, initial}, fn file, {:ok, {metadata, index}} ->
-      case generate_piece(request, from_dir, to_dir, file, index) do
-        :unchanged ->
-          {:cont, {:ok, {metadata, index}}}
+    metadata =
+      files
+      |> Stream.transform(0, fn file, index ->
+        case build_piece(request, from_dir, to_dir, file) do
+          :unchanged -> {[], index}
+          {update, data} -> {[{index, update, data}], index + 1}
+        end
+      end)
+      |> Task.async_stream(
+        fn {index, update, data} ->
+          try do
+            Cache.put_piece!(request, index, data)
+            update
+          rescue
+            exception -> {:piece_error, exception, __STACKTRACE__}
+          end
+        end,
+        max_concurrency: @upload_concurrency,
+        timeout: @upload_timeout
+      )
+      |> Enum.reduce(initial, fn
+        {:ok, {:piece_error, exception, stacktrace}}, _metadata -> reraise(exception, stacktrace)
+        {:ok, update}, metadata -> merge_metadata(metadata, update)
+      end)
 
-        {:ok, update} ->
-          {:cont, {:ok, {merge_metadata(metadata, update), index + 1}}}
-
-        {:error, reason} ->
-          {:halt, {:error, reason}}
-      end
-    end)
-    |> case do
-      {:ok, {metadata, _index}} -> {:ok, metadata}
-      error -> error
-    end
+    {:ok, metadata}
   end
 
-  defp generate_piece(request, from_dir, to_dir, file, index) do
+  defp build_piece(request, from_dir, to_dir, file) do
     from_path = Path.join(from_dir, file)
     to_path = Path.join(to_dir, file)
-    from_path = if File.regular?(from_path, raw: true), do: from_path, else: "/dev/null"
-    to_path = if File.regular?(to_path, raw: true), do: to_path, else: "/dev/null"
+    from_path = if regular_file?(from_path), do: from_path, else: "/dev/null"
+    to_path = if regular_file?(to_path), do: to_path, else: "/dev/null"
     same_contents? = same_contents?(from_path, to_path)
 
     cond do
@@ -93,28 +116,24 @@ defmodule Hexpm.Diff.Generator do
 
       not same_contents? and (too_large?(from_path) or too_large?(to_path)) ->
         file = sanitize_utf8(file)
-        Cache.put_piece!(request, index, %{type: "too_large", file: file})
-        {:ok, metadata_update(file, 0, 0)}
+        {metadata_update(file, 0, 0), %{type: "too_large", file: file}}
 
       true ->
         case git_diff(from_path, to_path, request.ignore_whitespace) do
-          {:ok, nil} ->
+          nil ->
             :unchanged
 
-          {:ok, raw_diff} ->
+          raw_diff ->
             raw_diff = sanitize_utf8(raw_diff)
+            {additions, deletions} = count_changes(raw_diff)
 
-            Cache.put_piece!(request, index, %{
+            data = %{
               "diff" => raw_diff,
               "path_from" => sanitize_utf8(from_dir),
               "path_to" => sanitize_utf8(to_dir)
-            })
+            }
 
-            {additions, deletions} = count_changes(raw_diff)
-            {:ok, metadata_update(sanitize_utf8(file), additions, deletions)}
-
-          {:error, reason} ->
-            {:error, {:git_diff, reason}}
+            {metadata_update(sanitize_utf8(file), additions, deletions), data}
         end
     end
   end
@@ -132,9 +151,9 @@ defmodule Hexpm.Diff.Generator do
       ] ++ if(ignore_whitespace, do: ["-w"], else: []) ++ [from_path, to_path]
 
     case System.cmd("git", args, stderr_to_stdout: true) do
-      {"", 0} -> {:ok, nil}
-      {output, 1} -> {:ok, output}
-      other -> {:error, other}
+      {"", 0} -> nil
+      {output, 1} -> output
+      {output, status} -> raise "git diff exited with status #{status}: #{output}"
     end
   end
 
@@ -198,12 +217,8 @@ defmodule Hexpm.Diff.Generator do
 
   defp executable?(mode), do: band(mode, 0o111) != 0
 
-  defp tree_files(directory) do
-    directory
-    |> Path.join("**")
-    |> Path.wildcard(match_dot: true)
-    |> Enum.filter(&File.regular?(&1, raw: true))
-    |> Enum.map(&Path.relative_to(&1, directory))
+  defp regular_file?(path) do
+    match?({:ok, %File.Stat{type: :regular}}, File.lstat(path))
   end
 
   defp sanitize_utf8(content) when is_binary(content) do

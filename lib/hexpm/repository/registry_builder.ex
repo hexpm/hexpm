@@ -313,7 +313,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
         etag = Storage.put_object(key, data, surrogate_keys, cache_control(repository))
         %{kind: kind, key: key, etag: etag}
       end,
-      max_concurrency: 10,
+      max_concurrency: 32,
       timeout: 60_000
     )
     |> Enum.map(fn {:ok, upload} -> upload end)

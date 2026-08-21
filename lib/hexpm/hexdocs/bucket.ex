@@ -231,7 +231,7 @@ defmodule Hexpm.Hexdocs.Bucket do
           {:ok, %{etag: etag}} = Hexpm.Store.put(bucket, key, data, opts)
           %{key: key, etag: etag}
       end,
-      max_concurrency: 10,
+      max_concurrency: 32,
       timeout: 60_000
     )
     |> Hexpm.Utils.raise_async_stream_error()
