@@ -5,12 +5,23 @@ defmodule Hexpm.Diff.Generator do
   alias Hexpm.Repository.Assets
 
   @max_file_size 100 * 1000
-  @upload_concurrency 10
+  @upload_concurrency 32
   @upload_timeout 120_000
 
   def generate(%Request{} = request) do
-    with {:ok, from_path} <- download(request.from_release, request.from_checksum),
-         {:ok, to_path} <- download(request.to_release, request.to_checksum),
+    # TmpDir tracks the calling process, so the paths must be created here
+    # rather than in the download tasks.
+    from_path = Hexpm.TmpDir.tmp_file("diff-tarball")
+    to_path = Hexpm.TmpDir.tmp_file("diff-tarball")
+
+    [from_download, to_download] =
+      Hexpm.Utils.multi_task([
+        fn -> download(from_path, request.from_release, request.from_checksum) end,
+        fn -> download(to_path, request.to_release, request.to_checksum) end
+      ])
+
+    with :ok <- from_download,
+         :ok <- to_download,
          {:ok, from_dir} <- unpack(from_path, request, request.from),
          {:ok, to_dir} <- unpack(to_path, request, request.to),
          {:ok, metadata} <- generate_pieces(request, from_dir, to_dir) do
@@ -23,16 +34,14 @@ defmodule Hexpm.Diff.Generator do
     kind, reason -> {:error, {kind, reason}}
   end
 
-  defp download(release, expected_checksum) do
-    path = Hexpm.TmpDir.tmp_file("diff-tarball")
-
+  defp download(path, release, expected_checksum) do
     case Hexpm.Store.get_to_file(:repo_bucket, Assets.tarball_store_key(release), path) do
       nil ->
         {:error, :tarball_not_found}
 
       _ ->
         if Assets.file_checksum(path) == expected_checksum do
-          {:ok, path}
+          :ok
         else
           {:error, :checksum_mismatch}
         end

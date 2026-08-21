@@ -151,7 +151,7 @@ defmodule Hexpm.Application do
 
   defp finch_pools() do
     gcs_url = Application.get_env(:hexpm, :gcs_url, "https://storage.googleapis.com")
-    %{gcs_url => [size: 50, count: 2]}
+    %{gcs_url => [size: 50, count: 8]}
   end
 
   defp web_children do

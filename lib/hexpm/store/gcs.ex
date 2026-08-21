@@ -68,7 +68,7 @@ defmodule Hexpm.Store.GCS do
     keys
     |> Task.async_stream(
       &delete(bucket, &1),
-      max_concurrency: 10,
+      max_concurrency: 32,
       timeout: 60_000
     )
     |> Stream.each(fn
