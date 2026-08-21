@@ -14,6 +14,7 @@ defmodule Hexpm.Application do
     children = children(mode)
 
     shutdown_on_eof()
+    load_lumis()
 
     opts = [strategy: :one_for_one, name: Hexpm.Supervisor]
     Supervisor.start_link(children, opts)
@@ -77,6 +78,10 @@ defmodule Hexpm.Application do
     def shutdown_on_eof(), do: nil
   end
 
+  defp load_lumis do
+    Lumis.Languages.async_load(~w(markdown comment erlang elixir))
+  end
+
   defp read_only_mode() do
     mode = System.get_env("HEXPM_READ_ONLY_MODE") == "1"
     Application.put_env(:hexpm, :read_only_mode, mode)
@@ -133,8 +138,7 @@ defmodule Hexpm.Application do
       goth_spec(),
       setup(),
       HexpmWeb.Telemetry,
-      metrics_server_spec(),
-      {Task, &HexpmWeb.SyntaxHighlight.warm/0}
+      metrics_server_spec()
     ]
     |> Enum.reject(&is_nil/1)
   end

@@ -3,11 +3,9 @@ defmodule HexpmWeb.SyntaxHighlightTest do
 
   alias HexpmWeb.SyntaxHighlight
 
-  # Without this the assertions below race the highlighter's first load, and a
-  # loaded machine loses: `highlight/3` gives up after @timeout and answers with
-  # escaped plain source, which looks like a highlighting bug.
+  # Warm-up to avoid race conditions. Repeated calls are no-op once it's already loaded in the environment.
   setup do
-    assert SyntaxHighlight.warm() == :ok
+    assert Lumis.Languages.load(["elixir"]) == :ok
     :ok
   end
 

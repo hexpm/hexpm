@@ -179,7 +179,4 @@ config :ueberauth, Ueberauth,
 
 config :mdex_native, syntax_highlighter: :lumis
 
-# The lumis git checkout has no precompiled NIF checksums, build from source
-System.put_env("LUMIS_BUILD", "1")
-
 import_config "#{Mix.env()}.exs"

@@ -4,20 +4,6 @@ defmodule HexpmWeb.SyntaxHighlight do
   @timeout 1_000
   @line_pattern ~r/<div class="l-line" data-line="\d+">(.*?)\n?<\/div>/s
 
-  @doc """
-  Loads the highlighter so the first request does not have to.
-
-  The NIF is 143 MB, and the timeout above is sized for highlighting a file, not
-  for opening it. Whichever request arrived first used to pay that load out of
-  its own budget and fall back to unhighlighted source when it ran out.
-  """
-  def warm() do
-    Lumis.highlight!("", formatter: {:html_linked, language: "warm.ex"})
-    :ok
-  rescue
-    error -> Logger.warning("Failed to warm the highlighter: #{Exception.message(error)}")
-  end
-
   def highlight(source, language, label) do
     run(
       fn -> Lumis.highlight!(source, formatter: {:html_linked, language: language}) end,
