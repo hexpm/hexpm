@@ -28,4 +28,10 @@ Access to the package repository is logged. Actions taken within an organization
 
 ### Reporting a vulnerability
 
-If you find a security problem in hex.pm, email <security@hex.pm>. Please don't open a public issue for it.
+If you find a security problem in hex.pm itself, email <security@hex.pm>. Please don't open a public issue for it.
+
+If you find a vulnerability in a package published on Hex, use the report form on that package's page. You need to be signed in with a verified email address. Vulnerability reports are sent to the [Erlang Ecosystem Foundation CNA](https://cna.erlef.org), which triages them and contacts the people involved. The [Privacy Policy](/policies/privacy) describes what the submission contains.
+
+### Ecosystem security
+
+The security model, practices and controls for the Hex package ecosystem, including the threat model, the development and build process, and supply chain integrity, are documented in the [specifications repository](https://github.com/hexpm/specifications/tree/main/security). That documentation covers the ecosystem as a whole. The measures Six Colors commits to are the ones on this page.
