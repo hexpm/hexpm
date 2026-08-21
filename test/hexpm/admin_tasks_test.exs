@@ -5,6 +5,7 @@ defmodule Hexpm.AdminTasksTest do
 
   alias Hexpm.AdminTasks
   alias Hexpm.Accounts.{Organization, OrganizationUser, User}
+  alias Hexpm.Emails.{OutboxEntry, OutboxWorker}
   alias Hexpm.Repository.{Package, Release}
 
   describe "change_password/3" do
@@ -349,10 +350,12 @@ defmodule Hexpm.AdminTasksTest do
         assert email.text_body =~ "Reason:"
         assert email.text_body =~ "Because of a thing."
         assert email.text_body =~ "contact support at support@hex.pm"
+        assert email.text_body =~ "/policies/termsofservice"
 
         assert email.html_body =~ "Reason:"
         assert email.html_body =~ "Because of a thing."
         assert email.html_body =~ "mailto:support@hex.pm"
+        assert email.html_body =~ "/policies/termsofservice"
       end
     end
 
@@ -1101,13 +1104,20 @@ defmodule Hexpm.AdminTasksTest do
   end
 
   describe "send_email/3" do
-    test "sends a separate email to each recipient" do
+    test "queues a separate email for each recipient" do
       assert {:ok, 2} =
                AdminTasks.send_email(
                  ["bob@example.com", "jane@example.com"],
                  "Hex.pm - Service update",
                  "First paragraph.\n\nSecond paragraph."
                )
+
+      assert Enum.map(Repo.all(OutboxEntry), & &1.category) == [
+               "admin.announcement",
+               "admin.announcement"
+             ]
+
+      deliver_queued_emails()
 
       assert_email_sent(fn email ->
         assert email.to == [{"", "bob@example.com"}]
@@ -1121,23 +1131,51 @@ defmodule Hexpm.AdminTasksTest do
       assert_email_sent(fn email -> assert email.to == [{"", "jane@example.com"}] end)
     end
 
-    test "only sends once to duplicate recipients" do
+    test "only queues once for duplicate recipients" do
       assert {:ok, 1} =
                AdminTasks.send_email(
                  ["bob@example.com", "bob@example.com"],
                  "Hex.pm - Service update",
                  "Body"
                )
+
+      assert length(Repo.all(OutboxEntry)) == 1
     end
 
     test "escapes the body in the html email" do
       assert {:ok, 1} =
                AdminTasks.send_email(["bob@example.com"], "Subject", "<script>alert(1)</script>")
 
+      deliver_queued_emails()
+
       assert_email_sent(fn email ->
         refute email.html_body =~ "<script>"
         assert email.html_body =~ "&lt;script&gt;"
       end)
+    end
+
+    test "links bare urls in the html email and leaves the text body alone" do
+      assert {:ok, 1} =
+               AdminTasks.send_email(
+                 ["bob@example.com"],
+                 "Subject",
+                 "Read https://hex.pm/policies/termsofservice."
+               )
+
+      deliver_queued_emails()
+
+      assert_email_sent(fn email ->
+        assert email.html_body =~
+                 ~s(<a href="https://hex.pm/policies/termsofservice" style="color: #0f59d8; text-decoration: none;">https://hex.pm/policies/termsofservice</a>.)
+
+        assert email.text_body =~ "Read https://hex.pm/policies/termsofservice."
+      end)
+    end
+  end
+
+  defp deliver_queued_emails() do
+    for entry <- Repo.all(OutboxEntry) do
+      assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: entry.id})
     end
   end
 end

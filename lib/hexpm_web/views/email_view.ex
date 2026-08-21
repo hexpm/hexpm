@@ -11,7 +11,10 @@ defmodule HexpmWeb.EmailView do
   end
 
   defmodule Common do
-    import Phoenix.HTML, only: [safe_to_string: 1]
+    import Phoenix.HTML, only: [html_escape: 1, safe_to_string: 1]
+
+    @link_style "color: #0f59d8; text-decoration: none;"
+    @url_regex ~r{https?://[^\s<>"]+}
 
     def greeting(username), do: "Hello #{username}"
 
@@ -22,7 +25,7 @@ defmodule HexpmWeb.EmailView do
       safe_to_string(
         PhoenixHTMLHelpers.Link.link(text,
           to: url,
-          style: "color: #0f59d8; text-decoration: none;"
+          style: @link_style
         )
       )
     end
@@ -44,6 +47,13 @@ defmodule HexpmWeb.EmailView do
       "If you have any questions about why this action was taken, please contact support at #{support_link(format)}."
     end
 
+    def terms_notice(format) do
+      url = HexpmWeb.EmailView.email_url("/policies/termsofservice")
+
+      "This action was taken under our #{link(url, "Terms of Service", format)}. " <>
+        "If you have any questions, contact support at #{support_link(format)}."
+    end
+
     def reason_heading(), do: "Reason:"
 
     def paragraphs(body) do
@@ -51,6 +61,25 @@ defmodule HexpmWeb.EmailView do
       |> String.split(~r/\n\s*\n/, trim: true)
       |> Enum.map(&String.trim/1)
       |> Enum.reject(&(&1 == ""))
+    end
+
+    # Bare URLs written in a plain text body become links in the HTML part.
+    # The text is escaped before the anchors go in, so the replacement only
+    # ever wraps markup that is already safe, and a URL ending a sentence
+    # keeps its punctuation outside the link.
+    def autolink(text) do
+      text
+      |> html_escape()
+      |> safe_to_string()
+      |> String.replace(@url_regex, fn match ->
+        {url, trailing} = split_trailing_punctuation(match)
+        ~s(<a href="#{url}" style="#{@link_style}">#{url}</a>) <> trailing
+      end)
+    end
+
+    defp split_trailing_punctuation(url) do
+      [head, tail] = Regex.run(~r/\A(.*?)([.,;:!?)\]]*)\z/, url, capture: :all_but_first)
+      {head, tail}
     end
 
     # Common labels for build tools
@@ -99,7 +128,7 @@ defmodule HexpmWeb.EmailView do
 
   defmodule AccountRemoved do
     defdelegate reason_heading(), to: Common
-    defdelegate questions_notice(format), to: Common
+    defdelegate terms_notice(format), to: Common
     defdelegate paragraphs(reason), to: Common
 
     def title() do
@@ -120,6 +149,7 @@ defmodule HexpmWeb.EmailView do
 
   defmodule Announcement do
     defdelegate paragraphs(body), to: Common
+    defdelegate autolink(text), to: Common
 
     def title("Hex.pm - " <> title), do: title
     def title(subject), do: subject
@@ -459,7 +489,7 @@ defmodule HexpmWeb.EmailView do
 
   defmodule PackageRemoved do
     defdelegate reason_heading(), to: Common
-    defdelegate questions_notice(format), to: Common
+    defdelegate terms_notice(format), to: Common
     defdelegate paragraphs(reason), to: Common
 
     def title(package) do
@@ -474,7 +504,7 @@ defmodule HexpmWeb.EmailView do
 
   defmodule ReleaseRemoved do
     defdelegate reason_heading(), to: Common
-    defdelegate questions_notice(format), to: Common
+    defdelegate terms_notice(format), to: Common
     defdelegate paragraphs(reason), to: Common
 
     def title(package, version) do

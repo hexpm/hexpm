@@ -17,5 +17,5 @@
 <% end %>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
-  <%= raw(ReleaseRemoved.questions_notice(:html)) %>
+  <%= raw(ReleaseRemoved.terms_notice(:html)) %>
 </p>
