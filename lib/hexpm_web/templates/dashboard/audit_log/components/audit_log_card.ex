@@ -436,9 +436,17 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
 
   defp humanize_action(%AuditLog{
          action: "sso.break_glass",
+         params: %{"organization" => %{"name" => org}, "screen" => screen}
+       })
+       when is_binary(screen) do
+    "Reached #{org}'s #{String.replace(screen, "_", " ")} without a current SSO session"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "sso.break_glass",
          params: %{"organization" => %{"name" => org}}
        }) do
-    "Reached #{org}'s billing or SSO settings without a current SSO session"
+    "Reached #{org} without a current SSO session"
   end
 
   defp humanize_action(%AuditLog{action: "password.reset.init"}) do

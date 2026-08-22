@@ -1,8 +1,8 @@
 defmodule Hexpm.OAuth.Tokens do
   use Hexpm.Context
 
-  alias Hexpm.UserSessions
-  alias Hexpm.OAuth.{Token, JWT}
+  alias Hexpm.{UserSession, UserSessions}
+  alias Hexpm.OAuth.{AuthorizationCodes, Token, JWT}
   alias Hexpm.Permissions
 
   @default_expires_in 30 * 60
@@ -42,6 +42,9 @@ defmodule Hexpm.OAuth.Tokens do
   ## Returns
     * `{:ok, token}` - Token found and valid
     * `{:error, reason}` - Token not found, invalid, or validation failed
+
+  A validated token also has to belong to a live session, so revoking a session
+  takes effect on the next request even for a token the revocation missed.
   """
   def lookup(jwt_token, type, opts \\ []) when type in [:access, :refresh] do
     client_id = Keyword.get(opts, :client_id)
@@ -50,8 +53,8 @@ defmodule Hexpm.OAuth.Tokens do
 
     with {:ok, claims} <- JWT.verify_and_decode(jwt_token),
          {:ok, jti} <- extract_jti_for_type(claims, type),
-         {:ok, token} <- find_token_by_jti(jti, type, client_id),
-         :ok <- maybe_validate(token, validate, type),
+         {:ok, token, session_live?} <- find_token_by_jti(jti, type, client_id),
+         :ok <- maybe_validate(token, session_live?, validate, type),
          token <- maybe_preload(token, preload) do
       {:ok, token}
     else
@@ -273,6 +276,11 @@ defmodule Hexpm.OAuth.Tokens do
 
   @doc """
   Creates a session and token for a user atomically within a transaction.
+
+  Pass `:authorization_code` to redeem a code in the same transaction: the code
+  is consumed first, so the session and token exist only if this request is the
+  one that consumed it, and `{:error, :already_used}` comes back when another
+  request got there first.
   """
   def create_session_and_token_for_user(
         user,
@@ -301,11 +309,15 @@ defmodule Hexpm.OAuth.Tokens do
       create_for_user(user, client_id, scopes, grant_type, grant_reference, token_opts)
 
     # Build flat Multi (no nested transactions, last_use folded into INSERT)
-    UserSessions.build_oauth_session_multi(user, client_id,
-      expires_at: session_expires_at,
-      name: Keyword.get(opts, :name),
-      usage_info: Keyword.get(opts, :usage_info),
-      audit: Keyword.fetch!(opts, :audit)
+    Keyword.get(opts, :authorization_code)
+    |> consume_authorization_code_multi()
+    |> Ecto.Multi.append(
+      UserSessions.build_oauth_session_multi(user, client_id,
+        expires_at: session_expires_at,
+        name: Keyword.get(opts, :name),
+        usage_info: Keyword.get(opts, :usage_info),
+        audit: Keyword.fetch!(opts, :audit)
+      )
     )
     |> Ecto.Multi.run(:organization_sso_sessions, fn _repo, %{session: session} ->
       {:ok, Hexpm.Accounts.SSO.grant_org_sessions!(browser_session_id, session.id, user.id)}
@@ -318,13 +330,28 @@ defmodule Hexpm.OAuth.Tokens do
     |> Repo.transaction()
     |> case do
       {:ok, %{token: token}} -> {:ok, token}
+      {:error, :authorization_code, reason, _changes} -> {:error, reason}
       {:error, _failed_operation, changeset, _changes} -> {:error, changeset}
     end
+  end
+
+  defp consume_authorization_code_multi(nil), do: Ecto.Multi.new()
+
+  defp consume_authorization_code_multi(auth_code) do
+    Ecto.Multi.run(Ecto.Multi.new(), :authorization_code, fn _repo, _changes ->
+      AuthorizationCodes.consume(auth_code)
+    end)
   end
 
   @doc """
   Revokes an old token and creates a new one atomically within a transaction.
   Used for refresh token grant to ensure the old token is only revoked if the new one is created successfully.
+
+  The old token is taken under `FOR UPDATE` and re-checked there, so of two
+  refreshes presenting the same token one issues the replacement and the other
+  gets `{:error, :token_revoked}` instead of a second live child. The session is
+  taken next and refused if it is no longer live, which is also the order
+  `UserSessions.revoke/3` takes them in.
   """
   def revoke_and_create_token(
         old_token,
@@ -343,32 +370,54 @@ defmodule Hexpm.OAuth.Tokens do
 
     session_id = Keyword.get(opts, :user_session_id) || old_token.user_session_id
 
-    Ecto.Multi.new()
-    |> Ecto.Multi.update(:revoked_token, revoke_changeset(old_token))
-    |> Ecto.Multi.run(:new_token, fn _repo, _changes ->
-      token_changeset
-      |> Ecto.Changeset.put_change(:user_session_id, session_id)
-      |> Repo.insert()
-    end)
-    |> Ecto.Multi.run(:update_session_last_use, fn _repo, _changes ->
-      if session_id && Keyword.has_key?(opts, :usage_info) do
-        case Repo.get(Hexpm.UserSession, session_id) do
-          nil ->
-            {:ok, nil}
+    Repo.transaction(fn ->
+      token = locked_token(old_token.id)
+      session = session_id && locked_session(session_id)
 
-          session ->
-            UserSessions.update_last_use(session, Keyword.get(opts, :usage_info))
-        end
-      else
-        {:ok, nil}
+      cond do
+        is_nil(token) or revoked?(token) -> Repo.rollback(:token_revoked)
+        refresh_token_expired?(token) -> Repo.rollback(:token_expired)
+        session && not session_live?(session) -> Repo.rollback(:session_revoked)
+        true -> :ok
       end
+
+      Repo.update!(revoke_changeset(token))
+
+      new_token =
+        token_changeset
+        |> Ecto.Changeset.put_change(:user_session_id, session_id)
+        |> Repo.insert()
+        |> case do
+          {:ok, new_token} -> new_token
+          {:error, changeset} -> Repo.rollback(changeset)
+        end
+
+      if session && Keyword.has_key?(opts, :usage_info) do
+        UserSessions.update_last_use(session, Keyword.get(opts, :usage_info))
+      end
+
+      new_token
     end)
-    |> Repo.transaction()
-    |> case do
-      {:ok, %{new_token: token}} -> {:ok, token}
-      {:error, _failed_operation, changeset, _changes} -> {:error, changeset}
-    end
   end
+
+  defp locked_token(id) do
+    from(t in Token, where: t.id == ^id, lock: "FOR UPDATE")
+    |> Repo.one()
+  end
+
+  # `FOR NO KEY UPDATE` rather than `FOR UPDATE`: it conflicts with the plain
+  # update that revoking a session takes, which is what has to serialize here,
+  # and leaves tokens referencing the session free to be inserted.
+  defp locked_session(id) do
+    from(s in UserSession, where: s.id == ^id, lock: "FOR NO KEY UPDATE")
+    |> Repo.one()
+  end
+
+  defp session_live?(%UserSession{revoked_at: nil, expires_at: %DateTime{} = expires_at}) do
+    DateTime.compare(DateTime.utc_now(), expires_at) == :lt
+  end
+
+  defp session_live?(%UserSession{}), do: false
 
   @doc """
   Revokes a single token without affecting the session.
@@ -444,51 +493,47 @@ defmodule Hexpm.OAuth.Tokens do
     end
   end
 
-  defp find_token_by_jti(jti, :access, client_id) do
-    query =
-      if client_id do
-        Repo.get_by(Token, jti: jti, client_id: client_id)
-      else
-        Repo.get_by(Token, jti: jti)
-      end
+  # The session is joined and reduced to whether it is live in the same query,
+  # so a token lookup stays one round trip and one index lookup wider.
+  defp find_token_by_jti(jti, type, client_id) do
+    now = DateTime.utc_now()
 
-    case query do
+    from(t in Token,
+      left_join: s in assoc(t, :user_session),
+      select: {t, is_nil(s.id) or (is_nil(s.revoked_at) and s.expires_at > ^now)}
+    )
+    |> filter_by_jti(type, jti)
+    |> filter_by_client(client_id)
+    |> Repo.one()
+    |> case do
       nil -> {:error, :not_found}
-      token -> {:ok, token}
+      {token, session_live?} -> {:ok, token, session_live?}
     end
   end
 
-  defp find_token_by_jti(jti, :refresh, client_id) do
-    query =
-      if client_id do
-        Repo.get_by(Token, refresh_jti: jti, client_id: client_id)
-      else
-        Repo.get_by(Token, refresh_jti: jti)
-      end
+  defp filter_by_jti(query, :access, jti), do: from(t in query, where: t.jti == ^jti)
+  defp filter_by_jti(query, :refresh, jti), do: from(t in query, where: t.refresh_jti == ^jti)
 
-    case query do
-      nil -> {:error, :not_found}
-      token -> {:ok, token}
-    end
-  end
+  defp filter_by_client(query, nil), do: query
+  defp filter_by_client(query, client_id), do: from(t in query, where: t.client_id == ^client_id)
 
-  defp maybe_validate(token, true, :access) do
-    if valid?(token) do
+  defp maybe_validate(token, session_live?, true, :access) do
+    if valid?(token) and session_live? do
       :ok
     else
       {:error, :token_invalid}
     end
   end
 
-  defp maybe_validate(token, true, :refresh) do
-    if refresh_token_valid?(token) do
+  defp maybe_validate(token, session_live?, true, :refresh) do
+    if refresh_token_valid?(token) and session_live? do
       :ok
     else
       {:error, :token_invalid}
     end
   end
 
-  defp maybe_validate(_token, false, _type), do: :ok
+  defp maybe_validate(_token, _session_live?, false, _type), do: :ok
 
   defp maybe_preload(token, []), do: token
   defp maybe_preload(token, preload), do: Repo.preload(token, preload)

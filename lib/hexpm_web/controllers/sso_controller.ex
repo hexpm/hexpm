@@ -146,6 +146,9 @@ defmodule HexpmWeb.SSOController do
 
   defp validate_target_link_uri(_organization, nil), do: {:ok, nil}
 
+  # The provider chooses this value, so it is held to the initiating
+  # organization's own dashboard rather than to the return path policy that
+  # covers the paths we hand out ourselves.
   defp validate_target_link_uri(organization, target_link_uri)
        when is_binary(target_link_uri) and byte_size(target_link_uri) <= 2_048 do
     configured = URI.parse(Application.fetch_env!(:hexpm, :email_base_url))
@@ -155,9 +158,9 @@ defmodule HexpmWeb.SSOController do
          nil <- target.userinfo,
          nil <- target.fragment,
          path when is_binary(path) <- target.path,
+         true <- organization_dashboard_path?(organization, path),
          relative = path <> if(target.query, do: "?" <> target.query, else: ""),
-         return_path when is_binary(return_path) <-
-           SSO.allowed_return_path(organization, relative) do
+         return_path when is_binary(return_path) <- SSO.allowed_return_path(relative) do
       {:ok, return_path}
     else
       _other -> {:error, :invalid_third_party_initiation}
@@ -166,6 +169,12 @@ defmodule HexpmWeb.SSOController do
 
   defp validate_target_link_uri(_organization, _target_link_uri),
     do: {:error, :invalid_third_party_initiation}
+
+  defp organization_dashboard_path?(organization, path) do
+    base = "/dashboard/orgs/#{organization.name}"
+
+    path == base or String.starts_with?(path, base <> "/")
+  end
 
   defp same_origin?(left, right) do
     left.scheme in ["http", "https"] and left.scheme == right.scheme and
@@ -519,7 +528,7 @@ defmodule HexpmWeb.SSOController do
 
   defp login_destination(conn, transaction, organization, return_path) do
     authorization_path(conn, transaction) ||
-      SSO.allowed_return_path(organization, return_path) ||
+      SSO.allowed_return_path(return_path) ||
       ~p"/dashboard/orgs/#{organization}"
   end
 

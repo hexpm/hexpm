@@ -105,24 +105,31 @@ defmodule HexpmWeb.API.OAuthController do
            validate_authorization_code(safe_param(params, "code"), client.client_id),
          :ok <- validate_redirect_uri_match(auth_code, params["redirect_uri"]),
          :ok <- validate_pkce(auth_code, safe_param(params, "code_verifier")) do
-      {:ok, used_auth_code} = AuthorizationCodes.mark_as_used(auth_code)
       usage_info = build_usage_info(conn)
-      audit = %{audit_data(conn) | user: used_auth_code.user}
+      audit = %{audit_data(conn) | user: auth_code.user}
 
       case Tokens.create_session_and_token_for_user(
-             used_auth_code.user,
+             auth_code.user,
              client.client_id,
-             used_auth_code.scopes,
+             auth_code.scopes,
              "authorization_code",
-             used_auth_code.code,
+             auth_code.code,
              name: safe_param(params, "name"),
              with_refresh_token: true,
              usage_info: usage_info,
              audit: audit,
-             browser_session_id: used_auth_code.user_session_id
+             browser_session_id: auth_code.user_session_id,
+             authorization_code: auth_code
            ) do
         {:ok, token} ->
           render(conn, :token, token: token)
+
+        {:error, :already_used} ->
+          render_oauth_error(
+            conn,
+            :invalid_grant,
+            "Authorization code expired or already used"
+          )
 
         {:error, changeset} ->
           render_oauth_error(
@@ -186,6 +193,15 @@ defmodule HexpmWeb.API.OAuthController do
            ) do
         {:ok, new_token} ->
           render(conn, :token, token: new_token)
+
+        {:error, :token_revoked} ->
+          render_oauth_error(conn, :invalid_grant, "Refresh token has been revoked")
+
+        {:error, :token_expired} ->
+          render_oauth_error(conn, :invalid_grant, "Refresh token has expired")
+
+        {:error, :session_revoked} ->
+          render_oauth_error(conn, :invalid_grant, "Session has been revoked")
 
         {:error, changeset} ->
           render_oauth_error(

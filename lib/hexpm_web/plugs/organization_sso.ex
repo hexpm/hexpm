@@ -10,14 +10,18 @@ defmodule HexpmWeb.Plugs.OrganizationSSO do
 
   `organization:` says where the organization comes from: `:dashboard_org` reads
   the route parameter, `:repository` the repository a controller has already
-  resolved and assigned.
+  resolved and assigned, and `:billing_proxy` the customer the proxied billing
+  path names.
 
-  Pass `except:` the actions enforcement deliberately leaves open. Billing and
-  the SSO settings are the carve-out: an organization whose provider has broken,
-  or whose administrator was deactivated in it by mistake, has to be able to
-  repair the connection and keep paying, and it could not if those screens sat
-  behind the gate they are the only way to unlock. Reaching one that way is
-  audited and mailed to the administrators.
+  Pass `except:` the actions enforcement deliberately leaves open. Billing, the
+  SSO settings and leaving are the carve-out: an organization whose provider has
+  broken, or whose administrator was deactivated in it by mistake, has to be
+  able to repair the connection, keep paying, and get out, and it could not if
+  those screens sat behind the gate they are the only way to unlock. Reaching
+  one that way is audited and mailed to the administrators.
+
+  `screen:` names what the audit entry records where the action name is not the
+  screen a person would recognise. It defaults to the action name.
   """
 
   @behaviour Plug
@@ -28,19 +32,23 @@ defmodule HexpmWeb.Plugs.OrganizationSSO do
 
   @impl Plug
   def init(opts) do
-    {Keyword.get(opts, :organization, :dashboard_org), Keyword.get(opts, :except, [])}
+    %{
+      source: Keyword.get(opts, :organization, :dashboard_org),
+      except: Keyword.get(opts, :except, []),
+      screen: Keyword.get(opts, :screen)
+    }
   end
 
   @impl Plug
-  def call(conn, {source, except}) do
+  def call(conn, opts) do
     with %{} = user <- conn.assigns[:current_user],
-         %{} = organization <- organization(conn, source),
+         %{} = organization <- organization(conn, opts.source),
          {:error, refusal} <- SSOEnforcement.check(conn, organization, user) do
-      if carve_out?(conn, except) do
+      if carve_out?(conn, opts.except) do
         Enforcement.break_glass(
           organization,
           user,
-          Phoenix.Controller.action_name(conn),
+          screen(conn, opts.screen),
           HexpmWeb.ControllerHelpers.audit_data(conn)
         )
 
@@ -55,6 +63,9 @@ defmodule HexpmWeb.Plugs.OrganizationSSO do
 
   defp carve_out?(conn, except), do: Phoenix.Controller.action_name(conn) in except
 
+  defp screen(conn, nil), do: Phoenix.Controller.action_name(conn)
+  defp screen(_conn, screen), do: screen
+
   defp organization(conn, :dashboard_org) do
     case conn.params["dashboard_org"] do
       name when is_binary(name) -> Organizations.get(name)
@@ -63,4 +74,11 @@ defmodule HexpmWeb.Plugs.OrganizationSSO do
   end
 
   defp organization(conn, :repository), do: conn.assigns.repository.organization
+
+  defp organization(conn, :billing_proxy) do
+    case conn.params["path"] do
+      ["api", "customers", name, _action] when is_binary(name) -> Organizations.get(name)
+      _ -> nil
+    end
+  end
 end

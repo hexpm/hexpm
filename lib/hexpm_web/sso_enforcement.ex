@@ -48,11 +48,16 @@ defmodule HexpmWeb.SSOEnforcement do
   would take the public packages down with it.
   """
   def reachable_organizations(conn_or_socket) do
-    principal = conn_or_socket.assigns.current_user
+    reachable(conn_or_socket, Users.all_organizations(conn_or_socket.assigns.current_user))
+  end
 
+  @doc """
+  The same filter over a set of organizations the caller has already resolved.
+  """
+  def reachable(conn_or_socket, organizations) do
     Enforcement.reachable(
-      Users.all_organizations(principal),
-      principal,
+      organizations,
+      conn_or_socket.assigns.current_user,
       credential(conn_or_socket),
       session_id(conn_or_socket)
     )
@@ -130,9 +135,17 @@ defmodule HexpmWeb.SSOEnforcement do
   def allow_provider_form_action(conn, organization) do
     case SSO.get_connection(organization) do
       nil -> conn
-      connection -> ContentSecurityPolicy.allow_form_action(conn, connection.issuer)
+      connection -> ContentSecurityPolicy.allow_form_action(conn, provider_url(connection))
     end
   end
+
+  # The redirect goes to the authorization endpoint discovery returned, which
+  # nothing requires to share an origin with the issuer.
+  defp provider_url(%{discovery_document: %{"authorization_endpoint" => endpoint}})
+       when is_binary(endpoint),
+       do: endpoint
+
+  defp provider_url(connection), do: connection.issuer
 
   defp request_path(conn) do
     case conn.query_string do

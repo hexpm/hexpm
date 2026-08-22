@@ -17,5 +17,9 @@ defmodule Hexpm.Accounts.SSO.Failure do
     failure
     |> cast(attrs, [:connection_id, :stage, :code, :user_id])
     |> validate_required([:connection_id, :stage, :code])
+    # A diagnostic is written after the connection has been read, and a
+    # connection that was deleted in between leaves nothing to attach it to.
+    # Losing the entry is the outcome; raising over it is not.
+    |> foreign_key_constraint(:connection_id)
   end
 end

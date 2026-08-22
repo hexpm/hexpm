@@ -399,6 +399,37 @@ defmodule HexpmWeb.API.AuthControllerTest do
       |> response(401)
     end
 
+    test "authenticate oauth token against a package", %{user: user, owned_org: owned_org} do
+      repository = insert(:repository, organization: owned_org, name: owned_org.name)
+      package = insert(:package, repository_id: repository.id)
+      insert(:package_owner, package: package, user: user)
+      token = oauth_token(user, ["api"])
+
+      build_conn()
+      |> put_req_header("authorization", "Bearer #{token.access_token}")
+      |> get("/api/auth", domain: "package", resource: "#{owned_org.name}/#{package.name}")
+      |> response(204)
+
+      build_conn()
+      |> put_req_header("authorization", "Bearer #{token.access_token}")
+      |> get("/api/auth", domain: "package", resource: "#{owned_org.name}/nonexistent")
+      |> response(403)
+    end
+
+    test "authenticate oauth token against a package without active billing", %{user: user} do
+      organization = insert(:organization, billing_active: false)
+      insert(:organization_user, organization: organization, user: user)
+      repository = insert(:repository, organization: organization, name: organization.name)
+      package = insert(:package, repository_id: repository.id)
+      insert(:package_owner, package: package, user: user)
+      token = oauth_token(user, ["api"])
+
+      build_conn()
+      |> put_req_header("authorization", "Bearer #{token.access_token}")
+      |> get("/api/auth", domain: "package", resource: "#{organization.name}/#{package.name}")
+      |> response(403)
+    end
+
     test "authenticate repository key against repository without access permissions", %{
       unowned_user_repo_key: key,
       unowned_org: unowned_org
@@ -441,5 +472,22 @@ defmodule HexpmWeb.API.AuthControllerTest do
       |> get("/api/auth", domain: "repository", resource: organization.name)
       |> response(403)
     end
+  end
+
+  defp oauth_token(user, scopes) do
+    client = insert(:oauth_client)
+    session = insert(:oauth_session, user: user, client_id: client.client_id)
+
+    {:ok, token} =
+      Hexpm.OAuth.Tokens.create_and_insert_for_user(
+        user,
+        client.client_id,
+        scopes,
+        "authorization_code",
+        "test_grant_ref-#{System.unique_integer([:positive])}",
+        user_session_id: session.id
+      )
+
+    token
   end
 end

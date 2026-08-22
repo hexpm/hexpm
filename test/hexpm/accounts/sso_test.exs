@@ -1472,21 +1472,39 @@ defmodule Hexpm.Accounts.SSOTest do
   defp sso_group_key(connection, user), do: "sso:#{connection.id}:#{user.id}"
 
   describe "return paths" do
-    test "allows only the selected organization dashboard", context do
+    test "allows any path on this site", context do
       base = "/dashboard/orgs/#{context.organization.name}"
 
-      assert SSO.allowed_return_path(context.organization, base) == base
+      for path <- [
+            base,
+            base <> "/packages?sort=name",
+            "/packages/#{context.organization.name}/ecto",
+            "/packages/#{context.organization.name}/ecto/1.0.0/files",
+            "/diff/#{context.organization.name}/ecto/1.0.0..2.0.0",
+            "/preview/#{context.organization.name}/ecto/1.0.0?path=mix.exs",
+            "/oauth/authorize?client_id=abc&state=xyz",
+            "/dashboard/profile"
+          ] do
+        assert SSO.allowed_return_path(path) == path
+      end
+    end
 
-      assert SSO.allowed_return_path(context.organization, base <> "/packages?sort=name") ==
-               base <> "/packages?sort=name"
-
-      assert SSO.allowed_return_path(context.organization, "/dashboard/profile") == nil
-      assert SSO.allowed_return_path(context.organization, "//evil.example") == nil
-      assert SSO.allowed_return_path(context.organization, "/\\evil.example") == nil
-      assert SSO.allowed_return_path(context.organization, base <> "-attacker") == nil
-      assert SSO.allowed_return_path(context.organization, base <> "/../other") == nil
-      assert SSO.allowed_return_path(context.organization, base <> "/%2e%2e/other") == nil
-      assert SSO.allowed_return_path(context.organization, base <> "/%5cevil") == nil
+    test "allows nothing that could leave it" do
+      for path <- [
+            "https://evil.example/packages",
+            "//evil.example",
+            "/\\evil.example",
+            "/%2f%2fevil.example",
+            "/packages/../../evil",
+            "/packages/%2e%2e/evil",
+            "/packages/%5cevil",
+            "/diff/foo\r\nSet-Cookie:%20a=b",
+            "/packages/foo#fragment",
+            "packages/foo",
+            ""
+          ] do
+        assert SSO.allowed_return_path(path) == nil
+      end
     end
   end
 

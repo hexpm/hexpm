@@ -161,11 +161,13 @@ An exempt member reaches the organization on their Hexpm credential alone. That 
 
 ### Break-glass
 
-Two screens stay reachable for a governed member with no current organization access session: **Billing** and the **SSO** settings themselves. Everything else on the organization dashboard, and every private package, is refused as usual.
+Three things stay reachable for a governed member with no current organization access session: **Billing**, the **SSO** settings themselves, and **leaving the organization**. Everything else on the organization dashboard, and every private package, is refused as usual.
 
-They stay open because an organization whose client secret expired, or whose administrator was deactivated in the provider by mistake, has to be able to repair the connection and keep paying. If those screens sat behind the gate they are the only way to unlock, nothing could ever fix it. So while the provider is down, a required organization can fix its connection and keep its subscription, and cannot publish or fetch privately until the provider is back.
+The first two stay open because an organization whose client secret expired, or whose administrator was deactivated in the provider by mistake, has to be able to repair the connection and keep paying. If those screens sat behind the gate they are the only way to unlock, nothing could ever fix it. So while the provider is down, a required organization can fix its connection and keep its subscription, and cannot publish or fetch privately until the provider is back.
 
-Reaching either screen that way is recorded in the organization's audit log and emailed to its administrators, at most once an hour per member.
+Leaving is open because it removes the member's own access rather than granting any, and it is the only lever someone deactivated at the provider has. Gating it would leave them unable to authenticate, unable to leave, and still a billed seat.
+
+Reaching any of the three that way is recorded in the organization's audit log, which names the screen, and emailed to its administrators, at most once an hour per member.
 
 The SSO screen is reachable so the connection can be repaired, and turning enforcement off for the organization counts as repairing it. Exempting individual members does not: it outlives the outage and leaves the organization reading as enforced, so that control needs a current organization access session like everything else.
 
@@ -178,7 +180,7 @@ A required organization has exactly four ways in that do not involve its identit
 3. **Personal API keys**, unless the organization chose to block them.
 4. **Break-glass** on the billing and SSO settings screens, audited and mailed.
 
-There is no fifth. If you are evaluating Hexpm against a compliance requirement, this is the list.
+There is no fifth. If you are evaluating Hexpm against a compliance requirement, this is the list. Leaving the organization is open on the same break-glass terms and audited the same way, but it is not on the list: it takes the member's access away rather than giving them any.
 
 ### Offboarding
 

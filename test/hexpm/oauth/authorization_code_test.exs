@@ -1,8 +1,6 @@
 defmodule Hexpm.OAuth.AuthorizationCodeTest do
   use Hexpm.DataCase, async: true
 
-  import Ecto.Changeset, only: [get_field: 2]
-
   alias Hexpm.OAuth.{AuthorizationCode, Clients}
 
   describe "changeset/2" do
@@ -96,19 +94,6 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
 
       changeset = AuthorizationCode.build(attrs)
       assert changeset.valid?
-    end
-  end
-
-  describe "mark_as_used/1" do
-    test "creates changeset with used_at timestamp" do
-      auth_code = %AuthorizationCode{}
-      earliest_used_at = DateTime.utc_now() |> DateTime.truncate(:second)
-      changeset = AuthorizationCode.mark_as_used(auth_code)
-      latest_used_at = DateTime.utc_now() |> DateTime.truncate(:second)
-
-      used_at = get_field(changeset, :used_at)
-      assert used_at
-      assert_datetime_between(used_at, earliest_used_at, latest_used_at)
     end
   end
 end

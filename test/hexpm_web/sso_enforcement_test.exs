@@ -1,8 +1,11 @@
 defmodule HexpmWeb.SSOEnforcementTest do
   use HexpmWeb.ConnCase, async: false
 
+  import Phoenix.LiveViewTest
+
   alias Hexpm.Accounts.SSO
   alias Hexpm.Accounts.SSO.Enforcement
+  alias Hexpm.Diff.Cache
   alias Hexpm.Emails.OutboxEntry
 
   setup do
@@ -132,6 +135,72 @@ defmodule HexpmWeb.SSOEnforcementTest do
     end
   end
 
+  describe "a connected LiveView" do
+    test "re-resolves the repositories a search reaches", context do
+      require_sso(context)
+      {conn, session} = login(context.member)
+      authenticate(context, context.member, session)
+
+      {:ok, view, html} = live(conn, "/packages?search=#{context.package.name}")
+
+      assert html =~ "#{context.repository.name}/#{context.package.name}"
+
+      expire_org_sessions(session)
+
+      refute render_patch(view, "/packages?search=#{context.package.name}&sort=name") =~
+               "#{context.repository.name}/#{context.package.name}"
+    end
+
+    test "sends the diff view at the provider before loading another piece", context do
+      require_sso(context)
+      insert(:release, package: context.package, version: "2.0.0")
+      {conn, session} = login(context.member)
+      authenticate(context, context.member, session)
+
+      {:ok, request} =
+        Hexpm.Diff.prepare(context.repository.name, context.package.name, "1.0.0", "2.0.0", [])
+
+      put_ready_cache(request, 6)
+
+      path = "/diff/#{context.repository.name}/#{context.package.name}/1.0.0..2.0.0"
+      {:ok, view, html} = live(conn, path)
+
+      assert html =~ "5 of 6 files loaded"
+      assert html =~ ~s(id="diff-gap-5-5")
+
+      expire_org_sessions(session)
+
+      assert {:error, {:redirect, %{to: to}}} =
+               render_hook(view, "load-gap", %{"start" => "5", "last" => "5"})
+
+      assert to == "/sso/org/#{context.organization.name}?return=" <> URI.encode_www_form(path)
+    end
+
+    test "refuses a package report filed after the session lapses", context do
+      require_sso(context)
+      {conn, session} = login(context.member)
+      authenticate(context, context.member, session)
+
+      path = "/packages/#{context.repository.name}/#{context.package.name}/report"
+      {:ok, view, _html} = live(conn, path)
+
+      expire_org_sessions(session)
+
+      assert {:error, {:redirect, %{to: to}}} =
+               render_submit(view, "submit", %{
+                 "h-captcha-response" => "captcha",
+                 "report" => %{
+                   reason: "other",
+                   summary: "Question",
+                   description: "Report details"
+                 }
+               })
+
+      assert to == "/sso/org/#{context.organization.name}?return=" <> URI.encode_www_form(path)
+      refute Repo.exists?(Hexpm.PackageReports.Report)
+    end
+  end
+
   describe "the dashboard" do
     test "refuses a governed admin", context do
       require_sso(context)
@@ -221,6 +290,43 @@ defmodule HexpmWeb.SSOEnforcementTest do
       assert response(get(conn, "/dashboard/orgs/#{context.organization.name}/billing"), 200)
     end
 
+    test "accounts for the billing proxy the same way the billing screen is", context do
+      require_sso(context)
+      {conn, _session} = login(context.admin)
+
+      stub(Hexpm.HTTP.Mock, :post, fn _url, _headers, _body, _opts ->
+        {:ok, 200, [], %{"client_secret" => "seti_123"}}
+      end)
+
+      conn =
+        post(
+          conn,
+          "/dashboard/billing-api/api/customers/#{context.organization.name}/setup_intent"
+        )
+
+      assert json_response(conn, 200)
+
+      assert [log] = break_glass_logs(context)
+      assert log.params["screen"] == "billing"
+      assert log.user_id == context.admin.id
+    end
+
+    test "names the screen that was reached in the audit log", context do
+      require_sso(context)
+      {conn, session} = login(context.admin)
+
+      assert response(get(conn, "/dashboard/orgs/#{context.organization.name}/billing"), 200)
+
+      authenticate(context, context.admin, session)
+
+      html =
+        conn
+        |> get("/dashboard/orgs/#{context.organization.name}/audit-logs")
+        |> response(200)
+
+      assert html =~ "Reached #{context.organization.name}&#39;s billing without a current"
+    end
+
     test "records nothing while the admin has a session", context do
       require_sso(context)
       {conn, session} = login(context.admin)
@@ -305,7 +411,11 @@ defmodule HexpmWeb.SSOEnforcementTest do
         |> put_req_header("authorization", basic_auth(user.username, "hunter42"))
         |> get("/api/orgs/#{context.organization.name}")
 
-      assert json_response(conn, 403)["message"] =~ "requires authenticating through its identity"
+      message = json_response(conn, 403)["message"]
+
+      assert message =~ "requires authenticating through its identity"
+      assert message =~ "username and password"
+      refute message =~ "/sso/org/"
     end
 
     test "lets a personal key through where the organization allows them", context do
@@ -327,6 +437,29 @@ defmodule HexpmWeb.SSOEnforcementTest do
         |> put_req_header("authorization", key_for(context.organization))
         |> get("/api/orgs/#{context.organization.name}")
 
+      assert json_response(conn, 200)["name"] == context.organization.name
+    end
+
+    test "never governs a token minted from the organization's own key", context do
+      require_sso(context)
+
+      secret =
+        key_for(context.organization, [
+          %{"domain" => "api", "resource" => "read"},
+          %{"domain" => "repositories"}
+        ])
+
+      body = client_credentials(secret, "api:read repositories")
+
+      assert body["scope"] =~ "repository:#{context.organization.name}"
+
+      conn =
+        build_conn()
+        |> put_req_header("authorization", "Bearer #{body["access_token"]}")
+        |> get("/api/orgs/#{context.organization.name}")
+
+      # The subject is the organization rather than a person, so nothing about
+      # it is governed and no organization access session is looked for.
       assert json_response(conn, 200)["name"] == context.organization.name
     end
   end
@@ -374,7 +507,14 @@ defmodule HexpmWeb.SSOEnforcementTest do
         |> put_req_header("x-hex-otp", otp(member))
         |> post("/api/publish?repository=#{context.repository.name}", create_tar(meta))
 
-      assert json_response(conn, 403)["message"] =~ "requires authenticating through its identity"
+      message = json_response(conn, 403)["message"]
+
+      assert message =~ "requires authenticating through its identity"
+      assert message =~ "mix hex.user auth"
+
+      # A sign-in URL would authenticate the browser that followed it, not this
+      # token's session, so the refusal must not offer one.
+      refute message =~ "/sso/org/"
     end
 
     test "lets an OAuth token whose session is authenticated through", context do
@@ -419,6 +559,41 @@ defmodule HexpmWeb.SSOEnforcementTest do
         |> get("/api/auth", domain: "repository", resource: context.organization.name)
 
       assert json_response(conn, 200)["key"]["owner"]["type"] == "organization"
+    end
+
+    test "resolves a package to its organization for both checks", context do
+      require_sso(context)
+      token = oauth_token(context.member, ["api"])
+
+      conn =
+        build_conn()
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> get("/api/auth",
+          domain: "package",
+          resource: "#{context.organization.name}/#{context.package.name}"
+        )
+
+      # The package domain verifies to a package, and billing and enforcement
+      # are both about the organization behind it. Left to its scopes like any
+      # other token, with or without an organization access session.
+      assert response(conn, 204)
+    end
+
+    test "resolves a package for a governed session that has authenticated", context do
+      require_sso(context)
+      session = oauth_session(context.member)
+      authenticate(context, context.member, session)
+      token = oauth_token(context.member, ["api"], session)
+
+      conn =
+        build_conn()
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> get("/api/auth",
+          domain: "package",
+          resource: "#{context.organization.name}/#{context.package.name}"
+        )
+
+      assert response(conn, 204)
     end
 
     test "leaves an OAuth token to its scopes", context do
@@ -546,6 +721,30 @@ defmodule HexpmWeb.SSOEnforcementTest do
       assert [granted] = SSO.grant_org_sessions!(browser.id, oauth.id, context.member.id)
 
       assert DateTime.compare(granted.expires_at, source.expires_at) == :eq
+    end
+
+    test "a second flow leaves the first session's access alone", context do
+      require_sso(context)
+      {first_conn, first_browser} = login(context.member)
+      authenticate(context, context.member, first_browser)
+
+      first_oauth = oauth_session(context.member)
+
+      assert [_granted] =
+               SSO.grant_org_sessions!(first_browser.id, first_oauth.id, context.member.id)
+
+      {_second_conn, second_browser} = login(context.member)
+      authenticate(context, context.member, second_browser)
+      second_oauth = oauth_session(context.member)
+      SSO.grant_org_sessions!(second_browser.id, second_oauth.id, context.member.id)
+
+      assert Enforcement.check(context.organization, context.member, nil, first_oauth.id) == :ok
+      assert Enforcement.check(context.organization, context.member, nil, second_oauth.id) == :ok
+
+      assert response(
+               get(first_conn, "/packages/#{context.repository.name}/#{context.package.name}"),
+               200
+             ) =~ context.package.name
     end
 
     test "carries nothing when the browser had nothing", context do
@@ -867,11 +1066,15 @@ defmodule HexpmWeb.SSOEnforcementTest do
 
     test "leave them off the owner's profile", context do
       insert(:package_owner, package: context.package, user: context.member)
-      require_sso(context)
       {conn, _session} = login(context.member)
 
-      refute get(conn, "/users/#{context.member.username}") |> response(200) =~
-               context.package.name
+      assert package_card_paths(conn, context.member) == [
+               "/packages/#{context.repository.name}/#{context.package.name}"
+             ]
+
+      require_sso(context)
+
+      assert package_card_paths(conn, context.member) == []
     end
 
     test "leave them out of search", context do
@@ -893,12 +1096,51 @@ defmodule HexpmWeb.SSOEnforcementTest do
     end
   end
 
+  describe "membership listings" do
+    test "leave a governed organization out of the API organization index", context do
+      token = oauth_token(context.member, ["api:read"])
+
+      names = fn ->
+        build_conn()
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> get("/api/orgs")
+        |> json_response(200)
+        |> Enum.map(& &1["name"])
+      end
+
+      assert context.organization.name in names.()
+
+      require_sso(context)
+
+      refute context.organization.name in names.()
+    end
+
+    test "leave its repository out of the API repository index", context do
+      token = oauth_token(context.member, ["api:read"])
+
+      names = fn ->
+        build_conn()
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> get("/api/repos")
+        |> json_response(200)
+        |> Enum.map(& &1["name"])
+      end
+
+      assert context.repository.name in names.()
+
+      require_sso(context)
+
+      refute context.repository.name in names.()
+      assert "hexpm" in names.()
+    end
+  end
+
   describe "a token exchanged from a personal key" do
     test "keeps the organizations that accept personal keys", context do
       require_sso(context, "allow")
       key = insert(:key, user: context.member, organization: nil, permissions: repository_all())
 
-      body = client_credentials(key, "repositories")
+      body = client_credentials(key.user_secret, "repositories")
 
       assert body["scope"] =~ "repository:#{context.organization.name}"
       refute body["sso_reauth_required"]
@@ -908,10 +1150,40 @@ defmodule HexpmWeb.SSOEnforcementTest do
       require_sso(context)
       key = insert(:key, user: context.member, organization: nil, permissions: repository_all())
 
-      body = client_credentials(key, "repositories")
+      body = client_credentials(key.user_secret, "repositories")
 
       refute body["scope"] =~ "repository:#{context.organization.name}"
       assert body["sso_reauth_required"] in [nil, []]
+    end
+
+    test "reaches the organization on the terms the key itself reaches it on", context do
+      require_sso(context, "allow")
+      key = insert(:key, user: context.member, organization: nil, permissions: api_and_repos())
+
+      body = client_credentials(key.user_secret, "api:read repositories")
+
+      conn =
+        build_conn()
+        |> put_req_header("authorization", "Bearer #{body["access_token"]}")
+        |> get("/api/orgs/#{context.organization.name}")
+
+      # Its session can never hold organization access, so judging it on one
+      # would refuse it where the key it came from is allowed.
+      assert json_response(conn, 200)["name"] == context.organization.name
+    end
+
+    test "is turned away where the organization turns personal keys away", context do
+      require_sso(context)
+      key = insert(:key, user: context.member, organization: nil, permissions: api_and_repos())
+
+      body = client_credentials(key.user_secret, "api:read repositories")
+
+      conn =
+        build_conn()
+        |> put_req_header("authorization", "Bearer #{body["access_token"]}")
+        |> get("/api/orgs/#{context.organization.name}")
+
+      assert json_response(conn, 403)["message"] =~ "does not accept personal API keys"
     end
   end
 
@@ -1071,7 +1343,14 @@ defmodule HexpmWeb.SSOEnforcementTest do
 
   defp repository_all, do: [build(:key_permission, domain: "repositories", resource: nil)]
 
-  defp client_credentials(key, scope) do
+  defp api_and_repos do
+    [
+      build(:key_permission, domain: "api", resource: "read"),
+      build(:key_permission, domain: "repositories", resource: nil)
+    ]
+  end
+
+  defp client_credentials(secret, scope) do
     {:ok, client} =
       Hexpm.OAuth.Client.build(%{
         client_id: Hexpm.OAuth.Clients.generate_client_id(),
@@ -1086,7 +1365,7 @@ defmodule HexpmWeb.SSOEnforcementTest do
     |> post("/api/oauth/token", %{
       "grant_type" => "client_credentials",
       "client_id" => client.client_id,
-      "client_secret" => key.user_secret,
+      "client_secret" => secret,
       "scope" => scope
     })
     |> json_response(200)
@@ -1121,5 +1400,28 @@ defmodule HexpmWeb.SSOEnforcementTest do
   defp break_glass_logs(context) do
     Hexpm.Accounts.AuditLogs.all_by(context.organization)
     |> Enum.filter(&(&1.action == "sso.break_glass"))
+  end
+
+  defp package_card_paths(conn, user) do
+    {:ok, document} =
+      conn |> get("/users/#{user.username}") |> response(200) |> Floki.parse_document()
+
+    document
+    |> Floki.find("a[href^='/packages/']")
+    |> Floki.attribute("href")
+  end
+
+  defp put_ready_cache(request, count) do
+    for index <- 0..(count - 1) do
+      Cache.put_piece!(request, index, %{type: "too_large", file: "file-#{index}.bin"})
+    end
+
+    Cache.put_metadata!(request, %{
+      total_diffs: count,
+      total_additions: count,
+      total_deletions: count,
+      files_changed: count,
+      files: Enum.map(0..(count - 1), &"file-#{&1}.bin")
+    })
   end
 end

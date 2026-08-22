@@ -264,6 +264,14 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
                 "#{user.username} is not a member of this organization."
               )
 
+            {:error, :no_reachable_admin} ->
+              redirect_with_flash(
+                conn,
+                organization,
+                :error,
+                enforcement_error(:no_reachable_admin)
+              )
+
             {:error, _changeset} ->
               redirect_with_flash(
                 conn,

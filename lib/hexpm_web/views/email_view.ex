@@ -437,16 +437,18 @@ defmodule HexpmWeb.EmailView do
   end
 
   defmodule SSOBreakGlass do
-    def intro(organization, username) do
-      "#{username} opened the billing or single sign-on settings for the #{organization} organization on Hex.pm without a current single sign-on session."
+    def intro(organization, username, screen) do
+      "#{username} reached the #{organization} organization's #{screen_name(screen)} on Hex.pm, one of the screens enforcement leaves open, without a current single sign-on session."
     end
 
+    defp screen_name(screen), do: String.replace(screen, "_", " ")
+
     def why() do
-      "Those two screens are the only ones enforcement leaves open. An organization whose provider stops working, or whose administrator is deactivated in it by mistake, still has to be able to repair the connection and keep paying, and it could not if those screens sat behind the same gate."
+      "An organization whose provider stops working, or whose administrator is deactivated in it by mistake, still has to be able to repair the connection, keep paying, and leave. It could not do any of that if those screens sat behind the gate they are the only way to unlock."
     end
 
     def scope() do
-      "Private packages, publishing and every other organization page were refused as usual. The SSO settings screen does show the accounts linked to your provider, the personal API keys that reach this organization, and recent login failures, so treat those as seen."
+      "Private packages, publishing and the rest of the organization dashboard were refused as usual. The SSO settings screen, if that was the one, shows the accounts linked to your provider, the personal API keys that reach this organization, and recent login failures, so treat those as seen."
     end
 
     def action() do

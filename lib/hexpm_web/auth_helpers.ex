@@ -415,8 +415,14 @@ defmodule HexpmWeb.AuthHelpers do
 
   def sso_enforced(%Plug.Conn{} = conn, organization, user_or_organization) do
     case HexpmWeb.SSOEnforcement.check(conn, organization, user_or_organization) do
-      :ok -> :ok
-      {:error, refusal} -> {:error, :auth, Enforcement.refusal_message(refusal, organization)}
+      :ok ->
+        :ok
+
+      {:error, refusal} ->
+        message =
+          Enforcement.refusal_message(refusal, organization, conn.assigns[:auth_credential])
+
+        {:error, :auth, message}
     end
   end
 

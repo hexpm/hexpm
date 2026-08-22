@@ -60,10 +60,6 @@ defmodule Hexpm.OAuth.AuthorizationCode do
     |> changeset(attrs)
   end
 
-  def mark_as_used(%__MODULE__{} = auth_code) do
-    changeset(auth_code, %{used_at: DateTime.utc_now()})
-  end
-
   defp validate_scopes(changeset) do
     validate_change(changeset, :scopes, fn :scopes, scopes ->
       case Permissions.validate_scopes(scopes) do

@@ -346,7 +346,8 @@ defmodule Hexpm.OAuth.DeviceCodes do
   # code row so concurrent polls serialize and cannot each mint a fresh token,
   # which would leave multiple live tokens for the same device code. The JWT is
   # signed before the transaction so the connection and row lock are not held
-  # during the CPU-intensive signing.
+  # during the CPU-intensive signing. Tokens are written before the session's
+  # last use, the order the refresh grant and session revocation take them in.
   defp rotate_device_token(device_code_record, usage_info) do
     case get_device_token(device_code_record) do
       nil ->
@@ -357,13 +358,16 @@ defmodule Hexpm.OAuth.DeviceCodes do
 
         Repo.transaction(fn ->
           lock_device_code(device_code_record)
-          update_session_last_use(old_token, usage_info)
           revoke_live_device_tokens(device_code_record)
 
-          case Repo.insert(new_token_changeset) do
-            {:ok, new_token} -> new_token
-            {:error, changeset} -> Repo.rollback(changeset)
-          end
+          new_token =
+            case Repo.insert(new_token_changeset) do
+              {:ok, new_token} -> new_token
+              {:error, changeset} -> Repo.rollback(changeset)
+            end
+
+          update_session_last_use(old_token, usage_info)
+          new_token
         end)
     end
   end

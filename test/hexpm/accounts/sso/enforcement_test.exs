@@ -301,10 +301,53 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
       assert message =~ "mix hex.user auth"
     end
 
-    test "points a refused member at their provider", context do
+    test "tells an OAuth token to re-authorize the session it is on", context do
+      session = oauth_session(context.member)
+      message = Enforcement.refusal_message(:sso_required, context.organization, token(session))
+
+      assert message =~ "requires authenticating through its identity provider"
+      assert message =~ "mix hex.user auth"
+
+      # A sign-in URL would authenticate whichever browser session followed it,
+      # which is not the one the token is on.
+      refute message =~ "/sso/org/"
+    end
+
+    test "tells a username and password that it cannot hold the session", context do
       message = Enforcement.refusal_message(:sso_required, context.organization)
 
-      assert message =~ "/sso/org/#{context.organization.name}"
+      assert message =~ "requires authenticating through its identity provider"
+      assert message =~ "username and password"
+      assert message =~ "mix hex.user auth"
+      refute message =~ "/sso/org/"
+    end
+
+    test "treats a token exchanged from a personal key as that key", context do
+      {:ok, _connection} = require_sso(context)
+      session = oauth_session(context.member)
+
+      assert Enforcement.check(
+               context.organization,
+               context.member,
+               api_key_token(session),
+               session.id
+             ) == {:error, :personal_key}
+    end
+
+    test "lets that token through where the organization allows personal keys", context do
+      link_identity(context, context.admin)
+
+      {:ok, _connection} =
+        configure(context, %{"enforcement_mode" => "required", "personal_keys" => "allow"})
+
+      session = oauth_session(context.member)
+
+      assert Enforcement.check(
+               context.organization,
+               context.member,
+               api_key_token(session),
+               session.id
+             ) == :ok
     end
 
     test "never governs the public repository", context do
@@ -610,6 +653,71 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
                  audit: audit_data(context.admin)
                )
     end
+
+    test "refuses to enforce the last administrator who can still get in", context do
+      {:ok, _member} =
+        SSO.set_member_enforcement(context.organization, context.admin, "exempt",
+          audit: audit_data(context.admin)
+        )
+
+      {:ok, _connection} =
+        configure(context, %{"enforcement_mode" => "required", "personal_keys" => "block"})
+
+      assert {:error, :no_reachable_admin} =
+               SSO.set_member_enforcement(context.organization, context.admin, "enforced",
+                 audit: audit_data(context.admin)
+               )
+
+      assert Repo.get_by!(Hexpm.Accounts.OrganizationUser,
+               organization_id: context.organization.id,
+               user_id: context.admin.id
+             ).sso_enforcement == "exempt"
+    end
+
+    test "allows it while another administrator is still reachable", context do
+      other_admin = insert(:user)
+
+      insert(:organization_user,
+        organization: context.organization,
+        user: other_admin,
+        role: "admin"
+      )
+
+      link_identity(context, other_admin)
+
+      {:ok, _member} =
+        SSO.set_member_enforcement(context.organization, context.admin, "exempt",
+          audit: audit_data(context.admin)
+        )
+
+      {:ok, _connection} =
+        configure(context, %{"enforcement_mode" => "required", "personal_keys" => "block"})
+
+      assert {:ok, member} =
+               SSO.set_member_enforcement(context.organization, context.admin, "enforced",
+                 audit: audit_data(context.admin)
+               )
+
+      assert member.sso_enforcement == "enforced"
+    end
+
+    test "does not hold an organization that has no reachable administrator to it", context do
+      link_identity(context, context.admin)
+
+      {:ok, _connection} =
+        configure(context, %{"enforcement_mode" => "required", "personal_keys" => "block"})
+
+      Repo.delete_all(Hexpm.Accounts.SSO.Identity)
+
+      # Nothing here would make it worse, and the change that gives the
+      # organization an administrator back goes through the same function.
+      assert {:ok, member} =
+               SSO.set_member_enforcement(context.organization, context.member, "enforced",
+                 audit: audit_data(context.admin)
+               )
+
+      assert member.sso_enforcement == "enforced"
+    end
   end
 
   describe "a pilot that blocks personal keys" do
@@ -777,6 +885,14 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
 
   defp token(session) do
     %Hexpm.OAuth.Token{user_session_id: session.id}
+  end
+
+  defp api_key_token(session) do
+    %Hexpm.OAuth.Token{
+      user_session_id: session.id,
+      user_id: session.user_id,
+      grant_type: "client_credentials"
+    }
   end
 
   defp personal_key(user) do

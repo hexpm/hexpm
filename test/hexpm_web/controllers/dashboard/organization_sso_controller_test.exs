@@ -453,6 +453,72 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     assert html =~ "issuer_mismatch"
   end
 
+  test "lets the browser follow the form through to the authorization endpoint", context do
+    insert(:organization_sso_connection,
+      organization: context.organization,
+      issuer: "https://issuer.example",
+      discovery_document: %{
+        "issuer" => "https://issuer.example",
+        "authorization_endpoint" => "https://login.example/oauth2/authorize"
+      }
+    )
+
+    conn =
+      build_conn()
+      |> test_login(context.admin)
+      |> get("/dashboard/orgs/#{context.organization.name}/sso")
+
+    assert html_response(conn, 200)
+
+    [csp] = get_resp_header(conn, "content-security-policy")
+
+    # The POST redirect goes to the authorization endpoint, which nothing
+    # requires to share an origin with the issuer.
+    assert csp =~ "form-action 'self' https://login.example"
+    refute csp =~ "https://issuer.example"
+  end
+
+  test "lists the personal keys that reach the organization on the SSO tab", context do
+    insert(:organization_sso_connection, organization: context.organization)
+
+    Hexpm.Accounts.Keys.create(
+      context.member,
+      %{
+        name: "laptop",
+        permissions: [%{"domain" => "repository", "resource" => context.organization.name}]
+      },
+      audit: audit_data(context.member)
+    )
+
+    Hexpm.Accounts.Keys.create(
+      context.member,
+      %{name: "everything", permissions: [%{"domain" => "repositories"}]},
+      audit: audit_data(context.member)
+    )
+
+    html =
+      build_conn()
+      |> test_login(context.admin)
+      |> get("/dashboard/orgs/#{context.organization.name}/sso")
+      |> html_response(200)
+
+    assert html =~ "Personal API keys that reach this organization"
+
+    {:ok, document} = Floki.parse_document(html)
+
+    rows =
+      document
+      |> Floki.find("#sso-enforcement table tbody tr")
+      |> Enum.map(fn row ->
+        row |> Floki.find("td") |> Enum.map(&(&1 |> Floki.text() |> String.trim()))
+      end)
+
+    assert rows == [
+             [context.member.username, "everything", "Through every repository", "Never"],
+             [context.member.username, "laptop", "Named in the key", "Never"]
+           ]
+  end
+
   defp enable_beta_for(organization) do
     config = Application.fetch_env!(:hexpm, :organization_sso)
 

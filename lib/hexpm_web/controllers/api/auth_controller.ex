@@ -24,9 +24,11 @@ defmodule HexpmWeb.API.AuthController do
         {:ok, nil} ->
           success(conn)
 
-        {:ok, repository} ->
-          with :ok <- organization_billing_active(repository, user_or_organization),
-               :ok <- sso_enforced_credential(conn, repository, user_or_organization) do
+        {:ok, verified} ->
+          organization = resource_organization(verified)
+
+          with :ok <- organization_billing_active(organization, user_or_organization),
+               :ok <- sso_enforced_credential(conn, organization, user_or_organization) do
             success(conn)
           else
             error -> error(conn, error)
@@ -39,6 +41,15 @@ defmodule HexpmWeb.API.AuthController do
       error(conn, {:error, :domain})
     end
   end
+
+  # The repository and docs domains verify against an organization, the package
+  # domain against a package. Billing and enforcement are both about the
+  # organization behind the resource, so the package resolves to its own.
+  defp resource_organization(%Package{} = package) do
+    Hexpm.Repo.preload(package, repository: :organization).repository.organization
+  end
+
+  defp resource_organization(%Organization{} = organization), do: organization
 
   # An OAuth token's repository and docs scopes are minted against a live
   # organization access session when the token is refreshed, so the scope check

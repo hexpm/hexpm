@@ -3,6 +3,13 @@ defmodule HexpmWeb.Dashboard.BillingProxyController do
 
   plug :requires_login
 
+  # The browser's billing forms talk to the billing service through here, so it
+  # is the billing carve-out under another address and is accounted for as one.
+  plug HexpmWeb.Plugs.OrganizationSSO,
+    organization: :billing_proxy,
+    except: [:proxy],
+    screen: :billing
+
   @timeout 15_000
 
   @allowed_actions ~w(setup_intent confirm_setup_intent)

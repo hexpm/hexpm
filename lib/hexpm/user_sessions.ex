@@ -276,14 +276,17 @@ defmodule Hexpm.UserSessions do
   def revoke(%UserSession{type: "oauth"} = session, revoke_at, opts) do
     revoke_at = revoke_at || DateTime.utc_now()
 
+    # Tokens before the session, the order `Tokens.revoke_and_create_token`
+    # takes them in, so a refresh running against this session waits rather than
+    # deadlocking with it.
     multi =
       Ecto.Multi.new()
-      |> Ecto.Multi.update(:session, UserSession.changeset(session, %{revoked_at: revoke_at}))
       |> Ecto.Multi.update_all(
         :tokens,
         from(t in Token, where: t.user_session_id == ^session.id and is_nil(t.revoked_at)),
         set: [revoked_at: revoke_at, updated_at: DateTime.utc_now()]
       )
+      |> Ecto.Multi.update(:session, UserSession.changeset(session, %{revoked_at: revoke_at}))
 
     # Add audit if provided
     multi =

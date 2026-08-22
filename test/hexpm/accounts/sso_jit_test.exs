@@ -241,6 +241,23 @@ defmodule Hexpm.Accounts.SSOJITTest do
       assert Organizations.get_role(context.organization, member) == "write"
     end
 
+    test "does not re-admit on an address the provider did not confirm", context do
+      member = insert(:user)
+
+      insert(:organization_sso_identity,
+        connection: context.connection,
+        organization: context.organization,
+        user: member
+      )
+
+      transaction = start_login(context, member)
+
+      assert {:error, :not_member} =
+               complete(transaction, claims("member@example.com", false), member)
+
+      refute Organizations.get_role(context.organization, member)
+    end
+
     test "does not re-admit when the address is no longer on a verified domain", context do
       member = insert(:user)
 
@@ -336,6 +353,44 @@ defmodule Hexpm.Accounts.SSOJITTest do
                  newcomer,
                  claims("newcomer@example.com", false)
                )
+    end
+
+    test "buys nothing when the browser is signed in as another account", context do
+      fill_seats(context.organization)
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
+
+      Mox.stub(Hexpm.Billing.Mock, :update, fn _name, _params ->
+        flunk("billing must not be called for a transaction another account started")
+      end)
+
+      assert :ok =
+               SSO.maybe_expand_seats(
+                 transaction,
+                 insert(:user),
+                 claims("newcomer@example.com")
+               )
+
+      # The callback the seat would have been for is refused, so nothing was
+      # ever going to use it.
+      assert {:error, :session_user_mismatch} =
+               complete(transaction, claims("newcomer@example.com"), insert(:user))
+    end
+
+    test "buys nothing for a login that has already been completed", context do
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
+
+      assert {:ok, {:link, _id, _token}} =
+               complete(transaction, claims("newcomer@example.com"), newcomer)
+
+      fill_seats(context.organization)
+
+      Mox.stub(Hexpm.Billing.Mock, :update, fn _name, _params ->
+        flunk("billing must not be called for a spent transaction")
+      end)
+
+      assert :ok = SSO.maybe_expand_seats(transaction, newcomer, claims("newcomer@example.com"))
     end
 
     test "does not retry a purchase that already failed", context do

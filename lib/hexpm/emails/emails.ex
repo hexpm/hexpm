@@ -272,12 +272,13 @@ defmodule Hexpm.Emails do
     |> render_body(:sso_key_revoked)
   end
 
-  def sso_break_glass(organization, username, recipients) do
+  def sso_break_glass(organization, username, screen, recipients) do
     base_email()
     |> email_to(recipients)
-    |> subject("Hex.pm - #{organization} billing or SSO settings reached without single sign-on")
+    |> subject("Hex.pm - #{organization} reached without single sign-on")
     |> assign(:organization, organization)
     |> assign(:username, username)
+    |> assign(:screen, screen)
     |> render_body(:sso_break_glass)
   end
 

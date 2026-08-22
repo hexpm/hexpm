@@ -84,8 +84,10 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   key reaching an organization that does not accept one, which authenticating
   does not fix and a different credential does.
 
-  One query, and none at all for someone who is not a member. `user_session_id`
-  is the browser session in hand: an OAuth token carries its own instead, and a
+  Two queries at most: the memberships enforcement governs, and the organization
+  access sessions when there is a session id in hand and something governed to
+  check it against. Neither runs while the feature is off. `user_session_id` is
+  the browser session in hand: an OAuth token carries its own instead, and a
   static credential carries none.
   """
   @spec check(Organization.t() | nil, term(), credential(), integer() | nil) ::
@@ -195,21 +197,30 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   def personal_key_refused(_principal), do: []
 
   @doc """
-  What to tell someone refused for this organization, and what would fix it.
+  What to tell someone refused for this organization with the credential they
+  used, and what would fix it.
   """
-  @spec refusal_message(refusal(), Organization.t()) :: String.t()
-  def refusal_message(:sso_required, organization) do
+  @spec refusal_message(refusal(), Organization.t(), credential()) :: String.t()
+  def refusal_message(refusal, organization, credential \\ nil)
+
+  # Following a sign-in URL would not fix this token: the organization access it
+  # produces lands on the browser session that visited it, not on the session
+  # the token belongs to. The CLI asks for the session in hand instead.
+  def refusal_message(:sso_required, organization, %Token{}) do
     "organization #{organization.name} requires authenticating through its identity" <>
-      " provider, sign in at #{login_url(organization)}"
+      " provider, run mix deps.get to be prompted to re-authorize this session," <>
+      " or mix hex.user auth to authenticate again"
   end
 
-  def refusal_message(:personal_key, organization) do
+  def refusal_message(:sso_required, organization, _credential) do
+    "organization #{organization.name} requires authenticating through its identity" <>
+      " provider, which a username and password cannot do, run mix hex.user auth" <>
+      " or use an organization key for automation"
+  end
+
+  def refusal_message(:personal_key, organization, _credential) do
     "organization #{organization.name} does not accept personal API keys, use an" <>
       " organization key for automation or run mix hex.user auth"
-  end
-
-  defp login_url(organization) do
-    "#{HexpmWeb.Endpoint.url()}/sso/org/#{organization.name}"
   end
 
   # Nothing is governed while the feature is off. Answering that here is what
@@ -219,6 +230,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
       from(
         member in OrganizationUser,
         join: organization in assoc(member, :organization),
+        as: :organization,
         join: connection in Connection,
         on: connection.organization_id == member.organization_id,
         where: member.user_id == ^user.id,
@@ -238,10 +250,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   defp restrict_organizations(query, :all), do: query
 
   defp restrict_organizations(query, {:names, names}) do
-    from(member in query,
-      join: organization in assoc(member, :organization),
-      where: organization.name in ^names
-    )
+    from(member in query, where: as(:organization).name in ^names)
   end
 
   defp restrict_organizations(query, organization_ids) do
@@ -274,7 +283,17 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
 
   # The principal is a person, so a key in hand is one of theirs. An
   # organization's own key never reaches here.
+  #
+  # A token a personal key was exchanged for holds the key's standing: it is
+  # minted with no refresh token and its session dies with it, so there is never
+  # an organization access session for it to carry and judging it on one would
+  # refuse it against a session that can never hold access.
   defp personal_key?(%Key{}), do: true
+
+  defp personal_key?(%Token{grant_type: "client_credentials", user_id: user_id})
+       when not is_nil(user_id),
+       do: true
+
   defp personal_key?(_credential), do: false
 
   defp session_id(%Token{user_session_id: user_session_id}, _browser_session_id),
@@ -569,7 +588,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     # sequence of repairs indistinguishable from an administrator who
     # authenticated normally.
     unless recent? do
-      notify_admins_of_break_glass(organization, user)
+      notify_admins_of_break_glass(organization, user, screen)
     end
 
     :ok
@@ -590,12 +609,12 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     )
   end
 
-  defp notify_admins_of_break_glass(organization, user) do
+  defp notify_admins_of_break_glass(organization, user, screen) do
     recipients = admin_emails(organization)
 
     if recipients != [] do
       Outbox.enqueue!(
-        Emails.sso_break_glass(organization.name, user.username, recipients),
+        Emails.sso_break_glass(organization.name, user.username, to_string(screen), recipients),
         category: @break_glass_category,
         group_key: "#{@break_glass_category}:#{organization.id}:#{user.id}",
         scope_key: "sso:organization:#{organization.id}"

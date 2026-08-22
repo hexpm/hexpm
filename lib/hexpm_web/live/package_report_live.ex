@@ -28,6 +28,8 @@ defmodule HexpmWeb.PackageReportLive do
             {:ok,
              assign(socket,
                package: package,
+               repository_name: repository,
+               package_name: package_name,
                package_identifier: PackageReports.package_identifier(package),
                package_path: PackageReports.package_path(package),
                form: new_form(),
@@ -59,13 +61,32 @@ defmodule HexpmWeb.PackageReportLive do
 
   @impl true
   def handle_event("submit", %{"report" => params} = event_params, socket) do
-    changeset = Report.changeset(%Report{}, params)
-    submitted_form = changeset |> Map.put(:action, :validate) |> to_form(as: :report)
+    %{repository_name: repository, package_name: package_name} = socket.assigns
 
-    if changeset.valid? do
-      submit_report(event_params["h-captcha-response"], params, submitted_form, socket)
-    else
-      {:noreply, assign(socket, form: submitted_form, captcha_error: nil)}
+    # The package was accepted at mount and the form outlives the organization
+    # access session that let it open, so the report is only filed against a
+    # package the reporter still reaches.
+    case RepositoryAccess.fetch_package(socket, repository, package_name) do
+      {:ok, _package} ->
+        changeset = Report.changeset(%Report{}, params)
+        submitted_form = changeset |> Map.put(:action, :validate) |> to_form(as: :report)
+
+        if changeset.valid? do
+          submit_report(event_params["h-captcha-response"], params, submitted_form, socket)
+        else
+          {:noreply, assign(socket, form: submitted_form, captcha_error: nil)}
+        end
+
+      {:error, :sso_required, organization} ->
+        {:noreply,
+         SSOEnforcement.redirect_to_login(
+           socket,
+           organization,
+           report_path(repository, package_name)
+         )}
+
+      :error ->
+        raise NotFoundError
     end
   end
 

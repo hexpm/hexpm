@@ -463,6 +463,24 @@ defmodule Hexpm.Permissions do
   # this runs.
   @organization_scope_domains ~w(repository docs)
 
+  defp filter_sso_scopes(%User{} = user, scopes, _user_session_id, %Key{}) do
+    refused =
+      user
+      |> Enforcement.personal_key_refused()
+      |> Enum.map(& &1.name)
+
+    {Enum.reject(scopes, &names_organization?(&1, refused)), []}
+  end
+
+  defp filter_sso_scopes(%User{} = user, scopes, user_session_id, _credential) do
+    case Enforcement.sso_required(user, organization_scope_names(scopes), user_session_id) do
+      [] -> {scopes, []}
+      required -> {Enum.reject(scopes, &names_organization?(&1, required)), required}
+    end
+  end
+
+  defp filter_sso_scopes(_principal, scopes, _user_session_id, _credential), do: {scopes, []}
+
   @doc """
   Drops the organization scopes this session is not currently authenticated for,
   and names the organizations that authenticating would give back.
@@ -471,6 +489,10 @@ defmodule Hexpm.Permissions do
   capability the edge verifies without a database lookup, so the decision has to
   be taken when they are minted rather than when they are used, and they are
   minted on every grant including refresh.
+
+  `repositories` is expanded first, which is the only order that decides
+  anything: it names no organization, so enforcement can neither drop nor name
+  one until it has been expanded into the scopes that do.
 
   The ordering falls out: a removed member's organization is not in
   `all_organizations/1` at all, so it is dropped without ever being named, while
@@ -484,33 +506,6 @@ defmodule Hexpm.Permissions do
   session for it to carry. It keeps the organizations that accept personal keys
   and loses the ones that do not, and names neither, since a browser visit does
   not change what a static credential may reach.
-  """
-  @spec filter_sso_scopes(term(), [String.t()], integer() | nil, Key.t() | nil) ::
-          {[String.t()], [String.t()]}
-  def filter_sso_scopes(principal, scopes, user_session_id, credential \\ nil)
-
-  def filter_sso_scopes(%User{} = user, scopes, _user_session_id, %Key{}) do
-    refused =
-      user
-      |> Enforcement.personal_key_refused()
-      |> Enum.map(& &1.name)
-
-    {Enum.reject(scopes, &names_organization?(&1, refused)), []}
-  end
-
-  def filter_sso_scopes(%User{} = user, scopes, user_session_id, _credential) do
-    case Enforcement.sso_required(user, organization_scope_names(scopes), user_session_id) do
-      [] -> {scopes, []}
-      required -> {Enum.reject(scopes, &names_organization?(&1, required)), required}
-    end
-  end
-
-  def filter_sso_scopes(_principal, scopes, _user_session_id, _credential), do: {scopes, []}
-
-  @doc """
-  `filter_sso_scopes/4` over expanded scopes, which is the only order that
-  decides anything: `repositories` names no organization, so enforcement can
-  neither drop nor name one until it has been expanded into the scopes that do.
   """
   @spec expand_and_filter_sso_scopes(term(), [String.t()], integer() | nil, Key.t() | nil) ::
           {[String.t()], [String.t()]}

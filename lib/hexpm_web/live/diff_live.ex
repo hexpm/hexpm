@@ -76,13 +76,15 @@ defmodule HexpmWeb.DiffLive do
 
   @impl Phoenix.LiveView
   def handle_event("load-gap", %{"start" => start, "last" => last}, socket) do
-    with {:ok, start} <- parse_index(start),
-         {:ok, last} <- parse_index(last),
-         true <- start >= 0 and start <= last do
-      {:noreply, load_gap(socket, start, last)}
-    else
-      _ -> {:noreply, socket}
-    end
+    still_reachable(socket, fn socket ->
+      with {:ok, start} <- parse_index(start),
+           {:ok, last} <- parse_index(last),
+           true <- start >= 0 and start <= last do
+        {:noreply, load_gap(socket, start, last)}
+      else
+        _ -> {:noreply, socket}
+      end
+    end)
   end
 
   def handle_event("load-gap", _params, socket), do: {:noreply, socket}
@@ -98,25 +100,29 @@ defmodule HexpmWeb.DiffLive do
   end
 
   def handle_event("select-file", %{"id" => id}, socket) do
-    if Enum.any?(socket.assigns.files, &(&1.id == id)) do
-      socket =
-        socket
-        |> ensure_piece_loaded(id)
-        |> assign(selected_file: id)
-        |> push_event("scroll-to-file", %{id: "#{id}-container"})
+    still_reachable(socket, fn socket ->
+      if Enum.any?(socket.assigns.files, &(&1.id == id)) do
+        socket =
+          socket
+          |> ensure_piece_loaded(id)
+          |> assign(selected_file: id)
+          |> push_event("scroll-to-file", %{id: "#{id}-container"})
 
-      {:noreply, socket}
-    else
-      {:noreply, socket}
-    end
+        {:noreply, socket}
+      else
+        {:noreply, socket}
+      end
+    end)
   end
 
   def handle_event("load-piece", %{"id" => id}, socket) do
-    if Enum.any?(socket.assigns.all_pieces, &(Hexpm.Diff.piece_id(&1) == id)) do
-      {:noreply, load_piece_by_id(socket, id)}
-    else
-      {:noreply, socket}
-    end
+    still_reachable(socket, fn socket ->
+      if Enum.any?(socket.assigns.all_pieces, &(Hexpm.Diff.piece_id(&1) == id)) do
+        {:noreply, load_piece_by_id(socket, id)}
+      else
+        {:noreply, socket}
+      end
+    end)
   end
 
   def handle_event(
@@ -146,45 +152,74 @@ defmodule HexpmWeb.DiffLive do
   end
 
   def handle_event("retry", _params, socket) do
-    case Hexpm.Diff.prepare(
-           socket.assigns.repository,
-           socket.assigns.package,
-           socket.assigns.from,
-           socket.assigns.to,
-           ignore_whitespace: socket.assigns.ignore_whitespace
-         ) do
-      {:ok, request} ->
-        {:noreply, socket |> assign(request: request) |> throttle_and_enqueue()}
+    still_reachable(socket, fn socket ->
+      case Hexpm.Diff.prepare(
+             socket.assigns.repository,
+             socket.assigns.package,
+             socket.assigns.from,
+             socket.assigns.to,
+             ignore_whitespace: socket.assigns.ignore_whitespace
+           ) do
+        {:ok, request} ->
+          {:noreply, socket |> assign(request: request) |> throttle_and_enqueue()}
+
+        {:error, reason} ->
+          {:noreply, assign(socket, error: error_message(reason))}
+      end
+    end)
+  end
+
+  @impl Phoenix.LiveView
+  def handle_info({:poll_job, job_id}, %{assigns: %{job_id: job_id}} = socket) do
+    still_reachable(socket, fn socket ->
+      case Hexpm.Diff.job_status(job_id) do
+        :missing ->
+          {:noreply, assign(socket, job_state: :missing)}
+
+        :completed ->
+          case Hexpm.Diff.fetch(socket.assigns.request) do
+            {:ok, metadata, pieces} -> {:noreply, show_ready(socket, metadata, pieces)}
+            :miss -> {:noreply, assign(socket, job_state: :completed_without_metadata)}
+            {:error, reason} -> {:noreply, assign(socket, error: storage_error(reason))}
+          end
+
+        state when state in [:discarded, :cancelled] ->
+          {:noreply, assign(socket, job_state: state)}
+
+        state ->
+          socket = assign(socket, job_state: state)
+          schedule_poll(socket)
+          {:noreply, socket}
+      end
+    end)
+  end
+
+  def handle_info({:poll_job, _stale_job_id}, socket), do: {:noreply, socket}
+
+  # A connected view outlives the organization access session that let it mount,
+  # so every event that pulls more of the diff over re-asks. The public
+  # repository answers from the socket without a query.
+  defp still_reachable(socket, fun) do
+    case fetch_repository(socket, socket.assigns.repository) do
+      {:ok, _repository} ->
+        fun.(socket)
+
+      {:sso_required, organization} ->
+        return_to =
+          diff_path(
+            socket.assigns.repository,
+            socket.assigns.package,
+            socket.assigns.from,
+            socket.assigns.to,
+            socket.assigns.ignore_whitespace
+          )
+
+        {:noreply, SSOEnforcement.redirect_to_login(socket, organization, return_to)}
 
       {:error, reason} ->
         {:noreply, assign(socket, error: error_message(reason))}
     end
   end
-
-  @impl Phoenix.LiveView
-  def handle_info({:poll_job, job_id}, %{assigns: %{job_id: job_id}} = socket) do
-    case Hexpm.Diff.job_status(job_id) do
-      :missing ->
-        {:noreply, assign(socket, job_state: :missing)}
-
-      :completed ->
-        case Hexpm.Diff.fetch(socket.assigns.request) do
-          {:ok, metadata, pieces} -> {:noreply, show_ready(socket, metadata, pieces)}
-          :miss -> {:noreply, assign(socket, job_state: :completed_without_metadata)}
-          {:error, reason} -> {:noreply, assign(socket, error: storage_error(reason))}
-        end
-
-      state when state in [:discarded, :cancelled] ->
-        {:noreply, assign(socket, job_state: state)}
-
-      state ->
-        socket = assign(socket, job_state: state)
-        schedule_poll(socket)
-        {:noreply, socket}
-    end
-  end
-
-  def handle_info({:poll_job, _stale_job_id}, socket), do: {:noreply, socket}
 
   defp load_or_enqueue(socket) do
     {:ok, load_or_enqueue_socket(socket)}
