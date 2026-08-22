@@ -60,10 +60,8 @@ defmodule HexpmWeb.API.PackageController do
       repository = conn.assigns.repository ->
         [repository]
 
-      user = conn.assigns.current_user ->
-        conn
-        |> HexpmWeb.SSOEnforcement.reachable_organizations(user)
-        |> Enum.map(& &1.repository)
+      conn.assigns.current_user ->
+        HexpmWeb.SSOEnforcement.reachable_repositories(conn)
 
       organization = conn.assigns.current_organization ->
         [Repository.hexpm(), organization.repository]

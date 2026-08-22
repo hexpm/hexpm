@@ -36,8 +36,6 @@ defmodule Hexpm.Accounts.SSO.Features do
     end
   end
 
-  def mode, do: config()[:mode]
-
   defp config do
     Application.fetch_env!(:hexpm, :organization_sso)
   end

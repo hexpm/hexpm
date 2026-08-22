@@ -68,21 +68,18 @@ defmodule Hexpm.OAuth.Tokens do
     expires_in = Keyword.get(opts, :expires_in, @default_expires_in)
     expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)
 
-    # Expand "repositories" scope to individual "repository:{org}" scopes for access tokens
-    # This allows edge verification without database lookups
-    expanded_scopes = Permissions.expand_repositories_scope(user, scopes)
-
-    # Then drop the organizations this session has not authenticated for. The
-    # access token is verified at the edge without a database lookup, so the
-    # scope it carries is the decision.
+    # "repositories" is expanded into individual "repository:{org}" scopes so the
+    # edge can verify them without a database lookup, and the organizations this
+    # session has not authenticated for are then dropped: the scope the token
+    # carries is the decision.
     #
     # `sso_session_id` is for the authorization code grant, where the session
     # this token belongs to does not exist yet and the browser that consented
     # holds the organization access it is about to inherit.
     {expanded_scopes, sso_reauth_required} =
-      Permissions.filter_sso_scopes(
+      Permissions.expand_and_filter_sso_scopes(
         user,
-        expanded_scopes,
+        scopes,
         Keyword.get(opts, :sso_session_id) || Keyword.get(opts, :user_session_id),
         Keyword.get(opts, :credential)
       )

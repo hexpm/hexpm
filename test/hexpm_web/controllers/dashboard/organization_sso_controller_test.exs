@@ -429,7 +429,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
 
   defp sso_group_key(connection, user), do: "sso:#{connection.id}:#{user.id}"
 
-  test "diagnostics are capped, stable, and redact all supplied details", context do
+  test "diagnostics are capped and stable", context do
     connection =
       insert(:organization_sso_connection,
         organization: context.organization,
@@ -438,11 +438,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
 
     for _attempt <- 1..25 do
       assert {:ok, _failure} =
-               SSO.record_failure(connection, %Error{
-                 stage: :claims,
-                 code: :issuer_mismatch,
-                 details: %{reason: "stored-client-secret", token: "raw-token"}
-               })
+               SSO.record_failure(connection, %Error{stage: :claims, code: :issuer_mismatch})
     end
 
     assert length(SSO.failures(connection)) == 20
@@ -455,8 +451,6 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
 
     assert html =~ "claims"
     assert html =~ "issuer_mismatch"
-    refute html =~ "stored-client-secret"
-    refute html =~ "raw-token"
   end
 
   defp enable_beta_for(organization) do

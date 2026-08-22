@@ -114,7 +114,7 @@ defmodule Hexpm.Accounts.SSOJITTest do
       newcomer = insert(:user)
       transaction = start_login(context, newcomer)
 
-      assert {:ok, {:link, transaction_id, link_token, _return}} =
+      assert {:ok, {:link, transaction_id, link_token}} =
                complete(transaction, claims("newcomer@example.com"), newcomer)
 
       # Consent has not been given, so nothing has been joined or billed.
@@ -136,7 +136,7 @@ defmodule Hexpm.Accounts.SSOJITTest do
       newcomer = insert(:user)
       transaction = start_login(context, newcomer)
 
-      assert {:ok, {:link, _transaction_id, _token, _return}} =
+      assert {:ok, {:link, _transaction_id, _token}} =
                complete(transaction, claims("newcomer@example.com"), newcomer)
 
       refute Organizations.get_role(context.organization, newcomer)
@@ -176,7 +176,7 @@ defmodule Hexpm.Accounts.SSOJITTest do
       insert(:organization_user, organization: context.organization, user: member, role: "read")
       transaction = start_login(context, member)
 
-      assert {:ok, {:link, _id, _token, _return}} =
+      assert {:ok, {:link, _id, _token}} =
                complete(transaction, claims("member@elsewhere.com"), member)
 
       # Their role is untouched by the connection's join role.
@@ -281,7 +281,7 @@ defmodule Hexpm.Accounts.SSOJITTest do
       assert :ok = SSO.maybe_expand_seats(transaction, newcomer, claims("newcomer@example.com"))
       assert Repo.get!(Hexpm.Accounts.Organization, context.organization.id).billing_seats == 4
 
-      assert {:ok, {:link, _id, _token, _return}} =
+      assert {:ok, {:link, _id, _token}} =
                complete(transaction, claims("newcomer@example.com"), newcomer)
     end
 

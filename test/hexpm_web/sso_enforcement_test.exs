@@ -110,6 +110,18 @@ defmodule HexpmWeb.SSOEnforcementTest do
       assert redirected_to(conn) =~ "/sso/org/#{context.organization.name}?return="
     end
 
+    test "send a governed full owner off the owners page too", context do
+      insert(:package_owner, package: context.package, user: context.member, level: "full")
+      require_sso(context)
+      {conn, _session} = login(context.member)
+
+      path = "/packages/#{context.repository.name}/#{context.package.name}/owners"
+      conn = get(conn, path)
+
+      assert redirected_to(conn) ==
+               "/sso/org/#{context.organization.name}?return=" <> URI.encode_www_form(path)
+    end
+
     test "leave the public repository alone", context do
       require_sso(context)
       public = insert(:package)
@@ -137,7 +149,9 @@ defmodule HexpmWeb.SSOEnforcementTest do
 
       conn = get(conn, "/dashboard/orgs/#{context.organization.name}/members")
 
-      assert response(conn, 200)
+      # The per-member enforcement control is what the members tab derives from
+      # the mode, and it only appears once the organization is not optional.
+      assert response(conn, 200) =~ "sso-enforcement-form-#{context.member.id}"
     end
 
     test "keeps billing reachable and says so", context do

@@ -24,7 +24,6 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
   attr :organization, :map, required: true
   attr :quantity, :integer, default: nil
   attr :sso_mode, :atom, default: :optional
-  attr :sso_enforcing, :boolean, default: false
 
   def members_tab(assigns) do
     ~H"""
@@ -120,7 +119,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                   </.sudo_form>
 
                   <.sudo_form
-                    :if={@sso_enforcing}
+                    :if={@sso_mode != :optional}
                     current_user={@current_user}
                     action={~p"/dashboard/orgs/#{@organization}/sso/enforcement/member"}
                     id={"sso-enforcement-form-#{org_user.user.id}"}
@@ -167,20 +166,18 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
         :if={admin?(@current_user, @organization) and @sso_mode == :required}
         class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden"
       >
+        <% exempt = exempt_members(@organization) %>
         <div class="px-6 py-5 border-b border-grey-200 dark:border-grey-700">
           <h2 class="text-grey-900 dark:text-white text-lg font-semibold">
-            Exempt from SSO ({length(exempt_members(@organization))})
+            Exempt from SSO ({length(exempt)})
           </h2>
           <p class="text-grey-500 dark:text-grey-300 text-sm mt-1">
-            {exemption_summary(@organization)}
+            {exemption_summary(exempt)}
           </p>
         </div>
 
-        <ul
-          :if={exempt_members(@organization) != []}
-          class="divide-y divide-grey-100 dark:divide-grey-700"
-        >
-          <li :for={org_user <- exempt_members(@organization)} class="px-6 py-4">
+        <ul :if={exempt != []} class="divide-y divide-grey-100 dark:divide-grey-700">
+          <li :for={org_user <- exempt} class="px-6 py-4">
             <p class="text-sm font-medium text-grey-900 dark:text-white">
               {org_user.user.username}
             </p>
@@ -401,13 +398,13 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
     |> Enum.sort_by(& &1.user.username)
   end
 
-  defp exemption_summary(organization) do
-    case length(exempt_members(organization)) do
-      0 ->
-        "Nobody is exempt. Every member authenticates through your provider to reach this organization."
+  defp exemption_summary([]) do
+    "Nobody is exempt. Every member authenticates through your provider to reach this organization."
+  end
 
-      count ->
-        "#{count} #{member_label(count)} #{reach_label(count)} this organization's private packages on a Hexpm password alone. This list bounds what SSO enforcement can claim, so keep it short and review it."
-    end
+  defp exemption_summary(exempt) do
+    count = length(exempt)
+
+    "#{count} #{member_label(count)} #{reach_label(count)} this organization's private packages on a Hexpm password alone. This list bounds what SSO enforcement can claim, so keep it short and review it."
   end
 end

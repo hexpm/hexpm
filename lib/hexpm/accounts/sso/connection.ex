@@ -95,10 +95,6 @@ defmodule Hexpm.Accounts.SSO.Connection do
   @jit_seat_policies ~w(block expand)
   @jit_roles ~w(admin write read)
 
-  def jit_seat_policies, do: @jit_seat_policies
-
-  def jit_roles, do: @jit_roles
-
   @doc """
   Turns just-in-time membership on or off. `jit_seat_policy` is required to turn
   it on and there is no default, because auto-expanding a subscription is a
@@ -116,12 +112,6 @@ defmodule Hexpm.Accounts.SSO.Connection do
   @enforcement_modes ~w(optional pilot required)
   @personal_key_policies ~w(block allow)
   @session_lifetimes [3_600, 28_800, 86_400, 604_800, 2_592_000]
-
-  def enforcement_modes, do: @enforcement_modes
-
-  def personal_key_policies, do: @personal_key_policies
-
-  def session_lifetimes, do: @session_lifetimes
 
   @doc """
   Sets the enforcement mode, when required mode starts biting, how long an
@@ -204,13 +194,4 @@ defmodule Hexpm.Accounts.SSO.Connection do
   def blocks_personal_keys?(%__MODULE__{}), do: false
 
   def blocks_personal_keys?(nil), do: false
-
-  defp nilify_blank(value) when is_binary(value) do
-    case String.trim(value) do
-      "" -> nil
-      trimmed -> trimmed
-    end
-  end
-
-  defp nilify_blank(value), do: value
 end

@@ -1,6 +1,8 @@
 defmodule HexpmWeb.API.UserController do
   use HexpmWeb, :controller
 
+  alias HexpmWeb.SSOEnforcement
+
   plug :authorize,
        [authentication: :required, domains: [{"api", "read"}]]
        when action in [:test, :me, :audit_logs]
@@ -26,7 +28,10 @@ defmodule HexpmWeb.API.UserController do
   def me(conn, _params) do
     if user = conn.assigns.current_user do
       accessible_packages =
-        Packages.accessible_user_owned_packages(user, reachable_organizations(conn))
+        Packages.accessible_user_owned_packages(
+          user,
+          SSOEnforcement.reachable_organizations(conn)
+        )
 
       user = %{user | owned_packages: accessible_packages}
 
@@ -54,7 +59,7 @@ defmodule HexpmWeb.API.UserController do
     user = Users.public_get(name, [:emails, owned_packages: :repository])
 
     accessible_packages =
-      Packages.accessible_user_owned_packages(user, reachable_organizations(conn))
+      Packages.accessible_user_owned_packages(user, SSOEnforcement.reachable_organizations(conn))
 
     user = user && %{user | owned_packages: accessible_packages}
 
@@ -79,9 +84,5 @@ defmodule HexpmWeb.API.UserController do
     else
       params
     end
-  end
-
-  defp reachable_organizations(conn) do
-    HexpmWeb.SSOEnforcement.reachable_organizations(conn, conn.assigns.current_user)
   end
 end

@@ -258,7 +258,7 @@ defmodule Hexpm.Accounts.SSOConcurrencyTest do
   defp pending_link(context, user) do
     transaction = start_transaction(context, user)
 
-    assert {:ok, {:link, transaction_id, link_token, _return_path}} =
+    assert {:ok, {:link, transaction_id, link_token}} =
              SSO.complete_callback(
                transaction,
                valid_claims(),

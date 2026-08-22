@@ -29,7 +29,7 @@ defmodule HexpmWeb.DiffLive do
       release = Releases.preload(request.to_release, [:requirements])
 
       layout_assigns =
-        PackageLayoutAssigns.for_package(socket.assigns.current_user, request.package_record,
+        PackageLayoutAssigns.for_package(socket, request.package_record,
           releases: request.releases,
           current_release: release,
           graph_release: release,
@@ -67,7 +67,7 @@ defmodule HexpmWeb.DiffLive do
     else
       {:sso_required, organization} ->
         return_to = diff_path(repository, package, versions, ignore_whitespace)
-        {:ok, redirect(socket, to: SSOEnforcement.login_path(organization, return_to))}
+        {:ok, SSOEnforcement.redirect_to_login(socket, organization, return_to)}
 
       {:error, reason} ->
         {:ok, assign(socket, error: error_message(reason))}

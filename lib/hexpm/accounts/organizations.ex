@@ -150,10 +150,7 @@ defmodule Hexpm.Accounts.Organizations do
       |> Seats.lock(:seats, organization)
       |> Multi.run(:member, fn _repo, _changes -> member_to_remove(organization, user) end)
       |> Multi.delete(:organization_user, & &1.member)
-      |> Hexpm.Accounts.SSO.delete_member_transactions(organization, user)
-      |> Hexpm.Accounts.SSO.enqueue_member_unlink_notification(organization, user)
-      |> Hexpm.Accounts.SSO.delete_member_identities(organization, user)
-      |> Hexpm.Accounts.SSO.delete_member_notifications(organization, user)
+      |> Hexpm.Accounts.SSO.remove_member(organization, user)
       |> delete_package_owners(organization, user)
       |> audit(audit_data, "organization.member.remove", {organization, user})
 

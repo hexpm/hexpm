@@ -28,8 +28,7 @@ defmodule Hexpm.Accounts.SSO.Identity do
       :user_id,
       :issuer,
       :subject,
-      :provider_email,
-      :last_authenticated_at
+      :provider_email
     ])
     |> validate_required([:organization_id, :connection_id, :user_id, :issuer, :subject])
     |> validate_length(:subject, max: 255)

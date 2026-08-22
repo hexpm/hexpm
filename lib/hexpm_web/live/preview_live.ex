@@ -78,8 +78,8 @@ defmodule HexpmWeb.PreviewLive do
         end
 
       {:error, :sso_required, organization} ->
-        to = SSOEnforcement.login_path(organization, SSOEnforcement.return_path(uri))
-        {:noreply, redirect(socket, to: to)}
+        {:noreply,
+         SSOEnforcement.redirect_to_login(socket, organization, SSOEnforcement.return_path(uri))}
 
       _ ->
         raise NotFoundError
@@ -113,7 +113,7 @@ defmodule HexpmWeb.PreviewLive do
       release = Releases.preload(release, [:requirements])
 
       layout_assigns =
-        PackageLayoutAssigns.for_package(socket.assigns.current_user, package,
+        PackageLayoutAssigns.for_package(socket, package,
           releases: releases,
           current_release: release,
           graph_release: release,

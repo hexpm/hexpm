@@ -21,7 +21,7 @@ defmodule Hexpm.Accounts.SSO.Transaction do
     field :subject, :string, redact: true
     field :provider_email, :string, redact: true
     field :link_token_hash, :binary, redact: true
-    field :entrypoint, :string, default: "organization"
+    field :entrypoint, :string
     field :linked_at, :utc_datetime_usec
     field :cancelled_at, :utc_datetime_usec
 

@@ -388,60 +388,20 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
           </ul>
         </div>
 
-        <div :if={@personal_keys != []} class="mt-6">
-          <h4 class="text-sm font-semibold text-grey-900 dark:text-grey-100">
-            {personal_keys_heading(@connection)}
-          </h4>
-          <table class="mt-2 w-full text-sm">
-            <thead class="text-left text-grey-500 dark:text-grey-400">
-              <tr>
-                <th class="py-1 font-medium">Member</th>
-                <th class="py-1 font-medium">Key</th>
-                <th class="py-1 font-medium">Reaches this organization</th>
-                <th class="py-1 font-medium">Last used</th>
-              </tr>
-            </thead>
-            <tbody class="text-grey-700 dark:text-grey-200">
-              <tr :for={key <- @personal_keys} class="border-t border-grey-100 dark:border-grey-800">
-                <td class="py-1">{key.user.username}</td>
-                <td class="py-1">{key.name}</td>
-                <td class="py-1">{reach_description(key)}</td>
-                <td class="py-1">{last_used(key)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <.personal_key_table
+          :if={@personal_keys != []}
+          heading={personal_keys_heading(@connection)}
+          keys={@personal_keys}
+        />
 
-        <div :if={@pending_personal_keys != []} class="mt-6">
-          <h4 class="text-sm font-semibold text-grey-900 dark:text-grey-100">
-            {pending_keys_heading(@connection)}
-          </h4>
-          <p class="mt-1 text-sm text-grey-600 dark:text-grey-300">
-            These members follow the organization's mode rather than a per-member setting, so they
-            keep their access until the date above and lose it on it.
-          </p>
-          <table class="mt-2 w-full text-sm">
-            <thead class="text-left text-grey-500 dark:text-grey-400">
-              <tr>
-                <th class="py-1 font-medium">Member</th>
-                <th class="py-1 font-medium">Key</th>
-                <th class="py-1 font-medium">Reaches this organization</th>
-                <th class="py-1 font-medium">Last used</th>
-              </tr>
-            </thead>
-            <tbody class="text-grey-700 dark:text-grey-200">
-              <tr
-                :for={key <- @pending_personal_keys}
-                class="border-t border-grey-100 dark:border-grey-800"
-              >
-                <td class="py-1">{key.user.username}</td>
-                <td class="py-1">{key.name}</td>
-                <td class="py-1">{reach_description(key)}</td>
-                <td class="py-1">{last_used(key)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <.personal_key_table
+          :if={@pending_personal_keys != []}
+          heading={pending_keys_heading(@connection)}
+          keys={@pending_personal_keys}
+        >
+          These members follow the organization's mode rather than a per-member setting, so they
+          keep their access until the date above and lose it on it.
+        </.personal_key_table>
       </section>
 
       <section
@@ -499,6 +459,39 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
           </li>
         </ul>
       </section>
+    </div>
+    """
+  end
+
+  attr :heading, :string, required: true
+  attr :keys, :list, required: true
+  slot :inner_block
+
+  defp personal_key_table(assigns) do
+    ~H"""
+    <div class="mt-6">
+      <h4 class="text-sm font-semibold text-grey-900 dark:text-grey-100">{@heading}</h4>
+      <p :if={@inner_block != []} class="mt-1 text-sm text-grey-600 dark:text-grey-300">
+        {render_slot(@inner_block)}
+      </p>
+      <table class="mt-2 w-full text-sm">
+        <thead class="text-left text-grey-500 dark:text-grey-400">
+          <tr>
+            <th class="py-1 font-medium">Member</th>
+            <th class="py-1 font-medium">Key</th>
+            <th class="py-1 font-medium">Reaches this organization</th>
+            <th class="py-1 font-medium">Last used</th>
+          </tr>
+        </thead>
+        <tbody class="text-grey-700 dark:text-grey-200">
+          <tr :for={key <- @keys} class="border-t border-grey-100 dark:border-grey-800">
+            <td class="py-1">{key.user.username}</td>
+            <td class="py-1">{key.name}</td>
+            <td class="py-1">{reach_description(key)}</td>
+            <td class="py-1">{last_used(key)}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
     """
   end

@@ -65,8 +65,7 @@ defmodule Hexpm.Accounts.KeyPermission do
   # still on the form and can pick a credential that works.
   defp validate_personal_key_reach(changeset, user_or_organization) do
     with true <- changeset.valid?,
-         reach when not is_nil(reach) <-
-           reach(get_field(changeset, :domain), get_field(changeset, :resource)),
+         reach when not is_nil(reach) <- organization_reach(apply_changes(changeset)),
          organization when not is_nil(organization) <-
            Enum.find(Enforcement.personal_key_refused(user_or_organization), &reached?(&1, reach)) do
       add_error(changeset, :resource, Enforcement.refusal_message(:personal_key, organization))
@@ -75,12 +74,31 @@ defmodule Hexpm.Accounts.KeyPermission do
     end
   end
 
-  # An `api` permission names no organization, so nothing here can be stripped
-  # from it and the request that uses it is refused where it is authorized.
-  defp reach(domain, name) when domain in ["repository", "docs"] and is_binary(name), do: name
-  defp reach("repositories", nil), do: :every
-  defp reach("package", resource) when is_binary(resource), do: hd(String.split(resource, "/"))
-  defp reach(_domain, _resource), do: nil
+  @doc """
+  The organization this permission names, `:every` for one that names them all,
+  or nil for one that names none.
+
+  An `api` permission names no organization, so nothing can be stripped from it
+  and the request that uses it is refused where it is authorized instead. A
+  package resource is stored as `organization/package`, the organization having
+  been put on when it was cast, so one without a slash names a package rather
+  than an organization.
+  """
+  def organization_reach(%__MODULE__{domain: domain, resource: name})
+      when domain in ["repository", "docs"] and is_binary(name),
+      do: name
+
+  def organization_reach(%__MODULE__{domain: "repositories"}), do: :every
+
+  def organization_reach(%__MODULE__{domain: "package", resource: resource})
+      when is_binary(resource) do
+    case String.split(resource, "/", parts: 2) do
+      [organization, _package] -> organization
+      [_package] -> nil
+    end
+  end
+
+  def organization_reach(%__MODULE__{}), do: nil
 
   defp reached?(_organization, :every), do: true
   defp reached?(organization, name), do: organization.name == name

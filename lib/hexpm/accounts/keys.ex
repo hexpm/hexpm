@@ -38,8 +38,10 @@ defmodule Hexpm.Accounts.Keys do
   either by naming it or by covering every repository.
   """
   def reaches_organization?(%Key{} = key, %Organization{} = organization) do
-    organization_permissions(key, organization) != [] or
-      Enum.any?(key.permissions, &(&1.domain == "repositories"))
+    Enum.any?(
+      key.permissions,
+      &(KeyPermission.organization_reach(&1) in [:every, organization.name])
+    )
   end
 
   @doc """
@@ -51,18 +53,8 @@ defmodule Hexpm.Accounts.Keys do
   keys are refused at the request instead.
   """
   def organization_permissions(%Key{} = key, %Organization{} = organization) do
-    Enum.filter(key.permissions, &names_organization?(&1, organization.name))
+    Enum.filter(key.permissions, &(KeyPermission.organization_reach(&1) == organization.name))
   end
-
-  defp names_organization?(%{domain: domain, resource: name}, name)
-       when domain in ["repository", "docs"],
-       do: true
-
-  defp names_organization?(%{domain: "package", resource: resource}, name)
-       when is_binary(resource),
-       do: String.starts_with?(resource, name <> "/")
-
-  defp names_organization?(_permission, _name), do: false
 
   def get(id) do
     Repo.get(Key, id)

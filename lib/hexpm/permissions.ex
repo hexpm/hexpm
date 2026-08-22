@@ -507,21 +507,35 @@ defmodule Hexpm.Permissions do
 
   def filter_sso_scopes(_principal, scopes, _user_session_id, _credential), do: {scopes, []}
 
+  @doc """
+  `filter_sso_scopes/4` over expanded scopes, which is the only order that
+  decides anything: `repositories` names no organization, so enforcement can
+  neither drop nor name one until it has been expanded into the scopes that do.
+  """
+  @spec expand_and_filter_sso_scopes(term(), [String.t()], integer() | nil, Key.t() | nil) ::
+          {[String.t()], [String.t()]}
+  def expand_and_filter_sso_scopes(principal, scopes, user_session_id, credential \\ nil) do
+    expanded = expand_repositories_scope(principal, scopes)
+    filter_sso_scopes(principal, expanded, user_session_id, credential)
+  end
+
   defp organization_scope_names(scopes) do
     scopes
     |> Enum.flat_map(fn scope ->
-      case String.split(scope, ":", parts: 2) do
-        [domain, name] when domain in @organization_scope_domains -> [name]
-        _other -> []
+      case organization_scope_name(scope) do
+        nil -> []
+        name -> [name]
       end
     end)
     |> Enum.uniq()
   end
 
-  defp names_organization?(scope, names) do
-    case String.split(scope, ":", parts: 2) do
-      [domain, name] when domain in @organization_scope_domains -> name in names
-      _other -> false
+  defp names_organization?(scope, names), do: organization_scope_name(scope) in names
+
+  defp organization_scope_name(scope) do
+    case scope_to_permission(scope) do
+      %{domain: domain, resource: name} when domain in @organization_scope_domains -> name
+      _other -> nil
     end
   end
 

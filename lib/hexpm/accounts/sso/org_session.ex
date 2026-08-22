@@ -16,6 +16,24 @@ defmodule Hexpm.Accounts.SSO.OrgSession do
     timestamps()
   end
 
+  @doc """
+  The organization access a browser session is currently carrying: everything
+  written against it that has neither been revoked nor lapsed.
+  """
+  def live(user_session_id, now) do
+    from(session in __MODULE__,
+      where: session.user_session_id == ^user_session_id,
+      where: is_nil(session.revoked_at) and session.expires_at > ^now
+    )
+  end
+
+  @doc """
+  Narrows to the sessions the account owns.
+  """
+  def for_user(query, user_id) do
+    from(session in query, where: session.user_id == ^user_id)
+  end
+
   def changeset(session, attrs) do
     session
     |> cast(attrs, [

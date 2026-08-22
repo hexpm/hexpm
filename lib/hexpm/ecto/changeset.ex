@@ -102,6 +102,15 @@ defmodule Hexpm.Changeset do
   defp default_hash(""), do: @default_password
   defp default_hash(password), do: password
 
+  def nilify_blank(value) when is_binary(value) do
+    case String.trim(value) do
+      "" -> nil
+      trimmed -> trimmed
+    end
+  end
+
+  def nilify_blank(value), do: value
+
   def put_default_embed(changeset, key, value) do
     if get_change(changeset, key) do
       changeset

@@ -38,7 +38,7 @@ defmodule HexpmWeb.PackageReportLive do
              )}
 
           {:error, :sso_required, organization} ->
-            {:ok, redirect(socket, to: SSOEnforcement.login_path(organization, return_path))}
+            {:ok, SSOEnforcement.redirect_to_login(socket, organization, return_path)}
 
           :error ->
             raise NotFoundError

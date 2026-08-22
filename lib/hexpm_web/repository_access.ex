@@ -5,7 +5,9 @@ defmodule HexpmWeb.RepositoryAccess do
 
   An organization the user does belong to but has not authenticated for is the
   exception: they already know they are a member, so it is named along with what
-  would let them in.
+  would let them in. That is the only refusal these surfaces see, because a
+  browser carries no credential for the personal-key branch of enforcement to
+  look at.
   """
 
   alias Hexpm.Accounts.Users
@@ -23,7 +25,7 @@ defmodule HexpmWeb.RepositoryAccess do
       organization ->
         case SSOEnforcement.check(conn_or_socket, organization, current_user) do
           :ok -> {:ok, organization.repository}
-          {:error, refusal} -> {:error, refusal, organization}
+          {:error, :sso_required} -> {:error, :sso_required, organization}
         end
     end
   end

@@ -37,13 +37,4 @@ defmodule Hexpm.Repository.Policy.Override do
         end
     end
   end
-
-  defp nilify_blank(nil), do: nil
-
-  defp nilify_blank(value) do
-    case String.trim(value) do
-      "" -> nil
-      trimmed -> trimmed
-    end
-  end
 end

@@ -4,7 +4,7 @@ defmodule HexpmWeb.SSOController do
   alias Hexpm.Accounts.SSO
   alias Hexpm.Accounts.SSO.Error
   alias HexpmWeb.Plugs.Attack
-  alias HexpmWeb.Plugs.ContentSecurityPolicy
+  alias HexpmWeb.SSOEnforcement
 
   plug :put_no_store
   plug :require_sso_available
@@ -26,6 +26,8 @@ defmodule HexpmWeb.SSOController do
 
   plug :rate_limit_callback when action in [:callback]
 
+  @initiation_parameters ~w(iss login_hint target_link_uri)
+
   defp require_sso_available(conn, _opts) do
     if SSO.available?() do
       conn
@@ -39,34 +41,43 @@ defmodule HexpmWeb.SSOController do
   def start(conn, %{"organization" => name} = params) do
     organization = Organizations.get(name)
 
-    if organization && SSO.reachable?(organization) && allow_start?(conn, organization) do
-      with {:ok, return_path, opts} <- initiation_options(conn, organization, params),
-           {:ok, transaction, uri} <-
-             SSO.start_login(
-               organization,
-               conn.assigns.current_user,
-               return_path,
-               callback_url(),
-               opts
-             ) do
-        conn
-        |> remember_sso_state(transaction.raw_state)
-        |> redirect(external: uri)
-      else
-        {:error, reason} ->
-          conn
-          |> put_flash(:error, start_error_message(reason))
-          |> redirect(to: ~p"/dashboard")
-      end
-    else
-      if organization && SSO.reachable?(organization) do
-        conn
-        |> put_status(:too_many_requests)
-        |> text("Too many SSO login attempts. Try again later.")
-      else
+    cond do
+      is_nil(organization) or not SSO.reachable?(organization) ->
         not_found(conn)
-      end
+
+      not allow_start?(conn, organization) ->
+        too_many_requests(conn)
+
+      true ->
+        start_login(conn, organization, params)
     end
+  end
+
+  defp start_login(conn, organization, params) do
+    with {:ok, return_path, opts} <- initiation_options(conn, organization, params),
+         {:ok, transaction, uri} <-
+           SSO.start_login(
+             organization,
+             conn.assigns.current_user,
+             return_path,
+             SSOEnforcement.callback_url(),
+             opts
+           ) do
+      conn
+      |> remember_sso_state(transaction.raw_state)
+      |> redirect(external: uri)
+    else
+      {:error, reason} ->
+        conn
+        |> put_flash(:error, start_error_message(reason))
+        |> redirect(to: ~p"/dashboard")
+    end
+  end
+
+  defp too_many_requests(conn) do
+    conn
+    |> put_status(:too_many_requests)
+    |> text("Too many SSO login attempts. Try again later.")
   end
 
   defp allow_start?(conn, organization) do
@@ -79,9 +90,8 @@ defmodule HexpmWeb.SSOController do
 
   defp initiation_options(conn, organization, params) do
     with {:ok, query} <- decode_initiation_query(conn.query_string),
-         :ok <- reject_duplicate_initiation_parameters(query) do
-      recognized = Enum.filter(query, &(elem(&1, 0) in ~w(iss login_hint target_link_uri)))
-
+         recognized = Enum.filter(query, &(elem(&1, 0) in @initiation_parameters)),
+         :ok <- reject_duplicate_initiation_parameters(recognized) do
       if recognized == [] do
         {:ok, params["return"], []}
       else
@@ -113,10 +123,9 @@ defmodule HexpmWeb.SSOController do
     _exception -> {:error, :invalid_third_party_initiation}
   end
 
-  defp reject_duplicate_initiation_parameters(query) do
+  defp reject_duplicate_initiation_parameters(recognized) do
     duplicate? =
-      query
-      |> Enum.filter(&(elem(&1, 0) in ~w(iss login_hint target_link_uri)))
+      recognized
       |> Enum.frequencies_by(&elem(&1, 0))
       |> Enum.any?(fn {_key, count} -> count > 1 end)
 
@@ -223,7 +232,7 @@ defmodule HexpmWeb.SSOController do
 
   defp exchange_and_complete(conn, transaction, code) do
     with {:ok, user, user_session_id} <- account_session(conn, transaction),
-         {:ok, claims} <- SSO.exchange_code(transaction, code, callback_url()),
+         {:ok, claims} <- SSO.exchange_code(transaction, code, SSOEnforcement.callback_url()),
          :ok <- SSO.maybe_expand_seats(transaction, user, claims),
          {:ok, result} <-
            SSO.complete_callback(transaction, claims, user, user_session_id, audit_data(conn)) do
@@ -404,9 +413,7 @@ defmodule HexpmWeb.SSOController do
             if allow_start?(conn, organization) do
               start_authorization(conn, authorization, organization, code)
             else
-              conn
-              |> put_status(:too_many_requests)
-              |> text("Too many SSO login attempts. Try again later.")
+              too_many_requests(conn)
             end
         end
     end
@@ -418,23 +425,21 @@ defmodule HexpmWeb.SSOController do
 
   def authorize_organization(conn, _params), do: expired_authorization(conn)
 
-  # Each button on the page submits to an action that redirects to that
-  # organization's provider, and Chrome applies form-action to the redirect.
+  # One button per organization still to authenticate, each submitting to the
+  # action that starts that organization's login.
   defp allow_provider_form_actions(conn, status) do
     Enum.reduce(status, conn, fn
-      {_organization, true}, conn ->
-        conn
-
-      {organization, false}, conn ->
-        case SSO.get_connection(organization) do
-          nil -> conn
-          connection -> ContentSecurityPolicy.allow_form_action(conn, connection.issuer)
-        end
+      {_organization, true}, conn -> conn
+      {organization, false}, conn -> SSOEnforcement.allow_provider_form_action(conn, organization)
     end)
   end
 
   defp start_authorization(conn, authorization, organization, code) do
-    case SSO.start_login(organization, conn.assigns.current_user, nil, callback_url(),
+    case SSO.start_login(
+           organization,
+           conn.assigns.current_user,
+           nil,
+           SSOEnforcement.callback_url(),
            entrypoint: "cli",
            target_user_session_id: authorization.user_session_id
          ) do
@@ -498,7 +503,7 @@ defmodule HexpmWeb.SSOController do
     |> redirect(to: ~p"/dashboard/orgs/#{organization}/sso")
   end
 
-  defp handle_callback_result(conn, _transaction, {:link, transaction_id, token, _return_path}) do
+  defp handle_callback_result(conn, _transaction, {:link, transaction_id, token}) do
     conn
     |> put_session("pending_sso_link", %{"transaction_id" => transaction_id, "token" => token})
     |> redirect(to: ~p"/sso/link")
@@ -559,8 +564,6 @@ defmodule HexpmWeb.SSOController do
         nil
     end
   end
-
-  defp callback_url, do: url(~p"/sso/callback")
 
   defp start_error_message(:connection_disabled), do: "SSO is not enabled for that organization."
   defp start_error_message(:not_configured), do: "SSO is not configured for that organization."

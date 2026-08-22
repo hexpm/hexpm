@@ -13,8 +13,6 @@ defmodule Hexpm.Accounts.OrganizationUser do
     timestamps()
   end
 
-  def enforcements, do: @enforcements
-
   @doc """
   Sets whether SSO is enforced for this member regardless of the organization's
   mode. Nil follows the mode, "enforced" always does, "exempt" never does.
@@ -25,13 +23,4 @@ defmodule Hexpm.Accounts.OrganizationUser do
     |> update_change(:sso_enforcement, &nilify_blank/1)
     |> validate_inclusion(:sso_enforcement, @enforcements)
   end
-
-  defp nilify_blank(value) when is_binary(value) do
-    case String.trim(value) do
-      "" -> nil
-      trimmed -> trimmed
-    end
-  end
-
-  defp nilify_blank(value), do: value
 end

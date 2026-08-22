@@ -23,7 +23,6 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
 
   @default_session_lifetime 86_400
   @warning_window_seconds 14 * 24 * 60 * 60
-  @notice_retention_seconds 30 * 24 * 60 * 60
   @pending_category "sso.enforcement_pending"
   @key_revoked_category "sso.key_revoked"
   @break_glass_category "sso.break_glass"
@@ -100,17 +99,11 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   def check(%Organization{}, %User{service: true}, _credential, _user_session_id), do: :ok
 
   def check(%Organization{} = organization, %User{} = user, credential, user_session_id) do
-    if Features.available?() do
-      user
-      |> governed_memberships([organization.id])
-      |> refuse(user, credential, user_session_id)
-      |> Map.fetch(organization.id)
-      |> case do
-        {:ok, refusal} -> {:error, refusal}
-        :error -> :ok
-      end
-    else
-      :ok
+    refused = refusals_for([organization.id], user, credential, user_session_id)
+
+    case Map.fetch(refused, organization.id) do
+      {:ok, refusal} -> {:error, refusal}
+      :error -> :ok
     end
   end
 
@@ -129,16 +122,8 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     do: organizations
 
   def reachable(organizations, %User{} = user, credential, user_session_id) do
-    if Features.available?() do
-      refused =
-        user
-        |> governed_memberships(Enum.map(organizations, & &1.id))
-        |> refuse(user, credential, user_session_id)
-
-      Enum.reject(organizations, &Map.has_key?(refused, &1.id))
-    else
-      organizations
-    end
+    refused = refusals_for(Enum.map(organizations, & &1.id), user, credential, user_session_id)
+    Enum.reject(organizations, &Map.has_key?(refused, &1.id))
   end
 
   def reachable(organizations, _principal, _credential, _user_session_id), do: organizations
@@ -160,14 +145,10 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   def sso_required(%User{service: true}, _organization_names, _user_session_id), do: []
 
   def sso_required(%User{} = user, organization_names, user_session_id) do
-    if Features.available?() do
-      user
-      |> governed_memberships({:names, organization_names})
-      |> unauthenticated(user, user_session_id)
-      |> Enum.map(fn {organization, _connection, _member_enforcement} -> organization.name end)
-    else
-      []
-    end
+    user
+    |> governed_memberships({:names, organization_names})
+    |> unauthenticated(user, user_session_id)
+    |> Enum.map(fn {organization, _connection, _member_enforcement} -> organization.name end)
   end
 
   def sso_required(_principal, _organization_names, _user_session_id), do: []
@@ -184,13 +165,9 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   def governed(%User{service: true}, _organization_names), do: []
 
   def governed(%User{} = user, organization_names) do
-    if Features.available?() do
-      user
-      |> governed_memberships({:names, organization_names})
-      |> Enum.map(fn {organization, _connection, _member_enforcement} -> organization end)
-    else
-      []
-    end
+    user
+    |> governed_memberships({:names, organization_names})
+    |> Enum.map(fn {organization, _connection, _member_enforcement} -> organization end)
   end
 
   def governed(_principal, _organization_names), do: []
@@ -207,16 +184,12 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   def personal_key_refused(%User{service: true}), do: []
 
   def personal_key_refused(%User{} = user) do
-    if Features.available?() do
-      user
-      |> governed_memberships(:all)
-      |> Enum.filter(fn {_organization, connection, _member_enforcement} ->
-        Connection.blocks_personal_keys?(connection)
-      end)
-      |> Enum.map(fn {organization, _connection, _member_enforcement} -> organization end)
-    else
-      []
-    end
+    user
+    |> governed_memberships(:all)
+    |> Enum.filter(fn {_organization, connection, _member_enforcement} ->
+      Connection.blocks_personal_keys?(connection)
+    end)
+    |> Enum.map(fn {organization, _connection, _member_enforcement} -> organization end)
   end
 
   def personal_key_refused(_principal), do: []
@@ -239,21 +212,27 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     "#{HexpmWeb.Endpoint.url()}/sso/org/#{organization.name}"
   end
 
+  # Nothing is governed while the feature is off. Answering that here is what
+  # keeps the query off every request that reaches enforcement at all.
   defp governed_memberships(user, organization_ids) do
-    from(
-      member in OrganizationUser,
-      join: organization in assoc(member, :organization),
-      join: connection in Connection,
-      on: connection.organization_id == member.organization_id,
-      where: member.user_id == ^user.id,
-      where: not is_nil(connection.enabled_at),
-      select: {organization, connection, member.sso_enforcement}
-    )
-    |> restrict_organizations(organization_ids)
-    |> Repo.all()
-    |> Enum.filter(fn {organization, connection, member_enforcement} ->
-      governed?(organization, connection, member_enforcement)
-    end)
+    if Features.available?() do
+      from(
+        member in OrganizationUser,
+        join: organization in assoc(member, :organization),
+        join: connection in Connection,
+        on: connection.organization_id == member.organization_id,
+        where: member.user_id == ^user.id,
+        where: not is_nil(connection.enabled_at),
+        select: {organization, connection, member.sso_enforcement}
+      )
+      |> restrict_organizations(organization_ids)
+      |> Repo.all()
+      |> Enum.filter(fn {organization, connection, member_enforcement} ->
+        governed?(organization, connection, member_enforcement)
+      end)
+    else
+      []
+    end
   end
 
   defp restrict_organizations(query, :all), do: query
@@ -267,6 +246,14 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
 
   defp restrict_organizations(query, organization_ids) do
     from(member in query, where: member.organization_id in ^organization_ids)
+  end
+
+  # Which of these organizations this credential is refused for, and why, keyed
+  # by organization id.
+  defp refusals_for(organization_ids, user, credential, user_session_id) do
+    user
+    |> governed_memberships(organization_ids)
+    |> refuse(user, credential, user_session_id)
   end
 
   defp refuse([], _user, _credential, _user_session_id), do: %{}
@@ -301,13 +288,14 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     organization_ids = Enum.map(governed, fn {organization, _, _} -> organization.id end)
     now = DateTime.utc_now()
 
+    live =
+      user_session_id
+      |> OrgSession.live(now)
+      |> OrgSession.for_user(user.id)
+
     authenticated =
-      from(
-        session in OrgSession,
-        where: session.user_session_id == ^user_session_id,
-        where: session.user_id == ^user.id,
+      from(session in live,
         where: session.organization_id in ^organization_ids,
-        where: is_nil(session.revoked_at) and session.expires_at > ^now,
         select: session.organization_id
       )
       |> Repo.all()
@@ -350,16 +338,11 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   end
 
   defp warn_organization(connection, organization) do
-    from(
-      member in OrganizationUser,
+    from(member in members_with_identity(organization),
       join: user in assoc(member, :user),
       join: address in assoc(user, :emails),
-      left_join: identity in Identity,
-      on:
-        identity.organization_id == member.organization_id and identity.user_id == member.user_id,
-      where: member.organization_id == ^organization.id,
       where: is_nil(member.sso_enforcement) or member.sso_enforcement == "enforced",
-      where: is_nil(identity.id),
+      where: is_nil(as(:identity).id),
       where: address.primary and address.verified,
       select: {user, address.email}
     )
@@ -382,19 +365,16 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
       )
       |> Repo.insert!()
 
-      Outbox.insert!(
-        Outbox.prepare!(
-          Emails.sso_enforcement_pending(
-            organization.name,
-            connection.required_at,
-            HexpmWeb.Endpoint.url() <> "/sso/org/#{organization.name}",
-            [email]
-          ),
-          category: @pending_category,
-          group_key: "#{@pending_category}:#{organization.id}:#{user.id}",
-          scope_key: "sso:user:#{user.id}",
-          expires_at: DateTime.add(DateTime.utc_now(), @notice_retention_seconds, :second)
-        )
+      Outbox.enqueue!(
+        Emails.sso_enforcement_pending(
+          organization.name,
+          connection.required_at,
+          HexpmWeb.Endpoint.url() <> "/sso/org/#{organization.name}",
+          [email]
+        ),
+        category: @pending_category,
+        group_key: "#{@pending_category}:#{organization.id}:#{user.id}",
+        scope_key: "sso:user:#{user.id}"
       )
 
       :sent
@@ -430,7 +410,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     )
     |> Repo.all()
     |> Enum.filter(fn {connection, organization} ->
-      mode(organization, connection) == :required and Connection.blocks_personal_keys?(connection)
+      mode(organization, connection) == :required
     end)
     |> Enum.map(fn {connection, organization} -> sweep_organization(organization, connection) end)
     |> Enum.sum()
@@ -552,13 +532,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   end
 
   defp notify_key_owner(organization, [{%Key{user: user}, _outcome} | _] = keys) do
-    recipients =
-      from(address in Hexpm.Accounts.Email,
-        where: address.user_id == ^user.id,
-        where: address.primary and address.verified,
-        select: address.email
-      )
-      |> Repo.all()
+    recipients = user_emails(user)
 
     if recipients != [] do
       revoked = for {key, :revoked} <- keys, do: key.name
@@ -620,19 +594,32 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     recipients = admin_emails(organization)
 
     if recipients != [] do
-      Outbox.insert!(
-        Outbox.prepare!(
-          Emails.sso_break_glass(organization.name, user.username, recipients),
-          category: @break_glass_category,
-          group_key: "#{@break_glass_category}:#{organization.id}:#{user.id}",
-          scope_key: "sso:organization:#{organization.id}",
-          expires_at: DateTime.add(DateTime.utc_now(), @notice_retention_seconds, :second)
-        )
+      Outbox.enqueue!(
+        Emails.sso_break_glass(organization.name, user.username, recipients),
+        category: @break_glass_category,
+        group_key: "#{@break_glass_category}:#{organization.id}:#{user.id}",
+        scope_key: "sso:organization:#{organization.id}"
       )
     end
   end
 
-  defp admin_emails(organization) do
+  # The members of an organization with their SSO identity attached where they
+  # have one, so a query can select on not having one.
+  @doc false
+  def members_with_identity(organization) do
+    from(member in OrganizationUser,
+      left_join: identity in Identity,
+      on:
+        identity.organization_id == member.organization_id and
+          identity.user_id == member.user_id,
+      as: :identity,
+      where: member.organization_id == ^organization.id
+    )
+  end
+
+  # Where a notice about an organization goes.
+  @doc false
+  def admin_emails(organization) do
     from(
       member in OrganizationUser,
       join: user in assoc(member, :user),
@@ -645,19 +632,29 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     |> Repo.all()
   end
 
+  # Where a notice about one account goes. The verified primary address only:
+  # any address can be attached to an account unverified, so sending to all of
+  # them would let an account holder mail an address they do not own.
+  @doc false
+  def user_emails(user) do
+    from(address in Email,
+      where: address.user_id == ^user.id,
+      where: address.primary and address.verified,
+      select: address.email
+    )
+    |> Repo.all()
+  end
+
   defp enqueue_once(email, opts) do
     group_key = Keyword.fetch!(opts, :group_key)
 
     if pending_entry?(group_key) do
       :skipped
     else
-      Outbox.insert!(
-        Outbox.prepare!(email,
-          category: Keyword.fetch!(opts, :category),
-          group_key: group_key,
-          scope_key: Keyword.fetch!(opts, :scope_key),
-          expires_at: DateTime.add(DateTime.utc_now(), @notice_retention_seconds, :second)
-        )
+      Outbox.enqueue!(email,
+        category: Keyword.fetch!(opts, :category),
+        group_key: group_key,
+        scope_key: Keyword.fetch!(opts, :scope_key)
       )
 
       :sent
