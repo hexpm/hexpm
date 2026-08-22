@@ -112,9 +112,13 @@ defmodule Hexpm.MixProject do
     if path = System.get_env("HEX_CORE_PATH") do
       [path: path]
     else
-      # TODO: revert to the published `{:hex_core, "~> 0.19"}` dependency once a
-      # hex_core release ships the per-repository policy model
-      [github: "hexpm/hex_core", depth: 1]
+      # TODO: revert to the published `{:hex_core, "~> 0.20"}` dependency once a
+      # hex_core release ships the expanded policy override model
+      [
+        github: "hexpm/hex_core",
+        ref: "582c0ec81bcdbda65b567a42fdf324a9d43356e9",
+        depth: 1
+      ]
     end
   end
 

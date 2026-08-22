@@ -3,11 +3,32 @@ defmodule Hexpm.Repository.PolicyBuilderTest do
   use Oban.Testing, repo: Hexpm.RepoBase
 
   alias Hexpm.Repository.{Policies, PolicyBuilder}
+  alias Hexpm.Security.Advisory
+  alias Hexpm.Security.AdvisoryAffectedVersion
 
   setup do
     user = insert(:user)
     organization = insert(:organization)
     audit_data = audit_data(user)
+    package = insert(:package, name: "phoenix")
+
+    Repo.insert!(%Advisory{
+      id: "GHSA-policy-build",
+      summary: "policy builder advisory",
+      aliases: ["CVE-2026-6000"],
+      published_at: ~U[2026-01-01 00:00:00Z],
+      modified_at: ~U[2026-01-01 00:00:00Z]
+    })
+
+    Repo.insert!(%AdvisoryAffectedVersion{
+      advisory_id: "GHSA-policy-build",
+      package_id: package.id,
+      requirement: Version.parse_requirement!("< 1.8.0")
+    })
+
+    Repo.insert_all("security_advisory_affected_packages", [
+      %{advisory_id: "GHSA-policy-build", package_id: package.id}
+    ])
 
     {:ok, %{policy: policy}} =
       Policies.create(
@@ -22,8 +43,31 @@ defmodule Hexpm.Repository.PolicyBuilderTest do
               "advisory_min_severity" => 3,
               "retirement_reasons" => [1, 2],
               "overrides" => [
-                %{"action" => "deny", "package" => "badlib"},
-                %{"action" => "allow", "package" => "phoenix", "requirement" => "== 1.7.10"}
+                %{"action" => "deny", "package" => "badlib", "comment" => "never approved"},
+                %{
+                  "action" => "allow",
+                  "package" => "phoenix",
+                  "requirement" => "== 1.7.10",
+                  "comment" => "approved release"
+                },
+                %{
+                  "action" => "advisory",
+                  "package" => "phoenix",
+                  "requirement" => ">= 1.7.0 and < 1.8.0",
+                  "advisory_id" => "CVE-2026-6000",
+                  "comment" => "approved migration"
+                },
+                %{
+                  "action" => "retirement",
+                  "package" => "old_package",
+                  "retirement_reason" => 2
+                },
+                %{
+                  "action" => "cooldown",
+                  "package" => "fresh_package",
+                  "requirement" => "== 1.0.0",
+                  "comment" => "release provenance verified"
+                }
               ]
             },
             %{"repository" => organization.name}
@@ -61,12 +105,27 @@ defmodule Hexpm.Repository.PolicyBuilderTest do
       assert hexpm.restriction.retirement_reasons == [:RETIRED_INVALID, :RETIRED_SECURITY]
       assert hexpm.restriction.cooldown == "14d"
 
-      assert [deny, allow] = hexpm.overrides
+      assert [deny, allow, advisory, retirement, cooldown] = hexpm.overrides
       assert deny.action == :OVERRIDE_ACTION_DENY
       assert deny.ref.package == "badlib"
+      assert deny.comment == "never approved"
       assert allow.action == :OVERRIDE_ACTION_ALLOW
       assert allow.ref.package == "phoenix"
       assert allow.ref.requirement == "== 1.7.10"
+      assert allow.comment == "approved release"
+      assert advisory.action == :OVERRIDE_ACTION_ADVISORY
+      assert advisory.ref.package == "phoenix"
+      assert advisory.ref.requirement == ">= 1.7.0 and < 1.8.0"
+      assert advisory.advisory_id == "CVE-2026-6000"
+      assert advisory.comment == "approved migration"
+      assert retirement.action == :OVERRIDE_ACTION_RETIREMENT
+      assert retirement.ref.package == "old_package"
+      assert retirement.retirement_reason == :RETIRED_SECURITY
+      assert Map.get(retirement, :comment, :undefined) == :undefined
+      assert cooldown.action == :OVERRIDE_ACTION_COOLDOWN
+      assert cooldown.ref.package == "fresh_package"
+      assert cooldown.ref.requirement == "== 1.0.0"
+      assert cooldown.comment == "release provenance verified"
 
       org_tab = Enum.find(repositories, &(&1.repository == org.name))
       assert org_tab.overrides == []

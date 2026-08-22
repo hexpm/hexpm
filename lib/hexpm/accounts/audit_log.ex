@@ -420,10 +420,18 @@ defmodule Hexpm.Accounts.AuditLog do
       cooldown: repository_policy.cooldown,
       advisory_min_severity: repository_policy.advisory_min_severity,
       retirement_reasons: repository_policy.retirement_reasons,
-      overrides:
-        Enum.map(repository_policy.overrides, fn override ->
-          %{action: override.action, package: override.package, requirement: override.requirement}
-        end)
+      overrides: Enum.map(repository_policy.overrides, &serialize_policy_override/1)
+    }
+  end
+
+  defp serialize_policy_override(override) do
+    %{
+      action: override.action,
+      package: override.package,
+      requirement: override.requirement,
+      advisory_id: override.advisory_id,
+      retirement_reason: override.retirement_reason,
+      comment: override.comment
     }
   end
 

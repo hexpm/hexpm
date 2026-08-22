@@ -73,7 +73,14 @@ defmodule Hexpm.Repository.PolicyTest do
               "retirement_reasons" => [1, 2],
               "overrides" => [
                 %{"action" => "deny", "package" => "badlib"},
-                %{"action" => "allow", "package" => "phoenix", "requirement" => "== 1.7.10"}
+                %{"action" => "allow", "package" => "phoenix", "requirement" => "== 1.7.10"},
+                %{
+                  "action" => "retirement",
+                  "package" => "retired_package",
+                  "requirement" => "~> 1.0",
+                  "retirement_reason" => 2,
+                  "comment" => "accepted"
+                }
               ]
             },
             %{"repository" => "myorg"}
@@ -88,10 +95,14 @@ defmodule Hexpm.Repository.PolicyTest do
       assert hexpm.cooldown == "14d"
       assert hexpm.advisory_min_severity == 3
       assert hexpm.retirement_reasons == [1, 2]
-      assert [deny, allow] = hexpm.overrides
+      assert [deny, allow, retirement] = hexpm.overrides
       assert deny.action == :deny
       assert deny.package == "badlib"
       assert allow.requirement == "== 1.7.10"
+      assert retirement.action == :retirement
+      assert retirement.package == "retired_package"
+      assert retirement.retirement_reason == 2
+      assert retirement.comment == "accepted"
       assert myorg.repository == "myorg"
       assert myorg.overrides == []
     end
@@ -108,7 +119,7 @@ defmodule Hexpm.Repository.PolicyTest do
     end
 
     test "rejects reserved names that would shadow policy routes" do
-      for name <- ~w(new package-suggestions version-suggestions) do
+      for name <- ~w(new package-suggestions version-suggestions advisory-suggestions) do
         changeset =
           Policy.changeset(%Policy{}, %{
             name: name,

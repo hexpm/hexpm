@@ -32,7 +32,12 @@ export const OverrideList = {
     };
 
     const refreshEmpty = () => {
-      if (empty) empty.classList.toggle("hidden", rows.children.length > 0);
+      if (empty) {
+        const rowCount = this.el.querySelectorAll(
+          "[data-override-row], [data-exception-row]"
+        ).length;
+        empty.classList.toggle("hidden", rowCount > 0);
+      }
     };
 
     const closeSuggestions = (row) => {
@@ -281,14 +286,11 @@ export const OverrideList = {
           button.dataset.active = button === decision ? "true" : "false";
         });
         const row = decision.closest("[data-override-row]");
-        row.classList.toggle(
-          "border-l-green-500",
+        const kind = row.querySelector("[data-override-kind]");
+        kind.textContent =
           decision.dataset.decisionValue === "allow"
-        );
-        row.classList.toggle(
-          "border-l-red-500",
-          decision.dataset.decisionValue === "deny"
-        );
+            ? "Allow override"
+            : "Deny override";
         notifyFormChanged();
         return;
       }
