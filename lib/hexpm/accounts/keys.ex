@@ -1,12 +1,59 @@
 defmodule Hexpm.Accounts.Keys do
   use Hexpm.Context
 
-  alias Hexpm.Accounts.Organization
+  alias Hexpm.Accounts.{Organization, OrganizationUser}
 
   def all(user_or_organization) do
     Key.all(user_or_organization)
     |> Repo.all()
     |> Enum.map(&Key.associate_owner(&1, user_or_organization))
+  end
+
+  @doc """
+  Personal API keys held by this organization's members that carry a repository
+  permission reaching it.
+
+  Plain `api` permissions are left out deliberately. Every key has one by
+  default, so listing them would bury the keys that actually carry private
+  package access, and an `api` permission is not organization-specific: nothing
+  can be stripped from it, and a request that uses one against an enforced
+  organization is refused where the request is authorized instead.
+  """
+  def personal_reaching_organization(%Organization{} = organization) do
+    from(
+      key in Key,
+      join: member in OrganizationUser,
+      on: member.user_id == key.user_id,
+      where: member.organization_id == ^organization.id,
+      where: is_nil(key.revoke_at) or key.revoke_at > fragment("NOW()"),
+      order_by: [asc: key.name],
+      preload: [:user]
+    )
+    |> Repo.all()
+    |> Enum.filter(&reaches_organization?(&1, organization))
+  end
+
+  @doc """
+  Whether a key carries a repository permission that reaches this organization,
+  either by naming it or by covering every repository.
+  """
+  def reaches_organization?(%Key{} = key, %Organization{} = organization) do
+    Enum.any?(
+      key.permissions,
+      &(KeyPermission.organization_reach(&1) in [:every, organization.name])
+    )
+  end
+
+  @doc """
+  The permissions on a key that name this organization, which are the ones a
+  sweep can remove without touching anything else the key reaches.
+
+  A `repositories` permission reaches the organization too but reaches every
+  other one as well, so removing it would take unrelated access with it. Those
+  keys are refused at the request instead.
+  """
+  def organization_permissions(%Key{} = key, %Organization{} = organization) do
+    Enum.filter(key.permissions, &(KeyPermission.organization_reach(&1) == organization.name))
   end
 
   def get(id) do

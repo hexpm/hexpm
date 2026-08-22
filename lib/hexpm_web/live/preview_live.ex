@@ -6,6 +6,7 @@ defmodule HexpmWeb.PreviewLive do
   alias Hexpm.Repository.Releases
   alias HexpmWeb.PackageLayoutAssigns
   alias HexpmWeb.RepositoryAccess
+  alias HexpmWeb.SSOEnforcement
 
   defmodule NotFoundError do
     defexception message: "Package file not found", plug_status: 404
@@ -43,14 +44,13 @@ defmodule HexpmWeb.PreviewLive do
   end
 
   @impl true
-  def handle_params(params, _uri, socket) do
+  def handle_params(params, uri, socket) do
     repository = params["repository"] || "hexpm"
     package_name = params["package"]
     version = params["version"]
     requested_filename = filename(params["filename"])
 
-    with {:ok, package} <-
-           RepositoryAccess.fetch_package(socket.assigns.current_user, repository, package_name),
+    with {:ok, package} <- RepositoryAccess.fetch_package(socket, repository, package_name),
          [_ | _] = releases <- Releases.all(package),
          release when not is_nil(release) <- find_release(releases, version),
          {:ok, source} <-
@@ -76,6 +76,10 @@ defmodule HexpmWeb.PreviewLive do
         else
           {:noreply, redirect(socket, to: to)}
         end
+
+      {:error, :sso_required, organization} ->
+        {:noreply,
+         SSOEnforcement.redirect_to_login(socket, organization, SSOEnforcement.return_path(uri))}
 
       _ ->
         raise NotFoundError
@@ -109,7 +113,7 @@ defmodule HexpmWeb.PreviewLive do
       release = Releases.preload(release, [:requirements])
 
       layout_assigns =
-        PackageLayoutAssigns.for_package(socket.assigns.current_user, package,
+        PackageLayoutAssigns.for_package(socket, package,
           releases: releases,
           current_release: release,
           graph_release: release,

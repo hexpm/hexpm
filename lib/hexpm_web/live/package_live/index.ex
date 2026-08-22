@@ -19,8 +19,7 @@ defmodule HexpmWeb.PackageLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    organizations = Users.all_organizations(socket.assigns.current_user)
-    repositories = Enum.map(organizations, & &1.repository)
+    repositories = HexpmWeb.SSOEnforcement.reachable_repositories(socket)
 
     socket =
       assign(socket,

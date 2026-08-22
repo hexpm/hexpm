@@ -37,7 +37,9 @@ defmodule Hexpm.Repository.Packages do
   end
 
   def get(repository, name) when is_binary(repository) do
-    repository = Repositories.get(repository)
+    # The organization comes along because `owner_with_access?/3` falls back to
+    # organization-level access, which reads it off the repository.
+    repository = Repositories.get(repository, [:organization])
     repository && get(repository, name)
   end
 
@@ -236,9 +238,12 @@ defmodule Hexpm.Repository.Packages do
     []
   end
 
-  def accessible_user_owned_packages(user, for_user) do
-    repositories = Enum.map(Users.all_organizations(for_user), & &1.repository)
-    repository_ids = Enum.map(repositories, & &1.id)
+  def accessible_user_owned_packages(user, organizations) do
+    repository_ids =
+      organizations
+      |> Enum.map(& &1.repository)
+      |> Enum.reject(&is_nil/1)
+      |> Enum.map(& &1.id)
 
     # Atoms sort before strings
     sorter = fn repo -> if(repo.id == 1, do: :first, else: repo.name) end

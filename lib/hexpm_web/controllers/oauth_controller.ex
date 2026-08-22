@@ -37,7 +37,14 @@ defmodule HexpmWeb.OAuthController do
           scopes: scopes,
           state: params["state"],
           code_challenge: params["code_challenge"],
-          code_challenge_method: params["code_challenge_method"]
+          code_challenge_method: params["code_challenge_method"],
+          sso_pending:
+            HexpmWeb.SSOEnforcement.unauthenticated_organizations(
+              conn,
+              conn.assigns.current_user,
+              scopes
+            ),
+          sso_return_path: current_path(conn)
         })
       else
         redirect(conn, to: ~p"/login?return=#{current_path(conn)}")
@@ -95,7 +102,8 @@ defmodule HexpmWeb.OAuthController do
              redirect_uri,
              selected_scopes,
              code_challenge: params["code_challenge"],
-             code_challenge_method: params["code_challenge_method"]
+             code_challenge_method: params["code_challenge_method"],
+             user_session_id: conn.assigns.current_session && conn.assigns.current_session.id
            ) do
         {:ok, auth_code} ->
           success_params = %{

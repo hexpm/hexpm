@@ -12,6 +12,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   alias HexpmWeb.Dashboard.KeyController
   alias HexpmWeb.Dashboard.Organization.Components.BillingHelpers
   alias Hexpm.Accounts.SSO
+  alias Hexpm.Accounts.SSO.{Connection, Enforcement}
+  alias HexpmWeb.SSOEnforcement
 
   @policy_suggestion_limit 8
 
@@ -52,6 +54,27 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
               :update_policy,
               :delete_policy
             ]
+
+  plug HexpmWeb.Plugs.OrganizationSSO,
+    except: [
+      :billing,
+      :billing_token,
+      :cancel_billing,
+      :resume_billing,
+      :update_billing,
+      :create_billing,
+      :add_seats,
+      :remove_seats,
+      :void_invoice,
+      :change_plan,
+      :show_invoice,
+      :pay_invoice,
+      :sso,
+      # Removes the member's own access rather than granting any, and it is the
+      # only lever someone deactivated at the provider has. Gating it leaves
+      # them unable to authenticate, unable to leave, and still a billed seat.
+      :leave
+    ]
 
   def redirect_repo(conn, params) do
     glob = params["glob"] || []
@@ -260,26 +283,14 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   def sso(conn, %{"dashboard_org" => organization}) do
     access_organization(conn, organization, "admin", fn organization ->
-      if SSO.enabled?(organization) do
+      if SSO.reachable?(organization) do
         conn
-        |> allow_provider_form_action(organization)
+        |> SSOEnforcement.allow_provider_form_action(organization)
         |> render_index(organization, tab: :sso)
       else
         not_found(conn)
       end
     end)
-  end
-
-  # Testing a connection submits a form whose response redirects to the provider,
-  # and Chrome applies form-action to that redirect.
-  defp allow_provider_form_action(conn, organization) do
-    case SSO.get_connection(organization) do
-      nil ->
-        conn
-
-      connection ->
-        HexpmWeb.Plugs.ContentSecurityPolicy.allow_form_action(conn, connection.issuer)
-    end
   end
 
   def billing(conn, %{"dashboard_org" => organization}) do
@@ -1001,6 +1012,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     {policies, policy_stats, policy_activity, policy_rev} =
       policy_assigns(organization, opts[:tab], policy_action, policy)
 
+    connection = SSO.get_connection(organization)
+
     assigns =
       [
         title: "Dashboard - Organization",
@@ -1030,10 +1043,11 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         policy_stats: policy_stats,
         policy_activity: policy_activity,
         policy_rev: policy_rev,
-        sso_org_session: current_org_session(conn, organization)
+        sso_org_session: current_org_session(conn, organization),
+        sso_mode: Enforcement.mode(organization, connection)
       ] ++
         audit_log_assigns(organization, opts[:tab], opts) ++
-        sso_assigns(organization, opts[:tab]) ++
+        sso_assigns(organization, connection, opts[:tab]) ++
         member_assigns(organization, opts[:tab], opts)
 
     assigns = Keyword.merge(assigns, customer_assigns(customer, organization))
@@ -1075,21 +1089,33 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   defp policy_assigns(_organization, _tab, _action, _policy), do: {[], %{}, [], 0}
 
-  defp sso_assigns(organization, :sso) do
-    connection = SSO.get_connection(organization)
-    identities = if connection, do: SSO.identities(connection), else: []
-
+  defp sso_assigns(organization, connection, :sso) do
     [
       sso_connection: connection,
-      sso_identities: identities,
+      sso_identities: if(connection, do: SSO.identities(connection), else: []),
       sso_failures: if(connection, do: SSO.failures(connection), else: []),
-      sso_callback_url: url(~p"/sso/callback"),
+      sso_callback_url: SSOEnforcement.callback_url(),
       sso_login_url: url(~p"/sso/org/#{organization}"),
-      sso_domains: OrganizationDomains.all(organization)
+      sso_domains: OrganizationDomains.all(organization),
+      sso_personal_keys: sso_personal_keys(organization, connection),
+      sso_pending_personal_keys: Enforcement.pending_personal_keys(organization, connection)
     ]
   end
 
-  defp sso_assigns(_organization, _tab), do: []
+  defp sso_assigns(_organization, _connection, _tab), do: []
+
+  # Under "block" the table is a list of what enforcement takes away, so it
+  # names the keys enforcement reaches. Under "allow" it is a standing list of
+  # what still gets in, which is every member's.
+  defp sso_personal_keys(_organization, nil), do: []
+
+  defp sso_personal_keys(organization, connection) do
+    if Connection.blocks_personal_keys?(connection) do
+      Enforcement.blocked_personal_keys(organization, connection)
+    else
+      Keys.personal_reaching_organization(organization)
+    end
+  end
 
   defp member_assigns(organization, :members, opts) do
     [
@@ -1103,7 +1129,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   end
 
   defp current_org_session(conn, organization) do
-    if SSO.enabled?(organization) && conn.assigns[:current_session] do
+    if SSO.reachable?(organization) && conn.assigns[:current_session] do
       SSO.current_org_session(conn.assigns.current_session.id, organization.id)
     end
   end

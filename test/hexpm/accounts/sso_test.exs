@@ -579,7 +579,7 @@ defmodule Hexpm.Accounts.SSOTest do
     test "an unlinked subject hands a member to the link consent step", context do
       transaction = start_transaction(context, context.member)
 
-      assert {:ok, {:link, transaction_id, link_token, _return_path}} =
+      assert {:ok, {:link, transaction_id, link_token}} =
                complete(transaction, valid_claims(), context.member)
 
       assert transaction_id == transaction.id
@@ -1451,7 +1451,7 @@ defmodule Hexpm.Accounts.SSOTest do
   defp pending_link(context, user) do
     transaction = start_transaction(context, user)
 
-    assert {:ok, {:link, transaction_id, link_token, _return_path}} =
+    assert {:ok, {:link, transaction_id, link_token}} =
              complete(transaction, valid_claims(), user)
 
     {transaction_id, link_token}
@@ -1539,7 +1539,7 @@ defmodule Hexpm.Accounts.SSOTest do
           | subject: provider_subject
         }
 
-        assert {:ok, {:link, _transaction_id, link_token, _return_path}} =
+        assert {:ok, {:link, _transaction_id, link_token}} =
                  SSO.complete_callback(
                    transaction,
                    claims,

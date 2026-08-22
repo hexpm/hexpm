@@ -6,6 +6,7 @@ defmodule HexpmWeb.PackageReportLive do
   alias Hexpm.PackageReports.Report
   alias HexpmWeb.Captcha
   alias HexpmWeb.RepositoryAccess
+  alias HexpmWeb.SSOEnforcement
 
   defmodule NotFoundError do
     defexception message: "Package not found", plug_status: 404
@@ -22,11 +23,7 @@ defmodule HexpmWeb.PackageReportLive do
         {:ok, redirect(socket, to: ~p"/login?#{[return: return_path]}")}
 
       %User{} ->
-        case RepositoryAccess.fetch_package(
-               socket.assigns.current_user,
-               repository,
-               package_name
-             ) do
+        case RepositoryAccess.fetch_package(socket, repository, package_name) do
           {:ok, package} ->
             {:ok,
              assign(socket,
@@ -39,6 +36,9 @@ defmodule HexpmWeb.PackageReportLive do
                page_title: "Report #{PackageReports.package_identifier(package)} | Hex",
                container: "container"
              )}
+
+          {:error, :sso_required, organization} ->
+            {:ok, SSOEnforcement.redirect_to_login(socket, organization, return_path)}
 
           :error ->
             raise NotFoundError

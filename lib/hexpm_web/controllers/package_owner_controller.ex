@@ -6,6 +6,7 @@ defmodule HexpmWeb.PackageOwnerController do
   plug :requires_login
   plug :fetch_package
   plug :requires_full_owner
+  plug HexpmWeb.Plugs.OrganizationSSO, organization: :repository
   plug HexpmWeb.Plugs.Sudo
 
   def index(conn, _params) do

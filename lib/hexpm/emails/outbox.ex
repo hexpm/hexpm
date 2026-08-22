@@ -6,12 +6,20 @@ defmodule Hexpm.Emails.Outbox do
 
   @allowed_options [:category, :group_key, :scope_key, :expires_at]
   @cancel_options [:group_key, :scope_key, :categories]
+  @retention_seconds 30 * 24 * 60 * 60
 
   def enqueue!(%Swoosh.Email{} = email, opts) do
     email
-    |> prepare!(opts)
+    |> prepare!(Keyword.put_new(opts, :expires_at, default_expires_at()))
     |> insert!()
   end
+
+  @doc """
+  When a queued mail stops being worth delivering. One nothing has delivered or
+  cancelled by then is stale enough that sending it would confuse its recipient
+  more than dropping it would.
+  """
+  def default_expires_at, do: DateTime.add(DateTime.utc_now(), @retention_seconds, :second)
 
   # Split from insert!/1 so a caller enqueueing inside its own transaction can
   # put the part that raises on a malformed email before the part that issues
