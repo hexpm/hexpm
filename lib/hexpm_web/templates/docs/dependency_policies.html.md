@@ -4,18 +4,27 @@ Hex has three controls for dependency risk: project settings, dependency policie
 
 ### Which dependencies each command checks
 
-`mix deps.get` and `mix deps.update` resolve dependencies that need to change. They filter candidate releases through the project cooldown and the active dependency policy. After resolution, their advisory and retirement warnings cover dependencies listed as new, upgraded, downgraded, or unchanged by that resolution. Dependencies that remain trusted from the existing lock aren't re-evaluated as candidates.
+`mix deps.get` and `mix deps.update` first resolve dependencies and then report findings for the result. Resolution and warning output use different parts of the policy:
 
-`mix hex.audit` reads every Hex dependency in `mix.lock`, including dependencies that didn't change in the last resolution. Use it in CI when the complete lockfile needs to be checked against newly published advisories or retirement metadata.
+| Operation | What it checks |
+| --- | --- |
+| Dependency resolution | Candidate releases needed by the current operation. The active policy and project cooldown filter those candidates. Existing locked releases that remain unchanged aren't re-evaluated as candidates. |
+| Resolution warnings | Advisories and retirements for dependencies reported by the current resolution. Matching Allow, Advisory, and Retirement overrides suppress their corresponding warnings. Policy severity and retirement settings don't suppress these warnings. |
+| Whole-lock audit | Every Hex dependency in `mix.lock`, including dependencies that didn't change in the last resolution. Use `mix hex.audit` in CI to check the complete lockfile against newly published advisories and retirement metadata. |
 
-| Command | Default behavior | Effect of an active policy |
-| --- | --- | --- |
-| `mix deps.get` and `mix deps.update` | Resolve dependencies that need to change, filter their candidate releases through the project cooldown, and report advisory or retirement findings for the resulting dependency changes. | Policy restrictions filter candidates during resolution. Matching Allow, advisory, and retirement overrides suppress the corresponding dependency-change warnings. |
-| `mix hex.audit` | Check every Hex dependency in `mix.lock` for advisories and retirements. The policy doesn't change this default mode. | None unless a policy flag is passed. |
-| `mix hex.audit --policy-overrides` | Start with all advisory and retirement findings in the lockfile. | Report findings unless a matching Allow, advisory, or retirement override accepts them. |
-| `mix hex.audit --policy` | Start with all advisory and retirement findings in the lockfile. | Report only findings rejected by the policy's advisory threshold, retirement reasons, and overrides. |
+### Choosing an audit mode
 
-Both policy audit flags require an active policy and can't be used together. Policy-accepted findings and project-ignored findings appear in separate output sections. Active findings produce a non-zero exit status. Audit modes don't check cooldown eligibility or general lockfile validity because locked releases are trusted.
+Every `mix hex.audit` mode checks the complete lockfile for advisories and retirements. The active policy changes the result only when a policy flag is passed.
+
+| Command | Findings reported |
+| --- | --- |
+| `mix hex.audit` | All advisory and retirement findings, regardless of the active policy. |
+| `mix hex.audit --policy-overrides` | All findings except those accepted by a matching Allow, Advisory, or Retirement override. Policy severity and retirement settings aren't applied. |
+| `mix hex.audit --policy` | Findings rejected after applying the active policy's advisory severity, retirement reasons, and overrides. |
+
+Use `--policy-overrides` when every advisory and retirement should remain actionable unless an organization administrator explicitly accepted it. Use `--policy` when the audit should check compliance with the organization's full advisory and retirement policy.
+
+Both policy flags require an active policy and can't be used together. Project `ignore_advisories` and `ignore_retirements` settings are applied after policy evaluation. Policy-accepted and project-ignored findings appear in separate output sections and don't affect the exit status. Audit modes don't check cooldown eligibility or general lockfile validity.
 
 ### Project controls
 
