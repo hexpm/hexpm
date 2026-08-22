@@ -300,11 +300,23 @@ export const PolicyExceptionList = {
       }
 
       const row = remove.closest("[data-exception-row]");
-      closeAllSuggestions(row.querySelector("[data-exception-search]"));
-      closeSuggestions(row.querySelector("[data-exception-search]"));
+      if (!row) return;
+
+      const nextFocus =
+        row.nextElementSibling?.querySelector("[data-exception-remove]") ||
+        row.previousElementSibling?.querySelector("[data-exception-remove]") ||
+        this.el.querySelector(
+          `[data-exception-add="${row.dataset.exceptionType}"]`
+        );
+
+      const input = row.querySelector("[data-exception-search]");
+      closeAllSuggestions(input);
+      closeSuggestions(input);
       row.remove();
+
       refreshEmpty();
       notifyFormChanged();
+      nextFocus?.focus();
     };
 
     this.onInput = (event) => {
