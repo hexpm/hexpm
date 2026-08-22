@@ -10,6 +10,13 @@ defmodule HexpmWeb.DocsControllerTest do
     assert html =~ "Hex warns when a loaded policy contains override actions"
     assert html =~ "mix hex.policy show"
     assert html =~ "newer advisory, retirement, and cooldown overrides remain fail-closed"
+    assert html =~ "Dependency resolution"
+    assert html =~ "Resolution warnings"
+    assert html =~ "Whole-lock audit"
+    assert html =~ "mix hex.audit --policy-overrides"
+    assert html =~ "mix hex.audit --policy"
+    assert html =~ "every advisory and retirement should remain actionable"
+    assert html =~ "full advisory and retirement policy"
   end
 
   test "renders the organization SSO setup guide in the docs navigation" do
