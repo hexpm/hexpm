@@ -214,8 +214,13 @@ defmodule HexpmWeb.SSOController do
 
   def callback(conn, %{"state" => state, "error" => _provider_error}) do
     case bound_transaction(conn, state) do
-      nil -> callback_error(conn, nil, :invalid_state)
-      transaction -> abandon(conn, transaction, :authorization, :provider_error)
+      nil ->
+        callback_error(conn, nil, :invalid_state)
+
+      transaction ->
+        conn
+        |> forget_sso_state(state)
+        |> abandon(transaction, :authorization, :provider_error)
     end
   end
 
@@ -234,8 +239,13 @@ defmodule HexpmWeb.SSOController do
 
   def callback(conn, params) do
     case bound_transaction(conn, params["state"]) do
-      nil -> callback_error(conn, nil, :invalid_response)
-      transaction -> abandon(conn, transaction, :callback, :invalid_response)
+      nil ->
+        callback_error(conn, nil, :invalid_response)
+
+      transaction ->
+        conn
+        |> forget_sso_state(params["state"])
+        |> abandon(transaction, :callback, :invalid_response)
     end
   end
 

@@ -85,14 +85,25 @@ defmodule Hexpm.Permissions do
       [scope_name] ->
         scope_name in @all_scopes
 
-      [scope_name, _resource] when scope_name in @resource_only_scopes ->
-        true
+      ["api", sub] ->
+        sub in ["read", "write"]
 
-      ["api", sub] when sub in ["read", "write"] ->
-        true
+      ["package", resource] ->
+        package_resource?(resource)
+
+      [scope_name, resource] when scope_name in @resource_only_scopes ->
+        resource != ""
 
       _ ->
         false
+    end
+  end
+
+  # A package resource names one package in one organization.
+  defp package_resource?(resource) do
+    case String.split(resource, "/") do
+      [organization, package] -> organization != "" and package != ""
+      _other -> false
     end
   end
 
@@ -349,8 +360,13 @@ defmodule Hexpm.Permissions do
 
   # Helper functions for resource matching
   defp match_package_resource?(permission_resource, %Package{} = resource) do
-    [organization, package] = String.split(permission_resource, "/")
-    resource.repository.name == organization and resource.name == package
+    case String.split(permission_resource, "/") do
+      [organization, package] ->
+        resource.repository.name == organization and resource.name == package
+
+      _other ->
+        false
+    end
   end
 
   @doc """
@@ -494,11 +510,12 @@ defmodule Hexpm.Permissions do
   anything: it names no organization, so enforcement can neither drop nor name
   one until it has been expanded into the scopes that do.
 
-  The ordering falls out: a removed member's organization is not in
-  `all_organizations/1` at all, so it is dropped without ever being named, while
-  a member whose only missing piece is a live organization access session is
-  dropped and named. A client can act on the second and has nothing to act on
-  for the first.
+  Every organization scope is then held against current membership, the ones
+  the expansion produced and the ones the client was granted by name alike. A
+  removed member's organization is not in `all_organizations/1`, so it goes
+  without ever being named, while a member whose only missing piece is a live
+  organization access session is dropped and named. A client can act on the
+  second and has nothing to act on for the first.
 
   A token exchanged from a personal API key is the exception: it holds the
   key's standing rather than a session's, because it is minted with no refresh
@@ -510,9 +527,40 @@ defmodule Hexpm.Permissions do
   @spec expand_and_filter_sso_scopes(term(), [String.t()], integer() | nil, Key.t() | nil) ::
           {[String.t()], [String.t()]}
   def expand_and_filter_sso_scopes(principal, scopes, user_session_id, credential \\ nil) do
-    expanded = expand_repositories_scope(principal, scopes)
+    expanded =
+      principal
+      |> expand_repositories_scope(scopes)
+      |> reject_unaffiliated_scopes(principal)
+
     filter_sso_scopes(principal, expanded, user_session_id, credential)
   end
+
+  # The edge verifies an organization scope from the token rather than from the
+  # database, so a scope naming an organization the account has since left is
+  # taken here or not at all. Enforcement never sees it, and so never names it
+  # as something authenticating would give back.
+  defp reject_unaffiliated_scopes(scopes, %User{} = user) do
+    case organization_scope_names(scopes) do
+      [] ->
+        scopes
+
+      _names ->
+        member_of =
+          user
+          |> Hexpm.Repo.preload(:organizations)
+          |> Users.all_organizations()
+          |> MapSet.new(& &1.name)
+
+        Enum.reject(scopes, fn scope ->
+          case organization_scope_name(scope) do
+            nil -> false
+            name -> not MapSet.member?(member_of, name)
+          end
+        end)
+    end
+  end
+
+  defp reject_unaffiliated_scopes(scopes, _principal), do: scopes
 
   defp organization_scope_names(scopes) do
     scopes

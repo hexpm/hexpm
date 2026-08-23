@@ -187,6 +187,55 @@ defmodule Hexpm.Accounts.SSOConcurrencyTest do
     end)
   end
 
+  test "an administrator demoted while a member enforcement waits for the lock cannot land it" do
+    committed(fn context ->
+      parent = self()
+
+      holder =
+        unboxed_task(fn ->
+          Hexpm.RepoBase.transaction(fn ->
+            Hexpm.RepoBase.one!(
+              from(connection in Connection,
+                where: connection.id == ^context.connection.id,
+                lock: "FOR UPDATE"
+              )
+            )
+
+            send(parent, {:locked, self()})
+            assert_receive :release, 15_000
+          end)
+        end)
+
+      assert_receive {:locked, _pid}, 15_000
+
+      writer =
+        unboxed_task(fn ->
+          SSO.set_member_enforcement(context.organization, context.member, "exempt",
+            audit: audit_data(context.admin)
+          )
+        end)
+
+      assert await_lock_wait() == :waiting
+
+      Hexpm.RepoBase.update_all(
+        from(member in Hexpm.Accounts.OrganizationUser,
+          where: member.organization_id == ^context.organization.id,
+          where: member.user_id == ^context.admin.id
+        ),
+        set: [role: "write"]
+      )
+
+      send(holder.pid, :release)
+      assert {:ok, _result} = Task.await(holder, 15_000)
+      assert Task.await(writer, 15_000) == {:error, :admin_required}
+
+      refute Hexpm.RepoBase.get_by!(Hexpm.Accounts.OrganizationUser,
+               organization_id: context.organization.id,
+               user_id: context.member.id
+             ).sso_enforcement
+    end)
+  end
+
   # Postgres is the only thing that knows the other transaction is blocked, so
   # ask it rather than sleeping for a while and hoping.
   defp await_lock_wait do

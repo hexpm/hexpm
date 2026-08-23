@@ -28,7 +28,7 @@ defmodule HexpmWeb.API.AuthController do
           organization = resource_organization(verified)
 
           with :ok <- organization_billing_active(organization, user_or_organization),
-               :ok <- sso_enforced_credential(conn, organization, user_or_organization) do
+               :ok <- sso_enforced_credential(conn, domain, organization, user_or_organization) do
             success(conn)
           else
             error -> error(conn, error)
@@ -56,7 +56,15 @@ defmodule HexpmWeb.API.AuthController do
   # above already carries the decision. Re-deciding it here would make this
   # endpoint disagree with the edge, which verifies the same scopes without ever
   # reaching the database.
-  defp sso_enforced_credential(conn, organization, user_or_organization) do
+  #
+  # The package domain carries no such decision: a bare `api` or `api:write`
+  # scope satisfies it, and nothing filters those against an organization access
+  # session, so this endpoint takes the decision itself.
+  defp sso_enforced_credential(conn, "package", organization, user_or_organization) do
+    sso_enforced(conn, organization, user_or_organization)
+  end
+
+  defp sso_enforced_credential(conn, _domain, organization, user_or_organization) do
     case conn.assigns.auth_credential do
       %Hexpm.OAuth.Token{} -> :ok
       _credential -> sso_enforced(conn, organization, user_or_organization)

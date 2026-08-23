@@ -1,12 +1,11 @@
 defmodule HexpmWeb.PackageOwnerController do
   use HexpmWeb, :controller
 
-  alias HexpmWeb.{PackageLayoutAssigns, ViewHelpers}
+  alias HexpmWeb.{PackageLayoutAssigns, RepositoryAccess, SSOEnforcement, ViewHelpers}
 
   plug :requires_login
   plug :fetch_package
   plug :requires_full_owner
-  plug HexpmWeb.Plugs.OrganizationSSO, organization: :repository
   plug HexpmWeb.Plugs.Sudo
 
   def index(conn, _params) do
@@ -146,19 +145,24 @@ defmodule HexpmWeb.PackageOwnerController do
     end
   end
 
+  # Answering 403 for a package that exists and 404 for one that does not tells
+  # anyone who asks which private package names are taken, and organization
+  # names are public. A repository the caller does not reach answers exactly as
+  # a missing package does.
   defp fetch_package(conn, _opts) do
-    name = conn.params["name"]
-    repository = Repositories.get(conn.params["repository"], [:organization])
-    package = repository && Packages.get(repository, name)
+    case RepositoryAccess.fetch_package(conn, conn.params["repository"], conn.params["name"]) do
+      {:ok, package} ->
+        conn
+        |> assign(:repository, package.repository)
+        |> assign(:package, package)
 
-    if package do
-      conn
-      |> assign(:repository, repository)
-      |> assign(:package, package)
-    else
-      conn
-      |> render_error(404, message: "Package not found")
-      |> halt()
+      {:error, :sso_required, organization} ->
+        SSOEnforcement.refuse(conn, :sso_required, organization)
+
+      :error ->
+        conn
+        |> render_error(404, message: "Package not found")
+        |> halt()
     end
   end
 

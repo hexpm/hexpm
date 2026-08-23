@@ -289,6 +289,98 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
     end
   end
 
+  describe "the sweep and the keys it only refuses" do
+    test "tells a piloted member their key is turned away and leaves it alone", context do
+      key = personal_key(context, [%{domain: "repository", resource: context.organization.name}])
+      pilot_sso(context)
+      enforce(context, context.member)
+
+      assert Enforcement.sweep_personal_keys() == 0
+      assert Repo.get!(Hexpm.Accounts.Key, key.id).permissions == key.permissions
+      assert [entry] = blocked_entries()
+      assert entry.group_key =~ to_string(context.member.id)
+      assert Repo.all(from(e in OutboxEntry, where: e.category == "sso.key_revoked")) == []
+    end
+
+    test "says nothing to a member the pilot does not cover", context do
+      personal_key(context, [%{domain: "repository", resource: context.organization.name}])
+      pilot_sso(context)
+
+      assert Enforcement.sweep_personal_keys() == 0
+      assert blocked_entries() == []
+    end
+
+    test "says it once however many sweeps run", context do
+      personal_key(context, [%{domain: "repository", resource: context.organization.name}])
+      pilot_sso(context)
+      enforce(context, context.member)
+
+      assert Enforcement.sweep_personal_keys() == 0
+      assert Enforcement.sweep_personal_keys() == 0
+      assert [_entry] = blocked_entries()
+    end
+
+    test "tells a member whose key names every repository, which is kept", context do
+      key = personal_key(context, [%{domain: "repositories", resource: nil}])
+      require_sso(context, DateTime.add(DateTime.utc_now(), -60, :second))
+
+      assert Enforcement.sweep_personal_keys() == 0
+      assert Repo.get!(Hexpm.Accounts.Key, key.id).permissions == key.permissions
+      assert [_entry] = blocked_entries()
+    end
+
+    test "names the key and what still works", context do
+      key = personal_key(context, [%{domain: "repositories", resource: nil}])
+      require_sso(context, DateTime.add(DateTime.utc_now(), -60, :second))
+
+      assert Enforcement.sweep_personal_keys() == 0
+      assert [entry] = blocked_entries()
+
+      body = entry.email["text_body"]
+
+      assert body =~ "chose not to accept personal API keys"
+      assert body =~ "your key #{key.name} no longer reaches"
+      assert body =~ "The key itself is untouched"
+      assert body =~ "mix hex.user auth"
+      assert body =~ "organization key"
+      assert entry.email["subject"] =~ "does not accept personal API keys"
+    end
+
+    test "goes away with the account it was addressed to", context do
+      personal_key(context, [%{domain: "repositories", resource: nil}])
+      require_sso(context, DateTime.add(DateTime.utc_now(), -60, :second))
+
+      assert Enforcement.sweep_personal_keys() == 0
+      assert [_entry] = blocked_entries()
+
+      :ok = Hexpm.Accounts.Users.delete(context.member, audit: audit_data(context.member))
+
+      assert blocked_entries() == []
+    end
+  end
+
+  defp pilot_sso(context) do
+    {:ok, connection} =
+      SSO.configure_enforcement(
+        context.organization,
+        %{"enforcement_mode" => "pilot", "personal_keys" => "block"},
+        audit: audit_data(context.admin)
+      )
+
+    connection
+  end
+
+  defp enforce(context, user) do
+    {:ok, _member} =
+      SSO.set_member_enforcement(context.organization, user, "enforced",
+        audit: audit_data(context.admin)
+      )
+  end
+
+  defp blocked_entries do
+    Repo.all(from(e in OutboxEntry, where: e.category == "sso.key_blocked"))
+  end
+
   defp exempt(context, user) do
     {:ok, _member} =
       SSO.set_member_enforcement(context.organization, user, "exempt",

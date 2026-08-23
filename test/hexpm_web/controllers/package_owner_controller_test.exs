@@ -358,6 +358,7 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
       package = Hexpm.Repo.preload(package, :repository)
 
       %{
+        organization: organization,
         repository: repository,
         full_owner: full_owner,
         package: package
@@ -375,6 +376,54 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
         |> get("/packages/#{repository.name}/#{package.name}/owners")
 
       assert html_response(conn, 200) =~ "Current owners"
+    end
+
+    test "answers an outsider the same for a package that exists and one that does not", %{
+      repository: repository,
+      package: package
+    } do
+      outsider = insert(:user)
+
+      existing =
+        build_conn()
+        |> test_login(outsider)
+        |> get("/packages/#{repository.name}/#{package.name}/owners")
+
+      missing =
+        build_conn()
+        |> test_login(outsider)
+        |> get("/packages/#{repository.name}/no-such-package/owners")
+
+      assert existing.status == 404
+      assert missing.status == 404
+      refute response(existing, 404) =~ package.name
+    end
+
+    test "answers an outsider the same for a repository that does not exist", %{package: package} do
+      outsider = insert(:user)
+
+      conn =
+        build_conn()
+        |> test_login(outsider)
+        |> get("/packages/no-such-organization/#{package.name}/owners")
+
+      assert conn.status == 404
+    end
+
+    test "keeps naming a member who is not an owner", %{
+      organization: organization,
+      repository: repository,
+      package: package
+    } do
+      member = insert(:user)
+      insert(:organization_user, organization: organization, user: member, role: "read")
+
+      conn =
+        build_conn()
+        |> test_login(member)
+        |> get("/packages/#{repository.name}/#{package.name}/owners")
+
+      assert conn.status == 403
     end
   end
 end

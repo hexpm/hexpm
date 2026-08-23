@@ -23,9 +23,15 @@ defmodule HexpmWeb.API.SSOAuthorizationController do
   end
 
   # The session in hand is the one being authorized, so it has to be one that
-  # can hold organization access. A static key has nowhere to put it.
+  # can hold organization access. A static key has nowhere to put it, and a
+  # token exchanged from one holds the key's standing: enforcement reads it as a
+  # key, so an organization access session written against it would never be
+  # looked at and the caller would be refused again after the round trip.
   defp session(conn) do
     case {conn.assigns.current_user, conn.assigns.auth_credential} do
+      {%User{}, %Token{grant_type: "client_credentials"}} ->
+        {:error, :invalid_session}
+
       {%User{}, %Token{user_session_id: user_session_id}} when is_integer(user_session_id) ->
         {:ok, user_session_id}
 

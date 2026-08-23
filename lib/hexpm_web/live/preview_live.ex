@@ -50,7 +50,8 @@ defmodule HexpmWeb.PreviewLive do
     version = params["version"]
     requested_filename = filename(params["filename"])
 
-    with {:ok, package} <- RepositoryAccess.fetch_package(socket, repository, package_name),
+    with {:ok, package} <-
+           RepositoryAccess.fetch_package(socket, repository, package_name, reload: true),
          [_ | _] = releases <- Releases.all(package),
          release when not is_nil(release) <- find_release(releases, version),
          {:ok, source} <-

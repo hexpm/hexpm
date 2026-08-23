@@ -43,10 +43,11 @@ defmodule HexpmWeb.PackageLive.Index do
   end
 
   # Resolved per set of results rather than held from the mount, so a search or
-  # a page turn on a connected view sees an organization access session that has
-  # since lapsed or been revoked.
+  # a page turn on a connected view sees a membership that has since been
+  # removed and an organization access session that has since lapsed or been
+  # revoked.
   defp load_results(socket, params) do
-    repositories = HexpmWeb.SSOEnforcement.reachable_repositories(socket)
+    repositories = HexpmWeb.SSOEnforcement.reachable_repositories(socket, reload: true)
     search = Hexpm.Utils.parse_search(params["search"])
 
     sort = sort(params["sort"])

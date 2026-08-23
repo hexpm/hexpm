@@ -25,6 +25,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   @warning_window_seconds 14 * 24 * 60 * 60
   @pending_category "sso.enforcement_pending"
   @key_revoked_category "sso.key_revoked"
+  @key_blocked_category "sso.key_blocked"
   @break_glass_category "sso.break_glass"
   @break_glass_notice_seconds 60 * 60
 
@@ -32,7 +33,8 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   The notices that are about one member rather than about their organization,
   and so go away with their account.
   """
-  def member_notification_categories, do: [@pending_category, @key_revoked_category]
+  def member_notification_categories,
+    do: [@pending_category, @key_revoked_category, @key_blocked_category]
 
   @doc """
   The enforcement mode in force for an organization right now, or `:optional`
@@ -205,11 +207,12 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
 
   # Following a sign-in URL would not fix this token: the organization access it
   # produces lands on the browser session that visited it, not on the session
-  # the token belongs to. The CLI asks for the session in hand instead.
+  # the token belongs to. The CLI asks for the session in hand instead, and only
+  # for the organizations the project depends on, which a project that publishes
+  # to this one but depends on none of its packages never asks for.
   def refusal_message(:sso_required, organization, %Token{}) do
     "organization #{organization.name} requires authenticating through its identity" <>
-      " provider, run mix deps.get to be prompted to re-authorize this session," <>
-      " or mix hex.user auth to authenticate again"
+      " provider, run mix hex.user auth to authenticate this session again"
   end
 
   def refusal_message(:sso_required, organization, _credential) do
@@ -412,47 +415,61 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
 
   @doc """
   Removes this organization's permissions from its members' personal API keys,
-  wherever the organization requires SSO and chose to block them.
+  wherever the organization requires SSO and chose to block them, and tells
+  every member whose keys it turns away, whether or not anything was removed.
 
   Only the permissions naming the organization go. A key carrying every
   repository reaches other organizations too, so stripping it here would take
-  unrelated access with it; those are refused at the request instead.
+  unrelated access with it; those are refused at the request instead. A pilot
+  refuses the keys of the members it pilots without removing anything, so those
+  members are told and their keys are left as they are.
+
+  Returns how many keys were changed.
   """
   @spec sweep_personal_keys() :: non_neg_integer()
   def sweep_personal_keys do
     from(connection in Connection,
       join: organization in assoc(connection, :organization),
       where: connection.personal_keys == "block",
-      where: connection.enforcement_mode == "required",
+      where: connection.enforcement_mode in ["pilot", "required"],
       where: not is_nil(connection.enabled_at),
       select: {connection, organization}
     )
     |> Repo.all()
     |> Enum.filter(fn {connection, organization} ->
-      mode(organization, connection) == :required
+      mode(organization, connection) != :optional
     end)
     |> Enum.map(fn {connection, organization} -> sweep_organization(organization, connection) end)
     |> Enum.sum()
   end
 
   defp sweep_organization(organization, connection) do
-    stripped =
+    strip? = mode(organization, connection) == :required
+
+    outcomes =
       organization
       |> blocked_personal_keys(connection)
-      |> Enum.flat_map(fn key ->
-        case strip_key(key, organization) do
-          {:stripped, outcome} -> [{key, outcome}]
-          :kept -> []
-        end
-      end)
+      |> Enum.map(fn key -> {key, key_outcome(key, organization, strip?)} end)
 
     # One notice per owner rather than per key: a member with a key for each of
     # their projects should hear about it once.
-    stripped
+    outcomes
     |> Enum.group_by(fn {key, _outcome} -> key.user_id end)
     |> Enum.each(fn {_user_id, keys} -> notify_key_owner(organization, keys) end)
 
-    length(stripped)
+    Enum.count(outcomes, fn {_key, outcome} -> outcome in [:revoked, :trimmed] end)
+  end
+
+  # A pilot turns the key away without taking anything from it, and so does a
+  # key whose only reach is every repository, which carries other organizations'
+  # access along with this one's.
+  defp key_outcome(_key, _organization, false = _strip?), do: :blocked
+
+  defp key_outcome(key, organization, true = _strip?) do
+    case strip_key(key, organization) do
+      {:stripped, outcome} -> outcome
+      :kept -> :blocked
+    end
   end
 
   @doc """
@@ -556,13 +573,25 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     if recipients != [] do
       revoked = for {key, :revoked} <- keys, do: key.name
       trimmed = for {key, :trimmed} <- keys, do: key.name
+      blocked = for {key, :blocked} <- keys, do: key.name
 
-      enqueue_once(
-        Emails.sso_key_revoked(organization.name, revoked, trimmed, recipients),
-        category: @key_revoked_category,
-        group_key: "#{@key_revoked_category}:#{organization.id}:#{user.id}",
-        scope_key: "sso:user:#{user.id}"
-      )
+      if revoked != [] or trimmed != [] do
+        enqueue_once(
+          Emails.sso_key_revoked(organization.name, revoked, trimmed, recipients),
+          category: @key_revoked_category,
+          group_key: "#{@key_revoked_category}:#{organization.id}:#{user.id}",
+          scope_key: "sso:user:#{user.id}"
+        )
+      end
+
+      if blocked != [] do
+        enqueue_once(
+          Emails.sso_key_blocked(organization.name, blocked, recipients),
+          category: @key_blocked_category,
+          group_key: "#{@key_blocked_category}:#{organization.id}:#{user.id}",
+          scope_key: "sso:user:#{user.id}"
+        )
+      end
     end
   end
 

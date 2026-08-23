@@ -75,6 +75,14 @@ defmodule Hexpm.Repository.Packages do
       (repository.id != 1 and Organizations.access?(repository.organization, user, role))
   end
 
+  @doc """
+  The organizations that own this package and whose membership gives this user
+  access to it at this level.
+  """
+  def owner_organizations(package, user, level \\ "maintainer") do
+    Repo.all(Package.owner_organizations(package, user, level))
+  end
+
   def preload(package) do
     package = Repo.preload(package, [:downloads, :releases])
     update_in(package.releases, &Release.sort/1)

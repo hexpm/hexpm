@@ -599,12 +599,10 @@ defmodule Hexpm.Accounts.SSO do
   held to it, because the change that would give it one goes through here too.
   """
   def set_member_enforcement(organization, user, enforcement, audit: audit_data) do
-    Repo.transaction(fn ->
-      # The connection lock serialises this against the mode change and against
-      # another member's, so two of them cannot each rely on an administrator
-      # the other is taking away.
-      connection = locked_connection_for_organization(organization)
-
+    # The connection lock serialises this against the mode change and against
+    # another member's, so two of them cannot each rely on an administrator the
+    # other is taking away.
+    with_locked_connection(organization, audit_data.user, &require_active/1, fn connection ->
       reachable_before? =
         Enforcement.mode(organization, connection) == :required and
           reachable_admin?(organization)
@@ -661,9 +659,14 @@ defmodule Hexpm.Accounts.SSO do
   # The callback this seat is for has to be one the callback can still accept.
   # A transaction that is spent, expired, or belongs to another account is about
   # to be rejected, and the seat would be bought for a login that never happens.
+  # The connection is held to the same conditions the locked completion holds it
+  # to, so an administrator disabling or reconfiguring it while the provider was
+  # answering costs the organization nothing.
   defp expands_seat?(transaction, connection, user, claims) do
     transaction.kind == "login" and transaction.user_id == user.id and
       transaction_available?(transaction) == :ok and
+      callback_available?(%{transaction | connection: connection}) == :ok and
+      transaction_configuration_available?(transaction, connection) == :ok and
       connection.jit_seat_policy == "expand" and
       jit_admits(connection, claims.email, claims[:email_verified] == true) == :ok and
       is_nil(Organizations.get_role(connection.organization, user))
@@ -1172,15 +1175,13 @@ defmodule Hexpm.Accounts.SSO do
 
   defp authorization_names(_names), do: {:error, :invalid_organizations}
 
-  # Every name has to resolve, so a client cannot open a request that is only
-  # half honourable and then be told at the browser which half it was.
+  # A client posts the list it last heard about, which can be as old as its
+  # access token, so a name that has since been exempted or turned off is
+  # dropped rather than taken as a reason to refuse the ones that still stand.
   defp authorization_organizations(user, names) do
-    organizations = Enforcement.governed(user, names)
-
-    if MapSet.new(organizations, & &1.name) == MapSet.new(names) do
-      {:ok, organizations}
-    else
-      {:error, :not_governed}
+    case Enforcement.governed(user, names) do
+      [] -> {:error, :not_governed}
+      organizations -> {:ok, organizations}
     end
   end
 
@@ -1261,22 +1262,16 @@ defmodule Hexpm.Accounts.SSO do
 
   @doc """
   The organization access session for a browser session, or nil.
-
-  The account session is checked alongside it so that revoking or expiring a
-  browser session takes its organization access with it, whichever path did
-  the revoking.
   """
   def current_org_session(user_session_id, organization_id)
       when is_integer(user_session_id) and is_integer(organization_id) do
     now = DateTime.utc_now()
 
     from(session in OrgSession.live(user_session_id, now),
-      join: user_session in assoc(session, :user_session),
       where: session.organization_id == ^organization_id,
       # user_id is denormalised onto the session, so assert it agrees with the
       # browser session rather than trusting the copy on the read path.
-      where: session.user_id == user_session.user_id,
-      where: is_nil(user_session.revoked_at) and user_session.expires_at > ^now
+      where: session.user_id == as(:user_session).user_id
     )
     |> Repo.one()
   end
@@ -1284,16 +1279,39 @@ defmodule Hexpm.Accounts.SSO do
   def current_org_session(_user_session_id, _organization_id), do: nil
 
   def revoke_org_sessions_for_user_session(multi, user_session, revoke_at) do
-    now = DateTime.utc_now()
-
     Multi.update_all(
       multi,
       :organization_sso_sessions,
-      from(session in OrgSession,
-        where: session.user_session_id == ^user_session.id,
-        where: is_nil(session.revoked_at)
-      ),
-      set: [revoked_at: revoke_at, updated_at: now]
+      revoke_org_sessions_query([user_session.id], revoke_at),
+      []
+    )
+  end
+
+  @doc """
+  The organization access sessions written against these sessions, or against
+  every session an account owns, set to revoked.
+
+  The caller runs the query, so revoking sessions in bulk takes the organization
+  access they carry with them rather than leaving rows that only the read path
+  knows are dead.
+  """
+  def revoke_org_sessions_query(user_session_ids, revoke_at) when is_list(user_session_ids) do
+    now = DateTime.utc_now()
+
+    from(session in OrgSession,
+      where: session.user_session_id in ^user_session_ids,
+      where: is_nil(session.revoked_at),
+      update: [set: [revoked_at: ^revoke_at, updated_at: ^now]]
+    )
+  end
+
+  def revoke_org_sessions_query(%User{} = user, revoke_at) do
+    now = DateTime.utc_now()
+
+    from(session in OrgSession,
+      where: session.user_id == ^user.id,
+      where: is_nil(session.revoked_at),
+      update: [set: [revoked_at: ^revoke_at, updated_at: ^now]]
     )
   end
 

@@ -199,6 +199,39 @@ defmodule HexpmWeb.SSOEnforcementTest do
       assert to == "/sso/org/#{context.organization.name}?return=" <> URI.encode_www_form(path)
       refute Repo.exists?(Hexpm.PackageReports.Report)
     end
+
+    test "drops the organization of a member removed while the search is open", context do
+      {conn, _session} = login(context.member)
+
+      {:ok, view, html} = live(conn, "/packages?search=#{context.package.name}")
+
+      assert html =~ "#{context.repository.name}/#{context.package.name}"
+
+      remove_member(context, context.member)
+
+      refute render_patch(view, "/packages?search=#{context.package.name}&sort=name") =~
+               "#{context.repository.name}/#{context.package.name}"
+    end
+
+    test "stops feeding the diff view to a member removed while it is open", context do
+      insert(:release, package: context.package, version: "2.0.0")
+      {conn, _session} = login(context.member)
+
+      {:ok, request} =
+        Hexpm.Diff.prepare(context.repository.name, context.package.name, "1.0.0", "2.0.0", [])
+
+      put_ready_cache(request, 6)
+
+      path = "/diff/#{context.repository.name}/#{context.package.name}/1.0.0..2.0.0"
+      {:ok, view, html} = live(conn, path)
+
+      assert html =~ "5 of 6 files loaded"
+
+      remove_member(context, context.member)
+
+      assert render_hook(view, "load-gap", %{"start" => "5", "last" => "5"}) =~
+               "Package not found"
+    end
   end
 
   describe "the dashboard" do
@@ -309,6 +342,41 @@ defmodule HexpmWeb.SSOEnforcementTest do
       assert [log] = break_glass_logs(context)
       assert log.params["screen"] == "billing"
       assert log.user_id == context.admin.id
+    end
+
+    test "records nothing for a billing-proxy path that reaches no action", context do
+      require_sso(context)
+      {conn, _session} = login(context.admin)
+
+      conn =
+        post(conn, "/dashboard/billing-api/api/customers/#{context.organization.name}/nonsense")
+
+      assert json_response(conn, 404)
+      assert break_glass_logs(context) == []
+    end
+
+    test "records nothing for a member the billing proxy turns away", context do
+      require_sso(context)
+      {conn, _session} = login(context.member)
+
+      conn =
+        post(
+          conn,
+          "/dashboard/billing-api/api/customers/#{context.organization.name}/setup_intent"
+        )
+
+      assert json_response(conn, 403)
+      assert break_glass_logs(context) == []
+    end
+
+    test "records nothing for a member the billing screen turns away", context do
+      require_sso(context)
+      {conn, _session} = login(context.member)
+
+      conn = get(conn, "/dashboard/orgs/#{context.organization.name}/billing")
+
+      assert response(conn, 400)
+      assert break_glass_logs(context) == []
     end
 
     test "names the screen that was reached in the audit log", context do
@@ -536,6 +604,118 @@ defmodule HexpmWeb.SSOEnforcementTest do
     end
   end
 
+  describe "a public package the organization owns" do
+    setup context do
+      package = insert(:package, repository_id: 1)
+      insert(:release, package: package, version: "1.0.0")
+      insert(:package_owner, package: package, user: context.organization.user, level: "full")
+
+      %{public_package: package}
+    end
+
+    test "refuses a release from a session with no organization access", context do
+      require_sso(context)
+      member = enable_tfa(context.member)
+      token = oauth_token(member, ["api:write"])
+
+      meta = %{name: context.public_package.name, version: "2.0.0", description: "New"}
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> put_req_header("x-hex-otp", otp(member))
+        |> post("/api/publish", create_tar(meta))
+
+      assert json_response(conn, 403)["message"] =~ "requires authenticating through its identity"
+    end
+
+    test "publishes once that session has authenticated", context do
+      require_sso(context)
+      member = enable_tfa(context.member)
+      session = oauth_session(member)
+      authenticate(context, member, session)
+      token = oauth_token(member, ["api:write"], session)
+
+      meta = %{name: context.public_package.name, version: "2.0.0", description: "New"}
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> put_req_header("x-hex-otp", otp(member))
+        |> post("/api/publish", create_tar(meta))
+
+      assert json_response(conn, 201)["version"] == "2.0.0"
+    end
+
+    test "refuses a personal key the organization turns away", context do
+      require_sso(context)
+
+      meta = %{name: context.public_package.name, version: "2.0.0", description: "New"}
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(context.member, api_write()))
+        |> post("/api/publish", create_tar(meta))
+
+      assert json_response(conn, 403)["message"] =~ "does not accept personal API keys"
+    end
+
+    test "refuses an owner change from a session with no organization access", context do
+      require_sso(context)
+      admin = enable_tfa(context.admin)
+      token = oauth_token(admin, ["api:write"])
+      other = insert(:user, emails: [build(:email, verified: true, primary: true)])
+
+      conn =
+        build_conn()
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> put_req_header("x-hex-otp", otp(admin))
+        |> put("/api/packages/#{context.public_package.name}/owners/#{hd(other.emails).email}")
+
+      assert json_response(conn, 403)["message"] =~ "requires authenticating through its identity"
+    end
+
+    test "refuses retiring a release from a session with no organization access", context do
+      require_sso(context)
+      member = enable_tfa(context.member)
+      token = oauth_token(member, ["api:write"])
+
+      conn =
+        build_conn()
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> put_req_header("x-hex-otp", otp(member))
+        |> post("/api/packages/#{context.public_package.name}/releases/1.0.0/retire", %{
+          "reason" => "security",
+          "message" => "CVE"
+        })
+
+      assert json_response(conn, 403)["message"] =~ "requires authenticating through its identity"
+    end
+
+    test "leaves a public package no organization owns alone", context do
+      require_sso(context)
+      member = enable_tfa(context.member)
+      token = oauth_token(member, ["api:write"])
+      package = insert(:package, repository_id: 1)
+      insert(:release, package: package, version: "1.0.0")
+      insert(:package_owner, package: package, user: member, level: "full")
+
+      meta = %{name: package.name, version: "2.0.0", description: "New"}
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> put_req_header("x-hex-otp", otp(member))
+        |> post("/api/publish", create_tar(meta))
+
+      assert json_response(conn, 201)["version"] == "2.0.0"
+    end
+  end
+
   describe "the edge check at /api/auth" do
     test "refuses a personal key the day enforcement starts, before any sweep", context do
       secret = key_for(context.member, repository_permission(context))
@@ -573,10 +753,10 @@ defmodule HexpmWeb.SSOEnforcementTest do
           resource: "#{context.organization.name}/#{context.package.name}"
         )
 
-      # The package domain verifies to a package, and billing and enforcement
-      # are both about the organization behind it. Left to its scopes like any
-      # other token, with or without an organization access session.
-      assert response(conn, 204)
+      # A bare api scope satisfies the package domain, so nothing has filtered
+      # this token against an organization access session and this endpoint
+      # takes the decision itself.
+      assert json_response(conn, 403)["message"] =~ "requires authenticating through its identity"
     end
 
     test "resolves a package for a governed session that has authenticated", context do
@@ -1381,6 +1561,15 @@ defmodule HexpmWeb.SSOEnforcementTest do
   end
 
   defp otp(user), do: Hexpm.Accounts.TFA.time_based_token(user.tfa.secret)
+
+  defp remove_member(context, user) do
+    Repo.delete_all(
+      from(member in Hexpm.Accounts.OrganizationUser,
+        where: member.organization_id == ^context.organization.id,
+        where: member.user_id == ^user.id
+      )
+    )
+  end
 
   defp expire_org_sessions(session) do
     Repo.update_all(

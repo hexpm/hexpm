@@ -45,20 +45,32 @@ defmodule HexpmWeb.Plugs.OrganizationSSO do
          %{} = organization <- organization(conn, opts.source),
          {:error, refusal} <- SSOEnforcement.check(conn, organization, user) do
       if carve_out?(conn, opts.except) do
-        Enforcement.break_glass(
-          organization,
-          user,
-          screen(conn, opts.screen),
-          HexpmWeb.ControllerHelpers.audit_data(conn)
-        )
-
-        conn
+        record_break_glass(conn, organization, user, screen(conn, opts.screen))
       else
         SSOEnforcement.refuse(conn, refusal, organization)
       end
     else
       _ -> conn
     end
+  end
+
+  # This runs before the action, which is where the membership and role checks
+  # live, so what was reached is only known once the response is. A request the
+  # action turns away reached nothing, and recording it would let any governed
+  # member write into their organization's audit log at will.
+  defp record_break_glass(conn, organization, user, screen) do
+    Plug.Conn.register_before_send(conn, fn conn ->
+      if conn.status < 400 do
+        Enforcement.break_glass(
+          organization,
+          user,
+          screen,
+          HexpmWeb.ControllerHelpers.audit_data(conn)
+        )
+      end
+
+      conn
+    end)
   end
 
   defp carve_out?(conn, except), do: Phoenix.Controller.action_name(conn) in except

@@ -290,15 +290,33 @@ defmodule HexpmWeb.AuthHelpers do
   def package_owner(conn, user_or_organization, opts \\ [])
 
   def package_owner(%Plug.Conn{} = conn, user_or_organization, opts) do
-    with :ok <-
-           package_owner(
-             conn.assigns.repository,
-             conn.assigns.package,
-             user_or_organization,
-             opts
-           ) do
-      sso_enforced(conn, user_or_organization)
+    repository = conn.assigns.repository
+    package = conn.assigns.package
+
+    with :ok <- package_owner(repository, package, user_or_organization, opts) do
+      package_sso_enforced(conn, repository, package, user_or_organization, opts)
     end
+  end
+
+  # `conn.assigns.organization` is the repository's, which for a package in the
+  # public repository is the public organization, and enforcement never governs
+  # that one. An organization can own a package that lives there, and its
+  # membership is what lets its members act on the package, so enforcement runs
+  # against the organizations that own it. A package no organization owns has
+  # nothing to enforce.
+  defp package_sso_enforced(conn, %Repository{id: 1}, %Package{} = package, %User{} = user, opts) do
+    package
+    |> Packages.owner_organizations(user, opts[:owner_level] || "maintainer")
+    |> Enum.reduce_while(:ok, fn organization, :ok ->
+      case sso_enforced(conn, organization, user) do
+        :ok -> {:cont, :ok}
+        error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp package_sso_enforced(conn, _repository, _package, user_or_organization, _opts) do
+    sso_enforced(conn, user_or_organization)
   end
 
   def package_owner(

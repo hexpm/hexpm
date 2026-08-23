@@ -10,11 +10,22 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
   # These are carved out of the SSO gate, so a stolen account session reaches
   # them without ever touching the provider. Chained, they replace the
   # organization's provider with one the attacker controls: disable, unlink
-  # every identity, point the connection at another issuer, enable, link. Each
-  # step takes a fresh password rather than the rolling window login grants.
+  # every identity, point the connection at another issuer, enable, link.
+  # Setting enforcement back to optional takes the gate off every member in one
+  # step and without touching the provider at all. Each of them takes a fresh
+  # password rather than the rolling window login grants.
   plug HexpmWeb.Plugs.Sudo,
        [force: true]
-       when action in [:configure, :enable, :disable, :delete, :rotate, :promote, :unlink]
+       when action in [
+              :configure,
+              :enable,
+              :disable,
+              :delete,
+              :rotate,
+              :promote,
+              :unlink,
+              :configure_enforcement
+            ]
 
   plug HexpmWeb.Plugs.Sudo
 
@@ -270,6 +281,22 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
                 organization,
                 :error,
                 enforcement_error(:no_reachable_admin)
+              )
+
+            {:error, :admin_required} ->
+              redirect_with_flash(
+                conn,
+                organization,
+                :error,
+                configuration_error(:admin_required)
+              )
+
+            {:error, :feature_disabled} ->
+              redirect_with_flash(
+                conn,
+                organization,
+                :error,
+                "SSO is not available for this organization."
               )
 
             {:error, _changeset} ->

@@ -207,13 +207,18 @@ defmodule Hexpm.Accounts.User do
   end
 
   def verify_permissions(%User{} = user, "package", name) do
-    [organization, package] = String.split(name, "/", parts: 2)
-    package = Packages.get(organization, package)
+    case String.split(name, "/", parts: 2) do
+      [organization, package_name] ->
+        package = Packages.get(organization, package_name)
 
-    if package && Packages.owner_with_access?(package, user) do
-      {:ok, package}
-    else
-      :error
+        if package && Packages.owner_with_access?(package, user) do
+          {:ok, package}
+        else
+          :error
+        end
+
+      _other ->
+        :error
     end
   end
 

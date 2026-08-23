@@ -519,6 +519,50 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
            ]
   end
 
+  test "takes a fresh password before enforcement is turned down", context do
+    connection =
+      insert(:organization_sso_connection,
+        organization: context.organization,
+        tested_at: DateTime.utc_now(),
+        enabled_at: DateTime.utc_now(),
+        enforcement_mode: "required",
+        required_at: DateTime.utc_now()
+      )
+
+    conn =
+      build_conn()
+      |> test_login(context.admin,
+        sudo_at: NaiveDateTime.add(NaiveDateTime.utc_now(), -5, :minute)
+      )
+      |> post("/dashboard/orgs/#{context.organization.name}/sso/enforcement", %{
+        "enforcement" => %{"enforcement_mode" => "optional", "personal_keys" => "allow"}
+      })
+
+    assert redirected_to(conn) == "/sudo"
+    assert Repo.get!(Connection, connection.id).enforcement_mode == "required"
+  end
+
+  test "turns enforcement down for an administrator who just authenticated", context do
+    connection =
+      insert(:organization_sso_connection,
+        organization: context.organization,
+        tested_at: DateTime.utc_now(),
+        enabled_at: DateTime.utc_now(),
+        enforcement_mode: "required",
+        required_at: DateTime.utc_now()
+      )
+
+    conn =
+      build_conn()
+      |> test_login(context.admin)
+      |> post("/dashboard/orgs/#{context.organization.name}/sso/enforcement", %{
+        "enforcement" => %{"enforcement_mode" => "optional", "personal_keys" => "allow"}
+      })
+
+    assert redirected_to(conn) == "/dashboard/orgs/#{context.organization.name}/sso"
+    assert Repo.get!(Connection, connection.id).enforcement_mode == "optional"
+  end
+
   defp enable_beta_for(organization) do
     config = Application.fetch_env!(:hexpm, :organization_sso)
 

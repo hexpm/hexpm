@@ -393,6 +393,45 @@ defmodule Hexpm.Accounts.SSOJITTest do
       assert :ok = SSO.maybe_expand_seats(transaction, newcomer, claims("newcomer@example.com"))
     end
 
+    test "buys nothing once the connection has been disabled", context do
+      fill_seats(context.organization)
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
+
+      {:ok, _connection} = SSO.disable(context.organization, audit: audit_data(context.admin))
+
+      Mox.stub(Hexpm.Billing.Mock, :update, fn _name, _params ->
+        flunk("billing must not be called for a login the callback will refuse")
+      end)
+
+      assert :ok = SSO.maybe_expand_seats(transaction, newcomer, claims("newcomer@example.com"))
+
+      assert {:error, :connection_disabled} =
+               complete(transaction, claims("newcomer@example.com"), newcomer)
+
+      refute Organizations.get_role(context.organization, newcomer)
+    end
+
+    test "buys nothing when the connection was reconfigured mid-login", context do
+      fill_seats(context.organization)
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
+
+      Repo.update_all(
+        from(connection in Connection, where: connection.id == ^context.connection.id),
+        inc: [version: 1]
+      )
+
+      Mox.stub(Hexpm.Billing.Mock, :update, fn _name, _params ->
+        flunk("billing must not be called for a login the callback will refuse")
+      end)
+
+      assert :ok = SSO.maybe_expand_seats(transaction, newcomer, claims("newcomer@example.com"))
+
+      assert {:error, :connection_configuration_changed} =
+               complete(transaction, claims("newcomer@example.com"), newcomer)
+    end
+
     test "does not retry a purchase that already failed", context do
       fill_seats(context.organization)
       calls = :counters.new(1, [])

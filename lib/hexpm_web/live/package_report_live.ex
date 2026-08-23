@@ -63,10 +63,10 @@ defmodule HexpmWeb.PackageReportLive do
   def handle_event("submit", %{"report" => params} = event_params, socket) do
     %{repository_name: repository, package_name: package_name} = socket.assigns
 
-    # The package was accepted at mount and the form outlives the organization
-    # access session that let it open, so the report is only filed against a
-    # package the reporter still reaches.
-    case RepositoryAccess.fetch_package(socket, repository, package_name) do
+    # The package was accepted at mount and the form outlives both the
+    # organization access session and the membership that let it open, so the
+    # report is only filed against a package the reporter still reaches.
+    case RepositoryAccess.fetch_package(socket, repository, package_name, reload: true) do
       {:ok, _package} ->
         changeset = Report.changeset(%Report{}, params)
         submitted_form = changeset |> Map.put(:action, :validate) |> to_form(as: :report)

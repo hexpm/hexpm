@@ -272,6 +272,15 @@ defmodule Hexpm.Emails do
     |> render_body(:sso_key_revoked)
   end
 
+  def sso_key_blocked(organization, blocked, recipients) do
+    base_email()
+    |> email_to(recipients)
+    |> subject("Hex.pm - #{organization} does not accept personal API keys")
+    |> assign(:organization, organization)
+    |> assign(:blocked, blocked)
+    |> render_body(:sso_key_blocked)
+  end
+
   def sso_break_glass(organization, username, screen, recipients) do
     base_email()
     |> email_to(recipients)

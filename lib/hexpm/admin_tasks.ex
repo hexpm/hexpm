@@ -738,9 +738,10 @@ defmodule Hexpm.AdminTasks do
 
         # Revoke all keys and sessions if requested
         if revoke_all_access do
-          {session_query, token_query} = Hexpm.UserSessions.revoke_all(user)
+          {session_query, token_query, org_session_query} = Hexpm.UserSessions.revoke_all(user)
           Repo.update_all(session_query, [])
           Repo.update_all(token_query, [])
+          Repo.update_all(org_session_query, [])
           Repo.update_all(Key.revoke_all(user), [])
         end
 

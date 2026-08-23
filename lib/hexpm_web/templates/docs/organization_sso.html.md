@@ -173,14 +173,15 @@ The SSO screen is reachable so the connection can be repaired, and turning enfor
 
 ### The residual bypasses
 
-A required organization has exactly four ways in that do not involve its identity provider, and they are all deliberate:
+A required organization has exactly five ways in that do not involve its identity provider, and they are all deliberate:
 
 1. **Exemptions**, one per member, listed on the members tab.
 2. **Organization API keys**, which authenticate as the organization. This is the audited automation exception; enforcement constrains and monitors it but cannot close it.
 3. **Personal API keys**, unless the organization chose to block them.
 4. **Break-glass** on the billing and SSO settings screens, audited and mailed.
+5. **Readme URLs.** A private package's readme renders on a separate host that never receives your Hexpm session cookie, so the package page signs a URL for it after taking its own authorization decision, and signs one for each image the readme contains. That URL renders that one readme for thirty minutes to anyone holding it. Nothing about it is checked against enforcement, the session it was minted from, or the member's membership, and reaching a readme this way is not audited. It carries no other access: one package, one version, and the images in that readme.
 
-There is no fifth. If you are evaluating Hexpm against a compliance requirement, this is the list. Leaving the organization is open on the same break-glass terms and audited the same way, but it is not on the list: it takes the member's access away rather than giving them any.
+There is no sixth. If you are evaluating Hexpm against a compliance requirement, this is the list. Leaving the organization is open on the same break-glass terms and audited the same way, but it is not on the list: it takes the member's access away rather than giving them any.
 
 ### Offboarding
 

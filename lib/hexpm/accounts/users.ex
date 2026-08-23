@@ -71,6 +71,23 @@ defmodule Hexpm.Accounts.Users do
     [Organization.hexpm()]
   end
 
+  @doc """
+  The same list, read from the database rather than from the association the
+  caller has in hand.
+
+  A connected LiveView loads its memberships once, at mount, and outlives them:
+  a member removed while the socket is open still has the organization in the
+  association, and enforcement does not catch that because a non-member is not
+  governed by anything.
+  """
+  def reload_organizations(%User{} = user) do
+    [Organization.hexpm() | Organizations.all_by_user(user, :repository)]
+  end
+
+  def reload_organizations(nil) do
+    [Organization.hexpm()]
+  end
+
   def add(params, audit: audit_data) do
     multi =
       Multi.new()
@@ -488,7 +505,7 @@ defmodule Hexpm.Accounts.Users do
   defp password_reset(user, params, revoke_all_access) do
     alias Hexpm.UserSessions
 
-    {sessions_query, tokens_query} = UserSessions.revoke_all(user)
+    {sessions_query, tokens_query, org_sessions_query} = UserSessions.revoke_all(user)
 
     multi =
       Multi.new()
@@ -496,6 +513,7 @@ defmodule Hexpm.Accounts.Users do
       |> Multi.delete_all(:reset, assoc(user, :password_resets))
       |> Multi.delete_all(:account_deletion_requests, assoc(user, :account_deletion_requests))
       |> Multi.update_all(:revoke_tokens, tokens_query, [])
+      |> Multi.update_all(:revoke_org_sessions, org_sessions_query, [])
       |> Multi.update_all(:revoke_sessions, sessions_query, [])
 
     if revoke_all_access,

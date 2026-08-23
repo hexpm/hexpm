@@ -196,6 +196,22 @@ defmodule HexpmWeb.API.AuthControllerTest do
       |> response(401)
     end
 
+    test "refuses an organization key asking about another organization", %{
+      owned_org: owned_org,
+      unowned_org: unowned_org
+    } do
+      key =
+        insert(:key,
+          organization: owned_org,
+          permissions: [build(:key_permission, domain: "repositories")]
+        )
+
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("/api/auth", domain: "repository", resource: unowned_org.name)
+      |> response(403)
+    end
+
     test "authenticate user api key", %{user_api_key: key} do
       build_conn()
       |> put_req_header("authorization", key.user_secret)

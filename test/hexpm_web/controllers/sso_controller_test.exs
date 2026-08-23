@@ -868,6 +868,45 @@ defmodule HexpmWeb.SSOControllerTest do
       assert [%{stage: "authorization", code: "provider_error"}] =
                SSO.failures(context.connection)
     end
+
+    test "a failed callback takes its state out of the browser session", context do
+      %{conn: conn, state: state} = begin_login(context)
+
+      failed =
+        conn
+        |> recycle()
+        |> get("/sso/callback", %{state: state, error: "access_denied"})
+
+      refute state in List.wrap(get_session(failed, "sso_states"))
+    end
+
+    test "a callback with nothing usable in it takes its state out too", context do
+      %{conn: conn, state: state} = begin_login(context)
+
+      failed =
+        conn
+        |> recycle()
+        |> get("/sso/callback", %{state: state})
+
+      refute state in List.wrap(get_session(failed, "sso_states"))
+    end
+
+    # The session holds five states, so dead ones left behind evict the live one
+    # and the callback that follows is refused as an invalid state.
+    test "a run of failed logins does not evict a live state", context do
+      %{conn: conn, state: live_state} = begin_login(context)
+
+      conn =
+        Enum.reduce(1..5, conn, fn _attempt, conn ->
+          expect_authorization_request(context.connection)
+          conn = conn |> recycle() |> get("/sso/org/#{context.organization.name}")
+          assert_receive {:sso_state, dead_state, _redirect_uri}
+
+          conn |> recycle() |> get("/sso/callback", %{state: dead_state, error: "access_denied"})
+        end)
+
+      assert live_state in List.wrap(get_session(conn, "sso_states"))
+    end
   end
 
   describe "re-authorizing a session" do
@@ -902,6 +941,33 @@ defmodule HexpmWeb.SSOControllerTest do
       assert body["message"] =~ "OAuth session"
     end
 
+    test "refuses a token exchanged from a personal key", context do
+      require_sso(context)
+      key = insert(:key, user: context.member)
+      client = insert(:oauth_client)
+
+      token =
+        build_conn()
+        |> post("/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "api:read"
+        })
+        |> json_response(200)
+
+      body =
+        build_conn()
+        |> put_req_header("authorization", "Bearer #{token["access_token"]}")
+        |> post("/api/oauth/sso_authorization", %{
+          "organizations" => [context.organization.name]
+        })
+        |> json_response(422)
+
+      assert body["message"] =~ "mix hex.user auth"
+      refute Repo.exists?(SSO.Authorization)
+    end
+
     test "refuses an organization the caller is not governed by", context do
       require_sso(context)
       %{token: token} = cli_session(context)
@@ -917,18 +983,22 @@ defmodule HexpmWeb.SSOControllerTest do
       refute Repo.exists?(SSO.Authorization)
     end
 
-    test "refuses the whole request when one organization does not resolve", context do
+    test "covers the organizations that resolve and drops the ones that do not", context do
       require_sso(context)
       %{token: token} = cli_session(context)
 
-      build_conn()
-      |> put_req_header("authorization", "Bearer #{token.access_token}")
-      |> post("/api/oauth/sso_authorization", %{
-        "organizations" => [context.organization.name, "no-such-organization"]
-      })
-      |> json_response(422)
+      body =
+        build_conn()
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> post("/api/oauth/sso_authorization", %{
+          "organizations" => [context.organization.name, "no-such-organization"]
+        })
+        |> json_response(201)
 
-      refute Repo.exists?(SSO.Authorization)
+      assert body["verification_uri"] =~ "/sso/authorize?code="
+
+      assert [authorization] = Repo.all(SSO.Authorization)
+      assert authorization.organization_ids == [context.organization.id]
     end
 
     test "asks the person to confirm who they are first", context do

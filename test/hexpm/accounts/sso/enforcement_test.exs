@@ -301,7 +301,7 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
       assert message =~ "mix hex.user auth"
     end
 
-    test "tells an OAuth token to re-authorize the session it is on", context do
+    test "tells an OAuth token to authenticate the session it is on", context do
       session = oauth_session(context.member)
       message = Enforcement.refusal_message(:sso_required, context.organization, token(session))
 
@@ -311,6 +311,11 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
       # A sign-in URL would authenticate whichever browser session followed it,
       # which is not the one the token is on.
       refute message =~ "/sso/org/"
+
+      # The client only prompts for the organizations the project depends on, so
+      # a project that publishes here and depends on nothing here is told to run
+      # something that would do nothing.
+      refute message =~ "deps.get"
     end
 
     test "tells a username and password that it cannot hold the session", context do
@@ -652,6 +657,18 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
                SSO.set_member_enforcement(context.organization, insert(:user), "exempt",
                  audit: audit_data(context.admin)
                )
+    end
+
+    test "refuses someone who is not an administrator", context do
+      assert {:error, :admin_required} =
+               SSO.set_member_enforcement(context.organization, context.member, "exempt",
+                 audit: audit_data(context.member)
+               )
+
+      refute Repo.get_by!(Hexpm.Accounts.OrganizationUser,
+               organization_id: context.organization.id,
+               user_id: context.member.id
+             ).sso_enforcement
     end
 
     test "refuses to enforce the last administrator who can still get in", context do
