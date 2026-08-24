@@ -23,6 +23,10 @@ defmodule Hexpm.Permissions do
   # Legacy domain list for KeyPermission compatibility
   @legacy_domains ~w(api package repository repositories docs)
 
+  # Scopes that name an organization, which both CDN edges verify from the token
+  # without reading the database
+  @organization_scope_domains ~w(repository docs)
+
   @doc """
   Returns all valid domains for KeyPermissions (legacy format).
   """
@@ -467,6 +471,45 @@ defmodule Hexpm.Permissions do
       end
     end)
     |> MapSet.new()
+  end
+
+  @doc """
+  Drops organization scopes naming an organization the account is not in.
+
+  `expand_repositories_scope/3` only rewrites the literal `repositories` scope,
+  so an explicitly granted `repository:<org>` or `docs:<org>` passes through it
+  untouched and `granted_scopes` carries it across every refresh. Both CDN edges
+  verify these from the token without reading the database, so a scope kept here
+  is access to that organization until the token expires.
+  """
+  def reject_unaffiliated_scopes(scopes, principal)
+
+  def reject_unaffiliated_scopes(scopes, %User{} = user) do
+    if Enum.any?(scopes, &organization_scope_name/1) do
+      member_of =
+        user
+        |> Hexpm.Repo.preload(:organizations)
+        |> Users.all_organizations()
+        |> MapSet.new(& &1.name)
+
+      Enum.reject(scopes, fn scope ->
+        case organization_scope_name(scope) do
+          nil -> false
+          name -> not MapSet.member?(member_of, name)
+        end
+      end)
+    else
+      scopes
+    end
+  end
+
+  def reject_unaffiliated_scopes(scopes, _principal), do: scopes
+
+  defp organization_scope_name(scope) do
+    case scope_to_permission(scope) do
+      %{domain: domain, resource: name} when domain in @organization_scope_domains -> name
+      _other -> nil
+    end
   end
 
   @doc """

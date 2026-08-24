@@ -69,8 +69,14 @@ defmodule Hexpm.OAuth.Tokens do
     expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)
 
     # Expand "repositories" scope to individual "repository:{org}" scopes for access tokens
-    # This allows edge verification without database lookups
-    expanded_scopes = Permissions.expand_repositories_scope(user, scopes)
+    # This allows edge verification without database lookups, so the expanded set
+    # is then held against current membership: `granted_scopes` carries an
+    # explicit organization scope across every refresh, and expansion does not
+    # revisit it.
+    expanded_scopes =
+      user
+      |> Permissions.expand_repositories_scope(scopes)
+      |> Permissions.reject_unaffiliated_scopes(user)
 
     jwt_opts = [
       session_id: Keyword.get(opts, :user_session_id),

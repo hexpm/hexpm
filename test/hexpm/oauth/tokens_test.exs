@@ -11,6 +11,47 @@ defmodule Hexpm.OAuth.TokensTest do
       %{user: user}
     end
 
+    test "drops an explicit organization scope the user is not a member of", %{user: user} do
+      other = insert(:organization)
+
+      changeset =
+        Tokens.create_for_user(
+          user,
+          "test_client",
+          ["api:read", "repository:#{other.name}", "docs:#{other.name}"],
+          "refresh_token"
+        )
+
+      assert get_field(changeset, :scopes) == ["api:read"]
+    end
+
+    test "keeps an explicit organization scope the user is a member of", %{user: user} do
+      org = insert(:organization)
+      insert(:organization_user, organization: org, user: user)
+
+      changeset =
+        Tokens.create_for_user(
+          user,
+          "test_client",
+          ["api:read", "repository:#{org.name}"],
+          "refresh_token"
+        )
+
+      assert "repository:#{org.name}" in get_field(changeset, :scopes)
+    end
+
+    test "keeps the public repository scope for a user in no organization", %{user: user} do
+      changeset =
+        Tokens.create_for_user(
+          user,
+          "test_client",
+          ["repository:hexpm"],
+          "refresh_token"
+        )
+
+      assert get_field(changeset, :scopes) == ["repository:hexpm"]
+    end
+
     test "creates changeset with required fields", %{user: user} do
       changeset =
         Tokens.create_for_user(
