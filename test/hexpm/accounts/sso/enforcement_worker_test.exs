@@ -45,6 +45,21 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
       assert Enforcement.warn_pending() == 1
       assert [entry] = pending_entries()
       assert entry.category == "sso.enforcement_pending"
+
+      assert entry.email["text_body"] =~
+               Application.fetch_env!(:hexpm, :email_base_url) <>
+                 "/sso/org/#{context.organization.name}"
+    end
+
+    test "builds the login link without the web endpoint" do
+      # This runs on `queue: :periodic`, which is configured only for
+      # `HEXPM_MODE=worker`, and worker pods start no endpoint. A call to
+      # `HexpmWeb.Endpoint.url/0` from here raises on every run in production
+      # and the suite would not see it, because `mode(:test, _)` is `:all`.
+      {:ok, {_module, [imports: imports]}} =
+        :beam_lib.chunks(:code.which(Enforcement), [:imports])
+
+      refute Enum.any?(imports, fn {module, _fun, _arity} -> module == HexpmWeb.Endpoint end)
     end
 
     test "says nothing twice", context do
@@ -318,6 +333,36 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
       assert Enforcement.sweep_personal_keys() == 0
       assert Enforcement.sweep_personal_keys() == 0
       assert [_entry] = blocked_entries()
+    end
+
+    test "says it once once the mail has gone out", context do
+      personal_key(context, [%{domain: "repository", resource: context.organization.name}])
+      pilot_sso(context)
+      enforce(context, context.member)
+
+      assert Enforcement.sweep_personal_keys() == 0
+
+      # A blocked key changes nothing, so it is blocked again tomorrow. The
+      # outbox row is gone by then and only the audit entry stops the mail.
+      Enum.each(blocked_entries(), &Repo.delete!/1)
+
+      assert Enforcement.sweep_personal_keys() == 0
+      assert blocked_entries() == []
+    end
+
+    test "says it again for a key minted after the first notice", context do
+      personal_key(context, [%{domain: "repository", resource: context.organization.name}])
+      pilot_sso(context)
+      enforce(context, context.member)
+
+      assert Enforcement.sweep_personal_keys() == 0
+      Enum.each(blocked_entries(), &Repo.delete!/1)
+
+      second = personal_key(context, [%{domain: "docs", resource: context.organization.name}])
+
+      assert Enforcement.sweep_personal_keys() == 0
+      assert [entry] = blocked_entries()
+      assert entry.email["text_body"] =~ second.name
     end
 
     test "tells a member whose key names every repository, which is kept", context do

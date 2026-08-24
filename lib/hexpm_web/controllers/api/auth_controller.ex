@@ -28,7 +28,14 @@ defmodule HexpmWeb.API.AuthController do
           organization = resource_organization(verified)
 
           with :ok <- organization_billing_active(organization, user_or_organization),
-               :ok <- sso_enforced_credential(conn, domain, organization, user_or_organization) do
+               :ok <-
+                 sso_enforced_credential(
+                   conn,
+                   domain,
+                   verified,
+                   organization,
+                   user_or_organization
+                 ) do
             success(conn)
           else
             error -> error(conn, error)
@@ -43,8 +50,9 @@ defmodule HexpmWeb.API.AuthController do
   end
 
   # The repository and docs domains verify against an organization, the package
-  # domain against a package. Billing and enforcement are both about the
-  # organization behind the resource, so the package resolves to its own.
+  # domain against a package. Billing is about who pays for the repository the
+  # package lives in, which is the public organization for a public package and
+  # is always active.
   defp resource_organization(%Package{} = package) do
     Hexpm.Repo.preload(package, repository: :organization).repository.organization
   end
@@ -59,12 +67,14 @@ defmodule HexpmWeb.API.AuthController do
   #
   # The package domain carries no such decision: a bare `api` or `api:write`
   # scope satisfies it, and nothing filters those against an organization access
-  # session, so this endpoint takes the decision itself.
-  defp sso_enforced_credential(conn, "package", organization, user_or_organization) do
-    sso_enforced(conn, organization, user_or_organization)
+  # session, so this endpoint takes the decision itself. It also resolves the
+  # organization differently from billing, because a public package's owner is
+  # what enforcement is about rather than the repository it sits in.
+  defp sso_enforced_credential(conn, "package", %Package{} = package, _organization, principal) do
+    package_sso_enforced(conn, package, principal)
   end
 
-  defp sso_enforced_credential(conn, _domain, organization, user_or_organization) do
+  defp sso_enforced_credential(conn, _domain, _verified, organization, user_or_organization) do
     case conn.assigns.auth_credential do
       %Hexpm.OAuth.Token{} -> :ok
       _credential -> sso_enforced(conn, organization, user_or_organization)

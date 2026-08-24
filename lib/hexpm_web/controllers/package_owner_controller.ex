@@ -166,12 +166,19 @@ defmodule HexpmWeb.PackageOwnerController do
     end
   end
 
+  # `fetch_package/2` enforces against the repository's organization, which for a
+  # package in the public repository is the public one. Ownership of a public
+  # package can come from a governed organization, so it is enforced here where
+  # the owners are resolved.
   defp requires_full_owner(conn, _opts) do
     package = conn.assigns.package
     current_user = conn.assigns.current_user
 
     if current_user && Packages.owner_with_access?(package, current_user, "full") do
-      conn
+      case SSOEnforcement.check_package(conn, package, current_user, "full") do
+        :ok -> conn
+        {:error, refusal, organization} -> SSOEnforcement.refuse(conn, refusal, organization)
+      end
     else
       conn
       |> render_error(403, message: "You must be a full owner of this package")

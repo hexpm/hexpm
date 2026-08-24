@@ -17,6 +17,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   alias Hexpm.Emails
   alias Hexpm.Emails.Outbox
   alias Hexpm.OAuth.Token
+  alias HexpmWeb.EmailView
 
   @type refusal :: :sso_required | :personal_key
   @type credential :: nil | Key.t() | Token.t()
@@ -375,29 +376,34 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
 
   # The audit entry is the durable record, so the "once" hangs off it rather
   # than off the mail: the outbox row is deleted as soon as it is delivered,
-  # and a member would be told again on every tick.
+  # and a member would be told again on every tick. Both go in one transaction,
+  # so a failure while building the mail does not leave the member recorded as
+  # warned and never told.
   defp warn_member(connection, organization, user, email) do
     if warned?(organization, user) do
       :skipped
     else
-      %{user: user, auth_credential: nil, user_agent: "hexpm", remote_ip: nil}
-      |> AuditLog.build(
-        "sso.enforcement.warned",
-        {organization, user, connection.required_at}
-      )
-      |> Repo.insert!()
+      {:ok, _} =
+        Repo.transaction(fn ->
+          %{user: user, auth_credential: nil, user_agent: "hexpm", remote_ip: nil}
+          |> AuditLog.build(
+            "sso.enforcement.warned",
+            {organization, user, connection.required_at}
+          )
+          |> Repo.insert!()
 
-      Outbox.enqueue!(
-        Emails.sso_enforcement_pending(
-          organization.name,
-          connection.required_at,
-          HexpmWeb.Endpoint.url() <> "/sso/org/#{organization.name}",
-          [email]
-        ),
-        category: @pending_category,
-        group_key: "#{@pending_category}:#{organization.id}:#{user.id}",
-        scope_key: "sso:user:#{user.id}"
-      )
+          Outbox.enqueue!(
+            Emails.sso_enforcement_pending(
+              organization.name,
+              connection.required_at,
+              EmailView.email_url("/sso/org/#{organization.name}"),
+              [email]
+            ),
+            category: @pending_category,
+            group_key: "#{@pending_category}:#{organization.id}:#{user.id}",
+            scope_key: "sso:user:#{user.id}"
+          )
+        end)
 
       :sent
     end
@@ -443,19 +449,28 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     |> Enum.sum()
   end
 
+  # Stripping and telling the owner are one transaction. A stripped key no
+  # longer matches `blocked_personal_keys/2`, so a crash between the two would
+  # take the notice with it and the owner would never hear that the key they
+  # publish with stopped reaching this organization.
   defp sweep_organization(organization, connection) do
     strip? = mode(organization, connection) == :required
 
-    outcomes =
-      organization
-      |> blocked_personal_keys(connection)
-      |> Enum.map(fn key -> {key, key_outcome(key, organization, strip?)} end)
+    {:ok, outcomes} =
+      Repo.transaction(fn ->
+        outcomes =
+          organization
+          |> blocked_personal_keys(connection)
+          |> Enum.map(fn key -> {key, key_outcome(key, organization, strip?)} end)
 
-    # One notice per owner rather than per key: a member with a key for each of
-    # their projects should hear about it once.
-    outcomes
-    |> Enum.group_by(fn {key, _outcome} -> key.user_id end)
-    |> Enum.each(fn {_user_id, keys} -> notify_key_owner(organization, keys) end)
+        # One notice per owner rather than per key: a member with a key for each
+        # of their projects should hear about it once.
+        outcomes
+        |> Enum.group_by(fn {key, _outcome} -> key.user_id end)
+        |> Enum.each(fn {_user_id, keys} -> notify_key_owner(organization, keys) end)
+
+        outcomes
+      end)
 
     Enum.count(outcomes, fn {_key, outcome} -> outcome in [:revoked, :trimmed] end)
   end
@@ -573,7 +588,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     if recipients != [] do
       revoked = for {key, :revoked} <- keys, do: key.name
       trimmed = for {key, :trimmed} <- keys, do: key.name
-      blocked = for {key, :blocked} <- keys, do: key.name
+      blocked = for {key, :blocked} <- keys, do: key
 
       if revoked != [] or trimmed != [] do
         enqueue_once(
@@ -584,15 +599,53 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
         )
       end
 
-      if blocked != [] do
-        enqueue_once(
-          Emails.sso_key_blocked(organization.name, blocked, recipients),
+      notify_blocked(organization, user, blocked, recipients)
+    end
+  end
+
+  # A blocked key changes no state, so unlike the revoked notice this one has
+  # nothing to make it stop: the outbox row is deleted on delivery, and the same
+  # key is blocked again on the next tick. The audit entry is the durable record
+  # the "once" hangs off, per key rather than per member, so minting another key
+  # that this organization also refuses is announced instead of swallowed.
+  defp notify_blocked(_organization, _user, [], _recipients), do: :skipped
+
+  defp notify_blocked(organization, user, blocked, recipients) do
+    announced = announced_blocked_key_ids(organization, user)
+
+    case Enum.reject(blocked, &MapSet.member?(announced, &1.id)) do
+      [] ->
+        :skipped
+
+      fresh ->
+        Enum.each(fresh, &audit_key_blocked(organization, &1))
+
+        Outbox.enqueue!(
+          Emails.sso_key_blocked(organization.name, Enum.map(blocked, & &1.name), recipients),
           category: @key_blocked_category,
           group_key: "#{@key_blocked_category}:#{organization.id}:#{user.id}",
           scope_key: "sso:user:#{user.id}"
         )
-      end
+
+        :sent
     end
+  end
+
+  defp announced_blocked_key_ids(organization, user) do
+    from(log in AuditLog,
+      where: log.organization_id == ^organization.id,
+      where: log.user_id == ^user.id,
+      where: log.action == "sso.key.blocked",
+      select: log.params
+    )
+    |> Repo.all()
+    |> MapSet.new(fn params -> get_in(params, ["key", "id"]) end)
+  end
+
+  defp audit_key_blocked(organization, key) do
+    %{user: key.user, auth_credential: nil, user_agent: "hexpm", remote_ip: nil}
+    |> AuditLog.build("sso.key.blocked", {organization, key})
+    |> Repo.insert!()
   end
 
   @doc """

@@ -678,6 +678,58 @@ defmodule HexpmWeb.SSOEnforcementTest do
       assert json_response(conn, 403)["message"] =~ "requires authenticating through its identity"
     end
 
+    # Ownership here comes from the organization rather than from a package
+    # owner row of the member's own, which is what enforcement is about: the
+    # package lives in the public repository, so its repository's organization
+    # is the public one and never governed.
+    test "sends a governed administrator off the owners page", context do
+      require_sso(context)
+      {conn, _session} = login(context.admin)
+
+      path = "/packages/#{context.public_package.name}/owners"
+      conn = get(conn, path)
+
+      assert redirected_to(conn) ==
+               "/sso/org/#{context.organization.name}?return=" <> URI.encode_www_form(path)
+    end
+
+    test "lets an administrator who has authenticated onto the owners page", context do
+      require_sso(context)
+      {conn, session} = login(context.admin)
+      authenticate(context, context.admin, session)
+
+      conn = get(conn, "/packages/#{context.public_package.name}/owners")
+
+      assert html_response(conn, 200) =~ "Current owners"
+    end
+
+    test "refuses the package domain at /api/auth for a governed member", context do
+      require_sso(context)
+      token = oauth_token(context.member, ["api:write"])
+
+      conn =
+        build_conn()
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> get("/api/auth", domain: "package", resource: "hexpm/#{context.public_package.name}")
+
+      assert json_response(conn, 403)["message"] =~ "requires authenticating through its identity"
+    end
+
+    test "answers the package domain at /api/auth once that session has authenticated",
+         context do
+      require_sso(context)
+      session = oauth_session(context.member)
+      authenticate(context, context.member, session)
+      token = oauth_token(context.member, ["api:write"], session)
+
+      conn =
+        build_conn()
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> get("/api/auth", domain: "package", resource: "hexpm/#{context.public_package.name}")
+
+      assert response(conn, 204)
+    end
+
     test "refuses retiring a release from a session with no organization access", context do
       require_sso(context)
       member = enable_tfa(context.member)

@@ -19,8 +19,9 @@ defmodule HexpmWeb.SSOEnforcement do
 
   alias Hexpm.Accounts.SSO
   alias Hexpm.Accounts.SSO.Enforcement
-  alias Hexpm.Accounts.Users
+  alias Hexpm.Accounts.{User, Users}
   alias Hexpm.Permissions
+  alias Hexpm.Repository.{Package, Packages}
   alias HexpmWeb.Plugs.ContentSecurityPolicy
 
   @doc """
@@ -37,6 +38,54 @@ defmodule HexpmWeb.SSOEnforcement do
       credential(conn_or_socket),
       session_id(conn_or_socket)
     )
+  end
+
+  @doc """
+  Whether this request may act on a package, and which organization turned it
+  away.
+
+  A package's own repository is the wrong thing to enforce against when the
+  package lives in the public repository: that repository belongs to the public
+  organization, which enforcement never governs. An organization can own a
+  package that lives there, and its membership is what lets its members act on
+  the package, so the owners are what enforcement runs against. A public package
+  no organization owns has nothing to enforce.
+
+  Every caller that decides something about a package goes through here, because
+  the resolution is the part that was wrong rather than the check.
+  """
+  def check_package(conn_or_socket, package, principal, level \\ "maintainer")
+
+  def check_package(conn_or_socket, %Package{repository_id: 1} = package, %User{} = user, level) do
+    package
+    |> Packages.owner_organizations(user, level)
+    |> Enum.reduce_while(:ok, fn organization, :ok ->
+      case check(conn_or_socket, organization, user) do
+        :ok -> {:cont, :ok}
+        {:error, refusal} -> {:halt, {:error, refusal, organization}}
+      end
+    end)
+  end
+
+  def check_package(conn_or_socket, %Package{} = package, principal, _level) do
+    package
+    |> Hexpm.Repo.preload(repository: :organization)
+    |> Map.fetch!(:repository)
+    |> Map.fetch!(:organization)
+    |> check_organization(conn_or_socket, principal)
+  end
+
+  # Publishing a package that does not exist yet has no owners to resolve, so
+  # the repository it is going into is all there is to enforce against.
+  def check_package(conn_or_socket, _package, principal, _level) do
+    check_organization(conn_or_socket.assigns[:organization], conn_or_socket, principal)
+  end
+
+  defp check_organization(organization, conn_or_socket, principal) do
+    case check(conn_or_socket, organization, principal) do
+      :ok -> :ok
+      {:error, refusal} -> {:error, refusal, organization}
+    end
   end
 
   @doc """

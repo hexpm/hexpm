@@ -435,6 +435,13 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
   end
 
   defp humanize_action(%AuditLog{
+         action: "sso.key.blocked",
+         params: %{"key" => %{"name" => name}, "organization" => %{"name" => org}}
+       }) do
+    "Refused the API key #{name} for #{org} because #{org} requires SSO"
+  end
+
+  defp humanize_action(%AuditLog{
          action: "sso.break_glass",
          params: %{"organization" => %{"name" => org}, "screen" => screen}
        })

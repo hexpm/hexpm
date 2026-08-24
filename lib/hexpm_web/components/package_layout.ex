@@ -610,8 +610,14 @@ defmodule HexpmWeb.Components.PackageLayout do
     ]
   end
 
+  # A package owner row of the member's own is one way to reach the owners page
+  # and organization ownership is another, which leaves no row to find here. The
+  # controller has already decided, so being on the page is enough: without this
+  # the layout finds no active tab and the page it was asked for raises.
   defp owners_tab(assigns) do
-    is_full_owner = Owners.full_owner?(assigns.owners, assigns.current_user)
+    is_full_owner =
+      assigns.active_tab == :owners or
+        Owners.full_owner?(assigns.owners, assigns.current_user)
 
     if is_full_owner do
       [

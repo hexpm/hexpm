@@ -30,6 +30,26 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
       assert html_response(conn, 200) =~ "Current owners"
     end
 
+    test "an organization admin who owns nothing directly sees the page" do
+      organization = insert(:organization)
+      insert(:repository, organization: organization, name: organization.name)
+      admin = insert(:user)
+      insert(:organization_user, organization: organization, user: admin, role: "admin")
+
+      package =
+        insert(:package,
+          repository_id: 1,
+          package_owners: [build(:package_owner, user: organization.user, level: "full")]
+        )
+
+      conn =
+        build_conn()
+        |> test_login(admin)
+        |> get("/packages/#{package.name}/owners")
+
+      assert html_response(conn, 200) =~ "Current owners"
+    end
+
     test "uses selector-safe modal IDs for owners with dots in their usernames", %{
       full_owner: full_owner,
       package: package

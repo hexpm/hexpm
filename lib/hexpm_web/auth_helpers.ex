@@ -294,29 +294,27 @@ defmodule HexpmWeb.AuthHelpers do
     package = conn.assigns.package
 
     with :ok <- package_owner(repository, package, user_or_organization, opts) do
-      package_sso_enforced(conn, repository, package, user_or_organization, opts)
+      package_sso_enforced(conn, package, user_or_organization, opts)
     end
   end
 
-  # `conn.assigns.organization` is the repository's, which for a package in the
-  # public repository is the public organization, and enforcement never governs
-  # that one. An organization can own a package that lives there, and its
-  # membership is what lets its members act on the package, so enforcement runs
-  # against the organizations that own it. A package no organization owns has
-  # nothing to enforce.
-  defp package_sso_enforced(conn, %Repository{id: 1}, %Package{} = package, %User{} = user, opts) do
-    package
-    |> Packages.owner_organizations(user, opts[:owner_level] || "maintainer")
-    |> Enum.reduce_while(:ok, fn organization, :ok ->
-      case sso_enforced(conn, organization, user) do
-        :ok -> {:cont, :ok}
-        error -> {:halt, error}
-      end
-    end)
-  end
+  @doc """
+  Refuses a governed member acting on a package, resolved against the
+  organizations that own it rather than the repository it lives in.
+  """
+  def package_sso_enforced(conn, package, user_or_organization, opts \\ []) do
+    level = opts[:owner_level] || "maintainer"
 
-  defp package_sso_enforced(conn, _repository, _package, user_or_organization, _opts) do
-    sso_enforced(conn, user_or_organization)
+    case HexpmWeb.SSOEnforcement.check_package(conn, package, user_or_organization, level) do
+      :ok ->
+        :ok
+
+      {:error, refusal, organization} ->
+        message =
+          Enforcement.refusal_message(refusal, organization, conn.assigns[:auth_credential])
+
+        {:error, :auth, message}
+    end
   end
 
   def package_owner(

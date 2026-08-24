@@ -317,6 +317,13 @@ defmodule Hexpm.Accounts.AuditLog do
     }
   end
 
+  defp extract_params("sso.key.blocked", {organization, key}) do
+    %{
+      organization: serialize(organization),
+      key: %{id: key.id, name: key.name}
+    }
+  end
+
   defp extract_params("password.reset.init", nil), do: %{}
   defp extract_params("password.reset.finish", nil), do: %{}
   defp extract_params("password.update", nil), do: %{}
