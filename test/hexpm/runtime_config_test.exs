@@ -30,6 +30,7 @@ defmodule Hexpm.RuntimeConfigTest do
     "HEXPM_VARSEL_JWT_AUDIENCE" => "https://cna.example.com/reports",
     "HEXPM_VARSEL_SIGNING_KEY" => "varsel-signing-key",
     "HEXPM_VARSEL_KEY_ID" => "varsel-key-id",
+    "HEXPM_VARSEL_JWKS" => ~S({"keys":[]}),
     "HEXPM_HCAPTCHA_SITEKEY" => "hcaptcha-sitekey",
     "HEXPM_HCAPTCHA_SECRET" => "hcaptcha-secret",
     "HEXPM_GITHUB_CLIENT_ID" => "github-client-id",

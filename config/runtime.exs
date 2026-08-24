@@ -72,7 +72,8 @@ if config_env() == :prod do
     report_url: System.fetch_env!("HEXPM_VARSEL_REPORT_URL"),
     audience: System.fetch_env!("HEXPM_VARSEL_JWT_AUDIENCE"),
     signing_key: System.fetch_env!("HEXPM_VARSEL_SIGNING_KEY"),
-    key_id: System.fetch_env!("HEXPM_VARSEL_KEY_ID")
+    key_id: System.fetch_env!("HEXPM_VARSEL_KEY_ID"),
+    jwks: System.fetch_env!("HEXPM_VARSEL_JWKS")
 
   config :hexpm, :hcaptcha,
     sitekey: System.fetch_env!("HEXPM_HCAPTCHA_SITEKEY"),

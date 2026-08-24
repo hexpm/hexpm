@@ -38,6 +38,16 @@ defmodule HexpmWeb.Plugs.AttackTest do
       assert get_resp_header(conn, "x-ratelimit-remaining") == ["499"]
     end
 
+    test "broadcasts varsel token ids" do
+      time = System.system_time(:millisecond)
+      key = {:varsel_jti, "broadcast-jti"}
+      Phoenix.PubSub.broadcast!(Hexpm.PubSub, "ratelimit", {:throttle, key, time})
+      :sys.get_state(RateLimitPubSub)
+
+      assert Attack.varsel_jti("broadcast-jti", time: time) == 2
+      assert Attack.varsel_jti("fresh-jti", time: time) == 1
+    end
+
     test "broadcasts user rate limits", %{user: user} do
       align_to_throttle_bucket()
       time = System.system_time(:millisecond)

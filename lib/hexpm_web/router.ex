@@ -69,6 +69,14 @@ defmodule HexpmWeb.Router do
     plug :default_repository
   end
 
+  pipeline :varsel do
+    plug :accepts, ["json"]
+    plug :user_agent
+    plug :validate_url
+    plug HexpmWeb.Plugs.Attack
+    plug HexpmWeb.Plugs.VarselAuth
+  end
+
   pipeline :browser_api do
     plug :accepts, ["json"]
     plug :fetch_session
@@ -478,6 +486,12 @@ defmodule HexpmWeb.Router do
     post "/oauth/device_authorization", OAuthController, :device_authorization
     post "/oauth/revoke", OAuthController, :revoke
     post "/oauth/revoke_by_hash", OAuthController, :revoke_by_hash
+  end
+
+  scope "/api", HexpmWeb.API, as: :api do
+    pipe_through :varsel
+
+    get "/users/:name/contact", UserContactController, :show
   end
 
   if Mix.env() in [:dev, :test, :hex] do
