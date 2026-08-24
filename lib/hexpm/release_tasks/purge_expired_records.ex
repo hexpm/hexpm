@@ -15,8 +15,6 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
 
   @repos Application.compile_env!(:hexpm, :ecto_repos)
   @retention_days 90
-  # Plug session cookies have a 30-day max_age; rows older than that are unreachable.
-  @plug_session_retention_days 30
   # Deletes run in batches so each statement stays well below the query timeout
   # regardless of how many rows have accumulated.
   @batch_size 10_000
@@ -44,7 +42,6 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
       purge_device_codes(repo, batch_size)
       purge_oauth_tokens(repo, batch_size)
       purge_user_sessions(repo, batch_size)
-      purge_plug_sessions(repo, batch_size)
       purge_password_resets(repo, batch_size)
       purge_account_deletion_requests(repo, batch_size)
       purge_sso_transactions(repo, batch_size)
@@ -121,23 +118,6 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
       )
 
     Logger.info("[task] Purged #{count} expired/revoked user sessions")
-  end
-
-  defp purge_plug_sessions(repo, batch_size) do
-    count =
-      delete_in_batches(
-        repo,
-        Hexpm.PlugSession,
-        from(s in Hexpm.PlugSession,
-          where:
-            s.updated_at <
-              fragment("NOW() - make_interval(days => ?)", @plug_session_retention_days),
-          order_by: s.updated_at
-        ),
-        batch_size
-      )
-
-    Logger.info("[task] Purged #{count} stale plug sessions")
   end
 
   defp purge_password_resets(repo, batch_size) do

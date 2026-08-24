@@ -58,12 +58,6 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
 
   defp days_ago(days), do: seconds_ago(days * 86400)
 
-  defp naive_days_ago(days) do
-    NaiveDateTime.utc_now()
-    |> NaiveDateTime.add(-days * 86400, :second)
-    |> NaiveDateTime.truncate(:second)
-  end
-
   describe "purge authorization codes" do
     test "deletes any expired code" do
       user = insert(:user)
@@ -348,29 +342,6 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
       PurgeExpiredRecords.run()
 
       assert Repo.get(Hexpm.UserSession, active.id)
-    end
-  end
-
-  describe "purge plug sessions" do
-    test "deletes sessions inactive for more than 30 days" do
-      stale =
-        Repo.insert!(%Hexpm.PlugSession{
-          token: :crypto.strong_rand_bytes(32),
-          data: %{},
-          inserted_at: naive_days_ago(31),
-          updated_at: naive_days_ago(31)
-        })
-
-      recent =
-        Repo.insert!(%Hexpm.PlugSession{
-          token: :crypto.strong_rand_bytes(32),
-          data: %{}
-        })
-
-      PurgeExpiredRecords.run()
-
-      refute Repo.get(Hexpm.PlugSession, stale.id)
-      assert Repo.get(Hexpm.PlugSession, recent.id)
     end
   end
 
