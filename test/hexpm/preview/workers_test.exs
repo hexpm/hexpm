@@ -10,6 +10,7 @@ defmodule Hexpm.Preview.WorkersTest do
     defdelegate list(bucket, prefix), to: Hexpm.Store.Memory
     defdelegate get(bucket, key, opts), to: Hexpm.Store.Memory
     defdelegate size(bucket, key), to: Hexpm.Store.Memory
+    defdelegate stream(bucket, key), to: Hexpm.Store.Memory
     defdelegate get_to_file(bucket, key, path, opts), to: Hexpm.Store.Memory
     defdelegate put(bucket, key, body, opts), to: Hexpm.Store.Memory
     defdelegate delete(bucket, key), to: Hexpm.Store.Memory
@@ -30,6 +31,7 @@ defmodule Hexpm.Preview.WorkersTest do
 
     defdelegate get(bucket, key, opts), to: Hexpm.Store.Memory
     defdelegate size(bucket, key), to: Hexpm.Store.Memory
+    defdelegate stream(bucket, key), to: Hexpm.Store.Memory
     defdelegate get_to_file(bucket, key, path, opts), to: Hexpm.Store.Memory
     defdelegate put(bucket, key, body, opts), to: Hexpm.Store.Memory
     defdelegate delete(bucket, key), to: Hexpm.Store.Memory

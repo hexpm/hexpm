@@ -16,6 +16,23 @@ defmodule Hexpm.Store.LocalTest do
     :ok
   end
 
+  describe "stream/2" do
+    @tag :tmp_dir
+    test "streams the file in chunks", %{tmp_dir: tmp_dir} do
+      bucket_dir = Path.join([tmp_dir, "store", "bucket"])
+      File.mkdir_p!(bucket_dir)
+      content = :crypto.strong_rand_bytes(200_000)
+      File.write!(Path.join(bucket_dir, "file.bin"), content)
+
+      chunks = Local.stream("bucket", "file.bin") |> Enum.to_list()
+      assert length(chunks) == 4
+      assert IO.iodata_to_binary(chunks) == content
+
+      assert Hexpm.Store.stream({Local, "bucket"}, "file.bin") |> Enum.to_list() == chunks
+      assert Local.stream("bucket", "missing.bin") == nil
+    end
+  end
+
   describe "get/3" do
     @tag :tmp_dir
     test "works for valid paths", %{tmp_dir: tmp_dir} do
