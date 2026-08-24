@@ -113,6 +113,8 @@ defmodule Hexpm.Accounts.Organization do
     {:ok, organization}
   end
 
+  def verify_permissions(%Organization{}, _domain, _resource), do: :error
+
   def billing_active?(%Organization{billing_active: active} = organization) do
     active or trialing?(organization)
   end

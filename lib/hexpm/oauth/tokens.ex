@@ -149,6 +149,7 @@ defmodule Hexpm.OAuth.Tokens do
   end
 
   defp create_for_org(org, client_id, scopes, grant_type, grant_reference, opts) do
+    scopes = Enum.reject(scopes, &foreign_organization_scope?(&1, org))
     expires_in = Keyword.get(opts, :expires_in, @default_expires_in)
     expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)
 
@@ -175,6 +176,15 @@ defmodule Hexpm.OAuth.Tokens do
 
     Token.build(attrs)
   end
+
+  # An organization token's subject is the organization, so the only organization
+  # it can carry a scope for is itself. Dropping the rest here means the mint
+  # fails closed on its own, without depending on the grant having validated the
+  # request, because both CDN edges read these scopes from the token and never
+  # ask the database.
+  defp foreign_organization_scope?("repository:" <> name, org), do: name != org.name
+  defp foreign_organization_scope?("docs:" <> name, org), do: name != org.name
+  defp foreign_organization_scope?(_scope, _org), do: false
 
   @doc """
   Creates and inserts a token for a user.

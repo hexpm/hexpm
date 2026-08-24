@@ -3,6 +3,7 @@ defmodule HexpmWeb.API.OAuthController do
 
   import HexpmWeb.RequestHelpers, only: [build_usage_info: 1]
 
+  alias Hexpm.Accounts.Organization
   alias Hexpm.UserSessions
   alias Hexpm.OAuth.{Clients, Tokens, AuthorizationCodes, DeviceCodes}
 
@@ -277,7 +278,7 @@ defmodule HexpmWeb.API.OAuthController do
 
     # Final validation: check that all requested scopes are allowed
     # This validates non-repository scopes (like "api")
-    if validate_scopes_against_key(expanded_scopes, api_key.permissions) do
+    if validate_scopes_against_key(expanded_scopes, api_key.permissions, user_or_org) do
       {:ok, expanded_scopes}
     else
       {:error, :invalid_scope, "Requested scopes exceed API key permissions"}
@@ -288,7 +289,7 @@ defmodule HexpmWeb.API.OAuthController do
     {:error, :invalid_scope, "Invalid scope parameter"}
   end
 
-  defp validate_scopes_against_key(scopes, permissions) do
+  defp validate_scopes_against_key(scopes, permissions, user_or_org) do
     allowed_scopes =
       permissions
       |> Enum.flat_map(&Hexpm.Permissions.permission_to_scopes/1)
@@ -296,9 +297,27 @@ defmodule HexpmWeb.API.OAuthController do
 
     Enum.all?(scopes, fn scope ->
       scope in allowed_scopes or
-        (:all_repositories in allowed_scopes and String.starts_with?(scope, "repository:"))
+        (:all_repositories in allowed_scopes and reaches_repository?(user_or_org, scope))
     end)
   end
+
+  # The `repositories` permission means every repository this principal reaches,
+  # not every repository there is, so the name has to be resolved against the
+  # principal rather than matched as a prefix. The CDN edges verify
+  # `repository:<org>` from the token alone, so a scope minted here is access to
+  # that organization until the token expires.
+  #
+  # The public repository is the exception: `expand_repositories_scope/3` adds it
+  # for every principal and it carries nothing private.
+  defp reaches_repository?(user_or_org, "repository:" <> organization) do
+    organization == Organization.hexpm(recursive: false).name or
+      match?(
+        {:ok, _},
+        Hexpm.Permissions.verify_user_access(user_or_org, "repository", organization)
+      )
+  end
+
+  defp reaches_repository?(_user_or_org, _scope), do: false
 
   defp error_description(:invalid_request), do: "Missing or invalid client_secret"
   defp error_description(:invalid_client), do: "Invalid API key"
