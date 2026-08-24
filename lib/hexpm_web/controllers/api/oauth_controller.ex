@@ -343,8 +343,8 @@ defmodule HexpmWeb.API.OAuthController do
   defp revoke_token(%{"token" => token_value, "client_id" => client_id})
        when is_binary(token_value) and is_binary(client_id) do
     with {:ok, _client} <- validate_client(client_id),
-         {:ok, token} <- lookup_token_for_revocation(token_value, client_id) do
-      case Tokens.revoke(token) do
+         {:ok, type, token} <- lookup_token_for_revocation(token_value, client_id) do
+      case revoke_for_type(type, token) do
         {:ok, _} -> :ok
         {:error, _} -> {:error, :revocation_failed}
       end
@@ -354,6 +354,13 @@ defmodule HexpmWeb.API.OAuthController do
   end
 
   defp revoke_token(_params), do: {:error, :invalid_request}
+
+  # RFC 7009: revoking a refresh token also revokes the access tokens issued
+  # from the same grant. Marking only the row presented would leave the session
+  # and its organization access alive, and a sibling token would refresh
+  # straight back into the same scopes.
+  defp revoke_for_type(:refresh, token), do: UserSessions.revoke_for_oauth_token(token)
+  defp revoke_for_type(:access, token), do: Tokens.revoke(token)
 
   defp revoke_token_by_hash(%{"token_hash" => token_hash})
        when is_binary(token_hash) and token_hash != "" do
@@ -373,29 +380,21 @@ defmodule HexpmWeb.API.OAuthController do
 
   defp lookup_token_for_revocation(token_value, client_id) do
     # Try to find as access token first
-    case lookup_access_token_for_revocation(token_value, client_id) do
-      {:ok, token} -> {:ok, token}
+    case lookup_for_revocation(token_value, :access, client_id) do
+      {:ok, token} -> {:ok, :access, token}
       {:error, _} -> lookup_refresh_token_for_revocation(token_value, client_id)
     end
   end
 
-  defp lookup_access_token_for_revocation(user_access_token, client_id) do
-    case Tokens.lookup(user_access_token, :access,
-           client_id: client_id,
-           validate: false,
-           preload: []
-         ) do
-      {:ok, token} -> {:ok, token}
-      {:error, _} -> {:error, :invalid_token}
+  defp lookup_refresh_token_for_revocation(token_value, client_id) do
+    case lookup_for_revocation(token_value, :refresh, client_id) do
+      {:ok, token} -> {:ok, :refresh, token}
+      {:error, reason} -> {:error, reason}
     end
   end
 
-  defp lookup_refresh_token_for_revocation(user_refresh_token, client_id) do
-    case Tokens.lookup(user_refresh_token, :refresh,
-           client_id: client_id,
-           validate: false,
-           preload: []
-         ) do
+  defp lookup_for_revocation(token_value, type, client_id) do
+    case Tokens.lookup(token_value, type, client_id: client_id, validate: false, preload: []) do
       {:ok, token} -> {:ok, token}
       {:error, _} -> {:error, :invalid_token}
     end

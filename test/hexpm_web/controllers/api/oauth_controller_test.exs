@@ -665,7 +665,11 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert Tokens.revoked?(updated_token)
     end
 
-    test "successfully revokes refresh token", %{
+    # RFC 7009: revoking a refresh token also revokes what was issued from the
+    # same grant. Marking only the row presented left the session and its
+    # organization access alive, so a sibling token refreshed straight back into
+    # the same scopes.
+    test "revoking a refresh token takes the session with it", %{
       revoke_client: client,
       revoke_token: token,
       revoke_refresh_token: refresh_token
@@ -679,8 +683,25 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       |> post(~p"/api/oauth/revoke", params)
       |> response(200)
 
-      updated_token = Repo.get(Token, token.id)
-      assert Tokens.revoked?(updated_token)
+      assert Repo.get(Hexpm.UserSession, token.user_session_id).revoked_at
+    end
+
+    test "revoking an access token leaves the session alone", %{
+      revoke_client: client,
+      revoke_token: token,
+      revoke_access_token: access_token
+    } do
+      params = %{
+        token: access_token,
+        client_id: client.client_id
+      }
+
+      build_conn()
+      |> post(~p"/api/oauth/revoke", params)
+      |> response(200)
+
+      assert Tokens.revoked?(Repo.get(Token, token.id))
+      refute Repo.get(Hexpm.UserSession, token.user_session_id).revoked_at
     end
 
     test "returns 200 OK for invalid token (security per RFC 7009)", %{

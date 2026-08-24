@@ -77,6 +77,22 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
              ) == :required
     end
 
+    # A date already past means the same thing as an empty box, and storing it
+    # as given would leave the screen showing a grace period that never was.
+    test "brings a date already past forward to now", context do
+      link_identity(context, context.admin)
+
+      {:ok, connection} =
+        configure(context, %{
+          "enforcement_mode" => "required",
+          "required_at" => DateTime.add(DateTime.utc_now(), -9 * 24 * 60 * 60, :second),
+          "personal_keys" => "block"
+        })
+
+      assert DateTime.diff(DateTime.utc_now(), connection.required_at) < 5
+      assert Enforcement.mode(context.organization, connection) == :required
+    end
+
     test "flips on the timestamp with no job having run", context do
       link_identity(context, context.admin)
 
@@ -219,6 +235,25 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
 
       assert Enforcement.check(context.organization, context.member, nil, session.id) ==
                {:error, :sso_required}
+    end
+
+    # A catch-all would answer `:ok`, which is the one answer nothing notices.
+    test "raises rather than passing on an unloaded organization", context do
+      {:ok, _connection} = require_sso(context)
+      session = browser_session(context.member)
+
+      assert_raise FunctionClauseError, fn ->
+        Enforcement.check(
+          %Ecto.Association.NotLoaded{
+            __field__: :organization,
+            __owner__: Hexpm.Repository.Repository,
+            __cardinality__: :one
+          },
+          context.member,
+          nil,
+          session.id
+        )
+      end
     end
 
     test "passes once the member has authenticated on that session", context do

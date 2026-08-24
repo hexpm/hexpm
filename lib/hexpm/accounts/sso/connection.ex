@@ -151,13 +151,20 @@ defmodule Hexpm.Accounts.SSO.Connection do
   defp validate_required_at(changeset) do
     mode = get_field(changeset, :enforcement_mode)
     required_at = get_field(changeset, :required_at)
+    now = DateTime.utc_now()
 
     cond do
       mode == "required" and is_nil(required_at) ->
-        put_change(changeset, :required_at, DateTime.utc_now())
+        put_change(changeset, :required_at, now)
 
       mode != "required" and not is_nil(required_at) ->
         put_change(changeset, :required_at, nil)
+
+      # A date already past means the same thing as an empty box, and storing it
+      # as given would leave the screen showing a grace period that never
+      # existed.
+      mode == "required" and DateTime.compare(required_at, now) == :lt ->
+        put_change(changeset, :required_at, now)
 
       true ->
         changeset

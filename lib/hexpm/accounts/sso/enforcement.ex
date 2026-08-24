@@ -112,7 +112,16 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     end
   end
 
-  def check(_organization, _principal, _credential, _user_session_id), do: :ok
+  # An organization subject authenticates as the organization rather than as a
+  # person and is never governed, and neither is an anonymous request, which
+  # reaches nothing private to begin with.
+  #
+  # Written out rather than left as a catch-all: an unloaded association is a
+  # bug on the caller's side, and a catch-all answers it with `:ok`, which is
+  # the one answer that cannot be noticed.
+  def check(%Organization{}, %Organization{}, _credential, _user_session_id), do: :ok
+  def check(%Organization{}, nil, _credential, _user_session_id), do: :ok
+  def check(nil, _principal, _credential, _user_session_id), do: :ok
 
   @doc """
   Which of these organizations this credential currently reaches.
