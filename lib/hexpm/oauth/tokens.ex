@@ -1,6 +1,7 @@
 defmodule Hexpm.OAuth.Tokens do
   use Hexpm.Context
 
+  alias Hexpm.Accounts.{Organization, User}
   alias Hexpm.{UserSession, UserSessions}
   alias Hexpm.OAuth.{AuthorizationCodes, Token, JWT}
   alias Hexpm.Permissions
@@ -68,24 +69,18 @@ defmodule Hexpm.OAuth.Tokens do
   Creates a token for a user with the given client and scopes.
   """
   def create_for_user(user, client_id, scopes, grant_type, grant_reference \\ nil, opts \\ []) do
+    build_token(user, client_id, scopes, grant_type, grant_reference, opts)
+  end
+
+  # Every token is minted here, so this is the only place an organization scope is
+  # held against the subject that will carry it. A grant type added later cannot
+  # skip the check without adding a second builder, which is how create_for_org/6
+  # came to mint scopes for organizations it had no access to.
+  defp build_token(principal, client_id, scopes, grant_type, grant_reference, opts) do
     expires_in = Keyword.get(opts, :expires_in, @default_expires_in)
     expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)
-
-    # "repositories" is expanded into individual "repository:{org}" scopes so the
-    # edge can verify them without a database lookup, and the organizations this
-    # session has not authenticated for are then dropped: the scope the token
-    # carries is the decision.
-    #
-    # `sso_session_id` is for the authorization code grant, where the session
-    # this token belongs to does not exist yet and the browser that consented
-    # holds the organization access it is about to inherit.
-    {expanded_scopes, sso_reauth_required} =
-      Permissions.expand_and_filter_sso_scopes(
-        user,
-        scopes,
-        Keyword.get(opts, :sso_session_id) || Keyword.get(opts, :user_session_id),
-        Keyword.get(opts, :credential)
-      )
+    {authorized, sso_reauth_required} = authorized_scopes(principal, scopes, opts)
+    {subject, subject_type} = subject(principal)
 
     jwt_opts = [
       session_id: Keyword.get(opts, :user_session_id),
@@ -93,104 +88,100 @@ defmodule Hexpm.OAuth.Tokens do
     ]
 
     {:ok, access_token, jti} =
-      JWT.generate_access_token(user.username, "user", expanded_scopes, jwt_opts)
+      JWT.generate_access_token(subject, subject_type, authorized, jwt_opts)
 
-    attrs = %{
+    %{
       jti: jti,
       access_token: access_token,
-      scopes: expanded_scopes,
-      granted_scopes: scopes,
+      scopes: authorized,
+      granted_scopes: granted_scopes(principal, scopes, authorized),
       expires_at: expires_at,
       grant_type: grant_type,
       grant_reference: grant_reference,
-      user_id: user.id,
       client_id: client_id,
       user_session_id: Keyword.get(opts, :user_session_id),
       sso_reauth_required: sso_reauth_required
     }
-
-    attrs =
-      if Keyword.get(opts, :with_refresh_token, false) do
-        # Use provided refresh_token_expires_at (e.g., from session) or calculate fresh
-        refresh_expires_at =
-          Keyword.get(
-            opts,
-            :refresh_token_expires_at,
-            DateTime.add(DateTime.utc_now(), @default_refresh_token_expires_in, :second)
-          )
-
-        refresh_opts = [
-          session_id: Keyword.get(opts, :user_session_id),
-          expires_in: @default_refresh_token_expires_in
-        ]
-
-        {:ok, refresh_token, refresh_jti} =
-          JWT.generate_refresh_token(user.username, "user", scopes, refresh_opts)
-
-        refresh_token_hash = hash_refresh_token(refresh_token)
-
-        Map.merge(attrs, %{
-          refresh_jti: refresh_jti,
-          refresh_token: refresh_token,
-          refresh_token_expires_at: refresh_expires_at,
-          refresh_token_hash: refresh_token_hash
-        })
-      else
-        attrs
-      end
-
-    Token.build(attrs)
+    |> Map.merge(principal_id(principal))
+    |> maybe_add_refresh_token(principal, authorized, opts)
+    |> Token.build()
   end
 
-  defp create_for_user_or_org(
-         %Hexpm.Accounts.User{} = user,
-         client_id,
-         scopes,
-         grant_type,
-         grant_reference,
-         opts
-       ) do
-    create_for_user(user, client_id, scopes, grant_type, grant_reference, opts)
+  # A user reaches the organizations they are currently a member of, after the
+  # literal `repositories` scope has been expanded into names, minus the ones
+  # enforcement wants a live organization access session for. An organization
+  # subject reaches only itself.
+  #
+  # `sso_session_id` is for the authorization code grant, where the session this
+  # token belongs to does not exist yet and the browser that consented holds the
+  # organization access it is about to inherit.
+  defp authorized_scopes(%User{} = user, scopes, opts) do
+    Permissions.expand_and_filter_sso_scopes(
+      user,
+      scopes,
+      Keyword.get(opts, :sso_session_id) || Keyword.get(opts, :user_session_id),
+      Keyword.get(opts, :credential)
+    )
   end
 
-  defp create_for_user_or_org(
-         %Hexpm.Accounts.Organization{} = org,
-         client_id,
-         scopes,
-         grant_type,
-         grant_reference,
-         opts
-       ) do
-    create_for_org(org, client_id, scopes, grant_type, grant_reference, opts)
+  defp authorized_scopes(%Organization{} = org, scopes, _opts) do
+    {Enum.reject(scopes, &foreign_organization_scope?(&1, org)), []}
   end
 
-  defp create_for_org(org, client_id, scopes, grant_type, grant_reference, opts) do
-    expires_in = Keyword.get(opts, :expires_in, @default_expires_in)
-    expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)
+  defp subject(%User{username: username}), do: {username, "user"}
+  defp subject(%Organization{name: name}), do: {name, "org"}
 
-    jwt_opts = [
-      session_id: Keyword.get(opts, :user_session_id),
-      expires_in: expires_in
-    ]
+  defp principal_id(%User{id: id}), do: %{user_id: id}
+  defp principal_id(%Organization{id: id}), do: %{organization_id: id}
 
-    {:ok, access_token, jti} =
-      JWT.generate_access_token(org.name, "org", scopes, jwt_opts)
+  # The refresh grant re-derives from `granted_scopes`, so a user's stays the raw
+  # request and is filtered again on every mint. An organization token has no
+  # refresh, so there is nothing to re-derive and the filtered set is what it got.
+  defp granted_scopes(%User{}, requested, _authorized), do: requested
+  defp granted_scopes(%Organization{}, _requested, authorized), do: authorized
 
-    attrs = %{
-      jti: jti,
-      access_token: access_token,
-      scopes: scopes,
-      granted_scopes: scopes,
-      expires_at: expires_at,
-      grant_type: grant_type,
-      grant_reference: grant_reference,
-      organization_id: org.id,
-      client_id: client_id,
-      user_session_id: Keyword.get(opts, :user_session_id)
-    }
+  # Signed with the same scopes as the access token. Both edges accept any JWT
+  # that verifies, and neither distinguishes a refresh token from an access
+  # token, so a refresh token carrying the unfiltered request would be usable as
+  # a bearer credential for the scopes the mint just refused.
+  defp maybe_add_refresh_token(attrs, %User{} = user, scopes, opts) do
+    if Keyword.get(opts, :with_refresh_token, false) do
+      # Use provided refresh_token_expires_at (e.g., from session) or calculate fresh
+      refresh_expires_at =
+        Keyword.get(
+          opts,
+          :refresh_token_expires_at,
+          DateTime.add(DateTime.utc_now(), @default_refresh_token_expires_in, :second)
+        )
 
-    Token.build(attrs)
+      refresh_opts = [
+        session_id: Keyword.get(opts, :user_session_id),
+        expires_in: @default_refresh_token_expires_in
+      ]
+
+      {:ok, refresh_token, refresh_jti} =
+        JWT.generate_refresh_token(user.username, "user", scopes, refresh_opts)
+
+      Map.merge(attrs, %{
+        refresh_jti: refresh_jti,
+        refresh_token: refresh_token,
+        refresh_token_expires_at: refresh_expires_at,
+        refresh_token_hash: hash_refresh_token(refresh_token)
+      })
+    else
+      attrs
+    end
   end
+
+  defp maybe_add_refresh_token(attrs, %Organization{}, _scopes, _opts), do: attrs
+
+  defp create_for_user_or_org(principal, client_id, scopes, grant_type, grant_reference, opts) do
+    build_token(principal, client_id, scopes, grant_type, grant_reference, opts)
+  end
+
+  defp foreign_organization_scope?("repository:" <> name, org), do: name != org.name
+  defp foreign_organization_scope?("docs:" <> name, org), do: name != org.name
+  defp foreign_organization_scope?(_scope, _org), do: false
 
   @doc """
   Creates and inserts a token for a user.

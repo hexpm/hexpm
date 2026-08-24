@@ -1387,6 +1387,79 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert json_response(conn, 200)
     end
 
+    test "refuses a personal 'repositories' key naming an organization it cannot reach", %{
+      user: user,
+      client: client
+    } do
+      other = insert(:organization)
+
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{name: "all_repos", permissions: [%{domain: "repositories"}]},
+          audit: audit_data(user)
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "repository:#{other.name}"
+        })
+
+      assert json_response(conn, 400)["error"] == "invalid_scope"
+    end
+
+    test "refuses an organization 'repositories' key naming another organization", %{
+      client: client
+    } do
+      org = insert(:organization)
+      other = insert(:organization)
+
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          org,
+          %{name: "all_repos", permissions: [%{domain: "repositories"}]},
+          audit: audit_data(org.user)
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "repository:#{other.name}"
+        })
+
+      assert json_response(conn, 400)["error"] == "invalid_scope"
+    end
+
+    test "allows a personal 'repositories' key naming an organization it is a member of", %{
+      user: user,
+      client: client
+    } do
+      org = insert(:organization)
+      insert(:organization_user, organization: org, user: user)
+
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{name: "all_repos", permissions: [%{domain: "repositories"}]},
+          audit: audit_data(user)
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "repository:#{org.name}"
+        })
+
+      assert json_response(conn, 200)["scope"] == "repository:#{org.name}"
+    end
+
     test "succeeds for organization key requesting 'repositories' scope", %{client: client} do
       org = insert(:organization)
 

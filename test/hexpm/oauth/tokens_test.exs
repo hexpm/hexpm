@@ -5,10 +5,115 @@ defmodule Hexpm.OAuth.TokensTest do
 
   alias Hexpm.OAuth.{Token, Tokens}
 
+  describe "minted scopes" do
+    setup do
+      user = insert(:user)
+      member = for _ <- 1..2, do: insert(:organization)
+      Enum.each(member, &insert(:organization_user, organization: &1, user: user))
+      foreign = for _ <- 1..2, do: insert(:organization)
+
+      %{
+        user: user,
+        member_names: Enum.map(member, & &1.name),
+        foreign_names: Enum.map(foreign, & &1.name)
+      }
+    end
+
+    # Both CDN edges read repository:<org> and docs:<org> straight off the token,
+    # so a name that survives minting is access to that organization until the
+    # token expires. Nothing the caller asks for may widen that beyond the
+    # account's own memberships, whatever mix of literal and explicit scopes the
+    # request carries. The interesting cases are the combinations: expansion
+    # rewrites the literal `repositories` and leaves an explicit scope alone, and
+    # the bug this covers lived in that gap.
+    test "never name an organization the account is not in", context do
+      %{user: user, member_names: member_names, foreign_names: foreign_names} = context
+      [member, _] = member_names
+      [foreign, other_foreign] = foreign_names
+
+      requests = [
+        ["repositories"],
+        ["repository:#{member}"],
+        ["docs:#{member}"],
+        ["repository:#{foreign}"],
+        ["docs:#{foreign}"],
+        ["repository:hexpm"],
+        ["repositories", "repository:#{foreign}"],
+        ["repositories", "docs:#{foreign}"],
+        ["repositories", "repository:#{member}"],
+        ["repository:#{member}", "repository:#{foreign}"],
+        ["repository:#{foreign}", "repository:#{other_foreign}"],
+        ["api", "repository:#{foreign}", "docs:#{foreign}", "repository:hexpm"],
+        ["api:read", "api:write", "repositories", "repository:hexpm"]
+      ]
+
+      for requested <- requests do
+        minted =
+          user
+          |> Tokens.create_for_user("test_client", requested, "refresh_token")
+          |> get_field(:scopes)
+
+        for scope <- minted,
+            [domain, name] <- [String.split(scope, ":", parts: 2)],
+            domain in ["repository", "docs"] do
+          assert name == "hexpm" or name in member_names,
+                 "minted #{scope} from #{inspect(requested)} for an account in #{inspect(member_names)}"
+        end
+
+        # and the filter must not be passing by dropping everything
+        for name <- member_names, "repository:#{name}" in requested do
+          assert "repository:#{name}" in minted,
+                 "dropped repository:#{name} from #{inspect(requested)} for a member"
+        end
+      end
+    end
+  end
+
   describe "create_for_user/6" do
     setup do
       user = insert(:user)
       %{user: user}
+    end
+
+    test "drops an explicit organization scope the user is not a member of", %{user: user} do
+      other = insert(:organization)
+
+      changeset =
+        Tokens.create_for_user(
+          user,
+          "test_client",
+          ["api:read", "repository:#{other.name}", "docs:#{other.name}"],
+          "refresh_token"
+        )
+
+      assert get_field(changeset, :scopes) == ["api:read"]
+    end
+
+    test "keeps an explicit organization scope the user is a member of", %{user: user} do
+      org = insert(:organization)
+      insert(:organization_user, organization: org, user: user)
+
+      changeset =
+        Tokens.create_for_user(
+          user,
+          "test_client",
+          ["api:read", "repository:#{org.name}"],
+          "refresh_token"
+        )
+
+      assert "repository:#{org.name}" in get_field(changeset, :scopes)
+    end
+
+    test "keeps the public repository scope for a user in no organization", %{user: user} do
+      changeset =
+        Tokens.create_for_user(
+          user,
+          "test_client",
+          ["repository:hexpm"],
+          "refresh_token"
+        )
+
+      assert get_field(changeset, :scopes) == ["repository:hexpm"]
     end
 
     test "creates changeset with required fields", %{user: user} do
