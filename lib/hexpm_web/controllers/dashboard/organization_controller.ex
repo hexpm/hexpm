@@ -73,6 +73,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       # Removes the member's own access rather than granting any, and it is the
       # only lever someone deactivated at the provider has. Gating it leaves
       # them unable to authenticate, unable to leave, and still a billed seat.
+      # The danger zone comes with it: leaving is the only thing on that tab,
+      # and it is the only page carrying the form.
+      :danger_zone,
       :leave
     ]
 
@@ -1044,7 +1047,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         policy_activity: policy_activity,
         policy_rev: policy_rev,
         sso_org_session: current_org_session(conn, organization),
-        sso_mode: Enforcement.mode(organization, connection)
+        sso_mode: Enforcement.mode(organization, connection),
+        sso_requires_sso?: sso_requires_sso?(connection)
       ] ++
         audit_log_assigns(organization, opts[:tab], opts) ++
         sso_assigns(organization, connection, opts[:tab]) ++
@@ -1089,6 +1093,15 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   defp policy_assigns(_organization, _tab, _action, _policy), do: {[], %{}, [], 0}
 
+  # The mode in force during a grace period is pilot, which is what governs, but
+  # the screens an administrator prepares with have to know the date is set: the
+  # activation checklist says review the exemptions and then set the date, and
+  # doing those the other way round would otherwise hide the list.
+  defp sso_requires_sso?(%Connection{enforcement_mode: "required"} = connection),
+    do: Connection.enabled?(connection)
+
+  defp sso_requires_sso?(_connection), do: false
+
   defp sso_assigns(organization, connection, :sso) do
     [
       sso_connection: connection,
@@ -1098,11 +1111,16 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       sso_login_url: url(~p"/sso/org/#{organization}"),
       sso_domains: OrganizationDomains.all(organization),
       sso_personal_keys: sso_personal_keys(organization, connection),
-      sso_pending_personal_keys: Enforcement.pending_personal_keys(organization, connection)
+      sso_pending_personal_keys: Enforcement.pending_personal_keys(organization, connection),
+      sso_exempt_count: exempt_member_count(organization)
     ]
   end
 
   defp sso_assigns(_organization, _connection, _tab), do: []
+
+  defp exempt_member_count(organization) do
+    Enum.count(organization.organization_users, &(&1.sso_enforcement == "exempt"))
+  end
 
   # Under "block" the table is a list of what enforcement takes away, so it
   # names the keys enforcement reaches. Under "allow" it is a standing list of

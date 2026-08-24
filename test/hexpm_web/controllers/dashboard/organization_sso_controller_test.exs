@@ -496,6 +496,14 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
       audit: audit_data(context.member)
     )
 
+    # `api:write` plus membership publishes and changes owners, so this key
+    # reaches the organization without naming it anywhere.
+    Hexpm.Accounts.Keys.create(
+      context.member,
+      %{name: "ci", permissions: [%{"domain" => "api", "resource" => "write"}]},
+      audit: audit_data(context.member)
+    )
+
     html =
       build_conn()
       |> test_login(context.admin)
@@ -503,6 +511,9 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
       |> html_response(200)
 
     assert html =~ "Personal API keys that reach this organization"
+
+    assert html =~
+             "records when it was last used but not what it was used for"
 
     {:ok, document} = Floki.parse_document(html)
 
@@ -514,9 +525,64 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
       end)
 
     assert rows == [
+             [context.member.username, "ci", "Through the key's API access", "Never"],
              [context.member.username, "everything", "Through every repository", "Never"],
              [context.member.username, "laptop", "Named in the key", "Never"]
            ]
+  end
+
+  test "shows the exemption list and the residual bypasses during the grace period", context do
+    insert(:organization_sso_connection,
+      organization: context.organization,
+      tested_at: DateTime.utc_now(),
+      enabled_at: DateTime.utc_now(),
+      enforcement_mode: "required",
+      required_at: DateTime.add(DateTime.utc_now(), 9 * 24 * 60 * 60, :second)
+    )
+
+    {:ok, _member} =
+      SSO.set_member_enforcement(context.organization, context.member, "exempt",
+        audit: audit_data(context.admin)
+      )
+
+    conn = build_conn() |> test_login(context.admin)
+
+    # The activation checklist says review the exemptions and then set the date.
+    # Doing it the other way round leaves the mode in force reading as pilot.
+    members = conn |> get("/dashboard/orgs/#{context.organization.name}/members")
+    members_html = html_response(members, 200)
+
+    assert members_html =~ "Exempt from SSO (1)"
+    assert members_html =~ context.member.username
+    assert members_html =~ "Enforced on the date"
+
+    sso_html =
+      conn
+      |> get("/dashboard/orgs/#{context.organization.name}/sso")
+      |> html_response(200)
+
+    assert sso_html =~ "Exempt members (1)"
+    assert sso_html =~ "Billing and this page"
+    assert sso_html =~ "Organization API keys"
+  end
+
+  test "does not claim every member goes through the provider when nobody is exempt", context do
+    insert(:organization_sso_connection,
+      organization: context.organization,
+      tested_at: DateTime.utc_now(),
+      enabled_at: DateTime.utc_now(),
+      enforcement_mode: "required",
+      required_at: DateTime.add(DateTime.utc_now(), 9 * 24 * 60 * 60, :second)
+    )
+
+    html =
+      build_conn()
+      |> test_login(context.admin)
+      |> get("/dashboard/orgs/#{context.organization.name}/members")
+      |> html_response(200)
+
+    assert html =~ "Nobody is exempt."
+    assert html =~ "Organization API keys and, unless you block them, personal API keys"
   end
 
   test "takes a fresh password before enforcement is turned down", context do
@@ -680,7 +746,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
           "domain" => %{"domain" => "example.com"}
         })
 
-      assert redirected_to(conn) == "/dashboard/orgs/#{context.organization.name}"
+      assert response(conn, 403)
       assert OrganizationDomains.all(context.organization) == []
     end
   end
@@ -729,7 +795,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
           "jit" => %{"jit_seat_policy" => "block", "jit_role" => "read"}
         })
 
-      assert redirected_to(conn) == "/dashboard/orgs/#{context.organization.name}"
+      assert response(conn, 403)
       refute Connection.jit_enabled?(SSO.get_connection(context.organization))
     end
   end

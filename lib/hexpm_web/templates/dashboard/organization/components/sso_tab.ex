@@ -5,6 +5,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
   import HexpmWeb.Components.Buttons, only: [button: 1, button_link: 1]
   import HexpmWeb.Components.Input, only: [password_input: 1, select_input: 1, text_input: 1]
 
+  alias Hexpm.Accounts.Keys
   alias Hexpm.Accounts.OrganizationDomain
   alias Hexpm.Accounts.SSO
   alias Hexpm.Accounts.SSO.Connection
@@ -18,6 +19,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
   attr :domains, :list, default: []
   attr :personal_keys, :list, default: []
   attr :pending_personal_keys, :list, default: []
+  attr :exempt_count, :integer, default: 0
 
   def sso_tab(assigns) do
     ~H"""
@@ -379,6 +381,18 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
               provider's policy to evaluate, and they keep reaching this organization regardless of
               enforcement. Removing the member here still takes their keys with it.
             </li>
+            <li :if={@exempt_count > 0}>
+              <span class="font-medium">
+                Exempt members ({@exempt_count}).
+              </span>
+              They reach this organization on a Hex password alone. The members tab names them.
+            </li>
+            <li>
+              <span class="font-medium">Billing and this page.</span>
+              Both stay reachable without authenticating, so a broken connection can be repaired
+              and the subscription does not lapse while you are locked out. Reaching them that way
+              is recorded in the audit log and mailed to the administrators.
+            </li>
             <li>
               <span class="font-medium">Offboarding takes time.</span>
               Removing a member here stops new access within 30 minutes, bounded by how long an
@@ -392,12 +406,14 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
           :if={@personal_keys != []}
           heading={personal_keys_heading(@connection)}
           keys={@personal_keys}
+          organization={@organization}
         />
 
         <.personal_key_table
           :if={@pending_personal_keys != []}
           heading={pending_keys_heading(@connection)}
           keys={@pending_personal_keys}
+          organization={@organization}
         >
           These members follow the organization's mode rather than a per-member setting, so they
           keep their access until the date above and lose it on it.
@@ -465,6 +481,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
 
   attr :heading, :string, required: true
   attr :keys, :list, required: true
+  attr :organization, :any, required: true
   slot :inner_block
 
   defp personal_key_table(assigns) do
@@ -479,19 +496,23 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
           <tr>
             <th class="py-1 font-medium">Member</th>
             <th class="py-1 font-medium">Key</th>
-            <th class="py-1 font-medium">Reaches this organization</th>
-            <th class="py-1 font-medium">Last used</th>
+            <th class="py-1 font-medium">How it reaches this organization</th>
+            <th class="py-1 font-medium">Key last used</th>
           </tr>
         </thead>
         <tbody class="text-grey-700 dark:text-grey-200">
           <tr :for={key <- @keys} class="border-t border-grey-100 dark:border-grey-800">
             <td class="py-1">{key.user.username}</td>
             <td class="py-1">{key.name}</td>
-            <td class="py-1">{reach_description(key)}</td>
+            <td class="py-1">{reach_description(key, @organization)}</td>
             <td class="py-1">{last_used(key)}</td>
           </tr>
         </tbody>
       </table>
+      <p class="mt-2 text-xs text-grey-500 dark:text-grey-400">
+        A key records when it was last used but not what it was used for, so this date is the
+        key's last use anywhere on Hex rather than its last use against this organization.
+      </p>
     </div>
     """
   end
@@ -552,15 +573,11 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
     "Personal API keys that lose access on " <> Calendar.strftime(required_at, "%Y-%m-%d")
   end
 
-  # A key whose permission names the organization definitely reaches it. One
-  # carrying every repository, or plain API access, might not have been used
-  # against this organization at all, and a key's recorded last use does not say
-  # which organization it was for.
-  defp reach_description(key) do
-    if Enum.any?(key.permissions, &(&1.domain == "repositories")) do
-      "Through every repository"
-    else
-      "Named in the key"
+  defp reach_description(key, organization) do
+    cond do
+      Keys.names_organization?(key, organization) -> "Named in the key"
+      Enum.any?(key.permissions, &(&1.domain == "repositories")) -> "Through every repository"
+      true -> "Through the key's API access"
     end
   end
 

@@ -24,6 +24,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
   attr :organization, :map, required: true
   attr :quantity, :integer, default: nil
   attr :sso_mode, :atom, default: :optional
+  attr :sso_requires_sso?, :boolean, default: false
 
   def members_tab(assigns) do
     ~H"""
@@ -130,7 +131,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                       id={"sso-enforcement-#{org_user.user.id}"}
                       name="sso_enforcement"
                       value={org_user.sso_enforcement}
-                      options={sso_enforcement_options(@sso_mode)}
+                      options={sso_enforcement_options(@sso_mode, @sso_requires_sso?)}
                       variant="light"
                       class="w-40 h-9 text-sm"
                     />
@@ -163,7 +164,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
       accounts reaching private packages on a Hexpm password alone, so it is
       presented as the compliance surface it is rather than as a settings row. --%>
       <div
-        :if={admin?(@current_user, @organization) and @sso_mode == :required}
+        :if={admin?(@current_user, @organization) and (@sso_mode == :required or @sso_requires_sso?)}
         class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden"
       >
         <% exempt = exempt_members(@organization) %>
@@ -384,11 +385,18 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
   defp role_badge_class("write"), do: "bg-blue-100 text-blue-700"
   defp role_badge_class(_), do: "bg-grey-100 text-grey-600"
 
-  defp sso_enforcement_options(:required) do
+  # During a grace period the mode in force is pilot but the unset state means
+  # enforced on the date, so labelling it "Not enforced" would be wrong for
+  # everyone it is about to cover.
+  defp sso_enforcement_options(:required, _requires_sso?) do
     [{"Follows required", ""}, {"Enforced", "enforced"}, {"Exempt", "exempt"}]
   end
 
-  defp sso_enforcement_options(_mode) do
+  defp sso_enforcement_options(_mode, true) do
+    [{"Enforced on the date", ""}, {"Enforced now", "enforced"}, {"Exempt", "exempt"}]
+  end
+
+  defp sso_enforcement_options(_mode, false) do
     [{"Not enforced", ""}, {"Enforced", "enforced"}, {"Exempt", "exempt"}]
   end
 
@@ -399,7 +407,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
   end
 
   defp exemption_summary([]) do
-    "Nobody is exempt. Every member authenticates through your provider to reach this organization."
+    "Nobody is exempt. Every member authenticates through your provider to reach this organization in a browser or with the CLI. Organization API keys and, unless you block them, personal API keys still reach it without authenticating."
   end
 
   defp exemption_summary(exempt) do

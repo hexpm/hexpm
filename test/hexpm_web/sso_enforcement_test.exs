@@ -308,6 +308,53 @@ defmodule HexpmWeb.SSOEnforcementTest do
       assert redirected_to(conn) == "/dashboard/profile"
     end
 
+    # Leaving is carved out because it is the only lever someone deactivated at
+    # the provider has, and it is worth nothing if the only page carrying the
+    # form is gated.
+    test "keeps the page carrying the leave form reachable", context do
+      require_sso(context)
+      {conn, _session} = login(context.member)
+
+      conn = get(conn, "/dashboard/orgs/#{context.organization.name}/danger-zone")
+
+      assert response(conn, 200) =~ "/dashboard/orgs/#{context.organization.name}/leave"
+    end
+
+    # The provider sends the browser back with a GET, so replaying a POST path
+    # either 404s or loads the page and says the action succeeded when nothing
+    # ran.
+    test "sends a refused POST back to the page it came from", context do
+      require_sso(context)
+      {conn, _session} = login(context.admin)
+      members_path = "/dashboard/orgs/#{context.organization.name}/members"
+
+      conn =
+        conn
+        |> put_req_header("referer", "http://localhost:5000" <> members_path)
+        |> post("/dashboard/orgs/#{context.organization.name}", %{
+          "action" => "add_member",
+          "organization_user" => %{"username" => context.member.username, "role" => "read"}
+        })
+
+      assert redirected_to(conn) ==
+               "/sso/org/#{context.organization.name}?return=" <>
+                 URI.encode_www_form(members_path)
+    end
+
+    test "sends a refused POST with no referer at the provider with nowhere to return",
+         context do
+      require_sso(context)
+      {conn, _session} = login(context.admin)
+
+      conn =
+        post(conn, "/dashboard/orgs/#{context.organization.name}", %{
+          "action" => "add_member",
+          "organization_user" => %{"username" => context.member.username, "role" => "read"}
+        })
+
+      assert redirected_to(conn) == "/sso/org/#{context.organization.name}"
+    end
+
     test "takes a fresh password before replacing the provider", context do
       require_sso(context)
 
@@ -376,6 +423,22 @@ defmodule HexpmWeb.SSOEnforcementTest do
       conn = get(conn, "/dashboard/orgs/#{context.organization.name}/billing")
 
       assert response(conn, 400)
+      assert break_glass_logs(context) == []
+    end
+
+    # Every SSO configuration action is carved out, so refusing a non-admin with
+    # a redirect would let them write these rows at will and mail the admins
+    # about actions they never ran.
+    test "records nothing for a member the SSO configuration turns away", context do
+      require_sso(context)
+      {conn, _session} = login(context.member)
+
+      conn =
+        post(conn, "/dashboard/orgs/#{context.organization.name}/sso/jit", %{
+          "jit" => %{"jit_seat_policy" => "block", "jit_role" => "read"}
+        })
+
+      assert response(conn, 403)
       assert break_glass_logs(context) == []
     end
 

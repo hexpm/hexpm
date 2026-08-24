@@ -512,6 +512,7 @@ defmodule Hexpm.Accounts.SSO do
     gate = Keyword.fetch!(opts, :gate)
     action = Keyword.fetch!(opts, :action)
     audit_params = Keyword.fetch!(opts, :audit_params)
+    after_update = Keyword.get(opts, :after_update, fn _connection -> :ok end)
 
     with_existing_connection(
       organization,
@@ -524,6 +525,7 @@ defmodule Hexpm.Accounts.SSO do
         with :ok <- gate.(changeset) do
           case Repo.update(changeset) do
             {:ok, connection} ->
+              :ok = after_update.(connection)
               insert_audit!(audit_data, action, {organization, audit_params.(connection)})
               connection
 
@@ -556,6 +558,7 @@ defmodule Hexpm.Accounts.SSO do
       changeset: &Connection.enforcement_changeset(&1, params),
       require: &require_active/1,
       gate: &require_reachable_admin(organization, &1),
+      after_update: &clamp_org_sessions(organization, &1),
       action: "sso.enforcement.configure",
       audit_params:
         &%{
@@ -565,6 +568,28 @@ defmodule Hexpm.Accounts.SSO do
           personal_keys: &1.personal_keys
         }
     )
+  end
+
+  # `expires_at` is stamped at authentication, so an administrator who cuts the
+  # lifetime during an incident would otherwise leave every session already open
+  # running for the old one. Sessions are only ever shortened: the setting is
+  # about how long ago the provider has to have vouched for someone, and
+  # extending it would push that further into the past than the organization
+  # asked for.
+  defp clamp_org_sessions(organization, connection) do
+    now = DateTime.utc_now()
+    cutoff = DateTime.add(now, Enforcement.session_lifetime(connection), :second)
+
+    Repo.update_all(
+      from(session in OrgSession,
+        where: session.organization_id == ^organization.id,
+        where: is_nil(session.revoked_at),
+        where: session.expires_at > ^cutoff
+      ),
+      set: [expires_at: cutoff, updated_at: now]
+    )
+
+    :ok
   end
 
   # Required mode with nobody able to administer the organization is a lockout

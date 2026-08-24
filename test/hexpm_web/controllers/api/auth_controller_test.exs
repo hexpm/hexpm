@@ -432,6 +432,19 @@ defmodule HexpmWeb.API.AuthControllerTest do
       |> response(403)
     end
 
+    # A resource-only domain with no resource used to reach String.split/2 with
+    # nil and answer 500.
+    test "refuses a resource-less request rather than falling over", %{user: user} do
+      token = oauth_token(user, ["api"])
+
+      for {domain, status} <- [{"package", 403}, {"repository", 401}, {"docs", 401}] do
+        build_conn()
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> get("/api/auth", domain: domain)
+        |> response(status)
+      end
+    end
+
     test "authenticate oauth token against a package without active billing", %{user: user} do
       organization = insert(:organization, billing_active: false)
       insert(:organization_user, organization: organization, user: user)

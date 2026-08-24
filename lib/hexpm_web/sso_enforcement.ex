@@ -149,6 +149,8 @@ defmodule HexpmWeb.SSOEnforcement do
     required
   end
 
+  def login_path(organization, nil), do: ~p"/sso/org/#{organization}"
+
   def login_path(organization, return_path) do
     ~p"/sso/org/#{organization}?#{[return: return_path]}"
   end
@@ -209,11 +211,38 @@ defmodule HexpmWeb.SSOEnforcement do
 
   defp provider_url(connection), do: connection.issuer
 
-  defp request_path(conn) do
+  # A GET is worth resuming, and coming back to it is the whole point. Anything
+  # else is not: the provider sends the browser back with a GET, so the method
+  # and the body are gone by then. Replaying the path would either 404, on the
+  # routes with no GET counterpart, or load the page and say the action
+  # succeeded when nothing ran. The page the form was on is where the person
+  # can try again.
+  defp request_path(%{method: "GET"} = conn) do
     case conn.query_string do
       "" -> conn.request_path
       query -> conn.request_path <> "?" <> query
     end
+  end
+
+  defp request_path(conn) do
+    conn
+    |> Plug.Conn.get_req_header("referer")
+    |> List.first()
+    |> referer_path()
+  end
+
+  defp referer_path(referer) when is_binary(referer) do
+    case URI.parse(referer) do
+      %URI{path: path, query: nil} when is_binary(path) -> SSO.allowed_return_path(path)
+      %URI{path: path, query: query} when is_binary(path) -> allowed_return_path(path, query)
+      _other -> nil
+    end
+  end
+
+  defp referer_path(_referer), do: nil
+
+  defp allowed_return_path(path, query) do
+    if SSO.allowed_return_path(path), do: path <> "?" <> query
   end
 
   defp credential(%{assigns: assigns}), do: assigns[:auth_credential]

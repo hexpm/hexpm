@@ -177,6 +177,33 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
                       3_600,
                       2
     end
+
+    # An administrator cutting the lifetime during an incident means it now,
+    # and `expires_at` is stamped at authentication.
+    test "shortens the sessions already open", context do
+      session = browser_session(context.member)
+      org_session = authenticate(context, context.member, session)
+
+      assert DateTime.diff(org_session.expires_at, DateTime.utc_now()) > 80_000
+
+      {:ok, _connection} = configure(context, %{"session_lifetime_seconds" => 3_600})
+
+      assert DateTime.diff(
+               Repo.get!(Hexpm.Accounts.SSO.OrgSession, org_session.id).expires_at,
+               DateTime.utc_now()
+             ) <= 3_600
+    end
+
+    test "leaves a session alone when the lifetime is raised", context do
+      {:ok, _connection} = configure(context, %{"session_lifetime_seconds" => 3_600})
+      session = browser_session(context.member)
+      org_session = authenticate(context, context.member, session)
+
+      {:ok, _connection} = configure(context, %{"session_lifetime_seconds" => 2_592_000})
+
+      assert Repo.get!(Hexpm.Accounts.SSO.OrgSession, org_session.id).expires_at ==
+               org_session.expires_at
+    end
   end
 
   describe "check/4" do
@@ -847,6 +874,52 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
       {:ok, connection} = require_sso(context)
 
       assert Enforcement.pending_personal_keys(context.organization, connection) == []
+    end
+  end
+
+  describe "the personal keys an organization turns away" do
+    # `api:write` plus membership publishes, retires and changes owners, so a
+    # key carrying no repository permission at all still reaches this
+    # organization and belongs on the administrator's list.
+    test "includes a key whose only permission is API access", context do
+      {:ok, connection} = require_sso(context)
+
+      key =
+        insert(:key,
+          user: context.member,
+          organization: nil,
+          permissions: [build(:key_permission, domain: "api", resource: "write")]
+        )
+
+      assert [blocked] = Enforcement.blocked_personal_keys(context.organization, connection)
+      assert blocked.id == key.id
+    end
+
+    test "strips nothing from it, because API access is not this organization's", context do
+      {:ok, _connection} = require_sso(context)
+
+      key =
+        insert(:key,
+          user: context.member,
+          organization: nil,
+          permissions: [build(:key_permission, domain: "api", resource: "write")]
+        )
+
+      assert Enforcement.sweep_personal_keys() == 0
+      assert Repo.get!(Hexpm.Accounts.Key, key.id).permissions == key.permissions
+    end
+
+    test "leaves out a member of no governed organization", context do
+      other = insert(:user)
+      {:ok, connection} = require_sso(context)
+
+      insert(:key,
+        user: other,
+        organization: nil,
+        permissions: [build(:key_permission, domain: "api", resource: "write")]
+      )
+
+      assert Enforcement.blocked_personal_keys(context.organization, connection) == []
     end
   end
 

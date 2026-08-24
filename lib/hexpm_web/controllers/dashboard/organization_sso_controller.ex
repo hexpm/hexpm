@@ -392,10 +392,13 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
       not SSO.reachable?(organization) ->
         not_found(conn)
 
+      # Every action here is carved out of the SSO gate, and the gate records
+      # what a governed member reached by looking at the status. A redirect
+      # reads as success, so refusing with one would let anyone who can reach
+      # the route write `sso.break_glass` rows naming themselves and an action
+      # they never ran, and mail the administrators about it.
       Organizations.get_role(organization, user) != "admin" ->
-        conn
-        |> put_flash(:error, "You do not have permission for this action.")
-        |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+        render_error(conn, 403, message: "You do not have permission for this action.")
 
       true ->
         fun.(organization)

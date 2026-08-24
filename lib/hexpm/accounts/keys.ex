@@ -10,14 +10,14 @@ defmodule Hexpm.Accounts.Keys do
   end
 
   @doc """
-  Personal API keys held by this organization's members that carry a repository
-  permission reaching it.
+  Personal API keys held by this organization's members that reach it.
 
-  Plain `api` permissions are left out deliberately. Every key has one by
-  default, so listing them would bury the keys that actually carry private
-  package access, and an `api` permission is not organization-specific: nothing
-  can be stripped from it, and a request that uses one against an enforced
-  organization is refused where the request is authorized instead.
+  This is the list an administrator reviews before turning enforcement on and
+  the list the sweep works from, so it has to hold every key the organization
+  will turn away. That includes the ones carrying only an `api` permission: the
+  API authorizes an organization action against any one of the domains it
+  accepts, so `api:write` plus membership publishes, retires and changes owners
+  without a repository permission anywhere on the key.
   """
   def personal_reaching_organization(%Organization{} = organization) do
     from(
@@ -34,14 +34,27 @@ defmodule Hexpm.Accounts.Keys do
   end
 
   @doc """
-  Whether a key carries a repository permission that reaches this organization,
-  either by naming it or by covering every repository.
+  Whether a key reaches this organization, by naming it, by covering every
+  repository, or by carrying an `api` permission.
   """
   def reaches_organization?(%Key{} = key, %Organization{} = organization) do
-    Enum.any?(
-      key.permissions,
-      &(KeyPermission.organization_reach(&1) in [:every, organization.name])
-    )
+    Enum.any?(key.permissions, fn permission ->
+      KeyPermission.organization_reach(permission) in [:every, organization.name] or
+        permission.domain == "api"
+    end)
+  end
+
+  @doc """
+  Whether a key names this organization rather than reaching it through
+  something wider.
+
+  The distinction is what an administrator's list can honestly say about a key's
+  last use: `last_use` records when a key was used and not what it was used for,
+  so a key naming the organization did reach it and a key carrying `api` or
+  `repositories` only could have.
+  """
+  def names_organization?(%Key{} = key, %Organization{} = organization) do
+    Enum.any?(key.permissions, &(KeyPermission.organization_reach(&1) == organization.name))
   end
 
   @doc """

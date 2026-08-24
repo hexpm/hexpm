@@ -95,7 +95,7 @@ defmodule Hexpm.Accounts.Organization do
     {:ok, nil}
   end
 
-  def verify_permissions(%Organization{} = organization, "package", name) do
+  def verify_permissions(%Organization{} = organization, "package", name) when is_binary(name) do
     case String.split(name, "/", parts: 2) do
       [organization_name, package_name] when organization_name == organization.name ->
         case Packages.get(organization_name, package_name) do
