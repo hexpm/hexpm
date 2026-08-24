@@ -85,6 +85,8 @@ defmodule Hexpm.ReleaseTasks.Stats do
       # in the database. Should be uncommon
       num = ets_stream() |> Enum.reduce(0, fn {_, count}, acc -> count + acc end)
 
+      if num == 0 and not dryrun?, do: raise("[stats] no downloads found for #{date}")
+
       unless dryrun? do
         Repo.transaction(
           fn ->
@@ -150,7 +152,7 @@ defmodule Hexpm.ReleaseTasks.Stats do
 
   defp process_buckets(date) do
     bucket = Application.get_env(:hexpm, :logs_bucket)
-    prefix = "fastly_hex/#{date}"
+    prefix = "fastly_hex/dt=#{date}/"
     keys = Store.list(bucket, prefix) |> Enum.to_list()
     process_keys(bucket, keys)
   end
