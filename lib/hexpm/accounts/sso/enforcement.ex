@@ -659,10 +659,11 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   """
   @spec break_glass(Organization.t(), User.t(), atom(), map()) :: :ok
   def break_glass(%Organization{} = organization, %User{} = user, screen, audit_data) do
-    recent? = recent_break_glass?(organization, user)
+    screen = to_string(screen)
+    recent? = recent_break_glass?(organization, user, screen)
 
     audit_data
-    |> AuditLog.build("sso.break_glass", {organization, %{screen: to_string(screen)}})
+    |> AuditLog.build("sso.break_glass", {organization, %{screen: screen}})
     |> Repo.insert!()
 
     # Only the mail is rate limited. The audit entry is the one record that says
@@ -676,9 +677,14 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     :ok
   end
 
+  # Per screen rather than per member. The carve-out is thirteen actions
+  # including deleting the connection, and the mail names one screen, so a
+  # window covering all of them would announce whichever was reached first and
+  # say nothing about the rest.
+  #
   # The window hangs off the audit entry rather than off the mail, which an
   # organization with no confirmed administrator address never gets.
-  defp recent_break_glass?(organization, user) do
+  defp recent_break_glass?(organization, user, screen) do
     cutoff = DateTime.add(DateTime.utc_now(), -@break_glass_notice_seconds, :second)
 
     Repo.exists?(
@@ -686,7 +692,8 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
         where: log.organization_id == ^organization.id,
         where: log.user_id == ^user.id,
         where: log.action == "sso.break_glass",
-        where: log.inserted_at > ^cutoff
+        where: log.inserted_at > ^cutoff,
+        where: fragment("?->>'screen'", log.params) == ^screen
       )
     )
   end
@@ -696,9 +703,9 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
 
     if recipients != [] do
       Outbox.enqueue!(
-        Emails.sso_break_glass(organization.name, user.username, to_string(screen), recipients),
+        Emails.sso_break_glass(organization.name, user.username, screen, recipients),
         category: @break_glass_category,
-        group_key: "#{@break_glass_category}:#{organization.id}:#{user.id}",
+        group_key: "#{@break_glass_category}:#{organization.id}:#{user.id}:#{screen}",
         scope_key: "sso:organization:#{organization.id}"
       )
     end

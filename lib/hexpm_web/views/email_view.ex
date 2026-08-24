@@ -476,11 +476,11 @@ defmodule HexpmWeb.EmailView do
     end
 
     def scope() do
-      "Private packages, publishing and the rest of the organization dashboard were refused as usual. The SSO settings screen, if that was the one, shows the accounts linked to your provider, the personal API keys that reach this organization, and recent login failures, so treat those as seen."
+      "Private packages, publishing and the rest of the organization dashboard were refused as usual. The screens that stay open are not read-only: billing can be changed and the subscription cancelled, and the SSO settings screen can replace the provider, unlink accounts and turn enforcement off. It also shows the linked accounts, the personal API keys that reach this organization, and recent login failures, so treat those as seen."
     end
 
     def action() do
-      "If this was not one of your administrators, review the organization's members and audit log."
+      "If this was not one of your administrators, review the organization's members and audit log. The audit log records every screen that was reached this way, including any this notice does not name."
     end
   end
 

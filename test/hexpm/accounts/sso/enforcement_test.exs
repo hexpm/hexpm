@@ -440,7 +440,7 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
   end
 
   describe "break_glass/3" do
-    test "audits every reach and mails the administrators once an hour", context do
+    test "audits every reach and mails once an hour for each screen", context do
       {:ok, _connection} = require_sso(context)
 
       for screen <- [:billing, :sso, :add_seats] do
@@ -461,12 +461,35 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
       assert length(logs) == 3
       assert Enum.map(logs, & &1.params["screen"]) |> Enum.sort() == ~w(add_seats billing sso)
 
-      assert [entry] =
+      # The mail names one screen, so a window covering every screen would
+      # announce billing and say nothing about the connection being replaced.
+      entries =
+        Repo.all(from(e in Hexpm.Emails.OutboxEntry, where: e.category == "sso.break_glass"))
+
+      assert length(entries) == 3
+
+      assert Enum.all?(
+               entries,
+               &(&1.scope_key == "sso:organization:#{context.organization.id}")
+             )
+    end
+
+    test "mails once however many times one screen is opened", context do
+      {:ok, _connection} = require_sso(context)
+
+      for _ <- 1..3 do
+        Enforcement.break_glass(
+          context.organization,
+          context.member,
+          :billing,
+          audit_data(context.member)
+        )
+      end
+
+      assert [_entry] =
                Repo.all(
                  from(e in Hexpm.Emails.OutboxEntry, where: e.category == "sso.break_glass")
                )
-
-      assert entry.scope_key == "sso:organization:#{context.organization.id}"
     end
 
     test "audits again once the window has passed", context do

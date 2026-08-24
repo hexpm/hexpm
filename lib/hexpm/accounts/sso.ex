@@ -1123,6 +1123,10 @@ defmodule Hexpm.Accounts.SSO do
   It inherits the expiry too: restarting the clock here would let a member who
   authorized a client just before their own session lapsed walk away with twice
   the window the administrator set.
+
+  The copy names the session it came from, so revoking that one takes the copy
+  with it. Someone who signs out because their browser session was stolen means
+  the access it handed out as well.
   """
   def grant_org_sessions!(from_user_session_id, to_user_session_id, user_id)
       when is_integer(from_user_session_id) and is_integer(to_user_session_id) do
@@ -1137,6 +1141,7 @@ defmodule Hexpm.Accounts.SSO do
         user_id: source.user_id,
         organization_id: source.organization_id,
         user_session_id: to_user_session_id,
+        granted_from_user_session_id: from_user_session_id,
         identity_id: source.identity_id,
         authenticated_at: source.authenticated_at,
         expires_at: source.expires_at
@@ -1146,6 +1151,21 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   def grant_org_sessions!(_from_user_session_id, _to_user_session_id, _user_id), do: []
+
+  @doc """
+  The organizations a session is currently carrying access for, which is what
+  `grant_org_sessions!/3` would hand on.
+  """
+  def granted_organization_ids(user_session_id, user_id) when is_integer(user_session_id) do
+    live =
+      user_session_id
+      |> OrgSession.live(DateTime.utc_now())
+      |> OrgSession.for_user(user_id)
+
+    Repo.all(from(session in live, select: session.organization_id))
+  end
+
+  def granted_organization_ids(_user_session_id, _user_id), do: []
 
   # Which session an authentication lands on. A transaction started from a
   # terminal names the session it is for; everything else means the browser

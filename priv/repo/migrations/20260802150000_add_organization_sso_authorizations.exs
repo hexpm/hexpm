@@ -2,6 +2,11 @@ defmodule Hexpm.RepoBase.Migrations.AddOrganizationSsoAuthorizations do
   use Ecto.Migration
 
   def up do
+    # The foreign key takes SHARE ROW EXCLUSIVE on `user_sessions`, which the
+    # browser request path writes to. Give up rather than queue behind a
+    # long-running read and hold every writer behind us.
+    execute("SET LOCAL lock_timeout TO '5s'")
+
     alter table(:organization_sso_transactions) do
       add :target_user_session_id, references(:user_sessions, on_delete: :delete_all)
     end
@@ -34,6 +39,8 @@ defmodule Hexpm.RepoBase.Migrations.AddOrganizationSsoAuthorizations do
   end
 
   def down do
+    execute("SET LOCAL lock_timeout TO '5s'")
+
     drop table(:organization_sso_authorizations)
 
     execute("DELETE FROM organization_sso_transactions WHERE entrypoint = 'cli'")

@@ -416,7 +416,12 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
 
       assert existing.status == 404
       assert missing.status == 404
-      refute response(existing, 404) =~ package.name
+
+      # Against the error text rather than the whole page: the search filter
+      # cheatsheet in the nav names real packages, so a generated name that
+      # happens to be one of them would fail a bare match on the full body for
+      # a reason that has nothing to do with the response.
+      refute error_message(response(existing, 404)) =~ package.name
     end
 
     test "answers an outsider the same for a repository that does not exist", %{package: package} do
@@ -445,5 +450,10 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
 
       assert conn.status == 403
     end
+  end
+
+  defp error_message(body) do
+    {:ok, document} = Floki.parse_document(body)
+    document |> Floki.find(".text-h4") |> Floki.text()
   end
 end

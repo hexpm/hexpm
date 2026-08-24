@@ -286,8 +286,9 @@ defmodule HexpmWeb.DeviceController do
   end
 
   defp render_authorization(conn, device_code, error_message) do
-    render(
-      conn,
+    conn
+    |> touch_verified_code(device_code)
+    |> render(
       "authorize.html",
       title: "Device Authorization",
       container: "container page page-xs device",
@@ -297,6 +298,20 @@ defmodule HexpmWeb.DeviceController do
       sso_pending: unauthenticated_organizations(conn, device_code),
       sso_return_path: current_path(conn)
     )
+  end
+
+  # The window runs from the last time this page was shown rather than from the
+  # POST that verified the code. Authenticating at the organization's provider
+  # is a round trip through someone else's login and MFA, and one that took
+  # longer than the window came back to a cleared marker and a destroyed device
+  # authorization. The device code's own lifetime still bounds it, and
+  # `get_for_verification/1` is consulted on every use, so sliding this cannot
+  # outlive the authorization it is for.
+  defp touch_verified_code(conn, device_code) do
+    put_session(conn, "device_code_verified", %{
+      "user_code" => device_code.user_code,
+      "verified_at" => NaiveDateTime.utc_now() |> NaiveDateTime.to_iso8601()
+    })
   end
 
   defp unauthenticated_organizations(conn, device_code) do

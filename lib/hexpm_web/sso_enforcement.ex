@@ -149,6 +149,17 @@ defmodule HexpmWeb.SSOEnforcement do
     required
   end
 
+  @doc """
+  The organization access this browser session is carrying, which approving a
+  client would copy onto the client's own session.
+  """
+  def granted_organizations(conn_or_socket, user) do
+    case session_id(conn_or_socket) do
+      nil -> []
+      id -> SSO.granted_organization_ids(id, user.id)
+    end
+  end
+
   def login_path(organization, nil), do: ~p"/sso/org/#{organization}"
 
   def login_path(organization, return_path) do

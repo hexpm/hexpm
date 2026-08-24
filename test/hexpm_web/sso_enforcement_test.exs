@@ -1131,6 +1131,103 @@ defmodule HexpmWeb.SSOEnforcementTest do
       refute Map.has_key?(body, "sso_reauth_required")
     end
 
+    # Approving hands the client's own session a copy of the organization
+    # access this browser is carrying, so a stolen cookie is otherwise enough.
+    test "asks for the password before a consent hands organization access on", context do
+      require_sso(context)
+      {conn, browser} = login(context.member, sudo_at: minutes_ago(60))
+      authenticate(context, context.member, browser)
+
+      client = insert(:oauth_client, allowed_scopes: ["api:read", "docs"])
+
+      conn =
+        get(conn, "/oauth/authorize", %{
+          "client_id" => client.client_id,
+          "redirect_uri" => hd(client.redirect_uris),
+          "response_type" => "code",
+          "scope" => "docs:#{context.organization.name}",
+          "state" => "state",
+          "code_challenge" => "VeRkYllVqy6XLHXPgfpoJxXX_3dxEB2Nb7eJZ5T4aIA",
+          "code_challenge_method" => "S256"
+        })
+
+      assert redirected_to(conn) =~ "/sudo"
+    end
+
+    test "leaves a consent with no organization access to hand on alone", context do
+      require_sso(context)
+      {conn, _browser} = login(context.member, sudo_at: minutes_ago(60))
+
+      client = insert(:oauth_client, allowed_scopes: ["api:read"])
+
+      conn =
+        get(conn, "/oauth/authorize", %{
+          "client_id" => client.client_id,
+          "redirect_uri" => hd(client.redirect_uris),
+          "response_type" => "code",
+          "scope" => "api:read",
+          "state" => "state",
+          "code_challenge" => "VeRkYllVqy6XLHXPgfpoJxXX_3dxEB2Nb7eJZ5T4aIA",
+          "code_challenge_method" => "S256"
+        })
+
+      assert html_response(conn, 200)
+    end
+
+    # Someone signing out because their cookie was stolen means the access it
+    # handed out as well.
+    test "revoking the browser session takes the copy it handed out with it", context do
+      require_sso(context)
+      {conn, browser} = login(context.member)
+      authenticate(context, context.member, browser)
+
+      name = context.organization.name
+      client = insert(:oauth_client, allowed_scopes: ["api:read", "docs"])
+      verifier = "code-verifier-#{System.unique_integer([:positive])}"
+      challenge = :sha256 |> :crypto.hash(verifier) |> Base.url_encode64(padding: false)
+
+      conn =
+        post(conn, "/oauth/authorize", %{
+          "client_id" => client.client_id,
+          "redirect_uri" => hd(client.redirect_uris),
+          "action" => "approve",
+          "scope" => "docs:#{name}",
+          "selected_scopes" => ["docs:#{name}"],
+          "state" => "opaque-state",
+          "code_challenge" => challenge,
+          "code_challenge_method" => "S256"
+        })
+
+      %URI{query: query} = conn |> redirected_to() |> URI.parse()
+
+      body =
+        build_conn()
+        |> post("/api/oauth/token", %{
+          "grant_type" => "authorization_code",
+          "code" => URI.decode_query(query)["code"],
+          "client_id" => client.client_id,
+          "redirect_uri" => hd(client.redirect_uris),
+          "code_verifier" => verifier
+        })
+        |> json_response(200)
+
+      assert body["scope"] =~ "docs:#{name}"
+
+      {:ok, _} = Hexpm.UserSessions.revoke(browser, nil, audit: test_audit_data(context.member))
+
+      refreshed =
+        build_conn()
+        |> post("/api/oauth/token", %{
+          "grant_type" => "refresh_token",
+          "refresh_token" => body["refresh_token"],
+          "client_id" => client.client_id
+        })
+        |> json_response(200)
+
+      refute refreshed["scope"] =~ "docs:#{name}"
+      assert refreshed["sso_reauth_required"] == [name]
+    end
+
     test "the device approval page names the organizations still to authenticate", context do
       require_sso(context)
       {conn, _browser} = login(context.member)
