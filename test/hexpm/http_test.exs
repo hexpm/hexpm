@@ -148,6 +148,127 @@ defmodule Hexpm.HTTPTest do
              )
   end
 
+  test "stream/3 yields the body chunks in order", %{lasso: lasso} do
+    body = Base.encode64(:crypto.strong_rand_bytes(600_000))
+
+    Lasso.expect_once(lasso, "GET", "/stream", fn conn ->
+      Conn.resp(conn, 200, body)
+    end)
+
+    assert {:ok, 200, headers, chunks} =
+             HTTP.stream(lasso_url(lasso, "/stream"), [], receive_timeout: @receive_timeout)
+
+    assert {"content-length", _} = List.keyfind(headers, "content-length", 0)
+
+    chunks = Enum.to_list(chunks)
+    assert length(chunks) > 1
+    assert IO.iodata_to_binary(chunks) == body
+  end
+
+  test "stream/3 reads the next chunk only after the previous one was consumed", %{
+    lasso: lasso
+  } do
+    test_process = self()
+
+    Lasso.expect_once(lasso, "GET", "/lazy", fn conn ->
+      conn = Conn.send_chunked(conn, 200)
+      {:ok, conn} = Conn.chunk(conn, "first")
+      send(test_process, {:first_sent, self()})
+
+      receive do
+        :send_second -> :ok
+      after
+        @server_step_timeout -> raise "the first chunk was never consumed"
+      end
+
+      {:ok, conn} = Conn.chunk(conn, "second")
+      conn
+    end)
+
+    assert {:ok, 200, _headers, chunks} =
+             HTTP.stream(lasso_url(lasso, "/lazy"), [], receive_timeout: @receive_timeout)
+
+    assert_receive {:first_sent, server}, @server_await_timeout
+
+    chunks =
+      Enum.reduce(chunks, [], fn chunk, acc ->
+        if acc == [], do: send(server, :send_second)
+        [chunk | acc]
+      end)
+
+    assert Enum.reverse(chunks) == ["first", "second"]
+  end
+
+  test "stream/3 stops the request when the stream is halted early", %{lasso: lasso} do
+    test_process = self()
+
+    Lasso.expect_once(lasso, "GET", "/halt", fn conn ->
+      conn = Conn.send_chunked(conn, 200)
+      {:ok, conn} = Conn.chunk(conn, "first")
+      send(test_process, {:first_sent, self()})
+
+      receive do
+        :finish -> :ok
+      after
+        @server_step_timeout -> :ok
+      end
+
+      conn
+    end)
+
+    assert {:ok, 200, _headers, chunks} =
+             HTTP.stream(lasso_url(lasso, "/halt"), [], receive_timeout: @receive_timeout)
+
+    assert_receive {:first_sent, server}, @server_await_timeout
+    [task] = stream_tasks()
+
+    assert Enum.take(chunks, 1) == ["first"]
+
+    refute Process.alive?(task)
+    refute_received {_ref, :data, _chunk}
+    send(server, :finish)
+  end
+
+  test "stream/3 ends the request when a chunk is not consumed in time", %{lasso: lasso} do
+    Lasso.expect_once(lasso, "GET", "/unconsumed", fn conn ->
+      Conn.resp(conn, 200, "body")
+    end)
+
+    assert {:ok, 200, _headers, chunks} =
+             HTTP.stream(lasso_url(lasso, "/unconsumed"), [],
+               ack_timeout: 100,
+               receive_timeout: @receive_timeout
+             )
+
+    [task] = stream_tasks()
+    ref = Process.monitor(task)
+    assert_receive {:DOWN, ^ref, _, _, _}, @server_await_timeout
+
+    assert_raise RuntimeError, ~r/not consumed within 100ms/, fn -> Enum.to_list(chunks) end
+    assert stream_tasks() == []
+  end
+
+  test "stream/3 raises when the connection drops mid-body" do
+    {:ok, listener} =
+      :gen_tcp.listen(0, [:binary, active: false, reuseaddr: true, ip: {127, 0, 0, 1}])
+
+    {:ok, port} = :inet.port(listener)
+    on_exit(fn -> :gen_tcp.close(listener) end)
+
+    spawn_link(fn ->
+      {:ok, socket} = :gen_tcp.accept(listener, @server_step_timeout)
+      {:ok, _request} = :gen_tcp.recv(socket, 0, @server_step_timeout)
+      :ok = :gen_tcp.send(socket, "HTTP/1.1 200 OK\r\ncontent-length: 100\r\n\r\nfirst")
+      :gen_tcp.close(socket)
+    end)
+
+    assert {:ok, 200, _headers, chunks} =
+             HTTP.stream("http://127.0.0.1:#{port}/drop", [], receive_timeout: @receive_timeout)
+
+    assert_raise Finch.TransportError, fn -> Enum.to_list(chunks) end
+    assert stream_tasks() == []
+  end
+
   test "head/2", %{lasso: lasso} do
     Lasso.expect_once(lasso, "HEAD", "/head", fn conn ->
       conn
@@ -390,6 +511,13 @@ defmodule Hexpm.HTTPTest do
       end)
 
     {"https://#{hostname}:#{port}/pinned", certificate[:cacerts], server}
+  end
+
+  defp stream_tasks() do
+    for pid <- Task.Supervisor.children(Hexpm.Tasks),
+        {:dictionary, dictionary} <- [Process.info(pid, :dictionary)],
+        self() in List.wrap(dictionary[:"$callers"]),
+        do: pid
   end
 
   defp lasso_url(lasso, path) do
