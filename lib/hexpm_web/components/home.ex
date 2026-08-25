@@ -33,23 +33,25 @@ defmodule HexpmWeb.Components.Home do
   def language_card(assigns) do
     ~H"""
     <div class="bg-grey-900 dark:bg-grey-950 border border-grey-800 dark:border-grey-800 rounded-xl p-4 shadow-xs">
-      <div class="flex gap-1.5 mb-3">
-        <div class="w-2 h-2 rounded-full bg-green-500"></div>
-        <div class="w-2 h-2 rounded-full bg-yellow-500"></div>
-        <div class="w-2 h-2 rounded-full bg-red-500"></div>
+      <div class="flex items-center gap-5 min-h-6 mb-3">
+        <div class="flex gap-1.5">
+          <div class="w-2 h-2 rounded-full bg-green-500"></div>
+          <div class="w-2 h-2 rounded-full bg-yellow-500"></div>
+          <div class="w-2 h-2 rounded-full bg-red-500"></div>
+        </div>
+        <h2>
+          <a href={@href} class="text-grey-100 font-semibold text-base hover:text-white">
+            Using with {@language}
+          </a>
+        </h2>
       </div>
       <div class="flex gap-4">
         <div class="flex items-center shrink-0">
           <img src={@image_src} alt={@language} class="w-10 h-12 object-contain" />
         </div>
-        <div class="flex flex-col gap-1">
-          <a href={@href} class="text-grey-100 font-semibold text-base hover:text-white">
-            Using with {@language}
-          </a>
-          <p class="text-grey-200 text-sm leading-5">
-            {render_slot(@inner_block)}
-          </p>
-        </div>
+        <p class="text-grey-200 text-sm leading-5">
+          {render_slot(@inner_block)}
+        </p>
       </div>
     </div>
     """
@@ -66,9 +68,9 @@ defmodule HexpmWeb.Components.Home do
 
   def code_inline(assigns) do
     ~H"""
-    <span class="bg-grey-700 dark:bg-grey-800 text-grey-200 dark:text-grey-100 mx-1 px-0.5 py-0.5 rounded border border-grey-600 dark:border-grey-700 font-mono text-sm">
-      {render_slot(@inner_block)}
-    </span>
+    <span class="bg-grey-700 dark:bg-grey-800 text-grey-200 dark:text-grey-100 px-0.5 py-0.5 rounded border border-grey-600 dark:border-grey-700 font-mono text-sm">{render_slot(
+      @inner_block
+    )}</span>
     """
   end
 
