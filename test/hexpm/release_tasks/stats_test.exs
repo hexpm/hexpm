@@ -347,6 +347,48 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
              300_000
   end
 
+  test "counts every batch of a large object, including a partial last one", %{
+    package1: package1,
+    package2: package2
+  } do
+    lines =
+      for i <- 1..12_345 do
+        {package, version} =
+          case rem(i, 4) do
+            0 -> {package1.name, "0.0.1"}
+            1 -> {package1.name, "0.0.2"}
+            2 -> {package2.name, "0.0.1"}
+            3 -> {package2.name, "0.0.3-rc.1"}
+          end
+
+        ~s{<134>2025-09-09T21:05:03Z cache-bma-essb1270021 logging_gcs[226941]: 98.128.175.50 [09/Sep/2025:21:05:03 +0000] "GET /tarballs/#{package}-#{version}.tar" 200 "Hex/2.1.1" 0}
+      end
+
+    Store.put(
+      :logs_bucket,
+      "fastly_hex/dt=2025-09-09/daily.log.gz",
+      :zlib.gzip(Enum.join(lines, "\n") <> "\n"),
+      []
+    )
+
+    expect_monitor(:ok)
+    assert :ok = perform_job(Stats, %{"date" => "2025-09-09"})
+
+    counts =
+      for {package, version, expected} <- [
+            {package1, "0.0.1", 3_086},
+            {package1, "0.0.2", 3_087},
+            {package2, "0.0.1", 3_086},
+            {package2, "0.0.3-rc.1", 3_086}
+          ] do
+        release = Repo.get_by!(assoc(package, :releases), version: version)
+        {Repo.get_by!(Download, release_id: release.id, day: ~D[2025-09-09]).downloads, expected}
+      end
+
+    assert Enum.all?(counts, fn {got, expected} -> got == expected end), inspect(counts)
+    assert Enum.sum(Enum.map(counts, &elem(&1, 0))) == 12_345
+  end
+
   @tag :capture_log
   test "a log line longer than the limit fails the job" do
     Store.put(
