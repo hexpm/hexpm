@@ -51,7 +51,7 @@ defmodule HexpmWeb.Endpoint do
     cookie_key: "request_logger"
 
   plug Plug.RequestId
-  plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
+  plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint], log: false
   plug Logster.Plugs.ChangeLogLevel, to: :info
   plug Logster.Plugs.Logger, excludes: [:params]
 
