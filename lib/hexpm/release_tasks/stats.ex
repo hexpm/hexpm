@@ -42,6 +42,8 @@ defmodule Hexpm.ReleaseTasks.Stats do
 
   @ets __MODULE__
   @max_line_bytes 1_048_576
+  @count_batch_lines 5_000
+  @task_timeout 3_600_000
   @monitor_slug "hexpm-stats"
   @monitor_schedule "0 1 * * *"
 
@@ -69,7 +71,7 @@ defmodule Hexpm.ReleaseTasks.Stats do
   end
 
   def do_run(date, dryrun?) do
-    :ets.new(@ets, [:named_table, :public])
+    :ets.new(@ets, [:named_table, :public, write_concurrency: true])
 
     try do
       {repositories, packages, releases} =
@@ -161,7 +163,7 @@ defmodule Hexpm.ReleaseTasks.Stats do
     Hexpm.Tasks
     |> Task.Supervisor.async_stream_nolink(keys, &process_key(bucket, &1),
       max_concurrency: 10,
-      timeout: 600_000
+      timeout: @task_timeout
     )
     |> Enum.each(fn
       {:ok, _result} ->
@@ -184,7 +186,13 @@ defmodule Hexpm.ReleaseTasks.Stats do
         chunks
         |> gunzip(key)
         |> lines()
-        |> Enum.each(&count/1)
+        |> Stream.chunk_every(@count_batch_lines)
+        |> Task.async_stream(fn batch -> Enum.each(batch, &count/1) end,
+          max_concurrency: System.schedulers_online(),
+          ordered: false,
+          timeout: @task_timeout
+        )
+        |> Stream.run()
     end
   end
 
