@@ -93,7 +93,7 @@ defmodule Hexpm.MixProject do
       {:prom_ex, "~> 1.11"},
       {:sentry, "~> 13.0"},
       {:tailwind, "~> 0.4", runtime: Mix.env() == :dev},
-      {:tidewave, "~> 0.8.2", only: :dev},
+      {:tidewave, "~> 0.9.0", only: :dev},
       # Dependency is broken with mix due to missing dependency on :ssl application
       {:ssl_verify_fun, "~> 1.1", manager: :rebar3, override: true},
       {:sweet_xml, "~> 0.5"},
@@ -104,7 +104,7 @@ defmodule Hexpm.MixProject do
       {:lazy_html, ">= 0.1.0", only: :test},
       # ExAws signs empty-body GET requests that Req 0.7 rewrites as POST.
       # https://github.com/ex-aws/ex_aws/issues/1246
-      {:req, "0.6.3"}
+      {:req, "0.7.3"}
     ]
   end
 
