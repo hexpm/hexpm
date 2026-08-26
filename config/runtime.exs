@@ -47,6 +47,7 @@ if config_env() == :prod do
     private_key: System.fetch_env!("HEXPM_SIGNING_KEY"),
     repo_bucket: System.fetch_env!("HEXPM_REPO_BUCKET"),
     logs_bucket: System.fetch_env!("HEXPM_LOGS_BUCKET"),
+    audit_bucket: System.fetch_env!("HEXPM_AUDIT_BUCKET"),
     docs_bucket: System.fetch_env!("HEXPM_DOCS_BUCKET"),
     preview_bucket: System.fetch_env!("HEXPM_PREVIEW_BUCKET"),
     diff_bucket: System.fetch_env!("HEXPM_DIFF_BUCKET"),
