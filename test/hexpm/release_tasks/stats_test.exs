@@ -89,14 +89,14 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
 
     Store.put(
       :logs_bucket,
-      "fastly_hex/2013-11-01T14:00:00.000-tzletcEGGiI7atIAAAAA.log.gz",
+      "fastly_hex/dt=2013-11-01/2013-11-01T14:00:00.000-tzletcEGGiI7atIAAAAA.log.gz",
       logfile1,
       []
     )
 
     Store.put(
       :logs_bucket,
-      "fastly_hex/2013-11-01T15:00:00.000-tzletcEGGiI7atIAAAAA.log.gz",
+      "fastly_hex/dt=2013-11-01/2013-11-01T15:00:00.000-tzletcEGGiI7atIAAAAA.log.gz",
       logfile2,
       []
     )
@@ -140,7 +140,7 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
 
     Store.put(
       :logs_bucket,
-      "fastly_hex/2013-11-01T14:00:00.000-tzletcEGGiI7atIAAAAA.log.gz",
+      "fastly_hex/dt=2013-11-01/2013-11-01T14:00:00.000-tzletcEGGiI7atIAAAAA.log.gz",
       logfile,
       []
     )
@@ -178,7 +178,7 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
 
     Store.put(
       :logs_bucket,
-      "fastly_hex/2025-09-09T21:00:00.000-tzletcEGGiI7atIAAAAA.log.gz",
+      "fastly_hex/dt=2025-09-09/2025-09-09T21:00:00.000-tzletcEGGiI7atIAAAAA.log.gz",
       logfile,
       []
     )
@@ -195,7 +195,12 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
     end
   end
 
-  test "scheduled jobs process the previous UTC date", %{package1: package1} do
+  test "scheduled jobs process the previous UTC date", %{
+    repository1: repository1,
+    package1: package1,
+    package2: package2,
+    package4: package4
+  } do
     release = Repo.get_by!(assoc(package1, :releases), version: "0.0.1")
 
     target =
@@ -214,6 +219,23 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
         downloads: 20
       )
 
+    logfile =
+      read_log(
+        "fastly_logs_2.txt",
+        repository1: repository1.name,
+        package1: package1.name,
+        package2: package2.name,
+        package4: package4.name
+      )
+      |> :zlib.gzip()
+
+    Store.put(
+      :logs_bucket,
+      "fastly_hex/dt=2013-11-01/2013-11-01T14:00:00.000-tzletcEGGiI7atIAAAAA.log.gz",
+      logfile,
+      []
+    )
+
     expect_monitor(:ok)
 
     assert :ok =
@@ -222,7 +244,39 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
              )
 
     refute Repo.get(Download, target.id)
+    assert Repo.get_by!(Download, release_id: release.id, day: ~D[2013-11-01]).downloads == 3
     assert Repo.get(Download, other.id)
+  end
+
+  @tag :capture_log
+  test "a day without downloads fails instead of replacing the rows with nothing", %{
+    package1: package1
+  } do
+    release = Repo.get_by!(assoc(package1, :releases), version: "0.0.1")
+
+    existing =
+      insert(:download,
+        package: package1,
+        release: release,
+        day: ~D[2013-11-01],
+        downloads: 10
+      )
+
+    Store.put(
+      :logs_bucket,
+      "fastly_hex/2013-11-01T14:00:00.000-tzletcEGGiI7atIAAAAA.log.gz",
+      :zlib.gzip("not under the day prefix"),
+      []
+    )
+
+    expect_monitor(:error)
+
+    assert_raise RuntimeError, ~r/no downloads found for 2013-11-01/, fn ->
+      perform_job(Stats, %{"date" => "2013-11-01"})
+    end
+
+    assert Repo.get(Download, existing.id)
+    assert :ok = Stats.run(~D[2013-11-01], true)
   end
 
   test "invalid dates cancel without retrying" do
@@ -234,7 +288,7 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
   test "processing failures propagate for Oban retries and report an error check-in" do
     Store.put(
       :logs_bucket,
-      "fastly_hex/2013-11-01T14:00:00.000-invalid.log.gz",
+      "fastly_hex/dt=2013-11-01/2013-11-01T14:00:00.000-invalid.log.gz",
       "not gzip data",
       []
     )
@@ -254,7 +308,7 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
 
     Store.put(
       :logs_bucket,
-      "fastly_hex/2013-11-01T14:00:00.000-tzletcEGGiI7atIAAAAA.log.gz",
+      "fastly_hex/dt=2013-11-01/2013-11-01T14:00:00.000-tzletcEGGiI7atIAAAAA.log.gz",
       :zlib.gzip(read_log("fastly_logs_2.txt", package1: package1.name)),
       []
     )
@@ -279,7 +333,7 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
 
     Store.put(
       :logs_bucket,
-      "fastly_hex/2025-09-09T21:00:00.000-tzletcEGGiI7atIAAAAA.log.gz",
+      "fastly_hex/dt=2025-09-09/2025-09-09T21:00:00.000-tzletcEGGiI7atIAAAAA.log.gz",
       logfile,
       []
     )
@@ -297,7 +351,7 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
   test "a log line longer than the limit fails the job" do
     Store.put(
       :logs_bucket,
-      "fastly_hex/2013-11-01T14:00:00.000-tzletcEGGiI7atIAAAAA.log.gz",
+      "fastly_hex/dt=2013-11-01/2013-11-01T14:00:00.000-tzletcEGGiI7atIAAAAA.log.gz",
       :zlib.gzip(String.duplicate("x", 2 * 1024 * 1024)),
       []
     )
