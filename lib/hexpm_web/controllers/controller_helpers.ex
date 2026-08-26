@@ -337,7 +337,8 @@ defmodule HexpmWeb.ControllerHelpers do
       user: user_or_organization,
       auth_credential: Map.get(conn.assigns, :auth_credential),
       user_agent: conn.assigns.user_agent,
-      remote_ip: HexpmWeb.RequestHelpers.parse_ip(conn.remote_ip)
+      remote_ip: HexpmWeb.RequestHelpers.parse_ip(conn.remote_ip),
+      request_id: List.first(get_resp_header(conn, "x-request-id"))
     }
   end
 

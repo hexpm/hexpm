@@ -135,6 +135,8 @@ defmodule HexpmWeb.API.KeyControllerTest do
       assert log.user_id == c.eric.id
       assert log.action == "key.generate"
       assert %{"name" => "macbook"} = log.params
+      assert [request_id] = get_resp_header(conn, "x-request-id")
+      assert log.request_id == request_id
     end
 
     test "create key without authentication returns 401" do
