@@ -199,7 +199,8 @@ defmodule Hexpm.TestHelpers do
       user: user,
       auth_credential: Keyword.get(opts, :auth_credential, Keyword.get(opts, :key)),
       user_agent: Keyword.get(opts, :user_agent, "TEST"),
-      remote_ip: Keyword.get(opts, :remote_ip, "127.0.0.1")
+      remote_ip: Keyword.get(opts, :remote_ip, "127.0.0.1"),
+      request_id: Keyword.get(opts, :request_id)
     }
   end
 

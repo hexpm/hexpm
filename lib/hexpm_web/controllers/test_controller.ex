@@ -50,6 +50,7 @@ defmodule HexpmWeb.TestController do
           user: %User{},
           user_agent: "TEST",
           remote_ip: "127.0.0.1",
+          request_id: List.first(get_resp_header(conn, "x-request-id")),
           auth_credential: conn.assigns.auth_credential
         }
       )
@@ -107,7 +108,8 @@ defmodule HexpmWeb.TestController do
         user: user,
         auth_credential: nil,
         user_agent: conn.assigns[:user_agent],
-        remote_ip: HexpmWeb.RequestHelpers.parse_ip(conn.remote_ip)
+        remote_ip: HexpmWeb.RequestHelpers.parse_ip(conn.remote_ip),
+        request_id: List.first(get_resp_header(conn, "x-request-id"))
       }
 
       case Tokens.create_session_and_token_for_user(

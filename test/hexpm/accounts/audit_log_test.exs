@@ -12,6 +12,22 @@ defmodule Hexpm.Accounts.AuditLogTest do
   end
 
   describe "build/4" do
+    test "carries the request id when the audit data has one", %{user: user, key: key} do
+      audit_data = %{
+        user: user,
+        auth_credential: key,
+        user_agent: "user_agent",
+        remote_ip: "127.0.0.1",
+        request_id: "GM9dSL6BM4-SdLoAABnD"
+      }
+
+      audit = AuditLog.build(audit_data, "key.generate", key)
+      assert audit.request_id == "GM9dSL6BM4-SdLoAABnD"
+
+      audit = AuditLog.build(Map.delete(audit_data, :request_id), "key.generate", key)
+      assert audit.request_id == nil
+    end
+
     test "action password.reset.init" do
       audit_data = %{
         user: nil,
