@@ -10,4 +10,15 @@ defmodule HexpmWeb.EndpointTest do
 
     :telemetry.detach(ref)
   end
+
+  test "ignores a client-supplied request id" do
+    conn =
+      build_conn()
+      |> put_req_header("x-request-id", "client-chosen-id-000000001")
+      |> get("/diffs")
+
+    assert [request_id] = get_resp_header(conn, "x-request-id")
+    assert request_id != "client-chosen-id-000000001"
+    assert byte_size(request_id) >= 20
+  end
 end

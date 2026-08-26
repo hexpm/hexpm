@@ -50,6 +50,8 @@ defmodule HexpmWeb.Endpoint do
     param_key: "request_logger",
     cookie_key: "request_logger"
 
+  # Plug.RequestId keeps a client-supplied x-request-id; ours is always generated.
+  plug :drop_request_id
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint], log: false
   plug Logster.Plugs.ChangeLogLevel, to: :info
@@ -77,4 +79,6 @@ defmodule HexpmWeb.Endpoint do
   plug HexpmWeb.Plugs.CanonicalHost
 
   plug HexpmWeb.Router
+
+  defp drop_request_id(conn, _opts), do: delete_req_header(conn, "x-request-id")
 end
