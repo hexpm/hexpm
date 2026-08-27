@@ -281,9 +281,8 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
   defp archive(schema, run, seq, rows) do
     table = schema.__schema__(:source)
     archived_at = DateTime.to_iso8601(run.archived_at)
-    date = run.archived_at |> DateTime.to_date() |> Date.to_iso8601()
     seq = seq |> Integer.to_string() |> String.pad_leading(4, "0")
-    key = "#{table}/dt=#{date}/#{run.name}-#{seq}.json.gz"
+    key = "#{table}-#{run.name}-#{seq}.json.gz"
 
     lines =
       Enum.map(rows, fn {id, row} ->

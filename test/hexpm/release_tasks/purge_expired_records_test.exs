@@ -655,10 +655,9 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
 
       PurgeExpiredRecords.run(batch_size: 2)
 
-      assert [first, second, third] = Enum.sort(Hexpm.Store.list(:audit_bucket, "oauth_tokens/"))
+      assert [first, second, third] = Enum.sort(Hexpm.Store.list(:audit_bucket, "oauth_tokens-"))
 
-      assert first =~
-               ~r"^oauth_tokens/dt=\d{4}-\d{2}-\d{2}/\d{8}T\d{6}Z-[0-9a-f]{8}-0001\.json\.gz$"
+      assert first =~ ~r"^oauth_tokens-\d{8}T\d{6}Z-[0-9a-f]{8}-0001\.json\.gz$"
 
       run = String.replace_suffix(first, "-0001.json.gz", "")
       assert second == run <> "-0002.json.gz"
@@ -787,7 +786,7 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
 
   defp archived_rows(table) do
     :audit_bucket
-    |> Hexpm.Store.list("#{table}/")
+    |> Hexpm.Store.list("#{table}-")
     |> Enum.sort()
     |> Enum.flat_map(&archived_lines/1)
   end
