@@ -4,6 +4,40 @@ defmodule Hexpm.Hexdocs.WorkersTest do
 
   alias Hexpm.Hexdocs.Workers
 
+  defmodule ReplacingStore do
+    @behaviour Hexpm.Store.Behaviour
+    @replacement_key {__MODULE__, :replacement}
+
+    defdelegate list(bucket, prefix), to: Hexpm.Store.Memory
+    defdelegate get(bucket, key, opts), to: Hexpm.Store.Memory
+    defdelegate size(bucket, key), to: Hexpm.Store.Memory
+    defdelegate stream(bucket, key), to: Hexpm.Store.Memory
+    defdelegate put(bucket, key, body, opts), to: Hexpm.Store.Memory
+    defdelegate put_file(bucket, key, path, opts), to: Hexpm.Store.Memory
+    defdelegate delete(bucket, key), to: Hexpm.Store.Memory
+    defdelegate delete_many(bucket, keys), to: Hexpm.Store.Memory
+
+    # Serves the object once and then replaces it, so a job unpacks one
+    # archive and finds another when it checks the store afterwards.
+    def get_to_file(bucket, key, path, opts) do
+      result = Hexpm.Store.Memory.get_to_file(bucket, key, path, opts)
+
+      case :persistent_term.get(@replacement_key, nil) do
+        {^key, body} ->
+          :persistent_term.erase(@replacement_key)
+          Hexpm.Store.Memory.put(bucket, key, body, [])
+
+        _other ->
+          :ok
+      end
+
+      result
+    end
+
+    def replace_after_read(key, body), do: :persistent_term.put(@replacement_key, {key, body})
+    def clear, do: :persistent_term.erase(@replacement_key)
+  end
+
   test "upload and delete are repeatable for public documentation" do
     package = insert(:package, name: "worker_docs", docs_updated_at: DateTime.utc_now())
     release = insert(:release, package: package, version: "1.0.0", has_docs: true)
@@ -212,6 +246,53 @@ defmodule Hexpm.Hexdocs.WorkersTest do
     assert_raise Hexpm.Hexdocs.Tar.UnpackError, fn ->
       perform_job(Workers.Search, %{key: key})
     end
+  end
+
+  test "upload snoozes when the archive changes while docs are uploading" do
+    package = insert(:package, name: "replaced_docs", docs_updated_at: DateTime.utc_now())
+    release = insert(:release, package: package, version: "1.0.0", has_docs: true)
+    key = "docs/#{package.name}-#{release.version}.tar.gz"
+    index = "<html><head></head></html>"
+
+    Hexpm.Store.put(
+      :repo_bucket,
+      key,
+      create_docs_tar([{"index.html", index}, {"old.html", "old"}])
+    )
+
+    use_replacing_store(key, create_docs_tar([{"index.html", index}, {"new.html", "new"}]))
+
+    assert {:snooze, 15} = perform_job(Workers.Upload, %{key: key, generation: "0001"})
+    assert Hexpm.Store.get(:docs_bucket, "#{package.name}/1.0.0/old.html") =~ "old"
+
+    assert :ok = perform_job(Workers.Upload, %{key: key, generation: "0002"})
+    assert Hexpm.Store.get(:docs_bucket, "#{package.name}/1.0.0/old.html") == nil
+    assert Hexpm.Store.get(:docs_bucket, "#{package.name}/1.0.0/new.html") =~ "new"
+  end
+
+  test "search snoozes when the archive changes while indexing" do
+    package = insert(:package, name: "replaced_search_docs")
+    release = insert(:release, package: package, version: "1.0.0", has_docs: true)
+    key = "docs/#{package.name}-#{release.version}.tar.gz"
+    Hexpm.Store.put(:repo_bucket, key, create_docs_tar([{"index.html", "old"}]))
+    use_replacing_store(key, create_docs_tar([{"index.html", "new"}]))
+
+    use_search_mock(fn ->
+      expect(Hexpm.Hexdocs.Search.Mock, :delete, fn _name, _version -> :ok end)
+
+      assert {:snooze, 15} = perform_job(Workers.Search, %{key: key, generation: "0001"})
+    end)
+  end
+
+  defp use_replacing_store(key, replacement) do
+    original = Application.fetch_env!(:hexpm, :repo_bucket)
+    Application.put_env(:hexpm, :repo_bucket, {ReplacingStore, "repo_bucket"})
+    ReplacingStore.replace_after_read(key, replacement)
+
+    on_exit(fn ->
+      ReplacingStore.clear()
+      Application.put_env(:hexpm, :repo_bucket, original)
+    end)
   end
 
   defp use_search_mock(fun) do

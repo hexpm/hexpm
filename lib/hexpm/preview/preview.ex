@@ -8,6 +8,13 @@ defmodule Hexpm.Preview do
   @max_file_size 100 * 1000
   @readme_filenames ~w(README.md readme.md README.markdown readme.markdown README.txt readme.txt README readme)
 
+  defmodule StaleTarballError do
+    defexception [:key]
+
+    @impl true
+    def message(%{key: key}), do: "Preview tarball changed while processing: #{key}"
+  end
+
   @doc """
   Reads the file a request asked for.
 
@@ -227,7 +234,7 @@ defmodule Hexpm.Preview do
         delete_contents(repository, package, version)
 
       not tarball_current?(repository, package, version, checksum) ->
-        raise "Preview tarball changed while processing: #{Bucket.tarball_key(repository, package, version)}"
+        raise StaleTarballError, key: Bucket.tarball_key(repository, package, version)
 
       latest_version?(repository, package, version) ->
         Bucket.update_latest_version(repository, package, version)
@@ -244,7 +251,7 @@ defmodule Hexpm.Preview do
         delete_contents(repository, package, version)
 
       not tarball_current?(repository, package, version, checksum) ->
-        raise "Preview tarball changed while processing: #{Bucket.tarball_key(repository, package, version)}"
+        raise StaleTarballError, key: Bucket.tarball_key(repository, package, version)
 
       not latest_version?(repository, package, version) ->
         reconcile_latest(repository, package)
@@ -270,7 +277,7 @@ defmodule Hexpm.Preview do
             reconcile_latest(repository, package)
 
           not tarball_current?(repository, package, latest, checksum) ->
-            raise "Preview tarball changed while processing: #{Bucket.tarball_key(repository, package, latest)}"
+            raise StaleTarballError, key: Bucket.tarball_key(repository, package, latest)
 
           not latest_version?(repository, package, latest) ->
             reconcile_latest(repository, package)
