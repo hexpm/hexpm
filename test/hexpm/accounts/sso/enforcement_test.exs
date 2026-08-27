@@ -242,17 +242,11 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
       {:ok, _connection} = require_sso(context)
       session = browser_session(context.member)
 
+      inserted = insert(:repository, organization: context.organization)
+      repository = Hexpm.Repo.get!(Hexpm.Repository.Repository, inserted.id)
+
       assert_raise FunctionClauseError, fn ->
-        Enforcement.check(
-          %Ecto.Association.NotLoaded{
-            __field__: :organization,
-            __owner__: Hexpm.Repository.Repository,
-            __cardinality__: :one
-          },
-          context.member,
-          nil,
-          session.id
-        )
+        Enforcement.check(repository.organization, context.member, nil, session.id)
       end
     end
 
