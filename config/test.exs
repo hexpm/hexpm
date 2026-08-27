@@ -3,6 +3,7 @@ import Config
 config :hexpm,
   repo_bucket: {Hexpm.Store.Memory, "repo_bucket"},
   logs_bucket: {Hexpm.Store.Memory, "logs_bucket"},
+  audit_bucket: {Hexpm.Store.Memory, "audit_bucket"},
   docs_bucket: {Hexpm.Store.Memory, "docs_bucket"},
   docs_private_bucket: {Hexpm.Store.Memory, "docs_private_bucket"},
   preview_bucket: {Hexpm.Store.Memory, "preview_bucket"},

@@ -9,11 +9,39 @@ defmodule Hexpm.Store.S3Test do
   defmodule FakeClient do
     @behaviour ExAws.Request.HttpClient
 
+    @object "logs/day.log.gz"
+
+    # Two full 1 MiB download parts and a 4-byte tail.
+    def object_body, do: String.duplicate("0123456789abcdef", 131_072) <> "tail"
+
     @impl true
-    def request(method, url, body, _headers, _opts) do
+    def request(method, url, body, headers, _opts) do
       send(self(), {:s3, method, url, body})
-      {:ok, respond(method, URI.parse(url))}
+      {:ok, respond(method, URI.parse(url), headers)}
     end
+
+    defp respond(:head, %URI{path: "/bucket/" <> @object}, _headers) do
+      %{
+        status_code: 200,
+        headers: [{"Content-Length", Integer.to_string(byte_size(object_body()))}]
+      }
+    end
+
+    defp respond(:head, %URI{}, _headers) do
+      %{status_code: 404, headers: [], body: ""}
+    end
+
+    defp respond(:get, %URI{path: "/bucket/" <> @object}, headers) do
+      "bytes=" <> range =
+        Enum.find_value(headers, fn {key, value} ->
+          if String.downcase(to_string(key)) == "range", do: value
+        end)
+
+      [first, last] = range |> String.split("-") |> Enum.map(&String.to_integer/1)
+      %{status_code: 200, headers: [], body: binary_part(object_body(), first, last - first + 1)}
+    end
+
+    defp respond(method, uri, _headers), do: respond(method, uri)
 
     defp respond(:put, %URI{query: nil}) do
       %{status_code: 200, headers: [{"ETag", ~s("9a0364b9e99bb480dd25e1f0284c8555")}]}
@@ -56,6 +84,14 @@ defmodule Hexpm.Store.S3Test do
     end)
 
     :ok
+  end
+
+  test "stream returns the object body in ranged chunks and nil for a missing object" do
+    chunks = S3.stream("us-east-1,bucket", "logs/day.log.gz") |> Enum.to_list()
+
+    assert Enum.map(chunks, &byte_size/1) == [1_048_576, 1_048_576, 4]
+    assert IO.iodata_to_binary(chunks) == FakeClient.object_body()
+    assert S3.stream("us-east-1,bucket", "logs/missing.log.gz") == nil
   end
 
   test "put returns the ETag from the response header" do

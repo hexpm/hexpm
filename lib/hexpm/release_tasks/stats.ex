@@ -41,6 +41,9 @@ defmodule Hexpm.ReleaseTasks.Stats do
   >x
 
   @ets __MODULE__
+  @max_line_bytes 1_048_576
+  @count_batch_lines 5_000
+  @task_timeout 3_600_000
   @monitor_slug "hexpm-stats"
   @monitor_schedule "0 1 * * *"
 
@@ -68,7 +71,7 @@ defmodule Hexpm.ReleaseTasks.Stats do
   end
 
   def do_run(date, dryrun?) do
-    :ets.new(@ets, [:named_table, :public])
+    :ets.new(@ets, [:named_table, :public, write_concurrency: true])
 
     try do
       {repositories, packages, releases} =
@@ -83,6 +86,8 @@ defmodule Hexpm.ReleaseTasks.Stats do
       # May not be a perfect count since it counts downloads without a release
       # in the database. Should be uncommon
       num = ets_stream() |> Enum.reduce(0, fn {_, count}, acc -> count + acc end)
+
+      if num == 0 and not dryrun?, do: raise("[stats] no downloads found for #{date}")
 
       unless dryrun? do
         Repo.transaction(
@@ -149,22 +154,16 @@ defmodule Hexpm.ReleaseTasks.Stats do
 
   defp process_buckets(date) do
     bucket = Application.get_env(:hexpm, :logs_bucket)
-    prefix = "fastly_hex/#{date}"
+    prefix = "fastly_hex/dt=#{date}/"
     keys = Store.list(bucket, prefix) |> Enum.to_list()
     process_keys(bucket, keys)
   end
 
   defp process_keys(bucket, keys) do
     Hexpm.Tasks
-    |> Task.Supervisor.async_stream_nolink(
-      keys,
-      fn key ->
-        Store.get(bucket, key, [])
-        |> maybe_unzip(key)
-        |> process_file()
-      end,
+    |> Task.Supervisor.async_stream_nolink(keys, &process_key(bucket, &1),
       max_concurrency: 10,
-      timeout: 600_000
+      timeout: @task_timeout
     )
     |> Enum.each(fn
       {:ok, _result} ->
@@ -178,19 +177,87 @@ defmodule Hexpm.ReleaseTasks.Stats do
     end)
   end
 
-  defp process_file(file) do
-    lines = String.split(file, "\n")
+  defp process_key(bucket, key) do
+    case Store.stream(bucket, key) do
+      nil ->
+        raise "#{key} is gone from the logs bucket"
 
-    Enum.each(lines, fn line ->
-      case parse_line(line) do
-        {repository, package, version} ->
-          key = {repository, package, version}
-          :ets.update_counter(@ets, key, 1, {key, 0})
+      chunks ->
+        chunks
+        |> gunzip(key)
+        |> lines()
+        |> Stream.chunk_every(@count_batch_lines)
+        |> Task.async_stream(fn batch -> Enum.each(batch, &count/1) end,
+          max_concurrency: System.schedulers_online(),
+          ordered: false,
+          timeout: @task_timeout
+        )
+        |> Stream.run()
+    end
+  end
 
-        nil ->
-          :ok
-      end
+  # inflateEnd runs only when the input ended, where it raises data_error for
+  # a truncated object; on any other exit the original exception stays.
+  defp gunzip(chunks, key) do
+    if String.ends_with?(key, ".gz") do
+      Stream.transform(
+        chunks,
+        fn ->
+          z = :zlib.open()
+          :ok = :zlib.inflateInit(z, 31, :reset)
+          z
+        end,
+        fn chunk, z -> {inflate(z, chunk), z} end,
+        fn z ->
+          :zlib.inflateEnd(z)
+          {[], z}
+        end,
+        fn z -> :zlib.close(z) end
+      )
+    else
+      chunks
+    end
+  end
+
+  # safeInflate returns a bounded piece of output per call, so a chunk that
+  # expands a thousandfold is still handled a piece at a time.
+  defp inflate(z, chunk) do
+    Stream.unfold({:input, chunk}, fn
+      :done -> nil
+      {:input, data} -> inflated(:zlib.safeInflate(z, data))
+      :more -> inflated(:zlib.safeInflate(z, []))
     end)
+  end
+
+  defp inflated({:continue, output}), do: {IO.iodata_to_binary(output), :more}
+  defp inflated({:finished, output}), do: {IO.iodata_to_binary(output), :done}
+
+  defp lines(chunks) do
+    Stream.transform(
+      chunks,
+      fn -> "" end,
+      fn chunk, carry ->
+        {carry, complete} = List.pop_at(String.split(carry <> chunk, "\n"), -1)
+
+        if byte_size(carry) > @max_line_bytes do
+          raise "[stats] a log line is longer than #{@max_line_bytes} bytes"
+        end
+
+        {complete, carry}
+      end,
+      fn
+        "" -> {[], ""}
+        carry -> {[carry], ""}
+      end,
+      fn _carry -> :ok end
+    )
+  end
+
+  defp count(line) do
+    case parse_line(line) do
+      {_repository, _package, _version} = key -> :ets.update_counter(@ets, key, 1, {key, 0})
+      nil -> :ok
+    end
   end
 
   def parse_line(line) do
@@ -219,14 +286,6 @@ defmodule Hexpm.ReleaseTasks.Stats do
     from(r in Release, select: {{r.package_id, r.version}, r.id})
     |> Repo.all()
     |> Map.new(fn {{pid, vsn}, rid} -> {{pid, to_string(vsn)}, rid} end)
-  end
-
-  defp maybe_unzip(data, key) do
-    if String.ends_with?(key, ".gz") do
-      :zlib.gunzip(data)
-    else
-      data
-    end
   end
 
   defp nillify(""), do: nil

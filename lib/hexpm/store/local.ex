@@ -1,5 +1,6 @@
 defmodule Hexpm.Store.Local do
   @behaviour Hexpm.Store.Behaviour
+  @chunk_size 65_536
 
   # only used during development (not safe)
 
@@ -33,6 +34,14 @@ defmodule Hexpm.Store.Local do
     case File.stat(path) do
       {:ok, stat} -> stat.size
       {:error, :enoent} -> nil
+    end
+  end
+
+  def stream(bucket, key) do
+    path = safe_path!(bucket, key)
+
+    if File.regular?(path) do
+      File.stream!(path, @chunk_size)
     end
   end
 

@@ -5,9 +5,14 @@ defmodule Hexpm.HTTP.Interface do
   @type opts() :: Keyword.t()
   @type response() ::
           {:ok, Mint.Types.status(), Mint.Types.headers(), binary()} | {:error, Exception.t()}
+  @type chunked_response() ::
+          {:ok, Mint.Types.status(), Mint.Types.headers(), Enumerable.t()}
+          | {:error, Exception.t()}
 
   @callback get(url(), headers()) :: response()
   @callback get(url(), headers(), opts()) :: response()
+  @callback stream(url(), headers()) :: chunked_response()
+  @callback stream(url(), headers(), opts()) :: chunked_response()
   @callback head(url(), headers()) :: response()
   @callback head(url(), headers(), opts()) :: response()
   @callback post(url(), headers(), params()) :: response()
@@ -28,6 +33,7 @@ defmodule Hexpm.HTTP do
   @default_attempts 3
   @default_base_delay 100
   @request_opts [:pool_timeout, :receive_timeout, :request_timeout]
+  @ack_timeout 60_000
 
   def impl() do
     Application.get_env(:hexpm, :http_impl, __MODULE__)
@@ -35,6 +41,35 @@ defmodule Hexpm.HTTP do
 
   @impl Hexpm.HTTP.Interface
   def get(url, headers, opts \\ []), do: do_request(:get, url, headers, nil, opts)
+
+  @doc """
+  GETs `url` and returns the body as a stream of chunks instead of a binary.
+  The status and headers are read before this returns; the body is read from
+  the connection as the stream is consumed, one chunk in flight, so a
+  response of any size is handled in bounded memory. The stream has to be
+  consumed by the process that called `stream/3`. Halting it early closes
+  the request, and so does a chunk that is not consumed within
+  `:ack_timeout` (60 seconds), so an abandoned stream does not keep its
+  connection.
+  """
+  @impl Hexpm.HTTP.Interface
+  def stream(url, headers, opts \\ []) do
+    {ack_timeout, opts} = Keyword.pop(opts, :ack_timeout, @ack_timeout)
+    {request_opts, build_opts} = Keyword.split(opts, @request_opts)
+    request = Finch.build(:get, url, headers, nil, build_opts)
+    ref = make_ref()
+    parent = self()
+
+    task =
+      Task.Supervisor.async_nolink(Hexpm.Tasks, fn ->
+        stream_request(request, request_opts, parent, ref, ack_timeout)
+      end)
+
+    with {:ok, status} <- stream_await(:status, task, ref),
+         {:ok, response_headers} <- stream_await(:headers, task, ref) do
+      {:ok, status, response_headers, stream_body(task, ref)}
+    end
+  end
 
   @impl Hexpm.HTTP.Interface
   def head(url, headers, opts \\ []), do: do_request(:head, url, headers, nil, opts)
@@ -299,6 +334,109 @@ defmodule Hexpm.HTTP do
 
       {:error, reason, _response} ->
         {:error, reason}
+    end
+  end
+
+  defp stream_request(request, request_opts, parent, ref, ack_timeout) do
+    parent_ref = Process.monitor(parent)
+
+    fun = fn
+      {:status, status}, acc ->
+        send(parent, {ref, :status, status})
+        {:cont, acc}
+
+      {:headers, headers}, acc ->
+        send(parent, {ref, :headers, headers})
+        {:cont, acc}
+
+      {:data, data}, acc ->
+        send(parent, {ref, :data, data})
+
+        receive do
+          {^ref, :next} -> {:cont, acc}
+          {^ref, :halt} -> {:halt, acc}
+          {:DOWN, ^parent_ref, _, _, _} -> {:halt, acc}
+        after
+          ack_timeout -> {:halt, :unconsumed}
+        end
+
+      {:trailers, _headers}, acc ->
+        {:cont, acc}
+    end
+
+    case Finch.stream_while(request, Hexpm.Finch, nil, fun, request_opts) do
+      {:ok, :unconsumed} ->
+        {:error, %RuntimeError{message: "a body chunk was not consumed within #{ack_timeout}ms"}}
+
+      {:ok, _acc} ->
+        :done
+
+      {:error, reason, _acc} ->
+        {:error, reason}
+    end
+  end
+
+  defp stream_await(tag, %Task{ref: task_ref}, ref) do
+    receive do
+      {^ref, ^tag, value} ->
+        {:ok, value}
+
+      {^task_ref, {:error, reason}} ->
+        Process.demonitor(task_ref, [:flush])
+        {:error, reason}
+
+      {:DOWN, ^task_ref, _, _, reason} ->
+        {:error, stream_exit(reason)}
+    end
+  end
+
+  defp stream_body(task, ref) do
+    Stream.resource(
+      fn -> :running end,
+      fn
+        :running -> stream_next(task, ref)
+        :done -> {:halt, :done}
+      end,
+      fn
+        :done ->
+          :ok
+
+        :running ->
+          send(task.pid, {ref, :halt})
+          Task.shutdown(task, :brutal_kill)
+          stream_flush(ref)
+      end
+    )
+  end
+
+  defp stream_next(%Task{ref: task_ref} = task, ref) do
+    receive do
+      {^ref, :data, chunk} ->
+        send(task.pid, {ref, :next})
+        {[chunk], :running}
+
+      {^task_ref, :done} ->
+        Process.demonitor(task_ref, [:flush])
+        {:halt, :done}
+
+      {^task_ref, {:error, reason}} ->
+        Process.demonitor(task_ref, [:flush])
+        raise reason
+
+      {:DOWN, ^task_ref, _, _, reason} ->
+        raise stream_exit(reason)
+    end
+  end
+
+  defp stream_exit(reason) do
+    %RuntimeError{message: "HTTP stream exited: #{inspect(reason)}"}
+  end
+
+  defp stream_flush(ref) do
+    receive do
+      {^ref, _tag, _value} -> stream_flush(ref)
+    after
+      0 -> :ok
     end
   end
 

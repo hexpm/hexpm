@@ -5,6 +5,7 @@ defmodule Hexpm.Store.Memory do
   @behaviour Hexpm.Store.Behaviour
 
   @table __MODULE__
+  @chunk_size 65_536
   @ownership __MODULE__.Ownership
   @key :store
 
@@ -44,6 +45,20 @@ defmodule Hexpm.Store.Memory do
     case get(bucket, key, []) do
       nil -> nil
       body -> byte_size(body)
+    end
+  end
+
+  def stream(bucket, key) do
+    case get(bucket, key, []) do
+      nil ->
+        nil
+
+      body ->
+        Stream.unfold(body, fn
+          "" -> nil
+          <<chunk::binary-size(@chunk_size), rest::binary>> -> {chunk, rest}
+          chunk -> {chunk, ""}
+        end)
     end
   end
 

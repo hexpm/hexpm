@@ -27,6 +27,17 @@ defmodule Hexpm.Store.S3 do
     end
   end
 
+  def stream(bucket, key) do
+    case size(bucket, key) do
+      nil ->
+        nil
+
+      _size ->
+        S3.download_file(bucket(bucket), key, :memory)
+        |> ExAws.stream!(region: region(bucket))
+    end
+  end
+
   def get_to_file(bucket, key, destination, _opts) do
     case size(bucket, key) do
       nil ->

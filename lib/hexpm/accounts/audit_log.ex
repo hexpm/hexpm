@@ -4,6 +4,7 @@ defmodule Hexpm.Accounts.AuditLog do
   schema "audit_logs" do
     field :user_agent, :string
     field :remote_ip, :string
+    field :request_id, :string
     field :action, :string
     field :params, :map
     field :user_data, :map
@@ -32,6 +33,7 @@ defmodule Hexpm.Accounts.AuditLog do
       oauth_token: oauth_token,
       user_agent: truncate_codepoints(audit_data.user_agent, 255),
       remote_ip: audit_data.remote_ip,
+      request_id: Map.get(audit_data, :request_id),
       action: action,
       params: params
     }
@@ -51,6 +53,7 @@ defmodule Hexpm.Accounts.AuditLog do
       oauth_token: oauth_token,
       user_agent: truncate_codepoints(audit_data.user_agent, 255),
       remote_ip: audit_data.remote_ip,
+      request_id: Map.get(audit_data, :request_id),
       action: "organization.create",
       params: params
     }
@@ -72,6 +75,7 @@ defmodule Hexpm.Accounts.AuditLog do
       oauth_token: oauth_token,
       user_agent: truncate_codepoints(audit_data.user_agent, 255),
       remote_ip: audit_data.remote_ip,
+      request_id: Map.get(audit_data, :request_id),
       action: action,
       params: params
     }
@@ -91,6 +95,7 @@ defmodule Hexpm.Accounts.AuditLog do
       oauth_token: oauth_token,
       user_agent: truncate_codepoints(audit_data.user_agent, 255),
       remote_ip: audit_data.remote_ip,
+      request_id: Map.get(audit_data, :request_id),
       action: action,
       params: params
     }

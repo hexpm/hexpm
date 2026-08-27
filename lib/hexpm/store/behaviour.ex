@@ -13,6 +13,11 @@ defmodule Hexpm.Store.Behaviour do
 
   @callback list(bucket, prefix) :: [key]
   @callback get(bucket, key, opts) :: body | nil
+  @doc """
+  The object body as a stream of binary chunks, `nil` when the object does
+  not exist. The stream has to be consumed by the process that called it.
+  """
+  @callback stream(bucket, key) :: Enumerable.t() | nil
   @callback size(bucket, key) :: non_neg_integer() | nil
   @callback get_to_file(bucket, key, Path.t(), opts) :: :ok | nil
   @callback put(bucket, key, body, opts) :: {:ok, %{etag: etag}}

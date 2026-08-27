@@ -5,11 +5,21 @@ defmodule Hexpm.Preview.Workers.Upload do
     max_attempts: 5,
     unique: [period: :infinity, states: :incomplete, fields: [:worker, :args]]
 
+  require Logger
+
+  @stale_snooze 15
+
   @impl Oban.Worker
   def timeout(_job), do: 270_000
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"key" => key}}), do: Hexpm.Preview.upload(key)
+  def perform(%Oban.Job{args: %{"key" => key}}) do
+    Hexpm.Preview.upload(key)
+  rescue
+    Hexpm.Preview.StaleTarballError ->
+      Logger.info("STALE PREVIEW TARBALL #{key} snooze=#{@stale_snooze}s")
+      {:snooze, @stale_snooze}
+  end
 end
 
 defmodule Hexpm.Preview.Workers.Delete do
@@ -19,9 +29,19 @@ defmodule Hexpm.Preview.Workers.Delete do
     max_attempts: 5,
     unique: [period: :infinity, states: :incomplete, fields: [:worker, :args]]
 
+  require Logger
+
+  @stale_snooze 15
+
   @impl Oban.Worker
   def timeout(_job), do: 270_000
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"key" => key}}), do: Hexpm.Preview.delete(key)
+  def perform(%Oban.Job{args: %{"key" => key}}) do
+    Hexpm.Preview.delete(key)
+  rescue
+    Hexpm.Preview.StaleTarballError ->
+      Logger.info("STALE PREVIEW TARBALL #{key} snooze=#{@stale_snooze}s")
+      {:snooze, @stale_snooze}
+  end
 end

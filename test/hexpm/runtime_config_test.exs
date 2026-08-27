@@ -7,6 +7,7 @@ defmodule Hexpm.RuntimeConfigTest do
     "HEXPM_SIGNING_KEY" => "signing-key",
     "HEXPM_REPO_BUCKET" => "s3,us-east-1,repo",
     "HEXPM_LOGS_BUCKET" => "gcs,logs",
+    "HEXPM_AUDIT_BUCKET" => "gcs,audit",
     "HEXPM_DOCS_BUCKET" => "gcs,docs",
     "HEXPM_PREVIEW_BUCKET" => "gcs,preview",
     "HEXPM_DIFF_BUCKET" => "gcs,diff",

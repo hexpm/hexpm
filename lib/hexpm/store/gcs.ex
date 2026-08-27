@@ -28,6 +28,35 @@ defmodule Hexpm.Store.GCS do
     end
   end
 
+  def stream(bucket, key) do
+    url = url(bucket, key)
+
+    case retry(url, fn -> stream_request(url) end) do
+      {:ok, 200, _headers, chunks} -> chunks
+      {:ok, 404, _headers, _body} -> nil
+      {:ok, status, _headers, _body} -> raise "GCS GET #{url} returned status #{status}"
+      {:error, reason} -> raise "GCS GET #{url} failed: #{inspect(reason)}"
+    end
+  end
+
+  # Any response but a 200 is read to the end here, so a retry never leaves
+  # a half-read response holding its connection. A failure while reading it
+  # is returned as an error so the retry sees it.
+  defp stream_request(url) do
+    case Hexpm.HTTP.impl().stream(url, headers()) do
+      {:ok, 200, _headers, _chunks} = response -> response
+      {:ok, status, headers, chunks} -> drain(chunks, status, headers)
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp drain(chunks, status, headers) do
+    Stream.run(chunks)
+    {:ok, status, headers, ""}
+  rescue
+    exception -> {:error, exception}
+  end
+
   def get_to_file(bucket, key, destination, opts) do
     case get(bucket, key, opts) do
       nil -> nil
