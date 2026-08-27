@@ -83,15 +83,40 @@ defmodule Hexpm.Hexdocs do
   def delete(key) do
     {repository, package, version} = key_components!(key)
 
-    if package in @special_package_names do
-      :ok
-    else
-      version = Version.parse!(version)
-      {all_versions, _retired_versions} = Releases.docs_versions(repository, package)
-      Bucket.delete(repository, package, version, all_versions)
-      update_index_sitemap(repository, key)
-      if repository == "hexpm", do: Search.delete(package, version)
-      :ok
+    cond do
+      package in @special_package_names ->
+        :ok
+
+      Releases.docs_exist?(repository, package, version) ->
+        upload(key)
+
+      true ->
+        version = Version.parse!(version)
+        {all_versions, _retired_versions} = Releases.docs_versions(repository, package)
+        delete_docs(repository, package, version, all_versions)
+        update_index_sitemap(repository, key)
+        if repository == "hexpm", do: Search.delete(package, version)
+        :ok
+    end
+  end
+
+  defp delete_docs(repository, package, version, all_versions) do
+    latest? = Utils.latest_version?(package, version, all_versions)
+    new_latest = if latest?, do: Utils.latest_version(all_versions -- [version])
+
+    cond do
+      new_latest ->
+        key = Bucket.archive_key(repository, package, new_latest)
+        {dir, files, checksum} = download_and_unpack!(key, repository, package, new_latest)
+        FileRewriter.rewrite_files(dir, files)
+        Bucket.promote(repository, package, version, new_latest, dir, files)
+        ensure_archive_current!(key, checksum)
+
+      latest? ->
+        Bucket.delete(repository, package, version, :both)
+
+      true ->
+        Bucket.delete(repository, package, version, :versioned)
     end
   end
 

@@ -54,9 +54,26 @@ defmodule Hexpm.Hexdocs.WorkersTest do
     assert Hexpm.Store.get(:docs_bucket, "#{package.name}/index.html") =~ "plausible"
     assert Hexpm.Store.get(:docs_bucket, "#{package.name}/1.0.0/index.html") =~ "plausible"
 
+    Ecto.Changeset.change(release, has_docs: false) |> Repo.update!()
     assert :ok = perform_job(Workers.Delete, %{key: key})
     assert :ok = perform_job(Workers.Delete, %{key: key})
     assert Hexpm.Store.get(:docs_bucket, "#{package.name}/index.html") == nil
+  end
+
+  test "a stale delete event restores docs that still exist" do
+    package = insert(:package, name: "stale_delete_docs", docs_updated_at: DateTime.utc_now())
+    release = insert(:release, package: package, version: "1.0.0", has_docs: true)
+    key = "docs/#{package.name}-#{release.version}.tar.gz"
+
+    Hexpm.Store.put(
+      :repo_bucket,
+      key,
+      create_docs_tar([{"index.html", "<html><head></head></html>"}])
+    )
+
+    assert :ok = perform_job(Workers.Delete, %{key: key})
+    assert Hexpm.Store.get(:docs_bucket, "#{package.name}/index.html") =~ "plausible"
+    assert Hexpm.Store.get(:docs_bucket, "#{package.name}/1.0.0/index.html") =~ "plausible"
   end
 
   test "upload and delete verify the purged pages through their index.html" do
@@ -87,6 +104,7 @@ defmodule Hexpm.Hexdocs.WorkersTest do
       }
     )
 
+    Ecto.Changeset.change(release, has_docs: false) |> Repo.update!()
     assert :ok = perform_job(Workers.Delete, %{key: key})
 
     assert_enqueued(
@@ -282,6 +300,25 @@ defmodule Hexpm.Hexdocs.WorkersTest do
 
       assert {:snooze, 15} = perform_job(Workers.Search, %{key: key, generation: "0001"})
     end)
+  end
+
+  test "deleting latest docs snoozes when the fallback archive changes while promoting" do
+    package =
+      insert(:package, name: "replaced_fallback_docs", docs_updated_at: DateTime.utc_now())
+
+    fallback = insert(:release, package: package, version: "1.0.0", has_docs: true)
+    removed = insert(:release, package: package, version: "2.0.0", has_docs: false)
+    fallback_key = "docs/#{package.name}-#{fallback.version}.tar.gz"
+    removed_key = "docs/#{package.name}-#{removed.version}.tar.gz"
+    Hexpm.Store.put(:repo_bucket, fallback_key, create_docs_tar([{"index.html", "old"}]))
+    Hexpm.Store.put(:docs_bucket, "#{package.name}/index.html", "removed latest")
+    use_replacing_store(fallback_key, create_docs_tar([{"index.html", "new"}]))
+
+    assert {:snooze, 15} = perform_job(Workers.Delete, %{key: removed_key, generation: "0001"})
+    assert Hexpm.Store.get(:docs_bucket, "#{package.name}/index.html") =~ "old"
+
+    assert :ok = perform_job(Workers.Delete, %{key: removed_key, generation: "0001"})
+    assert Hexpm.Store.get(:docs_bucket, "#{package.name}/index.html") =~ "new"
   end
 
   defp use_replacing_store(key, replacement) do
