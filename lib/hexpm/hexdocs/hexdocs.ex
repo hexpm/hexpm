@@ -2,7 +2,7 @@ defmodule Hexpm.Hexdocs do
   require Logger
 
   alias Hexpm.Hexdocs.{Bucket, FileRewriter, PackageSitemap, Search, SourceRepo, Tar, Utils}
-  alias Hexpm.Repository.{Packages, Releases, Sitemaps}
+  alias Hexpm.Repository.{Assets, Packages, Releases, Sitemaps}
 
   @special_packages Application.compile_env!(:hexpm, :hexdocs_special_packages)
   @special_package_names Map.keys(@special_packages)
@@ -12,15 +12,23 @@ defmodule Hexpm.Hexdocs do
   # it has been told not to keep.
   @noindex_pages ~w(404.html search.html)
 
+  defmodule StaleArchiveError do
+    defexception [:key]
+
+    @impl true
+    def message(%{key: key}), do: "Hexdocs archive changed while processing: #{key}"
+  end
+
   def upload(key) do
     {repository, package, version} = key_components!(key)
     start = System.monotonic_time(:millisecond)
     Logger.info("UPLOAD #{key}")
 
     {version, all_versions, retired_versions} = versions(repository, package, version)
-    {dir, files} = download_and_unpack!(key, repository, package, version)
+    {dir, files, checksum} = download_and_unpack!(key, repository, package, version)
     FileRewriter.rewrite_files(dir, files)
     Bucket.upload(repository, package, version, all_versions, retired_versions, dir, files)
+    ensure_archive_current!(key, checksum)
 
     if Utils.latest_version?(package, version, all_versions) do
       update_index_sitemap(repository, key)
@@ -43,7 +51,7 @@ defmodule Hexpm.Hexdocs do
           :error when package in @special_package_names -> version
         end
 
-      {dir, files} = download_and_unpack!(key, repository, package, version)
+      {dir, files, checksum} = download_and_unpack!(key, repository, package, version)
 
       files_with_content =
         Enum.flat_map(files, fn path ->
@@ -63,6 +71,8 @@ defmodule Hexpm.Hexdocs do
           Search.delete(package, version)
           Logger.info("SKIPPING SEARCH INDEX #{key} (invalid or missing search items)")
       end
+
+      ensure_archive_current!(key, checksum)
     else
       Logger.warning("SKIPPING SEARCH INDEX #{key} (repository is not hexpm)")
     end
@@ -73,21 +83,46 @@ defmodule Hexpm.Hexdocs do
   def delete(key) do
     {repository, package, version} = key_components!(key)
 
-    if package in @special_package_names do
-      :ok
-    else
-      version = Version.parse!(version)
-      {all_versions, _retired_versions} = Releases.docs_versions(repository, package)
-      Bucket.delete(repository, package, version, all_versions)
-      update_index_sitemap(repository, key)
-      if repository == "hexpm", do: Search.delete(package, version)
-      :ok
+    cond do
+      package in @special_package_names ->
+        :ok
+
+      Releases.docs_exist?(repository, package, version) ->
+        upload(key)
+
+      true ->
+        version = Version.parse!(version)
+        {all_versions, _retired_versions} = Releases.docs_versions(repository, package)
+        delete_docs(repository, package, version, all_versions)
+        update_index_sitemap(repository, key)
+        if repository == "hexpm", do: Search.delete(package, version)
+        :ok
+    end
+  end
+
+  defp delete_docs(repository, package, version, all_versions) do
+    latest? = Utils.latest_version?(package, version, all_versions)
+    new_latest = if latest?, do: Utils.latest_version(all_versions -- [version])
+
+    cond do
+      new_latest ->
+        key = Bucket.archive_key(repository, package, new_latest)
+        {dir, files, checksum} = download_and_unpack!(key, repository, package, new_latest)
+        FileRewriter.rewrite_files(dir, files)
+        Bucket.promote(repository, package, version, new_latest, dir, files)
+        ensure_archive_current!(key, checksum)
+
+      latest? ->
+        Bucket.delete(repository, package, version, :both)
+
+      true ->
+        Bucket.delete(repository, package, version, :versioned)
     end
   end
 
   def sitemap(key) do
     {repository, package, version} = key_components!(key)
-    {_dir, files} = download_and_unpack!(key, repository, package, version)
+    {_dir, files, _checksum} = download_and_unpack!(key, repository, package, version)
     update_index_sitemap(repository, key)
     update_package_sitemap(repository, key, package, files)
     :ok
@@ -142,14 +177,28 @@ defmodule Hexpm.Hexdocs do
 
     case Hexpm.Store.get_to_file(:repo_bucket, key, path) do
       :ok ->
-        Tar.unpack_to_dir!({:file, path},
-          repository: repository,
-          package: package,
-          version: version
-        )
+        {dir, files} =
+          Tar.unpack_to_dir!({:file, path},
+            repository: repository,
+            package: package,
+            version: version
+          )
+
+        {dir, files, Assets.file_checksum(path)}
 
       nil ->
         raise "Hexdocs archive not found in store: #{key}"
+    end
+  end
+
+  defp ensure_archive_current!(key, checksum) do
+    path = Hexpm.TmpDir.tmp_file("docs-tarball")
+
+    if Hexpm.Store.get_to_file(:repo_bucket, key, path) == :ok and
+         Assets.file_checksum(path) == checksum do
+      :ok
+    else
+      raise StaleArchiveError, key: key
     end
   end
 

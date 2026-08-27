@@ -1,5 +1,5 @@
 defmodule Hexpm.Hexdocs.Bucket do
-  alias Hexpm.Hexdocs.{Debouncer, FileRewriter, Utils}
+  alias Hexpm.Hexdocs.{Debouncer, Utils}
 
   @special_package_names Map.keys(Application.compile_env!(:hexpm, :hexdocs_special_packages))
   @gcs_put_debounce Application.compile_env!(:hexpm, :hexdocs_gcs_put_debounce)
@@ -124,56 +124,37 @@ defmodule Hexpm.Hexdocs.Bucket do
     {path, docs_config_cdn_key(repository, package), data, public?(repository)}
   end
 
-  def delete(repository, package, version, all_versions) do
-    deleting_latest? = Utils.latest_version?(package, version, all_versions)
-    new_latest = Utils.latest_version(all_versions -- [version])
-
-    cond do
-      deleting_latest? and new_latest ->
-        key = build_key(repository, package, new_latest)
-        tarball_path = Hexpm.TmpDir.tmp_file("docs-tarball")
-
-        case Hexpm.Store.get_to_file(:repo_bucket, key, tarball_path) do
-          :ok ->
-            {dir, files} =
-              Hexpm.Hexdocs.Tar.unpack_to_dir!({:file, tarball_path},
-                repository: repository,
-                package: package,
-                version: new_latest
-              )
-
-            FileRewriter.rewrite_files(dir, files)
-            uploads = list_upload_files(repository, package, new_latest, dir, files, :both)
-            paths = MapSet.new(uploads, &elem(&1, 0))
-            versions = [version, new_latest]
-            uploaded = upload_new_files(uploads)
-            delete_old_docs(repository, package, versions, paths, :both)
-
-            targets =
-              page_targets(repository, uploaded) ++
-                deleted_page_targets(repository, package, [version])
-
-            purge_hexdocs_cache(repository, package, versions, :both, targets)
-
-          nil ->
-            raise "Hexdocs archive not found in store: #{key}"
-        end
-
-      deleting_latest? ->
-        delete_old_docs(repository, package, [version], [], :both)
-        targets = deleted_page_targets(repository, package, [version, nil])
-        purge_hexdocs_cache(repository, package, [version], :both, targets)
-
-      true ->
-        delete_old_docs(repository, package, [version], [], :versioned)
-        targets = deleted_page_targets(repository, package, [version])
-        purge_hexdocs_cache(repository, package, [version], :versioned, targets)
-    end
+  def delete(repository, package, version, :both) do
+    delete_old_docs(repository, package, [version], [], :both)
+    targets = deleted_page_targets(repository, package, [version, nil])
+    purge_hexdocs_cache(repository, package, [version], :both, targets)
   end
 
-  defp build_key("hexpm", package, version), do: Path.join("docs", "#{package}-#{version}.tar.gz")
+  def delete(repository, package, version, :versioned) do
+    delete_old_docs(repository, package, [version], [], :versioned)
+    targets = deleted_page_targets(repository, package, [version])
+    purge_hexdocs_cache(repository, package, [version], :versioned, targets)
+  end
 
-  defp build_key(repository, package, version),
+  @doc "Replaces the removed latest `version` with `new_latest`, unpacked in `dir`."
+  def promote(repository, package, version, new_latest, dir, files) do
+    uploads = list_upload_files(repository, package, new_latest, dir, files, :both)
+    paths = MapSet.new(uploads, &elem(&1, 0))
+    versions = [version, new_latest]
+    uploaded = upload_new_files(uploads)
+    delete_old_docs(repository, package, versions, paths, :both)
+
+    targets =
+      page_targets(repository, uploaded) ++
+        deleted_page_targets(repository, package, [version])
+
+    purge_hexdocs_cache(repository, package, versions, :both, targets)
+  end
+
+  def archive_key("hexpm", package, version),
+    do: Path.join("docs", "#{package}-#{version}.tar.gz")
+
+  def archive_key(repository, package, version),
     do: Path.join(["repos", repository, "docs", "#{package}-#{version}.tar.gz"])
 
   defp list_upload_files(repository, package, version, dir, files, upload_type) do

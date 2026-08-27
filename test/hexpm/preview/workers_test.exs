@@ -231,7 +231,7 @@ defmodule Hexpm.Preview.WorkersTest do
     )
   end
 
-  test "upload retries when the source tarball changes while files are uploading" do
+  test "upload snoozes when the source tarball changes while files are uploading" do
     package = insert(:package, name: "replacement_preview")
     release = insert(:release, package: package, version: "1.0.0")
     key = "tarballs/#{package.name}-#{release.version}.tar"
@@ -244,16 +244,27 @@ defmodule Hexpm.Preview.WorkersTest do
       Hexpm.Store.Memory.put("repo_bucket", key, replacement, [])
     end)
 
-    assert_raise RuntimeError, ~r/Preview tarball changed while processing/, fn ->
-      perform_job(Workers.Upload, %{key: key, generation: "0001"})
-    end
-
+    assert {:snooze, 15} = perform_job(Workers.Upload, %{key: key, generation: "0001"})
     assert :ok = perform_job(Workers.Upload, %{key: key, generation: "0002"})
     assert Hexpm.Store.get(:preview_bucket, "files/#{package.name}/1.0.0/old.txt") == nil
     assert Hexpm.Store.get(:preview_bucket, "files/#{package.name}/1.0.0/new.txt") == "new"
 
     assert JSON.decode!(Hexpm.Store.get(:preview_bucket, "file_lists/#{package.name}-1.0.0.json")) ==
              ["new.txt"]
+  end
+
+  test "delete snoozes when the source tarball changes while it restores the release" do
+    package = insert(:package, name: "replacement_delete_preview")
+    release = insert(:release, package: package, version: "1.0.0")
+    key = "tarballs/#{package.name}-#{release.version}.tar"
+    put_tarball(key, package.name, to_string(release.version), [{"old.txt", "old"}])
+    replacement = tarball(package.name, to_string(release.version), [{"new.txt", "new"}])
+
+    use_action_store("files/#{package.name}/1.0.0/old.txt", fn ->
+      Hexpm.Store.Memory.put("repo_bucket", key, replacement, [])
+    end)
+
+    assert {:snooze, 15} = perform_job(Workers.Delete, %{key: key, generation: "0001"})
   end
 
   @tag :capture_log

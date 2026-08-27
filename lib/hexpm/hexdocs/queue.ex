@@ -27,7 +27,7 @@ defmodule Hexpm.Hexdocs.Queue do
   @impl Broadway
   def handle_message(_processor, %Broadway.Message{} = message, _context) do
     with {:ok, data} <- JSON.decode(message.data),
-         {:ok, jobs} <- jobs_for(data),
+         {:ok, jobs} <- jobs_for(data, message.metadata[:message_id]),
          {:ok, _inserted} <- insert_jobs(jobs) do
       message
     else
@@ -39,55 +39,70 @@ defmodule Hexpm.Hexdocs.Queue do
 
   defp insert_jobs(jobs) do
     Hexpm.Repo.transaction(fn ->
-      Enum.map(jobs, fn {worker, key} ->
-        key
-        |> then(&worker.new(%{key: &1}))
+      Enum.map(jobs, fn {worker, args} ->
+        args
+        |> worker.new()
         |> Oban.insert!()
       end)
     end)
   end
 
-  defp jobs_for(%{"Event" => "s3:TestEvent"}), do: {:ok, []}
+  defp jobs_for(%{"Event" => "s3:TestEvent"}, _message_id), do: {:ok, []}
 
-  defp jobs_for(%{"Records" => records}) when is_list(records) do
+  defp jobs_for(%{"Records" => records}, message_id) when is_list(records) do
     Enum.reduce_while(records, {:ok, []}, fn record, {:ok, jobs} ->
-      case jobs_for_record(record) do
+      case jobs_for_record(record, message_id) do
         {:ok, record_jobs} -> {:cont, {:ok, jobs ++ record_jobs}}
         {:error, reason} -> {:halt, {:error, reason}}
       end
     end)
   end
 
-  defp jobs_for(%{"hexdocs:upload" => key}) when is_binary(key),
-    do: {:ok, [{Workers.Upload, key}]}
+  defp jobs_for(%{"hexdocs:upload" => key}, _message_id) when is_binary(key),
+    do: {:ok, [{Workers.Upload, %{key: key}}]}
 
-  defp jobs_for(%{"hexdocs:search" => key}) when is_binary(key),
-    do: {:ok, [{Workers.Search, key}]}
+  defp jobs_for(%{"hexdocs:search" => key}, _message_id) when is_binary(key),
+    do: {:ok, [{Workers.Search, %{key: key}}]}
 
-  defp jobs_for(%{"hexdocs:sitemap" => key}) when is_binary(key),
-    do: {:ok, [{Workers.Sitemap, key}]}
+  defp jobs_for(%{"hexdocs:sitemap" => key}, _message_id) when is_binary(key),
+    do: {:ok, [{Workers.Sitemap, %{key: key}}]}
 
-  defp jobs_for(data), do: {:error, {:unsupported_hexdocs_message, data}}
+  defp jobs_for(data, _message_id), do: {:error, {:unsupported_hexdocs_message, data}}
 
-  defp jobs_for_record(%{"eventName" => "ObjectCreated:" <> _, "s3" => s3}) do
-    key = decode_s3_key(s3)
+  defp jobs_for_record(%{"eventName" => "ObjectCreated:" <> _, "s3" => s3}, message_id) do
+    jobs_for_object(s3, message_id, &created_workers/1)
+  end
+
+  defp jobs_for_record(%{"eventName" => "ObjectRemoved:" <> _, "s3" => s3}, message_id) do
+    jobs_for_object(s3, message_id, &removed_workers/1)
+  end
+
+  defp jobs_for_record(record, _message_id), do: {:error, {:unsupported_s3_record, record}}
+
+  defp created_workers("hexpm"), do: [Workers.Upload, Workers.Search]
+  defp created_workers(_repository), do: [Workers.Upload]
+
+  defp removed_workers(_repository), do: [Workers.Delete]
+
+  defp jobs_for_object(%{"object" => %{"key" => encoded_key} = object}, message_id, workers) do
+    key = URI.decode_www_form(encoded_key)
 
     case Hexpm.Hexdocs.key_components(key) do
-      {:ok, "hexpm", _package, _version} -> {:ok, [{Workers.Upload, key}, {Workers.Search, key}]}
-      {:ok, _repository, _package, _version} -> {:ok, [{Workers.Upload, key}]}
-      :error -> {:ok, []}
+      {:ok, repository, _package, _version} ->
+        args = job_args(key, object_generation(object) || message_id)
+        {:ok, Enum.map(workers.(repository), &{&1, args})}
+
+      :error ->
+        {:ok, []}
     end
   end
 
-  defp jobs_for_record(%{"eventName" => "ObjectRemoved:" <> _, "s3" => s3}) do
-    key = decode_s3_key(s3)
+  defp jobs_for_object(s3, _message_id, _workers), do: {:error, {:malformed_s3_object, s3}}
 
-    if Hexpm.Hexdocs.key_components(key) == :error,
-      do: {:ok, []},
-      else: {:ok, [{Workers.Delete, key}]}
+  defp job_args(key, nil), do: %{key: key}
+  defp job_args(key, generation), do: %{key: key, generation: generation}
+
+  defp object_generation(object) do
+    object["sequencer"] || object["versionId"] || object["eTag"]
   end
-
-  defp jobs_for_record(record), do: {:error, {:unsupported_s3_record, record}}
-
-  defp decode_s3_key(%{"object" => %{"key" => key}}), do: URI.decode_www_form(key)
 end
