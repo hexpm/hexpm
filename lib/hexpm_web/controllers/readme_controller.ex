@@ -76,23 +76,43 @@ defmodule HexpmWeb.ReadmeController do
       {:ok, filename, content, available} ->
         html =
           if byte_size(content) > @max_doc_size do
-            "<p>This file is too large to display on Hex.pm.</p>"
+            too_large_notice(filename, package.name, version)
           else
             render_doc(filename, content, package.name, version)
           end
 
-        conn
-        |> put_resp_header("cache-control", "public, max-age=86400")
-        |> render(:show,
-          readme_html: html,
-          parent_origins: parent_origins(),
-          doc_kinds: Enum.map(available, &Atom.to_string/1),
-          doc_source: filename
-        )
+        render_show(conn, html, filename, available)
 
-      {:error, available} ->
-        send_not_found(conn, available)
+      {:error, :too_large, filename, available} ->
+        html = too_large_notice(filename, package.name, version)
+        render_show(conn, html, filename, available)
+
+      {:error, :not_found, available} ->
+        send_not_found(conn, available, cacheable: true)
+
+      {:error, :upstream_error, available} ->
+        send_not_found(conn, available, cacheable: false)
     end
+  end
+
+  defp render_show(conn, html, filename, available) do
+    conn
+    |> put_resp_header("cache-control", "public, max-age=86400")
+    |> render(:show,
+      readme_html: html,
+      parent_origins: parent_origins(),
+      doc_kinds: Enum.map(available, &Atom.to_string/1),
+      doc_source: filename
+    )
+  end
+
+  defp too_large_notice(filename, package_name, version) do
+    preview_url = Hexpm.Utils.preview_html_url(package_name, version)
+    escaped_filename = Plug.HTML.html_escape(filename)
+    escaped_url = Plug.HTML.html_escape(preview_url)
+
+    "<p>#{escaped_filename} is too large to display on Hex.pm. " <>
+      "<a href=\"#{escaped_url}\">View it in the file browser</a>.</p>"
   end
 
   defp fetch_doc(package_name, version, kind) do
@@ -100,25 +120,59 @@ defmodule HexpmWeb.ReadmeController do
     file_list_url = "#{cdn_url}/preview-files/#{package_name}-#{version}.json"
 
     case Hexpm.HTTP.impl().get(file_list_url, []) do
-      {:ok, 200, _headers, json} ->
-        files = Jason.decode!(json)
-        available = Files.available_kinds(files)
+      {:ok, 200, _headers, body} ->
+        case decode_file_list(body) do
+          {:ok, files} ->
+            resolved = Files.resolve_all(files)
+            available = Files.present_kinds(resolved)
 
-        case Files.resolve(kind, files) do
-          nil ->
-            {:error, available}
-
-          filename ->
-            doc_url = "#{cdn_url}/preview/#{package_name}/#{version}/#{filename}"
-
-            case Hexpm.HTTP.impl().get(doc_url, []) do
-              {:ok, 200, _headers, content} -> {:ok, filename, content, available}
-              _ -> {:error, available}
+            case Map.get(resolved, kind) do
+              nil -> {:error, :not_found, available}
+              filename -> fetch_document(cdn_url, package_name, version, filename, available)
             end
+
+          :error ->
+            {:error, :not_found, []}
         end
 
-      _ ->
-        {:error, []}
+      {:ok, status, _headers, _body} when status in 500..599 ->
+        {:error, :upstream_error, []}
+
+      {:ok, _status, _headers, _body} ->
+        {:error, :not_found, []}
+
+      {:error, _reason} ->
+        {:error, :upstream_error, []}
+    end
+  end
+
+  defp decode_file_list(body) when is_binary(body) do
+    case Jason.decode(body) do
+      {:ok, decoded} -> {:ok, decoded}
+      {:error, _} -> :error
+    end
+  end
+
+  defp decode_file_list(body), do: {:ok, body}
+
+  defp fetch_document(cdn_url, package_name, version, filename, available) do
+    doc_url = "#{cdn_url}/preview/#{package_name}/#{version}/#{filename}"
+
+    case Hexpm.HTTP.impl().get(doc_url, [], max_body_size: @max_doc_size) do
+      {:ok, 200, _headers, content} ->
+        {:ok, filename, content, available}
+
+      {:error, :body_too_large} ->
+        {:error, :too_large, filename, available}
+
+      {:ok, status, _headers, _body} when status in 500..599 ->
+        {:error, :upstream_error, available}
+
+      {:ok, _status, _headers, _body} ->
+        {:error, :not_found, available}
+
+      {:error, _reason} ->
+        {:error, :upstream_error, available}
     end
   end
 
@@ -174,9 +228,16 @@ defmodule HexpmWeb.ReadmeController do
     |> String.replace("&#39;", "'")
   end
 
-  defp send_not_found(conn, available) do
+  defp send_not_found(conn, available, opts \\ []) do
+    cache_control =
+      if Keyword.get(opts, :cacheable, true) do
+        "public, max-age=3600"
+      else
+        "no-store"
+      end
+
     conn
-    |> put_resp_header("cache-control", "public, max-age=3600")
+    |> put_resp_header("cache-control", cache_control)
     |> render(:no_readme,
       parent_origins: parent_origins(),
       doc_kinds: Enum.map(available, &Atom.to_string/1)

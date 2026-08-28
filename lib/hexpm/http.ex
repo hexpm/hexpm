@@ -31,9 +31,16 @@ defmodule Hexpm.HTTP do
 
   @impl Hexpm.HTTP.Interface
   def get(url, headers, opts \\ []) do
-    build_request(:get, url, headers, nil, opts)
-    |> Finch.request(Hexpm.Finch)
-    |> read_response()
+    case Keyword.pop(opts, :max_body_size) do
+      {nil, opts} ->
+        build_request(:get, url, headers, nil, opts)
+        |> Finch.request(Hexpm.Finch)
+        |> read_response()
+
+      {max_body_size, opts} ->
+        build_request(:get, url, headers, nil, opts)
+        |> stream_get(max_body_size)
+    end
   end
 
   @impl Hexpm.HTTP.Interface
@@ -67,6 +74,64 @@ defmodule Hexpm.HTTP do
   defp build_request(method, url, headers, body, opts) do
     params = encode_params(body, headers)
     Finch.build(method, url, headers, params, opts)
+  end
+
+  # Streams the response body, aborting as soon as more than `max_body_size`
+  # bytes have been received, without buffering the rest. Also rejects early
+  # if the response declares a content-length larger than the limit.
+  defp stream_get(request, max_body_size) do
+    acc = %{status: nil, headers: [], body: [], size: 0, too_large: false}
+
+    fun = fn
+      {:status, value}, acc ->
+        {:cont, %{acc | status: value}}
+
+      {:headers, value}, acc ->
+        headers = acc.headers ++ value
+
+        if content_length_too_large?(headers, max_body_size) do
+          {:halt, %{acc | headers: headers, too_large: true}}
+        else
+          {:cont, %{acc | headers: headers}}
+        end
+
+      {:data, value}, acc ->
+        size = acc.size + byte_size(value)
+
+        if size > max_body_size do
+          {:halt, %{acc | size: size, too_large: true}}
+        else
+          {:cont, %{acc | body: [acc.body, value], size: size}}
+        end
+
+      {:trailers, _value}, acc ->
+        {:cont, acc}
+    end
+
+    case Finch.stream_while(request, Hexpm.Finch, acc, fun) do
+      {:ok, %{too_large: true}} ->
+        {:error, :body_too_large}
+
+      {:ok, %{status: status, headers: headers, body: body}} ->
+        params = decode_body(IO.iodata_to_binary(body), headers)
+        {:ok, status, headers, params}
+
+      {:error, reason, _acc} ->
+        {:error, reason}
+    end
+  end
+
+  defp content_length_too_large?(headers, max_body_size) do
+    case List.keyfind(headers, "content-length", 0) do
+      {_, value} ->
+        case Integer.parse(value) do
+          {length, _} -> length > max_body_size
+          :error -> false
+        end
+
+      nil ->
+        false
+    end
   end
 
   defp encode_params(body, _headers) when is_binary(body) or is_nil(body) do

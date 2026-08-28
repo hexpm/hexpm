@@ -17,16 +17,19 @@ defmodule HexpmWeb.ReadmeControllerTest do
   defp mock_file_list_and_readme(package_name, version, filename, content) do
     file_list = Jason.encode!([filename])
 
-    Mox.expect(Hexpm.HTTP.Mock, :get, 2, fn url, _headers ->
-      cond do
-        String.contains?(url, "/preview-files/#{package_name}-#{version}.json") ->
-          {:ok, 200, [], file_list}
+    Mox.expect(Hexpm.HTTP.Mock, :get, fn url, _headers ->
+      if String.contains?(url, "/preview-files/#{package_name}-#{version}.json") do
+        {:ok, 200, [], file_list}
+      else
+        {:ok, 404, [], ""}
+      end
+    end)
 
-        String.ends_with?(url, "/#{filename}") ->
-          {:ok, 200, [], content}
-
-        true ->
-          {:ok, 404, [], ""}
+    Mox.expect(Hexpm.HTTP.Mock, :get, fn url, _headers, _opts ->
+      if String.ends_with?(url, "/#{filename}") do
+        {:ok, 200, [], content}
+      else
+        {:ok, 404, [], ""}
       end
     end)
   end
@@ -52,16 +55,19 @@ defmodule HexpmWeb.ReadmeControllerTest do
   defp mock_files_and_content(package_name, version, files, filename, content) do
     file_list = Jason.encode!(files)
 
-    Mox.expect(Hexpm.HTTP.Mock, :get, 2, fn url, _headers ->
-      cond do
-        String.contains?(url, "/preview-files/#{package_name}-#{version}.json") ->
-          {:ok, 200, [], file_list}
+    Mox.expect(Hexpm.HTTP.Mock, :get, fn url, _headers ->
+      if String.contains?(url, "/preview-files/#{package_name}-#{version}.json") do
+        {:ok, 200, [], file_list}
+      else
+        {:ok, 404, [], ""}
+      end
+    end)
 
-        String.ends_with?(url, "/#{filename}") ->
-          {:ok, 200, [], content}
-
-        true ->
-          {:ok, 404, [], ""}
+    Mox.expect(Hexpm.HTTP.Mock, :get, fn url, _headers, _opts ->
+      if String.ends_with?(url, "/#{filename}") do
+        {:ok, 200, [], content}
+      else
+        {:ok, 404, [], ""}
       end
     end)
   end
@@ -443,7 +449,162 @@ defmodule HexpmWeb.ReadmeControllerTest do
 
       assert conn.status == 200
       assert conn.resp_body =~ "too large to display"
+      assert conn.resp_body =~ "CHANGELOG.md"
+      assert conn.resp_body =~ Hexpm.Utils.preview_html_url(package.name, "1.0.0")
       refute conn.resp_body =~ "aaaaaaaaaa"
+    end
+
+    test "document fetch aborted for exceeding max body size renders a too-large notice", %{
+      package: package
+    } do
+      file_list = Jason.encode!(["CHANGELOG.md"])
+
+      Mox.expect(Hexpm.HTTP.Mock, :get, fn url, _headers ->
+        if String.contains?(url, "/preview-files/#{package.name}-1.0.0.json") do
+          {:ok, 200, [], file_list}
+        else
+          {:ok, 404, [], ""}
+        end
+      end)
+
+      Mox.expect(Hexpm.HTTP.Mock, :get, fn _url, _headers, _opts ->
+        {:error, :body_too_large}
+      end)
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/1.0.0/changelog")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "too large to display"
+      assert conn.resp_body =~ "CHANGELOG.md"
+    end
+
+    test "upstream failure fetching file list is not cached", %{package: package} do
+      Mox.expect(Hexpm.HTTP.Mock, :get, fn _url, _headers ->
+        {:ok, 502, [], ""}
+      end)
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/1.0.0/changelog")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "readme-not-found"
+      assert get_resp_header(conn, "cache-control") == ["no-store"]
+    end
+
+    test "connection error fetching file list is not cached", %{package: package} do
+      Mox.expect(Hexpm.HTTP.Mock, :get, fn _url, _headers ->
+        {:error, :timeout}
+      end)
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/1.0.0/changelog")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "readme-not-found"
+      assert get_resp_header(conn, "cache-control") == ["no-store"]
+    end
+
+    test "upstream failure fetching document is not cached", %{package: package} do
+      file_list = Jason.encode!(["CHANGELOG.md"])
+
+      Mox.expect(Hexpm.HTTP.Mock, :get, fn url, _headers ->
+        if String.contains?(url, "/preview-files/#{package.name}-1.0.0.json") do
+          {:ok, 200, [], file_list}
+        else
+          {:ok, 404, [], ""}
+        end
+      end)
+
+      Mox.expect(Hexpm.HTTP.Mock, :get, fn _url, _headers, _opts ->
+        {:ok, 503, [], ""}
+      end)
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/1.0.0/changelog")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "readme-not-found"
+      assert get_resp_header(conn, "cache-control") == ["no-store"]
+    end
+
+    test "genuinely missing file is still cached", %{package: package} do
+      mock_file_list(package.name, "1.0.0", ["README.md"])
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/1.0.0/changelog")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "readme-not-found"
+      assert get_resp_header(conn, "cache-control") == ["public, max-age=3600"]
+    end
+
+    test "non-list JSON file list degrades to not-found without crashing", %{package: package} do
+      Mox.expect(Hexpm.HTTP.Mock, :get, fn url, _headers ->
+        if String.contains?(url, "/preview-files/#{package.name}-1.0.0.json") do
+          {:ok, 200, [], Jason.encode!(%{"not" => "a list"})}
+        else
+          {:ok, 404, [], ""}
+        end
+      end)
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/1.0.0/changelog")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "readme-not-found"
+    end
+
+    test "already-decoded (non-binary) JSON file list body is tolerated", %{package: package} do
+      Mox.expect(Hexpm.HTTP.Mock, :get, fn url, _headers ->
+        if String.contains?(url, "/preview-files/#{package.name}-1.0.0.json") do
+          {:ok, 200, [{"content-type", "application/json"}], ["CHANGELOG.md"]}
+        else
+          {:ok, 404, [], ""}
+        end
+      end)
+
+      Mox.expect(Hexpm.HTTP.Mock, :get, fn _url, _headers, _opts ->
+        {:ok, 200, [], "# Changelog"}
+      end)
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/1.0.0/changelog")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "Changelog"
+    end
+
+    test "invalid JSON file list degrades to not-found without a 500", %{package: package} do
+      Mox.expect(Hexpm.HTTP.Mock, :get, fn url, _headers ->
+        if String.contains?(url, "/preview-files/#{package.name}-1.0.0.json") do
+          {:ok, 200, [], "not json {{{"}
+        else
+          {:ok, 404, [], ""}
+        end
+      end)
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/1.0.0/changelog")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "readme-not-found"
     end
 
     test "readme show page also reports doc-files", %{package: package} do
