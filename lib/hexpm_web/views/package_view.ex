@@ -177,6 +177,17 @@ defmodule HexpmWeb.PackageView do
     ~p"/packages/#{package.repository}/#{package}/dependents?#{options}"
   end
 
+  def doc_page_path(package, release, version_pinned?, kind) do
+    base =
+      if version_pinned? && release do
+        ViewHelpers.path_for_release(package, release)
+      else
+        ViewHelpers.path_for_package(package)
+      end
+
+    if kind == :readme, do: base, else: "#{base}/#{kind}"
+  end
+
   @doc """
   This function turns an audit_log struct into a short description.
 

@@ -1,59 +1,110 @@
 <% description = @package.meta.description %>
 
-<.package_layout {@package_layout} active_tab={:readme} version_pinned?={@version_pinned?}>
+<.package_layout
+  {@package_layout}
+  active_tab={:readme}
+  version_pinned?={@version_pinned?}
+  doc_kind={@doc_kind}
+>
   <:inner_content>
-    <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-6">
+    <div class="flex gap-5 items-start">
       <%= if ViewHelpers.main_repository?(@package) and @current_release do %>
-        <div
-          id="readme-loading"
-          class="flex items-center justify-center py-12 text-grey-400 dark:text-grey-300"
+        <nav
+          id="doc-sidebar"
+          aria-label="Documentation files"
+          class="hidden w-[200px] shrink-0 flex-col gap-1 bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4"
         >
-          <svg class="animate-spin h-6 w-6 mr-3" viewBox="0 0 24 24" fill="none">
-            <circle
-              class="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="4"
+          <p class="text-[10px] font-medium uppercase tracking-wide text-grey-400 dark:text-grey-300 mb-2">
+            Files
+          </p>
+          <%= for kind <- HexpmWeb.Docs.Files.kinds() do %>
+            <a
+              data-doc-kind={kind}
+              hidden
+              href={doc_page_path(@package, @current_release, @version_pinned?, kind)}
+              aria-current={@doc_kind == kind && "page"}
+              class={[
+                "flex items-center gap-2 rounded px-2 py-1.5 text-sm font-medium transition-colors",
+                @doc_kind == kind &&
+                  "bg-grey-50 dark:bg-grey-700/60 text-grey-900 dark:text-white",
+                @doc_kind != kind &&
+                  "text-grey-500 dark:text-grey-300 hover:text-grey-700 dark:hover:text-grey-200"
+              ]}
             >
-            </circle>
-            <path
-              class="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-            >
-            </path>
-          </svg>
-          Loading README...
-        </div>
-
-        <%= if description do %>
-          <div
-            id="readme-fallback"
-            class="text-grey-600 dark:text-grey-300 mb-8 leading-relaxed hidden"
+              {HexpmWeb.ViewIcons.icon(:heroicon, "document", class: "size-4 shrink-0")}
+              <span class="truncate">{HexpmWeb.Docs.Files.label(kind)}</span>
+            </a>
+          <% end %>
+          <p
+            id="doc-source"
+            class="hidden mt-4 pt-3 border-t border-grey-200 dark:border-grey-700 text-[10px] font-mono uppercase tracking-wide text-grey-400 dark:text-grey-300 truncate"
           >
-            {ViewHelpers.text_length(description, 300) |> text_to_html(insert_brs: false)}
-          </div>
-        <% end %>
-
-        <iframe
-          id="readme-frame"
-          src={"#{ViewHelpers.doc_url(@package.name, @current_release.version, @doc_kind)}"}
-          sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
-          loading="lazy"
-          referrerpolicy="no-referrer"
-          title={"README for #{ViewHelpers.package_name(@package)}"}
-          class="w-full border-0 opacity-0 h-0 overflow-hidden"
-        >
-        </iframe>
-      <% else %>
-        <%= if description do %>
-          <div class="text-grey-600 dark:text-grey-300 mb-8 leading-relaxed">
-            {ViewHelpers.text_length(description, 300) |> text_to_html(insert_brs: false)}
-          </div>
-        <% end %>
+          </p>
+        </nav>
       <% end %>
+
+      <div class="flex-1 min-w-0 bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-6">
+        <%= if ViewHelpers.main_repository?(@package) and @current_release do %>
+          <div
+            id="readme-loading"
+            class="flex items-center justify-center py-12 text-grey-400 dark:text-grey-300"
+          >
+            <svg class="animate-spin h-6 w-6 mr-3" viewBox="0 0 24 24" fill="none">
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              >
+              </circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              >
+              </path>
+            </svg>
+            Loading {HexpmWeb.Docs.Files.label(@doc_kind)}...
+          </div>
+
+          <%= if @doc_kind == :readme do %>
+            <%= if description do %>
+              <div
+                id="readme-fallback"
+                class="text-grey-600 dark:text-grey-300 mb-8 leading-relaxed hidden"
+              >
+                {ViewHelpers.text_length(description, 300) |> text_to_html(insert_brs: false)}
+              </div>
+            <% end %>
+          <% else %>
+            <div
+              id="readme-fallback"
+              class="text-grey-600 dark:text-grey-300 mb-8 leading-relaxed hidden"
+            >
+              This package does not publish a {HexpmWeb.Docs.Files.label(@doc_kind)} file.
+            </div>
+          <% end %>
+
+          <iframe
+            id="readme-frame"
+            src={"#{ViewHelpers.doc_url(@package.name, @current_release.version, @doc_kind)}"}
+            sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+            loading="lazy"
+            referrerpolicy="no-referrer"
+            title={"#{HexpmWeb.Docs.Files.label(@doc_kind)} for #{ViewHelpers.package_name(@package)}"}
+            class="w-full border-0 opacity-0 h-0 overflow-hidden"
+          >
+          </iframe>
+        <% else %>
+          <%= if description do %>
+            <div class="text-grey-600 dark:text-grey-300 mb-8 leading-relaxed">
+              {ViewHelpers.text_length(description, 300) |> text_to_html(insert_brs: false)}
+            </div>
+          <% end %>
+        <% end %>
+      </div>
     </div>
   </:inner_content>
 </.package_layout>

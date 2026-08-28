@@ -836,6 +836,39 @@ defmodule HexpmWeb.PackageControllerTest do
       conn = get(build_conn(), "/packages/nonexistent_pkg/changelog")
       assert response(conn, 404)
     end
+
+    test "show page renders hidden doc sidebar and Documentation tab" do
+      package = insert(:package)
+
+      insert(:release,
+        package: package,
+        version: "0.0.1",
+        meta: build(:release_metadata, app: package.name)
+      )
+
+      body = response(get(build_conn(), "/packages/#{package.name}"), 200)
+
+      assert body =~ "Documentation"
+      assert body =~ ~s(id="doc-sidebar")
+      assert body =~ ~s(data-doc-kind="changelog")
+      assert body =~ ~s(data-doc-kind="threat_model")
+      assert body =~ ~s(id="doc-source")
+    end
+
+    test "doc page marks its sidebar entry active and shows kind-specific fallback" do
+      package = insert(:package)
+
+      insert(:release,
+        package: package,
+        version: "0.0.1",
+        meta: build(:release_metadata, app: package.name)
+      )
+
+      body = response(get(build_conn(), "/packages/#{package.name}/security"), 200)
+
+      assert body =~ ~s(aria-current="page")
+      assert body =~ "does not publish a Security file"
+    end
   end
 
   defp escape(html) do
