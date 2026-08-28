@@ -507,7 +507,7 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
     @credentials %{
       "authorization_codes" => ~w(code code_challenge),
       "device_codes" => ~w(device_code user_code verification_uri_complete),
-      "oauth_tokens" => ~w(refresh_token_hash),
+      "oauth_tokens" => ~w(refresh_token_hash grant_reference),
       "user_sessions" => ~w(session_token),
       "password_resets" => ~w(key),
       "account_deletion_requests" => ~w(key),
