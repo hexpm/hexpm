@@ -54,7 +54,7 @@ Some pages load resources directly from third parties, so your browser contacts 
 
 ### Billing
 
-Organizations with a paid subscription provide billing details such as the billing name, address and VAT number. Payments are processed by Stripe, and we determine the country for VAT from the paying user's IP address, using a database held on our own servers. The legal bases are our contract with the organization, for charging for the service, and legal obligation, because Swedish accounting and tax law requires us to keep billing, payment and tax records. We keep those records for as long as that law requires.
+Organizations with a paid subscription provide billing details such as the billing name, address and VAT number. Payments are processed by Stripe. We also record the IP address the payment details were entered from and the country it resolves to, because the VAT rate depends on the country you give us and we have to be able to show it was the right one. The legal bases are our contract with the organization, for charging for the service, and legal obligation, because Swedish accounting and tax law requires us to keep billing, payment and tax records. We keep those records for as long as that law requires.
 
 ### Vulnerability reports
 
