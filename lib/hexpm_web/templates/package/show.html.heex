@@ -66,7 +66,9 @@
               >
               </path>
             </svg>
-            Loading {HexpmWeb.Docs.Files.label(@doc_kind)}...
+            Loading {if @doc_kind == :readme,
+              do: "README",
+              else: HexpmWeb.Docs.Files.label(@doc_kind)}...
           </div>
 
           <%= if @doc_kind == :readme do %>
@@ -98,9 +100,15 @@
           >
           </iframe>
         <% else %>
-          <%= if description do %>
+          <%= if @doc_kind == :readme do %>
+            <%= if description do %>
+              <div class="text-grey-600 dark:text-grey-300 mb-8 leading-relaxed">
+                {ViewHelpers.text_length(description, 300) |> text_to_html(insert_brs: false)}
+              </div>
+            <% end %>
+          <% else %>
             <div class="text-grey-600 dark:text-grey-300 mb-8 leading-relaxed">
-              {ViewHelpers.text_length(description, 300) |> text_to_html(insert_brs: false)}
+              Documentation files are not available for private packages.
             </div>
           <% end %>
         <% end %>

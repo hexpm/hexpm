@@ -271,7 +271,7 @@ defmodule HexpmWeb.PackageController do
           ),
         description: package.meta.description,
         container: "container",
-        canonical_url: ~p"/packages/#{package}",
+        canonical_url: canonical_url(package, doc_kind),
         releases: releases,
         version_pinned?: type == :release,
         dependants: dependants,
@@ -287,6 +287,11 @@ defmodule HexpmWeb.PackageController do
         )
     )
   end
+
+  defp canonical_url(package, :readme), do: ~p"/packages/#{package}"
+
+  defp canonical_url(package, doc_kind),
+    do: "#{HexpmWeb.ViewHelpers.path_for_package(package)}/#{doc_kind}"
 
   defp show_docs_html_url(package, :package, _release, releases) do
     latest_release_with_docs =

@@ -250,6 +250,7 @@ defmodule HexpmWeb.Components.PackageLayout do
                         kind
                       )
                     }
+                    aria-current={@doc_kind == kind && "page"}
                     class={mobile_tab_class(@doc_kind == kind)}
                   >
                     <div class="flex min-w-0 items-center gap-3">

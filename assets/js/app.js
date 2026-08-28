@@ -152,9 +152,14 @@ window.addEventListener("message", function (event) {
       return typeof k === "string";
     });
 
-    if (kinds.length > 1) {
+    var hideRail = kinds.length === 0 || (kinds.length === 1 && kinds[0] === "readme");
+
+    if (!hideRail) {
       document.querySelectorAll("[data-doc-kind]").forEach(function (el) {
-        if (kinds.indexOf(el.getAttribute("data-doc-kind")) >= 0) {
+        if (
+          kinds.indexOf(el.getAttribute("data-doc-kind")) >= 0 ||
+          el.getAttribute("aria-current") === "page"
+        ) {
           el.removeAttribute("hidden");
         }
       });

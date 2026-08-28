@@ -880,7 +880,7 @@ defmodule HexpmWeb.PackageControllerTest do
         |> test_login(user1)
         |> get("/packages/#{repository1.name}/#{package3.name}/0.0.1/changelog")
 
-      assert response(conn, 200) =~ "Changelog"
+      assert response(conn, 200) =~ "Documentation files are not available for private packages."
     end
 
     test "renders for repository/name unversioned changelog", %{
@@ -893,7 +893,22 @@ defmodule HexpmWeb.PackageControllerTest do
         |> test_login(user1)
         |> get("/packages/#{repository1.name}/#{package3.name}/changelog")
 
-      assert response(conn, 200) =~ "Changelog"
+      assert response(conn, 200) =~ "Documentation files are not available for private packages."
+    end
+
+    test "doc page sets canonical URL to its own page, not the bare package page" do
+      package = insert(:package)
+
+      insert(:release,
+        package: package,
+        version: "0.0.1",
+        meta: build(:release_metadata, app: package.name)
+      )
+
+      conn = get(build_conn(), "/packages/#{package.name}/changelog")
+
+      assert response(conn, 200) =~
+               ~s(<link href="/packages/#{package.name}/changelog" rel="canonical">)
     end
   end
 

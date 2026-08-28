@@ -227,9 +227,6 @@ defmodule HexpmWeb.Router do
     for kind <- HexpmWeb.Docs.Files.kinds(), kind != :readme do
       kind_str = Atom.to_string(kind)
 
-      get "/packages/:repository/:name/#{kind}", PackageController, :docs_file,
-        assigns: %{doc_kind: kind_str}
-
       get "/packages/:repository/:name/:version/#{kind}", PackageController, :docs_file,
         assigns: %{doc_kind: kind_str}
     end
