@@ -8,9 +8,9 @@ One part of the service works differently: an organization's private packages an
 
 ### Accounts
 
-To register you have to provide a username and an email address, and a password unless you sign up with GitHub; without them we can't create an account. You can add profile information, such as a full name and social media handles, if you want to. Passwords are stored hashed, using bcrypt. If you choose to sign in with GitHub we receive your GitHub account identity.
+To register you have to provide a username and an email address, and a password unless you sign up with GitHub; without them we can't create an account. You can add profile information, such as a full name and social media handles, if you want to. If you choose to sign in with GitHub we receive your GitHub account identity.
 
-Your profile is public: your username always, and your email address, which is shown by default and which you can hide in your dashboard. Your full name is shown only if you choose to show it. The public packages you own are also public. Your organization memberships and the private packages those organizations own aren't. Nothing else about your account, including your password, is made public. Non-public data is shared only with the providers on the [Subprocessors](/policies/subprocessors) page and in the cases described under "Vulnerability reports" and "Disclosure" below.
+Your profile is public: your username always, and your email address, which is shown by default and which you can hide in your dashboard. Your full name is shown only if you choose to show it. The public packages you own are also public. Your organization memberships and the private packages those organizations own aren't. Nothing else about your account is made public. Non-public data is shared only with the providers on the [Subprocessors](/policies/subprocessors) page and in the cases described under "Vulnerability reports" and "Disclosure" below.
 
 We send transactional email, such as address verification and password resets, through the email provider on the [Subprocessors](/policies/subprocessors) page.
 
@@ -20,19 +20,19 @@ We process account data to operate your account and deliver the service, so the 
 
 Packages published to the public repository are public. Anyone can download the full contents of a package without an account, the metadata is shown on hex.pm, and the documentation is published on hexdocs.pm. Publishing requires an account; downloading doesn't.
 
-Package contents and metadata may contain personal data the publisher chose to include, for example author names and email addresses. If a package contains personal data about you, it came from the publisher, not from us collecting it from you; see "Your rights" below. Treat anything published publicly as public immediately and forever. If credentials are published by accident, change them immediately.
+Package contents and metadata may contain personal data the publisher chose to include, for example author names and email addresses. If a package contains personal data about you, it came from the publisher, not from us collecting it from you; see "Your rights" below.
 
 We process public packages to run the registry, on the basis of our contract with the publisher. Published packages stay available indefinitely, including after the publisher deletes their account, unless removed under our policies.
 
 ### Private packages
 
-Packages published to an organization's private repository aren't public. They're available only to members of that organization, and their documentation is served to authenticated members from the organization's subdomain of hexorgs.pm. The organization is the controller of this content and we process it under the [Data Processing Agreement](/policies/dpa); it's also covered by the confidentiality terms of the [Terms of Service](/policies/termsofservice). When a subscription ends we keep the organization's content for 90 days so the organization can retrieve it. After that we may delete it at any time, and we delete it on request.
+Packages published to an organization's private repository aren't public. They're available only to members of that organization, and so is their documentation. The organization is the controller of this content and we process it under the [Data Processing Agreement](/policies/dpa); it's also covered by the confidentiality terms of the [Terms of Service](/policies/termsofservice). When a subscription ends we keep the organization's content for 90 days so the organization can retrieve it. After that we may delete it at any time, and we delete it on request.
 
 ### Logs and security
 
-The package repository at repo.hex.pm writes an access log for every request. Each entry contains the client IP address, the time, the request method and path, the response status, the user agent and the request size. The image proxy at img.hex.pm, which serves images embedded in package readmes, writes the same log. These logs are stored in a private storage bucket and are available to our administrators and to the infrastructure providers on the [Subprocessors](/policies/subprocessors) page. We use them for security, for investigating abuse and to compute the aggregate download counts shown on hex.pm. We archive them daily and keep the archives, because the download counts we publish for every past day are derived from them.
+The package repository at repo.hex.pm writes an access log for every request. Each entry contains the client IP address, the time, the request method and path, the response status, the user agent and the request size. The image proxy at img.hex.pm, which serves images embedded in package readmes, writes the same log. These logs are available to our administrators and to the infrastructure providers on the [Subprocessors](/policies/subprocessors) page. We use them for security, for investigating abuse and to compute the aggregate download counts shown on hex.pm. We archive them daily and keep the archives, because the download counts we publish for every past day are derived from them.
 
-For the hex.pm website and API, the application logs the method, path, response status and timing of each request without the IP address, and the load balancer in front of it separately logs every request with the client IP address, user agent and referrer. We don't write access logs for hexdocs.pm or hexorgs.pm.
+Requests to the hex.pm website and API are logged with the client IP address, user agent and referrer. We don't write access logs for hexdocs.pm or hexorgs.pm.
 
 When you take an action that changes something, such as publishing a package, generating a key or changing account settings, we record it in an audit log together with the IP address and user agent of the request that performed it. You can see your own audit log in the dashboard, and organization administrators can see their organization's. We keep audit log entries indefinitely, because their purpose is to be a permanent record of what changed. Entries about public packages and other public content are kept even after the account or organization that made them is deleted, and they keep a copy of who acted. Entries about an organization's private content are part of that organization's data under the [Data Processing Agreement](/policies/dpa) and are deleted with the rest of it. On request we can remove the identifying details from your entries.
 
@@ -60,7 +60,7 @@ Organizations with a paid subscription provide billing details such as the billi
 
 When someone submits a vulnerability report for a package, we send the report to the [Erlang Ecosystem Foundation CNA](https://cna.erlef.org), which triages vulnerabilities in the ecosystem and contacts the people involved. The submission contains the report's summary and description, the name, username and primary email address of the reporter, and the same three fields for each of the package's owners. For a package owned by an organization it also includes its administrators, or all its members if no administrator has a verified email address. The primary email address is sent even if you've hidden your email address on your public profile.
 
-The Foundation decides for itself how it uses this data, so it's a separate controller and a recipient of the data rather than a provider acting on our behalf, and it isn't listed on the [Subprocessors](/policies/subprocessors) page. The legal basis for the disclosure is our legitimate interest, shared with the ecosystem, in coordinated handling of security vulnerabilities.
+The Foundation decides for itself how it uses this data, so it's a separate controller and a recipient of the data rather than a provider acting on our behalf. The legal basis for the disclosure is our legitimate interest, shared with the ecosystem, in coordinated handling of security vulnerabilities.
 
 ### Communication
 
@@ -92,7 +92,7 @@ Any questions about this Privacy Policy should be addressed to <support@hex.pm>.
 
 ### Changes
 
-We may change this Privacy Policy from time to time. The detailed history of changes can be found in the [git repository](https://github.com/hexpm/hexpm/blob/main/lib/hexpm_web/templates/policy/privacy.html.md) history for this document. We encourage you to check this page for changes when you use the service.
+We may change this Privacy Policy from time to time. The detailed history of changes can be found in the [git repository](https://github.com/hexpm/hexpm/blob/main/lib/hexpm_web/templates/policy/privacy.html.md) history for this document.
 
 ### Credit and License
 
