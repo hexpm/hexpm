@@ -34,15 +34,15 @@ defmodule HexpmWeb.Docs.FilesTest do
       assert Files.resolve(:changelog, ["ChangeLog"]) == "ChangeLog"
     end
 
-    test "prefers .md, then .markdown, then bare, then .txt" do
+    test "prefers .md, then .markdown, then .txt, then bare" do
       files = ["CHANGELOG.txt", "CHANGELOG", "CHANGELOG.markdown", "CHANGELOG.md"]
       assert Files.resolve(:changelog, files) == "CHANGELOG.md"
 
       assert Files.resolve(:changelog, ["CHANGELOG.txt", "CHANGELOG", "CHANGELOG.markdown"]) ==
                "CHANGELOG.markdown"
 
-      assert Files.resolve(:changelog, ["CHANGELOG.txt", "CHANGELOG"]) == "CHANGELOG"
-      assert Files.resolve(:changelog, ["CHANGELOG.txt"]) == "CHANGELOG.txt"
+      assert Files.resolve(:changelog, ["CHANGELOG.txt", "CHANGELOG"]) == "CHANGELOG.txt"
+      assert Files.resolve(:changelog, ["CHANGELOG"]) == "CHANGELOG"
     end
 
     test "breaks ties within an extension lexicographically" do
@@ -73,8 +73,22 @@ defmodule HexpmWeb.Docs.FilesTest do
     test "readme resolution matches conventional names" do
       assert Files.resolve(:readme, ["README.md", "LICENSE"]) == "README.md"
       assert Files.resolve(:readme, ["readme.markdown"]) == "readme.markdown"
-      # bare now beats .txt (intentional change from the old README list)
-      assert Files.resolve(:readme, ["README.txt", "README"]) == "README"
+      assert Files.resolve(:readme, ["README.txt", "README"]) == "README.txt"
+    end
+
+    test "does not match a filename ending in a bare trailing dot" do
+      assert Files.resolve(:readme, ["README."]) == nil
+      assert Files.resolve(:readme, ["README"]) == "README"
+      assert Files.resolve(:readme, ["README.md"]) == "README.md"
+    end
+
+    test "tolerates malformed file lists instead of raising" do
+      assert Files.resolve(:readme, ["README.md", nil]) == "README.md"
+      assert Files.resolve(:readme, [1, "README.md"]) == "README.md"
+      assert Files.resolve(:readme, [["nested"], "README.md"]) == "README.md"
+      assert Files.resolve(:readme, [%{}]) == nil
+      assert Files.resolve(:readme, %{"files" => []}) == nil
+      assert Files.resolve(:readme, nil) == nil
     end
   end
 
@@ -82,5 +96,56 @@ defmodule HexpmWeb.Docs.FilesTest do
     files = ["LICENSE", "README.md", "CHANGELOG.md", "mix.exs", "lib/a.ex"]
     assert Files.available_kinds(files) == [:readme, :changelog, :license]
     assert Files.available_kinds(["mix.exs"]) == []
+  end
+
+  test "available_kinds/1 tolerates malformed file lists instead of raising" do
+    assert Files.available_kinds(["README.md", nil, 1, ["x"], %{}]) == [:readme]
+    assert Files.available_kinds(%{"files" => []}) == []
+    assert Files.available_kinds(nil) == []
+  end
+
+  describe "resolve_all/1" do
+    test "matches resolve/2 for every kind on a mixed file list" do
+      files = [
+        "README.md",
+        "CHANGELOG.txt",
+        "LICENSE",
+        "docs/SECURITY.md",
+        "support.MD",
+        "ACKNOWLEDGEMENTS.markdown",
+        "THREAT-MODEL.md",
+        nil,
+        1,
+        ["nested"],
+        %{}
+      ]
+
+      resolved = Files.resolve_all(files)
+
+      for kind <- Files.kinds() do
+        assert Map.get(resolved, kind) == Files.resolve(kind, files)
+      end
+    end
+
+    test "returns an empty map for a malformed file list" do
+      assert Files.resolve_all(%{"files" => []}) == %{}
+      assert Files.resolve_all(nil) == %{}
+    end
+  end
+
+  describe "present_kinds/1" do
+    test "returns kinds in canonical order regardless of map insertion order" do
+      resolved = %{
+        threat_model: "THREAT_MODEL.md",
+        readme: "README.md",
+        license: "LICENSE"
+      }
+
+      assert Files.present_kinds(resolved) == [:readme, :license, :threat_model]
+    end
+
+    test "returns an empty list for an empty map" do
+      assert Files.present_kinds(%{}) == []
+    end
   end
 end
