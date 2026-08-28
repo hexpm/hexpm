@@ -1,9 +1,10 @@
 defmodule HexpmWeb.ReadmeController do
   use HexpmWeb, :controller
 
+  alias HexpmWeb.Docs.Files
   alias HexpmWeb.Readme.{Sanitizer, TaskList, URLRewriter}
 
-  @readme_filenames ~w(README.md readme.md README.markdown readme.markdown README.txt readme.txt README readme)
+  @max_doc_size 2 * 1024 * 1024
 
   plug :put_root_layout, false
   plug :put_layout, false
@@ -14,7 +15,16 @@ defmodule HexpmWeb.ReadmeController do
     |> send_resp(404, "Not Found")
   end
 
-  def show(conn, %{"version" => version} = params) do
+  def show(conn, params), do: serve(conn, params, :readme)
+
+  def show_doc(conn, params) do
+    case Files.parse_segment(conn.assigns.doc_kind) do
+      nil -> not_found(conn, params)
+      kind -> serve(conn, params, kind)
+    end
+  end
+
+  defp serve(conn, %{"version" => version} = params, kind) do
     name = params["name"]
     package = Packages.get("hexpm", name)
 
@@ -22,16 +32,16 @@ defmodule HexpmWeb.ReadmeController do
       release = Enum.find(Releases.all(package), &(to_string(&1.version) == version))
 
       if release do
-        serve_readme(conn, package, release)
+        serve_doc(conn, package, release, kind)
       else
-        send_no_readme(conn)
+        send_not_found(conn, [])
       end
     else
-      send_no_readme(conn)
+      send_not_found(conn, [])
     end
   end
 
-  def show(conn, params) do
+  defp serve(conn, params, kind) do
     name = params["name"]
     package = Packages.get("hexpm", name)
 
@@ -47,62 +57,72 @@ defmodule HexpmWeb.ReadmeController do
       if release do
         conn
         |> put_resp_header("cache-control", "public, max-age=3600")
-        |> redirect(to: "/#{name}/#{release.version}")
+        |> redirect(to: doc_path(name, release.version, kind))
       else
-        send_no_readme(conn)
+        send_not_found(conn, [])
       end
     else
-      send_no_readme(conn)
+      send_not_found(conn, [])
     end
   end
 
-  defp serve_readme(conn, package, release) do
+  defp doc_path(name, version, :readme), do: "/#{name}/#{version}"
+  defp doc_path(name, version, kind), do: "/#{name}/#{version}/#{kind}"
+
+  defp serve_doc(conn, package, release, kind) do
     version = to_string(release.version)
 
-    case fetch_readme(package.name, version) do
-      {:ok, filename, content} ->
-        html = render_readme(filename, content, package.name, version)
+    case fetch_doc(package.name, version, kind) do
+      {:ok, filename, content, available} ->
+        html =
+          if byte_size(content) > @max_doc_size do
+            "<p>This file is too large to display on Hex.pm.</p>"
+          else
+            render_doc(filename, content, package.name, version)
+          end
 
         conn
         |> put_resp_header("cache-control", "public, max-age=86400")
-        |> render(:show, readme_html: html, parent_origins: parent_origins())
+        |> render(:show,
+          readme_html: html,
+          parent_origins: parent_origins(),
+          doc_kinds: Enum.map(available, &Atom.to_string/1),
+          doc_source: filename
+        )
 
-      :error ->
-        send_no_readme(conn)
+      {:error, available} ->
+        send_not_found(conn, available)
     end
   end
 
-  defp fetch_readme(package_name, version) do
+  defp fetch_doc(package_name, version, kind) do
     cdn_url = Application.fetch_env!(:hexpm, :cdn_url)
     file_list_url = "#{cdn_url}/preview-files/#{package_name}-#{version}.json"
 
     case Hexpm.HTTP.impl().get(file_list_url, []) do
       {:ok, 200, _headers, json} ->
         files = Jason.decode!(json)
+        available = Files.available_kinds(files)
 
-        case find_readme_file(files) do
+        case Files.resolve(kind, files) do
           nil ->
-            :error
+            {:error, available}
 
           filename ->
-            readme_url = "#{cdn_url}/preview/#{package_name}/#{version}/#{filename}"
+            doc_url = "#{cdn_url}/preview/#{package_name}/#{version}/#{filename}"
 
-            case Hexpm.HTTP.impl().get(readme_url, []) do
-              {:ok, 200, _headers, content} -> {:ok, filename, content}
-              _ -> :error
+            case Hexpm.HTTP.impl().get(doc_url, []) do
+              {:ok, 200, _headers, content} -> {:ok, filename, content, available}
+              _ -> {:error, available}
             end
         end
 
       _ ->
-        :error
+        {:error, []}
     end
   end
 
-  defp find_readme_file(files) do
-    Enum.find(@readme_filenames, &(&1 in files))
-  end
-
-  defp render_readme(filename, content, package_name, version) do
+  defp render_doc(filename, content, package_name, version) do
     ext = Path.extname(filename) |> String.downcase()
 
     html =
@@ -154,10 +174,13 @@ defmodule HexpmWeb.ReadmeController do
     |> String.replace("&#39;", "'")
   end
 
-  defp send_no_readme(conn) do
+  defp send_not_found(conn, available) do
     conn
     |> put_resp_header("cache-control", "public, max-age=3600")
-    |> render(:no_readme, parent_origins: parent_origins())
+    |> render(:no_readme,
+      parent_origins: parent_origins(),
+      doc_kinds: Enum.map(available, &Atom.to_string/1)
+    )
   end
 
   defp parent_origins do

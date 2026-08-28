@@ -99,6 +99,11 @@ defmodule HexpmWeb.Router do
   scope "/", HexpmWeb, host: "readme." do
     pipe_through :readme
 
+    for kind <- ~w(changelog license security support acknowledgments threat_model) do
+      get "/:name/:version/#{kind}", ReadmeController, :show_doc, assigns: %{doc_kind: kind}
+      get "/:name/#{kind}", ReadmeController, :show_doc, assigns: %{doc_kind: kind}
+    end
+
     get "/:name/:version", ReadmeController, :show
     get "/:name", ReadmeController, :show
     match :*, "/*path", ReadmeController, :not_found

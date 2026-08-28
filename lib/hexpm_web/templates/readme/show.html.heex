@@ -46,6 +46,12 @@
 
         sendHeight();
         new ResizeObserver(sendHeight).observe(document.body);
+
+        var docKinds = <%= raw(Jason.encode!(@doc_kinds)) %>;
+        var docSource = <%= raw(Jason.encode!(@doc_source)) %>;
+        origins.forEach(function(o) {
+          window.parent.postMessage({type: "doc-files", kinds: docKinds, source: docSource}, o);
+        });
       });
     </script>
   </body>

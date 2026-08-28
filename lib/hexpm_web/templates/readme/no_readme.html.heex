@@ -4,8 +4,10 @@
   <body>
     <script nonce={@script_src_nonce}>
       var origins = <%= raw(Jason.encode!(@parent_origins)) %>;
+      var docKinds = <%= raw(Jason.encode!(@doc_kinds)) %>;
       origins.forEach(function(o) {
         window.parent.postMessage({type: 'readme-not-found'}, o);
+        window.parent.postMessage({type: 'doc-files', kinds: docKinds}, o);
       });
     </script>
   </body>

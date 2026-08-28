@@ -49,6 +49,23 @@ defmodule HexpmWeb.ReadmeControllerTest do
     end)
   end
 
+  defp mock_files_and_content(package_name, version, files, filename, content) do
+    file_list = Jason.encode!(files)
+
+    Mox.expect(Hexpm.HTTP.Mock, :get, 2, fn url, _headers ->
+      cond do
+        String.contains?(url, "/preview-files/#{package_name}-#{version}.json") ->
+          {:ok, 200, [], file_list}
+
+        String.ends_with?(url, "/#{filename}") ->
+          {:ok, 200, [], content}
+
+        true ->
+          {:ok, 404, [], ""}
+      end
+    end)
+  end
+
   describe "show/2" do
     test "renders README for package with version", %{package: package} do
       mock_file_list_and_readme(
@@ -338,6 +355,114 @@ defmodule HexpmWeb.ReadmeControllerTest do
       assert conn.status == 200
       assert conn.resp_body =~ "http://localhost:5000/img/fetch/"
       refute conn.resp_body =~ ~s[src="https://example.com/logo.png"]
+    end
+  end
+
+  describe "show_doc/2" do
+    test "renders a markdown changelog", %{package: package} do
+      mock_files_and_content(
+        package.name,
+        "1.0.0",
+        ["README.md", "CHANGELOG.md"],
+        "CHANGELOG.md",
+        "# Changelog\n\n## v1.0.0\n\n- First release"
+      )
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/1.0.0/changelog")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "First release"
+      assert conn.resp_body =~ ~s("doc-files")
+      assert conn.resp_body =~ ~s(["readme","changelog"])
+      assert conn.resp_body =~ "CHANGELOG.md"
+      assert get_resp_header(conn, "cache-control") == ["public, max-age=86400"]
+    end
+
+    test "renders a bare LICENSE file as escaped pre", %{package: package} do
+      mock_files_and_content(
+        package.name,
+        "1.0.0",
+        ["README.md", "LICENSE"],
+        "LICENSE",
+        "Apache License <2.0>"
+      )
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/1.0.0/license")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "Apache License &lt;2.0&gt;"
+    end
+
+    test "missing kind renders not-found page that still reports doc-files", %{package: package} do
+      mock_file_list(package.name, "1.0.0", ["README.md", "CHANGELOG.md"])
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/1.0.0/security")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "readme-not-found"
+      assert conn.resp_body =~ ~s(["readme","changelog"])
+      assert get_resp_header(conn, "cache-control") == ["public, max-age=3600"]
+    end
+
+    test "unknown kind segment is a 404", %{package: package} do
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/1.0.0/contributing")
+
+      assert conn.status == 404
+    end
+
+    test "versionless doc URL redirects to latest version", %{package: package} do
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/changelog")
+
+      assert conn.status == 302
+      assert get_resp_header(conn, "location") == ["/#{package.name}/1.0.0/changelog"]
+    end
+
+    test "oversized file renders a too-large notice", %{package: package} do
+      big = String.duplicate("a", 2 * 1024 * 1024 + 1)
+      mock_files_and_content(package.name, "1.0.0", ["CHANGELOG.md"], "CHANGELOG.md", big)
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/1.0.0/changelog")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "too large to display"
+      refute conn.resp_body =~ "aaaaaaaaaa"
+    end
+
+    test "readme show page also reports doc-files", %{package: package} do
+      mock_files_and_content(
+        package.name,
+        "1.0.0",
+        ["README.md", "LICENSE"],
+        "README.md",
+        "# Hello"
+      )
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/1.0.0")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ ~s(["readme","license"])
+      assert conn.resp_body =~ ~s("README.md")
     end
   end
 end
