@@ -121,9 +121,10 @@ window.liveSocket = liveSocket;
 
 // README iframe: show spinner until loaded, fall back to description if no readme
 var readmeFrame = document.getElementById("readme-frame");
+var readmeFrameWindow = readmeFrame && readmeFrame.contentWindow;
 
 window.addEventListener("message", function (event) {
-  if (!event.data || !readmeFrame || event.source !== readmeFrame.contentWindow) return;
+  if (!event.data || !readmeFrame || event.source !== readmeFrameWindow) return;
 
   if (
     event.data.type === "readme-height" &&
