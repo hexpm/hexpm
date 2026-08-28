@@ -796,6 +796,48 @@ defmodule HexpmWeb.PackageControllerTest do
     end
   end
 
+  describe "doc file pages" do
+    test "GET /packages/:name/changelog renders show layout with changelog iframe" do
+      package = insert(:package)
+
+      insert(:release,
+        package: package,
+        version: "0.0.1",
+        meta: build(:release_metadata, app: package.name)
+      )
+
+      conn = get(build_conn(), "/packages/#{package.name}/changelog")
+
+      assert response(conn, 200) =~ "readme-frame"
+      assert response(conn, 200) =~ "/#{package.name}/0.0.1/changelog"
+    end
+
+    test "GET /packages/:name/:version/changelog pins the version" do
+      package = insert(:package)
+
+      insert(:release,
+        package: package,
+        version: "0.0.1",
+        meta: build(:release_metadata, app: package.name)
+      )
+
+      insert(:release,
+        package: package,
+        version: "0.0.2",
+        meta: build(:release_metadata, app: package.name)
+      )
+
+      conn = get(build_conn(), "/packages/#{package.name}/0.0.1/changelog")
+
+      assert response(conn, 200) =~ "/#{package.name}/0.0.1/changelog"
+    end
+
+    test "unknown package 404s" do
+      conn = get(build_conn(), "/packages/nonexistent_pkg/changelog")
+      assert response(conn, 404)
+    end
+  end
+
   defp escape(html) do
     {:safe, safe} = Phoenix.HTML.html_escape(html)
     IO.iodata_to_binary(safe)

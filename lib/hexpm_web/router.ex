@@ -200,6 +200,14 @@ defmodule HexpmWeb.Router do
     get "/packages/:name/dependencies", PackageController, :dependencies
     get "/packages/:name/versions", PackageController, :versions
     get "/packages/:name/advisories", PackageController, :advisories
+
+    for kind <- ~w(changelog license security support acknowledgments threat_model) do
+      get "/packages/:name/#{kind}", PackageController, :docs_file, assigns: %{doc_kind: kind}
+
+      get "/packages/:name/:version/#{kind}", PackageController, :docs_file,
+        assigns: %{doc_kind: kind}
+    end
+
     get "/packages/:name/:version/dependencies", PackageController, :dependencies
     get "/packages/:name/:version", PackageController, :show
     get "/packages/:repository/:name/owners", PackageOwnerController, :index

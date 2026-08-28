@@ -39,7 +39,7 @@
 
         <iframe
           id="readme-frame"
-          src={"#{ViewHelpers.readme_url(@package.name, @current_release.version)}"}
+          src={"#{ViewHelpers.doc_url(@package.name, @current_release.version, @doc_kind)}"}
           sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
           loading="lazy"
           referrerpolicy="no-referrer"

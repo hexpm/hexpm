@@ -2,6 +2,7 @@ defmodule HexpmWeb.PackageController do
   use HexpmWeb, :controller
 
   alias Hexpm.Security.Advisories
+  alias HexpmWeb.Docs.Files
   alias HexpmWeb.PackageLayoutAssigns
 
   @packages_per_page 30
@@ -25,7 +26,29 @@ defmodule HexpmWeb.PackageController do
         end
 
       if release do
-        package(conn, repositories, package, releases, release, type)
+        package(conn, repositories, package, releases, release, type, :readme)
+      else
+        not_found(conn)
+      end
+    end)
+  end
+
+  def docs_file(conn, params) do
+    params = fixup_params(params)
+    kind = Files.parse_segment(conn.assigns.doc_kind)
+
+    access_package(conn, params, fn package, repositories ->
+      releases = Releases.all(package)
+
+      {release, type} =
+        if version = params["version"] do
+          {matching_release(releases, version), :release}
+        else
+          {Release.latest_version(releases, only_stable: true, unstable_fallback: true), :package}
+        end
+
+      if release && kind do
+        package(conn, repositories, package, releases, release, type, kind)
       else
         not_found(conn)
       end
@@ -222,7 +245,7 @@ defmodule HexpmWeb.PackageController do
     Enum.find(releases, &(to_string(&1.version) == version))
   end
 
-  defp package(conn, repositories, package, releases, release, type) do
+  defp package(conn, repositories, package, releases, release, type, doc_kind) do
     release =
       Releases.preload(release, [:requirements, :downloads, :publisher, :security_advisories])
 
@@ -241,7 +264,11 @@ defmodule HexpmWeb.PackageController do
       conn,
       "show.html",
       [
-        title: package.name,
+        title:
+          if(doc_kind == :readme,
+            do: package.name,
+            else: "#{Files.label(doc_kind)} · #{package.name}"
+          ),
         description: package.meta.description,
         container: "container",
         canonical_url: ~p"/packages/#{package}",
@@ -249,7 +276,8 @@ defmodule HexpmWeb.PackageController do
         version_pinned?: type == :release,
         dependants: dependants,
         audit_logs: audit_logs,
-        type: type
+        type: type,
+        doc_kind: doc_kind
       ] ++
         PackageLayoutAssigns.for_package(conn, package,
           releases: releases,

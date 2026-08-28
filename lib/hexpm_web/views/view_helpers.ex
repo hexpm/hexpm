@@ -530,6 +530,12 @@ defmodule HexpmWeb.ViewHelpers do
     "#{readme_url}/#{package_name}/#{version}"
   end
 
+  def doc_url(package_name, version, :readme), do: readme_url(package_name, version)
+
+  def doc_url(package_name, version, kind) do
+    "#{readme_url(package_name, version)}/#{kind}"
+  end
+
   def safe_url(url) when is_binary(url) do
     case URI.parse(url) do
       %URI{scheme: scheme} when scheme in ["http", "https", "mailto"] -> url
