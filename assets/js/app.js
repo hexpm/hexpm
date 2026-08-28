@@ -123,7 +123,7 @@ window.liveSocket = liveSocket;
 var readmeFrame = document.getElementById("readme-frame");
 
 window.addEventListener("message", function (event) {
-  if (!event.data || !readmeFrame) return;
+  if (!event.data || !readmeFrame || event.source !== readmeFrame.contentWindow) return;
 
   if (
     event.data.type === "readme-height" &&
@@ -144,5 +144,33 @@ window.addEventListener("message", function (event) {
     readmeFrame.remove();
     var fallback = document.getElementById("readme-fallback");
     if (fallback) fallback.classList.remove("hidden");
+  }
+
+  if (event.data.type === "doc-files" && Array.isArray(event.data.kinds)) {
+    var kinds = event.data.kinds.filter(function (k) {
+      return typeof k === "string";
+    });
+
+    if (kinds.length > 1) {
+      document.querySelectorAll("[data-doc-kind]").forEach(function (el) {
+        if (kinds.indexOf(el.getAttribute("data-doc-kind")) >= 0) {
+          el.removeAttribute("hidden");
+        }
+      });
+
+      var sidebar = document.getElementById("doc-sidebar");
+      if (sidebar) {
+        sidebar.classList.remove("hidden");
+        sidebar.classList.add("flex");
+      }
+    }
+
+    if (typeof event.data.source === "string" && event.data.source.length <= 255) {
+      var source = document.getElementById("doc-source");
+      if (source) {
+        source.textContent = "From " + event.data.source;
+        source.classList.remove("hidden");
+      }
+    }
   }
 });
