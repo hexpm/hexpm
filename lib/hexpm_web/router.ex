@@ -99,9 +99,12 @@ defmodule HexpmWeb.Router do
   scope "/", HexpmWeb, host: "readme." do
     pipe_through :readme
 
-    for kind <- ~w(changelog license security support acknowledgments threat_model) do
-      get "/:name/:version/#{kind}", ReadmeController, :show_doc, assigns: %{doc_kind: kind}
-      get "/:name/#{kind}", ReadmeController, :show_doc, assigns: %{doc_kind: kind}
+    for kind <- HexpmWeb.Docs.Files.kinds(), kind != :readme do
+      kind_str = Atom.to_string(kind)
+
+      get "/:name/:version/#{kind}", ReadmeController, :show_doc, assigns: %{doc_kind: kind_str}
+
+      get "/:name/#{kind}", ReadmeController, :show_doc, assigns: %{doc_kind: kind_str}
     end
 
     get "/:name/:version", ReadmeController, :show
@@ -201,11 +204,13 @@ defmodule HexpmWeb.Router do
     get "/packages/:name/versions", PackageController, :versions
     get "/packages/:name/advisories", PackageController, :advisories
 
-    for kind <- ~w(changelog license security support acknowledgments threat_model) do
-      get "/packages/:name/#{kind}", PackageController, :docs_file, assigns: %{doc_kind: kind}
+    for kind <- HexpmWeb.Docs.Files.kinds(), kind != :readme do
+      kind_str = Atom.to_string(kind)
+
+      get "/packages/:name/#{kind}", PackageController, :docs_file, assigns: %{doc_kind: kind_str}
 
       get "/packages/:name/:version/#{kind}", PackageController, :docs_file,
-        assigns: %{doc_kind: kind}
+        assigns: %{doc_kind: kind_str}
     end
 
     get "/packages/:name/:version/dependencies", PackageController, :dependencies
@@ -218,6 +223,17 @@ defmodule HexpmWeb.Router do
     get "/packages/:repository/:name/dependents", PackageController, :dependents
     get "/packages/:repository/:name/versions", PackageController, :versions
     get "/packages/:repository/:name/advisories", PackageController, :advisories
+
+    for kind <- HexpmWeb.Docs.Files.kinds(), kind != :readme do
+      kind_str = Atom.to_string(kind)
+
+      get "/packages/:repository/:name/#{kind}", PackageController, :docs_file,
+        assigns: %{doc_kind: kind_str}
+
+      get "/packages/:repository/:name/:version/#{kind}", PackageController, :docs_file,
+        assigns: %{doc_kind: kind_str}
+    end
+
     get "/packages/:repository/:name/:version/dependencies", PackageController, :dependencies
     get "/packages/:repository/:name/:version", PackageController, :show
 

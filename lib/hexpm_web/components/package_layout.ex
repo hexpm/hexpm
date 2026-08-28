@@ -237,25 +237,34 @@ defmodule HexpmWeb.Components.PackageLayout do
             </summary>
 
             <div class="package-tabs-mobile-menu absolute inset-x-0 top-full z-20 mt-2 overflow-hidden rounded-xl border border-grey-200 bg-white shadow-lg dark:border-grey-700 dark:bg-grey-800">
-              <%= for kind <- Files.kinds(), kind != :readme do %>
-                <a
-                  data-doc-kind={kind}
-                  hidden
-                  href={doc_page_path(assigns, kind)}
-                  class={mobile_tab_class(@doc_kind == kind)}
-                >
-                  <div class="flex min-w-0 items-center gap-3">
-                    {HexpmWeb.ViewIcons.icon(:heroicon, "document",
-                      class: "size-4.5 shrink-0 text-grey-500 dark:text-grey-300"
-                    )}
-                    <span class="truncate pl-4">{Files.label(kind)}</span>
-                  </div>
-                  <%= if @doc_kind == kind do %>
-                    {HexpmWeb.ViewIcons.icon(:heroicon, "check",
-                      class: "size-4 shrink-0 text-primary-default dark:text-white"
-                    )}
-                  <% end %>
-                </a>
+              <%= if ViewHelpers.main_repository?(@package) && @current_release do %>
+                <%= for kind <- Files.kinds(), kind != :readme do %>
+                  <a
+                    data-doc-kind={kind}
+                    hidden
+                    href={
+                      HexpmWeb.PackageView.doc_page_path(
+                        @package,
+                        @current_release,
+                        @version_pinned?,
+                        kind
+                      )
+                    }
+                    class={mobile_tab_class(@doc_kind == kind)}
+                  >
+                    <div class="flex min-w-0 items-center gap-3">
+                      {HexpmWeb.ViewIcons.icon(:heroicon, "document",
+                        class: "size-4.5 shrink-0 text-grey-500 dark:text-grey-300"
+                      )}
+                      <span class="truncate pl-4">{Files.label(kind)}</span>
+                    </div>
+                    <%= if @doc_kind == kind do %>
+                      {HexpmWeb.ViewIcons.icon(:heroicon, "check",
+                        class: "size-4 shrink-0 text-primary-default dark:text-white"
+                      )}
+                    <% end %>
+                  </a>
+                <% end %>
               <% end %>
               <%= for tab <- @tabs do %>
                 <a
@@ -693,17 +702,6 @@ defmodule HexpmWeb.Components.PackageLayout do
        do: ViewHelpers.path_for_release(package, release)
 
   defp readme_path(%{package: package}), do: ViewHelpers.path_for_package(package)
-
-  defp doc_page_path(assigns, :readme), do: readme_path(assigns)
-
-  defp doc_page_path(%{version_pinned?: true} = assigns, kind)
-       when not is_nil(assigns.current_release) do
-    "#{ViewHelpers.path_for_release(assigns.package, assigns.current_release)}/#{kind}"
-  end
-
-  defp doc_page_path(assigns, kind) do
-    "#{ViewHelpers.path_for_package(assigns.package)}/#{kind}"
-  end
 
   defp dependencies_tab_path(%{version_pinned?: true, package: package, current_release: release})
        when not is_nil(release),

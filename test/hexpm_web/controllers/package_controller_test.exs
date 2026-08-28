@@ -869,6 +869,32 @@ defmodule HexpmWeb.PackageControllerTest do
       assert body =~ ~s(aria-current="page")
       assert body =~ "does not publish a Security file"
     end
+
+    test "renders for repository/name/version/changelog triple", %{
+      package3: package3,
+      repository1: repository1,
+      user1: user1
+    } do
+      conn =
+        build_conn()
+        |> test_login(user1)
+        |> get("/packages/#{repository1.name}/#{package3.name}/0.0.1/changelog")
+
+      assert response(conn, 200) =~ "Changelog"
+    end
+
+    test "renders for repository/name unversioned changelog", %{
+      package3: package3,
+      repository1: repository1,
+      user1: user1
+    } do
+      conn =
+        build_conn()
+        |> test_login(user1)
+        |> get("/packages/#{repository1.name}/#{package3.name}/changelog")
+
+      assert response(conn, 200) =~ "Changelog"
+    end
   end
 
   defp escape(html) do

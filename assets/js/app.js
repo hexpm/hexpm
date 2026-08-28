@@ -162,7 +162,7 @@ window.addEventListener("message", function (event) {
       var sidebar = document.getElementById("doc-sidebar");
       if (sidebar) {
         sidebar.classList.remove("hidden");
-        sidebar.classList.add("flex");
+        sidebar.classList.add("md:flex");
       }
     }
 

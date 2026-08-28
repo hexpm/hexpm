@@ -22,7 +22,7 @@
     </article>
     <script nonce={@script_src_nonce}>
       document.addEventListener('DOMContentLoaded', function() {
-        var origins = <%= raw(Jason.encode!(@parent_origins)) %>;
+        var origins = <%= raw(Jason.encode!(@parent_origins, escape: :html_safe)) %>;
         function isAllowedOrigin(origin) {
           return origins[0] === "*" || origins.indexOf(origin) >= 0;
         }
@@ -47,8 +47,8 @@
         sendHeight();
         new ResizeObserver(sendHeight).observe(document.body);
 
-        var docKinds = <%= raw(Jason.encode!(@doc_kinds)) %>;
-        var docSource = <%= raw(Jason.encode!(@doc_source)) %>;
+        var docKinds = <%= raw(Jason.encode!(@doc_kinds, escape: :html_safe)) %>;
+        var docSource = <%= raw(Jason.encode!(@doc_source, escape: :html_safe)) %>;
         origins.forEach(function(o) {
           window.parent.postMessage({type: "doc-files", kinds: docKinds, source: docSource}, o);
         });
