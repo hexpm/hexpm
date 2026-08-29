@@ -167,6 +167,7 @@ defmodule Hexpm.Application do
       {Cluster.Supervisor, [cluster_topologies(), [name: Hexpm.ClusterSupervisor]]},
       {Phoenix.PubSub, name: Hexpm.PubSub, adapter: Phoenix.PubSub.PG2},
       HexpmWeb.RateLimitPubSub,
+      Hexpm.WriteModePubSub,
       {PlugAttack.Storage.Ets, name: HexpmWeb.Plugs.Attack.Storage, clean_period: 60_000},
       {Hexpm.Cache,
        name: Hexpm.Cache,

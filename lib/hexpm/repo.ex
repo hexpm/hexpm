@@ -64,6 +64,43 @@ defmodule Hexpm.Repo do
       raise Hexpm.WriteInReadOnlyMode
     end
   end
+
+  @doc """
+  Restarts the database pool on this node against a different local port, for
+  cutting over to an instance whose proxy listens beside the current one.
+  Queries on this node fail between terminate and reconnect, so hold writes
+  first and expect a brief blip in reads.
+  """
+  def retarget_port!(port) when is_integer(port) do
+    # Hexpm.RepoBase.init/2 re-reads HEXPM_DATABASE_URL on every pool start,
+    # so the environment variable has to be rewritten too or the restarted
+    # pool comes back on the old port.
+    if url = System.get_env("HEXPM_DATABASE_URL") do
+      System.put_env("HEXPM_DATABASE_URL", put_url_port(url, port))
+    end
+
+    config =
+      :hexpm
+      |> Application.fetch_env!(Hexpm.RepoBase)
+      |> put_port(port)
+
+    Application.put_env(:hexpm, Hexpm.RepoBase, config)
+    :ok = Supervisor.terminate_child(Hexpm.Supervisor, Hexpm.RepoBase)
+    {:ok, _} = Supervisor.restart_child(Hexpm.Supervisor, Hexpm.RepoBase)
+    :ok
+  end
+
+  defp put_port(config, port) do
+    if url = config[:url] do
+      Keyword.put(config, :url, put_url_port(url, port))
+    else
+      Keyword.put(config, :port, port)
+    end
+  end
+
+  defp put_url_port(url, port) do
+    URI.to_string(%{URI.parse(url) | port: port})
+  end
 end
 
 defmodule Hexpm.RepoBase do
