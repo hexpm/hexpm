@@ -1,6 +1,7 @@
 defmodule HexpmWeb.MarkdownEngine do
   @behaviour Phoenix.Template.Engine
 
+  alias HexpmWeb.MDExPlugins.CodeCopy
   alias HexpmWeb.MDExPlugins.HeadingAnchors
   alias HexpmWeb.MDExPlugins.InlineAttributeLists
 
@@ -18,6 +19,7 @@ defmodule HexpmWeb.MarkdownEngine do
       |> MDEx.Document.run()
       |> MDEx.traverse_and_update(&InlineAttributeLists.transform/1)
       |> MDEx.traverse_and_update(HeadingAnchors.transform(levels: @header_tags))
+      |> maybe_add_copy_controls(path)
       |> MDEx.traverse_and_update(&transform_node/1)
       |> MDEx.to_html!()
 
@@ -29,6 +31,24 @@ defmodule HexpmWeb.MarkdownEngine do
       |> String.replace(unquote(@nonce_placeholder), nonce)
       |> Phoenix.HTML.raw()
     end
+  end
+
+  # Copy controls are docs-only. Blog and policy templates share this engine;
+  # drop maybe_add_copy_controls/2 if those pages should get the same control.
+  defp maybe_add_copy_controls(document, path) do
+    if docs_template?(path) do
+      {document, _index} = MDEx.traverse_and_update(document, 1, &CodeCopy.transform/2)
+      document
+    else
+      document
+    end
+  end
+
+  defp docs_template?(path) do
+    path
+    |> Path.split()
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.any?(&(&1 == ["templates", "docs"]))
   end
 
   defp transform_node(%MDEx.HtmlBlock{literal: literal} = node) do

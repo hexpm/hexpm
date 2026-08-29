@@ -16,15 +16,10 @@ defmodule HexpmWeb.MarkdownEngineTest do
   Security vulnerabilities should be disclosed to [security@hex.pm](mailto:security@hex.pm).
   """
 
-  @path Application.compile_env(:hexpm, :tmp_dir) <> "faq.md"
-
   @icon HexpmWeb.ViewIcons.icon(:heroicon, :link, class: "icon-link")
         |> Phoenix.HTML.safe_to_string()
 
-  setup do
-    File.write!(@path, @markdown)
-    on_exit(fn -> File.rm!(@path) end)
-  end
+  @tmp_dir Application.compile_env(:hexpm, :tmp_dir)
 
   test "does not change h2 tags" do
     html = render_markdown()
@@ -49,10 +44,88 @@ defmodule HexpmWeb.MarkdownEngineTest do
     assert html =~ "How do I contact Hex?</h4>"
   end
 
-  defp render_markdown do
-    quoted = HexpmWeb.MarkdownEngine.compile(@path, nil)
-    {result, _binding} = Code.eval_quoted(quoted, assigns: %{script_src_nonce: "test-nonce"})
-    {:safe, html} = result
-    html
+  test "adds a copy control that copies only the fenced source" do
+    html =
+      render_markdown("""
+      ```elixir
+      IO.puts("hi")
+      ```
+      """)
+
+    {:ok, document} = Floki.parse_document(html)
+
+    assert [button] = Floki.find(document, ~s(button[phx-hook="CopyButton"]))
+    assert [target_id] = Floki.attribute(button, "data-copy-target")
+    assert [target] = Floki.find(document, "##{target_id}")
+    assert Floki.attribute(target, "data-value") == [~s|IO.puts("hi")\n|]
+
+    refute html =~ "```"
+    refute hd(Floki.attribute(target, "data-value")) =~ "<"
   end
+
+  test "does not add a copy control to inline code" do
+    html = render_markdown("Use `mix deps.get` to fetch deps.")
+    {:ok, document} = Floki.parse_document(html)
+
+    assert Floki.find(document, ~s(button[phx-hook="CopyButton"])) == []
+    assert html =~ "<code>"
+  end
+
+  test "keeps syntax highlighting on fenced source" do
+    html =
+      render_markdown("""
+      ```elixir
+      IO.puts("hi")
+      ```
+      """)
+
+    assert html =~ ~s(class="lumis")
+    assert html =~ ~s(phx-hook="CopyButton")
+  end
+
+  test "does not add a copy control outside docs templates" do
+    html =
+      render_markdown(
+        """
+        ```elixir
+        IO.puts("hi")
+        ```
+        """,
+        kind: :blog
+      )
+
+    {:ok, document} = Floki.parse_document(html)
+
+    assert Floki.find(document, ~s(button[phx-hook="CopyButton"])) == []
+    assert html =~ ~s(class="lumis")
+  end
+
+  defp render_markdown(markdown \\ @markdown, opts \\ []) when is_binary(markdown) do
+    kind = Keyword.get(opts, :kind, :docs)
+    path = markdown_path(kind)
+
+    File.mkdir_p!(Path.dirname(path))
+    File.write!(path, markdown)
+
+    try do
+      quoted = HexpmWeb.MarkdownEngine.compile(path, nil)
+      {result, _binding} = Code.eval_quoted(quoted, assigns: %{script_src_nonce: "test-nonce"})
+      {:safe, html} = result
+      html
+    after
+      File.rm(path)
+    end
+  end
+
+  defp markdown_path(kind) do
+    Path.join([
+      @tmp_dir,
+      "templates",
+      template_kind_dir(kind),
+      "markdown-#{System.unique_integer([:positive])}.md"
+    ])
+  end
+
+  defp template_kind_dir(:docs), do: "docs"
+  defp template_kind_dir(:blog), do: "blog"
 end

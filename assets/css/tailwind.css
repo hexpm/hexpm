@@ -276,6 +276,11 @@ html[data-theme="dark"] .blog-card-excerpt a:hover {
   padding: 0;
 }
 
+/* Room for the copy control on the top-right of highlighted blocks */
+.markdown-code-block .lumis {
+  padding-right: 3rem;
+}
+
 /* Theme toggle icon state — controlled by data-theme-preference on <html> */
 [data-theme-toggle] [data-theme-icon] {
   display: none;
