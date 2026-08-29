@@ -127,6 +127,8 @@ defmodule Hexpm.Repository.Releases do
         audit: audit_data,
         replace: replace?
       ) do
+    Repo.write_mode!()
+
     Multi.new()
     |> Multi.run(:repository, fn _, _ -> {:ok, repository} end)
     |> Multi.run(:reserved_packages, fn _, _ -> {:ok, reserved_packages(repository, meta)} end)
@@ -144,6 +146,7 @@ defmodule Hexpm.Repository.Releases do
   end
 
   def publish_docs(package, release, body_path, audit: audit_data) do
+    Repo.write_mode!()
     Assets.push_docs(release, body_path)
 
     now = DateTime.utc_now()
