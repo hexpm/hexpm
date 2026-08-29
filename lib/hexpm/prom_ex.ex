@@ -24,7 +24,7 @@ defmodule Hexpm.PromEx do
   defp oban_plugins do
     case Application.fetch_env!(:hexpm, Oban)[:queues] do
       queues when queues in [false, []] -> []
-      _queues -> [{Plugins.Oban, poll_rate: :timer.minutes(1)}]
+      _queues -> [{Hexpm.PromEx.Plugins.Oban, poll_rate: :timer.minutes(1)}]
     end
   end
 

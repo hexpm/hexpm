@@ -3,7 +3,7 @@ defmodule Hexpm.PromExTest do
 
   defp oban_plugin() do
     Enum.find(Hexpm.PromEx.plugins(), fn
-      {PromEx.Plugins.Oban, _opts} -> true
+      {Hexpm.PromEx.Plugins.Oban, _opts} -> true
       _plugin -> false
     end)
   end
@@ -30,6 +30,6 @@ defmodule Hexpm.PromExTest do
     refute oban_plugin()
 
     put_queues(registry: 1)
-    assert {PromEx.Plugins.Oban, poll_rate: 60_000} = oban_plugin()
+    assert {Hexpm.PromEx.Plugins.Oban, poll_rate: 60_000} = oban_plugin()
   end
 end
