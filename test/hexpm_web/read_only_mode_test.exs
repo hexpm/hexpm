@@ -97,6 +97,35 @@ defmodule HexpmWeb.ReadOnlyModeTest do
     |> response(200)
   end
 
+  test "hold_all parks reads and completes them on release" do
+    user = insert(:user)
+    key = insert(:key, user: user)
+    Ecto.Adapters.SQL.Sandbox.mode(Hexpm.RepoBase, {:shared, self()})
+    WriteMode.configure!(:hold_all)
+
+    task =
+      Task.async(fn ->
+        build_conn()
+        |> put_req_header("authorization", key.user_secret)
+        |> get("/api/auth", domain: "api")
+      end)
+
+    assert nil == Task.yield(task, 100)
+
+    WriteMode.configure!(false)
+    assert response(Task.await(task), 200)
+  end
+
+  test "hold_all falls back to the maintenance error when the deadline passes" do
+    Application.put_env(:hexpm, :write_hold_timeout, 50)
+    on_exit(fn -> Application.delete_env(:hexpm, :write_hold_timeout) end)
+
+    WriteMode.configure!(:hold_all)
+
+    conn = get(build_conn(), "/api/packages/nonexistent", domain: "api")
+    assert conn.status == 503
+  end
+
   test "Hexpm.Repo.insert_all is gated by read-only mode" do
     WriteMode.configure!(true)
 
