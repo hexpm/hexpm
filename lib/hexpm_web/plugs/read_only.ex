@@ -15,11 +15,38 @@ defmodule HexpmWeb.Plugs.ReadOnly do
   end
 
   def call(conn, opts) do
-    if WriteMode.enabled?() and write_request?(conn, opts) and not allowed_route?(conn, opts) do
-      unavailable(conn)
-    else
-      conn
+    case WriteMode.mode() do
+      :write ->
+        conn
+
+      mode ->
+        cond do
+          write_request?(conn, opts) and not allowed_route?(conn, opts) ->
+            case mode do
+              :read_only -> unavailable(conn)
+              _hold -> hold(conn, &WriteMode.await_write/1)
+            end
+
+          # Also parks the allowed write routes: nothing may touch the pool
+          # while it restarts onto the new primary.
+          mode == :hold_all ->
+            hold(conn, &WriteMode.await_read/1)
+
+          true ->
+            conn
+        end
     end
+  end
+
+  defp hold(conn, awaiter) do
+    case awaiter.(hold_timeout()) do
+      :ok -> conn
+      _ -> unavailable(conn)
+    end
+  end
+
+  defp hold_timeout() do
+    Application.get_env(:hexpm, :write_hold_timeout, 25_000)
   end
 
   defp prepare_unavailable(conn) do
