@@ -49,6 +49,54 @@ defmodule HexpmWeb.ReadOnlyModeTest do
     assert conn.private.logster_log_level == :info
   end
 
+  test "hold mode parks API writes and completes them when writes resume" do
+    Ecto.Adapters.SQL.Sandbox.mode(Hexpm.RepoBase, {:shared, self()})
+    user = insert(:user)
+    key = insert(:key, user: user)
+    WriteMode.configure!(:hold)
+
+    task =
+      Task.async(fn ->
+        build_conn()
+        |> put_req_header("authorization", key.user_secret)
+        |> post("/api/keys", %{name: "held-key"})
+      end)
+
+    assert nil == Task.yield(task, 300)
+
+    WriteMode.configure!(false)
+    conn = Task.await(task)
+    assert json_response(conn, 201)["name"] == "held-key"
+  end
+
+  test "hold mode falls back to the maintenance error when the deadline passes" do
+    Application.put_env(:hexpm, :write_hold_timeout, 50)
+    on_exit(fn -> Application.delete_env(:hexpm, :write_hold_timeout) end)
+
+    user = insert(:user)
+    key = insert(:key, user: user)
+    WriteMode.configure!(:hold)
+
+    conn =
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> post("/api/keys", %{name: "late-key"})
+
+    assert json_response(conn, 503)["error"] == "temporarily_unavailable"
+    assert get_resp_header(conn, "retry-after") == ["60"]
+  end
+
+  test "hold mode does not delay reads" do
+    user = insert(:user)
+    key = insert(:key, user: user)
+    WriteMode.configure!(:hold)
+
+    build_conn()
+    |> put_req_header("authorization", key.user_secret)
+    |> get("/api/auth", domain: "api")
+    |> response(200)
+  end
+
   test "Hexpm.Repo.insert_all is gated by read-only mode" do
     WriteMode.configure!(true)
 

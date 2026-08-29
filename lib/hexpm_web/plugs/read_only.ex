@@ -15,11 +15,27 @@ defmodule HexpmWeb.Plugs.ReadOnly do
   end
 
   def call(conn, opts) do
-    if WriteMode.enabled?() and write_request?(conn, opts) and not allowed_route?(conn, opts) do
-      unavailable(conn)
+    if write_request?(conn, opts) and not allowed_route?(conn, opts) do
+      case WriteMode.mode() do
+        :write ->
+          conn
+
+        :read_only ->
+          unavailable(conn)
+
+        :hold ->
+          case WriteMode.await_write(hold_timeout()) do
+            :ok -> conn
+            _ -> unavailable(conn)
+          end
+      end
     else
       conn
     end
+  end
+
+  defp hold_timeout() do
+    Application.get_env(:hexpm, :write_hold_timeout, 25_000)
   end
 
   defp prepare_unavailable(conn) do
