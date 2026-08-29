@@ -3,10 +3,13 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
   PromEx plugin for hex.pm business metrics: the domain events emitted from
   the contexts (see `Hexpm.Repository.Releases` and `Hexpm.Accounts.Users`),
   registry builds (`Hexpm.Repository.RegistryWorker`) and CDN purges
-  (`Hexpm.CDN.PurgeWorker`, `Hexpm.CDN.Fastly`).
+  (`Hexpm.CDN.PurgeWorker`, `Hexpm.CDN.Fastly`), and the number of Erlang
+  nodes this node is connected to.
   """
 
   use PromEx.Plugin
+
+  @cluster_event [:hexpm, :cluster, :connected_nodes]
 
   @impl true
   def event_metrics(_opts) do
@@ -112,5 +115,28 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
         )
       ])
     ]
+  end
+
+  @impl true
+  def polling_metrics(opts) do
+    poll_rate = Keyword.get(opts, :poll_rate, 5_000)
+
+    Polling.build(
+      :hexpm_cluster_polling_metrics,
+      poll_rate,
+      {__MODULE__, :execute_cluster_metrics, []},
+      [
+        last_value("hexpm.cluster.connected_nodes",
+          event_name: @cluster_event,
+          measurement: :count,
+          description: "Erlang nodes this node is connected to, the length of Node.list/0."
+        )
+      ]
+    )
+  end
+
+  @doc false
+  def execute_cluster_metrics do
+    :telemetry.execute(@cluster_event, %{count: length(Node.list())}, %{})
   end
 end
