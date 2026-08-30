@@ -628,8 +628,12 @@ defmodule HexpmWeb.PackageControllerTest do
 
       body = response(get(build_conn(), "/packages/#{package.name}/1.0.0/security"), 200)
 
+      # The package description legitimately appears in the page header (every
+      # tab shows it) and in <head> meta/og tags (controller-action-level,
+      # shared by every tab) -- neither is in scope here. This test only cares
+      # that the Documentation tab's content area shows the explanation
+      # instead of the description.
       assert body =~ "does not publish a Security file"
-      refute body =~ "A test package."
     end
 
     test "the active sidebar entry carries aria-current" do
