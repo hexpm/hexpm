@@ -95,8 +95,15 @@ defmodule Hexpm.Docs.Files do
       {base, ext} = split_extension(filename)
 
       case Map.get(@basename_to_kind, String.upcase(base)) do
-        nil -> :nomatch
-        kind -> {kind, ext}
+        nil ->
+          :nomatch
+
+        kind ->
+          if ext in @extensions do
+            {kind, ext}
+          else
+            :nomatch
+          end
       end
     end
   end

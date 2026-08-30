@@ -102,5 +102,10 @@ defmodule Hexpm.Docs.FilesTest do
     test "present_kinds on an empty result is empty" do
       assert Files.present_kinds(%{}) == []
     end
+
+    test "a recognized basename with an unrecognized extension is not resolved" do
+      assert Files.resolve_all(["LICENSE.rapidxml"]) == %{}
+      assert Files.resolve(:license, ["LICENSE.rapidxml"]) == nil
+    end
   end
 end
