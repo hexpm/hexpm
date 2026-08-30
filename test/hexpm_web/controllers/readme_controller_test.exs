@@ -424,4 +424,147 @@ defmodule HexpmWeb.ReadmeControllerTest do
       refute conn.resp_body =~ ~s[src="https://example.com/logo.png"]
     end
   end
+
+  describe "show/2 with a kind" do
+    test "renders a recognized doc kind", %{package: package} do
+      mock_file_list_and_readme(
+        package.name,
+        "1.0.0",
+        "CHANGELOG.md",
+        "# Changelog\n\nv1.0.0 notes"
+      )
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/1.0.0?kind=changelog")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "Changelog"
+      assert conn.resp_body =~ "v1.0.0 notes"
+      assert get_resp_header(conn, "cache-control") == ["public, max-age=86400"]
+    end
+
+    test "renders the not-found page when the requested kind is missing", %{package: package} do
+      mock_file_list(package.name, "1.0.0", ["README.md"])
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/1.0.0?kind=changelog")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "readme-not-found"
+    end
+
+    test "404s for an unrecognized kind", %{package: package} do
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/1.0.0?kind=bogus")
+
+      assert conn.status == 404
+    end
+
+    test "preserves the kind through the versionless redirect", %{package: package} do
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}?kind=changelog")
+
+      assert conn.status == 302
+      assert get_resp_header(conn, "location") == ["/#{package.name}/1.0.0?kind=changelog"]
+    end
+
+    test "404s the versionless route for an unrecognized kind", %{package: package} do
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}?kind=bogus")
+
+      assert conn.status == 404
+    end
+
+    test "no kind param behaves exactly like :readme (back-compat)", %{package: package} do
+      mock_file_list_and_readme(package.name, "1.0.0", "README.md", "# Hi")
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{package.name}/1.0.0")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "Hi"
+    end
+  end
+
+  describe "show/2 for private packages with a kind" do
+    setup do
+      repository = insert(:repository)
+      package = insert(:package, repository_id: repository.id, name: "private_docs")
+
+      insert(
+        :release,
+        package: package,
+        version: "1.0.0",
+        meta: build(:release_metadata, app: package.name)
+      )
+
+      Hexpm.Store.put(
+        :preview_bucket,
+        "repos/#{repository.name}/file_lists/#{package.name}-1.0.0.json",
+        JSON.encode!(["README.md", "SECURITY.md"])
+      )
+
+      Hexpm.Store.put(
+        :preview_bucket,
+        "repos/#{repository.name}/files/#{package.name}/1.0.0/SECURITY.md",
+        "# Report a vulnerability"
+      )
+
+      %{repository: repository, private_package: package}
+    end
+
+    test "renders a recognized kind with a valid token", %{
+      repository: repository,
+      private_package: package
+    } do
+      token = HexpmWeb.ReadmeToken.sign(repository.name, package.name, "1.0.0")
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{repository.name}/#{package.name}/1.0.0?token=#{token}&kind=security")
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "Report a vulnerability"
+      assert get_resp_header(conn, "cache-control") == ["private, no-store"]
+    end
+
+    test "404s for an unrecognized kind even with a valid token", %{
+      repository: repository,
+      private_package: package
+    } do
+      token = HexpmWeb.ReadmeToken.sign(repository.name, package.name, "1.0.0")
+
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{repository.name}/#{package.name}/1.0.0?token=#{token}&kind=bogus")
+
+      assert conn.status == 404
+    end
+
+    test "repository-scoped URL with no token at all 404s regardless of kind", %{
+      repository: repository,
+      private_package: package
+    } do
+      conn =
+        build_conn()
+        |> Map.put(:host, "readme.localhost")
+        |> get("/#{repository.name}/#{package.name}/1.0.0?kind=security")
+
+      assert conn.status == 404
+    end
+  end
 end

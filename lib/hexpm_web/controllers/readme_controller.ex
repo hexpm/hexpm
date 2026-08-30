@@ -1,6 +1,7 @@
 defmodule HexpmWeb.ReadmeController do
   use HexpmWeb, :controller
 
+  alias Hexpm.Docs.Files
   alias Hexpm.Preview
   alias HexpmWeb.Readme.Renderer
   alias HexpmWeb.ReadmeToken
@@ -19,13 +20,19 @@ defmodule HexpmWeb.ReadmeController do
   def show(conn, %{"repository" => repository, "version" => version, "token" => token} = params) do
     name = params["name"]
 
-    with :ok <- ReadmeToken.verify(token, repository, name, version),
-         package when not is_nil(package) <- Packages.get(repository, name),
-         release when not is_nil(release) <-
-           Enum.find(Releases.all(package), &(to_string(&1.version) == version)) do
-      serve_readme(conn, repository, package, release, @private_cache_control)
-    else
-      _ -> send_no_readme(conn, @private_cache_control)
+    case doc_kind(params) do
+      nil ->
+        not_found(conn, params)
+
+      kind ->
+        with :ok <- ReadmeToken.verify(token, repository, name, version),
+             package when not is_nil(package) <- Packages.get(repository, name),
+             release when not is_nil(release) <-
+               Enum.find(Releases.all(package), &(to_string(&1.version) == version)) do
+          serve_readme(conn, repository, package, release, kind, @private_cache_control)
+        else
+          _ -> send_no_readme(conn, @private_cache_control)
+        end
     end
   end
 
@@ -35,42 +42,61 @@ defmodule HexpmWeb.ReadmeController do
 
   def show(conn, %{"version" => version} = params) do
     name = params["name"]
-    package = Packages.get("hexpm", name)
 
-    if package do
-      release = Enum.find(Releases.all(package), &(to_string(&1.version) == version))
+    case doc_kind(params) do
+      nil ->
+        not_found(conn, params)
 
-      if release do
-        serve_readme(conn, "hexpm", package, release, "public, max-age=86400")
-      else
-        send_no_readme(conn)
-      end
-    else
-      send_no_readme(conn)
+      kind ->
+        package = Packages.get("hexpm", name)
+
+        if package do
+          release = Enum.find(Releases.all(package), &(to_string(&1.version) == version))
+
+          if release do
+            serve_readme(conn, "hexpm", package, release, kind, "public, max-age=86400")
+          else
+            send_no_readme(conn)
+          end
+        else
+          send_no_readme(conn)
+        end
     end
   end
 
   def show(conn, params) do
     name = params["name"]
 
-    case Releases.latest_version("hexpm", name,
-           only_stable: true,
-           unstable_fallback: true
-         ) do
+    case doc_kind(params) do
       nil ->
-        send_no_readme(conn)
+        not_found(conn, params)
 
-      version ->
-        conn
-        |> put_resp_header("cache-control", "public, max-age=3600")
-        |> redirect(to: "/#{name}/#{version}")
+      _kind ->
+        case Releases.latest_version("hexpm", name,
+               only_stable: true,
+               unstable_fallback: true
+             ) do
+          nil ->
+            send_no_readme(conn)
+
+          version ->
+            conn
+            |> put_resp_header("cache-control", "public, max-age=3600")
+            |> redirect(to: "/#{name}/#{version}#{redirect_query(params)}")
+        end
     end
   end
 
-  defp serve_readme(conn, repository, package, release, cache_control) do
+  defp doc_kind(%{"kind" => kind}), do: Files.parse_segment(kind)
+  defp doc_kind(_params), do: :readme
+
+  defp redirect_query(%{"kind" => kind}), do: "?kind=#{kind}"
+  defp redirect_query(_params), do: ""
+
+  defp serve_readme(conn, repository, package, release, kind, cache_control) do
     version = to_string(release.version)
 
-    case Preview.readme(repository, package.name, version) do
+    case Preview.doc(repository, package.name, version, kind) do
       {:ok, filename, content} ->
         html = render_readme(repository, filename, content, package.name, version)
 
