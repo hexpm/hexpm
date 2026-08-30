@@ -1,12 +1,12 @@
 defmodule Hexpm.Preview do
   require Logger
 
+  alias Hexpm.Docs.Files
   alias Hexpm.Preview.{Bucket, Sitemaps}
   alias Hexpm.Repository.{Assets, Releases}
   alias Hexpm.Repository.Sitemaps, as: RepositorySitemaps
 
   @max_file_size 100 * 1000
-  @readme_filenames ~w(README.md readme.md README.markdown readme.markdown README.txt readme.txt README readme)
 
   defmodule StaleTarballError do
     defexception [:key]
@@ -45,14 +45,23 @@ defmodule Hexpm.Preview do
     end
   end
 
-  def readme(repository, package, version) do
+  def doc(repository, package, version, kind) do
     with files when is_list(files) <- Bucket.get_file_list(repository, package, version),
-         filename when is_binary(filename) <- Enum.find(@readme_filenames, &(&1 in files)),
+         filename when is_binary(filename) <- Files.resolve(kind, files),
          contents when is_binary(contents) <-
            Bucket.get_file(repository, package, version, filename) do
       {:ok, filename, contents}
     else
       _ -> :error
+    end
+  end
+
+  def readme(repository, package, version), do: doc(repository, package, version, :readme)
+
+  def doc_kinds(repository, package, version) do
+    case Bucket.get_file_list(repository, package, version) do
+      files when is_list(files) -> Files.resolve_all(files)
+      _ -> %{}
     end
   end
 
