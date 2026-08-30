@@ -401,7 +401,7 @@ defmodule HexpmWeb.DeviceControllerTest do
       token =
         Repo.get_by(Hexpm.OAuth.Token,
           grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-          grant_reference: device_code.device_code
+          grant_reference: "device_code:#{device_code.id}"
         )
 
       assert token.scopes == ["api:read"]
@@ -429,7 +429,7 @@ defmodule HexpmWeb.DeviceControllerTest do
       token =
         Repo.get_by(Hexpm.OAuth.Token,
           grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-          grant_reference: device_code.device_code
+          grant_reference: "device_code:#{device_code.id}"
         )
 
       assert token.scopes == ["api:read"]

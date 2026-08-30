@@ -278,7 +278,7 @@ defmodule Hexpm.OAuth.DeviceCodes do
               device_code_record.client_id,
               final_scopes,
               "urn:ietf:params:oauth:grant-type:device_code",
-              device_code_record.device_code,
+              grant_reference(device_code_record),
               user_session_id: session.id,
               with_refresh_token: true
             )
@@ -318,11 +318,13 @@ defmodule Hexpm.OAuth.DeviceCodes do
     end
   end
 
+  defp grant_reference(device_code_record), do: "device_code:#{device_code_record.id}"
+
   defp get_device_token(device_code_record) do
     from(t in Token,
       where:
         t.grant_type == "urn:ietf:params:oauth:grant-type:device_code" and
-          t.grant_reference == ^device_code_record.device_code and
+          t.grant_reference == ^grant_reference(device_code_record) and
           t.client_id == ^device_code_record.client_id and
           is_nil(t.revoked_at),
       order_by: [desc: t.inserted_at, desc: t.id],
@@ -386,7 +388,7 @@ defmodule Hexpm.OAuth.DeviceCodes do
     from(t in Token,
       where:
         t.grant_type == "urn:ietf:params:oauth:grant-type:device_code" and
-          t.grant_reference == ^device_code_record.device_code and
+          t.grant_reference == ^grant_reference(device_code_record) and
           t.client_id == ^device_code_record.client_id and
           is_nil(t.revoked_at)
     )

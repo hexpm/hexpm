@@ -26,7 +26,7 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
   @redacted %{
     Hexpm.OAuth.AuthorizationCode => ~w(code code_challenge),
     Hexpm.OAuth.DeviceCode => ~w(device_code user_code verification_uri_complete),
-    Hexpm.OAuth.Token => ~w(refresh_token_hash grant_reference),
+    Hexpm.OAuth.Token => ~w(refresh_token_hash),
     Hexpm.UserSession => ~w(session_token),
     Hexpm.Accounts.PasswordReset => ~w(key),
     Hexpm.Accounts.AccountDeletionRequest => ~w(key),
