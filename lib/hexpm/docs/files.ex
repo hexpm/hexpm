@@ -41,6 +41,7 @@ defmodule Hexpm.Docs.Files do
   def kinds(), do: @kinds
 
   def label(kind) when kind in @kinds, do: @labels[kind]
+  def label(kind), do: to_string(kind)
 
   def parse_segment(segment) when is_binary(segment) do
     Enum.find(@kinds, &(Atom.to_string(&1) == segment))

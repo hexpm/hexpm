@@ -678,6 +678,91 @@ defmodule HexpmWeb.PackageControllerTest do
       assert {:ok, document} = Floki.parse_document(body)
       assert [_ | _] = Floki.find(document, ".package-tabs-mobile-menu a[href$=\"/license\"]")
     end
+
+    test "following the sidebar's Readme link does not 404" do
+      package = insert(:package, name: "docfile_link_pkg")
+
+      insert(:release,
+        package: package,
+        version: "1.0.0",
+        meta: build(:release_metadata, app: package.name)
+      )
+
+      Hexpm.Store.put(
+        :preview_bucket,
+        "file_lists/#{package.name}-1.0.0.json",
+        JSON.encode!(["README.md", "CHANGELOG.md"])
+      )
+
+      body = response(get(build_conn(), "/packages/#{package.name}/1.0.0/changelog"), 200)
+
+      assert {:ok, document} = Floki.parse_document(body)
+
+      assert [readme_link] =
+               Floki.find(document, "nav[aria-label=\"Documentation files\"] a")
+               |> Enum.filter(&(Floki.text(&1) =~ "Readme"))
+
+      assert [readme_href] = Floki.attribute(readme_link, "href")
+      refute readme_href =~ "/readme"
+
+      response(get(build_conn(), readme_href), 200)
+    end
+
+    test "deep link to a missing kind keeps it as the active sidebar entry" do
+      package = insert(:package, name: "missing_kind_active_pkg")
+
+      insert(:release,
+        package: package,
+        version: "1.0.0",
+        meta: build(:release_metadata, app: package.name)
+      )
+
+      Hexpm.Store.put(
+        :preview_bucket,
+        "file_lists/#{package.name}-1.0.0.json",
+        JSON.encode!(["README.md"])
+      )
+
+      body = response(get(build_conn(), "/packages/#{package.name}/1.0.0/security"), 200)
+
+      assert {:ok, document} = Floki.parse_document(body)
+
+      # Even though this release has no SECURITY file, the sidebar must still
+      # show "Security" as the active entry -- the requested kind is never
+      # missing from the sidebar/dropdown.
+      assert [security_link] = Floki.find(document, "a[aria-current=page]")
+      assert Floki.text(security_link) =~ "Security"
+
+      assert [_ | _] =
+               Floki.find(document, ".package-tabs-mobile-menu a")
+               |> Enum.filter(&(Floki.text(&1) =~ "Security"))
+
+      # And there's still a way back to the readme.
+      assert [_ | _] =
+               Floki.find(document, ".package-tabs-mobile-menu a")
+               |> Enum.filter(&(Floki.text(&1) =~ "Documentation"))
+    end
+
+    test "mobile dropdown shows doc kinds on non-Documentation tabs too" do
+      package = insert(:package, name: "versions_tab_doc_kinds_pkg")
+
+      insert(:release,
+        package: package,
+        version: "1.0.0",
+        meta: build(:release_metadata, app: package.name)
+      )
+
+      Hexpm.Store.put(
+        :preview_bucket,
+        "file_lists/#{package.name}-1.0.0.json",
+        JSON.encode!(["README.md", "CHANGELOG.md"])
+      )
+
+      body = response(get(build_conn(), "/packages/#{package.name}/versions"), 200)
+
+      assert {:ok, document} = Floki.parse_document(body)
+      assert [_ | _] = Floki.find(document, ".package-tabs-mobile-menu a[href$=\"/changelog\"]")
+    end
   end
 
   describe "GET /packages/:name/audit-logs" do

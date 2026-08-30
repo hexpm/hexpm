@@ -1,5 +1,11 @@
 <% description = @package.meta.description %>
-<% sidebar_kinds = Hexpm.Docs.Files.present_kinds(@doc_kinds) %>
+<%!--
+  The sidebar must never be missing the kind currently being viewed, even
+  when the release doesn't actually have it (a deep link to an unavailable
+  kind) -- so union @doc_kind into the resolved map before deriving the
+  list, keeping present_kinds/1's canonical ordering.
+--%>
+<% sidebar_kinds = Hexpm.Docs.Files.present_kinds(Map.put_new(@doc_kinds, @doc_kind, nil)) %>
 
 <.package_layout
   {@package_layout}

@@ -14,6 +14,10 @@ defmodule Hexpm.Docs.FilesTest do
     assert Files.label(:acknowledgments) == "Acknowledgments"
   end
 
+  test "label/1 degrades to the atom's string form for an unrecognized kind instead of raising" do
+    assert Files.label(:bogus) == "bogus"
+  end
+
   test "parse_segment/1" do
     assert Files.parse_segment("changelog") == :changelog
     assert Files.parse_segment("threat_model") == :threat_model

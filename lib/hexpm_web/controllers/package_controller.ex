@@ -2,9 +2,8 @@ defmodule HexpmWeb.PackageController do
   use HexpmWeb, :controller
 
   alias Hexpm.Docs.Files
-  alias Hexpm.Preview
   alias Hexpm.Security.Advisories
-  alias HexpmWeb.PackageLayoutAssigns
+  alias HexpmWeb.{PackageLayoutAssigns, ViewHelpers}
 
   @packages_per_page 30
   @versions_per_page 100
@@ -257,22 +256,18 @@ defmodule HexpmWeb.PackageController do
         :release -> release
       end
 
-    doc_kinds =
-      Preview.doc_kinds(package.repository.name, package.name, to_string(release.version))
-
     render(
       conn,
       "show.html",
       [
-        title: package.name,
+        title: doc_title(package, doc_kind),
         description: package.meta.description,
         container: "container",
-        canonical_url: ~p"/packages/#{package}",
+        canonical_url: doc_canonical_url(package, release, doc_kind),
         releases: releases,
         version_pinned?: type == :release,
         type: type,
-        doc_kind: doc_kind,
-        doc_kinds: doc_kinds
+        doc_kind: doc_kind
       ] ++
         PackageLayoutAssigns.for_package(conn, package,
           releases: releases,
@@ -282,6 +277,19 @@ defmodule HexpmWeb.PackageController do
         )
     )
   end
+
+  defp doc_title(package, :readme), do: package.name
+  defp doc_title(package, doc_kind), do: "#{package.name} · #{Files.label(doc_kind)}"
+
+  # `:readme` has no dedicated URL of its own -- the bare package URL already
+  # renders it -- so its canonical URL stays what it's always been. Every
+  # other kind gets its own shareable URL canonicalized to itself, via
+  # `path_for_doc/3` since `~p` can't verify the per-kind literal routes (see
+  # the comment on `path_for_doc/3`).
+  defp doc_canonical_url(package, _release, :readme), do: ~p"/packages/#{package}"
+
+  defp doc_canonical_url(package, release, doc_kind),
+    do: ViewHelpers.path_for_doc(package, release, doc_kind)
 
   defp show_docs_html_url(package, :package, _release, releases) do
     latest_release_with_docs =

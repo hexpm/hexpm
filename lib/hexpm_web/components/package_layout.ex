@@ -86,15 +86,20 @@ defmodule HexpmWeb.Components.PackageLayout do
       )
 
     tabs = package_tabs(assigns)
+    doc_kind_entries = doc_kind_entries(assigns)
+
+    # Exactly one of the "Documentation" tab or a doc-kind entry is active at
+    # a time (see the `active:` clauses above and in `doc_kind_entries/1`),
+    # so the mobile trigger's icon/label falls back to the active doc-kind
+    # entry when it's that one, not the Documentation tab, that's active.
+    active_package_tab =
+      Enum.find(tabs, & &1.active) || Enum.find(doc_kind_entries, & &1.active)
 
     assigns =
       assigns
       |> assign(:tabs, tabs)
-      |> assign(:active_package_tab, Enum.find(tabs, & &1.active))
-
-    doc_kind_entries = doc_kind_entries(assigns)
-
-    assigns = assign(assigns, :doc_kind_entries, doc_kind_entries)
+      |> assign(:doc_kind_entries, doc_kind_entries)
+      |> assign(:active_package_tab, active_package_tab)
 
     flash_visible = assigns.current_release && assigns.current_release.vulnerable?
     assigns = assign(assigns, :flash_visible, flash_visible)
@@ -231,6 +236,31 @@ defmodule HexpmWeb.Components.PackageLayout do
             </summary>
 
             <div class="package-tabs-mobile-menu absolute inset-x-0 top-full z-20 mt-2 overflow-hidden rounded-xl border border-grey-200 bg-white shadow-lg dark:border-grey-700 dark:bg-grey-800">
+              <%!--
+                `package_tabs/1` always puts "Documentation" first, and the
+                doc-kind entries (Changelog, License, ...) belong directly
+                under it, not before it and not after the rest of the tabs --
+                so render that one tab, then the doc-kind entries, then the
+                remaining tabs.
+              --%>
+              <%= for tab <- Enum.take(@tabs, 1) do %>
+                <a
+                  href={tab.path}
+                  class={mobile_tab_class(tab.active)}
+                >
+                  <div class="flex min-w-0 items-center gap-3">
+                    {HexpmWeb.ViewIcons.icon(:heroicon, tab.icon,
+                      class: "size-4.5 shrink-0 text-grey-500 dark:text-grey-300"
+                    )}
+                    <span class="truncate">{tab.label}</span>
+                  </div>
+                  <%= if tab.active do %>
+                    {HexpmWeb.ViewIcons.icon(:heroicon, "check",
+                      class: "size-4 shrink-0 text-primary-default dark:text-white"
+                    )}
+                  <% end %>
+                </a>
+              <% end %>
               <%= for entry <- @doc_kind_entries do %>
                 <a href={entry.path} class={mobile_tab_class(entry.active)}>
                   <div class="flex min-w-0 items-center gap-3">
@@ -246,7 +276,7 @@ defmodule HexpmWeb.Components.PackageLayout do
                   <% end %>
                 </a>
               <% end %>
-              <%= for tab <- @tabs do %>
+              <%= for tab <- Enum.drop(@tabs, 1) do %>
                 <a
                   href={tab.path}
                   class={mobile_tab_class(tab.active)}
@@ -585,7 +615,7 @@ defmodule HexpmWeb.Components.PackageLayout do
   defp package_tabs(assigns) do
     [
       %{
-        active: assigns.active_tab == :readme,
+        active: assigns.active_tab == :readme && assigns.doc_kind == :readme,
         icon: "document-text",
         label: "Documentation",
         path: readme_path(assigns)
@@ -734,13 +764,19 @@ defmodule HexpmWeb.Components.PackageLayout do
   defp dependants_label(count),
     do: "#{count} #{pluralize(count, "Dependant", "Dependants")}"
 
+  # Same union as show.html.heex's `sidebar_kinds`: the kind currently being
+  # viewed must always appear here, even when the release doesn't actually
+  # have it (a deep link to an unavailable kind), so the mobile dropdown
+  # never loses track of the active entry either.
   defp doc_kind_entries(assigns) do
     assigns.doc_kinds
+    |> Map.put_new(assigns.doc_kind, nil)
     |> Files.present_kinds()
     |> Enum.reject(&(&1 == :readme))
     |> Enum.map(fn kind ->
       %{
         kind: kind,
+        icon: "document",
         label: Files.label(kind),
         path: ViewHelpers.path_for_doc(assigns.package, assigns.current_release, kind),
         active: assigns.doc_kind == kind

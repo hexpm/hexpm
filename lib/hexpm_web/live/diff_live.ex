@@ -34,7 +34,13 @@ defmodule HexpmWeb.DiffLive do
           current_release: release,
           graph_release: release,
           sidebar?: false,
-          dependants_count?: false
+          dependants_count?: false,
+          # `current_release` here is only the diff's `to_release`, standing
+          # in for the layout's version dropdown -- not a release the user is
+          # actually browsing -- so resolving its doc kinds for the mobile
+          # dropdown would cost a bucket lookup on every diff page for
+          # entries that don't correspond to what's on screen.
+          doc_kinds?: false
         )
 
       socket =

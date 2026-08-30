@@ -59,6 +59,13 @@ defmodule HexpmWeb.ViewHelpers do
   # `readme_url/3` builds URLs, and is trivially correct here since `kind` is
   # always one of the known atoms whose string form is the literal segment
   # the router generates.
+  # `:readme` has no dedicated `/readme` route -- the bare package/release URL
+  # already renders the readme, so delegate to `path_for_release/2` instead of
+  # appending a `/readme` segment the router doesn't recognize.
+  def path_for_doc(%Package{} = package, release, :readme) do
+    path_for_release(package, release)
+  end
+
   def path_for_doc(%Package{repository_id: 1} = package, release, kind) do
     "/packages/#{package.name}/#{release.version}/#{kind}"
   end
