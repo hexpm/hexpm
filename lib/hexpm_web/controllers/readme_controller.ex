@@ -48,18 +48,12 @@ defmodule HexpmWeb.ReadmeController do
         not_found(conn, params)
 
       kind ->
-        package = Packages.get("hexpm", name)
-
-        if package do
-          release = Enum.find(Releases.all(package), &(to_string(&1.version) == version))
-
-          if release do
-            serve_readme(conn, "hexpm", package, release, kind, "public, max-age=86400")
-          else
-            send_no_readme(conn)
-          end
+        with package when not is_nil(package) <- Packages.get("hexpm", name),
+             release when not is_nil(release) <-
+               Enum.find(Releases.all(package), &(to_string(&1.version) == version)) do
+          serve_readme(conn, "hexpm", package, release, kind, "public, max-age=86400")
         else
-          send_no_readme(conn)
+          _ -> send_no_readme(conn)
         end
     end
   end
