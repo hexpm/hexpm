@@ -510,6 +510,40 @@ defmodule HexpmWeb.PackageControllerTest do
       assert body =~ "/#{package.name}/1.0.0?kind=changelog"
     end
 
+    test "renders a recognized doc kind for a repository-scoped package", %{
+      user1: user1,
+      repository1: repository1
+    } do
+      package = insert(:package, repository_id: repository1.id, name: "repo_doc_kind_pkg")
+
+      insert(:release,
+        package: package,
+        version: "1.0.0",
+        meta: build(:release_metadata, app: package.name)
+      )
+
+      Hexpm.Store.put(
+        :preview_bucket,
+        "repos/#{repository1.name}/file_lists/#{package.name}-1.0.0.json",
+        JSON.encode!(["README.md", "CHANGELOG.md"])
+      )
+
+      Hexpm.Store.put(
+        :preview_bucket,
+        "repos/#{repository1.name}/files/#{package.name}/1.0.0/CHANGELOG.md",
+        "# Changelog"
+      )
+
+      conn =
+        build_conn()
+        |> test_login(user1)
+        |> get("/packages/#{repository1.name}/#{package.name}/1.0.0/changelog")
+
+      body = response(conn, 200)
+
+      assert body =~ "readme-frame"
+    end
+
     test "404s for a version the package does not have" do
       package = insert(:package, name: "doc_kind_missing_version")
 
