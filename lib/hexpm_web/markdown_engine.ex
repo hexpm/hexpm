@@ -10,11 +10,17 @@ defmodule HexpmWeb.MarkdownEngine do
 
   @header_tags [3, 4]
 
+  # MDEx.Document.wrap/1 does not inherit the parent document's options, so
+  # CodeCopy must pass the same highlighter config when re-rendering a block.
+  @syntax_highlight [formatter: :html_linked]
+
+  def syntax_highlight_opts, do: @syntax_highlight
+
   def compile(path, _name) do
     html =
       path
       |> File.read!()
-      |> then(&MDEx.new(markdown: &1, syntax_highlight: [formatter: :html_linked]))
+      |> then(&MDEx.new(markdown: &1, syntax_highlight: syntax_highlight_opts()))
       |> MDExGFM.attach()
       |> MDEx.Document.run()
       |> MDEx.traverse_and_update(&InlineAttributeLists.transform/1)

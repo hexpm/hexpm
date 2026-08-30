@@ -10,7 +10,9 @@ defmodule HexpmWeb.MDExPlugins.CodeCopy do
   @doc """
   `MDEx.traverse_and_update/3` callback that wraps each `MDEx.CodeBlock`.
 
-  The accumulator is the next unique id index. Start at `1`.
+  Unlike the other `mdex_plugins/`, this callback is arity-2: the accumulator
+  is the next unique id index (needed because a doc can contain several code
+  blocks). Start at `1`.
   """
   def transform(%MDEx.CodeBlock{} = node, index) do
     {wrap_with_copy_control(node, "markdown-code-#{index}"), index + 1}
@@ -22,7 +24,7 @@ defmodule HexpmWeb.MDExPlugins.CodeCopy do
     highlighted =
       node
       |> MDEx.Document.wrap()
-      |> MDEx.to_html!(syntax_highlight: [formatter: :html_linked])
+      |> MDEx.to_html!(syntax_highlight: HexpmWeb.MarkdownEngine.syntax_highlight_opts())
       |> String.trim()
 
     escaped_source =

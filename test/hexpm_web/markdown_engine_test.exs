@@ -121,11 +121,8 @@ defmodule HexpmWeb.MarkdownEngineTest do
     Path.join([
       @tmp_dir,
       "templates",
-      template_kind_dir(kind),
+      Atom.to_string(kind),
       "markdown-#{System.unique_integer([:positive])}.md"
     ])
   end
-
-  defp template_kind_dir(:docs), do: "docs"
-  defp template_kind_dir(:blog), do: "blog"
 end
