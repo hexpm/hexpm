@@ -9,21 +9,8 @@ ENV LANG=C.UTF-8
 # install build dependencies
 RUN apt update && \
     apt upgrade -y && \
-    apt install -y --no-install-recommends git build-essential curl ca-certificates && \
+    apt install -y --no-install-recommends git build-essential && \
     apt clean -y && rm -rf /var/lib/apt/lists/*
-
-# install rust, the lumis and mdex_native NIFs are built from source
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
-ENV PATH="/root/.cargo/bin:${PATH}"
-
-# tree-sitter grammars generated with CLI < 0.26.4 ship an array.h whose
-# macros violate strict aliasing, which gcc -O2 miscompiles into heap
-# corruption (tree-sitter/tree-sitter-haskell#144)
-ENV CFLAGS="-fno-strict-aliasing"
-
-# mdex_native links its own copy of the grammars, and its precompiled NIF is
-# built without the flag above
-ENV MDEX_NATIVE_BUILD=1
 
 # prepare build dir
 RUN mkdir /app
