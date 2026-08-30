@@ -674,7 +674,8 @@ defmodule HexpmWeb.SSOEnforcementTest do
       message = json_response(conn, 403)["message"]
 
       assert message =~ "requires authenticating through its identity"
-      assert message =~ "mix hex.user auth"
+      assert message =~ "authenticate this session again from your Hex client"
+      refute message =~ "mix hex"
 
       # A sign-in URL would authenticate the browser that followed it, not this
       # token's session, so the refusal must not offer one.

@@ -41,7 +41,7 @@ defmodule HexpmWeb.API.SSOAuthorizationController do
   end
 
   defp message(:invalid_session) do
-    "SSO re-authorization is for an OAuth session, run mix hex.user auth to get one"
+    "SSO re-authorization is for an OAuth session, sign in from your Hex client to get one"
   end
 
   defp message(:invalid_organizations) do

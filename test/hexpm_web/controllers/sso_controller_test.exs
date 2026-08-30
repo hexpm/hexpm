@@ -964,7 +964,8 @@ defmodule HexpmWeb.SSOControllerTest do
         })
         |> json_response(422)
 
-      assert body["message"] =~ "mix hex.user auth"
+      assert body["message"] =~ "sign in from your Hex client"
+      refute body["message"] =~ "mix hex"
       refute Repo.exists?(SSO.Authorization)
     end
 

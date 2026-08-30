@@ -354,7 +354,10 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
       message = Enforcement.refusal_message(:personal_key, context.organization)
       assert message =~ "does not accept personal API keys"
       assert message =~ "organization key"
-      assert message =~ "mix hex.user auth"
+
+      # mix is not the only client, so no API message may name a mix task; the
+      # client translates "sign in" into its own command.
+      refute message =~ "mix hex"
     end
 
     test "tells an OAuth token to authenticate the session it is on", context do
@@ -362,7 +365,8 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
       message = Enforcement.refusal_message(:sso_required, context.organization, token(session))
 
       assert message =~ "requires authenticating through its identity provider"
-      assert message =~ "mix hex.user auth"
+      assert message =~ "authenticate this session again from your Hex client"
+      refute message =~ "mix hex"
 
       # A sign-in URL would authenticate whichever browser session followed it,
       # which is not the one the token is on.
@@ -379,7 +383,8 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
 
       assert message =~ "requires authenticating through its identity provider"
       assert message =~ "username and password"
-      assert message =~ "mix hex.user auth"
+      assert message =~ "sign in from your Hex client"
+      refute message =~ "mix hex"
       refute message =~ "/sso/org/"
     end
 

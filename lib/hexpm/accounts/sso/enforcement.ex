@@ -220,20 +220,23 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   # the token belongs to. The CLI asks for the session in hand instead, and only
   # for the organizations the project depends on, which a project that publishes
   # to this one but depends on none of its packages never asks for.
+  #
+  # No message names a client command: mix is not the only client, so each
+  # client translates "authenticate again" into its own task.
   def refusal_message(:sso_required, organization, %Token{}) do
     "organization #{organization.name} requires authenticating through its identity" <>
-      " provider, run mix hex.user auth to authenticate this session again"
+      " provider, authenticate this session again from your Hex client"
   end
 
   def refusal_message(:sso_required, organization, _credential) do
     "organization #{organization.name} requires authenticating through its identity" <>
-      " provider, which a username and password cannot do, run mix hex.user auth" <>
-      " or use an organization key for automation"
+      " provider, which a username and password cannot do, sign in from your Hex" <>
+      " client or use an organization key for automation"
   end
 
   def refusal_message(:personal_key, organization, _credential) do
     "organization #{organization.name} does not accept personal API keys, use an" <>
-      " organization key for automation or run mix hex.user auth"
+      " organization key for automation or sign in from your Hex client"
   end
 
   # Nothing is governed while the feature is off. Answering that here is what
