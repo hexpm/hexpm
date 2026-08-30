@@ -631,6 +631,49 @@ defmodule HexpmWeb.PackageControllerTest do
       assert body =~ "does not publish a Security file"
       refute body =~ "A test package."
     end
+
+    test "the active sidebar entry carries aria-current" do
+      package = insert(:package, name: "active_entry_pkg")
+
+      insert(:release,
+        package: package,
+        version: "1.0.0",
+        meta: build(:release_metadata, app: package.name)
+      )
+
+      Hexpm.Store.put(
+        :preview_bucket,
+        "file_lists/#{package.name}-1.0.0.json",
+        JSON.encode!(["README.md", "CHANGELOG.md"])
+      )
+
+      body = response(get(build_conn(), "/packages/#{package.name}/1.0.0/changelog"), 200)
+
+      assert {:ok, document} = Floki.parse_document(body)
+      assert [changelog_link] = Floki.find(document, "a[aria-current=page]")
+      assert Floki.text(changelog_link) =~ "Changelog"
+    end
+
+    test "mobile dropdown lists the available doc kinds" do
+      package = insert(:package, name: "mobile_doc_pkg")
+
+      insert(:release,
+        package: package,
+        version: "1.0.0",
+        meta: build(:release_metadata, app: package.name)
+      )
+
+      Hexpm.Store.put(
+        :preview_bucket,
+        "file_lists/#{package.name}-1.0.0.json",
+        JSON.encode!(["README.md", "LICENSE"])
+      )
+
+      body = response(get(build_conn(), "/packages/#{package.name}"), 200)
+
+      assert {:ok, document} = Floki.parse_document(body)
+      assert [_ | _] = Floki.find(document, ".package-tabs-mobile-menu a[href$=\"/license\"]")
+    end
   end
 
   describe "GET /packages/:name/audit-logs" do

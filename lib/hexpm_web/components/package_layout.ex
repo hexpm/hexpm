@@ -18,6 +18,7 @@ defmodule HexpmWeb.Components.PackageLayout do
 
   import HexpmWeb.Components.Badge
 
+  alias Hexpm.Docs.Files
   alias Hexpm.Repository.Owners
   alias Hexpm.Security.Advisories
   alias HexpmWeb.ViewHelpers
@@ -44,6 +45,8 @@ defmodule HexpmWeb.Components.PackageLayout do
   attr :version_pinned?, :boolean, default: false
   attr :wide?, :boolean, default: false
   attr :source_filename, :string, default: nil
+  attr :doc_kind, :atom, default: :readme
+  attr :doc_kinds, :map, default: %{}
 
   # Dependants tab data — only loaded on the dependants page
   attr :dependants, :list, default: []
@@ -88,6 +91,10 @@ defmodule HexpmWeb.Components.PackageLayout do
       assigns
       |> assign(:tabs, tabs)
       |> assign(:active_package_tab, Enum.find(tabs, & &1.active))
+
+    doc_kind_entries = doc_kind_entries(assigns)
+
+    assigns = assign(assigns, :doc_kind_entries, doc_kind_entries)
 
     flash_visible = assigns.current_release && assigns.current_release.vulnerable?
     assigns = assign(assigns, :flash_visible, flash_visible)
@@ -224,6 +231,21 @@ defmodule HexpmWeb.Components.PackageLayout do
             </summary>
 
             <div class="package-tabs-mobile-menu absolute inset-x-0 top-full z-20 mt-2 overflow-hidden rounded-xl border border-grey-200 bg-white shadow-lg dark:border-grey-700 dark:bg-grey-800">
+              <%= for entry <- @doc_kind_entries do %>
+                <a href={entry.path} class={mobile_tab_class(entry.active)}>
+                  <div class="flex min-w-0 items-center gap-3">
+                    {HexpmWeb.ViewIcons.icon(:heroicon, "document",
+                      class: "size-4.5 shrink-0 text-grey-500 dark:text-grey-300"
+                    )}
+                    <span class="truncate pl-4">{entry.label}</span>
+                  </div>
+                  <%= if entry.active do %>
+                    {HexpmWeb.ViewIcons.icon(:heroicon, "check",
+                      class: "size-4 shrink-0 text-primary-default dark:text-white"
+                    )}
+                  <% end %>
+                </a>
+              <% end %>
               <%= for tab <- @tabs do %>
                 <a
                   href={tab.path}
@@ -565,7 +587,7 @@ defmodule HexpmWeb.Components.PackageLayout do
       %{
         active: assigns.active_tab == :readme,
         icon: "document-text",
-        label: "Readme",
+        label: "Documentation",
         path: readme_path(assigns)
       },
       %{
@@ -711,6 +733,20 @@ defmodule HexpmWeb.Components.PackageLayout do
 
   defp dependants_label(count),
     do: "#{count} #{pluralize(count, "Dependant", "Dependants")}"
+
+  defp doc_kind_entries(assigns) do
+    assigns.doc_kinds
+    |> Files.present_kinds()
+    |> Enum.reject(&(&1 == :readme))
+    |> Enum.map(fn kind ->
+      %{
+        kind: kind,
+        label: Files.label(kind),
+        path: ViewHelpers.path_for_doc(assigns.package, assigns.current_release, kind),
+        active: assigns.doc_kind == kind
+      }
+    end)
+  end
 
   defp path_for_tab(:dependencies, package, release, _filename),
     do: ViewHelpers.path_for_dependencies(package, release)
