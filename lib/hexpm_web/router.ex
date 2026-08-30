@@ -250,6 +250,29 @@ defmodule HexpmWeb.Router do
     get "/packages/:name/versions", PackageController, :versions
     get "/packages/:name/advisories", PackageController, :advisories
     get "/packages/:name/:version/dependencies", PackageController, :dependencies
+
+    # This must be declared before the `/packages/:repository/:name/:version`
+    # (and `/packages/:name/:version`) `:show` routes below. Phoenix router
+    # clauses are tried in declaration order, and `:show`'s three fully
+    # dynamic segments would match any 4-segment `/packages/*/*/*` path --
+    # including these literal-kind paths -- if it came first, permanently
+    # shadowing these routes. Using literal per-kind segments (one route per
+    # kind from `Hexpm.Docs.Files.kinds()`) rather than a single dynamic
+    # `:kind` param avoids a *different* collision: a dynamic `:kind` here
+    # would have the exact same all-dynamic shape as `:show`'s route, which
+    # Phoenix could then only disambiguate by declaration order too, and
+    # every hex.pm release version is a valid `:kind` value at the type
+    # level, unlike a real kind segment such as "changelog".
+    for kind <- Hexpm.Docs.Files.kinds(), kind != :readme do
+      kind_str = Atom.to_string(kind)
+
+      get "/packages/:name/:version/#{kind}", PackageController, :docs_file,
+        assigns: %{doc_kind_segment: kind_str}
+
+      get "/packages/:repository/:name/:version/#{kind}", PackageController, :docs_file,
+        assigns: %{doc_kind_segment: kind_str}
+    end
+
     get "/packages/:name/:version", PackageController, :show
     get "/packages/:repository/:name/owners", PackageOwnerController, :index
     post "/packages/:repository/:name/owners", PackageOwnerController, :create

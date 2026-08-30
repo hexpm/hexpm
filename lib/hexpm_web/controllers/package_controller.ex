@@ -1,6 +1,8 @@
 defmodule HexpmWeb.PackageController do
   use HexpmWeb, :controller
 
+  alias Hexpm.Docs.Files
+  alias Hexpm.Preview
   alias Hexpm.Security.Advisories
   alias HexpmWeb.PackageLayoutAssigns
 
@@ -24,7 +26,23 @@ defmodule HexpmWeb.PackageController do
         end
 
       if release do
-        package(conn, package, releases, release, type)
+        package(conn, package, releases, release, type, :readme)
+      else
+        not_found(conn)
+      end
+    end)
+  end
+
+  def docs_file(conn, params) do
+    params = fixup_params(params)
+    kind = Files.parse_segment(conn.assigns.doc_kind_segment)
+
+    access_package(conn, params, fn package, _repositories ->
+      releases = Releases.all(package)
+      release = matching_release(releases, params["version"])
+
+      if release && kind do
+        package(conn, package, releases, release, :release, kind)
       else
         not_found(conn)
       end
@@ -229,7 +247,7 @@ defmodule HexpmWeb.PackageController do
     Enum.find(releases, &(to_string(&1.version) == version))
   end
 
-  defp package(conn, package, releases, release, type) do
+  defp package(conn, package, releases, release, type, doc_kind) do
     release =
       Releases.preload(release, [:requirements, :downloads, :publisher, :security_advisories])
 
@@ -238,6 +256,9 @@ defmodule HexpmWeb.PackageController do
         :package -> nil
         :release -> release
       end
+
+    doc_kinds =
+      Preview.doc_kinds(package.repository.name, package.name, to_string(release.version))
 
     render(
       conn,
@@ -249,7 +270,9 @@ defmodule HexpmWeb.PackageController do
         canonical_url: ~p"/packages/#{package}",
         releases: releases,
         version_pinned?: type == :release,
-        type: type
+        type: type,
+        doc_kind: doc_kind,
+        doc_kinds: doc_kinds
       ] ++
         PackageLayoutAssigns.for_package(conn, package,
           releases: releases,

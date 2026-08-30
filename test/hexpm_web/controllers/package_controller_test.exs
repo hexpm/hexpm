@@ -482,6 +482,123 @@ defmodule HexpmWeb.PackageControllerTest do
     end
   end
 
+  describe "GET /packages/:name/:version/:kind" do
+    test "renders a recognized doc kind" do
+      package = insert(:package, name: "doc_kind_pkg")
+
+      insert(:release,
+        package: package,
+        version: "1.0.0",
+        meta: build(:release_metadata, app: package.name)
+      )
+
+      Hexpm.Store.put(
+        :preview_bucket,
+        "file_lists/#{package.name}-1.0.0.json",
+        JSON.encode!(["README.md", "CHANGELOG.md"])
+      )
+
+      Hexpm.Store.put(
+        :preview_bucket,
+        "files/#{package.name}/1.0.0/CHANGELOG.md",
+        "# Changelog"
+      )
+
+      body = response(get(build_conn(), "/packages/#{package.name}/1.0.0/changelog"), 200)
+
+      assert body =~ "readme-frame"
+      assert body =~ "/#{package.name}/1.0.0?kind=changelog"
+    end
+
+    test "404s for a version the package does not have" do
+      package = insert(:package, name: "doc_kind_missing_version")
+
+      insert(:release,
+        package: package,
+        version: "1.0.0",
+        meta: build(:release_metadata, app: package.name)
+      )
+
+      conn = get(build_conn(), "/packages/#{package.name}/9.9.9/changelog")
+      assert response(conn, 404)
+    end
+
+    test "unknown package 404s" do
+      conn = get(build_conn(), "/packages/nonexistent_doc_pkg/1.0.0/changelog")
+      assert response(conn, 404)
+    end
+  end
+
+  describe "Documentation sidebar" do
+    test "shows only the kinds the release actually has" do
+      package = insert(:package, name: "sidebar_pkg")
+
+      insert(:release,
+        package: package,
+        version: "1.0.0",
+        meta: build(:release_metadata, app: package.name)
+      )
+
+      Hexpm.Store.put(
+        :preview_bucket,
+        "file_lists/#{package.name}-1.0.0.json",
+        JSON.encode!(["README.md", "CHANGELOG.md", "LICENSE"])
+      )
+
+      body = response(get(build_conn(), "/packages/#{package.name}"), 200)
+
+      assert body =~ "Documentation"
+      assert body =~ ">Changelog<"
+      assert body =~ ">License<"
+      refute body =~ ">Security<"
+    end
+
+    test "no sidebar for a readme-only package" do
+      package = insert(:package, name: "readme_only_pkg")
+
+      insert(:release,
+        package: package,
+        version: "1.0.0",
+        meta: build(:release_metadata, app: package.name)
+      )
+
+      Hexpm.Store.put(
+        :preview_bucket,
+        "file_lists/#{package.name}-1.0.0.json",
+        JSON.encode!(["README.md"])
+      )
+
+      body = response(get(build_conn(), "/packages/#{package.name}"), 200)
+
+      refute body =~ "aria-label=\"Documentation files\""
+    end
+
+    test "deep link to a missing kind shows an explanation, not the description" do
+      package =
+        insert(:package,
+          name: "missing_kind_pkg",
+          meta: build(:package_metadata, description: "A test package.")
+        )
+
+      insert(:release,
+        package: package,
+        version: "1.0.0",
+        meta: build(:release_metadata, app: package.name)
+      )
+
+      Hexpm.Store.put(
+        :preview_bucket,
+        "file_lists/#{package.name}-1.0.0.json",
+        JSON.encode!(["README.md"])
+      )
+
+      body = response(get(build_conn(), "/packages/#{package.name}/1.0.0/security"), 200)
+
+      assert body =~ "does not publish a Security file"
+      refute body =~ "A test package."
+    end
+  end
+
   describe "GET /packages/:name/audit-logs" do
     test "sets title correctly" do
       _package = insert(:package, name: "Test")
