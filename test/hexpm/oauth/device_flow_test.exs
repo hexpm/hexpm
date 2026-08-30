@@ -220,7 +220,7 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
           client.client_id,
           device_code.scopes,
           "urn:ietf:params:oauth:grant-type:device_code",
-          device_code.device_code
+          "device_code:#{device_code.id}"
         )
 
       assert {:error, changeset} = Repo.insert(duplicate)
@@ -234,7 +234,7 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
       from(t in Token,
         where:
           t.grant_type == "urn:ietf:params:oauth:grant-type:device_code" and
-            t.grant_reference == ^device_code.device_code and
+            t.grant_reference == ^"device_code:#{device_code.id}" and
             t.client_id == ^client.client_id and
             is_nil(t.revoked_at)
       )
@@ -262,7 +262,7 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
       oauth_token =
         Repo.get_by(Token,
           grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-          grant_reference: device_code.device_code,
+          grant_reference: "device_code:#{device_code.id}",
           client_id: client.client_id
         )
 
@@ -287,7 +287,7 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
       oauth_token =
         Repo.get_by(Token,
           grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-          grant_reference: device_code.device_code,
+          grant_reference: "device_code:#{device_code.id}",
           client_id: client.client_id
         )
         |> Repo.preload(:user_session)
