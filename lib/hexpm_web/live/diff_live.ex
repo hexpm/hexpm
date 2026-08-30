@@ -200,7 +200,7 @@ defmodule HexpmWeb.DiffLive do
   # so every event that pulls more of the diff over re-asks. The public
   # repository answers from the socket without a query.
   defp still_reachable(socket, fun) do
-    case fetch_repository(socket, socket.assigns.repository, reload: true) do
+    case fetch_repository(socket, socket.assigns.repository) do
       {:ok, _repository} ->
         fun.(socket)
 
@@ -500,8 +500,8 @@ defmodule HexpmWeb.DiffLive do
     end
   end
 
-  defp fetch_repository(socket, repository, opts \\ []) do
-    case RepositoryAccess.fetch_repository(socket, repository, opts) do
+  defp fetch_repository(socket, repository) do
+    case RepositoryAccess.fetch_repository(socket, repository) do
       {:ok, repository} -> {:ok, repository}
       {:error, :sso_required, organization} -> {:sso_required, organization}
       _ -> {:error, :package_not_found}

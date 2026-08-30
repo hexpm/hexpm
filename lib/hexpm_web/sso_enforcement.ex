@@ -95,22 +95,10 @@ defmodule HexpmWeb.SSOEnforcement do
   than refusing: an organization the person has not authenticated for is absent
   the same way one they do not belong to is. Refusing the whole page instead
   would take the public packages down with it.
-
-  `reload: true` reads the memberships from the database rather than from the
-  association the caller loaded, which is what a connected LiveView needs: it
-  loaded them at mount and a member removed since is governed by nothing.
   """
-  def reachable_organizations(conn_or_socket, opts \\ []) do
+  def reachable_organizations(conn_or_socket) do
     user = conn_or_socket.assigns.current_user
-
-    organizations =
-      if Keyword.get(opts, :reload, false) do
-        Users.reload_organizations(user)
-      else
-        Users.all_organizations(user)
-      end
-
-    reachable(conn_or_socket, organizations)
+    reachable(conn_or_socket, Users.all_organizations(user))
   end
 
   @doc """
@@ -129,9 +117,9 @@ defmodule HexpmWeb.SSOEnforcement do
   The repositories behind `reachable_organizations/1`, which is what the package
   queries take.
   """
-  def reachable_repositories(conn_or_socket, opts \\ []) do
+  def reachable_repositories(conn_or_socket) do
     conn_or_socket
-    |> reachable_organizations(opts)
+    |> reachable_organizations()
     |> Enum.map(& &1.repository)
   end
 

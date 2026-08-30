@@ -47,7 +47,7 @@ defmodule HexpmWeb.PackageLive.Index do
   # removed and an organization access session that has since lapsed or been
   # revoked.
   defp load_results(socket, params) do
-    repositories = HexpmWeb.SSOEnforcement.reachable_repositories(socket, reload: true)
+    repositories = HexpmWeb.SSOEnforcement.reachable_repositories(socket)
     search = Hexpm.Utils.parse_search(params["search"])
 
     sort = sort(params["sort"])

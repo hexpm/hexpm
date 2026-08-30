@@ -71,23 +71,6 @@ defmodule Hexpm.Accounts.Users do
     [Organization.hexpm()]
   end
 
-  @doc """
-  The same list, read from the database rather than from the association the
-  caller has in hand.
-
-  A connected LiveView loads its memberships once, at mount, and outlives them:
-  a member removed while the socket is open still has the organization in the
-  association, and enforcement does not catch that because a non-member is not
-  governed by anything.
-  """
-  def reload_organizations(%User{} = user) do
-    [Organization.hexpm() | Organizations.all_by_user(user, :repository)]
-  end
-
-  def reload_organizations(nil) do
-    [Organization.hexpm()]
-  end
-
   def add(params, audit: audit_data) do
     multi =
       Multi.new()

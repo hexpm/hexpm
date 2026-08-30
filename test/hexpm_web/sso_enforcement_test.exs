@@ -232,6 +232,39 @@ defmodule HexpmWeb.SSOEnforcementTest do
       assert render_hook(view, "load-gap", %{"start" => "5", "last" => "5"}) =~
                "Package not found"
     end
+
+    test "drops the organization once the session behind the socket is revoked", context do
+      {conn, session} = login(context.member)
+
+      {:ok, view, html} = live(conn, "/packages?search=#{context.package.name}")
+
+      assert html =~ "#{context.repository.name}/#{context.package.name}"
+
+      {:ok, _session} = Hexpm.UserSessions.revoke(session)
+
+      refute render_patch(view, "/packages?search=#{context.package.name}&sort=name") =~
+               "#{context.repository.name}/#{context.package.name}"
+    end
+
+    test "stops feeding the diff view once the session behind the socket is revoked", context do
+      insert(:release, package: context.package, version: "2.0.0")
+      {conn, session} = login(context.member)
+
+      {:ok, request} =
+        Hexpm.Diff.prepare(context.repository.name, context.package.name, "1.0.0", "2.0.0", [])
+
+      put_ready_cache(request, 6)
+
+      path = "/diff/#{context.repository.name}/#{context.package.name}/1.0.0..2.0.0"
+      {:ok, view, html} = live(conn, path)
+
+      assert html =~ "5 of 6 files loaded"
+
+      {:ok, _session} = Hexpm.UserSessions.revoke(session)
+
+      assert render_hook(view, "load-gap", %{"start" => "5", "last" => "5"}) =~
+               "Package not found"
+    end
   end
 
   describe "the dashboard" do

@@ -66,7 +66,7 @@ defmodule HexpmWeb.PackageReportLive do
     # The package was accepted at mount and the form outlives both the
     # organization access session and the membership that let it open, so the
     # report is only filed against a package the reporter still reaches.
-    case RepositoryAccess.fetch_package(socket, repository, package_name, reload: true) do
+    case RepositoryAccess.fetch_package(socket, repository, package_name) do
       {:ok, _package} ->
         changeset = Report.changeset(%Report{}, params)
         submitted_form = changeset |> Map.put(:action, :validate) |> to_form(as: :report)

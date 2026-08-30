@@ -16,15 +16,10 @@ defmodule HexpmWeb.RepositoryAccess do
 
   @doc """
   The repository behind this name, if the current user reaches it.
-
-  `reload: true` resolves the memberships from the database instead of from the
-  association the caller loaded. A connected LiveView loads them once, at mount,
-  and a member removed since is refused by nothing else: enforcement only
-  governs members.
   """
-  def fetch_repository(conn_or_socket, repository_name, opts \\ []) do
+  def fetch_repository(conn_or_socket, repository_name) do
     current_user = conn_or_socket.assigns.current_user
-    organizations = organizations(current_user, opts)
+    organizations = Users.all_organizations(current_user)
 
     case Enum.find(organizations, &(&1.repository.name == repository_name)) do
       nil ->
@@ -38,8 +33,8 @@ defmodule HexpmWeb.RepositoryAccess do
     end
   end
 
-  def fetch_package(conn_or_socket, repository_name, package_name, opts \\ []) do
-    case fetch_repository(conn_or_socket, repository_name, opts) do
+  def fetch_package(conn_or_socket, repository_name, package_name) do
+    case fetch_repository(conn_or_socket, repository_name) do
       {:ok, repository} ->
         case Packages.get(repository, package_name) do
           %Package{} = package -> {:ok, package}
@@ -48,14 +43,6 @@ defmodule HexpmWeb.RepositoryAccess do
 
       other ->
         other
-    end
-  end
-
-  defp organizations(current_user, opts) do
-    if Keyword.get(opts, :reload, false) do
-      Users.reload_organizations(current_user)
-    else
-      Users.all_organizations(current_user)
     end
   end
 end
