@@ -1,12 +1,12 @@
 defmodule Hexpm.Preview do
   require Logger
 
+  alias Hexpm.Docs.Files
   alias Hexpm.Preview.{Bucket, Sitemaps}
   alias Hexpm.Repository.{Assets, Releases}
   alias Hexpm.Repository.Sitemaps, as: RepositorySitemaps
 
   @max_file_size 100 * 1000
-  @readme_filenames ~w(README.md readme.md README.markdown readme.markdown README.txt readme.txt README readme)
 
   defmodule StaleTarballError do
     defexception [:key]
@@ -45,15 +45,40 @@ defmodule Hexpm.Preview do
     end
   end
 
-  def readme(repository, package, version) do
+  def doc(repository, package, version, kind) do
     with files when is_list(files) <- Bucket.get_file_list(repository, package, version),
-         filename when is_binary(filename) <- Enum.find(@readme_filenames, &(&1 in files)),
+         filename when is_binary(filename) <- Files.resolve(kind, files),
          contents when is_binary(contents) <-
            Bucket.get_file(repository, package, version, filename) do
       {:ok, filename, contents}
     else
       _ -> :error
     end
+  end
+
+  def readme(repository, package, version), do: doc(repository, package, version, :readme)
+
+  @doc """
+  Which documentation-file kinds (changelog, license, ...) a release has,
+  for the mobile tab dropdown's doc-kind entries.
+
+  This only decorates that dropdown, so a failure here must never take down
+  the package page it renders on: any error resolving the file list (a store
+  outage, a malformed response, ...) degrades to `%{}` rather than raising.
+  """
+  def doc_kinds(repository, package, version) do
+    case Bucket.get_file_list(repository, package, version) do
+      files when is_list(files) -> Files.resolve_all(files)
+      _ -> %{}
+    end
+  rescue
+    error ->
+      Logger.warning(
+        "Failed to resolve doc kinds for #{repository}/#{package} #{version}: " <>
+          Exception.message(error)
+      )
+
+      %{}
   end
 
   def raw_file(repository, package, version, filename) do

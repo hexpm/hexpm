@@ -17,6 +17,7 @@ defmodule HexpmWeb.PackageLayoutAssigns do
   """
 
   alias Hexpm.Accounts.Users
+  alias Hexpm.Preview
   alias Hexpm.Repository.{Downloads, Owners, Packages, Release, Releases}
 
   @doc """
@@ -35,6 +36,15 @@ defmodule HexpmWeb.PackageLayoutAssigns do
       defaults to `true`
     * `:dependants_count?` — load the dependant count used in the tab label;
       defaults to `true`
+    * `:doc_kinds?` — resolve which documentation-file kinds (changelog,
+      license, ...) the current release has, for the mobile tab dropdown's
+      doc-kind entries; defaults to `true`. Requires a resolvable
+      `current_release` -- when there isn't one, this resolves to `%{}`
+      regardless of the option.
+    * `:doc_kinds` — precomputed doc kinds map to use instead of calling
+      `Preview.doc_kinds/3`, for a caller that already has the release's
+      file list (e.g. `Preview.source/4`) and would otherwise fetch it a
+      second time. Ignored when `:doc_kinds?` is `false`.
   """
   def for_package(conn_or_user, package, opts \\ []) do
     current_user = current_user(conn_or_user)
@@ -43,6 +53,7 @@ defmodule HexpmWeb.PackageLayoutAssigns do
     graph_release = opts[:graph_release]
     sidebar? = Keyword.get(opts, :sidebar?, true)
     dependants_count? = Keyword.get(opts, :dependants_count?, true)
+    doc_kinds? = Keyword.get(opts, :doc_kinds?, true)
 
     owners =
       cond do
@@ -87,6 +98,12 @@ defmodule HexpmWeb.PackageLayoutAssigns do
           Keyword.get_lazy(opts, :dependants_count, fn ->
             Packages.count_dependants(repositories, package)
           end)
+        end,
+      doc_kinds:
+        if doc_kinds? do
+          Keyword.get_lazy(opts, :doc_kinds, fn -> doc_kinds(package, current_release) end)
+        else
+          %{}
         end
     ]
 
@@ -95,6 +112,15 @@ defmodule HexpmWeb.PackageLayoutAssigns do
 
   defp current_user(%Plug.Conn{} = conn), do: conn.assigns.current_user
   defp current_user(user), do: user
+
+  # Which documentation-file kinds (changelog, license, ...) the current
+  # release has, for the mobile tab dropdown's doc-kind entries. Needs a
+  # release to resolve a version against, so it's `%{}` without one.
+  defp doc_kinds(_package, nil), do: %{}
+
+  defp doc_kinds(package, current_release) do
+    Preview.doc_kinds(package.repository.name, package.name, to_string(current_release.version))
+  end
 
   # The layout shows a security banner for the release on screen, so that one
   # release needs its vulnerable? flag and none of the others do.

@@ -264,6 +264,35 @@ defmodule HexpmWeb.Router do
     get "/packages/:name/versions", PackageController, :versions
     get "/packages/:name/advisories", PackageController, :advisories
     get "/packages/:name/:version/dependencies", PackageController, :dependencies
+
+    # The non-repository kind routes below (`/packages/:name/:version/#{kind}`,
+    # 4 segments: name, version, kind) MUST be declared before the
+    # pre-existing `/packages/:repository/:name/:version` `:show` route
+    # further down (also 4 segments, all dynamic: repository, name, version).
+    # Phoenix router clauses are tried in declaration order, not by
+    # literal-vs-dynamic specificity, so if `:show` came first its three
+    # fully-dynamic segments would match any 4-segment `/packages/*/*/*`
+    # path -- including e.g. `/packages/some_pkg/1.0.0/changelog` (read as
+    # repository="some_pkg", name="1.0.0", version="changelog") -- and
+    # permanently shadow the non-repository kind routes. The repository-scoped
+    # kind routes (`/packages/:repository/:name/:version/#{kind}`, 5
+    # segments) are never at risk this way: no other route with 5 fully-
+    # dynamic segments at that depth exists to shadow them, so their position
+    # relative to `:show` doesn't matter. Using literal per-kind segments
+    # (one route per kind from `Hexpm.Docs.Files.kinds()`) rather than a
+    # single dynamic `:kind` param avoids a *different* collision: a dynamic
+    # `:kind` here would have the exact same all-dynamic shape as `:show`'s
+    # route, which Phoenix could then only disambiguate by declaration order
+    # too, and every hex.pm release version is a valid `:kind` value at the
+    # type level, unlike a real kind segment such as "changelog".
+    for kind <- Hexpm.Docs.Files.kinds(), kind != :readme do
+      get "/packages/:name/:version/#{kind}", PackageController, :docs_file,
+        assigns: %{doc_kind: kind}
+
+      get "/packages/:repository/:name/:version/#{kind}", PackageController, :docs_file,
+        assigns: %{doc_kind: kind}
+    end
+
     get "/packages/:name/:version", PackageController, :show
     get "/packages/:repository/:name/owners", PackageOwnerController, :index
     post "/packages/:repository/:name/owners", PackageOwnerController, :create

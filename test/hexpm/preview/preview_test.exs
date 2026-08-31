@@ -126,6 +126,77 @@ defmodule Hexpm.PreviewTest do
     assert Preview.get_latest_version("other", "scoped") == nil
   end
 
+  describe "doc/4" do
+    test "resolves and reads a non-readme kind" do
+      put_release("hexpm", "doc_package", "1.0.0", [
+        {"README.md", "readme"},
+        {"CHANGELOG.md", "changelog contents"}
+      ])
+
+      assert Preview.doc("hexpm", "doc_package", "1.0.0", :changelog) ==
+               {:ok, "CHANGELOG.md", "changelog contents"}
+    end
+
+    test "returns :error for a kind the release does not have" do
+      put_release("hexpm", "no_changelog", "1.0.0", [{"README.md", "readme"}])
+
+      assert Preview.doc("hexpm", "no_changelog", "1.0.0", :changelog) == :error
+    end
+
+    test "readme/3 is doc/4 with :readme" do
+      put_release("hexpm", "readme_only", "1.0.0", [{"README.md", "hello"}])
+
+      assert Preview.readme("hexpm", "readme_only", "1.0.0") ==
+               Preview.doc("hexpm", "readme_only", "1.0.0", :readme)
+    end
+
+    test "returns :error when the file list names a file whose object is missing" do
+      Hexpm.Store.put(
+        :preview_bucket,
+        "file_lists/partial_doc-1.0.0.json",
+        JSON.encode!(["CHANGELOG.md"])
+      )
+
+      # deliberately no object written for files/partial_doc/1.0.0/CHANGELOG.md
+      assert Preview.doc("hexpm", "partial_doc", "1.0.0", :changelog) == :error
+    end
+  end
+
+  describe "doc_kinds/3" do
+    test "returns every resolvable kind for a release" do
+      put_release("hexpm", "multi_doc", "1.0.0", [
+        {"README.md", "readme"},
+        {"CHANGELOG.md", "changelog"},
+        {"LICENSE", "license"}
+      ])
+
+      assert Preview.doc_kinds("hexpm", "multi_doc", "1.0.0") == %{
+               readme: "README.md",
+               changelog: "CHANGELOG.md",
+               license: "LICENSE"
+             }
+    end
+
+    test "returns an empty map for a package with no file list" do
+      assert Preview.doc_kinds("hexpm", "missing_entirely", "1.0.0") == %{}
+    end
+
+    test "returns an empty map instead of raising when the file list is unreadable" do
+      # This decorates a `md:hidden` dropdown on every package page tab, so a
+      # store blip or a malformed object must degrade quietly rather than
+      # crashing the page (JSON.decode! raises on this malformed payload the
+      # same way an S3 error unhandled by Hexpm.Store.S3.get/3 would).
+      Hexpm.Store.put(
+        :preview_bucket,
+        "file_lists/broken_doc_kinds-1.0.0.json",
+        "not valid json",
+        []
+      )
+
+      assert Preview.doc_kinds("hexpm", "broken_doc_kinds", "1.0.0") == %{}
+    end
+  end
+
   defp put_release(repository, package, version, files) do
     prefix = if repository == "hexpm", do: "", else: "repos/#{repository}/"
     filenames = Enum.map(files, &elem(&1, 0))

@@ -52,6 +52,24 @@ defmodule HexpmWeb.ViewHelpers do
     ~p"/packages/#{package.repository}/#{package}/versions"
   end
 
+  # `:readme` has no dedicated `/readme` route -- the bare package/release URL
+  # already renders the readme, so delegate to `path_for_release/2` instead of
+  # appending a `/readme` segment the router doesn't recognize.
+  def path_for_doc(%Package{} = package, release, :readme),
+    do: path_for_release(package, release)
+
+  # This deliberately uses plain string interpolation rather than `~p`: the
+  # router does not have one route with a genuine dynamic `:kind` segment for
+  # `~p` to verify against -- it has six separately-generated *literal*
+  # routes (`changelog`, `license`, ...). Plain interpolation is exactly how
+  # `readme_url/3` builds URLs, and is trivially correct here since `kind` is
+  # always one of the known atoms whose string form is the literal segment
+  # the router generates. It builds on `path_for_release/2` for the
+  # package/release portion of the URL rather than re-deriving the
+  # repository/main-repo split by hand.
+  def path_for_doc(%Package{} = package, release, kind),
+    do: "#{path_for_release(package, release)}/#{kind}"
+
   def path_for_diff(%Package{repository_id: 1} = package, version, previous_version) do
     versions = "#{previous_version}..#{version}"
     ~p"/diff/#{package}/#{versions}"
@@ -551,17 +569,31 @@ defmodule HexpmWeb.ViewHelpers do
   def main_repository?(%{repository_id: 1}), do: true
   def main_repository?(_), do: false
 
-  def readme_url(%Package{repository_id: 1} = package, version) do
+  def readme_url(package, version, kind \\ :readme)
+
+  def readme_url(%Package{repository_id: 1} = package, version, kind) do
     readme_url = Application.fetch_env!(:hexpm, :readme_url)
-    "#{readme_url}/#{package.name}/#{version}"
+    "#{readme_url}/#{package.name}/#{version}#{doc_query(kind: doc_query_kind(kind))}"
   end
 
-  def readme_url(%Package{} = package, version) do
+  def readme_url(%Package{} = package, version, kind) do
     readme_url = Application.fetch_env!(:hexpm, :readme_url)
     repository = package.repository.name
     version = to_string(version)
     token = HexpmWeb.ReadmeToken.sign(repository, package.name, version)
-    "#{readme_url}/#{repository}/#{package.name}/#{version}?token=#{token}"
+
+    "#{readme_url}/#{repository}/#{package.name}/#{version}" <>
+      doc_query(token: token, kind: doc_query_kind(kind))
+  end
+
+  defp doc_query_kind(:readme), do: nil
+  defp doc_query_kind(kind), do: kind
+
+  defp doc_query(params) do
+    case Enum.reject(params, fn {_key, value} -> is_nil(value) end) do
+      [] -> ""
+      params -> "?" <> URI.encode_query(params)
+    end
   end
 
   def safe_url(url) when is_binary(url) do
