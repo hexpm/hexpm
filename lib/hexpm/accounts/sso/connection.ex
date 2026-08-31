@@ -24,6 +24,11 @@ defmodule Hexpm.Accounts.SSO.Connection do
     field :required_at, :utc_datetime_usec
     field :session_lifetime_seconds, :integer, default: 86_400
     field :personal_keys, :string
+    field :scim_token_first, :string, redact: true
+    field :scim_token_second, :string, redact: true
+    field :scim_token, :string, virtual: true, redact: true
+    field :scim_seat_policy, :string
+    field :scim_role, :string, default: "read"
 
     belongs_to :organization, Organization
     belongs_to :configured_by_user, User
@@ -170,6 +175,55 @@ defmodule Hexpm.Accounts.SSO.Connection do
         changeset
     end
   end
+
+  @scim_seat_policies ~w(block expand)
+  @scim_roles ~w(admin write read)
+
+  @doc """
+  The provisioning settings. `scim_seat_policy` is a forced choice while SCIM
+  is on, for the reason `jit_seat_policy` is: provisioning claims seats, and
+  auto-expanding a subscription is a billing change nobody should get without
+  having asked for it. `scim_role` is separate from `jit_role` because either
+  feature runs without the other, and a setting labeled for one silently
+  governing the other is a support ticket waiting to happen.
+  """
+  def scim_changeset(connection, attrs) do
+    changeset =
+      connection
+      |> cast(attrs, [:scim_seat_policy, :scim_role])
+      |> update_change(:scim_seat_policy, &nilify_blank/1)
+      |> validate_required([:scim_role])
+      |> validate_inclusion(:scim_seat_policy, @scim_seat_policies)
+      |> validate_inclusion(:scim_role, @scim_roles)
+
+    if scim_enabled?(connection) do
+      validate_required(changeset, [:scim_seat_policy])
+    else
+      changeset
+    end
+  end
+
+  @doc """
+  Turns provisioning on, or replaces the bearer token of a connection that
+  already has one. The plaintext lands in the virtual `scim_token` for the one
+  screen that shows it; only the split hash is stored.
+  """
+  def scim_generate_changeset(connection, attrs) do
+    {token, first, second} = Hexpm.Accounts.Key.gen_key()
+
+    connection
+    |> scim_changeset(attrs)
+    |> validate_required([:scim_seat_policy])
+    |> put_change(:scim_token_first, first)
+    |> put_change(:scim_token_second, second)
+    |> put_change(:scim_token, token)
+  end
+
+  def scim_delete_changeset(connection) do
+    change(connection, scim_token_first: nil, scim_token_second: nil)
+  end
+
+  def scim_enabled?(%__MODULE__{scim_token_first: first}), do: not is_nil(first)
 
   def enabled?(%__MODULE__{enabled_at: enabled_at}), do: not is_nil(enabled_at)
 

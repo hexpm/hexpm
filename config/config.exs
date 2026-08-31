@@ -146,7 +146,8 @@ config :mime,
   types: %{
     "application/vnd.hex+json" => ["json"],
     "application/vnd.hex+elixir" => ["elixir"],
-    "application/vnd.hex+erlang" => ["erlang"]
+    "application/vnd.hex+erlang" => ["erlang"],
+    "application/scim+json" => ["scim"]
   },
   extensions: %{
     "json" => "application/json"

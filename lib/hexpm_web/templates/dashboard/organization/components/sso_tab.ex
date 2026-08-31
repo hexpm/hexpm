@@ -15,6 +15,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
   attr :identities, :list, required: true
   attr :failures, :list, required: true
   attr :callback_url, :string, required: true
+  attr :scim_base_url, :string, required: true
+  attr :generated_scim_token, :any, default: nil
   attr :login_url, :string, required: true
   attr :domains, :list, default: []
   attr :personal_keys, :list, default: []
@@ -293,6 +295,99 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
             <.button type="submit" variant="secondary">Save</.button>
           </div>
         </.form>
+      </section>
+
+      <section
+        :if={@connection}
+        id="sso-scim"
+        class="rounded-lg border border-grey-200 dark:border-grey-800 bg-white dark:bg-grey-900 p-5"
+      >
+        <h3 class="font-semibold text-grey-900 dark:text-grey-100">Provisioning (SCIM)</h3>
+        <p class="mt-2 text-sm text-grey-600 dark:text-grey-300">
+          Lets your provider create and deactivate members here as you assign and deactivate them
+          there. Point its SCIM integration at the base URL below with the bearer token, which is
+          shown once when generated. People without a Hex account are reached with an invitation;
+          nothing here creates an account.
+        </p>
+
+        <div
+          :if={@generated_scim_token}
+          id="sso-scim-generated-token"
+          class="mt-4 rounded-md border border-grey-200 dark:border-grey-800 bg-grey-50 dark:bg-grey-950 p-4"
+        >
+          <p class="text-sm font-medium text-grey-900 dark:text-grey-100">
+            Copy the token now. It is not shown again.
+          </p>
+          <code class="mt-2 block break-all text-sm text-grey-900 dark:text-grey-100">
+            {@generated_scim_token}
+          </code>
+        </div>
+
+        <div class="mt-4 grid gap-4">
+          <.readonly_value label="SCIM base URL" value={@scim_base_url} />
+          <.readonly_value
+            label="Status"
+            value={if Connection.scim_enabled?(@connection), do: "On", else: "Off"}
+          />
+        </div>
+
+        <.form
+          for={%{}}
+          action={
+            if Connection.scim_enabled?(@connection),
+              do: ~p"/dashboard/orgs/#{@organization}/sso/scim",
+              else: ~p"/dashboard/orgs/#{@organization}/sso/scim/generate"
+          }
+          as={:scim}
+          class="mt-4 grid gap-4 sm:grid-cols-2"
+        >
+          <.select_input
+            id="sso-scim-seat-policy"
+            name="scim[scim_seat_policy]"
+            label="When the seats run out"
+            value={@connection.scim_seat_policy}
+            options={[
+              {"Choose what happens", ""},
+              {"Refuse the create and notify administrators", "block"},
+              {"Add a seat to the subscription", "expand"}
+            ]}
+            variant="light"
+          />
+          <.select_input
+            id="sso-scim-role"
+            name="scim[scim_role]"
+            label="Role for provisioned members"
+            value={@connection.scim_role}
+            options={[{"Read", "read"}, {"Write", "write"}, {"Admin", "admin"}]}
+            variant="light"
+          />
+          <div class="sm:col-span-2">
+            <.button type="submit" variant="secondary">
+              {if Connection.scim_enabled?(@connection),
+                do: "Save settings",
+                else: "Save and generate token"}
+            </.button>
+          </div>
+        </.form>
+
+        <div :if={Connection.scim_enabled?(@connection)} class="mt-4 flex gap-3">
+          <.form
+            for={%{}}
+            action={~p"/dashboard/orgs/#{@organization}/sso/scim/generate"}
+            as={:scim}
+          >
+            <input type="hidden" name="scim[scim_seat_policy]" value={@connection.scim_seat_policy} />
+            <input type="hidden" name="scim[scim_role]" value={@connection.scim_role} />
+            <.button type="submit" variant="outline">Regenerate token</.button>
+          </.form>
+          <.form
+            for={%{}}
+            action={~p"/dashboard/orgs/#{@organization}/sso/scim/delete"}
+            as={:scim}
+          >
+            <.button type="submit" variant="outline">Turn provisioning off</.button>
+          </.form>
+        </div>
       </section>
 
       <section
