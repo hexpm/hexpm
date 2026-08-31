@@ -41,6 +41,10 @@ defmodule HexpmWeb.PackageLayoutAssigns do
       doc-kind entries; defaults to `true`. Requires a resolvable
       `current_release` -- when there isn't one, this resolves to `%{}`
       regardless of the option.
+    * `:doc_kinds` — precomputed doc kinds map to use instead of calling
+      `Preview.doc_kinds/3`, for a caller that already has the release's
+      file list (e.g. `Preview.source/4`) and would otherwise fetch it a
+      second time. Ignored when `:doc_kinds?` is `false`.
   """
   def for_package(conn_or_user, package, opts \\ []) do
     current_user = current_user(conn_or_user)
@@ -95,7 +99,12 @@ defmodule HexpmWeb.PackageLayoutAssigns do
             Packages.count_dependants(repositories, package)
           end)
         end,
-      doc_kinds: doc_kinds(doc_kinds?, package, current_release)
+      doc_kinds:
+        if doc_kinds? do
+          Keyword.get_lazy(opts, :doc_kinds, fn -> doc_kinds(package, current_release) end)
+        else
+          %{}
+        end
     ]
 
     [{:package_layout, Map.new(layout)} | layout]
@@ -107,10 +116,9 @@ defmodule HexpmWeb.PackageLayoutAssigns do
   # Which documentation-file kinds (changelog, license, ...) the current
   # release has, for the mobile tab dropdown's doc-kind entries. Needs a
   # release to resolve a version against, so it's `%{}` without one.
-  defp doc_kinds(false, _package, _current_release), do: %{}
-  defp doc_kinds(true, _package, nil), do: %{}
+  defp doc_kinds(_package, nil), do: %{}
 
-  defp doc_kinds(true, package, current_release) do
+  defp doc_kinds(package, current_release) do
     Preview.doc_kinds(package.repository.name, package.name, to_string(current_release.version))
   end
 

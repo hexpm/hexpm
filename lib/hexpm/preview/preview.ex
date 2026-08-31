@@ -58,11 +58,27 @@ defmodule Hexpm.Preview do
 
   def readme(repository, package, version), do: doc(repository, package, version, :readme)
 
+  @doc """
+  Which documentation-file kinds (changelog, license, ...) a release has,
+  for the mobile tab dropdown's doc-kind entries.
+
+  This only decorates that dropdown, so a failure here must never take down
+  the package page it renders on: any error resolving the file list (a store
+  outage, a malformed response, ...) degrades to `%{}` rather than raising.
+  """
   def doc_kinds(repository, package, version) do
     case Bucket.get_file_list(repository, package, version) do
       files when is_list(files) -> Files.resolve_all(files)
       _ -> %{}
     end
+  rescue
+    error ->
+      Logger.warning(
+        "Failed to resolve doc kinds for #{repository}/#{package} #{version}: " <>
+          Exception.message(error)
+      )
+
+      %{}
   end
 
   def raw_file(repository, package, version, filename) do

@@ -169,6 +169,21 @@ defmodule Hexpm.PreviewTest do
     test "returns an empty map for a package with no file list" do
       assert Preview.doc_kinds("hexpm", "missing_entirely", "1.0.0") == %{}
     end
+
+    test "returns an empty map instead of raising when the file list is unreadable" do
+      # This decorates a `md:hidden` dropdown on every package page tab, so a
+      # store blip or a malformed object must degrade quietly rather than
+      # crashing the page (JSON.decode! raises on this malformed payload the
+      # same way an S3 error unhandled by Hexpm.Store.S3.get/3 would).
+      Hexpm.Store.put(
+        :preview_bucket,
+        "file_lists/broken_doc_kinds-1.0.0.json",
+        "not valid json",
+        []
+      )
+
+      assert Preview.doc_kinds("hexpm", "broken_doc_kinds", "1.0.0") == %{}
+    end
   end
 
   defp put_release(repository, package, version, files) do
