@@ -1,22 +1,15 @@
 <% description = @package.meta.description %>
-<%!--
-  The sidebar must never be missing the kind currently being viewed, even
-  when the release doesn't actually have it (a deep link to an unavailable
-  kind) -- so union @doc_kind into the resolved map before deriving the
-  list, keeping present_kinds/1's canonical ordering.
---%>
-<% sidebar_kinds = Hexpm.Docs.Files.present_kinds(Map.put_new(@doc_kinds, @doc_kind, nil)) %>
+<% sidebar_kinds = Hexpm.Docs.Files.nav_kinds(@doc_kinds, @doc_kind) %>
 
 <.package_layout
   {@package_layout}
   active_tab={:readme}
   version_pinned?={@version_pinned?}
   doc_kind={@doc_kind}
-  doc_kinds={@doc_kinds}
 >
   <:inner_content>
     <div class="flex gap-5 items-start">
-      <%= if length(sidebar_kinds) > 1 do %>
+      <%= if match?([_, _ | _], sidebar_kinds) do %>
         <nav
           aria-label="Documentation files"
           class="hidden md:flex w-[200px] shrink-0 flex-col gap-1 bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4"
@@ -56,90 +49,18 @@
                 {ViewHelpers.text_length(description, 300) |> text_to_html(insert_brs: false)}
               </div>
             <% end %>
-          <% @doc_kind == :readme -> %>
-            <div
-              id="readme-loading"
-              class="flex items-center justify-center py-12 text-grey-400 dark:text-grey-300"
-            >
-              <svg class="animate-spin h-6 w-6 mr-3" viewBox="0 0 24 24" fill="none">
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                >
-                </circle>
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                >
-                </path>
-              </svg>
-              Loading README...
-            </div>
-
-            <%= if description do %>
-              <div
-                id="readme-fallback"
-                class="text-grey-600 dark:text-grey-300 mb-8 leading-relaxed hidden"
-              >
-                {ViewHelpers.text_length(description, 300) |> text_to_html(insert_brs: false)}
-              </div>
-            <% end %>
-
-            <iframe
-              id="readme-frame"
-              src={"#{ViewHelpers.readme_url(@package, @current_release.version)}"}
-              sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
-              loading="lazy"
-              referrerpolicy="no-referrer"
-              title={"README for #{ViewHelpers.package_name(@package)}"}
-              class="w-full border-0 opacity-0 h-0 overflow-hidden"
-            ></iframe>
-          <% Map.has_key?(@doc_kinds, @doc_kind) -> %>
-            <div
-              id="readme-loading"
-              class="flex items-center justify-center py-12 text-grey-400 dark:text-grey-300"
-            >
-              <svg class="animate-spin h-6 w-6 mr-3" viewBox="0 0 24 24" fill="none">
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                >
-                </circle>
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                >
-                </path>
-              </svg>
-              Loading {Hexpm.Docs.Files.label(@doc_kind)}...
-            </div>
-
-            <div
-              id="readme-fallback"
-              class="text-grey-600 dark:text-grey-300 mb-8 leading-relaxed hidden"
-            >
-              This package does not publish a {Hexpm.Docs.Files.label(@doc_kind)} file.
-            </div>
-
-            <iframe
-              id="readme-frame"
-              src={"#{ViewHelpers.readme_url(@package, @current_release.version, @doc_kind)}"}
-              sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
-              loading="lazy"
-              referrerpolicy="no-referrer"
-              title={"#{Hexpm.Docs.Files.label(@doc_kind)} for #{ViewHelpers.package_name(@package)}"}
-              class="w-full border-0 opacity-0 h-0 overflow-hidden"
-            ></iframe>
+          <% @doc_kind == :readme or Map.has_key?(@doc_kinds, @doc_kind) -> %>
+            <.doc_frame package={@package} release={@current_release} doc_kind={@doc_kind}>
+              <:fallback>
+                <%= if @doc_kind == :readme do %>
+                  <%= if description do %>
+                    {ViewHelpers.text_length(description, 300) |> text_to_html(insert_brs: false)}
+                  <% end %>
+                <% else %>
+                  This package does not publish a {Hexpm.Docs.Files.label(@doc_kind)} file.
+                <% end %>
+              </:fallback>
+            </.doc_frame>
           <% true -> %>
             <p class="text-grey-600 dark:text-grey-300 leading-relaxed">
               This package does not publish a {Hexpm.Docs.Files.label(@doc_kind)} file.

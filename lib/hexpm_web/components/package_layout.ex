@@ -87,18 +87,18 @@ defmodule HexpmWeb.Components.PackageLayout do
 
     tabs = package_tabs(assigns)
     doc_kind_entries = doc_kind_entries(assigns)
+    mobile_entries = mobile_entries(tabs, doc_kind_entries)
 
-    # Exactly one of the "Documentation" tab or a doc-kind entry is active at
-    # a time (see the `active:` clauses above and in `doc_kind_entries/1`),
-    # so the mobile trigger's icon/label falls back to the active doc-kind
-    # entry when it's that one, not the Documentation tab, that's active.
-    active_package_tab =
-      Enum.find(tabs, & &1.active) || Enum.find(doc_kind_entries, & &1.active)
+    # The Documentation tab and a doc-kind entry can both be `active` at once
+    # (the tab highlights the whole section on desktop), but only one entry
+    # is ever `checked?` -- the mobile trigger's icon/label follows that one,
+    # so it names the specific doc kind being viewed rather than the section.
+    active_package_tab = Enum.find(mobile_entries, & &1.checked?)
 
     assigns =
       assigns
       |> assign(:tabs, tabs)
-      |> assign(:doc_kind_entries, doc_kind_entries)
+      |> assign(:mobile_entries, mobile_entries)
       |> assign(:active_package_tab, active_package_tab)
 
     flash_visible = assigns.current_release && assigns.current_release.vulnerable?
@@ -236,58 +236,15 @@ defmodule HexpmWeb.Components.PackageLayout do
             </summary>
 
             <div class="package-tabs-mobile-menu absolute inset-x-0 top-full z-20 mt-2 overflow-hidden rounded-xl border border-grey-200 bg-white shadow-lg dark:border-grey-700 dark:bg-grey-800">
-              <%!--
-                `package_tabs/1` always puts "Documentation" first, and the
-                doc-kind entries (Changelog, License, ...) belong directly
-                under it, not before it and not after the rest of the tabs --
-                so render that one tab, then the doc-kind entries, then the
-                remaining tabs.
-              --%>
-              <%= for tab <- Enum.take(@tabs, 1) do %>
-                <a
-                  href={tab.path}
-                  class={mobile_tab_class(tab.active)}
-                >
-                  <div class="flex min-w-0 items-center gap-3">
-                    {HexpmWeb.ViewIcons.icon(:heroicon, tab.icon,
-                      class: "size-4.5 shrink-0 text-grey-500 dark:text-grey-300"
-                    )}
-                    <span class="truncate">{tab.label}</span>
-                  </div>
-                  <%= if tab.active do %>
-                    {HexpmWeb.ViewIcons.icon(:heroicon, "check",
-                      class: "size-4 shrink-0 text-primary-default dark:text-white"
-                    )}
-                  <% end %>
-                </a>
-              <% end %>
-              <%= for entry <- @doc_kind_entries do %>
+              <%= for entry <- @mobile_entries do %>
                 <a href={entry.path} class={mobile_tab_class(entry.active)}>
                   <div class="flex min-w-0 items-center gap-3">
-                    {HexpmWeb.ViewIcons.icon(:heroicon, "document",
+                    {HexpmWeb.ViewIcons.icon(:heroicon, entry.icon,
                       class: "size-4.5 shrink-0 text-grey-500 dark:text-grey-300"
                     )}
-                    <span class="truncate pl-4">{entry.label}</span>
+                    <span class={["truncate", entry.indent? && "pl-4"]}>{entry.label}</span>
                   </div>
-                  <%= if entry.active do %>
-                    {HexpmWeb.ViewIcons.icon(:heroicon, "check",
-                      class: "size-4 shrink-0 text-primary-default dark:text-white"
-                    )}
-                  <% end %>
-                </a>
-              <% end %>
-              <%= for tab <- Enum.drop(@tabs, 1) do %>
-                <a
-                  href={tab.path}
-                  class={mobile_tab_class(tab.active)}
-                >
-                  <div class="flex min-w-0 items-center gap-3">
-                    {HexpmWeb.ViewIcons.icon(:heroicon, tab.icon,
-                      class: "size-4.5 shrink-0 text-grey-500 dark:text-grey-300"
-                    )}
-                    <span class="truncate">{tab.label}</span>
-                  </div>
-                  <%= if tab.active do %>
+                  <%= if entry.checked? do %>
                     {HexpmWeb.ViewIcons.icon(:heroicon, "check",
                       class: "size-4 shrink-0 text-primary-default dark:text-white"
                     )}
@@ -613,40 +570,59 @@ defmodule HexpmWeb.Components.PackageLayout do
     do: "/packages/#{package.repository.name}/#{package.name}/advisories"
 
   defp package_tabs(assigns) do
-    [
-      %{
-        active: assigns.active_tab == :readme && assigns.doc_kind == :readme,
-        icon: "document-text",
-        label: "Documentation",
-        path: readme_path(assigns)
-      },
-      %{
-        active: assigns.active_tab == :versions,
-        icon: "tag",
-        label:
-          "#{assigns.versions_count} #{pluralize(assigns.versions_count, "Version", "Versions")}",
-        path: ViewHelpers.path_for_releases(assigns.package)
-      }
-    ] ++
-      dependency_tab(assigns) ++
-      [
-        %{
-          active: assigns.active_tab == :dependants,
-          icon: "puzzle-piece",
-          label: dependants_label(assigns.dependants_count),
-          path: dependents_path(assigns.package)
-        }
-      ] ++
-      advisories_tab(assigns) ++
-      files_tab(assigns) ++
-      [
-        %{
-          active: assigns.active_tab == :activity,
-          icon: "clock",
-          label: "Activity",
-          path: audit_logs_path(assigns.package)
-        }
-      ] ++ owners_tab(assigns)
+    ([
+       %{
+         id: :readme,
+         active: assigns.active_tab == :readme,
+         icon: "document-text",
+         label: "Documentation",
+         path: readme_path(assigns),
+         indent?: false
+       },
+       %{
+         id: :versions,
+         active: assigns.active_tab == :versions,
+         icon: "tag",
+         label:
+           "#{assigns.versions_count} #{pluralize(assigns.versions_count, "Version", "Versions")}",
+         path: ViewHelpers.path_for_releases(assigns.package),
+         indent?: false
+       }
+     ] ++
+       dependency_tab(assigns) ++
+       [
+         %{
+           id: :dependants,
+           active: assigns.active_tab == :dependants,
+           icon: "puzzle-piece",
+           label: dependants_label(assigns.dependants_count),
+           path: dependents_path(assigns.package),
+           indent?: false
+         }
+       ] ++
+       advisories_tab(assigns) ++
+       files_tab(assigns) ++
+       [
+         %{
+           id: :activity,
+           active: assigns.active_tab == :activity,
+           icon: "clock",
+           label: "Activity",
+           path: audit_logs_path(assigns.package),
+           indent?: false
+         }
+       ] ++ owners_tab(assigns))
+    # `active:` marks the whole doc/kind section on desktop; `checked?`
+    # (the mobile checkmark) narrows the Documentation tab to only the
+    # readme kind, so the specific doc-kind entry gets the checkmark when
+    # a different kind is active.
+    |> Enum.map(fn
+      %{id: :readme} = tab ->
+        Map.put(tab, :checked?, assigns.active_tab == :readme && assigns.doc_kind == :readme)
+
+      tab ->
+        Map.put(tab, :checked?, tab.active)
+    end)
   end
 
   defp files_tab(%{current_release: nil}), do: []
@@ -654,10 +630,12 @@ defmodule HexpmWeb.Components.PackageLayout do
   defp files_tab(assigns) do
     [
       %{
+        id: :files,
         active: assigns.active_tab == :files,
         icon: "code-bracket",
         label: "Files",
-        path: files_path(assigns)
+        path: files_path(assigns),
+        indent?: false
       }
     ]
   end
@@ -668,10 +646,12 @@ defmodule HexpmWeb.Components.PackageLayout do
     if is_full_owner do
       [
         %{
+          id: :owners,
           active: assigns.active_tab == :owners,
           icon: "user-group",
           label: "Owners",
-          path: ViewHelpers.path_for_owners(assigns.package)
+          path: ViewHelpers.path_for_owners(assigns.package),
+          indent?: false
         }
       ]
     else
@@ -684,11 +664,13 @@ defmodule HexpmWeb.Components.PackageLayout do
   defp dependency_tab(assigns) do
     [
       %{
+        id: :dependencies,
         active: assigns.active_tab == :dependencies,
         icon: "cube",
         label:
           "#{assigns.dependency_count} #{pluralize(assigns.dependency_count, "Dependency", "Dependencies")}",
-        path: dependencies_tab_path(assigns)
+        path: dependencies_tab_path(assigns),
+        indent?: false
       }
     ]
   end
@@ -704,10 +686,12 @@ defmodule HexpmWeb.Components.PackageLayout do
     else
       [
         %{
+          id: :advisories,
           active: assigns.active_tab == :advisories,
           icon: "shield-exclamation",
           label: "#{count} #{pluralize(count, "Advisory", "Advisories")}",
-          path: advisories_path(assigns.package)
+          path: advisories_path(assigns.package),
+          indent?: false
         }
       ]
     end
@@ -764,23 +748,32 @@ defmodule HexpmWeb.Components.PackageLayout do
   defp dependants_label(count),
     do: "#{count} #{pluralize(count, "Dependant", "Dependants")}"
 
-  # Same union as show.html.heex's `sidebar_kinds`: the kind currently being
-  # viewed must always appear here, even when the release doesn't actually
-  # have it (a deep link to an unavailable kind), so the mobile dropdown
-  # never loses track of the active entry either.
   defp doc_kind_entries(assigns) do
     assigns.doc_kinds
-    |> Map.put_new(assigns.doc_kind, nil)
-    |> Files.present_kinds()
+    |> Files.nav_kinds(assigns.doc_kind)
     |> Enum.reject(&(&1 == :readme))
     |> Enum.map(fn kind ->
+      active = assigns.doc_kind == kind
+
       %{
-        kind: kind,
+        id: kind,
+        active: active,
+        checked?: active,
         icon: "document",
         label: Files.label(kind),
         path: ViewHelpers.path_for_doc(assigns.package, assigns.current_release, kind),
-        active: assigns.doc_kind == kind
+        indent?: true
       }
+    end)
+  end
+
+  # Splices the doc-kind entries (Changelog, License, ...) directly under
+  # the Documentation tab for the mobile "Jump to" dropdown, by identity
+  # rather than position.
+  defp mobile_entries(tabs, doc_kind_entries) do
+    Enum.flat_map(tabs, fn
+      %{id: :readme} = tab -> [tab | doc_kind_entries]
+      tab -> [tab]
     end)
   end
 

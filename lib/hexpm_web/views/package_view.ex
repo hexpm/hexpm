@@ -286,4 +286,62 @@ defmodule HexpmWeb.PackageView do
   defp cvss_version(<<"CVSS:3.1/", _::binary>>), do: "3.1"
   defp cvss_version(<<"CVSS:3.0/", _::binary>>), do: "3.0"
   defp cvss_version(_), do: "3.1"
+
+  # Shared by the readme and doc-kind branches of show.html.heex: same
+  # spinner, same `#readme-fallback`/`#readme-frame` ids (assets/js/app.js
+  # and existing tests key off those ids and postMessage), differing only in
+  # which doc kind the iframe loads and the fallback content shown before it
+  # loads. `ViewHelpers.readme_url/3` defaults its kind argument to
+  # `:readme`, so a single call covers both branches.
+  defp doc_frame(assigns) do
+    assigns = assign_new(assigns, :doc_kind, fn -> :readme end)
+
+    ~H"""
+    <div
+      id="readme-loading"
+      class="flex items-center justify-center py-12 text-grey-400 dark:text-grey-300"
+    >
+      <svg class="animate-spin h-6 w-6 mr-3" viewBox="0 0 24 24" fill="none">
+        <circle
+          class="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          stroke-width="4"
+        >
+        </circle>
+        <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+        >
+        </path>
+      </svg>
+      Loading {doc_frame_title(@doc_kind)}...
+    </div>
+
+    <div
+      id="readme-fallback"
+      class="text-grey-600 dark:text-grey-300 mb-8 leading-relaxed hidden"
+    >
+      {render_slot(@fallback)}
+    </div>
+
+    <iframe
+      id="readme-frame"
+      src={ViewHelpers.readme_url(@package, @release.version, @doc_kind)}
+      sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+      loading="lazy"
+      referrerpolicy="no-referrer"
+      title={"#{doc_frame_title(@doc_kind)} for #{ViewHelpers.package_name(@package)}"}
+      class="w-full border-0 opacity-0 h-0 overflow-hidden"
+    ></iframe>
+    """
+  end
+
+  # README is an acronym, so it's displayed all-caps here -- deliberately
+  # distinct from `Files.label(:readme)`, which is "Readme".
+  defp doc_frame_title(:readme), do: "README"
+  defp doc_frame_title(kind), do: Hexpm.Docs.Files.label(kind)
 end
