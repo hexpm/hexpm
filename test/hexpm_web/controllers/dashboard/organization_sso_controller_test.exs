@@ -665,6 +665,38 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
       refute html =~ token
     end
 
+    test "the one-time token never renders on another organization", context do
+      other = insert(:organization)
+      insert(:organization_user, organization: other, user: context.admin, role: "admin")
+      insert(:organization_sso_connection, organization: other)
+
+      config = Application.fetch_env!(:hexpm, :organization_sso)
+
+      app_env(
+        :hexpm,
+        :organization_sso,
+        Keyword.merge(config,
+          mode: :beta,
+          beta_organizations: [context.organization.name, other.name]
+        )
+      )
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/scim/generate", %{
+          "scim" => %{"scim_seat_policy" => "block", "scim_role" => "read"}
+        })
+
+      html =
+        conn
+        |> recycle()
+        |> get("/dashboard/orgs/#{other.name}/sso")
+        |> html_response(200)
+
+      refute html =~ "Copy the token now"
+    end
+
     test "generating without the seat policy is refused", context do
       conn =
         build_conn()

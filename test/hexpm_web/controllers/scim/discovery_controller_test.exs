@@ -63,6 +63,16 @@ defmodule HexpmWeb.SCIM.DiscoveryControllerTest do
     assert scim_json_response(scim_get(context.token, "/scim/v2/ServiceProviderConfig"), 401)
   end
 
+  test "requests are rate limited per address", context do
+    conn =
+      %{build_conn() | remote_ip: {203, 0, 113, 9}}
+      |> put_req_header("authorization", "Bearer #{context.token}")
+      |> get("/scim/v2/ServiceProviderConfig")
+
+    assert response(conn, 200)
+    assert [_limit] = get_resp_header(conn, "x-ratelimit-limit")
+  end
+
   test "the surface does not exist while SSO is off", context do
     config = Application.fetch_env!(:hexpm, :organization_sso)
     app_env(:hexpm, :organization_sso, Keyword.put(config, :mode, :off))

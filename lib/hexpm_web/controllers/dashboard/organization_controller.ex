@@ -287,19 +287,31 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   def sso(conn, %{"dashboard_org" => organization}) do
     access_organization(conn, organization, "admin", fn organization ->
       if SSO.reachable?(organization) do
-        generated_scim_token = get_session(conn, :generated_scim_token)
-
         conn
         |> delete_session(:generated_scim_token)
         |> SSOEnforcement.allow_provider_form_action(organization)
         |> render_index(organization,
           tab: :sso,
-          generated_scim_token: generated_scim_token
+          generated_scim_token: generated_scim_token(conn, organization)
         )
       else
         not_found(conn)
       end
     end)
+  end
+
+  # The one-time token stash renders only for the connection it was generated
+  # on and the account that generated it; anything else reads as absent and is
+  # already deleted by the time this runs.
+  defp generated_scim_token(conn, organization) do
+    with %{"connection_id" => connection_id, "user_id" => user_id, "token" => token} <-
+           get_session(conn, :generated_scim_token),
+         %Connection{id: ^connection_id} <- SSO.get_connection(organization),
+         %User{id: ^user_id} <- conn.assigns.current_user do
+      token
+    else
+      _mismatch -> nil
+    end
   end
 
   def billing(conn, %{"dashboard_org" => organization}) do

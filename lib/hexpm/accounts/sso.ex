@@ -128,7 +128,9 @@ defmodule Hexpm.Accounts.SSO do
           enabled_at: nil
         })
 
-      changeset = Connection.configuration_changeset(connection, attrs)
+      changeset =
+        Connection.configuration_changeset(connection, attrs)
+        |> revoke_scim_token_on_provider_change(connection, desired)
 
       case Repo.insert_or_update(changeset, log: false) do
         {:ok, saved} ->
@@ -143,6 +145,21 @@ defmodule Hexpm.Accounts.SSO do
           Hexpm.RepoBase.rollback(changeset)
       end
     end)
+  end
+
+  # The provisioning token belongs to the provider the connection points at.
+  # Pointing it somewhere else must not leave the old provider's agent holding
+  # a credential that can still create and remove members.
+  defp revoke_scim_token_on_provider_change(changeset, %Connection{id: nil}, _desired) do
+    changeset
+  end
+
+  defp revoke_scim_token_on_provider_change(changeset, connection, desired) do
+    if connection.issuer != desired.issuer or connection.client_id != desired.client_id do
+      change(changeset, scim_token_first: nil, scim_token_second: nil)
+    else
+      changeset
+    end
   end
 
   def refresh_metadata(%Connection{} = connection) do
@@ -575,9 +592,11 @@ defmodule Hexpm.Accounts.SSO do
       )
       |> Repo.one()
 
+    # `active?` rather than `enabled?`: a lapsed card must not stop the
+    # provider deprovisioning people. Generating a token stays billing-gated.
     with %Connection{} <- connection,
          true <- Hexpm.Utils.secure_check(connection.scim_token_second, second),
-         true <- Features.enabled?(connection.organization) do
+         true <- Features.active?(connection.organization) do
       {:ok, connection}
     else
       _mismatch -> :error
