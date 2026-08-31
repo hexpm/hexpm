@@ -9,7 +9,19 @@ defmodule Hexpm.Docs.Files do
   Hexpm.Preview's existing README filename priority exactly.
   """
 
-  @kinds [:readme, :changelog, :license, :security, :support, :acknowledgments, :threat_model]
+  @type resolved :: %{atom => String.t()}
+
+  @kinds_and_labels [
+    readme: "Readme",
+    changelog: "Changelog",
+    license: "License",
+    security: "Security",
+    support: "Support",
+    acknowledgments: "Acknowledgments",
+    threat_model: "Threat Model"
+  ]
+
+  @kinds Keyword.keys(@kinds_and_labels)
 
   @basenames %{
     readme: ["README"],
@@ -23,28 +35,25 @@ defmodule Hexpm.Docs.Files do
 
   @extensions ["md", "markdown", "txt", ""]
 
-  @labels %{
-    readme: "Readme",
-    changelog: "Changelog",
-    license: "License",
-    security: "Security",
-    support: "Support",
-    acknowledgments: "Acknowledgments",
-    threat_model: "Threat Model"
-  }
+  @extension_rank @extensions |> Enum.with_index() |> Map.new()
 
   # Reverse lookup from an uppercased basename to the kind it belongs to,
   # built once at compile time so resolve_all/1 classifies each file in a
   # single pass instead of checking every kind against every file.
   @basename_to_kind for {kind, names} <- @basenames, name <- names, into: %{}, do: {name, kind}
 
-  def kinds(), do: @kinds
+  @doc "The recognized documentation kinds, in canonical order."
+  @spec kinds() :: [atom]
+  def kinds(), do: Keyword.keys(@kinds_and_labels)
 
-  def label(kind) when kind in @kinds, do: @labels[kind]
-  def label(kind), do: to_string(kind)
+  @doc "Human-readable label for a kind, falling back to its string form when unrecognized."
+  @spec label(atom) :: String.t()
+  def label(kind), do: Keyword.get(@kinds_and_labels, kind, to_string(kind))
 
-  def parse_segment(segment) when is_binary(segment) do
-    Enum.find(@kinds, &(Atom.to_string(&1) == segment))
+  @doc "Parses a URL segment into its kind, or nil when unrecognized."
+  @spec parse_segment(term) :: atom | nil
+  for kind <- @kinds do
+    def parse_segment(unquote(Atom.to_string(kind))), do: unquote(kind)
   end
 
   def parse_segment(_segment), do: nil
@@ -56,12 +65,24 @@ defmodule Hexpm.Docs.Files do
   rather than raising -- `files` ultimately comes from a release tarball's
   recorded index, which this module does not control the shape of.
   """
+  @spec resolve_all(term) :: resolved
   def resolve_all(files) when is_list(files) do
     files
     |> Enum.filter(&is_binary/1)
     |> Enum.reject(&String.contains?(&1, "/"))
-    |> Enum.reduce(%{}, &classify_into/2)
-    |> Map.new(fn {kind, by_ext} -> {kind, pick_extension(by_ext)} end)
+    |> Enum.flat_map(fn filename ->
+      case classify(filename) do
+        {kind, ext} -> [{kind, ext, filename}]
+        :nomatch -> []
+      end
+    end)
+    |> Enum.group_by(&elem(&1, 0))
+    |> Map.new(fn {kind, matches} ->
+      {_kind, _ext, filename} =
+        Enum.min_by(matches, fn {_, ext, name} -> {@extension_rank[ext], name} end)
+
+      {kind, filename}
+    end)
   end
 
   def resolve_all(_files), do: %{}
@@ -69,54 +90,45 @@ defmodule Hexpm.Docs.Files do
   @doc """
   The kinds present in a `resolve_all/1` result, in canonical `kinds/0` order.
   """
-  def present_kinds(resolved) when is_map(resolved) do
+  @spec present_kinds(resolved) :: [atom]
+  def present_kinds(resolved) do
     Enum.filter(@kinds, &Map.has_key?(resolved, &1))
   end
 
+  @doc """
+  Kinds to show in navigation: every kind the release has, plus `active` even
+  when the release doesn't have it (a deep link to an unavailable kind).
+  """
+  @spec nav_kinds(resolved, atom) :: [atom]
+  def nav_kinds(resolved, active) do
+    resolved |> Map.put_new(active, nil) |> present_kinds()
+  end
+
+  @doc "Resolves a single kind against `files`, or nil when there is no match."
+  @spec resolve(atom, term) :: String.t() | nil
   def resolve(kind, files) when kind in @kinds do
     files |> resolve_all() |> Map.get(kind)
   end
 
-  defp classify_into(filename, acc) do
-    case classify(filename) do
-      {kind, ext} ->
-        Map.update(acc, kind, %{ext => filename}, fn by_ext ->
-          Map.update(by_ext, ext, filename, &min(&1, filename))
-        end)
-
-      :nomatch ->
-        acc
-    end
-  end
+  def resolve(_kind, _files), do: nil
 
   defp classify(filename) do
-    if String.ends_with?(filename, ".") do
-      :nomatch
-    else
-      {base, ext} = split_extension(filename)
+    case split_extension(filename) do
+      {base, ext} when ext in @extensions ->
+        case Map.fetch(@basename_to_kind, String.upcase(base, :ascii)) do
+          {:ok, kind} -> {kind, ext}
+          :error -> :nomatch
+        end
 
-      case Map.get(@basename_to_kind, String.upcase(base)) do
-        nil ->
-          :nomatch
-
-        kind ->
-          if ext in @extensions do
-            {kind, ext}
-          else
-            :nomatch
-          end
-      end
+      _ ->
+        :nomatch
     end
   end
 
   defp split_extension(filename) do
     case Path.extname(filename) do
-      "" -> {filename, ""}
-      "." <> ext -> {Path.rootname(filename), String.downcase(ext)}
+      "." <> ext when ext != "" -> {Path.rootname(filename), String.downcase(ext)}
+      _ -> {filename, ""}
     end
-  end
-
-  defp pick_extension(by_ext) do
-    Enum.find_value(@extensions, fn ext -> Map.get(by_ext, ext) end)
   end
 end

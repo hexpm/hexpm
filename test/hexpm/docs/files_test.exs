@@ -111,5 +111,44 @@ defmodule Hexpm.Docs.FilesTest do
       assert Files.resolve_all(["LICENSE.rapidxml"]) == %{}
       assert Files.resolve(:license, ["LICENSE.rapidxml"]) == nil
     end
+
+    test "does not fold non-ASCII homoglyphs into ASCII basenames" do
+      # U+017F LATIN SMALL LETTER LONG S
+      assert Files.resolve_all(["LICENſE.md"]) == %{}
+      # U+0131 LATIN SMALL LETTER DOTLESS I
+      assert Files.resolve_all(["lıcense.md"]) == %{}
+    end
+  end
+
+  describe "resolve/2 with an unrecognized kind" do
+    test "returns nil instead of raising" do
+      assert Files.resolve(:bogus, ["README.md"]) == nil
+    end
+  end
+
+  describe "nav_kinds/2" do
+    test "includes every present kind plus the active kind even when absent" do
+      resolved = %{readme: "README.md", license: "LICENSE"}
+      assert Files.nav_kinds(resolved, :changelog) == [:readme, :changelog, :license]
+    end
+
+    test "does not duplicate the active kind when it is already present" do
+      resolved = %{readme: "README.md", changelog: "CHANGELOG.md"}
+      assert Files.nav_kinds(resolved, :changelog) == [:readme, :changelog]
+    end
+
+    test "inserts the absent active kind in canonical position, not appended" do
+      resolved = %{license: "LICENSE", threat_model: "THREAT_MODEL.md"}
+      assert Files.nav_kinds(resolved, :readme) == [:readme, :license, :threat_model]
+    end
+  end
+
+  describe "parse_segment/1 with non-binary input" do
+    test "returns nil" do
+      assert Files.parse_segment(["changelog"]) == nil
+      assert Files.parse_segment(nil) == nil
+      assert Files.parse_segment("") == nil
+      assert Files.parse_segment(:changelog) == nil
+    end
   end
 end
