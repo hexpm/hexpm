@@ -272,13 +272,11 @@ defmodule HexpmWeb.Router do
     # too, and every hex.pm release version is a valid `:kind` value at the
     # type level, unlike a real kind segment such as "changelog".
     for kind <- Hexpm.Docs.Files.kinds(), kind != :readme do
-      kind_str = Atom.to_string(kind)
-
       get "/packages/:name/:version/#{kind}", PackageController, :docs_file,
-        assigns: %{doc_kind_segment: kind_str}
+        assigns: %{doc_kind: kind}
 
       get "/packages/:repository/:name/:version/#{kind}", PackageController, :docs_file,
-        assigns: %{doc_kind_segment: kind_str}
+        assigns: %{doc_kind: kind}
     end
 
     get "/packages/:name/:version", PackageController, :show

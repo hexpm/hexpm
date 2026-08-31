@@ -34,13 +34,12 @@ defmodule HexpmWeb.PackageController do
 
   def docs_file(conn, params) do
     params = fixup_params(params)
-    kind = Files.parse_segment(conn.assigns.doc_kind_segment)
+    %{doc_kind: kind} = conn.assigns
 
     access_package(conn, params, fn package, _repositories ->
       releases = Releases.all(package)
-      release = matching_release(releases, params["version"])
 
-      if release && kind do
+      if release = matching_release(releases, params["version"]) do
         package(conn, package, releases, release, :release, kind)
       else
         not_found(conn)
@@ -282,14 +281,14 @@ defmodule HexpmWeb.PackageController do
   defp doc_title(package, doc_kind), do: "#{package.name} · #{Files.label(doc_kind)}"
 
   # `:readme` has no dedicated URL of its own -- the bare package URL already
-  # renders it -- so its canonical URL stays what it's always been. Every
-  # other kind gets its own shareable URL canonicalized to itself, via
-  # `path_for_doc/3` since `~p` can't verify the per-kind literal routes (see
-  # the comment on `path_for_doc/3`).
+  # renders it -- so its canonical URL stays what it's always been.
   defp doc_canonical_url(package, _release, :readme), do: ~p"/packages/#{package}"
 
+  # Every other kind gets its own shareable URL canonicalized to itself. This
+  # also feeds `og:url`, which requires an absolute URL, so build on the
+  # endpoint's URL like `PreviewLive` and `DiffLive` do.
   defp doc_canonical_url(package, release, doc_kind),
-    do: ViewHelpers.path_for_doc(package, release, doc_kind)
+    do: HexpmWeb.Endpoint.url() <> ViewHelpers.path_for_doc(package, release, doc_kind)
 
   defp show_docs_html_url(package, :package, _release, releases) do
     latest_release_with_docs =
