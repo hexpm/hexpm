@@ -20,6 +20,7 @@ defmodule Hexpm.Accounts.SSO.Transaction do
     field :issuer, :string
     field :subject, :string, redact: true
     field :provider_email, :string, redact: true
+    field :sid, :string, redact: true
     field :link_token_hash, :binary, redact: true
     field :entrypoint, :string
     field :linked_at, :utc_datetime_usec
@@ -78,6 +79,7 @@ defmodule Hexpm.Accounts.SSO.Transaction do
       :issuer,
       :subject,
       :provider_email,
+      :sid,
       :link_token_hash,
       :linked_at,
       :cancelled_at,

@@ -15,6 +15,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
   attr :identities, :list, required: true
   attr :failures, :list, required: true
   attr :callback_url, :string, required: true
+  attr :backchannel_logout_url, :string, required: true
   attr :login_url, :string, required: true
   attr :domains, :list, default: []
   attr :personal_keys, :list, default: []
@@ -48,6 +49,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
         </div>
         <div class="mt-4 grid gap-4">
           <.readonly_value label="Redirect URI" value={@callback_url} />
+          <.readonly_value label="Back-Channel Logout URI" value={@backchannel_logout_url} />
           <.readonly_value label="Required scopes" value="openid email" />
           <.readonly_value
             :if={@connection && Connection.enabled?(@connection)}

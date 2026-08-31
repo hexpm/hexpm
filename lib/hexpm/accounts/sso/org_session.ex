@@ -7,6 +7,9 @@ defmodule Hexpm.Accounts.SSO.OrgSession do
     field :authenticated_at, :utc_datetime_usec
     field :expires_at, :utc_datetime_usec
     field :revoked_at, :utc_datetime_usec
+    # The provider session this authentication came from, so a sid-scoped
+    # back-channel logout token can end exactly the access that session created.
+    field :sid, :string, redact: true
 
     belongs_to :user, User
     belongs_to :organization, Organization
@@ -62,7 +65,8 @@ defmodule Hexpm.Accounts.SSO.OrgSession do
       :identity_id,
       :authenticated_at,
       :expires_at,
-      :revoked_at
+      :revoked_at,
+      :sid
     ])
     |> validate_required([
       :user_id,

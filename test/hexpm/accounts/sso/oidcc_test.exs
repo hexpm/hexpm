@@ -907,6 +907,189 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
     end
   end
 
+  test "exchange_code carries the provider session id through, dropping unusable ones",
+       context do
+    for {sid_claim, expected} <- [
+          {"provider-session-1", "provider-session-1"},
+          {String.duplicate("s", 256), nil},
+          {"", nil},
+          {123, nil}
+        ] do
+      token = signed_id_token(context.key, "key-1", context.transaction, %{"sid" => sid_claim})
+      expect_token_response(token)
+
+      assert {:ok, %{sid: ^expected}} =
+               Oidcc.exchange_code(
+                 context.connection,
+                 context.transaction,
+                 "authorization-code",
+                 context.transaction.redirect_uri,
+                 context.connection.client_secret
+               )
+    end
+  end
+
+  describe "validate_logout_token/2" do
+    test "accepts a conforming logout token", context do
+      token = logout_token(context.key)
+
+      assert {:ok, claims} = Oidcc.validate_logout_token(context.connection, token)
+      assert claims.issuer == @issuer
+      assert claims.subject == "00u123"
+      assert claims.sid == "provider-session-1"
+      assert claims.jwks_document == nil
+    end
+
+    test "accepts a token with no sid", context do
+      token = logout_token(context.key, %{}, ["sid"])
+
+      assert {:ok, %{sid: nil}} = Oidcc.validate_logout_token(context.connection, token)
+    end
+
+    test "rejects a sid-only token, since the subject is required", context do
+      token = logout_token(context.key, %{}, ["sub"])
+
+      assert {:error, %Error{stage: :logout_token, code: :required_claim_missing}} =
+               Oidcc.validate_logout_token(context.connection, token)
+    end
+
+    test "rejects a token carrying a nonce", context do
+      token = logout_token(context.key, %{"nonce" => "nonce"})
+
+      assert {:error, %Error{stage: :logout_token, code: :nonce_present}} =
+               Oidcc.validate_logout_token(context.connection, token)
+    end
+
+    test "rejects a token without the back-channel logout event", context do
+      for events <- [
+            :drop,
+            %{},
+            %{"http://schemas.openid.net/event/other" => %{}},
+            %{"http://schemas.openid.net/event/backchannel-logout" => "not-an-object"}
+          ] do
+        token =
+          case events do
+            :drop -> logout_token(context.key, %{}, ["events"])
+            events -> logout_token(context.key, %{"events" => events})
+          end
+
+        assert {:error, %Error{stage: :logout_token, code: :events_invalid}} =
+                 Oidcc.validate_logout_token(context.connection, token)
+      end
+    end
+
+    test "rejects an expired token", context do
+      now = DateTime.utc_now() |> DateTime.to_unix()
+      token = logout_token(context.key, %{"exp" => now - 10})
+
+      assert {:error, %Error{stage: :logout_token, code: :expired}} =
+               Oidcc.validate_logout_token(context.connection, token)
+    end
+
+    test "rejects a token issued too long ago even when it has not expired", context do
+      now = DateTime.utc_now() |> DateTime.to_unix()
+      token = logout_token(context.key, %{"iat" => now - 400, "exp" => now + 100})
+
+      assert {:error, %Error{stage: :logout_token, code: :issued_at_too_old}} =
+               Oidcc.validate_logout_token(context.connection, token)
+    end
+
+    test "rejects a token issued in the future", context do
+      now = DateTime.utc_now() |> DateTime.to_unix()
+      token = logout_token(context.key, %{"iat" => now + 120})
+
+      assert {:error, %Error{stage: :logout_token, code: :issued_at_in_future}} =
+               Oidcc.validate_logout_token(context.connection, token)
+    end
+
+    test "rejects a token for another audience or issuer", context do
+      for overrides <- [%{"aud" => "someone-else"}, %{"iss" => "https://other.example.com"}] do
+        token = logout_token(context.key, overrides)
+
+        assert {:error, %Error{stage: :logout_token}} =
+                 Oidcc.validate_logout_token(context.connection, token)
+      end
+    end
+
+    test "rejects a token signed with an unknown key", context do
+      other_key = JOSE.JWK.generate_key({:rsa, 1_024})
+      token = logout_token(other_key)
+
+      assert {:error, %Error{stage: :logout_token}} =
+               Oidcc.validate_logout_token(context.connection, token)
+    end
+
+    test "rejects a symmetrically signed token", context do
+      claims = default_logout_token_claims()
+
+      token =
+        %{"kty" => "oct", "k" => Base.url_encode64("client-secret", padding: false)}
+        |> JOSE.JWK.from_map()
+        |> JOSE.JWT.sign(%{"alg" => "HS256", "kid" => "key-1"}, claims)
+        |> JOSE.JWS.compact()
+        |> elem(1)
+
+      assert {:error, %Error{stage: :logout_token}} =
+               Oidcc.validate_logout_token(context.connection, token)
+    end
+
+    test "rejects a string that is not a token", context do
+      assert {:error, %Error{stage: :logout_token}} =
+               Oidcc.validate_logout_token(context.connection, "not-a-jwt")
+    end
+
+    test "refreshes the signing keys for an unknown kid and hands the document back",
+         context do
+      rotated_key = JOSE.JWK.generate_key({:rsa, 1_024})
+      {_, rotated_public} = rotated_key |> JOSE.JWK.to_public_map()
+      rotated_public = Map.put(rotated_public, "kid", "key-2")
+
+      rotated_document = %{"keys" => [rotated_public]}
+      expect_json_get(@jwks_uri, rotated_document, "max-age=300")
+
+      token =
+        rotated_key
+        |> JOSE.JWT.sign(%{"alg" => "RS256", "kid" => "key-2"}, default_logout_token_claims())
+        |> JOSE.JWS.compact()
+        |> elem(1)
+
+      assert {:ok, claims} = Oidcc.validate_logout_token(context.connection, token)
+      assert claims.subject == "00u123"
+      assert claims.jwks_document == rotated_document
+      assert claims.jwks_expires_at
+    end
+
+    test "drops an unusable sid rather than failing the logout", context do
+      token = logout_token(context.key, %{"sid" => String.duplicate("s", 256)})
+
+      assert {:ok, %{sid: nil}} = Oidcc.validate_logout_token(context.connection, token)
+    end
+  end
+
+  defp logout_token(key, overrides \\ %{}, drops \\ []) do
+    claims =
+      default_logout_token_claims()
+      |> Map.merge(overrides)
+      |> Map.drop(drops)
+
+    sign_id_token(key, "key-1", claims)
+  end
+
+  defp default_logout_token_claims do
+    now = DateTime.utc_now() |> DateTime.to_unix()
+
+    %{
+      "iss" => @issuer,
+      "sub" => "00u123",
+      "aud" => "client-id",
+      "iat" => now,
+      "exp" => now + 120,
+      "jti" => "logout-jti",
+      "events" => %{"http://schemas.openid.net/event/backchannel-logout" => %{}},
+      "sid" => "provider-session-1"
+    }
+  end
+
   defp expect_json_get(url, document, cache_control \\ "max-age=600") do
     expect(Hexpm.HTTP.Mock, :get, fn received_url, headers, opts ->
       assert received_url == url

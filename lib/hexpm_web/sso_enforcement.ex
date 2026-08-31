@@ -188,6 +188,14 @@ defmodule HexpmWeb.SSOEnforcement do
   def callback_url, do: url(~p"/sso/callback")
 
   @doc """
+  Where the provider posts back-channel logout tokens. Per organization,
+  because the organization name is how the receiving end finds the connection.
+  """
+  def backchannel_logout_url(organization) do
+    url(~p"/sso/backchannel-logout/#{organization}")
+  end
+
+  @doc """
   Lets the browser follow a form submission through to this organization's
   provider.
 

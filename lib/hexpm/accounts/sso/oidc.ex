@@ -17,6 +17,9 @@ defmodule Hexpm.Accounts.SSO.OIDC do
   @callback exchange_code(Connection.t(), Transaction.t(), String.t(), String.t(), String.t()) ::
               {:ok, map()} | {:error, Error.t()}
 
+  @callback validate_logout_token(Connection.t(), String.t()) ::
+              {:ok, map()} | {:error, Error.t()}
+
   def impl do
     Application.fetch_env!(:hexpm, :organization_sso)
     |> Keyword.fetch!(:oidc_impl)

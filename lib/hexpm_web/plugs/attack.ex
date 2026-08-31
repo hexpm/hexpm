@@ -232,6 +232,21 @@ defmodule HexpmWeb.Plugs.Attack do
     )
   end
 
+  # Roomier than the callback throttle: a provider deactivating members in bulk
+  # sends one token per session from a handful of egress addresses.
+  def sso_backchannel_logout_ip_throttle(ip, opts \\ []) do
+    time = opts[:time] || System.system_time(:millisecond)
+    unless opts[:time], do: RateLimitPubSub.broadcast({:sso_backchannel_logout_ip, ip}, time)
+
+    timed_throttle(
+      {:sso_backchannel_logout_ip, ip},
+      time: time,
+      storage: @storage,
+      limit: 200,
+      period: @sso_period
+    )
+  end
+
   def tfa_ip_throttle(ip, opts \\ []) do
     time = opts[:time] || System.system_time(:millisecond)
 

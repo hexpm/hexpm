@@ -293,7 +293,8 @@ defmodule Hexpm.Accounts.AuditLog do
               "sso.login",
               "sso.jit.configure",
               "sso.enforcement.configure",
-              "sso.break_glass"
+              "sso.break_glass",
+              "sso.backchannel_logout"
             ] do
     Map.put(params, :organization, serialize(organization))
   end

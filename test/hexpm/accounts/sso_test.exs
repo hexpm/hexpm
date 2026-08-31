@@ -578,9 +578,10 @@ defmodule Hexpm.Accounts.SSOTest do
 
     test "an unlinked subject hands a member to the link consent step", context do
       transaction = start_transaction(context, context.member)
+      claims = Map.put(valid_claims(), :sid, "provider-session-1")
 
       assert {:ok, {:link, transaction_id, link_token}} =
-               complete(transaction, valid_claims(), context.member)
+               complete(transaction, claims, context.member)
 
       assert transaction_id == transaction.id
       refute Repo.exists?(Identity)
@@ -605,12 +606,30 @@ defmodule Hexpm.Accounts.SSOTest do
       # Consent completes an authentication, so it unlocks the organization.
       assert org_session.identity_id == identity.id
 
+      # The provider session survived the consent round trip onto the org
+      # session and left the transaction stash.
+      assert org_session.sid == "provider-session-1"
+      refute Repo.get!(SSO.Transaction, transaction_id).sid
+
       assert SSO.current_org_session(user_session.id, context.organization.id).id ==
                org_session.id
 
       actions = context.organization |> AuditLogs.all_by() |> Enum.map(& &1.action)
       assert "sso.identity.link" in actions
       assert "sso.login" in actions
+    end
+
+    test "an authentication records the provider session it came from", context do
+      identity = link_identity(context, context.member)
+      user_session = browser_session(context.member)
+      transaction = start_transaction(context, context.member)
+      claims = Map.put(valid_claims(), :sid, "provider-session-1")
+
+      assert {:ok, {:login, _user, org_session, _return_path}} =
+               complete(transaction, claims, context.member, user_session.id)
+
+      assert org_session.identity_id == identity.id
+      assert org_session.sid == "provider-session-1"
     end
 
     test "an unlinked subject refuses a nonmember and creates nothing", context do

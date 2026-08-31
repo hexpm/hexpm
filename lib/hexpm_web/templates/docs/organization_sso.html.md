@@ -20,7 +20,7 @@ You need:
 * A Hexpm account for every person who will use SSO.
 * Existing organization membership for every person who will link an SSO identity.
 
-Open the Hexpm organization dashboard, select **SSO**, and keep the **Redirect URI** shown there available while configuring Okta.
+Open the Hexpm organization dashboard, select **SSO**, and keep the **Redirect URI** and **Back-Channel Logout URI** shown there available while configuring Okta.
 
 ### Create the Okta application
 
@@ -30,7 +30,7 @@ In the Okta Admin Console, follow Okta's [OIDC app-integration instructions](htt
 2. Choose **OIDC - OpenID Connect** as the sign-in method and **Web Application** as the application type.
 3. Select the **Authorization Code** grant type.
 4. Add the exact **Redirect URI** from the Hexpm SSO dashboard as a sign-in redirect URI. Do not use a wildcard.
-5. Leave the sign-out redirect URIs empty. This release does not use OIDC logout.
+5. Leave the sign-out redirect URIs empty; Hexpm does not use RP-initiated logout. If your Okta org supports back-channel logout, enable it for the application and set the **Back-Channel Logout URI** from the Hexpm SSO dashboard, so sign-outs and deactivations in Okta end members' organization access sessions promptly. This is optional; without it, sessions end on their own lifetime.
 6. Under **Login initiated by**, select **App Only** if members will always start from the organization login URL. To let them start from Okta instead, select **Either Okta or App** and set the **Initiate login URI** described below. The URI appears on the Hexpm SSO dashboard only after SSO login is enabled, so this step needs a second pass through Okta once setup is finished.
 7. Assign only the people or groups who should be able to use the Hexpm integration.
 8. Save the application, then copy its **Client ID** and **Client secret**.
@@ -128,6 +128,14 @@ When one lapses in the browser you are sent to the provider and back, and unless
 
 Shorter is stricter and more interruptive. The lifetime is what bounds how long someone your provider has deactivated keeps reaching the organization, so it is the number to pick deliberately.
 
+### Provider-initiated logout
+
+If you set the **Back-Channel Logout URI** in your provider, the provider tells Hexpm when a member's provider session ends, whether they signed out or were deactivated, and Hexpm revokes the organization access sessions that provider session created. A logout token naming only the subject revokes every organization access session the member's linked identity holds. The member's next request goes back through the provider, which is where a deactivated account stops.
+
+Delivery is best-effort: it is one HTTPS request from your provider, and if it is lost nothing retries it here. The session lifetime is still what bounds how long a deactivated member keeps access, so back-channel logout shortens the window in practice without replacing the lifetime as the guarantee.
+
+Hexpm requires the `sub` claim in logout tokens and rejects tokens carrying only a `sid`; Okta sends `sub`. Microsoft Entra does not send back-channel logout tokens, so Entra deactivations wait out the session lifetime. Each received logout is written to the organization's audit log, and rejected logout tokens appear under **Recent failures** with the `logout_token` stage.
+
 ### The Hex CLI
 
 When a CLI session's authentication lapses, the next `mix deps.get` asks:
@@ -188,7 +196,7 @@ There is no sixth. If you are evaluating Hexpm against a compliance requirement,
 Two windows, and they are different:
 
 * **Removing a member in Hexpm** takes effect within thirty minutes. The CLI's access token is a capability the edge verifies without a database lookup, so it keeps its scopes until it is next refreshed. Web access ends immediately.
-* **Deactivating someone in your provider only** takes effect when their organization access session expires, which is the lifetime you set. Hexpm does not learn about a provider-side deactivation until then.
+* **Deactivating someone in your provider only** takes effect when the provider sends a back-channel logout token, if you configured that, and otherwise when their organization access session expires, which is the lifetime you set. The logout token is the fast path; the lifetime is the guarantee.
 
 SCIM closes the second one and is not in this release. Until it ships, the session lifetime is what bounds it, which is the reason to pick that number deliberately rather than take the default.
 
@@ -259,4 +267,4 @@ Do not send client secrets, authorization codes, tokens, cookies, or raw callbac
 
 Enabled organizations can use the organization login URL and third-party-initiated login. Custom Okta dashboard tiles and Microsoft Entra are not supported, and there is no public Okta Integration Network listing. Tiles and Entra both work and have been exercised privately; supporting them is an open release decision rather than an untested path. The OIN listing is different in kind: the integration was built and exercised, but it was never submitted for review, so no listing exists to install from.
 
-This release does not support SAML, account creation, SCIM, group or role synchronization, or OIDC logout.
+This release supports OIDC back-channel logout. It does not support SAML, account creation, SCIM, group or role synchronization, RP-initiated logout, or front-channel logout.

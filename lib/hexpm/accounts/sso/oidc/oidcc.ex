@@ -10,6 +10,8 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
   @fallback_cache_seconds 3_600
   @http_timeout 5_000
   @clock_skew_seconds 60
+  @logout_event "http://schemas.openid.net/event/backchannel-logout"
+  @logout_token_max_age_seconds 300
 
   @impl true
   def discover(issuer) do
@@ -94,6 +96,28 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
            subject: claims["sub"],
            email: optional_binary(claims["email"]),
            email_verified: claims["email_verified"] == true,
+           sid: optional_sid(claims["sid"]),
+           jwks_document: refreshed_jwks,
+           jwks_expires_at: refreshed_jwks_expires_at
+         }}
+      end
+    end)
+  end
+
+  @impl true
+  def validate_logout_token(%Connection{} = connection, logout_token)
+      when is_binary(logout_token) do
+    with_adapter(fn ref ->
+      with {:ok, client_context} <- client_context(connection, connection.client_secret),
+           {:ok, claims} <- validate_logout_jwt(logout_token, client_context, ref),
+           :ok <- validate_logout_claims(claims, connection) do
+        {refreshed_jwks, refreshed_jwks_expires_at} = refreshed_jwks(ref)
+
+        {:ok,
+         %{
+           issuer: claims["iss"],
+           subject: claims["sub"],
+           sid: optional_sid(claims["sid"]),
            jwks_document: refreshed_jwks,
            jwks_expires_at: refreshed_jwks_expires_at
          }}
@@ -174,6 +198,48 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
 
       {:error, :token_validation_exception}
   end
+
+  defp validate_logout_jwt(logout_token, client_context, ref) do
+    opts = %{
+      signing_algs: allowed_signing_algorithms(client_context.provider_configuration),
+      trusted_audiences: [],
+      refresh_jwks: refresh_jwks_fun(client_context, ref)
+    }
+
+    case oidcc_validate_jwt(logout_token, client_context, opts, ref) do
+      {:ok, claims} -> {:ok, claims}
+      {:error, reason} -> logout_token_error(reason)
+    end
+  end
+
+  defp oidcc_validate_jwt(logout_token, client_context, opts, ref) do
+    Oidcc.Token.validate_jwt(logout_token, client_context, opts)
+  rescue
+    exception ->
+      :telemetry.execute(
+        [:hexpm, :sso, :oidc, :token_validation_exception],
+        %{count: 1},
+        %{exception: exception.__struct__, phase: token_phase(ref)}
+      )
+
+      {:error, :token_validation_exception}
+  end
+
+  defp logout_token_error(%Error{} = error), do: {:error, error}
+  defp logout_token_error(:token_expired), do: error(:logout_token, :expired)
+
+  defp logout_token_error({:missing_claim, _claim, _claims}),
+    do: error(:logout_token, :required_claim_missing)
+
+  defp logout_token_error({:none_alg_used, _claims}),
+    do: error(:logout_token, :signature_invalid)
+
+  defp logout_token_error(:no_matching_key), do: error(:logout_token, :signature_invalid)
+
+  defp logout_token_error({:no_matching_key_with_kid, _kid}),
+    do: error(:logout_token, :signature_invalid)
+
+  defp logout_token_error(_reason), do: error(:logout_token, :invalid)
 
   # oidcc retries validation itself once the refreshed keys come back, so the
   # fetch only has to hand the raw document on for persistence.
@@ -284,6 +350,31 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
       true -> :ok
     end
   end
+
+  # The signature, `iss`, `aud`, `exp`, and required-claims checks ran in
+  # oidcc, and requiring `sub` there is deliberate: a sid-only logout token is
+  # rejected, which sso.md records as a limitation. What oidcc has no notion of
+  # is checked here: the logout `events` member, the spec's prohibition on
+  # `nonce`, and a freshness window on `iat`, since a logout token is a
+  # one-shot signal rather than a credential with its own lifetime.
+  defp validate_logout_claims(claims, connection) do
+    now = DateTime.utc_now() |> DateTime.to_unix()
+    issued_at = claims["iat"]
+
+    cond do
+      claims["iss"] != connection.issuer -> error(:logout_token, :issuer_mismatch)
+      not OIDC.valid_subject?(claims["sub"]) -> error(:logout_token, :subject_invalid)
+      not logout_event?(claims["events"]) -> error(:logout_token, :events_invalid)
+      is_map_key(claims, "nonce") -> error(:logout_token, :nonce_present)
+      not is_integer(issued_at) -> error(:logout_token, :issued_at_invalid)
+      issued_at > now + @clock_skew_seconds -> error(:logout_token, :issued_at_in_future)
+      issued_at < now - @logout_token_max_age_seconds -> error(:logout_token, :issued_at_too_old)
+      true -> :ok
+    end
+  end
+
+  defp logout_event?(%{@logout_event => event}) when is_map(event), do: true
+  defp logout_event?(_events), do: false
 
   defp client_context(connection, client_secret) do
     with {:ok, _uri} <- Issuer.validate_syntax(connection.issuer),
@@ -469,6 +560,11 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
 
   defp optional_binary(value) when is_binary(value), do: value
   defp optional_binary(_value), do: nil
+
+  # An unusable sid degrades to sub-wide revocation rather than failing the
+  # authentication or the logout, which errs toward revoking more.
+  defp optional_sid(sid) when is_binary(sid) and sid != "" and byte_size(sid) <= 255, do: sid
+  defp optional_sid(_sid), do: nil
 
   defp error(stage, code), do: {:error, %Error{stage: stage, code: code}}
 end

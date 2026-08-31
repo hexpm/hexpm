@@ -1108,6 +1108,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       sso_identities: if(connection, do: SSO.identities(connection), else: []),
       sso_failures: if(connection, do: SSO.failures(connection), else: []),
       sso_callback_url: SSOEnforcement.callback_url(),
+      sso_backchannel_logout_url: SSOEnforcement.backchannel_logout_url(organization),
       sso_login_url: url(~p"/sso/org/#{organization}"),
       sso_domains: OrganizationDomains.all(organization),
       sso_personal_keys: sso_personal_keys(organization, connection),

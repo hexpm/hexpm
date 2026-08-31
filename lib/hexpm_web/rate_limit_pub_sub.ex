@@ -50,4 +50,9 @@ defmodule HexpmWeb.RateLimitPubSub do
     Attack.sso_callback_ip_throttle(ip, time: time)
     {:noreply, []}
   end
+
+  def handle_info({:throttle, {:sso_backchannel_logout_ip, ip}, time}, []) do
+    Attack.sso_backchannel_logout_ip_throttle(ip, time: time)
+    {:noreply, []}
+  end
 end

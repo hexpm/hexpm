@@ -456,6 +456,13 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
     "Reached #{org} without a current SSO session"
   end
 
+  defp humanize_action(%AuditLog{
+         action: "sso.backchannel_logout",
+         params: %{"organization" => %{"name" => org}}
+       }) do
+    "#{org}'s identity provider ended this member's SSO sessions"
+  end
+
   defp humanize_action(%AuditLog{action: "password.reset.init"}) do
     "Requested a password reset"
   end

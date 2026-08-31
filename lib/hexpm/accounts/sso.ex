@@ -808,7 +808,8 @@ defmodule Hexpm.Accounts.SSO do
                   link_token_hash: nil,
                   issuer: nil,
                   subject: nil,
-                  provider_email: nil
+                  provider_email: nil,
+                  sid: nil
                 })
               )
 
@@ -824,6 +825,7 @@ defmodule Hexpm.Accounts.SSO do
                   identity,
                   user,
                   user_session_id,
+                  transaction.sid,
                   audit_data
                 )
 
@@ -857,7 +859,8 @@ defmodule Hexpm.Accounts.SSO do
             link_token_hash: nil,
             issuer: nil,
             subject: nil,
-            provider_email: nil
+            provider_email: nil,
+            sid: nil
           })
         )
       else
@@ -1058,7 +1061,7 @@ defmodule Hexpm.Accounts.SSO do
   rather than adding a second one, which is what the unique index on
   `(user_session_id, organization_id)` enforces.
   """
-  def establish_org_session!(%Identity{} = identity, user_session_id) do
+  def establish_org_session!(%Identity{} = identity, user_session_id, sid \\ nil) do
     now = DateTime.utc_now()
 
     Repo.update_all(
@@ -1089,7 +1092,8 @@ defmodule Hexpm.Accounts.SSO do
       identity_id: identity.id,
       authenticated_at: now,
       expires_at: DateTime.add(now, lifetime, :second),
-      revoked_at: nil
+      revoked_at: nil,
+      sid: sid
     })
     |> Repo.insert_or_update!()
   end
@@ -1097,9 +1101,9 @@ defmodule Hexpm.Accounts.SSO do
   # The organization access an authentication produces, and the entry that
   # records it. Both paths that authenticate go through here, so a login and a
   # link cannot come to disagree about what an authentication logs.
-  defp establish_login!(transaction, connection, identity, user, user_session_id, audit_data) do
+  defp establish_login!(transaction, connection, identity, user, user_session_id, sid, audit_data) do
     org_session =
-      establish_org_session!(identity, authenticated_session(transaction, user_session_id))
+      establish_org_session!(identity, authenticated_session(transaction, user_session_id), sid)
 
     insert_audit!(%{audit_data | user: user}, "sso.login", {
       connection.organization,
@@ -1144,7 +1148,8 @@ defmodule Hexpm.Accounts.SSO do
         granted_from_user_session_id: from_user_session_id,
         identity_id: source.identity_id,
         authenticated_at: source.authenticated_at,
-        expires_at: source.expires_at
+        expires_at: source.expires_at,
+        sid: source.sid
       })
       |> Repo.insert!()
     end)
@@ -1360,6 +1365,78 @@ defmodule Hexpm.Accounts.SSO do
     )
   end
 
+  @doc """
+  Handles a back-channel logout token from the organization's provider.
+
+  The provider says a session of theirs ended, by logout or deactivation, so
+  the organization access that authentication created is revoked: the sessions
+  from that provider session when the token carries a `sid`, everything the
+  identity holds when it does not. An unknown subject and a token with nothing
+  left to revoke both succeed, because from the provider's side the logout is
+  done and there is nothing here for it to retry.
+  """
+  def backchannel_logout(%Organization{} = organization, logout_token)
+      when is_binary(logout_token) do
+    case get_connection(organization) do
+      nil ->
+        {:error, :not_configured}
+
+      connection ->
+        case OIDC.impl().validate_logout_token(connection, logout_token) do
+          {:ok, claims} ->
+            maybe_update_jwks(connection, claims)
+            revoke_backchannel_sessions(connection, organization, claims)
+
+          {:error, %Error{} = error} ->
+            record_failure(connection, error)
+            {:error, error}
+        end
+    end
+  end
+
+  defp revoke_backchannel_sessions(connection, organization, claims) do
+    identity =
+      from(identity in Identity,
+        where: identity.connection_id == ^connection.id,
+        where: identity.issuer == ^claims.issuer,
+        where: identity.subject == ^claims.subject,
+        preload: [:user]
+      )
+      |> Repo.one(log: false)
+
+    if identity do
+      now = DateTime.utc_now()
+
+      query =
+        from(session in OrgSession,
+          where: session.identity_id == ^identity.id,
+          where: is_nil(session.revoked_at),
+          update: [set: [revoked_at: ^now, updated_at: ^now]]
+        )
+
+      query =
+        case claims.sid do
+          nil -> query
+          sid -> from(session in query, where: session.sid == ^sid)
+        end
+
+      {revoked_count, _} = Repo.update_all(query, [])
+
+      insert_audit!(
+        %{user: identity.user, auth_credential: nil, user_agent: "hexpm", remote_ip: nil},
+        "sso.backchannel_logout",
+        {organization,
+         %{
+           user_id: identity.user_id,
+           revoked_count: revoked_count,
+           sid_scoped: not is_nil(claims.sid)
+         }}
+      )
+    end
+
+    :ok
+  end
+
   def failures(%Connection{} = connection) do
     from(failure in Failure,
       where: failure.connection_id == ^connection.id,
@@ -1537,6 +1614,7 @@ defmodule Hexpm.Accounts.SSO do
         identity,
         identity.user,
         user_session_id,
+        claims[:sid],
         audit_data
       )
 
@@ -1741,6 +1819,7 @@ defmodule Hexpm.Accounts.SSO do
       issuer: claims.issuer,
       subject: claims.subject,
       provider_email: claims.email,
+      sid: claims[:sid],
       link_token_hash: hash(link_token)
     })
 
@@ -2189,7 +2268,15 @@ defmodule Hexpm.Accounts.SSO do
       "id_token_invalid_after_jwks_refresh" =>
         "The identity token failed validation even after refreshing the signing keys",
       "invalid_response" => "The provider response could not be read",
-      "provider_error" => "The provider returned an error instead of an authorization code"
+      "provider_error" => "The provider returned an error instead of an authorization code",
+      "expired" => "The logout token had already expired",
+      "required_claim_missing" =>
+        "The logout token was missing a required claim, such as the subject",
+      "signature_invalid" => "The logout token signature could not be verified",
+      "events_invalid" => "The logout token did not carry the back-channel logout event",
+      "nonce_present" => "The logout token carried a nonce, which the specification forbids",
+      "issued_at_too_old" => "The logout token was issued more than five minutes ago",
+      "invalid" => "The logout token could not be validated"
     }
   end
 

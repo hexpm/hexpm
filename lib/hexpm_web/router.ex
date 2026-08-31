@@ -102,6 +102,16 @@ defmodule HexpmWeb.Router do
     plug HexpmWeb.Plugs.ReadmeContentSecurityPolicy
   end
 
+  # Server-to-server POST from an identity provider: no session, no CSRF token,
+  # and not the :api pipeline either, whose :authenticate would read the request
+  # as an API call.
+  pipeline :sso_backchannel do
+    plug :accepts, ["json"]
+    plug :user_agent, required: false
+    plug :validate_url
+    plug HexpmWeb.Plugs.Attack
+  end
+
   pipeline :admin do
     plug HexpmWeb.Plugs.DashboardAuth
   end
@@ -138,6 +148,13 @@ defmodule HexpmWeb.Router do
     get "/preview_sitemap.xml", PreviewRedirectController, :sitemap
     get "/preview/sitemap.xml", SitemapController, :preview_index
     get "/preview/:package/sitemap.xml", SitemapController, :preview_package
+  end
+
+  scope "/", HexpmWeb do
+    pipe_through :sso_backchannel
+
+    post "/sso/backchannel-logout/:organization", SSOBackchannelLogoutController, :create,
+      log: false
   end
 
   scope "/", HexpmWeb do
