@@ -27,7 +27,7 @@ defmodule Hexpm.Repository.Package do
   end
 
   @elixir_names ~w(eex elixir elixirc ex_unit iex logger mix)
-  @tool_names ~w(erlang typer to_erl run_erl escript erlc erl epmd dialyzer ct_run rebar rebar3 hex hexpm mix_hex)
+  @tool_names ~w(erlang typer to_erl run_erl escript erlc erl epmd dialyzer ct_run rebar rebar3 hex hexpm mix_hex flock phx gleam)
   @otp_names ~w(
     otp asn1 common_test compiler crypto debugger dialyzer diameter
     edoc eldap erl_docgen erl_interface erts et eunit ftp hipe
