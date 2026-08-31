@@ -227,8 +227,15 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
     with_organization(conn, name, fn organization ->
       case SSO.generate_scim_token(organization, params["scim"] || %{}, audit: audit_data(conn)) do
         {:ok, connection} ->
+          # Bound to the connection and the account that generated it, so a
+          # stale stash can never render on another organization's page or
+          # under another login.
           conn
-          |> put_session(:generated_scim_token, connection.scim_token)
+          |> put_session(:generated_scim_token, %{
+            "connection_id" => connection.id,
+            "user_id" => conn.assigns.current_user.id,
+            "token" => connection.scim_token
+          })
           |> put_flash(:info, "The provisioning token was generated. Copy it now.")
           |> redirect(to: ~p"/dashboard/orgs/#{organization}/sso")
 

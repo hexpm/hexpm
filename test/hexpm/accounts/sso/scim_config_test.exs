@@ -1,8 +1,12 @@
 defmodule Hexpm.Accounts.SSO.SCIMConfigTest do
   use Hexpm.DataCase
 
-  alias Hexpm.Accounts.{AuditLogs, SSO}
+  import Mox
+
+  alias Hexpm.Accounts.{AuditLogs, Organization, SSO}
   alias Hexpm.Accounts.SSO.Connection
+
+  setup :verify_on_exit!
 
   @params %{"scim_seat_policy" => "block", "scim_role" => "read"}
 
@@ -123,6 +127,89 @@ defmodule Hexpm.Accounts.SSO.SCIMConfigTest do
     app_env(:hexpm, :organization_sso, Keyword.merge(config, beta_organizations: []))
 
     assert :error = SSO.scim_auth(connection.scim_token)
+  end
+
+  test "pointing the connection at another provider revokes the token", context do
+    {:ok, connection} =
+      SSO.generate_scim_token(context.organization, @params, audit: audit_data(context.admin))
+
+    expect(Hexpm.Accounts.SSO.OIDC.Mock, :discover, fn issuer ->
+      {:ok, discovery_metadata(issuer)}
+    end)
+
+    assert {:ok, _connection} =
+             SSO.configure(
+               context.organization,
+               %{
+                 "issuer" => "https://other.example.com",
+                 "client_id" => "other-client",
+                 "client_secret" => "other-secret"
+               },
+               audit: audit_data(context.admin)
+             )
+
+    assert :error = SSO.scim_auth(connection.scim_token)
+  end
+
+  test "re-saving the same provider keeps the token", context do
+    {:ok, connection} =
+      SSO.generate_scim_token(context.organization, @params, audit: audit_data(context.admin))
+
+    expect(Hexpm.Accounts.SSO.OIDC.Mock, :discover, fn issuer ->
+      {:ok, discovery_metadata(issuer)}
+    end)
+
+    assert {:ok, _connection} =
+             SSO.configure(
+               context.organization,
+               %{
+                 "issuer" => context.connection.issuer,
+                 "client_id" => context.connection.client_id,
+                 "client_secret" => "rotated-by-resave"
+               },
+               audit: audit_data(context.admin)
+             )
+
+    assert {:ok, _connection} = SSO.scim_auth(connection.scim_token)
+  end
+
+  test "a lapsed subscription keeps the token working but blocks generating one", context do
+    {:ok, connection} =
+      SSO.generate_scim_token(context.organization, @params, audit: audit_data(context.admin))
+
+    Repo.update!(Ecto.Changeset.change(context.organization, billing_active: false))
+
+    config = Application.fetch_env!(:hexpm, :organization_sso)
+
+    app_env(
+      :hexpm,
+      :organization_sso,
+      Keyword.merge(config, mode: :enabled, all_organizations: false)
+    )
+
+    assert {:ok, _connection} = SSO.scim_auth(connection.scim_token)
+
+    organization = Repo.get!(Organization, context.organization.id)
+
+    assert {:error, :feature_disabled} =
+             SSO.generate_scim_token(organization, @params, audit: audit_data(context.admin))
+  end
+
+  defp discovery_metadata(issuer) do
+    expires_at = DateTime.add(DateTime.utc_now(), 3_600, :second)
+
+    %{
+      discovery_document: %{
+        "issuer" => issuer,
+        "authorization_endpoint" => "https://identity.example.com/authorize",
+        "token_endpoint" => "https://identity.example.com/token",
+        "jwks_uri" => "https://identity.example.com/keys"
+      },
+      jwks_document: %{"keys" => [%{"kty" => "RSA", "kid" => "key-1"}]},
+      discovery_expires_at: expires_at,
+      jwks_expires_at: expires_at,
+      metadata_expires_at: expires_at
+    }
   end
 
   defp enable_beta_for(organization) do
