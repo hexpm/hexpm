@@ -474,6 +474,7 @@ defmodule HexpmWeb.ReadmeControllerTest do
 
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["/#{package.name}/1.0.0?kind=changelog"]
+      assert get_resp_header(conn, "cache-control") == ["public, max-age=3600"]
     end
 
     test "404s the versionless route for an unrecognized kind", %{package: package} do

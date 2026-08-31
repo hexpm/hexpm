@@ -492,17 +492,10 @@ defmodule HexpmWeb.PackageControllerTest do
         meta: build(:release_metadata, app: package.name)
       )
 
-      Hexpm.Store.put(
-        :preview_bucket,
-        "file_lists/#{package.name}-1.0.0.json",
-        JSON.encode!(["README.md", "CHANGELOG.md"])
-      )
-
-      Hexpm.Store.put(
-        :preview_bucket,
-        "files/#{package.name}/1.0.0/CHANGELOG.md",
-        "# Changelog"
-      )
+      put_doc_files(package.name, "1.0.0", [
+        {"README.md", "# Readme"},
+        {"CHANGELOG.md", "# Changelog"}
+      ])
 
       body = response(get(build_conn(), "/packages/#{package.name}/1.0.0/changelog"), 200)
 
@@ -522,16 +515,11 @@ defmodule HexpmWeb.PackageControllerTest do
         meta: build(:release_metadata, app: package.name)
       )
 
-      Hexpm.Store.put(
-        :preview_bucket,
-        "repos/#{repository1.name}/file_lists/#{package.name}-1.0.0.json",
-        JSON.encode!(["README.md", "CHANGELOG.md"])
-      )
-
-      Hexpm.Store.put(
-        :preview_bucket,
-        "repos/#{repository1.name}/files/#{package.name}/1.0.0/CHANGELOG.md",
-        "# Changelog"
+      put_doc_files(
+        package.name,
+        "1.0.0",
+        [{"README.md", "# Readme"}, {"CHANGELOG.md", "# Changelog"}],
+        repository: repository1.name
       )
 
       conn =
@@ -541,7 +529,13 @@ defmodule HexpmWeb.PackageControllerTest do
 
       body = response(conn, 200)
 
-      assert body =~ "readme-frame"
+      assert [doc_url] =
+               body
+               |> Floki.parse_document!()
+               |> Floki.attribute("#readme-frame", "src")
+
+      assert doc_url =~ "token="
+      assert doc_url =~ "kind=changelog"
     end
 
     test "404s for a version the package does not have" do
@@ -573,18 +567,24 @@ defmodule HexpmWeb.PackageControllerTest do
         meta: build(:release_metadata, app: package.name)
       )
 
-      Hexpm.Store.put(
-        :preview_bucket,
-        "file_lists/#{package.name}-1.0.0.json",
-        JSON.encode!(["README.md", "CHANGELOG.md", "LICENSE"])
-      )
+      put_doc_files(package.name, "1.0.0", [
+        {"README.md", "# Readme"},
+        {"CHANGELOG.md", "# Changelog"},
+        {"LICENSE", "MIT"}
+      ])
 
       body = response(get(build_conn(), "/packages/#{package.name}"), 200)
 
-      assert body =~ "Documentation"
-      assert body =~ ">Changelog<"
-      assert body =~ ">License<"
-      refute body =~ ">Security<"
+      assert {:ok, document} = Floki.parse_document(body)
+
+      labels =
+        document
+        |> Floki.find(~s(nav[aria-label="Documentation files"] a))
+        |> Enum.map(&(Floki.text(&1) |> String.trim()))
+
+      assert "Changelog" in labels
+      assert "License" in labels
+      refute "Security" in labels
     end
 
     test "no sidebar for a readme-only package" do
@@ -596,11 +596,7 @@ defmodule HexpmWeb.PackageControllerTest do
         meta: build(:release_metadata, app: package.name)
       )
 
-      Hexpm.Store.put(
-        :preview_bucket,
-        "file_lists/#{package.name}-1.0.0.json",
-        JSON.encode!(["README.md"])
-      )
+      put_doc_files(package.name, "1.0.0", [{"README.md", "# Readme"}])
 
       body = response(get(build_conn(), "/packages/#{package.name}"), 200)
 
@@ -620,11 +616,7 @@ defmodule HexpmWeb.PackageControllerTest do
         meta: build(:release_metadata, app: package.name)
       )
 
-      Hexpm.Store.put(
-        :preview_bucket,
-        "file_lists/#{package.name}-1.0.0.json",
-        JSON.encode!(["README.md"])
-      )
+      put_doc_files(package.name, "1.0.0", [{"README.md", "# Readme"}])
 
       body = response(get(build_conn(), "/packages/#{package.name}/1.0.0/security"), 200)
 
@@ -645,11 +637,10 @@ defmodule HexpmWeb.PackageControllerTest do
         meta: build(:release_metadata, app: package.name)
       )
 
-      Hexpm.Store.put(
-        :preview_bucket,
-        "file_lists/#{package.name}-1.0.0.json",
-        JSON.encode!(["README.md", "CHANGELOG.md"])
-      )
+      put_doc_files(package.name, "1.0.0", [
+        {"README.md", "# Readme"},
+        {"CHANGELOG.md", "# Changelog"}
+      ])
 
       body = response(get(build_conn(), "/packages/#{package.name}/1.0.0/changelog"), 200)
 
@@ -667,11 +658,7 @@ defmodule HexpmWeb.PackageControllerTest do
         meta: build(:release_metadata, app: package.name)
       )
 
-      Hexpm.Store.put(
-        :preview_bucket,
-        "file_lists/#{package.name}-1.0.0.json",
-        JSON.encode!(["README.md", "LICENSE"])
-      )
+      put_doc_files(package.name, "1.0.0", [{"README.md", "# Readme"}, {"LICENSE", "MIT"}])
 
       body = response(get(build_conn(), "/packages/#{package.name}"), 200)
 
@@ -688,11 +675,10 @@ defmodule HexpmWeb.PackageControllerTest do
         meta: build(:release_metadata, app: package.name)
       )
 
-      Hexpm.Store.put(
-        :preview_bucket,
-        "file_lists/#{package.name}-1.0.0.json",
-        JSON.encode!(["README.md", "CHANGELOG.md"])
-      )
+      put_doc_files(package.name, "1.0.0", [
+        {"README.md", "# Readme"},
+        {"CHANGELOG.md", "# Changelog"}
+      ])
 
       body = response(get(build_conn(), "/packages/#{package.name}/1.0.0/changelog"), 200)
 
@@ -717,11 +703,7 @@ defmodule HexpmWeb.PackageControllerTest do
         meta: build(:release_metadata, app: package.name)
       )
 
-      Hexpm.Store.put(
-        :preview_bucket,
-        "file_lists/#{package.name}-1.0.0.json",
-        JSON.encode!(["README.md"])
-      )
+      put_doc_files(package.name, "1.0.0", [{"README.md", "# Readme"}])
 
       body = response(get(build_conn(), "/packages/#{package.name}/1.0.0/security"), 200)
 
@@ -752,11 +734,10 @@ defmodule HexpmWeb.PackageControllerTest do
         meta: build(:release_metadata, app: package.name)
       )
 
-      Hexpm.Store.put(
-        :preview_bucket,
-        "file_lists/#{package.name}-1.0.0.json",
-        JSON.encode!(["README.md", "CHANGELOG.md"])
-      )
+      put_doc_files(package.name, "1.0.0", [
+        {"README.md", "# Readme"},
+        {"CHANGELOG.md", "# Changelog"}
+      ])
 
       body = response(get(build_conn(), "/packages/#{package.name}/versions"), 200)
 
@@ -1196,6 +1177,24 @@ defmodule HexpmWeb.PackageControllerTest do
   defp escape(html) do
     {:safe, safe} = Phoenix.HTML.html_escape(html)
     IO.iodata_to_binary(safe)
+  end
+
+  defp put_doc_files(package_name, version, files, opts \\ []) do
+    prefix = if repo = opts[:repository], do: "repos/#{repo}/", else: ""
+
+    Hexpm.Store.put(
+      :preview_bucket,
+      "#{prefix}file_lists/#{package_name}-#{version}.json",
+      JSON.encode!(Enum.map(files, &elem(&1, 0)))
+    )
+
+    Enum.each(files, fn {name, content} ->
+      Hexpm.Store.put(
+        :preview_bucket,
+        "#{prefix}files/#{package_name}/#{version}/#{name}",
+        content
+      )
+    end)
   end
 
   defp advise(package, id, version) do

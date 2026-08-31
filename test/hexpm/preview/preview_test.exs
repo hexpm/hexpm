@@ -149,6 +149,17 @@ defmodule Hexpm.PreviewTest do
       assert Preview.readme("hexpm", "readme_only", "1.0.0") ==
                Preview.doc("hexpm", "readme_only", "1.0.0", :readme)
     end
+
+    test "returns :error when the file list names a file whose object is missing" do
+      Hexpm.Store.put(
+        :preview_bucket,
+        "file_lists/partial_doc-1.0.0.json",
+        JSON.encode!(["CHANGELOG.md"])
+      )
+
+      # deliberately no object written for files/partial_doc/1.0.0/CHANGELOG.md
+      assert Preview.doc("hexpm", "partial_doc", "1.0.0", :changelog) == :error
+    end
   end
 
   describe "doc_kinds/3" do
