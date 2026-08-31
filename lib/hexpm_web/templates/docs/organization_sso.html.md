@@ -130,7 +130,7 @@ Shorter is stricter and more interruptive. The lifetime is what bounds how long 
 
 ### Provider-initiated logout
 
-If you set the **Back-Channel Logout URI** in your provider, the provider tells Hexpm when a member's provider session ends, whether they signed out or were deactivated, and Hexpm revokes the organization access sessions that provider session created. A logout token naming only the subject revokes every organization access session the member's linked identity holds. The member's next request goes back through the provider, which is where a deactivated account stops.
+If you set the **Back-Channel Logout URI** in your provider, the provider tells Hexpm when a member's provider session ends, whether they signed out or were deactivated, and Hexpm revokes the organization access sessions that provider session created, together with any of the member's sessions whose provider session Hexpm does not know. A logout token naming only the subject revokes every organization access session the member's linked identity holds. The member's next request goes back through the provider, which is where a deactivated account stops.
 
 Delivery is best-effort: it is one HTTPS request from your provider, and if it is lost nothing retries it here. The session lifetime is still what bounds how long a deactivated member keeps access, so back-channel logout shortens the window in practice without replacing the lifetime as the guarantee.
 

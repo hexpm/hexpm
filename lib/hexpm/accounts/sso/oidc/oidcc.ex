@@ -12,6 +12,7 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
   @clock_skew_seconds 60
   @logout_event "http://schemas.openid.net/event/backchannel-logout"
   @logout_token_max_age_seconds 300
+  @sid_max_bytes 4096
 
   @impl true
   def discover(issuer) do
@@ -105,11 +106,13 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
   end
 
   @impl true
-  def validate_logout_token(%Connection{} = connection, logout_token)
+  def validate_logout_token(connection, logout_token, opts \\ [])
+
+  def validate_logout_token(%Connection{} = connection, logout_token, opts)
       when is_binary(logout_token) do
     with_adapter(fn ref ->
       with {:ok, client_context} <- client_context(connection, connection.client_secret),
-           {:ok, claims} <- validate_logout_jwt(logout_token, client_context, ref),
+           {:ok, claims} <- validate_logout_jwt(logout_token, client_context, ref, opts),
            :ok <- validate_logout_claims(claims, connection) do
         {refreshed_jwks, refreshed_jwks_expires_at} = refreshed_jwks(ref)
 
@@ -199,14 +202,23 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
       {:error, :token_validation_exception}
   end
 
-  defp validate_logout_jwt(logout_token, client_context, ref) do
-    opts = %{
+  # The refresh hook is what turns an unknown `kid` into an outbound JWKS
+  # fetch, and this endpoint takes unauthenticated input, so the caller decides
+  # per request whether that fetch is on the table.
+  defp validate_logout_jwt(logout_token, client_context, ref, opts) do
+    validate_opts = %{
       signing_algs: allowed_signing_algorithms(client_context.provider_configuration),
-      trusted_audiences: [],
-      refresh_jwks: refresh_jwks_fun(client_context, ref)
+      trusted_audiences: []
     }
 
-    case oidcc_validate_jwt(logout_token, client_context, opts, ref) do
+    validate_opts =
+      if Keyword.get(opts, :refresh_jwks, true) do
+        Map.put(validate_opts, :refresh_jwks, refresh_jwks_fun(client_context, ref))
+      else
+        validate_opts
+      end
+
+    case oidcc_validate_jwt(logout_token, client_context, validate_opts, ref) do
       {:ok, claims} -> {:ok, claims}
       {:error, reason} -> logout_token_error(reason)
     end
@@ -366,6 +378,8 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
       not OIDC.valid_subject?(claims["sub"]) -> error(:logout_token, :subject_invalid)
       not logout_event?(claims["events"]) -> error(:logout_token, :events_invalid)
       is_map_key(claims, "nonce") -> error(:logout_token, :nonce_present)
+      not valid_jti?(claims["jti"]) -> error(:logout_token, :jti_missing)
+      not valid_logout_sid?(claims["sid"]) -> error(:logout_token, :sid_invalid)
       not is_integer(issued_at) -> error(:logout_token, :issued_at_invalid)
       issued_at > now + @clock_skew_seconds -> error(:logout_token, :issued_at_in_future)
       issued_at < now - @logout_token_max_age_seconds -> error(:logout_token, :issued_at_too_old)
@@ -375,6 +389,15 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
 
   defp logout_event?(%{@logout_event => event}) when is_map(event), do: true
   defp logout_event?(_events), do: false
+
+  defp valid_jti?(jti), do: is_binary(jti) and jti != ""
+
+  # A sid the sessions cannot carry must fail the logout rather than silently
+  # widen it to everything the identity holds.
+  defp valid_logout_sid?(nil), do: true
+
+  defp valid_logout_sid?(sid),
+    do: is_binary(sid) and sid != "" and byte_size(sid) <= @sid_max_bytes
 
   defp client_context(connection, client_secret) do
     with {:ok, _uri} <- Issuer.validate_syntax(connection.issuer),
@@ -561,9 +584,13 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
   defp optional_binary(value) when is_binary(value), do: value
   defp optional_binary(_value), do: nil
 
-  # An unusable sid degrades to sub-wide revocation rather than failing the
-  # authentication or the logout, which errs toward revoking more.
-  defp optional_sid(sid) when is_binary(sid) and sid != "" and byte_size(sid) <= 255, do: sid
+  # At authentication an unusable sid is dropped rather than failing the login;
+  # the session then reads as coming from an unknown provider session, which
+  # any logout for the identity revokes. Logout tokens reject unusable sids in
+  # `valid_logout_sid?/1` instead, so this clause never widens one.
+  defp optional_sid(sid) when is_binary(sid) and sid != "" and byte_size(sid) <= @sid_max_bytes,
+    do: sid
+
   defp optional_sid(_sid), do: nil
 
   defp error(stage, code), do: {:error, %Error{stage: stage, code: code}}

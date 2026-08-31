@@ -911,7 +911,7 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
        context do
     for {sid_claim, expected} <- [
           {"provider-session-1", "provider-session-1"},
-          {String.duplicate("s", 256), nil},
+          {String.duplicate("s", 4097), nil},
           {"", nil},
           {123, nil}
         ] do
@@ -1059,10 +1059,34 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
       assert claims.jwks_expires_at
     end
 
-    test "drops an unusable sid rather than failing the logout", context do
-      token = logout_token(context.key, %{"sid" => String.duplicate("s", 256)})
+    test "rejects an unusable sid rather than widening the logout", context do
+      for sid <- [String.duplicate("s", 4097), 123, ""] do
+        token = logout_token(context.key, %{"sid" => sid})
 
-      assert {:ok, %{sid: nil}} = Oidcc.validate_logout_token(context.connection, token)
+        assert {:error, %Error{stage: :logout_token, code: :sid_invalid}} =
+                 Oidcc.validate_logout_token(context.connection, token)
+      end
+    end
+
+    test "rejects a token without a token identifier", context do
+      token = logout_token(context.key, %{}, ["jti"])
+
+      assert {:error, %Error{stage: :logout_token, code: :jti_missing}} =
+               Oidcc.validate_logout_token(context.connection, token)
+    end
+
+    test "does not fetch signing keys for an unknown kid when the caller forbids it",
+         context do
+      rotated_key = JOSE.JWK.generate_key({:rsa, 1_024})
+
+      token =
+        rotated_key
+        |> JOSE.JWT.sign(%{"alg" => "RS256", "kid" => "key-2"}, default_logout_token_claims())
+        |> JOSE.JWS.compact()
+        |> elem(1)
+
+      assert {:error, %Error{stage: :logout_token}} =
+               Oidcc.validate_logout_token(context.connection, token, refresh_jwks: false)
     end
   end
 

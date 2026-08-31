@@ -619,6 +619,43 @@ defmodule Hexpm.Accounts.SSOTest do
       assert "sso.login" in actions
     end
 
+    test "a logout token cancels a pending link consent", context do
+      transaction = start_transaction(context, context.member)
+      claims = Map.put(valid_claims(), :sid, "provider-session-1")
+
+      assert {:ok, {:link, transaction_id, link_token}} =
+               complete(transaction, claims, context.member)
+
+      expect(Hexpm.Accounts.SSO.OIDC.Mock, :validate_logout_token, fn _connection,
+                                                                      _token,
+                                                                      _opts ->
+        {:ok,
+         %{
+           issuer: "https://identity.example.com/oauth2/default",
+           subject: "00u123",
+           sid: "provider-session-1",
+           jwks_document: nil,
+           jwks_expires_at: nil
+         }}
+      end)
+
+      assert :ok = SSO.backchannel_logout(context.organization, "logout-token")
+
+      user = Repo.preload(context.member, :emails)
+      user_session = browser_session(context.member)
+
+      assert {:error, :link_cancelled} =
+               SSO.complete_link(
+                 transaction_id,
+                 link_token,
+                 user,
+                 user_session.id,
+                 audit_data(user)
+               )
+
+      refute Repo.exists?(SSO.OrgSession)
+    end
+
     test "an authentication records the provider session it came from", context do
       identity = link_identity(context, context.member)
       user_session = browser_session(context.member)

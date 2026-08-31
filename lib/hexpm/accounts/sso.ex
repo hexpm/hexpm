@@ -41,6 +41,7 @@ defmodule Hexpm.Accounts.SSO do
     @email_mismatch_category
   ]
   @seats_notice_seconds 60 * 60
+  @jwks_cooldown_seconds 10 * 60
 
   def available?, do: Features.available?()
 
@@ -1371,9 +1372,16 @@ defmodule Hexpm.Accounts.SSO do
   The provider says a session of theirs ended, by logout or deactivation, so
   the organization access that authentication created is revoked: the sessions
   from that provider session when the token carries a `sid`, everything the
-  identity holds when it does not. An unknown subject and a token with nothing
-  left to revoke both succeed, because from the provider's side the logout is
-  done and there is nothing here for it to retry.
+  identity holds when it does not. A sid-scoped token also revokes sessions
+  whose provider session is unknown, since nothing ties them to a session that
+  is still alive. A pending link consent for the subject is cancelled too;
+  without that, a consent screen open across the logout would mint fresh
+  access from a provider session that already ended. An unknown subject and a
+  token with nothing left to revoke both succeed, because from the provider's
+  side the logout is done and there is nothing here for it to retry.
+
+  Revocation takes the connection lock `complete_callback/5` holds, so it
+  cannot interleave with a login writing new access for the same identity.
   """
   def backchannel_logout(%Organization{} = organization, logout_token)
       when is_binary(logout_token) do
@@ -1382,13 +1390,25 @@ defmodule Hexpm.Accounts.SSO do
         {:error, :not_configured}
 
       connection ->
-        case OIDC.impl().validate_logout_token(connection, logout_token) do
+        opts = [
+          refresh_jwks: not recent_logout_token_failure?(connection, @jwks_cooldown_seconds)
+        ]
+
+        case OIDC.impl().validate_logout_token(connection, logout_token, opts) do
           {:ok, claims} ->
             maybe_update_jwks(connection, claims)
-            revoke_backchannel_sessions(connection, organization, claims)
+
+            case Repo.transaction(fn ->
+                   connection = locked_connection!(connection.id)
+                   revoke_backchannel_sessions(connection, organization, claims)
+                   cancel_pending_links(connection, claims)
+                 end) do
+              {:ok, _result} -> :ok
+              {:error, reason} -> {:error, reason}
+            end
 
           {:error, %Error{} = error} ->
-            record_failure(connection, error)
+            record_logout_token_failure(connection, error)
             {:error, error}
         end
     end
@@ -1417,7 +1437,7 @@ defmodule Hexpm.Accounts.SSO do
       query =
         case claims.sid do
           nil -> query
-          sid -> from(session in query, where: session.sid == ^sid)
+          sid -> from(session in query, where: session.sid == ^sid or is_nil(session.sid))
         end
 
       {revoked_count, _} = Repo.update_all(query, [])
@@ -1434,6 +1454,81 @@ defmodule Hexpm.Accounts.SSO do
       )
     end
 
+    :ok
+  end
+
+  defp cancel_pending_links(connection, claims) do
+    now = DateTime.utc_now()
+
+    query =
+      from(transaction in SSOTransaction,
+        where: transaction.connection_id == ^connection.id,
+        where: transaction.kind == "login",
+        where: transaction.subject == ^claims.subject,
+        where: not is_nil(transaction.link_token_hash),
+        where: is_nil(transaction.linked_at),
+        where: is_nil(transaction.cancelled_at),
+        update: [
+          set: [
+            cancelled_at: ^now,
+            link_token_hash: nil,
+            issuer: nil,
+            subject: nil,
+            provider_email: nil,
+            sid: nil,
+            updated_at: ^now
+          ]
+        ]
+      )
+
+    query =
+      case claims.sid do
+        nil ->
+          query
+
+        sid ->
+          from(transaction in query, where: transaction.sid == ^sid or is_nil(transaction.sid))
+      end
+
+    Repo.update_all(query, [])
+    :ok
+  end
+
+  # The refusal is the throttle: while a recently rejected logout token sits in
+  # the failure log, an unknown signing key does not get to trigger another
+  # outbound JWKS fetch. Legitimate key rotation validates cleanly on its first
+  # refresh and never lands here.
+  defp recent_logout_token_failure?(connection, within_seconds) do
+    cutoff = DateTime.add(DateTime.utc_now(), -within_seconds, :second)
+
+    Repo.exists?(
+      from(failure in Failure,
+        where: failure.connection_id == ^connection.id,
+        where: failure.stage == "logout_token",
+        where: failure.inserted_at > ^cutoff
+      )
+    )
+  end
+
+  # The endpoint is unauthenticated, and the failure log keeps twenty rows, so
+  # recording every garbage POST would let anyone push the diagnostics an
+  # administrator needs out of view. One row per code per hour keeps the
+  # signal without the eviction.
+  defp record_logout_token_failure(connection, %Error{} = error) do
+    code = to_string(stable_failure_code(error.code))
+    cutoff = DateTime.add(DateTime.utc_now(), -3600, :second)
+
+    recent? =
+      Repo.exists?(
+        from(failure in Failure,
+          where: failure.connection_id == ^connection.id,
+          where: failure.stage == "logout_token",
+          where: failure.code == ^code,
+          where: failure.inserted_at > ^cutoff
+        )
+      )
+
+    unless recent?, do: record_failure(connection, error)
     :ok
   end
 
@@ -2276,6 +2371,8 @@ defmodule Hexpm.Accounts.SSO do
       "events_invalid" => "The logout token did not carry the back-channel logout event",
       "nonce_present" => "The logout token carried a nonce, which the specification forbids",
       "issued_at_too_old" => "The logout token was issued more than five minutes ago",
+      "jti_missing" => "The logout token carried no token identifier",
+      "sid_invalid" => "The logout token carried an unusable session identifier",
       "invalid" => "The logout token could not be validated"
     }
   end

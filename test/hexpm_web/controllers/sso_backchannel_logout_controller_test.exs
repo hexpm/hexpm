@@ -27,10 +27,11 @@ defmodule HexpmWeb.SSOBackchannelLogoutControllerTest do
     %{organization: organization, user: user, connection: connection, identity: identity}
   end
 
-  test "a sid-scoped token ends the sessions from that provider session and no other",
+  test "a sid-scoped token ends that provider session's access and any of unknown origin",
        context do
     {_session, revoked} = establish_session(context, "sid-1")
     {survivor_session, _survivor} = establish_session(context, "sid-2")
+    {_unknown_session, unknown_origin} = establish_session(context, nil)
     copy = grant_copy(context, revoked)
 
     expect_logout_token(context.connection, ok_claims(sid: "sid-1"))
@@ -42,13 +43,14 @@ defmodule HexpmWeb.SSOBackchannelLogoutControllerTest do
 
     assert Repo.get!(OrgSession, revoked.id).revoked_at
     assert Repo.get!(OrgSession, copy.id).revoked_at
+    assert Repo.get!(OrgSession, unknown_origin.id).revoked_at
     assert SSO.current_org_session(survivor_session.id, context.organization.id)
 
     assert [audit] = audit_entries("sso.backchannel_logout")
     assert audit.params["organization"]["id"] == context.organization.id
     assert audit.params["user_id"] == context.user.id
     assert audit.params["sid_scoped"] == true
-    assert audit.params["revoked_count"] == 2
+    assert audit.params["revoked_count"] == 3
   end
 
   test "a token with no sid ends everything the identity holds, sessions without a sid included",
@@ -77,7 +79,9 @@ defmodule HexpmWeb.SSOBackchannelLogoutControllerTest do
   test "a replayed token succeeds and changes nothing further", context do
     {session, org_session} = establish_session(context, "sid-1")
 
-    expect(Hexpm.Accounts.SSO.OIDC.Mock, :validate_logout_token, 2, fn _connection, _token ->
+    expect(Hexpm.Accounts.SSO.OIDC.Mock, :validate_logout_token, 2, fn _connection,
+                                                                       _token,
+                                                                       _opts ->
       ok_claims(sid: "sid-1")
     end)
 
@@ -90,16 +94,37 @@ defmodule HexpmWeb.SSOBackchannelLogoutControllerTest do
     refute SSO.current_org_session(session.id, context.organization.id)
   end
 
-  test "an invalid token is refused and recorded for the administrator", context do
-    expect(Hexpm.Accounts.SSO.OIDC.Mock, :validate_logout_token, fn _connection, _token ->
+  test "an invalid token is refused and recorded once for the administrator", context do
+    expect(Hexpm.Accounts.SSO.OIDC.Mock, :validate_logout_token, 3, fn _connection,
+                                                                       _token,
+                                                                       _opts ->
       {:error, %Error{stage: :logout_token, code: :nonce_present}}
     end)
 
+    assert response(post_logout(context.organization), 400)
+    assert response(post_logout(context.organization), 400)
     assert response(post_logout(context.organization), 400)
 
     assert [failure] = SSO.failures(context.connection)
     assert failure.stage == "logout_token"
     assert failure.code == "nonce_present"
+  end
+
+  test "an unknown signing key stops triggering fetches while rejections are recent",
+       context do
+    expect(Hexpm.Accounts.SSO.OIDC.Mock, :validate_logout_token, fn _connection, _token, opts ->
+      assert opts[:refresh_jwks] == true
+      {:error, %Error{stage: :logout_token, code: :signature_invalid}}
+    end)
+
+    assert response(post_logout(context.organization), 400)
+
+    expect(Hexpm.Accounts.SSO.OIDC.Mock, :validate_logout_token, fn _connection, _token, opts ->
+      assert opts[:refresh_jwks] == false
+      {:error, %Error{stage: :logout_token, code: :signature_invalid}}
+    end)
+
+    assert response(post_logout(context.organization), 400)
   end
 
   test "a refreshed signing-key document is persisted", context do
@@ -172,9 +197,10 @@ defmodule HexpmWeb.SSOBackchannelLogoutControllerTest do
   end
 
   defp expect_logout_token(connection, result) do
-    expect(Hexpm.Accounts.SSO.OIDC.Mock, :validate_logout_token, fn received, token ->
+    expect(Hexpm.Accounts.SSO.OIDC.Mock, :validate_logout_token, fn received, token, opts ->
       assert received.id == connection.id
       assert token == "logout-token"
+      assert opts[:refresh_jwks] == true
       result
     end)
   end
