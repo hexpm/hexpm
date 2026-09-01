@@ -1,5 +1,5 @@
 defmodule Hexpm.Accounts.SSO.Error do
-  defexception [:stage, :code, details: %{}]
+  defexception [:stage, :code]
 
   @type t :: %__MODULE__{}
 

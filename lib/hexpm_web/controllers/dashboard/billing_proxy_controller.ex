@@ -3,6 +3,19 @@ defmodule HexpmWeb.Dashboard.BillingProxyController do
 
   plug :requires_login
 
+  # Changing the organization's billing setup takes sudo on the screen this
+  # forwards from, and it forwards with the server's own billing credential, so
+  # it takes sudo here too. Ahead of the SSO plug, so a session sent off to
+  # reauthenticate never counts as having reached billing.
+  plug HexpmWeb.Plugs.Sudo
+
+  # The browser's billing forms talk to the billing service through here, so it
+  # is the billing carve-out under another address and is accounted for as one.
+  plug HexpmWeb.Plugs.OrganizationSSO,
+    organization: :billing_proxy,
+    except: [:proxy],
+    screen: :billing
+
   @timeout 15_000
 
   @allowed_actions ~w(setup_intent confirm_setup_intent)

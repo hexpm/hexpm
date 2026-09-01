@@ -1,5 +1,6 @@
 defmodule Hexpm.Store.Local do
   @behaviour Hexpm.Store.Behaviour
+  @chunk_size 65_536
 
   # only used during development (not safe)
 
@@ -36,6 +37,14 @@ defmodule Hexpm.Store.Local do
     end
   end
 
+  def stream(bucket, key) do
+    path = safe_path!(bucket, key)
+
+    if File.regular?(path) do
+      File.stream!(path, @chunk_size)
+    end
+  end
+
   def get_to_file(bucket, key, destination, _opts) do
     path = safe_path!(bucket, key)
 
@@ -49,12 +58,21 @@ defmodule Hexpm.Store.Local do
     path = safe_path!(bucket, key)
     File.mkdir_p!(Path.dirname(path))
     File.write!(path, blob)
+    {:ok, %{etag: quote_etag(:crypto.hash(:md5, blob))}}
   end
 
   def put_file(bucket, key, source_path, _opts) do
     path = safe_path!(bucket, key)
     File.mkdir_p!(Path.dirname(path))
     File.cp!(source_path, path)
+
+    hash =
+      path
+      |> File.stream!(65_536)
+      |> Enum.reduce(:crypto.hash_init(:md5), &:crypto.hash_update(&2, &1))
+      |> :crypto.hash_final()
+
+    {:ok, %{etag: quote_etag(hash)}}
   end
 
   def delete(bucket, key) do
@@ -80,4 +98,6 @@ defmodule Hexpm.Store.Local do
     Application.get_env(:hexpm, :local_store_dir) ||
       Path.join(Application.fetch_env!(:hexpm, :tmp_dir), "store")
   end
+
+  defp quote_etag(hash), do: ~s("#{Base.encode16(hash, case: :lower)}")
 end

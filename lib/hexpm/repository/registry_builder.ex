@@ -1,173 +1,146 @@
 defmodule Hexpm.Repository.RegistryBuilder do
+  @moduledoc """
+  Builds the signed registry objects (`names`, `versions`, `packages/<name>`)
+  and writes them to the repository bucket.
+
+  Every builder returns the CDN purge the write calls for, as
+  `%{keys: surrogate_keys, verify: targets}`, for the caller to hand to
+  `Hexpm.CDN.purge/3`. Nothing here takes the `:registry` advisory lock or
+  purges; `Hexpm.Repository.RegistryWorker` does both, so call these under
+  that lock (or from a place where concurrent builds cannot happen, such as
+  test setup).
+  """
+
   import Ecto.Query, only: [from: 2]
-  require Logger
   alias Hexpm.Repository.{Package, Release, Repository, Requirement, Storage}
   alias Hexpm.Repo
 
+  @type purge :: %{keys: [String.t()], verify: [Hexpm.CDN.target()]}
+
+  @doc """
+  Rebuilds every registry object of the repository and removes package
+  objects that no longer belong to a package.
+
+  Verification covers `names` and `versions` only, not the tens of thousands
+  of package objects a full build writes.
+  """
+  @spec full(Repository.t()) :: purge
   def full(repository) do
-    locked_build(fn -> build_full(repository) end, 300_000)
+    {packages, releases} = tuples(repository, nil, requirements: true)
+
+    new = build_all(repository, packages, releases)
+    uploaded = upload_files(repository, new)
+
+    {_, _, packages} = new
+
+    new_keys =
+      Enum.map(packages, &repository_store_key(repository, "packages/#{elem(&1, 0)}"))
+      |> Enum.sort()
+
+    old_keys =
+      Hexpm.Store.list(:repo_bucket, repository_store_key(repository, "packages/"))
+      |> Enum.sort()
+
+    Hexpm.Store.delete_many(:repo_bucket, old_keys -- new_keys)
+
+    index_uploads = Enum.filter(uploaded, &(&1.kind == :index))
+
+    %{
+      keys: ["registry", repository_cdn_key(repository, "registry")],
+      verify: verify_targets(repository, index_uploads)
+    }
   end
 
-  # NOTE: Does not rebuild package indexes, use full/1 instead
+  @doc "Rebuilds `names` and `versions` for the repository, not the package objects."
+  @spec repository(Repository.t()) :: purge
   def repository(repository) do
-    locked_build(fn -> build_partial(repository) end, 30_000)
+    {packages, releases} = tuples(repository, nil, requirements: false)
+    release_map = Map.new(releases)
+
+    names = build_names(repository, packages)
+    versions = build_versions(repository, packages, release_map)
+    uploaded = upload_files(repository, {names, versions, []})
+
+    %{
+      keys: ["registry-index", repository_cdn_key(repository, "registry-index")],
+      verify: verify_targets(repository, uploaded)
+    }
   end
 
-  def package(package) do
-    build_package(package)
+  @doc "Rebuilds the `packages/<name>` object of the package."
+  @spec package(Package.t()) :: purge
+  def package(%Package{repository: repository} = package), do: packages(repository, [package])
+
+  @doc """
+  Rebuilds the `packages/<name>` objects of the packages, all in the given
+  repository, with one round of queries and concurrent uploads.
+  """
+  @spec packages(Repository.t(), [Package.t()]) :: purge
+  def packages(repository, packages) do
+    {package_tuples, releases} = tuples(repository, packages, requirements: true)
+    release_map = Map.new(releases)
+    objects = build_packages(repository, package_tuples, release_map)
+
+    uploaded = upload_files(repository, {nil, nil, objects})
+
+    %{
+      keys:
+        Enum.flat_map(packages, fn package ->
+          [
+            "registry-package-#{package.name}",
+            repository_cdn_key(repository, "registry-package", package.name)
+          ]
+        end),
+      verify: verify_targets(repository, uploaded)
+    }
   end
 
-  def package_delete(package) do
-    delete_package(package)
+  @doc """
+  Deletes the `packages/<name>` object. Takes the repository and the name
+  rather than the package, which is usually gone by the time this runs.
+  """
+  @spec package_delete(Repository.t(), String.t()) :: purge
+  def package_delete(repository, name) do
+    key = repository_store_key(repository, "packages/#{name}")
+    Storage.delete_object(key)
+
+    %{
+      keys: [
+        "registry-package-#{name}",
+        repository_cdn_key(repository, "registry-package", name)
+      ],
+      verify: verify_targets(repository, [%{key: key, etag: nil}])
+    }
   end
 
-  defp locked_build(fun, timeout) do
-    start_time = System.monotonic_time(:millisecond)
-    lock(fun, start_time, timeout)
-  end
-
-  defp lock(fun, start_time, timeout) do
-    now = System.monotonic_time(:millisecond)
-
-    if now > start_time + timeout do
-      raise "lock timeout"
-    end
-
-    {:ok, ran?} =
-      Repo.transaction(
-        fn -> run_with_lock(fun, now - start_time) end,
-        timeout: timeout
-      )
-
-    unless ran? do
-      Process.sleep(1000)
-      lock(fun, start_time, timeout)
-    end
-  end
-
-  if Mix.env() == :test do
-    defp run_with_lock(fun, time) do
-      if Repo.try_advisory_lock?(:registry) do
-        try do
-          Logger.warning("REGISTRY_BUILDER aquired_lock (#{time}ms)")
-          fun.()
-          true
-        after
-          Repo.advisory_unlock(:registry)
-        end
-      else
-        Logger.warning("REGISTRY_BUILDER failed_aquire_lock (#{time}ms)")
-        false
-      end
-    end
-  else
-    defp run_with_lock(fun, time) do
-      if Repo.try_advisory_xact_lock?(:registry) do
-        Logger.warning("REGISTRY_BUILDER aquired_lock (#{time}ms)")
-        fun.()
-        true
-      else
-        Logger.warning("REGISTRY_BUILDER failed_aquire_lock (#{time}ms)")
-        false
-      end
-    end
-  end
-
-  defp build_full(repository) do
-    log(:all, fn ->
-      {packages, releases} = tuples(repository, nil, requirements: true)
-
-      new = build_all(repository, packages, releases)
-      upload_files(repository, new)
-
-      {_, _, packages} = new
-
-      new_keys =
-        Enum.map(packages, &repository_store_key(repository, "packages/#{elem(&1, 0)}"))
-        |> Enum.sort()
-
-      old_keys =
-        Hexpm.Store.list(:repo_bucket, repository_store_key(repository, "packages/"))
-        |> Enum.sort()
-
-      Hexpm.Store.delete_many(:repo_bucket, old_keys -- new_keys)
-
-      Storage.purge([
-        "registry",
-        repository_cdn_key(repository, "registry")
-      ])
+  # The store key is the CDN path for both the public repository and the
+  # `repos/<name>/` prefix of a private one; the check fetches the latter
+  # with a token for that repository.
+  defp verify_targets(%Repository{id: 1}, uploads) do
+    Enum.map(uploads, fn %{key: key, etag: etag} ->
+      %{url: Hexpm.Utils.cdn_url(key), etag: etag}
     end)
   end
 
-  defp build_partial(repository) do
-    log(:repository, fn ->
-      {packages, releases} = tuples(repository, nil, requirements: false)
-      release_map = Map.new(releases)
-
-      names = build_names(repository, packages)
-      versions = build_versions(repository, packages, release_map)
-      upload_files(repository, {names, versions, []})
-
-      Storage.purge([
-        "registry-index",
-        repository_cdn_key(repository, "registry-index")
-      ])
+  defp verify_targets(%Repository{name: name}, uploads) do
+    Enum.map(uploads, fn %{key: key, etag: etag} ->
+      %{url: Hexpm.Utils.cdn_url(key), etag: etag, repository: name}
     end)
   end
 
-  defp build_package(package) do
-    log(:package_build, fn ->
-      repository = package.repository
-
-      {packages, releases} = tuples(repository, package, requirements: true)
-      release_map = Map.new(releases)
-      packages = build_packages(repository, packages, release_map)
-
-      upload_files(repository, {nil, nil, packages})
-
-      Storage.purge([
-        "registry-package-#{package.name}",
-        repository_cdn_key(repository, "registry-package", package.name)
-      ])
-    end)
-  end
-
-  defp delete_package(package) do
-    log(:package_delete, fn ->
-      repository = package.repository
-
-      Storage.delete_object(repository_store_key(repository, "packages/#{package.name}"))
-
-      Storage.purge([
-        "registry-package-#{package.name}",
-        repository_cdn_key(repository, "registry-package", package.name)
-      ])
-    end)
-  end
-
-  defp tuples(repository, package, opts) do
+  # `packages` is nil for the whole repository or a list of packages in it.
+  defp tuples(repository, packages, opts) do
     requirements =
       if Keyword.fetch!(opts, :requirements) do
-        requirements(repository, package)
+        requirements(repository, packages)
       end
 
-    releases = releases(repository, package)
-    packages = packages(repository, package)
+    releases = releases(repository, packages)
+    packages = package_rows(repository, packages)
     package_tuples = package_tuples(packages, releases)
     release_tuples = release_tuples(packages, releases, requirements)
 
     {package_tuples, release_tuples}
-  end
-
-  defp log(type, fun) do
-    try do
-      {time, _} = :timer.tc(fun)
-      Logger.warning("REGISTRY_BUILDER completed #{type} (#{div(time, 1000)}ms)")
-    catch
-      exception ->
-        Logger.error("REGISTRY_BUILDER failed #{type}")
-        reraise exception, __STACKTRACE__
-    end
   end
 
   defp build_all(repository, packages, releases) do
@@ -336,13 +309,14 @@ defmodule Hexpm.Repository.RegistryBuilder do
   defp upload_files(repository, objects) do
     Task.async_stream(
       objects(objects, repository),
-      fn {key, data, surrogate_keys} ->
-        Storage.put_object(key, data, surrogate_keys, cache_control(repository))
+      fn {kind, key, data, surrogate_keys} ->
+        etag = Storage.put_object(key, data, surrogate_keys, cache_control(repository))
+        %{kind: kind, key: key, etag: etag}
       end,
-      max_concurrency: 10,
+      max_concurrency: 32,
       timeout: 60_000
     )
-    |> Stream.run()
+    |> Enum.map(fn {:ok, upload} -> upload end)
   end
 
   defp objects(nil, _repository) do
@@ -364,8 +338,8 @@ defmodule Hexpm.Repository.RegistryBuilder do
     ]
 
     [
-      {repository_store_key(repository, "names"), names, surrogate_keys},
-      {repository_store_key(repository, "versions"), versions, surrogate_keys}
+      {:index, repository_store_key(repository, "names"), names, surrogate_keys},
+      {:index, repository_store_key(repository, "versions"), versions, surrogate_keys}
     ]
   end
 
@@ -376,7 +350,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
         repository_cdn_key(repository, "registry-package", name)
       ]
 
-      {repository_store_key(repository, "packages/#{name}"), contents, surrogate_keys}
+      {:package, repository_store_key(repository, "packages/#{name}"), contents, surrogate_keys}
     end)
   end
 
@@ -447,7 +421,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
     |> Enum.sort()
   end
 
-  defp packages(repository, package) do
+  defp package_rows(repository, packages) do
     query =
       from(p in Package,
         left_join: a in assoc(p, :security_advisories),
@@ -469,9 +443,9 @@ defmodule Hexpm.Repository.RegistryBuilder do
       )
 
     query =
-      case package do
+      case packages do
         nil -> from(p in query, where: p.repository_id == ^repository.id)
-        _ -> from(p in query, where: p.id == ^package.id)
+        packages -> from(p in query, where: p.id in ^Enum.map(packages, & &1.id))
       end
 
     query
@@ -479,7 +453,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
     |> Map.new()
   end
 
-  defp releases(repository, package) do
+  defp releases(repository, packages) do
     from(
       r in Release,
       join: p in assoc(r, :package),
@@ -498,7 +472,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
         advisory_ids: fragment("array_remove(array_agg(?), NULL)", a.id)
       }
     )
-    |> releases_where(repository, package)
+    |> releases_where(repository, packages)
     |> Hexpm.Repo.all()
   end
 
@@ -509,14 +483,14 @@ defmodule Hexpm.Repository.RegistryBuilder do
     )
   end
 
-  defp releases_where(query, _repository, package) do
+  defp releases_where(query, _repository, packages) do
     from(
       [r, p] in query,
-      where: p.id == ^package.id
+      where: p.id in ^Enum.map(packages, & &1.id)
     )
   end
 
-  defp requirements(repository, package) do
+  defp requirements(repository, packages) do
     reqs =
       from(
         req in Requirement,
@@ -533,7 +507,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
           optional: req.optional
         }
       )
-      |> requirements_where(repository, package)
+      |> requirements_where(repository, packages)
       |> Repo.all()
 
     Enum.reduce(reqs, %{}, fn map, acc ->
@@ -549,10 +523,10 @@ defmodule Hexpm.Repository.RegistryBuilder do
     )
   end
 
-  defp requirements_where(query, _repository, package) do
+  defp requirements_where(query, _repository, packages) do
     from(
       [req, rel, parent] in query,
-      where: parent.id == ^package.id
+      where: parent.id in ^Enum.map(packages, & &1.id)
     )
   end
 

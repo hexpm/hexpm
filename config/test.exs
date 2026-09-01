@@ -3,6 +3,7 @@ import Config
 config :hexpm,
   repo_bucket: {Hexpm.Store.Memory, "repo_bucket"},
   logs_bucket: {Hexpm.Store.Memory, "logs_bucket"},
+  audit_bucket: {Hexpm.Store.Memory, "audit_bucket"},
   docs_bucket: {Hexpm.Store.Memory, "docs_bucket"},
   docs_private_bucket: {Hexpm.Store.Memory, "docs_private_bucket"},
   preview_bucket: {Hexpm.Store.Memory, "preview_bucket"},
@@ -33,7 +34,11 @@ config :hexpm,
   fastly_hexdocs_private: "fastly_hexdocs_private",
   fastly_key: "fastly_key",
   fastly_docs_key: "fastly_docs_key",
-  fastly_purge_wait: 200,
+  purge_wait: 0,
+  purge_verify_grace: 0,
+  purge_verify_rounds: 3,
+  fastly_probe_pops: ["nrt-tokyo-jp"],
+  registry_lock_wait: 100,
   billing_impl: Hexpm.Billing.Mock,
   billing_url: "http://localhost:4001",
   billing_key: "hex_billing_key",
@@ -50,7 +55,11 @@ config :hexpm, HexpmWeb.Endpoint,
   http: [port: 5000],
   server: false,
   secret_key_base: "38K8orQfRHMC6ZWXIdgItQEiumeY+L2Ls0fvYfTMt4AoG5+DSFsLG6vMajNcd5Td",
-  live_view: [signing_salt: "2UTSB72sZsF9KTlxefkIrFFPXTO7d+Ep"]
+  live_view: [signing_salt: "2UTSB72sZsF9KTlxefkIrFFPXTO7d+Ep"],
+  cache_static_manifest_latest: %{
+    "assets/app.css" => "assets/app-11111111111111111111111111111111.css",
+    "assets/app.js" => "assets/app-22222222222222222222222222222222.js"
+  }
 
 config :hexpm, Hexpm.Emails.Mailer, adapter: Swoosh.Adapters.Test
 config :swoosh, :api_client, false

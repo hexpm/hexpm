@@ -8,18 +8,14 @@ defmodule HexpmWeb.Router do
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
-    plug :migrate_session
     plug :fetch_flash
     plug :put_root_layout, {HexpmWeb.LayoutView, :root}
     plug :put_layout, {HexpmWeb.LayoutView, :app}
-    plug :protect_from_forgery
+
     plug :put_secure_browser_headers
     plug :user_agent, required: false
     plug :validate_url
     plug HexpmWeb.Plugs.Attack
-    plug :login
-    plug :disable_deactivated
-    plug :default_repository
 
     plug HexpmWeb.Plugs.ContentSecurityPolicy,
       nonces_for: [:script_src, :style_src],
@@ -46,10 +42,23 @@ defmodule HexpmWeb.Router do
         # Disallow embedding this site in frames (clickjacking protection)
         frame_ancestors: ~w('none')
       }
+
+    plug HexpmWeb.Plugs.ReadOnly,
+      allowed_routes: [{"POST", "/logout"}],
+      write_routes: [
+        {"GET", "/auth/:provider/callback"},
+        {"GET", "/email/verify"}
+      ]
+
+    plug :protect_from_forgery
+    plug :login
+    plug :disable_deactivated
+    plug :default_repository
   end
 
   pipeline :upload do
     plug :accepts, @accepted_formats
+    plug HexpmWeb.Plugs.ReadOnly
     plug :user_agent
     plug :authenticate
     plug :disable_deactivated
@@ -61,6 +70,9 @@ defmodule HexpmWeb.Router do
 
   pipeline :api do
     plug :accepts, @accepted_formats
+
+    plug HexpmWeb.Plugs.ReadOnly
+
     plug :user_agent
     plug :authenticate
     plug :disable_deactivated
@@ -73,12 +85,12 @@ defmodule HexpmWeb.Router do
   pipeline :browser_api do
     plug :accepts, ["json"]
     plug :fetch_session
-    plug :migrate_session
-    plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug :user_agent, required: false
     plug :validate_url
     plug HexpmWeb.Plugs.Attack
+    plug HexpmWeb.Plugs.ReadOnly
+    plug :protect_from_forgery
     plug :login
     plug :disable_deactivated
     plug :default_repository
@@ -169,6 +181,11 @@ defmodule HexpmWeb.Router do
     post "/sso/link", SSOController, :confirm_link, log: false
     post "/sso/link/cancel", SSOController, :cancel_link, log: false
     get "/sso/org/:organization", SSOController, :start, log: false
+    # The code rides in the query string, not the path: both loggers on the
+    # endpoint record `conn.request_path`, so a code in the path would be
+    # written to stdout and to Sentry on every visit.
+    get "/sso/authorize", SSOController, :authorize, log: false
+    post "/sso/authorize", SSOController, :authorize_organization, log: false
 
     get "/invites", OrganizationInvitationController, :show, log: false
     post "/invites", OrganizationInvitationController, :accept, log: false
@@ -218,7 +235,7 @@ defmodule HexpmWeb.Router do
     get "/policies/dispute", PolicyController, :dispute
 
     live_session :packages,
-      on_mount: {HexpmWeb.Live.InitAssigns, :default},
+      on_mount: [{HexpmWeb.Live.InitAssigns, :default}, HexpmWeb.Live.StaticReload],
       session: {HexpmWeb.Live.InitAssigns, :session, []} do
       live "/packages", PackageLive.Index, :index
       live "/packages/:name/report", PackageReportLive, :new
@@ -234,7 +251,8 @@ defmodule HexpmWeb.Router do
     get "/preview/:package/:version", PreviewRedirectController, :version
     get "/preview/:package/:version/show/*filename", PreviewRedirectController, :version_file
 
-    live_session :preview, on_mount: {HexpmWeb.Live.InitAssigns, :default} do
+    live_session :preview,
+      on_mount: [{HexpmWeb.Live.InitAssigns, :default}, HexpmWeb.Live.StaticReload] do
       live "/packages/:package/:version/files", PreviewLive, :files
       live "/packages/:package/:version/files/*filename", PreviewLive, :files
       live "/packages/:repository/:package/:version/files", PreviewLive, :files
@@ -335,6 +353,15 @@ defmodule HexpmWeb.Router do
     post "/orgs/:dashboard_org/sso/promote", OrganizationSSOController, :promote, log: false
     post "/orgs/:dashboard_org/sso/unlink", OrganizationSSOController, :unlink, log: false
     post "/orgs/:dashboard_org/sso/jit", OrganizationSSOController, :configure_jit
+
+    post "/orgs/:dashboard_org/sso/enforcement",
+         OrganizationSSOController,
+         :configure_enforcement
+
+    post "/orgs/:dashboard_org/sso/enforcement/member",
+         OrganizationSSOController,
+         :set_member_enforcement
+
     post "/orgs/:dashboard_org/sso/domains", OrganizationSSOController, :add_domain
     post "/orgs/:dashboard_org/sso/domains/verify", OrganizationSSOController, :verify_domain
     post "/orgs/:dashboard_org/sso/domains/remove", OrganizationSSOController, :remove_domain
@@ -480,6 +507,7 @@ defmodule HexpmWeb.Router do
     post "/oauth/device_authorization", OAuthController, :device_authorization
     post "/oauth/revoke", OAuthController, :revoke
     post "/oauth/revoke_by_hash", OAuthController, :revoke_by_hash
+    post "/oauth/sso_authorization", SSOAuthorizationController, :create
 
     get "/oidc/audience", OIDCController, :audience
     post "/oidc/mint-token", OIDCController, :mint_token

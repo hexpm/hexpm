@@ -22,6 +22,12 @@ defmodule Hexpm.OAuth.Token do
     field :access_token, :string, virtual: true
     field :refresh_token, :string, virtual: true
 
+    # The organizations whose scopes this grant dropped only because the
+    # session has not authenticated through their provider lately. Told to the
+    # client so it can offer to fix it, and carried no further than the
+    # response that reports it.
+    field :sso_reauth_required, {:array, :string}, virtual: true, default: []
+
     belongs_to :user, User
     belongs_to :organization, Organization
     belongs_to :trusted_publisher, Hexpm.TrustedPublishers.TrustedPublisher
@@ -55,7 +61,8 @@ defmodule Hexpm.OAuth.Token do
       :trusted_publisher_id,
       :client_id,
       :access_token,
-      :refresh_token
+      :refresh_token,
+      :sso_reauth_required
     ])
     |> cast_embed(:oidc_claims)
     |> validate_required([

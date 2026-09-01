@@ -1,9 +1,10 @@
 defmodule Hexpm.Repository.Storage do
   @moduledoc """
   Low-level helpers shared by registry and policy builders for signing
-  protobuf payloads, writing them to the repository bucket, and purging
-  the matching Fastly surrogate keys.
+  protobuf payloads and writing them to the repository bucket.
   """
+
+  alias Hexpm.Repo
 
   @doc """
   Signs the given encoded protobuf payload with the configured private
@@ -21,17 +22,20 @@ defmodule Hexpm.Repository.Storage do
   @doc """
   Writes `contents` to `key` in the repo bucket along with the standard
   surrogate-key/surrogate-control metadata and the supplied
-  `cache_control` value.
+  `cache_control` value. Returns the object's ETag as the store reports it.
   """
-  @spec put_object(String.t(), iodata(), [String.t()], String.t()) :: term()
+  @spec put_object(String.t(), iodata(), [String.t()], String.t()) :: String.t()
   def put_object(key, contents, surrogate_keys, cache_control) do
+    Repo.write_mode!()
+
     meta = [
       {"surrogate-key", Enum.join(surrogate_keys, " ")},
       {"surrogate-control", "public, max-age=604800"}
     ]
 
     opts = [cache_control: cache_control, meta: meta]
-    Hexpm.Store.put(:repo_bucket, key, contents, opts)
+    {:ok, %{etag: etag}} = Hexpm.Store.put(:repo_bucket, key, contents, opts)
+    etag
   end
 
   @doc """
@@ -39,14 +43,7 @@ defmodule Hexpm.Repository.Storage do
   """
   @spec delete_object(String.t()) :: term()
   def delete_object(key) do
+    Repo.write_mode!()
     Hexpm.Store.delete(:repo_bucket, key)
-  end
-
-  @doc """
-  Purges the given surrogate keys on the hexrepo Fastly service.
-  """
-  @spec purge(String.t() | [String.t()]) :: term()
-  def purge(surrogate_keys) do
-    Hexpm.CDN.purge_key(:fastly_hexrepo, surrogate_keys)
   end
 end

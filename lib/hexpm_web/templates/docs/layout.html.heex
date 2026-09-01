@@ -2,291 +2,48 @@
   <div class="max-w-7xl mx-auto w-full flex gap-8 flex-col lg:flex-row">
     <%!-- Sidebar --%>
     <aside class="w-full lg:w-64 shrink-0">
-      <nav class="bg-white dark:bg-grey-900 border border-grey-200 dark:border-grey-700 rounded-lg p-4 shadow-xs sticky top-4">
-        <div class="space-y-6">
-          <div>
-            <h3 class="text-sm font-semibold text-grey-900 dark:text-grey-100 mb-2">Mix</h3>
-            <ul class="space-y-1">
-              <li>
-                <a
-                  href={~p"/docs/usage"}
-                  class={[
-                    "block px-3 py-1.5 text-sm rounded transition-colors",
-                    if(@view_name == :usage,
-                      do:
-                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
-                      else:
-                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-700"
-                    )
-                  ]}
-                >
-                  Usage
-                </a>
-              </li>
-              <li>
-                <a
-                  href={~p"/docs/publish"}
-                  class={[
-                    "block px-3 py-1.5 text-sm rounded transition-colors",
-                    if(@view_name == :publish,
-                      do:
-                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
-                      else:
-                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-800"
-                    )
-                  ]}
-                >
-                  Publishing packages
-                </a>
-              </li>
-              <li>
-                <a
-                  href={~p"/docs/private"}
-                  class={[
-                    "block px-3 py-1.5 text-sm rounded transition-colors",
-                    if(@view_name == :private,
-                      do:
-                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
-                      else:
-                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-800"
-                    )
-                  ]}
-                >
-                  Private packages
-                </a>
-              </li>
-              <li>
-                <a
-                  href={~p"/docs/dependency-policies"}
-                  class={[
-                    "block px-3 py-1.5 text-sm rounded transition-colors",
-                    if(@view_name == :dependency_policies,
-                      do:
-                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
-                      else:
-                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-800"
-                    )
-                  ]}
-                >
-                  Dependency policies
-                </a>
-              </li>
-              <li>
-                <a
-                  target="_blank"
-                  rel="noopener"
-                  href="https://hexdocs.pm/hex"
-                  class="block px-3 py-1.5 text-sm rounded text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-700 flex items-center gap-1"
-                >
-                  Tasks {icon(:heroicon, "window", class: "w-3 h-3")}
-                </a>
-              </li>
-            </ul>
-          </div>
+      <details id="docs-nav-mobile" class="group lg:hidden">
+        <summary class="select-none flex cursor-pointer list-none items-center justify-between gap-4 rounded-lg border border-grey-200 bg-white p-4 shadow-xs transition-colors hover:border-grey-300 dark:border-grey-700 dark:bg-grey-900 dark:hover:border-grey-600 [&::-webkit-details-marker]:hidden">
+          <span class="flex min-w-0 items-center gap-3">
+            {icon(:heroicon, "book-open",
+              class: "size-5 shrink-0 text-grey-500 dark:text-grey-300"
+            )}
+            <span class="min-w-0">
+              <span class="block text-[10px] font-medium uppercase tracking-wide text-grey-400 dark:text-grey-300">
+                Documentation
+              </span>
+              <span class="block truncate text-sm font-semibold text-grey-900 dark:text-grey-100">
+                {@title}
+              </span>
+            </span>
+          </span>
+          <span class="flex shrink-0 items-center gap-2 text-grey-500 dark:text-grey-300">
+            <span class="text-xs font-medium">Browse</span>
+            {icon(:heroicon, "chevron-down",
+              class: "size-4 shrink-0 transition-transform group-open:rotate-180"
+            )}
+          </span>
+        </summary>
 
-          <div>
-            <h3 class="text-sm font-semibold text-grey-900 dark:text-grey-100 mb-2">Rebar</h3>
-            <ul class="space-y-1">
-              <li>
-                <a
-                  href={~p"/docs/rebar3-usage"}
-                  class={[
-                    "block px-3 py-1.5 text-sm rounded transition-colors",
-                    if(@view_name == :rebar3_usage,
-                      do:
-                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
-                      else:
-                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-700"
-                    )
-                  ]}
-                >
-                  Usage
-                </a>
-              </li>
-              <li>
-                <a
-                  href={~p"/docs/rebar3-publish"}
-                  class={[
-                    "block px-3 py-1.5 text-sm rounded transition-colors",
-                    if(@view_name == :rebar3_publish,
-                      do:
-                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
-                      else:
-                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-800"
-                    )
-                  ]}
-                >
-                  Publishing packages
-                </a>
-              </li>
-              <li>
-                <a
-                  href={~p"/docs/rebar3-private"}
-                  class={[
-                    "block px-3 py-1.5 text-sm rounded transition-colors",
-                    if(@view_name == :rebar3_private,
-                      do:
-                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
-                      else:
-                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-800"
-                    )
-                  ]}
-                >
-                  Private packages
-                </a>
-              </li>
-              <li>
-                <a
-                  target="_blank"
-                  rel="noopener"
-                  href="https://rebar3.org/docs/package_management/hex_package_management/"
-                  class="block px-3 py-1.5 text-sm rounded text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-700 flex items-center gap-1"
-                >
-                  Tasks {icon(:heroicon, "window", class: "w-3 h-3")}
-                </a>
-              </li>
-            </ul>
-          </div>
+        <nav
+          aria-label="Documentation"
+          class="mt-2 bg-white dark:bg-grey-900 border border-grey-200 dark:border-grey-700 rounded-lg p-4 shadow-xs"
+        >
+          {render("_nav.html", assigns)}
+        </nav>
+      </details>
 
-          <div>
-            <h3 class="text-sm font-semibold text-grey-900 dark:text-grey-100 mb-2">Gleam</h3>
-            <ul class="space-y-1">
-              <li>
-                <a
-                  href={~p"/docs/gleam-usage"}
-                  class={[
-                    "block px-3 py-1.5 text-sm rounded transition-colors",
-                    if(@view_name == :gleam_usage,
-                      do:
-                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
-                      else:
-                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-700"
-                    )
-                  ]}
-                >
-                  Usage
-                </a>
-              </li>
-              <li>
-                <a
-                  target="_blank"
-                  rel="noopener"
-                  href="https://gleam.run/command-line-reference/"
-                  class="block px-3 py-1.5 text-sm rounded text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-700 flex items-center gap-1"
-                >
-                  Tasks {icon(:heroicon, "window", class: "w-3 h-3")}
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 class="text-sm font-semibold text-grey-900 dark:text-grey-100 mb-2">Hex</h3>
-            <ul class="space-y-1">
-              <li :if={Hexpm.Accounts.SSO.available?()}>
-                <a
-                  href={~p"/docs/organization-sso"}
-                  class={[
-                    "block px-3 py-1.5 text-sm rounded transition-colors",
-                    if(@view_name == :organization_sso,
-                      do:
-                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
-                      else:
-                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-700"
-                    )
-                  ]}
-                >
-                  Organization SSO
-                </a>
-              </li>
-              <li :if={Hexpm.TrustedPublishers.enabled?()}>
-                <a
-                  href={~p"/docs/trusted-publishers"}
-                  class={[
-                    "block px-3 py-1.5 text-sm rounded transition-colors",
-                    if(@view_name == :trusted_publishers,
-                      do:
-                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
-                      else:
-                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-700"
-                    )
-                  ]}
-                >
-                  Trusted publishers
-                </a>
-              </li>
-              <li>
-                <a
-                  href={~p"/docs/faq"}
-                  class={[
-                    "block px-3 py-1.5 text-sm rounded transition-colors",
-                    if(@view_name == :faq,
-                      do:
-                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
-                      else:
-                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-700"
-                    )
-                  ]}
-                >
-                  FAQ
-                </a>
-              </li>
-              <li>
-                <a
-                  href={~p"/docs/self-hosting"}
-                  class={[
-                    "block px-3 py-1.5 text-sm rounded transition-colors",
-                    if(@view_name == :self_hosting,
-                      do:
-                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
-                      else:
-                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-800"
-                    )
-                  ]}
-                >
-                  Self-hosting
-                </a>
-              </li>
-              <li>
-                <a
-                  href={~p"/docs/mirrors"}
-                  class={[
-                    "block px-3 py-1.5 text-sm rounded transition-colors",
-                    if(@view_name == :mirrors,
-                      do:
-                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
-                      else:
-                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-800"
-                    )
-                  ]}
-                >
-                  Mirrors
-                </a>
-              </li>
-              <li>
-                <a
-                  href={~p"/docs/public-keys"}
-                  class={[
-                    "block px-3 py-1.5 text-sm rounded transition-colors",
-                    if(@view_name == :public_keys,
-                      do:
-                        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200 font-medium",
-                      else:
-                        "text-grey-700 dark:text-grey-200 hover:bg-grey-50 dark:hover:bg-grey-800"
-                    )
-                  ]}
-                >
-                  Public keys
-                </a>
-              </li>
-            </ul>
-          </div>
-        </div>
+      <nav
+        id="docs-nav"
+        aria-label="Documentation"
+        class="hidden lg:block bg-white dark:bg-grey-900 border border-grey-200 dark:border-grey-700 rounded-lg p-4 shadow-xs sticky top-4"
+      >
+        {render("_nav.html", assigns)}
       </nav>
     </aside>
 
     <%!-- Content --%>
-    <main class="lg:w-64 flex-1">
+    <main class="flex-1 min-w-0">
       <article class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-6 lg:p-10 shadow-xs docs-content">
         <style nonce={@style_src_nonce}>
           .docs-content h2 {

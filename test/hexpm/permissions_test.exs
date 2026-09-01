@@ -31,6 +31,18 @@ defmodule Hexpm.PermissionsTest do
       assert {:error, _} = Permissions.validate_scopes(["docs"])
     end
 
+    test "rejects a resource that is not the shape its scope takes" do
+      # A package scope names one package in one organization, and everything
+      # else names an organization.
+      for scope <- ["package:decimal", "package:hexpm/decimal/1.0.0", "package:hexpm/"] do
+        assert {:error, _} = Permissions.validate_scopes([scope])
+      end
+
+      for scope <- ["package:", "repository:", "docs:"] do
+        assert {:error, _} = Permissions.validate_scopes([scope])
+      end
+    end
+
     test "accepts mixed valid scopes" do
       assert :ok =
                Permissions.validate_scopes([
@@ -80,6 +92,12 @@ defmodule Hexpm.PermissionsTest do
       # Should not grant API access
       refute Permissions.verify_access?(token, "api", "read")
       refute Permissions.verify_access?(token, "api", "write")
+    end
+
+    test "a package scope of another shape reaches nothing", %{package: package} do
+      for scope <- ["package:decimal", "package:hexpm/decimal/1.0.0"] do
+        refute Permissions.verify_access?(%Token{scopes: [scope]}, "package", package)
+      end
     end
 
     test "multiple package scopes grant access to multiple packages", %{package: package} do
@@ -274,6 +292,48 @@ defmodule Hexpm.PermissionsTest do
       assert Permissions.verify_access?(key, "api", "write")
       refute Permissions.verify_access?(key, "repository", "foo")
       refute Permissions.verify_access?(key, "repositories", nil)
+    end
+  end
+
+  describe "expand_and_filter_sso_scopes/4" do
+    test "expands repositories into the organizations the account belongs to" do
+      user = insert(:user)
+      organization = insert(:organization)
+      insert(:organization_user, organization: organization, user: user)
+
+      assert {scopes, []} =
+               Permissions.expand_and_filter_sso_scopes(user, ["api:read", "repositories"], nil)
+
+      assert Enum.sort(scopes) ==
+               Enum.sort(["api:read", "repository:hexpm", "repository:#{organization.name}"])
+    end
+
+    test "drops an organization scope the account is no longer a member of" do
+      user = insert(:user)
+      organization = insert(:organization)
+
+      scopes = ["api:read", "repository:#{organization.name}", "docs:#{organization.name}"]
+
+      # Granted while they were a member, and verified at the edge from the
+      # token rather than from the database, so this is where it goes.
+      assert Permissions.expand_and_filter_sso_scopes(user, scopes, nil) == {["api:read"], []}
+    end
+
+    test "keeps an organization scope while the membership stands" do
+      user = insert(:user)
+      organization = insert(:organization)
+      insert(:organization_user, organization: organization, user: user)
+
+      scopes = ["api:read", "repository:#{organization.name}", "docs:#{organization.name}"]
+
+      assert Permissions.expand_and_filter_sso_scopes(user, scopes, nil) == {scopes, []}
+    end
+
+    test "leaves an organization principal's own scopes alone" do
+      organization = insert(:organization)
+      scopes = ["repository:#{organization.name}", "docs:#{organization.name}"]
+
+      assert Permissions.expand_and_filter_sso_scopes(organization, scopes, nil) == {scopes, []}
     end
   end
 

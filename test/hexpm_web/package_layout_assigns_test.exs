@@ -7,8 +7,10 @@ defmodule HexpmWeb.PackageLayoutAssignsTest do
     package = insert(:package) |> Repo.preload(:repository)
     release = insert(:release, package: package)
 
+    conn = Plug.Conn.assign(build_conn(), :current_user, nil)
+
     assigns =
-      PackageLayoutAssigns.for_package(nil, package,
+      PackageLayoutAssigns.for_package(conn, package,
         releases: [release],
         current_release: release,
         sidebar?: false,

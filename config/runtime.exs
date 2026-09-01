@@ -43,9 +43,11 @@ if config_env() == :prod do
     end
 
   config :hexpm,
+    secret: System.fetch_env!("HEXPM_SECRET"),
     private_key: System.fetch_env!("HEXPM_SIGNING_KEY"),
     repo_bucket: System.fetch_env!("HEXPM_REPO_BUCKET"),
     logs_bucket: System.fetch_env!("HEXPM_LOGS_BUCKET"),
+    audit_bucket: System.fetch_env!("HEXPM_AUDIT_BUCKET"),
     docs_bucket: System.fetch_env!("HEXPM_DOCS_BUCKET"),
     preview_bucket: System.fetch_env!("HEXPM_PREVIEW_BUCKET"),
     diff_bucket: System.fetch_env!("HEXPM_DIFF_BUCKET"),
@@ -55,9 +57,31 @@ if config_env() == :prod do
     private_docs_url: System.fetch_env!("HEXPM_PRIVATE_DOCS_URL"),
     fastly_key: System.fetch_env!("HEXPM_FASTLY_KEY"),
     fastly_hexrepo: System.fetch_env!("HEXPM_FASTLY_HEXREPO"),
+    jwt_signing_key: System.fetch_env!("HEXPM_JWT_SIGNING_KEY"),
     billing_key: System.fetch_env!("HEXPM_BILLING_KEY"),
     billing_url: System.fetch_env!("HEXPM_BILLING_URL"),
+    host: System.fetch_env!("HEXPM_HOST"),
+    dashboard_user: System.fetch_env!("HEXPM_DASHBOARD_USER"),
+    dashboard_password: System.fetch_env!("HEXPM_DASHBOARD_PASSWORD"),
+    img_url: System.fetch_env!("HEXPM_IMG_URL"),
+    img_proxy_secret: System.fetch_env!("HEXPM_IMG_PROXY_SECRET"),
+    readme_host: System.fetch_env!("HEXPM_README_HOST"),
+    readme_url: System.fetch_env!("HEXPM_README_URL"),
     secret_scan_notify: System.get_env("HEXPM_SECRET_SCAN_NOTIFY") == "true"
+
+  config :hexpm, :varsel,
+    report_url: System.fetch_env!("HEXPM_VARSEL_REPORT_URL"),
+    audience: System.fetch_env!("HEXPM_VARSEL_JWT_AUDIENCE"),
+    signing_key: System.fetch_env!("HEXPM_VARSEL_SIGNING_KEY"),
+    key_id: System.fetch_env!("HEXPM_VARSEL_KEY_ID")
+
+  config :hexpm, :hcaptcha,
+    sitekey: System.fetch_env!("HEXPM_HCAPTCHA_SITEKEY"),
+    secret: System.fetch_env!("HEXPM_HCAPTCHA_SECRET")
+
+  config :ueberauth, Ueberauth.Strategy.Github.OAuth,
+    client_id: System.fetch_env!("HEXPM_GITHUB_CLIENT_ID"),
+    client_secret: System.fetch_env!("HEXPM_GITHUB_CLIENT_SECRET")
 
   config :ex_aws,
     access_key_id: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_ID"),
@@ -74,34 +98,45 @@ if config_env() == :prod do
 
   config :hexpm, Hexpm.Emails.Mailer, api_key: System.fetch_env!("HEXPM_SENDGRID_API_KEY")
 
+  # IP geolocation database for audit-log locations. Resolution order:
+  #
+  #   1. HEXPM_GEOIP_COUNTRY_PATH, if set.
+  #   2. priv/geoip/country.mmdb, which the Docker image bakes in at build time
+  #      (mix download_geoip) — so the official image works with zero config.
+  #
+  # Fail-soft: if no database is found, geolix logs an info message and returns
+  # nil for all lookups; the app boots normally and location fields are simply
+  # omitted until a database is provisioned.
+  default_geoip_path =
+    case :code.priv_dir(:hexpm) do
+      {:error, _} -> nil
+      priv_dir -> Path.join(to_string(priv_dir), "geoip/country.mmdb")
+    end
+
+  geoip_country_path = System.get_env("HEXPM_GEOIP_COUNTRY_PATH") || default_geoip_path
+
+  if geoip_country_path do
+    config :geolix,
+      databases: [
+        %{
+          id: :country,
+          adapter: Geolix.Adapter.MMDB2,
+          source: geoip_country_path
+        }
+      ]
+  end
+
   # Set on both web and worker deployments so Prometheus can scrape all pods
   if metrics_port = System.get_env("HEXPM_METRICS_PORT") do
     config :hexpm, metrics_port: String.to_integer(metrics_port)
   end
 
+  # Only the web server's own wiring may live in this block: everything else is
+  # shared, because Oban jobs read app config on worker pods too. The env vars
+  # below (HEXPM_PORT, HEXPM_SECRET_KEY_BASE, BEAM_PORT, ...) are the ones the
+  # worker deployment does not have to provide.
   if mode == :web do
     config :hexpm, Oban, queues: false, plugins: false, peer: false
-
-    config :hexpm, :varsel,
-      report_url: System.fetch_env!("HEXPM_VARSEL_REPORT_URL"),
-      audience: System.fetch_env!("HEXPM_VARSEL_JWT_AUDIENCE"),
-      signing_key: System.fetch_env!("HEXPM_VARSEL_SIGNING_KEY"),
-      key_id: System.fetch_env!("HEXPM_VARSEL_KEY_ID")
-
-    config :hexpm,
-      host: System.fetch_env!("HEXPM_HOST"),
-      secret: System.fetch_env!("HEXPM_SECRET"),
-      dashboard_user: System.fetch_env!("HEXPM_DASHBOARD_USER"),
-      dashboard_password: System.fetch_env!("HEXPM_DASHBOARD_PASSWORD"),
-      jwt_signing_key: System.fetch_env!("HEXPM_JWT_SIGNING_KEY"),
-      img_url: System.fetch_env!("HEXPM_IMG_URL"),
-      img_proxy_secret: System.fetch_env!("HEXPM_IMG_PROXY_SECRET"),
-      readme_host: System.fetch_env!("HEXPM_README_HOST"),
-      readme_url: System.fetch_env!("HEXPM_README_URL")
-
-    config :hexpm, :hcaptcha,
-      sitekey: System.fetch_env!("HEXPM_HCAPTCHA_SITEKEY"),
-      secret: System.fetch_env!("HEXPM_HCAPTCHA_SECRET")
 
     hexpm_port =
       case System.get_env("HEXPM_PORT") do
@@ -128,45 +163,15 @@ if config_env() == :prod do
     config :kernel,
       inet_dist_listen_min: String.to_integer(System.fetch_env!("BEAM_PORT")),
       inet_dist_listen_max: String.to_integer(System.fetch_env!("BEAM_PORT"))
-
-    config :ueberauth, Ueberauth.Strategy.Github.OAuth,
-      client_id: System.fetch_env!("HEXPM_GITHUB_CLIENT_ID"),
-      client_secret: System.fetch_env!("HEXPM_GITHUB_CLIENT_SECRET")
-
-    # IP geolocation database for audit-log locations. Resolution order:
-    #
-    #   1. HEXPM_GEOIP_COUNTRY_PATH, if set.
-    #   2. priv/geoip/country.mmdb, which the Docker image bakes in at build time
-    #      (mix download_geoip) — so the official image works with zero config.
-    #
-    # Fail-soft: if no database is found, geolix logs an info message and returns
-    # nil for all lookups; the app boots normally and location fields are simply
-    # omitted until a database is provisioned.
-    default_geoip_path =
-      case :code.priv_dir(:hexpm) do
-        {:error, _} -> nil
-        priv_dir -> Path.join(to_string(priv_dir), "geoip/country.mmdb")
-      end
-
-    geoip_country_path = System.get_env("HEXPM_GEOIP_COUNTRY_PATH") || default_geoip_path
-
-    if geoip_country_path do
-      config :geolix,
-        databases: [
-          %{
-            id: :country,
-            adapter: Geolix.Adapter.MMDB2,
-            source: geoip_country_path
-          }
-        ]
-    end
   end
 
   if mode == :worker do
     config :hexpm, Oban,
       queues: [
         periodic: String.to_integer(System.fetch_env!("HEXPM_OBAN_PERIODIC_CONCURRENCY")),
-        heavy: String.to_integer(System.fetch_env!("HEXPM_OBAN_HEAVY_CONCURRENCY"))
+        heavy: String.to_integer(System.fetch_env!("HEXPM_OBAN_HEAVY_CONCURRENCY")),
+        registry: String.to_integer(System.fetch_env!("HEXPM_OBAN_REGISTRY_CONCURRENCY")),
+        purge: String.to_integer(System.fetch_env!("HEXPM_OBAN_PURGE_CONCURRENCY"))
       ]
 
     config :hexpm,

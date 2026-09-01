@@ -204,6 +204,12 @@ defmodule HexpmWeb.BlogView do
     """)
   end
 
+  def post_title(template) do
+    template
+    |> get_raw_content()
+    |> title()
+  end
+
   # Get raw template content without wrapper (used by both render and posts)
   defp get_raw_content(template, assigns \\ %{}) do
     # Ensure template has .html suffix for render_template

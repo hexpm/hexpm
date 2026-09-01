@@ -22,7 +22,8 @@ config :bcrypt_elixir, log_rounds: 12
 config :sentry,
   enable_source_code_context: true,
   root_source_code_paths: [File.cwd!()],
-  before_send: {Hexpm.Application, :sentry_before_send}
+  before_send: {Hexpm.Application, :sentry_before_send},
+  integrations: [oban: [capture_errors: true]]
 
 config :hexpm,
   topologies: [
@@ -54,7 +55,8 @@ config :hexpm, Oban,
        {"30 0 * * *", Hexpm.ReleaseTasks.CheckNames},
        {"0 1 * * *", Hexpm.ReleaseTasks.Stats},
        {"0 2 * * *", Hexpm.ReleaseTasks.PurgeExpiredRecords},
-       {"15 3 * * *", Hexpm.Accounts.OrganizationDomains.RecheckWorker}
+       {"15 3 * * *", Hexpm.Accounts.OrganizationDomains.RecheckWorker},
+       {"45 3 * * *", Hexpm.Accounts.SSO.EnforcementWorker}
      ],
      timezone: "Etc/UTC"},
     # Successful jobs are read by nobody and are the bulk of the table, which

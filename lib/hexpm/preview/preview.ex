@@ -8,6 +8,13 @@ defmodule Hexpm.Preview do
   @max_file_size 100 * 1000
   @readme_filenames ~w(README.md readme.md README.markdown readme.markdown README.txt readme.txt README readme)
 
+  defmodule StaleTarballError do
+    defexception [:key]
+
+    @impl true
+    def message(%{key: key}), do: "Preview tarball changed while processing: #{key}"
+  end
+
   @doc """
   Reads the file a request asked for.
 
@@ -183,12 +190,8 @@ defmodule Hexpm.Preview do
 
   defp file_paths(output_dir, repository, package, version) do
     output_dir
-    |> Path.join("**")
-    |> Path.wildcard(match_dot: true)
-    |> Enum.filter(&File.regular?(&1, raw: true))
-    |> Enum.flat_map(fn full_path ->
-      relative = Path.relative_to(full_path, output_dir)
-
+    |> Hexpm.Utils.tree_regular_files()
+    |> Enum.flat_map(fn relative ->
       if relative == "hex_metadata.config" do
         []
       else
@@ -231,7 +234,7 @@ defmodule Hexpm.Preview do
         delete_contents(repository, package, version)
 
       not tarball_current?(repository, package, version, checksum) ->
-        raise "Preview tarball changed while processing: #{Bucket.tarball_key(repository, package, version)}"
+        raise StaleTarballError, key: Bucket.tarball_key(repository, package, version)
 
       latest_version?(repository, package, version) ->
         Bucket.update_latest_version(repository, package, version)
@@ -248,7 +251,7 @@ defmodule Hexpm.Preview do
         delete_contents(repository, package, version)
 
       not tarball_current?(repository, package, version, checksum) ->
-        raise "Preview tarball changed while processing: #{Bucket.tarball_key(repository, package, version)}"
+        raise StaleTarballError, key: Bucket.tarball_key(repository, package, version)
 
       not latest_version?(repository, package, version) ->
         reconcile_latest(repository, package)
@@ -274,7 +277,7 @@ defmodule Hexpm.Preview do
             reconcile_latest(repository, package)
 
           not tarball_current?(repository, package, latest, checksum) ->
-            raise "Preview tarball changed while processing: #{Bucket.tarball_key(repository, package, latest)}"
+            raise StaleTarballError, key: Bucket.tarball_key(repository, package, latest)
 
           not latest_version?(repository, package, latest) ->
             reconcile_latest(repository, package)
@@ -295,7 +298,8 @@ defmodule Hexpm.Preview do
   end
 
   defp purge(repository, package, version) do
-    Hexpm.CDN.purge_key(:fastly_hexrepo, Bucket.surrogate_keys(repository, package, version))
+    Hexpm.CDN.purge(:fastly_hexrepo, Bucket.surrogate_keys(repository, package, version))
+    :ok
   end
 
   defp release_exists?(repository, package, version) do

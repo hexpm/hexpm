@@ -4,6 +4,7 @@ defmodule Hexpm.Accounts.AuditLog do
   schema "audit_logs" do
     field :user_agent, :string
     field :remote_ip, :string
+    field :request_id, :string
     field :action, :string
     field :params, :map
     field :user_data, :map
@@ -32,6 +33,7 @@ defmodule Hexpm.Accounts.AuditLog do
       oauth_token: oauth_token,
       user_agent: truncate_codepoints(audit_data.user_agent, 255),
       remote_ip: audit_data.remote_ip,
+      request_id: Map.get(audit_data, :request_id),
       action: action,
       params: params
     }
@@ -81,6 +83,7 @@ defmodule Hexpm.Accounts.AuditLog do
       oauth_token: oauth_token,
       user_agent: truncate_codepoints(audit_data.user_agent, 255),
       remote_ip: audit_data.remote_ip,
+      request_id: Map.get(audit_data, :request_id),
       action: "organization.create",
       params: params
     }
@@ -102,6 +105,7 @@ defmodule Hexpm.Accounts.AuditLog do
       oauth_token: oauth_token,
       user_agent: truncate_codepoints(audit_data.user_agent, 255),
       remote_ip: audit_data.remote_ip,
+      request_id: Map.get(audit_data, :request_id),
       action: action,
       params: params
     }
@@ -121,6 +125,7 @@ defmodule Hexpm.Accounts.AuditLog do
       oauth_token: oauth_token,
       user_agent: truncate_codepoints(audit_data.user_agent, 255),
       remote_ip: audit_data.remote_ip,
+      request_id: Map.get(audit_data, :request_id),
       action: action,
       params: params
     }
@@ -326,9 +331,42 @@ defmodule Hexpm.Accounts.AuditLog do
               "sso.identity.link",
               "sso.identity.unlink",
               "sso.login",
-              "sso.jit.configure"
+              "sso.jit.configure",
+              "sso.enforcement.configure",
+              "sso.break_glass"
             ] do
     Map.put(params, :organization, serialize(organization))
+  end
+
+  defp extract_params("sso.enforcement.warned", {organization, user, required_at}) do
+    %{
+      organization: serialize(organization),
+      user: serialize(user),
+      required_at: required_at
+    }
+  end
+
+  defp extract_params("sso.enforcement.member", {organization, user, enforcement}) do
+    %{
+      organization: serialize(organization),
+      user: serialize(user),
+      sso_enforcement: enforcement
+    }
+  end
+
+  defp extract_params("sso.key.revoke", {organization, key, permissions}) do
+    %{
+      organization: serialize(organization),
+      key: %{id: key.id, name: key.name},
+      removed_permissions: Enum.map(permissions, &"#{&1.domain}:#{&1.resource}")
+    }
+  end
+
+  defp extract_params("sso.key.blocked", {organization, key}) do
+    %{
+      organization: serialize(organization),
+      key: %{id: key.id, name: key.name}
+    }
   end
 
   defp extract_params("password.reset.init", nil), do: %{}

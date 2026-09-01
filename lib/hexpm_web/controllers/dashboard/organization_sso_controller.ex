@@ -3,24 +3,64 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
 
   alias Hexpm.Accounts.SSO
   alias Hexpm.Accounts.SSO.Error
+  alias HexpmWeb.SSOEnforcement
 
   plug :requires_login
+
+  # These are carved out of the SSO gate, so a stolen account session reaches
+  # them without ever touching the provider. Chained, they replace the
+  # organization's provider with one the attacker controls: disable, unlink
+  # every identity, point the connection at another issuer, enable, link.
+  # Setting enforcement back to optional takes the gate off every member in one
+  # step and without touching the provider at all. Each of them takes a fresh
+  # password rather than the rolling window login grants.
+  plug HexpmWeb.Plugs.Sudo,
+       [force: true]
+       when action in [
+              :configure,
+              :enable,
+              :disable,
+              :delete,
+              :rotate,
+              :promote,
+              :unlink,
+              :configure_enforcement
+            ]
+
   plug HexpmWeb.Plugs.Sudo
+
+  # Repairing the connection is what break-glass is for, and turning enforcement
+  # off is part of repairing it: it is one switch, organization-wide, audited,
+  # and visible on the screen that shows it. Exempting a single member is not.
+  # It outlives the outage, leaves the organization reading as enforced, and an
+  # administrator locked out by their own provider could quietly write
+  # themselves out of enforcement with it.
+  plug HexpmWeb.Plugs.OrganizationSSO,
+    except: [
+      :configure,
+      :test,
+      :enable,
+      :disable,
+      :delete,
+      :rotate,
+      :promote,
+      :unlink,
+      :configure_jit,
+      :configure_enforcement,
+      :add_domain,
+      :verify_domain,
+      :remove_domain
+    ]
 
   def configure(conn, %{"dashboard_org" => name, "sso" => params}) do
     with_organization(conn, name, fn organization ->
-      case SSO.configure(organization, params, audit: audit_data(conn)) do
-        {:ok, _connection} ->
-          redirect_with_flash(
-            conn,
-            organization,
-            :info,
-            "SSO configuration was saved. Test it before enabling login."
-          )
-
-        {:error, reason} ->
-          redirect_with_flash(conn, organization, :error, configuration_error(reason))
-      end
+      redirect_result(
+        conn,
+        organization,
+        SSO.configure(organization, params, audit: audit_data(conn)),
+        "SSO configuration was saved. Test it before enabling login.",
+        &configuration_error/1
+      )
     end)
   end
 
@@ -28,7 +68,12 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
     with_organization(conn, name, fn organization ->
       secret_slot = params["secret_slot"] || "active"
 
-      case SSO.start_test(organization, conn.assigns.current_user, secret_slot, callback_url()) do
+      case SSO.start_test(
+             organization,
+             conn.assigns.current_user,
+             secret_slot,
+             SSOEnforcement.callback_url()
+           ) do
         {:ok, transaction, uri} ->
           conn
           |> remember_sso_state(transaction.raw_state)
@@ -42,59 +87,49 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
 
   def enable(conn, %{"dashboard_org" => name}) do
     with_organization(conn, name, fn organization ->
-      case SSO.enable(organization, audit: audit_data(conn)) do
-        {:ok, _connection} ->
-          redirect_with_flash(conn, organization, :info, "SSO login was enabled.")
-
-        {:error, reason} ->
-          redirect_with_flash(conn, organization, :error, enable_error(reason))
-      end
+      redirect_result(
+        conn,
+        organization,
+        SSO.enable(organization, audit: audit_data(conn)),
+        "SSO login was enabled.",
+        &enable_error/1
+      )
     end)
   end
 
   def disable(conn, %{"dashboard_org" => name}) do
     with_organization(conn, name, fn organization ->
-      case SSO.disable(organization, audit: audit_data(conn)) do
-        {:ok, _connection} ->
-          redirect_with_flash(conn, organization, :info, "SSO login was disabled immediately.")
-
-        {:error, reason} ->
-          redirect_with_flash(conn, organization, :error, configuration_error(reason))
-      end
+      redirect_result(
+        conn,
+        organization,
+        SSO.disable(organization, audit: audit_data(conn)),
+        "SSO login was disabled immediately.",
+        &configuration_error/1
+      )
     end)
   end
 
   def delete(conn, %{"dashboard_org" => name}) do
     with_organization(conn, name, fn organization ->
-      case SSO.delete_connection(organization, audit: audit_data(conn)) do
-        {:ok, _connection} ->
-          redirect_with_flash(
-            conn,
-            organization,
-            :info,
-            "The SSO configuration was removed, along with every account linked through it."
-          )
-
-        {:error, reason} ->
-          redirect_with_flash(conn, organization, :error, delete_error(reason))
-      end
+      redirect_result(
+        conn,
+        organization,
+        SSO.delete_connection(organization, audit: audit_data(conn)),
+        "The SSO configuration was removed, along with every account linked through it.",
+        &delete_error/1
+      )
     end)
   end
 
   def rotate(conn, %{"dashboard_org" => name, "sso" => %{"client_secret" => secret}}) do
     with_organization(conn, name, fn organization ->
-      case SSO.begin_rotation(organization, secret, audit: audit_data(conn)) do
-        {:ok, _connection} ->
-          redirect_with_flash(
-            conn,
-            organization,
-            :info,
-            "The replacement secret was saved. Test it before completing rotation."
-          )
-
-        {:error, reason} ->
-          redirect_with_flash(conn, organization, :error, rotation_error(reason))
-      end
+      redirect_result(
+        conn,
+        organization,
+        SSO.begin_rotation(organization, secret, audit: audit_data(conn)),
+        "The replacement secret was saved. Test it before completing rotation.",
+        &rotation_error/1
+      )
     end)
   end
 
@@ -106,13 +141,13 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
 
   def promote(conn, %{"dashboard_org" => name}) do
     with_organization(conn, name, fn organization ->
-      case SSO.promote_rotation(organization, audit: audit_data(conn)) do
-        {:ok, _connection} ->
-          redirect_with_flash(conn, organization, :info, "Client secret rotation was completed.")
-
-        {:error, reason} ->
-          redirect_with_flash(conn, organization, :error, rotation_error(reason))
-      end
+      redirect_result(
+        conn,
+        organization,
+        SSO.promote_rotation(organization, audit: audit_data(conn)),
+        "Client secret rotation was completed.",
+        &rotation_error/1
+      )
     end)
   end
 
@@ -139,13 +174,13 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
 
   def configure_jit(conn, %{"dashboard_org" => name} = params) do
     with_organization(conn, name, fn organization ->
-      case SSO.configure_jit(organization, params["jit"] || %{}, audit: audit_data(conn)) do
-        {:ok, connection} ->
-          redirect_with_flash(conn, organization, :info, jit_message(connection))
-
-        {:error, reason} ->
-          redirect_with_flash(conn, organization, :error, jit_error(reason))
-      end
+      redirect_result(
+        conn,
+        organization,
+        SSO.configure_jit(organization, params["jit"] || %{}, audit: audit_data(conn)),
+        &jit_message/1,
+        &jit_error/1
+      )
     end)
   end
 
@@ -170,55 +205,144 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
 
   defp jit_error(reason), do: configuration_error(reason)
 
+  def configure_enforcement(conn, %{"dashboard_org" => name} = params) do
+    with_organization(conn, name, fn organization ->
+      redirect_result(
+        conn,
+        organization,
+        SSO.configure_enforcement(organization, params["enforcement"] || %{},
+          audit: audit_data(conn)
+        ),
+        &enforcement_message/1,
+        &enforcement_error/1
+      )
+    end)
+  end
+
+  defp enforcement_message(%{enforcement_mode: "optional"}),
+    do: "SSO is optional. Members reach the organization with or without it."
+
+  defp enforcement_message(%{enforcement_mode: "pilot"}),
+    do: "SSO is in pilot. Only the members you marked as enforced need it."
+
+  defp enforcement_message(%{enforcement_mode: "required", required_at: required_at}) do
+    if DateTime.compare(DateTime.utc_now(), required_at) == :lt do
+      "SSO becomes required on #{HexpmWeb.ViewHelpers.pretty_date(required_at)}. Until then only the members you marked as enforced need it."
+    else
+      "SSO is required. Every member except the exemptions needs it."
+    end
+  end
+
+  defp enforcement_error(:no_reachable_admin),
+    do:
+      "At least one administrator has to have linked their identity, or be exempt, before SSO can be required."
+
+  defp enforcement_error(:not_configured), do: "Configure SSO before setting enforcement."
+
+  defp enforcement_error(%Ecto.Changeset{} = changeset) do
+    case translate_errors(changeset) do
+      %{personal_keys: message} -> "Personal API keys #{message}."
+      %{session_lifetime_seconds: message} -> "Session lifetime #{message}."
+      _ -> "The enforcement settings could not be saved."
+    end
+  end
+
+  defp enforcement_error(reason), do: configuration_error(reason)
+
+  def set_member_enforcement(conn, %{"dashboard_org" => name, "user_id" => user_id} = params) do
+    with_organization(conn, name, fn organization ->
+      case Users.get_by_id(safe_to_integer(user_id) || 0) do
+        nil ->
+          not_found(conn)
+
+        user ->
+          case SSO.set_member_enforcement(organization, user, params["sso_enforcement"],
+                 audit: audit_data(conn)
+               ) do
+            {:ok, _member} ->
+              redirect_with_flash(
+                conn,
+                organization,
+                :info,
+                member_enforcement_message(user, params["sso_enforcement"])
+              )
+
+            {:error, :not_member} ->
+              redirect_with_flash(
+                conn,
+                organization,
+                :error,
+                "#{user.username} is not a member of this organization."
+              )
+
+            {:error, :no_reachable_admin} ->
+              redirect_with_flash(
+                conn,
+                organization,
+                :error,
+                enforcement_error(:no_reachable_admin)
+              )
+
+            {:error, :admin_required} ->
+              redirect_with_flash(
+                conn,
+                organization,
+                :error,
+                configuration_error(:admin_required)
+              )
+
+            {:error, :feature_disabled} ->
+              redirect_with_flash(
+                conn,
+                organization,
+                :error,
+                "SSO is not available for this organization."
+              )
+
+            {:error, _changeset} ->
+              redirect_with_flash(
+                conn,
+                organization,
+                :error,
+                "That is not an enforcement setting."
+              )
+          end
+      end
+    end)
+  end
+
+  defp member_enforcement_message(user, "enforced"),
+    do: "#{user.username} now needs SSO whatever the mode is."
+
+  defp member_enforcement_message(user, "exempt"),
+    do: "#{user.username} is exempt from SSO. Exemptions are listed for administrators to review."
+
+  defp member_enforcement_message(user, _enforcement),
+    do: "#{user.username} now follows the organization's enforcement mode."
+
   def add_domain(conn, %{"dashboard_org" => name, "domain" => params}) do
     with_organization(conn, name, fn organization ->
-      case OrganizationDomains.add(organization, params, conn.assigns.current_user,
-             audit: audit_data(conn)
-           ) do
-        {:ok, domain} ->
-          redirect_with_flash(
-            conn,
-            organization,
-            :info,
-            "#{domain.domain} was added. Publish the TXT record below, then verify it."
-          )
-
-        {:error, changeset} ->
-          redirect_with_flash(conn, organization, :error, domain_error(changeset))
-      end
+      redirect_result(
+        conn,
+        organization,
+        OrganizationDomains.add(organization, params, conn.assigns.current_user,
+          audit: audit_data(conn)
+        ),
+        &"#{&1.domain} was added. Publish the TXT record below, then verify it.",
+        &domain_error/1
+      )
     end)
   end
 
   def verify_domain(conn, %{"dashboard_org" => name, "domain_id" => id}) do
     with_domain(conn, name, id, fn organization, domain ->
-      case OrganizationDomains.verify(organization, domain, audit: audit_data(conn)) do
-        {:ok, domain} ->
-          redirect_with_flash(conn, organization, :info, "#{domain.domain} is verified.")
-
-        {:error, :record_not_found} ->
-          redirect_with_flash(
-            conn,
-            organization,
-            :error,
-            "No matching TXT record was found for #{domain.domain}. DNS changes can take a while to propagate."
-          )
-
-        {:error, :lookup_failed} ->
-          redirect_with_flash(
-            conn,
-            organization,
-            :error,
-            "The DNS lookup for #{domain.domain} did not answer. Try again in a moment."
-          )
-
-        {:error, _reason} ->
-          redirect_with_flash(
-            conn,
-            organization,
-            :error,
-            "#{domain.domain} could not be verified."
-          )
-      end
+      redirect_result(
+        conn,
+        organization,
+        OrganizationDomains.verify(organization, domain, audit: audit_data(conn)),
+        &"#{&1.domain} is verified.",
+        &verify_domain_error(domain, &1)
+      )
     end)
   end
 
@@ -230,6 +354,16 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
       redirect_with_flash(conn, organization, :info, "#{domain.domain} was removed.")
     end)
   end
+
+  defp verify_domain_error(domain, :record_not_found) do
+    "No matching TXT record was found for #{domain.domain}. DNS changes can take a while to propagate."
+  end
+
+  defp verify_domain_error(domain, :lookup_failed) do
+    "The DNS lookup for #{domain.domain} did not answer. Try again in a moment."
+  end
+
+  defp verify_domain_error(domain, _reason), do: "#{domain.domain} could not be verified."
 
   defp with_domain(conn, name, id, fun) do
     with_organization(conn, name, fn organization ->
@@ -255,13 +389,16 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
       is_nil(organization) ->
         not_found(conn)
 
-      not SSO.enabled?(organization) ->
+      not SSO.reachable?(organization) ->
         not_found(conn)
 
+      # Every action here is carved out of the SSO gate, and the gate records
+      # what a governed member reached by looking at the status. A redirect
+      # reads as success, so refusing with one would let anyone who can reach
+      # the route write `sso.break_glass` rows naming themselves and an action
+      # they never ran, and mail the administrators about it.
       Organizations.get_role(organization, user) != "admin" ->
-        conn
-        |> put_flash(:error, "You do not have permission for this action.")
-        |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+        render_error(conn, 403, message: "You do not have permission for this action.")
 
       true ->
         fun.(organization)
@@ -274,7 +411,21 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
     |> redirect(to: ~p"/dashboard/orgs/#{organization}/sso")
   end
 
-  defp callback_url, do: url(~p"/sso/callback")
+  # Every configuration action lands back on the SSO tab, saying what changed or
+  # why it did not. `success` is the message, or a function of what came back
+  # when the message names it.
+  defp redirect_result(conn, organization, result, success, error) do
+    case result do
+      {:ok, value} ->
+        redirect_with_flash(conn, organization, :info, success_message(success, value))
+
+      {:error, reason} ->
+        redirect_with_flash(conn, organization, :error, error.(reason))
+    end
+  end
+
+  defp success_message(message, _value) when is_binary(message), do: message
+  defp success_message(fun, value) when is_function(fun, 1), do: fun.(value)
 
   defp configuration_error(%Error{code: code}),
     do: "SSO configuration could not be validated (#{code})."

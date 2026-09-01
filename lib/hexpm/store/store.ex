@@ -30,6 +30,11 @@ defmodule Hexpm.Store do
     impl.size(bucket, key)
   end
 
+  def stream(bucket, key) do
+    {impl, bucket} = impl_bucket(bucket)
+    impl.stream(bucket, key)
+  end
+
   def fetch(bucket, key, opts \\ []) do
     {impl, bucket} = impl_bucket(bucket)
 

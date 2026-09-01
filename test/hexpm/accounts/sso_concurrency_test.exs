@@ -3,7 +3,7 @@ defmodule Hexpm.Accounts.SSOConcurrencyTest do
   import Hexpm.ConcurrencyCase
 
   alias Hexpm.Accounts.SSO
-  alias Hexpm.Accounts.SSO.{Identity, OIDC, OrgSession}
+  alias Hexpm.Accounts.SSO.{Connection, Identity, OIDC, OrgSession}
   alias Hexpm.Emails
   alias Hexpm.Emails.Outbox
   alias Hexpm.Emails.{OutboxEntry, OutboxWorker}
@@ -138,6 +138,127 @@ defmodule Hexpm.Accounts.SSOConcurrencyTest do
   # something a test can pin down. What this does cover is that two concurrent
   # scope cancellations over shared groups both complete and each deletes only
   # its own rows, which is worth having and is why it stays.
+  test "an administrator demoted while a connection setting waits for the lock cannot land it" do
+    committed(fn context ->
+      parent = self()
+
+      holder =
+        unboxed_task(fn ->
+          Hexpm.RepoBase.transaction(fn ->
+            Hexpm.RepoBase.one!(
+              from(connection in Connection,
+                where: connection.id == ^context.connection.id,
+                lock: "FOR UPDATE"
+              )
+            )
+
+            send(parent, {:locked, self()})
+            assert_receive :release, 15_000
+          end)
+        end)
+
+      assert_receive {:locked, _pid}, 15_000
+
+      writer =
+        unboxed_task(fn ->
+          SSO.configure_enforcement(context.organization, %{"enforcement_mode" => "pilot"},
+            audit: audit_data(context.admin)
+          )
+        end)
+
+      # The write has to be waiting on the row lock before the demotion lands,
+      # or the check before the transaction is what refuses it and the one
+      # under the lock is never reached.
+      assert await_lock_wait() == :waiting
+
+      Hexpm.RepoBase.update_all(
+        from(member in Hexpm.Accounts.OrganizationUser,
+          where: member.organization_id == ^context.organization.id,
+          where: member.user_id == ^context.admin.id
+        ),
+        set: [role: "write"]
+      )
+
+      send(holder.pid, :release)
+      assert {:ok, _result} = Task.await(holder, 15_000)
+      assert Task.await(writer, 15_000) == {:error, :admin_required}
+
+      assert Hexpm.RepoBase.get!(Connection, context.connection.id).enforcement_mode == "optional"
+    end)
+  end
+
+  test "an administrator demoted while a member enforcement waits for the lock cannot land it" do
+    committed(fn context ->
+      parent = self()
+
+      holder =
+        unboxed_task(fn ->
+          Hexpm.RepoBase.transaction(fn ->
+            Hexpm.RepoBase.one!(
+              from(connection in Connection,
+                where: connection.id == ^context.connection.id,
+                lock: "FOR UPDATE"
+              )
+            )
+
+            send(parent, {:locked, self()})
+            assert_receive :release, 15_000
+          end)
+        end)
+
+      assert_receive {:locked, _pid}, 15_000
+
+      writer =
+        unboxed_task(fn ->
+          SSO.set_member_enforcement(context.organization, context.member, "exempt",
+            audit: audit_data(context.admin)
+          )
+        end)
+
+      assert await_lock_wait() == :waiting
+
+      Hexpm.RepoBase.update_all(
+        from(member in Hexpm.Accounts.OrganizationUser,
+          where: member.organization_id == ^context.organization.id,
+          where: member.user_id == ^context.admin.id
+        ),
+        set: [role: "write"]
+      )
+
+      send(holder.pid, :release)
+      assert {:ok, _result} = Task.await(holder, 15_000)
+      assert Task.await(writer, 15_000) == {:error, :admin_required}
+
+      refute Hexpm.RepoBase.get_by!(Hexpm.Accounts.OrganizationUser,
+               organization_id: context.organization.id,
+               user_id: context.member.id
+             ).sso_enforcement
+    end)
+  end
+
+  # Postgres is the only thing that knows the other transaction is blocked, so
+  # ask it rather than sleeping for a while and hoping.
+  defp await_lock_wait do
+    Enum.reduce_while(1..300, :timeout, fn _attempt, _acc ->
+      %{rows: [[waiting]]} =
+        Ecto.Adapters.SQL.query!(
+          Hexpm.RepoBase,
+          """
+          SELECT count(*) FROM pg_locks locks
+          JOIN pg_stat_activity backends ON backends.pid = locks.pid
+          WHERE NOT locks.granted AND backends.datname = current_database()
+          """
+        )
+
+      if waiting > 0 do
+        {:halt, :waiting}
+      else
+        Process.sleep(10)
+        {:cont, :timeout}
+      end
+    end)
+  end
+
   test "concurrent scope cancellations over shared groups each delete their own rows" do
     committed(fn context ->
       groups = ["sso:#{context.connection.id}:b", "sso:#{context.connection.id}:a"]
@@ -258,7 +379,7 @@ defmodule Hexpm.Accounts.SSOConcurrencyTest do
   defp pending_link(context, user) do
     transaction = start_transaction(context, user)
 
-    assert {:ok, {:link, transaction_id, link_token, _return_path}} =
+    assert {:ok, {:link, transaction_id, link_token}} =
              SSO.complete_callback(
                transaction,
                valid_claims(),

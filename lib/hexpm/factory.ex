@@ -312,7 +312,8 @@ defmodule Hexpm.Factory do
       type: "oauth",
       name: "Test OAuth Session",
       client_id: Hexpm.OAuth.Clients.generate_client_id(),
-      user_id: user.id
+      user_id: user.id,
+      expires_at: DateTime.add(DateTime.utc_now(), 30 * 24 * 60 * 60, :second)
     }
   end
 

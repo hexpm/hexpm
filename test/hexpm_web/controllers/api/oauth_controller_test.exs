@@ -414,6 +414,52 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert response["error_description"] == "Refresh token has been revoked"
     end
 
+    test "refuses a refresh once the session is revoked", %{
+      client: client,
+      refresh_token: refresh_token
+    } do
+      {:ok, token} = Tokens.lookup(refresh_token, :refresh, validate: false, preload: [])
+
+      {:ok, _revoked} =
+        Hexpm.UserSessions.revoke(Repo.get!(Hexpm.UserSession, token.user_session_id))
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "refresh_token",
+          "refresh_token" => refresh_token,
+          "client_id" => client.client_id
+        })
+
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_grant"
+      assert response["error_description"] == "Refresh token has been revoked"
+    end
+
+    test "refuses a refresh for a live token whose session is revoked", %{
+      client: client,
+      refresh_token: refresh_token
+    } do
+      {:ok, token} = Tokens.lookup(refresh_token, :refresh, validate: false, preload: [])
+
+      # Only the session, which is what a revocation that raced this token into
+      # existence leaves behind.
+      Repo.get!(Hexpm.UserSession, token.user_session_id)
+      |> Ecto.Changeset.change(revoked_at: DateTime.utc_now())
+      |> Repo.update!()
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "refresh_token",
+          "refresh_token" => refresh_token,
+          "client_id" => client.client_id
+        })
+
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_grant"
+      assert response["error_description"] == "Session has been revoked"
+      assert Repo.get!(Token, token.id).revoked_at == nil
+    end
+
     test "returns error for expired refresh token", %{user: user, client: client} do
       {:ok, session} =
         Hexpm.UserSessions.create_oauth_session(user, client.client_id, audit: audit_data(user))
@@ -451,6 +497,111 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert response = json_response(conn, 400)
       assert response["error"] == "invalid_grant"
       assert response["error_description"] == "Refresh token has expired"
+    end
+  end
+
+  describe "POST /api/oauth/token with authorization_code grant" do
+    setup do
+      user = insert(:user)
+      client = insert(:oauth_client)
+      verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+      challenge = :sha256 |> :crypto.hash(verifier) |> Base.url_encode64(padding: false)
+
+      {:ok, auth_code} =
+        Hexpm.OAuth.AuthorizationCodes.create_and_insert_for_user(
+          user,
+          client.client_id,
+          hd(client.redirect_uris),
+          ["api"],
+          code_challenge: challenge
+        )
+
+      %{code_user: user, code_client: client, auth_code: auth_code, verifier: verifier}
+    end
+
+    test "returns a token for a valid code", %{
+      code_client: client,
+      auth_code: auth_code,
+      verifier: verifier
+    } do
+      response =
+        build_conn()
+        |> post(~p"/api/oauth/token", token_params(client, auth_code, verifier))
+        |> json_response(200)
+
+      assert response["access_token"]
+      assert response["refresh_token"]
+      assert Repo.get!(Hexpm.OAuth.AuthorizationCode, auth_code.id).used_at
+    end
+
+    test "refuses a second redemption of the same code", %{
+      code_client: client,
+      auth_code: auth_code,
+      verifier: verifier
+    } do
+      params = token_params(client, auth_code, verifier)
+
+      assert build_conn() |> post(~p"/api/oauth/token", params) |> json_response(200)
+
+      response = build_conn() |> post(~p"/api/oauth/token", params) |> json_response(400)
+
+      assert response["error"] == "invalid_grant"
+      assert response["error_description"] == "Authorization code expired or already used"
+      assert token_count(client) == 1
+      assert session_count(client) == 1
+    end
+
+    test "returns error for an expired code", %{
+      code_client: client,
+      auth_code: auth_code,
+      verifier: verifier
+    } do
+      past = DateTime.utc_now() |> DateTime.add(-60, :second) |> DateTime.truncate(:second)
+      auth_code |> Ecto.Changeset.change(expires_at: past) |> Repo.update!()
+
+      response =
+        build_conn()
+        |> post(~p"/api/oauth/token", token_params(client, auth_code, verifier))
+        |> json_response(400)
+
+      assert response["error"] == "invalid_grant"
+      assert response["error_description"] == "Authorization code expired or already used"
+      assert token_count(client) == 0
+    end
+
+    test "returns error for an invalid code verifier", %{
+      code_client: client,
+      auth_code: auth_code
+    } do
+      response =
+        build_conn()
+        |> post(~p"/api/oauth/token", token_params(client, auth_code, "wrong-verifier"))
+        |> json_response(400)
+
+      assert response["error"] == "invalid_grant"
+      assert response["error_description"] == "Invalid code verifier"
+      assert Repo.get!(Hexpm.OAuth.AuthorizationCode, auth_code.id).used_at == nil
+    end
+
+    defp token_params(client, auth_code, verifier) do
+      %{
+        "grant_type" => "authorization_code",
+        "code" => auth_code.code,
+        "client_id" => client.client_id,
+        "redirect_uri" => auth_code.redirect_uri,
+        "code_verifier" => verifier
+      }
+    end
+
+    defp token_count(client) do
+      Repo.aggregate(from(t in Token, where: t.client_id == ^client.client_id), :count)
+    end
+
+    defp session_count(client) do
+      Repo.aggregate(
+        from(s in Hexpm.UserSession, where: s.client_id == ^client.client_id),
+        :count
+      )
     end
   end
 
@@ -514,7 +665,11 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert Tokens.revoked?(updated_token)
     end
 
-    test "successfully revokes refresh token", %{
+    # RFC 7009: revoking a refresh token also revokes what was issued from the
+    # same grant. Marking only the row presented left the session and its
+    # organization access alive, so a sibling token refreshed straight back into
+    # the same scopes.
+    test "revoking a refresh token takes the session with it", %{
       revoke_client: client,
       revoke_token: token,
       revoke_refresh_token: refresh_token
@@ -528,8 +683,25 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       |> post(~p"/api/oauth/revoke", params)
       |> response(200)
 
-      updated_token = Repo.get(Token, token.id)
-      assert Tokens.revoked?(updated_token)
+      assert Repo.get(Hexpm.UserSession, token.user_session_id).revoked_at
+    end
+
+    test "revoking an access token leaves the session alone", %{
+      revoke_client: client,
+      revoke_token: token,
+      revoke_access_token: access_token
+    } do
+      params = %{
+        token: access_token,
+        client_id: client.client_id
+      }
+
+      build_conn()
+      |> post(~p"/api/oauth/revoke", params)
+      |> response(200)
+
+      assert Tokens.revoked?(Repo.get(Token, token.id))
+      refute Repo.get(Hexpm.UserSession, token.user_session_id).revoked_at
     end
 
     test "returns 200 OK for invalid token (security per RFC 7009)", %{
@@ -1234,6 +1406,79 @@ defmodule HexpmWeb.API.OAuthControllerTest do
         })
 
       assert json_response(conn, 200)
+    end
+
+    test "refuses a personal 'repositories' key naming an organization it cannot reach", %{
+      user: user,
+      client: client
+    } do
+      other = insert(:organization)
+
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{name: "all_repos", permissions: [%{domain: "repositories"}]},
+          audit: audit_data(user)
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "repository:#{other.name}"
+        })
+
+      assert json_response(conn, 400)["error"] == "invalid_scope"
+    end
+
+    test "refuses an organization 'repositories' key naming another organization", %{
+      client: client
+    } do
+      org = insert(:organization)
+      other = insert(:organization)
+
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          org,
+          %{name: "all_repos", permissions: [%{domain: "repositories"}]},
+          audit: audit_data(org.user)
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "repository:#{other.name}"
+        })
+
+      assert json_response(conn, 400)["error"] == "invalid_scope"
+    end
+
+    test "allows a personal 'repositories' key naming an organization it is a member of", %{
+      user: user,
+      client: client
+    } do
+      org = insert(:organization)
+      insert(:organization_user, organization: org, user: user)
+
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{name: "all_repos", permissions: [%{domain: "repositories"}]},
+          audit: audit_data(user)
+        )
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "repository:#{org.name}"
+        })
+
+      assert json_response(conn, 200)["scope"] == "repository:#{org.name}"
     end
 
     test "succeeds for organization key requesting 'repositories' scope", %{client: client} do

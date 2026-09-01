@@ -22,6 +22,73 @@ defmodule Hexpm.Store.GCSTest do
 
   def auth_headers, do: [{"authorization", "Bearer token"}]
 
+  test "streams object bodies" do
+    expect(Hexpm.HTTP.Mock, :stream, fn url, headers ->
+      assert url == "https://storage.example/bucket/fastly_hex/day.log.gz"
+      assert headers == [{"authorization", "Bearer token"}]
+      {:ok, 200, [], Stream.map(["first", "second"], & &1)}
+    end)
+
+    assert GCS.stream("bucket", "fastly_hex/day.log.gz") |> Enum.to_list() == ["first", "second"]
+  end
+
+  test "streams nil for a missing object after reading its body" do
+    test_process = self()
+
+    expect(Hexpm.HTTP.Mock, :stream, fn _url, _headers ->
+      body = Stream.map(["not found"], fn chunk -> send(test_process, {:read, chunk}) end)
+      {:ok, 404, [], body}
+    end)
+
+    assert GCS.stream("bucket", "missing") == nil
+    assert_received {:read, "not found"}
+  end
+
+  test "retries a transient stream status after reading its body" do
+    test_process = self()
+
+    expect(Hexpm.HTTP.Mock, :stream, 2, fn _url, _headers ->
+      attempt = Process.get(:gcs_stream_attempt, 0)
+      Process.put(:gcs_stream_attempt, attempt + 1)
+
+      if attempt == 0 do
+        body = Stream.map(["unavailable"], fn chunk -> send(test_process, {:read, chunk}) end)
+        {:ok, 503, [], body}
+      else
+        {:ok, 200, [], ["contents"]}
+      end
+    end)
+
+    assert GCS.stream("bucket", "file") |> Enum.to_list() == ["contents"]
+    assert_received {:read, "unavailable"}
+  end
+
+  test "retries when reading a transient error body fails" do
+    expect(Hexpm.HTTP.Mock, :stream, 2, fn _url, _headers ->
+      attempt = Process.get(:gcs_stream_attempt, 0)
+      Process.put(:gcs_stream_attempt, attempt + 1)
+
+      if attempt == 0 do
+        body = Stream.map([:closed], fn _ -> raise Finch.TransportError, reason: :closed end)
+        {:ok, 503, [], body}
+      else
+        {:ok, 200, [], ["contents"]}
+      end
+    end)
+
+    assert GCS.stream("bucket", "file") |> Enum.to_list() == ["contents"]
+  end
+
+  test "raises for terminal stream failures" do
+    expect(Hexpm.HTTP.Mock, :stream, fn _url, _headers ->
+      {:ok, 403, [], ["forbidden"]}
+    end)
+
+    assert_raise RuntimeError, ~r/returned status 403/, fn ->
+      GCS.stream("bucket", "file")
+    end
+  end
+
   test "reads object bodies without decoding json" do
     expect(Hexpm.HTTP.Mock, :get, fn url, headers, opts ->
       assert url == "https://storage.example/bucket/files/package/1.0.0/data.json"
@@ -79,10 +146,10 @@ defmodule Hexpm.Store.GCSTest do
       assert {"x-goog-meta-surrogate-key", "docs"} in headers
       assert {"cache-control", "public, max-age=3600"} in headers
       assert {"content-type", "text/html"} in headers
-      {:ok, 200, [], ""}
+      {:ok, 200, [{"ETag", ~s("abc123")}], ""}
     end)
 
-    assert :ok =
+    assert {:ok, %{etag: ~s("abc123")}} =
              GCS.put_file("bucket", "docs/a b?#.html", path,
                meta: [{"surrogate-key", "docs"}],
                cache_control: "public, max-age=3600",

@@ -5,6 +5,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
   import HexpmWeb.Components.Buttons, only: [button: 1, button_link: 1]
   import HexpmWeb.Components.Input, only: [password_input: 1, select_input: 1, text_input: 1]
 
+  alias Hexpm.Accounts.Keys
   alias Hexpm.Accounts.OrganizationDomain
   alias Hexpm.Accounts.SSO
   alias Hexpm.Accounts.SSO.Connection
@@ -16,6 +17,9 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
   attr :callback_url, :string, required: true
   attr :login_url, :string, required: true
   attr :domains, :list, default: []
+  attr :personal_keys, :list, default: []
+  attr :pending_personal_keys, :list, default: []
+  attr :exempt_count, :integer, default: 0
 
   def sso_tab(assigns) do
     ~H"""
@@ -293,6 +297,131 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
 
       <section
         :if={@connection}
+        id="sso-enforcement"
+        class="rounded-lg border border-grey-200 dark:border-grey-800 bg-white dark:bg-grey-900 p-5"
+      >
+        <h3 class="font-semibold text-grey-900 dark:text-grey-100">Enforcement</h3>
+        <p class="mt-2 text-sm text-grey-600 dark:text-grey-300">
+          Decides whether members have to authenticate through your provider to reach this
+          organization. Optional asks nobody. Pilot asks only the members you mark as enforced on
+          the members tab. Required asks everyone except the exemptions listed there.
+        </p>
+
+        <.form
+          for={%{}}
+          action={~p"/dashboard/orgs/#{@organization}/sso/enforcement"}
+          as={:enforcement}
+          class="mt-4 grid gap-4 sm:grid-cols-2"
+        >
+          <.select_input
+            id="sso-enforcement-mode"
+            name="enforcement[enforcement_mode]"
+            label="Mode"
+            value={@connection.enforcement_mode}
+            options={[{"Optional", "optional"}, {"Pilot", "pilot"}, {"Required", "required"}]}
+            variant="light"
+          />
+          <.select_input
+            id="sso-enforcement-personal-keys"
+            name="enforcement[personal_keys]"
+            label="Personal API keys"
+            value={@connection.personal_keys || "allow"}
+            options={[
+              {"Allow them, and list them below", "allow"},
+              {"Block them from reaching this organization", "block"}
+            ]}
+            variant="light"
+          />
+          <.select_input
+            id="sso-enforcement-lifetime"
+            name="enforcement[session_lifetime_seconds]"
+            label="How long an authentication lasts"
+            value={to_string(@connection.session_lifetime_seconds)}
+            options={[
+              {"1 hour", "3600"},
+              {"8 hours", "28800"},
+              {"24 hours", "86400"},
+              {"7 days", "604800"},
+              {"30 days", "2592000"}
+            ]}
+            variant="light"
+          />
+          <.text_input
+            id="sso-enforcement-required-at"
+            name="enforcement[required_at]"
+            label="Required from"
+            type="date"
+            value={required_at_value(@connection)}
+          />
+          <p class="sm:col-span-2 text-sm text-grey-600 dark:text-grey-300">
+            The lifetime governs every path. A member on the web re-authenticates with a redirect;
+            at a terminal the CLI asks them to re-authenticate in a browser and keeps the session it
+            already has. Continuous integration is unaffected either way, because it authenticates
+            with an organization key rather than as a person.
+          </p>
+          <div class="sm:col-span-2">
+            <.button type="submit" variant="secondary">Save</.button>
+          </div>
+        </.form>
+
+        <div class="mt-6 border-t border-grey-200 dark:border-grey-800 pt-4">
+          <h4 class="text-sm font-semibold text-grey-900 dark:text-grey-100">
+            What enforcement does not cover
+          </h4>
+          <ul class="mt-2 space-y-2 text-sm text-grey-600 dark:text-grey-300">
+            <li>
+              <span class="font-medium">Organization API keys.</span>
+              These authenticate as the organization rather than as a person, which is what makes
+              continuous integration work, so SSO never applies to them. Revoke the key to revoke
+              the access.
+            </li>
+            <li :if={@connection.personal_keys != "block"}>
+              <span class="font-medium">Personal API keys.</span>
+              They are static credentials with nothing to expire them and nothing for your
+              provider's policy to evaluate, and they keep reaching this organization regardless of
+              enforcement. Removing the member here still takes their keys with it.
+            </li>
+            <li :if={@exempt_count > 0}>
+              <span class="font-medium">
+                Exempt members ({@exempt_count}).
+              </span>
+              They reach this organization on a Hex password alone. The members tab names them.
+            </li>
+            <li>
+              <span class="font-medium">Billing and this page.</span>
+              Both stay reachable without authenticating, so a broken connection can be repaired
+              and the subscription does not lapse while you are locked out. Reaching them that way
+              is recorded in the audit log and mailed to the administrators.
+            </li>
+            <li>
+              <span class="font-medium">Offboarding takes time.</span>
+              Removing a member here stops new access within 30 minutes, bounded by how long an
+              already-issued token lives. Deactivating someone only at your provider takes until
+              their authentication lapses, which is the lifetime set above.
+            </li>
+          </ul>
+        </div>
+
+        <.personal_key_table
+          :if={@personal_keys != []}
+          heading={personal_keys_heading(@connection)}
+          keys={@personal_keys}
+          organization={@organization}
+        />
+
+        <.personal_key_table
+          :if={@pending_personal_keys != []}
+          heading={pending_keys_heading(@connection)}
+          keys={@pending_personal_keys}
+          organization={@organization}
+        >
+          These members follow the organization's mode rather than a per-member setting, so they
+          keep their access until the date above and lose it on it.
+        </.personal_key_table>
+      </section>
+
+      <section
+        :if={@connection}
         id="sso-linked-accounts"
         class="rounded-lg border border-grey-200 dark:border-grey-800 bg-white dark:bg-grey-900 p-5"
       >
@@ -350,6 +479,44 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
     """
   end
 
+  attr :heading, :string, required: true
+  attr :keys, :list, required: true
+  attr :organization, :any, required: true
+  slot :inner_block
+
+  defp personal_key_table(assigns) do
+    ~H"""
+    <div class="mt-6">
+      <h4 class="text-sm font-semibold text-grey-900 dark:text-grey-100">{@heading}</h4>
+      <p :if={@inner_block != []} class="mt-1 text-sm text-grey-600 dark:text-grey-300">
+        {render_slot(@inner_block)}
+      </p>
+      <table class="mt-2 w-full text-sm">
+        <thead class="text-left text-grey-500 dark:text-grey-400">
+          <tr>
+            <th class="py-1 font-medium">Member</th>
+            <th class="py-1 font-medium">Key</th>
+            <th class="py-1 font-medium">How it reaches this organization</th>
+            <th class="py-1 font-medium">Key last used</th>
+          </tr>
+        </thead>
+        <tbody class="text-grey-700 dark:text-grey-200">
+          <tr :for={key <- @keys} class="border-t border-grey-100 dark:border-grey-800">
+            <td class="py-1">{key.user.username}</td>
+            <td class="py-1">{key.name}</td>
+            <td class="py-1">{reach_description(key, @organization)}</td>
+            <td class="py-1">{last_used(key)}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="mt-2 text-xs text-grey-500 dark:text-grey-400">
+        A key records when it was last used but not what it was used for, so this date is the
+        key's last use anywhere on Hex rather than its last use against this organization.
+      </p>
+    </div>
+    """
+  end
+
   attr :label, :string, required: true
   attr :value, :string, required: true
 
@@ -387,4 +554,36 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
   defp last_authenticated(authenticated_at) do
     "Last authenticated #{Calendar.strftime(authenticated_at, "%Y-%m-%d %H:%M UTC")}"
   end
+
+  defp required_at_value(%Connection{required_at: nil}), do: ""
+
+  defp required_at_value(%Connection{required_at: required_at}) do
+    Calendar.strftime(required_at, "%Y-%m-%d")
+  end
+
+  defp personal_keys_heading(%Connection{} = connection) do
+    if Connection.blocks_personal_keys?(connection) do
+      "Personal API keys this organization already turns away"
+    else
+      "Personal API keys that reach this organization"
+    end
+  end
+
+  defp pending_keys_heading(%Connection{required_at: required_at}) when not is_nil(required_at) do
+    "Personal API keys that lose access on " <> Calendar.strftime(required_at, "%Y-%m-%d")
+  end
+
+  defp reach_description(key, organization) do
+    cond do
+      Keys.names_organization?(key, organization) -> "Named in the key"
+      Enum.any?(key.permissions, &(&1.domain == "repositories")) -> "Through every repository"
+      true -> "Through the key's API access"
+    end
+  end
+
+  defp last_used(%{last_use: %{used_at: used_at}}) when not is_nil(used_at) do
+    Calendar.strftime(used_at, "%Y-%m-%d")
+  end
+
+  defp last_used(_key), do: "Never"
 end

@@ -11,13 +11,16 @@ defmodule HexpmWeb.PreviewRawController do
       }) do
     filename = Path.join(filename_parts)
 
-    with {:ok, package} <-
-           RepositoryAccess.fetch_package(conn.assigns.current_user, repository, name),
+    with {:ok, package} <- RepositoryAccess.fetch_package(conn, repository, name),
          release when not is_nil(release) <- find_release(package, version),
          {:ok, contents} <- Hexpm.Preview.raw_file(repository, name, version, filename) do
       send_raw(conn, filename, contents)
     else
-      _ -> not_found(conn)
+      {:error, :sso_required, organization} ->
+        HexpmWeb.SSOEnforcement.redirect_to_login(conn, organization)
+
+      _ ->
+        not_found(conn)
     end
   end
 

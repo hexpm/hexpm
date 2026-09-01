@@ -95,7 +95,7 @@ defmodule Hexpm.Accounts.Organization do
     {:ok, nil}
   end
 
-  def verify_permissions(%Organization{} = organization, "package", name) do
+  def verify_permissions(%Organization{} = organization, "package", name) when is_binary(name) do
     case String.split(name, "/", parts: 2) do
       [organization_name, package_name] when organization_name == organization.name ->
         case Packages.get(organization_name, package_name) do
@@ -112,6 +112,8 @@ defmodule Hexpm.Accounts.Organization do
       when domain in ["repository", "docs"] do
     {:ok, organization}
   end
+
+  def verify_permissions(%Organization{}, _domain, _resource), do: :error
 
   def billing_active?(%Organization{billing_active: active} = organization) do
     active or trialing?(organization)

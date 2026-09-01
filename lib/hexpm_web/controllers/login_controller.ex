@@ -44,7 +44,16 @@ defmodule HexpmWeb.LoginController do
   end
 
   def delete(conn, _params) do
-    # Revoke browser session if exists
+    if Hexpm.Repo.write_mode?() do
+      revoke_browser_session(conn)
+    end
+
+    conn
+    |> clear_session()
+    |> redirect(to: ~p"/")
+  end
+
+  defp revoke_browser_session(conn) do
     if session_token = get_session(conn, "session_token") do
       case Base.decode64(session_token) do
         {:ok, decoded_token} ->
@@ -57,10 +66,6 @@ defmodule HexpmWeb.LoginController do
           :ok
       end
     end
-
-    conn
-    |> clear_session()
-    |> redirect(to: ~p"/")
   end
 
   defp start_session(conn, user, return) do

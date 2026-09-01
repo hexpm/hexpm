@@ -56,6 +56,8 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       package_owner = Hexpm.Repo.one!(assoc(package, :owners))
       assert package_owner.id == user.id
 
+      Oban.drain_queue(queue: :registry)
+
       assert Hexpm.Store.get(:repo_bucket, "packages/#{package.name}", [])
 
       log = Hexpm.Repo.one!(AuditLog)
@@ -89,6 +91,8 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       package_owner = Hexpm.Repo.one!(assoc(package, :owners))
       assert package_owner.id == organization.user.id
 
+      Oban.drain_queue(queue: :registry)
+
       assert Hexpm.Store.get(:repo_bucket, "packages/#{package.name}", [])
 
       log = Hexpm.Repo.one!(AuditLog)
@@ -114,6 +118,8 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       assert result["html_url"] =~ "packages/#{package.name}/1.0.0"
 
       assert Hexpm.Repo.get_by(Package, name: package.name).meta.description == "awesomeness"
+
+      Oban.drain_queue(queue: :registry)
 
       assert Hexpm.Store.get(:repo_bucket, "packages/#{package.name}", [])
     end
@@ -841,6 +847,8 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       |> post("/api/publish", create_tar(meta))
       |> json_response(201)
 
+      Oban.drain_queue(queue: :registry)
+
       assert Hexpm.Store.get(:repo_bucket, "packages/#{meta.name}", [])
     end
 
@@ -1250,6 +1258,8 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       refute Hexpm.Repo.get_by(Package, name: package.name)
       refute Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1")
 
+      Oban.drain_queue(queue: :registry)
+
       refute Hexpm.Store.get(:repo_bucket, "packages/#{package.name}", [])
 
       [log] = Hexpm.Repo.all(AuditLog)
@@ -1274,6 +1284,8 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
       assert Hexpm.Repo.get_by(Package, name: package.name)
       refute Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1")
+
+      Oban.drain_queue(queue: :registry)
 
       assert Hexpm.Store.get(:repo_bucket, "packages/#{package.name}", [])
     end

@@ -1,12 +1,72 @@
 defmodule Hexpm.Accounts.Keys do
   use Hexpm.Context
 
-  alias Hexpm.Accounts.Organization
+  alias Hexpm.Accounts.{Organization, OrganizationUser}
 
   def all(user_or_organization) do
     Key.all(user_or_organization)
     |> Repo.all()
     |> Enum.map(&Key.associate_owner(&1, user_or_organization))
+  end
+
+  @doc """
+  Personal API keys held by this organization's members that reach it.
+
+  This is the list an administrator reviews before turning enforcement on and
+  the list the sweep works from, so it has to hold every key the organization
+  will turn away. That includes the ones carrying only an `api` permission: the
+  API authorizes an organization action against any one of the domains it
+  accepts, so `api:write` plus membership publishes, retires and changes owners
+  without a repository permission anywhere on the key.
+  """
+  def personal_reaching_organization(%Organization{} = organization) do
+    from(
+      key in Key,
+      join: member in OrganizationUser,
+      on: member.user_id == key.user_id,
+      where: member.organization_id == ^organization.id,
+      where: is_nil(key.revoke_at) or key.revoke_at > fragment("NOW()"),
+      order_by: [asc: key.name],
+      preload: [:user]
+    )
+    |> Repo.all()
+    |> Enum.filter(&reaches_organization?(&1, organization))
+  end
+
+  @doc """
+  Whether a key reaches this organization, by naming it, by covering every
+  repository, or by carrying an `api` permission.
+  """
+  def reaches_organization?(%Key{} = key, %Organization{} = organization) do
+    Enum.any?(key.permissions, fn permission ->
+      KeyPermission.organization_reach(permission) in [:every, organization.name] or
+        permission.domain == "api"
+    end)
+  end
+
+  @doc """
+  Whether a key names this organization rather than reaching it through
+  something wider.
+
+  The distinction is what an administrator's list can honestly say about a key's
+  last use: `last_use` records when a key was used and not what it was used for,
+  so a key naming the organization did reach it and a key carrying `api` or
+  `repositories` only could have.
+  """
+  def names_organization?(%Key{} = key, %Organization{} = organization) do
+    Enum.any?(key.permissions, &(KeyPermission.organization_reach(&1) == organization.name))
+  end
+
+  @doc """
+  The permissions on a key that name this organization, which are the ones a
+  sweep can remove without touching anything else the key reaches.
+
+  A `repositories` permission reaches the organization too but reaches every
+  other one as well, so removing it would take unrelated access with it. Those
+  keys are refused at the request instead.
+  """
+  def organization_permissions(%Key{} = key, %Organization{} = organization) do
+    Enum.filter(key.permissions, &(KeyPermission.organization_reach(&1) == organization.name))
   end
 
   def get(id) do

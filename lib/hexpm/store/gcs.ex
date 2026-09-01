@@ -28,6 +28,35 @@ defmodule Hexpm.Store.GCS do
     end
   end
 
+  def stream(bucket, key) do
+    url = url(bucket, key)
+
+    case retry(url, fn -> stream_request(url) end) do
+      {:ok, 200, _headers, chunks} -> chunks
+      {:ok, 404, _headers, _body} -> nil
+      {:ok, status, _headers, _body} -> raise "GCS GET #{url} returned status #{status}"
+      {:error, reason} -> raise "GCS GET #{url} failed: #{inspect(reason)}"
+    end
+  end
+
+  # Any response but a 200 is read to the end here, so a retry never leaves
+  # a half-read response holding its connection. A failure while reading it
+  # is returned as an error so the retry sees it.
+  defp stream_request(url) do
+    case Hexpm.HTTP.impl().stream(url, headers()) do
+      {:ok, 200, _headers, _chunks} = response -> response
+      {:ok, status, headers, chunks} -> drain(chunks, status, headers)
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp drain(chunks, status, headers) do
+    Stream.run(chunks)
+    {:ok, status, headers, ""}
+  rescue
+    exception -> {:error, exception}
+  end
+
   def get_to_file(bucket, key, destination, opts) do
     case get(bucket, key, opts) do
       nil -> nil
@@ -59,16 +88,16 @@ defmodule Hexpm.Store.GCS do
     url = url(bucket, key)
     headers = filter_nil_values(headers)
 
-    {:ok, 200, _headers, _body} = retry(url, fn -> fun.(url, headers) end)
+    {:ok, 200, response_headers, _body} = retry(url, fn -> fun.(url, headers) end)
 
-    :ok
+    {:ok, %{etag: header!(response_headers, "etag")}}
   end
 
   def delete_many(bucket, keys) do
     keys
     |> Task.async_stream(
       &delete(bucket, &1),
-      max_concurrency: 10,
+      max_concurrency: 32,
       timeout: 60_000
     )
     |> Stream.each(fn
@@ -120,10 +149,12 @@ defmodule Hexpm.Store.GCS do
     Enum.reject(keyword, fn {_key, value} -> is_nil(value) end)
   end
 
-  defp content_length!(headers) do
-    case Enum.find(headers, fn {key, _value} -> String.downcase(key) == "content-length" end) do
-      {_key, value} -> String.to_integer(value)
-      nil -> raise "GCS response is missing content-length"
+  defp content_length!(headers), do: headers |> header!("content-length") |> String.to_integer()
+
+  defp header!(headers, name) do
+    case Enum.find(headers, fn {key, _value} -> String.downcase(key) == name end) do
+      {_key, value} -> value
+      nil -> raise "GCS response is missing #{name}"
     end
   end
 

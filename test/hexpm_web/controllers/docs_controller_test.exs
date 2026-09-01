@@ -24,9 +24,34 @@ defmodule HexpmWeb.DocsControllerTest do
     assert html =~ "never suppresses a personal Hexpm two-factor prompt"
 
     {:ok, document} = Floki.parse_document(html)
-    assert [link] = Floki.find(document, ~s(a[href="/docs/organization-sso"]))
+    assert [link] = Floki.find(document, ~s(#docs-nav a[href="/docs/organization-sso"]))
     assert Floki.text(link) =~ "Organization SSO"
     assert Floki.attribute(link, "class") |> List.first() =~ "bg-blue-50"
+  end
+
+  test "renders the navigation as a sidebar on desktop and a collapsed accordion below it" do
+    html =
+      build_conn()
+      |> get("/docs/rebar3-usage")
+      |> html_response(200)
+
+    {:ok, document} = Floki.parse_document(html)
+
+    assert [sidebar] = Floki.find(document, "nav#docs-nav")
+    assert Floki.attribute(sidebar, "class") |> List.first() =~ "hidden lg:block"
+
+    assert [accordion] = Floki.find(document, "details#docs-nav-mobile")
+    assert Floki.attribute(accordion, "class") |> List.first() =~ "lg:hidden"
+    assert Floki.attribute(accordion, "open") == []
+    assert Floki.find(accordion, "summary") |> Floki.text() =~ "Rebar3 usage"
+
+    for nav <- [sidebar, accordion] do
+      assert [link] = Floki.find(nav, ~s(a[href="/docs/rebar3-usage"]))
+      assert Floki.attribute(link, "class") |> List.first() =~ "bg-blue-50"
+      assert [_] = Floki.find(nav, ~s(a[href="/docs/public-keys"]))
+      assert [tasks] = Floki.find(nav, ~s(a[href="https://hexdocs.pm/hex"]))
+      assert Floki.attribute(tasks, "target") == ["_blank"]
+    end
   end
 
   test "hides the organization SSO guide and navigation when SSO is off" do
@@ -62,7 +87,7 @@ defmodule HexpmWeb.DocsControllerTest do
     assert html =~ "Cannot create a package"
 
     {:ok, document} = Floki.parse_document(html)
-    assert [link] = Floki.find(document, ~s(a[href="/docs/trusted-publishers"]))
+    assert [link] = Floki.find(document, ~s(#docs-nav a[href="/docs/trusted-publishers"]))
     assert Floki.text(link) =~ "Trusted publishers"
     assert Floki.attribute(link, "class") |> List.first() =~ "bg-blue-50"
   end

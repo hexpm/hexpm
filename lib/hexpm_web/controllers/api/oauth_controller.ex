@@ -3,6 +3,7 @@ defmodule HexpmWeb.API.OAuthController do
 
   import HexpmWeb.RequestHelpers, only: [build_usage_info: 1]
 
+  alias Hexpm.Accounts.Organization
   alias Hexpm.UserSessions
   alias Hexpm.OAuth.{Clients, Tokens, AuthorizationCodes, DeviceCodes}
 
@@ -105,23 +106,31 @@ defmodule HexpmWeb.API.OAuthController do
            validate_authorization_code(safe_param(params, "code"), client.client_id),
          :ok <- validate_redirect_uri_match(auth_code, params["redirect_uri"]),
          :ok <- validate_pkce(auth_code, safe_param(params, "code_verifier")) do
-      {:ok, used_auth_code} = AuthorizationCodes.mark_as_used(auth_code)
       usage_info = build_usage_info(conn)
-      audit = %{audit_data(conn) | user: used_auth_code.user}
+      audit = %{audit_data(conn) | user: auth_code.user}
 
       case Tokens.create_session_and_token_for_user(
-             used_auth_code.user,
+             auth_code.user,
              client.client_id,
-             used_auth_code.scopes,
+             auth_code.scopes,
              "authorization_code",
-             used_auth_code.code,
+             "authorization_code:#{auth_code.id}",
              name: safe_param(params, "name"),
              with_refresh_token: true,
              usage_info: usage_info,
-             audit: audit
+             audit: audit,
+             browser_session_id: auth_code.user_session_id,
+             authorization_code: auth_code
            ) do
         {:ok, token} ->
           render(conn, :token, token: token)
+
+        {:error, :already_used} ->
+          render_oauth_error(
+            conn,
+            :invalid_grant,
+            "Authorization code expired or already used"
+          )
 
         {:error, changeset} ->
           render_oauth_error(
@@ -178,13 +187,22 @@ defmodule HexpmWeb.API.OAuthController do
              client.client_id,
              token.granted_scopes,
              "refresh_token",
-             params["refresh_token"],
+             "token:#{token.jti}",
              with_refresh_token: true,
              user_session_id: token.user_session_id,
              usage_info: usage_info
            ) do
         {:ok, new_token} ->
           render(conn, :token, token: new_token)
+
+        {:error, :token_revoked} ->
+          render_oauth_error(conn, :invalid_grant, "Refresh token has been revoked")
+
+        {:error, :token_expired} ->
+          render_oauth_error(conn, :invalid_grant, "Refresh token has expired")
+
+        {:error, :session_revoked} ->
+          render_oauth_error(conn, :invalid_grant, "Session has been revoked")
 
         {:error, changeset} ->
           render_oauth_error(
@@ -215,9 +233,10 @@ defmodule HexpmWeb.API.OAuthController do
              client.client_id,
              scopes,
              "client_credentials",
-             api_key_secret,
+             "key:#{auth_info.auth_credential.id}",
              name: safe_param(params, "name"),
-             usage_info: usage_info
+             usage_info: usage_info,
+             credential: auth_info.auth_credential
            ) do
         {:ok, token} ->
           render(conn, :token, token: token)
@@ -277,7 +296,7 @@ defmodule HexpmWeb.API.OAuthController do
 
     # Final validation: check that all requested scopes are allowed
     # This validates non-repository scopes (like "api")
-    if validate_scopes_against_key(expanded_scopes, api_key.permissions) do
+    if validate_scopes_against_key(expanded_scopes, api_key.permissions, user_or_org) do
       {:ok, expanded_scopes}
     else
       {:error, :invalid_scope, "Requested scopes exceed API key permissions"}
@@ -288,7 +307,7 @@ defmodule HexpmWeb.API.OAuthController do
     {:error, :invalid_scope, "Invalid scope parameter"}
   end
 
-  defp validate_scopes_against_key(scopes, permissions) do
+  defp validate_scopes_against_key(scopes, permissions, user_or_org) do
     allowed_scopes =
       permissions
       |> Enum.flat_map(&Hexpm.Permissions.permission_to_scopes/1)
@@ -296,9 +315,27 @@ defmodule HexpmWeb.API.OAuthController do
 
     Enum.all?(scopes, fn scope ->
       scope in allowed_scopes or
-        (:all_repositories in allowed_scopes and String.starts_with?(scope, "repository:"))
+        (:all_repositories in allowed_scopes and reaches_repository?(user_or_org, scope))
     end)
   end
+
+  # The `repositories` permission means every repository this principal reaches,
+  # not every repository there is, so the name has to be resolved against the
+  # principal rather than matched as a prefix. The CDN edges verify
+  # `repository:<org>` from the token alone, so a scope minted here is access to
+  # that organization until the token expires.
+  #
+  # The public repository is the exception: `expand_repositories_scope/3` adds it
+  # for every principal and it carries nothing private.
+  defp reaches_repository?(user_or_org, "repository:" <> organization) do
+    organization == Organization.hexpm(recursive: false).name or
+      match?(
+        {:ok, _},
+        Hexpm.Permissions.verify_user_access(user_or_org, "repository", organization)
+      )
+  end
+
+  defp reaches_repository?(_user_or_org, _scope), do: false
 
   defp error_description(:invalid_request), do: "Missing or invalid client_secret"
   defp error_description(:invalid_client), do: "Invalid API key"
@@ -306,8 +343,8 @@ defmodule HexpmWeb.API.OAuthController do
   defp revoke_token(%{"token" => token_value, "client_id" => client_id})
        when is_binary(token_value) and is_binary(client_id) do
     with {:ok, _client} <- validate_client(client_id),
-         {:ok, token} <- lookup_token_for_revocation(token_value, client_id) do
-      case Tokens.revoke(token) do
+         {:ok, type, token} <- lookup_token_for_revocation(token_value, client_id) do
+      case revoke_for_type(type, token) do
         {:ok, _} -> :ok
         {:error, _} -> {:error, :revocation_failed}
       end
@@ -317,6 +354,13 @@ defmodule HexpmWeb.API.OAuthController do
   end
 
   defp revoke_token(_params), do: {:error, :invalid_request}
+
+  # RFC 7009: revoking a refresh token also revokes the access tokens issued
+  # from the same grant. Marking only the row presented would leave the session
+  # and its organization access alive, and a sibling token would refresh
+  # straight back into the same scopes.
+  defp revoke_for_type(:refresh, token), do: UserSessions.revoke_for_oauth_token(token)
+  defp revoke_for_type(:access, token), do: Tokens.revoke(token)
 
   defp revoke_token_by_hash(%{"token_hash" => token_hash})
        when is_binary(token_hash) and token_hash != "" do
@@ -336,29 +380,21 @@ defmodule HexpmWeb.API.OAuthController do
 
   defp lookup_token_for_revocation(token_value, client_id) do
     # Try to find as access token first
-    case lookup_access_token_for_revocation(token_value, client_id) do
-      {:ok, token} -> {:ok, token}
+    case lookup_for_revocation(token_value, :access, client_id) do
+      {:ok, token} -> {:ok, :access, token}
       {:error, _} -> lookup_refresh_token_for_revocation(token_value, client_id)
     end
   end
 
-  defp lookup_access_token_for_revocation(user_access_token, client_id) do
-    case Tokens.lookup(user_access_token, :access,
-           client_id: client_id,
-           validate: false,
-           preload: []
-         ) do
-      {:ok, token} -> {:ok, token}
-      {:error, _} -> {:error, :invalid_token}
+  defp lookup_refresh_token_for_revocation(token_value, client_id) do
+    case lookup_for_revocation(token_value, :refresh, client_id) do
+      {:ok, token} -> {:ok, :refresh, token}
+      {:error, reason} -> {:error, reason}
     end
   end
 
-  defp lookup_refresh_token_for_revocation(user_refresh_token, client_id) do
-    case Tokens.lookup(user_refresh_token, :refresh,
-           client_id: client_id,
-           validate: false,
-           preload: []
-         ) do
+  defp lookup_for_revocation(token_value, type, client_id) do
+    case Tokens.lookup(token_value, type, client_id: client_id, validate: false, preload: []) do
       {:ok, token} -> {:ok, token}
       {:error, _} -> {:error, :invalid_token}
     end

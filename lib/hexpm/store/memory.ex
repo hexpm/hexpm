@@ -5,6 +5,7 @@ defmodule Hexpm.Store.Memory do
   @behaviour Hexpm.Store.Behaviour
 
   @table __MODULE__
+  @chunk_size 65_536
   @ownership __MODULE__.Ownership
   @key :store
 
@@ -47,6 +48,20 @@ defmodule Hexpm.Store.Memory do
     end
   end
 
+  def stream(bucket, key) do
+    case get(bucket, key, []) do
+      nil ->
+        nil
+
+      body ->
+        Stream.unfold(body, fn
+          "" -> nil
+          <<chunk::binary-size(@chunk_size), rest::binary>> -> {chunk, rest}
+          chunk -> {chunk, ""}
+        end)
+    end
+  end
+
   def get_to_file(bucket, key, destination, opts) do
     case get(bucket, key, opts) do
       nil -> nil
@@ -57,6 +72,7 @@ defmodule Hexpm.Store.Memory do
   def put(bucket, key, body, _opts) do
     owner = owner_pid()
     :ets.insert(@table, {{owner, bucket, key}, body})
+    {:ok, %{etag: ~s("#{Base.encode16(:crypto.hash(:md5, body), case: :lower)}")}}
   end
 
   def put_file(bucket, key, path, opts) do

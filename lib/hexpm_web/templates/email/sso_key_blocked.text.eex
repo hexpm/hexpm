@@ -1,0 +1,9 @@
+Personal API Key Not Accepted
+
+<%= SSOKeyBlocked.intro(@organization, @blocked) %>
+
+<%= SSOKeyBlocked.unchanged(@blocked) %>
+
+<%= SSOKeyBlocked.alternatives() %>
+
+<%= SSOKeyBlocked.why() %>

@@ -196,11 +196,30 @@ defmodule HexpmWeb.API.AuthControllerTest do
       |> response(401)
     end
 
-    test "authenticate user api key", %{user_api_key: key} do
+    test "refuses an organization key asking about another organization", %{
+      owned_org: owned_org,
+      unowned_org: unowned_org
+    } do
+      key =
+        insert(:key,
+          organization: owned_org,
+          permissions: [build(:key_permission, domain: "repositories")]
+        )
+
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("/api/auth", domain: "api")
-      |> response(200)
+      |> get("/api/auth", domain: "repository", resource: unowned_org.name)
+      |> response(403)
+    end
+
+    test "authenticate user api key", %{user_api_key: key} do
+      conn =
+        build_conn()
+        |> put_req_header("authorization", key.user_secret)
+        |> get("/api/auth", domain: "api")
+
+      assert response(conn, 200)
+      assert get_resp_header(conn, "x-hex-key-id") == [Integer.to_string(key.id)]
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
@@ -399,6 +418,50 @@ defmodule HexpmWeb.API.AuthControllerTest do
       |> response(401)
     end
 
+    test "authenticate oauth token against a package", %{user: user, owned_org: owned_org} do
+      repository = insert(:repository, organization: owned_org, name: owned_org.name)
+      package = insert(:package, repository_id: repository.id)
+      insert(:package_owner, package: package, user: user)
+      token = oauth_token(user, ["api"])
+
+      build_conn()
+      |> put_req_header("authorization", "Bearer #{token.access_token}")
+      |> get("/api/auth", domain: "package", resource: "#{owned_org.name}/#{package.name}")
+      |> response(204)
+
+      build_conn()
+      |> put_req_header("authorization", "Bearer #{token.access_token}")
+      |> get("/api/auth", domain: "package", resource: "#{owned_org.name}/nonexistent")
+      |> response(403)
+    end
+
+    # A resource-only domain with no resource used to reach String.split/2 with
+    # nil and answer 500.
+    test "refuses a resource-less request rather than falling over", %{user: user} do
+      token = oauth_token(user, ["api"])
+
+      for {domain, status} <- [{"package", 403}, {"repository", 401}, {"docs", 401}] do
+        build_conn()
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> get("/api/auth", domain: domain)
+        |> response(status)
+      end
+    end
+
+    test "authenticate oauth token against a package without active billing", %{user: user} do
+      organization = insert(:organization, billing_active: false)
+      insert(:organization_user, organization: organization, user: user)
+      repository = insert(:repository, organization: organization, name: organization.name)
+      package = insert(:package, repository_id: repository.id)
+      insert(:package_owner, package: package, user: user)
+      token = oauth_token(user, ["api"])
+
+      build_conn()
+      |> put_req_header("authorization", "Bearer #{token.access_token}")
+      |> get("/api/auth", domain: "package", resource: "#{organization.name}/#{package.name}")
+      |> response(403)
+    end
+
     test "authenticate repository key against repository without access permissions", %{
       unowned_user_repo_key: key,
       unowned_org: unowned_org
@@ -441,5 +504,22 @@ defmodule HexpmWeb.API.AuthControllerTest do
       |> get("/api/auth", domain: "repository", resource: organization.name)
       |> response(403)
     end
+  end
+
+  defp oauth_token(user, scopes) do
+    client = insert(:oauth_client)
+    session = insert(:oauth_session, user: user, client_id: client.client_id)
+
+    {:ok, token} =
+      Hexpm.OAuth.Tokens.create_and_insert_for_user(
+        user,
+        client.client_id,
+        scopes,
+        "authorization_code",
+        "test_grant_ref-#{System.unique_integer([:positive])}",
+        user_session_id: session.id
+      )
+
+    token
   end
 end

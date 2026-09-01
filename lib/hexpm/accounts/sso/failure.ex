@@ -6,7 +6,6 @@ defmodule Hexpm.Accounts.SSO.Failure do
   schema "organization_sso_failures" do
     field :stage, :string
     field :code, :string
-    field :details, :map, default: %{}
 
     belongs_to :connection, Hexpm.Accounts.SSO.Connection
     belongs_to :user, User
@@ -16,7 +15,11 @@ defmodule Hexpm.Accounts.SSO.Failure do
 
   def changeset(failure, attrs) do
     failure
-    |> cast(attrs, [:connection_id, :stage, :code, :details, :user_id])
-    |> validate_required([:connection_id, :stage, :code, :details])
+    |> cast(attrs, [:connection_id, :stage, :code, :user_id])
+    |> validate_required([:connection_id, :stage, :code])
+    # The connection can be deleted between being read and this insert. The
+    # constraint turns that raise into {:error, changeset}, dropping a
+    # diagnostic whose connection no longer exists.
+    |> foreign_key_constraint(:connection_id)
   end
 end

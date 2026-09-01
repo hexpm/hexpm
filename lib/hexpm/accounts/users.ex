@@ -488,7 +488,7 @@ defmodule Hexpm.Accounts.Users do
   defp password_reset(user, params, revoke_all_access) do
     alias Hexpm.UserSessions
 
-    {sessions_query, tokens_query} = UserSessions.revoke_all(user)
+    {sessions_query, tokens_query, org_sessions_query} = UserSessions.revoke_all(user)
 
     multi =
       Multi.new()
@@ -496,6 +496,7 @@ defmodule Hexpm.Accounts.Users do
       |> Multi.delete_all(:reset, assoc(user, :password_resets))
       |> Multi.delete_all(:account_deletion_requests, assoc(user, :account_deletion_requests))
       |> Multi.update_all(:revoke_tokens, tokens_query, [])
+      |> Multi.update_all(:revoke_org_sessions, org_sessions_query, [])
       |> Multi.update_all(:revoke_sessions, sessions_query, [])
 
     if revoke_all_access,

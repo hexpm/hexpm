@@ -34,6 +34,7 @@ defmodule Hexpm.Repo do
   defdelegate preload(structs_or_struct_or_nil, preloads, opts \\ []), to: RepoBase
 
   defwrite(advisory_xact_lock(key, opts \\ []))
+  defwrite(advisory_xact_lock_shared(key, opts \\ []))
   defwrite(try_advisory_xact_lock?(key, opts \\ []))
   defwrite(try_advisory_lock?(key, opts \\ []))
   defwrite(advisory_unlock(key, opts \\ []))
@@ -55,13 +56,50 @@ defmodule Hexpm.Repo do
   defwrite(update(changeset, opts \\ []))
 
   def write_mode?() do
-    not Application.get_env(:hexpm, :read_only_mode, false)
+    not Hexpm.WriteMode.enabled?()
   end
 
   def write_mode!() do
     unless write_mode?() do
       raise Hexpm.WriteInReadOnlyMode
     end
+  end
+
+  @doc """
+  Restarts the database pool on this node against a different local port, for
+  cutting over to an instance whose proxy listens beside the current one.
+  Queries on this node fail between terminate and reconnect, so hold writes
+  first and expect a brief blip in reads.
+  """
+  def retarget_port!(port) when is_integer(port) do
+    # Hexpm.RepoBase.init/2 re-reads HEXPM_DATABASE_URL on every pool start,
+    # so the environment variable has to be rewritten too or the restarted
+    # pool comes back on the old port.
+    if url = System.get_env("HEXPM_DATABASE_URL") do
+      System.put_env("HEXPM_DATABASE_URL", put_url_port(url, port))
+    end
+
+    config =
+      :hexpm
+      |> Application.fetch_env!(Hexpm.RepoBase)
+      |> put_port(port)
+
+    Application.put_env(:hexpm, Hexpm.RepoBase, config)
+    :ok = Supervisor.terminate_child(Hexpm.Supervisor, Hexpm.RepoBase)
+    {:ok, _} = Supervisor.restart_child(Hexpm.Supervisor, Hexpm.RepoBase)
+    :ok
+  end
+
+  defp put_port(config, port) do
+    if url = config[:url] do
+      Keyword.put(config, :url, put_url_port(url, port))
+    else
+      Keyword.put(config, :port, port)
+    end
+  end
+
+  defp put_url_port(url, port) do
+    URI.to_string(%{URI.parse(url) | port: port})
   end
 end
 
@@ -77,7 +115,8 @@ defmodule Hexpm.RepoBase do
     diff: 4,
     email_outbox: 5,
     migrate: 6,
-    secret_scan: 7
+    secret_scan: 7,
+    registry_object: 8
   }
 
   def advisory_lock_key(key), do: Map.fetch!(@advisory_locks, key)
@@ -114,14 +153,27 @@ defmodule Hexpm.RepoBase do
   end
 
   def advisory_xact_lock(key, opts \\ []) do
+    xact_lock("pg_advisory_xact_lock", key, opts)
+  end
+
+  @doc """
+  Takes the shared form of the transaction lock: shared holders do not block
+  each other, an exclusive holder (`advisory_xact_lock/2` on the same key and
+  sub key) blocks them all and waits for them all.
+  """
+  def advisory_xact_lock_shared(key, opts \\ []) do
+    xact_lock("pg_advisory_xact_lock_shared", key, opts)
+  end
+
+  defp xact_lock(function, key, opts) do
     unless skip_advisory_locks?() do
       {sub_key, opts} = Keyword.pop(opts, :sub_key)
 
       {sql, params} =
         if sub_key do
-          {"SELECT pg_advisory_xact_lock($1, $2)", [Map.fetch!(@advisory_locks, key), sub_key]}
+          {"SELECT #{function}($1, $2)", [Map.fetch!(@advisory_locks, key), sub_key]}
         else
-          {"SELECT pg_advisory_xact_lock($1)", [Map.fetch!(@advisory_locks, key)]}
+          {"SELECT #{function}($1)", [Map.fetch!(@advisory_locks, key)]}
         end
 
       %Postgrex.Result{} = query!(sql, params, opts)
@@ -181,7 +233,7 @@ defmodule Hexpm.RepoBase do
 end
 
 defmodule Hexpm.WriteInReadOnlyMode do
-  defexception []
+  defexception plug_status: 503
 
   def message(_) do
     "tried to write in read-only mode"

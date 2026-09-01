@@ -118,6 +118,7 @@ defmodule Hexpm.Accounts.OrganizationDomainsTest do
 
     test "refuses another organization's token", %{organization: organization, admin: admin} do
       other = insert(:organization)
+      insert(:organization_user, organization: other, user: admin, role: "admin")
       {:ok, ours} = add(organization, admin, "example.com")
       {:ok, theirs} = add(other, admin, "example.com")
 
@@ -125,6 +126,28 @@ defmodule Hexpm.Accounts.OrganizationDomainsTest do
 
       assert {:error, :record_not_found} = verify(organization, ours, admin)
       assert {:ok, _domain} = verify(other, theirs, admin)
+    end
+
+    test "refuses someone who lost their role while the lookup ran", %{
+      organization: organization,
+      admin: admin
+    } do
+      {:ok, domain} = add(organization, admin, "example.com")
+      Resolver.publish("example.com", OrganizationDomain.record_value(domain))
+
+      Repo.update_all(
+        from(member in Hexpm.Accounts.OrganizationUser,
+          where: member.organization_id == ^organization.id,
+          where: member.user_id == ^admin.id
+        ),
+        set: [role: "write"]
+      )
+
+      # A verified domain admits people through just-in-time membership, so the
+      # role is taken again under a lock rather than trusted from before the
+      # lookup.
+      assert {:error, :admin_required} = verify(organization, domain, admin)
+      refute OrganizationDomain.verified?(Repo.get!(OrganizationDomain, domain.id))
     end
 
     test "ignores unrelated records on the same name", %{

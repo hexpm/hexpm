@@ -20,6 +20,10 @@ defmodule Hexpm.Accounts.SSO.Connection do
     field :enabled_at, :utc_datetime_usec
     field :jit_seat_policy, :string
     field :jit_role, :string, default: "read"
+    field :enforcement_mode, :string, default: "optional"
+    field :required_at, :utc_datetime_usec
+    field :session_lifetime_seconds, :integer, default: 86_400
+    field :personal_keys, :string
 
     belongs_to :organization, Organization
     belongs_to :configured_by_user, User
@@ -91,10 +95,6 @@ defmodule Hexpm.Accounts.SSO.Connection do
   @jit_seat_policies ~w(block expand)
   @jit_roles ~w(admin write read)
 
-  def jit_seat_policies, do: @jit_seat_policies
-
-  def jit_roles, do: @jit_roles
-
   @doc """
   Turns just-in-time membership on or off. `jit_seat_policy` is required to turn
   it on and there is no default, because auto-expanding a subscription is a
@@ -109,16 +109,96 @@ defmodule Hexpm.Accounts.SSO.Connection do
     |> validate_inclusion(:jit_role, @jit_roles)
   end
 
+  @enforcement_modes ~w(optional pilot required)
+  @personal_key_policies ~w(block allow)
+  @session_lifetimes [3_600, 28_800, 86_400, 604_800, 2_592_000]
+
+  @doc """
+  Sets the enforcement mode, when required mode starts biting, how long an
+  organization access session lasts, and what happens to personal API keys.
+
+  `personal_keys` defaults to allowing them. Blocking breaks publishing
+  workflows that only the organization can weigh, and SCIM will close the
+  offboarding half of what blocking is for.
+  """
+  def enforcement_changeset(connection, attrs) do
+    connection
+    |> cast(normalize_required_at(attrs), [
+      :enforcement_mode,
+      :required_at,
+      :session_lifetime_seconds,
+      :personal_keys
+    ])
+    |> update_change(:personal_keys, &nilify_blank/1)
+    |> validate_required([:enforcement_mode, :session_lifetime_seconds])
+    |> validate_inclusion(:enforcement_mode, @enforcement_modes)
+    |> validate_inclusion(:personal_keys, @personal_key_policies)
+    |> validate_inclusion(:session_lifetime_seconds, @session_lifetimes)
+    |> validate_required_at()
+  end
+
+  # The form offers a date, which is what an administrator picks, and the column
+  # holds an instant. An empty box means "as soon as this is saved".
+  defp normalize_required_at(%{"required_at" => value} = attrs) when is_binary(value) do
+    case Date.from_iso8601(String.trim(value)) do
+      {:ok, date} -> Map.put(attrs, "required_at", DateTime.new!(date, ~T[00:00:00], "Etc/UTC"))
+      {:error, _reason} -> attrs
+    end
+  end
+
+  defp normalize_required_at(attrs), do: attrs
+
+  defp validate_required_at(changeset) do
+    mode = get_field(changeset, :enforcement_mode)
+    required_at = get_field(changeset, :required_at)
+    now = DateTime.utc_now()
+
+    cond do
+      mode == "required" and is_nil(required_at) ->
+        put_change(changeset, :required_at, now)
+
+      mode != "required" and not is_nil(required_at) ->
+        put_change(changeset, :required_at, nil)
+
+      # A date already past means the same thing as an empty box, and storing it
+      # as given would leave the screen showing a grace period that never
+      # existed.
+      mode == "required" and DateTime.compare(required_at, now) == :lt ->
+        put_change(changeset, :required_at, now)
+
+      true ->
+        changeset
+    end
+  end
+
   def enabled?(%__MODULE__{enabled_at: enabled_at}), do: not is_nil(enabled_at)
 
   def jit_enabled?(%__MODULE__{jit_seat_policy: policy}), do: policy in @jit_seat_policies
 
-  defp nilify_blank(value) when is_binary(value) do
-    case String.trim(value) do
-      "" -> nil
-      trimmed -> trimmed
-    end
+  @doc """
+  The mode in force now. A required organization with a future `required_at` is
+  still in its grace period, so it enforces the members it would have enforced
+  in pilot and nobody else.
+  """
+  def enforcement_mode(connection, now \\ DateTime.utc_now())
+
+  def enforcement_mode(%__MODULE__{enforcement_mode: "required", required_at: required_at}, now)
+      when not is_nil(required_at) do
+    if DateTime.compare(now, required_at) == :lt, do: "pilot", else: "required"
   end
 
-  defp nilify_blank(value), do: value
+  def enforcement_mode(%__MODULE__{enforcement_mode: mode}, _now), do: mode
+
+  @doc """
+  Whether this organization turns personal API keys away. Which members that
+  applies to is their own enforcement to decide, so a pilot turns them away for
+  the members it pilots and for nobody else.
+  """
+  def blocks_personal_keys?(%__MODULE__{personal_keys: "block"} = connection) do
+    enforcement_mode(connection) in ["pilot", "required"]
+  end
+
+  def blocks_personal_keys?(%__MODULE__{}), do: false
+
+  def blocks_personal_keys?(nil), do: false
 end

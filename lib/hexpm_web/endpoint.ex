@@ -7,7 +7,7 @@ defmodule HexpmWeb.Endpoint do
   @session_options [
     signing_salt: "NOcCmerj",
     encryption_salt: "Zb5cCLE7",
-    store: HexpmWeb.Session.Transition,
+    store: :cookie,
     serializer: HexpmWeb.Session.JSON,
     key: "_hexpm_key",
     max_age: 60 * 60 * 24 * 30
@@ -17,14 +17,22 @@ defmodule HexpmWeb.Endpoint do
   #
   # You should set gzip to true if you are running phoenix.digest
   # when deploying your static files in production.
+  #
+  # only_matching also serves the digested /favicon-<hash>.ico that
+  # ~p"/favicon.ico" resolves to when the static manifest is loaded.
   plug Plug.Static,
     at: "/",
     from: :hexpm,
     gzip: true,
-    only: HexpmWeb.static_paths()
+    only: HexpmWeb.static_paths(),
+    only_matching: ~w(favicon)
 
   socket("/live", Phoenix.LiveView.Socket,
-    websocket: [compress: true, connect_info: [:peer_data, :x_headers, session: @session_options]]
+    websocket: [
+      compress: true,
+      log: false,
+      connect_info: [:peer_data, :x_headers, session: @session_options]
+    ]
   )
 
   if Code.ensure_loaded?(Tidewave) do
@@ -46,8 +54,10 @@ defmodule HexpmWeb.Endpoint do
     param_key: "request_logger",
     cookie_key: "request_logger"
 
+  # Plug.RequestId keeps a client-supplied x-request-id; ours is always generated.
+  plug :drop_request_id
   plug Plug.RequestId
-  plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
+  plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint], log: false
   plug Logster.Plugs.ChangeLogLevel, to: :info
   plug Logster.Plugs.Logger, excludes: [:params]
 
@@ -73,4 +83,6 @@ defmodule HexpmWeb.Endpoint do
   plug HexpmWeb.Plugs.CanonicalHost
 
   plug HexpmWeb.Router
+
+  defp drop_request_id(conn, _opts), do: delete_req_header(conn, "x-request-id")
 end
