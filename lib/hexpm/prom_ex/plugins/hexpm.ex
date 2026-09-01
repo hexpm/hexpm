@@ -66,6 +66,14 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
           tags: [:type]
         )
       ]),
+      Event.build(:hexpm_sentry_event_metrics, [
+        counter("hexpm.sentry.filtered.total",
+          event_name: [:hexpm, :sentry, :filtered],
+          description:
+            "Sentry events dropped by the before_send filter and counted here instead, by class.",
+          tags: [:class]
+        )
+      ]),
       Event.build(:hexpm_cdn_event_metrics, [
         counter("hexpm.cdn.purge_request.total",
           event_name: [:hexpm, :cdn, :purge_request, :stop],

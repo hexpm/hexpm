@@ -44,6 +44,92 @@ defmodule Hexpm.ApplicationTest do
 
       assert Hexpm.Application.sentry_before_send(event) == event
     end
+
+    test "counts and drops pool checkout timeouts" do
+      ref = :telemetry_test.attach_event_handlers(self(), [[:hexpm, :sentry, :filtered]])
+
+      exception =
+        DBConnection.ConnectionError.exception(
+          "connection not available and request was dropped from queue after 101ms",
+          :queue_timeout
+        )
+
+      event = Sentry.Event.create_event(exception: exception)
+
+      assert Hexpm.Application.sentry_before_send(event) == nil
+      assert_received {[:hexpm, :sentry, :filtered], ^ref, %{}, %{class: :pool_timeout}}
+    end
+
+    test "counts and drops connection failures by shape" do
+      ref = :telemetry_test.attach_event_handlers(self(), [[:hexpm, :sentry, :filtered]])
+
+      connect = DBConnection.ConnectionError.exception("tcp connect (127.0.0.1:5432): refused")
+      disconnect = DBConnection.ConnectionError.exception("tcp recv (idle): closed")
+
+      assert Hexpm.Application.sentry_before_send(Sentry.Event.create_event(exception: connect)) ==
+               nil
+
+      assert_received {[:hexpm, :sentry, :filtered], ^ref, %{}, %{class: :db_connect}}
+
+      assert Hexpm.Application.sentry_before_send(
+               Sentry.Event.create_event(exception: disconnect)
+             ) == nil
+
+      assert_received {[:hexpm, :sentry, :filtered], ^ref, %{}, %{class: :db_disconnect}}
+    end
+
+    test "counts and drops crash reports wrapping connection errors" do
+      ref = :telemetry_test.attach_event_handlers(self(), [[:hexpm, :sentry, :filtered]])
+
+      event =
+        Sentry.Event.create_event(
+          message: "Uncaught exit",
+          extra: %{
+            crash_reason: "{%DBConnection.ConnectionError{message: \"tcp recv: closed\"}, []}"
+          }
+        )
+
+      assert Hexpm.Application.sentry_before_send(event) == nil
+      assert_received {[:hexpm, :sentry, :filtered], ^ref, %{}, %{class: :db_connection_exit}}
+    end
+
+    test "counts and drops saturation-level postgres errors, keeps the rest" do
+      ref = :telemetry_test.attach_event_handlers(self(), [[:hexpm, :sentry, :filtered]])
+
+      canceled = %Postgrex.Error{postgres: %{code: :query_canceled}}
+      saturated = %Postgrex.Error{postgres: %{code: :too_many_connections}}
+      query_bug = %Postgrex.Error{postgres: %{code: :object_not_in_prerequisite_state}}
+
+      assert Hexpm.Application.sentry_before_send(Sentry.Event.create_event(exception: canceled)) ==
+               nil
+
+      assert_received {[:hexpm, :sentry, :filtered], ^ref, %{}, %{class: :query_canceled}}
+
+      assert Hexpm.Application.sentry_before_send(Sentry.Event.create_event(exception: saturated)) ==
+               nil
+
+      assert_received {[:hexpm, :sentry, :filtered], ^ref, %{}, %{class: :too_many_connections}}
+
+      event = Sentry.Event.create_event(exception: query_bug)
+      assert Hexpm.Application.sentry_before_send(event) == event
+    end
+
+    test "counts and drops client transport errors" do
+      ref = :telemetry_test.attach_event_handlers(self(), [[:hexpm, :sentry, :filtered]])
+
+      transport = %Bandit.TransportError{message: "Unrecoverable error: closed", error: :closed}
+      not_sent = %Plug.Conn.NotSentError{}
+
+      assert Hexpm.Application.sentry_before_send(Sentry.Event.create_event(exception: transport)) ==
+               nil
+
+      assert_received {[:hexpm, :sentry, :filtered], ^ref, %{}, %{class: :client_transport}}
+
+      assert Hexpm.Application.sentry_before_send(Sentry.Event.create_event(exception: not_sent)) ==
+               nil
+
+      assert_received {[:hexpm, :sentry, :filtered], ^ref, %{}, %{class: :response_not_sent}}
+    end
   end
 
   describe "mode supervision" do
