@@ -20,6 +20,18 @@ defmodule Hexpm.Emails.OutboxTest do
       assert Repo.get(OutboxEntry, other_group.id)
     end
 
+    test "leaves a delivered entry in place" do
+      delivered =
+        insert(:email_outbox_entry,
+          group_key: "sso:1:2",
+          category: "sso.identity_linked",
+          delivered_at: DateTime.utc_now()
+        )
+
+      assert Outbox.cancel!(group_key: "sso:1:2", categories: ["sso.identity_linked"]) == 0
+      assert Repo.get(OutboxEntry, delivered.id)
+    end
+
     test "deletes nothing when the group has no matching category" do
       entry = insert(:email_outbox_entry, group_key: "sso:1:2", category: "sso.identity_unlinked")
 
@@ -114,6 +126,18 @@ defmodule Hexpm.Emails.OutboxTest do
 
       Outbox.cancel!(group_key: "sso:1:2", categories: ["sso.identity_linked"])
       assert held_outbox_locks() == 1
+    end
+
+    test "takes no lock for a group whose only entries were delivered" do
+      insert(:email_outbox_entry,
+        scope_key: "sso:user:9",
+        group_key: "sso:1:9",
+        category: "sso.identity_linked",
+        delivered_at: DateTime.utc_now()
+      )
+
+      Outbox.cancel!(scope_key: "sso:user:9", categories: ["sso.identity_linked"])
+      assert held_outbox_locks() == 0
     end
 
     test "takes no lock for a group the categories do not reach" do

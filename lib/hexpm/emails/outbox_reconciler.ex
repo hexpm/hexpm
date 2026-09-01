@@ -35,6 +35,7 @@ defmodule Hexpm.Emails.OutboxReconciler do
             SELECT 1
             FROM email_outbox_entries AS entry
             WHERE entry.id = (?->>'outbox_entry_id')::bigint
+              AND entry.delivered_at IS NULL
           )
           """,
           job.args
@@ -53,7 +54,7 @@ defmodule Hexpm.Emails.OutboxReconciler do
     {:ok, entries} =
       Repo.transaction(fn ->
         entries =
-          from(entry in OutboxEntry,
+          from(entry in OutboxEntry.undelivered(),
             where: not is_nil(entry.expires_at),
             where: entry.expires_at <= ^now,
             order_by: [asc: entry.id],
@@ -85,7 +86,7 @@ defmodule Hexpm.Emails.OutboxReconciler do
 
     worker = inspect(OutboxWorker)
 
-    from(entry in OutboxEntry,
+    from(entry in OutboxEntry.undelivered(),
       where:
         fragment(
           """

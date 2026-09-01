@@ -1137,6 +1137,7 @@ defmodule Hexpm.AdminTasksTest do
 
       assert [entry] = Repo.all(OutboxEntry)
       assert entry.priority == 3
+      assert entry.group_key == "admin.announcement:Hex.pm - Service update"
 
       assert [%Oban.Job{priority: 3}] =
                Repo.all(
@@ -1145,6 +1146,54 @@ defmodule Hexpm.AdminTasksTest do
                    where: job.args == ^%{"outbox_entry_id" => entry.id}
                  )
                )
+    end
+
+    test "skips recipients that already have this announcement queued or delivered" do
+      assert {:ok, 2} =
+               AdminTasks.send_email(
+                 ["bob@example.com", "jane@example.com"],
+                 "Hex.pm - Service update",
+                 "Body"
+               )
+
+      [first | _] = Repo.all(OutboxEntry)
+      assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: first.id})
+
+      assert {:ok, 1} =
+               AdminTasks.send_email(
+                 ["bob@example.com", "jane@example.com", "joe@example.com"],
+                 "Hex.pm - Service update",
+                 "Body"
+               )
+
+      assert Enum.sort(Enum.flat_map(Repo.all(OutboxEntry), & &1.recipients)) == [
+               "bob@example.com",
+               "jane@example.com",
+               "joe@example.com"
+             ]
+
+      assert {:ok, 2} =
+               AdminTasks.send_email(
+                 ["bob@example.com", "jane@example.com"],
+                 "Hex.pm - Another update",
+                 "Body"
+               )
+    end
+
+    test "a queued announcement can be cancelled by its group key" do
+      assert {:ok, 2} =
+               AdminTasks.send_email(
+                 ["bob@example.com", "jane@example.com"],
+                 "Hex.pm - Service update",
+                 "Body"
+               )
+
+      assert Hexpm.Emails.Outbox.cancel!(
+               group_key: "admin.announcement:Hex.pm - Service update",
+               categories: ["admin.announcement"]
+             ) == 2
+
+      assert Repo.all(OutboxEntry) == []
     end
 
     test "only queues once for duplicate recipients" do

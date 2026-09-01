@@ -1698,7 +1698,8 @@ defmodule Hexpm.Accounts.SSO do
   # Rate-limited on the outbox rather than on the failure log: failures are a
   # 20-row ring buffer per connection, and with just-in-time membership on
   # anyone signed in can start a login and fill it, which would reset the
-  # window at will. Outbox entries are kept for a month and are not evicted.
+  # window at will. Outbox entries stay on the table after delivery and are
+  # not evicted within the window.
   defp enqueue_seats_notice!(connection, kind) do
     group_key = "#{@seats_exhausted_category}:#{kind}:#{connection.id}"
     cutoff = DateTime.add(DateTime.utc_now(), -@seats_notice_seconds, :second)

@@ -414,6 +414,20 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
     end
   end
 
+  describe "purge email outbox entries" do
+    test "deletes entries delivered more than 90 days ago and keeps the rest" do
+      old = insert(:email_outbox_entry, delivered_at: days_ago(91))
+      recent = insert(:email_outbox_entry, delivered_at: days_ago(60))
+      pending = insert(:email_outbox_entry, inserted_at: days_ago(91))
+
+      PurgeExpiredRecords.run()
+
+      refute Repo.get(Hexpm.Emails.OutboxEntry, old.id)
+      assert Repo.get(Hexpm.Emails.OutboxEntry, recent.id)
+      assert Repo.get(Hexpm.Emails.OutboxEntry, pending.id)
+    end
+  end
+
   describe "purge organization SSO transactions" do
     test "deletes expired transactions and retains active ones" do
       connection =
@@ -541,7 +555,8 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
       "organization_sso_transactions" => ~w(state_hash nonce code_verifier link_token_hash),
       "organization_sso_sessions" => [],
       "organization_invitations" => ~w(token_hash),
-      "keys" => ~w(secret_first secret_second)
+      "keys" => ~w(secret_first secret_second),
+      "email_outbox_entries" => ~w(email)
     }
 
     test "writes every column but the credentials of each row it deletes" do
@@ -646,6 +661,28 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
       assert row["last_use"]["ip"] == "203.0.113.10"
       refute Map.has_key?(row, "secret_first")
       refute Map.has_key?(row, "secret_second")
+    end
+
+    test "keeps who was sent what but not the mail itself" do
+      entry =
+        insert(:email_outbox_entry,
+          category: "admin.announcement",
+          subject: "Hex.pm - Service update",
+          recipients: ["bob@example.com"],
+          delivered_at: days_ago(91),
+          provider_message_id: "sg-message-id"
+        )
+
+      PurgeExpiredRecords.run()
+
+      assert [%{"row" => row}] = archived_rows("email_outbox_entries")
+      assert row["id"] == entry.id
+      assert row["category"] == "admin.announcement"
+      assert row["subject"] == "Hex.pm - Service update"
+      assert row["recipients"] == ["bob@example.com"]
+      assert row["provider_message_id"] == "sg-message-id"
+      assert row["delivered_at"] =~ ~r/^\d{4}-\d{2}-\d{2}T/
+      refute Map.has_key?(row, "email")
     end
 
     test "leaves the rows in place when the upload fails" do
@@ -797,6 +834,12 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
 
     key = insert(:key, user: user, revoke_at: days_ago(91))
 
+    outbox_entry =
+      insert(:email_outbox_entry,
+        delivered_at: days_ago(91),
+        provider_message_id: "sg-message-id"
+      )
+
     %{
       Hexpm.OAuth.AuthorizationCode => code.id,
       Hexpm.OAuth.DeviceCode => device_code.id,
@@ -807,7 +850,8 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
       Hexpm.Accounts.SSO.Transaction => transaction.id,
       Hexpm.Accounts.SSO.OrgSession => org_session.id,
       Hexpm.Accounts.OrganizationInvitation => invitation.id,
-      Hexpm.Accounts.Key => key.id
+      Hexpm.Accounts.Key => key.id,
+      Hexpm.Emails.OutboxEntry => outbox_entry.id
     }
   end
 

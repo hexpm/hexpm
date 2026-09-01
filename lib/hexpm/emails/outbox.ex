@@ -27,7 +27,15 @@ defmodule Hexpm.Emails.Outbox do
   def prepare!(%Swoosh.Email{} = email, opts) do
     attrs = Map.new(opts)
     validate_options!(attrs)
-    Map.put(attrs, :email, OutboxEnvelope.dump!(email))
+
+    attrs
+    |> Map.put(:email, OutboxEnvelope.dump!(email))
+    |> Map.put(:recipients, recipients(email))
+    |> Map.put(:subject, email.subject)
+  end
+
+  defp recipients(%Swoosh.Email{to: to, cc: cc, bcc: bcc}) do
+    Enum.map(to ++ cc ++ bcc, fn {_name, address} -> address end)
   end
 
   def insert!(attrs) do
@@ -94,7 +102,7 @@ defmodule Hexpm.Emails.Outbox do
   # One lock per group the scope reaches, taken in a sorted order so two
   # callers cancelling overlapping groups cannot deadlock against each other.
   defp acquire_locks!(repo, {:scope_key, scope_key}, categories) do
-    from(entry in OutboxEntry,
+    from(entry in OutboxEntry.undelivered(),
       where: entry.scope_key == ^scope_key,
       where: entry.category in ^categories,
       select: entry.group_key,
@@ -106,11 +114,11 @@ defmodule Hexpm.Emails.Outbox do
   end
 
   defp cancel_query({:group_key, group_key}) do
-    from(entry in OutboxEntry, where: entry.group_key == ^group_key)
+    from(entry in OutboxEntry.undelivered(), where: entry.group_key == ^group_key)
   end
 
   defp cancel_query({:scope_key, scope_key}) do
-    from(entry in OutboxEntry, where: entry.scope_key == ^scope_key)
+    from(entry in OutboxEntry.undelivered(), where: entry.scope_key == ^scope_key)
   end
 
   defp cancel_scope(%{group_key: group_key, scope_key: scope_key})

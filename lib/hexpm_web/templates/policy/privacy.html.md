@@ -12,7 +12,7 @@ To register you have to provide a username and an email address, and a password 
 
 Your profile is public: your username always, and your email address, which is shown by default and which you can hide in your dashboard. Your full name is shown only if you choose to show it. The public packages you own are also public. Your organization memberships and the private packages those organizations own aren't. Nothing else about your account is made public. Non-public data is shared only with the providers on the [Subprocessors](/policies/subprocessors) page and in the cases described under "Vulnerability reports" and "Disclosure" below.
 
-We send transactional email, such as address verification and password resets, through the email provider on the [Subprocessors](/policies/subprocessors) page.
+We send transactional email, such as address verification and password resets, through the email provider on the [Subprocessors](/policies/subprocessors) page. For each email we send we record the recipient addresses, the subject, the time it was sent and the provider's message id, so we can tell what was sent to whom. We keep the email itself for 90 days after sending and the record of having sent it after that.
 
 We process account data to operate your account and deliver the service, so the legal basis is our contract with you. We keep it for as long as your account exists. You can delete your account in the dashboard. After deletion, public packages you published stay public, your username stays reserved so nobody else can take it over, and audit log entries and billing records aren't deleted with the account.
 
