@@ -533,6 +533,12 @@ defmodule HexpmWeb.Router do
     get "/ServiceProviderConfig", DiscoveryController, :service_provider_config
     get "/ResourceTypes", DiscoveryController, :resource_types
     get "/Schemas", DiscoveryController, :schemas
+    get "/Users", UserController, :index
+    post "/Users", UserController, :create
+    get "/Users/:id", UserController, :show
+    put "/Users/:id", UserController, :update
+    patch "/Users/:id", UserController, :patch
+    delete "/Users/:id", UserController, :delete
     match :*, "/*path", DiscoveryController, :not_found
   end
 
