@@ -63,18 +63,22 @@ defmodule HexpmWeb.EmailView do
       |> Enum.reject(&(&1 == ""))
     end
 
-    # Bare URLs written in a plain text body become links in the HTML part.
-    # The text is escaped before the anchors go in, so the replacement only
-    # ever wraps markup that is already safe, and a URL ending a sentence
-    # keeps its punctuation outside the link.
-    def autolink(text) do
+    # A plain text paragraph rendered for the HTML part: bare URLs become
+    # links and single newlines become line breaks. The text is escaped
+    # before the markup goes in, so the replacements only ever wrap markup
+    # that is already safe, and a URL ending a sentence keeps its punctuation
+    # outside the link.
+    def html_paragraph(text) do
       text
       |> html_escape()
       |> safe_to_string()
-      |> String.replace(@url_regex, fn match ->
-        {url, trailing} = split_trailing_punctuation(match)
-        ~s(<a href="#{url}" style="#{@link_style}">#{url}</a>) <> trailing
-      end)
+      |> String.replace(@url_regex, &autolink/1)
+      |> String.replace("\n", "<br>\n")
+    end
+
+    defp autolink(url) do
+      {url, trailing} = split_trailing_punctuation(url)
+      ~s(<a href="#{url}" style="#{@link_style}">#{url}</a>) <> trailing
     end
 
     defp split_trailing_punctuation(url) do
@@ -149,7 +153,7 @@ defmodule HexpmWeb.EmailView do
 
   defmodule Announcement do
     defdelegate paragraphs(body), to: Common
-    defdelegate autolink(text), to: Common
+    defdelegate html_paragraph(text), to: Common
 
     def title("Hex.pm - " <> title), do: title
     def title(subject), do: subject

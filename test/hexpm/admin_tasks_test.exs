@@ -1171,6 +1171,27 @@ defmodule Hexpm.AdminTasksTest do
         assert email.text_body =~ "Read https://hex.pm/policies/termsofservice."
       end)
     end
+
+    test "keeps single newlines as line breaks in the html email" do
+      assert {:ok, 1} =
+               AdminTasks.send_email(
+                 ["bob@example.com"],
+                 "Subject",
+                 "Read them here:\n\nhttps://hex.pm/policies/termsofservice\nhttps://hex.pm/policies/privacy"
+               )
+
+      deliver_queued_emails()
+
+      assert_email_sent(fn email ->
+        assert email.html_body =~
+                 ~r{termsofservice</a><br>\s*<a href="https://hex.pm/policies/privacy"}
+
+        assert email.html_body =~ ~r{Read them here:\s*</p>}
+
+        assert email.text_body =~
+                 "https://hex.pm/policies/termsofservice\nhttps://hex.pm/policies/privacy"
+      end)
+    end
   end
 
   defp deliver_queued_emails() do
