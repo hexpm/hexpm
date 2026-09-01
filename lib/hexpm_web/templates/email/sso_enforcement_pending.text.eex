@@ -1,0 +1,11 @@
+Single Sign-On Is Becoming Required
+
+<%= SSOEnforcementPending.intro(@organization, @required_at) %>
+
+<%= SSOEnforcementPending.not_linked() %>
+
+<%= @login_url %>
+
+<%= SSOEnforcementPending.account_notice() %>
+
+<%= SSOEnforcementPending.cli_notice() %>

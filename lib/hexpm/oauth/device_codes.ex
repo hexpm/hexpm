@@ -271,6 +271,15 @@ defmodule Hexpm.OAuth.DeviceCodes do
             audit: audit_data
           )
         end)
+        |> Ecto.Multi.run(:organization_sso_sessions, fn _repo, %{session: session} ->
+          # Before the token, because minting its scopes reads them.
+          {:ok,
+           Hexpm.Accounts.SSO.grant_org_sessions!(
+             Keyword.get(opts, :browser_session_id),
+             session.id,
+             user.id
+           )}
+        end)
         |> Ecto.Multi.run(:token, fn _repo, %{session: session} ->
           changeset =
             Tokens.create_for_user(
@@ -339,7 +348,8 @@ defmodule Hexpm.OAuth.DeviceCodes do
   # code row so concurrent polls serialize and cannot each mint a fresh token,
   # which would leave multiple live tokens for the same device code. The JWT is
   # signed before the transaction so the connection and row lock are not held
-  # during the CPU-intensive signing.
+  # during the CPU-intensive signing. Tokens are written before the session's
+  # last use, the order the refresh grant and session revocation take them in.
   defp rotate_device_token(device_code_record, usage_info) do
     case get_device_token(device_code_record) do
       nil ->
@@ -350,22 +360,29 @@ defmodule Hexpm.OAuth.DeviceCodes do
 
         Repo.transaction(fn ->
           lock_device_code(device_code_record)
-          update_session_last_use(old_token, usage_info)
           revoke_live_device_tokens(device_code_record)
 
-          case Repo.insert(new_token_changeset) do
-            {:ok, new_token} -> new_token
-            {:error, changeset} -> Repo.rollback(changeset)
-          end
+          new_token =
+            case Repo.insert(new_token_changeset) do
+              {:ok, new_token} -> new_token
+              {:error, changeset} -> Repo.rollback(changeset)
+            end
+
+          update_session_last_use(old_token, usage_info)
+          new_token
         end)
     end
   end
 
+  # From the granted scopes rather than the expanded ones, so "repositories"
+  # is re-expanded against current membership and organization access the same
+  # way the refresh grant does it. Rotating the expansion instead would freeze
+  # whatever the approving browser happened to hold.
   defp rotation_changeset(old_token) do
     Tokens.create_for_user(
       old_token.user,
       old_token.client_id,
-      old_token.scopes,
+      old_token.granted_scopes,
       "urn:ietf:params:oauth:grant-type:device_code",
       old_token.grant_reference,
       expires_in: DateTime.diff(old_token.expires_at, DateTime.utc_now()),

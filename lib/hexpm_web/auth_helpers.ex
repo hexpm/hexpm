@@ -3,6 +3,7 @@ defmodule HexpmWeb.AuthHelpers do
   import HexpmWeb.ControllerHelpers, only: [render_error: 3]
 
   alias Hexpm.Accounts.{Auth, Organization, Organizations, User, TFA}
+  alias Hexpm.Accounts.SSO.Enforcement
   alias Hexpm.Permissions
   alias Hexpm.Repository.{Package, Packages, PackageOwner, Repository}
   alias Hexpm.OAuth.Token
@@ -289,7 +290,31 @@ defmodule HexpmWeb.AuthHelpers do
   def package_owner(conn, user_or_organization, opts \\ [])
 
   def package_owner(%Plug.Conn{} = conn, user_or_organization, opts) do
-    package_owner(conn.assigns.repository, conn.assigns.package, user_or_organization, opts)
+    repository = conn.assigns.repository
+    package = conn.assigns.package
+
+    with :ok <- package_owner(repository, package, user_or_organization, opts) do
+      package_sso_enforced(conn, package, user_or_organization, opts)
+    end
+  end
+
+  @doc """
+  Refuses a governed member acting on a package, resolved against the
+  organizations that own it rather than the repository it lives in.
+  """
+  def package_sso_enforced(conn, package, user_or_organization, opts \\ []) do
+    level = opts[:owner_level] || "maintainer"
+
+    case HexpmWeb.SSOEnforcement.check_package(conn, package, user_or_organization, level) do
+      :ok ->
+        :ok
+
+      {:error, refusal, organization} ->
+        message =
+          Enforcement.refusal_message(refusal, organization, conn.assigns[:auth_credential])
+
+        {:error, :auth, message}
+    end
   end
 
   def package_owner(
@@ -360,7 +385,9 @@ defmodule HexpmWeb.AuthHelpers do
   def organization_access(conn, user_or_organization, opts \\ [])
 
   def organization_access(%Plug.Conn{} = conn, user_or_organization, opts) do
-    organization_access(conn.assigns.organization, user_or_organization, opts)
+    with :ok <- organization_access(conn.assigns.organization, user_or_organization, opts) do
+      sso_enforced(conn, user_or_organization)
+    end
   end
 
   def organization_access(%Organization{id: 1}, _user_or_organization, opts) do
@@ -386,6 +413,32 @@ defmodule HexpmWeb.AuthHelpers do
 
       true ->
         {:error, :not_found}
+    end
+  end
+
+  @doc """
+  Refuses a member who is governed by their organization's SSO and has no
+  current organization access session, and a personal API key reaching an
+  organization that does not accept one.
+
+  Runs after the access checks above so an organization the caller is not a
+  member of stays indistinguishable from one that does not exist. Someone who is
+  a member already knows it, so the reason is named.
+  """
+  def sso_enforced(%Plug.Conn{} = conn, user_or_organization) do
+    sso_enforced(conn, conn.assigns[:organization], user_or_organization)
+  end
+
+  def sso_enforced(%Plug.Conn{} = conn, organization, user_or_organization) do
+    case HexpmWeb.SSOEnforcement.check(conn, organization, user_or_organization) do
+      :ok ->
+        :ok
+
+      {:error, refusal} ->
+        message =
+          Enforcement.refusal_message(refusal, organization, conn.assigns[:auth_credential])
+
+        {:error, :auth, message}
     end
   end
 

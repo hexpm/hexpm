@@ -5,6 +5,27 @@ defmodule HexpmWeb.OAuthController do
   alias Hexpm.Accounts.User
   alias Hexpm.Permissions
 
+  # The same bar device approval and the re-authorization page set, for the same
+  # reason: approving hands the client's session a copy of the organization
+  # access this browser is carrying, and a stolen cookie is otherwise enough. It
+  # only applies when there is access to copy, so signing in to a client that
+  # reaches no governed organization is unaffected.
+  plug :require_sudo_to_grant_organization_access
+
+  defp require_sudo_to_grant_organization_access(conn, _opts) do
+    if grants_organization_access?(conn) do
+      HexpmWeb.Plugs.Sudo.call(conn, [])
+    else
+      conn
+    end
+  end
+
+  defp grants_organization_access?(%{assigns: %{current_user: %User{} = user}} = conn) do
+    HexpmWeb.SSOEnforcement.granted_organizations(conn, user) != []
+  end
+
+  defp grants_organization_access?(_conn), do: false
+
   @doc """
   Standard OAuth 2.0 authorization endpoint.
   Initiates the authorization code flow.
@@ -37,7 +58,14 @@ defmodule HexpmWeb.OAuthController do
           scopes: scopes,
           state: params["state"],
           code_challenge: params["code_challenge"],
-          code_challenge_method: params["code_challenge_method"]
+          code_challenge_method: params["code_challenge_method"],
+          sso_pending:
+            HexpmWeb.SSOEnforcement.unauthenticated_organizations(
+              conn,
+              conn.assigns.current_user,
+              scopes
+            ),
+          sso_return_path: current_path(conn)
         })
       else
         redirect(conn, to: ~p"/login?return=#{current_path(conn)}")
@@ -95,7 +123,8 @@ defmodule HexpmWeb.OAuthController do
              redirect_uri,
              selected_scopes,
              code_challenge: params["code_challenge"],
-             code_challenge_method: params["code_challenge_method"]
+             code_challenge_method: params["code_challenge_method"],
+             user_session_id: conn.assigns.current_session && conn.assigns.current_session.id
            ) do
         {:ok, auth_code} ->
           success_params = %{

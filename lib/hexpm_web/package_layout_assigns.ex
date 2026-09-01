@@ -16,11 +16,14 @@ defmodule HexpmWeb.PackageLayoutAssigns do
   and every tab gets it.
   """
 
-  alias Hexpm.Accounts.Users
   alias Hexpm.Repository.{Downloads, Owners, Packages, Release, Releases}
 
   @doc """
   Builds the layout assigns for `package`.
+
+  Takes the connection or the LiveView socket rather than the user, because the
+  dependant count is filtered by SSO enforcement and that reads the session as
+  well as the account.
 
   Options:
 
@@ -36,8 +39,8 @@ defmodule HexpmWeb.PackageLayoutAssigns do
     * `:dependants_count?` — load the dependant count used in the tab label;
       defaults to `true`
   """
-  def for_package(conn_or_user, package, opts \\ []) do
-    current_user = current_user(conn_or_user)
+  def for_package(conn_or_socket, package, opts \\ []) do
+    current_user = conn_or_socket.assigns.current_user
     releases = opts[:releases] || Releases.all(package)
     current_release = resolve_current_release(opts[:current_release], releases)
     graph_release = opts[:graph_release]
@@ -51,11 +54,11 @@ defmodule HexpmWeb.PackageLayoutAssigns do
         true -> []
       end
 
+    # The count is an aggregate over private packages, so it follows the same
+    # enforcement filter the dependants list does.
     repositories =
       if dependants_count? do
-        current_user
-        |> Users.all_organizations()
-        |> Enum.map(& &1.repository)
+        HexpmWeb.SSOEnforcement.reachable_repositories(conn_or_socket)
       end
 
     docs_html_url =
@@ -92,9 +95,6 @@ defmodule HexpmWeb.PackageLayoutAssigns do
 
     [{:package_layout, Map.new(layout)} | layout]
   end
-
-  defp current_user(%Plug.Conn{} = conn), do: conn.assigns.current_user
-  defp current_user(user), do: user
 
   # The layout shows a security banner for the release on screen, so that one
   # release needs its vulnerable? flag and none of the others do.

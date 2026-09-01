@@ -31,6 +31,7 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
     Hexpm.Accounts.PasswordReset => ~w(key),
     Hexpm.Accounts.AccountDeletionRequest => ~w(key),
     Hexpm.Accounts.SSO.Transaction => ~w(state_hash nonce code_verifier link_token_hash),
+    Hexpm.Accounts.SSO.Authorization => ~w(code_hash),
     Hexpm.Accounts.SSO.OrgSession => [],
     Hexpm.Accounts.OrganizationInvitation => ~w(token_hash),
     Hexpm.Accounts.Key => ~w(secret_first secret_second)
@@ -61,6 +62,7 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
       purge_password_resets(repo, batch_size, run)
       purge_account_deletion_requests(repo, batch_size, run)
       purge_sso_transactions(repo, batch_size, run)
+      purge_sso_authorizations(repo, batch_size, run)
       purge_sso_sessions(repo, batch_size, run)
       purge_organization_invitations(repo, batch_size, run)
       purge_keys(repo, batch_size, run)
@@ -186,6 +188,22 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
       )
 
     Logger.info("[task] Purged #{count} expired organization SSO transactions")
+  end
+
+  defp purge_sso_authorizations(repo, batch_size, run) do
+    count =
+      archive_and_delete(
+        repo,
+        Hexpm.Accounts.SSO.Authorization,
+        from(authorization in Hexpm.Accounts.SSO.Authorization,
+          where: authorization.expires_at < fragment("NOW()"),
+          order_by: authorization.expires_at
+        ),
+        batch_size,
+        run
+      )
+
+    Logger.info("[task] Purged #{count} expired organization SSO authorizations")
   end
 
   # One predicate rather than `expires_at < NOW() OR revoked_at IS NOT NULL`,

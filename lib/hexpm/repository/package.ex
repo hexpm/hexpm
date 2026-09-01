@@ -122,6 +122,24 @@ defmodule Hexpm.Repository.Package do
     )
   end
 
+  def owner_organizations(package, user, level \\ "maintainer") do
+    role = PackageOwner.level_to_organization_role(level)
+    roles = Organization.role_or_higher(role)
+
+    from(
+      po in PackageOwner,
+      join: u in assoc(po, :user),
+      join: organization in assoc(u, :organization),
+      join: ou in OrganizationUser,
+      on: ou.organization_id == organization.id,
+      where: po.package_id == ^package.id,
+      where: ou.user_id == ^user.id,
+      where: ou.role in ^roles,
+      distinct: true,
+      select: organization
+    )
+  end
+
   def all(repositories, page, count, search, sort, fields) do
     if view = download_view(sort) do
       # Ordering by downloads cannot use an index, since the key lives in the

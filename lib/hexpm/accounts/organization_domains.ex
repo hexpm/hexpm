@@ -100,6 +100,11 @@ defmodule Hexpm.Accounts.OrganizationDomains do
   Looks for the domain's TXT record and records what it found. Returns
   `{:ok, domain}` when the record is there and `{:error, :record_not_found}`
   when it is not, in both cases having stamped `last_checked_at`.
+
+  A verified domain is what just-in-time membership admits people on, so the
+  administrator's role is taken again under a lock before the verification
+  lands: the provider lookup takes as long as it takes, and a demotion during it
+  has to stop the write.
   """
   def verify(organization, domain, audit: audit_data) do
     now = DateTime.utc_now()
@@ -107,11 +112,15 @@ defmodule Hexpm.Accounts.OrganizationDomains do
     case published?(domain) do
       {:ok, true} ->
         Multi.new()
+        |> Multi.run(:admin, fn _repo, _changes ->
+          require_locked_admin(organization, audit_data.user)
+        end)
         |> Multi.update(:domain, OrganizationDomain.verified_changeset(domain, now))
         |> audit(audit_data, "organization.domain.verify", {organization, domain})
         |> Repo.transaction()
         |> case do
           {:ok, %{domain: domain}} -> {:ok, domain}
+          {:error, :admin, reason, _changes} -> {:error, reason}
           {:error, :domain, changeset, _changes} -> {:error, changeset}
         end
 
@@ -121,6 +130,23 @@ defmodule Hexpm.Accounts.OrganizationDomains do
 
       :error ->
         {:error, :lookup_failed}
+    end
+  end
+
+  defp require_locked_admin(organization, user) do
+    member =
+      user &&
+        Repo.one(
+          from(member in OrganizationUser,
+            where: member.organization_id == ^organization.id,
+            where: member.user_id == ^user.id,
+            lock: "FOR UPDATE"
+          )
+        )
+
+    case member do
+      %OrganizationUser{role: "admin"} = member -> {:ok, member}
+      _other -> {:error, :admin_required}
     end
   end
 

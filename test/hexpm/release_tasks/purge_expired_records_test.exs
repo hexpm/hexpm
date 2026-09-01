@@ -452,6 +452,33 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
     end
   end
 
+  describe "purge organization SSO authorizations" do
+    test "deletes expired verification codes and retains live ones" do
+      user = insert(:user)
+
+      {:ok, session, _token} =
+        Hexpm.UserSessions.create_browser_session(user, audit: audit_data(user))
+
+      expired = insert_authorization(user, session, days_ago(1))
+      live = insert_authorization(user, session, hours_from_now(1))
+
+      PurgeExpiredRecords.run()
+
+      refute Repo.get(Hexpm.Accounts.SSO.Authorization, expired.id)
+      assert Repo.get(Hexpm.Accounts.SSO.Authorization, live.id)
+    end
+  end
+
+  defp insert_authorization(user, session, expires_at) do
+    Repo.insert!(%Hexpm.Accounts.SSO.Authorization{
+      code_hash: :crypto.strong_rand_bytes(32),
+      user_id: user.id,
+      user_session_id: session.id,
+      organization_ids: [],
+      expires_at: expires_at
+    })
+  end
+
   describe "purge organization SSO sessions" do
     test "deletes lapsed organization access sessions" do
       organization = insert(:organization)

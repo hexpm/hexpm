@@ -579,7 +579,7 @@ defmodule Hexpm.Accounts.SSOTest do
     test "an unlinked subject hands a member to the link consent step", context do
       transaction = start_transaction(context, context.member)
 
-      assert {:ok, {:link, transaction_id, link_token, _return_path}} =
+      assert {:ok, {:link, transaction_id, link_token}} =
                complete(transaction, valid_claims(), context.member)
 
       assert transaction_id == transaction.id
@@ -1143,9 +1143,7 @@ defmodule Hexpm.Accounts.SSOTest do
     end
 
     test "an organization access session dies when the parent is revoked in bulk", context do
-      # revoke_all/2 does a raw update_all on user_sessions and never touches
-      # organization_sso_sessions, so the parent check in current_org_session/2
-      # is the only thing enforcing this. Password reset uses this path.
+      # The path a password reset takes.
       link_identity(context, context.member)
       user_session = browser_session(context.member)
 
@@ -1156,12 +1154,88 @@ defmodule Hexpm.Accounts.SSOTest do
 
       assert SSO.current_org_session(user_session.id, context.organization.id)
 
-      {sessions, tokens} = Hexpm.UserSessions.revoke_all(context.member)
+      {sessions, tokens, org_sessions} = Hexpm.UserSessions.revoke_all(context.member)
       Repo.update_all(sessions, [])
       Repo.update_all(tokens, [])
+      Repo.update_all(org_sessions, [])
 
       refute SSO.current_org_session(user_session.id, context.organization.id)
-      assert Repo.get!(SSO.OrgSession, org_session.id).revoked_at == nil
+      assert Repo.get!(SSO.OrgSession, org_session.id).revoked_at
+    end
+
+    test "a password reset takes the organization access with it", context do
+      link_identity(context, context.member)
+      user_session = browser_session(context.member)
+
+      assert {:ok, {:login, _user, org_session, _return}} =
+               context
+               |> start_transaction(context.member)
+               |> complete(valid_claims(), context.member, user_session.id)
+
+      :ok = Users.password_reset_init(context.member.username, audit: audit_data(context.member))
+      [reset] = Users.get_by_id(context.member.id, [:emails, :password_resets]).password_resets
+
+      :ok =
+        Users.password_reset_finish(
+          context.member.username,
+          reset.key,
+          %{
+            "username" => context.member.username,
+            "password" => "new_password_123",
+            "password_confirmation" => "new_password_123"
+          },
+          false,
+          audit: audit_data(context.member)
+        )
+
+      assert Repo.get!(SSO.OrgSession, org_session.id).revoked_at
+      refute SSO.current_org_session(user_session.id, context.organization.id)
+    end
+
+    test "evicting a session takes its organization access with it", context do
+      link_identity(context, context.member)
+      user_session = browser_session(context.member)
+
+      assert {:ok, {:login, _user, org_session, _return}} =
+               context
+               |> start_transaction(context.member)
+               |> complete(valid_claims(), context.member, user_session.id)
+
+      # The least recently used session is the one the limit evicts, and it is
+      # the one carrying the organization access.
+      Repo.update_all(
+        from(session in Hexpm.UserSession, where: session.id == ^user_session.id),
+        set: [inserted_at: DateTime.add(DateTime.utc_now(), -3600, :second)]
+      )
+
+      for _index <- 1..Hexpm.UserSessions.max_user_sessions(), do: browser_session(context.member)
+
+      assert Repo.get!(Hexpm.UserSession, user_session.id).revoked_at
+      assert Repo.get!(SSO.OrgSession, org_session.id).revoked_at
+      refute SSO.current_org_session(user_session.id, context.organization.id)
+    end
+
+    test "a revoked session hands on no organization access", context do
+      link_identity(context, context.member)
+      user_session = browser_session(context.member)
+
+      assert {:ok, {:login, _user, _org_session, _return}} =
+               context
+               |> start_transaction(context.member)
+               |> complete(valid_claims(), context.member, user_session.id)
+
+      target = browser_session(context.member)
+
+      Repo.update_all(
+        from(session in Hexpm.UserSession, where: session.id == ^user_session.id),
+        set: [revoked_at: DateTime.utc_now()]
+      )
+
+      # An authorization code minted before the revocation still redeems inside
+      # its ten minutes, and the session it mints must not inherit access from a
+      # session that has been revoked since.
+      assert SSO.grant_org_sessions!(user_session.id, target.id, context.member.id) == []
+      refute SSO.current_org_session(target.id, context.organization.id)
     end
 
     test "an organization access session dies when the parent expires", context do
@@ -1451,7 +1525,7 @@ defmodule Hexpm.Accounts.SSOTest do
   defp pending_link(context, user) do
     transaction = start_transaction(context, user)
 
-    assert {:ok, {:link, transaction_id, link_token, _return_path}} =
+    assert {:ok, {:link, transaction_id, link_token}} =
              complete(transaction, valid_claims(), user)
 
     {transaction_id, link_token}
@@ -1472,21 +1546,39 @@ defmodule Hexpm.Accounts.SSOTest do
   defp sso_group_key(connection, user), do: "sso:#{connection.id}:#{user.id}"
 
   describe "return paths" do
-    test "allows only the selected organization dashboard", context do
+    test "allows any path on this site", context do
       base = "/dashboard/orgs/#{context.organization.name}"
 
-      assert SSO.allowed_return_path(context.organization, base) == base
+      for path <- [
+            base,
+            base <> "/packages?sort=name",
+            "/packages/#{context.organization.name}/ecto",
+            "/packages/#{context.organization.name}/ecto/1.0.0/files",
+            "/diff/#{context.organization.name}/ecto/1.0.0..2.0.0",
+            "/preview/#{context.organization.name}/ecto/1.0.0?path=mix.exs",
+            "/oauth/authorize?client_id=abc&state=xyz",
+            "/dashboard/profile"
+          ] do
+        assert SSO.allowed_return_path(path) == path
+      end
+    end
 
-      assert SSO.allowed_return_path(context.organization, base <> "/packages?sort=name") ==
-               base <> "/packages?sort=name"
-
-      assert SSO.allowed_return_path(context.organization, "/dashboard/profile") == nil
-      assert SSO.allowed_return_path(context.organization, "//evil.example") == nil
-      assert SSO.allowed_return_path(context.organization, "/\\evil.example") == nil
-      assert SSO.allowed_return_path(context.organization, base <> "-attacker") == nil
-      assert SSO.allowed_return_path(context.organization, base <> "/../other") == nil
-      assert SSO.allowed_return_path(context.organization, base <> "/%2e%2e/other") == nil
-      assert SSO.allowed_return_path(context.organization, base <> "/%5cevil") == nil
+    test "allows nothing that could leave it" do
+      for path <- [
+            "https://evil.example/packages",
+            "//evil.example",
+            "/\\evil.example",
+            "/%2f%2fevil.example",
+            "/packages/../../evil",
+            "/packages/%2e%2e/evil",
+            "/packages/%5cevil",
+            "/diff/foo\r\nSet-Cookie:%20a=b",
+            "/packages/foo#fragment",
+            "packages/foo",
+            ""
+          ] do
+        assert SSO.allowed_return_path(path) == nil
+      end
     end
   end
 
@@ -1539,7 +1631,7 @@ defmodule Hexpm.Accounts.SSOTest do
           | subject: provider_subject
         }
 
-        assert {:ok, {:link, _transaction_id, link_token, _return_path}} =
+        assert {:ok, {:link, _transaction_id, link_token}} =
                  SSO.complete_callback(
                    transaction,
                    claims,
@@ -1608,6 +1700,69 @@ defmodule Hexpm.Accounts.SSOTest do
 
       assert [%{code: "not_member", user: %{username: username}}] = SSO.failures(connection)
       assert username == member.username
+    end
+  end
+
+  describe "request_authorization/3" do
+    setup context do
+      configured_and_tested_connection(context)
+
+      assert {:ok, _connection} =
+               SSO.enable(context.organization, audit: audit_data(context.admin))
+
+      member = insert(:user)
+      insert(:organization_user, organization: context.organization, user: member)
+      connection = SSO.get_connection(context.organization)
+
+      insert(:organization_sso_identity,
+        connection: connection,
+        organization: context.organization,
+        user: context.admin
+      )
+
+      assert {:ok, connection} =
+               SSO.configure_enforcement(
+                 context.organization,
+                 %{"enforcement_mode" => "required"},
+                 audit: audit_data(context.admin)
+               )
+
+      Map.merge(context, %{connection: connection, member: member})
+    end
+
+    test "covers the organizations that are still governed", context do
+      session = browser_session(context.member)
+
+      assert {:ok, authorization} =
+               SSO.request_authorization(context.member, session.id, [context.organization.name])
+
+      assert authorization.organization_ids == [context.organization.id]
+    end
+
+    test "skips a name that is no longer governed and keeps the rest", context do
+      exempted = insert(:organization)
+      insert(:organization_user, organization: exempted, user: context.member)
+      session = browser_session(context.member)
+
+      # The client posts the list it last heard about, which is as old as its
+      # access token, so one name that has since stopped being governed cannot
+      # cost the others their re-authorization.
+      assert {:ok, authorization} =
+               SSO.request_authorization(context.member, session.id, [
+                 context.organization.name,
+                 exempted.name
+               ])
+
+      assert authorization.organization_ids == [context.organization.id]
+    end
+
+    test "refuses when nothing named is governed", context do
+      session = browser_session(context.member)
+
+      assert {:error, :not_governed} =
+               SSO.request_authorization(context.member, session.id, ["no-such-organization"])
+
+      refute Repo.exists?(SSO.Authorization)
     end
   end
 

@@ -24,9 +24,17 @@ defmodule HexpmWeb.API.OAuthView do
       scope: Enum.join(token.scopes, " ")
     }
 
-    if token.refresh_token,
-      do: Map.put(response, :refresh_token, token.refresh_token),
-      else: response
+    response =
+      if token.refresh_token,
+        do: Map.put(response, :refresh_token, token.refresh_token),
+        else: response
+
+    # Additive, so a client that has never heard of it ignores it and sees only
+    # a scope it no longer has.
+    case token.sso_reauth_required do
+      [] -> response
+      organizations -> Map.put(response, :sso_reauth_required, organizations)
+    end
   end
 
   def render("error." <> _, %{error_type: error_type, description: description}) do

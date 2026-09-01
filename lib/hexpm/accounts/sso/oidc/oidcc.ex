@@ -1,7 +1,7 @@
 defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
   @behaviour Hexpm.Accounts.SSO.OIDC
 
-  alias Hexpm.Accounts.SSO.{Connection, Error, SafeURL, Transaction}
+  alias Hexpm.Accounts.SSO.{Connection, Error, OIDC, SafeURL, Transaction}
   alias Hexpm.Accounts.SSO.OIDC.{HTTPAdapter, Issuer}
 
   @allowed_signing_algorithms ~w(RS256 RS384 RS512 PS256 PS384 PS512 ES256 ES384 ES512 EdDSA)
@@ -28,7 +28,7 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
            jwks_document: jwks_document,
            discovery_expires_at: discovery_expires_at,
            jwks_expires_at: jwks_expires_at,
-           metadata_expires_at: earliest(discovery_expires_at, jwks_expires_at)
+           metadata_expires_at: OIDC.metadata_expires_at(discovery_expires_at, jwks_expires_at)
          }}
       end
     end)
@@ -277,8 +277,8 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
 
     cond do
       claims["iss"] != connection.issuer -> error(:claims, :issuer_mismatch)
-      not valid_subject?(claims["sub"]) -> error(:claims, :subject_invalid)
-      not valid_provider_email?(claims["email"]) -> error(:claims, :provider_email_invalid)
+      not OIDC.valid_subject?(claims["sub"]) -> error(:claims, :subject_invalid)
+      not OIDC.valid_provider_email?(claims["email"]) -> error(:claims, :provider_email_invalid)
       not is_integer(issued_at) -> error(:claims, :issued_at_invalid)
       issued_at > now + @clock_skew_seconds -> error(:claims, :issued_at_in_future)
       true -> :ok
@@ -467,27 +467,8 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
     end
   end
 
-  defp earliest(left, right) do
-    if DateTime.compare(left, right) == :gt, do: right, else: left
-  end
-
   defp optional_binary(value) when is_binary(value), do: value
   defp optional_binary(_value), do: nil
-
-  defp valid_subject?(subject) when is_binary(subject) do
-    subject != "" and byte_size(subject) <= 255 and
-      subject |> :binary.bin_to_list() |> Enum.all?(&(&1 <= 127))
-  end
-
-  defp valid_subject?(_subject), do: false
-
-  defp valid_provider_email?(nil), do: true
-
-  defp valid_provider_email?(email) when is_binary(email) do
-    byte_size(email) <= 320 and String.valid?(email)
-  end
-
-  defp valid_provider_email?(_email), do: false
 
   defp error(stage, code), do: {:error, %Error{stage: stage, code: code}}
 end

@@ -14,7 +14,7 @@ defmodule HexpmWeb.API.RepositoryController do
   def index(conn, _params) do
     repositories =
       (Repositories.all_public() ++
-         all_by_user(conn.assigns.current_user) ++
+         all_by_user(conn) ++
          all_by_organization(conn.assigns.current_organization))
       |> Enum.sort_by(fn repository ->
         if repository.id == 1, do: {0, nil}, else: {1, repository.name}
@@ -37,12 +37,16 @@ defmodule HexpmWeb.API.RepositoryController do
     end)
   end
 
-  defp all_by_user(nil) do
-    []
-  end
+  defp all_by_user(conn) do
+    case conn.assigns.current_user do
+      nil ->
+        []
 
-  defp all_by_user(user) do
-    Enum.map(Organizations.all_by_user(user, [:repository]), & &1.repository)
+      user ->
+        conn
+        |> HexpmWeb.SSOEnforcement.reachable(Organizations.all_by_user(user, [:repository]))
+        |> Enum.map(& &1.repository)
+    end
   end
 
   defp all_by_organization(nil), do: []

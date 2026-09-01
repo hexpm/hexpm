@@ -150,6 +150,16 @@ defmodule Hexpm.Accounts.UserTest do
     end
   end
 
+  describe "verify_permissions/3" do
+    test "refuses a package resource that names no package", %{user: user} do
+      # The resource comes off the query string of /api/auth, so anything at all
+      # can arrive here.
+      for name <- ["decimal", "", "hexpm/decimal/1.0.0"] do
+        assert User.verify_permissions(user, "package", name) == :error
+      end
+    end
+  end
+
   describe "update_profile/2" do
     test "changes name", %{user: user} do
       changeset = User.update_profile(user, %{full_name: "Jane", username: "ignore_this"})

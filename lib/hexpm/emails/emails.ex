@@ -252,6 +252,45 @@ defmodule Hexpm.Emails do
   defp sso_seats_subject("expansion_failed", organization),
     do: "#{organization} could not add a seat"
 
+  def sso_enforcement_pending(organization, required_at, login_url, recipients) do
+    base_email()
+    |> email_to(recipients)
+    |> subject("Hex.pm - #{organization} will require single sign-on")
+    |> assign(:organization, organization)
+    |> assign(:required_at, required_at)
+    |> assign(:login_url, login_url)
+    |> render_body(:sso_enforcement_pending)
+  end
+
+  def sso_key_revoked(organization, revoked, trimmed, recipients) do
+    base_email()
+    |> email_to(recipients)
+    |> subject("Hex.pm - #{organization} access removed from an API key")
+    |> assign(:organization, organization)
+    |> assign(:revoked, revoked)
+    |> assign(:trimmed, trimmed)
+    |> render_body(:sso_key_revoked)
+  end
+
+  def sso_key_blocked(organization, blocked, recipients) do
+    base_email()
+    |> email_to(recipients)
+    |> subject("Hex.pm - #{organization} does not accept personal API keys")
+    |> assign(:organization, organization)
+    |> assign(:blocked, blocked)
+    |> render_body(:sso_key_blocked)
+  end
+
+  def sso_break_glass(organization, username, screen, recipients) do
+    base_email()
+    |> email_to(recipients)
+    |> subject("Hex.pm - #{organization} reached without single sign-on")
+    |> assign(:organization, organization)
+    |> assign(:username, username)
+    |> assign(:screen, screen)
+    |> render_body(:sso_break_glass)
+  end
+
   def sso_email_mismatch(organization, username, recipients, provider_email) do
     base_email()
     |> email_to(recipients)

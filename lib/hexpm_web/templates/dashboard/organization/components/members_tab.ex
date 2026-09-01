@@ -23,6 +23,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
   attr :invite_changeset, :any, default: nil
   attr :organization, :map, required: true
   attr :quantity, :integer, default: nil
+  attr :sso_mode, :atom, default: :optional
+  attr :sso_requires_sso?, :boolean, default: false
 
   def members_tab(assigns) do
     ~H"""
@@ -117,7 +119,25 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                     />
                   </.sudo_form>
 
-                  <%!-- Remove (hidden for self) --%>
+                  <.sudo_form
+                    :if={@sso_mode != :optional}
+                    current_user={@current_user}
+                    action={~p"/dashboard/orgs/#{@organization}/sso/enforcement/member"}
+                    id={"sso-enforcement-form-#{org_user.user.id}"}
+                    phx-hook="AutoSubmit"
+                  >
+                    <input type="hidden" name="user_id" value={org_user.user.id} />
+                    <.select_input
+                      id={"sso-enforcement-#{org_user.user.id}"}
+                      name="sso_enforcement"
+                      value={org_user.sso_enforcement}
+                      options={sso_enforcement_options(@sso_mode, @sso_requires_sso?)}
+                      variant="light"
+                      class="w-40 h-9 text-sm"
+                    />
+                  </.sudo_form>
+
+                  <%!-- Remove (hidden for self, its footprint kept so rows align) --%>
                   <%= if org_user.user.id != @current_user.id do %>
                     <.icon_button
                       icon="x-mark"
@@ -125,6 +145,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                       aria-label="Remove member"
                       phx-click={show_modal("remove-member-#{org_user.user.id}")}
                     />
+                  <% else %>
+                    <span class="w-8 h-8" aria-hidden="true"></span>
                   <% end %>
                 <% else %>
                   <span class={[
@@ -137,6 +159,35 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
               </div>
             </li>
           <% end %>
+        </ul>
+      </div>
+
+      <%!-- Exemptions. A required organization's exemption list is the set of
+      accounts reaching private packages on a Hexpm password alone, so it is
+      presented as the compliance surface it is rather than as a settings row. --%>
+      <div
+        :if={admin?(@current_user, @organization) and (@sso_mode == :required or @sso_requires_sso?)}
+        class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden"
+      >
+        <% exempt = exempt_members(@organization) %>
+        <div class="px-6 py-5 border-b border-grey-200 dark:border-grey-700">
+          <h2 class="text-grey-900 dark:text-white text-lg font-semibold">
+            Exempt from SSO ({length(exempt)})
+          </h2>
+          <p class="text-grey-500 dark:text-grey-300 text-sm mt-1">
+            {exemption_summary(exempt)}
+          </p>
+        </div>
+
+        <ul :if={exempt != []} class="divide-y divide-grey-100 dark:divide-grey-700">
+          <li :for={org_user <- exempt} class="px-6 py-4">
+            <p class="text-sm font-medium text-grey-900 dark:text-white">
+              {org_user.user.username}
+            </p>
+            <p class="text-xs text-grey-500 dark:text-grey-300">
+              {String.capitalize(org_user.role)} access without authenticating through your provider
+            </p>
+          </li>
         </ul>
       </div>
 
@@ -329,7 +380,41 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
   defp member_label(1), do: "member"
   defp member_label(_), do: "members"
 
+  defp reach_label(1), do: "reaches"
+  defp reach_label(_), do: "reach"
+
   defp role_badge_class("admin"), do: "bg-purple-100 text-purple-700"
   defp role_badge_class("write"), do: "bg-blue-100 text-blue-700"
   defp role_badge_class(_), do: "bg-grey-100 text-grey-600"
+
+  # During a grace period the mode in force is pilot but the unset state means
+  # enforced on the date, so labelling it "Not enforced" would be wrong for
+  # everyone it is about to cover.
+  defp sso_enforcement_options(:required, _requires_sso?) do
+    [{"Follows required", ""}, {"Enforced", "enforced"}, {"Exempt", "exempt"}]
+  end
+
+  defp sso_enforcement_options(_mode, true) do
+    [{"Enforced on the date", ""}, {"Enforced now", "enforced"}, {"Exempt", "exempt"}]
+  end
+
+  defp sso_enforcement_options(_mode, false) do
+    [{"Not enforced", ""}, {"Enforced", "enforced"}, {"Exempt", "exempt"}]
+  end
+
+  defp exempt_members(organization) do
+    organization.organization_users
+    |> Enum.filter(&(&1.sso_enforcement == "exempt"))
+    |> Enum.sort_by(& &1.user.username)
+  end
+
+  defp exemption_summary([]) do
+    "Nobody is exempt. Every member authenticates through your provider to reach this organization in a browser or with the CLI. Organization API keys and, unless you block them, personal API keys still reach it without authenticating."
+  end
+
+  defp exemption_summary(exempt) do
+    count = length(exempt)
+
+    "#{count} #{member_label(count)} #{reach_label(count)} this organization's private packages on a Hexpm password alone. This list bounds what SSO enforcement can claim, so keep it short and review it."
+  end
 end

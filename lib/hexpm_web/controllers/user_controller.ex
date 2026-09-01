@@ -2,6 +2,7 @@ defmodule HexpmWeb.UserController do
   use HexpmWeb, :controller
 
   alias Hexpm.Repository.Downloads
+  alias HexpmWeb.SSOEnforcement
 
   @packages_per_page 20
   @y_axis_positions [194, 154, 114, 74, 34]
@@ -36,7 +37,9 @@ defmodule HexpmWeb.UserController do
     sort_by = Map.get(params, "sort", "popular")
     page = Hexpm.Utils.safe_int(params["page"]) || 1
 
-    all_packages = Packages.accessible_user_owned_packages(user, conn.assigns.current_user)
+    all_packages =
+      Packages.accessible_user_owned_packages(user, SSOEnforcement.reachable_organizations(conn))
+
     downloads = Downloads.packages_all_views(all_packages)
 
     total_downloads =
@@ -85,7 +88,7 @@ defmodule HexpmWeb.UserController do
            ]) do
       all_packages =
         user
-        |> Packages.accessible_user_owned_packages(conn.assigns.current_user)
+        |> Packages.accessible_user_owned_packages(SSOEnforcement.reachable_organizations(conn))
         |> Packages.attach_latest_releases()
 
       package_downloads = Downloads.packages_all_views(all_packages)

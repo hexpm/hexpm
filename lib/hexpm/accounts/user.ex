@@ -206,18 +206,24 @@ defmodule Hexpm.Accounts.User do
     {:ok, nil}
   end
 
-  def verify_permissions(%User{} = user, "package", name) do
-    [organization, package] = String.split(name, "/", parts: 2)
-    package = Packages.get(organization, package)
+  def verify_permissions(%User{} = user, "package", name) when is_binary(name) do
+    case String.split(name, "/", parts: 2) do
+      [organization, package_name] ->
+        package = Packages.get(organization, package_name)
 
-    if package && Packages.owner_with_access?(package, user) do
-      {:ok, package}
-    else
-      :error
+        if package && Packages.owner_with_access?(package, user) do
+          {:ok, package}
+        else
+          :error
+        end
+
+      _other ->
+        :error
     end
   end
 
-  def verify_permissions(%User{} = user, domain, name) when domain in ["repository", "docs"] do
+  def verify_permissions(%User{} = user, domain, name)
+      when domain in ["repository", "docs"] and is_binary(name) do
     organization = Organizations.get(name)
 
     if organization && Organizations.access?(organization, user, "read") do
@@ -226,6 +232,8 @@ defmodule Hexpm.Accounts.User do
       :error
     end
   end
+
+  def verify_permissions(%User{}, _domain, _resource), do: :error
 
   def organization?(user), do: user.organization_id != nil
 
