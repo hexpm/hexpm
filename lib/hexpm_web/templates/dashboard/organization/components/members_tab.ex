@@ -137,7 +137,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                     />
                   </.sudo_form>
 
-                  <%!-- Remove (hidden for self) --%>
+                  <%!-- Remove (hidden for self, its footprint kept so rows align) --%>
                   <%= if org_user.user.id != @current_user.id do %>
                     <.icon_button
                       icon="x-mark"
@@ -145,6 +145,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                       aria-label="Remove member"
                       phx-click={show_modal("remove-member-#{org_user.user.id}")}
                     />
+                  <% else %>
+                    <span class="w-8 h-8" aria-hidden="true"></span>
                   <% end %>
                 <% else %>
                   <span class={[
