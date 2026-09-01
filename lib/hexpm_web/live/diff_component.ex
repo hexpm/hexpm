@@ -78,10 +78,12 @@ defmodule HexpmWeb.DiffComponent do
   defp file_header(%{from: nil, to: to}), do: to
   defp file_header(%{from: from, to: nil}), do: from
   defp file_header(%{from: path, to: path}), do: path
+  defp file_header(%{from: from, to: to}), do: "#{from} → #{to}"
 
   defp diff_status(%{from: nil}), do: "added"
   defp diff_status(%{to: nil}), do: "removed"
   defp diff_status(%{from: path, to: path}), do: "changed"
+  defp diff_status(%{from: _from, to: _to}), do: "renamed"
 
   defp line_number(number), do: to_string(number)
 

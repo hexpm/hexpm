@@ -75,4 +75,13 @@ defmodule HexpmWeb.DiffComponentTest do
     assert oversized =~ "ghd-file-status-unknown"
     refute oversized =~ "ghd-file-status-too-large"
   end
+
+  test "renders renamed files with both paths" do
+    diff = %GitDiff.Patch{from: "lib/old_name.ex", to: "lib/new_name.ex", chunks: []}
+
+    html = render_component(&DiffComponent.diff/1, diff: diff, id: "renamed", highlights: %{})
+
+    assert html =~ "ghd-file-status-renamed"
+    assert html =~ "lib/old_name.ex → lib/new_name.ex"
+  end
 end
