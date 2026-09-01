@@ -158,6 +158,9 @@ defmodule Hexpm.Accounts.User do
     Enum.any?(emails, &(&1.primary and &1.verified))
   end
 
+  def public_profile?(%User{organization_id: id}) when not is_nil(id), do: true
+  def public_profile?(%User{} = user), do: verified_primary_email?(user)
+
   def get(username_or_email, preload \\ []) do
     if email?(username_or_email) do
       from(
