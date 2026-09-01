@@ -232,6 +232,9 @@ defmodule HexpmWeb.Router do
     get "/policies/termsofservice", PolicyController, :tos
     get "/policies/copyright", PolicyController, :copyright
     get "/policies/dispute", PolicyController, :dispute
+    get "/policies/subprocessors", PolicyController, :subprocessors
+    get "/policies/dpa", PolicyController, :dpa
+    get "/policies/security", PolicyController, :security
 
     live_session :packages,
       on_mount: [{HexpmWeb.Live.InitAssigns, :default}, HexpmWeb.Live.StaticReload],

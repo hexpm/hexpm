@@ -198,6 +198,19 @@ defmodule Hexpm.Accounts.User do
     )
   end
 
+  # Organization accounts, service accounts and deactivated accounts are not
+  # people to write to, and an unverified address is one we never confirmed
+  # reaches anyone.
+  def all_notifiable_emails() do
+    from(
+      u in Hexpm.Accounts.User,
+      join: e in assoc(u, :emails),
+      where: e.verified and e.primary,
+      where: is_nil(u.organization_id) and not u.service and is_nil(u.deactivated_at),
+      select: e.email
+    )
+  end
+
   def verify_permissions(%User{}, "api", _resource) do
     {:ok, nil}
   end
