@@ -717,6 +717,8 @@ defmodule HexpmWeb.SSOControllerTest do
       build_conn() |> get("/sso/link") |> response(404)
       build_conn() |> post("/sso/link") |> response(404)
       build_conn() |> post("/sso/link/cancel") |> response(404)
+      build_conn() |> get("/sso/authorize", %{code: "code"}) |> response(404)
+      build_conn() |> post("/sso/authorize") |> response(404)
     end
 
     test "the removed and legacy routes are gone", context do
