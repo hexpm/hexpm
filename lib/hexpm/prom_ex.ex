@@ -10,14 +10,22 @@ defmodule Hexpm.PromEx do
       Plugins.Beam,
       {Plugins.Phoenix, router: HexpmWeb.Router, endpoint: HexpmWeb.Endpoint},
       {Plugins.Ecto, repos: [Hexpm.RepoBase]},
-      # Queue lengths come from counting the jobs table, which every node does
-      # on its own timer, so the default five seconds is a scan per node per
-      # five seconds for a number that does not move that fast.
-      {Plugins.Oban, poll_rate: :timer.minutes(1)},
       Hexpm.PromEx.Plugins.Hexpm,
       Hexpm.PromEx.Plugins.EctoLatency,
       Hexpm.PromEx.Plugins.OutboundHttp
-    ]
+    ] ++ oban_plugins()
+  end
+
+  # Queue lengths are counted from the jobs table and zero-filled from the
+  # node's own queue config, so a node that runs no queues never reports a
+  # zero and its gauges keep the last count they saw. Only nodes that run the
+  # queues report Oban metrics. The count is a scan of the table per node, so
+  # it runs once a minute rather than the default five seconds.
+  defp oban_plugins do
+    case Application.fetch_env!(:hexpm, Oban)[:queues] do
+      queues when queues in [false, []] -> []
+      _queues -> [{Hexpm.PromEx.Plugins.Oban, poll_rate: :timer.minutes(1)}]
+    end
   end
 
   @impl true

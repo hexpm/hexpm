@@ -213,10 +213,13 @@ defmodule HexpmWeb.API.AuthControllerTest do
     end
 
     test "authenticate user api key", %{user_api_key: key} do
-      build_conn()
-      |> put_req_header("authorization", key.user_secret)
-      |> get("/api/auth", domain: "api")
-      |> response(200)
+      conn =
+        build_conn()
+        |> put_req_header("authorization", key.user_secret)
+        |> get("/api/auth", domain: "api")
+
+      assert response(conn, 200)
+      assert get_resp_header(conn, "x-hex-key-id") == [Integer.to_string(key.id)]
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)

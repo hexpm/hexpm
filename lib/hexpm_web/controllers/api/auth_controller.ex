@@ -83,8 +83,13 @@ defmodule HexpmWeb.API.AuthController do
 
   defp success(conn) do
     case conn.assigns.auth_credential do
-      %Key{} = key -> render(conn, :show, key: key)
-      _ -> send_resp(conn, 204, "")
+      %Key{} = key ->
+        conn
+        |> put_resp_header("x-hex-key-id", Integer.to_string(key.id))
+        |> render(:show, key: key)
+
+      _ ->
+        send_resp(conn, 204, "")
     end
   end
 end

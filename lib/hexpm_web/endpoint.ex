@@ -28,7 +28,11 @@ defmodule HexpmWeb.Endpoint do
     only_matching: ~w(favicon)
 
   socket("/live", Phoenix.LiveView.Socket,
-    websocket: [compress: true, connect_info: [:peer_data, :x_headers, session: @session_options]]
+    websocket: [
+      compress: true,
+      log: false,
+      connect_info: [:peer_data, :x_headers, session: @session_options]
+    ]
   )
 
   if Code.ensure_loaded?(Tidewave) do

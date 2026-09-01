@@ -114,7 +114,7 @@ defmodule HexpmWeb.API.OAuthController do
              client.client_id,
              auth_code.scopes,
              "authorization_code",
-             auth_code.code,
+             "authorization_code:#{auth_code.id}",
              name: safe_param(params, "name"),
              with_refresh_token: true,
              usage_info: usage_info,
@@ -187,7 +187,7 @@ defmodule HexpmWeb.API.OAuthController do
              client.client_id,
              token.granted_scopes,
              "refresh_token",
-             params["refresh_token"],
+             "token:#{token.jti}",
              with_refresh_token: true,
              user_session_id: token.user_session_id,
              usage_info: usage_info
@@ -233,7 +233,7 @@ defmodule HexpmWeb.API.OAuthController do
              client.client_id,
              scopes,
              "client_credentials",
-             api_key_secret,
+             "key:#{auth_info.auth_credential.id}",
              name: safe_param(params, "name"),
              usage_info: usage_info,
              credential: auth_info.auth_credential
