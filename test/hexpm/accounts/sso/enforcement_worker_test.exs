@@ -1,5 +1,6 @@
 defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
   use Hexpm.DataCase
+  use Oban.Testing, repo: Hexpm.RepoBase
 
   alias Hexpm.Accounts.SSO
   alias Hexpm.Accounts.SSO.Enforcement
@@ -227,6 +228,28 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
 
       assert log.params["key"]["name"] == key.name
       assert log.params["removed_permissions"] == ["repository:#{context.organization.name}"]
+    end
+  end
+
+  describe "the sweep and its notices" do
+    test "collapses a notice that has not gone out and sends again once it has", context do
+      personal_key(context, [%{domain: "repository", resource: context.organization.name}])
+      require_sso(context, DateTime.add(DateTime.utc_now(), -60, :second))
+
+      assert Enforcement.sweep_personal_keys() == 1
+      personal_key(context, [%{domain: "repository", resource: context.organization.name}])
+      assert Enforcement.sweep_personal_keys() == 1
+
+      assert [pending] = Repo.all(from(e in OutboxEntry, where: e.category == "sso.key_revoked"))
+      assert :ok = perform_job(Hexpm.Emails.OutboxWorker, %{outbox_entry_id: pending.id})
+
+      personal_key(context, [%{domain: "repository", resource: context.organization.name}])
+      assert Enforcement.sweep_personal_keys() == 1
+
+      assert [%OutboxEntry{delivered_at: %DateTime{}}, %OutboxEntry{delivered_at: nil}] =
+               Repo.all(
+                 from(e in OutboxEntry, where: e.category == "sso.key_revoked", order_by: e.id)
+               )
     end
   end
 

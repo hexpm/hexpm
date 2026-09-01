@@ -67,7 +67,7 @@ defmodule Hexpm.AdminTasks do
   use Hexpm.Context
 
   alias Hexpm.AdminTasks.Reasons
-  alias Hexpm.Emails.Outbox
+  alias Hexpm.Emails.{Outbox, OutboxEntry, OutboxLock}
 
   @announcement_category "admin.announcement"
   # Announcements queue behind transactional mail: package reports, secret-scan
@@ -858,13 +858,27 @@ defmodule Hexpm.AdminTasks do
   Sends an email with an arbitrary subject and body.
 
   Every recipient gets a separate email so addresses are not disclosed between
-  recipients. Duplicate addresses are only queued once. The emails go into the
-  outbox and are delivered by Oban, so a send survives the console it was
-  started from and a failed delivery is retried. Announcements are queued at a
-  lower priority than transactional mail, so a large send does not delay those.
-  The returned count is the number queued, not the number delivered.
+  recipients. Duplicate addresses are only queued once, and so is an address
+  that already has an announcement with this subject queued or delivered within
+  the last 90 days, so a send that was interrupted can be run again with the
+  full recipient list. The send holds a lock on the subject while it reads and
+  queues, so two consoles running the same announcement cannot both queue it.
+  The emails go into the outbox and are delivered by Oban, so a send survives
+  the console it was started from and a failed delivery is retried.
+  Announcements are queued at a lower priority than transactional mail, so a
+  large send does not delay those. The returned count is the number queued, not
+  the number delivered.
 
-  Addresses that fail to queue are logged and do not stop the rest.
+  Addresses that fail to render are logged and do not stop the rest.
+
+  The entries share the group key `"admin.announcement:" <> subject`, so an
+  announcement that has not gone out yet can be cancelled:
+
+      iex> Hexpm.Emails.Outbox.cancel!(
+      ...>   group_key: "admin.announcement:Hex.pm - Service update",
+      ...>   categories: ["admin.announcement"]
+      ...> )
+      18392
 
   ## Arguments
 
@@ -880,25 +894,60 @@ defmodule Hexpm.AdminTasks do
   """
   @spec send_email([String.t()], String.t(), String.t()) :: {:ok, non_neg_integer()}
   def send_email(recipients, subject, body) do
-    queued =
-      recipients
-      |> List.wrap()
-      |> Enum.uniq()
-      |> Enum.count(&queue_announcement(&1, subject, body))
+    group_key = announcement_group_key(subject)
 
-    {:ok, queued}
+    Repo.transaction(
+      fn ->
+        OutboxLock.acquire!(group_key)
+        already_queued = announcement_recipients(subject)
+
+        {skipped, pending} =
+          recipients
+          |> List.wrap()
+          |> Enum.uniq()
+          |> Enum.split_with(&MapSet.member?(already_queued, &1))
+
+        if skipped != [] do
+          Logger.info("Skipped #{length(skipped)} recipients already sent #{inspect(subject)}")
+        end
+
+        pending
+        |> Enum.flat_map(&prepare_announcement(&1, subject, body, group_key))
+        |> Enum.map(&Outbox.insert!/1)
+        |> length()
+      end,
+      timeout: :infinity
+    )
   end
 
-  defp queue_announcement(recipient, subject, body) do
-    recipient
-    |> Emails.announcement(subject, body)
-    |> Outbox.enqueue!(category: @announcement_category, priority: @announcement_priority)
+  defp announcement_group_key(subject), do: "#{@announcement_category}:#{subject}"
 
-    true
+  defp announcement_recipients(subject) do
+    from(entry in OutboxEntry,
+      where: entry.category == ^@announcement_category,
+      where: entry.subject == ^subject,
+      select: entry.recipients
+    )
+    |> Repo.all()
+    |> List.flatten()
+    |> MapSet.new()
+  end
+
+  # Rendering is the part that can fail per recipient, and it is kept apart
+  # from the inserts so a failure leaves the transaction usable.
+  defp prepare_announcement(recipient, subject, body, group_key) do
+    [
+      Outbox.prepare!(Emails.announcement(recipient, subject, body),
+        category: @announcement_category,
+        group_key: group_key,
+        priority: @announcement_priority,
+        expires_at: Outbox.default_expires_at()
+      )
+    ]
   rescue
     error ->
       Logger.error("Could not queue email to #{recipient}: #{inspect(error.__struct__)}")
-      false
+      []
   end
 
   defp deliver(email, description) do

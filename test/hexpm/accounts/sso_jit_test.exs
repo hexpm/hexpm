@@ -1,5 +1,6 @@
 defmodule Hexpm.Accounts.SSOJITTest do
   use Hexpm.DataCase
+  use Oban.Testing, repo: Hexpm.RepoBase
 
   alias Hexpm.Accounts.{OrganizationDomains, Organizations, Seats, SSO}
   alias Hexpm.Accounts.SSO.{Connection, Failure, Identity, OIDC}
@@ -209,6 +210,22 @@ defmodule Hexpm.Accounts.SSOJITTest do
 
       assert length(Repo.all(OutboxEntry)) == 1
       assert length(Repo.all(Failure)) == 3
+    end
+
+    test "the hour holds after the notice has been delivered", context do
+      fill_seats(context.organization)
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
+      assert {:error, :seats_exhausted} = complete(transaction, claims(), newcomer)
+
+      assert [entry] = Repo.all(OutboxEntry)
+      assert :ok = perform_job(Hexpm.Emails.OutboxWorker, %{outbox_entry_id: entry.id})
+
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
+      assert {:error, :seats_exhausted} = complete(transaction, claims(), newcomer)
+
+      assert [%OutboxEntry{delivered_at: %DateTime{}}] = Repo.all(OutboxEntry)
     end
 
     test "re-admits a linked account whose membership was removed", context do

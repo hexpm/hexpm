@@ -40,8 +40,11 @@ defmodule Hexpm.Emails.OutboxWorker do
           :ok
 
         entry ->
-          deliver_or_expire!(entry)
-          Repo.delete!(entry)
+          case deliver_or_expire!(entry) do
+            {:delivered, result} -> record_delivery!(entry, result)
+            :expired -> Repo.delete!(entry)
+          end
+
           :ok
       end
     end)
@@ -52,10 +55,10 @@ defmodule Hexpm.Emails.OutboxWorker do
   end
 
   # Delivery runs inside the transaction so that a failed commit leaves the entry
-  # to be retried rather than dropped. The row lock is held across it, which is
-  # why cancellation skips locked rows instead of waiting for them.
+  # to be retried rather than recorded as delivered. The row lock is held across
+  # it, which is why cancellation skips locked rows instead of waiting for them.
   defp locked_entry(outbox_entry_id) do
-    from(entry in OutboxEntry,
+    from(entry in OutboxEntry.undelivered(),
       where: entry.id == ^outbox_entry_id,
       lock: "FOR UPDATE"
     )
@@ -89,11 +92,29 @@ defmodule Hexpm.Emails.OutboxWorker do
     end
   end
 
-  defp deliver_or_expire!(%OutboxEntry{expires_at: nil} = entry), do: deliver!(entry)
+  defp deliver_or_expire!(%OutboxEntry{expires_at: nil} = entry) do
+    {:delivered, deliver!(entry)}
+  end
 
   defp deliver_or_expire!(%OutboxEntry{expires_at: expires_at} = entry) do
-    if DateTime.compare(expires_at, DateTime.utc_now()) == :gt, do: deliver!(entry)
+    if DateTime.compare(expires_at, DateTime.utc_now()) == :gt do
+      {:delivered, deliver!(entry)}
+    else
+      :expired
+    end
   end
+
+  defp record_delivery!(entry, result) do
+    entry
+    |> Ecto.Changeset.change(
+      delivered_at: DateTime.utc_now(),
+      provider_message_id: provider_message_id(result)
+    )
+    |> Repo.update!()
+  end
+
+  defp provider_message_id(%{id: id}) when is_binary(id), do: id
+  defp provider_message_id(_result), do: nil
 
   defp deliver!(entry) do
     email = OutboxEnvelope.load!(entry.email)
