@@ -435,6 +435,105 @@ defmodule Hexpm.Accounts.SCIMTest do
     end
   end
 
+  describe "review regressions" do
+    test "deactivating a member also retires a pending invitation for the handle", context do
+      {:ok, %{state: :invited, resource: resource}} =
+        SCIM.create_user(context.connection, %{"userName" => "late@example.com"})
+
+      user = insert(:user, emails: [build(:email, email: "late@example.com")])
+      insert(:organization_user, organization: context.organization, user: user)
+
+      assert {:ok, %{state: :member}} = SCIM.get_user(context.connection, resource.scim_id)
+
+      assert {:ok, %{state: :inactive}} = deactivate(context.connection, resource)
+
+      refute Organizations.get_role(context.organization, user)
+      assert OrganizationInvitations.all_pending(context.organization) == []
+    end
+
+    test "deactivating after the invitation was accepted removes the member", context do
+      {:ok, %{resource: resource}} =
+        SCIM.create_user(context.connection, %{"userName" => "accepted@example.com"})
+
+      invitation =
+        Repo.get!(OrganizationInvitation, resource.invitation_id)
+        |> Repo.preload(:organization)
+
+      acceptor = insert(:user)
+
+      {:ok, _organization_user} =
+        OrganizationInvitations.accept(invitation, acceptor, audit: audit_data(acceptor))
+
+      assert {:ok, %{state: :inactive}} = deactivate(context.connection, resource)
+      refute Organizations.get_role(context.organization, acceptor)
+    end
+
+    test "the full import skips unverified primary addresses instead of binding them",
+         context do
+      wrong =
+        insert(:user,
+          emails: [build(:email, email: "collision@example.com", verified: false)]
+        )
+
+      owner = insert(:user, emails: [build(:email, email: "collision@example.com")])
+      insert(:organization_user, organization: context.organization, user: wrong)
+      insert(:organization_user, organization: context.organization, user: owner)
+
+      listing = SCIM.list_users(context.connection, 1, 100)
+
+      collision =
+        Enum.find(listing.resources, &(&1.resource.user_name == "collision@example.com"))
+
+      assert collision.resource.user_id == owner.id
+      refute Enum.any?(listing.resources, &(&1.resource.user_id == wrong.id))
+    end
+
+    test "patch operations run in array order", context do
+      user_a = insert(:user)
+      email_a = hd(user_a.emails).email
+      user_b = insert(:user)
+      email_b = hd(user_b.emails).email
+
+      {:ok, %{resource: resource}} =
+        SCIM.create_user(context.connection, %{"userName" => email_a})
+
+      {:ok, _resolved} = deactivate(context.connection, resource)
+
+      assert {:ok, %{state: :member, resource: resource, user: activated}} =
+               SCIM.patch_user(context.connection, resource.scim_id, [
+                 %{"op" => "replace", "path" => "active", "value" => true},
+                 %{"op" => "replace", "path" => "userName", "value" => email_b}
+               ])
+
+      assert activated.id == user_a.id
+      assert resource.user_name == email_b
+      assert Organizations.get_role(context.organization, user_a) == "read"
+      refute Organizations.get_role(context.organization, user_b)
+    end
+
+    test "renaming to a taken name leaves the original invitation standing", context do
+      {:ok, %{resource: resource}} =
+        SCIM.create_user(context.connection, %{"userName" => "old@example.com"})
+
+      {:ok, _other} = SCIM.create_user(context.connection, %{"userName" => "taken@example.com"})
+
+      assert {:error, :uniqueness} =
+               SCIM.patch_user(context.connection, resource.scim_id, [
+                 %{"op" => "replace", "path" => "userName", "value" => "taken@example.com"}
+               ])
+
+      assert {:ok, %{state: :invited, resource: resource}} =
+               SCIM.get_user(context.connection, resource.scim_id)
+
+      assert resource.user_name == "old@example.com"
+
+      emails =
+        OrganizationInvitations.all_pending(context.organization) |> Enum.map(& &1.email)
+
+      assert "old@example.com" in emails
+    end
+  end
+
   defp deactivate(connection, resource) do
     SCIM.patch_user(connection, resource.scim_id, [
       %{"op" => "replace", "path" => "active", "value" => false}

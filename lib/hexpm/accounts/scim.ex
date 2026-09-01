@@ -140,12 +140,31 @@ defmodule Hexpm.Accounts.SCIM do
   `userName`, and `externalId`, with Entra's string booleans normalized.
   Operations on attributes we do not store are ignored.
   """
-  def patch_user(%Connection{} = connection, scim_id, operations) do
-    with {:ok, resolved} <- get_user(connection, scim_id),
-         {:ok, changes} <- patch_changes(operations) do
-      apply_changes(connection, resolved, changes)
+  def patch_user(%Connection{} = connection, scim_id, operations) when is_list(operations) do
+    with {:ok, resolved} <- get_user(connection, scim_id) do
+      # Operations run one at a time, in array order, as RFC 7644 requires:
+      # `active` then `userName` means activate the account this name matches
+      # now and relabel afterwards, which is not the same as activating under
+      # the final name.
+      Enum.reduce_while(operations, {:ok, resolved}, fn operation, {:ok, resolved} ->
+        case patch_change(operation) do
+          {:ok, change} ->
+            case apply_changes(connection, resolved, change) do
+              {:ok, resolved} -> {:cont, {:ok, resolved}}
+              {:error, reason} -> {:halt, {:error, reason}}
+            end
+
+          :ignore ->
+            {:cont, {:ok, resolved}}
+
+          {:error, reason} ->
+            {:halt, {:error, reason}}
+        end
+      end)
     end
   end
+
+  def patch_user(%Connection{}, _scim_id, _operations), do: {:error, :invalid_path}
 
   @doc """
   Deactivates, then deletes the handle, freeing the `userName` slot. Sent by
@@ -222,7 +241,7 @@ defmodule Hexpm.Accounts.SCIM do
         create_member(connection, user_name, external_id, user, _retried? = false)
 
       nil ->
-        with {:ok, invitation} <- obtain_invitation(connection, user_name) do
+        with {:ok, invitation, _provenance} <- obtain_invitation(connection, user_name) do
           insert_resource(connection, %{
             user_name: user_name,
             external_id: external_id,
@@ -300,7 +319,7 @@ defmodule Hexpm.Accounts.SCIM do
         end
 
       nil ->
-        with {:ok, invitation} <- obtain_invitation(connection, resource.user_name),
+        with {:ok, invitation, _provenance} <- obtain_invitation(connection, resource.user_name),
              {:ok, resource} <- update_resource(resource, %{invitation_id: invitation.id}) do
           {:ok, resolve(resource)}
         end
@@ -359,7 +378,7 @@ defmodule Hexpm.Accounts.SCIM do
 
     case OrganizationInvitations.get_pending_by_email(organization, user_name) do
       %OrganizationInvitation{} = invitation ->
-        {:ok, invitation}
+        {:ok, invitation, :adopted}
 
       nil ->
         case OrganizationInvitations.invite(
@@ -369,7 +388,7 @@ defmodule Hexpm.Accounts.SCIM do
                audit: AuditLogs.system(organization)
              ) do
           {:ok, invitation} ->
-            {:ok, invitation}
+            {:ok, invitation, :created}
 
           # `invite/4` matched a member through a username or an unverified
           # address. A verified email never reached this branch, so binding
@@ -426,17 +445,29 @@ defmodule Hexpm.Accounts.SCIM do
           {:ok, %{resolved | resource: resource}}
         end
 
-      # An invited person renamed is an invitation to the new address.
+      # An invited person renamed is an invitation to the new address. The
+      # row is updated before the old invitation is retired, so a rename that
+      # fails on a taken name leaves the original untouched; only an
+      # invitation this rename itself created is taken back on failure.
       resolved.state == :invited ->
-        revoke_invitation(connection, resolved.resource)
+        old_invitation_id = resolved.resource.invitation_id
 
-        with {:ok, invitation} <- obtain_invitation(connection, user_name),
-             {:ok, resource} <-
-               update_resource(resolved.resource, %{
+        with {:ok, invitation, provenance} <- obtain_invitation(connection, user_name) do
+          case update_resource(resolved.resource, %{
                  user_name: user_name,
                  invitation_id: invitation.id
                }) do
-          {:ok, resolve(resource)}
+            {:ok, resource} ->
+              retire_invitation(connection, old_invitation_id)
+              {:ok, resolve(resource)}
+
+            {:error, reason} ->
+              if provenance == :created do
+                retire_invitation(connection, invitation.id)
+              end
+
+              {:error, reason}
+          end
         end
     end
   end
@@ -449,32 +480,87 @@ defmodule Hexpm.Accounts.SCIM do
     case Organizations.remove_member(organization, resolved.user,
            audit: AuditLogs.system(organization)
          ) do
-      :ok -> {:ok, resolve(resolved.resource)}
+      :ok -> retire_and_clear(connection, resolved.resource)
       {:error, :last_member} -> {:error, :last_member}
     end
   end
 
   defp deactivate(connection, %{state: :invited} = resolved) do
-    revoke_invitation(connection, resolved.resource)
-
-    with {:ok, resource} <- update_resource(resolved.resource, %{invitation_id: nil}) do
-      {:ok, resolve(resource)}
-    end
+    retire_and_clear(connection, resolved.resource)
   end
 
   defp deactivate(_connection, %{state: :inactive} = resolved), do: {:ok, resolved}
 
-  defp revoke_invitation(connection, resource) do
-    resource = Repo.preload(resource, :invitation)
+  # What a deactivation leaves behind: no live invitation that could re-admit
+  # the address, no membership created by an acceptance that raced it, and no
+  # dangling pointer on the handle.
+  defp retire_and_clear(connection, resource) do
+    case retire_invitation(connection, resource.invitation_id) do
+      {:accepted, user_id} ->
+        organization = connection.organization
+        acceptor = user_id && Repo.get(User, user_id)
 
-    if pending?(resource.invitation) do
-      {:ok, _invitation} =
-        OrganizationInvitations.revoke(connection.organization, resource.invitation,
-          audit: AuditLogs.system(connection.organization)
-        )
+        remove =
+          if acceptor && Organizations.get_role(organization, acceptor) do
+            Organizations.remove_member(organization, acceptor,
+              audit: AuditLogs.system(organization)
+            )
+          else
+            :ok
+          end
+
+        case remove do
+          {:error, :last_member} -> {:error, :last_member}
+          :ok -> clear_invitation(resource)
+        end
+
+      _retired ->
+        clear_invitation(resource)
     end
+  end
 
-    :ok
+  defp clear_invitation(resource) do
+    with {:ok, resource} <- update_resource(resource, %{invitation_id: nil}) do
+      {:ok, resolve(resource)}
+    end
+  end
+
+  # Revokes under a row lock, or reports that an acceptance won the race, so
+  # revocation never stamps an accepted row while its membership walks away.
+  defp retire_invitation(_connection, nil), do: :none
+
+  defp retire_invitation(connection, invitation_id) do
+    {:ok, outcome} =
+      Repo.transaction(fn ->
+        locked =
+          Repo.one(
+            from(invitation in OrganizationInvitation,
+              where: invitation.id == ^invitation_id,
+              lock: "FOR UPDATE"
+            )
+          )
+
+        cond do
+          is_nil(locked) ->
+            :none
+
+          locked.accepted_at ->
+            {:accepted, locked.accepted_by_user_id}
+
+          is_nil(locked.revoked_at) ->
+            {:ok, _invitation} =
+              OrganizationInvitations.revoke(connection.organization, locked,
+                audit: AuditLogs.system(connection.organization)
+              )
+
+            :revoked
+
+          true ->
+            :none
+        end
+      end)
+
+    outcome
   end
 
   # -- materialization -------------------------------------------------------
@@ -531,8 +617,11 @@ defmodule Hexpm.Accounts.SCIM do
     end
   end
 
+  # Verified as well as primary: presenting an unverified address as the
+  # match key would let the handle bind to whoever typed the address first
+  # rather than whoever owns it.
   defp primary_email(user) do
-    Enum.find_value(user.emails, fn email -> email.primary && email.email end)
+    Enum.find_value(user.emails, fn email -> email.verified && email.primary && email.email end)
   end
 
   # -- persistence helpers ---------------------------------------------------
@@ -628,18 +717,6 @@ defmodule Hexpm.Accounts.SCIM do
       _other -> default
     end
   end
-
-  defp patch_changes(operations) when is_list(operations) do
-    Enum.reduce_while(operations, {:ok, %{}}, fn operation, {:ok, changes} ->
-      case patch_change(operation) do
-        {:ok, change} -> {:cont, {:ok, Map.merge(changes, change)}}
-        :ignore -> {:cont, {:ok, changes}}
-        {:error, reason} -> {:halt, {:error, reason}}
-      end
-    end)
-  end
-
-  defp patch_changes(_operations), do: {:error, :invalid_path}
 
   defp patch_change(%{"op" => op} = operation) do
     path = operation |> Map.get("path") |> normalize_path()
