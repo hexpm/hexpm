@@ -68,6 +68,11 @@ defmodule HexpmWeb.API.OwnerController do
                 "cannot add owner to private package when the user is not a member of the organization"
             })
 
+          {:error, :unverified_primary_email} ->
+            validation_failed(conn, %{
+              "username" => "cannot add owner until the user has verified their primary email"
+            })
+
           {:error, :not_organization_transfer} ->
             validation_failed(conn, %{
               "username" =>

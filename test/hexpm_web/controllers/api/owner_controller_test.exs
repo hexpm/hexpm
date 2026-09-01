@@ -266,6 +266,37 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       assert Owners.get(package, user2).level == "maintainer"
     end
 
+    test "cannot add owner whose primary email is unverified", %{user1: user1, package: package} do
+      unverified = insert(:user, emails: [build(:email, verified: false)])
+
+      result =
+        build_conn()
+        |> put_req_header("authorization", key_for(user1))
+        |> put("/api/packages/#{package.name}/owners/#{unverified.username}")
+        |> json_response(422)
+
+      assert result["errors"]["username"] ==
+               "cannot add owner until the user has verified their primary email"
+
+      refute Owners.get(package, unverified)
+      refute Hexpm.Repo.exists?(AuditLog)
+    end
+
+    test "cannot transfer to owner whose primary email is unverified", %{
+      user1: user1,
+      package: package
+    } do
+      unverified = insert(:user, emails: [build(:email, verified: false)])
+
+      build_conn()
+      |> put_req_header("authorization", key_for(user1))
+      |> put("/api/packages/#{package.name}/owners/#{unverified.username}", %{"transfer" => true})
+      |> json_response(422)
+
+      assert [owner] = assoc(package, :owners) |> Hexpm.Repo.all()
+      assert owner.id == user1.id
+    end
+
     test "add owner with duplicate email (organization admin)", %{user1: user1} do
       # Create organization and make user2 an admin
       organization = insert(:organization)

@@ -154,6 +154,10 @@ defmodule Hexpm.Accounts.User do
   defp email(nil), do: nil
   defp email(email), do: email.email
 
+  def verified_primary_email?(%User{emails: emails}) do
+    Enum.any?(emails, &(&1.primary and &1.verified))
+  end
+
   def get(username_or_email, preload \\ []) do
     if email?(username_or_email) do
       from(
