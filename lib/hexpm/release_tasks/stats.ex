@@ -87,7 +87,11 @@ defmodule Hexpm.ReleaseTasks.Stats do
       # in the database. Should be uncommon
       num = ets_stream() |> Enum.reduce(0, fn {_, count}, acc -> count + acc end)
 
-      if num == 0 and not dryrun?, do: raise("[stats] no downloads found for #{date}")
+      expect_downloads? = Application.fetch_env!(:hexpm, :stats_expect_downloads)
+
+      if num == 0 and not dryrun? and expect_downloads? do
+        raise "[stats] no downloads found for #{date}"
+      end
 
       unless dryrun? do
         Repo.transaction(
