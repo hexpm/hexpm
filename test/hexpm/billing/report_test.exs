@@ -18,10 +18,11 @@ defmodule Hexpm.Billing.ReportTest do
     organization4 = insert(:organization, billing_active: false)
 
     stub(Billing.Mock, :report, fn ->
-      [
-        %{"token" => organization1.name, "quantity" => 5},
-        %{"token" => organization3.name, "quantity" => 10}
-      ]
+      {:ok,
+       [
+         %{"token" => organization1.name, "quantity" => 5},
+         %{"token" => organization3.name, "quantity" => 10}
+       ]}
     end)
 
     assert :ok = perform_job(Billing.Report, %{})
@@ -41,7 +42,7 @@ defmodule Hexpm.Billing.ReportTest do
     organization3 = insert(:organization, billing_active: false)
     organization4 = insert(:organization, billing_active: false)
 
-    stub(Billing.Mock, :report, fn -> [] end)
+    stub(Billing.Mock, :report, fn -> {:ok, []} end)
 
     assert :ok = perform_job(Billing.Report, %{})
 
@@ -57,7 +58,7 @@ defmodule Hexpm.Billing.ReportTest do
     organization3 = insert(:organization, billing_active: false, billing_override: true)
     organization4 = insert(:organization, billing_active: false, billing_override: false)
 
-    stub(Billing.Mock, :report, fn -> [] end)
+    stub(Billing.Mock, :report, fn -> {:ok, []} end)
 
     assert :ok = perform_job(Billing.Report, %{})
 
@@ -74,12 +75,13 @@ defmodule Hexpm.Billing.ReportTest do
     organization4 = insert(:organization, billing_active: false, billing_override: false)
 
     stub(Billing.Mock, :report, fn ->
-      [
-        %{"token" => organization1.name, "quantity" => 5},
-        %{"token" => organization2.name, "quantity" => 7},
-        %{"token" => organization3.name, "quantity" => 8},
-        %{"token" => organization4.name, "quantity" => 6}
-      ]
+      {:ok,
+       [
+         %{"token" => organization1.name, "quantity" => 5},
+         %{"token" => organization2.name, "quantity" => 7},
+         %{"token" => organization3.name, "quantity" => 8},
+         %{"token" => organization4.name, "quantity" => 6}
+       ]}
     end)
 
     assert :ok = perform_job(Billing.Report, %{})
@@ -117,7 +119,7 @@ defmodule Hexpm.Billing.ReportTest do
 
     # Billing report returns reduced seats (10 -> 5)
     stub(Billing.Mock, :report, fn ->
-      [%{"token" => organization.name, "quantity" => 5}]
+      {:ok, [%{"token" => organization.name, "quantity" => 5}]}
     end)
 
     assert :ok = perform_job(Billing.Report, %{})
@@ -130,11 +132,9 @@ defmodule Hexpm.Billing.ReportTest do
     assert Hexpm.UserSessions.count_for_user(organization) == 5
   end
 
-  test "raises when the billing request fails so Oban retries the job" do
-    stub(Billing.Mock, :report, fn -> raise "unavailable" end)
+  test "fails the job when the billing request fails so Oban retries it" do
+    stub(Billing.Mock, :report, fn -> {:error, %{}} end)
 
-    assert_raise RuntimeError, "unavailable", fn ->
-      perform_job(Billing.Report, %{})
-    end
+    assert {:error, %{}} = perform_job(Billing.Report, %{})
   end
 end

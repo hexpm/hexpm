@@ -279,6 +279,15 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
     assert :ok = Stats.run(~D[2013-11-01], true)
   end
 
+  test "a day without downloads completes when downloads are not expected" do
+    Application.put_env(:hexpm, :stats_expect_downloads, false)
+    on_exit(fn -> Application.put_env(:hexpm, :stats_expect_downloads, true) end)
+
+    expect_monitor(:ok)
+
+    assert :ok = perform_job(Stats, %{"date" => "2013-11-01"})
+  end
+
   test "invalid dates cancel without retrying" do
     assert {:cancel, {:invalid_date, "not-a-date"}} =
              perform_job(Stats, %{"date" => "not-a-date"})

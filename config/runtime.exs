@@ -47,6 +47,9 @@ if config_env() == :prod do
     private_key: System.fetch_env!("HEXPM_SIGNING_KEY"),
     repo_bucket: System.fetch_env!("HEXPM_REPO_BUCKET"),
     logs_bucket: System.fetch_env!("HEXPM_LOGS_BUCKET"),
+    # Staging serves no package downloads, so an empty day is not a broken
+    # log pipeline there
+    stats_expect_downloads: System.fetch_env!("HEXPM_ENV") == "prod",
     audit_bucket: System.fetch_env!("HEXPM_AUDIT_BUCKET"),
     docs_bucket: System.fetch_env!("HEXPM_DOCS_BUCKET"),
     preview_bucket: System.fetch_env!("HEXPM_PREVIEW_BUCKET"),

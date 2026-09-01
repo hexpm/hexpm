@@ -456,6 +456,9 @@ defmodule Hexpm.HTTP do
     end
   end
 
+  # HEAD responses and 204s carry a content-type but no body
+  defp decode_body("", _headers), do: ""
+
   defp decode_body(body, headers) do
     case List.keyfind(headers, "content-type", 0) do
       {_, "application/json" <> _} -> JSON.decode!(body)
