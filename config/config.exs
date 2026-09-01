@@ -63,7 +63,7 @@ config :hexpm, ecto_repos: [Hexpm.RepoBase]
 
 config :hexpm, Oban,
   repo: Hexpm.RepoBase,
-  queues: [periodic: 2, heavy: 1, registry: 1, purge: 5],
+  queues: [periodic: 2, heavy: 1, registry: 1, purge: 5, email: 1],
   shutdown_grace_period: 300_000
 
 config :hexpm, registry_lock_wait: 60_000

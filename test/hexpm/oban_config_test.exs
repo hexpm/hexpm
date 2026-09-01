@@ -49,6 +49,7 @@ defmodule Hexpm.ObanConfigTest do
              states: :incomplete
            ]
 
+    assert Hexpm.Emails.OutboxWorker.__opts__()[:queue] == :email
     assert Hexpm.Emails.OutboxWorker.timeout(%Oban.Job{}) == 30_000
 
     for worker <- [

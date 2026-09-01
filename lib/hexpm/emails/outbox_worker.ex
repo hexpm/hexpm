@@ -1,6 +1,6 @@
 defmodule Hexpm.Emails.OutboxWorker do
   use Oban.Worker,
-    queue: :periodic,
+    queue: :email,
     max_attempts: 10,
     unique: [period: :infinity, states: :incomplete, fields: [:worker, :args]]
 
