@@ -87,9 +87,19 @@ if config_env() == :prod do
     access_key_id: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_ID"),
     secret_access_key: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_SECRET")
 
+  # GIT_SHA is baked into the image (see the Dockerfile) and matches the
+  # release CI creates in Sentry, so issues resolved via commits auto-resolve
+  # when the deploy carrying the fix is registered.
+  sentry_release =
+    case System.get_env("GIT_SHA") do
+      sha when sha in [nil, "", "unknown"] -> nil
+      sha -> sha
+    end
+
   config :sentry,
     dsn: System.fetch_env!("HEXPM_SENTRY_DSN"),
-    environment_name: System.fetch_env!("HEXPM_ENV")
+    environment_name: System.fetch_env!("HEXPM_ENV"),
+    release: sentry_release
 
   config :hexpm,
     email_base_url: "https://#{System.fetch_env!("HEXPM_HOST")}",
