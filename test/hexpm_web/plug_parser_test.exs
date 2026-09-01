@@ -2,21 +2,17 @@ defmodule HexpmWeb.PlugParserTest do
   use HexpmWeb.ConnCase, async: true
 
   describe "erlang media request" do
-    test "POST /api/users" do
-      params = %{
-        username: Fake.sequence(:username),
-        email: Fake.sequence(:email),
-        password: "passpass"
-      }
+    test "POST /api/keys" do
+      user = insert(:user)
+      erlang_params = HexpmWeb.ErlangFormat.encode_to_iodata!(%{name: "macbook"})
 
-      erlang_params = HexpmWeb.ErlangFormat.encode_to_iodata!(params)
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/vnd.hex+erlang")
+        |> put_req_header("authorization", key_for(user))
+        |> post("/api/keys", erlang_params)
 
-      build_conn()
-      |> put_req_header("content-type", "application/vnd.hex+erlang")
-      |> post("/api/users", erlang_params)
-      |> json_response(201)
-
-      assert Hexpm.Repo.get_by!(Hexpm.Accounts.User, username: params.username)
+      assert json_response(conn, 201)["name"] == "macbook"
     end
   end
 end

@@ -7,24 +7,6 @@ defmodule HexpmWeb.API.UserController do
        [authentication: :required, domains: [{"api", "read"}]]
        when action in [:test, :me, :audit_logs]
 
-  def create(conn, params) do
-    params = email_param(params)
-
-    case Users.add(params, audit: audit_data(conn)) do
-      {:ok, user} ->
-        location = ~p"/api/users/#{user}"
-
-        conn
-        |> put_resp_header("location", location)
-        |> api_cache(:private)
-        |> put_status(201)
-        |> render(:show, user: user)
-
-      {:error, changeset} ->
-        validation_failed(conn, changeset)
-    end
-  end
-
   def me(conn, _params) do
     if user = conn.assigns.current_user do
       accessible_packages =
@@ -76,13 +58,5 @@ defmodule HexpmWeb.API.UserController do
 
   def test(conn, params) do
     show(conn, params)
-  end
-
-  defp email_param(params) do
-    if email = params["email"] do
-      Map.put_new(params, "emails", [%{"email" => email}])
-    else
-      params
-    end
   end
 end

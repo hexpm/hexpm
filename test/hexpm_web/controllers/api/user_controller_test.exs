@@ -1,78 +1,7 @@
 defmodule HexpmWeb.API.UserControllerTest do
   use HexpmWeb.ConnCase, async: true
-  import Swoosh.TestAssertions
 
   alias Hexpm.Accounts.User
-
-  defp publish_package(user) do
-    meta = %{name: "ecto", version: "1.0.0", description: "Domain-specific language."}
-    body = create_tar(meta)
-
-    build_conn()
-    |> put_req_header("content-type", "application/octet-stream")
-    |> put_req_header("authorization", key_for(user))
-    |> post("/api/packages/ecto/releases", body)
-  end
-
-  describe "POST /api/users" do
-    test "create user" do
-      params = %{
-        username: Fake.sequence(:username),
-        email: Fake.sequence(:email),
-        password: "passpass"
-      }
-
-      conn = json_post(build_conn(), "/api/users", params)
-      assert json_response(conn, 201)["url"] =~ "/api/users/#{params.username}"
-
-      user = Hexpm.Repo.get_by!(User, username: params.username) |> Hexpm.Repo.preload(:emails)
-      assert List.first(user.emails).email == params.email
-    end
-
-    test "create user sends mails and requires confirmation" do
-      params = %{
-        username: Fake.sequence(:username),
-        email: Fake.sequence(:email),
-        password: "passpass"
-      }
-
-      conn = json_post(build_conn(), "/api/users", params)
-
-      assert conn.status == 201
-      user = Hexpm.Repo.get_by!(User, username: params.username) |> Hexpm.Repo.preload(:emails)
-      user_email = List.first(user.emails)
-
-      assert_email_sent(Hexpm.Emails.verification(user, user_email))
-
-      conn = publish_package(user)
-      assert json_response(conn, 403)["message"] == "email not verified"
-
-      conn =
-        get(
-          build_conn(),
-          "/email/verify",
-          username: params.username,
-          email: user_email.email,
-          key: user_email.verification_key
-        )
-
-      assert redirected_to(conn) == "/"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "verified"
-
-      conn = publish_package(user)
-      assert conn.status == 201
-    end
-
-    test "create user validates" do
-      params = %{username: Fake.sequence(:username), password: "passpass"}
-      conn = json_post(build_conn(), "/api/users", params)
-
-      result = json_response(conn, 422)
-      assert result["message"] == "Validation error(s)"
-      assert result["errors"]["emails"] == "can't be blank"
-      refute Hexpm.Repo.get_by(User, username: params.username)
-    end
-  end
 
   describe "GET /api/users/me" do
     test "get current user" do
