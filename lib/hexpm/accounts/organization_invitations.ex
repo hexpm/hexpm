@@ -50,6 +50,11 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
 
   def get_pending_by_token(_raw_token), do: nil
 
+  def get_pending_by_email(organization, email) do
+    email = OrganizationInvitation.normalize_email(email)
+    Repo.one(from(invitation in pending_query(organization), where: invitation.email == ^email))
+  end
+
   def invite(organization, params, invited_by, audit: audit_data) do
     email = OrganizationInvitation.normalize_email(params["email"] || "")
 
@@ -76,7 +81,8 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
     changeset =
       OrganizationInvitation.changeset(%OrganizationInvitation{}, %{
         "organization_id" => organization.id,
-        "invited_by_user_id" => invited_by.id,
+        # nil when the inviter is not a person, such as SCIM provisioning.
+        "invited_by_user_id" => invited_by && invited_by.id,
         "email" => email,
         "role" => role,
         "token_hash" => hash(raw_token),
