@@ -108,10 +108,10 @@ defmodule Hexpm.Emails.OutboxReconciler do
           ^incomplete_states
         ),
       order_by: [asc: entry.id],
-      select: entry.id,
+      select: {entry.id, entry.priority},
       limit: 500
     )
     |> Repo.all()
-    |> Enum.each(&OutboxWorker.enqueue!/1)
+    |> Enum.each(fn {id, priority} -> OutboxWorker.enqueue!(id, priority: priority) end)
   end
 end

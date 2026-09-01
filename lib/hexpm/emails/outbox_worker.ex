@@ -10,9 +10,9 @@ defmodule Hexpm.Emails.OutboxWorker do
   alias Hexpm.Repo
   alias Swoosh.Email
 
-  def enqueue!(outbox_entry_id) do
+  def enqueue!(outbox_entry_id, opts \\ []) do
     %{outbox_entry_id: outbox_entry_id}
-    |> new()
+    |> new(priority: Keyword.get(opts, :priority, 0))
     |> Oban.insert!()
   end
 

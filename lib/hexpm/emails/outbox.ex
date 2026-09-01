@@ -4,7 +4,7 @@ defmodule Hexpm.Emails.Outbox do
   alias Hexpm.Emails.{OutboxEntry, OutboxEnvelope, OutboxLock, OutboxWorker}
   alias Hexpm.Repo
 
-  @allowed_options [:category, :group_key, :scope_key, :expires_at]
+  @allowed_options [:category, :group_key, :scope_key, :expires_at, :priority]
   @cancel_options [:group_key, :scope_key, :categories]
   @retention_seconds 30 * 24 * 60 * 60
 
@@ -40,7 +40,7 @@ defmodule Hexpm.Emails.Outbox do
           |> OutboxEntry.changeset(attrs)
           |> Repo.insert!(log: false)
 
-        OutboxWorker.enqueue!(entry.id)
+        OutboxWorker.enqueue!(entry.id, priority: entry.priority)
         entry
       end)
 

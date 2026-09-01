@@ -70,6 +70,9 @@ defmodule Hexpm.AdminTasks do
   alias Hexpm.Emails.Outbox
 
   @announcement_category "admin.announcement"
+  # Announcements queue behind transactional mail: package reports, secret-scan
+  # alerts and SSO notices go out first.
+  @announcement_priority 3
 
   require Logger
 
@@ -857,8 +860,9 @@ defmodule Hexpm.AdminTasks do
   Every recipient gets a separate email so addresses are not disclosed between
   recipients. Duplicate addresses are only queued once. The emails go into the
   outbox and are delivered by Oban, so a send survives the console it was
-  started from and a failed delivery is retried. The returned count is the
-  number queued, not the number delivered.
+  started from and a failed delivery is retried. Announcements are queued at a
+  lower priority than transactional mail, so a large send does not delay those.
+  The returned count is the number queued, not the number delivered.
 
   Addresses that fail to queue are logged and do not stop the rest.
 
@@ -888,7 +892,7 @@ defmodule Hexpm.AdminTasks do
   defp queue_announcement(recipient, subject, body) do
     recipient
     |> Emails.announcement(subject, body)
-    |> Outbox.enqueue!(category: @announcement_category)
+    |> Outbox.enqueue!(category: @announcement_category, priority: @announcement_priority)
 
     true
   rescue
