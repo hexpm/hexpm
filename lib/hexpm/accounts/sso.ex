@@ -838,6 +838,16 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   defp expand_seats(connection, user) do
+    expand_seat(connection, user, :login)
+  end
+
+  @doc """
+  Buys one more seat when the organization chose auto-expansion, for a person
+  the organization's 2FA policy admits. Runs its billing call outside any
+  transaction the caller holds; `stage` names the surface asking, for the
+  failure log. The connection must carry its organization.
+  """
+  def expand_seat(%Connection{} = connection, user, stage) do
     organization = connection.organization
 
     # The target is absolute rather than one more than whatever is subscribed
@@ -855,7 +865,7 @@ defmodule Hexpm.Accounts.SSO do
            {claim, Seats.used(organization)}
          end) do
       {:ok, {{:error, :seats_exhausted}, used}} ->
-        purchase_seat(connection, organization, used + 1)
+        purchase_seat(connection, organization, used + 1, stage)
 
       _other ->
         :ok
@@ -866,7 +876,7 @@ defmodule Hexpm.Accounts.SSO do
   # login, or a card that needs confirming turns every retry into another
   # charge attempt. The refusal is recorded like any other, which is also what
   # rate-limits the notice to the administrators.
-  defp purchase_seat(connection, organization, quantity) do
+  defp purchase_seat(connection, organization, quantity, stage) do
     if recent_failure?(connection, "expansion_failed") do
       :ok
     else
@@ -881,7 +891,7 @@ defmodule Hexpm.Accounts.SSO do
           :ok
 
         _other ->
-          record_failure(connection, :login, :expansion_failed)
+          record_failure(connection, stage, :expansion_failed)
           enqueue_seats_notice!(connection, "expansion_failed")
       end
     end
