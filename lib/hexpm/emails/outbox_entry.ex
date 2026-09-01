@@ -7,14 +7,16 @@ defmodule Hexpm.Emails.OutboxEntry do
     field :scope_key, :string
     field :email, :map, redact: true
     field :expires_at, :utc_datetime_usec
+    field :priority, :integer, default: 0
 
     timestamps(updated_at: false)
   end
 
   def changeset(entry, attrs) do
     entry
-    |> cast(attrs, [:category, :group_key, :scope_key, :email, :expires_at])
+    |> cast(attrs, [:category, :group_key, :scope_key, :email, :expires_at, :priority])
     |> validate_required([:category, :email])
+    |> validate_inclusion(:priority, 0..9)
     |> validate_format(:category, ~r/\A[a-z][a-z0-9_.-]*\z/)
     |> validate_length(:category, max: 100)
     |> validate_length(:group_key, max: 255)

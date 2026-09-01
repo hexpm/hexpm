@@ -299,6 +299,30 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
     assert %Oban.Job{state: "available"} = delivery_job(missing)
   end
 
+  test "the delivery job carries the entry's priority" do
+    default = Outbox.enqueue!(rendered_email("Default"), category: "test.default")
+    assert default.priority == 0
+    assert delivery_job(default).priority == 0
+
+    bulk = Outbox.enqueue!(rendered_email("Bulk"), category: "test.bulk", priority: 3)
+    assert bulk.priority == 3
+    assert delivery_job(bulk).priority == 3
+  end
+
+  test "rejects a priority outside Oban's range" do
+    assert_raise Ecto.InvalidChangesetError, fn ->
+      Outbox.enqueue!(rendered_email("Too low"), category: "test.priority", priority: 10)
+    end
+  end
+
+  test "reconciliation requeues a missing job at the entry's priority" do
+    entry = Outbox.enqueue!(rendered_email("Requeued"), category: "test.requeued", priority: 3)
+    entry |> delivery_job() |> Repo.delete!()
+
+    assert :ok = perform_job(OutboxReconciler, %{})
+    assert %Oban.Job{state: "available", priority: 3} = delivery_job(entry)
+  end
+
   test "does not enqueue duplicate incomplete jobs for one entry" do
     entry = Outbox.enqueue!(rendered_email("Unique"), category: "test.unique")
     first = delivery_job(entry)

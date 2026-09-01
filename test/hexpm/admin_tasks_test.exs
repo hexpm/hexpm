@@ -1131,6 +1131,22 @@ defmodule Hexpm.AdminTasksTest do
       assert_email_sent(fn email -> assert email.to == [{"", "jane@example.com"}] end)
     end
 
+    test "queues announcements behind transactional mail" do
+      assert {:ok, 1} =
+               AdminTasks.send_email(["bob@example.com"], "Hex.pm - Service update", "Body")
+
+      assert [entry] = Repo.all(OutboxEntry)
+      assert entry.priority == 3
+
+      assert [%Oban.Job{priority: 3}] =
+               Repo.all(
+                 from(job in Oban.Job,
+                   where: job.worker == "Hexpm.Emails.OutboxWorker",
+                   where: job.args == ^%{"outbox_entry_id" => entry.id}
+                 )
+               )
+    end
+
     test "only queues once for duplicate recipients" do
       assert {:ok, 1} =
                AdminTasks.send_email(
