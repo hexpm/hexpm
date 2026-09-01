@@ -568,12 +568,15 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         invoice_ids = Enum.map(customer["invoices"], & &1["id"])
 
         if id in invoice_ids do
-          invoice =
-            Hexpm.Billing.invoice(id, style_nonce: conn.assigns[:style_src_nonce])
+          case Hexpm.Billing.invoice(id, style_nonce: conn.assigns[:style_src_nonce]) do
+            {:ok, invoice} ->
+              conn
+              |> put_resp_header("content-type", "text/html")
+              |> send_resp(200, invoice)
 
-          conn
-          |> put_resp_header("content-type", "text/html")
-          |> send_resp(200, invoice)
+            {:error, _reason} ->
+              render_error(conn, 500)
+          end
         else
           not_found(conn)
         end

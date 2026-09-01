@@ -1093,7 +1093,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       stub(Hexpm.Billing.Mock, :invoice, fn id, _opts ->
         assert id == 123
-        "Invoice"
+        {:ok, "Invoice"}
       end)
 
       insert(:organization_user, organization: organization, user: user, role: "admin")
@@ -1104,6 +1104,26 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> get("/dashboard/orgs/#{organization.name}/invoices/123")
 
       assert response(conn, 200) == "Invoice"
+    end
+
+    test "renders an error when the billing service fails", %{
+      user: user,
+      organization: organization
+    } do
+      stub(Hexpm.Billing.Mock, :get, fn _token, _opts ->
+        %{"invoices" => [%{"id" => 123}]}
+      end)
+
+      stub(Hexpm.Billing.Mock, :invoice, fn _id, _opts -> {:error, %{}} end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/invoices/123")
+
+      assert response(conn, 500)
     end
 
     test "returns 404 for non-integer invoice ID", %{user: user, organization: organization} do

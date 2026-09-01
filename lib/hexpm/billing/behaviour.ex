@@ -10,8 +10,9 @@ defmodule Hexpm.Billing.Behaviour do
   @callback update(organization(), map()) ::
               {:ok, map()} | {:requires_action, map()} | {:error, map()}
   @callback change_plan(organization(), map()) :: :ok
-  @callback invoice(id :: pos_integer(), opts :: keyword()) :: binary()
+  @callback invoice(id :: pos_integer(), opts :: keyword()) ::
+              {:ok, binary()} | {:error, map()}
   @callback void_invoice(organization(), payments_token :: String.t()) :: :ok | {:error, map()}
   @callback pay_invoice(id :: pos_integer()) :: :ok | {:error, map()}
-  @callback report() :: [map()]
+  @callback report() :: {:ok, [map()]} | {:error, map()}
 end
