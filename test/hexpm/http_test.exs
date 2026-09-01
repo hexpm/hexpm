@@ -21,6 +21,16 @@ defmodule Hexpm.HTTPTest do
     assert {:ok, 200, _headers, "respbody"} = HTTP.get(lasso_url(lasso, "/get"), [])
   end
 
+  test "head/2 tolerates a json content-type with no body", %{lasso: lasso} do
+    Lasso.expect_once(lasso, "HEAD", "/head", fn conn ->
+      conn
+      |> Conn.put_resp_content_type("application/json")
+      |> Conn.resp(200, "")
+    end)
+
+    assert {:ok, 200, _headers, ""} = HTTP.head(lasso_url(lasso, "/head"), [])
+  end
+
   test "get/3 can stop reading an oversized response", %{lasso: lasso} do
     Lasso.expect_once(lasso, "GET", "/oversized", fn conn ->
       Conn.resp(conn, 200, String.duplicate("x", 100))
