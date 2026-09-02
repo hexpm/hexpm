@@ -40,6 +40,8 @@ defmodule Hexpm.Emails.OutboxWorker do
           :ok
 
         entry ->
+          Logger.metadata(outbox_entry_id: entry.id, outbox_category: entry.category)
+
           case deliver_or_expire!(entry) do
             {:delivered, result} -> record_delivery!(entry, result)
             :expired -> Repo.delete!(entry)

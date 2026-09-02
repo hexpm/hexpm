@@ -35,6 +35,7 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
            ]
 
     assert entry.subject == "Rendered email"
+    assert entry.type == nil
     assert entry.delivered_at == nil
 
     assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: entry.id})
@@ -42,6 +43,15 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
 
     assert %OutboxEntry{delivered_at: %DateTime{}, provider_message_id: nil} =
              Repo.get!(OutboxEntry, entry.id)
+  end
+
+  test "keeps the email type across the outbox" do
+    email = Emails.announcement("bob@example.com", "Hex.pm - Service update", "Body")
+    entry = Outbox.enqueue!(email, category: "admin.announcement")
+
+    assert entry.type == "announcement"
+    assert entry.email["type"] == "announcement"
+    assert OutboxEnvelope.load!(entry.email).private == %{type: "announcement"}
   end
 
   test "records the provider's message id", context do
