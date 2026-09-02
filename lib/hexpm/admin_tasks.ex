@@ -309,6 +309,60 @@ defmodule Hexpm.AdminTasks do
   end
 
   @doc """
+  Blocks new email addresses on a domain and everything under it.
+
+  Existing addresses stay; only adding an address on the domain fails, at
+  signup and in the account settings alike.
+
+  ## Examples
+
+      iex> AdminTasks.block_email_domain("example.com", comment: "signup farm")
+      :ok
+  """
+  @spec block_email_domain(String.t(), keyword()) :: :ok | {:error, Ecto.Changeset.t()}
+  def block_email_domain(domain, opts \\ []) do
+    params = %{domain: domain, comment: Keyword.get(opts, :comment)}
+
+    case Repo.insert(BlockedEmailDomain.changeset(%BlockedEmailDomain{}, params)) do
+      {:ok, _blocked} -> :ok
+      {:error, changeset} -> {:error, changeset}
+    end
+  end
+
+  @doc """
+  Removes a domain from the email block list.
+
+  ## Examples
+
+      iex> AdminTasks.unblock_email_domain("example.com")
+      :ok
+  """
+  @spec unblock_email_domain(String.t()) :: :ok | {:error, :not_found}
+  def unblock_email_domain(domain) do
+    case Repo.delete_all(BlockedEmailDomain.by_domain(domain)) do
+      {0, _} -> {:error, :not_found}
+      {_count, _} -> :ok
+    end
+  end
+
+  @doc """
+  Lists the blocked email domains with their comments.
+
+  ## Examples
+
+      iex> AdminTasks.blocked_email_domains()
+      [%{domain: "example.com", comment: "signup farm"}]
+  """
+  @spec blocked_email_domains() :: [%{domain: String.t(), comment: String.t() | nil}]
+  def blocked_email_domains() do
+    from(b in BlockedEmailDomain,
+      order_by: b.domain,
+      select: %{domain: b.domain, comment: b.comment}
+    )
+    |> Repo.all()
+  end
+
+  @doc """
   Allows republishing a release by resetting its inserted_at timestamp.
 
   ## Arguments

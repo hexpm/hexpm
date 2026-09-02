@@ -400,6 +400,45 @@ defmodule Hexpm.AdminTasksTest do
     end
   end
 
+  describe "block_email_domain/2" do
+    test "blocks new addresses on the domain and leaves existing ones" do
+      user = insert(:user, emails: [build(:email, email: "old@farm.example")])
+
+      assert :ok = AdminTasks.block_email_domain("farm.example", comment: "signup farm")
+
+      assert [%{domain: "farm.example", comment: "signup farm"}] =
+               AdminTasks.blocked_email_domains()
+
+      assert {:error, changeset} =
+               Hexpm.Accounts.Users.add_email(user, %{email: "new@farm.example"},
+                 audit: audit_data(user)
+               )
+
+      assert errors_on(changeset)[:email] == "uses a blocked domain"
+
+      assert Repo.get!(User, user.id) |> Repo.preload(:emails) |> Map.fetch!(:emails) |> length() ==
+               1
+    end
+
+    test "rejects a domain that is already blocked or malformed" do
+      assert :ok = AdminTasks.block_email_domain("farm.example")
+      assert {:error, changeset} = AdminTasks.block_email_domain("FARM.example")
+      assert errors_on(changeset)[:domain] == "has already been taken"
+
+      assert {:error, changeset} = AdminTasks.block_email_domain("not a domain")
+      assert errors_on(changeset)[:domain] == "has invalid format"
+    end
+  end
+
+  describe "unblock_email_domain/1" do
+    test "removes the block" do
+      assert :ok = AdminTasks.block_email_domain("farm.example")
+      assert :ok = AdminTasks.unblock_email_domain("farm.example")
+      assert AdminTasks.blocked_email_domains() == []
+      assert {:error, :not_found} = AdminTasks.unblock_email_domain("farm.example")
+    end
+  end
+
   describe "rename_user/2" do
     test "renames user" do
       user = insert(:user, username: "oldname")
