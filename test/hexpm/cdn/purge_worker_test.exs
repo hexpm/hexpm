@@ -58,7 +58,7 @@ defmodule Hexpm.CDN.PurgeWorkerTest do
       expect(Hexpm.CDN.Mock, :purge_key, 4, fn :fastly_hexrepo, ["k"] -> :ok end)
 
       expect(Hexpm.CDN.Mock, :verify, fn _service, [%{url: "https://r/a"} = a] ->
-        [{a, {:error, {:stale, [%{pop: :nearest, etag: "old", served_by: "cache-iad-1-IAD"}]}}}]
+        [{a, {:error, {:stale, [%{pop: :nearest, etag: "old", cache: "x-cache: HIT"}]}}}]
       end)
 
       expect(Hexpm.CDN.Mock, :verify, fn _service, [%{url: "https://r/a"} = a] -> [{a, :ok}] end)
@@ -76,7 +76,7 @@ defmodule Hexpm.CDN.PurgeWorkerTest do
       expect(Hexpm.CDN.Mock, :purge_key, 6, fn :fastly_hexrepo, ["k"] -> :ok end)
 
       expect(Hexpm.CDN.Mock, :verify, 3, fn _service, [%{url: "https://r/a"} = a] ->
-        [{a, {:error, {:stale, [%{pop: :nearest, etag: "old", served_by: "cache-iad-1-IAD"}]}}}]
+        [{a, {:error, {:stale, [%{pop: :nearest, etag: "old", cache: "x-cache: HIT"}]}}}]
       end)
 
       args = %{
@@ -85,9 +85,9 @@ defmodule Hexpm.CDN.PurgeWorkerTest do
         "verify" => [target("https://r/a")]
       }
 
-      assert_raise Hexpm.CDN.PurgeVerificationError, ~r/https:\/\/r\/a expected "abc"/, fn ->
-        perform_job(PurgeWorker, args)
-      end
+      assert_raise Hexpm.CDN.PurgeVerificationError,
+                   ~r/https:\/\/r\/a expected "abc": nearest serves "old" \(x-cache: HIT\)/,
+                   fn -> perform_job(PurgeWorker, args) end
     end
 
     test "returns the purge error so the job retries" do

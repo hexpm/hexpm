@@ -226,8 +226,8 @@ defmodule Hexpm.CDN.PurgeVerificationError do
 
   defp describe({target, {:stale, pops}}) do
     pops =
-      Enum.map_join(pops, ", ", fn %{pop: pop, etag: etag, served_by: served_by} ->
-        "#{pop} serves #{inspect(etag)} (#{served_by})"
+      Enum.map_join(pops, ", ", fn %{pop: pop, etag: etag, cache: cache} ->
+        "#{pop} serves #{inspect(etag)} (#{cache})"
       end)
 
     "  #{target.url} expected #{inspect(target.etag)}: #{pops}"

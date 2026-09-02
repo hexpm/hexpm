@@ -122,7 +122,13 @@ defmodule Hexpm.CDN.FastlyTest do
 
           {_, "nrt-tokyo-jp"} ->
             {:ok, 200,
-             [{"etag", ~s("old")}, {"x-cache-served-by", "cache-iad-2-IAD, cache-nrt-1-NRT"}], ""}
+             [
+               {"etag", ~s("old")},
+               {"x-cache-served-by", "cache-iad-2-IAD, cache-nrt-1-NRT"},
+               {"x-cache", "HIT, HIT"},
+               {"x-cache-age", "120, 3"},
+               {"x-cache-hits", "5, 1"}
+             ], ""}
         end
       end)
 
@@ -137,7 +143,9 @@ defmodule Hexpm.CDN.FastlyTest do
                       %{
                         pop: "nrt-tokyo-jp",
                         etag: ~s("old"),
-                        served_by: "cache-iad-2-IAD, cache-nrt-1-NRT"
+                        cache:
+                          "x-cache-served-by: cache-iad-2-IAD, cache-nrt-1-NRT; " <>
+                            "x-cache: HIT, HIT; x-cache-age: 120, 3; x-cache-hits: 5, 1"
                       }
                     ]}}}
                ]
@@ -173,7 +181,7 @@ defmodule Hexpm.CDN.FastlyTest do
       target = %{url: "https://repo.example/packages/foo", etag: "abc"}
 
       assert Fastly.verify(:fastly_hexrepo, [target]) ==
-               [{target, {:error, {:status, 503, "cache-bma-1-BMA"}}}]
+               [{target, {:error, {:status, 503, "x-cache-served-by: cache-bma-1-BMA"}}}]
     end
 
     test "emits telemetry per POP with the result" do

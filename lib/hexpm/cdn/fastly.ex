@@ -15,10 +15,11 @@ defmodule Hexpm.CDN.Fastly do
   from that POP's cache, tunnelled over Fastly's shield network. The CDN
   turns the HEAD into a GET on a miss, so a probe also pulls the object
   into that POP's cache, which a client there would have done anyway. Every
-  answer carries `x-cache-served-by` (shield first, then edge), so a stale
-  result names the caches that kept the old copy. A probe that fails to
-  answer is reported in telemetry and the log but does not fail the check;
-  a stale answer from any POP does.
+  answer carries `x-cache-served-by`, `x-cache`, `x-cache-age` and
+  `x-cache-hits` (shield first, then edge), so a stale result names the
+  caches that kept the old copy and how long they had it. A probe that
+  fails to answer is reported in telemetry and the log but does not fail
+  the check; a stale answer from any POP does.
 
   Objects in a private repository are fetched with a token minted for the
   check: two minutes, scoped to that repository, verified by the edge
@@ -35,6 +36,7 @@ defmodule Hexpm.CDN.Fastly do
   @retry_opts [attempts: 5, base_delay: 200, statuses: [429, 500..599]]
   @probe_timeout 15_000
   @verify_concurrency 10
+  @cache_headers ~w(x-cache-served-by x-cache x-cache-age x-cache-hits)
 
   @impl true
   def purge_key(service, keys) do
@@ -94,8 +96,8 @@ defmodule Hexpm.CDN.Fastly do
   # nearest fetch decides, since a failed probe is no evidence of staleness.
   defp verdict(results) do
     stale =
-      for {_target, pop, {:error, {:stale, served, served_by}}} <- results,
-          do: %{pop: pop, etag: served, served_by: served_by}
+      for {_target, pop, {:error, {:stale, served, cache}}} <- results,
+          do: %{pop: pop, etag: served, cache: cache}
 
     if stale == [] do
       [nearest] = for {_target, :nearest, result} <- results, do: result
@@ -153,14 +155,20 @@ defmodule Hexpm.CDN.Fastly do
     if normalize_etag(served) == normalize_etag(etag) do
       :ok
     else
-      {:error, {:stale, served, header(headers, "x-cache-served-by")}}
+      {:error, {:stale, served, cache(headers)}}
     end
   end
 
   defp compare(404, _headers, nil), do: :ok
 
-  defp compare(status, headers, _etag),
-    do: {:error, {:status, status, header(headers, "x-cache-served-by")}}
+  defp compare(status, headers, _etag), do: {:error, {:status, status, cache(headers)}}
+
+  defp cache(headers) do
+    case for(name <- @cache_headers, value = header(headers, name), do: "#{name}: #{value}") do
+      [] -> nil
+      pairs -> Enum.join(pairs, "; ")
+    end
+  end
 
   @impl true
   def public_ips() do
