@@ -42,38 +42,62 @@ defmodule Hexpm.Hexdocs.Bucket do
 
   # Every docs upload, on any pod, writes these objects, so the render, the
   # write number and the put run under a lock on the object: the number is
-  # then in write order and the content is the newest render.
+  # then in write order and the content is the newest render. Under the
+  # package lock of `Hexpm.Hexdocs` the object lock joins that transaction
+  # rather than nesting one, so a failure here reaches that lock's handling
+  # and the purge jobs of the pages already written still commit.
   defp upload_content(key, path, content_type, render, url) do
-    {:ok, :ok} =
-      Hexpm.Repo.transaction(
-        fn ->
-          Hexpm.Repo.advisory_xact_lock(:hexdocs,
-            sub_key: :erlang.phash2(path),
-            timeout: @lock_timeout
-          )
+    locked_on(path, fn ->
+      write = Hexpm.CDN.next_write()
 
-          write = Hexpm.CDN.next_write()
+      opts = [
+        content_type: content_type,
+        cache_control: "public, max-age=3600",
+        meta: [{"surrogate-key", key}, {"write", Integer.to_string(write)}]
+      ]
 
-          opts = [
-            content_type: content_type,
-            cache_control: "public, max-age=3600",
-            meta: [{"surrogate-key", key}, {"write", Integer.to_string(write)}]
-          ]
+      {:ok, %{etag: etag}} = Hexpm.Store.put(:docs_bucket, path, render.(), opts)
+      purge("hexpm", [key], [%{url: url, etag: etag, write: write}])
+    end)
+  end
 
-          {:ok, %{etag: etag}} = Hexpm.Store.put(:docs_bucket, path, render.(), opts)
-          purge("hexpm", [key], [%{url: url, etag: etag, write: write}])
-        end,
+  defp locked_on(path, fun) do
+    locked = fn ->
+      Hexpm.Repo.advisory_xact_lock(:hexdocs,
+        sub_key: :erlang.phash2(path),
         timeout: @lock_timeout
       )
 
-    :ok
+      fun.()
+    end
+
+    if Hexpm.Repo.in_transaction?() do
+      locked.()
+    else
+      {:ok, result} = Hexpm.Repo.transaction(locked, timeout: @lock_timeout)
+      result
+    end
   end
 
-  def upload(repository, package, version, all_versions, retired_versions, dir, files) do
-    upload_type =
-      if Utils.latest_version?(package, version, all_versions), do: :both, else: :versioned
+  @doc "Writes the pages of `version` under its own prefix and removes its files no longer in it."
+  def upload_versioned(repository, package, version, dir, files) do
+    uploads = list_upload_files(repository, package, version, dir, files, :versioned)
+    paths = MapSet.new(uploads, &elem(&1, 0))
+    write = Hexpm.CDN.next_write()
+    uploaded = upload_new_files(uploads, write)
+    delete_old_docs(repository, package, [version], paths, :versioned)
+    targets = page_targets(repository, uploaded, write)
+    purge_hexdocs_cache(repository, package, [version], :versioned, targets)
+  end
 
-    upload_files = list_upload_files(repository, package, version, dir, files, upload_type)
+  @doc """
+  Writes the pages of `version` as the package's unversioned pages and
+  removes the unversioned files no longer in it. `version` must be the
+  latest, decided under the package's lock in `Hexpm.Hexdocs`, where this
+  runs.
+  """
+  def upload_unversioned(repository, package, version, dir, files) do
+    uploads = list_upload_files(repository, package, version, dir, files, :unversioned)
 
     # docs_config.js, and on the public site the sitemap, are rewritten by
     # this same upload, so they stay in place rather than being missing
@@ -82,14 +106,19 @@ defmodule Hexpm.Hexdocs.Bucket do
       if repository == "hexpm", do: ["docs_config.js", "sitemap.xml"], else: ["docs_config.js"]
 
     paths =
-      Enum.reduce(rewritten, MapSet.new(upload_files, &elem(&1, 0)), fn file, paths ->
+      Enum.reduce(rewritten, MapSet.new(uploads, &elem(&1, 0)), fn file, paths ->
         MapSet.put(paths, repository_path(repository, Path.join(package, file)))
       end)
 
     write = Hexpm.CDN.next_write()
-    uploaded = upload_new_files(upload_files, write)
-    delete_old_docs(repository, package, [version], paths, upload_type)
+    uploaded = upload_new_files(uploads, write)
+    delete_old_docs(repository, package, [], paths, :unversioned)
+    targets = page_targets(repository, uploaded, write)
+    purge_hexdocs_cache(repository, package, [], :unversioned, targets)
+  end
 
+  @doc "Writes the package's docs_config.js, the version list every page loads, debounced."
+  def upload_docs_config(repository, package, version, all_versions, retired_versions, dir, files) do
     Debouncer.debounce(Debouncer, {:docs_config, repository, package}, @gcs_put_debounce, fn ->
       config =
         build_docs_config(
@@ -104,14 +133,6 @@ defmodule Hexpm.Hexdocs.Bucket do
 
       upload_new_files([config], Hexpm.CDN.next_write())
     end)
-
-    purge_hexdocs_cache(
-      repository,
-      package,
-      [version],
-      upload_type,
-      page_targets(repository, uploaded, write)
-    )
 
     purge(repository, [docs_config_cdn_key(repository, package)])
   end
@@ -285,11 +306,11 @@ defmodule Hexpm.Hexdocs.Bucket do
 
     existing =
       case {upload_type, versions} do
-        {:both, _} ->
-          Hexpm.Store.list(bucket, repository_path(repository, "#{package}/"))
-
         {:versioned, [version]} ->
           Hexpm.Store.list(bucket, repository_path(repository, "#{package}/#{version}/"))
+
+        {_both_or_unversioned, _} ->
+          Hexpm.Store.list(bucket, repository_path(repository, "#{package}/"))
       end
 
     keys =
@@ -339,6 +360,10 @@ defmodule Hexpm.Hexdocs.Bucket do
 
   defp purge_hexdocs_cache(repository, package, versions, :versioned, targets) do
     purge(repository, Enum.map(versions, &versioned_cdn_key(repository, package, &1)), targets)
+  end
+
+  defp purge_hexdocs_cache(repository, package, [], :unversioned, targets) do
+    purge(repository, [unversioned_cdn_key(repository, package)], targets)
   end
 
   defp versioned_cdn_key(repository, package, version),
