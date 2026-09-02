@@ -34,6 +34,8 @@ The package repository at repo.hex.pm writes an access log for every request. Ea
 
 Requests to the hex.pm website and API are logged with the client IP address, user agent and referrer. We don't write access logs for hexdocs.pm or hexorgs.pm.
 
+When an attempt to sign in, or to authenticate to the API or the package repository, fails, we record the username or email address it was made with, the IP address, the user agent and why it was refused, so that we can detect attacks on accounts.
+
 When you take an action that changes something, such as publishing a package, generating a key or changing account settings, we record it in an audit log together with the IP address and user agent of the request that performed it. You can see your own audit log in the dashboard, and organization administrators can see their organization's. We keep audit log entries indefinitely, because their purpose is to be a permanent record of what changed. Entries about public packages and other public content are kept even after the account or organization that made them is deleted, and they keep a copy of who acted. Entries about an organization's private content are part of that organization's data under the [Data Processing Agreement](/policies/dpa) and are deleted with the rest of it. On request we can remove the identifying details from your entries.
 
 Sign up, password reset, email verification and the package report form are protected by hCaptcha, which receives your IP address and browser data to tell people from bots. Application errors are reported to the error tracking provider on the [Subprocessors](/policies/subprocessors) page and can include the request data that was in scope when the error happened; they're deleted on that provider's retention schedule.
