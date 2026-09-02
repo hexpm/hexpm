@@ -117,6 +117,14 @@ defmodule Hexpm.Accounts.Organizations do
   end
 
   def add_member(organization, %User{organization_id: nil} = user, params, audit: audit_data) do
+    if User.verified_primary_email?(user) do
+      insert_member(organization, user, params, audit_data)
+    else
+      {:error, :unverified_primary_email}
+    end
+  end
+
+  defp insert_member(organization, user, params, audit_data) do
     multi =
       Multi.new()
       |> Seats.claim(:seats, organization)

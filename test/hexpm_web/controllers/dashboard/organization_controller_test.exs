@@ -456,6 +456,33 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert_email_sent(Hexpm.Emails.organization_invite(organization, new_user))
     end
 
+    test "add member whose primary email is unverified", %{
+      user: user,
+      organization: organization
+    } do
+      mock_customer(organization)
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      unverified = insert(:user, emails: [build(:email, verified: false)])
+      params = %{"username" => unverified.username, role: "write"}
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}", %{
+          "action" => "add_member",
+          "organization_user" => params
+        })
+
+      html = html_response(conn, 400)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "User #{unverified.username} has not verified their primary email."
+
+      assert active_org_tab(html) == "Members"
+      refute Repo.get_by(assoc(organization, :organization_users), user_id: unverified.id)
+      assert_no_email_sent()
+    end
+
     test "adding member does not send invite when user opts out", %{
       user: user,
       organization: organization

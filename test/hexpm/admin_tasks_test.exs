@@ -6,7 +6,7 @@ defmodule Hexpm.AdminTasksTest do
   alias Hexpm.AdminTasks
   alias Hexpm.Accounts.{Organization, OrganizationUser, User}
   alias Hexpm.Emails.{OutboxEntry, OutboxWorker}
-  alias Hexpm.Repository.{Package, Release}
+  alias Hexpm.Repository.{Package, PackageOwner, Release}
 
   describe "change_password/3" do
     test "changes password by username" do
@@ -872,6 +872,18 @@ defmodule Hexpm.AdminTasksTest do
       assert {:ok, package_owner} = AdminTasks.add_owner(package.name, email)
 
       assert package_owner.user_id == new_owner.id
+    end
+
+    test "refuses a user whose primary email is unverified" do
+      package = insert(:package)
+      owner = insert(:user)
+      insert(:package_owner, package: package, user: owner)
+      new_owner = insert(:user, emails: [build(:email, verified: false)])
+
+      assert {:error, :unverified_primary_email} =
+               AdminTasks.add_owner(package.name, new_owner.username)
+
+      refute Repo.get_by(PackageOwner, package_id: package.id, user_id: new_owner.id)
     end
   end
 

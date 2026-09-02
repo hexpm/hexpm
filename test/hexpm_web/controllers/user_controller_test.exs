@@ -46,6 +46,25 @@ defmodule HexpmWeb.UserControllerTest do
     assert response(conn, 200) =~ c.user1.username
   end
 
+  test "returns 404 for a user whose primary email is unverified" do
+    user = insert(:user, full_name: "Unverified Person", emails: [build(:email, verified: false)])
+
+    conn = get(build_conn(), "/users/#{user.username}")
+    assert response(conn, 404)
+    refute conn.resp_body =~ "Unverified Person"
+
+    conn = get(build_conn(), "/users/#{user.username}/stats")
+    assert response(conn, 404)
+  end
+
+  test "shows an organization page without any organization emails" do
+    name = Hexpm.Fake.sequence(:package)
+    insert(:organization, name: name, user: build(:user, username: name, emails: []))
+
+    conn = get(build_conn(), "/orgs/#{name}")
+    assert response(conn, 200) =~ name
+  end
+
   test "show owned packages as owner", c do
     conn =
       build_conn()
