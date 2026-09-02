@@ -129,6 +129,23 @@ defmodule HexpmWeb.SudoControllerTest do
                        }}
     end
 
+    test "records an account without a password" do
+      user = insert(:user, password: nil)
+
+      conn =
+        build_conn()
+        |> test_login(user, sudo: false)
+        |> post(~p"/sudo", %{"type" => "password", "password" => "password"})
+
+      assert html_response(conn, 200) =~ "Incorrect password"
+      refute Sudo.sudo_active?(conn)
+
+      user_id = user.id
+
+      assert_received {Hexpm.SecurityLog,
+                       %{method: "password", reason: "no_password", user_id: ^user_id}}
+    end
+
     test "returns error when 2FA enabled" do
       user = insert(:user_with_tfa)
 
@@ -299,6 +316,11 @@ defmodule HexpmWeb.SudoControllerTest do
         |> post(~p"/sudo/recovery", %{"code" => "invalid"})
 
       assert html_response(conn, 200) =~ "Invalid recovery code format"
+
+      user_id = user.id
+
+      assert_received {Hexpm.SecurityLog,
+                       %{method: "recovery_code", reason: "invalid_code", user_id: ^user_id}}
     end
 
     test "redirects when 2FA not enabled" do

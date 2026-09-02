@@ -112,7 +112,7 @@ defmodule HexpmWeb.SudoController do
         if correct_password?(user, password) do
           redirect_after_sudo(conn)
         else
-          SecurityLog.auth_failure(conn, :password, :wrong_password, user_id: user.id)
+          SecurityLog.auth_failure(conn, :password, password_reason(user), user_id: user.id)
 
           conn
           |> put_flash(:error, "Incorrect password.")
@@ -164,6 +164,8 @@ defmodule HexpmWeb.SudoController do
               |> render_recovery()
           end
         else
+          SecurityLog.auth_failure(conn, :recovery_code, :invalid_code, user_id: user.id)
+
           conn
           |> put_flash(:error, "Invalid recovery code format.")
           |> render_recovery()
@@ -206,6 +208,10 @@ defmodule HexpmWeb.SudoController do
       container: "container page page-xs login"
     )
   end
+
+  @spec password_reason(User.t()) :: :no_password | :wrong_password
+  defp password_reason(%User{password: nil}), do: :no_password
+  defp password_reason(%User{}), do: :wrong_password
 
   @spec correct_password?(User.t(), String.t()) :: boolean()
   defp correct_password?(%User{password: nil}, _password), do: false

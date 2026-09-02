@@ -54,12 +54,14 @@ defmodule Hexpm.SecurityLogTest do
     conn = put_req_header(conn, "user-agent", <<"bad ", 0xFF, " agent">>)
 
     SecurityLog.auth_failure(conn, :password, :unknown_user,
-      username: String.duplicate("a", 2000)
+      username: "a" <> String.duplicate("\u0301", 2000)
     )
 
     assert_received {SecurityLog, event}
     assert event.user_agent == "bad � agent"
-    assert String.length(event.username) == 1024
+    assert byte_size(event.username) == 1023
+    assert String.length(event.username) == 1
+    assert String.valid?(event.username)
     assert Jason.encode!(event)
   end
 

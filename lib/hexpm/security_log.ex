@@ -11,6 +11,8 @@ defmodule Hexpm.SecurityLog do
 
   alias Hexpm.Accounts.Key
 
+  @max_text_bytes 1024
+
   @doc """
   Records an authentication attempt that failed.
 
@@ -54,8 +56,14 @@ defmodule Hexpm.SecurityLog do
     end
   end
 
-  defp text(value) when is_binary(value),
-    do: value |> String.replace_invalid() |> String.slice(0, 1024)
+  defp text(value) when is_binary(value) do
+    value
+    |> String.replace_invalid()
+    |> truncate(@max_text_bytes)
+  end
 
   defp text(value), do: value
+
+  defp truncate(string, max) when byte_size(string) <= max, do: string
+  defp truncate(string, max), do: string |> binary_part(0, max) |> String.replace_invalid("")
 end
