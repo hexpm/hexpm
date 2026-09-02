@@ -913,8 +913,7 @@ defmodule Hexpm.AdminTasks do
 
         pending
         |> Enum.flat_map(&prepare_announcement(&1, subject, body, group_key))
-        |> Enum.map(&Outbox.insert!/1)
-        |> length()
+        |> Outbox.insert_all!()
       end,
       timeout: :infinity
     )

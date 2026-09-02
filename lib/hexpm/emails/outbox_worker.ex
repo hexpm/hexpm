@@ -16,6 +16,12 @@ defmodule Hexpm.Emails.OutboxWorker do
     |> Oban.insert!()
   end
 
+  def enqueue_all!(entries) do
+    entries
+    |> Enum.map(&new(%{outbox_entry_id: &1.id}, priority: &1.priority))
+    |> Oban.insert_all()
+  end
+
   def discard!(outbox_entry_id), do: discard_entry(outbox_entry_id)
 
   @impl Oban.Worker

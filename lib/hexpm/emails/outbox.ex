@@ -7,6 +7,8 @@ defmodule Hexpm.Emails.Outbox do
   @allowed_options [:category, :group_key, :scope_key, :expires_at, :priority]
   @cancel_options [:group_key, :scope_key, :categories]
   @retention_seconds 30 * 24 * 60 * 60
+  @insert_chunk_size 1_000
+  @entry_fields ~w(category type group_key scope_key recipients subject email expires_at priority)a
 
   def enqueue!(%Swoosh.Email{} = email, opts) do
     email
@@ -54,6 +56,47 @@ defmodule Hexpm.Emails.Outbox do
       end)
 
     entry
+  end
+
+  @doc """
+  Inserts prepared entries and their delivery jobs in chunks, one statement per
+  table and chunk. Returns the number of entries inserted.
+  """
+  def insert_all!(attrs_list) do
+    {:ok, count} =
+      Repo.transaction(fn ->
+        attrs_list
+        |> Enum.map(& &1[:group_key])
+        |> Enum.uniq()
+        |> Enum.sort()
+        |> Enum.each(&OutboxLock.acquire!/1)
+
+        attrs_list
+        |> Enum.chunk_every(@insert_chunk_size)
+        |> Enum.map(&insert_chunk!/1)
+        |> Enum.sum()
+      end)
+
+    count
+  end
+
+  defp insert_chunk!(attrs_list) do
+    inserted_at = DateTime.utc_now()
+
+    rows =
+      Enum.map(attrs_list, fn attrs ->
+        %OutboxEntry{}
+        |> OutboxEntry.changeset(attrs)
+        |> Ecto.Changeset.apply_action!(:insert)
+        |> Map.take(@entry_fields)
+        |> Map.put(:inserted_at, inserted_at)
+      end)
+
+    {count, entries} =
+      Repo.insert_all(OutboxEntry, rows, returning: [:id, :priority], log: false)
+
+    OutboxWorker.enqueue_all!(entries)
+    count
   end
 
   @doc """

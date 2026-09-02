@@ -1,7 +1,79 @@
 defmodule Hexpm.Emails.OutboxTest do
   use Hexpm.DataCase
+  use Oban.Testing, repo: Hexpm.RepoBase
 
-  alias Hexpm.Emails.{Outbox, OutboxEntry}
+  import Swoosh.Email, except: [from: 2]
+
+  alias Hexpm.Emails.{Outbox, OutboxEntry, OutboxWorker}
+
+  describe "insert_all!/1" do
+    test "inserts the entries and one delivery job per entry" do
+      attrs =
+        for n <- 1..3 do
+          prepared_entry("Bulk #{n}", category: "test.bulk", group_key: "bulk:1", priority: 3)
+        end
+
+      assert Outbox.insert_all!(attrs) == 3
+
+      entries = Repo.all(from(entry in OutboxEntry, order_by: entry.id))
+      assert Enum.map(entries, & &1.subject) == ["Bulk 1", "Bulk 2", "Bulk 3"]
+      assert Enum.map(entries, & &1.category) == ["test.bulk", "test.bulk", "test.bulk"]
+      assert Enum.map(entries, & &1.recipients) == List.duplicate(["bob@example.com"], 3)
+      assert Enum.all?(entries, & &1.inserted_at)
+
+      jobs = all_enqueued(worker: OutboxWorker)
+
+      assert Enum.sort(Enum.map(jobs, & &1.args["outbox_entry_id"])) ==
+               Enum.map(entries, & &1.id)
+
+      assert Enum.map(jobs, & &1.priority) == [3, 3, 3]
+    end
+
+    test "inserts more entries than one chunk holds" do
+      attrs = List.duplicate(prepared_entry("Bulk", category: "test.bulk"), 1_001)
+
+      assert Outbox.insert_all!(attrs) == 1_001
+      assert Repo.aggregate(OutboxEntry, :count) == 1_001
+      assert length(all_enqueued(worker: OutboxWorker)) == 1_001
+    end
+
+    test "inserts nothing when an entry is invalid" do
+      attrs = [
+        prepared_entry("Valid", category: "test.bulk"),
+        prepared_entry("Invalid", category: "Not A Category")
+      ]
+
+      assert_raise Ecto.InvalidChangesetError, fn -> Outbox.insert_all!(attrs) end
+      assert Repo.all(OutboxEntry) == []
+      assert all_enqueued(worker: OutboxWorker) == []
+    end
+
+    test "inserts nothing for an empty list" do
+      assert Outbox.insert_all!([]) == 0
+      assert Repo.all(OutboxEntry) == []
+    end
+  end
+
+  describe "insert_all!/1 locking" do
+    setup do
+      skip = Application.fetch_env!(:hexpm, :skip_advisory_locks)
+      Application.put_env(:hexpm, :skip_advisory_locks, false)
+      on_exit(fn -> Application.put_env(:hexpm, :skip_advisory_locks, skip) end)
+      :ok
+    end
+
+    test "takes one advisory lock per group" do
+      attrs = [
+        prepared_entry("One", category: "test.bulk", group_key: "bulk:1"),
+        prepared_entry("Two", category: "test.bulk", group_key: "bulk:1"),
+        prepared_entry("Three", category: "test.bulk", group_key: "bulk:2")
+      ]
+
+      assert held_outbox_locks() == 0
+      Outbox.insert_all!(attrs)
+      assert held_outbox_locks() == 2
+    end
+  end
 
   describe "cancel!/1 by group key" do
     test "deletes only the named categories in that group" do
@@ -230,5 +302,14 @@ defmodule Hexpm.Emails.OutboxTest do
 
       assert Repo.get(OutboxEntry, entry.id)
     end
+  end
+
+  defp prepared_entry(subject, opts) do
+    new()
+    |> Swoosh.Email.from({"Hex.pm", "noreply@hex.pm"})
+    |> to("bob@example.com")
+    |> subject(subject)
+    |> text_body("Body")
+    |> Outbox.prepare!(opts)
   end
 end
