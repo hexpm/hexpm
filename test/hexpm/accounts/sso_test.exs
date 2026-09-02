@@ -1119,7 +1119,7 @@ defmodule Hexpm.Accounts.SSOTest do
       # deletes it and cascades to the organization access session. The
       # administrator's linked-accounts view has to survive that.
       Hexpm.UserSessions.revoke(user_session, nil, audit: audit_data(context.member))
-      Hexpm.ReleaseTasks.PurgeExpiredRecords.run()
+      Hexpm.PurgeExpiredRecords.run()
 
       refute Repo.exists?(SSO.OrgSession)
       assert Repo.get!(Identity, identity.id).last_authenticated_at == authenticated_at

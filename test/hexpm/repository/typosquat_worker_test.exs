@@ -1,11 +1,11 @@
-defmodule Hexpm.ReleaseTasks.CheckNamesTest do
+defmodule Hexpm.Repository.TyposquatWorkerTest do
   use Hexpm.DataCase
   use Oban.Testing, repo: Hexpm.RepoBase
 
   import Swoosh.TestAssertions
 
   alias Hexpm.CronMonitor.SentryMock
-  alias Hexpm.ReleaseTasks.CheckNames
+  alias Hexpm.Repository.TyposquatWorker
 
   @date ~D[2026-07-20]
 
@@ -23,7 +23,7 @@ defmodule Hexpm.ReleaseTasks.CheckNamesTest do
   end
 
   test "finds typosquats from a fixed UTC date interval" do
-    assert CheckNames.find_candidates(2, @date) == [["phoenics", "phoenix", 2]]
+    assert TyposquatWorker.find_candidates(2, @date) == [["phoenics", "phoenix", 2]]
   end
 
   test "scheduled jobs use the UTC date from scheduled_at" do
@@ -31,7 +31,7 @@ defmodule Hexpm.ReleaseTasks.CheckNamesTest do
     expect_monitor()
 
     assert :ok =
-             perform_job(CheckNames, %{},
+             perform_job(TyposquatWorker, %{},
                scheduled_at: DateTime.new!(@date, ~T[00:30:00], "Etc/UTC")
              )
 
@@ -43,7 +43,7 @@ defmodule Hexpm.ReleaseTasks.CheckNamesTest do
     expect_monitor()
 
     assert :ok =
-             perform_job(CheckNames, %{"date" => Date.to_iso8601(@date)},
+             perform_job(TyposquatWorker, %{"date" => Date.to_iso8601(@date)},
                scheduled_at: DateTime.new!(Date.add(@date, 10), ~T[00:30:00], "Etc/UTC")
              )
 
@@ -52,7 +52,7 @@ defmodule Hexpm.ReleaseTasks.CheckNamesTest do
 
   test "invalid dates cancel without retrying" do
     assert {:cancel, {:invalid_date, "not-a-date"}} =
-             perform_job(CheckNames, %{"date" => "not-a-date"})
+             perform_job(TyposquatWorker, %{"date" => "not-a-date"})
   end
 
   defp expect_monitor do

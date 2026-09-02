@@ -1,4 +1,4 @@
-defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
+defmodule Hexpm.PurgeExpiredRecords do
   use Oban.Worker,
     queue: :periodic,
     max_attempts: 5,

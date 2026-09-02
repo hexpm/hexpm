@@ -1,4 +1,4 @@
-defmodule Hexpm.ReleaseTasks.Stats do
+defmodule Hexpm.Repository.DownloadsWorker do
   use Oban.Worker,
     queue: :heavy,
     max_attempts: 5,
