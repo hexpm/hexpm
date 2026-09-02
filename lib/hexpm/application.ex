@@ -207,8 +207,9 @@ defmodule Hexpm.Application do
   defp oban_child, do: {Oban, Application.fetch_env!(:hexpm, Oban)}
 
   defp finch_pools() do
+    cdn_url = Application.fetch_env!(:hexpm, :cdn_url)
     gcs_url = Application.get_env(:hexpm, :gcs_url, "https://storage.googleapis.com")
-    %{gcs_url => [size: 50, count: 8]}
+    %{cdn_url => [conn_max_idle_time: 5_000], gcs_url => [size: 50, count: 8]}
   end
 
   defp web_children do
