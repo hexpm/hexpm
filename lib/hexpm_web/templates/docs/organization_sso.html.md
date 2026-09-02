@@ -128,6 +128,23 @@ When one lapses in the browser you are sent to the provider and back, and unless
 
 Shorter is stricter and more interruptive. The lifetime is what bounds how long someone your provider has deactivated keeps reaching the organization, so it is the number to pick deliberately.
 
+### Provisioning (SCIM)
+
+Provisioning lets your provider create and deactivate members here as you assign and deactivate them there. It is separate from SSO login: SSO proves a person may authenticate now, provisioning changes who is a member.
+
+On the organization's **SSO** dashboard, under **Provisioning (SCIM)**, choose what happens when the seats run out and the role provisioned members join with, then generate the bearer token. The token is shown once; regenerate it to replace it, and it is revoked automatically if the connection is pointed at a different provider. In your provider's SCIM integration, use the **SCIM base URL** from the dashboard with that token. For Okta, enable the provisioning features you want: **Create Users**, **Update User Attributes**, and **Deactivate Users** each work on their own, so you can start with deactivation only.
+
+What each operation does:
+
+* **Assigning a person** whose Hexpm account has a verified email matching the SCIM `userName` adds them as a member with the role you chose, taking a seat. If the seats are full, the create is refused or a seat is added to the subscription, per your choice.
+* **Assigning an address with no Hexpm account** sends a pending invitation to that address instead. Nothing creates a Hexpm account, and the seat is spent when the invitation is accepted, not when it is sent.
+* **Deactivating or unassigning** removes the membership, with the member's organization access sessions and SSO link, or revokes the pending invitation. The seat is freed for reuse; the billed quantity changes only when an administrator changes it.
+* **Reactivating** joins the person again with the provisioned role. A role an administrator granted by hand before the deactivation is not remembered.
+
+Membership stays manageable in Hexpm either way. A member you remove by hand reads as deactivated on the provider's next sync, and a member you add by hand is matched by the provider's import through their verified email. One thing to know before connecting it: a full import lists each member's primary email address (or the address your provider already knows them by) to your provider, which is more than the member list on hex.pm shows.
+
+CI is unaffected: organization API keys are not members and never appear on this surface.
+
 ### The Hex CLI
 
 When a CLI session's authentication lapses, the next `mix deps.get` asks:
@@ -149,7 +166,7 @@ A personal API key is a static credential. There is no session behind it, nothin
 * **Block** removes this organization's permissions from members' personal keys on the required-by date, and refuses new ones. Their owners are emailed, and the rest of each key keeps working. Members publishing by hand run `mix hex.user auth` instead, and automation moves to an organization key.
 
     Blocking follows the same members enforcement does. A pilot turns personal keys away for the members you marked enforced and for nobody else, and it refuses new ones rather than removing what is already there, so a pilot shows you what required mode will do without taking anything away yet. An exempt member's keys are never touched.
-* **Allow** leaves them alone, and is what you get if you change nothing. It is the right answer if your publishing workflow depends on them. It means required mode has a standing exception: those keys reach the organization with no session, no expiry, and no exposure to your provider's conditional-access policy. A key still stops working when its owner is removed from the organization here, because its permissions are checked against current membership on every request; it does not stop working when they are deactivated only in your provider, which is what SCIM will change.
+* **Allow** leaves them alone, and is what you get if you change nothing. It is the right answer if your publishing workflow depends on them. It means required mode has a standing exception: those keys reach the organization with no session, no expiry, and no exposure to your provider's conditional-access policy. A key still stops working when its owner is removed from the organization here, because its permissions are checked against current membership on every request, and a provider deactivation counts as removal once provisioning is connected; without provisioning, a provider-only deactivation does not touch it.
 
     An organization API key has the same properties and is never enforced at all, so allowing personal keys widens a path that is already open rather than opening a new one. What blocking buys that removing the member does not is your provider's conditional-access policy, which no static credential evaluates.
 
@@ -188,17 +205,15 @@ There is no sixth. If you are evaluating Hexpm against a compliance requirement,
 Two windows, and they are different:
 
 * **Removing a member in Hexpm** takes effect within thirty minutes. The CLI's access token is a capability the edge verifies without a database lookup, so it keeps its scopes until it is next refreshed. Web access ends immediately.
-* **Deactivating someone in your provider only** takes effect when their organization access session expires, which is the lifetime you set. Hexpm does not learn about a provider-side deactivation until then.
+* **Deactivating someone in your provider** removes their membership here when provisioning is connected, which is the same as removing them by hand. Without provisioning, it takes effect when their organization access session expires, which is the lifetime you set; Hexpm does not learn about a provider-side deactivation until then.
 
-SCIM closes the second one and is not in this release. Until it ships, the session lifetime is what bounds it, which is the reason to pick that number deliberately rather than take the default.
-
-Removing the member in Hexpm is what revokes access. Removing their provider assignment is not.
+Without provisioning, the session lifetime is what bounds a provider-side deactivation, which is the reason to pick that number deliberately rather than take the default, and removing the member in Hexpm is what revokes access; removing their provider assignment is not.
 
 ### Seats and billing
 
 Configuring SSO takes an active subscription. Being governed by it does not. If a payment fails, enforcement stays exactly as you set it: an organization that requires SSO keeps requiring it, and its members keep being able to authenticate. A lapsed card does not quietly turn your access control off, and does not lock your team out either. The SSO settings and billing screens stay reachable throughout, which is the same break-glass path described above.
 
-Just-in-time membership is the only part of SSO that can change a seat count. If it is on and a member is admitted when the seats are full, the organization either adds a seat to the subscription or refuses the admission, depending on which you chose under **When the seats run out** on the SSO tab. Enforcement on its own never adds, removes, or bills a seat.
+Just-in-time membership and provisioning are the only parts of SSO that can change a seat count, and each asks you to choose its behavior first: when the seats are full, the organization either adds a seat to the subscription or refuses the admission, depending on what you chose under **When the seats run out**. Enforcement on its own never adds, removes, or bills a seat.
 
 ### Before you turn on required mode
 
@@ -259,4 +274,4 @@ Do not send client secrets, authorization codes, tokens, cookies, or raw callbac
 
 Enabled organizations can use the organization login URL and third-party-initiated login. Custom Okta dashboard tiles and Microsoft Entra are not supported, and there is no public Okta Integration Network listing. Tiles and Entra both work and have been exercised privately; supporting them is an open release decision rather than an untested path. The OIN listing is different in kind: the integration was built and exercised, but it was never submitted for review, so no listing exists to install from.
 
-This release does not support SAML, account creation, SCIM, group or role synchronization, or OIDC logout.
+This release supports SCIM provisioning of members (the Users resource). It does not support SAML, account creation, group or role synchronization, or OIDC logout.
