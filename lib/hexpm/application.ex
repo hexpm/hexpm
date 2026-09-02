@@ -183,6 +183,7 @@ defmodule Hexpm.Application do
   defp common_children(write_mode?) do
     [
       Hexpm.PromEx,
+      {DBConnection.TelemetryListener, name: Hexpm.RepoBase.TelemetryListener},
       Hexpm.RepoBase,
       {Finch, name: Hexpm.Finch, pools: finch_pools()},
       Hexpm.TmpDir,

@@ -122,6 +122,8 @@ defmodule Hexpm.RepoBase do
   def advisory_lock_key(key), do: Map.fetch!(@advisory_locks, key)
 
   def init(_reason, opts) do
+    opts = put_connection_listener(opts)
+
     if url = System.get_env("HEXPM_DATABASE_URL") do
       pool_size_env = System.get_env("HEXPM_DATABASE_POOL_SIZE")
       pool_size = if pool_size_env, do: String.to_integer(pool_size_env), else: opts[:pool_size]
@@ -134,6 +136,17 @@ defmodule Hexpm.RepoBase do
       {:ok, opts}
     else
       {:ok, opts}
+    end
+  end
+
+  # The listener runs in the application tree. A repo started on its own, as
+  # the release tasks do, has nobody to notify, and a name that is not
+  # registered would crash every connection that tries.
+  defp put_connection_listener(opts) do
+    if Process.whereis(__MODULE__.TelemetryListener) do
+      Keyword.put(opts, :connection_listeners, {[__MODULE__.TelemetryListener], __MODULE__})
+    else
+      opts
     end
   end
 
