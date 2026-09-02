@@ -34,6 +34,7 @@ defmodule HexpmWeb.DocsView do
        ]},
       {"Hex",
        organization_sso_link() ++
+         trusted_publishers_link() ++
          [
            %{view: :faq, label: "FAQ", href: ~p"/docs/faq"},
            %{view: :self_hosting, label: "Self-hosting", href: ~p"/docs/self-hosting"},
@@ -47,6 +48,18 @@ defmodule HexpmWeb.DocsView do
     if Hexpm.Accounts.SSO.available?(),
       do: [
         %{view: :organization_sso, label: "Organization SSO", href: ~p"/docs/organization-sso"}
+      ],
+      else: []
+  end
+
+  defp trusted_publishers_link() do
+    if Hexpm.TrustedPublishers.enabled?(),
+      do: [
+        %{
+          view: :trusted_publishers,
+          label: "Trusted publishers",
+          href: ~p"/docs/trusted-publishers"
+        }
       ],
       else: []
   end

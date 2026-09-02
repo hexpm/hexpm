@@ -3,6 +3,19 @@ defmodule Hexpm.PromEx.Plugins.HexpmTest do
 
   alias Hexpm.PromEx.Plugins.Hexpm, as: Plugin
 
+  test "mint success tags keep provider cardinality bounded" do
+    assert Plugin.mint_success_tags(%{provider: "github", package_id: 123}) == %{
+             provider: "github"
+           }
+
+    assert Plugin.mint_success_tags(%{}) == %{provider: "unknown"}
+  end
+
+  test "mint failure tags surface the error reason" do
+    assert Plugin.mint_failure_tags(%{reason: :token_replayed}) == %{reason: :token_replayed}
+    assert Plugin.mint_failure_tags(%{}) == %{reason: "unknown"}
+  end
+
   test "measures the number of connected nodes" do
     ref = make_ref()
     parent = self()

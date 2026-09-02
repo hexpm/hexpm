@@ -1,10 +1,11 @@
 defmodule Hexpm.PromEx.Plugins.Hexpm do
   @moduledoc """
   PromEx plugin for hex.pm business metrics: the domain events emitted from
-  the contexts (see `Hexpm.Repository.Releases` and `Hexpm.Accounts.Users`),
-  registry builds (`Hexpm.Repository.RegistryWorker`) and CDN purges
-  (`Hexpm.CDN.PurgeWorker`, `Hexpm.CDN.Fastly`), and the number of Erlang
-  nodes this node is connected to.
+  the contexts (see `Hexpm.Repository.Releases`, `Hexpm.Accounts.Users` and
+  `Hexpm.TrustedPublishers`), registry builds
+  (`Hexpm.Repository.RegistryWorker`) and CDN purges (`Hexpm.CDN.PurgeWorker`,
+  `Hexpm.CDN.Fastly`), and the number of Erlang nodes this node is connected
+  to.
   """
 
   use PromEx.Plugin
@@ -42,6 +43,18 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
           unit: {:native, :millisecond},
           reporter_options: [buckets: [10, 50, 100, 500, 1000, 5000, 30_000]],
           description: "Time spent matching a release's files."
+        ),
+        counter("hexpm.trusted_publishers.mint.success.total",
+          event_name: [:hexpm, :trusted_publishers, :mint, :success],
+          description: "Trusted publisher OIDC tokens successfully exchanged for Hex tokens.",
+          tags: [:provider],
+          tag_values: &__MODULE__.mint_success_tags/1
+        ),
+        counter("hexpm.trusted_publishers.mint.failure.total",
+          event_name: [:hexpm, :trusted_publishers, :mint, :failure],
+          description: "Trusted publisher mint attempts that failed.",
+          tags: [:reason],
+          tag_values: &__MODULE__.mint_failure_tags/1
         )
       ]),
       Event.build(:hexpm_registry_builder_event_metrics, [
@@ -146,5 +159,15 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
   @doc false
   def execute_cluster_metrics do
     :telemetry.execute(@cluster_event, %{count: length(Node.list())}, %{})
+  end
+
+  @doc false
+  def mint_success_tags(metadata) do
+    %{provider: Map.get(metadata, :provider, "unknown")}
+  end
+
+  @doc false
+  def mint_failure_tags(metadata) do
+    %{reason: Map.get(metadata, :reason, "unknown")}
   end
 end

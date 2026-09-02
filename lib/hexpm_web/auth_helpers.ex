@@ -7,16 +7,23 @@ defmodule HexpmWeb.AuthHelpers do
   alias Hexpm.Permissions
   alias Hexpm.Repository.{Package, Packages, PackageOwner, Repository}
   alias Hexpm.OAuth.Token
+  alias Hexpm.TrustedPublishers.TrustedPublisher
   alias HexpmWeb.BasicAuth
   alias HexpmWeb.Plugs.Attack
 
   def authorize(conn, opts) do
     user_or_organization = conn.assigns.current_user || conn.assigns.current_organization
+    trusted_publisher = Map.get(conn.assigns, :trusted_publisher)
 
-    if user_or_organization || opts[:authentication] != :required do
-      authorized(conn, user_or_organization, opts[:fun], opts)
-    else
-      error(conn, {:error, :missing})
+    cond do
+      match?(%TrustedPublisher{}, trusted_publisher) ->
+        authorized_trusted_publisher(conn, trusted_publisher, opts)
+
+      user_or_organization || opts[:authentication] != :required ->
+        authorized(conn, user_or_organization, opts[:fun], opts)
+
+      true ->
+        error(conn, {:error, :missing})
     end
   end
 
@@ -51,6 +58,34 @@ defmodule HexpmWeb.AuthHelpers do
 
       true ->
         conn
+    end
+  end
+
+  # Trusted-publisher tokens only reach endpoints that set allow_trusted_publisher: true
+  # (release/docs publish). This path intentionally does not apply opts[:fun]; it always
+  # enforces package ownership for the bound package plus organization billing.
+  defp authorized_trusted_publisher(conn, %TrustedPublisher{} = trusted_publisher, opts) do
+    domains = Keyword.get(opts, :domains, [])
+    auth_credential = conn.assigns.auth_credential
+
+    cond do
+      not Keyword.get(opts, :allow_trusted_publisher, false) ->
+        error(conn, {:error, :auth})
+
+      not verify_permissions?(conn, auth_credential, domains) ->
+        error(conn, {:error, :domain})
+
+      true ->
+        case package_owner(conn, trusted_publisher, opts) do
+          :ok ->
+            case organization_billing_active(conn, nil, opts) do
+              :ok -> conn
+              other -> error(conn, other)
+            end
+
+          other ->
+            error(conn, other)
+        end
     end
   end
 
@@ -98,16 +133,21 @@ defmodule HexpmWeb.AuthHelpers do
     Permissions.verify_access?(auth_credential, domain, resource)
   end
 
-  # TOTP validation for write operations
-  defp validate_totp_for_write_access(conn, %User{} = user, %Token{} = _token, domains) do
+  # TOTP validation for write operations.
+  # Trusted-publisher tokens never reach this clause: they authenticate with user: nil
+  # and are handled by authorized_trusted_publisher/3 instead.
+  defp validate_totp_for_write_access(
+         conn,
+         %User{} = user,
+         %Token{} = _token,
+         domains
+       ) do
     if requires_write_access?(domains) do
       if not User.tfa_enabled?(user) do
         {:error, :tfa_not_enabled}
       else
         validate_totp(conn, user)
       end
-    else
-      nil
     end
   end
 
@@ -315,6 +355,24 @@ defmodule HexpmWeb.AuthHelpers do
 
         {:error, :auth, message}
     end
+  end
+
+  def package_owner(
+        %Repository{} = repository,
+        %Package{} = package,
+        %TrustedPublisher{} = trusted_publisher,
+        _opts
+      ) do
+    cond do
+      trusted_publisher.package_id == package.id -> :ok
+      repository.id == 1 -> {:error, :auth}
+      true -> {:error, :not_found}
+    end
+  end
+
+  # Pending publishers (create brand-new packages from CI) are deferred.
+  def package_owner(%Repository{} = repository, nil = _package, %TrustedPublisher{}, _opts) do
+    if repository.id == 1, do: {:error, :auth}, else: {:error, :not_found}
   end
 
   def package_owner(

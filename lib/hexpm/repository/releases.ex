@@ -123,17 +123,26 @@ defmodule Hexpm.Repository.Releases do
     Repo.preload(release, preload)
   end
 
-  def publish(repository, package, user, body, meta, inner_checksum, outer_checksum,
-        audit: audit_data,
-        replace: replace?
-      ) do
+  def publish(repository, package, user, body, meta, inner_checksum, outer_checksum, opts) do
     Repo.write_mode!()
+
+    audit_data = Keyword.fetch!(opts, :audit)
+    replace? = Keyword.fetch!(opts, :replace)
+    trusted_publisher = Keyword.get(opts, :trusted_publisher)
 
     Multi.new()
     |> Multi.run(:repository, fn _, _ -> {:ok, repository} end)
     |> Multi.run(:reserved_packages, fn _, _ -> {:ok, reserved_packages(repository, meta)} end)
     |> create_package(repository, package, user, meta)
-    |> create_release(package, user, inner_checksum, outer_checksum, meta, replace?)
+    |> create_release(
+      package,
+      user,
+      inner_checksum,
+      outer_checksum,
+      meta,
+      replace?,
+      trusted_publisher
+    )
     |> Multi.run(:matched_advisories, fn repo, %{release: release} ->
       Hexpm.Security.Advisories.affect_release_with_existing_advisories(repo, release)
     end)
@@ -335,7 +344,16 @@ defmodule Hexpm.Repository.Releases do
     )
   end
 
-  defp create_release(multi, package, user, inner_checksum, outer_checksum, meta, replace?) do
+  defp create_release(
+         multi,
+         package,
+         user,
+         inner_checksum,
+         outer_checksum,
+         meta,
+         replace?,
+         trusted_publisher
+       ) do
     version = meta["version"]
 
     # Validate version manually to avoid an Ecto.Query.CastError exception
@@ -359,9 +377,24 @@ defmodule Hexpm.Repository.Releases do
             if release do
               %{release | package: package}
               |> preload([:requirements, :publisher])
-              |> Release.update(user, params, inner_checksum, outer_checksum, replace?)
+              |> Release.update(
+                user,
+                params,
+                inner_checksum,
+                outer_checksum,
+                replace?,
+                trusted_publisher
+              )
             else
-              Release.build(package, user, params, inner_checksum, outer_checksum, replace?)
+              Release.build(
+                package,
+                user,
+                params,
+                inner_checksum,
+                outer_checksum,
+                replace?,
+                trusted_publisher
+              )
             end
 
           validate_reserved_version(changeset, reserved_packages)

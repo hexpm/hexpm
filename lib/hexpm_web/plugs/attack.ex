@@ -205,6 +205,19 @@ defmodule HexpmWeb.Plugs.Attack do
     )
   end
 
+  def trusted_publisher_mint_ip_throttle(ip, opts \\ []) do
+    time = opts[:time] || System.system_time(:millisecond)
+    unless opts[:time], do: RateLimitPubSub.broadcast({:trusted_publisher_mint_ip, ip}, time)
+
+    timed_throttle(
+      {:trusted_publisher_mint_ip, ip},
+      time: time,
+      storage: @storage,
+      limit: 30,
+      period: 15 * 60_000
+    )
+  end
+
   def sso_start_organization_throttle(organization_id, ip, opts \\ []) do
     time = opts[:time] || System.system_time(:millisecond)
     key = {:sso_start_organization, organization_id, ip}

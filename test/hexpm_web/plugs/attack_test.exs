@@ -116,6 +116,32 @@ defmodule HexpmWeb.Plugs.AttackTest do
       assert callback_data[:remaining] == 48
     end
 
+    test "broadcasts and bounds trusted publisher mint rate limits" do
+      align_to_throttle_bucket()
+      time = System.system_time(:millisecond)
+      ip = {8, 8, 8, 8}
+
+      Phoenix.PubSub.broadcast!(
+        Hexpm.PubSub,
+        "ratelimit",
+        {:throttle, {:trusted_publisher_mint_ip, ip}, time}
+      )
+
+      :sys.get_state(RateLimitPubSub)
+
+      assert {:allow, {:throttle, data}} =
+               Attack.trusted_publisher_mint_ip_throttle(ip, time: time)
+
+      assert data[:limit] == 30
+      assert data[:remaining] == 28
+
+      for _ <- 1..28 do
+        assert {:allow, _data} = Attack.trusted_publisher_mint_ip_throttle(ip, time: time)
+      end
+
+      assert {:block, _data} = Attack.trusted_publisher_mint_ip_throttle(ip, time: time)
+    end
+
     test "halts requests when ip limit is exceeded" do
       align_to_throttle_bucket()
 

@@ -72,6 +72,53 @@ defmodule HexpmWeb.DocsControllerTest do
     assert_sso_docs_hidden()
   end
 
+  test "renders the trusted publishers guide in the docs navigation" do
+    enable_trusted_publisher_docs()
+
+    html =
+      build_conn()
+      |> get("/docs/trusted-publishers")
+      |> html_response(200)
+
+    assert html =~ "Trusted publishers"
+    assert html =~ "Configure a trusted publisher"
+    assert html =~ "/api/oidc/mint-token"
+    assert html =~ "id-token: write"
+    assert html =~ "Cannot create a package"
+
+    {:ok, document} = Floki.parse_document(html)
+    assert [link] = Floki.find(document, ~s(#docs-nav a[href="/docs/trusted-publishers"]))
+    assert Floki.text(link) =~ "Trusted publishers"
+    assert Floki.attribute(link, "class") |> List.first() =~ "bg-blue-50"
+  end
+
+  test "hides the trusted publishers guide and navigation when the feature is off" do
+    app_env(:hexpm, :features, trusted_publishers: false)
+
+    build_conn()
+    |> get("/docs/trusted-publishers")
+    |> response(404)
+
+    html =
+      build_conn()
+      |> get("/docs/usage")
+      |> html_response(200)
+
+    refute html =~ ~s(href="/docs/trusted-publishers")
+  end
+
+  test "publish docs link to trusted publishers when the feature is on" do
+    enable_trusted_publisher_docs()
+
+    html =
+      build_conn()
+      |> get("/docs/publish")
+      |> html_response(200)
+
+    assert html =~ ~s(href="/docs/trusted-publishers")
+    assert html =~ "trusted publishers"
+  end
+
   defp assert_sso_docs_hidden do
     build_conn()
     |> get("/docs/organization-sso")
@@ -93,5 +140,9 @@ defmodule HexpmWeb.DocsControllerTest do
       :organization_sso,
       Keyword.merge(config, mode: :beta, beta_organizations: ["pilot"])
     )
+  end
+
+  defp enable_trusted_publisher_docs do
+    app_env(:hexpm, :features, trusted_publishers: true)
   end
 end
