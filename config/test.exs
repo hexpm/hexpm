@@ -48,7 +48,7 @@ config :hexpm,
   cache_enabled: false,
   skip_advisory_locks: true,
   # VACUUM cannot run inside the sandbox transaction that wraps each test.
-  # Hexpm.ReleaseTasks.StatsTest covers it unboxed.
+  # Hexpm.Repository.DownloadsWorkerTest covers it unboxed.
   skip_maintenance_vacuum: true
 
 config :hexpm, HexpmWeb.Endpoint,

@@ -1,9 +1,9 @@
-defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
+defmodule Hexpm.PurgeExpiredRecordsTest do
   use Hexpm.DataCase
   use Oban.Testing, repo: Hexpm.RepoBase
 
   alias Hexpm.CronMonitor.SentryMock
-  alias Hexpm.ReleaseTasks.PurgeExpiredRecords
+  alias Hexpm.PurgeExpiredRecords
 
   setup :verify_on_exit!
 
