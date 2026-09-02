@@ -16,7 +16,9 @@ defmodule Hexpm.CDN do
 
   @typedoc """
   An object to check after purging: the CDN must serve `url` with `etag`,
-  or with a 404 when `etag` is `nil`. `repository` names the organization
+  or, when `etag` is `nil`, answer 404 or redirect to the organization docs
+  host, which is what a removed page under an organization's name gets.
+  `repository` names the organization
   whose private repository the object belongs to; the check then carries a
   short-lived token the edge accepts for that repository.
   """

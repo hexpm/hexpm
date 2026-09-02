@@ -124,11 +124,11 @@ defmodule Hexpm.CDN.Fastly do
 
   defp probes(_service, _target), do: []
 
-  defp check(%{url: url, etag: etag}, pop, headers) do
+  defp check(%{url: url} = target, pop, headers) do
     :telemetry.span([:hexpm, :cdn, :verify], %{url: url, pop: pop}, fn ->
       result =
         case HTTP.impl().head(url, headers, decode_body: false, request_timeout: @probe_timeout) do
-          {:ok, status, headers, _body} -> compare(status, headers, etag)
+          {:ok, status, headers, _body} -> compare(target, status, headers)
           {:error, reason} -> {:error, reason}
         end
 
@@ -149,7 +149,7 @@ defmodule Hexpm.CDN.Fastly do
     token
   end
 
-  defp compare(200, headers, etag) when is_binary(etag) do
+  defp compare(%{etag: etag}, 200, headers) when is_binary(etag) do
     served = header(headers, "etag")
 
     if normalize_etag(served) == normalize_etag(etag) do
@@ -159,9 +159,26 @@ defmodule Hexpm.CDN.Fastly do
     end
   end
 
-  defp compare(404, _headers, nil), do: :ok
+  defp compare(%{etag: nil}, 404, _headers), do: :ok
 
-  defp compare(status, headers, _etag), do: {:error, {:status, status, cache(headers)}}
+  # A page removed from a subdomain that names an organization is redirected
+  # to the organization's docs host instead of answering 404.
+  defp compare(%{etag: nil, url: url}, 301, headers) do
+    if header(headers, "location") == organization_docs_url(url) do
+      :ok
+    else
+      {:error, {:status, 301, cache(headers)}}
+    end
+  end
+
+  defp compare(_target, status, headers), do: {:error, {:status, status, cache(headers)}}
+
+  defp organization_docs_url(url) do
+    target = URI.parse(url)
+    [subdomain | _] = String.split(target.host, ".")
+    docs = URI.parse(Application.fetch_env!(:hexpm, :private_docs_url))
+    URI.to_string(%{docs | host: "#{subdomain}.#{docs.host}", path: target.path})
+  end
 
   defp cache(headers) do
     case for(name <- @cache_headers, value = header(headers, name), do: "#{name}: #{value}") do

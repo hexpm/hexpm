@@ -170,6 +170,28 @@ defmodule Hexpm.CDN.FastlyTest do
       assert Fastly.verify(:fastly_hexrepo, [target]) == [{target, :ok}]
     end
 
+    test "accepts the organization docs redirect for a deleted page" do
+      expect(Hexpm.HTTP.Mock, :head, fn "https://foo.hexdocs.example/1.0.0/index.html",
+                                        [],
+                                        _opts ->
+        {:ok, 301, [{"location", "http://foo.localhost:5002/1.0.0/index.html"}], ""}
+      end)
+
+      target = %{url: "https://foo.hexdocs.example/1.0.0/index.html", etag: nil}
+      assert Fastly.verify(:fastly_hexdocs, [target]) == [{target, :ok}]
+    end
+
+    test "rejects any other redirect for a deleted page" do
+      expect(Hexpm.HTTP.Mock, :head, fn _url, _headers, _opts ->
+        {:ok, 301, [{"location", "https://foo.hexdocs.example/"}], ""}
+      end)
+
+      target = %{url: "https://foo.hexdocs.example/1.0.0/index.html", etag: nil}
+
+      assert Fastly.verify(:fastly_hexdocs, [target]) ==
+               [{target, {:error, {:status, 301, nil}}}]
+    end
+
     test "returns the status when the nearest POP does not serve the object" do
       expect(Hexpm.HTTP.Mock, :head, 2, fn _url, headers, _opts ->
         case List.keyfind(headers, "hex-cache-probe", 0) do
