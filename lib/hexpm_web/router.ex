@@ -102,6 +102,17 @@ defmodule HexpmWeb.Router do
     plug HexpmWeb.Plugs.ReadmeContentSecurityPolicy
   end
 
+  # The provisioning agent's surface, authenticated by the connection's SCIM
+  # bearer token alone. Not the :api pipeline: its :authenticate would read
+  # the token as an OAuth JWT and refuse before the SCIM auth ran.
+  pipeline :scim do
+    plug :accepts, ["scim", "json"]
+    plug :user_agent, required: false
+    plug :validate_url
+    plug HexpmWeb.Plugs.Attack
+    plug HexpmWeb.Plugs.SCIMAuth
+  end
+
   pipeline :admin do
     plug HexpmWeb.Plugs.DashboardAuth
   end
@@ -355,6 +366,13 @@ defmodule HexpmWeb.Router do
     post "/orgs/:dashboard_org/sso/promote", OrganizationSSOController, :promote, log: false
     post "/orgs/:dashboard_org/sso/unlink", OrganizationSSOController, :unlink, log: false
     post "/orgs/:dashboard_org/sso/jit", OrganizationSSOController, :configure_jit
+    post "/orgs/:dashboard_org/sso/scim", OrganizationSSOController, :configure_scim
+
+    post "/orgs/:dashboard_org/sso/scim/generate",
+         OrganizationSSOController,
+         :generate_scim_token
+
+    post "/orgs/:dashboard_org/sso/scim/delete", OrganizationSSOController, :delete_scim_token
 
     post "/orgs/:dashboard_org/sso/enforcement",
          OrganizationSSOController,
@@ -510,6 +528,15 @@ defmodule HexpmWeb.Router do
     post "/oauth/revoke", OAuthController, :revoke
     post "/oauth/revoke_by_hash", OAuthController, :revoke_by_hash
     post "/oauth/sso_authorization", SSOAuthorizationController, :create
+  end
+
+  scope "/scim/v2", HexpmWeb.SCIM do
+    pipe_through :scim
+
+    get "/ServiceProviderConfig", DiscoveryController, :service_provider_config
+    get "/ResourceTypes", DiscoveryController, :resource_types
+    get "/Schemas", DiscoveryController, :schemas
+    match :*, "/*path", DiscoveryController, :not_found
   end
 
   if Mix.env() in [:dev, :test, :hex] do

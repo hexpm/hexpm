@@ -456,6 +456,27 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
     "Reached #{org} without a current SSO session"
   end
 
+  defp humanize_action(%AuditLog{
+         action: "sso.scim.configure",
+         params: %{"organization" => %{"name" => org}}
+       }) do
+    "Changed #{org}'s provisioning settings"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "sso.scim.token.generate",
+         params: %{"organization" => %{"name" => org}}
+       }) do
+    "Generated a provisioning token for #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "sso.scim.token.delete",
+         params: %{"organization" => %{"name" => org}}
+       }) do
+    "Turned provisioning off for #{org}"
+  end
+
   defp humanize_action(%AuditLog{action: "password.reset.init"}) do
     "Requested a password reset"
   end

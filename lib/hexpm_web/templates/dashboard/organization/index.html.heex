@@ -105,6 +105,8 @@
             <% :sso -> %>
               <.sso_tab
                 callback_url={@sso_callback_url}
+                scim_base_url={@sso_scim_base_url}
+                generated_scim_token={@sso_generated_scim_token}
                 connection={@sso_connection}
                 domains={@sso_domains}
                 failures={@sso_failures}

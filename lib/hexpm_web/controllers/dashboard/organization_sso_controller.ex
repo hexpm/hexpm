@@ -24,7 +24,10 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
               :rotate,
               :promote,
               :unlink,
-              :configure_enforcement
+              :configure_enforcement,
+              :configure_scim,
+              :generate_scim_token,
+              :delete_scim_token
             ]
 
   plug HexpmWeb.Plugs.Sudo
@@ -47,6 +50,9 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
       :unlink,
       :configure_jit,
       :configure_enforcement,
+      :configure_scim,
+      :generate_scim_token,
+      :delete_scim_token,
       :add_domain,
       :verify_domain,
       :remove_domain
@@ -204,6 +210,69 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
     do: "Choose what happens when the seats run out, and a role for new members."
 
   defp jit_error(reason), do: configuration_error(reason)
+
+  def configure_scim(conn, %{"dashboard_org" => name} = params) do
+    with_organization(conn, name, fn organization ->
+      redirect_result(
+        conn,
+        organization,
+        SSO.configure_scim(organization, params["scim"] || %{}, audit: audit_data(conn)),
+        &scim_message/1,
+        &scim_error/1
+      )
+    end)
+  end
+
+  def generate_scim_token(conn, %{"dashboard_org" => name} = params) do
+    with_organization(conn, name, fn organization ->
+      case SSO.generate_scim_token(organization, params["scim"] || %{}, audit: audit_data(conn)) do
+        {:ok, connection} ->
+          # Bound to the connection and the account that generated it, so a
+          # stale stash can never render on another organization's page or
+          # under another login.
+          conn
+          |> put_session(:generated_scim_token, %{
+            "connection_id" => connection.id,
+            "user_id" => conn.assigns.current_user.id,
+            "token" => connection.scim_token
+          })
+          |> put_flash(:info, "The provisioning token was generated. Copy it now.")
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}/sso")
+
+        {:error, reason} ->
+          redirect_with_flash(conn, organization, :error, scim_error(reason))
+      end
+    end)
+  end
+
+  def delete_scim_token(conn, %{"dashboard_org" => name}) do
+    with_organization(conn, name, fn organization ->
+      redirect_result(
+        conn,
+        organization,
+        SSO.delete_scim_token(organization, audit: audit_data(conn)),
+        "Provisioning is off. The token no longer works.",
+        &scim_error/1
+      )
+    end)
+  end
+
+  defp scim_message(%{scim_seat_policy: "block", scim_role: role}),
+    do:
+      "Provisioning settings saved. Provisioned members join as #{role}, and creates are refused once the seats run out."
+
+  defp scim_message(%{scim_seat_policy: "expand", scim_role: role}),
+    do:
+      "Provisioning settings saved. Provisioned members join as #{role}, and the subscription grows by a seat when it needs to."
+
+  defp scim_message(_connection), do: "Provisioning settings saved."
+
+  defp scim_error(:not_configured), do: "Configure SSO before setting up provisioning."
+
+  defp scim_error(%Ecto.Changeset{}),
+    do: "Choose what happens when the seats run out, and a role for provisioned members."
+
+  defp scim_error(reason), do: configuration_error(reason)
 
   def configure_enforcement(conn, %{"dashboard_org" => name} = params) do
     with_organization(conn, name, fn organization ->
