@@ -77,7 +77,11 @@ defmodule HexpmWeb.LoginControllerTest do
         {"line feed", "/\n/evil.com"},
         {"carriage return", "/\r/evil.com"},
         {"CRLF", "/\r\n/evil.com"},
-        {"header injection", "/dashboard\r\nSet-Cookie: x=1"}
+        {"header injection", "/dashboard\r\nSet-Cookie: x=1"},
+        {"null byte", "/dashboard\0"},
+        {"vertical tab", "/dashboard\v"},
+        {"form feed", "/dashboard\f"},
+        {"delete", "/dashboard\d"}
       ] do
     test "log in refuses to redirect off-site via a #{label} return path", c do
       conn =
