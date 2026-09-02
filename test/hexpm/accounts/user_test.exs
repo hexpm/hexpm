@@ -1,7 +1,7 @@
 defmodule Hexpm.Accounts.UserTest do
   use Hexpm.DataCase, async: true
 
-  alias Hexpm.Accounts.{Auth, User, OptionalEmails}
+  alias Hexpm.Accounts.{Auth, BlockedEmailDomain, User, OptionalEmails}
 
   setup do
     user = insert(:user, password: Auth.gen_password("password"))
@@ -61,6 +61,34 @@ defmodule Hexpm.Accounts.UserTest do
                |> Hexpm.Repo.insert()
 
       assert errors_on(changeset)[:emails][:email] == "already in use"
+    end
+
+    test "rejects an email on a blocked domain or under it" do
+      Repo.insert!(
+        BlockedEmailDomain.changeset(%BlockedEmailDomain{}, %{domain: "Blocked.example"})
+      )
+
+      for email <- ["someone@blocked.example", "someone@mail.BLOCKED.example"] do
+        assert {:error, changeset} =
+                 User.build(
+                   %{username: "blockeduser", emails: [%{email: email}], password: "password"},
+                   true
+                 )
+                 |> Hexpm.Repo.insert()
+
+        assert errors_on(changeset)[:emails][:email] == "uses a blocked domain"
+      end
+
+      assert {:ok, _user} =
+               User.build(
+                 %{
+                   username: "blockeduser",
+                   emails: [%{email: "someone@notblocked.example"}],
+                   password: "password"
+                 },
+                 true
+               )
+               |> Hexpm.Repo.insert()
     end
   end
 
