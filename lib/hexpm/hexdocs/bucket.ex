@@ -75,13 +75,16 @@ defmodule Hexpm.Hexdocs.Bucket do
 
     upload_files = list_upload_files(repository, package, version, dir, files, upload_type)
 
-    # The sitemap and docs_config.js are rewritten by this same upload, so
-    # they stay in place rather than being missing until then.
+    # docs_config.js, and on the public site the sitemap, are rewritten by
+    # this same upload, so they stay in place rather than being missing
+    # until then.
+    rewritten =
+      if repository == "hexpm", do: ["docs_config.js", "sitemap.xml"], else: ["docs_config.js"]
+
     paths =
-      upload_files
-      |> MapSet.new(&elem(&1, 0))
-      |> MapSet.put(repository_path(repository, Path.join(package, "sitemap.xml")))
-      |> MapSet.put(repository_path(repository, Path.join(package, "docs_config.js")))
+      Enum.reduce(rewritten, MapSet.new(upload_files, &elem(&1, 0)), fn file, paths ->
+        MapSet.put(paths, repository_path(repository, Path.join(package, file)))
+      end)
 
     write = Hexpm.CDN.next_write()
     uploaded = upload_new_files(upload_files, write)
