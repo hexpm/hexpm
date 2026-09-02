@@ -3,22 +3,27 @@ defmodule Hexpm.CDN.Fastly do
   Fastly purging and post-purge verification.
 
   `verify/2` fetches every target the way a client would and compares the
-  served ETag with the one the store returned for the write. The checks of
-  all targets and POPs run in one task stream, so `@verify_concurrency`
-  bounds the requests in flight for the whole batch. Fastly routes
-  by anycast, so a plain request cannot pick its POP; the workers run in
+  write number the edge serves (`x-cache-write`, the object's `write`
+  metadata) with the target's: a copy at or past it is current, since a
+  later write of the object only raises the number, so a check that runs
+  after the next write of the same object still passes. Copies cached before
+  writes were numbered carry no number and are compared by ETag. The checks
+  of all targets and POPs run in one task stream, so `@verify_concurrency`
+  bounds the requests in flight for the whole batch. Fastly routes by
+  anycast, so a plain request cannot pick its POP; the workers run in
   us-east4, next to the IAD shield every other POP fetches through, so the
   direct fetch checks the shield, which is where the purges of August 2026
   went missing. For the repository service the check also asks the POPs in
   `:fastly_probe_pops`, one per continent: the Compute code accepts
   `hex-cache-probe: <shield code>` with a valid `fastly-key` and answers
   from that POP's cache, tunnelled over Fastly's shield network. The CDN
-  turns the HEAD into a GET on a miss, so a probe also pulls the object
-  into that POP's cache, which a client there would have done anyway. Every
-  answer carries `x-cache-served-by` (shield first, then edge), so a stale
-  result names the caches that kept the old copy. A probe that fails to
-  answer is reported in telemetry and the log but does not fail the check;
-  a stale answer from any POP does.
+  turns the HEAD into a GET on a miss, so a probe also pulls the object into
+  that POP's cache, which a client there would have done anyway. Every
+  answer carries `x-cache-served-by`, `x-cache`, `x-cache-age` and
+  `x-cache-hits` (shield first, then edge), so a stale result names the
+  caches that kept the old copy and how long they had it. A probe that fails
+  to answer is reported in telemetry and the log but does not fail the
+  check; a stale answer from any POP does.
 
   Objects in a private repository are fetched with a token minted for the
   check: two minutes, scoped to that repository, verified by the edge
@@ -35,6 +40,7 @@ defmodule Hexpm.CDN.Fastly do
   @retry_opts [attempts: 5, base_delay: 200, statuses: [429, 500..599]]
   @probe_timeout 15_000
   @verify_concurrency 10
+  @cache_headers ~w(x-cache-served-by x-cache x-cache-age x-cache-hits)
 
   @impl true
   def purge_key(service, keys) do
@@ -94,8 +100,14 @@ defmodule Hexpm.CDN.Fastly do
   # nearest fetch decides, since a failed probe is no evidence of staleness.
   defp verdict(results) do
     stale =
-      for {_target, pop, {:error, {:stale, served, served_by}}} <- results,
-          do: %{pop: pop, etag: served, served_by: served_by}
+      for {_target, pop, {:error, {:stale, served, cache}}} <- results,
+          do: %{pop: pop, served: served, cache: cache}
+
+    stale =
+      Enum.sort_by(stale, fn
+        %{pop: :nearest} -> {0, ""}
+        %{pop: pop} -> {1, pop}
+      end)
 
     if stale == [] do
       [nearest] = for {_target, :nearest, result} <- results, do: result
@@ -122,11 +134,11 @@ defmodule Hexpm.CDN.Fastly do
 
   defp probes(_service, _target), do: []
 
-  defp check(%{url: url, etag: etag}, pop, headers) do
+  defp check(%{url: url} = target, pop, headers) do
     :telemetry.span([:hexpm, :cdn, :verify], %{url: url, pop: pop}, fn ->
       result =
         case HTTP.impl().head(url, headers, decode_body: false, request_timeout: @probe_timeout) do
-          {:ok, status, headers, _body} -> compare(status, headers, etag)
+          {:ok, status, headers, _body} -> compare(target, status, headers)
           {:error, reason} -> {:error, reason}
         end
 
@@ -147,20 +159,73 @@ defmodule Hexpm.CDN.Fastly do
     token
   end
 
-  defp compare(200, headers, etag) when is_binary(etag) do
-    served = header(headers, "etag")
+  # A target without a number was written before writes were numbered, so
+  # any numbered copy is a later write.
+  defp compare(%{etag: etag} = target, 200, headers) when is_binary(etag) do
+    case {target[:write], served_write(headers)} do
+      {write, served} when is_integer(write) and is_integer(served) ->
+        if served >= write, do: :ok, else: {:error, {:stale, {:write, served}, cache(headers)}}
 
-    if normalize_etag(served) == normalize_etag(etag) do
-      :ok
-    else
-      {:error, {:stale, served, header(headers, "x-cache-served-by")}}
+      {nil, served} when is_integer(served) ->
+        :ok
+
+      _ ->
+        served = header(headers, "etag")
+
+        if normalize_etag(served) == normalize_etag(etag),
+          do: :ok,
+          else: {:error, {:stale, {:etag, served}, cache(headers)}}
     end
   end
 
-  defp compare(404, _headers, nil), do: :ok
+  defp compare(%{etag: nil}, 404, _headers), do: :ok
 
-  defp compare(status, headers, _etag),
-    do: {:error, {:status, status, header(headers, "x-cache-served-by")}}
+  # A deleted object answered with a copy written after the deletion has
+  # been re-created since; anything else is the copy the deletion should
+  # have removed.
+  defp compare(%{etag: nil} = target, 200, headers) do
+    served = served_write(headers)
+
+    cond do
+      not is_integer(served) -> {:error, {:stale, {:write, served}, cache(headers)}}
+      is_nil(target[:write]) -> :ok
+      served > target[:write] -> :ok
+      true -> {:error, {:stale, {:write, served}, cache(headers)}}
+    end
+  end
+
+  # A page removed from a subdomain that names an organization is redirected
+  # to the organization's docs host instead of answering 404.
+  defp compare(%{etag: nil, url: url}, 301, headers) do
+    if header(headers, "location") == organization_docs_url(url) do
+      :ok
+    else
+      {:error, {:status, 301, cache(headers)}}
+    end
+  end
+
+  defp compare(_target, status, headers), do: {:error, {:status, status, cache(headers)}}
+
+  defp served_write(headers) do
+    case header(headers, "x-cache-write") do
+      nil -> nil
+      value -> with {write, ""} <- Integer.parse(value), do: write, else: (_ -> nil)
+    end
+  end
+
+  defp organization_docs_url(url) do
+    target = URI.parse(url)
+    [subdomain | _] = String.split(target.host, ".")
+    docs = URI.parse(Application.fetch_env!(:hexpm, :private_docs_url))
+    URI.to_string(%{docs | host: "#{subdomain}.#{docs.host}", path: target.path})
+  end
+
+  defp cache(headers) do
+    case for(name <- @cache_headers, value = header(headers, name), do: "#{name}: #{value}") do
+      [] -> nil
+      pairs -> Enum.join(pairs, "; ")
+    end
+  end
 
   @impl true
   def public_ips() do

@@ -92,32 +92,28 @@ defmodule Hexpm.Hexdocs.WorkersTest do
     index = Hexpm.Store.get(:docs_bucket, "#{package.name}/1.0.0/index.html")
     etag = ~s("#{Base.encode16(:crypto.hash(:md5, index), case: :lower)}")
 
-    assert_enqueued(
-      worker: Hexpm.CDN.PurgeWorker,
-      args: %{
-        "service" => "fastly_hexdocs",
-        "keys" => ["docspage/verified_docs", "docspage/verified_docs/1.0.0"],
-        "verify" => [
-          %{"url" => "http://verified-docs.localhost:5002/1.0.0/index.html", "etag" => etag},
-          %{"url" => "http://verified-docs.localhost:5002/index.html", "etag" => etag}
-        ]
-      }
-    )
+    keys = ["docspage/verified_docs", "docspage/verified_docs/1.0.0"]
+
+    assert purge_args(keys) == %{
+             "service" => "fastly_hexdocs",
+             "keys" => keys,
+             "verify" => [
+               %{"url" => "http://verified-docs.localhost:5002/1.0.0/index.html", "etag" => etag},
+               %{"url" => "http://verified-docs.localhost:5002/index.html", "etag" => etag}
+             ]
+           }
 
     Ecto.Changeset.change(release, has_docs: false) |> Repo.update!()
     assert :ok = perform_job(Workers.Delete, %{key: key})
 
-    assert_enqueued(
-      worker: Hexpm.CDN.PurgeWorker,
-      args: %{
-        "service" => "fastly_hexdocs",
-        "keys" => ["docspage/verified_docs", "docspage/verified_docs/1.0.0"],
-        "verify" => [
-          %{"url" => "http://verified-docs.localhost:5002/1.0.0/index.html", "etag" => nil},
-          %{"url" => "http://verified-docs.localhost:5002/index.html", "etag" => nil}
-        ]
-      }
-    )
+    assert purge_args(keys) == %{
+             "service" => "fastly_hexdocs",
+             "keys" => keys,
+             "verify" => [
+               %{"url" => "http://verified-docs.localhost:5002/1.0.0/index.html", "etag" => nil},
+               %{"url" => "http://verified-docs.localhost:5002/index.html", "etag" => nil}
+             ]
+           }
   end
 
   test "upload succeeds for archives with write-protected file modes" do
@@ -247,14 +243,13 @@ defmodule Hexpm.Hexdocs.WorkersTest do
 
     etag = ~s("#{Base.encode16(:crypto.hash(:md5, sitemap), case: :lower)}")
 
-    assert_enqueued(
-      worker: Hexpm.CDN.PurgeWorker,
-      args: %{
-        "service" => "fastly_hexdocs",
-        "keys" => ["sitemap/#{package.name}"],
-        "verify" => [%{"url" => "http://sitemap-docs.localhost:5002/sitemap.xml", "etag" => etag}]
-      }
-    )
+    assert purge_args(["sitemap/#{package.name}"]) == %{
+             "service" => "fastly_hexdocs",
+             "keys" => ["sitemap/#{package.name}"],
+             "verify" => [
+               %{"url" => "http://sitemap-docs.localhost:5002/sitemap.xml", "etag" => etag}
+             ]
+           }
   end
 
   test "malformed archives fail so Oban can retry" do
