@@ -223,21 +223,31 @@ defmodule HexpmWeb.AuthHelpers do
 
   def authenticate_at(conn, now) do
     case get_req_header(conn, "authorization") do
-      ["Basic " <> credentials] ->
-        if BasicAuth.disabled?(now) do
-          {:error, :basic_auth_disabled}
-        else
-          basic_auth(credentials)
-        end
+      ["Basic " <> credentials] -> credentials |> basic_auth(now) |> report(:basic)
+      ["Bearer " <> token] -> token |> oauth_token_auth(conn) |> report(:bearer)
+      [key] -> key |> key_auth(conn) |> report(:key)
+      _ -> {:error, :missing}
+    end
+  end
 
-      ["Bearer " <> token] ->
-        oauth_token_auth(token, conn)
+  defp report(result, scheme) do
+    :telemetry.execute(
+      [:hexpm, :api, :authenticate],
+      %{count: 1},
+      %{scheme: scheme, result: result_tag(result)}
+    )
 
-      [key] ->
-        key_auth(key, conn)
+    result
+  end
 
-      _ ->
-        {:error, :missing}
+  defp result_tag({:ok, _}), do: :ok
+  defp result_tag({:error, reason}), do: reason
+
+  defp basic_auth(credentials, now) do
+    if BasicAuth.disabled?(now) do
+      {:error, :basic_auth_disabled}
+    else
+      basic_auth(credentials)
     end
   end
 
