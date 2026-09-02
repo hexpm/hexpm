@@ -103,6 +103,12 @@ defmodule Hexpm.CDN.Fastly do
       for {_target, pop, {:error, {:stale, served, cache}}} <- results,
           do: %{pop: pop, served: served, cache: cache}
 
+    stale =
+      Enum.sort_by(stale, fn
+        %{pop: :nearest} -> {0, ""}
+        %{pop: pop} -> {1, pop}
+      end)
+
     if stale == [] do
       [nearest] = for {_target, :nearest, result} <- results, do: result
       nearest
