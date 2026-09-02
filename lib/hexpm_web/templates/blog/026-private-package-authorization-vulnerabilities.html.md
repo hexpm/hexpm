@@ -97,8 +97,9 @@ logs did not record which account made a request. We made four changes:
    history in the organization audit log. It is the check reported above,
    and it can be run again under a different rule later.
 3. **Identity in the CDN access log.** Each repo.hex.pm access-log line now
-   ends with the token or API key that authorized the request, so a private
-   package download can be attributed to the account behind it.
+   ends with the id of the token or API key that authorized the request,
+   never the credential itself, so a private package download can be
+   attributed to the account behind it.
 4. **Origin and application logs.** Requests to the storage bucket behind
    repo.hex.pm are logged again, which they had not been since 2018,
    application logs are kept for ten years, and every audit-log entry
@@ -114,5 +115,6 @@ private packages between 18 October 2025 and 24 August 2026, for you to
 compare against your own team. Email [security@hex.pm](mailto:security@hex.pm)
 from an admin account of the organization.
 
-We apologize to the organizations that trust hex.pm with their private
-packages.
+We take the trust organizations place in hex.pm seriously. When
+vulnerabilities are found, we will fix them quickly, investigate their
+impact, and be transparent about what we know and what we cannot establish.
