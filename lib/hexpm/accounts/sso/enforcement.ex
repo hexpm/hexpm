@@ -781,9 +781,11 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     end
   end
 
-  # An entry is deleted once it is delivered, so this only collapses a notice
-  # that has not gone out yet.
+  # Collapses a notice that has not gone out yet; a delivered one stays on the
+  # table as a record and must not stop the next.
   defp pending_entry?(group_key) do
-    Repo.exists?(from(entry in Hexpm.Emails.OutboxEntry, where: entry.group_key == ^group_key))
+    Repo.exists?(
+      from(entry in Hexpm.Emails.OutboxEntry.undelivered(), where: entry.group_key == ^group_key)
+    )
   end
 end

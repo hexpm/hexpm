@@ -324,11 +324,13 @@ defmodule Hexpm.Accounts.SSOConcurrencyTest do
         end)
 
       assert {:ok, %Identity{}} = Task.await(unlink, 2_000)
-      assert Repo.get(OutboxEntry, entry.id)
+      assert %OutboxEntry{delivered_at: nil} = Repo.get(OutboxEntry, entry.id)
 
       send(delivering_pid, :release)
       assert :ok = Task.await(delivery, 5_000)
-      refute Repo.get(OutboxEntry, entry.id)
+
+      assert %OutboxEntry{delivered_at: %DateTime{}, provider_message_id: "blocking"} =
+               Repo.get(OutboxEntry, entry.id)
     end)
   end
 

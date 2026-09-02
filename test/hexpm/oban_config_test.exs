@@ -21,9 +21,9 @@ defmodule Hexpm.ObanConfigTest do
     assert Hexpm.Security.Updater.timeout(%Oban.Job{}) == 300_000
 
     for {worker, queue, timeout} <- [
-          {Hexpm.ReleaseTasks.CheckNames, :periodic, 600_000},
-          {Hexpm.ReleaseTasks.Stats, :heavy, 3_600_000},
-          {Hexpm.ReleaseTasks.PurgeExpiredRecords, :periodic, 1_800_000}
+          {Hexpm.Repository.TyposquatWorker, :periodic, 600_000},
+          {Hexpm.Repository.DownloadsWorker, :heavy, 3_600_000},
+          {Hexpm.PurgeExpiredRecords, :periodic, 1_800_000}
         ] do
       assert worker.__opts__()[:queue] == queue
       assert worker.__opts__()[:max_attempts] == 5
@@ -49,6 +49,7 @@ defmodule Hexpm.ObanConfigTest do
              states: :incomplete
            ]
 
+    assert Hexpm.Emails.OutboxWorker.__opts__()[:queue] == :email
     assert Hexpm.Emails.OutboxWorker.timeout(%Oban.Job{}) == 30_000
 
     for worker <- [
@@ -88,9 +89,9 @@ defmodule Hexpm.ObanConfigTest do
              {"* * * * *", Hexpm.Billing.Report},
              {"* * * * *", Hexpm.Emails.OutboxReconciler},
              {"*/30 * * * *", Hexpm.Security.Updater},
-             {"30 0 * * *", Hexpm.ReleaseTasks.CheckNames},
-             {"0 1 * * *", Hexpm.ReleaseTasks.Stats},
-             {"0 2 * * *", Hexpm.ReleaseTasks.PurgeExpiredRecords},
+             {"30 0 * * *", Hexpm.Repository.TyposquatWorker},
+             {"0 1 * * *", Hexpm.Repository.DownloadsWorker},
+             {"0 2 * * *", Hexpm.PurgeExpiredRecords},
              {"15 3 * * *", Hexpm.Accounts.OrganizationDomains.RecheckWorker},
              {"45 3 * * *", Hexpm.Accounts.SSO.EnforcementWorker}
            ]
@@ -115,7 +116,7 @@ defmodule Hexpm.ObanConfigTest do
       |> Enum.map(&{&1, &1.timeout(%Oban.Job{})})
       |> Enum.filter(&is_integer(elem(&1, 1)))
 
-    assert {Hexpm.ReleaseTasks.Stats, 3_600_000} in workers
+    assert {Hexpm.Repository.DownloadsWorker, 3_600_000} in workers
 
     for {worker, timeout} <- workers do
       assert lifeline[:rescue_after] > timeout,
