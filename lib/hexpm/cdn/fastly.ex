@@ -159,10 +159,15 @@ defmodule Hexpm.CDN.Fastly do
     token
   end
 
+  # A target without a number was written before writes were numbered, so
+  # any numbered copy is a later write.
   defp compare(%{etag: etag} = target, 200, headers) when is_binary(etag) do
     case {target[:write], served_write(headers)} do
       {write, served} when is_integer(write) and is_integer(served) ->
         if served >= write, do: :ok, else: {:error, {:stale, {:write, served}, cache(headers)}}
+
+      {nil, served} when is_integer(served) ->
+        :ok
 
       _ ->
         served = header(headers, "etag")
@@ -181,9 +186,12 @@ defmodule Hexpm.CDN.Fastly do
   defp compare(%{etag: nil} = target, 200, headers) do
     served = served_write(headers)
 
-    if is_integer(target[:write]) and is_integer(served) and served > target[:write],
-      do: :ok,
-      else: {:error, {:stale, {:write, served}, cache(headers)}}
+    cond do
+      not is_integer(served) -> {:error, {:stale, {:write, served}, cache(headers)}}
+      is_nil(target[:write]) -> :ok
+      served > target[:write] -> :ok
+      true -> {:error, {:stale, {:write, served}, cache(headers)}}
+    end
   end
 
   # A page removed from a subdomain that names an organization is redirected

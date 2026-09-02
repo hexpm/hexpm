@@ -198,6 +198,22 @@ defmodule Hexpm.CDN.FastlyTest do
                ]
     end
 
+    test "accepts a numbered copy for a target from before writes were numbered" do
+      expect(Hexpm.HTTP.Mock, :head, 2, fn _url, _headers, _opts ->
+        {:ok, 200, [{"etag", ~s("later")}, {"x-cache-write", "5"}], ""}
+      end)
+
+      target = %{url: "https://repo.example/packages/foo", etag: ~s("abc")}
+      assert Fastly.verify(:fastly_hexrepo, [target]) == [{target, :ok}]
+
+      expect(Hexpm.HTTP.Mock, :head, 2, fn _url, _headers, _opts ->
+        {:ok, 200, [{"etag", ~s("later")}, {"x-cache-write", "5"}], ""}
+      end)
+
+      deleted = %{url: "https://repo.example/tarballs/foo-1.0.0.tar", etag: nil}
+      assert Fastly.verify(:fastly_hexrepo, [deleted]) == [{deleted, :ok}]
+    end
+
     test "accepts a deleted object re-created by a later write" do
       expect(Hexpm.HTTP.Mock, :head, 2, fn _url, _headers, _opts ->
         {:ok, 200, [{"etag", ~s("new")}, {"x-cache-write", "10"}], ""}
