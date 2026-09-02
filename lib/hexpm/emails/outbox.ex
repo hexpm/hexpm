@@ -30,6 +30,7 @@ defmodule Hexpm.Emails.Outbox do
 
     attrs
     |> Map.put(:email, OutboxEnvelope.dump!(email))
+    |> Map.put(:type, email.private[:type])
     |> Map.put(:recipients, recipients(email))
     |> Map.put(:subject, email.subject)
   end

@@ -157,6 +157,7 @@ defmodule Hexpm.Factory do
 
     %Hexpm.Emails.OutboxEntry{
       category: "test.email",
+      type: "test_email",
       group_key: "test:#{Fake.sequence(:word)}",
       recipients: [address],
       subject: "Test email",

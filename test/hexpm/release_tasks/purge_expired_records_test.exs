@@ -667,6 +667,7 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
       entry =
         insert(:email_outbox_entry,
           category: "admin.announcement",
+          type: "announcement",
           subject: "Hex.pm - Service update",
           recipients: ["bob@example.com"],
           delivered_at: days_ago(91),
@@ -678,6 +679,7 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecordsTest do
       assert [%{"row" => row}] = archived_rows("email_outbox_entries")
       assert row["id"] == entry.id
       assert row["category"] == "admin.announcement"
+      assert row["type"] == "announcement"
       assert row["subject"] == "Hex.pm - Service update"
       assert row["recipients"] == ["bob@example.com"]
       assert row["provider_message_id"] == "sg-message-id"

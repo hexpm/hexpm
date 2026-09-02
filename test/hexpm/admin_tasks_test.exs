@@ -1137,6 +1137,7 @@ defmodule Hexpm.AdminTasksTest do
 
       assert [entry] = Repo.all(OutboxEntry)
       assert entry.priority == 3
+      assert entry.type == "announcement"
       assert entry.group_key == "admin.announcement:Hex.pm - Service update"
 
       assert [%Oban.Job{priority: 3}] =

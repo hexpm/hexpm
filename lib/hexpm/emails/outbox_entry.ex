@@ -3,6 +3,7 @@ defmodule Hexpm.Emails.OutboxEntry do
 
   schema "email_outbox_entries" do
     field :category, :string
+    field :type, :string
     field :group_key, :string
     field :scope_key, :string
     field :recipients, {:array, :string}, redact: true
@@ -20,6 +21,7 @@ defmodule Hexpm.Emails.OutboxEntry do
     entry
     |> cast(attrs, [
       :category,
+      :type,
       :group_key,
       :scope_key,
       :recipients,
@@ -32,6 +34,7 @@ defmodule Hexpm.Emails.OutboxEntry do
     |> validate_inclusion(:priority, 0..9)
     |> validate_format(:category, ~r/\A[a-z][a-z0-9_.-]*\z/)
     |> validate_length(:category, max: 100)
+    |> validate_length(:type, max: 100)
     |> validate_length(:group_key, max: 255)
     |> validate_length(:scope_key, max: 255)
   end
