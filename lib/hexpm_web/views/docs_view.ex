@@ -38,7 +38,8 @@ defmodule HexpmWeb.DocsView do
            %{view: :faq, label: "FAQ", href: ~p"/docs/faq"},
            %{view: :self_hosting, label: "Self-hosting", href: ~p"/docs/self-hosting"},
            %{view: :mirrors, label: "Mirrors", href: ~p"/docs/mirrors"},
-           %{view: :public_keys, label: "Public keys", href: ~p"/docs/public-keys"}
+           %{view: :public_keys, label: "Public keys", href: ~p"/docs/public-keys"},
+           %{view: :leaked_keys, label: "Leaked API keys", href: ~p"/docs/leaked-keys"}
          ]}
     ]
   end

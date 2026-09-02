@@ -54,6 +54,21 @@ defmodule HexpmWeb.DocsControllerTest do
     end
   end
 
+  test "renders the leaked API keys guide in the docs navigation" do
+    html =
+      build_conn()
+      |> get("/docs/leaked-keys")
+      |> html_response(200)
+
+    assert html =~ "Leaked API keys"
+    assert html =~ "What Hex.pm did automatically"
+
+    {:ok, document} = Floki.parse_document(html)
+    assert [link] = Floki.find(document, ~s(#docs-nav a[href="/docs/leaked-keys"]))
+    assert Floki.text(link) =~ "Leaked API keys"
+    assert Floki.attribute(link, "class") |> List.first() =~ "bg-blue-50"
+  end
+
   test "hides the organization SSO guide and navigation when SSO is off" do
     config = Application.fetch_env!(:hexpm, :organization_sso)
     app_env(:hexpm, :organization_sso, Keyword.put(config, :mode, :off))

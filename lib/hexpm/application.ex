@@ -11,6 +11,7 @@ defmodule Hexpm.Application do
 
     mode = mode()
     if web_mode?(mode), do: Hexpm.BlockAddress.start()
+    if web_mode?(mode) and Application.fetch_env!(:hexpm, :cache_enabled), do: Hexpm.Cache.start()
     children = children(mode, Hexpm.Repo.write_mode?())
 
     shutdown_on_eof()
@@ -217,10 +218,6 @@ defmodule Hexpm.Application do
       HexpmWeb.RateLimitPubSub,
       Hexpm.WriteModePubSub,
       {PlugAttack.Storage.Ets, name: HexpmWeb.Plugs.Attack.Storage, clean_period: 60_000},
-      {Hexpm.Cache,
-       name: Hexpm.Cache,
-       interval: 3_600_000,
-       enabled: Application.fetch_env!(:hexpm, :cache_enabled)},
       load_caches(),
       HexpmWeb.Endpoint
     ]
