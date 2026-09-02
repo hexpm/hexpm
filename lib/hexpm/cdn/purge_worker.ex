@@ -7,9 +7,9 @@ defmodule Hexpm.CDN.PurgeWorker do
   the shield saw the purge). It then waits for propagation and checks every
   target the caller supplied against the CDN (`Hexpm.CDN.verify/2`: the
   nearest POP plus one probed POP per continent for the repository
-  service). Targets still serving the old ETag anywhere mean the purge did
-  not apply, so the keys are purged again and the targets rechecked, up to
-  `:purge_verify_rounds` times, after which the job raises
+  service). A target whose copy anywhere is older than the write means the
+  purge did not apply, so the keys are purged again and the targets
+  rechecked, up to `:purge_verify_rounds` times, after which the job raises
   `Hexpm.CDN.PurgeVerificationError` and Oban retries it later.
 
   Purges queue up faster than they run during publish bursts, so on start a
@@ -18,13 +18,13 @@ defmodule Hexpm.CDN.PurgeWorker do
   them) and the absorbed jobs are cancelled. Fastly accepts up to 256 keys
   per purge request, so a job never carries more than that, and it looks at
   no more than 256 candidates, since each brings at least one key. Two
-  targets for the same URL keep the later one's ETag, since that is the
-  object the store holds now.
+  targets for the same URL keep the one with the higher write number, since
+  that is the object the store holds now.
 
   The same object can also be written again after this job was enqueued,
-  by a job this one did not absorb. That job's ETag is the one the CDN
-  will serve, so a target that comes back stale is dropped, not re-purged,
-  when a newer job for its URL exists.
+  by a job this one did not absorb. The check compares write numbers, so
+  the CDN serving that later write passes this job's target too, and the
+  later job verifies its own.
   """
 
   use Oban.Worker, queue: :purge, max_attempts: 5
@@ -33,6 +33,7 @@ defmodule Hexpm.CDN.PurgeWorker do
   import Ecto.Changeset, only: [change: 2]
 
   alias Hexpm.CDN
+  alias Hexpm.CDN.PurgeVerificationError
   alias Hexpm.Repo
 
   require Logger
@@ -51,7 +52,9 @@ defmodule Hexpm.CDN.PurgeWorker do
     targets =
       targets
       |> dedupe_targets()
-      |> Enum.map(&%{url: &1["url"], etag: &1["etag"], repository: &1["repository"]})
+      |> Enum.map(
+        &%{url: &1["url"], etag: &1["etag"], write: &1["write"], repository: &1["repository"]}
+      )
 
     metadata = %{
       service: service,
@@ -91,20 +94,13 @@ defmodule Hexpm.CDN.PurgeWorker do
       for {target, {:error, reason}} <- CDN.verify(service, targets),
           do: {target, reason}
 
-    {superseded, stale} = Enum.split_with(stale, fn {target, _} -> superseded?(job, target) end)
-
-    for {target, reason} <- superseded do
-      Logger.info("CDN_PURGE_SUPERSEDED #{target.url} #{inspect(reason)} job=#{job.id}")
-    end
-
     for {target, reason} <- stale do
       Logger.warning(
-        "CDN_PURGE_STALE round=#{round} #{target.url} expected=#{inspect(target.etag)} " <>
-          "#{inspect(reason)} keys=#{Enum.join(keys, " ")} job=#{job.id}"
+        "CDN_PURGE_STALE round=#{round} #{target.url} " <>
+          "expected=#{PurgeVerificationError.expected(target)} #{inspect(reason)} " <>
+          "keys=#{Enum.join(keys, " ")} job=#{job.id}"
       )
     end
-
-    targets = targets -- Enum.map(superseded, &elem(&1, 0))
 
     cond do
       stale == [] ->
@@ -116,7 +112,7 @@ defmodule Hexpm.CDN.PurgeWorker do
         end
 
       true ->
-        raise Hexpm.CDN.PurgeVerificationError,
+        raise PurgeVerificationError,
           service: service,
           keys: keys,
           stale: stale,
@@ -124,30 +120,15 @@ defmodule Hexpm.CDN.PurgeWorker do
     end
   end
 
-  # A later job for the same URL, whether queued, running or done, carries
-  # the ETag the store holds now; this job's expectation is out of date.
-  defp superseded?(%Oban.Job{id: nil}, _target), do: false
-
-  defp superseded?(%Oban.Job{id: id}, %{url: url}) do
-    worker = Oban.Worker.to_string(__MODULE__)
-    match = %{"verify" => [%{"url" => url}]}
-
-    Repo.exists?(
-      from(j in Oban.Job,
-        where: j.worker == ^worker and j.id > ^id,
-        where: j.state in ["scheduled", "available", "executing", "retryable", "completed"],
-        where: fragment("? @> ?", j.args, ^match)
-      )
-    )
-  end
-
-  # Later targets replace earlier ones for the same URL: the running job's
-  # own targets come first, absorbed jobs follow in id order.
+  # One target per URL, the one with the highest write number; between
+  # equals (or targets without one) the later wins.
   defp dedupe_targets(targets) do
     targets
-    |> Enum.reverse()
-    |> Enum.uniq_by(& &1["url"])
-    |> Enum.reverse()
+    |> Enum.with_index()
+    |> Enum.sort_by(fn {target, index} -> {target["write"] || 0, index} end, :desc)
+    |> Enum.uniq_by(fn {target, _index} -> target["url"] end)
+    |> Enum.sort_by(fn {_target, index} -> index end)
+    |> Enum.map(fn {target, _index} -> target end)
   end
 
   defp purge_twice(service, keys) do
@@ -224,16 +205,25 @@ defmodule Hexpm.CDN.PurgeVerificationError do
     "purge of #{inspect(keys)} on #{service} not visible after #{rounds} rounds:\n#{stale}"
   end
 
+  @doc "Describes what the check wanted for `target`, for logs and this message."
+  def expected(%{etag: nil}), do: "404"
+  def expected(%{etag: _etag, write: write}) when is_integer(write), do: "write #{write}"
+  def expected(%{etag: etag}), do: inspect(etag)
+
   defp describe({target, {:stale, pops}}) do
     pops =
-      Enum.map_join(pops, ", ", fn %{pop: pop, etag: etag, cache: cache} ->
-        "#{pop} serves #{inspect(etag)} (#{cache})"
+      Enum.map_join(pops, ", ", fn %{pop: pop, served: served, cache: cache} ->
+        "#{pop} serves #{served(served)} (#{cache})"
       end)
 
-    "  #{target.url} expected #{inspect(target.etag)}: #{pops}"
+    "  #{target.url} expected #{expected(target)}: #{pops}"
   end
 
   defp describe({target, reason}) do
-    "  #{target.url} expected #{inspect(target.etag)}: #{inspect(reason)}"
+    "  #{target.url} expected #{expected(target)}: #{inspect(reason)}"
   end
+
+  defp served({:write, nil}), do: "no write number"
+  defp served({:write, write}), do: "write #{write}"
+  defp served({:etag, etag}), do: inspect(etag)
 end
