@@ -4,6 +4,45 @@ defmodule Hexpm.Accounts.OrganizationsTest do
   alias Hexpm.Accounts.Organizations
   alias Hexpm.Repository.PackageOwner
 
+  describe "all_admin_notifiable_emails/1" do
+    test "returns the verified primary address of each admin once" do
+      admin = insert(:user)
+      member = insert(:user)
+      organization = insert(:organization)
+      other = insert(:organization)
+      insert(:organization_user, organization: organization, user: admin, role: "admin")
+      insert(:organization_user, organization: other, user: admin, role: "admin")
+      insert(:organization_user, organization: organization, user: member, role: "write")
+
+      assert Organizations.all_admin_notifiable_emails() == [hd(admin.emails).email]
+    end
+
+    test "skips unverified addresses and deactivated admins" do
+      organization = insert(:organization)
+      unverified = insert(:user, emails: [build(:email, verified: false)])
+      deactivated = insert(:user, deactivated_at: DateTime.utc_now())
+      insert(:organization_user, organization: organization, user: unverified, role: "admin")
+      insert(:organization_user, organization: organization, user: deactivated, role: "admin")
+
+      assert Organizations.all_admin_notifiable_emails() == []
+    end
+
+    test "filters on billing_active" do
+      billed = insert(:user)
+      unbilled = insert(:user)
+      billed_org = insert(:organization, billing_active: true)
+      unbilled_org = insert(:organization, billing_active: false)
+      insert(:organization_user, organization: billed_org, user: billed, role: "admin")
+      insert(:organization_user, organization: unbilled_org, user: unbilled, role: "admin")
+
+      assert Organizations.all_admin_notifiable_emails(billing_active: true) ==
+               [hd(billed.emails).email]
+
+      assert Organizations.all_admin_notifiable_emails(billing_active: false) ==
+               [hd(unbilled.emails).email]
+    end
+  end
+
   describe "create/3" do
     test "publishes org_names.csv to the docs bucket" do
       user = insert(:user)

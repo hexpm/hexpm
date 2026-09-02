@@ -19,6 +19,11 @@ defmodule Hexpm.Accounts.Organizations do
     |> Repo.preload(preload)
   end
 
+  def all_admin_notifiable_emails(opts \\ []) do
+    Organization.all_admin_notifiable_emails(opts)
+    |> Repo.all()
+  end
+
   def get(name, preload \\ []) do
     Repo.get_by(Organization, name: name)
     |> Repo.preload(preload)
