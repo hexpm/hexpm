@@ -3,50 +3,70 @@ defmodule Hexpm.Hexdocs.Bucket do
 
   @special_package_names Map.keys(Application.compile_env!(:hexpm, :hexdocs_special_packages))
   @gcs_put_debounce Application.compile_env!(:hexpm, :hexdocs_gcs_put_debounce)
+  @lock_timeout :timer.minutes(1)
 
-  def upload_index_sitemap(sitemap) do
+  @doc "Writes the sitemap index `render` produces."
+  def upload_index_sitemap(render) do
     upload_content(
       "sitemap",
       "sitemap.xml",
       "text/xml",
-      sitemap,
+      render,
       Hexpm.Utils.docs_url("sitemap.xml")
     )
   end
 
   # The CDN redirects hexdocs.pm/<package>/... to the package subdomain, so
   # the check has to fetch the sitemap where it is served.
-  def upload_package_sitemap(package, sitemap) do
+  @doc "Writes the sitemap of `package` that `render` produces."
+  def upload_package_sitemap(package, render) do
     upload_content(
       "sitemap/#{package}",
       "#{package}/sitemap.xml",
       "text/xml",
-      sitemap,
+      render,
       Hexpm.Utils.docs_html_url("hexpm", package, "/sitemap.xml")
     )
   end
 
-  def upload_package_names_csv(contents) do
+  @doc "Writes the package name list `render` produces."
+  def upload_package_names_csv(render) do
     upload_content(
       "package_names.csv",
       "package_names.csv",
       "text/csv",
-      contents,
+      render,
       Hexpm.Utils.docs_url("package_names.csv")
     )
   end
 
-  defp upload_content(key, path, content_type, content, url) do
-    write = Hexpm.CDN.next_write()
+  # Every docs upload, on any pod, writes these objects, so the render, the
+  # write number and the put run under a lock on the object: the number is
+  # then in write order and the content is the newest render.
+  defp upload_content(key, path, content_type, render, url) do
+    {:ok, :ok} =
+      Hexpm.Repo.transaction(
+        fn ->
+          Hexpm.Repo.advisory_xact_lock(:hexdocs,
+            sub_key: :erlang.phash2(path),
+            timeout: @lock_timeout
+          )
 
-    opts = [
-      content_type: content_type,
-      cache_control: "public, max-age=3600",
-      meta: [{"surrogate-key", key}, {"write", Integer.to_string(write)}]
-    ]
+          write = Hexpm.CDN.next_write()
 
-    {:ok, %{etag: etag}} = Hexpm.Store.put(:docs_bucket, path, content, opts)
-    purge("hexpm", [key], [%{url: url, etag: etag, write: write}])
+          opts = [
+            content_type: content_type,
+            cache_control: "public, max-age=3600",
+            meta: [{"surrogate-key", key}, {"write", Integer.to_string(write)}]
+          ]
+
+          {:ok, %{etag: etag}} = Hexpm.Store.put(:docs_bucket, path, render.(), opts)
+          purge("hexpm", [key], [%{url: url, etag: etag, write: write}])
+        end,
+        timeout: @lock_timeout
+      )
+
+    :ok
   end
 
   def upload(repository, package, version, all_versions, retired_versions, dir, files) do

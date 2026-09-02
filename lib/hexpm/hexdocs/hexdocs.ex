@@ -209,7 +209,11 @@ defmodule Hexpm.Hexdocs do
       Hexpm.Hexdocs.Debouncer,
       :sitemap_index,
       @gcs_put_debounce,
-      fn -> Bucket.upload_index_sitemap(Sitemaps.render_docs(Sitemaps.packages_with_docs())) end
+      fn ->
+        Bucket.upload_index_sitemap(fn ->
+          Sitemaps.render_docs(Sitemaps.packages_with_docs())
+        end)
+      end
     )
   end
 
@@ -222,17 +226,18 @@ defmodule Hexpm.Hexdocs do
           path not in @noindex_pages,
           do: path
 
-    Bucket.upload_package_sitemap(
-      package,
+    Bucket.upload_package_sitemap(package, fn ->
       PackageSitemap.render(package, pages, DateTime.utc_now())
-    )
+    end)
   end
 
   defp update_package_sitemap(_repository, _key, _package, _files), do: :ok
 
   defp update_package_names_csv("hexpm") do
-    names = Enum.sort(@special_package_names) ++ Packages.public_names()
-    Bucket.upload_package_names_csv(for name <- names, do: [name, "\n"])
+    Bucket.upload_package_names_csv(fn ->
+      names = Enum.sort(@special_package_names) ++ Packages.public_names()
+      for name <- names, do: [name, "\n"]
+    end)
   end
 
   defp update_package_names_csv(_repository), do: :ok
