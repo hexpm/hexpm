@@ -162,6 +162,84 @@ defmodule Hexpm.CDN.PurgeWorkerTest do
                jobs("completed")
     end
 
+    test "drops a content target answered 404 when a newer deletion job exists" do
+      {:ok, older} =
+        Repo.insert(
+          PurgeWorker.new(%{
+            "service" => "fastly_hexrepo",
+            "keys" => ["a"],
+            "verify" => [target("https://r/a", "abc", 1)]
+          })
+        )
+
+      Oban.insert!(
+        PurgeWorker.new(
+          %{
+            "service" => "fastly_hexrepo",
+            "keys" => ["a"],
+            "verify" => [target("https://r/a", nil, 2)]
+          },
+          schedule_in: 60
+        )
+      )
+
+      expect(Hexpm.CDN.Mock, :purge_key, 2, fn :fastly_hexrepo, ["a"] -> :ok end)
+
+      expect(Hexpm.CDN.Mock, :verify, fn _service, [%{url: "https://r/a", write: 1} = a] ->
+        [{a, {:error, {:status, 404, nil}}}]
+      end)
+
+      assert :ok = PurgeWorker.perform(older)
+    end
+
+    test "drops a stale target judged by ETag when a newer job for its URL exists" do
+      {:ok, older} =
+        Repo.insert(
+          PurgeWorker.new(%{
+            "service" => "fastly_hexrepo",
+            "keys" => ["a"],
+            "verify" => [target("https://r/a", "1", 1)]
+          })
+        )
+
+      Oban.insert!(
+        PurgeWorker.new(
+          %{
+            "service" => "fastly_hexrepo",
+            "keys" => ["a"],
+            "verify" => [target("https://r/a", "2", 2)]
+          },
+          schedule_in: 60
+        )
+      )
+
+      expect(Hexpm.CDN.Mock, :purge_key, 2, fn :fastly_hexrepo, ["a"] -> :ok end)
+
+      expect(Hexpm.CDN.Mock, :verify, fn _service, [%{url: "https://r/a", write: 1} = a] ->
+        [{a, {:error, {:stale, [%{pop: :nearest, served: {:etag, "2"}, cache: nil}]}}}]
+      end)
+
+      assert :ok = PurgeWorker.perform(older)
+    end
+
+    test "purges again on a 404 that no newer job explains" do
+      expect(Hexpm.CDN.Mock, :purge_key, 4, fn :fastly_hexrepo, ["k"] -> :ok end)
+
+      expect(Hexpm.CDN.Mock, :verify, fn _service, [%{url: "https://r/a"} = a] ->
+        [{a, {:error, {:status, 404, "x-cache: HIT"}}}]
+      end)
+
+      expect(Hexpm.CDN.Mock, :verify, fn _service, [%{url: "https://r/a"} = a] -> [{a, :ok}] end)
+
+      args = %{
+        "service" => "fastly_hexrepo",
+        "keys" => ["k"],
+        "verify" => [target("https://r/a")]
+      }
+
+      assert :ok = perform_job(PurgeWorker, args)
+    end
+
     test "checks its target even when a newer job for the same URL is queued" do
       {:ok, older} =
         Repo.insert(

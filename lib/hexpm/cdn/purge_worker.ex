@@ -24,7 +24,10 @@ defmodule Hexpm.CDN.PurgeWorker do
   The same object can also be written again after this job was enqueued,
   by a job this one did not absorb. The check compares write numbers, so
   the CDN serving that later write passes this job's target too, and the
-  later job verifies its own.
+  later job verifies its own. When the number cannot decide, because the
+  copy served carries none or the object has been deleted since, a newer
+  job for the URL settles it: the target is dropped and that job's check
+  covers the URL.
   """
 
   use Oban.Worker, queue: :purge, max_attempts: 5
@@ -94,6 +97,17 @@ defmodule Hexpm.CDN.PurgeWorker do
       for {target, {:error, reason}} <- CDN.verify(service, targets),
           do: {target, reason}
 
+    {superseded, stale} =
+      Enum.split_with(stale, fn {target, reason} ->
+        undecided?(target, reason) and superseded?(job, target)
+      end)
+
+    for {target, reason} <- superseded do
+      Logger.info("CDN_PURGE_SUPERSEDED #{target.url} #{inspect(reason)} job=#{job.id}")
+    end
+
+    targets = targets -- Enum.map(superseded, &elem(&1, 0))
+
     for {target, reason} <- stale do
       Logger.warning(
         "CDN_PURGE_STALE round=#{round} #{target.url} " <>
@@ -118,6 +132,36 @@ defmodule Hexpm.CDN.PurgeWorker do
           stale: stale,
           rounds: round
     end
+  end
+
+  # The write number decides when the copy carries one. A copy without one
+  # is judged by ETag, and a 404 or redirect for a target that expected
+  # content may be a deletion since the write; neither tells whether a
+  # later write explains it.
+  defp undecided?(_target, {:stale, pops}),
+    do: Enum.all?(pops, &match?(%{served: {:etag, _}}, &1))
+
+  defp undecided?(%{etag: etag}, {:status, status, _cache})
+       when is_binary(etag) and status in [301, 404],
+       do: true
+
+  defp undecided?(_target, _reason), do: false
+
+  # A later job for the same URL, whether queued, running or done, carries
+  # what the store holds now; its check covers the URL.
+  defp superseded?(%Oban.Job{id: nil}, _target), do: false
+
+  defp superseded?(%Oban.Job{id: id}, %{url: url}) do
+    worker = Oban.Worker.to_string(__MODULE__)
+    match = %{"verify" => [%{"url" => url}]}
+
+    Repo.exists?(
+      from(j in Oban.Job,
+        where: j.worker == ^worker and j.id > ^id,
+        where: j.state in ["scheduled", "available", "executing", "retryable", "completed"],
+        where: fragment("? @> ?", j.args, ^match)
+      )
+    )
   end
 
   # One target per URL, the one with the highest write number; between
