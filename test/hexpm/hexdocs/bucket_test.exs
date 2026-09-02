@@ -44,6 +44,20 @@ defmodule Hexpm.Hexdocs.BucketTest do
     assert Hexpm.Store.get(:docs_private_bucket, "acme/package_extra/index.html") == "prefix"
   end
 
+  test "keeps the sitemap and docs_config.js the upload rewrites, and drops other old files" do
+    version = Version.parse!("1.0.0")
+    Hexpm.Store.put(:docs_bucket, "package/sitemap.xml", "old sitemap", [])
+    Hexpm.Store.put(:docs_bucket, "package/docs_config.js", "old config", [])
+    Hexpm.Store.put(:docs_bucket, "package/removed.html", "removed", [])
+    {dir, files} = create_files([{"index.html", "new"}])
+
+    Bucket.upload("hexpm", "package", version, [], MapSet.new(), dir, files)
+
+    assert Hexpm.Store.get(:docs_bucket, "package/sitemap.xml") == "old sitemap"
+    assert IO.iodata_to_binary(Hexpm.Store.get(:docs_bucket, "package/docs_config.js")) =~ "1.0.0"
+    refute Hexpm.Store.get(:docs_bucket, "package/removed.html")
+  end
+
   test "writes public docs to the existing docs bucket" do
     version = Version.parse!("1.0.0")
     {dir, files} = create_files([{"index.html", "public"}])
