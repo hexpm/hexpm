@@ -37,14 +37,16 @@ defmodule Hexpm.Hexdocs.Bucket do
   end
 
   defp upload_content(key, path, content_type, content, url) do
+    write = Hexpm.CDN.next_write()
+
     opts = [
       content_type: content_type,
       cache_control: "public, max-age=3600",
-      meta: [{"surrogate-key", key}]
+      meta: [{"surrogate-key", key}, {"write", Integer.to_string(write)}]
     ]
 
     {:ok, %{etag: etag}} = Hexpm.Store.put(:docs_bucket, path, content, opts)
-    purge("hexpm", [key], [%{url: url, etag: etag}])
+    purge("hexpm", [key], [%{url: url, etag: etag, write: write}])
   end
 
   def upload(repository, package, version, all_versions, retired_versions, dir, files) do
@@ -54,7 +56,8 @@ defmodule Hexpm.Hexdocs.Bucket do
     upload_files = list_upload_files(repository, package, version, dir, files, upload_type)
     paths = MapSet.new(upload_files, &elem(&1, 0))
 
-    uploaded = upload_new_files(upload_files)
+    write = Hexpm.CDN.next_write()
+    uploaded = upload_new_files(upload_files, write)
     delete_old_docs(repository, package, [version], paths, upload_type)
 
     Debouncer.debounce(Debouncer, {:docs_config, repository, package}, @gcs_put_debounce, fn ->
@@ -69,7 +72,7 @@ defmodule Hexpm.Hexdocs.Bucket do
           files
         )
 
-      upload_new_files([config])
+      upload_new_files([config], Hexpm.CDN.next_write())
     end)
 
     purge_hexdocs_cache(
@@ -77,7 +80,7 @@ defmodule Hexpm.Hexdocs.Bucket do
       package,
       [version],
       upload_type,
-      page_targets(repository, uploaded)
+      page_targets(repository, uploaded, write)
     )
 
     purge(repository, [docs_config_cdn_key(repository, package)])
@@ -126,13 +129,13 @@ defmodule Hexpm.Hexdocs.Bucket do
 
   def delete(repository, package, version, :both) do
     delete_old_docs(repository, package, [version], [], :both)
-    targets = deleted_page_targets(repository, package, [version, nil])
+    targets = deleted_page_targets(repository, package, [version, nil], Hexpm.CDN.next_write())
     purge_hexdocs_cache(repository, package, [version], :both, targets)
   end
 
   def delete(repository, package, version, :versioned) do
     delete_old_docs(repository, package, [version], [], :versioned)
-    targets = deleted_page_targets(repository, package, [version])
+    targets = deleted_page_targets(repository, package, [version], Hexpm.CDN.next_write())
     purge_hexdocs_cache(repository, package, [version], :versioned, targets)
   end
 
@@ -141,12 +144,13 @@ defmodule Hexpm.Hexdocs.Bucket do
     uploads = list_upload_files(repository, package, new_latest, dir, files, :both)
     paths = MapSet.new(uploads, &elem(&1, 0))
     versions = [version, new_latest]
-    uploaded = upload_new_files(uploads)
+    write = Hexpm.CDN.next_write()
+    uploaded = upload_new_files(uploads, write)
     delete_old_docs(repository, package, versions, paths, :both)
 
     targets =
-      page_targets(repository, uploaded) ++
-        deleted_page_targets(repository, package, [version])
+      page_targets(repository, uploaded, write) ++
+        deleted_page_targets(repository, package, [version], write)
 
     purge_hexdocs_cache(repository, package, versions, :both, targets)
   end
@@ -186,7 +190,7 @@ defmodule Hexpm.Hexdocs.Bucket do
     end)
   end
 
-  defp upload_new_files(files) do
+  defp upload_new_files(files, write) do
     files
     |> Enum.map(fn {store_key, cdn_key, data, public?} ->
       opts =
@@ -197,7 +201,8 @@ defmodule Hexpm.Hexdocs.Bucket do
         )
         |> Keyword.put(:meta, [
           {"surrogate-key", cdn_key},
-          {"surrogate-control", "public, max-age=604800"}
+          {"surrogate-control", "public, max-age=604800"},
+          {"write", Integer.to_string(write)}
         ])
 
       {bucket(public?), store_key, data, opts}
@@ -222,23 +227,23 @@ defmodule Hexpm.Hexdocs.Bucket do
   # Each uploaded page set is checked through its index.html, versioned and
   # unversioned. Private docs sit behind a browser session the check cannot
   # carry, so only the public site is verified.
-  defp page_targets("hexpm", uploaded) do
+  defp page_targets("hexpm", uploaded, write) do
     for %{key: key, etag: etag} <- uploaded, Path.basename(key) == "index.html" do
-      %{url: page_url(key), etag: etag}
+      %{url: page_url(key), etag: etag, write: write}
     end
   end
 
-  defp page_targets(_repository, _uploaded), do: []
+  defp page_targets(_repository, _uploaded, _write), do: []
 
   # `nil` stands for the unversioned pages.
-  defp deleted_page_targets("hexpm", package, versions) do
+  defp deleted_page_targets("hexpm", package, versions, write) do
     Enum.map(versions, fn
-      nil -> %{url: page_url("#{package}/index.html"), etag: nil}
-      version -> %{url: page_url("#{package}/#{version}/index.html"), etag: nil}
+      nil -> %{url: page_url("#{package}/index.html"), etag: nil, write: write}
+      version -> %{url: page_url("#{package}/#{version}/index.html"), etag: nil, write: write}
     end)
   end
 
-  defp deleted_page_targets(_repository, _package, _versions), do: []
+  defp deleted_page_targets(_repository, _package, _versions, _write), do: []
 
   defp page_url(key) do
     [package | rest] = Path.split(key)

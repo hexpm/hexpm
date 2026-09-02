@@ -2,6 +2,23 @@ defmodule Hexpm.TestHelpers do
   @tmp Application.compile_env(:hexpm, :tmp_dir)
 
   @doc """
+  The arguments of the newest purge job enqueued for `keys`, with the write
+  number every target must carry taken out, so a test can compare the rest
+  against a literal.
+  """
+  def purge_args(keys) do
+    jobs =
+      Oban.Testing.all_enqueued(Hexpm.RepoBase,
+        worker: Hexpm.CDN.PurgeWorker,
+        args: %{"keys" => keys}
+      )
+
+    %{args: args} = Enum.max_by(jobs, & &1.id)
+    true = Enum.all?(args["verify"], &is_integer(&1["write"]))
+    update_in(args["verify"], &Enum.map(&1, fn target -> Map.delete(target, "write") end))
+  end
+
+  @doc """
   Captures logs down to debug, including Ecto's query log.
 
   `capture_log/2`'s `:level` option filters what it keeps; it does not lower
