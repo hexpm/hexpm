@@ -7,7 +7,8 @@ defmodule Hexpm.Hexdocs.BucketTest do
     version = Version.parse!("1.0.0")
     {dir, files} = create_files([{"index.html", "1.0.0"}])
 
-    assert :ok = Bucket.upload("acme", "package", version, [], MapSet.new(), dir, files)
+    assert :ok = Bucket.upload_versioned("acme", "package", version, dir, files)
+    assert :ok = Bucket.upload_unversioned("acme", "package", version, dir, files)
 
     assert Hexpm.Store.get(:docs_private_bucket, "acme/package/1.0.0/index.html") == "1.0.0"
     assert Hexpm.Store.get(:docs_private_bucket, "acme/package/index.html") == "1.0.0"
@@ -19,11 +20,25 @@ defmodule Hexpm.Hexdocs.BucketTest do
     {latest_dir, latest_files} = create_files([{"index.html", "latest"}])
     {older_dir, older_files} = create_files([{"index.html", "older"}])
 
-    Bucket.upload("acme", "package", latest, [], MapSet.new(), latest_dir, latest_files)
-    Bucket.upload("acme", "package", older, [latest], MapSet.new(), older_dir, older_files)
+    Bucket.upload_versioned("acme", "package", latest, latest_dir, latest_files)
+    Bucket.upload_unversioned("acme", "package", latest, latest_dir, latest_files)
+    Bucket.upload_versioned("acme", "package", older, older_dir, older_files)
 
     assert Hexpm.Store.get(:docs_private_bucket, "acme/package/index.html") == "latest"
     assert Hexpm.Store.get(:docs_private_bucket, "acme/package/1.0.0/index.html") == "older"
+  end
+
+  test "the unversioned pages replace only unversioned files" do
+    version = Version.parse!("1.0.0")
+    Hexpm.Store.put(:docs_private_bucket, "acme/package/0.9.0/index.html", "0.9.0", [])
+    Hexpm.Store.put(:docs_private_bucket, "acme/package/removed.html", "removed", [])
+    {dir, files} = create_files([{"index.html", "1.0.0"}])
+
+    Bucket.upload_unversioned("acme", "package", version, dir, files)
+
+    assert Hexpm.Store.get(:docs_private_bucket, "acme/package/index.html") == "1.0.0"
+    assert Hexpm.Store.get(:docs_private_bucket, "acme/package/0.9.0/index.html") == "0.9.0"
+    refute Hexpm.Store.get(:docs_private_bucket, "acme/package/removed.html")
   end
 
   test "replacing docs removes stale files without affecting prefix-matching packages" do
@@ -35,9 +50,14 @@ defmodule Hexpm.Hexdocs.BucketTest do
     {prefix_dir, prefix_files} = create_files([{"index.html", "prefix"}])
     {second_dir, second_files} = create_files([{"index.html", "second"}])
 
-    Bucket.upload("acme", "package_extra", version, [], MapSet.new(), prefix_dir, prefix_files)
-    Bucket.upload("acme", "package", version, [], MapSet.new(), first_dir, first_files)
-    Bucket.upload("acme", "package", version, [], MapSet.new(), second_dir, second_files)
+    upload = fn package, dir, files ->
+      Bucket.upload_versioned("acme", package, version, dir, files)
+      Bucket.upload_unversioned("acme", package, version, dir, files)
+    end
+
+    upload.("package_extra", prefix_dir, prefix_files)
+    upload.("package", first_dir, first_files)
+    upload.("package", second_dir, second_files)
 
     assert Hexpm.Store.get(:docs_private_bucket, "acme/package/index.html") == "second"
     refute Hexpm.Store.get(:docs_private_bucket, "acme/package/removed.html")
@@ -51,7 +71,9 @@ defmodule Hexpm.Hexdocs.BucketTest do
     Hexpm.Store.put(:docs_bucket, "package/removed.html", "removed", [])
     {dir, files} = create_files([{"index.html", "new"}])
 
-    Bucket.upload("hexpm", "package", version, [], MapSet.new(), dir, files)
+    Bucket.upload_versioned("hexpm", "package", version, dir, files)
+    Bucket.upload_unversioned("hexpm", "package", version, dir, files)
+    Bucket.upload_docs_config("hexpm", "package", version, [], MapSet.new(), dir, files)
 
     assert Hexpm.Store.get(:docs_bucket, "package/sitemap.xml") == "old sitemap"
     assert IO.iodata_to_binary(Hexpm.Store.get(:docs_bucket, "package/docs_config.js")) =~ "1.0.0"
@@ -64,7 +86,9 @@ defmodule Hexpm.Hexdocs.BucketTest do
     Hexpm.Store.put(:docs_private_bucket, "acme/package/docs_config.js", "old config", [])
     {dir, files} = create_files([{"index.html", "new"}])
 
-    Bucket.upload("acme", "package", version, [], MapSet.new(), dir, files)
+    Bucket.upload_versioned("acme", "package", version, dir, files)
+    Bucket.upload_unversioned("acme", "package", version, dir, files)
+    Bucket.upload_docs_config("acme", "package", version, [], MapSet.new(), dir, files)
 
     refute Hexpm.Store.get(:docs_private_bucket, "acme/package/sitemap.xml")
 
@@ -77,7 +101,9 @@ defmodule Hexpm.Hexdocs.BucketTest do
     version = Version.parse!("1.0.0")
     {dir, files} = create_files([{"index.html", "public"}])
 
-    Bucket.upload("hexpm", "package", version, [], MapSet.new(), dir, files)
+    Bucket.upload_versioned("hexpm", "package", version, dir, files)
+    Bucket.upload_unversioned("hexpm", "package", version, dir, files)
+    Bucket.upload_docs_config("hexpm", "package", version, [], MapSet.new(), dir, files)
 
     assert Hexpm.Store.get(:docs_bucket, "package/index.html") == "public"
 
