@@ -396,6 +396,9 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       response = json_response(conn, 400)
       assert response["error"] == "invalid_grant"
       assert response["error_description"] == "Invalid refresh token"
+
+      assert_received {Hexpm.SecurityLog,
+                       %{method: "refresh_token", reason: "invalid", path: "/api/oauth/token"}}
     end
 
     test "returns error for mismatched client_id", %{refresh_token: refresh_token} do
@@ -458,6 +461,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       response = json_response(conn, 400)
       assert response["error"] == "invalid_grant"
       assert response["error_description"] == "Refresh token has been revoked"
+      assert_received {Hexpm.SecurityLog, %{method: "refresh_token", reason: "revoked"}}
     end
 
     test "refuses a refresh for a live token whose session is revoked", %{
@@ -483,6 +487,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert response["error"] == "invalid_grant"
       assert response["error_description"] == "Session has been revoked"
       assert Repo.get!(Token, token.id).revoked_at == nil
+      assert_received {Hexpm.SecurityLog, %{method: "refresh_token", reason: "session_revoked"}}
     end
 
     test "returns error for expired refresh token", %{user: user, client: client} do
@@ -522,6 +527,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert response = json_response(conn, 400)
       assert response["error"] == "invalid_grant"
       assert response["error_description"] == "Refresh token has expired"
+      assert_received {Hexpm.SecurityLog, %{method: "refresh_token", reason: "expired"}}
     end
   end
 
@@ -963,6 +969,29 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert json_response(conn, 401)
       response = json_response(conn, 401)
       assert response["error"] == "invalid_client"
+
+      assert_received {Hexpm.SecurityLog,
+                       %{method: "api_key", reason: "invalid", path: "/api/oauth/token"}}
+    end
+
+    test "returns error for a revoked API key", %{client: client, user: user} do
+      key = insert(:key, user: user, revoke_at: ~N[2018-01-01 00:00:00])
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 401)["error"] == "invalid_client"
+
+      key_id = key.id
+      user_id = user.id
+
+      assert_received {Hexpm.SecurityLog,
+                       %{method: "api_key", reason: "revoked", key_id: ^key_id, user_id: ^user_id}}
     end
 
     test "returns error for unauthorized grant type", %{api_key: api_key} do

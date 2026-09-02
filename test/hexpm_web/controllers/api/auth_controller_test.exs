@@ -84,6 +84,11 @@ defmodule HexpmWeb.API.AuthControllerTest do
       |> put_req_header("authorization", "ABC")
       |> get("/api/auth", domain: "api")
       |> response(401)
+
+      assert_received {Hexpm.SecurityLog,
+                       %{method: "api_key", reason: "invalid", path: "/api/auth"} = event}
+
+      refute Map.has_key?(event, :key_id)
     end
 
     test "without domain returns 400", %{user_full_key: key} do
@@ -106,6 +111,12 @@ defmodule HexpmWeb.API.AuthControllerTest do
       |> put_req_header("authorization", key.user_secret)
       |> get("/api/auth", domain: "api")
       |> response(401)
+
+      key_id = key.id
+      user_id = user.id
+
+      assert_received {Hexpm.SecurityLog,
+                       %{method: "api_key", reason: "revoked", key_id: ^key_id, user_id: ^user_id}}
 
       key =
         insert(

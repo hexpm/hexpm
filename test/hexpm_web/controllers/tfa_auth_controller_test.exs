@@ -57,6 +57,11 @@ defmodule HexpmWeb.TFAAuthControllerTest do
 
       assert response(conn, 200) =~
                "The verification code you provided is incorrect. Please try again."
+
+      user_id = c.user.id
+
+      assert_received {Hexpm.SecurityLog,
+                       %{method: "tfa", reason: "invalid_code", user_id: ^user_id, path: "/tfa"}}
     end
 
     test "with valid token", c do

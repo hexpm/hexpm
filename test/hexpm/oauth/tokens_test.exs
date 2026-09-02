@@ -518,7 +518,7 @@ defmodule Hexpm.OAuth.TokensTest do
       revoke_session(session)
 
       assert {:error, :token_invalid} = Tokens.lookup(token.access_token, :access)
-      assert :error = Hexpm.Accounts.Auth.oauth_token_auth(token.access_token, %{})
+      assert {:error, :invalid} = Hexpm.Accounts.Auth.oauth_token_auth(token.access_token, %{})
     end
 
     test "rejects a live token whose session expired", %{
@@ -541,7 +541,7 @@ defmodule Hexpm.OAuth.TokensTest do
       |> Repo.update!()
 
       assert {:error, :token_invalid} = Tokens.lookup(token.access_token, :access)
-      assert :error = Hexpm.Accounts.Auth.oauth_token_auth(token.access_token, %{})
+      assert {:error, :invalid} = Hexpm.Accounts.Auth.oauth_token_auth(token.access_token, %{})
     end
 
     test "still finds a token of a revoked session when not validating", %{

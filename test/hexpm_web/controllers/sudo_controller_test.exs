@@ -117,6 +117,16 @@ defmodule HexpmWeb.SudoControllerTest do
 
       assert html_response(conn, 200) =~ "Incorrect password"
       refute Sudo.sudo_active?(conn)
+
+      user_id = user.id
+
+      assert_received {Hexpm.SecurityLog,
+                       %{
+                         method: "password",
+                         reason: "wrong_password",
+                         user_id: ^user_id,
+                         path: "/sudo"
+                       }}
     end
 
     test "returns error when 2FA enabled" do
@@ -177,6 +187,11 @@ defmodule HexpmWeb.SudoControllerTest do
 
       assert html_response(conn, 200) =~ "Incorrect authentication code"
       refute Sudo.sudo_active?(conn)
+
+      user_id = user.id
+
+      assert_received {Hexpm.SecurityLog,
+                       %{method: "tfa", reason: "invalid_code", user_id: ^user_id}}
     end
 
     test "returns error when 2FA not enabled" do
@@ -268,6 +283,11 @@ defmodule HexpmWeb.SudoControllerTest do
 
       assert html_response(conn, 200) =~ "Incorrect recovery code"
       refute Sudo.sudo_active?(conn)
+
+      user_id = user.id
+
+      assert_received {Hexpm.SecurityLog,
+                       %{method: "recovery_code", reason: "invalid_code", user_id: ^user_id}}
     end
 
     test "rejects invalid recovery code format" do

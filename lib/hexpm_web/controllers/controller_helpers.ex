@@ -347,17 +347,17 @@ defmodule HexpmWeb.ControllerHelpers do
       {:ok, %{user: user, email: email}} ->
         if email.verified,
           do: {:ok, user},
-          else: {:error, :unconfirmed}
+          else: {:error, :unverified_email}
 
-      :error ->
-        {:error, :wrong}
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
-  def auth_error_message(:wrong), do: "Invalid username, email or password."
-
-  def auth_error_message(:unconfirmed),
+  def auth_error_message(:unverified_email),
     do: "Email has not been verified yet. You can resend the verification email below."
+
+  def auth_error_message(_reason), do: "Invalid username, email or password."
 
   def password_breached_message() do
     # docs_path + anchor #password-security

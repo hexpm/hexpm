@@ -4,7 +4,7 @@ defmodule HexpmWeb.API.OAuthController do
   import HexpmWeb.RequestHelpers, only: [build_usage_info: 1]
 
   alias Hexpm.Accounts.Organization
-  alias Hexpm.UserSessions
+  alias Hexpm.{SecurityLog, UserSessions}
   alias Hexpm.OAuth.{Clients, Tokens, AuthorizationCodes, DeviceCodes}
 
   defp safe_param(params, key), do: safe_string(params[key])
@@ -195,13 +195,13 @@ defmodule HexpmWeb.API.OAuthController do
           render(conn, :token, token: new_token)
 
         {:error, :token_revoked} ->
-          render_oauth_error(conn, :invalid_grant, "Refresh token has been revoked")
+          refresh_failure(conn, :revoked)
 
         {:error, :token_expired} ->
-          render_oauth_error(conn, :invalid_grant, "Refresh token has expired")
+          refresh_failure(conn, :expired)
 
         {:error, :session_revoked} ->
-          render_oauth_error(conn, :invalid_grant, "Session has been revoked")
+          refresh_failure(conn, :session_revoked)
 
         {:error, %Ecto.Changeset{data: %Hexpm.UserSession{}} = changeset} ->
           render_oauth_error(conn, :invalid_request, changeset_description(changeset))
@@ -214,10 +214,23 @@ defmodule HexpmWeb.API.OAuthController do
           )
       end
     else
+      {:error, :refresh_token, reason} ->
+        refresh_failure(conn, reason)
+
       {:error, error, description} ->
         render_oauth_error(conn, error, description)
     end
   end
+
+  defp refresh_failure(conn, reason) do
+    SecurityLog.auth_failure(conn, :refresh_token, reason)
+    render_oauth_error(conn, :invalid_grant, refresh_failure_description(reason))
+  end
+
+  defp refresh_failure_description(:revoked), do: "Refresh token has been revoked"
+  defp refresh_failure_description(:expired), do: "Refresh token has expired"
+  defp refresh_failure_description(:session_revoked), do: "Session has been revoked"
+  defp refresh_failure_description(:invalid), do: "Invalid refresh token"
 
   defp handle_client_credentials_grant(conn, params) do
     with {:ok, client} <- validate_client(safe_param(params, "client_id")),
@@ -281,9 +294,16 @@ defmodule HexpmWeb.API.OAuthController do
     usage_info = build_usage_info(conn)
 
     case Hexpm.Accounts.Auth.key_auth(api_key_secret, usage_info, preload: :oauth) do
-      {:ok, auth_info} -> {:ok, auth_info}
-      :error -> {:error, :invalid_client}
-      :revoked -> {:error, :invalid_client}
+      {:ok, auth_info} ->
+        {:ok, auth_info}
+
+      {:error, :invalid} ->
+        SecurityLog.auth_failure(conn, :api_key, :invalid)
+        {:error, :invalid_client}
+
+      {:error, :revoked, key} ->
+        SecurityLog.auth_failure(conn, :api_key, :revoked, key: key)
+        {:error, :invalid_client}
     end
   end
 
@@ -487,24 +507,13 @@ defmodule HexpmWeb.API.OAuthController do
     case Tokens.lookup(user_refresh_token, :refresh, client_id: client_id, validate: false) do
       {:ok, token} ->
         cond do
-          Tokens.revoked?(token) ->
-            {:error, :invalid_grant, "Refresh token has been revoked"}
-
-          Tokens.refresh_token_expired?(token) ->
-            {:error, :invalid_grant, "Refresh token has expired"}
-
-          true ->
-            {:ok, token}
+          Tokens.revoked?(token) -> {:error, :refresh_token, :revoked}
+          Tokens.refresh_token_expired?(token) -> {:error, :refresh_token, :expired}
+          true -> {:ok, token}
         end
 
-      {:error, :not_found} ->
-        {:error, :invalid_grant, "Invalid refresh token"}
-
-      {:error, :invalid_token} ->
-        {:error, :invalid_grant, "Invalid refresh token"}
-
       {:error, _} ->
-        {:error, :invalid_grant, "Invalid refresh token"}
+        {:error, :refresh_token, :invalid}
     end
   end
 
