@@ -17,7 +17,13 @@ defmodule Hexpm.Hexdocs.Workers.Upload do
     Hexpm.Hexdocs.upload(key)
   rescue
     Hexpm.Hexdocs.StaleArchiveError ->
-      Logger.info(%{message: "STALE DOCS ARCHIVE #{key}", key: key, snooze: @stale_snooze})
+      Logger.info(%{
+        message: "Stale docs archive, snoozing",
+        event: "hexdocs.stale",
+        key: key,
+        snooze: @stale_snooze
+      })
+
       {:snooze, @stale_snooze}
   end
 end
@@ -41,7 +47,13 @@ defmodule Hexpm.Hexdocs.Workers.Search do
     Hexpm.Hexdocs.search(key)
   rescue
     Hexpm.Hexdocs.StaleArchiveError ->
-      Logger.info(%{message: "STALE DOCS ARCHIVE #{key}", key: key, snooze: @stale_snooze})
+      Logger.info(%{
+        message: "Stale docs archive, snoozing",
+        event: "hexdocs.stale",
+        key: key,
+        snooze: @stale_snooze
+      })
+
       {:snooze, @stale_snooze}
   end
 end
@@ -65,7 +77,13 @@ defmodule Hexpm.Hexdocs.Workers.Delete do
     Hexpm.Hexdocs.delete(key)
   rescue
     Hexpm.Hexdocs.StaleArchiveError ->
-      Logger.info(%{message: "STALE DOCS ARCHIVE #{key}", key: key, snooze: @stale_snooze})
+      Logger.info(%{
+        message: "Stale docs archive, snoozing",
+        event: "hexdocs.stale",
+        key: key,
+        snooze: @stale_snooze
+      })
+
       {:snooze, @stale_snooze}
   end
 end

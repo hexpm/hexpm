@@ -105,11 +105,11 @@ defmodule Hexpm.Repository.RegistryWorker do
           keys = Enum.flat_map(purges, & &1.keys)
           verify = Enum.flat_map(purges, & &1.verify)
           if keys != [], do: Hexpm.CDN.purge(:fastly_hexrepo, keys, verify: verify)
-          log(job, "built", consolidated)
+          log(job, :built, consolidated)
           :ok
         else
           {:discard, reason} ->
-            log(job, "skipped, #{reason}", 0)
+            log(job, {:skipped, reason}, 0)
             {:discard, reason}
         end
       end,
@@ -314,7 +314,7 @@ defmodule Hexpm.Repository.RegistryWorker do
   defp run({:repository, repository}), do: [RegistryBuilder.repository(repository)]
   defp run({:full, repository}), do: [RegistryBuilder.full(repository)]
 
-  defp log(%Oban.Job{id: id, args: args}, what, cancelled) do
+  defp log(%Oban.Job{id: id, args: args}, outcome, cancelled) do
     fields =
       [
         job_type: args["type"],
@@ -326,8 +326,17 @@ defmodule Hexpm.Repository.RegistryWorker do
       ]
       |> Enum.reject(fn {_key, value} -> is_nil(value) end)
 
-    Logger.info(Enum.into(fields, %{message: "REGISTRY_BUILDER #{args["type"]} #{what}"}))
+    Logger.info(Enum.into(fields, line(outcome)))
   end
+
+  defp line(:built), do: %{message: "Registry built", event: "registry.build"}
+
+  defp line({:skipped, reason}),
+    do: %{
+      message: "Registry build skipped",
+      event: "registry.build_skipped",
+      reason: to_string(reason)
+    }
 
   defp result_tag(:ok), do: :ok
   defp result_tag({:discard, _}), do: :discard

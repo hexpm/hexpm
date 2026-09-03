@@ -52,7 +52,8 @@ defmodule Hexpm.CDN.Fastly do
       case post(service, "service/#{service_id}/purge", body) do
         {:ok, 200, _headers, body} ->
           Logger.info(%{
-            message: "CDN_PURGE_REQUEST #{service} #{Enum.join(keys, " ")}",
+            message: "CDN purge requested",
+            event: "cdn.purge_request",
             service: service,
             keys: keys,
             status: 200,
@@ -63,7 +64,8 @@ defmodule Hexpm.CDN.Fastly do
 
         {:ok, status, _headers, body} ->
           Logger.error(%{
-            message: "CDN_PURGE_REQUEST #{service} #{Enum.join(keys, " ")} failed",
+            message: "CDN purge request failed",
+            event: "cdn.purge_request",
             service: service,
             keys: keys,
             status: status,
@@ -74,7 +76,8 @@ defmodule Hexpm.CDN.Fastly do
 
         {:error, reason} ->
           Logger.error(%{
-            message: "CDN_PURGE_REQUEST #{service} #{Enum.join(keys, " ")} failed",
+            message: "CDN purge request failed",
+            event: "cdn.purge_request",
             service: service,
             keys: keys,
             error: inspect(reason)
@@ -157,7 +160,8 @@ defmodule Hexpm.CDN.Fastly do
 
       if pop != :nearest and verify_result(result) == :error do
         Logger.warning(%{
-          message: "CDN_PROBE #{pop} #{url}",
+          message: "CDN probe failed",
+          event: "cdn.probe",
           pop: pop,
           url: url,
           result: inspect(result)

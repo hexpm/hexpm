@@ -17,7 +17,13 @@ defmodule Hexpm.Preview.Workers.Upload do
     Hexpm.Preview.upload(key)
   rescue
     Hexpm.Preview.StaleTarballError ->
-      Logger.info(%{message: "STALE PREVIEW TARBALL #{key}", key: key, snooze: @stale_snooze})
+      Logger.info(%{
+        message: "Stale preview tarball, snoozing",
+        event: "preview.stale",
+        key: key,
+        snooze: @stale_snooze
+      })
+
       {:snooze, @stale_snooze}
   end
 end
@@ -41,7 +47,13 @@ defmodule Hexpm.Preview.Workers.Delete do
     Hexpm.Preview.delete(key)
   rescue
     Hexpm.Preview.StaleTarballError ->
-      Logger.info(%{message: "STALE PREVIEW TARBALL #{key}", key: key, snooze: @stale_snooze})
+      Logger.info(%{
+        message: "Stale preview tarball, snoozing",
+        event: "preview.stale",
+        key: key,
+        snooze: @stale_snooze
+      })
+
       {:snooze, @stale_snooze}
   end
 end

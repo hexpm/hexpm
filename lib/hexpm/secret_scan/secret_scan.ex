@@ -387,9 +387,8 @@ defmodule Hexpm.SecretScan do
       rules = findings |> Enum.map(& &1.rule) |> Enum.frequencies()
 
       Logger.info(%{
-        message:
-          "SECRET SCAN #{release.package.name} #{release.version} " <>
-            "#{length(findings)} findings#{if truncated?, do: " (truncated)"}",
+        message: "Secret scan findings",
+        event: "secret_scan.findings",
         package: release.package.name,
         version: to_string(release.version),
         findings: length(findings),

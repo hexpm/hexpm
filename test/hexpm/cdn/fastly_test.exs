@@ -45,11 +45,11 @@ defmodule Hexpm.CDN.FastlyTest do
                    {:error, {:status, 503, %{"msg" => "unavailable"}}}
         end)
 
-      assert [line] = Enum.filter(lines, &String.starts_with?(&1["message"], "CDN_PURGE_REQUEST"))
+      assert [line] = Enum.filter(lines, &(&1["event"] == "cdn.purge_request"))
 
       assert %{
                "severity" => "ERROR",
-               "message" => "CDN_PURGE_REQUEST fastly_hexrepo key failed",
+               "message" => "CDN purge request failed",
                "service" => "fastly_hexrepo",
                "keys" => ["key"],
                "status" => 503,

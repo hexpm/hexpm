@@ -56,7 +56,8 @@ defmodule Hexpm.CDN.PurgeWorkerTest do
 
       assert %{
                "severity" => "INFO",
-               "message" => "CDN_PURGE fastly_hexrepo k verified",
+               "message" => "CDN purge verified",
+               "event" => "cdn.purge",
                "service" => "fastly_hexrepo",
                "keys" => ["k"],
                "verified" => 2,

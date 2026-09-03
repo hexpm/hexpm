@@ -70,7 +70,8 @@ defmodule Hexpm.CDN.PurgeWorker do
       case purge_and_verify(job, service, keys, targets) do
         {:ok, rounds} ->
           Logger.info(%{
-            message: "CDN_PURGE #{service} #{Enum.join(keys, " ")} verified",
+            message: "CDN purge verified",
+            event: "cdn.purge",
             service: service,
             keys: keys,
             verified: length(targets),
@@ -109,7 +110,8 @@ defmodule Hexpm.CDN.PurgeWorker do
 
     for {target, reason} <- superseded do
       Logger.info(%{
-        message: "CDN_PURGE_SUPERSEDED #{target.url}",
+        message: "CDN purge target superseded",
+        event: "cdn.purge_superseded",
         url: target.url,
         reason: inspect(reason),
         job_id: job.id
@@ -120,7 +122,8 @@ defmodule Hexpm.CDN.PurgeWorker do
 
     for {target, reason} <- stale do
       Logger.warning(%{
-        message: "CDN_PURGE_STALE #{target.url}",
+        message: "CDN purge target stale",
+        event: "cdn.purge_stale",
         round: round,
         url: target.url,
         expected: PurgeVerificationError.expected(target),

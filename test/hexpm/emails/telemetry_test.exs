@@ -25,7 +25,8 @@ defmodule Hexpm.Emails.TelemetryTest do
 
     assert %{
              "severity" => "INFO",
-             "message" => "[email] announcement ok",
+             "message" => "Email delivery",
+             "event" => "email.delivery",
              "type" => "announcement",
              "outcome" => "ok",
              "message_id" => "sg-message-id",
@@ -46,7 +47,7 @@ defmodule Hexpm.Emails.TelemetryTest do
 
     assert %{
              "severity" => "WARNING",
-             "message" => "[email] announcement error",
+             "message" => "Email delivery",
              "type" => "announcement",
              "outcome" => "error",
              "error" => ":mail_unavailable"
@@ -65,7 +66,7 @@ defmodule Hexpm.Emails.TelemetryTest do
 
     assert %{
              "severity" => "WARNING",
-             "message" => "[email] announcement exception",
+             "message" => "Email delivery",
              "outcome" => "exception",
              "kind" => "error",
              "reason" => "%RuntimeError{message: \"provider unreachable\"}"
@@ -81,7 +82,7 @@ defmodule Hexpm.Emails.TelemetryTest do
              end)
 
     assert %{
-             "message" => "[email] announcement ok",
+             "outcome" => "ok",
              "outbox_entry_id" => entry_id,
              "outbox_category" => "admin.announcement"
            } = line
@@ -92,7 +93,7 @@ defmodule Hexpm.Emails.TelemetryTest do
   defp email_lines(fun) do
     fun
     |> capture_json_log()
-    |> Enum.filter(&String.starts_with?(&1["message"], "[email]"))
+    |> Enum.filter(&(&1["event"] == "email.delivery"))
   end
 
   defp announcement do

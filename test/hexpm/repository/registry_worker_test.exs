@@ -171,13 +171,14 @@ defmodule Hexpm.Repository.RegistryWorkerTest do
 
       assert [
                %{
-                 "message" => "REGISTRY_BUILDER repository built",
+                 "message" => "Registry built",
+                 "event" => "registry.build",
                  "job_type" => "repository",
                  "repository_id" => hexpm_id,
                  "consolidated" => 1
                },
                %{"repository_id" => other_id, "consolidated" => 0}
-             ] = Enum.filter(lines, &String.starts_with?(&1["message"], "REGISTRY_BUILDER"))
+             ] = Enum.filter(lines, &(&1["event"] == "registry.build"))
 
       assert hexpm_id == Repository.hexpm().id
       assert other_id == other.id

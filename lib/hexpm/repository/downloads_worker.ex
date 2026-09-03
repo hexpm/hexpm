@@ -68,7 +68,8 @@ defmodule Hexpm.Repository.DownloadsWorker do
       end)
 
     Logger.info(%{
-      message: "[stats] completed #{size} downloads",
+      message: "Download stats completed",
+      event: "stats.completed",
       downloads: size,
       duration_us: time
     })
@@ -322,7 +323,14 @@ defmodule Hexpm.Repository.DownloadsWorker do
 
   defp time_log(action, fun) do
     {time, result} = :timer.tc(fun)
-    Logger.info(%{message: "[stats] completed #{action}", step: action, duration_us: time})
+
+    Logger.info(%{
+      message: "Download stats step completed",
+      event: "stats.step",
+      step: action,
+      duration_us: time
+    })
+
     result
   end
 
