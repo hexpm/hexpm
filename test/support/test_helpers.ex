@@ -38,6 +38,33 @@ defmodule Hexpm.TestHelpers do
   end
 
   @doc """
+  Runs `fun` and returns the lines the calling process logged meanwhile, as
+  `{level, fields}` with the fields production writes.
+  """
+  def capture_log_lines(fun) do
+    flush_log_lines()
+    Process.put(Hexpm.LogLines, true)
+    fun.()
+    collect_log_lines([])
+  end
+
+  defp flush_log_lines do
+    receive do
+      {Hexpm.LogLines, _level, _fields} -> flush_log_lines()
+    after
+      0 -> :ok
+    end
+  end
+
+  defp collect_log_lines(lines) do
+    receive do
+      {Hexpm.LogLines, level, fields} -> collect_log_lines([{level, fields} | lines])
+    after
+      0 -> Enum.reverse(lines)
+    end
+  end
+
+  @doc """
   Inserts a release whose tarball holds `files`, and puts it in the repo bucket.
 
   `Hexpm.Factory.insert_with_tarball/1` hardcodes a generated `mix.exs`, which

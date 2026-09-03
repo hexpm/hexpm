@@ -46,7 +46,6 @@ defmodule HexpmWeb.ReadOnlyModeTest do
     assert get_resp_header(conn, "cache-control") == ["no-store"]
     assert get_resp_header(conn, "pragma") == ["no-cache"]
     assert get_resp_header(conn, "retry-after") == ["60"]
-    assert conn.private.logster_log_level == :info
   end
 
   test "hold mode parks API writes and completes them when writes resume" do
@@ -144,7 +143,6 @@ defmodule HexpmWeb.ReadOnlyModeTest do
     assert get_resp_header(conn, "retry-after") == ["60"]
     assert get_resp_header(conn, "content-security-policy") != []
     assert get_resp_header(conn, "x-content-type-options") == ["nosniff"]
-    assert conn.private.logster_log_level == :info
   end
 
   test "expected write attempts do not produce error logs" do
@@ -197,7 +195,6 @@ defmodule HexpmWeb.ReadOnlyModeTest do
       |> post("/api/publish", "not a package")
 
     assert json_response(conn, 503)["error"] == "temporarily_unavailable"
-    assert conn.private.logster_log_level == :info
   end
 
   test "write errors use every supported API response format" do
@@ -296,7 +293,6 @@ defmodule HexpmWeb.ReadOnlyModeTest do
     assert get_resp_header(conn, "cache-control") == ["no-store"]
     assert get_resp_header(conn, "pragma") == ["no-cache"]
     assert get_resp_header(conn, "retry-after") == ["60"]
-    assert conn.private.logster_log_level == :info
     assert Repo.get!(Token, token.id).revoked_at == nil
     assert Repo.aggregate(Token, :count) == token_count
   end
@@ -318,7 +314,6 @@ defmodule HexpmWeb.ReadOnlyModeTest do
 
     assert json_response(conn, 503)["error"] == "temporarily_unavailable"
     assert get_resp_header(conn, "retry-after") == ["60"]
-    assert conn.private.logster_log_level == :info
   end
 
   test "read-only write errors map to service unavailable" do

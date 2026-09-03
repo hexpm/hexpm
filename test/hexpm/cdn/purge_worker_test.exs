@@ -52,7 +52,21 @@ defmodule Hexpm.CDN.PurgeWorkerTest do
         "verify" => [target("https://r/a"), target("https://r/b", nil)]
       }
 
-      assert :ok = perform_job(PurgeWorker, args)
+      assert [{:info, line}] =
+               capture_log_lines(fn -> assert :ok = perform_job(PurgeWorker, args) end)
+
+      assert %{
+               message: "CDN purge verified",
+               event: "cdn.purge",
+               service: :fastly_hexrepo,
+               keys: ["k"],
+               verified: 2,
+               rounds: 1,
+               absorbed: 0,
+               job_id: job_id
+             } = line
+
+      assert is_integer(job_id)
     end
 
     test "purges again while a target still serves the old object" do

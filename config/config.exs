@@ -104,6 +104,12 @@ config :sentry,
 
 config :postgrex, :json_library, JSON
 
+config :logger_json, encoder: JSON
+
+# Logger metadata that reaches the log line in production. A line's own
+# fields go in its message map; these are the keys processes carry.
+config :hexpm, :log_metadata, [:request_id, :outbox_entry_id, :outbox_category]
+
 config :bcrypt_elixir, log_rounds: 4
 
 config :hexpm, HexpmWeb.Endpoint,

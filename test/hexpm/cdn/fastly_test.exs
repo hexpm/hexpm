@@ -1,6 +1,7 @@
 defmodule Hexpm.CDN.FastlyTest do
   use ExUnit.Case, async: true
   import Mox
+  import Hexpm.TestHelpers, only: [capture_log_lines: 1]
   alias Hexpm.CDN.Fastly
 
   setup :verify_on_exit!
@@ -33,14 +34,27 @@ defmodule Hexpm.CDN.FastlyTest do
       assert Fastly.purge_key(:fastly_hexdocs, ["docs-key"]) == :ok
     end
 
-    @tag :capture_log
     test "retries 5xx and 429 before giving up with the status and body" do
       expect(Hexpm.HTTP.Mock, :post, 5, fn _url, _headers, _body ->
         {:ok, 503, [], %{"msg" => "unavailable"}}
       end)
 
-      assert Fastly.purge_key(:fastly_hexrepo, ["key"]) ==
-               {:error, {:status, 503, %{"msg" => "unavailable"}}}
+      lines =
+        capture_log_lines(fn ->
+          assert Fastly.purge_key(:fastly_hexrepo, ["key"]) ==
+                   {:error, {:status, 503, %{"msg" => "unavailable"}}}
+        end)
+
+      assert [{:error, line}] =
+               Enum.filter(lines, fn {_level, fields} -> fields[:event] == "cdn.purge_request" end)
+
+      assert %{
+               message: "CDN purge request failed",
+               service: :fastly_hexrepo,
+               keys: ["key"],
+               status: 503,
+               error: ~s(%{"msg" => "unavailable"})
+             } = line
     end
 
     @tag :capture_log

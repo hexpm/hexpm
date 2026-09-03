@@ -40,7 +40,12 @@ config :phoenix, :serve_endpoints, true
 
 config :logger, level: :info
 
-config :logger, :default_formatter, metadata: [:request_id]
+config :logger, :default_handler,
+  formatter:
+    {LoggerJSON.Formatters.GoogleCloud,
+     metadata: {:from_application_env, {:hexpm, :log_metadata}},
+     reported_levels: [],
+     project_id: nil}
 
 config :hexpm, Oban,
   peer: Oban.Peers.Database,
