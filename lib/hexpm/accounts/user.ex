@@ -45,6 +45,8 @@ defmodule Hexpm.Accounts.User do
     |> cast_embed(:tfa)
     |> update_change(:username, &String.downcase/1)
     |> validate_length(:username, min: 3)
+    |> validate_length(:username, count: :bytes, max: 255)
+    |> validate_length(:full_name, count: :codepoints, max: 255)
     |> validate_format(:username, @username_regex)
     |> validate_format(:username, @username_reject_regex)
     |> validate_exclusion(:username, @reserved_names)
@@ -110,6 +112,7 @@ defmodule Hexpm.Accounts.User do
 
   def update_profile(user, params) do
     cast(user, params, ~w(full_name)a)
+    |> validate_length(:full_name, count: :codepoints, max: 255)
     |> cast_embed(:handles)
   end
 
@@ -153,6 +156,13 @@ defmodule Hexpm.Accounts.User do
 
   defp email(nil), do: nil
   defp email(email), do: email.email
+
+  def verified_primary_email?(%User{emails: emails}) do
+    Enum.any?(emails, &(&1.primary and &1.verified))
+  end
+
+  def public_profile?(%User{organization_id: id}) when not is_nil(id), do: true
+  def public_profile?(%User{} = user), do: verified_primary_email?(user)
 
   def get(username_or_email, preload \\ []) do
     if email?(username_or_email) do

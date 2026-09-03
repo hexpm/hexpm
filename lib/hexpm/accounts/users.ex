@@ -737,9 +737,7 @@ defmodule Hexpm.Accounts.Users do
       Multi.new()
       |> Multi.insert(:user, User.build_from_oauth(username, full_name, email, confirmed?))
       |> Multi.run(:user_provider, fn _repo, %{user: user} ->
-        user_provider = UserProvider.build(user, provider, provider_uid, email, %{})
-        changeset = UserProvider.changeset(user_provider, %{})
-        Repo.insert(changeset)
+        Repo.insert(UserProvider.build(user, provider, provider_uid, email))
       end)
       |> audit_with_user(audit_data, "user.create", fn %{user: user} -> user end)
       |> audit_with_user(audit_data, "email.add", fn %{user: %{emails: [email]}} -> email end)

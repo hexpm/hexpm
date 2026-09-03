@@ -38,9 +38,9 @@ defmodule Hexpm.Accounts.SSO.Connection do
     connection
     |> cast(attrs, [:organization_id, :issuer, :client_id, :client_secret])
     |> validate_required([:organization_id, :issuer, :client_id, :client_secret])
-    |> validate_length(:issuer, max: 2_048)
-    |> validate_length(:client_id, max: 1_024)
-    |> validate_length(:client_secret, max: 4_096)
+    |> validate_length(:issuer, count: :bytes, max: 2_048)
+    |> validate_length(:client_id, count: :bytes, max: 1_024)
+    |> validate_length(:client_secret, count: :bytes, max: 4_096)
   end
 
   def configuration_changeset(connection, attrs) do
@@ -75,9 +75,9 @@ defmodule Hexpm.Accounts.SSO.Connection do
       :metadata_expires_at,
       :version
     ])
-    |> validate_length(:issuer, max: 2_048)
-    |> validate_length(:client_id, max: 1_024)
-    |> validate_length(:client_secret, max: 4_096)
+    |> validate_length(:issuer, count: :bytes, max: 2_048)
+    |> validate_length(:client_id, count: :bytes, max: 1_024)
+    |> validate_length(:client_secret, count: :bytes, max: 4_096)
     |> unique_constraint(:organization_id)
   end
 
@@ -89,7 +89,7 @@ defmodule Hexpm.Accounts.SSO.Connection do
       :pending_client_secret_tested_at
     ])
     |> validate_required([:pending_client_secret])
-    |> validate_length(:pending_client_secret, max: 4_096)
+    |> validate_length(:pending_client_secret, count: :bytes, max: 4_096)
   end
 
   @jit_seat_policies ~w(block expand)

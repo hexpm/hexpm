@@ -66,6 +66,8 @@ defmodule Hexpm.Accounts.SSO.Transaction do
       :redirect_uri,
       :expires_at
     ])
+    |> validate_length(:redirect_uri, count: :bytes, max: 2_048)
+    |> validate_length(:return_path, count: :bytes, max: 2_048)
     |> validate_inclusion(:kind, ~w(login test))
     |> validate_inclusion(:entrypoint, ~w(organization third_party cli))
     |> validate_inclusion(:secret_slot, ~w(active pending))
@@ -84,5 +86,8 @@ defmodule Hexpm.Accounts.SSO.Transaction do
       :nonce,
       :code_verifier
     ])
+    |> validate_length(:issuer, count: :bytes, max: 2_048)
+    |> validate_length(:subject, count: :bytes, max: 255)
+    |> validate_length(:provider_email, count: :bytes, max: 255)
   end
 end

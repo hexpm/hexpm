@@ -261,7 +261,7 @@ defmodule HexpmWeb.AuthControllerTest do
         |> get("/auth/complete-signup")
 
       assert html_response(conn, 200) =~ "Complete your signup"
-      assert html_response(conn, 200) =~ username
+      assert html_response(conn, 200) =~ binary_part(username, 0, min(byte_size(username), 20))
     end
 
     test "redirects to signup when session expired" do

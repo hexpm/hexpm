@@ -36,6 +36,7 @@ defmodule Hexpm.Accounts.Organization do
     |> unique_constraint(:name)
     |> update_change(:name, &String.downcase/1)
     |> validate_length(:name, min: 3)
+    |> validate_length(:name, count: :bytes, max: 255)
     |> validate_format(:name, @name_regex)
     |> validate_exclusion(:name, @reserved_names)
   end
@@ -69,6 +70,28 @@ defmodule Hexpm.Accounts.Organization do
       where: ou.role in ^role_or_higher(role),
       select: count() >= 1
     )
+  end
+
+  # Admins are the members an organization notice is written to, and an
+  # unverified address is one we never confirmed reaches anyone.
+  def all_admin_notifiable_emails(opts) do
+    query =
+      from(
+        o in Hexpm.Accounts.Organization,
+        join: ou in assoc(o, :organization_users),
+        join: u in assoc(ou, :user),
+        join: e in assoc(u, :emails),
+        where: ou.role == "admin",
+        where: e.verified and e.primary,
+        where: is_nil(u.deactivated_at),
+        distinct: true,
+        select: e.email
+      )
+
+    case Keyword.fetch(opts, :billing_active) do
+      {:ok, billing_active} -> from(o in query, where: o.billing_active == ^billing_active)
+      :error -> query
+    end
   end
 
   def role_or_higher("read"), do: ["read", "write", "admin"]

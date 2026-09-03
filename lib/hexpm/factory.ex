@@ -153,14 +153,19 @@ defmodule Hexpm.Factory do
   end
 
   def email_outbox_entry_factory() do
+    address = Fake.sequence(:email)
+
     %Hexpm.Emails.OutboxEntry{
       category: "test.email",
+      type: "test_email",
       group_key: "test:#{Fake.sequence(:word)}",
+      recipients: [address],
+      subject: "Test email",
       email: %{
         "version" => 1,
         "subject" => "Test email",
         "from" => %{"name" => "Hex.pm", "address" => "noreply@hex.pm"},
-        "to" => [%{"name" => "", "address" => Fake.sequence(:email)}],
+        "to" => [%{"name" => "", "address" => address}],
         "cc" => [],
         "bcc" => [],
         "reply_to" => nil,

@@ -116,7 +116,8 @@ defmodule Hexpm.RepoBase do
     email_outbox: 5,
     migrate: 6,
     secret_scan: 7,
-    registry_object: 8
+    registry_object: 8,
+    hexdocs: 9
   }
 
   def advisory_lock_key(key), do: Map.fetch!(@advisory_locks, key)

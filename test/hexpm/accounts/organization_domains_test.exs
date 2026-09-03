@@ -29,6 +29,28 @@ defmodule Hexpm.Accounts.OrganizationDomainsTest do
     end
   end
 
+  describe "OrganizationDomain.changeset/2" do
+    test "bounds the domain in bytes" do
+      label = String.duplicate("a", 63)
+      at_cap = Enum.join([label, label, label, String.duplicate("a", 61)], ".")
+      assert byte_size(at_cap) == 253
+      assert domain_changeset(at_cap).valid?
+
+      changeset =
+        domain_changeset(Enum.join([label, label, label, String.duplicate("a", 62)], "."))
+
+      assert errors_on(changeset).domain == "should be at most 253 byte(s)"
+    end
+
+    defp domain_changeset(domain) do
+      OrganizationDomain.changeset(%OrganizationDomain{}, %{
+        organization_id: 1,
+        domain: domain,
+        verification_token: "token"
+      })
+    end
+  end
+
   setup do
     organization = insert(:organization)
     admin = insert(:user)

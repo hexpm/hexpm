@@ -17,7 +17,7 @@ defmodule Hexpm.UserSessions do
   ## Session Expiration
 
   All sessions expire after 30 days of creation (non-sliding window). Expired
-  rows are deleted by `Hexpm.ReleaseTasks.PurgeExpiredRecords`.
+  rows are deleted by `Hexpm.PurgeExpiredRecords`.
 
   ## Last Use Tracking
 

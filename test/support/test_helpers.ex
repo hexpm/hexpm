@@ -2,6 +2,23 @@ defmodule Hexpm.TestHelpers do
   @tmp Application.compile_env(:hexpm, :tmp_dir)
 
   @doc """
+  The arguments of the newest purge job enqueued for `keys`, with the write
+  number every target must carry taken out, so a test can compare the rest
+  against a literal.
+  """
+  def purge_args(keys) do
+    jobs =
+      Oban.Testing.all_enqueued(Hexpm.RepoBase,
+        worker: Hexpm.CDN.PurgeWorker,
+        args: %{"keys" => keys}
+      )
+
+    %{args: args} = Enum.max_by(jobs, & &1.id)
+    true = Enum.all?(args["verify"], &is_integer(&1["write"]))
+    update_in(args["verify"], &Enum.map(&1, fn target -> Map.delete(target, "write") end))
+  end
+
+  @doc """
   Captures logs down to debug, including Ecto's query log.
 
   `capture_log/2`'s `:level` option filters what it keeps; it does not lower
@@ -132,6 +149,22 @@ defmodule Hexpm.TestHelpers do
     params
     |> Map.put("meta", meta)
     |> Map.update("requirements", [], &requirements_meta/1)
+  end
+
+  @doc """
+  A string of exactly `bytes` bytes made of one or two base letters followed by
+  combining acute accents, so it is one or two graphemes however long it is.
+  """
+  def combining_string(bytes) when bytes >= 1 do
+    base = if rem(bytes, 2) == 1, do: "a", else: "ab"
+    base <> String.duplicate("́", div(bytes - byte_size(base), 2))
+  end
+
+  @doc """
+  A string of exactly `count` codepoints that is a single grapheme.
+  """
+  def codepoints_string(count) when count >= 1 do
+    "a" <> String.duplicate("́", count - 1)
   end
 
   def pkg_meta(meta) do

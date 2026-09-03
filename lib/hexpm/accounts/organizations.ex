@@ -19,6 +19,11 @@ defmodule Hexpm.Accounts.Organizations do
     |> Repo.preload(preload)
   end
 
+  def all_admin_notifiable_emails(opts \\ []) do
+    Organization.all_admin_notifiable_emails(opts)
+    |> Repo.all()
+  end
+
   def get(name, preload \\ []) do
     Repo.get_by(Organization, name: name)
     |> Repo.preload(preload)
@@ -117,6 +122,14 @@ defmodule Hexpm.Accounts.Organizations do
   end
 
   def add_member(organization, %User{organization_id: nil} = user, params, audit: audit_data) do
+    if User.verified_primary_email?(user) do
+      insert_member(organization, user, params, audit_data)
+    else
+      {:error, :unverified_primary_email}
+    end
+  end
+
+  defp insert_member(organization, user, params, audit_data) do
     multi =
       Multi.new()
       |> Seats.claim(:seats, organization)

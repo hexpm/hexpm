@@ -9,6 +9,15 @@ defmodule Hexpm.EmailsTest do
     Emails.package_published([build(:user)], build(:user), "cowboy", "2.16.1")
   end
 
+  describe "type" do
+    test "names the builder that produced the email" do
+      assert package_published_email().private.type == "package_published"
+
+      assert Emails.announcement("bob@example.com", "Subject", "Body").private.type ==
+               "announcement"
+    end
+  end
+
   describe "html layout" do
     test "header does not rely on flexbox" do
       refute package_published_email().html_body =~ "display: flex"

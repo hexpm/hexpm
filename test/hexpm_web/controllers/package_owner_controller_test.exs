@@ -160,6 +160,25 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "not found"
     end
 
+    test "shows error flash for user whose primary email is unverified", %{
+      full_owner: full_owner,
+      package: package
+    } do
+      unverified = insert(:user, emails: [build(:email, verified: false)])
+
+      conn =
+        build_conn()
+        |> test_login(full_owner, sudo: true)
+        |> post("/packages/#{package.name}/owners", %{"username" => unverified.username})
+
+      assert redirected_to(conn) == "/packages/#{package.name}/owners"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "#{unverified.username} has not verified their primary email."
+
+      refute Owners.get(package, unverified)
+    end
+
     test "is forbidden for maintainer even with sudo", %{
       maintainer: maintainer,
       non_owner: non_owner,

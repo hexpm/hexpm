@@ -15,6 +15,7 @@ defmodule Hexpm.Accounts.KeyPermission do
     cast(struct, params, ~w(domain resource)a)
     |> validate_inclusion(:domain, Permissions.valid_domains())
     |> normalize_resource()
+    |> validate_length(:resource, count: :bytes, max: 512)
     |> validate_resource()
     |> validate_permission(user_or_organization)
     |> validate_personal_key_reach(user_or_organization)

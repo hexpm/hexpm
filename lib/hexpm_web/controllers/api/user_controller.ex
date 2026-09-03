@@ -40,12 +40,15 @@ defmodule HexpmWeb.API.UserController do
   def show(conn, %{"name" => name}) do
     user = Users.public_get(name, [:emails, owned_packages: :repository])
 
-    accessible_packages =
-      Packages.accessible_user_owned_packages(user, SSOEnforcement.reachable_organizations(conn))
+    if user && User.public_profile?(user) do
+      accessible_packages =
+        Packages.accessible_user_owned_packages(
+          user,
+          SSOEnforcement.reachable_organizations(conn)
+        )
 
-    user = user && %{user | owned_packages: accessible_packages}
+      user = %{user | owned_packages: accessible_packages}
 
-    if user do
       when_stale(conn, user, fn conn ->
         conn
         |> api_cache(:private)

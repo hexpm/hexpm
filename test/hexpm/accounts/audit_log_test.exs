@@ -11,6 +11,92 @@ defmodule Hexpm.Accounts.AuditLogTest do
     %{user: user, key: key, package: package, release: release}
   end
 
+  describe "build/4 params stay bounded" do
+    setup %{user: user, key: key} do
+      %{audit_data: %{user: user, auth_credential: key, user_agent: "ua", remote_ip: "127.0.0.1"}}
+    end
+
+    # Each entry snapshots rows that later publishes, unretires and account
+    # deletions overwrite or remove, so the metadata stays in; the field caps
+    # are what keep the snapshot bounded.
+    test "release.publish at every metadata cap", %{audit_data: audit_data} do
+      # Four bytes per codepoint is the worst case for the codepoint-capped fields.
+      wide = &String.duplicate("𝕒", &1)
+
+      package =
+        build(:package,
+          meta: %Hexpm.Repository.PackageMetadata{
+            description: wide.(4096),
+            licenses: List.duplicate(wide.(255), 32),
+            links: Map.new(1..32, &{"#{&1}" <> wide.(253), combining_string(2048)}),
+            maintainers: List.duplicate(wide.(255), 64),
+            extra: %{"blob" => combining_string(16_000)}
+          }
+        )
+
+      release =
+        build(:release,
+          meta: %Hexpm.Repository.ReleaseMetadata{
+            app: wide.(255),
+            build_tools: List.duplicate(wide.(255), 16),
+            elixir: combining_string(255)
+          }
+        )
+
+      audit = AuditLog.build(audit_data, "release.publish", {package, release})
+
+      assert audit.params.package.meta.description == package.meta.description
+      assert audit.params.release.meta.app == release.meta.app
+
+      assert audit.params.release.outer_checksum ==
+               Base.encode16(release.outer_checksum, case: :lower)
+
+      assert byte_size(JSON.encode!(audit.params)) < 256 * 1024
+    end
+
+    test "release.retire at the message cap", %{audit_data: audit_data, package: package} do
+      message = codepoints_string(140)
+
+      release =
+        build(:release,
+          retirement: %Hexpm.Repository.ReleaseRetirement{reason: "security", message: message}
+        )
+
+      audit = AuditLog.build(audit_data, "release.retire", {package, release})
+
+      assert audit.params.release.retirement == %{reason: "security", message: message}
+      assert byte_size(JSON.encode!(audit.params)) < 8 * 1024
+    end
+
+    test "key.generate at the permission caps", %{audit_data: audit_data, user: user} do
+      permissions =
+        Enum.map(
+          1..1000,
+          &%Hexpm.Accounts.KeyPermission{
+            domain: "package",
+            resource: "hexpm/#{&1}" <> combining_string(500)
+          }
+        )
+
+      key = build(:key, user: user, permissions: permissions)
+      audit = AuditLog.build(%{audit_data | auth_credential: key}, "key.generate", key)
+
+      assert length(audit.params.permissions) == 1000
+      assert length(audit.key_data.permissions) == 1000
+      assert byte_size(JSON.encode!(audit.params)) < 1024 * 1024
+      assert byte_size(JSON.encode!(audit.key_data)) < 1024 * 1024
+    end
+
+    test "truncates the user agent to 255 bytes", %{audit_data: audit_data, key: key} do
+      user_agent = "Mozilla/5.0 " <> combining_string(1000)
+      audit = AuditLog.build(%{audit_data | user_agent: user_agent}, "key.generate", key)
+
+      assert byte_size(audit.user_agent) <= 255
+      assert String.valid?(audit.user_agent)
+      assert String.starts_with?(audit.user_agent, "Mozilla/5.0 ")
+    end
+  end
+
   describe "build/4" do
     test "carries the request id when the audit data has one", %{user: user, key: key} do
       audit_data = %{

@@ -48,6 +48,81 @@ defmodule Hexpm.Repository.ReleaseTest do
            ] = Release.all(package) |> Hexpm.Repo.all() |> Release.sort()
   end
 
+  test "bounds release metadata", %{publisher: publisher, packages: [package, _, _]} do
+    build = fn params ->
+      Release.build(package, publisher, rel_meta(Map.put(params, :version, "0.0.1")), "", "")
+    end
+
+    elixir = "~> 1.0" <> String.duplicate(" ", 249)
+
+    assert build.(%{app: codepoints_string(255)}).valid?
+    assert build.(%{app: package.name, elixir: elixir}).valid?
+
+    assert build.(%{app: package.name, build_tools: List.duplicate(codepoints_string(255), 16)}).valid?
+
+    assert errors_on(build.(%{app: codepoints_string(256)})).meta.app ==
+             "should be at most 255 character(s)"
+
+    assert errors_on(build.(%{app: package.name, elixir: elixir <> " "})).meta.elixir ==
+             "should be at most 255 byte(s)"
+
+    changeset = build.(%{app: package.name, build_tools: List.duplicate("mix", 17)})
+    assert errors_on(changeset).meta.build_tools == "should have at most 16 item(s)"
+
+    changeset = build.(%{app: package.name, build_tools: [codepoints_string(256)]})
+    assert errors_on(changeset).meta.build_tools == "entries should be at most 255 character(s)"
+  end
+
+  test "bounds requirements", %{publisher: publisher, packages: [package, dep, _]} do
+    build = fn requirement ->
+      params =
+        rel_meta(%{
+          version: "0.0.1",
+          app: package.name,
+          requirements: [
+            Map.merge(%{name: dep.name, app: dep.name, requirement: "~> 1.0"}, requirement)
+          ]
+        })
+
+      Release.build(package, publisher, params, "", "")
+    end
+
+    assert build.(%{app: codepoints_string(255)}).valid?
+    assert build.(%{requirement: "~> 1.0" <> String.duplicate(" ", 249)}).valid?
+
+    assert %{app: "should be at most 255 character(s)"} =
+             requirement_error(build.(%{app: codepoints_string(256)}))
+
+    assert %{requirement: "should be at most 255 byte(s)"} =
+             requirement_error(build.(%{requirement: "~> 1.0" <> String.duplicate(" ", 250)}))
+  end
+
+  defp requirement_error(changeset) do
+    changeset |> errors_on() |> Map.fetch!(:requirements) |> List.wrap() |> hd()
+  end
+
+  test "bounds the retirement message in codepoints", %{
+    publisher: publisher,
+    packages: [package, _, _]
+  } do
+    release =
+      Release.build(package, publisher, rel_meta(%{version: "0.0.1", app: package.name}), "", "")
+      |> Hexpm.Repo.insert!()
+
+    retire = fn message ->
+      Release.retire(release, %{"retirement" => %{"reason" => "other", "message" => message}})
+    end
+
+    at_cap = "abc" <> String.duplicate("́", 137)
+    assert length(String.codepoints(at_cap)) == 140
+    assert retire.(at_cap).valid?
+
+    over_cap = "abc" <> String.duplicate("́", 138)
+
+    assert errors_on(retire.(over_cap)).retirement.message ==
+             "should be at most 140 character(s)"
+  end
+
   test "stores the SemVer sort key", %{publisher: publisher, packages: [package, _, _]} do
     version = Version.parse!("10.20.30-beta.2.alpha")
 

@@ -30,10 +30,12 @@ defmodule Hexpm.Accounts.Key do
   def changeset(key, user_or_organization, params) do
     cast(key, params, ~w(name revoke_at)a)
     |> validate_required(~w(name)a)
+    |> validate_length(:name, count: :codepoints, max: 255)
     |> validate_revoke_at_in_future()
     |> add_keys()
     |> prepare_changes(&unique_name/1)
     |> cast_embed(:permissions, with: &KeyPermission.changeset(&1, user_or_organization, &2))
+    |> validate_length(:permissions, max: 1000)
     |> put_default_embed(:permissions, [%KeyPermission{domain: "api"}])
   end
 
@@ -168,7 +170,9 @@ defmodule Hexpm.Accounts.Key do
 
     name = if name in names, do: find_unique_name(name, names), else: name
 
-    put_change(changeset, :name, name)
+    changeset
+    |> put_change(:name, name)
+    |> validate_length(:name, count: :codepoints, max: 255)
   end
 
   defp find_unique_name(name, names) do

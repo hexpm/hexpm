@@ -154,6 +154,27 @@ defmodule HexpmWeb.API.UserControllerTest do
       assert conn.status == 404
     end
 
+    test "returns 404 for a user whose primary email is unverified" do
+      user = insert(:user, emails: [build(:email, verified: false)])
+
+      conn = get(build_conn(), "/api/users/#{user.username}")
+      assert conn.status == 404
+      refute conn.resp_body =~ hd(user.emails).email
+    end
+
+    test "returns an organization account without any organization emails" do
+      name = Hexpm.Fake.sequence(:package)
+      insert(:organization, name: name, user: build(:user, username: name, emails: []))
+
+      body =
+        build_conn()
+        |> get("/api/users/#{name}")
+        |> json_response(200)
+
+      assert body["username"] == name
+      refute body["email"]
+    end
+
     test "show owned packages as owner", data do
       conn =
         build_conn()

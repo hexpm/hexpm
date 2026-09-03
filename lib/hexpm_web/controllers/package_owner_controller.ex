@@ -41,6 +41,11 @@ defmodule HexpmWeb.PackageOwnerController do
           |> put_flash(:error, "#{username} is not a member of this repository.")
           |> redirect(to: ViewHelpers.path_for_owners(package))
 
+        {:error, :unverified_primary_email} ->
+          conn
+          |> put_flash(:error, "#{username} has not verified their primary email.")
+          |> redirect(to: ViewHelpers.path_for_owners(package))
+
         {:error, :not_organization_transfer} ->
           conn
           |> put_flash(:error, "#{username} is an organization — use a transfer to add it.")

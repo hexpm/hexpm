@@ -135,6 +135,12 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
             |> put_flash(:error, "Not enough seats in organization to add member.")
             |> render_index(organization, tab: :members)
 
+          {:error, :unverified_primary_email} ->
+            conn
+            |> put_status(400)
+            |> put_flash(:error, "User #{username} has not verified their primary email.")
+            |> render_index(organization, tab: :members)
+
           {:error, changeset} ->
             conn
             |> put_status(400)

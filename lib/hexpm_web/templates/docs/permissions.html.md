@@ -264,7 +264,7 @@ Check the package beneath "Packages".
 - [Publishing Packages](/docs/publish)
 - [Private Packages and Organizations](/docs/private)
 - [Security Settings](/dashboard/security)
-- [API Documentation](https://hex.pm/docs/api)
+- [API Documentation](https://github.com/hexpm/specifications/blob/main/apiary.apib)
 
 ---
 

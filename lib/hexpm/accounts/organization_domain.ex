@@ -38,7 +38,7 @@ defmodule Hexpm.Accounts.OrganizationDomain do
     |> cast(attrs, [:organization_id, :added_by_user_id, :domain, :verification_token])
     |> validate_required([:organization_id, :domain, :verification_token])
     |> update_change(:domain, &normalize/1)
-    |> validate_length(:domain, max: 253)
+    |> validate_length(:domain, count: :bytes, max: 253)
     |> validate_format(:domain, @domain_regex, message: "is not a valid domain name")
     |> unique_constraint(:domain,
       name: :organization_domains_organization_id_domain_index,
