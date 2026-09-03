@@ -531,6 +531,7 @@ defmodule HexpmWeb.Router do
     scope "/api", HexpmWeb do
       pipe_through :api
 
+      post "/user", TestController, :user
       post "/repo", TestController, :repo
       post "/oauth_client", TestController, :oauth_client
       post "/oauth_token", TestController, :oauth_token

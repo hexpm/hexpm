@@ -43,6 +43,22 @@ defmodule HexpmWeb.TestController do
     |> send_object(conn)
   end
 
+  def user(conn, params) do
+    params = Map.put(params, "emails", [%{"email" => params["email"]}])
+
+    case Users.add(params, audit: audit_data(conn)) do
+      {:ok, _user} ->
+        send_resp(conn, 201, "")
+
+      {:error, changeset} ->
+        conn
+        |> put_status(400)
+        |> render(:error,
+          error: %{error: "Failed to create user", details: inspect(changeset.errors)}
+        )
+    end
+  end
+
   def repo(conn, params) do
     {:ok, organization} =
       Organizations.create(conn.assigns.current_user, params,
