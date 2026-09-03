@@ -52,18 +52,18 @@ defmodule Hexpm.CDN.PurgeWorkerTest do
         "verify" => [target("https://r/a"), target("https://r/b", nil)]
       }
 
-      assert [line] = capture_json_log(fn -> assert :ok = perform_job(PurgeWorker, args) end)
+      assert [{:info, line}] =
+               capture_log_lines(fn -> assert :ok = perform_job(PurgeWorker, args) end)
 
       assert %{
-               "severity" => "INFO",
-               "message" => "CDN purge verified",
-               "event" => "cdn.purge",
-               "service" => "fastly_hexrepo",
-               "keys" => ["k"],
-               "verified" => 2,
-               "rounds" => 1,
-               "absorbed" => 0,
-               "job_id" => job_id
+               message: "CDN purge verified",
+               event: "cdn.purge",
+               service: :fastly_hexrepo,
+               keys: ["k"],
+               verified: 2,
+               rounds: 1,
+               absorbed: 0,
+               job_id: job_id
              } = line
 
       assert is_integer(job_id)

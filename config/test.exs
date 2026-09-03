@@ -77,7 +77,8 @@ config :hexpm, Hexpm.RepoBase,
   pool_size: 20,
   ownership_timeout: 61_000
 
-config :logger, level: :error
+config :logger, level: :info
+config :logger, :default_handler, level: :error
 
 config :hexpm, :hcaptcha,
   sitekey: "sitekey",

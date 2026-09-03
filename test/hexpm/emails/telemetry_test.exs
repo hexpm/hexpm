@@ -21,43 +21,36 @@ defmodule Hexpm.Emails.TelemetryTest do
   test "logs one line per accepted delivery with the type and message id", context do
     put_adapter(context, Emails.ProviderIdAdapter, message_id: "sg-message-id")
 
-    assert [line] = email_lines(fn -> Mailer.deliver!(announcement()) end)
+    assert [{:info, line}] = email_lines(fn -> Mailer.deliver!(announcement()) end)
 
     assert %{
-             "severity" => "INFO",
-             "message" => "Email delivery",
-             "event" => "email.delivery",
-             "type" => "announcement",
-             "outcome" => "ok",
-             "message_id" => "sg-message-id",
-             "duration_us" => duration
+             message: "Email delivery",
+             event: "email.delivery",
+             type: "announcement",
+             outcome: "ok",
+             message_id: "sg-message-id",
+             duration_us: duration
            } = line
 
     assert is_integer(duration)
-    refute Map.has_key?(line, "error")
+    refute Map.has_key?(line, :error)
   end
 
   test "logs a refused delivery with the provider's answer", context do
     put_adapter(context, Emails.FailingAdapter, [])
 
-    assert [line] =
+    assert [{:warning, line}] =
              email_lines(fn ->
                assert {:error, :mail_unavailable} = Mailer.deliver(announcement())
              end)
 
-    assert %{
-             "severity" => "WARNING",
-             "message" => "Email delivery",
-             "type" => "announcement",
-             "outcome" => "error",
-             "error" => ":mail_unavailable"
-           } = line
+    assert %{type: "announcement", outcome: "error", error: ":mail_unavailable"} = line
   end
 
   test "logs a delivery that raised", context do
     put_adapter(context, RaisingAdapter, [])
 
-    assert [line] =
+    assert [{:warning, line}] =
              email_lines(fn ->
                assert_raise RuntimeError, "provider unreachable", fn ->
                  Mailer.deliver!(announcement())
@@ -65,35 +58,30 @@ defmodule Hexpm.Emails.TelemetryTest do
              end)
 
     assert %{
-             "severity" => "WARNING",
-             "message" => "Email delivery",
-             "outcome" => "exception",
-             "kind" => "error",
-             "reason" => "%RuntimeError{message: \"provider unreachable\"}"
+             outcome: "exception",
+             kind: :error,
+             reason: "%RuntimeError{message: \"provider unreachable\"}"
            } = line
   end
 
   test "an outbox delivery names its entry and category" do
     entry = Outbox.enqueue!(announcement(), category: "admin.announcement")
 
-    assert [line] =
+    assert [{:info, line}] =
              email_lines(fn ->
                assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: entry.id})
              end)
 
-    assert %{
-             "outcome" => "ok",
-             "outbox_entry_id" => entry_id,
-             "outbox_category" => "admin.announcement"
-           } = line
+    assert %{outcome: "ok", outbox_entry_id: entry_id, outbox_category: "admin.announcement"} =
+             line
 
     assert entry_id == entry.id
   end
 
   defp email_lines(fun) do
     fun
-    |> capture_json_log()
-    |> Enum.filter(&(&1["event"] == "email.delivery"))
+    |> capture_log_lines()
+    |> Enum.filter(fn {_level, fields} -> fields[:event] == "email.delivery" end)
   end
 
   defp announcement do

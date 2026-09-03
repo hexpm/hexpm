@@ -38,24 +38,29 @@ defmodule Hexpm.TestHelpers do
   end
 
   @doc """
-  Captures what `fun` logs at `:info` and above as the JSON lines production
-  writes, one decoded map per line.
+  Runs `fun` and returns the lines the calling process logged meanwhile, as
+  `{level, fields}` with the fields production writes.
   """
-  def capture_json_log(fun) do
-    level = Logger.level()
-    Logger.configure(level: :info)
+  def capture_log_lines(fun) do
+    flush_log_lines()
+    fun.()
+    collect_log_lines([])
+  end
 
-    formatter =
-      {LoggerJSON.Formatters.GoogleCloud,
-       metadata: Application.fetch_env!(:hexpm, :log_metadata), reported_levels: []}
-
-    try do
-      ExUnit.CaptureLog.capture_log([formatter: formatter], fun)
+  defp flush_log_lines do
+    receive do
+      {Hexpm.LogLines, _level, _fields} -> flush_log_lines()
     after
-      Logger.configure(level: level)
+      0 -> :ok
     end
-    |> String.split("\n", trim: true)
-    |> Enum.map(&JSON.decode!/1)
+  end
+
+  defp collect_log_lines(lines) do
+    receive do
+      {Hexpm.LogLines, level, fields} -> collect_log_lines([{level, fields} | lines])
+    after
+      0 -> Enum.reverse(lines)
+    end
   end
 
   @doc """
