@@ -18,41 +18,29 @@ defmodule Hexpm.Emails.Telemetry do
   def handle_event([:swoosh, :deliver, :stop], measurements, metadata, _config) do
     case metadata do
       %{error: error} ->
-        Logger.warning(line(metadata, measurements, error: inspect(error, printable_limit: 200)))
+        log(:warning, metadata, measurements, error: inspect(error, printable_limit: 200))
 
       %{result: result} ->
-        Logger.info(line(metadata, measurements, message_id: message_id(result)))
+        log(:info, metadata, measurements, message_id: message_id(result))
     end
   end
 
   def handle_event([:swoosh, :deliver, :exception], measurements, metadata, _config) do
-    Logger.warning(
-      line(metadata, measurements,
-        outcome: "exception",
-        kind: metadata[:kind],
-        reason: inspect(metadata[:reason], printable_limit: 200)
-      )
+    log(:warning, metadata, measurements,
+      outcome: "exception",
+      kind: metadata[:kind],
+      reason: inspect(metadata[:reason], printable_limit: 200)
     )
   end
 
-  # The outbox worker puts its entry on the process's Logger metadata; the
-  # formatter prints only request_id, so it goes into the message here.
-  defp line(metadata, %{duration: duration}, extra) do
-    logger_metadata = Logger.metadata()
-
+  defp log(level, metadata, %{duration: duration}, extra) do
     fields =
-      [
-        type: Metrics.type(metadata),
-        outcome: Metrics.outcome(metadata),
-        outbox_entry_id: logger_metadata[:outbox_entry_id],
-        category: logger_metadata[:outbox_category]
-      ]
+      [type: Metrics.type(metadata), outcome: Metrics.outcome(metadata)]
       |> Keyword.merge(extra)
-      |> Kernel.++(duration: "#{System.convert_time_unit(duration, :native, :millisecond)}ms")
+      |> Keyword.put(:duration_us, System.convert_time_unit(duration, :native, :microsecond))
       |> Enum.reject(fn {_key, value} -> is_nil(value) end)
-      |> Enum.map_join(" ", fn {key, value} -> "#{key}=#{value}" end)
 
-    "[email] " <> fields
+    Logger.log(level, "[email] #{fields[:type]} #{fields[:outcome]}", fields)
   end
 
   defp message_id(%{id: id}) when is_binary(id), do: id

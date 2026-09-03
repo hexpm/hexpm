@@ -51,20 +51,30 @@ defmodule Hexpm.CDN.Fastly do
     :telemetry.span([:hexpm, :cdn, :purge_request], metadata, fn ->
       case post(service, "service/#{service_id}/purge", body) do
         {:ok, 200, _headers, body} ->
-          Logger.info("CDN_PURGE_REQUEST #{service} #{Enum.join(keys, " ")} ids=#{inspect(body)}")
+          Logger.info("CDN_PURGE_REQUEST #{service} #{Enum.join(keys, " ")}",
+            service: service,
+            keys: keys,
+            status: 200,
+            purge_ids: inspect(body)
+          )
+
           {:ok, Map.put(metadata, :status, 200)}
 
         {:ok, status, _headers, body} ->
-          Logger.error(
-            "CDN_PURGE_REQUEST #{service} #{Enum.join(keys, " ")} failed status=#{status} " <>
-              "body=#{inspect(body)}"
+          Logger.error("CDN_PURGE_REQUEST #{service} #{Enum.join(keys, " ")} failed",
+            service: service,
+            keys: keys,
+            status: status,
+            error: inspect(body)
           )
 
           {{:error, {:status, status, body}}, Map.put(metadata, :status, status)}
 
         {:error, reason} ->
-          Logger.error(
-            "CDN_PURGE_REQUEST #{service} #{Enum.join(keys, " ")} failed #{inspect(reason)}"
+          Logger.error("CDN_PURGE_REQUEST #{service} #{Enum.join(keys, " ")} failed",
+            service: service,
+            keys: keys,
+            error: inspect(reason)
           )
 
           {{:error, reason}, Map.put(metadata, :status, :error)}
@@ -143,7 +153,7 @@ defmodule Hexpm.CDN.Fastly do
         end
 
       if pop != :nearest and verify_result(result) == :error do
-        Logger.warning("CDN_PROBE #{pop} #{url} #{inspect(result)}")
+        Logger.warning("CDN_PROBE #{pop} #{url}", pop: pop, url: url, result: inspect(result))
       end
 
       {result, %{url: url, pop: pop, result: verify_result(result)}}

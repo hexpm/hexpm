@@ -2,8 +2,6 @@ defmodule Hexpm.Emails.TelemetryTest do
   use Hexpm.DataCase, async: false
   use Oban.Testing, repo: Hexpm.RepoBase
 
-  import ExUnit.CaptureLog
-
   alias Hexpm.Emails
   alias Hexpm.Emails.{Mailer, Outbox, OutboxWorker}
 
@@ -15,65 +13,86 @@ defmodule Hexpm.Emails.TelemetryTest do
   end
 
   setup do
-    level = Logger.level()
-    Logger.configure(level: :info)
     mailer_config = Application.fetch_env!(:hexpm, Emails.Mailer)
-
-    on_exit(fn ->
-      Logger.configure(level: level)
-      Application.put_env(:hexpm, Emails.Mailer, mailer_config)
-    end)
-
+    on_exit(fn -> Application.put_env(:hexpm, Emails.Mailer, mailer_config) end)
     %{mailer_config: mailer_config}
   end
 
   test "logs one line per accepted delivery with the type and message id", context do
     put_adapter(context, Emails.ProviderIdAdapter, message_id: "sg-message-id")
 
-    log = capture_log(fn -> Mailer.deliver!(announcement()) end)
+    assert [line] = email_lines(fn -> Mailer.deliver!(announcement()) end)
 
-    assert [line] = String.split(log, "\n", trim: true)
+    assert %{
+             "severity" => "INFO",
+             "message" => "[email] announcement ok",
+             "type" => "announcement",
+             "outcome" => "ok",
+             "message_id" => "sg-message-id",
+             "duration_us" => duration
+           } = line
 
-    assert line =~
-             ~r"^\[info\] \[email\] type=announcement outcome=ok message_id=sg-message-id duration=\d+ms$"
+    assert is_integer(duration)
+    refute Map.has_key?(line, "error")
   end
 
   test "logs a refused delivery with the provider's answer", context do
     put_adapter(context, Emails.FailingAdapter, [])
 
-    log =
-      capture_log(fn ->
-        assert {:error, :mail_unavailable} = Mailer.deliver(announcement())
-      end)
+    assert [line] =
+             email_lines(fn ->
+               assert {:error, :mail_unavailable} = Mailer.deliver(announcement())
+             end)
 
-    assert log =~
-             ~r"^\[warning\] \[email\] type=announcement outcome=error error=:mail_unavailable duration=\d+ms$"m
+    assert %{
+             "severity" => "WARNING",
+             "message" => "[email] announcement error",
+             "type" => "announcement",
+             "outcome" => "error",
+             "error" => ":mail_unavailable"
+           } = line
   end
 
   test "logs a delivery that raised", context do
     put_adapter(context, RaisingAdapter, [])
 
-    log =
-      capture_log(fn ->
-        assert_raise RuntimeError, "provider unreachable", fn ->
-          Mailer.deliver!(announcement())
-        end
-      end)
+    assert [line] =
+             email_lines(fn ->
+               assert_raise RuntimeError, "provider unreachable", fn ->
+                 Mailer.deliver!(announcement())
+               end
+             end)
 
-    assert log =~
-             ~r"^\[warning\] \[email\] type=announcement outcome=exception kind=error reason=%RuntimeError\{message: \"provider unreachable\"\} duration=\d+ms$"m
+    assert %{
+             "severity" => "WARNING",
+             "message" => "[email] announcement exception",
+             "outcome" => "exception",
+             "kind" => "error",
+             "reason" => "%RuntimeError{message: \"provider unreachable\"}"
+           } = line
   end
 
   test "an outbox delivery names its entry and category" do
     entry = Outbox.enqueue!(announcement(), category: "admin.announcement")
 
-    log =
-      capture_log(fn ->
-        assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: entry.id})
-      end)
+    assert [line] =
+             email_lines(fn ->
+               assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: entry.id})
+             end)
 
-    assert log =~
-             ~r"\[email\] type=announcement outcome=ok outbox_entry_id=#{entry.id} category=admin.announcement duration=\d+ms$"m
+    assert %{
+             "message" => "[email] announcement ok",
+             "outbox_entry_id" => entry_id,
+             "outbox_category" => "admin.announcement"
+           } = line
+
+    assert entry_id == entry.id
+  end
+
+  defp email_lines(fun) do
+    fun
+    |> capture_json_log()
+    |> Enum.filter(&String.starts_with?(&1["message"], "[email]"))
   end
 
   defp announcement do

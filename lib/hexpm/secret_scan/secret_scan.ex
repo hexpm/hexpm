@@ -388,7 +388,12 @@ defmodule Hexpm.SecretScan do
 
       Logger.info(
         "SECRET SCAN #{release.package.name} #{release.version} " <>
-          "#{length(findings)} findings#{if truncated?, do: " (truncated)"} #{inspect(rules)}"
+          "#{length(findings)} findings#{if truncated?, do: " (truncated)"}",
+        package: release.package.name,
+        version: to_string(release.version),
+        findings: length(findings),
+        truncated: truncated?,
+        rules: inspect(rules)
       )
     end
   end

@@ -59,7 +59,7 @@ defmodule Hexpm.MixProject do
       {:joken, "~> 2.6"},
       {:lasso, "~> 0.1.4", only: :test},
       {:libcluster, "~> 3.0"},
-      {:logster, "~> 1.0"},
+      {:logger_json, "~> 7.0"},
       {:git_diff,
        github: "ericmj/git_diff", ref: "d47473d661ff0073ce4080ae04db1a439d78a62b", depth: 1},
       {:mdex, "~> 0.13"},

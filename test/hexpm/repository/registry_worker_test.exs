@@ -1,5 +1,5 @@
 defmodule Hexpm.Repository.RegistryWorkerTest do
-  use Hexpm.DataCase, async: true
+  use Hexpm.DataCase, async: false
   use Oban.Testing, repo: Hexpm.RepoBase
 
   alias Hexpm.CDN.PurgeWorker
@@ -163,8 +163,24 @@ defmodule Hexpm.Repository.RegistryWorkerTest do
       other = insert(:repository)
       {:ok, kept} = RegistryWorker.enqueue_repository(other)
 
-      assert %{success: 2, failure: 0} =
-               Oban.drain_queue(queue: :registry, with_limit: 1, with_recursion: true)
+      lines =
+        capture_json_log(fn ->
+          assert %{success: 2, failure: 0} =
+                   Oban.drain_queue(queue: :registry, with_limit: 1, with_recursion: true)
+        end)
+
+      assert [
+               %{
+                 "message" => "REGISTRY_BUILDER repository built",
+                 "job_type" => "repository",
+                 "repository_id" => hexpm_id,
+                 "consolidated" => 1
+               },
+               %{"repository_id" => other_id, "consolidated" => 0}
+             ] = Enum.filter(lines, &String.starts_with?(&1["message"], "REGISTRY_BUILDER"))
+
+      assert hexpm_id == Repository.hexpm().id
+      assert other_id == other.id
 
       states =
         Repo.all(

@@ -104,6 +104,54 @@ config :sentry,
 
 config :postgrex, :json_library, JSON
 
+config :logger_json, encoder: JSON
+
+# Logger metadata that reaches the log line in production. A key keeps one
+# type: the BigQuery log sink types a column from the first value it sees.
+config :hexpm, :log_metadata, [
+  :request_id,
+  :method,
+  :path,
+  :status,
+  :duration_us,
+  :controller,
+  :action,
+  :format,
+  :type,
+  :outcome,
+  :message_id,
+  :error,
+  :kind,
+  :reason,
+  :outbox_entry_id,
+  :outbox_category,
+  :service,
+  :keys,
+  :purge_ids,
+  :pop,
+  :url,
+  :result,
+  :verified,
+  :rounds,
+  :absorbed,
+  :job_id,
+  :round,
+  :expected,
+  :job_type,
+  :package_id,
+  :repository_id,
+  :package,
+  :consolidated,
+  :key,
+  :snooze,
+  :downloads,
+  :step,
+  :version,
+  :findings,
+  :truncated,
+  :rules
+]
+
 config :bcrypt_elixir, log_rounds: 4
 
 config :hexpm, HexpmWeb.Endpoint,

@@ -315,10 +315,18 @@ defmodule Hexpm.Repository.RegistryWorker do
   defp run({:full, repository}), do: [RegistryBuilder.full(repository)]
 
   defp log(%Oban.Job{id: id, args: args}, what, cancelled) do
-    Logger.info(
-      "REGISTRY_BUILDER #{args["type"]} #{what} job=#{id} args=#{inspect(args)} " <>
-        "consolidated=#{cancelled}"
-    )
+    fields =
+      [
+        job_type: args["type"],
+        package_id: args["package_id"],
+        repository_id: args["repository_id"],
+        package: args["name"],
+        job_id: id,
+        consolidated: cancelled
+      ]
+      |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+
+    Logger.info("REGISTRY_BUILDER #{args["type"]} #{what}", fields)
   end
 
   defp result_tag(:ok), do: :ok

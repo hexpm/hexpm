@@ -1,17 +1,30 @@
 defmodule HexpmWeb.EndpointLogTest do
   use HexpmWeb.ConnCase
-  import ExUnit.CaptureLog
 
-  setup do
-    level = Logger.level()
-    Logger.configure(level: :info)
-    on_exit(fn -> Logger.configure(level: level) end)
+  test "logs one line per request with its fields" do
+    assert [line] = capture_json_log(fn -> get(build_conn(), "/diffs") end)
+
+    assert %{
+             "severity" => "INFO",
+             "message" => "GET /diffs 200",
+             "method" => "GET",
+             "path" => "/diffs",
+             "status" => 200,
+             "duration_us" => duration,
+             "controller" => "HexpmWeb.DiffController",
+             "action" => "index",
+             "format" => "html",
+             "request_id" => request_id
+           } = line
+
+    assert is_integer(duration)
+    assert is_binary(request_id)
   end
 
-  test "logs one line per request" do
-    log = capture_log(fn -> get(build_conn(), "/diffs") end)
+  test "logs a response that is not a success with its status" do
+    assert [line] = capture_json_log(fn -> get(build_conn(), "/api/no/such/route") end)
 
-    assert [line] = String.split(log, "\n", trim: true)
-    assert line =~ ~r"^\[info\] .*\bstatus=200\b.*\bpath=/diffs\b.*\bmethod=GET\b"
+    assert %{"severity" => "INFO", "message" => "GET /api/no/such/route 404", "status" => 404} =
+             line
   end
 end
