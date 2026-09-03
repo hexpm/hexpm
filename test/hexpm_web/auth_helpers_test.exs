@@ -122,7 +122,7 @@ defmodule HexpmWeb.AuthHelpersTest do
 
     username = user.username
 
-    assert_received {Hexpm.SecurityLog,
+    assert_received {Hexpm.LogLines, :warning,
                      %{
                        method: "password",
                        reason: "wrong_password",
@@ -136,7 +136,7 @@ defmodule HexpmWeb.AuthHelpersTest do
     conn = auth_conn(user, "Bearer not-a-jwt")
 
     assert {:error, :key} = AuthHelpers.authenticate_at(conn, ~U[2026-09-30 23:59:59Z])
-    assert_received {Hexpm.SecurityLog, %{method: "oauth_token", reason: "invalid"}}
+    assert_received {Hexpm.LogLines, :warning, %{method: "oauth_token", reason: "invalid"}}
   end
 
   defp auth_conn(user, authorization) do

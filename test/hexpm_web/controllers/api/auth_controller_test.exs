@@ -85,7 +85,7 @@ defmodule HexpmWeb.API.AuthControllerTest do
       |> get("/api/auth", domain: "api")
       |> response(401)
 
-      assert_received {Hexpm.SecurityLog,
+      assert_received {Hexpm.LogLines, :warning,
                        %{method: "api_key", reason: "invalid", path: "/api/auth"} = event}
 
       refute Map.has_key?(event, :key_id)
@@ -115,7 +115,7 @@ defmodule HexpmWeb.API.AuthControllerTest do
       key_id = key.id
       user_id = user.id
 
-      assert_received {Hexpm.SecurityLog,
+      assert_received {Hexpm.LogLines, :warning,
                        %{method: "api_key", reason: "revoked", key_id: ^key_id, user_id: ^user_id}}
 
       key =

@@ -1736,7 +1736,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
       user_id = oauth_token.user_id
 
-      assert_received {Hexpm.SecurityLog,
+      assert_received {Hexpm.LogLines, :warning,
                        %{method: "totp", reason: "invalid_code", user_id: ^user_id}}
     end
 

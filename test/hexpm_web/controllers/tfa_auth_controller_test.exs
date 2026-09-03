@@ -60,7 +60,7 @@ defmodule HexpmWeb.TFAAuthControllerTest do
 
       user_id = c.user.id
 
-      assert_received {Hexpm.SecurityLog,
+      assert_received {Hexpm.LogLines, :warning,
                        %{method: "tfa", reason: "invalid_code", user_id: ^user_id, path: "/tfa"}}
     end
 

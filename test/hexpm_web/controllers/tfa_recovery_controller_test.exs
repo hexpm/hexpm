@@ -52,7 +52,7 @@ defmodule HexpmWeb.TFARecoveryControllerTest do
 
       user_id = c.user.id
 
-      assert_received {Hexpm.SecurityLog,
+      assert_received {Hexpm.LogLines, :warning,
                        %{method: "recovery_code", reason: "invalid_code", user_id: ^user_id}}
     end
 

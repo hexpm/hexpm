@@ -47,8 +47,6 @@ config :hexpm, secret_scan_notify: false
 
 config :hexpm, HexpmWeb.BasicAuth, schedule_enabled: true
 
-config :hexpm, Hexpm.SecurityLog, sink: :stdio
-
 config :hexpm, :organization_sso,
   mode: :off,
   beta_organizations: [],

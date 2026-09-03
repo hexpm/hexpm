@@ -397,7 +397,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert response["error"] == "invalid_grant"
       assert response["error_description"] == "Invalid refresh token"
 
-      assert_received {Hexpm.SecurityLog,
+      assert_received {Hexpm.LogLines, :warning,
                        %{method: "refresh_token", reason: "invalid", path: "/api/oauth/token"}}
     end
 
@@ -461,7 +461,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       response = json_response(conn, 400)
       assert response["error"] == "invalid_grant"
       assert response["error_description"] == "Refresh token has been revoked"
-      assert_received {Hexpm.SecurityLog, %{method: "refresh_token", reason: "revoked"}}
+      assert_received {Hexpm.LogLines, :warning, %{method: "refresh_token", reason: "revoked"}}
     end
 
     test "refuses a refresh for a live token whose session is revoked", %{
@@ -487,7 +487,9 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert response["error"] == "invalid_grant"
       assert response["error_description"] == "Session has been revoked"
       assert Repo.get!(Token, token.id).revoked_at == nil
-      assert_received {Hexpm.SecurityLog, %{method: "refresh_token", reason: "session_revoked"}}
+
+      assert_received {Hexpm.LogLines, :warning,
+                       %{method: "refresh_token", reason: "session_revoked"}}
     end
 
     test "returns error for expired refresh token", %{user: user, client: client} do
@@ -527,7 +529,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert response = json_response(conn, 400)
       assert response["error"] == "invalid_grant"
       assert response["error_description"] == "Refresh token has expired"
-      assert_received {Hexpm.SecurityLog, %{method: "refresh_token", reason: "expired"}}
+      assert_received {Hexpm.LogLines, :warning, %{method: "refresh_token", reason: "expired"}}
     end
   end
 
@@ -970,7 +972,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       response = json_response(conn, 401)
       assert response["error"] == "invalid_client"
 
-      assert_received {Hexpm.SecurityLog,
+      assert_received {Hexpm.LogLines, :warning,
                        %{method: "api_key", reason: "invalid", path: "/api/oauth/token"}}
     end
 
@@ -990,7 +992,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       key_id = key.id
       user_id = user.id
 
-      assert_received {Hexpm.SecurityLog,
+      assert_received {Hexpm.LogLines, :warning,
                        %{method: "api_key", reason: "revoked", key_id: ^key_id, user_id: ^user_id}}
     end
 

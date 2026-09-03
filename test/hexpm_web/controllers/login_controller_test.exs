@@ -121,7 +121,7 @@ defmodule HexpmWeb.LoginControllerTest do
 
     username = c.user.username
 
-    assert_received {Hexpm.SecurityLog,
+    assert_received {Hexpm.LogLines, :warning,
                      %{
                        event: "auth.failure",
                        method: "password",
@@ -141,7 +141,7 @@ defmodule HexpmWeb.LoginControllerTest do
     assert Phoenix.Flash.get(conn.assigns.flash, "error") ==
              "Invalid username, email or password."
 
-    assert_received {Hexpm.SecurityLog,
+    assert_received {Hexpm.LogLines, :warning,
                      %{method: "password", reason: "unknown_user", username: "nobody@example.com"}}
   end
 
@@ -155,7 +155,7 @@ defmodule HexpmWeb.LoginControllerTest do
     assert Phoenix.Flash.get(conn.assigns.flash, "error") =~ "Email has not been verified yet."
     refute get_session(conn, "session_token")
 
-    assert_received {Hexpm.SecurityLog, %{method: "password", reason: "unverified_email"}}
+    assert_received {Hexpm.LogLines, :warning, %{method: "password", reason: "unverified_email"}}
   end
 
   test "log out", c do

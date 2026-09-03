@@ -120,7 +120,7 @@ defmodule HexpmWeb.SudoControllerTest do
 
       user_id = user.id
 
-      assert_received {Hexpm.SecurityLog,
+      assert_received {Hexpm.LogLines, :warning,
                        %{
                          method: "password",
                          reason: "wrong_password",
@@ -142,7 +142,7 @@ defmodule HexpmWeb.SudoControllerTest do
 
       user_id = user.id
 
-      assert_received {Hexpm.SecurityLog,
+      assert_received {Hexpm.LogLines, :warning,
                        %{method: "password", reason: "no_password", user_id: ^user_id}}
     end
 
@@ -207,7 +207,7 @@ defmodule HexpmWeb.SudoControllerTest do
 
       user_id = user.id
 
-      assert_received {Hexpm.SecurityLog,
+      assert_received {Hexpm.LogLines, :warning,
                        %{method: "tfa", reason: "invalid_code", user_id: ^user_id}}
     end
 
@@ -303,7 +303,7 @@ defmodule HexpmWeb.SudoControllerTest do
 
       user_id = user.id
 
-      assert_received {Hexpm.SecurityLog,
+      assert_received {Hexpm.LogLines, :warning,
                        %{method: "recovery_code", reason: "invalid_code", user_id: ^user_id}}
     end
 
@@ -319,7 +319,7 @@ defmodule HexpmWeb.SudoControllerTest do
 
       user_id = user.id
 
-      assert_received {Hexpm.SecurityLog,
+      assert_received {Hexpm.LogLines, :warning,
                        %{method: "recovery_code", reason: "invalid_code", user_id: ^user_id}}
     end
 
