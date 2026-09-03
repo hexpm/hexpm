@@ -80,6 +80,8 @@ config :hexpm, Hexpm.RepoBase,
 config :logger, level: :info
 config :logger, :default_handler, level: :error
 
+config :hexpm, Hexpm.SecurityLog, sink: :process
+
 config :hexpm, :hcaptcha,
   sitekey: "sitekey",
   secret: "secret"

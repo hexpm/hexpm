@@ -115,6 +115,30 @@ defmodule HexpmWeb.AuthHelpersTest do
     if self() == pid, do: send(pid, {ref, measurements, metadata})
   end
 
+  test "records a wrong Basic password", %{user: user} do
+    conn = auth_conn(user, "Basic " <> Base.encode64("#{user.username}:wrong"))
+
+    assert {:error, :password} = AuthHelpers.authenticate_at(conn, ~U[2026-09-30 23:59:59Z])
+
+    username = user.username
+
+    assert_received {Hexpm.LogLines, :warning,
+                     %{
+                       method: "password",
+                       reason: "wrong_password",
+                       username: ^username,
+                       user_agent: "TEST",
+                       ip: "127.0.0.1"
+                     }}
+  end
+
+  test "records an invalid Bearer token", %{user: user} do
+    conn = auth_conn(user, "Bearer not-a-jwt")
+
+    assert {:error, :key} = AuthHelpers.authenticate_at(conn, ~U[2026-09-30 23:59:59Z])
+    assert_received {Hexpm.LogLines, :warning, %{method: "oauth_token", reason: "invalid"}}
+  end
+
   defp auth_conn(user, authorization) do
     build_conn()
     |> fetch_query_params()

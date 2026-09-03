@@ -18,6 +18,7 @@ defmodule HexpmWeb.TFARecoveryController do
       |> redirect(to: safe_return_path(session["return"]) || ~p"/users/#{updated_user}")
     else
       _ ->
+        Hexpm.SecurityLog.auth_failure(conn, :recovery_code, :invalid_code, user_id: uid)
         render_show_error(conn)
     end
   end
