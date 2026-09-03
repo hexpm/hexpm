@@ -43,6 +43,7 @@ defmodule Hexpm.TestHelpers do
   """
   def capture_log_lines(fun) do
     flush_log_lines()
+    Process.put(Hexpm.LogLines, true)
     fun.()
     collect_log_lines([])
   end

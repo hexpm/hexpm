@@ -1,13 +1,15 @@
 defmodule Hexpm.LogLines do
   @moduledoc """
   A `:logger` handler, attached for the test run, that sends every line a
-  process logs back to that process as `{Hexpm.LogLines, level, fields}`. The
+  process logs back to that process as `{Hexpm.LogLines, level, fields}`,
+  once the process has put `Hexpm.LogLines` in its process dictionary. The
   fields are what production writes: the message map's keys, or `:message`
   for a plain message, and the process metadata that reaches the line.
   """
 
   def log(%{level: level, msg: msg, meta: %{pid: pid} = meta}, _config) do
-    send(pid, {__MODULE__, level, fields(msg, meta)})
+    if Process.get(__MODULE__), do: send(pid, {__MODULE__, level, fields(msg, meta)})
+    :ok
   rescue
     _ -> :ok
   end
