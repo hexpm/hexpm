@@ -448,7 +448,6 @@ defmodule HexpmWeb.Router do
 
     get "/", IndexController, :index
 
-    post "/users", UserController, :create
     get "/users/me", UserController, :me
     get "/users/me/audit-logs", UserController, :audit_logs
     get "/users/:name", UserController, :show
