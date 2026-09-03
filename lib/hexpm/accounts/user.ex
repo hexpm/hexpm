@@ -45,6 +45,8 @@ defmodule Hexpm.Accounts.User do
     |> cast_embed(:tfa)
     |> update_change(:username, &String.downcase/1)
     |> validate_length(:username, min: 3)
+    |> validate_length(:username, count: :bytes, max: 255)
+    |> validate_length(:full_name, count: :codepoints, max: 255)
     |> validate_format(:username, @username_regex)
     |> validate_format(:username, @username_reject_regex)
     |> validate_exclusion(:username, @reserved_names)
@@ -110,6 +112,7 @@ defmodule Hexpm.Accounts.User do
 
   def update_profile(user, params) do
     cast(user, params, ~w(full_name)a)
+    |> validate_length(:full_name, count: :codepoints, max: 255)
     |> cast_embed(:handles)
   end
 

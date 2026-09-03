@@ -39,7 +39,7 @@ defmodule Hexpm.Accounts.SSO.OIDC do
   def valid_provider_email?(nil), do: true
 
   def valid_provider_email?(email) when is_binary(email) do
-    byte_size(email) <= 320 and String.valid?(email)
+    byte_size(email) <= 255 and String.valid?(email)
   end
 
   def valid_provider_email?(_email), do: false

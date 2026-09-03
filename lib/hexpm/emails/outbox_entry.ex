@@ -33,10 +33,10 @@ defmodule Hexpm.Emails.OutboxEntry do
     |> validate_required([:category, :email])
     |> validate_inclusion(:priority, 0..9)
     |> validate_format(:category, ~r/\A[a-z][a-z0-9_.-]*\z/)
-    |> validate_length(:category, max: 100)
-    |> validate_length(:type, max: 100)
-    |> validate_length(:group_key, max: 255)
-    |> validate_length(:scope_key, max: 255)
+    |> validate_length(:category, count: :bytes, max: 100)
+    |> validate_length(:type, count: :bytes, max: 100)
+    |> validate_length(:group_key, count: :bytes, max: 255)
+    |> validate_length(:scope_key, count: :bytes, max: 255)
   end
 
   # A delivered entry stays as the record of what was sent until the purge job

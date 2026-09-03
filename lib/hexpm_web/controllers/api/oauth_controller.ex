@@ -50,12 +50,8 @@ defmodule HexpmWeb.API.OAuthController do
         {:ok, response} ->
           render(conn, :device_authorization, device_response: response)
 
-        {:error, reason} ->
-          render_oauth_error(
-            conn,
-            :server_error,
-            "Failed to initiate device authorization: #{reason}"
-          )
+        {:error, %Ecto.Changeset{} = changeset} ->
+          render_oauth_error(conn, :invalid_request, changeset_description(changeset))
       end
     else
       {:error, error, description} ->
@@ -132,6 +128,9 @@ defmodule HexpmWeb.API.OAuthController do
             "Authorization code expired or already used"
           )
 
+        {:error, %Ecto.Changeset{data: %Hexpm.UserSession{}} = changeset} ->
+          render_oauth_error(conn, :invalid_request, changeset_description(changeset))
+
         {:error, changeset} ->
           render_oauth_error(
             conn,
@@ -204,6 +203,9 @@ defmodule HexpmWeb.API.OAuthController do
         {:error, :session_revoked} ->
           render_oauth_error(conn, :invalid_grant, "Session has been revoked")
 
+        {:error, %Ecto.Changeset{data: %Hexpm.UserSession{}} = changeset} ->
+          render_oauth_error(conn, :invalid_request, changeset_description(changeset))
+
         {:error, changeset} ->
           render_oauth_error(
             conn,
@@ -240,6 +242,9 @@ defmodule HexpmWeb.API.OAuthController do
            ) do
         {:ok, token} ->
           render(conn, :token, token: token)
+
+        {:error, %Ecto.Changeset{data: %Hexpm.UserSession{}} = changeset} ->
+          render_oauth_error(conn, :invalid_request, changeset_description(changeset))
 
         {:error, changeset} ->
           render_oauth_error(
@@ -504,6 +509,15 @@ defmodule HexpmWeb.API.OAuthController do
   end
 
   defp validate_refresh_token(_, _), do: {:error, :invalid_grant, "Missing refresh token"}
+
+  defp changeset_description(changeset) do
+    changeset
+    |> translate_errors()
+    |> Enum.map_join("; ", fn
+      {field, message} when is_binary(message) -> "#{field} #{message}"
+      {field, _message} -> "#{field} is invalid"
+    end)
+  end
 
   defp render_oauth_error(conn, error_type, description) do
     status = error_status(error_type)

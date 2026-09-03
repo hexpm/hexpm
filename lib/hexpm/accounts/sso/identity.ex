@@ -31,8 +31,9 @@ defmodule Hexpm.Accounts.SSO.Identity do
       :provider_email
     ])
     |> validate_required([:organization_id, :connection_id, :user_id, :issuer, :subject])
-    |> validate_length(:subject, max: 255)
-    |> validate_length(:provider_email, max: 320)
+    |> validate_length(:issuer, count: :bytes, max: 2_048)
+    |> validate_length(:subject, count: :bytes, max: 255)
+    |> validate_length(:provider_email, count: :bytes, max: 255)
     |> unique_constraint([:connection_id, :issuer, :subject],
       name: :organization_sso_identities_external_identity_index
     )

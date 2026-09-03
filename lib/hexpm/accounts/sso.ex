@@ -2213,7 +2213,7 @@ defmodule Hexpm.Accounts.SSO do
   any path on this site is a place to come back to. Anything that could leave
   the site is not one.
   """
-  def allowed_return_path(value) when is_binary(value) do
+  def allowed_return_path(value) when is_binary(value) and byte_size(value) <= 2_048 do
     if same_origin_path?(value), do: value
   end
 

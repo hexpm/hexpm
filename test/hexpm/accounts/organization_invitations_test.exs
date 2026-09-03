@@ -12,6 +12,30 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
     %{organization: organization, admin: admin}
   end
 
+  describe "OrganizationInvitation.changeset/2" do
+    test "bounds the email address in bytes", %{organization: organization} do
+      at_cap = combining_string(250) <> "@b.co"
+      assert byte_size(at_cap) == 255
+      assert invitation_changeset(organization, at_cap).valid?
+
+      changeset = invitation_changeset(organization, combining_string(252) <> "@b.co")
+      assert errors_on(changeset).email == "should be at most 255 byte(s)"
+    end
+
+    defp invitation_changeset(organization, email) do
+      Hexpm.Accounts.OrganizationInvitation.changeset(
+        %Hexpm.Accounts.OrganizationInvitation{},
+        %{
+          organization_id: organization.id,
+          email: email,
+          role: "read",
+          token_hash: "hash",
+          expires_at: DateTime.utc_now()
+        }
+      )
+    end
+  end
+
   describe "invite/4" do
     test "sends a link the recipient can use", %{organization: organization, admin: admin} do
       assert {:ok, invitation} = invite(organization, admin, "newcomer@example.com")

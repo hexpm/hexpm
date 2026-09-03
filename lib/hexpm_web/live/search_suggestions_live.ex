@@ -232,7 +232,7 @@ defmodule HexpmWeb.SearchSuggestionsLive do
 
   defp extract_search_term(params) do
     term = params["search"] || params["value"] || ""
-    String.slice(to_string(term), 0, 100)
+    Hexpm.Utils.truncate_bytes(to_string(term), 100)
   end
 
   defp input_id("home"), do: "home-search-input"

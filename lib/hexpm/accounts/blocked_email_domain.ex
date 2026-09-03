@@ -19,6 +19,8 @@ defmodule Hexpm.Accounts.BlockedEmailDomain do
     cast(blocked_domain, params, ~w(domain comment)a)
     |> validate_required(~w(domain)a)
     |> update_change(:domain, &normalize/1)
+    |> validate_length(:domain, count: :bytes, max: 253)
+    |> validate_length(:comment, count: :codepoints, max: 255)
     |> validate_format(:domain, ~r/^[^\s@]+\.[^\s@.]+$/)
     |> unique_constraint(:domain)
   end

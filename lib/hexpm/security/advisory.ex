@@ -38,6 +38,10 @@ defmodule Hexpm.Security.Advisory do
     |> cast(params, ~w(id summary aliases published_at modified_at withdrawn_at
                        cvss_vector cvss_score cvss_rating)a)
     |> validate_required(~w(id summary published_at modified_at)a)
+    |> validate_length(:id, count: :bytes, max: 255)
+    |> validate_length(:summary, count: :codepoints, max: 255)
+    |> validate_each_length(:aliases, count: :bytes, max: 255)
+    |> validate_length(:cvss_vector, count: :bytes, max: 255)
     |> validate_inclusion(:cvss_rating, @ratings)
     |> cast_assoc(:references, with: &AdvisoryReference.changeset/2)
     |> cast_assoc(:affected_versions, with: &AdvisoryAffectedVersion.changeset/2)

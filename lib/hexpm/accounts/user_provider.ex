@@ -16,16 +16,17 @@ defmodule Hexpm.Accounts.UserProvider do
     cast(user_provider, params, ~w(provider provider_uid provider_email provider_data)a)
     |> validate_required(~w(provider provider_uid)a)
     |> validate_inclusion(:provider, ~w(github))
+    |> validate_length(:provider_uid, count: :bytes, max: 255)
+    |> validate_length(:provider_email, count: :bytes, max: 255)
     |> unique_constraint([:provider, :provider_uid])
   end
 
   def build(user, provider, provider_uid, provider_email, provider_data \\ %{}) do
-    %__MODULE__{
-      user_id: user.id,
+    changeset(%__MODULE__{user_id: user.id}, %{
       provider: provider,
       provider_uid: provider_uid,
       provider_email: provider_email,
       provider_data: provider_data
-    }
+    })
   end
 end

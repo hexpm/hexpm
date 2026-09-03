@@ -84,6 +84,7 @@ defmodule Hexpm.Accounts.Email do
     changeset
     |> validate_required(~w(email)a)
     |> update_change(:email, &String.downcase/1)
+    |> validate_length(:email, count: :bytes, max: 255)
     |> validate_format(:email, @email_regex)
     |> validate_domain_not_blocked()
     |> unique_constraint(:email, name: "emails_email_key")

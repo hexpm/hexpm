@@ -36,6 +36,7 @@ defmodule Hexpm.Accounts.Organization do
     |> unique_constraint(:name)
     |> update_change(:name, &String.downcase/1)
     |> validate_length(:name, min: 3)
+    |> validate_length(:name, count: :bytes, max: 255)
     |> validate_format(:name, @name_regex)
     |> validate_exclusion(:name, @reserved_names)
   end

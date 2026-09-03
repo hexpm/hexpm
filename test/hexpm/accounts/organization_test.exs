@@ -19,5 +19,12 @@ defmodule Hexpm.Accounts.OrganizationTest do
     test "rejects dots" do
       refute Organization.changeset(%Organization{}, %{name: "foo.bar"}).valid?
     end
+
+    test "bounds the name in bytes" do
+      assert Organization.changeset(%Organization{}, %{name: String.duplicate("a", 255)}).valid?
+
+      changeset = Organization.changeset(%Organization{}, %{name: String.duplicate("a", 256)})
+      assert errors_on(changeset).name == "should be at most 255 byte(s)"
+    end
   end
 end

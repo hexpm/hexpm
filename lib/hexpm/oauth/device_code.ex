@@ -55,8 +55,21 @@ defmodule Hexpm.OAuth.DeviceCode do
     ])
     |> validate_inclusion(:status, @valid_statuses)
     |> validate_number(:interval, greater_than: 0)
+    |> validate_length(:name, count: :codepoints, max: 255)
+    |> validate_length(:verification_uri, count: :bytes, max: 255)
+    |> validate_length(:verification_uri_complete, count: :bytes, max: 255)
+    |> validate_scopes()
     |> unique_constraint(:device_code)
     |> unique_constraint(:user_code)
+  end
+
+  defp validate_scopes(changeset) do
+    validate_change(changeset, :scopes, fn :scopes, scopes ->
+      case Hexpm.Permissions.validate_scopes(scopes) do
+        :ok -> []
+        {:error, message} -> [scopes: message]
+      end
+    end)
   end
 
   @doc """
