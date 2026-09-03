@@ -136,7 +136,7 @@ defmodule HexpmWeb.SSOController do
   defp validate_login_hint(""), do: {:ok, nil}
 
   defp validate_login_hint(login_hint)
-       when is_binary(login_hint) and byte_size(login_hint) <= 320 do
+       when is_binary(login_hint) and byte_size(login_hint) <= 255 do
     if String.valid?(login_hint),
       do: {:ok, login_hint},
       else: {:error, :invalid_third_party_initiation}

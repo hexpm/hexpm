@@ -48,6 +48,35 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
       assert changeset.valid?
     end
 
+    test "bounds the name in codepoints" do
+      assert DeviceCode.changeset(%DeviceCode{}, valid_attrs(name: codepoints_string(255))).valid?
+
+      changeset = DeviceCode.changeset(%DeviceCode{}, valid_attrs(name: codepoints_string(256)))
+      assert errors_on(changeset).name == "should be at most 255 character(s)"
+    end
+
+    test "bounds each scope in bytes" do
+      scope = "repository:" <> String.duplicate("a", 244)
+      assert DeviceCode.changeset(%DeviceCode{}, valid_attrs(scopes: [scope])).valid?
+
+      scope = "repository:" <> String.duplicate("a", 245)
+      changeset = DeviceCode.changeset(%DeviceCode{}, valid_attrs(scopes: [scope]))
+      assert errors_on(changeset).scopes =~ "contains invalid scopes"
+    end
+
+    defp valid_attrs(overrides) do
+      Map.merge(
+        %{
+          device_code: "device123",
+          user_code: "USER-CODE",
+          verification_uri: "https://example.com/device",
+          client_id: "test_client",
+          expires_at: DateTime.utc_now()
+        },
+        Map.new(overrides)
+      )
+    end
+
     test "sets default values" do
       attrs = %{
         device_code: "device123",

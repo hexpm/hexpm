@@ -4,6 +4,32 @@ defmodule Hexpm.UserSessionsTest do
   alias Hexpm.UserSessions
   alias Hexpm.Accounts.{AuditLog, AuditLogs}
 
+  describe "UserSession.changeset/2" do
+    test "bounds the name in codepoints" do
+      user = insert(:user)
+
+      attrs = %{
+        user_id: user.id,
+        type: "oauth",
+        client_id: Ecto.UUID.generate(),
+        expires_at: DateTime.utc_now()
+      }
+
+      assert Hexpm.UserSession.changeset(
+               %Hexpm.UserSession{},
+               Map.put(attrs, :name, codepoints_string(255))
+             ).valid?
+
+      changeset =
+        Hexpm.UserSession.changeset(
+          %Hexpm.UserSession{},
+          Map.put(attrs, :name, codepoints_string(256))
+        )
+
+      assert errors_on(changeset).name == "should be at most 255 character(s)"
+    end
+  end
+
   describe "session limit enforcement" do
     test "limits browser sessions to 5 per user" do
       user = insert(:user)

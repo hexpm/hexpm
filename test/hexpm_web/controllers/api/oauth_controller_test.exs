@@ -107,6 +107,31 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert device_code.name == name
     end
 
+    test "bounds the name in codepoints", %{client: client} do
+      conn =
+        post(build_conn(), ~p"/api/oauth/device_authorization", %{
+          "client_id" => client.client_id,
+          "scope" => "api",
+          "name" => codepoints_string(255)
+        })
+
+      response = json_response(conn, 200)
+      device_code = Repo.get_by(Hexpm.OAuth.DeviceCode, device_code: response["device_code"])
+      assert device_code.name == codepoints_string(255)
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/device_authorization", %{
+          "client_id" => client.client_id,
+          "scope" => "api",
+          "name" => codepoints_string(256)
+        })
+
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_request"
+      assert response["error_description"] == "name should be at most 255 character(s)"
+      assert Repo.aggregate(Hexpm.OAuth.DeviceCode, :count) == 1
+    end
+
     test "returns error for scope as array (malformed JSON)", %{client: client} do
       conn =
         post(build_conn(), ~p"/api/oauth/device_authorization", %{

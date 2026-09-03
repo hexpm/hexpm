@@ -36,7 +36,22 @@ defmodule Hexpm.Repository.PolicyTest do
                  name: String.duplicate("a", 65),
                  visibility: "public"
                })
-             ).name == "should be at most 64 character(s)"
+             ).name == "should be at most 64 byte(s)"
+    end
+
+    test "bounds the description in codepoints and the tabs in number" do
+      attrs = %{name: "ok-name", visibility: "public"}
+
+      assert Policy.changeset(%Policy{}, Map.put(attrs, :description, codepoints_string(500))).valid?
+
+      changeset =
+        Policy.changeset(%Policy{}, Map.put(attrs, :description, codepoints_string(501)))
+
+      assert errors_on(changeset).description == "should be at most 500 character(s)"
+
+      repositories = Enum.map(1..17, &%{"repository" => "repo#{&1}"})
+      changeset = Policy.changeset(%Policy{}, Map.put(attrs, :repositories, repositories))
+      assert errors_on(changeset).repositories == "should have at most 16 item(s)"
     end
 
     test "validates visibility inclusion" do

@@ -15,12 +15,11 @@ defmodule Hexpm.Accounts.UserProviders do
   def create(user, provider, provider_uid, provider_email, provider_data \\ %{},
         audit: audit_data
       ) do
-    user_provider =
-      UserProvider.build(user, provider, provider_uid, provider_email, provider_data)
+    changeset = UserProvider.build(user, provider, provider_uid, provider_email, provider_data)
 
     multi =
       Multi.new()
-      |> Multi.insert(:user_provider, UserProvider.changeset(user_provider, %{}))
+      |> Multi.insert(:user_provider, changeset)
       |> audit(audit_data, "user_provider.create", fn %{user_provider: up} -> up end)
 
     case Repo.transaction(multi) do

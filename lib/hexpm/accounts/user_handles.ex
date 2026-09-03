@@ -16,6 +16,13 @@ defmodule Hexpm.Accounts.UserHandles do
   def changeset(handles, params) do
     handles
     |> cast(params, ~w(twitter bluesky github elixirforum freenode slack url)a)
+    |> validate_length(:twitter, count: :codepoints, max: 255)
+    |> validate_length(:bluesky, count: :codepoints, max: 255)
+    |> validate_length(:github, count: :codepoints, max: 255)
+    |> validate_length(:elixirforum, count: :codepoints, max: 255)
+    |> validate_length(:freenode, count: :codepoints, max: 255)
+    |> validate_length(:slack, count: :codepoints, max: 255)
+    |> validate_length(:url, count: :bytes, max: 2048)
     |> validate_change(:url, fn :url, url ->
       case URI.new(url) do
         {:ok, uri} ->

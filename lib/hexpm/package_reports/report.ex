@@ -26,9 +26,9 @@ defmodule Hexpm.PackageReports.Report do
     report
     |> cast(attrs, @fields)
     |> validate_required([:reason, :summary, :description])
-    |> validate_length(:summary, max: 200)
+    |> validate_length(:summary, count: :codepoints, max: 200)
     |> validate_format(:summary, ~r/\A[^\r\n]+\z/, message: "must be one line")
-    |> validate_length(:description, max: 100_000)
+    |> validate_length(:description, count: :codepoints, max: 100_000)
     |> validate_vulnerability_confirmations()
   end
 

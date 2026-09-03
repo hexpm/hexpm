@@ -84,6 +84,8 @@ defmodule Hexpm.Permissions do
     |> Enum.uniq()
   end
 
+  defp valid_scope?(scope) when byte_size(scope) > 255, do: false
+
   defp valid_scope?(scope) do
     case String.split(scope, ":", parts: 2) do
       [scope_name] ->

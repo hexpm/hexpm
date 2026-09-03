@@ -437,7 +437,7 @@ defmodule Hexpm.Repository.Packages do
     |> String.downcase()
     |> String.replace(~r/[^\w\s]/u, " ")
     |> String.split(~r/\s+/, trim: true)
-    |> Enum.map(&String.slice(&1, 0, @max_word_length))
+    |> Enum.map(&Hexpm.Utils.truncate_bytes(&1, @max_word_length))
     |> Enum.map(&(&1 <> ":*"))
     |> Enum.join(" & ")
   end

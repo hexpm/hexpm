@@ -58,6 +58,6 @@ defmodule Hexpm.SecretScan.Finding do
     path
     |> String.replace_invalid()
     |> String.replace(~r/[[:cntrl:]]/u, "�")
-    |> String.slice(0, @max_path)
+    |> Hexpm.Utils.truncate_bytes(@max_path)
   end
 end

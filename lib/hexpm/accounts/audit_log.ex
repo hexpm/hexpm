@@ -31,7 +31,7 @@ defmodule Hexpm.Accounts.AuditLog do
       key_data: serialize_key(key),
       key: key,
       oauth_token: oauth_token,
-      user_agent: truncate_codepoints(audit_data.user_agent, 255),
+      user_agent: Hexpm.Utils.truncate_bytes(audit_data.user_agent, 255),
       remote_ip: audit_data.remote_ip,
       request_id: Map.get(audit_data, :request_id),
       action: action,
@@ -51,7 +51,7 @@ defmodule Hexpm.Accounts.AuditLog do
       key_data: serialize_key(key),
       key: key,
       oauth_token: oauth_token,
-      user_agent: truncate_codepoints(audit_data.user_agent, 255),
+      user_agent: Hexpm.Utils.truncate_bytes(audit_data.user_agent, 255),
       remote_ip: audit_data.remote_ip,
       request_id: Map.get(audit_data, :request_id),
       action: "organization.create",
@@ -73,7 +73,7 @@ defmodule Hexpm.Accounts.AuditLog do
       key_data: serialize_key(key),
       key: key,
       oauth_token: oauth_token,
-      user_agent: truncate_codepoints(audit_data.user_agent, 255),
+      user_agent: Hexpm.Utils.truncate_bytes(audit_data.user_agent, 255),
       remote_ip: audit_data.remote_ip,
       request_id: Map.get(audit_data, :request_id),
       action: action,
@@ -93,7 +93,7 @@ defmodule Hexpm.Accounts.AuditLog do
       key_data: serialize_key(key),
       key: key,
       oauth_token: oauth_token,
-      user_agent: truncate_codepoints(audit_data.user_agent, 255),
+      user_agent: Hexpm.Utils.truncate_bytes(audit_data.user_agent, 255),
       remote_ip: audit_data.remote_ip,
       request_id: Map.get(audit_data, :request_id),
       action: action,
@@ -418,6 +418,7 @@ defmodule Hexpm.Accounts.AuditLog do
   defp serialize(%Release{} = release) do
     release
     |> do_serialize()
+    |> Map.put(:outer_checksum, encode_checksum(release.outer_checksum))
     |> Map.put(:meta, serialize(release.meta))
     |> Map.put(:retirement, serialize(release.retirement))
   end
@@ -452,6 +453,9 @@ defmodule Hexpm.Accounts.AuditLog do
 
   defp do_serialize(schema), do: Map.take(schema, fields(schema))
 
+  defp encode_checksum(nil), do: nil
+  defp encode_checksum(checksum), do: Base.encode16(checksum, case: :lower)
+
   defp serialize_repository_policy(repository_policy) do
     %{
       repository: repository_policy.repository,
@@ -470,9 +474,9 @@ defmodule Hexpm.Accounts.AuditLog do
   defp fields(%KeyPermission{}), do: [:resource, :domain]
   defp fields(%Package{}), do: [:id, :name, :organization_id]
   defp fields(%PackageMetadata{}), do: [:description, :licenses, :links, :maintainers, :extra]
-  defp fields(%Release{}), do: [:id, :version, :checksum, :has_docs, :package_id]
+  defp fields(%Release{}), do: [:id, :version, :has_docs, :package_id]
   defp fields(%ReleaseMetadata{}), do: [:app, :build_tools, :elixir]
-  defp fields(%ReleaseRetirement{}), do: [:status, :message]
+  defp fields(%ReleaseRetirement{}), do: [:reason, :message]
   defp fields(%Organization{}), do: [:id, :name, :public, :active, :billing_active]
   defp fields(%User{}), do: [:id, :username]
 
@@ -543,12 +547,5 @@ defmodule Hexpm.Accounts.AuditLog do
 
   defp extract_auth_credential(_) do
     {nil, nil}
-  end
-
-  defp truncate_codepoints(string, length) do
-    string
-    |> String.to_charlist()
-    |> Enum.take(length)
-    |> List.to_string()
   end
 end

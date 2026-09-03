@@ -151,6 +151,22 @@ defmodule Hexpm.TestHelpers do
     |> Map.update("requirements", [], &requirements_meta/1)
   end
 
+  @doc """
+  A string of exactly `bytes` bytes made of one or two base letters followed by
+  combining acute accents, so it is one or two graphemes however long it is.
+  """
+  def combining_string(bytes) when bytes >= 1 do
+    base = if rem(bytes, 2) == 1, do: "a", else: "ab"
+    base <> String.duplicate("́", div(bytes - byte_size(base), 2))
+  end
+
+  @doc """
+  A string of exactly `count` codepoints that is a single grapheme.
+  """
+  def codepoints_string(count) when count >= 1 do
+    "a" <> String.duplicate("́", count - 1)
+  end
+
   def pkg_meta(meta) do
     params = params(meta)
     meta = Map.put_new(params, "licenses", ["Apache-2.0"])
