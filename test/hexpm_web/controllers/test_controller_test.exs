@@ -53,6 +53,28 @@ defmodule HexpmWeb.TestControllerTest do
     assert response(conn, 404) == ""
   end
 
+  test "POST /api/user creates a user and returns 201" do
+    username = "user_" <> Fake.sequence(:package)
+
+    conn =
+      json_post(build_conn(), "/api/user", %{
+        "username" => username,
+        "email" => "#{username}@example.com",
+        "password" => "hunter42"
+      })
+
+    assert conn.status == 201
+    user = Hexpm.Accounts.Users.get(username, [:emails])
+    assert [%{email: email}] = user.emails
+    assert email == "#{username}@example.com"
+  end
+
+  test "POST /api/user returns 400 on invalid params" do
+    conn = json_post(build_conn(), "/api/user", %{"username" => "x", "password" => "hunter42"})
+
+    assert json_response(conn, 400)["error"] == "Failed to create user"
+  end
+
   test "POST /api/repo creates organization and returns 204" do
     user = insert(:user)
     org_name = "org_" <> Fake.sequence(:package)
