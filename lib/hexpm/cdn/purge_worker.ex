@@ -69,14 +69,15 @@ defmodule Hexpm.CDN.PurgeWorker do
     :telemetry.span([:hexpm, :cdn, :purge], metadata, fn ->
       case purge_and_verify(job, service, keys, targets) do
         {:ok, rounds} ->
-          Logger.info("CDN_PURGE #{service} #{Enum.join(keys, " ")} verified",
+          Logger.info(%{
+            message: "CDN_PURGE #{service} #{Enum.join(keys, " ")} verified",
             service: service,
             keys: keys,
             verified: length(targets),
             rounds: rounds,
             absorbed: metadata.absorbed,
             job_id: job.id
-          )
+          })
 
           {:ok, Map.merge(metadata, %{result: :ok, rounds: rounds})}
 
@@ -107,24 +108,26 @@ defmodule Hexpm.CDN.PurgeWorker do
       end)
 
     for {target, reason} <- superseded do
-      Logger.info("CDN_PURGE_SUPERSEDED #{target.url}",
+      Logger.info(%{
+        message: "CDN_PURGE_SUPERSEDED #{target.url}",
         url: target.url,
         reason: inspect(reason),
         job_id: job.id
-      )
+      })
     end
 
     targets = targets -- Enum.map(superseded, &elem(&1, 0))
 
     for {target, reason} <- stale do
-      Logger.warning("CDN_PURGE_STALE #{target.url}",
+      Logger.warning(%{
+        message: "CDN_PURGE_STALE #{target.url}",
         round: round,
         url: target.url,
         expected: PurgeVerificationError.expected(target),
         reason: inspect(reason),
         keys: keys,
         job_id: job.id
-      )
+      })
     end
 
     cond do

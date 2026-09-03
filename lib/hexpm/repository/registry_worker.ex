@@ -326,7 +326,7 @@ defmodule Hexpm.Repository.RegistryWorker do
       ]
       |> Enum.reject(fn {_key, value} -> is_nil(value) end)
 
-    Logger.info("REGISTRY_BUILDER #{args["type"]} #{what}", fields)
+    Logger.info(Enum.into(fields, %{message: "REGISTRY_BUILDER #{args["type"]} #{what}"}))
   end
 
   defp result_tag(:ok), do: :ok

@@ -40,7 +40,10 @@ defmodule Hexpm.Emails.Telemetry do
       |> Keyword.put(:duration_us, System.convert_time_unit(duration, :native, :microsecond))
       |> Enum.reject(fn {_key, value} -> is_nil(value) end)
 
-    Logger.log(level, "[email] #{fields[:type]} #{fields[:outcome]}", fields)
+    Logger.log(
+      level,
+      Enum.into(fields, %{message: "[email] #{fields[:type]} #{fields[:outcome]}"})
+    )
   end
 
   defp message_id(%{id: id}) when is_binary(id), do: id

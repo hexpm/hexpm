@@ -386,15 +386,16 @@ defmodule Hexpm.SecretScan do
     if findings != [] do
       rules = findings |> Enum.map(& &1.rule) |> Enum.frequencies()
 
-      Logger.info(
-        "SECRET SCAN #{release.package.name} #{release.version} " <>
-          "#{length(findings)} findings#{if truncated?, do: " (truncated)"}",
+      Logger.info(%{
+        message:
+          "SECRET SCAN #{release.package.name} #{release.version} " <>
+            "#{length(findings)} findings#{if truncated?, do: " (truncated)"}",
         package: release.package.name,
         version: to_string(release.version),
         findings: length(findings),
         truncated: truncated?,
         rules: inspect(rules)
-      )
+      })
     end
   end
 end
