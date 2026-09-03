@@ -12,6 +12,7 @@ defmodule Hexpm.PromEx do
       {Plugins.Ecto, repos: [Hexpm.RepoBase]},
       Hexpm.PromEx.Plugins.Hexpm,
       Hexpm.PromEx.Plugins.EctoLatency,
+      Hexpm.PromEx.Plugins.DbConnection,
       Hexpm.PromEx.Plugins.OutboundHttp,
       Hexpm.PromEx.Plugins.Email
     ] ++ oban_plugins()
