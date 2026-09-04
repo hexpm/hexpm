@@ -78,7 +78,30 @@ defmodule Hexpm.Accounts.OrganizationsTest do
       assert {:error, changeset} =
                Organizations.create(user, %{"name" => "graveyard"}, audit: audit_data(user))
 
-      assert %{username: "has already been taken"} = errors_on(changeset)
+      assert %{name: "has already been taken"} = errors_on(changeset)
+    end
+  end
+
+  describe "delete/2" do
+    test "refuses to delete the public organization" do
+      assert {:error, :public_organization} =
+               Organizations.delete(Repo.get!(Hexpm.Accounts.Organization, 1),
+                 audit: audit_data(insert(:user))
+               )
+
+      assert Repo.get(Hexpm.Accounts.Organization, 1)
+    end
+
+    test "publishes org_names.csv without the deleted organization" do
+      user = insert(:user)
+      organization = insert(:organization)
+      kept = insert(:organization)
+
+      assert :ok = Organizations.delete(organization, audit: audit_data(user))
+
+      csv = Hexpm.Store.get(:docs_bucket, "org_names.csv", [])
+      refute csv =~ organization.name
+      assert csv =~ kept.name
     end
   end
 

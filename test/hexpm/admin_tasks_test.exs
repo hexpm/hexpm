@@ -994,6 +994,140 @@ defmodule Hexpm.AdminTasksTest do
     end
   end
 
+  describe "delete_organization/2" do
+    test "deletes the organization with its repository, packages and releases" do
+      repository = insert(:repository)
+      organization = Repo.preload(repository.organization, :user)
+      package = insert(:package, repository_id: repository.id)
+      release = insert(:release, package: package)
+      member = insert(:user)
+      organization_user = insert(:organization_user, organization: organization, user: member)
+      key = insert(:key, organization: organization)
+
+      report =
+        Repo.insert!(%Hexpm.PackageReports.Report{
+          package_id: package.id,
+          reason: :malware,
+          summary: "summary",
+          description: "description",
+          status: :pending
+        })
+
+      assert :ok = AdminTasks.delete_organization(organization.name)
+
+      refute Repo.get(Organization, organization.id)
+      refute Repo.get(Hexpm.Repository.Repository, repository.id)
+      refute Repo.get(Package, package.id)
+      refute Repo.get(Release, release.id)
+      refute Repo.get(Hexpm.PackageReports.Report, report.id)
+      refute Repo.get(OrganizationUser, organization_user.id)
+      refute Repo.get(Hexpm.Accounts.Key, key.id)
+      refute Repo.get(User, organization.user.id)
+      assert Repo.get(User, member.id)
+    end
+
+    test "deletes the organization's audit logs and writes one for the deletion" do
+      organization = insert(:organization)
+
+      audit_log =
+        insert(:audit_log, organization: organization, action: "organization.member.add")
+
+      assert :ok = AdminTasks.delete_organization(organization.name)
+
+      refute Repo.get(Hexpm.Accounts.AuditLog, audit_log.id)
+
+      deletion = Repo.get_by!(Hexpm.Accounts.AuditLog, action: "organization.delete")
+      assert deletion.user_agent == "ADMIN"
+      assert is_nil(deletion.organization_id)
+      assert deletion.params["name"] == organization.name
+    end
+
+    test "reserves the name so another organization cannot take it" do
+      organization = insert(:organization)
+      user = insert(:user)
+
+      assert :ok = AdminTasks.delete_organization(organization.name)
+
+      assert Repo.exists?(Hexpm.Accounts.ReservedUsername.by_name(organization.name))
+
+      assert {:error, changeset} =
+               Hexpm.Accounts.Organizations.create(user, %{"name" => organization.name},
+                 audit: audit_data(user)
+               )
+
+      assert %{name: "has already been taken"} = errors_on(changeset)
+    end
+
+    test "returns an error for a nonexistent organization" do
+      assert {:error, :organization_not_found} = AdminTasks.delete_organization("nonexistent")
+    end
+
+    test "leaves stored objects alone without delete_data" do
+      repository = insert(:repository)
+      name = repository.organization.name
+      put_organization_objects(name)
+
+      assert :ok = AdminTasks.delete_organization(name)
+
+      assert Hexpm.Store.get(:repo_bucket, "repos/#{name}/tarballs/pkg-1.0.0.tar", [])
+      assert Hexpm.Store.get(:preview_bucket, "repos/#{name}/files/pkg/1.0.0/README.md", [])
+      assert Hexpm.Store.get(:diff_bucket, "repos/#{name}/diffs/pkg-1.0.0-2.0.0.json", [])
+      assert Hexpm.Store.get(:docs_private_bucket, "#{name}/pkg/index.html", [])
+      refute_enqueued(worker: Hexpm.CDN.PurgeWorker)
+    end
+
+    test "delete_data removes the organization's objects from every bucket" do
+      repository = insert(:repository)
+      name = repository.organization.name
+      other = insert(:repository).organization.name
+      put_organization_objects(name)
+      put_organization_objects(other)
+      Hexpm.Store.put(:repo_bucket, "tarballs/pkg-1.0.0.tar", "PUBLIC", [])
+
+      assert :ok = AdminTasks.delete_organization(name, delete_data: true)
+
+      assert Hexpm.Store.list(:repo_bucket, "repos/#{name}/") |> Enum.to_list() == []
+      assert Hexpm.Store.list(:preview_bucket, "repos/#{name}/") |> Enum.to_list() == []
+      assert Hexpm.Store.list(:diff_bucket, "repos/#{name}/") |> Enum.to_list() == []
+      assert Hexpm.Store.list(:docs_private_bucket, "#{name}/") |> Enum.to_list() == []
+
+      assert Hexpm.Store.get(:repo_bucket, "tarballs/pkg-1.0.0.tar", []) == "PUBLIC"
+      assert Hexpm.Store.get(:repo_bucket, "repos/#{other}/tarballs/pkg-1.0.0.tar", [])
+      assert Hexpm.Store.get(:docs_private_bucket, "#{other}/pkg/index.html", [])
+    end
+
+    test "delete_data purges the CDN keys the deleted objects were served under" do
+      repository = insert(:repository)
+      organization = repository.organization
+      name = organization.name
+      package = insert(:package, repository_id: repository.id)
+      insert(:release, package: package, version: "1.0.0")
+
+      Repo.insert!(%Hexpm.Repository.Policy{
+        organization_id: organization.id,
+        name: "strict",
+        visibility: "private",
+        repositories: []
+      })
+
+      assert :ok = AdminTasks.delete_organization(name, delete_data: true)
+
+      keys =
+        all_enqueued(worker: Hexpm.CDN.PurgeWorker)
+        |> Enum.flat_map(& &1.args["keys"])
+
+      assert "registry/#{name}" in keys
+      assert "policy/#{name}/strict" in keys
+      assert "tarballs/#{name}-#{package.name}-1.0.0" in keys
+      assert "docs/#{name}-#{package.name}-1.0.0" in keys
+      assert "preview/package/#{name}-#{package.name}" in keys
+      assert "preview/package/#{name}-#{package.name}/version/1.0.0" in keys
+      assert "docspage/#{name}-#{package.name}" in keys
+      assert "docspage/#{name}-#{package.name}/docs_config.js" in keys
+      assert "docspage/#{name}-#{package.name}/1.0.0" in keys
+    end
+  end
+
   describe "add_install/2" do
     test "adds new install record" do
       initial_count = Repo.aggregate(Hexpm.Repository.Install, :count)
@@ -1325,5 +1459,12 @@ defmodule Hexpm.AdminTasksTest do
     for entry <- Repo.all(OutboxEntry) do
       assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: entry.id})
     end
+  end
+
+  defp put_organization_objects(name) do
+    Hexpm.Store.put(:repo_bucket, "repos/#{name}/tarballs/pkg-1.0.0.tar", "TARBALL", [])
+    Hexpm.Store.put(:preview_bucket, "repos/#{name}/files/pkg/1.0.0/README.md", "README", [])
+    Hexpm.Store.put(:diff_bucket, "repos/#{name}/diffs/pkg-1.0.0-2.0.0.json", "DIFF", [])
+    Hexpm.Store.put(:docs_private_bucket, "#{name}/pkg/index.html", "DOCS", [])
   end
 end

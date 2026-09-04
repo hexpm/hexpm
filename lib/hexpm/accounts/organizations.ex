@@ -111,6 +111,78 @@ defmodule Hexpm.Accounts.Organizations do
     end
   end
 
+  @doc """
+  Deletes the organization and everything scoped to it: its repository with
+  every package and release in it, its members, keys, audit logs and the user
+  row carrying its name. The name is reserved afterwards so nobody can take it
+  again, as an organization or as a username.
+
+  Objects in the repository, preview and docs buckets are left where they are,
+  `Hexpm.AdminTasks.delete_organization/2` removes those. A billing
+  subscription is not cancelled either.
+  """
+  def delete(%Organization{id: 1}, audit: _audit_data) do
+    {:error, :public_organization}
+  end
+
+  def delete(organization, audit: audit_data) do
+    organization = Repo.preload(organization, [:repository, :user])
+
+    multi =
+      Multi.new()
+      |> Multi.delete_all(
+        :audit_logs,
+        from(a in AuditLog, where: a.organization_id == ^organization.id)
+      )
+      |> Multi.delete_all(:keys, from(k in Key, where: k.organization_id == ^organization.id))
+      |> Multi.delete_all(:organization_users, assoc(organization, :organization_users))
+      |> delete_repository(organization.repository)
+      |> delete_organization_user(organization.user)
+      |> Multi.insert(:reserved_name, %ReservedUsername{name: organization.name},
+        on_conflict: :nothing
+      )
+      |> audit(audit_data, "organization.delete", organization)
+      |> Multi.delete(:organization, organization)
+
+    case Repo.transaction(multi) do
+      {:ok, _result} ->
+        publish_org_names()
+        :ok
+
+      {:error, _operation, changeset, _changes} ->
+        {:error, changeset}
+    end
+  end
+
+  defp delete_repository(multi, nil), do: multi
+
+  # Releases and package reports go before packages because neither
+  # releases_package_id_fkey nor package_reports_package_id_fkey cascades, and
+  # reserved_packages before the repository for the same reason.
+  defp delete_repository(multi, repository) do
+    packages = from(p in Package, where: p.repository_id == ^repository.id)
+    package_ids = from(p in packages, select: p.id)
+
+    multi
+    |> Multi.delete_all(
+      :package_reports,
+      from(r in Hexpm.PackageReports.Report, where: r.package_id in subquery(package_ids))
+    )
+    |> Multi.delete_all(
+      :releases,
+      from(r in Release, where: r.package_id in subquery(package_ids))
+    )
+    |> Multi.delete_all(:packages, packages)
+    |> Multi.delete_all(
+      :reserved_packages,
+      from(r in "reserved_packages", where: r.repository_id == ^repository.id)
+    )
+    |> Multi.delete(:repository, repository)
+  end
+
+  defp delete_organization_user(multi, nil), do: multi
+  defp delete_organization_user(multi, user), do: Multi.delete(multi, :user, user)
+
   def merge_with_user(
         %Organization{name: name} = organization,
         %User{username: name, organization_id: nil} = user

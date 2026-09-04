@@ -59,6 +59,29 @@ defmodule Hexpm.Accounts.AuditLog do
     }
   end
 
+  # The organization row is gone by the time this is committed, so the entry
+  # keeps its details in params and references no organization.
+  def build(%{user: user} = audit_data, "organization.delete", organization)
+      when is_nil(user) or is_struct(user, User) do
+    params = extract_params("organization.delete", organization)
+
+    {key, oauth_token} = extract_auth_credential(audit_data.auth_credential)
+
+    %AuditLog{
+      user_id: user && user.id,
+      organization_id: nil,
+      user_data: user && serialize_user_with_emails(user),
+      key_data: serialize_key(key),
+      key: key,
+      oauth_token: oauth_token,
+      user_agent: Hexpm.Utils.truncate_bytes(audit_data.user_agent, 255),
+      remote_ip: audit_data.remote_ip,
+      request_id: Map.get(audit_data, :request_id),
+      action: "organization.delete",
+      params: params
+    }
+  end
+
   def build(%{user: %User{id: user_id}} = audit_data, action, params) do
     params = extract_params(action, params)
 
@@ -247,6 +270,8 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("password.add", _), do: %{}
   defp extract_params("password.remove", _), do: %{}
   defp extract_params("organization.create", organization), do: serialize(organization)
+
+  defp extract_params("organization.delete", organization), do: serialize(organization)
 
   defp extract_params("organization.member.add", {organization, user}),
     do: %{organization: serialize(organization), user: serialize(user)}

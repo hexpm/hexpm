@@ -42,6 +42,19 @@ defmodule Hexpm.Accounts.Organization do
     |> validate_length(:name, count: :bytes, max: 255)
     |> validate_format(:name, @name_regex)
     |> validate_exclusion(:name, @reserved_names)
+    |> validate_name_not_reserved()
+  end
+
+  defp validate_name_not_reserved(changeset) do
+    prepare_changes(changeset, fn changeset ->
+      name = get_field(changeset, :name)
+
+      if name && changeset.repo.exists?(ReservedUsername.by_name(name)) do
+        add_error(changeset, :name, "has already been taken")
+      else
+        changeset
+      end
+    end)
   end
 
   def build_from_user(user) do

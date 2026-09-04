@@ -36,6 +36,10 @@ defmodule Hexpm.AdminTasks do
       iex> AdminTasks.remove_organization_member("acme", "jose")
       :ok
 
+      # Delete an organization and everything stored under its name
+      iex> AdminTasks.delete_organization("acme", delete_data: true)
+      :ok
+
       # Remove a package
       iex> AdminTasks.remove_package("hexpm", "malicious_pkg")
       :ok
@@ -73,6 +77,16 @@ defmodule Hexpm.AdminTasks do
   # Announcements queue behind transactional mail: package reports, secret-scan
   # alerts and SSO notices go out first.
   @announcement_priority 3
+
+  @organization_prefixes [
+    repo_bucket: "repos/",
+    preview_bucket: "repos/",
+    diff_bucket: "repos/",
+    docs_private_bucket: ""
+  ]
+  @delete_batch 1000
+  # Fastly takes at most 256 surrogate keys in one purge request.
+  @purge_keys_per_request 256
 
   require Logger
 
@@ -750,6 +764,131 @@ defmodule Hexpm.AdminTasks do
 
       :ok
     end
+  end
+
+  @doc """
+  Deletes an organization.
+
+  Removes the organization together with its repository and every package and
+  release in it, its members, keys and audit logs, and reserves the name so it
+  cannot be taken again, as an organization or as a username.
+
+  A billing subscription is not cancelled, cancel it before deleting.
+
+  ## Arguments
+
+  - `name` - The name of the organization
+  - `opts` - Options:
+    - `:delete_data` - When `true`, also deletes the organization's stored
+      objects, `repos/<name>/` in the repository, preview and diff buckets and
+      `<name>/` in the private docs bucket, and purges the CDN keys they were
+      served under (default: `false`)
+
+  ## Examples
+
+      iex> AdminTasks.delete_organization("acme")
+      :ok
+
+      iex> AdminTasks.delete_organization("acme", delete_data: true)
+      :ok
+  """
+  @spec delete_organization(String.t(), keyword()) :: :ok | {:error, term()}
+  def delete_organization(name, opts \\ []) do
+    delete_data? = Keyword.get(opts, :delete_data, false)
+
+    with {:ok, organization} <- find_organization(name) do
+      # Read while the rows are still there, the CDN keys are built from them.
+      contents = if delete_data?, do: organization_contents(organization)
+
+      case Organizations.delete(organization, audit: AuditLogs.admin()) do
+        :ok ->
+          if delete_data?, do: delete_organization_data(organization.name, contents)
+          :ok
+
+        {:error, reason} ->
+          {:error, reason}
+      end
+    end
+  end
+
+  defp organization_contents(organization) do
+    organization = Repo.preload(organization, [:repository, :policies])
+
+    packages =
+      case organization.repository do
+        nil ->
+          []
+
+        repository ->
+          from(p in Package,
+            where: p.repository_id == ^repository.id,
+            left_join: r in assoc(p, :releases),
+            select: {p.name, r.version}
+          )
+          |> Repo.all()
+      end
+
+    %{packages: packages, policies: Enum.map(organization.policies, & &1.name)}
+  end
+
+  defp delete_organization_data(name, contents) do
+    Repo.write_mode!()
+
+    Enum.each(@organization_prefixes, fn {bucket, prefix} ->
+      delete_prefix(bucket, "#{prefix}#{name}/")
+    end)
+
+    purge_keys(:fastly_hexrepo, repository_cdn_keys(name, contents))
+    purge_keys(:fastly_hexdocs_private, docs_cdn_keys(name, contents))
+    :ok
+  end
+
+  # The store lists lazily and a bucket holds one object per file of every
+  # documented version, so the deletes go out in batches.
+  defp delete_prefix(bucket, prefix) do
+    Hexpm.Store.list(bucket, prefix)
+    |> Stream.chunk_every(@delete_batch)
+    |> Enum.each(&Hexpm.Store.delete_many(bucket, &1))
+  end
+
+  defp purge_keys(service, keys) do
+    keys
+    |> Enum.uniq()
+    |> Enum.chunk_every(@purge_keys_per_request)
+    |> Enum.each(&Hexpm.CDN.purge(service, &1))
+  end
+
+  # Every registry object of the repository carries `registry/<name>`, so the one
+  # key covers names, versions and every packages/<package> object.
+  defp repository_cdn_keys(name, %{packages: packages, policies: policies}) do
+    ["registry/#{name}"] ++
+      Enum.map(policies, &"policy/#{name}/#{&1}") ++
+      Enum.map(package_names(packages), &"preview/package/#{name}-#{&1}") ++
+      Enum.flat_map(packages, fn
+        {_package, nil} ->
+          []
+
+        {package, version} ->
+          [
+            "tarballs/#{name}-#{package}-#{version}",
+            "docs/#{name}-#{package}-#{version}",
+            "preview/package/#{name}-#{package}/version/#{version}"
+          ]
+      end)
+  end
+
+  defp docs_cdn_keys(name, %{packages: packages}) do
+    Enum.flat_map(package_names(packages), fn package ->
+      ["docspage/#{name}-#{package}", "docspage/#{name}-#{package}/docs_config.js"]
+    end) ++
+      Enum.flat_map(packages, fn
+        {_package, nil} -> []
+        {package, version} -> ["docspage/#{name}-#{package}/#{version}"]
+      end)
+  end
+
+  defp package_names(packages) do
+    packages |> Enum.map(&elem(&1, 0)) |> Enum.uniq()
   end
 
   @doc """
