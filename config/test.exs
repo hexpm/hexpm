@@ -92,7 +92,14 @@ config :hexpm, :organization_sso,
   oidc_impl: Hexpm.Accounts.SSO.OIDC.Mock
 
 config :hexpm, :varsel_impl, Hexpm.PackageReports.Varsel.Mock
-config :hexpm, :varsel, key_id: "hexpm-test"
+
+config :hexpm, :varsel,
+  key_id: "hexpm-test",
+  jwks: """
+  {"keys": [{"kty": "EC", "crv": "P-256", "kid": "varsel-test",
+             "x": "E34oPnnGyf9799k058t0zBpEo6cMDYDaFmmEEt2ePLw",
+             "y": "ajZ6c2ekFLfW1H-YBYlJKcKXpnfyu88FF2_PoewQCCU"}]}
+  """
 
 # Don't sleep waiting for Sentry to flush in tests.
 config :hexpm, sentry_flush_ms: 0
