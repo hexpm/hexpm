@@ -7,7 +7,7 @@ defmodule Hexpm.Preview.WorkersTest do
   defmodule FailingStore do
     @behaviour Hexpm.Store.Behaviour
 
-    defdelegate list(bucket, prefix), to: Hexpm.Store.Memory
+    defdelegate list_objects(bucket, prefix), to: Hexpm.Store.Memory
 
     def get(_bucket, "file_lists/backfill_storage_failure-1.0.0.json", _opts) do
       raise "simulated storage failure"
@@ -42,9 +42,9 @@ defmodule Hexpm.Preview.WorkersTest do
     defdelegate delete(bucket, key), to: Hexpm.Store.Memory
     defdelegate delete_many(bucket, keys), to: Hexpm.Store.Memory
 
-    def list(bucket, prefix) do
+    def list_objects(bucket, prefix) do
       run_action(:list, prefix)
-      Hexpm.Store.Memory.list(bucket, prefix)
+      Hexpm.Store.Memory.list_objects(bucket, prefix)
     end
 
     def put_file(bucket, key, path, opts) do

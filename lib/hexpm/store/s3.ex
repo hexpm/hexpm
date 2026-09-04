@@ -3,10 +3,15 @@ defmodule Hexpm.Store.S3 do
 
   alias ExAws.S3
 
-  def list(bucket, prefix) do
+  def list_objects(bucket, prefix) do
     S3.list_objects(bucket(bucket), prefix: prefix)
     |> ExAws.stream!(region: region(bucket))
-    |> Stream.map(&Map.get(&1, :key))
+    |> Stream.map(&%{key: &1.key, last_modified: parse_last_modified(&1.last_modified)})
+  end
+
+  defp parse_last_modified(value) do
+    {:ok, datetime, _offset} = DateTime.from_iso8601(value)
+    datetime
   end
 
   def get(bucket, key, opts) do

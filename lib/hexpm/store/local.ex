@@ -4,17 +4,23 @@ defmodule Hexpm.Store.Local do
 
   # only used during development (not safe)
 
-  def list(bucket, prefix) do
+  def list_objects(bucket, prefix) do
     bucket_dir = Path.join([dir(), bucket])
     paths = Path.join(bucket_dir, "**") |> Path.wildcard()
 
     Enum.flat_map(paths, fn path ->
       relative = Path.relative_to(path, bucket_dir)
 
-      if String.starts_with?(relative, prefix) and File.regular?(path) do
-        [relative]
-      else
-        []
+      case File.stat(path, time: :posix) do
+        {:ok, %File.Stat{type: :regular, mtime: mtime}} ->
+          if String.starts_with?(relative, prefix) do
+            [%{key: relative, last_modified: DateTime.from_unix!(mtime)}]
+          else
+            []
+          end
+
+        _ ->
+          []
       end
     end)
   end

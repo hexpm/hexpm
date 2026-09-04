@@ -8,7 +8,7 @@ defmodule Hexpm.Hexdocs.WorkersTest do
     @behaviour Hexpm.Store.Behaviour
     @replacement_key {__MODULE__, :replacement}
 
-    defdelegate list(bucket, prefix), to: Hexpm.Store.Memory
+    defdelegate list_objects(bucket, prefix), to: Hexpm.Store.Memory
     defdelegate get(bucket, key, opts), to: Hexpm.Store.Memory
     defdelegate size(bucket, key), to: Hexpm.Store.Memory
     defdelegate stream(bucket, key), to: Hexpm.Store.Memory
@@ -42,7 +42,7 @@ defmodule Hexpm.Hexdocs.WorkersTest do
     @behaviour Hexpm.Store.Behaviour
     @hook_key {__MODULE__, :after_read}
 
-    defdelegate list(bucket, prefix), to: Hexpm.Store.Memory
+    defdelegate list_objects(bucket, prefix), to: Hexpm.Store.Memory
     defdelegate get(bucket, key, opts), to: Hexpm.Store.Memory
     defdelegate size(bucket, key), to: Hexpm.Store.Memory
     defdelegate stream(bucket, key), to: Hexpm.Store.Memory
@@ -76,7 +76,7 @@ defmodule Hexpm.Hexdocs.WorkersTest do
     @behaviour Hexpm.Store.Behaviour
     @failing_key {__MODULE__, :failing}
 
-    defdelegate list(bucket, prefix), to: Hexpm.Store.Memory
+    defdelegate list_objects(bucket, prefix), to: Hexpm.Store.Memory
     defdelegate get(bucket, key, opts), to: Hexpm.Store.Memory
     defdelegate size(bucket, key), to: Hexpm.Store.Memory
     defdelegate stream(bucket, key), to: Hexpm.Store.Memory

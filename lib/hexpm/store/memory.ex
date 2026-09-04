@@ -19,13 +19,13 @@ defmodule Hexpm.Store.Memory do
     NimbleOwnership.get_and_update(@ownership, self(), @key, fn _ -> {:ok, true} end)
   end
 
-  def list(bucket, prefix) do
+  def list_objects(bucket, prefix) do
     owner = owner_pid()
 
-    :ets.match_object(@table, {{owner, bucket, :_}, :_})
-    |> Enum.flat_map(fn {{_, _, key}, _value} ->
+    :ets.match_object(@table, {{owner, bucket, :_}, :_, :_})
+    |> Enum.flat_map(fn {{_, _, key}, _value, last_modified} ->
       if String.starts_with?(key, prefix) do
-        [key]
+        [%{key: key, last_modified: last_modified}]
       else
         []
       end
@@ -36,7 +36,7 @@ defmodule Hexpm.Store.Memory do
     owner = owner_pid()
 
     case :ets.lookup(@table, {owner, bucket, key}) do
-      [{_, value}] -> value
+      [{_, value, _last_modified}] -> value
       [] -> nil
     end
   end
@@ -71,8 +71,18 @@ defmodule Hexpm.Store.Memory do
 
   def put(bucket, key, body, _opts) do
     owner = owner_pid()
-    :ets.insert(@table, {{owner, bucket, key}, body})
+    written_at = Process.get({__MODULE__, :written_at}) || DateTime.utc_now()
+    :ets.insert(@table, {{owner, bucket, key}, body, written_at})
     {:ok, %{etag: ~s("#{Base.encode16(:crypto.hash(:md5, body), case: :lower)}")}}
+  end
+
+  @doc """
+  Dates every object this process writes from here on at `datetime`, so a test
+  can put an object that the store reports as older than it is.
+  """
+  def written_at(datetime) do
+    Process.put({__MODULE__, :written_at}, datetime)
+    :ok
   end
 
   def put_file(bucket, key, path, opts) do

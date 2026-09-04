@@ -586,7 +586,7 @@ defmodule Hexpm.PurgeExpiredRecordsTest do
     test "writes nothing when there is nothing to purge" do
       PurgeExpiredRecords.run()
 
-      assert Hexpm.Store.list(:audit_bucket, "") == []
+      assert Enum.to_list(Hexpm.Store.list(:audit_bucket, "")) == []
     end
 
     test "round-trips arrays and embedded maps" do

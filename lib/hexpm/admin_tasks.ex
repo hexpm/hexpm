@@ -54,6 +54,12 @@ defmodule Hexpm.AdminTasks do
       iex> AdminTasks.send_email(["bob@example.com"], "Hex.pm - Subject", "Body")
       {:ok, 1}
 
+      # Report, then delete, objects no package or release accounts for
+      iex> AdminTasks.orphaned_objects(buckets: [:diff_bucket])
+      %{diff_bucket: %{scanned: 812, orphaned: 40, unrecognised: 0, ...}}
+      iex> AdminTasks.delete_orphaned_objects(buckets: [:diff_bucket])
+      %{diff_bucket: %{deleted: 40, ...}}
+
   ## Removal emails
 
   `remove_package/3`, `remove_release/4` and `remove_user/2` take a `:reason`
@@ -883,6 +889,46 @@ defmodule Hexpm.AdminTasks do
   defp package_names(packages) do
     packages |> Enum.map(&elem(&1, 0)) |> Enum.uniq()
   end
+
+  @doc """
+  Reports objects in the buckets that no repository, package, release or
+  policy accounts for, without deleting anything.
+
+  Takes `:buckets`, `:prefix`, `:older_than` and `:limit`, see
+  `Hexpm.OrphanedObjects.scan/1`.
+
+  ## Examples
+
+      iex> AdminTasks.orphaned_objects()
+      %{diff_bucket: %{scanned: 812, orphaned: 40, unrecognised: 0, ...}, ...}
+
+      iex> AdminTasks.orphaned_objects(buckets: [:docs_bucket], prefix: "phoenix/")
+      %{docs_bucket: %{scanned: 1204, orphaned: 0, ...}}
+  """
+  @spec orphaned_objects(keyword()) :: %{atom() => map()}
+  defdelegate orphaned_objects(opts \\ []), to: Hexpm.OrphanedObjects, as: :scan
+
+  @doc """
+  Deletes what `orphaned_objects/1` reports, and returns the same report with
+  the number deleted per bucket.
+
+  Objects written in the last `:older_than` days are left alone, and every
+  candidate is checked against a second read of the packages before it goes,
+  so a release published while the bucket was being listed keeps its objects.
+  Run `orphaned_objects/1` first and read `unrecognised_sample`: those keys
+  are never deleted, and a shape appearing there means this needs teaching
+  about it.
+
+  ## Examples
+
+      iex> AdminTasks.delete_orphaned_objects(buckets: [:diff_bucket])
+      %{diff_bucket: %{deleted: 40, orphaned: 40, ...}}
+
+      iex> AdminTasks.delete_orphaned_objects(older_than: 30)
+      %{repo_bucket: %{deleted: 0, ...}, ...}
+  """
+  @spec delete_orphaned_objects(keyword()) :: %{atom() => map()}
+  defdelegate delete_orphaned_objects(opts \\ []), to: Hexpm.OrphanedObjects, as: :delete
 
   @doc """
   Initiates a security password reset for a user by sending a password reset email.

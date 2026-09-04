@@ -18,8 +18,19 @@ defmodule Hexpm.Store do
   end
 
   def list(bucket, prefix) do
+    bucket
+    |> list_objects(prefix)
+    |> Stream.map(& &1.key)
+  end
+
+  @doc """
+  The objects under `prefix` as `%{key: key, last_modified: datetime}`, for a
+  caller that has to know how old an object is. `list/2` is the same listing
+  with only the keys.
+  """
+  def list_objects(bucket, prefix) do
     {impl, bucket} = impl_bucket(bucket)
-    impl.list(bucket, prefix)
+    impl.list_objects(bucket, prefix)
   end
 
   def get(bucket, key, opts \\ []) do
