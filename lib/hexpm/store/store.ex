@@ -1,4 +1,6 @@
 defmodule Hexpm.Store do
+  @delete_batch 1000
+
   defp impl_bucket(atom) when is_atom(atom) do
     impl_bucket(Application.get_env(:hexpm, atom))
   end
@@ -73,5 +75,17 @@ defmodule Hexpm.Store do
   def delete_many(bucket, keys) do
     {impl, bucket} = impl_bucket(bucket)
     impl.delete_many(bucket, keys)
+  end
+
+  @doc """
+  Deletes every object under `prefix`. The listing is lazy and a prefix can
+  cover a page per file of every version of a package, so the keys go out in
+  batches rather than one call.
+  """
+  def delete_prefix(bucket, prefix) do
+    bucket
+    |> list(prefix)
+    |> Stream.chunk_every(@delete_batch)
+    |> Enum.each(&delete_many(bucket, &1))
   end
 end

@@ -43,8 +43,27 @@ defmodule Hexpm.Diff.Cache do
     "#{repo_prefix(request)}diffs/#{request.package}-#{request.from}-#{request.to}-#{hash}-diff-#{index}.json"
   end
 
-  defp repo_prefix(%Request{repository: "hexpm"}), do: ""
-  defp repo_prefix(%Request{repository: repository}), do: "repos/#{repository}/"
+  @doc """
+  Deletes every cached diff of the package.
+
+  An entry is keyed by the pair of versions it compares, so removing one
+  release invalidates every entry naming it, and the entries that pair it with
+  a version removed earlier can no longer be told apart from a valid one by
+  the key. The package's whole cache goes instead. The next request for a pair
+  that is still valid recomputes it.
+  """
+  @spec delete_package(String.t(), String.t()) :: :ok
+  def delete_package(repository, package) when is_binary(repository) and is_binary(package) do
+    prefix = repo_prefix(repository)
+
+    Hexpm.Store.delete_prefix(:diff_bucket, "#{prefix}metadata/#{package}-")
+    Hexpm.Store.delete_prefix(:diff_bucket, "#{prefix}diffs/#{package}-")
+    :ok
+  end
+
+  defp repo_prefix(%Request{repository: repository}), do: repo_prefix(repository)
+  defp repo_prefix("hexpm"), do: ""
+  defp repo_prefix(repository) when is_binary(repository), do: "repos/#{repository}/"
 
   defp fetch_legacy(%Request{canonical_hash: hash, legacy_hash: hash}), do: :miss
 

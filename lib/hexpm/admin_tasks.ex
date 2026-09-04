@@ -84,7 +84,6 @@ defmodule Hexpm.AdminTasks do
     diff_bucket: "repos/",
     docs_private_bucket: ""
   ]
-  @delete_batch 1000
   # Fastly takes at most 256 surrogate keys in one purge request.
   @purge_keys_per_request 256
 
@@ -523,8 +522,9 @@ defmodule Hexpm.AdminTasks do
     {releases, package}
   end
 
-  defp run_package_removal_side_effects({releases, _package}) do
+  defp run_package_removal_side_effects({releases, package}) do
     Enum.each(releases, &Assets.revert_release/1)
+    Hexpm.Diff.Cache.delete_package(package.repository.name, package.name)
   end
 
   @doc """
@@ -559,6 +559,7 @@ defmodule Hexpm.AdminTasks do
       |> Repo.delete!()
 
       Assets.revert_release(release)
+      Hexpm.Diff.Cache.delete_package(package.repository.name, package.name)
       {:ok, _} = RegistryWorker.enqueue_package(package)
       {:ok, _} = RegistryWorker.enqueue_repository(package.repository)
 
@@ -835,20 +836,12 @@ defmodule Hexpm.AdminTasks do
     Repo.write_mode!()
 
     Enum.each(@organization_prefixes, fn {bucket, prefix} ->
-      delete_prefix(bucket, "#{prefix}#{name}/")
+      Hexpm.Store.delete_prefix(bucket, "#{prefix}#{name}/")
     end)
 
     purge_keys(:fastly_hexrepo, repository_cdn_keys(name, contents))
     purge_keys(:fastly_hexdocs_private, docs_cdn_keys(name, contents))
     :ok
-  end
-
-  # The store lists lazily and a bucket holds one object per file of every
-  # documented version, so the deletes go out in batches.
-  defp delete_prefix(bucket, prefix) do
-    Hexpm.Store.list(bucket, prefix)
-    |> Stream.chunk_every(@delete_batch)
-    |> Enum.each(&Hexpm.Store.delete_many(bucket, &1))
   end
 
   defp purge_keys(service, keys) do

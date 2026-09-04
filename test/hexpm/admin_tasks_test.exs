@@ -596,6 +596,31 @@ defmodule Hexpm.AdminTasksTest do
 
       refute_email_sent()
     end
+
+    test "drops the package's cached diffs" do
+      package = insert(:package)
+      insert(:release, package: package)
+      put_diff_objects(package.name)
+
+      assert :ok = AdminTasks.remove_package("hexpm", package.name)
+
+      assert Enum.to_list(Hexpm.Store.list(:diff_bucket, "")) == [
+               "metadata/other-1.0.0-2.0.0-1.json"
+             ]
+    end
+
+    test "drops the cached diffs of a package in an organization" do
+      repository = insert(:repository)
+      package = insert(:package, repository_id: repository.id)
+      insert(:release, package: package)
+      put_diff_objects(package.name, "repos/#{repository.name}/")
+
+      assert :ok = AdminTasks.remove_package(repository.name, package.name)
+
+      assert Enum.to_list(Hexpm.Store.list(:diff_bucket, "repos/")) == [
+               "repos/#{repository.name}/metadata/other-1.0.0-2.0.0-1.json"
+             ]
+    end
   end
 
   describe "remove_package/3 with reason" do
@@ -735,6 +760,21 @@ defmodule Hexpm.AdminTasksTest do
 
       assert log =~ "found no address for owners of #{package.name}"
       refute_email_sent()
+    end
+  end
+
+  describe "remove_release/3 diff cache" do
+    test "drops the package's cached diffs" do
+      package = insert(:package)
+      insert(:release, package: package, version: "1.0.0")
+      insert(:release, package: package, version: "2.0.0")
+      put_diff_objects(package.name)
+
+      assert :ok = AdminTasks.remove_release("hexpm", package.name, "1.0.0")
+
+      assert Enum.to_list(Hexpm.Store.list(:diff_bucket, "")) == [
+               "metadata/other-1.0.0-2.0.0-1.json"
+             ]
     end
   end
 
@@ -1459,6 +1499,12 @@ defmodule Hexpm.AdminTasksTest do
     for entry <- Repo.all(OutboxEntry) do
       assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: entry.id})
     end
+  end
+
+  defp put_diff_objects(package, prefix \\ "") do
+    Hexpm.Store.put(:diff_bucket, "#{prefix}metadata/#{package}-1.0.0-2.0.0-1.json", "{}", [])
+    Hexpm.Store.put(:diff_bucket, "#{prefix}diffs/#{package}-1.0.0-2.0.0-1-diff-0.json", "{}", [])
+    Hexpm.Store.put(:diff_bucket, "#{prefix}metadata/other-1.0.0-2.0.0-1.json", "{}", [])
   end
 
   defp put_organization_objects(name) do
