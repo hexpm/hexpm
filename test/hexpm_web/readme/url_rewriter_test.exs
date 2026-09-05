@@ -5,9 +5,10 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
 
   defp rewrite(html, package, version) do
     html
-    |> Floki.parse_document!()
+    |> LazyHTML.from_fragment()
+    |> LazyHTML.to_tree()
     |> URLRewriter.rewrite("hexpm", package, version)
-    |> Floki.raw_html()
+    |> LazyHTML.Tree.to_html()
   end
 
   describe "rewrite/3" do
@@ -40,9 +41,10 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
 
       result =
         html
-        |> Floki.parse_document!()
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.to_tree()
         |> URLRewriter.rewrite("acme", "my_package", "1.0.0")
-        |> Floki.raw_html()
+        |> LazyHTML.Tree.to_html()
 
       assert result =~
                HexpmWeb.Endpoint.url() <> "/packages/acme/my_package/1.0.0/raw/CHANGELOG.md"
@@ -53,14 +55,13 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
 
       result =
         html
-        |> Floki.parse_document!()
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.to_tree()
         |> URLRewriter.rewrite("acme", "my_package", "1.0.0")
-        |> Floki.raw_html()
+        |> LazyHTML.Tree.to_html()
 
       [proxied] =
-        result
-        |> Floki.parse_fragment!()
-        |> Floki.attribute("img", "src")
+        result |> LazyHTML.from_fragment() |> LazyHTML.query("img") |> LazyHTML.attribute("src")
 
       assert String.starts_with?(proxied, Application.fetch_env!(:hexpm, :img_url) <> "/fetch/")
 

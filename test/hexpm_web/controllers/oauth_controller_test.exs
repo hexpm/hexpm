@@ -128,12 +128,13 @@ defmodule HexpmWeb.OAuthControllerTest do
       assert html =~ "api:write"
       assert html =~ "repositories"
 
-      assert {:ok, document} = Floki.parse_document(html)
+      document = LazyHTML.from_document(html)
 
       assert [{"input", attrs, _}] =
-               Floki.find(document, ~s(input[value="api:write"][name="selected_scopes[]"]))
+               LazyHTML.query(document, ~s(input[value="api:write"][name="selected_scopes[]"]))
+               |> LazyHTML.to_tree()
 
-      assert {"disabled", "disabled"} in attrs
+      assert {"disabled", ""} in attrs
     end
 
     test "CSP form-action includes redirect URI origin", %{client: client} do

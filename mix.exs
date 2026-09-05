@@ -50,7 +50,6 @@ defmodule Hexpm.MixProject do
       {:ex_aws, "~> 2.0"},
       {:ex_machina, "~> 2.0"},
       {:finch, "~> 0.23.0"},
-      {:floki, "~> 0.37"},
       {:geolix, "~> 2.0"},
       {:geolix_adapter_mmdb2, "~> 0.6"},
       {:goth, "~> 1.4"},
@@ -101,7 +100,7 @@ defmodule Hexpm.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:ueberauth, "~> 0.10"},
       {:ueberauth_github, "~> 0.8"},
-      {:lazy_html, ">= 0.1.0", only: :test},
+      {:lazy_html, "~> 0.1.12"},
       # ExAws signs empty-body GET requests that Req 0.7 rewrites as POST.
       # https://github.com/ex-aws/ex_aws/issues/1246
       {:req, "0.7.3"}

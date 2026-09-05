@@ -1838,12 +1838,12 @@ defmodule HexpmWeb.SSOEnforcementTest do
   end
 
   defp package_card_paths(conn, user) do
-    {:ok, document} =
-      conn |> get("/users/#{user.username}") |> response(200) |> Floki.parse_document()
+    document =
+      conn |> get("/users/#{user.username}") |> response(200) |> LazyHTML.from_document()
 
     document
-    |> Floki.find("a[href^='/packages/']")
-    |> Floki.attribute("href")
+    |> LazyHTML.query("a[href^='/packages/']")
+    |> LazyHTML.attribute("href")
   end
 
   defp put_ready_cache(request, count) do

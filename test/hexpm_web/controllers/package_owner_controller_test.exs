@@ -63,27 +63,33 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
         |> get("/packages/#{package.name}/owners")
         |> html_response(200)
 
-      {:ok, document} = Floki.parse_document(html)
+      document = LazyHTML.from_document(html)
       edit_modal_id = "edit-role-#{owner.id}"
       remove_modal_id = "remove-owner-#{owner.id}"
 
-      assert [_edit_modal] = Floki.find(document, "##{edit_modal_id}")
-      assert [_remove_modal] = Floki.find(document, "##{remove_modal_id}")
-      assert [_role_form] = Floki.find(document, "#role-form-#{owner.id}")
-      assert [_role_select] = Floki.find(document, "#role-select-#{owner.id}")
-      assert [_remove_form] = Floki.find(document, "#remove-form-#{owner.id}")
+      assert [_edit_modal] = LazyHTML.query(document, "##{edit_modal_id}") |> Enum.to_list()
+      assert [_remove_modal] = LazyHTML.query(document, "##{remove_modal_id}") |> Enum.to_list()
+      assert [_role_form] = LazyHTML.query(document, "#role-form-#{owner.id}") |> Enum.to_list()
+
+      assert [_role_select] =
+               LazyHTML.query(document, "#role-select-#{owner.id}") |> Enum.to_list()
+
+      assert [_remove_form] =
+               LazyHTML.query(document, "#remove-form-#{owner.id}") |> Enum.to_list()
 
       assert [edit_button] =
-               Floki.find(document, ~s(button[aria-label="Edit role for owner.with.dots"]))
+               LazyHTML.query(document, ~s(button[aria-label="Edit role for owner.with.dots"]))
+               |> Enum.to_list()
 
-      assert Floki.attribute(edit_button, "phx-click")
+      assert LazyHTML.attribute(edit_button, "phx-click")
              |> List.first()
              |> String.contains?("##{edit_modal_id}")
 
       assert [remove_button] =
-               Floki.find(document, ~s(button[aria-label="Remove owner.with.dots"]))
+               LazyHTML.query(document, ~s(button[aria-label="Remove owner.with.dots"]))
+               |> Enum.to_list()
 
-      assert Floki.attribute(remove_button, "phx-click")
+      assert LazyHTML.attribute(remove_button, "phx-click")
              |> List.first()
              |> String.contains?("##{remove_modal_id}")
     end
@@ -472,7 +478,7 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
   end
 
   defp error_message(body) do
-    {:ok, document} = Floki.parse_document(body)
-    document |> Floki.find(".text-h4") |> Floki.text()
+    document = LazyHTML.from_document(body)
+    document |> LazyHTML.query(".text-h4") |> LazyHTML.text()
   end
 end
