@@ -49,6 +49,11 @@ defmodule HexpmWeb.TFARecoveryControllerTest do
 
       assert response(conn, 200) =~
                "The recovery code you provided is incorrect. Please try again."
+
+      user_id = c.user.id
+
+      assert_received {Hexpm.LogLines, :warning,
+                       %{method: "recovery_code", reason: "invalid_code", user_id: ^user_id}}
     end
 
     test "with valid code", c do

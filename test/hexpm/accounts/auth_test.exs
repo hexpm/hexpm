@@ -26,8 +26,8 @@ defmodule Hexpm.Accounts.AuthTest do
     end
 
     test "does not authorize wrong password", %{user: user, password: password} do
-      assert Auth.password_auth("some_invalid_username", password) == :error
-      assert Auth.password_auth(user.username, "some_wrong_password") == :error
+      assert Auth.password_auth("some_invalid_username", password) == {:error, :unknown_user}
+      assert Auth.password_auth(user.username, "some_wrong_password") == {:error, :wrong_password}
     end
   end
 
@@ -69,12 +69,13 @@ defmodule Hexpm.Accounts.AuthTest do
     end
 
     test "does not authorize wrong key" do
-      assert Auth.key_auth("0123456789abcdef", %{}) == :error
+      assert Auth.key_auth("0123456789abcdef", %{}) == {:error, :invalid}
     end
 
     test "does not authorize revoked key", %{user: user} do
       key = insert(:key, user: user, revoke_at: ~N"2017-01-01 00:00:00")
-      assert Auth.key_auth(key.user_secret, %{}) == :revoked
+      assert {:error, :revoked, %Key{id: revoked_id}} = Auth.key_auth(key.user_secret, %{})
+      assert revoked_id == key.id
     end
   end
 
@@ -114,12 +115,12 @@ defmodule Hexpm.Accounts.AuthTest do
 
     test "fails with invalid JWT token" do
       auth_result = Auth.oauth_token_auth("invalid.jwt.token", %{})
-      assert auth_result == :error
+      assert auth_result == {:error, :invalid}
     end
 
     test "fails with malformed JWT token" do
       auth_result = Auth.oauth_token_auth("not-a-jwt", %{})
-      assert auth_result == :error
+      assert auth_result == {:error, :invalid}
     end
 
     test "regression test: documents correct JWT sub format for authentication" do

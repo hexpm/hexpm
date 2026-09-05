@@ -28,7 +28,8 @@ defmodule Hexpm.OAuth.AuthorizationCodes do
       user_id: user.id,
       client_id: client_id,
       code_challenge: Keyword.fetch!(opts, :code_challenge),
-      code_challenge_method: Keyword.get(opts, :code_challenge_method, "S256")
+      code_challenge_method: Keyword.get(opts, :code_challenge_method, "S256"),
+      user_session_id: Keyword.get(opts, :user_session_id)
     }
 
     AuthorizationCode.build(attrs)
@@ -43,12 +44,27 @@ defmodule Hexpm.OAuth.AuthorizationCodes do
   end
 
   @doc """
-  Marks the authorization code as used.
+  Marks the authorization code as used and returns it.
+
+  Returns `{:error, :already_used}` when the code was already used or has
+  expired. The update is conditional rather than a read followed by a write, so
+  of two requests redeeming the same code the second matches no rows. Run it in
+  the transaction that creates what the code grants: the row lock is held until
+  commit, and a failure there leaves the code redeemable.
   """
-  def mark_as_used(%AuthorizationCode{} = auth_code) do
-    auth_code
-    |> AuthorizationCode.mark_as_used()
-    |> Repo.update()
+  def consume(%AuthorizationCode{} = auth_code) do
+    now = DateTime.utc_now()
+
+    from(code in AuthorizationCode,
+      where: code.id == ^auth_code.id,
+      where: is_nil(code.used_at) and code.expires_at > ^now,
+      select: code
+    )
+    |> Repo.update_all(set: [used_at: DateTime.truncate(now, :second), updated_at: now])
+    |> case do
+      {1, [consumed]} -> {:ok, consumed}
+      {0, _} -> {:error, :already_used}
+    end
   end
 
   @doc """

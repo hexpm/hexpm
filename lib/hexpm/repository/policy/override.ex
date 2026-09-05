@@ -21,6 +21,8 @@ defmodule Hexpm.Repository.Policy.Override do
     |> cast(attrs, [:action, :package, :requirement])
     |> update_change(:requirement, &nilify_blank/1)
     |> validate_required([:action, :package])
+    |> validate_length(:package, count: :bytes, max: 255)
+    |> validate_length(:requirement, count: :bytes, max: 255)
     |> validate_format(:package, @package_format)
     |> validate_requirement()
   end
@@ -35,15 +37,6 @@ defmodule Hexpm.Repository.Policy.Override do
           {:ok, _} -> changeset
           :error -> add_error(changeset, :requirement, "is invalid")
         end
-    end
-  end
-
-  defp nilify_blank(nil), do: nil
-
-  defp nilify_blank(value) do
-    case String.trim(value) do
-      "" -> nil
-      trimmed -> trimmed
     end
   end
 end

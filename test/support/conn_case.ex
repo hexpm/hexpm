@@ -37,6 +37,7 @@ defmodule HexpmWeb.ConnCase do
   end
 
   setup do
+    Process.put(Hexpm.LogLines, true)
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(Hexpm.RepoBase)
     Hexpm.Store.Memory.checkout()
 

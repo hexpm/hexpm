@@ -229,6 +229,45 @@ defmodule Hexpm.OAuth.AuthorizationCodesTest do
     end
   end
 
+  describe "consume/1" do
+    setup do
+      user = insert(:user)
+      client = insert(:oauth_client)
+
+      {:ok, auth_code} =
+        AuthorizationCodes.create_and_insert_for_user(
+          user,
+          client.client_id,
+          "https://example.com/callback",
+          ["api"],
+          code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+        )
+
+      %{auth_code: auth_code}
+    end
+
+    test "marks the code used", %{auth_code: auth_code} do
+      assert {:ok, consumed} = AuthorizationCodes.consume(auth_code)
+      assert consumed.used_at
+      assert Repo.get!(AuthorizationCode, auth_code.id).used_at == consumed.used_at
+    end
+
+    test "refuses a code that was already consumed", %{auth_code: auth_code} do
+      assert {:ok, _consumed} = AuthorizationCodes.consume(auth_code)
+      assert {:error, :already_used} = AuthorizationCodes.consume(auth_code)
+    end
+
+    test "refuses an expired code", %{auth_code: auth_code} do
+      past = DateTime.utc_now() |> DateTime.add(-60, :second) |> DateTime.truncate(:second)
+
+      {:ok, expired} =
+        auth_code |> Ecto.Changeset.change(expires_at: past) |> Repo.update()
+
+      assert {:error, :already_used} = AuthorizationCodes.consume(expired)
+      assert Repo.get!(AuthorizationCode, auth_code.id).used_at == nil
+    end
+  end
+
   describe "valid?/1" do
     test "returns true for non-expired, unused code" do
       future_time = DateTime.add(DateTime.utc_now(), 600, :second)

@@ -2,11 +2,14 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
   @moduledoc """
   PromEx plugin for hex.pm business metrics: the domain events emitted from
   the contexts (see `Hexpm.Repository.Releases` and `Hexpm.Accounts.Users`),
-  registry builds (`Hexpm.Repository.RegistryWorker`) and CDN purges
-  (`Hexpm.CDN.PurgeWorker`, `Hexpm.CDN.Fastly`).
+  API authentication (`HexpmWeb.AuthHelpers`), registry builds
+  (`Hexpm.Repository.RegistryWorker`) and CDN purges (`Hexpm.CDN.PurgeWorker`,
+  `Hexpm.CDN.Fastly`), and the number of Erlang nodes this node is connected to.
   """
 
   use PromEx.Plugin
+
+  @cluster_event [:hexpm, :cluster, :connected_nodes]
 
   @impl true
   def event_metrics(_opts) do
@@ -41,6 +44,13 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
           description: "Time spent matching a release's files."
         )
       ]),
+      Event.build(:hexpm_api_event_metrics, [
+        counter("hexpm.api.authenticate.total",
+          event_name: [:hexpm, :api, :authenticate],
+          description: "API requests that carried an Authorization header, by scheme and result.",
+          tags: [:scheme, :result]
+        )
+      ]),
       Event.build(:hexpm_registry_builder_event_metrics, [
         counter("hexpm.registry_builder.build.total",
           event_name: [:hexpm, :registry_builder, :build, :stop],
@@ -61,6 +71,14 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
           event_name: [:hexpm, :registry_builder, :build, :exception],
           description: "Registry builds that raised.",
           tags: [:type]
+        )
+      ]),
+      Event.build(:hexpm_sentry_event_metrics, [
+        counter("hexpm.sentry.filtered.total",
+          event_name: [:hexpm, :sentry, :filtered],
+          description:
+            "Sentry events dropped by the before_send filter and counted here instead, by class.",
+          tags: [:class]
         )
       ]),
       Event.build(:hexpm_cdn_event_metrics, [
@@ -112,5 +130,28 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
         )
       ])
     ]
+  end
+
+  @impl true
+  def polling_metrics(opts) do
+    poll_rate = Keyword.get(opts, :poll_rate, 5_000)
+
+    Polling.build(
+      :hexpm_cluster_polling_metrics,
+      poll_rate,
+      {__MODULE__, :execute_cluster_metrics, []},
+      [
+        last_value("hexpm.cluster.connected_nodes",
+          event_name: @cluster_event,
+          measurement: :count,
+          description: "Erlang nodes this node is connected to, the length of Node.list/0."
+        )
+      ]
+    )
+  end
+
+  @doc false
+  def execute_cluster_metrics do
+    :telemetry.execute(@cluster_event, %{count: length(Node.list())}, %{})
   end
 end

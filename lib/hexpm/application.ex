@@ -5,13 +5,14 @@ defmodule Hexpm.Application do
 
   def start(_type, _args) do
     :logger.add_handler(:sentry_handler, Sentry.LoggerHandler, %{})
+    Hexpm.Emails.Telemetry.attach()
 
     read_only_mode()
     setup_tmp_dir()
 
     mode = mode()
     if web_mode?(mode), do: Hexpm.BlockAddress.start()
-    children = children(mode)
+    children = children(mode, Hexpm.Repo.write_mode?())
 
     shutdown_on_eof()
 
@@ -40,10 +41,18 @@ defmodule Hexpm.Application do
   def mode(environment, _value) when environment in [:dev, :test, :hex], do: :all
 
   def children(mode) when mode in [:web, :worker, :all] do
-    common_children() ++
-      if(mode in [:worker, :all], do: worker_before_oban_children(), else: []) ++
-      [oban_child()] ++
-      if(mode in [:worker, :all], do: worker_after_oban_children(), else: []) ++
+    children(mode, Hexpm.Repo.write_mode?())
+  end
+
+  @doc false
+  def children(mode, write_mode?)
+      when mode in [:web, :worker, :all] and is_boolean(write_mode?) do
+    worker_mode? = mode in [:worker, :all] and write_mode?
+
+    common_children(write_mode?) ++
+      if(worker_mode?, do: worker_before_oban_children(), else: []) ++
+      if(write_mode?, do: [oban_child()], else: []) ++
+      if(worker_mode?, do: worker_after_oban_children(), else: []) ++
       if(mode in [:web, :all], do: web_children(), else: [])
   end
 
@@ -51,10 +60,21 @@ defmodule Hexpm.Application do
 
   def sentry_before_send(%Sentry.Event{original_exception: exception} = event) do
     cond do
-      websocket_protocol_error?(event) -> nil
-      Plug.Exception.status(exception) < 500 -> nil
-      Sentry.DefaultEventFilter.exclude_exception?(exception, event.source) -> nil
-      true -> event
+      websocket_protocol_error?(event) ->
+        nil
+
+      Plug.Exception.status(exception) < 500 ->
+        nil
+
+      class = metric_only_class(event) ->
+        :telemetry.execute([:hexpm, :sentry, :filtered], %{}, %{class: class})
+        nil
+
+      Sentry.DefaultEventFilter.exclude_exception?(exception, event.source) ->
+        nil
+
+      true ->
+        event
     end
   end
 
@@ -65,6 +85,43 @@ defmodule Hexpm.Application do
     do: true
 
   defp websocket_protocol_error?(%Sentry.Event{}), do: false
+
+  # Saturation and transport failures carry no per-event signal, so they are
+  # counted in the hexpm.sentry.filtered.total metric instead of reported as
+  # issues. Query-level failures arrive as Postgrex.Error and stay reported,
+  # except the two saturation symptoms.
+  defp metric_only_class(%Sentry.Event{
+         original_exception: %DBConnection.ConnectionError{} = error
+       }) do
+    case error do
+      %{reason: :queue_timeout} -> :pool_timeout
+      %{message: "tcp connect" <> _} -> :db_connect
+      _other -> :db_disconnect
+    end
+  end
+
+  defp metric_only_class(%Sentry.Event{
+         original_exception: %Postgrex.Error{postgres: %{code: code}}
+       })
+       when code in [:too_many_connections, :query_canceled] do
+    code
+  end
+
+  defp metric_only_class(%Sentry.Event{original_exception: %Bandit.TransportError{}}) do
+    :client_transport
+  end
+
+  defp metric_only_class(%Sentry.Event{original_exception: %Plug.Conn.NotSentError{}}) do
+    :response_not_sent
+  end
+
+  defp metric_only_class(%Sentry.Event{
+         extra: %{crash_reason: "{%DBConnection.ConnectionError{" <> _}
+       }) do
+    :db_connection_exit
+  end
+
+  defp metric_only_class(%Sentry.Event{}), do: nil
 
   # Make sure we exit after hex client tests are finished running
   if Mix.env() == :hex do
@@ -123,15 +180,16 @@ defmodule Hexpm.Application do
     end
   end
 
-  defp common_children do
+  defp common_children(write_mode?) do
     [
       Hexpm.PromEx,
+      {DBConnection.TelemetryListener, name: Hexpm.RepoBase.TelemetryListener},
       Hexpm.RepoBase,
       {Finch, name: Hexpm.Finch, pools: finch_pools()},
       Hexpm.TmpDir,
       {Task.Supervisor, name: Hexpm.Tasks},
       goth_spec(),
-      setup(),
+      if(write_mode?, do: setup()),
       HexpmWeb.Telemetry,
       metrics_server_spec(),
       {Task, &HexpmWeb.SyntaxHighlight.warm/0}
@@ -150,8 +208,9 @@ defmodule Hexpm.Application do
   defp oban_child, do: {Oban, Application.fetch_env!(:hexpm, Oban)}
 
   defp finch_pools() do
+    cdn_url = Application.fetch_env!(:hexpm, :cdn_url)
     gcs_url = Application.get_env(:hexpm, :gcs_url, "https://storage.googleapis.com")
-    %{gcs_url => [size: 50, count: 8]}
+    %{cdn_url => [conn_max_idle_time: 5_000], gcs_url => [size: 50, count: 8]}
   end
 
   defp web_children do
@@ -159,6 +218,7 @@ defmodule Hexpm.Application do
       {Cluster.Supervisor, [cluster_topologies(), [name: Hexpm.ClusterSupervisor]]},
       {Phoenix.PubSub, name: Hexpm.PubSub, adapter: Phoenix.PubSub.PG2},
       HexpmWeb.RateLimitPubSub,
+      Hexpm.WriteModePubSub,
       {PlugAttack.Storage.Ets, name: HexpmWeb.Plugs.Attack.Storage, clean_period: 60_000},
       {Hexpm.Cache,
        name: Hexpm.Cache,

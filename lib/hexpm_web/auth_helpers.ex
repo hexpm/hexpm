@@ -3,7 +3,9 @@ defmodule HexpmWeb.AuthHelpers do
   import HexpmWeb.ControllerHelpers, only: [render_error: 3]
 
   alias Hexpm.Accounts.{Auth, Organization, Organizations, User, TFA}
+  alias Hexpm.Accounts.SSO.Enforcement
   alias Hexpm.Permissions
+  alias Hexpm.SecurityLog
   alias Hexpm.Repository.{Package, Packages, PackageOwner, Repository}
   alias Hexpm.OAuth.Token
   alias HexpmWeb.BasicAuth
@@ -129,16 +131,16 @@ defmodule HexpmWeb.AuthHelpers do
       is_nil(otp_code) ->
         {:error, :totp_required}
 
-      not TFA.token_valid?(user.tfa.secret, otp_code) ->
-        # Check rate limits
+      TFA.token_valid?(user.tfa.secret, otp_code) ->
+        nil
+
+      true ->
+        SecurityLog.auth_failure(conn, :totp, :invalid_code, user_id: user.id)
+
         case check_totp_rate_limits(conn, user) do
           :ok -> {:error, :invalid_totp}
           {:rate_limited, _} -> {:error, :totp_rate_limited}
         end
-
-      true ->
-        # Valid TOTP
-        nil
     end
   end
 
@@ -222,30 +224,44 @@ defmodule HexpmWeb.AuthHelpers do
 
   def authenticate_at(conn, now) do
     case get_req_header(conn, "authorization") do
-      ["Basic " <> credentials] ->
-        if BasicAuth.disabled?(now) do
-          {:error, :basic_auth_disabled}
-        else
-          basic_auth(credentials)
-        end
-
-      ["Bearer " <> token] ->
-        oauth_token_auth(token, conn)
-
-      [key] ->
-        key_auth(key, conn)
-
-      _ ->
-        {:error, :missing}
+      ["Basic " <> credentials] -> credentials |> basic_auth(conn, now) |> report(:basic)
+      ["Bearer " <> token] -> token |> oauth_token_auth(conn) |> report(:bearer)
+      [key] -> key |> key_auth(conn) |> report(:key)
+      _ -> {:error, :missing}
     end
   end
 
-  defp basic_auth(credentials) do
+  defp report(result, scheme) do
+    :telemetry.execute(
+      [:hexpm, :api, :authenticate],
+      %{count: 1},
+      %{scheme: scheme, result: result_tag(result)}
+    )
+
+    result
+  end
+
+  defp result_tag({:ok, _}), do: :ok
+  defp result_tag({:error, reason}), do: reason
+
+  defp basic_auth(credentials, conn, now) do
+    if BasicAuth.disabled?(now) do
+      {:error, :basic_auth_disabled}
+    else
+      basic_auth(credentials, conn)
+    end
+  end
+
+  defp basic_auth(credentials, conn) do
     with {:ok, decoded} <- Base.decode64(credentials),
          [username_or_email, password] <- String.split(decoded, ":", parts: 2) do
       case Auth.password_auth(username_or_email, password) do
-        {:ok, result} -> {:ok, result}
-        :error -> {:error, :password}
+        {:ok, result} ->
+          {:ok, result}
+
+        {:error, reason} ->
+          SecurityLog.auth_failure(conn, :password, reason, username: username_or_email)
+          {:error, :password}
       end
     else
       _ ->
@@ -255,16 +271,27 @@ defmodule HexpmWeb.AuthHelpers do
 
   defp oauth_token_auth(token, conn) do
     case Auth.oauth_token_auth(token, usage_info(conn)) do
-      {:ok, result} -> {:ok, result}
-      :error -> {:error, :key}
+      {:ok, result} ->
+        {:ok, result}
+
+      {:error, reason} ->
+        SecurityLog.auth_failure(conn, :oauth_token, reason)
+        {:error, :key}
     end
   end
 
   defp key_auth(key, conn) do
     case Auth.key_auth(key, usage_info(conn)) do
-      {:ok, result} -> {:ok, result}
-      :error -> {:error, :key}
-      :revoked -> {:error, :revoked_key}
+      {:ok, result} ->
+        {:ok, result}
+
+      {:error, :invalid} ->
+        SecurityLog.auth_failure(conn, :api_key, :invalid)
+        {:error, :key}
+
+      {:error, :revoked, key} ->
+        SecurityLog.auth_failure(conn, :api_key, :revoked, key: key)
+        {:error, :revoked_key}
     end
   end
 
@@ -289,7 +316,31 @@ defmodule HexpmWeb.AuthHelpers do
   def package_owner(conn, user_or_organization, opts \\ [])
 
   def package_owner(%Plug.Conn{} = conn, user_or_organization, opts) do
-    package_owner(conn.assigns.repository, conn.assigns.package, user_or_organization, opts)
+    repository = conn.assigns.repository
+    package = conn.assigns.package
+
+    with :ok <- package_owner(repository, package, user_or_organization, opts) do
+      package_sso_enforced(conn, package, user_or_organization, opts)
+    end
+  end
+
+  @doc """
+  Refuses a governed member acting on a package, resolved against the
+  organizations that own it rather than the repository it lives in.
+  """
+  def package_sso_enforced(conn, package, user_or_organization, opts \\ []) do
+    level = opts[:owner_level] || "maintainer"
+
+    case HexpmWeb.SSOEnforcement.check_package(conn, package, user_or_organization, level) do
+      :ok ->
+        :ok
+
+      {:error, refusal, organization} ->
+        message =
+          Enforcement.refusal_message(refusal, organization, conn.assigns[:auth_credential])
+
+        {:error, :auth, message}
+    end
   end
 
   def package_owner(
@@ -360,7 +411,9 @@ defmodule HexpmWeb.AuthHelpers do
   def organization_access(conn, user_or_organization, opts \\ [])
 
   def organization_access(%Plug.Conn{} = conn, user_or_organization, opts) do
-    organization_access(conn.assigns.organization, user_or_organization, opts)
+    with :ok <- organization_access(conn.assigns.organization, user_or_organization, opts) do
+      sso_enforced(conn, user_or_organization)
+    end
   end
 
   def organization_access(%Organization{id: 1}, _user_or_organization, opts) do
@@ -386,6 +439,32 @@ defmodule HexpmWeb.AuthHelpers do
 
       true ->
         {:error, :not_found}
+    end
+  end
+
+  @doc """
+  Refuses a member who is governed by their organization's SSO and has no
+  current organization access session, and a personal API key reaching an
+  organization that does not accept one.
+
+  Runs after the access checks above so an organization the caller is not a
+  member of stays indistinguishable from one that does not exist. Someone who is
+  a member already knows it, so the reason is named.
+  """
+  def sso_enforced(%Plug.Conn{} = conn, user_or_organization) do
+    sso_enforced(conn, conn.assigns[:organization], user_or_organization)
+  end
+
+  def sso_enforced(%Plug.Conn{} = conn, organization, user_or_organization) do
+    case HexpmWeb.SSOEnforcement.check(conn, organization, user_or_organization) do
+      :ok ->
+        :ok
+
+      {:error, refusal} ->
+        message =
+          Enforcement.refusal_message(refusal, organization, conn.assigns[:auth_credential])
+
+        {:error, :auth, message}
     end
   end
 

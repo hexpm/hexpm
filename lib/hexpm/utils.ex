@@ -135,6 +135,32 @@ defmodule Hexpm.Utils do
 
   def safe_int(_), do: nil
 
+  @doc """
+  Cuts a string down to at most `max` bytes without leaving a partial UTF-8
+  sequence at the end. Invalid bytes in the input are replaced first.
+  """
+  def truncate_bytes(string, max) when is_binary(string) do
+    string = String.replace_invalid(string)
+
+    if byte_size(string) <= max do
+      string
+    else
+      string
+      |> binary_part(0, max)
+      |> trim_partial_codepoint()
+    end
+  end
+
+  defp trim_partial_codepoint(binary) do
+    if String.valid?(binary) do
+      binary
+    else
+      binary
+      |> binary_part(0, byte_size(binary) - 1)
+      |> trim_partial_codepoint()
+    end
+  end
+
   def parse_search(nil), do: nil
   def parse_search(""), do: nil
   def parse_search(search) when is_binary(search), do: String.trim(search)

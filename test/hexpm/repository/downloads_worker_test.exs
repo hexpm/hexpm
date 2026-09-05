@@ -1,11 +1,11 @@
-defmodule Hexpm.ReleaseTasks.StatsTest do
+defmodule Hexpm.Repository.DownloadsWorkerTest do
   use Hexpm.DataCase
   use Oban.Testing, repo: Hexpm.RepoBase
 
   alias Hexpm.CronMonitor.SentryMock
   alias Hexpm.Repository.Download
   alias Hexpm.Store
-  alias Hexpm.ReleaseTasks.Stats
+  alias Hexpm.Repository.DownloadsWorker
 
   setup :verify_on_exit!
 
@@ -52,11 +52,11 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
   end
 
   test "parse_line/1" do
-    assert Stats.parse_line(
+    assert DownloadsWorker.parse_line(
              ~s{<134>2014-02-06T04:32:22Z cache-ams4138 S3Logging[216674]: 192.168.1.0 "Sat, 06 Feb 2014 04:32:22 GMT" "GET /tarballs/foo-0.0.1.tar" 200 "User-Agent"}
            ) == {"hexpm", "foo", "0.0.1"}
 
-    assert Stats.parse_line(
+    assert DownloadsWorker.parse_line(
              ~s{<134>2025-09-09T21:05:03Z cache-bma-essb1270021 logging_gcs[226941]: 98.128.175.50 [09/Sep/2025:21:05:03 +0000] "GET /tarballs/bar-0.1.0.tar" 200 "curl/8.7.1" 0}
            ) == {"hexpm", "bar", "0.1.0"}
   end
@@ -102,8 +102,8 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
     )
 
     expect_monitor(:ok)
-    assert :ok = perform_job(Stats, %{"date" => "2013-11-01"})
-    assert :ok = Stats.run(~D[2013-11-01])
+    assert :ok = perform_job(DownloadsWorker, %{"date" => "2013-11-01"})
+    assert :ok = DownloadsWorker.run(~D[2013-11-01])
 
     rel1 = Repo.get_by!(assoc(package1, :releases), version: "0.0.1")
     rel2 = Repo.get_by!(assoc(package1, :releases), version: "0.0.2")
@@ -146,7 +146,7 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
     )
 
     expect_monitor(:ok)
-    assert :ok = perform_job(Stats, %{"date" => "2013-11-01"})
+    assert :ok = perform_job(DownloadsWorker, %{"date" => "2013-11-01"})
 
     rel1 = Repo.get_by!(assoc(package1, :releases), version: "0.0.1")
     rel2 = Repo.get_by!(assoc(package1, :releases), version: "0.0.2")
@@ -184,7 +184,7 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
     )
 
     expect_monitor(:ok)
-    assert :ok = perform_job(Stats, %{"date" => "2025-09-09"})
+    assert :ok = perform_job(DownloadsWorker, %{"date" => "2025-09-09"})
 
     downloads = Hexpm.Repo.all(Download)
     assert length(downloads) == 3
@@ -239,7 +239,7 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
     expect_monitor(:ok)
 
     assert :ok =
-             perform_job(Stats, %{},
+             perform_job(DownloadsWorker, %{},
                scheduled_at: DateTime.new!(~D[2013-11-02], ~T[01:00:00], "Etc/UTC")
              )
 
@@ -272,16 +272,25 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
     expect_monitor(:error)
 
     assert_raise RuntimeError, ~r/no downloads found for 2013-11-01/, fn ->
-      perform_job(Stats, %{"date" => "2013-11-01"})
+      perform_job(DownloadsWorker, %{"date" => "2013-11-01"})
     end
 
     assert Repo.get(Download, existing.id)
-    assert :ok = Stats.run(~D[2013-11-01], true)
+    assert :ok = DownloadsWorker.run(~D[2013-11-01], true)
+  end
+
+  test "a day without downloads completes when downloads are not expected" do
+    Application.put_env(:hexpm, :stats_expect_downloads, false)
+    on_exit(fn -> Application.put_env(:hexpm, :stats_expect_downloads, true) end)
+
+    expect_monitor(:ok)
+
+    assert :ok = perform_job(DownloadsWorker, %{"date" => "2013-11-01"})
   end
 
   test "invalid dates cancel without retrying" do
     assert {:cancel, {:invalid_date, "not-a-date"}} =
-             perform_job(Stats, %{"date" => "not-a-date"})
+             perform_job(DownloadsWorker, %{"date" => "not-a-date"})
   end
 
   @tag :capture_log
@@ -296,7 +305,7 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
     expect_monitor(:error)
 
     assert_raise Oban.CrashError, fn ->
-      perform_job(Stats, %{},
+      perform_job(DownloadsWorker, %{},
         scheduled_at: DateTime.new!(~D[2013-11-02], ~T[01:00:00], "Etc/UTC")
       )
     end
@@ -317,7 +326,7 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
 
     error =
       assert_raise RuntimeError, fn ->
-        perform_job(Stats, %{"date" => "2013-11-01"})
+        perform_job(DownloadsWorker, %{"date" => "2013-11-01"})
       end
 
     assert Exception.message(error) =~ "connection dropped"
@@ -339,7 +348,7 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
     )
 
     expect_monitor(:ok)
-    assert :ok = perform_job(Stats, %{"date" => "2025-09-09"})
+    assert :ok = perform_job(DownloadsWorker, %{"date" => "2025-09-09"})
 
     release = Repo.get_by!(assoc(package1, :releases), version: "0.0.1")
 
@@ -372,7 +381,7 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
     )
 
     expect_monitor(:ok)
-    assert :ok = perform_job(Stats, %{"date" => "2025-09-09"})
+    assert :ok = perform_job(DownloadsWorker, %{"date" => "2025-09-09"})
 
     counts =
       for {package, version, expected} <- [
@@ -402,7 +411,7 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
 
     error =
       assert_raise RuntimeError, fn ->
-        perform_job(Stats, %{"date" => "2013-11-01"})
+        perform_job(DownloadsWorker, %{"date" => "2013-11-01"})
       end
 
     assert Exception.message(error) =~ "longer than 1048576 bytes"
@@ -441,7 +450,7 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
     test "runs against a real connection" do
       app_env(:hexpm, :skip_maintenance_vacuum, false)
 
-      task = Hexpm.ConcurrencyCase.unboxed_task(fn -> Stats.vacuum_downloads() end)
+      task = Hexpm.ConcurrencyCase.unboxed_task(fn -> DownloadsWorker.vacuum_downloads() end)
 
       assert Task.await(task, 15_000) == :ok
     end
@@ -449,7 +458,7 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
     test "issues no statement when disabled" do
       app_env(:hexpm, :skip_maintenance_vacuum, true)
 
-      queries = capture_queries(fn -> assert Stats.vacuum_downloads() == :ok end)
+      queries = capture_queries(fn -> assert DownloadsWorker.vacuum_downloads() == :ok end)
 
       refute Enum.any?(queries, &(&1 =~ "VACUUM"))
     end

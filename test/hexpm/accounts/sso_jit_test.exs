@@ -1,5 +1,6 @@
 defmodule Hexpm.Accounts.SSOJITTest do
   use Hexpm.DataCase
+  use Oban.Testing, repo: Hexpm.RepoBase
 
   alias Hexpm.Accounts.{OrganizationDomains, Organizations, Seats, SSO}
   alias Hexpm.Accounts.SSO.{Connection, Failure, Identity, OIDC}
@@ -114,7 +115,7 @@ defmodule Hexpm.Accounts.SSOJITTest do
       newcomer = insert(:user)
       transaction = start_login(context, newcomer)
 
-      assert {:ok, {:link, transaction_id, link_token, _return}} =
+      assert {:ok, {:link, transaction_id, link_token}} =
                complete(transaction, claims("newcomer@example.com"), newcomer)
 
       # Consent has not been given, so nothing has been joined or billed.
@@ -136,7 +137,7 @@ defmodule Hexpm.Accounts.SSOJITTest do
       newcomer = insert(:user)
       transaction = start_login(context, newcomer)
 
-      assert {:ok, {:link, _transaction_id, _token, _return}} =
+      assert {:ok, {:link, _transaction_id, _token}} =
                complete(transaction, claims("newcomer@example.com"), newcomer)
 
       refute Organizations.get_role(context.organization, newcomer)
@@ -176,7 +177,7 @@ defmodule Hexpm.Accounts.SSOJITTest do
       insert(:organization_user, organization: context.organization, user: member, role: "read")
       transaction = start_login(context, member)
 
-      assert {:ok, {:link, _id, _token, _return}} =
+      assert {:ok, {:link, _id, _token}} =
                complete(transaction, claims("member@elsewhere.com"), member)
 
       # Their role is untouched by the connection's join role.
@@ -211,6 +212,22 @@ defmodule Hexpm.Accounts.SSOJITTest do
       assert length(Repo.all(Failure)) == 3
     end
 
+    test "the hour holds after the notice has been delivered", context do
+      fill_seats(context.organization)
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
+      assert {:error, :seats_exhausted} = complete(transaction, claims(), newcomer)
+
+      assert [entry] = Repo.all(OutboxEntry)
+      assert :ok = perform_job(Hexpm.Emails.OutboxWorker, %{outbox_entry_id: entry.id})
+
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
+      assert {:error, :seats_exhausted} = complete(transaction, claims(), newcomer)
+
+      assert [%OutboxEntry{delivered_at: %DateTime{}}] = Repo.all(OutboxEntry)
+    end
+
     test "re-admits a linked account whose membership was removed", context do
       member = insert(:user)
       insert(:organization_user, organization: context.organization, user: member, role: "read")
@@ -239,6 +256,23 @@ defmodule Hexpm.Accounts.SSOJITTest do
 
       assert user.id == member.id
       assert Organizations.get_role(context.organization, member) == "write"
+    end
+
+    test "does not re-admit on an address the provider did not confirm", context do
+      member = insert(:user)
+
+      insert(:organization_sso_identity,
+        connection: context.connection,
+        organization: context.organization,
+        user: member
+      )
+
+      transaction = start_login(context, member)
+
+      assert {:error, :not_member} =
+               complete(transaction, claims("member@example.com", false), member)
+
+      refute Organizations.get_role(context.organization, member)
     end
 
     test "does not re-admit when the address is no longer on a verified domain", context do
@@ -281,7 +315,7 @@ defmodule Hexpm.Accounts.SSOJITTest do
       assert :ok = SSO.maybe_expand_seats(transaction, newcomer, claims("newcomer@example.com"))
       assert Repo.get!(Hexpm.Accounts.Organization, context.organization.id).billing_seats == 4
 
-      assert {:ok, {:link, _id, _token, _return}} =
+      assert {:ok, {:link, _id, _token}} =
                complete(transaction, claims("newcomer@example.com"), newcomer)
     end
 
@@ -336,6 +370,83 @@ defmodule Hexpm.Accounts.SSOJITTest do
                  newcomer,
                  claims("newcomer@example.com", false)
                )
+    end
+
+    test "buys nothing when the browser is signed in as another account", context do
+      fill_seats(context.organization)
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
+
+      Mox.stub(Hexpm.Billing.Mock, :update, fn _name, _params ->
+        flunk("billing must not be called for a transaction another account started")
+      end)
+
+      assert :ok =
+               SSO.maybe_expand_seats(
+                 transaction,
+                 insert(:user),
+                 claims("newcomer@example.com")
+               )
+
+      # The callback the seat would have been for is refused, so nothing was
+      # ever going to use it.
+      assert {:error, :session_user_mismatch} =
+               complete(transaction, claims("newcomer@example.com"), insert(:user))
+    end
+
+    test "buys nothing for a login that has already been completed", context do
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
+
+      assert {:ok, {:link, _id, _token}} =
+               complete(transaction, claims("newcomer@example.com"), newcomer)
+
+      fill_seats(context.organization)
+
+      Mox.stub(Hexpm.Billing.Mock, :update, fn _name, _params ->
+        flunk("billing must not be called for a spent transaction")
+      end)
+
+      assert :ok = SSO.maybe_expand_seats(transaction, newcomer, claims("newcomer@example.com"))
+    end
+
+    test "buys nothing once the connection has been disabled", context do
+      fill_seats(context.organization)
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
+
+      {:ok, _connection} = SSO.disable(context.organization, audit: audit_data(context.admin))
+
+      Mox.stub(Hexpm.Billing.Mock, :update, fn _name, _params ->
+        flunk("billing must not be called for a login the callback will refuse")
+      end)
+
+      assert :ok = SSO.maybe_expand_seats(transaction, newcomer, claims("newcomer@example.com"))
+
+      assert {:error, :connection_disabled} =
+               complete(transaction, claims("newcomer@example.com"), newcomer)
+
+      refute Organizations.get_role(context.organization, newcomer)
+    end
+
+    test "buys nothing when the connection was reconfigured mid-login", context do
+      fill_seats(context.organization)
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
+
+      Repo.update_all(
+        from(connection in Connection, where: connection.id == ^context.connection.id),
+        inc: [version: 1]
+      )
+
+      Mox.stub(Hexpm.Billing.Mock, :update, fn _name, _params ->
+        flunk("billing must not be called for a login the callback will refuse")
+      end)
+
+      assert :ok = SSO.maybe_expand_seats(transaction, newcomer, claims("newcomer@example.com"))
+
+      assert {:error, :connection_configuration_changed} =
+               complete(transaction, claims("newcomer@example.com"), newcomer)
     end
 
     test "does not retry a purchase that already failed", context do

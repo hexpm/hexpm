@@ -20,14 +20,14 @@ defmodule Hexpm.Accounts.Auth do
 
     case result do
       nil ->
-        :error
+        {:error, :invalid}
 
       key ->
         valid_auth = !key.user || not User.organization?(key.user)
 
         if valid_auth && Hexpm.Utils.secure_check(key.secret_second, second) do
           if Key.revoked?(key) do
-            :revoked
+            {:error, :revoked, key}
           else
             Keys.update_last_use(key, usage_info(usage_info))
 
@@ -40,7 +40,7 @@ defmodule Hexpm.Accounts.Auth do
              }}
           end
         else
-          :error
+          {:error, :invalid}
         end
     end
   end
@@ -78,18 +78,24 @@ defmodule Hexpm.Accounts.Auth do
         organizations: :repository
       ])
 
-    valid_user = user && not User.organization?(user) && user.password
+    cond do
+      is_nil(user) or User.organization?(user) ->
+        {:error, :unknown_user}
 
-    if valid_user && Bcrypt.verify_pass(password, user.password) do
-      {:ok,
-       %{
-         auth_credential: nil,
-         user: user,
-         organization: nil,
-         email: find_email(user, username_or_email)
-       }}
-    else
-      :error
+      is_nil(user.password) ->
+        {:error, :no_password}
+
+      Bcrypt.verify_pass(password, user.password) ->
+        {:ok,
+         %{
+           auth_credential: nil,
+           user: user,
+           organization: nil,
+           email: find_email(user, username_or_email)
+         }}
+
+      true ->
+        {:error, :wrong_password}
     end
   end
 
@@ -105,7 +111,8 @@ defmodule Hexpm.Accounts.Auth do
          {:ok, oauth_token} <- Tokens.lookup(jwt_token, :access, preload: []) do
       build_auth_result(entity, oauth_token)
     else
-      _ -> :error
+      {:error, [_message, {:claim, "exp"} | _]} -> {:error, :expired}
+      _ -> {:error, :invalid}
     end
   end
 

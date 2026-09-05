@@ -37,6 +37,8 @@
                 invite_changeset={@invite_changeset}
                 organization={@organization}
                 quantity={@quantity}
+                sso_mode={@sso_mode}
+                sso_requires_sso?={@sso_requires_sso?}
               />
             <% :keys -> %>
               <.keys_tab
@@ -109,6 +111,9 @@
                 identities={@sso_identities}
                 login_url={@sso_login_url}
                 organization={@organization}
+                personal_keys={@sso_personal_keys}
+                pending_personal_keys={@sso_pending_personal_keys}
+                exempt_count={@sso_exempt_count}
               />
             <% :danger_zone -> %>
               <.danger_zone_tab current_user={@current_user} organization={@organization} />

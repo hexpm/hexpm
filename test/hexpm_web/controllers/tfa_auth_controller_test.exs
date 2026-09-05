@@ -57,6 +57,11 @@ defmodule HexpmWeb.TFAAuthControllerTest do
 
       assert response(conn, 200) =~
                "The verification code you provided is incorrect. Please try again."
+
+      user_id = c.user.id
+
+      assert_received {Hexpm.LogLines, :warning,
+                       %{method: "tfa", reason: "invalid_code", user_id: ^user_id, path: "/tfa"}}
     end
 
     test "with valid token", c do
@@ -75,36 +80,35 @@ defmodule HexpmWeb.TFAAuthControllerTest do
       assert redirected_to(conn) == "/"
     end
 
-    test "with valid token and non-path return falls back to user profile", c do
-      token = Hexpm.Accounts.TFA.time_based_token(c.user.tfa.secret)
+    # The return value reaches the session from the login form, so the same
+    # unsafe spellings rejected in HexpmWeb.LoginControllerTest have to be
+    # rejected again here, on the way out of the TFA step.
+    for {label, return} <- [
+          {"absolute URL", "https%3A%2F%2Fhex.pm%2Foauth%2Fauthorize%3Fclient_id%3Dabc"},
+          {"protocol-relative", "//evil.com"},
+          {"backslash", "/\\evil.com"},
+          {"encoded slash", "/%2fevil.com"},
+          {"tab", "/\t/evil.com"},
+          {"encoded tab", "/%09/evil.com"},
+          {"CRLF", "/\r\n/evil.com"},
+          {"null byte", "/dashboard\0"},
+          {"delete", "/dashboard\d"}
+        ] do
+      test "with valid token and #{label} return falls back to user profile", c do
+        token = Hexpm.Accounts.TFA.time_based_token(c.user.tfa.secret)
 
-      conn =
-        build_conn()
-        |> test_login(c.user)
-        |> put_session("tfa_user_id", %{
-          "uid" => c.user.id,
-          "at" => NaiveDateTime.to_iso8601(NaiveDateTime.utc_now()),
-          "return" => "https%3A%2F%2Fhex.pm%2Foauth%2Fauthorize%3Fclient_id%3Dabc"
-        })
-        |> post("/tfa", %{"code" => token})
+        conn =
+          build_conn()
+          |> test_login(c.user)
+          |> put_session("tfa_user_id", %{
+            "uid" => c.user.id,
+            "at" => NaiveDateTime.to_iso8601(NaiveDateTime.utc_now()),
+            "return" => unquote(return)
+          })
+          |> post("/tfa", %{"code" => token})
 
-      assert redirected_to(conn) == "/users/#{c.user.username}"
-    end
-
-    test "with valid token and protocol-relative return falls back to user profile", c do
-      token = Hexpm.Accounts.TFA.time_based_token(c.user.tfa.secret)
-
-      conn =
-        build_conn()
-        |> test_login(c.user)
-        |> put_session("tfa_user_id", %{
-          "uid" => c.user.id,
-          "return" => "//evil.com",
-          "at" => NaiveDateTime.to_iso8601(NaiveDateTime.utc_now())
-        })
-        |> post("/tfa", %{"code" => token})
-
-      assert redirected_to(conn) == "/users/#{c.user.username}"
+        assert redirected_to(conn) == "/users/#{c.user.username}"
+      end
     end
 
     test "redirects to login after too many failed attempts", c do

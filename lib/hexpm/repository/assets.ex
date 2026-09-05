@@ -2,51 +2,59 @@ defmodule Hexpm.Repository.Assets do
   alias Hexpm.Repository.Repository
 
   def push_release(release, body_path) do
-    meta = [
-      {"surrogate-key", tarball_cdn_key(release)},
-      {"surrogate-control", "public, max-age=604800"}
-    ]
+    Hexpm.Repo.write_mode!()
 
+    write = Hexpm.CDN.next_write()
     cache_control = tarball_cache_control(release.package.repository)
-    opts = [cache_control: cache_control, meta: meta]
+    opts = [cache_control: cache_control, meta: meta(tarball_cdn_key(release), write)]
     key = tarball_store_key(release)
 
     {:ok, %{etag: etag}} = Hexpm.Store.put_file(:repo_bucket, key, body_path, opts)
-    purge(release, tarball_cdn_key(release), key, etag)
+    purge(release, tarball_cdn_key(release), key, etag, write)
   end
 
   def revert_release(release) do
+    Hexpm.Repo.write_mode!()
+
     key = tarball_store_key(release)
     Hexpm.Store.delete(:repo_bucket, key)
-    purge(release, tarball_cdn_key(release), key, nil)
+    purge(release, tarball_cdn_key(release), key, nil, Hexpm.CDN.next_write())
     revert_docs(release)
   end
 
   def push_docs(release, body_path) do
-    meta = [
-      {"surrogate-key", docs_cdn_key(release)},
-      {"surrogate-control", "public, max-age=604800"}
-    ]
+    Hexpm.Repo.write_mode!()
 
+    write = Hexpm.CDN.next_write()
     cache_control = docs_cache_control(release.package.repository)
-    opts = [cache_control: cache_control, meta: meta]
+    opts = [cache_control: cache_control, meta: meta(docs_cdn_key(release), write)]
     key = docs_store_key(release)
 
     {:ok, %{etag: etag}} = Hexpm.Store.put_file(:repo_bucket, key, body_path, opts)
-    purge(release, docs_cdn_key(release), key, etag)
+    purge(release, docs_cdn_key(release), key, etag, write)
   end
 
   def revert_docs(release) do
+    Hexpm.Repo.write_mode!()
+
     if release.has_docs do
       key = docs_store_key(release)
       Hexpm.Store.delete(:repo_bucket, key)
-      purge(release, docs_cdn_key(release), key, nil)
+      purge(release, docs_cdn_key(release), key, nil, Hexpm.CDN.next_write())
     end
   end
 
-  defp purge(release, cdn_key, store_key, etag) do
+  defp meta(cdn_key, write) do
+    [
+      {"surrogate-key", cdn_key},
+      {"surrogate-control", "public, max-age=604800"},
+      {"write", Integer.to_string(write)}
+    ]
+  end
+
+  defp purge(release, cdn_key, store_key, etag, write) do
     repository = release.package.repository
-    target = %{url: Hexpm.Utils.cdn_url(store_key), etag: etag}
+    target = %{url: Hexpm.Utils.cdn_url(store_key), etag: etag, write: write}
 
     target =
       if repository.id == 1, do: target, else: Map.put(target, :repository, repository.name)

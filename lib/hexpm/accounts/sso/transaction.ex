@@ -21,12 +21,17 @@ defmodule Hexpm.Accounts.SSO.Transaction do
     field :subject, :string, redact: true
     field :provider_email, :string, redact: true
     field :link_token_hash, :binary, redact: true
-    field :entrypoint, :string, default: "organization"
+    field :entrypoint, :string
     field :linked_at, :utc_datetime_usec
     field :cancelled_at, :utc_datetime_usec
 
     belongs_to :connection, Hexpm.Accounts.SSO.Connection
     belongs_to :user, User
+
+    # The session this authentication is for, when it is not the browser doing
+    # it. A terminal cannot complete a provider round trip itself, so it sends
+    # its owner to one and the organization access lands here instead.
+    belongs_to :target_user_session, Hexpm.UserSession
 
     timestamps()
   end
@@ -36,6 +41,7 @@ defmodule Hexpm.Accounts.SSO.Transaction do
     |> cast(attrs, [
       :connection_id,
       :user_id,
+      :target_user_session_id,
       :state_hash,
       :nonce,
       :code_verifier,
@@ -60,7 +66,10 @@ defmodule Hexpm.Accounts.SSO.Transaction do
       :redirect_uri,
       :expires_at
     ])
+    |> validate_length(:redirect_uri, count: :bytes, max: 2_048)
+    |> validate_length(:return_path, count: :bytes, max: 2_048)
     |> validate_inclusion(:kind, ~w(login test))
+    |> validate_inclusion(:entrypoint, ~w(organization third_party cli))
     |> validate_inclusion(:secret_slot, ~w(active pending))
     |> unique_constraint(:state_hash)
   end
@@ -77,5 +86,8 @@ defmodule Hexpm.Accounts.SSO.Transaction do
       :nonce,
       :code_verifier
     ])
+    |> validate_length(:issuer, count: :bytes, max: 2_048)
+    |> validate_length(:subject, count: :bytes, max: 255)
+    |> validate_length(:provider_email, count: :bytes, max: 255)
   end
 end

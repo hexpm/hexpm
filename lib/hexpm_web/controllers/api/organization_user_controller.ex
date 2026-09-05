@@ -61,6 +61,12 @@ defmodule HexpmWeb.API.OrganizationUserController do
         {:error, :organization_user} ->
           validation_failed(conn, "cannot add an organization as member to an organization")
 
+        {:error, :unverified_primary_email} ->
+          validation_failed(
+            conn,
+            "cannot add member until the user has verified their primary email"
+          )
+
         {:error, changeset} ->
           validation_failed(conn, changeset)
       end

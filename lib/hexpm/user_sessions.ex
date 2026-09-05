@@ -17,7 +17,7 @@ defmodule Hexpm.UserSessions do
   ## Session Expiration
 
   All sessions expire after 30 days of creation (non-sliding window). Expired
-  rows are deleted by `Hexpm.ReleaseTasks.PurgeExpiredRecords`.
+  rows are deleted by `Hexpm.PurgeExpiredRecords`.
 
   ## Last Use Tracking
 
@@ -276,14 +276,17 @@ defmodule Hexpm.UserSessions do
   def revoke(%UserSession{type: "oauth"} = session, revoke_at, opts) do
     revoke_at = revoke_at || DateTime.utc_now()
 
+    # Tokens before the session, the order `Tokens.revoke_and_create_token`
+    # takes them in, so a refresh running against this session waits rather than
+    # deadlocking with it.
     multi =
       Ecto.Multi.new()
-      |> Ecto.Multi.update(:session, UserSession.changeset(session, %{revoked_at: revoke_at}))
       |> Ecto.Multi.update_all(
         :tokens,
         from(t in Token, where: t.user_session_id == ^session.id and is_nil(t.revoked_at)),
         set: [revoked_at: revoke_at, updated_at: DateTime.utc_now()]
       )
+      |> Ecto.Multi.update(:session, UserSession.changeset(session, %{revoked_at: revoke_at}))
 
     # Add audit if provided
     multi =
@@ -338,15 +341,14 @@ defmodule Hexpm.UserSessions do
   def revoke_for_oauth_token(%Token{}), do: {:error, :session_not_found}
 
   @doc """
-  Revokes all sessions for a user (both browser and OAuth).
-  Returns a query suitable for use in Multi.update_all.
-  For OAuth sessions, associated tokens will also be revoked.
+  Revokes all sessions for a user (both browser and OAuth), the tokens minted
+  from them, and the organization access they carry.
+
+  Returns the three queries, suitable for use in Multi.update_all.
   """
   def revoke_all(user, revoke_at \\ nil) do
     revoke_at = revoke_at || DateTime.utc_now()
 
-    # First, we need to revoke all OAuth tokens associated with this user's sessions
-    # This is handled by updating the sessions table and separately updating tokens
     {from(s in UserSession,
        where: s.user_id == ^user.id and is_nil(s.revoked_at),
        update: [set: [revoked_at: ^revoke_at, updated_at: ^DateTime.utc_now()]]
@@ -354,16 +356,20 @@ defmodule Hexpm.UserSessions do
      from(t in Token,
        where: t.user_id == ^user.id and is_nil(t.revoked_at),
        update: [set: [revoked_at: ^revoke_at, updated_at: ^DateTime.utc_now()]]
-     )}
+     ), Hexpm.Accounts.SSO.revoke_org_sessions_query(user, revoke_at)}
   end
 
   @doc """
   Updates the last use information for a session.
   """
   def update_last_use(%UserSession{} = session, usage_info) do
-    session
-    |> UserSession.update_last_use(usage_info)
-    |> Repo.update()
+    if Repo.write_mode?() do
+      session
+      |> UserSession.update_last_use(usage_info)
+      |> Repo.update()
+    else
+      {:ok, session}
+    end
   end
 
   @doc """
@@ -431,6 +437,8 @@ defmodule Hexpm.UserSessions do
           ),
           set: [revoked_at: now, updated_at: now]
         )
+
+        Repo.update_all(Hexpm.Accounts.SSO.revoke_org_sessions_query(session_ids, now), [])
 
         Repo.update_all(
           from(s in UserSession,

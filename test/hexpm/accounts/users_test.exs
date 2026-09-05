@@ -6,6 +6,29 @@ defmodule Hexpm.Accounts.UsersTest do
   alias Hexpm.Accounts.{AuditLog, OptionalEmails, User, Users, UserProviders}
   alias Hexpm.Emails.OutboxEntry
 
+  describe "all_notifiable_emails/0" do
+    test "returns the verified primary address of each individual account" do
+      user = insert(:user)
+
+      assert Users.all_notifiable_emails() == [hd(user.emails).email]
+    end
+
+    test "skips unverified and non-primary addresses" do
+      insert(:user, emails: [build(:email, verified: false)])
+      insert(:user, emails: [build(:email, primary: false)])
+
+      assert Users.all_notifiable_emails() == []
+    end
+
+    test "skips organization, service and deactivated accounts" do
+      insert(:organization)
+      insert(:user, service: true)
+      insert(:user, deactivated_at: DateTime.utc_now())
+
+      assert Users.all_notifiable_emails() == []
+    end
+  end
+
   describe "all_organizations/1" do
     test "keeps the public organization first and sorts the rest by name" do
       user =

@@ -497,5 +497,77 @@ defmodule Hexpm.OAuth.TokensTest do
 
       assert {:ok, _found_token} = Tokens.lookup(token.refresh_token, :refresh)
     end
+
+    test "rejects a live token whose session was revoked", %{
+      user: user,
+      client: client,
+      session: session
+    } do
+      {:ok, token} =
+        Tokens.create_and_insert_for_user(
+          user,
+          client.client_id,
+          ["api:read"],
+          "authorization_code",
+          "test_code",
+          user_session_id: session.id
+        )
+
+      # The session alone, leaving the token live, is the state a revocation
+      # that raced a token being issued into the session leaves behind.
+      revoke_session(session)
+
+      assert {:error, :token_invalid} = Tokens.lookup(token.access_token, :access)
+      assert {:error, :invalid} = Hexpm.Accounts.Auth.oauth_token_auth(token.access_token, %{})
+    end
+
+    test "rejects a live token whose session expired", %{
+      user: user,
+      client: client,
+      session: session
+    } do
+      {:ok, token} =
+        Tokens.create_and_insert_for_user(
+          user,
+          client.client_id,
+          ["api:read"],
+          "authorization_code",
+          "test_code",
+          user_session_id: session.id
+        )
+
+      session
+      |> Ecto.Changeset.change(expires_at: DateTime.add(DateTime.utc_now(), -60, :second))
+      |> Repo.update!()
+
+      assert {:error, :token_invalid} = Tokens.lookup(token.access_token, :access)
+      assert {:error, :invalid} = Hexpm.Accounts.Auth.oauth_token_auth(token.access_token, %{})
+    end
+
+    test "still finds a token of a revoked session when not validating", %{
+      user: user,
+      client: client,
+      session: session
+    } do
+      {:ok, token} =
+        Tokens.create_and_insert_for_user(
+          user,
+          client.client_id,
+          ["api:read"],
+          "authorization_code",
+          "test_code",
+          user_session_id: session.id
+        )
+
+      revoke_session(session)
+
+      assert {:ok, _found_token} = Tokens.lookup(token.access_token, :access, validate: false)
+    end
+
+    defp revoke_session(session) do
+      session
+      |> Ecto.Changeset.change(revoked_at: DateTime.utc_now())
+      |> Repo.update!()
+    end
   end
 end

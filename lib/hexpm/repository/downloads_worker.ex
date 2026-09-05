@@ -1,4 +1,4 @@
-defmodule Hexpm.ReleaseTasks.Stats do
+defmodule Hexpm.Repository.DownloadsWorker do
   use Oban.Worker,
     queue: :heavy,
     max_attempts: 5,
@@ -67,7 +67,12 @@ defmodule Hexpm.ReleaseTasks.Stats do
         do_run(date, dryrun?)
       end)
 
-    Logger.info("[stats] completed #{size} downloads (#{div(time, 1000)}ms)")
+    Logger.info(%{
+      message: "Download stats completed",
+      event: "stats.completed",
+      downloads: size,
+      duration_us: time
+    })
   end
 
   def do_run(date, dryrun?) do
@@ -87,7 +92,11 @@ defmodule Hexpm.ReleaseTasks.Stats do
       # in the database. Should be uncommon
       num = ets_stream() |> Enum.reduce(0, fn {_, count}, acc -> count + acc end)
 
-      if num == 0 and not dryrun?, do: raise("[stats] no downloads found for #{date}")
+      expect_downloads? = Application.fetch_env!(:hexpm, :stats_expect_downloads)
+
+      if num == 0 and not dryrun? and expect_downloads? do
+        raise "[stats] no downloads found for #{date}"
+      end
 
       unless dryrun? do
         Repo.transaction(
@@ -314,7 +323,14 @@ defmodule Hexpm.ReleaseTasks.Stats do
 
   defp time_log(action, fun) do
     {time, result} = :timer.tc(fun)
-    Logger.info("[stats] completed \"#{action}\" in #{time / 1000}ms")
+
+    Logger.info(%{
+      message: "Download stats step completed",
+      event: "stats.step",
+      step: action,
+      duration_us: time
+    })
+
     result
   end
 

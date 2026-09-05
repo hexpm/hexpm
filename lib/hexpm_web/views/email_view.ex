@@ -11,7 +11,10 @@ defmodule HexpmWeb.EmailView do
   end
 
   defmodule Common do
-    import Phoenix.HTML, only: [safe_to_string: 1]
+    import Phoenix.HTML, only: [html_escape: 1, safe_to_string: 1]
+
+    @link_style "color: #0f59d8; text-decoration: none;"
+    @url_regex ~r{https?://[^\s<>"]+}
 
     def greeting(username), do: "Hello #{username}"
 
@@ -22,7 +25,7 @@ defmodule HexpmWeb.EmailView do
       safe_to_string(
         PhoenixHTMLHelpers.Link.link(text,
           to: url,
-          style: "color: #0f59d8; text-decoration: none;"
+          style: @link_style
         )
       )
     end
@@ -44,6 +47,13 @@ defmodule HexpmWeb.EmailView do
       "If you have any questions about why this action was taken, please contact support at #{support_link(format)}."
     end
 
+    def terms_notice(format) do
+      url = HexpmWeb.EmailView.email_url("/policies/termsofservice")
+
+      "This action was taken under our #{link(url, "Terms of Service", format)}. " <>
+        "If you have any questions, contact support at #{support_link(format)}."
+    end
+
     def reason_heading(), do: "Reason:"
 
     def paragraphs(body) do
@@ -51,6 +61,29 @@ defmodule HexpmWeb.EmailView do
       |> String.split(~r/\n\s*\n/, trim: true)
       |> Enum.map(&String.trim/1)
       |> Enum.reject(&(&1 == ""))
+    end
+
+    # A plain text paragraph rendered for the HTML part: bare URLs become
+    # links and single newlines become line breaks. The text is escaped
+    # before the markup goes in, so the replacements only ever wrap markup
+    # that is already safe, and a URL ending a sentence keeps its punctuation
+    # outside the link.
+    def html_paragraph(text) do
+      text
+      |> html_escape()
+      |> safe_to_string()
+      |> String.replace(@url_regex, &autolink/1)
+      |> String.replace("\n", "<br>\n")
+    end
+
+    defp autolink(url) do
+      {url, trailing} = split_trailing_punctuation(url)
+      ~s(<a href="#{url}" style="#{@link_style}">#{url}</a>) <> trailing
+    end
+
+    defp split_trailing_punctuation(url) do
+      [head, tail] = Regex.run(~r/\A(.*?)([.,;:!?)\]]*)\z/, url, capture: :all_but_first)
+      {head, tail}
     end
 
     # Common labels for build tools
@@ -99,7 +132,7 @@ defmodule HexpmWeb.EmailView do
 
   defmodule AccountRemoved do
     defdelegate reason_heading(), to: Common
-    defdelegate questions_notice(format), to: Common
+    defdelegate terms_notice(format), to: Common
     defdelegate paragraphs(reason), to: Common
 
     def title() do
@@ -120,6 +153,7 @@ defmodule HexpmWeb.EmailView do
 
   defmodule Announcement do
     defdelegate paragraphs(body), to: Common
+    defdelegate html_paragraph(text), to: Common
 
     def title("Hex.pm - " <> title), do: title
     def title(subject), do: subject
@@ -369,6 +403,121 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
+  defmodule SSOEnforcementPending do
+    def intro(organization, required_at) do
+      "From #{Calendar.strftime(required_at, "%B %-d, %Y")}, reaching the #{organization} organization on Hex.pm will require signing in through its identity provider."
+    end
+
+    def not_linked() do
+      "Your Hex account is not connected to that provider yet. Connect it before then and nothing about your day changes. Leave it until after and you lose access to the organization's private packages until you do."
+    end
+
+    def account_notice() do
+      "This does not affect your Hex account itself, your own packages, or any other organization you belong to. You keep signing in to Hex.pm exactly as you do now."
+    end
+
+    def cli_notice() do
+      "Command line access is included. Once enforcement starts, mix will ask you to authenticate in a browser the first time it needs a package from this organization, and again whenever the organization's authentication window lapses."
+    end
+  end
+
+  defmodule SSOKeyRevoked do
+    def intro(organization, revoked, trimmed) do
+      "The #{organization} organization on Hex.pm now requires single sign-on, and chose not to allow personal API keys. #{keys(revoked ++ trimmed)} to that organization removed."
+    end
+
+    # A key whose only permission named this organization has nothing left to
+    # authorize, so it is revoked rather than left inert.
+    def rest_of_key([], trimmed), do: kept(trimmed)
+
+    def rest_of_key(revoked, []) do
+      "#{subject(revoked)} nothing else, so #{pronoun(revoked)} been revoked. Delete #{object(revoked)} from your dashboard when convenient."
+    end
+
+    def rest_of_key(revoked, trimmed) do
+      "#{subject(revoked)} nothing else, so #{pronoun(revoked)} been revoked. #{kept(trimmed)}"
+    end
+
+    defp kept([key_name]),
+      do:
+        "The key #{key_name} still works for everything else it could reach. Only the permissions naming this organization were removed."
+
+    defp kept(key_names) do
+      "The keys #{Enum.join(key_names, ", ")} still work for everything else they could reach. Only the permissions naming this organization were removed."
+    end
+
+    defp subject([key_name]), do: "The key #{key_name} carried"
+    defp subject(key_names), do: "The keys #{Enum.join(key_names, ", ")} carried"
+
+    defp pronoun([_key_name]), do: "it has"
+    defp pronoun(_key_names), do: "they have"
+
+    defp object([_key_name]), do: "it"
+    defp object(_key_names), do: "them"
+
+    defp keys([key_name]), do: "Your key #{key_name} has had its access"
+
+    defp keys(key_names) do
+      "Your keys #{Enum.join(key_names, ", ")} have had their access"
+    end
+
+    def alternatives() do
+      "For your own work, run mix hex.user auth and sign in, which authenticates you through the provider when the organization asks for it. For continuous integration, use an organization key, which authenticates as the organization rather than as a person and is unaffected."
+    end
+
+    def why() do
+      "A personal key is a static credential. There is nothing for the organization's provider to check when it is used, and nothing that expires it, which is why an organization requiring SSO can choose to turn them away."
+    end
+  end
+
+  defmodule SSOKeyBlocked do
+    def intro(organization, blocked) do
+      "The #{organization} organization on Hex.pm authenticates its members through an identity provider, and chose not to accept personal API keys from the members it covers. Your account is one of them, so #{keys(blocked)} that organization."
+    end
+
+    def unchanged([_key_name]) do
+      "The key itself is untouched. It still exists, still carries the permissions it always did, and still works for everything else it reaches. Only the requests it makes to this organization are refused."
+    end
+
+    def unchanged(_key_names) do
+      "The keys themselves are untouched. They still exist, still carry the permissions they always did, and still work for everything else they reach. Only the requests they make to this organization are refused."
+    end
+
+    def alternatives() do
+      "For your own work, run mix hex.user auth and sign in, which authenticates you through the provider when the organization asks for it. For continuous integration, use an organization key, which authenticates as the organization rather than as a person and is unaffected."
+    end
+
+    def why() do
+      "A personal key is a static credential. There is nothing for the organization's provider to check when it is used, and nothing that expires it, which is why an organization requiring SSO can choose to turn them away."
+    end
+
+    defp keys([key_name]), do: "your key #{key_name} no longer reaches"
+
+    defp keys(key_names) do
+      "your keys #{Enum.join(key_names, ", ")} no longer reach"
+    end
+  end
+
+  defmodule SSOBreakGlass do
+    def intro(organization, username, screen) do
+      "#{username} reached the #{organization} organization's #{screen_name(screen)} on Hex.pm, one of the screens enforcement leaves open, without a current single sign-on session."
+    end
+
+    defp screen_name(screen), do: String.replace(screen, "_", " ")
+
+    def why() do
+      "An organization whose provider stops working, or whose administrator is deactivated in it by mistake, still has to be able to repair the connection, keep paying, and leave. It could not do any of that if those screens sat behind the gate they are the only way to unlock."
+    end
+
+    def scope() do
+      "Private packages, publishing and the rest of the organization dashboard were refused as usual. The screens that stay open are not read-only: billing can be changed and the subscription cancelled, and the SSO settings screen can replace the provider, unlink accounts and turn enforcement off. It also shows the linked accounts, the personal API keys that reach this organization, and recent login failures, so treat those as seen."
+    end
+
+    def action() do
+      "If this was not one of your administrators, review the organization's members and audit log. The audit log records every screen that was reached this way, including any this notice does not name."
+    end
+  end
+
   defmodule OrganizationInvitation do
     def intro(organization, role) do
       "You have been invited to join the #{organization} organization on Hex.pm as #{article(role)} #{role} member."
@@ -459,7 +608,7 @@ defmodule HexpmWeb.EmailView do
 
   defmodule PackageRemoved do
     defdelegate reason_heading(), to: Common
-    defdelegate questions_notice(format), to: Common
+    defdelegate terms_notice(format), to: Common
     defdelegate paragraphs(reason), to: Common
 
     def title(package) do
@@ -474,7 +623,7 @@ defmodule HexpmWeb.EmailView do
 
   defmodule ReleaseRemoved do
     defdelegate reason_heading(), to: Common
-    defdelegate questions_notice(format), to: Common
+    defdelegate terms_notice(format), to: Common
     defdelegate paragraphs(reason), to: Common
 
     def title(package, version) do

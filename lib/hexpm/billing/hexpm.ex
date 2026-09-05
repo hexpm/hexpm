@@ -80,11 +80,14 @@ defmodule Hexpm.Billing.Hexpm do
     query = URI.encode_query(Enum.reject(opts, fn {_k, v} -> is_nil(v) end))
     url = "/api/invoices/#{id}/html?#{query}"
 
-    {:ok, 200, _headers, body} =
+    result =
       fn -> get_html(url) end
-      |> Hexpm.HTTP.retry("billing")
+      |> Hexpm.HTTP.retry("billing", statuses: [500..599])
 
-    body
+    case result do
+      {:ok, 200, _headers, body} -> {:ok, body}
+      other -> unexpected_response("invoice", id, other)
+    end
   end
 
   def pay_invoice(id) do
@@ -100,11 +103,14 @@ defmodule Hexpm.Billing.Hexpm do
   end
 
   def report() do
-    {:ok, 200, _headers, body} =
+    result =
       fn -> get_json("/api/reports/customers") end
-      |> Hexpm.HTTP.retry("billing")
+      |> Hexpm.HTTP.retry("billing", statuses: [500..599])
 
-    body
+    case result do
+      {:ok, 200, _headers, body} -> {:ok, body}
+      other -> unexpected_response("report", "customers", other)
+    end
   end
 
   # The billing service reports the underlying failure to Sentry, hexpm only

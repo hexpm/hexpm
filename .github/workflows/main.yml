@@ -139,9 +139,6 @@ jobs:
           - hex-version: v2.3
             otp: 29.0
             elixir: 1.20.3
-          - hex-version: v2.2
-            otp: 29.0
-            elixir: 1.20.3
 
     env:
       HEXPM_PATH: ..
@@ -200,6 +197,7 @@ jobs:
       PROJECT_ID: "hexpm-prod"
       SERVICE_ACCOUNT: ${{ secrets.GCLOUD_SERVICE_ACCOUNT }}
       WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCLOUD_WORKFLOW_IDENTITY_POOL_PROVIDER }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -237,3 +235,22 @@ jobs:
           push: ${{ github.event_name != 'pull_request' && env.SERVICE_ACCOUNT != '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      # The release version is the image tag; the app sends the same value
+      # from the baked GIT_SHA, and the hexpm-ops deploy registers when it
+      # reaches an environment. The refs association needs the repository
+      # linked to the Sentry GitHub integration; fall back to a bare release
+      # so a missing link degrades commit tracking, not CI.
+      - name: Create Sentry release
+        if: ${{ github.event_name != 'pull_request' && env.SERVICE_ACCOUNT != '' && env.SENTRY_AUTH_TOKEN != '' }}
+        run: |
+          api="https://sentry.io/api/0/organizations/hexpm/releases/"
+          refs_payload=$(printf '{"version": "%s", "projects": ["hexpm"], "refs": [{"repository": "hexpm/hexpm", "commit": "%s"}]}' "$COMMIT_SHORT_SHA" "$GITHUB_SHA")
+          bare_payload=$(printf '{"version": "%s", "projects": ["hexpm"]}' "$COMMIT_SHORT_SHA")
+          curl -sf -X POST "$api" \
+            -H "Authorization: Bearer $SENTRY_AUTH_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$refs_payload" ||
+            curl -sf -X POST "$api" \
+              -H "Authorization: Bearer $SENTRY_AUTH_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "$bare_payload"

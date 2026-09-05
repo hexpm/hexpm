@@ -21,7 +21,7 @@ defmodule HexpmWeb.API.OrganizationController do
 
   def index(conn, _params) do
     organizations =
-      (all_organizations_by_user(conn.assigns.current_user) ++
+      (all_organizations_by_user(conn) ++
          current_organization(conn.assigns.current_organization))
       |> Enum.sort_by(& &1.name)
 
@@ -75,6 +75,13 @@ defmodule HexpmWeb.API.OrganizationController do
   defp current_organization(nil), do: []
   defp current_organization(organization), do: [organization]
 
-  defp all_organizations_by_user(%User{} = user), do: Organizations.all_by_user(user)
-  defp all_organizations_by_user(nil = _user), do: []
+  defp all_organizations_by_user(conn) do
+    case conn.assigns.current_user do
+      %User{} = user ->
+        HexpmWeb.SSOEnforcement.reachable(conn, Organizations.all_by_user(user))
+
+      nil ->
+        []
+    end
+  end
 end

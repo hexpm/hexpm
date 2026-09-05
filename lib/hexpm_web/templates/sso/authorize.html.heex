@@ -1,0 +1,39 @@
+<.auth_layout
+  title="Authenticate a session"
+  subtitle={"Sign in to your organizations' identity providers for #{@session.name || "your session"}"}
+  show_oauth={false}
+>
+  <div class="space-y-5 text-sm text-grey-700 dark:text-grey-200">
+    <p>
+      You are signed in as <strong>{@current_user.username}</strong>. Completing this authenticates <strong>{@session.name || "an unnamed session"}</strong>, not this browser.
+    </p>
+
+    <p class="text-grey-600 dark:text-grey-300">
+      That session was named by whatever created it. It signed in {session_started(@session)} and {session_last_used(
+        @session
+      )}. If none of that is yours, close this page and revoke the session from your dashboard.
+    </p>
+
+    <ul class="list-none space-y-2">
+      <li
+        :for={{organization, authenticated?} <- @organizations}
+        class="flex items-center justify-between gap-3 rounded-lg border border-grey-200 dark:border-grey-700 px-4 py-3"
+      >
+        <span class="font-semibold text-grey-900 dark:text-grey-100">{organization.name}</span>
+        <span :if={authenticated?} class="text-sm text-grey-600 dark:text-grey-300">
+          Authenticated
+        </span>
+        <.form :if={!authenticated?} for={%{}} action={~p"/sso/authorize"} class="shrink-0">
+          <input type="hidden" name="code" value={@code} />
+          <input type="hidden" name="organization" value={organization.name} />
+          <.button type="submit" variant="primary">Authenticate</.button>
+        </.form>
+      </li>
+    </ul>
+
+    <p>
+      The session keeps the access it already has. This only renews the organizations listed above,
+      and each one lasts as long as its administrator has configured.
+    </p>
+  </div>
+</.auth_layout>

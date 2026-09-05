@@ -110,7 +110,13 @@ config :hexpm, metrics_port: 9568
 
 config :hexpm, :organization_sso, all_organizations: true
 
-config :hexpm, :varsel, key_id: "hexpm-dev"
+config :hexpm, :varsel,
+  key_id: "hexpm-dev",
+  jwks: """
+  {"keys": [{"kty": "EC", "crv": "P-256", "kid": "varsel-dev",
+             "x": "E34oPnnGyf9799k058t0zBpEo6cMDYDaFmmEEt2ePLw",
+             "y": "ajZ6c2ekFLfW1H-YBYlJKcKXpnfyu88FF2_PoewQCCU"}]}
+  """
 
 config :ueberauth, Ueberauth.Strategy.Github.OAuth,
   client_id: System.get_env("HEXPM_GITHUB_CLIENT_ID"),

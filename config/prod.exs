@@ -40,7 +40,12 @@ config :phoenix, :serve_endpoints, true
 
 config :logger, level: :info
 
-config :logger, :default_formatter, metadata: [:request_id]
+config :logger, :default_handler,
+  formatter:
+    {LoggerJSON.Formatters.GoogleCloud,
+     metadata: {:from_application_env, {:hexpm, :log_metadata}},
+     reported_levels: [],
+     project_id: nil}
 
 config :hexpm, Oban,
   peer: Oban.Peers.Database,
@@ -50,10 +55,11 @@ config :hexpm, Oban,
        {"* * * * *", Hexpm.Billing.Report},
        {"* * * * *", Hexpm.Emails.OutboxReconciler},
        {"*/30 * * * *", Hexpm.Security.Updater},
-       {"30 0 * * *", Hexpm.ReleaseTasks.CheckNames},
-       {"0 1 * * *", Hexpm.ReleaseTasks.Stats},
-       {"0 2 * * *", Hexpm.ReleaseTasks.PurgeExpiredRecords},
-       {"15 3 * * *", Hexpm.Accounts.OrganizationDomains.RecheckWorker}
+       {"30 0 * * *", Hexpm.Repository.TyposquatWorker},
+       {"0 1 * * *", Hexpm.Repository.DownloadsWorker},
+       {"0 2 * * *", Hexpm.PurgeExpiredRecords},
+       {"15 3 * * *", Hexpm.Accounts.OrganizationDomains.RecheckWorker},
+       {"45 3 * * *", Hexpm.Accounts.SSO.EnforcementWorker}
      ],
      timezone: "Etc/UTC"},
     # Successful jobs are read by nobody and are the bulk of the table, which

@@ -1,30 +1,22 @@
 defmodule HexpmWeb.API.UserController do
   use HexpmWeb, :controller
 
+  alias HexpmWeb.SSOEnforcement
+
   plug :authorize,
        [authentication: :required, domains: [{"api", "read"}]]
        when action in [:test, :me, :audit_logs]
 
-  def create(conn, params) do
-    params = email_param(params)
-
-    case Users.add(params, audit: audit_data(conn)) do
-      {:ok, user} ->
-        location = ~p"/api/users/#{user}"
-
-        conn
-        |> put_resp_header("location", location)
-        |> api_cache(:private)
-        |> put_status(201)
-        |> render(:show, user: user)
-
-      {:error, changeset} ->
-        validation_failed(conn, changeset)
-    end
-  end
-
   def me(conn, _params) do
     if user = conn.assigns.current_user do
+      accessible_packages =
+        Packages.accessible_user_owned_packages(
+          user,
+          SSOEnforcement.reachable_organizations(conn)
+        )
+
+      user = %{user | owned_packages: accessible_packages}
+
       when_stale(conn, user, fn conn ->
         conn
         |> api_cache(:private)
@@ -47,11 +39,16 @@ defmodule HexpmWeb.API.UserController do
 
   def show(conn, %{"name" => name}) do
     user = Users.public_get(name, [:emails, owned_packages: :repository])
-    accessible_packages = Packages.accessible_user_owned_packages(user, conn.assigns.current_user)
 
-    user = user && %{user | owned_packages: accessible_packages}
+    if user && User.public_profile?(user) do
+      accessible_packages =
+        Packages.accessible_user_owned_packages(
+          user,
+          SSOEnforcement.reachable_organizations(conn)
+        )
 
-    if user do
+      user = %{user | owned_packages: accessible_packages}
+
       when_stale(conn, user, fn conn ->
         conn
         |> api_cache(:private)
@@ -64,13 +61,5 @@ defmodule HexpmWeb.API.UserController do
 
   def test(conn, params) do
     show(conn, params)
-  end
-
-  defp email_param(params) do
-    if email = params["email"] do
-      Map.put_new(params, "emails", [%{"email" => email}])
-    else
-      params
-    end
   end
 end

@@ -10,7 +10,7 @@ The organization's packages are namespaced under the organization's repository. 
 $ mix hex.user auth
 ```
 
-Run `$ mix hex.user register` to register first if you do not have a user yet.
+[Sign up](/signup) first if you do not have a user yet.
 
 > **Deprecated:** Authorizing a single organization with `mix hex.organization auth acme` (without `--key`) is deprecated and will be removed. Authenticate as a user with `mix hex.user auth` for development, or generate an organization key for CI as described below.
 
@@ -61,3 +61,5 @@ Copy the returned hash and authenticate with it on your build server:
 ```nohighlight
 $ mix hex.organization auth acme --key 126d49fb3014bd26457471ebae97c625
 ```
+
+An organization key authenticates as the organization rather than as a person, so it keeps working when the organization requires [single sign-on](/docs/organization-sso). A personal API key does not, unless the organization chose to allow one. For automation, generate an organization key.

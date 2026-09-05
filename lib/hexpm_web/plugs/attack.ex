@@ -11,6 +11,7 @@ defmodule HexpmWeb.Plugs.Attack do
   @diff_limit 20
   @diff_period 60_000
   @sso_period 10 * 60_000
+  @varsel_jti_period 300_000
 
   rule "allow local", conn do
     allow(conn.remote_ip == {127, 0, 0, 1})
@@ -134,6 +135,15 @@ defmodule HexpmWeb.Plugs.Attack do
       limit: 100,
       period: 60_000
     )
+  end
+
+  def varsel_jti(jti, opts \\ []) do
+    key = {:varsel_jti, jti}
+    time = opts[:time] || System.system_time(:millisecond)
+    unless opts[:time], do: RateLimitPubSub.broadcast(key, time)
+
+    {storage, name} = @storage
+    storage.increment(name, key, 1, time + @varsel_jti_period)
   end
 
   def diff_throttle(identity, opts \\ []) do

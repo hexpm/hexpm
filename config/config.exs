@@ -4,6 +4,7 @@ config :hexpm,
   user_confirm: true,
   user_agent_req: true,
   billing_report: true,
+  stats_expect_downloads: true,
   cache_enabled: true,
   email_base_url: "http://localhost:4000",
   support_email: "support@hex.pm",
@@ -62,7 +63,7 @@ config :hexpm, ecto_repos: [Hexpm.RepoBase]
 
 config :hexpm, Oban,
   repo: Hexpm.RepoBase,
-  queues: [periodic: 2, heavy: 1, registry: 1, purge: 5],
+  queues: [periodic: 2, heavy: 1, registry: 1, purge: 5, email: 1],
   shutdown_grace_period: 300_000
 
 config :hexpm, registry_lock_wait: 60_000
@@ -102,6 +103,12 @@ config :sentry,
   json_library: JSON
 
 config :postgrex, :json_library, JSON
+
+config :logger_json, encoder: JSON
+
+# Logger metadata that reaches the log line in production. A line's own
+# fields go in its message map; these are the keys processes carry.
+config :hexpm, :log_metadata, [:request_id, :outbox_entry_id, :outbox_category]
 
 config :bcrypt_elixir, log_rounds: 4
 

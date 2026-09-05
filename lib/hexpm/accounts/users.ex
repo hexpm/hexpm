@@ -63,6 +63,11 @@ defmodule Hexpm.Accounts.Users do
 
   def get_maybe_unverified_email(_, _), do: nil
 
+  def all_notifiable_emails() do
+    User.all_notifiable_emails()
+    |> Repo.all()
+  end
+
   def all_organizations(%User{organizations: organizations}) when is_list(organizations) do
     [Organization.hexpm() | Enum.sort_by(organizations, & &1.name)]
   end
@@ -488,7 +493,7 @@ defmodule Hexpm.Accounts.Users do
   defp password_reset(user, params, revoke_all_access) do
     alias Hexpm.UserSessions
 
-    {sessions_query, tokens_query} = UserSessions.revoke_all(user)
+    {sessions_query, tokens_query, org_sessions_query} = UserSessions.revoke_all(user)
 
     multi =
       Multi.new()
@@ -496,6 +501,7 @@ defmodule Hexpm.Accounts.Users do
       |> Multi.delete_all(:reset, assoc(user, :password_resets))
       |> Multi.delete_all(:account_deletion_requests, assoc(user, :account_deletion_requests))
       |> Multi.update_all(:revoke_tokens, tokens_query, [])
+      |> Multi.update_all(:revoke_org_sessions, org_sessions_query, [])
       |> Multi.update_all(:revoke_sessions, sessions_query, [])
 
     if revoke_all_access,
@@ -731,9 +737,7 @@ defmodule Hexpm.Accounts.Users do
       Multi.new()
       |> Multi.insert(:user, User.build_from_oauth(username, full_name, email, confirmed?))
       |> Multi.run(:user_provider, fn _repo, %{user: user} ->
-        user_provider = UserProvider.build(user, provider, provider_uid, email, %{})
-        changeset = UserProvider.changeset(user_provider, %{})
-        Repo.insert(changeset)
+        Repo.insert(UserProvider.build(user, provider, provider_uid, email))
       end)
       |> audit_with_user(audit_data, "user.create", fn %{user: user} -> user end)
       |> audit_with_user(audit_data, "email.add", fn %{user: %{emails: [email]}} -> email end)

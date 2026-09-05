@@ -67,6 +67,12 @@ defmodule Hexpm.AdminTasks do
   use Hexpm.Context
 
   alias Hexpm.AdminTasks.Reasons
+  alias Hexpm.Emails.{Outbox, OutboxEntry, OutboxLock}
+
+  @announcement_category "admin.announcement"
+  # Announcements queue behind transactional mail: package reports, secret-scan
+  # alerts and SSO notices go out first.
+  @announcement_priority 3
 
   require Logger
 
@@ -300,6 +306,60 @@ defmodule Hexpm.AdminTasks do
 
       :ok
     end
+  end
+
+  @doc """
+  Blocks new email addresses on a domain and everything under it.
+
+  Existing addresses stay; only adding an address on the domain fails, at
+  signup and in the account settings alike.
+
+  ## Examples
+
+      iex> AdminTasks.block_email_domain("example.com", comment: "signup farm")
+      :ok
+  """
+  @spec block_email_domain(String.t(), keyword()) :: :ok | {:error, Ecto.Changeset.t()}
+  def block_email_domain(domain, opts \\ []) do
+    params = %{domain: domain, comment: Keyword.get(opts, :comment)}
+
+    case Repo.insert(BlockedEmailDomain.changeset(%BlockedEmailDomain{}, params)) do
+      {:ok, _blocked} -> :ok
+      {:error, changeset} -> {:error, changeset}
+    end
+  end
+
+  @doc """
+  Removes a domain from the email block list.
+
+  ## Examples
+
+      iex> AdminTasks.unblock_email_domain("example.com")
+      :ok
+  """
+  @spec unblock_email_domain(String.t()) :: :ok | {:error, :not_found}
+  def unblock_email_domain(domain) do
+    case Repo.delete_all(BlockedEmailDomain.by_domain(domain)) do
+      {0, _} -> {:error, :not_found}
+      {_count, _} -> :ok
+    end
+  end
+
+  @doc """
+  Lists the blocked email domains with their comments.
+
+  ## Examples
+
+      iex> AdminTasks.blocked_email_domains()
+      [%{domain: "example.com", comment: "signup farm"}]
+  """
+  @spec blocked_email_domains() :: [%{domain: String.t(), comment: String.t() | nil}]
+  def blocked_email_domains() do
+    from(b in BlockedEmailDomain,
+      order_by: b.domain,
+      select: %{domain: b.domain, comment: b.comment}
+    )
+    |> Repo.all()
   end
 
   @doc """
@@ -738,9 +798,10 @@ defmodule Hexpm.AdminTasks do
 
         # Revoke all keys and sessions if requested
         if revoke_all_access do
-          {session_query, token_query} = Hexpm.UserSessions.revoke_all(user)
+          {session_query, token_query, org_session_query} = Hexpm.UserSessions.revoke_all(user)
           Repo.update_all(session_query, [])
           Repo.update_all(token_query, [])
+          Repo.update_all(org_session_query, [])
           Repo.update_all(Key.revoke_all(user), [])
         end
 
@@ -851,15 +912,35 @@ defmodule Hexpm.AdminTasks do
   Sends an email with an arbitrary subject and body.
 
   Every recipient gets a separate email so addresses are not disclosed between
-  recipients. Duplicate addresses are only sent to once. Failed deliveries are
-  logged and do not stop the remaining sends, the returned count is the number
-  of emails delivered.
+  recipients. Duplicate addresses are only queued once, and so is an address
+  that already has an announcement with this subject queued or delivered within
+  the last 90 days, so a send that was interrupted can be run again with the
+  full recipient list. The send holds a lock on the subject while it reads and
+  queues, so two consoles running the same announcement cannot both queue it.
+  The emails go into the outbox and are delivered by Oban, so a send survives
+  the console it was started from and a failed delivery is retried.
+  Announcements are queued at a lower priority than transactional mail, so a
+  large send does not delay those. The returned count is the number queued, not
+  the number delivered.
+
+  Addresses that fail to render are logged and do not stop the rest.
+
+  The entries share the group key `"admin.announcement:" <> subject`, so an
+  announcement that has not gone out yet can be cancelled:
+
+      iex> Hexpm.Emails.Outbox.cancel!(
+      ...>   group_key: "admin.announcement:Hex.pm - Service update",
+      ...>   categories: ["admin.announcement"]
+      ...> )
+      18392
 
   ## Arguments
 
-  - `recipients` - Email addresses to send to
+  - `recipients` - Email addresses to send to, see `Hexpm.Accounts.Users.all_notifiable_emails/0`
+    and `Hexpm.Accounts.Organizations.all_admin_notifiable_emails/1`
   - `subject` - Subject line, a leading `"Hex.pm - "` is dropped from the heading
-  - `body` - Plain text body, blank lines separate paragraphs
+  - `body` - Plain text body, blank lines separate paragraphs, single newlines
+    are kept as line breaks and bare URLs become links in the HTML part
 
   ## Examples
 
@@ -868,13 +949,59 @@ defmodule Hexpm.AdminTasks do
   """
   @spec send_email([String.t()], String.t(), String.t()) :: {:ok, non_neg_integer()}
   def send_email(recipients, subject, body) do
-    sent =
-      recipients
-      |> List.wrap()
-      |> Enum.uniq()
-      |> Enum.count(&deliver(Emails.announcement(&1, subject, body), &1))
+    group_key = announcement_group_key(subject)
 
-    {:ok, sent}
+    Repo.transaction(
+      fn ->
+        OutboxLock.acquire!(group_key)
+        already_queued = announcement_recipients(subject)
+
+        {skipped, pending} =
+          recipients
+          |> List.wrap()
+          |> Enum.uniq()
+          |> Enum.split_with(&MapSet.member?(already_queued, &1))
+
+        if skipped != [] do
+          Logger.info("Skipped #{length(skipped)} recipients already sent #{inspect(subject)}")
+        end
+
+        pending
+        |> Enum.flat_map(&prepare_announcement(&1, subject, body, group_key))
+        |> Outbox.insert_all!()
+      end,
+      timeout: :infinity
+    )
+  end
+
+  defp announcement_group_key(subject), do: "#{@announcement_category}:#{subject}"
+
+  defp announcement_recipients(subject) do
+    from(entry in OutboxEntry,
+      where: entry.category == ^@announcement_category,
+      where: entry.subject == ^subject,
+      select: entry.recipients
+    )
+    |> Repo.all()
+    |> List.flatten()
+    |> MapSet.new()
+  end
+
+  # Rendering is the part that can fail per recipient, and it is kept apart
+  # from the inserts so a failure leaves the transaction usable.
+  defp prepare_announcement(recipient, subject, body, group_key) do
+    [
+      Outbox.prepare!(Emails.announcement(recipient, subject, body),
+        category: @announcement_category,
+        group_key: group_key,
+        priority: @announcement_priority,
+        expires_at: Outbox.default_expires_at()
+      )
+    ]
+  rescue
+    error ->
+      Logger.error("Could not queue email to #{recipient}: #{inspect(error.__struct__)}")
+      []
   end
 
   defp deliver(email, description) do

@@ -37,6 +37,81 @@ defmodule Hexpm.Changeset do
     is_binary(req) and match?({:ok, _}, Version.parse_requirement(req))
   end
 
+  @doc """
+  Every entry of a list field has to be a string of at most `max` units, where
+  `count` is `:bytes` or `:codepoints`.
+  """
+  def validate_each_length(changeset, field, opts) do
+    max = Keyword.fetch!(opts, :max)
+    count = Keyword.fetch!(opts, :count)
+
+    validate_change(changeset, field, fn _, list ->
+      if Enum.all?(list, &(is_binary(&1) and string_length(&1, count) <= max)) do
+        []
+      else
+        [{field, {"entries should be at most %{count} #{unit(count)}", count: max}}]
+      end
+    end)
+  end
+
+  @doc """
+  A map field has at most `max_entries` entries, every key is a string of at
+  most `key_max` units and every string value is at most `value_max` units,
+  counted in `key_count` and `value_count` (`:bytes` or `:codepoints`).
+  """
+  def validate_map_entries(changeset, field, opts) do
+    max_entries = Keyword.fetch!(opts, :max_entries)
+    key_max = Keyword.fetch!(opts, :key_max)
+    key_count = Keyword.fetch!(opts, :key_count)
+    value_max = Keyword.fetch!(opts, :value_max)
+    value_count = Keyword.fetch!(opts, :value_count)
+
+    validate_change(changeset, field, fn _, map ->
+      cond do
+        map_size(map) > max_entries ->
+          [{field, {"should have at most %{count} entry(ies)", count: max_entries}}]
+
+        not Enum.all?(map, fn {key, _} ->
+          is_binary(key) and string_length(key, key_count) <= key_max
+        end) ->
+          [{field, {"keys should be at most %{count} #{unit(key_count)}", count: key_max}}]
+
+        not Enum.all?(map, fn {_, value} ->
+          is_binary(value) and string_length(value, value_count) <= value_max
+        end) ->
+          [{field, {"values should be at most %{count} #{unit(value_count)}", count: value_max}}]
+
+        true ->
+          []
+      end
+    end)
+  end
+
+  defp string_length(string, :bytes), do: byte_size(string)
+  defp string_length(string, :codepoints), do: length(String.codepoints(string))
+
+  defp unit(:bytes), do: "byte(s)"
+  defp unit(:codepoints), do: "character(s)"
+
+  @doc """
+  The JSON encoding of a field is at most `max` bytes.
+  """
+  def validate_encoded_size(changeset, field, max: max) do
+    validate_change(changeset, field, fn _, value ->
+      case encoded_size(value) do
+        {:ok, size} when size <= max -> []
+        {:ok, _size} -> [{field, {"should be at most %{count} byte(s) when encoded", count: max}}]
+        :error -> [{field, "is invalid"}]
+      end
+    end)
+  end
+
+  defp encoded_size(value) do
+    {:ok, IO.iodata_length(JSON.encode_to_iodata!(value))}
+  rescue
+    _ -> :error
+  end
+
   def validate_verified_email_exists(changeset, field, opts) do
     validate_change(changeset, field, fn _, email ->
       case Hexpm.Repo.get_by(Hexpm.Accounts.Email, email: email, verified: true) do
@@ -101,6 +176,15 @@ defmodule Hexpm.Changeset do
   defp default_hash(nil), do: @default_password
   defp default_hash(""), do: @default_password
   defp default_hash(password), do: password
+
+  def nilify_blank(value) when is_binary(value) do
+    case String.trim(value) do
+      "" -> nil
+      trimmed -> trimmed
+    end
+  end
+
+  def nilify_blank(value), do: value
 
   def put_default_embed(changeset, key, value) do
     if get_change(changeset, key) do

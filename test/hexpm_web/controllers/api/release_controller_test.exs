@@ -1733,6 +1733,11 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       assert get_resp_header(conn, "www-authenticate") == [
                ~s(Bearer realm="hex", error="invalid_totp")
              ]
+
+      user_id = oauth_token.user_id
+
+      assert_received {Hexpm.LogLines, :warning,
+                       %{method: "totp", reason: "invalid_code", user_id: ^user_id}}
     end
 
     test "read operation works without TOTP even with write-scoped token", %{

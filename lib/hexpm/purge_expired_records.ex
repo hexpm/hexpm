@@ -1,4 +1,4 @@
-defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
+defmodule Hexpm.PurgeExpiredRecords do
   use Oban.Worker,
     queue: :periodic,
     max_attempts: 5,
@@ -22,7 +22,8 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
   @monitor_schedule "0 2 * * *"
 
   # Every row goes to the audit bucket before it is deleted, as the whole row
-  # minus these columns: the credential itself, never the record of who held it.
+  # minus these columns: the credential itself, or the mail body, never the
+  # record of who held or received it.
   @redacted %{
     Hexpm.OAuth.AuthorizationCode => ~w(code code_challenge),
     Hexpm.OAuth.DeviceCode => ~w(device_code user_code verification_uri_complete),
@@ -31,9 +32,11 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
     Hexpm.Accounts.PasswordReset => ~w(key),
     Hexpm.Accounts.AccountDeletionRequest => ~w(key),
     Hexpm.Accounts.SSO.Transaction => ~w(state_hash nonce code_verifier link_token_hash),
+    Hexpm.Accounts.SSO.Authorization => ~w(code_hash),
     Hexpm.Accounts.SSO.OrgSession => [],
     Hexpm.Accounts.OrganizationInvitation => ~w(token_hash),
-    Hexpm.Accounts.Key => ~w(secret_first secret_second)
+    Hexpm.Accounts.Key => ~w(secret_first secret_second),
+    Hexpm.Emails.OutboxEntry => ~w(email)
   }
 
   @impl Oban.Worker
@@ -61,9 +64,11 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
       purge_password_resets(repo, batch_size, run)
       purge_account_deletion_requests(repo, batch_size, run)
       purge_sso_transactions(repo, batch_size, run)
+      purge_sso_authorizations(repo, batch_size, run)
       purge_sso_sessions(repo, batch_size, run)
       purge_organization_invitations(repo, batch_size, run)
       purge_keys(repo, batch_size, run)
+      purge_email_outbox_entries(repo, batch_size, run)
     end)
   end
 
@@ -188,6 +193,22 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
     Logger.info("[task] Purged #{count} expired organization SSO transactions")
   end
 
+  defp purge_sso_authorizations(repo, batch_size, run) do
+    count =
+      archive_and_delete(
+        repo,
+        Hexpm.Accounts.SSO.Authorization,
+        from(authorization in Hexpm.Accounts.SSO.Authorization,
+          where: authorization.expires_at < fragment("NOW()"),
+          order_by: authorization.expires_at
+        ),
+        batch_size,
+        run
+      )
+
+    Logger.info("[task] Purged #{count} expired organization SSO authorizations")
+  end
+
   # One predicate rather than `expires_at < NOW() OR revoked_at IS NOT NULL`,
   # which could use neither index. A revoked session carries an expiry too, so
   # it is collected within the day. Nothing durable is lost: when a member last
@@ -243,6 +264,23 @@ defmodule Hexpm.ReleaseTasks.PurgeExpiredRecords do
       )
 
     Logger.info("[task] Purged #{count} revoked keys")
+  end
+
+  defp purge_email_outbox_entries(repo, batch_size, run) do
+    count =
+      archive_and_delete(
+        repo,
+        Hexpm.Emails.OutboxEntry,
+        from(entry in Hexpm.Emails.OutboxEntry,
+          where:
+            entry.delivered_at < fragment("NOW() - make_interval(days => ?)", @retention_days),
+          order_by: entry.delivered_at
+        ),
+        batch_size,
+        run
+      )
+
+    Logger.info("[task] Purged #{count} delivered email outbox entries")
   end
 
   # Each batch is uploaded before it is deleted, so a failed upload raises with

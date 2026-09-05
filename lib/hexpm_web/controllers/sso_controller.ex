@@ -4,11 +4,29 @@ defmodule HexpmWeb.SSOController do
   alias Hexpm.Accounts.SSO
   alias Hexpm.Accounts.SSO.Error
   alias HexpmWeb.Plugs.Attack
+  alias HexpmWeb.SSOEnforcement
 
   plug :put_no_store
   plug :require_sso_available
-  plug :requires_login when action in [:start, :link, :confirm_link, :cancel_link]
+
+  plug :requires_login
+       when action in [
+              :start,
+              :link,
+              :confirm_link,
+              :cancel_link,
+              :authorize,
+              :authorize_organization
+            ]
+
+  # The same bar device approval sets, for the same reason: this hands a
+  # capability to a session that is not the browser doing the clicking, and a
+  # stolen access token is enough to ask for the page.
+  plug HexpmWeb.Plugs.Sudo when action in [:authorize, :authorize_organization]
+
   plug :rate_limit_callback when action in [:callback]
+
+  @initiation_parameters ~w(iss login_hint target_link_uri)
 
   defp require_sso_available(conn, _opts) do
     if SSO.available?() do
@@ -23,34 +41,43 @@ defmodule HexpmWeb.SSOController do
   def start(conn, %{"organization" => name} = params) do
     organization = Organizations.get(name)
 
-    if organization && SSO.enabled?(organization) && allow_start?(conn, organization) do
-      with {:ok, return_path, opts} <- initiation_options(conn, organization, params),
-           {:ok, transaction, uri} <-
-             SSO.start_login(
-               organization,
-               conn.assigns.current_user,
-               return_path,
-               callback_url(),
-               opts
-             ) do
-        conn
-        |> remember_sso_state(transaction.raw_state)
-        |> redirect(external: uri)
-      else
-        {:error, reason} ->
-          conn
-          |> put_flash(:error, start_error_message(reason))
-          |> redirect(to: ~p"/dashboard")
-      end
-    else
-      if organization && SSO.enabled?(organization) do
-        conn
-        |> put_status(:too_many_requests)
-        |> text("Too many SSO login attempts. Try again later.")
-      else
+    cond do
+      is_nil(organization) or not SSO.reachable?(organization) ->
         not_found(conn)
-      end
+
+      not allow_start?(conn, organization) ->
+        too_many_requests(conn)
+
+      true ->
+        start_login(conn, organization, params)
     end
+  end
+
+  defp start_login(conn, organization, params) do
+    with {:ok, return_path, opts} <- initiation_options(conn, organization, params),
+         {:ok, transaction, uri} <-
+           SSO.start_login(
+             organization,
+             conn.assigns.current_user,
+             return_path,
+             SSOEnforcement.callback_url(),
+             opts
+           ) do
+      conn
+      |> remember_sso_state(transaction.raw_state)
+      |> redirect(external: uri)
+    else
+      {:error, reason} ->
+        conn
+        |> put_flash(:error, start_error_message(reason))
+        |> redirect(to: ~p"/dashboard")
+    end
+  end
+
+  defp too_many_requests(conn) do
+    conn
+    |> put_status(:too_many_requests)
+    |> text("Too many SSO login attempts. Try again later.")
   end
 
   defp allow_start?(conn, organization) do
@@ -63,9 +90,8 @@ defmodule HexpmWeb.SSOController do
 
   defp initiation_options(conn, organization, params) do
     with {:ok, query} <- decode_initiation_query(conn.query_string),
-         :ok <- reject_duplicate_initiation_parameters(query) do
-      recognized = Enum.filter(query, &(elem(&1, 0) in ~w(iss login_hint target_link_uri)))
-
+         recognized = Enum.filter(query, &(elem(&1, 0) in @initiation_parameters)),
+         :ok <- reject_duplicate_initiation_parameters(recognized) do
       if recognized == [] do
         {:ok, params["return"], []}
       else
@@ -97,10 +123,9 @@ defmodule HexpmWeb.SSOController do
     _exception -> {:error, :invalid_third_party_initiation}
   end
 
-  defp reject_duplicate_initiation_parameters(query) do
+  defp reject_duplicate_initiation_parameters(recognized) do
     duplicate? =
-      query
-      |> Enum.filter(&(elem(&1, 0) in ~w(iss login_hint target_link_uri)))
+      recognized
       |> Enum.frequencies_by(&elem(&1, 0))
       |> Enum.any?(fn {_key, count} -> count > 1 end)
 
@@ -111,7 +136,7 @@ defmodule HexpmWeb.SSOController do
   defp validate_login_hint(""), do: {:ok, nil}
 
   defp validate_login_hint(login_hint)
-       when is_binary(login_hint) and byte_size(login_hint) <= 320 do
+       when is_binary(login_hint) and byte_size(login_hint) <= 255 do
     if String.valid?(login_hint),
       do: {:ok, login_hint},
       else: {:error, :invalid_third_party_initiation}
@@ -121,6 +146,9 @@ defmodule HexpmWeb.SSOController do
 
   defp validate_target_link_uri(_organization, nil), do: {:ok, nil}
 
+  # The provider chooses this value, so it is held to the initiating
+  # organization's own dashboard rather than to the return path policy that
+  # covers the paths we hand out ourselves.
   defp validate_target_link_uri(organization, target_link_uri)
        when is_binary(target_link_uri) and byte_size(target_link_uri) <= 2_048 do
     configured = URI.parse(Application.fetch_env!(:hexpm, :email_base_url))
@@ -130,9 +158,9 @@ defmodule HexpmWeb.SSOController do
          nil <- target.userinfo,
          nil <- target.fragment,
          path when is_binary(path) <- target.path,
+         true <- organization_dashboard_path?(organization, path),
          relative = path <> if(target.query, do: "?" <> target.query, else: ""),
-         return_path when is_binary(return_path) <-
-           SSO.allowed_return_path(organization, relative) do
+         return_path when is_binary(return_path) <- SSO.allowed_return_path(relative) do
       {:ok, return_path}
     else
       _other -> {:error, :invalid_third_party_initiation}
@@ -141,6 +169,12 @@ defmodule HexpmWeb.SSOController do
 
   defp validate_target_link_uri(_organization, _target_link_uri),
     do: {:error, :invalid_third_party_initiation}
+
+  defp organization_dashboard_path?(organization, path) do
+    base = "/dashboard/orgs/#{organization.name}"
+
+    path == base or String.starts_with?(path, base <> "/")
+  end
 
   defp same_origin?(left, right) do
     left.scheme in ["http", "https"] and left.scheme == right.scheme and
@@ -180,8 +214,13 @@ defmodule HexpmWeb.SSOController do
 
   def callback(conn, %{"state" => state, "error" => _provider_error}) do
     case bound_transaction(conn, state) do
-      nil -> callback_error(conn, nil, :invalid_state)
-      transaction -> abandon(conn, transaction, :authorization, :provider_error)
+      nil ->
+        callback_error(conn, nil, :invalid_state)
+
+      transaction ->
+        conn
+        |> forget_sso_state(state)
+        |> abandon(transaction, :authorization, :provider_error)
     end
   end
 
@@ -200,14 +239,19 @@ defmodule HexpmWeb.SSOController do
 
   def callback(conn, params) do
     case bound_transaction(conn, params["state"]) do
-      nil -> callback_error(conn, nil, :invalid_response)
-      transaction -> abandon(conn, transaction, :callback, :invalid_response)
+      nil ->
+        callback_error(conn, nil, :invalid_response)
+
+      transaction ->
+        conn
+        |> forget_sso_state(params["state"])
+        |> abandon(transaction, :callback, :invalid_response)
     end
   end
 
   defp exchange_and_complete(conn, transaction, code) do
     with {:ok, user, user_session_id} <- account_session(conn, transaction),
-         {:ok, claims} <- SSO.exchange_code(transaction, code, callback_url()),
+         {:ok, claims} <- SSO.exchange_code(transaction, code, SSOEnforcement.callback_url()),
          :ok <- SSO.maybe_expand_seats(transaction, user, claims),
          {:ok, result} <-
            SSO.complete_callback(transaction, claims, user, user_session_id, audit_data(conn)) do
@@ -313,9 +357,7 @@ defmodule HexpmWeb.SSOController do
             |> delete_session("pending_sso_link")
             |> put_flash(:info, "Organization SSO has been connected to your Hexpm account.")
             |> redirect(
-              to:
-                SSO.allowed_return_path(organization, transaction.return_path) ||
-                  ~p"/dashboard/orgs/#{organization}"
+              to: login_destination(conn, transaction, organization, transaction.return_path)
             )
 
           {:error, reason} ->
@@ -327,6 +369,135 @@ defmodule HexpmWeb.SSOController do
             |> redirect(to: ~p"/dashboard")
         end
     end
+  end
+
+  @doc """
+  Authenticates a session that cannot reach a browser itself.
+
+  Everything the provider needs happens here, in a browser that is signed in as
+  the same account, and the organization access lands on the session named by
+  the request rather than on this one.
+  """
+  def authorize(conn, %{"code" => code}) do
+    case SSO.get_authorization(code, conn.assigns.current_user) do
+      nil ->
+        expired_authorization(conn)
+
+      authorization ->
+        case SSO.authorization_status(authorization) do
+          [] ->
+            expired_authorization(conn)
+
+          status ->
+            if Enum.all?(status, fn {_organization, authenticated?} -> authenticated? end) do
+              SSO.consume_authorization!(authorization)
+
+              conn
+              |> delete_session("sso_authorization")
+              |> put_flash(:info, authorized_message(authorization, status))
+              |> redirect(to: ~p"/dashboard")
+            else
+              conn
+              |> allow_provider_form_actions(status)
+              |> render("authorize.html",
+                title: "Authenticate a session",
+                container: "container page page-xs",
+                code: code,
+                session: authorization.user_session,
+                organizations: status
+              )
+            end
+        end
+    end
+  end
+
+  # The code moved out of the path, so both actions can now be reached without
+  # one. Say the same thing a stale code says rather than raising.
+  def authorize(conn, _params), do: expired_authorization(conn)
+
+  def authorize_organization(conn, %{"code" => code, "organization" => name}) do
+    case SSO.get_authorization(code, conn.assigns.current_user) do
+      nil ->
+        expired_authorization(conn)
+
+      authorization ->
+        case authorized_organization(authorization, name) do
+          # Already done, or never on the list. Either way the page is where the
+          # answer is, and re-rendering it says nothing a second request would
+          # not have said anyway.
+          nil ->
+            redirect(conn, to: ~p"/sso/authorize?#{[code: code]}")
+
+          organization ->
+            if allow_start?(conn, organization) do
+              start_authorization(conn, authorization, organization, code)
+            else
+              too_many_requests(conn)
+            end
+        end
+    end
+  end
+
+  def authorize_organization(conn, %{"code" => code}) do
+    redirect(conn, to: ~p"/sso/authorize?#{[code: code]}")
+  end
+
+  def authorize_organization(conn, _params), do: expired_authorization(conn)
+
+  # One button per organization still to authenticate, each submitting to the
+  # action that starts that organization's login.
+  defp allow_provider_form_actions(conn, status) do
+    Enum.reduce(status, conn, fn
+      {_organization, true}, conn -> conn
+      {organization, false}, conn -> SSOEnforcement.allow_provider_form_action(conn, organization)
+    end)
+  end
+
+  defp start_authorization(conn, authorization, organization, code) do
+    case SSO.start_login(
+           organization,
+           conn.assigns.current_user,
+           nil,
+           SSOEnforcement.callback_url(),
+           entrypoint: "cli",
+           target_user_session_id: authorization.user_session_id
+         ) do
+      {:ok, transaction, uri} ->
+        conn
+        |> put_session("sso_authorization", code)
+        |> remember_sso_state(transaction.raw_state)
+        |> redirect(external: uri)
+
+      {:error, reason} ->
+        conn
+        |> put_flash(:error, start_error_message(reason))
+        |> redirect(to: ~p"/sso/authorize?#{[code: code]}")
+    end
+  end
+
+  defp authorized_organization(authorization, name) when is_binary(name) do
+    Enum.find_value(SSO.authorization_status(authorization), fn {organization, authenticated?} ->
+      if organization.name == name and not authenticated?, do: organization
+    end)
+  end
+
+  defp authorized_organization(_authorization, _name), do: nil
+
+  defp expired_authorization(conn) do
+    conn
+    |> delete_session("sso_authorization")
+    |> put_flash(
+      :error,
+      "That authentication request is no longer open. Run the command again for a new link."
+    )
+    |> redirect(to: ~p"/dashboard")
+  end
+
+  defp authorized_message(authorization, status) do
+    names = status |> Enum.map(fn {organization, _} -> organization.name end) |> Enum.join(", ")
+    session = authorization.user_session.name || "your session"
+
+    "#{session} is authenticated to #{names}. You can go back to your terminal."
   end
 
   def cancel_link(conn, _params) do
@@ -351,7 +522,7 @@ defmodule HexpmWeb.SSOController do
     |> redirect(to: ~p"/dashboard/orgs/#{organization}/sso")
   end
 
-  defp handle_callback_result(conn, _transaction, {:link, transaction_id, token, _return_path}) do
+  defp handle_callback_result(conn, _transaction, {:link, transaction_id, token}) do
     conn
     |> put_session("pending_sso_link", %{"transaction_id" => transaction_id, "token" => token})
     |> redirect(to: ~p"/sso/link")
@@ -362,11 +533,25 @@ defmodule HexpmWeb.SSOController do
 
     conn
     |> put_flash(:info, "You are authenticated to #{organization.name}.")
-    |> redirect(
-      to:
-        SSO.allowed_return_path(organization, return_path) || ~p"/dashboard/orgs/#{organization}"
-    )
+    |> redirect(to: login_destination(conn, transaction, organization, return_path))
   end
+
+  defp login_destination(conn, transaction, organization, return_path) do
+    authorization_path(conn, transaction) ||
+      SSO.allowed_return_path(return_path) ||
+      ~p"/dashboard/orgs/#{organization}"
+  end
+
+  # An authentication a terminal asked for goes back to the page listing what is
+  # left to do, not to the organization's dashboard.
+  defp authorization_path(conn, %{target_user_session_id: target}) when not is_nil(target) do
+    case get_session(conn, "sso_authorization") do
+      code when is_binary(code) -> ~p"/sso/authorize?#{[code: code]}"
+      _other -> nil
+    end
+  end
+
+  defp authorization_path(_conn, _transaction), do: nil
 
   # Rendering only. Callers that found a transaction have already recorded their
   # diagnostic, either through `abandon/4` or inside the context. The ones that
@@ -398,8 +583,6 @@ defmodule HexpmWeb.SSOController do
         nil
     end
   end
-
-  defp callback_url, do: url(~p"/sso/callback")
 
   defp start_error_message(:connection_disabled), do: "SSO is not enabled for that organization."
   defp start_error_message(:not_configured), do: "SSO is not configured for that organization."

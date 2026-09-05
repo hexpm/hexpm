@@ -1,7 +1,7 @@
 defmodule Hexpm.Accounts.UserTest do
   use Hexpm.DataCase, async: true
 
-  alias Hexpm.Accounts.{Auth, User, OptionalEmails}
+  alias Hexpm.Accounts.{Auth, BlockedEmailDomain, User, OptionalEmails}
 
   setup do
     user = insert(:user, password: Auth.gen_password("password"))
@@ -35,6 +35,39 @@ defmodule Hexpm.Accounts.UserTest do
       assert errors_on(changeset)[:password] == "should be at least 8 character(s)"
     end
 
+    test "bounds the username in bytes" do
+      changeset = User.build(%{username: String.duplicate("a", 255)})
+      refute errors_on(changeset)[:username]
+
+      changeset = User.build(%{username: String.duplicate("a", 256)})
+      assert errors_on(changeset)[:username] == "should be at most 255 byte(s)"
+    end
+
+    test "bounds the full name in codepoints" do
+      changeset = User.build(%{username: "username", full_name: codepoints_string(255)})
+      refute errors_on(changeset)[:full_name]
+
+      changeset = User.build(%{username: "username", full_name: codepoints_string(256)})
+      assert errors_on(changeset)[:full_name] == "should be at most 255 character(s)"
+    end
+
+    test "bounds the email address in bytes" do
+      at_cap = combining_string(250) <> "@b.co"
+      assert byte_size(at_cap) == 255
+
+      changeset =
+        Hexpm.Accounts.Email.changeset(%Hexpm.Accounts.Email{}, :create, %{email: at_cap}, true)
+
+      refute errors_on(changeset)[:email]
+
+      over_cap = combining_string(252) <> "@b.co"
+
+      changeset =
+        Hexpm.Accounts.Email.changeset(%Hexpm.Accounts.Email{}, :create, %{email: over_cap}, true)
+
+      assert errors_on(changeset)[:email] == "should be at most 255 byte(s)"
+    end
+
     test "username and email are unique", %{user: user} do
       assert {:error, changeset} =
                User.build(
@@ -61,6 +94,34 @@ defmodule Hexpm.Accounts.UserTest do
                |> Hexpm.Repo.insert()
 
       assert errors_on(changeset)[:emails][:email] == "already in use"
+    end
+
+    test "rejects an email on a blocked domain or under it" do
+      Repo.insert!(
+        BlockedEmailDomain.changeset(%BlockedEmailDomain{}, %{domain: "Blocked.example"})
+      )
+
+      for email <- ["someone@blocked.example", "someone@mail.BLOCKED.example"] do
+        assert {:error, changeset} =
+                 User.build(
+                   %{username: "blockeduser", emails: [%{email: email}], password: "password"},
+                   true
+                 )
+                 |> Hexpm.Repo.insert()
+
+        assert errors_on(changeset)[:emails][:email] == "uses a blocked domain"
+      end
+
+      assert {:ok, _user} =
+               User.build(
+                 %{
+                   username: "blockeduser",
+                   emails: [%{email: "someone@notblocked.example"}],
+                   password: "password"
+                 },
+                 true
+               )
+               |> Hexpm.Repo.insert()
     end
   end
 
@@ -126,7 +187,7 @@ defmodule Hexpm.Accounts.UserTest do
       assert {:ok, %{user: auth_user}} = Auth.password_auth(user.username, "new_password")
 
       assert auth_user.id == user.id
-      assert :error == Auth.password_auth(user.username, "password")
+      assert {:error, :wrong_password} == Auth.password_auth(user.username, "password")
     end
 
     test "validates", %{user: user} do
@@ -150,6 +211,16 @@ defmodule Hexpm.Accounts.UserTest do
     end
   end
 
+  describe "verify_permissions/3" do
+    test "refuses a package resource that names no package", %{user: user} do
+      # The resource comes off the query string of /api/auth, so anything at all
+      # can arrive here.
+      for name <- ["decimal", "", "hexpm/decimal/1.0.0"] do
+        assert User.verify_permissions(user, "package", name) == :error
+      end
+    end
+  end
+
   describe "update_profile/2" do
     test "changes name", %{user: user} do
       changeset = User.update_profile(user, %{full_name: "Jane", username: "ignore_this"})
@@ -158,12 +229,31 @@ defmodule Hexpm.Accounts.UserTest do
       refute changeset.changes[:username]
     end
 
+    test "bounds the full name in codepoints", %{user: user} do
+      assert User.update_profile(user, %{full_name: codepoints_string(255)}).valid?
+
+      changeset = User.update_profile(user, %{full_name: codepoints_string(256)})
+      assert errors_on(changeset)[:full_name] == "should be at most 255 character(s)"
+    end
+
+    test "bounds the handles", %{user: user} do
+      url = "https://example.com/" <> String.duplicate("a", 2028)
+      handles = %{github: codepoints_string(255), url: url}
+      assert User.update_profile(user, %{handles: handles}).valid?
+
+      changeset = User.update_profile(user, %{handles: %{github: codepoints_string(256)}})
+      assert errors_on(changeset).handles.github == "should be at most 255 character(s)"
+
+      changeset = User.update_profile(user, %{handles: %{url: url <> "a"}})
+      assert errors_on(changeset).handles.url == "should be at most 2048 byte(s)"
+    end
+
     test "does not change password", %{user: user, password: password} do
       User.update_profile(user, %{full_name: "Jane", password: "ignore_this"})
       |> Hexpm.Repo.update!()
 
       assert {:ok, _} = Auth.password_auth(user.username, password)
-      assert :error == Auth.password_auth("new_username", "ignore_this")
+      assert {:error, :unknown_user} == Auth.password_auth("new_username", "ignore_this")
     end
   end
 end

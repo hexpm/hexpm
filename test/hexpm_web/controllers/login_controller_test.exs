@@ -77,7 +77,11 @@ defmodule HexpmWeb.LoginControllerTest do
         {"line feed", "/\n/evil.com"},
         {"carriage return", "/\r/evil.com"},
         {"CRLF", "/\r\n/evil.com"},
-        {"header injection", "/dashboard\r\nSet-Cookie: x=1"}
+        {"header injection", "/dashboard\r\nSet-Cookie: x=1"},
+        {"null byte", "/dashboard\0"},
+        {"vertical tab", "/dashboard\v"},
+        {"form feed", "/dashboard\f"},
+        {"delete", "/dashboard\d"}
       ] do
     test "log in refuses to redirect off-site via a #{label} return path", c do
       conn =
@@ -114,6 +118,31 @@ defmodule HexpmWeb.LoginControllerTest do
              "Invalid username, email or password."
 
     refute get_session(conn, "session_token")
+
+    username = c.user.username
+
+    assert_received {Hexpm.LogLines, :warning,
+                     %{
+                       event: "auth.failure",
+                       method: "password",
+                       reason: "wrong_password",
+                       username: ^username,
+                       path: "/login",
+                       ip: "127.0.0.1"
+                     }}
+  end
+
+  test "log in with unknown user" do
+    PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
+
+    conn = post(build_conn(), "/login", %{username: "nobody@example.com", password: "WRONG"})
+    assert response(conn, 400) =~ "Log in"
+
+    assert Phoenix.Flash.get(conn.assigns.flash, "error") ==
+             "Invalid username, email or password."
+
+    assert_received {Hexpm.LogLines, :warning,
+                     %{method: "password", reason: "unknown_user", username: "nobody@example.com"}}
   end
 
   test "log in with unconfirmed email", c do
@@ -125,6 +154,8 @@ defmodule HexpmWeb.LoginControllerTest do
     assert response(conn, 400) =~ "Log in"
     assert Phoenix.Flash.get(conn.assigns.flash, "error") =~ "Email has not been verified yet."
     refute get_session(conn, "session_token")
+
+    assert_received {Hexpm.LogLines, :warning, %{method: "password", reason: "unverified_email"}}
   end
 
   test "log out", c do

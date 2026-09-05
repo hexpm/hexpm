@@ -1,7 +1,7 @@
 defmodule HexpmWeb.PackageOwnerController do
   use HexpmWeb, :controller
 
-  alias HexpmWeb.{PackageLayoutAssigns, ViewHelpers}
+  alias HexpmWeb.{PackageLayoutAssigns, RepositoryAccess, SSOEnforcement, ViewHelpers}
 
   plug :requires_login
   plug :fetch_package
@@ -39,6 +39,11 @@ defmodule HexpmWeb.PackageOwnerController do
         {:error, :not_member} ->
           conn
           |> put_flash(:error, "#{username} is not a member of this repository.")
+          |> redirect(to: ViewHelpers.path_for_owners(package))
+
+        {:error, :unverified_primary_email} ->
+          conn
+          |> put_flash(:error, "#{username} has not verified their primary email.")
           |> redirect(to: ViewHelpers.path_for_owners(package))
 
         {:error, :not_organization_transfer} ->
@@ -145,28 +150,40 @@ defmodule HexpmWeb.PackageOwnerController do
     end
   end
 
+  # Answering 403 for a package that exists and 404 for one that does not tells
+  # anyone who asks which private package names are taken, and organization
+  # names are public. A repository the caller does not reach answers exactly as
+  # a missing package does.
   defp fetch_package(conn, _opts) do
-    name = conn.params["name"]
-    repository = Repositories.get(conn.params["repository"], [:organization])
-    package = repository && Packages.get(repository, name)
+    case RepositoryAccess.fetch_package(conn, conn.params["repository"], conn.params["name"]) do
+      {:ok, package} ->
+        conn
+        |> assign(:repository, package.repository)
+        |> assign(:package, package)
 
-    if package do
-      conn
-      |> assign(:repository, repository)
-      |> assign(:package, package)
-    else
-      conn
-      |> render_error(404, message: "Package not found")
-      |> halt()
+      {:error, :sso_required, organization} ->
+        SSOEnforcement.refuse(conn, :sso_required, organization)
+
+      :error ->
+        conn
+        |> render_error(404, message: "Package not found")
+        |> halt()
     end
   end
 
+  # `fetch_package/2` enforces against the repository's organization, which for a
+  # package in the public repository is the public one. Ownership of a public
+  # package can come from a governed organization, so it is enforced here where
+  # the owners are resolved.
   defp requires_full_owner(conn, _opts) do
     package = conn.assigns.package
     current_user = conn.assigns.current_user
 
     if current_user && Packages.owner_with_access?(package, current_user, "full") do
-      conn
+      case SSOEnforcement.check_package(conn, package, current_user, "full") do
+        :ok -> conn
+        {:error, refusal, organization} -> SSOEnforcement.refuse(conn, refusal, organization)
+      end
     else
       conn
       |> render_error(403, message: "You must be a full owner of this package")

@@ -6,4 +6,4 @@
 
 <%= @reason %>
 
-<%= PackageRemoved.questions_notice(:text) %>
+<%= PackageRemoved.terms_notice(:text) %>

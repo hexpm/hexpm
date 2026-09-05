@@ -347,17 +347,17 @@ defmodule HexpmWeb.ControllerHelpers do
       {:ok, %{user: user, email: email}} ->
         if email.verified,
           do: {:ok, user},
-          else: {:error, :unconfirmed}
+          else: {:error, :unverified_email}
 
-      :error ->
-        {:error, :wrong}
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
-  def auth_error_message(:wrong), do: "Invalid username, email or password."
-
-  def auth_error_message(:unconfirmed),
+  def auth_error_message(:unverified_email),
     do: "Email has not been verified yet. You can resend the verification email below."
+
+  def auth_error_message(_reason), do: "Invalid username, email or password."
 
   def password_breached_message() do
     # docs_path + anchor #password-security
@@ -599,9 +599,14 @@ defmodule HexpmWeb.ControllerHelpers do
   #   * tab, LF and CR are stripped while parsing a URL, so `/<TAB>/evil.com`
   #     resolves as `//evil.com` (the bypass behind CVE-2026-64941). LF and CR
   #     would also split a Location header.
-  #   * `%2f` and `%5c` are the encoded spellings, rejected so that a later
-  #     decoding step downstream cannot reintroduce the leading `//`.
-  @invalid_return_path_chars ["\\", "\t", "\n", "\r", "%09", "%2f", "%2F", "%5c", "%5C"]
+  #   * `%2f`, `%5c` and `%09` are the encoded spellings, rejected so that a
+  #     later decoding step downstream cannot reintroduce the leading `//`.
+  #
+  # The whole C0 range and DEL go with them: none belong in a path, and
+  # `Plug.Conn.put_resp_header/3` raises on NUL, LF and CR rather than
+  # redirecting, which surfaces as a 500.
+  @control_chars Enum.map(Enum.to_list(0x00..0x1F) ++ [0x7F], &<<&1>>)
+  @invalid_return_path_chars ["\\", "%09", "%2f", "%2F", "%5c", "%5C"] ++ @control_chars
 
   @doc """
   Returns the value if it is a local path, otherwise returns nil.

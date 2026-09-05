@@ -31,6 +31,7 @@ defmodule Hexpm.RuntimeConfigTest do
     "HEXPM_VARSEL_JWT_AUDIENCE" => "https://cna.example.com/reports",
     "HEXPM_VARSEL_SIGNING_KEY" => "varsel-signing-key",
     "HEXPM_VARSEL_KEY_ID" => "varsel-key-id",
+    "HEXPM_VARSEL_JWKS" => ~S({"keys":[]}),
     "HEXPM_HCAPTCHA_SITEKEY" => "hcaptcha-sitekey",
     "HEXPM_HCAPTCHA_SECRET" => "hcaptcha-secret",
     "HEXPM_GITHUB_CLIENT_ID" => "github-client-id",
@@ -57,6 +58,7 @@ defmodule Hexpm.RuntimeConfigTest do
                 "HEXPM_OBAN_HEAVY_CONCURRENCY" => "10",
                 "HEXPM_OBAN_REGISTRY_CONCURRENCY" => "2",
                 "HEXPM_OBAN_PURGE_CONCURRENCY" => "5",
+                "HEXPM_OBAN_EMAIL_CONCURRENCY" => "5",
                 "HEXPM_DOCS_PRIVATE_BUCKET" => "docs-private",
                 "HEXPM_PREVIEW_QUEUE_ID" => "preview-queue",
                 "HEXPM_DOCS_QUEUE_ID" => "docs-queue",
@@ -81,6 +83,18 @@ defmodule Hexpm.RuntimeConfigTest do
     config = read_runtime(Map.put(@worker_env, "HEXPM_SECRET_SCAN_NOTIFY", "true"))
 
     assert config[:hexpm][:secret_scan_notify] == true
+  end
+
+  test "worker mode sizes each queue from its own variable" do
+    config = read_runtime(@worker_env)
+
+    assert config[:hexpm][Oban][:queues] == [
+             periodic: 5,
+             heavy: 10,
+             registry: 2,
+             purge: 5,
+             email: 5
+           ]
   end
 
   # Oban jobs read the same app config web requests do, so any key set only in

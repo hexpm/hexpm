@@ -1,6 +1,7 @@
 defmodule Hexpm.CDN.FastlyTest do
   use ExUnit.Case, async: true
   import Mox
+  import Hexpm.TestHelpers, only: [capture_log_lines: 1]
   alias Hexpm.CDN.Fastly
 
   setup :verify_on_exit!
@@ -33,14 +34,27 @@ defmodule Hexpm.CDN.FastlyTest do
       assert Fastly.purge_key(:fastly_hexdocs, ["docs-key"]) == :ok
     end
 
-    @tag :capture_log
     test "retries 5xx and 429 before giving up with the status and body" do
       expect(Hexpm.HTTP.Mock, :post, 5, fn _url, _headers, _body ->
         {:ok, 503, [], %{"msg" => "unavailable"}}
       end)
 
-      assert Fastly.purge_key(:fastly_hexrepo, ["key"]) ==
-               {:error, {:status, 503, %{"msg" => "unavailable"}}}
+      lines =
+        capture_log_lines(fn ->
+          assert Fastly.purge_key(:fastly_hexrepo, ["key"]) ==
+                   {:error, {:status, 503, %{"msg" => "unavailable"}}}
+        end)
+
+      assert [{:error, line}] =
+               Enum.filter(lines, fn {_level, fields} -> fields[:event] == "cdn.purge_request" end)
+
+      assert %{
+               message: "CDN purge request failed",
+               service: :fastly_hexrepo,
+               keys: ["key"],
+               status: 503,
+               error: ~s(%{"msg" => "unavailable"})
+             } = line
     end
 
     @tag :capture_log
@@ -122,7 +136,13 @@ defmodule Hexpm.CDN.FastlyTest do
 
           {_, "nrt-tokyo-jp"} ->
             {:ok, 200,
-             [{"etag", ~s("old")}, {"x-cache-served-by", "cache-iad-2-IAD, cache-nrt-1-NRT"}], ""}
+             [
+               {"etag", ~s("old")},
+               {"x-cache-served-by", "cache-iad-2-IAD, cache-nrt-1-NRT"},
+               {"x-cache", "HIT, HIT"},
+               {"x-cache-age", "120, 3"},
+               {"x-cache-hits", "5, 1"}
+             ], ""}
         end
       end)
 
@@ -136,9 +156,105 @@ defmodule Hexpm.CDN.FastlyTest do
                     [
                       %{
                         pop: "nrt-tokyo-jp",
-                        etag: ~s("old"),
-                        served_by: "cache-iad-2-IAD, cache-nrt-1-NRT"
+                        served: {:etag, ~s("old")},
+                        cache:
+                          "x-cache-served-by: cache-iad-2-IAD, cache-nrt-1-NRT; " <>
+                            "x-cache: HIT, HIT; x-cache-age: 120, 3; x-cache-hits: 5, 1"
                       }
+                    ]}}}
+               ]
+    end
+
+    test "passes a copy whose write number is at or past the target's" do
+      expect(Hexpm.HTTP.Mock, :head, 2, fn _url, headers, _opts ->
+        case List.keyfind(headers, "hex-cache-probe", 0) do
+          nil -> {:ok, 200, [{"etag", ~s("later")}, {"x-cache-write", "8"}], ""}
+          _probe -> {:ok, 200, [{"etag", ~s("abc")}, {"x-cache-write", "7"}], ""}
+        end
+      end)
+
+      target = %{url: "https://repo.example/packages/foo", etag: ~s("abc"), write: 7}
+      assert Fastly.verify(:fastly_hexrepo, [target]) == [{target, :ok}]
+    end
+
+    test "reports a copy with a lower write number as stale whatever its ETag" do
+      expect(Hexpm.HTTP.Mock, :head, 2, fn _url, headers, _opts ->
+        case List.keyfind(headers, "hex-cache-probe", 0) do
+          nil -> {:ok, 200, [{"etag", ~s("abc")}, {"x-cache-write", "7"}], ""}
+          _probe -> {:ok, 200, [{"etag", ~s("abc")}, {"x-cache-write", "6"}], ""}
+        end
+      end)
+
+      target = %{url: "https://repo.example/packages/foo", etag: ~s("abc"), write: 7}
+
+      assert Fastly.verify(:fastly_hexrepo, [target]) ==
+               [
+                 {target,
+                  {:error, {:stale, [%{pop: "nrt-tokyo-jp", served: {:write, 6}, cache: nil}]}}}
+               ]
+    end
+
+    test "compares the ETag when the copy carries no write number" do
+      expect(Hexpm.HTTP.Mock, :head, 2, fn _url, headers, _opts ->
+        case List.keyfind(headers, "hex-cache-probe", 0) do
+          nil -> {:ok, 200, [{"etag", ~s("abc")}], ""}
+          _probe -> {:ok, 200, [{"etag", ~s("old")}], ""}
+        end
+      end)
+
+      target = %{url: "https://repo.example/packages/foo", etag: ~s("abc"), write: 7}
+
+      assert Fastly.verify(:fastly_hexrepo, [target]) ==
+               [
+                 {target,
+                  {:error,
+                   {:stale, [%{pop: "nrt-tokyo-jp", served: {:etag, ~s("old")}, cache: nil}]}}}
+               ]
+    end
+
+    test "accepts a numbered copy for a target from before writes were numbered" do
+      expect(Hexpm.HTTP.Mock, :head, 2, fn _url, _headers, _opts ->
+        {:ok, 200, [{"etag", ~s("later")}, {"x-cache-write", "5"}], ""}
+      end)
+
+      target = %{url: "https://repo.example/packages/foo", etag: ~s("abc")}
+      assert Fastly.verify(:fastly_hexrepo, [target]) == [{target, :ok}]
+
+      expect(Hexpm.HTTP.Mock, :head, 2, fn _url, _headers, _opts ->
+        {:ok, 200, [{"etag", ~s("later")}, {"x-cache-write", "5"}], ""}
+      end)
+
+      deleted = %{url: "https://repo.example/tarballs/foo-1.0.0.tar", etag: nil}
+      assert Fastly.verify(:fastly_hexrepo, [deleted]) == [{deleted, :ok}]
+    end
+
+    test "accepts a deleted object re-created by a later write" do
+      expect(Hexpm.HTTP.Mock, :head, 2, fn _url, _headers, _opts ->
+        {:ok, 200, [{"etag", ~s("new")}, {"x-cache-write", "10"}], ""}
+      end)
+
+      target = %{url: "https://repo.example/tarballs/foo-1.0.0.tar", etag: nil, write: 9}
+      assert Fastly.verify(:fastly_hexrepo, [target]) == [{target, :ok}]
+    end
+
+    test "reports a deleted object still served as stale" do
+      expect(Hexpm.HTTP.Mock, :head, 2, fn _url, headers, _opts ->
+        case List.keyfind(headers, "hex-cache-probe", 0) do
+          nil -> {:ok, 200, [{"etag", ~s("old")}, {"x-cache-write", "9"}], ""}
+          _probe -> {:ok, 200, [{"etag", ~s("old")}], ""}
+        end
+      end)
+
+      target = %{url: "https://repo.example/tarballs/foo-1.0.0.tar", etag: nil, write: 9}
+
+      assert Fastly.verify(:fastly_hexrepo, [target]) ==
+               [
+                 {target,
+                  {:error,
+                   {:stale,
+                    [
+                      %{pop: :nearest, served: {:write, 9}, cache: nil},
+                      %{pop: "nrt-tokyo-jp", served: {:write, nil}, cache: nil}
                     ]}}}
                ]
     end
@@ -162,6 +278,28 @@ defmodule Hexpm.CDN.FastlyTest do
       assert Fastly.verify(:fastly_hexrepo, [target]) == [{target, :ok}]
     end
 
+    test "accepts the organization docs redirect for a deleted page" do
+      expect(Hexpm.HTTP.Mock, :head, fn "https://foo.hexdocs.example/1.0.0/index.html",
+                                        [],
+                                        _opts ->
+        {:ok, 301, [{"location", "http://foo.localhost:5002/1.0.0/index.html"}], ""}
+      end)
+
+      target = %{url: "https://foo.hexdocs.example/1.0.0/index.html", etag: nil}
+      assert Fastly.verify(:fastly_hexdocs, [target]) == [{target, :ok}]
+    end
+
+    test "rejects any other redirect for a deleted page" do
+      expect(Hexpm.HTTP.Mock, :head, fn _url, _headers, _opts ->
+        {:ok, 301, [{"location", "https://foo.hexdocs.example/"}], ""}
+      end)
+
+      target = %{url: "https://foo.hexdocs.example/1.0.0/index.html", etag: nil}
+
+      assert Fastly.verify(:fastly_hexdocs, [target]) ==
+               [{target, {:error, {:status, 301, nil}}}]
+    end
+
     test "returns the status when the nearest POP does not serve the object" do
       expect(Hexpm.HTTP.Mock, :head, 2, fn _url, headers, _opts ->
         case List.keyfind(headers, "hex-cache-probe", 0) do
@@ -173,7 +311,7 @@ defmodule Hexpm.CDN.FastlyTest do
       target = %{url: "https://repo.example/packages/foo", etag: "abc"}
 
       assert Fastly.verify(:fastly_hexrepo, [target]) ==
-               [{target, {:error, {:status, 503, "cache-bma-1-BMA"}}}]
+               [{target, {:error, {:status, 503, "x-cache-served-by: cache-bma-1-BMA"}}}]
     end
 
     test "emits telemetry per POP with the result" do

@@ -19,6 +19,11 @@ defmodule Hexpm.Accounts.Organizations do
     |> Repo.preload(preload)
   end
 
+  def all_admin_notifiable_emails(opts \\ []) do
+    Organization.all_admin_notifiable_emails(opts)
+    |> Repo.all()
+  end
+
   def get(name, preload \\ []) do
     Repo.get_by(Organization, name: name)
     |> Repo.preload(preload)
@@ -117,6 +122,14 @@ defmodule Hexpm.Accounts.Organizations do
   end
 
   def add_member(organization, %User{organization_id: nil} = user, params, audit: audit_data) do
+    if User.verified_primary_email?(user) do
+      insert_member(organization, user, params, audit_data)
+    else
+      {:error, :unverified_primary_email}
+    end
+  end
+
+  defp insert_member(organization, user, params, audit_data) do
     multi =
       Multi.new()
       |> Seats.claim(:seats, organization)
@@ -150,10 +163,7 @@ defmodule Hexpm.Accounts.Organizations do
       |> Seats.lock(:seats, organization)
       |> Multi.run(:member, fn _repo, _changes -> member_to_remove(organization, user) end)
       |> Multi.delete(:organization_user, & &1.member)
-      |> Hexpm.Accounts.SSO.delete_member_transactions(organization, user)
-      |> Hexpm.Accounts.SSO.enqueue_member_unlink_notification(organization, user)
-      |> Hexpm.Accounts.SSO.delete_member_identities(organization, user)
-      |> Hexpm.Accounts.SSO.delete_member_notifications(organization, user)
+      |> Hexpm.Accounts.SSO.remove_member(organization, user)
       |> delete_package_owners(organization, user)
       |> audit(audit_data, "organization.member.remove", {organization, user})
 

@@ -321,6 +321,32 @@ defmodule HexpmWeb.DeviceControllerTest do
       assert redirected_to(conn) == "/oauth/device"
     end
 
+    # The window is about how recently this browser saw the page, and going
+    # through an organization's provider and its MFA is a round trip that can
+    # take longer than the window did from the POST that verified the code.
+    test "restarts the window each time the page is shown", %{
+      user: user,
+      device_code: device_code
+    } do
+      almost_expired = NaiveDateTime.shift(NaiveDateTime.utc_now(), minute: -4)
+
+      conn =
+        login_with_verified_code(build_conn(), user, device_code.user_code,
+          verified_at: almost_expired
+        )
+
+      conn = get(conn, ~p"/oauth/device/authorize")
+      assert html_response(conn, 200)
+
+      {:ok, refreshed} =
+        conn
+        |> get_session("device_code_verified")
+        |> Map.fetch!("verified_at")
+        |> NaiveDateTime.from_iso8601()
+
+      assert NaiveDateTime.diff(NaiveDateTime.utc_now(), refreshed) < 60
+    end
+
     test "redirects to /oauth/device when device code has expired", %{
       user: user,
       client: client
@@ -401,7 +427,7 @@ defmodule HexpmWeb.DeviceControllerTest do
       token =
         Repo.get_by(Hexpm.OAuth.Token,
           grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-          grant_reference: device_code.device_code
+          grant_reference: "device_code:#{device_code.id}"
         )
 
       assert token.scopes == ["api:read"]
@@ -429,7 +455,7 @@ defmodule HexpmWeb.DeviceControllerTest do
       token =
         Repo.get_by(Hexpm.OAuth.Token,
           grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-          grant_reference: device_code.device_code
+          grant_reference: "device_code:#{device_code.id}"
         )
 
       assert token.scopes == ["api:read"]

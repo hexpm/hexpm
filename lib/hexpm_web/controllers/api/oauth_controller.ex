@@ -4,7 +4,7 @@ defmodule HexpmWeb.API.OAuthController do
   import HexpmWeb.RequestHelpers, only: [build_usage_info: 1]
 
   alias Hexpm.Accounts.Organization
-  alias Hexpm.UserSessions
+  alias Hexpm.{SecurityLog, UserSessions}
   alias Hexpm.OAuth.{Clients, Tokens, AuthorizationCodes, DeviceCodes}
 
   defp safe_param(params, key), do: safe_string(params[key])
@@ -50,12 +50,8 @@ defmodule HexpmWeb.API.OAuthController do
         {:ok, response} ->
           render(conn, :device_authorization, device_response: response)
 
-        {:error, reason} ->
-          render_oauth_error(
-            conn,
-            :server_error,
-            "Failed to initiate device authorization: #{reason}"
-          )
+        {:error, %Ecto.Changeset{} = changeset} ->
+          render_oauth_error(conn, :invalid_request, changeset_description(changeset))
       end
     else
       {:error, error, description} ->
@@ -106,23 +102,34 @@ defmodule HexpmWeb.API.OAuthController do
            validate_authorization_code(safe_param(params, "code"), client.client_id),
          :ok <- validate_redirect_uri_match(auth_code, params["redirect_uri"]),
          :ok <- validate_pkce(auth_code, safe_param(params, "code_verifier")) do
-      {:ok, used_auth_code} = AuthorizationCodes.mark_as_used(auth_code)
       usage_info = build_usage_info(conn)
-      audit = %{audit_data(conn) | user: used_auth_code.user}
+      audit = %{audit_data(conn) | user: auth_code.user}
 
       case Tokens.create_session_and_token_for_user(
-             used_auth_code.user,
+             auth_code.user,
              client.client_id,
-             used_auth_code.scopes,
+             auth_code.scopes,
              "authorization_code",
-             used_auth_code.code,
+             "authorization_code:#{auth_code.id}",
              name: safe_param(params, "name"),
              with_refresh_token: true,
              usage_info: usage_info,
-             audit: audit
+             audit: audit,
+             browser_session_id: auth_code.user_session_id,
+             authorization_code: auth_code
            ) do
         {:ok, token} ->
           render(conn, :token, token: token)
+
+        {:error, :already_used} ->
+          render_oauth_error(
+            conn,
+            :invalid_grant,
+            "Authorization code expired or already used"
+          )
+
+        {:error, %Ecto.Changeset{data: %Hexpm.UserSession{}} = changeset} ->
+          render_oauth_error(conn, :invalid_request, changeset_description(changeset))
 
         {:error, changeset} ->
           render_oauth_error(
@@ -179,13 +186,25 @@ defmodule HexpmWeb.API.OAuthController do
              client.client_id,
              token.granted_scopes,
              "refresh_token",
-             params["refresh_token"],
+             "token:#{token.jti}",
              with_refresh_token: true,
              user_session_id: token.user_session_id,
              usage_info: usage_info
            ) do
         {:ok, new_token} ->
           render(conn, :token, token: new_token)
+
+        {:error, :token_revoked} ->
+          refresh_failure(conn, :revoked)
+
+        {:error, :token_expired} ->
+          refresh_failure(conn, :expired)
+
+        {:error, :session_revoked} ->
+          refresh_failure(conn, :session_revoked)
+
+        {:error, %Ecto.Changeset{data: %Hexpm.UserSession{}} = changeset} ->
+          render_oauth_error(conn, :invalid_request, changeset_description(changeset))
 
         {:error, changeset} ->
           render_oauth_error(
@@ -195,10 +214,23 @@ defmodule HexpmWeb.API.OAuthController do
           )
       end
     else
+      {:error, :refresh_token, reason} ->
+        refresh_failure(conn, reason)
+
       {:error, error, description} ->
         render_oauth_error(conn, error, description)
     end
   end
+
+  defp refresh_failure(conn, reason) do
+    SecurityLog.auth_failure(conn, :refresh_token, reason)
+    render_oauth_error(conn, :invalid_grant, refresh_failure_description(reason))
+  end
+
+  defp refresh_failure_description(:revoked), do: "Refresh token has been revoked"
+  defp refresh_failure_description(:expired), do: "Refresh token has expired"
+  defp refresh_failure_description(:session_revoked), do: "Session has been revoked"
+  defp refresh_failure_description(:invalid), do: "Invalid refresh token"
 
   defp handle_client_credentials_grant(conn, params) do
     with {:ok, client} <- validate_client(safe_param(params, "client_id")),
@@ -216,12 +248,16 @@ defmodule HexpmWeb.API.OAuthController do
              client.client_id,
              scopes,
              "client_credentials",
-             api_key_secret,
+             "key:#{auth_info.auth_credential.id}",
              name: safe_param(params, "name"),
-             usage_info: usage_info
+             usage_info: usage_info,
+             credential: auth_info.auth_credential
            ) do
         {:ok, token} ->
           render(conn, :token, token: token)
+
+        {:error, %Ecto.Changeset{data: %Hexpm.UserSession{}} = changeset} ->
+          render_oauth_error(conn, :invalid_request, changeset_description(changeset))
 
         {:error, changeset} ->
           render_oauth_error(
@@ -258,9 +294,16 @@ defmodule HexpmWeb.API.OAuthController do
     usage_info = build_usage_info(conn)
 
     case Hexpm.Accounts.Auth.key_auth(api_key_secret, usage_info, preload: :oauth) do
-      {:ok, auth_info} -> {:ok, auth_info}
-      :error -> {:error, :invalid_client}
-      :revoked -> {:error, :invalid_client}
+      {:ok, auth_info} ->
+        {:ok, auth_info}
+
+      {:error, :invalid} ->
+        SecurityLog.auth_failure(conn, :api_key, :invalid)
+        {:error, :invalid_client}
+
+      {:error, :revoked, key} ->
+        SecurityLog.auth_failure(conn, :api_key, :revoked, key: key)
+        {:error, :invalid_client}
     end
   end
 
@@ -325,8 +368,8 @@ defmodule HexpmWeb.API.OAuthController do
   defp revoke_token(%{"token" => token_value, "client_id" => client_id})
        when is_binary(token_value) and is_binary(client_id) do
     with {:ok, _client} <- validate_client(client_id),
-         {:ok, token} <- lookup_token_for_revocation(token_value, client_id) do
-      case Tokens.revoke(token) do
+         {:ok, type, token} <- lookup_token_for_revocation(token_value, client_id) do
+      case revoke_for_type(type, token) do
         {:ok, _} -> :ok
         {:error, _} -> {:error, :revocation_failed}
       end
@@ -336,6 +379,13 @@ defmodule HexpmWeb.API.OAuthController do
   end
 
   defp revoke_token(_params), do: {:error, :invalid_request}
+
+  # RFC 7009: revoking a refresh token also revokes the access tokens issued
+  # from the same grant. Marking only the row presented would leave the session
+  # and its organization access alive, and a sibling token would refresh
+  # straight back into the same scopes.
+  defp revoke_for_type(:refresh, token), do: UserSessions.revoke_for_oauth_token(token)
+  defp revoke_for_type(:access, token), do: Tokens.revoke(token)
 
   defp revoke_token_by_hash(%{"token_hash" => token_hash})
        when is_binary(token_hash) and token_hash != "" do
@@ -355,29 +405,21 @@ defmodule HexpmWeb.API.OAuthController do
 
   defp lookup_token_for_revocation(token_value, client_id) do
     # Try to find as access token first
-    case lookup_access_token_for_revocation(token_value, client_id) do
-      {:ok, token} -> {:ok, token}
+    case lookup_for_revocation(token_value, :access, client_id) do
+      {:ok, token} -> {:ok, :access, token}
       {:error, _} -> lookup_refresh_token_for_revocation(token_value, client_id)
     end
   end
 
-  defp lookup_access_token_for_revocation(user_access_token, client_id) do
-    case Tokens.lookup(user_access_token, :access,
-           client_id: client_id,
-           validate: false,
-           preload: []
-         ) do
-      {:ok, token} -> {:ok, token}
-      {:error, _} -> {:error, :invalid_token}
+  defp lookup_refresh_token_for_revocation(token_value, client_id) do
+    case lookup_for_revocation(token_value, :refresh, client_id) do
+      {:ok, token} -> {:ok, :refresh, token}
+      {:error, reason} -> {:error, reason}
     end
   end
 
-  defp lookup_refresh_token_for_revocation(user_refresh_token, client_id) do
-    case Tokens.lookup(user_refresh_token, :refresh,
-           client_id: client_id,
-           validate: false,
-           preload: []
-         ) do
+  defp lookup_for_revocation(token_value, type, client_id) do
+    case Tokens.lookup(token_value, type, client_id: client_id, validate: false, preload: []) do
       {:ok, token} -> {:ok, token}
       {:error, _} -> {:error, :invalid_token}
     end
@@ -465,28 +507,26 @@ defmodule HexpmWeb.API.OAuthController do
     case Tokens.lookup(user_refresh_token, :refresh, client_id: client_id, validate: false) do
       {:ok, token} ->
         cond do
-          Tokens.revoked?(token) ->
-            {:error, :invalid_grant, "Refresh token has been revoked"}
-
-          Tokens.refresh_token_expired?(token) ->
-            {:error, :invalid_grant, "Refresh token has expired"}
-
-          true ->
-            {:ok, token}
+          Tokens.revoked?(token) -> {:error, :refresh_token, :revoked}
+          Tokens.refresh_token_expired?(token) -> {:error, :refresh_token, :expired}
+          true -> {:ok, token}
         end
 
-      {:error, :not_found} ->
-        {:error, :invalid_grant, "Invalid refresh token"}
-
-      {:error, :invalid_token} ->
-        {:error, :invalid_grant, "Invalid refresh token"}
-
       {:error, _} ->
-        {:error, :invalid_grant, "Invalid refresh token"}
+        {:error, :refresh_token, :invalid}
     end
   end
 
   defp validate_refresh_token(_, _), do: {:error, :invalid_grant, "Missing refresh token"}
+
+  defp changeset_description(changeset) do
+    changeset
+    |> translate_errors()
+    |> Enum.map_join("; ", fn
+      {field, message} when is_binary(message) -> "#{field} #{message}"
+      {field, _message} -> "#{field} is invalid"
+    end)
+  end
 
   defp render_oauth_error(conn, error_type, description) do
     status = error_status(error_type)

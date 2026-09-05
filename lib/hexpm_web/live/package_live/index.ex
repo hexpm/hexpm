@@ -19,16 +19,12 @@ defmodule HexpmWeb.PackageLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    organizations = Users.all_organizations(socket.assigns.current_user)
-    repositories = Enum.map(organizations, & &1.repository)
-
     socket =
       assign(socket,
         title: "Packages",
         container: "container",
         live_search: true,
         per_page: @packages_per_page,
-        repositories: repositories,
         sort_options: @sort_options
       )
 
@@ -46,8 +42,12 @@ defmodule HexpmWeb.PackageLive.Index do
     {:noreply, push_event(socket, "sync-search", %{value: socket.assigns.search || ""})}
   end
 
+  # Resolved per set of results rather than held from the mount, so a search or
+  # a page turn on a connected view sees a membership that has since been
+  # removed and an organization access session that has since lapsed or been
+  # revoked.
   defp load_results(socket, params) do
-    repositories = socket.assigns.repositories
+    repositories = HexpmWeb.SSOEnforcement.reachable_repositories(socket)
     search = Hexpm.Utils.parse_search(params["search"])
 
     sort = sort(params["sort"])

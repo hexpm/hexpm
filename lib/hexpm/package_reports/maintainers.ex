@@ -14,9 +14,18 @@ defmodule Hexpm.PackageReports.Maintainers do
   end
 
   def identity(%User{} = user) do
+    case contact(user) do
+      %{email: _email} = contact -> contact
+      _contact -> nil
+    end
+  end
+
+  def contact(%User{} = user) do
+    contact = %{name: display_name(user), username: user.username}
+
     case Enum.find(user.emails, &(&1.primary && &1.verified)) do
-      nil -> nil
-      email -> %{name: display_name(user), username: user.username, email: email.email}
+      nil -> contact
+      email -> Map.put(contact, :email, email.email)
     end
   end
 

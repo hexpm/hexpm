@@ -8,6 +8,7 @@ defmodule Hexpm.Permissions do
   """
 
   alias Hexpm.Accounts.{Key, KeyPermission, User, Users, Organization}
+  alias Hexpm.Accounts.SSO.Enforcement
   alias Hexpm.OAuth.Token
   alias Hexpm.Repository.Package
 
@@ -83,19 +84,32 @@ defmodule Hexpm.Permissions do
     |> Enum.uniq()
   end
 
+  defp valid_scope?(scope) when byte_size(scope) > 255, do: false
+
   defp valid_scope?(scope) do
     case String.split(scope, ":", parts: 2) do
       [scope_name] ->
         scope_name in @all_scopes
 
-      [scope_name, _resource] when scope_name in @resource_only_scopes ->
-        true
+      ["api", sub] ->
+        sub in ["read", "write"]
 
-      ["api", sub] when sub in ["read", "write"] ->
-        true
+      ["package", resource] ->
+        package_resource?(resource)
+
+      [scope_name, resource] when scope_name in @resource_only_scopes ->
+        resource != ""
 
       _ ->
         false
+    end
+  end
+
+  # A package resource names one package in one organization.
+  defp package_resource?(resource) do
+    case String.split(resource, "/") do
+      [organization, package] -> organization != "" and package != ""
+      _other -> false
     end
   end
 
@@ -352,8 +366,13 @@ defmodule Hexpm.Permissions do
 
   # Helper functions for resource matching
   defp match_package_resource?(permission_resource, %Package{} = resource) do
-    [organization, package] = String.split(permission_resource, "/")
-    resource.repository.name == organization and resource.name == package
+    case String.split(permission_resource, "/") do
+      [organization, package] ->
+        resource.repository.name == organization and resource.name == package
+
+      _other ->
+        false
+    end
   end
 
   @doc """
@@ -460,6 +479,75 @@ defmodule Hexpm.Permissions do
       scopes
     end
   end
+
+  defp filter_sso_scopes(%User{} = user, scopes, _user_session_id, %Key{}) do
+    refused =
+      user
+      |> Enforcement.personal_key_refused()
+      |> Enum.map(& &1.name)
+
+    {Enum.reject(scopes, &names_organization?(&1, refused)), []}
+  end
+
+  defp filter_sso_scopes(%User{} = user, scopes, user_session_id, _credential) do
+    case Enforcement.sso_required(user, organization_scope_names(scopes), user_session_id) do
+      [] -> {scopes, []}
+      required -> {Enum.reject(scopes, &names_organization?(&1, required)), required}
+    end
+  end
+
+  defp filter_sso_scopes(_principal, scopes, _user_session_id, _credential), do: {scopes, []}
+
+  @doc """
+  Drops the organization scopes this session is not currently authenticated for,
+  and names the organizations that authenticating would give back.
+
+  This is where enforcement reaches the credential path. A token's scopes are a
+  capability the edge verifies without a database lookup, so the decision has to
+  be taken when they are minted rather than when they are used, and they are
+  minted on every grant including refresh.
+
+  `repositories` is expanded first, which is the only order that decides
+  anything: it names no organization, so enforcement can neither drop nor name
+  one until it has been expanded into the scopes that do.
+
+  Every organization scope is then held against current membership, the ones
+  the expansion produced and the ones the client was granted by name alike. A
+  removed member's organization is not in `all_organizations/1`, so it goes
+  without ever being named, while a member whose only missing piece is a live
+  organization access session is dropped and named. A client can act on the
+  second and has nothing to act on for the first.
+
+  A token exchanged from a personal API key is the exception: it holds the
+  key's standing rather than a session's, because it is minted with no refresh
+  token and its session dies with it, so there is never an organization access
+  session for it to carry. It keeps the organizations that accept personal keys
+  and loses the ones that do not, and names neither, since a browser visit does
+  not change what a static credential may reach.
+  """
+  @spec expand_and_filter_sso_scopes(term(), [String.t()], integer() | nil, Key.t() | nil) ::
+          {[String.t()], [String.t()]}
+  def expand_and_filter_sso_scopes(principal, scopes, user_session_id, credential \\ nil) do
+    expanded =
+      principal
+      |> expand_repositories_scope(scopes)
+      |> reject_unaffiliated_scopes(principal)
+
+    filter_sso_scopes(principal, expanded, user_session_id, credential)
+  end
+
+  defp organization_scope_names(scopes) do
+    scopes
+    |> Enum.flat_map(fn scope ->
+      case organization_scope_name(scope) do
+        nil -> []
+        name -> [name]
+      end
+    end)
+    |> Enum.uniq()
+  end
+
+  defp names_organization?(scope, names), do: organization_scope_name(scope) in names
 
   defp get_allowed_repositories_from_key(permissions) do
     permissions

@@ -38,7 +38,7 @@ defmodule Hexpm.Accounts.OrganizationInvitation do
     ])
     |> validate_required([:organization_id, :email, :role, :token_hash, :expires_at])
     |> update_change(:email, &normalize_email/1)
-    |> validate_length(:email, max: 320)
+    |> validate_length(:email, count: :bytes, max: 255)
     |> validate_format(:email, ~r/^[^\s]+@[^\s]+\.[^\s]+$/, message: "is not a valid email")
     |> validate_inclusion(:role, @roles)
     |> unique_constraint(:token_hash)

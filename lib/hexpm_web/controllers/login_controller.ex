@@ -1,7 +1,6 @@
 defmodule HexpmWeb.LoginController do
   use HexpmWeb, :controller
-  require Logger
-  alias Hexpm.UserSessions
+  alias Hexpm.{SecurityLog, UserSessions}
   alias HexpmWeb.Plugs.Attack
 
   plug :nillify_params, ["return"]
@@ -21,11 +20,7 @@ defmodule HexpmWeb.LoginController do
         login(conn, user, password_breached: breached?)
 
       {:error, reason} ->
-        Logger.warning("Failed login attempt",
-          username: username,
-          ip: conn.remote_ip |> :inet.ntoa() |> to_string(),
-          user_agent: get_req_header(conn, "user-agent") |> List.first()
-        )
+        SecurityLog.auth_failure(conn, :password, reason, username: username)
 
         case Attack.login_ip_throttle(conn.remote_ip) do
           {:block, _data} ->
@@ -44,7 +39,16 @@ defmodule HexpmWeb.LoginController do
   end
 
   def delete(conn, _params) do
-    # Revoke browser session if exists
+    if Hexpm.Repo.write_mode?() do
+      revoke_browser_session(conn)
+    end
+
+    conn
+    |> clear_session()
+    |> redirect(to: ~p"/")
+  end
+
+  defp revoke_browser_session(conn) do
     if session_token = get_session(conn, "session_token") do
       case Base.decode64(session_token) do
         {:ok, decoded_token} ->
@@ -57,10 +61,6 @@ defmodule HexpmWeb.LoginController do
           :ok
       end
     end
-
-    conn
-    |> clear_session()
-    |> redirect(to: ~p"/")
   end
 
   defp start_session(conn, user, return) do

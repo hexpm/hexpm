@@ -139,6 +139,26 @@ defmodule HexpmWeb.API.KeyControllerTest do
       assert log.request_id == request_id
     end
 
+    test "bounds the key name in codepoints", c do
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/json")
+        |> put_req_header("authorization", key_for(c.eric))
+        |> post("/api/keys", %{name: codepoints_string(256)})
+
+      assert json_response(conn, 422)["errors"]["name"] == "should be at most 255 character(s)"
+      refute Repo.exists?(from(a in AuditLog, where: a.action == "key.generate"))
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/json")
+        |> put_req_header("authorization", key_for(c.eric))
+        |> post("/api/keys", %{name: codepoints_string(255)})
+
+      assert conn.status == 201
+      assert Repo.one!(Key.get(c.eric, codepoints_string(255)))
+    end
+
     test "create key without authentication returns 401" do
       body = %{name: "macbook"}
 

@@ -75,6 +75,27 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwnerTest do
     refute submit_button_disabled?(after_lookup)
   end
 
+  test "refuses a user whose primary email is unverified", %{conn: conn, session: session} do
+    insert(:user,
+      username: "unverified_user",
+      full_name: "Unverified Person",
+      emails: [build(:email, verified: false)]
+    )
+
+    {:ok, view, _html} = live_isolated(conn, AddOwner, session: session)
+
+    html =
+      view
+      |> form("#add-owner-form", username: "unverified_user", level: "maintainer")
+      |> render_change()
+
+    assert html =~ "unverified_user"
+    assert html =~ "has not verified their primary email"
+    refute html =~ "Unverified Person"
+    refute html =~ ~s(href="/users/unverified_user")
+    assert submit_button_disabled?(html)
+  end
+
   defp submit_button_disabled?(html) do
     {:ok, doc} = Floki.parse_fragment(html)
 

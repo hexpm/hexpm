@@ -2,7 +2,9 @@ defmodule Hexpm.Accounts.SSO do
   use Hexpm.Context
 
   alias Hexpm.Accounts.SSO.{
+    Authorization,
     Connection,
+    Enforcement,
     Error,
     Failure,
     Features,
@@ -18,28 +20,42 @@ defmodule Hexpm.Accounts.SSO do
   alias Hexpm.Emails.Outbox
 
   @transaction_lifetime_seconds 10 * 60
+  @authorization_lifetime_seconds 10 * 60
+  @authorization_organization_limit 20
   @diagnostic_limit 20
   @identity_linked_email_category "sso.identity_linked"
   @identity_unlinked_email_category "sso.identity_unlinked"
   @email_mismatch_category "sso.email_mismatch"
   @seats_exhausted_category "sso.seats_exhausted"
+  # The notices an account takes with it, which are the ones enqueued under its
+  # scope key.
   @notification_categories [
-    @identity_linked_email_category,
-    @identity_unlinked_email_category,
-    @email_mismatch_category,
-    @seats_exhausted_category
-  ]
+                             @identity_linked_email_category,
+                             @identity_unlinked_email_category,
+                             @email_mismatch_category
+                           ] ++ Enforcement.member_notification_categories()
   # A seat notice is about the organization, not about the member who happened
   # to trip it, so unlinking that member must not cancel it.
   @cancelled_notification_categories [
     @identity_linked_email_category,
     @email_mismatch_category
   ]
-  @notification_retention_seconds 30 * 24 * 60 * 60
   @seats_notice_seconds 60 * 60
 
   def available?, do: Features.available?()
-  def enabled?(organization), do: Features.enabled?(organization)
+
+  @doc """
+  Whether this organization reaches the SSO screens and can authenticate
+  against them.
+
+  Configuring SSO takes an active subscription; keeping what you configured
+  does not. A lapsed card must not leave a broken connection with no screen to
+  repair it on, or leave members enforced with no way to sign in.
+  """
+  def reachable?(organization) do
+    Features.enabled?(organization) or
+      (Features.active?(organization) and not is_nil(get_connection(organization)))
+  end
 
   def get_connection(organization, preload \\ []) do
     Repo.get_by(Connection, organization_id: organization.id)
@@ -85,23 +101,14 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   defp persist_configuration(desired, supplied_secret, metadata, organization, audit_data) do
-    Repo.transaction(fn ->
-      current = locked_connection_for_organization(organization)
+    with_locked_connection(organization, audit_data.user, &require_feature/1, fn current ->
       connection = current || %Connection{organization_id: organization.id, version: 0}
-
-      if require_locked_admin(organization, audit_data.user) != :ok do
-        Hexpm.RepoBase.rollback(:admin_required)
-      end
 
       if Connection.enabled?(connection) do
         Hexpm.RepoBase.rollback(:connection_enabled)
       end
 
-      if identity_key_changed_with_identities?(
-           connection,
-           desired.issuer,
-           desired.client_id
-         ) do
+      if identity_key_changed_with_identities?(connection, desired.issuer, desired.client_id) do
         Hexpm.RepoBase.rollback(:connection_has_identities)
       end
 
@@ -136,10 +143,6 @@ defmodule Hexpm.Accounts.SSO do
           Hexpm.RepoBase.rollback(changeset)
       end
     end)
-    |> case do
-      {:ok, connection} -> {:ok, connection}
-      {:error, reason} -> {:error, reason}
-    end
   end
 
   def refresh_metadata(%Connection{} = connection) do
@@ -164,49 +167,38 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   def begin_rotation(organization, client_secret, audit: audit_data) do
-    with :ok <- require_feature(organization),
-         :ok <- require_admin(organization, audit_data.user),
-         secret when not is_nil(secret) <- present(client_secret) do
-      Repo.transaction(fn ->
-        case locked_connection_for_organization(organization) do
-          %Connection{} = connection ->
-            if require_locked_admin(organization, audit_data.user) != :ok do
-              Hexpm.RepoBase.rollback(:admin_required)
-            end
+    with_existing_connection(
+      organization,
+      audit_data.user,
+      &require_active/1,
+      :not_configured,
+      fn connection ->
+        secret = present(client_secret) || Hexpm.RepoBase.rollback(:not_configured)
+        pending_version = (connection.pending_client_secret_version || 0) + 1
 
-            pending_version = (connection.pending_client_secret_version || 0) + 1
+        saved =
+          connection
+          |> Connection.rotation_changeset(%{
+            pending_client_secret: secret,
+            pending_client_secret_version: pending_version,
+            pending_client_secret_tested_at: nil
+          })
+          |> Repo.update!(log: false)
 
-            saved =
-              connection
-              |> Connection.rotation_changeset(%{
-                pending_client_secret: secret,
-                pending_client_secret_version: pending_version,
-                pending_client_secret_tested_at: nil
-              })
-              |> Repo.update!(log: false)
-
-            insert_audit!(audit_data, "sso.connection.rotation.start", {organization, %{}})
-            saved
-
-          nil ->
-            Hexpm.RepoBase.rollback(:not_configured)
-        end
-      end)
-    else
-      nil -> {:error, :not_configured}
-      {:error, _reason} = error -> error
-    end
+        insert_audit!(audit_data, "sso.connection.rotation.start", {organization, %{}})
+        saved
+      end
+    )
   end
 
   def promote_rotation(organization, audit: audit_data) do
-    with :ok <- require_feature(organization),
-         :ok <- require_admin(organization, audit_data.user) do
-      Repo.transaction(fn ->
-        connection = locked_connection_for_organization(organization)
-
-        with :ok <- require_locked_admin(organization, audit_data.user),
-             %Connection{} <- connection,
-             secret when not is_nil(secret) <- connection.pending_client_secret,
+    with_existing_connection(
+      organization,
+      audit_data.user,
+      &require_active/1,
+      :rotation_not_ready,
+      fn connection ->
+        with secret when not is_nil(secret) <- connection.pending_client_secret,
              %DateTime{} = tested_at <- connection.pending_client_secret_tested_at do
           saved =
             connection
@@ -223,74 +215,56 @@ defmodule Hexpm.Accounts.SSO do
           insert_audit!(audit_data, "sso.connection.rotation.complete", {organization, %{}})
           saved
         else
-          {:error, :admin_required} -> Hexpm.RepoBase.rollback(:admin_required)
           _other -> Hexpm.RepoBase.rollback(:rotation_not_ready)
         end
-      end)
-    else
-      {:error, _reason} = error -> error
-    end
+      end
+    )
   end
 
   def enable(organization, audit: audit_data) do
-    with :ok <- require_feature(organization),
-         :ok <- require_admin(organization, audit_data.user) do
-      Repo.transaction(fn ->
-        connection = locked_connection_for_organization(organization)
-
-        if require_locked_admin(organization, audit_data.user) != :ok do
-          Hexpm.RepoBase.rollback(:admin_required)
-        end
-
-        if connection && connection.tested_at do
+    with_existing_connection(
+      organization,
+      audit_data.user,
+      &require_feature/1,
+      :connection_not_tested,
+      fn connection ->
+        if connection.tested_at do
           saved = Repo.update!(change(connection, enabled_at: DateTime.utc_now()))
           insert_audit!(audit_data, "sso.connection.enable", {organization, %{}})
           saved
         else
           Hexpm.RepoBase.rollback(:connection_not_tested)
         end
-      end)
-    else
-      {:error, _reason} = error -> error
-    end
+      end
+    )
   end
 
   def disable(organization, audit: audit_data) do
-    with :ok <- require_feature(organization),
-         :ok <- require_admin(organization, audit_data.user) do
-      Repo.transaction(fn ->
-        case locked_connection_for_organization(organization) do
-          %Connection{} = connection ->
-            if require_locked_admin(organization, audit_data.user) != :ok do
-              Hexpm.RepoBase.rollback(:admin_required)
-            end
+    with_existing_connection(
+      organization,
+      audit_data.user,
+      &require_active/1,
+      :not_configured,
+      fn connection ->
+        saved = Repo.update!(change(connection, enabled_at: nil, version: connection.version + 1))
 
-            saved =
-              Repo.update!(change(connection, enabled_at: nil, version: connection.version + 1))
+        # Disabling is what an administrator reaches for when the provider is
+        # compromised, so the access it already granted goes too rather than
+        # lasting out its 24 hours.
+        now = DateTime.utc_now()
 
-            # Disabling is what an administrator reaches for when the provider
-            # is compromised, so the access it already granted goes too rather
-            # than lasting out its 24 hours.
-            now = DateTime.utc_now()
+        Repo.update_all(
+          from(session in OrgSession,
+            where: session.organization_id == ^organization.id,
+            where: is_nil(session.revoked_at)
+          ),
+          set: [revoked_at: now, updated_at: now]
+        )
 
-            Repo.update_all(
-              from(session in OrgSession,
-                where: session.organization_id == ^organization.id,
-                where: is_nil(session.revoked_at)
-              ),
-              set: [revoked_at: now, updated_at: now]
-            )
-
-            insert_audit!(audit_data, "sso.connection.disable", {organization, %{}})
-            saved
-
-          nil ->
-            Hexpm.RepoBase.rollback(:not_configured)
-        end
-      end)
-    else
-      {:error, _reason} = error -> error
-    end
+        insert_audit!(audit_data, "sso.connection.disable", {organization, %{}})
+        saved
+      end
+    )
   end
 
   @doc """
@@ -300,57 +274,98 @@ defmodule Hexpm.Accounts.SSO do
   SSO before their links go.
   """
   def delete_connection(organization, audit: audit_data) do
-    with :ok <- require_feature(organization),
-         :ok <- require_admin(organization, audit_data.user) do
-      Repo.transaction(fn ->
-        case locked_connection_for_organization(organization) do
-          %Connection{} = connection ->
-            if require_locked_admin(organization, audit_data.user) != :ok do
-              Hexpm.RepoBase.rollback(:admin_required)
-            end
-
-            if Connection.enabled?(connection) do
-              Hexpm.RepoBase.rollback(:connection_enabled)
-            end
-
-            insert_audit!(audit_data, "sso.connection.delete", {organization, %{}})
-            Repo.delete!(connection)
-
-          nil ->
-            Hexpm.RepoBase.rollback(:not_configured)
+    with_existing_connection(
+      organization,
+      audit_data.user,
+      &require_active/1,
+      :not_configured,
+      fn connection ->
+        if Connection.enabled?(connection) do
+          Hexpm.RepoBase.rollback(:connection_enabled)
         end
-      end)
-    else
-      {:error, _reason} = error -> error
-    end
+
+        insert_audit!(audit_data, "sso.connection.delete", {organization, %{}})
+        Repo.delete!(connection)
+      end
+    )
   end
 
   def start_login(organization, user, return_path, redirect_uri, opts \\ []) do
     entrypoint = Keyword.get(opts, :entrypoint, "organization")
-    login_hint = Keyword.get(opts, :login_hint)
 
     with :ok <- require_entrypoint(entrypoint),
-         :ok <- require_feature(organization),
-         %Connection{} = connection <- get_connection(organization) |> Repo.preload(:organization),
-         true <- Connection.enabled?(connection),
-         :ok <- require_member_or_jit(connection, user),
+         :ok <- require_active(organization) do
+      start_transaction(organization, user, redirect_uri,
+        kind: "login",
+        secret_slot: "active",
+        login_hint: Keyword.get(opts, :login_hint),
+        gate: fn connection ->
+          with :ok <- require_connection_enabled(connection),
+               do: require_member_or_jit(connection, user)
+        end,
+        locked_gate: fn connection ->
+          with :ok <- require_connection_enabled(connection),
+               do: require_locked_member_or_jit(connection, user)
+        end,
+        secret: fn connection -> {:ok, connection.client_secret} end,
+        transaction: [
+          return_path: return_path,
+          entrypoint: entrypoint,
+          target_user_session_id: Keyword.get(opts, :target_user_session_id)
+        ]
+      )
+    end
+  end
+
+  def start_test(organization, user, secret_slot, redirect_uri) do
+    secret_slot = to_string(secret_slot)
+
+    with :ok <- require_active(organization),
+         :ok <- require_admin(organization, user) do
+      start_transaction(organization, user, redirect_uri,
+        kind: "test",
+        secret_slot: secret_slot,
+        gate: &require_configuration_admin(&1, user, secret_slot),
+        locked_gate: fn connection ->
+          with :ok <- require_locked_admin(connection.organization, user),
+               do: require_configuration_admin(connection, user, secret_slot)
+        end,
+        secret: &secret_for_slot(&1, secret_slot)
+      )
+    end
+  end
+
+  # Both ways of starting a provider round trip: check the connection is in a
+  # state that can serve one, take its lock, check again under it, write the
+  # transaction, and hand the provider URI back. They differ only in the gates,
+  # the kind of transaction, and which secret signs the request.
+  defp start_transaction(organization, user, redirect_uri, opts) do
+    kind = Keyword.fetch!(opts, :kind)
+    secret_slot = Keyword.fetch!(opts, :secret_slot)
+    gate = Keyword.fetch!(opts, :gate)
+    locked_gate = Keyword.fetch!(opts, :locked_gate)
+    secret = Keyword.fetch!(opts, :secret)
+    login_hint = Keyword.get(opts, :login_hint)
+    transaction_opts = Keyword.get(opts, :transaction, [])
+
+    with %Connection{} = connection <- get_connection(organization) |> Repo.preload(:organization),
+         :ok <- gate.(connection),
          {:ok, connection} <- refresh_metadata_if_expired(connection),
          {:ok, {transaction, uri}} <-
            Repo.transaction(fn ->
              connection = locked_connection!(connection.id)
 
-             with :ok <- require_feature(connection.organization),
-                  :ok <- require_connection_enabled(connection),
-                  :ok <- require_locked_member_or_jit(connection, user),
+             with :ok <- require_active(connection.organization),
+                  :ok <- locked_gate.(connection),
+                  {:ok, client_secret} <- secret.(connection),
                   {:ok, transaction, state} <-
                     create_transaction(
                       connection,
                       user,
-                      "login",
-                      "active",
+                      kind,
+                      secret_slot,
                       redirect_uri,
-                      return_path,
-                      entrypoint
+                      transaction_opts
                     ),
                   transaction = %{
                     transaction
@@ -358,62 +373,6 @@ defmodule Hexpm.Accounts.SSO do
                       login_hint: login_hint,
                       connection: connection
                   },
-                  {:ok, uri} <-
-                    OIDC.impl().authorization_uri(
-                      connection,
-                      transaction,
-                      redirect_uri,
-                      connection.client_secret
-                    ) do
-               {transaction, uri}
-             else
-               {:error, reason} -> Hexpm.RepoBase.rollback(reason)
-             end
-           end) do
-      {:ok, transaction, uri}
-    else
-      nil ->
-        {:error, :not_configured}
-
-      false ->
-        {:error, :connection_disabled}
-
-      {:error, %Error{} = error} = result ->
-        maybe_record_failure(get_connection(organization), error)
-        result
-
-      {:error, _reason} = error ->
-        error
-    end
-  end
-
-  def start_test(organization, user, secret_slot, redirect_uri) do
-    secret_slot = to_string(secret_slot)
-
-    with :ok <- require_feature(organization),
-         :ok <- require_admin(organization, user),
-         %Connection{} = connection <- get_connection(organization),
-         :ok <- require_configuration_admin(connection, user, secret_slot),
-         {:ok, connection} <- refresh_metadata_if_expired(connection),
-         {:ok, {transaction, uri}} <-
-           Repo.transaction(fn ->
-             connection = locked_connection!(connection.id)
-
-             with :ok <- require_feature(connection.organization),
-                  :ok <- require_locked_admin(connection.organization, user),
-                  :ok <- require_configuration_admin(connection, user, secret_slot),
-                  {:ok, client_secret} <- secret_for_slot(connection, secret_slot),
-                  {:ok, transaction, state} <-
-                    create_transaction(
-                      connection,
-                      user,
-                      "test",
-                      secret_slot,
-                      redirect_uri,
-                      nil,
-                      "organization"
-                    ),
-                  transaction = %{transaction | raw_state: state, connection: connection},
                   {:ok, uri} <-
                     OIDC.impl().authorization_uri(
                       connection,
@@ -534,31 +493,50 @@ defmodule Hexpm.Accounts.SSO do
   would be admitting anyone whose provider happens to return any address at all.
   """
   def configure_jit(organization, params, audit: audit_data) do
-    Repo.transaction(fn ->
-      connection =
-        locked_connection_for_organization(organization) ||
-          Hexpm.RepoBase.rollback(:not_configured)
+    update_connection(organization, audit_data,
+      changeset: &Connection.jit_changeset(&1, params),
+      require: &require_feature/1,
+      gate: &require_verified_domain(organization, &1),
+      action: "sso.jit.configure",
+      audit_params: &%{jit_seat_policy: &1.jit_seat_policy, jit_role: &1.jit_role}
+    )
+  end
 
-      changeset = Connection.jit_changeset(connection, params)
+  # Every connection setting is saved the same way: the gate the setting takes
+  # against the organization, the row lock and the administrator check under it,
+  # then the changeset, the gate that setting takes against it, the save, and
+  # the log.
+  defp update_connection(organization, audit_data, opts) do
+    changeset_fun = Keyword.fetch!(opts, :changeset)
+    requirement = Keyword.fetch!(opts, :require)
+    gate = Keyword.fetch!(opts, :gate)
+    action = Keyword.fetch!(opts, :action)
+    audit_params = Keyword.fetch!(opts, :audit_params)
+    after_update = Keyword.get(opts, :after_update, fn _connection -> :ok end)
 
-      with :ok <- require_feature(organization),
-           :ok <- require_verified_domain(organization, changeset) do
-        case Repo.update(changeset) do
-          {:ok, connection} ->
-            insert_audit!(audit_data, "sso.jit.configure", {
-              organization,
-              %{jit_seat_policy: connection.jit_seat_policy, jit_role: connection.jit_role}
-            })
+    with_existing_connection(
+      organization,
+      audit_data.user,
+      requirement,
+      :not_configured,
+      fn connection ->
+        changeset = changeset_fun.(connection)
 
-            connection
+        with :ok <- gate.(changeset) do
+          case Repo.update(changeset) do
+            {:ok, connection} ->
+              :ok = after_update.(connection)
+              insert_audit!(audit_data, action, {organization, audit_params.(connection)})
+              connection
 
-          {:error, changeset} ->
-            Hexpm.RepoBase.rollback(changeset)
+            {:error, changeset} ->
+              Hexpm.RepoBase.rollback(changeset)
+          end
+        else
+          {:error, reason} -> Hexpm.RepoBase.rollback(reason)
         end
-      else
-        {:error, reason} -> Hexpm.RepoBase.rollback(reason)
       end
-    end)
+    )
   end
 
   defp require_verified_domain(organization, changeset) do
@@ -572,6 +550,118 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   @doc """
+  Sets the enforcement mode, its start date, the organization access session
+  lifetime, and what happens to personal API keys.
+  """
+  def configure_enforcement(organization, params, audit: audit_data) do
+    update_connection(organization, audit_data,
+      changeset: &Connection.enforcement_changeset(&1, params),
+      require: &require_active/1,
+      gate: &require_reachable_admin(organization, &1),
+      after_update: &clamp_org_sessions(organization, &1),
+      action: "sso.enforcement.configure",
+      audit_params:
+        &%{
+          enforcement_mode: &1.enforcement_mode,
+          required_at: &1.required_at,
+          session_lifetime_seconds: &1.session_lifetime_seconds,
+          personal_keys: &1.personal_keys
+        }
+    )
+  end
+
+  # `expires_at` is stamped at authentication, so an administrator who cuts the
+  # lifetime during an incident would otherwise leave every session already open
+  # running for the old one. Sessions are only ever shortened: the setting is
+  # about how long ago the provider has to have vouched for someone, and
+  # extending it would push that further into the past than the organization
+  # asked for.
+  defp clamp_org_sessions(organization, connection) do
+    now = DateTime.utc_now()
+    cutoff = DateTime.add(now, Enforcement.session_lifetime(connection), :second)
+
+    Repo.update_all(
+      from(session in OrgSession,
+        where: session.organization_id == ^organization.id,
+        where: is_nil(session.revoked_at),
+        where: session.expires_at > ^cutoff
+      ),
+      set: [expires_at: cutoff, updated_at: now]
+    )
+
+    :ok
+  end
+
+  # Required mode with nobody able to administer the organization is a lockout
+  # the carve-out cannot undo, so it is refused while the admin can still act.
+  defp require_reachable_admin(organization, changeset) do
+    if Ecto.Changeset.get_field(changeset, :enforcement_mode) == "required" and
+         not reachable_admin?(organization) do
+      {:error, :no_reachable_admin}
+    else
+      :ok
+    end
+  end
+
+  # An administrator enforcement cannot lock out: exempt from it, or linked and
+  # able to authenticate.
+  defp reachable_admin?(organization) do
+    Repo.exists?(
+      from(member in Enforcement.members_with_identity(organization),
+        where: member.role == "admin",
+        where: member.sso_enforcement == "exempt" or not is_nil(as(:identity).id)
+      )
+    )
+  end
+
+  @doc """
+  Sets whether SSO is enforced for one member regardless of the organization's
+  mode. Nil follows the mode, "enforced" always does, "exempt" never does.
+
+  The last administrator an organization already requiring SSO can still reach
+  it with cannot be enforced away here, the same lockout the mode change is
+  refused for. An organization that has no reachable administrator left is not
+  held to it, because the change that would give it one goes through here too.
+  """
+  def set_member_enforcement(organization, user, enforcement, audit: audit_data) do
+    # The connection lock serialises this against the mode change and against
+    # another member's, so two of them cannot each rely on an administrator the
+    # other is taking away.
+    with_locked_connection(organization, audit_data.user, &require_active/1, fn connection ->
+      reachable_before? =
+        Enforcement.mode(organization, connection) == :required and
+          reachable_admin?(organization)
+
+      member =
+        Repo.get_by(OrganizationUser,
+          organization_id: organization.id,
+          user_id: user.id
+        ) || Hexpm.RepoBase.rollback(:not_member)
+
+      changeset =
+        OrganizationUser.enforcement_changeset(member, %{"sso_enforcement" => enforcement})
+
+      case Repo.update(changeset) do
+        {:ok, member} ->
+          if reachable_before? and not reachable_admin?(organization) do
+            Hexpm.RepoBase.rollback(:no_reachable_admin)
+          end
+
+          insert_audit!(audit_data, "sso.enforcement.member", {
+            organization,
+            user,
+            member.sso_enforcement
+          })
+
+          member
+
+        {:error, changeset} ->
+          Hexpm.RepoBase.rollback(changeset)
+      end
+    end)
+  end
+
+  @doc """
   Buys the seat a just-in-time join is about to need, when the organization
   chose to auto-expand.
 
@@ -582,14 +672,29 @@ defmodule Hexpm.Accounts.SSO do
   """
   def maybe_expand_seats(%SSOTransaction{} = transaction, user, claims) do
     connection = Repo.get(Connection, transaction.connection_id) |> Repo.preload(:organization)
+    transaction = Repo.get(SSOTransaction, transaction.id, log: false)
 
-    if connection && transaction.kind == "login" && connection.jit_seat_policy == "expand" &&
-         jit_admissible(connection, claims) == :ok &&
-         is_nil(Organizations.get_role(connection.organization, user)) do
+    if connection && transaction && expands_seat?(transaction, connection, user, claims) do
       expand_seats(connection)
     end
 
     :ok
+  end
+
+  # The callback this seat is for has to be one the callback can still accept.
+  # A transaction that is spent, expired, or belongs to another account is about
+  # to be rejected, and the seat would be bought for a login that never happens.
+  # The connection is held to the same conditions the locked completion holds it
+  # to, so an administrator disabling or reconfiguring it while the provider was
+  # answering costs the organization nothing.
+  defp expands_seat?(transaction, connection, user, claims) do
+    transaction.kind == "login" and transaction.user_id == user.id and
+      transaction_available?(transaction) == :ok and
+      callback_available?(%{transaction | connection: connection}) == :ok and
+      transaction_configuration_available?(transaction, connection) == :ok and
+      connection.jit_seat_policy == "expand" and
+      jit_admits(connection, claims.email, claims[:email_verified] == true) == :ok and
+      is_nil(Organizations.get_role(connection.organization, user))
   end
 
   defp expand_seats(connection) do
@@ -674,10 +779,10 @@ defmodule Hexpm.Accounts.SSO do
       transaction =
         Repo.get(SSOTransaction, transaction_id) || Hexpm.RepoBase.rollback(:invalid_link)
 
-      connection = locked_connection!(transaction.connection_id)
+      connection = locked_connection!(transaction.connection_id, :invalid_link)
       organization = connection.organization
 
-      with :ok <- require_feature(organization),
+      with :ok <- require_active(organization),
            :ok <- require_connection_enabled(connection) do
         transaction = locked_transaction!(transaction_id, :invalid_link)
 
@@ -712,16 +817,15 @@ defmodule Hexpm.Accounts.SSO do
                 %{user_id: user.id, entrypoint: transaction.entrypoint}
               })
 
-              org_session = establish_org_session!(identity, user_session_id)
-
-              insert_audit!(%{audit_data | user: user}, "sso.login", {
-                organization,
-                %{
-                  user_id: user.id,
-                  entrypoint: transaction.entrypoint,
-                  expires_at: org_session.expires_at
-                }
-              })
+              org_session =
+                establish_login!(
+                  transaction,
+                  connection,
+                  identity,
+                  user,
+                  user_session_id,
+                  audit_data
+                )
 
               enqueue_sso_notification!("identity_linked", connection, user)
               {identity, org_session}
@@ -773,58 +877,45 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   def unlink_identity(organization, user, audit: audit_data) do
-    with :ok <- require_feature(organization),
-         :ok <- require_admin(organization, audit_data.user) do
-      Repo.transaction(fn ->
-        case locked_connection_for_organization(organization) do
-          nil ->
-            nil
+    with_locked_connection(organization, audit_data.user, &require_active/1, fn
+      nil ->
+        nil
 
-          connection ->
-            if require_locked_admin(organization, audit_data.user) != :ok do
-              Hexpm.RepoBase.rollback(:admin_required)
-            end
+      connection ->
+        identity =
+          from(identity in Identity,
+            where: identity.connection_id == ^connection.id,
+            where: identity.user_id == ^user.id,
+            lock: "FOR UPDATE"
+          )
+          |> Repo.one()
 
-            identity =
-              from(identity in Identity,
-                where: identity.connection_id == ^connection.id,
-                where: identity.user_id == ^user.id,
-                lock: "FOR UPDATE"
-              )
-              |> Repo.one()
+        if identity do
+          Repo.delete_all(
+            from(transaction in SSOTransaction,
+              where: transaction.connection_id == ^identity.connection_id,
+              where:
+                transaction.user_id == ^user.id or
+                  (transaction.issuer == ^identity.issuer and
+                     transaction.subject == ^identity.subject)
+            ),
+            log: false
+          )
 
-            if identity do
-              Repo.delete_all(
-                from(transaction in SSOTransaction,
-                  where: transaction.connection_id == ^identity.connection_id,
-                  where:
-                    transaction.user_id == ^user.id or
-                      (transaction.issuer == ^identity.issuer and
-                         transaction.subject == ^identity.subject)
-                ),
-                log: false
-              )
+          Repo.delete_all(
+            from(session in OrgSession, where: session.identity_id == ^identity.id),
+            log: false
+          )
 
-              Repo.delete_all(
-                from(session in OrgSession, where: session.identity_id == ^identity.id),
-                log: false
-              )
+          Repo.delete!(identity)
 
-              Repo.delete!(identity)
+          insert_audit!(audit_data, "sso.identity.unlink", {organization, %{user_id: user.id}})
 
-              insert_audit!(
-                audit_data,
-                "sso.identity.unlink",
-                {organization, %{user_id: user.id}}
-              )
-
-              delete_notifications!(connection, user)
-              enqueue_sso_notification!("identity_unlinked", connection, user)
-              identity
-            end
+          delete_notifications!(connection, user)
+          enqueue_sso_notification!("identity_unlinked", connection, user)
+          identity
         end
-      end)
-    end
+    end)
   end
 
   def delete_member_identities(multi, organization, user) do
@@ -843,21 +934,22 @@ defmodule Hexpm.Accounts.SSO do
     )
   end
 
-  def enqueue_member_unlink_notification(multi, organization, user) do
-    Multi.run(multi, :organization_sso_unlink_notification, fn _repo, _changes ->
-      connection = get_connection(organization, [:organization])
+  @doc """
+  What a removed member takes with them: the transactions they started, their
+  identity and the organization access it granted, and the notifications about
+  a state that is about to stop being true.
 
-      identity =
-        connection &&
-          Repo.get_by(Identity, connection_id: connection.id, user_id: user.id)
+  An organization has one connection or none, so it is read once for all four
+  steps rather than once per step.
+  """
+  def remove_member(multi, organization, user) do
+    connection = get_connection(organization, [:organization])
 
-      if identity do
-        delete_notifications!(connection, user)
-        enqueue_sso_notification!("identity_unlinked", connection, user)
-      end
-
-      {:ok, :notified}
-    end)
+    multi
+    |> delete_member_transactions(connection, user)
+    |> enqueue_member_unlink_notification(connection, user)
+    |> delete_member_identities(organization, user)
+    |> delete_member_notifications(connection, user)
   end
 
   def lock_member_removal(multi, organization, user) do
@@ -868,36 +960,41 @@ defmodule Hexpm.Accounts.SSO do
     end)
   end
 
-  def delete_member_transactions(multi, organization, user) do
-    case get_connection(organization) do
-      nil ->
-        multi
+  defp enqueue_member_unlink_notification(multi, nil, _user), do: multi
 
-      connection ->
-        Multi.delete_all(
-          multi,
-          :organization_sso_transactions,
-          from(transaction in SSOTransaction,
-            where: transaction.connection_id == ^connection.id,
-            where: transaction.user_id == ^user.id
-          )
-        )
-    end
+  defp enqueue_member_unlink_notification(multi, connection, user) do
+    Multi.run(multi, :organization_sso_unlink_notification, fn _repo, _changes ->
+      if Repo.get_by(Identity, connection_id: connection.id, user_id: user.id) do
+        delete_notifications!(connection, user)
+        enqueue_sso_notification!("identity_unlinked", connection, user)
+      end
+
+      {:ok, :notified}
+    end)
   end
+
+  defp delete_member_transactions(multi, nil, _user), do: multi
+
+  defp delete_member_transactions(multi, connection, user) do
+    Multi.delete_all(
+      multi,
+      :organization_sso_transactions,
+      from(transaction in SSOTransaction,
+        where: transaction.connection_id == ^connection.id,
+        where: transaction.user_id == ^user.id
+      )
+    )
+  end
+
+  defp delete_member_notifications(multi, nil, _user), do: multi
 
   # Only the categories that describe a state the caller is about to undo. An
   # unlink notification stands whatever else happens.
-  def delete_member_notifications(multi, organization, user) do
-    case get_connection(organization) do
-      nil ->
-        multi
-
-      connection ->
-        Outbox.cancel(multi, :organization_sso_email_outbox,
-          group_key: notification_group_key(connection, user),
-          categories: @cancelled_notification_categories
-        )
-    end
+  defp delete_member_notifications(multi, connection, user) do
+    Outbox.cancel(multi, :organization_sso_email_outbox,
+      group_key: notification_group_key(connection, user),
+      categories: @cancelled_notification_categories
+    )
   end
 
   # The account is going away, so every notification about it goes with it,
@@ -969,6 +1066,13 @@ defmodule Hexpm.Accounts.SSO do
       set: [last_authenticated_at: now, updated_at: now]
     )
 
+    lifetime =
+      from(connection in Connection,
+        where: connection.organization_id == ^identity.organization_id
+      )
+      |> Repo.one()
+      |> Enforcement.session_lifetime()
+
     current =
       from(session in OrgSession,
         where: session.user_session_id == ^user_session_id,
@@ -984,32 +1088,235 @@ defmodule Hexpm.Accounts.SSO do
       user_session_id: user_session_id,
       identity_id: identity.id,
       authenticated_at: now,
-      expires_at: DateTime.add(now, OrgSession.lifetime_seconds(), :second),
+      expires_at: DateTime.add(now, lifetime, :second),
       revoked_at: nil
     })
     |> Repo.insert_or_update!()
   end
 
+  # The organization access an authentication produces, and the entry that
+  # records it. Both paths that authenticate go through here, so a login and a
+  # link cannot come to disagree about what an authentication logs.
+  defp establish_login!(transaction, connection, identity, user, user_session_id, audit_data) do
+    org_session =
+      establish_org_session!(identity, authenticated_session(transaction, user_session_id))
+
+    insert_audit!(%{audit_data | user: user}, "sso.login", {
+      connection.organization,
+      %{
+        user_id: user.id,
+        entrypoint: transaction.entrypoint,
+        expires_at: org_session.expires_at
+      }
+    })
+
+    org_session
+  end
+
+  @doc """
+  Gives a session the organization access the session that authorized it is
+  currently carrying.
+
+  Approving a device, or consenting to an OAuth client, happens in a browser
+  that has already authenticated for these organizations, so this is that same
+  authentication reaching the session it just approved rather than a new one.
+  It inherits the expiry too: restarting the clock here would let a member who
+  authorized a client just before their own session lapsed walk away with twice
+  the window the administrator set.
+
+  The copy names the session it came from, so revoking that one takes the copy
+  with it. Someone who signs out because their browser session was stolen means
+  the access it handed out as well.
+  """
+  def grant_org_sessions!(from_user_session_id, to_user_session_id, user_id)
+      when is_integer(from_user_session_id) and is_integer(to_user_session_id) do
+    now = DateTime.utc_now()
+
+    OrgSession.live(from_user_session_id, now)
+    |> OrgSession.for_user(user_id)
+    |> Repo.all()
+    |> Enum.map(fn source ->
+      %OrgSession{}
+      |> OrgSession.changeset(%{
+        user_id: source.user_id,
+        organization_id: source.organization_id,
+        user_session_id: to_user_session_id,
+        granted_from_user_session_id: from_user_session_id,
+        identity_id: source.identity_id,
+        authenticated_at: source.authenticated_at,
+        expires_at: source.expires_at
+      })
+      |> Repo.insert!()
+    end)
+  end
+
+  def grant_org_sessions!(_from_user_session_id, _to_user_session_id, _user_id), do: []
+
+  @doc """
+  The organizations a session is currently carrying access for, which is what
+  `grant_org_sessions!/3` would hand on.
+  """
+  def granted_organization_ids(user_session_id, user_id) when is_integer(user_session_id) do
+    live =
+      user_session_id
+      |> OrgSession.live(DateTime.utc_now())
+      |> OrgSession.for_user(user_id)
+
+    Repo.all(from(session in live, select: session.organization_id))
+  end
+
+  def granted_organization_ids(_user_session_id, _user_id), do: []
+
+  # Which session an authentication lands on. A transaction started from a
+  # terminal names the session it is for; everything else means the browser
+  # that started it.
+  defp authenticated_session(%SSOTransaction{target_user_session_id: nil}, user_session_id),
+    do: user_session_id
+
+  defp authenticated_session(%SSOTransaction{target_user_session_id: target}, _user_session_id),
+    do: target
+
+  @doc """
+  Opens a re-authorization for a session that has lost its organization access.
+
+  The session doing the asking is the one being authorized. Its owner completes
+  the provider round trip in a browser, and the organization access session that
+  produces is written against the asking session, so a lapsed terminal costs a
+  browser visit rather than a new device authorization and a new refresh token.
+  """
+  @spec request_authorization(User.t(), integer(), term()) ::
+          {:ok, Authorization.t()} | {:error, atom()}
+  def request_authorization(%User{} = user, user_session_id, organization_names)
+      when is_integer(user_session_id) do
+    with {:ok, names} <- authorization_names(organization_names),
+         {:ok, organizations} <- authorization_organizations(user, names) do
+      code = random_token()
+
+      authorization =
+        %Authorization{}
+        |> Authorization.changeset(%{
+          user_id: user.id,
+          user_session_id: user_session_id,
+          code_hash: hash(code),
+          organization_ids: Enum.map(organizations, & &1.id),
+          expires_at: DateTime.add(DateTime.utc_now(), @authorization_lifetime_seconds, :second)
+        })
+        |> Repo.insert!(log: false)
+
+      {:ok, %{authorization | raw_code: code}}
+    end
+  end
+
+  defp authorization_names(names) when is_list(names) and names != [] do
+    names = Enum.uniq(names)
+
+    if length(names) <= @authorization_organization_limit and
+         Enum.all?(names, &(is_binary(&1) and &1 != "" and byte_size(&1) <= 100)) do
+      {:ok, names}
+    else
+      {:error, :invalid_organizations}
+    end
+  end
+
+  defp authorization_names(_names), do: {:error, :invalid_organizations}
+
+  # A client posts the list it last heard about, which can be as old as its
+  # access token, so a name that has since been exempted or turned off is
+  # dropped rather than taken as a reason to refuse the ones that still stand.
+  defp authorization_organizations(user, names) do
+    case Enforcement.governed(user, names) do
+      [] -> {:error, :not_governed}
+      organizations -> {:ok, organizations}
+    end
+  end
+
+  @doc """
+  The open re-authorization this code names, for this account.
+
+  A revoked or expired target session takes its authorization with it: there is
+  nothing left to authorize, and saying so is the same answer as a bad code.
+  """
+  def get_authorization(code, %User{} = user) when is_binary(code) and byte_size(code) <= 512 do
+    now = DateTime.utc_now()
+
+    from(authorization in Authorization,
+      join: user_session in assoc(authorization, :user_session),
+      where: authorization.code_hash == ^hash(code),
+      where: authorization.user_id == ^user.id,
+      where: authorization.user_id == user_session.user_id,
+      where: is_nil(authorization.consumed_at),
+      where: authorization.expires_at > ^now,
+      where: is_nil(user_session.revoked_at) and user_session.expires_at > ^now,
+      preload: [user_session: user_session]
+    )
+    |> Repo.one(log: false)
+  end
+
+  def get_authorization(_code, _user), do: nil
+
+  @doc """
+  The organizations a re-authorization covers, and whether the session it is for
+  is currently authenticated to each.
+  """
+  @spec authorization_status(Authorization.t()) :: [{Organization.t(), boolean()}]
+  def authorization_status(%Authorization{} = authorization) do
+    now = DateTime.utc_now()
+
+    organizations =
+      from(organization in Organization,
+        where: organization.id in ^authorization.organization_ids,
+        order_by: organization.name
+      )
+      |> Repo.all()
+
+    live =
+      authorization.user_session_id
+      |> OrgSession.live(now)
+      |> OrgSession.for_user(authorization.user_id)
+
+    authenticated =
+      from(session in live,
+        where: session.organization_id in ^authorization.organization_ids,
+        select: session.organization_id
+      )
+      |> Repo.all()
+      |> MapSet.new()
+
+    Enum.map(organizations, fn organization ->
+      {organization, MapSet.member?(authenticated, organization.id)}
+    end)
+  end
+
+  @doc """
+  Closes a re-authorization once it has nothing left to do, so the verification
+  URI cannot be replayed to renew the session again later.
+  """
+  def consume_authorization!(%Authorization{} = authorization) do
+    now = DateTime.utc_now()
+
+    Repo.update_all(
+      from(row in Authorization,
+        where: row.id == ^authorization.id,
+        where: is_nil(row.consumed_at)
+      ),
+      set: [consumed_at: now, updated_at: now]
+    )
+
+    :ok
+  end
+
   @doc """
   The organization access session for a browser session, or nil.
-
-  The account session is checked alongside it so that revoking or expiring a
-  browser session takes its organization access with it, whichever path did
-  the revoking.
   """
   def current_org_session(user_session_id, organization_id)
       when is_integer(user_session_id) and is_integer(organization_id) do
     now = DateTime.utc_now()
 
-    from(session in OrgSession,
-      join: user_session in assoc(session, :user_session),
-      where: session.user_session_id == ^user_session_id,
+    from(session in OrgSession.live(user_session_id, now),
       where: session.organization_id == ^organization_id,
       # user_id is denormalised onto the session, so assert it agrees with the
       # browser session rather than trusting the copy on the read path.
-      where: session.user_id == user_session.user_id,
-      where: is_nil(session.revoked_at) and session.expires_at > ^now,
-      where: is_nil(user_session.revoked_at) and user_session.expires_at > ^now
+      where: session.user_id == as(:user_session).user_id
     )
     |> Repo.one()
   end
@@ -1017,16 +1324,39 @@ defmodule Hexpm.Accounts.SSO do
   def current_org_session(_user_session_id, _organization_id), do: nil
 
   def revoke_org_sessions_for_user_session(multi, user_session, revoke_at) do
-    now = DateTime.utc_now()
-
     Multi.update_all(
       multi,
       :organization_sso_sessions,
-      from(session in OrgSession,
-        where: session.user_session_id == ^user_session.id,
-        where: is_nil(session.revoked_at)
-      ),
-      set: [revoked_at: revoke_at, updated_at: now]
+      revoke_org_sessions_query([user_session.id], revoke_at),
+      []
+    )
+  end
+
+  @doc """
+  The organization access sessions written against these sessions, or against
+  every session an account owns, set to revoked.
+
+  The caller runs the query, so revoking sessions in bulk takes the organization
+  access they carry with them rather than leaving rows that only the read path
+  knows are dead.
+  """
+  def revoke_org_sessions_query(user_session_ids, revoke_at) when is_list(user_session_ids) do
+    now = DateTime.utc_now()
+
+    from(session in OrgSession,
+      where: session.user_session_id in ^user_session_ids,
+      where: is_nil(session.revoked_at),
+      update: [set: [revoked_at: ^revoke_at, updated_at: ^now]]
+    )
+  end
+
+  def revoke_org_sessions_query(%User{} = user, revoke_at) do
+    now = DateTime.utc_now()
+
+    from(session in OrgSession,
+      where: session.user_id == ^user.id,
+      where: is_nil(session.revoked_at),
+      update: [set: [revoked_at: ^revoke_at, updated_at: ^now]]
     )
   end
 
@@ -1045,7 +1375,7 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   def record_failure(%Connection{} = connection, stage, code, user \\ nil) do
-    do_record_failure(connection, %Error{stage: stage, code: stable_failure_code(code)}, user)
+    do_record_failure(connection, %Error{stage: stage, code: code}, user)
   end
 
   defp do_record_failure(%Connection{} = connection, %Error{} = error, user) do
@@ -1053,9 +1383,8 @@ defmodule Hexpm.Accounts.SSO do
 
     attrs = %{
       connection_id: connection.id,
-      stage: to_string(stable_failure_code(error.stage)),
+      stage: Atom.to_string(error.stage),
       code: to_string(code),
-      details: redact_details(error.details),
       user_id: failure_user_id(code, user)
     }
 
@@ -1165,7 +1494,7 @@ defmodule Hexpm.Accounts.SSO do
       # JIT on there is no consent left to ask for, so re-admit rather than
       # unlinking and making them start over.
       is_nil(locked_member(organization, identity.user)) and
-          jit_available(connection, claims.email) == :ok ->
+          jit_admits(connection, claims.email, claims[:email_verified] == true) == :ok ->
         case join_member(connection, organization, identity.user, audit_data) do
           :ok ->
             login!(transaction, connection, identity, claims, user_session_id, audit_data)
@@ -1198,19 +1527,18 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   defp login!(transaction, connection, identity, claims, user_session_id, audit_data) do
-    organization = connection.organization
     notify_email_mismatch? = update_identity_email(identity, claims.email)
     consume_transaction!(transaction, %{})
-    org_session = establish_org_session!(identity, user_session_id)
 
-    insert_audit!(%{audit_data | user: identity.user}, "sso.login", {
-      organization,
-      %{
-        user_id: identity.user.id,
-        entrypoint: transaction.entrypoint,
-        expires_at: org_session.expires_at
-      }
-    })
+    org_session =
+      establish_login!(
+        transaction,
+        connection,
+        identity,
+        identity.user,
+        user_session_id,
+        audit_data
+      )
 
     if notify_email_mismatch? do
       enqueue_sso_notification!("email_mismatch", connection, identity.user, claims.email)
@@ -1249,7 +1577,7 @@ defmodule Hexpm.Accounts.SSO do
   # a membership created now would outlive an abandoned consent screen. What
   # this buys is not offering a screen that cannot be honoured.
   defp begin_jit_link!(transaction, connection, claims, current_user) do
-    case jit_admissible(connection, claims) do
+    case jit_admits(connection, claims.email, claims[:email_verified] == true) do
       :ok ->
         case Seats.claim(connection.organization, unknown: :deny) do
           {:ok, _usage} ->
@@ -1292,7 +1620,7 @@ defmodule Hexpm.Accounts.SSO do
       not is_nil(locked_member(organization, user)) ->
         :ok
 
-      jit_available(connection, transaction.provider_email) != :ok ->
+      jit_admits(connection, transaction.provider_email, true) != :ok ->
         {:error, :not_member}
 
       true ->
@@ -1321,33 +1649,21 @@ defmodule Hexpm.Accounts.SSO do
     end
   end
 
+  # Whether this connection would admit the address, ignoring seats.
+  #
   # An `email` claim is whatever the provider chose to assert. `email_verified`
   # is the provider saying it checked, and OIDC has it precisely because the
   # address alone is not authoritative. Membership turns on the address here, so
-  # an unverified one is not enough. Checked wherever the ID token is in hand;
-  # by the time a link is completed, the transaction only exists because this
-  # already passed.
-  defp jit_admissible(connection, claims) do
+  # an unverified one is not enough. It is checked wherever the ID token is in
+  # hand; callers past that point pass `true`, because the transaction they are
+  # working from only exists because the check already passed.
+  defp jit_admits(connection, provider_email, email_verified?) do
     cond do
       not Connection.jit_enabled?(connection) ->
         {:error, :jit_disabled}
 
-      Map.get(claims, :email_verified) != true ->
+      not email_verified? ->
         {:error, :provider_email_unverified}
-
-      not OrganizationDomains.verified_for_email?(connection.organization, claims.email) ->
-        {:error, :domain_not_verified}
-
-      true ->
-        :ok
-    end
-  end
-
-  # Whether this connection would admit the address, ignoring seats.
-  defp jit_available(connection, provider_email) do
-    cond do
-      not Connection.jit_enabled?(connection) ->
-        {:error, :jit_disabled}
 
       not OrganizationDomains.verified_for_email?(connection.organization, provider_email) ->
         {:error, :domain_not_verified}
@@ -1382,7 +1698,8 @@ defmodule Hexpm.Accounts.SSO do
   # Rate-limited on the outbox rather than on the failure log: failures are a
   # 20-row ring buffer per connection, and with just-in-time membership on
   # anyone signed in can start a login and fill it, which would reset the
-  # window at will. Outbox entries are kept for a month and are not evicted.
+  # window at will. Outbox entries stay on the table after delivery and are
+  # not evicted within the window.
   defp enqueue_seats_notice!(connection, kind) do
     group_key = "#{@seats_exhausted_category}:#{kind}:#{connection.id}"
     cutoff = DateTime.add(DateTime.utc_now(), -@seats_notice_seconds, :second)
@@ -1403,32 +1720,17 @@ defmodule Hexpm.Accounts.SSO do
   defp send_seats_notice!(connection, kind, group_key) do
     organization = connection.organization
 
-    recipients =
-      Repo.all(
-        from(organization_user in OrganizationUser,
-          join: member in assoc(organization_user, :user),
-          join: address in assoc(member, :emails),
-          where: organization_user.organization_id == ^organization.id,
-          where: organization_user.role == "admin",
-          where: address.primary and address.verified,
-          select: address.email
-        )
-      )
-
-    case recipients do
+    case Enforcement.admin_emails(organization) do
       [] ->
         :ok
 
       recipients ->
         email = Emails.sso_seats(organization.name, kind, recipients)
 
-        Outbox.insert!(
-          Outbox.prepare!(email,
-            category: @seats_exhausted_category,
-            group_key: group_key,
-            scope_key: "sso:organization:#{organization.id}",
-            expires_at: DateTime.add(DateTime.utc_now(), @notification_retention_seconds, :second)
-          )
+        Outbox.enqueue!(email,
+          category: @seats_exhausted_category,
+          group_key: group_key,
+          scope_key: "sso:organization:#{organization.id}"
         )
     end
   end
@@ -1443,23 +1745,16 @@ defmodule Hexpm.Accounts.SSO do
       link_token_hash: hash(link_token)
     })
 
-    {:link, transaction.id, link_token, transaction.return_path}
+    {:link, transaction.id, link_token}
   end
 
-  defp create_transaction(
-         connection,
-         user,
-         kind,
-         secret_slot,
-         redirect_uri,
-         return_path,
-         entrypoint
-       ) do
+  defp create_transaction(connection, user, kind, secret_slot, redirect_uri, opts) do
     state = random_token()
 
     attrs = %{
       connection_id: connection.id,
       user_id: user && user.id,
+      target_user_session_id: Keyword.get(opts, :target_user_session_id),
       state_hash: hash(state),
       nonce: random_token(),
       code_verifier: random_token(),
@@ -1468,8 +1763,8 @@ defmodule Hexpm.Accounts.SSO do
       connection_version: connection.version,
       secret_version: secret_version(connection, secret_slot),
       redirect_uri: redirect_uri,
-      return_path: allowed_return_path(connection.organization, return_path),
-      entrypoint: entrypoint,
+      return_path: allowed_return_path(Keyword.get(opts, :return_path)),
+      entrypoint: Keyword.get(opts, :entrypoint),
       expires_at: DateTime.add(DateTime.utc_now(), @transaction_lifetime_seconds, :second)
     }
 
@@ -1479,7 +1774,7 @@ defmodule Hexpm.Accounts.SSO do
     end
   end
 
-  defp require_entrypoint(entrypoint) when entrypoint in ~w(organization third_party), do: :ok
+  defp require_entrypoint(entrypoint) when entrypoint in ~w(organization third_party cli), do: :ok
   defp require_entrypoint(_entrypoint), do: {:error, :invalid_entrypoint}
 
   defp locked_transaction!(id, reason \\ :invalid_transaction) do
@@ -1495,13 +1790,17 @@ defmodule Hexpm.Accounts.SSO do
     end
   end
 
-  defp locked_connection!(id) do
+  defp locked_connection!(id, reason \\ :not_configured) do
     from(connection in Connection,
       where: connection.id == ^id,
       lock: "FOR UPDATE",
       preload: [:organization]
     )
-    |> Repo.one!()
+    |> Repo.one()
+    |> case do
+      nil -> Hexpm.RepoBase.rollback(reason)
+      connection -> connection
+    end
   end
 
   defp locked_connection_for_organization(organization) do
@@ -1511,6 +1810,36 @@ defmodule Hexpm.Accounts.SSO do
       preload: [:organization]
     )
     |> Repo.one()
+  end
+
+  # The preamble every administrative change to a connection runs: the gate the
+  # change takes, then the row lock, then the administrator check again under
+  # it, because the first answer was read before the lock and a role can change
+  # in between. `fun` is handed the locked connection, or nil when there is
+  # none.
+  defp with_locked_connection(organization, user, gate, fun) do
+    with :ok <- gate.(organization),
+         :ok <- require_admin(organization, user) do
+      Repo.transaction(fn ->
+        connection = locked_connection_for_organization(organization)
+
+        if require_locked_admin(organization, user) != :ok do
+          Hexpm.RepoBase.rollback(:admin_required)
+        end
+
+        fun.(connection)
+      end)
+    end
+  end
+
+  # As `with_locked_connection/4`, for the changes that need a connection to
+  # already exist. `missing` is what the change is refused with when there is
+  # none.
+  defp with_existing_connection(organization, user, gate, missing, fun) do
+    with_locked_connection(organization, user, gate, fn
+      nil -> Hexpm.RepoBase.rollback(missing)
+      connection -> fun.(connection)
+    end)
   end
 
   defp consume_transaction!(transaction, attrs) do
@@ -1538,7 +1867,7 @@ defmodule Hexpm.Accounts.SSO do
 
   defp callback_available?(%SSOTransaction{connection: connection, kind: kind}) do
     cond do
-      not Features.enabled?(connection.organization) -> {:error, :feature_disabled}
+      not Features.active?(connection.organization) -> {:error, :feature_disabled}
       kind == "login" and not Connection.enabled?(connection) -> {:error, :connection_disabled}
       true -> :ok
     end
@@ -1561,26 +1890,11 @@ defmodule Hexpm.Accounts.SSO do
     cond do
       not is_map(claims) -> {:error, :invalid_claims}
       claims[:issuer] != connection.issuer -> {:error, :issuer_mismatch}
-      not valid_subject?(claims[:subject]) -> {:error, :subject_invalid}
-      not valid_provider_email?(claims[:email]) -> {:error, :provider_email_invalid}
+      not OIDC.valid_subject?(claims[:subject]) -> {:error, :subject_invalid}
+      not OIDC.valid_provider_email?(claims[:email]) -> {:error, :provider_email_invalid}
       true -> :ok
     end
   end
-
-  defp valid_subject?(subject) when is_binary(subject) do
-    subject != "" and byte_size(subject) <= 255 and
-      subject |> :binary.bin_to_list() |> Enum.all?(&(&1 <= 127))
-  end
-
-  defp valid_subject?(_subject), do: false
-
-  defp valid_provider_email?(nil), do: true
-
-  defp valid_provider_email?(email) when is_binary(email) do
-    byte_size(email) <= 320 and String.valid?(email)
-  end
-
-  defp valid_provider_email?(_email), do: false
 
   defp link_available?(transaction, raw_link_token) do
     cond do
@@ -1630,7 +1944,8 @@ defmodule Hexpm.Accounts.SSO do
          jwks_document: jwks_document,
          jwks_expires_at: jwks_expires_at
        }) do
-    metadata_expires_at = earliest(connection.discovery_expires_at, jwks_expires_at)
+    metadata_expires_at =
+      OIDC.metadata_expires_at(connection.discovery_expires_at, jwks_expires_at)
 
     Repo.update!(
       change(connection,
@@ -1662,8 +1977,19 @@ defmodule Hexpm.Accounts.SSO do
     mismatch?
   end
 
+  # Taking the feature up: a first connection, turning login on, and expanding
+  # the subscription for just-in-time members. Those cost money, so they take a
+  # subscription.
   defp require_feature(organization) do
     if Features.enabled?(organization), do: :ok, else: {:error, :feature_disabled}
+  end
+
+  # Authenticating against a connection that already exists, and repairing or
+  # removing one. Enforcement follows the connection, so gating these on billing
+  # would leave an organization enforcing a provider it can no longer fix and
+  # members locked out of their own private packages over a failed card.
+  defp require_active(organization) do
+    if Features.active?(organization), do: :ok, else: {:error, :feature_disabled}
   end
 
   defp require_connection_enabled(connection) do
@@ -1728,17 +2054,7 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   defp enqueue_sso_notification!(kind, connection, user, provider_email \\ nil) do
-    # The verified primary address only. Any address can be attached to an
-    # account unverified, so sending to all of them would let an account holder
-    # mail an address they do not own.
-    recipients =
-      Repo.all(
-        from(email in assoc(user, :emails),
-          where: email.primary and email.verified,
-          select: email.email
-        )
-      )
-
+    recipients = Enforcement.user_emails(user)
     enqueue_sso_notification!(kind, connection, user, provider_email, recipients)
   end
 
@@ -1781,7 +2097,7 @@ defmodule Hexpm.Accounts.SSO do
        category: category,
        group_key: notification_group_key(connection, user),
        scope_key: notification_scope_key(user),
-       expires_at: DateTime.add(DateTime.utc_now(), @notification_retention_seconds, :second)
+       expires_at: Outbox.default_expires_at()
      )}
   rescue
     exception ->
@@ -1835,8 +2151,6 @@ defmodule Hexpm.Accounts.SSO do
     (connection.issuer != issuer or connection.client_id != client_id) and
       Repo.exists?(from(identity in Identity, where: identity.connection_id == ^connection.id))
   end
-
-  defp redact_details(_details), do: %{}
 
   defp failure_messages do
     %{
@@ -1892,27 +2206,44 @@ defmodule Hexpm.Accounts.SSO do
 
   defp secure_hash_match?(_stored_hash, _value), do: false
 
-  def allowed_return_path(organization, value) when is_binary(value) do
-    uri = URI.parse(value)
-    organization_path = "/dashboard/orgs/#{organization.name}"
+  @doc """
+  The path to send the browser back to once it has authenticated, or nil.
 
-    if is_nil(uri.scheme) and is_nil(uri.host) and is_nil(uri.userinfo) and is_nil(uri.fragment) and
-         allowed_organization_path?(uri.path, organization_path) do
-      value
+  Enforcement turns a member away wherever they asked for the organization, so
+  any path on this site is a place to come back to. Anything that could leave
+  the site is not one.
+  """
+  def allowed_return_path(value) when is_binary(value) and byte_size(value) <= 2_048 do
+    if same_origin_path?(value), do: value
+  end
+
+  def allowed_return_path(_value), do: nil
+
+  @unsafe_characters ["\\", "\r", "\n", "\t"]
+
+  # No scheme, host, userinfo or fragment to leave the origin with, and no
+  # backslash or control character a browser or a response header would read
+  # differently to us.
+  defp same_origin_path?(value) do
+    case URI.parse(value) do
+      %URI{scheme: nil, host: nil, userinfo: nil, fragment: nil, path: path} ->
+        not String.contains?(value, @unsafe_characters) and safe_path?(path)
+
+      _other ->
+        false
     end
   end
 
-  def allowed_return_path(_organization, _value), do: nil
-
-  defp allowed_organization_path?(path, organization_path) when is_binary(path) do
+  # Judged after every layer of escaping is off, so `%2e%2e` is the traversal
+  # and `%2f` is the separator it decodes to. A leading `//` is an authority to
+  # a browser rather than a path.
+  defp safe_path?(path) when is_binary(path) do
     case fully_decode_path(path) do
       decoded_path when is_binary(decoded_path) ->
-        segments = String.split(decoded_path, "/")
-
-        not String.contains?(decoded_path, ["\\", "\r", "\n", "\t"]) and
-          not Enum.any?(segments, &(&1 in [".", ".."])) and
-          (decoded_path == organization_path or
-             String.starts_with?(decoded_path, organization_path <> "/"))
+        String.starts_with?(decoded_path, "/") and
+          not String.starts_with?(decoded_path, "//") and
+          not String.contains?(decoded_path, @unsafe_characters) and
+          not Enum.any?(String.split(decoded_path, "/"), &(&1 in [".", ".."]))
 
       nil ->
         false
@@ -1921,7 +2252,7 @@ defmodule Hexpm.Accounts.SSO do
     _exception -> false
   end
 
-  defp allowed_organization_path?(_path, _organization_path), do: false
+  defp safe_path?(_path), do: false
 
   defp fully_decode_path(path, attempts \\ 0)
 
@@ -1933,10 +2264,6 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   defp fully_decode_path(_path, _attempts), do: nil
-
-  defp earliest(left, right) do
-    if DateTime.compare(left, right) == :gt, do: right, else: left
-  end
 
   defp secret_version(connection, "active"), do: connection.version
   defp secret_version(connection, "pending"), do: connection.pending_client_secret_version

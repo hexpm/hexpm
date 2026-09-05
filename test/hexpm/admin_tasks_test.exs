@@ -5,7 +5,8 @@ defmodule Hexpm.AdminTasksTest do
 
   alias Hexpm.AdminTasks
   alias Hexpm.Accounts.{Organization, OrganizationUser, User}
-  alias Hexpm.Repository.{Package, Release}
+  alias Hexpm.Emails.{OutboxEntry, OutboxWorker}
+  alias Hexpm.Repository.{Package, PackageOwner, Release}
 
   describe "change_password/3" do
     test "changes password by username" do
@@ -349,10 +350,12 @@ defmodule Hexpm.AdminTasksTest do
         assert email.text_body =~ "Reason:"
         assert email.text_body =~ "Because of a thing."
         assert email.text_body =~ "contact support at support@hex.pm"
+        assert email.text_body =~ "/policies/termsofservice"
 
         assert email.html_body =~ "Reason:"
         assert email.html_body =~ "Because of a thing."
         assert email.html_body =~ "mailto:support@hex.pm"
+        assert email.html_body =~ "/policies/termsofservice"
       end
     end
 
@@ -394,6 +397,45 @@ defmodule Hexpm.AdminTasksTest do
       assert_raise ArgumentError, ~r/unknown scope :packages/, fn ->
         AdminTasks.reasons(:packages)
       end
+    end
+  end
+
+  describe "block_email_domain/2" do
+    test "blocks new addresses on the domain and leaves existing ones" do
+      user = insert(:user, emails: [build(:email, email: "old@farm.example")])
+
+      assert :ok = AdminTasks.block_email_domain("farm.example", comment: "signup farm")
+
+      assert [%{domain: "farm.example", comment: "signup farm"}] =
+               AdminTasks.blocked_email_domains()
+
+      assert {:error, changeset} =
+               Hexpm.Accounts.Users.add_email(user, %{email: "new@farm.example"},
+                 audit: audit_data(user)
+               )
+
+      assert errors_on(changeset)[:email] == "uses a blocked domain"
+
+      assert Repo.get!(User, user.id) |> Repo.preload(:emails) |> Map.fetch!(:emails) |> length() ==
+               1
+    end
+
+    test "rejects a domain that is already blocked or malformed" do
+      assert :ok = AdminTasks.block_email_domain("farm.example")
+      assert {:error, changeset} = AdminTasks.block_email_domain("FARM.example")
+      assert errors_on(changeset)[:domain] == "has already been taken"
+
+      assert {:error, changeset} = AdminTasks.block_email_domain("not a domain")
+      assert errors_on(changeset)[:domain] == "has invalid format"
+    end
+  end
+
+  describe "unblock_email_domain/1" do
+    test "removes the block" do
+      assert :ok = AdminTasks.block_email_domain("farm.example")
+      assert :ok = AdminTasks.unblock_email_domain("farm.example")
+      assert AdminTasks.blocked_email_domains() == []
+      assert {:error, :not_found} = AdminTasks.unblock_email_domain("farm.example")
     end
   end
 
@@ -870,6 +912,18 @@ defmodule Hexpm.AdminTasksTest do
 
       assert package_owner.user_id == new_owner.id
     end
+
+    test "refuses a user whose primary email is unverified" do
+      package = insert(:package)
+      owner = insert(:user)
+      insert(:package_owner, package: package, user: owner)
+      new_owner = insert(:user, emails: [build(:email, verified: false)])
+
+      assert {:error, :unverified_primary_email} =
+               AdminTasks.add_owner(package.name, new_owner.username)
+
+      refute Repo.get_by(PackageOwner, package_id: package.id, user_id: new_owner.id)
+    end
   end
 
   describe "remove_owner/2" do
@@ -1101,13 +1155,20 @@ defmodule Hexpm.AdminTasksTest do
   end
 
   describe "send_email/3" do
-    test "sends a separate email to each recipient" do
+    test "queues a separate email for each recipient" do
       assert {:ok, 2} =
                AdminTasks.send_email(
                  ["bob@example.com", "jane@example.com"],
                  "Hex.pm - Service update",
                  "First paragraph.\n\nSecond paragraph."
                )
+
+      assert Enum.map(Repo.all(OutboxEntry), & &1.category) == [
+               "admin.announcement",
+               "admin.announcement"
+             ]
+
+      deliver_queued_emails()
 
       assert_email_sent(fn email ->
         assert email.to == [{"", "bob@example.com"}]
@@ -1121,23 +1182,138 @@ defmodule Hexpm.AdminTasksTest do
       assert_email_sent(fn email -> assert email.to == [{"", "jane@example.com"}] end)
     end
 
-    test "only sends once to duplicate recipients" do
+    test "queues announcements behind transactional mail" do
+      assert {:ok, 1} =
+               AdminTasks.send_email(["bob@example.com"], "Hex.pm - Service update", "Body")
+
+      assert [entry] = Repo.all(OutboxEntry)
+      assert entry.priority == 3
+      assert entry.type == "announcement"
+      assert entry.group_key == "admin.announcement:Hex.pm - Service update"
+
+      assert [%Oban.Job{priority: 3}] =
+               Repo.all(
+                 from(job in Oban.Job,
+                   where: job.worker == "Hexpm.Emails.OutboxWorker",
+                   where: job.args == ^%{"outbox_entry_id" => entry.id}
+                 )
+               )
+    end
+
+    test "skips recipients that already have this announcement queued or delivered" do
+      assert {:ok, 2} =
+               AdminTasks.send_email(
+                 ["bob@example.com", "jane@example.com"],
+                 "Hex.pm - Service update",
+                 "Body"
+               )
+
+      [first | _] = Repo.all(OutboxEntry)
+      assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: first.id})
+
+      assert {:ok, 1} =
+               AdminTasks.send_email(
+                 ["bob@example.com", "jane@example.com", "joe@example.com"],
+                 "Hex.pm - Service update",
+                 "Body"
+               )
+
+      assert Enum.sort(Enum.flat_map(Repo.all(OutboxEntry), & &1.recipients)) == [
+               "bob@example.com",
+               "jane@example.com",
+               "joe@example.com"
+             ]
+
+      assert {:ok, 2} =
+               AdminTasks.send_email(
+                 ["bob@example.com", "jane@example.com"],
+                 "Hex.pm - Another update",
+                 "Body"
+               )
+    end
+
+    test "a queued announcement can be cancelled by its group key" do
+      assert {:ok, 2} =
+               AdminTasks.send_email(
+                 ["bob@example.com", "jane@example.com"],
+                 "Hex.pm - Service update",
+                 "Body"
+               )
+
+      assert Hexpm.Emails.Outbox.cancel!(
+               group_key: "admin.announcement:Hex.pm - Service update",
+               categories: ["admin.announcement"]
+             ) == 2
+
+      assert Repo.all(OutboxEntry) == []
+    end
+
+    test "only queues once for duplicate recipients" do
       assert {:ok, 1} =
                AdminTasks.send_email(
                  ["bob@example.com", "bob@example.com"],
                  "Hex.pm - Service update",
                  "Body"
                )
+
+      assert length(Repo.all(OutboxEntry)) == 1
     end
 
     test "escapes the body in the html email" do
       assert {:ok, 1} =
                AdminTasks.send_email(["bob@example.com"], "Subject", "<script>alert(1)</script>")
 
+      deliver_queued_emails()
+
       assert_email_sent(fn email ->
         refute email.html_body =~ "<script>"
         assert email.html_body =~ "&lt;script&gt;"
       end)
+    end
+
+    test "links bare urls in the html email and leaves the text body alone" do
+      assert {:ok, 1} =
+               AdminTasks.send_email(
+                 ["bob@example.com"],
+                 "Subject",
+                 "Read https://hex.pm/policies/termsofservice."
+               )
+
+      deliver_queued_emails()
+
+      assert_email_sent(fn email ->
+        assert email.html_body =~
+                 ~s(<a href="https://hex.pm/policies/termsofservice" style="color: #0f59d8; text-decoration: none;">https://hex.pm/policies/termsofservice</a>.)
+
+        assert email.text_body =~ "Read https://hex.pm/policies/termsofservice."
+      end)
+    end
+
+    test "keeps single newlines as line breaks in the html email" do
+      assert {:ok, 1} =
+               AdminTasks.send_email(
+                 ["bob@example.com"],
+                 "Subject",
+                 "Read them here:\n\nhttps://hex.pm/policies/termsofservice\nhttps://hex.pm/policies/privacy"
+               )
+
+      deliver_queued_emails()
+
+      assert_email_sent(fn email ->
+        assert email.html_body =~
+                 ~r{termsofservice</a><br>\s*<a href="https://hex.pm/policies/privacy"}
+
+        assert email.html_body =~ ~r{Read them here:\s*</p>}
+
+        assert email.text_body =~
+                 "https://hex.pm/policies/termsofservice\nhttps://hex.pm/policies/privacy"
+      end)
+    end
+  end
+
+  defp deliver_queued_emails() do
+    for entry <- Repo.all(OutboxEntry) do
+      assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: entry.id})
     end
   end
 end

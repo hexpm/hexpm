@@ -38,8 +38,12 @@ defmodule Hexpm.Repository.PolicyBuilder do
         Hexpm.Repo.advisory_xact_lock(:policy, sub_key: policy.id)
         contents = build(policy)
         cdn_key = cdn_key(policy)
-        etag = Storage.put_object(store_key(policy), contents, [cdn_key], cache_control(policy))
-        Hexpm.CDN.purge(:fastly_hexrepo, cdn_key, verify: verify_targets(policy, etag))
+        write = Hexpm.CDN.next_write()
+
+        etag =
+          Storage.put_object(store_key(policy), contents, [cdn_key], cache_control(policy), write)
+
+        Hexpm.CDN.purge(:fastly_hexrepo, cdn_key, verify: verify_targets(policy, etag, write))
         :ok
       end)
 
@@ -54,19 +58,21 @@ defmodule Hexpm.Repository.PolicyBuilder do
   def delete(%Policy{} = policy) do
     policy = Hexpm.Repo.preload(policy, :organization)
     Storage.delete_object(store_key(policy))
-    Hexpm.CDN.purge(:fastly_hexrepo, cdn_key(policy), verify: verify_targets(policy, nil))
+    targets = verify_targets(policy, nil, Hexpm.CDN.next_write())
+    Hexpm.CDN.purge(:fastly_hexrepo, cdn_key(policy), verify: targets)
     :ok
   end
 
-  defp verify_targets(%{visibility: "public"} = policy, etag) do
-    [%{url: Hexpm.Utils.cdn_url(store_key(policy)), etag: etag}]
+  defp verify_targets(%{visibility: "public"} = policy, etag, write) do
+    [%{url: Hexpm.Utils.cdn_url(store_key(policy)), etag: etag, write: write}]
   end
 
-  defp verify_targets(policy, etag) do
+  defp verify_targets(policy, etag, write) do
     [
       %{
         url: Hexpm.Utils.cdn_url(store_key(policy)),
         etag: etag,
+        write: write,
         repository: policy.organization.name
       }
     ]
