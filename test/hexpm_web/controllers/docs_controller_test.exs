@@ -82,11 +82,15 @@ defmodule HexpmWeb.DocsControllerTest do
       |> get("/docs/usage")
       |> html_response(200)
 
-    {:ok, document} = Floki.parse_document(html)
-    assert [button | _] = Floki.find(document, ~s(.docs-content button[phx-hook="CopyButton"]))
-    assert [target_id] = Floki.attribute(button, "data-copy-target")
-    assert [target] = Floki.find(document, "##{target_id}")
-    assert [value] = Floki.attribute(target, "data-value")
+    document = LazyHTML.from_document(html)
+
+    assert [button | _] =
+             LazyHTML.query(document, ~s(.docs-content button[phx-hook="CopyButton"]))
+             |> Enum.to_list()
+
+    assert [target_id] = LazyHTML.attribute(button, "data-copy-target")
+    assert [target] = LazyHTML.query(document, "##{target_id}") |> Enum.to_list()
+    assert [value] = LazyHTML.attribute(target, "data-value")
     assert value =~ "defmodule MyProject.MixProject"
     refute value =~ "```"
   end
