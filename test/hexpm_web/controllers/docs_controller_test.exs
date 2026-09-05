@@ -72,6 +72,21 @@ defmodule HexpmWeb.DocsControllerTest do
     assert_sso_docs_hidden()
   end
 
+  test "usage guide code blocks have a copy control" do
+    html =
+      build_conn()
+      |> get("/docs/usage")
+      |> html_response(200)
+
+    {:ok, document} = Floki.parse_document(html)
+    assert [button | _] = Floki.find(document, ~s(.docs-content button[phx-hook="CopyButton"]))
+    assert [target_id] = Floki.attribute(button, "data-copy-target")
+    assert [target] = Floki.find(document, "##{target_id}")
+    assert [value] = Floki.attribute(target, "data-value")
+    assert value =~ "defmodule MyProject.MixProject"
+    refute value =~ "```"
+  end
+
   defp assert_sso_docs_hidden do
     build_conn()
     |> get("/docs/organization-sso")
