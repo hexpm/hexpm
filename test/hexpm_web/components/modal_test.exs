@@ -8,8 +8,13 @@ defmodule HexpmWeb.Components.ModalTest do
 
   test "remains outside its parent layout when shown" do
     html = render_component(&test_modal/1, %{})
-    document = Floki.parse_document!(html)
-    classes = Floki.attribute(document, "#test-modal", "class") |> List.first() |> String.split()
+    document = LazyHTML.from_fragment(html)
+
+    classes =
+      LazyHTML.query(document, "#test-modal")
+      |> LazyHTML.attribute("class")
+      |> List.first()
+      |> String.split()
 
     assert "fixed" in classes
     assert "inset-0" in classes

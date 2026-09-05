@@ -24,12 +24,13 @@ defmodule Hexpm.EmailsTest do
     end
 
     test "header wordmark is a link with explicit white color and no underline" do
-      assert [{"a", attrs, _children}] =
+      assert [wordmark] =
                package_published_email().html_body
-               |> Floki.parse_document!()
-               |> Floki.find("a")
-               |> Enum.filter(&(&1 |> Floki.text() |> String.trim() == "Hex"))
+               |> LazyHTML.from_document()
+               |> LazyHTML.query("a")
+               |> Enum.filter(&(&1 |> LazyHTML.text() |> String.trim() == "Hex"))
 
+      assert [{"a", attrs, _children}] = LazyHTML.to_tree(wordmark)
       attrs = Map.new(attrs)
       assert attrs["href"] == Application.fetch_env!(:hexpm, :email_base_url) <> "/"
       assert attrs["style"] =~ "color: #ffffff"
@@ -39,8 +40,9 @@ defmodule Hexpm.EmailsTest do
     test "logo is a png image" do
       assert [src] =
                package_published_email().html_body
-               |> Floki.parse_document!()
-               |> Floki.attribute("img", "src")
+               |> LazyHTML.from_document()
+               |> LazyHTML.query("img")
+               |> LazyHTML.attribute("src")
 
       assert src =~ "hex-full.png"
     end
@@ -82,12 +84,14 @@ defmodule Hexpm.EmailsTest do
   describe "security_password_reset/2" do
     test "matches the styled email design" do
       email = Emails.security_password_reset(build(:user), %{key: "abc"})
-      document = Floki.parse_document!(email.html_body)
+      # HTML5 parsing closes paragraphs before pre elements, so check the source.
+      refute email.html_body =~ ~r/<p\b[^>]*>(?:(?!<\/p\s*>).)*<pre\b/is
+      document = LazyHTML.from_document(email.html_body)
 
-      assert [_title] = Floki.find(document, "h1")
-      assert Floki.find(document, "p pre") == []
+      assert [_title] = LazyHTML.query(document, "h1") |> Enum.to_list()
 
-      assert Enum.any?(Floki.find(document, "a"), fn {"a", attrs, _children} ->
+      assert Enum.any?(LazyHTML.query(document, "a") |> LazyHTML.to_tree(), fn {"a", attrs,
+                                                                                _children} ->
                (Map.new(attrs)["href"] || "") =~ "/password/new"
              end)
     end

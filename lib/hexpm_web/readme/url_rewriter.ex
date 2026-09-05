@@ -15,7 +15,7 @@ defmodule HexpmWeb.Readme.URLRewriter do
   alias HexpmWeb.ReadmeToken
 
   @doc """
-  Rewrites URLs in a Floki HTML tree.
+  Rewrites URLs in an HTML tree.
   """
   def rewrite(tree, "hexpm", package_name, version) do
     cdn_url = Application.fetch_env!(:hexpm, :cdn_url)

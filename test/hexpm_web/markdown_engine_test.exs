@@ -52,22 +52,24 @@ defmodule HexpmWeb.MarkdownEngineTest do
       ```
       """)
 
-    {:ok, document} = Floki.parse_document(html)
+    document = LazyHTML.from_fragment(html)
 
-    assert [button] = Floki.find(document, ~s(button[phx-hook="CopyButton"]))
-    assert [target_id] = Floki.attribute(button, "data-copy-target")
-    assert [target] = Floki.find(document, "##{target_id}")
-    assert Floki.attribute(target, "data-value") == [~s|IO.puts("hi")\n|]
+    assert [button] =
+             LazyHTML.query(document, ~s(button[phx-hook="CopyButton"])) |> Enum.to_list()
+
+    assert [target_id] = LazyHTML.attribute(button, "data-copy-target")
+    assert [target] = LazyHTML.query(document, "##{target_id}") |> Enum.to_list()
+    assert LazyHTML.attribute(target, "data-value") == [~s|IO.puts("hi")\n|]
 
     refute html =~ "```"
-    refute hd(Floki.attribute(target, "data-value")) =~ "<"
+    refute hd(LazyHTML.attribute(target, "data-value")) =~ "<"
   end
 
   test "does not add a copy control to inline code" do
     html = render_markdown("Use `mix deps.get` to fetch deps.")
-    {:ok, document} = Floki.parse_document(html)
+    document = LazyHTML.from_fragment(html)
 
-    assert Floki.find(document, ~s(button[phx-hook="CopyButton"])) == []
+    assert LazyHTML.query(document, ~s(button[phx-hook="CopyButton"])) |> Enum.to_list() == []
     assert html =~ "<code>"
   end
 
@@ -94,9 +96,9 @@ defmodule HexpmWeb.MarkdownEngineTest do
         kind: :blog
       )
 
-    {:ok, document} = Floki.parse_document(html)
+    document = LazyHTML.from_fragment(html)
 
-    assert Floki.find(document, ~s(button[phx-hook="CopyButton"])) == []
+    assert LazyHTML.query(document, ~s(button[phx-hook="CopyButton"])) |> Enum.to_list() == []
     assert html =~ ~s(class="lumis")
   end
 

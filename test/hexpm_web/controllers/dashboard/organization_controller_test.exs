@@ -21,12 +21,13 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
   end
 
   defp active_org_tab(html) do
-    {:ok, document} = Floki.parse_document(html)
+    document = LazyHTML.from_document(html)
 
-    [active_tab] = Floki.find(document, ~s(#org-tab-nav [data-active="true"]))
+    [active_tab] =
+      LazyHTML.query(document, ~s(#org-tab-nav [data-active="true"])) |> Enum.to_list()
 
     active_tab
-    |> Floki.text(sep: " ")
+    |> LazyHTML.text(separator: " ")
     |> String.replace(~r/\s+/, " ")
     |> String.trim()
   end
@@ -163,24 +164,26 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> get("/dashboard/orgs/#{organization.name}/members")
         |> html_response(200)
 
-      {:ok, document} = Floki.parse_document(html)
+      document = LazyHTML.from_document(html)
       modal_id = "remove-member-#{member.id}"
 
-      assert [_role_form] = Floki.find(document, "#change-role-form-#{member.id}")
-      assert [_role_select] = Floki.find(document, "#role-#{member.id}")
-      assert [_modal] = Floki.find(document, "##{modal_id}")
+      assert [_role_form] =
+               LazyHTML.query(document, "#change-role-form-#{member.id}") |> Enum.to_list()
+
+      assert [_role_select] = LazyHTML.query(document, "#role-#{member.id}") |> Enum.to_list()
+      assert [_modal] = LazyHTML.query(document, "##{modal_id}") |> Enum.to_list()
 
       assert [remove_button] =
-               Floki.find(document, ~s(button[aria-label="Remove member"]))
+               LazyHTML.query(document, ~s(button[aria-label="Remove member"])) |> Enum.to_list()
 
-      assert Floki.attribute(remove_button, "phx-click")
+      assert LazyHTML.attribute(remove_button, "phx-click")
              |> List.first()
              |> String.contains?("##{modal_id}")
 
       assert ["member.with.dots"] =
                document
-               |> Floki.find(~s(##{modal_id} input[name="organization_user[username]"]))
-               |> Floki.attribute("value")
+               |> LazyHTML.query(~s(##{modal_id} input[name="organization_user[username]"]))
+               |> LazyHTML.attribute("value")
     end
 
     test "returns 404 for non-members", %{user: user, organization: organization} do
@@ -205,12 +208,14 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> test_login(user)
         |> get("/dashboard/orgs/#{organization.name}/members")
         |> html_response(200)
-        |> Floki.parse_document!()
+        |> LazyHTML.from_document()
 
       usernames =
         document
-        |> Floki.find(~s(form[id^="change-role-form-"] input[name="organization_user[username]"]))
-        |> Enum.map(&(Floki.attribute(&1, "value") |> List.first()))
+        |> LazyHTML.query(
+          ~s(form[id^="change-role-form-"] input[name="organization_user[username]"])
+        )
+        |> Enum.map(&(LazyHTML.attribute(&1, "value") |> List.first()))
 
       assert usernames == Enum.sort(usernames)
       assert "alpha_member" in usernames
@@ -276,9 +281,9 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> test_login(c.user)
         |> get("/dashboard/orgs/#{c.organization.name}/keys")
         |> html_response(200)
-        |> Floki.parse_document!()
-        |> Floki.find(~s(#generate-key-modal input[name^="key[permissions][package]"]))
-        |> Enum.map(&(Floki.attribute(&1, "name") |> List.first()))
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(~s(#generate-key-modal input[name^="key[permissions][package]"]))
+        |> Enum.map(&(LazyHTML.attribute(&1, "name") |> List.first()))
 
       assert package_inputs == [
                "key[permissions][package][#{c.organization.name}/alpha_package]",
@@ -814,7 +819,10 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> response(200)
 
       text =
-        body |> Floki.parse_document!() |> Floki.text(sep: " ") |> String.replace(~r/\s+/, " ")
+        body
+        |> LazyHTML.from_document()
+        |> LazyHTML.text(separator: " ")
+        |> String.replace(~r/\s+/, " ")
 
       assert text =~ "Organization, monthly billed ($7.00 per user / month)"
       assert text =~ "$7.00 x 2 user(s)"
@@ -852,8 +860,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> test_login(user)
         |> get("/dashboard/orgs/#{organization.name}/billing")
         |> response(200)
-        |> Floki.parse_document!()
-        |> Floki.text(sep: " ")
+        |> LazyHTML.from_document()
+        |> LazyHTML.text(separator: " ")
         |> String.replace(~r/\s+/, " ")
 
       assert text =~ "Organization, monthly billed ($7.00 per user / month)"
@@ -893,8 +901,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> test_login(user)
         |> get("/dashboard/orgs/#{organization.name}/billing")
         |> response(200)
-        |> Floki.parse_document!()
-        |> Floki.text(sep: " ")
+        |> LazyHTML.from_document()
+        |> LazyHTML.text(separator: " ")
         |> String.replace(~r/\s+/, " ")
 
       assert text =~ "Organization, annually billed ($70.00 per user / year)"
@@ -1831,9 +1839,9 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> test_login(c.user)
         |> get("/dashboard/orgs/#{c.organization.name}/packages")
         |> html_response(200)
-        |> Floki.parse_document!()
-        |> Floki.find("table tbody tr td:first-child span.font-medium")
-        |> Enum.map(&(&1 |> Floki.text() |> String.trim()))
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("table tbody tr td:first-child span.font-medium")
+        |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim()))
 
       assert package_names == ["alpha_package", "zulu_package"]
     end

@@ -43,17 +43,19 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     assert html =~ "openid email"
     refute html =~ "stored-client-secret"
 
-    {:ok, document} = Floki.parse_document(html)
+    document = LazyHTML.from_document(html)
 
     assert [_link] =
-             Floki.find(document, ~s(a[href="/docs/organization-sso"]))
+             LazyHTML.query(document, ~s(a[href="/docs/organization-sso"])) |> Enum.to_list()
 
     for path <- [
           "/dashboard/orgs/#{context.organization.name}/policies",
           "/dashboard/orgs/#{context.organization.name}/sso"
         ] do
-      assert [tab] = Floki.find(document, ~s(#org-tab-nav a[href="#{path}"]))
-      assert Floki.text(tab) =~ "NEW"
+      assert [tab] =
+               LazyHTML.query(document, ~s(#org-tab-nav a[href="#{path}"])) |> Enum.to_list()
+
+      assert LazyHTML.text(tab) =~ "NEW"
     end
 
     conn =
@@ -77,7 +79,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
 
     status = connection_status(context)
 
-    assert Floki.text(status) |> String.trim() == "Not tested"
+    assert LazyHTML.text(status) |> String.trim() == "Not tested"
 
     connection =
       connection
@@ -86,7 +88,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
 
     status = connection_status(context)
 
-    assert Floki.text(status) |> String.trim() == "Tested, disabled"
+    assert LazyHTML.text(status) |> String.trim() == "Tested, disabled"
 
     connection
     |> Ecto.Changeset.change(enabled_at: DateTime.utc_now())
@@ -94,7 +96,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
 
     status = connection_status(context)
 
-    assert Floki.text(status) |> String.trim() == "Enabled"
+    assert LazyHTML.text(status) |> String.trim() == "Enabled"
   end
 
   test "links linked accounts to user profiles", context do
@@ -116,13 +118,14 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
       |> get("/dashboard/orgs/#{context.organization.name}/sso")
       |> html_response(200)
 
-    {:ok, document} = Floki.parse_document(html)
+    document = LazyHTML.from_document(html)
 
     assert [_link] =
-             Floki.find(
+             LazyHTML.query(
                document,
                ~s(#sso-linked-accounts a[href="/users/#{context.member.username}"])
              )
+             |> Enum.to_list()
   end
 
   test "the runtime gate hides setup and action routes", context do
@@ -157,12 +160,13 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
       |> get("/dashboard/orgs/#{context.organization.name}")
       |> html_response(200)
 
-    {:ok, document} = Floki.parse_document(html)
+    document = LazyHTML.from_document(html)
 
-    assert Floki.find(
+    assert LazyHTML.query(
              document,
              ~s(#org-tab-nav a[href="/dashboard/orgs/#{context.organization.name}/sso"])
-           ) == []
+           )
+           |> Enum.to_list() == []
 
     build_conn()
     |> test_login(context.admin)
@@ -515,13 +519,13 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     assert html =~
              "records when it was last used but not what it was used for"
 
-    {:ok, document} = Floki.parse_document(html)
+    document = LazyHTML.from_document(html)
 
     rows =
       document
-      |> Floki.find("#sso-enforcement table tbody tr")
+      |> LazyHTML.query("#sso-enforcement table tbody tr")
       |> Enum.map(fn row ->
-        row |> Floki.find("td") |> Enum.map(&(&1 |> Floki.text() |> String.trim()))
+        row |> LazyHTML.query("td") |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim()))
       end)
 
     assert rows == [
@@ -646,8 +650,12 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
       |> get("/dashboard/orgs/#{context.organization.name}/sso")
       |> html_response(200)
 
-    {:ok, document} = Floki.parse_document(html)
-    [status] = Floki.find(document, "section > div:first-child > #sso-connection-status")
+    document = LazyHTML.from_document(html)
+
+    [status] =
+      LazyHTML.query(document, "section > div:first-child > #sso-connection-status")
+      |> Enum.to_list()
+
     status
   end
 

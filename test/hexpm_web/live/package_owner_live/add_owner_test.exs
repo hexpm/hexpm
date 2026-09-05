@@ -97,10 +97,10 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwnerTest do
   end
 
   defp submit_button_disabled?(html) do
-    {:ok, doc} = Floki.parse_fragment(html)
+    doc = LazyHTML.from_fragment(html)
 
     doc
-    |> Floki.find(~s(button[type="submit"]))
-    |> Enum.any?(fn button -> Floki.attribute(button, "disabled") != [] end)
+    |> LazyHTML.query(~s(button[type="submit"]))
+    |> Enum.any?(fn button -> LazyHTML.attribute(button, "disabled") != [] end)
   end
 end

@@ -31,25 +31,29 @@ defmodule HexpmWeb.DiffLiveTest do
 
     {:ok, view, html} = live(build_conn(), "/diff/#{package.name}/1.0.0..7.0.0")
 
-    {:ok, document} = Floki.parse_document(html)
+    document = LazyHTML.from_document(html)
 
-    assert Floki.find(document, "#diff-files-changed strong") |> Floki.text() |> String.trim() ==
+    assert LazyHTML.query(document, "#diff-files-changed strong")
+           |> LazyHTML.text()
+           |> String.trim() ==
              "6"
 
-    assert Floki.find(document, "#diff-files-changed span") |> Floki.text() |> String.trim() ==
+    assert LazyHTML.query(document, "#diff-files-changed span")
+           |> LazyHTML.text()
+           |> String.trim() ==
              "files changed"
 
-    assert Floki.find(document, "a.border-primary-default") |> Floki.text() =~ "Versions"
+    assert LazyHTML.query(document, "a.border-primary-default") |> LazyHTML.text() =~ "Versions"
     assert html =~ ~s(phx-hook="LineHighlight")
 
-    actions = Floki.find(document, "#diff-page-actions")
-    refute Floki.text(actions) =~ package.name
-    refute Floki.text(actions) =~ "1.0.0..7.0.0"
+    actions = LazyHTML.query(document, "#diff-page-actions")
+    refute LazyHTML.text(actions) =~ package.name
+    refute LazyHTML.text(actions) =~ "1.0.0..7.0.0"
 
-    assert [find_file_button] = Floki.find(actions, "button")
-    assert find_file_button |> Floki.text() |> String.trim() == "Find file"
+    assert [find_file_button] = LazyHTML.query(actions, "button") |> Enum.to_list()
+    assert find_file_button |> LazyHTML.text() |> String.trim() == "Find file"
 
-    assert "lg:hidden" in (Floki.attribute(find_file_button, "class")
+    assert "lg:hidden" in (LazyHTML.attribute(find_file_button, "class")
                            |> List.first()
                            |> String.split())
 
@@ -62,7 +66,7 @@ defmodule HexpmWeb.DiffLiveTest do
     assert html =~ ~s(id="diff-gap-5-5")
     assert has_element?(view, "#diff-gap-5-5.mb-4[data-direction='forward']")
 
-    assert Floki.attribute(document, "#whitespace-toggle", "href") == [
+    assert LazyHTML.query(document, "#whitespace-toggle") |> LazyHTML.attribute("href") == [
              "/diff/#{package.name}/1.0.0..7.0.0?w=1"
            ]
 
@@ -498,14 +502,14 @@ defmodule HexpmWeb.DiffLiveTest do
     assert html =~ "Show whitespace"
     assert html =~ "View diff"
     assert html =~ ~s(data-phx-link="redirect")
-    {:ok, document} = Floki.parse_document(html)
+    document = LazyHTML.from_document(html)
 
-    assert Floki.attribute(document, "#whitespace-toggle", "href") == [
+    assert LazyHTML.query(document, "#whitespace-toggle") |> LazyHTML.attribute("href") == [
              "/diff/#{package.name}/1.0.0..2.0.0"
            ]
 
-    assert length(Floki.find(document, "select option")) == 14
-    assert length(Floki.find(document, "select option[disabled]")) == 2
+    assert Enum.count(LazyHTML.query(document, "select option")) == 14
+    assert Enum.count(LazyHTML.query(document, "select option[disabled]")) == 2
 
     render_submit(view, "view-diff", %{"versions" => %{"from" => "3.0.0", "to" => "4.0.0"}})
     assert_redirect(view, "/diff/#{package.name}/3.0.0..4.0.0?w=1")
@@ -648,9 +652,9 @@ defmodule HexpmWeb.DiffLiveTest do
   defp diff_container_ids(view) do
     view
     |> render()
-    |> Floki.parse_fragment!()
-    |> Floki.find("#diff-list > [id$='-container']")
-    |> Floki.attribute("id")
+    |> LazyHTML.from_fragment()
+    |> LazyHTML.query("#diff-list > [id$='-container']")
+    |> LazyHTML.attribute("id")
   end
 
   defp set_job_state(job, state) do

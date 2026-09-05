@@ -99,7 +99,7 @@ defmodule HexpmWeb.PageControllerTest do
   test "pricing identifies per-user pricing and organization policy tiers" do
     html = build_conn() |> get("/pricing") |> response(200)
 
-    document = Floki.parse_document!(html)
+    document = LazyHTML.from_document(html)
 
     assert prices(document, ".monthly-active") == [
              "$0 / user / month",
@@ -138,10 +138,10 @@ defmodule HexpmWeb.PageControllerTest do
 
   defp prices(document, selector) do
     document
-    |> Floki.find(selector)
+    |> LazyHTML.query(selector)
     |> Enum.map(fn element ->
       element
-      |> Floki.text()
+      |> LazyHTML.text()
       |> String.replace(~r/\s+/, " ")
       |> String.trim()
     end)
