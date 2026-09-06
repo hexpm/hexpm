@@ -17,6 +17,14 @@ defmodule Hexpm.OrphanedObjectsTest do
     package
   end
 
+  defp documented_package(opts \\ []) do
+    repository_id = Keyword.get(opts, :repository_id, 1)
+    package = insert(:package, repository_id: repository_id)
+    insert(:release, package: package, version: "1.0.0", has_docs: true)
+    insert(:release, package: package, version: "2.0.0", has_docs: true)
+    package
+  end
+
   describe "scan/1" do
     test "reports orphans without deleting them" do
       package = live_package()
@@ -113,6 +121,19 @@ defmodule Hexpm.OrphanedObjectsTest do
       assert keys(:repo_bucket) == ["repos/#{repository.name}/policies/strict"]
     end
 
+    test "keeps the docs archive of a package that has no rows to check" do
+      put(:repo_bucket, "docs/elixir-1.18.0.tar.gz")
+      put(:repo_bucket, "docs/mix-1.18.0.tar.gz")
+      put(:repo_bucket, "docs/gone_package-1.0.0.tar.gz")
+
+      assert %{deleted: 1, unrecognised: 0} = sweep(:repo_bucket)
+
+      assert keys(:repo_bucket) == [
+               "docs/elixir-1.18.0.tar.gz",
+               "docs/mix-1.18.0.tar.gz"
+             ]
+    end
+
     test "reports a key it cannot place and never deletes it" do
       put(:repo_bucket, "something/we/have/not/seen")
 
@@ -169,7 +190,7 @@ defmodule Hexpm.OrphanedObjectsTest do
     end
 
     test "deletes pages of a version or a package that is gone" do
-      package = live_package()
+      package = documented_package()
       put(:docs_bucket, "#{package.name}/index.html")
       put(:docs_bucket, "#{package.name}/sitemap.xml")
       put(:docs_bucket, "#{package.name}/1.0.0/index.html")
@@ -186,9 +207,35 @@ defmodule Hexpm.OrphanedObjectsTest do
              ]
     end
 
+    test "deletes the pages of a release that no longer carries docs" do
+      package = insert(:package)
+      insert(:release, package: package, version: "1.0.0", has_docs: true)
+      insert(:release, package: package, version: "2.0.0", has_docs: false)
+      put(:docs_bucket, "#{package.name}/index.html")
+      put(:docs_bucket, "#{package.name}/1.0.0/index.html")
+      put(:docs_bucket, "#{package.name}/2.0.0/index.html")
+
+      assert %{deleted: 1} = sweep(:docs_bucket)
+
+      assert keys(:docs_bucket) == [
+               "#{package.name}/1.0.0/index.html",
+               "#{package.name}/index.html"
+             ]
+    end
+
+    test "deletes the unversioned pages of a package with no documented release" do
+      package = insert(:package)
+      insert(:release, package: package, version: "1.0.0", has_docs: false)
+      put(:docs_bucket, "#{package.name}/index.html")
+      put(:docs_bucket, "#{package.name}/sitemap.xml")
+
+      assert %{deleted: 2} = sweep(:docs_bucket)
+      assert keys(:docs_bucket) == []
+    end
+
     test "takes the first segment of a private docs key as the repository" do
       repository = insert(:repository)
-      package = live_package(repository_id: repository.id)
+      package = documented_package(repository_id: repository.id)
       put(:docs_private_bucket, "#{repository.name}/#{package.name}/1.0.0/index.html")
       put(:docs_private_bucket, "#{repository.name}/#{package.name}/9.9.9/index.html")
       put(:docs_private_bucket, "gone_org/#{package.name}/1.0.0/index.html")
@@ -232,6 +279,21 @@ defmodule Hexpm.OrphanedObjectsTest do
 
       assert %{deleted: 1} = sweep(:diff_bucket)
       assert keys(:diff_bucket) == ["metadata/#{package.name}-1.0.0-rc.1-2.0.0-123.json"]
+    end
+
+    test "splits a pair where a prerelease contains the piece separator" do
+      package = insert(:package)
+      insert(:release, package: package, version: "1.0.0-diff-rc.1")
+      insert(:release, package: package, version: "2.0.0")
+
+      put(:diff_bucket, "diffs/#{package.name}-1.0.0-diff-rc.1-2.0.0-123-diff-0.json")
+      put(:diff_bucket, "diffs/#{package.name}-1.0.0-diff-rc.2-2.0.0-123-diff-0.json")
+
+      assert %{deleted: 1, unrecognised: 0} = sweep(:diff_bucket)
+
+      assert keys(:diff_bucket) == [
+               "diffs/#{package.name}-1.0.0-diff-rc.1-2.0.0-123-diff-0.json"
+             ]
     end
 
     test "reports a key that is not shaped like a cache entry" do

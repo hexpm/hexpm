@@ -181,7 +181,21 @@ defmodule Hexpm.Accounts.Organizations do
   end
 
   defp delete_organization_user(multi, nil), do: multi
-  defp delete_organization_user(multi, user), do: Multi.delete(multi, :user, user)
+
+  # An organization made out of an existing account keeps that account's keys
+  # and tokens. Audit logs reference both with ON DELETE SET NULL, and letting
+  # the user's deletion cascade into them instead hits the foreign key trigger
+  # ordering that fails the transaction, which is what Users.delete/2 takes
+  # them out in their own statements to avoid.
+  defp delete_organization_user(multi, user) do
+    multi
+    |> Multi.delete_all(:user_keys, assoc(user, :keys))
+    |> Multi.delete_all(
+      :user_oauth_tokens,
+      from(t in Hexpm.OAuth.Token, where: t.user_id == ^user.id)
+    )
+    |> Multi.delete(:user, user)
+  end
 
   def merge_with_user(
         %Organization{name: name} = organization,

@@ -89,6 +89,16 @@ defmodule Hexpm.Store do
   end
 
   @doc """
+  The object at `key` as `list_objects/2` reports it, or `nil`. For confirming
+  an object is still the one a listing turned up.
+  """
+  def object(bucket, key) do
+    bucket
+    |> list_objects(key)
+    |> Enum.find(&(&1.key == key))
+  end
+
+  @doc """
   Deletes every object under `prefix`. The listing is lazy and a prefix can
   cover a page per file of every version of a package, so the keys go out in
   batches rather than one call.

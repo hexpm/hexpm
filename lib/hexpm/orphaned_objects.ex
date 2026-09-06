@@ -24,10 +24,15 @@ defmodule Hexpm.OrphanedObjects do
   A publish writes its database row before it writes any object, so an object
   in a listing whose row is missing from a database read taken after that
   listing has no row at all. `delete/1` reads the packages twice for this:
-  once to pick candidates out of the listing, and again, after the listing has
-  finished, to decide what to delete. Objects written in the last
-  `:older_than` days are left alone regardless, which covers a republish of a
-  version between the second read and the delete.
+  once to pick candidates out of the listing, and again once the listing has
+  finished, to decide what to delete.
+
+  That second read still says nothing about a publish landing after it, and a
+  republished version writes its object under the key it had before, which is
+  the key sitting in the candidates. So each candidate is fetched again
+  immediately before the delete and skipped unless it is still the object the
+  listing turned up. Objects written in the last `:older_than` days never
+  become candidates in the first place.
   """
 
   import Ecto.Query, only: [from: 2]
@@ -100,8 +105,8 @@ defmodule Hexpm.OrphanedObjects do
 
     Map.new(buckets(opts), fn bucket ->
       collected = collect(bucket, index, opts)
-      deleted = delete_collected(bucket, collected.orphaned)
-      {bucket, Map.put(report(collected), :deleted, deleted)}
+      counts = delete_collected(bucket, collected.orphaned)
+      {bucket, Map.merge(report(collected), counts)}
     end)
   end
 
@@ -114,32 +119,58 @@ defmodule Hexpm.OrphanedObjects do
     end
   end
 
-  # The second read of the packages. Everything in `keys` was listed before it
-  # ran, and an object is written after the row it belongs to, so a key still
-  # orphaned here has no row.
-  defp delete_collected(_bucket, []), do: 0
+  # The second read of the packages. Everything in `candidates` was listed
+  # before it ran, and an object is written after the row it belongs to, so a
+  # candidate still orphaned here had no row when the read was taken.
+  defp delete_collected(_bucket, []), do: %{deleted: 0, rewritten: 0}
 
-  defp delete_collected(bucket, keys) do
+  defp delete_collected(bucket, candidates) do
     index = index()
 
-    keys =
-      Enum.filter(keys, fn {_key, classification} -> orphaned?(classification, index) end)
-      |> Enum.map(&elem(&1, 0))
-
-    keys
+    candidates
+    |> Enum.filter(fn {_key, _last_modified, classification} ->
+      orphaned?(classification, index)
+    end)
     |> Stream.chunk_every(@delete_batch)
-    |> Enum.each(fn batch ->
-      Hexpm.Store.delete_many(bucket, batch)
+    |> Enum.reduce(%{deleted: 0, rewritten: 0}, fn batch, counts ->
+      keys = unchanged(bucket, batch)
+      Hexpm.Store.delete_many(bucket, keys)
 
       Logger.info(%{
         message: "Deleted orphaned objects",
         event: "orphaned_objects.delete",
         bucket: bucket,
-        count: length(batch)
+        count: length(keys),
+        rewritten: length(batch) - length(keys)
       })
-    end)
 
-    length(keys)
+      %{
+        deleted: counts.deleted + length(keys),
+        rewritten: counts.rewritten + length(batch) - length(keys)
+      }
+    end)
+  end
+
+  # The row read above covers a publish up to the moment it ran, and nothing
+  # after it. A version republished since then writes its object under the key
+  # it had before, which is the key sitting in this batch, so each object is
+  # checked to be the one the listing turned up before it is deleted.
+  defp unchanged(bucket, batch) do
+    batch
+    |> Task.async_stream(
+      fn {key, last_modified, _classification} ->
+        case Hexpm.Store.object(bucket, key) do
+          %{last_modified: current} ->
+            if DateTime.compare(current, last_modified) == :eq, do: key
+
+          nil ->
+            nil
+        end
+      end,
+      max_concurrency: 32,
+      timeout: 60_000
+    )
+    |> Enum.flat_map(fn {:ok, key} -> List.wrap(key) end)
   end
 
   defp collect(bucket, index, opts) do
@@ -187,7 +218,9 @@ defmodule Hexpm.OrphanedObjects do
               %{
                 acc
                 | orphaned_count: acc.orphaned_count + 1,
-                  orphaned: [{object.key, classification} | acc.orphaned]
+                  orphaned: [
+                    {object.key, object.last_modified, classification} | acc.orphaned
+                  ]
               }
           end
       end
@@ -220,16 +253,30 @@ defmodule Hexpm.OrphanedObjects do
   ## What the database says exists
 
   defp index() do
-    packages =
+    rows =
       from(p in Package,
         join: repository in assoc(p, :repository),
         left_join: release in assoc(p, :releases),
-        select: {repository.name, p.name, release.version}
+        select: {repository.name, p.name, release.version, release.has_docs}
       )
       |> Repo.all()
-      |> Enum.reduce(%{}, fn {repository, package, version}, acc ->
+
+    packages =
+      Enum.reduce(rows, %{}, fn {repository, package, version, _has_docs}, acc ->
         versions = if version, do: [to_string(version)], else: []
         Map.update(acc, {repository, package}, MapSet.new(versions), &union(&1, versions))
+      end)
+
+    # Only the releases carrying has_docs, so a package with no documented
+    # release is absent rather than present and empty.
+    documented =
+      Enum.reduce(rows, %{}, fn
+        {repository, package, version, true}, acc ->
+          versions = [to_string(version)]
+          Map.update(acc, {repository, package}, MapSet.new(versions), &union(&1, versions))
+
+        _row, acc ->
+          acc
       end)
 
     repositories =
@@ -242,7 +289,12 @@ defmodule Hexpm.OrphanedObjects do
       |> Repo.all()
       |> MapSet.new()
 
-    %{packages: packages, repositories: repositories, policies: policies}
+    %{
+      packages: packages,
+      documented: documented,
+      repositories: repositories,
+      policies: policies
+    }
   end
 
   defp union(set, []), do: set
@@ -261,6 +313,22 @@ defmodule Hexpm.OrphanedObjects do
       {:ok, versions} -> not MapSet.member?(versions, version)
       :error -> true
     end
+  end
+
+  # Reverting docs clears has_docs and deletes the archive, which is what the
+  # ObjectRemoved handler reads, so the pages of a release that no longer
+  # carries the flag are as gone as the pages of a release that was removed.
+  defp orphaned?({:release_docs, repository, package, version}, index) do
+    case Map.fetch(index.documented, {repository, package}) do
+      {:ok, versions} -> not MapSet.member?(versions, version)
+      :error -> true
+    end
+  end
+
+  # The unversioned pages are whichever documented version is latest, so they
+  # stand while the package has one.
+  defp orphaned?({:package_docs, repository, package}, index) do
+    not Map.has_key?(index.documented, {repository, package})
   end
 
   defp orphaned?({:policy, repository, name}, index) do
@@ -338,8 +406,13 @@ defmodule Hexpm.OrphanedObjects do
     release(repository, file, ".tar")
   end
 
+  # Elixir and Hex upload their docs archives straight to the bucket, so these
+  # names have no package row to check them against and the archives are live.
   defp classify_repo(repository, "docs/" <> file) do
-    release(repository, file, ".tar.gz")
+    case release(repository, file, ".tar.gz") do
+      {:release, _repository, package, _version} when package in @special_packages -> :keep
+      classification -> classification
+    end
   end
 
   defp classify_repo(repository, "policies/" <> name) do
@@ -371,8 +444,8 @@ defmodule Hexpm.OrphanedObjects do
 
   defp classify_docs(repository, [package, segment | _rest]) do
     case Version.parse(segment) do
-      {:ok, _version} -> {:release, repository, package, segment}
-      :error -> {:package, repository, package}
+      {:ok, _version} -> {:release_docs, repository, package, segment}
+      :error -> {:package_docs, repository, package}
     end
   end
 
@@ -382,9 +455,11 @@ defmodule Hexpm.OrphanedObjects do
     diff(repository, file, ".json")
   end
 
+  # Greedy, so a version whose prerelease holds "-diff-" keeps it and only the
+  # piece index comes off.
   defp classify_diff(repository, "diffs/" <> file) do
     with {:ok, base} <- strip_suffix(file, ".json"),
-         [rest, _index] <- String.split(base, "-diff-") do
+         [_, rest] <- Regex.run(~r/\A(.+)-diff-\d+\z/, base) do
       diff(repository, rest, "")
     else
       _ -> :unrecognised

@@ -60,17 +60,17 @@ defmodule Hexpm.Accounts.AuditLog do
   end
 
   # The organization row is gone by the time this is committed, so the entry
-  # keeps its details in params and references no organization.
-  def build(%{user: user} = audit_data, "organization.delete", organization)
-      when is_nil(user) or is_struct(user, User) do
+  # keeps its details in params and references no organization. That holds
+  # however the deletion was ordered, including by the organization itself.
+  def build(%{user: actor} = audit_data, "organization.delete", organization) do
     params = extract_params("organization.delete", organization)
 
     {key, oauth_token} = extract_auth_credential(audit_data.auth_credential)
 
     %AuditLog{
-      user_id: user && user.id,
+      user_id: actor_id(actor),
       organization_id: nil,
-      user_data: user && serialize_user_with_emails(user),
+      user_data: actor_data(actor),
       key_data: serialize_key(key),
       key: key,
       oauth_token: oauth_token,
@@ -123,6 +123,12 @@ defmodule Hexpm.Accounts.AuditLog do
       params: params
     }
   end
+
+  defp actor_id(%User{id: id}), do: id
+  defp actor_id(_actor), do: nil
+
+  defp actor_data(%User{} = user), do: serialize_user_with_emails(user)
+  defp actor_data(_actor), do: nil
 
   def audit(audit_data, action, params) do
     build(audit_data, action, params)

@@ -440,6 +440,14 @@ defmodule Hexpm.AdminTasksTest do
   end
 
   describe "rename_user/2" do
+    test "refuses a reserved name" do
+      user = insert(:user)
+      Repo.insert!(%Hexpm.Accounts.ReservedUsername{name: "graveyard"})
+
+      assert {:error, :name_reserved} = AdminTasks.rename_user(user.username, "graveyard")
+      assert Repo.get!(User, user.id).username == user.username
+    end
+
     test "renames user" do
       user = insert(:user, username: "oldname")
 
@@ -1032,6 +1040,38 @@ defmodule Hexpm.AdminTasksTest do
       assert {:error, :organization_not_found} =
                AdminTasks.rename_organization("nonexistent", "new_name")
     end
+
+    test "reserves the old name" do
+      insert(:organization, name: "old_org")
+
+      assert :ok = AdminTasks.rename_organization("old_org", "new_org")
+
+      assert Repo.exists?(Hexpm.Accounts.ReservedUsername.by_name("old_org"))
+    end
+
+    test "refuses a name reserved by an earlier deletion" do
+      deleted = insert(:organization)
+      assert :ok = AdminTasks.delete_organization(deleted.name)
+      other = insert(:organization)
+
+      assert {:error, :name_reserved} =
+               AdminTasks.rename_organization(other.name, deleted.name)
+
+      assert Repo.get!(Organization, other.id).name == other.name
+    end
+
+    test "a renamed organization's objects cannot be deleted for another organization" do
+      named_repository("org_one")
+      second = named_repository("org_two")
+      Hexpm.Store.put(:repo_bucket, "repos/org_one/tarballs/pkg-1.0.0.tar", "FIRST", [])
+
+      assert :ok = AdminTasks.rename_organization("org_one", "org_one_renamed")
+      assert {:error, :name_reserved} = AdminTasks.rename_organization("org_two", "org_one")
+
+      assert :ok = AdminTasks.delete_organization(second.name, delete_data: true)
+
+      assert Hexpm.Store.get(:repo_bucket, "repos/org_one/tarballs/pkg-1.0.0.tar", []) == "FIRST"
+    end
   end
 
   describe "delete_organization/2" do
@@ -1100,6 +1140,35 @@ defmodule Hexpm.AdminTasksTest do
 
     test "returns an error for a nonexistent organization" do
       assert {:error, :organization_not_found} = AdminTasks.delete_organization("nonexistent")
+    end
+
+    test "deletes an organization made out of an existing account with keys" do
+      user = insert(:user)
+      key = insert(:key, user: user)
+      insert(:audit_log, user: user, key: key, action: "key.generate")
+
+      assert {:ok, %{organization: organization}} =
+               Hexpm.Accounts.Organizations.create_from_user(user, insert(:user))
+
+      assert :ok = AdminTasks.delete_organization(organization.name)
+
+      refute Repo.get(Organization, organization.id)
+      refute Repo.get(Hexpm.Accounts.Key, key.id)
+      refute Repo.get(User, user.id)
+    end
+
+    test "deletes an organization audited as itself" do
+      organization = insert(:organization)
+
+      assert :ok =
+               Hexpm.Accounts.Organizations.delete(organization,
+                 audit: Hexpm.Accounts.AuditLogs.system(organization)
+               )
+
+      refute Repo.get(Organization, organization.id)
+      deletion = Repo.get_by!(Hexpm.Accounts.AuditLog, action: "organization.delete")
+      assert is_nil(deletion.organization_id)
+      assert is_nil(deletion.user_id)
     end
 
     test "leaves stored objects alone without delete_data" do
@@ -1499,6 +1568,13 @@ defmodule Hexpm.AdminTasksTest do
     for entry <- Repo.all(OutboxEntry) do
       assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: entry.id})
     end
+  end
+
+  defp named_repository(name) do
+    insert(:repository,
+      name: name,
+      organization: build(:organization, name: name, user: build(:user, username: name))
+    )
   end
 
   defp put_diff_objects(package, prefix \\ "") do

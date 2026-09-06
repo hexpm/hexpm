@@ -309,20 +309,32 @@ defmodule Hexpm.AdminTasks do
   ## Arguments
 
   - `old_name` - The current username
-  - `new_name` - The new username
+  - `new_name` - The new username, refused if it is reserved
 
   ## Examples
 
       iex> AdminTasks.rename_user("oldname", "newname")
       :ok
+
+      iex> AdminTasks.rename_user("oldname", "deleted_user")
+      {:error, :name_reserved}
   """
   @spec rename_user(String.t(), String.t()) :: :ok | {:error, atom()}
   def rename_user(old_name, new_name) do
-    with {:ok, user} <- find_user(old_name) do
+    with {:ok, user} <- find_user(old_name),
+         :ok <- check_name_available(new_name) do
       user
       |> Ecto.Changeset.change(username: new_name)
       |> Repo.update!()
 
+      :ok
+    end
+  end
+
+  defp check_name_available(name) do
+    if Repo.exists?(ReservedUsername.by_name(name)) do
+      {:error, :name_reserved}
+    else
       :ok
     end
   end
@@ -718,19 +730,28 @@ defmodule Hexpm.AdminTasks do
   This updates the organization name, its associated user's username, and all
   key permissions that reference the organization.
 
+  The old name is reserved. Stored objects keep the `repos/<old name>/` prefix
+  they were written under, so letting another organization take the name would
+  point its prefix at them, and `delete_organization/2` would then delete one
+  organization's objects for another.
+
   ## Arguments
 
   - `old_name` - The current organization name
-  - `new_name` - The new organization name
+  - `new_name` - The new organization name, refused if it is reserved
 
   ## Examples
 
       iex> AdminTasks.rename_organization("old_org", "new_org")
       :ok
+
+      iex> AdminTasks.rename_organization("old_org", "deleted_org")
+      {:error, :name_reserved}
   """
   @spec rename_organization(String.t(), String.t()) :: :ok | {:error, atom()}
   def rename_organization(old_name, new_name) do
-    with {:ok, organization} <- find_organization(old_name) do
+    with {:ok, organization} <- find_organization(old_name),
+         :ok <- check_name_available(new_name) do
       user_changeset = Ecto.Changeset.change(organization.user, username: new_name)
 
       changeset =
@@ -740,6 +761,7 @@ defmodule Hexpm.AdminTasks do
 
       Repo.transaction(fn ->
         Repo.update!(changeset)
+        Repo.insert!(%ReservedUsername{name: old_name}, on_conflict: :nothing)
 
         keys = Repo.all(Key)
 
