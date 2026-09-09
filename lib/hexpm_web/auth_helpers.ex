@@ -2,8 +2,8 @@ defmodule HexpmWeb.AuthHelpers do
   import Plug.Conn
   import HexpmWeb.ControllerHelpers, only: [render_error: 3]
 
-  alias Hexpm.Accounts.{Auth, Organization, Organizations, User, TFA}
-  alias Hexpm.Accounts.SSO.Enforcement
+  alias Hexpm.Accounts.{Auth, Organization, Organizations, User, TFA, TFASessions}
+  alias Hexpm.Accounts.OrganizationAuth, as: Enforcement
   alias Hexpm.Permissions
   alias Hexpm.SecurityLog
   alias Hexpm.Repository.{Package, Packages, PackageOwner, Repository}
@@ -100,12 +100,12 @@ defmodule HexpmWeb.AuthHelpers do
   end
 
   # TOTP validation for write operations
-  defp validate_totp_for_write_access(conn, %User{} = user, %Token{} = _token, domains) do
+  defp validate_totp_for_write_access(conn, %User{} = user, %Token{} = token, domains) do
     if requires_write_access?(domains) do
       if not User.tfa_enabled?(user) do
         {:error, :tfa_not_enabled}
       else
-        validate_totp(conn, user)
+        validate_totp(conn, user, token)
       end
     else
       nil
@@ -124,7 +124,7 @@ defmodule HexpmWeb.AuthHelpers do
     end)
   end
 
-  defp validate_totp(conn, user) do
+  defp validate_totp(conn, user, token) do
     otp_code = get_req_header(conn, "x-hex-otp") |> List.first()
 
     cond do
@@ -132,7 +132,14 @@ defmodule HexpmWeb.AuthHelpers do
         {:error, :totp_required}
 
       TFA.token_valid?(user.tfa.secret, otp_code) ->
-        nil
+        if token.grant_type == "client_credentials" do
+          nil
+        else
+          case TFASessions.record_verified!(user, token.user_session_id) do
+            {:ok, :ok} -> nil
+            {:error, _} -> {:error, :invalid_totp}
+          end
+        end
 
       true ->
         SecurityLog.auth_failure(conn, :totp, :invalid_code, user_id: user.id)

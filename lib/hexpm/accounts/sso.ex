@@ -606,8 +606,13 @@ defmodule Hexpm.Accounts.SSO do
   # An administrator enforcement cannot lock out: exempt from it, or linked and
   # able to authenticate.
   defp reachable_admin?(organization) do
+    organization = Seats.lock!(organization)
+    requires_tfa = Hexpm.Accounts.OrganizationTFA.scheduled?(organization)
+
     Repo.exists?(
       from(member in Enforcement.members_with_identity(organization),
+        join: user in assoc(member, :user),
+        where: not (^requires_tfa) or not is_nil(user.tfa),
         where: member.role == "admin",
         where: member.sso_enforcement == "exempt" or not is_nil(as(:identity).id)
       )
@@ -675,7 +680,7 @@ defmodule Hexpm.Accounts.SSO do
     transaction = Repo.get(SSOTransaction, transaction.id, log: false)
 
     if connection && transaction && expands_seat?(transaction, connection, user, claims) do
-      expand_seats(connection)
+      expand_seats(connection, user)
     end
 
     :ok
@@ -697,7 +702,7 @@ defmodule Hexpm.Accounts.SSO do
       is_nil(Organizations.get_role(connection.organization, user))
   end
 
-  defp expand_seats(connection) do
+  defp expand_seats(connection, user) do
     organization = connection.organization
 
     # The target is absolute rather than one more than whatever is subscribed
@@ -705,7 +710,14 @@ defmodule Hexpm.Accounts.SSO do
     # claim, and the other expands again on its next attempt instead of both
     # buying a seat.
     case Repo.transaction(fn ->
-           {Seats.claim(organization, unknown: :deny), Seats.used(organization)}
+           eligibility = Hexpm.Accounts.OrganizationTFA.admit(organization, user)
+
+           claim =
+             if eligibility == :ok,
+               do: Seats.claim(organization, unknown: :deny),
+               else: eligibility
+
+           {claim, Seats.used(organization)}
          end) do
       {:ok, {{:error, :seats_exhausted}, used}} ->
         purchase_seat(connection, organization, used + 1)
@@ -1099,7 +1111,7 @@ defmodule Hexpm.Accounts.SSO do
   # link cannot come to disagree about what an authentication logs.
   defp establish_login!(transaction, connection, identity, user, user_session_id, audit_data) do
     org_session =
-      establish_org_session!(identity, authenticated_session(transaction, user_session_id))
+      establish_org_session!(identity, user_session_id)
 
     insert_audit!(%{audit_data | user: user}, "sso.login", {
       connection.organization,
@@ -1167,28 +1179,17 @@ defmodule Hexpm.Accounts.SSO do
 
   def granted_organization_ids(_user_session_id, _user_id), do: []
 
-  # Which session an authentication lands on. A transaction started from a
-  # terminal names the session it is for; everything else means the browser
-  # that started it.
-  defp authenticated_session(%SSOTransaction{target_user_session_id: nil}, user_session_id),
-    do: user_session_id
-
-  defp authenticated_session(%SSOTransaction{target_user_session_id: target}, _user_session_id),
-    do: target
-
   @doc """
-  Opens a re-authorization for a session that has lost its organization access.
-
-  The session doing the asking is the one being authorized. Its owner completes
-  the provider round trip in a browser, and the organization access session that
-  produces is written against the asking session, so a lapsed terminal costs a
-  browser visit rather than a new device authorization and a new refresh token.
+  Opens a browser request to verify the organization requirements of an OAuth session.
+  Verification is copied to the target only when every requested check is complete.
   """
-  @spec request_authorization(User.t(), integer(), term()) ::
+  @spec request_authorization(User.t(), integer(), term(), keyword()) ::
           {:ok, Authorization.t()} | {:error, atom()}
-  def request_authorization(%User{} = user, user_session_id, organization_names)
+  def request_authorization(%User{} = user, user_session_id, organization_names, opts \\ [])
       when is_integer(user_session_id) do
-    with {:ok, names} <- authorization_names(organization_names),
+    with {:ok, session} <- authorization_session(user, user_session_id),
+         {:ok, redirect} <- authorization_redirect(session, opts),
+         {:ok, names} <- authorization_names(organization_names),
          {:ok, organizations} <- authorization_organizations(user, names) do
       code = random_token()
 
@@ -1198,6 +1199,8 @@ defmodule Hexpm.Accounts.SSO do
           user_id: user.id,
           user_session_id: user_session_id,
           code_hash: hash(code),
+          redirect_uri: redirect[:redirect_uri],
+          state: redirect[:state],
           organization_ids: Enum.map(organizations, & &1.id),
           expires_at: DateTime.add(DateTime.utc_now(), @authorization_lifetime_seconds, :second)
         })
@@ -1205,6 +1208,71 @@ defmodule Hexpm.Accounts.SSO do
 
       {:ok, %{authorization | raw_code: code}}
     end
+  end
+
+  defp authorization_session(user, session_id) do
+    now = DateTime.utc_now()
+
+    case Repo.one(
+           from(s in Hexpm.UserSession,
+             where: s.id == ^session_id and s.user_id == ^user.id and s.type == "oauth",
+             where: is_nil(s.revoked_at) and s.expires_at > ^now
+           )
+         ) do
+      nil -> {:error, :invalid_session}
+      session -> {:ok, session}
+    end
+  end
+
+  defp authorization_redirect(session, opts) do
+    case {opts[:redirect_uri], opts[:state]} do
+      {nil, nil} ->
+        {:ok, []}
+
+      {redirect_uri, state}
+      when is_binary(redirect_uri) and byte_size(redirect_uri) <= 2048 and
+             is_binary(state) and byte_size(state) in 1..512 ->
+        uri =
+          case URI.new(redirect_uri) do
+            {:ok, uri} -> uri
+            {:error, _} -> nil
+          end
+
+        client = Repo.get(Hexpm.OAuth.Client, session.client_id)
+
+        if client && uri && String.valid?(state) && !String.contains?(state, <<0>>) &&
+             uri.scheme in ["http", "https"] && is_binary(uri.host) &&
+             uri.userinfo == nil && uri.fragment == nil &&
+             !String.contains?(redirect_uri, ["\\", "\r", "\n", "\t"]) &&
+             !Enum.any?(URI.query_decoder(uri.query || ""), fn {key, _} ->
+               key in ["state", "organization_authorization"]
+             end) && authorization_redirect_allowed?(client, uri, redirect_uri) do
+          {:ok, [redirect_uri: redirect_uri, state: state]}
+        else
+          {:error, :invalid_redirect}
+        end
+
+      _ ->
+        {:error, :invalid_redirect}
+    end
+  end
+
+  defp authorization_redirect_allowed?(client, uri, redirect_uri) do
+    Enum.any?(client.redirect_uris, fn registered ->
+      allowed = URI.parse(registered)
+
+      host_pattern =
+        allowed.host
+        |> Regex.escape()
+        |> String.replace("\\*", "[a-zA-Z0-9-]+")
+
+      uri.scheme == allowed.scheme && uri.port == allowed.port &&
+        Regex.match?(Regex.compile!("\\A" <> host_pattern <> "\\z"), uri.host) &&
+        Hexpm.OAuth.Clients.valid_redirect_uri?(
+          %{client | redirect_uris: [registered]},
+          redirect_uri
+        )
+    end)
   end
 
   defp authorization_names(names) when is_list(names) and names != [] do
@@ -1224,7 +1292,7 @@ defmodule Hexpm.Accounts.SSO do
   # access token, so a name that has since been exempted or turned off is
   # dropped rather than taken as a reason to refuse the ones that still stand.
   defp authorization_organizations(user, names) do
-    case Enforcement.governed(user, names) do
+    case Hexpm.Accounts.OrganizationAuth.governed(user, names) do
       [] -> {:error, :not_governed}
       organizations -> {:ok, organizations}
     end
@@ -1255,35 +1323,114 @@ defmodule Hexpm.Accounts.SSO do
   def get_authorization(_code, _user), do: nil
 
   @doc """
-  The organizations a re-authorization covers, and whether the session it is for
-  is currently authenticated to each.
+  Checks the target session and any verification in the approving browser.
+  Membership removal invalidates the request.
   """
-  @spec authorization_status(Authorization.t()) :: [{Organization.t(), boolean()}]
-  def authorization_status(%Authorization{} = authorization) do
-    now = DateTime.utc_now()
+  def authorization_status(%Authorization{} = authorization, browser_session_id \\ nil) do
+    user = Repo.get!(User, authorization.user_id)
 
     organizations =
-      from(organization in Organization,
-        where: organization.id in ^authorization.organization_ids,
-        order_by: organization.name
+      Repo.all(
+        from(o in assoc(user, :organizations),
+          where: o.id in ^authorization.organization_ids,
+          order_by: o.name
+        )
       )
-      |> Repo.all()
 
-    live =
-      authorization.user_session_id
-      |> OrgSession.live(now)
-      |> OrgSession.for_user(authorization.user_id)
+    if length(organizations) == length(authorization.organization_ids) do
+      Enum.map(organizations, fn organization ->
+        {organization,
+         authorization_requirements(authorization, organization, browser_session_id) == []}
+      end)
+    else
+      []
+    end
+  end
 
-    authenticated =
-      from(session in live,
-        where: session.organization_id in ^authorization.organization_ids,
-        select: session.organization_id
+  def authorization_requirements(authorization, organization, browser_session_id) do
+    user = Repo.get!(User, authorization.user_id)
+
+    target =
+      Hexpm.Accounts.OrganizationAuth.required(
+        user,
+        [organization.name],
+        authorization.user_session_id
       )
-      |> Repo.all()
-      |> MapSet.new()
 
-    Enum.map(organizations, fn organization ->
-      {organization, MapSet.member?(authenticated, organization.id)}
+    browser =
+      Hexpm.Accounts.OrganizationAuth.required(user, [organization.name], browser_session_id)
+
+    missing = Enum.flat_map(browser, & &1.requirements)
+    Enum.flat_map(target, & &1.requirements) |> Enum.filter(&(&1 in missing))
+  end
+
+  def complete_authorization(authorization, user, browser_session_id) do
+    Repo.transaction(fn ->
+      user = Hexpm.Accounts.TFASessions.lock_user!(user)
+      now = DateTime.utc_now()
+
+      current =
+        Repo.one(
+          from(a in Authorization,
+            where: a.id == ^authorization.id and a.user_id == ^user.id,
+            where: is_nil(a.consumed_at) and a.expires_at > ^now,
+            lock: "FOR UPDATE"
+          )
+        )
+
+      if is_nil(current), do: Repo.rollback(:invalid_authorization)
+
+      session =
+        Repo.one(
+          from(s in Hexpm.UserSession,
+            where:
+              s.id == ^current.user_session_id and s.user_id == ^user.id and s.type == "oauth",
+            where: is_nil(s.revoked_at) and s.expires_at > ^now,
+            lock: "FOR UPDATE"
+          )
+        )
+
+      if is_nil(session), do: Repo.rollback(:invalid_session)
+      status = authorization_status(current, browser_session_id)
+
+      unless status != [] and Enum.all?(status, &elem(&1, 1)),
+        do: Repo.rollback(:requirements_missing)
+
+      if browser_session_id do
+        Hexpm.Accounts.TFASessions.copy!(browser_session_id, session.id, user)
+
+        for {organization, _} <- status,
+            {:error, :sso_required} == Enforcement.check(organization, user, nil, session.id) do
+          source = current_org_session(browser_session_id, organization.id)
+          if is_nil(source) or source.user_id != user.id, do: Repo.rollback(:requirements_missing)
+
+          existing =
+            Repo.get_by(OrgSession, user_session_id: session.id, organization_id: organization.id)
+
+          (existing || %OrgSession{})
+          |> OrgSession.changeset(%{
+            user_id: user.id,
+            organization_id: organization.id,
+            user_session_id: session.id,
+            granted_from_user_session_id: browser_session_id,
+            identity_id: source.identity_id,
+            authenticated_at: source.authenticated_at,
+            expires_at: source.expires_at,
+            revoked_at: nil
+          })
+          |> Repo.insert_or_update!()
+        end
+      end
+
+      unless Enum.all?(status, fn {organization, _} ->
+               Hexpm.Accounts.OrganizationAuth.check(organization, user, nil, session.id) == :ok
+             end),
+             do: Repo.rollback(:requirements_missing)
+
+      case consume_authorization!(current) do
+        :ok -> :ok
+        {:error, reason} -> Repo.rollback(reason)
+      end
     end)
   end
 
@@ -1294,15 +1441,16 @@ defmodule Hexpm.Accounts.SSO do
   def consume_authorization!(%Authorization{} = authorization) do
     now = DateTime.utc_now()
 
-    Repo.update_all(
-      from(row in Authorization,
-        where: row.id == ^authorization.id,
-        where: is_nil(row.consumed_at)
-      ),
-      set: [consumed_at: now, updated_at: now]
-    )
-
-    :ok
+    case Repo.update_all(
+           from(row in Authorization,
+             where: row.id == ^authorization.id,
+             where: is_nil(row.consumed_at) and row.expires_at > ^now
+           ),
+           set: [consumed_at: now, updated_at: now]
+         ) do
+      {1, _} -> :ok
+      {0, _} -> {:error, :invalid_authorization}
+    end
   end
 
   @doc """
@@ -1629,7 +1777,8 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   defp join_member(connection, organization, user, audit_data) do
-    with {:ok, _usage} <- Seats.claim(organization, unknown: :deny) do
+    with :ok <- Hexpm.Accounts.OrganizationTFA.admit(organization, user),
+         {:ok, _usage} <- Seats.claim(organization, unknown: :deny) do
       organization_user = %OrganizationUser{organization_id: organization.id, user_id: user.id}
 
       case Repo.insert(

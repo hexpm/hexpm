@@ -2,6 +2,7 @@ defmodule HexpmWeb.API.OrganizationUserController do
   use HexpmWeb, :controller
 
   plug :fetch_organization
+  plug :assign_tfa_visibility
 
   plug :authorize,
        [
@@ -17,13 +18,23 @@ defmodule HexpmWeb.API.OrganizationUserController do
        ]
        when action in [:create, :update, :delete]
 
+  defp assign_tfa_visibility(conn, _opts) do
+    organization = conn.assigns.organization
+    principal = conn.assigns[:current_user] || conn.assigns[:current_organization]
+    assign(conn, :tfa_visible?, Organizations.access?(organization, principal, "admin"))
+  end
+
   def index(conn, %{"organization" => name}) do
     organization = Organizations.get(name)
     organization_users = Organizations.all_members(organization, user: :emails)
 
     conn
     |> api_cache(:private)
-    |> render(:index, organization_users: organization_users)
+    |> render(:index,
+      organization_users: organization_users,
+      organization: organization,
+      tfa_visible?: conn.assigns.tfa_visible?
+    )
   end
 
   def show(conn, %{"organization" => name, "name" => username}) do
@@ -34,7 +45,12 @@ defmodule HexpmWeb.API.OrganizationUserController do
     if role do
       conn
       |> api_cache(:private)
-      |> render(:show, user: user, role: role)
+      |> render(:show,
+        user: user,
+        role: role,
+        organization: organization,
+        tfa_visible?: conn.assigns.tfa_visible?
+      )
     else
       not_found(conn)
     end
@@ -53,7 +69,15 @@ defmodule HexpmWeb.API.OrganizationUserController do
           conn
           |> api_cache(:private)
           |> put_resp_header("location", location)
-          |> render(:show, user: user, role: organization_user.role)
+          |> render(:show,
+            user: user,
+            role: organization_user.role,
+            organization: organization,
+            tfa_visible?: conn.assigns.tfa_visible?
+          )
+
+        {:error, :tfa_enrollment_required} ->
+          validation_failed(conn, "user must enable 2FA before joining this organization")
 
         {:error, :seats_exhausted} ->
           validation_failed(conn, "not enough seats to add member")
@@ -85,7 +109,12 @@ defmodule HexpmWeb.API.OrganizationUserController do
         {:ok, organization_user} ->
           conn
           |> api_cache(:private)
-          |> render(:show, user: user, role: organization_user.role)
+          |> render(:show,
+            user: user,
+            role: organization_user.role,
+            organization: organization,
+            tfa_visible?: conn.assigns.tfa_visible?
+          )
 
         {:error, :last_admin} ->
           validation_failed(conn, "cannot demote last admin member")
@@ -107,6 +136,9 @@ defmodule HexpmWeb.API.OrganizationUserController do
         conn
         |> api_cache(:private)
         |> send_resp(204, "")
+
+      {:error, :last_admin} ->
+        validation_failed(conn, "cannot remove the last eligible administrator")
 
       {:error, :last_member} ->
         validation_failed(conn, "cannot remove last member")

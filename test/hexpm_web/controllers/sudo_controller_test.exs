@@ -105,6 +105,7 @@ defmodule HexpmWeb.SudoControllerTest do
 
       assert redirected_to(conn) == "/dashboard/security"
       assert Sudo.sudo_active?(conn)
+      refute Hexpm.Accounts.TFASessions.proof(user, conn.assigns.current_session.id)
     end
 
     test "rejects incorrect password" do
@@ -283,6 +284,7 @@ defmodule HexpmWeb.SudoControllerTest do
 
       assert redirected_to(conn) == "/dashboard/email"
       assert Sudo.sudo_active?(conn)
+      assert Hexpm.Accounts.TFASessions.proof(user, conn.assigns.current_session.id)
 
       # Verify code was marked as used
       updated_user = Hexpm.Accounts.Users.get_by_id(user.id)

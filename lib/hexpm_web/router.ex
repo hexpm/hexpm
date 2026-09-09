@@ -160,6 +160,10 @@ defmodule HexpmWeb.Router do
     post "/login", LoginController, :create
     post "/logout", LoginController, :delete
 
+    get "/tfa/verify", OrganizationAuthController, :verify
+    post "/tfa/verify", OrganizationAuthController, :verify_code
+    get "/organizations/:organization/authenticate", OrganizationAuthController, :authenticate
+
     get "/tfa", TFAAuthController, :show
     post "/tfa", TFAAuthController, :create
 
@@ -192,8 +196,8 @@ defmodule HexpmWeb.Router do
     # The code rides in the query string, not the path: both loggers on the
     # endpoint record `conn.request_path`, so a code in the path would be
     # written to stdout and to Sentry on every visit.
-    get "/sso/authorize", SSOController, :authorize, log: false
-    post "/sso/authorize", SSOController, :authorize_organization, log: false
+    get "/organizations/authorize", SSOController, :authorize, log: false
+    post "/organizations/authorize", SSOController, :authorize_organization, log: false
 
     get "/invites", OrganizationInvitationController, :show, log: false
     post "/invites", OrganizationInvitationController, :accept, log: false
@@ -230,6 +234,7 @@ defmodule HexpmWeb.Router do
     get "/docs/private", DocsController, :private
     get "/docs/dependency-policies", DocsController, :dependency_policies
     get "/docs/organization-sso", DocsController, :organization_sso
+    get "/docs/organization-tfa", DocsController, :organization_tfa
     get "/docs/faq", DocsController, :faq
     get "/docs/mirrors", DocsController, :mirrors
     get "/docs/public-keys", DocsController, :public_keys
@@ -350,6 +355,7 @@ defmodule HexpmWeb.Router do
     get "/orgs/:dashboard_org", OrganizationController, :show
     post "/orgs/:dashboard_org", OrganizationController, :update
     get "/orgs/:dashboard_org/members", OrganizationController, :members
+    post "/orgs/:dashboard_org/tfa", OrganizationController, :configure_tfa
     get "/orgs/:dashboard_org/keys", OrganizationController, :keys
     get "/orgs/:dashboard_org/packages", OrganizationController, :packages
     get "/orgs/:dashboard_org/audit-logs", OrganizationController, :audit_logs
@@ -516,7 +522,7 @@ defmodule HexpmWeb.Router do
     post "/oauth/device_authorization", OAuthController, :device_authorization
     post "/oauth/revoke", OAuthController, :revoke
     post "/oauth/revoke_by_hash", OAuthController, :revoke_by_hash
-    post "/oauth/sso_authorization", SSOAuthorizationController, :create
+    post "/oauth/organization_authorization", SSOAuthorizationController, :create
   end
 
   scope "/api", HexpmWeb.API, as: :api do
@@ -548,6 +554,11 @@ defmodule HexpmWeb.Router do
       post "/repo", TestController, :repo
       post "/oauth_client", TestController, :oauth_client
       post "/oauth_token", TestController, :oauth_token
+
+      if Mix.env() == :hex do
+        post "/organization_tfa", TestController, :organization_tfa
+      end
+
       post "/oauth_device_authorize", TestController, :oauth_device_authorize
       get "/oauth_device_pending", TestController, :oauth_device_pending
     end

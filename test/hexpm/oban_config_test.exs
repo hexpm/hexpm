@@ -93,7 +93,8 @@ defmodule Hexpm.ObanConfigTest do
              {"0 1 * * *", Hexpm.Repository.DownloadsWorker},
              {"0 2 * * *", Hexpm.PurgeExpiredRecords},
              {"15 3 * * *", Hexpm.Accounts.OrganizationDomains.RecheckWorker},
-             {"45 3 * * *", Hexpm.Accounts.SSO.EnforcementWorker}
+             {"45 3 * * *", Hexpm.Accounts.SSO.EnforcementWorker},
+             {"*/15 * * * *", Hexpm.Accounts.OrganizationTFAWorker}
            ]
 
     assert {Hexpm.Oban.Pruner, [max_age: 259_200, discarded_max_age: 31_536_000]} in oban[

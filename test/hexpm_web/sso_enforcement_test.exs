@@ -58,7 +58,7 @@ defmodule HexpmWeb.SSOEnforcementTest do
       conn = get(conn, "/packages/#{context.repository.name}/#{context.package.name}")
 
       assert redirected_to(conn) ==
-               "/sso/org/#{context.organization.name}?return=" <>
+               "/organizations/#{context.organization.name}/authenticate?return=" <>
                  URI.encode_www_form(
                    "/packages/#{context.repository.name}/#{context.package.name}"
                  )
@@ -99,7 +99,8 @@ defmodule HexpmWeb.SSOEnforcementTest do
       conn = get(conn, path)
 
       assert redirected_to(conn) ==
-               "/sso/org/#{context.organization.name}?return=" <> URI.encode_www_form(path)
+               "/organizations/#{context.organization.name}/authenticate?return=" <>
+                 URI.encode_www_form(path)
     end
 
     test "send a governed member off the diff view too", context do
@@ -110,7 +111,8 @@ defmodule HexpmWeb.SSOEnforcementTest do
       conn =
         get(conn, "/diff/#{context.repository.name}/#{context.package.name}/1.0.0..2.0.0")
 
-      assert redirected_to(conn) =~ "/sso/org/#{context.organization.name}?return="
+      assert redirected_to(conn) =~
+               "/organizations/#{context.organization.name}/authenticate?return="
     end
 
     test "send a governed full owner off the owners page too", context do
@@ -122,7 +124,8 @@ defmodule HexpmWeb.SSOEnforcementTest do
       conn = get(conn, path)
 
       assert redirected_to(conn) ==
-               "/sso/org/#{context.organization.name}?return=" <> URI.encode_www_form(path)
+               "/organizations/#{context.organization.name}/authenticate?return=" <>
+                 URI.encode_www_form(path)
     end
 
     test "leave the public repository alone", context do
@@ -173,7 +176,9 @@ defmodule HexpmWeb.SSOEnforcementTest do
       assert {:error, {:redirect, %{to: to}}} =
                render_hook(view, "load-gap", %{"start" => "5", "last" => "5"})
 
-      assert to == "/sso/org/#{context.organization.name}?return=" <> URI.encode_www_form(path)
+      assert to ==
+               "/organizations/#{context.organization.name}/authenticate?return=" <>
+                 URI.encode_www_form(path)
     end
 
     test "refuses a package report filed after the session lapses", context do
@@ -196,7 +201,10 @@ defmodule HexpmWeb.SSOEnforcementTest do
                  }
                })
 
-      assert to == "/sso/org/#{context.organization.name}?return=" <> URI.encode_www_form(path)
+      assert to ==
+               "/organizations/#{context.organization.name}/authenticate?return=" <>
+                 URI.encode_www_form(path)
+
       refute Repo.exists?(Hexpm.PackageReports.Report)
     end
 
@@ -274,7 +282,7 @@ defmodule HexpmWeb.SSOEnforcementTest do
 
       conn = get(conn, "/dashboard/orgs/#{context.organization.name}/members")
 
-      assert redirected_to(conn) =~ "/sso/org/#{context.organization.name}"
+      assert redirected_to(conn) =~ "/organizations/#{context.organization.name}/authenticate"
     end
 
     test "admits them once they have authenticated", context do
@@ -370,7 +378,7 @@ defmodule HexpmWeb.SSOEnforcementTest do
         })
 
       assert redirected_to(conn) ==
-               "/sso/org/#{context.organization.name}?return=" <>
+               "/organizations/#{context.organization.name}/authenticate?return=" <>
                  URI.encode_www_form(members_path)
     end
 
@@ -385,7 +393,7 @@ defmodule HexpmWeb.SSOEnforcementTest do
           "organization_user" => %{"username" => context.member.username, "role" => "read"}
         })
 
-      assert redirected_to(conn) == "/sso/org/#{context.organization.name}"
+      assert redirected_to(conn) == "/organizations/#{context.organization.name}/authenticate"
     end
 
     test "takes a fresh password before replacing the provider", context do
@@ -528,7 +536,7 @@ defmodule HexpmWeb.SSOEnforcementTest do
           "sso_enforcement" => "exempt"
         })
 
-      assert redirected_to(conn) =~ "/sso/org/#{context.organization.name}"
+      assert redirected_to(conn) =~ "/organizations/#{context.organization.name}/authenticate"
 
       assert Repo.get_by!(Hexpm.Accounts.OrganizationUser,
                organization_id: context.organization.id,
@@ -787,7 +795,8 @@ defmodule HexpmWeb.SSOEnforcementTest do
       conn = get(conn, path)
 
       assert redirected_to(conn) ==
-               "/sso/org/#{context.organization.name}?return=" <> URI.encode_www_form(path)
+               "/organizations/#{context.organization.name}/authenticate?return=" <>
+                 URI.encode_www_form(path)
     end
 
     test "lets an administrator who has authenticated onto the owners page", context do
@@ -957,7 +966,7 @@ defmodule HexpmWeb.SSOEnforcementTest do
       token = oauth_token(context.member, ["api:read", "repositories"], session)
 
       assert "repository:#{context.organization.name}" in token.scopes
-      assert token.sso_reauth_required == []
+      assert token.organization_reauth_required == []
     end
 
     test "drop the ones it has not, and name them", context do
@@ -966,7 +975,10 @@ defmodule HexpmWeb.SSOEnforcementTest do
       token = oauth_token(context.member, ["api:read", "repositories"])
 
       refute "repository:#{context.organization.name}" in token.scopes
-      assert token.sso_reauth_required == [context.organization.name]
+
+      assert token.organization_reauth_required == [
+               %{organization: context.organization.name, requirements: ["sso"]}
+             ]
     end
 
     test "drop a docs scope the same way a repository scope goes", context do
@@ -976,14 +988,14 @@ defmodule HexpmWeb.SSOEnforcementTest do
       token = oauth_token(context.member, ["api:read", "docs:#{name}", "repository:#{name}"])
 
       assert token.scopes == ["api:read"]
-      assert token.sso_reauth_required == [name]
+      assert token.organization_reauth_required == [%{organization: name, requirements: ["sso"]}]
     end
 
     test "are unaffected while the organization does not enforce", context do
       token = oauth_token(context.member, ["api:read", "repositories"])
 
       assert "repository:#{context.organization.name}" in token.scopes
-      assert token.sso_reauth_required == []
+      assert token.organization_reauth_required == []
     end
 
     test "are re-derived on refresh, and the flag reaches the client", context do
@@ -998,7 +1010,10 @@ defmodule HexpmWeb.SSOEnforcementTest do
       body = refresh(token, session)
 
       refute body["scope"] =~ "repository:#{context.organization.name}"
-      assert body["sso_reauth_required"] == [context.organization.name]
+
+      assert body["organization_reauth_required"] == [
+               %{"organization" => context.organization.name, "requirements" => ["sso"]}
+             ]
     end
 
     test "leave an organization the member was removed from unnamed", context do
@@ -1018,14 +1033,14 @@ defmodule HexpmWeb.SSOEnforcementTest do
       # Dropped, like a lapsed session, but not named: authenticating would not
       # give it back and the client has nothing to act on.
       refute body["scope"] =~ "repository:#{context.organization.name}"
-      refute Map.has_key?(body, "sso_reauth_required")
+      refute Map.has_key?(body, "organization_reauth_required")
     end
 
     test "say nothing to a client that has nothing to fix", context do
       session = oauth_session(context.member)
       token = oauth_token(context.member, ["api:read"], session)
 
-      refute Map.has_key?(refresh(token, session), "sso_reauth_required")
+      refute Map.has_key?(refresh(token, session), "organization_reauth_required")
     end
   end
 
@@ -1121,7 +1136,7 @@ defmodule HexpmWeb.SSOEnforcementTest do
         |> json_response(200)
 
       assert body["scope"] =~ "repository:#{context.organization.name}"
-      refute Map.has_key?(body, "sso_reauth_required")
+      refute Map.has_key?(body, "organization_reauth_required")
     end
 
     # The flow hexdocs uses, and the one that carries a docs scope rather than
@@ -1162,7 +1177,7 @@ defmodule HexpmWeb.SSOEnforcementTest do
         |> json_response(200)
 
       assert body["scope"] =~ "docs:#{name}"
-      refute Map.has_key?(body, "sso_reauth_required")
+      refute Map.has_key?(body, "organization_reauth_required")
     end
 
     # Approving hands the client's own session a copy of the organization
@@ -1259,7 +1274,10 @@ defmodule HexpmWeb.SSOEnforcementTest do
         |> json_response(200)
 
       refute refreshed["scope"] =~ "docs:#{name}"
-      assert refreshed["sso_reauth_required"] == [name]
+
+      assert refreshed["organization_reauth_required"] == [
+               %{"organization" => name, "requirements" => ["sso"]}
+             ]
     end
 
     test "the device approval page names the organizations still to authenticate", context do
@@ -1284,8 +1302,16 @@ defmodule HexpmWeb.SSOEnforcementTest do
         |> get("/oauth/device/authorize")
         |> html_response(200)
 
-      assert body =~ "Authenticate to #{context.organization.name}"
-      assert body =~ "/sso/org/#{context.organization.name}"
+      document = LazyHTML.from_document(body)
+
+      assert document
+             |> LazyHTML.query(
+               "li > a[href^='/organizations/#{context.organization.name}/authenticate']"
+             )
+             |> LazyHTML.text() == context.organization.name
+
+      assert document |> LazyHTML.query("ul > li > ul > li") |> LazyHTML.text() ==
+               "SSO authentication required"
     end
 
     test "the consent page names the organizations still to authenticate", context do
@@ -1307,8 +1333,16 @@ defmodule HexpmWeb.SSOEnforcementTest do
         })
         |> html_response(200)
 
-      assert body =~ "Authenticate to #{context.organization.name}"
-      assert body =~ "/sso/org/#{context.organization.name}"
+      document = LazyHTML.from_document(body)
+
+      assert document
+             |> LazyHTML.query(
+               "li > a[href^='/organizations/#{context.organization.name}/authenticate']"
+             )
+             |> LazyHTML.text() == context.organization.name
+
+      assert document |> LazyHTML.query("ul > li > ul > li") |> LazyHTML.text() ==
+               "SSO authentication required"
     end
 
     test "a device approved in a browser that has not authenticated says so", context do
@@ -1347,7 +1381,10 @@ defmodule HexpmWeb.SSOEnforcementTest do
       # member belongs to, so the grant takes what the browser holds and names
       # what it could not.
       refute body["scope"] =~ "repository:#{context.organization.name}"
-      assert body["sso_reauth_required"] == [context.organization.name]
+
+      assert body["organization_reauth_required"] == [
+               %{"organization" => context.organization.name, "requirements" => ["sso"]}
+             ]
     end
   end
 
@@ -1569,7 +1606,7 @@ defmodule HexpmWeb.SSOEnforcementTest do
       body = client_credentials(key.user_secret, "repositories")
 
       assert body["scope"] =~ "repository:#{context.organization.name}"
-      refute body["sso_reauth_required"]
+      refute body["organization_reauth_required"]
     end
 
     test "loses the ones that do not, and is told nothing to fix", context do
@@ -1579,7 +1616,7 @@ defmodule HexpmWeb.SSOEnforcementTest do
       body = client_credentials(key.user_secret, "repositories")
 
       refute body["scope"] =~ "repository:#{context.organization.name}"
-      assert body["sso_reauth_required"] in [nil, []]
+      assert body["organization_reauth_required"] in [nil, []]
     end
 
     test "reaches the organization on the terms the key itself reaches it on", context do
@@ -1624,7 +1661,9 @@ defmodule HexpmWeb.SSOEnforcementTest do
                other.package.name
 
       unresolved = get(conn, "/packages/#{context.repository.name}/#{context.package.name}")
-      assert redirected_to(unresolved) =~ "/sso/org/#{context.organization.name}?return="
+
+      assert redirected_to(unresolved) =~
+               "/organizations/#{context.organization.name}/authenticate?return="
     end
 
     test "keeps the scope it has and names only the one it is missing", context do
@@ -1637,7 +1676,10 @@ defmodule HexpmWeb.SSOEnforcementTest do
 
       assert "repository:#{other.organization.name}" in token.scopes
       refute "repository:#{context.organization.name}" in token.scopes
-      assert token.sso_reauth_required == [context.organization.name]
+
+      assert token.organization_reauth_required == [
+               %{organization: context.organization.name, requirements: ["sso"]}
+             ]
     end
   end
 

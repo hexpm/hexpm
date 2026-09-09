@@ -16,7 +16,7 @@ defmodule HexpmWeb.PreviewRawController do
          {:ok, contents} <- Hexpm.Preview.raw_file(repository, name, version, filename) do
       send_raw(conn, filename, contents)
     else
-      {:error, :sso_required, organization} ->
+      {:error, requirement, organization} when requirement in [:sso_required, :tfa_required] ->
         HexpmWeb.SSOEnforcement.redirect_to_login(conn, organization)
 
       _ ->

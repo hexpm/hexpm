@@ -1,7 +1,7 @@
 defmodule Hexpm.Accounts.KeyPermission do
   use Hexpm.Schema
 
-  alias Hexpm.Accounts.SSO.Enforcement
+  alias Hexpm.Accounts.OrganizationAuth, as: Enforcement
   alias Hexpm.Permissions
 
   @derive {HexpmWeb.Stale, last_modified: nil}

@@ -76,6 +76,25 @@ defmodule HexpmWeb.DocsControllerTest do
     assert_sso_docs_hidden()
   end
 
+  test "2FA navigation follows its own rollout availability" do
+    app_env(:hexpm, :organization_sso, mode: :off, beta_organizations: [])
+
+    for {config, visible?} <- [
+          {[mode: :off, beta_organizations: ["pilot"]], false},
+          {[mode: :beta, beta_organizations: []], false},
+          {[mode: :beta, beta_organizations: ["pilot"]], true},
+          {[mode: :enabled, beta_organizations: []], true}
+        ] do
+      app_env(:hexpm, :organization_tfa, config)
+      html = build_conn() |> get("/docs/usage") |> html_response(200)
+      assert html =~ ~s(href="/docs/organization-tfa") == visible?
+      refute html =~ ~s(href="/docs/organization-sso")
+    end
+
+    app_env(:hexpm, :organization_tfa, mode: :off, beta_organizations: [])
+    build_conn() |> get("/docs/organization-tfa") |> html_response(200)
+  end
+
   test "usage guide code blocks have a copy control" do
     html =
       build_conn()

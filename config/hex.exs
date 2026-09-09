@@ -34,7 +34,7 @@ config :hexpm, HexpmWeb.Endpoint,
 config :hexpm, Hexpm.RepoBase,
   username: "postgres",
   password: "postgres",
-  database: "hexpm_hex",
+  database: System.get_env("HEXPM_INTEGRATION_DATABASE", "hexpm_hex"),
   hostname: "localhost",
   pool_size: 10
 

@@ -265,11 +265,22 @@ defmodule Hexpm.OAuth.DeviceCodes do
 
       result =
         Ecto.Multi.new()
+        |> Ecto.Multi.run(:user, fn _repo, _changes ->
+          {:ok, Hexpm.Accounts.TFASessions.lock_user!(user)}
+        end)
         |> Ecto.Multi.run(:session, fn _repo, _changes ->
           UserSessions.create_oauth_session(user, device_code_record.client_id,
             name: device_code_record.name,
             audit: audit_data
           )
+        end)
+        |> Ecto.Multi.run(:tfa_proof, fn _repo, %{session: session} ->
+          {:ok,
+           Hexpm.Accounts.TFASessions.copy!(
+             Keyword.get(opts, :browser_session_id),
+             session.id,
+             user
+           )}
         end)
         |> Ecto.Multi.run(:organization_sso_sessions, fn _repo, %{session: session} ->
           # Before the token, because minting its scopes reads them.
@@ -289,6 +300,7 @@ defmodule Hexpm.OAuth.DeviceCodes do
               "urn:ietf:params:oauth:grant-type:device_code",
               grant_reference(device_code_record),
               user_session_id: session.id,
+              refresh_token_expires_at: session.expires_at,
               with_refresh_token: true
             )
 
@@ -387,7 +399,8 @@ defmodule Hexpm.OAuth.DeviceCodes do
       old_token.grant_reference,
       expires_in: DateTime.diff(old_token.expires_at, DateTime.utc_now()),
       with_refresh_token: not is_nil(old_token.refresh_jti),
-      user_session_id: old_token.user_session_id
+      user_session_id: old_token.user_session_id,
+      refresh_token_expires_at: old_token.refresh_token_expires_at
     )
   end
 

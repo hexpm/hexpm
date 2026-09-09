@@ -71,7 +71,7 @@ config :hexpm, Hexpm.PromEx, disabled: true
 config :hexpm, Hexpm.RepoBase,
   username: "postgres",
   password: "postgres",
-  database: "hexpm_test",
+  database: System.get_env("HEXPM_TEST_DATABASE", "hexpm_test"),
   hostname: "localhost",
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: 20,

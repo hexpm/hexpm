@@ -31,9 +31,9 @@ defmodule HexpmWeb.API.OAuthView do
 
     # Additive, so a client that has never heard of it ignores it and sees only
     # a scope it no longer has.
-    case token.sso_reauth_required do
+    case token.organization_reauth_required do
       [] -> response
-      organizations -> Map.put(response, :sso_reauth_required, organizations)
+      organizations -> Map.put(response, :organization_reauth_required, organizations)
     end
   end
 

@@ -161,7 +161,7 @@ defmodule HexpmWeb.PackageOwnerController do
         |> assign(:repository, package.repository)
         |> assign(:package, package)
 
-      {:error, :sso_required, organization} ->
+      {:error, requirement, organization} when requirement in [:sso_required, :tfa_required] ->
         SSOEnforcement.refuse(conn, :sso_required, organization)
 
       :error ->

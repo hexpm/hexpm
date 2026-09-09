@@ -28,7 +28,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.DangerZoneTab do
         </div>
 
         <%!-- Leave organization --%>
-        <div class="px-6 py-5 flex items-start justify-between gap-6">
+        <div class="px-6 py-5 flex flex-col items-start gap-4 sm:flex-row sm:justify-between sm:gap-6">
           <div>
             <h3 class="text-sm font-semibold text-grey-900 dark:text-white">Leave organization</h3>
             <p class="text-sm text-grey-500 dark:text-grey-300 mt-1">

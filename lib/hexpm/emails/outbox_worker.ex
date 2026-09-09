@@ -105,7 +105,9 @@ defmodule Hexpm.Emails.OutboxWorker do
   end
 
   defp deliver_or_expire!(%OutboxEntry{expires_at: expires_at} = entry) do
-    if DateTime.compare(expires_at, DateTime.utc_now()) == :gt do
+    if DateTime.compare(expires_at, DateTime.utc_now()) == :gt and
+         Hexpm.Accounts.OrganizationTFANotifications.valid?(entry) do
+      entry = Hexpm.Accounts.OrganizationTFANotifications.prepare_delivery!(entry)
       {:delivered, deliver!(entry)}
     else
       :expired

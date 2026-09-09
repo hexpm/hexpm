@@ -295,14 +295,18 @@ defmodule Hexpm.PermissionsTest do
     end
   end
 
-  describe "expand_and_filter_sso_scopes/4" do
+  describe "expand_and_filter_organization_scopes/4" do
     test "expands repositories into the organizations the account belongs to" do
       user = insert(:user)
       organization = insert(:organization)
       insert(:organization_user, organization: organization, user: user)
 
       assert {scopes, []} =
-               Permissions.expand_and_filter_sso_scopes(user, ["api:read", "repositories"], nil)
+               Permissions.expand_and_filter_organization_scopes(
+                 user,
+                 ["api:read", "repositories"],
+                 nil
+               )
 
       assert Enum.sort(scopes) ==
                Enum.sort(["api:read", "repository:hexpm", "repository:#{organization.name}"])
@@ -316,7 +320,8 @@ defmodule Hexpm.PermissionsTest do
 
       # Granted while they were a member, and verified at the edge from the
       # token rather than from the database, so this is where it goes.
-      assert Permissions.expand_and_filter_sso_scopes(user, scopes, nil) == {["api:read"], []}
+      assert Permissions.expand_and_filter_organization_scopes(user, scopes, nil) ==
+               {["api:read"], []}
     end
 
     test "keeps an organization scope while the membership stands" do
@@ -326,14 +331,15 @@ defmodule Hexpm.PermissionsTest do
 
       scopes = ["api:read", "repository:#{organization.name}", "docs:#{organization.name}"]
 
-      assert Permissions.expand_and_filter_sso_scopes(user, scopes, nil) == {scopes, []}
+      assert Permissions.expand_and_filter_organization_scopes(user, scopes, nil) == {scopes, []}
     end
 
     test "leaves an organization principal's own scopes alone" do
       organization = insert(:organization)
       scopes = ["repository:#{organization.name}", "docs:#{organization.name}"]
 
-      assert Permissions.expand_and_filter_sso_scopes(organization, scopes, nil) == {scopes, []}
+      assert Permissions.expand_and_filter_organization_scopes(organization, scopes, nil) ==
+               {scopes, []}
     end
   end
 

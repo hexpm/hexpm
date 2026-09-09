@@ -543,13 +543,18 @@ defmodule HexpmWeb.SSOControllerTest do
     end
 
     test "removing the member deletes it", context do
-      insert(:organization_user, organization: context.organization, user: insert(:user))
-
-      Hexpm.Accounts.Organizations.remove_member(
-        context.organization,
-        context.member,
-        audit: audit_data(context.member)
+      insert(:organization_user,
+        organization: context.organization,
+        user: insert(:user),
+        role: "admin"
       )
+
+      assert :ok =
+               Hexpm.Accounts.Organizations.remove_member(
+                 context.organization,
+                 context.member,
+                 audit: audit_data(context.member)
+               )
 
       refute Repo.exists?(OrgSession)
       refute Repo.exists?(Identity)
@@ -717,8 +722,8 @@ defmodule HexpmWeb.SSOControllerTest do
       build_conn() |> get("/sso/link") |> response(404)
       build_conn() |> post("/sso/link") |> response(404)
       build_conn() |> post("/sso/link/cancel") |> response(404)
-      build_conn() |> get("/sso/authorize", %{code: "code"}) |> response(404)
-      build_conn() |> post("/sso/authorize") |> response(404)
+      build_conn() |> get("/organizations/authorize", %{code: "code"}) |> response(302)
+      build_conn() |> post("/organizations/authorize") |> response(302)
     end
 
     test "the removed and legacy routes are gone", context do
@@ -919,12 +924,12 @@ defmodule HexpmWeb.SSOControllerTest do
       body =
         build_conn()
         |> put_req_header("authorization", "Bearer #{token.access_token}")
-        |> post("/api/oauth/sso_authorization", %{
+        |> post("/api/oauth/organization_authorization", %{
           "organizations" => [context.organization.name]
         })
         |> json_response(201)
 
-      assert body["verification_uri"] =~ "/sso/authorize?code="
+      assert body["verification_uri"] =~ "/organizations/authorize?code="
       assert body["expires_in"] > 0
     end
 
@@ -935,7 +940,7 @@ defmodule HexpmWeb.SSOControllerTest do
       body =
         build_conn()
         |> put_req_header("authorization", key.user_secret)
-        |> post("/api/oauth/sso_authorization", %{
+        |> post("/api/oauth/organization_authorization", %{
           "organizations" => [context.organization.name]
         })
         |> json_response(422)
@@ -961,7 +966,7 @@ defmodule HexpmWeb.SSOControllerTest do
       body =
         build_conn()
         |> put_req_header("authorization", "Bearer #{token["access_token"]}")
-        |> post("/api/oauth/sso_authorization", %{
+        |> post("/api/oauth/organization_authorization", %{
           "organizations" => [context.organization.name]
         })
         |> json_response(422)
@@ -979,7 +984,7 @@ defmodule HexpmWeb.SSOControllerTest do
       body =
         build_conn()
         |> put_req_header("authorization", "Bearer #{token.access_token}")
-        |> post("/api/oauth/sso_authorization", %{"organizations" => [other.name]})
+        |> post("/api/oauth/organization_authorization", %{"organizations" => [other.name]})
         |> json_response(422)
 
       assert body["message"] =~ "not required"
@@ -993,12 +998,12 @@ defmodule HexpmWeb.SSOControllerTest do
       body =
         build_conn()
         |> put_req_header("authorization", "Bearer #{token.access_token}")
-        |> post("/api/oauth/sso_authorization", %{
+        |> post("/api/oauth/organization_authorization", %{
           "organizations" => [context.organization.name, "no-such-organization"]
         })
         |> json_response(201)
 
-      assert body["verification_uri"] =~ "/sso/authorize?code="
+      assert body["verification_uri"] =~ "/organizations/authorize?code="
 
       assert [authorization] = Repo.all(SSO.Authorization)
       assert authorization.organization_ids == [context.organization.id]
@@ -1013,7 +1018,7 @@ defmodule HexpmWeb.SSOControllerTest do
       conn =
         build_conn()
         |> test_login(context.member, sudo: false)
-        |> get("/sso/authorize?code=#{code}")
+        |> get("/organizations/authorize?code=#{code}")
 
       assert redirected_to(conn) =~ "/sudo"
       refute Repo.exists?(OrgSession)
@@ -1025,9 +1030,10 @@ defmodule HexpmWeb.SSOControllerTest do
       %{session: session} = cli_session(context)
       code = request_authorization(context, session)
 
-      conn = build_conn() |> test_login(context.member) |> get("/sso/authorize?code=#{code}")
+      conn =
+        build_conn() |> test_login(context.member) |> get("/organizations/authorize?code=#{code}")
 
-      assert conn.request_path == "/sso/authorize"
+      assert conn.request_path == "/organizations/authorize"
       refute conn.request_path =~ code
     end
 
@@ -1037,7 +1043,8 @@ defmodule HexpmWeb.SSOControllerTest do
       %{session: session} = cli_session(context)
       code = request_authorization(context, session)
 
-      conn = build_conn() |> test_login(context.member) |> get("/sso/authorize?code=#{code}")
+      conn =
+        build_conn() |> test_login(context.member) |> get("/organizations/authorize?code=#{code}")
 
       assert html_response(conn, 200)
 
@@ -1047,21 +1054,28 @@ defmodule HexpmWeb.SSOControllerTest do
       assert csp =~ "form-action 'self' https://identity.example.com"
     end
 
-    test "authenticates the session that asked, not the browser", context do
+    test "copies browser verification only after completing the request", context do
       require_sso(context)
       link_member(context)
       %{session: session} = cli_session(context)
       code = request_authorization(context, session)
 
-      conn = build_conn() |> test_login(context.member) |> get("/sso/authorize?code=#{code}")
+      conn =
+        build_conn() |> test_login(context.member) |> get("/organizations/authorize?code=#{code}")
+
       assert html_response(conn, 200) =~ context.organization.name
 
       conn = authorize_through_provider(context, code)
-      assert redirected_to(conn) == "/sso/authorize?code=#{code}"
+      assert redirected_to(conn) == "/organizations/authorize?code=#{code}"
 
-      assert [org_session] = Repo.all(OrgSession)
-      assert org_session.user_session_id == session.id
-      assert org_session.organization_id == context.organization.id
+      assert [browser_proof] = Repo.all(OrgSession)
+      assert browser_proof.user_session_id == conn.assigns.current_session.id
+      refute SSO.current_org_session(session.id, context.organization.id)
+      completed = conn |> recycle() |> get(redirected_to(conn))
+      assert redirected_to(completed) == "/dashboard"
+      target_proof = SSO.current_org_session(session.id, context.organization.id)
+      assert target_proof.authenticated_at == browser_proof.authenticated_at
+      assert target_proof.granted_from_user_session_id == browser_proof.user_session_id
     end
 
     test "is consumed once it has nothing left to do, and cannot be replayed", context do
@@ -1074,8 +1088,7 @@ defmodule HexpmWeb.SSOControllerTest do
         context
         |> authorize_through_provider(code)
         |> recycle()
-        |> test_login(context.member)
-        |> get("/sso/authorize?code=#{code}")
+        |> get("/organizations/authorize?code=#{code}")
 
       assert redirected_to(conn) == "/dashboard"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ context.organization.name
@@ -1085,7 +1098,7 @@ defmodule HexpmWeb.SSOControllerTest do
         conn
         |> recycle()
         |> test_login(context.member)
-        |> get("/sso/authorize?code=#{code}")
+        |> get("/organizations/authorize?code=#{code}")
 
       assert redirected_to(replayed) == "/dashboard"
       assert Phoenix.Flash.get(replayed.assigns.flash, :error) =~ "no longer open"
@@ -1096,10 +1109,14 @@ defmodule HexpmWeb.SSOControllerTest do
       %{session: session, token: token} = cli_session(context, ["api:read", "repositories"])
 
       refute "repository:#{context.organization.name}" in token.scopes
-      assert token.sso_reauth_required == [context.organization.name]
+
+      assert token.organization_reauth_required == [
+               %{organization: context.organization.name, requirements: ["sso"]}
+             ]
 
       code = request_authorization(context, session)
-      authorize_through_provider(context, code)
+      conn = authorize_through_provider(context, code)
+      conn |> recycle() |> get(redirected_to(conn))
 
       body =
         build_conn()
@@ -1111,7 +1128,7 @@ defmodule HexpmWeb.SSOControllerTest do
         |> json_response(200)
 
       assert body["scope"] =~ "repository:#{context.organization.name}"
-      refute Map.has_key?(body, "sso_reauth_required")
+      refute Map.has_key?(body, "organization_reauth_required")
     end
 
     test "the page belongs to the account that asked for it", context do
@@ -1122,7 +1139,7 @@ defmodule HexpmWeb.SSOControllerTest do
       conn =
         build_conn()
         |> test_login(insert(:user))
-        |> get("/sso/authorize?code=#{code}")
+        |> get("/organizations/authorize?code=#{code}")
 
       assert redirected_to(conn) == "/dashboard"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "no longer open"
@@ -1140,7 +1157,7 @@ defmodule HexpmWeb.SSOControllerTest do
       conn =
         build_conn()
         |> test_login(context.member)
-        |> get("/sso/authorize?code=#{code}")
+        |> get("/organizations/authorize?code=#{code}")
 
       assert redirected_to(conn) == "/dashboard"
       assert Repo.one!(SSO.Authorization).consumed_at
@@ -1159,7 +1176,7 @@ defmodule HexpmWeb.SSOControllerTest do
       conn =
         build_conn()
         |> test_login(context.member)
-        |> get("/sso/authorize?code=#{code}")
+        |> get("/organizations/authorize?code=#{code}")
 
       assert redirected_to(conn) == "/dashboard"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "no longer open"
@@ -1392,7 +1409,10 @@ defmodule HexpmWeb.SSOControllerTest do
     conn =
       build_conn()
       |> test_login(context.member)
-      |> post("/sso/authorize", %{"code" => code, "organization" => context.organization.name})
+      |> post("/organizations/authorize", %{
+        "code" => code,
+        "organization" => context.organization.name
+      })
 
     assert_receive {:sso_state, state, _redirect_uri}
     complete_callback(conn, state)

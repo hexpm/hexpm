@@ -367,14 +367,19 @@ defmodule HexpmWeb.ControllerHelpers do
       "Learn more about our password security.</a>"
   end
 
-  def start_session_internal(conn, user) do
-    {:ok, _user_session, session_token} =
+  def start_session_internal(conn, user, opts \\ []) do
+    {:ok, user_session, session_token} =
       UserSessions.create_browser_session(user,
         name: detect_browser(conn),
         audit: %{audit_data(conn) | user: user}
       )
 
+    if Keyword.get(opts, :tfa_verified, false) do
+      {:ok, :ok} = Hexpm.Accounts.TFASessions.record_verified!(user, user_session.id)
+    end
+
     conn
+    |> assign(:current_session, user_session)
     |> configure_session(renew: true)
     |> put_session("session_token", Base.encode64(session_token))
   end

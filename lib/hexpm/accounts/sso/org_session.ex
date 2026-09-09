@@ -36,6 +36,7 @@ defmodule Hexpm.Accounts.SSO.OrgSession do
       join: user_session in assoc(session, :user_session),
       as: :user_session,
       left_join: source in assoc(session, :granted_from_user_session),
+      as: :sso_source_session,
       where: session.user_session_id == ^user_session_id,
       where: is_nil(session.revoked_at) and session.expires_at > ^now,
       where: is_nil(user_session.revoked_at) and user_session.expires_at > ^now,

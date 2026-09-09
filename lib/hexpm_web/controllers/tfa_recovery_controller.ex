@@ -13,7 +13,7 @@ defmodule HexpmWeb.TFARecoveryController do
          {:ok, updated_user} <- Hexpm.Accounts.Users.tfa_recover(user, code) do
       conn
       |> delete_session("tfa_user_id")
-      |> start_session_internal(updated_user)
+      |> start_session_internal(updated_user, tfa_verified: true)
       |> HexpmWeb.Plugs.Sudo.set_sudo_authenticated()
       |> redirect(to: safe_return_path(session["return"]) || ~p"/users/#{updated_user}")
     else

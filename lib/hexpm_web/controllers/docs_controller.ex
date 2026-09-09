@@ -104,6 +104,15 @@ defmodule HexpmWeb.DocsController do
     )
   end
 
+  def organization_tfa(conn, _params) do
+    render(conn, "layout.html",
+      view: "organization_tfa.html",
+      view_name: :organization_tfa,
+      title: "Organization two-factor authentication",
+      container: "flex-1 flex flex-col"
+    )
+  end
+
   def organization_sso(conn, _params) do
     if SSO.available?() do
       render(

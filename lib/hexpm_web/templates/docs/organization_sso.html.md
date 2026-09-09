@@ -260,3 +260,5 @@ Do not send client secrets, authorization codes, tokens, cookies, or raw callbac
 Enabled organizations can use the organization login URL and third-party-initiated login. Custom Okta dashboard tiles and Microsoft Entra are not supported, and there is no public Okta Integration Network listing. Tiles and Entra both work and have been exercised privately; supporting them is an open release decision rather than an untested path. The OIN listing is different in kind: the integration was built and exercised, but it was never submitted for review, so no listing exists to install from.
 
 This release does not support SAML, account creation, SCIM, group or role synchronization, or OIDC logout.
+
+Organization [2FA enforcement](/docs/organization-tfa) is configured independently on the Members page. When both policies apply, members must satisfy both.

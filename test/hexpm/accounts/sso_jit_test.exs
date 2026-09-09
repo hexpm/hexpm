@@ -111,6 +111,30 @@ defmodule Hexpm.Accounts.SSOJITTest do
       Map.put(context, :connection, connection)
     end
 
+    test "scheduled 2FA requires enrollment before SSO creates membership", context do
+      context.organization
+      |> Ecto.Changeset.change(tfa_required_at: DateTime.add(DateTime.utc_now(), 14 * 86_400))
+      |> Repo.update!()
+
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
+      {:ok, {:link, id, token}} = complete(transaction, claims("newcomer@example.com"), newcomer)
+      session = browser_session(newcomer)
+
+      assert {:error, :tfa_enrollment_required} =
+               SSO.complete_link(
+                 id,
+                 token,
+                 Repo.preload(newcomer, :emails),
+                 session.id,
+                 audit_data(newcomer)
+               )
+
+      refute Organizations.get_role(context.organization, newcomer)
+      assert Seats.used(context.organization) == 1
+      refute Repo.exists?(Identity)
+    end
+
     test "a non-member on a verified domain joins after consenting", context do
       newcomer = insert(:user)
       transaction = start_login(context, newcomer)
@@ -299,6 +323,29 @@ defmodule Hexpm.Accounts.SSOJITTest do
       verify_domain(context, "example.com")
       {:ok, connection} = enable_jit(context, "expand")
       Map.put(context, :connection, connection)
+    end
+
+    test "buys no seat for a newcomer who hasn't enrolled in scheduled 2FA", context do
+      context.organization
+      |> Ecto.Changeset.change(tfa_required_at: DateTime.add(DateTime.utc_now(), 14 * 86_400))
+      |> Repo.update!()
+
+      fill_seats(context.organization)
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
+
+      Mox.stub(Hexpm.Billing.Mock, :update, fn _, _ ->
+        flunk("ineligible admission must not buy a seat")
+      end)
+
+      assert :ok = SSO.maybe_expand_seats(transaction, newcomer, claims("newcomer@example.com"))
+      assert Repo.get!(Hexpm.Accounts.Organization, context.organization.id).billing_seats == 3
+
+      assert {:error, :seats_exhausted} =
+               complete(transaction, claims("newcomer@example.com"), newcomer)
+
+      refute Organizations.get_role(context.organization, newcomer)
+      assert Seats.used(context.organization) == 3
     end
 
     test "buys a seat when the organization is full", context do

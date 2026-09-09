@@ -1,5 +1,31 @@
 import Config
 
+organization_tfa_mode =
+  case System.get_env("HEXPM_ORGANIZATION_TFA_MODE", "off") do
+    "off" ->
+      :off
+
+    "beta" ->
+      :beta
+
+    "enabled" ->
+      :enabled
+
+    value ->
+      raise "invalid HEXPM_ORGANIZATION_TFA_MODE #{inspect(value)}; expected off, beta, or enabled"
+  end
+
+organization_tfa_beta_organizations =
+  System.get_env("HEXPM_ORGANIZATION_TFA_BETA_ORGANIZATIONS", "")
+  |> String.split(",", trim: true)
+  |> Enum.map(&String.trim/1)
+  |> Enum.reject(&(&1 == ""))
+  |> Enum.uniq()
+
+config :hexpm, :organization_tfa,
+  mode: organization_tfa_mode,
+  beta_organizations: organization_tfa_beta_organizations
+
 default_sso_mode = if config_env() == :dev, do: "enabled", else: "off"
 
 sso_mode =

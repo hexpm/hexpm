@@ -39,7 +39,8 @@ defmodule HexpmWeb.PackageReportLive do
                container: "container"
              )}
 
-          {:error, :sso_required, organization} ->
+          {:error, requirement, organization}
+          when requirement in [:sso_required, :tfa_required] ->
             {:ok, SSOEnforcement.redirect_to_login(socket, organization, return_path)}
 
           :error ->
@@ -77,7 +78,7 @@ defmodule HexpmWeb.PackageReportLive do
           {:noreply, assign(socket, form: submitted_form, captcha_error: nil)}
         end
 
-      {:error, :sso_required, organization} ->
+      {:error, requirement, organization} when requirement in [:sso_required, :tfa_required] ->
         {:noreply,
          SSOEnforcement.redirect_to_login(
            socket,

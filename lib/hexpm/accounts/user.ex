@@ -14,6 +14,7 @@ defmodule Hexpm.Accounts.User do
     field :deactivated_at, :utc_datetime_usec
     field :role, :string, default: "basic"
     field :optional_emails, :map
+    field :tfa_generation, :integer, default: 0
     timestamps()
 
     embeds_one :handles, UserHandles, on_replace: :delete
@@ -265,11 +266,17 @@ defmodule Hexpm.Accounts.User do
 
   def update_tfa(user, changes) do
     current_tfa = user.tfa || %{}
-    put_embed(change(user, %{}), :tfa, Map.merge(current_tfa, changes))
+    changeset = put_embed(change(user, %{}), :tfa, Map.merge(current_tfa, changes))
+
+    if Map.has_key?(changes, :secret) do
+      put_change(changeset, :tfa_generation, user.tfa_generation + 1)
+    else
+      changeset
+    end
   end
 
   def clear_tfa(user) do
-    put_embed(change(user, %{}), :tfa, nil)
+    put_embed(change(user, tfa_generation: user.tfa_generation + 1), :tfa, nil)
   end
 
   def recovery_code_used(user, code) do
