@@ -132,6 +132,29 @@ defmodule Hexpm.ApplicationTest do
     end
   end
 
+  describe "report_oban_error?/2" do
+    test "reports only the attempt that exhausts the retries" do
+      refute Application.report_oban_error?(Hexpm.Billing.Report, %Oban.Job{
+               attempt: 1,
+               max_attempts: 5
+             })
+
+      refute Application.report_oban_error?(Hexpm.Billing.Report, %Oban.Job{
+               attempt: 4,
+               max_attempts: 5
+             })
+
+      assert Application.report_oban_error?(Hexpm.Billing.Report, %Oban.Job{
+               attempt: 5,
+               max_attempts: 5
+             })
+    end
+
+    test "reports the first failure of a job without retries" do
+      assert Application.report_oban_error?(nil, %Oban.Job{attempt: 1, max_attempts: 1})
+    end
+  end
+
   describe "mode supervision" do
     test "web and worker select distinct role children and all is their union" do
       web_ids = child_ids(Application.children(:web))
