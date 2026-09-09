@@ -189,8 +189,11 @@ defmodule HexpmWeb.SudoController do
   defp render_show(conn) do
     user = Hexpm.Repo.preload(conn.assigns.current_user, :user_providers)
 
-    render(
-      conn,
+    conn
+    |> HexpmWeb.SSOEnforcement.allow_authorization_return_form_action(
+      get_session(conn, "sudo_return_to")
+    )
+    |> render(
       "show.html",
       title: "Verify your identity",
       container: "container page page-xs login",
@@ -202,8 +205,11 @@ defmodule HexpmWeb.SudoController do
 
   @spec render_recovery(Plug.Conn.t()) :: Plug.Conn.t()
   defp render_recovery(conn) do
-    render(
-      conn,
+    conn
+    |> HexpmWeb.SSOEnforcement.allow_authorization_return_form_action(
+      get_session(conn, "sudo_return_to")
+    )
+    |> render(
       "recovery.html",
       title: "Enter recovery code",
       container: "container page page-xs login"

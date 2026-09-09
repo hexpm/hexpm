@@ -1323,6 +1323,24 @@ defmodule Hexpm.Accounts.SSO do
   def get_authorization(_code, _user), do: nil
 
   @doc """
+  Returns the registered callback of an open, account-bound authorization.
+  """
+  def authorization_redirect_uri(code, user) do
+    with %Authorization{redirect_uri: redirect_uri} = authorization when is_binary(redirect_uri) <-
+           get_authorization(code, user),
+         {:ok, _redirect} <-
+           authorization_redirect(authorization.user_session,
+             redirect_uri: redirect_uri,
+             state: authorization.state
+           ),
+         [_ | _] <- authorization_status(authorization) do
+      redirect_uri
+    else
+      _ -> nil
+    end
+  end
+
+  @doc """
   Checks the target session and any verification in the approving browser.
   Membership removal invalidates the request.
   """

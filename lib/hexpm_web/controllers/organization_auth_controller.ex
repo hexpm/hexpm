@@ -41,7 +41,7 @@ defmodule HexpmWeb.OrganizationAuthController do
         else: conn
 
     if User.tfa_enabled?(conn.assigns.current_user),
-      do: render(conn, :verify, title: "2FA verification", container: "container page page-xs"),
+      do: render_verification(conn),
       else: redirect(conn, to: ~p"/dashboard/security")
   end
 
@@ -61,8 +61,16 @@ defmodule HexpmWeb.OrganizationAuthController do
 
         conn
         |> put_flash(:error, "2FA verification failed. Check your code or try again later.")
-        |> render(:verify, title: "2FA verification", container: "container page page-xs")
+        |> render_verification()
     end
+  end
+
+  defp render_verification(conn) do
+    conn
+    |> HexpmWeb.SSOEnforcement.allow_authorization_return_form_action(
+      get_session(conn, :tfa_return_to)
+    )
+    |> render(:verify, title: "2FA verification", container: "container page page-xs")
   end
 
   defp verify_user(user, code) do

@@ -243,8 +243,11 @@ defmodule HexpmWeb.Dashboard.SecurityController do
           User.add_password(user, %{})
         end
 
-    render(
-      conn,
+    conn
+    |> HexpmWeb.SSOEnforcement.allow_authorization_return_form_action(
+      get_session(conn, :tfa_return_to)
+    )
+    |> render(
       "index.html",
       title: "Dashboard - Security",
       container: "container page dashboard",

@@ -409,6 +409,7 @@ defmodule HexpmWeb.SSOController do
             else
               conn
               |> allow_provider_form_actions(status)
+              |> SSOEnforcement.allow_authorization_form_action(code)
               |> render("authorize.html",
                 title: "Authenticate a session",
                 container: "container page page-xs",

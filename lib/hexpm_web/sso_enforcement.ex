@@ -202,6 +202,38 @@ defmodule HexpmWeb.SSOEnforcement do
     end
   end
 
+  @doc """
+  Allows form redirects to the registered callback of a live authorization.
+  """
+  def allow_authorization_form_action(conn, code) do
+    allow_authorization_form_action(conn, code, conn.assigns.current_user)
+  end
+
+  defp allow_authorization_form_action(conn, code, user) do
+    case SSO.authorization_redirect_uri(code, user) do
+      nil -> conn
+      redirect_uri -> ContentSecurityPolicy.allow_form_action(conn, redirect_uri)
+    end
+  end
+
+  def allow_authorization_return_form_action(conn, return_path) do
+    allow_authorization_return_form_action(conn, return_path, conn.assigns.current_user)
+  end
+
+  def allow_authorization_return_form_action(conn, return_path, user)
+      when is_binary(return_path) do
+    case URI.new(return_path) do
+      {:ok, %URI{scheme: nil, host: nil, path: "/organizations/authorize", query: query}}
+      when is_binary(query) ->
+        allow_authorization_form_action(conn, URI.decode_query(query)["code"], user)
+
+      _ ->
+        conn
+    end
+  end
+
+  def allow_authorization_return_form_action(conn, _return_path, _user), do: conn
+
   # The redirect goes to the authorization endpoint discovery returned, which
   # nothing requires to share an origin with the issuer.
   defp provider_url(%{discovery_document: %{"authorization_endpoint" => endpoint}})
