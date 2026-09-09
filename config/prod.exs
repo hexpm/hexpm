@@ -21,7 +21,12 @@ config :sentry,
   enable_source_code_context: true,
   root_source_code_paths: [File.cwd!()],
   before_send: {Hexpm.Application, :sentry_before_send},
-  integrations: [oban: [capture_errors: true]]
+  integrations: [
+    oban: [
+      capture_errors: true,
+      should_report_error_callback: &Hexpm.Application.report_oban_error?/2
+    ]
+  ]
 
 config :hexpm,
   topologies: [

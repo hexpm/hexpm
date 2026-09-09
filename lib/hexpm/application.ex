@@ -78,6 +78,13 @@ defmodule Hexpm.Application do
     end
   end
 
+  # Oban retries a failed job until max_attempts and its exception telemetry
+  # counts every attempt, so only the attempt that exhausts the retries is
+  # reported as an issue.
+  def report_oban_error?(_worker, %Oban.Job{attempt: attempt, max_attempts: max_attempts}) do
+    attempt >= max_attempts
+  end
+
   # Bandit stops the websocket connection process with a non-shutdown reason when a
   # client sends invalid frames, which gets logged as a crash even though the client
   # was correctly rejected
