@@ -117,9 +117,9 @@ defmodule Hexpm.Accounts.Organizations do
   row carrying its name. The name is reserved afterwards so nobody can take it
   again, as an organization or as a username.
 
-  Objects in the repository, preview and docs buckets are left where they are,
-  `Hexpm.AdminTasks.delete_organization/2` removes those. A billing
-  subscription is not cancelled either.
+  Objects in the repository, preview and docs buckets are left where they are
+  and the billing subscription is left running; `Hexpm.AdminTasks.delete_organization/2`
+  handles both.
   """
   def delete(%Organization{id: 1}, audit: _audit_data) do
     {:error, :public_organization}

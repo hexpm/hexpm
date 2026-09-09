@@ -802,7 +802,10 @@ defmodule Hexpm.AdminTasks do
   release in it, its members, keys and audit logs, and reserves the name so it
   cannot be taken again, as an organization or as a username.
 
-  A billing subscription is not cancelled, cancel it before deleting.
+  A billing subscription is cancelled first, the way the dashboard's cancel
+  does it: a started one at the end of its period, a trialing or unpaid one at
+  once. The billing service refusing or being unreachable raises, and at that
+  point nothing has been deleted.
 
   ## Arguments
 
@@ -826,6 +829,7 @@ defmodule Hexpm.AdminTasks do
     delete_data? = Keyword.get(opts, :delete_data, false)
 
     with {:ok, organization} <- find_organization(name) do
+      cancel_billing(organization)
       # Read while the rows are still there, the CDN keys are built from them.
       contents = if delete_data?, do: organization_contents(organization)
 
@@ -838,6 +842,18 @@ defmodule Hexpm.AdminTasks do
           {:error, reason}
       end
     end
+  end
+
+  # Before any row goes. A failure here raises with the organization as it
+  # was, and a database failure after it leaves a period-end cancellation the
+  # dashboard's resume button undoes. Not gated on billing_active, which is
+  # false for a trialing subscription that Stripe would go on to charge.
+  defp cancel_billing(organization) do
+    if Hexpm.Billing.get(organization.name) do
+      Hexpm.Billing.cancel(organization.name)
+    end
+
+    :ok
   end
 
   defp organization_contents(organization) do

@@ -1018,6 +1018,11 @@ defmodule Hexpm.AdminTasksTest do
   end
 
   describe "rename_organization/2" do
+    setup do
+      stub(Hexpm.Billing.Mock, :get, fn _organization, _opts -> nil end)
+      :ok
+    end
+
     test "renames organization" do
       organization = insert(:organization, name: "old_org")
 
@@ -1075,6 +1080,50 @@ defmodule Hexpm.AdminTasksTest do
   end
 
   describe "delete_organization/2" do
+    setup do
+      stub(Hexpm.Billing.Mock, :get, fn _organization, _opts -> nil end)
+      :ok
+    end
+
+    test "cancels the billing subscription before deleting" do
+      organization = insert(:organization)
+      name = organization.name
+      parent = self()
+
+      expect(Hexpm.Billing.Mock, :get, fn ^name, _opts -> %{"subscription" => %{}} end)
+
+      expect(Hexpm.Billing.Mock, :cancel, fn ^name ->
+        send(parent, {:cancelled, Repo.get(Organization, organization.id) != nil})
+        %{}
+      end)
+
+      assert :ok = AdminTasks.delete_organization(name)
+
+      assert_received {:cancelled, true}
+      refute Repo.get(Organization, organization.id)
+    end
+
+    test "does not call cancel when there is no billing customer" do
+      organization = insert(:organization)
+      expect(Hexpm.Billing.Mock, :get, fn _name, _opts -> nil end)
+
+      assert :ok = AdminTasks.delete_organization(organization.name)
+      refute Repo.get(Organization, organization.id)
+    end
+
+    test "leaves the organization alone when billing cannot be cancelled" do
+      organization = insert(:organization)
+      expect(Hexpm.Billing.Mock, :get, fn _name, _opts -> %{"subscription" => %{}} end)
+      expect(Hexpm.Billing.Mock, :cancel, fn _name -> raise "billing service unavailable" end)
+
+      assert_raise RuntimeError, "billing service unavailable", fn ->
+        AdminTasks.delete_organization(organization.name)
+      end
+
+      assert Repo.get(Organization, organization.id)
+      refute Repo.exists?(Hexpm.Accounts.ReservedUsername.by_name(organization.name))
+    end
+
     test "deletes the organization with its repository, packages and releases" do
       repository = insert(:repository)
       organization = Repo.preload(repository.organization, :user)
