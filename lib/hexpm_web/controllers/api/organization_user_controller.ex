@@ -19,9 +19,13 @@ defmodule HexpmWeb.API.OrganizationUserController do
        when action in [:create, :update, :delete]
 
   defp assign_tfa_visibility(conn, _opts) do
-    organization = conn.assigns.organization
-    principal = conn.assigns[:current_user] || conn.assigns[:current_organization]
-    assign(conn, :tfa_visible?, Organizations.access?(organization, principal, "admin"))
+    user = conn.assigns[:current_user]
+
+    assign(
+      conn,
+      :tfa_visible?,
+      user != nil and Organizations.access?(conn.assigns.organization, user, "admin")
+    )
   end
 
   def index(conn, %{"organization" => name}) do

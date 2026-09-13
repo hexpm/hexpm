@@ -175,9 +175,10 @@ defmodule HexpmWeb.Plugs.Attack do
     limit = Keyword.fetch!(opts, :limit)
     period = Keyword.fetch!(opts, :period)
     now = Keyword.fetch!(opts, :time)
+    increment = Keyword.get(opts, :increment, 1)
 
     expires_at = expires_at(now, period)
-    count = do_throttle(storage, key, now, period, expires_at)
+    count = do_throttle(storage, key, now, period, expires_at, increment)
     rem = limit - count
     data = [period: period, expires_at: expires_at, limit: limit, remaining: max(rem, 0)]
     {if(rem >= 0, do: :allow, else: :block), {:throttle, data}}
@@ -185,9 +186,9 @@ defmodule HexpmWeb.Plugs.Attack do
 
   defp expires_at(now, period), do: (div(now, period) + 1) * period
 
-  defp do_throttle({mod, opts}, key, now, period, expires_at) do
+  defp do_throttle({mod, opts}, key, now, period, expires_at, increment) do
     full_key = {:throttle, key, div(now, period)}
-    mod.increment(opts, full_key, 1, expires_at)
+    mod.increment(opts, full_key, increment, expires_at)
   end
 
   def login_ip_throttle(ip, opts \\ []) do
@@ -248,6 +249,7 @@ defmodule HexpmWeb.Plugs.Attack do
     timed_throttle(
       {:tfa_ip, ip},
       time: time,
+      increment: Keyword.get(opts, :increment, 1),
       storage: @storage,
       limit: 20,
       period: 15 * 60_000
@@ -260,6 +262,7 @@ defmodule HexpmWeb.Plugs.Attack do
     timed_throttle(
       {:tfa_session, tfa_user_id},
       time: time,
+      increment: Keyword.get(opts, :increment, 1),
       storage: @storage,
       limit: 5,
       period: 10 * 60_000

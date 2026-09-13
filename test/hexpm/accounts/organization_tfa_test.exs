@@ -343,7 +343,7 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
     c = context()
     client = insert(:oauth_client)
     cutoff = DateTime.add(DateTime.utc_now(), 120)
-    {:ok, org} = configure(c, %{tfa_required_at: cutoff})
+    org = c.organization |> Ecto.Changeset.change(tfa_required_at: cutoff) |> Repo.update!()
     scopes = ["repository:#{org.name}", "docs:#{org.name}", "api:read"]
 
     {:ok, token} =

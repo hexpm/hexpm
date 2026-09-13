@@ -56,6 +56,14 @@ defmodule HexpmWeb.OrganizationTFATest do
 
       assert Enum.all?(body, &(Map.has_key?(&1, "tfa_status") == visible?))
     end
+
+    body =
+      build_conn()
+      |> put_req_header("authorization", key_for(c.organization))
+      |> get("/api/orgs/#{c.organization.name}/members")
+      |> json_response(200)
+
+    refute Enum.any?(body, &Map.has_key?(&1, "tfa_status"))
   end
 
   test "beta controls and policy POSTs are limited to allowed organizations", c do
@@ -188,6 +196,29 @@ defmodule HexpmWeb.OrganizationTFATest do
     assert html_response(conn, 200) =~ "2FA verification failed"
   end
 
+  test "verification counts attempts against the sudo code limit", c do
+    conn = build_conn() |> test_login(c.admin, sudo: false) |> get("/dashboard/security")
+
+    for _ <- 1..5 do
+      conn |> recycle() |> post("/sudo", %{"type" => "tfa", "code" => "000000"})
+    end
+
+    blocked =
+      conn
+      |> recycle()
+      |> post("/tfa/verify", %{code: Hexpm.Accounts.TFA.time_based_token(c.admin.tfa.secret)})
+
+    assert html_response(blocked, 200) =~ "2FA verification failed"
+    refute get_session(blocked, "sudo_authenticated_at")
+    refute TFASessions.proof(c.admin, blocked.assigns.current_session.id)
+  end
+
+  test "verification ignores a return path from the query string", c do
+    conn = browser(c.admin) |> recycle() |> get("/tfa/verify?return=/dashboard/keys")
+    assert html_response(conn, 200) =~ "2FA verification required"
+    refute get_session(conn, :tfa_return_to)
+  end
+
   test "fresh proof is required to configure a policy even when the account has 2FA", c do
     conn = browser(c.admin)
     params = %{policy: %{enforcement: "transition", grace_days: "14"}}
@@ -198,6 +229,26 @@ defmodule HexpmWeb.OrganizationTFATest do
     accepted = conn |> recycle() |> post("/dashboard/orgs/#{c.organization.name}/tfa", params)
     assert redirected_to(accepted) == "/dashboard/orgs/#{c.organization.name}/members"
     assert Repo.get!(Hexpm.Accounts.Organization, c.organization.id).tfa_required_at
+  end
+
+  test "the policy deadline comes only from the enforcement choice", c do
+    conn = browser(c.admin)
+    {:ok, :ok} = TFASessions.record_verified!(c.admin, conn.assigns.current_session.id)
+    path = "/dashboard/orgs/#{c.organization.name}/tfa"
+    deadline = DateTime.utc_now() |> DateTime.add(3 * 86_400) |> DateTime.to_iso8601()
+
+    conn |> recycle() |> post(path, %{policy: %{tfa_required_at: deadline}})
+    refute Repo.get!(Hexpm.Accounts.Organization, c.organization.id).tfa_required_at
+
+    invalid =
+      conn
+      |> recycle()
+      |> post(path, %{policy: %{enforcement: "transition", grace_days: ["14"]}})
+
+    assert Phoenix.Flash.get(invalid.assigns.flash, :error) =~ "Invalid deadline"
+    refute Repo.get!(Hexpm.Accounts.Organization, c.organization.id).tfa_required_at
+
+    assert_error_sent 400, fn -> conn |> recycle() |> post(path, %{policy: "immediate"}) end
   end
 
   test "general API permissions and exchanged personal keys cannot bypass enforced 2FA", c do

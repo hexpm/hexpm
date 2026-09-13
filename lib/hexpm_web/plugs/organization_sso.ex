@@ -49,7 +49,10 @@ defmodule HexpmWeb.Plugs.OrganizationSSO do
 
         carve_out?(conn, opts.except) and
             Phoenix.Controller.action_name(conn) in [:leave, :danger_zone] ->
-          conn
+          if Enforcement.check(organization, user, nil, conn.assigns.current_session.id) ==
+               {:error, :sso_required},
+             do: record_break_glass(conn, organization, user, screen(conn, opts.screen)),
+             else: conn
 
         true ->
           SSOEnforcement.refuse(conn, refusal, organization)

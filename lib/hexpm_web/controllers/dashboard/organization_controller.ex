@@ -95,7 +95,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end)
   end
 
-  def configure_tfa(conn, %{"dashboard_org" => name, "policy" => attrs}) do
+  def configure_tfa(conn, %{"dashboard_org" => name, "policy" => attrs}) when is_map(attrs) do
     access_organization(conn, name, "admin", fn organization ->
       case Hexpm.Accounts.OrganizationTFA.configure(
              organization,

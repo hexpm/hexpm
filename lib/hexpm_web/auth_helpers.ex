@@ -131,6 +131,9 @@ defmodule HexpmWeb.AuthHelpers do
       is_nil(otp_code) ->
         {:error, :totp_required}
 
+      check_totp_rate_limits(conn, user, increment: 0) != :ok ->
+        {:error, :totp_rate_limited}
+
       TFA.token_valid?(user.tfa.secret, otp_code) ->
         if token.grant_type == "client_credentials" do
           nil
@@ -151,9 +154,9 @@ defmodule HexpmWeb.AuthHelpers do
     end
   end
 
-  defp check_totp_rate_limits(conn, user) do
-    ip_result = Attack.tfa_ip_throttle(conn.remote_ip)
-    user_result = Attack.tfa_session_throttle(%{"uid" => user.id})
+  defp check_totp_rate_limits(conn, user, opts \\ []) do
+    ip_result = Attack.tfa_ip_throttle(conn.remote_ip, opts)
+    user_result = Attack.tfa_session_throttle(%{"uid" => user.id}, opts)
 
     case {ip_result, user_result} do
       {{:block, _}, _} -> {:rate_limited, :ip}

@@ -102,7 +102,7 @@ defmodule Hexpm.Accounts.OrganizationTFA do
 
       changeset = changeset(organization, normalize_attrs(attrs, now), now)
 
-      if changeset.changes == %{} do
+      if changeset.valid? and changeset.changes == %{} do
         organization
       else
         updated =
@@ -133,23 +133,25 @@ defmodule Hexpm.Accounts.OrganizationTFA do
     end)
   end
 
-  defp normalize_attrs(%{"enforcement" => "disabled"} = attrs, _now),
-    do: Map.put(attrs, "tfa_required_at", nil)
+  defp normalize_attrs(attrs, now) do
+    attrs
+    |> Map.take(["tfa_session_lifetime_seconds"])
+    |> Map.merge(deadline(attrs, now))
+  end
 
-  defp normalize_attrs(%{"enforcement" => "immediate"} = attrs, now),
-    do: Map.put(attrs, "tfa_required_at", now)
+  defp deadline(%{"enforcement" => "disabled"}, _now), do: %{"tfa_required_at" => nil}
+  defp deadline(%{"enforcement" => "immediate"}, now), do: %{"tfa_required_at" => now}
 
-  defp normalize_attrs(%{"enforcement" => "transition"} = attrs, now) do
-    case Integer.parse(Map.get(attrs, "grace_days", "14")) do
-      {days, ""} when days in 1..30 ->
-        Map.put(attrs, "tfa_required_at", DateTime.add(now, days * 86_400))
-
-      _ ->
-        Map.put(attrs, "tfa_required_at", "invalid")
+  defp deadline(%{"enforcement" => "transition"} = attrs, now) do
+    with grace_days when is_binary(grace_days) <- Map.get(attrs, "grace_days", "14"),
+         {days, ""} when days in 1..30 <- Integer.parse(grace_days) do
+      %{"tfa_required_at" => DateTime.add(now, days * 86_400)}
+    else
+      _ -> %{"tfa_required_at" => "invalid"}
     end
   end
 
-  defp normalize_attrs(attrs, _now), do: attrs
+  defp deadline(_attrs, _now), do: %{}
 
   def enrollment_status(organization, user, now \\ DateTime.utc_now()) do
     cond do

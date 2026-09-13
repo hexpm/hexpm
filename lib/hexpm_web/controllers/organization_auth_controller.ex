@@ -34,12 +34,7 @@ defmodule HexpmWeb.OrganizationAuthController do
     end
   end
 
-  def verify(conn, params) do
-    conn =
-      if return_to = safe_return_path(params["return"]),
-        do: put_session(conn, :tfa_return_to, return_to),
-        else: conn
-
+  def verify(conn, _params) do
     if User.tfa_enabled?(conn.assigns.current_user),
       do: render_verification(conn),
       else: redirect(conn, to: ~p"/dashboard/security")
@@ -47,11 +42,8 @@ defmodule HexpmWeb.OrganizationAuthController do
 
   def verify_code(conn, %{"code" => code}) do
     user = Users.get_by_id(conn.assigns.current_user.id)
-    session_data = %{"uid" => user.id, "at" => 0}
-    ip_result = Attack.tfa_ip_throttle(conn.remote_ip)
-    session_result = Attack.tfa_session_throttle(session_data)
 
-    with false <- match?({:block, _}, ip_result) or match?({:block, _}, session_result),
+    with {:allow, _data} <- Attack.sudo_tfa_throttle(user.id),
          {:ok, user} <- verify_user(user, code),
          {:ok, :ok} <- TFASessions.record_verified!(user, conn.assigns.current_session.id) do
       complete_tfa_authorization(conn)

@@ -1181,6 +1181,30 @@ defmodule HexpmWeb.SSOControllerTest do
       assert redirected_to(conn) == "/dashboard"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "no longer open"
     end
+
+    test "a closed request only clears the pending authorization it names", context do
+      require_sso(context)
+      %{session: session} = cli_session(context)
+      code = request_authorization(context, session)
+
+      conn =
+        build_conn()
+        |> test_login(context.member)
+        |> put_session(:organization_authorization, code)
+        |> get("/organizations/authorize?code=unknown")
+
+      assert redirected_to(conn) == "/dashboard"
+      assert get_session(conn, :organization_authorization) == code
+
+      Repo.update_all(
+        from(s in Hexpm.UserSession, where: s.id == ^session.id),
+        set: [revoked_at: DateTime.utc_now()]
+      )
+
+      conn = conn |> recycle() |> get("/organizations/authorize?code=#{code}")
+      assert redirected_to(conn) == "/dashboard"
+      refute get_session(conn, :organization_authorization)
+    end
   end
 
   # A browser that still holds the SSO state binding but no account session,

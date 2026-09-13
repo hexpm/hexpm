@@ -381,14 +381,14 @@ defmodule HexpmWeb.SSOController do
   def authorize(conn, %{"code" => code}) do
     case SSO.get_authorization(code, conn.assigns.current_user) do
       nil ->
-        expired_authorization(conn)
+        expired_authorization(conn, code)
 
       authorization ->
         browser_session_id = approving_browser(conn, code)
 
         case SSO.authorization_status(authorization, browser_session_id) do
           [] ->
-            expired_authorization(conn)
+            expired_authorization(conn, code)
 
           status ->
             if Enum.all?(status, fn {_organization, authenticated?} -> authenticated? end) do
@@ -404,7 +404,7 @@ defmodule HexpmWeb.SSOController do
                   |> finish_authorization(authorization, status)
 
                 {:error, _} ->
-                  expired_authorization(conn)
+                  expired_authorization(conn, code)
               end
             else
               conn
@@ -443,14 +443,14 @@ defmodule HexpmWeb.SSOController do
         |> redirect(to: ~p"/dashboard")
       end
     else
-      _ -> expired_authorization(conn)
+      _ -> expired_authorization(conn, code)
     end
   end
 
   def authorize_organization(conn, %{"code" => code, "organization" => name}) do
     case SSO.get_authorization(code, conn.assigns.current_user) do
       nil ->
-        expired_authorization(conn)
+        expired_authorization(conn, code)
 
       authorization ->
         case authorized_organization(authorization, name, approving_browser(conn, code)) do
@@ -546,10 +546,13 @@ defmodule HexpmWeb.SSOController do
       else: nil
   end
 
-  defp expired_authorization(conn) do
-    conn
-    |> delete_session(:organization_authorization)
-    |> delete_session("sso_authorization")
+  defp expired_authorization(conn, code \\ nil) do
+    [:organization_authorization, "sso_authorization"]
+    |> Enum.reduce(conn, fn key, conn ->
+      if is_binary(code) and get_session(conn, key) == code,
+        do: delete_session(conn, key),
+        else: conn
+    end)
     |> put_flash(
       :error,
       "That authentication request is no longer open. Start a new request from your application."

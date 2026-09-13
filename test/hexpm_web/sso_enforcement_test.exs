@@ -361,6 +361,22 @@ defmodule HexpmWeb.SSOEnforcementTest do
       assert response(conn, 200) =~ "/dashboard/orgs/#{context.organization.name}/leave"
     end
 
+    test "records the break-glass when 2FA is also missing", context do
+      require_sso(context)
+
+      context.organization
+      |> Ecto.Changeset.change(tfa_required_at: DateTime.add(DateTime.utc_now(), -1))
+      |> Repo.update!()
+
+      {conn, _session} = login(context.member)
+
+      conn = get(conn, "/dashboard/orgs/#{context.organization.name}/danger-zone")
+
+      assert response(conn, 200) =~ "/dashboard/orgs/#{context.organization.name}/leave"
+      assert [log] = break_glass_logs(context)
+      assert log.params["screen"] == "danger_zone"
+    end
+
     # The provider sends the browser back with a GET, so replaying a POST path
     # either 404s or loads the page and says the action succeeded when nothing
     # ran.
