@@ -1,6 +1,7 @@
 defmodule Hexpm.CDN.FastlyTest do
   use ExUnit.Case, async: true
   import Mox
+  import ExUnit.CaptureLog, only: [capture_log: 1]
   import Hexpm.TestHelpers, only: [capture_log_lines: 1]
   alias Hexpm.CDN.Fastly
 
@@ -269,6 +270,32 @@ defmodule Hexpm.CDN.FastlyTest do
 
       target = %{url: "https://repo.example/packages/foo", etag: "abc"}
       assert Fastly.verify(:fastly_hexrepo, [target]) == [{target, :ok}]
+    end
+
+    test "a check that crashes leaves no credential in the crash report" do
+      expect(Hexpm.HTTP.Mock, :head, 2, fn _url, headers, _opts ->
+        assert {"authorization", "Bearer " <> _token} = List.keyfind(headers, "authorization", 0)
+        raise "boom"
+      end)
+
+      target = %{
+        url: "https://repo.example/repos/acme/packages/foo",
+        etag: "abc",
+        repository: "acme"
+      }
+
+      Process.flag(:trap_exit, true)
+
+      log =
+        capture_log(fn ->
+          assert [{^target, {:error, {:exit, {%RuntimeError{message: "boom"}, _stacktrace}}}}] =
+                   Fastly.verify(:fastly_hexrepo, [target])
+        end)
+
+      assert log =~ "boom"
+      assert log =~ ~s(repository: "acme")
+      refute log =~ "fastly_key"
+      refute log =~ "Bearer"
     end
 
     test "expects a 404 for a deleted object" do
