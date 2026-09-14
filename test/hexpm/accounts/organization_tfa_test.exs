@@ -72,19 +72,15 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
     end
   end
 
-  test "existing policies remain enforced and manageable after leaving the rollout" do
-    for rollout <- [
-          [mode: :off, beta_organizations: []],
-          [mode: :beta, beta_organizations: ["other"]]
-        ],
-        policy <- [
+  test "an organization removed from the beta allowlist keeps enforcing and stays manageable" do
+    for policy <- [
           %{"enforcement" => "immediate"},
           %{"enforcement" => "transition", "grace_days" => "14"}
         ] do
       app_env(:hexpm, :organization_tfa, mode: :enabled, beta_organizations: [])
       c = context()
       assert {:ok, organization} = configure(c, policy)
-      app_env(:hexpm, :organization_tfa, rollout)
+      app_env(:hexpm, :organization_tfa, mode: :beta, beta_organizations: ["other"])
       refute OrganizationTFA.enabled?(organization)
       assert OrganizationTFA.configurable?(organization)
       assert OrganizationTFA.enforced?(organization, organization.tfa_required_at)
@@ -109,6 +105,35 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
       assert OrganizationAuth.check(disabled, c.member) == :ok
       assert {:error, :unavailable} = configure(c, %{"enforcement" => "immediate"})
     end
+  end
+
+  test "the global switch off suspends enforcement while keeping policies and management" do
+    app_env(:hexpm, :organization_tfa, mode: :enabled, beta_organizations: [])
+    c = context()
+    assert {:ok, organization} = configure(c, %{"enforcement" => "immediate"})
+    assert OrganizationAuth.check(organization, c.member) == {:error, :tfa_required}
+
+    app_env(:hexpm, :organization_tfa, mode: :off, beta_organizations: [])
+
+    # The policy row is untouched, but nothing enforces.
+    assert OrganizationTFA.scheduled?(organization)
+    refute OrganizationTFA.active?(organization)
+    refute OrganizationTFA.enforced?(organization, organization.tfa_required_at)
+    assert OrganizationAuth.check(organization, c.member) == :ok
+    assert OrganizationTFA.enrollment_status(organization, c.member) == "pending"
+
+    assert :ok =
+             Repo.transaction(fn -> OrganizationTFA.admit(organization, c.member) end) |> elem(1)
+
+    assert OrganizationTFA.personal_key_refused(c.member) == []
+    assert OrganizationTFA.required_memberships(c.member) == []
+    assert OrganizationAuth.required(c.member, [organization.name], nil) == []
+
+    # It can still be managed while off, and flipping back resumes it unchanged.
+    assert OrganizationTFA.configurable?(organization)
+    app_env(:hexpm, :organization_tfa, mode: :enabled, beta_organizations: [])
+    assert OrganizationTFA.enforced?(organization, organization.tfa_required_at)
+    assert OrganizationAuth.check(organization, c.member) == {:error, :tfa_required}
   end
 
   test "existing organizations start disabled and all deadlines have exact boundaries" do

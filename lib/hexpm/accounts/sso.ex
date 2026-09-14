@@ -607,7 +607,7 @@ defmodule Hexpm.Accounts.SSO do
   # able to authenticate.
   defp reachable_admin?(organization) do
     organization = Seats.lock!(organization)
-    requires_tfa = Hexpm.Accounts.OrganizationTFA.scheduled?(organization)
+    requires_tfa = Hexpm.Accounts.OrganizationTFA.active?(organization)
 
     Repo.exists?(
       from(member in Enforcement.members_with_identity(organization),

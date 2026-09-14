@@ -10,6 +10,11 @@ defmodule Hexpm.OAuth.ConcurrencyTest do
   @code_challenge "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
   @redirect_uri "https://example.com/callback"
 
+  setup do
+    app_env(:hexpm, :organization_tfa, mode: :enabled, beta_organizations: [])
+    :ok
+  end
+
   test "two redemptions of one authorization code leave one session and one token" do
     committed(fn context ->
       auth_code = authorization_code(context)

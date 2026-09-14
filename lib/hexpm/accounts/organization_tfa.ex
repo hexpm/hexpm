@@ -39,10 +39,24 @@ defmodule Hexpm.Accounts.OrganizationTFA do
 
   defp config, do: Application.fetch_env!(:hexpm, :organization_tfa)
 
+  @doc """
+  Whether 2FA enforcement is switched on at all. `off` is the global stop:
+  scheduled policies stay in place and remain manageable, but nothing is
+  enforced until the mode is `beta` or `enabled` again.
+  """
+  def enforcement_enabled?, do: config()[:mode] != :off
+
+  @doc """
+  A scheduled policy the global switch is not holding off. Every enforcement and
+  reauthorization decision goes through this rather than `scheduled?/1`, so the
+  switch reaches all of them.
+  """
+  def active?(organization), do: enforcement_enabled?() and scheduled?(organization)
+
   def scheduled?(organization), do: not is_nil(organization.tfa_required_at)
 
   def enforced?(organization, now \\ DateTime.utc_now()) do
-    scheduled?(organization) and DateTime.compare(now, organization.tfa_required_at) != :lt
+    active?(organization) and DateTime.compare(now, organization.tfa_required_at) != :lt
   end
 
   def changeset(organization, attrs, now \\ DateTime.utc_now()) do
@@ -197,17 +211,25 @@ defmodule Hexpm.Accounts.OrganizationTFA do
   def session_id(_, browser_id), do: browser_id
 
   def governed(%User{service: false} = user, names) do
-    from(o in assoc(user, :organizations),
-      where: o.name in ^names and not is_nil(o.tfa_required_at)
-    )
-    |> Repo.all()
+    if enforcement_enabled?() do
+      from(o in assoc(user, :organizations),
+        where: o.name in ^names and not is_nil(o.tfa_required_at)
+      )
+      |> Repo.all()
+    else
+      []
+    end
   end
 
   def governed(_, _), do: []
 
   def personal_key_refused(%User{service: false} = user) do
-    now = DateTime.utc_now()
-    Repo.all(from(o in assoc(user, :organizations), where: o.tfa_required_at <= ^now))
+    if enforcement_enabled?() do
+      now = DateTime.utc_now()
+      Repo.all(from(o in assoc(user, :organizations), where: o.tfa_required_at <= ^now))
+    else
+      []
+    end
   end
 
   def personal_key_refused(_), do: []
@@ -218,7 +240,7 @@ defmodule Hexpm.Accounts.OrganizationTFA do
     organization = Seats.lock!(organization)
     user = TFASessions.lock_user!(user)
 
-    if scheduled?(organization) and not User.tfa_enabled?(user),
+    if active?(organization) and not User.tfa_enabled?(user),
       do: {:error, :tfa_enrollment_required},
       else: :ok
   end
@@ -233,7 +255,11 @@ defmodule Hexpm.Accounts.OrganizationTFA do
   end
 
   def required_memberships(user) do
-    Repo.all(from(o in assoc(user, :organizations), where: not is_nil(o.tfa_required_at)))
+    if enforcement_enabled?() do
+      Repo.all(from(o in assoc(user, :organizations), where: not is_nil(o.tfa_required_at)))
+    else
+      []
+    end
   end
 
   def eligible_admin?(organization, member) do
@@ -241,7 +267,7 @@ defmodule Hexpm.Accounts.OrganizationTFA do
     connection = SSO.get_connection(organization)
 
     member.role == "admin" and is_nil(user.deactivated_at) and
-      (not scheduled?(organization) or User.tfa_enabled?(user)) and
+      (not active?(organization) or User.tfa_enabled?(user)) and
       (not Enforcement.governed?(organization, connection, member.sso_enforcement) or
          Repo.exists?(
            from(i in Identity,

@@ -76,7 +76,7 @@ defmodule Hexpm.Accounts.OrganizationAuth do
     tfa =
       Enum.flat_map(organizations, fn o ->
         cond do
-          not OrganizationTFA.scheduled?(o) ->
+          not OrganizationTFA.active?(o) ->
             []
 
           not OrganizationTFA.enforced?(o, now) ->

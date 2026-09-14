@@ -21,6 +21,7 @@ defmodule Hexpm.Accounts.SSOJITTest do
   end
 
   setup do
+    app_env(:hexpm, :organization_tfa, mode: :enabled, beta_organizations: [])
     organization = insert(:organization, billing_seats: 3)
     admin = insert(:user)
     insert(:organization_user, organization: organization, user: admin, role: "admin")

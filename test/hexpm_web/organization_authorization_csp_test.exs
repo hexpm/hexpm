@@ -8,6 +8,7 @@ defmodule HexpmWeb.OrganizationAuthorizationCSPTest do
 
   setup do
     PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
+    app_env(:hexpm, :organization_tfa, mode: :enabled, beta_organizations: [])
     stub(Hexpm.Billing.Mock, :get, fn _, _ -> nil end)
     user = insert(:user_with_tfa)
     organization = insert(:organization, tfa_required_at: DateTime.add(DateTime.utc_now(), -1))

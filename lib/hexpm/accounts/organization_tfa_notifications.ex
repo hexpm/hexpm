@@ -9,7 +9,7 @@ defmodule Hexpm.Accounts.OrganizationTFANotifications do
   def policy_changed!(organization) do
     cancel_organization!(organization)
 
-    if OrganizationTFA.scheduled?(organization) do
+    if OrganizationTFA.active?(organization) do
       Enum.each(Organizations.all_members(organization, user: :emails), fn member ->
         enqueue!(organization, member, "scheduled")
       end)
@@ -22,7 +22,7 @@ defmodule Hexpm.Accounts.OrganizationTFANotifications do
       Repo.transaction(fn ->
         organization = Seats.lock!(organization)
 
-        if OrganizationTFA.scheduled?(organization) do
+        if OrganizationTFA.active?(organization) do
           for member <- Organizations.all_members(organization, user: :emails),
               stage <- @stages -- ["scheduled"],
               due?(organization, member, stage, now) do
@@ -41,7 +41,7 @@ defmodule Hexpm.Accounts.OrganizationTFANotifications do
     with ["tfa", org_id, revision, user_id, stage] <- String.split(key, ":"),
          %Organization{} = organization <- Repo.get(Organization, String.to_integer(org_id)),
          true <- organization.tfa_policy_revision == String.to_integer(revision),
-         true <- OrganizationTFA.scheduled?(organization),
+         true <- OrganizationTFA.active?(organization),
          %OrganizationUser{} = member <-
            Repo.get_by(OrganizationUser,
              organization_id: organization.id,
