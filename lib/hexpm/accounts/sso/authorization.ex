@@ -1,8 +1,11 @@
 defmodule Hexpm.Accounts.SSO.Authorization do
   @moduledoc """
-  A request bound to an account and an OAuth session for browser verification of
-  organization SSO and 2FA requirements. Completing every check grants the
-  verified access without extending the target session's expiry.
+  A request from a session to be authenticated against its organizations'
+  identity providers, and the short-lived URI its owner opens to do it.
+
+  The session that asks is the session that gets the organization access, which
+  is what lets a terminal renew a lapsed binding with a browser visit rather
+  than a whole new device authorization.
   """
 
   use Hexpm.Schema
@@ -15,8 +18,6 @@ defmodule Hexpm.Accounts.SSO.Authorization do
     field :organization_ids, {:array, :integer}, default: []
     field :expires_at, :utc_datetime_usec
     field :consumed_at, :utc_datetime_usec
-    field :redirect_uri, :string
-    field :state, :string, redact: true
 
     belongs_to :user, User
     belongs_to :user_session, Hexpm.UserSession
@@ -26,19 +27,7 @@ defmodule Hexpm.Accounts.SSO.Authorization do
 
   def changeset(authorization, attrs) do
     authorization
-    |> cast(
-      attrs,
-      [
-        :user_id,
-        :user_session_id,
-        :code_hash,
-        :organization_ids,
-        :expires_at,
-        :redirect_uri,
-        :state
-      ],
-      empty_values: []
-    )
+    |> cast(attrs, [:user_id, :user_session_id, :code_hash, :organization_ids, :expires_at])
     |> validate_required([:user_id, :user_session_id, :code_hash, :organization_ids, :expires_at])
     |> unique_constraint(:code_hash)
   end

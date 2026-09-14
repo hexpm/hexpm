@@ -193,33 +193,6 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
       assert token2.jti != token3.jti
     end
 
-    test "polling preserves an aged session's absolute refresh-token expiry", %{
-      device_code: device_code,
-      client: client
-    } do
-      user = insert(:user_with_tfa)
-      {:ok, _} = DeviceCodes.authorize_device(device_code.user_code, user, device_code.scopes)
-      [original] = live_device_tokens(device_code, client)
-      expires_at = DateTime.utc_now() |> DateTime.add(3600) |> DateTime.truncate(:second)
-      original |> Ecto.Changeset.change(refresh_token_expires_at: expires_at) |> Repo.update!()
-      session = Repo.get!(Hexpm.UserSession, original.user_session_id)
-
-      session
-      |> Ecto.Changeset.change(expires_at: %{expires_at | microsecond: {0, 6}})
-      |> Repo.update!()
-
-      for _ <- 1..2 do
-        assert {:ok, token} =
-                 DeviceCodes.poll_device_token(device_code.device_code, client.client_id)
-
-        assert token.refresh_token_expires_at == expires_at
-        assert token.user_session_id == session.id
-
-        assert DateTime.compare(Repo.get!(Hexpm.UserSession, session.id).expires_at, expires_at) ==
-                 :eq
-      end
-    end
-
     test "keeps exactly one live token across multiple polls", %{
       device_code: device_code,
       client: client

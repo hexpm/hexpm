@@ -12,9 +12,7 @@ defmodule HexpmWeb.API.SSOAuthorizationController do
            SSO.request_authorization(
              conn.assigns.current_user,
              user_session_id,
-             params["organizations"],
-             redirect_uri: params["redirect_uri"],
-             state: params["state"]
+             params["organizations"]
            ) do
       conn
       |> put_status(201)
@@ -44,10 +42,6 @@ defmodule HexpmWeb.API.SSOAuthorizationController do
 
   defp message(:invalid_session) do
     "Organization reauthorization requires an OAuth session, sign in from your Hex client to get one"
-  end
-
-  defp message(:invalid_redirect) do
-    "redirect_uri must be a registered callback for this OAuth session's client and include a nonempty state"
   end
 
   defp message(:invalid_organizations) do

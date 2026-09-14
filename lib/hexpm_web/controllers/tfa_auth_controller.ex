@@ -44,15 +44,8 @@ defmodule HexpmWeb.TFAAuthController do
   end
 
   defp render_show(conn) do
-    session_data = get_session(conn, "tfa_user_id")
-    user = Hexpm.Accounts.Users.get_by_id(session_data["uid"])
-
-    conn
-    |> HexpmWeb.SSOEnforcement.allow_authorization_return_form_action(
-      session_data["return"],
-      user
-    )
-    |> render(
+    render(
+      conn,
       "show.html",
       title: "Two Factor Authentication",
       container: "container page page-xs login"

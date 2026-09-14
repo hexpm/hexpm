@@ -26,15 +26,14 @@ defmodule Hexpm.OAuth.JWT do
       "jti" => jti,
       "iat" => now,
       "nbf" => now - 30,
-      "scope" => Enum.join(scopes, " "),
-      "token_use" => "access"
+      "scope" => Enum.join(scopes, " ")
     }
 
     expires_in = Keyword.get(opts, :expires_in, 30 * 60)
 
     extra_claims =
       if expires_in do
-        Map.put(extra_claims, "exp", Keyword.get(opts, :expires_at, now + expires_in))
+        Map.put(extra_claims, "exp", unix_now() + expires_in)
       else
         extra_claims
       end
@@ -63,8 +62,7 @@ defmodule Hexpm.OAuth.JWT do
       "iat" => now,
       "nbf" => now - 30,
       "scope" => Enum.join(scopes, " "),
-      "token_use" => "refresh",
-      "exp" => Keyword.get(opts, :expires_at, now + expires_in)
+      "exp" => now + expires_in
     }
 
     signer = get_signer()

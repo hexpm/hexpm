@@ -77,52 +77,14 @@ defmodule Hexpm.OAuth.Tokens do
   # skip the check without adding a second builder, which is how create_for_org/6
   # came to mint scopes for organizations it had no access to.
   defp build_token(principal, client_id, scopes, grant_type, grant_reference, opts) do
-    opts =
-      if grant_type == "client_credentials" do
-        opts
-        |> Keyword.put_new(:credential, %Hexpm.Accounts.Key{})
-        |> Keyword.put(:with_refresh_token, false)
-      else
-        opts
-      end
-
     expires_in = Keyword.get(opts, :expires_in, @default_expires_in)
-    now = DateTime.utc_now()
+    expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)
     {authorized, organization_reauth_required} = authorized_scopes(principal, scopes, opts)
-    session_id = Keyword.get(opts, :user_session_id)
-
-    expires_at =
-      Hexpm.Accounts.OrganizationAuth.access_expires_at(
-        principal,
-        authorized,
-        session_id,
-        DateTime.add(now, expires_in),
-        now
-      )
-
-    expires_at =
-      case Keyword.get(opts, :refresh_token_expires_at) do
-        %DateTime{} = absolute ->
-          Enum.min_by([expires_at, absolute], &DateTime.to_unix(&1, :microsecond))
-
-        _ ->
-          expires_at
-      end
-
-    session = session_id && Repo.get(UserSession, session_id)
-
-    expires_at =
-      if session,
-        do: Enum.min_by([expires_at, session.expires_at], &DateTime.to_unix(&1, :microsecond)),
-        else: expires_at
-
-    expires_in = max(DateTime.diff(expires_at, now), 0)
     {subject, subject_type} = subject(principal)
 
     jwt_opts = [
       session_id: Keyword.get(opts, :user_session_id),
-      expires_in: expires_in,
-      expires_at: DateTime.to_unix(expires_at)
+      expires_in: expires_in
     ]
 
     {:ok, access_token, jti} =
@@ -150,11 +112,14 @@ defmodule Hexpm.OAuth.Tokens do
   # enforcement wants a live organization access session for. An organization
   # subject reaches only itself.
   #
+  # `sso_session_id` is for the authorization code grant, where the session this
+  # token belongs to does not exist yet and the browser that consented holds the
+  # organization access it is about to inherit.
   defp authorized_scopes(%User{} = user, scopes, opts) do
     Permissions.expand_and_filter_organization_scopes(
       user,
       scopes,
-      Keyword.get(opts, :user_session_id),
+      Keyword.get(opts, :sso_session_id) || Keyword.get(opts, :user_session_id),
       Keyword.get(opts, :credential)
     )
   end
@@ -175,6 +140,10 @@ defmodule Hexpm.OAuth.Tokens do
   defp granted_scopes(%User{}, requested, _authorized), do: requested
   defp granted_scopes(%Organization{}, _requested, authorized), do: authorized
 
+  # Signed with the same scopes as the access token. Both edges accept any JWT
+  # that verifies, and neither distinguishes a refresh token from an access
+  # token, so a refresh token carrying the unfiltered request would be usable as
+  # a bearer credential for the scopes the mint just refused.
   defp maybe_add_refresh_token(attrs, %User{} = user, scopes, opts) do
     if Keyword.get(opts, :with_refresh_token, false) do
       # Use provided refresh_token_expires_at (e.g., from session) or calculate fresh
@@ -187,8 +156,7 @@ defmodule Hexpm.OAuth.Tokens do
 
       refresh_opts = [
         session_id: Keyword.get(opts, :user_session_id),
-        expires_in: DateTime.diff(refresh_expires_at, DateTime.utc_now(), :second),
-        expires_at: DateTime.to_unix(refresh_expires_at)
+        expires_in: @default_refresh_token_expires_in
       ]
 
       {:ok, refresh_token, refresh_jti} =
@@ -322,7 +290,14 @@ defmodule Hexpm.OAuth.Tokens do
 
     browser_session_id = Keyword.get(opts, :browser_session_id)
 
-    token_opts = Keyword.put(opts, :refresh_token_expires_at, session_expires_at)
+    # Pre-compute JWT outside the transaction (CPU-intensive ES256 signing)
+    token_opts =
+      opts
+      |> Keyword.put(:refresh_token_expires_at, session_expires_at)
+      |> Keyword.put(:sso_session_id, browser_session_id)
+
+    token_changeset =
+      create_for_user(user, client_id, scopes, grant_type, grant_reference, token_opts)
 
     # Build flat Multi (no nested transactions, last_use folded into INSERT)
     Keyword.get(opts, :authorization_code)
@@ -339,14 +314,8 @@ defmodule Hexpm.OAuth.Tokens do
       {:ok, Hexpm.Accounts.SSO.grant_org_sessions!(browser_session_id, session.id, user.id)}
     end)
     |> Ecto.Multi.run(:token, fn _repo, %{session: session} ->
-      create_for_user(
-        user,
-        client_id,
-        scopes,
-        grant_type,
-        grant_reference,
-        Keyword.put(token_opts, :user_session_id, session.id)
-      )
+      token_changeset
+      |> Ecto.Changeset.put_change(:user_session_id, session.id)
       |> Repo.insert()
     end)
     |> Repo.transaction()
@@ -383,7 +352,12 @@ defmodule Hexpm.OAuth.Tokens do
         grant_reference \\ nil,
         opts \\ []
       ) do
-    token_opts = Keyword.put(opts, :refresh_token_expires_at, old_token.refresh_token_expires_at)
+    # Pre-compute JWT outside the transaction (CPU-intensive ES256 signing)
+    token_opts =
+      Keyword.put(opts, :refresh_token_expires_at, old_token.refresh_token_expires_at)
+
+    token_changeset =
+      create_for_user(old_token.user, client_id, scopes, grant_type, grant_reference, token_opts)
 
     session_id = Keyword.get(opts, :user_session_id) || old_token.user_session_id
 
@@ -401,14 +375,8 @@ defmodule Hexpm.OAuth.Tokens do
       Repo.update!(revoke_changeset(token))
 
       new_token =
-        create_for_user(
-          old_token.user,
-          client_id,
-          scopes,
-          grant_type,
-          grant_reference,
-          Keyword.put(token_opts, :user_session_id, session_id)
-        )
+        token_changeset
+        |> Ecto.Changeset.put_change(:user_session_id, session_id)
         |> Repo.insert()
         |> case do
           {:ok, new_token} -> new_token

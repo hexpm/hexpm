@@ -384,40 +384,27 @@ defmodule HexpmWeb.SSOController do
         expired_authorization(conn, code)
 
       authorization ->
-        browser_session_id = approving_browser(conn, code)
-
-        case SSO.authorization_status(authorization, browser_session_id) do
+        case SSO.authorization_status(authorization) do
           [] ->
             expired_authorization(conn, code)
 
           status ->
-            if Enum.all?(status, fn {_organization, authenticated?} -> authenticated? end) do
-              case SSO.complete_authorization(
-                     authorization,
-                     conn.assigns.current_user,
-                     browser_session_id
-                   ) do
-                {:ok, :ok} ->
-                  conn
-                  |> delete_session("sso_authorization")
-                  |> delete_session(:organization_authorization)
-                  |> finish_authorization(authorization, status)
+            if Enum.all?(status, fn {_organization, requirements} -> requirements == [] end) do
+              SSO.consume_authorization!(authorization)
 
-                {:error, _} ->
-                  expired_authorization(conn, code)
-              end
+              conn
+              |> delete_session("sso_authorization")
+              |> put_flash(:info, authorized_message(authorization, status))
+              |> redirect(to: ~p"/dashboard")
             else
               conn
               |> allow_provider_form_actions(status)
-              |> SSOEnforcement.allow_authorization_form_action(code)
               |> render("authorize.html",
                 title: "Authenticate a session",
                 container: "container page page-xs",
                 code: code,
                 session: authorization.user_session,
-                organizations: status,
-                authorization: authorization,
-                approving_browser: browser_session_id
+                organizations: status
               )
             end
         end
@@ -426,47 +413,31 @@ defmodule HexpmWeb.SSOController do
 
   def authorize(conn, _params), do: expired_authorization(conn)
 
-  def authorize_organization(conn, %{"code" => code, "action" => "cancel"}) do
-    with %SSO.Authorization{} = authorization <-
-           SSO.get_authorization(code, conn.assigns.current_user),
-         :ok <- SSO.consume_authorization!(authorization) do
-      conn =
-        conn
-        |> delete_session(:organization_authorization)
-        |> delete_session("sso_authorization")
-
-      if authorization.redirect_uri do
-        redirect(conn, external: authorization_callback(authorization, "cancelled"))
-      else
-        conn
-        |> put_flash(:info, "Organization authentication cancelled.")
-        |> redirect(to: ~p"/dashboard")
-      end
-    else
-      _ -> expired_authorization(conn, code)
-    end
-  end
-
   def authorize_organization(conn, %{"code" => code, "organization" => name}) do
     case SSO.get_authorization(code, conn.assigns.current_user) do
       nil ->
         expired_authorization(conn, code)
 
       authorization ->
-        case authorized_organization(authorization, name, approving_browser(conn, code)) do
+        case authorized_organization(authorization, name) do
           # Already done, or never on the list. Either way the page is where the
           # answer is, and re-rendering it says nothing a second request would
           # not have said anyway.
           nil ->
             redirect(conn, to: ~p"/organizations/authorize?#{[code: code]}")
 
-          organization ->
-            if allow_start?(conn, organization) do
-              conn
-              |> put_session(:organization_authorization, code)
-              |> start_organization_authorization(authorization, organization, code)
-            else
-              too_many_requests(conn)
+          {organization, requirements} ->
+            cond do
+              "tfa" in requirements ->
+                conn
+                |> put_session(:tfa_return_to, ~p"/organizations/authorize?#{[code: code]}")
+                |> redirect(to: ~p"/dashboard/security")
+
+              allow_start?(conn, organization) ->
+                start_authorization(conn, authorization, organization, code)
+
+              true ->
+                too_many_requests(conn)
             end
         end
     end
@@ -478,31 +449,14 @@ defmodule HexpmWeb.SSOController do
 
   def authorize_organization(conn, _params), do: expired_authorization(conn)
 
-  # One button per organization still to authenticate, each submitting to the
-  # action that starts that organization's login.
+  # One button per organization still to authenticate through its provider,
+  # each submitting to the action that starts that organization's login.
   defp allow_provider_form_actions(conn, status) do
-    Enum.reduce(status, conn, fn
-      {_organization, true}, conn -> conn
-      {organization, false}, conn -> SSOEnforcement.allow_provider_form_action(conn, organization)
+    Enum.reduce(status, conn, fn {organization, requirements}, conn ->
+      if "sso" in requirements,
+        do: SSOEnforcement.allow_provider_form_action(conn, organization),
+        else: conn
     end)
-  end
-
-  defp start_organization_authorization(conn, authorization, organization, code) do
-    requirements =
-      SSO.authorization_requirements(authorization, organization, conn.assigns.current_session.id)
-
-    cond do
-      "tfa" in requirements ->
-        conn
-        |> put_session(:tfa_return_to, ~p"/organizations/authorize?#{[code: code]}")
-        |> redirect(to: ~p"/dashboard/security")
-
-      "sso" in requirements ->
-        start_authorization(conn, authorization, organization, code)
-
-      true ->
-        redirect(conn, to: ~p"/organizations/authorize?#{[code: code]}")
-    end
   end
 
   defp start_authorization(conn, authorization, organization, code) do
@@ -527,53 +481,28 @@ defmodule HexpmWeb.SSOController do
     end
   end
 
-  defp authorized_organization(authorization, name, browser_session_id) when is_binary(name) do
-    Enum.find_value(SSO.authorization_status(authorization, browser_session_id), fn {organization,
-                                                                                     authenticated?} ->
-      if organization.name == name and not authenticated?, do: organization
+  defp authorized_organization(authorization, name) when is_binary(name) do
+    Enum.find(SSO.authorization_status(authorization), fn {organization, requirements} ->
+      organization.name == name and requirements != []
     end)
   end
 
-  defp authorized_organization(_authorization, _name, _browser_session_id), do: nil
+  defp authorized_organization(_authorization, _name), do: nil
 
-  defp approving_browser(conn, code) do
-    if get_session(conn, :organization_authorization) == code,
-      do: conn.assigns.current_session.id,
-      else: nil
-  end
-
+  # Clears the pending marker only when it names this code, so a request for a
+  # stale code does not close a request that is still open.
   defp expired_authorization(conn, code \\ nil) do
-    [:organization_authorization, "sso_authorization"]
-    |> Enum.reduce(conn, fn key, conn ->
-      if is_binary(code) and get_session(conn, key) == code,
-        do: delete_session(conn, key),
+    conn =
+      if is_binary(code) and get_session(conn, "sso_authorization") == code,
+        do: delete_session(conn, "sso_authorization"),
         else: conn
-    end)
+
+    conn
     |> put_flash(
       :error,
       "That authentication request is no longer open. Start a new request from your application."
     )
     |> redirect(to: ~p"/dashboard")
-  end
-
-  defp finish_authorization(conn, %{redirect_uri: nil} = authorization, status) do
-    conn
-    |> put_flash(:info, authorized_message(authorization, status))
-    |> redirect(to: ~p"/dashboard")
-  end
-
-  defp finish_authorization(conn, authorization, _status) do
-    redirect(conn, external: authorization_callback(authorization, "complete"))
-  end
-
-  defp authorization_callback(authorization, result) do
-    uri = URI.parse(authorization.redirect_uri)
-
-    query =
-      URI.encode_query(%{"organization_authorization" => result, "state" => authorization.state})
-
-    query = if uri.query in [nil, ""], do: query, else: uri.query <> "&" <> query
-    URI.to_string(%{uri | query: query})
   end
 
   defp authorized_message(authorization, status) do

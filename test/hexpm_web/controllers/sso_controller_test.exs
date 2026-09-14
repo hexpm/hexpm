@@ -1054,7 +1054,7 @@ defmodule HexpmWeb.SSOControllerTest do
       assert csp =~ "form-action 'self' https://identity.example.com"
     end
 
-    test "copies browser verification only after completing the request", context do
+    test "authenticates the session that asked, not the browser", context do
       require_sso(context)
       link_member(context)
       %{session: session} = cli_session(context)
@@ -1068,14 +1068,9 @@ defmodule HexpmWeb.SSOControllerTest do
       conn = authorize_through_provider(context, code)
       assert redirected_to(conn) == "/organizations/authorize?code=#{code}"
 
-      assert [browser_proof] = Repo.all(OrgSession)
-      assert browser_proof.user_session_id == conn.assigns.current_session.id
-      refute SSO.current_org_session(session.id, context.organization.id)
-      completed = conn |> recycle() |> get(redirected_to(conn))
-      assert redirected_to(completed) == "/dashboard"
-      target_proof = SSO.current_org_session(session.id, context.organization.id)
-      assert target_proof.authenticated_at == browser_proof.authenticated_at
-      assert target_proof.granted_from_user_session_id == browser_proof.user_session_id
+      assert [org_session] = Repo.all(OrgSession)
+      assert org_session.user_session_id == session.id
+      assert org_session.organization_id == context.organization.id
     end
 
     test "is consumed once it has nothing left to do, and cannot be replayed", context do
@@ -1088,6 +1083,7 @@ defmodule HexpmWeb.SSOControllerTest do
         context
         |> authorize_through_provider(code)
         |> recycle()
+        |> test_login(context.member)
         |> get("/organizations/authorize?code=#{code}")
 
       assert redirected_to(conn) == "/dashboard"
@@ -1115,8 +1111,7 @@ defmodule HexpmWeb.SSOControllerTest do
              ]
 
       code = request_authorization(context, session)
-      conn = authorize_through_provider(context, code)
-      conn |> recycle() |> get(redirected_to(conn))
+      authorize_through_provider(context, code)
 
       body =
         build_conn()
@@ -1190,11 +1185,11 @@ defmodule HexpmWeb.SSOControllerTest do
       conn =
         build_conn()
         |> test_login(context.member)
-        |> put_session(:organization_authorization, code)
+        |> put_session("sso_authorization", code)
         |> get("/organizations/authorize?code=unknown")
 
       assert redirected_to(conn) == "/dashboard"
-      assert get_session(conn, :organization_authorization) == code
+      assert get_session(conn, "sso_authorization") == code
 
       Repo.update_all(
         from(s in Hexpm.UserSession, where: s.id == ^session.id),
@@ -1203,7 +1198,7 @@ defmodule HexpmWeb.SSOControllerTest do
 
       conn = conn |> recycle() |> get("/organizations/authorize?code=#{code}")
       assert redirected_to(conn) == "/dashboard"
-      refute get_session(conn, :organization_authorization)
+      refute get_session(conn, "sso_authorization")
     end
   end
 

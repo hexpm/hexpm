@@ -12,7 +12,7 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
     OrganizationTFANotification
   }
 
-  alias Hexpm.OAuth.{Tokens, JWT}
+  alias Hexpm.OAuth.Tokens
   alias Hexpm.UserSession
 
   setup do
@@ -334,53 +334,6 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
     assert message =~ "two-factor authentication"
   end
 
-  test "tokens cap scheduled enforcement for unenrolled members and distinguish purposes" do
-    c = context()
-    client = insert(:oauth_client)
-    cutoff = DateTime.add(DateTime.utc_now(), 120)
-    org = c.organization |> Ecto.Changeset.change(tfa_required_at: cutoff) |> Repo.update!()
-    scopes = ["repository:#{org.name}", "docs:#{org.name}", "api:read"]
-
-    mint = fn user, browser_session ->
-      Tokens.create_session_and_token_for_user(
-        user,
-        client.client_id,
-        scopes,
-        "authorization_code",
-        nil,
-        browser_session_id: browser_session.id,
-        with_refresh_token: true,
-        audit: audit_data(user)
-      )
-    end
-
-    {:ok, token} = mint.(c.member, browser(c.member))
-    {:ok, claims} = JWT.verify_and_decode(token.access_token)
-    assert claims["token_use"] == "access"
-    assert claims["exp"] <= DateTime.to_unix(cutoff)
-    {:ok, refresh_claims} = JWT.verify_and_decode(token.refresh_token)
-    assert refresh_claims["token_use"] == "refresh"
-
-    {:ok, enrolled} = mint.(c.admin, c.session)
-    {:ok, enrolled_claims} = JWT.verify_and_decode(enrolled.access_token)
-    assert enrolled_claims["exp"] > DateTime.to_unix(cutoff)
-
-    before = Repo.get!(UserSession, token.user_session_id)
-    token = Repo.preload(token, :user)
-
-    {:ok, refreshed} =
-      Tokens.revoke_and_create_token(token, client.client_id, scopes, "refresh_token", nil,
-        user_session_id: token.user_session_id,
-        with_refresh_token: true
-      )
-
-    after_session = Repo.get!(UserSession, token.user_session_id)
-    assert before.expires_at == after_session.expires_at
-    assert token.refresh_token_expires_at == refreshed.refresh_token_expires_at
-    {:ok, refresh_claims} = JWT.verify_and_decode(refreshed.refresh_token)
-    assert refresh_claims["exp"] <= DateTime.to_unix(before.expires_at)
-  end
-
   test "notifications are durable per revision and obsolete queued notices are cancelled" do
     c = context()
     {:ok, org} = configure(c, %{"enforcement" => "transition", "grace_days" => "14"})
@@ -496,12 +449,16 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
           "refresh_token",
           "client_credentials"
         ] do
+      opts = if grant == "client_credentials", do: [credential: %Hexpm.Accounts.Key{}], else: []
+
       token =
         Tokens.create_for_user(
           c.member,
           client.client_id,
           ["api:read", "repository:#{org.name}", "docs:#{org.name}", "repository:#{other.name}"],
-          grant
+          grant,
+          nil,
+          opts
         )
         |> Ecto.Changeset.apply_changes()
 
@@ -524,8 +481,8 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
         ["repository:#{org.name}"],
         "client_credentials",
         nil,
-        user_session_id: session.id,
-        with_refresh_token: true
+        credential: %Hexpm.Accounts.Key{},
+        user_session_id: session.id
       )
       |> Ecto.Changeset.apply_changes()
 
@@ -740,24 +697,24 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
   test "membership removal invalidates an open browser authorization" do
     c = context()
     {:ok, org} = configure(c, %{"enforcement" => "immediate"})
-    target = insert(:oauth_session, user: c.admin, client_id: insert(:oauth_client).client_id)
+    target = insert(:oauth_session, user: c.member, client_id: insert(:oauth_client).client_id)
 
     {:ok, authorization} =
-      Hexpm.Accounts.SSO.request_authorization(c.admin, target.id, [org.name])
+      Hexpm.Accounts.SSO.request_authorization(c.member, target.id, [org.name])
+
+    assert [{%{id: id}, ["tfa"]}] = Hexpm.Accounts.SSO.authorization_status(authorization)
+    assert id == org.id
 
     Repo.delete_all(
       from(m in Hexpm.Accounts.OrganizationUser,
-        where: m.organization_id == ^org.id and m.user_id == ^c.admin.id
+        where: m.organization_id == ^org.id and m.user_id == ^c.member.id
       )
     )
 
-    assert {:error, :requirements_missing} =
-             Hexpm.Accounts.SSO.complete_authorization(authorization, c.admin, c.session.id)
-
-    assert Hexpm.Accounts.SSO.get_authorization(authorization.raw_code, c.admin)
+    assert Hexpm.Accounts.SSO.authorization_status(authorization) == []
   end
 
-  test "combined authorization needs enrollment, copies SSO access, and retains target expiry" do
+  test "an authorization tracks enrollment and the target session's SSO access separately" do
     c = context()
     {:ok, org} = configure(c, %{"enforcement" => "immediate"})
     config = Application.fetch_env!(:hexpm, :organization_sso)
@@ -780,39 +737,17 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
         user: c.member
       )
 
-    browser = browser(c.member)
     target = insert(:oauth_session, user: c.member, client_id: insert(:oauth_client).client_id)
 
     {:ok, authorization} =
       Hexpm.Accounts.SSO.request_authorization(c.member, target.id, [org.name])
 
-    assert {:error, :requirements_missing} =
-             Hexpm.Accounts.SSO.complete_authorization(authorization, c.member, browser.id)
-
-    source = Hexpm.Accounts.SSO.establish_org_session!(identity, browser.id)
-
-    assert {:error, :requirements_missing} =
-             Hexpm.Accounts.SSO.complete_authorization(authorization, c.member, browser.id)
-
-    user = enroll(c.member)
-
-    assert {:ok, :ok} =
-             Hexpm.Accounts.SSO.complete_authorization(authorization, user, browser.id)
-
-    assert OrganizationAuth.required(user, [org.name], target.id) == []
-
-    assert Hexpm.Accounts.SSO.current_org_session(target.id, org.id).authenticated_at ==
-             source.authenticated_at
-
+    assert [{_, ["tfa", "sso"]}] = Hexpm.Accounts.SSO.authorization_status(authorization)
+    Hexpm.Accounts.SSO.establish_org_session!(identity, target.id)
+    assert [{_, ["tfa"]}] = Hexpm.Accounts.SSO.authorization_status(authorization)
+    enroll(c.member)
+    assert [{_, []}] = Hexpm.Accounts.SSO.authorization_status(authorization)
     assert Repo.get!(UserSession, target.id).expires_at == target.expires_at
-
-    Repo.update_all(from(s in UserSession, where: s.id == ^browser.id),
-      set: [revoked_at: DateTime.utc_now()]
-    )
-
-    assert OrganizationAuth.required(user, [org.name], target.id) == [
-             %{organization: org.name, requirements: ["sso"]}
-           ]
   end
 
   test "queued administrator summaries reflect enrollment and membership removal" do

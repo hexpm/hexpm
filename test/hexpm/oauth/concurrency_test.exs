@@ -3,17 +3,11 @@ defmodule Hexpm.OAuth.ConcurrencyTest do
   import Hexpm.ConcurrencyCase
 
   alias Ecto.Adapters.SQL.Sandbox
-  alias Hexpm.Accounts.SSO
   alias Hexpm.OAuth.{AuthorizationCode, AuthorizationCodes, Client, Token, Tokens}
   alias Hexpm.{UserSession, UserSessions}
 
   @code_challenge "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
   @redirect_uri "https://example.com/callback"
-
-  setup do
-    app_env(:hexpm, :organization_tfa, mode: :enabled, beta_organizations: [])
-    :ok
-  end
 
   test "two redemptions of one authorization code leave one session and one token" do
     committed(fn context ->
@@ -113,120 +107,6 @@ defmodule Hexpm.OAuth.ConcurrencyTest do
     end)
   end
 
-  test "completed organization authorization refuses a waiting cancellation" do
-    committed(fn context ->
-      context = organization_authorization(context)
-      parent = self()
-
-      completion =
-        unboxed_task(fn ->
-          Repo.transaction(fn ->
-            {:ok, :ok} =
-              SSO.complete_authorization(context.authorization, context.user, context.browser.id)
-
-            send(parent, :completed)
-
-            receive do
-              :release -> :ok
-            after
-              5000 -> raise "completion was not released"
-            end
-          end)
-        end)
-
-      assert_receive :completed, 5000
-
-      cancellation =
-        unboxed_task(fn ->
-          %{rows: [[pid]]} =
-            Ecto.Adapters.SQL.query!(Hexpm.RepoBase, "SELECT pg_backend_pid()", [])
-
-          send(parent, {:cancellation_pid, pid})
-          SSO.consume_authorization!(context.authorization)
-        end)
-
-      assert_receive {:cancellation_pid, pid}, 5000
-      wait_for_lock(pid, 100)
-      send(completion.pid, :release)
-      assert {:ok, :ok} = Task.await(completion, 10000)
-      assert {:error, :invalid_authorization} = Task.await(cancellation, 10000)
-      refute SSO.get_authorization(context.authorization.raw_code, context.user)
-      assert Repo.get!(UserSession, context.target.id).expires_at == context.target.expires_at
-    end)
-  end
-
-  test "cancelled organization authorization refuses waiting completion" do
-    committed(fn context ->
-      context = organization_authorization(context)
-      parent = self()
-
-      cancellation =
-        unboxed_task(fn ->
-          Repo.transaction(fn ->
-            :ok = SSO.consume_authorization!(context.authorization)
-            send(parent, :cancelled)
-
-            receive do
-              :release -> :ok
-            after
-              5000 -> raise "cancellation was not released"
-            end
-          end)
-        end)
-
-      assert_receive :cancelled, 5000
-
-      completion =
-        unboxed_task(fn ->
-          %{rows: [[pid]]} =
-            Ecto.Adapters.SQL.query!(Hexpm.RepoBase, "SELECT pg_backend_pid()", [])
-
-          send(parent, {:completion_pid, pid})
-          SSO.complete_authorization(context.authorization, context.user, context.browser.id)
-        end)
-
-      assert_receive {:completion_pid, pid}, 5000
-      wait_for_lock(pid, 100)
-      send(cancellation.pid, :release)
-      assert {:ok, :ok} = Task.await(cancellation, 10000)
-      assert {:error, :invalid_authorization} = Task.await(completion, 10000)
-      refute SSO.get_authorization(context.authorization.raw_code, context.user)
-      assert Repo.get!(UserSession, context.target.id).expires_at == context.target.expires_at
-    end)
-  end
-
-  defp organization_authorization(context) do
-    user = insert(:user_with_tfa)
-    organization = insert(:organization, tfa_required_at: DateTime.add(DateTime.utc_now(), -1))
-    insert(:organization_user, user: user, organization: organization, role: "admin")
-    browser = insert(:session, user: user, expires_at: DateTime.add(DateTime.utc_now(), 86400))
-    target = insert(:oauth_session, user: user, client_id: context.client.client_id)
-
-    {:ok, authorization} =
-      SSO.request_authorization(user, target.id, [organization.name],
-        redirect_uri: @redirect_uri,
-        state: "authorization-race-state"
-      )
-
-    %{user: user, browser: browser, target: target, authorization: authorization}
-  end
-
-  defp wait_for_lock(_, 0), do: flunk("competing transaction did not wait for a lock")
-
-  defp wait_for_lock(pid, attempts) do
-    %{rows: rows} =
-      Ecto.Adapters.SQL.query!(
-        Hexpm.RepoBase,
-        "SELECT wait_event_type FROM pg_stat_activity WHERE pid=$1",
-        [pid]
-      )
-
-    if rows != [["Lock"]] do
-      Process.sleep(20)
-      wait_for_lock(pid, attempts - 1)
-    end
-  end
-
   defp redeem(context, auth_code) do
     Tokens.create_session_and_token_for_user(
       context.user,
@@ -304,10 +184,6 @@ defmodule Hexpm.OAuth.ConcurrencyTest do
 
           Hexpm.RepoBase.delete_all(
             from(c in AuthorizationCode, where: c.client_id == ^context.client.client_id)
-          )
-
-          Hexpm.RepoBase.delete_all(
-            from(d in Hexpm.OAuth.DeviceCode, where: d.client_id == ^context.client.client_id)
           )
 
           Hexpm.RepoBase.delete_all(

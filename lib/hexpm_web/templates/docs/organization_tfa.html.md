@@ -30,7 +30,7 @@ You can leave an organization while suspended. Removing members, demoting admini
 
 When an organization enforces both SSO and 2FA, its members must satisfy both. SSO exemptions and its setting allowing personal keys don't override the 2FA policy.
 
-Hex clients display "2FA enrollment required" or "SSO authentication required", with the affected organization names. When both are missing, both appear. The shared browser flow completes outstanding requirements before the client refreshes permissions and resumes fetching. It retains the OAuth session's original absolute expiry. Private documentation redirects to Hexpm and returns to the original documentation page after refreshing permissions. Cancelling shows an explicit retry link and doesn't restart the flow automatically. Cancelling, using an expired request, signing in as another account, or revoking the target session doesn't grant access.
+Hex clients display "2FA enrollment required" or "SSO authentication required", with the affected organization names. When both are missing, both appear. The shared browser flow completes outstanding requirements before the client refreshes permissions and resumes fetching. Using an expired request, signing in as another account, or revoking the target session doesn't grant access.
 
 ### Notifications
 
@@ -40,8 +40,6 @@ Notification deduplication uses the policy revision, recipient, and stage. Polic
 
 ### Download authorization
 
-CDN validators verify access tokens offline. Newly issued access tokens have a default lifetime of 30 minutes, capped by applicable SSO expiries, the OAuth session's absolute expiry, and scheduled enforcement deadlines for members who haven't enabled 2FA. Refreshing a token doesn't extend the session's absolute lifetime.
+CDN validators verify access tokens offline. A token issued before the deadline can keep reaching the organization until it expires, normally 30 minutes after issue, plus the verifier's 60-second tolerance. Tokens issued after the deadline don't carry the organization for members without 2FA.
 
-A previously issued access token may remain usable until its signed expiry, plus the CDN verifier's 60-second tolerance. This includes tokens issued before a policy change or session revocation. Refresh tokens and tokens without an explicit access-token purpose are refused as download credentials.
-
-Repository API-key authorization can remain cached for 600 seconds after a successful check. Denials are cached for 10 seconds; server errors for five seconds. These are separate from the access-token lifetime and verifier tolerance.
+Repository API-key authorization can remain cached for 600 seconds after a successful check. Denials are cached for 10 seconds; server errors for five seconds.

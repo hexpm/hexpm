@@ -289,7 +289,6 @@ defmodule Hexpm.OAuth.DeviceCodes do
               "urn:ietf:params:oauth:grant-type:device_code",
               grant_reference(device_code_record),
               user_session_id: session.id,
-              refresh_token_expires_at: session.expires_at,
               with_refresh_token: true
             )
 
@@ -388,8 +387,7 @@ defmodule Hexpm.OAuth.DeviceCodes do
       old_token.grant_reference,
       expires_in: DateTime.diff(old_token.expires_at, DateTime.utc_now()),
       with_refresh_token: not is_nil(old_token.refresh_jti),
-      user_session_id: old_token.user_session_id,
-      refresh_token_expires_at: old_token.refresh_token_expires_at
+      user_session_id: old_token.user_session_id
     )
   end
 

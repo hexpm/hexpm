@@ -6,49 +6,35 @@
   <div class="space-y-5 text-sm text-grey-700 dark:text-grey-200">
     <p>
       You are signed in as <strong class="break-words font-semibold text-grey-900 dark:text-grey-100">{@current_user.username}</strong>.
-    </p>
-    <p>
-      Complete the checks below to allow
-      <strong class="break-words font-semibold text-grey-900 dark:text-grey-100">{@session.name ||
-        "an unnamed session"}</strong>
-      to access the listed organizations.
+      Completing this authenticates <strong class="break-words font-semibold text-grey-900 dark:text-grey-100">{@session.name ||
+        "an unnamed session"}</strong>, not this browser.
     </p>
 
     <p class="text-grey-600 dark:text-grey-300">
-      The application that created this session chose its name. It signed in {session_started(
+      That session was named by whatever created it. It signed in {session_started(@session)} and {session_last_used(
         @session
-      )} and {session_last_used(@session)}. If you don't recognize this session, cancel this request and review your <a
-        href={~p"/dashboard/sessions"}
-        class="font-medium text-primary-600 dark:text-primary-300 hover:underline"
-      >sessions</a>.
+      )}. If none of that is yours, close this page and revoke the session from your dashboard.
     </p>
 
     <ul class="list-none space-y-2">
       <li
-        :for={{organization, authenticated?} <- @organizations}
+        :for={{organization, requirements} <- @organizations}
         class="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between rounded-lg border border-grey-200 dark:border-grey-700 px-4 py-3"
       >
         <div class="w-full min-w-0 sm:w-auto">
           <strong class="block break-words font-semibold text-grey-900 dark:text-grey-100">{organization.name}</strong>
-          <p :for={
-            requirement <-
-              Hexpm.Accounts.SSO.authorization_requirements(
-                @authorization,
-                organization,
-                @approving_browser
-              )
-          }>
+          <p :for={requirement <- requirements}>
             {case requirement do
               "tfa" -> "2FA enrollment required"
               "sso" -> "SSO authentication required"
             end}
           </p>
         </div>
-        <span :if={authenticated?} class="text-sm text-grey-600 dark:text-grey-300">
+        <span :if={requirements == []} class="text-sm text-grey-600 dark:text-grey-300">
           Authenticated
         </span>
         <.form
-          :if={!authenticated?}
+          :if={requirements != []}
           for={%{}}
           action={~p"/organizations/authorize"}
           class="shrink-0"
@@ -60,13 +46,9 @@
       </li>
     </ul>
 
-    <.form for={%{}} action={~p"/organizations/authorize"}>
-      <input type="hidden" name="code" value={@code} />
-      <.button type="submit" name="action" value="cancel" variant="outline">Cancel</.button>
-    </.form>
     <p>
-      The session keeps its original expiry. SSO authentication applies to the listed
-      organizations for as long as each organization's policy allows. 2FA enrollment applies to
+      The session keeps the access it already has. SSO authentication renews the organizations
+      listed above for as long as each administrator has configured. 2FA enrollment applies to
       your account.
     </p>
   </div>
