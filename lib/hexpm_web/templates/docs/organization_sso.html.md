@@ -261,4 +261,4 @@ Enabled organizations can use the organization login URL and third-party-initiat
 
 This release does not support SAML, account creation, SCIM, group or role synchronization, or OIDC logout.
 
-Organization [2FA enforcement](/docs/organization-tfa) is configured independently on the Members page. When both policies apply, members must satisfy both.
+Organization 2FA enforcement is configured independently on the Members page. When both policies apply, members must satisfy both.
