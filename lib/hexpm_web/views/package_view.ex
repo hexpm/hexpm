@@ -286,4 +286,99 @@ defmodule HexpmWeb.PackageView do
   defp cvss_version(<<"CVSS:3.1/", _::binary>>), do: "3.1"
   defp cvss_version(<<"CVSS:3.0/", _::binary>>), do: "3.0"
   defp cvss_version(_), do: "3.1"
+
+  def doc_content(%{release: nil} = assigns) do
+    ~H"""
+    <div :if={@description} class="text-grey-600 dark:text-grey-300 mb-8 leading-relaxed">
+      {description_html(@description)}
+    </div>
+    """
+  end
+
+  # The readme frame always renders: the iframe reports its own absence.
+  def doc_content(%{doc_kind: :readme} = assigns) do
+    ~H"""
+    <.doc_frame package={@package} release={@release} doc_kind={:readme}>
+      <:fallback>{description_html(@description)}</:fallback>
+    </.doc_frame>
+    """
+  end
+
+  def doc_content(%{doc_kind: kind, doc_kinds: kinds} = assigns) when is_map_key(kinds, kind) do
+    ~H"""
+    <.doc_frame package={@package} release={@release} doc_kind={@doc_kind}>
+      <:fallback>{unpublished_text(@doc_kind)}</:fallback>
+    </.doc_frame>
+    """
+  end
+
+  def doc_content(assigns) do
+    ~H"""
+    <p class="text-grey-600 dark:text-grey-300 leading-relaxed">
+      {unpublished_text(@doc_kind)}
+    </p>
+    """
+  end
+
+  defp description_html(nil), do: nil
+
+  defp description_html(description) do
+    description |> ViewHelpers.text_length(300) |> text_to_html(insert_brs: false)
+  end
+
+  defp unpublished_text(doc_kind) do
+    "This package does not publish a #{Hexpm.Docs.Files.label(doc_kind)} file."
+  end
+
+  # The ids are load-bearing: assets/js/app.js drives this iframe by them.
+  defp doc_frame(assigns) do
+    assigns = assign_new(assigns, :doc_kind, fn -> :readme end)
+
+    ~H"""
+    <div
+      id="readme-loading"
+      class="flex items-center justify-center py-12 text-grey-400 dark:text-grey-300"
+    >
+      <svg class="animate-spin h-6 w-6 mr-3" viewBox="0 0 24 24" fill="none">
+        <circle
+          class="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          stroke-width="4"
+        >
+        </circle>
+        <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+        >
+        </path>
+      </svg>
+      Loading {doc_frame_title(@doc_kind)}...
+    </div>
+
+    <div
+      id="readme-fallback"
+      class="text-grey-600 dark:text-grey-300 mb-8 leading-relaxed hidden"
+    >
+      {render_slot(@fallback)}
+    </div>
+
+    <iframe
+      id="readme-frame"
+      src={ViewHelpers.readme_url(@package, @release.version, @doc_kind)}
+      sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+      loading="lazy"
+      referrerpolicy="no-referrer"
+      title={"#{doc_frame_title(@doc_kind)} for #{ViewHelpers.package_name(@package)}"}
+      class="w-full border-0 opacity-0 h-0 overflow-hidden"
+    ></iframe>
+    """
+  end
+
+  # README is an acronym; `Files.label(:readme)` is "Readme".
+  defp doc_frame_title(:readme), do: "README"
+  defp doc_frame_title(kind), do: Hexpm.Docs.Files.label(kind)
 end

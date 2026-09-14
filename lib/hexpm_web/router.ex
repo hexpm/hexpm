@@ -280,6 +280,17 @@ defmodule HexpmWeb.Router do
     get "/packages/:name/versions", PackageController, :versions
     get "/packages/:name/advisories", PackageController, :advisories
     get "/packages/:name/:version/dependencies", PackageController, :dependencies
+
+    # Before the `:show` routes: Phoenix matches in declaration order, not by
+    # specificity, so `/packages/:repository/:name/:version` would shadow these.
+    for kind <- Hexpm.Docs.Files.kinds(), kind != :readme do
+      get "/packages/:name/:version/#{kind}", PackageController, :docs_file,
+        assigns: %{doc_kind: kind}
+
+      get "/packages/:repository/:name/:version/#{kind}", PackageController, :docs_file,
+        assigns: %{doc_kind: kind}
+    end
+
     get "/packages/:name/:version", PackageController, :show
     get "/packages/:repository/:name/owners", PackageOwnerController, :index
     post "/packages/:repository/:name/owners", PackageOwnerController, :create

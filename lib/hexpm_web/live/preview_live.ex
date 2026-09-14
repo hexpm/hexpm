@@ -59,7 +59,7 @@ defmodule HexpmWeb.PreviewLive do
       socket =
         socket
         |> assign(repository: repository)
-        |> assign_package(package, release, releases)
+        |> assign_package(package, release, releases, source.files)
         |> assign_source(repository, package_name, version, source)
 
       {:noreply, socket}
@@ -103,7 +103,7 @@ defmodule HexpmWeb.PreviewLive do
     ~p"/packages/#{repository}/#{package}/#{version}/files/#{Path.split(filename)}"
   end
 
-  defp assign_package(socket, package, release, releases) do
+  defp assign_package(socket, package, release, releases, files) do
     version = to_string(release.version)
 
     if socket.assigns.package &&
@@ -119,7 +119,8 @@ defmodule HexpmWeb.PreviewLive do
           current_release: release,
           graph_release: release,
           sidebar?: false,
-          dependants_count?: false
+          dependants_count?: false,
+          doc_kinds: Hexpm.Docs.Files.resolve_all(files)
         )
 
       socket
