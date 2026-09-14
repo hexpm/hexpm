@@ -90,14 +90,11 @@ defmodule Hexpm.CDN.Fastly do
 
   @impl true
   def verify(service, targets) do
-    checks =
-      for target <- targets,
-          {pop, headers} <- [{:nearest, target_headers(target)} | probes(service, target)],
-          do: {target, pop, headers}
+    checks = for target <- targets, pop <- [:nearest | probe_pops(service)], do: {target, pop}
 
     checks
     |> Task.async_stream(
-      fn {target, pop, headers} -> {target, pop, check(target, pop, headers)} end,
+      fn {target, pop} -> {target, pop, check(target, pop)} end,
       max_concurrency: @verify_concurrency,
       timeout: @probe_timeout + 5_000,
       on_timeout: :kill_task,
@@ -106,7 +103,7 @@ defmodule Hexpm.CDN.Fastly do
     )
     |> Enum.map(fn
       {:ok, result} -> result
-      {:exit, {{target, pop, _headers}, reason}} -> {target, pop, {:error, {:exit, reason}}}
+      {:exit, {{target, pop}, reason}} -> {target, pop, {:error, {:exit, reason}}}
     end)
     |> Enum.group_by(fn {target, _pop, _result} -> target end)
     |> Enum.map(fn {target, results} -> {target, verdict(results)} end)
@@ -133,27 +130,16 @@ defmodule Hexpm.CDN.Fastly do
     end
   end
 
-  defp target_headers(target) do
-    case Map.get(target, :repository) do
-      nil -> []
-      repository -> [{"authorization", "Bearer " <> repository_token(repository)}]
-    end
-  end
+  defp probe_pops(:fastly_hexrepo), do: Application.fetch_env!(:hexpm, :fastly_probe_pops)
+  defp probe_pops(_service), do: []
 
-  defp probes(:fastly_hexrepo, target) do
-    key = Application.get_env(:hexpm, :fastly_key)
-
-    for pop <- Application.fetch_env!(:hexpm, :fastly_probe_pops) do
-      {pop, [{"hex-cache-probe", pop}, {"fastly-key", key} | target_headers(target)]}
-    end
-  end
-
-  defp probes(_service, _target), do: []
-
-  defp check(%{url: url} = target, pop, headers) do
+  defp check(%{url: url} = target, pop) do
     :telemetry.span([:hexpm, :cdn, :verify], %{url: url, pop: pop}, fn ->
       result =
-        case HTTP.impl().head(url, headers, decode_body: false, request_timeout: @probe_timeout) do
+        case HTTP.impl().head(url, headers(target, pop),
+               decode_body: false,
+               request_timeout: @probe_timeout
+             ) do
           {:ok, status, headers, _body} -> compare(target, status, headers)
           {:error, reason} -> {:error, reason}
         end
@@ -170,6 +156,22 @@ defmodule Hexpm.CDN.Fastly do
 
       {result, %{url: url, pop: pop, result: verify_result(result)}}
     end)
+  end
+
+  # Built inside the check's task, since a task's crash report prints its
+  # arguments.
+  defp headers(target, :nearest), do: target_headers(target)
+
+  defp headers(target, pop) do
+    key = Application.get_env(:hexpm, :fastly_key)
+    [{"hex-cache-probe", pop}, {"fastly-key", key} | target_headers(target)]
+  end
+
+  defp target_headers(target) do
+    case Map.get(target, :repository) do
+      nil -> []
+      repository -> [{"authorization", "Bearer " <> repository_token(repository)}]
+    end
   end
 
   defp repository_token(repository) do

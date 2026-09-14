@@ -530,6 +530,36 @@ defmodule Hexpm.HTTPTest do
         do: pid
   end
 
+  test "get/3 returns an error when the pool has no free connection within the pool timeout",
+       %{lasso: lasso} do
+    test = self()
+
+    Lasso.expect(lasso, "GET", "/held", fn conn ->
+      send(test, {:held, self()})
+
+      receive do
+        :release -> Conn.resp(conn, 200, "released")
+      end
+    end)
+
+    tasks = for _ <- 1..50, do: Task.async(fn -> HTTP.get(lasso_url(lasso, "/held"), []) end)
+
+    held =
+      for _ <- tasks do
+        assert_receive {:held, pid}, @server_await_timeout
+        pid
+      end
+
+    assert {:error, %RuntimeError{message: "Finch was unable to provide a connection" <> _}} =
+             HTTP.get(lasso_url(lasso, "/held"), [], pool_timeout: 100)
+
+    Enum.each(held, &send(&1, :release))
+
+    for result <- Task.await_many(tasks, @server_await_timeout) do
+      assert {:ok, 200, _headers, "released"} = result
+    end
+  end
+
   defp lasso_url(lasso, path) do
     "http://localhost:#{lasso.port}#{path}"
   end

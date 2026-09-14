@@ -293,7 +293,7 @@ defmodule Hexpm.HTTP do
   defp default_port(:https), do: 443
 
   defp request(request, nil, request_opts) do
-    Finch.request(request, Hexpm.Finch, request_opts)
+    finch(fn -> Finch.request(request, Hexpm.Finch, request_opts) end)
   end
 
   defp request(request, max_body_bytes, request_opts)
@@ -320,7 +320,7 @@ defmodule Hexpm.HTTP do
         {:cont, acc}
     end
 
-    case Finch.stream_while(request, Hexpm.Finch, initial, stream, request_opts) do
+    case finch(fn -> Finch.stream_while(request, Hexpm.Finch, initial, stream, request_opts) end) do
       {:ok, %{too_large?: true}} ->
         {:error, :response_too_large}
 
@@ -334,7 +334,18 @@ defmodule Hexpm.HTTP do
 
       {:error, reason, _response} ->
         {:error, reason}
+
+      {:error, reason} ->
+        {:error, reason}
     end
+  end
+
+  # Finch raises, rather than returning an error, when no pooled connection
+  # can be checked out within the pool timeout.
+  defp finch(fun) do
+    fun.()
+  rescue
+    error in RuntimeError -> {:error, error}
   end
 
   defp stream_request(request, request_opts, parent, ref, ack_timeout) do
@@ -364,7 +375,7 @@ defmodule Hexpm.HTTP do
         {:cont, acc}
     end
 
-    case Finch.stream_while(request, Hexpm.Finch, nil, fun, request_opts) do
+    case finch(fn -> Finch.stream_while(request, Hexpm.Finch, nil, fun, request_opts) end) do
       {:ok, :unconsumed} ->
         {:error, %RuntimeError{message: "a body chunk was not consumed within #{ack_timeout}ms"}}
 
@@ -372,6 +383,9 @@ defmodule Hexpm.HTTP do
         :done
 
       {:error, reason, _acc} ->
+        {:error, reason}
+
+      {:error, reason} ->
         {:error, reason}
     end
   end
