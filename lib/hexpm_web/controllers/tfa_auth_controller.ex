@@ -15,7 +15,7 @@ defmodule HexpmWeb.TFAAuthController do
     if Hexpm.Accounts.TFA.token_valid?(secret, code) do
       conn
       |> delete_session("tfa_user_id")
-      |> start_session_internal(user, tfa_verified: true)
+      |> start_session_internal(user)
       |> HexpmWeb.Plugs.Sudo.set_sudo_authenticated()
       |> redirect(to: safe_return_path(session_data["return"]) || ~p"/users/#{user}")
     else

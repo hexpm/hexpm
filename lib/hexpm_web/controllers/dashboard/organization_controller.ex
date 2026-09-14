@@ -112,14 +112,14 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         {:error, :tfa_required} ->
           conn
           |> put_session(:tfa_return_to, ~p"/dashboard/orgs/#{name}/members")
-          |> put_flash(:info, "Verify 2FA, then submit the policy again.")
-          |> redirect(to: ~p"/tfa/verify")
+          |> put_flash(:error, "Enable 2FA on your account before configuring this policy.")
+          |> redirect(to: ~p"/dashboard/security")
 
         {:error, reason} ->
           message =
             if is_struct(reason, Ecto.Changeset),
               do:
-                "Invalid deadline or interval. After enforcement starts, disable the policy before scheduling another transition.",
+                "Invalid deadline. After enforcement starts, disable the policy before scheduling another transition.",
               else: "You can't configure this policy: #{reason}."
 
           conn |> put_flash(:error, message) |> redirect(to: ~p"/dashboard/orgs/#{name}/members")

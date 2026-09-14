@@ -3,6 +3,4 @@
 <%= if @stage == "summary" do %>Members suspended because 2FA isn't enabled: <%= if @suspended == [], do: "none", else: Enum.join(@suspended, ", ") %>.<% end %>
 <%= if @stage == "suspended" do %>Your organization access is suspended until you enable 2FA. Your membership, role, package ownership, and billed seat are retained.<% end %>
 
-Enable 2FA at <%= email_url("/dashboard/security") %> and authenticate your Hex client. Personal API keys, tokens exchanged from them, and password-only API access won't work for this organization after enforcement starts, even if 2FA is enabled on your account. Use organization-owned credentials for automation.
-
-Verify 2FA every <%= if @organization.tfa_session_lifetime_seconds == 86400, do: "24 hours", else: "#{div(@organization.tfa_session_lifetime_seconds, 86400)} days" %>. SSO authentication is separate and may also be required. Recovery codes remain available. After enrollment, return to any pending invitation to accept it.
+Enable 2FA at <%= email_url("/dashboard/security") %>. Your existing Hex client sessions and API keys work again as soon as 2FA is enabled on your account. SSO authentication is separate and may also be required. Recovery codes remain available. After enrollment, return to any pending invitation to accept it.

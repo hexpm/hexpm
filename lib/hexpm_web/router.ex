@@ -160,8 +160,6 @@ defmodule HexpmWeb.Router do
     post "/login", LoginController, :create
     post "/logout", LoginController, :delete
 
-    get "/tfa/verify", OrganizationAuthController, :verify
-    post "/tfa/verify", OrganizationAuthController, :verify_code
     get "/organizations/:organization/authenticate", OrganizationAuthController, :authenticate
 
     get "/tfa", TFAAuthController, :show

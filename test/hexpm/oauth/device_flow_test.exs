@@ -208,18 +208,12 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
       |> Ecto.Changeset.change(expires_at: %{expires_at | microsecond: {0, 6}})
       |> Repo.update!()
 
-      {:ok, :ok} = Hexpm.Accounts.TFASessions.record_verified!(user, session.id)
-      proof = Hexpm.Accounts.TFASessions.proof(user, session.id)
-
       for _ <- 1..2 do
         assert {:ok, token} =
                  DeviceCodes.poll_device_token(device_code.device_code, client.client_id)
 
         assert token.refresh_token_expires_at == expires_at
         assert token.user_session_id == session.id
-
-        assert Hexpm.Accounts.TFASessions.proof(user, session.id).tfa_verified_at ==
-                 proof.tfa_verified_at
 
         assert DateTime.compare(Repo.get!(Hexpm.UserSession, session.id).expires_at, expires_at) ==
                  :eq

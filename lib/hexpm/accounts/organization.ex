@@ -12,7 +12,6 @@ defmodule Hexpm.Accounts.Organization do
     field :billing_seats, :integer
     field :trial_end, :utc_datetime_usec
     field :tfa_required_at, :utc_datetime_usec
-    field :tfa_session_lifetime_seconds, :integer, default: 604_800
     field :tfa_policy_updated_at, :utc_datetime_usec
     field :tfa_policy_revision, :integer, default: 0
     timestamps()

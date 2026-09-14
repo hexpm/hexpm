@@ -19,7 +19,7 @@
               <%= link entry.organization, to: HexpmWeb.SSOEnforcement.login_path(entry.organization, assigns[:sso_return_path]), class: "break-words text-primary-600 dark:text-primary-300 font-semibold hover:underline" %>
               <ul class="list-disc pl-5 mt-1 space-y-1 text-sm text-grey-700 dark:text-grey-300">
                 <%= for requirement <- entry.requirements do %>
-                  <li><%= if requirement == "tfa", do: "2FA verification required", else: "SSO authentication required" %></li>
+                  <li><%= if requirement == "tfa", do: "2FA enrollment required", else: "SSO authentication required" %></li>
                 <% end %>
               </ul>
             </li>

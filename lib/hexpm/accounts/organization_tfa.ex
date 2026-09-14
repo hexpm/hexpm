@@ -1,17 +1,15 @@
 defmodule Hexpm.Accounts.OrganizationTFA do
   @moduledoc """
-  Organization enrollment and session requirements. A scheduled policy requires
-  enrollment for admission; its deadline determines when existing members need
-  verified sessions. Membership and seat allocation are retained on suspension.
+  Organization 2FA enrollment requirements. A scheduled policy requires
+  enrollment for admission; its deadline determines when existing members
+  without 2FA lose access. Membership and seat allocation are retained on
+  suspension.
   """
   use Hexpm.Context
 
-  alias Hexpm.Accounts.{Organization, Organizations, Seats, TFASessions}
+  alias Hexpm.Accounts.{Organization, Organizations, Seats}
   alias Hexpm.Accounts.SSO
   alias Hexpm.Accounts.SSO.{Enforcement, Identity}
-  alias Hexpm.OAuth.Token
-
-  @intervals [86_400, 604_800, 2_592_000]
 
   @doc """
   Whether an organization may enable a new 2FA policy.
@@ -47,9 +45,9 @@ defmodule Hexpm.Accounts.OrganizationTFA do
   def enforcement_enabled?, do: config()[:mode] != :off
 
   @doc """
-  A scheduled policy the global switch is not holding off. Every enforcement and
-  reauthorization decision goes through this rather than `scheduled?/1`, so the
-  switch reaches all of them.
+  A scheduled policy the global switch is not holding off. Every enforcement
+  decision goes through this rather than `scheduled?/1`, so the switch reaches
+  all of them.
   """
   def active?(organization), do: enforcement_enabled?() and scheduled?(organization)
 
@@ -61,9 +59,7 @@ defmodule Hexpm.Accounts.OrganizationTFA do
 
   def changeset(organization, attrs, now \\ DateTime.utc_now()) do
     organization
-    |> Ecto.Changeset.cast(attrs, [:tfa_required_at, :tfa_session_lifetime_seconds])
-    |> Ecto.Changeset.validate_required([:tfa_session_lifetime_seconds])
-    |> Ecto.Changeset.validate_inclusion(:tfa_session_lifetime_seconds, @intervals)
+    |> Ecto.Changeset.cast(attrs, [:tfa_required_at])
     |> Ecto.Changeset.validate_change(:tfa_required_at, fn :tfa_required_at, deadline ->
       cond do
         is_nil(deadline) ->
@@ -94,7 +90,7 @@ defmodule Hexpm.Accounts.OrganizationTFA do
       )
 
       organization = Seats.lock!(organization)
-      user = TFASessions.lock_user!(user)
+      user = Users.lock!(user)
       now = DateTime.utc_now()
 
       cond do
@@ -104,7 +100,7 @@ defmodule Hexpm.Accounts.OrganizationTFA do
         Organizations.get_role(organization, user) != "admin" ->
           Repo.rollback(:admin_required)
 
-        not TFASessions.verified?(user, session_id, 300, now) ->
+        not User.tfa_enabled?(user) ->
           Repo.rollback(:tfa_required)
 
         Enforcement.check(organization, user, nil, session_id) != :ok ->
@@ -114,7 +110,7 @@ defmodule Hexpm.Accounts.OrganizationTFA do
           :ok
       end
 
-      changeset = changeset(organization, normalize_attrs(attrs, now), now)
+      changeset = changeset(organization, deadline(attrs, now), now)
 
       if changeset.valid? and changeset.changes == %{} do
         organization
@@ -133,11 +129,7 @@ defmodule Hexpm.Accounts.OrganizationTFA do
         |> AuditLog.build(
           "organization.tfa.configure",
           {updated,
-           %{
-             required_at: updated.tfa_required_at,
-             session_lifetime_seconds: updated.tfa_session_lifetime_seconds,
-             policy_revision: updated.tfa_policy_revision
-           }}
+           %{required_at: updated.tfa_required_at, policy_revision: updated.tfa_policy_revision}}
         )
         |> Repo.insert!()
 
@@ -145,12 +137,6 @@ defmodule Hexpm.Accounts.OrganizationTFA do
         updated
       end
     end)
-  end
-
-  defp normalize_attrs(attrs, now) do
-    attrs
-    |> Map.take(["tfa_session_lifetime_seconds"])
-    |> Map.merge(deadline(attrs, now))
   end
 
   defp deadline(%{"enforcement" => "disabled"}, _now), do: %{"tfa_required_at" => nil}
@@ -175,40 +161,43 @@ defmodule Hexpm.Accounts.OrganizationTFA do
     end
   end
 
+  @doc """
+  Whether a member may reach the organization. The requirement is a property
+  of the account, so the credential and session make no difference.
+  """
   def check(organization, principal, credential \\ nil, session_id \\ nil)
   def check(%Organization{id: 1}, _user, _credential, _session_id), do: :ok
 
-  def check(%Organization{} = organization, %User{service: false} = user, credential, session_id) do
+  def check(
+        %Organization{} = organization,
+        %User{service: false} = user,
+        _credential,
+        _session_id
+      ) do
     organization = Repo.get!(Organization, organization.id)
 
-    if enforced?(organization) and Organizations.get_role(organization, user) do
-      cond do
-        personal_key?(credential) ->
-          {:error, :tfa_personal_key}
-
-        TFASessions.verified?(
-          user,
-          session_id(credential, session_id),
-          organization.tfa_session_lifetime_seconds
-        ) ->
-          :ok
-
-        true ->
-          {:error, :tfa_required}
-      end
-    else
-      :ok
-    end
+    if enforced?(organization) and not is_nil(Organizations.get_role(organization, user)) and
+         not User.tfa_enabled?(Repo.get!(User, user.id)),
+       do: {:error, :tfa_required},
+       else: :ok
   end
 
   def check(_organization, _principal, _credential, _session_id), do: :ok
 
-  def personal_key?(%Key{}), do: true
-  def personal_key?(%Token{grant_type: "client_credentials"}), do: true
-  def personal_key?(_), do: false
+  @doc """
+  The organizations the member is suspended from until they enable 2FA.
+  """
+  def refused(user, now \\ DateTime.utc_now())
 
-  def session_id(%Token{user_session_id: id}, _), do: id
-  def session_id(_, browser_id), do: browser_id
+  def refused(%User{service: false} = user, now) do
+    if enforcement_enabled?() and not User.tfa_enabled?(user) do
+      Repo.all(from(o in assoc(user, :organizations), where: o.tfa_required_at <= ^now))
+    else
+      []
+    end
+  end
+
+  def refused(_, _), do: []
 
   def governed(%User{service: false} = user, names) do
     if enforcement_enabled?() do
@@ -223,22 +212,11 @@ defmodule Hexpm.Accounts.OrganizationTFA do
 
   def governed(_, _), do: []
 
-  def personal_key_refused(%User{service: false} = user) do
-    if enforcement_enabled?() do
-      now = DateTime.utc_now()
-      Repo.all(from(o in assoc(user, :organizations), where: o.tfa_required_at <= ^now))
-    else
-      []
-    end
-  end
-
-  def personal_key_refused(_), do: []
-
   # Admission and policy changes take the organization lock before the user
   # lock. Disabling 2FA also locks the user and checks current memberships.
   def admit(organization, user) do
     organization = Seats.lock!(organization)
-    user = TFASessions.lock_user!(user)
+    user = Users.lock!(user)
 
     if active?(organization) and not User.tfa_enabled?(user),
       do: {:error, :tfa_enrollment_required},

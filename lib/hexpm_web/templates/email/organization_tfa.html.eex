@@ -3,7 +3,5 @@
 <p><strong><%= @organization.name %></strong> requires two-factor authentication from <strong><%= DateTime.to_iso8601(@organization.tfa_required_at) %> (UTC)</strong>.</p>
 <%= if @stage == "summary" do %><p>Members suspended because 2FA isn't enabled: <%= if @suspended == [], do: "none", else: Enum.join(@suspended, ", ") %>.</p><% end %>
 <%= if @stage == "suspended" do %><p>Your organization access is suspended until you enable 2FA. Your membership, role, package ownership, and billed seat are retained.</p><% end %>
-<p>Enable 2FA in your <a href="<%= email_url("/dashboard/security") %>">account security settings</a> and authenticate your Hex client. Personal API keys, tokens exchanged from them, and password-only API access won't work for this organization after enforcement starts, even if 2FA is enabled on your account. Use organization-owned credentials for automation.</p>
-<p>Verify 2FA every <%= if @organization.tfa_session_lifetime_seconds == 86400, do: "24 hours", else: "#{div(@organization.tfa_session_lifetime_seconds, 86400)} days" %>. SSO authentication is separate and may also be required. Recovery codes remain available. After enrollment, return to any pending invitation to accept it.
-</p>
+<p>Enable 2FA in your <a href="<%= email_url("/dashboard/security") %>">account security settings</a>. Your existing Hex client sessions and API keys work again as soon as 2FA is enabled on your account. SSO authentication is separate and may also be required. Recovery codes remain available. After enrollment, return to any pending invitation to accept it.</p>
 </div>

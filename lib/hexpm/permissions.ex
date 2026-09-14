@@ -483,8 +483,8 @@ defmodule Hexpm.Permissions do
   defp filter_organization_scopes(%User{} = user, scopes, _user_session_id, %Key{}) do
     refused =
       user
-      |> Enforcement.personal_key_refused()
-      |> Enum.map(& &1.name)
+      |> Enforcement.personal_key_refusals()
+      |> Enum.map(fn {organization, _refusal} -> organization.name end)
 
     {Enum.reject(scopes, &names_organization?(&1, refused)), []}
   end

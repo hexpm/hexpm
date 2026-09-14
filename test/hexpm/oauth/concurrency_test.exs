@@ -3,7 +3,7 @@ defmodule Hexpm.OAuth.ConcurrencyTest do
   import Hexpm.ConcurrencyCase
 
   alias Ecto.Adapters.SQL.Sandbox
-  alias Hexpm.Accounts.{SSO, TFASessions}
+  alias Hexpm.Accounts.SSO
   alias Hexpm.OAuth.{AuthorizationCode, AuthorizationCodes, Client, Token, Tokens}
   alias Hexpm.{UserSession, UserSessions}
 
@@ -113,83 +113,6 @@ defmodule Hexpm.OAuth.ConcurrencyTest do
     end)
   end
 
-  test "device approval and OTP verification use compatible lock order at the session limit" do
-    committed(fn context ->
-      alias Hexpm.Accounts.TFASessions
-      alias Hexpm.OAuth.DeviceCodes
-
-      user = insert(:user_with_tfa)
-
-      old =
-        insert(:oauth_session,
-          user: user,
-          client_id: context.client.client_id,
-          inserted_at: DateTime.add(DateTime.utc_now(), -3600)
-        )
-
-      browser = insert(:session, user: user, expires_at: DateTime.add(DateTime.utc_now(), 86400))
-      {:ok, :ok} = TFASessions.record_verified!(user, browser.id)
-      for _ <- 1..3, do: insert(:oauth_session, user: user, client_id: context.client.client_id)
-
-      {:ok, device} =
-        DeviceCodes.initiate_device_authorization(
-          Phoenix.ConnTest.build_conn(),
-          context.client.client_id,
-          ["api:read"]
-        )
-
-      parent = self()
-
-      verifier =
-        unboxed_task(fn ->
-          Repo.transaction(fn ->
-            TFASessions.lock_user!(user)
-            send(parent, :user_locked)
-
-            receive do
-              :continue -> :ok
-            after
-              5000 -> raise "verification was not released"
-            end
-
-            TFASessions.record_verified!(user, old.id)
-          end)
-        end)
-
-      assert_receive :user_locked, 5000
-
-      approval =
-        unboxed_task(fn ->
-          %{rows: [[pid]]} =
-            Ecto.Adapters.SQL.query!(Hexpm.RepoBase, "SELECT pg_backend_pid()", [])
-
-          send(parent, {:approval_pid, pid})
-
-          DeviceCodes.authorize_device(device.user_code, user, ["api:read"],
-            browser_session_id: browser.id,
-            audit: audit_data(user)
-          )
-        end)
-
-      assert_receive {:approval_pid, pid}, 5000
-      wait_for_lock(pid, 100)
-      send(verifier.pid, :continue)
-      assert {:ok, {:ok, :ok}} = Task.await(verifier, 10000)
-      assert {:ok, _} = Task.await(approval, 10000)
-
-      session =
-        Repo.one!(
-          from s in UserSession,
-            where: s.user_id == ^user.id and s.type == "oauth" and is_nil(s.revoked_at),
-            order_by: [desc: s.id],
-            limit: 1
-        )
-
-      assert TFASessions.proof(user, session.id).tfa_source_session_id == browser.id
-      assert Repo.get!(UserSession, old.id).revoked_at
-    end)
-  end
-
   test "completed organization authorization refuses a waiting cancellation" do
     committed(fn context ->
       context = organization_authorization(context)
@@ -227,13 +150,12 @@ defmodule Hexpm.OAuth.ConcurrencyTest do
       send(completion.pid, :release)
       assert {:ok, :ok} = Task.await(completion, 10000)
       assert {:error, :invalid_authorization} = Task.await(cancellation, 10000)
-      assert TFASessions.proof(context.user, context.target.id)
       refute SSO.get_authorization(context.authorization.raw_code, context.user)
       assert Repo.get!(UserSession, context.target.id).expires_at == context.target.expires_at
     end)
   end
 
-  test "cancelled organization authorization refuses waiting completion without copying proof" do
+  test "cancelled organization authorization refuses waiting completion" do
     committed(fn context ->
       context = organization_authorization(context)
       parent = self()
@@ -268,7 +190,6 @@ defmodule Hexpm.OAuth.ConcurrencyTest do
       send(cancellation.pid, :release)
       assert {:ok, :ok} = Task.await(cancellation, 10000)
       assert {:error, :invalid_authorization} = Task.await(completion, 10000)
-      refute TFASessions.proof(context.user, context.target.id)
       refute SSO.get_authorization(context.authorization.raw_code, context.user)
       assert Repo.get!(UserSession, context.target.id).expires_at == context.target.expires_at
     end)
@@ -279,7 +200,6 @@ defmodule Hexpm.OAuth.ConcurrencyTest do
     organization = insert(:organization, tfa_required_at: DateTime.add(DateTime.utc_now(), -1))
     insert(:organization_user, user: user, organization: organization, role: "admin")
     browser = insert(:session, user: user, expires_at: DateTime.add(DateTime.utc_now(), 86400))
-    {:ok, :ok} = TFASessions.record_verified!(user, browser.id)
     target = insert(:oauth_session, user: user, client_id: context.client.client_id)
 
     {:ok, authorization} =

@@ -147,15 +147,14 @@ defmodule Hexpm.Accounts.OrganizationTFANotifications do
         else: 0
 
     enrolled? = User.tfa_enabled?(member.user)
-    action? = not enrolled? or personal_keys?(organization, member.user)
 
     case stage do
       "seven_days" ->
-        action? and transition >= 7 * 86_400 and remaining > 86_400_000_000 and
+        not enrolled? and transition >= 7 * 86_400 and remaining > 86_400_000_000 and
           remaining <= 604_800_000_000
 
       "one_day" ->
-        action? and transition >= 86_400 and remaining > 0 and remaining <= 86_400_000_000
+        not enrolled? and transition >= 86_400 and remaining > 0 and remaining <= 86_400_000_000
 
       "suspended" ->
         not enrolled? and remaining <= 0
@@ -166,11 +165,6 @@ defmodule Hexpm.Accounts.OrganizationTFANotifications do
       _ ->
         false
     end
-  end
-
-  defp personal_keys?(organization, user) do
-    Hexpm.Accounts.Keys.personal_reaching_organization(organization)
-    |> Enum.any?(&(&1.user_id == user.id))
   end
 
   defp enqueue!(organization, member, stage) do

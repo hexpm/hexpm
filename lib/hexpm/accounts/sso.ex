@@ -1384,7 +1384,6 @@ defmodule Hexpm.Accounts.SSO do
 
   def complete_authorization(authorization, user, browser_session_id) do
     Repo.transaction(fn ->
-      user = Hexpm.Accounts.TFASessions.lock_user!(user)
       now = DateTime.utc_now()
 
       current =
@@ -1415,8 +1414,6 @@ defmodule Hexpm.Accounts.SSO do
         do: Repo.rollback(:requirements_missing)
 
       if browser_session_id do
-        Hexpm.Accounts.TFASessions.copy!(browser_session_id, session.id, user)
-
         for {organization, _} <- status,
             {:error, :sso_required} == Enforcement.check(organization, user, nil, session.id) do
           source = current_org_session(browser_session_id, organization.id)

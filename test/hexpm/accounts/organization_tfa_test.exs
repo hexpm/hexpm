@@ -5,7 +5,6 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
   alias Hexpm.Accounts.{
     OrganizationTFA,
     OrganizationAuth,
-    TFASessions,
     Users,
     Organizations,
     OrganizationInvitations,
@@ -28,7 +27,6 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
     insert(:organization_user, organization: organization, user: admin, role: "admin")
     insert(:organization_user, organization: organization, user: member, role: "read")
     session = browser(admin)
-    {:ok, :ok} = TFASessions.record_verified!(admin, session.id)
     %{organization: organization, admin: admin, member: member, session: session}
   end
 
@@ -40,6 +38,17 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
     OrganizationTFA.configure(c.organization, c.admin, c.session.id, attrs,
       audit: audit_data(c.admin)
     )
+  end
+
+  defp enroll(user) do
+    secret = Hexpm.Accounts.TFA.generate_secret()
+
+    {:ok, user} =
+      Users.tfa_enable(user, secret, Hexpm.Accounts.TFA.time_based_token(secret),
+        audit: audit_data(user)
+      )
+
+    user
   end
 
   test "rollout modes control new policies independently of SSO" do
@@ -97,8 +106,6 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
         assert DateTime.compare(edited.tfa_required_at, organization.tfa_required_at) == :lt
       end
 
-      assert {:ok, changed} = configure(c, %{"tfa_session_lifetime_seconds" => "86400"})
-      assert changed.tfa_session_lifetime_seconds == 86400
       assert {:ok, disabled} = configure(c, %{"enforcement" => "disabled"})
       refute OrganizationTFA.scheduled?(disabled)
       refute OrganizationTFA.configurable?(disabled)
@@ -125,7 +132,7 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
     assert :ok =
              Repo.transaction(fn -> OrganizationTFA.admit(organization, c.member) end) |> elem(1)
 
-    assert OrganizationTFA.personal_key_refused(c.member) == []
+    assert OrganizationTFA.refused(c.member) == []
     assert OrganizationTFA.required_memberships(c.member) == []
     assert OrganizationAuth.required(c.member, [organization.name], nil) == []
 
@@ -139,7 +146,6 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
   test "existing organizations start disabled and all deadlines have exact boundaries" do
     c = context()
     assert c.organization.tfa_required_at == nil
-    assert c.organization.tfa_session_lifetime_seconds == 604_800
     assert OrganizationAuth.check(c.organization, c.member) == :ok
     now = DateTime.utc_now()
 
@@ -158,7 +164,7 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
            ).valid?
   end
 
-  test "policy configuration requires an enrolled administrator with fresh proof" do
+  test "policy configuration requires an enrolled administrator" do
     c = context()
     attrs = %{"enforcement" => "transition", "grace_days" => "14"}
 
@@ -167,19 +173,15 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
                audit: audit_data(c.member)
              )
 
-    unverified = browser(c.admin)
+    unenrolled = insert(:user)
+    insert(:organization_user, organization: c.organization, user: unenrolled, role: "admin")
 
     assert {:error, :tfa_required} =
-             OrganizationTFA.configure(c.organization, c.admin, unverified.id, attrs,
-               audit: audit_data(c.admin)
+             OrganizationTFA.configure(c.organization, unenrolled, browser(unenrolled).id, attrs,
+               audit: audit_data(unenrolled)
              )
 
-    Repo.update_all(from(s in UserSession, where: s.id == ^c.session.id),
-      set: [tfa_verified_at: DateTime.add(DateTime.utc_now(), -301)]
-    )
-
-    assert {:error, :tfa_required} = configure(c, attrs)
-    {:ok, :ok} = TFASessions.record_verified!(c.admin, c.session.id)
+    refute Repo.get!(Hexpm.Accounts.Organization, c.organization.id).tfa_required_at
     assert {:ok, org} = configure(c, attrs)
     assert org.tfa_policy_revision == 1
     assert DateTime.diff(org.tfa_required_at, DateTime.utc_now()) in 1_209_598..1_209_600
@@ -196,60 +198,42 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
     assert {:error, %Ecto.Changeset{}} =
              configure(c, %{"enforcement" => "transition", "grace_days" => "14"})
 
-    assert {:ok, interval} = configure(c, %{"tfa_session_lifetime_seconds" => "86400"})
-    assert interval.tfa_required_at == org.tfa_required_at
+    assert {:ok, kept} = configure(c, %{"enforcement" => "keep"})
+    assert kept.tfa_required_at == org.tfa_required_at
+    assert kept.tfa_policy_revision == org.tfa_policy_revision
     assert {:ok, disabled} = configure(c, %{"enforcement" => "disabled"})
     refute OrganizationTFA.scheduled?(disabled)
     assert {:ok, _} = configure(c, %{"enforcement" => "transition", "grace_days" => "14"})
   end
 
-  test "suspension retains membership, role, ownership and seat and enrollment restores eligibility" do
+  test "suspension retains membership, role, ownership and seat and enrollment restores access" do
     c = context()
     before = Organizations.all_members(c.organization)
     assert {:ok, org} = configure(c, %{"enforcement" => "immediate"})
     assert OrganizationAuth.check(org, c.member) == {:error, :tfa_required}
+
+    assert OrganizationAuth.check(org, c.member, insert(:key, user: c.member)) ==
+             {:error, :tfa_required}
+
     assert OrganizationTFA.enrollment_status(org, c.member) == "overdue"
     assert Organizations.all_members(org) == before
     assert Hexpm.Accounts.Seats.used(org) == 2
     session = browser(c.member)
-    secret = Hexpm.Accounts.TFA.generate_secret()
-
-    {:ok, user} =
-      Users.tfa_enable(c.member, secret, Hexpm.Accounts.TFA.time_based_token(secret),
-        audit: audit_data(c.member)
-      )
-
+    user = enroll(c.member)
     assert OrganizationTFA.enrollment_status(org, user) == "enabled"
-    assert OrganizationAuth.check(org, user, nil, session.id) == {:error, :tfa_required}
-    {:ok, :ok} = TFASessions.record_verified!(user, session.id)
+    assert OrganizationAuth.check(org, user) == :ok
     assert OrganizationAuth.check(org, user, nil, session.id) == :ok
+    assert OrganizationAuth.check(org, user, insert(:key, user: user)) == :ok
     assert Organizations.all_members(org) == before
   end
 
-  test "all cadences expire at the original verification timestamp and changes re-evaluate it" do
+  test "the account decides, so a stale struct is rechecked against the database" do
     c = context()
-    now = DateTime.utc_now()
-
-    for seconds <- [86_400, 604_800, 2_592_000] do
-      assert OrganizationTFA.changeset(c.organization, %{tfa_session_lifetime_seconds: seconds}).valid?
-
-      proof_time = DateTime.add(now, -seconds)
-
-      Repo.update_all(from(s in UserSession, where: s.id == ^c.session.id),
-        set: [tfa_verified_at: proof_time]
-      )
-
-      refute TFASessions.verified?(c.admin, c.session.id, seconds, now)
-
-      assert TFASessions.verified?(
-               c.admin,
-               c.session.id,
-               seconds,
-               DateTime.add(now, -1, :microsecond)
-             )
-    end
-
-    refute OrganizationTFA.changeset(c.organization, %{tfa_session_lifetime_seconds: 3600}).valid?
+    {:ok, org} = configure(c, %{"enforcement" => "immediate"})
+    enroll(c.member)
+    assert OrganizationAuth.check(org, c.member) == :ok
+    Repo.update!(Hexpm.Accounts.User.clear_tfa(c.admin))
+    assert OrganizationAuth.check(org, c.admin) == {:error, :tfa_required}
   end
 
   test "enrollment is required for direct addition and an invitation remains pending" do
@@ -277,13 +261,7 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
 
     assert Repo.get!(Hexpm.Accounts.OrganizationInvitation, invitation.id).accepted_at == nil
     assert Hexpm.Accounts.Seats.used(c.organization) == 2
-    secret = Hexpm.Accounts.TFA.generate_secret()
-
-    {:ok, user} =
-      Users.tfa_enable(user, secret, Hexpm.Accounts.TFA.time_based_token(secret),
-        audit: audit_data(user)
-      )
-
+    user = enroll(user)
     assert {:ok, _} = OrganizationInvitations.accept(invitation, user, audit: audit_data(user))
     assert Hexpm.Accounts.Seats.used(c.organization) == 3
   end
@@ -312,82 +290,81 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
     assert {:error, {:organizations, [_]}} = Users.delete(c.admin, audit: audit_data(c.admin))
   end
 
-  test "proof isn't inferred, replacement invalidates it, and copying retains time and revocation" do
-    c = context()
-    client = insert(:oauth_client)
-    target = insert(:oauth_session, user: c.admin, client_id: client.client_id)
-    old = DateTime.add(DateTime.utc_now(), -1000)
-
-    Repo.update_all(from(s in UserSession, where: s.id == ^c.session.id),
-      set: [tfa_verified_at: old]
-    )
-
-    assert TFASessions.proof(c.admin, target.id) == nil
-    TFASessions.copy!(c.session.id, target.id, c.admin)
-    assert TFASessions.proof(c.admin, target.id).tfa_verified_at == old
-
-    Repo.update_all(from(s in UserSession, where: s.id == ^c.session.id),
-      set: [revoked_at: DateTime.utc_now()]
-    )
-
-    assert TFASessions.proof(c.admin, target.id) == nil
-    Repo.update_all(from(s in UserSession, where: s.id == ^c.session.id), set: [revoked_at: nil])
-    secret = Hexpm.Accounts.TFA.generate_secret()
-    assert :error = Users.tfa_enable(c.admin, secret, "invalid", audit: audit_data(c.admin))
-    assert TFASessions.proof(c.admin, target.id)
-
-    {:ok, updated} =
-      Users.tfa_enable(c.admin, secret, Hexpm.Accounts.TFA.time_based_token(secret),
-        audit: audit_data(c.admin)
-      )
-
-    assert updated.tfa_generation == c.admin.tfa_generation + 1
-    refute TFASessions.proof(updated, target.id)
-    assert {:error, :credentials_changed} = TFASessions.record_verified!(c.admin, c.session.id)
-  end
-
-  test "every human credential is refused without proof and organization-owned credentials are exempt" do
+  test "replacing an authenticator keeps the member enrolled throughout" do
     c = context()
     {:ok, org} = configure(c, %{"enforcement" => "immediate"})
-    key = insert(:key, user: c.admin)
-    assert OrganizationAuth.check(org, c.admin, key) == {:error, :tfa_personal_key}
+    secret = Hexpm.Accounts.TFA.generate_secret()
+    assert :error = Users.tfa_enable(c.admin, secret, "invalid", audit: audit_data(c.admin))
+    assert OrganizationAuth.check(org, c.admin) == :ok
+    replaced = enroll(c.admin)
+    assert replaced.tfa.secret != c.admin.tfa.secret
+    assert OrganizationAuth.check(org, replaced) == :ok
+  end
+
+  test "unenrolled members are refused with every credential and organization credentials are exempt" do
+    c = context()
+    {:ok, org} = configure(c, %{"enforcement" => "immediate"})
+    key = insert(:key, user: c.member)
+    assert OrganizationAuth.check(org, c.member, key) == {:error, :tfa_required}
 
     token = %Hexpm.OAuth.Token{
       grant_type: "client_credentials",
-      user_id: c.admin.id,
-      user_session_id: c.session.id
+      user_id: c.member.id,
+      user_session_id: browser(c.member).id
     }
 
-    assert OrganizationAuth.check(org, c.admin, token) == {:error, :tfa_personal_key}
-    assert OrganizationAuth.check(org, c.admin) == {:error, :tfa_required}
+    assert OrganizationAuth.check(org, c.member, token) == {:error, :tfa_required}
+    assert OrganizationAuth.check(org, c.member) == {:error, :tfa_required}
+    assert OrganizationAuth.check(org, c.admin, insert(:key, user: c.admin)) == :ok
     assert OrganizationAuth.check(org, org, key) == :ok
-    assert OrganizationAuth.check(insert(:organization), c.admin, key) == :ok
+    assert OrganizationAuth.check(insert(:organization), c.member, key) == :ok
+
+    assert [{refused, :tfa_required}] = OrganizationAuth.personal_key_refusals(c.member)
+    assert refused.id == org.id
+    assert OrganizationAuth.personal_key_refusals(c.admin) == []
+
+    assert {:error, :key, changeset, _} =
+             Hexpm.Accounts.Keys.create(
+               c.member,
+               %{name: "refused", permissions: [%{domain: "repository", resource: org.name}]},
+               audit: audit_data(c.member)
+             )
+
+    assert [%Ecto.Changeset{errors: [resource: {message, _}]}] = changeset.changes.permissions
+    assert message =~ "two-factor authentication"
   end
 
-  test "tokens cap scheduled enforcement, distinguish purposes, and refresh preserves proof and absolute expiry" do
+  test "tokens cap scheduled enforcement for unenrolled members and distinguish purposes" do
     c = context()
     client = insert(:oauth_client)
     cutoff = DateTime.add(DateTime.utc_now(), 120)
     org = c.organization |> Ecto.Changeset.change(tfa_required_at: cutoff) |> Repo.update!()
     scopes = ["repository:#{org.name}", "docs:#{org.name}", "api:read"]
 
-    {:ok, token} =
+    mint = fn user, browser_session ->
       Tokens.create_session_and_token_for_user(
-        c.admin,
+        user,
         client.client_id,
         scopes,
         "authorization_code",
         nil,
-        browser_session_id: c.session.id,
+        browser_session_id: browser_session.id,
         with_refresh_token: true,
-        audit: audit_data(c.admin)
+        audit: audit_data(user)
       )
+    end
 
+    {:ok, token} = mint.(c.member, browser(c.member))
     {:ok, claims} = JWT.verify_and_decode(token.access_token)
     assert claims["token_use"] == "access"
     assert claims["exp"] <= DateTime.to_unix(cutoff)
     {:ok, refresh_claims} = JWT.verify_and_decode(token.refresh_token)
     assert refresh_claims["token_use"] == "refresh"
+
+    {:ok, enrolled} = mint.(c.admin, c.session)
+    {:ok, enrolled_claims} = JWT.verify_and_decode(enrolled.access_token)
+    assert enrolled_claims["exp"] > DateTime.to_unix(cutoff)
+
     before = Repo.get!(UserSession, token.user_session_id)
     token = Repo.preload(token, :user)
 
@@ -398,7 +375,6 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
       )
 
     after_session = Repo.get!(UserSession, token.user_session_id)
-    assert before.tfa_verified_at == after_session.tfa_verified_at
     assert before.expires_at == after_session.expires_at
     assert token.refresh_token_expires_at == refreshed.refresh_token_expires_at
     {:ok, refresh_claims} = JWT.verify_and_decode(refreshed.refresh_token)
@@ -441,7 +417,7 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
     end)
   end
 
-  test "SSO and 2FA expire and renew independently, including SSO exemptions" do
+  test "SSO and 2FA requirements are tracked independently, including SSO exemptions" do
     c = context()
     config = Application.fetch_env!(:hexpm, :organization_sso)
     Application.put_env(:hexpm, :organization_sso, Keyword.merge(config, mode: :enabled))
@@ -459,60 +435,50 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
       )
 
     identity =
-      insert(:organization_sso_identity, organization: org, connection: connection, user: c.admin)
+      insert(:organization_sso_identity,
+        organization: org,
+        connection: connection,
+        user: c.member
+      )
 
     client = insert(:oauth_client)
-    target = insert(:oauth_session, user: c.admin, client_id: client.client_id)
+    target = insert(:oauth_session, user: c.member, client_id: client.client_id)
 
-    assert OrganizationAuth.required(c.admin, [org.name], target.id) == [
+    assert OrganizationAuth.required(c.member, [org.name], target.id) == [
              %{organization: org.name, requirements: ["tfa", "sso"]}
            ]
 
     sso = Hexpm.Accounts.SSO.establish_org_session!(identity, target.id)
 
-    assert OrganizationAuth.required(c.admin, [org.name], target.id) == [
+    assert OrganizationAuth.required(c.member, [org.name], target.id) == [
              %{organization: org.name, requirements: ["tfa"]}
            ]
 
-    {:ok, :ok} = TFASessions.record_verified!(c.admin, target.id)
-    assert OrganizationAuth.required(c.admin, [org.name], target.id) == []
-    proof_time = TFASessions.proof(c.admin, target.id).tfa_verified_at
+    user = enroll(c.member)
+    assert OrganizationAuth.required(user, [org.name], target.id) == []
 
     Repo.update_all(from(s in Hexpm.Accounts.SSO.OrgSession, where: s.id == ^sso.id),
       set: [expires_at: DateTime.utc_now()]
     )
 
-    assert OrganizationAuth.required(c.admin, [org.name], target.id) == [
+    assert OrganizationAuth.required(user, [org.name], target.id) == [
              %{organization: org.name, requirements: ["sso"]}
            ]
 
     Hexpm.Accounts.SSO.establish_org_session!(identity, target.id)
-    assert TFASessions.proof(c.admin, target.id).tfa_verified_at == proof_time
-
-    Repo.update_all(from(s in UserSession, where: s.id == ^target.id),
-      set: [tfa_verified_at: DateTime.add(DateTime.utc_now(), -604_801)]
-    )
-
-    assert OrganizationAuth.required(c.admin, [org.name], target.id) == [
-             %{organization: org.name, requirements: ["tfa"]}
-           ]
+    assert OrganizationAuth.required(user, [org.name], target.id) == []
 
     Repo.update_all(
-      from(m in Hexpm.Accounts.OrganizationUser,
-        where: m.organization_id == ^org.id and m.user_id == ^c.admin.id
-      ),
+      from(m in Hexpm.Accounts.OrganizationUser, where: m.organization_id == ^org.id),
       set: [sso_enforcement: "exempt"]
     )
 
-    assert OrganizationAuth.required(c.admin, [org.name], target.id) == [
-             %{organization: org.name, requirements: ["tfa"]}
-           ]
-
-    assert OrganizationAuth.check(org, c.admin, insert(:key, user: c.admin)) ==
-             {:error, :tfa_personal_key}
+    assert OrganizationAuth.required(user, [org.name], browser(user).id) == []
+    assert OrganizationAuth.check(org, user, insert(:key, user: user)) == :ok
+    assert OrganizationAuth.check(org, c.member, insert(:key, user: user)) == :ok
 
     {:ok, _} = configure(c, %{"enforcement" => "disabled"})
-    assert OrganizationAuth.required(c.admin, [org.name], target.id) == []
+    assert OrganizationAuth.required(user, [org.name], target.id) == []
     assert Repo.get!(Hexpm.Accounts.SSO.Connection, connection.id).enforcement_mode == "required"
   end
 
@@ -520,8 +486,9 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
     c = context()
     {:ok, org} = configure(c, %{"enforcement" => "immediate"})
     other = insert(:organization)
-    insert(:organization_user, organization: other, user: c.admin, role: "read")
+    insert(:organization_user, organization: other, user: c.member, role: "read")
     client = insert(:oauth_client)
+    session = browser(c.member)
 
     for grant <- [
           "authorization_code",
@@ -531,7 +498,7 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
         ] do
       token =
         Tokens.create_for_user(
-          c.admin,
+          c.member,
           client.client_id,
           ["api:read", "repository:#{org.name}", "docs:#{org.name}", "repository:#{other.name}"],
           grant
@@ -552,18 +519,32 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
 
     token =
       Tokens.create_for_user(
-        c.admin,
+        c.member,
         client.client_id,
         ["repository:#{org.name}"],
         "client_credentials",
         nil,
-        user_session_id: c.session.id,
+        user_session_id: session.id,
         with_refresh_token: true
       )
       |> Ecto.Changeset.apply_changes()
 
     assert token.scopes == []
     assert token.refresh_token == nil
+
+    enrolled =
+      Tokens.create_for_user(
+        c.admin,
+        client.client_id,
+        ["api:read", "repository:#{org.name}"],
+        "authorization_code",
+        nil,
+        user_session_id: c.session.id
+      )
+      |> Ecto.Changeset.apply_changes()
+
+    assert enrolled.scopes == ["api:read", "repository:#{org.name}"]
+    assert enrolled.organization_reauth_required == []
   end
 
   test "reminders skip elapsed stages and suspension notices are deduplicated after the deadline" do
@@ -597,12 +578,7 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
              :count
            ) == 1
 
-    secret = Hexpm.Accounts.TFA.generate_secret()
-
-    {:ok, _} =
-      Users.tfa_enable(c.member, secret, Hexpm.Accounts.TFA.time_based_token(secret),
-        audit: audit_data(c.member)
-      )
+    enroll(c.member)
 
     refute Repo.exists?(
              from(e in Hexpm.Emails.OutboxEntry,
@@ -654,7 +630,7 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
     )
   end
 
-  test "admission racing with enrollment rechecks the locked credential generation" do
+  test "admission racing with enrollment rechecks the locked account" do
     committed(&context/0, fn c ->
       {:ok, _} = configure(c, %{"enforcement" => "transition", "grace_days" => "14"})
       user = insert(:user)
@@ -682,16 +658,18 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
     end)
   end
 
-  test "suspension notices begin at the exact deadline and personal-key users receive reminders" do
+  test "suspension notices begin at the exact deadline and enrolled members get no reminders" do
     c = context()
     insert(:key, user: c.admin, permissions: [build(:key_permission, domain: "api")])
     {:ok, org} = configure(c, %{"enforcement" => "transition", "grace_days" => "14"})
     OrganizationTFANotifications.sweep(DateTime.add(org.tfa_required_at, -7 * 86_400))
 
-    assert Repo.aggregate(
-             from(n in OrganizationTFANotification, where: n.stage == "seven_days"),
-             :count
-           ) == 2
+    assert Repo.all(
+             from(n in OrganizationTFANotification,
+               where: n.stage == "seven_days",
+               select: n.user_id
+             )
+           ) == [c.member.id]
 
     OrganizationTFANotifications.sweep(DateTime.add(org.tfa_required_at, -1, :microsecond))
 
@@ -738,12 +716,7 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
                audit: audit_data(c.admin)
              )
 
-    secret = Hexpm.Accounts.TFA.generate_secret()
-
-    {:ok, user} =
-      Users.tfa_enable(user, secret, Hexpm.Accounts.TFA.time_based_token(secret),
-        audit: audit_data(user)
-      )
+    user = enroll(user)
 
     assert {:error, :seats_exhausted} =
              OrganizationInvitations.accept(invitation, user, audit: audit_data(user))
@@ -755,18 +728,13 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
 
   test "recovery-code rotation with a stale user doesn't restore a replaced authenticator" do
     c = context()
-    secret = Hexpm.Accounts.TFA.generate_secret()
-
-    {:ok, replaced} =
-      Users.tfa_enable(c.admin, secret, Hexpm.Accounts.TFA.time_based_token(secret),
-        audit: audit_data(c.admin)
-      )
-
+    replaced = enroll(c.admin)
     rotated = Users.tfa_rotate_recovery_codes(c.admin, audit: audit_data(c.admin))
     assert rotated.tfa.secret == replaced.tfa.secret
-    assert rotated.tfa_generation == replaced.tfa_generation
     refute rotated.tfa.recovery_codes == replaced.tfa.recovery_codes
-    refute TFASessions.proof(rotated, c.session.id)
+
+    assert {:error, :not_enrolled} =
+             Users.tfa_rotate_recovery_codes(c.member, audit: audit_data(c.member))
   end
 
   test "membership removal invalidates an open browser authorization" do
@@ -786,10 +754,10 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
     assert {:error, :requirements_missing} =
              Hexpm.Accounts.SSO.complete_authorization(authorization, c.admin, c.session.id)
 
-    refute TFASessions.proof(c.admin, target.id)
+    assert Hexpm.Accounts.SSO.get_authorization(authorization.raw_code, c.admin)
   end
 
-  test "combined authorization commits both proofs and retains browser revocation and target expiry" do
+  test "combined authorization needs enrollment, copies SSO access, and retains target expiry" do
     c = context()
     {:ok, org} = configure(c, %{"enforcement" => "immediate"})
     config = Application.fetch_env!(:hexpm, :organization_sso)
@@ -806,38 +774,44 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
       )
 
     identity =
-      insert(:organization_sso_identity, organization: org, connection: connection, user: c.admin)
+      insert(:organization_sso_identity,
+        organization: org,
+        connection: connection,
+        user: c.member
+      )
 
-    target = insert(:oauth_session, user: c.admin, client_id: insert(:oauth_client).client_id)
+    browser = browser(c.member)
+    target = insert(:oauth_session, user: c.member, client_id: insert(:oauth_client).client_id)
 
     {:ok, authorization} =
-      Hexpm.Accounts.SSO.request_authorization(c.admin, target.id, [org.name])
+      Hexpm.Accounts.SSO.request_authorization(c.member, target.id, [org.name])
 
     assert {:error, :requirements_missing} =
-             Hexpm.Accounts.SSO.complete_authorization(authorization, c.admin, c.session.id)
+             Hexpm.Accounts.SSO.complete_authorization(authorization, c.member, browser.id)
 
-    refute TFASessions.proof(c.admin, target.id)
-    source = Hexpm.Accounts.SSO.establish_org_session!(identity, c.session.id)
+    source = Hexpm.Accounts.SSO.establish_org_session!(identity, browser.id)
+
+    assert {:error, :requirements_missing} =
+             Hexpm.Accounts.SSO.complete_authorization(authorization, c.member, browser.id)
+
+    user = enroll(c.member)
 
     assert {:ok, :ok} =
-             Hexpm.Accounts.SSO.complete_authorization(authorization, c.admin, c.session.id)
+             Hexpm.Accounts.SSO.complete_authorization(authorization, user, browser.id)
 
-    assert OrganizationAuth.required(c.admin, [org.name], target.id) == []
-
-    assert TFASessions.proof(c.admin, target.id).tfa_verified_at ==
-             TFASessions.proof(c.admin, c.session.id).tfa_verified_at
+    assert OrganizationAuth.required(user, [org.name], target.id) == []
 
     assert Hexpm.Accounts.SSO.current_org_session(target.id, org.id).authenticated_at ==
              source.authenticated_at
 
     assert Repo.get!(UserSession, target.id).expires_at == target.expires_at
 
-    Repo.update_all(from(s in UserSession, where: s.id == ^c.session.id),
+    Repo.update_all(from(s in UserSession, where: s.id == ^browser.id),
       set: [revoked_at: DateTime.utc_now()]
     )
 
-    assert OrganizationAuth.required(c.admin, [org.name], target.id) == [
-             %{organization: org.name, requirements: ["tfa", "sso"]}
+    assert OrganizationAuth.required(user, [org.name], target.id) == [
+             %{organization: org.name, requirements: ["sso"]}
            ]
   end
 
@@ -854,13 +828,7 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
       )
 
     assert summary.email["text_body"] =~ c.member.username
-    secret = Hexpm.Accounts.TFA.generate_secret()
-
-    assert {:ok, _} =
-             Users.tfa_enable(c.member, secret, Hexpm.Accounts.TFA.time_based_token(secret),
-               audit: audit_data(c.member)
-             )
-
+    enroll(c.member)
     updated = Repo.get!(Hexpm.Emails.OutboxEntry, summary.id)
     assert updated.email["text_body"] =~ "Members suspended because 2FA isn't enabled: none"
     refute updated.email["text_body"] =~ c.member.username
@@ -896,12 +864,7 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
         )
       )
 
-    secret = Hexpm.Accounts.TFA.generate_secret()
-
-    assert {:ok, _} =
-             Users.tfa_enable(c.member, secret, Hexpm.Accounts.TFA.time_based_token(secret),
-               audit: audit_data(c.member)
-             )
+    enroll(c.member)
 
     Repo.update_all(from(e in Hexpm.Emails.OutboxEntry, where: e.id == ^summary.id),
       set: [email: summary.email]

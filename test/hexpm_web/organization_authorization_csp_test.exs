@@ -1,7 +1,7 @@
 defmodule HexpmWeb.OrganizationAuthorizationCSPTest do
   use HexpmWeb.ConnCase
 
-  alias Hexpm.Accounts.{SSO, TFASessions, TFA}
+  alias Hexpm.Accounts.{SSO, TFA}
 
   @redirect_uri "https://acme.hexorgs.pm/oauth/callback"
   @origin "https://acme.hexorgs.pm"
@@ -18,42 +18,12 @@ defmodule HexpmWeb.OrganizationAuthorizationCSPTest do
     %{user: user, organization: organization, membership: membership, client: client}
   end
 
-  test "expired browser retains approval and login TOTP completes an external callback" do
+  test "login TOTP completes an external callback", c do
     mock_pwned()
-    stub(Hexpm.Billing.Mock, :get, fn _, _ -> nil end)
-    user = insert(:user_with_tfa)
-    organization = insert(:organization, tfa_required_at: DateTime.add(DateTime.utc_now(), -1))
-    insert(:organization_user, organization: organization, user: user, role: "admin")
-    client = insert(:oauth_client, redirect_uris: ["https://acme.hexorgs.pm/oauth/callback"])
-    target = insert(:oauth_session, user: user, client_id: client.client_id)
+    {authorization, target} = authorization(c)
+    path = authorization_path(authorization)
 
-    {:ok, authorization} =
-      SSO.request_authorization(user, target.id, [organization.name],
-        redirect_uri: "https://acme.hexorgs.pm/oauth/callback",
-        state: "docs-state"
-      )
-
-    path = "/organizations/authorize?" <> URI.encode_query(%{code: authorization.raw_code})
-    conn = build_conn() |> test_login(user) |> get(path)
-    old_session = conn.assigns.current_session
-
-    conn =
-      conn
-      |> recycle()
-      |> post("/organizations/authorize", %{
-        code: authorization.raw_code,
-        organization: organization.name
-      })
-
-    assert redirected_to(conn) == "/tfa/verify"
-
-    old_session
-    |> Ecto.Changeset.change(expires_at: DateTime.add(DateTime.utc_now(), -1))
-    |> Repo.update!()
-
-    conn = conn |> recycle() |> get(path)
-    assert conn.assigns.current_user == nil
-    assert get_session(conn, :organization_authorization) == authorization.raw_code
+    conn = build_conn() |> get(path)
     assert redirected_to(conn) =~ "/login?return="
     conn = conn |> recycle() |> get(redirected_to(conn))
     assert html_response(conn, 200) =~ "Log in"
@@ -61,36 +31,37 @@ defmodule HexpmWeb.OrganizationAuthorizationCSPTest do
     conn =
       conn
       |> recycle()
-      |> post("/login", %{username: user.username, password: "password", return: path})
+      |> post("/login", %{username: c.user.username, password: "password", return: path})
 
     assert redirected_to(conn) == "/tfa"
     conn = conn |> recycle() |> get("/tfa")
     assert html_response(conn, 200) =~ "Two-factor authentication"
-    [csp] = get_resp_header(conn, "content-security-policy")
-    assert csp =~ "form-action 'self' https://acme.hexorgs.pm"
+    assert form_actions(conn) == ["'self'", @origin]
 
     conn =
       conn
       |> recycle()
-      |> post("/tfa", %{code: TFA.time_based_token(user.tfa.secret)})
+      |> post("/tfa", %{code: TFA.time_based_token(c.user.tfa.secret)})
 
     assert redirected_to(conn) == path
-    assert get_session(conn, :organization_authorization) == authorization.raw_code
     conn = conn |> recycle() |> get(path)
-    assert redirected_to(conn) =~ "https://acme.hexorgs.pm/oauth/callback?"
-    assert TFASessions.proof(user, target.id)
+    assert redirected_to(conn) =~ @redirect_uri <> "?"
+    assert Repo.get!(Hexpm.UserSession, target.id).expires_at == target.expires_at
+    refute SSO.get_authorization(authorization.raw_code, c.user)
   end
 
-  test "shared authorization and TOTP forms allow only the registered callback origin", c do
-    {authorization, target} = authorization(c)
+  test "shared authorization and enrollment forms allow only the registered callback origin", c do
+    user = insert(:user)
+    insert(:organization_user, organization: c.organization, user: user, role: "read")
+    {authorization, target} = authorization(%{c | user: user})
     path = authorization_path(authorization)
 
     conn =
       build_conn()
-      |> test_login(c.user)
+      |> test_login(user)
       |> get(path <> "&redirect_uri=https%3A%2F%2Fevil.example")
 
-    assert html_response(conn, 200) =~ "Authenticate"
+    assert html_response(conn, 200) =~ "2FA enrollment required"
     assert form_actions(conn) == ["'self'", @origin]
 
     conn =
@@ -101,30 +72,35 @@ defmodule HexpmWeb.OrganizationAuthorizationCSPTest do
         organization: c.organization.name
       })
 
-    assert redirected_to(conn) == "/tfa/verify"
-    conn = conn |> recycle() |> get("/tfa/verify")
-    assert html_response(conn, 200) =~ "2FA verification required"
+    assert redirected_to(conn) == "/dashboard/security"
+    conn = conn |> recycle() |> get("/dashboard/security")
+    assert html_response(conn, 200)
     assert form_actions(conn) == ["'self'", @origin]
 
-    conn = conn |> recycle() |> post("/tfa/verify", %{code: "invalid"})
-    assert html_response(conn, 200) =~ "2FA verification failed"
+    conn = conn |> recycle() |> post("/dashboard/security/enable-tfa")
+    conn = conn |> recycle() |> get(redirected_to(conn))
+    assert html_response(conn, 200) =~ "verification_code"
     assert form_actions(conn) == ["'self'", @origin]
+    secret = get_session(conn, :tfa_setup_secret)
 
     conn =
       conn
       |> recycle()
-      |> post("/tfa/verify", %{code: TFA.time_based_token(c.user.tfa.secret)})
+      |> post("/dashboard/security/verify-tfa-code", %{
+        "verification_code" => TFA.time_based_token(secret)
+      })
 
     assert redirected_to(conn) == path
     conn = conn |> recycle() |> get(path)
     assert redirected_to(conn) =~ @redirect_uri
-    assert TFASessions.proof(c.user, target.id)
     assert Repo.get!(Hexpm.UserSession, target.id).expires_at == target.expires_at
   end
 
-  test "cancellation forms permit the registered callback without copying proof", c do
-    {authorization, target} = authorization(c)
-    conn = build_conn() |> test_login(c.user) |> get(authorization_path(authorization))
+  test "cancellation forms permit the registered callback", c do
+    user = insert(:user)
+    insert(:organization_user, organization: c.organization, user: user, role: "read")
+    {authorization, _target} = authorization(%{c | user: user})
+    conn = build_conn() |> test_login(user) |> get(authorization_path(authorization))
     assert html_response(conn, 200) =~ "Cancel"
     assert form_actions(conn) == ["'self'", @origin]
 
@@ -135,7 +111,7 @@ defmodule HexpmWeb.OrganizationAuthorizationCSPTest do
 
     assert redirected_to(conn) =~ @redirect_uri
     assert redirected_to(conn) =~ "organization_authorization=cancelled"
-    refute TFASessions.proof(c.user, target.id)
+    refute SSO.get_authorization(authorization.raw_code, user)
   end
 
   test "sudo TOTP and recovery forms allow the pending registered callback", c do
@@ -152,22 +128,6 @@ defmodule HexpmWeb.OrganizationAuthorizationCSPTest do
     assert form_actions(conn) == ["'self'", @origin]
     conn = conn |> recycle() |> get("/sudo/recovery")
     assert html_response(conn, 200) =~ "Enter recovery code"
-    assert form_actions(conn) == ["'self'", @origin]
-  end
-
-  test "enrollment forms allow the pending registered callback", c do
-    user = insert(:user)
-    insert(:organization_user, organization: c.organization, user: user, role: "read")
-    {authorization, _target} = authorization(%{c | user: user})
-
-    conn =
-      build_conn()
-      |> test_login(user)
-      |> put_session(:tfa_return_to, authorization_path(authorization))
-      |> post("/dashboard/security/enable-tfa")
-
-    conn = conn |> recycle() |> get(redirected_to(conn))
-    assert html_response(conn, 200) =~ "verification_code"
     assert form_actions(conn) == ["'self'", @origin]
   end
 
@@ -211,7 +171,6 @@ defmodule HexpmWeb.OrganizationAuthorizationCSPTest do
       assert form_actions(conn) == ["'self'"]
 
       for {page, key} <- [
-            {"/tfa/verify", :tfa_return_to},
             {"/dashboard/security", :tfa_return_to},
             {"/sudo", "sudo_return_to"},
             {"/sudo/recovery", "sudo_return_to"}
@@ -242,7 +201,7 @@ defmodule HexpmWeb.OrganizationAuthorizationCSPTest do
         build_conn()
         |> test_login(c.user)
         |> put_session(:tfa_return_to, path)
-        |> get("/tfa/verify")
+        |> get("/dashboard/security")
 
       assert html_response(conn, 200)
       assert form_actions(conn) == ["'self'"]

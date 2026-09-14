@@ -11,11 +11,6 @@ defmodule Hexpm.UserSession do
     field :name, :string
     field :revoked_at, :utc_datetime_usec
     field :expires_at, :utc_datetime_usec
-    field :tfa_verified_at, :utc_datetime_usec
-    field :tfa_generation, :integer
-    field :tfa_copied, :boolean, default: false
-    field :tfa_source_expires_at, :utc_datetime_usec, virtual: true
-    belongs_to :tfa_source_session, __MODULE__
 
     embeds_one :last_use, Use, on_replace: :delete do
       field :used_at, :utc_datetime_usec

@@ -94,7 +94,7 @@ defmodule HexpmWeb.Dashboard.SecurityController do
 
     conn
     |> put_session(:tfa_setup_secret, secret)
-    |> put_session(:tfa_replace_generation, conn.assigns.current_user.tfa_generation)
+    |> put_session(:tfa_replacing, true)
     |> put_flash(:info, "Please scan the new QR code with your authenticator app")
     |> redirect(to: ~p"/dashboard/security?show_tfa_modal=true")
   end
@@ -104,8 +104,7 @@ defmodule HexpmWeb.Dashboard.SecurityController do
     secret = get_session(conn, :tfa_setup_secret)
 
     cond do
-      User.tfa_enabled?(user) and
-          get_session(conn, :tfa_replace_generation) != user.tfa_generation ->
+      User.tfa_enabled?(user) and get_session(conn, :tfa_replacing) != true ->
         conn
         |> delete_session(:tfa_setup_secret)
         |> put_flash(:info, "Two-factor authentication is already enabled.")
@@ -113,14 +112,11 @@ defmodule HexpmWeb.Dashboard.SecurityController do
 
       secret ->
         case Users.tfa_enable(user, secret, verification_code, audit: audit_data(conn)) do
-          {:ok, user} ->
-            {:ok, :ok} =
-              Hexpm.Accounts.TFASessions.record_verified!(user, conn.assigns.current_session.id)
-
+          {:ok, _user} ->
             return_to = get_session(conn, :tfa_return_to) || ~p"/dashboard/security"
 
             conn
-            |> delete_session(:tfa_replace_generation)
+            |> delete_session(:tfa_replacing)
             |> delete_session(:tfa_return_to)
             |> delete_session(:tfa_setup_secret)
             |> put_flash(:info, "Two-factor authentication has been enabled.")

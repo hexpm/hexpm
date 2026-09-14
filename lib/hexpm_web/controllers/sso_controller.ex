@@ -488,8 +488,6 @@ defmodule HexpmWeb.SSOController do
   end
 
   defp start_organization_authorization(conn, authorization, organization, code) do
-    user = conn.assigns.current_user
-
     requirements =
       SSO.authorization_requirements(authorization, organization, conn.assigns.current_session.id)
 
@@ -497,9 +495,7 @@ defmodule HexpmWeb.SSOController do
       "tfa" in requirements ->
         conn
         |> put_session(:tfa_return_to, ~p"/organizations/authorize?#{[code: code]}")
-        |> redirect(
-          to: if(User.tfa_enabled?(user), do: ~p"/tfa/verify", else: ~p"/dashboard/security")
-        )
+        |> redirect(to: ~p"/dashboard/security")
 
       "sso" in requirements ->
         start_authorization(conn, authorization, organization, code)

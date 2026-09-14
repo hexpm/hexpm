@@ -38,7 +38,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
       >
         <h2 class="text-lg font-semibold">Require two-factor authentication</h2>
         <p>
-          Members must enable 2FA and use verified sessions. Personal API keys and password-only API access are refused after the deadline. Organization keys remain available for automation. SSO settings are separate.
+          Members must enable two-factor authentication on their accounts. After the deadline, members without 2FA lose access to the organization until they enable it. SSO settings are separate.
         </p>
         <p :if={@organization.tfa_required_at}>
           Enforcement deadline: <strong>{DateTime.to_iso8601(@organization.tfa_required_at)} (UTC)</strong>.
@@ -69,15 +69,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
               class="block w-full rounded border border-grey-300 dark:border-grey-600 bg-white dark:bg-grey-800 p-2"
             />
           </label>
-          <.select_input
-            id="policy-tfa-session-lifetime"
-            name="policy[tfa_session_lifetime_seconds]"
-            label="Verify 2FA again every"
-            options={[{"24 hours", 86400}, {"7 days", 604_800}, {"30 days", 2_592_000}]}
-            value={@organization.tfa_session_lifetime_seconds}
-          />
           <p>
-            Changing this policy requires 2FA verified within the last 5 minutes. Once enforcement starts, disable it before scheduling another transition.
+            Configuring this policy requires 2FA on your own account. Once enforcement starts, disable it before scheduling another transition.
           </p>
           <.button type="submit">Save 2FA policy</.button>
         </.sudo_form>

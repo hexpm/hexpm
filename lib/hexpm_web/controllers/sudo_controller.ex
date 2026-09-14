@@ -2,7 +2,7 @@ defmodule HexpmWeb.SudoController do
   use HexpmWeb, :controller
 
   alias Hexpm.SecurityLog
-  alias Hexpm.Accounts.{TFA, Users, TFASessions}
+  alias Hexpm.Accounts.{TFA, Users}
   alias HexpmWeb.Plugs.{Attack, Sudo}
 
   plug :requires_login
@@ -130,8 +130,7 @@ defmodule HexpmWeb.SudoController do
         |> render_show()
 
       {:allow, _data} ->
-        if TFA.token_valid?(user.tfa.secret, code) and
-             TFASessions.record_verified!(user, conn.assigns.current_session.id) == {:ok, :ok} do
+        if TFA.token_valid?(user.tfa.secret, code) do
           redirect_after_sudo(conn)
         else
           SecurityLog.auth_failure(conn, :tfa, :invalid_code, user_id: user.id)
@@ -153,10 +152,10 @@ defmodule HexpmWeb.SudoController do
 
       {:allow, _data} ->
         if valid_recovery_code?(code) do
-          with {:ok, user} <- Users.tfa_recover(user, code),
-               {:ok, :ok} <- TFASessions.record_verified!(user, conn.assigns.current_session.id) do
-            redirect_after_sudo(conn)
-          else
+          case Users.tfa_recover(user, code) do
+            {:ok, _user} ->
+              redirect_after_sudo(conn)
+
             _ ->
               SecurityLog.auth_failure(conn, :recovery_code, :invalid_code, user_id: user.id)
 

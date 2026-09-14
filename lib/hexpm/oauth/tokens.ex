@@ -335,9 +335,6 @@ defmodule Hexpm.OAuth.Tokens do
         audit: Keyword.fetch!(opts, :audit)
       )
     )
-    |> Ecto.Multi.run(:tfa_proof, fn _repo, %{session: session} ->
-      {:ok, Hexpm.Accounts.TFASessions.copy!(browser_session_id, session.id, user)}
-    end)
     |> Ecto.Multi.run(:organization_sso_sessions, fn _repo, %{session: session} ->
       {:ok, Hexpm.Accounts.SSO.grant_org_sessions!(browser_session_id, session.id, user.id)}
     end)

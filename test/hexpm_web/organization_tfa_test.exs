@@ -1,7 +1,7 @@
 defmodule HexpmWeb.OrganizationTFATest do
   use HexpmWeb.ConnCase
   import Phoenix.LiveViewTest
-  alias Hexpm.Accounts.{TFASessions, SSO, OrganizationAuth}
+  alias Hexpm.Accounts.{SSO, OrganizationAuth, TFA}
   alias Hexpm.Repository.{Packages, Owners}
   alias Hexpm.OAuth.Tokens
 
@@ -24,6 +24,19 @@ defmodule HexpmWeb.OrganizationTFATest do
   end
 
   defp browser(user), do: build_conn() |> test_login(user) |> get("/dashboard/security")
+
+  # Walks the security page's enrollment flow and returns the conn after the
+  # verification POST, whose redirect is the stored return path.
+  defp enroll(conn) do
+    conn = conn |> recycle() |> post("/dashboard/security/enable-tfa")
+    secret = get_session(conn, :tfa_setup_secret)
+
+    conn
+    |> recycle()
+    |> post("/dashboard/security/verify-tfa-code", %{
+      "verification_code" => TFA.time_based_token(secret)
+    })
+  end
 
   test "only administrators see other members' enrollment on the members page and API", c do
     admin_body =
@@ -68,7 +81,6 @@ defmodule HexpmWeb.OrganizationTFATest do
 
   test "beta controls and policy POSTs are limited to allowed organizations", c do
     conn = browser(c.admin)
-    {:ok, :ok} = TFASessions.record_verified!(c.admin, conn.assigns.current_session.id)
     path = "/dashboard/orgs/#{c.organization.name}"
 
     for rollout <- [
@@ -90,21 +102,15 @@ defmodule HexpmWeb.OrganizationTFATest do
     assert body =~ "organization-tfa-policy"
     accepted = conn |> recycle() |> post(path <> "/tfa", %{policy: %{enforcement: "immediate"}})
     assert redirected_to(accepted) == path <> "/members"
-    assert Repo.get!(Hexpm.Accounts.Organization, c.organization.id).tfa_required_at
+    deadline = Repo.get!(Hexpm.Accounts.Organization, c.organization.id).tfa_required_at
+    assert deadline
 
     app_env(:hexpm, :organization_tfa, mode: :beta, beta_organizations: [])
     body = conn |> recycle() |> get(path <> "/members") |> html_response(200)
     assert body =~ "organization-tfa-policy"
-
-    changed =
-      conn
-      |> recycle()
-      |> post(path <> "/tfa", %{policy: %{tfa_session_lifetime_seconds: "86400"}})
-
-    assert Phoenix.Flash.get(changed.assigns.flash, :info) =~ "updated"
-
-    assert Repo.get!(Hexpm.Accounts.Organization, c.organization.id).tfa_session_lifetime_seconds ==
-             86400
+    kept = conn |> recycle() |> post(path <> "/tfa", %{policy: %{enforcement: "keep"}})
+    assert Phoenix.Flash.get(kept.assigns.flash, :info) =~ "updated"
+    assert Repo.get!(Hexpm.Accounts.Organization, c.organization.id).tfa_required_at == deadline
 
     app_env(:hexpm, :organization_tfa, mode: :off, beta_organizations: [])
     body = conn |> recycle() |> get(path <> "/members") |> html_response(200)
@@ -117,23 +123,16 @@ defmodule HexpmWeb.OrganizationTFATest do
     assert Phoenix.Flash.get(refused.assigns.flash, :error) =~ "unavailable"
   end
 
-  test "policy selects preserve the available actions and selected verification interval", c do
+  test "policy selects preserve the available actions", c do
     conn = browser(c.admin)
-    {:ok, :ok} = TFASessions.record_verified!(c.admin, conn.assigns.current_session.id)
     now = DateTime.utc_now()
 
-    for {deadline, interval, actions, selected} <- [
-          {nil, 604_800, ["transition", "immediate", "disabled"], "transition"},
-          {DateTime.add(now, 86400), 86400, ["keep", "transition", "immediate", "disabled"],
-           "keep"},
-          {DateTime.add(now, -1), 2_592_000, ["keep", "disabled"], "keep"}
+    for {deadline, actions, selected} <- [
+          {nil, ["transition", "immediate", "disabled"], "transition"},
+          {DateTime.add(now, 86400), ["keep", "transition", "immediate", "disabled"], "keep"},
+          {DateTime.add(now, -1), ["keep", "disabled"], "keep"}
         ] do
-      c.organization
-      |> Ecto.Changeset.change(
-        tfa_required_at: deadline,
-        tfa_session_lifetime_seconds: interval
-      )
-      |> Repo.update!()
+      c.organization |> Ecto.Changeset.change(tfa_required_at: deadline) |> Repo.update!()
 
       document =
         conn
@@ -151,89 +150,55 @@ defmodule HexpmWeb.OrganizationTFATest do
              |> LazyHTML.query("#policy-enforcement option[selected]")
              |> LazyHTML.attribute("value") == [selected]
 
-      assert document
-             |> LazyHTML.query("#policy-tfa-session-lifetime option")
-             |> LazyHTML.attribute("value") == ["86400", "604800", "2592000"]
-
-      assert document
-             |> LazyHTML.query("#policy-tfa-session-lifetime option[selected]")
-             |> LazyHTML.attribute("value") == [to_string(interval)]
+      assert LazyHTML.query(document, "#policy-tfa-session-lifetime") |> Enum.empty?()
     end
   end
 
-  test "an enrolled member needs browser proof; TOTP verification restores organization access",
-       c do
+  test "an unenrolled member is sent to enrollment and returns after enabling 2FA", c do
     enforce(c)
-    conn = browser(c.admin)
-    session_id = conn.assigns.current_session.id
-    assert TFASessions.proof(c.admin, session_id) == nil
+
+    assert browser(c.admin)
+           |> recycle()
+           |> get("/dashboard/orgs/#{c.organization.name}/members")
+           |> html_response(200)
+
+    conn = browser(c.member)
     response = conn |> recycle() |> get("/dashboard/orgs/#{c.organization.name}/members")
     assert redirected_to(response) =~ "/organizations/#{c.organization.name}/authenticate"
     response = response |> recycle() |> get(redirected_to(response))
-    assert redirected_to(response) == "/tfa/verify"
-    response = response |> recycle() |> get("/tfa/verify")
-    assert html_response(response, 200) =~ "2FA verification required"
+    assert redirected_to(response) == "/dashboard/security"
 
-    response =
-      response
-      |> recycle()
-      |> post("/tfa/verify", %{code: Hexpm.Accounts.TFA.time_based_token(c.admin.tfa.secret)})
+    assert get_session(response, :tfa_return_to) =~
+             "/organizations/#{c.organization.name}/authenticate"
 
-    assert TFASessions.proof(c.admin, session_id)
+    response = enroll(response)
     assert redirected_to(response) =~ "/organizations/#{c.organization.name}/authenticate"
+    refute get_session(response, :tfa_return_to)
     response = response |> recycle() |> get(redirected_to(response))
     assert redirected_to(response) == "/dashboard/orgs/#{c.organization.name}/members"
+    assert response |> recycle() |> get(redirected_to(response)) |> html_response(200)
   end
 
-  test "recovery codes establish proof without changing credentials", c do
-    enforce(c)
-    conn = browser(c.admin)
-    conn = conn |> recycle() |> post("/tfa/verify", %{code: "1234-1234-1234-1234"})
-    assert redirected_to(conn) == "/dashboard/security"
-    assert TFASessions.proof(c.admin, conn.assigns.current_session.id)
-    assert Repo.get!(Hexpm.Accounts.User, c.admin.id).tfa_generation == c.admin.tfa_generation
-    conn = conn |> recycle() |> post("/tfa/verify", %{code: "1234-1234-1234-1234"})
-    assert html_response(conn, 200) =~ "2FA verification failed"
-  end
-
-  test "verification counts attempts against the sudo code limit", c do
-    conn = build_conn() |> test_login(c.admin, sudo: false) |> get("/dashboard/security")
-
-    for _ <- 1..5 do
-      conn |> recycle() |> post("/sudo", %{"type" => "tfa", "code" => "000000"})
-    end
-
-    blocked =
-      conn
-      |> recycle()
-      |> post("/tfa/verify", %{code: Hexpm.Accounts.TFA.time_based_token(c.admin.tfa.secret)})
-
-    assert html_response(blocked, 200) =~ "2FA verification failed"
-    refute get_session(blocked, "sudo_authenticated_at")
-    refute TFASessions.proof(c.admin, blocked.assigns.current_session.id)
-  end
-
-  test "verification ignores a return path from the query string", c do
-    conn = browser(c.admin) |> recycle() |> get("/tfa/verify?return=/dashboard/keys")
-    assert html_response(conn, 200) =~ "2FA verification required"
-    refute get_session(conn, :tfa_return_to)
-  end
-
-  test "fresh proof is required to configure a policy even when the account has 2FA", c do
-    conn = browser(c.admin)
+  test "an administrator without 2FA can't configure a policy", c do
+    unenrolled = insert(:user)
+    insert(:organization_user, organization: c.organization, user: unenrolled, role: "admin")
     params = %{policy: %{enforcement: "transition", grace_days: "14"}}
-    refused = conn |> recycle() |> post("/dashboard/orgs/#{c.organization.name}/tfa", params)
-    assert redirected_to(refused) == "/tfa/verify"
+    path = "/dashboard/orgs/#{c.organization.name}/tfa"
+    refused = browser(unenrolled) |> recycle() |> post(path, params)
+    assert redirected_to(refused) == "/dashboard/security"
+    assert Phoenix.Flash.get(refused.assigns.flash, :error) =~ "Enable 2FA"
+
+    assert get_session(refused, :tfa_return_to) ==
+             "/dashboard/orgs/#{c.organization.name}/members"
+
     refute Repo.get!(Hexpm.Accounts.Organization, c.organization.id).tfa_required_at
-    {:ok, :ok} = TFASessions.record_verified!(c.admin, conn.assigns.current_session.id)
-    accepted = conn |> recycle() |> post("/dashboard/orgs/#{c.organization.name}/tfa", params)
+    accepted = browser(c.admin) |> recycle() |> post(path, params)
     assert redirected_to(accepted) == "/dashboard/orgs/#{c.organization.name}/members"
     assert Repo.get!(Hexpm.Accounts.Organization, c.organization.id).tfa_required_at
   end
 
   test "the policy deadline comes only from the enforcement choice", c do
     conn = browser(c.admin)
-    {:ok, :ok} = TFASessions.record_verified!(c.admin, conn.assigns.current_session.id)
     path = "/dashboard/orgs/#{c.organization.name}/tfa"
     deadline = DateTime.utc_now() |> DateTime.add(3 * 86_400) |> DateTime.to_iso8601()
 
@@ -251,28 +216,32 @@ defmodule HexpmWeb.OrganizationTFATest do
     assert_error_sent 400, fn -> conn |> recycle() |> post(path, %{policy: "immediate"}) end
   end
 
-  test "general API permissions and exchanged personal keys cannot bypass enforced 2FA", c do
+  test "personal keys of unenrolled members are refused and enrolled members' keys work", c do
     enforce(c)
-    key = key_for(c.admin)
 
     response =
       build_conn()
-      |> put_req_header("authorization", key)
+      |> put_req_header("authorization", key_for(c.member))
       |> get("/api/orgs/#{c.organization.name}/members")
 
     assert response.status in [401, 403]
-    assert response.resp_body =~ "2FA"
+    assert response.resp_body =~ "two-factor authentication"
+
+    assert build_conn()
+           |> put_req_header("authorization", key_for(c.admin))
+           |> get("/api/orgs/#{c.organization.name}/members")
+           |> json_response(200)
   end
 
-  test "the shared reauthorization endpoint completes a 2FA-only request without extending the target session",
+  test "the shared authorization endpoint completes a 2FA-only request after enrollment without extending the target session",
        c do
     enforce(c)
     client = insert(:oauth_client)
-    target = insert(:oauth_session, user: c.admin, client_id: client.client_id)
+    target = insert(:oauth_session, user: c.member, client_id: client.client_id)
 
     {:ok, token} =
       Tokens.create_and_insert_for_user(
-        c.admin,
+        c.member,
         client.client_id,
         ["api:read", "repository:#{c.organization.name}"],
         "authorization_code",
@@ -293,24 +262,18 @@ defmodule HexpmWeb.OrganizationTFATest do
 
     %URI{path: path, query: query} = URI.parse(response["verification_uri"])
     code = URI.decode_query(query)["code"]
-    conn = browser(c.admin)
+    conn = browser(c.member)
     conn = conn |> recycle() |> get(path <> "?" <> query)
-    assert html_response(conn, 200) =~ "2FA verification required"
+    assert html_response(conn, 200) =~ "2FA enrollment required"
     conn = conn |> recycle() |> post(path, %{code: code, organization: c.organization.name})
-    assert redirected_to(conn) == "/tfa/verify"
-
-    conn =
-      conn
-      |> recycle()
-      |> post("/tfa/verify", %{code: Hexpm.Accounts.TFA.time_based_token(c.admin.tfa.secret)})
-
+    assert redirected_to(conn) == "/dashboard/security"
+    conn = enroll(conn)
     assert redirected_to(conn) == path <> "?" <> query
-    refute TFASessions.proof(c.admin, target.id)
     conn = conn |> recycle() |> get(redirected_to(conn))
     assert redirected_to(conn) == "/dashboard"
     assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "authenticated"
-    assert TFASessions.proof(c.admin, target.id)
     assert Repo.get!(Hexpm.UserSession, target.id).expires_at == target.expires_at
+    assert SSO.get_authorization(code, c.member) == nil
 
     {:ok, refreshed} =
       Tokens.revoke_and_create_token(
@@ -324,6 +287,7 @@ defmodule HexpmWeb.OrganizationTFATest do
       )
 
     assert "repository:#{c.organization.name}" in refreshed.scopes
+    assert refreshed.organization_reauth_required == []
   end
 
   test "documentation verification returns to the registered callback and preserves the session",
@@ -331,11 +295,11 @@ defmodule HexpmWeb.OrganizationTFATest do
     enforce(c)
     callback = "https://docs.example/oauth/callback?client=docs"
     client = insert(:oauth_client, redirect_uris: [callback])
-    target = insert(:oauth_session, user: c.admin, client_id: client.client_id)
+    target = insert(:oauth_session, user: c.member, client_id: client.client_id)
 
     {:ok, token} =
       Tokens.create_and_insert_for_user(
-        c.admin,
+        c.member,
         client.client_id,
         ["docs:#{c.organization.name}"],
         "authorization_code",
@@ -356,22 +320,15 @@ defmodule HexpmWeb.OrganizationTFATest do
 
     %URI{path: path, query: query} = URI.parse(response["verification_uri"])
     code = URI.decode_query(query)["code"]
-    authorization = SSO.get_authorization(code, c.admin)
+    authorization = SSO.get_authorization(code, c.member)
     assert authorization.redirect_uri == callback
     assert authorization.state == "docs-state+&="
 
-    conn = browser(c.admin) |> recycle() |> get(path <> "?" <> query)
-    assert html_response(conn, 200) =~ "2FA verification required"
+    conn = browser(c.member) |> recycle() |> get(path <> "?" <> query)
+    assert html_response(conn, 200) =~ "2FA enrollment required"
     conn = conn |> recycle() |> post(path, %{code: code, organization: c.organization.name})
-    assert redirected_to(conn) == "/tfa/verify"
-
-    conn =
-      conn
-      |> recycle()
-      |> post("/tfa/verify", %{
-        code: Hexpm.Accounts.TFA.time_based_token(c.admin.tfa.secret)
-      })
-
+    assert redirected_to(conn) == "/dashboard/security"
+    conn = enroll(conn)
     conn = conn |> recycle() |> get(redirected_to(conn))
 
     %URI{host: "docs.example", path: "/oauth/callback", query: returned_query} =
@@ -383,10 +340,9 @@ defmodule HexpmWeb.OrganizationTFATest do
              "state" => "docs-state+&="
            }
 
-    refute Phoenix.Flash.get(conn.assigns.flash, :info)
-    assert TFASessions.proof(c.admin, target.id)
+    refute Phoenix.Flash.get(conn.assigns.flash, :info) =~ "authenticated"
     assert Repo.get!(Hexpm.UserSession, target.id).expires_at == target.expires_at
-    assert SSO.get_authorization(code, c.admin) == nil
+    assert SSO.get_authorization(code, c.member) == nil
 
     {:ok, refreshed} =
       Tokens.revoke_and_create_token(
@@ -406,24 +362,20 @@ defmodule HexpmWeb.OrganizationTFATest do
     assert redirected_to(conn) == "/dashboard"
   end
 
-  test "documentation cancellation returns a cancellation result without copying browser proof",
-       c do
+  test "documentation cancellation returns a cancellation result", c do
     enforce(c)
     callback = "https://docs.example/oauth/callback"
     client = insert(:oauth_client, redirect_uris: [callback])
-    target = insert(:oauth_session, user: c.admin, client_id: client.client_id)
+    target = insert(:oauth_session, user: c.member, client_id: client.client_id)
 
     {:ok, authorization} =
-      SSO.request_authorization(c.admin, target.id, [c.organization.name],
+      SSO.request_authorization(c.member, target.id, [c.organization.name],
         redirect_uri: callback,
         state: "cancel-state"
       )
 
-    conn = browser(c.admin)
-    {:ok, :ok} = TFASessions.record_verified!(c.admin, conn.assigns.current_session.id)
-
     conn =
-      conn
+      browser(c.member)
       |> recycle()
       |> post("/organizations/authorize", %{
         code: authorization.raw_code,
@@ -440,8 +392,7 @@ defmodule HexpmWeb.OrganizationTFATest do
              "state" => "cancel-state"
            }
 
-    refute TFASessions.proof(c.admin, target.id)
-    assert SSO.get_authorization(authorization.raw_code, c.admin) == nil
+    assert SSO.get_authorization(authorization.raw_code, c.member) == nil
 
     conn =
       conn
@@ -451,7 +402,7 @@ defmodule HexpmWeb.OrganizationTFATest do
     assert redirected_to(conn) == "/dashboard"
   end
 
-  test "invalid browser-return requests never redirect or grant proof", c do
+  test "invalid browser-return requests never redirect", c do
     enforce(c)
     callback = "https://docs.example/oauth/callback"
     client = insert(:oauth_client, redirect_uris: [callback])
@@ -486,7 +437,7 @@ defmodule HexpmWeb.OrganizationTFATest do
         |> get("/organizations/authorize", %{code: authorization.raw_code})
 
       assert redirected_to(conn) == "/dashboard"
-      refute TFASessions.proof(c.admin, target.id)
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "no longer open"
 
       conn =
         conn
@@ -583,15 +534,15 @@ defmodule HexpmWeb.OrganizationTFATest do
     assert Repo.get!(SSO.Authorization, opaque.id).state == " "
   end
 
-  test "cancellation, account mismatch, expiry, and revocation grant no proof", c do
+  test "cancellation, account mismatch, expiry, and revocation grant no access", c do
     enforce(c)
     client = insert(:oauth_client)
 
     for failure <- [:cancel, :mismatch, :expired, :revoked] do
-      target = insert(:oauth_session, user: c.admin, client_id: client.client_id)
-      {:ok, authorization} = SSO.request_authorization(c.admin, target.id, [c.organization.name])
+      target = insert(:oauth_session, user: c.member, client_id: client.client_id)
+      {:ok, authorization} = SSO.request_authorization(c.member, target.id, [c.organization.name])
       code = authorization.raw_code
-      user = if failure == :mismatch, do: c.member, else: c.admin
+      user = if failure == :mismatch, do: c.admin, else: c.member
       conn = browser(user)
 
       case failure do
@@ -613,64 +564,45 @@ defmodule HexpmWeb.OrganizationTFATest do
       conn = conn |> recycle() |> get("/organizations/authorize", %{code: code})
       assert redirected_to(conn) == "/dashboard"
       refute Phoenix.Flash.get(conn.assigns.flash, :info)
-      refute TFASessions.proof(c.admin, target.id)
+      assert OrganizationAuth.check(c.organization, c.member) == {:error, :tfa_required}
     end
   end
 
-  test "cancelling after 2FA verification leaves the target unverified", c do
+  test "cancelling closes the request even after enrollment", c do
     enforce(c)
-    target = insert(:oauth_session, user: c.admin, client_id: insert(:oauth_client).client_id)
-    {:ok, authorization} = SSO.request_authorization(c.admin, target.id, [c.organization.name])
+    target = insert(:oauth_session, user: c.member, client_id: insert(:oauth_client).client_id)
+    {:ok, authorization} = SSO.request_authorization(c.member, target.id, [c.organization.name])
     code = authorization.raw_code
-    conn = browser(c.admin)
+    conn = browser(c.member)
 
     conn =
       conn
       |> recycle()
       |> post("/organizations/authorize", %{code: code, organization: c.organization.name})
 
-    conn =
-      conn
-      |> recycle()
-      |> post("/tfa/verify", %{code: Hexpm.Accounts.TFA.time_based_token(c.admin.tfa.secret)})
-
-    assert TFASessions.proof(c.admin, conn.assigns.current_session.id)
-    refute TFASessions.proof(c.admin, target.id)
+    assert redirected_to(conn) == "/dashboard/security"
+    conn = enroll(conn)
     conn = conn |> recycle() |> post("/organizations/authorize", %{code: code, action: "cancel"})
+    assert redirected_to(conn) == "/dashboard"
     conn = conn |> recycle() |> get("/organizations/authorize", %{code: code})
     assert redirected_to(conn) == "/dashboard"
     assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "no longer open"
-    refute TFASessions.proof(c.admin, target.id)
+    assert OrganizationAuth.check(c.organization, c.member) == :ok
   end
 
-  test "opening a verification URL doesn't approve copying fresh browser proof", c do
-    enforce(c)
-    target = insert(:oauth_session, user: c.admin, client_id: insert(:oauth_client).client_id)
-    {:ok, authorization} = SSO.request_authorization(c.admin, target.id, [c.organization.name])
-    conn = browser(c.admin)
-    {:ok, :ok} = TFASessions.record_verified!(c.admin, conn.assigns.current_session.id)
-    conn = conn |> recycle() |> get("/organizations/authorize", %{code: authorization.raw_code})
-    assert html_response(conn, 200) =~ "Authenticate"
-    refute TFASessions.proof(c.admin, target.id)
-  end
-
-  test "LiveView search and report events recheck 2FA expiry", c do
+  test "LiveView search and report events recheck enrollment", c do
     enforce(c)
     repository = insert(:repository, organization: c.organization, name: c.organization.name)
     package = insert(:package, repository_id: repository.id)
     insert(:release, package: package, version: "1.0.0")
     conn = browser(c.admin)
-    session = conn.assigns.current_session
-    {:ok, :ok} = TFASessions.record_verified!(c.admin, session.id)
     {:ok, search, html} = live(recycle(conn), "/packages?search=#{package.name}")
     assert html =~ "#{repository.name}/#{package.name}"
 
     {:ok, report, _html} =
       live(recycle(conn), "/packages/#{repository.name}/#{package.name}/report")
 
-    Repo.update_all(from(s in Hexpm.UserSession, where: s.id == ^session.id),
-      set: [tfa_verified_at: DateTime.add(DateTime.utc_now(), -604_800)]
-    )
+    Repo.update!(Hexpm.Accounts.User.clear_tfa(c.admin))
 
     refute render_patch(search, "/packages?search=#{package.name}&sort=name") =~
              "#{repository.name}/#{package.name}"
@@ -689,20 +621,24 @@ defmodule HexpmWeb.OrganizationTFATest do
     refute Repo.exists?(Hexpm.PackageReports.Report)
   end
 
-  test "edge authorization rejects human keys for private resources and public ownership", c do
+  test "edge authorization rejects unenrolled members' keys for private resources and public ownership",
+       c do
     repository = insert(:repository, organization: c.organization, name: c.organization.name)
     private = insert(:package, repository_id: repository.id)
     public = insert(:package, repository_id: 1)
     organization = Repo.preload(c.organization, :user)
     insert(:package_owner, package: public, user: organization.user, level: "full")
+    unenrolled = insert(:user)
+    insert(:organization_user, organization: c.organization, user: unenrolled, role: "admin")
 
-    secret =
-      key_for(c.admin, [
-        %{"domain" => "api"},
-        %{"domain" => "repositories"},
-        %{"domain" => "docs", "resource" => repository.name}
-      ])
+    permissions = [
+      %{"domain" => "api"},
+      %{"domain" => "repositories"},
+      %{"domain" => "docs", "resource" => repository.name}
+    ]
 
+    secret = key_for(unenrolled, permissions)
+    enrolled = key_for(c.admin, permissions)
     enforce(c)
 
     for {domain, resource} <- [
@@ -715,12 +651,17 @@ defmodule HexpmWeb.OrganizationTFATest do
         |> get("/api/auth", domain: domain, resource: resource)
 
       assert response.status == 403, "#{domain}: #{response.resp_body}"
-      assert response.resp_body =~ "2FA"
+      assert response.resp_body =~ "two-factor authentication"
+
+      assert build_conn()
+             |> put_req_header("authorization", enrolled)
+             |> get("/api/auth", domain: domain, resource: resource)
+             |> json_response(200)
     end
 
     {:ok, token} =
       Tokens.create_and_insert_for_user(
-        c.admin,
+        unenrolled,
         insert(:oauth_client).client_id,
         ["api"],
         "authorization_code"
@@ -732,7 +673,7 @@ defmodule HexpmWeb.OrganizationTFATest do
         |> put_req_header("authorization", "Bearer #{token.access_token}")
         |> get("/api/auth", domain: "package", resource: resource)
 
-      assert json_response(response, 403)["message"] =~ "2FA"
+      assert json_response(response, 403)["message"] =~ "two-factor authentication"
     end
 
     response =
@@ -740,7 +681,7 @@ defmodule HexpmWeb.OrganizationTFATest do
       |> put_req_header("authorization", secret)
       |> put("/api/packages/#{public.name}/owners/#{hd(c.member.emails).email}")
 
-    assert json_response(response, 403)["message"] =~ "2FA"
+    assert json_response(response, 403)["message"] =~ "two-factor authentication"
 
     own_key = key_for(organization, [%{"domain" => "repository", "resource" => repository.name}])
 
@@ -750,47 +691,6 @@ defmodule HexpmWeb.OrganizationTFATest do
       |> get("/api/auth", domain: "repository", resource: repository.name)
 
     assert json_response(response, 200)["key"]["owner"]["type"] == "organization"
-  end
-
-  test "valid older browser proof replaces proof from a revoked source" do
-    user = insert(:user_with_tfa)
-    organization = insert(:organization, tfa_required_at: DateTime.add(DateTime.utc_now(), -1))
-    insert(:organization_user, user: user, organization: organization, role: "admin")
-    browser = build_conn() |> test_login(user) |> get("/dashboard/security")
-    browser_id = browser.assigns.current_session.id
-    {:ok, :ok} = TFASessions.record_verified!(user, browser_id)
-
-    Repo.update_all(from(s in Hexpm.UserSession, where: s.id == ^browser_id),
-      set: [tfa_verified_at: DateTime.add(DateTime.utc_now(), -60)]
-    )
-
-    newer = insert(:session, user: user, expires_at: DateTime.add(DateTime.utc_now(), 86_400))
-    {:ok, :ok} = TFASessions.record_verified!(user, newer.id)
-    target = insert(:oauth_session, user: user, client_id: insert(:oauth_client).client_id)
-    :ok = TFASessions.copy!(newer.id, target.id, user)
-    assert OrganizationAuth.check(organization, user, nil, target.id) == :ok
-    {:ok, _} = Hexpm.UserSessions.revoke(newer)
-    assert OrganizationAuth.check(organization, user, nil, target.id) == {:error, :tfa_required}
-    assert OrganizationAuth.check(organization, user, nil, browser_id) == :ok
-    {:ok, request} = SSO.request_authorization(user, target.id, [organization.name])
-
-    response =
-      browser
-      |> recycle()
-      |> post("/organizations/authorize", %{
-        code: request.raw_code,
-        organization: organization.name
-      })
-
-    response = response |> recycle() |> get(redirected_to(response))
-    assert redirected_to(response) == "/dashboard"
-    refute Phoenix.Flash.get(response.assigns.flash, :error)
-    refute SSO.get_authorization(request.raw_code, user)
-    assert OrganizationAuth.check(organization, user, nil, target.id) == :ok
-    copied = Repo.get!(Hexpm.UserSession, target.id)
-    assert copied.tfa_verified_at == Repo.get!(Hexpm.UserSession, browser_id).tfa_verified_at
-    assert copied.tfa_source_session_id == browser_id
-    assert Repo.get!(Hexpm.UserSession, target.id).expires_at == target.expires_at
   end
 
   test "organization enforcement preserves independent full public-package ownership" do
@@ -837,7 +737,7 @@ defmodule HexpmWeb.OrganizationTFATest do
     assert conn |> get("/packages/#{package.name}/owners") |> html_response(200)
   end
 
-  test "shared authorization uses proof from successful sudo TOTP verification" do
+  test "shared authorization resumes after sudo and completes for an enrolled member" do
     user = insert(:user_with_tfa)
     organization = insert(:organization, tfa_required_at: DateTime.add(DateTime.utc_now(), -1))
     insert(:organization_user, user: user, organization: organization, role: "admin")
@@ -854,25 +754,14 @@ defmodule HexpmWeb.OrganizationTFATest do
     conn =
       conn
       |> recycle()
-      |> post("/sudo", %{type: "tfa", code: Hexpm.Accounts.TFA.time_based_token(user.tfa.secret)})
+      |> post("/sudo", %{type: "tfa", code: TFA.time_based_token(user.tfa.secret)})
 
     assert redirected_to(conn) =~ "/organizations/authorize"
     assert HexpmWeb.Plugs.Sudo.sudo_active?(conn)
-    assert TFASessions.proof(user, conn.assigns.current_session.id)
-    conn = conn |> recycle() |> get(redirected_to(conn))
-    assert html_response(conn, 200) =~ "2FA verification required"
-
-    conn =
-      conn
-      |> recycle()
-      |> post("/organizations/authorize", %{
-        code: request.raw_code,
-        organization: organization.name
-      })
-
-    assert redirected_to(conn) =~ "/organizations/authorize"
     conn = conn |> recycle() |> get(redirected_to(conn))
     assert redirected_to(conn) == "/dashboard"
-    assert TFASessions.proof(user, target.id)
+    assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "authenticated"
+    refute SSO.get_authorization(request.raw_code, user)
+    assert Repo.get!(Hexpm.UserSession, target.id).expires_at == target.expires_at
   end
 end

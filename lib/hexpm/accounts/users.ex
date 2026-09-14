@@ -379,16 +379,10 @@ defmodule Hexpm.Accounts.Users do
 
       multi =
         Multi.new()
-        |> Multi.run(:locked_user, fn _repo, _ ->
-          locked = Hexpm.Accounts.TFASessions.lock_user!(user)
-
-          if locked.tfa_generation == user.tfa_generation,
-            do: {:ok, locked},
-            else: {:error, :credentials_changed}
-        end)
-        |> Multi.update(:user, fn %{locked_user: locked_user} ->
-          User.update_tfa(locked_user, %{secret: secret, recovery_codes: codes})
-        end)
+        |> Multi.update(
+          :user,
+          User.update_tfa(user, %{secret: secret, recovery_codes: codes})
+        )
         |> Multi.run(:tfa_notifications, fn _repo, %{user: user} ->
           {:ok, Hexpm.Accounts.OrganizationTFANotifications.cancel_obsolete!(user)}
         end)
@@ -414,7 +408,7 @@ defmodule Hexpm.Accounts.Users do
     multi =
       Multi.new()
       |> Multi.run(:locked_user, fn _repo, _ ->
-        user = Hexpm.Accounts.TFASessions.lock_user!(user)
+        user = lock!(user)
 
         if Hexpm.Accounts.OrganizationTFA.required_memberships(user) == [],
           do: {:ok, user},
@@ -440,7 +434,7 @@ defmodule Hexpm.Accounts.Users do
     multi =
       Multi.new()
       |> Multi.run(:locked_user, fn _repo, _ ->
-        current = Hexpm.Accounts.TFASessions.lock_user!(user)
+        current = lock!(user)
         if User.tfa_enabled?(current), do: {:ok, current}, else: {:error, :not_enrolled}
       end)
       |> Multi.update(:user, fn %{locked_user: current} -> User.rotate_recovery_codes(current) end)
@@ -723,15 +717,23 @@ defmodule Hexpm.Accounts.Users do
   end
 
   def tfa_recover(%User{} = user, code_str) do
-    Repo.transaction(fn ->
-      user = Hexpm.Accounts.TFASessions.lock_user!(user)
-      if not User.tfa_enabled?(user), do: Repo.rollback(:invalid_code)
+    case RecoveryCode.verify(user.tfa.recovery_codes, code_str) do
+      {:ok, %RecoveryCode{} = code} ->
+        user =
+          user
+          |> User.recovery_code_used(code)
+          |> Repo.update!()
 
-      case RecoveryCode.verify(user.tfa.recovery_codes, code_str) do
-        {:ok, %RecoveryCode{} = code} -> user |> User.recovery_code_used(code) |> Repo.update!()
-        _ -> Repo.rollback(:invalid_code)
-      end
-    end)
+        {:ok, user}
+
+      err ->
+        err
+    end
+  end
+
+  def lock!(user) do
+    Repo.one!(from(u in User, where: u.id == ^user.id, lock: "FOR NO KEY UPDATE"))
+    |> Repo.preload(:emails)
   end
 
   defp find_email(user, params) do

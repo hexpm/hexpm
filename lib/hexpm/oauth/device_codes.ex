@@ -265,22 +265,11 @@ defmodule Hexpm.OAuth.DeviceCodes do
 
       result =
         Ecto.Multi.new()
-        |> Ecto.Multi.run(:user, fn _repo, _changes ->
-          {:ok, Hexpm.Accounts.TFASessions.lock_user!(user)}
-        end)
         |> Ecto.Multi.run(:session, fn _repo, _changes ->
           UserSessions.create_oauth_session(user, device_code_record.client_id,
             name: device_code_record.name,
             audit: audit_data
           )
-        end)
-        |> Ecto.Multi.run(:tfa_proof, fn _repo, %{session: session} ->
-          {:ok,
-           Hexpm.Accounts.TFASessions.copy!(
-             Keyword.get(opts, :browser_session_id),
-             session.id,
-             user
-           )}
         end)
         |> Ecto.Multi.run(:organization_sso_sessions, fn _repo, %{session: session} ->
           # Before the token, because minting its scopes reads them.

@@ -39,7 +39,7 @@
               )
           }>
             {case requirement do
-              "tfa" -> "2FA verification required"
+              "tfa" -> "2FA enrollment required"
               "sso" -> "SSO authentication required"
             end}
           </p>
@@ -65,9 +65,9 @@
       <.button type="submit" name="action" value="cancel" variant="outline">Cancel</.button>
     </.form>
     <p>
-      The session keeps its original expiry. Each organization's authentication policy determines
-      how long verification remains valid. 2FA verification applies to the account session;
-      SSO authentication applies to the listed organizations.
+      The session keeps its original expiry. SSO authentication applies to the listed
+      organizations for as long as each organization's policy allows. 2FA enrollment applies to
+      your account.
     </p>
   </div>
 </.auth_layout>

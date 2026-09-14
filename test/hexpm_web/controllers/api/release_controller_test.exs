@@ -1742,7 +1742,6 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
     test "a valid TOTP code is refused once invalid codes are rate limited", %{
       oauth_token: oauth_token,
-      oauth_session: oauth_session,
       user_with_tfa: user,
       meta: meta
     } do
@@ -1762,8 +1761,6 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
       assert json_response(conn, 429)["message"] =~
                "Too many failed two-factor authentication attempts"
-
-      refute Hexpm.Accounts.TFASessions.proof(user, oauth_session.id)
     end
 
     test "read operation works without TOTP even with write-scoped token", %{

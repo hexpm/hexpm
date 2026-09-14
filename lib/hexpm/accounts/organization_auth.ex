@@ -3,7 +3,7 @@ defmodule Hexpm.Accounts.OrganizationAuth do
   Independent organization authentication requirements for human sessions.
   """
   use Hexpm.Context
-  alias Hexpm.Accounts.{OrganizationTFA, TFASessions}
+  alias Hexpm.Accounts.OrganizationTFA
   alias Hexpm.Accounts.SSO.{Enforcement, OrgSession}
 
   def check(organization, user, credential \\ nil, session_id \\ nil) do
@@ -20,9 +20,9 @@ defmodule Hexpm.Accounts.OrganizationAuth do
     sso = Enforcement.sso_required(user, names, session_id)
 
     tfa =
-      OrganizationTFA.governed(user, names)
-      |> Enum.filter(&(OrganizationTFA.check(&1, user, nil, session_id) != :ok))
+      OrganizationTFA.refused(user)
       |> Enum.map(& &1.name)
+      |> Enum.filter(&(&1 in names))
 
     (sso ++ tfa)
     |> Enum.uniq()
@@ -44,19 +44,20 @@ defmodule Hexpm.Accounts.OrganizationAuth do
     |> Enum.uniq_by(& &1.id)
   end
 
-  def personal_key_refused(user) do
-    (Enforcement.personal_key_refused(user) ++ OrganizationTFA.personal_key_refused(user))
-    |> Enum.uniq_by(& &1.id)
+  @doc """
+  The organizations a personal key of this account cannot reach, with the
+  refusal each one answers with.
+  """
+  def personal_key_refusals(user) do
+    (Enum.map(Enforcement.personal_key_refused(user), &{&1, :personal_key}) ++
+       Enum.map(OrganizationTFA.refused(user), &{&1, :tfa_required}))
+    |> Enum.uniq_by(fn {organization, _refusal} -> organization.id end)
   end
 
   def refusal_message(refusal, organization, credential \\ nil)
 
   def refusal_message(:tfa_required, organization, _) do
-    "2FA verification required for organization #{organization.name}. Authenticate your session again."
-  end
-
-  def refusal_message(:tfa_personal_key, organization, _) do
-    "Organization #{organization.name} requires 2FA and doesn't accept personal API keys. Sign in from your Hex client or use an organization key for automation."
+    "Organization #{organization.name} requires two-factor authentication. Enable it in your account security settings."
   end
 
   def refusal_message(refusal, organization, credential),
@@ -71,27 +72,19 @@ defmodule Hexpm.Accounts.OrganizationAuth do
       end)
 
     organizations = Repo.all(from(o in assoc(user, :organizations), where: o.name in ^names))
-    proof = TFASessions.proof(user, session_id, now)
 
     tfa =
-      Enum.flat_map(organizations, fn o ->
-        cond do
-          not OrganizationTFA.active?(o) ->
-            []
-
-          not OrganizationTFA.enforced?(o, now) ->
-            [o.tfa_required_at]
-
-          proof ->
-            [
-              DateTime.add(proof.tfa_verified_at, o.tfa_session_lifetime_seconds),
-              proof.expires_at
-            ]
-
-          true ->
-            [now]
-        end
-      end)
+      if User.tfa_enabled?(user) do
+        []
+      else
+        Enum.flat_map(organizations, fn o ->
+          cond do
+            not OrganizationTFA.active?(o) -> []
+            OrganizationTFA.enforced?(o, now) -> [now]
+            true -> [o.tfa_required_at]
+          end
+        end)
+      end
 
     sso_organization_ids = Enforcement.governed(user, names) |> Enum.map(& &1.id)
 
@@ -128,16 +121,7 @@ defmodule Hexpm.Accounts.OrganizationAuth do
            else: []
       end)
 
-    source_expiry =
-      if proof && proof.tfa_source_expires_at &&
-           Enum.any?(organizations, &OrganizationTFA.enforced?(&1, now)),
-         do: [proof.tfa_source_expires_at],
-         else: []
-
-    Enum.min_by(
-      [expires_at | tfa ++ sso ++ cutoffs ++ source_expiry],
-      &DateTime.to_unix(&1, :microsecond)
-    )
+    Enum.min_by([expires_at | tfa ++ sso ++ cutoffs], &DateTime.to_unix(&1, :microsecond))
   end
 
   def access_expires_at(_, _, _, expires_at, _), do: expires_at
