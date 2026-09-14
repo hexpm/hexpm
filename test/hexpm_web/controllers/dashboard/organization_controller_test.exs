@@ -270,6 +270,29 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert response(conn, 200) =~ "mykey"
     end
 
+    test "shows keys with docs permissions", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "write")
+      mock_customer(organization)
+
+      insert(:key,
+        organization: organization,
+        name: "hexdocs",
+        permissions: [
+          build(:key_permission, domain: "repository", resource: organization.name),
+          build(:key_permission, domain: "docs", resource: organization.name)
+        ]
+      )
+
+      html =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/keys")
+        |> html_response(200)
+
+      assert html =~ "REPO:#{organization.name}"
+      assert html =~ "DOCS:#{organization.name}"
+    end
+
     test "sorts package permissions by package name", c do
       insert(:organization_user, organization: c.organization, user: c.user, role: "write")
       insert(:package, name: "zulu_package", repository_id: c.repository.id)
