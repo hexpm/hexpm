@@ -16,7 +16,7 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
 
   use Hexpm.Context
 
-  alias Hexpm.Accounts.OrganizationInvitation
+  alias Hexpm.Accounts.{OrganizationInvitation, SCIM}
   alias Hexpm.Emails.Outbox
 
   def all_pending(organization) do
@@ -206,6 +206,7 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
       :accepted_invitation,
       OrganizationInvitation.accept_changeset(invitation, user, DateTime.utc_now())
     )
+    |> Multi.run(:scim_handle, fn _repo, _changes -> SCIM.adopt_acceptance(invitation, user) end)
     |> audit(audit_data, "organization.invitation.accept", {organization, invitation})
   end
 

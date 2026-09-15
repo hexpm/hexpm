@@ -2,6 +2,7 @@ defmodule Hexpm.Accounts.Organizations do
   use Hexpm.Context
 
   alias Hexpm.Accounts.OptionalEmails
+  alias Hexpm.Emails.Outbox
   alias Hexpm.Repository.OrgNamesPublisher
 
   def all_by_user(user, preload \\ []) do
@@ -255,12 +256,17 @@ defmodule Hexpm.Accounts.Organizations do
   @doc """
   Tells someone they were added to an organization. Every path that creates a
   membership without the person asking for it sends this, including
-  provisioning.
+  provisioning. Queued rather than delivered, so a caller can send it inside
+  the transaction that creates the membership.
   """
   def send_member_added_email(organization, user) do
     if OptionalEmails.allowed?(user, :organization_invite) do
       Emails.organization_invite(organization, user)
-      |> Mailer.deliver!()
+      |> Outbox.enqueue!(
+        category: "organization.member_added",
+        group_key: "organization-member-added:#{organization.id}:#{user.id}",
+        scope_key: "organization:#{organization.id}"
+      )
     end
 
     :ok
