@@ -218,6 +218,58 @@ defmodule HexpmWeb.SCIM.UserControllerTest do
     assert body["scimType"] == "invalidValue"
   end
 
+  test "a huge startIndex is clamped rather than sent to the database", context do
+    body =
+      scim_conn(context.token)
+      |> get("/scim/v2/Users", %{"startIndex" => "99999999999999999999"})
+      |> scim_json_response(200)
+
+    assert body["Resources"] == []
+  end
+
+  test "a filter that is not a string is refused", context do
+    body =
+      scim_conn(context.token)
+      |> get("/scim/v2/Users?filter[]=a&filter[]=b")
+      |> scim_json_response(400)
+
+    assert body["scimType"] == "invalidFilter"
+  end
+
+  test "a PATCH past the operation cap is refused", context do
+    created =
+      scim_conn(context.token)
+      |> post("/scim/v2/Users", scim_body(%{"userName" => "capped@example.com"}))
+      |> scim_json_response(201)
+
+    operations =
+      for index <- 1..50 do
+        %{"op" => "replace", "path" => "userName", "value" => "capped#{index}@example.com"}
+      end
+
+    body =
+      scim_conn(context.token)
+      |> patch("/scim/v2/Users/#{created["id"]}", scim_body(%{"Operations" => operations}))
+      |> scim_json_response(400)
+
+    assert body["scimType"] == "invalidValue"
+  end
+
+  test "a non-boolean active is refused rather than activating", context do
+    user = insert(:user)
+
+    body =
+      scim_conn(context.token)
+      |> post(
+        "/scim/v2/Users",
+        scim_body(%{"userName" => hd(user.emails).email, "active" => "0"})
+      )
+      |> scim_json_response(400)
+
+    assert body["scimType"] == "invalidValue"
+    refute Organizations.get_role(context.organization, user)
+  end
+
   defp scim_conn(token) do
     build_conn()
     |> put_req_header("authorization", "Bearer #{token}")

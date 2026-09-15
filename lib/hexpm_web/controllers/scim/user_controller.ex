@@ -11,17 +11,21 @@ defmodule HexpmWeb.SCIM.UserController do
 
   @default_count 100
   @max_count 200
+  # Past this the offset is meaningless and past int8 it is a 500. The provider
+  # pages forward from 1, so anything beyond the membership of the largest
+  # organization is a malformed request.
+  @max_start_index 1_000_000
 
   @filter_regex ~r/^\s*(userName|externalId)\s+eq\s+"((?:[^"\\]|\\.)*)"\s*$/i
 
-  def index(conn, %{"filter" => filter}) do
+  def index(conn, %{"filter" => filter}) when is_binary(filter) do
     case Regex.run(@filter_regex, filter) do
       [_all, attribute, value] ->
         value = String.replace(value, ~r/\\(.)/, "\\1")
 
         resolved =
           case String.downcase(attribute) do
-            "username" -> SCIM.find_by_user_name(connection(conn), value)
+            "username" -> SCIM.find_by_user_name(connection(conn), value, audit: audit(conn))
             "externalid" -> SCIM.find_by_external_id(connection(conn), value)
           end
 
@@ -40,15 +44,22 @@ defmodule HexpmWeb.SCIM.UserController do
     end
   end
 
+  def index(conn, %{"filter" => _filter}) do
+    scim_error(conn, 400, "Unsupported filter", :invalidFilter)
+  end
+
   def index(conn, params) do
-    start_index = max(Hexpm.Utils.safe_int(params["startIndex"]) || 1, 1)
+    start_index =
+      (Hexpm.Utils.safe_int(params["startIndex"]) || 1)
+      |> max(1)
+      |> min(@max_start_index)
 
     count =
       (Hexpm.Utils.safe_int(params["count"]) || @default_count)
       |> min(@max_count)
       |> max(0)
 
-    listing = SCIM.list_users(connection(conn), start_index, count)
+    listing = SCIM.list_users(connection(conn), start_index, count, audit: audit(conn))
 
     scim_json(conn, 200, %{
       "schemas" => [@list_schema],
@@ -67,7 +78,7 @@ defmodule HexpmWeb.SCIM.UserController do
   end
 
   def create(conn, params) do
-    case SCIM.create_user(connection(conn), params) do
+    case SCIM.create_user(connection(conn), params, audit: audit(conn)) do
       {:ok, resolved} ->
         conn
         |> put_resp_header("location", location(resolved))
@@ -79,27 +90,36 @@ defmodule HexpmWeb.SCIM.UserController do
   end
 
   def update(conn, %{"id" => id} = params) do
-    case SCIM.replace_user(connection(conn), id, params) do
+    case SCIM.replace_user(connection(conn), id, params, audit: audit(conn)) do
       {:ok, resolved} -> scim_json(conn, 200, user_json(resolved))
       {:error, reason} -> refuse(conn, reason)
     end
   end
 
   def patch(conn, %{"id" => id} = params) do
-    case SCIM.patch_user(connection(conn), id, params["Operations"]) do
+    case SCIM.patch_user(connection(conn), id, params["Operations"], audit: audit(conn)) do
       {:ok, resolved} -> scim_json(conn, 200, user_json(resolved))
       {:error, reason} -> refuse(conn, reason)
     end
   end
 
   def delete(conn, %{"id" => id}) do
-    case SCIM.delete_user(connection(conn), id) do
+    case SCIM.delete_user(connection(conn), id, audit: audit(conn)) do
       :ok -> send_resp(conn, 204, "")
       {:error, reason} -> refuse(conn, reason)
     end
   end
 
   defp connection(conn), do: conn.assigns.scim_connection
+
+  # Every row the provisioning agent writes names the agent and its address,
+  # so an administrator can tell a provider change from one a person made.
+  defp audit(conn) do
+    Hexpm.Accounts.AuditLogs.scim(
+      connection(conn).organization,
+      conn.remote_ip |> :inet.ntoa() |> to_string()
+    )
+  end
 
   defp refuse(conn, :not_found), do: scim_error(conn, 404, "Resource not found")
 
@@ -138,6 +158,15 @@ defmodule HexpmWeb.SCIM.UserController do
 
   defp refuse(conn, :invalid_path),
     do: scim_error(conn, 400, "Unsupported patch operation", :invalidPath)
+
+  defp refuse(conn, :too_many_operations),
+    do:
+      scim_error(
+        conn,
+        400,
+        "A PATCH carries at most #{SCIM.max_operations()} operations",
+        :invalidValue
+      )
 
   defp refuse(conn, %Ecto.Changeset{}),
     do: scim_error(conn, 400, "The value could not be saved", :invalidValue)

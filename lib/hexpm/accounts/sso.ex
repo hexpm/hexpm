@@ -898,6 +898,20 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   @doc """
+  Tells the administrators the organization has run out of seats, and records
+  the stage that hit it.
+
+  Provisioning refuses silently otherwise: the provider logs the 409 and nobody
+  on this side hears about it. Notice first, so the failure this call is about
+  to write does not count as the recent one that suppresses it.
+  """
+  def notify_seats_exhausted(%Connection{} = connection, stage) do
+    enqueue_seats_notice!(connection, "seats_exhausted")
+    record_failure(connection, stage, :seats_exhausted)
+    :ok
+  end
+
+  @doc """
   Ends a login attempt that cannot be completed and records why.
 
   Consuming the transaction here is what stops a replay: the authorization code
