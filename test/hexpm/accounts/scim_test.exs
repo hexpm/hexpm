@@ -2,7 +2,6 @@ defmodule Hexpm.Accounts.SCIMTest do
   use Hexpm.DataCase
 
   import Mox
-  import Swoosh.TestAssertions
 
   alias Hexpm.Accounts.{
     AuditLogs,
@@ -17,6 +16,7 @@ defmodule Hexpm.Accounts.SCIMTest do
   alias Hexpm.Accounts.SCIM.Resource
   alias Hexpm.Accounts.SSO
   alias Hexpm.Accounts.SSO.OrgSession
+  alias Hexpm.Emails.OutboxEntry
 
   setup :verify_on_exit!
 
@@ -172,7 +172,8 @@ defmodule Hexpm.Accounts.SCIMTest do
       assert {:error, :invalid_value} = create_user(context.connection, %{})
     end
 
-    test "seat exhaustion under block refuses the create", context do
+    test "seat exhaustion under block refuses the create and tells the administrators",
+         context do
       organization = seats_full(context.organization)
       connection = %{context.connection | organization: organization}
       user = insert(:user)
@@ -181,6 +182,10 @@ defmodule Hexpm.Accounts.SCIMTest do
                create_user(connection, %{"userName" => hd(user.emails).email})
 
       refute Organizations.get_role(organization, user)
+
+      assert Repo.get_by(OutboxEntry,
+               group_key: "sso.seats_exhausted:seats_exhausted:#{connection.id}"
+             )
     end
 
     test "seat exhaustion under expand buys a seat and retries once", context do
@@ -617,9 +622,12 @@ defmodule Hexpm.Accounts.SCIMTest do
       {:ok, _resolved} =
         create_user(context.connection, %{"userName" => hd(user.emails).email})
 
-      assert_email_sent(fn email ->
-        email.to == [{user.username, hd(user.emails).email}]
-      end)
+      assert %OutboxEntry{category: "organization.member_added", recipients: [recipient]} =
+               Repo.get_by!(OutboxEntry,
+                 group_key: "organization-member-added:#{context.organization.id}:#{user.id}"
+               )
+
+      assert recipient == hd(user.emails).email
     end
 
     test "provisioning writes name the agent and its address", context do
@@ -847,6 +855,161 @@ defmodule Hexpm.Accounts.SCIMTest do
         OrganizationInvitations.all_pending(context.organization) |> Enum.map(& &1.email)
 
       assert "old@example.com" in emails
+    end
+
+    test "a refused operation rolls back the whole PATCH", context do
+      user = insert(:user)
+
+      {:ok, %{resource: resource}} =
+        create_user(context.connection, %{"userName" => hd(user.emails).email})
+
+      assert {:error, :invalid_path} =
+               patch_user(context.connection, resource.scim_id, [
+                 %{"op" => "replace", "path" => "active", "value" => false},
+                 %{"op" => "remove", "path" => "userName"}
+               ])
+
+      assert Organizations.get_role(context.organization, user) == "read"
+      assert {:ok, %{state: :member}} = SCIM.get_user(context.connection, resource.scim_id)
+    end
+
+    test "a PATCH refused partway through leaves the earlier operations unapplied",
+         context do
+      user = insert(:user)
+
+      {:ok, %{resource: resource}} =
+        create_user(context.connection, %{"userName" => hd(user.emails).email})
+
+      {:ok, _other} = create_user(context.connection, %{"userName" => "taken@example.com"})
+
+      assert {:error, :uniqueness} =
+               patch_user(context.connection, resource.scim_id, [
+                 %{"op" => "replace", "path" => "active", "value" => false},
+                 %{"op" => "replace", "path" => "userName", "value" => "taken@example.com"}
+               ])
+
+      assert Organizations.get_role(context.organization, user) == "read"
+    end
+
+    test "a create refused on its attributes leaves no invitation behind", context do
+      assert {:error, %Ecto.Changeset{}} =
+               create_user(context.connection, %{
+                 "userName" => "nobody@example.com",
+                 "externalId" => String.duplicate("x", 1_025)
+               })
+
+      assert OrganizationInvitations.all_pending(context.organization) == []
+      refute Repo.get_by(OutboxEntry, category: "organization.invitation")
+    end
+
+    test "deactivating an inactive handle retires an invitation sent by hand", context do
+      user = insert(:user)
+      email = hd(user.emails).email
+
+      {:ok, %{resource: resource}} = create_user(context.connection, %{"userName" => email})
+      {:ok, %{state: :inactive}} = deactivate(context.connection, resource)
+
+      {:ok, _invitation} =
+        OrganizationInvitations.invite(
+          context.organization,
+          %{"email" => email, "role" => "write"},
+          context.admin,
+          audit: audit_data(context.admin)
+        )
+
+      assert {:ok, %{state: :inactive}} = deactivate(context.connection, resource)
+      assert OrganizationInvitations.all_pending(context.organization) == []
+    end
+
+    test "an invitation the last member accepted makes the handle theirs, and the guard holds",
+         context do
+      {:ok, %{resource: resource}} =
+        create_user(context.connection, %{"userName" => "admin-alias@example.com"})
+
+      invitation =
+        Repo.get!(OrganizationInvitation, resource.invitation_id)
+        |> Repo.preload(:organization)
+
+      {:ok, :already_member} =
+        OrganizationInvitations.accept(invitation, context.admin,
+          audit: audit_data(context.admin)
+        )
+
+      assert {:ok, %{state: :member, user: %{id: admin_id}}} =
+               SCIM.get_user(context.connection, resource.scim_id)
+
+      assert admin_id == context.admin.id
+
+      assert {:error, :last_member} = deactivate(context.connection, resource)
+      assert Organizations.get_role(context.organization, context.admin) == "admin"
+    end
+
+    test "the import lists a member added after another was removed by hand", context do
+      leaver = insert(:user)
+      insert(:organization_user, organization: context.organization, user: leaver)
+
+      assert Enum.count(list_users(context.connection, 1, 100).resources) == 2
+
+      :ok =
+        Organizations.remove_member(context.organization, leaver,
+          audit: audit_data(context.admin)
+        )
+
+      joiner = insert(:user)
+      insert(:organization_user, organization: context.organization, user: joiner)
+
+      listing = list_users(context.connection, 1, 100)
+      assert Enum.any?(listing.resources, &(&1.user && &1.user.id == joiner.id))
+    end
+
+    test "a PATCH that sets active to null is refused", context do
+      user = insert(:user)
+
+      {:ok, %{resource: resource}} =
+        create_user(context.connection, %{"userName" => hd(user.emails).email})
+
+      assert {:error, :invalid_value} =
+               patch_user(context.connection, resource.scim_id, [
+                 %{"op" => "replace", "path" => "active", "value" => nil}
+               ])
+
+      assert {:error, :invalid_value} =
+               patch_user(context.connection, resource.scim_id, [
+                 %{"op" => "replace", "value" => %{"active" => nil}}
+               ])
+
+      assert Organizations.get_role(context.organization, user) == "read"
+    end
+
+    test "an accepted invitation binds the handle in the acceptance itself", context do
+      {:ok, %{resource: resource}} =
+        create_user(context.connection, %{"userName" => "joiner@example.com"})
+
+      invitation =
+        Repo.get!(OrganizationInvitation, resource.invitation_id)
+        |> Repo.preload(:organization)
+
+      joiner = insert(:user)
+
+      {:ok, _organization_user} =
+        OrganizationInvitations.accept(invitation, joiner, audit: audit_data(joiner))
+
+      assert Repo.get!(Resource, resource.id).user_id == joiner.id
+
+      # An import between the acceptance and the next read must not hand the
+      # account to a second row.
+      listing = list_users(context.connection, 1, 100)
+      assert Enum.count(listing.resources, &(&1.user && &1.user.id == joiner.id)) == 1
+
+      assert {:ok, %{state: :inactive}} = deactivate(context.connection, resource)
+      refute Organizations.get_role(context.organization, joiner)
+    end
+
+    test "filter values past the column bounds match nothing", context do
+      assert find_by_user_name(context.connection, String.duplicate("a", 250) <> "@x.io") ==
+               nil
+
+      assert SCIM.find_by_external_id(context.connection, String.duplicate("x", 1_025)) == nil
     end
   end
 

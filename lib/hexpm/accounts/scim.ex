@@ -84,26 +84,34 @@ defmodule Hexpm.Accounts.SCIM do
       when is_binary(user_name) do
     user_name = Resource.normalize_user_name(user_name)
 
-    case get_resource_by_user_name(connection, user_name) do
-      %Resource{} = resource ->
-        resolve(resource)
+    # Nothing that is not an address within the column's bound is stored, so
+    # nothing else can match.
+    if Resource.email_shaped?(user_name) do
+      case get_resource_by_user_name(connection, user_name) do
+        %Resource{} = resource ->
+          resolve(resource)
 
-      nil ->
-        case resolve_account(connection.id, connection.organization_id, user_name) do
-          %User{} = user ->
-            if member?(connection.organization_id, user.id) do
-              materialize_member(connection, user, user_name, audit_data)
-            end
+        nil ->
+          case resolve_account(connection.id, connection.organization_id, user_name) do
+            %User{} = user ->
+              if member?(connection.organization_id, user.id) do
+                materialize_member(connection, user, user_name, audit_data)
+              end
 
-          nil ->
-            nil
-        end
+            nil ->
+              nil
+          end
+      end
     end
   end
 
   # Entra maps `externalId` from `mailNickname` by default, which repeats after
   # a rehire, so two rows under one id is a shape the provider produces without
   # malice. The oldest wins rather than the request failing.
+  def find_by_external_id(%Connection{}, external_id)
+      when is_binary(external_id) and byte_size(external_id) > 1_024,
+      do: nil
+
   def find_by_external_id(%Connection{} = connection, external_id)
       when is_binary(external_id) do
     case Repo.one(
@@ -140,20 +148,22 @@ defmodule Hexpm.Accounts.SCIM do
          {:ok, active} <- active_value(params["active"]) do
       external_id = optional_string(params["externalId"])
 
-      cond do
-        get_resource_by_user_name(connection, user_name) ->
-          {:error, :uniqueness}
+      write(connection, fn ->
+        cond do
+          get_resource_by_user_name(connection, user_name) ->
+            {:error, :uniqueness}
 
-        active == false ->
-          insert_resource(
-            connection,
-            %{user_name: user_name, external_id: external_id},
-            audit_data
-          )
+          active == false ->
+            insert_resource(
+              connection,
+              %{user_name: user_name, external_id: external_id},
+              audit_data
+            )
 
-        true ->
-          create_active(connection, user_name, external_id, audit_data)
-      end
+          true ->
+            create_active(connection, user_name, external_id, audit_data)
+        end
+      end)
     end
   end
 
@@ -162,8 +172,7 @@ defmodule Hexpm.Accounts.SCIM do
   `active` transition. Everything else in the payload is ignored.
   """
   def replace_user(%Connection{} = connection, scim_id, params, audit: audit_data) do
-    with {:ok, resolved} <- get_user(connection, scim_id),
-         {:ok, user_name} <- validate_user_name(params["userName"]),
+    with {:ok, user_name} <- validate_user_name(params["userName"]),
          {:ok, active} <- active_value(params["active"]) do
       changes = %{
         user_name: user_name,
@@ -172,7 +181,11 @@ defmodule Hexpm.Accounts.SCIM do
 
       changes = if active == :unchanged, do: changes, else: Map.put(changes, :active, active)
 
-      apply_changes(connection, resolved, changes, audit_data)
+      write(connection, fn ->
+        with {:ok, resolved} <- get_user(connection, scim_id) do
+          apply_changes(connection, resolved, changes, audit_data)
+        end
+      end)
     end
   end
 
@@ -188,24 +201,21 @@ defmodule Hexpm.Accounts.SCIM do
 
   def patch_user(%Connection{} = connection, scim_id, operations, audit: audit_data)
       when is_list(operations) do
-    with {:ok, resolved} <- get_user(connection, scim_id) do
-      # Operations run one at a time, in array order, as RFC 7644 requires:
-      # `active` then `userName` means activate the account this name matches
-      # now and relabel afterwards, which is not the same as activating under
-      # the final name.
-      Enum.reduce_while(operations, {:ok, resolved}, fn operation, {:ok, resolved} ->
-        case patch_change(operation) do
-          {:ok, change} ->
+    # Every operation is parsed before any runs, so a malformed one refuses
+    # the request without a transaction.
+    with {:ok, changes} <- patch_changes(operations) do
+      write(connection, fn ->
+        with {:ok, resolved} <- get_user(connection, scim_id) do
+          # Operations run one at a time, in array order, as RFC 7644
+          # requires: `active` then `userName` means activate the account this
+          # name matches now and relabel afterwards, which is not the same as
+          # activating under the final name.
+          Enum.reduce_while(changes, {:ok, resolved}, fn change, {:ok, resolved} ->
             case apply_changes(connection, resolved, change, audit_data) do
               {:ok, resolved} -> {:cont, {:ok, resolved}}
               {:error, reason} -> {:halt, {:error, reason}}
             end
-
-          :ignore ->
-            {:cont, {:ok, resolved}}
-
-          {:error, reason} ->
-            {:halt, {:error, reason}}
+          end)
         end
       end)
     end
@@ -218,12 +228,103 @@ defmodule Hexpm.Accounts.SCIM do
   Entra on permanent deletion; Okta deactivates instead.
   """
   def delete_user(%Connection{} = connection, scim_id, audit: audit_data) do
-    with {:ok, resolved} <- get_user(connection, scim_id),
-         {:ok, resolved} <- deactivate(connection, resolved, audit_data) do
-      Repo.delete!(resolved.resource)
-      audit!(audit_data, "sso.scim.resource.delete", connection, resolved.resource)
-      :ok
+    write(connection, fn ->
+      with {:ok, resolved} <- get_user(connection, scim_id),
+           {:ok, resolved} <- deactivate(connection, resolved, audit_data) do
+        Repo.delete!(resolved.resource)
+        audit!(audit_data, "sso.scim.resource.delete", connection, resolved.resource)
+        {:ok, :deleted}
+      end
+    end)
+    |> case do
+      {:ok, :deleted} -> :ok
+      {:error, reason} -> {:error, reason}
     end
+  end
+
+  @doc """
+  Binds the handle behind an accepted invitation to the account that accepted
+  it, in the acceptance's own transaction. Runs under the invitation lock, so
+  a deactivation of the same handle sees either the pending invitation or the
+  member it produced, never the gap between.
+
+  The provider's own handle wins over a row an import materialized for the
+  same account under another address: that row loses its account and reads
+  inactive from then on.
+  """
+  def adopt_acceptance(%OrganizationInvitation{id: invitation_id}, %User{id: user_id}) do
+    case Repo.get_by(Resource, invitation_id: invitation_id) do
+      nil ->
+        {:ok, :none}
+
+      %Resource{user_id: ^user_id} ->
+        {:ok, :bound}
+
+      %Resource{} = resource ->
+        from(other in Resource,
+          where: other.connection_id == ^resource.connection_id,
+          where: other.user_id == ^user_id,
+          where: other.id != ^resource.id
+        )
+        |> Repo.update_all(set: [user_id: nil])
+
+        resource
+        |> change(user_id: user_id)
+        |> Repo.update()
+    end
+  end
+
+  # -- one transaction per write ---------------------------------------------
+
+  # A write is one transaction, so a refusal partway through a PATCH or a PUT
+  # leaves nothing applied (RFC 7644 section 3.5.2), and an invitation, the
+  # mail behind it, the membership and the audit rows commit together or not
+  # at all. Locks are taken in one order: the connection, then any invitation
+  # the write retires, then the organization seat row, then the user.
+  # `Organizations.remove_member/3` and invitation acceptance take theirs in
+  # the same order.
+  #
+  # Buying a seat is the one step that cannot run inside, because it is a
+  # billing call. A write refused for seats under the expand policy expands
+  # afterwards and runs once more from the start.
+  defp write(connection, fun, retried? \\ false) do
+    result =
+      Repo.transaction(fn ->
+        lock_connection!(connection)
+
+        case fun.() do
+          {:ok, value} -> value
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end)
+
+    case result do
+      {:ok, value} ->
+        {:ok, value}
+
+      {:error, {:seats_exhausted, user}}
+      when not retried? and connection.scim_seat_policy == "expand" ->
+        SSO.expand_seat(connection, user, :scim)
+        write(connection, fun, true)
+
+      {:error, {:seats_exhausted, _user}} ->
+        SSO.notify_seats_exhausted(connection, :scim)
+        {:error, :seats_exhausted}
+
+      {:error, :seat_limit_unknown} = error ->
+        SSO.notify_seats_exhausted(connection, :scim)
+        error
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  # `FOR NO KEY UPDATE` serializes the provider's writes on this connection
+  # without blocking the `FOR KEY SHARE` a login's identity insert takes on the
+  # same row. Member removal takes `FOR UPDATE` here first as well.
+  defp lock_connection!(connection) do
+    Repo.one!(from(row in Connection, where: row.id == ^connection.id, lock: "FOR NO KEY UPDATE"))
   end
 
   # -- state resolution ------------------------------------------------------
@@ -267,15 +368,30 @@ defmodule Hexpm.Accounts.SCIM do
 
   defp repair(resource), do: resource
 
+  # Another handle already holding the account leaves this one alone. That is
+  # checked before the write rather than caught after it, because a unique
+  # violation inside a write's transaction would abort the transaction; the
+  # constraint stays as the answer to a race on the read paths.
   defp adopt_user(resource, user_id) do
-    resource
-    |> change(user_id: user_id)
-    |> unique_constraint([:connection_id, :user_id])
-    |> Repo.update()
-    |> case do
-      {:ok, resource} -> Repo.preload(resource, :user, force: true)
-      # Another resource already holds this account; leave this one alone.
-      {:error, _changeset} -> resource
+    holder =
+      Repo.exists?(
+        from(other in Resource,
+          where: other.connection_id == ^resource.connection_id,
+          where: other.user_id == ^user_id
+        )
+      )
+
+    if holder do
+      resource
+    else
+      resource
+      |> change(user_id: user_id)
+      |> unique_constraint([:connection_id, :user_id])
+      |> Repo.update()
+      |> case do
+        {:ok, resource} -> Repo.preload(resource, :user, force: true)
+        {:error, _changeset} -> resource
+      end
     end
   end
 
@@ -286,56 +402,23 @@ defmodule Hexpm.Accounts.SCIM do
 
   # -- create and activation -------------------------------------------------
 
+  # The handle is validated before the invitation goes out, so a create that
+  # fails on its own attributes leaves no invitation behind.
   defp create_active(connection, user_name, external_id, audit_data) do
+    attrs = %{user_name: user_name, external_id: external_id}
+
     case resolve_account(connection.id, connection.organization_id, user_name) do
       %User{} = user ->
-        create_member(connection, user_name, external_id, user, audit_data, _retried? = false)
+        with {:ok, _handle} <- validate_resource(connection, attrs),
+             {:ok, _membership} <- ensure_membership(connection, user, audit_data) do
+          insert_resource(connection, Map.put(attrs, :user_id, user.id), audit_data)
+        end
 
       nil ->
-        with {:ok, invitation, _provenance} <-
-               obtain_invitation(connection, user_name, audit_data) do
-          insert_resource(
-            connection,
-            %{
-              user_name: user_name,
-              external_id: external_id,
-              invitation_id: invitation.id
-            },
-            audit_data
-          )
+        with {:ok, _handle} <- validate_resource(connection, attrs),
+             {:ok, invitation} <- obtain_invitation(connection, user_name, audit_data) do
+          insert_resource(connection, Map.put(attrs, :invitation_id, invitation.id), audit_data)
         end
-    end
-  end
-
-  defp create_member(connection, user_name, external_id, user, audit_data, retried?) do
-    attrs = %{user_name: user_name, external_id: external_id, user_id: user.id}
-
-    result =
-      Repo.transaction(fn ->
-        with {:ok, membership} <- ensure_membership(connection, user, audit_data) do
-          case do_insert_resource(connection, attrs) do
-            {:ok, resource} -> {resource, membership}
-            {:error, reason} -> Repo.rollback(reason)
-          end
-        else
-          {:error, reason} -> Repo.rollback(reason)
-        end
-      end)
-
-    case result do
-      {:ok, {resource, membership}} ->
-        if membership == :joined, do: notify_member(connection, user)
-        audit!(audit_data, "sso.scim.resource.create", connection, resource)
-        {:ok, resolve(resource)}
-
-      {:error, :seats_exhausted} when not retried? ->
-        retry_after_expansion(connection, user, fn ->
-          create_member(connection, user_name, external_id, user, audit_data, true)
-        end)
-
-      {:error, reason} ->
-        notify_seats(connection, reason)
-        {:error, reason}
     end
   end
 
@@ -347,42 +430,15 @@ defmodule Hexpm.Accounts.SCIM do
   end
 
   defp activate(connection, %{resource: resource}, audit_data) do
-    activate_resource(connection, resource, audit_data, _retried? = false)
-  end
-
-  defp activate_resource(connection, resource, audit_data, retried?) do
     case resolve_account(connection.id, connection.organization_id, resource.user_name) do
       %User{} = user ->
-        result =
-          Repo.transaction(fn ->
-            with {:ok, membership} <- ensure_membership(connection, user, audit_data) do
-              case update_resource(resource, %{user_id: user.id}) do
-                {:ok, resource} -> {resource, membership}
-                {:error, reason} -> Repo.rollback(reason)
-              end
-            else
-              {:error, reason} -> Repo.rollback(reason)
-            end
-          end)
-
-        case result do
-          {:ok, {resource, membership}} ->
-            if membership == :joined, do: notify_member(connection, user)
-            {:ok, resolve(resource)}
-
-          {:error, :seats_exhausted} when not retried? ->
-            retry_after_expansion(connection, user, fn ->
-              activate_resource(connection, resource, audit_data, true)
-            end)
-
-          {:error, reason} ->
-            notify_seats(connection, reason)
-            {:error, reason}
+        with {:ok, _membership} <- ensure_membership(connection, user, audit_data),
+             {:ok, resource} <- update_resource(resource, %{user_id: user.id}) do
+          {:ok, resolve(resource)}
         end
 
       nil ->
-        with {:ok, invitation, _provenance} <-
-               obtain_invitation(connection, resource.user_name, audit_data),
+        with {:ok, invitation} <- obtain_invitation(connection, resource.user_name, audit_data),
              {:ok, resource} <-
                update_resource(resource, %{invitation_id: invitation.id, user_id: nil}) do
           {:ok, resolve(resource)}
@@ -390,79 +446,61 @@ defmodule Hexpm.Accounts.SCIM do
     end
   end
 
-  # The seat is claimed and the membership inserted in the caller's
-  # transaction. A concurrent membership (JIT, an administrator) is adopted
-  # rather than refused: the person the provider asked for is a member.
+  # The seat is claimed and the membership inserted in the write's transaction.
+  # A membership that already exists (JIT, an administrator) is adopted rather
+  # than refused: the person the provider asked for is a member. It costs no
+  # seat and needs no admission, so a full organization, or one whose 2FA
+  # policy the person does not yet satisfy, still provisions someone who is
+  # already in it.
   #
-  # The seat lock comes before the role is read, so the membership set cannot
-  # change between the two and a concurrent insert cannot abort the caller's
-  # transaction on the unique index.
+  # The seat lock comes before the role is read, and every other path that
+  # inserts a membership takes the same lock first, so the role read is exact
+  # and the insert cannot hit the unique index.
   defp ensure_membership(connection, user, audit_data) do
     organization = connection.organization
 
     if User.organization?(user) do
       {:error, :invalid_value}
     else
-      claim_membership(connection, organization, user, audit_data)
-    end
-  end
+      organization = Seats.lock!(organization)
 
-  # Already a member costs no seat and needs no admission, so a full
-  # organization, or one whose 2FA policy the person does not yet satisfy,
-  # still provisions someone who is already in it.
-  defp claim_membership(connection, organization, user, audit_data) do
-    organization = Seats.lock!(organization)
-
-    if Organizations.get_role(organization, user) do
-      {:ok, :already_member}
-    else
-      with :ok <- OrganizationTFA.admit(organization, user),
-           {:ok, _usage} <- Seats.claim(organization, unknown: :deny) do
-        insert_membership(connection, organization, user, audit_data)
+      if Organizations.get_role(organization, user) do
+        {:ok, :already_member}
+      else
+        with :ok <- OrganizationTFA.admit(organization, user),
+             {:ok, _usage} <- claim_seat(organization, user) do
+          insert_membership(connection, organization, user, audit_data)
+        end
       end
     end
   end
 
+  # The refusal carries the person, so the retry outside the transaction can
+  # buy the seat for exactly them.
+  defp claim_seat(organization, user) do
+    case Seats.claim(organization, unknown: :deny) do
+      {:error, :seats_exhausted} -> {:error, {:seats_exhausted, user}}
+      other -> other
+    end
+  end
+
+  # Joining an organization is something the person finds out about, whether
+  # an administrator added them or their identity provider did. The mail is
+  # queued with the membership, so a delivery problem never answers the
+  # provider after the membership has committed.
   defp insert_membership(connection, organization, user, audit_data) do
     organization_user = %OrganizationUser{
       organization_id: organization.id,
       user_id: user.id
     }
 
-    case Repo.insert(
-           Organization.add_member(organization_user, %{"role" => connection.scim_role})
-         ) do
-      {:ok, _member} ->
-        insert_audit!(audit_data, "organization.member.add", {organization, user})
-        {:ok, :joined}
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        if unique_violation?(changeset), do: {:ok, :already_member}, else: {:error, changeset}
-    end
-  end
-
-  # Joining an organization is something the person finds out about, whether an
-  # administrator added them or their identity provider did.
-  defp notify_member(connection, user) do
-    Organizations.send_member_added_email(
-      connection.organization,
-      Repo.preload(user, :emails)
-    )
-  end
-
-  defp notify_seats(connection, reason)
-       when reason in [:seats_exhausted, :seat_limit_unknown] do
-    SSO.notify_seats_exhausted(connection, :scim)
-  end
-
-  defp notify_seats(_connection, _reason), do: :ok
-
-  defp retry_after_expansion(connection, user, retry) do
-    if connection.scim_seat_policy == "expand" do
-      SSO.expand_seat(connection, user, :scim)
-      retry.()
-    else
-      {:error, :seats_exhausted}
+    with {:ok, _member} <-
+           Repo.insert(
+             Organization.add_member(organization_user, %{"role" => connection.scim_role})
+           ) do
+      insert_audit!(audit_data, "organization.member.add", {organization, user})
+      Organizations.send_member_added_email(organization, Repo.preload(user, :emails))
+      {:ok, :joined}
     end
   end
 
@@ -471,7 +509,7 @@ defmodule Hexpm.Accounts.SCIM do
 
     case OrganizationInvitations.get_pending_by_email(organization, user_name) do
       %OrganizationInvitation{} = invitation ->
-        {:ok, invitation, :adopted}
+        {:ok, invitation}
 
       nil ->
         case OrganizationInvitations.invite(
@@ -481,7 +519,7 @@ defmodule Hexpm.Accounts.SCIM do
                audit: audit_data
              ) do
           {:ok, invitation} ->
-            {:ok, invitation, :created}
+            {:ok, invitation}
 
           # `invite/4` matched a member through a username or an unverified
           # address. A verified email never reached this branch, so binding
@@ -540,101 +578,92 @@ defmodule Hexpm.Accounts.SCIM do
           {:ok, %{resolved | resource: resource}}
         end
 
-      # An invited person renamed is an invitation to the new address. The
-      # row is updated before the old invitation is retired, so a rename that
-      # fails on a taken name leaves the original untouched; only an
-      # invitation this rename itself created is taken back on failure.
+      # An invited person renamed is an invitation to the new address. The old
+      # invitation is locked first, so an acceptance of it either lands before
+      # the rename and is undone the way a deactivation undoes one, or waits
+      # and finds the invitation revoked.
       resolved.state == :invited ->
-        old_invitation_id = resolved.resource.invitation_id
+        old_invitation = lock_invitation(resolved.resource.invitation_id)
 
-        with {:ok, invitation, provenance} <-
-               obtain_invitation(connection, user_name, audit_data) do
-          case update_resource(resolved.resource, %{
+        with {:ok, invitation} <- obtain_invitation(connection, user_name, audit_data),
+             {:ok, resource} <-
+               update_resource(resolved.resource, %{
                  user_name: user_name,
                  invitation_id: invitation.id
-               }) do
-            {:ok, resource} ->
-              audit!(audit_data, "sso.scim.resource.update", connection, resource)
-              retire_accepted_or_revoke(connection, old_invitation_id, audit_data)
-              {:ok, resolve(resource)}
-
-            {:error, reason} ->
-              if provenance == :created do
-                retire_invitation(connection, invitation.id, audit_data)
-              end
-
-              {:error, reason}
-          end
+               }),
+             :ok <- retire_locked(connection, old_invitation, audit_data) do
+          audit!(audit_data, "sso.scim.resource.update", connection, resource)
+          {:ok, resolve(resource)}
         end
     end
   end
 
   defp apply_user_name(_connection, resolved, _changes, _audit_data), do: {:ok, resolved}
 
-  # A rename whose old invitation was accepted while it was in flight leaves a
-  # membership the handle no longer points at, so the acceptance is undone the
-  # way a deactivation undoes one.
-  defp retire_accepted_or_revoke(connection, invitation_id, audit_data) do
-    case retire_invitation(connection, invitation_id, audit_data) do
-      {:accepted, user_id} -> remove_acceptor(connection, user_id, audit_data)
-      _retired -> :ok
+  # What a deactivation leaves behind: no membership, no live invitation that
+  # could re-admit the address, no membership created by an acceptance that
+  # raced it, and no pointer on the handle. That holds whichever state the
+  # handle was in: an invitation sent by hand for the address names the person
+  # the provider just deprovisioned, and following it would put them straight
+  # back in, so it is retired even when the handle itself was already inactive.
+  #
+  # The invitations are locked before the membership is removed, the order
+  # acceptance uses (invitation, then organization), and the last-member and
+  # last-admin guards refuse the whole deactivation, never half of it.
+  defp deactivate(connection, resolved, audit_data) do
+    resource = resolved.resource
+    own = lock_invitation(resource.invitation_id)
+    matching = lock_matching_invitation(connection, resource, own)
+
+    with :ok <- remove_deactivated(connection, resolved, audit_data),
+         :ok <- retire_locked(connection, own, audit_data),
+         :ok <- retire_locked(connection, matching, audit_data),
+         {:ok, resource} <- update_resource(resource, %{invitation_id: nil, user_id: nil}) do
+      {:ok, resolve(resource)}
     end
   end
 
-  # One transaction over the membership and the invitation: the last-member
-  # guard can refuse either removal, and a deactivation that leaves the
-  # invitation revoked but the membership standing is worse than one that does
-  # nothing.
-  defp deactivate(connection, %{state: :member} = resolved, audit_data) do
-    organization = connection.organization
-
-    Repo.transaction(fn ->
-      with :ok <- Organizations.remove_member(organization, resolved.user, audit: audit_data),
-           {:ok, cleared} <- retire_and_clear(connection, resolved.resource, audit_data) do
-        cleared
-      else
-        {:error, reason} -> Repo.rollback(reason)
-      end
-    end)
+  defp remove_deactivated(connection, %{state: :member, user: user}, audit_data) do
+    Organizations.remove_member(connection.organization, user, audit: audit_data)
   end
 
-  defp deactivate(connection, %{state: :invited} = resolved, audit_data) do
-    retire_and_clear(connection, resolved.resource, audit_data)
+  defp remove_deactivated(_connection, _resolved, _audit_data), do: :ok
+
+  defp lock_invitation(nil), do: nil
+
+  defp lock_invitation(invitation_id) do
+    Repo.one(
+      from(invitation in OrganizationInvitation,
+        where: invitation.id == ^invitation_id,
+        lock: "FOR UPDATE"
+      )
+    )
   end
 
-  defp deactivate(_connection, %{state: :inactive} = resolved, _audit_data), do: {:ok, resolved}
+  defp lock_matching_invitation(connection, resource, own) do
+    case OrganizationInvitations.get_pending_by_email(connection.organization, resource.user_name) do
+      %OrganizationInvitation{id: id} when is_nil(own) or id != own.id -> lock_invitation(id)
+      _own_or_none -> nil
+    end
+  end
 
-  # What a deactivation leaves behind: no live invitation that could re-admit
-  # the address, no membership created by an acceptance that raced it, and no
-  # dangling pointer on the handle.
-  #
-  # An invitation sent by hand for the same address is retired too. It names
-  # the person the provider just deprovisioned, and following it would put them
-  # straight back in.
-  defp retire_and_clear(connection, resource, audit_data) do
-    retire_matching_invitation(connection, resource, audit_data)
+  # Revokes a locked invitation, or undoes the acceptance that won the race to
+  # it: the membership it produced is removed the way a deactivation removes
+  # one, and the guards' refusals come back rather than being dropped.
+  defp retire_locked(_connection, nil, _audit_data), do: :ok
 
-    case retire_invitation(connection, resource.invitation_id, audit_data) do
-      {:accepted, user_id} ->
-        case remove_acceptor(connection, user_id, audit_data) do
-          {:error, reason} -> {:error, reason}
-          :ok -> clear_invitation(resource)
+  defp retire_locked(connection, %OrganizationInvitation{} = locked, audit_data) do
+    cond do
+      locked.accepted_at ->
+        remove_acceptor(connection, locked.accepted_by_user_id, audit_data)
+
+      is_nil(locked.revoked_at) ->
+        with {:ok, _invitation} <-
+               OrganizationInvitations.revoke(connection.organization, locked, audit: audit_data) do
+          :ok
         end
 
-      _retired ->
-        clear_invitation(resource)
-    end
-  end
-
-  defp retire_matching_invitation(connection, resource, audit_data) do
-    case OrganizationInvitations.get_pending_by_email(
-           connection.organization,
-           resource.user_name
-         ) do
-      %OrganizationInvitation{id: id} when id != resource.invitation_id ->
-        retire_invitation(connection, id, audit_data)
-
-      _own_or_none ->
+      true ->
         :ok
     end
   end
@@ -650,51 +679,19 @@ defmodule Hexpm.Accounts.SCIM do
     end
   end
 
-  defp clear_invitation(resource) do
-    with {:ok, resource} <- update_resource(resource, %{invitation_id: nil, user_id: nil}) do
-      {:ok, resolve(resource)}
-    end
-  end
-
-  # Revokes under a row lock, or reports that an acceptance won the race, so
-  # revocation never stamps an accepted row while its membership walks away.
-  defp retire_invitation(_connection, nil, _audit_data), do: :none
-
-  defp retire_invitation(connection, invitation_id, audit_data) do
-    {:ok, outcome} =
-      Repo.transaction(fn ->
-        locked =
-          Repo.one(
-            from(invitation in OrganizationInvitation,
-              where: invitation.id == ^invitation_id,
-              lock: "FOR UPDATE"
-            )
-          )
-
-        cond do
-          is_nil(locked) ->
-            :none
-
-          locked.accepted_at ->
-            {:accepted, locked.accepted_by_user_id}
-
-          is_nil(locked.revoked_at) ->
-            {:ok, _invitation} =
-              OrganizationInvitations.revoke(connection.organization, locked, audit: audit_data)
-
-            :revoked
-
-          true ->
-            :none
-        end
-      end)
-
-    outcome
-  end
-
   # -- materialization -------------------------------------------------------
 
+  # Handles that can be bound to an account are repaired before the members
+  # without one are looked for, so an accepted invitation's handle claims its
+  # account rather than an import materializing a second row for the same
+  # person. Membership is compared by account, not by count: a handle whose
+  # account was removed by hand still carries the account.
   defp materialize_members(connection, audit_data) do
+    from(resource in resources_query(connection), where: is_nil(resource.user_id))
+    |> Repo.all()
+    |> Repo.preload([:user, :invitation])
+    |> Enum.each(&repair/1)
+
     represented =
       from(resource in resources_query(connection),
         where: not is_nil(resource.user_id),
@@ -703,14 +700,6 @@ defmodule Hexpm.Accounts.SCIM do
       |> Repo.all()
       |> MapSet.new()
 
-    if Seats.used(connection.organization) > MapSet.size(represented) do
-      materialize_missing(connection, represented, audit_data)
-    end
-
-    :ok
-  end
-
-  defp materialize_missing(connection, represented, audit_data) do
     provider_emails =
       from(identity in Identity,
         where: identity.connection_id == ^connection.id,
@@ -728,6 +717,8 @@ defmodule Hexpm.Accounts.SCIM do
         materialize_member(connection, user, user_name, audit_data)
       end
     end
+
+    :ok
   end
 
   # An account holds at most one handle per connection, so a member the
@@ -786,18 +777,24 @@ defmodule Hexpm.Accounts.SCIM do
   # -- persistence helpers ---------------------------------------------------
 
   defp insert_resource(connection, attrs, audit_data) do
-    with {:ok, resource} <- do_insert_resource(connection, attrs) do
-      audit!(audit_data, "sso.scim.resource.create", connection, resource)
-      {:ok, resolve(resource)}
-    end
-  end
-
-  defp do_insert_resource(connection, attrs) do
     connection
     |> Resource.build()
     |> Resource.changeset(attrs)
     |> Repo.insert()
     |> normalize_write_error()
+    |> case do
+      {:ok, resource} ->
+        audit!(audit_data, "sso.scim.resource.create", connection, resource)
+        {:ok, resolve(resource)}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp validate_resource(connection, attrs) do
+    changeset = connection |> Resource.build() |> Resource.changeset(attrs)
+    if changeset.valid?, do: {:ok, changeset}, else: {:error, changeset}
   end
 
   defp update_resource(resource, attrs) do
@@ -925,6 +922,20 @@ defmodule Hexpm.Accounts.SCIM do
 
   defp active_value(_value), do: {:error, :invalid_value}
 
+  defp patch_changes(operations) do
+    Enum.reduce_while(operations, {:ok, []}, fn operation, {:ok, changes} ->
+      case patch_change(operation) do
+        {:ok, change} -> {:cont, {:ok, [change | changes]}}
+        :ignore -> {:cont, {:ok, changes}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+    |> case do
+      {:ok, changes} -> {:ok, Enum.reverse(changes)}
+      error -> error
+    end
+  end
+
   defp patch_change(%{"op" => op} = operation) when is_binary(op) do
     value = Map.get(operation, "value")
 
@@ -933,8 +944,14 @@ defmodule Hexpm.Accounts.SCIM do
         {op, nil} when op in ["replace", "add"] and is_map(value) ->
           value_object_changes(value)
 
+        # A patch that names `active` has to say which way; PUT is where an
+        # absent value means unchanged.
         {op, "active"} when op in ["replace", "add"] ->
-          with {:ok, active} <- active_value(value), do: {:ok, %{active: active}}
+          case active_value(value) do
+            {:ok, :unchanged} -> {:error, :invalid_value}
+            {:ok, active} -> {:ok, %{active: active}}
+            {:error, reason} -> {:error, reason}
+          end
 
         {op, "username"} when op in ["replace", "add"] and is_binary(value) ->
           {:ok, %{user_name: value}}
@@ -977,6 +994,7 @@ defmodule Hexpm.Accounts.SCIM do
       case {String.downcase(to_string(key)), value} do
         {"active", value} ->
           case active_value(value) do
+            {:ok, :unchanged} -> {:halt, {:error, :invalid_value}}
             {:ok, active} -> {:cont, {:ok, Map.put(changes, :active, active)}}
             {:error, reason} -> {:halt, {:error, reason}}
           end
