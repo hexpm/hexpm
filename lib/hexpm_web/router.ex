@@ -329,6 +329,8 @@ defmodule HexpmWeb.Router do
     post "/security/enable-tfa", SecurityController, :enable_tfa, as: :dashboard_security
     post "/security/disable-tfa", SecurityController, :disable_tfa, as: :dashboard_security
 
+    get "/security/recovery-codes", SecurityController, :recovery_codes, as: :dashboard_security
+
     post "/security/rotate-recovery-codes", SecurityController, :rotate_recovery_codes,
       as: :dashboard_security
 

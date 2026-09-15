@@ -36,6 +36,7 @@
       <%= for {key, value} <- @hidden_fields do %>
         <input type="hidden" name="<%= key %>" value="<%= value %>">
       <% end %>
+      <input type="hidden" name="_sudo_token" value="<%= HexpmWeb.Plugs.Sudo.generate_form_token(@current_user.id, "POST", @form_action) %>">
 
       <div class="flex items-center justify-center gap-3 pt-4">
         <%= submit "Authorize", name: "action", value: @approve_value, class: "inline-flex items-center justify-center gap-2 font-semibold rounded h-12 px-4 text-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-grey-800 cursor-pointer bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 flex-1" %>

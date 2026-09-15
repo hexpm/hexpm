@@ -387,6 +387,26 @@ defmodule HexpmWeb.DeviceControllerTest do
       assert redirected_to(conn) == "/sudo"
     end
 
+    test "authorizes without a sudo session when the form carries its token", %{
+      user: user,
+      device_code: device_code
+    } do
+      conn = login_with_verified_code(build_conn(), user, device_code.user_code, sudo: false)
+      token = HexpmWeb.Plugs.Sudo.generate_form_token(user.id, "POST", "/oauth/device/authorize")
+
+      conn =
+        post(conn, ~p"/oauth/device/authorize", %{
+          "action" => "authorize",
+          "selected_scopes" => ["api:read"],
+          "_sudo_token" => token
+        })
+
+      assert redirected_to(conn) == "/"
+
+      assert Hexpm.OAuth.DeviceCodes.get_by_code(device_code.device_code).status ==
+               "authorized"
+    end
+
     test "authorizes device successfully with 2FA for api scope", %{client: client} do
       user = insert(:user_with_tfa)
       {_response, device_code} = create_device_code(client)

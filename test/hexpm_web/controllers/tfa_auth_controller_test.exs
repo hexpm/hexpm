@@ -132,7 +132,7 @@ defmodule HexpmWeb.TFAAuthControllerTest do
         |> put_session("tfa_user_id", session_data)
         |> post("/tfa", %{"code" => "999999"})
 
-      assert redirected_to(conn) == "/login"
+      assert redirected_to(conn) == "/login?return=%2F"
 
       assert Phoenix.Flash.get(conn.assigns.flash, "error") ==
                "Too many incorrect codes. Please log in again."

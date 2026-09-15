@@ -133,9 +133,60 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
         |> Hexpm.Repo.preload(:emails)
 
       assert updated_user.tfa.recovery_codes != c.user.tfa.recovery_codes
-      assert redirected_to(conn) == "/dashboard/security"
+      assert redirected_to(conn) == "/dashboard/security/recovery-codes"
 
       assert_email_sent(Hexpm.Emails.tfa_rotate_recovery_codes(updated_user))
+    end
+  end
+
+  describe "get /dashboard/security/recovery-codes" do
+    test "the security page links to the codes without showing them", c do
+      [code | _] = c.user.tfa.recovery_codes
+
+      result =
+        build_conn()
+        |> test_login(c.user)
+        |> get("/dashboard/security")
+        |> response(200)
+
+      refute result =~ code.code
+      assert result =~ "/dashboard/security/recovery-codes"
+
+      unused = Enum.count(c.user.tfa.recovery_codes, &is_nil(&1.used_at))
+      assert result =~ "#{unused} of #{length(c.user.tfa.recovery_codes)} codes unused"
+    end
+
+    test "shows the codes and marks used ones", c do
+      [used | unused] = c.user.tfa.recovery_codes
+      {:ok, user} = Hexpm.Accounts.Users.tfa_recover(c.user, used.code)
+
+      result =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/security/recovery-codes")
+        |> response(200)
+
+      for code <- [used | unused], do: assert(result =~ code.code)
+      assert result =~ "Used"
+      assert result =~ "line-through"
+    end
+
+    test "requires sudo", c do
+      conn =
+        build_conn()
+        |> test_login(c.user, sudo: false)
+        |> get("/dashboard/security/recovery-codes")
+
+      assert redirected_to(conn) == "/sudo"
+    end
+
+    test "redirects users without two-factor authentication" do
+      conn =
+        build_conn()
+        |> test_login(insert(:user))
+        |> get("/dashboard/security/recovery-codes")
+
+      assert redirected_to(conn) == "/dashboard/security"
     end
   end
 

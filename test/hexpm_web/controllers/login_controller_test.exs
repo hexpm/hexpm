@@ -12,14 +12,20 @@ defmodule HexpmWeb.LoginControllerTest do
     assert response(conn, 200) =~ "Log in"
   end
 
-  test "ordinary return paths do not change the GitHub login destination" do
+  test "the GitHub login link carries the return path" do
     html =
       build_conn()
       |> get("/login", %{return: "/dashboard"})
       |> html_response(200)
 
+    assert html =~ ~s(href="/auth/github?return=%2Fdashboard")
+  end
+
+  test "the GitHub login link has no return param without a return path" do
+    html = build_conn() |> get("/login") |> html_response(200)
+
     assert html =~ ~s(href="/auth/github")
-    refute html =~ ~s(href="/auth/github?return=)
+    refute html =~ ~s(href="/auth/github?)
   end
 
   test "show redirects a signed-in user without a pending SSO link", c do
@@ -95,7 +101,13 @@ defmodule HexpmWeb.LoginControllerTest do
     end
   end
 
-  for return <- ["/", "/dashboard", "/packages?search=ecto"] do
+  for return <- [
+        "/",
+        "/dashboard",
+        "/packages?search=ecto",
+        "/oauth/authorize?client_id=abc&redirect_uri=https%3A%2F%2Fexample.com%2Fcallback",
+        "/dashboard?next=%5Cevil.com&tab=%09"
+      ] do
     test "log in honours the on-site return path #{inspect(return)}", c do
       conn =
         post(build_conn(), "/login", %{

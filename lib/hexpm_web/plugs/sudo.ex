@@ -51,6 +51,8 @@ defmodule HexpmWeb.Plugs.Sudo do
         return_to =
           if conn.method == "GET" do
             full_request_path(conn)
+          else
+            referer_path(conn)
           end
 
         conn
@@ -94,6 +96,18 @@ defmodule HexpmWeb.Plugs.Sudo do
     case conn.query_string do
       "" -> conn.request_path
       qs -> conn.request_path <> "?" <> qs
+    end
+  end
+
+  # A form submission can't be replayed after verifying, so the page the form
+  # was on is where the person can try again.
+  @spec referer_path(Plug.Conn.t()) :: String.t() | nil
+  defp referer_path(conn) do
+    with [referer | _] <- get_req_header(conn, "referer"),
+         %URI{path: path, query: query} when is_binary(path) <- URI.parse(referer) do
+      HexpmWeb.ControllerHelpers.safe_return_path(if(query, do: path <> "?" <> query, else: path))
+    else
+      _ -> nil
     end
   end
 

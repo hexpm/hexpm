@@ -1219,6 +1219,60 @@ defmodule HexpmWeb.SSOEnforcementTest do
       assert redirected_to(conn) =~ "/sudo"
     end
 
+    test "a consent submitted after the sudo window passes with the page's token", context do
+      require_sso(context)
+      {conn, browser} = login(context.member, sudo_at: minutes_ago(60))
+      authenticate(context, context.member, browser)
+
+      client = insert(:oauth_client, allowed_scopes: ["api:read", "docs"])
+
+      token =
+        HexpmWeb.Plugs.Sudo.generate_form_token(context.member.id, "POST", "/oauth/authorize")
+
+      conn =
+        post(conn, "/oauth/authorize", %{
+          "client_id" => client.client_id,
+          "redirect_uri" => hd(client.redirect_uris),
+          "action" => "approve",
+          "scope" => "docs:#{context.organization.name}",
+          "selected_scopes" => ["docs:#{context.organization.name}"],
+          "state" => "opaque-state",
+          "code_challenge" => "VeRkYllVqy6XLHXPgfpoJxXX_3dxEB2Nb7eJZ5T4aIA",
+          "code_challenge_method" => "S256",
+          "_sudo_token" => token
+        })
+
+      assert redirected_to(conn) =~ hd(client.redirect_uris) <> "?code="
+    end
+
+    test "a consent submitted after the sudo window comes back to the consent page", context do
+      require_sso(context)
+      {conn, browser} = login(context.member, sudo_at: minutes_ago(60))
+      authenticate(context, context.member, browser)
+
+      client = insert(:oauth_client, allowed_scopes: ["api:read", "docs"])
+
+      consent_page =
+        "/oauth/authorize?client_id=#{client.client_id}&scope=docs%3A#{context.organization.name}"
+
+      conn =
+        conn
+        |> put_req_header("referer", "https://hex.pm" <> consent_page)
+        |> post("/oauth/authorize", %{
+          "client_id" => client.client_id,
+          "redirect_uri" => hd(client.redirect_uris),
+          "action" => "approve",
+          "scope" => "docs:#{context.organization.name}",
+          "selected_scopes" => ["docs:#{context.organization.name}"],
+          "state" => "opaque-state",
+          "code_challenge" => "VeRkYllVqy6XLHXPgfpoJxXX_3dxEB2Nb7eJZ5T4aIA",
+          "code_challenge_method" => "S256"
+        })
+
+      assert redirected_to(conn) == "/sudo"
+      assert get_session(conn, "sudo_return_to") == consent_page
+    end
+
     test "leaves a consent with no organization access to hand on alone", context do
       require_sso(context)
       {conn, _browser} = login(context.member, sudo_at: minutes_ago(60))

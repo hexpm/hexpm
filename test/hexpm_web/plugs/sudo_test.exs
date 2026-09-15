@@ -95,7 +95,7 @@ defmodule HexpmWeb.Plugs.SudoTest do
       assert get_session(conn, "sudo_return_to") == "/dashboard/security"
     end
 
-    test "does not store return path for POST requests" do
+    test "does not store a return path for POST requests without a referer" do
       user = insert(:user)
 
       conn =
@@ -105,6 +105,39 @@ defmodule HexpmWeb.Plugs.SudoTest do
         |> Sudo.call([])
 
       assert conn.halted
+      assert redirected_to(conn) == "/sudo"
+      refute get_session(conn, "sudo_return_to")
+    end
+
+    test "stores the referer path for POST requests" do
+      user = insert(:user)
+
+      conn =
+        build_conn(:post, "/oauth/authorize", %{})
+        |> put_req_header(
+          "referer",
+          "https://hex.pm/oauth/authorize?client_id=abc&redirect_uri=https%3A%2F%2Fexample.com%2Fcb"
+        )
+        |> test_login(user, sudo: false)
+        |> fetch_flash()
+        |> Sudo.call([])
+
+      assert redirected_to(conn) == "/sudo"
+
+      assert get_session(conn, "sudo_return_to") ==
+               "/oauth/authorize?client_id=abc&redirect_uri=https%3A%2F%2Fexample.com%2Fcb"
+    end
+
+    test "ignores a referer whose path would leave the site" do
+      user = insert(:user)
+
+      conn =
+        build_conn(:post, "/oauth/authorize", %{})
+        |> put_req_header("referer", "https://hex.pm//evil.com")
+        |> test_login(user, sudo: false)
+        |> fetch_flash()
+        |> Sudo.call([])
+
       assert redirected_to(conn) == "/sudo"
       refute get_session(conn, "sudo_return_to")
     end

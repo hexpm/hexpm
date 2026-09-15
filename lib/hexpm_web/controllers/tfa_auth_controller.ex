@@ -29,13 +29,13 @@ defmodule HexpmWeb.TFAAuthController do
           conn
           |> delete_session("tfa_user_id")
           |> put_flash(:error, "Too many 2FA attempts from your IP. Please try again later.")
-          |> redirect(to: ~p"/login")
+          |> redirect(to: login_path(session_data["return"]))
 
         {_, {:block, _}} ->
           conn
           |> delete_session("tfa_user_id")
           |> put_flash(:error, "Too many incorrect codes. Please log in again.")
-          |> redirect(to: ~p"/login")
+          |> redirect(to: login_path(session_data["return"]))
 
         _ ->
           render_show_error(conn)
