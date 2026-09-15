@@ -62,13 +62,29 @@ defmodule HexpmWeb.Dashboard.SecurityController do
     |> redirect(to: ~p"/dashboard/security")
   end
 
+  def recovery_codes(conn, _params) do
+    user = conn.assigns.current_user
+
+    if User.tfa_enabled?(user) do
+      render(conn, "recovery_codes.html",
+        title: "Dashboard - Recovery codes",
+        container: "container page dashboard",
+        codes: user.tfa.recovery_codes
+      )
+    else
+      conn
+      |> put_flash(:error, "Enable two-factor authentication to get recovery codes.")
+      |> redirect(to: ~p"/dashboard/security")
+    end
+  end
+
   def rotate_recovery_codes(conn, _params) do
     user = conn.assigns.current_user
     Users.tfa_rotate_recovery_codes(user, audit: audit_data(conn))
 
     conn
     |> put_flash(:info, "New two-factor recovery codes successfully generated.")
-    |> redirect(to: ~p"/dashboard/security")
+    |> redirect(to: ~p"/dashboard/security/recovery-codes")
   end
 
   def reset_auth_app(conn, _params) do
