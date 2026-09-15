@@ -17,6 +17,7 @@ defmodule Hexpm.Accounts.SCIM do
 
   use Hexpm.Context
 
+  alias Hexpm.Accounts.OrganizationTFA
   alias Hexpm.Accounts.SCIM.Resource
   alias Hexpm.Accounts.SSO
   alias Hexpm.Accounts.SSO.{Connection, Identity}
@@ -328,7 +329,7 @@ defmodule Hexpm.Accounts.SCIM do
         {:ok, resolve(resource)}
 
       {:error, :seats_exhausted} when not retried? ->
-        retry_after_expansion(connection, fn ->
+        retry_after_expansion(connection, user, fn ->
           create_member(connection, user_name, external_id, user, audit_data, true)
         end)
 
@@ -370,7 +371,7 @@ defmodule Hexpm.Accounts.SCIM do
             {:ok, resolve(resource)}
 
           {:error, :seats_exhausted} when not retried? ->
-            retry_after_expansion(connection, fn ->
+            retry_after_expansion(connection, user, fn ->
               activate_resource(connection, resource, audit_data, true)
             end)
 
@@ -406,23 +407,19 @@ defmodule Hexpm.Accounts.SCIM do
     end
   end
 
+  # Already a member costs no seat and needs no admission, so a full
+  # organization, or one whose 2FA policy the person does not yet satisfy,
+  # still provisions someone who is already in it.
   defp claim_membership(connection, organization, user, audit_data) do
-    case Seats.claim(organization, unknown: :deny) do
-      {:ok, _usage} ->
-        if Organizations.get_role(organization, user) do
-          {:ok, :already_member}
-        else
-          insert_membership(connection, organization, user, audit_data)
-        end
+    organization = Seats.lock!(organization)
 
-      {:error, reason} ->
-        # Already a member costs no seat, so a full organization still
-        # provisions someone who is already in it.
-        if Organizations.get_role(organization, user) do
-          {:ok, :already_member}
-        else
-          {:error, reason}
-        end
+    if Organizations.get_role(organization, user) do
+      {:ok, :already_member}
+    else
+      with :ok <- OrganizationTFA.admit(organization, user),
+           {:ok, _usage} <- Seats.claim(organization, unknown: :deny) do
+        insert_membership(connection, organization, user, audit_data)
+      end
     end
   end
 
@@ -460,9 +457,9 @@ defmodule Hexpm.Accounts.SCIM do
 
   defp notify_seats(_connection, _reason), do: :ok
 
-  defp retry_after_expansion(connection, retry) do
+  defp retry_after_expansion(connection, user, retry) do
     if connection.scim_seat_policy == "expand" do
-      SSO.expand_seat(connection, :scim)
+      SSO.expand_seat(connection, user, :scim)
       retry.()
     else
       {:error, :seats_exhausted}
@@ -620,7 +617,7 @@ defmodule Hexpm.Accounts.SCIM do
     case retire_invitation(connection, resource.invitation_id, audit_data) do
       {:accepted, user_id} ->
         case remove_acceptor(connection, user_id, audit_data) do
-          {:error, :last_member} -> {:error, :last_member}
+          {:error, reason} -> {:error, reason}
           :ok -> clear_invitation(resource)
         end
 

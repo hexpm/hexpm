@@ -14,8 +14,8 @@ defmodule Hexpm.RepoBase.Migrations.CreateOrganizationScimResources do
 
       add :organization_id, references(:organizations, on_delete: :delete_all), null: false
       add :scim_id, :uuid, null: false
-      add :external_id, :text
-      add :user_name, :text, null: false
+      add :external_id, :string, size: 1024
+      add :user_name, :string, size: 255, null: false
       add :user_id, references(:users, on_delete: :nilify_all)
       add :invitation_id, references(:organization_invitations, on_delete: :nilify_all)
 

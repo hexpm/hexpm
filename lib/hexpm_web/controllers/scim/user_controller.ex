@@ -145,6 +145,17 @@ defmodule HexpmWeb.SCIM.UserController do
   defp refuse(conn, :last_member),
     do: scim_error(conn, 409, "Cannot remove the organization's last member")
 
+  defp refuse(conn, :last_admin),
+    do: scim_error(conn, 409, "Cannot remove the organization's last administrator")
+
+  defp refuse(conn, :tfa_enrollment_required),
+    do:
+      scim_error(
+        conn,
+        409,
+        "The organization requires two-factor authentication; the person must enable it on hex.pm before they can be added"
+      )
+
   defp refuse(conn, :unverified_member),
     do:
       scim_error(
