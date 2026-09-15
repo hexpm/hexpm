@@ -243,10 +243,30 @@ defmodule Hexpm.Accounts.SCIM do
   end
 
   @doc """
+  Puts an invitation acceptance behind the same lock as the provider's writes,
+  as the first step of its Multi. Acceptance goes on to lock the invitation,
+  the organization seat row, and the handle it binds, all of which a
+  provisioning write can hold in the other order; taking the connection first
+  on both sides is what keeps the two from waiting on each other. An
+  organization with no connection has nothing to lock.
+  """
+  def lock_provisioning(multi, %Organization{id: organization_id}) do
+    Multi.run(multi, :provisioning_lock, fn _repo, _changes ->
+      {:ok,
+       Repo.one(
+         from(row in Connection,
+           where: row.organization_id == ^organization_id,
+           lock: "FOR NO KEY UPDATE"
+         )
+       )}
+    end)
+  end
+
+  @doc """
   Binds the handle behind an accepted invitation to the account that accepted
-  it, in the acceptance's own transaction. Runs under the invitation lock, so
-  a deactivation of the same handle sees either the pending invitation or the
-  member it produced, never the gap between.
+  it, in the acceptance's own transaction. Runs under the connection and
+  invitation locks, so a deactivation of the same handle sees either the
+  pending invitation or the member it produced, never the gap between.
 
   The provider's own handle wins over a row an import materialized for the
   same account under another address: that row loses its account and reads
@@ -375,31 +395,36 @@ defmodule Hexpm.Accounts.SCIM do
 
   defp repair(resource), do: resource
 
-  # Another handle already holding the account leaves this one alone. That is
-  # checked before the write rather than caught after it, because a unique
-  # violation inside a write's transaction would abort the transaction; the
-  # constraint stays as the answer to a race on the read paths.
+  # Another handle already holding the account leaves this one alone. Every
+  # path that binds an account to a handle, this one from a read, a write,
+  # and an invitation acceptance, does so under the connection lock, so the
+  # check cannot be overtaken and no unique violation can abort a write's
+  # transaction. From a read this is its own short transaction; inside a
+  # write it joins the one already holding the lock.
   defp adopt_user(resource, user_id) do
-    holder =
-      Repo.exists?(
-        from(other in Resource,
-          where: other.connection_id == ^resource.connection_id,
-          where: other.user_id == ^user_id
-        )
-      )
+    {:ok, resource} =
+      Repo.transaction(fn ->
+        lock_connection!(%Connection{id: resource.connection_id})
 
-    if holder do
-      resource
-    else
-      resource
-      |> change(user_id: user_id)
-      |> unique_constraint([:connection_id, :user_id])
-      |> Repo.update()
-      |> case do
-        {:ok, resource} -> Repo.preload(resource, :user, force: true)
-        {:error, _changeset} -> resource
-      end
-    end
+        holder =
+          Repo.exists?(
+            from(other in Resource,
+              where: other.connection_id == ^resource.connection_id,
+              where: other.user_id == ^user_id
+            )
+          )
+
+        if holder do
+          resource
+        else
+          resource
+          |> change(user_id: user_id)
+          |> Repo.update!()
+          |> Repo.preload(:user, force: true)
+        end
+      end)
+
+    resource
   end
 
   defp pending?(%OrganizationInvitation{} = invitation),
@@ -579,10 +604,21 @@ defmodule Hexpm.Accounts.SCIM do
 
       # While a membership stands the name is a label; deactivate and
       # reactivate is the account-transfer path.
-      resolved.state in [:member, :inactive] ->
+      resolved.state == :member ->
         with {:ok, resource} <- update_resource(resolved.resource, %{user_name: user_name}) do
           audit!(audit_data, "sso.scim.resource.update", connection, resource)
           {:ok, %{resolved | resource: resource}}
+        end
+
+      # An inactive handle may still point at the account it used to name,
+      # which a hand removal leaves behind. Renamed, it means the new address
+      # and nothing else: a following activation or deactivation acts on
+      # whoever that address matches, and a stale pointer cannot outlive it.
+      resolved.state == :inactive ->
+        with {:ok, resource} <-
+               update_resource(resolved.resource, %{user_name: user_name, user_id: nil}) do
+          audit!(audit_data, "sso.scim.resource.update", connection, resource)
+          {:ok, %{resolved | resource: resource, user: nil}}
         end
 
       # An invited person renamed is an invitation to the new address. The old
@@ -618,6 +654,12 @@ defmodule Hexpm.Accounts.SCIM do
   # acceptance uses (invitation, then organization), and the last-member and
   # last-admin guards refuse the whole deactivation, never half of it.
   defp deactivate(connection, resolved, audit_data) do
+    # Resolved again here rather than trusting the state the request began
+    # with: an earlier operation may have renamed the handle onto an address
+    # a current member holds, and it is that member the provider is now
+    # deactivating. Nothing is re-resolved afterwards, so the cleared handle
+    # cannot pick up a surviving membership on its way out.
+    resolved = resolve(resolved.resource)
     resource = resolved.resource
     own = lock_invitation(resource.invitation_id)
     matching = lock_matching_invitation(connection, resource, own)
@@ -626,7 +668,8 @@ defmodule Hexpm.Accounts.SCIM do
          :ok <- retire_locked(connection, own, audit_data),
          :ok <- retire_locked(connection, matching, audit_data),
          {:ok, resource} <- update_resource(resource, %{invitation_id: nil, user_id: nil}) do
-      {:ok, resolve(resource)}
+      {:ok,
+       %{resource: Repo.preload(resource, [:user, :invitation]), state: :inactive, user: nil}}
     end
   end
 

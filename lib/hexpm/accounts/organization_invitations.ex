@@ -145,12 +145,15 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
 
   The invitation row is locked before the seat is claimed, so two people
   following the same link at once produce one membership and one refusal. Lock
-  order is invitation, then the organization seat row; nothing else takes both.
+  order is the organization's SSO connection when it has one, then the
+  invitation, then the organization seat row; provisioning writes take the
+  same three in the same order.
   """
   def accept(%OrganizationInvitation{} = invitation, user, audit: audit_data) do
     organization = invitation.organization
 
     Multi.new()
+    |> SCIM.lock_provisioning(organization)
     |> Multi.run(:invitation, fn _repo, _changes -> locked_pending(invitation) end)
     |> Hexpm.Accounts.OrganizationTFA.admit(organization, user)
     |> Multi.run(:existing_role, fn _repo, _changes ->
