@@ -1005,6 +1005,29 @@ defmodule Hexpm.Accounts.SCIMTest do
       refute Organizations.get_role(context.organization, joiner)
     end
 
+    test "deactivating after a rename removes the member the new name matches", context do
+      leaver = insert(:user)
+      stayer = insert(:user)
+      insert(:organization_user, organization: context.organization, user: stayer)
+
+      {:ok, %{resource: resource}} =
+        create_user(context.connection, %{"userName" => hd(leaver.emails).email})
+
+      :ok =
+        Organizations.remove_member(context.organization, leaver,
+          audit: audit_data(context.admin)
+        )
+
+      assert {:ok, %{state: :inactive}} =
+               patch_user(context.connection, resource.scim_id, [
+                 %{"op" => "replace", "path" => "userName", "value" => hd(stayer.emails).email},
+                 %{"op" => "replace", "path" => "active", "value" => false}
+               ])
+
+      refute Organizations.get_role(context.organization, stayer)
+      assert {:ok, %{state: :inactive}} = SCIM.get_user(context.connection, resource.scim_id)
+    end
+
     test "filter values past the column bounds match nothing", context do
       assert find_by_user_name(context.connection, String.duplicate("a", 250) <> "@x.io") ==
                nil
