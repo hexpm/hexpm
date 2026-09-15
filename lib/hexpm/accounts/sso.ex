@@ -1177,18 +1177,31 @@ defmodule Hexpm.Accounts.SSO do
     )
   end
 
+  # The connections locked are those of every organization the account is a
+  # member of, and every connection whose provisioning handles still point at
+  # the account: a former member's handle keeps the pointer, and deleting the
+  # account clears it through the foreign key, which has to happen under the
+  # same lock every other writer of that pointer holds.
   def lock_user_removal(multi, user) do
     Multi.run(multi, :organization_sso_user_removal_locks, fn _repo, _changes ->
       organization_ids =
         from(organization_user in OrganizationUser,
           where: organization_user.user_id == ^user.id,
-          order_by: [asc: organization_user.organization_id],
           select: organization_user.organization_id
         )
         |> Repo.all(log: false)
 
+      handle_connection_ids =
+        from(resource in Hexpm.Accounts.SCIM.Resource,
+          where: resource.user_id == ^user.id,
+          select: resource.connection_id
+        )
+        |> Repo.all(log: false)
+
       from(connection in Connection,
-        where: connection.organization_id in ^organization_ids,
+        where:
+          connection.organization_id in ^organization_ids or
+            connection.id in ^handle_connection_ids,
         order_by: [asc: connection.organization_id],
         lock: "FOR UPDATE"
       )

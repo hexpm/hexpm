@@ -676,13 +676,17 @@ defmodule Hexpm.Accounts.SCIM do
   # holds; and it is resolved once more after each removal, because with the
   # bound account gone the address can still name a member, added by hand or
   # matched through their identity, who is the person the provider means.
-  # Each round removes an account the address names, and an address names at
-  # most a few, so this ends.
+  #
+  # This ends because every round that does not finish removes a membership:
+  # with both pointers cleared, the only way the handle resolves to anything is
+  # by matching a current member through the address, and the next round
+  # removes that member. Identities do not make the address unique, so several
+  # members can share one, and each takes a round.
   defp deactivate(connection, resolved, audit_data) do
-    deactivate_round(connection, resolve(resolved.resource), audit_data, 4)
+    deactivate_round(connection, resolve(resolved.resource), audit_data)
   end
 
-  defp deactivate_round(connection, resolved, audit_data, rounds) do
+  defp deactivate_round(connection, resolved, audit_data) do
     resource = resolved.resource
     own = lock_invitation(resource.invitation_id)
     matching = lock_matching_invitation(connection, resource, own)
@@ -693,8 +697,7 @@ defmodule Hexpm.Accounts.SCIM do
          {:ok, resource} <- update_resource(resource, %{invitation_id: nil, user_id: nil}) do
       case resolve(resource) do
         %{state: :inactive} = resolved -> {:ok, resolved}
-        resolved when rounds > 1 -> deactivate_round(connection, resolved, audit_data, rounds - 1)
-        resolved -> {:ok, resolved}
+        resolved -> deactivate_round(connection, resolved, audit_data)
       end
     end
   end
@@ -815,6 +818,10 @@ defmodule Hexpm.Accounts.SCIM do
   # unique index. Two members presenting the same address keep the row that
   # exists; the filter asked for the address, and that row answers it.
   defp materialize_member(connection, user, user_name, audit_data) do
+    # The identity's provider email arrives as the provider sent it; the row
+    # stores it normalized, and so must every comparison against the rows.
+    user_name = Resource.normalize_user_name(user_name)
+
     {:ok, resolved} =
       Repo.transaction(fn ->
         lock_connection!(connection)
