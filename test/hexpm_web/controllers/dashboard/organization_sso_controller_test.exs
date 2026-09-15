@@ -833,7 +833,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
           "scim" => %{"scim_seat_policy" => "block", "scim_role" => "read"}
         })
 
-      assert redirected_to(conn) =~ "/sso/org/#{context.organization.name}"
+      assert redirected_to(conn) =~ "/organizations/#{context.organization.name}/authenticate"
       refute Connection.scim_enabled?(Repo.get!(Connection, context.connection.id))
 
       conn =
@@ -843,7 +843,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
           "scim" => %{"scim_seat_policy" => "expand", "scim_role" => "admin"}
         })
 
-      assert redirected_to(conn) =~ "/sso/org/#{context.organization.name}"
+      assert redirected_to(conn) =~ "/organizations/#{context.organization.name}/authenticate"
       assert Repo.get!(Connection, context.connection.id).scim_role == "read"
 
       # Revoking the credential is the emergency direction, so it stays on the
