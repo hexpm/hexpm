@@ -1,6 +1,7 @@
 defmodule HexpmWeb.AuthController do
   use HexpmWeb, :controller
   plug :check_oauth_config when action in [:request]
+  plug :store_return_path when action in [:request]
   plug Ueberauth
 
   alias Hexpm.Accounts.{Auth, Users, UserProviders}
@@ -26,14 +27,44 @@ defmodule HexpmWeb.AuthController do
 
   def check_oauth_config(conn, _opts), do: conn
 
+  # GitHub only echoes `code` and `state` back to the callback, so the return
+  # path rides in the session across the round trip.
+  def store_return_path(conn, _opts) do
+    case safe_return_path(conn.params["return"]) do
+      nil ->
+        delete_session(conn, "oauth_return")
+
+      path ->
+        put_session(conn, "oauth_return", %{
+          "at" => NaiveDateTime.utc_now() |> NaiveDateTime.to_iso8601(),
+          "path" => path
+        })
+    end
+  end
+
+  defp pop_return_path(conn) do
+    path =
+      case get_session(conn, "oauth_return") do
+        %{"at" => at, "path" => path} ->
+          if HexpmWeb.Session.TTL.within?(at, minute: 30), do: safe_return_path(path)
+
+        _ ->
+          nil
+      end
+
+    {delete_session(conn, "oauth_return"), path}
+  end
+
   def request(conn, _params) do
     conn
   end
 
   def callback(%{assigns: %{ueberauth_failure: _fails}} = conn, _params) do
+    {conn, return} = pop_return_path(conn)
+
     conn
     |> put_flash(:error, "Failed to authenticate with GitHub.")
-    |> redirect(to: ~p"/login")
+    |> redirect(to: login_path(return))
   end
 
   def callback(%{assigns: %{ueberauth_auth: auth}} = conn, _params) do
@@ -71,7 +102,7 @@ defmodule HexpmWeb.AuthController do
   end
 
   defp handle_existing_user_login(conn, user) do
-    return = safe_return_path(conn.params["return"])
+    {conn, return} = pop_return_path(conn)
 
     if User.tfa_enabled?(user) do
       conn
@@ -108,12 +139,14 @@ defmodule HexpmWeb.AuthController do
 
       %{user: _existing_user} ->
         # Email exists - show error asking to log in first
+        {conn, return} = pop_return_path(conn)
+
         conn
         |> put_flash(
           :error,
           "An account with email #{provider_email} already exists. Please log in first, then connect your GitHub account from the dashboard."
         )
-        |> redirect(to: ~p"/login")
+        |> redirect(to: login_path(return))
     end
   end
 
@@ -212,12 +245,14 @@ defmodule HexpmWeb.AuthController do
            confirmed?: true
          ) do
       {:ok, user} ->
+        {conn, return} = pop_return_path(conn)
+
         conn
         |> delete_session("pending_oauth")
         |> start_session_internal(user)
         |> HexpmWeb.Plugs.Sudo.set_sudo_authenticated()
         |> put_flash(:info, "Account created successfully!")
-        |> redirect(to: ~p"/users/#{user}")
+        |> redirect(to: return || ~p"/users/#{user}")
 
       {:error, changeset} ->
         suggested_username =
