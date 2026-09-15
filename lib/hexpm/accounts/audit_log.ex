@@ -282,6 +282,8 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params(action, {organization, params})
        when action in [
               "sso.connection.configure",
+              "organization.tfa.configure",
+              "organization.tfa.notification",
               "sso.connection.test",
               "sso.connection.enable",
               "sso.connection.disable",

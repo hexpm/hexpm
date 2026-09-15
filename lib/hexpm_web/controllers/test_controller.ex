@@ -108,6 +108,17 @@ defmodule HexpmWeb.TestController do
     end
   end
 
+  def organization_tfa(conn, %{"organization" => name}) do
+    organization = Organizations.get(name)
+
+    if organization && Organizations.access?(organization, conn.assigns.current_user, "admin") do
+      organization |> Ecto.Changeset.change(tfa_required_at: DateTime.utc_now()) |> Repo.update!()
+      send_resp(conn, 204, "")
+    else
+      not_found(conn)
+    end
+  end
+
   def oauth_token(conn, params) do
     user = Users.get(params["username"])
 

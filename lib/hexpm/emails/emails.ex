@@ -252,6 +252,16 @@ defmodule Hexpm.Emails do
   defp sso_seats_subject("expansion_failed", organization),
     do: "#{organization} could not add a seat"
 
+  def organization_tfa(organization, stage, recipients, suspended) do
+    base_email(:organization_tfa)
+    |> email_to(recipients)
+    |> subject("Hex.pm - #{organization.name} 2FA enforcement")
+    |> assign(:organization, organization)
+    |> assign(:stage, stage)
+    |> assign(:suspended, suspended)
+    |> render_body(:organization_tfa)
+  end
+
   def sso_enforcement_pending(organization, required_at, login_url, recipients) do
     base_email(:sso_enforcement_pending)
     |> email_to(recipients)

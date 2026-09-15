@@ -165,6 +165,7 @@ defmodule Hexpm.Accounts.Users do
         from(t in Hexpm.OAuth.Token, where: t.user_id == ^user.id)
       )
       |> Hexpm.Accounts.SSO.lock_user_removal(user)
+      |> Hexpm.Accounts.OrganizationTFA.protect_account_removal(user)
       |> Hexpm.Accounts.SSO.delete_user_transactions(user)
       |> Multi.delete(:user, user, stale_error_field: :id)
       |> Hexpm.Accounts.SSO.delete_user_notifications(user)
@@ -382,6 +383,9 @@ defmodule Hexpm.Accounts.Users do
           :user,
           User.update_tfa(user, %{secret: secret, recovery_codes: codes})
         )
+        |> Multi.run(:tfa_notifications, fn _repo, %{user: user} ->
+          {:ok, Hexpm.Accounts.OrganizationTFANotifications.cancel_obsolete!(user)}
+        end)
         |> audit(audit_data, "security.update", fn %{user: user} -> user end)
 
       case Repo.transaction(multi) do
@@ -392,7 +396,7 @@ defmodule Hexpm.Accounts.Users do
 
           {:ok, user}
 
-        {:error, :user, changeset, _} ->
+        {:error, _operation, changeset, _} ->
           {:error, changeset}
       end
     else
@@ -403,7 +407,14 @@ defmodule Hexpm.Accounts.Users do
   def tfa_disable(user, audit: audit_data) do
     multi =
       Multi.new()
-      |> Multi.update(:user, User.clear_tfa(user))
+      |> Multi.run(:locked_user, fn _repo, _ ->
+        user = lock!(user)
+
+        if Hexpm.Accounts.OrganizationTFA.required_memberships(user) == [],
+          do: {:ok, user},
+          else: {:error, :organization_tfa_required}
+      end)
+      |> Multi.update(:user, fn %{locked_user: user} -> User.clear_tfa(user) end)
       |> audit(audit_data, "security.update", fn %{user: user} -> user end)
 
     case Repo.transaction(multi) do
@@ -414,7 +425,7 @@ defmodule Hexpm.Accounts.Users do
 
         user
 
-      {:error, :user, changeset, _} ->
+      {:error, _operation, changeset, _} ->
         {:error, changeset}
     end
   end
@@ -422,7 +433,11 @@ defmodule Hexpm.Accounts.Users do
   def tfa_rotate_recovery_codes(user, audit: audit_data) do
     multi =
       Multi.new()
-      |> Multi.update(:user, User.rotate_recovery_codes(user))
+      |> Multi.run(:locked_user, fn _repo, _ ->
+        current = lock!(user)
+        if User.tfa_enabled?(current), do: {:ok, current}, else: {:error, :not_enrolled}
+      end)
+      |> Multi.update(:user, fn %{locked_user: current} -> User.rotate_recovery_codes(current) end)
       |> audit(audit_data, "security.rotate_recovery_codes", fn %{user: user} -> user end)
 
     case Repo.transaction(multi) do
@@ -433,7 +448,7 @@ defmodule Hexpm.Accounts.Users do
 
         user
 
-      {:error, :user, changeset, _} ->
+      {:error, _operation, changeset, _} ->
         {:error, changeset}
     end
   end
@@ -714,6 +729,11 @@ defmodule Hexpm.Accounts.Users do
       err ->
         err
     end
+  end
+
+  def lock!(user) do
+    Repo.one!(from(u in User, where: u.id == ^user.id, lock: "FOR NO KEY UPDATE"))
+    |> Repo.preload(:emails)
   end
 
   defp find_email(user, params) do

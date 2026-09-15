@@ -3,7 +3,7 @@ defmodule HexpmWeb.AuthHelpers do
   import HexpmWeb.ControllerHelpers, only: [render_error: 3]
 
   alias Hexpm.Accounts.{Auth, Organization, Organizations, User, TFA}
-  alias Hexpm.Accounts.SSO.Enforcement
+  alias Hexpm.Accounts.OrganizationAuth
   alias Hexpm.Permissions
   alias Hexpm.SecurityLog
   alias Hexpm.Repository.{Package, Packages, PackageOwner, Repository}
@@ -131,6 +131,9 @@ defmodule HexpmWeb.AuthHelpers do
       is_nil(otp_code) ->
         {:error, :totp_required}
 
+      check_totp_rate_limits(conn, user, increment: 0) != :ok ->
+        {:error, :totp_rate_limited}
+
       TFA.token_valid?(user.tfa.secret, otp_code) ->
         nil
 
@@ -144,9 +147,9 @@ defmodule HexpmWeb.AuthHelpers do
     end
   end
 
-  defp check_totp_rate_limits(conn, user) do
-    ip_result = Attack.tfa_ip_throttle(conn.remote_ip)
-    user_result = Attack.tfa_session_throttle(%{"uid" => user.id})
+  defp check_totp_rate_limits(conn, user, opts \\ []) do
+    ip_result = Attack.tfa_ip_throttle(conn.remote_ip, opts)
+    user_result = Attack.tfa_session_throttle(%{"uid" => user.id}, opts)
 
     case {ip_result, user_result} do
       {{:block, _}, _} -> {:rate_limited, :ip}
@@ -337,7 +340,7 @@ defmodule HexpmWeb.AuthHelpers do
 
       {:error, refusal, organization} ->
         message =
-          Enforcement.refusal_message(refusal, organization, conn.assigns[:auth_credential])
+          OrganizationAuth.refusal_message(refusal, organization, conn.assigns[:auth_credential])
 
         {:error, :auth, message}
     end
@@ -462,7 +465,7 @@ defmodule HexpmWeb.AuthHelpers do
 
       {:error, refusal} ->
         message =
-          Enforcement.refusal_message(refusal, organization, conn.assigns[:auth_credential])
+          OrganizationAuth.refusal_message(refusal, organization, conn.assigns[:auth_credential])
 
         {:error, :auth, message}
     end

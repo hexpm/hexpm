@@ -1731,7 +1731,8 @@ defmodule Hexpm.Accounts.SSOTest do
     end
 
     test "covers the organizations that are still governed", context do
-      session = browser_session(context.member)
+      session =
+        insert(:oauth_session, user: context.member, client_id: insert(:oauth_client).client_id)
 
       assert {:ok, authorization} =
                SSO.request_authorization(context.member, session.id, [context.organization.name])
@@ -1742,7 +1743,9 @@ defmodule Hexpm.Accounts.SSOTest do
     test "skips a name that is no longer governed and keeps the rest", context do
       exempted = insert(:organization)
       insert(:organization_user, organization: exempted, user: context.member)
-      session = browser_session(context.member)
+
+      session =
+        insert(:oauth_session, user: context.member, client_id: insert(:oauth_client).client_id)
 
       # The client posts the list it last heard about, which is as old as its
       # access token, so one name that has since stopped being governed cannot
@@ -1757,7 +1760,8 @@ defmodule Hexpm.Accounts.SSOTest do
     end
 
     test "refuses when nothing named is governed", context do
-      session = browser_session(context.member)
+      session =
+        insert(:oauth_session, user: context.member, client_id: insert(:oauth_client).client_id)
 
       assert {:error, :not_governed} =
                SSO.request_authorization(context.member, session.id, ["no-such-organization"])

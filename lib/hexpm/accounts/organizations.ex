@@ -132,6 +132,7 @@ defmodule Hexpm.Accounts.Organizations do
   defp insert_member(organization, user, params, audit_data) do
     multi =
       Multi.new()
+      |> Hexpm.Accounts.OrganizationTFA.admit(organization, user)
       |> Seats.claim(:seats, organization)
       |> Multi.insert(:organization_user, fn _changes ->
         organization_user = %OrganizationUser{organization_id: organization.id, user_id: user.id}
@@ -143,6 +144,9 @@ defmodule Hexpm.Accounts.Organizations do
       {:ok, result} ->
         send_invite_email(organization, user)
         {:ok, result.organization_user}
+
+      {:error, :tfa_admission, reason, _} ->
+        {:error, reason}
 
       {:error, :seats, reason, _} ->
         {:error, reason}
@@ -162,7 +166,11 @@ defmodule Hexpm.Accounts.Organizations do
       |> Hexpm.Accounts.SSO.lock_member_removal(organization, user)
       |> Seats.lock(:seats, organization)
       |> Multi.run(:member, fn _repo, _changes -> member_to_remove(organization, user) end)
+      |> Hexpm.Accounts.OrganizationTFA.protect_admin(organization, user)
       |> Multi.delete(:organization_user, & &1.member)
+      |> Multi.run(:tfa_notifications, fn _repo, _ ->
+        {:ok, Hexpm.Accounts.OrganizationTFANotifications.cancel_member!(organization, user)}
+      end)
       |> Hexpm.Accounts.SSO.remove_member(organization, user)
       |> delete_package_owners(organization, user)
       |> audit(audit_data, "organization.member.remove", {organization, user})
@@ -171,6 +179,7 @@ defmodule Hexpm.Accounts.Organizations do
       {:ok, _result} -> :ok
       {:error, :member, :not_member, _} -> :ok
       {:error, :member, :last_member, _} -> {:error, :last_member}
+      {:error, :eligible_admin, reason, _} -> {:error, reason}
     end
   end
 
@@ -190,6 +199,7 @@ defmodule Hexpm.Accounts.Organizations do
       Multi.new()
       |> Hexpm.Accounts.SSO.lock_member_removal(organization, user)
       |> Seats.lock(:seats, organization)
+      |> Hexpm.Accounts.OrganizationTFA.protect_admin(organization, user, params["role"])
       |> Multi.run(:member, fn _repo, _changes -> member_to_change(organization, user) end)
       |> Multi.update(:organization_user, &Organization.change_role(&1.member, params))
       |> audit(audit_data, "organization.member.role", {organization, user, params["role"]})
@@ -197,6 +207,9 @@ defmodule Hexpm.Accounts.Organizations do
     case Repo.transaction(multi) do
       {:ok, result} ->
         {:ok, result.organization_user}
+
+      {:error, :eligible_admin, reason, _} ->
+        {:error, reason}
 
       {:error, :member, reason, _} ->
         {:error, reason}

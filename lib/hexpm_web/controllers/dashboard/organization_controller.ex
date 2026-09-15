@@ -25,6 +25,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
               :create,
               :show,
               :members,
+              :configure_tfa,
               :keys,
               :packages,
               :billing,
@@ -94,6 +95,38 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end)
   end
 
+  def configure_tfa(conn, %{"dashboard_org" => name, "policy" => attrs}) when is_map(attrs) do
+    access_organization(conn, name, "admin", fn organization ->
+      case Hexpm.Accounts.OrganizationTFA.configure(
+             organization,
+             conn.assigns.current_user,
+             conn.assigns.current_session.id,
+             attrs,
+             audit: audit_data(conn)
+           ) do
+        {:ok, _} ->
+          conn
+          |> put_flash(:info, "Organization 2FA policy updated.")
+          |> redirect(to: ~p"/dashboard/orgs/#{name}/members")
+
+        {:error, :tfa_required} ->
+          conn
+          |> put_session(:tfa_return_to, ~p"/dashboard/orgs/#{name}/members")
+          |> put_flash(:error, "Enable 2FA on your account before configuring this policy.")
+          |> redirect(to: ~p"/dashboard/security")
+
+        {:error, reason} ->
+          message =
+            if is_struct(reason, Ecto.Changeset),
+              do:
+                "Invalid deadline. After enforcement starts, disable the policy before scheduling another transition.",
+              else: "You can't configure this policy: #{reason}."
+
+          conn |> put_flash(:error, message) |> redirect(to: ~p"/dashboard/orgs/#{name}/members")
+      end
+    end)
+  end
+
   def members(conn, %{"dashboard_org" => organization}) do
     access_organization(conn, organization, "read", fn organization ->
       render_index(conn, organization, tab: :members)
@@ -128,6 +161,12 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
             conn
             |> put_flash(:info, "User #{username} has been added to the organization.")
             |> redirect(to: ~p"/dashboard/orgs/#{organization}/members")
+
+          {:error, :tfa_enrollment_required} ->
+            conn
+            |> put_status(400)
+            |> put_flash(:error, "This user must enable 2FA before joining the organization.")
+            |> render_index(organization, tab: :members)
 
           {:error, :seats_exhausted} ->
             conn
@@ -171,10 +210,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
             |> put_flash(:info, "User #{username} has been removed from the organization.")
             |> redirect(to: ~p"/dashboard/orgs/#{organization}/members")
 
-          {:error, :last_member} ->
+          {:error, reason} when reason in [:last_member, :last_admin] ->
             conn
             |> put_status(400)
-            |> put_flash(:error, "Cannot remove last member from organization.")
+            |> put_flash(
+              :error,
+              "At least one eligible administrator must remain in the organization."
+            )
             |> render_index(organization, tab: :members)
         end
       else
@@ -499,10 +541,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
             |> put_flash(:info, "You just left the organization #{organization.name}.")
             |> redirect(to: ~p"/dashboard/profile")
 
-          {:error, :last_member} ->
+          {:error, reason} when reason in [:last_member, :last_admin] ->
             conn
             |> put_status(400)
-            |> put_flash(:error, "The last member of an organization cannot leave.")
+            |> put_flash(
+              :error,
+              "At least one eligible administrator must remain in the organization."
+            )
             |> render_index(organization, tab: :danger_zone)
         end
       else

@@ -29,9 +29,55 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
   def members_tab(assigns) do
     ~H"""
     <div class="space-y-6">
+      <section
+        :if={
+          admin?(@current_user, @organization) &&
+            Hexpm.Accounts.OrganizationTFA.configurable?(@organization)
+        }
+        class="rounded-lg border border-grey-200 dark:border-grey-700 bg-white dark:bg-grey-800 p-6 space-y-4"
+      >
+        <h2 class="text-lg font-semibold">Require two-factor authentication</h2>
+        <p>
+          Members must enable two-factor authentication on their accounts. After the deadline, members without 2FA lose access to the organization until they enable it. SSO settings are separate.
+        </p>
+        <p :if={@organization.tfa_required_at}>
+          Enforcement deadline: <strong>{HexpmWeb.ViewHelpers.pretty_utc_datetime(@organization.tfa_required_at)}</strong>.
+          Suspended members retain their membership, role, package ownership, and billed seat.
+        </p>
+        <p :if={!@organization.tfa_required_at}>Enforcement is disabled.</p>
+        <.sudo_form
+          current_user={@current_user}
+          action={~p"/dashboard/orgs/#{@organization}/tfa"}
+          id="organization-tfa-policy"
+          class="space-y-4"
+        >
+          <.select_input
+            id="policy-enforcement"
+            name="policy[enforcement]"
+            label="Enforcement"
+            options={tfa_enforcement_options(@organization)}
+            value={if @organization.tfa_required_at, do: "keep", else: "transition"}
+          />
+          <label :if={!Hexpm.Accounts.OrganizationTFA.enforced?(@organization)} class="block">
+            Transition length in days (1 to 30)
+            <input
+              type="number"
+              name="policy[grace_days]"
+              value="14"
+              min="1"
+              max="30"
+              class="block w-full rounded border border-grey-300 dark:border-grey-600 bg-white dark:bg-grey-800 p-2"
+            />
+          </label>
+          <p>
+            Configuring this policy requires 2FA on your own account. Once enforcement starts, disable it before scheduling another transition.
+          </p>
+          <.button type="submit">Save 2FA policy</.button>
+        </.sudo_form>
+      </section>
       <%!-- Member List --%>
       <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden">
-        <div class="px-6 py-5 border-b border-grey-200 dark:border-grey-700 flex items-center justify-between">
+        <div class="px-6 py-5 border-b border-grey-200 dark:border-grey-700 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 class="text-grey-900 dark:text-white text-lg font-semibold">Members</h2>
             <p class="text-grey-500 dark:text-grey-300 text-sm mt-1">
@@ -44,7 +90,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
             </p>
           </div>
           <%= if admin?(@current_user, @organization) do %>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
               <.button
                 variant="outline"
                 size="sm"
@@ -67,9 +113,9 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
 
         <ul class="divide-y divide-grey-100 dark:divide-grey-700">
           <%= for org_user <- @organization.organization_users do %>
-            <li class="flex items-center justify-between px-6 py-4">
+            <li class="flex flex-col items-start gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
               <%!-- Avatar + name --%>
-              <div class="flex items-center gap-3">
+              <div class="flex min-w-0 items-center gap-3">
                 <img
                   src={
                     HexpmWeb.ViewHelpers.gravatar_url(
@@ -90,11 +136,24 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                     </a>
                   </p>
                   <p class="text-xs text-grey-500 dark:text-grey-300">{org_user.user.full_name}</p>
+                  <p
+                    :if={admin?(@current_user, @organization)}
+                    class="text-xs text-grey-600 dark:text-grey-300"
+                  >
+                    {case Hexpm.Accounts.OrganizationTFA.enrollment_status(
+                            @organization,
+                            org_user.user
+                          ) do
+                      "enabled" -> "2FA enabled"
+                      "overdue" -> "2FA enrollment overdue"
+                      "pending" -> "2FA enrollment pending"
+                    end}
+                  </p>
                 </div>
               </div>
 
               <%!-- Actions --%>
-              <div class="flex items-center gap-2">
+              <div class="flex shrink-0 flex-wrap items-center gap-2">
                 <%= if admin?(@current_user, @organization) do %>
                   <%!-- Role select (auto-submits on change) --%>
                   <.sudo_form
@@ -137,7 +196,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                     />
                   </.sudo_form>
 
-                  <%!-- Remove (hidden for self, its footprint kept so rows align) --%>
+                  <%!-- Remove member --%>
                   <%= if org_user.user.id != @current_user.id do %>
                     <.icon_button
                       icon="x-mark"
@@ -146,7 +205,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                       phx-click={show_modal("remove-member-#{org_user.user.id}")}
                     />
                   <% else %>
-                    <span class="w-8 h-8" aria-hidden="true"></span>
+                    <span class="hidden sm:block w-8 h-8" aria-hidden="true"></span>
                   <% end %>
                 <% else %>
                   <span class={[
@@ -361,6 +420,17 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
       <% end %>
     </div>
     """
+  end
+
+  defp tfa_enforcement_options(organization) do
+    keep = if organization.tfa_required_at, do: [{"Keep current deadline", "keep"}], else: []
+
+    schedule =
+      if Hexpm.Accounts.OrganizationTFA.enforced?(organization),
+        do: [],
+        else: [{"Schedule a transition", "transition"}, {"Enforce immediately", "immediate"}]
+
+    keep ++ schedule ++ [{"Disable enforcement", "disabled"}]
   end
 
   defp add_member_modal_id, do: "add-member-modal"

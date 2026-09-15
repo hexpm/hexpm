@@ -391,6 +391,10 @@ defmodule HexpmWeb.ViewHelpers do
     Calendar.strftime(date, "%B %d, %Y")
   end
 
+  def pretty_utc_datetime(datetime) do
+    Calendar.strftime(datetime, "%B %-d, %Y at %H:%M UTC")
+  end
+
   def pretty_date(date, :short) do
     Calendar.strftime(date, "%b %d, %Y")
   end

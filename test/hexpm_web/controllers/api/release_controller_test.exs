@@ -1740,6 +1740,29 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
                        %{method: "totp", reason: "invalid_code", user_id: ^user_id}}
     end
 
+    test "a valid TOTP code is refused once invalid codes are rate limited", %{
+      oauth_token: oauth_token,
+      user_with_tfa: user,
+      meta: meta
+    } do
+      publish = fn code ->
+        build_conn()
+        |> Map.put(:remote_ip, {10, 0, 16, 2})
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", "Bearer #{oauth_token.access_token}")
+        |> put_req_header("x-hex-otp", code)
+        |> post("/api/packages/#{meta.name}/releases", create_tar(meta))
+      end
+
+      for _ <- 1..5, do: json_response(publish.("000000"), 401)
+      json_response(publish.("000000"), 429)
+
+      conn = publish.(Hexpm.Accounts.TFA.time_based_token(user.tfa.secret))
+
+      assert json_response(conn, 429)["message"] =~
+               "Too many failed two-factor authentication attempts"
+    end
+
     test "read operation works without TOTP even with write-scoped token", %{
       oauth_token: oauth_token,
       package: package,

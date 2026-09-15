@@ -116,7 +116,97 @@ defmodule Hexpm.RuntimeConfigTest do
              "where jobs can read it too."
   end
 
-  defp read_runtime(env) do
+  test "organization 2FA defaults to off in every environment" do
+    for env <- [:dev, :test, :prod] do
+      config = read_runtime(@web_env, env)
+
+      assert config[:hexpm][:organization_tfa] == [mode: :off, beta_organizations: []]
+    end
+  end
+
+  test "organization 2FA accepts each mode in every environment" do
+    for env <- [:dev, :test, :prod],
+        {value, mode} <- [{"off", :off}, {"beta", :beta}, {"enabled", :enabled}] do
+      config = read_runtime(Map.put(@web_env, "HEXPM_ORGANIZATION_TFA_MODE", value), env)
+
+      assert config[:hexpm][:organization_tfa] == [mode: mode, beta_organizations: []]
+    end
+  end
+
+  test "organization 2FA normalizes the beta organization allowlist" do
+    config =
+      read_runtime(
+        Map.merge(@web_env, %{
+          "HEXPM_ORGANIZATION_TFA_MODE" => "beta",
+          "HEXPM_ORGANIZATION_TFA_BETA_ORGANIZATIONS" => " acme, , other,acme,\tthird\n,other,, "
+        })
+      )
+
+    assert config[:hexpm][:organization_tfa] == [
+             mode: :beta,
+             beta_organizations: ["acme", "other", "third"]
+           ]
+  end
+
+  test "organization 2FA allows an empty beta organization allowlist" do
+    for allowlist <- ["", " ,\t, \n,"] do
+      config =
+        read_runtime(
+          Map.merge(@web_env, %{
+            "HEXPM_ORGANIZATION_TFA_MODE" => "beta",
+            "HEXPM_ORGANIZATION_TFA_BETA_ORGANIZATIONS" => allowlist
+          })
+        )
+
+      assert config[:hexpm][:organization_tfa] == [mode: :beta, beta_organizations: []]
+    end
+  end
+
+  test "organization 2FA rejects invalid modes in every environment" do
+    for env <- [:dev, :test, :prod], mode <- ["invalid", "true", "Beta", "enabled ", ""] do
+      assert_raise RuntimeError, ~r/invalid HEXPM_ORGANIZATION_TFA_MODE/, fn ->
+        read_runtime(Map.put(@web_env, "HEXPM_ORGANIZATION_TFA_MODE", mode), env)
+      end
+    end
+  end
+
+  test "organization 2FA mode and beta organizations are independent of SSO" do
+    for {tfa_value, tfa_mode} <- [{"off", :off}, {"beta", :beta}, {"enabled", :enabled}],
+        {sso_value, sso_mode} <- [{"off", :off}, {"beta", :beta}, {"enabled", :enabled}] do
+      config =
+        read_runtime(
+          Map.merge(@web_env, %{
+            "HEXPM_ORGANIZATION_TFA_MODE" => tfa_value,
+            "HEXPM_ORGANIZATION_TFA_BETA_ORGANIZATIONS" => "tfa_org",
+            "HEXPM_SSO_MODE" => sso_value,
+            "HEXPM_SSO_BETA_ORGANIZATIONS" => "sso_org"
+          })
+        )
+
+      assert config[:hexpm][:organization_tfa] == [
+               mode: tfa_mode,
+               beta_organizations: ["tfa_org"]
+             ]
+
+      assert config[:hexpm][:organization_sso] == [
+               mode: sso_mode,
+               beta_organizations: ["sso_org"]
+             ]
+    end
+  end
+
+  defp read_runtime(env, config_env \\ :prod) do
+    env =
+      Map.merge(
+        %{
+          "HEXPM_ORGANIZATION_TFA_MODE" => nil,
+          "HEXPM_ORGANIZATION_TFA_BETA_ORGANIZATIONS" => nil,
+          "HEXPM_SSO_MODE" => nil,
+          "HEXPM_SSO_BETA_ORGANIZATIONS" => nil
+        },
+        env
+      )
+
     previous = Map.new(env, fn {key, _value} -> {key, System.get_env(key)} end)
 
     on_exit(fn ->
@@ -126,7 +216,11 @@ defmodule Hexpm.RuntimeConfigTest do
       end)
     end)
 
-    System.put_env(env)
-    Config.Reader.read!("config/runtime.exs", env: :prod)
+    Enum.each(env, fn
+      {key, nil} -> System.delete_env(key)
+      {key, value} -> System.put_env(key, value)
+    end)
+
+    Config.Reader.read!("config/runtime.exs", env: config_env)
   end
 end

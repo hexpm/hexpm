@@ -25,8 +25,8 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.AuthenticatorAppCard 
       </h2>
 
       <p class="text-grey-600 dark:text-grey-300 text-sm mb-4">
-        Reset your authenticator app if you've lost access to your device. This will
-        invalidate your current two-factor device and recovery codes.
+        Set up a replacement authenticator app. Your current authenticator and recovery codes
+        remain active until you verify the replacement.
       </p>
 
       <.button type="button" variant="outline" phx-click={show_modal("reset-auth-app-modal")}>
@@ -39,7 +39,7 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.AuthenticatorAppCard 
       id="reset-auth-app-modal"
       current_user={@user}
       title="Reset Authenticator App?"
-      message="This will disable two-factor authentication until you scan the new QR code and verify it. All your current recovery codes will stop working and new ones will be generated."
+      message="Your current authenticator and recovery codes remain active until you verify the new app. After verification, the new app and recovery codes replace them."
       confirm_text="Reset App"
       confirm_action={~p"/dashboard/security/reset-auth-app"}
       danger={true}

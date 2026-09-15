@@ -191,25 +191,24 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
   end
 
   describe "post /dashboard/security/reset-auth-app" do
-    test "disables TFA and generates new session secret", c do
+    test "retains the current authenticator while setting up its replacement", c do
       conn =
         build_conn()
         |> test_login(c.user)
         |> post("/dashboard/security/reset-auth-app")
 
-      # TFA should be disabled in DB
       updated_user =
         Hexpm.Accounts.User
         |> Hexpm.Repo.get(c.user.id)
         |> Hexpm.Repo.preload(:emails)
 
-      refute Hexpm.Accounts.User.tfa_enabled?(updated_user)
+      assert updated_user.tfa == c.user.tfa
 
       # New secret should be stored in session for re-setup
       assert get_session(conn, :tfa_setup_secret)
 
       assert redirected_to(conn) == "/dashboard/security?show_tfa_modal=true"
-      assert_email_sent(Hexpm.Emails.tfa_disabled(updated_user))
+      refute_email_sent()
     end
   end
 
@@ -320,7 +319,7 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
       assert redirected_to(conn) == "/dashboard/security"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
-               "Two-factor authentication has been successfully enabled!"
+               "Two-factor authentication has been enabled."
 
       updated_user =
         Hexpm.Accounts.User

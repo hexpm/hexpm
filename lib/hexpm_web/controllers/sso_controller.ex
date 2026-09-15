@@ -1,13 +1,13 @@
 defmodule HexpmWeb.SSOController do
   use HexpmWeb, :controller
 
-  alias Hexpm.Accounts.SSO
+  alias Hexpm.Accounts.{OrganizationAuth, SSO}
   alias Hexpm.Accounts.SSO.Error
   alias HexpmWeb.Plugs.Attack
   alias HexpmWeb.SSOEnforcement
 
   plug :put_no_store
-  plug :require_sso_available
+  plug :require_sso_available when action not in [:authorize, :authorize_organization]
 
   plug :requires_login
        when action in [
@@ -381,15 +381,15 @@ defmodule HexpmWeb.SSOController do
   def authorize(conn, %{"code" => code}) do
     case SSO.get_authorization(code, conn.assigns.current_user) do
       nil ->
-        expired_authorization(conn)
+        expired_authorization(conn, code)
 
       authorization ->
         case SSO.authorization_status(authorization) do
           [] ->
-            expired_authorization(conn)
+            expired_authorization(conn, code)
 
           status ->
-            if Enum.all?(status, fn {_organization, authenticated?} -> authenticated? end) do
+            if Enum.all?(status, fn {_organization, requirements} -> requirements == [] end) do
               SSO.consume_authorization!(authorization)
 
               conn
@@ -411,14 +411,12 @@ defmodule HexpmWeb.SSOController do
     end
   end
 
-  # The code moved out of the path, so both actions can now be reached without
-  # one. Say the same thing a stale code says rather than raising.
   def authorize(conn, _params), do: expired_authorization(conn)
 
   def authorize_organization(conn, %{"code" => code, "organization" => name}) do
     case SSO.get_authorization(code, conn.assigns.current_user) do
       nil ->
-        expired_authorization(conn)
+        expired_authorization(conn, code)
 
       authorization ->
         case authorized_organization(authorization, name) do
@@ -426,30 +424,42 @@ defmodule HexpmWeb.SSOController do
           # answer is, and re-rendering it says nothing a second request would
           # not have said anyway.
           nil ->
-            redirect(conn, to: ~p"/sso/authorize?#{[code: code]}")
+            redirect(conn, to: ~p"/organizations/authorize?#{[code: code]}")
 
-          organization ->
-            if allow_start?(conn, organization) do
-              start_authorization(conn, authorization, organization, code)
-            else
-              too_many_requests(conn)
+          {organization, requirements} ->
+            cond do
+              "tfa" in requirements ->
+                conn
+                |> put_session(:tfa_return_to, ~p"/organizations/authorize?#{[code: code]}")
+                |> put_flash(
+                  :error,
+                  OrganizationAuth.refusal_message(:tfa_required, organization)
+                )
+                |> redirect(to: ~p"/dashboard/security")
+
+              allow_start?(conn, organization) ->
+                start_authorization(conn, authorization, organization, code)
+
+              true ->
+                too_many_requests(conn)
             end
         end
     end
   end
 
   def authorize_organization(conn, %{"code" => code}) do
-    redirect(conn, to: ~p"/sso/authorize?#{[code: code]}")
+    redirect(conn, to: ~p"/organizations/authorize?#{[code: code]}")
   end
 
   def authorize_organization(conn, _params), do: expired_authorization(conn)
 
-  # One button per organization still to authenticate, each submitting to the
-  # action that starts that organization's login.
+  # One button per organization still to authenticate through its provider,
+  # each submitting to the action that starts that organization's login.
   defp allow_provider_form_actions(conn, status) do
-    Enum.reduce(status, conn, fn
-      {_organization, true}, conn -> conn
-      {organization, false}, conn -> SSOEnforcement.allow_provider_form_action(conn, organization)
+    Enum.reduce(status, conn, fn {organization, requirements}, conn ->
+      if "sso" in requirements,
+        do: SSOEnforcement.allow_provider_form_action(conn, organization),
+        else: conn
     end)
   end
 
@@ -471,24 +481,30 @@ defmodule HexpmWeb.SSOController do
       {:error, reason} ->
         conn
         |> put_flash(:error, start_error_message(reason))
-        |> redirect(to: ~p"/sso/authorize?#{[code: code]}")
+        |> redirect(to: ~p"/organizations/authorize?#{[code: code]}")
     end
   end
 
   defp authorized_organization(authorization, name) when is_binary(name) do
-    Enum.find_value(SSO.authorization_status(authorization), fn {organization, authenticated?} ->
-      if organization.name == name and not authenticated?, do: organization
+    Enum.find(SSO.authorization_status(authorization), fn {organization, requirements} ->
+      organization.name == name and requirements != []
     end)
   end
 
   defp authorized_organization(_authorization, _name), do: nil
 
-  defp expired_authorization(conn) do
+  # Clears the pending marker only when it names this code, so a request for a
+  # stale code does not close a request that is still open.
+  defp expired_authorization(conn, code \\ nil) do
+    conn =
+      if is_binary(code) and get_session(conn, "sso_authorization") == code,
+        do: delete_session(conn, "sso_authorization"),
+        else: conn
+
     conn
-    |> delete_session("sso_authorization")
     |> put_flash(
       :error,
-      "That authentication request is no longer open. Run the command again for a new link."
+      "That authentication request is no longer open. Start a new request from your application."
     )
     |> redirect(to: ~p"/dashboard")
   end
@@ -546,7 +562,7 @@ defmodule HexpmWeb.SSOController do
   # left to do, not to the organization's dashboard.
   defp authorization_path(conn, %{target_user_session_id: target}) when not is_nil(target) do
     case get_session(conn, "sso_authorization") do
-      code when is_binary(code) -> ~p"/sso/authorize?#{[code: code]}"
+      code when is_binary(code) -> ~p"/organizations/authorize?#{[code: code]}"
       _other -> nil
     end
   end

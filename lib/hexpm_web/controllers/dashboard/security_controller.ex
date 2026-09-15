@@ -53,13 +53,21 @@ defmodule HexpmWeb.Dashboard.SecurityController do
   end
 
   def disable_tfa(conn, _params) do
-    user = conn.assigns.current_user
-    Users.tfa_disable(user, audit: audit_data(conn))
+    case Users.tfa_disable(conn.assigns.current_user, audit: audit_data(conn)) do
+      %User{} ->
+        conn
+        |> delete_session(:tfa_setup_secret)
+        |> put_flash(:info, "Two factor authentication has been disabled.")
+        |> redirect(to: ~p"/dashboard/security")
 
-    conn
-    |> delete_session(:tfa_setup_secret)
-    |> put_flash(:info, "Two factor authentication has been disabled.")
-    |> redirect(to: ~p"/dashboard/security")
+      {:error, :organization_tfa_required} ->
+        conn
+        |> put_flash(
+          :error,
+          "You can't disable 2FA while an organization requires it, including during its transition."
+        )
+        |> redirect(to: ~p"/dashboard/security")
+    end
   end
 
   def recovery_codes(conn, _params) do
@@ -80,22 +88,26 @@ defmodule HexpmWeb.Dashboard.SecurityController do
 
   def rotate_recovery_codes(conn, _params) do
     user = conn.assigns.current_user
-    Users.tfa_rotate_recovery_codes(user, audit: audit_data(conn))
 
-    conn
-    |> put_flash(:info, "New two-factor recovery codes successfully generated.")
-    |> redirect(to: ~p"/dashboard/security/recovery-codes")
+    case Users.tfa_rotate_recovery_codes(user, audit: audit_data(conn)) do
+      %User{} ->
+        conn
+        |> put_flash(:info, "New two-factor recovery codes successfully generated.")
+        |> redirect(to: ~p"/dashboard/security/recovery-codes")
+
+      {:error, _} ->
+        conn
+        |> put_flash(:error, "Enable two-factor authentication before generating recovery codes.")
+        |> redirect(to: ~p"/dashboard/security")
+    end
   end
 
   def reset_auth_app(conn, _params) do
-    user = conn.assigns.current_user
-    Users.tfa_disable(user, audit: audit_data(conn))
-
-    # Generate new secret in session for re-setup
     secret = TFA.generate_secret()
 
     conn
     |> put_session(:tfa_setup_secret, secret)
+    |> put_session(:tfa_replacing, true)
     |> put_flash(:info, "Please scan the new QR code with your authenticator app")
     |> redirect(to: ~p"/dashboard/security?show_tfa_modal=true")
   end
@@ -105,7 +117,7 @@ defmodule HexpmWeb.Dashboard.SecurityController do
     secret = get_session(conn, :tfa_setup_secret)
 
     cond do
-      User.tfa_enabled?(user) ->
+      User.tfa_enabled?(user) and get_session(conn, :tfa_replacing) != true ->
         conn
         |> delete_session(:tfa_setup_secret)
         |> put_flash(:info, "Two-factor authentication is already enabled.")
@@ -114,10 +126,14 @@ defmodule HexpmWeb.Dashboard.SecurityController do
       secret ->
         case Users.tfa_enable(user, secret, verification_code, audit: audit_data(conn)) do
           {:ok, _user} ->
+            return_to = get_session(conn, :tfa_return_to) || ~p"/dashboard/security"
+
             conn
+            |> delete_session(:tfa_replacing)
+            |> delete_session(:tfa_return_to)
             |> delete_session(:tfa_setup_secret)
-            |> put_flash(:info, "Two-factor authentication has been successfully enabled!")
-            |> redirect(to: ~p"/dashboard/security")
+            |> put_flash(:info, "Two-factor authentication has been enabled.")
+            |> redirect(to: return_to)
 
           :error ->
             conn

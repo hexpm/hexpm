@@ -143,6 +143,7 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
 
     Multi.new()
     |> Multi.run(:invitation, fn _repo, _changes -> locked_pending(invitation) end)
+    |> Hexpm.Accounts.OrganizationTFA.admit(organization, user)
     |> Multi.run(:existing_role, fn _repo, _changes ->
       {:ok, Organizations.get_role(organization, user)}
     end)
@@ -158,6 +159,9 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
         {:ok, :already_member}
 
       {:error, :invitation, reason, _changes} ->
+        {:error, reason}
+
+      {:error, :tfa_admission, reason, _changes} ->
         {:error, reason}
 
       {:error, :seats, reason, _changes} ->

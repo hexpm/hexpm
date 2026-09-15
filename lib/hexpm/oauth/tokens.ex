@@ -79,7 +79,7 @@ defmodule Hexpm.OAuth.Tokens do
   defp build_token(principal, client_id, scopes, grant_type, grant_reference, opts) do
     expires_in = Keyword.get(opts, :expires_in, @default_expires_in)
     expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)
-    {authorized, sso_reauth_required} = authorized_scopes(principal, scopes, opts)
+    {authorized, organization_reauth_required} = authorized_scopes(principal, scopes, opts)
     {subject, subject_type} = subject(principal)
 
     jwt_opts = [
@@ -100,7 +100,7 @@ defmodule Hexpm.OAuth.Tokens do
       grant_reference: grant_reference,
       client_id: client_id,
       user_session_id: Keyword.get(opts, :user_session_id),
-      sso_reauth_required: sso_reauth_required
+      organization_reauth_required: organization_reauth_required
     }
     |> Map.merge(principal_id(principal))
     |> maybe_add_refresh_token(principal, authorized, opts)
@@ -116,7 +116,7 @@ defmodule Hexpm.OAuth.Tokens do
   # token belongs to does not exist yet and the browser that consented holds the
   # organization access it is about to inherit.
   defp authorized_scopes(%User{} = user, scopes, opts) do
-    Permissions.expand_and_filter_sso_scopes(
+    Permissions.expand_and_filter_organization_scopes(
       user,
       scopes,
       Keyword.get(opts, :sso_session_id) || Keyword.get(opts, :user_session_id),

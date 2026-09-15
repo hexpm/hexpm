@@ -8,7 +8,7 @@ defmodule Hexpm.Permissions do
   """
 
   alias Hexpm.Accounts.{Key, KeyPermission, User, Users, Organization}
-  alias Hexpm.Accounts.SSO.Enforcement
+  alias Hexpm.Accounts.OrganizationAuth
   alias Hexpm.OAuth.Token
   alias Hexpm.Repository.Package
 
@@ -480,23 +480,30 @@ defmodule Hexpm.Permissions do
     end
   end
 
-  defp filter_sso_scopes(%User{} = user, scopes, _user_session_id, %Key{}) do
+  defp filter_organization_scopes(%User{} = user, scopes, _user_session_id, %Key{}) do
     refused =
       user
-      |> Enforcement.personal_key_refused()
-      |> Enum.map(& &1.name)
+      |> OrganizationAuth.personal_key_refusals()
+      |> Enum.map(fn {organization, _refusal} -> organization.name end)
 
     {Enum.reject(scopes, &names_organization?(&1, refused)), []}
   end
 
-  defp filter_sso_scopes(%User{} = user, scopes, user_session_id, _credential) do
-    case Enforcement.sso_required(user, organization_scope_names(scopes), user_session_id) do
-      [] -> {scopes, []}
-      required -> {Enum.reject(scopes, &names_organization?(&1, required)), required}
+  defp filter_organization_scopes(%User{} = user, scopes, user_session_id, _credential) do
+    case OrganizationAuth.required(user, organization_scope_names(scopes), user_session_id) do
+      [] ->
+        {scopes, []}
+
+      required ->
+        {Enum.reject(
+           scopes,
+           &names_organization?(&1, Enum.map(required, fn entry -> entry.organization end))
+         ), required}
     end
   end
 
-  defp filter_sso_scopes(_principal, scopes, _user_session_id, _credential), do: {scopes, []}
+  defp filter_organization_scopes(_principal, scopes, _user_session_id, _credential),
+    do: {scopes, []}
 
   @doc """
   Drops the organization scopes this session is not currently authenticated for,
@@ -525,15 +532,20 @@ defmodule Hexpm.Permissions do
   and loses the ones that do not, and names neither, since a browser visit does
   not change what a static credential may reach.
   """
-  @spec expand_and_filter_sso_scopes(term(), [String.t()], integer() | nil, Key.t() | nil) ::
-          {[String.t()], [String.t()]}
-  def expand_and_filter_sso_scopes(principal, scopes, user_session_id, credential \\ nil) do
+  @spec expand_and_filter_organization_scopes(
+          term(),
+          [String.t()],
+          integer() | nil,
+          Key.t() | nil
+        ) ::
+          {[String.t()], [map()]}
+  def expand_and_filter_organization_scopes(principal, scopes, user_session_id, credential \\ nil) do
     expanded =
       principal
       |> expand_repositories_scope(scopes)
       |> reject_unaffiliated_scopes(principal)
 
-    filter_sso_scopes(principal, expanded, user_session_id, credential)
+    filter_organization_scopes(principal, expanded, user_session_id, credential)
   end
 
   defp organization_scope_names(scopes) do
