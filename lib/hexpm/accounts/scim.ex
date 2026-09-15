@@ -406,25 +406,36 @@ defmodule Hexpm.Accounts.SCIM do
       Repo.transaction(fn ->
         lock_connection!(%Connection{id: resource.connection_id})
 
-        holder =
-          Repo.exists?(
-            from(other in Resource,
-              where: other.connection_id == ^resource.connection_id,
-              where: other.user_id == ^user_id
-            )
-          )
+        # Read again under the lock: a write that ran while this waited may
+        # have bound or renamed the handle, and the match was made against
+        # the name it had before.
+        fresh = Repo.get!(Resource, resource.id) |> Repo.preload([:user, :invitation])
 
-        if holder do
-          resource
-        else
-          resource
-          |> change(user_id: user_id)
-          |> Repo.update!()
-          |> Repo.preload(:user, force: true)
+        cond do
+          fresh.user_id || fresh.user_name != resource.user_name ->
+            fresh
+
+          holder?(fresh.connection_id, user_id) ->
+            fresh
+
+          true ->
+            fresh
+            |> change(user_id: user_id)
+            |> Repo.update!()
+            |> Repo.preload(:user, force: true)
         end
       end)
 
     resource
+  end
+
+  defp holder?(connection_id, user_id) do
+    Repo.exists?(
+      from(other in Resource,
+        where: other.connection_id == ^connection_id,
+        where: other.user_id == ^user_id
+      )
+    )
   end
 
   defp pending?(%OrganizationInvitation{} = invitation),
@@ -610,13 +621,18 @@ defmodule Hexpm.Accounts.SCIM do
           {:ok, %{resolved | resource: resource}}
         end
 
-      # An inactive handle may still point at the account it used to name,
-      # which a hand removal leaves behind. Renamed, it means the new address
-      # and nothing else: a following activation or deactivation acts on
-      # whoever that address matches, and a stale pointer cannot outlive it.
+      # An inactive handle may still point at the account it used to name and
+      # at the invitation that once named it, which a hand removal leaves
+      # behind. Renamed, it means the new address and nothing else: a
+      # following activation or deactivation acts on whoever that address
+      # matches, and neither stale pointer can outlive the rename.
       resolved.state == :inactive ->
         with {:ok, resource} <-
-               update_resource(resolved.resource, %{user_name: user_name, user_id: nil}) do
+               update_resource(resolved.resource, %{
+                 user_name: user_name,
+                 user_id: nil,
+                 invitation_id: nil
+               }) do
           audit!(audit_data, "sso.scim.resource.update", connection, resource)
           {:ok, %{resolved | resource: resource, user: nil}}
         end
@@ -653,13 +669,20 @@ defmodule Hexpm.Accounts.SCIM do
   # The invitations are locked before the membership is removed, the order
   # acceptance uses (invitation, then organization), and the last-member and
   # last-admin guards refuse the whole deactivation, never half of it.
+  #
+  # A deactivation is done when the handle reads inactive. It is resolved
+  # again here rather than trusting the state the request began with, because
+  # an earlier operation may have renamed it onto an address a current member
+  # holds; and it is resolved once more after each removal, because with the
+  # bound account gone the address can still name a member, added by hand or
+  # matched through their identity, who is the person the provider means.
+  # Each round removes an account the address names, and an address names at
+  # most a few, so this ends.
   defp deactivate(connection, resolved, audit_data) do
-    # Resolved again here rather than trusting the state the request began
-    # with: an earlier operation may have renamed the handle onto an address
-    # a current member holds, and it is that member the provider is now
-    # deactivating. Nothing is re-resolved afterwards, so the cleared handle
-    # cannot pick up a surviving membership on its way out.
-    resolved = resolve(resolved.resource)
+    deactivate_round(connection, resolve(resolved.resource), audit_data, 4)
+  end
+
+  defp deactivate_round(connection, resolved, audit_data, rounds) do
     resource = resolved.resource
     own = lock_invitation(resource.invitation_id)
     matching = lock_matching_invitation(connection, resource, own)
@@ -668,8 +691,11 @@ defmodule Hexpm.Accounts.SCIM do
          :ok <- retire_locked(connection, own, audit_data),
          :ok <- retire_locked(connection, matching, audit_data),
          {:ok, resource} <- update_resource(resource, %{invitation_id: nil, user_id: nil}) do
-      {:ok,
-       %{resource: Repo.preload(resource, [:user, :invitation]), state: :inactive, user: nil}}
+      case resolve(resource) do
+        %{state: :inactive} = resolved -> {:ok, resolved}
+        resolved when rounds > 1 -> deactivate_round(connection, resolved, audit_data, rounds - 1)
+        resolved -> {:ok, resolved}
+      end
     end
   end
 
@@ -784,46 +810,46 @@ defmodule Hexpm.Accounts.SCIM do
   # provider asks for under a new address is relabeled rather than given a
   # second row. Without that the insert conflicts on the account, the filter
   # answers nothing, and the provider's recovery path never converges.
+  # Under the connection lock like every other write to a handle, so the
+  # lookups below are exact and neither the relabel nor the insert can hit a
+  # unique index. Two members presenting the same address keep the row that
+  # exists; the filter asked for the address, and that row answers it.
   defp materialize_member(connection, user, user_name, audit_data) do
-    case Repo.get_by(Resource, connection_id: connection.id, user_id: user.id) do
-      %Resource{user_name: ^user_name} = resource ->
-        resolve(resource)
+    {:ok, resolved} =
+      Repo.transaction(fn ->
+        lock_connection!(connection)
 
-      %Resource{} = resource ->
-        case update_resource(resource, %{user_name: user_name}) do
-          {:ok, resource} ->
-            audit!(audit_data, "sso.scim.resource.update", connection, resource)
+        case Repo.get_by(Resource, connection_id: connection.id, user_id: user.id) do
+          %Resource{user_name: ^user_name} = resource ->
             resolve(resource)
 
-          {:error, _taken} ->
-            refetch(connection, user_name)
+          %Resource{} = resource ->
+            case get_resource_by_user_name(connection, user_name) do
+              %Resource{} = taken ->
+                resolve(taken)
+
+              nil ->
+                {:ok, resource} = update_resource(resource, %{user_name: user_name})
+                audit!(audit_data, "sso.scim.resource.update", connection, resource)
+                resolve(resource)
+            end
+
+          nil ->
+            case get_resource_by_user_name(connection, user_name) do
+              %Resource{} = taken ->
+                resolve(taken)
+
+              nil ->
+                connection
+                |> Resource.build()
+                |> Resource.changeset(%{user_name: user_name, user_id: user.id})
+                |> Repo.insert!()
+                |> resolve()
+            end
         end
+      end)
 
-      nil ->
-        insert_materialized(connection, user, user_name)
-    end
-  end
-
-  # Best-effort under races and collisions: `on_conflict: :nothing` covers a
-  # concurrent import or two members presenting the same address, and the read
-  # path re-resolves whatever row won.
-  defp insert_materialized(connection, user, user_name) do
-    connection
-    |> Resource.build()
-    |> Resource.changeset(%{user_name: user_name, user_id: user.id})
-    |> Repo.insert(on_conflict: :nothing)
-    |> case do
-      {:ok, %Resource{id: nil}} -> refetch(connection, user_name)
-      {:ok, resource} -> resolve(resource)
-      {:error, _changeset} -> refetch(connection, user_name)
-    end
-  end
-
-  defp refetch(connection, user_name) do
-    case get_resource_by_user_name(connection, user_name) do
-      %Resource{} = resource -> resolve(resource)
-      nil -> nil
-    end
+    resolved
   end
 
   # Verified as well as primary: presenting an unverified address as the

@@ -1028,6 +1028,55 @@ defmodule Hexpm.Accounts.SCIMTest do
       assert {:ok, %{state: :inactive}} = SCIM.get_user(context.connection, resource.scim_id)
     end
 
+    test "deactivating a handle removes everyone its address names", context do
+      bound = insert(:user)
+      named = insert(:user)
+      insert(:organization_user, organization: context.organization, user: named)
+
+      {:ok, %{resource: resource}} =
+        create_user(context.connection, %{"userName" => hd(bound.emails).email})
+
+      assert {:ok, %{state: :inactive}} =
+               patch_user(context.connection, resource.scim_id, [
+                 %{"op" => "replace", "path" => "userName", "value" => hd(named.emails).email},
+                 %{"op" => "replace", "path" => "active", "value" => false}
+               ])
+
+      refute Organizations.get_role(context.organization, bound)
+      refute Organizations.get_role(context.organization, named)
+      assert {:ok, %{state: :inactive}} = SCIM.get_user(context.connection, resource.scim_id)
+    end
+
+    test "an accepted invitation does not outlive a rename of the inactive handle", context do
+      acceptor = insert(:user)
+      named = insert(:user)
+      insert(:organization_user, organization: context.organization, user: named)
+
+      {:ok, %{resource: resource}} =
+        create_user(context.connection, %{"userName" => "work@example.com"})
+
+      invitation =
+        Repo.get!(OrganizationInvitation, resource.invitation_id)
+        |> Repo.preload(:organization)
+
+      {:ok, _organization_user} =
+        OrganizationInvitations.accept(invitation, acceptor, audit: audit_data(acceptor))
+
+      :ok =
+        Organizations.remove_member(context.organization, acceptor,
+          audit: audit_data(context.admin)
+        )
+
+      assert {:ok, %{state: :inactive}} =
+               patch_user(context.connection, resource.scim_id, [
+                 %{"op" => "replace", "path" => "userName", "value" => hd(named.emails).email},
+                 %{"op" => "replace", "path" => "active", "value" => false}
+               ])
+
+      refute Organizations.get_role(context.organization, named)
+      assert {:ok, %{state: :inactive}} = SCIM.get_user(context.connection, resource.scim_id)
+    end
+
     test "filter values past the column bounds match nothing", context do
       assert find_by_user_name(context.connection, String.duplicate("a", 250) <> "@x.io") ==
                nil
