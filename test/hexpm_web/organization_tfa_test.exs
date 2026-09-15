@@ -168,6 +168,9 @@ defmodule HexpmWeb.OrganizationTFATest do
     response = response |> recycle() |> get(redirected_to(response))
     assert redirected_to(response) == "/dashboard/security"
 
+    assert Phoenix.Flash.get(response.assigns.flash, :error) ==
+             "Organization #{c.organization.name} requires two-factor authentication. Enable it in your account security settings."
+
     assert get_session(response, :tfa_return_to) =~
              "/organizations/#{c.organization.name}/authenticate"
 
@@ -267,6 +270,10 @@ defmodule HexpmWeb.OrganizationTFATest do
     assert html_response(conn, 200) =~ "2FA enrollment required"
     conn = conn |> recycle() |> post(path, %{code: code, organization: c.organization.name})
     assert redirected_to(conn) == "/dashboard/security"
+
+    assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+             "requires two-factor authentication"
+
     conn = enroll(conn)
     assert redirected_to(conn) == path <> "?" <> query
     conn = conn |> recycle() |> get(redirected_to(conn))

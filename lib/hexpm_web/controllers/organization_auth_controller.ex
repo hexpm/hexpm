@@ -21,6 +21,7 @@ defmodule HexpmWeb.OrganizationAuthController do
               :tfa_return_to,
               ~p"/organizations/#{name}/authenticate?#{[return: return_to]}"
             )
+            |> put_flash(:error, OrganizationAuth.refusal_message(:tfa_required, organization))
             |> redirect(to: ~p"/dashboard/security")
           else
             redirect(conn, to: ~p"/sso/org/#{name}?#{[return: return_to]}")

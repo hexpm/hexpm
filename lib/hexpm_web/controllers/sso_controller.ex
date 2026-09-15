@@ -1,7 +1,7 @@
 defmodule HexpmWeb.SSOController do
   use HexpmWeb, :controller
 
-  alias Hexpm.Accounts.SSO
+  alias Hexpm.Accounts.{OrganizationAuth, SSO}
   alias Hexpm.Accounts.SSO.Error
   alias HexpmWeb.Plugs.Attack
   alias HexpmWeb.SSOEnforcement
@@ -431,6 +431,10 @@ defmodule HexpmWeb.SSOController do
               "tfa" in requirements ->
                 conn
                 |> put_session(:tfa_return_to, ~p"/organizations/authorize?#{[code: code]}")
+                |> put_flash(
+                  :error,
+                  OrganizationAuth.refusal_message(:tfa_required, organization)
+                )
                 |> redirect(to: ~p"/dashboard/security")
 
               allow_start?(conn, organization) ->
