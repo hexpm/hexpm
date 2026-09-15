@@ -144,6 +144,30 @@ defmodule HexpmWeb.OAuthControllerTest do
       assert html =~ "repositories"
     end
 
+    test "the consent form carries a sudo token for its own action", %{client: client} do
+      user = insert(:user)
+      conn = login_user(build_conn(), user)
+
+      html =
+        conn
+        |> get(~p"/oauth/authorize", %{
+          "client_id" => client.client_id,
+          "redirect_uri" => "https://example.com/callback",
+          "scope" => "api:read",
+          "state" => "test_state",
+          "code_challenge" => "challenge123",
+          "code_challenge_method" => "S256"
+        })
+        |> html_response(200)
+
+      [_, token] = Regex.run(~r/name="_sudo_token" value="([^"]+)"/, html)
+
+      assert {:ok, {user_id, "POST", "/oauth/authorize"}} =
+               Phoenix.Token.verify(HexpmWeb.Endpoint, "sudo_form_token", token, max_age: 60)
+
+      assert user_id == user.id
+    end
+
     test "expands full api scope on authorization page", %{client: client} do
       user = insert(:user)
       conn = login_user(build_conn(), user)
