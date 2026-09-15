@@ -8,7 +8,7 @@ defmodule Hexpm.Permissions do
   """
 
   alias Hexpm.Accounts.{Key, KeyPermission, User, Users, Organization}
-  alias Hexpm.Accounts.OrganizationAuth, as: Enforcement
+  alias Hexpm.Accounts.OrganizationAuth
   alias Hexpm.OAuth.Token
   alias Hexpm.Repository.Package
 
@@ -483,14 +483,14 @@ defmodule Hexpm.Permissions do
   defp filter_organization_scopes(%User{} = user, scopes, _user_session_id, %Key{}) do
     refused =
       user
-      |> Enforcement.personal_key_refusals()
+      |> OrganizationAuth.personal_key_refusals()
       |> Enum.map(fn {organization, _refusal} -> organization.name end)
 
     {Enum.reject(scopes, &names_organization?(&1, refused)), []}
   end
 
   defp filter_organization_scopes(%User{} = user, scopes, user_session_id, _credential) do
-    case Enforcement.required(user, organization_scope_names(scopes), user_session_id) do
+    case OrganizationAuth.required(user, organization_scope_names(scopes), user_session_id) do
       [] ->
         {scopes, []}
 

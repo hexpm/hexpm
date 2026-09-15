@@ -3,7 +3,7 @@ defmodule HexpmWeb.AuthHelpers do
   import HexpmWeb.ControllerHelpers, only: [render_error: 3]
 
   alias Hexpm.Accounts.{Auth, Organization, Organizations, User, TFA}
-  alias Hexpm.Accounts.OrganizationAuth, as: Enforcement
+  alias Hexpm.Accounts.OrganizationAuth
   alias Hexpm.Permissions
   alias Hexpm.SecurityLog
   alias Hexpm.Repository.{Package, Packages, PackageOwner, Repository}
@@ -340,7 +340,7 @@ defmodule HexpmWeb.AuthHelpers do
 
       {:error, refusal, organization} ->
         message =
-          Enforcement.refusal_message(refusal, organization, conn.assigns[:auth_credential])
+          OrganizationAuth.refusal_message(refusal, organization, conn.assigns[:auth_credential])
 
         {:error, :auth, message}
     end
@@ -465,7 +465,7 @@ defmodule HexpmWeb.AuthHelpers do
 
       {:error, refusal} ->
         message =
-          Enforcement.refusal_message(refusal, organization, conn.assigns[:auth_credential])
+          OrganizationAuth.refusal_message(refusal, organization, conn.assigns[:auth_credential])
 
         {:error, :auth, message}
     end

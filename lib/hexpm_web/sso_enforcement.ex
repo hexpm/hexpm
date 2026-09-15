@@ -9,7 +9,7 @@ defmodule HexpmWeb.SSOEnforcement do
   import Plug.Conn, only: [halt: 1]
 
   alias Hexpm.Accounts.SSO
-  alias Hexpm.Accounts.OrganizationAuth, as: Enforcement
+  alias Hexpm.Accounts.OrganizationAuth
   alias Hexpm.Accounts.{User, Users}
   alias Hexpm.Permissions
   alias Hexpm.Repository.{Package, Packages}
@@ -23,7 +23,7 @@ defmodule HexpmWeb.SSOEnforcement do
   key carries none.
   """
   def check(conn_or_socket, organization, principal) do
-    Enforcement.check(
+    OrganizationAuth.check(
       organization,
       principal,
       credential(conn_or_socket),
@@ -100,7 +100,7 @@ defmodule HexpmWeb.SSOEnforcement do
   The same filter over a set of organizations the caller has already resolved.
   """
   def reachable(conn_or_socket, organizations) do
-    Enforcement.reachable(
+    OrganizationAuth.reachable(
       organizations,
       conn_or_socket.assigns.current_user,
       credential(conn_or_socket),

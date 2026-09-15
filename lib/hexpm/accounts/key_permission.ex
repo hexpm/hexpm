@@ -1,7 +1,7 @@
 defmodule Hexpm.Accounts.KeyPermission do
   use Hexpm.Schema
 
-  alias Hexpm.Accounts.OrganizationAuth, as: Enforcement
+  alias Hexpm.Accounts.OrganizationAuth
   alias Hexpm.Permissions
 
   @derive {HexpmWeb.Stale, last_modified: nil}
@@ -69,10 +69,10 @@ defmodule Hexpm.Accounts.KeyPermission do
          reach when not is_nil(reach) <- organization_reach(apply_changes(changeset)),
          {organization, refusal} <-
            Enum.find(
-             Enforcement.personal_key_refusals(user_or_organization),
+             OrganizationAuth.personal_key_refusals(user_or_organization),
              fn {organization, _refusal} -> reached?(organization, reach) end
            ) do
-      add_error(changeset, :resource, Enforcement.refusal_message(refusal, organization))
+      add_error(changeset, :resource, OrganizationAuth.refusal_message(refusal, organization))
     else
       _ -> changeset
     end
