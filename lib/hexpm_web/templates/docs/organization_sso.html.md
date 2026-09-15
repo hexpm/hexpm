@@ -136,12 +136,18 @@ On the organization's **SSO** dashboard, under **Provisioning (SCIM)**, choose w
 
 What each operation does:
 
-* **Assigning a person** whose Hexpm account has a verified email matching the SCIM `userName` adds them as a member with the role you chose, taking a seat. If the seats are full, the create is refused or a seat is added to the subscription, per your choice.
-* **Assigning an address with no Hexpm account** sends a pending invitation to that address instead. Nothing creates a Hexpm account, and the seat is spent when the invitation is accepted, not when it is sent.
-* **Deactivating or unassigning** removes the membership, with the member's organization access sessions and SSO link, or revokes the pending invitation. The seat is freed for reuse; the billed quantity changes only when an administrator changes it.
+* **Assigning a person** whose Hexpm account has a verified email matching the SCIM `userName`, or who has signed in through this connection with that address, adds them as a member with the role you chose, taking a seat. They are emailed that they were added. If the seats are full, the create is refused or a seat is added to the subscription, per your choice.
+* **Assigning an address with no Hexpm account** sends a pending invitation to that address instead. Nothing creates a Hexpm account, and the seat is spent when the invitation is accepted, not when it is sent. An invitation is refused at acceptance if the organization is full by then, whichever seat policy you chose, because acceptance is what spends the seat.
+* **Deactivating or unassigning** removes the membership, with the member's organization access sessions and SSO link, and revokes any pending invitation to that address, including one an administrator sent by hand. The seat is freed for reuse; the billed quantity changes only when an administrator changes it.
 * **Reactivating** joins the person again with the provisioned role. A role an administrator granted by hand before the deactivation is not remembered.
 
-Membership stays manageable in Hexpm either way. A member you remove by hand reads as deactivated on the provider's next sync, and a member you add by hand is matched by the provider's import through their verified email. One thing to know before connecting it: a full import lists each member's primary email address (or the address your provider already knows them by) to your provider, which is more than the member list on hex.pm shows.
+Membership stays manageable in Hexpm either way, with one thing to know: a member you remove by hand is added again the next time your provider sends them as active. Unassign them in the provider as well, or the next sync undoes the removal. A member you add by hand is matched by the provider's import through their verified email or the address they sign in with.
+
+Provisioning is not bounded by the safeguards that apply to an administrator using the dashboard. A provider that deactivates every administrator leaves the organization with none; the organization's last member is the only removal provisioning refuses. Recovering from that takes support.
+
+A full import lists each member's primary email address (or the address your provider already knows them by) to your provider, which is more than the member list on hex.pm shows.
+
+Every provisioning write is recorded in the organization's audit log as **SCIM**, with the address the request came from. The **Provisioning (SCIM)** card shows who generated the token, when, and when it was last used.
 
 CI is unaffected: organization API keys are not members and never appear on this surface.
 
@@ -190,15 +196,16 @@ The SSO screen is reachable so the connection can be repaired, and turning enfor
 
 ### The residual bypasses
 
-A required organization has exactly five ways in that do not involve its identity provider, and they are all deliberate:
+A required organization has exactly six ways in that do not involve its identity provider, and they are all deliberate:
 
 1. **Exemptions**, one per member, listed on the members tab.
 2. **Organization API keys**, which authenticate as the organization. This is the audited automation exception; enforcement constrains and monitors it but cannot close it.
 3. **Personal API keys**, unless the organization chose to block them.
 4. **Break-glass** on the billing and SSO settings screens, audited and mailed.
-5. **Readme URLs.** A private package's readme renders on a separate host that never receives your Hexpm session cookie, so the package page signs a URL for it after taking its own authorization decision, and signs one for each image the readme contains. That URL renders that one readme for thirty minutes to anyone holding it. Nothing about it is checked against enforcement, the session it was minted from, or the member's membership, and reaching a readme this way is not audited. It carries no other access: one package, one version, and the images in that readme.
+5. **The provisioning token**, when provisioning is on. It authenticates as the provider's agent rather than as a person, so nothing about enforcement applies to it, and it keeps working after the administrator who generated it leaves. Every write it makes is audited. Delete it under **Provisioning (SCIM)** to close it.
+6. **Readme URLs.** A private package's readme renders on a separate host that never receives your Hexpm session cookie, so the package page signs a URL for it after taking its own authorization decision, and signs one for each image the readme contains. That URL renders that one readme for thirty minutes to anyone holding it. Nothing about it is checked against enforcement, the session it was minted from, or the member's membership, and reaching a readme this way is not audited. It carries no other access: one package, one version, and the images in that readme.
 
-There is no sixth. If you are evaluating Hexpm against a compliance requirement, this is the list. Leaving the organization is open on the same break-glass terms and audited the same way, but it is not on the list: it takes the member's access away rather than giving them any.
+There is no seventh. If you are evaluating Hexpm against a compliance requirement, this is the list. Leaving the organization is open on the same break-glass terms and audited the same way, but it is not on the list: it takes the member's access away rather than giving them any.
 
 ### Offboarding
 
@@ -248,7 +255,7 @@ The active secret continues serving logins until the tested replacement is promo
 
 ### Disable SSO, unlink an account, or remove the configuration
 
-Select **Disable SSO login** to stop new SSO logins immediately and revoke every organization access session the connection has granted. This does not remove the saved configuration or linked accounts, and conventional Hexpm login remains available.
+Select **Disable SSO login** to stop new SSO logins immediately and revoke every organization access session the connection has granted. This does not remove the saved configuration or linked accounts, and conventional Hexpm login remains available. It does not stop provisioning either: the provisioning token keeps working until you delete it under **Provisioning (SCIM)**.
 
 Organization administrators can unlink an account from the **Linked accounts** section, which also ends that member's current organization access. Removing a member from the organization does the same and removes the SSO link. If the person is added again later, they must link again.
 

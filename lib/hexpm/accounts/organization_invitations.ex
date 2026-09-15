@@ -17,6 +17,7 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
   use Hexpm.Context
 
   alias Hexpm.Accounts.OrganizationInvitation
+  alias Hexpm.Emails.Outbox
 
   def all_pending(organization) do
     Repo.all(
@@ -92,8 +93,9 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
     Multi.new()
     |> Multi.insert(:invitation, changeset)
     |> audit(audit_data, "organization.invitation.create", &{organization, &1.invitation})
-    |> Repo.transaction()
     |> deliver(organization, raw_token)
+    |> Repo.transaction()
+    |> result()
   end
 
   defp lapsed_invitation(organization, email) do
@@ -119,8 +121,9 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
       OrganizationInvitation.reissue_changeset(invitation, hash(raw_token), expires_at())
     )
     |> audit(audit_data, "organization.invitation.create", &{organization, &1.invitation})
-    |> Repo.transaction()
     |> deliver(organization, raw_token)
+    |> Repo.transaction()
+    |> result()
   end
 
   def revoke(organization, invitation, audit: audit_data) do
@@ -206,19 +209,27 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
     |> audit(audit_data, "organization.invitation.accept", {organization, invitation})
   end
 
-  defp deliver({:ok, %{invitation: invitation}}, organization, raw_token) do
-    invitation = %{invitation | raw_token: raw_token, organization: organization}
+  # Queued in the same transaction as the invitation. Delivering afterwards
+  # meant a mail failure answered the caller with the invitation already
+  # committed, and the retry adopted that invitation without mailing anyone.
+  defp deliver(multi, organization, raw_token) do
+    Multi.run(multi, :email, fn _repo, %{invitation: invitation} ->
+      invitation = %{invitation | raw_token: raw_token, organization: organization}
 
-    invitation
-    |> Emails.organization_invitation()
-    |> Mailer.deliver!()
+      invitation
+      |> Emails.organization_invitation()
+      |> Outbox.enqueue!(
+        category: "organization.invitation",
+        group_key: "organization-invitation:#{invitation.id}",
+        scope_key: "organization:#{organization.id}"
+      )
 
-    {:ok, invitation}
+      {:ok, invitation}
+    end)
   end
 
-  defp deliver({:error, :invitation, changeset, _changes}, _organization, _raw_token) do
-    {:error, changeset}
-  end
+  defp result({:ok, %{email: invitation}}), do: {:ok, invitation}
+  defp result({:error, :invitation, changeset, _changes}), do: {:error, changeset}
 
   defp locked_pending(invitation) do
     locked =

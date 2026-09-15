@@ -2,6 +2,7 @@ defmodule Hexpm.Accounts.SCIMTest do
   use Hexpm.DataCase
 
   import Mox
+  import Swoosh.TestAssertions
 
   alias Hexpm.Accounts.{
     AuditLogs,
@@ -52,7 +53,7 @@ defmodule Hexpm.Accounts.SCIMTest do
       email = hd(user.emails).email
 
       assert {:ok, %{state: :member, user: matched}} =
-               SCIM.create_user(context.connection, %{"userName" => email})
+               create_user(context.connection, %{"userName" => email})
 
       assert matched.id == user.id
       assert Organizations.get_role(context.organization, user) == "read"
@@ -64,7 +65,7 @@ defmodule Hexpm.Accounts.SCIMTest do
 
     test "an unknown address becomes a pending invitation, not an account", context do
       assert {:ok, %{state: :invited, resource: resource}} =
-               SCIM.create_user(context.connection, %{"userName" => "new@example.com"})
+               create_user(context.connection, %{"userName" => "new@example.com"})
 
       invitation = Repo.get!(OrganizationInvitation, resource.invitation_id)
       assert invitation.email == "new@example.com"
@@ -83,17 +84,17 @@ defmodule Hexpm.Accounts.SCIMTest do
         )
 
       assert {:ok, %{state: :invited, resource: resource}} =
-               SCIM.create_user(context.connection, %{"userName" => "pending@example.com"})
+               create_user(context.connection, %{"userName" => "pending@example.com"})
 
       assert resource.invitation_id == invitation.id
     end
 
     test "a duplicate userName is a uniqueness conflict", context do
       assert {:ok, _resolved} =
-               SCIM.create_user(context.connection, %{"userName" => "dup@example.com"})
+               create_user(context.connection, %{"userName" => "dup@example.com"})
 
       assert {:error, :uniqueness} =
-               SCIM.create_user(context.connection, %{"userName" => "dup@example.com"})
+               create_user(context.connection, %{"userName" => "dup@example.com"})
     end
 
     test "a second resource for the same account is a uniqueness conflict", context do
@@ -110,10 +111,10 @@ defmodule Hexpm.Accounts.SCIMTest do
         )
 
       assert {:ok, %{state: :member}} =
-               SCIM.create_user(context.connection, %{"userName" => primary_email.email})
+               create_user(context.connection, %{"userName" => primary_email.email})
 
       assert {:error, :uniqueness} =
-               SCIM.create_user(context.connection, %{"userName" => other_email.email})
+               create_user(context.connection, %{"userName" => other_email.email})
     end
 
     test "an inactive create stores the handle and touches nothing", context do
@@ -121,7 +122,7 @@ defmodule Hexpm.Accounts.SCIMTest do
       email = hd(user.emails).email
 
       assert {:ok, %{state: :inactive}} =
-               SCIM.create_user(context.connection, %{"userName" => email, "active" => false})
+               create_user(context.connection, %{"userName" => email, "active" => false})
 
       refute Organizations.get_role(context.organization, user)
       assert Seats.used(context.organization) == 1
@@ -129,9 +130,9 @@ defmodule Hexpm.Accounts.SCIMTest do
 
     test "a userName that is not an email is refused", context do
       assert {:error, :invalid_value} =
-               SCIM.create_user(context.connection, %{"userName" => "not-an-email"})
+               create_user(context.connection, %{"userName" => "not-an-email"})
 
-      assert {:error, :invalid_value} = SCIM.create_user(context.connection, %{})
+      assert {:error, :invalid_value} = create_user(context.connection, %{})
     end
 
     test "seat exhaustion under block refuses the create", context do
@@ -140,7 +141,7 @@ defmodule Hexpm.Accounts.SCIMTest do
       user = insert(:user)
 
       assert {:error, :seats_exhausted} =
-               SCIM.create_user(connection, %{"userName" => hd(user.emails).email})
+               create_user(connection, %{"userName" => hd(user.emails).email})
 
       refute Organizations.get_role(organization, user)
     end
@@ -165,7 +166,7 @@ defmodule Hexpm.Accounts.SCIMTest do
       end)
 
       assert {:ok, %{state: :member}} =
-               SCIM.create_user(connection, %{"userName" => hd(user.emails).email})
+               create_user(connection, %{"userName" => hd(user.emails).email})
 
       assert Organizations.get_role(organization, user) == "read"
     end
@@ -178,7 +179,7 @@ defmodule Hexpm.Accounts.SCIMTest do
       email = hd(user.emails).email
 
       {:ok, %{resource: resource}} =
-        SCIM.create_user(context.connection, %{"userName" => email})
+        create_user(context.connection, %{"userName" => email})
 
       connection_row = Repo.get!(Hexpm.Accounts.SSO.Connection, context.connection.id)
 
@@ -195,7 +196,7 @@ defmodule Hexpm.Accounts.SCIMTest do
       SSO.establish_org_session!(identity, session.id)
 
       assert {:ok, %{state: :inactive}} =
-               SCIM.patch_user(context.connection, resource.scim_id, [
+               patch_user(context.connection, resource.scim_id, [
                  %{"op" => "replace", "path" => "active", "value" => false}
                ])
 
@@ -209,10 +210,10 @@ defmodule Hexpm.Accounts.SCIMTest do
 
     test "deactivating an invited person revokes the invitation", context do
       {:ok, %{resource: resource}} =
-        SCIM.create_user(context.connection, %{"userName" => "invited@example.com"})
+        create_user(context.connection, %{"userName" => "invited@example.com"})
 
       assert {:ok, %{state: :inactive}} =
-               SCIM.patch_user(context.connection, resource.scim_id, [
+               patch_user(context.connection, resource.scim_id, [
                  %{"op" => "replace", "path" => "active", "value" => "False"}
                ])
 
@@ -223,7 +224,7 @@ defmodule Hexpm.Accounts.SCIMTest do
       resolved = materialized_admin(context)
 
       assert {:error, :last_member} =
-               SCIM.patch_user(context.connection, resolved.resource.scim_id, [
+               patch_user(context.connection, resolved.resource.scim_id, [
                  %{"op" => "replace", "value" => %{"active" => "False"}}
                ])
 
@@ -234,7 +235,7 @@ defmodule Hexpm.Accounts.SCIMTest do
       user = insert(:user)
 
       {:ok, %{resource: resource}} =
-        SCIM.create_user(context.connection, %{"userName" => hd(user.emails).email})
+        create_user(context.connection, %{"userName" => hd(user.emails).email})
 
       assert {:ok, %{state: :inactive}} = deactivate(context.connection, resource)
       assert {:ok, %{state: :inactive}} = deactivate(context.connection, resource)
@@ -244,13 +245,13 @@ defmodule Hexpm.Accounts.SCIMTest do
       user = insert(:user)
 
       {:ok, %{resource: resource}} =
-        SCIM.create_user(context.connection, %{"userName" => hd(user.emails).email})
+        create_user(context.connection, %{"userName" => hd(user.emails).email})
 
       {:ok, _resolved} = deactivate(context.connection, resource)
       refute Organizations.get_role(context.organization, user)
 
       assert {:ok, %{state: :member}} =
-               SCIM.patch_user(context.connection, resource.scim_id, [
+               patch_user(context.connection, resource.scim_id, [
                  %{"op" => "replace", "path" => "active", "value" => true}
                ])
 
@@ -262,7 +263,7 @@ defmodule Hexpm.Accounts.SCIMTest do
       user = insert(:user)
 
       {:ok, %{resource: resource}} =
-        SCIM.create_user(context.connection, %{"userName" => hd(user.emails).email})
+        create_user(context.connection, %{"userName" => hd(user.emails).email})
 
       :ok =
         Organizations.remove_member(context.organization, user, audit: audit_data(context.admin))
@@ -273,7 +274,7 @@ defmodule Hexpm.Accounts.SCIMTest do
 
     test "an accepted invitation repairs the handle to the member", context do
       {:ok, %{resource: resource}} =
-        SCIM.create_user(context.connection, %{"userName" => "joiner@example.com"})
+        create_user(context.connection, %{"userName" => "joiner@example.com"})
 
       invitation =
         Repo.get!(OrganizationInvitation, resource.invitation_id)
@@ -297,10 +298,10 @@ defmodule Hexpm.Accounts.SCIMTest do
       email = hd(user.emails).email
 
       {:ok, %{resource: resource}} =
-        SCIM.create_user(context.connection, %{"userName" => email})
+        create_user(context.connection, %{"userName" => email})
 
       assert {:ok, %{state: :inactive}} =
-               SCIM.replace_user(context.connection, resource.scim_id, %{
+               replace_user(context.connection, resource.scim_id, %{
                  "userName" => email,
                  "active" => false
                })
@@ -312,10 +313,10 @@ defmodule Hexpm.Accounts.SCIMTest do
       user = insert(:user)
 
       {:ok, %{resource: resource}} =
-        SCIM.create_user(context.connection, %{"userName" => hd(user.emails).email})
+        create_user(context.connection, %{"userName" => hd(user.emails).email})
 
       assert {:ok, %{state: :member, resource: resource, user: same}} =
-               SCIM.replace_user(context.connection, resource.scim_id, %{
+               replace_user(context.connection, resource.scim_id, %{
                  "userName" => "newlabel@example.com",
                  "active" => true
                })
@@ -326,10 +327,10 @@ defmodule Hexpm.Accounts.SCIMTest do
 
     test "renaming an invited person reinvites the new address", context do
       {:ok, %{resource: resource}} =
-        SCIM.create_user(context.connection, %{"userName" => "old@example.com"})
+        create_user(context.connection, %{"userName" => "old@example.com"})
 
       assert {:ok, %{state: :invited, resource: resource}} =
-               SCIM.replace_user(context.connection, resource.scim_id, %{
+               replace_user(context.connection, resource.scim_id, %{
                  "userName" => "new@example.com",
                  "active" => true
                })
@@ -346,20 +347,20 @@ defmodule Hexpm.Accounts.SCIMTest do
       email = hd(user.emails).email
 
       {:ok, %{resource: resource}} =
-        SCIM.create_user(context.connection, %{"userName" => email})
+        create_user(context.connection, %{"userName" => email})
 
-      assert :ok = SCIM.delete_user(context.connection, resource.scim_id)
+      assert :ok = delete_user(context.connection, resource.scim_id)
       refute Organizations.get_role(context.organization, user)
       assert {:error, :not_found} = SCIM.get_user(context.connection, resource.scim_id)
 
-      assert {:ok, _resolved} = SCIM.create_user(context.connection, %{"userName" => email})
+      assert {:ok, _resolved} = create_user(context.connection, %{"userName" => email})
     end
 
     test "deleting the last member is refused and keeps the handle", context do
       resolved = materialized_admin(context)
 
       assert {:error, :last_member} =
-               SCIM.delete_user(context.connection, resolved.resource.scim_id)
+               delete_user(context.connection, resolved.resource.scim_id)
 
       assert {:ok, _resolved} =
                SCIM.get_user(context.connection, resolved.resource.scim_id)
@@ -374,11 +375,11 @@ defmodule Hexpm.Accounts.SCIMTest do
         insert(:organization_user, organization: context.organization, user: user)
       end
 
-      listing = SCIM.list_users(context.connection, 1, 2)
+      listing = list_users(context.connection, 1, 2)
       assert listing.total == 4
       assert length(listing.resources) == 2
 
-      rest = SCIM.list_users(context.connection, 3, 2)
+      rest = list_users(context.connection, 3, 2)
       assert length(rest.resources) == 2
 
       ids = Enum.map(listing.resources ++ rest.resources, & &1.resource.scim_id)
@@ -399,7 +400,7 @@ defmodule Hexpm.Accounts.SCIMTest do
         provider_email: "work@corp.example.com"
       )
 
-      listing = SCIM.list_users(context.connection, 1, 100)
+      listing = list_users(context.connection, 1, 100)
       user_names = Enum.map(listing.resources, & &1.resource.user_name)
       assert "work@corp.example.com" in user_names
     end
@@ -409,8 +410,8 @@ defmodule Hexpm.Accounts.SCIMTest do
       insert(:organization_user, organization: context.organization, user: user)
       email = hd(user.emails).email
 
-      assert %{state: :member} = SCIM.find_by_user_name(context.connection, email)
-      assert %{state: :member} = SCIM.find_by_user_name(context.connection, email)
+      assert %{state: :member} = find_by_user_name(context.connection, email)
+      assert %{state: :member} = find_by_user_name(context.connection, email)
 
       assert Repo.aggregate(Resource, :count) == 1
     end
@@ -418,13 +419,13 @@ defmodule Hexpm.Accounts.SCIMTest do
     test "filtering by userName finds nothing for outsiders", context do
       outsider = insert(:user)
 
-      assert SCIM.find_by_user_name(context.connection, hd(outsider.emails).email) == nil
+      assert find_by_user_name(context.connection, hd(outsider.emails).email) == nil
       assert Repo.aggregate(Resource, :count) == 0
     end
 
     test "filtering by externalId matches stored handles", context do
       {:ok, %{resource: resource}} =
-        SCIM.create_user(context.connection, %{
+        create_user(context.connection, %{
           "userName" => "ext@example.com",
           "externalId" => "okta-123"
         })
@@ -435,10 +436,271 @@ defmodule Hexpm.Accounts.SCIMTest do
     end
   end
 
+  describe "security review regressions" do
+    test "a member matched by the address they authenticate with is deprovisioned", context do
+      member = insert(:user)
+      insert(:organization_user, organization: context.organization, user: member, role: "write")
+
+      insert(:organization_sso_identity,
+        connection: context.connection,
+        organization: context.organization,
+        user: member,
+        provider_email: "Work@Corp.example.com"
+      )
+
+      # No verified copy of the work address on the Hex account; the identity is
+      # what names them.
+      assert %{state: :member, resource: resource} =
+               find_by_user_name(context.connection, "work@corp.example.com")
+
+      assert {:ok, %{state: :inactive}} = deactivate(context.connection, resource)
+      refute Organizations.get_role(context.organization, member)
+    end
+
+    test "a member already holding a handle is relabeled rather than missed", context do
+      member = insert(:user)
+      insert(:organization_user, organization: context.organization, user: member, role: "write")
+
+      # The first import binds their primary address.
+      list_users(context.connection, 1, 100)
+
+      insert(:organization_sso_identity,
+        connection: context.connection,
+        organization: context.organization,
+        user: member,
+        provider_email: "renamed@corp.example.com"
+      )
+
+      assert %{state: :member, resource: resource} =
+               find_by_user_name(context.connection, "renamed@corp.example.com")
+
+      assert resource.user_name == "renamed@corp.example.com"
+      assert Repo.aggregate(from(r in Resource, where: r.user_id == ^member.id), :count) == 1
+    end
+
+    test "reactivating under a new name binds whoever accepts, not the old account",
+         context do
+      old = insert(:user)
+
+      {:ok, %{resource: resource}} =
+        create_user(context.connection, %{"userName" => hd(old.emails).email})
+
+      {:ok, _resolved} = deactivate(context.connection, resource)
+
+      {:ok, _resolved} =
+        replace_user(context.connection, resource.scim_id, %{
+          "userName" => "successor@example.com",
+          "active" => true
+        })
+
+      reloaded = Repo.get!(Resource, resource.id)
+      refute reloaded.user_id
+
+      successor = insert(:user)
+
+      invitation =
+        Repo.get!(OrganizationInvitation, reloaded.invitation_id) |> Repo.preload(:organization)
+
+      {:ok, _member} =
+        OrganizationInvitations.accept(invitation, successor, audit: audit_data(successor))
+
+      assert {:ok, %{state: :inactive}} = deactivate(context.connection, reloaded)
+      refute Organizations.get_role(context.organization, successor)
+      refute Organizations.get_role(context.organization, old)
+    end
+
+    test "a deactivated handle keeps no pointer at the account it named", context do
+      user = insert(:user)
+
+      {:ok, %{resource: resource}} =
+        create_user(context.connection, %{"userName" => hd(user.emails).email})
+
+      {:ok, _resolved} = deactivate(context.connection, resource)
+
+      refute Repo.get!(Resource, resource.id).user_id
+    end
+
+    test "an invitation sent by hand does not survive the deprovisioning", context do
+      user = insert(:user)
+      email = hd(user.emails).email
+
+      {:ok, _invitation} =
+        OrganizationInvitations.invite(
+          context.organization,
+          %{"email" => email, "role" => "admin"},
+          context.admin,
+          audit: audit_data(context.admin)
+        )
+
+      {:ok, %{resource: resource}} = create_user(context.connection, %{"userName" => email})
+      {:ok, _resolved} = deactivate(context.connection, resource)
+
+      refute Organizations.get_role(context.organization, user)
+      refute OrganizationInvitations.get_pending_by_email(context.organization, email)
+    end
+
+    test "a PUT that says nothing about active does not re-add a member", context do
+      user = insert(:user)
+      email = hd(user.emails).email
+
+      {:ok, %{resource: resource}} = create_user(context.connection, %{"userName" => email})
+
+      other = insert(:user)
+      insert(:organization_user, organization: context.organization, user: other, role: "write")
+
+      :ok =
+        Organizations.remove_member(context.organization, user, audit: audit_data(context.admin))
+
+      {:ok, _resolved} =
+        replace_user(context.connection, resource.scim_id, %{"userName" => email})
+
+      refute Organizations.get_role(context.organization, user)
+    end
+
+    test "joining through a verified address tells the person", context do
+      user = insert(:user)
+
+      {:ok, _resolved} =
+        create_user(context.connection, %{"userName" => hd(user.emails).email})
+
+      assert_email_sent(fn email ->
+        email.to == [{user.username, hd(user.emails).email}]
+      end)
+    end
+
+    test "provisioning writes name the agent and its address", context do
+      user = insert(:user)
+
+      {:ok, _resolved} =
+        create_user(context.connection, %{"userName" => hd(user.emails).email})
+
+      rows = AuditLogs.all_by(context.organization)
+
+      assert Enum.all?(rows, &(&1.user_agent == "SCIM"))
+      assert Enum.all?(rows, &(&1.remote_ip == "198.51.100.4"))
+      assert "sso.scim.resource.create" in Enum.map(rows, & &1.action)
+      assert "organization.member.add" in Enum.map(rows, & &1.action)
+    end
+
+    test "a relabel leaves a record, since it decides what a reactivation binds",
+         context do
+      {:ok, %{resource: resource}} =
+        create_user(context.connection, %{"userName" => "before@example.com"})
+
+      {:ok, _resolved} =
+        replace_user(context.connection, resource.scim_id, %{"userName" => "after@example.com"})
+
+      assert "sso.scim.resource.update" in Enum.map(
+               AuditLogs.all_by(context.organization),
+               & &1.action
+             )
+    end
+
+    test "an unrecognized active value is refused rather than read as active", context do
+      user = insert(:user)
+
+      assert {:error, :invalid_value} =
+               create_user(context.connection, %{
+                 "userName" => hd(user.emails).email,
+                 "active" => "0"
+               })
+
+      refute Organizations.get_role(context.organization, user)
+    end
+
+    test "attribute names and the schema URN are matched case-insensitively", context do
+      user = insert(:user)
+
+      {:ok, %{resource: resource}} =
+        create_user(context.connection, %{"userName" => hd(user.emails).email})
+
+      other = insert(:user)
+      insert(:organization_user, organization: context.organization, user: other, role: "write")
+
+      assert {:ok, %{state: :inactive}} =
+               patch_user(context.connection, resource.scim_id, [
+                 %{
+                   "op" => "Replace",
+                   "path" => "urn:ietf:params:scim:schemas:core:2.0:User:ACTIVE",
+                   "value" => "FALSE"
+                 }
+               ])
+
+      refute Organizations.get_role(context.organization, user)
+    end
+
+    test "a value object with a differently cased key is applied", context do
+      {:ok, %{resource: resource}} =
+        create_user(context.connection, %{"userName" => "cased@example.com"})
+
+      assert {:ok, %{resource: renamed}} =
+               patch_user(context.connection, resource.scim_id, [
+                 %{"op" => "replace", "value" => %{"username" => "recased@example.com"}}
+               ])
+
+      assert renamed.user_name == "recased@example.com"
+    end
+
+    test "malformed operations are refused rather than raised", context do
+      {:ok, %{resource: resource}} =
+        create_user(context.connection, %{"userName" => "malformed@example.com"})
+
+      for operation <- [
+            %{"op" => %{}, "path" => "active", "value" => false},
+            %{"op" => "replace", "path" => 1, "value" => false},
+            %{"path" => "active", "value" => false}
+          ] do
+        assert {:error, :invalid_path} =
+                 patch_user(context.connection, resource.scim_id, [operation])
+      end
+    end
+
+    test "a PATCH longer than the cap is refused before anything is written", context do
+      {:ok, %{resource: resource}} =
+        create_user(context.connection, %{"userName" => "capped@example.com"})
+
+      operations =
+        for index <- 1..(SCIM.max_operations() + 1) do
+          %{"op" => "replace", "path" => "userName", "value" => "capped#{index}@example.com"}
+        end
+
+      assert {:error, :too_many_operations} =
+               patch_user(context.connection, resource.scim_id, operations)
+
+      assert Repo.get!(Resource, resource.id).user_name == "capped@example.com"
+    end
+
+    test "one externalId on two handles answers rather than failing", context do
+      {:ok, _first} =
+        create_user(context.connection, %{
+          "userName" => "rehire1@example.com",
+          "externalId" => "shared"
+        })
+
+      {:ok, _second} =
+        create_user(context.connection, %{
+          "userName" => "rehire2@example.com",
+          "externalId" => "shared"
+        })
+
+      assert %{resource: %Resource{user_name: "rehire1@example.com"}} =
+               SCIM.find_by_external_id(context.connection, "shared")
+    end
+
+    test "removing someone who is not a member is not the last-member refusal", context do
+      outsider = insert(:user)
+
+      assert :ok =
+               Organizations.remove_member(context.organization, outsider,
+                 audit: audit_data(context.admin)
+               )
+    end
+  end
+
   describe "review regressions" do
     test "deactivating a member also retires a pending invitation for the handle", context do
       {:ok, %{state: :invited, resource: resource}} =
-        SCIM.create_user(context.connection, %{"userName" => "late@example.com"})
+        create_user(context.connection, %{"userName" => "late@example.com"})
 
       user = insert(:user, emails: [build(:email, email: "late@example.com")])
       insert(:organization_user, organization: context.organization, user: user)
@@ -453,7 +715,7 @@ defmodule Hexpm.Accounts.SCIMTest do
 
     test "deactivating after the invitation was accepted removes the member", context do
       {:ok, %{resource: resource}} =
-        SCIM.create_user(context.connection, %{"userName" => "accepted@example.com"})
+        create_user(context.connection, %{"userName" => "accepted@example.com"})
 
       invitation =
         Repo.get!(OrganizationInvitation, resource.invitation_id)
@@ -479,7 +741,7 @@ defmodule Hexpm.Accounts.SCIMTest do
       insert(:organization_user, organization: context.organization, user: wrong)
       insert(:organization_user, organization: context.organization, user: owner)
 
-      listing = SCIM.list_users(context.connection, 1, 100)
+      listing = list_users(context.connection, 1, 100)
 
       collision =
         Enum.find(listing.resources, &(&1.resource.user_name == "collision@example.com"))
@@ -495,12 +757,12 @@ defmodule Hexpm.Accounts.SCIMTest do
       email_b = hd(user_b.emails).email
 
       {:ok, %{resource: resource}} =
-        SCIM.create_user(context.connection, %{"userName" => email_a})
+        create_user(context.connection, %{"userName" => email_a})
 
       {:ok, _resolved} = deactivate(context.connection, resource)
 
       assert {:ok, %{state: :member, resource: resource, user: activated}} =
-               SCIM.patch_user(context.connection, resource.scim_id, [
+               patch_user(context.connection, resource.scim_id, [
                  %{"op" => "replace", "path" => "active", "value" => true},
                  %{"op" => "replace", "path" => "userName", "value" => email_b}
                ])
@@ -513,12 +775,12 @@ defmodule Hexpm.Accounts.SCIMTest do
 
     test "renaming to a taken name leaves the original invitation standing", context do
       {:ok, %{resource: resource}} =
-        SCIM.create_user(context.connection, %{"userName" => "old@example.com"})
+        create_user(context.connection, %{"userName" => "old@example.com"})
 
-      {:ok, _other} = SCIM.create_user(context.connection, %{"userName" => "taken@example.com"})
+      {:ok, _other} = create_user(context.connection, %{"userName" => "taken@example.com"})
 
       assert {:error, :uniqueness} =
-               SCIM.patch_user(context.connection, resource.scim_id, [
+               patch_user(context.connection, resource.scim_id, [
                  %{"op" => "replace", "path" => "userName", "value" => "taken@example.com"}
                ])
 
@@ -535,13 +797,34 @@ defmodule Hexpm.Accounts.SCIMTest do
   end
 
   defp deactivate(connection, resource) do
-    SCIM.patch_user(connection, resource.scim_id, [
+    patch_user(connection, resource.scim_id, [
       %{"op" => "replace", "path" => "active", "value" => false}
     ])
   end
 
+  # The provisioning agent is the actor on every write.
+  defp audit(connection), do: AuditLogs.scim(connection.organization, "198.51.100.4")
+
+  defp list_users(connection, start_index, count),
+    do: SCIM.list_users(connection, start_index, count, audit: audit(connection))
+
+  defp find_by_user_name(connection, user_name),
+    do: SCIM.find_by_user_name(connection, user_name, audit: audit(connection))
+
+  defp create_user(connection, params),
+    do: SCIM.create_user(connection, params, audit: audit(connection))
+
+  defp replace_user(connection, scim_id, params),
+    do: SCIM.replace_user(connection, scim_id, params, audit: audit(connection))
+
+  defp patch_user(connection, scim_id, operations),
+    do: SCIM.patch_user(connection, scim_id, operations, audit: audit(connection))
+
+  defp delete_user(connection, scim_id),
+    do: SCIM.delete_user(connection, scim_id, audit: audit(connection))
+
   defp materialized_admin(context) do
-    SCIM.find_by_user_name(context.connection, hd(context.admin.emails).email)
+    find_by_user_name(context.connection, hd(context.admin.emails).email)
   end
 
   defp seats_full(organization) do

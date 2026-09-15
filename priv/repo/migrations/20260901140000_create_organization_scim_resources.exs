@@ -2,6 +2,12 @@ defmodule Hexpm.RepoBase.Migrations.CreateOrganizationScimResources do
   use Ecto.Migration
 
   def change do
+    # The foreign keys take SHARE ROW EXCLUSIVE on users, organizations and
+    # organization_invitations, all of which the request path writes to. Give
+    # up rather than queue behind a long-running read and hold every writer
+    # behind us.
+    execute("SET lock_timeout TO '5s'", "SET lock_timeout TO DEFAULT")
+
     create table(:organization_scim_resources) do
       add :connection_id, references(:organization_sso_connections, on_delete: :delete_all),
         null: false
@@ -26,5 +32,7 @@ defmodule Hexpm.RepoBase.Migrations.CreateOrganizationScimResources do
     create index(:organization_scim_resources, [:organization_id])
     create index(:organization_scim_resources, [:user_id])
     create index(:organization_scim_resources, [:invitation_id])
+
+    execute("SET lock_timeout TO DEFAULT", "SET lock_timeout TO '5s'")
   end
 end
