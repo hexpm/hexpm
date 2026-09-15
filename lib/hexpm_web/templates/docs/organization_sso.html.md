@@ -136,14 +136,16 @@ On the organization's **SSO** dashboard, under **Provisioning (SCIM)**, choose w
 
 What each operation does:
 
-* **Assigning a person** whose Hexpm account has a verified email matching the SCIM `userName`, or who has signed in through this connection with that address, adds them as a member with the role you chose, taking a seat. They are emailed that they were added. If the seats are full, the create is refused or a seat is added to the subscription, per your choice.
+* **Assigning a person** whose Hexpm account has a verified email matching the SCIM `userName`, or who has signed in through this connection with that address, adds them as a member with the role you chose, taking a seat. They are emailed that they were added. If the seats are full, the create is refused or a seat is added to the subscription, per your choice. If the organization requires two-factor authentication and the person has not enabled it, the create is refused until they do; your provider retries on its own schedule.
 * **Assigning an address with no Hexpm account** sends a pending invitation to that address instead. Nothing creates a Hexpm account, and the seat is spent when the invitation is accepted, not when it is sent. An invitation is refused at acceptance if the organization is full by then, whichever seat policy you chose, because acceptance is what spends the seat.
 * **Deactivating or unassigning** removes the membership, with the member's organization access sessions and SSO link, and revokes any pending invitation to that address, including one an administrator sent by hand. The seat is freed for reuse; the billed quantity changes only when an administrator changes it.
-* **Reactivating** joins the person again with the provisioned role. A role an administrator granted by hand before the deactivation is not remembered.
+* **Reactivating** joins the person again with the provisioned role, under the same seat and two-factor checks as assigning them. A role an administrator granted by hand before the deactivation is not remembered.
 
 Membership stays manageable in Hexpm either way, with one thing to know: a member you remove by hand is added again the next time your provider sends them as active. Unassign them in the provider as well, or the next sync undoes the removal. A member you add by hand is matched by the provider's import through their verified email or the address they sign in with.
 
-Provisioning is not bounded by the safeguards that apply to an administrator using the dashboard. A provider that deactivates every administrator leaves the organization with none; the organization's last member is the only removal provisioning refuses. Recovering from that takes support.
+Provisioning refuses two removals, the same two the dashboard refuses: the organization's last member, and its last administrator who can still reach the organization (an active account that satisfies the organization's two-factor and SSO requirements). A provider that deactivates the other administrators leaves that one in place. Everything else a provider asks for is applied.
+
+Microsoft Entra reports a `displayName` update every time it syncs a member, because Hexpm shows the member's username there and never stores the directory's value. The update succeeds and changes nothing; it is not a sign that provisioning is failing.
 
 A full import lists each member's primary email address (or the address your provider already knows them by) to your provider, which is more than the member list on hex.pm shows.
 

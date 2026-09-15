@@ -40,8 +40,8 @@ defmodule Hexpm.Accounts.SCIM.Resource do
     |> cast(attrs, [:external_id, :user_name, :user_id, :invitation_id])
     |> update_change(:user_name, &normalize_user_name/1)
     |> validate_required([:connection_id, :organization_id, :scim_id, :user_name])
-    |> validate_length(:user_name, max: 320)
-    |> validate_length(:external_id, max: 1_024)
+    |> validate_length(:user_name, count: :bytes, max: 255)
+    |> validate_length(:external_id, count: :bytes, max: 1_024)
     |> unique_constraint([:connection_id, :scim_id])
     |> unique_constraint([:connection_id, :user_name])
     |> unique_constraint([:connection_id, :user_id])
@@ -52,7 +52,7 @@ defmodule Hexpm.Accounts.SCIM.Resource do
   end
 
   def email_shaped?(value) when is_binary(value) do
-    Regex.match?(~r/^[^\s]+@[^\s]+\.[^\s]+$/, value) and byte_size(value) <= 320
+    Regex.match?(~r/^[^\s]+@[^\s]+\.[^\s]+$/, value) and byte_size(value) <= 255
   end
 
   def email_shaped?(_value), do: false

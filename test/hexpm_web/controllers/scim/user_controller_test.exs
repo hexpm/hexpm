@@ -199,6 +199,49 @@ defmodule HexpmWeb.SCIM.UserControllerTest do
     assert Organizations.get_role(context.organization, context.admin) == "admin"
   end
 
+  test "removing the last administrator is a 409 naming the refusal", context do
+    insert(:organization_user,
+      organization: context.organization,
+      user: insert(:user),
+      role: "read"
+    )
+
+    admin_email = hd(context.admin.emails).email
+
+    listing =
+      scim_conn(context.token)
+      |> get("/scim/v2/Users", filter: ~s(userName eq "#{admin_email}"))
+      |> scim_json_response(200)
+
+    assert [%{"id" => id}] = listing["Resources"]
+
+    body =
+      scim_conn(context.token)
+      |> delete("/scim/v2/Users/#{id}")
+      |> scim_json_response(409)
+
+    assert body["detail"] =~ "last administrator"
+    assert Organizations.get_role(context.organization, context.admin) == "admin"
+  end
+
+  test "a 2FA policy the person has not met is a 409 naming the fix", context do
+    app_env(:hexpm, :organization_tfa, mode: :enabled, beta_organizations: [])
+
+    context.organization
+    |> Ecto.Changeset.change(tfa_required_at: DateTime.add(DateTime.utc_now(), 14 * 86_400))
+    |> Repo.update!()
+
+    user = insert(:user)
+
+    body =
+      scim_conn(context.token)
+      |> post("/scim/v2/Users", scim_body(%{"userName" => hd(user.emails).email}))
+      |> scim_json_response(409)
+
+    assert body["detail"] =~ "two-factor authentication"
+    refute Organizations.get_role(context.organization, user)
+  end
+
   test "an unknown or malformed id is not found", context do
     assert scim_conn(context.token)
            |> get("/scim/v2/Users/#{Ecto.UUID.generate()}")

@@ -63,6 +63,43 @@ defmodule Hexpm.Accounts.SCIMTest do
       assert "organization.member.add" in actions
     end
 
+    test "an organization 2FA policy refuses the join until the person enrolls", context do
+      require_tfa(context.organization)
+
+      user = insert(:user)
+
+      assert {:error, :tfa_enrollment_required} =
+               create_user(context.connection, %{"userName" => hd(user.emails).email})
+
+      refute Organizations.get_role(context.organization, user)
+      assert Seats.used(context.organization) == 1
+      assert Repo.all(Resource) == []
+
+      enrolled = insert(:user_with_tfa)
+
+      assert {:ok, %{state: :member}} =
+               create_user(context.connection, %{"userName" => hd(enrolled.emails).email})
+
+      assert Organizations.get_role(context.organization, enrolled) == "read"
+    end
+
+    test "a 2FA policy does not touch someone who is already a member", context do
+      require_tfa(context.organization)
+
+      member = insert(:user)
+
+      insert(:organization_user,
+        organization: context.organization,
+        user: member,
+        role: "write"
+      )
+
+      assert {:ok, %{state: :member}} =
+               create_user(context.connection, %{"userName" => hd(member.emails).email})
+
+      assert Organizations.get_role(context.organization, member) == "write"
+    end
+
     test "an unknown address becomes a pending invitation, not an account", context do
       assert {:ok, %{state: :invited, resource: resource}} =
                create_user(context.connection, %{"userName" => "new@example.com"})
@@ -226,6 +263,23 @@ defmodule Hexpm.Accounts.SCIMTest do
       assert {:error, :last_member} =
                patch_user(context.connection, resolved.resource.scim_id, [
                  %{"op" => "replace", "value" => %{"active" => "False"}}
+               ])
+
+      assert Organizations.get_role(context.organization, context.admin) == "admin"
+    end
+
+    test "deactivating the last administrator is refused", context do
+      insert(:organization_user,
+        organization: context.organization,
+        user: insert(:user),
+        role: "read"
+      )
+
+      resolved = materialized_admin(context)
+
+      assert {:error, :last_admin} =
+               patch_user(context.connection, resolved.resource.scim_id, [
+                 %{"op" => "replace", "path" => "active", "value" => false}
                ])
 
       assert Organizations.get_role(context.organization, context.admin) == "admin"
@@ -833,6 +887,14 @@ defmodule Hexpm.Accounts.SCIMTest do
 
     organization
     |> Ecto.Changeset.change(billing_seats: 2)
+    |> Repo.update!()
+  end
+
+  defp require_tfa(organization) do
+    app_env(:hexpm, :organization_tfa, mode: :enabled, beta_organizations: [])
+
+    organization
+    |> Ecto.Changeset.change(tfa_required_at: DateTime.add(DateTime.utc_now(), 14 * 86_400))
     |> Repo.update!()
   end
 end
