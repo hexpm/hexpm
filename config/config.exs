@@ -145,7 +145,8 @@ config :phoenix, :generators,
 config :phoenix, :format_encoders,
   elixir: HexpmWeb.ElixirFormat,
   erlang: HexpmWeb.ErlangFormat,
-  json: JSON
+  json: JSON,
+  scim: JSON
 
 config :phoenix, :json_library, JSON
 
@@ -153,7 +154,8 @@ config :mime,
   types: %{
     "application/vnd.hex+json" => ["json"],
     "application/vnd.hex+elixir" => ["elixir"],
-    "application/vnd.hex+erlang" => ["erlang"]
+    "application/vnd.hex+erlang" => ["erlang"],
+    "application/scim+json" => ["scim"]
   },
   extensions: %{
     "json" => "application/json"

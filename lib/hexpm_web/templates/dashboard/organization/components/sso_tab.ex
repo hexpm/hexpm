@@ -7,6 +7,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
 
   alias Hexpm.Accounts.Keys
   alias Hexpm.Accounts.OrganizationDomain
+  alias Hexpm.Accounts.User
   alias Hexpm.Accounts.SSO
   alias Hexpm.Accounts.SSO.Connection
 
@@ -15,6 +16,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
   attr :identities, :list, required: true
   attr :failures, :list, required: true
   attr :callback_url, :string, required: true
+  attr :scim_base_url, :string, required: true
+  attr :generated_scim_token, :any, default: nil
   attr :login_url, :string, required: true
   attr :domains, :list, default: []
   attr :personal_keys, :list, default: []
@@ -297,6 +300,116 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
 
       <section
         :if={@connection}
+        id="sso-scim"
+        class="rounded-lg border border-grey-200 dark:border-grey-800 bg-white dark:bg-grey-900 p-5"
+      >
+        <h3 class="font-semibold text-grey-900 dark:text-grey-100">Provisioning (SCIM)</h3>
+        <p class="mt-2 text-sm text-grey-600 dark:text-grey-300">
+          Lets your provider create and deactivate members here as you assign and deactivate them
+          there. Point its SCIM integration at the base URL below with the bearer token, which is
+          shown once when generated. People without a Hex account are reached with an invitation;
+          nothing here creates an account.
+        </p>
+
+        <div
+          :if={@generated_scim_token}
+          id="sso-scim-generated-token"
+          class="mt-4 rounded-md border border-grey-200 dark:border-grey-800 bg-grey-50 dark:bg-grey-950 p-4"
+        >
+          <p class="text-sm font-medium text-grey-900 dark:text-grey-100">
+            Copy the token now. It is not shown again.
+          </p>
+          <code class="mt-2 block break-all text-sm text-grey-900 dark:text-grey-100">
+            {@generated_scim_token}
+          </code>
+        </div>
+
+        <div class="mt-4 grid gap-4">
+          <.readonly_value label="SCIM base URL" value={@scim_base_url} />
+          <.readonly_value
+            label="Status"
+            value={if Connection.scim_enabled?(@connection), do: "On", else: "Off"}
+          />
+          <.readonly_value
+            :if={Connection.scim_enabled?(@connection)}
+            label="Token generated"
+            value={token_origin(@connection)}
+          />
+          <.readonly_value
+            :if={Connection.scim_enabled?(@connection)}
+            label="Token last used"
+            value={token_last_use(@connection)}
+          />
+        </div>
+        <p
+          :if={Connection.scim_enabled?(@connection)}
+          class="mt-2 text-xs text-grey-500 dark:text-grey-400"
+        >
+          The token keeps working after the administrator who generated it leaves the
+          organization. Delete it here to stop provisioning.
+        </p>
+
+        <.form
+          for={%{}}
+          action={
+            if Connection.scim_enabled?(@connection),
+              do: ~p"/dashboard/orgs/#{@organization}/sso/scim",
+              else: ~p"/dashboard/orgs/#{@organization}/sso/scim/generate"
+          }
+          as={:scim}
+          class="mt-4 grid gap-4 sm:grid-cols-2"
+        >
+          <.select_input
+            id="sso-scim-seat-policy"
+            name="scim[scim_seat_policy]"
+            label="When the seats run out"
+            value={@connection.scim_seat_policy}
+            options={[
+              {"Choose what happens", ""},
+              {"Refuse the create and notify administrators", "block"},
+              {"Add a seat to the subscription", "expand"}
+            ]}
+            variant="light"
+          />
+          <.select_input
+            id="sso-scim-role"
+            name="scim[scim_role]"
+            label="Role for provisioned members"
+            value={@connection.scim_role}
+            options={[{"Read", "read"}, {"Write", "write"}, {"Admin", "admin"}]}
+            variant="light"
+          />
+          <div class="sm:col-span-2">
+            <.button type="submit" variant="secondary">
+              {if Connection.scim_enabled?(@connection),
+                do: "Save settings",
+                else: "Save and generate token"}
+            </.button>
+          </div>
+        </.form>
+
+        <div :if={Connection.scim_enabled?(@connection)} class="mt-4 flex gap-3">
+          <.form
+            for={%{}}
+            action={~p"/dashboard/orgs/#{@organization}/sso/scim/generate"}
+            as={:scim}
+          >
+            <input type="hidden" name="scim[scim_seat_policy]" value={@connection.scim_seat_policy} />
+            <input type="hidden" name="scim[scim_role]" value={@connection.scim_role} />
+            <.button type="submit" variant="outline">Regenerate token</.button>
+          </.form>
+          <.form
+            for={%{}}
+            action={~p"/dashboard/orgs/#{@organization}/sso/scim/delete"}
+            as={:scim}
+          >
+            <.button type="submit" variant="outline">Turn provisioning off</.button>
+          </.form>
+        </div>
+      </section>
+
+      <section
+        :if={@connection}
         id="sso-enforcement"
         class="rounded-lg border border-grey-200 dark:border-grey-800 bg-white dark:bg-grey-900 p-5"
       >
@@ -527,6 +640,24 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
       <code class="mt-1 block overflow-x-auto rounded-md bg-grey-50 dark:bg-grey-950 px-3 py-2 text-sm text-grey-900 dark:text-grey-100">{@value}</code>
     </div>
     """
+  end
+
+  defp token_origin(%Connection{scim_token_generated_at: nil}), do: "Unknown"
+
+  defp token_origin(%Connection{} = connection) do
+    date = Calendar.strftime(connection.scim_token_generated_at, "%Y-%m-%d")
+
+    case connection.scim_token_generated_by_user do
+      %User{username: username} -> "#{date} by #{username}"
+      _unknown -> date
+    end
+  end
+
+  defp token_last_use(%Connection{scim_token_used_at: nil}), do: "Never"
+
+  defp token_last_use(%Connection{scim_token_used_at: used_at, scim_token_used_ip: ip}) do
+    date = Calendar.strftime(used_at, "%Y-%m-%d %H:%M UTC")
+    if ip, do: "#{date} from #{ip}", else: date
   end
 
   defp domain_status(%OrganizationDomain{verified_at: nil}) do

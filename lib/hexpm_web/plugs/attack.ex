@@ -44,7 +44,7 @@ defmodule HexpmWeb.Plugs.Attack do
   end
 
   rule "ip throttle", conn do
-    if api?(conn) do
+    if api?(conn) or scim?(conn) do
       ip_throttle(conn.remote_ip)
     end
   end
@@ -80,10 +80,10 @@ defmodule HexpmWeb.Plugs.Attack do
 
   defp throttled_user(conn) do
     cond do
-      user = conn.assigns.current_user ->
+      user = conn.assigns[:current_user] ->
         "user #{user.id}"
 
-      organization = conn.assigns.current_organization ->
+      organization = conn.assigns[:current_organization] ->
         "organization #{organization.id}"
 
       true ->
@@ -335,4 +335,7 @@ defmodule HexpmWeb.Plugs.Attack do
 
   defp api?(%Plug.Conn{request_path: "/api/" <> _}), do: true
   defp api?(%Plug.Conn{}), do: false
+
+  defp scim?(%Plug.Conn{request_path: "/scim/" <> _}), do: true
+  defp scim?(%Plug.Conn{}), do: false
 end
