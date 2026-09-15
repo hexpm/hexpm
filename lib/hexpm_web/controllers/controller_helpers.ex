@@ -623,17 +623,24 @@ defmodule HexpmWeb.ControllerHelpers do
   def safe_return_path("//" <> _), do: nil
 
   def safe_return_path("/" <> _ = path) do
-    [request_path | _] = String.split(path, "?", parts: 2)
-
-    if String.contains?(path, @invalid_return_path_chars) or
-         String.contains?(request_path, @invalid_return_path_encodings) do
-      nil
-    else
-      path
+    cond do
+      String.contains?(path, @invalid_return_path_chars) -> nil
+      String.contains?(URI.parse(path).path || path, @invalid_return_path_encodings) -> nil
+      true -> path
     end
   end
 
   def safe_return_path(_), do: nil
+
+  @doc """
+  The login page, carrying `return` when it is a local path.
+  """
+  def login_path(return) do
+    case safe_return_path(return) do
+      nil -> ~p"/login"
+      return -> ~p"/login?return=#{return}"
+    end
+  end
 
   @doc """
   Safely parses a string to integer. Returns nil for invalid input.

@@ -60,9 +60,11 @@ defmodule HexpmWeb.AuthController do
   end
 
   def callback(%{assigns: %{ueberauth_failure: _fails}} = conn, _params) do
+    {conn, return} = pop_return_path(conn)
+
     conn
     |> put_flash(:error, "Failed to authenticate with GitHub.")
-    |> redirect(to: ~p"/login")
+    |> redirect(to: login_path(return))
   end
 
   def callback(%{assigns: %{ueberauth_auth: auth}} = conn, _params) do
@@ -137,12 +139,14 @@ defmodule HexpmWeb.AuthController do
 
       %{user: _existing_user} ->
         # Email exists - show error asking to log in first
+        {conn, return} = pop_return_path(conn)
+
         conn
         |> put_flash(
           :error,
           "An account with email #{provider_email} already exists. Please log in first, then connect your GitHub account from the dashboard."
         )
-        |> redirect(to: ~p"/login")
+        |> redirect(to: login_path(return))
     end
   end
 

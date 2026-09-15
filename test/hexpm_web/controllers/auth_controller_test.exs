@@ -212,6 +212,20 @@ defmodule HexpmWeb.AuthControllerTest do
       assert Phoenix.Flash.get(conn.assigns.flash, "error") =~
                "An account with email #{email} already exists"
     end
+
+    test "sends the email conflict back to the login page with the return path" do
+      existing_user = insert(:user)
+      email = hd(existing_user.emails).email
+
+      conn =
+        build_conn()
+        |> mock_github_auth_success("11112", email)
+        |> put_session("oauth_return", oauth_return("/dashboard"))
+        |> HexpmWeb.AuthController.callback(%{})
+
+      assert redirected_to(conn) == "/login?return=%2Fdashboard"
+      refute get_session(conn, "oauth_return")
+    end
   end
 
   describe "GET /auth/github/callback - Link to logged-in user" do
@@ -264,6 +278,17 @@ defmodule HexpmWeb.AuthControllerTest do
 
       assert Phoenix.Flash.get(conn.assigns.flash, "error") ==
                "Failed to authenticate with GitHub."
+    end
+
+    test "keeps the return path on the login page" do
+      conn =
+        build_conn()
+        |> mock_github_auth_failure()
+        |> put_session("oauth_return", oauth_return("/dashboard"))
+        |> HexpmWeb.AuthController.callback(%{})
+
+      assert redirected_to(conn) == "/login?return=%2Fdashboard"
+      refute get_session(conn, "oauth_return")
     end
   end
 
