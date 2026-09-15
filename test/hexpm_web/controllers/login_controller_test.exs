@@ -95,7 +95,13 @@ defmodule HexpmWeb.LoginControllerTest do
     end
   end
 
-  for return <- ["/", "/dashboard", "/packages?search=ecto"] do
+  for return <- [
+        "/",
+        "/dashboard",
+        "/packages?search=ecto",
+        "/oauth/authorize?client_id=abc&redirect_uri=https%3A%2F%2Fexample.com%2Fcallback",
+        "/dashboard?next=%5Cevil.com&tab=%09"
+      ] do
     test "log in honours the on-site return path #{inspect(return)}", c do
       conn =
         post(build_conn(), "/login", %{

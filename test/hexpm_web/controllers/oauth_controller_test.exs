@@ -88,6 +88,41 @@ defmodule HexpmWeb.OAuthControllerTest do
       assert return =~ "client_id=#{client.client_id}"
     end
 
+    test "logging in returns to the authorization page with its query intact", %{client: client} do
+      mock_pwned()
+      user = insert(:user)
+
+      query =
+        URI.encode_query(%{
+          "client_id" => client.client_id,
+          "redirect_uri" => "https://example.com/callback",
+          "scope" => "api:read",
+          "state" => "test_state",
+          "code_challenge" => "challenge123",
+          "code_challenge_method" => "S256"
+        })
+
+      authorize_path = "/oauth/authorize?" <> query
+      assert authorize_path =~ "redirect_uri=https%3A%2F%2Fexample.com%2Fcallback"
+
+      login_path = build_conn() |> get(authorize_path) |> redirected_to()
+      %URI{path: "/login", query: login_query} = URI.parse(login_path)
+      return = URI.decode_query(login_query)["return"]
+      assert return == authorize_path
+
+      conn =
+        post(build_conn(), ~p"/login", %{
+          "username" => user.username,
+          "password" => "password",
+          "return" => return
+        })
+
+      assert redirected_to(conn) == authorize_path
+
+      conn = conn |> recycle() |> get(authorize_path)
+      assert html_response(conn, 200) =~ client.name
+    end
+
     test "shows authorization page when authenticated", %{client: client} do
       user = insert(:user)
       conn = login_user(build_conn(), user)

@@ -601,12 +601,16 @@ defmodule HexpmWeb.ControllerHelpers do
   #     would also split a Location header.
   #   * `%2f`, `%5c` and `%09` are the encoded spellings, rejected so that a
   #     later decoding step downstream cannot reintroduce the leading `//`.
+  #     They are only checked in the path: a query string never resolves as a
+  #     path, and one that carries a percent-encoded URL (an OAuth client's
+  #     `redirect_uri` on the way through `/login`) is a valid return target.
   #
   # The whole C0 range and DEL go with them: none belong in a path, and
   # `Plug.Conn.put_resp_header/3` raises on NUL, LF and CR rather than
   # redirecting, which surfaces as a 500.
   @control_chars Enum.map(Enum.to_list(0x00..0x1F) ++ [0x7F], &<<&1>>)
-  @invalid_return_path_chars ["\\", "%09", "%2f", "%2F", "%5c", "%5C"] ++ @control_chars
+  @invalid_return_path_chars ["\\"] ++ @control_chars
+  @invalid_return_path_encodings ["%09", "%2f", "%2F", "%5c", "%5C"]
 
   @doc """
   Returns the value if it is a local path, otherwise returns nil.
@@ -619,7 +623,14 @@ defmodule HexpmWeb.ControllerHelpers do
   def safe_return_path("//" <> _), do: nil
 
   def safe_return_path("/" <> _ = path) do
-    if String.contains?(path, @invalid_return_path_chars), do: nil, else: path
+    [request_path | _] = String.split(path, "?", parts: 2)
+
+    if String.contains?(path, @invalid_return_path_chars) or
+         String.contains?(request_path, @invalid_return_path_encodings) do
+      nil
+    else
+      path
+    end
   end
 
   def safe_return_path(_), do: nil
