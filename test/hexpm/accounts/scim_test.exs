@@ -1077,6 +1077,58 @@ defmodule Hexpm.Accounts.SCIMTest do
       assert {:ok, %{state: :inactive}} = SCIM.get_user(context.connection, resource.scim_id)
     end
 
+    test "deactivating an address several identities share removes each of them", context do
+      connection_row = Repo.get!(Hexpm.Accounts.SSO.Connection, context.connection.id)
+
+      sharers =
+        for n <- 1..5 do
+          user = insert(:user)
+          insert(:organization_user, organization: context.organization, user: user)
+
+          insert(:organization_sso_identity,
+            organization: context.organization,
+            connection: connection_row,
+            user: user,
+            subject: "sharer-#{n}",
+            provider_email: "shared@example.com"
+          )
+
+          user
+        end
+
+      {:ok, %{resource: resource}} =
+        create_user(context.connection, %{"userName" => "handle@example.com", "active" => false})
+
+      assert {:ok, %{state: :inactive}} =
+               patch_user(context.connection, resource.scim_id, [
+                 %{"op" => "replace", "path" => "userName", "value" => "shared@example.com"},
+                 %{"op" => "replace", "path" => "active", "value" => false}
+               ])
+
+      for user <- sharers, do: refute(Organizations.get_role(context.organization, user))
+      assert {:ok, %{state: :inactive}} = SCIM.get_user(context.connection, resource.scim_id)
+    end
+
+    test "the import survives two identities sharing a mixed-case address", context do
+      connection_row = Repo.get!(Hexpm.Accounts.SSO.Connection, context.connection.id)
+
+      for n <- 1..2 do
+        user = insert(:user)
+        insert(:organization_user, organization: context.organization, user: user)
+
+        insert(:organization_sso_identity,
+          organization: context.organization,
+          connection: connection_row,
+          user: user,
+          subject: "sharer-#{n}",
+          provider_email: "Shared@Example.com"
+        )
+      end
+
+      listing = list_users(context.connection, 1, 100)
+      assert Enum.count(listing.resources, &(&1.resource.user_name == "shared@example.com")) == 1
+    end
+
     test "filter values past the column bounds match nothing", context do
       assert find_by_user_name(context.connection, String.duplicate("a", 250) <> "@x.io") ==
                nil
