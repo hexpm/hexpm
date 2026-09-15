@@ -19,8 +19,8 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.RecoveryCodesCard do
   def recovery_codes_card(assigns) do
     ~H"""
     <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-8">
-      <div class="flex flex-col items-start gap-4 sm:flex-row sm:justify-between">
-        <div>
+      <div class="mb-8 flex flex-col items-start gap-4 sm:flex-row sm:flex-wrap sm:justify-between">
+        <div class="sm:min-w-0 sm:flex-1">
           <h2 class="text-grey-900 dark:text-white text-xl font-semibold mb-2">
             Recovery Codes
           </h2>
@@ -30,18 +30,18 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.RecoveryCodesCard do
           </p>
         </div>
 
+        <p class="order-2 text-grey-600 dark:text-grey-300 text-sm sm:order-3 sm:mt-2 sm:basis-full">
+          {unused_count(@user)} of {length(@user.tfa.recovery_codes)} codes unused
+        </p>
+
         <.button_link
           variant="outline"
-          class="shrink-0 whitespace-nowrap"
+          class="order-3 shrink-0 whitespace-nowrap sm:order-2"
           href={~p"/dashboard/security/recovery-codes"}
         >
           View Recovery Codes
         </.button_link>
       </div>
-
-      <p class="text-grey-600 dark:text-grey-300 text-sm mt-6 mb-8">
-        {unused_count(@user)} of {length(@user.tfa.recovery_codes)} codes unused
-      </p>
 
       <%!-- Generate New Codes Section --%>
       <div class="border-t border-grey-200 dark:border-grey-700 pt-6">
