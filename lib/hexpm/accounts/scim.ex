@@ -287,6 +287,13 @@ defmodule Hexpm.Accounts.SCIM do
   # Buying a seat is the one step that cannot run inside, because it is a
   # billing call. A write refused for seats under the expand policy expands
   # afterwards and runs once more from the start.
+  #
+  # Two things about nesting. A failed Multi anywhere inside rolls the write
+  # back even when its caller answers `:ok`, so nothing in here may call one
+  # that can fail on a condition it means to tolerate. And a unique violation
+  # aborts the Postgres transaction, so nothing in here may catch one and
+  # continue; the checks that would have been constraints are lookups under
+  # the locks instead.
   defp write(connection, fun, retried? \\ false) do
     result =
       Repo.transaction(fn ->
@@ -624,10 +631,23 @@ defmodule Hexpm.Accounts.SCIM do
   end
 
   defp remove_deactivated(connection, %{state: :member, user: user}, audit_data) do
-    Organizations.remove_member(connection.organization, user, audit: audit_data)
+    remove_if_member(connection, user, audit_data)
   end
 
   defp remove_deactivated(_connection, _resolved, _audit_data), do: :ok
+
+  # The role is checked first because `remove_member/3` answers `:ok` for a
+  # non-member by failing its Multi, and a failed Multi inside the write's
+  # transaction rolls the whole write back whatever the caller makes of it.
+  defp remove_if_member(connection, user, audit_data) do
+    organization = connection.organization
+
+    if Organizations.get_role(organization, user) do
+      Organizations.remove_member(organization, user, audit: audit_data)
+    else
+      :ok
+    end
+  end
 
   defp lock_invitation(nil), do: nil
 
@@ -669,13 +689,9 @@ defmodule Hexpm.Accounts.SCIM do
   end
 
   defp remove_acceptor(connection, user_id, audit_data) do
-    organization = connection.organization
-    acceptor = user_id && Repo.get(User, user_id)
-
-    if acceptor && Organizations.get_role(organization, acceptor) do
-      Organizations.remove_member(organization, acceptor, audit: audit_data)
-    else
-      :ok
+    case user_id && Repo.get(User, user_id) do
+      %User{} = acceptor -> remove_if_member(connection, acceptor, audit_data)
+      nil -> :ok
     end
   end
 
