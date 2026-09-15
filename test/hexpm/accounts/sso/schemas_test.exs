@@ -1,6 +1,7 @@
 defmodule Hexpm.Accounts.SSO.SchemasTest do
   use Hexpm.DataCase, async: true
 
+  alias Hexpm.Accounts.SCIM.Resource
   alias Hexpm.Accounts.SSO
   alias Hexpm.Accounts.SSO.{Connection, Identity, Transaction}
 
@@ -112,6 +113,34 @@ defmodule Hexpm.Accounts.SSO.SchemasTest do
                "/" <> combining_string(2047)
 
       assert SSO.allowed_return_path("/" <> combining_string(2048)) == nil
+    end
+  end
+
+  describe "SCIM.Resource.changeset/2" do
+    test "bounds the provider's identifiers in bytes" do
+      assert resource(user_name: combining_string(255)).valid?
+      assert resource(external_id: combining_string(1024)).valid?
+
+      changeset = resource(user_name: combining_string(256))
+      assert errors_on(changeset).user_name == "should be at most 255 byte(s)"
+
+      changeset = resource(external_id: combining_string(1025))
+      assert errors_on(changeset).external_id == "should be at most 1024 byte(s)"
+    end
+
+    test "email_shaped?/1 applies the same byte cap as the invitation address" do
+      local = combining_string(243)
+      assert Resource.email_shaped?(local <> "@example.com")
+      refute Resource.email_shaped?(combining_string(244) <> "@example.com")
+    end
+
+    defp resource(overrides) do
+      attrs = Map.merge(%{user_name: "person@example.com"}, Map.new(overrides))
+
+      Resource.changeset(
+        %Resource{connection_id: 1, organization_id: 1, scim_id: Ecto.UUID.generate()},
+        attrs
+      )
     end
   end
 end
