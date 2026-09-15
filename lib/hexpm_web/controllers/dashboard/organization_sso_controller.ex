@@ -50,8 +50,6 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
       :unlink,
       :configure_jit,
       :configure_enforcement,
-      :configure_scim,
-      :generate_scim_token,
       :delete_scim_token,
       :add_domain,
       :verify_domain,
@@ -109,7 +107,8 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
         conn,
         organization,
         SSO.disable(organization, audit: audit_data(conn)),
-        "SSO login was disabled immediately.",
+        "SSO login was disabled immediately. Provisioning keeps running; " <>
+          "delete the provisioning token to stop it.",
         &configuration_error/1
       )
     end)

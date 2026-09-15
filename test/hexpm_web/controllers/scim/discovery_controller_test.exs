@@ -73,6 +73,49 @@ defmodule HexpmWeb.SCIM.DiscoveryControllerTest do
     assert [_limit] = get_resp_header(conn, "x-ratelimit-limit")
   end
 
+  test "requests past the address bucket answer with the SCIM error schema", context do
+    PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
+    on_exit(fn -> PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage) end)
+
+    ip = {203, 0, 113, 21}
+
+    conn =
+      Enum.reduce(1..130, nil, fn _index, _acc ->
+        %{build_conn() | remote_ip: ip}
+        |> put_req_header("authorization", "Bearer #{context.token}")
+        |> put_req_header("accept", "application/scim+json")
+        |> get("/scim/v2/ServiceProviderConfig")
+      end)
+
+    body = scim_json_response(conn, 429)
+    assert body["schemas"] == ["urn:ietf:params:scim:api:messages:2.0:Error"]
+    assert body["status"] == "429"
+  end
+
+  test "a refusal before the controller answers with the SCIM error schema", context do
+    body =
+      scim_json_response(scim_get(context.token, "/scim/v2/ServiceProviderConfig?x=%00"), 400)
+
+    assert body["schemas"] == ["urn:ietf:params:scim:api:messages:2.0:Error"]
+    assert body["status"] == "400"
+    assert body["detail"] == "Bad request"
+  end
+
+  test "read-only mode refuses the writing routes with the SCIM error schema", context do
+    Application.put_env(:hexpm, :read_only_mode, true)
+    on_exit(fn -> Application.put_env(:hexpm, :read_only_mode, false) end)
+
+    conn = scim_get(context.token, "/scim/v2/Users")
+    body = scim_json_response(conn, 503)
+
+    assert body["schemas"] == ["urn:ietf:params:scim:api:messages:2.0:Error"]
+    assert body["status"] == "503"
+    assert get_resp_header(conn, "retry-after") == ["60"]
+
+    # The conformance documents are pure reads and stay available.
+    assert scim_json_response(scim_get(context.token, "/scim/v2/ServiceProviderConfig"), 200)
+  end
+
   test "the surface does not exist while SSO is off", context do
     config = Application.fetch_env!(:hexpm, :organization_sso)
     app_env(:hexpm, :organization_sso, Keyword.put(config, :mode, :off))

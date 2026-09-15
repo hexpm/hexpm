@@ -28,6 +28,8 @@ defmodule HexpmWeb.Plugs.SCIMAuth do
   defp authenticate(conn) do
     with ["Bearer " <> token] <- get_req_header(conn, "authorization"),
          {:ok, connection} <- SSO.scim_auth(token) do
+      :ok = SSO.record_scim_token_use(connection, remote_ip(conn))
+
       conn
       |> assign(:scim_connection, connection)
       |> assign(:organization, connection.organization)
@@ -38,4 +40,6 @@ defmodule HexpmWeb.Plugs.SCIMAuth do
         |> scim_error(401, "Authentication failed")
     end
   end
+
+  defp remote_ip(conn), do: conn.remote_ip |> :inet.ntoa() |> to_string()
 end

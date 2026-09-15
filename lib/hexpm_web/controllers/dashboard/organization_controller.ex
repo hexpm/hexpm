@@ -335,13 +335,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   def sso(conn, %{"dashboard_org" => organization}) do
     access_organization(conn, organization, "admin", fn organization ->
       if SSO.reachable?(organization) do
+        token = generated_scim_token(conn, organization)
+
         conn
         |> delete_session(:generated_scim_token)
+        |> prevent_caching(token)
         |> SSOEnforcement.allow_provider_form_action(organization)
-        |> render_index(organization,
-          tab: :sso,
-          generated_scim_token: generated_scim_token(conn, organization)
-        )
+        |> render_index(organization, tab: :sso, generated_scim_token: token)
       else
         not_found(conn)
       end
@@ -351,6 +351,16 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   # The one-time token stash renders only for the connection it was generated
   # on and the account that generated it; anything else reads as absent and is
   # already deleted by the time this runs.
+  # The rendered token is shown once and never again, so no store between here
+  # and the browser may keep a copy of this response.
+  defp prevent_caching(conn, nil), do: conn
+
+  defp prevent_caching(conn, _token) do
+    conn
+    |> put_resp_header("cache-control", "no-store")
+    |> put_resp_header("pragma", "no-cache")
+  end
+
   defp generated_scim_token(conn, organization) do
     with %{"connection_id" => connection_id, "user_id" => user_id, "token" => token} <-
            get_session(conn, :generated_scim_token),
@@ -1087,7 +1097,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     {policies, policy_stats, policy_activity, policy_rev} =
       policy_assigns(organization, opts[:tab], policy_action, policy)
 
-    connection = SSO.get_connection(organization)
+    connection = SSO.get_connection(organization, [:scim_token_generated_by_user])
 
     assigns =
       [

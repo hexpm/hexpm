@@ -118,6 +118,15 @@ defmodule HexpmWeb.Router do
     plug :user_agent, required: false
     plug :validate_url
     plug HexpmWeb.Plugs.Attack
+
+    # Both listing routes materialize the rows a member has no handle for yet,
+    # so they write even though they are GETs.
+    plug HexpmWeb.Plugs.ReadOnly,
+      write_routes: [
+        {"GET", "/scim/v2/Users"},
+        {"GET", "/scim/v2/Users/:id"}
+      ]
+
     plug HexpmWeb.Plugs.SCIMAuth
   end
 

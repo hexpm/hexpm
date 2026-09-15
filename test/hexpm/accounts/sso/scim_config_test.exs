@@ -149,6 +149,10 @@ defmodule Hexpm.Accounts.SSO.SCIMConfigTest do
              )
 
     assert :error = SSO.scim_auth(connection.scim_token)
+
+    assert Repo.exists?(
+             from(log in Hexpm.Accounts.AuditLog, where: log.action == "sso.scim.token.delete")
+           )
   end
 
   test "re-saving the same provider keeps the token", context do
@@ -171,6 +175,44 @@ defmodule Hexpm.Accounts.SSO.SCIMConfigTest do
              )
 
     assert {:ok, _connection} = SSO.scim_auth(connection.scim_token)
+
+    refute Repo.exists?(
+             from(log in Hexpm.Accounts.AuditLog, where: log.action == "sso.scim.token.delete")
+           )
+  end
+
+  test "the token records who generated it and when it was last used", context do
+    {:ok, connection} =
+      SSO.generate_scim_token(context.organization, @params, audit: audit_data(context.admin))
+
+    stored = Repo.get!(Connection, connection.id)
+    assert stored.scim_token_generated_by_user_id == context.admin.id
+    assert stored.scim_token_generated_at
+    refute stored.scim_token_used_at
+
+    {:ok, authenticated} = SSO.scim_auth(connection.scim_token)
+    :ok = SSO.record_scim_token_use(authenticated, "198.51.100.7")
+
+    used = Repo.get!(Connection, connection.id)
+    assert used.scim_token_used_at
+    assert used.scim_token_used_ip == "198.51.100.7"
+  end
+
+  test "deleting the token clears what the card showed about it", context do
+    {:ok, connection} =
+      SSO.generate_scim_token(context.organization, @params, audit: audit_data(context.admin))
+
+    {:ok, authenticated} = SSO.scim_auth(connection.scim_token)
+    :ok = SSO.record_scim_token_use(authenticated, "198.51.100.7")
+
+    {:ok, _connection} =
+      SSO.delete_scim_token(context.organization, audit: audit_data(context.admin))
+
+    stored = Repo.get!(Connection, connection.id)
+    refute stored.scim_token_generated_by_user_id
+    refute stored.scim_token_generated_at
+    refute stored.scim_token_used_at
+    refute stored.scim_token_used_ip
   end
 
   test "a lapsed subscription keeps the token working but blocks generating one", context do

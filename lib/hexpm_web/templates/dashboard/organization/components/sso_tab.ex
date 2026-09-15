@@ -7,6 +7,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
 
   alias Hexpm.Accounts.Keys
   alias Hexpm.Accounts.OrganizationDomain
+  alias Hexpm.Accounts.User
   alias Hexpm.Accounts.SSO
   alias Hexpm.Accounts.SSO.Connection
 
@@ -329,7 +330,24 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
             label="Status"
             value={if Connection.scim_enabled?(@connection), do: "On", else: "Off"}
           />
+          <.readonly_value
+            :if={Connection.scim_enabled?(@connection)}
+            label="Token generated"
+            value={token_origin(@connection)}
+          />
+          <.readonly_value
+            :if={Connection.scim_enabled?(@connection)}
+            label="Token last used"
+            value={token_last_use(@connection)}
+          />
         </div>
+        <p
+          :if={Connection.scim_enabled?(@connection)}
+          class="mt-2 text-xs text-grey-500 dark:text-grey-400"
+        >
+          The token keeps working after the administrator who generated it leaves the
+          organization. Delete it here to stop provisioning.
+        </p>
 
         <.form
           for={%{}}
@@ -622,6 +640,24 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
       <code class="mt-1 block overflow-x-auto rounded-md bg-grey-50 dark:bg-grey-950 px-3 py-2 text-sm text-grey-900 dark:text-grey-100">{@value}</code>
     </div>
     """
+  end
+
+  defp token_origin(%Connection{scim_token_generated_at: nil}), do: "Unknown"
+
+  defp token_origin(%Connection{} = connection) do
+    date = Calendar.strftime(connection.scim_token_generated_at, "%Y-%m-%d")
+
+    case connection.scim_token_generated_by_user do
+      %User{username: username} -> "#{date} by #{username}"
+      _unknown -> date
+    end
+  end
+
+  defp token_last_use(%Connection{scim_token_used_at: nil}), do: "Never"
+
+  defp token_last_use(%Connection{scim_token_used_at: used_at, scim_token_used_ip: ip}) do
+    date = Calendar.strftime(used_at, "%Y-%m-%d %H:%M UTC")
+    if ip, do: "#{date} from #{ip}", else: date
   end
 
   defp domain_status(%OrganizationDomain{verified_at: nil}) do

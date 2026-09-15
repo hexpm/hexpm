@@ -18,19 +18,20 @@ defmodule HexpmWeb.SCIMHelpers do
   end
 
   def scim_error(conn, status, detail, scim_type \\ nil) do
-    body =
-      put_scim_type(
-        %{
-          "schemas" => [@error_schema],
-          "status" => Integer.to_string(status),
-          "detail" => detail
-        },
-        scim_type
-      )
-
     conn
-    |> scim_json(status, body)
+    |> scim_json(status, error_body(status, detail, scim_type))
     |> halt()
+  end
+
+  def error_body(status, detail, scim_type \\ nil) do
+    put_scim_type(
+      %{
+        "schemas" => [@error_schema],
+        "status" => Integer.to_string(status),
+        "detail" => detail
+      },
+      scim_type
+    )
   end
 
   defp put_scim_type(body, nil), do: body

@@ -145,7 +145,8 @@ config :phoenix, :generators,
 config :phoenix, :format_encoders,
   elixir: HexpmWeb.ElixirFormat,
   erlang: HexpmWeb.ErlangFormat,
-  json: JSON
+  json: JSON,
+  scim: JSON
 
 config :phoenix, :json_library, JSON
 

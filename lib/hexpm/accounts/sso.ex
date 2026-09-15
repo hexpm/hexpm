@@ -132,12 +132,21 @@ defmodule Hexpm.Accounts.SSO do
         Connection.configuration_changeset(connection, attrs)
         |> revoke_scim_token_on_provider_change(connection, desired)
 
+      revoked_scim_token? = Ecto.Changeset.changed?(changeset, :scim_token_first)
+
       case Repo.insert_or_update(changeset, log: false) do
         {:ok, saved} ->
           insert_audit!(audit_data, "sso.connection.configure", {
             organization,
             %{issuer: saved.issuer, client_id: saved.client_id}
           })
+
+          if revoked_scim_token? do
+            insert_audit!(audit_data, "sso.scim.token.delete", {
+              organization,
+              scim_audit_params(saved)
+            })
+          end
 
           saved
 
@@ -540,7 +549,7 @@ defmodule Hexpm.Accounts.SSO do
   """
   def generate_scim_token(organization, params, audit: audit_data) do
     update_connection(organization, audit_data,
-      changeset: &Connection.scim_generate_changeset(&1, params),
+      changeset: &Connection.scim_generate_changeset(&1, params, audit_data.user),
       require: &require_feature/1,
       gate: fn _changeset -> :ok end,
       action: "sso.scim.token.generate",
@@ -569,6 +578,29 @@ defmodule Hexpm.Accounts.SSO do
       scim_role: connection.scim_role
     }
   end
+
+  @doc """
+  Records that the provisioning agent used the token, so the SCIM card can
+  show whether the provider is still talking to us and from where.
+
+  Skipped in read-only mode: the conformance documents are pure reads and
+  must keep answering while the database is held.
+  """
+  def record_scim_token_use(%Connection{} = connection, remote_ip) do
+    now = DateTime.utc_now()
+
+    if Hexpm.WriteMode.mode() == :write and stale_use?(connection.scim_token_used_at, now) do
+      from(row in Connection, where: row.id == ^connection.id)
+      |> Repo.update_all(set: [scim_token_used_at: now, scim_token_used_ip: remote_ip])
+    end
+
+    :ok
+  end
+
+  # One write a minute per connection at most: the provider polls, and the
+  # column is for the administrator reading the card, not an access log.
+  defp stale_use?(nil, _now), do: true
+  defp stale_use?(used_at, now), do: DateTime.diff(now, used_at, :second) >= 60
 
   @doc """
   Resolves a SCIM bearer token to the connection it belongs to, with the

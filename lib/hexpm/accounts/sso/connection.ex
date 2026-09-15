@@ -29,9 +29,13 @@ defmodule Hexpm.Accounts.SSO.Connection do
     field :scim_token, :string, virtual: true, redact: true
     field :scim_seat_policy, :string
     field :scim_role, :string, default: "read"
+    field :scim_token_generated_at, :utc_datetime_usec
+    field :scim_token_used_at, :utc_datetime_usec
+    field :scim_token_used_ip, :string
 
     belongs_to :organization, Organization
     belongs_to :configured_by_user, User
+    belongs_to :scim_token_generated_by_user, User
     has_many :identities, Hexpm.Accounts.SSO.Identity
     has_many :transactions, Hexpm.Accounts.SSO.Transaction
     has_many :failures, Hexpm.Accounts.SSO.Failure
@@ -208,7 +212,7 @@ defmodule Hexpm.Accounts.SSO.Connection do
   already has one. The plaintext lands in the virtual `scim_token` for the one
   screen that shows it; only the split hash is stored.
   """
-  def scim_generate_changeset(connection, attrs) do
+  def scim_generate_changeset(connection, attrs, generated_by) do
     {token, first, second} = Hexpm.Accounts.Key.gen_key()
 
     connection
@@ -217,10 +221,21 @@ defmodule Hexpm.Accounts.SSO.Connection do
     |> put_change(:scim_token_first, first)
     |> put_change(:scim_token_second, second)
     |> put_change(:scim_token, token)
+    |> put_change(:scim_token_generated_by_user_id, generated_by && generated_by.id)
+    |> put_change(:scim_token_generated_at, DateTime.utc_now())
+    |> put_change(:scim_token_used_at, nil)
+    |> put_change(:scim_token_used_ip, nil)
   end
 
   def scim_delete_changeset(connection) do
-    change(connection, scim_token_first: nil, scim_token_second: nil)
+    change(connection,
+      scim_token_first: nil,
+      scim_token_second: nil,
+      scim_token_generated_by_user_id: nil,
+      scim_token_generated_at: nil,
+      scim_token_used_at: nil,
+      scim_token_used_ip: nil
+    )
   end
 
   def scim_enabled?(%__MODULE__{scim_token_first: first}), do: not is_nil(first)
