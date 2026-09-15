@@ -19,23 +19,29 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.RecoveryCodesCard do
   def recovery_codes_card(assigns) do
     ~H"""
     <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-8">
-      <h2 class="text-grey-900 dark:text-white text-xl font-semibold mb-4">
-        Recovery Codes
-      </h2>
+      <div class="flex flex-col items-start gap-4 sm:flex-row sm:justify-between">
+        <div>
+          <h2 class="text-grey-900 dark:text-white text-xl font-semibold mb-2">
+            Recovery Codes
+          </h2>
+          <p class="text-grey-600 dark:text-grey-300 text-sm">
+            Recovery codes can be used to access your account in the event you lose access to
+            your device and cannot receive two-factor authentication codes.
+          </p>
+        </div>
 
-      <p class="text-grey-600 dark:text-grey-300 text-sm mb-6">
-        Recovery codes can be used to access your account in the event you lose access to
-        your device and cannot receive two-factor authentication codes.
-      </p>
-
-      <div class="flex flex-wrap items-center gap-3 mb-8">
-        <span class="text-grey-600 dark:text-grey-300 text-sm">
-          {unused_count(@user)} of {length(@user.tfa.recovery_codes)} codes unused
-        </span>
-        <.button_link variant="outline" size="sm" href={~p"/dashboard/security/recovery-codes"}>
+        <.button_link
+          variant="outline"
+          class="shrink-0 whitespace-nowrap"
+          href={~p"/dashboard/security/recovery-codes"}
+        >
           View Recovery Codes
         </.button_link>
       </div>
+
+      <p class="text-grey-600 dark:text-grey-300 text-sm mt-6 mb-8">
+        {unused_count(@user)} of {length(@user.tfa.recovery_codes)} codes unused
+      </p>
 
       <%!-- Generate New Codes Section --%>
       <div class="border-t border-grey-200 dark:border-grey-700 pt-6">
@@ -48,7 +54,7 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.RecoveryCodesCard do
         </p>
 
         <.sudo_form current_user={@user} action={~p"/dashboard/security/rotate-recovery-codes"}>
-          <.button type="submit" variant="outline">
+          <.button type="submit" variant="outline" size="sm">
             Generate New Codes
           </.button>
         </.sudo_form>
