@@ -1,0 +1,90 @@
+<div class="bg-grey-50 dark:bg-grey-950 min-h-screen py-4 sm:py-8">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="flex flex-col gap-4 sm:gap-8 lg:flex-row">
+      <%!-- Left Sidebar --%>
+      <div class="w-full lg:w-64 flex-shrink-0">
+        {render(HexpmWeb.DashboardView, "_sidebar.html", assigns)}
+      </div>
+
+      <%!-- Right Content --%>
+      <div class="flex-1 min-w-0">
+        <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-8">
+          <h2 class="text-grey-900 dark:text-white text-xl font-semibold mb-4">
+            Recovery Codes
+          </h2>
+
+          <p class="text-grey-600 dark:text-grey-300 text-sm mb-6">
+            Each code can be used once in place of an authenticator code. Keep them somewhere
+            safe, such as a password manager, and don't share them.
+          </p>
+
+          <div
+            class="p-6 bg-grey-50 dark:bg-grey-900 border border-grey-200 dark:border-grey-700 rounded-lg mb-6"
+            id="recovery-codes"
+            data-value={Enum.map_join(@codes, "\n", & &1.code)}
+          >
+            <div class="grid grid-cols-2 gap-3">
+              <%= for code <- @codes do %>
+                <div class="flex items-center justify-between p-2 bg-white dark:bg-grey-800 rounded border border-grey-200 dark:border-grey-700">
+                  <code class={[
+                    "text-sm font-mono",
+                    if(code.used_at,
+                      do: "text-grey-400 dark:text-grey-300 line-through",
+                      else: "text-grey-900 dark:text-white"
+                    )
+                  ]}>
+                    {code.code}
+                  </code>
+                  <%= if code.used_at do %>
+                    <span class="text-xs px-2 py-1 bg-grey-100 dark:bg-grey-700 text-grey-600 dark:text-grey-200 rounded">
+                      Used
+                    </span>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <.button
+              id="download-recovery-codes-btn"
+              type="button"
+              variant="outline"
+              size="sm"
+              phx-hook="DownloadButton"
+              data-download-target="recovery-codes"
+            >
+              Download
+            </.button>
+            <.button
+              id="print-recovery-codes-btn"
+              type="button"
+              variant="outline"
+              size="sm"
+              phx-hook="PrintButton"
+              data-print-target="recovery-codes"
+            >
+              Print
+            </.button>
+            <.button
+              id="copy-recovery-codes-btn"
+              type="button"
+              variant="outline"
+              size="sm"
+              phx-hook="CopyButton"
+              data-copy-target="recovery-codes"
+            >
+              Copy
+            </.button>
+            <a
+              href={~p"/dashboard/security"}
+              class="text-sm text-grey-600 dark:text-grey-300 hover:text-grey-900 dark:hover:text-white"
+            >
+              Back to security settings
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
