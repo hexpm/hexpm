@@ -182,6 +182,26 @@ defmodule HexpmWeb.OrganizationTFATest do
     assert response |> recycle() |> get(redirected_to(response)) |> html_response(200)
   end
 
+  test "the deadline is shown as a readable UTC date on the page and in email", c do
+    c.organization
+    |> Ecto.Changeset.change(tfa_required_at: ~U[2026-09-29 01:04:53.493658Z])
+    |> Repo.update!()
+
+    body =
+      browser(c.admin)
+      |> recycle()
+      |> get("/dashboard/orgs/#{c.organization.name}/members")
+      |> html_response(200)
+
+    assert body =~ "Enforcement deadline: <strong>September 29, 2026 at 01:04 UTC</strong>"
+    refute body =~ "2026-09-29T01:04:53"
+
+    organization = Repo.get!(Hexpm.Accounts.Organization, c.organization.id)
+    email = Hexpm.Emails.organization_tfa(organization, "scheduled", ["member@example.com"], [])
+    assert email.html_body =~ "from <strong>September 29, 2026 at 01:04 UTC</strong>"
+    assert email.text_body =~ "from September 29, 2026 at 01:04 UTC."
+  end
+
   test "an administrator without 2FA can't configure a policy", c do
     unenrolled = insert(:user)
     insert(:organization_user, organization: c.organization, user: unenrolled, role: "admin")

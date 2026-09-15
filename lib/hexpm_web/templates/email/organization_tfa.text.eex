@@ -1,4 +1,4 @@
-<%= @organization.name %> requires two-factor authentication from <%= DateTime.to_iso8601(@organization.tfa_required_at) %> (UTC).
+<%= @organization.name %> requires two-factor authentication from <%= HexpmWeb.ViewHelpers.pretty_utc_datetime(@organization.tfa_required_at) %>.
 
 <%= if @stage == "summary" do %>Members suspended because 2FA isn't enabled: <%= if @suspended == [], do: "none", else: Enum.join(@suspended, ", ") %>.<% end %>
 <%= if @stage == "suspended" do %>Your organization access is suspended until you enable 2FA. Your membership, role, package ownership, and billed seat are retained.<% end %>

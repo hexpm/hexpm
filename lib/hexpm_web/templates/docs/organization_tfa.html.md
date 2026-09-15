@@ -4,7 +4,7 @@ Administrators can see each member's 2FA enrollment status on the Members page a
 
 ### Scheduling enforcement
 
-An administrator with 2FA enabled on their own account can configure the policy on the Members page. Choose immediate enforcement or a transition of 1 to 30 days. The initial transition selection is 14 days. The page displays the exact UTC deadline. Existing organizations have enforcement disabled. During the beta rollout, policy controls are available only to participating organizations. An existing policy remains enforced and can still be managed if the organization leaves the beta.
+An administrator with 2FA enabled on their own account can configure the policy on the Members page. Choose immediate enforcement or a transition of 1 to 30 days. The initial transition selection is 14 days. The page displays the deadline in UTC. Existing organizations have enforcement disabled. During the beta rollout, policy controls are available only to participating organizations. An existing policy remains enforced and can still be managed if the organization leaves the beta.
 
 Existing members retain access during the transition. After the deadline, a member without 2FA loses access to the organization. Their membership, role, package ownership, and billed seat remain. Enabling 2FA restores access immediately.
 

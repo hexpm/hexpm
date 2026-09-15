@@ -41,7 +41,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
           Members must enable two-factor authentication on their accounts. After the deadline, members without 2FA lose access to the organization until they enable it. SSO settings are separate.
         </p>
         <p :if={@organization.tfa_required_at}>
-          Enforcement deadline: <strong>{DateTime.to_iso8601(@organization.tfa_required_at)} (UTC)</strong>.
+          Enforcement deadline: <strong>{HexpmWeb.ViewHelpers.pretty_utc_datetime(@organization.tfa_required_at)}</strong>.
           Suspended members retain their membership, role, package ownership, and billed seat.
         </p>
         <p :if={!@organization.tfa_required_at}>Enforcement is disabled.</p>
