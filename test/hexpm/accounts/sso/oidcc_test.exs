@@ -208,6 +208,19 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
              Oidcc.discover(@issuer)
   end
 
+  test "rejects a JWKS document that is not JSON", context do
+    expect_json_get(
+      @issuer <> "/.well-known/openid-configuration",
+      context.discovery_document
+    )
+
+    expect(Hexpm.HTTP.Mock, :get, fn @jwks_uri, _headers, _opts ->
+      {:ok, 200, [{"content-type", "application/json"}], "{\"keys\": "}
+    end)
+
+    assert {:error, %Error{stage: :jwks, code: :invalid_document}} = Oidcc.discover(@issuer)
+  end
+
   test "rejects a provider that publishes no signing keys", context do
     expect_json_get(
       @issuer <> "/.well-known/openid-configuration",
@@ -824,7 +837,7 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
 
       assert_receive {:token_validation_exception, %{count: 1}, metadata}
       assert metadata.phase == :initial
-      assert metadata.exception in [CaseClauseError, Jason.DecodeError]
+      assert metadata.exception in [CaseClauseError, ErlangError]
       assert Map.keys(metadata) |> Enum.sort() == [:exception, :phase]
     end
   end
