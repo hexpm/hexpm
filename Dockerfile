@@ -9,7 +9,7 @@ ENV LANG=C.UTF-8
 # install build dependencies
 RUN apt update && \
     apt upgrade -y && \
-    apt install -y --no-install-recommends git build-essential curl ca-certificates && \
+    apt install -y --no-install-recommends git build-essential cmake curl ca-certificates && \
     apt clean -y && rm -rf /var/lib/apt/lists/*
 
 # install rust, the lumis and mdex_native NIFs are built from source
