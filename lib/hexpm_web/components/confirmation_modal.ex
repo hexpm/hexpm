@@ -36,13 +36,13 @@ defmodule HexpmWeb.Components.ConfirmationModal do
     <.modal id={@id} max_width="md">
       <%!-- Header with Icon --%>
       <:header>
-        <h2 class="text-lg font-semibold text-grey-900">
+        <h2 class="text-lg font-semibold text-grey-900 dark:text-white">
           {@title}
         </h2>
       </:header>
 
       <%!-- Message --%>
-      <p class="text-grey-700">
+      <p class="text-grey-700 dark:text-grey-300">
         {@message}
       </p>
 

@@ -50,6 +50,26 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
       assert result =~ secret
     end
 
+    test "renders the reset authenticator confirmation modal with dark mode text colors", c do
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> get("/dashboard/security")
+
+      document = LazyHTML.from_document(response(conn, 200))
+
+      classes = fn selector ->
+        document
+        |> LazyHTML.query(selector)
+        |> LazyHTML.attribute("class")
+        |> List.first()
+        |> String.split()
+      end
+
+      assert "dark:text-white" in classes.("#reset-auth-app-modal h2")
+      assert "dark:text-grey-300" in classes.("#reset-auth-app-modal p")
+    end
+
     test "does NOT show remove password button when user has no providers" do
       user = insert(:user)
 
