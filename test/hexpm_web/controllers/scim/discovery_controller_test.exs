@@ -63,25 +63,52 @@ defmodule HexpmWeb.SCIM.DiscoveryControllerTest do
     assert scim_json_response(scim_get(context.token, "/scim/v2/ServiceProviderConfig"), 401)
   end
 
-  test "requests are rate limited per address", context do
-    conn =
-      %{build_conn() | remote_ip: {203, 0, 113, 9}}
-      |> put_req_header("authorization", "Bearer #{context.token}")
-      |> get("/scim/v2/ServiceProviderConfig")
-
-    assert response(conn, 200)
-    assert [_limit] = get_resp_header(conn, "x-ratelimit-limit")
-  end
-
-  test "requests past the address bucket answer with the SCIM error schema", context do
+  test "requests are rate limited per connection, not per address", context do
     PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
     on_exit(fn -> PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage) end)
 
-    ip = {203, 0, 113, 21}
+    other_organization = insert(:organization)
+    other_admin = insert(:user)
+    insert(:organization_user, organization: other_organization, user: other_admin, role: "admin")
+    insert(:organization_sso_connection, organization: other_organization)
+    enable_beta_for(other_organization)
+
+    {:ok, other_connection} =
+      SSO.generate_scim_token(
+        other_organization,
+        %{"scim_seat_policy" => "block", "scim_role" => "read"},
+        audit: audit_data(other_admin)
+      )
+
+    # Both providers send from the same address.
+    ip = {203, 0, 113, 9}
+
+    request = fn token ->
+      %{build_conn() | remote_ip: ip}
+      |> put_req_header("authorization", "Bearer #{token}")
+      |> get("/scim/v2/ServiceProviderConfig")
+    end
+
+    for _ <- 1..3, do: assert(response(request.(context.token), 200))
+
+    conn = request.(context.token)
+    assert response(conn, 200)
+    assert get_resp_header(conn, "x-ratelimit-limit") == ["500"]
+    assert get_resp_header(conn, "x-ratelimit-remaining") == ["496"]
+
+    conn = request.(other_connection.scim_token)
+    assert response(conn, 200)
+    assert get_resp_header(conn, "x-ratelimit-remaining") == ["499"]
+  end
+
+  test "requests past the connection budget answer with the SCIM error schema and a retry-after",
+       context do
+    PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
+    on_exit(fn -> PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage) end)
 
     conn =
-      Enum.reduce(1..130, nil, fn _index, _acc ->
-        %{build_conn() | remote_ip: ip}
+      Enum.reduce(1..501, nil, fn _index, _acc ->
+        %{build_conn() | remote_ip: {203, 0, 113, 21}}
         |> put_req_header("authorization", "Bearer #{context.token}")
         |> put_req_header("accept", "application/scim+json")
         |> get("/scim/v2/ServiceProviderConfig")
@@ -90,6 +117,21 @@ defmodule HexpmWeb.SCIM.DiscoveryControllerTest do
     body = scim_json_response(conn, 429)
     assert body["schemas"] == ["urn:ietf:params:scim:api:messages:2.0:Error"]
     assert body["status"] == "429"
+    assert [seconds] = get_resp_header(conn, "retry-after")
+    assert String.to_integer(seconds) in 1..60
+  end
+
+  test "a request that fails authentication is refused before any throttle" do
+    PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
+    on_exit(fn -> PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage) end)
+
+    conn =
+      %{build_conn() | remote_ip: {203, 0, 113, 33}}
+      |> put_req_header("authorization", "Bearer wrong-token")
+      |> get("/scim/v2/ServiceProviderConfig")
+
+    assert response(conn, 401)
+    assert get_resp_header(conn, "x-ratelimit-limit") == []
   end
 
   test "a refusal before the controller answers with the SCIM error schema", context do
@@ -140,11 +182,12 @@ defmodule HexpmWeb.SCIM.DiscoveryControllerTest do
 
   defp enable_beta_for(organization) do
     config = Application.fetch_env!(:hexpm, :organization_sso)
+    names = Enum.uniq([organization.name | Keyword.get(config, :beta_organizations, [])])
 
     app_env(
       :hexpm,
       :organization_sso,
-      Keyword.merge(config, mode: :beta, beta_organizations: [organization.name])
+      Keyword.merge(config, mode: :beta, beta_organizations: names)
     )
   end
 end

@@ -31,6 +31,11 @@ defmodule HexpmWeb.RateLimitPubSub do
     {:noreply, []}
   end
 
+  def handle_info({:throttle, {:scim_connection, connection_id}, time}, []) do
+    Attack.scim_connection_throttle(connection_id, time: time)
+    {:noreply, []}
+  end
+
   def handle_info({:throttle, {:varsel_jti, jti}, time}, []) do
     Attack.varsel_jti(jti, time: time)
     {:noreply, []}

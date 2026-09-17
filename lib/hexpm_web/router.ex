@@ -117,6 +117,12 @@ defmodule HexpmWeb.Router do
     plug :accepts, ["scim", "json"]
     plug :user_agent, required: false
     plug :validate_url
+
+    # Authentication before the throttle, so the throttle keys on the
+    # connection. The address is the provider's shared egress, one bucket for
+    # every organization provisioned from the same provider cell, and a request
+    # that fails authentication costs one hash and one indexed read.
+    plug HexpmWeb.Plugs.SCIMAuth
     plug HexpmWeb.Plugs.Attack
 
     # Both listing routes materialize the rows a member has no handle for yet,
@@ -126,8 +132,6 @@ defmodule HexpmWeb.Router do
         {"GET", "/scim/v2/Users"},
         {"GET", "/scim/v2/Users/:id"}
       ]
-
-    plug HexpmWeb.Plugs.SCIMAuth
   end
 
   pipeline :admin do
