@@ -1,8 +1,8 @@
 defmodule Hexpm.Accounts.OrganizationInvitationsTest do
   use Hexpm.DataCase, async: true
-  import Swoosh.TestAssertions
 
   alias Hexpm.Accounts.{AuditLogs, OrganizationInvitations, Organizations}
+  alias Hexpm.Emails.OutboxEntry
 
   setup do
     organization = insert(:organization, billing_seats: 3)
@@ -43,7 +43,11 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
       assert invitation.email == "newcomer@example.com"
       assert invitation.role == "read"
       assert invitation.invited_by_user_id == admin.id
-      assert_email_sent(fn email -> email.to == [{"", "newcomer@example.com"}] end)
+
+      assert %OutboxEntry{category: "organization.invitation", email: email} =
+               Repo.get_by!(OutboxEntry, group_key: "organization-invitation:#{invitation.id}")
+
+      assert email["to"] == [%{"name" => "", "address" => "newcomer@example.com"}]
 
       assert OrganizationInvitations.get_pending_by_token(invitation.raw_token).id ==
                invitation.id

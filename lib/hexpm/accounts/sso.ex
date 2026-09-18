@@ -838,6 +838,16 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   defp expand_seats(connection, user) do
+    expand_seat(connection, user, :login)
+  end
+
+  @doc """
+  Buys one more seat when the organization chose auto-expansion, for a person
+  the organization's 2FA policy admits. Runs its billing call outside any
+  transaction the caller holds; `stage` names the surface asking, for the
+  failure log. The connection must carry its organization.
+  """
+  def expand_seat(%Connection{} = connection, user, stage) do
     organization = connection.organization
 
     # The target is absolute rather than one more than whatever is subscribed
@@ -855,7 +865,7 @@ defmodule Hexpm.Accounts.SSO do
            {claim, Seats.used(organization)}
          end) do
       {:ok, {{:error, :seats_exhausted}, used}} ->
-        purchase_seat(connection, organization, used + 1)
+        purchase_seat(connection, organization, used + 1, stage)
 
       _other ->
         :ok
@@ -866,7 +876,7 @@ defmodule Hexpm.Accounts.SSO do
   # login, or a card that needs confirming turns every retry into another
   # charge attempt. The refusal is recorded like any other, which is also what
   # rate-limits the notice to the administrators.
-  defp purchase_seat(connection, organization, quantity) do
+  defp purchase_seat(connection, organization, quantity, stage) do
     if recent_failure?(connection, "expansion_failed") do
       :ok
     else
@@ -881,10 +891,24 @@ defmodule Hexpm.Accounts.SSO do
           :ok
 
         _other ->
-          record_failure(connection, :login, :expansion_failed)
+          record_failure(connection, stage, :expansion_failed)
           enqueue_seats_notice!(connection, "expansion_failed")
       end
     end
+  end
+
+  @doc """
+  Tells the administrators the organization has run out of seats, and records
+  the stage that hit it.
+
+  Provisioning refuses silently otherwise: the provider logs the 409 and nobody
+  on this side hears about it. Notice first, so the failure this call is about
+  to write does not count as the recent one that suppresses it.
+  """
+  def notify_seats_exhausted(%Connection{} = connection, stage) do
+    enqueue_seats_notice!(connection, "seats_exhausted")
+    record_failure(connection, stage, :seats_exhausted)
+    :ok
   end
 
   @doc """
@@ -1153,18 +1177,31 @@ defmodule Hexpm.Accounts.SSO do
     )
   end
 
+  # The connections locked are those of every organization the account is a
+  # member of, and every connection whose provisioning handles still point at
+  # the account: a former member's handle keeps the pointer, and deleting the
+  # account clears it through the foreign key, which has to happen under the
+  # same lock every other writer of that pointer holds.
   def lock_user_removal(multi, user) do
     Multi.run(multi, :organization_sso_user_removal_locks, fn _repo, _changes ->
       organization_ids =
         from(organization_user in OrganizationUser,
           where: organization_user.user_id == ^user.id,
-          order_by: [asc: organization_user.organization_id],
           select: organization_user.organization_id
         )
         |> Repo.all(log: false)
 
+      handle_connection_ids =
+        from(resource in Hexpm.Accounts.SCIM.Resource,
+          where: resource.user_id == ^user.id,
+          select: resource.connection_id
+        )
+        |> Repo.all(log: false)
+
       from(connection in Connection,
-        where: connection.organization_id in ^organization_ids,
+        where:
+          connection.organization_id in ^organization_ids or
+            connection.id in ^handle_connection_ids,
         order_by: [asc: connection.organization_id],
         lock: "FOR UPDATE"
       )

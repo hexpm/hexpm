@@ -477,6 +477,27 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
     "Turned provisioning off for #{org}"
   end
 
+  defp humanize_action(%AuditLog{
+         action: "sso.scim.resource.create",
+         params: %{"user_name" => user_name}
+       }) do
+    "The provider created a provisioning record for #{user_name}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "sso.scim.resource.update",
+         params: %{"user_name" => user_name}
+       }) do
+    "The provider changed the provisioning record for #{user_name}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "sso.scim.resource.delete",
+         params: %{"user_name" => user_name}
+       }) do
+    "The provider deleted the provisioning record for #{user_name}"
+  end
+
   defp humanize_action(%AuditLog{action: "password.reset.init"}) do
     "Requested a password reset"
   end

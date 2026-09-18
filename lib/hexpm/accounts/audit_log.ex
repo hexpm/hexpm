@@ -298,7 +298,10 @@ defmodule Hexpm.Accounts.AuditLog do
               "sso.break_glass",
               "sso.scim.configure",
               "sso.scim.token.generate",
-              "sso.scim.token.delete"
+              "sso.scim.token.delete",
+              "sso.scim.resource.create",
+              "sso.scim.resource.update",
+              "sso.scim.resource.delete"
             ] do
     Map.put(params, :organization, serialize(organization))
   end

@@ -481,7 +481,10 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       assert repo_user.role == "write"
 
-      assert_email_sent(Hexpm.Emails.organization_invite(organization, new_user))
+      assert %Hexpm.Emails.OutboxEntry{category: "organization.member_added"} =
+               Repo.get_by!(Hexpm.Emails.OutboxEntry,
+                 group_key: "organization-member-added:#{organization.id}:#{new_user.id}"
+               )
     end
 
     test "add member whose primary email is unverified", %{
@@ -610,7 +613,11 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert [invitation] = OrganizationInvitations.all_pending(organization)
       assert invitation.email == "newcomer@example.com"
       assert invitation.role == "write"
-      assert_email_sent(fn email -> email.to == [{"", "newcomer@example.com"}] end)
+
+      assert %{email: %{"to" => [%{"address" => "newcomer@example.com"}]}} =
+               Repo.get_by!(Hexpm.Emails.OutboxEntry,
+                 group_key: "organization-invitation:#{invitation.id}"
+               )
     end
 
     test "inviting an address that already belongs to a member is refused", %{

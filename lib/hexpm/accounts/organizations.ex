@@ -2,6 +2,7 @@ defmodule Hexpm.Accounts.Organizations do
   use Hexpm.Context
 
   alias Hexpm.Accounts.OptionalEmails
+  alias Hexpm.Emails.Outbox
   alias Hexpm.Repository.OrgNamesPublisher
 
   def all_by_user(user, preload \\ []) do
@@ -183,14 +184,19 @@ defmodule Hexpm.Accounts.Organizations do
     end
   end
 
+  # Membership before the last-member guard: someone who is not a member cannot
+  # be the last one, and removing them is a no-op rather than a refusal.
   defp member_to_remove(organization, user) do
-    if Seats.used(organization) == 1 do
-      {:error, :last_member}
-    else
-      case Repo.get_by(assoc(organization, :organization_users), user_id: user.id) do
-        nil -> {:error, :not_member}
-        organization_user -> {:ok, organization_user}
-      end
+    case Repo.get_by(assoc(organization, :organization_users), user_id: user.id) do
+      nil ->
+        {:error, :not_member}
+
+      organization_user ->
+        if Seats.used(organization) == 1 do
+          {:error, :last_member}
+        else
+          {:ok, organization_user}
+        end
     end
   end
 
@@ -244,10 +250,26 @@ defmodule Hexpm.Accounts.Organizations do
   end
 
   defp send_invite_email(organization, user) do
+    send_member_added_email(organization, user)
+  end
+
+  @doc """
+  Tells someone they were added to an organization. Every path that creates a
+  membership without the person asking for it sends this, including
+  provisioning. Queued rather than delivered, so a caller can send it inside
+  the transaction that creates the membership.
+  """
+  def send_member_added_email(organization, user) do
     if OptionalEmails.allowed?(user, :organization_invite) do
       Emails.organization_invite(organization, user)
-      |> Mailer.deliver!()
+      |> Outbox.enqueue!(
+        category: "organization.member_added",
+        group_key: "organization-member-added:#{organization.id}:#{user.id}",
+        scope_key: "organization:#{organization.id}"
+      )
     end
+
+    :ok
   end
 
   defp publish_org_names do

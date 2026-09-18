@@ -50,4 +50,14 @@ defmodule Hexpm.Accounts.AuditLogs do
   def system(organization) do
     %{user: organization, auth_credential: nil, user_agent: "SYSTEM", remote_ip: nil}
   end
+
+  @doc """
+  Audit data for a write the identity provider's provisioning agent made. The
+  organization is the subject, as it is for `system/1`, but the agent's address
+  is recorded: these rows are what an administrator reads to tell a
+  provisioning change from one a person made.
+  """
+  def scim(organization, remote_ip) do
+    %{user: organization, auth_credential: nil, user_agent: "SCIM", remote_ip: remote_ip}
+  end
 end
