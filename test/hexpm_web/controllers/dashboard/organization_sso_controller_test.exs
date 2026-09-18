@@ -633,6 +633,238 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     assert Repo.get!(Connection, connection.id).enforcement_mode == "optional"
   end
 
+  describe "SCIM provisioning" do
+    setup context do
+      connection = insert(:organization_sso_connection, organization: context.organization)
+      Map.put(context, :connection, connection)
+    end
+
+    test "generating a token shows it exactly once", context do
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/scim/generate", %{
+          "scim" => %{"scim_seat_policy" => "block", "scim_role" => "read"}
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{context.organization.name}/sso"
+
+      html =
+        conn
+        |> recycle()
+        |> get("/dashboard/orgs/#{context.organization.name}/sso")
+        |> html_response(200)
+
+      assert html =~ "Copy the token now"
+      assert [token] = Regex.run(~r/<code[^>]*>\s*([0-9a-f]{32})\s*<\/code>/, html) |> tl()
+      assert {:ok, _connection} = SSO.scim_auth(token)
+
+      html =
+        build_conn()
+        |> test_login(context.admin)
+        |> get("/dashboard/orgs/#{context.organization.name}/sso")
+        |> html_response(200)
+
+      refute html =~ "Copy the token now"
+      refute html =~ token
+    end
+
+    test "the one-time token never renders on another organization", context do
+      other = insert(:organization)
+      insert(:organization_user, organization: other, user: context.admin, role: "admin")
+      insert(:organization_sso_connection, organization: other)
+
+      config = Application.fetch_env!(:hexpm, :organization_sso)
+
+      app_env(
+        :hexpm,
+        :organization_sso,
+        Keyword.merge(config,
+          mode: :beta,
+          beta_organizations: [context.organization.name, other.name]
+        )
+      )
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/scim/generate", %{
+          "scim" => %{"scim_seat_policy" => "block", "scim_role" => "read"}
+        })
+
+      html =
+        conn
+        |> recycle()
+        |> get("/dashboard/orgs/#{other.name}/sso")
+        |> html_response(200)
+
+      refute html =~ "Copy the token now"
+    end
+
+    test "generating without the seat policy is refused", context do
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/scim/generate", %{
+          "scim" => %{"scim_role" => "read"}
+        })
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+               "Choose what happens when the seats run out"
+
+      refute Connection.scim_enabled?(Repo.get!(Connection, context.connection.id))
+    end
+
+    test "settings save and token delete work while provisioning is on", context do
+      {:ok, _connection} =
+        SSO.generate_scim_token(
+          context.organization,
+          %{"scim_seat_policy" => "block", "scim_role" => "read"},
+          audit: audit_data(context.admin)
+        )
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/scim", %{
+          "scim" => %{"scim_seat_policy" => "expand", "scim_role" => "write"}
+        })
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Provisioning settings saved"
+      stored = Repo.get!(Connection, context.connection.id)
+      assert stored.scim_seat_policy == "expand"
+      assert stored.scim_role == "write"
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/scim/delete")
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Provisioning is off"
+      refute Connection.scim_enabled?(Repo.get!(Connection, context.connection.id))
+    end
+
+    test "members cannot touch provisioning", context do
+      conn =
+        build_conn()
+        |> test_login(context.member)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/scim/generate", %{
+          "scim" => %{"scim_seat_policy" => "block", "scim_role" => "read"}
+        })
+
+      assert response(conn, 403)
+    end
+
+    test "the page carrying the token is not stored by anything in between", context do
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/scim/generate", %{
+          "scim" => %{"scim_seat_policy" => "block", "scim_role" => "read"}
+        })
+
+      conn =
+        conn
+        |> recycle()
+        |> get("/dashboard/orgs/#{context.organization.name}/sso")
+
+      assert html_response(conn, 200) =~ "Copy the token now"
+      assert get_resp_header(conn, "cache-control") == ["no-store"]
+      assert get_resp_header(conn, "pragma") == ["no-cache"]
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> get("/dashboard/orgs/#{context.organization.name}/sso")
+
+      refute html_response(conn, 200) =~ "Copy the token now"
+      refute get_resp_header(conn, "cache-control") == ["no-store"]
+    end
+
+    test "the card names who generated the token and when it was last used", context do
+      {:ok, connection} =
+        SSO.generate_scim_token(
+          context.organization,
+          %{"scim_seat_policy" => "block", "scim_role" => "read"},
+          audit: audit_data(context.admin)
+        )
+
+      {:ok, authenticated} = SSO.scim_auth(connection.scim_token)
+      :ok = SSO.record_scim_token_use(authenticated, "198.51.100.7")
+
+      html =
+        build_conn()
+        |> test_login(context.admin)
+        |> get("/dashboard/orgs/#{context.organization.name}/sso")
+        |> html_response(200)
+
+      assert html =~ "Token generated"
+      assert html =~ context.admin.username
+      assert html =~ "Token last used"
+      assert html =~ "198.51.100.7"
+    end
+
+    test "setting provisioning up needs an organization access session, revoking it does not",
+         context do
+      insert(:organization_sso_identity,
+        connection: context.connection,
+        organization: context.organization,
+        user: context.admin
+      )
+
+      Repo.update!(
+        Ecto.Changeset.change(context.connection,
+          tested_at: DateTime.utc_now(),
+          enabled_at: DateTime.utc_now()
+        )
+      )
+
+      {:ok, _connection} =
+        SSO.configure_enforcement(
+          context.organization,
+          %{"enforcement_mode" => "required", "personal_keys" => "block"},
+          audit: audit_data(context.admin)
+        )
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/scim/generate", %{
+          "scim" => %{"scim_seat_policy" => "block", "scim_role" => "read"}
+        })
+
+      assert redirected_to(conn) =~ "/organizations/#{context.organization.name}/authenticate"
+      refute Connection.scim_enabled?(Repo.get!(Connection, context.connection.id))
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/scim", %{
+          "scim" => %{"scim_seat_policy" => "expand", "scim_role" => "admin"}
+        })
+
+      assert redirected_to(conn) =~ "/organizations/#{context.organization.name}/authenticate"
+      assert Repo.get!(Connection, context.connection.id).scim_role == "read"
+
+      # Revoking the credential is the emergency direction, so it stays on the
+      # break-glass path.
+      {:ok, _connection} =
+        SSO.generate_scim_token(
+          context.organization,
+          %{"scim_seat_policy" => "block", "scim_role" => "read"},
+          audit: audit_data(context.admin)
+        )
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/scim/delete")
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{context.organization.name}/sso"
+      refute Connection.scim_enabled?(Repo.get!(Connection, context.connection.id))
+    end
+  end
+
   defp enable_beta_for(organization) do
     config = Application.fetch_env!(:hexpm, :organization_sso)
 

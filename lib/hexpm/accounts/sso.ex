@@ -128,7 +128,11 @@ defmodule Hexpm.Accounts.SSO do
           enabled_at: nil
         })
 
-      changeset = Connection.configuration_changeset(connection, attrs)
+      changeset =
+        Connection.configuration_changeset(connection, attrs)
+        |> revoke_scim_token_on_provider_change(connection, desired)
+
+      revoked_scim_token? = Ecto.Changeset.changed?(changeset, :scim_token_first)
 
       case Repo.insert_or_update(changeset, log: false) do
         {:ok, saved} ->
@@ -137,12 +141,34 @@ defmodule Hexpm.Accounts.SSO do
             %{issuer: saved.issuer, client_id: saved.client_id}
           })
 
+          if revoked_scim_token? do
+            insert_audit!(audit_data, "sso.scim.token.delete", {
+              organization,
+              scim_audit_params(saved)
+            })
+          end
+
           saved
 
         {:error, changeset} ->
           Hexpm.RepoBase.rollback(changeset)
       end
     end)
+  end
+
+  # The provisioning token belongs to the provider the connection points at.
+  # Pointing it somewhere else must not leave the old provider's agent holding
+  # a credential that can still create and remove members.
+  defp revoke_scim_token_on_provider_change(changeset, %Connection{id: nil}, _desired) do
+    changeset
+  end
+
+  defp revoke_scim_token_on_provider_change(changeset, connection, desired) do
+    if connection.issuer != desired.issuer or connection.client_id != desired.client_id do
+      change(changeset, scim_token_first: nil, scim_token_second: nil)
+    else
+      changeset
+    end
   end
 
   def refresh_metadata(%Connection{} = connection) do
@@ -501,6 +527,115 @@ defmodule Hexpm.Accounts.SSO do
       audit_params: &%{jit_seat_policy: &1.jit_seat_policy, jit_role: &1.jit_role}
     )
   end
+
+  @doc """
+  Saves the provisioning settings: the seat policy and the role provisioned
+  members join with.
+  """
+  def configure_scim(organization, params, audit: audit_data) do
+    update_connection(organization, audit_data,
+      changeset: &Connection.scim_changeset(&1, params),
+      require: &require_feature/1,
+      gate: fn _changeset -> :ok end,
+      action: "sso.scim.configure",
+      audit_params: &scim_audit_params/1
+    )
+  end
+
+  @doc """
+  Turns provisioning on, or replaces its bearer token. The returned
+  connection carries the plaintext token in the virtual `scim_token`, for the
+  one screen that shows it; regenerating invalidates the old token on commit.
+  """
+  def generate_scim_token(organization, params, audit: audit_data) do
+    update_connection(organization, audit_data,
+      changeset: &Connection.scim_generate_changeset(&1, params, audit_data.user),
+      require: &require_feature/1,
+      gate: fn _changeset -> :ok end,
+      action: "sso.scim.token.generate",
+      audit_params: &scim_audit_params/1
+    )
+  end
+
+  @doc """
+  Turns provisioning off by deleting the bearer token. The settings stay, so
+  turning it back on offers what the administrator chose before.
+  """
+  def delete_scim_token(organization, audit: audit_data) do
+    update_connection(organization, audit_data,
+      changeset: &Connection.scim_delete_changeset/1,
+      require: &require_active/1,
+      gate: fn _changeset -> :ok end,
+      action: "sso.scim.token.delete",
+      audit_params: &scim_audit_params/1
+    )
+  end
+
+  defp scim_audit_params(connection) do
+    %{
+      scim_enabled: Connection.scim_enabled?(connection),
+      scim_seat_policy: connection.scim_seat_policy,
+      scim_role: connection.scim_role
+    }
+  end
+
+  @doc """
+  Records that the provisioning agent used the token, so the SCIM card can
+  show whether the provider is still talking to us and from where.
+
+  Skipped in read-only mode: the conformance documents are pure reads and
+  must keep answering while the database is held.
+  """
+  def record_scim_token_use(%Connection{} = connection, remote_ip) do
+    now = DateTime.utc_now()
+
+    if Hexpm.WriteMode.mode() == :write and stale_use?(connection.scim_token_used_at, now) do
+      from(row in Connection, where: row.id == ^connection.id)
+      |> Repo.update_all(set: [scim_token_used_at: now, scim_token_used_ip: remote_ip])
+    end
+
+    :ok
+  end
+
+  # One write a minute per connection at most: the provider polls, and the
+  # column is for the administrator reading the card, not an access log.
+  defp stale_use?(nil, _now), do: true
+  defp stale_use?(used_at, now), do: DateTime.diff(now, used_at, :second) >= 60
+
+  @doc """
+  Resolves a SCIM bearer token to the connection it belongs to, with the
+  organization preloaded.
+
+  The token is the only credential on the provisioning surface. It never
+  reaches `authorize/2`: it is not a person or an organization acting through
+  the API, it is one provider's agent addressing one connection.
+  """
+  def scim_auth(user_secret) when is_binary(user_secret) do
+    app_secret = Application.get_env(:hexpm, :secret)
+
+    <<first::binary-size(32), second::binary-size(32)>> =
+      :crypto.mac(:hmac, :sha256, app_secret, user_secret)
+      |> Base.encode16(case: :lower)
+
+    connection =
+      from(connection in Connection,
+        where: connection.scim_token_first == ^first,
+        preload: [:organization]
+      )
+      |> Repo.one()
+
+    # `active?` rather than `enabled?`: a lapsed card must not stop the
+    # provider deprovisioning people. Generating a token stays billing-gated.
+    with %Connection{} <- connection,
+         true <- Hexpm.Utils.secure_check(connection.scim_token_second, second),
+         true <- Features.active?(connection.organization) do
+      {:ok, connection}
+    else
+      _mismatch -> :error
+    end
+  end
+
+  def scim_auth(_user_secret), do: :error
 
   # Every connection setting is saved the same way: the gate the setting takes
   # against the organization, the row lock and the administrator check under it,

@@ -188,6 +188,14 @@ defmodule HexpmWeb.SSOEnforcement do
   def callback_url, do: url(~p"/sso/callback")
 
   @doc """
+  The SCIM base URL the administrator pastes into the provider. One address
+  for every organization; the bearer token is what names the connection.
+  """
+  def scim_base_url do
+    HexpmWeb.Endpoint.url() <> "/scim/v2"
+  end
+
+  @doc """
   Lets the browser follow a form submission through to this organization's
   provider.
 

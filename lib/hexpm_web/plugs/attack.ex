@@ -43,6 +43,17 @@ defmodule HexpmWeb.Plugs.Attack do
     end
   end
 
+  # The provisioning agent is one client per connection whatever address it
+  # sends from, and the address is the provider's shared egress, so the
+  # connection is the key. Requests that fail authentication never reach here.
+  rule "scim connection throttle", conn do
+    connection = conn.assigns[:scim_connection]
+
+    if scim?(conn) && connection do
+      scim_connection_throttle(connection.id)
+    end
+  end
+
   rule "ip throttle", conn do
     if api?(conn) do
       ip_throttle(conn.remote_ip)
@@ -60,6 +71,7 @@ defmodule HexpmWeb.Plugs.Attack do
   def block_action(conn, {:throttle, data}, _opts) do
     conn
     |> add_throttling_headers(data)
+    |> put_retry_after(data)
     |> render_error(429, message: "API rate limit exceeded for #{throttled_user(conn)}")
   end
 
@@ -78,13 +90,23 @@ defmodule HexpmWeb.Plugs.Attack do
     |> put_resp_header("x-ratelimit-reset", Integer.to_string(reset))
   end
 
+  # The standard header for a 429, which the provisioning agents read to pace
+  # their retries; the x-ratelimit headers are ours.
+  defp put_retry_after(conn, data) do
+    seconds = max(div(data[:expires_at] - System.system_time(:millisecond) + 999, 1_000), 1)
+    put_resp_header(conn, "retry-after", Integer.to_string(seconds))
+  end
+
   defp throttled_user(conn) do
     cond do
-      user = conn.assigns.current_user ->
+      user = conn.assigns[:current_user] ->
         "user #{user.id}"
 
-      organization = conn.assigns.current_organization ->
+      organization = conn.assigns[:current_organization] ->
         "organization #{organization.id}"
+
+      connection = conn.assigns[:scim_connection] ->
+        "provisioning connection #{connection.id}"
 
       true ->
         "IP #{ip_string(conn.remote_ip)}"
@@ -133,6 +155,23 @@ defmodule HexpmWeb.Plugs.Attack do
       time: time,
       storage: @storage,
       limit: 100,
+      period: 60_000
+    )
+  end
+
+  # The same budget an authenticated organization gets on the API. A provider
+  # sends two or three requests per person it touches and fans them out, so
+  # a bulk unassignment or an initial import runs well past the address limit.
+  def scim_connection_throttle(connection_id, opts \\ []) do
+    key = {:scim_connection, connection_id}
+    time = opts[:time] || System.system_time(:millisecond)
+    unless opts[:time], do: RateLimitPubSub.broadcast(key, time)
+
+    timed_throttle(
+      key,
+      time: time,
+      storage: @storage,
+      limit: 500,
       period: 60_000
     )
   end
@@ -335,4 +374,7 @@ defmodule HexpmWeb.Plugs.Attack do
 
   defp api?(%Plug.Conn{request_path: "/api/" <> _}), do: true
   defp api?(%Plug.Conn{}), do: false
+
+  defp scim?(%Plug.Conn{request_path: "/scim/" <> _}), do: true
+  defp scim?(%Plug.Conn{}), do: false
 end
