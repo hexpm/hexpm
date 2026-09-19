@@ -1322,6 +1322,31 @@ defmodule HexpmWeb.SSOEnforcementTest do
       assert get_session(conn, "sudo_return_to") == consent_page
     end
 
+    # Private docs restart login at the edge when the token they hold no longer
+    # carries the organization, and this page is where that restart lands. It
+    # only recovers access if the page offers the authentication first, because
+    # approving copies the organization access the browser already holds.
+    test "offers authentication before a docs consent the browser cannot satisfy", context do
+      require_sso(context)
+      {conn, _browser} = login(context.member)
+
+      name = context.organization.name
+      client = insert(:oauth_client, allowed_scopes: ["docs"])
+
+      conn =
+        get(conn, "/oauth/authorize", %{
+          "client_id" => client.client_id,
+          "redirect_uri" => hd(client.redirect_uris),
+          "response_type" => "code",
+          "scope" => "docs:#{name}",
+          "state" => "state",
+          "code_challenge" => "VeRkYllVqy6XLHXPgfpoJxXX_3dxEB2Nb7eJZ5T4aIA",
+          "code_challenge_method" => "S256"
+        })
+
+      assert html_response(conn, 200) =~ "/organizations/#{name}/authenticate"
+    end
+
     test "leaves a consent with no organization access to hand on alone", context do
       require_sso(context)
       {conn, _browser} = login(context.member, sudo_at: minutes_ago(60))
