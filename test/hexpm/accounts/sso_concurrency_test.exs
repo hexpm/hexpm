@@ -334,6 +334,36 @@ defmodule Hexpm.Accounts.SSOConcurrencyTest do
     end)
   end
 
+  test "a session copy racing a disable does not outlive it" do
+    committed(fn context ->
+      identity = link_identity(context, context.member)
+      browser = browser_session(context.member)
+      target = browser_session(context.member)
+
+      SSO.establish_org_session!(identity, browser.id)
+      assert SSO.current_org_session(browser.id, context.organization.id)
+
+      copy = fn ->
+        Hexpm.RepoBase.transaction(fn ->
+          # The order the OAuth multis take: the connections first, then the
+          # rows. Reversing it is what let a copy commit into a window the
+          # disable had already swept.
+          SSO.lock_granting_connections!(browser.id, context.member.id)
+          SSO.grant_org_sessions!(browser.id, target.id, context.member.id)
+        end)
+      end
+
+      disable = fn ->
+        SSO.disable(context.organization, audit: audit_data(context.admin))
+      end
+
+      race([copy, disable], fn fun -> fun.() end)
+
+      refute SSO.current_org_session(target.id, context.organization.id)
+      refute SSO.current_org_session(browser.id, context.organization.id)
+    end)
+  end
+
   defp committed(fun), do: committed(&build_context/0, fun)
 
   defp build_context do

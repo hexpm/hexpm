@@ -1196,6 +1196,55 @@ defmodule HexpmWeb.SSOEnforcementTest do
       refute Map.has_key?(body, "organization_reauth_required")
     end
 
+    # The gate only applies when there is access to copy, so a consent given
+    # before the browser authenticates passes without a fresh password. The code
+    # must not then pick up the access the browser gains afterwards, or the
+    # window between approval and exchange is a way around the gate.
+    test "a consent given with no organization access copies none gained later", context do
+      require_sso(context)
+      {conn, browser} = login(context.member)
+
+      name = context.organization.name
+      client = insert(:oauth_client, allowed_scopes: ["api:read", "repositories"])
+      verifier = "code-verifier-#{System.unique_integer([:positive])}"
+      challenge = :sha256 |> :crypto.hash(verifier) |> Base.url_encode64(padding: false)
+
+      conn =
+        post(conn, "/oauth/authorize", %{
+          "client_id" => client.client_id,
+          "redirect_uri" => hd(client.redirect_uris),
+          "action" => "approve",
+          "scope" => "api:read repositories",
+          "selected_scopes" => ["api:read", "repositories"],
+          "state" => "opaque-state",
+          "code_challenge" => challenge,
+          "code_challenge_method" => "S256"
+        })
+
+      %URI{query: query} = conn |> redirected_to() |> URI.parse()
+      code = URI.decode_query(query)["code"]
+
+      # Between the approval and the exchange the browser authenticates.
+      authenticate(context, context.member, browser)
+
+      body =
+        build_conn()
+        |> post("/api/oauth/token", %{
+          "grant_type" => "authorization_code",
+          "code" => code,
+          "client_id" => client.client_id,
+          "redirect_uri" => hd(client.redirect_uris),
+          "code_verifier" => verifier
+        })
+        |> json_response(200)
+
+      refute body["scope"] =~ "repository:#{name}"
+
+      assert body["organization_reauth_required"] == [
+               %{"organization" => name, "requirements" => ["sso"]}
+             ]
+    end
+
     # Approving hands the client's own session a copy of the organization
     # access this browser is carrying, so a stolen cookie is otherwise enough.
     test "asks for the password before a consent hands organization access on", context do

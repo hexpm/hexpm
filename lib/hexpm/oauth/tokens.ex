@@ -300,8 +300,11 @@ defmodule Hexpm.OAuth.Tokens do
       create_for_user(user, client_id, scopes, grant_type, grant_reference, token_opts)
 
     # Build flat Multi (no nested transactions, last_use folded into INSERT)
-    Keyword.get(opts, :authorization_code)
-    |> consume_authorization_code_multi()
+    Ecto.Multi.new()
+    |> Ecto.Multi.run(:sso_connection_lock, fn _repo, _changes ->
+      {:ok, Hexpm.Accounts.SSO.lock_granting_connections!(browser_session_id, user.id)}
+    end)
+    |> Ecto.Multi.append(consume_authorization_code_multi(Keyword.get(opts, :authorization_code)))
     |> Ecto.Multi.append(
       UserSessions.build_oauth_session_multi(user, client_id,
         expires_at: session_expires_at,

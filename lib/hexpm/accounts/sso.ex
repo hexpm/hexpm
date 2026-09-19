@@ -1375,6 +1375,30 @@ defmodule Hexpm.Accounts.SSO do
   def grant_org_sessions!(_from_user_session_id, _to_user_session_id, _user_id), do: []
 
   @doc """
+  Takes a share lock on the connections whose access a copy would carry, so a
+  disable or a lifetime cut running at the same time cannot miss the rows that
+  copy is about to insert. Both of those take `FOR UPDATE` on the connection
+  before they update the sessions, so the copy either commits first and is seen,
+  or waits and then reads the state the writer left.
+
+  Ordered by organization id, and called as the first statement of the multi
+  that copies. Taking it later would mean holding the new session row, and on
+  the authorization-code path the code row, before the connection, which
+  deadlocks against account deletion taking them the other way round.
+  """
+  def lock_granting_connections!(from_user_session_id, user_id) do
+    organization_ids = from_user_session_id |> granted_organization_ids(user_id) |> Enum.sort()
+
+    Repo.all(
+      from(connection in Connection,
+        where: connection.organization_id in ^organization_ids,
+        order_by: [asc: connection.organization_id],
+        lock: "FOR SHARE"
+      )
+    )
+  end
+
+  @doc """
   The organizations a session is currently carrying access for, which is what
   `grant_org_sessions!/3` would hand on.
   """
