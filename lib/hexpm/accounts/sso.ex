@@ -780,11 +780,10 @@ defmodule Hexpm.Accounts.SSO do
         Enforcement.mode(organization, connection) == :required and
           reachable_admin?(organization)
 
-      member =
-        Repo.get_by(OrganizationUser,
-          organization_id: organization.id,
-          user_id: user.id
-        ) || Hexpm.RepoBase.rollback(:not_member)
+      # Under the connection lock and in the same order member removal takes
+      # them, so a removal committing between the read and the update cannot
+      # turn this into a stale-entry crash.
+      member = locked_member(organization, user) || Hexpm.RepoBase.rollback(:not_member)
 
       changeset =
         OrganizationUser.enforcement_changeset(member, %{"sso_enforcement" => enforcement})

@@ -364,6 +364,56 @@ defmodule Hexpm.Accounts.SSOConcurrencyTest do
     end)
   end
 
+  # An organization with the feature on but no connection row yet has nothing for
+  # `with_locked_connection/4` to lock, so the member row is the only thing
+  # ordering an enforcement change against a removal of the same member.
+  test "setting enforcement on a member being removed answers rather than raising" do
+    committed(fn context ->
+      Repo.delete!(context.connection)
+      parent = self()
+
+      remover =
+        unboxed_task(fn ->
+          Hexpm.RepoBase.transaction(fn ->
+            Hexpm.RepoBase.one!(
+              from(member in Hexpm.Accounts.OrganizationUser,
+                where: member.organization_id == ^context.organization.id,
+                where: member.user_id == ^context.member.id,
+                lock: "FOR UPDATE"
+              )
+            )
+
+            send(parent, :holding)
+            assert_receive :remove, 15_000
+
+            Hexpm.RepoBase.delete_all(
+              from(member in Hexpm.Accounts.OrganizationUser,
+                where: member.organization_id == ^context.organization.id,
+                where: member.user_id == ^context.member.id
+              )
+            )
+          end)
+        end)
+
+      assert_receive :holding, 15_000
+
+      enforcer =
+        unboxed_task(fn ->
+          SSO.set_member_enforcement(context.organization, context.member, "enforced",
+            audit: audit_data(context.admin)
+          )
+        end)
+
+      # Long enough for the enforcement change to reach the member row and block
+      # on the lock the remover is holding.
+      Process.sleep(500)
+      send(remover.pid, :remove)
+
+      assert {:ok, {:ok, _count}} = Task.yield(remover, 15_000)
+      assert {:ok, {:error, :not_member}} = Task.yield(enforcer, 15_000)
+    end)
+  end
+
   defp committed(fun), do: committed(&build_context/0, fun)
 
   defp build_context do

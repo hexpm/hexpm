@@ -1020,6 +1020,54 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     end
   end
 
+  describe "settings posted in a shape the form never produces" do
+    test "answers rather than raising", context do
+      insert(:organization_sso_connection, organization: context.organization)
+      base = "/dashboard/orgs/#{context.organization.name}/sso"
+
+      for {path, params} <- [
+            {"#{base}/jit", %{"jit" => "block"}},
+            {"#{base}/scim", %{"scim" => ["expand"]}},
+            {"#{base}/scim/generate", %{"scim" => "read"}},
+            {"#{base}/enforcement", %{"enforcement" => "required"}},
+            {"#{base}/test", %{"secret_slot" => %{"a" => "b"}}}
+          ] do
+        conn = build_conn() |> test_login(context.admin) |> post(path, params)
+
+        assert conn.status == 302, "#{path} answered #{conn.status}"
+      end
+    end
+
+    test "refuses a domain that is not a map", context do
+      insert(:organization_sso_connection, organization: context.organization)
+
+      assert_error_sent(400, fn ->
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/domains", %{
+          "domain" => "example.com"
+        })
+      end)
+    end
+
+    test "refuses an enforcement setting that is not a string", context do
+      insert(:organization_sso_connection, organization: context.organization)
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/enforcement/member", %{
+          "user_id" => to_string(context.member.id),
+          "sso_enforcement" => %{"x" => "y"}
+        })
+
+      assert redirected_to(conn) =~ "/sso"
+
+      assert Repo.get_by!(Hexpm.Accounts.OrganizationUser, user_id: context.member.id).sso_enforcement ==
+               nil
+    end
+  end
+
   describe "just-in-time membership" do
     test "will not turn on without a verified domain", context do
       insert(:organization_sso_connection, organization: context.organization)

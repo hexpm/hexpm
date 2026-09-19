@@ -76,7 +76,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
 
   def test(conn, %{"dashboard_org" => name} = params) do
     with_organization(conn, name, fn organization ->
-      secret_slot = params["secret_slot"] || "active"
+      secret_slot = string_param(params, "secret_slot") || "active"
 
       case SSO.start_test(
              organization,
@@ -188,7 +188,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
       redirect_result(
         conn,
         organization,
-        SSO.configure_jit(organization, params["jit"] || %{}, audit: audit_data(conn)),
+        SSO.configure_jit(organization, settings(params, "jit"), audit: audit_data(conn)),
         &jit_message/1,
         &jit_error/1
       )
@@ -221,7 +221,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
       redirect_result(
         conn,
         organization,
-        SSO.configure_scim(organization, params["scim"] || %{}, audit: audit_data(conn)),
+        SSO.configure_scim(organization, settings(params, "scim"), audit: audit_data(conn)),
         &scim_message/1,
         &scim_error/1
       )
@@ -230,7 +230,9 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
 
   def generate_scim_token(conn, %{"dashboard_org" => name} = params) do
     with_organization(conn, name, fn organization ->
-      case SSO.generate_scim_token(organization, params["scim"] || %{}, audit: audit_data(conn)) do
+      case SSO.generate_scim_token(organization, settings(params, "scim"),
+             audit: audit_data(conn)
+           ) do
         {:ok, connection} ->
           # Bound to the connection and the account that generated it, so a
           # stale stash can never render on another organization's page or
@@ -284,7 +286,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
       redirect_result(
         conn,
         organization,
-        SSO.configure_enforcement(organization, params["enforcement"] || %{},
+        SSO.configure_enforcement(organization, settings(params, "enforcement"),
           audit: audit_data(conn)
         ),
         &enforcement_message/1,
@@ -330,7 +332,10 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
           not_found(conn)
 
         user ->
-          case SSO.set_member_enforcement(organization, user, params["sso_enforcement"],
+          case SSO.set_member_enforcement(
+                 organization,
+                 user,
+                 string_param(params, "sso_enforcement"),
                  audit: audit_data(conn)
                ) do
             {:ok, _member} ->
@@ -338,7 +343,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
                 conn,
                 organization,
                 :info,
-                member_enforcement_message(user, params["sso_enforcement"])
+                member_enforcement_message(user, string_param(params, "sso_enforcement"))
               )
 
             {:error, :not_member} ->
@@ -394,7 +399,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
   defp member_enforcement_message(user, _enforcement),
     do: "#{user.username} now follows the organization's enforcement mode."
 
-  def add_domain(conn, %{"dashboard_org" => name, "domain" => params}) do
+  def add_domain(conn, %{"dashboard_org" => name, "domain" => %{} = params}) do
     with_organization(conn, name, fn organization ->
       redirect_result(
         conn,
@@ -452,6 +457,23 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
     case translate_errors(changeset)[:domain] do
       nil -> "The domain could not be added."
       message -> "Domain #{message}."
+    end
+  end
+
+  # A form posts these as a nested map, and a hand-written request can post a
+  # string or a list under the same name. Anything that is not the shape the
+  # changeset takes is the same as posting nothing.
+  defp settings(params, key) do
+    case params do
+      %{^key => %{} = settings} -> settings
+      _ -> %{}
+    end
+  end
+
+  defp string_param(params, key) do
+    case params do
+      %{^key => value} when is_binary(value) -> value
+      _ -> nil
     end
   end
 
