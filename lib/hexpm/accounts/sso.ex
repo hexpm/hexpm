@@ -707,22 +707,30 @@ defmodule Hexpm.Accounts.SSO do
 
   # `expires_at` is stamped at authentication, so an administrator who cuts the
   # lifetime during an incident would otherwise leave every session already open
-  # running for the old one. Sessions are only ever shortened: the setting is
-  # about how long ago the provider has to have vouched for someone, and
-  # extending it would push that further into the past than the organization
-  # asked for.
+  # running for the old one. Each row is bound by its own authentication rather
+  # than by the save, so the setting means what it says: how long ago the
+  # provider has to have vouched for someone. A session authenticated longer ago
+  # than the new lifetime lapses at the save. Sessions are only ever shortened;
+  # the clause never matches on an increase.
   defp clamp_org_sessions(organization, connection) do
     now = DateTime.utc_now()
-    cutoff = DateTime.add(now, Enforcement.session_lifetime(connection), :second)
+    lifetime = Enforcement.session_lifetime(connection)
 
-    Repo.update_all(
-      from(session in OrgSession,
-        where: session.organization_id == ^organization.id,
-        where: is_nil(session.revoked_at),
-        where: session.expires_at > ^cutoff
-      ),
-      set: [expires_at: cutoff, updated_at: now]
+    from(session in OrgSession,
+      where: session.organization_id == ^organization.id,
+      where: is_nil(session.revoked_at),
+      where:
+        session.expires_at >
+          fragment("? + make_interval(secs => ?)", session.authenticated_at, ^lifetime),
+      update: [
+        set: [
+          expires_at:
+            fragment("? + make_interval(secs => ?)", session.authenticated_at, ^lifetime),
+          updated_at: ^now
+        ]
+      ]
     )
+    |> Repo.update_all([])
 
     :ok
   end
@@ -1273,7 +1281,10 @@ defmodule Hexpm.Accounts.SSO do
       identity_id: identity.id,
       authenticated_at: now,
       expires_at: DateTime.add(now, lifetime, :second),
-      revoked_at: nil
+      revoked_at: nil,
+      # This row now stands on an authentication of its own. Leaving the copy's
+      # source on it would let a revoked browser session keep discarding it.
+      granted_from_user_session_id: nil
     })
     |> Repo.insert_or_update!()
   end

@@ -183,6 +183,34 @@ defmodule Hexpm.Accounts.OrganizationDomainsTest do
       assert {:ok, _domain} = verify(organization, domain, admin)
     end
 
+    # Just-in-time membership admits people on a verified domain, so a manual
+    # check that finds the record gone has to take the verification with it.
+    # Leaving it standing let an administrator confirm a domain they no longer
+    # control.
+    test "clears the verification when the record has gone", %{
+      organization: organization,
+      admin: admin
+    } do
+      {:ok, domain} = add(organization, admin, "example.com")
+      Resolver.publish("example.com", OrganizationDomain.record_value(domain))
+      {:ok, domain} = verify(organization, domain, admin)
+      assert OrganizationDomain.verified?(domain)
+
+      Resolver.withdraw("example.com")
+
+      assert {:error, :record_not_found} = verify(organization, domain, admin)
+      refute OrganizationDomain.verified?(Repo.get!(OrganizationDomain, domain.id))
+      refute OrganizationDomains.verified_for_email?(organization, "person@example.com")
+
+      # The administrator asked for this check, so the row is theirs, not the
+      # scheduled run's SYSTEM actor.
+      assert %{user_id: user_id} =
+               AuditLogs.all_by(organization)
+               |> Enum.find(&(&1.action == "organization.domain.unverify"))
+
+      assert user_id == admin.id
+    end
+
     test "audits the verification", %{organization: organization, admin: admin} do
       {:ok, domain} = add(organization, admin, "example.com")
       Resolver.publish("example.com", OrganizationDomain.record_value(domain))
@@ -274,6 +302,29 @@ defmodule Hexpm.Accounts.OrganizationDomainsTest do
       assert OrganizationDomains.recheck_all() == 0
       assert OrganizationDomain.verified?(Repo.get!(OrganizationDomain, domain.id))
       refute Repo.get!(OrganizationDomain, domain.id).last_checked_at == nil
+    end
+
+    # Ordered by the last attempt with the failures stamped, so a domain whose
+    # resolver never answers does not sort first on every run and spend the
+    # budget before the rest of the table is reached.
+    @tag :capture_log
+    test "records the attempt even when the resolver does not answer", %{
+      organization: organization,
+      admin: admin
+    } do
+      {:ok, domain} = add(organization, admin, "example.com")
+      Resolver.publish("example.com", OrganizationDomain.record_value(domain))
+      {:ok, domain} = verify(organization, domain, admin)
+
+      age_out(domain)
+      aged = Repo.get!(OrganizationDomain, domain.id).last_checked_at
+      Resolver.break("example.com")
+
+      assert OrganizationDomains.recheck_all() == 0
+
+      checked = Repo.get!(OrganizationDomain, domain.id).last_checked_at
+      assert DateTime.compare(checked, aged) == :gt
+      assert_in_delta DateTime.diff(DateTime.utc_now(), checked), 0, 5
     end
 
     test "leaves a domain whose record is still there", %{

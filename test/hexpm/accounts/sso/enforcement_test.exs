@@ -210,6 +210,27 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
              ) <= 3_600
     end
 
+    # The cut counts from each session's own authentication, not from the save,
+    # so a member who authenticated longer ago than the new lifetime is out now
+    # rather than getting a fresh full window.
+    test "lapses a session authenticated longer ago than the new lifetime", context do
+      session = browser_session(context.member)
+      org_session = authenticate(context, context.member, session)
+
+      Repo.update_all(
+        from(row in Hexpm.Accounts.SSO.OrgSession, where: row.id == ^org_session.id),
+        set: [authenticated_at: DateTime.add(DateTime.utc_now(), -7_200, :second)]
+      )
+
+      {:ok, _connection} = configure(context, %{"session_lifetime_seconds" => 3_600})
+
+      reloaded = Repo.get!(Hexpm.Accounts.SSO.OrgSession, org_session.id)
+
+      assert DateTime.compare(reloaded.expires_at, DateTime.utc_now()) == :lt
+      assert_in_delta DateTime.diff(reloaded.expires_at, reloaded.authenticated_at), 3_600, 2
+      refute SSO.current_org_session(session.id, context.organization.id)
+    end
+
     test "leaves a session alone when the lifetime is raised", context do
       {:ok, _connection} = configure(context, %{"session_lifetime_seconds" => 3_600})
       session = browser_session(context.member)

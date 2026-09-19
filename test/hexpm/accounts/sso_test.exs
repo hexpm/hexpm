@@ -1286,6 +1286,27 @@ defmodule Hexpm.Accounts.SSOTest do
       assert SSO.current_org_session(user_session.id, context.organization.id)
     end
 
+    test "re-authenticating clears the session the access was copied from", context do
+      # A CLI session gets its access as a copy carrying the browser session it
+      # came from, and OrgSession.live/2 discards a copy whose source is gone.
+      # Re-authorizing through the provider has to stand on its own, or the
+      # member cannot restore CLI access until the nightly purge.
+      identity = link_identity(context, context.member)
+      browser = browser_session(context.member)
+      cli = browser_session(context.member)
+
+      SSO.establish_org_session!(identity, browser.id)
+      SSO.grant_org_sessions!(browser.id, cli.id, context.member.id)
+
+      assert SSO.current_org_session(cli.id, context.organization.id)
+
+      Hexpm.UserSessions.revoke(browser, nil, audit: audit_data(context.member))
+      refute SSO.current_org_session(cli.id, context.organization.id)
+
+      SSO.establish_org_session!(identity, cli.id)
+      assert SSO.current_org_session(cli.id, context.organization.id)
+    end
+
     test "an organization access session is scoped to its own organization", context do
       other_organization = insert(:organization)
       insert(:organization_user, organization: other_organization, user: context.member)

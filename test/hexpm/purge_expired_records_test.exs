@@ -545,26 +545,28 @@ defmodule Hexpm.PurgeExpiredRecordsTest do
   defp hours_from_now(hours), do: DateTime.add(DateTime.utc_now(), hours * 3600, :second)
 
   describe "archive" do
-    @credentials %{
+    # The credential itself, the mail body, or the identity a provider gave us.
+    @redacted %{
       "authorization_codes" => ~w(code code_challenge),
       "device_codes" => ~w(device_code user_code verification_uri_complete),
       "oauth_tokens" => ~w(refresh_token_hash),
       "user_sessions" => ~w(session_token),
       "password_resets" => ~w(key),
       "account_deletion_requests" => ~w(key),
-      "organization_sso_transactions" => ~w(state_hash nonce code_verifier link_token_hash),
+      "organization_sso_transactions" =>
+        ~w(state_hash nonce code_verifier link_token_hash subject provider_email),
       "organization_sso_sessions" => [],
       "organization_invitations" => ~w(token_hash),
       "keys" => ~w(secret_first secret_second),
       "email_outbox_entries" => ~w(email)
     }
 
-    test "writes every column but the credentials of each row it deletes" do
+    test "writes every column but the redacted ones of each row it deletes" do
       expired = insert_expired_rows()
 
       PurgeExpiredRecords.run()
 
-      assert map_size(expired) == map_size(@credentials)
+      assert map_size(expired) == map_size(@redacted)
 
       for {schema, id} <- expired do
         table = schema.__schema__(:source)
@@ -576,8 +578,8 @@ defmodule Hexpm.PurgeExpiredRecordsTest do
         assert {:ok, _archived_at, 0} = DateTime.from_iso8601(archived["archived_at"])
 
         columns = schema.__schema__(:fields) |> Enum.map(&Atom.to_string/1) |> Enum.sort()
-        credentials = Map.fetch!(@credentials, table)
-        assert Enum.sort(Map.keys(archived["row"])) == columns -- credentials
+        redacted = Map.fetch!(@redacted, table)
+        assert Enum.sort(Map.keys(archived["row"])) == columns -- redacted
       end
     end
 
