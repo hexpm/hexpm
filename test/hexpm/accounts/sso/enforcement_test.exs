@@ -31,6 +31,70 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
     %{organization: organization, admin: admin, member: member, connection: connection}
   end
 
+  describe "personal key permissions" do
+    test "read the organizations that refuse them once per key, not once per permission",
+         context do
+      link_identity(context, context.admin)
+
+      {:ok, _connection} =
+        SSO.configure_enforcement(
+          context.organization,
+          %{"enforcement_mode" => "required", "personal_keys" => "block"},
+          audit: audit_data(context.admin)
+        )
+
+      permissions =
+        List.duplicate(%{domain: "repository", resource: context.organization.name}, 20)
+
+      assert count_enforcement_queries(fn ->
+               Hexpm.Accounts.Key.build(context.member, %{
+                 name: "twenty",
+                 permissions: permissions
+               })
+             end) ==
+               count_enforcement_queries(fn ->
+                 Hexpm.Accounts.Key.build(context.member, %{
+                   name: "one",
+                   permissions: [hd(permissions)]
+                 })
+               end)
+    end
+
+    # The enforcement read is the one joining the connections table, which tells
+    # it apart from the per-permission access checks.
+    defp count_enforcement_queries(fun) do
+      ref = make_ref()
+      parent = self()
+      prefix = Hexpm.RepoBase.config() |> Keyword.fetch!(:telemetry_prefix)
+
+      :telemetry.attach(
+        {__MODULE__, ref},
+        prefix ++ [:query],
+        fn _event, _measurements, metadata, _config ->
+          if self() == parent and metadata.query =~ "organization_sso_connections" do
+            send(parent, {ref, :query})
+          end
+        end,
+        nil
+      )
+
+      try do
+        fun.()
+        drain_queries(ref, 0)
+      after
+        :telemetry.detach({__MODULE__, ref})
+      end
+    end
+
+    defp drain_queries(ref, count) do
+      receive do
+        {^ref, :query} -> drain_queries(ref, count + 1)
+      after
+        0 -> count
+      end
+    end
+  end
+
   describe "mode/3" do
     test "is optional without a connection", %{organization: organization} do
       assert Enforcement.mode(organization, nil) == :optional
