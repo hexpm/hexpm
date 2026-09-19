@@ -1020,6 +1020,24 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     end
   end
 
+  test "names every way into a required organization that skips the provider", context do
+    insert(:organization_sso_connection,
+      organization: context.organization,
+      enforcement_mode: "required",
+      personal_keys: "block"
+    )
+
+    html =
+      build_conn()
+      |> test_login(context.admin)
+      |> get("/dashboard/orgs/#{context.organization.name}/sso")
+      |> html_response(200)
+
+    assert html =~ "What enforcement does not cover"
+    assert html =~ "Readme URLs"
+    assert html =~ "That is permanent"
+  end
+
   describe "settings posted in a shape the form never produces" do
     test "answers rather than raising", context do
       insert(:organization_sso_connection, organization: context.organization)
