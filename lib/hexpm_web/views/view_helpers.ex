@@ -236,7 +236,7 @@ defmodule HexpmWeb.ViewHelpers do
     # Needs to be odd number
     max_links = opts[:page_links]
 
-    all_pages = div(count - 1, per_page) + 1
+    all_pages = max(1, Integer.ceil_div(count, per_page))
     middle_links = div(max_links, 2) + 1
 
     page_links =

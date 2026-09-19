@@ -212,4 +212,41 @@ defmodule Hexpm.UtilsTest do
                "http://localhost:5002/search/0.3.0/"
     end
   end
+
+  describe "safe_page/3" do
+    test "clamps lower bound to 1 for negative or zero page" do
+      assert Utils.safe_page(0, 30, 30) == 1
+      assert Utils.safe_page(-5, 30, 30) == 1
+    end
+
+    test "clamps to 1 when count is 0" do
+      assert Utils.safe_page(1, 0, 30) == 1
+      assert Utils.safe_page(2, 0, 30) == 1
+      assert Utils.safe_page(10, 0, 30) == 1
+    end
+
+    test "clamps upper bound when count is an exact multiple of per_page" do
+      # 30 items at 30 per page = 1 page
+      assert Utils.safe_page(1, 30, 30) == 1
+      assert Utils.safe_page(2, 30, 30) == 1
+      assert Utils.safe_page(5, 30, 30) == 1
+
+      # 60 items at 30 per page = 2 pages
+      assert Utils.safe_page(1, 60, 30) == 1
+      assert Utils.safe_page(2, 60, 30) == 2
+      assert Utils.safe_page(3, 60, 30) == 2
+      assert Utils.safe_page(99, 60, 30) == 2
+    end
+
+    test "correctly handles non-multiple counts" do
+      # 31 items at 30 per page = 2 pages
+      assert Utils.safe_page(1, 31, 30) == 1
+      assert Utils.safe_page(2, 31, 30) == 2
+      assert Utils.safe_page(3, 31, 30) == 2
+
+      # 1 item at 30 per page = 1 page
+      assert Utils.safe_page(1, 1, 30) == 1
+      assert Utils.safe_page(2, 1, 30) == 1
+    end
+  end
 end
