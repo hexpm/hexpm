@@ -32,6 +32,7 @@ defmodule Hexpm.Accounts.SSO.Connection do
     field :scim_token_generated_at, :utc_datetime_usec
     field :scim_token_used_at, :utc_datetime_usec
     field :scim_token_used_ip, :string
+    field :seat_expansion_failed_at, :utc_datetime_usec
 
     belongs_to :organization, Organization
     belongs_to :configured_by_user, User

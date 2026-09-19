@@ -884,8 +884,12 @@ defmodule Hexpm.Accounts.SSO do
   # login, or a card that needs confirming turns every retry into another
   # charge attempt. The refusal is recorded like any other, which is also what
   # rate-limits the notice to the administrators.
+  # The guard is a column rather than the failure log: failures are a 20-row
+  # ring per connection, and with just-in-time membership on anyone signed in
+  # can start a login and flush it, which would let the next login try to buy a
+  # seat again inside the window.
   defp purchase_seat(connection, organization, quantity, stage) do
-    if recent_failure?(connection, "expansion_failed") do
+    if recent_expansion_failure?(connection) do
       :ok
     else
       organization
@@ -899,10 +903,33 @@ defmodule Hexpm.Accounts.SSO do
           :ok
 
         _other ->
+          record_expansion_failure(connection)
           record_failure(connection, stage, :expansion_failed)
           enqueue_seats_notice!(connection, "expansion_failed")
       end
     end
+  end
+
+  defp recent_expansion_failure?(connection) do
+    cutoff = DateTime.add(DateTime.utc_now(), -@seats_notice_seconds, :second)
+
+    Repo.exists?(
+      from(row in Connection,
+        where: row.id == ^connection.id,
+        where: row.seat_expansion_failed_at > ^cutoff
+      )
+    )
+  end
+
+  defp record_expansion_failure(connection) do
+    now = DateTime.utc_now()
+
+    Repo.update_all(
+      from(row in Connection, where: row.id == ^connection.id),
+      set: [seat_expansion_failed_at: now, updated_at: now]
+    )
+
+    :ok
   end
 
   @doc """
@@ -1891,18 +1918,6 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   defp maybe_notify_seats_exhausted(_connection, _reason), do: :ok
-
-  defp recent_failure?(connection, code) do
-    cutoff = DateTime.add(DateTime.utc_now(), -@seats_notice_seconds, :second)
-
-    Repo.exists?(
-      from(failure in Failure,
-        where: failure.connection_id == ^connection.id,
-        where: failure.code == ^code,
-        where: failure.inserted_at > ^cutoff
-      )
-    )
-  end
 
   # Rate-limited on the outbox rather than on the failure log: failures are a
   # 20-row ring buffer per connection, and with just-in-time membership on

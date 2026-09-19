@@ -90,13 +90,19 @@ defmodule HexpmWeb.SSOController do
     |> text("Too many SSO login attempts. Try again later.")
   end
 
+  # A signed-in member is counted as themselves, so someone else behind the same
+  # egress address cannot spend their attempts. Only an anonymous start, which
+  # is a just-in-time organization, falls back to the organization and address.
   defp allow_start?(conn, organization) do
     match?({:allow, _data}, Attack.sso_start_ip_throttle(conn.remote_ip)) and
-      match?(
-        {:allow, _data},
-        Attack.sso_start_organization_throttle(organization.id, conn.remote_ip)
-      )
+      match?({:allow, _data}, start_subject_throttle(conn, organization))
   end
+
+  defp start_subject_throttle(%{assigns: %{current_user: %{id: user_id}}}, organization),
+    do: Attack.sso_start_user_throttle(user_id, organization.id)
+
+  defp start_subject_throttle(conn, organization),
+    do: Attack.sso_start_organization_throttle(organization.id, conn.remote_ip)
 
   defp initiation_options(conn, organization, params) do
     with {:ok, query} <- decode_initiation_query(conn.query_string),
@@ -209,17 +215,30 @@ defmodule HexpmWeb.SSOController do
     put_resp_header(conn, "cache-control", "no-store")
   end
 
+  # Only a callback whose state this browser does not hold is counted. A bound
+  # state was written into this browser's encrypted session when the login
+  # started, so it cannot be produced by anyone else, and members behind one
+  # egress address no longer spend each other's attempts.
   defp rate_limit_callback(conn, _opts) do
-    case Attack.sso_callback_ip_throttle(conn.remote_ip) do
-      {:allow, _data} ->
-        conn
+    if bound_state?(conn) do
+      conn
+    else
+      case Attack.sso_callback_ip_throttle(conn.remote_ip) do
+        {:allow, _data} ->
+          conn
 
-      {:block, _data} ->
-        conn
-        |> put_status(:too_many_requests)
-        |> text("Too many SSO callback attempts. Try again later.")
-        |> halt()
+        {:block, _data} ->
+          conn
+          |> put_status(:too_many_requests)
+          |> text("Too many SSO callback attempts. Try again later.")
+          |> halt()
+      end
     end
+  end
+
+  defp bound_state?(conn) do
+    state = conn.params["state"]
+    is_binary(state) and valid_sso_state?(conn, state)
   end
 
   def callback(conn, %{"state" => state, "error" => _provider_error}) do

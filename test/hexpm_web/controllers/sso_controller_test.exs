@@ -813,7 +813,7 @@ defmodule HexpmWeb.SSOControllerTest do
       ip = {198, 51, 100, 42}
       time = System.system_time(:millisecond)
 
-      for _attempt <- 1..30 do
+      for _attempt <- 1..300 do
         assert {:allow, _data} = Attack.sso_start_ip_throttle(ip, time: time)
       end
 
@@ -827,32 +827,35 @@ defmodule HexpmWeb.SSOControllerTest do
       refute Repo.exists?(SSO.Transaction)
     end
 
-    test "rate limits starts per organization without locking out another IP", context do
-      ip = {198, 51, 100, 44}
+    test "rate limits starts per account without locking out the rest", context do
       time = System.system_time(:millisecond)
 
       for _attempt <- 1..20 do
         assert {:allow, _data} =
-                 Attack.sso_start_organization_throttle(context.organization.id, ip, time: time)
+                 Attack.sso_start_user_throttle(context.member.id, context.organization.id,
+                   time: time
+                 )
       end
 
       conn =
         build_conn()
-        |> Map.put(:remote_ip, ip)
+        |> Map.put(:remote_ip, {198, 51, 100, 44})
         |> test_login(context.member)
         |> get("/sso/org/#{context.organization.name}")
 
       assert response(conn, 429) =~ "Too many SSO login attempts"
       refute Repo.exists?(SSO.Transaction)
 
-      # The counter is per organization and IP, so exhausting one IP must not
-      # keep the rest of the organization out.
+      # The counter is the account's, so one member exhausting theirs must not
+      # keep another member behind the same egress address out.
+      other = insert(:user)
+      insert(:organization_user, organization: context.organization, user: other, role: "read")
       expect_authorization_request(context.connection)
 
       conn =
         build_conn()
-        |> Map.put(:remote_ip, {198, 51, 100, 45})
-        |> test_login(context.member)
+        |> Map.put(:remote_ip, {198, 51, 100, 44})
+        |> test_login(other)
         |> get("/sso/org/#{context.organization.name}")
 
       assert redirected_to(conn) =~ "https://identity.example.com/authorize"
@@ -872,6 +875,31 @@ defmodule HexpmWeb.SSOControllerTest do
         |> get("/sso/callback/acme", %{state: "any", code: "any"})
 
       assert response(conn, 429) =~ "Too many SSO callback attempts"
+    end
+
+    # The bucket is for callbacks nobody asked for. A state this browser is
+    # carrying was written into its own encrypted session at the start, so
+    # counting it lets one member behind a shared address lock the others out.
+    test "a callback the browser started is not counted against the IP", context do
+      ip = {198, 51, 100, 46}
+      time = System.system_time(:millisecond)
+
+      %{conn: conn, state: state} = begin_login(context)
+
+      for _attempt <- 1..50 do
+        assert {:allow, _data} = Attack.sso_callback_ip_throttle(ip, time: time)
+      end
+
+      conn =
+        conn
+        |> recycle()
+        |> Map.put(:remote_ip, ip)
+        |> get("/sso/callback/#{context.organization.name}", %{state: state})
+
+      # Answered rather than refused with 429: the transaction is consumed and
+      # the browser is sent on.
+      assert redirected_to(conn) == "/dashboard"
+      refute SSO.get_transaction_by_state(state)
     end
 
     test "a code delivered to another organization's callback is refused", context do
