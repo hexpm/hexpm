@@ -1,7 +1,7 @@
 defmodule HexpmWeb.SSOController do
   use HexpmWeb, :controller
 
-  alias Hexpm.Accounts.{OrganizationAuth, SSO}
+  alias Hexpm.Accounts.{OrganizationAuth, Organizations, SSO}
   alias Hexpm.Accounts.SSO.Error
   alias HexpmWeb.Plugs.Attack
   alias HexpmWeb.SSOEnforcement
@@ -68,9 +68,19 @@ defmodule HexpmWeb.SSOController do
       |> redirect(external: uri)
     else
       {:error, reason} ->
-        conn
-        |> put_flash(:error, start_error_message(reason))
-        |> redirect(to: ~p"/dashboard")
+        # A member is told what went wrong. Anyone else gets what an
+        # organization without SSO gets, so the refusals do not report whether
+        # this one has a connection, whether it is enabled, or whether it is
+        # paying. An organization admitting people just in time still identifies
+        # itself by redirecting to its provider, which is inherent to the
+        # feature and documented.
+        if Organizations.access?(organization, conn.assigns.current_user, "read") do
+          conn
+          |> put_flash(:error, start_error_message(reason))
+          |> redirect(to: ~p"/dashboard")
+        else
+          not_found(conn)
+        end
     end
   end
 

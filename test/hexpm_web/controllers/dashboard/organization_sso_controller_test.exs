@@ -593,6 +593,31 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     assert html =~ "Organization API keys and, unless you block them, personal API keys"
   end
 
+  # A member who is not an administrator is told no. Someone outside the
+  # organization is told nothing: 403 against 404 reports whether the
+  # organization has SSO configured and whether it is paying.
+  test "an outsider cannot tell an SSO organization from any other", context do
+    insert(:organization_sso_connection,
+      organization: context.organization,
+      tested_at: DateTime.utc_now(),
+      enabled_at: DateTime.utc_now()
+    )
+
+    outsider = insert(:user)
+
+    conn =
+      build_conn()
+      |> test_login(outsider)
+      |> post("/dashboard/orgs/#{context.organization.name}/sso/disable")
+
+    assert response(conn, 404)
+
+    assert build_conn()
+           |> test_login(context.member)
+           |> post("/dashboard/orgs/#{context.organization.name}/sso/disable")
+           |> response(403)
+  end
+
   test "takes a fresh password before enforcement is turned down", context do
     connection =
       insert(:organization_sso_connection,
@@ -1026,6 +1051,43 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
       connection = SSO.get_connection(context.organization)
       assert connection.jit_seat_policy == "expand"
       assert connection.jit_role == "write"
+    end
+
+    # Admission and the domains it keys on decide who joins and at what role, so
+    # a stolen cookie inside the rolling sudo window must not reach them.
+    test "takes a fresh password", context do
+      insert(:organization_sso_connection, organization: context.organization)
+      verify_domain(context)
+
+      stale = fn ->
+        build_conn()
+        |> test_login(context.admin,
+          sudo_at: NaiveDateTime.add(NaiveDateTime.utc_now(), -5, :minute)
+        )
+      end
+
+      conn =
+        stale.()
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/jit", %{
+          "jit" => %{"jit_seat_policy" => "expand", "jit_role" => "admin"}
+        })
+
+      assert redirected_to(conn) == "/sudo"
+      refute Connection.jit_enabled?(SSO.get_connection(context.organization))
+
+      for path <- ["domains", "domains/verify", "domains/remove"] do
+        conn =
+          stale.()
+          |> post("/dashboard/orgs/#{context.organization.name}/sso/#{path}", %{
+            "domain" => %{"domain" => "attacker.example"},
+            "id" => "1"
+          })
+
+        assert redirected_to(conn) == "/sudo"
+      end
+
+      assert OrganizationDomains.all(context.organization) |> Enum.map(& &1.domain) ==
+               ["example.com"]
     end
 
     test "a read member cannot change it", context do

@@ -202,6 +202,9 @@ defmodule HexpmWeb.SSOControllerTest do
       refute Repo.exists?(SSO.Transaction)
     end
 
+    # The same answer an organization without SSO gives, so the refusal does not
+    # tell an outsider whether this one has a connection, whether it is enabled,
+    # or whether it is paying.
     test "a signed-in nonmember is refused before the provider round trip", context do
       outsider = insert(:user)
 
@@ -210,9 +213,28 @@ defmodule HexpmWeb.SSOControllerTest do
         |> test_login(outsider)
         |> get("/sso/org/#{context.organization.name}")
 
-      assert redirected_to(conn) == "/dashboard"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "not a member"
+      assert response(conn, 404)
       refute Repo.exists?(SSO.Transaction)
+
+      without_sso = insert(:organization)
+      insert(:organization_user, organization: without_sso, user: outsider)
+
+      assert build_conn()
+             |> test_login(outsider)
+             |> get("/sso/org/#{without_sso.name}")
+             |> response(404)
+    end
+
+    test "a member is told why the login could not start", context do
+      SSO.disable(context.organization, audit: audit_data(context.member))
+
+      conn =
+        build_conn()
+        |> test_login(context.member)
+        |> get("/sso/org/#{context.organization.name}")
+
+      assert redirected_to(conn) == "/dashboard"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "not enabled"
     end
 
     test "a signed-in member starts a transaction bound to that account", context do

@@ -12,8 +12,10 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
   # organization's provider with one the attacker controls: disable, unlink
   # every identity, point the connection at another issuer, enable, link.
   # Setting enforcement back to optional takes the gate off every member in one
-  # step and without touching the provider at all. Each of them takes a fresh
-  # password rather than the rolling window login grants.
+  # step and without touching the provider at all. Just-in-time admission and a
+  # verified domain decide who joins and at what role, which is the same
+  # authority by another route. Each of them takes a fresh password rather than
+  # the rolling window login grants.
   plug HexpmWeb.Plugs.Sudo,
        [force: true]
        when action in [
@@ -27,7 +29,11 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
               :configure_enforcement,
               :configure_scim,
               :generate_scim_token,
-              :delete_scim_token
+              :delete_scim_token,
+              :configure_jit,
+              :add_domain,
+              :verify_domain,
+              :remove_domain
             ]
 
   plug HexpmWeb.Plugs.Sudo
@@ -453,8 +459,16 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
     user = conn.assigns.current_user
     organization = Organizations.get(name)
 
+    role = organization && Organizations.get_role(organization, user)
+
     cond do
       is_nil(organization) ->
+        not_found(conn)
+
+      # Before the reachability check, or the split between 404 and any other
+      # answer tells someone outside the organization whether it has SSO
+      # configured and whether it is paying.
+      is_nil(role) ->
         not_found(conn)
 
       not SSO.reachable?(organization) ->
@@ -465,7 +479,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
       # reads as success, so refusing with one would let anyone who can reach
       # the route write `sso.break_glass` rows naming themselves and an action
       # they never ran, and mail the administrators about it.
-      Organizations.get_role(organization, user) != "admin" ->
+      role != "admin" ->
         render_error(conn, 403, message: "You do not have permission for this action.")
 
       true ->
