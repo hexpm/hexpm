@@ -1,6 +1,6 @@
 ## Organization single sign-on
 
-Organization single sign-on (SSO) lets members sign in to an organization through an OpenID Connect (OIDC) identity provider. Customer-created Okta applications are the supported and documented integration. Microsoft Entra has been validated privately against the same connector but is not a supported provider, and there is no Okta Integration Network listing to install the integration from.
+Organization single sign-on (SSO) lets members sign in to an organization through an OpenID Connect (OIDC) identity provider. Okta and Microsoft Entra are the supported providers, each through an application you create in your own tenant. There is no Okta Integration Network listing to install the integration from.
 
 Organization SSO is currently available only to organizations enabled by Hexpm's runtime SSO gate. It is optional and scoped to one Hexpm organization. It does not create accounts, add organization members, or assign roles.
 
@@ -20,7 +20,7 @@ You need:
 * A Hexpm account for every person who will use SSO.
 * Existing organization membership for every person who will link an SSO identity.
 
-Open the Hexpm organization dashboard, select **SSO**, and keep the **Redirect URI** shown there available while configuring Okta. The URI ends in the organization name and is unique to this organization, so an organization configured with another organization's URI cannot complete a login.
+Open the Hexpm organization dashboard, select **SSO**, and keep the **Redirect URI** shown there available while configuring your provider. The URI ends in the organization name and is unique to this organization, so an organization configured with another organization's URI cannot complete a login.
 
 ### Create the Okta application
 
@@ -37,14 +37,29 @@ In the Okta Admin Console, follow Okta's [OIDC app-integration instructions](htt
 
 The application must allow the `openid` and `email` scopes. Hexpm uses the provider subject as the stable identity. The email claim is display data and is used for notifications; it never proves account ownership or grants organization membership.
 
+The issuer to enter in Hexpm is the Okta organization URL, `https://{yourOktaDomain}`. Use the organization issuer rather than a custom authorization server such as `/oauth2/default`; Hexpm is tested and documented against the organization issuer.
+
+### Register the Entra application
+
+In the Microsoft Entra admin center:
+
+1. Open **Identity**, **Applications**, **App registrations**, and select **New registration**.
+2. Under **Supported account types**, choose **Accounts in this organizational directory only**. Hexpm accepts only the tenant-specific issuer, so a multitenant registration gains nothing.
+3. Under **Redirect URI**, choose the **Web** platform and enter the exact **Redirect URI** from the Hexpm SSO dashboard.
+4. Register the application, then copy the **Application (client) ID** and **Directory (tenant) ID** from its **Overview** page.
+5. Open **Certificates & secrets**, add a client secret, and copy its **Value** before leaving the page; it is shown once. Entra client secrets expire, so note the date and rotate before it as described below.
+6. Open the application under **Enterprise applications**, set **Assignment required** to **Yes** under **Properties**, and assign the people or groups who should be able to use the Hexpm integration under **Users and groups**.
+
+The issuer to enter in Hexpm is the tenant-specific v2 issuer, `https://login.microsoftonline.com/{tenant-id}/v2.0`. Do not use `common`, `organizations`, or another tenant-independent issuer: their discovery documents do not return the issuer you configured, and Hexpm requires that they match. Hexpm uses the exact issuer and stable OIDC subject as the identity key for managed and guest users alike, and never substitutes `preferred_username` or the user principal name for a missing email claim.
+
 ### Configure Hexpm
 
 On the organization's **SSO** dashboard:
 
-1. Enter the exact Okta organization **Issuer URL**, `https://{yourOktaDomain}`. Use the organization issuer rather than a custom authorization server such as `/oauth2/default`; Hexpm is tested and documented against the organization issuer. Hexpm requires an HTTPS issuer with no query or fragment and requires the provider discovery document to return that exact issuer.
+1. Enter the **Issuer URL** for your provider, exactly as given above. Hexpm requires an HTTPS issuer with no query or fragment and requires the provider discovery document to return that exact issuer.
 2. Enter the application's **Client ID** and **Client secret**.
 3. Select **Save configuration**.
-4. Select **Test connection** and complete the Okta sign-in as the same Hexpm administrator who saved the configuration.
+4. Select **Test connection** and complete the provider sign-in as the same Hexpm administrator who saved the configuration.
 5. After the test succeeds, select **Enable SSO login**.
 
 The status changes from **Not tested** after saving, to **Tested, disabled** after a successful test, and to **Enabled** after SSO login is enabled.
@@ -61,19 +76,6 @@ The **Organization / Initiate Login URI** is organization-bound; Hexpm never per
 * Unknown parameters are ignored.
 
 Every accepted initiation creates fresh state, nonce, and PKCE values. Custom Okta dashboard tiles, OIN Wizard-generated instances, and public OIN listings are not supported launch claims. Tiles and a Wizard-generated instance both work and have been exercised, so for those this is a decision about what Hexpm will document and answer for rather than a gap in what has been tried. A public listing has never been submitted for review, so it does not exist.
-
-### Microsoft Entra private validation
-
-Microsoft Entra uses the same provider-neutral OIDC connection. Hexpm has validated it privately across managed users, guest users, missing and unexpected claims, secret rotation, and signing-key rotation. That validation is not a support claim: supporting a second provider is a separate decision covering documentation, fixtures, and what Hexpm will answer for when a customer's provider misbehaves, and it has not been taken.
-
-The steps below describe an approved private validation, not general use:
-
-1. Register a Web application with the exact Hexpm redirect URI.
-2. Use the tenant-specific v2 issuer, `https://login.microsoftonline.com/{tenant-id}/v2.0`. Do not use `common`, `organizations`, or a tenant-independent issuer.
-3. Configure the application's client ID and client secret in Hexpm, test the connection, and enable it only for the validation organization.
-4. Assign only the managed and guest test users included in the validation.
-
-Hexpm uses the exact issuer and stable OIDC subject as the identity key. Hexpm does not substitute `preferred_username` or UPN as an email address.
 
 ### Link a member's account
 
@@ -132,7 +134,13 @@ Shorter is stricter and more interruptive. The lifetime is what bounds how long 
 
 Provisioning lets your provider create and deactivate members here as you assign and deactivate them there. It is separate from SSO login: SSO proves a person may authenticate now, provisioning changes who is a member.
 
-On the organization's **SSO** dashboard, under **Provisioning (SCIM)**, choose what happens when the seats run out and the role provisioned members join with, then generate the bearer token. The token is shown once; regenerate it to replace it, and it is revoked automatically if the connection is pointed at a different provider. In your provider's SCIM integration, use the **SCIM base URL** from the dashboard with that token. For Okta, enable the provisioning features you want: **Create Users**, **Update User Attributes**, and **Deactivate Users** each work on their own, so you can start with deactivation only.
+On the organization's **SSO** dashboard, under **Provisioning (SCIM)**, choose what happens when the seats run out and the role provisioned members join with, then generate the bearer token. The token is shown once; regenerate it to replace it, and it is revoked automatically if the connection is pointed at a different provider. Provisioning is configured on a second application in your provider, separate from the one that handles login, using the **SCIM base URL** from the dashboard and that token.
+
+In Okta, add **SCIM 2.0 Test App (OAuth Bearer Token)** from the application catalog. Under **Provisioning**, **Integration**, enter the SCIM base URL and the bearer token and test the API credentials. Under **To App**, enable the provisioning features you want: **Create Users**, **Update User Attributes**, and **Deactivate Users** each work on their own, so you can start with deactivation only. Then assign the same people or groups as the login application.
+
+In Microsoft Entra, open **Enterprise applications**, select **New application**, then **Create your own application**, and choose **Integrate any other application you don't find in the gallery**. The application registered for login cannot be used here; Entra offers provisioning only on an enterprise application created this way. Under **Provisioning**, choose the **Automatic** mode, enter the SCIM base URL as the tenant URL and the bearer token as the secret token, and test the connection. Keep the default attribute mappings, turn provisioning on with its scope set to assigned users and groups, and assign people or groups under **Users and groups**. Entra sends changes on its own cycle, about every forty minutes and sometimes longer; **Provision on demand** applies one person's assignment, deactivation, or reactivation immediately, while a permanent deletion always waits for the next cycle.
+
+Hexpm matches a provisioned person by `userName`, so the mapping must produce the email address the person verified on Hexpm. Entra's default maps it from the user principal name; if your users' principal names are not their email addresses, map it from `mail` instead. Hexpm reads `userName`, `externalId`, and `active` and ignores every other attribute.
 
 What each operation does:
 
@@ -240,18 +248,18 @@ The two MFA policies do not compete, because they protect different things. The 
 
 An SSO authentication never suppresses a personal Hexpm two-factor prompt, because it never establishes the account session in the first place. It also never satisfies step-up re-authentication (sudo), which stays on credentials the account itself owns: password, GitHub, an authenticator code, or a recovery code. Configure the required MFA and conditional-access policy for organization access in your provider.
 
-Okta controls authentication to the SSO application. Hexpm remains the source of truth for organization membership and roles. Removing an Okta assignment does not remove the member from Hexpm. Remove the member in Hexpm to revoke organization access.
+Your provider controls authentication to the SSO application. Hexpm remains the source of truth for organization membership and roles. Removing a provider assignment removes the member from Hexpm only when provisioning is connected; otherwise, remove the member in Hexpm to revoke organization access.
 
 ### Rotate the client secret
 
-Open the Okta application's **General** settings and use **Client Credentials** to generate a new secret. Keep the old secret active during the overlap; Okta documents this process in [Client secret rotation](https://developer.okta.com/docs/guides/client-secret-rotation-key/main/).
+In Okta, open the application's **General** settings and use **Client Credentials** to generate a new secret. Keep the old secret active during the overlap; Okta documents this process in [Client secret rotation](https://developer.okta.com/docs/guides/client-secret-rotation-key/main/). In Microsoft Entra, open the application's **Certificates & secrets** and add a new client secret; the old one stays valid until you delete it.
 
 On the Hexpm SSO dashboard:
 
 1. Enter the new secret under **Client secret rotation** and select **Save replacement**.
 2. Select **Test replacement** and complete the provider sign-in.
 3. Select **Complete rotation** only after the replacement test succeeds.
-4. Return to Okta and deactivate or delete the old secret.
+4. Return to your provider and deactivate or delete the old secret.
 
 The active secret continues serving logins until the tested replacement is promoted.
 
@@ -270,8 +278,9 @@ Organization administrators can unlink an account from the **Linked accounts** s
 The SSO dashboard shows recent failures using stable stage and error codes. Check these common causes:
 
 * **Configuration cannot be saved:** confirm that the issuer is an exact HTTPS URL and that its discovery and key endpoints are publicly reachable over HTTPS.
-* **Okta rejects the callback:** compare the Okta sign-in redirect URI with the **Redirect URI** shown by Hexpm, including the scheme, host, path, and port.
-* **The user cannot open the Okta application:** confirm that the user or one of their groups is assigned to the application.
+* **The provider rejects the callback:** compare the redirect URI registered in the provider with the **Redirect URI** shown by Hexpm, including the scheme, host, path, and port.
+* **Saving an Entra configuration reports an issuer mismatch:** the issuer is `common`, `organizations`, or another tenant-independent endpoint. Use `https://login.microsoftonline.com/{tenant-id}/v2.0`.
+* **The user cannot open the application:** confirm that the user or one of their groups is assigned to the application.
 * **The connection test fails:** restart it from the same browser while signed in as the Hexpm administrator who saved the configuration and initiated the test. If that administrator is unavailable, disable SSO if it is enabled, have a current administrator save the existing configuration again, then test and re-enable it. Leaving the client secret blank while re-saving keeps the current secret.
 * **Account linking says the account is not a member:** add the existing Hexpm account to the organization, then restart from the organization login URL.
 * **A linked identity conflicts:** unlink the existing organization link before attempting to connect the same provider identity or Hexpm account again.
@@ -281,7 +290,7 @@ Do not send client secrets, authorization codes, tokens, cookies, or raw callbac
 
 ### Release scope
 
-Enabled organizations can use the organization login URL and third-party-initiated login. Custom Okta dashboard tiles and Microsoft Entra are not supported, and there is no public Okta Integration Network listing. Tiles and Entra both work and have been exercised privately; supporting them is an open release decision rather than an untested path. The OIN listing is different in kind: the integration was built and exercised, but it was never submitted for review, so no listing exists to install from.
+Enabled organizations can use the organization login URL and third-party-initiated login, with Okta or Microsoft Entra as the provider. Custom Okta dashboard tiles are not supported, and there is no public Okta Integration Network listing. Tiles work and have been exercised; supporting them is an open release decision rather than an untested path. The OIN listing is different in kind: the integration was built and exercised, but it was never submitted for review, so no listing exists to install from.
 
 This release supports SCIM provisioning of members (the Users resource). It does not support SAML, account creation, group or role synchronization, or OIDC logout.
 

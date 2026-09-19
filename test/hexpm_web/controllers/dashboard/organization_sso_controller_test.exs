@@ -38,7 +38,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
 
     assert html =~ "Single sign-on"
     assert html =~ "Redirect URI"
-    assert html =~ "Okta is the documented pilot integration"
+    assert html =~ "Okta and Microsoft Entra are the documented"
     assert html =~ "Required scopes"
     assert html =~ "openid email"
     refute html =~ "stored-client-secret"

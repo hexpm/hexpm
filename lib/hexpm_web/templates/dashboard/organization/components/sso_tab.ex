@@ -31,8 +31,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
         <div class="min-w-0 flex-1">
           <h2 class="text-xl font-semibold text-grey-900 dark:text-grey-100">Single sign-on</h2>
           <p class="mt-2 text-sm text-grey-600 dark:text-grey-300">
-            Configure a standards-based OpenID Connect provider. Okta is the documented pilot integration, and
-            conventional Hexpm login remains available.
+            Configure a standards-based OpenID Connect provider. Okta and Microsoft Entra are the documented
+            providers, and conventional Hexpm login remains available.
           </p>
         </div>
         <div class="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
