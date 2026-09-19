@@ -103,7 +103,11 @@ defmodule Hexpm.Accounts.SSO.Connection do
   end
 
   @jit_seat_policies ~w(block expand)
-  @jit_roles ~w(admin write read)
+
+  # The provider decides who arrives; an administrator here decides who runs the
+  # organization. Admitting someone as an administrator would hand the provider
+  # both, and an administrator can elevate a member afterwards.
+  @jit_roles ~w(write read)
 
   @doc """
   Turns just-in-time membership on or off. `jit_seat_policy` is required to turn

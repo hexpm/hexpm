@@ -289,7 +289,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
             name="jit[jit_role]"
             label="Role for new members"
             value={@connection.jit_role}
-            options={[{"Read", "read"}, {"Write", "write"}, {"Admin", "admin"}]}
+            options={[{"Read", "read"}, {"Write", "write"}]}
             variant="light"
           />
           <div class="sm:col-span-2">

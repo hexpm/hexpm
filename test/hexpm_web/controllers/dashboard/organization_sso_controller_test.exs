@@ -1069,7 +1069,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
       conn =
         stale.()
         |> post("/dashboard/orgs/#{context.organization.name}/sso/jit", %{
-          "jit" => %{"jit_seat_policy" => "expand", "jit_role" => "admin"}
+          "jit" => %{"jit_seat_policy" => "expand", "jit_role" => "write"}
         })
 
       assert redirected_to(conn) == "/sudo"
@@ -1088,6 +1088,25 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
 
       assert OrganizationDomains.all(context.organization) |> Enum.map(& &1.domain) ==
                ["example.com"]
+    end
+
+    # The provider decides who arrives. Who administers the organization is the
+    # administrators' to decide, and they can elevate a member afterwards.
+    test "will not admit people as administrators", context do
+      insert(:organization_sso_connection, organization: context.organization)
+      verify_domain(context)
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/jit", %{
+          "jit" => %{"jit_seat_policy" => "block", "jit_role" => "admin"}
+        })
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error)
+      connection = SSO.get_connection(context.organization)
+      refute Connection.jit_enabled?(connection)
+      assert connection.jit_role == "read"
     end
 
     test "a read member cannot change it", context do
