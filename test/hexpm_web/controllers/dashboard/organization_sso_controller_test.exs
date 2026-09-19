@@ -309,7 +309,11 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
        }}
     end)
 
-    conn = conn |> recycle() |> get("/sso/callback", %{state: state, code: "code"})
+    conn =
+      conn
+      |> recycle()
+      |> get("/sso/callback/#{context.organization.name}", %{state: state, code: "code"})
+
     assert redirected_to(conn) == "/dashboard/orgs/#{context.organization.name}/sso"
     assert Repo.get!(Connection, connection.id).tested_at
 

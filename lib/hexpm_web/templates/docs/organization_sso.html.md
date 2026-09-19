@@ -20,7 +20,7 @@ You need:
 * A Hexpm account for every person who will use SSO.
 * Existing organization membership for every person who will link an SSO identity.
 
-Open the Hexpm organization dashboard, select **SSO**, and keep the **Redirect URI** shown there available while configuring Okta.
+Open the Hexpm organization dashboard, select **SSO**, and keep the **Redirect URI** shown there available while configuring Okta. The URI ends in the organization name and is unique to this organization, so an organization configured with another organization's URI cannot complete a login.
 
 ### Create the Okta application
 

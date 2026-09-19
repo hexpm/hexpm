@@ -60,7 +60,7 @@ defmodule HexpmWeb.SSOController do
              organization,
              conn.assigns.current_user,
              return_path,
-             SSOEnforcement.callback_url(),
+             SSOEnforcement.callback_url(organization),
              opts
            ) do
       conn
@@ -251,7 +251,7 @@ defmodule HexpmWeb.SSOController do
 
   defp exchange_and_complete(conn, transaction, code) do
     with {:ok, user, user_session_id} <- account_session(conn, transaction),
-         {:ok, claims} <- SSO.exchange_code(transaction, code, SSOEnforcement.callback_url()),
+         {:ok, claims} <- SSO.exchange_code(transaction, code, arrival_url(conn)),
          :ok <- SSO.maybe_expand_seats(transaction, user, claims),
          {:ok, result} <-
            SSO.complete_callback(transaction, claims, user, user_session_id, audit_data(conn)) do
@@ -268,6 +268,12 @@ defmodule HexpmWeb.SSOController do
         callback_error(conn, transaction, reason)
     end
   end
+
+  # The address the provider actually sent the browser to, which exchange_code/3
+  # holds against the transaction's own. Built from the request rather than from
+  # the transaction, so a code issued for one organization cannot be redeemed at
+  # another organization's callback.
+  defp arrival_url(conn), do: HexpmWeb.Endpoint.url() <> conn.request_path
 
   defp bound_transaction(conn, state) do
     if is_binary(state) and valid_sso_state?(conn, state) do
@@ -468,7 +474,7 @@ defmodule HexpmWeb.SSOController do
            organization,
            conn.assigns.current_user,
            nil,
-           SSOEnforcement.callback_url(),
+           SSOEnforcement.callback_url(organization),
            entrypoint: "cli",
            target_user_session_id: authorization.user_session_id
          ) do

@@ -86,7 +86,10 @@ defmodule HexpmWeb.SSOControllerTest do
       conn =
         conn
         |> session_less_conn()
-        |> get("/sso/callback", %{state: state, code: "authorization-code"})
+        |> get("/sso/callback/#{context.organization.name}", %{
+          state: state,
+          code: "authorization-code"
+        })
 
       assert redirected_to(conn) == "/login"
       refute get_session(conn, "session_token")
@@ -343,7 +346,10 @@ defmodule HexpmWeb.SSOControllerTest do
 
       conn
       |> recycle()
-      |> get("/sso/callback", %{state: state, code: "authorization-code"})
+      |> get("/sso/callback/#{context.organization.name}", %{
+        state: state,
+        code: "authorization-code"
+      })
 
       second = Repo.one!(OrgSession)
       assert second.id == first.id
@@ -412,7 +418,11 @@ defmodule HexpmWeb.SSOControllerTest do
         {:error, %SSO.Error{stage: :token, code: :token_endpoint_rejected_request}}
       end)
 
-      conn = get(conn |> recycle(), "/sso/callback", %{state: state, code: "authorization-code"})
+      conn =
+        get(conn |> recycle(), "/sso/callback/#{context.organization.name}", %{
+          state: state,
+          code: "authorization-code"
+        })
 
       assert redirected_to(conn) == "/dashboard"
       assert Phoenix.Flash.get(conn.assigns.flash, :error)
@@ -462,7 +472,10 @@ defmodule HexpmWeb.SSOControllerTest do
         conn
         |> recycle()
         |> test_login(other)
-        |> get("/sso/callback", %{state: state, code: "authorization-code"})
+        |> get("/sso/callback/#{context.organization.name}", %{
+          state: state,
+          code: "authorization-code"
+        })
 
       assert redirected_to(conn) == "/dashboard"
 
@@ -509,7 +522,10 @@ defmodule HexpmWeb.SSOControllerTest do
       conn =
         conn
         |> session_less_conn()
-        |> get("/sso/callback", %{state: state, code: "authorization-code"})
+        |> get("/sso/callback/#{context.organization.name}", %{
+          state: state,
+          code: "authorization-code"
+        })
 
       assert redirected_to(conn) == "/login"
       refute get_session(conn, "session_token")
@@ -618,7 +634,10 @@ defmodule HexpmWeb.SSOControllerTest do
       conn =
         conn
         |> recycle()
-        |> get("/sso/callback", %{state: state, code: "authorization-code"})
+        |> get("/sso/callback/#{context.organization.name}", %{
+          state: state,
+          code: "authorization-code"
+        })
 
       assert redirected_to(conn) == "/dashboard/orgs/#{context.organization.name}"
       refute get_session(conn, "tfa_user_id")
@@ -718,7 +737,11 @@ defmodule HexpmWeb.SSOControllerTest do
       )
 
       build_conn() |> get("/sso/org/#{context.organization.name}") |> response(404)
-      build_conn() |> get("/sso/callback", %{state: "unknown", code: "code"}) |> response(404)
+
+      build_conn()
+      |> get("/sso/callback/#{context.organization.name}", %{state: "unknown", code: "code"})
+      |> response(404)
+
       build_conn() |> get("/sso/link") |> response(404)
       build_conn() |> post("/sso/link") |> response(404)
       build_conn() |> post("/sso/link/cancel") |> response(404)
@@ -751,7 +774,7 @@ defmodule HexpmWeb.SSOControllerTest do
       log =
         capture_debug_log(fn ->
           build_conn()
-          |> get("/sso/callback", %{state: state, code: code})
+          |> get("/sso/callback/acme", %{state: state, code: code})
           |> response(302)
         end)
 
@@ -824,9 +847,35 @@ defmodule HexpmWeb.SSOControllerTest do
       conn =
         build_conn()
         |> Map.put(:remote_ip, ip)
-        |> get("/sso/callback", %{state: "any", code: "any"})
+        |> get("/sso/callback/acme", %{state: "any", code: "any"})
 
       assert response(conn, 429) =~ "Too many SSO callback attempts"
+    end
+
+    test "a code delivered to another organization's callback is refused", context do
+      other = insert(:organization)
+
+      insert(:organization_sso_connection,
+        organization: other,
+        tested_at: DateTime.utc_now(),
+        enabled_at: DateTime.utc_now()
+      )
+
+      %{conn: conn, state: state} = begin_login(context)
+
+      conn =
+        conn
+        |> recycle()
+        |> get("/sso/callback/#{other.name}", %{state: state, code: "authorization-code"})
+
+      assert redirected_to(conn) == "/dashboard"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, "error") =~ "redirect_uri_mismatch"
+
+      # The transaction is consumed, so the code cannot be replayed at the
+      # organization's own callback afterwards.
+      refute SSO.get_transaction_by_state(state)
+      refute Repo.exists?(OrgSession)
     end
 
     test "callback state is bound to the browser that started the transaction", context do
@@ -835,7 +884,10 @@ defmodule HexpmWeb.SSOControllerTest do
       conn =
         build_conn()
         |> test_login(context.member)
-        |> get("/sso/callback", %{state: state, code: "authorization-code"})
+        |> get("/sso/callback/#{context.organization.name}", %{
+          state: state,
+          code: "authorization-code"
+        })
 
       assert redirected_to(conn) == "/dashboard"
       refute Repo.exists?(Identity)
@@ -854,7 +906,10 @@ defmodule HexpmWeb.SSOControllerTest do
         conn
         |> recycle()
         |> test_login(context.member)
-        |> get("/sso/callback", %{state: state, code: "authorization-code"})
+        |> get("/sso/callback/#{context.organization.name}", %{
+          state: state,
+          code: "authorization-code"
+        })
 
       assert redirected_to(replayed) == "/dashboard"
       assert Phoenix.Flash.get(replayed.assigns.flash, :error) =~ "invalid_state"
@@ -867,7 +922,10 @@ defmodule HexpmWeb.SSOControllerTest do
       conn =
         conn
         |> recycle()
-        |> get("/sso/callback", %{state: state, error: "access_denied"})
+        |> get("/sso/callback/#{context.organization.name}", %{
+          state: state,
+          error: "access_denied"
+        })
 
       assert redirected_to(conn) == "/dashboard"
       assert Repo.one!(SSO.Transaction).consumed_at
@@ -882,7 +940,10 @@ defmodule HexpmWeb.SSOControllerTest do
       failed =
         conn
         |> recycle()
-        |> get("/sso/callback", %{state: state, error: "access_denied"})
+        |> get("/sso/callback/#{context.organization.name}", %{
+          state: state,
+          error: "access_denied"
+        })
 
       refute state in List.wrap(get_session(failed, "sso_states"))
     end
@@ -893,7 +954,7 @@ defmodule HexpmWeb.SSOControllerTest do
       failed =
         conn
         |> recycle()
-        |> get("/sso/callback", %{state: state})
+        |> get("/sso/callback/#{context.organization.name}", %{state: state})
 
       refute state in List.wrap(get_session(failed, "sso_states"))
     end
@@ -909,7 +970,12 @@ defmodule HexpmWeb.SSOControllerTest do
           conn = conn |> recycle() |> get("/sso/org/#{context.organization.name}")
           assert_receive {:sso_state, dead_state, _redirect_uri}
 
-          conn |> recycle() |> get("/sso/callback", %{state: dead_state, error: "access_denied"})
+          conn
+          |> recycle()
+          |> get("/sso/callback/#{context.organization.name}", %{
+            state: dead_state,
+            error: "access_denied"
+          })
         end)
 
       assert live_state in List.wrap(get_session(conn, "sso_states"))
@@ -1231,9 +1297,14 @@ defmodule HexpmWeb.SSOControllerTest do
       {:ok, %{issuer: connection.issuer, subject: subject, email: email, jwks_document: nil}}
     end)
 
+    transaction = SSO.get_transaction_by_state(state)
+
     conn
     |> recycle()
-    |> get("/sso/callback", %{state: state, code: "authorization-code"})
+    |> get("/sso/callback/#{transaction.connection.organization.name}", %{
+      state: state,
+      code: "authorization-code"
+    })
   end
 
   defp expect_authorization_request(connection, opts \\ []) do

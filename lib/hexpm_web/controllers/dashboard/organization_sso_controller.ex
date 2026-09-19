@@ -76,7 +76,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
              organization,
              conn.assigns.current_user,
              secret_slot,
-             SSOEnforcement.callback_url()
+             SSOEnforcement.callback_url(organization)
            ) do
         {:ok, transaction, uri} ->
           conn
