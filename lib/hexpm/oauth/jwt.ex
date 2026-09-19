@@ -83,6 +83,16 @@ defmodule Hexpm.OAuth.JWT do
   end
 
   @doc """
+  Verifies the token signature and returns its claims without enforcing the
+  time-based claims. Revocation uses this: an expired but authentically signed
+  token must still be found so its session can be ended.
+  """
+  def verify_signature(token) do
+    signer = get_signer()
+    verify(token, signer)
+  end
+
+  @doc """
   Extracts the JTI (JWT ID) from a token without full validation.
   Useful for revocation checks.
   """
