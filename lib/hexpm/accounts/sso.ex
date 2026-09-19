@@ -1514,7 +1514,9 @@ defmodule Hexpm.Accounts.SSO do
   @doc """
   The organizations an authorization covers, each with the requirements the
   session it is for still has to meet. Membership removal invalidates the
-  request.
+  request, and so does an organization that stopped asking: an organization
+  whose connection was disabled while the request was open is dropped, because
+  the page's only button for it starts a login the connection refuses.
   """
   @spec authorization_status(Authorization.t()) :: [{Organization.t(), [String.t()]}]
   def authorization_status(%Authorization{} = authorization) do
@@ -1529,14 +1531,15 @@ defmodule Hexpm.Accounts.SSO do
       )
 
     if length(organizations) == length(authorization.organization_ids) do
-      required =
-        Hexpm.Accounts.OrganizationAuth.required(
-          user,
-          Enum.map(organizations, & &1.name),
-          authorization.user_session_id
-        )
+      names = Enum.map(organizations, & &1.name)
+      governed = Hexpm.Accounts.OrganizationAuth.governed(user, names) |> MapSet.new(& &1.id)
 
-      Enum.map(organizations, fn organization ->
+      required =
+        Hexpm.Accounts.OrganizationAuth.required(user, names, authorization.user_session_id)
+
+      organizations
+      |> Enum.filter(&MapSet.member?(governed, &1.id))
+      |> Enum.map(fn organization ->
         entry = Enum.find(required, &(&1.organization == organization.name))
         {organization, if(entry, do: entry.requirements, else: [])}
       end)

@@ -1125,6 +1125,22 @@ defmodule HexpmWeb.SSOControllerTest do
       assert authorization.organization_ids == [context.organization.id]
     end
 
+    test "closes itself when the organization stops asking", context do
+      require_sso(context)
+      link_member(context)
+      %{session: session} = cli_session(context)
+      code = request_authorization(context, session)
+
+      {:ok, _connection} = SSO.disable(context.organization, audit: audit_data(context.member))
+
+      conn =
+        build_conn() |> test_login(context.member) |> get("/organizations/authorize?code=#{code}")
+
+      assert redirected_to(conn) == "/dashboard"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "no longer open"
+      assert Repo.one!(SSO.Authorization).consumed_at
+    end
+
     test "asks the person to confirm who they are first", context do
       require_sso(context)
       link_member(context)

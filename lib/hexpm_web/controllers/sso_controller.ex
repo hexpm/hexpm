@@ -420,7 +420,11 @@ defmodule HexpmWeb.SSOController do
 
       authorization ->
         case SSO.authorization_status(authorization) do
+          # Nothing left to authenticate for, and nothing the page could offer.
+          # Closing it here keeps the verification URI from standing open for
+          # the rest of its ten minutes.
           [] ->
+            SSO.consume_authorization!(authorization)
             expired_authorization(conn, code)
 
           status ->

@@ -1133,7 +1133,7 @@ defmodule HexpmWeb.SSOEnforcementTest do
         conn
         |> Plug.Conn.put_session("device_code_verified", %{
           "user_code" => response.user_code,
-          "verified_at" => NaiveDateTime.to_iso8601(NaiveDateTime.utc_now())
+          "expires_at" => DateTime.to_iso8601(DateTime.add(DateTime.utc_now(), 900, :second))
         })
         |> post("/oauth/device/authorize", %{
           "action" => "authorize",
@@ -1416,7 +1416,7 @@ defmodule HexpmWeb.SSOEnforcementTest do
         conn
         |> Plug.Conn.put_session("device_code_verified", %{
           "user_code" => response.user_code,
-          "verified_at" => NaiveDateTime.to_iso8601(NaiveDateTime.utc_now())
+          "expires_at" => DateTime.to_iso8601(DateTime.add(DateTime.utc_now(), 900, :second))
         })
         |> get("/oauth/device/authorize")
         |> html_response(200)
@@ -1480,7 +1480,7 @@ defmodule HexpmWeb.SSOEnforcementTest do
       conn
       |> Plug.Conn.put_session("device_code_verified", %{
         "user_code" => response.user_code,
-        "verified_at" => NaiveDateTime.to_iso8601(NaiveDateTime.utc_now())
+        "expires_at" => DateTime.to_iso8601(DateTime.add(DateTime.utc_now(), 900, :second))
       })
       |> post("/oauth/device/authorize", %{
         "action" => "authorize",

@@ -63,7 +63,7 @@ defmodule HexpmWeb.DeviceControllerTest do
     alias Hexpm.UserSessions
 
     sudo = Keyword.get(opts, :sudo, true)
-    verified_at = Keyword.get(opts, :verified_at, NaiveDateTime.utc_now())
+    expires_at = Keyword.get(opts, :expires_at, DateTime.add(DateTime.utc_now(), 900, :second))
 
     {:ok, _session, session_token} =
       UserSessions.create_browser_session(user,
@@ -75,7 +75,7 @@ defmodule HexpmWeb.DeviceControllerTest do
       "session_token" => Base.encode64(session_token),
       "device_code_verified" => %{
         "user_code" => user_code,
-        "verified_at" => NaiveDateTime.to_iso8601(verified_at)
+        "expires_at" => DateTime.to_iso8601(expires_at)
       }
     }
 
@@ -204,7 +204,7 @@ defmodule HexpmWeb.DeviceControllerTest do
 
       flag = get_session(conn, "device_code_verified")
       assert flag["user_code"] == device_code.user_code
-      assert {:ok, _} = NaiveDateTime.from_iso8601(flag["verified_at"])
+      assert flag["expires_at"] == DateTime.to_iso8601(device_code.expires_at)
     end
 
     test "does not require sudo", %{user: user, device_code: device_code} do
@@ -310,41 +310,34 @@ defmodule HexpmWeb.DeviceControllerTest do
       user: user,
       device_code: device_code
     } do
-      expired_at = NaiveDateTime.shift(NaiveDateTime.utc_now(), minute: -6)
+      expired_at = DateTime.add(DateTime.utc_now(), -60, :second)
 
       conn =
         login_with_verified_code(build_conn(), user, device_code.user_code,
-          verified_at: expired_at
+          expires_at: expired_at
         )
 
       conn = get(conn, ~p"/oauth/device/authorize")
       assert redirected_to(conn) == "/oauth/device"
     end
 
-    # The window is about how recently this browser saw the page, and going
-    # through an organization's provider and its MFA is a round trip that can
-    # take longer than the window did from the POST that verified the code.
-    test "restarts the window each time the page is shown", %{
+    # Going through an organization's provider and its MFA is a round trip that
+    # can take longer than a window of the marker's own, and coming back to a
+    # cleared marker means starting the whole device authorization again.
+    test "lasts as long as the device authorization it names", %{
       user: user,
       device_code: device_code
     } do
-      almost_expired = NaiveDateTime.shift(NaiveDateTime.utc_now(), minute: -4)
-
       conn =
         login_with_verified_code(build_conn(), user, device_code.user_code,
-          verified_at: almost_expired
+          expires_at: device_code.expires_at
         )
 
       conn = get(conn, ~p"/oauth/device/authorize")
       assert html_response(conn, 200)
 
-      {:ok, refreshed} =
-        conn
-        |> get_session("device_code_verified")
-        |> Map.fetch!("verified_at")
-        |> NaiveDateTime.from_iso8601()
-
-      assert NaiveDateTime.diff(NaiveDateTime.utc_now(), refreshed) < 60
+      assert get_session(conn, "device_code_verified")["expires_at"] ==
+               DateTime.to_iso8601(device_code.expires_at)
     end
 
     test "redirects to /oauth/device when device code has expired", %{
@@ -603,11 +596,11 @@ defmodule HexpmWeb.DeviceControllerTest do
       user: user,
       device_code: device_code
     } do
-      expired_at = NaiveDateTime.shift(NaiveDateTime.utc_now(), minute: -6)
+      expired_at = DateTime.add(DateTime.utc_now(), -60, :second)
 
       conn =
         login_with_verified_code(build_conn(), user, device_code.user_code,
-          verified_at: expired_at
+          expires_at: expired_at
         )
 
       conn =
