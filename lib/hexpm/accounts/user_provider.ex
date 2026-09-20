@@ -19,6 +19,7 @@ defmodule Hexpm.Accounts.UserProvider do
     |> validate_length(:provider_uid, count: :bytes, max: 255)
     |> validate_length(:provider_email, count: :bytes, max: 255)
     |> unique_constraint([:provider, :provider_uid])
+    |> unique_constraint([:user_id, :provider])
   end
 
   def build(user, provider, provider_uid, provider_email, provider_data \\ %{}) do
