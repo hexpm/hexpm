@@ -15,7 +15,7 @@ defmodule HexpmWeb.API.OrganizationController do
   plug :authorize,
        [
          domains: [{"api", "write"}],
-         fun: {AuthHelpers, :organization_access, [organization_level: "write"]}
+         fun: {AuthHelpers, :organization_access, [organization_role: "admin"]}
        ]
        when action == :update
 
