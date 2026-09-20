@@ -51,8 +51,9 @@ defmodule Hexpm.OAuth.Tokens do
     client_id = Keyword.get(opts, :client_id)
     validate = Keyword.get(opts, :validate, true)
     preload = Keyword.get(opts, :preload, [:user])
+    verify = Keyword.get(opts, :verify, :full)
 
-    with {:ok, claims} <- JWT.verify_and_decode(jwt_token),
+    with {:ok, claims} <- verify_token(jwt_token, verify),
          {:ok, jti} <- extract_jti_for_type(claims, type),
          {:ok, token, session_live?} <- find_token_by_jti(jti, type, client_id),
          :ok <- maybe_validate(token, session_live?, validate, type),
@@ -64,6 +65,12 @@ defmodule Hexpm.OAuth.Tokens do
       other -> other
     end
   end
+
+  # `:full` enforces the time-based claims; `:signature` verifies only that
+  # hexpm signed the token, so an expired token presented for revocation is
+  # still found by jti.
+  defp verify_token(jwt_token, :full), do: JWT.verify_and_decode(jwt_token)
+  defp verify_token(jwt_token, :signature), do: JWT.verify_signature(jwt_token)
 
   @doc """
   Creates a token for a user with the given client and scopes.

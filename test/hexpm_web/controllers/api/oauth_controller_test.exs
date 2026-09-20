@@ -719,7 +719,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert Repo.get(Hexpm.UserSession, token.user_session_id).revoked_at
     end
 
-    test "revoking an access token leaves the session alone", %{
+    test "revoking an access token takes the session with it", %{
       revoke_client: client,
       revoke_token: token,
       revoke_access_token: access_token
@@ -734,7 +734,61 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       |> response(200)
 
       assert Tokens.revoked?(Repo.get(Token, token.id))
-      refute Repo.get(Hexpm.UserSession, token.user_session_id).revoked_at
+      assert Repo.get(Hexpm.UserSession, token.user_session_id).revoked_at
+    end
+
+    # `mix hex.user deauth` presents the access token, which lives 30 minutes
+    # and so is usually expired by then. Revocation still has to find it and end
+    # the session; otherwise the 30-day refresh token keeps working.
+    test "revoking an expired access token still takes the session with it", %{
+      revoke_client: client,
+      revoke_token: token
+    } do
+      expired = expired_token(token, token.jti)
+
+      assert {:error, _} = Tokens.lookup(expired, :access, validate: false)
+
+      build_conn()
+      |> post(~p"/api/oauth/revoke", %{token: expired, client_id: client.client_id})
+      |> response(200)
+
+      assert Repo.get(Hexpm.UserSession, token.user_session_id).revoked_at
+    end
+
+    test "revoking an expired refresh token still takes the session with it", %{
+      revoke_client: client,
+      revoke_token: token
+    } do
+      expired = expired_token(token, token.refresh_jti)
+
+      assert {:error, _} = Tokens.lookup(expired, :refresh, validate: false)
+
+      build_conn()
+      |> post(~p"/api/oauth/revoke", %{token: expired, client_id: client.client_id})
+      |> response(200)
+
+      assert Repo.get(Hexpm.UserSession, token.user_session_id).revoked_at
+    end
+
+    test "revoking a token that belongs to no session marks the token", %{
+      revoke_user: user,
+      revoke_client: client
+    } do
+      {:ok, token} =
+        user
+        |> Tokens.create_for_user(client.client_id, ["api:read"], "client_credentials")
+        |> Repo.insert()
+
+      assert token.user_session_id == nil
+
+      build_conn()
+      |> post(~p"/api/oauth/revoke", %{
+        token: token.access_token,
+        client_id: client.client_id
+      })
+      |> response(200)
+
+      assert Tokens.revoked?(Repo.get(Token, token.id))
     end
 
     test "returns 200 OK for invalid token (security per RFC 7009)", %{
@@ -1839,5 +1893,28 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       token = Repo.get_by(Token, refresh_token_hash: expected_hash)
       assert token != nil
     end
+  end
+
+  # A token carrying the row's jti but an expiry in the past, signed with
+  # hexpm's key, as a stored token becomes over time.
+  defp expired_token(token, jti) do
+    signer =
+      Joken.Signer.create("ES256", %{"pem" => Application.get_env(:hexpm, :jwt_signing_key)})
+
+    now = System.system_time(:second)
+
+    claims = %{
+      "iss" => "hexpm",
+      "aud" => "hexpm:api",
+      "sub" => "user:#{token.user.username}",
+      "jti" => jti,
+      "iat" => now - 100,
+      "nbf" => now - 100,
+      "exp" => now - 10,
+      "scope" => "api:read api:write repositories"
+    }
+
+    {:ok, jwt, _} = Joken.generate_and_sign(%{}, claims, signer)
+    jwt
   end
 end
