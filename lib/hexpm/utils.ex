@@ -112,16 +112,9 @@ defmodule Hexpm.Utils do
 
   def safe_date(_), do: nil
 
-  def safe_page(page, _count, _per_page) when page < 1 do
-    1
-  end
-
-  def safe_page(page, count, per_page) when page > div(count, per_page) + 1 do
-    div(count, per_page) + 1
-  end
-
-  def safe_page(page, _count, _per_page) do
-    page
+  def safe_page(page, count, per_page) do
+    max_page = max(1, Integer.ceil_div(count, per_page))
+    page |> max(1) |> min(max_page)
   end
 
   def safe_int(nil), do: nil
