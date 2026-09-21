@@ -2,6 +2,7 @@ defmodule Hexpm.Accounts.Keys do
   use Hexpm.Context
 
   alias Hexpm.Accounts.{Organization, OrganizationUser}
+  alias Hexpm.UserSessions
 
   def all(user_or_organization) do
     Key.all(user_or_organization)
@@ -102,6 +103,7 @@ defmodule Hexpm.Accounts.Keys do
   def revoke(key, audit: audit_data) do
     Multi.new()
     |> Multi.update(:key, Key.revoke(key))
+    |> revoke_derived_tokens([key])
     |> audit(audit_data, "key.remove", key)
     |> Repo.transaction()
   end
@@ -124,9 +126,12 @@ defmodule Hexpm.Accounts.Keys do
   end
 
   def revoke_all(user_or_organization, audit: audit_data) do
+    keys = all(user_or_organization)
+
     Multi.new()
     |> Multi.update_all(:keys, Key.revoke_all(user_or_organization), [])
-    |> audit_many(audit_data, "key.remove", all(user_or_organization))
+    |> revoke_derived_tokens(keys)
+    |> audit_many(audit_data, "key.remove", keys)
     |> Repo.transaction()
     |> tap(fn
       {:ok, %{keys: {count, _}}} when count > 0 ->
@@ -138,6 +143,17 @@ defmodule Hexpm.Accounts.Keys do
       _ ->
         :ok
     end)
+  end
+
+  # The client credentials grant mints an OAuth token from a key, and that token
+  # is then authorized on its own, so revoking the key has to reach what it
+  # minted.
+  defp revoke_derived_tokens(multi, keys) do
+    {tokens_query, sessions_query} = UserSessions.revoke_for_api_keys(keys)
+
+    multi
+    |> Multi.update_all(:oauth_tokens, tokens_query, [])
+    |> Multi.update_all(:oauth_sessions, sessions_query, [])
   end
 
   # Throttle last_use updates to at most once per 5 minutes per key,
