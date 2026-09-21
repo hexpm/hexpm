@@ -505,7 +505,7 @@ defmodule HexpmWeb.Components.Input do
       ]}
     >
       {@label}
-      <span :if={@required} class="text-red-600 ml-1">*</span>
+      <span :if={@required} class="text-red-600 dark:text-red-400 ml-1">*</span>
     </label>
     """
   end
