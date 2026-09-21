@@ -959,6 +959,86 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       refute response["refresh_token"]
     end
 
+    test "revoking the API key refuses the token it minted", %{
+      client: client,
+      api_key: api_key,
+      user: user
+    } do
+      response =
+        build_conn()
+        |> post(~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "api"
+        })
+        |> json_response(200)
+
+      access_token = response["access_token"]
+
+      build_conn()
+      |> put_req_header("authorization", "Bearer #{access_token}")
+      |> get(~p"/api/users/me")
+      |> json_response(200)
+
+      key = Hexpm.Accounts.Keys.get(user, "test-key")
+      {:ok, _} = Hexpm.Accounts.Keys.revoke(key, audit: audit_data(user))
+
+      build_conn()
+      |> put_req_header("authorization", "Bearer #{access_token}")
+      |> get(~p"/api/users/me")
+      |> json_response(401)
+    end
+
+    test "revoking every API key refuses the tokens they minted", %{
+      client: client,
+      api_key: api_key,
+      user: user
+    } do
+      response =
+        build_conn()
+        |> post(~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "api"
+        })
+        |> json_response(200)
+
+      access_token = response["access_token"]
+
+      {:ok, _} = Hexpm.Accounts.Keys.revoke_all(user, audit: audit_data(user))
+
+      build_conn()
+      |> put_req_header("authorization", "Bearer #{access_token}")
+      |> get(~p"/api/users/me")
+      |> json_response(401)
+    end
+
+    test "revoking an organization key revokes the token it minted", %{client: client} do
+      org = insert(:organization)
+
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(org, %{name: "ci"}, audit: audit_data(org.user))
+
+      build_conn()
+      |> post(~p"/api/oauth/token", %{
+        "grant_type" => "client_credentials",
+        "client_id" => client.client_id,
+        "client_secret" => key.user_secret,
+        "scope" => "api"
+      })
+      |> json_response(200)
+
+      token = Repo.one!(Ecto.Query.from(t in Token, where: t.organization_id == ^org.id))
+      refute Tokens.revoked?(token)
+
+      {:ok, _} = Hexpm.Accounts.Keys.revoke(key, audit: audit_data(org.user))
+
+      assert Tokens.revoked?(Repo.get!(Token, token.id))
+      assert Repo.get!(Hexpm.UserSession, token.user_session_id).revoked_at
+    end
+
     test "creates session with access token expiration", %{
       client: client,
       api_key: api_key,
