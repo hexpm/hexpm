@@ -288,11 +288,11 @@ defmodule Hexpm.Accounts.AuditLogTest do
       assert audit.user_agent == "user_agent"
       assert audit.remote_ip == "127.0.0.1"
       assert audit.params.organization.name == "Organization Name"
-      assert audit.params.email == "test@example.com"
-      assert audit.params.person == "Test Person"
-      assert audit.params.company == "Test Company"
-      assert audit.params.token == "Test Token"
       assert audit.params.quantity == 11
+      refute Map.has_key?(audit.params, :email)
+      refute Map.has_key?(audit.params, :person)
+      refute Map.has_key?(audit.params, :company)
+      refute Map.has_key?(audit.params, :token)
     end
 
     test "action billing.change_plan", %{user: user} do
@@ -385,11 +385,11 @@ defmodule Hexpm.Accounts.AuditLogTest do
       assert audit.user_agent == "user_agent"
       assert audit.remote_ip == "127.0.0.1"
       assert audit.params.organization.name == "Organization Name"
-      assert audit.params.email == "test@example.com"
-      assert audit.params.person == "Test Person"
-      assert audit.params.company == "Test Company"
-      assert audit.params.token == "Test Token"
       assert audit.params.quantity == 11
+      refute Map.has_key?(audit.params, :email)
+      refute Map.has_key?(audit.params, :person)
+      refute Map.has_key?(audit.params, :company)
+      refute Map.has_key?(audit.params, :token)
     end
   end
 
