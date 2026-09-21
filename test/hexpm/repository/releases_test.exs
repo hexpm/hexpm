@@ -65,6 +65,63 @@ defmodule Hexpm.Repository.ReleasesTest do
     end
   end
 
+  describe "put_doc_files/4 and doc_files/1" do
+    test "stores the recognized documentation files", %{package: package, release: release} do
+      assert Releases.doc_files(release) == %{}
+
+      :ok =
+        Releases.put_doc_files("hexpm", package.name, to_string(release.version), [
+          "README.md",
+          "CHANGELOG.md",
+          "lib/CHANGELOG.md",
+          "mix.exs"
+        ])
+
+      assert Releases.doc_files(release) == %{readme: "README.md", changelog: "CHANGELOG.md"}
+    end
+
+    test "replaces a previously stored set", %{package: package, release: release} do
+      version = to_string(release.version)
+      :ok = Releases.put_doc_files("hexpm", package.name, version, ["README.md", "LICENSE"])
+      :ok = Releases.put_doc_files("hexpm", package.name, version, ["README.md"])
+
+      assert Releases.doc_files(release) == %{readme: "README.md"}
+    end
+
+    test "stores nothing for a release that does not exist", %{
+      repository: repository,
+      package: package,
+      release: release
+    } do
+      :ok = Releases.put_doc_files("hexpm", package.name, "9.9.9", ["README.md"])
+
+      :ok =
+        Releases.put_doc_files(repository.name, package.name, to_string(release.version), [
+          "README.md"
+        ])
+
+      assert Releases.doc_files(release) == %{}
+    end
+
+    test "is removed with its release", %{package: package, release: release} do
+      :ok =
+        Releases.put_doc_files("hexpm", package.name, to_string(release.version), ["README.md"])
+
+      Repo.delete!(release)
+
+      refute Repo.get_by(Hexpm.Repository.ReleaseDocFiles, release_id: release.id)
+    end
+
+    test "ignores kinds that are no longer recognized", %{release: release} do
+      Repo.insert!(%Hexpm.Repository.ReleaseDocFiles{
+        release_id: release.id,
+        files: %{"readme" => "README.md", "retired_kind" => "RETIRED.md"}
+      })
+
+      assert Releases.doc_files(release) == %{readme: "README.md"}
+    end
+  end
+
   describe "mark_vulnerable/1" do
     setup do
       package = insert(:package, name: "advised")

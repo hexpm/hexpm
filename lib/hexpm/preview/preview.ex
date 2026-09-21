@@ -1,12 +1,12 @@
 defmodule Hexpm.Preview do
   require Logger
 
+  alias Hexpm.Docs.Files
   alias Hexpm.Preview.{Bucket, Sitemaps}
   alias Hexpm.Repository.{Assets, Releases}
   alias Hexpm.Repository.Sitemaps, as: RepositorySitemaps
 
   @max_file_size 100 * 1000
-  @readme_filenames ~w(README.md readme.md README.markdown readme.markdown README.txt readme.txt README readme)
 
   defmodule StaleTarballError do
     defexception [:key]
@@ -45,15 +45,59 @@ defmodule Hexpm.Preview do
     end
   end
 
-  def readme(repository, package, version) do
+  def doc(repository, package, version, kind) do
     with files when is_list(files) <- Bucket.get_file_list(repository, package, version),
-         filename when is_binary(filename) <- Enum.find(@readme_filenames, &(&1 in files)),
+         filename when is_binary(filename) <- Files.resolve(kind, files),
          contents when is_binary(contents) <-
            Bucket.get_file(repository, package, version, filename) do
       {:ok, filename, contents}
     else
       _ -> :error
     end
+  end
+
+  def readme(repository, package, version), do: doc(repository, package, version, :readme)
+
+  @doc """
+  Stores documentation files for up to `limit` releases after `after_id` that
+  have none, from their file lists in preview storage. Returns the last
+  release id handled, or `:done`.
+  """
+  def backfill_doc_files(after_id, limit) do
+    case Releases.missing_doc_files(after_id, limit) do
+      [] ->
+        :done
+
+      releases ->
+        releases
+        |> Task.async_stream(
+          fn {id, repository, package, version} ->
+            {id, backfill_file_list(repository, package, version)}
+          end,
+          max_concurrency: 16,
+          timeout: 60_000
+        )
+        |> Enum.flat_map(fn
+          {:ok, {id, files}} when is_list(files) -> [{id, files}]
+          {:ok, {_id, nil}} -> []
+        end)
+        |> Releases.insert_missing_doc_files()
+
+        {:ok, releases |> List.last() |> elem(0)}
+    end
+  end
+
+  # A bad file list is skipped, not failed on; rerunning the backfill retries it.
+  defp backfill_file_list(repository, package, version) do
+    Bucket.get_file_list(repository, package, version)
+  rescue
+    error ->
+      Logger.warning(
+        "Skipping doc files backfill for #{repository}/#{package} #{version}: " <>
+          Exception.message(error)
+      )
+
+      nil
   end
 
   def raw_file(repository, package, version, filename) do
@@ -94,7 +138,7 @@ defmodule Hexpm.Preview do
 
     if release_exists?(repository, package, version) do
       {dir, file_paths, checksum, _metadata} = download_and_unpack!(repository, package, version)
-      Bucket.put_files(repository, package, version, dir, file_paths)
+      put_files(repository, package, version, dir, file_paths)
 
       reconcile_uploaded_release(repository, package, version, checksum)
     else
@@ -216,6 +260,12 @@ defmodule Hexpm.Preview do
     end
   end
 
+  # Package pages read the documentation files from the database.
+  defp put_files(repository, package, version, dir, file_paths) do
+    Bucket.put_files(repository, package, version, dir, file_paths)
+    Releases.put_doc_files(repository, package, version, file_paths)
+  end
+
   defp delete_contents(repository, package, version) do
     Bucket.delete_files(repository, package, version)
 
@@ -269,7 +319,7 @@ defmodule Hexpm.Preview do
       latest ->
         latest = to_string(latest)
         {dir, file_paths, checksum, _metadata} = download_and_unpack!(repository, package, latest)
-        Bucket.put_files(repository, package, latest, dir, file_paths)
+        put_files(repository, package, latest, dir, file_paths)
 
         cond do
           not release_exists?(repository, package, latest) ->

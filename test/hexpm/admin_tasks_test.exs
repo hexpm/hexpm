@@ -517,6 +517,16 @@ defmodule Hexpm.AdminTasksTest do
     end
   end
 
+  describe "backfill_doc_files/0" do
+    test "enqueues the backfill from the first release, once" do
+      assert {:ok, _job} = AdminTasks.backfill_doc_files()
+      assert {:ok, %Oban.Job{conflict?: true}} = AdminTasks.backfill_doc_files()
+
+      assert [%Oban.Job{args: %{"after_id" => 0}}] =
+               all_enqueued(worker: Hexpm.Preview.Workers.BackfillDocFiles)
+    end
+  end
+
   describe "allow_republish/3" do
     test "resets inserted_at timestamp for release" do
       package = insert(:package)

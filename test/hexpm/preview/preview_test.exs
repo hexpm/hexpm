@@ -126,6 +126,42 @@ defmodule Hexpm.PreviewTest do
     assert Preview.get_latest_version("other", "scoped") == nil
   end
 
+  describe "doc/4" do
+    test "resolves and reads a non-readme kind" do
+      put_release("hexpm", "doc_package", "1.0.0", [
+        {"README.md", "readme"},
+        {"CHANGELOG.md", "changelog contents"}
+      ])
+
+      assert Preview.doc("hexpm", "doc_package", "1.0.0", :changelog) ==
+               {:ok, "CHANGELOG.md", "changelog contents"}
+    end
+
+    test "returns :error for a kind the release does not have" do
+      put_release("hexpm", "no_changelog", "1.0.0", [{"README.md", "readme"}])
+
+      assert Preview.doc("hexpm", "no_changelog", "1.0.0", :changelog) == :error
+    end
+
+    test "readme/3 is doc/4 with :readme" do
+      put_release("hexpm", "readme_only", "1.0.0", [{"README.md", "hello"}])
+
+      assert Preview.readme("hexpm", "readme_only", "1.0.0") ==
+               Preview.doc("hexpm", "readme_only", "1.0.0", :readme)
+    end
+
+    test "returns :error when the file list names a file whose object is missing" do
+      Hexpm.Store.put(
+        :preview_bucket,
+        "file_lists/partial_doc-1.0.0.json",
+        JSON.encode!(["CHANGELOG.md"])
+      )
+
+      # deliberately no object written for files/partial_doc/1.0.0/CHANGELOG.md
+      assert Preview.doc("hexpm", "partial_doc", "1.0.0", :changelog) == :error
+    end
+  end
+
   defp put_release(repository, package, version, files) do
     prefix = if repository == "hexpm", do: "", else: "repos/#{repository}/"
     filenames = Enum.map(files, &elem(&1, 0))

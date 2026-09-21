@@ -88,6 +88,29 @@ defmodule Hexpm.Preview.WorkersTest do
     assert Hexpm.Store.get(:preview_bucket, "latest_versions/#{package.name}") == "1.0.0"
   end
 
+  test "upload stores the release's documentation files, replacing them on reupload" do
+    package = insert(:package, name: "doc_files_preview")
+    release = insert(:release, package: package, version: "1.0.0")
+    key = "tarballs/#{package.name}-#{release.version}.tar"
+
+    put_tarball(key, package.name, to_string(release.version), [
+      {"README.md", "readme"},
+      {"CHANGELOG.md", "changelog"}
+    ])
+
+    assert :ok = perform_job(Workers.Upload, %{key: key})
+
+    assert Hexpm.Repository.Releases.doc_files(release) == %{
+             readme: "README.md",
+             changelog: "CHANGELOG.md"
+           }
+
+    put_tarball(key, package.name, to_string(release.version), [{"README.md", "readme"}])
+    assert :ok = perform_job(Workers.Upload, %{key: key})
+
+    assert Hexpm.Repository.Releases.doc_files(release) == %{readme: "README.md"}
+  end
+
   test "nonlatest uploads do not replace latest metadata" do
     package = insert(:package, name: "older_preview")
     old = insert(:release, package: package, version: "1.0.0")
@@ -439,6 +462,67 @@ defmodule Hexpm.Preview.WorkersTest do
 
     assert_raise RuntimeError, ~r/Preview tarball not found/, fn ->
       perform_job(Workers.Delete, %{key: key})
+    end
+  end
+
+  describe "BackfillDocFiles" do
+    alias Hexpm.Repository.Releases
+
+    test "stores doc files for releases without them and enqueues the next batch" do
+      package = insert(:package, name: "backfill_preview")
+      listed = insert(:release, package: package, version: "1.0.0")
+      unlisted = insert(:release, package: package, version: "1.1.0")
+      stored = insert(:release, package: package, version: "1.2.0")
+
+      Hexpm.Store.put(
+        :preview_bucket,
+        "file_lists/backfill_preview-1.0.0.json",
+        JSON.encode!(["README.md", "CHANGELOG.md", "lib/backfill.ex"])
+      )
+
+      Hexpm.Store.put(
+        :preview_bucket,
+        "file_lists/backfill_preview-1.2.0.json",
+        JSON.encode!(["README.md", "CHANGELOG.md"])
+      )
+
+      :ok = Releases.put_doc_files("hexpm", package.name, "1.2.0", ["README.md"])
+
+      assert :ok = perform_job(Workers.BackfillDocFiles, %{after_id: 0})
+
+      assert Releases.doc_files(listed) == %{readme: "README.md", changelog: "CHANGELOG.md"}
+      assert Releases.doc_files(unlisted) == %{}
+      # Written by the upload job, so the backfill leaves it alone.
+      assert Releases.doc_files(stored) == %{readme: "README.md"}
+
+      assert_enqueued(worker: Workers.BackfillDocFiles, args: %{after_id: unlisted.id})
+    end
+
+    test "skips a release whose file list is unreadable" do
+      package = insert(:package, name: "backfill_broken_preview")
+      broken = insert(:release, package: package, version: "1.0.0")
+      listed = insert(:release, package: package, version: "1.1.0")
+
+      Hexpm.Store.put(:preview_bucket, "file_lists/#{package.name}-1.0.0.json", "not json")
+
+      Hexpm.Store.put(
+        :preview_bucket,
+        "file_lists/#{package.name}-1.1.0.json",
+        JSON.encode!(["LICENSE"])
+      )
+
+      assert :ok = perform_job(Workers.BackfillDocFiles, %{after_id: 0})
+
+      assert Releases.doc_files(broken) == %{}
+      assert Releases.doc_files(listed) == %{license: "LICENSE"}
+    end
+
+    test "stops when no releases are left" do
+      release = insert(:release, package: insert(:package))
+
+      assert :ok = perform_job(Workers.BackfillDocFiles, %{after_id: release.id})
+
+      refute_enqueued(worker: Workers.BackfillDocFiles)
     end
   end
 
