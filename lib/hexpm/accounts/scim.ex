@@ -294,8 +294,6 @@ defmodule Hexpm.Accounts.SCIM do
     end
   end
 
-  # -- one transaction per write ---------------------------------------------
-
   # A write is one transaction, so a refusal partway through a PATCH or a PUT
   # leaves nothing applied (RFC 7644 section 3.5.2), and an invitation, the
   # mail behind it, the membership and the audit rows commit together or not
@@ -353,8 +351,6 @@ defmodule Hexpm.Accounts.SCIM do
   defp lock_connection!(connection) do
     Repo.one!(from(row in Connection, where: row.id == ^connection.id, lock: "FOR NO KEY UPDATE"))
   end
-
-  # -- state resolution ------------------------------------------------------
 
   # Derives the state and performs the two lazy repairs: an accepted
   # invitation hands its account over, and a userName newly verified by a
@@ -442,8 +438,6 @@ defmodule Hexpm.Accounts.SCIM do
     do: OrganizationInvitation.pending?(invitation, DateTime.utc_now())
 
   defp pending?(_invitation), do: false
-
-  # -- create and activation -------------------------------------------------
 
   # The handle is validated before the invitation goes out, so a create that
   # fails on its own attributes leaves no invitation behind.
@@ -575,8 +569,6 @@ defmodule Hexpm.Accounts.SCIM do
         end
     end
   end
-
-  # -- attribute changes and deactivation ------------------------------------
 
   defp apply_changes(connection, resolved, changes, audit_data) do
     with {:ok, resolved} <- apply_attributes(connection, resolved, changes, audit_data) do
@@ -767,8 +759,6 @@ defmodule Hexpm.Accounts.SCIM do
     end
   end
 
-  # -- materialization -------------------------------------------------------
-
   # Handles that can be bound to an account are repaired before the members
   # without one are looked for, so an accepted invitation's handle claims its
   # account rather than an import materializing a second row for the same
@@ -865,8 +855,6 @@ defmodule Hexpm.Accounts.SCIM do
   defp primary_email(user) do
     Enum.find_value(user.emails, fn email -> email.verified && email.primary && email.email end)
   end
-
-  # -- persistence helpers ---------------------------------------------------
 
   defp insert_resource(connection, attrs, audit_data) do
     connection
@@ -979,8 +967,6 @@ defmodule Hexpm.Accounts.SCIM do
     |> AuditLog.build(action, params)
     |> Repo.insert!()
   end
-
-  # -- SCIM value parsing ----------------------------------------------------
 
   defp validate_user_name(user_name) when is_binary(user_name) do
     user_name = Resource.normalize_user_name(user_name)

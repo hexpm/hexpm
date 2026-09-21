@@ -242,6 +242,24 @@ defmodule HexpmWeb.Plugs.Attack do
     )
   end
 
+  # The account is what an SSO login belongs to, so it is what the limit is for.
+  # The IP bucket below stays as a ceiling on anonymous starts and on one host
+  # working through accounts, at a limit an office or a university behind one
+  # address does not reach.
+  def sso_start_user_throttle(user_id, organization_id, opts \\ []) do
+    time = opts[:time] || System.system_time(:millisecond)
+    key = {:sso_start_user, user_id, organization_id}
+    unless opts[:time], do: RateLimitPubSub.broadcast(key, time)
+
+    timed_throttle(
+      key,
+      time: time,
+      storage: @storage,
+      limit: 20,
+      period: @sso_period
+    )
+  end
+
   def sso_start_ip_throttle(ip, opts \\ []) do
     time = opts[:time] || System.system_time(:millisecond)
     unless opts[:time], do: RateLimitPubSub.broadcast({:sso_start_ip, ip}, time)
@@ -250,7 +268,7 @@ defmodule HexpmWeb.Plugs.Attack do
       {:sso_start_ip, ip},
       time: time,
       storage: @storage,
-      limit: 30,
+      limit: 300,
       period: @sso_period
     )
   end

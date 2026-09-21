@@ -1,7 +1,7 @@
 defmodule HexpmWeb.SSOController do
   use HexpmWeb, :controller
 
-  alias Hexpm.Accounts.{OrganizationAuth, SSO}
+  alias Hexpm.Accounts.{OrganizationAuth, Organizations, SSO}
   alias Hexpm.Accounts.SSO.Error
   alias HexpmWeb.Plugs.Attack
   alias HexpmWeb.SSOEnforcement
@@ -60,7 +60,7 @@ defmodule HexpmWeb.SSOController do
              organization,
              conn.assigns.current_user,
              return_path,
-             SSOEnforcement.callback_url(),
+             SSOEnforcement.callback_url(organization),
              opts
            ) do
       conn
@@ -68,9 +68,19 @@ defmodule HexpmWeb.SSOController do
       |> redirect(external: uri)
     else
       {:error, reason} ->
-        conn
-        |> put_flash(:error, start_error_message(reason))
-        |> redirect(to: ~p"/dashboard")
+        # A member is told what went wrong. Anyone else gets what an
+        # organization without SSO gets, so the refusals do not report whether
+        # this one has a connection, whether it is enabled, or whether it is
+        # paying. An organization admitting people just in time still identifies
+        # itself by redirecting to its provider, which is inherent to the
+        # feature and documented.
+        if Organizations.access?(organization, conn.assigns.current_user, "read") do
+          conn
+          |> put_flash(:error, start_error_message(reason))
+          |> redirect(to: ~p"/dashboard")
+        else
+          not_found(conn)
+        end
     end
   end
 
@@ -80,13 +90,19 @@ defmodule HexpmWeb.SSOController do
     |> text("Too many SSO login attempts. Try again later.")
   end
 
+  # A signed-in member is counted as themselves, so someone else behind the same
+  # egress address cannot spend their attempts. Only an anonymous start, which
+  # is a just-in-time organization, falls back to the organization and address.
   defp allow_start?(conn, organization) do
     match?({:allow, _data}, Attack.sso_start_ip_throttle(conn.remote_ip)) and
-      match?(
-        {:allow, _data},
-        Attack.sso_start_organization_throttle(organization.id, conn.remote_ip)
-      )
+      match?({:allow, _data}, start_subject_throttle(conn, organization))
   end
+
+  defp start_subject_throttle(%{assigns: %{current_user: %{id: user_id}}}, organization),
+    do: Attack.sso_start_user_throttle(user_id, organization.id)
+
+  defp start_subject_throttle(conn, organization),
+    do: Attack.sso_start_organization_throttle(organization.id, conn.remote_ip)
 
   defp initiation_options(conn, organization, params) do
     with {:ok, query} <- decode_initiation_query(conn.query_string),
@@ -199,17 +215,30 @@ defmodule HexpmWeb.SSOController do
     put_resp_header(conn, "cache-control", "no-store")
   end
 
+  # Only a callback whose state this browser does not hold is counted. A bound
+  # state was written into this browser's encrypted session when the login
+  # started, so it cannot be produced by anyone else, and members behind one
+  # egress address no longer spend each other's attempts.
   defp rate_limit_callback(conn, _opts) do
-    case Attack.sso_callback_ip_throttle(conn.remote_ip) do
-      {:allow, _data} ->
-        conn
+    if bound_state?(conn) do
+      conn
+    else
+      case Attack.sso_callback_ip_throttle(conn.remote_ip) do
+        {:allow, _data} ->
+          conn
 
-      {:block, _data} ->
-        conn
-        |> put_status(:too_many_requests)
-        |> text("Too many SSO callback attempts. Try again later.")
-        |> halt()
+        {:block, _data} ->
+          conn
+          |> put_status(:too_many_requests)
+          |> text("Too many SSO callback attempts. Try again later.")
+          |> halt()
+      end
     end
+  end
+
+  defp bound_state?(conn) do
+    state = conn.params["state"]
+    is_binary(state) and valid_sso_state?(conn, state)
   end
 
   def callback(conn, %{"state" => state, "error" => _provider_error}) do
@@ -251,7 +280,7 @@ defmodule HexpmWeb.SSOController do
 
   defp exchange_and_complete(conn, transaction, code) do
     with {:ok, user, user_session_id} <- account_session(conn, transaction),
-         {:ok, claims} <- SSO.exchange_code(transaction, code, SSOEnforcement.callback_url()),
+         {:ok, claims} <- SSO.exchange_code(transaction, code, arrival_url(conn)),
          :ok <- SSO.maybe_expand_seats(transaction, user, claims),
          {:ok, result} <-
            SSO.complete_callback(transaction, claims, user, user_session_id, audit_data(conn)) do
@@ -268,6 +297,12 @@ defmodule HexpmWeb.SSOController do
         callback_error(conn, transaction, reason)
     end
   end
+
+  # The address the provider actually sent the browser to, which exchange_code/3
+  # holds against the transaction's own. Built from the request rather than from
+  # the transaction, so a code issued for one organization cannot be redeemed at
+  # another organization's callback.
+  defp arrival_url(conn), do: HexpmWeb.Endpoint.url() <> conn.request_path
 
   defp bound_transaction(conn, state) do
     if is_binary(state) and valid_sso_state?(conn, state) do
@@ -385,7 +420,11 @@ defmodule HexpmWeb.SSOController do
 
       authorization ->
         case SSO.authorization_status(authorization) do
+          # Nothing left to authenticate for, and nothing the page could offer.
+          # Closing it here keeps the verification URI from standing open for
+          # the rest of its ten minutes.
           [] ->
+            SSO.consume_authorization!(authorization)
             expired_authorization(conn, code)
 
           status ->
@@ -468,7 +507,7 @@ defmodule HexpmWeb.SSOController do
            organization,
            conn.assigns.current_user,
            nil,
-           SSOEnforcement.callback_url(),
+           SSOEnforcement.callback_url(organization),
            entrypoint: "cli",
            target_user_session_id: authorization.user_session_id
          ) do

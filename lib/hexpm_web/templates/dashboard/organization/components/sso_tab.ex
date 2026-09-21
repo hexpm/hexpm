@@ -31,8 +31,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
         <div class="min-w-0 flex-1">
           <h2 class="text-xl font-semibold text-grey-900 dark:text-grey-100">Single sign-on</h2>
           <p class="mt-2 text-sm text-grey-600 dark:text-grey-300">
-            Configure a standards-based OpenID Connect provider. Okta is the documented pilot integration, and
-            conventional Hexpm login remains available.
+            Configure a standards-based OpenID Connect provider. Okta and Microsoft Entra are the documented
+            providers, and conventional Hexpm login remains available.
           </p>
         </div>
         <div class="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
@@ -289,7 +289,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
             name="jit[jit_role]"
             label="Role for new members"
             value={@connection.jit_role}
-            options={[{"Read", "read"}, {"Write", "write"}, {"Admin", "admin"}]}
+            options={[{"Read", "read"}, {"Write", "write"}]}
             variant="light"
           />
           <div class="sm:col-span-2">
@@ -445,6 +445,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
             ]}
             variant="light"
           />
+          <p class="sm:col-span-2 text-sm text-grey-600 dark:text-grey-300">
+            Blocking takes this organization's permissions off the personal keys that carry them,
+            once the mode is required. That is permanent: turning blocking back off, or turning
+            enforcement off entirely, does not put the permissions back, and the members whose keys
+            were changed have to add them again.
+          </p>
           <.select_input
             id="sso-enforcement-lifetime"
             name="enforcement[session_lifetime_seconds]"
@@ -505,6 +511,14 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
               Both stay reachable without authenticating, so a broken connection can be repaired
               and the subscription does not lapse while you are locked out. Reaching them that way
               is recorded in the audit log and mailed to the administrators.
+            </li>
+            <li>
+              <span class="font-medium">Readme URLs.</span>
+              A private package's readme renders on a host that never receives a Hexpm session
+              cookie, so the package page signs a URL for it, and one for each image it contains.
+              That URL renders that one readme for thirty minutes to anyone holding it, and is
+              checked against neither enforcement nor the session it was signed from. It reaches
+              one package version and nothing else.
             </li>
             <li>
               <span class="font-medium">Offboarding takes time.</span>

@@ -38,7 +38,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
 
     assert html =~ "Single sign-on"
     assert html =~ "Redirect URI"
-    assert html =~ "Okta is the documented pilot integration"
+    assert html =~ "Okta and Microsoft Entra are the documented"
     assert html =~ "Required scopes"
     assert html =~ "openid email"
     refute html =~ "stored-client-secret"
@@ -309,7 +309,11 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
        }}
     end)
 
-    conn = conn |> recycle() |> get("/sso/callback", %{state: state, code: "code"})
+    conn =
+      conn
+      |> recycle()
+      |> get("/sso/callback/#{context.organization.name}", %{state: state, code: "code"})
+
     assert redirected_to(conn) == "/dashboard/orgs/#{context.organization.name}/sso"
     assert Repo.get!(Connection, connection.id).tested_at
 
@@ -587,6 +591,31 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
 
     assert html =~ "Nobody is exempt."
     assert html =~ "Organization API keys and, unless you block them, personal API keys"
+  end
+
+  # A member who is not an administrator is told no. Someone outside the
+  # organization is told nothing: 403 against 404 reports whether the
+  # organization has SSO configured and whether it is paying.
+  test "an outsider cannot tell an SSO organization from any other", context do
+    insert(:organization_sso_connection,
+      organization: context.organization,
+      tested_at: DateTime.utc_now(),
+      enabled_at: DateTime.utc_now()
+    )
+
+    outsider = insert(:user)
+
+    conn =
+      build_conn()
+      |> test_login(outsider)
+      |> post("/dashboard/orgs/#{context.organization.name}/sso/disable")
+
+    assert response(conn, 404)
+
+    assert build_conn()
+           |> test_login(context.member)
+           |> post("/dashboard/orgs/#{context.organization.name}/sso/disable")
+           |> response(403)
   end
 
   test "takes a fresh password before enforcement is turned down", context do
@@ -991,6 +1020,72 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     end
   end
 
+  test "names every way into a required organization that skips the provider", context do
+    insert(:organization_sso_connection,
+      organization: context.organization,
+      enforcement_mode: "required",
+      personal_keys: "block"
+    )
+
+    html =
+      build_conn()
+      |> test_login(context.admin)
+      |> get("/dashboard/orgs/#{context.organization.name}/sso")
+      |> html_response(200)
+
+    assert html =~ "What enforcement does not cover"
+    assert html =~ "Readme URLs"
+    assert html =~ "That is permanent"
+  end
+
+  describe "settings posted in a shape the form never produces" do
+    test "answers rather than raising", context do
+      insert(:organization_sso_connection, organization: context.organization)
+      base = "/dashboard/orgs/#{context.organization.name}/sso"
+
+      for {path, params} <- [
+            {"#{base}/jit", %{"jit" => "block"}},
+            {"#{base}/scim", %{"scim" => ["expand"]}},
+            {"#{base}/scim/generate", %{"scim" => "read"}},
+            {"#{base}/enforcement", %{"enforcement" => "required"}},
+            {"#{base}/test", %{"secret_slot" => %{"a" => "b"}}}
+          ] do
+        conn = build_conn() |> test_login(context.admin) |> post(path, params)
+
+        assert conn.status == 302, "#{path} answered #{conn.status}"
+      end
+    end
+
+    test "refuses a domain that is not a map", context do
+      insert(:organization_sso_connection, organization: context.organization)
+
+      assert_error_sent(400, fn ->
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/domains", %{
+          "domain" => "example.com"
+        })
+      end)
+    end
+
+    test "refuses an enforcement setting that is not a string", context do
+      insert(:organization_sso_connection, organization: context.organization)
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/enforcement/member", %{
+          "user_id" => to_string(context.member.id),
+          "sso_enforcement" => %{"x" => "y"}
+        })
+
+      assert redirected_to(conn) =~ "/sso"
+
+      assert Repo.get_by!(Hexpm.Accounts.OrganizationUser, user_id: context.member.id).sso_enforcement ==
+               nil
+    end
+  end
+
   describe "just-in-time membership" do
     test "will not turn on without a verified domain", context do
       insert(:organization_sso_connection, organization: context.organization)
@@ -1022,6 +1117,62 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
       connection = SSO.get_connection(context.organization)
       assert connection.jit_seat_policy == "expand"
       assert connection.jit_role == "write"
+    end
+
+    # Admission and the domains it keys on decide who joins and at what role, so
+    # a stolen cookie inside the rolling sudo window must not reach them.
+    test "takes a fresh password", context do
+      insert(:organization_sso_connection, organization: context.organization)
+      verify_domain(context)
+
+      stale = fn ->
+        build_conn()
+        |> test_login(context.admin,
+          sudo_at: NaiveDateTime.add(NaiveDateTime.utc_now(), -5, :minute)
+        )
+      end
+
+      conn =
+        stale.()
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/jit", %{
+          "jit" => %{"jit_seat_policy" => "expand", "jit_role" => "write"}
+        })
+
+      assert redirected_to(conn) == "/sudo"
+      refute Connection.jit_enabled?(SSO.get_connection(context.organization))
+
+      for path <- ["domains", "domains/verify", "domains/remove"] do
+        conn =
+          stale.()
+          |> post("/dashboard/orgs/#{context.organization.name}/sso/#{path}", %{
+            "domain" => %{"domain" => "attacker.example"},
+            "id" => "1"
+          })
+
+        assert redirected_to(conn) == "/sudo"
+      end
+
+      assert OrganizationDomains.all(context.organization) |> Enum.map(& &1.domain) ==
+               ["example.com"]
+    end
+
+    # The provider decides who arrives. Who administers the organization is the
+    # administrators' to decide, and they can elevate a member afterwards.
+    test "will not admit people as administrators", context do
+      insert(:organization_sso_connection, organization: context.organization)
+      verify_domain(context)
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/jit", %{
+          "jit" => %{"jit_seat_policy" => "block", "jit_role" => "admin"}
+        })
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error)
+      connection = SSO.get_connection(context.organization)
+      refute Connection.jit_enabled?(connection)
+      assert connection.jit_role == "read"
     end
 
     test "a read member cannot change it", context do

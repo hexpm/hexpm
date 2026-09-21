@@ -210,7 +210,7 @@ defmodule HexpmWeb.Router do
     get "/auth/:provider", AuthController, :request
     get "/auth/:provider/callback", AuthController, :callback
 
-    get "/sso/callback", SSOController, :callback, log: false
+    get "/sso/callback/:organization", SSOController, :callback, log: false
     get "/sso/link", SSOController, :link, log: false
     post "/sso/link", SSOController, :confirm_link, log: false
     post "/sso/link/cancel", SSOController, :cancel_link, log: false

@@ -7,8 +7,6 @@ defmodule HexpmWeb.DeviceController do
   alias HexpmWeb.Plugs.{Attack, Sudo}
   alias HexpmWeb.DeviceView
 
-  @verification_timeout_minutes 5
-
   plug :nillify_params, ["user_code"]
   plug :requires_login
   plug Sudo when action in [:authorize_show, :authorize_create]
@@ -43,12 +41,9 @@ defmodule HexpmWeb.DeviceController do
     normalized_code = DeviceView.normalize_user_code(user_code)
 
     case DeviceCodes.get_for_verification(normalized_code) do
-      {:ok, _device_code} ->
+      {:ok, device_code} ->
         conn
-        |> put_session("device_code_verified", %{
-          "user_code" => normalized_code,
-          "verified_at" => NaiveDateTime.utc_now() |> NaiveDateTime.to_iso8601()
-        })
+        |> put_verified_code(device_code)
         |> redirect(to: ~p"/oauth/device/authorize")
 
       {:error, :invalid_code} ->
@@ -116,17 +111,13 @@ defmodule HexpmWeb.DeviceController do
 
   defp get_verified_code(conn) do
     case get_session(conn, "device_code_verified") do
-      %{"user_code" => user_code, "verified_at" => verified_at_string}
-      when is_binary(user_code) ->
-        case NaiveDateTime.from_iso8601(verified_at_string) do
-          {:ok, verified_at} ->
-            expires_at = NaiveDateTime.shift(verified_at, minute: @verification_timeout_minutes)
-
-            if NaiveDateTime.compare(NaiveDateTime.utc_now(), expires_at) == :lt do
-              {:ok, user_code}
-            else
-              :error
-            end
+      %{"user_code" => user_code, "expires_at" => expires_at_string}
+      when is_binary(user_code) and is_binary(expires_at_string) ->
+        case DateTime.from_iso8601(expires_at_string) do
+          {:ok, expires_at, _offset} ->
+            if DateTime.compare(DateTime.utc_now(), expires_at) == :lt,
+              do: {:ok, user_code},
+              else: :error
 
           _ ->
             :error
@@ -287,7 +278,7 @@ defmodule HexpmWeb.DeviceController do
 
   defp render_authorization(conn, device_code, error_message) do
     conn
-    |> touch_verified_code(device_code)
+    |> put_verified_code(device_code)
     |> render(
       "authorize.html",
       title: "Device Authorization",
@@ -300,17 +291,16 @@ defmodule HexpmWeb.DeviceController do
     )
   end
 
-  # The window runs from the last time this page was shown rather than from the
-  # POST that verified the code. Authenticating at the organization's provider
-  # is a round trip through someone else's login and MFA, and one that took
-  # longer than the window came back to a cleared marker and a destroyed device
-  # authorization. The device code's own lifetime still bounds it, and
-  # `get_for_verification/1` is consulted on every use, so sliding this cannot
-  # outlive the authorization it is for.
-  defp touch_verified_code(conn, device_code) do
+  # The marker lasts as long as the device authorization it names, rather than a
+  # window of its own. Authenticating at an organization's provider is a round
+  # trip through someone else's login and MFA, and a trip longer than the window
+  # came back to a cleared marker and a device authorization that could no
+  # longer be approved. `get_for_verification/1` is consulted on every use, so
+  # the marker authorizes nothing the device code does not.
+  defp put_verified_code(conn, device_code) do
     put_session(conn, "device_code_verified", %{
       "user_code" => device_code.user_code,
-      "verified_at" => NaiveDateTime.utc_now() |> NaiveDateTime.to_iso8601()
+      "expires_at" => DateTime.to_iso8601(device_code.expires_at)
     })
   end
 

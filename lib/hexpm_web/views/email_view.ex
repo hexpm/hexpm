@@ -421,9 +421,9 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
-  defmodule SSOKeyRevoked do
-    def intro(organization, revoked, trimmed) do
-      "The #{organization} organization on Hex.pm now requires single sign-on, and chose not to allow personal API keys. #{keys(revoked ++ trimmed)} to that organization removed."
+  defmodule SSOKeysRefused do
+    def removed(organization, revoked, trimmed) do
+      "The #{organization} organization on Hex.pm now requires single sign-on, and chose not to allow personal API keys. #{keys_removed(revoked ++ trimmed)} to that organization removed."
     end
 
     # A key whose only permission named this organization has nothing left to
@@ -436,6 +436,30 @@ defmodule HexpmWeb.EmailView do
 
     def rest_of_key(revoked, trimmed) do
       "#{subject(revoked)} nothing else, so #{pronoun(revoked)} been revoked. #{kept(trimmed)}"
+    end
+
+    def refused(organization, blocked, []) do
+      "The #{organization} organization on Hex.pm authenticates its members through an identity provider, and chose not to accept personal API keys from the members it covers. Your account is one of them, so #{keys_refused(blocked)} that organization."
+    end
+
+    def refused(organization, blocked, _changed) do
+      "The #{organization} organization does not accept personal API keys from the members it covers at all, so #{keys_refused(blocked)} it either."
+    end
+
+    def unchanged([_key_name]) do
+      "That key itself is untouched. It still exists, still carries the permissions it always did, and still works for everything else it reaches. Only the requests it makes to this organization are refused."
+    end
+
+    def unchanged(_key_names) do
+      "Those keys themselves are untouched. They still exist, still carry the permissions they always did, and still work for everything else they reach. Only the requests they make to this organization are refused."
+    end
+
+    def alternatives() do
+      "For your own work, run mix hex.user auth and sign in, which authenticates you through the provider when the organization asks for it. For continuous integration, use an organization key, which authenticates as the organization rather than as a person and is unaffected."
+    end
+
+    def why() do
+      "A personal key is a static credential. There is nothing for the organization's provider to check when it is used, and nothing that expires it, which is why an organization requiring SSO can choose to turn them away."
     end
 
     defp kept([key_name]),
@@ -455,45 +479,15 @@ defmodule HexpmWeb.EmailView do
     defp object([_key_name]), do: "it"
     defp object(_key_names), do: "them"
 
-    defp keys([key_name]), do: "Your key #{key_name} has had its access"
+    defp keys_removed([key_name]), do: "Your key #{key_name} has had its access"
 
-    defp keys(key_names) do
+    defp keys_removed(key_names) do
       "Your keys #{Enum.join(key_names, ", ")} have had their access"
     end
 
-    def alternatives() do
-      "For your own work, run mix hex.user auth and sign in, which authenticates you through the provider when the organization asks for it. For continuous integration, use an organization key, which authenticates as the organization rather than as a person and is unaffected."
-    end
+    defp keys_refused([key_name]), do: "your key #{key_name} no longer reaches"
 
-    def why() do
-      "A personal key is a static credential. There is nothing for the organization's provider to check when it is used, and nothing that expires it, which is why an organization requiring SSO can choose to turn them away."
-    end
-  end
-
-  defmodule SSOKeyBlocked do
-    def intro(organization, blocked) do
-      "The #{organization} organization on Hex.pm authenticates its members through an identity provider, and chose not to accept personal API keys from the members it covers. Your account is one of them, so #{keys(blocked)} that organization."
-    end
-
-    def unchanged([_key_name]) do
-      "The key itself is untouched. It still exists, still carries the permissions it always did, and still works for everything else it reaches. Only the requests it makes to this organization are refused."
-    end
-
-    def unchanged(_key_names) do
-      "The keys themselves are untouched. They still exist, still carry the permissions they always did, and still work for everything else they reach. Only the requests they make to this organization are refused."
-    end
-
-    def alternatives() do
-      "For your own work, run mix hex.user auth and sign in, which authenticates you through the provider when the organization asks for it. For continuous integration, use an organization key, which authenticates as the organization rather than as a person and is unaffected."
-    end
-
-    def why() do
-      "A personal key is a static credential. There is nothing for the organization's provider to check when it is used, and nothing that expires it, which is why an organization requiring SSO can choose to turn them away."
-    end
-
-    defp keys([key_name]), do: "your key #{key_name} no longer reaches"
-
-    defp keys(key_names) do
+    defp keys_refused(key_names) do
       "your keys #{Enum.join(key_names, ", ")} no longer reach"
     end
   end

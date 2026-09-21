@@ -517,6 +517,42 @@ defmodule Hexpm.Accounts.SSOJITTest do
       assert :counters.get(calls, 1) == 1
     end
 
+    test "the guard survives a flushed failure log", context do
+      fill_seats(context.organization)
+      calls = :counters.new(1, [])
+
+      Mox.stub(Hexpm.Billing.Mock, :update, fn _name, _params ->
+        :counters.add(calls, 1, 1)
+        {:error, %{"errors" => "card declined"}}
+      end)
+
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
+      assert :ok = SSO.maybe_expand_seats(transaction, newcomer, claims())
+      assert :counters.get(calls, 1) == 1
+
+      # Failures are a 20-row ring per connection, and with admission on anyone
+      # signed in can fill it. The guard cannot live there.
+      connection = SSO.get_connection(context.organization)
+
+      for _refusal <- 1..25 do
+        SSO.abandon_login(start_login(context, insert(:user)), :callback, :invalid_response)
+      end
+
+      assert Repo.aggregate(
+               from(failure in Hexpm.Accounts.SSO.Failure,
+                 where: failure.connection_id == ^connection.id,
+                 where: failure.code == "expansion_failed"
+               ),
+               :count
+             ) == 0
+
+      later = insert(:user)
+      transaction = start_login(context, later)
+      assert :ok = SSO.maybe_expand_seats(transaction, later, claims())
+      assert :counters.get(calls, 1) == 1
+    end
+
     test "a failed purchase does not admit anyone", context do
       fill_seats(context.organization)
       newcomer = insert(:user)

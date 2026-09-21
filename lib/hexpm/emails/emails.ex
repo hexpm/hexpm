@@ -272,24 +272,22 @@ defmodule Hexpm.Emails do
     |> render_body(:sso_enforcement_pending)
   end
 
-  def sso_key_revoked(organization, revoked, trimmed, recipients) do
-    base_email(:sso_key_revoked)
+  def sso_keys_refused(organization, revoked, trimmed, blocked, recipients) do
+    base_email(:sso_keys_refused)
     |> email_to(recipients)
-    |> subject("Hex.pm - #{organization} access removed from an API key")
+    |> subject(sso_keys_refused_subject(organization, revoked ++ trimmed))
     |> assign(:organization, organization)
     |> assign(:revoked, revoked)
     |> assign(:trimmed, trimmed)
-    |> render_body(:sso_key_revoked)
+    |> assign(:blocked, blocked)
+    |> render_body(:sso_keys_refused)
   end
 
-  def sso_key_blocked(organization, blocked, recipients) do
-    base_email(:sso_key_blocked)
-    |> email_to(recipients)
-    |> subject("Hex.pm - #{organization} does not accept personal API keys")
-    |> assign(:organization, organization)
-    |> assign(:blocked, blocked)
-    |> render_body(:sso_key_blocked)
-  end
+  defp sso_keys_refused_subject(organization, []),
+    do: "Hex.pm - #{organization} does not accept personal API keys"
+
+  defp sso_keys_refused_subject(organization, _changed),
+    do: "Hex.pm - #{organization} access removed from an API key"
 
   def sso_break_glass(organization, username, screen, recipients) do
     base_email(:sso_break_glass)

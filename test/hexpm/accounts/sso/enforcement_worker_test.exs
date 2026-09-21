@@ -108,6 +108,31 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
       assert Enforcement.warn_pending() == 0
     end
 
+    test "leaves an already enforced member alone", context do
+      {:ok, _member} =
+        SSO.set_member_enforcement(context.organization, context.member, "enforced",
+          audit: audit_data(context.admin)
+        )
+
+      require_sso(context, DateTime.add(DateTime.utc_now(), 3 * 24 * 60 * 60, :second))
+
+      assert Enforcement.warn_pending() == 0
+    end
+
+    test "says it again when the date moves", context do
+      require_sso(context, DateTime.add(DateTime.utc_now(), 3 * 24 * 60 * 60, :second))
+
+      assert Enforcement.warn_pending() == 1
+      Enum.each(pending_entries(), &Repo.delete!/1)
+
+      moved = DateTime.add(DateTime.utc_now(), 5 * 24 * 60 * 60, :second)
+      require_sso(context, moved)
+
+      assert Enforcement.warn_pending() == 1
+      assert [entry] = pending_entries()
+      assert entry.email["text_body"] =~ to_string(moved.year)
+    end
+
     test "says nothing while the date is far off", context do
       require_sso(context, DateTime.add(DateTime.utc_now(), 60 * 24 * 60 * 60, :second))
 
@@ -219,7 +244,7 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
 
       assert Enforcement.sweep_personal_keys() == 1
 
-      assert [entry] = Repo.all(from(e in OutboxEntry, where: e.category == "sso.key_revoked"))
+      assert [entry] = Repo.all(from(e in OutboxEntry, where: e.category == "sso.keys_refused"))
       assert entry.group_key =~ to_string(context.member.id)
 
       log =
@@ -240,7 +265,7 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
       personal_key(context, [%{domain: "repository", resource: context.organization.name}])
       assert Enforcement.sweep_personal_keys() == 1
 
-      assert [pending] = Repo.all(from(e in OutboxEntry, where: e.category == "sso.key_revoked"))
+      assert [pending] = Repo.all(from(e in OutboxEntry, where: e.category == "sso.keys_refused"))
       assert :ok = perform_job(Hexpm.Emails.OutboxWorker, %{outbox_entry_id: pending.id})
 
       personal_key(context, [%{domain: "repository", resource: context.organization.name}])
@@ -248,7 +273,7 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
 
       assert [%OutboxEntry{delivered_at: %DateTime{}}, %OutboxEntry{delivered_at: nil}] =
                Repo.all(
-                 from(e in OutboxEntry, where: e.category == "sso.key_revoked", order_by: e.id)
+                 from(e in OutboxEntry, where: e.category == "sso.keys_refused", order_by: e.id)
                )
     end
   end
@@ -261,7 +286,7 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
 
       assert Enforcement.sweep_personal_keys() == 0
       assert Repo.get!(Hexpm.Accounts.Key, key.id).permissions == key.permissions
-      assert Repo.all(from(e in OutboxEntry, where: e.category == "sso.key_revoked")) == []
+      assert Repo.all(from(e in OutboxEntry, where: e.category == "sso.keys_refused")) == []
     end
 
     test "takes a key that expires later but has not expired yet", context do
@@ -323,7 +348,7 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
 
       assert Enforcement.sweep_personal_keys() == 2
 
-      assert [_one] = Repo.all(from(e in OutboxEntry, where: e.category == "sso.key_revoked"))
+      assert [_one] = Repo.all(from(e in OutboxEntry, where: e.category == "sso.keys_refused"))
     end
   end
 
@@ -337,7 +362,7 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
       assert Repo.get!(Hexpm.Accounts.Key, key.id).permissions == key.permissions
       assert [entry] = blocked_entries()
       assert entry.group_key =~ to_string(context.member.id)
-      assert Repo.all(from(e in OutboxEntry, where: e.category == "sso.key_revoked")) == []
+      refute entry.email["text_body"] =~ "has had its access"
     end
 
     test "says nothing to a member the pilot does not cover", context do
@@ -408,7 +433,7 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
 
       assert body =~ "chose not to accept personal API keys"
       assert body =~ "your key #{key.name} no longer reaches"
-      assert body =~ "The key itself is untouched"
+      assert body =~ "That key itself is untouched"
       assert body =~ "mix hex.user auth"
       assert body =~ "organization key"
       assert entry.email["subject"] =~ "does not accept personal API keys"
@@ -424,6 +449,38 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
       :ok = Hexpm.Accounts.Users.delete(context.member, audit: audit_data(context.member))
 
       assert blocked_entries() == []
+    end
+
+    test "names removed and refused keys in the same mail", context do
+      removed =
+        personal_key(context, [%{domain: "repository", resource: context.organization.name}])
+
+      refused = personal_key(context, [%{domain: "repositories", resource: nil}])
+      require_sso(context, DateTime.add(DateTime.utc_now(), -60, :second))
+
+      assert Enforcement.sweep_personal_keys() == 1
+      assert [entry] = blocked_entries()
+
+      body = entry.email["text_body"]
+
+      assert body =~ "Your key #{removed.name} has had its access"
+      assert body =~ "your key #{refused.name} no longer reaches"
+    end
+
+    test "audits a notice it cannot deliver", context do
+      Repo.delete_all(from(e in Hexpm.Accounts.Email, where: e.user_id == ^context.member.id))
+      key = personal_key(context, [%{domain: "repositories", resource: nil}])
+      require_sso(context, DateTime.add(DateTime.utc_now(), -60, :second))
+
+      assert Enforcement.sweep_personal_keys() == 0
+      assert blocked_entries() == []
+
+      log =
+        Hexpm.Accounts.AuditLogs.all_by(context.member)
+        |> Enum.find(&(&1.action == "sso.key.notice_undeliverable"))
+
+      assert log.params["blocked"] == [key.name]
+      assert log.params["organization"]["name"] == context.organization.name
     end
   end
 
@@ -446,7 +503,7 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
   end
 
   defp blocked_entries do
-    Repo.all(from(e in OutboxEntry, where: e.category == "sso.key_blocked"))
+    Repo.all(from(e in OutboxEntry, where: e.category == "sso.keys_refused"))
   end
 
   defp exempt(context, user) do

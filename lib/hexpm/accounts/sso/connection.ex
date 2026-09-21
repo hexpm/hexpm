@@ -32,6 +32,7 @@ defmodule Hexpm.Accounts.SSO.Connection do
     field :scim_token_generated_at, :utc_datetime_usec
     field :scim_token_used_at, :utc_datetime_usec
     field :scim_token_used_ip, :string
+    field :seat_expansion_failed_at, :utc_datetime_usec
 
     belongs_to :organization, Organization
     belongs_to :configured_by_user, User
@@ -102,7 +103,11 @@ defmodule Hexpm.Accounts.SSO.Connection do
   end
 
   @jit_seat_policies ~w(block expand)
-  @jit_roles ~w(admin write read)
+
+  # The provider decides who arrives; an administrator here decides who runs the
+  # organization. Admitting someone as an administrator would hand the provider
+  # both, and an administrator can elevate a member afterwards.
+  @jit_roles ~w(write read)
 
   @doc """
   Turns just-in-time membership on or off. `jit_seat_policy` is required to turn

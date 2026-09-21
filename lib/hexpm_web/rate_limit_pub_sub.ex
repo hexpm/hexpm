@@ -46,6 +46,11 @@ defmodule HexpmWeb.RateLimitPubSub do
     {:noreply, []}
   end
 
+  def handle_info({:throttle, {:sso_start_user, user_id, organization_id}, time}, []) do
+    Attack.sso_start_user_throttle(user_id, organization_id, time: time)
+    {:noreply, []}
+  end
+
   def handle_info({:throttle, {:sso_start_ip, ip}, time}, []) do
     Attack.sso_start_ip_throttle(ip, time: time)
     {:noreply, []}

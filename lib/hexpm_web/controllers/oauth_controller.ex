@@ -26,6 +26,17 @@ defmodule HexpmWeb.OAuthController do
 
   defp grants_organization_access?(_conn), do: false
 
+  # The code carries the browser session only so the exchange can copy the
+  # organization access that session is holding, and that copy is what the sudo
+  # gate above is for. A request the gate did not apply to had no access to
+  # copy, so binding it would hand over whatever the browser gained afterwards,
+  # under an approval nobody re-authenticated for.
+  defp organization_access_session_id(conn) do
+    if grants_organization_access?(conn) do
+      conn.assigns.current_session && conn.assigns.current_session.id
+    end
+  end
+
   @doc """
   Standard OAuth 2.0 authorization endpoint.
   Initiates the authorization code flow.
@@ -124,7 +135,7 @@ defmodule HexpmWeb.OAuthController do
              selected_scopes,
              code_challenge: params["code_challenge"],
              code_challenge_method: params["code_challenge_method"],
-             user_session_id: conn.assigns.current_session && conn.assigns.current_session.id
+             user_session_id: organization_access_session_id(conn)
            ) do
         {:ok, auth_code} ->
           success_params = %{

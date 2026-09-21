@@ -22,8 +22,8 @@ defmodule Hexpm.PurgeExpiredRecords do
   @monitor_schedule "0 2 * * *"
 
   # Every row goes to the audit bucket before it is deleted, as the whole row
-  # minus these columns: the credential itself, or the mail body, never the
-  # record of who held or received it.
+  # minus these columns: the credential itself, the mail body, or the identity
+  # a provider gave us, never the record of who held or received it.
   @redacted %{
     Hexpm.OAuth.AuthorizationCode => ~w(code code_challenge),
     Hexpm.OAuth.DeviceCode => ~w(device_code user_code verification_uri_complete),
@@ -31,7 +31,8 @@ defmodule Hexpm.PurgeExpiredRecords do
     Hexpm.UserSession => ~w(session_token),
     Hexpm.Accounts.PasswordReset => ~w(key),
     Hexpm.Accounts.AccountDeletionRequest => ~w(key),
-    Hexpm.Accounts.SSO.Transaction => ~w(state_hash nonce code_verifier link_token_hash),
+    Hexpm.Accounts.SSO.Transaction =>
+      ~w(state_hash nonce code_verifier link_token_hash subject provider_email),
     Hexpm.Accounts.SSO.Authorization => ~w(code_hash),
     Hexpm.Accounts.SSO.OrgSession => [],
     Hexpm.Accounts.OrganizationInvitation => ~w(token_hash),

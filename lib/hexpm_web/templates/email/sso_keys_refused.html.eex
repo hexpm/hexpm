@@ -1,0 +1,31 @@
+<h1 style="color: #030913; font-size: 24px; line-height: 32px; font-weight: 600; margin: 0 0 24px 0; text-align: center;">
+  Personal API Keys And <%= @organization %>
+</h1>
+
+<%= if @revoked != [] or @trimmed != [] do %>
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= SSOKeysRefused.removed(@organization, @revoked, @trimmed) %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= SSOKeysRefused.rest_of_key(@revoked, @trimmed) %>
+</p>
+<% end %>
+
+<%= if @blocked != [] do %>
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= SSOKeysRefused.refused(@organization, @blocked, @revoked ++ @trimmed) %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= SSOKeysRefused.unchanged(@blocked) %>
+</p>
+<% end %>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= SSOKeysRefused.alternatives() %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= SSOKeysRefused.why() %>
+</p>

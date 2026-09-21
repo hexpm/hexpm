@@ -182,10 +182,12 @@ defmodule HexpmWeb.SSOEnforcement do
   end
 
   @doc """
-  Where the provider sends the browser back to. One address for every flow, and
-  the one registered with the provider.
+  Where the organization's provider sends the browser back to, and the address
+  registered with that provider. One per connection: a code issued by one
+  organization's provider arrives at an address no other connection's
+  transaction carries, so it cannot be redeemed into another connection.
   """
-  def callback_url, do: url(~p"/sso/callback")
+  def callback_url(organization), do: url(~p"/sso/callback/#{organization}")
 
   @doc """
   The SCIM base URL the administrator pastes into the provider. One address

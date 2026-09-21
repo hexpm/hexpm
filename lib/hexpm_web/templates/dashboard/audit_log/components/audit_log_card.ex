@@ -442,6 +442,13 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
   end
 
   defp humanize_action(%AuditLog{
+         action: "sso.key.notice_undeliverable",
+         params: %{"organization" => %{"name" => org}}
+       }) do
+    "Could not tell this member that #{org} turns their API keys away, because their account has no verified email address"
+  end
+
+  defp humanize_action(%AuditLog{
          action: "sso.break_glass",
          params: %{"organization" => %{"name" => org}, "screen" => screen}
        })

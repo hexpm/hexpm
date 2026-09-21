@@ -1,6 +1,8 @@
 defmodule Hexpm.Accounts.Key do
   use Hexpm.Schema
 
+  alias Hexpm.Accounts.OrganizationAuth
+
   @derive HexpmWeb.Stale
   @derive {Phoenix.Param, key: :name}
 
@@ -28,13 +30,19 @@ defmodule Hexpm.Accounts.Key do
   end
 
   def changeset(key, user_or_organization, params) do
+    # Read once for the key rather than once per permission: the form takes up
+    # to a thousand of them, and each refusal answer is two queries.
+    refusals = OrganizationAuth.personal_key_refusals(user_or_organization)
+
     cast(key, params, ~w(name revoke_at)a)
     |> validate_required(~w(name)a)
     |> validate_length(:name, count: :codepoints, max: 255)
     |> validate_revoke_at_in_future()
     |> add_keys()
     |> prepare_changes(&unique_name/1)
-    |> cast_embed(:permissions, with: &KeyPermission.changeset(&1, user_or_organization, &2))
+    |> cast_embed(:permissions,
+      with: &KeyPermission.changeset(&1, user_or_organization, refusals, &2)
+    )
     |> validate_length(:permissions, max: 1000)
     |> put_default_embed(:permissions, [%KeyPermission{domain: "api"}])
   end
