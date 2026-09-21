@@ -347,6 +347,8 @@ defmodule HexpmWeb.Router do
     post "/security/remove-password", SecurityController, :remove_password,
       as: :dashboard_security
 
+    post "/security/connect-github", SecurityController, :connect_github, as: :dashboard_security
+
     post "/security/disconnect-github", SecurityController, :disconnect_github,
       as: :dashboard_security
 

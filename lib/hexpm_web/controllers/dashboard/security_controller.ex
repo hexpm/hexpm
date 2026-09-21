@@ -172,6 +172,15 @@ defmodule HexpmWeb.Dashboard.SecurityController do
     end
   end
 
+  def connect_github(conn, _params) do
+    conn
+    |> put_session("provider_link", %{
+      "at" => NaiveDateTime.utc_now() |> NaiveDateTime.to_iso8601(),
+      "provider" => "github"
+    })
+    |> redirect(to: ~p"/auth/github")
+  end
+
   def disconnect_github(conn, _params) do
     user = Hexpm.Repo.preload(conn.assigns.current_user, :user_providers)
 

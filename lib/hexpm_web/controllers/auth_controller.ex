@@ -78,7 +78,7 @@ defmodule HexpmWeb.AuthController do
 
       logged_in?(conn) ->
         # User is already logged in - try to link this provider
-        link_provider_to_user(conn, provider, provider_uid, auth.info.email)
+        handle_link(conn, provider, provider_uid, auth.info.email)
 
       true ->
         # Not logged in - check if provider exists or create new user
@@ -148,6 +148,33 @@ defmodule HexpmWeb.AuthController do
         )
         |> redirect(to: login_path(return))
     end
+  end
+
+  # A linked provider logs in as the user and satisfies sudo, so linking takes
+  # the same re-authentication as the page that unlinks it.
+  defp handle_link(conn, provider, provider_uid, provider_email) do
+    {conn, pending?} = pop_pending_link(conn, provider)
+
+    if pending? do
+      link_provider_to_user(conn, provider, provider_uid, provider_email)
+    else
+      conn
+      |> put_flash(:error, "Connect your GitHub account from your security settings.")
+      |> redirect(to: ~p"/dashboard/security")
+    end
+  end
+
+  defp pop_pending_link(conn, provider) do
+    pending? =
+      case get_session(conn, "provider_link") do
+        %{"at" => at, "provider" => ^provider} ->
+          HexpmWeb.Session.TTL.within?(at, minute: 10)
+
+        _ ->
+          false
+      end
+
+    {delete_session(conn, "provider_link"), pending?}
   end
 
   defp link_provider_to_user(conn, provider, provider_uid, provider_email) do

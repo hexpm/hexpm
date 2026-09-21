@@ -396,6 +396,32 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
     end
   end
 
+  describe "POST /dashboard/security/connect-github" do
+    test "records the started flow and sends the user to the provider" do
+      user = insert(:user)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/security/connect-github")
+
+      assert redirected_to(conn) == "/auth/github"
+      assert %{"provider" => "github", "at" => _} = get_session(conn, "provider_link")
+    end
+
+    test "requires sudo" do
+      user = insert(:user)
+
+      conn =
+        build_conn()
+        |> test_login(user, sudo: false)
+        |> post("/dashboard/security/connect-github")
+
+      assert redirected_to(conn) == "/sudo"
+      refute get_session(conn, "provider_link")
+    end
+  end
+
   describe "POST /dashboard/security/disconnect-github" do
     test "disconnects GitHub when user has password" do
       user = insert(:user)

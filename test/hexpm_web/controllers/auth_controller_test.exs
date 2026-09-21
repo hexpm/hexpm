@@ -14,6 +14,13 @@ defmodule HexpmWeb.AuthControllerTest do
     %{"at" => NaiveDateTime.to_iso8601(at), "path" => path}
   end
 
+  defp pending_link(opts \\ []) do
+    minutes_ago = Keyword.get(opts, :minutes_ago, 0)
+    provider = Keyword.get(opts, :provider, "github")
+    at = NaiveDateTime.utc_now() |> NaiveDateTime.add(-minutes_ago * 60, :second)
+    %{"at" => NaiveDateTime.to_iso8601(at), "provider" => provider}
+  end
+
   describe "GET /auth/github/callback - GitHub signup (new user)" do
     test "redirects to username selection form" do
       email = Hexpm.Fake.sequence(:email)
@@ -237,6 +244,7 @@ defmodule HexpmWeb.AuthControllerTest do
         build_conn()
         |> mock_github_auth_success("22222", email)
         |> Plug.Conn.assign(:current_user, user)
+        |> Plug.Conn.put_session("provider_link", pending_link())
         |> HexpmWeb.AuthController.callback(%{})
 
       assert redirected_to(conn) == "/dashboard/security"
@@ -247,6 +255,8 @@ defmodule HexpmWeb.AuthControllerTest do
       user_provider = UserProviders.get_by_provider("github", "22222")
       assert user_provider
       assert user_provider.user_id == user.id
+
+      refute get_session(conn, "provider_link")
     end
 
     test "shows error when linking fails" do
@@ -260,10 +270,60 @@ defmodule HexpmWeb.AuthControllerTest do
         build_conn()
         |> mock_github_auth_success("33333", email)
         |> Plug.Conn.assign(:current_user, user)
+        |> Plug.Conn.put_session("provider_link", pending_link())
         |> HexpmWeb.AuthController.callback(%{})
 
       assert redirected_to(conn) == "/dashboard/security"
       assert Phoenix.Flash.get(conn.assigns.flash, "error") == "Failed to connect GitHub account."
+    end
+
+    test "refuses to link when the flow did not start from security settings" do
+      email = Hexpm.Fake.sequence(:email)
+      user = insert(:user)
+
+      conn =
+        build_conn()
+        |> mock_github_auth_success("22223", email)
+        |> Plug.Conn.assign(:current_user, user)
+        |> HexpmWeb.AuthController.callback(%{})
+
+      assert redirected_to(conn) == "/dashboard/security"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, "error") ==
+               "Connect your GitHub account from your security settings."
+
+      refute UserProviders.get_by_provider("github", "22223")
+    end
+
+    test "refuses to link when the started flow expired" do
+      email = Hexpm.Fake.sequence(:email)
+      user = insert(:user)
+
+      conn =
+        build_conn()
+        |> mock_github_auth_success("22224", email)
+        |> Plug.Conn.assign(:current_user, user)
+        |> Plug.Conn.put_session("provider_link", pending_link(minutes_ago: 11))
+        |> HexpmWeb.AuthController.callback(%{})
+
+      assert redirected_to(conn) == "/dashboard/security"
+      refute UserProviders.get_by_provider("github", "22224")
+      refute get_session(conn, "provider_link")
+    end
+
+    test "refuses to link when the started flow names another provider" do
+      email = Hexpm.Fake.sequence(:email)
+      user = insert(:user)
+
+      conn =
+        build_conn()
+        |> mock_github_auth_success("22225", email)
+        |> Plug.Conn.assign(:current_user, user)
+        |> Plug.Conn.put_session("provider_link", pending_link(provider: "gitlab"))
+        |> HexpmWeb.AuthController.callback(%{})
+
+      assert redirected_to(conn) == "/dashboard/security"
+      refute UserProviders.get_by_provider("github", "22225")
     end
   end
 
