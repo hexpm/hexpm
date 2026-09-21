@@ -35,6 +35,7 @@ defmodule Hexpm.CDN.FastlyTest do
       assert Fastly.purge_key(:fastly_hexdocs, ["docs-key"]) == :ok
     end
 
+    @tag :capture_log
     test "retries 5xx and 429 before giving up with the status and body" do
       expect(Hexpm.HTTP.Mock, :post, 5, fn _url, _headers, _body ->
         {:ok, 503, [], %{"msg" => "unavailable"}}
