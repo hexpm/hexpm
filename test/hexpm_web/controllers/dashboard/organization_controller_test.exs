@@ -1329,8 +1329,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       audit_logs = AuditLogs.all_by(user)
       assert audit_log = Enum.find(audit_logs, &(&1.action == "billing.update"))
       assert audit_log.action == "billing.update"
-      assert audit_log.params["email"] == "billing@example.com"
       assert audit_log.params["organization"]["name"] == organization.name
+      refute Map.has_key?(audit_log.params, "email")
     end
   end
 
@@ -1508,6 +1508,11 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       audit_logs = AuditLogs.all_by(user)
       assert audit_log = Enum.find(audit_logs, &(&1.action == "billing.create"))
       assert audit_log.params["organization"]["name"] == organization.name
+
+      refute Map.has_key?(audit_log.params, "email")
+      refute Map.has_key?(audit_log.params, "person")
+      refute Map.has_key?(audit_log.params, "company")
+      refute Map.has_key?(audit_log.params, "token")
     end
   end
 

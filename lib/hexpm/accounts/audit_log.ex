@@ -368,20 +368,12 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("billing.create", {organization, params}),
     do: %{
       organization: serialize(organization),
-      email: params["email"],
-      person: params["person"],
-      company: params["company"],
-      token: params["token"],
       quantity: params["quantity"]
     }
 
   defp extract_params("billing.update", {organization, params}),
     do: %{
       organization: serialize(organization),
-      email: params["email"],
-      person: params["person"],
-      company: params["company"],
-      token: params["token"],
       quantity: params["quantity"]
     }
 
