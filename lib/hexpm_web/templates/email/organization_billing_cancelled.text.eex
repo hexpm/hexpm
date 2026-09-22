@@ -1,0 +1,9 @@
+<%= OrganizationBillingCancelled.heading() %>
+
+<%= OrganizationBillingCancelled.body(@organization, @access_until) %>
+
+<%= OrganizationBillingCancelled.deletion(@organization, @deletion_at) %>
+
+<%= OrganizationBillingCancelled.next_step() %>
+
+<%= @billing_url %>

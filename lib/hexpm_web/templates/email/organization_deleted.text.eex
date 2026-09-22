@@ -1,0 +1,5 @@
+<%= OrganizationDeleted.heading() %>
+
+<%= OrganizationDeleted.body(@organization) %>
+
+<%= OrganizationDeleted.next_step() %>

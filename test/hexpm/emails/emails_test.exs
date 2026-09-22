@@ -19,6 +19,38 @@ defmodule Hexpm.EmailsTest do
     end
   end
 
+  describe "organization deletion emails" do
+    test "render the dates and the billing page" do
+      deletion_at = ~U[2027-03-01 05:00:00Z]
+
+      email = Emails.organization_deletion_scheduled("acme", deletion_at, ["a@example.com"])
+      assert email.subject == "Hex.pm - acme will be deleted on March 1, 2027"
+      assert email.text_body =~ "scheduled for deletion on March 1, 2027"
+      assert email.html_body =~ "/dashboard/orgs/acme/billing"
+
+      email = Emails.organization_deletion_reminder("acme", deletion_at, 7, ["a@example.com"])
+      assert email.subject == "Hex.pm - acme will be deleted in 7 days"
+      assert email.text_body =~ "is deleted in 7 days, on March 1, 2027"
+
+      email = Emails.organization_deletion_reminder("acme", deletion_at, 1, ["a@example.com"])
+      assert email.subject == "Hex.pm - acme will be deleted tomorrow"
+      assert email.html_body =~ "Organization Deleted Tomorrow"
+
+      email = Emails.organization_deleted("acme", ["a@example.com"])
+      assert email.subject == "Hex.pm - acme has been deleted"
+      assert email.text_body =~ "the name acme has been retired"
+
+      email =
+        Emails.organization_billing_cancelled("acme", ~U[2026-12-01 00:00:00Z], deletion_at, [
+          "a@example.com"
+        ])
+
+      assert email.subject == "Hex.pm - Billing for acme has been cancelled"
+      assert email.text_body =~ "until the end of the paid period on December 1, 2026"
+      assert email.text_body =~ "on March 1, 2027 at the earliest"
+    end
+  end
+
   describe "html layout" do
     test "header does not rely on flexbox" do
       refute package_published_email().html_body =~ "display: flex"

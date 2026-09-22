@@ -85,6 +85,19 @@ defmodule Hexpm.OrphanedObjectsTest do
       assert keys(:repo_bucket) == ["repos/#{repository.name}/names"]
     end
 
+    test "records a repository that is gone for the backup, once" do
+      repository = insert(:repository)
+      put(:repo_bucket, "repos/#{repository.name}/names")
+      put(:repo_bucket, "repos/gone/names")
+      put(:repo_bucket, "repos/gone/tarballs/pkg-1.0.0.tar")
+      put(:repo_bucket, "repos/gone-renamed/versions")
+
+      assert %{deleted: 3} = sweep(:repo_bucket)
+
+      assert keys(:deletions_bucket) == ["organizations/gone", "organizations/gone-renamed"]
+      refute Hexpm.Store.get(:deletions_bucket, "organizations/#{repository.name}", [])
+    end
+
     test "deletes tarballs, docs archives and registry objects of what is gone" do
       package = live_package()
       put(:repo_bucket, "packages/#{package.name}")

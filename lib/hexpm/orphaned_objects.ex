@@ -135,6 +135,7 @@ defmodule Hexpm.OrphanedObjects do
     |> Enum.reduce(%{deleted: 0, rewritten: 0}, fn batch, counts ->
       keys = unchanged(bucket, batch)
       Hexpm.Store.delete_many(bucket, keys)
+      record_deleted_repositories(bucket, keys, index)
 
       Logger.info(%{
         message: "Deleted orphaned objects",
@@ -150,6 +151,22 @@ defmodule Hexpm.OrphanedObjects do
       }
     end)
   end
+
+  # An organization deleted before its objects were, or whose objects a
+  # deletion left behind, is recorded for the backup like a deletion of it
+  # today would be, so the nightly removes it from the snapshots too.
+  defp record_deleted_repositories(:repo_bucket, keys, index) do
+    keys
+    |> Enum.flat_map(fn
+      "repos/" <> rest -> [rest |> String.split("/", parts: 2) |> hd()]
+      _key -> []
+    end)
+    |> Enum.uniq()
+    |> Enum.reject(&MapSet.member?(index.repositories, &1))
+    |> Enum.each(&Hexpm.Backups.delete_organization/1)
+  end
+
+  defp record_deleted_repositories(_bucket, _keys, _index), do: :ok
 
   # The row read above covers a publish up to the moment it ran, and nothing
   # after it. A version republished since then writes its object under the key

@@ -8,8 +8,16 @@ defmodule Hexpm.Billing.Report do
     ]
 
   import Ecto.Query, only: [from: 2]
+  require Logger
   alias Hexpm.Repo
   alias Hexpm.Accounts.Organization
+
+  # An organization inactive for 90 days is deleted with its data
+  # (`Hexpm.Accounts.OrganizationDeletions`), so a report that would set more
+  # organizations inactive in one run than customers stop paying in a day is
+  # taken for a broken report, not for that many cancellations, and its
+  # deactivations are refused.
+  @max_deactivations 10
 
   @impl Oban.Worker
   def timeout(_job), do: 20_000
@@ -23,11 +31,10 @@ defmodule Hexpm.Billing.Report do
           report_tokens = MapSet.new(report_map, fn {token, _quantity} -> token end)
           updates = to_update(organizations(), report_tokens, report_map)
 
-          {set_active, set_inactive} =
-            Enum.split_with(updates, fn {_name, active?, _old_seats, _new_seats} -> active? end)
+          {set_active, set_inactive} = Enum.split_with(updates, & &1.active?)
 
           do_update(set_active, true)
-          do_update(set_inactive, false)
+          deactivate(set_inactive)
 
         {:error, reason} ->
           {:error, reason}
@@ -58,12 +65,41 @@ defmodule Hexpm.Billing.Report do
       active_changed? = should_be_active? != already_active?
 
       if active_changed? or seats_changed? do
-        # Include both old and new seats so we can detect reductions
-        [{name, should_be_active?, current_billing_seats, new_billing_seats}]
+        # Both old and new seats are kept so a reduction can be detected.
+        [
+          %{
+            name: name,
+            active?: should_be_active?,
+            active_changed?: active_changed?,
+            old_seats: current_billing_seats,
+            new_seats: new_billing_seats
+          }
+        ]
       else
         []
       end
     end)
+  end
+
+  defp deactivate(updates) do
+    newly_inactive = Enum.count(updates, & &1.active_changed?)
+
+    if newly_inactive > @max_deactivations do
+      Logger.error(%{
+        message: "Billing report refused: too many organizations to set inactive",
+        event: "billing.report_refused",
+        count: newly_inactive,
+        max: @max_deactivations
+      })
+
+      Sentry.capture_message("Billing report refused: too many organizations to set inactive",
+        extra: %{count: newly_inactive, max: @max_deactivations}
+      )
+
+      {:error, :too_many_deactivations}
+    else
+      do_update(updates, false)
+    end
   end
 
   defp do_update([], _boolean) do
@@ -71,28 +107,45 @@ defmodule Hexpm.Billing.Report do
   end
 
   defp do_update(to_update, boolean) do
-    # Group updates by new seats value to minimize database queries
-    Enum.group_by(to_update, fn {_name, _active?, _old_seats, new_seats} -> new_seats end)
+    now = DateTime.utc_now()
+
+    # Grouped by the new seats value to keep the number of queries down.
+    Enum.group_by(to_update, & &1.new_seats)
     |> Enum.each(fn {new_billing_seats, updates} ->
-      names = Enum.map(updates, fn {name, _active?, _old_seats, _new_seats} -> name end)
+      names = Enum.map(updates, & &1.name)
 
       from(r in Organization, where: r.name in ^names)
       |> Repo.update_all(set: [billing_active: boolean, billing_seats: new_billing_seats])
 
       if new_billing_seats do
-        Enum.each(updates, fn {name, _active?, old_seats, new_seats} ->
-          if is_integer(old_seats) and is_integer(new_seats) and new_seats < old_seats do
-            organization = Hexpm.Accounts.Organizations.get(name)
+        Enum.each(updates, fn update ->
+          if is_integer(update.old_seats) and is_integer(update.new_seats) and
+               update.new_seats < update.old_seats do
+            organization = Hexpm.Accounts.Organizations.get(update.name)
 
             if organization do
               Hexpm.UserSessions.revoke_excess_sessions_for_organization(
                 organization,
-                new_seats
+                update.new_seats
               )
             end
           end
         end)
       end
     end)
+
+    # The day billing stopped is what the deletion counts from, and it is
+    # cleared with everything scheduled from it when billing is back.
+    changed = to_update |> Enum.filter(& &1.active_changed?) |> Enum.map(& &1.name)
+
+    set =
+      if boolean,
+        do: [billing_inactive_since: nil, deletion_scheduled_at: nil, deletion_notices: []],
+        else: [billing_inactive_since: now]
+
+    from(r in Organization, where: r.name in ^changed)
+    |> Repo.update_all(set: set)
+
+    :ok
   end
 end

@@ -11,6 +11,7 @@ defmodule Hexpm.RuntimeConfigTest do
     "HEXPM_DOCS_BUCKET" => "gcs,docs",
     "HEXPM_PREVIEW_BUCKET" => "gcs,preview",
     "HEXPM_DIFF_BUCKET" => "gcs,diff",
+    "HEXPM_DELETIONS_BUCKET" => "gcs,deletions",
     "HEXPM_DIFF_CACHE_VERSION" => "1",
     "HEXPM_CDN_URL" => "https://repo.example.com",
     "HEXPM_DOCS_URL" => "https://docs.example.com",

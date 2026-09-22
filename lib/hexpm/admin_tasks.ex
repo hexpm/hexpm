@@ -38,7 +38,7 @@ defmodule Hexpm.AdminTasks do
 
       # Delete an organization and everything stored under its name
       iex> AdminTasks.delete_organization("acme", delete_data: true)
-      :ok
+      {:ok, %{repo_bucket: 12, preview_bucket: 40, diff_bucket: 0, docs_private_bucket: 300}}
 
       # Remove a package
       iex> AdminTasks.remove_package("hexpm", "malicious_pkg")
@@ -84,12 +84,6 @@ defmodule Hexpm.AdminTasks do
   # alerts and SSO notices go out first.
   @announcement_priority 3
 
-  @organization_prefixes [
-    repo_bucket: "repos/",
-    preview_bucket: "repos/",
-    diff_bucket: "repos/",
-    docs_private_bucket: ""
-  ]
   # Fastly takes at most 256 surrogate keys in one purge request.
   @purge_keys_per_request 256
 
@@ -812,19 +806,25 @@ defmodule Hexpm.AdminTasks do
   - `name` - The name of the organization
   - `opts` - Options:
     - `:delete_data` - When `true`, also deletes the organization's stored
-      objects, `repos/<name>/` in the repository, preview and diff buckets and
-      `<name>/` in the private docs bucket, and purges the CDN keys they were
-      served under (default: `false`)
+      objects, `repos/<name>/` in the repository, preview and diff buckets,
+      the uploads kept under `debug/` in the repository bucket and `<name>/`
+      in the private docs bucket, purges the CDN keys they were served under
+      and records the deletion for the nightly backup, which removes the
+      organization from every snapshot a week later (default: `false`)
+
+  Returns the number of objects deleted per bucket, an empty map without
+  `:delete_data`.
 
   ## Examples
 
       iex> AdminTasks.delete_organization("acme")
-      :ok
+      {:ok, %{}}
 
       iex> AdminTasks.delete_organization("acme", delete_data: true)
-      :ok
+      {:ok, %{repo_bucket: 12, preview_bucket: 40, diff_bucket: 0, docs_private_bucket: 300}}
   """
-  @spec delete_organization(String.t(), keyword()) :: :ok | {:error, term()}
+  @spec delete_organization(String.t(), keyword()) ::
+          {:ok, %{optional(atom()) => non_neg_integer()}} | {:error, term()}
   def delete_organization(name, opts \\ []) do
     delete_data? = Keyword.get(opts, :delete_data, false)
 
@@ -835,8 +835,8 @@ defmodule Hexpm.AdminTasks do
 
       case Organizations.delete(organization, audit: AuditLogs.admin()) do
         :ok ->
-          if delete_data?, do: delete_organization_data(organization.name, contents)
-          :ok
+          counts = if delete_data?, do: delete_organization_data(organization.name, contents)
+          {:ok, counts || %{}}
 
         {:error, reason} ->
           {:error, reason}
@@ -876,16 +876,36 @@ defmodule Hexpm.AdminTasks do
     %{packages: packages, policies: Enum.map(organization.policies, & &1.name)}
   end
 
+  # Every object the organization has in a bucket, under one prefix per
+  # bucket: its registry, tarballs, docs archives and policies in the repo
+  # bucket, plus the uploads kept as sent under debug/, the unpacked preview
+  # files, the cached diffs and the unpacked private docs.
+  defp organization_prefixes(name) do
+    [
+      {:repo_bucket, "repos/#{name}/"},
+      {:repo_bucket, "debug/tarballs/#{name}-"},
+      {:repo_bucket, "debug/docs/#{name}-"},
+      {:preview_bucket, "repos/#{name}/"},
+      {:diff_bucket, "repos/#{name}/"},
+      {:docs_private_bucket, "#{name}/"}
+    ]
+  end
+
   defp delete_organization_data(name, contents) do
     Repo.write_mode!()
 
-    Enum.each(@organization_prefixes, fn {bucket, prefix} ->
-      Hexpm.Store.delete_prefix(bucket, "#{prefix}#{name}/")
-    end)
+    counts =
+      name
+      |> organization_prefixes()
+      |> Enum.reduce(%{}, fn {bucket, prefix}, counts ->
+        count = Hexpm.Store.delete_prefix(bucket, prefix)
+        Map.update(counts, bucket, count, &(&1 + count))
+      end)
 
+    Hexpm.Backups.delete_organization(name)
     purge_keys(:fastly_hexrepo, repository_cdn_keys(name, contents))
     purge_keys(:fastly_hexdocs_private, docs_cdn_keys(name, contents))
-    :ok
+    counts
   end
 
   defp purge_keys(service, keys) do

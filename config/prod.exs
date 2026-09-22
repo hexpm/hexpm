@@ -65,7 +65,8 @@ config :hexpm, Oban,
        {"0 2 * * *", Hexpm.PurgeExpiredRecords},
        {"15 3 * * *", Hexpm.Accounts.OrganizationDomains.RecheckWorker},
        {"45 3 * * *", Hexpm.Accounts.SSO.EnforcementWorker},
-       {"*/15 * * * *", Hexpm.Accounts.OrganizationTFAWorker}
+       {"*/15 * * * *", Hexpm.Accounts.OrganizationTFAWorker},
+       {"0 5 * * *", Hexpm.Accounts.OrganizationDeletions.Worker}
      ],
      timezone: "Etc/UTC"},
     # Successful jobs are read by nobody and are the bulk of the table, which

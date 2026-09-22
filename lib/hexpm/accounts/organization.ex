@@ -14,6 +14,9 @@ defmodule Hexpm.Accounts.Organization do
     field :tfa_required_at, :utc_datetime_usec
     field :tfa_policy_updated_at, :utc_datetime_usec
     field :tfa_policy_revision, :integer, default: 0
+    field :billing_inactive_since, :utc_datetime_usec
+    field :deletion_scheduled_at, :utc_datetime_usec
+    field :deletion_notices, {:array, :string}, default: []
     timestamps()
 
     has_one :repository, Repository
