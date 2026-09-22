@@ -6,6 +6,7 @@ defmodule Hexpm.Shared do
         Accounts.AuditLog,
         Accounts.AuditLogs,
         Accounts.Auth,
+        Accounts.BlockedEmailDomain,
         Accounts.Email,
         Accounts.Key,
         Accounts.KeyPermission,

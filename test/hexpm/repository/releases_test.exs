@@ -253,19 +253,16 @@ defmodule Hexpm.Repository.ReleasesTest do
                &match?(%{version: "0.1.0"}, &1)
              )
 
-      assert_enqueued(
-        worker: Hexpm.CDN.PurgeWorker,
-        args: %{
-          "service" => "fastly_hexrepo",
-          "keys" => ["tarballs/#{name}-0.1.0"],
-          "verify" => [
-            %{
-              "url" => "http://localhost:5000/tarballs/#{name}-0.1.0.tar",
-              "etag" => ~s("#{Base.encode16(:crypto.hash(:md5, tarball), case: :lower)}")
-            }
-          ]
-        }
-      )
+      assert purge_args(["tarballs/#{name}-0.1.0"]) == %{
+               "service" => "fastly_hexrepo",
+               "keys" => ["tarballs/#{name}-0.1.0"],
+               "verify" => [
+                 %{
+                   "url" => "http://localhost:5000/tarballs/#{name}-0.1.0.tar",
+                   "etag" => ~s("#{Base.encode16(:crypto.hash(:md5, tarball), case: :lower)}")
+                 }
+               ]
+             }
     end
 
     test "publish private package with public dependency", %{

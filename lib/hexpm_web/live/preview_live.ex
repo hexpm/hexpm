@@ -78,7 +78,7 @@ defmodule HexpmWeb.PreviewLive do
           {:noreply, redirect(socket, to: to)}
         end
 
-      {:error, :sso_required, organization} ->
+      {:error, requirement, organization} when requirement in [:sso_required, :tfa_required] ->
         {:noreply,
          SSOEnforcement.redirect_to_login(socket, organization, SSOEnforcement.return_path(uri))}
 

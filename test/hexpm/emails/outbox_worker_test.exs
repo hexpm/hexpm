@@ -18,7 +18,7 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
     %{mailer_config: mailer_config}
   end
 
-  test "delivers a rendered email through Swoosh.Adapters.Test and deletes it" do
+  test "delivers a rendered email through Swoosh.Adapters.Test and records the delivery" do
     assert Application.fetch_env!(:hexpm, Emails.Mailer)[:adapter] == Swoosh.Adapters.Test
 
     email = rendered_email("Rendered email")
@@ -26,9 +26,79 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
     persisted_email = OutboxEnvelope.load!(entry.email)
 
     assert persisted_email == %{email | private: %{}, assigns: %{}}
+
+    assert entry.recipients == [
+             "recipient@example.com",
+             "second@example.com",
+             "cc@example.com",
+             "bcc@example.com"
+           ]
+
+    assert entry.subject == "Rendered email"
+    assert entry.type == nil
+    assert entry.delivered_at == nil
+
     assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: entry.id})
     assert_email_sent(delivered(persisted_email, entry))
-    refute Repo.get(OutboxEntry, entry.id)
+
+    assert %OutboxEntry{delivered_at: %DateTime{}, provider_message_id: nil} =
+             Repo.get!(OutboxEntry, entry.id)
+  end
+
+  test "keeps the email type across the outbox" do
+    email = Emails.announcement("bob@example.com", "Hex.pm - Service update", "Body")
+    entry = Outbox.enqueue!(email, category: "admin.announcement")
+
+    assert entry.type == "announcement"
+    assert entry.email["type"] == "announcement"
+    assert OutboxEnvelope.load!(entry.email).private == %{type: "announcement"}
+  end
+
+  test "records the provider's message id", context do
+    entry = Outbox.enqueue!(rendered_email("Identified"), category: "test.identified")
+
+    Application.put_env(
+      :hexpm,
+      Emails.Mailer,
+      context.mailer_config
+      |> Keyword.put(:adapter, Emails.ProviderIdAdapter)
+      |> Keyword.put(:message_id, "sg-message-id")
+    )
+
+    assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: entry.id})
+    assert Repo.get!(OutboxEntry, entry.id).provider_message_id == "sg-message-id"
+  end
+
+  test "a delivered entry is not delivered again" do
+    entry = Outbox.enqueue!(rendered_email("Once"), category: "test.once")
+
+    assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: entry.id})
+    assert_email_sent(subject: "Once")
+
+    assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: entry.id})
+    refute_email_sent()
+  end
+
+  test "reconciliation leaves a delivered entry alone" do
+    entry =
+      Outbox.enqueue!(rendered_email("Delivered"),
+        category: "test.delivered",
+        group_key: "delivered:1"
+      )
+
+    assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: entry.id})
+    entry |> delivery_job() |> Repo.delete!()
+
+    delivered = Repo.get!(OutboxEntry, entry.id)
+
+    delivered
+    |> Ecto.Changeset.change(expires_at: DateTime.add(DateTime.utc_now(), -1, :second))
+    |> Repo.update!()
+
+    assert :ok = perform_job(OutboxReconciler, %{})
+
+    refute delivery_job(entry)
+    assert Repo.get!(OutboxEntry, entry.id).delivered_at == delivered.delivered_at
   end
 
   test "delivers each SSO security notification to every snapshotted address" do
@@ -53,7 +123,7 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
         to: ["one@example.com", "two@example.com"]
       )
 
-      refute Repo.get(OutboxEntry, entry.id)
+      assert delivered?(entry)
     end
   end
 
@@ -82,7 +152,7 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
     assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: entry.id})
     assert_email_sent(delivered_email)
     assert delivered_email.headers["Message-ID"] == "<outbox-#{entry.id}@hex.pm>"
-    refute Repo.get(OutboxEntry, entry.id)
+    assert delivered?(entry)
   end
 
   test "a failing entry does not hold up another entry in its group", context do
@@ -120,11 +190,11 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
 
     assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: unlinked.id})
     assert_email_sent(subject: "Unlinked")
-    refute Repo.get(OutboxEntry, unlinked.id)
+    assert delivered?(unlinked)
 
     assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: linked.id})
     assert_email_sent(subject: "Linked")
-    refute Repo.get(OutboxEntry, linked.id)
+    assert delivered?(linked)
   end
 
   test "missing and expired entries are harmless" do
@@ -202,7 +272,7 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
 
     assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: next.id})
     assert_email_sent(subject: "Next")
-    refute Repo.get(OutboxEntry, next.id)
+    assert delivered?(next)
   end
 
   test "reconciles a discarded delivery job while its outbox entry remains" do
@@ -297,6 +367,30 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
 
     assert :ok = perform_job(OutboxReconciler, %{})
     assert %Oban.Job{state: "available"} = delivery_job(missing)
+  end
+
+  test "the delivery job carries the entry's priority" do
+    default = Outbox.enqueue!(rendered_email("Default"), category: "test.default")
+    assert default.priority == 0
+    assert delivery_job(default).priority == 0
+
+    bulk = Outbox.enqueue!(rendered_email("Bulk"), category: "test.bulk", priority: 3)
+    assert bulk.priority == 3
+    assert delivery_job(bulk).priority == 3
+  end
+
+  test "rejects a priority outside Oban's range" do
+    assert_raise Ecto.InvalidChangesetError, fn ->
+      Outbox.enqueue!(rendered_email("Too low"), category: "test.priority", priority: 10)
+    end
+  end
+
+  test "reconciliation requeues a missing job at the entry's priority" do
+    entry = Outbox.enqueue!(rendered_email("Requeued"), category: "test.requeued", priority: 3)
+    entry |> delivery_job() |> Repo.delete!()
+
+    assert :ok = perform_job(OutboxReconciler, %{})
+    assert %Oban.Job{state: "available", priority: 3} = delivery_job(entry)
   end
 
   test "does not enqueue duplicate incomplete jobs for one entry" do
@@ -400,7 +494,7 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
     assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: entry.id})
     assert_email_sent(delivered(persisted_email, entry))
     assert {_name, ^recipient} = List.first(persisted_email.to)
-    refute Repo.get(OutboxEntry, entry.id)
+    assert delivered?(entry)
   end
 
   test "rejects emails that are not safely deliverable and redacts the persisted envelope" do
@@ -426,8 +520,10 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
     end
 
     assert :email in OutboxEntry.__schema__(:redact_fields)
+    assert :recipients in OutboxEntry.__schema__(:redact_fields)
 
-    entry = Outbox.enqueue!(rendered_email("Private body"), category: "test.redaction")
+    entry = Outbox.enqueue!(rendered_email("Redacted"), category: "test.redaction")
+    assert inspect(entry) =~ ~s(subject: "Redacted")
     refute inspect(entry) =~ "Private body"
     refute inspect(entry) =~ "recipient@example.com"
   end
@@ -443,6 +539,10 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
 
   defp delivered(email, entry) do
     header(email, "Message-ID", "<outbox-#{entry.id}@hex.pm>")
+  end
+
+  defp delivered?(entry) do
+    match?(%OutboxEntry{delivered_at: %DateTime{}}, Repo.get!(OutboxEntry, entry.id))
   end
 
   defp delivery_job(entry) do

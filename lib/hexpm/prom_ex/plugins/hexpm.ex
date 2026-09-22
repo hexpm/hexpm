@@ -2,9 +2,9 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
   @moduledoc """
   PromEx plugin for hex.pm business metrics: the domain events emitted from
   the contexts (see `Hexpm.Repository.Releases` and `Hexpm.Accounts.Users`),
-  registry builds (`Hexpm.Repository.RegistryWorker`) and CDN purges
-  (`Hexpm.CDN.PurgeWorker`, `Hexpm.CDN.Fastly`), and the number of Erlang
-  nodes this node is connected to.
+  API authentication (`HexpmWeb.AuthHelpers`), registry builds
+  (`Hexpm.Repository.RegistryWorker`) and CDN purges (`Hexpm.CDN.PurgeWorker`,
+  `Hexpm.CDN.Fastly`), and the number of Erlang nodes this node is connected to.
   """
 
   use PromEx.Plugin
@@ -42,6 +42,13 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
           unit: {:native, :millisecond},
           reporter_options: [buckets: [10, 50, 100, 500, 1000, 5000, 30_000]],
           description: "Time spent matching a release's files."
+        )
+      ]),
+      Event.build(:hexpm_api_event_metrics, [
+        counter("hexpm.api.authenticate.total",
+          event_name: [:hexpm, :api, :authenticate],
+          description: "API requests that carried an Authorization header, by scheme and result.",
+          tags: [:scheme, :result]
         )
       ]),
       Event.build(:hexpm_registry_builder_event_metrics, [

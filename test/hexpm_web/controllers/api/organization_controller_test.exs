@@ -116,7 +116,7 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
     end
 
     test "update organization seats", %{user1: user1, organization: organization} do
-      insert(:organization_user, organization: organization, user: user1, role: "write")
+      insert(:organization_user, organization: organization, user: user1, role: "admin")
 
       expect(Hexpm.Billing.Mock, :update, fn token, params ->
         assert organization.name == token
@@ -130,8 +130,17 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
       |> response(200)
     end
 
-    test "validate update organization seats", %{user1: user1, organization: organization} do
+    test "update organization seats requires admin", %{user1: user1, organization: organization} do
       insert(:organization_user, organization: organization, user: user1, role: "write")
+
+      build_conn()
+      |> put_req_header("authorization", key_for(user1))
+      |> post("/api/orgs/#{organization.name}", %{seats: 5})
+      |> response(404)
+    end
+
+    test "validate update organization seats", %{user1: user1, organization: organization} do
+      insert(:organization_user, organization: organization, user: user1, role: "admin")
 
       result =
         build_conn()

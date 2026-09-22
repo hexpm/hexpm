@@ -23,10 +23,14 @@ defmodule HexpmWeb.DocsControllerTest do
     assert html =~ "organization access session"
     assert html =~ "never suppresses a personal Hexpm two-factor prompt"
 
-    {:ok, document} = Floki.parse_document(html)
-    assert [link] = Floki.find(document, ~s(#docs-nav a[href="/docs/organization-sso"]))
-    assert Floki.text(link) =~ "Organization SSO"
-    assert Floki.attribute(link, "class") |> List.first() =~ "bg-blue-50"
+    document = LazyHTML.from_document(html)
+
+    assert [link] =
+             LazyHTML.query(document, ~s(#docs-nav a[href="/docs/organization-sso"]))
+             |> Enum.to_list()
+
+    assert LazyHTML.text(link) =~ "Organization SSO"
+    assert LazyHTML.attribute(link, "class") |> List.first() =~ "bg-blue-50"
   end
 
   test "renders the navigation as a sidebar on desktop and a collapsed accordion below it" do
@@ -35,22 +39,22 @@ defmodule HexpmWeb.DocsControllerTest do
       |> get("/docs/rebar3-usage")
       |> html_response(200)
 
-    {:ok, document} = Floki.parse_document(html)
+    document = LazyHTML.from_document(html)
 
-    assert [sidebar] = Floki.find(document, "nav#docs-nav")
-    assert Floki.attribute(sidebar, "class") |> List.first() =~ "hidden lg:block"
+    assert [sidebar] = LazyHTML.query(document, "nav#docs-nav") |> Enum.to_list()
+    assert LazyHTML.attribute(sidebar, "class") |> List.first() =~ "hidden lg:block"
 
-    assert [accordion] = Floki.find(document, "details#docs-nav-mobile")
-    assert Floki.attribute(accordion, "class") |> List.first() =~ "lg:hidden"
-    assert Floki.attribute(accordion, "open") == []
-    assert Floki.find(accordion, "summary") |> Floki.text() =~ "Rebar3 usage"
+    assert [accordion] = LazyHTML.query(document, "details#docs-nav-mobile") |> Enum.to_list()
+    assert LazyHTML.attribute(accordion, "class") |> List.first() =~ "lg:hidden"
+    assert LazyHTML.attribute(accordion, "open") == []
+    assert LazyHTML.query(accordion, "summary") |> LazyHTML.text() =~ "Rebar3 usage"
 
     for nav <- [sidebar, accordion] do
-      assert [link] = Floki.find(nav, ~s(a[href="/docs/rebar3-usage"]))
-      assert Floki.attribute(link, "class") |> List.first() =~ "bg-blue-50"
-      assert [_] = Floki.find(nav, ~s(a[href="/docs/public-keys"]))
-      assert [tasks] = Floki.find(nav, ~s(a[href="https://hexdocs.pm/hex"]))
-      assert Floki.attribute(tasks, "target") == ["_blank"]
+      assert [link] = LazyHTML.query(nav, ~s(a[href="/docs/rebar3-usage"])) |> Enum.to_list()
+      assert LazyHTML.attribute(link, "class") |> List.first() =~ "bg-blue-50"
+      assert [_] = LazyHTML.query(nav, ~s(a[href="/docs/public-keys"])) |> Enum.to_list()
+      assert [tasks] = LazyHTML.query(nav, ~s(a[href="https://hexdocs.pm/hex"])) |> Enum.to_list()
+      assert LazyHTML.attribute(tasks, "target") == ["_blank"]
     end
   end
 
@@ -63,10 +67,14 @@ defmodule HexpmWeb.DocsControllerTest do
     assert html =~ "Leaked API keys"
     assert html =~ "What Hex.pm did automatically"
 
-    {:ok, document} = Floki.parse_document(html)
-    assert [link] = Floki.find(document, ~s(#docs-nav a[href="/docs/leaked-keys"]))
-    assert Floki.text(link) =~ "Leaked API keys"
-    assert Floki.attribute(link, "class") |> List.first() =~ "bg-blue-50"
+    document = LazyHTML.from_document(html)
+
+    assert [link] =
+             LazyHTML.query(document, ~s(#docs-nav a[href="/docs/leaked-keys"]))
+             |> Enum.to_list()
+
+    assert LazyHTML.text(link) =~ "Leaked API keys"
+    assert LazyHTML.attribute(link, "class") |> List.first() =~ "bg-blue-50"
   end
 
   test "hides the organization SSO guide and navigation when SSO is off" do
@@ -85,6 +93,45 @@ defmodule HexpmWeb.DocsControllerTest do
     )
 
     assert_sso_docs_hidden()
+  end
+
+  test "2FA documentation and navigation follow their own rollout availability" do
+    app_env(:hexpm, :organization_sso, mode: :off, beta_organizations: [])
+
+    for {config, visible?} <- [
+          {[mode: :off, beta_organizations: ["pilot"]], false},
+          {[mode: :beta, beta_organizations: []], false},
+          {[mode: :beta, beta_organizations: ["pilot"]], true},
+          {[mode: :enabled, beta_organizations: []], true}
+        ] do
+      app_env(:hexpm, :organization_tfa, config)
+      html = build_conn() |> get("/docs/usage") |> html_response(200)
+      assert html =~ ~s(href="/docs/organization-tfa") == visible?
+      refute html =~ ~s(href="/docs/organization-sso")
+
+      assert build_conn()
+             |> get("/docs/organization-tfa")
+             |> response(if visible?, do: 200, else: 404)
+    end
+  end
+
+  test "usage guide code blocks have a copy control" do
+    html =
+      build_conn()
+      |> get("/docs/usage")
+      |> html_response(200)
+
+    document = LazyHTML.from_document(html)
+
+    assert [button | _] =
+             LazyHTML.query(document, ~s(.docs-content button[phx-hook="CopyButton"]))
+             |> Enum.to_list()
+
+    assert [target_id] = LazyHTML.attribute(button, "data-copy-target")
+    assert [target] = LazyHTML.query(document, "##{target_id}") |> Enum.to_list()
+    assert [value] = LazyHTML.attribute(target, "data-value")
+    assert value =~ "defmodule MyProject.MixProject"
+    refute value =~ "```"
   end
 
   defp assert_sso_docs_hidden do

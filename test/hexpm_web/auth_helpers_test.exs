@@ -65,6 +65,80 @@ defmodule HexpmWeb.AuthHelpersTest do
     assert oauth_user.id == user.id
   end
 
+  test "counts every request carrying credentials by scheme and result", %{user: user} do
+    ref = make_ref()
+
+    :telemetry.attach(
+      {__MODULE__, ref},
+      [:hexpm, :api, :authenticate],
+      &__MODULE__.forward_event/4,
+      %{pid: self(), ref: ref}
+    )
+
+    on_exit(fn -> :telemetry.detach({__MODULE__, ref}) end)
+
+    now = ~U[2026-09-30 23:59:59Z]
+    basic = "Basic " <> Base.encode64("#{user.username}:password")
+
+    user |> auth_conn(basic) |> AuthHelpers.authenticate_at(now)
+    assert_receive {^ref, %{count: 1}, %{scheme: :basic, result: :ok}}
+
+    user |> auth_conn(basic) |> AuthHelpers.authenticate_at(~U[2026-10-01 00:00:00Z])
+    assert_receive {^ref, %{count: 1}, %{scheme: :basic, result: :basic_auth_disabled}}
+
+    user
+    |> auth_conn("Basic " <> Base.encode64("#{user.username}:wrong"))
+    |> AuthHelpers.authenticate_at(now)
+
+    assert_receive {^ref, %{count: 1}, %{scheme: :basic, result: :password}}
+
+    user |> auth_conn("Basic not-base64") |> AuthHelpers.authenticate_at(now)
+    assert_receive {^ref, %{count: 1}, %{scheme: :basic, result: :invalid}}
+
+    key = Key.build(user, %{name: "api-key"}) |> Repo.insert!()
+    user |> auth_conn(key.user_secret) |> AuthHelpers.authenticate_at(now)
+    assert_receive {^ref, %{count: 1}, %{scheme: :key, result: :ok}}
+
+    user |> auth_conn("no-such-key") |> AuthHelpers.authenticate_at(now)
+    assert_receive {^ref, %{count: 1}, %{scheme: :key, result: :key}}
+
+    user |> auth_conn("Bearer no-such-token") |> AuthHelpers.authenticate_at(now)
+    assert_receive {^ref, %{count: 1}, %{scheme: :bearer, result: :key}}
+
+    assert {:error, :missing} = AuthHelpers.authenticate_at(build_conn(), now)
+    refute_received {^ref, _, _}
+  end
+
+  # Only events the test process itself executes are forwarded, so key and
+  # token authentication in concurrently running tests never reach the mailbox.
+  def forward_event(_event, measurements, metadata, %{pid: pid, ref: ref}) do
+    if self() == pid, do: send(pid, {ref, measurements, metadata})
+  end
+
+  test "records a wrong Basic password", %{user: user} do
+    conn = auth_conn(user, "Basic " <> Base.encode64("#{user.username}:wrong"))
+
+    assert {:error, :password} = AuthHelpers.authenticate_at(conn, ~U[2026-09-30 23:59:59Z])
+
+    username = user.username
+
+    assert_received {Hexpm.LogLines, :warning,
+                     %{
+                       method: "password",
+                       reason: "wrong_password",
+                       username: ^username,
+                       user_agent: "TEST",
+                       ip: "127.0.0.1"
+                     }}
+  end
+
+  test "records an invalid Bearer token", %{user: user} do
+    conn = auth_conn(user, "Bearer not-a-jwt")
+
+    assert {:error, :key} = AuthHelpers.authenticate_at(conn, ~U[2026-09-30 23:59:59Z])
+    assert_received {Hexpm.LogLines, :warning, %{method: "oauth_token", reason: "invalid"}}
+  end
+
   defp auth_conn(user, authorization) do
     build_conn()
     |> fetch_query_params()

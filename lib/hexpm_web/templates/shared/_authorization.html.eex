@@ -11,12 +11,17 @@
       <div class="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 p-4 space-y-2">
         <h3 class="text-lg font-semibold text-grey-900 dark:text-grey-100">Authenticate first</h3>
         <p class="text-sm text-grey-700 dark:text-grey-300">
-          These organizations require single sign-on and this browser has not authenticated for them. Approving now issues a token that cannot reach them, and authenticating afterwards does not change a token that has already been issued.
+          These organizations require authentication that this browser has not completed. Approving now issues a token that cannot reach them, and authenticating afterwards does not change a token that has already been issued.
         </p>
-        <ul class="space-y-1">
-          <%= for name <- @sso_pending do %>
+        <ul class="list-disc pl-5 space-y-3">
+          <%= for entry <- @sso_pending do %>
             <li>
-              <%= link "Authenticate to #{name}", to: HexpmWeb.SSOEnforcement.login_path(name, assigns[:sso_return_path]), class: "text-primary-600 dark:text-primary-300 font-medium hover:underline" %>
+              <%= link entry.organization, to: HexpmWeb.SSOEnforcement.login_path(entry.organization, assigns[:sso_return_path]), class: "break-words text-primary-600 dark:text-primary-300 font-semibold hover:underline" %>
+              <ul class="list-disc pl-5 mt-1 space-y-1 text-sm text-grey-700 dark:text-grey-300">
+                <%= for requirement <- entry.requirements do %>
+                  <li><%= if requirement == "tfa", do: "2FA enrollment required", else: "SSO authentication required" %></li>
+                <% end %>
+              </ul>
             </li>
           <% end %>
         </ul>
@@ -31,6 +36,7 @@
       <%= for {key, value} <- @hidden_fields do %>
         <input type="hidden" name="<%= key %>" value="<%= value %>">
       <% end %>
+      <input type="hidden" name="_sudo_token" value="<%= HexpmWeb.Plugs.Sudo.generate_form_token(@current_user.id, "POST", @form_action) %>">
 
       <div class="flex items-center justify-center gap-3 pt-4">
         <%= submit "Authorize", name: "action", value: @approve_value, class: "inline-flex items-center justify-center gap-2 font-semibold rounded h-12 px-4 text-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-grey-800 cursor-pointer bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 flex-1" %>

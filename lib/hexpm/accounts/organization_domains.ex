@@ -16,6 +16,7 @@ defmodule Hexpm.Accounts.OrganizationDomains do
 
   @dns_timeout 5_000
   @recheck_after_seconds 24 * 60 * 60
+  @recheck_concurrency 5
 
   def all(organization) do
     Repo.all(
@@ -125,7 +126,7 @@ defmodule Hexpm.Accounts.OrganizationDomains do
         end
 
       {:ok, false} ->
-        Repo.update!(change(domain, last_checked_at: now))
+        unverify(organization, domain, now, audit_data)
         {:error, :record_not_found}
 
       :error ->
@@ -153,6 +154,11 @@ defmodule Hexpm.Accounts.OrganizationDomains do
   @doc """
   Re-checks every verified domain that has not been looked at for a day and
   clears the ones whose record has gone. Returns the number cleared.
+
+  Ordered by the last attempt, longest ago first, and every attempt stamps that
+  time whether it answered or not. Without both, domains whose resolver never
+  answers sort the same way on every run and spend the whole budget before the
+  rest of the table is reached.
   """
   def recheck_all(now \\ DateTime.utc_now()) do
     cutoff = DateTime.add(now, -@recheck_after_seconds, :second)
@@ -161,21 +167,29 @@ defmodule Hexpm.Accounts.OrganizationDomains do
       from(domain in OrganizationDomain,
         where: not is_nil(domain.verified_at),
         where: is_nil(domain.last_checked_at) or domain.last_checked_at < ^cutoff,
+        order_by: [asc_nulls_first: domain.last_checked_at],
         preload: [:organization]
       )
     )
-    |> Enum.count(&recheck(&1, now))
+    |> Task.async_stream(&recheck(&1, now),
+      max_concurrency: @recheck_concurrency,
+      timeout: @dns_timeout * 2,
+      on_timeout: :kill_task
+    )
+    |> Enum.count(&match?({:ok, true}, &1))
   end
 
   # A resolver that cannot answer is not the same as a record that is gone.
   # Treating them alike would let one bad minute of DNS unverify every domain
   # hexpm knows, and nothing re-checks a domain once it is cleared, so every
-  # organization would need a human. A failed lookup leaves both the
-  # verification and `last_checked_at` alone, so the next run tries again.
+  # organization would need a human. A failed lookup leaves the verification
+  # alone; it still stamps the attempt, so the run after this one starts with
+  # the domains nobody has tried for longest.
   defp recheck(domain, now) do
     case published?(domain) do
       :error ->
         Logger.warning("[domains] could not look up #{domain.domain}, leaving it verified")
+        Repo.update!(change(domain, last_checked_at: now))
         false
 
       {:ok, true} ->
@@ -183,26 +197,26 @@ defmodule Hexpm.Accounts.OrganizationDomains do
         false
 
       {:ok, false} ->
-        unverify(domain, now)
+        unverify(domain.organization, domain, now)
     end
   end
 
-  defp unverify(domain, now) do
+  # The scheduled run has no administrator behind it, so it writes the audit row
+  # as the system. A manual check does have one and writes it as them.
+  defp unverify(organization, domain, now, audit_data \\ nil) do
     Repo.transaction(fn ->
       Repo.update!(OrganizationDomain.unverified_changeset(domain, now))
 
       Repo.insert!(
         AuditLog.build(
-          AuditLogs.system(domain.organization),
+          audit_data || AuditLogs.system(organization),
           "organization.domain.unverify",
-          {domain.organization, domain}
+          {organization, domain}
         )
       )
     end)
 
-    Logger.warning(
-      "[domains] #{domain.domain} no longer verifies for #{domain.organization.name}"
-    )
+    Logger.warning("[domains] #{domain.domain} no longer verifies for #{organization.name}")
 
     true
   end

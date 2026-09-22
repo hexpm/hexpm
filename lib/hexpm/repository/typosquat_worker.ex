@@ -1,4 +1,4 @@
-defmodule Hexpm.ReleaseTasks.CheckNames do
+defmodule Hexpm.Repository.TyposquatWorker do
   use Oban.Worker,
     queue: :periodic,
     max_attempts: 5,

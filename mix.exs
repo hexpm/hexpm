@@ -5,7 +5,7 @@ defmodule Hexpm.MixProject do
     [
       app: :hexpm,
       version: "0.0.1",
-      elixir: "~> 1.18",
+      elixir: "~> 1.20",
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: Mix.compilers(),
       build_embedded: Mix.env() == :prod,
@@ -49,8 +49,15 @@ defmodule Hexpm.MixProject do
       {:ex_aws_sqs, "~> 3.0"},
       {:ex_aws, "~> 2.0"},
       {:ex_machina, "~> 2.0"},
-      {:finch, "~> 0.23.0"},
-      {:floki, "~> 0.37"},
+      # Finch 0.23.0 closes idle-expired HTTP/1 connections inside the pool
+      # process, where a peer that doesn't answer the TLS close blocks every
+      # checkout for up to 5 s. No release includes the fix yet.
+      # https://github.com/sneako/finch/pull/392
+      {:finch,
+       github: "sneako/finch",
+       ref: "79885b6cd1ca072824149389b6ab8899f8b970d1",
+       depth: 1,
+       override: true},
       {:geolix, "~> 2.0"},
       {:geolix_adapter_mmdb2, "~> 0.6"},
       {:goth, "~> 1.4"},
@@ -59,15 +66,15 @@ defmodule Hexpm.MixProject do
       {:joken, "~> 2.6"},
       {:lasso, "~> 0.1.4", only: :test},
       {:libcluster, "~> 3.0"},
-      {:logster, "~> 1.0"},
+      {:logger_json, "~> 7.0"},
       {:git_diff,
        github: "ericmj/git_diff", ref: "d47473d661ff0073ce4080ae04db1a439d78a62b", depth: 1},
       {:mdex, "~> 0.13"},
       {:mdex_gfm, "~> 0.1"},
       {:lumis,
        github: "ericmj/lumis",
-       branch: "vendor-haskell-parser",
-       sparse: "packages/elixir/lumis",
+       branch: "hexpm",
+       subdir: "packages/elixir/lumis",
        depth: 1,
        override: true},
       {:rustler, ">= 0.0.0"},
@@ -101,10 +108,10 @@ defmodule Hexpm.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:ueberauth, "~> 0.10"},
       {:ueberauth_github, "~> 0.8"},
-      {:lazy_html, ">= 0.1.0", only: :test},
+      {:lazy_html, "~> 0.1.12"},
       # ExAws signs empty-body GET requests that Req 0.7 rewrites as POST.
       # https://github.com/ex-aws/ex_aws/issues/1246
-      {:req, "0.7.3"}
+      {:req, "0.7.4"}
     ]
   end
 

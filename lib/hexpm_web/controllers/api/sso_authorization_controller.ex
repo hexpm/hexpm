@@ -41,7 +41,7 @@ defmodule HexpmWeb.API.SSOAuthorizationController do
   end
 
   defp message(:invalid_session) do
-    "SSO re-authorization is for an OAuth session, sign in from your Hex client to get one"
+    "Organization reauthorization requires an OAuth session, sign in from your Hex client to get one"
   end
 
   defp message(:invalid_organizations) do
@@ -52,6 +52,6 @@ defmodule HexpmWeb.API.SSOAuthorizationController do
   # of, and one that does not require SSO, so asking tells them nothing they
   # did not already know.
   defp message(:not_governed) do
-    "SSO authentication is not required for the requested organizations"
+    "Organization authentication is not required for the requested organizations"
   end
 end

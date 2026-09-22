@@ -20,6 +20,25 @@ defmodule Hexpm.Repository.Policy.OverrideTest do
     assert changeset(%{"action" => "deny", "package" => "phoenix"}).valid?
   end
 
+  test "bounds the package and requirement in bytes" do
+    cs = changeset(%{"action" => "allow", "package" => String.duplicate("a", 256)})
+    assert errors_on(cs).package == "should be at most 255 byte(s)"
+
+    requirement = String.duplicate("~> 1.0 or ", 23) <> "~> 1.0-" <> String.duplicate("a", 18)
+    assert byte_size(requirement) == 255
+
+    assert changeset(%{"action" => "allow", "package" => "phoenix", "requirement" => requirement}).valid?
+
+    cs =
+      changeset(%{
+        "action" => "allow",
+        "package" => "phoenix",
+        "requirement" => requirement <> "a"
+      })
+
+    assert errors_on(cs).requirement == "should be at most 255 byte(s)"
+  end
+
   test "validates package format" do
     cs = changeset(%{"action" => "allow", "package" => "Bad Name"})
     refute cs.valid?

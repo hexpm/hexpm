@@ -107,6 +107,31 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert device_code.name == name
     end
 
+    test "bounds the name in codepoints", %{client: client} do
+      conn =
+        post(build_conn(), ~p"/api/oauth/device_authorization", %{
+          "client_id" => client.client_id,
+          "scope" => "api",
+          "name" => codepoints_string(255)
+        })
+
+      response = json_response(conn, 200)
+      device_code = Repo.get_by(Hexpm.OAuth.DeviceCode, device_code: response["device_code"])
+      assert device_code.name == codepoints_string(255)
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/device_authorization", %{
+          "client_id" => client.client_id,
+          "scope" => "api",
+          "name" => codepoints_string(256)
+        })
+
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_request"
+      assert response["error_description"] == "name should be at most 255 character(s)"
+      assert Repo.aggregate(Hexpm.OAuth.DeviceCode, :count) == 1
+    end
+
     test "returns error for scope as array (malformed JSON)", %{client: client} do
       conn =
         post(build_conn(), ~p"/api/oauth/device_authorization", %{
@@ -371,6 +396,9 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       response = json_response(conn, 400)
       assert response["error"] == "invalid_grant"
       assert response["error_description"] == "Invalid refresh token"
+
+      assert_received {Hexpm.LogLines, :warning,
+                       %{method: "refresh_token", reason: "invalid", path: "/api/oauth/token"}}
     end
 
     test "returns error for mismatched client_id", %{refresh_token: refresh_token} do
@@ -433,6 +461,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       response = json_response(conn, 400)
       assert response["error"] == "invalid_grant"
       assert response["error_description"] == "Refresh token has been revoked"
+      assert_received {Hexpm.LogLines, :warning, %{method: "refresh_token", reason: "revoked"}}
     end
 
     test "refuses a refresh for a live token whose session is revoked", %{
@@ -458,6 +487,9 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert response["error"] == "invalid_grant"
       assert response["error_description"] == "Session has been revoked"
       assert Repo.get!(Token, token.id).revoked_at == nil
+
+      assert_received {Hexpm.LogLines, :warning,
+                       %{method: "refresh_token", reason: "session_revoked"}}
     end
 
     test "returns error for expired refresh token", %{user: user, client: client} do
@@ -497,6 +529,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert response = json_response(conn, 400)
       assert response["error"] == "invalid_grant"
       assert response["error_description"] == "Refresh token has expired"
+      assert_received {Hexpm.LogLines, :warning, %{method: "refresh_token", reason: "expired"}}
     end
   end
 
@@ -686,7 +719,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert Repo.get(Hexpm.UserSession, token.user_session_id).revoked_at
     end
 
-    test "revoking an access token leaves the session alone", %{
+    test "revoking an access token takes the session with it", %{
       revoke_client: client,
       revoke_token: token,
       revoke_access_token: access_token
@@ -701,7 +734,61 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       |> response(200)
 
       assert Tokens.revoked?(Repo.get(Token, token.id))
-      refute Repo.get(Hexpm.UserSession, token.user_session_id).revoked_at
+      assert Repo.get(Hexpm.UserSession, token.user_session_id).revoked_at
+    end
+
+    # `mix hex.user deauth` presents the access token, which lives 30 minutes
+    # and so is usually expired by then. Revocation still has to find it and end
+    # the session; otherwise the 30-day refresh token keeps working.
+    test "revoking an expired access token still takes the session with it", %{
+      revoke_client: client,
+      revoke_token: token
+    } do
+      expired = expired_token(token, token.jti)
+
+      assert {:error, _} = Tokens.lookup(expired, :access, validate: false)
+
+      build_conn()
+      |> post(~p"/api/oauth/revoke", %{token: expired, client_id: client.client_id})
+      |> response(200)
+
+      assert Repo.get(Hexpm.UserSession, token.user_session_id).revoked_at
+    end
+
+    test "revoking an expired refresh token still takes the session with it", %{
+      revoke_client: client,
+      revoke_token: token
+    } do
+      expired = expired_token(token, token.refresh_jti)
+
+      assert {:error, _} = Tokens.lookup(expired, :refresh, validate: false)
+
+      build_conn()
+      |> post(~p"/api/oauth/revoke", %{token: expired, client_id: client.client_id})
+      |> response(200)
+
+      assert Repo.get(Hexpm.UserSession, token.user_session_id).revoked_at
+    end
+
+    test "revoking a token that belongs to no session marks the token", %{
+      revoke_user: user,
+      revoke_client: client
+    } do
+      {:ok, token} =
+        user
+        |> Tokens.create_for_user(client.client_id, ["api:read"], "client_credentials")
+        |> Repo.insert()
+
+      assert token.user_session_id == nil
+
+      build_conn()
+      |> post(~p"/api/oauth/revoke", %{
+        token: token.access_token,
+        client_id: client.client_id
+      })
+      |> response(200)
+
+      assert Tokens.revoked?(Repo.get(Token, token.id))
     end
 
     test "returns 200 OK for invalid token (security per RFC 7009)", %{
@@ -872,6 +959,86 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       refute response["refresh_token"]
     end
 
+    test "revoking the API key refuses the token it minted", %{
+      client: client,
+      api_key: api_key,
+      user: user
+    } do
+      response =
+        build_conn()
+        |> post(~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "api"
+        })
+        |> json_response(200)
+
+      access_token = response["access_token"]
+
+      build_conn()
+      |> put_req_header("authorization", "Bearer #{access_token}")
+      |> get(~p"/api/users/me")
+      |> json_response(200)
+
+      key = Hexpm.Accounts.Keys.get(user, "test-key")
+      {:ok, _} = Hexpm.Accounts.Keys.revoke(key, audit: audit_data(user))
+
+      build_conn()
+      |> put_req_header("authorization", "Bearer #{access_token}")
+      |> get(~p"/api/users/me")
+      |> json_response(401)
+    end
+
+    test "revoking every API key refuses the tokens they minted", %{
+      client: client,
+      api_key: api_key,
+      user: user
+    } do
+      response =
+        build_conn()
+        |> post(~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "api"
+        })
+        |> json_response(200)
+
+      access_token = response["access_token"]
+
+      {:ok, _} = Hexpm.Accounts.Keys.revoke_all(user, audit: audit_data(user))
+
+      build_conn()
+      |> put_req_header("authorization", "Bearer #{access_token}")
+      |> get(~p"/api/users/me")
+      |> json_response(401)
+    end
+
+    test "revoking an organization key revokes the token it minted", %{client: client} do
+      org = insert(:organization)
+
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(org, %{name: "ci"}, audit: audit_data(org.user))
+
+      build_conn()
+      |> post(~p"/api/oauth/token", %{
+        "grant_type" => "client_credentials",
+        "client_id" => client.client_id,
+        "client_secret" => key.user_secret,
+        "scope" => "api"
+      })
+      |> json_response(200)
+
+      token = Repo.one!(Ecto.Query.from(t in Token, where: t.organization_id == ^org.id))
+      refute Tokens.revoked?(token)
+
+      {:ok, _} = Hexpm.Accounts.Keys.revoke(key, audit: audit_data(org.user))
+
+      assert Tokens.revoked?(Repo.get!(Token, token.id))
+      assert Repo.get!(Hexpm.UserSession, token.user_session_id).revoked_at
+    end
+
     test "creates session with access token expiration", %{
       client: client,
       api_key: api_key,
@@ -938,6 +1105,29 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert json_response(conn, 401)
       response = json_response(conn, 401)
       assert response["error"] == "invalid_client"
+
+      assert_received {Hexpm.LogLines, :warning,
+                       %{method: "api_key", reason: "invalid", path: "/api/oauth/token"}}
+    end
+
+    test "returns error for a revoked API key", %{client: client, user: user} do
+      key = insert(:key, user: user, revoke_at: ~N[2018-01-01 00:00:00])
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 401)["error"] == "invalid_client"
+
+      key_id = key.id
+      user_id = user.id
+
+      assert_received {Hexpm.LogLines, :warning,
+                       %{method: "api_key", reason: "revoked", key_id: ^key_id, user_id: ^user_id}}
     end
 
     test "returns error for unauthorized grant type", %{api_key: api_key} do
@@ -1783,5 +1973,28 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       token = Repo.get_by(Token, refresh_token_hash: expected_hash)
       assert token != nil
     end
+  end
+
+  # A token carrying the row's jti but an expiry in the past, signed with
+  # hexpm's key, as a stored token becomes over time.
+  defp expired_token(token, jti) do
+    signer =
+      Joken.Signer.create("ES256", %{"pem" => Application.get_env(:hexpm, :jwt_signing_key)})
+
+    now = System.system_time(:second)
+
+    claims = %{
+      "iss" => "hexpm",
+      "aud" => "hexpm:api",
+      "sub" => "user:#{token.user.username}",
+      "jti" => jti,
+      "iat" => now - 100,
+      "nbf" => now - 100,
+      "exp" => now - 10,
+      "scope" => "api:read api:write repositories"
+    }
+
+    {:ok, jwt, _} = Joken.generate_and_sign(%{}, claims, signer)
+    jwt
   end
 end

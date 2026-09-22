@@ -3,7 +3,10 @@ defmodule Hexpm.SentryClient do
 
   @impl true
   def child_spec do
-    Supervisor.child_spec({Finch, name: __MODULE__}, id: __MODULE__)
+    Supervisor.child_spec(
+      {Finch, name: __MODULE__, pools: %{default: [conn_max_idle_time: 5_000]}},
+      id: __MODULE__
+    )
   end
 
   @impl true

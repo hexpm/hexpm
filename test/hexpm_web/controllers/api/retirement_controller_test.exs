@@ -53,6 +53,30 @@ defmodule HexpmWeb.API.RetirementControllerTest do
       assert release.retirement.reason == "security"
       assert release.retirement.message == "See CVE-NNNN"
     end
+
+    test "bounds the message in codepoints", %{user: user, package: package} do
+      at_cap = "abc" <> String.duplicate("́", 137)
+      assert length(String.codepoints(at_cap)) == 140
+      params = %{"reason" => "security", "message" => "abc" <> String.duplicate("́", 138)}
+
+      result =
+        build_conn()
+        |> put_req_header("authorization", key_for(user))
+        |> post("/api/packages/#{package.name}/releases/1.0.0/retire", params)
+        |> json_response(422)
+
+      assert result["errors"]["retirement"]["message"] == "should be at most 140 character(s)"
+      refute Hexpm.Repository.Releases.get(package, "1.0.0").retirement
+
+      params = %{"reason" => "security", "message" => at_cap}
+
+      build_conn()
+      |> put_req_header("authorization", key_for(user))
+      |> post("/api/packages/#{package.name}/releases/1.0.0/retire", params)
+      |> response(204)
+
+      assert Hexpm.Repository.Releases.get(package, "1.0.0").retirement.message == at_cap
+    end
   end
 
   describe "POST /api/packages/:name/retire" do

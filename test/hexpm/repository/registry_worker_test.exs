@@ -41,19 +41,18 @@ defmodule Hexpm.Repository.RegistryWorkerTest do
 
       assert [%{version: "0.0.1"}] = decoded.releases
 
-      assert_enqueued(
-        worker: PurgeWorker,
-        args: %{
-          "service" => "fastly_hexrepo",
-          "keys" => ["registry-package-#{package.name}", "registry-package/#{package.name}"],
-          "verify" => [
-            %{
-              "url" => "http://localhost:5000/packages/#{package.name}",
-              "etag" => etag("packages/#{package.name}")
-            }
-          ]
-        }
-      )
+      keys = ["registry-package-#{package.name}", "registry-package/#{package.name}"]
+
+      assert purge_args(keys) == %{
+               "service" => "fastly_hexrepo",
+               "keys" => keys,
+               "verify" => [
+                 %{
+                   "url" => "http://localhost:5000/packages/#{package.name}",
+                   "etag" => etag("packages/#{package.name}")
+                 }
+               ]
+             }
     end
 
     test "verifies a private repository's object with its repository named" do
@@ -67,22 +66,22 @@ defmodule Hexpm.Repository.RegistryWorkerTest do
       key = "repos/#{repository.name}/packages/#{package.name}"
       assert registry(key)
 
-      assert_enqueued(
-        worker: PurgeWorker,
-        args: %{
-          "keys" => [
-            "registry-package-#{package.name}",
-            "registry-package/#{repository.name}/#{package.name}"
-          ],
-          "verify" => [
-            %{
-              "url" => "http://localhost:5000/#{key}",
-              "etag" => etag(key),
-              "repository" => repository.name
-            }
-          ]
-        }
-      )
+      keys = [
+        "registry-package-#{package.name}",
+        "registry-package/#{repository.name}/#{package.name}"
+      ]
+
+      assert purge_args(keys) == %{
+               "service" => "fastly_hexrepo",
+               "keys" => keys,
+               "verify" => [
+                 %{
+                   "url" => "http://localhost:5000/#{key}",
+                   "etag" => etag(key),
+                   "repository" => repository.name
+                 }
+               ]
+             }
     end
 
     test "discards the job when the package is gone", %{package: package} do
@@ -164,8 +163,26 @@ defmodule Hexpm.Repository.RegistryWorkerTest do
       other = insert(:repository)
       {:ok, kept} = RegistryWorker.enqueue_repository(other)
 
-      assert %{success: 2, failure: 0} =
-               Oban.drain_queue(queue: :registry, with_limit: 1, with_recursion: true)
+      lines =
+        capture_log_lines(fn ->
+          assert %{success: 2, failure: 0} =
+                   Oban.drain_queue(queue: :registry, with_limit: 1, with_recursion: true)
+        end)
+
+      assert [
+               {:info,
+                %{
+                  message: "Registry built",
+                  event: "registry.build",
+                  job_type: "repository",
+                  repository_id: hexpm_id,
+                  consolidated: 1
+                }},
+               {:info, %{repository_id: other_id, consolidated: 0}}
+             ] = Enum.filter(lines, fn {_level, fields} -> fields[:event] == "registry.build" end)
+
+      assert hexpm_id == Repository.hexpm().id
+      assert other_id == other.id
 
       states =
         Repo.all(
@@ -269,15 +286,15 @@ defmodule Hexpm.Repository.RegistryWorkerTest do
 
       refute Hexpm.Store.get(:repo_bucket, "packages/#{package.name}", [])
 
-      assert_enqueued(
-        worker: PurgeWorker,
-        args: %{
-          "keys" => ["registry-package-#{package.name}", "registry-package/#{package.name}"],
-          "verify" => [
-            %{"url" => "http://localhost:5000/packages/#{package.name}", "etag" => nil}
-          ]
-        }
-      )
+      keys = ["registry-package-#{package.name}", "registry-package/#{package.name}"]
+
+      assert purge_args(keys) == %{
+               "service" => "fastly_hexrepo",
+               "keys" => keys,
+               "verify" => [
+                 %{"url" => "http://localhost:5000/packages/#{package.name}", "etag" => nil}
+               ]
+             }
     end
   end
 
@@ -289,16 +306,17 @@ defmodule Hexpm.Repository.RegistryWorkerTest do
       {:ok, names} = :hex_registry.decode_names(registry("names"), "hexpm")
       assert Enum.any?(names.packages, &(&1.name == package.name))
 
-      assert_enqueued(
-        worker: PurgeWorker,
-        args: %{
-          "keys" => ["registry-index"],
-          "verify" => [
-            %{"url" => "http://localhost:5000/names", "etag" => etag("names")},
-            %{"url" => "http://localhost:5000/versions", "etag" => etag("versions")}
-          ]
-        }
-      )
+      assert purge_args(["registry-index"]) == %{
+               "service" => "fastly_hexrepo",
+               "keys" => ["registry-index"],
+               "verify" => [
+                 %{"url" => "http://localhost:5000/names", "etag" => etag("names")},
+                 %{"url" => "http://localhost:5000/versions", "etag" => etag("versions")}
+               ]
+             }
+
+      assert [%{args: %{"verify" => [%{"write" => write}, %{"write" => write}]}}] =
+               all_enqueued(worker: PurgeWorker)
     end
   end
 
@@ -309,16 +327,14 @@ defmodule Hexpm.Repository.RegistryWorkerTest do
 
       assert registry("packages/#{package.name}")
 
-      assert_enqueued(
-        worker: PurgeWorker,
-        args: %{
-          "keys" => ["registry"],
-          "verify" => [
-            %{"url" => "http://localhost:5000/names", "etag" => etag("names")},
-            %{"url" => "http://localhost:5000/versions", "etag" => etag("versions")}
-          ]
-        }
-      )
+      assert purge_args(["registry"]) == %{
+               "service" => "fastly_hexrepo",
+               "keys" => ["registry"],
+               "verify" => [
+                 %{"url" => "http://localhost:5000/names", "etag" => etag("names")},
+                 %{"url" => "http://localhost:5000/versions", "etag" => etag("versions")}
+               ]
+             }
     end
   end
 

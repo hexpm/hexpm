@@ -1,5 +1,31 @@
 import Config
 
+organization_tfa_mode =
+  case System.get_env("HEXPM_ORGANIZATION_TFA_MODE", "off") do
+    "off" ->
+      :off
+
+    "beta" ->
+      :beta
+
+    "enabled" ->
+      :enabled
+
+    value ->
+      raise "invalid HEXPM_ORGANIZATION_TFA_MODE #{inspect(value)}; expected off, beta, or enabled"
+  end
+
+organization_tfa_beta_organizations =
+  System.get_env("HEXPM_ORGANIZATION_TFA_BETA_ORGANIZATIONS", "")
+  |> String.split(",", trim: true)
+  |> Enum.map(&String.trim/1)
+  |> Enum.reject(&(&1 == ""))
+  |> Enum.uniq()
+
+config :hexpm, :organization_tfa,
+  mode: organization_tfa_mode,
+  beta_organizations: organization_tfa_beta_organizations
+
 default_sso_mode = if config_env() == :dev, do: "enabled", else: "off"
 
 sso_mode =
@@ -76,7 +102,8 @@ if config_env() == :prod do
     report_url: System.fetch_env!("HEXPM_VARSEL_REPORT_URL"),
     audience: System.fetch_env!("HEXPM_VARSEL_JWT_AUDIENCE"),
     signing_key: System.fetch_env!("HEXPM_VARSEL_SIGNING_KEY"),
-    key_id: System.fetch_env!("HEXPM_VARSEL_KEY_ID")
+    key_id: System.fetch_env!("HEXPM_VARSEL_KEY_ID"),
+    jwks: System.fetch_env!("HEXPM_VARSEL_JWKS")
 
   config :hexpm, :hcaptcha,
     sitekey: System.fetch_env!("HEXPM_HCAPTCHA_SITEKEY"),
@@ -184,7 +211,8 @@ if config_env() == :prod do
         periodic: String.to_integer(System.fetch_env!("HEXPM_OBAN_PERIODIC_CONCURRENCY")),
         heavy: String.to_integer(System.fetch_env!("HEXPM_OBAN_HEAVY_CONCURRENCY")),
         registry: String.to_integer(System.fetch_env!("HEXPM_OBAN_REGISTRY_CONCURRENCY")),
-        purge: String.to_integer(System.fetch_env!("HEXPM_OBAN_PURGE_CONCURRENCY"))
+        purge: String.to_integer(System.fetch_env!("HEXPM_OBAN_PURGE_CONCURRENCY")),
+        email: String.to_integer(System.fetch_env!("HEXPM_OBAN_EMAIL_CONCURRENCY"))
       ]
 
     config :hexpm,

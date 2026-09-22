@@ -10,7 +10,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyNew do
     router: HexpmWeb.Router,
     statics: HexpmWeb.static_paths()
 
-  import HexpmWeb.Components.Buttons, only: [button: 1]
+  import HexpmWeb.Components.Buttons, only: [button: 1, button_link: 1]
   import HexpmWeb.Components.Form, only: [sudo_form: 1]
   import HexpmWeb.Components.Input, only: [text_input: 1, textarea_input: 1]
   import HexpmWeb.ViewIcons, only: [icon: 3]
@@ -82,13 +82,10 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyNew do
               rows="2"
             />
 
-            <div class="flex justify-end gap-2 pt-2">
-              <a
-                href={~p"/dashboard/orgs/#{@organization}/policies"}
-                class="inline-flex items-center justify-center h-9 px-4 rounded-md text-sm font-medium text-grey-600 dark:text-grey-300 hover:text-grey-900 dark:hover:text-white hover:bg-grey-100 dark:hover:bg-grey-700 transition-colors"
-              >
+            <div class="flex items-center justify-end gap-2 pt-2">
+              <.button_link variant="ghost" href={~p"/dashboard/orgs/#{@organization}/policies"}>
                 Cancel
-              </a>
+              </.button_link>
               <.button type="submit" variant="primary">Create policy</.button>
             </div>
           </div>

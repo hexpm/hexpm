@@ -50,6 +50,9 @@ defmodule Hexpm.OAuth.AuthorizationCode do
       :code_challenge,
       :code_challenge_method
     ])
+    |> validate_length(:code, count: :bytes, max: 255)
+    |> validate_length(:redirect_uri, count: :bytes, max: 255)
+    |> validate_length(:code_challenge, count: :bytes, max: 128)
     |> validate_scopes()
     |> validate_code_challenge()
     |> unique_constraint(:code)

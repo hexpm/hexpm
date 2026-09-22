@@ -1,0 +1,13 @@
+Personal API Keys And <%= @organization %>
+
+<%= if @revoked != [] or @trimmed != [] do %><%= SSOKeysRefused.removed(@organization, @revoked, @trimmed) %>
+
+<%= SSOKeysRefused.rest_of_key(@revoked, @trimmed) %>
+<% end %>
+<%= if @blocked != [] do %><%= SSOKeysRefused.refused(@organization, @blocked, @revoked ++ @trimmed) %>
+
+<%= SSOKeysRefused.unchanged(@blocked) %>
+<% end %>
+<%= SSOKeysRefused.alternatives() %>
+
+<%= SSOKeysRefused.why() %>

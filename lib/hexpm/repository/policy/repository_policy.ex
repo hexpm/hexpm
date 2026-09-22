@@ -27,6 +27,9 @@ defmodule Hexpm.Repository.Policy.RepositoryPolicy do
     |> cast(attrs, [:repository, :cooldown, :advisory_min_severity, :retirement_reasons])
     |> cast_embed(:overrides)
     |> validate_required([:repository])
+    |> validate_length(:repository, count: :bytes, max: 255)
+    |> validate_length(:cooldown, count: :bytes, max: 64)
+    |> validate_length(:overrides, max: 1000)
     |> validate_number(:advisory_min_severity,
       greater_than_or_equal_to: 0,
       less_than_or_equal_to: 4

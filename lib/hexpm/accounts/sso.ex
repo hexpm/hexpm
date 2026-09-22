@@ -128,7 +128,11 @@ defmodule Hexpm.Accounts.SSO do
           enabled_at: nil
         })
 
-      changeset = Connection.configuration_changeset(connection, attrs)
+      changeset =
+        Connection.configuration_changeset(connection, attrs)
+        |> revoke_scim_token_on_provider_change(connection, desired)
+
+      revoked_scim_token? = Ecto.Changeset.changed?(changeset, :scim_token_first)
 
       case Repo.insert_or_update(changeset, log: false) do
         {:ok, saved} ->
@@ -137,12 +141,34 @@ defmodule Hexpm.Accounts.SSO do
             %{issuer: saved.issuer, client_id: saved.client_id}
           })
 
+          if revoked_scim_token? do
+            insert_audit!(audit_data, "sso.scim.token.delete", {
+              organization,
+              scim_audit_params(saved)
+            })
+          end
+
           saved
 
         {:error, changeset} ->
           Hexpm.RepoBase.rollback(changeset)
       end
     end)
+  end
+
+  # The provisioning token belongs to the provider the connection points at.
+  # Pointing it somewhere else must not leave the old provider's agent holding
+  # a credential that can still create and remove members.
+  defp revoke_scim_token_on_provider_change(changeset, %Connection{id: nil}, _desired) do
+    changeset
+  end
+
+  defp revoke_scim_token_on_provider_change(changeset, connection, desired) do
+    if connection.issuer != desired.issuer or connection.client_id != desired.client_id do
+      change(changeset, scim_token_first: nil, scim_token_second: nil)
+    else
+      changeset
+    end
   end
 
   def refresh_metadata(%Connection{} = connection) do
@@ -502,6 +528,115 @@ defmodule Hexpm.Accounts.SSO do
     )
   end
 
+  @doc """
+  Saves the provisioning settings: the seat policy and the role provisioned
+  members join with.
+  """
+  def configure_scim(organization, params, audit: audit_data) do
+    update_connection(organization, audit_data,
+      changeset: &Connection.scim_changeset(&1, params),
+      require: &require_feature/1,
+      gate: fn _changeset -> :ok end,
+      action: "sso.scim.configure",
+      audit_params: &scim_audit_params/1
+    )
+  end
+
+  @doc """
+  Turns provisioning on, or replaces its bearer token. The returned
+  connection carries the plaintext token in the virtual `scim_token`, for the
+  one screen that shows it; regenerating invalidates the old token on commit.
+  """
+  def generate_scim_token(organization, params, audit: audit_data) do
+    update_connection(organization, audit_data,
+      changeset: &Connection.scim_generate_changeset(&1, params, audit_data.user),
+      require: &require_feature/1,
+      gate: fn _changeset -> :ok end,
+      action: "sso.scim.token.generate",
+      audit_params: &scim_audit_params/1
+    )
+  end
+
+  @doc """
+  Turns provisioning off by deleting the bearer token. The settings stay, so
+  turning it back on offers what the administrator chose before.
+  """
+  def delete_scim_token(organization, audit: audit_data) do
+    update_connection(organization, audit_data,
+      changeset: &Connection.scim_delete_changeset/1,
+      require: &require_active/1,
+      gate: fn _changeset -> :ok end,
+      action: "sso.scim.token.delete",
+      audit_params: &scim_audit_params/1
+    )
+  end
+
+  defp scim_audit_params(connection) do
+    %{
+      scim_enabled: Connection.scim_enabled?(connection),
+      scim_seat_policy: connection.scim_seat_policy,
+      scim_role: connection.scim_role
+    }
+  end
+
+  @doc """
+  Records that the provisioning agent used the token, so the SCIM card can
+  show whether the provider is still talking to us and from where.
+
+  Skipped in read-only mode: the conformance documents are pure reads and
+  must keep answering while the database is held.
+  """
+  def record_scim_token_use(%Connection{} = connection, remote_ip) do
+    now = DateTime.utc_now()
+
+    if Hexpm.WriteMode.mode() == :write and stale_use?(connection.scim_token_used_at, now) do
+      from(row in Connection, where: row.id == ^connection.id)
+      |> Repo.update_all(set: [scim_token_used_at: now, scim_token_used_ip: remote_ip])
+    end
+
+    :ok
+  end
+
+  # One write a minute per connection at most: the provider polls, and the
+  # column is for the administrator reading the card, not an access log.
+  defp stale_use?(nil, _now), do: true
+  defp stale_use?(used_at, now), do: DateTime.diff(now, used_at, :second) >= 60
+
+  @doc """
+  Resolves a SCIM bearer token to the connection it belongs to, with the
+  organization preloaded.
+
+  The token is the only credential on the provisioning surface. It never
+  reaches `authorize/2`: it is not a person or an organization acting through
+  the API, it is one provider's agent addressing one connection.
+  """
+  def scim_auth(user_secret) when is_binary(user_secret) do
+    app_secret = Application.get_env(:hexpm, :secret)
+
+    <<first::binary-size(32), second::binary-size(32)>> =
+      :crypto.mac(:hmac, :sha256, app_secret, user_secret)
+      |> Base.encode16(case: :lower)
+
+    connection =
+      from(connection in Connection,
+        where: connection.scim_token_first == ^first,
+        preload: [:organization]
+      )
+      |> Repo.one()
+
+    # `active?` rather than `enabled?`: a lapsed card must not stop the
+    # provider deprovisioning people. Generating a token stays billing-gated.
+    with %Connection{} <- connection,
+         true <- Hexpm.Utils.secure_check(connection.scim_token_second, second),
+         true <- Features.active?(connection.organization) do
+      {:ok, connection}
+    else
+      _mismatch -> :error
+    end
+  end
+
+  def scim_auth(_user_secret), do: :error
+
   # Every connection setting is saved the same way: the gate the setting takes
   # against the organization, the row lock and the administrator check under it,
   # then the changeset, the gate that setting takes against it, the save, and
@@ -572,22 +707,30 @@ defmodule Hexpm.Accounts.SSO do
 
   # `expires_at` is stamped at authentication, so an administrator who cuts the
   # lifetime during an incident would otherwise leave every session already open
-  # running for the old one. Sessions are only ever shortened: the setting is
-  # about how long ago the provider has to have vouched for someone, and
-  # extending it would push that further into the past than the organization
-  # asked for.
+  # running for the old one. Each row is bound by its own authentication rather
+  # than by the save, so the setting means what it says: how long ago the
+  # provider has to have vouched for someone. A session authenticated longer ago
+  # than the new lifetime lapses at the save. Sessions are only ever shortened;
+  # the clause never matches on an increase.
   defp clamp_org_sessions(organization, connection) do
     now = DateTime.utc_now()
-    cutoff = DateTime.add(now, Enforcement.session_lifetime(connection), :second)
+    lifetime = Enforcement.session_lifetime(connection)
 
-    Repo.update_all(
-      from(session in OrgSession,
-        where: session.organization_id == ^organization.id,
-        where: is_nil(session.revoked_at),
-        where: session.expires_at > ^cutoff
-      ),
-      set: [expires_at: cutoff, updated_at: now]
+    from(session in OrgSession,
+      where: session.organization_id == ^organization.id,
+      where: is_nil(session.revoked_at),
+      where:
+        session.expires_at >
+          fragment("? + make_interval(secs => ?)", session.authenticated_at, ^lifetime),
+      update: [
+        set: [
+          expires_at:
+            fragment("? + make_interval(secs => ?)", session.authenticated_at, ^lifetime),
+          updated_at: ^now
+        ]
+      ]
     )
+    |> Repo.update_all([])
 
     :ok
   end
@@ -606,8 +749,13 @@ defmodule Hexpm.Accounts.SSO do
   # An administrator enforcement cannot lock out: exempt from it, or linked and
   # able to authenticate.
   defp reachable_admin?(organization) do
+    organization = Seats.lock!(organization)
+    requires_tfa = Hexpm.Accounts.OrganizationTFA.active?(organization)
+
     Repo.exists?(
       from(member in Enforcement.members_with_identity(organization),
+        join: user in assoc(member, :user),
+        where: not (^requires_tfa) or not is_nil(user.tfa),
         where: member.role == "admin",
         where: member.sso_enforcement == "exempt" or not is_nil(as(:identity).id)
       )
@@ -632,11 +780,10 @@ defmodule Hexpm.Accounts.SSO do
         Enforcement.mode(organization, connection) == :required and
           reachable_admin?(organization)
 
-      member =
-        Repo.get_by(OrganizationUser,
-          organization_id: organization.id,
-          user_id: user.id
-        ) || Hexpm.RepoBase.rollback(:not_member)
+      # Under the connection lock and in the same order member removal takes
+      # them, so a removal committing between the read and the update cannot
+      # turn this into a stale-entry crash.
+      member = locked_member(organization, user) || Hexpm.RepoBase.rollback(:not_member)
 
       changeset =
         OrganizationUser.enforcement_changeset(member, %{"sso_enforcement" => enforcement})
@@ -675,7 +822,7 @@ defmodule Hexpm.Accounts.SSO do
     transaction = Repo.get(SSOTransaction, transaction.id, log: false)
 
     if connection && transaction && expands_seat?(transaction, connection, user, claims) do
-      expand_seats(connection)
+      expand_seats(connection, user)
     end
 
     :ok
@@ -697,7 +844,17 @@ defmodule Hexpm.Accounts.SSO do
       is_nil(Organizations.get_role(connection.organization, user))
   end
 
-  defp expand_seats(connection) do
+  defp expand_seats(connection, user) do
+    expand_seat(connection, user, :login)
+  end
+
+  @doc """
+  Buys one more seat when the organization chose auto-expansion, for a person
+  the organization's 2FA policy admits. Runs its billing call outside any
+  transaction the caller holds; `stage` names the surface asking, for the
+  failure log. The connection must carry its organization.
+  """
+  def expand_seat(%Connection{} = connection, user, stage) do
     organization = connection.organization
 
     # The target is absolute rather than one more than whatever is subscribed
@@ -705,10 +862,17 @@ defmodule Hexpm.Accounts.SSO do
     # claim, and the other expands again on its next attempt instead of both
     # buying a seat.
     case Repo.transaction(fn ->
-           {Seats.claim(organization, unknown: :deny), Seats.used(organization)}
+           eligibility = Hexpm.Accounts.OrganizationTFA.admit(organization, user)
+
+           claim =
+             if eligibility == :ok,
+               do: Seats.claim(organization, unknown: :deny),
+               else: eligibility
+
+           {claim, Seats.used(organization)}
          end) do
       {:ok, {{:error, :seats_exhausted}, used}} ->
-        purchase_seat(connection, organization, used + 1)
+        purchase_seat(connection, organization, used + 1, stage)
 
       _other ->
         :ok
@@ -719,8 +883,12 @@ defmodule Hexpm.Accounts.SSO do
   # login, or a card that needs confirming turns every retry into another
   # charge attempt. The refusal is recorded like any other, which is also what
   # rate-limits the notice to the administrators.
-  defp purchase_seat(connection, organization, quantity) do
-    if recent_failure?(connection, "expansion_failed") do
+  # The guard is a column rather than the failure log: failures are a 20-row
+  # ring per connection, and with just-in-time membership on anyone signed in
+  # can start a login and flush it, which would let the next login try to buy a
+  # seat again inside the window.
+  defp purchase_seat(connection, organization, quantity, stage) do
+    if recent_expansion_failure?(connection) do
       :ok
     else
       organization
@@ -734,10 +902,47 @@ defmodule Hexpm.Accounts.SSO do
           :ok
 
         _other ->
-          record_failure(connection, :login, :expansion_failed)
+          record_expansion_failure(connection)
+          record_failure(connection, stage, :expansion_failed)
           enqueue_seats_notice!(connection, "expansion_failed")
       end
     end
+  end
+
+  defp recent_expansion_failure?(connection) do
+    cutoff = DateTime.add(DateTime.utc_now(), -@seats_notice_seconds, :second)
+
+    Repo.exists?(
+      from(row in Connection,
+        where: row.id == ^connection.id,
+        where: row.seat_expansion_failed_at > ^cutoff
+      )
+    )
+  end
+
+  defp record_expansion_failure(connection) do
+    now = DateTime.utc_now()
+
+    Repo.update_all(
+      from(row in Connection, where: row.id == ^connection.id),
+      set: [seat_expansion_failed_at: now, updated_at: now]
+    )
+
+    :ok
+  end
+
+  @doc """
+  Tells the administrators the organization has run out of seats, and records
+  the stage that hit it.
+
+  Provisioning refuses silently otherwise: the provider logs the 409 and nobody
+  on this side hears about it. Notice first, so the failure this call is about
+  to write does not count as the recent one that suppresses it.
+  """
+  def notify_seats_exhausted(%Connection{} = connection, stage) do
+    enqueue_seats_notice!(connection, "seats_exhausted")
+    record_failure(connection, stage, :seats_exhausted)
+    :ok
   end
 
   @doc """
@@ -1006,18 +1211,31 @@ defmodule Hexpm.Accounts.SSO do
     )
   end
 
+  # The connections locked are those of every organization the account is a
+  # member of, and every connection whose provisioning handles still point at
+  # the account: a former member's handle keeps the pointer, and deleting the
+  # account clears it through the foreign key, which has to happen under the
+  # same lock every other writer of that pointer holds.
   def lock_user_removal(multi, user) do
     Multi.run(multi, :organization_sso_user_removal_locks, fn _repo, _changes ->
       organization_ids =
         from(organization_user in OrganizationUser,
           where: organization_user.user_id == ^user.id,
-          order_by: [asc: organization_user.organization_id],
           select: organization_user.organization_id
         )
         |> Repo.all(log: false)
 
+      handle_connection_ids =
+        from(resource in Hexpm.Accounts.SCIM.Resource,
+          where: resource.user_id == ^user.id,
+          select: resource.connection_id
+        )
+        |> Repo.all(log: false)
+
       from(connection in Connection,
-        where: connection.organization_id in ^organization_ids,
+        where:
+          connection.organization_id in ^organization_ids or
+            connection.id in ^handle_connection_ids,
         order_by: [asc: connection.organization_id],
         lock: "FOR UPDATE"
       )
@@ -1089,7 +1307,10 @@ defmodule Hexpm.Accounts.SSO do
       identity_id: identity.id,
       authenticated_at: now,
       expires_at: DateTime.add(now, lifetime, :second),
-      revoked_at: nil
+      revoked_at: nil,
+      # This row now stands on an authentication of its own. Leaving the copy's
+      # source on it would let a revoked browser session keep discarding it.
+      granted_from_user_session_id: nil
     })
     |> Repo.insert_or_update!()
   end
@@ -1153,6 +1374,30 @@ defmodule Hexpm.Accounts.SSO do
   def grant_org_sessions!(_from_user_session_id, _to_user_session_id, _user_id), do: []
 
   @doc """
+  Takes a share lock on the connections whose access a copy would carry, so a
+  disable or a lifetime cut running at the same time cannot miss the rows that
+  copy is about to insert. Both of those take `FOR UPDATE` on the connection
+  before they update the sessions, so the copy either commits first and is seen,
+  or waits and then reads the state the writer left.
+
+  Ordered by organization id, and called as the first statement of the multi
+  that copies. Taking it later would mean holding the new session row, and on
+  the authorization-code path the code row, before the connection, which
+  deadlocks against account deletion taking them the other way round.
+  """
+  def lock_granting_connections!(from_user_session_id, user_id) do
+    organization_ids = from_user_session_id |> granted_organization_ids(user_id) |> Enum.sort()
+
+    Repo.all(
+      from(connection in Connection,
+        where: connection.organization_id in ^organization_ids,
+        order_by: [asc: connection.organization_id],
+        lock: "FOR SHARE"
+      )
+    )
+  end
+
+  @doc """
   The organizations a session is currently carrying access for, which is what
   `grant_org_sessions!/3` would hand on.
   """
@@ -1177,18 +1422,16 @@ defmodule Hexpm.Accounts.SSO do
     do: target
 
   @doc """
-  Opens a re-authorization for a session that has lost its organization access.
-
-  The session doing the asking is the one being authorized. Its owner completes
-  the provider round trip in a browser, and the organization access session that
-  produces is written against the asking session, so a lapsed terminal costs a
-  browser visit rather than a new device authorization and a new refresh token.
+  Opens a browser request to meet the organization requirements of an OAuth
+  session. The session that asks is the session that gets the access, so a
+  lapsed terminal costs a browser visit rather than a new device authorization.
   """
   @spec request_authorization(User.t(), integer(), term()) ::
           {:ok, Authorization.t()} | {:error, atom()}
   def request_authorization(%User{} = user, user_session_id, organization_names)
       when is_integer(user_session_id) do
-    with {:ok, names} <- authorization_names(organization_names),
+    with {:ok, _session} <- authorization_session(user, user_session_id),
+         {:ok, names} <- authorization_names(organization_names),
          {:ok, organizations} <- authorization_organizations(user, names) do
       code = random_token()
 
@@ -1204,6 +1447,20 @@ defmodule Hexpm.Accounts.SSO do
         |> Repo.insert!(log: false)
 
       {:ok, %{authorization | raw_code: code}}
+    end
+  end
+
+  defp authorization_session(user, session_id) do
+    now = DateTime.utc_now()
+
+    case Repo.one(
+           from(s in Hexpm.UserSession,
+             where: s.id == ^session_id and s.user_id == ^user.id and s.type == "oauth",
+             where: is_nil(s.revoked_at) and s.expires_at > ^now
+           )
+         ) do
+      nil -> {:error, :invalid_session}
+      session -> {:ok, session}
     end
   end
 
@@ -1224,7 +1481,7 @@ defmodule Hexpm.Accounts.SSO do
   # access token, so a name that has since been exempted or turned off is
   # dropped rather than taken as a reason to refuse the ones that still stand.
   defp authorization_organizations(user, names) do
-    case Enforcement.governed(user, names) do
+    case Hexpm.Accounts.OrganizationAuth.governed(user, names) do
       [] -> {:error, :not_governed}
       organizations -> {:ok, organizations}
     end
@@ -1255,36 +1512,40 @@ defmodule Hexpm.Accounts.SSO do
   def get_authorization(_code, _user), do: nil
 
   @doc """
-  The organizations a re-authorization covers, and whether the session it is for
-  is currently authenticated to each.
+  The organizations an authorization covers, each with the requirements the
+  session it is for still has to meet. Membership removal invalidates the
+  request, and so does an organization that stopped asking: an organization
+  whose connection was disabled while the request was open is dropped, because
+  the page's only button for it starts a login the connection refuses.
   """
-  @spec authorization_status(Authorization.t()) :: [{Organization.t(), boolean()}]
+  @spec authorization_status(Authorization.t()) :: [{Organization.t(), [String.t()]}]
   def authorization_status(%Authorization{} = authorization) do
-    now = DateTime.utc_now()
+    user = Repo.get!(User, authorization.user_id)
 
     organizations =
-      from(organization in Organization,
-        where: organization.id in ^authorization.organization_ids,
-        order_by: organization.name
+      Repo.all(
+        from(o in assoc(user, :organizations),
+          where: o.id in ^authorization.organization_ids,
+          order_by: o.name
+        )
       )
-      |> Repo.all()
 
-    live =
-      authorization.user_session_id
-      |> OrgSession.live(now)
-      |> OrgSession.for_user(authorization.user_id)
+    if length(organizations) == length(authorization.organization_ids) do
+      names = Enum.map(organizations, & &1.name)
+      governed = Hexpm.Accounts.OrganizationAuth.governed(user, names) |> MapSet.new(& &1.id)
 
-    authenticated =
-      from(session in live,
-        where: session.organization_id in ^authorization.organization_ids,
-        select: session.organization_id
-      )
-      |> Repo.all()
-      |> MapSet.new()
+      required =
+        Hexpm.Accounts.OrganizationAuth.required(user, names, authorization.user_session_id)
 
-    Enum.map(organizations, fn organization ->
-      {organization, MapSet.member?(authenticated, organization.id)}
-    end)
+      organizations
+      |> Enum.filter(&MapSet.member?(governed, &1.id))
+      |> Enum.map(fn organization ->
+        entry = Enum.find(required, &(&1.organization == organization.name))
+        {organization, if(entry, do: entry.requirements, else: [])}
+      end)
+    else
+      []
+    end
   end
 
   @doc """
@@ -1629,7 +1890,8 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   defp join_member(connection, organization, user, audit_data) do
-    with {:ok, _usage} <- Seats.claim(organization, unknown: :deny) do
+    with :ok <- Hexpm.Accounts.OrganizationTFA.admit(organization, user),
+         {:ok, _usage} <- Seats.claim(organization, unknown: :deny) do
       organization_user = %OrganizationUser{organization_id: organization.id, user_id: user.id}
 
       case Repo.insert(
@@ -1683,22 +1945,11 @@ defmodule Hexpm.Accounts.SSO do
 
   defp maybe_notify_seats_exhausted(_connection, _reason), do: :ok
 
-  defp recent_failure?(connection, code) do
-    cutoff = DateTime.add(DateTime.utc_now(), -@seats_notice_seconds, :second)
-
-    Repo.exists?(
-      from(failure in Failure,
-        where: failure.connection_id == ^connection.id,
-        where: failure.code == ^code,
-        where: failure.inserted_at > ^cutoff
-      )
-    )
-  end
-
   # Rate-limited on the outbox rather than on the failure log: failures are a
   # 20-row ring buffer per connection, and with just-in-time membership on
   # anyone signed in can start a login and fill it, which would reset the
-  # window at will. Outbox entries are kept for a month and are not evicted.
+  # window at will. Outbox entries stay on the table after delivery and are
+  # not evicted within the window.
   defp enqueue_seats_notice!(connection, kind) do
     group_key = "#{@seats_exhausted_category}:#{kind}:#{connection.id}"
     cutoff = DateTime.add(DateTime.utc_now(), -@seats_notice_seconds, :second)
@@ -2212,7 +2463,7 @@ defmodule Hexpm.Accounts.SSO do
   any path on this site is a place to come back to. Anything that could leave
   the site is not one.
   """
-  def allowed_return_path(value) when is_binary(value) do
+  def allowed_return_path(value) when is_binary(value) and byte_size(value) <= 2_048 do
     if same_origin_path?(value), do: value
   end
 

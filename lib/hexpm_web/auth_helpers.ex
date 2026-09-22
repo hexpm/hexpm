@@ -3,8 +3,9 @@ defmodule HexpmWeb.AuthHelpers do
   import HexpmWeb.ControllerHelpers, only: [render_error: 3]
 
   alias Hexpm.Accounts.{Auth, Organization, Organizations, User, TFA}
-  alias Hexpm.Accounts.SSO.Enforcement
+  alias Hexpm.Accounts.OrganizationAuth
   alias Hexpm.Permissions
+  alias Hexpm.SecurityLog
   alias Hexpm.Repository.{Package, Packages, PackageOwner, Repository}
   alias Hexpm.OAuth.Token
   alias HexpmWeb.BasicAuth
@@ -130,22 +131,25 @@ defmodule HexpmWeb.AuthHelpers do
       is_nil(otp_code) ->
         {:error, :totp_required}
 
-      not TFA.token_valid?(user.tfa.secret, otp_code) ->
-        # Check rate limits
+      check_totp_rate_limits(conn, user, increment: 0) != :ok ->
+        {:error, :totp_rate_limited}
+
+      TFA.token_valid?(user.tfa.secret, otp_code) ->
+        nil
+
+      true ->
+        SecurityLog.auth_failure(conn, :totp, :invalid_code, user_id: user.id)
+
         case check_totp_rate_limits(conn, user) do
           :ok -> {:error, :invalid_totp}
           {:rate_limited, _} -> {:error, :totp_rate_limited}
         end
-
-      true ->
-        # Valid TOTP
-        nil
     end
   end
 
-  defp check_totp_rate_limits(conn, user) do
-    ip_result = Attack.tfa_ip_throttle(conn.remote_ip)
-    user_result = Attack.tfa_session_throttle(%{"uid" => user.id})
+  defp check_totp_rate_limits(conn, user, opts \\ []) do
+    ip_result = Attack.tfa_ip_throttle(conn.remote_ip, opts)
+    user_result = Attack.tfa_session_throttle(%{"uid" => user.id}, opts)
 
     case {ip_result, user_result} do
       {{:block, _}, _} -> {:rate_limited, :ip}
@@ -225,21 +229,10 @@ defmodule HexpmWeb.AuthHelpers do
 
   def authenticate_at(conn, now) do
     case get_req_header(conn, "authorization") do
-      ["Basic " <> credentials] ->
-        if BasicAuth.disabled?(now) do
-          {:error, :basic_auth_disabled}
-        else
-          basic_auth(credentials)
-        end
-
-      ["Bearer " <> token] ->
-        bearer_auth(token, conn)
-
-      [key] ->
-        key_auth(String.trim(key), conn)
-
-      _ ->
-        {:error, :missing}
+      ["Basic " <> credentials] -> credentials |> basic_auth(conn, now) |> report(:basic)
+      ["Bearer " <> token] -> token |> bearer_auth(conn) |> report(:bearer)
+      [key] -> key |> String.trim() |> key_auth(conn) |> report(:key)
+      _ -> {:error, :missing}
     end
   end
 
@@ -251,12 +244,37 @@ defmodule HexpmWeb.AuthHelpers do
     end
   end
 
-  defp basic_auth(credentials) do
+  defp report(result, scheme) do
+    :telemetry.execute(
+      [:hexpm, :api, :authenticate],
+      %{count: 1},
+      %{scheme: scheme, result: result_tag(result)}
+    )
+
+    result
+  end
+
+  defp result_tag({:ok, _}), do: :ok
+  defp result_tag({:error, reason}), do: reason
+
+  defp basic_auth(credentials, conn, now) do
+    if BasicAuth.disabled?(now) do
+      {:error, :basic_auth_disabled}
+    else
+      basic_auth(credentials, conn)
+    end
+  end
+
+  defp basic_auth(credentials, conn) do
     with {:ok, decoded} <- Base.decode64(credentials),
          [username_or_email, password] <- String.split(decoded, ":", parts: 2) do
       case Auth.password_auth(username_or_email, password) do
-        {:ok, result} -> {:ok, result}
-        :error -> {:error, :password}
+        {:ok, result} ->
+          {:ok, result}
+
+        {:error, reason} ->
+          SecurityLog.auth_failure(conn, :password, reason, username: username_or_email)
+          {:error, :password}
       end
     else
       _ ->
@@ -266,16 +284,27 @@ defmodule HexpmWeb.AuthHelpers do
 
   defp oauth_token_auth(token, conn) do
     case Auth.oauth_token_auth(token, usage_info(conn)) do
-      {:ok, result} -> {:ok, result}
-      :error -> {:error, :key}
+      {:ok, result} ->
+        {:ok, result}
+
+      {:error, reason} ->
+        SecurityLog.auth_failure(conn, :oauth_token, reason)
+        {:error, :key}
     end
   end
 
   defp key_auth(key, conn) do
     case Auth.key_auth(key, usage_info(conn)) do
-      {:ok, result} -> {:ok, result}
-      :error -> {:error, :key}
-      :revoked -> {:error, :revoked_key}
+      {:ok, result} ->
+        {:ok, result}
+
+      {:error, :invalid} ->
+        SecurityLog.auth_failure(conn, :api_key, :invalid)
+        {:error, :key}
+
+      {:error, :revoked, key} ->
+        SecurityLog.auth_failure(conn, :api_key, :revoked, key: key)
+        {:error, :revoked_key}
     end
   end
 
@@ -321,7 +350,7 @@ defmodule HexpmWeb.AuthHelpers do
 
       {:error, refusal, organization} ->
         message =
-          Enforcement.refusal_message(refusal, organization, conn.assigns[:auth_credential])
+          OrganizationAuth.refusal_message(refusal, organization, conn.assigns[:auth_credential])
 
         {:error, :auth, message}
     end
@@ -446,7 +475,7 @@ defmodule HexpmWeb.AuthHelpers do
 
       {:error, refusal} ->
         message =
-          Enforcement.refusal_message(refusal, organization, conn.assigns[:auth_credential])
+          OrganizationAuth.refusal_message(refusal, organization, conn.assigns[:auth_credential])
 
         {:error, :auth, message}
     end

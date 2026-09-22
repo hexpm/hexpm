@@ -194,6 +194,83 @@ defmodule Hexpm.Repository.PackageTest do
              changeset.changes.meta.errors
   end
 
+  test "bounds the package name in bytes", %{user: user, repository: repository} do
+    changeset = Package.build(repository, user, pkg_meta(%{name: String.duplicate("a", 256)}))
+    assert errors_on(changeset).name == "should be at most 255 byte(s)"
+  end
+
+  test "bounds the description in codepoints", %{user: user, repository: repository} do
+    meta = pkg_meta(%{name: "ecto", description: codepoints_string(4096)})
+    assert Package.build(repository, user, meta).valid?
+
+    meta = pkg_meta(%{name: "ecto", description: codepoints_string(4097)})
+    changeset = Package.build(repository, user, meta)
+    assert errors_on(changeset).meta.description == "should be at most 4096 character(s)"
+  end
+
+  test "bounds licenses and maintainers", %{user: user, repository: repository} do
+    meta = pkg_meta(%{name: "ecto", licenses: List.duplicate(codepoints_string(255), 32)})
+    assert Package.build(repository, user, meta).valid?
+
+    meta = pkg_meta(%{name: "ecto", licenses: List.duplicate("MIT", 33)})
+    changeset = Package.build(repository, user, meta)
+    assert errors_on(changeset).meta.licenses == "should have at most 32 item(s)"
+
+    meta = pkg_meta(%{name: "ecto", licenses: [codepoints_string(256)]})
+    changeset = Package.build(repository, user, meta)
+    assert errors_on(changeset).meta.licenses == "entries should be at most 255 character(s)"
+
+    meta = pkg_meta(%{name: "ecto", maintainers: List.duplicate(codepoints_string(255), 64)})
+    assert Package.build(repository, user, meta).valid?
+
+    meta = pkg_meta(%{name: "ecto", maintainers: List.duplicate("me", 65)})
+    changeset = Package.build(repository, user, meta)
+    assert errors_on(changeset).meta.maintainers == "should have at most 64 item(s)"
+
+    meta = pkg_meta(%{name: "ecto", maintainers: [codepoints_string(256)]})
+    changeset = Package.build(repository, user, meta)
+    assert errors_on(changeset).meta.maintainers == "entries should be at most 255 character(s)"
+  end
+
+  test "bounds links", %{user: user, repository: repository} do
+    links = Map.new(1..32, &{"#{&1}" <> codepoints_string(253), "https://example.com/"})
+    meta = pkg_meta(%{name: "ecto", links: links})
+    assert Package.build(repository, user, meta).valid?
+
+    links = Map.new(1..33, &{"link#{&1}", "https://example.com/"})
+    changeset = Package.build(repository, user, pkg_meta(%{name: "ecto", links: links}))
+    assert errors_on(changeset).meta.links == "should have at most 32 entry(ies)"
+
+    links = %{codepoints_string(256) => "https://example.com/"}
+    changeset = Package.build(repository, user, pkg_meta(%{name: "ecto", links: links}))
+    assert errors_on(changeset).meta.links == "keys should be at most 255 character(s)"
+
+    links = %{"docs" => "https://example.com/" <> combining_string(2028)}
+    assert Package.build(repository, user, pkg_meta(%{name: "ecto", links: links})).valid?
+
+    links = %{"docs" => "https://example.com/" <> combining_string(2029)}
+    changeset = Package.build(repository, user, pkg_meta(%{name: "ecto", links: links}))
+    assert errors_on(changeset).meta.links == "values should be at most 2048 byte(s)"
+  end
+
+  test "bounds extra metadata", %{user: user, repository: repository} do
+    extra = Map.new(1..64, &{"key#{&1}", "value"})
+    assert Package.build(repository, user, pkg_meta(%{name: "ecto", extra: extra})).valid?
+
+    extra = Map.new(1..65, &{"key#{&1}", "value"})
+    changeset = Package.build(repository, user, pkg_meta(%{name: "ecto", extra: extra}))
+    assert errors_on(changeset).meta.extra == "should have at most 64 item(s)"
+
+    extra = %{"blob" => combining_string(16_384 - byte_size(~s({"blob":""})))}
+    assert Package.build(repository, user, pkg_meta(%{name: "ecto", extra: extra})).valid?
+
+    extra = %{"blob" => combining_string(16_384 - byte_size(~s({"blob":""})) + 2)}
+    changeset = Package.build(repository, user, pkg_meta(%{name: "ecto", extra: extra}))
+
+    assert errors_on(changeset).meta.extra ==
+             "should be at most 16384 byte(s) when encoded"
+  end
+
   test "packages are unique", %{user: user, repository: repository} do
     Package.build(repository, user, pkg_meta(%{name: "ecto", description: "DSL"}))
     |> Hexpm.Repo.insert!()

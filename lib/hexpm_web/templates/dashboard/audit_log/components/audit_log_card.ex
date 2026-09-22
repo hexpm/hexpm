@@ -442,6 +442,13 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
   end
 
   defp humanize_action(%AuditLog{
+         action: "sso.key.notice_undeliverable",
+         params: %{"organization" => %{"name" => org}}
+       }) do
+    "Could not tell this member that #{org} turns their API keys away, because their account has no verified email address"
+  end
+
+  defp humanize_action(%AuditLog{
          action: "sso.break_glass",
          params: %{"organization" => %{"name" => org}, "screen" => screen}
        })
@@ -454,6 +461,48 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
          params: %{"organization" => %{"name" => org}}
        }) do
     "Reached #{org} without a current SSO session"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "sso.scim.configure",
+         params: %{"organization" => %{"name" => org}}
+       }) do
+    "Changed #{org}'s provisioning settings"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "sso.scim.token.generate",
+         params: %{"organization" => %{"name" => org}}
+       }) do
+    "Generated a provisioning token for #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "sso.scim.token.delete",
+         params: %{"organization" => %{"name" => org}}
+       }) do
+    "Turned provisioning off for #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "sso.scim.resource.create",
+         params: %{"user_name" => user_name}
+       }) do
+    "The provider created a provisioning record for #{user_name}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "sso.scim.resource.update",
+         params: %{"user_name" => user_name}
+       }) do
+    "The provider changed the provisioning record for #{user_name}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "sso.scim.resource.delete",
+         params: %{"user_name" => user_name}
+       }) do
+    "The provider deleted the provisioning record for #{user_name}"
   end
 
   defp humanize_action(%AuditLog{action: "password.reset.init"}) do

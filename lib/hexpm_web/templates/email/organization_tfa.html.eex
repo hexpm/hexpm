@@ -1,0 +1,7 @@
+<div class="organization-tfa-notice">
+<h1>Organization two-factor authentication</h1>
+<p><strong><%= @organization.name %></strong> requires two-factor authentication from <strong><%= HexpmWeb.ViewHelpers.pretty_utc_datetime(@organization.tfa_required_at) %></strong>.</p>
+<%= if @stage == "summary" do %><p>Members suspended because 2FA isn't enabled: <%= if @suspended == [], do: "none", else: Enum.join(@suspended, ", ") %>.</p><% end %>
+<%= if @stage == "suspended" do %><p>Your organization access is suspended until you enable 2FA. Your membership, role, package ownership, and billed seat are retained.</p><% end %>
+<p>Enable 2FA in your <a href="<%= email_url("/dashboard/security") %>">account security settings</a>. Your existing Hex client sessions and API keys work again as soon as 2FA is enabled on your account. SSO authentication is separate and may also be required. Recovery codes remain available. After enrollment, return to any pending invitation to accept it.</p>
+</div>

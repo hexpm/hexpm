@@ -47,6 +47,16 @@ defmodule HexpmWeb.OrganizationInvitationController do
     |> redirect(to: ~p"/dashboard/orgs/#{invitation.organization}")
   end
 
+  defp handle_accept({:error, :tfa_enrollment_required}, conn, _invitation) do
+    conn
+    |> put_session(:tfa_return_to, ~p"/invites?#{[token: conn.params["token"]]}")
+    |> put_flash(
+      :error,
+      "Enable 2FA before accepting this invitation. Your invitation remains available."
+    )
+    |> redirect(to: ~p"/dashboard/security")
+  end
+
   defp handle_accept({:error, :seats_exhausted}, conn, invitation) do
     conn
     |> put_status(400)

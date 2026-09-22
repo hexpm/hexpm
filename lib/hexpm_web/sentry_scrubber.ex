@@ -4,8 +4,10 @@ defmodule HexpmWeb.SentryScrubber do
   # secrets out of the path is what stops them reaching stdout; this is what
   # stops them reaching Sentry. `login` is here because `requires_login` puts
   # the path it interrupted, query and all, into `return`.
-  @secret_query_paths ["sso", "invites", "login"]
-  @secret_body_paths ["sso"]
+  # `scim` carries the identity provider's record of a person, `userName` and
+  # `externalId`, in the body and in the filter.
+  @secret_query_paths ["sso", "invites", "login", "scim"]
+  @secret_body_paths ["sso", "scim"]
 
   def scrub_body(conn) do
     if path?(conn.request_path, @secret_body_paths) do

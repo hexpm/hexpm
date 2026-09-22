@@ -8,7 +8,8 @@ defmodule HexpmWeb.Components.HomeTest do
   test "inline code has no surrounding whitespace" do
     html = render_component(&inline_code/1, %{})
 
-    assert [{"span", _attributes, ["{deps, [hackney]}"]}] = Floki.parse_fragment!(html)
+    assert [{"span", _attributes, ["{deps, [hackney]}"]}] =
+             LazyHTML.from_fragment(html) |> LazyHTML.to_tree()
   end
 
   defp inline_code(assigns) do

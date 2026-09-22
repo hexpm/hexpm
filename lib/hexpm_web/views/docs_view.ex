@@ -34,6 +34,7 @@ defmodule HexpmWeb.DocsView do
        ]},
       {"Hex",
        organization_sso_link() ++
+         organization_tfa_link() ++
          [
            %{view: :faq, label: "FAQ", href: ~p"/docs/faq"},
            %{view: :self_hosting, label: "Self-hosting", href: ~p"/docs/self-hosting"},
@@ -42,6 +43,14 @@ defmodule HexpmWeb.DocsView do
            %{view: :leaked_keys, label: "Leaked API keys", href: ~p"/docs/leaked-keys"}
          ]}
     ]
+  end
+
+  defp organization_tfa_link() do
+    if Hexpm.Accounts.OrganizationTFA.available?(),
+      do: [
+        %{view: :organization_tfa, label: "Organization 2FA", href: ~p"/docs/organization-tfa"}
+      ],
+      else: []
   end
 
   defp organization_sso_link() do

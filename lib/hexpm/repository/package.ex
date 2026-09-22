@@ -27,7 +27,7 @@ defmodule Hexpm.Repository.Package do
   end
 
   @elixir_names ~w(eex elixir elixirc ex_unit iex logger mix)
-  @tool_names ~w(erlang typer to_erl run_erl escript erlc erl epmd dialyzer ct_run rebar rebar3 hex hexpm mix_hex)
+  @tool_names ~w(erlang typer to_erl run_erl escript erlc erl epmd dialyzer ct_run rebar rebar3 hex hexpm mix_hex flock phx gleam)
   @otp_names ~w(
     otp asn1 common_test compiler crypto debugger dialyzer diameter
     edoc eldap erl_docgen erl_interface erts et eunit ftp hipe
@@ -67,6 +67,7 @@ defmodule Hexpm.Repository.Package do
     |> unique_constraint(:name, name: :packages_repository_id_name_text_pattern_ops_index)
     |> validate_required(:name)
     |> validate_length(:name, min: 2)
+    |> validate_length(:name, count: :bytes, max: 255)
     |> validate_format(:name, ~r"^[a-z][a-z0-9_]*$")
     |> validate_exclusion(:name, @reserved_names)
     |> cast_embed(:meta, with: &PackageMetadata.changeset(&1, &2, package), required: true)

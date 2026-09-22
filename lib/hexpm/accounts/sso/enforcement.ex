@@ -25,8 +25,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   @default_session_lifetime 86_400
   @warning_window_seconds 14 * 24 * 60 * 60
   @pending_category "sso.enforcement_pending"
-  @key_revoked_category "sso.key_revoked"
-  @key_blocked_category "sso.key_blocked"
+  @keys_refused_category "sso.keys_refused"
   @break_glass_category "sso.break_glass"
   @break_glass_notice_seconds 60 * 60
 
@@ -35,7 +34,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   and so go away with their account.
   """
   def member_notification_categories,
-    do: [@pending_category, @key_revoked_category, @key_blocked_category]
+    do: [@pending_category, @keys_refused_category]
 
   @doc """
   The enforcement mode in force for an organization right now, or `:optional`
@@ -372,17 +371,25 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     |> Enum.sum()
   end
 
+  # A member already marked enforced is governed during the grace period too, so
+  # the date does not change anything for them and the notice would tell them
+  # they are about to lose access they lost already. An exempt member keeps
+  # their access past the date and hears nothing either.
   defp warn_organization(connection, organization) do
+    warned = warned_user_ids(organization, connection.required_at)
+
     from(member in members_with_identity(organization),
       join: user in assoc(member, :user),
       join: address in assoc(user, :emails),
-      where: is_nil(member.sso_enforcement) or member.sso_enforcement == "enforced",
+      where: is_nil(member.sso_enforcement),
       where: is_nil(as(:identity).id),
       where: address.primary and address.verified,
       select: {user, address.email}
     )
     |> Repo.all()
-    |> Enum.map(fn {user, email} -> warn_member(connection, organization, user, email) end)
+    |> Enum.map(fn {user, email} ->
+      warn_member(connection, organization, user, email, warned)
+    end)
     |> Enum.count(&(&1 == :sent))
   end
 
@@ -391,8 +398,8 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   # and a member would be told again on every tick. Both go in one transaction,
   # so a failure while building the mail does not leave the member recorded as
   # warned and never told.
-  defp warn_member(connection, organization, user, email) do
-    if warned?(organization, user) do
+  defp warn_member(connection, organization, user, email, warned) do
+    if MapSet.member?(warned, user.id) do
       :skipped
     else
       {:ok, _} =
@@ -421,14 +428,18 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     end
   end
 
-  defp warned?(organization, user) do
-    Repo.exists?(
-      from(log in AuditLog,
-        where: log.organization_id == ^organization.id,
-        where: log.user_id == ^user.id,
-        where: log.action == "sso.enforcement.warned"
-      )
+  # Keyed on the date the member was told, not on having been told. Moving the
+  # required-by date makes the notice they hold wrong, so a member whose last
+  # notice named a different date is told again.
+  defp warned_user_ids(organization, required_at) do
+    from(log in AuditLog,
+      where: log.organization_id == ^organization.id,
+      where: log.action == "sso.enforcement.warned",
+      where: fragment("? ->> 'required_at' = ?", log.params, ^DateTime.to_iso8601(required_at)),
+      select: log.user_id
     )
+    |> Repo.all()
+    |> MapSet.new()
   end
 
   @doc """
@@ -594,53 +605,63 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     |> Repo.insert!()
   end
 
+  # One notice covering every key of this owner that the sweep touched, whether
+  # the organization took its access away or only turned it down.
+  #
+  # A blocked key changes no state, so unlike a revoked one it has nothing to
+  # make the notice stop: the outbox row is deleted on delivery and the same key
+  # is blocked again on the next tick. The audit entry is the durable record the
+  # "once" hangs off, per key rather than per member, so minting another key
+  # that this organization also refuses is announced instead of swallowed.
   defp notify_key_owner(organization, [{%Key{user: user}, _outcome} | _] = keys) do
-    recipients = user_emails(user)
+    revoked = for {key, :revoked} <- keys, do: key.name
+    trimmed = for {key, :trimmed} <- keys, do: key.name
+    blocked = for {key, :blocked} <- keys, do: key
 
-    if recipients != [] do
-      revoked = for {key, :revoked} <- keys, do: key.name
-      trimmed = for {key, :trimmed} <- keys, do: key.name
-      blocked = for {key, :blocked} <- keys, do: key
+    announced = announced_blocked_key_ids(organization, user)
+    fresh = Enum.reject(blocked, &MapSet.member?(announced, &1.id))
 
-      if revoked != [] or trimmed != [] do
-        enqueue_once(
-          Emails.sso_key_revoked(organization.name, revoked, trimmed, recipients),
-          category: @key_revoked_category,
-          group_key: "#{@key_revoked_category}:#{organization.id}:#{user.id}",
-          scope_key: "sso:user:#{user.id}"
-        )
-      end
+    if revoked != [] or trimmed != [] or fresh != [] do
+      outcome =
+        deliver_key_notice(organization, user, revoked, trimmed, Enum.map(blocked, & &1.name))
 
-      notify_blocked(organization, user, blocked, recipients)
+      # Only once the notice naming them is on its way. A notice that was
+      # skipped because an earlier one is still queued does not name these keys,
+      # so recording them now would mean they are never named at all.
+      if outcome != :skipped, do: Enum.each(fresh, &audit_key_blocked(organization, &1))
+
+      outcome
+    else
+      :skipped
     end
   end
 
-  # A blocked key changes no state, so unlike the revoked notice this one has
-  # nothing to make it stop: the outbox row is deleted on delivery, and the same
-  # key is blocked again on the next tick. The audit entry is the durable record
-  # the "once" hangs off, per key rather than per member, so minting another key
-  # that this organization also refuses is announced instead of swallowed.
-  defp notify_blocked(_organization, _user, [], _recipients), do: :skipped
-
-  defp notify_blocked(organization, user, blocked, recipients) do
-    announced = announced_blocked_key_ids(organization, user)
-
-    case Enum.reject(blocked, &MapSet.member?(announced, &1.id)) do
+  # An account with no verified primary address cannot be told at all. The keys
+  # were still swept, so the audit row is what the audit log has to show for it
+  # instead of nothing.
+  defp deliver_key_notice(organization, user, revoked, trimmed, blocked) do
+    case user_emails(user) do
       [] ->
-        :skipped
+        audit_notice_undeliverable(organization, user, revoked, trimmed, blocked)
+        :undeliverable
 
-      fresh ->
-        Enum.each(fresh, &audit_key_blocked(organization, &1))
-
-        Outbox.enqueue!(
-          Emails.sso_key_blocked(organization.name, Enum.map(blocked, & &1.name), recipients),
-          category: @key_blocked_category,
-          group_key: "#{@key_blocked_category}:#{organization.id}:#{user.id}",
+      recipients ->
+        enqueue_once(
+          Emails.sso_keys_refused(organization.name, revoked, trimmed, blocked, recipients),
+          category: @keys_refused_category,
+          group_key: "#{@keys_refused_category}:#{organization.id}:#{user.id}",
           scope_key: "sso:user:#{user.id}"
         )
-
-        :sent
     end
+  end
+
+  defp audit_notice_undeliverable(organization, user, revoked, trimmed, blocked) do
+    %{user: user, auth_credential: nil, user_agent: "hexpm", remote_ip: nil}
+    |> AuditLog.build(
+      "sso.key.notice_undeliverable",
+      {organization, %{revoked: revoked, trimmed: trimmed, blocked: blocked}}
+    )
+    |> Repo.insert!()
   end
 
   defp announced_blocked_key_ids(organization, user) do
@@ -781,9 +802,11 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     end
   end
 
-  # An entry is deleted once it is delivered, so this only collapses a notice
-  # that has not gone out yet.
+  # Collapses a notice that has not gone out yet; a delivered one stays on the
+  # table as a record and must not stop the next.
   defp pending_entry?(group_key) do
-    Repo.exists?(from(entry in Hexpm.Emails.OutboxEntry, where: entry.group_key == ^group_key))
+    Repo.exists?(
+      from(entry in Hexpm.Emails.OutboxEntry.undelivered(), where: entry.group_key == ^group_key)
+    )
   end
 end

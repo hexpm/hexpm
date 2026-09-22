@@ -1,13 +1,12 @@
 defmodule HexpmWeb.Templates.Dashboard.Security.Components.RecoveryCodesCard do
   @moduledoc """
   Recovery codes management card component.
-  Displays recovery codes and allows generating new ones.
+  Links to the recovery codes page and allows generating new ones.
   """
   use Phoenix.Component
   use PhoenixHTMLHelpers
   import HexpmWeb.Components.Buttons
   import HexpmWeb.Components.Form, only: [sudo_form: 1]
-  alias Hexpm.Accounts.User
   use Hexpm.Shared
 
   use Phoenix.VerifiedRoutes,
@@ -24,77 +23,21 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.RecoveryCodesCard do
         Recovery Codes
       </h2>
 
-      <p class="text-grey-600 dark:text-grey-300 text-sm mb-6">
+      <p class="text-grey-600 dark:text-grey-300 text-sm mb-4">
         Recovery codes can be used to access your account in the event you lose access to
         your device and cannot receive two-factor authentication codes.
       </p>
 
-      <%= if show_recovery_codes?(@user) do %>
-        <%!-- Recovery Codes Display --%>
-        <div
-          class="p-6 bg-grey-50 dark:bg-grey-900 border border-grey-200 dark:border-grey-700 rounded-lg mb-6"
-          id="recovery-codes"
-          data-value={aggregate_recovery_codes(@user.tfa.recovery_codes)}
-        >
-          <div class="grid grid-cols-2 gap-3">
-            <%= for code <- @user.tfa.recovery_codes do %>
-              <div class="flex items-center justify-between p-2 bg-white dark:bg-grey-800 rounded border border-grey-200 dark:border-grey-700">
-                <code class={[
-                  "text-sm font-mono",
-                  if(code.used_at,
-                    do: "text-grey-400 dark:text-grey-300 line-through",
-                    else: "text-grey-900 dark:text-white"
-                  )
-                ]}>
-                  {code.code}
-                </code>
-                <%= if code.used_at do %>
-                  <span class="text-xs px-2 py-1 bg-grey-100 dark:bg-grey-700 text-grey-600 dark:text-grey-200 rounded">
-                    Used
-                  </span>
-                <% end %>
-              </div>
-            <% end %>
-          </div>
-        </div>
+      <p class="text-grey-600 dark:text-grey-300 text-sm mb-4">
+        {unused_count(@user)} of {length(@user.tfa.recovery_codes)} codes unused
+      </p>
 
-        <%!-- Action Buttons --%>
-        <div class="flex items-center gap-3 mb-8">
-          <.button
-            id="download-recovery-codes-btn"
-            type="button"
-            variant="outline"
-            size="sm"
-            phx-hook="DownloadButton"
-            data-download-target="recovery-codes"
-          >
-            Download
-          </.button>
-          <.button
-            id="print-recovery-codes-btn"
-            type="button"
-            variant="outline"
-            size="sm"
-            phx-hook="PrintButton"
-            data-print-target="recovery-codes"
-          >
-            Print
-          </.button>
-          <.button
-            id="copy-recovery-codes-btn"
-            type="button"
-            variant="outline"
-            size="sm"
-            phx-hook="CopyButton"
-            data-copy-target="recovery-codes"
-          >
-            Copy
-          </.button>
-        </div>
-      <% end %>
+      <.button_link variant="outline" href={~p"/dashboard/security/recovery-codes"}>
+        View Recovery Codes
+      </.button_link>
 
       <%!-- Generate New Codes Section --%>
-      <div class="border-t border-grey-200 dark:border-grey-700 pt-6">
+      <div class="border-t border-grey-200 dark:border-grey-700 mt-8 pt-6">
         <h3 class="text-grey-900 dark:text-white font-medium mb-2">
           Generate New Recovery Codes
         </h3>
@@ -113,13 +56,5 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.RecoveryCodesCard do
     """
   end
 
-  defp show_recovery_codes?(user) do
-    User.tfa_enabled?(user) && user.tfa.recovery_codes
-  end
-
-  defp aggregate_recovery_codes(codes) do
-    codes
-    |> Enum.map(& &1.code)
-    |> Enum.reduce(fn code, acc -> acc <> "\n" <> code end)
-  end
+  defp unused_count(user), do: Enum.count(user.tfa.recovery_codes, &is_nil(&1.used_at))
 end

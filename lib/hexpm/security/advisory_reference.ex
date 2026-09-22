@@ -13,7 +13,8 @@ defmodule Hexpm.Security.AdvisoryReference do
     reference
     |> cast(params, ~w(type url)a)
     |> validate_required(~w(type url)a)
-    |> validate_length(:url, max: 2000)
+    |> validate_length(:type, count: :bytes, max: 255)
+    |> validate_length(:url, count: :bytes, max: 2000)
     |> validate_change(:url, fn :url, url ->
       case URI.parse(url) do
         %URI{scheme: scheme, host: host}

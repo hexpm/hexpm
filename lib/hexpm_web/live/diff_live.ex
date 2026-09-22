@@ -502,9 +502,14 @@ defmodule HexpmWeb.DiffLive do
 
   defp fetch_repository(socket, repository) do
     case RepositoryAccess.fetch_repository(socket, repository) do
-      {:ok, repository} -> {:ok, repository}
-      {:error, :sso_required, organization} -> {:sso_required, organization}
-      _ -> {:error, :package_not_found}
+      {:ok, repository} ->
+        {:ok, repository}
+
+      {:error, requirement, organization} when requirement in [:sso_required, :tfa_required] ->
+        {:sso_required, organization}
+
+      _ ->
+        {:error, :package_not_found}
     end
   end
 

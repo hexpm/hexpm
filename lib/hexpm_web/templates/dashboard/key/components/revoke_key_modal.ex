@@ -13,18 +13,12 @@ defmodule HexpmWeb.Dashboard.Key.Components.RevokeKeyModal do
     assigns = assign(assigns, :modal_id, modal_id)
 
     ~H"""
-    <.modal id={@modal_id}>
-      <:header>
-        <h2 class="text-lg font-semibold text-grey-900">
-          Revoke Key
-        </h2>
-      </:header>
-
-      <p class="text-sm text-grey-600 mb-4">
+    <.modal id={@modal_id} title="Revoke Key">
+      <p class="text-sm text-grey-600 dark:text-grey-300 mb-4">
         Are you sure you want to revoke the key <strong class="font-semibold">{@key.name}</strong>?
       </p>
 
-      <p class="text-sm text-grey-600">
+      <p class="text-sm text-grey-600 dark:text-grey-300">
         This action cannot be undone. Any applications using this key will no longer be able to authenticate.
       </p>
 

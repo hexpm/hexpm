@@ -16,7 +16,8 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
 
   use Hexpm.Context
 
-  alias Hexpm.Accounts.OrganizationInvitation
+  alias Hexpm.Accounts.{OrganizationInvitation, SCIM}
+  alias Hexpm.Emails.Outbox
 
   def all_pending(organization) do
     Repo.all(
@@ -50,6 +51,11 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
 
   def get_pending_by_token(_raw_token), do: nil
 
+  def get_pending_by_email(organization, email) do
+    email = OrganizationInvitation.normalize_email(email)
+    Repo.one(from(invitation in pending_query(organization), where: invitation.email == ^email))
+  end
+
   def invite(organization, params, invited_by, audit: audit_data) do
     email = OrganizationInvitation.normalize_email(params["email"] || "")
 
@@ -76,7 +82,8 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
     changeset =
       OrganizationInvitation.changeset(%OrganizationInvitation{}, %{
         "organization_id" => organization.id,
-        "invited_by_user_id" => invited_by.id,
+        # nil when the inviter is not a person, such as SCIM provisioning.
+        "invited_by_user_id" => invited_by && invited_by.id,
         "email" => email,
         "role" => role,
         "token_hash" => hash(raw_token),
@@ -86,8 +93,9 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
     Multi.new()
     |> Multi.insert(:invitation, changeset)
     |> audit(audit_data, "organization.invitation.create", &{organization, &1.invitation})
-    |> Repo.transaction()
     |> deliver(organization, raw_token)
+    |> Repo.transaction()
+    |> result()
   end
 
   defp lapsed_invitation(organization, email) do
@@ -113,8 +121,9 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
       OrganizationInvitation.reissue_changeset(invitation, hash(raw_token), expires_at())
     )
     |> audit(audit_data, "organization.invitation.create", &{organization, &1.invitation})
-    |> Repo.transaction()
     |> deliver(organization, raw_token)
+    |> Repo.transaction()
+    |> result()
   end
 
   def revoke(organization, invitation, audit: audit_data) do
@@ -136,13 +145,17 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
 
   The invitation row is locked before the seat is claimed, so two people
   following the same link at once produce one membership and one refusal. Lock
-  order is invitation, then the organization seat row; nothing else takes both.
+  order is the organization's SSO connection when it has one, then the
+  invitation, then the organization seat row; provisioning writes take the
+  same three in the same order.
   """
   def accept(%OrganizationInvitation{} = invitation, user, audit: audit_data) do
     organization = invitation.organization
 
     Multi.new()
+    |> SCIM.lock_provisioning(organization)
     |> Multi.run(:invitation, fn _repo, _changes -> locked_pending(invitation) end)
+    |> Hexpm.Accounts.OrganizationTFA.admit(organization, user)
     |> Multi.run(:existing_role, fn _repo, _changes ->
       {:ok, Organizations.get_role(organization, user)}
     end)
@@ -158,6 +171,9 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
         {:ok, :already_member}
 
       {:error, :invitation, reason, _changes} ->
+        {:error, reason}
+
+      {:error, :tfa_admission, reason, _changes} ->
         {:error, reason}
 
       {:error, :seats, reason, _changes} ->
@@ -193,22 +209,31 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
       :accepted_invitation,
       OrganizationInvitation.accept_changeset(invitation, user, DateTime.utc_now())
     )
+    |> Multi.run(:scim_handle, fn _repo, _changes -> SCIM.adopt_acceptance(invitation, user) end)
     |> audit(audit_data, "organization.invitation.accept", {organization, invitation})
   end
 
-  defp deliver({:ok, %{invitation: invitation}}, organization, raw_token) do
-    invitation = %{invitation | raw_token: raw_token, organization: organization}
+  # Queued in the same transaction as the invitation. Delivering afterwards
+  # meant a mail failure answered the caller with the invitation already
+  # committed, and the retry adopted that invitation without mailing anyone.
+  defp deliver(multi, organization, raw_token) do
+    Multi.run(multi, :email, fn _repo, %{invitation: invitation} ->
+      invitation = %{invitation | raw_token: raw_token, organization: organization}
 
-    invitation
-    |> Emails.organization_invitation()
-    |> Mailer.deliver!()
+      invitation
+      |> Emails.organization_invitation()
+      |> Outbox.enqueue!(
+        category: "organization.invitation",
+        group_key: "organization-invitation:#{invitation.id}",
+        scope_key: "organization:#{organization.id}"
+      )
 
-    {:ok, invitation}
+      {:ok, invitation}
+    end)
   end
 
-  defp deliver({:error, :invitation, changeset, _changes}, _organization, _raw_token) do
-    {:error, changeset}
-  end
+  defp result({:ok, %{email: invitation}}), do: {:ok, invitation}
+  defp result({:error, :invitation, changeset, _changes}), do: {:error, changeset}
 
   defp locked_pending(invitation) do
     locked =

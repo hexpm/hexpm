@@ -1119,7 +1119,7 @@ defmodule Hexpm.Accounts.SSOTest do
       # deletes it and cascades to the organization access session. The
       # administrator's linked-accounts view has to survive that.
       Hexpm.UserSessions.revoke(user_session, nil, audit: audit_data(context.member))
-      Hexpm.ReleaseTasks.PurgeExpiredRecords.run()
+      Hexpm.PurgeExpiredRecords.run()
 
       refute Repo.exists?(SSO.OrgSession)
       assert Repo.get!(Identity, identity.id).last_authenticated_at == authenticated_at
@@ -1284,6 +1284,27 @@ defmodule Hexpm.Accounts.SSOTest do
       assert restored.id == org_session.id
       assert restored.revoked_at == nil
       assert SSO.current_org_session(user_session.id, context.organization.id)
+    end
+
+    test "re-authenticating clears the session the access was copied from", context do
+      # A CLI session gets its access as a copy carrying the browser session it
+      # came from, and OrgSession.live/2 discards a copy whose source is gone.
+      # Re-authorizing through the provider has to stand on its own, or the
+      # member cannot restore CLI access until the nightly purge.
+      identity = link_identity(context, context.member)
+      browser = browser_session(context.member)
+      cli = browser_session(context.member)
+
+      SSO.establish_org_session!(identity, browser.id)
+      SSO.grant_org_sessions!(browser.id, cli.id, context.member.id)
+
+      assert SSO.current_org_session(cli.id, context.organization.id)
+
+      Hexpm.UserSessions.revoke(browser, nil, audit: audit_data(context.member))
+      refute SSO.current_org_session(cli.id, context.organization.id)
+
+      SSO.establish_org_session!(identity, cli.id)
+      assert SSO.current_org_session(cli.id, context.organization.id)
     end
 
     test "an organization access session is scoped to its own organization", context do
@@ -1731,7 +1752,8 @@ defmodule Hexpm.Accounts.SSOTest do
     end
 
     test "covers the organizations that are still governed", context do
-      session = browser_session(context.member)
+      session =
+        insert(:oauth_session, user: context.member, client_id: insert(:oauth_client).client_id)
 
       assert {:ok, authorization} =
                SSO.request_authorization(context.member, session.id, [context.organization.name])
@@ -1742,7 +1764,9 @@ defmodule Hexpm.Accounts.SSOTest do
     test "skips a name that is no longer governed and keeps the rest", context do
       exempted = insert(:organization)
       insert(:organization_user, organization: exempted, user: context.member)
-      session = browser_session(context.member)
+
+      session =
+        insert(:oauth_session, user: context.member, client_id: insert(:oauth_client).client_id)
 
       # The client posts the list it last heard about, which is as old as its
       # access token, so one name that has since stopped being governed cannot
@@ -1757,7 +1781,8 @@ defmodule Hexpm.Accounts.SSOTest do
     end
 
     test "refuses when nothing named is governed", context do
-      session = browser_session(context.member)
+      session =
+        insert(:oauth_session, user: context.member, client_id: insert(:oauth_client).client_id)
 
       assert {:error, :not_governed} =
                SSO.request_authorization(context.member, session.id, ["no-such-organization"])

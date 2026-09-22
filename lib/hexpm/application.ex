@@ -5,6 +5,7 @@ defmodule Hexpm.Application do
 
   def start(_type, _args) do
     :logger.add_handler(:sentry_handler, Sentry.LoggerHandler, %{})
+    Hexpm.Emails.Telemetry.attach()
 
     read_only_mode()
     setup_tmp_dir()
@@ -76,6 +77,13 @@ defmodule Hexpm.Application do
       true ->
         event
     end
+  end
+
+  # Oban retries a failed job until max_attempts and its exception telemetry
+  # counts every attempt, so only the attempt that exhausts the retries is
+  # reported as an issue.
+  def report_oban_error?(_worker, %Oban.Job{attempt: attempt, max_attempts: max_attempts}) do
+    attempt >= max_attempts
   end
 
   # Bandit stops the websocket connection process with a non-shutdown reason when a
@@ -183,6 +191,7 @@ defmodule Hexpm.Application do
   defp common_children(write_mode?) do
     [
       Hexpm.PromEx,
+      {DBConnection.TelemetryListener, name: Hexpm.RepoBase.TelemetryListener},
       Hexpm.RepoBase,
       {Finch, name: Hexpm.Finch, pools: finch_pools()},
       Hexpm.TmpDir,
@@ -207,8 +216,14 @@ defmodule Hexpm.Application do
   defp oban_child, do: {Oban, Application.fetch_env!(:hexpm, Oban)}
 
   defp finch_pools() do
+    cdn_url = Application.fetch_env!(:hexpm, :cdn_url)
     gcs_url = Application.get_env(:hexpm, :gcs_url, "https://storage.googleapis.com")
-    %{gcs_url => [size: 50, count: 8]}
+
+    %{
+      :default => [conn_max_idle_time: 5_000],
+      cdn_url => [conn_max_idle_time: 5_000],
+      gcs_url => [size: 50, count: 8, conn_max_idle_time: 5_000]
+    }
   end
 
   defp web_children do

@@ -324,11 +324,93 @@ defmodule Hexpm.Accounts.SSOConcurrencyTest do
         end)
 
       assert {:ok, %Identity{}} = Task.await(unlink, 2_000)
-      assert Repo.get(OutboxEntry, entry.id)
+      assert %OutboxEntry{delivered_at: nil} = Repo.get(OutboxEntry, entry.id)
 
       send(delivering_pid, :release)
       assert :ok = Task.await(delivery, 5_000)
-      refute Repo.get(OutboxEntry, entry.id)
+
+      assert %OutboxEntry{delivered_at: %DateTime{}, provider_message_id: "blocking"} =
+               Repo.get(OutboxEntry, entry.id)
+    end)
+  end
+
+  test "a session copy racing a disable does not outlive it" do
+    committed(fn context ->
+      identity = link_identity(context, context.member)
+      browser = browser_session(context.member)
+      target = browser_session(context.member)
+
+      SSO.establish_org_session!(identity, browser.id)
+      assert SSO.current_org_session(browser.id, context.organization.id)
+
+      copy = fn ->
+        Hexpm.RepoBase.transaction(fn ->
+          # The order the OAuth multis take: the connections first, then the
+          # rows. Reversing it is what let a copy commit into a window the
+          # disable had already swept.
+          SSO.lock_granting_connections!(browser.id, context.member.id)
+          SSO.grant_org_sessions!(browser.id, target.id, context.member.id)
+        end)
+      end
+
+      disable = fn ->
+        SSO.disable(context.organization, audit: audit_data(context.admin))
+      end
+
+      race([copy, disable], fn fun -> fun.() end)
+
+      refute SSO.current_org_session(target.id, context.organization.id)
+      refute SSO.current_org_session(browser.id, context.organization.id)
+    end)
+  end
+
+  # An organization with the feature on but no connection row yet has nothing for
+  # `with_locked_connection/4` to lock, so the member row is the only thing
+  # ordering an enforcement change against a removal of the same member.
+  test "setting enforcement on a member being removed answers rather than raising" do
+    committed(fn context ->
+      Repo.delete!(context.connection)
+      parent = self()
+
+      remover =
+        unboxed_task(fn ->
+          Hexpm.RepoBase.transaction(fn ->
+            Hexpm.RepoBase.one!(
+              from(member in Hexpm.Accounts.OrganizationUser,
+                where: member.organization_id == ^context.organization.id,
+                where: member.user_id == ^context.member.id,
+                lock: "FOR UPDATE"
+              )
+            )
+
+            send(parent, :holding)
+            assert_receive :remove, 15_000
+
+            Hexpm.RepoBase.delete_all(
+              from(member in Hexpm.Accounts.OrganizationUser,
+                where: member.organization_id == ^context.organization.id,
+                where: member.user_id == ^context.member.id
+              )
+            )
+          end)
+        end)
+
+      assert_receive :holding, 15_000
+
+      enforcer =
+        unboxed_task(fn ->
+          SSO.set_member_enforcement(context.organization, context.member, "enforced",
+            audit: audit_data(context.admin)
+          )
+        end)
+
+      # Long enough for the enforcement change to reach the member row and block
+      # on the lock the remover is holding.
+      Process.sleep(500)
+      send(remover.pid, :remove)
+
+      assert {:ok, {:ok, _count}} = Task.yield(remover, 15_000)
+      assert {:ok, {:error, :not_member}} = Task.yield(enforcer, 15_000)
     end)
   end
 

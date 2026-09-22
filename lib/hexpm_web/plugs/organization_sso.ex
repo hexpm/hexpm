@@ -1,7 +1,6 @@
 defmodule HexpmWeb.Plugs.OrganizationSSO do
   @moduledoc """
-  Requires a current organization access session on pages of an organization
-  that enforces SSO.
+  Requires the organization's independent SSO and 2FA verification on its pages.
 
   This runs alongside sudo rather than instead of it: sudo says the person at
   the keyboard is still the account holder, and the organization access session
@@ -44,10 +43,19 @@ defmodule HexpmWeb.Plugs.OrganizationSSO do
     with %{} = user <- conn.assigns[:current_user],
          %{} = organization <- organization(conn, opts.source),
          {:error, refusal} <- SSOEnforcement.check(conn, organization, user) do
-      if carve_out?(conn, opts.except) do
-        record_break_glass(conn, organization, user, screen(conn, opts.screen))
-      else
-        SSOEnforcement.refuse(conn, refusal, organization)
+      cond do
+        carve_out?(conn, opts.except) and refusal == :sso_required ->
+          record_break_glass(conn, organization, user, screen(conn, opts.screen))
+
+        carve_out?(conn, opts.except) and
+            Phoenix.Controller.action_name(conn) in [:leave, :danger_zone] ->
+          if Enforcement.check(organization, user, nil, conn.assigns.current_session.id) ==
+               {:error, :sso_required},
+             do: record_break_glass(conn, organization, user, screen(conn, opts.screen)),
+             else: conn
+
+        true ->
+          SSOEnforcement.refuse(conn, refusal, organization)
       end
     else
       _ -> conn

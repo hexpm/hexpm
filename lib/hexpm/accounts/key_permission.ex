@@ -1,7 +1,7 @@
 defmodule Hexpm.Accounts.KeyPermission do
   use Hexpm.Schema
 
-  alias Hexpm.Accounts.SSO.Enforcement
+  alias Hexpm.Accounts.OrganizationAuth
   alias Hexpm.Permissions
 
   @derive {HexpmWeb.Stale, last_modified: nil}
@@ -11,13 +11,14 @@ defmodule Hexpm.Accounts.KeyPermission do
     field :resource, :string
   end
 
-  def changeset(struct, user_or_organization, params) do
+  def changeset(struct, user_or_organization, refusals, params) do
     cast(struct, params, ~w(domain resource)a)
     |> validate_inclusion(:domain, Permissions.valid_domains())
     |> normalize_resource()
+    |> validate_length(:resource, count: :bytes, max: 512)
     |> validate_resource()
     |> validate_permission(user_or_organization)
-    |> validate_personal_key_reach(user_or_organization)
+    |> validate_personal_key_reach(refusals)
   end
 
   defp validate_resource(changeset) do
@@ -63,12 +64,12 @@ defmodule Hexpm.Accounts.KeyPermission do
   # The key has nowhere to hang an organization access session, so refusing it
   # here rather than at the request means the member finds out while they are
   # still on the form and can pick a credential that works.
-  defp validate_personal_key_reach(changeset, user_or_organization) do
+  defp validate_personal_key_reach(changeset, refusals) do
     with true <- changeset.valid?,
          reach when not is_nil(reach) <- organization_reach(apply_changes(changeset)),
-         organization when not is_nil(organization) <-
-           Enum.find(Enforcement.personal_key_refused(user_or_organization), &reached?(&1, reach)) do
-      add_error(changeset, :resource, Enforcement.refusal_message(:personal_key, organization))
+         {organization, refusal} <-
+           Enum.find(refusals, fn {organization, _refusal} -> reached?(organization, reach) end) do
+      add_error(changeset, :resource, OrganizationAuth.refusal_message(refusal, organization))
     else
       _ -> changeset
     end

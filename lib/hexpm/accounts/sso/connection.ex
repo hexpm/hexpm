@@ -24,9 +24,19 @@ defmodule Hexpm.Accounts.SSO.Connection do
     field :required_at, :utc_datetime_usec
     field :session_lifetime_seconds, :integer, default: 86_400
     field :personal_keys, :string
+    field :scim_token_first, :string, redact: true
+    field :scim_token_second, :string, redact: true
+    field :scim_token, :string, virtual: true, redact: true
+    field :scim_seat_policy, :string
+    field :scim_role, :string, default: "read"
+    field :scim_token_generated_at, :utc_datetime_usec
+    field :scim_token_used_at, :utc_datetime_usec
+    field :scim_token_used_ip, :string
+    field :seat_expansion_failed_at, :utc_datetime_usec
 
     belongs_to :organization, Organization
     belongs_to :configured_by_user, User
+    belongs_to :scim_token_generated_by_user, User
     has_many :identities, Hexpm.Accounts.SSO.Identity
     has_many :transactions, Hexpm.Accounts.SSO.Transaction
     has_many :failures, Hexpm.Accounts.SSO.Failure
@@ -38,9 +48,9 @@ defmodule Hexpm.Accounts.SSO.Connection do
     connection
     |> cast(attrs, [:organization_id, :issuer, :client_id, :client_secret])
     |> validate_required([:organization_id, :issuer, :client_id, :client_secret])
-    |> validate_length(:issuer, max: 2_048)
-    |> validate_length(:client_id, max: 1_024)
-    |> validate_length(:client_secret, max: 4_096)
+    |> validate_length(:issuer, count: :bytes, max: 2_048)
+    |> validate_length(:client_id, count: :bytes, max: 1_024)
+    |> validate_length(:client_secret, count: :bytes, max: 4_096)
   end
 
   def configuration_changeset(connection, attrs) do
@@ -75,9 +85,9 @@ defmodule Hexpm.Accounts.SSO.Connection do
       :metadata_expires_at,
       :version
     ])
-    |> validate_length(:issuer, max: 2_048)
-    |> validate_length(:client_id, max: 1_024)
-    |> validate_length(:client_secret, max: 4_096)
+    |> validate_length(:issuer, count: :bytes, max: 2_048)
+    |> validate_length(:client_id, count: :bytes, max: 1_024)
+    |> validate_length(:client_secret, count: :bytes, max: 4_096)
     |> unique_constraint(:organization_id)
   end
 
@@ -89,11 +99,15 @@ defmodule Hexpm.Accounts.SSO.Connection do
       :pending_client_secret_tested_at
     ])
     |> validate_required([:pending_client_secret])
-    |> validate_length(:pending_client_secret, max: 4_096)
+    |> validate_length(:pending_client_secret, count: :bytes, max: 4_096)
   end
 
   @jit_seat_policies ~w(block expand)
-  @jit_roles ~w(admin write read)
+
+  # The provider decides who arrives; an administrator here decides who runs the
+  # organization. Admitting someone as an administrator would hand the provider
+  # both, and an administrator can elevate a member afterwards.
+  @jit_roles ~w(write read)
 
   @doc """
   Turns just-in-time membership on or off. `jit_seat_policy` is required to turn
@@ -170,6 +184,77 @@ defmodule Hexpm.Accounts.SSO.Connection do
         changeset
     end
   end
+
+  @scim_seat_policies ~w(block expand)
+  @scim_roles ~w(admin write read)
+
+  @doc """
+  The provisioning settings. `scim_seat_policy` is a forced choice while SCIM
+  is on, for the reason `jit_seat_policy` is: provisioning claims seats, and
+  auto-expanding a subscription is a billing change nobody should get without
+  having asked for it. `scim_role` is separate from `jit_role` because either
+  feature runs without the other, and a setting labeled for one silently
+  governing the other is a support ticket waiting to happen.
+  """
+  def scim_changeset(connection, attrs) do
+    changeset =
+      connection
+      |> cast(attrs, [:scim_seat_policy, :scim_role])
+      |> update_change(:scim_seat_policy, &nilify_blank/1)
+      |> validate_required([:scim_role])
+      |> validate_inclusion(:scim_seat_policy, @scim_seat_policies)
+      |> validate_inclusion(:scim_role, @scim_roles)
+
+    if scim_enabled?(connection) do
+      validate_required(changeset, [:scim_seat_policy])
+    else
+      changeset
+    end
+  end
+
+  @doc """
+  Turns provisioning on, or replaces the bearer token of a connection that
+  already has one. The plaintext lands in the virtual `scim_token` for the one
+  screen that shows it; only the split hash is stored.
+  """
+  def scim_generate_changeset(connection, attrs, generated_by) do
+    {token, first, second} = gen_scim_token()
+
+    connection
+    |> scim_changeset(attrs)
+    |> validate_required([:scim_seat_policy])
+    |> put_change(:scim_token_first, first)
+    |> put_change(:scim_token_second, second)
+    |> put_change(:scim_token, token)
+    |> put_change(:scim_token_generated_by_user_id, generated_by && generated_by.id)
+    |> put_change(:scim_token_generated_at, DateTime.utc_now())
+    |> put_change(:scim_token_used_at, nil)
+    |> put_change(:scim_token_used_ip, nil)
+  end
+
+  def scim_delete_changeset(connection) do
+    change(connection,
+      scim_token_first: nil,
+      scim_token_second: nil,
+      scim_token_generated_by_user_id: nil,
+      scim_token_generated_at: nil,
+      scim_token_used_at: nil,
+      scim_token_used_ip: nil
+    )
+  end
+
+  defp gen_scim_token() do
+    token = :crypto.strong_rand_bytes(16) |> Base.encode16(case: :lower)
+    app_secret = Application.get_env(:hexpm, :secret)
+
+    <<first::binary-size(32), second::binary-size(32)>> =
+      :crypto.mac(:hmac, :sha256, app_secret, token)
+      |> Base.encode16(case: :lower)
+
+    {token, first, second}
+  end
+
+  def scim_enabled?(%__MODULE__{scim_token_first: first}), do: not is_nil(first)
 
   def enabled?(%__MODULE__{enabled_at: enabled_at}), do: not is_nil(enabled_at)
 

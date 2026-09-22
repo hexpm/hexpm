@@ -262,9 +262,13 @@ defmodule HexpmWeb.PackageControllerTest do
 
       assert html =~ escape(~s({:#{package1.name}, "~> 0.0.2"}))
 
-      assert {:ok, document} = Floki.parse_document(html)
+      document = LazyHTML.from_document(html)
       assert link_text(document, "/packages/#{package1.name}/report") == "Report package"
-      assert [_report_link] = Floki.find(document, ".grid > #report-package-link.bg-grey-100")
+
+      assert [_report_link] =
+               LazyHTML.query(document, ".grid > #report-package-link.bg-grey-100")
+               |> Enum.to_list()
+
       assert link_text(document, "/packages/#{package1.name}/dependents") == "0 Dependants"
       assert link_text(document, "/packages/#{package1.name}/dependencies") == "0 Dependencies"
       assert link_text(document, "/packages/#{package1.name}/versions") == "3 Versions"
@@ -278,7 +282,9 @@ defmodule HexpmWeb.PackageControllerTest do
                "/packages/#{package1.name}/audit-logs"
              ]
 
-      assert [_ | _] = Floki.find(document, "details summary.package-tabs-mobile-trigger")
+      assert [_ | _] =
+               LazyHTML.query(document, "details summary.package-tabs-mobile-trigger")
+               |> Enum.to_list()
     end
 
     test "show package with long name" do
@@ -303,8 +309,11 @@ defmodule HexpmWeb.PackageControllerTest do
       assert html =~ long_name
       assert html =~ "min-w-0 break-words"
 
-      assert {:ok, document} = Floki.parse_document(html)
-      assert [_ | _] = Floki.find(document, "details summary.package-tabs-mobile-trigger")
+      document = LazyHTML.from_document(html)
+
+      assert [_ | _] =
+               LazyHTML.query(document, "details summary.package-tabs-mobile-trigger")
+               |> Enum.to_list()
     end
 
     test "show package uses singular dependant label for one dependant", %{package1: package1} do
@@ -315,7 +324,7 @@ defmodule HexpmWeb.PackageControllerTest do
         |> get("/packages/#{package1.name}")
         |> html_response(200)
 
-      assert {:ok, document} = Floki.parse_document(html)
+      document = LazyHTML.from_document(html)
       assert link_text(document, "/packages/#{package1.name}/dependents") == "1 Dependant"
     end
 
@@ -328,7 +337,7 @@ defmodule HexpmWeb.PackageControllerTest do
         |> get("/packages/#{package1.name}")
         |> html_response(200)
 
-      assert {:ok, document} = Floki.parse_document(html)
+      document = LazyHTML.from_document(html)
       assert link_text(document, "/packages/#{package1.name}/dependents") == "2 Dependants"
     end
 
@@ -406,8 +415,9 @@ defmodule HexpmWeb.PackageControllerTest do
 
       assert [readme_url] =
                body
-               |> Floki.parse_document!()
-               |> Floki.attribute("#readme-frame", "src")
+               |> LazyHTML.from_document()
+               |> LazyHTML.query("#readme-frame")
+               |> LazyHTML.attribute("src")
 
       assert readme_url =~ "/#{repository1.name}/#{package3.name}/0.0.1?token="
       [_url, token] = String.split(readme_url, "token=")
@@ -522,7 +532,7 @@ defmodule HexpmWeb.PackageControllerTest do
         |> get("/packages/Test/audit-logs")
         |> response(:ok)
 
-      {:ok, first_document} = Floki.parse_document(first_page)
+      first_document = LazyHTML.from_document(first_page)
       first_page_activities = table_column_texts(first_document, 2)
 
       assert "Publish release 0.0.101" in first_page_activities
@@ -535,7 +545,7 @@ defmodule HexpmWeb.PackageControllerTest do
         |> get("/packages/Test/audit-logs?page=2")
         |> response(:ok)
 
-      {:ok, second_document} = Floki.parse_document(second_page)
+      second_document = LazyHTML.from_document(second_page)
       second_page_activities = table_column_texts(second_document, 2)
 
       assert "Publish release 0.0.1" in second_page_activities
@@ -579,7 +589,7 @@ defmodule HexpmWeb.PackageControllerTest do
       assert result =~ "0.0.1"
       assert result =~ "0.0.2"
 
-      assert {:ok, document} = Floki.parse_document(result)
+      document = LazyHTML.from_document(result)
       assert link_text(document, "/packages/#{package1.name}/versions") == "3 Versions"
     end
 
@@ -678,7 +688,7 @@ defmodule HexpmWeb.PackageControllerTest do
       assert result =~ "&gt;= 0.0.1 and &lt; 0.0.2"
       assert result =~ "https://example.com/advisory"
 
-      assert {:ok, document} = Floki.parse_document(result)
+      document = LazyHTML.from_document(result)
 
       assert package_tab_hrefs(document, package1.name) == [
                "/packages/#{package1.name}",
@@ -746,14 +756,14 @@ defmodule HexpmWeb.PackageControllerTest do
       conn = get(build_conn(), "/packages/#{package1.name}/advisories")
       result = response(conn, 200)
 
-      assert {:ok, document} = Floki.parse_document(result)
+      document = LazyHTML.from_document(result)
       assert link_text(document, "/packages/#{package1.name}/advisories") == "1 Advisory"
 
-      assert Floki.find(
+      assert LazyHTML.query(
                document,
                ~s(a[href="https://osv.dev/vulnerability/EEF-CVE-2026-32689"])
              )
-             |> length() == 1
+             |> Enum.count() == 1
 
       assert result =~ "EEF canonical summary"
       refute result =~ "GHSA duplicate summary"
@@ -950,10 +960,10 @@ defmodule HexpmWeb.PackageControllerTest do
   # Tabs render in both the mobile (<details>) and desktop nav, so a single href
   # appears multiple times. Return the text of just the first match.
   defp link_text(document, href) do
-    case Floki.find(document, ~s(a[href="#{href}"])) do
+    case LazyHTML.query(document, ~s(a[href="#{href}"])) |> Enum.to_list() do
       [link | _rest] ->
         link
-        |> Floki.text(sep: " ")
+        |> LazyHTML.text(separator: " ")
         |> String.replace(~r/\s+/, " ")
         |> String.trim()
 
@@ -974,37 +984,40 @@ defmodule HexpmWeb.PackageControllerTest do
     ]
 
     document
-    |> Floki.find("a")
-    |> Enum.map(&List.first(Floki.attribute(&1, "href")))
+    |> LazyHTML.query("a")
+    |> Enum.map(&List.first(LazyHTML.attribute(&1, "href")))
     |> Enum.filter(&(&1 in package_paths))
     |> Enum.uniq()
   end
 
   defp table_column_texts(document, column_index) do
     document
-    |> Floki.find("tbody tr")
+    |> LazyHTML.query("tbody tr")
     |> Enum.map(fn row ->
       row
-      |> Floki.find("td")
+      |> LazyHTML.query("td")
       |> Enum.at(column_index - 1)
       |> case do
-        nil -> nil
-        cell -> Floki.text(cell, sep: " ") |> String.replace(~r/\s+/, " ") |> String.trim()
+        nil ->
+          nil
+
+        cell ->
+          LazyHTML.text(cell, separator: " ") |> String.replace(~r/\s+/, " ") |> String.trim()
       end
     end)
     |> Enum.reject(&is_nil/1)
   end
 
   defp current_page(document) do
-    case Floki.find(document, ~s([aria-current="page"])) do
-      [page | _rest] -> Floki.text(page, sep: " ") |> String.trim()
+    case LazyHTML.query(document, ~s([aria-current="page"])) |> Enum.to_list() do
+      [page | _rest] -> LazyHTML.text(page, separator: " ") |> String.trim()
       [] -> nil
     end
   end
 
   defp normalized_text(document) do
     document
-    |> Floki.text(sep: " ")
+    |> LazyHTML.text(separator: " ")
     |> String.replace(~r/\s+/, " ")
     |> String.trim()
   end

@@ -12,8 +12,10 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
   # organization's provider with one the attacker controls: disable, unlink
   # every identity, point the connection at another issuer, enable, link.
   # Setting enforcement back to optional takes the gate off every member in one
-  # step and without touching the provider at all. Each of them takes a fresh
-  # password rather than the rolling window login grants.
+  # step and without touching the provider at all. Just-in-time admission and a
+  # verified domain decide who joins and at what role, which is the same
+  # authority by another route. Each of them takes a fresh password rather than
+  # the rolling window login grants.
   plug HexpmWeb.Plugs.Sudo,
        [force: true]
        when action in [
@@ -24,7 +26,14 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
               :rotate,
               :promote,
               :unlink,
-              :configure_enforcement
+              :configure_enforcement,
+              :configure_scim,
+              :generate_scim_token,
+              :delete_scim_token,
+              :configure_jit,
+              :add_domain,
+              :verify_domain,
+              :remove_domain
             ]
 
   plug HexpmWeb.Plugs.Sudo
@@ -47,6 +56,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
       :unlink,
       :configure_jit,
       :configure_enforcement,
+      :delete_scim_token,
       :add_domain,
       :verify_domain,
       :remove_domain
@@ -66,13 +76,13 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
 
   def test(conn, %{"dashboard_org" => name} = params) do
     with_organization(conn, name, fn organization ->
-      secret_slot = params["secret_slot"] || "active"
+      secret_slot = string_param(params, "secret_slot") || "active"
 
       case SSO.start_test(
              organization,
              conn.assigns.current_user,
              secret_slot,
-             SSOEnforcement.callback_url()
+             SSOEnforcement.callback_url(organization)
            ) do
         {:ok, transaction, uri} ->
           conn
@@ -103,7 +113,8 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
         conn,
         organization,
         SSO.disable(organization, audit: audit_data(conn)),
-        "SSO login was disabled immediately.",
+        "SSO login was disabled immediately. Provisioning keeps running; " <>
+          "delete the provisioning token to stop it.",
         &configuration_error/1
       )
     end)
@@ -177,7 +188,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
       redirect_result(
         conn,
         organization,
-        SSO.configure_jit(organization, params["jit"] || %{}, audit: audit_data(conn)),
+        SSO.configure_jit(organization, settings(params, "jit"), audit: audit_data(conn)),
         &jit_message/1,
         &jit_error/1
       )
@@ -205,12 +216,77 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
 
   defp jit_error(reason), do: configuration_error(reason)
 
+  def configure_scim(conn, %{"dashboard_org" => name} = params) do
+    with_organization(conn, name, fn organization ->
+      redirect_result(
+        conn,
+        organization,
+        SSO.configure_scim(organization, settings(params, "scim"), audit: audit_data(conn)),
+        &scim_message/1,
+        &scim_error/1
+      )
+    end)
+  end
+
+  def generate_scim_token(conn, %{"dashboard_org" => name} = params) do
+    with_organization(conn, name, fn organization ->
+      case SSO.generate_scim_token(organization, settings(params, "scim"),
+             audit: audit_data(conn)
+           ) do
+        {:ok, connection} ->
+          # Bound to the connection and the account that generated it, so a
+          # stale stash can never render on another organization's page or
+          # under another login.
+          conn
+          |> put_session(:generated_scim_token, %{
+            "connection_id" => connection.id,
+            "user_id" => conn.assigns.current_user.id,
+            "token" => connection.scim_token
+          })
+          |> put_flash(:info, "The provisioning token was generated. Copy it now.")
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}/sso")
+
+        {:error, reason} ->
+          redirect_with_flash(conn, organization, :error, scim_error(reason))
+      end
+    end)
+  end
+
+  def delete_scim_token(conn, %{"dashboard_org" => name}) do
+    with_organization(conn, name, fn organization ->
+      redirect_result(
+        conn,
+        organization,
+        SSO.delete_scim_token(organization, audit: audit_data(conn)),
+        "Provisioning is off. The token no longer works.",
+        &scim_error/1
+      )
+    end)
+  end
+
+  defp scim_message(%{scim_seat_policy: "block", scim_role: role}),
+    do:
+      "Provisioning settings saved. Provisioned members join as #{role}, and creates are refused once the seats run out."
+
+  defp scim_message(%{scim_seat_policy: "expand", scim_role: role}),
+    do:
+      "Provisioning settings saved. Provisioned members join as #{role}, and the subscription grows by a seat when it needs to."
+
+  defp scim_message(_connection), do: "Provisioning settings saved."
+
+  defp scim_error(:not_configured), do: "Configure SSO before setting up provisioning."
+
+  defp scim_error(%Ecto.Changeset{}),
+    do: "Choose what happens when the seats run out, and a role for provisioned members."
+
+  defp scim_error(reason), do: configuration_error(reason)
+
   def configure_enforcement(conn, %{"dashboard_org" => name} = params) do
     with_organization(conn, name, fn organization ->
       redirect_result(
         conn,
         organization,
-        SSO.configure_enforcement(organization, params["enforcement"] || %{},
+        SSO.configure_enforcement(organization, settings(params, "enforcement"),
           audit: audit_data(conn)
         ),
         &enforcement_message/1,
@@ -256,7 +332,10 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
           not_found(conn)
 
         user ->
-          case SSO.set_member_enforcement(organization, user, params["sso_enforcement"],
+          case SSO.set_member_enforcement(
+                 organization,
+                 user,
+                 string_param(params, "sso_enforcement"),
                  audit: audit_data(conn)
                ) do
             {:ok, _member} ->
@@ -264,7 +343,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
                 conn,
                 organization,
                 :info,
-                member_enforcement_message(user, params["sso_enforcement"])
+                member_enforcement_message(user, string_param(params, "sso_enforcement"))
               )
 
             {:error, :not_member} ->
@@ -320,7 +399,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
   defp member_enforcement_message(user, _enforcement),
     do: "#{user.username} now follows the organization's enforcement mode."
 
-  def add_domain(conn, %{"dashboard_org" => name, "domain" => params}) do
+  def add_domain(conn, %{"dashboard_org" => name, "domain" => %{} = params}) do
     with_organization(conn, name, fn organization ->
       redirect_result(
         conn,
@@ -381,12 +460,37 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
     end
   end
 
+  # A form posts these as a nested map, and a hand-written request can post a
+  # string or a list under the same name. Anything that is not the shape the
+  # changeset takes is the same as posting nothing.
+  defp settings(params, key) do
+    case params do
+      %{^key => %{} = settings} -> settings
+      _ -> %{}
+    end
+  end
+
+  defp string_param(params, key) do
+    case params do
+      %{^key => value} when is_binary(value) -> value
+      _ -> nil
+    end
+  end
+
   defp with_organization(conn, name, fun) do
     user = conn.assigns.current_user
     organization = Organizations.get(name)
 
+    role = organization && Organizations.get_role(organization, user)
+
     cond do
       is_nil(organization) ->
+        not_found(conn)
+
+      # Before the reachability check, or the split between 404 and any other
+      # answer tells someone outside the organization whether it has SSO
+      # configured and whether it is paying.
+      is_nil(role) ->
         not_found(conn)
 
       not SSO.reachable?(organization) ->
@@ -397,7 +501,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
       # reads as success, so refusing with one would let anyone who can reach
       # the route write `sso.break_glass` rows naming themselves and an action
       # they never ran, and mail the administrators about it.
-      Organizations.get_role(organization, user) != "admin" ->
+      role != "admin" ->
         render_error(conn, 403, message: "You do not have permission for this action.")
 
       true ->

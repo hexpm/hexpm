@@ -1,7 +1,7 @@
 defmodule HexpmWeb.SudoController do
   use HexpmWeb, :controller
-  require Logger
 
+  alias Hexpm.SecurityLog
   alias Hexpm.Accounts.{TFA, Users}
   alias HexpmWeb.Plugs.{Attack, Sudo}
 
@@ -112,11 +112,7 @@ defmodule HexpmWeb.SudoController do
         if correct_password?(user, password) do
           redirect_after_sudo(conn)
         else
-          Logger.warning("Failed sudo password attempt",
-            user_id: user.id,
-            ip: conn.remote_ip |> :inet.ntoa() |> to_string(),
-            user_agent: get_req_header(conn, "user-agent") |> List.first()
-          )
+          SecurityLog.auth_failure(conn, :password, password_reason(user), user_id: user.id)
 
           conn
           |> put_flash(:error, "Incorrect password.")
@@ -137,11 +133,7 @@ defmodule HexpmWeb.SudoController do
         if TFA.token_valid?(user.tfa.secret, code) do
           redirect_after_sudo(conn)
         else
-          Logger.warning("Failed sudo 2FA attempt",
-            user_id: user.id,
-            ip: conn.remote_ip |> :inet.ntoa() |> to_string(),
-            user_agent: get_req_header(conn, "user-agent") |> List.first()
-          )
+          SecurityLog.auth_failure(conn, :tfa, :invalid_code, user_id: user.id)
 
           conn
           |> put_flash(:error, "Incorrect authentication code.")
@@ -165,17 +157,15 @@ defmodule HexpmWeb.SudoController do
               redirect_after_sudo(conn)
 
             _ ->
-              Logger.warning("Failed sudo recovery code attempt",
-                user_id: user.id,
-                ip: conn.remote_ip |> :inet.ntoa() |> to_string(),
-                user_agent: get_req_header(conn, "user-agent") |> List.first()
-              )
+              SecurityLog.auth_failure(conn, :recovery_code, :invalid_code, user_id: user.id)
 
               conn
               |> put_flash(:error, "Incorrect recovery code.")
               |> render_recovery()
           end
         else
+          SecurityLog.auth_failure(conn, :recovery_code, :invalid_code, user_id: user.id)
+
           conn
           |> put_flash(:error, "Invalid recovery code format.")
           |> render_recovery()
@@ -218,6 +208,10 @@ defmodule HexpmWeb.SudoController do
       container: "container page page-xs login"
     )
   end
+
+  @spec password_reason(User.t()) :: :no_password | :wrong_password
+  defp password_reason(%User{password: nil}), do: :no_password
+  defp password_reason(%User{}), do: :wrong_password
 
   @spec correct_password?(User.t(), String.t()) :: boolean()
   defp correct_password?(%User{password: nil}, _password), do: false

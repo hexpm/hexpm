@@ -57,24 +57,24 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
         |> test_login(c.user)
         |> get("/dashboard/keys")
         |> html_response(200)
-        |> Floki.parse_document!()
+        |> LazyHTML.from_document()
 
       key_names =
         document
-        |> Floki.find("table tbody tr td:first-child span")
-        |> Enum.map(&(&1 |> Floki.text() |> String.trim()))
+        |> LazyHTML.query("table tbody tr td:first-child span")
+        |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim()))
 
       organization_inputs =
         document
-        |> Floki.find(
+        |> LazyHTML.query(
           ~s(#repositories-permission-group input[name^="key[permissions][repository]"])
         )
-        |> Enum.map(&(Floki.attribute(&1, "name") |> List.first()))
+        |> Enum.map(&(LazyHTML.attribute(&1, "name") |> List.first()))
 
       package_inputs =
         document
-        |> Floki.find(~s(#generate-key-modal input[name^="key[permissions][package]"]))
-        |> Enum.map(&(Floki.attribute(&1, "name") |> List.first()))
+        |> LazyHTML.query(~s(#generate-key-modal input[name^="key[permissions][package]"]))
+        |> Enum.map(&(LazyHTML.attribute(&1, "name") |> List.first()))
 
       assert key_names == ["alpha_key", "zulu_key"]
 

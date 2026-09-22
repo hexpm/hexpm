@@ -232,12 +232,15 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
   defp discovery_error({:transport, :response_too_large}),
     do: error(:discovery, :response_too_large)
 
+  defp discovery_error({:invalid_json, _reason}), do: error(:discovery, :invalid_json)
+
   defp discovery_error(_reason), do: error(:discovery, :unavailable)
 
   defp jwks_error(%Error{} = error), do: {:error, error}
   defp jwks_error({:http_error, _status, _body}), do: error(:jwks, :http_status)
   defp jwks_error(:invalid_content_type), do: error(:jwks, :invalid_content_type)
   defp jwks_error({:transport, :response_too_large}), do: error(:jwks, :response_too_large)
+  defp jwks_error({:invalid_json, _reason}), do: error(:jwks, :invalid_document)
   defp jwks_error(_reason), do: error(:jwks, :unavailable)
 
   defp token_error(%Error{} = error, _ref), do: {:error, error}

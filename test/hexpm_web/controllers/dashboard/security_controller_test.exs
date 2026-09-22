@@ -133,32 +133,82 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
         |> Hexpm.Repo.preload(:emails)
 
       assert updated_user.tfa.recovery_codes != c.user.tfa.recovery_codes
-      assert redirected_to(conn) == "/dashboard/security"
+      assert redirected_to(conn) == "/dashboard/security/recovery-codes"
 
       assert_email_sent(Hexpm.Emails.tfa_rotate_recovery_codes(updated_user))
     end
   end
 
+  describe "get /dashboard/security/recovery-codes" do
+    test "the security page links to the codes without showing them", c do
+      [code | _] = c.user.tfa.recovery_codes
+
+      result =
+        build_conn()
+        |> test_login(c.user)
+        |> get("/dashboard/security")
+        |> response(200)
+
+      refute result =~ code.code
+      assert result =~ "/dashboard/security/recovery-codes"
+
+      unused = Enum.count(c.user.tfa.recovery_codes, &is_nil(&1.used_at))
+      assert result =~ "#{unused} of #{length(c.user.tfa.recovery_codes)} codes unused"
+    end
+
+    test "shows the codes and marks used ones", c do
+      [used | unused] = c.user.tfa.recovery_codes
+      {:ok, user} = Hexpm.Accounts.Users.tfa_recover(c.user, used.code)
+
+      result =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/security/recovery-codes")
+        |> response(200)
+
+      for code <- [used | unused], do: assert(result =~ code.code)
+      assert result =~ "Used"
+      assert result =~ "line-through"
+    end
+
+    test "requires sudo", c do
+      conn =
+        build_conn()
+        |> test_login(c.user, sudo: false)
+        |> get("/dashboard/security/recovery-codes")
+
+      assert redirected_to(conn) == "/sudo"
+    end
+
+    test "redirects users without two-factor authentication" do
+      conn =
+        build_conn()
+        |> test_login(insert(:user))
+        |> get("/dashboard/security/recovery-codes")
+
+      assert redirected_to(conn) == "/dashboard/security"
+    end
+  end
+
   describe "post /dashboard/security/reset-auth-app" do
-    test "disables TFA and generates new session secret", c do
+    test "retains the current authenticator while setting up its replacement", c do
       conn =
         build_conn()
         |> test_login(c.user)
         |> post("/dashboard/security/reset-auth-app")
 
-      # TFA should be disabled in DB
       updated_user =
         Hexpm.Accounts.User
         |> Hexpm.Repo.get(c.user.id)
         |> Hexpm.Repo.preload(:emails)
 
-      refute Hexpm.Accounts.User.tfa_enabled?(updated_user)
+      assert updated_user.tfa == c.user.tfa
 
       # New secret should be stored in session for re-setup
       assert get_session(conn, :tfa_setup_secret)
 
       assert redirected_to(conn) == "/dashboard/security?show_tfa_modal=true"
-      assert_email_sent(Hexpm.Emails.tfa_disabled(updated_user))
+      refute_email_sent()
     end
   end
 
@@ -192,7 +242,7 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
       assert redirected_to(conn) == "/dashboard/security"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Your password has been updated"
       assert {:ok, _} = Auth.password_auth(user.username, "newpassxx")
-      assert :error = Auth.password_auth(user.username, "password")
+      assert {:error, :wrong_password} = Auth.password_auth(user.username, "password")
 
       assert_email_sent(Hexpm.Emails.password_changed(user))
     end
@@ -232,7 +282,7 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
 
       response(conn, 400)
       assert {:ok, _} = Auth.password_auth(user.username, "password")
-      assert :error = Auth.password_auth(user.username, "newpassxx")
+      assert {:error, :wrong_password} = Auth.password_auth(user.username, "newpassxx")
     end
 
     test "fails to change password without current password", _c do
@@ -250,7 +300,7 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
 
       response(conn, 400)
       assert {:ok, _} = Auth.password_auth(user.username, "password")
-      assert :error = Auth.password_auth(user.username, "newpassxx")
+      assert {:error, :wrong_password} = Auth.password_auth(user.username, "newpassxx")
     end
   end
 
@@ -269,7 +319,7 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
       assert redirected_to(conn) == "/dashboard/security"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
-               "Two-factor authentication has been successfully enabled!"
+               "Two-factor authentication has been enabled."
 
       updated_user =
         Hexpm.Accounts.User
@@ -343,6 +393,32 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
         |> Hexpm.Repo.get(c.user.id)
 
       assert updated_user.tfa.secret == c.user.tfa.secret
+    end
+  end
+
+  describe "POST /dashboard/security/connect-github" do
+    test "records the started flow and sends the user to the provider" do
+      user = insert(:user)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/security/connect-github")
+
+      assert redirected_to(conn) == "/auth/github"
+      assert %{"provider" => "github", "at" => _} = get_session(conn, "provider_link")
+    end
+
+    test "requires sudo" do
+      user = insert(:user)
+
+      conn =
+        build_conn()
+        |> test_login(user, sudo: false)
+        |> post("/dashboard/security/connect-github")
+
+      assert redirected_to(conn) == "/sudo"
+      refute get_session(conn, "provider_link")
     end
   end
 

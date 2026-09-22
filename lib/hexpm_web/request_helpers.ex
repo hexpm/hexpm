@@ -36,6 +36,6 @@ defmodule HexpmWeb.RequestHelpers do
   """
   def parse_user_agent(nil), do: nil
   def parse_user_agent([]), do: nil
-  def parse_user_agent([value | _]), do: value
-  def parse_user_agent(value) when is_binary(value), do: value
+  def parse_user_agent([value | _]), do: Hexpm.Utils.truncate_bytes(value, 255)
+  def parse_user_agent(value) when is_binary(value), do: Hexpm.Utils.truncate_bytes(value, 255)
 end

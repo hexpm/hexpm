@@ -48,9 +48,11 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.ConnectedAccountsCard
             <p class="text-grey-600 dark:text-grey-300 text-sm mb-4">
               Connect your GitHub account to enable GitHub login.
             </p>
-            <.button_link href={~p"/auth/github"} variant="primary" size="sm">
-              Connect GitHub
-            </.button_link>
+            <.sudo_form current_user={@user} action={~p"/dashboard/security/connect-github"}>
+              <.button type="submit" variant="primary" size="sm">
+                Connect GitHub
+              </.button>
+            </.sudo_form>
           <% end %>
         </div>
       </div>

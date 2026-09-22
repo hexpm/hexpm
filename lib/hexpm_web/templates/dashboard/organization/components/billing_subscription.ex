@@ -565,12 +565,15 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
           You have {@quantity} seats of which {@member_count} are in use.
         </p>
         <%= if @quantity <= @member_count do %>
-          <p class="text-sm font-medium text-red-600">
+          <p class="text-sm font-medium text-red-600 dark:text-red-400">
             You are already at the minimum number of seats. Remove members to free up seats.
           </p>
         <% else %>
           <div>
-            <label for="remove-seats-select" class="block text-sm font-medium text-grey-700 mb-1">
+            <label
+              for="remove-seats-select"
+              class="block text-sm font-medium text-grey-700 dark:text-grey-200 mb-1"
+            >
               Reduce to
             </label>
             <div class="flex items-center gap-2">

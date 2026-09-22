@@ -219,7 +219,7 @@ defmodule HexpmWeb.PackageController do
       {:ok, package} ->
         fun.(package, HexpmWeb.SSOEnforcement.reachable_repositories(conn))
 
-      {:error, :sso_required, organization} ->
+      {:error, requirement, organization} when requirement in [:sso_required, :tfa_required] ->
         HexpmWeb.SSOEnforcement.redirect_to_login(conn, organization)
 
       _ ->

@@ -14,6 +14,20 @@ defmodule Hexpm.Repository.PackageMetadata do
   def changeset(meta, params, package) do
     cast(meta, params, ~w(description licenses links maintainers extra)a)
     |> validate_required_meta(package)
+    |> validate_length(:description, count: :codepoints, max: 4096)
+    |> validate_length(:licenses, max: 32)
+    |> validate_each_length(:licenses, count: :codepoints, max: 255)
+    |> validate_map_entries(:links,
+      max_entries: 32,
+      key_max: 255,
+      key_count: :codepoints,
+      value_max: 2048,
+      value_count: :bytes
+    )
+    |> validate_length(:maintainers, max: 64)
+    |> validate_each_length(:maintainers, count: :codepoints, max: 255)
+    |> validate_length(:extra, max: 64)
+    |> validate_encoded_size(:extra, max: 16_384)
     |> validate_links()
     |> validate_licenses(package)
   end

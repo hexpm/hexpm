@@ -3,7 +3,7 @@ defmodule Hexpm.Emails do
   alias Hexpm.Accounts.{Email, Organization, User}
 
   def owner_added(package, owners, owner) do
-    base_email()
+    base_email(:owner_added)
     |> email_to(owners)
     |> subject("Hex.pm - Owner added to package #{package.name}")
     |> assign(:username, owner.username)
@@ -12,7 +12,7 @@ defmodule Hexpm.Emails do
   end
 
   def owner_removed(package, owners, owner) do
-    base_email()
+    base_email(:owner_removed)
     |> email_to(owners)
     |> subject("Hex.pm - Owner removed from package #{package.name}")
     |> assign(:username, owner.username)
@@ -21,7 +21,7 @@ defmodule Hexpm.Emails do
   end
 
   def verification(user, email) do
-    base_email()
+    base_email(:verification)
     |> email_to(%{email | user: user})
     |> subject("Hex.pm - Email verification")
     |> assign(:username, user.username)
@@ -31,7 +31,7 @@ defmodule Hexpm.Emails do
   end
 
   def password_reset_request(user, reset) do
-    base_email()
+    base_email(:password_reset_request)
     |> email_to(user)
     |> subject("Hex.pm - Password reset request")
     |> assign(:username, user.username)
@@ -40,7 +40,7 @@ defmodule Hexpm.Emails do
   end
 
   def security_password_reset(user, reset) do
-    base_email()
+    base_email(:security_password_reset)
     |> email_to(user)
     |> subject("Hex.pm - Your password has been reset for security reasons")
     |> assign(:username, user.username)
@@ -49,7 +49,7 @@ defmodule Hexpm.Emails do
   end
 
   def account_deletion_request(user, request) do
-    base_email()
+    base_email(:account_deletion_request)
     |> email_to(user)
     |> subject("Hex.pm - Account deletion request")
     |> assign(:username, user.username)
@@ -58,7 +58,7 @@ defmodule Hexpm.Emails do
   end
 
   def account_deleted(user) do
-    base_email()
+    base_email(:account_deleted)
     |> email_to(user)
     |> subject("Hex.pm - Your account has been deleted")
     |> assign(:username, user.username)
@@ -66,7 +66,7 @@ defmodule Hexpm.Emails do
   end
 
   def account_removed(user, packages_deleted?, reason) do
-    base_email()
+    base_email(:account_removed)
     |> email_to(user)
     |> subject("Hex.pm - Your account has been removed")
     |> assign(:username, user.username)
@@ -76,7 +76,7 @@ defmodule Hexpm.Emails do
   end
 
   def package_removed(owners, package, reason) do
-    base_email()
+    base_email(:package_removed)
     |> email_to(owners)
     |> subject("Hex.pm - Package #{package} has been removed")
     |> assign(:package, package)
@@ -85,7 +85,7 @@ defmodule Hexpm.Emails do
   end
 
   def release_removed(owners, package, version, remaining, reason) do
-    base_email()
+    base_email(:release_removed)
     |> email_to(owners)
     |> subject("Hex.pm - Package #{package} v#{version} has been removed")
     |> assign(:package, package)
@@ -96,7 +96,7 @@ defmodule Hexpm.Emails do
   end
 
   def password_changed(user) do
-    base_email()
+    base_email(:password_changed)
     |> email_to(user)
     |> subject("Hex.pm - Your password has changed")
     |> assign(:username, user.username)
@@ -104,7 +104,7 @@ defmodule Hexpm.Emails do
   end
 
   def tfa_enabled(user) do
-    base_email()
+    base_email(:tfa_enabled)
     |> email_to(user)
     |> subject("Hex.pm - TFA has been enabled on your account")
     |> assign(:username, user.username)
@@ -112,7 +112,7 @@ defmodule Hexpm.Emails do
   end
 
   def tfa_disabled(user) do
-    base_email()
+    base_email(:tfa_disabled)
     |> email_to(user)
     |> subject("Hex.pm - TFA has been disabled on your account")
     |> assign(:username, user.username)
@@ -120,7 +120,7 @@ defmodule Hexpm.Emails do
   end
 
   def tfa_rotate_recovery_codes(user) do
-    base_email()
+    base_email(:tfa_rotate_recovery_codes)
     |> email_to(user)
     |> subject("Hex.pm - Your TFA recovery codes have been rotated")
     |> assign(:username, user.username)
@@ -128,7 +128,7 @@ defmodule Hexpm.Emails do
   end
 
   def key_leaked(user, key, url \\ nil) do
-    base_email()
+    base_email(:key_leaked)
     |> email_to(user)
     |> subject("Hex.pm - API key #{key.name} was found in a public repository and revoked")
     |> assign(:username, user.username)
@@ -147,7 +147,7 @@ defmodule Hexpm.Emails do
   end
 
   def email_added(user, new_email) do
-    base_email()
+    base_email(:email_added)
     |> email_to(user)
     |> subject("Hex.pm - A new email address was added to your account")
     |> assign(:username, user.username)
@@ -156,7 +156,7 @@ defmodule Hexpm.Emails do
   end
 
   def primary_email_changed(user, old_addr, new_addr) do
-    base_email()
+    base_email(:primary_email_changed)
     |> email_to(old_addr)
     |> subject("Hex.pm - Your primary email address has changed")
     |> assign(:username, user.username)
@@ -166,7 +166,7 @@ defmodule Hexpm.Emails do
   end
 
   def api_key_created(user_or_org, key) do
-    base_email()
+    base_email(:api_key_created)
     |> email_to(user_or_org)
     |> subject("Hex.pm - A new API key was created on your account")
     |> assign(:username, display_name(user_or_org))
@@ -175,7 +175,7 @@ defmodule Hexpm.Emails do
   end
 
   def api_key_revoked(user_or_org, key) do
-    base_email()
+    base_email(:api_key_revoked)
     |> email_to(user_or_org)
     |> subject("Hex.pm - An API key was revoked on your account")
     |> assign(:username, display_name(user_or_org))
@@ -184,7 +184,7 @@ defmodule Hexpm.Emails do
   end
 
   def api_keys_all_revoked(user_or_org) do
-    base_email()
+    base_email(:api_keys_all_revoked)
     |> email_to(user_or_org)
     |> subject("Hex.pm - All API keys have been revoked on your account")
     |> assign(:username, display_name(user_or_org))
@@ -192,7 +192,7 @@ defmodule Hexpm.Emails do
   end
 
   def typosquat_candidates(candidates, threshold) do
-    base_email()
+    base_email(:typosquat_candidates)
     |> email_to(Application.get_env(:hexpm, :support_email))
     |> subject("[TYPOSQUAT CANDIDATES]")
     |> assign(:candidates, candidates)
@@ -203,7 +203,7 @@ defmodule Hexpm.Emails do
   def package_report(package, package_url, report, reporter) do
     reporter_recipient = {reporter.name, reporter.email}
 
-    base_email()
+    base_email(:package_report)
     |> email_to(Application.fetch_env!(:hexpm, :support_email))
     |> Swoosh.Email.cc(reporter_recipient)
     |> Swoosh.Email.reply_to(reporter_recipient)
@@ -218,7 +218,7 @@ defmodule Hexpm.Emails do
   end
 
   def organization_invite(organization, user) do
-    base_email()
+    base_email(:organization_invite)
     |> email_to(user)
     |> subject("Hex.pm - You have been added to the #{organization.name} organization")
     |> assign(:organization, organization.name)
@@ -227,7 +227,7 @@ defmodule Hexpm.Emails do
   end
 
   def organization_invitation(invitation) do
-    base_email()
+    base_email(:organization_invitation)
     |> email_to(invitation.email)
     |> subject(
       "Hex.pm - You have been invited to the #{invitation.organization.name} organization"
@@ -240,7 +240,7 @@ defmodule Hexpm.Emails do
   end
 
   def sso_identity_linked(organization, username, recipients) do
-    base_email()
+    base_email(:sso_identity_linked)
     |> email_to(recipients)
     |> subject("Hex.pm - Organization SSO connected")
     |> assign(:organization, organization)
@@ -249,7 +249,7 @@ defmodule Hexpm.Emails do
   end
 
   def sso_identity_unlinked(organization, username, recipients) do
-    base_email()
+    base_email(:sso_identity_unlinked)
     |> email_to(recipients)
     |> subject("Hex.pm - Organization SSO disconnected")
     |> assign(:organization, organization)
@@ -258,7 +258,7 @@ defmodule Hexpm.Emails do
   end
 
   def sso_seats(organization, kind, recipients) do
-    base_email()
+    base_email(:sso_seats)
     |> email_to(recipients)
     |> subject("Hex.pm - #{sso_seats_subject(kind, organization)}")
     |> assign(:organization, organization)
@@ -271,8 +271,18 @@ defmodule Hexpm.Emails do
   defp sso_seats_subject("expansion_failed", organization),
     do: "#{organization} could not add a seat"
 
+  def organization_tfa(organization, stage, recipients, suspended) do
+    base_email(:organization_tfa)
+    |> email_to(recipients)
+    |> subject("Hex.pm - #{organization.name} 2FA enforcement")
+    |> assign(:organization, organization)
+    |> assign(:stage, stage)
+    |> assign(:suspended, suspended)
+    |> render_body(:organization_tfa)
+  end
+
   def sso_enforcement_pending(organization, required_at, login_url, recipients) do
-    base_email()
+    base_email(:sso_enforcement_pending)
     |> email_to(recipients)
     |> subject("Hex.pm - #{organization} will require single sign-on")
     |> assign(:organization, organization)
@@ -281,27 +291,25 @@ defmodule Hexpm.Emails do
     |> render_body(:sso_enforcement_pending)
   end
 
-  def sso_key_revoked(organization, revoked, trimmed, recipients) do
-    base_email()
+  def sso_keys_refused(organization, revoked, trimmed, blocked, recipients) do
+    base_email(:sso_keys_refused)
     |> email_to(recipients)
-    |> subject("Hex.pm - #{organization} access removed from an API key")
+    |> subject(sso_keys_refused_subject(organization, revoked ++ trimmed))
     |> assign(:organization, organization)
     |> assign(:revoked, revoked)
     |> assign(:trimmed, trimmed)
-    |> render_body(:sso_key_revoked)
+    |> assign(:blocked, blocked)
+    |> render_body(:sso_keys_refused)
   end
 
-  def sso_key_blocked(organization, blocked, recipients) do
-    base_email()
-    |> email_to(recipients)
-    |> subject("Hex.pm - #{organization} does not accept personal API keys")
-    |> assign(:organization, organization)
-    |> assign(:blocked, blocked)
-    |> render_body(:sso_key_blocked)
-  end
+  defp sso_keys_refused_subject(organization, []),
+    do: "Hex.pm - #{organization} does not accept personal API keys"
+
+  defp sso_keys_refused_subject(organization, _changed),
+    do: "Hex.pm - #{organization} access removed from an API key"
 
   def sso_break_glass(organization, username, screen, recipients) do
-    base_email()
+    base_email(:sso_break_glass)
     |> email_to(recipients)
     |> subject("Hex.pm - #{organization} reached without single sign-on")
     |> assign(:organization, organization)
@@ -311,7 +319,7 @@ defmodule Hexpm.Emails do
   end
 
   def sso_email_mismatch(organization, username, recipients, provider_email) do
-    base_email()
+    base_email(:sso_email_mismatch)
     |> email_to(recipients)
     |> subject("Hex.pm - Organization SSO email differs")
     |> assign(:organization, organization)
@@ -321,7 +329,7 @@ defmodule Hexpm.Emails do
   end
 
   def package_published(owners, publisher, name, version) do
-    base_email()
+    base_email(:package_published)
     |> email_to(owners)
     |> subject("Hex.pm - Package #{name} v#{version} published")
     |> assign(:publisher, publisher)
@@ -331,7 +339,7 @@ defmodule Hexpm.Emails do
   end
 
   def secrets_detected(recipients, name, version, findings) do
-    base_email()
+    base_email(:secrets_detected)
     |> email_to(recipients)
     |> subject("Hex.pm - Possible credentials found in #{name} v#{version}")
     |> assign(:package, name)
@@ -341,7 +349,7 @@ defmodule Hexpm.Emails do
   end
 
   def announcement(receiver, subject, body) do
-    base_email()
+    base_email(:announcement)
     |> email_to(receiver)
     |> subject(subject)
     |> assign(:subject, subject)
@@ -404,11 +412,13 @@ defmodule Hexpm.Emails do
   defp display_name(%User{username: username}), do: username
   defp display_name(%Organization{name: name}), do: name
 
-  defp base_email() do
+  # The type names the builder and labels the delivery metrics and log lines.
+  defp base_email(type) do
     new()
     |> from(source())
     |> put_layout({HexpmWeb.EmailView, :layout})
     |> put_provider_option(:click_tracking, %{enable: false})
+    |> put_private(:type, Atom.to_string(type))
   end
 
   defp source() do

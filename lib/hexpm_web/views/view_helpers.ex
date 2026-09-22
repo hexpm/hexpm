@@ -236,7 +236,7 @@ defmodule HexpmWeb.ViewHelpers do
     # Needs to be odd number
     max_links = opts[:page_links]
 
-    all_pages = div(count - 1, per_page) + 1
+    all_pages = max(1, Integer.ceil_div(count, per_page))
     middle_links = div(max_links, 2) + 1
 
     page_links =
@@ -389,6 +389,10 @@ defmodule HexpmWeb.ViewHelpers do
 
   def pretty_date(date) do
     Calendar.strftime(date, "%B %d, %Y")
+  end
+
+  def pretty_utc_datetime(datetime) do
+    Calendar.strftime(datetime, "%B %-d, %Y at %H:%M UTC")
   end
 
   def pretty_date(date, :short) do

@@ -27,8 +27,11 @@ defmodule HexpmWeb.RepositoryAccess do
 
       organization ->
         case SSOEnforcement.check(conn_or_socket, organization, current_user) do
-          :ok -> {:ok, %{organization.repository | organization: organization}}
-          {:error, :sso_required} -> {:error, :sso_required, organization}
+          :ok ->
+            {:ok, %{organization.repository | organization: organization}}
+
+          {:error, requirement} when requirement in [:sso_required, :tfa_required] ->
+            {:error, requirement, organization}
         end
     end
   end

@@ -87,6 +87,14 @@ defmodule HexpmWeb.Router do
     plug :default_repository
   end
 
+  pipeline :varsel do
+    plug :accepts, ["json"]
+    plug :user_agent
+    plug :validate_url
+    plug HexpmWeb.Plugs.Attack
+    plug HexpmWeb.Plugs.VarselAuth
+  end
+
   pipeline :browser_api do
     plug :accepts, ["json"]
     plug :fetch_session
@@ -105,6 +113,30 @@ defmodule HexpmWeb.Router do
     plug :accepts, ["html"]
     plug :put_secure_browser_headers
     plug HexpmWeb.Plugs.ReadmeContentSecurityPolicy
+  end
+
+  # The provisioning agent's surface, authenticated by the connection's SCIM
+  # bearer token alone. Not the :api pipeline: its :authenticate would read
+  # the token as an OAuth JWT and refuse before the SCIM auth ran.
+  pipeline :scim do
+    plug :accepts, ["scim", "json"]
+    plug :user_agent, required: false
+    plug :validate_url
+
+    # Authentication before the throttle, so the throttle keys on the
+    # connection. The address is the provider's shared egress, one bucket for
+    # every organization provisioned from the same provider cell, and a request
+    # that fails authentication costs one hash and one indexed read.
+    plug HexpmWeb.Plugs.SCIMAuth
+    plug HexpmWeb.Plugs.Attack
+
+    # Both listing routes materialize the rows a member has no handle for yet,
+    # so they write even though they are GETs.
+    plug HexpmWeb.Plugs.ReadOnly,
+      write_routes: [
+        {"GET", "/scim/v2/Users"},
+        {"GET", "/scim/v2/Users/:id"}
+      ]
   end
 
   pipeline :admin do
@@ -157,6 +189,8 @@ defmodule HexpmWeb.Router do
     post "/login", LoginController, :create
     post "/logout", LoginController, :delete
 
+    get "/organizations/:organization/authenticate", OrganizationAuthController, :authenticate
+
     get "/tfa", TFAAuthController, :show
     post "/tfa", TFAAuthController, :create
 
@@ -181,7 +215,7 @@ defmodule HexpmWeb.Router do
     get "/auth/:provider", AuthController, :request
     get "/auth/:provider/callback", AuthController, :callback
 
-    get "/sso/callback", SSOController, :callback, log: false
+    get "/sso/callback/:organization", SSOController, :callback, log: false
     get "/sso/link", SSOController, :link, log: false
     post "/sso/link", SSOController, :confirm_link, log: false
     post "/sso/link/cancel", SSOController, :cancel_link, log: false
@@ -189,8 +223,8 @@ defmodule HexpmWeb.Router do
     # The code rides in the query string, not the path: both loggers on the
     # endpoint record `conn.request_path`, so a code in the path would be
     # written to stdout and to Sentry on every visit.
-    get "/sso/authorize", SSOController, :authorize, log: false
-    post "/sso/authorize", SSOController, :authorize_organization, log: false
+    get "/organizations/authorize", SSOController, :authorize, log: false
+    post "/organizations/authorize", SSOController, :authorize_organization, log: false
 
     get "/invites", OrganizationInvitationController, :show, log: false
     post "/invites", OrganizationInvitationController, :accept, log: false
@@ -227,6 +261,7 @@ defmodule HexpmWeb.Router do
     get "/docs/private", DocsController, :private
     get "/docs/dependency-policies", DocsController, :dependency_policies
     get "/docs/organization-sso", DocsController, :organization_sso
+    get "/docs/organization-tfa", DocsController, :organization_tfa
     get "/docs/faq", DocsController, :faq
     get "/docs/mirrors", DocsController, :mirrors
     get "/docs/public-keys", DocsController, :public_keys
@@ -318,11 +353,15 @@ defmodule HexpmWeb.Router do
     post "/security/remove-password", SecurityController, :remove_password,
       as: :dashboard_security
 
+    post "/security/connect-github", SecurityController, :connect_github, as: :dashboard_security
+
     post "/security/disconnect-github", SecurityController, :disconnect_github,
       as: :dashboard_security
 
     post "/security/enable-tfa", SecurityController, :enable_tfa, as: :dashboard_security
     post "/security/disable-tfa", SecurityController, :disable_tfa, as: :dashboard_security
+
+    get "/security/recovery-codes", SecurityController, :recovery_codes, as: :dashboard_security
 
     post "/security/rotate-recovery-codes", SecurityController, :rotate_recovery_codes,
       as: :dashboard_security
@@ -348,6 +387,7 @@ defmodule HexpmWeb.Router do
     get "/orgs/:dashboard_org", OrganizationController, :show
     post "/orgs/:dashboard_org", OrganizationController, :update
     get "/orgs/:dashboard_org/members", OrganizationController, :members
+    post "/orgs/:dashboard_org/tfa", OrganizationController, :configure_tfa
     get "/orgs/:dashboard_org/keys", OrganizationController, :keys
     get "/orgs/:dashboard_org/packages", OrganizationController, :packages
     get "/orgs/:dashboard_org/audit-logs", OrganizationController, :audit_logs
@@ -361,6 +401,13 @@ defmodule HexpmWeb.Router do
     post "/orgs/:dashboard_org/sso/promote", OrganizationSSOController, :promote, log: false
     post "/orgs/:dashboard_org/sso/unlink", OrganizationSSOController, :unlink, log: false
     post "/orgs/:dashboard_org/sso/jit", OrganizationSSOController, :configure_jit
+    post "/orgs/:dashboard_org/sso/scim", OrganizationSSOController, :configure_scim
+
+    post "/orgs/:dashboard_org/sso/scim/generate",
+         OrganizationSSOController,
+         :generate_scim_token
+
+    post "/orgs/:dashboard_org/sso/scim/delete", OrganizationSSOController, :delete_scim_token
 
     post "/orgs/:dashboard_org/sso/enforcement",
          OrganizationSSOController,
@@ -463,7 +510,6 @@ defmodule HexpmWeb.Router do
 
     get "/", IndexController, :index
 
-    post "/users", UserController, :create
     get "/users/me", UserController, :me
     get "/users/me/audit-logs", UserController, :audit_logs
     get "/users/:name", UserController, :show
@@ -524,7 +570,28 @@ defmodule HexpmWeb.Router do
     post "/oauth/device_authorization", OAuthController, :device_authorization
     post "/oauth/revoke", OAuthController, :revoke
     post "/oauth/revoke_by_hash", OAuthController, :revoke_by_hash
-    post "/oauth/sso_authorization", SSOAuthorizationController, :create
+    post "/oauth/organization_authorization", SSOAuthorizationController, :create
+  end
+
+  scope "/api", HexpmWeb.API, as: :api do
+    pipe_through :varsel
+
+    get "/users/:name/contact", UserContactController, :show
+  end
+
+  scope "/scim/v2", HexpmWeb.SCIM do
+    pipe_through :scim
+
+    get "/ServiceProviderConfig", DiscoveryController, :service_provider_config
+    get "/ResourceTypes", DiscoveryController, :resource_types
+    get "/Schemas", DiscoveryController, :schemas
+    get "/Users", UserController, :index
+    post "/Users", UserController, :create
+    get "/Users/:id", UserController, :show
+    put "/Users/:id", UserController, :update
+    patch "/Users/:id", UserController, :patch
+    delete "/Users/:id", UserController, :delete
+    match :*, "/*path", DiscoveryController, :not_found
   end
 
   if Mix.env() in [:dev, :test, :hex] do
@@ -546,9 +613,15 @@ defmodule HexpmWeb.Router do
     scope "/api", HexpmWeb do
       pipe_through :api
 
+      post "/user", TestController, :user
       post "/repo", TestController, :repo
       post "/oauth_client", TestController, :oauth_client
       post "/oauth_token", TestController, :oauth_token
+
+      if Mix.env() == :hex do
+        post "/organization_tfa", TestController, :organization_tfa
+      end
+
       post "/oauth_device_authorize", TestController, :oauth_device_authorize
       get "/oauth_device_pending", TestController, :oauth_device_pending
     end

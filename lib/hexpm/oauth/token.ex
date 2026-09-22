@@ -22,11 +22,7 @@ defmodule Hexpm.OAuth.Token do
     field :access_token, :string, virtual: true
     field :refresh_token, :string, virtual: true
 
-    # The organizations whose scopes this grant dropped only because the
-    # session has not authenticated through their provider lately. Told to the
-    # client so it can offer to fix it, and carried no further than the
-    # response that reports it.
-    field :sso_reauth_required, {:array, :string}, virtual: true, default: []
+    field :organization_reauth_required, {:array, :map}, virtual: true, default: []
 
     belongs_to :user, User
     belongs_to :organization, Organization
@@ -58,7 +54,7 @@ defmodule Hexpm.OAuth.Token do
       :client_id,
       :access_token,
       :refresh_token,
-      :sso_reauth_required
+      :organization_reauth_required
     ])
     |> validate_required([
       :jti,

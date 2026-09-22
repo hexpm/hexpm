@@ -217,7 +217,7 @@ defmodule HexpmWeb.PasswordControllerTest do
                "This password reset link has expired or already been used. Please request a new one."
 
       # Verify password wasn't changed to the second attempt
-      assert :error = Auth.password_auth(username, "another_pass456")
+      assert {:error, :wrong_password} = Auth.password_auth(username, "another_pass456")
       # Verify first password still works
       assert {:ok, %{user: %User{username: ^username}}} =
                Auth.password_auth(username, "new_pass123")

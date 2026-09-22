@@ -39,8 +39,14 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwner do
 
         true ->
           case Users.get_by_username(username, [:emails, :organization]) do
-            nil -> :not_found
-            user -> user
+            nil ->
+              :not_found
+
+            %User{organization_id: nil} = user ->
+              if User.verified_primary_email?(user), do: user, else: :unverified
+
+            user ->
+              user
           end
       end
 
@@ -145,6 +151,15 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwner do
     ~H"""
     <p class="text-sm text-red-600 dark:text-red-400">
       No user found with username <span class="font-medium">"{@username}"</span>.
+    </p>
+    """
+  end
+
+  defp render_preview(%{looked_up_user: :unverified} = assigns) do
+    ~H"""
+    <p class="text-sm text-red-600 dark:text-red-400">
+      <span class="font-medium">{@username}</span>
+      has not verified their primary email and cannot be added as an owner.
     </p>
     """
   end
