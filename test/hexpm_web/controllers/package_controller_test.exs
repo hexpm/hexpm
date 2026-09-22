@@ -584,10 +584,10 @@ defmodule HexpmWeb.PackageControllerTest do
     end
   end
 
-  describe "Documentation sidebar" do
+  describe "Documentation files nav" do
     test "shows only the kinds the release actually has" do
       package =
-        doc_package("sidebar_pkg", [
+        doc_package("doc_nav_pkg", [
           "README.md",
           "CHANGELOG.md",
           "LICENSE"
@@ -607,7 +607,7 @@ defmodule HexpmWeb.PackageControllerTest do
       refute "Security" in labels
     end
 
-    test "no sidebar for a readme-only package" do
+    test "no documentation files nav for a readme-only package" do
       package = doc_package("readme_only_pkg", ["README.md"])
 
       body = response(get(build_conn(), "/packages/#{package.name}"), 200)
@@ -636,7 +636,7 @@ defmodule HexpmWeb.PackageControllerTest do
                |> Enum.filter(&(LazyHTML.text(&1, separator: " ") =~ "Documentation"))
     end
 
-    test "the active sidebar entry carries aria-current" do
+    test "the active documentation file carries aria-current" do
       package =
         doc_package("active_entry_pkg", [
           "README.md",
@@ -662,7 +662,7 @@ defmodule HexpmWeb.PackageControllerTest do
                |> Enum.to_list()
     end
 
-    test "following the sidebar's Readme link does not 404" do
+    test "following the Readme link does not 404" do
       package =
         doc_package("docfile_link_pkg", [
           "README.md",

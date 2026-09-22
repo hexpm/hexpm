@@ -160,7 +160,7 @@ defmodule HexpmWeb.ReadmeControllerTest do
         |> get("/#{package.name}/1.0.0")
 
       assert conn.status == 200
-      assert conn.resp_body =~ "<pre>"
+      assert conn.resp_body =~ ~s(<pre class="plain-text">)
       assert conn.resp_body =~ "Plain text README content"
     end
 
@@ -173,7 +173,7 @@ defmodule HexpmWeb.ReadmeControllerTest do
         |> get("/#{package.name}/1.0.0")
 
       assert conn.status == 200
-      assert conn.resp_body =~ "<pre>"
+      assert conn.resp_body =~ ~s(<pre class="plain-text">)
       assert conn.resp_body =~ "Text README"
     end
 
