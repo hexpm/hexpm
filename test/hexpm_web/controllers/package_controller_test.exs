@@ -1,6 +1,8 @@
 defmodule HexpmWeb.PackageControllerTest do
   use HexpmWeb.ConnCase, async: true
 
+  alias Hexpm.Repository.Releases
+
   setup do
     user1 = insert(:user)
     user2 = insert(:user)
@@ -492,6 +494,230 @@ defmodule HexpmWeb.PackageControllerTest do
     end
   end
 
+  describe "GET /packages/:name/:version/:kind" do
+    test "renders a recognized doc kind" do
+      package =
+        doc_package("doc_kind_pkg", ["README.md", "CHANGELOG.md"])
+
+      body = response(get(build_conn(), "/packages/#{package.name}/1.0.0/changelog"), 200)
+
+      assert body =~ "readme-frame"
+      assert body =~ "/#{package.name}/1.0.0?kind=changelog"
+    end
+
+    test "renders a recognized doc kind for a repository-scoped package", %{
+      user1: user1,
+      repository1: repository1
+    } do
+      package =
+        doc_package(
+          "repo_doc_kind_pkg",
+          ["README.md", "CHANGELOG.md"],
+          repository_id: repository1.id,
+          repository: repository1.name
+        )
+
+      conn =
+        build_conn()
+        |> test_login(user1)
+        |> get("/packages/#{repository1.name}/#{package.name}/1.0.0/changelog")
+
+      body = response(conn, 200)
+
+      assert [doc_url] =
+               body
+               |> LazyHTML.from_document()
+               |> LazyHTML.query("#readme-frame")
+               |> LazyHTML.attribute("src")
+
+      assert doc_url =~ "token="
+      assert doc_url =~ "kind=changelog"
+    end
+
+    test "README pages keep the package-level canonical URL" do
+      package = doc_package("readme_canonical_pkg", ["README.md"])
+
+      for path <- ["/packages/#{package.name}", "/packages/#{package.name}/1.0.0"] do
+        assert canonical_url(response(get(build_conn(), path), 200)) ==
+                 "/packages/#{package.name}"
+      end
+    end
+
+    test "doc kind pages canonicalize to their own versioned URL" do
+      package =
+        doc_package("changelog_canonical_pkg", [
+          "README.md",
+          "CHANGELOG.md"
+        ])
+
+      body = response(get(build_conn(), "/packages/#{package.name}/1.0.0/changelog"), 200)
+
+      assert canonical_url(body) ==
+               HexpmWeb.Endpoint.url() <> "/packages/#{package.name}/1.0.0/changelog"
+    end
+
+    test "renders a threat model at its own URL" do
+      package = doc_package("threat_model_pkg", ["README.md", "THREAT_MODEL.md"])
+
+      body = response(get(build_conn(), "/packages/#{package.name}/1.0.0/threat_model"), 200)
+
+      assert body =~ "/#{package.name}/1.0.0?kind=threat_model"
+      assert body =~ "Threat Model"
+    end
+
+    test "404s for a version the package does not have" do
+      package = insert(:package, name: "doc_kind_missing_version")
+
+      insert(:release,
+        package: package,
+        version: "1.0.0",
+        meta: build(:release_metadata, app: package.name)
+      )
+
+      conn = get(build_conn(), "/packages/#{package.name}/9.9.9/changelog")
+      assert response(conn, 404)
+    end
+
+    test "unknown package 404s" do
+      conn = get(build_conn(), "/packages/nonexistent_doc_pkg/1.0.0/changelog")
+      assert response(conn, 404)
+    end
+  end
+
+  describe "Documentation sidebar" do
+    test "shows only the kinds the release actually has" do
+      package =
+        doc_package("sidebar_pkg", [
+          "README.md",
+          "CHANGELOG.md",
+          "LICENSE"
+        ])
+
+      body = response(get(build_conn(), "/packages/#{package.name}"), 200)
+
+      document = LazyHTML.from_document(body)
+
+      labels =
+        document
+        |> LazyHTML.query(~s(nav[aria-label="Documentation files"] a))
+        |> Enum.map(&(LazyHTML.text(&1, separator: " ") |> String.trim()))
+
+      assert "Changelog" in labels
+      assert "License" in labels
+      refute "Security" in labels
+    end
+
+    test "no sidebar for a readme-only package" do
+      package = doc_package("readme_only_pkg", ["README.md"])
+
+      body = response(get(build_conn(), "/packages/#{package.name}"), 200)
+
+      refute body =~ "aria-label=\"Documentation files\""
+    end
+
+    test "deep link to a missing kind explains it and stays the active entry" do
+      package = doc_package("missing_kind_pkg", ["README.md"])
+
+      body = response(get(build_conn(), "/packages/#{package.name}/1.0.0/security"), 200)
+
+      assert body =~ "does not publish a Security file"
+
+      document = LazyHTML.from_document(body)
+
+      assert [security_link] = LazyHTML.query(document, "a[aria-current=page]") |> Enum.to_list()
+      assert LazyHTML.text(security_link, separator: " ") =~ "Security"
+
+      assert [_ | _] =
+               LazyHTML.query(document, ".package-tabs-mobile-menu a")
+               |> Enum.filter(&(LazyHTML.text(&1, separator: " ") =~ "Security"))
+
+      assert [_ | _] =
+               LazyHTML.query(document, ".package-tabs-mobile-menu a")
+               |> Enum.filter(&(LazyHTML.text(&1, separator: " ") =~ "Documentation"))
+    end
+
+    test "the active sidebar entry carries aria-current" do
+      package =
+        doc_package("active_entry_pkg", [
+          "README.md",
+          "CHANGELOG.md"
+        ])
+
+      body = response(get(build_conn(), "/packages/#{package.name}/1.0.0/changelog"), 200)
+
+      document = LazyHTML.from_document(body)
+      assert [changelog_link] = LazyHTML.query(document, "a[aria-current=page]") |> Enum.to_list()
+      assert LazyHTML.text(changelog_link, separator: " ") =~ "Changelog"
+    end
+
+    test "mobile dropdown lists the available doc kinds" do
+      package = doc_package("mobile_doc_pkg", ["README.md", "LICENSE"])
+
+      body = response(get(build_conn(), "/packages/#{package.name}"), 200)
+
+      document = LazyHTML.from_document(body)
+
+      assert [_ | _] =
+               LazyHTML.query(document, ".package-tabs-mobile-menu a[href$=\"/license\"]")
+               |> Enum.to_list()
+    end
+
+    test "following the sidebar's Readme link does not 404" do
+      package =
+        doc_package("docfile_link_pkg", [
+          "README.md",
+          "CHANGELOG.md"
+        ])
+
+      body = response(get(build_conn(), "/packages/#{package.name}/1.0.0/changelog"), 200)
+
+      document = LazyHTML.from_document(body)
+
+      assert [readme_link] =
+               LazyHTML.query(document, "nav[aria-label=\"Documentation files\"] a")
+               |> Enum.filter(&(LazyHTML.text(&1, separator: " ") =~ "Readme"))
+
+      assert [readme_href] = LazyHTML.attribute(readme_link, "href")
+      refute readme_href =~ "/readme"
+
+      response(get(build_conn(), readme_href), 200)
+    end
+
+    test "version picker links keep the selected doc kind" do
+      package =
+        doc_package("version_picker_doc_pkg", [
+          "README.md",
+          "CHANGELOG.md"
+        ])
+
+      insert(:release,
+        package: package,
+        version: "1.1.0",
+        meta: build(:release_metadata, app: package.name)
+      )
+
+      body = response(get(build_conn(), "/packages/#{package.name}/1.0.0/changelog"), 200)
+
+      assert body =~ ~s(href="/packages/#{package.name}/1.1.0/changelog")
+    end
+
+    test "mobile dropdown shows doc kinds on non-Documentation tabs too" do
+      package =
+        doc_package("versions_tab_doc_kinds_pkg", [
+          "README.md",
+          "CHANGELOG.md"
+        ])
+
+      body = response(get(build_conn(), "/packages/#{package.name}/versions"), 200)
+
+      document = LazyHTML.from_document(body)
+
+      assert [_ | _] =
+               LazyHTML.query(document, ".package-tabs-mobile-menu a[href$=\"/changelog\"]")
+               |> Enum.to_list()
+    end
+  end
+
   describe "GET /packages/:name/audit-logs" do
     test "sets title correctly" do
       _package = insert(:package, name: "Test")
@@ -920,9 +1146,38 @@ defmodule HexpmWeb.PackageControllerTest do
     end
   end
 
+  defp canonical_url(body) do
+    [url] =
+      body
+      |> LazyHTML.from_document()
+      |> LazyHTML.query(~s(link[rel="canonical"]))
+      |> LazyHTML.attribute("href")
+
+    url
+  end
+
   defp escape(html) do
     {:safe, safe} = Phoenix.HTML.html_escape(html)
     IO.iodata_to_binary(safe)
+  end
+
+  defp doc_package(name, filenames, opts \\ []) do
+    package = insert(:package, [name: name] ++ Keyword.take(opts, [:repository_id]))
+
+    insert(:release,
+      package: package,
+      version: "1.0.0",
+      meta: build(:release_metadata, app: name)
+    )
+
+    Releases.put_doc_files(
+      Keyword.get(opts, :repository, "hexpm"),
+      name,
+      "1.0.0",
+      filenames
+    )
+
+    package
   end
 
   defp advise(package, id, version) do

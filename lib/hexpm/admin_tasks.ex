@@ -909,6 +909,22 @@ defmodule Hexpm.AdminTasks do
   end
 
   @doc """
+  Backfills `release_doc_files` for releases published before it existed.
+  Runs in batches on the `:heavy` queue behind Preview uploads. Safe to start
+  again: it only fills releases still missing a row.
+
+  ## Examples
+
+      iex> AdminTasks.backfill_doc_files()
+      {:ok, %Oban.Job{}}
+  """
+  def backfill_doc_files() do
+    %{after_id: 0}
+    |> Hexpm.Preview.Workers.BackfillDocFiles.new()
+    |> Oban.insert()
+  end
+
+  @doc """
   Sends an email with an arbitrary subject and body.
 
   Every recipient gets a separate email so addresses are not disclosed between

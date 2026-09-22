@@ -34,7 +34,8 @@ defmodule HexpmWeb.DiffLive do
           current_release: release,
           graph_release: release,
           sidebar?: false,
-          dependants_count?: false
+          dependants_count?: false,
+          doc_kinds?: false
         )
 
       socket =
