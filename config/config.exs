@@ -96,7 +96,8 @@ config :hexpm, Hexpm.PromEx,
 
 config :ex_aws,
   json_codec: JSON,
-  http_client: ExAws.Request.Req
+  http_client: ExAws.Request.Req,
+  req_opts: [finch: [name: Hexpm.Finch]]
 
 config :sentry,
   client: Hexpm.SentryClient,
