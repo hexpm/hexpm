@@ -184,6 +184,13 @@ jobs:
           cd hex && mix deps.get && MIX_ENV=test mix deps.compile && cd ..
 
       - name: Run tests
+        # Mix's cross-process lock in Elixir 1.20 can deadlock when the second
+        # lock on a path gets the same ephemeral port as the first one
+        # (https://github.com/elixir-lang/elixir/pull/15765). The Hex suite
+        # locks the same deps and build paths repeatedly inside one VM and
+        # doesn't need the lock.
+        env:
+          MIX_OS_CONCURRENCY_LOCK: "0"
         run: cd hex && mix test --include integration && cd ..
 
   docker:
