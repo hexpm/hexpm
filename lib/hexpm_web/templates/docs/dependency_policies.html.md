@@ -150,6 +150,8 @@ $ mix hex.policy why PACKAGE
 
 A release can become rejected after it was locked, when it gets a security advisory, is retired, or the policy adds a deny override for it. Resolution keeps trusting the lockfile, so `mix deps.get` still installs it.
 
+`mix hex.audit --policy`, `mix hex.audit --policy-overrides`, and `policy_enforce_lock` require Hex v2.6 or later. Earlier versions ignore the `mix hex.audit` flags and report every advisory and retirement, and they ignore `policy_enforce_lock`, so `mix deps.get` doesn't fail. Run `mix hex.info` to see the installed version.
+
 `mix hex.audit --policy` checks every Hex package in `mix.lock` against the policy's advisory and retirement rules and its overrides. It exits with a non-zero code when a package is rejected or matched by a deny override. `mix hex.audit --policy-overrides` applies only the overrides and reports every other advisory and retirement. Cooldown isn't part of either check.
 
 To make `mix deps.get` and `mix deps.update` fail instead, enable `policy_enforce_lock`. After resolving dependencies they run the same check as `mix hex.audit --policy`, and when it reports anything they fail before writing `mix.lock` or fetching packages:
@@ -173,7 +175,7 @@ $ mix hex.config policy_enforce_lock true
 
 An empty `HEX_POLICY_ENFORCE_LOCK` disables the check for one invocation. The setting has no effect without an active policy.
 
-A finding that doesn't affect the project can be acknowledged in `mix.exs` with `ignore_advisories`, which takes advisory IDs or their aliases such as a CVE, or `ignore_retirements`, which takes package names optionally pinned to a version. Both commands apply ignore entries after the policy, and an entry doesn't change which new releases the policy accepts. Ignore entries can't clear a deny override. A denied package stays rejected until the policy changes.
+A finding that doesn't affect the project can be acknowledged in `mix.exs` (Hex v2.5.1 or later) with `ignore_advisories`, which takes advisory IDs or their aliases such as a CVE, or `ignore_retirements`, which takes package names optionally pinned to a version. Both commands apply ignore entries after the policy, and an entry doesn't change which new releases the policy accepts. Ignore entries can't clear a deny override. A denied package stays rejected until the policy changes.
 
 ```elixir
 # mix.exs
@@ -189,7 +191,7 @@ end
 
 #### Caching and failure behavior
 
-A policy is an enforcement feature, so Hex fails closed: a malformed `policy` or `policy_enforce_lock` configuration or a policy that cannot be loaded fails the command instead of running unenforced. Every error the policy causes ends with how to run a single command without it, by setting `HEX_POLICY` to an empty value.
+A policy is an enforcement feature, so Hex fails closed: a malformed `policy` or `policy_enforce_lock` configuration or a policy that cannot be loaded fails the command instead of running unenforced. In Hex v2.6 and later, every error the policy causes ends with how to run a single command without it, by setting `HEX_POLICY` to an empty value.
 
 Fetched policies are stored in the local registry cache. When a refresh fails — network error, registry outage — and a previously fetched copy is cached, Hex prints an error and continues with the cached copy; without a cached copy resolution aborts. In offline mode the cached copy is used directly.
 
