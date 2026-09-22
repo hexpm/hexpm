@@ -24,7 +24,7 @@ defmodule Hexpm.PromEx.Plugins.OutboundHttpTest do
     assert OutboundHttp.request_tags(%{request: request(), result: nil}).status == "unknown"
   end
 
-  test "attaches to the Finch events the requests actually emit" do
+  test "attaches to attempt and final outcome events" do
     events =
       [otp_app: :hexpm]
       |> OutboundHttp.event_metrics()
@@ -33,6 +33,7 @@ defmodule Hexpm.PromEx.Plugins.OutboundHttpTest do
       |> Enum.map(& &1.event_name)
       |> Enum.uniq()
 
+    assert [:hexpm, :http, :request, :stop] in events
     assert [:finch, :request, :stop] in events
     assert [:finch, :request, :exception] in events
     assert [:finch, :queue, :stop] in events
