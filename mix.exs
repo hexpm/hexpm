@@ -49,7 +49,15 @@ defmodule Hexpm.MixProject do
       {:ex_aws_sqs, "~> 3.0"},
       {:ex_aws, "~> 2.0"},
       {:ex_machina, "~> 2.0"},
-      {:finch, "~> 0.23.0"},
+      # Finch 0.23.0 closes idle-expired HTTP/1 connections inside the pool
+      # process, where a peer that doesn't answer the TLS close blocks every
+      # checkout for up to 5 s. No release includes the fix yet.
+      # https://github.com/sneako/finch/pull/392
+      {:finch,
+       github: "sneako/finch",
+       ref: "79885b6cd1ca072824149389b6ab8899f8b970d1",
+       depth: 1,
+       override: true},
       {:geolix, "~> 2.0"},
       {:geolix_adapter_mmdb2, "~> 0.6"},
       {:goth, "~> 1.4"},
