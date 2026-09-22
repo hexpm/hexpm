@@ -22,6 +22,12 @@ defmodule Hexpm.OAuth.JWTTest do
       assert claims["aud"] == "hexpm:api"
     end
 
+    test "is typed as an access token" do
+      {:ok, token, _jti} = JWT.generate_access_token("testuser", "user", ["api"])
+
+      assert header(token)["typ"] == "at+jwt"
+    end
+
     test "creates JWT that can be authenticated by Auth.oauth_token_auth" do
       user = insert(:user, username: "testuser")
       client = insert(:oauth_client)
@@ -64,19 +70,31 @@ defmodule Hexpm.OAuth.JWTTest do
     end
   end
 
-  describe "generate_refresh_token/4" do
+  describe "generate_refresh_token/3" do
     test "creates refresh token with correct sub claim format" do
       username = "testuser"
       subject_type = "user"
-      scopes = ["api"]
 
-      {:ok, token, jti} = JWT.generate_refresh_token(username, subject_type, scopes)
+      {:ok, token, jti} = JWT.generate_refresh_token(username, subject_type)
 
       {:ok, claims} = JWT.verify_and_decode(token)
 
       assert claims["sub"] == "user:testuser"
       assert claims["jti"] == jti
-      assert claims["scope"] == "api"
+    end
+
+    test "carries no scope claim" do
+      {:ok, token, _jti} = JWT.generate_refresh_token("testuser", "user")
+
+      {:ok, claims} = JWT.verify_and_decode(token)
+
+      refute Map.has_key?(claims, "scope")
+    end
+
+    test "is typed as a plain JWT, not an access token" do
+      {:ok, token, _jti} = JWT.generate_refresh_token("testuser", "user")
+
+      assert header(token)["typ"] == "JWT"
     end
   end
 
@@ -93,5 +111,13 @@ defmodule Hexpm.OAuth.JWTTest do
     test "fails to decode invalid JWT" do
       assert {:error, _reason} = JWT.verify_and_decode("invalid.jwt.token")
     end
+  end
+
+  defp header(token) do
+    [header, _payload, _signature] = String.split(token, ".")
+
+    header
+    |> Base.url_decode64!(padding: false)
+    |> JSON.decode!()
   end
 end

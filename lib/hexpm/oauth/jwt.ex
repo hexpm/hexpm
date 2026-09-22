@@ -16,6 +16,9 @@ defmodule Hexpm.OAuth.JWT do
 
   @doc """
   Generates a JWT access token for a subject (user or organization) with the given scopes.
+
+  Signed with the `at+jwt` media type registered by RFC 9068, which is how the
+  CDN edge tells an access token from a refresh token.
   """
   def generate_access_token(subject_name, subject_type, scopes, opts \\ []) do
     jti = generate_jti()
@@ -38,7 +41,7 @@ defmodule Hexpm.OAuth.JWT do
         extra_claims
       end
 
-    signer = get_signer()
+    signer = get_signer(%{"typ" => "at+jwt"})
 
     case generate_and_sign(extra_claims, signer) do
       {:ok, token, _claims} -> {:ok, token, jti}
@@ -49,8 +52,13 @@ defmodule Hexpm.OAuth.JWT do
   @doc """
   Generates a JWT refresh token for a subject (user or organization).
   Expiration time should be provided via opts[:expires_in], defaults to 30 days.
+
+  A refresh token carries no `scope` claim, so the only thing it is accepted for
+  is the refresh grant, which resolves scopes from the stored `granted_scopes`.
+  It keeps the generic `JWT` media type: RFC 9068 registers `at+jwt` for access
+  tokens and there is no registered type for a refresh token.
   """
-  def generate_refresh_token(subject_name, subject_type, scopes, opts \\ []) do
+  def generate_refresh_token(subject_name, subject_type, opts \\ []) do
     jti = generate_jti()
     now = unix_now()
 
@@ -61,7 +69,6 @@ defmodule Hexpm.OAuth.JWT do
       "jti" => jti,
       "iat" => now,
       "nbf" => now - 30,
-      "scope" => Enum.join(scopes, " "),
       "exp" => now + expires_in
     }
 
@@ -119,9 +126,9 @@ defmodule Hexpm.OAuth.JWT do
     |> Base.url_encode64(padding: false)
   end
 
-  defp get_signer do
+  defp get_signer(headers \\ %{}) do
     key = Application.get_env(:hexpm, :jwt_signing_key)
-    Joken.Signer.create("ES256", %{"pem" => key})
+    Joken.Signer.create("ES256", %{"pem" => key}, headers)
   end
 
   defp unix_now do
