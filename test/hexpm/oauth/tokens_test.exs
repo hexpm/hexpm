@@ -3,7 +3,7 @@ defmodule Hexpm.OAuth.TokensTest do
 
   import Ecto.Changeset, only: [get_field: 2]
 
-  alias Hexpm.OAuth.{Token, Tokens}
+  alias Hexpm.OAuth.{JWT, Token, Tokens}
 
   describe "minted scopes" do
     setup do
@@ -66,6 +66,24 @@ defmodule Hexpm.OAuth.TokensTest do
                  "dropped repository:#{name} from #{inspect(requested)} for a member"
         end
       end
+    end
+
+    test "the refresh token names no organization", %{user: user} do
+      changeset =
+        Tokens.create_for_user(
+          user,
+          "test_client",
+          ["api", "repositories"],
+          "authorization_code",
+          nil,
+          with_refresh_token: true
+        )
+
+      assert Enum.any?(get_field(changeset, :scopes), &String.starts_with?(&1, "repository:"))
+
+      {:ok, claims} = JWT.verify_and_decode(get_field(changeset, :refresh_token))
+
+      refute Map.has_key?(claims, "scope")
     end
   end
 

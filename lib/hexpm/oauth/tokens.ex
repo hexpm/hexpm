@@ -110,7 +110,7 @@ defmodule Hexpm.OAuth.Tokens do
       organization_reauth_required: organization_reauth_required
     }
     |> Map.merge(principal_id(principal))
-    |> maybe_add_refresh_token(principal, authorized, opts)
+    |> maybe_add_refresh_token(principal, opts)
     |> Token.build()
   end
 
@@ -147,11 +147,10 @@ defmodule Hexpm.OAuth.Tokens do
   defp granted_scopes(%User{}, requested, _authorized), do: requested
   defp granted_scopes(%Organization{}, _requested, authorized), do: authorized
 
-  # Signed with the same scopes as the access token. Both edges accept any JWT
-  # that verifies, and neither distinguishes a refresh token from an access
-  # token, so a refresh token carrying the unfiltered request would be usable as
-  # a bearer credential for the scopes the mint just refused.
-  defp maybe_add_refresh_token(attrs, %User{} = user, scopes, opts) do
+  # Signed without scopes. Both edges authorize from the scope claim of any JWT
+  # that verifies, so a refresh token carrying scopes is a bearer credential for
+  # them, with the refresh token's lifetime rather than the access token's.
+  defp maybe_add_refresh_token(attrs, %User{} = user, opts) do
     if Keyword.get(opts, :with_refresh_token, false) do
       # Use provided refresh_token_expires_at (e.g., from session) or calculate fresh
       refresh_expires_at =
@@ -167,7 +166,7 @@ defmodule Hexpm.OAuth.Tokens do
       ]
 
       {:ok, refresh_token, refresh_jti} =
-        JWT.generate_refresh_token(user.username, "user", scopes, refresh_opts)
+        JWT.generate_refresh_token(user.username, "user", refresh_opts)
 
       Map.merge(attrs, %{
         refresh_jti: refresh_jti,
@@ -180,7 +179,7 @@ defmodule Hexpm.OAuth.Tokens do
     end
   end
 
-  defp maybe_add_refresh_token(attrs, %Organization{}, _scopes, _opts), do: attrs
+  defp maybe_add_refresh_token(attrs, %Organization{}, _opts), do: attrs
 
   defp create_for_user_or_org(principal, client_id, scopes, grant_type, grant_reference, opts) do
     build_token(principal, client_id, scopes, grant_type, grant_reference, opts)
