@@ -72,7 +72,7 @@ defmodule Hexpm.Preview do
         releases
         |> Task.async_stream(
           fn {id, repository, package, version} ->
-            {id, backfill_file_list(repository, package, version)}
+            {id, Bucket.get_file_list(repository, package, version)}
           end,
           max_concurrency: 16,
           timeout: 60_000
@@ -85,19 +85,6 @@ defmodule Hexpm.Preview do
 
         {:ok, releases |> List.last() |> elem(0)}
     end
-  end
-
-  # A bad file list is skipped, not failed on; rerunning the backfill retries it.
-  defp backfill_file_list(repository, package, version) do
-    Bucket.get_file_list(repository, package, version)
-  rescue
-    error ->
-      Logger.warning(
-        "Skipping doc files backfill for #{repository}/#{package} #{version}: " <>
-          Exception.message(error)
-      )
-
-      nil
   end
 
   def raw_file(repository, package, version, filename) do
