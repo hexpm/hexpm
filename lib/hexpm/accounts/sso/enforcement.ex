@@ -351,7 +351,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   SSO and have not linked an identity yet.
 
   Only fires inside the window before the date, and a member is told once per
-  organization rather than once per tick.
+  organization and required-by date rather than once per tick.
   """
   @spec warn_pending() :: non_neg_integer()
   def warn_pending do
@@ -394,10 +394,10 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   end
 
   # The audit entry is the durable record, so the "once" hangs off it rather
-  # than off the mail: the outbox row is deleted as soon as it is delivered,
-  # and a member would be told again on every tick. Both go in one transaction,
-  # so a failure while building the mail does not leave the member recorded as
-  # warned and never told.
+  # than off the mail: a delivered outbox row is purged after the retention
+  # window, and a member would be told again on the next tick after that. Both
+  # go in one transaction, so a failure while building the mail does not leave
+  # the member recorded as warned and never told.
   defp warn_member(connection, organization, user, email, warned) do
     if MapSet.member?(warned, user.id) do
       :skipped
@@ -609,10 +609,11 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   # the organization took its access away or only turned it down.
   #
   # A blocked key changes no state, so unlike a revoked one it has nothing to
-  # make the notice stop: the outbox row is deleted on delivery and the same key
-  # is blocked again on the next tick. The audit entry is the durable record the
-  # "once" hangs off, per key rather than per member, so minting another key
-  # that this organization also refuses is announced instead of swallowed.
+  # make the notice stop: `enqueue_once/2` only collapses a notice that has not
+  # gone out yet, and the same key is blocked again on the next tick. The audit
+  # entry is the durable record the "once" hangs off, per key rather than per
+  # member, so minting another key that this organization also refuses is
+  # announced instead of swallowed.
   defp notify_key_owner(organization, [{%Key{user: user}, _outcome} | _] = keys) do
     revoked = for {key, :revoked} <- keys, do: key.name
     trimmed = for {key, :trimmed} <- keys, do: key.name

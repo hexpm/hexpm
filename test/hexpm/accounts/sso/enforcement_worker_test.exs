@@ -76,8 +76,8 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
 
       assert Enforcement.warn_pending() == 1
 
-      # The outbox row is the mail waiting to be sent, and the worker deletes it
-      # on delivery. Tomorrow's tick has only the audit entry to go on.
+      # A delivered outbox row is purged after the retention window, and a tick
+      # after that has only the audit entry to go on.
       Enum.each(pending_entries(), &Repo.delete!/1)
 
       assert Enforcement.warn_pending() == 0
@@ -390,8 +390,8 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
 
       assert Enforcement.sweep_personal_keys() == 0
 
-      # A blocked key changes nothing, so it is blocked again tomorrow. The
-      # outbox row is gone by then and only the audit entry stops the mail.
+      # A blocked key changes nothing, so it is blocked again tomorrow. By then
+      # the notice is no longer pending, and only the audit entry stops the mail.
       Enum.each(blocked_entries(), &Repo.delete!/1)
 
       assert Enforcement.sweep_personal_keys() == 0
