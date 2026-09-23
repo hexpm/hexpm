@@ -93,7 +93,7 @@ defmodule HexpmWeb.EmailView do
 
     # URL follow pattern for verification/reset emails
     def follow_link_instruction(url, :html) do
-      "You can do so by following #{link(url, "this link", :html)} or by pasting this link in your web browser: #{url}"
+      "You can do so by following #{link(url, "this link", :html)} or by pasting the link below in your web browser."
     end
 
     def follow_link_instruction(url, :text) do

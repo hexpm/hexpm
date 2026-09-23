@@ -2,6 +2,7 @@ defmodule Hexpm.EmailsTest do
   use Hexpm.DataCase, async: false
 
   alias Hexpm.Accounts.Organization
+  alias Hexpm.Accounts.OrganizationInvitation
   alias Hexpm.Emails
   alias HexpmWeb.EmailView.Common
 
@@ -237,6 +238,30 @@ defmodule Hexpm.EmailsTest do
 
       for email <- emails do
         refute email.html_body =~ "&lt;a"
+      end
+    end
+
+    test "action urls are shown once" do
+      user = build(:user)
+
+      invitation = %OrganizationInvitation{
+        email: "invitee@example.com",
+        role: "read",
+        raw_token: "abc",
+        expires_at: ~U[2026-10-01 00:00:00.000000Z],
+        organization: %Organization{name: "acme"}
+      }
+
+      emails = [
+        {Emails.verification(user, build(:email, verification_key: "abc")), "/email/verify?"},
+        {Emails.organization_invitation(invitation), "/invites?"},
+        {Emails.password_reset_request(user, %{key: "abc"}), "/password/new?"},
+        {Emails.security_password_reset(user, %{key: "abc"}), "/password/new?"}
+      ]
+
+      for {email, path} <- emails do
+        text = email.html_body |> LazyHTML.from_document() |> LazyHTML.text()
+        assert text |> String.split(path) |> length() == 2
       end
     end
   end
