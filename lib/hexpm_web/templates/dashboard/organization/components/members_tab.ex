@@ -49,7 +49,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
           current_user={@current_user}
           action={~p"/dashboard/orgs/#{@organization}/tfa"}
           id="organization-tfa-policy"
-          class="space-y-4"
+          class="group/tfa-policy space-y-4"
         >
           <.select_input
             id="policy-enforcement"
@@ -58,8 +58,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
             options={tfa_enforcement_options(@organization)}
             value={if @organization.tfa_required_at, do: "keep", else: "transition"}
           />
-          <label :if={!Hexpm.Accounts.OrganizationTFA.enforced?(@organization)} class="block">
-            Transition length in days (1 to 30)
+          <label
+            :if={!Hexpm.Accounts.OrganizationTFA.enforced?(@organization)}
+            id="policy-grace-days"
+            class="hidden group-has-[option[value=transition]:checked]/tfa-policy:block"
+          >
+            Days from now until enforcement (1 to 30)
             <input
               type="number"
               name="policy[grace_days]"

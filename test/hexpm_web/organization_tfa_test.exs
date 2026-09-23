@@ -150,6 +150,9 @@ defmodule HexpmWeb.OrganizationTFATest do
              |> LazyHTML.query("#policy-enforcement option[selected]")
              |> LazyHTML.attribute("value") == [selected]
 
+      assert Enum.empty?(LazyHTML.query(document, "#policy-grace-days")) ==
+               "transition" not in actions
+
       assert LazyHTML.query(document, "#policy-tfa-session-lifetime") |> Enum.empty?()
     end
   end
