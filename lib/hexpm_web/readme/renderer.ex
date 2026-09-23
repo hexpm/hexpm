@@ -39,7 +39,7 @@ defmodule HexpmWeb.Readme.Renderer do
           |> LazyHTML.to_tree()
 
         _ ->
-          [{"pre", [], [content]}]
+          [{"pre", [{"class", "plain-text"}], [content]}]
       end
 
     tree

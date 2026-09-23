@@ -1,4 +1,4 @@
-<% sidebar_kinds = Hexpm.Docs.Files.nav_kinds(@doc_kinds, @doc_kind) %>
+<% nav_kinds = Hexpm.Docs.Files.nav_kinds(@doc_kinds, @doc_kind) %>
 
 <.package_layout
   {@package_layout}
@@ -7,40 +7,36 @@
   doc_kind={@doc_kind}
 >
   <:inner_content>
-    <div class="flex gap-5 items-start">
-      <%= if length(sidebar_kinds) > 1 do %>
+    <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg">
+      <%= if length(nav_kinds) > 1 do %>
         <nav
           aria-label="Documentation files"
-          class="hidden md:flex w-[200px] shrink-0 flex-col gap-1 bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4"
+          class="hidden md:flex flex-wrap items-center gap-1 border-b border-grey-200 dark:border-grey-700 px-4 py-2"
         >
-          <p class="text-[10px] font-medium uppercase tracking-wide text-grey-400 dark:text-grey-300 mb-2">
-            Files
-          </p>
-          <%= for kind <- sidebar_kinds do %>
+          <%= for kind <- nav_kinds do %>
             <a
               href={ViewHelpers.path_for_doc(@package, @current_release, kind)}
               aria-current={@doc_kind == kind && "page"}
               class={[
-                "flex items-center gap-2 rounded px-2 py-1.5 text-sm font-medium transition-colors",
+                "rounded px-2.5 py-1 text-sm font-medium transition-colors",
                 @doc_kind == kind &&
                   "bg-grey-50 dark:bg-grey-700/60 text-grey-900 dark:text-white",
                 @doc_kind != kind &&
                   "text-grey-500 dark:text-grey-300 hover:text-grey-700 dark:hover:text-grey-200"
               ]}
             >
-              {HexpmWeb.ViewIcons.icon(:heroicon, "document", class: "size-4 shrink-0")}
-              <span class="truncate">{Hexpm.Docs.Files.label(kind)}</span>
+              {Hexpm.Docs.Files.label(kind)}
             </a>
           <% end %>
           <%= if filename = Map.get(@doc_kinds, @doc_kind) do %>
-            <p class="mt-4 pt-3 border-t border-grey-200 dark:border-grey-700 text-[10px] font-mono uppercase tracking-wide text-grey-400 dark:text-grey-300 truncate">
+            <p class="ml-auto pl-2 text-[10px] font-mono uppercase tracking-wide text-grey-400 dark:text-grey-300 truncate">
               From {filename}
             </p>
           <% end %>
         </nav>
       <% end %>
 
-      <div class="flex-1 min-w-0 bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-6">
+      <div class="p-6">
         <.doc_content
           package={@package}
           release={@current_release}
