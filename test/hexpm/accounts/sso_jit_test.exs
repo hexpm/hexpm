@@ -112,15 +112,31 @@ defmodule Hexpm.Accounts.SSOJITTest do
       Map.put(context, :connection, connection)
     end
 
-    test "scheduled 2FA requires enrollment before SSO creates membership", context do
+    test "scheduled 2FA requires enrollment before SSO offers membership", context do
       context.organization
       |> Ecto.Changeset.change(tfa_required_at: DateTime.add(DateTime.utc_now(), 14 * 86_400))
       |> Repo.update!()
 
       newcomer = insert(:user)
       transaction = start_login(context, newcomer)
+
+      assert {:error, :tfa_enrollment_required} =
+               complete(transaction, claims("newcomer@example.com"), newcomer)
+
+      refute Organizations.get_role(context.organization, newcomer)
+      assert Seats.used(context.organization) == 1
+      refute Repo.exists?(Identity)
+    end
+
+    test "2FA scheduled during the consent step still refuses the join", context do
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
       {:ok, {:link, id, token}} = complete(transaction, claims("newcomer@example.com"), newcomer)
       session = browser_session(newcomer)
+
+      context.organization
+      |> Ecto.Changeset.change(tfa_required_at: DateTime.add(DateTime.utc_now(), 14 * 86_400))
+      |> Repo.update!()
 
       assert {:error, :tfa_enrollment_required} =
                SSO.complete_link(
@@ -222,6 +238,23 @@ defmodule Hexpm.Accounts.SSOJITTest do
       assert failure.code == "seats_exhausted"
       assert [entry] = Repo.all(OutboxEntry)
       assert entry.category == "sso.seats_exhausted"
+    end
+
+    test "reports a seat count it cannot read as such", context do
+      context.organization
+      |> Ecto.Changeset.change(billing_seats: nil, billing_active: true)
+      |> Repo.update!()
+
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
+
+      assert {:error, :seat_limit_unknown} =
+               complete(transaction, claims("newcomer@example.com"), newcomer)
+
+      assert [entry] = Repo.all(OutboxEntry)
+      assert entry.subject =~ "seat count could not be read"
+      assert entry.email["text_body"] =~ "couldn't read how many seats"
+      refute entry.email["text_body"] =~ "no seats left"
     end
 
     test "does not mail the administrators again within the hour", context do
@@ -342,11 +375,16 @@ defmodule Hexpm.Accounts.SSOJITTest do
       assert :ok = SSO.maybe_expand_seats(transaction, newcomer, claims("newcomer@example.com"))
       assert Repo.get!(Hexpm.Accounts.Organization, context.organization.id).billing_seats == 3
 
-      assert {:error, :seats_exhausted} =
+      # A seat would not let them join, so the administrators are not asked
+      # for one.
+      assert {:error, :tfa_enrollment_required} =
                complete(transaction, claims("newcomer@example.com"), newcomer)
 
       refute Organizations.get_role(context.organization, newcomer)
       assert Seats.used(context.organization) == 3
+      assert Repo.all(OutboxEntry) == []
+      assert [failure] = SSO.failures(context.connection)
+      assert failure.code == "tfa_enrollment_required"
     end
 
     test "buys a seat when the organization is full", context do
@@ -568,6 +606,29 @@ defmodule Hexpm.Accounts.SSOJITTest do
                complete(transaction, claims("newcomer@example.com"), newcomer)
 
       refute Organizations.get_role(context.organization, newcomer)
+    end
+
+    test "a failed purchase and the refusal after it are one notice", context do
+      fill_seats(context.organization)
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
+
+      Mox.stub(Hexpm.Billing.Mock, :update, fn _name, _params ->
+        {:error, %{"errors" => "card declined"}}
+      end)
+
+      assert :ok = SSO.maybe_expand_seats(transaction, newcomer, claims("newcomer@example.com"))
+
+      assert {:error, :seats_exhausted} =
+               complete(transaction, claims("newcomer@example.com"), newcomer)
+
+      assert [entry] = Repo.all(OutboxEntry)
+      assert entry.subject =~ "could not add a seat"
+
+      body = entry.email["text_body"]
+      assert body =~ "buying the extra seat failed"
+      assert body =~ "For an hour after a failed purchase"
+      refute body =~ "without retrying the purchase"
     end
   end
 

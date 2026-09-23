@@ -333,11 +333,11 @@ defmodule Hexpm.Accounts.SCIM do
         write(connection, fun, true)
 
       {:error, {:seats_exhausted, _user}} ->
-        SSO.notify_seats_exhausted(connection, :scim)
+        SSO.notify_no_seat(connection, :seats_exhausted, :scim)
         {:error, :seats_exhausted}
 
       {:error, :seat_limit_unknown} = error ->
-        SSO.notify_seats_exhausted(connection, :scim)
+        SSO.notify_no_seat(connection, :seat_limit_unknown, :scim)
         error
 
       {:error, reason} ->

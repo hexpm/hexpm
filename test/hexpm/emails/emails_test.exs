@@ -154,12 +154,57 @@ defmodule Hexpm.EmailsTest do
     test "link and unlink notifications address the recipients they are given" do
       for email <- [
             Emails.sso_identity_linked("acme", "eric", ["primary@example.com"]),
-            Emails.sso_identity_unlinked("acme", "eric", ["primary@example.com"])
+            Emails.sso_identity_unlinked(
+              "acme",
+              "eric",
+              "alice",
+              true,
+              "https://hex.pm/sso/org/acme",
+              ["primary@example.com"]
+            )
           ] do
         assert Enum.map(email.to, &elem(&1, 1)) == ["primary@example.com"]
         assert email.text_body =~ "acme"
         assert email.text_body =~ "eric"
       end
+    end
+
+    test "unlink says who disconnected the account and how to connect it again" do
+      email =
+        Emails.sso_identity_unlinked(
+          "acme",
+          "eric",
+          "alice",
+          true,
+          "https://hex.pm/sso/org/acme",
+          ["primary@example.com"]
+        )
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ "alice, an administrator of the acme organization, disconnected"
+        assert body =~ "https://hex.pm/sso/org/acme"
+        assert body =~ "ask an administrator of the acme organization"
+        refute body =~ "Conventional Hex.pm login"
+        refute body =~ "contact support"
+      end
+
+      assert email.text_body =~ "you can't reach it until you connect your account again"
+    end
+
+    test "unlink by the member themself asks nobody else about it" do
+      email =
+        Emails.sso_identity_unlinked(
+          "acme",
+          "eric",
+          "eric",
+          false,
+          "https://hex.pm/sso/org/acme",
+          ["primary@example.com"]
+        )
+
+      assert email.text_body =~ "You disconnected your Hex.pm account"
+      assert email.text_body =~ "your access to it hasn't changed"
+      refute email.text_body =~ "ask an administrator"
     end
 
     test "email mismatch identifies the provider address" do
@@ -173,6 +218,164 @@ defmodule Hexpm.EmailsTest do
 
       assert email.text_body =~ "person@idp.example"
       assert email.text_body =~ "no account email was changed"
+    end
+  end
+
+  describe "sso_break_glass/4" do
+    test "says what was reached in words" do
+      email = Emails.sso_break_glass("acme", "alice", "delete", ["admin@example.com"])
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~
+                 "alice reached the acme organization on Hex.pm without a current single " <>
+                   "sign-on session, to delete the identity provider connection."
+
+        refute body =~ "as seen"
+        refute body =~ "not one of your administrators"
+      end
+    end
+
+    test "leaves out a screen it has no words for" do
+      email = Emails.sso_break_glass("acme", "alice", "somewhere", ["admin@example.com"])
+
+      assert email.text_body =~
+               "alice reached the acme organization on Hex.pm without a current single " <>
+                 "sign-on session.\n"
+
+      refute email.text_body =~ "somewhere"
+    end
+  end
+
+  describe "sso_enforcement_pending/5" do
+    defp pending_email(notice) do
+      Emails.sso_enforcement_pending(
+        "acme",
+        ~U[2026-10-01 00:00:00Z],
+        Map.merge(
+          %{
+            linked?: false,
+            session_lifetime: 86_400,
+            keys: %{revoked: [], trimmed: [], blocked: []}
+          },
+          notice
+        ),
+        "https://hex.pm/sso/org/acme",
+        ["member@example.com"]
+      )
+    end
+
+    test "says what changes after the date for a linked member" do
+      email = pending_email(%{linked?: true, session_lifetime: 28_800})
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ "October 1, 2026"
+        assert body =~ "again every 8 hours"
+        assert body =~ "public packages you can only manage because the organization owns them"
+        refute body =~ "nothing about your day changes"
+        refute body =~ "does not affect your Hex account"
+        refute body =~ "https://hex.pm/sso/org/acme"
+      end
+    end
+
+    test "links an unlinked member to the provider" do
+      email = pending_email(%{})
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ "https://hex.pm/sso/org/acme"
+      end
+
+      assert email.text_body =~ "isn't connected to that provider yet"
+    end
+
+    test "names the personal keys the date strips or refuses" do
+      email =
+        pending_email(%{
+          keys: %{revoked: ["laptop"], trimmed: ["desk", "ci"], blocked: ["everything"]}
+        })
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ "Your key laptop carries nothing but access to this organization, so it"
+        assert body =~ "Your keys desk, ci will lose their permissions for this organization"
+        assert body =~ "Your key everything reaches this organization through wider permissions"
+        assert body =~ "organization key"
+      end
+    end
+
+    test "says nothing about keys a member does not hold" do
+      refute pending_email(%{}).text_body =~ "personal API keys"
+    end
+  end
+
+  describe "sso_enforcement_started/4" do
+    test "says the requirement applies now and how to regain access" do
+      email =
+        Emails.sso_enforcement_started(
+          "acme",
+          3_600,
+          "https://hex.pm/sso/org/acme",
+          ["member@example.com"]
+        )
+
+      assert email.subject == "Hex.pm - acme now requires single sign-on"
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ "now requires you to sign in through its identity provider"
+        assert body =~ "https://hex.pm/sso/org/acme"
+        assert body =~ "again every hour"
+        refute body =~ "From "
+      end
+    end
+  end
+
+  describe "sso_seats/4" do
+    test "tells a login apart from provisioning" do
+      login = Emails.sso_seats("acme", "seats_exhausted", "login", ["admin@example.com"])
+      scim = Emails.sso_seats("acme", "seats_exhausted", "scim", ["admin@example.com"])
+
+      assert login.text_body =~ "Someone signed in to the acme organization"
+      assert login.text_body =~ "ask them to sign in again"
+
+      assert scim.text_body =~ "Your identity provider asked through SCIM provisioning"
+      refute scim.text_body =~ "Someone signed in"
+      refute scim.text_body =~ "sign in again"
+    end
+
+    test "says when a failed purchase is tried again" do
+      email = Emails.sso_seats("acme", "expansion_failed", "login", ["admin@example.com"])
+
+      assert email.text_body =~ "For an hour after a failed purchase"
+      refute email.text_body =~ "without retrying the purchase"
+    end
+
+    test "does not call an unreadable seat count a full organization" do
+      email = Emails.sso_seats("acme", "seat_limit_unknown", "login", ["admin@example.com"])
+
+      assert email.subject == "Hex.pm - acme seat count could not be read"
+      assert email.text_body =~ "couldn't read how many seats the organization has paid for"
+      refute email.text_body =~ "no seats left"
+    end
+  end
+
+  describe "sso_keys_refused/5" do
+    test "asks for nothing that cannot be done with a revoked key" do
+      email = Emails.sso_keys_refused("acme", ["laptop"], [], [], ["primary@example.com"])
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ "The key laptop carried nothing else, so it has been revoked."
+        # Revoked keys are not listed on the dashboard.
+        refute body =~ "dashboard"
+      end
+    end
+
+    test "tells the owner to remove a key mix stored for the organization" do
+      for email <- [
+            Emails.sso_keys_refused("acme", ["laptop"], [], [], ["primary@example.com"]),
+            Emails.sso_keys_refused("acme", [], [], ["laptop"], ["primary@example.com"])
+          ],
+          body <- [email.html_body, email.text_body] do
+        assert body =~ "mix hex.user auth"
+        assert body =~ "Run mix hex.organization deauth acme on that machine"
+      end
     end
   end
 

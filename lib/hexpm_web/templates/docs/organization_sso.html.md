@@ -103,7 +103,9 @@ Enforcement is set on the organization's **SSO** dashboard and has three modes:
 
 Exemptions are managed from the **Exempt from SSO** list on the members tab, in both modes, and exempt members carry an **SSO exempt** badge. Moving from pilot to required does not reassign anybody. The people you piloted with stay enforced, the people you never touched start being enforced because the organization now is, and only an explicit exemption opts anyone out.
 
-Setting a required-by date is a grace period, not a reminder. Until it passes the organization behaves exactly as it does in pilot. Members who have not linked an identity are emailed in the two weeks before the date, once each.
+Setting a required-by date is a grace period, not a reminder. Until it passes the organization behaves exactly as it does in pilot. Members who have not linked an identity are emailed in the two weeks before the date, and again if the date moves. When personal API keys are blocked, members who have linked but hold a key the date will strip or refuse are emailed too, with each key and what happens to it. A date inside those two weeks is announced when it is saved.
+
+A member who has not linked an identity is also emailed the moment enforcement starts applying to them with no date ahead: required mode saved with no date or a past one, the date moved to now, the connection turned on while required, or an administrator enforcing them or lifting their exemption.
 
 Hexpm refuses to switch an organization to required unless at least one administrator is exempt or has already linked an identity, so a misconfigured provider cannot lock every administrator out of the settings that would fix it.
 
@@ -179,7 +181,7 @@ CI is unaffected. It authenticates with an organization API key, which is the or
 
 A personal API key is a static credential. There is no session behind it, nothing expires it unless its owner set an expiry, and your provider never sees it used. Whether one may reach an enforced organization is the organization's choice, and the default is to allow them:
 
-* **Block** removes this organization's permissions from members' personal keys on the required-by date, and refuses new ones. Their owners are emailed, and the rest of each key keeps working. Members publishing by hand run `mix hex.user auth` instead, and automation moves to an organization key.
+* **Block** removes this organization's permissions from members' personal keys on the required-by date, and refuses new ones. Their owners are emailed, and the rest of each key keeps working. Members publishing by hand run `mix hex.user auth` instead, after `mix hex.organization deauth ORGANIZATION` on any machine where they ran `mix hex.organization auth ORGANIZATION`, because `mix` uses the key that command stored ahead of their sign-in. Automation moves to an organization key.
 
     Blocking follows the same members enforcement does. A pilot turns personal keys away for the members with Require SSO turned on and for nobody else, and it refuses new ones rather than removing what is already there, so a pilot shows you what required mode will do without taking anything away yet. An exempt member's keys are never touched.
 
@@ -202,7 +204,7 @@ The first two stay open because an organization whose client secret expired, or 
 
 Leaving is open because it removes the member's own access rather than granting any, and it is the only lever someone deactivated at the provider has. Gating it would leave them unable to authenticate, unable to leave, and still a billed seat.
 
-Reaching any of the three that way is recorded in the organization's audit log, which names the screen, and emailed to its administrators, at most once an hour per member.
+Reaching any of the three that way is recorded in the organization's audit log, which names the screen. Reaching billing or the SSO settings is also emailed to the administrators, at most once an hour per member. Leaving is not emailed.
 
 The SSO screen is reachable so the connection can be repaired, and turning enforcement off for the organization counts as repairing it. Exempting individual members does not: it outlives the outage and leaves the organization reading as enforced, so that control needs a current organization access session like everything else.
 

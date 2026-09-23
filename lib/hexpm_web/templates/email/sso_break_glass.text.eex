@@ -6,4 +6,4 @@ Organization Reached Without Single Sign-On
 
 <%= SSOBreakGlass.scope() %>
 
-<%= SSOBreakGlass.action() %>
+<%= SSOBreakGlass.action(@username) %>

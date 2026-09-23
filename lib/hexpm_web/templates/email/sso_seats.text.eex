@@ -1,5 +1,7 @@
 <%= SSOSeats.heading(@kind) %>
 
-<%= SSOSeats.body(@kind, @organization) %>
+<%= SSOSeats.body(@kind, @source, @organization) %>
 
-<%= SSOSeats.next_step(@kind) %>
+<%= SSOSeats.next_step(@kind, @source) %>
+
+<%= SSOSeats.rate_limit() %>

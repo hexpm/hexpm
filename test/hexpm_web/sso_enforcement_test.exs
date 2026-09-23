@@ -347,6 +347,12 @@ defmodule HexpmWeb.SSOEnforcementTest do
         })
 
       assert redirected_to(conn) == "/dashboard/profile"
+
+      # Audited like every other screen reached without a session, and not
+      # announced to the administrators.
+      assert [log] = break_glass_logs(context)
+      assert log.params["screen"] == "leave"
+      assert Repo.all(from(e in OutboxEntry, where: e.category == "sso.break_glass")) == []
     end
 
     # Leaving is carved out because it is the only lever someone deactivated at

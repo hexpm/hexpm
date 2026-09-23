@@ -229,21 +229,32 @@ defmodule Hexpm.Emails do
     |> render_body(:sso_identity_linked)
   end
 
-  def sso_identity_unlinked(organization, username, recipients) do
+  def sso_identity_unlinked(
+        organization,
+        username,
+        unlinked_by,
+        locked_out?,
+        login_url,
+        recipients
+      ) do
     base_email(:sso_identity_unlinked)
     |> email_to(recipients)
     |> subject("Hex.pm - Organization SSO disconnected")
     |> assign(:organization, organization)
     |> assign(:username, username)
+    |> assign(:unlinked_by, unlinked_by)
+    |> assign(:locked_out, locked_out?)
+    |> assign(:login_url, login_url)
     |> render_body(:sso_identity_unlinked)
   end
 
-  def sso_seats(organization, kind, recipients) do
+  def sso_seats(organization, kind, source, recipients) do
     base_email(:sso_seats)
     |> email_to(recipients)
     |> subject("Hex.pm - #{sso_seats_subject(kind, organization)}")
     |> assign(:organization, organization)
     |> assign(:kind, kind)
+    |> assign(:source, source)
     |> render_body(:sso_seats)
   end
 
@@ -251,6 +262,9 @@ defmodule Hexpm.Emails do
 
   defp sso_seats_subject("expansion_failed", organization),
     do: "#{organization} could not add a seat"
+
+  defp sso_seats_subject("seat_limit_unknown", organization),
+    do: "#{organization} seat count could not be read"
 
   def organization_tfa(organization, stage, recipients, suspended) do
     base_email(:organization_tfa)
@@ -277,14 +291,27 @@ defmodule Hexpm.Emails do
   defp organization_tfa_subject("summary", organization),
     do: "#{organization} now requires two-factor authentication"
 
-  def sso_enforcement_pending(organization, required_at, login_url, recipients) do
+  def sso_enforcement_pending(organization, required_at, notice, login_url, recipients) do
     base_email(:sso_enforcement_pending)
     |> email_to(recipients)
     |> subject("Hex.pm - #{organization} will require single sign-on")
     |> assign(:organization, organization)
     |> assign(:required_at, required_at)
+    |> assign(:linked, notice.linked?)
+    |> assign(:session_lifetime, notice.session_lifetime)
+    |> assign(:keys, notice.keys)
     |> assign(:login_url, login_url)
     |> render_body(:sso_enforcement_pending)
+  end
+
+  def sso_enforcement_started(organization, session_lifetime, login_url, recipients) do
+    base_email(:sso_enforcement_started)
+    |> email_to(recipients)
+    |> subject("Hex.pm - #{organization} now requires single sign-on")
+    |> assign(:organization, organization)
+    |> assign(:session_lifetime, session_lifetime)
+    |> assign(:login_url, login_url)
+    |> render_body(:sso_enforcement_started)
   end
 
   def sso_keys_refused(organization, revoked, trimmed, blocked, recipients) do

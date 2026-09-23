@@ -382,25 +382,97 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
+  defmodule SSOIdentityUnlinked do
+    def intro(organization, username, username) do
+      "You disconnected your Hex.pm account from the identity provider of the #{organization} organization."
+    end
+
+    def intro(organization, _username, unlinked_by) do
+      "#{unlinked_by}, an administrator of the #{organization} organization, disconnected your Hex.pm account from the organization's identity provider."
+    end
+
+    def access(true) do
+      "The organization requires single sign-on for your account, and disconnecting ended your current sign-ins to it, so you can't reach it until you connect your account again by signing in through the provider:"
+    end
+
+    def access(false) do
+      "The organization doesn't require single sign-on for your account at the moment, so your access to it hasn't changed. You can connect your account again by signing in through the provider:"
+    end
+
+    def questions(_organization, username, username), do: nil
+
+    def questions(organization, _username, _unlinked_by) do
+      "If you don't know why this happened, ask an administrator of the #{organization} organization."
+    end
+  end
+
   defmodule SSOSeats do
     def heading("seats_exhausted"), do: "Organization Has No Seats Left"
     def heading("expansion_failed"), do: "A Seat Could Not Be Added"
+    def heading("seat_limit_unknown"), do: "Seat Count Could Not Be Read"
 
-    def body("seats_exhausted", organization) do
-      "Someone authenticated to the #{organization} organization through your identity provider and would have been added as a member, but there were no seats left. They were turned away and nothing was billed."
+    def body(kind, source, organization) do
+      "#{attempt(source, organization)}, but #{problem(kind)}. #{outcome(source)}"
     end
 
-    def body("expansion_failed", organization) do
-      "Someone authenticated to the #{organization} organization through your identity provider and would have been added as a member, but the seat could not be purchased. They were turned away and nothing was billed."
+    defp attempt("login", organization) do
+      "Someone signed in to the #{organization} organization through your identity provider and would have been added as a member"
     end
 
-    def next_step("seats_exhausted") do
-      "Add seats from the organization billing page and ask them to sign in again. Further attempts are recorded on the SSO settings page, but this notice is only sent once an hour."
+    defp attempt("scim", organization) do
+      "Your identity provider asked through SCIM provisioning for someone to be added to the #{organization} organization"
     end
 
-    def next_step("expansion_failed") do
-      "Check the payment method on the organization billing page. Until it works, further logins are turned away without retrying the purchase."
+    defp problem("seats_exhausted"), do: "there were no seats left"
+    defp problem("expansion_failed"), do: "buying the extra seat failed"
+
+    defp problem("seat_limit_unknown"),
+      do: "Hex.pm couldn't read how many seats the organization has paid for"
+
+    defp outcome("login"), do: "They were turned away and nothing was billed."
+    defp outcome("scim"), do: "They weren't added and nothing was billed."
+
+    def next_step("seats_exhausted", "login") do
+      "Add seats from the organization billing page and ask them to sign in again."
     end
+
+    def next_step("seats_exhausted", "scim") do
+      "Add seats from the organization billing page. They're added the next time your identity provider sends the request."
+    end
+
+    def next_step("expansion_failed", _source) do
+      "Check the payment method on the organization billing page. For an hour after a failed purchase, anyone who needs a new seat is turned away without another purchase attempt. The first attempt after that tries the purchase again."
+    end
+
+    def next_step("seat_limit_unknown", _source) do
+      "Hex.pm reads the seat count from the billing service every minute, so this usually clears up on its own. If it keeps happening, contact support at #{Common.support_email()}."
+    end
+
+    def rate_limit() do
+      "Further attempts are recorded on the SSO settings page, but a seat notice like this one is only sent once an hour."
+    end
+  end
+
+  defmodule SSOEnforcement do
+    def scope() do
+      "That covers the organization's private packages and dashboard, and publishing or managing public packages you can only manage because the organization owns them."
+    end
+
+    def account_notice() do
+      "Signing in to Hex.pm itself doesn't change, and neither does your access to other organizations or to packages you own yourself."
+    end
+
+    def mix_notice() do
+      "That includes mix, which asks you to authenticate in a browser when it needs a package from the organization."
+    end
+
+    def duration(3_600), do: "hour"
+
+    def duration(seconds) when rem(seconds, 86_400) == 0 and seconds > 86_400,
+      do: "#{div(seconds, 86_400)} days"
+
+    def duration(seconds) when rem(seconds, 3_600) == 0, do: "#{div(seconds, 3_600)} hours"
+    def duration(seconds), do: "#{div(seconds, 60)} minutes"
   end
 
   defmodule OrganizationTFA do
@@ -473,20 +545,85 @@ defmodule HexpmWeb.EmailView do
   end
 
   defmodule SSOEnforcementPending do
+    defdelegate scope(), to: SSOEnforcement
+    defdelegate account_notice(), to: SSOEnforcement
+
+    def session(session_lifetime) do
+      "Once it applies, you sign in through the provider when you reach the organization, and again every #{SSOEnforcement.duration(session_lifetime)}. #{SSOEnforcement.mix_notice()}"
+    end
+
     def intro(organization, required_at) do
       "From #{Calendar.strftime(required_at, "%B %-d, %Y")}, reaching the #{organization} organization on Hex.pm will require signing in through its identity provider."
     end
 
+    def linked(true), do: "Your Hex.pm account is already connected to that provider."
+
+    def linked(false) do
+      "Your Hex.pm account isn't connected to that provider yet. Connect it before then by signing in through the provider, or you'll lose that access on that date until you do:"
+    end
+
+    def keys(%{revoked: [], trimmed: [], blocked: []}), do: []
+
+    def keys(keys) do
+      [
+        "The organization doesn't accept personal API keys from the members it requires single sign-on for, so on that date:"
+        | Enum.reject(
+            [
+              revoked(keys.revoked),
+              trimmed(keys.trimmed),
+              blocked(keys.blocked),
+              "For continuous integration, use an organization key, which authenticates as the organization rather than as a person and is unaffected."
+            ],
+            &is_nil/1
+          )
+      ]
+    end
+
+    defp revoked([]), do: nil
+
+    defp revoked([key_name]),
+      do:
+        "Your key #{key_name} carries nothing but access to this organization, so it will be revoked."
+
+    defp revoked(key_names),
+      do:
+        "Your keys #{Enum.join(key_names, ", ")} carry nothing but access to this organization, so they will be revoked."
+
+    defp trimmed([]), do: nil
+
+    defp trimmed([key_name]),
+      do:
+        "Your key #{key_name} will lose its permissions for this organization and keep the rest."
+
+    defp trimmed(key_names),
+      do:
+        "Your keys #{Enum.join(key_names, ", ")} will lose their permissions for this organization and keep the rest."
+
+    defp blocked([]), do: nil
+
+    defp blocked([key_name]),
+      do:
+        "Your key #{key_name} reaches this organization through wider permissions, which it keeps, but the organization will refuse it."
+
+    defp blocked(key_names),
+      do:
+        "Your keys #{Enum.join(key_names, ", ")} reach this organization through wider permissions, which they keep, but the organization will refuse them."
+  end
+
+  defmodule SSOEnforcementStarted do
+    defdelegate scope(), to: SSOEnforcement
+    defdelegate account_notice(), to: SSOEnforcement
+
+    def intro(organization) do
+      "Reaching the #{organization} organization on Hex.pm now requires you to sign in through its identity provider."
+    end
+
     def not_linked() do
-      "Your Hex account is not connected to that provider yet. Connect it before then and nothing about your day changes. Leave it until after and you lose access to the organization's private packages until you do."
+      "Your Hex.pm account isn't connected to that provider, so you can't reach any of that until you connect it by signing in through the provider:"
     end
 
-    def account_notice() do
-      "This does not affect your Hex account itself, your own packages, or any other organization you belong to. You keep signing in to Hex.pm exactly as you do now."
-    end
-
-    def cli_notice() do
-      "Command line access is included. Once enforcement starts, mix will ask you to authenticate in a browser the first time it needs a package from this organization, and again whenever the organization's authentication window lapses."
+    def session(session_lifetime) do
+      "After that, you sign in through the provider again every #{SSOEnforcement.duration(session_lifetime)}. #{SSOEnforcement.mix_notice()}"
     end
   end
 
@@ -500,7 +637,7 @@ defmodule HexpmWeb.EmailView do
     def rest_of_key([], trimmed), do: kept(trimmed)
 
     def rest_of_key(revoked, []) do
-      "#{subject(revoked)} nothing else, so #{pronoun(revoked)} been revoked. Delete #{object(revoked)} from your dashboard when convenient."
+      "#{subject(revoked)} nothing else, so #{pronoun(revoked)} been revoked."
     end
 
     def rest_of_key(revoked, trimmed) do
@@ -527,6 +664,13 @@ defmodule HexpmWeb.EmailView do
       "For your own work, run mix hex.user auth and sign in, which authenticates you through the provider when the organization asks for it. For continuous integration, use an organization key, which authenticates as the organization rather than as a person and is unaffected."
     end
 
+    # mix hex.organization auth stores a key per organization, and mix uses a
+    # stored key ahead of the account sign-in. mix hex.user auth leaves those
+    # stored keys in place.
+    def stored_key(organization) do
+      "If you ran mix hex.organization auth #{organization} on a machine, mix stored a key for the organization there and keeps using it instead of your sign-in. Run mix hex.organization deauth #{organization} on that machine to remove it."
+    end
+
     def why() do
       "A personal key is a static credential. There is nothing for the organization's provider to check when it is used, and nothing that expires it, which is why an organization requiring SSO can choose to turn them away."
     end
@@ -545,9 +689,6 @@ defmodule HexpmWeb.EmailView do
     defp pronoun([_key_name]), do: "it has"
     defp pronoun(_key_names), do: "they have"
 
-    defp object([_key_name]), do: "it"
-    defp object(_key_names), do: "them"
-
     defp keys_removed([key_name]), do: "Your key #{key_name} has had its access"
 
     defp keys_removed(key_names) do
@@ -563,21 +704,56 @@ defmodule HexpmWeb.EmailView do
 
   defmodule SSOBreakGlass do
     def intro(organization, username, screen) do
-      "#{username} reached the #{organization} organization's #{screen_name(screen)} on Hex.pm, one of the screens enforcement leaves open, without a current single sign-on session."
+      case purpose(screen) do
+        nil ->
+          "#{username} reached the #{organization} organization on Hex.pm without a current single sign-on session."
+
+        purpose ->
+          "#{username} reached the #{organization} organization on Hex.pm without a current single sign-on session, to #{purpose}."
+      end
     end
 
-    defp screen_name(screen), do: String.replace(screen, "_", " ")
+    # The screens enforcement leaves open, named by the controller action that
+    # served them.
+    defp purpose("billing"), do: "open the billing page"
+    defp purpose("billing_token"), do: "add a payment method"
+    defp purpose("create_billing"), do: "set up billing"
+    defp purpose("update_billing"), do: "change the billing details"
+    defp purpose("cancel_billing"), do: "cancel the subscription"
+    defp purpose("resume_billing"), do: "resume the subscription"
+    defp purpose("change_plan"), do: "change the plan"
+    defp purpose("add_seats"), do: "add seats"
+    defp purpose("remove_seats"), do: "remove seats"
+    defp purpose("show_invoice"), do: "view an invoice"
+    defp purpose("pay_invoice"), do: "pay an invoice"
+    defp purpose("void_invoice"), do: "void an invoice"
+    defp purpose("sso"), do: "open the SSO settings"
+    defp purpose("configure"), do: "change the identity provider settings"
+    defp purpose("test"), do: "test the identity provider connection"
+    defp purpose("enable"), do: "turn on login through the identity provider"
+    defp purpose("disable"), do: "turn off login through the identity provider"
+    defp purpose("delete"), do: "delete the identity provider connection"
+    defp purpose("rotate"), do: "start replacing the identity provider client secret"
+    defp purpose("promote"), do: "switch to the new identity provider client secret"
+    defp purpose("unlink"), do: "disconnect a member's account from the identity provider"
+    defp purpose("configure_jit"), do: "change just-in-time membership"
+    defp purpose("configure_enforcement"), do: "change SSO enforcement"
+    defp purpose("delete_scim_token"), do: "turn off SCIM provisioning"
+    defp purpose("add_domain"), do: "add a domain"
+    defp purpose("verify_domain"), do: "verify a domain"
+    defp purpose("remove_domain"), do: "remove a domain"
+    defp purpose(_screen), do: nil
 
     def why() do
-      "An organization whose provider stops working, or whose administrator is deactivated in it by mistake, still has to be able to repair the connection, keep paying, and leave. It could not do any of that if those screens sat behind the gate they are the only way to unlock."
+      "An organization whose provider stops working, or whose administrator is deactivated in it by mistake, still has to be able to repair the connection, keep paying, and leave. It couldn't do any of that if those screens sat behind the gate they're the only way to unlock."
     end
 
     def scope() do
-      "Private packages, publishing and the rest of the organization dashboard were refused as usual. The screens that stay open are not read-only: billing can be changed and the subscription cancelled, and the SSO settings screen can replace the provider, unlink accounts and turn enforcement off. It also shows the linked accounts, the personal API keys that reach this organization, and recent login failures, so treat those as seen."
+      "Private packages, publishing and the rest of the organization dashboard were refused as usual. Billing and the SSO settings stay open to administrators and aren't read-only: billing can be changed and the subscription cancelled, and the SSO settings can replace the provider, unlink accounts and turn enforcement off. The SSO settings also show the linked accounts, the personal API keys that reach this organization, and recent login failures."
     end
 
-    def action() do
-      "If this was not one of your administrators, review the organization's members and audit log. The audit log records every screen that was reached this way, including any this notice does not name."
+    def action(username) do
+      "This notice is sent at most once an hour for each member. The audit log records everything reached this way, including anything this notice doesn't name. If you didn't expect #{username} to do this, review the organization's administrators and audit log."
     end
   end
 

@@ -27,5 +27,9 @@
 </p>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= SSOKeysRefused.stored_key(@organization) %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
   <%= SSOKeysRefused.why() %>
 </p>

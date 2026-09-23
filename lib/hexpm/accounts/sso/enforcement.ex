@@ -25,16 +25,23 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   @default_session_lifetime 86_400
   @warning_window_seconds 14 * 24 * 60 * 60
   @pending_category "sso.enforcement_pending"
+  @started_category "sso.enforcement_started"
   @keys_refused_category "sso.keys_refused"
   @break_glass_category "sso.break_glass"
   @break_glass_notice_seconds 60 * 60
+
+  # Leaving removes the member's own access rather than reaching anything, and
+  # the danger zone tab carries nothing but the leave form. Both are open to
+  # every member, so announcing them would mail the administrators each time a
+  # member without a session leaves.
+  @unannounced_screens ~w(danger_zone leave)
 
   @doc """
   The notices that are about one member rather than about their organization,
   and so go away with their account.
   """
   def member_notification_categories,
-    do: [@pending_category, @keys_refused_category]
+    do: [@pending_category, @started_category, @keys_refused_category]
 
   @doc """
   The enforcement mode in force for an organization right now, or `:optional`
@@ -347,11 +354,13 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   end
 
   @doc """
-  Mails members who will lose access when their organization starts requiring
-  SSO and have not linked an identity yet.
+  Mails members whose access changes when their organization starts requiring
+  SSO: the ones who have not linked an identity yet, and, where the
+  organization blocks personal API keys, the ones holding a key it will strip
+  or refuse.
 
   Only fires inside the window before the date, and a member is told once per
-  organization rather than once per tick.
+  organization and required-by date rather than once per tick.
   """
   @spec warn_pending() :: non_neg_integer()
   def warn_pending do
@@ -371,34 +380,157 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     |> Enum.sum()
   end
 
+  @doc """
+  Tells members about an enforcement change as it is saved, rather than
+  leaving it to the daily run.
+
+  Members the change governs from now on and who have no identity to
+  authenticate with lost their access with the save, so they are told that it
+  has started. A required-by date inside the warning window is announced now as
+  well, because the daily run can come after a date saved for the next day.
+
+  `previous` and `connection` are the connection on either side of the change.
+  """
+  @spec announce_change(Organization.t(), Connection.t() | nil, Connection.t() | nil) :: :ok
+  def announce_change(%Organization{} = organization, previous, connection) do
+    now = DateTime.utc_now()
+
+    started =
+      MapSet.difference(
+        governed_member_ids(organization, connection, now),
+        governed_member_ids(organization, previous, now)
+      )
+
+    announce(organization, connection, started, now)
+  end
+
+  @doc """
+  Tells a member about a change to their own enforcement as it is saved, as
+  `announce_change/3` does for a change to the organization's.
+  """
+  @spec announce_member_change(
+          Organization.t(),
+          Connection.t() | nil,
+          OrganizationUser.t(),
+          OrganizationUser.t()
+        ) :: :ok
+  def announce_member_change(%Organization{} = organization, connection, previous, member) do
+    now = DateTime.utc_now()
+
+    started =
+      if not governed?(organization, connection, previous.sso_enforcement, now) and
+           governed?(organization, connection, member.sso_enforcement, now),
+         do: MapSet.new([member.user_id]),
+         else: MapSet.new()
+
+    announce(organization, connection, started, now)
+  end
+
+  defp announce(_organization, nil, _started, _now), do: :ok
+
+  defp announce(organization, connection, started, now) do
+    announce_started(organization, connection, started)
+
+    if pending_in_window?(organization, connection, now) do
+      warn_organization(connection, organization)
+    end
+
+    :ok
+  end
+
+  defp pending_in_window?(organization, connection, now) do
+    horizon = DateTime.add(now, @warning_window_seconds, :second)
+
+    Features.active?(organization) and Connection.enabled?(connection) and
+      connection.enforcement_mode == "required" and not is_nil(connection.required_at) and
+      DateTime.compare(connection.required_at, now) == :gt and
+      DateTime.compare(connection.required_at, horizon) != :gt
+  end
+
+  # A member who has linked an identity authenticates through it and keeps
+  # their access, so only the ones without one are told.
+  defp announce_started(organization, connection, user_ids) do
+    user_ids = MapSet.to_list(user_ids)
+
+    from(member in members_with_identity(organization),
+      join: user in assoc(member, :user),
+      join: address in assoc(user, :emails),
+      where: member.user_id in ^user_ids,
+      where: is_nil(as(:identity).id),
+      where: address.primary and address.verified,
+      select: {user, address.email}
+    )
+    |> Repo.all()
+    |> Enum.each(fn {user, email} ->
+      enqueue_once(
+        Emails.sso_enforcement_started(
+          organization.name,
+          session_lifetime(connection),
+          EmailView.email_url("/sso/org/#{organization.name}"),
+          [email]
+        ),
+        category: @started_category,
+        group_key: "#{@started_category}:#{organization.id}:#{user.id}",
+        scope_key: "sso:user:#{user.id}"
+      )
+    end)
+  end
+
   # A member already marked enforced is governed during the grace period too, so
   # the date does not change anything for them and the notice would tell them
   # they are about to lose access they lost already. An exempt member keeps
   # their access past the date and hears nothing either.
   defp warn_organization(connection, organization) do
     warned = warned_user_ids(organization, connection.required_at)
+    keys = keys_swept_at_required_at(connection, organization)
 
     from(member in members_with_identity(organization),
       join: user in assoc(member, :user),
       join: address in assoc(user, :emails),
       where: is_nil(member.sso_enforcement),
-      where: is_nil(as(:identity).id),
       where: address.primary and address.verified,
-      select: {user, address.email}
+      select: {user, address.email, not is_nil(as(:identity).id)}
     )
     |> Repo.all()
-    |> Enum.map(fn {user, email} ->
-      warn_member(connection, organization, user, email, warned)
+    |> Enum.filter(fn {user, _email, linked?} -> not linked? or Map.has_key?(keys, user.id) end)
+    |> Enum.map(fn {user, email, linked?} ->
+      notice = %{
+        linked?: linked?,
+        session_lifetime: session_lifetime(connection),
+        keys: Map.get(keys, user.id, %{revoked: [], trimmed: [], blocked: []})
+      }
+
+      warn_member(connection, organization, user, email, notice, warned)
     end)
     |> Enum.count(&(&1 == :sent))
   end
 
+  # What the sweep will do on the required-by date to each member's personal
+  # keys, keyed by member, when the organization blocks them.
+  defp keys_swept_at_required_at(%Connection{personal_keys: "block"}, organization) do
+    organization
+    |> Keys.personal_reaching_organization()
+    |> Enum.group_by(& &1.user_id)
+    |> Map.new(fn {user_id, keys} ->
+      outcomes = Enum.group_by(keys, &strip_outcome(&1, organization), & &1.name)
+
+      {user_id,
+       %{
+         revoked: Map.get(outcomes, :revoked, []),
+         trimmed: Map.get(outcomes, :trimmed, []),
+         blocked: Map.get(outcomes, :blocked, [])
+       }}
+    end)
+  end
+
+  defp keys_swept_at_required_at(_connection, _organization), do: %{}
+
   # The audit entry is the durable record, so the "once" hangs off it rather
-  # than off the mail: the outbox row is deleted as soon as it is delivered,
-  # and a member would be told again on every tick. Both go in one transaction,
-  # so a failure while building the mail does not leave the member recorded as
-  # warned and never told.
-  defp warn_member(connection, organization, user, email, warned) do
+  # than off the mail: a delivered outbox row is purged after the retention
+  # window, and a member would be told again on the next tick after that. Both
+  # go in one transaction, so a failure while building the mail does not leave
+  # the member recorded as warned and never told.
+  defp warn_member(connection, organization, user, email, notice, warned) do
     if MapSet.member?(warned, user.id) do
       :skipped
     else
@@ -415,6 +547,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
             Emails.sso_enforcement_pending(
               organization.name,
               connection.required_at,
+              notice,
               EmailView.email_url("/sso/org/#{organization.name}"),
               [email]
             ),
@@ -510,6 +643,16 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     end
   end
 
+  # What stripping this organization's permissions leaves of a key: a key with
+  # none naming it is kept and refused, and one whose permissions all name it is
+  # revoked.
+  defp strip_outcome(key, organization) do
+    case Keys.organization_permissions(key, organization) do
+      [] -> :blocked
+      removed -> if key.permissions -- removed == [], do: :revoked, else: :trimmed
+    end
+  end
+
   @doc """
   The personal API keys this organization turns away, which are the ones its
   governed members hold.
@@ -558,6 +701,8 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
 
   def pending_personal_keys(%Organization{}, nil), do: []
 
+  defp governed_member_ids(_organization, nil, _now), do: MapSet.new()
+
   defp governed_member_ids(organization, connection, now) do
     from(member in OrganizationUser,
       where: member.organization_id == ^organization.id,
@@ -571,11 +716,12 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   end
 
   defp strip_key(key, organization) do
-    case Keys.organization_permissions(key, organization) do
-      [] ->
+    case strip_outcome(key, organization) do
+      :blocked ->
         :kept
 
-      removed ->
+      outcome ->
+        removed = Keys.organization_permissions(key, organization)
         remaining = key.permissions -- removed
         now = DateTime.utc_now()
 
@@ -583,7 +729,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
         # owner would get a 401 naming neither SSO nor this organization. Revoke
         # it instead of leaving an inert credential in their key list.
         fields =
-          if remaining == [] do
+          if outcome == :revoked do
             [permissions: remaining, revoke_at: now, updated_at: now]
           else
             [permissions: remaining, updated_at: now]
@@ -595,7 +741,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
 
         audit_key_revoke(key, organization, removed)
 
-        if remaining == [], do: {:stripped, :revoked}, else: {:stripped, :trimmed}
+        {:stripped, outcome}
     end
   end
 
@@ -609,16 +755,24 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   # the organization took its access away or only turned it down.
   #
   # A blocked key changes no state, so unlike a revoked one it has nothing to
-  # make the notice stop: the outbox row is deleted on delivery and the same key
-  # is blocked again on the next tick. The audit entry is the durable record the
-  # "once" hangs off, per key rather than per member, so minting another key
-  # that this organization also refuses is announced instead of swallowed.
+  # make the notice stop: `enqueue_once/2` only collapses a notice that has not
+  # gone out yet, and the same key is blocked again on the next tick. The audit
+  # entry is the durable record the "once" hangs off, per key rather than per
+  # member, so minting another key that this organization also refuses is
+  # announced instead of swallowed.
   defp notify_key_owner(organization, [{%Key{user: user}, _outcome} | _] = keys) do
     revoked = for {key, :revoked} <- keys, do: key.name
     trimmed = for {key, :trimmed} <- keys, do: key.name
-    blocked = for {key, :blocked} <- keys, do: key
 
-    announced = announced_blocked_key_ids(organization, user)
+    # A key an earlier sweep took this organization's permissions from was
+    # announced then as having lost its access here. What it has left still
+    # reaches the organization through `api` or `repositories` and is refused,
+    # which is the same thing, so it is neither announced again nor listed as
+    # an untouched key.
+    stripped = audited_key_ids(organization, user, "sso.key.revoke")
+    blocked = for {key, :blocked} <- keys, not MapSet.member?(stripped, key.id), do: key
+
+    announced = audited_key_ids(organization, user, "sso.key.blocked")
     fresh = Enum.reject(blocked, &MapSet.member?(announced, &1.id))
 
     if revoked != [] or trimmed != [] or fresh != [] do
@@ -664,11 +818,11 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     |> Repo.insert!()
   end
 
-  defp announced_blocked_key_ids(organization, user) do
+  defp audited_key_ids(organization, user, action) do
     from(log in AuditLog,
       where: log.organization_id == ^organization.id,
       where: log.user_id == ^user.id,
-      where: log.action == "sso.key.blocked",
+      where: log.action == ^action,
       select: log.params
     )
     |> Repo.all()
@@ -688,12 +842,13 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   Billing and the SSO configuration itself stay reachable so an organization
   whose provider has broken can fix it and keep paying. That is a residual
   bypass, so it is audited and the administrators are told, at most hourly per
-  member so a few page loads are one notice.
+  member so a repair that takes several screens is one notice. A member leaving
+  is audited and not announced.
   """
   @spec break_glass(Organization.t(), User.t(), atom(), map()) :: :ok
   def break_glass(%Organization{} = organization, %User{} = user, screen, audit_data) do
     screen = to_string(screen)
-    recent? = recent_break_glass?(organization, user, screen)
+    announce? = screen not in @unannounced_screens and not recent_break_glass?(organization, user)
 
     audit_data
     |> AuditLog.build("sso.break_glass", {organization, %{screen: screen}})
@@ -702,22 +857,18 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     # Only the mail is rate limited. The audit entry is the one record that says
     # an action was taken without a session, so suppressing it would make a
     # sequence of repairs indistinguishable from an administrator who
-    # authenticated normally.
-    unless recent? do
+    # authenticated normally. The mail names the first screen and points at the
+    # audit log for the rest.
+    if announce? do
       notify_admins_of_break_glass(organization, user, screen)
     end
 
     :ok
   end
 
-  # Per screen rather than per member. The carve-out is thirteen actions
-  # including deleting the connection, and the mail names one screen, so a
-  # window covering all of them would announce whichever was reached first and
-  # say nothing about the rest.
-  #
   # The window hangs off the audit entry rather than off the mail, which an
   # organization with no confirmed administrator address never gets.
-  defp recent_break_glass?(organization, user, screen) do
+  defp recent_break_glass?(organization, user) do
     cutoff = DateTime.add(DateTime.utc_now(), -@break_glass_notice_seconds, :second)
 
     Repo.exists?(
@@ -726,7 +877,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
         where: log.user_id == ^user.id,
         where: log.action == "sso.break_glass",
         where: log.inserted_at > ^cutoff,
-        where: fragment("?->>'screen'", log.params) == ^screen
+        where: fragment("?->>'screen'", log.params) not in ^@unannounced_screens
       )
     )
   end
@@ -738,7 +889,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
       Outbox.enqueue!(
         Emails.sso_break_glass(organization.name, user.username, screen, recipients),
         category: @break_glass_category,
-        group_key: "#{@break_glass_category}:#{organization.id}:#{user.id}:#{screen}",
+        group_key: "#{@break_glass_category}:#{organization.id}:#{user.id}",
         scope_key: "sso:organization:#{organization.id}"
       )
     end

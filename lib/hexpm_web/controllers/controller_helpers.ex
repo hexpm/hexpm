@@ -402,6 +402,10 @@ defmodule HexpmWeb.ControllerHelpers do
     do:
       "That provider identity is already linked to a different Hexpm account. Sign in as that account, or ask an organization administrator to unlink it."
 
+  def sso_callback_error_message(:tfa_enrollment_required),
+    do:
+      "The organization requires two-factor authentication. Enable it on your Hexpm account and sign in through the provider again."
+
   def sso_callback_error_message(:identity_conflict),
     do:
       "This Hexpm account is already linked to a different provider identity in this organization. Unlink it before linking another."
