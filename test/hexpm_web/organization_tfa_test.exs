@@ -150,6 +150,9 @@ defmodule HexpmWeb.OrganizationTFATest do
              |> LazyHTML.query("#policy-enforcement option[selected]")
              |> LazyHTML.attribute("value") == [selected]
 
+      assert Enum.empty?(LazyHTML.query(document, "#policy-grace-days")) ==
+               "transition" not in actions
+
       assert LazyHTML.query(document, "#policy-tfa-session-lifetime") |> Enum.empty?()
     end
   end
@@ -254,6 +257,25 @@ defmodule HexpmWeb.OrganizationTFATest do
            |> put_req_header("authorization", key_for(c.admin))
            |> get("/api/orgs/#{c.organization.name}/members")
            |> json_response(200)
+  end
+
+  test "the key form shows why an unenrolled member can't create a key for the organization", c do
+    enforce(c)
+
+    body =
+      build_conn()
+      |> test_login(c.member)
+      |> post("/dashboard/keys", %{
+        key: %{
+          name: "org-key",
+          expires_in: "30",
+          permissions: %{repository: %{c.organization.name => "on"}}
+        }
+      })
+      |> response(400)
+
+    assert body =~
+             "Organization #{c.organization.name} requires two-factor authentication. Enable it in your account security settings."
   end
 
   test "the shared authorization endpoint completes a 2FA-only request after enrollment without extending the target session",
