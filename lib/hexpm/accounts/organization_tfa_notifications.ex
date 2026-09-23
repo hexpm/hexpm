@@ -10,9 +10,12 @@ defmodule Hexpm.Accounts.OrganizationTFANotifications do
     cancel_organization!(organization)
 
     if OrganizationTFA.active?(organization) do
-      Enum.each(Organizations.all_members(organization, user: :emails), fn member ->
-        enqueue!(organization, member, "scheduled")
-      end)
+      now = DateTime.utc_now()
+
+      organization
+      |> Organizations.all_members(user: :emails)
+      |> Enum.filter(&due?(organization, &1, "scheduled", now))
+      |> Enum.each(&enqueue!(organization, &1, "scheduled"))
     end
   end
 
@@ -47,7 +50,7 @@ defmodule Hexpm.Accounts.OrganizationTFANotifications do
              organization_id: organization.id,
              user_id: String.to_integer(user_id)
            ) do
-      stage == "scheduled" or due?(organization, Repo.preload(member, :user), stage, now)
+      due?(organization, Repo.preload(member, :user), stage, now)
     else
       _ -> false
     end
@@ -149,6 +152,9 @@ defmodule Hexpm.Accounts.OrganizationTFANotifications do
     enrolled? = User.tfa_enabled?(member.user)
 
     case stage do
+      "scheduled" ->
+        not enrolled? and remaining > 0
+
       "seven_days" ->
         not enrolled? and transition >= 7 * 86_400 and remaining > 86_400_000_000 and
           remaining <= 604_800_000_000

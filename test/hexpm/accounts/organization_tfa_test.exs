@@ -337,10 +337,10 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
   test "notifications are durable per revision and obsolete queued notices are cancelled" do
     c = context()
     {:ok, org} = configure(c, %{"enforcement" => "transition", "grace_days" => "14"})
-    assert Repo.aggregate(OrganizationTFANotification, :count) == 2
+    assert Repo.aggregate(OrganizationTFANotification, :count) == 1
     OrganizationTFANotifications.sweep()
     OrganizationTFANotifications.sweep()
-    assert Repo.aggregate(OrganizationTFANotification, :count) == 2
+    assert Repo.aggregate(OrganizationTFANotification, :count) == 1
     {:ok, _} = configure(c, %{"enforcement" => "disabled"})
 
     refute Repo.exists?(
@@ -349,7 +349,49 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
              )
            )
 
-    assert Repo.aggregate(OrganizationTFANotification, :count) == 2
+    assert Repo.aggregate(OrganizationTFANotification, :count) == 1
+  end
+
+  test "a transition notifies only unenrolled members and enrolling cancels the notice" do
+    c = context()
+    {:ok, org} = configure(c, %{"enforcement" => "transition", "grace_days" => "14"})
+
+    assert Repo.all(
+             from(n in OrganizationTFANotification,
+               where: n.stage == "scheduled",
+               select: n.user_id
+             )
+           ) == [c.member.id]
+
+    scheduled =
+      from(e in Hexpm.Emails.OutboxEntry,
+        where: like(e.group_key, ^"tfa:#{org.id}:%:%:scheduled"),
+        select: e.group_key
+      )
+
+    assert Repo.all(scheduled) == [
+             "tfa:#{org.id}:#{org.tfa_policy_revision}:#{c.member.id}:scheduled"
+           ]
+
+    enroll(c.member)
+
+    assert Repo.all(scheduled) == []
+  end
+
+  test "immediate enforcement sends no scheduled notice and suspends only unenrolled members" do
+    c = context()
+    {:ok, _} = configure(c, %{"enforcement" => "immediate"})
+
+    refute Repo.exists?(from(n in OrganizationTFANotification, where: n.stage == "scheduled"))
+
+    OrganizationTFANotifications.sweep()
+
+    assert Repo.all(
+             from(n in OrganizationTFANotification,
+               where: n.stage == "suspended",
+               select: n.user_id
+             )
+           ) == [c.member.id]
   end
 
   test "policy activation and disabling its administrator's 2FA serialize on separate connections" do
