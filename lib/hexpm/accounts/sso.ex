@@ -1096,6 +1096,15 @@ defmodule Hexpm.Accounts.SSO do
           |> Repo.one()
 
         if identity do
+          # The organization access sessions go with the identity, so a member
+          # enforcement governs is locked out until they link again.
+          member =
+            Repo.get_by(OrganizationUser, organization_id: organization.id, user_id: user.id)
+
+          locked_out? =
+            not is_nil(member) and
+              Enforcement.governed?(organization, connection, member.sso_enforcement)
+
           Repo.delete_all(
             from(transaction in SSOTransaction,
               where: transaction.connection_id == ^identity.connection_id,
@@ -1117,7 +1126,12 @@ defmodule Hexpm.Accounts.SSO do
           insert_audit!(audit_data, "sso.identity.unlink", {organization, %{user_id: user.id}})
 
           delete_notifications!(connection, user)
-          enqueue_sso_notification!("identity_unlinked", connection, user)
+
+          enqueue_sso_notification!("identity_unlinked", connection, user, %{
+            unlinked_by: audit_data.user,
+            locked_out?: locked_out?
+          })
+
           identity
         end
     end)
@@ -1144,15 +1158,14 @@ defmodule Hexpm.Accounts.SSO do
   identity and the organization access it granted, and the notifications about
   a state that is about to stop being true.
 
-  An organization has one connection or none, so it is read once for all four
+  An organization has one connection or none, so it is read once for all three
   steps rather than once per step.
   """
   def remove_member(multi, organization, user) do
-    connection = get_connection(organization, [:organization])
+    connection = get_connection(organization)
 
     multi
     |> delete_member_transactions(connection, user)
-    |> enqueue_member_unlink_notification(connection, user)
     |> delete_member_identities(organization, user)
     |> delete_member_notifications(connection, user)
   end
@@ -1162,19 +1175,6 @@ defmodule Hexpm.Accounts.SSO do
       locked_connection_for_organization(organization)
       locked_member(organization, user)
       {:ok, :locked}
-    end)
-  end
-
-  defp enqueue_member_unlink_notification(multi, nil, _user), do: multi
-
-  defp enqueue_member_unlink_notification(multi, connection, user) do
-    Multi.run(multi, :organization_sso_unlink_notification, fn _repo, _changes ->
-      if Repo.get_by(Identity, connection_id: connection.id, user_id: user.id) do
-        delete_notifications!(connection, user)
-        enqueue_sso_notification!("identity_unlinked", connection, user)
-      end
-
-      {:ok, :notified}
     end)
   end
 
@@ -1802,7 +1802,9 @@ defmodule Hexpm.Accounts.SSO do
       )
 
     if notify_email_mismatch? do
-      enqueue_sso_notification!("email_mismatch", connection, identity.user, claims.email)
+      enqueue_sso_notification!("email_mismatch", connection, identity.user, %{
+        provider_email: claims.email
+      })
     end
 
     {:login, identity.user, org_session, transaction.return_path}
@@ -2304,28 +2306,28 @@ defmodule Hexpm.Accounts.SSO do
     |> Repo.insert!()
   end
 
-  defp enqueue_sso_notification!(kind, connection, user, provider_email \\ nil) do
+  defp enqueue_sso_notification!(kind, connection, user, details \\ %{}) do
     recipients = Enforcement.user_emails(user)
-    enqueue_sso_notification!(kind, connection, user, provider_email, recipients)
+    enqueue_sso_notification!(kind, connection, user, details, recipients)
   end
 
-  defp enqueue_sso_notification!(_kind, _connection, _user, _provider_email, []), do: :ok
+  defp enqueue_sso_notification!(_kind, _connection, _user, _details, []), do: :ok
 
-  defp enqueue_sso_notification!(kind, connection, user, provider_email, recipients) do
-    case prepare_sso_notification(kind, connection, user, provider_email, recipients) do
+  defp enqueue_sso_notification!(kind, connection, user, details, recipients) do
+    case prepare_sso_notification(kind, connection, user, details, recipients) do
       {:ok, attrs} -> Outbox.insert!(attrs)
       :error -> :ok
     end
   end
 
-  # Rendering and envelope validation run inside the transaction that links an
-  # identity or removes a member. Letting them raise would roll that back, so a
+  # Rendering and envelope validation run inside the transaction that links or
+  # unlinks an identity. Letting them raise would roll that back, so a
   # broken notification loses the mail rather than the security action. The
   # audit log is the durable record either way. The insert stays outside the
   # rescue because it writes through that same transaction: once Postgres has
   # aborted it there is no security action left to save, and swallowing the
   # exception would only hide the rollback from the caller.
-  defp prepare_sso_notification(kind, connection, user, provider_email, recipients) do
+  defp prepare_sso_notification(kind, connection, user, details, recipients) do
     organization = connection.organization.name
 
     {category, email} =
@@ -2336,11 +2338,23 @@ defmodule Hexpm.Accounts.SSO do
 
         "identity_unlinked" ->
           {@identity_unlinked_email_category,
-           Emails.sso_identity_unlinked(organization, user.username, recipients)}
+           Emails.sso_identity_unlinked(
+             organization,
+             user.username,
+             details.unlinked_by.username,
+             details.locked_out?,
+             HexpmWeb.EmailView.email_url("/sso/org/#{organization}"),
+             recipients
+           )}
 
         "email_mismatch" ->
           {@email_mismatch_category,
-           Emails.sso_email_mismatch(organization, user.username, recipients, provider_email)}
+           Emails.sso_email_mismatch(
+             organization,
+             user.username,
+             recipients,
+             details.provider_email
+           )}
       end
 
     {:ok,

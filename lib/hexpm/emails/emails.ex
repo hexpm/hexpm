@@ -229,12 +229,22 @@ defmodule Hexpm.Emails do
     |> render_body(:sso_identity_linked)
   end
 
-  def sso_identity_unlinked(organization, username, recipients) do
+  def sso_identity_unlinked(
+        organization,
+        username,
+        unlinked_by,
+        locked_out?,
+        login_url,
+        recipients
+      ) do
     base_email(:sso_identity_unlinked)
     |> email_to(recipients)
     |> subject("Hex.pm - Organization SSO disconnected")
     |> assign(:organization, organization)
     |> assign(:username, username)
+    |> assign(:unlinked_by, unlinked_by)
+    |> assign(:locked_out, locked_out?)
+    |> assign(:login_url, login_url)
     |> render_body(:sso_identity_unlinked)
   end
 

@@ -105,8 +105,14 @@ defmodule Hexpm.Emails.OutboxWorkerTest do
     for {email, category, subject} <- [
           {Emails.sso_identity_linked("acme", "user", ["one@example.com", "two@example.com"]),
            "sso.identity_linked", "Hex.pm - Organization SSO connected"},
-          {Emails.sso_identity_unlinked("acme", "user", ["one@example.com", "two@example.com"]),
-           "sso.identity_unlinked", "Hex.pm - Organization SSO disconnected"},
+          {Emails.sso_identity_unlinked(
+             "acme",
+             "user",
+             "admin",
+             false,
+             "https://hex.pm/sso/org/acme",
+             ["one@example.com", "two@example.com"]
+           ), "sso.identity_unlinked", "Hex.pm - Organization SSO disconnected"},
           {Emails.sso_email_mismatch(
              "acme",
              "user",

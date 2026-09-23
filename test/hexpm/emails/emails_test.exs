@@ -104,12 +104,57 @@ defmodule Hexpm.EmailsTest do
     test "link and unlink notifications address the recipients they are given" do
       for email <- [
             Emails.sso_identity_linked("acme", "eric", ["primary@example.com"]),
-            Emails.sso_identity_unlinked("acme", "eric", ["primary@example.com"])
+            Emails.sso_identity_unlinked(
+              "acme",
+              "eric",
+              "alice",
+              true,
+              "https://hex.pm/sso/org/acme",
+              ["primary@example.com"]
+            )
           ] do
         assert Enum.map(email.to, &elem(&1, 1)) == ["primary@example.com"]
         assert email.text_body =~ "acme"
         assert email.text_body =~ "eric"
       end
+    end
+
+    test "unlink says who disconnected the account and how to connect it again" do
+      email =
+        Emails.sso_identity_unlinked(
+          "acme",
+          "eric",
+          "alice",
+          true,
+          "https://hex.pm/sso/org/acme",
+          ["primary@example.com"]
+        )
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ "alice, an administrator of the acme organization, disconnected"
+        assert body =~ "https://hex.pm/sso/org/acme"
+        assert body =~ "ask an administrator of the acme organization"
+        refute body =~ "Conventional Hex.pm login"
+        refute body =~ "contact support"
+      end
+
+      assert email.text_body =~ "you can't reach it until you connect your account again"
+    end
+
+    test "unlink by the member themself asks nobody else about it" do
+      email =
+        Emails.sso_identity_unlinked(
+          "acme",
+          "eric",
+          "eric",
+          false,
+          "https://hex.pm/sso/org/acme",
+          ["primary@example.com"]
+        )
+
+      assert email.text_body =~ "You disconnected your Hex.pm account"
+      assert email.text_body =~ "your access to it hasn't changed"
+      refute email.text_body =~ "ask an administrator"
     end
 
     test "email mismatch identifies the provider address" do

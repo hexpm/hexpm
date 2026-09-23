@@ -1433,6 +1433,71 @@ defmodule Hexpm.Accounts.SSOTest do
       refute Repo.exists?(Identity)
     end
 
+    test "removing or leaving sends no unlink notice", context do
+      leaver = insert(:user)
+      insert(:organization_user, organization: context.organization, user: leaver)
+      link_identity(context, context.member)
+      link_identity(context, leaver, subject: "leaver")
+
+      assert :ok =
+               Organizations.remove_member(context.organization, context.member,
+                 audit: audit_data(context.admin)
+               )
+
+      assert :ok =
+               Organizations.remove_member(context.organization, leaver,
+                 audit: audit_data(leaver)
+               )
+
+      refute Repo.exists?(Identity)
+
+      refute Repo.exists?(
+               from(entry in OutboxEntry, where: entry.category == "sso.identity_unlinked")
+             )
+    end
+
+    test "an administrator unlink tells a governed member they are locked out", context do
+      link_identity(context, context.admin, subject: "admin")
+      link_identity(context, context.member)
+
+      assert {:ok, _connection} =
+               SSO.configure_enforcement(
+                 context.organization,
+                 %{"enforcement_mode" => "required", "personal_keys" => "allow"},
+                 audit: audit_data(context.admin)
+               )
+
+      assert {:ok, %Identity{}} =
+               SSO.unlink_identity(context.organization, context.member,
+                 audit: audit_data(context.admin)
+               )
+
+      body = unlinked_notice().email["text_body"]
+
+      assert body =~
+               "#{context.admin.username}, an administrator of the " <>
+                 "#{context.organization.name} organization, disconnected your Hex.pm account"
+
+      assert body =~ "you can't reach it until you connect your account again"
+      assert body =~ "/sso/org/#{context.organization.name}"
+      refute body =~ "contact support"
+    end
+
+    test "an administrator unlink tells an ungoverned member nothing else changed", context do
+      link_identity(context, context.member)
+
+      assert {:ok, %Identity{}} =
+               SSO.unlink_identity(context.organization, context.member,
+                 audit: audit_data(context.admin)
+               )
+
+      body = unlinked_notice().email["text_body"]
+
+      assert body =~ "your access to it hasn't changed"
+      assert body =~ "/sso/org/#{context.organization.name}"
+      refute body =~ "can't reach it"
+    end
+
     test "a provider email change notifies the member without changing their addresses",
          context do
       link_identity(context, context.member, provider_email: "old@example.com")
@@ -1550,6 +1615,10 @@ defmodule Hexpm.Accounts.SSOTest do
         attrs
       )
     )
+  end
+
+  defp unlinked_notice do
+    Repo.one!(from(entry in OutboxEntry, where: entry.category == "sso.identity_unlinked"))
   end
 
   defp browser_session(user) do

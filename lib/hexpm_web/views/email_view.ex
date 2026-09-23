@@ -382,6 +382,30 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
+  defmodule SSOIdentityUnlinked do
+    def intro(organization, username, username) do
+      "You disconnected your Hex.pm account from the identity provider of the #{organization} organization."
+    end
+
+    def intro(organization, _username, unlinked_by) do
+      "#{unlinked_by}, an administrator of the #{organization} organization, disconnected your Hex.pm account from the organization's identity provider."
+    end
+
+    def access(true) do
+      "The organization requires single sign-on for your account, and disconnecting ended your current sign-ins to it, so you can't reach it until you connect your account again by signing in through the provider:"
+    end
+
+    def access(false) do
+      "The organization doesn't require single sign-on for your account at the moment, so your access to it hasn't changed. You can connect your account again by signing in through the provider:"
+    end
+
+    def questions(_organization, username, username), do: nil
+
+    def questions(organization, _username, _unlinked_by) do
+      "If you don't know why this happened, ask an administrator of the #{organization} organization."
+    end
+  end
+
   defmodule SSOSeats do
     def heading("seats_exhausted"), do: "Organization Has No Seats Left"
     def heading("expansion_failed"), do: "A Seat Could Not Be Added"
