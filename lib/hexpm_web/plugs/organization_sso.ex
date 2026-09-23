@@ -17,7 +17,8 @@ defmodule HexpmWeb.Plugs.OrganizationSSO do
   broken, or whose administrator was deactivated in it by mistake, has to be
   able to repair the connection, keep paying, and get out, and it could not if
   those screens sat behind the gate they are the only way to unlock. Reaching
-  one that way is audited and mailed to the administrators.
+  one that way is audited, and mailed to the administrators unless it is a
+  member leaving.
 
   `screen:` names what the audit entry records where the action name is not the
   screen a person would recognise. It defaults to the action name.

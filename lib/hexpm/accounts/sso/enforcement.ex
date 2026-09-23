@@ -29,6 +29,12 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   @break_glass_category "sso.break_glass"
   @break_glass_notice_seconds 60 * 60
 
+  # Leaving removes the member's own access rather than reaching anything, and
+  # the danger zone tab carries nothing but the leave form. Both are open to
+  # every member, so announcing them would mail the administrators each time a
+  # member without a session leaves.
+  @unannounced_screens ~w(danger_zone leave)
+
   @doc """
   The notices that are about one member rather than about their organization,
   and so go away with their account.
@@ -696,12 +702,13 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   Billing and the SSO configuration itself stay reachable so an organization
   whose provider has broken can fix it and keep paying. That is a residual
   bypass, so it is audited and the administrators are told, at most hourly per
-  member so a few page loads are one notice.
+  member so a repair that takes several screens is one notice. A member leaving
+  is audited and not announced.
   """
   @spec break_glass(Organization.t(), User.t(), atom(), map()) :: :ok
   def break_glass(%Organization{} = organization, %User{} = user, screen, audit_data) do
     screen = to_string(screen)
-    recent? = recent_break_glass?(organization, user, screen)
+    announce? = screen not in @unannounced_screens and not recent_break_glass?(organization, user)
 
     audit_data
     |> AuditLog.build("sso.break_glass", {organization, %{screen: screen}})
@@ -710,22 +717,18 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     # Only the mail is rate limited. The audit entry is the one record that says
     # an action was taken without a session, so suppressing it would make a
     # sequence of repairs indistinguishable from an administrator who
-    # authenticated normally.
-    unless recent? do
+    # authenticated normally. The mail names the first screen and points at the
+    # audit log for the rest.
+    if announce? do
       notify_admins_of_break_glass(organization, user, screen)
     end
 
     :ok
   end
 
-  # Per screen rather than per member. The carve-out is thirteen actions
-  # including deleting the connection, and the mail names one screen, so a
-  # window covering all of them would announce whichever was reached first and
-  # say nothing about the rest.
-  #
   # The window hangs off the audit entry rather than off the mail, which an
   # organization with no confirmed administrator address never gets.
-  defp recent_break_glass?(organization, user, screen) do
+  defp recent_break_glass?(organization, user) do
     cutoff = DateTime.add(DateTime.utc_now(), -@break_glass_notice_seconds, :second)
 
     Repo.exists?(
@@ -734,7 +737,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
         where: log.user_id == ^user.id,
         where: log.action == "sso.break_glass",
         where: log.inserted_at > ^cutoff,
-        where: fragment("?->>'screen'", log.params) == ^screen
+        where: fragment("?->>'screen'", log.params) not in ^@unannounced_screens
       )
     )
   end
@@ -746,7 +749,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
       Outbox.enqueue!(
         Emails.sso_break_glass(organization.name, user.username, screen, recipients),
         category: @break_glass_category,
-        group_key: "#{@break_glass_category}:#{organization.id}:#{user.id}:#{screen}",
+        group_key: "#{@break_glass_category}:#{organization.id}:#{user.id}",
         scope_key: "sso:organization:#{organization.id}"
       )
     end

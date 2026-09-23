@@ -171,6 +171,31 @@ defmodule Hexpm.EmailsTest do
     end
   end
 
+  describe "sso_break_glass/4" do
+    test "says what was reached in words" do
+      email = Emails.sso_break_glass("acme", "alice", "delete", ["admin@example.com"])
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~
+                 "alice reached the acme organization on Hex.pm without a current single " <>
+                   "sign-on session, to delete the identity provider connection."
+
+        refute body =~ "as seen"
+        refute body =~ "not one of your administrators"
+      end
+    end
+
+    test "leaves out a screen it has no words for" do
+      email = Emails.sso_break_glass("acme", "alice", "somewhere", ["admin@example.com"])
+
+      assert email.text_body =~
+               "alice reached the acme organization on Hex.pm without a current single " <>
+                 "sign-on session.\n"
+
+      refute email.text_body =~ "somewhere"
+    end
+  end
+
   describe "sso_keys_refused/5" do
     test "asks for nothing that cannot be done with a revoked key" do
       email = Emails.sso_keys_refused("acme", ["laptop"], [], [], ["primary@example.com"])

@@ -522,21 +522,56 @@ defmodule HexpmWeb.EmailView do
 
   defmodule SSOBreakGlass do
     def intro(organization, username, screen) do
-      "#{username} reached the #{organization} organization's #{screen_name(screen)} on Hex.pm, one of the screens enforcement leaves open, without a current single sign-on session."
+      case purpose(screen) do
+        nil ->
+          "#{username} reached the #{organization} organization on Hex.pm without a current single sign-on session."
+
+        purpose ->
+          "#{username} reached the #{organization} organization on Hex.pm without a current single sign-on session, to #{purpose}."
+      end
     end
 
-    defp screen_name(screen), do: String.replace(screen, "_", " ")
+    # The screens enforcement leaves open, named by the controller action that
+    # served them.
+    defp purpose("billing"), do: "open the billing page"
+    defp purpose("billing_token"), do: "add a payment method"
+    defp purpose("create_billing"), do: "set up billing"
+    defp purpose("update_billing"), do: "change the billing details"
+    defp purpose("cancel_billing"), do: "cancel the subscription"
+    defp purpose("resume_billing"), do: "resume the subscription"
+    defp purpose("change_plan"), do: "change the plan"
+    defp purpose("add_seats"), do: "add seats"
+    defp purpose("remove_seats"), do: "remove seats"
+    defp purpose("show_invoice"), do: "view an invoice"
+    defp purpose("pay_invoice"), do: "pay an invoice"
+    defp purpose("void_invoice"), do: "void an invoice"
+    defp purpose("sso"), do: "open the SSO settings"
+    defp purpose("configure"), do: "change the identity provider settings"
+    defp purpose("test"), do: "test the identity provider connection"
+    defp purpose("enable"), do: "turn on login through the identity provider"
+    defp purpose("disable"), do: "turn off login through the identity provider"
+    defp purpose("delete"), do: "delete the identity provider connection"
+    defp purpose("rotate"), do: "start replacing the identity provider client secret"
+    defp purpose("promote"), do: "switch to the new identity provider client secret"
+    defp purpose("unlink"), do: "disconnect a member's account from the identity provider"
+    defp purpose("configure_jit"), do: "change just-in-time membership"
+    defp purpose("configure_enforcement"), do: "change SSO enforcement"
+    defp purpose("delete_scim_token"), do: "turn off SCIM provisioning"
+    defp purpose("add_domain"), do: "add a domain"
+    defp purpose("verify_domain"), do: "verify a domain"
+    defp purpose("remove_domain"), do: "remove a domain"
+    defp purpose(_screen), do: nil
 
     def why() do
-      "An organization whose provider stops working, or whose administrator is deactivated in it by mistake, still has to be able to repair the connection, keep paying, and leave. It could not do any of that if those screens sat behind the gate they are the only way to unlock."
+      "An organization whose provider stops working, or whose administrator is deactivated in it by mistake, still has to be able to repair the connection, keep paying, and leave. It couldn't do any of that if those screens sat behind the gate they're the only way to unlock."
     end
 
     def scope() do
-      "Private packages, publishing and the rest of the organization dashboard were refused as usual. The screens that stay open are not read-only: billing can be changed and the subscription cancelled, and the SSO settings screen can replace the provider, unlink accounts and turn enforcement off. It also shows the linked accounts, the personal API keys that reach this organization, and recent login failures, so treat those as seen."
+      "Private packages, publishing and the rest of the organization dashboard were refused as usual. Billing and the SSO settings stay open to administrators and aren't read-only: billing can be changed and the subscription cancelled, and the SSO settings can replace the provider, unlink accounts and turn enforcement off. The SSO settings also show the linked accounts, the personal API keys that reach this organization, and recent login failures."
     end
 
-    def action() do
-      "If this was not one of your administrators, review the organization's members and audit log. The audit log records every screen that was reached this way, including any this notice does not name."
+    def action(username) do
+      "This notice is sent at most once an hour for each member. The audit log records everything reached this way, including anything this notice doesn't name. If you didn't expect #{username} to do this, review the organization's administrators and audit log."
     end
   end
 

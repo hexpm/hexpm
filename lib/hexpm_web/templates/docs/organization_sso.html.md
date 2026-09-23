@@ -202,7 +202,7 @@ The first two stay open because an organization whose client secret expired, or 
 
 Leaving is open because it removes the member's own access rather than granting any, and it is the only lever someone deactivated at the provider has. Gating it would leave them unable to authenticate, unable to leave, and still a billed seat.
 
-Reaching any of the three that way is recorded in the organization's audit log, which names the screen, and emailed to its administrators, at most once an hour per member.
+Reaching any of the three that way is recorded in the organization's audit log, which names the screen. Reaching billing or the SSO settings is also emailed to the administrators, at most once an hour per member. Leaving is not emailed.
 
 The SSO screen is reachable so the connection can be repaired, and turning enforcement off for the organization counts as repairing it. Exempting individual members does not: it outlives the outage and leaves the organization reading as enforced, so that control needs a current organization access session like everything else.
 
