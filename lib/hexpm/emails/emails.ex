@@ -248,12 +248,13 @@ defmodule Hexpm.Emails do
     |> render_body(:sso_identity_unlinked)
   end
 
-  def sso_seats(organization, kind, recipients) do
+  def sso_seats(organization, kind, source, recipients) do
     base_email(:sso_seats)
     |> email_to(recipients)
     |> subject("Hex.pm - #{sso_seats_subject(kind, organization)}")
     |> assign(:organization, organization)
     |> assign(:kind, kind)
+    |> assign(:source, source)
     |> render_body(:sso_seats)
   end
 
@@ -261,6 +262,9 @@ defmodule Hexpm.Emails do
 
   defp sso_seats_subject("expansion_failed", organization),
     do: "#{organization} could not add a seat"
+
+  defp sso_seats_subject("seat_limit_unknown", organization),
+    do: "#{organization} seat count could not be read"
 
   def organization_tfa(organization, stage, recipients, suspended) do
     base_email(:organization_tfa)

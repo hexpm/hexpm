@@ -409,21 +409,47 @@ defmodule HexpmWeb.EmailView do
   defmodule SSOSeats do
     def heading("seats_exhausted"), do: "Organization Has No Seats Left"
     def heading("expansion_failed"), do: "A Seat Could Not Be Added"
+    def heading("seat_limit_unknown"), do: "Seat Count Could Not Be Read"
 
-    def body("seats_exhausted", organization) do
-      "Someone authenticated to the #{organization} organization through your identity provider and would have been added as a member, but there were no seats left. They were turned away and nothing was billed."
+    def body(kind, source, organization) do
+      "#{attempt(source, organization)}, but #{problem(kind)}. #{outcome(source)}"
     end
 
-    def body("expansion_failed", organization) do
-      "Someone authenticated to the #{organization} organization through your identity provider and would have been added as a member, but the seat could not be purchased. They were turned away and nothing was billed."
+    defp attempt("login", organization) do
+      "Someone signed in to the #{organization} organization through your identity provider and would have been added as a member"
     end
 
-    def next_step("seats_exhausted") do
-      "Add seats from the organization billing page and ask them to sign in again. Further attempts are recorded on the SSO settings page, but this notice is only sent once an hour."
+    defp attempt("scim", organization) do
+      "Your identity provider asked through SCIM provisioning for someone to be added to the #{organization} organization"
     end
 
-    def next_step("expansion_failed") do
-      "Check the payment method on the organization billing page. Until it works, further logins are turned away without retrying the purchase."
+    defp problem("seats_exhausted"), do: "there were no seats left"
+    defp problem("expansion_failed"), do: "buying the extra seat failed"
+
+    defp problem("seat_limit_unknown"),
+      do: "Hex.pm couldn't read how many seats the organization has paid for"
+
+    defp outcome("login"), do: "They were turned away and nothing was billed."
+    defp outcome("scim"), do: "They weren't added and nothing was billed."
+
+    def next_step("seats_exhausted", "login") do
+      "Add seats from the organization billing page and ask them to sign in again."
+    end
+
+    def next_step("seats_exhausted", "scim") do
+      "Add seats from the organization billing page. They're added the next time your identity provider sends the request."
+    end
+
+    def next_step("expansion_failed", _source) do
+      "Check the payment method on the organization billing page. For an hour after a failed purchase, anyone who needs a new seat is turned away without another purchase attempt. The first attempt after that tries the purchase again."
+    end
+
+    def next_step("seat_limit_unknown", _source) do
+      "Hex.pm reads the seat count from the billing service every minute, so this usually clears up on its own. If it keeps happening, contact support at #{Common.support_email()}."
+    end
+
+    def rate_limit() do
+      "Further attempts are recorded on the SSO settings page, but a seat notice like this one is only sent once an hour."
     end
   end
 

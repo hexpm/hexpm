@@ -904,7 +904,7 @@ defmodule Hexpm.Accounts.SSO do
         _other ->
           record_expansion_failure(connection)
           record_failure(connection, stage, :expansion_failed)
-          enqueue_seats_notice!(connection, "expansion_failed")
+          enqueue_seats_notice!(connection, "expansion_failed", stage)
       end
     end
   end
@@ -932,16 +932,16 @@ defmodule Hexpm.Accounts.SSO do
   end
 
   @doc """
-  Tells the administrators the organization has run out of seats, and records
-  the stage that hit it.
+  Tells the administrators someone could not be added for want of a seat, or
+  because the seat count could not be read, and records the stage that hit it.
 
   Provisioning refuses silently otherwise: the provider logs the 409 and nobody
-  on this side hears about it. Notice first, so the failure this call is about
-  to write does not count as the recent one that suppresses it.
+  on this side hears about it.
   """
-  def notify_seats_exhausted(%Connection{} = connection, stage) do
-    enqueue_seats_notice!(connection, "seats_exhausted")
-    record_failure(connection, stage, :seats_exhausted)
+  def notify_no_seat(%Connection{} = connection, reason, stage)
+      when reason in [:seats_exhausted, :seat_limit_unknown] do
+    enqueue_seats_notice!(connection, Atom.to_string(reason), stage)
+    record_failure(connection, stage, reason)
     :ok
   end
 
@@ -1761,7 +1761,7 @@ defmodule Hexpm.Accounts.SSO do
             login!(transaction, connection, identity, claims, user_session_id, audit_data)
 
           {:error, reason} ->
-            maybe_notify_seats_exhausted(connection, reason)
+            maybe_notify_no_seat(connection, reason)
             record_failure(connection, :login, reason, identity.user)
             consume_transaction!(transaction, %{})
             {:reject, reason}
@@ -1838,16 +1838,18 @@ defmodule Hexpm.Accounts.SSO do
 
   # The seat is only checked here, not taken. Consent has not been given yet, so
   # a membership created now would outlive an abandoned consent screen. What
-  # this buys is not offering a screen that cannot be honoured.
+  # this buys is not offering a screen that cannot be honoured. The
+  # organization's 2FA policy comes first, as it does at the join: someone it
+  # turns away cannot join however many seats there are, and telling the
+  # administrators to add one would not help.
   defp begin_jit_link!(transaction, connection, claims, current_user) do
     case jit_admits(connection, claims.email, claims[:email_verified] == true) do
       :ok ->
-        case Seats.claim(connection.organization, unknown: :deny) do
-          {:ok, _usage} ->
-            begin_conventional_link!(transaction, claims)
-
-          {:error, reason} ->
-            reject_jit(transaction, connection, current_user, reason)
+        with :ok <- Hexpm.Accounts.OrganizationTFA.admit(connection.organization, current_user),
+             {:ok, _usage} <- Seats.claim(connection.organization, unknown: :deny) do
+          begin_conventional_link!(transaction, claims)
+        else
+          {:error, reason} -> reject_jit(transaction, connection, current_user, reason)
         end
 
       {:error, reason} ->
@@ -1864,9 +1866,7 @@ defmodule Hexpm.Accounts.SSO do
   defp rejection_code(_reason), do: :not_member
 
   defp reject_jit(transaction, connection, current_user, reason) do
-    # Before recording, so the failure this attempt is about to write does not
-    # count as the recent one that suppresses the notice.
-    maybe_notify_seats_exhausted(connection, reason)
+    maybe_notify_no_seat(connection, reason)
     record_failure(connection, :login, reason, current_user)
     consume_transaction!(transaction, %{})
     {:reject, reason}
@@ -1937,23 +1937,25 @@ defmodule Hexpm.Accounts.SSO do
     end
   end
 
-  # A login loop must not mail the administrators on every attempt, so the
-  # failures already being recorded double as the rate limit.
-  defp maybe_notify_seats_exhausted(connection, reason)
+  defp maybe_notify_no_seat(connection, reason)
        when reason in [:seats_exhausted, :seat_limit_unknown] do
-    enqueue_seats_notice!(connection, "seats_exhausted")
-    :ok
+    enqueue_seats_notice!(connection, Atom.to_string(reason), :login)
   end
 
-  defp maybe_notify_seats_exhausted(_connection, _reason), do: :ok
+  defp maybe_notify_no_seat(_connection, _reason), do: :ok
 
+  # At most one seat notice an hour per connection, whatever kind it is. A
+  # login loop must not mail the administrators on every attempt, and under the
+  # expand policy a purchase that fails is followed by the same person being
+  # refused for want of a seat, which is one event and one notice.
+  #
   # Rate-limited on the outbox rather than on the failure log: failures are a
   # 20-row ring buffer per connection, and with just-in-time membership on
   # anyone signed in can start a login and fill it, which would reset the
   # window at will. Outbox entries stay on the table after delivery and are
   # not evicted within the window.
-  defp enqueue_seats_notice!(connection, kind) do
-    group_key = "#{@seats_exhausted_category}:#{kind}:#{connection.id}"
+  defp enqueue_seats_notice!(connection, kind, stage) do
+    group_key = "#{@seats_exhausted_category}:#{connection.id}"
     cutoff = DateTime.add(DateTime.utc_now(), -@seats_notice_seconds, :second)
 
     recent? =
@@ -1964,12 +1966,12 @@ defmodule Hexpm.Accounts.SSO do
         )
       )
 
-    unless recent?, do: send_seats_notice!(connection, kind, group_key)
+    unless recent?, do: send_seats_notice!(connection, kind, stage, group_key)
 
     :ok
   end
 
-  defp send_seats_notice!(connection, kind, group_key) do
+  defp send_seats_notice!(connection, kind, stage, group_key) do
     organization = connection.organization
 
     case Enforcement.admin_emails(organization) do
@@ -1977,7 +1979,7 @@ defmodule Hexpm.Accounts.SSO do
         :ok
 
       recipients ->
-        email = Emails.sso_seats(organization.name, kind, recipients)
+        email = Emails.sso_seats(organization.name, kind, Atom.to_string(stage), recipients)
 
         Outbox.enqueue!(email,
           category: @seats_exhausted_category,
@@ -2433,6 +2435,8 @@ defmodule Hexpm.Accounts.SSO do
         "The provider did not confirm the email address, so no member was added",
       "seat_limit_unknown" =>
         "The organization's seat count could not be read, so no member was added",
+      "tfa_enrollment_required" =>
+        "The person has not enabled two-factor authentication, which the organization requires",
       "pkce_s256_unsupported" => "The provider does not support PKCE with S256",
       "token_endpoint_rejected_request" => "The provider rejected the authorization code",
       "token_endpoint_unavailable" => "The provider token endpoint could not be reached",

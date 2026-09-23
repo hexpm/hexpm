@@ -196,6 +196,35 @@ defmodule Hexpm.EmailsTest do
     end
   end
 
+  describe "sso_seats/4" do
+    test "tells a login apart from provisioning" do
+      login = Emails.sso_seats("acme", "seats_exhausted", "login", ["admin@example.com"])
+      scim = Emails.sso_seats("acme", "seats_exhausted", "scim", ["admin@example.com"])
+
+      assert login.text_body =~ "Someone signed in to the acme organization"
+      assert login.text_body =~ "ask them to sign in again"
+
+      assert scim.text_body =~ "Your identity provider asked through SCIM provisioning"
+      refute scim.text_body =~ "Someone signed in"
+      refute scim.text_body =~ "sign in again"
+    end
+
+    test "says when a failed purchase is tried again" do
+      email = Emails.sso_seats("acme", "expansion_failed", "login", ["admin@example.com"])
+
+      assert email.text_body =~ "For an hour after a failed purchase"
+      refute email.text_body =~ "without retrying the purchase"
+    end
+
+    test "does not call an unreadable seat count a full organization" do
+      email = Emails.sso_seats("acme", "seat_limit_unknown", "login", ["admin@example.com"])
+
+      assert email.subject == "Hex.pm - acme seat count could not be read"
+      assert email.text_body =~ "couldn't read how many seats the organization has paid for"
+      refute email.text_body =~ "no seats left"
+    end
+  end
+
   describe "sso_keys_refused/5" do
     test "asks for nothing that cannot be done with a revoked key" do
       email = Emails.sso_keys_refused("acme", ["laptop"], [], [], ["primary@example.com"])
