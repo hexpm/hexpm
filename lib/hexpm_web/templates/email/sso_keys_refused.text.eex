@@ -10,4 +10,6 @@ Personal API Keys And <%= @organization %>
 <% end %>
 <%= SSOKeysRefused.alternatives() %>
 
+<%= SSOKeysRefused.stored_key(@organization) %>
+
 <%= SSOKeysRefused.why() %>

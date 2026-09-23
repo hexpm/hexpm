@@ -126,6 +126,29 @@ defmodule Hexpm.EmailsTest do
     end
   end
 
+  describe "sso_keys_refused/5" do
+    test "asks for nothing that cannot be done with a revoked key" do
+      email = Emails.sso_keys_refused("acme", ["laptop"], [], [], ["primary@example.com"])
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ "The key laptop carried nothing else, so it has been revoked."
+        # Revoked keys are not listed on the dashboard.
+        refute body =~ "dashboard"
+      end
+    end
+
+    test "tells the owner to remove a key mix stored for the organization" do
+      for email <- [
+            Emails.sso_keys_refused("acme", ["laptop"], [], [], ["primary@example.com"]),
+            Emails.sso_keys_refused("acme", [], [], ["laptop"], ["primary@example.com"])
+          ],
+          body <- [email.html_body, email.text_body] do
+        assert body =~ "mix hex.user auth"
+        assert body =~ "Run mix hex.organization deauth acme on that machine"
+      end
+    end
+  end
+
   describe "secrets detected" do
     defp secrets_detected_email(findings) do
       Emails.secrets_detected([build(:user)], "cowboy", "2.16.1", findings)

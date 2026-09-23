@@ -431,7 +431,7 @@ defmodule HexpmWeb.EmailView do
     def rest_of_key([], trimmed), do: kept(trimmed)
 
     def rest_of_key(revoked, []) do
-      "#{subject(revoked)} nothing else, so #{pronoun(revoked)} been revoked. Delete #{object(revoked)} from your dashboard when convenient."
+      "#{subject(revoked)} nothing else, so #{pronoun(revoked)} been revoked."
     end
 
     def rest_of_key(revoked, trimmed) do
@@ -458,6 +458,13 @@ defmodule HexpmWeb.EmailView do
       "For your own work, run mix hex.user auth and sign in, which authenticates you through the provider when the organization asks for it. For continuous integration, use an organization key, which authenticates as the organization rather than as a person and is unaffected."
     end
 
+    # mix hex.organization auth stores a key per organization, and mix uses a
+    # stored key ahead of the account sign-in. mix hex.user auth leaves those
+    # stored keys in place.
+    def stored_key(organization) do
+      "If you ran mix hex.organization auth #{organization} on a machine, mix stored a key for the organization there and keeps using it instead of your sign-in. Run mix hex.organization deauth #{organization} on that machine to remove it."
+    end
+
     def why() do
       "A personal key is a static credential. There is nothing for the organization's provider to check when it is used, and nothing that expires it, which is why an organization requiring SSO can choose to turn them away."
     end
@@ -475,9 +482,6 @@ defmodule HexpmWeb.EmailView do
 
     defp pronoun([_key_name]), do: "it has"
     defp pronoun(_key_names), do: "they have"
-
-    defp object([_key_name]), do: "it"
-    defp object(_key_names), do: "them"
 
     defp keys_removed([key_name]), do: "Your key #{key_name} has had its access"
 

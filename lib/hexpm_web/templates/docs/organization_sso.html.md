@@ -179,7 +179,7 @@ CI is unaffected. It authenticates with an organization API key, which is the or
 
 A personal API key is a static credential. There is no session behind it, nothing expires it unless its owner set an expiry, and your provider never sees it used. Whether one may reach an enforced organization is the organization's choice, and the default is to allow them:
 
-* **Block** removes this organization's permissions from members' personal keys on the required-by date, and refuses new ones. Their owners are emailed, and the rest of each key keeps working. Members publishing by hand run `mix hex.user auth` instead, and automation moves to an organization key.
+* **Block** removes this organization's permissions from members' personal keys on the required-by date, and refuses new ones. Their owners are emailed, and the rest of each key keeps working. Members publishing by hand run `mix hex.user auth` instead, after `mix hex.organization deauth ORGANIZATION` on any machine where they ran `mix hex.organization auth ORGANIZATION`, because `mix` uses the key that command stored ahead of their sign-in. Automation moves to an organization key.
 
     Blocking follows the same members enforcement does. A pilot turns personal keys away for the members you marked enforced and for nobody else, and it refuses new ones rather than removing what is already there, so a pilot shows you what required mode will do without taking anything away yet. An exempt member's keys are never touched.
 
