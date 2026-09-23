@@ -458,27 +458,30 @@ defmodule HexpmWeb.EmailView do
       "That covers the organization's private packages and dashboard, and publishing or managing public packages you can only manage because the organization owns them."
     end
 
-    def session(session_lifetime) do
-      "Once it applies, you sign in through the provider when you reach the organization, and again every #{duration(session_lifetime)}. That includes mix, which asks you to authenticate in a browser when it needs a package from the organization."
-    end
-
     def account_notice() do
       "Signing in to Hex.pm itself doesn't change, and neither does your access to other organizations or to packages you own yourself."
     end
 
-    defp duration(3_600), do: "hour"
+    def mix_notice() do
+      "That includes mix, which asks you to authenticate in a browser when it needs a package from the organization."
+    end
 
-    defp duration(seconds) when rem(seconds, 86_400) == 0 and seconds > 86_400,
+    def duration(3_600), do: "hour"
+
+    def duration(seconds) when rem(seconds, 86_400) == 0 and seconds > 86_400,
       do: "#{div(seconds, 86_400)} days"
 
-    defp duration(seconds) when rem(seconds, 3_600) == 0, do: "#{div(seconds, 3_600)} hours"
-    defp duration(seconds), do: "#{div(seconds, 60)} minutes"
+    def duration(seconds) when rem(seconds, 3_600) == 0, do: "#{div(seconds, 3_600)} hours"
+    def duration(seconds), do: "#{div(seconds, 60)} minutes"
   end
 
   defmodule SSOEnforcementPending do
     defdelegate scope(), to: SSOEnforcement
-    defdelegate session(session_lifetime), to: SSOEnforcement
     defdelegate account_notice(), to: SSOEnforcement
+
+    def session(session_lifetime) do
+      "Once it applies, you sign in through the provider when you reach the organization, and again every #{SSOEnforcement.duration(session_lifetime)}. #{SSOEnforcement.mix_notice()}"
+    end
 
     def intro(organization, required_at) do
       "From #{Calendar.strftime(required_at, "%B %-d, %Y")}, reaching the #{organization} organization on Hex.pm will require signing in through its identity provider."
@@ -536,6 +539,23 @@ defmodule HexpmWeb.EmailView do
     defp blocked(key_names),
       do:
         "Your keys #{Enum.join(key_names, ", ")} reach this organization through wider permissions, which they keep, but the organization will refuse them."
+  end
+
+  defmodule SSOEnforcementStarted do
+    defdelegate scope(), to: SSOEnforcement
+    defdelegate account_notice(), to: SSOEnforcement
+
+    def intro(organization) do
+      "Reaching the #{organization} organization on Hex.pm now requires you to sign in through its identity provider."
+    end
+
+    def not_linked() do
+      "Your Hex.pm account isn't connected to that provider, so you can't reach any of that until you connect it by signing in through the provider:"
+    end
+
+    def session(session_lifetime) do
+      "After that, you sign in through the provider again every #{SSOEnforcement.duration(session_lifetime)}. #{SSOEnforcement.mix_notice()}"
+    end
   end
 
   defmodule SSOKeysRefused do

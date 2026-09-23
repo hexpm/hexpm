@@ -256,6 +256,27 @@ defmodule Hexpm.EmailsTest do
     end
   end
 
+  describe "sso_enforcement_started/4" do
+    test "says the requirement applies now and how to regain access" do
+      email =
+        Emails.sso_enforcement_started(
+          "acme",
+          3_600,
+          "https://hex.pm/sso/org/acme",
+          ["member@example.com"]
+        )
+
+      assert email.subject == "Hex.pm - acme now requires single sign-on"
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ "now requires you to sign in through its identity provider"
+        assert body =~ "https://hex.pm/sso/org/acme"
+        assert body =~ "again every hour"
+        refute body =~ "From "
+      end
+    end
+  end
+
   describe "sso_seats/4" do
     test "tells a login apart from provisioning" do
       login = Emails.sso_seats("acme", "seats_exhausted", "login", ["admin@example.com"])

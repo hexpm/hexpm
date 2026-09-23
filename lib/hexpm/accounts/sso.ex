@@ -257,6 +257,7 @@ defmodule Hexpm.Accounts.SSO do
         if connection.tested_at do
           saved = Repo.update!(change(connection, enabled_at: DateTime.utc_now()))
           insert_audit!(audit_data, "sso.connection.enable", {organization, %{}})
+          :ok = Enforcement.announce_change(organization, connection, saved)
           saved
         else
           Hexpm.RepoBase.rollback(:connection_not_tested)
@@ -647,7 +648,7 @@ defmodule Hexpm.Accounts.SSO do
     gate = Keyword.fetch!(opts, :gate)
     action = Keyword.fetch!(opts, :action)
     audit_params = Keyword.fetch!(opts, :audit_params)
-    after_update = Keyword.get(opts, :after_update, fn _connection -> :ok end)
+    after_update = Keyword.get(opts, :after_update, fn _previous, _saved -> :ok end)
 
     with_existing_connection(
       organization,
@@ -659,10 +660,10 @@ defmodule Hexpm.Accounts.SSO do
 
         with :ok <- gate.(changeset) do
           case Repo.update(changeset) do
-            {:ok, connection} ->
-              :ok = after_update.(connection)
-              insert_audit!(audit_data, action, {organization, audit_params.(connection)})
-              connection
+            {:ok, saved} ->
+              :ok = after_update.(connection, saved)
+              insert_audit!(audit_data, action, {organization, audit_params.(saved)})
+              saved
 
             {:error, changeset} ->
               Hexpm.RepoBase.rollback(changeset)
@@ -693,7 +694,10 @@ defmodule Hexpm.Accounts.SSO do
       changeset: &Connection.enforcement_changeset(&1, params),
       require: &require_active/1,
       gate: &require_reachable_admin(organization, &1),
-      after_update: &clamp_org_sessions(organization, &1),
+      after_update: fn previous, connection ->
+        :ok = clamp_org_sessions(organization, connection)
+        Enforcement.announce_change(organization, previous, connection)
+      end,
       action: "sso.enforcement.configure",
       audit_params:
         &%{
@@ -789,7 +793,7 @@ defmodule Hexpm.Accounts.SSO do
         OrganizationUser.enforcement_changeset(member, %{"sso_enforcement" => enforcement})
 
       case Repo.update(changeset) do
-        {:ok, member} ->
+        {:ok, updated} ->
           if reachable_before? and not reachable_admin?(organization) do
             Hexpm.RepoBase.rollback(:no_reachable_admin)
           end
@@ -797,10 +801,11 @@ defmodule Hexpm.Accounts.SSO do
           insert_audit!(audit_data, "sso.enforcement.member", {
             organization,
             user,
-            member.sso_enforcement
+            updated.sso_enforcement
           })
 
-          member
+          :ok = Enforcement.announce_member_change(organization, connection, member, updated)
+          updated
 
         {:error, changeset} ->
           Hexpm.RepoBase.rollback(changeset)

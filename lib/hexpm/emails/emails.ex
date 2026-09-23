@@ -289,6 +289,16 @@ defmodule Hexpm.Emails do
     |> render_body(:sso_enforcement_pending)
   end
 
+  def sso_enforcement_started(organization, session_lifetime, login_url, recipients) do
+    base_email(:sso_enforcement_started)
+    |> email_to(recipients)
+    |> subject("Hex.pm - #{organization} now requires single sign-on")
+    |> assign(:organization, organization)
+    |> assign(:session_lifetime, session_lifetime)
+    |> assign(:login_url, login_url)
+    |> render_body(:sso_enforcement_started)
+  end
+
   def sso_keys_refused(organization, revoked, trimmed, blocked, recipients) do
     base_email(:sso_keys_refused)
     |> email_to(recipients)

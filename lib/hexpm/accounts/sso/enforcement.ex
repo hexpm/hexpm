@@ -25,6 +25,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   @default_session_lifetime 86_400
   @warning_window_seconds 14 * 24 * 60 * 60
   @pending_category "sso.enforcement_pending"
+  @started_category "sso.enforcement_started"
   @keys_refused_category "sso.keys_refused"
   @break_glass_category "sso.break_glass"
   @break_glass_notice_seconds 60 * 60
@@ -40,7 +41,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   and so go away with their account.
   """
   def member_notification_categories,
-    do: [@pending_category, @keys_refused_category]
+    do: [@pending_category, @started_category, @keys_refused_category]
 
   @doc """
   The enforcement mode in force for an organization right now, or `:optional`
@@ -379,6 +380,102 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     |> Enum.sum()
   end
 
+  @doc """
+  Tells members about an enforcement change as it is saved, rather than
+  leaving it to the daily run.
+
+  Members the change governs from now on and who have no identity to
+  authenticate with lost their access with the save, so they are told that it
+  has started. A required-by date inside the warning window is announced now as
+  well, because the daily run can come after a date saved for the next day.
+
+  `previous` and `connection` are the connection on either side of the change.
+  """
+  @spec announce_change(Organization.t(), Connection.t() | nil, Connection.t() | nil) :: :ok
+  def announce_change(%Organization{} = organization, previous, connection) do
+    now = DateTime.utc_now()
+
+    started =
+      MapSet.difference(
+        governed_member_ids(organization, connection, now),
+        governed_member_ids(organization, previous, now)
+      )
+
+    announce(organization, connection, started, now)
+  end
+
+  @doc """
+  Tells a member about a change to their own enforcement as it is saved, as
+  `announce_change/3` does for a change to the organization's.
+  """
+  @spec announce_member_change(
+          Organization.t(),
+          Connection.t() | nil,
+          OrganizationUser.t(),
+          OrganizationUser.t()
+        ) :: :ok
+  def announce_member_change(%Organization{} = organization, connection, previous, member) do
+    now = DateTime.utc_now()
+
+    started =
+      if not governed?(organization, connection, previous.sso_enforcement, now) and
+           governed?(organization, connection, member.sso_enforcement, now),
+         do: MapSet.new([member.user_id]),
+         else: MapSet.new()
+
+    announce(organization, connection, started, now)
+  end
+
+  defp announce(_organization, nil, _started, _now), do: :ok
+
+  defp announce(organization, connection, started, now) do
+    announce_started(organization, connection, started)
+
+    if pending_in_window?(organization, connection, now) do
+      warn_organization(connection, organization)
+    end
+
+    :ok
+  end
+
+  defp pending_in_window?(organization, connection, now) do
+    horizon = DateTime.add(now, @warning_window_seconds, :second)
+
+    Features.active?(organization) and Connection.enabled?(connection) and
+      connection.enforcement_mode == "required" and not is_nil(connection.required_at) and
+      DateTime.compare(connection.required_at, now) == :gt and
+      DateTime.compare(connection.required_at, horizon) != :gt
+  end
+
+  # A member who has linked an identity authenticates through it and keeps
+  # their access, so only the ones without one are told.
+  defp announce_started(organization, connection, user_ids) do
+    user_ids = MapSet.to_list(user_ids)
+
+    from(member in members_with_identity(organization),
+      join: user in assoc(member, :user),
+      join: address in assoc(user, :emails),
+      where: member.user_id in ^user_ids,
+      where: is_nil(as(:identity).id),
+      where: address.primary and address.verified,
+      select: {user, address.email}
+    )
+    |> Repo.all()
+    |> Enum.each(fn {user, email} ->
+      enqueue_once(
+        Emails.sso_enforcement_started(
+          organization.name,
+          session_lifetime(connection),
+          EmailView.email_url("/sso/org/#{organization.name}"),
+          [email]
+        ),
+        category: @started_category,
+        group_key: "#{@started_category}:#{organization.id}:#{user.id}",
+        scope_key: "sso:user:#{user.id}"
+      )
+    end)
+  end
+
   # A member already marked enforced is governed during the grace period too, so
   # the date does not change anything for them and the notice would tell them
   # they are about to lose access they lost already. An exempt member keeps
@@ -603,6 +700,8 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   end
 
   def pending_personal_keys(%Organization{}, nil), do: []
+
+  defp governed_member_ids(_organization, nil, _now), do: MapSet.new()
 
   defp governed_member_ids(organization, connection, now) do
     from(member in OrganizationUser,
