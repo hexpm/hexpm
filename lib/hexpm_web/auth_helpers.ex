@@ -221,6 +221,8 @@ defmodule HexpmWeb.AuthHelpers do
     end
   end
 
+  @token_prefix Hexpm.Accounts.Key.token_prefix()
+
   def authenticate(conn) do
     authenticate_at(conn, DateTime.utc_now())
   end
@@ -228,9 +230,17 @@ defmodule HexpmWeb.AuthHelpers do
   def authenticate_at(conn, now) do
     case get_req_header(conn, "authorization") do
       ["Basic " <> credentials] -> credentials |> basic_auth(conn, now) |> report(:basic)
-      ["Bearer " <> token] -> token |> oauth_token_auth(conn) |> report(:bearer)
-      [key] -> key |> key_auth(conn) |> report(:key)
+      ["Bearer " <> token] -> token |> bearer_auth(conn) |> report(:bearer)
+      [key] -> key |> String.trim() |> key_auth(conn) |> report(:key)
       _ -> {:error, :missing}
+    end
+  end
+
+  defp bearer_auth(token, conn) do
+    if String.starts_with?(token, @token_prefix) do
+      key_auth(token, conn)
+    else
+      oauth_token_auth(token, conn)
     end
   end
 
