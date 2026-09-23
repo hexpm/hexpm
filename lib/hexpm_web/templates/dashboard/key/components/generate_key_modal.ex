@@ -69,6 +69,9 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
           <span class="block text-sm font-medium text-grey-700 dark:text-grey-300 mb-3">
             Key permissions
           </span>
+          <div :if={permission_errors(@form) != []} class="mb-3">
+            <.errors errors={permission_errors(@form)} />
+          </div>
 
           <%!-- API Permissions --%>
           <div
@@ -209,6 +212,20 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
     </.modal>
     """
   end
+
+  defp permission_errors(%{source: %Ecto.Changeset{} = changeset}) do
+    changeset
+    |> Ecto.Changeset.traverse_errors(&translate_error/1)
+    |> Map.get(:permissions, [])
+    |> List.wrap()
+    |> Enum.flat_map(fn
+      %{} = errors -> errors |> Map.values() |> List.flatten()
+      message -> [message]
+    end)
+    |> Enum.uniq()
+  end
+
+  defp permission_errors(_form), do: []
 
   defp package_resource(nil, package), do: package.name
   defp package_resource(organization, package), do: "#{organization.name}/#{package.name}"

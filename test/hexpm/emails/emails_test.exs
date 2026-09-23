@@ -100,6 +100,56 @@ defmodule Hexpm.EmailsTest do
 
   # Recipient selection lives in Hexpm.Accounts.SSO, which passes an already
   # filtered list; these cover the rendering only.
+  describe "organization 2FA notices" do
+    defp tfa_organization() do
+      %Organization{name: "acme", tfa_required_at: ~U[2026-09-29 01:04:00.000000Z]}
+    end
+
+    defp tfa_email(stage, suspended \\ []) do
+      Emails.organization_tfa(tfa_organization(), stage, ["member@example.com"], suspended)
+    end
+
+    test "notices before the deadline say what happens at the deadline" do
+      for {stage, subject} <- [
+            {"scheduled", "Hex.pm - acme will require two-factor authentication"},
+            {"seven_days", "Hex.pm - acme requires two-factor authentication in 7 days"},
+            {"one_day", "Hex.pm - acme requires two-factor authentication within a day"}
+          ] do
+        email = tfa_email(stage)
+        assert email.subject == subject
+
+        assert email.text_body =~
+                 "requires two-factor authentication from September 29, 2026 at 01:04 UTC."
+
+        assert email.text_body =~ "before then to keep access"
+        assert email.html_body =~ "/dashboard/security"
+        refute email.text_body =~ "work again"
+        refute email.text_body =~ "invitation"
+      end
+    end
+
+    test "the suspension notice says access returns once 2FA is enabled" do
+      email = tfa_email("suspended")
+      assert email.subject == "Hex.pm - Your access to acme is suspended until you enable 2FA"
+      assert email.text_body =~ "suspended until you enable 2FA at "
+      assert email.text_body =~ "work again as soon as it's enabled"
+    end
+
+    test "the administrator summary lists suspended members instead of asking to enable 2FA" do
+      email = tfa_email("summary", ["alice", "bob"])
+      assert email.subject == "Hex.pm - acme now requires two-factor authentication"
+
+      assert email.text_body =~
+               "Members suspended because they haven't enabled 2FA: alice, bob."
+
+      assert email.text_body =~ "/dashboard/orgs/acme/members"
+      refute email.text_body =~ "/dashboard/security"
+
+      assert tfa_email("summary").text_body =~
+               "Every member has 2FA enabled, so no one is suspended."
+    end
+  end
+
   describe "SSO security notifications" do
     test "link and unlink notifications address the recipients they are given" do
       for email <- [

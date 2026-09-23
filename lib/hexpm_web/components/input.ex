@@ -240,6 +240,11 @@ defmodule HexpmWeb.Components.Input do
     values: ["default", "light"],
     doc: "Style variant: 'default' uses grey-300 border, 'light' uses grey-200 border"
 
+  attr :size, :string,
+    default: "md",
+    values: ["sm", "md"],
+    doc: "Height matching the button sizes: 'sm' for inline controls, 'md' for form fields"
+
   attr :value, :any, default: nil
 
   def select_input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
@@ -273,7 +278,8 @@ defmodule HexpmWeb.Components.Input do
           id={@id}
           name={@name}
           class={[
-            "w-full h-12 pl-4 pr-10 bg-white border rounded-lg dark:bg-grey-800",
+            "w-full bg-white border rounded-lg dark:bg-grey-800",
+            select_size_classes(@size),
             "text-grey-900 font-medium cursor-pointer dark:text-grey-100",
             "focus:outline-none focus:ring-2 dark:focus:ring-offset-grey-800",
             "appearance-none",
@@ -290,7 +296,10 @@ defmodule HexpmWeb.Components.Input do
           <% end %>
         </select>
         <%!-- Chevron down icon --%>
-        <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-grey-400 dark:text-grey-300">
+        <div class={[
+          "absolute top-1/2 -translate-y-1/2 pointer-events-none text-grey-400 dark:text-grey-300",
+          if(@size == "sm", do: "right-2.5", else: "right-3")
+        ]}>
           {icon(:heroicon, "chevron-down", width: 15, height: 15)}
         </div>
       </div>
@@ -604,6 +613,9 @@ defmodule HexpmWeb.Components.Input do
         []
     end
   end
+
+  defp select_size_classes("sm"), do: "h-9 pl-3 pr-8 text-sm"
+  defp select_size_classes("md"), do: "h-12 pl-4 pr-10"
 
   # Helper function to determine border classes based on variant and error state
   defp select_border_classes("light", errors) when errors != [] do

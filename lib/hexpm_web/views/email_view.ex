@@ -403,6 +403,75 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
+  defmodule OrganizationTFA do
+    import Phoenix.HTML, only: [html_escape: 1, safe_to_string: 1]
+
+    @reminders ~w(scheduled seven_days one_day)
+
+    def heading(stage) when stage in @reminders, do: "Two-Factor Authentication Required"
+    def heading("suspended"), do: "Organization Access Suspended"
+    def heading("summary"), do: "Two-Factor Authentication Enforced"
+
+    def intro(stage, organization, format) when stage in @reminders do
+      "The #{escape(organization.name, format)} organization requires two-factor authentication from #{deadline(organization, format)}."
+    end
+
+    def intro("suspended", organization, format) do
+      "The #{escape(organization.name, format)} organization has required two-factor authentication since #{deadline(organization, format)}, and your Hex.pm account doesn't have it enabled."
+    end
+
+    def intro("summary", organization, format) do
+      "The #{escape(organization.name, format)} organization has required two-factor authentication since #{deadline(organization, format)}."
+    end
+
+    def body(stage, _suspended, format) when stage in @reminders do
+      "Your Hex.pm account doesn't have 2FA enabled. Enable it #{security_settings(format)} before then to keep access. After the deadline you can't reach the organization's private packages and documentation until you enable it."
+    end
+
+    def body("suspended", _suspended, format) do
+      "Your access to the organization is suspended until you enable 2FA #{security_settings(format)}. Your existing Hex client sessions and API keys work again as soon as it's enabled, and your membership, role, package ownership and billed seat are kept."
+    end
+
+    def body("summary", [], _format) do
+      "Every member has 2FA enabled, so no one is suspended."
+    end
+
+    def body("summary", suspended, format) do
+      "Members suspended because they haven't enabled 2FA: #{escape(Enum.join(suspended, ", "), format)}. They keep their membership, role, package ownership and billed seat, and regain access as soon as they enable 2FA."
+    end
+
+    def members_page(organization, format) do
+      url = HexpmWeb.EmailView.email_url("/dashboard/orgs/#{organization.name}/members")
+
+      case format do
+        :html ->
+          "Each member's 2FA status is shown on the organization's #{Common.link(url, "members page", :html)}."
+
+        :text ->
+          "Each member's 2FA status is shown on the organization's members page: #{url}"
+      end
+    end
+
+    defp security_settings(:html) do
+      url = HexpmWeb.EmailView.email_url("/dashboard/security")
+      "in your #{Common.link(url, "account security settings", :html)}"
+    end
+
+    defp security_settings(:text) do
+      "at #{HexpmWeb.EmailView.email_url("/dashboard/security")}"
+    end
+
+    defp deadline(organization, :html),
+      do:
+        "<strong>#{HexpmWeb.ViewHelpers.pretty_utc_datetime(organization.tfa_required_at)}</strong>"
+
+    defp deadline(organization, :text),
+      do: HexpmWeb.ViewHelpers.pretty_utc_datetime(organization.tfa_required_at)
+
+    defp escape(text, :html), do: text |> html_escape() |> safe_to_string()
+    defp escape(text, :text), do: text
+  end
+
   defmodule SSOEnforcementPending do
     def intro(organization, required_at) do
       "From #{Calendar.strftime(required_at, "%B %-d, %Y")}, reaching the #{organization} organization on Hex.pm will require signing in through its identity provider."

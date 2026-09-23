@@ -1,7 +1,16 @@
-<div class="organization-tfa-notice">
-<h1>Organization two-factor authentication</h1>
-<p><strong><%= @organization.name %></strong> requires two-factor authentication from <strong><%= HexpmWeb.ViewHelpers.pretty_utc_datetime(@organization.tfa_required_at) %></strong>.</p>
-<%= if @stage == "summary" do %><p>Members suspended because 2FA isn't enabled: <%= if @suspended == [], do: "none", else: Enum.join(@suspended, ", ") %>.</p><% end %>
-<%= if @stage == "suspended" do %><p>Your organization access is suspended until you enable 2FA. Your membership, role, package ownership, and billed seat are retained.</p><% end %>
-<p>Enable 2FA in your <a href="<%= email_url("/dashboard/security") %>">account security settings</a>. Your existing Hex client sessions and API keys work again as soon as 2FA is enabled on your account. SSO authentication is separate and may also be required. Recovery codes remain available. After enrollment, return to any pending invitation to accept it.</p>
-</div>
+<h1 style="color: #030913; font-size: 24px; line-height: 32px; font-weight: 600; margin: 0 0 24px 0; text-align: center;">
+  <%= OrganizationTFA.heading(@stage) %>
+</h1>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= raw(OrganizationTFA.intro(@stage, @organization, :html)) %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= raw(OrganizationTFA.body(@stage, @suspended, :html)) %>
+</p>
+<%= if @stage == "summary" do %>
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= raw(OrganizationTFA.members_page(@organization, :html)) %>
+</p>
+<% end %>
