@@ -292,9 +292,9 @@ defmodule HexpmWeb.SSOEnforcementTest do
 
       conn = get(conn, "/dashboard/orgs/#{context.organization.name}/members")
 
-      # The per-member enforcement control is what the members tab derives from
-      # the mode, and it only appears once the organization is not optional.
-      assert response(conn, 200) =~ "sso-enforcement-form-#{context.member.id}"
+      # The exemption list is what the members tab derives from the mode, and it
+      # only appears once the organization is not optional.
+      assert response(conn, 200) =~ "Nobody is exempt."
     end
 
     test "keeps billing reachable and says so", context do

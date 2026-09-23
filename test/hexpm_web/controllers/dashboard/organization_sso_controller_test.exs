@@ -540,12 +540,14 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
   end
 
   test "shows the exemption list and the residual bypasses during the grace period", context do
+    required_at = DateTime.add(DateTime.utc_now(), 9 * 24 * 60 * 60, :second)
+
     insert(:organization_sso_connection,
       organization: context.organization,
       tested_at: DateTime.utc_now(),
       enabled_at: DateTime.utc_now(),
       enforcement_mode: "required",
-      required_at: DateTime.add(DateTime.utc_now(), 9 * 24 * 60 * 60, :second)
+      required_at: required_at
     )
 
     {:ok, _member} =
@@ -560,18 +562,224 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     members = conn |> get("/dashboard/orgs/#{context.organization.name}/members")
     members_html = html_response(members, 200)
 
-    assert members_html =~ "Exempt from SSO (1)"
+    assert members_html =~ "1 member reaches this organization"
     assert members_html =~ context.member.username
-    assert members_html =~ "Enforced on the date"
+
+    document = LazyHTML.from_document(members_html)
+
+    # The toggles read the same as in a pilot, so the date is what says that
+    # the members with it off need SSO too once it passes.
+    assert [notice] = document |> LazyHTML.query("#sso-required-date") |> Enum.to_list()
+
+    assert LazyHTML.text(notice) =~
+             ~r/SSO becomes required on\s+#{HexpmWeb.ViewHelpers.pretty_date(required_at)}\s+for every member who isn't exempt/
+
+    assert member_row(document, context.member) |> LazyHTML.text() =~ "SSO exempt"
+
+    assert [_toggle] =
+             document |> LazyHTML.query("#sso-enforcement-#{context.member.id}") |> Enum.to_list()
 
     sso_html =
       conn
       |> get("/dashboard/orgs/#{context.organization.name}/sso")
       |> html_response(200)
 
-    assert sso_html =~ "Exempt members (1)"
+    assert sso_html =~ "Exempt members."
+    refute sso_html =~ "Exempt members ("
     assert sso_html =~ "Billing and this page"
     assert sso_html =~ "Organization API keys"
+  end
+
+  describe "per-member SSO controls on the members tab" do
+    test "a required organization badges exemptions and has no per-member toggle", context do
+      insert(:organization_sso_connection,
+        organization: context.organization,
+        tested_at: DateTime.utc_now(),
+        enabled_at: DateTime.utc_now(),
+        enforcement_mode: "required"
+      )
+
+      {:ok, _member} =
+        SSO.set_member_enforcement(context.organization, context.admin, "exempt",
+          audit: audit_data(context.admin)
+        )
+
+      document = members_document(context.admin, context)
+
+      refute LazyHTML.text(document) =~ "Require SSO"
+      assert LazyHTML.query(document, "#sso-required-date") |> Enum.to_list() == []
+      assert member_row(document, context.admin) |> LazyHTML.text() =~ "SSO exempt"
+      refute member_row(document, context.member) |> LazyHTML.text() =~ "SSO exempt"
+
+      assert document
+             |> LazyHTML.query("#sso-exempt-user option[value]:not([value=''])")
+             |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim())) == [context.member.username]
+
+      assert [_remove] =
+               document
+               |> LazyHTML.query("#sso-unexempt-form-#{context.admin.id}")
+               |> Enum.to_list()
+    end
+
+    test "exempting and un-exempting a member lands back on the members tab", context do
+      insert(:organization_sso_connection,
+        organization: context.organization,
+        tested_at: DateTime.utc_now(),
+        enabled_at: DateTime.utc_now(),
+        enforcement_mode: "required"
+      )
+
+      {:ok, _member} =
+        SSO.set_member_enforcement(context.organization, context.admin, "exempt",
+          audit: audit_data(context.admin)
+        )
+
+      conn = build_conn() |> test_login(context.admin)
+      path = "/dashboard/orgs/#{context.organization.name}/sso/enforcement/member"
+
+      exempted =
+        post(conn, path, %{"user_id" => context.member.id, "sso_enforcement" => "exempt"})
+
+      assert redirected_to(exempted) == "/dashboard/orgs/#{context.organization.name}/members"
+
+      assert Phoenix.Flash.get(exempted.assigns.flash, :info) =~
+               "#{context.member.username} is exempt from SSO"
+
+      assert member_enforcement(context, context.member) == "exempt"
+
+      removed = post(conn, path, %{"user_id" => context.member.id, "sso_enforcement" => ""})
+
+      assert redirected_to(removed) == "/dashboard/orgs/#{context.organization.name}/members"
+
+      assert Phoenix.Flash.get(removed.assigns.flash, :info) ==
+               "#{context.member.username} now needs SSO."
+
+      assert member_enforcement(context, context.member) == nil
+    end
+
+    test "a pilot has a Require SSO toggle on every row", context do
+      insert(:organization_sso_connection,
+        organization: context.organization,
+        tested_at: DateTime.utc_now(),
+        enabled_at: DateTime.utc_now(),
+        enforcement_mode: "pilot"
+      )
+
+      {:ok, _member} =
+        SSO.set_member_enforcement(context.organization, context.member, "enforced",
+          audit: audit_data(context.admin)
+        )
+
+      {:ok, _member} =
+        SSO.set_member_enforcement(context.organization, context.admin, "exempt",
+          audit: audit_data(context.admin)
+        )
+
+      document = members_document(context.admin, context)
+
+      assert [member_toggle] =
+               document
+               |> LazyHTML.query("#sso-enforcement-#{context.member.id}")
+               |> Enum.to_list()
+
+      assert LazyHTML.attribute(member_toggle, "checked") != []
+
+      assert [admin_toggle] =
+               document
+               |> LazyHTML.query("#sso-enforcement-#{context.admin.id}")
+               |> Enum.to_list()
+
+      assert LazyHTML.attribute(admin_toggle, "checked") == []
+
+      assert member_row(document, context.admin) |> LazyHTML.text() =~ "SSO exempt"
+      refute member_row(document, context.member) |> LazyHTML.text() =~ "SSO exempt"
+
+      assert LazyHTML.text(document) =~
+               "1 member will keep reaching this organization's private packages on a Hexpm password alone once SSO is required."
+
+      assert LazyHTML.query(document, "#sso-required-date") |> Enum.to_list() == []
+
+      reader = insert(:user)
+      insert(:organization_user, organization: context.organization, user: reader, role: "read")
+
+      refute members_document(reader, context) |> LazyHTML.text() =~ "SSO exempt"
+    end
+
+    test "the toggle posts the value its checkbox carries", context do
+      insert(:organization_sso_connection,
+        organization: context.organization,
+        tested_at: DateTime.utc_now(),
+        enabled_at: DateTime.utc_now(),
+        enforcement_mode: "pilot"
+      )
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> put_req_header("content-type", "application/x-www-form-urlencoded")
+
+      path = "/dashboard/orgs/#{context.organization.name}/sso/enforcement/member"
+
+      on =
+        post(conn, path, "user_id=#{context.member.id}&sso_enforcement=&sso_enforcement=enforced")
+
+      assert Phoenix.Flash.get(on.assigns.flash, :info) ==
+               "#{context.member.username} now needs SSO."
+
+      assert member_enforcement(context, context.member) == "enforced"
+
+      off = post(conn, path, "user_id=#{context.member.id}&sso_enforcement=")
+
+      assert Phoenix.Flash.get(off.assigns.flash, :info) ==
+               "#{context.member.username} doesn't need SSO."
+
+      assert member_enforcement(context, context.member) == nil
+    end
+
+    test "turning the toggle off during the grace period names the date", context do
+      required_at = DateTime.add(DateTime.utc_now(), 9 * 24 * 60 * 60, :second)
+
+      insert(:organization_sso_connection,
+        organization: context.organization,
+        tested_at: DateTime.utc_now(),
+        enabled_at: DateTime.utc_now(),
+        enforcement_mode: "required",
+        required_at: required_at
+      )
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/enforcement/member", %{
+          "user_id" => context.member.id,
+          "sso_enforcement" => ""
+        })
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
+               "#{context.member.username} needs SSO from #{HexpmWeb.ViewHelpers.pretty_date(required_at)}."
+    end
+
+    test "an optional organization shows no per-member SSO controls", context do
+      insert(:organization_sso_connection,
+        organization: context.organization,
+        tested_at: DateTime.utc_now(),
+        enabled_at: DateTime.utc_now(),
+        enforcement_mode: "optional"
+      )
+
+      Repo.update_all(
+        from(member in Hexpm.Accounts.OrganizationUser,
+          where: member.organization_id == ^context.organization.id
+        ),
+        set: [sso_enforcement: "exempt"]
+      )
+
+      text = members_document(context.admin, context) |> LazyHTML.text()
+
+      refute text =~ "Require SSO"
+      refute text =~ "SSO exempt"
+      refute text =~ "Exempt from SSO"
+    end
   end
 
   test "does not claim every member goes through the provider when nobody is exempt", context do
@@ -894,6 +1102,30 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     end
   end
 
+  defp members_document(user, context) do
+    build_conn()
+    |> test_login(user)
+    |> get("/dashboard/orgs/#{context.organization.name}/members")
+    |> html_response(200)
+    |> LazyHTML.from_document()
+  end
+
+  # The member list row, which links to the profile. The exemption list names
+  # members without a link, so this never matches a row there.
+  defp member_row(document, user) do
+    document
+    |> LazyHTML.query("li")
+    |> Enum.filter(&(LazyHTML.query(&1, ~s(a[href="/users/#{user.username}"])) |> Enum.any?()))
+    |> then(fn [row] -> row end)
+  end
+
+  defp member_enforcement(context, user) do
+    Repo.get_by!(Hexpm.Accounts.OrganizationUser,
+      organization_id: context.organization.id,
+      user_id: user.id
+    ).sso_enforcement
+  end
+
   defp enable_beta_for(organization) do
     config = Application.fetch_env!(:hexpm, :organization_sso)
 
@@ -1079,7 +1311,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
           "sso_enforcement" => %{"x" => "y"}
         })
 
-      assert redirected_to(conn) =~ "/sso"
+      assert redirected_to(conn) == "/dashboard/orgs/#{context.organization.name}/members"
 
       assert Repo.get_by!(Hexpm.Accounts.OrganizationUser, user_id: context.member.id).sso_enforcement ==
                nil
