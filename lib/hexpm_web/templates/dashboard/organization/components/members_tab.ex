@@ -58,21 +58,21 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
             options={tfa_enforcement_options(@organization)}
             value={if @organization.tfa_required_at, do: "keep", else: "transition"}
           />
-          <label
+          <div
             :if={!Hexpm.Accounts.OrganizationTFA.enforced?(@organization)}
             id="policy-grace-days"
             class="hidden group-has-[option[value=transition]:checked]/tfa-policy:block"
           >
-            Days from now until enforcement (1 to 30)
-            <input
+            <.text_input
+              id="policy-grace-days-input"
               type="number"
               name="policy[grace_days]"
+              label="Days from now until enforcement (1 to 30)"
               value="14"
               min="1"
               max="30"
-              class="block w-full rounded border border-grey-300 dark:border-grey-600 bg-white dark:bg-grey-800 p-2"
             />
-          </label>
+          </div>
           <p>
             Configuring this policy requires 2FA on your own account. Once enforcement starts, disable it before scheduling another transition.
           </p>
@@ -178,7 +178,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                       value={org_user.role}
                       options={role_options()}
                       variant="light"
-                      class="w-28 h-9 text-sm"
+                      size="sm"
+                      class="w-28"
                     />
                   </.sudo_form>
 
@@ -196,7 +197,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                       value={org_user.sso_enforcement}
                       options={sso_enforcement_options(@sso_mode, @sso_requires_sso?)}
                       variant="light"
-                      class="w-40 h-9 text-sm"
+                      size="sm"
+                      class="w-40"
                     />
                   </.sudo_form>
 
