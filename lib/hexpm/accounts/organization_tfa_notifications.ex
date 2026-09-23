@@ -156,11 +156,11 @@ defmodule Hexpm.Accounts.OrganizationTFANotifications do
         not enrolled? and remaining > 0
 
       "seven_days" ->
-        not enrolled? and transition >= 7 * 86_400 and remaining > 86_400_000_000 and
+        not enrolled? and transition > 7 * 86_400 and remaining > 86_400_000_000 and
           remaining <= 604_800_000_000
 
       "one_day" ->
-        not enrolled? and transition >= 86_400 and remaining > 0 and remaining <= 86_400_000_000
+        not enrolled? and transition > 86_400 and remaining > 0 and remaining <= 86_400_000_000
 
       "suspended" ->
         not enrolled? and remaining <= 0

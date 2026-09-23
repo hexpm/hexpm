@@ -378,6 +378,34 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
     assert Repo.all(scheduled) == []
   end
 
+  test "a reminder is only sent when the transition is longer than its window" do
+    for {days, stage} <- [{7, "seven_days"}, {1, "one_day"}] do
+      c = context()
+
+      {:ok, org} =
+        configure(c, %{"enforcement" => "transition", "grace_days" => Integer.to_string(days)})
+
+      OrganizationTFANotifications.sweep()
+
+      refute Repo.exists?(
+               from(n in OrganizationTFANotification,
+                 where: n.organization_id == ^org.id and n.stage == ^stage
+               )
+             )
+    end
+
+    c = context()
+    {:ok, org} = configure(c, %{"enforcement" => "transition", "grace_days" => "8"})
+    OrganizationTFANotifications.sweep(DateTime.add(org.tfa_required_at, -7 * 86_400))
+
+    assert Repo.all(
+             from(n in OrganizationTFANotification,
+               where: n.organization_id == ^org.id and n.stage == "seven_days",
+               select: n.user_id
+             )
+           ) == [c.member.id]
+  end
+
   test "immediate enforcement sends no scheduled notice and suspends only unenrolled members" do
     c = context()
     {:ok, _} = configure(c, %{"enforcement" => "immediate"})
@@ -807,7 +835,7 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
     assert summary.email["text_body"] =~ c.member.username
     enroll(c.member)
     updated = Repo.get!(Hexpm.Emails.OutboxEntry, summary.id)
-    assert updated.email["text_body"] =~ "Members suspended because 2FA isn't enabled: none"
+    assert updated.email["text_body"] =~ "Every member has 2FA enabled, so no one is suspended."
     refute updated.email["text_body"] =~ c.member.username
 
     assert Repo.aggregate(
@@ -851,7 +879,7 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
     assert :ok = Hexpm.Emails.OutboxWorker.perform(job)
     delivered = Repo.get!(Hexpm.Emails.OutboxEntry, summary.id)
     assert delivered.delivered_at
-    assert delivered.email["text_body"] =~ "Members suspended because 2FA isn't enabled: none"
+    assert delivered.email["text_body"] =~ "Every member has 2FA enabled, so no one is suspended."
     refute delivered.email["text_body"] =~ c.member.username
     assert :ok = Hexpm.Emails.OutboxWorker.perform(job)
     assert Repo.get!(Hexpm.Emails.OutboxEntry, summary.id).delivered_at == delivered.delivered_at

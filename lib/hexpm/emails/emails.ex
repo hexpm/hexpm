@@ -255,12 +255,27 @@ defmodule Hexpm.Emails do
   def organization_tfa(organization, stage, recipients, suspended) do
     base_email(:organization_tfa)
     |> email_to(recipients)
-    |> subject("Hex.pm - #{organization.name} 2FA enforcement")
+    |> subject("Hex.pm - #{organization_tfa_subject(stage, organization.name)}")
     |> assign(:organization, organization)
     |> assign(:stage, stage)
     |> assign(:suspended, suspended)
     |> render_body(:organization_tfa)
   end
+
+  defp organization_tfa_subject("scheduled", organization),
+    do: "#{organization} will require two-factor authentication"
+
+  defp organization_tfa_subject("seven_days", organization),
+    do: "#{organization} requires two-factor authentication in 7 days"
+
+  defp organization_tfa_subject("one_day", organization),
+    do: "#{organization} requires two-factor authentication within a day"
+
+  defp organization_tfa_subject("suspended", organization),
+    do: "Your access to #{organization} is suspended until you enable 2FA"
+
+  defp organization_tfa_subject("summary", organization),
+    do: "#{organization} now requires two-factor authentication"
 
   def sso_enforcement_pending(organization, required_at, login_url, recipients) do
     base_email(:sso_enforcement_pending)
