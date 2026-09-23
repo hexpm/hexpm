@@ -2,7 +2,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
   use HexpmWeb, :controller
 
   alias Hexpm.Accounts.SSO
-  alias Hexpm.Accounts.SSO.Error
+  alias Hexpm.Accounts.SSO.{Enforcement, Error}
   alias HexpmWeb.SSOEnforcement
 
   plug :requires_login
@@ -299,11 +299,11 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
     do: "SSO is optional. Members reach the organization with or without it."
 
   defp enforcement_message(%{enforcement_mode: "pilot"}),
-    do: "SSO is in pilot. Only the members you marked as enforced need it."
+    do: "SSO is in pilot. Only the members with Require SSO turned on need it."
 
   defp enforcement_message(%{enforcement_mode: "required", required_at: required_at}) do
     if DateTime.compare(DateTime.utc_now(), required_at) == :lt do
-      "SSO becomes required on #{HexpmWeb.ViewHelpers.pretty_date(required_at)}. Until then only the members you marked as enforced need it."
+      "SSO becomes required on #{HexpmWeb.ViewHelpers.pretty_date(required_at)}. Until then only the members with Require SSO turned on need it."
     else
       "SSO is required. Every member except the exemptions needs it."
     end
@@ -338,16 +338,16 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
                  string_param(params, "sso_enforcement"),
                  audit: audit_data(conn)
                ) do
-            {:ok, _member} ->
-              redirect_with_flash(
+            {:ok, member} ->
+              redirect_to_members(
                 conn,
                 organization,
                 :info,
-                member_enforcement_message(user, string_param(params, "sso_enforcement"))
+                member_enforcement_message(organization, user, member)
               )
 
             {:error, :not_member} ->
-              redirect_with_flash(
+              redirect_to_members(
                 conn,
                 organization,
                 :error,
@@ -355,7 +355,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
               )
 
             {:error, :no_reachable_admin} ->
-              redirect_with_flash(
+              redirect_to_members(
                 conn,
                 organization,
                 :error,
@@ -363,7 +363,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
               )
 
             {:error, :admin_required} ->
-              redirect_with_flash(
+              redirect_to_members(
                 conn,
                 organization,
                 :error,
@@ -371,7 +371,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
               )
 
             {:error, :feature_disabled} ->
-              redirect_with_flash(
+              redirect_to_members(
                 conn,
                 organization,
                 :error,
@@ -379,7 +379,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
               )
 
             {:error, _changeset} ->
-              redirect_with_flash(
+              redirect_to_members(
                 conn,
                 organization,
                 :error,
@@ -390,14 +390,25 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
     end)
   end
 
-  defp member_enforcement_message(user, "enforced"),
-    do: "#{user.username} now needs SSO whatever the mode is."
-
-  defp member_enforcement_message(user, "exempt"),
+  defp member_enforcement_message(_organization, user, %{sso_enforcement: "exempt"}),
     do: "#{user.username} is exempt from SSO. Exemptions are listed for administrators to review."
 
-  defp member_enforcement_message(user, _enforcement),
-    do: "#{user.username} now follows the organization's enforcement mode."
+  defp member_enforcement_message(organization, user, member) do
+    connection = SSO.get_connection(organization)
+    required_at = connection && connection.required_at
+
+    cond do
+      Enforcement.governed?(organization, connection, member.sso_enforcement) ->
+        "#{user.username} now needs SSO."
+
+      required_at &&
+          Enforcement.governed?(organization, connection, member.sso_enforcement, required_at) ->
+        "#{user.username} needs SSO from #{HexpmWeb.ViewHelpers.pretty_date(required_at)}."
+
+      true ->
+        "#{user.username} doesn't need SSO."
+    end
+  end
 
   def add_domain(conn, %{"dashboard_org" => name, "domain" => %{} = params}) do
     with_organization(conn, name, fn organization ->
@@ -513,6 +524,12 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOController do
     conn
     |> put_flash(level, message)
     |> redirect(to: ~p"/dashboard/orgs/#{organization}/sso")
+  end
+
+  defp redirect_to_members(conn, organization, level, message) do
+    conn
+    |> put_flash(level, message)
+    |> redirect(to: ~p"/dashboard/orgs/#{organization}/members")
   end
 
   # Every configuration action lands back on the SSO tab, saying what changed or

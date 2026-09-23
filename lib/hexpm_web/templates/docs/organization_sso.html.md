@@ -98,10 +98,10 @@ After linking, later uses of the organization login URL establish an organizatio
 Enforcement is set on the organization's **SSO** dashboard and has three modes:
 
 * **Optional** is the default. Members can authenticate through the provider and nothing changes if they do not.
-* **Pilot** enforces only the members an administrator marks as enforced, one at a time, so a team can try it on itself before turning it on for everyone.
+* **Pilot** enforces only the members with **Require SSO** turned on in the members tab, set one at a time, so a team can try it on itself before turning it on for everyone.
 * **Required** enforces every member except the ones marked exempt, from a date you pick.
 
-The per-member control has three states in both modes: enforced, exempt, and following the organization. Moving from pilot to required does not reassign anybody. The people you piloted with stay enforced, the people you never touched start being enforced because the organization now is, and only an explicit exemption opts anyone out.
+Exemptions are managed from the **Exempt from SSO** list on the members tab, in both modes, and exempt members carry an **SSO exempt** badge. Moving from pilot to required does not reassign anybody. The people you piloted with stay enforced, the people you never touched start being enforced because the organization now is, and only an explicit exemption opts anyone out.
 
 Setting a required-by date is a grace period, not a reminder. Until it passes the organization behaves exactly as it does in pilot. Members who have not linked an identity are emailed in the two weeks before the date, once each.
 
@@ -181,7 +181,7 @@ A personal API key is a static credential. There is no session behind it, nothin
 
 * **Block** removes this organization's permissions from members' personal keys on the required-by date, and refuses new ones. Their owners are emailed, and the rest of each key keeps working. Members publishing by hand run `mix hex.user auth` instead, and automation moves to an organization key.
 
-    Blocking follows the same members enforcement does. A pilot turns personal keys away for the members you marked enforced and for nobody else, and it refuses new ones rather than removing what is already there, so a pilot shows you what required mode will do without taking anything away yet. An exempt member's keys are never touched.
+    Blocking follows the same members enforcement does. A pilot turns personal keys away for the members with Require SSO turned on and for nobody else, and it refuses new ones rather than removing what is already there, so a pilot shows you what required mode will do without taking anything away yet. An exempt member's keys are never touched.
 
     The removal is permanent. Setting personal keys back to allow, or turning enforcement off, does not restore the permissions that were taken; the members whose keys were changed add them again themselves. Use a pilot first if you want to see the list before anything is removed.
 * **Allow** leaves them alone, and is what you get if you change nothing. It is the right answer if your publishing workflow depends on them. It means required mode has a standing exception: those keys reach the organization with no session, no expiry, and no exposure to your provider's conditional-access policy. A key still stops working when its owner is removed from the organization here, because its permissions are checked against current membership on every request, and a provider deactivation counts as removal once provisioning is connected; without provisioning, a provider-only deactivation does not touch it.

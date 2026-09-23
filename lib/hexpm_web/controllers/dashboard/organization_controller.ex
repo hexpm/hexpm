@@ -1130,7 +1130,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         policy_rev: policy_rev,
         sso_org_session: current_org_session(conn, organization),
         sso_mode: Enforcement.mode(organization, connection),
-        sso_requires_sso?: sso_requires_sso?(connection),
+        sso_required_at: sso_required_at(connection),
         sso_generated_scim_token: opts[:generated_scim_token]
       ] ++
         audit_log_assigns(organization, opts[:tab], opts) ++
@@ -1177,13 +1177,12 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   defp policy_assigns(_organization, _tab, _action, _policy), do: {[], %{}, [], 0}
 
   # The mode in force during a grace period is pilot, which is what governs, but
-  # the screens an administrator prepares with have to know the date is set: the
-  # activation checklist says review the exemptions and then set the date, and
-  # doing those the other way round would otherwise hide the list.
-  defp sso_requires_sso?(%Connection{enforcement_mode: "required"} = connection),
-    do: Connection.enabled?(connection)
+  # the members tab has to say when every member starts needing SSO.
+  defp sso_required_at(%Connection{enforcement_mode: "required"} = connection) do
+    if Connection.enabled?(connection), do: connection.required_at
+  end
 
-  defp sso_requires_sso?(_connection), do: false
+  defp sso_required_at(_connection), do: nil
 
   defp sso_assigns(organization, connection, :sso) do
     [
