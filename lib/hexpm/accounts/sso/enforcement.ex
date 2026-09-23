@@ -617,9 +617,16 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   defp notify_key_owner(organization, [{%Key{user: user}, _outcome} | _] = keys) do
     revoked = for {key, :revoked} <- keys, do: key.name
     trimmed = for {key, :trimmed} <- keys, do: key.name
-    blocked = for {key, :blocked} <- keys, do: key
 
-    announced = announced_blocked_key_ids(organization, user)
+    # A key an earlier sweep took this organization's permissions from was
+    # announced then as having lost its access here. What it has left still
+    # reaches the organization through `api` or `repositories` and is refused,
+    # which is the same thing, so it is neither announced again nor listed as
+    # an untouched key.
+    stripped = audited_key_ids(organization, user, "sso.key.revoke")
+    blocked = for {key, :blocked} <- keys, not MapSet.member?(stripped, key.id), do: key
+
+    announced = audited_key_ids(organization, user, "sso.key.blocked")
     fresh = Enum.reject(blocked, &MapSet.member?(announced, &1.id))
 
     if revoked != [] or trimmed != [] or fresh != [] do
@@ -665,11 +672,11 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     |> Repo.insert!()
   end
 
-  defp announced_blocked_key_ids(organization, user) do
+  defp audited_key_ids(organization, user, action) do
     from(log in AuditLog,
       where: log.organization_id == ^organization.id,
       where: log.user_id == ^user.id,
-      where: log.action == "sso.key.blocked",
+      where: log.action == ^action,
       select: log.params
     )
     |> Repo.all()

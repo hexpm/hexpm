@@ -341,6 +341,33 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
       refute key.revoke_at
     end
 
+    test "tells the owner of a trimmed key once", context do
+      trimmed =
+        personal_key(context, [
+          %{domain: "repository", resource: context.organization.name},
+          %{domain: "api", resource: "read"}
+        ])
+
+      require_sso(context, DateTime.add(DateTime.utc_now(), -60, :second))
+
+      assert Enforcement.sweep_personal_keys() == 1
+      assert [entry] = blocked_entries()
+      assert entry.email["text_body"] =~ "Your key #{trimmed.name} has had its access"
+      assert :ok = perform_job(Hexpm.Emails.OutboxWorker, %{outbox_entry_id: entry.id})
+
+      # What the key has left still reaches the organization through `api`, so
+      # the next sweep finds it again and turns it away.
+      assert Enforcement.sweep_personal_keys() == 0
+      assert [_entry] = blocked_entries()
+
+      refused = personal_key(context, [%{domain: "repositories", resource: nil}])
+
+      assert Enforcement.sweep_personal_keys() == 0
+      assert [_first, second] = Enum.sort_by(blocked_entries(), & &1.id)
+      assert second.email["text_body"] =~ "your key #{refused.name} no longer reaches"
+      refute second.email["text_body"] =~ trimmed.name
+    end
+
     test "tells an owner about all their keys at once", context do
       personal_key(context, [%{domain: "repository", resource: context.organization.name}])
       personal_key(context, [%{domain: "docs", resource: context.organization.name}])
