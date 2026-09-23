@@ -103,7 +103,7 @@ Enforcement is set on the organization's **SSO** dashboard and has three modes:
 
 The per-member control has three states in both modes: enforced, exempt, and following the organization. Moving from pilot to required does not reassign anybody. The people you piloted with stay enforced, the people you never touched start being enforced because the organization now is, and only an explicit exemption opts anyone out.
 
-Setting a required-by date is a grace period, not a reminder. Until it passes the organization behaves exactly as it does in pilot. Members who have not linked an identity are emailed in the two weeks before the date, once each.
+Setting a required-by date is a grace period, not a reminder. Until it passes the organization behaves exactly as it does in pilot. Members who have not linked an identity are emailed in the two weeks before the date, and again if the date moves. When personal API keys are blocked, members who have linked but hold a key the date will strip or refuse are emailed too, with each key and what happens to it.
 
 Hexpm refuses to switch an organization to required unless at least one administrator is exempt or has already linked an identity, so a misconfigured provider cannot lock every administrator out of the settings that would fix it.
 

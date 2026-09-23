@@ -453,22 +453,89 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
+  defmodule SSOEnforcement do
+    def scope() do
+      "That covers the organization's private packages and dashboard, and publishing or managing public packages you can only manage because the organization owns them."
+    end
+
+    def session(session_lifetime) do
+      "Once it applies, you sign in through the provider when you reach the organization, and again every #{duration(session_lifetime)}. That includes mix, which asks you to authenticate in a browser when it needs a package from the organization."
+    end
+
+    def account_notice() do
+      "Signing in to Hex.pm itself doesn't change, and neither does your access to other organizations or to packages you own yourself."
+    end
+
+    defp duration(3_600), do: "hour"
+
+    defp duration(seconds) when rem(seconds, 86_400) == 0 and seconds > 86_400,
+      do: "#{div(seconds, 86_400)} days"
+
+    defp duration(seconds) when rem(seconds, 3_600) == 0, do: "#{div(seconds, 3_600)} hours"
+    defp duration(seconds), do: "#{div(seconds, 60)} minutes"
+  end
+
   defmodule SSOEnforcementPending do
+    defdelegate scope(), to: SSOEnforcement
+    defdelegate session(session_lifetime), to: SSOEnforcement
+    defdelegate account_notice(), to: SSOEnforcement
+
     def intro(organization, required_at) do
       "From #{Calendar.strftime(required_at, "%B %-d, %Y")}, reaching the #{organization} organization on Hex.pm will require signing in through its identity provider."
     end
 
-    def not_linked() do
-      "Your Hex account is not connected to that provider yet. Connect it before then and nothing about your day changes. Leave it until after and you lose access to the organization's private packages until you do."
+    def linked(true), do: "Your Hex.pm account is already connected to that provider."
+
+    def linked(false) do
+      "Your Hex.pm account isn't connected to that provider yet. Connect it before then by signing in through the provider, or you'll lose that access on that date until you do:"
     end
 
-    def account_notice() do
-      "This does not affect your Hex account itself, your own packages, or any other organization you belong to. You keep signing in to Hex.pm exactly as you do now."
+    def keys(%{revoked: [], trimmed: [], blocked: []}), do: []
+
+    def keys(keys) do
+      [
+        "The organization doesn't accept personal API keys from the members it requires single sign-on for, so on that date:"
+        | Enum.reject(
+            [
+              revoked(keys.revoked),
+              trimmed(keys.trimmed),
+              blocked(keys.blocked),
+              "For continuous integration, use an organization key, which authenticates as the organization rather than as a person and is unaffected."
+            ],
+            &is_nil/1
+          )
+      ]
     end
 
-    def cli_notice() do
-      "Command line access is included. Once enforcement starts, mix will ask you to authenticate in a browser the first time it needs a package from this organization, and again whenever the organization's authentication window lapses."
-    end
+    defp revoked([]), do: nil
+
+    defp revoked([key_name]),
+      do:
+        "Your key #{key_name} carries nothing but access to this organization, so it will be revoked."
+
+    defp revoked(key_names),
+      do:
+        "Your keys #{Enum.join(key_names, ", ")} carry nothing but access to this organization, so they will be revoked."
+
+    defp trimmed([]), do: nil
+
+    defp trimmed([key_name]),
+      do:
+        "Your key #{key_name} will lose its permissions for this organization and keep the rest."
+
+    defp trimmed(key_names),
+      do:
+        "Your keys #{Enum.join(key_names, ", ")} will lose their permissions for this organization and keep the rest."
+
+    defp blocked([]), do: nil
+
+    defp blocked([key_name]),
+      do:
+        "Your key #{key_name} reaches this organization through wider permissions, which it keeps, but the organization will refuse it."
+
+    defp blocked(key_names),
+      do:
+        "Your keys #{Enum.join(key_names, ", ")} reach this organization through wider permissions, which they keep, but the organization will refuse them."
   end
 
   defmodule SSOKeysRefused do

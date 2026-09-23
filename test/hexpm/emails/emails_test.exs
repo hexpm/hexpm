@@ -196,6 +196,66 @@ defmodule Hexpm.EmailsTest do
     end
   end
 
+  describe "sso_enforcement_pending/5" do
+    defp pending_email(notice) do
+      Emails.sso_enforcement_pending(
+        "acme",
+        ~U[2026-10-01 00:00:00Z],
+        Map.merge(
+          %{
+            linked?: false,
+            session_lifetime: 86_400,
+            keys: %{revoked: [], trimmed: [], blocked: []}
+          },
+          notice
+        ),
+        "https://hex.pm/sso/org/acme",
+        ["member@example.com"]
+      )
+    end
+
+    test "says what changes after the date for a linked member" do
+      email = pending_email(%{linked?: true, session_lifetime: 28_800})
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ "October 1, 2026"
+        assert body =~ "again every 8 hours"
+        assert body =~ "public packages you can only manage because the organization owns them"
+        refute body =~ "nothing about your day changes"
+        refute body =~ "does not affect your Hex account"
+        refute body =~ "https://hex.pm/sso/org/acme"
+      end
+    end
+
+    test "links an unlinked member to the provider" do
+      email = pending_email(%{})
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ "https://hex.pm/sso/org/acme"
+      end
+
+      assert email.text_body =~ "isn't connected to that provider yet"
+    end
+
+    test "names the personal keys the date strips or refuses" do
+      email =
+        pending_email(%{
+          keys: %{revoked: ["laptop"], trimmed: ["desk", "ci"], blocked: ["everything"]}
+        })
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ "Your key laptop carries nothing but access to this organization, so it"
+        assert body =~ "Your keys desk, ci will lose their permissions for this organization"
+        assert body =~ "Your key everything reaches this organization through wider permissions"
+        assert body =~ "organization key"
+      end
+    end
+
+    test "says nothing about keys a member does not hold" do
+      refute pending_email(%{}).text_body =~ "personal API keys"
+    end
+  end
+
   describe "sso_seats/4" do
     test "tells a login apart from provisioning" do
       login = Emails.sso_seats("acme", "seats_exhausted", "login", ["admin@example.com"])

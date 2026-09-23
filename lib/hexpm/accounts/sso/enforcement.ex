@@ -353,8 +353,10 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   end
 
   @doc """
-  Mails members who will lose access when their organization starts requiring
-  SSO and have not linked an identity yet.
+  Mails members whose access changes when their organization starts requiring
+  SSO: the ones who have not linked an identity yet, and, where the
+  organization blocks personal API keys, the ones holding a key it will strip
+  or refuse.
 
   Only fires inside the window before the date, and a member is told once per
   organization and required-by date rather than once per tick.
@@ -383,28 +385,55 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   # their access past the date and hears nothing either.
   defp warn_organization(connection, organization) do
     warned = warned_user_ids(organization, connection.required_at)
+    keys = keys_swept_at_required_at(connection, organization)
 
     from(member in members_with_identity(organization),
       join: user in assoc(member, :user),
       join: address in assoc(user, :emails),
       where: is_nil(member.sso_enforcement),
-      where: is_nil(as(:identity).id),
       where: address.primary and address.verified,
-      select: {user, address.email}
+      select: {user, address.email, not is_nil(as(:identity).id)}
     )
     |> Repo.all()
-    |> Enum.map(fn {user, email} ->
-      warn_member(connection, organization, user, email, warned)
+    |> Enum.filter(fn {user, _email, linked?} -> not linked? or Map.has_key?(keys, user.id) end)
+    |> Enum.map(fn {user, email, linked?} ->
+      notice = %{
+        linked?: linked?,
+        session_lifetime: session_lifetime(connection),
+        keys: Map.get(keys, user.id, %{revoked: [], trimmed: [], blocked: []})
+      }
+
+      warn_member(connection, organization, user, email, notice, warned)
     end)
     |> Enum.count(&(&1 == :sent))
   end
+
+  # What the sweep will do on the required-by date to each member's personal
+  # keys, keyed by member, when the organization blocks them.
+  defp keys_swept_at_required_at(%Connection{personal_keys: "block"}, organization) do
+    organization
+    |> Keys.personal_reaching_organization()
+    |> Enum.group_by(& &1.user_id)
+    |> Map.new(fn {user_id, keys} ->
+      outcomes = Enum.group_by(keys, &strip_outcome(&1, organization), & &1.name)
+
+      {user_id,
+       %{
+         revoked: Map.get(outcomes, :revoked, []),
+         trimmed: Map.get(outcomes, :trimmed, []),
+         blocked: Map.get(outcomes, :blocked, [])
+       }}
+    end)
+  end
+
+  defp keys_swept_at_required_at(_connection, _organization), do: %{}
 
   # The audit entry is the durable record, so the "once" hangs off it rather
   # than off the mail: a delivered outbox row is purged after the retention
   # window, and a member would be told again on the next tick after that. Both
   # go in one transaction, so a failure while building the mail does not leave
   # the member recorded as warned and never told.
-  defp warn_member(connection, organization, user, email, warned) do
+  defp warn_member(connection, organization, user, email, notice, warned) do
     if MapSet.member?(warned, user.id) do
       :skipped
     else
@@ -421,6 +450,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
             Emails.sso_enforcement_pending(
               organization.name,
               connection.required_at,
+              notice,
               EmailView.email_url("/sso/org/#{organization.name}"),
               [email]
             ),
@@ -516,6 +546,16 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
     end
   end
 
+  # What stripping this organization's permissions leaves of a key: a key with
+  # none naming it is kept and refused, and one whose permissions all name it is
+  # revoked.
+  defp strip_outcome(key, organization) do
+    case Keys.organization_permissions(key, organization) do
+      [] -> :blocked
+      removed -> if key.permissions -- removed == [], do: :revoked, else: :trimmed
+    end
+  end
+
   @doc """
   The personal API keys this organization turns away, which are the ones its
   governed members hold.
@@ -577,11 +617,12 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   end
 
   defp strip_key(key, organization) do
-    case Keys.organization_permissions(key, organization) do
-      [] ->
+    case strip_outcome(key, organization) do
+      :blocked ->
         :kept
 
-      removed ->
+      outcome ->
+        removed = Keys.organization_permissions(key, organization)
         remaining = key.permissions -- removed
         now = DateTime.utc_now()
 
@@ -589,7 +630,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
         # owner would get a 401 naming neither SSO nor this organization. Revoke
         # it instead of leaving an inert credential in their key list.
         fields =
-          if remaining == [] do
+          if outcome == :revoked do
             [permissions: remaining, revoke_at: now, updated_at: now]
           else
             [permissions: remaining, updated_at: now]
@@ -601,7 +642,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
 
         audit_key_revoke(key, organization, removed)
 
-        if remaining == [], do: {:stripped, :revoked}, else: {:stripped, :trimmed}
+        {:stripped, outcome}
     end
   end
 

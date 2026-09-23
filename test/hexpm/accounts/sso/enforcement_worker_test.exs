@@ -50,6 +50,9 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
       assert entry.email["text_body"] =~
                Application.fetch_env!(:hexpm, :email_base_url) <>
                  "/sso/org/#{context.organization.name}"
+
+      assert entry.email["text_body"] =~ "isn't connected to that provider yet"
+      assert entry.email["text_body"] =~ "again every 24 hours"
     end
 
     test "builds the login link without the web endpoint" do
@@ -93,6 +96,62 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
       )
 
       require_sso(context, DateTime.add(DateTime.utc_now(), 3 * 24 * 60 * 60, :second))
+
+      assert Enforcement.warn_pending() == 0
+    end
+
+    test "tells a linked member which of their personal keys the date takes", context do
+      insert(:organization_sso_identity,
+        connection: context.connection,
+        organization: context.organization,
+        user: context.member,
+        subject: "linked-member"
+      )
+
+      revoked =
+        personal_key(context, [%{domain: "repository", resource: context.organization.name}])
+
+      trimmed =
+        personal_key(context, [
+          %{domain: "repository", resource: context.organization.name},
+          %{domain: "api", resource: "read"}
+        ])
+
+      refused = personal_key(context, [%{domain: "repositories", resource: nil}])
+
+      require_sso(context, DateTime.add(DateTime.utc_now(), 3 * 24 * 60 * 60, :second))
+
+      assert Enforcement.warn_pending() == 1
+      assert [entry] = pending_entries()
+
+      body = entry.email["text_body"]
+      assert body =~ "already connected to that provider"
+      assert body =~ "Your key #{revoked.name} carries nothing but access to this organization"
+      assert body =~ "Your key #{trimmed.name} will lose its permissions for this organization"
+      assert body =~ "Your key #{refused.name} reaches this organization through wider"
+      refute body =~ "/sso/org/"
+    end
+
+    test "leaves a linked member's keys alone while the organization allows them", context do
+      insert(:organization_sso_identity,
+        connection: context.connection,
+        organization: context.organization,
+        user: context.member,
+        subject: "linked-member"
+      )
+
+      personal_key(context, [%{domain: "repository", resource: context.organization.name}])
+
+      {:ok, _connection} =
+        SSO.configure_enforcement(
+          context.organization,
+          %{
+            "enforcement_mode" => "required",
+            "required_at" => DateTime.add(DateTime.utc_now(), 3 * 24 * 60 * 60, :second),
+            "personal_keys" => "allow"
+          },
+          audit: audit_data(context.admin)
+        )
 
       assert Enforcement.warn_pending() == 0
     end

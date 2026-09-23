@@ -276,12 +276,15 @@ defmodule Hexpm.Emails do
     |> render_body(:organization_tfa)
   end
 
-  def sso_enforcement_pending(organization, required_at, login_url, recipients) do
+  def sso_enforcement_pending(organization, required_at, notice, login_url, recipients) do
     base_email(:sso_enforcement_pending)
     |> email_to(recipients)
     |> subject("Hex.pm - #{organization} will require single sign-on")
     |> assign(:organization, organization)
     |> assign(:required_at, required_at)
+    |> assign(:linked, notice.linked?)
+    |> assign(:session_lifetime, notice.session_lifetime)
+    |> assign(:keys, notice.keys)
     |> assign(:login_url, login_url)
     |> render_body(:sso_enforcement_pending)
   end
