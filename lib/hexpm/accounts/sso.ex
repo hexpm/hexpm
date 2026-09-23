@@ -2215,10 +2215,11 @@ defmodule Hexpm.Accounts.SSO do
       |> Enum.map(&String.downcase(&1.email))
 
     normalized_provider_email = provider_email && String.downcase(provider_email)
+    stored_provider_email = identity.provider_email && String.downcase(identity.provider_email)
 
     mismatch? =
       is_binary(normalized_provider_email) and normalized_provider_email not in user_emails and
-        provider_email != identity.provider_email
+        normalized_provider_email != stored_provider_email
 
     if provider_email != identity.provider_email do
       Repo.update!(change(identity, provider_email: provider_email), log: false)

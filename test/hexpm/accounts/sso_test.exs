@@ -1458,6 +1458,22 @@ defmodule Hexpm.Accounts.SSOTest do
              )
     end
 
+    test "a provider email that only changes case is not a new address", context do
+      link_identity(context, context.member, provider_email: "Person@IdP.example")
+      user_session = browser_session(context.member)
+
+      assert {:ok, {:login, _user, _org_session, _return}} =
+               context
+               |> start_transaction(context.member)
+               |> complete(valid_claims("person@idp.example"), context.member, user_session.id)
+
+      assert Repo.one!(Identity).provider_email == "person@idp.example"
+
+      refute Repo.exists?(
+               from(entry in OutboxEntry, where: entry.category == "sso.email_mismatch")
+             )
+    end
+
     test "notifications reach the verified primary address and nothing else", context do
       # Verified but not primary. An address that is neither verified nor
       # primary cannot tell the two halves of `primary and verified` apart;
