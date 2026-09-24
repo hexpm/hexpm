@@ -3,7 +3,7 @@ defmodule Hexpm.Backups do
   The record of organizations whose stored data was deleted, read by the
   nightly backup to remove them from every snapshot. One object per
   organization under `organizations/` in the deletions bucket; the backup
-  acts on it once the organization has been gone from the mirror for a week.
+  acts on it once the organization has been gone from the mirror for 35 days.
   """
 
   @name_regex ~r/\A[a-z0-9_][a-z0-9_.-]*\z/

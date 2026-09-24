@@ -3,6 +3,12 @@ defmodule Hexpm.OrphanedObjectsTest do
 
   alias Hexpm.OrphanedObjects
 
+  # The sweep refuses a database read without the public hex package.
+  setup do
+    insert(:package, name: "hex", repository_id: 1)
+    :ok
+  end
+
   defp put(bucket, key), do: Hexpm.Store.put(bucket, key, "DATA", [])
   defp keys(bucket), do: bucket |> Hexpm.Store.list("") |> Enum.sort()
 
@@ -23,6 +29,50 @@ defmodule Hexpm.OrphanedObjectsTest do
     insert(:release, package: package, version: "1.0.0", has_docs: true)
     insert(:release, package: package, version: "2.0.0", has_docs: true)
     package
+  end
+
+  describe "the database read" do
+    test "is refused without the public hex package" do
+      Repo.delete_all(from(p in Hexpm.Repository.Package, where: p.name == "hex"))
+      put(:repo_bucket, "repos/gone/names")
+
+      assert_raise RuntimeError, ~r/refusing to judge objects/, fn -> report(:repo_bucket) end
+      assert_raise RuntimeError, ~r/refusing to judge objects/, fn -> sweep(:repo_bucket) end
+      assert keys(:repo_bucket) == ["repos/gone/names"]
+    end
+  end
+
+  describe "delete/1 on repositories missing from the database" do
+    test "refuses when more than ten would lose objects, across buckets, deleting nothing" do
+      for n <- 1..6, do: put(:repo_bucket, "repos/gone#{n}/names")
+      for n <- 7..11, do: put(:preview_bucket, "repos/gone#{n}/latest_versions/pkg")
+
+      assert_raise ArgumentError, ~r/the objects of 11 repositories/, fn ->
+        OrphanedObjects.delete(buckets: [:repo_bucket, :preview_bucket], older_than: 0)
+      end
+
+      assert length(keys(:repo_bucket)) == 6
+      assert length(keys(:preview_bucket)) == 5
+    end
+
+    test "deletes them when max_repositories covers them" do
+      for n <- 1..11, do: put(:repo_bucket, "repos/gone#{n}/names")
+
+      assert %{repo_bucket: %{deleted: 11}} =
+               OrphanedObjects.delete(
+                 buckets: [:repo_bucket],
+                 older_than: 0,
+                 max_repositories: 11
+               )
+
+      assert keys(:repo_bucket) == []
+    end
+
+    test "does not count orphans of repositories that exist" do
+      for n <- 1..12, do: put(:repo_bucket, "tarballs/gone_package_#{n}-1.0.0.tar")
+
+      assert %{deleted: 12} = sweep(:repo_bucket)
+    end
   end
 
   describe "scan/1" do

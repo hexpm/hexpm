@@ -809,7 +809,7 @@ defmodule Hexpm.AdminTasks do
       the uploads kept under `debug/` in the repository bucket and `<name>/`
       in the private docs bucket, purges the CDN keys they were served under
       and records the deletion for the nightly backup, which removes the
-      organization from every snapshot a week later (default: `false`). This
+      organization from every snapshot 35 days later (default: `false`). This
       runs in `Hexpm.Accounts.OrganizationDataWorker`, a job inserted with
       the deletion, which retries until it is through and posts the number of
       objects it deleted to Slack.

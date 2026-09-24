@@ -32,6 +32,7 @@ defmodule Hexpm.OrphanedObjectsRaceTest do
   end
 
   setup do
+    insert(:package, name: "hex", repository_id: 1)
     original = Application.get_env(:hexpm, :repo_bucket)
     Application.put_env(:hexpm, :repo_bucket, {RewritingStore, "repo_bucket"})
     on_exit(fn -> Application.put_env(:hexpm, :repo_bucket, original) end)

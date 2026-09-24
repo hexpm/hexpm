@@ -82,6 +82,13 @@ if config_env() == :prod do
     diff_bucket: System.fetch_env!("HEXPM_DIFF_BUCKET"),
     deletions_bucket: System.fetch_env!("HEXPM_DELETIONS_BUCKET"),
     slack_webhook_url: System.get_env("HEXPM_SLACK_WEBHOOK_URL"),
+    organization_deletions:
+      (case System.get_env("HEXPM_ORGANIZATION_DELETIONS", "off") do
+         "off" -> :off
+         "report" -> :report
+         "on" -> :on
+         other -> raise "HEXPM_ORGANIZATION_DELETIONS must be off, report or on, got: #{other}"
+       end),
     diff_cache_version: System.fetch_env!("HEXPM_DIFF_CACHE_VERSION") |> String.to_integer(),
     cdn_url: System.fetch_env!("HEXPM_CDN_URL"),
     docs_url: System.fetch_env!("HEXPM_DOCS_URL"),

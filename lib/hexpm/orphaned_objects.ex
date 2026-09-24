@@ -33,6 +33,15 @@ defmodule Hexpm.OrphanedObjects do
   immediately before the delete and skipped unless it is still the object the
   listing turned up. Objects written in the last `:older_than` days never
   become candidates in the first place.
+
+  ## Why a broken read does not delete everything
+
+  Every object is judged against the database read, so a read that came back
+  empty would make every object look orphaned. The read is refused unless it
+  holds the public repository and its packages, and `delete/1` refuses to
+  run when the objects of more than `:max_repositories` repositories missing
+  from the database would go: that is what a broken read looks like, and a
+  deliberate cleanup of that many passes the number it expects.
   """
 
   import Ecto.Query, only: [from: 2]
@@ -46,6 +55,7 @@ defmodule Hexpm.OrphanedObjects do
   @special_packages Map.keys(Application.compile_env!(:hexpm, :hexdocs_special_packages))
   @default_older_than 7
   @default_limit 100_000
+  @default_max_repositories 10
   @samples 20
   @delete_batch 1000
 
@@ -89,9 +99,13 @@ defmodule Hexpm.OrphanedObjects do
   Deletes what `scan/1` reports as orphaned, and returns the same report with
   the number actually deleted.
 
-  Takes the same options as `scan/1`. Candidates are checked against a second
-  read of the packages before anything is deleted, so a release published
-  while the bucket was being listed keeps its objects.
+  Takes the same options as `scan/1`, and `:max_repositories`: every bucket
+  is listed before anything is deleted, and when the candidates belong to
+  more than this many repositories that are not in the database the call
+  raises and deletes nothing (default: #{@default_max_repositories}).
+  Candidates are checked against a second read of the packages before
+  anything is deleted, so a release published while the bucket was being
+  listed keeps its objects.
 
   ## Examples
 
@@ -102,12 +116,38 @@ defmodule Hexpm.OrphanedObjects do
   def delete(opts \\ []) do
     Repo.write_mode!()
     index = index()
+    max_repositories = Keyword.get(opts, :max_repositories, @default_max_repositories)
+    collected = Map.new(buckets(opts), &{&1, collect(&1, index, opts)})
 
-    Map.new(buckets(opts), fn bucket ->
-      collected = collect(bucket, index, opts)
+    gone =
+      collected
+      |> Enum.flat_map(fn {_bucket, collected} ->
+        gone_repositories(collected.orphaned, index)
+      end)
+      |> Enum.uniq()
+      |> Enum.sort()
+
+    if length(gone) > max_repositories do
+      raise ArgumentError,
+            "refusing to delete: the objects of #{length(gone)} repositories that are not in " <>
+              "the database would go (#{Enum.join(Enum.take(gone, @samples), ", ")}), more than " <>
+              ":max_repositories (#{max_repositories}); check scan/1 and pass " <>
+              "max_repositories: #{length(gone)} if they are all meant to go"
+    end
+
+    Map.new(collected, fn {bucket, collected} ->
       counts = delete_collected(bucket, collected.orphaned)
       {bucket, Map.merge(report(collected), counts)}
     end)
+  end
+
+  # Every classification that can be a candidate carries its repository
+  # second.
+  defp gone_repositories(candidates, index) do
+    candidates
+    |> Enum.map(fn {_key, _last_modified, classification} -> elem(classification, 1) end)
+    |> Enum.uniq()
+    |> Enum.reject(&MapSet.member?(index.repositories, &1))
   end
 
   defp buckets(opts) do
@@ -305,6 +345,10 @@ defmodule Hexpm.OrphanedObjects do
       from(p in Policy, join: o in assoc(p, :organization), select: {o.name, p.name})
       |> Repo.all()
       |> MapSet.new()
+
+    unless MapSet.member?(repositories, "hexpm") and Map.has_key?(packages, {"hexpm", "hex"}) do
+      raise "the database read holds no public repository or no hex package, refusing to judge objects by it"
+    end
 
     %{
       packages: packages,

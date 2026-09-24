@@ -117,6 +117,19 @@ defmodule Hexpm.RuntimeConfigTest do
              "where jobs can read it too."
   end
 
+  test "organization deletions default to off and accept each mode" do
+    assert read_runtime(@worker_env)[:hexpm][:organization_deletions] == :off
+
+    for {value, mode} <- [{"off", :off}, {"report", :report}, {"on", :on}] do
+      config = read_runtime(Map.put(@worker_env, "HEXPM_ORGANIZATION_DELETIONS", value))
+      assert config[:hexpm][:organization_deletions] == mode
+    end
+
+    assert_raise RuntimeError, ~r/must be off, report or on/, fn ->
+      read_runtime(Map.put(@worker_env, "HEXPM_ORGANIZATION_DELETIONS", "yes"))
+    end
+  end
+
   test "organization 2FA defaults to off in every environment" do
     for env <- [:dev, :test, :prod] do
       config = read_runtime(@web_env, env)

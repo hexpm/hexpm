@@ -83,7 +83,9 @@ defmodule Hexpm.Accounts.OrganizationDataWorker do
   the cached diffs and the unpacked private docs.
   """
   def prefixes(name) do
-    unless Regex.match?(~r/\A[a-z0-9_]+\z/, name) do
+    # The public repository's uploads are debug/*/hexpm-*, so its name would
+    # take every one of them.
+    unless Regex.match?(~r/\A[a-z0-9_]+\z/, name) and name != "hexpm" do
       raise ArgumentError, "not an organization name: #{inspect(name)}"
     end
 

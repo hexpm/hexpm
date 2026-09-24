@@ -37,6 +37,65 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
 
   defp entries(), do: Repo.all(from(e in OutboxEntry, order_by: e.id))
 
+  describe "the organization_deletions switch" do
+    test "off does nothing" do
+      organization =
+        inactive_organization(
+          deletion_scheduled_at: days_ago(1),
+          deletion_notices: ["scheduled", "7_days", "1_days"]
+        )
+
+      unscheduled = inactive_organization(billing_inactive_since: days_ago(10))
+      app_env(:hexpm, :organization_deletions, :off)
+
+      assert :off = OrganizationDeletions.run()
+      assert Organizations.get(organization.name)
+      refute Organizations.get(unscheduled.name).deletion_scheduled_at
+      assert entries() == []
+    end
+
+    test "report posts what a run would do and writes, emails and deletes nothing" do
+      {unscheduled, _email} =
+        inactive_organization(billing_inactive_since: days_ago(10)) |> with_admin()
+
+      due =
+        inactive_organization(
+          deletion_scheduled_at: days_ago(1),
+          deletion_notices: ["scheduled", "7_days", "1_days"]
+        )
+
+      app_env(:hexpm, :organization_deletions, :report)
+      app_env(:hexpm, :slack_webhook_url, "https://hooks.slack.test/T/B/x")
+      unscheduled_name = unscheduled.name
+      due_name = due.name
+
+      expect(Hexpm.HTTP.Mock, :post, fn _url, _headers, %{text: text} ->
+        assert text =~ "report only: 1 would be scheduled, the first (#{unscheduled_name}) on"
+        assert text =~ "1 would be deleted today: #{due_name}"
+        {:ok, 200, [], "ok"}
+      end)
+
+      assert %{would_schedule: [{^unscheduled_name, _at}], would_delete: [^due_name]} =
+               OrganizationDeletions.run()
+
+      refute Organizations.get(unscheduled_name).deletion_scheduled_at
+      assert Organizations.get(due_name)
+      assert entries() == []
+      assert all_enqueued(worker: Hexpm.Accounts.OrganizationDataWorker) == []
+    end
+
+    test "the billing-cancelled email is only sent when on" do
+      {organization, _email} = insert(:organization) |> with_admin()
+
+      for mode <- [:off, :report] do
+        app_env(:hexpm, :organization_deletions, mode)
+        assert :ok = OrganizationDeletions.notify_billing_cancelled(organization, nil)
+      end
+
+      assert entries() == []
+    end
+  end
+
   describe "schedule" do
     test "schedules 90 days after billing stopped and tells the admins" do
       {organization, email} =

@@ -14,6 +14,12 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
   A run deletes at most `@max_deletions` organizations, so a mistake in the
   scheduling is bounded to a day's worth, and every step is posted to Slack
   and Sentry.
+
+  `config :hexpm, :organization_deletions` (`HEXPM_ORGANIZATION_DELETIONS`)
+  switches it: `:off` does nothing, `:report` posts to Slack what a run would
+  schedule, remind and delete without writing, emailing or deleting
+  anything, and `:on` runs it. The billing-cancelled email is only sent
+  with `:on`, since it announces the deletion.
   """
 
   import Ecto.Query, only: [from: 2]
@@ -32,6 +38,8 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
 
   def grace_days(), do: @grace_days
 
+  def mode(), do: Application.fetch_env!(:hexpm, :organization_deletions)
+
   @doc """
   Tells the organization's admins that billing was cancelled from the
   dashboard, until when the organization stays usable (`period_end`, an ISO
@@ -39,6 +47,10 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
   was paid for) and the earliest day it is deleted after that.
   """
   def notify_billing_cancelled(organization, period_end) do
+    if mode() == :on, do: do_notify_billing_cancelled(organization, period_end), else: :ok
+  end
+
+  defp do_notify_billing_cancelled(organization, period_end) do
     access_until = parse_period_end(period_end)
     deletion_at = DateTime.add(access_until || DateTime.utc_now(), @grace_days, :day)
 
@@ -60,7 +72,41 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
     datetime
   end
 
-  def run() do
+  def run(), do: run(mode())
+
+  defp run(:off), do: :off
+
+  # Nothing is written: no organization has a schedule in this mode, so the
+  # report is who would be scheduled and when, and any deletion already due
+  # under a schedule made while the job was on.
+  defp run(:report) do
+    now = DateTime.utc_now()
+
+    would_schedule =
+      schedulable()
+      |> Repo.all()
+      |> Enum.map(&{&1.name, deletion_at(&1, now)})
+
+    would_delete =
+      deletable(now, [])
+      |> Repo.all()
+      |> Enum.map(& &1.name)
+
+    first =
+      case Enum.min_by(would_schedule, &elem(&1, 1), DateTime, fn -> nil end) do
+        nil -> ""
+        {name, at} -> ", the first (#{name}) on #{date(at)}"
+      end
+
+    Hexpm.Slack.post(
+      "Organization deletions, report only: #{length(would_schedule)} would be scheduled" <>
+        "#{first}; #{length(would_delete)} would be deleted today#{names(would_delete)}"
+    )
+
+    %{would_schedule: would_schedule, would_delete: would_delete}
+  end
+
+  defp run(:on) do
     cleared = clear_reactivated()
     scheduled = schedule()
     reminded = remind()
@@ -100,15 +146,7 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
     now = DateTime.utc_now()
 
     scheduled =
-      from(o in Organization,
-        where: o.id != 1,
-        where: is_nil(o.deletion_scheduled_at),
-        where: not is_nil(o.billing_inactive_since),
-        where: not o.billing_active,
-        where: is_nil(o.billing_override) or o.billing_override == false,
-        where: o.trial_end < ^now,
-        order_by: o.billing_inactive_since
-      )
+      schedulable()
       |> Repo.all()
       |> Enum.map(&schedule(&1, now))
 
@@ -116,16 +154,33 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
     Enum.map(scheduled, &elem(&1, 0))
   end
 
-  defp schedule(organization, now) do
+  defp schedulable() do
+    now = DateTime.utc_now()
+
+    from(o in Organization,
+      where: o.id != 1,
+      where: is_nil(o.deletion_scheduled_at),
+      where: not is_nil(o.billing_inactive_since),
+      where: not o.billing_active,
+      where: is_nil(o.billing_override) or o.billing_override == false,
+      where: o.trial_end < ^now,
+      order_by: o.billing_inactive_since
+    )
+  end
+
+  # An organization overdue by the time it is scheduled (the job did not run
+  # for a while) still gets the week of notice.
+  defp deletion_at(organization, now) do
     since = Enum.max([organization.billing_inactive_since, organization.trial_end], DateTime)
 
-    # An organization overdue by the time it is scheduled (the job did not
-    # run for a while) still gets the week of notice.
-    deletion_at =
-      Enum.max(
-        [DateTime.add(since, @grace_days, :day), DateTime.add(now, hd(@reminder_days), :day)],
-        DateTime
-      )
+    Enum.max(
+      [DateTime.add(since, @grace_days, :day), DateTime.add(now, hd(@reminder_days), :day)],
+      DateTime
+    )
+  end
+
+  defp schedule(organization, now) do
+    deletion_at = deletion_at(organization, now)
 
     # The notice is recorded with its email or not at all: the deletion
     # counts on the notices having gone out.
@@ -156,13 +211,11 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
 
   defp post_scheduled(scheduled) do
     {first_name, first_at} = Enum.min_by(scheduled, &elem(&1, 1), DateTime)
-    names = Enum.map(scheduled, &elem(&1, 0))
-    shown = Enum.take(names, 20)
-    more = length(names) - length(shown)
+    scheduled_names = Enum.map(scheduled, &elem(&1, 0))
 
     Hexpm.Slack.post(
-      "#{length(names)} organization(s) scheduled for deletion, the first (#{first_name}) on " <>
-        "#{date(first_at)}: #{Enum.join(shown, ", ")}#{if more > 0, do: " and #{more} more"}"
+      "#{length(scheduled_names)} organization(s) scheduled for deletion, the first " <>
+        "(#{first_name}) on #{date(first_at)}#{names(scheduled_names)}"
     )
   end
 
@@ -210,7 +263,15 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
   # is deleted; the notices are recorded, so a run that missed days does not
   # remind and delete in one go.
   defp delete(reminded_now) do
-    now = DateTime.utc_now()
+    DateTime.utc_now()
+    |> deletable(reminded_now)
+    |> Repo.all()
+    |> Enum.map(fn organization ->
+      {organization.name, delete_organization(organization)}
+    end)
+  end
+
+  defp deletable(now, reminded_now) do
     last_notice = "#{List.last(@reminder_days)}_days"
 
     from(o in Organization,
@@ -224,10 +285,6 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
       order_by: o.deletion_scheduled_at,
       limit: @max_deletions
     )
-    |> Repo.all()
-    |> Enum.map(fn organization ->
-      {organization.name, delete_organization(organization)}
-    end)
   end
 
   defp delete_organization(organization) do
@@ -351,6 +408,14 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
   end
 
   defp date(datetime), do: Calendar.strftime(datetime, "%Y-%m-%d")
+
+  defp names([]), do: ""
+
+  defp names(names) do
+    shown = Enum.take(names, 20)
+    more = length(names) - length(shown)
+    ": " <> Enum.join(shown, ", ") <> if(more > 0, do: " and #{more} more", else: "")
+  end
 end
 
 defmodule Hexpm.Accounts.OrganizationDeletions.Worker do
