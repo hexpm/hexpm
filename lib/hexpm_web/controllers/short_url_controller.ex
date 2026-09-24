@@ -8,10 +8,16 @@ defmodule HexpmWeb.ShortURLController do
       nil ->
         not_found(conn)
 
-      %ShortURL{url: url} ->
-        conn
-        |> put_status(301)
-        |> redirect(external: url)
+      short_url ->
+        case ShortURL.redirect_url(short_url) do
+          nil ->
+            not_found(conn)
+
+          url ->
+            conn
+            |> put_status(301)
+            |> redirect(external: url)
+        end
     end
   end
 end

@@ -11,4 +11,12 @@ defmodule HexpmWeb.ShortURLControllerTest do
     conn = get(build_conn(), "/l/f4k3")
     assert response(conn, 404)
   end
+
+  # Rows predating the host validation, or written by anything but the
+  # changeset, are checked again on the way out rather than redirected to.
+  test "does not redirect to a stored URL that fails validation" do
+    insert(:short_url, url: "https://evil.example\\@hex.pm/", short_code: "DdEeF")
+    conn = get(build_conn(), "/l/DdEeF")
+    assert response(conn, 404)
+  end
 end
