@@ -4,7 +4,7 @@ defmodule Hexpm.AdminTasksTest do
   import Swoosh.TestAssertions
 
   alias Hexpm.AdminTasks
-  alias Hexpm.Accounts.{Organization, OrganizationUser, User}
+  alias Hexpm.Accounts.{Organization, Organizations, OrganizationUser, User}
   alias Hexpm.Emails.{OutboxEntry, OutboxWorker}
   alias Hexpm.Repository.{Package, PackageOwner, Release}
 
@@ -1056,7 +1056,7 @@ defmodule Hexpm.AdminTasksTest do
 
     test "refuses a name reserved by an earlier deletion" do
       deleted = insert(:organization)
-      assert {:ok, _} = AdminTasks.delete_organization(deleted.name)
+      assert :ok = AdminTasks.delete_organization(deleted.name)
       other = insert(:organization)
 
       assert {:error, :name_reserved} =
@@ -1073,7 +1073,8 @@ defmodule Hexpm.AdminTasksTest do
       assert :ok = AdminTasks.rename_organization("org_one", "org_one_renamed")
       assert {:error, :name_reserved} = AdminTasks.rename_organization("org_two", "org_one")
 
-      assert {:ok, _} = AdminTasks.delete_organization(second.name, delete_data: true)
+      assert :ok = AdminTasks.delete_organization(second.name, delete_data: true)
+      run_organization_data_jobs()
 
       assert Hexpm.Store.get(:repo_bucket, "repos/org_one/tarballs/pkg-1.0.0.tar", []) == "FIRST"
     end
@@ -1097,7 +1098,7 @@ defmodule Hexpm.AdminTasksTest do
         %{}
       end)
 
-      assert {:ok, _} = AdminTasks.delete_organization(name)
+      assert :ok = AdminTasks.delete_organization(name)
 
       assert_received {:cancelled, true}
       refute Repo.get(Organization, organization.id)
@@ -1107,7 +1108,7 @@ defmodule Hexpm.AdminTasksTest do
       organization = insert(:organization)
       expect(Hexpm.Billing.Mock, :get, fn _name, _opts -> nil end)
 
-      assert {:ok, _} = AdminTasks.delete_organization(organization.name)
+      assert :ok = AdminTasks.delete_organization(organization.name)
       refute Repo.get(Organization, organization.id)
     end
 
@@ -1142,7 +1143,7 @@ defmodule Hexpm.AdminTasksTest do
           status: :pending
         })
 
-      assert {:ok, _} = AdminTasks.delete_organization(organization.name)
+      assert :ok = AdminTasks.delete_organization(organization.name)
 
       refute Repo.get(Organization, organization.id)
       refute Repo.get(Hexpm.Repository.Repository, repository.id)
@@ -1161,7 +1162,7 @@ defmodule Hexpm.AdminTasksTest do
       audit_log =
         insert(:audit_log, organization: organization, action: "organization.member.add")
 
-      assert {:ok, _} = AdminTasks.delete_organization(organization.name)
+      assert :ok = AdminTasks.delete_organization(organization.name)
 
       refute Repo.get(Hexpm.Accounts.AuditLog, audit_log.id)
 
@@ -1175,7 +1176,7 @@ defmodule Hexpm.AdminTasksTest do
       organization = insert(:organization)
       user = insert(:user)
 
-      assert {:ok, _} = AdminTasks.delete_organization(organization.name)
+      assert :ok = AdminTasks.delete_organization(organization.name)
 
       assert Repo.exists?(Hexpm.Accounts.ReservedUsername.by_name(organization.name))
 
@@ -1192,14 +1193,15 @@ defmodule Hexpm.AdminTasksTest do
     end
 
     test "deletes an organization made out of an existing account with keys" do
-      user = insert(:user)
+      # Usernames may hold hyphens, organization names may not.
+      user = insert(:user, username: "converted_#{System.unique_integer([:positive])}")
       key = insert(:key, user: user)
       insert(:audit_log, user: user, key: key, action: "key.generate")
 
       assert {:ok, %{organization: organization}} =
                Hexpm.Accounts.Organizations.create_from_user(user, insert(:user))
 
-      assert {:ok, _} = AdminTasks.delete_organization(organization.name)
+      assert :ok = AdminTasks.delete_organization(organization.name)
 
       refute Repo.get(Organization, organization.id)
       refute Repo.get(Hexpm.Accounts.Key, key.id)
@@ -1225,7 +1227,7 @@ defmodule Hexpm.AdminTasksTest do
       name = repository.organization.name
       put_organization_objects(name)
 
-      assert {:ok, _} = AdminTasks.delete_organization(name)
+      assert :ok = AdminTasks.delete_organization(name)
 
       assert Hexpm.Store.get(:repo_bucket, "repos/#{name}/tarballs/pkg-1.0.0.tar", [])
       assert Hexpm.Store.get(:preview_bucket, "repos/#{name}/files/pkg/1.0.0/README.md", [])
@@ -1242,14 +1244,8 @@ defmodule Hexpm.AdminTasksTest do
       put_organization_objects(other)
       Hexpm.Store.put(:repo_bucket, "tarballs/pkg-1.0.0.tar", "PUBLIC", [])
 
-      assert {:ok, counts} = AdminTasks.delete_organization(name, delete_data: true)
-
-      assert counts == %{
-               repo_bucket: 3,
-               preview_bucket: 1,
-               diff_bucket: 1,
-               docs_private_bucket: 1
-             }
+      assert :ok = AdminTasks.delete_organization(name, delete_data: true)
+      run_organization_data_jobs()
 
       assert Hexpm.Store.list(:repo_bucket, "repos/#{name}/") |> Enum.to_list() == []
 
@@ -1270,11 +1266,52 @@ defmodule Hexpm.AdminTasksTest do
       assert Hexpm.Store.get(:docs_private_bucket, "#{other}/pkg/index.html", [])
     end
 
+    test "delete_data leaves the objects to a job inserted with the deletion" do
+      repository = insert(:repository)
+      name = repository.organization.name
+      put_organization_objects(name)
+
+      assert :ok = AdminTasks.delete_organization(name, delete_data: true)
+
+      refute Organizations.get(name)
+      assert [job] = all_enqueued(worker: Hexpm.Accounts.OrganizationDataWorker)
+      assert job.args["names"] == [name]
+      assert Hexpm.Store.get(:repo_bucket, "repos/#{name}/tarballs/pkg-1.0.0.tar", [])
+
+      run_organization_data_jobs()
+      assert Hexpm.Store.list(:repo_bucket, "repos/#{name}/") |> Enum.to_list() == []
+
+      # A retry after a store failure runs the same job again.
+      assert :ok = perform_job(Hexpm.Accounts.OrganizationDataWorker, job.args)
+    end
+
+    test "delete_data deletes a renamed organization's objects under its repository's name" do
+      named_repository("org_before")
+      Hexpm.Store.put(:repo_bucket, "repos/org_before/tarballs/pkg-1.0.0.tar", "DATA", [])
+      Hexpm.Store.put(:docs_private_bucket, "org_before/pkg/index.html", "DOCS", [])
+      assert :ok = AdminTasks.rename_organization("org_before", "org_after")
+
+      assert :ok = AdminTasks.delete_organization("org_after", delete_data: true)
+      run_organization_data_jobs()
+
+      assert Hexpm.Store.list(:repo_bucket, "repos/org_before/") |> Enum.to_list() == []
+      assert Hexpm.Store.list(:docs_private_bucket, "org_before/") |> Enum.to_list() == []
+      assert Hexpm.Store.get(:deletions_bucket, "organizations/org_before", [])
+      assert Hexpm.Store.get(:deletions_bucket, "organizations/org_after", [])
+    end
+
+    test "without delete_data no job is inserted" do
+      organization = insert(:organization)
+      assert :ok = AdminTasks.delete_organization(organization.name)
+      assert all_enqueued(worker: Hexpm.Accounts.OrganizationDataWorker) == []
+    end
+
     test "delete_data records the deletion for the backup" do
       repository = insert(:repository)
       name = repository.organization.name
 
-      assert {:ok, _} = AdminTasks.delete_organization(name, delete_data: true)
+      assert :ok = AdminTasks.delete_organization(name, delete_data: true)
+      run_organization_data_jobs()
 
       assert %{"name" => ^name, "deleted_at" => deleted_at} =
                Hexpm.Store.get(:deletions_bucket, "organizations/#{name}", []) |> JSON.decode!()
@@ -1286,7 +1323,7 @@ defmodule Hexpm.AdminTasksTest do
       repository = insert(:repository)
       name = repository.organization.name
 
-      assert {:ok, %{}} = AdminTasks.delete_organization(name)
+      assert :ok = AdminTasks.delete_organization(name)
 
       refute Hexpm.Store.get(:deletions_bucket, "organizations/#{name}", [])
     end
@@ -1305,7 +1342,8 @@ defmodule Hexpm.AdminTasksTest do
         repositories: []
       })
 
-      assert {:ok, _} = AdminTasks.delete_organization(name, delete_data: true)
+      assert :ok = AdminTasks.delete_organization(name, delete_data: true)
+      run_organization_data_jobs()
 
       keys =
         all_enqueued(worker: Hexpm.CDN.PurgeWorker)
@@ -1667,6 +1705,12 @@ defmodule Hexpm.AdminTasksTest do
     Hexpm.Store.put(:diff_bucket, "#{prefix}metadata/#{package}-1.0.0-2.0.0-1.json", "{}", [])
     Hexpm.Store.put(:diff_bucket, "#{prefix}diffs/#{package}-1.0.0-2.0.0-1-diff-0.json", "{}", [])
     Hexpm.Store.put(:diff_bucket, "#{prefix}metadata/other-1.0.0-2.0.0-1.json", "{}", [])
+  end
+
+  defp run_organization_data_jobs() do
+    for job <- all_enqueued(worker: Hexpm.Accounts.OrganizationDataWorker) do
+      assert :ok = perform_job(Hexpm.Accounts.OrganizationDataWorker, job.args)
+    end
   end
 
   defp put_organization_objects(name) do

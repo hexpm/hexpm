@@ -127,11 +127,17 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
         DateTime
       )
 
-    from(o in Organization, where: o.id == ^organization.id)
-    |> Repo.update_all(set: [deletion_scheduled_at: deletion_at, deletion_notices: ["scheduled"]])
+    # The notice is recorded with its email or not at all: the deletion
+    # counts on the notices having gone out.
+    Repo.transaction(fn ->
+      from(o in Organization, where: o.id == ^organization.id)
+      |> Repo.update_all(
+        set: [deletion_scheduled_at: deletion_at, deletion_notices: ["scheduled"]]
+      )
 
-    notify(organization, "scheduled", fn recipients ->
-      Emails.organization_deletion_scheduled(organization.name, deletion_at, recipients)
+      notify(organization, "scheduled", fn recipients ->
+        Emails.organization_deletion_scheduled(organization.name, deletion_at, recipients)
+      end)
     end)
 
     Logger.info(%{
@@ -173,16 +179,18 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
         if notice in organization.deletion_notices or DateTime.compare(now, due) == :lt do
           []
         else
-          from(o in Organization, where: o.id == ^organization.id)
-          |> Repo.update_all(push: [deletion_notices: notice])
+          Repo.transaction(fn ->
+            from(o in Organization, where: o.id == ^organization.id)
+            |> Repo.update_all(push: [deletion_notices: notice])
 
-          notify(organization, notice, fn recipients ->
-            Emails.organization_deletion_reminder(
-              organization.name,
-              organization.deletion_scheduled_at,
-              days,
-              recipients
-            )
+            notify(organization, notice, fn recipients ->
+              Emails.organization_deletion_reminder(
+                organization.name,
+                organization.deletion_scheduled_at,
+                days,
+                recipients
+              )
+            end)
           end)
 
           if days == 1 do
@@ -250,13 +258,13 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
     description = describe(organization)
 
     case Hexpm.AdminTasks.delete_organization(organization.name, delete_data: true) do
-      {:ok, counts} ->
+      :ok ->
         deliver(organization, "deleted", recipients, fn recipients ->
           Emails.organization_deleted(organization.name, recipients)
         end)
 
-        report(:info, "Organization deleted", organization, counts: counts, contents: description)
-        {:ok, counts}
+        report(:info, "Organization deleted", organization, contents: description)
+        :ok
 
       {:error, reason} ->
         report(:error, "Organization deletion failed", organization, reason: inspect(reason))

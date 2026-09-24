@@ -119,13 +119,17 @@ defmodule Hexpm.Accounts.Organizations do
 
   Objects in the repository, preview and docs buckets are left where they are
   and the billing subscription is left running; `Hexpm.AdminTasks.delete_organization/2`
-  handles both.
+  handles both. `:jobs` are Oban jobs inserted in the same transaction, so
+  they run exactly when the rows are gone.
   """
-  def delete(%Organization{id: 1}, audit: _audit_data) do
+  def delete(organization, opts)
+
+  def delete(%Organization{id: 1}, _opts) do
     {:error, :public_organization}
   end
 
-  def delete(organization, audit: audit_data) do
+  def delete(organization, opts) do
+    audit_data = Keyword.fetch!(opts, :audit)
     organization = Repo.preload(organization, [:repository, :user])
 
     multi =
@@ -143,6 +147,7 @@ defmodule Hexpm.Accounts.Organizations do
       )
       |> audit(audit_data, "organization.delete", organization)
       |> Multi.delete(:organization, organization)
+      |> insert_jobs(Keyword.get(opts, :jobs, []))
 
     case Repo.transaction(multi) do
       {:ok, _result} ->
@@ -152,6 +157,12 @@ defmodule Hexpm.Accounts.Organizations do
       {:error, _operation, changeset, _changes} ->
         {:error, changeset}
     end
+  end
+
+  defp insert_jobs(multi, jobs) do
+    jobs
+    |> Enum.with_index()
+    |> Enum.reduce(multi, fn {job, index}, multi -> Oban.insert(multi, {:job, index}, job) end)
   end
 
   defp delete_repository(multi, nil), do: multi

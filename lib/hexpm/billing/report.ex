@@ -106,7 +106,15 @@ defmodule Hexpm.Billing.Report do
     :ok
   end
 
+  # One transaction: billing_active and the day billing stopped change
+  # together, or a run stopped between them would leave an inactive
+  # organization that no later report sees change and so never dates.
   defp do_update(to_update, boolean) do
+    {:ok, :ok} = Repo.transaction(fn -> update(to_update, boolean) end)
+    :ok
+  end
+
+  defp update(to_update, boolean) do
     now = DateTime.utc_now()
 
     # Grouped by the new seats value to keep the number of queries down.

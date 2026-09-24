@@ -38,7 +38,7 @@ defmodule Hexpm.AdminTasks do
 
       # Delete an organization and everything stored under its name
       iex> AdminTasks.delete_organization("acme", delete_data: true)
-      {:ok, %{repo_bucket: 12, preview_bucket: 40, diff_bucket: 0, docs_private_bucket: 300}}
+      :ok
 
       # Remove a package
       iex> AdminTasks.remove_package("hexpm", "malicious_pkg")
@@ -85,7 +85,6 @@ defmodule Hexpm.AdminTasks do
   @announcement_priority 3
 
   # Fastly takes at most 256 surrogate keys in one purge request.
-  @purge_keys_per_request 256
 
   require Logger
 
@@ -810,37 +809,29 @@ defmodule Hexpm.AdminTasks do
       the uploads kept under `debug/` in the repository bucket and `<name>/`
       in the private docs bucket, purges the CDN keys they were served under
       and records the deletion for the nightly backup, which removes the
-      organization from every snapshot a week later (default: `false`)
-
-  Returns the number of objects deleted per bucket, an empty map without
-  `:delete_data`.
+      organization from every snapshot a week later (default: `false`). This
+      runs in `Hexpm.Accounts.OrganizationDataWorker`, a job inserted with
+      the deletion, which retries until it is through and posts the number of
+      objects it deleted to Slack.
 
   ## Examples
 
       iex> AdminTasks.delete_organization("acme")
-      {:ok, %{}}
+      :ok
 
       iex> AdminTasks.delete_organization("acme", delete_data: true)
-      {:ok, %{repo_bucket: 12, preview_bucket: 40, diff_bucket: 0, docs_private_bucket: 300}}
+      :ok
   """
-  @spec delete_organization(String.t(), keyword()) ::
-          {:ok, %{optional(atom()) => non_neg_integer()}} | {:error, term()}
+  @spec delete_organization(String.t(), keyword()) :: :ok | {:error, term()}
   def delete_organization(name, opts \\ []) do
     delete_data? = Keyword.get(opts, :delete_data, false)
 
     with {:ok, organization} <- find_organization(name) do
       cancel_billing(organization)
       # Read while the rows are still there, the CDN keys are built from them.
-      contents = if delete_data?, do: organization_contents(organization)
+      jobs = if delete_data?, do: [organization_data_job(organization)], else: []
 
-      case Organizations.delete(organization, audit: AuditLogs.admin()) do
-        :ok ->
-          counts = if delete_data?, do: delete_organization_data(organization.name, contents)
-          {:ok, counts || %{}}
-
-        {:error, reason} ->
-          {:error, reason}
-      end
+      Organizations.delete(organization, audit: AuditLogs.admin(), jobs: jobs)
     end
   end
 
@@ -856,7 +847,7 @@ defmodule Hexpm.AdminTasks do
     :ok
   end
 
-  defp organization_contents(organization) do
+  defp organization_data_job(organization) do
     organization = Repo.preload(organization, [:repository, :policies])
 
     packages =
@@ -873,79 +864,13 @@ defmodule Hexpm.AdminTasks do
           |> Repo.all()
       end
 
-    %{packages: packages, policies: Enum.map(organization.policies, & &1.name)}
-  end
-
-  # Every object the organization has in a bucket, under one prefix per
-  # bucket: its registry, tarballs, docs archives and policies in the repo
-  # bucket, plus the uploads kept as sent under debug/, the unpacked preview
-  # files, the cached diffs and the unpacked private docs.
-  defp organization_prefixes(name) do
-    [
-      {:repo_bucket, "repos/#{name}/"},
-      {:repo_bucket, "debug/tarballs/#{name}-"},
-      {:repo_bucket, "debug/docs/#{name}-"},
-      {:preview_bucket, "repos/#{name}/"},
-      {:diff_bucket, "repos/#{name}/"},
-      {:docs_private_bucket, "#{name}/"}
+    # A renamed organization's objects stay under its repository's name.
+    names = [
+      organization.name | List.wrap(organization.repository && organization.repository.name)
     ]
-  end
 
-  defp delete_organization_data(name, contents) do
-    Repo.write_mode!()
-
-    counts =
-      name
-      |> organization_prefixes()
-      |> Enum.reduce(%{}, fn {bucket, prefix}, counts ->
-        count = Hexpm.Store.delete_prefix(bucket, prefix)
-        Map.update(counts, bucket, count, &(&1 + count))
-      end)
-
-    Hexpm.Backups.delete_organization(name)
-    purge_keys(:fastly_hexrepo, repository_cdn_keys(name, contents))
-    purge_keys(:fastly_hexdocs_private, docs_cdn_keys(name, contents))
-    counts
-  end
-
-  defp purge_keys(service, keys) do
-    keys
-    |> Enum.uniq()
-    |> Enum.chunk_every(@purge_keys_per_request)
-    |> Enum.each(&Hexpm.CDN.purge(service, &1))
-  end
-
-  # Every registry object of the repository carries `registry/<name>`, so the one
-  # key covers names, versions and every packages/<package> object.
-  defp repository_cdn_keys(name, %{packages: packages, policies: policies}) do
-    ["registry/#{name}"] ++
-      Enum.map(policies, &"policy/#{name}/#{&1}") ++
-      Enum.map(package_names(packages), &"preview/package/#{name}-#{&1}") ++
-      Enum.flat_map(packages, fn
-        {_package, nil} ->
-          []
-
-        {package, version} ->
-          [
-            "tarballs/#{name}-#{package}-#{version}",
-            "docs/#{name}-#{package}-#{version}",
-            "preview/package/#{name}-#{package}/version/#{version}"
-          ]
-      end)
-  end
-
-  defp docs_cdn_keys(name, %{packages: packages}) do
-    Enum.flat_map(package_names(packages), fn package ->
-      ["docspage/#{name}-#{package}", "docspage/#{name}-#{package}/docs_config.js"]
-    end) ++
-      Enum.flat_map(packages, fn
-        {_package, nil} -> []
-        {package, version} -> ["docspage/#{name}-#{package}/#{version}"]
-      end)
-  end
-
-  defp package_names(packages) do
-    packages |> Enum.map(&elem(&1, 0)) |> Enum.uniq()
+    policies = Enum.map(organization.policies, & &1.name)
+    Hexpm.Accounts.OrganizationDataWorker.new_job(names, packages, policies)
   end
 
   @doc """

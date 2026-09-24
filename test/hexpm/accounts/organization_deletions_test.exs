@@ -149,6 +149,22 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
       assert entry.subject =~ "will be deleted tomorrow"
     end
 
+    test "records no notice when its email cannot be queued" do
+      {organization, _email} =
+        inactive_organization(
+          deletion_scheduled_at: days_from_now(1),
+          deletion_notices: ["scheduled", "7_days"]
+        )
+        |> with_admin()
+
+      app_env(:hexpm, :email_base_url, "http://[")
+
+      assert_raise URI.Error, fn -> OrganizationDeletions.run() end
+
+      assert Organizations.get(organization.name).deletion_notices == ["scheduled", "7_days"]
+      assert entries() == []
+    end
+
     test "does not remind before the week" do
       inactive_organization(
         deletion_scheduled_at: days_from_now(8),
@@ -207,9 +223,12 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
       name = organization.name
       Hexpm.Store.put(:repo_bucket, "repos/#{name}/tarballs/pkg-1.0.0.tar", "TARBALL", [])
 
-      assert %{deleted: [{^name, {:ok, counts}}]} = OrganizationDeletions.run()
+      assert %{deleted: [{^name, :ok}]} = OrganizationDeletions.run()
 
-      assert counts.repo_bucket == 1
+      for job <- all_enqueued(worker: Hexpm.Accounts.OrganizationDataWorker) do
+        assert :ok = perform_job(Hexpm.Accounts.OrganizationDataWorker, job.args)
+      end
+
       refute Organizations.get(name)
       assert Repo.exists?(Hexpm.Accounts.ReservedUsername.by_name(name))
       assert Hexpm.Store.list(:repo_bucket, "repos/#{name}/") |> Enum.to_list() == []
@@ -311,7 +330,7 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
 
       name = organization.name
       assert %{reminded: [{^name, "1_days"}], deleted: []} = OrganizationDeletions.run()
-      assert %{reminded: [], deleted: [{^name, {:ok, _}}]} = OrganizationDeletions.run()
+      assert %{reminded: [], deleted: [{^name, :ok}]} = OrganizationDeletions.run()
     end
   end
 
