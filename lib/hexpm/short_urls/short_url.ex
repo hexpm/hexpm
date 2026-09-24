@@ -61,6 +61,11 @@ defmodule Hexpm.ShortURLs.ShortURL do
     uri = URI.parse(url)
 
     cond do
+      # WHATWG strips these before it parses and `URI.parse/1` does not, so a
+      # URL holding one parses to a different authority in a browser.
+      String.contains?(url, ["\t", "\r", "\n"]) ->
+        {:error, "must not contain tabs or newlines"}
+
       uri.scheme not in ["http", "https"] ->
         {:error, "must use http or https scheme"}
 

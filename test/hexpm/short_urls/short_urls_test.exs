@@ -40,7 +40,9 @@ defmodule Hexpm.ShortURLsTest do
           {"encoded separator in the host", "https://evil.com%2f.hex.pm/"},
           {"IPv6 literal as userinfo", "https://[::1]@hex.pm/"},
           {"allowed host as userinfo", "https://hex.pm@evil.com/"},
-          {"non-default port", "https://hex.pm:8443/"}
+          {"non-default port", "https://hex.pm:8443/"},
+          {"tab inside the port", "https://hex.pm:443\t0/"},
+          {"newline inside the host", "https://hex\n.pm/"}
         ] do
       test "refuses a URL with a #{label}" do
         assert {:error, %{valid?: false}} = ShortURLs.add(%{"url" => unquote(url)})
