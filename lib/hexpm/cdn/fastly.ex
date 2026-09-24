@@ -290,13 +290,17 @@ defmodule Hexpm.CDN.Fastly do
       {"content-type", "application/json"}
     ]
 
-    HTTP.retry(fn -> HTTP.impl().post(url, headers, body) end, "fastly", @retry_opts)
+    HTTP.track_request(:post, url, fn ->
+      HTTP.retry(fn -> HTTP.impl().post(url, headers, body) end, "fastly", @retry_opts)
+    end)
   end
 
   defp get(url) do
+    url = @fastly_url <> url
     headers = [{"fastly-key", auth(:fastly_hexrepo)}, {"accept", "application/json"}]
 
-    fn -> HTTP.impl().get(@fastly_url <> url, headers) end
-    |> HTTP.retry("fastly", @retry_opts)
+    HTTP.track_request(:get, url, fn ->
+      HTTP.retry(fn -> HTTP.impl().get(url, headers) end, "fastly", @retry_opts)
+    end)
   end
 end

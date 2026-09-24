@@ -323,12 +323,38 @@ defmodule Hexpm.TestHelpers do
       :telemetry.detach(handler)
     end
 
-    collect_queries(handler, [])
+    collect_events(handler, [])
   end
 
-  defp collect_queries(handler, acc) do
+  @doc """
+  Returns the final outbound HTTP outcomes `fun` recorded in the calling
+  process, as the metadata of each `Hexpm.HTTP.track_request/3` event.
+  """
+  def capture_final_requests(fun) do
+    test = self()
+    handler = {__MODULE__, System.unique_integer()}
+
+    :telemetry.attach(
+      handler,
+      [:hexpm, :http, :request, :stop],
+      fn _event, _measurements, metadata, _config ->
+        if self() == test, do: send(test, {handler, metadata})
+      end,
+      nil
+    )
+
+    try do
+      fun.()
+    after
+      :telemetry.detach(handler)
+    end
+
+    collect_events(handler, [])
+  end
+
+  defp collect_events(handler, acc) do
     receive do
-      {^handler, query} -> collect_queries(handler, [query | acc])
+      {^handler, event} -> collect_events(handler, [event | acc])
     after
       0 -> Enum.reverse(acc)
     end

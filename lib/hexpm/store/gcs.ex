@@ -11,7 +11,7 @@ defmodule Hexpm.Store.GCS do
   def get(bucket, key, _opts) do
     url = url(bucket, key)
 
-    case retry(url, fn -> Hexpm.HTTP.impl().get(url, headers(), decode_body: false) end) do
+    case retry(:get, url, fn -> Hexpm.HTTP.impl().get(url, headers(), decode_body: false) end) do
       {:ok, 200, _headers, body} -> body
       {:ok, 404, _headers, _body} -> nil
       {:ok, status, _headers, _body} -> raise "GCS GET #{url} returned status #{status}"
@@ -22,7 +22,7 @@ defmodule Hexpm.Store.GCS do
   def size(bucket, key) do
     url = url(bucket, key)
 
-    case retry(url, fn -> Hexpm.HTTP.impl().head(url, headers(), decode_body: false) end) do
+    case retry(:head, url, fn -> Hexpm.HTTP.impl().head(url, headers(), decode_body: false) end) do
       {:ok, 200, response_headers, _body} -> content_length!(response_headers)
       {:ok, 404, _headers, _body} -> nil
     end
@@ -31,7 +31,7 @@ defmodule Hexpm.Store.GCS do
   def stream(bucket, key) do
     url = url(bucket, key)
 
-    case retry(url, fn -> stream_request(url) end) do
+    case retry(:get, url, fn -> stream_request(url) end) do
       {:ok, 200, _headers, chunks} -> chunks
       {:ok, 404, _headers, _body} -> nil
       {:ok, status, _headers, _body} -> raise "GCS GET #{url} returned status #{status}"
@@ -88,7 +88,7 @@ defmodule Hexpm.Store.GCS do
     url = url(bucket, key)
     headers = filter_nil_values(headers)
 
-    {:ok, 200, response_headers, _body} = retry(url, fn -> fun.(url, headers) end)
+    {:ok, 200, response_headers, _body} = retry(:put, url, fn -> fun.(url, headers) end)
 
     {:ok, %{etag: header!(response_headers, "etag")}}
   end
@@ -110,7 +110,7 @@ defmodule Hexpm.Store.GCS do
   def delete(bucket, key) do
     url = url(bucket, key)
 
-    case retry(url, fn -> Hexpm.HTTP.impl().delete(url, headers()) end) do
+    case retry(:delete, url, fn -> Hexpm.HTTP.impl().delete(url, headers()) end) do
       {:ok, status, _headers, _body} when status in [204, 404] -> :ok
     end
   end
@@ -135,7 +135,7 @@ defmodule Hexpm.Store.GCS do
     query = URI.encode_query(%{"prefix" => prefix, "marker" => marker || ""})
     url = url(bucket) <> "?" <> query
 
-    {:ok, 200, _headers, body} = retry(url, fn -> Hexpm.HTTP.impl().get(url, headers()) end)
+    {:ok, 200, _headers, body} = retry(:get, url, fn -> Hexpm.HTTP.impl().get(url, headers()) end)
 
     doc = SweetXml.parse(body)
     marker = SweetXml.xpath(doc, ~x"/ListBucketResult/NextMarker/text()"s)
@@ -184,11 +184,13 @@ defmodule Hexpm.Store.GCS do
     url(bucket) <> "/" <> encoded
   end
 
-  defp retry(url, fun) do
-    Hexpm.HTTP.retry(fun, "gcs #{url}",
-      attempts: 5,
-      base_delay: 200,
-      statuses: [429, 500..599]
-    )
+  defp retry(method, url, fun) do
+    Hexpm.HTTP.track_request(method, url, fn ->
+      Hexpm.HTTP.retry(fun, "gcs #{url}",
+        attempts: 5,
+        base_delay: 200,
+        statuses: [429, 500..599]
+      )
+    end)
   end
 end

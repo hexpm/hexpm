@@ -2,6 +2,7 @@ defmodule Hexpm.Billing.HexpmTest do
   use ExUnit.Case, async: true
   import ExUnit.CaptureLog
   import Mox
+  import Hexpm.TestHelpers, only: [capture_final_requests: 1]
 
   setup :verify_on_exit!
 
@@ -13,8 +14,14 @@ defmodule Hexpm.Billing.HexpmTest do
         {:ok, 204, [], ""}
       end)
 
-      assert Hexpm.Billing.Hexpm.change_plan("myorg", %{"plan_id" => "organization-annually"}) ==
-               :ok
+      events =
+        capture_final_requests(fn ->
+          assert Hexpm.Billing.Hexpm.change_plan("myorg", %{
+                   "plan_id" => "organization-annually"
+                 }) == :ok
+        end)
+
+      assert events == [%{host: "localhost", method: "POST", status: 204}]
     end
 
     test "returns the validation errors on 422" do
@@ -160,10 +167,36 @@ defmodule Hexpm.Billing.HexpmTest do
 
       log =
         capture_log(fn ->
-          assert Hexpm.Billing.Hexpm.pay_invoice(42) == {:error, %{}}
+          events =
+            capture_final_requests(fn ->
+              assert Hexpm.Billing.Hexpm.pay_invoice(42) == {:error, %{}}
+            end)
+
+          assert events == [%{host: "localhost", method: "POST", status: "error"}]
         end)
 
       assert log =~ "billing pay_invoice failed for 42"
+    end
+  end
+
+  describe "get/2" do
+    test "records one final outcome after a retried transport error" do
+      expect(Hexpm.HTTP.Mock, :get, 2, fn url, _headers, _opts ->
+        assert url == "http://localhost:4001/api/customers/myorg?"
+
+        if Process.put(:billing_get_attempted, true) do
+          {:ok, 200, [], %{"name" => "myorg"}}
+        else
+          {:error, %Mint.TransportError{reason: :closed}}
+        end
+      end)
+
+      events =
+        capture_final_requests(fn ->
+          assert Hexpm.Billing.Hexpm.get("myorg") == %{"name" => "myorg"}
+        end)
+
+      assert events == [%{host: "localhost", method: "GET", status: 200}]
     end
   end
 end

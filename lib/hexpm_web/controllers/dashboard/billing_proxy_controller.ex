@@ -35,7 +35,9 @@ defmodule HexpmWeb.Dashboard.BillingProxyController do
         {"accept", "application/json"}
       ]
 
-      case Hexpm.HTTP.impl().post(url, headers, body, receive_timeout: @timeout) do
+      case Hexpm.HTTP.track_request(:post, url, fn ->
+             Hexpm.HTTP.impl().post(url, headers, body, receive_timeout: @timeout)
+           end) do
         {:ok, status, _headers, response_body} ->
           conn
           |> put_resp_content_type("application/json")

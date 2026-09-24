@@ -494,6 +494,30 @@ defmodule Hexpm.HTTP do
   end
 
   @doc """
+  Records one final HTTP outcome from `fun`, tagged by host and method.
+  Wrap the complete request operation, including its retries. Once a host
+  reports final outcomes, alerting counts only those for it, so every call to
+  that host has to be wrapped.
+  """
+  def track_request(method, url, fun) do
+    result = fun.()
+
+    status =
+      case result do
+        {:ok, status, _headers, _body} -> status
+        {:error, _reason} -> "error"
+      end
+
+    :telemetry.execute([:hexpm, :http, :request, :stop], %{}, %{
+      host: URI.parse(url).host,
+      method: method |> to_string() |> String.upcase(),
+      status: status
+    })
+
+    result
+  end
+
+  @doc """
   Calls `fun` until it returns a response whose status is not in `:statuses`
   or the attempts run out, sleeping `:base_delay` times 3^n between tries.
   Transport errors are retried too. Once the attempts are used up the last

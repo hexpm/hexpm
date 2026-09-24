@@ -22,7 +22,7 @@ defmodule Hexpm.Hexdocs.Search.Typesense do
     url = url("collections/#{collection()}/documents/import?action=create")
     headers = [{"x-typesense-api-key", api_key()}]
 
-    case request(url, fn ->
+    case request(:post, url, fn ->
            Hexpm.HTTP.impl().post(url, headers, ndjson, receive_timeout: @timeout)
          end) do
       {:ok, 200, _headers, body} ->
@@ -54,7 +54,9 @@ defmodule Hexpm.Hexdocs.Search.Typesense do
     url = url("collections/#{collection()}/documents?" <> query)
     headers = [{"x-typesense-api-key", api_key()}]
 
-    case request(url, fn -> Hexpm.HTTP.impl().delete(url, headers, receive_timeout: @timeout) end) do
+    case request(:delete, url, fn ->
+           Hexpm.HTTP.impl().delete(url, headers, receive_timeout: @timeout)
+         end) do
       {:ok, 200, _headers, _body} ->
         :ok
 
@@ -70,11 +72,13 @@ defmodule Hexpm.Hexdocs.Search.Typesense do
   defp api_key, do: Application.fetch_env!(:hexpm, :hexdocs_typesense_api_key)
   defp url(path), do: Path.join(Application.fetch_env!(:hexpm, :hexdocs_typesense_url), path)
 
-  defp request(url, fun) do
-    Hexpm.HTTP.retry(fun, "typesense #{url}",
-      attempts: 5,
-      base_delay: 200,
-      statuses: [429, 500..599]
-    )
+  defp request(method, url, fun) do
+    Hexpm.HTTP.track_request(method, url, fn ->
+      Hexpm.HTTP.retry(fun, "typesense #{url}",
+        attempts: 5,
+        base_delay: 200,
+        statuses: [429, 500..599]
+      )
+    end)
   end
 end

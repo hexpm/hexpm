@@ -2,7 +2,7 @@ defmodule Hexpm.CDN.FastlyTest do
   use ExUnit.Case, async: true
   import Mox
   import ExUnit.CaptureLog, only: [capture_log: 1]
-  import Hexpm.TestHelpers, only: [capture_log_lines: 1]
+  import Hexpm.TestHelpers, only: [capture_final_requests: 1, capture_log_lines: 1]
   alias Hexpm.CDN.Fastly
 
   setup :verify_on_exit!
@@ -43,8 +43,13 @@ defmodule Hexpm.CDN.FastlyTest do
 
       lines =
         capture_log_lines(fn ->
-          assert Fastly.purge_key(:fastly_hexrepo, ["key"]) ==
-                   {:error, {:status, 503, %{"msg" => "unavailable"}}}
+          events =
+            capture_final_requests(fn ->
+              assert Fastly.purge_key(:fastly_hexrepo, ["key"]) ==
+                       {:error, {:status, 503, %{"msg" => "unavailable"}}}
+            end)
+
+          assert events == [%{host: "api.fastly.com", method: "POST", status: 503}]
         end)
 
       assert [{:error, line}] =
