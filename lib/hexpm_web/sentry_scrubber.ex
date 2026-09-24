@@ -5,9 +5,14 @@ defmodule HexpmWeb.SentryScrubber do
   # stops them reaching Sentry. `login` is here because `requires_login` puts
   # the path it interrupted, query and all, into `return`.
   # `scim` carries the identity provider's record of a person, `userName` and
-  # `externalId`, in the body and in the filter.
-  @secret_query_paths ["sso", "invites", "login", "scim"]
-  @secret_body_paths ["sso", "scim"]
+  # `externalId`, in the body and in the filter. `password` and `email` carry
+  # the reset and verification keys as `key`, which Sentry's own scrubber keeps
+  # because it matches `password`, `passwd` and `secret` exactly.
+  @secret_query_paths ["sso", "invites", "login", "scim", "password", "email"]
+  # `oauth` bodies carry an API key as `client_secret`, plus refresh tokens,
+  # authorization codes and the token presented for revocation. Sentry's
+  # exact-match scrubber keeps every one of them.
+  @secret_body_paths ["sso", "scim", "oauth"]
 
   def scrub_body(conn) do
     if path?(conn.request_path, @secret_body_paths) do

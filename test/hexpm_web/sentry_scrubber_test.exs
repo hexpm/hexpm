@@ -37,6 +37,41 @@ defmodule HexpmWeb.SentryScrubberTest do
     assert SentryScrubber.scrub_url(conn) == "http://www.example.com/packages?search=ecto"
   end
 
+  test "removes the API key the token endpoint receives as client_secret" do
+    conn =
+      conn(:post, "/api/oauth/token", %{
+        "grant_type" => "client_credentials",
+        "client_id" => "client-id",
+        "client_secret" => "raw-api-key"
+      })
+
+    assert SentryScrubber.scrub_body(conn) == %{}
+  end
+
+  test "removes the credentials the other OAuth endpoints receive" do
+    for {path, params} <- [
+          {"/api/oauth/token", %{"refresh_token" => "raw-refresh-token"}},
+          {"/api/oauth/revoke", %{"token" => "raw-token"}},
+          {"/oauth/device/authorize", %{"user_code" => "RAW-CODE"}}
+        ] do
+      conn = conn(:post, path, params)
+      assert SentryScrubber.scrub_body(conn) == %{}
+    end
+  end
+
+  test "removes reset and verification keys from the query" do
+    for path <- [
+          "/password/new?username=someone&key=raw-reset-key",
+          "/email/verify?username=someone&email=someone%40example.com&key=raw-verification-key"
+        ] do
+      conn = conn(:get, path)
+      scrubbed = SentryScrubber.scrub_url(conn)
+
+      refute scrubbed =~ "raw-"
+      assert URI.parse(scrubbed).query == nil
+    end
+  end
+
   test "removes configuration and rotation parameters from Sentry data" do
     for path <- [
           "/dashboard/orgs/acme/sso/configure",
