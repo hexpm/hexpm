@@ -2,6 +2,7 @@ defmodule HexpmWeb.Dashboard.ProfileController do
   use HexpmWeb, :controller
 
   plug :requires_login
+  plug :requires_verified_primary_email
 
   def index(conn, _params) do
     user = conn.assigns.current_user
@@ -32,5 +33,16 @@ defmodule HexpmWeb.Dashboard.ProfileController do
       container: "flex-1 flex flex-col",
       changeset: changeset
     )
+  end
+
+  defp requires_verified_primary_email(conn, _opts) do
+    if User.verified_primary_email?(conn.assigns.current_user) do
+      conn
+    else
+      conn
+      |> put_flash(:error, "Verify your primary email before editing your public profile.")
+      |> redirect(to: ~p"/dashboard/email")
+      |> halt()
+    end
   end
 end

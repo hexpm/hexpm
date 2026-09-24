@@ -112,16 +112,9 @@ defmodule Hexpm.Utils do
 
   def safe_date(_), do: nil
 
-  def safe_page(page, _count, _per_page) when page < 1 do
-    1
-  end
-
-  def safe_page(page, count, per_page) when page > div(count, per_page) + 1 do
-    div(count, per_page) + 1
-  end
-
-  def safe_page(page, _count, _per_page) do
-    page
+  def safe_page(page, count, per_page) do
+    max_page = max(1, Integer.ceil_div(count, per_page))
+    page |> max(1) |> min(max_page)
   end
 
   def safe_int(nil), do: nil
@@ -134,6 +127,32 @@ defmodule Hexpm.Utils do
   end
 
   def safe_int(_), do: nil
+
+  @doc """
+  Cuts a string down to at most `max` bytes without leaving a partial UTF-8
+  sequence at the end. Invalid bytes in the input are replaced first.
+  """
+  def truncate_bytes(string, max) when is_binary(string) do
+    string = String.replace_invalid(string)
+
+    if byte_size(string) <= max do
+      string
+    else
+      string
+      |> binary_part(0, max)
+      |> trim_partial_codepoint()
+    end
+  end
+
+  defp trim_partial_codepoint(binary) do
+    if String.valid?(binary) do
+      binary
+    else
+      binary
+      |> binary_part(0, byte_size(binary) - 1)
+      |> trim_partial_codepoint()
+    end
+  end
 
   def parse_search(nil), do: nil
   def parse_search(""), do: nil

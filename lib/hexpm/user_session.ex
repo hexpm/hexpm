@@ -44,6 +44,7 @@ defmodule Hexpm.UserSession do
       :session_token
     ])
     |> validate_required([:type, :expires_at])
+    |> validate_length(:name, count: :codepoints, max: 255)
     |> validate_user_or_organization()
     |> validate_inclusion(:type, @types)
     |> validate_type_specific_fields()

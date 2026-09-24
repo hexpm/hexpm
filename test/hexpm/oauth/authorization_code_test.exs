@@ -76,6 +76,30 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
     end
   end
 
+  describe "changeset/2 length limits" do
+    test "bounds the code challenge in bytes" do
+      user = insert(:user)
+      expires_at = DateTime.add(DateTime.utc_now(), 600, :second)
+
+      attrs = %{
+        code: "test_code",
+        redirect_uri: "https://example.com/callback",
+        scopes: ["api"],
+        expires_at: expires_at,
+        user_id: user.id,
+        client_id: Clients.generate_client_id(),
+        code_challenge_method: "S256"
+      }
+
+      attrs = Map.put(attrs, :code_challenge, combining_string(128))
+      assert AuthorizationCode.changeset(%AuthorizationCode{}, attrs).valid?
+
+      attrs = Map.put(attrs, :code_challenge, combining_string(129))
+      changeset = AuthorizationCode.changeset(%AuthorizationCode{}, attrs)
+      assert errors_on(changeset).code_challenge == "should be at most 128 byte(s)"
+    end
+  end
+
   describe "build/1" do
     test "builds authorization code with valid attributes" do
       user = insert(:user)

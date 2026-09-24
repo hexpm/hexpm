@@ -84,8 +84,22 @@ defmodule Hexpm.Accounts.Email do
     changeset
     |> validate_required(~w(email)a)
     |> update_change(:email, &String.downcase/1)
+    |> validate_length(:email, count: :bytes, max: 255)
     |> validate_format(:email, @email_regex)
+    |> validate_domain_not_blocked()
     |> unique_constraint(:email, name: "emails_email_key")
     |> unique_constraint(:email, name: "emails_email_user_key")
+  end
+
+  defp validate_domain_not_blocked(changeset) do
+    prepare_changes(changeset, fn changeset ->
+      email = get_change(changeset, :email)
+
+      if email && changeset.repo.exists?(BlockedEmailDomain.by_email(email)) do
+        add_error(changeset, :email, "uses a blocked domain")
+      else
+        changeset
+      end
+    end)
   end
 end

@@ -10,7 +10,7 @@ The organization's packages are namespaced under the organization's repository. 
 $ mix hex.user auth
 ```
 
-Run `$ mix hex.user register` to register first if you do not have a user yet.
+[Sign up](/signup) first if you do not have a user yet.
 
 > **Deprecated:** Authorizing a single organization with `mix hex.organization auth acme` (without `--key`) is deprecated and will be removed. Authenticate as a user with `mix hex.user auth` for development, or generate an organization key for CI as described below.
 

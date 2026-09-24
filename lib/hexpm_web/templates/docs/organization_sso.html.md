@@ -1,6 +1,6 @@
 ## Organization single sign-on
 
-Organization single sign-on (SSO) lets members sign in to an organization through an OpenID Connect (OIDC) identity provider. Customer-created Okta applications are the supported and documented integration. Microsoft Entra has been validated privately against the same connector but is not a supported provider, and there is no Okta Integration Network listing to install the integration from.
+Organization single sign-on (SSO) lets members sign in to an organization through an OpenID Connect (OIDC) identity provider. Okta and Microsoft Entra are the supported providers, each through an application you create in your own tenant. There is no Okta Integration Network listing to install the integration from.
 
 Organization SSO is currently available only to organizations enabled by Hexpm's runtime SSO gate. It is optional and scoped to one Hexpm organization. It does not create accounts, add organization members, or assign roles.
 
@@ -20,7 +20,7 @@ You need:
 * A Hexpm account for every person who will use SSO.
 * Existing organization membership for every person who will link an SSO identity.
 
-Open the Hexpm organization dashboard, select **SSO**, and keep the **Redirect URI** shown there available while configuring Okta.
+Open the Hexpm organization dashboard, select **SSO**, and keep the **Redirect URI** shown there available while configuring your provider. The URI ends in the organization name and is unique to this organization, so an organization configured with another organization's URI cannot complete a login.
 
 ### Create the Okta application
 
@@ -37,14 +37,29 @@ In the Okta Admin Console, follow Okta's [OIDC app-integration instructions](htt
 
 The application must allow the `openid` and `email` scopes. Hexpm uses the provider subject as the stable identity. The email claim is display data and is used for notifications; it never proves account ownership or grants organization membership.
 
+The issuer to enter in Hexpm is the Okta organization URL, `https://{yourOktaDomain}`. Use the organization issuer rather than a custom authorization server such as `/oauth2/default`; Hexpm is tested and documented against the organization issuer.
+
+### Register the Entra application
+
+In the Microsoft Entra admin center:
+
+1. Open **Identity**, **Applications**, **App registrations**, and select **New registration**.
+2. Under **Supported account types**, choose **Accounts in this organizational directory only**. Hexpm accepts only the tenant-specific issuer, so a multitenant registration gains nothing.
+3. Under **Redirect URI**, choose the **Web** platform and enter the exact **Redirect URI** from the Hexpm SSO dashboard.
+4. Register the application, then copy the **Application (client) ID** and **Directory (tenant) ID** from its **Overview** page.
+5. Open **Certificates & secrets**, add a client secret, and copy its **Value** before leaving the page; it is shown once. Entra client secrets expire, so note the date and rotate before it as described below.
+6. Open the application under **Enterprise applications**, set **Assignment required** to **Yes** under **Properties**, and assign the people or groups who should be able to use the Hexpm integration under **Users and groups**.
+
+The issuer to enter in Hexpm is the tenant-specific v2 issuer, `https://login.microsoftonline.com/{tenant-id}/v2.0`. Do not use `common`, `organizations`, or another tenant-independent issuer: their discovery documents do not return the issuer you configured, and Hexpm requires that they match. Hexpm uses the exact issuer and stable OIDC subject as the identity key for managed and guest users alike, and never substitutes `preferred_username` or the user principal name for a missing email claim.
+
 ### Configure Hexpm
 
 On the organization's **SSO** dashboard:
 
-1. Enter the exact Okta organization **Issuer URL**, `https://{yourOktaDomain}`. Use the organization issuer rather than a custom authorization server such as `/oauth2/default`; Hexpm is tested and documented against the organization issuer. Hexpm requires an HTTPS issuer with no query or fragment and requires the provider discovery document to return that exact issuer.
+1. Enter the **Issuer URL** for your provider, exactly as given above. Hexpm requires an HTTPS issuer with no query or fragment and requires the provider discovery document to return that exact issuer.
 2. Enter the application's **Client ID** and **Client secret**.
 3. Select **Save configuration**.
-4. Select **Test connection** and complete the Okta sign-in as the same Hexpm administrator who saved the configuration.
+4. Select **Test connection** and complete the provider sign-in as the same Hexpm administrator who saved the configuration.
 5. After the test succeeds, select **Enable SSO login**.
 
 The status changes from **Not tested** after saving, to **Tested, disabled** after a successful test, and to **Enabled** after SSO login is enabled.
@@ -61,19 +76,6 @@ The **Organization / Initiate Login URI** is organization-bound; Hexpm never per
 * Unknown parameters are ignored.
 
 Every accepted initiation creates fresh state, nonce, and PKCE values. Custom Okta dashboard tiles, OIN Wizard-generated instances, and public OIN listings are not supported launch claims. Tiles and a Wizard-generated instance both work and have been exercised, so for those this is a decision about what Hexpm will document and answer for rather than a gap in what has been tried. A public listing has never been submitted for review, so it does not exist.
-
-### Microsoft Entra private validation
-
-Microsoft Entra uses the same provider-neutral OIDC connection. Hexpm has validated it privately across managed users, guest users, missing and unexpected claims, secret rotation, and signing-key rotation. That validation is not a support claim: supporting a second provider is a separate decision covering documentation, fixtures, and what Hexpm will answer for when a customer's provider misbehaves, and it has not been taken.
-
-The steps below describe an approved private validation, not general use:
-
-1. Register a Web application with the exact Hexpm redirect URI.
-2. Use the tenant-specific v2 issuer, `https://login.microsoftonline.com/{tenant-id}/v2.0`. Do not use `common`, `organizations`, or a tenant-independent issuer.
-3. Configure the application's client ID and client secret in Hexpm, test the connection, and enable it only for the validation organization.
-4. Assign only the managed and guest test users included in the validation.
-
-Hexpm uses the exact issuer and stable OIDC subject as the identity key. Hexpm does not substitute `preferred_username` or UPN as an email address.
 
 ### Link a member's account
 
@@ -96,12 +98,14 @@ After linking, later uses of the organization login URL establish an organizatio
 Enforcement is set on the organization's **SSO** dashboard and has three modes:
 
 * **Optional** is the default. Members can authenticate through the provider and nothing changes if they do not.
-* **Pilot** enforces only the members an administrator marks as enforced, one at a time, so a team can try it on itself before turning it on for everyone.
+* **Pilot** enforces only the members with **Require SSO** turned on in the members tab, set one at a time, so a team can try it on itself before turning it on for everyone.
 * **Required** enforces every member except the ones marked exempt, from a date you pick.
 
-The per-member control has three states in both modes: enforced, exempt, and following the organization. Moving from pilot to required does not reassign anybody. The people you piloted with stay enforced, the people you never touched start being enforced because the organization now is, and only an explicit exemption opts anyone out.
+Exemptions are managed from the **Exempt from SSO** list on the members tab, in both modes, and exempt members carry an **SSO exempt** badge. Moving from pilot to required does not reassign anybody. The people you piloted with stay enforced, the people you never touched start being enforced because the organization now is, and only an explicit exemption opts anyone out.
 
-Setting a required-by date is a grace period, not a reminder. Until it passes the organization behaves exactly as it does in pilot. Members who have not linked an identity are emailed in the two weeks before the date, once each.
+Setting a required-by date is a grace period, not a reminder. Until it passes the organization behaves exactly as it does in pilot. Members who have not linked an identity are emailed in the two weeks before the date, and again if the date moves. When personal API keys are blocked, members who have linked but hold a key the date will strip or refuse are emailed too, with each key and what happens to it. A date inside those two weeks is announced when it is saved.
+
+A member who has not linked an identity is also emailed the moment enforcement starts applying to them with no date ahead: required mode saved with no date or a past one, the date moved to now, the connection turned on while required, or an administrator enforcing them or lifting their exemption.
 
 Hexpm refuses to switch an organization to required unless at least one administrator is exempt or has already linked an identity, so a misconfigured provider cannot lock every administrator out of the settings that would fix it.
 
@@ -128,6 +132,37 @@ When one lapses in the browser you are sent to the provider and back, and unless
 
 Shorter is stricter and more interruptive. The lifetime is what bounds how long someone your provider has deactivated keeps reaching the organization, so it is the number to pick deliberately.
 
+### Provisioning (SCIM)
+
+Provisioning lets your provider create and deactivate members here as you assign and deactivate them there. It is separate from SSO login: SSO proves a person may authenticate now, provisioning changes who is a member.
+
+On the organization's **SSO** dashboard, under **Provisioning (SCIM)**, choose what happens when the seats run out and the role provisioned members join with, then generate the bearer token. The token is shown once; regenerate it to replace it, and it is revoked automatically if the connection is pointed at a different provider. Provisioning is configured on a second application in your provider, separate from the one that handles login, using the **SCIM base URL** from the dashboard and that token.
+
+In Okta, add **SCIM 2.0 Test App (OAuth Bearer Token)** from the application catalog. Under **Provisioning**, **Integration**, enter the SCIM base URL and the bearer token and test the API credentials. Under **To App**, enable the provisioning features you want: **Create Users**, **Update User Attributes**, and **Deactivate Users** each work on their own, so you can start with deactivation only. Then assign the same people or groups as the login application.
+
+In Microsoft Entra, open **Enterprise applications**, select **New application**, then **Create your own application**, and choose **Integrate any other application you don't find in the gallery**. The application registered for login cannot be used here; Entra offers provisioning only on an enterprise application created this way. Under **Provisioning**, choose the **Automatic** mode, enter the SCIM base URL as the tenant URL and the bearer token as the secret token, and test the connection. Keep the default attribute mappings, turn provisioning on with its scope set to assigned users and groups, and assign people or groups under **Users and groups**. Entra sends changes on its own cycle, about every forty minutes and sometimes longer; **Provision on demand** applies one person's assignment, deactivation, or reactivation immediately, while a permanent deletion always waits for the next cycle.
+
+Hexpm matches a provisioned person by `userName`, so the mapping must produce the email address the person verified on Hexpm. Entra's default maps it from the user principal name; if your users' principal names are not their email addresses, map it from `mail` instead. Hexpm reads `userName`, `externalId`, and `active` and ignores every other attribute.
+
+What each operation does:
+
+* **Assigning a person** whose Hexpm account has a verified email matching the SCIM `userName`, or who has signed in through this connection with that address, adds them as a member with the role you chose, taking a seat. They are emailed that they were added. If the seats are full, the create is refused or a seat is added to the subscription, per your choice. If the organization requires two-factor authentication and the person has not enabled it, the create is refused until they do; your provider retries on its own schedule.
+* **Assigning an address with no Hexpm account** sends a pending invitation to that address instead. Nothing creates a Hexpm account, and the seat is spent when the invitation is accepted, not when it is sent. An invitation is refused at acceptance if the organization is full by then, whichever seat policy you chose, because acceptance is what spends the seat.
+* **Deactivating or unassigning** removes the membership, with the member's organization access sessions and SSO link, and revokes any pending invitation to that address, including one an administrator sent by hand. The seat is freed for reuse; the billed quantity changes only when an administrator changes it.
+* **Reactivating** joins the person again with the provisioned role, under the same seat and two-factor checks as assigning them. A role an administrator granted by hand before the deactivation is not remembered.
+
+Membership stays manageable in Hexpm either way, with one thing to know: a member you remove by hand is added again the next time your provider sends them as active. Unassign them in the provider as well, or the next sync undoes the removal. A member you add by hand is matched by the provider's import through their verified email or the address they sign in with.
+
+Provisioning refuses two removals, the same two the dashboard refuses: the organization's last member, and its last administrator who can still reach the organization (an active account that satisfies the organization's two-factor and SSO requirements). A provider that deactivates the other administrators leaves that one in place. Everything else a provider asks for is applied.
+
+Microsoft Entra reports a `displayName` update every time it syncs a member, because Hexpm shows the member's username there and never stores the directory's value. The update succeeds and changes nothing; it is not a sign that provisioning is failing.
+
+A full import lists each member's primary email address (or the address your provider already knows them by) to your provider, which is more than the member list on hex.pm shows.
+
+Every provisioning write is recorded in the organization's audit log as **SCIM**, with the address the request came from. The **Provisioning (SCIM)** card shows who generated the token, when, and when it was last used.
+
+CI is unaffected: organization API keys are not members and never appear on this surface.
+
 ### The Hex CLI
 
 When a CLI session's authentication lapses, the next `mix deps.get` asks:
@@ -146,10 +181,12 @@ CI is unaffected. It authenticates with an organization API key, which is the or
 
 A personal API key is a static credential. There is no session behind it, nothing expires it unless its owner set an expiry, and your provider never sees it used. Whether one may reach an enforced organization is the organization's choice, and the default is to allow them:
 
-* **Block** removes this organization's permissions from members' personal keys on the required-by date, and refuses new ones. Their owners are emailed, and the rest of each key keeps working. Members publishing by hand run `mix hex.user auth` instead, and automation moves to an organization key.
+* **Block** removes this organization's permissions from members' personal keys on the required-by date, and refuses new ones. Their owners are emailed, and the rest of each key keeps working. Members publishing by hand run `mix hex.user auth` instead, after `mix hex.organization deauth ORGANIZATION` on any machine where they ran `mix hex.organization auth ORGANIZATION`, because `mix` uses the key that command stored ahead of their sign-in. Automation moves to an organization key.
 
-    Blocking follows the same members enforcement does. A pilot turns personal keys away for the members you marked enforced and for nobody else, and it refuses new ones rather than removing what is already there, so a pilot shows you what required mode will do without taking anything away yet. An exempt member's keys are never touched.
-* **Allow** leaves them alone, and is what you get if you change nothing. It is the right answer if your publishing workflow depends on them. It means required mode has a standing exception: those keys reach the organization with no session, no expiry, and no exposure to your provider's conditional-access policy. A key still stops working when its owner is removed from the organization here, because its permissions are checked against current membership on every request; it does not stop working when they are deactivated only in your provider, which is what SCIM will change.
+    Blocking follows the same members enforcement does. A pilot turns personal keys away for the members with Require SSO turned on and for nobody else, and it refuses new ones rather than removing what is already there, so a pilot shows you what required mode will do without taking anything away yet. An exempt member's keys are never touched.
+
+    The removal is permanent. Setting personal keys back to allow, or turning enforcement off, does not restore the permissions that were taken; the members whose keys were changed add them again themselves. Use a pilot first if you want to see the list before anything is removed.
+* **Allow** leaves them alone, and is what you get if you change nothing. It is the right answer if your publishing workflow depends on them. It means required mode has a standing exception: those keys reach the organization with no session, no expiry, and no exposure to your provider's conditional-access policy. A key still stops working when its owner is removed from the organization here, because its permissions are checked against current membership on every request, and a provider deactivation counts as removal once provisioning is connected; without provisioning, a provider-only deactivation does not touch it.
 
     An organization API key has the same properties and is never enforced at all, so allowing personal keys widens a path that is already open rather than opening a new one. What blocking buys that removing the member does not is your provider's conditional-access policy, which no static credential evaluates.
 
@@ -167,38 +204,37 @@ The first two stay open because an organization whose client secret expired, or 
 
 Leaving is open because it removes the member's own access rather than granting any, and it is the only lever someone deactivated at the provider has. Gating it would leave them unable to authenticate, unable to leave, and still a billed seat.
 
-Reaching any of the three that way is recorded in the organization's audit log, which names the screen, and emailed to its administrators, at most once an hour per member.
+Reaching any of the three that way is recorded in the organization's audit log, which names the screen. Reaching billing or the SSO settings is also emailed to the administrators, at most once an hour per member. Leaving is not emailed.
 
 The SSO screen is reachable so the connection can be repaired, and turning enforcement off for the organization counts as repairing it. Exempting individual members does not: it outlives the outage and leaves the organization reading as enforced, so that control needs a current organization access session like everything else.
 
 ### The residual bypasses
 
-A required organization has exactly five ways in that do not involve its identity provider, and they are all deliberate:
+A required organization has exactly six ways in that do not involve its identity provider, and they are all deliberate:
 
 1. **Exemptions**, one per member, listed on the members tab.
 2. **Organization API keys**, which authenticate as the organization. This is the audited automation exception; enforcement constrains and monitors it but cannot close it.
 3. **Personal API keys**, unless the organization chose to block them.
 4. **Break-glass** on the billing and SSO settings screens, audited and mailed.
-5. **Readme URLs.** A private package's readme renders on a separate host that never receives your Hexpm session cookie, so the package page signs a URL for it after taking its own authorization decision, and signs one for each image the readme contains. That URL renders that one readme for thirty minutes to anyone holding it. Nothing about it is checked against enforcement, the session it was minted from, or the member's membership, and reaching a readme this way is not audited. It carries no other access: one package, one version, and the images in that readme.
+5. **The provisioning token**, when provisioning is on. It authenticates as the provider's agent rather than as a person, so nothing about enforcement applies to it, and it keeps working after the administrator who generated it leaves. Every write it makes is audited. Delete it under **Provisioning (SCIM)** to close it.
+6. **Readme URLs.** A private package's readme renders on a separate host that never receives your Hexpm session cookie, so the package page signs a URL for it after taking its own authorization decision, and signs one for each image the readme contains. That URL renders that one readme for thirty minutes to anyone holding it. Nothing about it is checked against enforcement, the session it was minted from, or the member's membership, and reaching a readme this way is not audited. It carries no other access: one package, one version, and the images in that readme.
 
-There is no sixth. If you are evaluating Hexpm against a compliance requirement, this is the list. Leaving the organization is open on the same break-glass terms and audited the same way, but it is not on the list: it takes the member's access away rather than giving them any.
+There is no seventh. If you are evaluating Hexpm against a compliance requirement, this is the list. Leaving the organization is open on the same break-glass terms and audited the same way, but it is not on the list: it takes the member's access away rather than giving them any.
 
 ### Offboarding
 
 Two windows, and they are different:
 
 * **Removing a member in Hexpm** takes effect within thirty minutes. The CLI's access token is a capability the edge verifies without a database lookup, so it keeps its scopes until it is next refreshed. Web access ends immediately.
-* **Deactivating someone in your provider only** takes effect when their organization access session expires, which is the lifetime you set. Hexpm does not learn about a provider-side deactivation until then.
+* **Deactivating someone in your provider** removes their membership here when provisioning is connected, which is the same as removing them by hand. Without provisioning, it takes effect when their organization access session expires, which is the lifetime you set; Hexpm does not learn about a provider-side deactivation until then.
 
-SCIM closes the second one and is not in this release. Until it ships, the session lifetime is what bounds it, which is the reason to pick that number deliberately rather than take the default.
-
-Removing the member in Hexpm is what revokes access. Removing their provider assignment is not.
+Without provisioning, the session lifetime is what bounds a provider-side deactivation, which is the reason to pick that number deliberately rather than take the default, and removing the member in Hexpm is what revokes access; removing their provider assignment is not.
 
 ### Seats and billing
 
 Configuring SSO takes an active subscription. Being governed by it does not. If a payment fails, enforcement stays exactly as you set it: an organization that requires SSO keeps requiring it, and its members keep being able to authenticate. A lapsed card does not quietly turn your access control off, and does not lock your team out either. The SSO settings and billing screens stay reachable throughout, which is the same break-glass path described above.
 
-Just-in-time membership is the only part of SSO that can change a seat count. If it is on and a member is admitted when the seats are full, the organization either adds a seat to the subscription or refuses the admission, depending on which you chose under **When the seats run out** on the SSO tab. Enforcement on its own never adds, removes, or bills a seat.
+Just-in-time membership and provisioning are the only parts of SSO that can change a seat count, and each asks you to choose its behavior first: when the seats are full, the organization either adds a seat to the subscription or refuses the admission, depending on what you chose under **When the seats run out**. Enforcement on its own never adds, removes, or bills a seat.
 
 ### Before you turn on required mode
 
@@ -216,24 +252,24 @@ The two MFA policies do not compete, because they protect different things. The 
 
 An SSO authentication never suppresses a personal Hexpm two-factor prompt, because it never establishes the account session in the first place. It also never satisfies step-up re-authentication (sudo), which stays on credentials the account itself owns: password, GitHub, an authenticator code, or a recovery code. Configure the required MFA and conditional-access policy for organization access in your provider.
 
-Okta controls authentication to the SSO application. Hexpm remains the source of truth for organization membership and roles. Removing an Okta assignment does not remove the member from Hexpm. Remove the member in Hexpm to revoke organization access.
+Your provider controls authentication to the SSO application. Hexpm remains the source of truth for organization membership and roles. Removing a provider assignment removes the member from Hexpm only when provisioning is connected; otherwise, remove the member in Hexpm to revoke organization access.
 
 ### Rotate the client secret
 
-Open the Okta application's **General** settings and use **Client Credentials** to generate a new secret. Keep the old secret active during the overlap; Okta documents this process in [Client secret rotation](https://developer.okta.com/docs/guides/client-secret-rotation-key/main/).
+In Okta, open the application's **General** settings and use **Client Credentials** to generate a new secret. Keep the old secret active during the overlap; Okta documents this process in [Client secret rotation](https://developer.okta.com/docs/guides/client-secret-rotation-key/main/). In Microsoft Entra, open the application's **Certificates & secrets** and add a new client secret; the old one stays valid until you delete it.
 
 On the Hexpm SSO dashboard:
 
 1. Enter the new secret under **Client secret rotation** and select **Save replacement**.
 2. Select **Test replacement** and complete the provider sign-in.
 3. Select **Complete rotation** only after the replacement test succeeds.
-4. Return to Okta and deactivate or delete the old secret.
+4. Return to your provider and deactivate or delete the old secret.
 
 The active secret continues serving logins until the tested replacement is promoted.
 
 ### Disable SSO, unlink an account, or remove the configuration
 
-Select **Disable SSO login** to stop new SSO logins immediately and revoke every organization access session the connection has granted. This does not remove the saved configuration or linked accounts, and conventional Hexpm login remains available.
+Select **Disable SSO login** to stop new SSO logins immediately and revoke every organization access session the connection has granted. This does not remove the saved configuration or linked accounts, and conventional Hexpm login remains available. It does not stop provisioning either: the provisioning token keeps working until you delete it under **Provisioning (SCIM)**.
 
 Organization administrators can unlink an account from the **Linked accounts** section, which also ends that member's current organization access. Removing a member from the organization does the same and removes the SSO link. If the person is added again later, they must link again.
 
@@ -246,8 +282,9 @@ Organization administrators can unlink an account from the **Linked accounts** s
 The SSO dashboard shows recent failures using stable stage and error codes. Check these common causes:
 
 * **Configuration cannot be saved:** confirm that the issuer is an exact HTTPS URL and that its discovery and key endpoints are publicly reachable over HTTPS.
-* **Okta rejects the callback:** compare the Okta sign-in redirect URI with the **Redirect URI** shown by Hexpm, including the scheme, host, path, and port.
-* **The user cannot open the Okta application:** confirm that the user or one of their groups is assigned to the application.
+* **The provider rejects the callback:** compare the redirect URI registered in the provider with the **Redirect URI** shown by Hexpm, including the scheme, host, path, and port.
+* **Saving an Entra configuration reports an issuer mismatch:** the issuer is `common`, `organizations`, or another tenant-independent endpoint. Use `https://login.microsoftonline.com/{tenant-id}/v2.0`.
+* **The user cannot open the application:** confirm that the user or one of their groups is assigned to the application.
 * **The connection test fails:** restart it from the same browser while signed in as the Hexpm administrator who saved the configuration and initiated the test. If that administrator is unavailable, disable SSO if it is enabled, have a current administrator save the existing configuration again, then test and re-enable it. Leaving the client secret blank while re-saving keeps the current secret.
 * **Account linking says the account is not a member:** add the existing Hexpm account to the organization, then restart from the organization login URL.
 * **A linked identity conflicts:** unlink the existing organization link before attempting to connect the same provider identity or Hexpm account again.
@@ -257,6 +294,8 @@ Do not send client secrets, authorization codes, tokens, cookies, or raw callbac
 
 ### Release scope
 
-Enabled organizations can use the organization login URL and third-party-initiated login. Custom Okta dashboard tiles and Microsoft Entra are not supported, and there is no public Okta Integration Network listing. Tiles and Entra both work and have been exercised privately; supporting them is an open release decision rather than an untested path. The OIN listing is different in kind: the integration was built and exercised, but it was never submitted for review, so no listing exists to install from.
+Enabled organizations can use the organization login URL and third-party-initiated login, with Okta or Microsoft Entra as the provider. Custom Okta dashboard tiles are not supported, and there is no public Okta Integration Network listing. Tiles work and have been exercised; supporting them is an open release decision rather than an untested path. The OIN listing is different in kind: the integration was built and exercised, but it was never submitted for review, so no listing exists to install from.
 
-This release does not support SAML, account creation, SCIM, group or role synchronization, or OIDC logout.
+This release supports SCIM provisioning of members (the Users resource). It does not support SAML, account creation, group or role synchronization, or OIDC logout.
+
+Organization 2FA enforcement is configured independently on the Members page. When both policies apply, members must satisfy both.

@@ -15,6 +15,17 @@ defmodule HexpmWeb.ErrorView do
     )
   end
 
+  # Refusals raised before the controller (a null byte in the query, the rate
+  # limit, read-only mode) reach the provisioning agent, which parses the SCIM
+  # error schema and nothing else.
+  def render(<<status::binary-3>> <> ".scim", assigns) when status != "all" do
+    HexpmWeb.SCIMHelpers.error_body(
+      String.to_integer(status),
+      assigns[:message] || message(status),
+      nil
+    )
+  end
+
   def render(<<status::binary-3>> <> _, assigns) when status != "all" do
     assigns
     |> Map.take([:message, :errors])

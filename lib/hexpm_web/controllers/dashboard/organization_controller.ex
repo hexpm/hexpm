@@ -25,6 +25,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
               :create,
               :show,
               :members,
+              :configure_tfa,
               :keys,
               :packages,
               :billing,
@@ -94,6 +95,38 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end)
   end
 
+  def configure_tfa(conn, %{"dashboard_org" => name, "policy" => attrs}) when is_map(attrs) do
+    access_organization(conn, name, "admin", fn organization ->
+      case Hexpm.Accounts.OrganizationTFA.configure(
+             organization,
+             conn.assigns.current_user,
+             conn.assigns.current_session.id,
+             attrs,
+             audit: audit_data(conn)
+           ) do
+        {:ok, _} ->
+          conn
+          |> put_flash(:info, "Organization 2FA policy updated.")
+          |> redirect(to: ~p"/dashboard/orgs/#{name}/members")
+
+        {:error, :tfa_required} ->
+          conn
+          |> put_session(:tfa_return_to, ~p"/dashboard/orgs/#{name}/members")
+          |> put_flash(:error, "Enable 2FA on your account before configuring this policy.")
+          |> redirect(to: ~p"/dashboard/security")
+
+        {:error, reason} ->
+          message =
+            if is_struct(reason, Ecto.Changeset),
+              do:
+                "Invalid deadline. After enforcement starts, disable the policy before scheduling another transition.",
+              else: "You can't configure this policy: #{reason}."
+
+          conn |> put_flash(:error, message) |> redirect(to: ~p"/dashboard/orgs/#{name}/members")
+      end
+    end)
+  end
+
   def members(conn, %{"dashboard_org" => organization}) do
     access_organization(conn, organization, "read", fn organization ->
       render_index(conn, organization, tab: :members)
@@ -129,10 +162,22 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
             |> put_flash(:info, "User #{username} has been added to the organization.")
             |> redirect(to: ~p"/dashboard/orgs/#{organization}/members")
 
+          {:error, :tfa_enrollment_required} ->
+            conn
+            |> put_status(400)
+            |> put_flash(:error, "This user must enable 2FA before joining the organization.")
+            |> render_index(organization, tab: :members)
+
           {:error, :seats_exhausted} ->
             conn
             |> put_status(400)
             |> put_flash(:error, "Not enough seats in organization to add member.")
+            |> render_index(organization, tab: :members)
+
+          {:error, :unverified_primary_email} ->
+            conn
+            |> put_status(400)
+            |> put_flash(:error, "User #{username} has not verified their primary email.")
             |> render_index(organization, tab: :members)
 
           {:error, changeset} ->
@@ -165,10 +210,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
             |> put_flash(:info, "User #{username} has been removed from the organization.")
             |> redirect(to: ~p"/dashboard/orgs/#{organization}/members")
 
-          {:error, :last_member} ->
+          {:error, reason} when reason in [:last_member, :last_admin] ->
             conn
             |> put_status(400)
-            |> put_flash(:error, "Cannot remove last member from organization.")
+            |> put_flash(
+              :error,
+              "At least one eligible administrator must remain in the organization."
+            )
             |> render_index(organization, tab: :members)
         end
       else
@@ -287,13 +335,41 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   def sso(conn, %{"dashboard_org" => organization}) do
     access_organization(conn, organization, "admin", fn organization ->
       if SSO.reachable?(organization) do
+        token = generated_scim_token(conn, organization)
+
         conn
+        |> delete_session(:generated_scim_token)
+        |> prevent_caching(token)
         |> SSOEnforcement.allow_provider_form_action(organization)
-        |> render_index(organization, tab: :sso)
+        |> render_index(organization, tab: :sso, generated_scim_token: token)
       else
         not_found(conn)
       end
     end)
+  end
+
+  # The one-time token stash renders only for the connection it was generated
+  # on and the account that generated it; anything else reads as absent and is
+  # already deleted by the time this runs.
+  # The rendered token is shown once and never again, so no store between here
+  # and the browser may keep a copy of this response.
+  defp prevent_caching(conn, nil), do: conn
+
+  defp prevent_caching(conn, _token) do
+    conn
+    |> put_resp_header("cache-control", "no-store")
+    |> put_resp_header("pragma", "no-cache")
+  end
+
+  defp generated_scim_token(conn, organization) do
+    with %{"connection_id" => connection_id, "user_id" => user_id, "token" => token} <-
+           get_session(conn, :generated_scim_token),
+         %Connection{id: ^connection_id} <- SSO.get_connection(organization),
+         %User{id: ^user_id} <- conn.assigns.current_user do
+      token
+    else
+      _mismatch -> nil
+    end
   end
 
   def billing(conn, %{"dashboard_org" => organization}) do
@@ -493,10 +569,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
             |> put_flash(:info, "You just left the organization #{organization.name}.")
             |> redirect(to: ~p"/dashboard/profile")
 
-          {:error, :last_member} ->
+          {:error, reason} when reason in [:last_member, :last_admin] ->
             conn
             |> put_status(400)
-            |> put_flash(:error, "The last member of an organization cannot leave.")
+            |> put_flash(
+              :error,
+              "At least one eligible administrator must remain in the organization."
+            )
             |> render_index(organization, tab: :danger_zone)
         end
       else
@@ -568,12 +647,15 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         invoice_ids = Enum.map(customer["invoices"], & &1["id"])
 
         if id in invoice_ids do
-          invoice =
-            Hexpm.Billing.invoice(id, style_nonce: conn.assigns[:style_src_nonce])
+          case Hexpm.Billing.invoice(id, style_nonce: conn.assigns[:style_src_nonce]) do
+            {:ok, invoice} ->
+              conn
+              |> put_resp_header("content-type", "text/html")
+              |> send_resp(200, invoice)
 
-          conn
-          |> put_resp_header("content-type", "text/html")
-          |> send_resp(200, invoice)
+            {:error, _reason} ->
+              render_error(conn, 500)
+          end
         else
           not_found(conn)
         end
@@ -1015,7 +1097,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     {policies, policy_stats, policy_activity, policy_rev} =
       policy_assigns(organization, opts[:tab], policy_action, policy)
 
-    connection = SSO.get_connection(organization)
+    connection = SSO.get_connection(organization, [:scim_token_generated_by_user])
 
     assigns =
       [
@@ -1048,7 +1130,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         policy_rev: policy_rev,
         sso_org_session: current_org_session(conn, organization),
         sso_mode: Enforcement.mode(organization, connection),
-        sso_requires_sso?: sso_requires_sso?(connection)
+        sso_required_at: sso_required_at(connection),
+        sso_generated_scim_token: opts[:generated_scim_token]
       ] ++
         audit_log_assigns(organization, opts[:tab], opts) ++
         sso_assigns(organization, connection, opts[:tab]) ++
@@ -1094,20 +1177,20 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   defp policy_assigns(_organization, _tab, _action, _policy), do: {[], %{}, [], 0}
 
   # The mode in force during a grace period is pilot, which is what governs, but
-  # the screens an administrator prepares with have to know the date is set: the
-  # activation checklist says review the exemptions and then set the date, and
-  # doing those the other way round would otherwise hide the list.
-  defp sso_requires_sso?(%Connection{enforcement_mode: "required"} = connection),
-    do: Connection.enabled?(connection)
+  # the members tab has to say when every member starts needing SSO.
+  defp sso_required_at(%Connection{enforcement_mode: "required"} = connection) do
+    if Connection.enabled?(connection), do: connection.required_at
+  end
 
-  defp sso_requires_sso?(_connection), do: false
+  defp sso_required_at(_connection), do: nil
 
   defp sso_assigns(organization, connection, :sso) do
     [
       sso_connection: connection,
       sso_identities: if(connection, do: SSO.identities(connection), else: []),
       sso_failures: if(connection, do: SSO.failures(connection), else: []),
-      sso_callback_url: SSOEnforcement.callback_url(),
+      sso_callback_url: SSOEnforcement.callback_url(organization),
+      sso_scim_base_url: SSOEnforcement.scim_base_url(),
       sso_login_url: url(~p"/sso/org/#{organization}"),
       sso_domains: OrganizationDomains.all(organization),
       sso_personal_keys: sso_personal_keys(organization, connection),

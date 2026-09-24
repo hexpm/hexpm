@@ -1,6 +1,8 @@
 defmodule HexpmWeb.PackageControllerTest do
   use HexpmWeb.ConnCase, async: true
 
+  alias Hexpm.Repository.Releases
+
   setup do
     user1 = insert(:user)
     user2 = insert(:user)
@@ -262,9 +264,13 @@ defmodule HexpmWeb.PackageControllerTest do
 
       assert html =~ escape(~s({:#{package1.name}, "~> 0.0.2"}))
 
-      assert {:ok, document} = Floki.parse_document(html)
+      document = LazyHTML.from_document(html)
       assert link_text(document, "/packages/#{package1.name}/report") == "Report package"
-      assert [_report_link] = Floki.find(document, ".grid > #report-package-link.bg-grey-100")
+
+      assert [_report_link] =
+               LazyHTML.query(document, ".grid > #report-package-link.bg-grey-100")
+               |> Enum.to_list()
+
       assert link_text(document, "/packages/#{package1.name}/dependents") == "0 Dependants"
       assert link_text(document, "/packages/#{package1.name}/dependencies") == "0 Dependencies"
       assert link_text(document, "/packages/#{package1.name}/versions") == "3 Versions"
@@ -278,7 +284,9 @@ defmodule HexpmWeb.PackageControllerTest do
                "/packages/#{package1.name}/audit-logs"
              ]
 
-      assert [_ | _] = Floki.find(document, "details summary.package-tabs-mobile-trigger")
+      assert [_ | _] =
+               LazyHTML.query(document, "details summary.package-tabs-mobile-trigger")
+               |> Enum.to_list()
     end
 
     test "show package with long name" do
@@ -303,8 +311,11 @@ defmodule HexpmWeb.PackageControllerTest do
       assert html =~ long_name
       assert html =~ "min-w-0 break-words"
 
-      assert {:ok, document} = Floki.parse_document(html)
-      assert [_ | _] = Floki.find(document, "details summary.package-tabs-mobile-trigger")
+      document = LazyHTML.from_document(html)
+
+      assert [_ | _] =
+               LazyHTML.query(document, "details summary.package-tabs-mobile-trigger")
+               |> Enum.to_list()
     end
 
     test "show package uses singular dependant label for one dependant", %{package1: package1} do
@@ -315,7 +326,7 @@ defmodule HexpmWeb.PackageControllerTest do
         |> get("/packages/#{package1.name}")
         |> html_response(200)
 
-      assert {:ok, document} = Floki.parse_document(html)
+      document = LazyHTML.from_document(html)
       assert link_text(document, "/packages/#{package1.name}/dependents") == "1 Dependant"
     end
 
@@ -328,7 +339,7 @@ defmodule HexpmWeb.PackageControllerTest do
         |> get("/packages/#{package1.name}")
         |> html_response(200)
 
-      assert {:ok, document} = Floki.parse_document(html)
+      document = LazyHTML.from_document(html)
       assert link_text(document, "/packages/#{package1.name}/dependents") == "2 Dependants"
     end
 
@@ -406,8 +417,9 @@ defmodule HexpmWeb.PackageControllerTest do
 
       assert [readme_url] =
                body
-               |> Floki.parse_document!()
-               |> Floki.attribute("#readme-frame", "src")
+               |> LazyHTML.from_document()
+               |> LazyHTML.query("#readme-frame")
+               |> LazyHTML.attribute("src")
 
       assert readme_url =~ "/#{repository1.name}/#{package3.name}/0.0.1?token="
       [_url, token] = String.split(readme_url, "token=")
@@ -482,6 +494,230 @@ defmodule HexpmWeb.PackageControllerTest do
     end
   end
 
+  describe "GET /packages/:name/:version/:kind" do
+    test "renders a recognized doc kind" do
+      package =
+        doc_package("doc_kind_pkg", ["README.md", "CHANGELOG.md"])
+
+      body = response(get(build_conn(), "/packages/#{package.name}/1.0.0/changelog"), 200)
+
+      assert body =~ "readme-frame"
+      assert body =~ "/#{package.name}/1.0.0?kind=changelog"
+    end
+
+    test "renders a recognized doc kind for a repository-scoped package", %{
+      user1: user1,
+      repository1: repository1
+    } do
+      package =
+        doc_package(
+          "repo_doc_kind_pkg",
+          ["README.md", "CHANGELOG.md"],
+          repository_id: repository1.id,
+          repository: repository1.name
+        )
+
+      conn =
+        build_conn()
+        |> test_login(user1)
+        |> get("/packages/#{repository1.name}/#{package.name}/1.0.0/changelog")
+
+      body = response(conn, 200)
+
+      assert [doc_url] =
+               body
+               |> LazyHTML.from_document()
+               |> LazyHTML.query("#readme-frame")
+               |> LazyHTML.attribute("src")
+
+      assert doc_url =~ "token="
+      assert doc_url =~ "kind=changelog"
+    end
+
+    test "README pages keep the package-level canonical URL" do
+      package = doc_package("readme_canonical_pkg", ["README.md"])
+
+      for path <- ["/packages/#{package.name}", "/packages/#{package.name}/1.0.0"] do
+        assert canonical_url(response(get(build_conn(), path), 200)) ==
+                 "/packages/#{package.name}"
+      end
+    end
+
+    test "doc kind pages canonicalize to their own versioned URL" do
+      package =
+        doc_package("changelog_canonical_pkg", [
+          "README.md",
+          "CHANGELOG.md"
+        ])
+
+      body = response(get(build_conn(), "/packages/#{package.name}/1.0.0/changelog"), 200)
+
+      assert canonical_url(body) ==
+               HexpmWeb.Endpoint.url() <> "/packages/#{package.name}/1.0.0/changelog"
+    end
+
+    test "renders a threat model at its own URL" do
+      package = doc_package("threat_model_pkg", ["README.md", "THREAT_MODEL.md"])
+
+      body = response(get(build_conn(), "/packages/#{package.name}/1.0.0/threat_model"), 200)
+
+      assert body =~ "/#{package.name}/1.0.0?kind=threat_model"
+      assert body =~ "Threat Model"
+    end
+
+    test "404s for a version the package does not have" do
+      package = insert(:package, name: "doc_kind_missing_version")
+
+      insert(:release,
+        package: package,
+        version: "1.0.0",
+        meta: build(:release_metadata, app: package.name)
+      )
+
+      conn = get(build_conn(), "/packages/#{package.name}/9.9.9/changelog")
+      assert response(conn, 404)
+    end
+
+    test "unknown package 404s" do
+      conn = get(build_conn(), "/packages/nonexistent_doc_pkg/1.0.0/changelog")
+      assert response(conn, 404)
+    end
+  end
+
+  describe "Documentation files nav" do
+    test "shows only the kinds the release actually has" do
+      package =
+        doc_package("doc_nav_pkg", [
+          "README.md",
+          "CHANGELOG.md",
+          "LICENSE"
+        ])
+
+      body = response(get(build_conn(), "/packages/#{package.name}"), 200)
+
+      document = LazyHTML.from_document(body)
+
+      labels =
+        document
+        |> LazyHTML.query(~s(nav[aria-label="Documentation files"] a))
+        |> Enum.map(&(LazyHTML.text(&1, separator: " ") |> String.trim()))
+
+      assert "Changelog" in labels
+      assert "License" in labels
+      refute "Security" in labels
+    end
+
+    test "no documentation files nav for a readme-only package" do
+      package = doc_package("readme_only_pkg", ["README.md"])
+
+      body = response(get(build_conn(), "/packages/#{package.name}"), 200)
+
+      refute body =~ "aria-label=\"Documentation files\""
+    end
+
+    test "deep link to a missing kind explains it and stays the active entry" do
+      package = doc_package("missing_kind_pkg", ["README.md"])
+
+      body = response(get(build_conn(), "/packages/#{package.name}/1.0.0/security"), 200)
+
+      assert body =~ "does not publish a Security file"
+
+      document = LazyHTML.from_document(body)
+
+      assert [security_link] = LazyHTML.query(document, "a[aria-current=page]") |> Enum.to_list()
+      assert LazyHTML.text(security_link, separator: " ") =~ "Security"
+
+      assert [_ | _] =
+               LazyHTML.query(document, ".package-tabs-mobile-menu a")
+               |> Enum.filter(&(LazyHTML.text(&1, separator: " ") =~ "Security"))
+
+      assert [_ | _] =
+               LazyHTML.query(document, ".package-tabs-mobile-menu a")
+               |> Enum.filter(&(LazyHTML.text(&1, separator: " ") =~ "Documentation"))
+    end
+
+    test "the active documentation file carries aria-current" do
+      package =
+        doc_package("active_entry_pkg", [
+          "README.md",
+          "CHANGELOG.md"
+        ])
+
+      body = response(get(build_conn(), "/packages/#{package.name}/1.0.0/changelog"), 200)
+
+      document = LazyHTML.from_document(body)
+      assert [changelog_link] = LazyHTML.query(document, "a[aria-current=page]") |> Enum.to_list()
+      assert LazyHTML.text(changelog_link, separator: " ") =~ "Changelog"
+    end
+
+    test "mobile dropdown lists the available doc kinds" do
+      package = doc_package("mobile_doc_pkg", ["README.md", "LICENSE"])
+
+      body = response(get(build_conn(), "/packages/#{package.name}"), 200)
+
+      document = LazyHTML.from_document(body)
+
+      assert [_ | _] =
+               LazyHTML.query(document, ".package-tabs-mobile-menu a[href$=\"/license\"]")
+               |> Enum.to_list()
+    end
+
+    test "following the Readme link does not 404" do
+      package =
+        doc_package("docfile_link_pkg", [
+          "README.md",
+          "CHANGELOG.md"
+        ])
+
+      body = response(get(build_conn(), "/packages/#{package.name}/1.0.0/changelog"), 200)
+
+      document = LazyHTML.from_document(body)
+
+      assert [readme_link] =
+               LazyHTML.query(document, "nav[aria-label=\"Documentation files\"] a")
+               |> Enum.filter(&(LazyHTML.text(&1, separator: " ") =~ "Readme"))
+
+      assert [readme_href] = LazyHTML.attribute(readme_link, "href")
+      refute readme_href =~ "/readme"
+
+      response(get(build_conn(), readme_href), 200)
+    end
+
+    test "version picker links keep the selected doc kind" do
+      package =
+        doc_package("version_picker_doc_pkg", [
+          "README.md",
+          "CHANGELOG.md"
+        ])
+
+      insert(:release,
+        package: package,
+        version: "1.1.0",
+        meta: build(:release_metadata, app: package.name)
+      )
+
+      body = response(get(build_conn(), "/packages/#{package.name}/1.0.0/changelog"), 200)
+
+      assert body =~ ~s(href="/packages/#{package.name}/1.1.0/changelog")
+    end
+
+    test "mobile dropdown shows doc kinds on non-Documentation tabs too" do
+      package =
+        doc_package("versions_tab_doc_kinds_pkg", [
+          "README.md",
+          "CHANGELOG.md"
+        ])
+
+      body = response(get(build_conn(), "/packages/#{package.name}/versions"), 200)
+
+      document = LazyHTML.from_document(body)
+
+      assert [_ | _] =
+               LazyHTML.query(document, ".package-tabs-mobile-menu a[href$=\"/changelog\"]")
+               |> Enum.to_list()
+    end
+  end
+
   describe "GET /packages/:name/audit-logs" do
     test "sets title correctly" do
       _package = insert(:package, name: "Test")
@@ -522,7 +758,7 @@ defmodule HexpmWeb.PackageControllerTest do
         |> get("/packages/Test/audit-logs")
         |> response(:ok)
 
-      {:ok, first_document} = Floki.parse_document(first_page)
+      first_document = LazyHTML.from_document(first_page)
       first_page_activities = table_column_texts(first_document, 2)
 
       assert "Publish release 0.0.101" in first_page_activities
@@ -535,7 +771,7 @@ defmodule HexpmWeb.PackageControllerTest do
         |> get("/packages/Test/audit-logs?page=2")
         |> response(:ok)
 
-      {:ok, second_document} = Floki.parse_document(second_page)
+      second_document = LazyHTML.from_document(second_page)
       second_page_activities = table_column_texts(second_document, 2)
 
       assert "Publish release 0.0.1" in second_page_activities
@@ -579,7 +815,7 @@ defmodule HexpmWeb.PackageControllerTest do
       assert result =~ "0.0.1"
       assert result =~ "0.0.2"
 
-      assert {:ok, document} = Floki.parse_document(result)
+      document = LazyHTML.from_document(result)
       assert link_text(document, "/packages/#{package1.name}/versions") == "3 Versions"
     end
 
@@ -678,7 +914,7 @@ defmodule HexpmWeb.PackageControllerTest do
       assert result =~ "&gt;= 0.0.1 and &lt; 0.0.2"
       assert result =~ "https://example.com/advisory"
 
-      assert {:ok, document} = Floki.parse_document(result)
+      document = LazyHTML.from_document(result)
 
       assert package_tab_hrefs(document, package1.name) == [
                "/packages/#{package1.name}",
@@ -746,14 +982,14 @@ defmodule HexpmWeb.PackageControllerTest do
       conn = get(build_conn(), "/packages/#{package1.name}/advisories")
       result = response(conn, 200)
 
-      assert {:ok, document} = Floki.parse_document(result)
+      document = LazyHTML.from_document(result)
       assert link_text(document, "/packages/#{package1.name}/advisories") == "1 Advisory"
 
-      assert Floki.find(
+      assert LazyHTML.query(
                document,
                ~s(a[href="https://osv.dev/vulnerability/EEF-CVE-2026-32689"])
              )
-             |> length() == 1
+             |> Enum.count() == 1
 
       assert result =~ "EEF canonical summary"
       refute result =~ "GHSA duplicate summary"
@@ -910,9 +1146,38 @@ defmodule HexpmWeb.PackageControllerTest do
     end
   end
 
+  defp canonical_url(body) do
+    [url] =
+      body
+      |> LazyHTML.from_document()
+      |> LazyHTML.query(~s(link[rel="canonical"]))
+      |> LazyHTML.attribute("href")
+
+    url
+  end
+
   defp escape(html) do
     {:safe, safe} = Phoenix.HTML.html_escape(html)
     IO.iodata_to_binary(safe)
+  end
+
+  defp doc_package(name, filenames, opts \\ []) do
+    package = insert(:package, [name: name] ++ Keyword.take(opts, [:repository_id]))
+
+    insert(:release,
+      package: package,
+      version: "1.0.0",
+      meta: build(:release_metadata, app: name)
+    )
+
+    Releases.put_doc_files(
+      Keyword.get(opts, :repository, "hexpm"),
+      name,
+      "1.0.0",
+      filenames
+    )
+
+    package
   end
 
   defp advise(package, id, version) do
@@ -950,10 +1215,10 @@ defmodule HexpmWeb.PackageControllerTest do
   # Tabs render in both the mobile (<details>) and desktop nav, so a single href
   # appears multiple times. Return the text of just the first match.
   defp link_text(document, href) do
-    case Floki.find(document, ~s(a[href="#{href}"])) do
+    case LazyHTML.query(document, ~s(a[href="#{href}"])) |> Enum.to_list() do
       [link | _rest] ->
         link
-        |> Floki.text(sep: " ")
+        |> LazyHTML.text(separator: " ")
         |> String.replace(~r/\s+/, " ")
         |> String.trim()
 
@@ -974,37 +1239,40 @@ defmodule HexpmWeb.PackageControllerTest do
     ]
 
     document
-    |> Floki.find("a")
-    |> Enum.map(&List.first(Floki.attribute(&1, "href")))
+    |> LazyHTML.query("a")
+    |> Enum.map(&List.first(LazyHTML.attribute(&1, "href")))
     |> Enum.filter(&(&1 in package_paths))
     |> Enum.uniq()
   end
 
   defp table_column_texts(document, column_index) do
     document
-    |> Floki.find("tbody tr")
+    |> LazyHTML.query("tbody tr")
     |> Enum.map(fn row ->
       row
-      |> Floki.find("td")
+      |> LazyHTML.query("td")
       |> Enum.at(column_index - 1)
       |> case do
-        nil -> nil
-        cell -> Floki.text(cell, sep: " ") |> String.replace(~r/\s+/, " ") |> String.trim()
+        nil ->
+          nil
+
+        cell ->
+          LazyHTML.text(cell, separator: " ") |> String.replace(~r/\s+/, " ") |> String.trim()
       end
     end)
     |> Enum.reject(&is_nil/1)
   end
 
   defp current_page(document) do
-    case Floki.find(document, ~s([aria-current="page"])) do
-      [page | _rest] -> Floki.text(page, sep: " ") |> String.trim()
+    case LazyHTML.query(document, ~s([aria-current="page"])) |> Enum.to_list() do
+      [page | _rest] -> LazyHTML.text(page, separator: " ") |> String.trim()
       [] -> nil
     end
   end
 
   defp normalized_text(document) do
     document
-    |> Floki.text(sep: " ")
+    |> LazyHTML.text(separator: " ")
     |> String.replace(~r/\s+/, " ")
     |> String.trim()
   end

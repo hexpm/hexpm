@@ -12,9 +12,10 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
     router: HexpmWeb.Router,
     statics: HexpmWeb.static_paths()
 
+  import HexpmWeb.Components.Badge, only: [badge: 1]
   import HexpmWeb.Components.Buttons, only: [button: 1, icon_button: 1]
   import HexpmWeb.Components.Form, only: [sudo_form: 1]
-  import HexpmWeb.Components.Input, only: [text_input: 1, select_input: 1]
+  import HexpmWeb.Components.Input, only: [text_input: 1, select_input: 1, toggle_switch: 1]
   import HexpmWeb.Components.Modal, only: [modal: 1, show_modal: 1, hide_modal: 1]
 
   attr :add_member_changeset, :any, required: true
@@ -24,14 +25,80 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
   attr :organization, :map, required: true
   attr :quantity, :integer, default: nil
   attr :sso_mode, :atom, default: :optional
-  attr :sso_requires_sso?, :boolean, default: false
+  attr :sso_required_at, :any, default: nil
 
   def members_tab(assigns) do
+    assigns = assign(assigns, :tfa_policy, tfa_policy(assigns.organization))
+
     ~H"""
     <div class="space-y-6">
+      <section
+        :if={
+          admin?(@current_user, @organization) &&
+            Hexpm.Accounts.OrganizationTFA.configurable?(@organization)
+        }
+        class="rounded-lg border border-grey-200 dark:border-grey-700 bg-white dark:bg-grey-800 p-6 space-y-4"
+      >
+        <h2 class="text-lg font-semibold">Require two-factor authentication</h2>
+        <p>
+          Members must enable two-factor authentication on their accounts. After the deadline, members without 2FA lose access to the organization until they enable it. SSO settings are separate.
+        </p>
+        <p :if={@tfa_policy == :disabled}>Enforcement is disabled.</p>
+        <p :if={@tfa_policy == :scheduled}>
+          Enforcement deadline: <strong>{HexpmWeb.ViewHelpers.pretty_utc_datetime(@organization.tfa_required_at)}</strong>.
+          Suspended members retain their membership, role, package ownership, and billed seat.
+        </p>
+        <p :if={@tfa_policy == :started}>
+          Enforced since <strong>{HexpmWeb.ViewHelpers.pretty_utc_datetime(@organization.tfa_required_at)}</strong>.
+          Members without 2FA are suspended until they enable it. Suspended members retain their membership, role, package ownership, and billed seat.
+        </p>
+        <p :if={@tfa_policy == :paused}>
+          The deadline passed on <strong>{HexpmWeb.ViewHelpers.pretty_utc_datetime(@organization.tfa_required_at)}</strong>, but Hex has paused organization 2FA enforcement, so members without 2FA have access until it resumes.
+        </p>
+        <.sudo_form
+          current_user={@current_user}
+          action={~p"/dashboard/orgs/#{@organization}/tfa"}
+          id="organization-tfa-policy"
+          class="group/tfa-policy space-y-4"
+        >
+          <%= if @tfa_policy in [:started, :paused] do %>
+            <input type="hidden" name="policy[enforcement]" value="disabled" />
+            <p>
+              Disabling enforcement removes the deadline and lifts the suspensions. You can schedule a new deadline after that.
+            </p>
+            <.button type="submit" variant="danger">Disable enforcement</.button>
+          <% else %>
+            <.select_input
+              id="policy-enforcement"
+              name="policy[enforcement]"
+              label="Enforcement"
+              options={tfa_enforcement_options(@tfa_policy)}
+              value={if @tfa_policy == :scheduled, do: "keep", else: "transition"}
+            />
+            <div
+              id="policy-grace-days"
+              class="hidden group-has-[option[value=transition]:checked]/tfa-policy:block"
+            >
+              <.text_input
+                id="policy-grace-days-input"
+                type="number"
+                name="policy[grace_days]"
+                label="Days from now until enforcement (1 to 30)"
+                value="14"
+                min="1"
+                max="30"
+              />
+            </div>
+            <p>
+              Configuring this policy requires 2FA on your own account. Once enforcement starts, disable it before scheduling another transition.
+            </p>
+            <.button type="submit">Save 2FA policy</.button>
+          <% end %>
+        </.sudo_form>
+      </section>
       <%!-- Member List --%>
       <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden">
-        <div class="px-6 py-5 border-b border-grey-200 dark:border-grey-700 flex items-center justify-between">
+        <div class="px-6 py-5 border-b border-grey-200 dark:border-grey-700 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 class="text-grey-900 dark:text-white text-lg font-semibold">Members</h2>
             <p class="text-grey-500 dark:text-grey-300 text-sm mt-1">
@@ -44,7 +111,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
             </p>
           </div>
           <%= if admin?(@current_user, @organization) do %>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
               <.button
                 variant="outline"
                 size="sm"
@@ -65,11 +132,26 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
           <% end %>
         </div>
 
+        <p
+          :if={
+            admin?(@current_user, @organization) and @sso_mode == :pilot and
+              not is_nil(@sso_required_at)
+          }
+          id="sso-required-date"
+          class="px-6 py-3 border-b border-grey-200 dark:border-grey-700 bg-grey-50 dark:bg-grey-900 text-sm text-grey-600 dark:text-grey-300"
+        >
+          SSO becomes required on
+          <strong class="font-semibold text-grey-900 dark:text-white">
+            {HexpmWeb.ViewHelpers.pretty_date(@sso_required_at)}
+          </strong>
+          for every member who isn't exempt. Until then only the members with Require SSO turned on need it.
+        </p>
+
         <ul class="divide-y divide-grey-100 dark:divide-grey-700">
           <%= for org_user <- @organization.organization_users do %>
-            <li class="flex items-center justify-between px-6 py-4">
+            <li class="flex flex-col items-start gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
               <%!-- Avatar + name --%>
-              <div class="flex items-center gap-3">
+              <div class="flex min-w-0 items-center gap-3">
                 <img
                   src={
                     HexpmWeb.ViewHelpers.gravatar_url(
@@ -81,21 +163,67 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                   class="w-9 h-9 rounded-full flex-shrink-0"
                 />
                 <div>
-                  <p class="text-sm font-medium text-grey-900 dark:text-white">
+                  <p class="flex flex-wrap items-center gap-2 text-sm font-medium text-grey-900 dark:text-white">
                     <a
                       href={~p"/users/#{org_user.user}"}
                       class="hover:text-primary-600 transition-colors"
                     >
                       {org_user.user.username}
                     </a>
+                    <.badge
+                      :if={
+                        admin?(@current_user, @organization) and @sso_mode != :optional and
+                          org_user.sso_enforcement == "exempt"
+                      }
+                      variant="yellow"
+                    >
+                      SSO exempt
+                    </.badge>
                   </p>
                   <p class="text-xs text-grey-500 dark:text-grey-300">{org_user.user.full_name}</p>
+                  <p
+                    :if={admin?(@current_user, @organization)}
+                    class="text-xs text-grey-600 dark:text-grey-300"
+                  >
+                    {case Hexpm.Accounts.OrganizationTFA.enrollment_status(
+                            @organization,
+                            org_user.user
+                          ) do
+                      "enabled" -> "2FA enabled"
+                      "overdue" -> "2FA enrollment overdue"
+                      "pending" -> "2FA enrollment pending"
+                    end}
+                  </p>
                 </div>
               </div>
 
               <%!-- Actions --%>
-              <div class="flex items-center gap-2">
+              <div class="flex shrink-0 flex-wrap items-center gap-2">
                 <%= if admin?(@current_user, @organization) do %>
+                  <.sudo_form
+                    :if={@sso_mode == :pilot}
+                    current_user={@current_user}
+                    action={~p"/dashboard/orgs/#{@organization}/sso/enforcement/member"}
+                    id={"sso-enforcement-form-#{org_user.user.id}"}
+                    class="flex items-center gap-2"
+                    phx-hook="AutoSubmit"
+                  >
+                    <input type="hidden" name="user_id" value={org_user.user.id} />
+                    <label
+                      for={"sso-enforcement-#{org_user.user.id}"}
+                      class="text-sm text-grey-600 dark:text-grey-300"
+                    >
+                      Require SSO
+                    </label>
+                    <.toggle_switch
+                      id={"sso-enforcement-#{org_user.user.id}"}
+                      name="sso_enforcement"
+                      value="enforced"
+                      hidden_value=""
+                      checked={org_user.sso_enforcement == "enforced"}
+                    />
+                  </.sudo_form>
+
                   <%!-- Role select (auto-submits on change) --%>
                   <.sudo_form
                     current_user={@current_user}
@@ -115,29 +243,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                       value={org_user.role}
                       options={role_options()}
                       variant="light"
-                      class="w-28 h-9 text-sm"
+                      size="sm"
+                      class="w-28"
                     />
                   </.sudo_form>
 
-                  <.sudo_form
-                    :if={@sso_mode != :optional}
-                    current_user={@current_user}
-                    action={~p"/dashboard/orgs/#{@organization}/sso/enforcement/member"}
-                    id={"sso-enforcement-form-#{org_user.user.id}"}
-                    phx-hook="AutoSubmit"
-                  >
-                    <input type="hidden" name="user_id" value={org_user.user.id} />
-                    <.select_input
-                      id={"sso-enforcement-#{org_user.user.id}"}
-                      name="sso_enforcement"
-                      value={org_user.sso_enforcement}
-                      options={sso_enforcement_options(@sso_mode, @sso_requires_sso?)}
-                      variant="light"
-                      class="w-40 h-9 text-sm"
-                    />
-                  </.sudo_form>
-
-                  <%!-- Remove (hidden for self, its footprint kept so rows align) --%>
+                  <%!-- Remove member --%>
                   <%= if org_user.user.id != @current_user.id do %>
                     <.icon_button
                       icon="x-mark"
@@ -146,7 +257,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                       phx-click={show_modal("remove-member-#{org_user.user.id}")}
                     />
                   <% else %>
-                    <span class="w-8 h-8" aria-hidden="true"></span>
+                    <span class="hidden sm:block w-8 h-8" aria-hidden="true"></span>
                   <% end %>
                 <% else %>
                   <span class={[
@@ -166,27 +277,60 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
       accounts reaching private packages on a Hexpm password alone, so it is
       presented as the compliance surface it is rather than as a settings row. --%>
       <div
-        :if={admin?(@current_user, @organization) and (@sso_mode == :required or @sso_requires_sso?)}
+        :if={admin?(@current_user, @organization) and @sso_mode != :optional}
         class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden"
       >
-        <% exempt = exempt_members(@organization) %>
+        <% {exempt, exemptable} = partition_exempt(@organization) %>
         <div class="px-6 py-5 border-b border-grey-200 dark:border-grey-700">
           <h2 class="text-grey-900 dark:text-white text-lg font-semibold">
-            Exempt from SSO ({length(exempt)})
+            Exempt from SSO
           </h2>
           <p class="text-grey-500 dark:text-grey-300 text-sm mt-1">
-            {exemption_summary(exempt)}
+            {exemption_summary(exempt, @sso_mode == :required or not is_nil(@sso_required_at))}
           </p>
+          <.sudo_form
+            :if={exemptable != []}
+            current_user={@current_user}
+            action={~p"/dashboard/orgs/#{@organization}/sso/enforcement/member"}
+            id="sso-exempt-form"
+            class="mt-4 flex flex-wrap items-center gap-2"
+          >
+            <input type="hidden" name="sso_enforcement" value="exempt" />
+            <.select_input
+              id="sso-exempt-user"
+              name="user_id"
+              options={Enum.map(exemptable, &{&1.user.username, &1.user.id})}
+              prompt="Choose a member"
+              required
+              variant="light"
+              size="sm"
+            />
+            <.button type="submit" variant="outline" size="sm">Exempt</.button>
+          </.sudo_form>
         </div>
 
         <ul :if={exempt != []} class="divide-y divide-grey-100 dark:divide-grey-700">
-          <li :for={org_user <- exempt} class="px-6 py-4">
-            <p class="text-sm font-medium text-grey-900 dark:text-white">
-              {org_user.user.username}
-            </p>
-            <p class="text-xs text-grey-500 dark:text-grey-300">
-              {String.capitalize(org_user.role)} access without authenticating through your provider
-            </p>
+          <li
+            :for={org_user <- exempt}
+            class="flex flex-col items-start gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div>
+              <p class="text-sm font-medium text-grey-900 dark:text-white">
+                {org_user.user.username}
+              </p>
+              <p class="text-xs text-grey-500 dark:text-grey-300">
+                {String.capitalize(org_user.role)} access without authenticating through your provider
+              </p>
+            </div>
+            <.sudo_form
+              current_user={@current_user}
+              action={~p"/dashboard/orgs/#{@organization}/sso/enforcement/member"}
+              id={"sso-unexempt-form-#{org_user.user.id}"}
+            >
+              <input type="hidden" name="user_id" value={org_user.user.id} />
+              <input type="hidden" name="sso_enforcement" value="" />
+              <.button type="submit" variant="outline" size="sm">Remove exemption</.button>
+            </.sudo_form>
           </li>
         </ul>
       </div>
@@ -363,6 +507,24 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
     """
   end
 
+  defp tfa_policy(%{tfa_required_at: nil}), do: :disabled
+
+  defp tfa_policy(organization) do
+    cond do
+      DateTime.after?(organization.tfa_required_at, DateTime.utc_now()) -> :scheduled
+      Hexpm.Accounts.OrganizationTFA.enforcement_enabled?() -> :started
+      true -> :paused
+    end
+  end
+
+  defp tfa_enforcement_options(:disabled),
+    do: [{"Schedule a transition", "transition"}, {"Enforce immediately", "immediate"}]
+
+  defp tfa_enforcement_options(:scheduled) do
+    [{"Keep current deadline", "keep"}] ++
+      tfa_enforcement_options(:disabled) ++ [{"Disable enforcement", "disabled"}]
+  end
+
   defp add_member_modal_id, do: "add-member-modal"
 
   defp invite_modal_id, do: "invite-member-modal"
@@ -387,34 +549,31 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
   defp role_badge_class("write"), do: "bg-blue-100 text-blue-700"
   defp role_badge_class(_), do: "bg-grey-100 text-grey-600"
 
-  # During a grace period the mode in force is pilot but the unset state means
-  # enforced on the date, so labelling it "Not enforced" would be wrong for
-  # everyone it is about to cover.
-  defp sso_enforcement_options(:required, _requires_sso?) do
-    [{"Follows required", ""}, {"Enforced", "enforced"}, {"Exempt", "exempt"}]
-  end
-
-  defp sso_enforcement_options(_mode, true) do
-    [{"Enforced on the date", ""}, {"Enforced now", "enforced"}, {"Exempt", "exempt"}]
-  end
-
-  defp sso_enforcement_options(_mode, false) do
-    [{"Not enforced", ""}, {"Enforced", "enforced"}, {"Exempt", "exempt"}]
-  end
-
-  defp exempt_members(organization) do
+  defp partition_exempt(organization) do
     organization.organization_users
-    |> Enum.filter(&(&1.sso_enforcement == "exempt"))
     |> Enum.sort_by(& &1.user.username)
+    |> Enum.split_with(&(&1.sso_enforcement == "exempt"))
   end
 
-  defp exemption_summary([]) do
+  # A pilot without a required-by date governs nobody it has not been told to,
+  # so an exemption there only takes effect once SSO becomes required.
+  defp exemption_summary([], true = _requires_sso?) do
     "Nobody is exempt. Every member authenticates through your provider to reach this organization in a browser or with the CLI. Organization API keys and, unless you block them, personal API keys still reach it without authenticating."
   end
 
-  defp exemption_summary(exempt) do
+  defp exemption_summary(exempt, true = _requires_sso?) do
     count = length(exempt)
 
     "#{count} #{member_label(count)} #{reach_label(count)} this organization's private packages on a Hexpm password alone. This list bounds what SSO enforcement can claim, so keep it short and review it."
+  end
+
+  defp exemption_summary([], false = _requires_sso?) do
+    "Nobody is exempt. Once SSO is required, every member authenticates through your provider to reach this organization."
+  end
+
+  defp exemption_summary(exempt, false = _requires_sso?) do
+    count = length(exempt)
+
+    "#{count} #{member_label(count)} will keep reaching this organization's private packages on a Hexpm password alone once SSO is required."
   end
 end

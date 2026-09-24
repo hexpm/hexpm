@@ -19,6 +19,17 @@ defmodule HexpmWeb.PlugParser do
     |> decode(decoder)
   end
 
+  # Okta and Entra send provisioning bodies as application/scim+json, which
+  # the stock :json parser does not match; without this clause they arrive
+  # unparsed and params are empty.
+  def parse(%Conn{} = conn, "application", "scim+json", _headers, opts) do
+    decoder = get_decoder("json", opts)
+
+    conn
+    |> Conn.read_body(opts)
+    |> decode(decoder)
+  end
+
   def parse(conn, _type, _subtype, _headers, _opts) do
     {:next, conn}
   end

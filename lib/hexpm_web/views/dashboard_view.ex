@@ -69,8 +69,9 @@ defmodule HexpmWeb.DashboardView do
       |> Atom.to_string()
       |> String.replace("_", "-")
 
-    if Enum.take(conn.path_info, -2) == ["dashboard", url_id] do
-      "selected"
+    case conn.path_info do
+      ["dashboard", ^url_id | _rest] -> "selected"
+      _other -> nil
     end
   end
 

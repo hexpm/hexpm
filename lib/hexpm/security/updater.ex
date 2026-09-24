@@ -133,7 +133,7 @@ defmodule Hexpm.Security.Updater do
   end
 
   defp valid_reference_url?(url) do
-    String.length(url) <= @reference_url_max_length and
+    byte_size(url) <= @reference_url_max_length and
       case URI.parse(url) do
         %URI{scheme: scheme, host: host}
         when scheme in @reference_url_schemes and is_binary(host) and host != "" ->

@@ -33,16 +33,9 @@ defmodule HexpmWeb.Components.ConfirmationModal do
 
   def confirmation_modal(assigns) do
     ~H"""
-    <.modal id={@id} max_width="md">
-      <%!-- Header with Icon --%>
-      <:header>
-        <h2 class="text-lg font-semibold text-grey-900">
-          {@title}
-        </h2>
-      </:header>
-
+    <.modal id={@id} title={@title} max_width="md">
       <%!-- Message --%>
-      <p class="text-grey-700">
+      <p class="text-grey-700 dark:text-grey-300">
         {@message}
       </p>
 

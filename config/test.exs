@@ -48,7 +48,7 @@ config :hexpm,
   cache_enabled: false,
   skip_advisory_locks: true,
   # VACUUM cannot run inside the sandbox transaction that wraps each test.
-  # Hexpm.ReleaseTasks.StatsTest covers it unboxed.
+  # Hexpm.Repository.DownloadsWorkerTest covers it unboxed.
   skip_maintenance_vacuum: true
 
 config :hexpm, HexpmWeb.Endpoint,
@@ -77,7 +77,10 @@ config :hexpm, Hexpm.RepoBase,
   pool_size: 20,
   ownership_timeout: 61_000
 
-config :logger, level: :error
+config :logger, level: :info
+config :logger, :default_handler, level: :error
+
+config :hexpm, Hexpm.SecurityLog, sink: :process
 
 config :hexpm, :hcaptcha,
   sitekey: "sitekey",
@@ -89,7 +92,14 @@ config :hexpm, :organization_sso,
   oidc_impl: Hexpm.Accounts.SSO.OIDC.Mock
 
 config :hexpm, :varsel_impl, Hexpm.PackageReports.Varsel.Mock
-config :hexpm, :varsel, key_id: "hexpm-test"
+
+config :hexpm, :varsel,
+  key_id: "hexpm-test",
+  jwks: """
+  {"keys": [{"kty": "EC", "crv": "P-256", "kid": "varsel-test",
+             "x": "E34oPnnGyf9799k058t0zBpEo6cMDYDaFmmEEt2ePLw",
+             "y": "ajZ6c2ekFLfW1H-YBYlJKcKXpnfyu88FF2_PoewQCCU"}]}
+  """
 
 # Don't sleep waiting for Sentry to flush in tests.
 config :hexpm, sentry_flush_ms: 0

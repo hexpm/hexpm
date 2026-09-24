@@ -109,7 +109,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
         "registry-package-#{name}",
         repository_cdn_key(repository, "registry-package", name)
       ],
-      verify: verify_targets(repository, [%{key: key, etag: nil}])
+      verify: verify_targets(repository, [%{key: key, etag: nil, write: Hexpm.CDN.next_write()}])
     }
   end
 
@@ -117,14 +117,14 @@ defmodule Hexpm.Repository.RegistryBuilder do
   # `repos/<name>/` prefix of a private one; the check fetches the latter
   # with a token for that repository.
   defp verify_targets(%Repository{id: 1}, uploads) do
-    Enum.map(uploads, fn %{key: key, etag: etag} ->
-      %{url: Hexpm.Utils.cdn_url(key), etag: etag}
+    Enum.map(uploads, fn %{key: key, etag: etag, write: write} ->
+      %{url: Hexpm.Utils.cdn_url(key), etag: etag, write: write}
     end)
   end
 
   defp verify_targets(%Repository{name: name}, uploads) do
-    Enum.map(uploads, fn %{key: key, etag: etag} ->
-      %{url: Hexpm.Utils.cdn_url(key), etag: etag, repository: name}
+    Enum.map(uploads, fn %{key: key, etag: etag, write: write} ->
+      %{url: Hexpm.Utils.cdn_url(key), etag: etag, write: write, repository: name}
     end)
   end
 
@@ -307,11 +307,13 @@ defmodule Hexpm.Repository.RegistryBuilder do
   defp retirement_reason("renamed"), do: :RETIRED_RENAMED
 
   defp upload_files(repository, objects) do
+    write = Hexpm.CDN.next_write()
+
     Task.async_stream(
       objects(objects, repository),
       fn {kind, key, data, surrogate_keys} ->
-        etag = Storage.put_object(key, data, surrogate_keys, cache_control(repository))
-        %{kind: kind, key: key, etag: etag}
+        etag = Storage.put_object(key, data, surrogate_keys, cache_control(repository), write)
+        %{kind: kind, key: key, etag: etag, write: write}
       end,
       max_concurrency: 32,
       timeout: 60_000

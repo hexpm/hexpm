@@ -51,8 +51,9 @@ defmodule Hexpm.OAuth.Tokens do
     client_id = Keyword.get(opts, :client_id)
     validate = Keyword.get(opts, :validate, true)
     preload = Keyword.get(opts, :preload, [:user])
+    verify = Keyword.get(opts, :verify, :full)
 
-    with {:ok, claims} <- JWT.verify_and_decode(jwt_token),
+    with {:ok, claims} <- verify_token(jwt_token, verify),
          {:ok, jti} <- extract_jti_for_type(claims, type),
          {:ok, token, session_live?} <- find_token_by_jti(jti, type, client_id),
          :ok <- maybe_validate(token, session_live?, validate, type),
@@ -64,6 +65,12 @@ defmodule Hexpm.OAuth.Tokens do
       other -> other
     end
   end
+
+  # `:full` enforces the time-based claims; `:signature` verifies only that
+  # hexpm signed the token, so an expired token presented for revocation is
+  # still found by jti.
+  defp verify_token(jwt_token, :full), do: JWT.verify_and_decode(jwt_token)
+  defp verify_token(jwt_token, :signature), do: JWT.verify_signature(jwt_token)
 
   @doc """
   Creates a token for a user with the given client and scopes.
@@ -79,7 +86,7 @@ defmodule Hexpm.OAuth.Tokens do
   defp build_token(principal, client_id, scopes, grant_type, grant_reference, opts) do
     expires_in = Keyword.get(opts, :expires_in, @default_expires_in)
     expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)
-    {authorized, sso_reauth_required} = authorized_scopes(principal, scopes, opts)
+    {authorized, organization_reauth_required} = authorized_scopes(principal, scopes, opts)
     {subject, subject_type} = subject(principal)
 
     jwt_opts = [
@@ -100,10 +107,10 @@ defmodule Hexpm.OAuth.Tokens do
       grant_reference: grant_reference,
       client_id: client_id,
       user_session_id: Keyword.get(opts, :user_session_id),
-      sso_reauth_required: sso_reauth_required
+      organization_reauth_required: organization_reauth_required
     }
     |> Map.merge(principal_id(principal))
-    |> maybe_add_refresh_token(principal, authorized, opts)
+    |> maybe_add_refresh_token(principal, opts)
     |> Token.build()
   end
 
@@ -116,7 +123,7 @@ defmodule Hexpm.OAuth.Tokens do
   # token belongs to does not exist yet and the browser that consented holds the
   # organization access it is about to inherit.
   defp authorized_scopes(%User{} = user, scopes, opts) do
-    Permissions.expand_and_filter_sso_scopes(
+    Permissions.expand_and_filter_organization_scopes(
       user,
       scopes,
       Keyword.get(opts, :sso_session_id) || Keyword.get(opts, :user_session_id),
@@ -140,11 +147,10 @@ defmodule Hexpm.OAuth.Tokens do
   defp granted_scopes(%User{}, requested, _authorized), do: requested
   defp granted_scopes(%Organization{}, _requested, authorized), do: authorized
 
-  # Signed with the same scopes as the access token. Both edges accept any JWT
-  # that verifies, and neither distinguishes a refresh token from an access
-  # token, so a refresh token carrying the unfiltered request would be usable as
-  # a bearer credential for the scopes the mint just refused.
-  defp maybe_add_refresh_token(attrs, %User{} = user, scopes, opts) do
+  # Signed without scopes. Both edges authorize from the scope claim of any JWT
+  # that verifies, so a refresh token carrying scopes is a bearer credential for
+  # them, with the refresh token's lifetime rather than the access token's.
+  defp maybe_add_refresh_token(attrs, %User{} = user, opts) do
     if Keyword.get(opts, :with_refresh_token, false) do
       # Use provided refresh_token_expires_at (e.g., from session) or calculate fresh
       refresh_expires_at =
@@ -160,7 +166,7 @@ defmodule Hexpm.OAuth.Tokens do
       ]
 
       {:ok, refresh_token, refresh_jti} =
-        JWT.generate_refresh_token(user.username, "user", scopes, refresh_opts)
+        JWT.generate_refresh_token(user.username, "user", refresh_opts)
 
       Map.merge(attrs, %{
         refresh_jti: refresh_jti,
@@ -173,7 +179,7 @@ defmodule Hexpm.OAuth.Tokens do
     end
   end
 
-  defp maybe_add_refresh_token(attrs, %Organization{}, _scopes, _opts), do: attrs
+  defp maybe_add_refresh_token(attrs, %Organization{}, _opts), do: attrs
 
   defp create_for_user_or_org(principal, client_id, scopes, grant_type, grant_reference, opts) do
     build_token(principal, client_id, scopes, grant_type, grant_reference, opts)
@@ -300,8 +306,11 @@ defmodule Hexpm.OAuth.Tokens do
       create_for_user(user, client_id, scopes, grant_type, grant_reference, token_opts)
 
     # Build flat Multi (no nested transactions, last_use folded into INSERT)
-    Keyword.get(opts, :authorization_code)
-    |> consume_authorization_code_multi()
+    Ecto.Multi.new()
+    |> Ecto.Multi.run(:sso_connection_lock, fn _repo, _changes ->
+      {:ok, Hexpm.Accounts.SSO.lock_granting_connections!(browser_session_id, user.id)}
+    end)
+    |> Ecto.Multi.append(consume_authorization_code_multi(Keyword.get(opts, :authorization_code)))
     |> Ecto.Multi.append(
       UserSessions.build_oauth_session_multi(user, client_id,
         expires_at: session_expires_at,

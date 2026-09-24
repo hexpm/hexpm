@@ -1,16 +1,7 @@
 defmodule HexpmWeb.SSOEnforcement do
   @moduledoc """
-  Turns an enforcement refusal into the response the surface it happened on
-  needs, and holds the parts of the provider round trip several surfaces share.
-
-  A browser gets sent at the provider rather than at an error page. The person
-  is already a member and already knows it; the only thing missing is the
-  authentication, so asking for it beats explaining it.
-
-  `:sso_required` is the only refusal a browser can get. `:auth_credential` is
-  assigned by `HexpmWeb.Plugs.authenticate/2`, which runs in the `:api` and
-  `:upload` pipelines only, so a browser request carries no credential and never
-  takes the personal-key branch of enforcement.
+  Applies organization SSO and 2FA requirements to browser, API, and LiveView
+  requests. Browser refusals resume through the shared authentication flow.
   """
 
   use HexpmWeb, :verified_routes
@@ -18,7 +9,7 @@ defmodule HexpmWeb.SSOEnforcement do
   import Plug.Conn, only: [halt: 1]
 
   alias Hexpm.Accounts.SSO
-  alias Hexpm.Accounts.SSO.Enforcement
+  alias Hexpm.Accounts.OrganizationAuth
   alias Hexpm.Accounts.{User, Users}
   alias Hexpm.Permissions
   alias Hexpm.Repository.{Package, Packages}
@@ -32,7 +23,7 @@ defmodule HexpmWeb.SSOEnforcement do
   key carries none.
   """
   def check(conn_or_socket, organization, principal) do
-    Enforcement.check(
+    OrganizationAuth.check(
       organization,
       principal,
       credential(conn_or_socket),
@@ -57,14 +48,18 @@ defmodule HexpmWeb.SSOEnforcement do
   def check_package(conn_or_socket, package, principal, level \\ "maintainer")
 
   def check_package(conn_or_socket, %Package{repository_id: 1} = package, %User{} = user, level) do
-    package
-    |> Packages.owner_organizations(user, level)
-    |> Enum.reduce_while(:ok, fn organization, :ok ->
-      case check(conn_or_socket, organization, user) do
-        :ok -> {:cont, :ok}
-        {:error, refusal} -> {:halt, {:error, refusal, organization}}
-      end
-    end)
+    if Hexpm.Repo.one!(Package.package_owner(package, user, level)) do
+      :ok
+    else
+      package
+      |> Packages.owner_organizations(user, level)
+      |> Enum.reduce_while(:ok, fn organization, :ok ->
+        case check(conn_or_socket, organization, user) do
+          :ok -> {:cont, :ok}
+          {:error, refusal} -> {:halt, {:error, refusal, organization}}
+        end
+      end)
+    end
   end
 
   def check_package(conn_or_socket, %Package{} = package, principal, _level) do
@@ -105,7 +100,7 @@ defmodule HexpmWeb.SSOEnforcement do
   The same filter over a set of organizations the caller has already resolved.
   """
   def reachable(conn_or_socket, organizations) do
-    Enforcement.reachable(
+    OrganizationAuth.reachable(
       organizations,
       conn_or_socket.assigns.current_user,
       credential(conn_or_socket),
@@ -132,7 +127,11 @@ defmodule HexpmWeb.SSOEnforcement do
   """
   def unauthenticated_organizations(conn_or_socket, principal, scopes) do
     {_scopes, required} =
-      Permissions.expand_and_filter_sso_scopes(principal, scopes, session_id(conn_or_socket))
+      Permissions.expand_and_filter_organization_scopes(
+        principal,
+        scopes,
+        session_id(conn_or_socket)
+      )
 
     required
   end
@@ -148,10 +147,10 @@ defmodule HexpmWeb.SSOEnforcement do
     end
   end
 
-  def login_path(organization, nil), do: ~p"/sso/org/#{organization}"
+  def login_path(organization, nil), do: ~p"/organizations/#{organization}/authenticate"
 
   def login_path(organization, return_path) do
-    ~p"/sso/org/#{organization}?#{[return: return_path]}"
+    ~p"/organizations/#{organization}/authenticate?#{[return: return_path]}"
   end
 
   def redirect_to_login(%Plug.Conn{} = conn, organization) do
@@ -167,7 +166,8 @@ defmodule HexpmWeb.SSOEnforcement do
   @doc """
   Ends a browser request that enforcement turned away.
   """
-  def refuse(%Plug.Conn{} = conn, :sso_required, organization) do
+  def refuse(%Plug.Conn{} = conn, refusal, organization)
+      when refusal in [:sso_required, :tfa_required] do
     redirect_to_login(conn, organization)
   end
 
@@ -182,10 +182,20 @@ defmodule HexpmWeb.SSOEnforcement do
   end
 
   @doc """
-  Where the provider sends the browser back to. One address for every flow, and
-  the one registered with the provider.
+  Where the organization's provider sends the browser back to, and the address
+  registered with that provider. One per connection: a code issued by one
+  organization's provider arrives at an address no other connection's
+  transaction carries, so it cannot be redeemed into another connection.
   """
-  def callback_url, do: url(~p"/sso/callback")
+  def callback_url(organization), do: url(~p"/sso/callback/#{organization}")
+
+  @doc """
+  The SCIM base URL the administrator pastes into the provider. One address
+  for every organization; the bearer token is what names the connection.
+  """
+  def scim_base_url do
+    HexpmWeb.Endpoint.url() <> "/scim/v2"
+  end
 
   @doc """
   Lets the browser follow a form submission through to this organization's

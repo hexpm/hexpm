@@ -1,6 +1,6 @@
-ARG ELIXIR_VERSION=1.20.3
-ARG ERLANG_VERSION=29.0.5
-ARG DEBIAN_VERSION=trixie-20260803-slim
+ARG ELIXIR_VERSION=1.20.4
+ARG ERLANG_VERSION=29.1.1
+ARG DEBIAN_VERSION=trixie-20260918-slim
 
 FROM hexpm/elixir:${ELIXIR_VERSION}-erlang-${ERLANG_VERSION}-debian-${DEBIAN_VERSION} AS build
 
@@ -9,7 +9,7 @@ ENV LANG=C.UTF-8
 # install build dependencies
 RUN apt update && \
     apt upgrade -y && \
-    apt install -y --no-install-recommends git build-essential curl ca-certificates && \
+    apt install -y --no-install-recommends git build-essential cmake curl ca-certificates && \
     apt clean -y && rm -rf /var/lib/apt/lists/*
 
 # install rust, the lumis and mdex_native NIFs are built from source

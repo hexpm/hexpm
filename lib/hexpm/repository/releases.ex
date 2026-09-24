@@ -64,12 +64,97 @@ defmodule Hexpm.Repository.Releases do
     |> Repo.exists?()
   end
 
+  @doc """
+  Stores the documentation files found in a release's file list, replacing
+  any stored before. Nothing is stored for a release that no longer exists.
+  """
+  def put_doc_files(repository, package, version, file_paths) do
+    files = Hexpm.Docs.Files.resolve_all(file_paths)
+    now = DateTime.utc_now()
+
+    query =
+      from(r in release_query(repository, package, version),
+        select: %{
+          release_id: r.id,
+          files: type(^files, :map),
+          inserted_at: ^now,
+          updated_at: ^now
+        }
+      )
+
+    Repo.insert_all(ReleaseDocFiles, query,
+      on_conflict: {:replace, [:files, :updated_at]},
+      conflict_target: :release_id
+    )
+
+    :ok
+  end
+
+  @doc "The documentation files stored for `release`, as kind => filename."
+  def doc_files(%Release{id: id}) do
+    from(d in ReleaseDocFiles, where: d.release_id == ^id, select: d.files)
+    |> Repo.one()
+    |> case do
+      nil -> %{}
+      files -> parse_doc_files(files)
+    end
+  end
+
+  @doc """
+  Up to `limit` releases after `after_id` with no stored documentation files,
+  as `{id, repository, package, version}`.
+  """
+  def missing_doc_files(after_id, limit) do
+    from(r in Release,
+      join: p in assoc(r, :package),
+      join: repository in assoc(p, :repository),
+      left_join: d in ReleaseDocFiles,
+      on: d.release_id == r.id,
+      where: r.id > ^after_id and is_nil(d.release_id),
+      order_by: r.id,
+      limit: ^limit,
+      select: {r.id, repository.name, p.name, r.version}
+    )
+    |> Repo.all()
+    |> Enum.map(fn {id, repository, package, version} ->
+      {id, repository, package, to_string(version)}
+    end)
+  end
+
+  @doc """
+  Stores documentation files from `{release_id, file_paths}` pairs, skipping
+  releases that already have them.
+  """
+  def insert_missing_doc_files(entries) do
+    now = DateTime.utc_now()
+
+    rows =
+      Enum.map(entries, fn {release_id, file_paths} ->
+        %{
+          release_id: release_id,
+          files: Hexpm.Docs.Files.resolve_all(file_paths),
+          inserted_at: now,
+          updated_at: now
+        }
+      end)
+
+    Repo.insert_all(ReleaseDocFiles, rows, on_conflict: :nothing, conflict_target: :release_id)
+    :ok
+  end
+
+  # Kinds no longer in `Hexpm.Docs.Files` are dropped.
+  defp parse_doc_files(files) do
+    for {kind, filename} <- files,
+        kind = Hexpm.Docs.Files.parse_segment(kind),
+        into: %{},
+        do: {kind, filename}
+  end
+
   defp release_query(repository, package, version) do
     from(r in Release,
       join: p in assoc(r, :package),
       join: repository in assoc(p, :repository),
-      where: repository.name == ^repository and p.name == ^package and r.version == ^version,
-      select: true
+      where: repository.name == ^repository and p.name == ^package and r.version == ^version
     )
   end
 

@@ -5,9 +5,10 @@ defmodule HexpmWeb.Readme.SanitizerTest do
 
   defp sanitize(html) do
     html
-    |> Floki.parse_document!()
+    |> LazyHTML.from_fragment()
+    |> LazyHTML.to_tree()
     |> Sanitizer.sanitize()
-    |> Floki.raw_html()
+    |> LazyHTML.Tree.to_html()
     |> IO.iodata_to_binary()
   end
 
@@ -59,6 +60,50 @@ defmodule HexpmWeb.Readme.SanitizerTest do
       refute result =~ ~s[href=]
     end
 
+    test "strips entity-encoded unsafe URL schemes after reparsing" do
+      for url <- [
+            "jav&#x61;script:alert(1)",
+            "&#106;avascript&colon;alert(1)",
+            "java&#9;script:alert(1)",
+            "java&NewLine;script:alert(1)",
+            "&#32;JaVaScRiPt:alert(1)",
+            "vbscript&#58;msgbox(1)",
+            "d&#97;ta:text/html,test"
+          ] do
+        document =
+          ~s|<a href="#{url}">click</a><img src="#{url}" alt="image">|
+          |> sanitize()
+          |> LazyHTML.from_fragment()
+
+        assert [link] = LazyHTML.query(document, "a") |> Enum.to_list()
+        assert [image] = LazyHTML.query(document, "img") |> Enum.to_list()
+        assert LazyHTML.text(link) == "click"
+        assert LazyHTML.attribute(image, "alt") == ["image"]
+        assert LazyHTML.attribute(link, "href") == []
+        assert LazyHTML.attribute(image, "src") == []
+      end
+    end
+
+    test "strips event handlers from malformed markup after reparsing" do
+      for html <- [
+            ~s|<p><strong>safe</p><img src="logo.png" onerror="alert(1)">|,
+            ~s|<table><tr><td onclick="alert(1)">safe<img src="logo.png" onerror="alert(1)">|,
+            ~s|<svg><foreignObject><p onmouseover="alert(1)">safe<img src="logo.png" onerror="alert(1)"></svg>|,
+            ~s|<math><mtext><table><mglyph><style><!--</style><img title="--><img src=logo.png onerror=alert(1)>">safe|
+          ] do
+        document = html |> sanitize() |> LazyHTML.from_fragment()
+
+        assert LazyHTML.text(document) =~ "safe"
+        assert [_ | _] = LazyHTML.query(document, "img") |> Enum.to_list()
+        assert [] = LazyHTML.query(document, "script, style, svg, math") |> Enum.to_list()
+
+        for attrs <- document |> LazyHTML.query("*") |> LazyHTML.attributes(),
+            {name, _value} <- attrs do
+          refute String.starts_with?(name, "on")
+        end
+      end
+    end
+
     test "allows mailto: URLs" do
       html = ~s[<a href="mailto:test@example.com">email</a>]
       result = sanitize(html)
@@ -92,17 +137,31 @@ defmodule HexpmWeb.Readme.SanitizerTest do
     end
 
     test "converts text-align style to align attribute on table cells" do
-      html = ~s[<td style="text-align: center">data</td>]
+      html = ~s[<table><tbody><tr><td style="text-align: center">data</td></tr></tbody></table>]
       result = sanitize(html)
-      assert result =~ ~s[align="center"]
+
+      assert [{"td", [{"align", "center"}], ["data"]}] =
+               result
+               |> LazyHTML.from_fragment()
+               |> LazyHTML.query("table tbody tr td")
+               |> LazyHTML.to_tree()
+
       refute result =~ "style"
     end
 
     test "strips non-text-align style from table cells" do
-      html = ~s[<td style="background-color: red; color: blue">data</td>]
+      html =
+        ~s[<table><tbody><tr><td style="background-color: red; color: blue">data</td></tr></tbody></table>]
+
       result = sanitize(html)
       refute result =~ "style"
       refute result =~ "align"
+
+      assert [{"td", [], ["data"]}] =
+               result
+               |> LazyHTML.from_fragment()
+               |> LazyHTML.query("table tbody tr td")
+               |> LazyHTML.to_tree()
     end
 
     test "strips style attributes from non-table elements" do
@@ -155,8 +214,15 @@ defmodule HexpmWeb.Readme.SanitizerTest do
     end
 
     test "allows table with align attribute" do
-      html = ~s[<th align="center">Header</th>]
-      assert sanitize(html) == html
+      html = ~s[<table><thead><tr><th align="center">Header</th></tr></thead></table>]
+      result = sanitize(html)
+      assert result == html
+
+      assert [{"th", [{"align", "center"}], ["Header"]}] =
+               result
+               |> LazyHTML.from_fragment()
+               |> LazyHTML.query("table thead tr th")
+               |> LazyHTML.to_tree()
     end
   end
 end

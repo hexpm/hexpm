@@ -1,6 +1,7 @@
 defmodule Hexpm.Store.GCSTest do
   use ExUnit.Case, async: false
   import Mox
+  import Hexpm.TestHelpers, only: [capture_final_requests: 1]
 
   alias Hexpm.Store.GCS
 
@@ -120,7 +121,12 @@ defmodule Hexpm.Store.GCSTest do
       end
     end)
 
-    assert GCS.get("bucket", "file", []) == "contents"
+    events =
+      capture_final_requests(fn ->
+        assert GCS.get("bucket", "file", []) == "contents"
+      end)
+
+    assert events == [%{host: "storage.example", method: "GET", status: 200}]
   end
 
   test "raises for terminal object read failures" do
@@ -149,12 +155,17 @@ defmodule Hexpm.Store.GCSTest do
       {:ok, 200, [{"ETag", ~s("abc123")}], ""}
     end)
 
-    assert {:ok, %{etag: ~s("abc123")}} =
-             GCS.put_file("bucket", "docs/a b?#.html", path,
-               meta: [{"surrogate-key", "docs"}],
-               cache_control: "public, max-age=3600",
-               content_type: "text/html"
-             )
+    events =
+      capture_final_requests(fn ->
+        assert {:ok, %{etag: ~s("abc123")}} =
+                 GCS.put_file("bucket", "docs/a b?#.html", path,
+                   meta: [{"surrogate-key", "docs"}],
+                   cache_control: "public, max-age=3600",
+                   content_type: "text/html"
+                 )
+      end)
+
+    assert events == [%{host: "storage.example", method: "PUT", status: 200}]
   end
 
   test "treats missing objects as successfully deleted" do

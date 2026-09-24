@@ -45,4 +45,31 @@ defmodule HexpmWeb.PolicyController do
       container: "flex-1 flex flex-col"
     )
   end
+
+  def subprocessors(conn, _params) do
+    render(
+      conn,
+      "subprocessors.html",
+      title: "Subprocessors",
+      container: "flex-1 flex flex-col"
+    )
+  end
+
+  def dpa(conn, _params) do
+    render(
+      conn,
+      "dpa.html",
+      title: "Data Processing Agreement",
+      container: "flex-1 flex flex-col"
+    )
+  end
+
+  def security(conn, _params) do
+    render(
+      conn,
+      "security.html",
+      title: "Security",
+      container: "flex-1 flex flex-col"
+    )
+  end
 end

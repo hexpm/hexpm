@@ -52,7 +52,6 @@ defmodule HexpmWeb.Plugs.ReadOnly do
   defp prepare_unavailable(conn) do
     conn
     |> prevent_caching()
-    |> put_private(:logster_log_level, :info)
     |> put_resp_header("retry-after", @retry_after)
   end
 

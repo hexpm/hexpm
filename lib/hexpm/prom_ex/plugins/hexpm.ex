@@ -2,10 +2,10 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
   @moduledoc """
   PromEx plugin for hex.pm business metrics: the domain events emitted from
   the contexts (see `Hexpm.Repository.Releases`, `Hexpm.Accounts.Users` and
-  `Hexpm.TrustedPublishers`), registry builds
-  (`Hexpm.Repository.RegistryWorker`) and CDN purges (`Hexpm.CDN.PurgeWorker`,
-  `Hexpm.CDN.Fastly`), and the number of Erlang nodes this node is connected
-  to.
+  `Hexpm.TrustedPublishers`), API authentication (`HexpmWeb.AuthHelpers`),
+  registry builds (`Hexpm.Repository.RegistryWorker`) and CDN purges
+  (`Hexpm.CDN.PurgeWorker`, `Hexpm.CDN.Fastly`), and the number of Erlang nodes
+  this node is connected to.
   """
 
   use PromEx.Plugin
@@ -57,6 +57,13 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
           tag_values: &__MODULE__.mint_failure_tags/1
         )
       ]),
+      Event.build(:hexpm_api_event_metrics, [
+        counter("hexpm.api.authenticate.total",
+          event_name: [:hexpm, :api, :authenticate],
+          description: "API requests that carried an Authorization header, by scheme and result.",
+          tags: [:scheme, :result]
+        )
+      ]),
       Event.build(:hexpm_registry_builder_event_metrics, [
         counter("hexpm.registry_builder.build.total",
           event_name: [:hexpm, :registry_builder, :build, :stop],
@@ -77,6 +84,14 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
           event_name: [:hexpm, :registry_builder, :build, :exception],
           description: "Registry builds that raised.",
           tags: [:type]
+        )
+      ]),
+      Event.build(:hexpm_sentry_event_metrics, [
+        counter("hexpm.sentry.filtered.total",
+          event_name: [:hexpm, :sentry, :filtered],
+          description:
+            "Sentry events dropped by the before_send filter and counted here instead, by class.",
+          tags: [:class]
         )
       ]),
       Event.build(:hexpm_cdn_event_metrics, [

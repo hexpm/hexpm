@@ -5,6 +5,7 @@ defmodule Hexpm.Application do
 
   def start(_type, _args) do
     :logger.add_handler(:sentry_handler, Sentry.LoggerHandler, %{})
+    Hexpm.Emails.Telemetry.attach()
 
     read_only_mode()
     setup_tmp_dir()
@@ -59,11 +60,29 @@ defmodule Hexpm.Application do
 
   def sentry_before_send(%Sentry.Event{original_exception: exception} = event) do
     cond do
-      websocket_protocol_error?(event) -> nil
-      Plug.Exception.status(exception) < 500 -> nil
-      Sentry.DefaultEventFilter.exclude_exception?(exception, event.source) -> nil
-      true -> event
+      websocket_protocol_error?(event) ->
+        nil
+
+      Plug.Exception.status(exception) < 500 ->
+        nil
+
+      class = metric_only_class(event) ->
+        :telemetry.execute([:hexpm, :sentry, :filtered], %{}, %{class: class})
+        nil
+
+      Sentry.DefaultEventFilter.exclude_exception?(exception, event.source) ->
+        nil
+
+      true ->
+        event
     end
+  end
+
+  # Oban retries a failed job until max_attempts and its exception telemetry
+  # counts every attempt, so only the attempt that exhausts the retries is
+  # reported as an issue.
+  def report_oban_error?(_worker, %Oban.Job{attempt: attempt, max_attempts: max_attempts}) do
+    attempt >= max_attempts
   end
 
   # Bandit stops the websocket connection process with a non-shutdown reason when a
@@ -73,6 +92,43 @@ defmodule Hexpm.Application do
     do: true
 
   defp websocket_protocol_error?(%Sentry.Event{}), do: false
+
+  # Saturation and transport failures carry no per-event signal, so they are
+  # counted in the hexpm.sentry.filtered.total metric instead of reported as
+  # issues. Query-level failures arrive as Postgrex.Error and stay reported,
+  # except the two saturation symptoms.
+  defp metric_only_class(%Sentry.Event{
+         original_exception: %DBConnection.ConnectionError{} = error
+       }) do
+    case error do
+      %{reason: :queue_timeout} -> :pool_timeout
+      %{message: "tcp connect" <> _} -> :db_connect
+      _other -> :db_disconnect
+    end
+  end
+
+  defp metric_only_class(%Sentry.Event{
+         original_exception: %Postgrex.Error{postgres: %{code: code}}
+       })
+       when code in [:too_many_connections, :query_canceled] do
+    code
+  end
+
+  defp metric_only_class(%Sentry.Event{original_exception: %Bandit.TransportError{}}) do
+    :client_transport
+  end
+
+  defp metric_only_class(%Sentry.Event{original_exception: %Plug.Conn.NotSentError{}}) do
+    :response_not_sent
+  end
+
+  defp metric_only_class(%Sentry.Event{
+         extra: %{crash_reason: "{%DBConnection.ConnectionError{" <> _}
+       }) do
+    :db_connection_exit
+  end
+
+  defp metric_only_class(%Sentry.Event{}), do: nil
 
   # Make sure we exit after hex client tests are finished running
   if Mix.env() == :hex do
@@ -134,6 +190,7 @@ defmodule Hexpm.Application do
   defp common_children(write_mode?) do
     [
       Hexpm.PromEx,
+      {DBConnection.TelemetryListener, name: Hexpm.RepoBase.TelemetryListener},
       Hexpm.RepoBase,
       {Finch, name: Hexpm.Finch, pools: finch_pools()},
       Hexpm.TmpDir,
@@ -158,8 +215,14 @@ defmodule Hexpm.Application do
   defp oban_child, do: {Oban, Application.fetch_env!(:hexpm, Oban)}
 
   defp finch_pools() do
+    cdn_url = Application.fetch_env!(:hexpm, :cdn_url)
     gcs_url = Application.get_env(:hexpm, :gcs_url, "https://storage.googleapis.com")
-    %{gcs_url => [size: 50, count: 8]}
+
+    %{
+      :default => [conn_max_idle_time: 5_000],
+      cdn_url => [conn_max_idle_time: 5_000],
+      gcs_url => [size: 50, count: 8, conn_max_idle_time: 5_000]
+    }
   end
 
   defp web_children do

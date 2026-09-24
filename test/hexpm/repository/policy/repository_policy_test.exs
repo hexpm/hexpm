@@ -16,6 +16,22 @@ defmodule Hexpm.Repository.Policy.RepositoryPolicyTest do
     assert changeset(%{"repository" => "hexpm"}).valid?
   end
 
+  test "bounds the number of overrides" do
+    overrides = Enum.map(1..1000, &%{"action" => "allow", "package" => "pkg#{&1}"})
+    assert changeset(%{"repository" => "hexpm", "overrides" => overrides}).valid?
+
+    overrides = Enum.map(1..1001, &%{"action" => "allow", "package" => "pkg#{&1}"})
+    cs = changeset(%{"repository" => "hexpm", "overrides" => overrides})
+    assert errors_on(cs).overrides == "should have at most 1000 item(s)"
+  end
+
+  test "bounds the cooldown in bytes" do
+    cs = changeset(%{"repository" => "hexpm", "cooldown" => combining_string(65)})
+
+    messages = for {message, _opts} <- Keyword.get_values(cs.errors, :cooldown), do: message
+    assert "should be at most %{count} byte(s)" in messages
+  end
+
   test "validates advisory_min_severity range 0..4" do
     cs = changeset(%{"repository" => "hexpm", "advisory_min_severity" => 5})
     refute cs.valid?

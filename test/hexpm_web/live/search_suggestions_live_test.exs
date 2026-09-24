@@ -35,6 +35,19 @@ defmodule HexpmWeb.SearchSuggestionsLiveTest do
       assert html =~ ~s(role="listbox")
     end
 
+    test "cuts the term to 100 bytes", %{conn: conn} do
+      insert(:package, name: "phoenix_live_view")
+
+      {:ok, view, _html} =
+        live_isolated(conn, HexpmWeb.SearchSuggestionsLive, session: %{"variant" => "home"})
+
+      term = "phoenix" <> String.duplicate("́", 1000)
+      html = view |> form("#search-suggestions-form", %{"search" => term}) |> render_change()
+
+      refute html =~ "phoenix_live_view"
+      assert byte_size(:sys.get_state(view.pid).socket.assigns.term) <= 100
+    end
+
     test "does not show dropdown until at least 3 characters are typed", %{conn: conn} do
       insert(:package, name: "phoenix_html")
 

@@ -31,6 +31,70 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
     %{organization: organization, admin: admin, member: member, connection: connection}
   end
 
+  describe "personal key permissions" do
+    test "read the organizations that refuse them once per key, not once per permission",
+         context do
+      link_identity(context, context.admin)
+
+      {:ok, _connection} =
+        SSO.configure_enforcement(
+          context.organization,
+          %{"enforcement_mode" => "required", "personal_keys" => "block"},
+          audit: audit_data(context.admin)
+        )
+
+      permissions =
+        List.duplicate(%{domain: "repository", resource: context.organization.name}, 20)
+
+      assert count_enforcement_queries(fn ->
+               Hexpm.Accounts.Key.build(context.member, %{
+                 name: "twenty",
+                 permissions: permissions
+               })
+             end) ==
+               count_enforcement_queries(fn ->
+                 Hexpm.Accounts.Key.build(context.member, %{
+                   name: "one",
+                   permissions: [hd(permissions)]
+                 })
+               end)
+    end
+
+    # The enforcement read is the one joining the connections table, which tells
+    # it apart from the per-permission access checks.
+    defp count_enforcement_queries(fun) do
+      ref = make_ref()
+      parent = self()
+      prefix = Hexpm.RepoBase.config() |> Keyword.fetch!(:telemetry_prefix)
+
+      :telemetry.attach(
+        {__MODULE__, ref},
+        prefix ++ [:query],
+        fn _event, _measurements, metadata, _config ->
+          if self() == parent and metadata.query =~ "organization_sso_connections" do
+            send(parent, {ref, :query})
+          end
+        end,
+        nil
+      )
+
+      try do
+        fun.()
+        drain_queries(ref, 0)
+      after
+        :telemetry.detach({__MODULE__, ref})
+      end
+    end
+
+    defp drain_queries(ref, count) do
+      receive do
+        {^ref, :query} -> drain_queries(ref, count + 1)
+      after
+        0 -> count
+      end
+    end
+  end
+
   describe "mode/3" do
     test "is optional without a connection", %{organization: organization} do
       assert Enforcement.mode(organization, nil) == :optional
@@ -208,6 +272,27 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
                Repo.get!(Hexpm.Accounts.SSO.OrgSession, org_session.id).expires_at,
                DateTime.utc_now()
              ) <= 3_600
+    end
+
+    # The cut counts from each session's own authentication, not from the save,
+    # so a member who authenticated longer ago than the new lifetime is out now
+    # rather than getting a fresh full window.
+    test "lapses a session authenticated longer ago than the new lifetime", context do
+      session = browser_session(context.member)
+      org_session = authenticate(context, context.member, session)
+
+      Repo.update_all(
+        from(row in Hexpm.Accounts.SSO.OrgSession, where: row.id == ^org_session.id),
+        set: [authenticated_at: DateTime.add(DateTime.utc_now(), -7_200, :second)]
+      )
+
+      {:ok, _connection} = configure(context, %{"session_lifetime_seconds" => 3_600})
+
+      reloaded = Repo.get!(Hexpm.Accounts.SSO.OrgSession, org_session.id)
+
+      assert DateTime.compare(reloaded.expires_at, DateTime.utc_now()) == :lt
+      assert_in_delta DateTime.diff(reloaded.expires_at, reloaded.authenticated_at), 3_600, 2
+      refute SSO.current_org_session(session.id, context.organization.id)
     end
 
     test "leaves a session alone when the lifetime is raised", context do
@@ -474,7 +559,7 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
   end
 
   describe "break_glass/3" do
-    test "audits every reach and mails once an hour for each screen", context do
+    test "audits every reach and mails once an hour for each member", context do
       {:ok, _connection} = require_sso(context)
 
       for screen <- [:billing, :sso, :add_seats] do
@@ -495,17 +580,65 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
       assert length(logs) == 3
       assert Enum.map(logs, & &1.params["screen"]) |> Enum.sort() == ~w(add_seats billing sso)
 
-      # The mail names one screen, so a window covering every screen would
-      # announce billing and say nothing about the connection being replaced.
-      entries =
-        Repo.all(from(e in Hexpm.Emails.OutboxEntry, where: e.category == "sso.break_glass"))
+      # One repair runs through several screens, and the mail points at the
+      # audit log for the ones after the first.
+      assert [entry] =
+               Repo.all(
+                 from(e in Hexpm.Emails.OutboxEntry, where: e.category == "sso.break_glass")
+               )
 
-      assert length(entries) == 3
+      assert entry.scope_key == "sso:organization:#{context.organization.id}"
 
-      assert Enum.all?(
-               entries,
-               &(&1.scope_key == "sso:organization:#{context.organization.id}")
-             )
+      assert entry.email["text_body"] =~
+               "without a current single sign-on session, to open the billing page."
+    end
+
+    test "mails for each member reaching a screen", context do
+      {:ok, _connection} = require_sso(context)
+
+      for user <- [context.member, context.admin] do
+        Enforcement.break_glass(context.organization, user, :billing, audit_data(user))
+      end
+
+      assert [_, _] =
+               Repo.all(
+                 from(e in Hexpm.Emails.OutboxEntry, where: e.category == "sso.break_glass")
+               )
+    end
+
+    test "audits a member leaving without mailing anyone", context do
+      {:ok, _connection} = require_sso(context)
+
+      for screen <- [:danger_zone, :leave] do
+        Enforcement.break_glass(
+          context.organization,
+          context.member,
+          screen,
+          audit_data(context.member)
+        )
+      end
+
+      logs =
+        Hexpm.Accounts.AuditLogs.all_by(context.organization)
+        |> Enum.filter(&(&1.action == "sso.break_glass"))
+
+      assert Enum.map(logs, & &1.params["screen"]) |> Enum.sort() == ~w(danger_zone leave)
+
+      assert Repo.all(from(e in Hexpm.Emails.OutboxEntry, where: e.category == "sso.break_glass")) ==
+               []
+
+      # Nothing was announced, so nothing holds back the next screen that is.
+      Enforcement.break_glass(
+        context.organization,
+        context.member,
+        :billing,
+        audit_data(context.member)
+      )
+
+      assert [_entry] =
+               Repo.all(
+                 from(e in Hexpm.Emails.OutboxEntry, where: e.category == "sso.break_glass")
+               )
     end
 
     test "mails once however many times one screen is opened", context do

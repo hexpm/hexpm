@@ -17,7 +17,7 @@ defmodule Hexpm.UserSessions do
   ## Session Expiration
 
   All sessions expire after 30 days of creation (non-sliding window). Expired
-  rows are deleted by `Hexpm.ReleaseTasks.PurgeExpiredRecords`.
+  rows are deleted by `Hexpm.PurgeExpiredRecords`.
 
   ## Last Use Tracking
 
@@ -339,6 +339,32 @@ defmodule Hexpm.UserSessions do
   end
 
   def revoke_for_oauth_token(%Token{}), do: {:error, :session_not_found}
+
+  @doc """
+  Revokes the tokens the client credentials grant minted from these API keys and
+  the sessions issued with them.
+
+  Returns the two queries, tokens first, suitable for use in Multi.update_all.
+  """
+  def revoke_for_api_keys(keys, revoke_at \\ nil) do
+    revoke_at = revoke_at || DateTime.utc_now()
+    references = Enum.map(keys, &"key:#{&1.id}")
+
+    sessions =
+      from(t in Token,
+        where: t.grant_reference in ^references and not is_nil(t.user_session_id),
+        select: t.user_session_id
+      )
+
+    {from(t in Token,
+       where: t.grant_reference in ^references and is_nil(t.revoked_at),
+       update: [set: [revoked_at: ^revoke_at, updated_at: ^DateTime.utc_now()]]
+     ),
+     from(s in UserSession,
+       where: s.id in subquery(sessions) and is_nil(s.revoked_at),
+       update: [set: [revoked_at: ^revoke_at, updated_at: ^DateTime.utc_now()]]
+     )}
+  end
 
   @doc """
   Revokes all sessions for a user (both browser and OAuth), the tokens minted

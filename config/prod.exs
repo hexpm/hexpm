@@ -23,7 +23,12 @@ config :sentry,
   enable_source_code_context: true,
   root_source_code_paths: [File.cwd!()],
   before_send: {Hexpm.Application, :sentry_before_send},
-  integrations: [oban: [capture_errors: true]]
+  integrations: [
+    oban: [
+      capture_errors: true,
+      should_report_error_callback: &Hexpm.Application.report_oban_error?/2
+    ]
+  ]
 
 config :hexpm,
   topologies: [
@@ -42,7 +47,12 @@ config :phoenix, :serve_endpoints, true
 
 config :logger, level: :info
 
-config :logger, :default_formatter, metadata: [:request_id]
+config :logger, :default_handler,
+  formatter:
+    {LoggerJSON.Formatters.GoogleCloud,
+     metadata: {:from_application_env, {:hexpm, :log_metadata}},
+     reported_levels: [],
+     project_id: nil}
 
 config :hexpm, Oban,
   peer: Oban.Peers.Database,
@@ -52,11 +62,12 @@ config :hexpm, Oban,
        {"* * * * *", Hexpm.Billing.Report},
        {"* * * * *", Hexpm.Emails.OutboxReconciler},
        {"*/30 * * * *", Hexpm.Security.Updater},
-       {"30 0 * * *", Hexpm.ReleaseTasks.CheckNames},
-       {"0 1 * * *", Hexpm.ReleaseTasks.Stats},
-       {"0 2 * * *", Hexpm.ReleaseTasks.PurgeExpiredRecords},
+       {"30 0 * * *", Hexpm.Repository.TyposquatWorker},
+       {"0 1 * * *", Hexpm.Repository.DownloadsWorker},
+       {"0 2 * * *", Hexpm.PurgeExpiredRecords},
        {"15 3 * * *", Hexpm.Accounts.OrganizationDomains.RecheckWorker},
-       {"45 3 * * *", Hexpm.Accounts.SSO.EnforcementWorker}
+       {"45 3 * * *", Hexpm.Accounts.SSO.EnforcementWorker},
+       {"*/15 * * * *", Hexpm.Accounts.OrganizationTFAWorker}
      ],
      timezone: "Etc/UTC"},
     # Successful jobs are read by nobody and are the bulk of the table, which

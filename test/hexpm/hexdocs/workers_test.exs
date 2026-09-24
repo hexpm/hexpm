@@ -38,6 +38,140 @@ defmodule Hexpm.Hexdocs.WorkersTest do
     def clear, do: :persistent_term.erase(@replacement_key)
   end
 
+  defmodule PublishingStore do
+    @behaviour Hexpm.Store.Behaviour
+    @hook_key {__MODULE__, :after_read}
+
+    defdelegate list(bucket, prefix), to: Hexpm.Store.Memory
+    defdelegate get(bucket, key, opts), to: Hexpm.Store.Memory
+    defdelegate size(bucket, key), to: Hexpm.Store.Memory
+    defdelegate stream(bucket, key), to: Hexpm.Store.Memory
+    defdelegate put(bucket, key, body, opts), to: Hexpm.Store.Memory
+    defdelegate put_file(bucket, key, path, opts), to: Hexpm.Store.Memory
+    defdelegate delete(bucket, key), to: Hexpm.Store.Memory
+    defdelegate delete_many(bucket, keys), to: Hexpm.Store.Memory
+
+    # Runs a hook once after the archive is read, standing in for another
+    # release being published while the job is unpacking.
+    def get_to_file(bucket, key, path, opts) do
+      result = Hexpm.Store.Memory.get_to_file(bucket, key, path, opts)
+
+      case :persistent_term.get(@hook_key, nil) do
+        {^key, hook} ->
+          :persistent_term.erase(@hook_key)
+          hook.()
+
+        _other ->
+          :ok
+      end
+
+      result
+    end
+
+    def after_read(key, hook), do: :persistent_term.put(@hook_key, {key, hook})
+    def clear, do: :persistent_term.erase(@hook_key)
+  end
+
+  defmodule FailingStore do
+    @behaviour Hexpm.Store.Behaviour
+    @failing_key {__MODULE__, :failing}
+
+    defdelegate list(bucket, prefix), to: Hexpm.Store.Memory
+    defdelegate get(bucket, key, opts), to: Hexpm.Store.Memory
+    defdelegate size(bucket, key), to: Hexpm.Store.Memory
+    defdelegate stream(bucket, key), to: Hexpm.Store.Memory
+    defdelegate get_to_file(bucket, key, path, opts), to: Hexpm.Store.Memory
+    defdelegate put_file(bucket, key, path, opts), to: Hexpm.Store.Memory
+    defdelegate delete(bucket, key), to: Hexpm.Store.Memory
+    defdelegate delete_many(bucket, keys), to: Hexpm.Store.Memory
+
+    def put(bucket, key, body, opts) do
+      if key == :persistent_term.get(@failing_key, nil), do: raise("store down")
+      Hexpm.Store.Memory.put(bucket, key, body, opts)
+    end
+
+    def fail_on(key), do: :persistent_term.put(@failing_key, key)
+    def clear, do: :persistent_term.erase(@failing_key)
+  end
+
+  test "decides which version is the latest when it writes, not when it starts" do
+    package = insert(:package, name: "racing_docs", docs_updated_at: DateTime.utc_now())
+    insert(:release, package: package, version: "1.0.0", has_docs: true)
+    key = "docs/#{package.name}-1.0.0.tar.gz"
+    Hexpm.Store.put(:repo_bucket, key, create_docs_tar([{"index.html", "1.0.0"}]))
+
+    app_env(:hexpm, :repo_bucket, {PublishingStore, "repo_bucket"})
+    on_exit(&PublishingStore.clear/0)
+
+    PublishingStore.after_read(key, fn ->
+      insert(:release, package: package, version: "2.0.0", has_docs: true)
+    end)
+
+    assert :ok = perform_job(Workers.Upload, %{key: key})
+
+    assert Hexpm.Store.get(:docs_bucket, "#{package.name}/1.0.0/index.html") =~ "1.0.0"
+    refute Hexpm.Store.get(:docs_bucket, "#{package.name}/index.html")
+  end
+
+  test "a docs revert during an upload leaves nothing behind" do
+    package = insert(:package, name: "reverted_docs", docs_updated_at: DateTime.utc_now())
+    release = insert(:release, package: package, version: "1.0.0", has_docs: true)
+    key = "docs/#{package.name}-1.0.0.tar.gz"
+    Hexpm.Store.put(:repo_bucket, key, create_docs_tar([{"index.html", "1.0.0"}]))
+
+    app_env(:hexpm, :repo_bucket, {PublishingStore, "repo_bucket"})
+    on_exit(&PublishingStore.clear/0)
+
+    PublishingStore.after_read(key, fn ->
+      Ecto.Changeset.change(release, has_docs: false) |> Repo.update!()
+      Hexpm.Store.delete(:repo_bucket, key)
+    end)
+
+    assert :ok = perform_job(Workers.Upload, %{key: key})
+
+    refute Hexpm.Store.get(:docs_bucket, "#{package.name}/1.0.0/index.html")
+    refute Hexpm.Store.get(:docs_bucket, "#{package.name}/index.html")
+    assert all_enqueued(worker: Hexpm.CDN.PurgeWorker) == []
+  end
+
+  test "the purges of finished writes survive a failure later in the upload" do
+    package = insert(:package, name: "half_uploaded_docs", docs_updated_at: DateTime.utc_now())
+    insert(:release, package: package, version: "1.0.0", has_docs: true)
+    key = "docs/#{package.name}-1.0.0.tar.gz"
+    Hexpm.Store.put(:repo_bucket, key, create_docs_tar([{"index.html", "1.0.0"}]))
+
+    app_env(:hexpm, :docs_bucket, {FailingStore, "docs_bucket"})
+    on_exit(&FailingStore.clear/0)
+    FailingStore.fail_on("#{package.name}/sitemap.xml")
+
+    assert_raise RuntimeError, "store down", fn -> perform_job(Workers.Upload, %{key: key}) end
+
+    assert Hexpm.Store.get(:docs_bucket, "#{package.name}/index.html") =~ "1.0.0"
+
+    assert_enqueued(
+      worker: Hexpm.CDN.PurgeWorker,
+      args: %{"keys" => ["docspage/#{package.name}/1.0.0"]}
+    )
+
+    assert_enqueued(
+      worker: Hexpm.CDN.PurgeWorker,
+      args: %{"keys" => ["docspage/#{package.name}"]}
+    )
+  end
+
+  test "a sitemap job for an older version leaves the latest sitemap alone" do
+    package = insert(:package, name: "sitemap_older_docs", docs_updated_at: DateTime.utc_now())
+    insert(:release, package: package, version: "1.0.0", has_docs: true)
+    insert(:release, package: package, version: "2.0.0", has_docs: true)
+    key = "docs/#{package.name}-1.0.0.tar.gz"
+    Hexpm.Store.put(:repo_bucket, key, create_docs_tar([{"index.html", "1.0.0"}]))
+    Hexpm.Store.put(:docs_bucket, "#{package.name}/sitemap.xml", "latest sitemap", [])
+
+    assert :ok = perform_job(Workers.Sitemap, %{key: key})
+
+    assert Hexpm.Store.get(:docs_bucket, "#{package.name}/sitemap.xml") == "latest sitemap"
+  end
+
   test "upload and delete are repeatable for public documentation" do
     package = insert(:package, name: "worker_docs", docs_updated_at: DateTime.utc_now())
     release = insert(:release, package: package, version: "1.0.0", has_docs: true)
@@ -92,32 +226,35 @@ defmodule Hexpm.Hexdocs.WorkersTest do
     index = Hexpm.Store.get(:docs_bucket, "#{package.name}/1.0.0/index.html")
     etag = ~s("#{Base.encode16(:crypto.hash(:md5, index), case: :lower)}")
 
-    assert_enqueued(
-      worker: Hexpm.CDN.PurgeWorker,
-      args: %{
-        "service" => "fastly_hexdocs",
-        "keys" => ["docspage/verified_docs", "docspage/verified_docs/1.0.0"],
-        "verify" => [
-          %{"url" => "http://verified-docs.localhost:5002/1.0.0/index.html", "etag" => etag},
-          %{"url" => "http://verified-docs.localhost:5002/index.html", "etag" => etag}
-        ]
-      }
-    )
+    assert purge_args(["docspage/verified_docs/1.0.0"]) == %{
+             "service" => "fastly_hexdocs",
+             "keys" => ["docspage/verified_docs/1.0.0"],
+             "verify" => [
+               %{"url" => "http://verified-docs.localhost:5002/1.0.0/index.html", "etag" => etag}
+             ]
+           }
+
+    assert purge_args(["docspage/verified_docs"]) == %{
+             "service" => "fastly_hexdocs",
+             "keys" => ["docspage/verified_docs"],
+             "verify" => [
+               %{"url" => "http://verified-docs.localhost:5002/index.html", "etag" => etag}
+             ]
+           }
+
+    keys = ["docspage/verified_docs", "docspage/verified_docs/1.0.0"]
 
     Ecto.Changeset.change(release, has_docs: false) |> Repo.update!()
     assert :ok = perform_job(Workers.Delete, %{key: key})
 
-    assert_enqueued(
-      worker: Hexpm.CDN.PurgeWorker,
-      args: %{
-        "service" => "fastly_hexdocs",
-        "keys" => ["docspage/verified_docs", "docspage/verified_docs/1.0.0"],
-        "verify" => [
-          %{"url" => "http://verified-docs.localhost:5002/1.0.0/index.html", "etag" => nil},
-          %{"url" => "http://verified-docs.localhost:5002/index.html", "etag" => nil}
-        ]
-      }
-    )
+    assert purge_args(keys) == %{
+             "service" => "fastly_hexdocs",
+             "keys" => keys,
+             "verify" => [
+               %{"url" => "http://verified-docs.localhost:5002/1.0.0/index.html", "etag" => nil},
+               %{"url" => "http://verified-docs.localhost:5002/index.html", "etag" => nil}
+             ]
+           }
   end
 
   test "upload succeeds for archives with write-protected file modes" do
@@ -247,14 +384,13 @@ defmodule Hexpm.Hexdocs.WorkersTest do
 
     etag = ~s("#{Base.encode16(:crypto.hash(:md5, sitemap), case: :lower)}")
 
-    assert_enqueued(
-      worker: Hexpm.CDN.PurgeWorker,
-      args: %{
-        "service" => "fastly_hexdocs",
-        "keys" => ["sitemap/#{package.name}"],
-        "verify" => [%{"url" => "http://sitemap-docs.localhost:5002/sitemap.xml", "etag" => etag}]
-      }
-    )
+    assert purge_args(["sitemap/#{package.name}"]) == %{
+             "service" => "fastly_hexdocs",
+             "keys" => ["sitemap/#{package.name}"],
+             "verify" => [
+               %{"url" => "http://sitemap-docs.localhost:5002/sitemap.xml", "etag" => etag}
+             ]
+           }
   end
 
   test "malformed archives fail so Oban can retry" do
@@ -281,7 +417,8 @@ defmodule Hexpm.Hexdocs.WorkersTest do
     use_replacing_store(key, create_docs_tar([{"index.html", index}, {"new.html", "new"}]))
 
     assert {:snooze, 15} = perform_job(Workers.Upload, %{key: key, generation: "0001"})
-    assert Hexpm.Store.get(:docs_bucket, "#{package.name}/1.0.0/old.html") =~ "old"
+    assert Hexpm.Store.get(:docs_bucket, "#{package.name}/1.0.0/old.html") == nil
+    assert Hexpm.Store.get(:docs_bucket, "#{package.name}/1.0.0/index.html") == nil
 
     assert :ok = perform_job(Workers.Upload, %{key: key, generation: "0002"})
     assert Hexpm.Store.get(:docs_bucket, "#{package.name}/1.0.0/old.html") == nil

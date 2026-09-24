@@ -1,6 +1,6 @@
 defmodule HexpmWeb.Readme.Sanitizer do
   @moduledoc """
-  Floki-based allowlist sanitizer for README HTML.
+  Allowlist sanitizer for README HTML.
 
   Strips unsafe tags and attributes to prevent XSS while preserving
   common markdown-rendered content.
@@ -40,7 +40,7 @@ defmodule HexpmWeb.Readme.Sanitizer do
   @safe_url_schemes MapSet.new(~w(http https mailto))
 
   @doc """
-  Sanitizes a Floki HTML tree by stripping disallowed tags and attributes.
+  Sanitizes an HTML tree by stripping disallowed tags and attributes.
   """
   def sanitize(nodes) when is_list(nodes) do
     Enum.flat_map(nodes, &sanitize_node/1)

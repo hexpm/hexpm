@@ -1,0 +1,24 @@
+<h1 style="color: #030913; font-size: 24px; line-height: 32px; font-weight: 600; margin: 0 0 24px 0; text-align: center;">
+  Single Sign-On Is Now Required
+</h1>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= SSOEnforcementStarted.intro(@organization) %>
+  <%= SSOEnforcementStarted.scope() %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= SSOEnforcementStarted.not_linked() %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <a href="<%= @login_url %>" style="color: #0f59d8; text-decoration: none; word-break: break-all;"><%= @login_url %></a>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= SSOEnforcementStarted.session(@session_lifetime) %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= SSOEnforcementStarted.account_notice() %>
+</p>

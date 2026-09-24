@@ -2,6 +2,11 @@ Organization SSO Disconnected
 
 <%= Common.greeting(@username) %>
 
-Single sign-on for the <%= @organization %> organization has been disconnected from your Hex.pm account. Conventional Hex.pm login remains available.
+<%= SSOIdentityUnlinked.intro(@organization, @username, @unlinked_by) %>
 
-<%= Common.unauthorized_change_notice(:text) %>
+<%= SSOIdentityUnlinked.access(@locked_out) %>
+
+<%= @login_url %>
+<%= if questions = SSOIdentityUnlinked.questions(@organization, @username, @unlinked_by) do %>
+<%= questions %>
+<% end %>

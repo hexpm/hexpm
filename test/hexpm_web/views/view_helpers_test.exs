@@ -156,4 +156,45 @@ defmodule HexpmWeb.ViewHelpersTest do
       assert human_number_space(800_191_956_003, 50) == "800 191 956 003"
     end
   end
+
+  describe "paginate/3" do
+    test "handles 0 items" do
+      assert paginate(1, 0, items_per_page: 30, page_links: 5) ==
+               %{prev: false, next: false, page_links: [1]}
+    end
+
+    test "handles exact multiples of per_page" do
+      # 30 items at 30/page = 1 page
+      assert paginate(1, 30, items_per_page: 30, page_links: 5) ==
+               %{prev: false, next: false, page_links: [1]}
+
+      # 60 items at 30/page = 2 pages
+      assert paginate(1, 60, items_per_page: 30, page_links: 5) ==
+               %{prev: false, next: true, page_links: [1, 2]}
+
+      assert paginate(2, 60, items_per_page: 30, page_links: 5) ==
+               %{prev: true, next: false, page_links: [1, 2]}
+    end
+
+    test "handles non-multiples of per_page" do
+      # 31 items at 30/page = 2 pages
+      assert paginate(1, 31, items_per_page: 30, page_links: 5) ==
+               %{prev: false, next: true, page_links: [1, 2]}
+
+      assert paginate(2, 31, items_per_page: 30, page_links: 5) ==
+               %{prev: true, next: false, page_links: [1, 2]}
+    end
+
+    test "slides link window across many pages" do
+      # 300 items at 30/page = 10 pages
+      assert paginate(1, 300, items_per_page: 30, page_links: 5) ==
+               %{prev: false, next: true, page_links: [1, 2, 3, 4, 5]}
+
+      assert paginate(5, 300, items_per_page: 30, page_links: 5) ==
+               %{prev: true, next: true, page_links: [3, 4, 5, 6, 7]}
+
+      assert paginate(10, 300, items_per_page: 30, page_links: 5) ==
+               %{prev: true, next: false, page_links: [6, 7, 8, 9, 10]}
+    end
+  end
 end

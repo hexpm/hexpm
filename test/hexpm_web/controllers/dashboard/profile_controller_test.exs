@@ -37,6 +37,37 @@ defmodule HexpmWeb.Dashboard.ProfileControllerTest do
     assert redirected_to(conn) == "/login?return=%2Fdashboard%2Fprofile"
   end
 
+  test "sends a user with an unverified primary email to the email page" do
+    user = insert(:user, emails: [build(:email, verified: false)])
+
+    conn =
+      build_conn()
+      |> test_login(user)
+      |> get("/dashboard/profile")
+
+    assert redirected_to(conn) == "/dashboard/email"
+
+    assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+             "Verify your primary email before editing your public profile."
+  end
+
+  test "does not update the profile of a user with an unverified primary email" do
+    user = insert(:user, emails: [build(:email, verified: false)])
+
+    conn =
+      build_conn()
+      |> test_login(user)
+      |> post("/dashboard/profile", %{
+        user: %{full_name: "New Name", handles: %{url: "https://example.com"}}
+      })
+
+    assert redirected_to(conn) == "/dashboard/email"
+
+    user = Hexpm.Repo.get!(User, user.id)
+    refute user.full_name == "New Name"
+    refute user.handles && user.handles.url
+  end
+
   test "update profile", c do
     conn =
       build_conn()
@@ -97,8 +128,8 @@ defmodule HexpmWeb.Dashboard.ProfileControllerTest do
     refute Users.get(c.user.username, [:emails]) |> User.email(:public)
   end
 
-  test "update profile with no emails", c do
-    Hexpm.Repo.delete_all(Hexpm.Accounts.Email)
+  test "update profile with no public email", c do
+    Hexpm.Repo.update_all(Hexpm.Accounts.Email, set: [public: false])
 
     conn =
       build_conn()

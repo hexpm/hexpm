@@ -11,6 +11,7 @@ defmodule HexpmWeb.Plugs.Attack do
   @diff_limit 20
   @diff_period 60_000
   @sso_period 10 * 60_000
+  @varsel_jti_period 300_000
 
   rule "allow local", conn do
     allow(conn.remote_ip == {127, 0, 0, 1})
@@ -42,6 +43,17 @@ defmodule HexpmWeb.Plugs.Attack do
     end
   end
 
+  # The provisioning agent is one client per connection whatever address it
+  # sends from, and the address is the provider's shared egress, so the
+  # connection is the key. Requests that fail authentication never reach here.
+  rule "scim connection throttle", conn do
+    connection = conn.assigns[:scim_connection]
+
+    if scim?(conn) && connection do
+      scim_connection_throttle(connection.id)
+    end
+  end
+
   rule "ip throttle", conn do
     if api?(conn) do
       ip_throttle(conn.remote_ip)
@@ -59,6 +71,7 @@ defmodule HexpmWeb.Plugs.Attack do
   def block_action(conn, {:throttle, data}, _opts) do
     conn
     |> add_throttling_headers(data)
+    |> put_retry_after(data)
     |> render_error(429, message: "API rate limit exceeded for #{throttled_user(conn)}")
   end
 
@@ -77,13 +90,23 @@ defmodule HexpmWeb.Plugs.Attack do
     |> put_resp_header("x-ratelimit-reset", Integer.to_string(reset))
   end
 
+  # The standard header for a 429, which the provisioning agents read to pace
+  # their retries; the x-ratelimit headers are ours.
+  defp put_retry_after(conn, data) do
+    seconds = max(div(data[:expires_at] - System.system_time(:millisecond) + 999, 1_000), 1)
+    put_resp_header(conn, "retry-after", Integer.to_string(seconds))
+  end
+
   defp throttled_user(conn) do
     cond do
-      user = conn.assigns.current_user ->
+      user = conn.assigns[:current_user] ->
         "user #{user.id}"
 
-      organization = conn.assigns.current_organization ->
+      organization = conn.assigns[:current_organization] ->
         "organization #{organization.id}"
+
+      connection = conn.assigns[:scim_connection] ->
+        "provisioning connection #{connection.id}"
 
       true ->
         "IP #{ip_string(conn.remote_ip)}"
@@ -136,6 +159,32 @@ defmodule HexpmWeb.Plugs.Attack do
     )
   end
 
+  # The same budget an authenticated organization gets on the API. A provider
+  # sends two or three requests per person it touches and fans them out, so
+  # a bulk unassignment or an initial import runs well past the address limit.
+  def scim_connection_throttle(connection_id, opts \\ []) do
+    key = {:scim_connection, connection_id}
+    time = opts[:time] || System.system_time(:millisecond)
+    unless opts[:time], do: RateLimitPubSub.broadcast(key, time)
+
+    timed_throttle(
+      key,
+      time: time,
+      storage: @storage,
+      limit: 500,
+      period: 60_000
+    )
+  end
+
+  def varsel_jti(jti, opts \\ []) do
+    key = {:varsel_jti, jti}
+    time = opts[:time] || System.system_time(:millisecond)
+    unless opts[:time], do: RateLimitPubSub.broadcast(key, time)
+
+    {storage, name} = @storage
+    storage.increment(name, key, 1, time + @varsel_jti_period)
+  end
+
   def diff_throttle(identity, opts \\ []) do
     key = {:diff, identity}
     time = opts[:time] || System.system_time(:millisecond)
@@ -165,9 +214,10 @@ defmodule HexpmWeb.Plugs.Attack do
     limit = Keyword.fetch!(opts, :limit)
     period = Keyword.fetch!(opts, :period)
     now = Keyword.fetch!(opts, :time)
+    increment = Keyword.get(opts, :increment, 1)
 
     expires_at = expires_at(now, period)
-    count = do_throttle(storage, key, now, period, expires_at)
+    count = do_throttle(storage, key, now, period, expires_at, increment)
     rem = limit - count
     data = [period: period, expires_at: expires_at, limit: limit, remaining: max(rem, 0)]
     {if(rem >= 0, do: :allow, else: :block), {:throttle, data}}
@@ -175,9 +225,9 @@ defmodule HexpmWeb.Plugs.Attack do
 
   defp expires_at(now, period), do: (div(now, period) + 1) * period
 
-  defp do_throttle({mod, opts}, key, now, period, expires_at) do
+  defp do_throttle({mod, opts}, key, now, period, expires_at, increment) do
     full_key = {:throttle, key, div(now, period)}
-    mod.increment(opts, full_key, 1, expires_at)
+    mod.increment(opts, full_key, increment, expires_at)
   end
 
   def login_ip_throttle(ip, opts \\ []) do
@@ -192,6 +242,24 @@ defmodule HexpmWeb.Plugs.Attack do
     )
   end
 
+  # The account is what an SSO login belongs to, so it is what the limit is for.
+  # The IP bucket below stays as a ceiling on anonymous starts and on one host
+  # working through accounts, at a limit an office or a university behind one
+  # address does not reach.
+  def sso_start_user_throttle(user_id, organization_id, opts \\ []) do
+    time = opts[:time] || System.system_time(:millisecond)
+    key = {:sso_start_user, user_id, organization_id}
+    unless opts[:time], do: RateLimitPubSub.broadcast(key, time)
+
+    timed_throttle(
+      key,
+      time: time,
+      storage: @storage,
+      limit: 20,
+      period: @sso_period
+    )
+  end
+
   def sso_start_ip_throttle(ip, opts \\ []) do
     time = opts[:time] || System.system_time(:millisecond)
     unless opts[:time], do: RateLimitPubSub.broadcast({:sso_start_ip, ip}, time)
@@ -200,7 +268,7 @@ defmodule HexpmWeb.Plugs.Attack do
       {:sso_start_ip, ip},
       time: time,
       storage: @storage,
-      limit: 30,
+      limit: 300,
       period: @sso_period
     )
   end
@@ -251,6 +319,7 @@ defmodule HexpmWeb.Plugs.Attack do
     timed_throttle(
       {:tfa_ip, ip},
       time: time,
+      increment: Keyword.get(opts, :increment, 1),
       storage: @storage,
       limit: 20,
       period: 15 * 60_000
@@ -263,6 +332,7 @@ defmodule HexpmWeb.Plugs.Attack do
     timed_throttle(
       {:tfa_session, tfa_user_id},
       time: time,
+      increment: Keyword.get(opts, :increment, 1),
       storage: @storage,
       limit: 5,
       period: 10 * 60_000
@@ -335,4 +405,7 @@ defmodule HexpmWeb.Plugs.Attack do
 
   defp api?(%Plug.Conn{request_path: "/api/" <> _}), do: true
   defp api?(%Plug.Conn{}), do: false
+
+  defp scim?(%Plug.Conn{request_path: "/scim/" <> _}), do: true
+  defp scim?(%Plug.Conn{}), do: false
 end

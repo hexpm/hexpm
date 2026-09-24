@@ -16,6 +16,16 @@ defmodule Hexpm.PromEx.Plugins.HexpmTest do
     assert Plugin.mint_failure_tags(%{}) == %{reason: "unknown"}
   end
 
+  test "counts API authentication by scheme and result" do
+    [counter] =
+      [otp_app: :hexpm]
+      |> Plugin.event_metrics()
+      |> Enum.flat_map(& &1.metrics)
+      |> Enum.filter(&(&1.event_name == [:hexpm, :api, :authenticate]))
+
+    assert %Telemetry.Metrics.Counter{tags: [:scheme, :result]} = counter
+  end
+
   test "measures the number of connected nodes" do
     ref = make_ref()
     parent = self()

@@ -1,3 +1,4 @@
+:logger.add_handler(:log_lines, Hexpm.LogLines, %{})
 ExUnit.start()
 
 tmp_dir = Application.get_env(:hexpm, :tmp_dir)

@@ -58,8 +58,7 @@ defmodule HexpmWeb.Endpoint do
   plug :drop_request_id
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint], log: false
-  plug Logster.Plugs.ChangeLogLevel, to: :info
-  plug Logster.Plugs.Logger, excludes: [:params]
+  plug HexpmWeb.Plugs.RequestLog
 
   plug Plug.Parsers,
     parsers: [:urlencoded, :json, HexpmWeb.PlugParser],

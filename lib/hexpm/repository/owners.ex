@@ -38,6 +38,9 @@ defmodule Hexpm.Repository.Owners do
       repository.id != 1 and not repository_access ->
         {:error, :not_member}
 
+      not User.organization?(user) and not User.verified_primary_email?(user) ->
+        {:error, :unverified_primary_email}
+
       User.organization?(user) and Map.get(params, "transfer", false) != true ->
         {:error, :not_organization_transfer}
 

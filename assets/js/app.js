@@ -156,8 +156,7 @@ window.addEventListener("message", function (event) {
   if (
     event.data.type === "readme-height" &&
     typeof event.data.height === "number" &&
-    event.data.height > 0 &&
-    event.data.height < 100000
+    event.data.height > 0
   ) {
     readmeFrame.classList.remove("opacity-0", "h-0", "overflow-hidden");
     readmeFrame.style.height = Math.ceil(event.data.height) + "px";

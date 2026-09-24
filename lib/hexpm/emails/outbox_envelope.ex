@@ -2,6 +2,7 @@ defmodule Hexpm.Emails.OutboxEnvelope do
   alias Swoosh.Email
 
   @rendering_private_keys [:phoenix_layout, :phoenix_template, :phoenix_view]
+  @persisted_private_keys [:type]
 
   def dump!(%Email{} = email) do
     ensure_deliverable!(email)
@@ -18,7 +19,8 @@ defmodule Hexpm.Emails.OutboxEnvelope do
       "text_body" => email.text_body,
       "html_body" => email.html_body,
       "headers" => email.headers,
-      "provider_options" => dump_provider_options!(email.provider_options)
+      "provider_options" => dump_provider_options!(email.provider_options),
+      "type" => email.private[:type]
     }
   end
 
@@ -36,9 +38,15 @@ defmodule Hexpm.Emails.OutboxEnvelope do
         provider_options: load_provider_options!(Map.fetch!(email, "provider_options"))
       )
 
-    case load_reply_to(Map.fetch!(email, "reply_to")) do
+    persisted_email =
+      case load_reply_to(Map.fetch!(email, "reply_to")) do
+        nil -> persisted_email
+        reply_to -> Email.reply_to(persisted_email, reply_to)
+      end
+
+    case email["type"] do
       nil -> persisted_email
-      reply_to -> Email.reply_to(persisted_email, reply_to)
+      type -> Email.put_private(persisted_email, :type, type)
     end
   end
 
@@ -69,7 +77,7 @@ defmodule Hexpm.Emails.OutboxEnvelope do
   end
 
   defp ensure_supported_private!(private) do
-    if map_size(Map.drop(private, @rendering_private_keys)) != 0 do
+    if map_size(Map.drop(private, @rendering_private_keys ++ @persisted_private_keys)) != 0 do
       raise ArgumentError, "email outbox does not support private delivery options"
     end
   end

@@ -17,7 +17,13 @@ defmodule Hexpm.Preview.Workers.Upload do
     Hexpm.Preview.upload(key)
   rescue
     Hexpm.Preview.StaleTarballError ->
-      Logger.info("STALE PREVIEW TARBALL #{key} snooze=#{@stale_snooze}s")
+      Logger.info(%{
+        message: "Stale preview tarball, snoozing",
+        event: "preview.stale",
+        key: key,
+        snooze: @stale_snooze
+      })
+
       {:snooze, @stale_snooze}
   end
 end
@@ -41,7 +47,41 @@ defmodule Hexpm.Preview.Workers.Delete do
     Hexpm.Preview.delete(key)
   rescue
     Hexpm.Preview.StaleTarballError ->
-      Logger.info("STALE PREVIEW TARBALL #{key} snooze=#{@stale_snooze}s")
+      Logger.info(%{
+        message: "Stale preview tarball, snoozing",
+        event: "preview.stale",
+        key: key,
+        snooze: @stale_snooze
+      })
+
       {:snooze, @stale_snooze}
+  end
+end
+
+defmodule Hexpm.Preview.Workers.BackfillDocFiles do
+  @moduledoc """
+  Fills `release_doc_files` for releases published before it existed, one
+  batch per job. Started once with `Hexpm.AdminTasks.backfill_doc_files/0`.
+  """
+
+  use Oban.Worker,
+    queue: :heavy,
+    # Below the Preview upload jobs sharing the queue.
+    priority: 9,
+    max_attempts: 5,
+    unique: [period: :infinity, states: :incomplete, fields: [:worker, :args]]
+
+  @batch_size 500
+
+  @impl Oban.Worker
+  def perform(%Oban.Job{args: %{"after_id" => after_id}}) do
+    case Hexpm.Preview.backfill_doc_files(after_id, @batch_size) do
+      {:ok, last_id} ->
+        %{after_id: last_id} |> new() |> Oban.insert!()
+        :ok
+
+      :done ->
+        :ok
+    end
   end
 end

@@ -13,7 +13,8 @@ defmodule Hexpm.Repository.ReleaseRetirement do
   def changeset(meta, params) do
     cast(meta, params, ~w(reason message)a)
     |> validate_required(~w(reason)a)
-    |> validate_length(:message, min: 3, max: 140)
+    |> validate_length(:message, min: 3)
+    |> validate_length(:message, count: :codepoints, max: 140)
     |> validate_inclusion(:reason, @reasons)
   end
 

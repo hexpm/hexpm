@@ -201,6 +201,32 @@ defmodule Hexpm.OAuth.ClientTest do
     end
   end
 
+  describe "changeset/2 length limits" do
+    test "bounds the name and redirect URIs" do
+      attrs = %{
+        client_id: Clients.generate_client_id(),
+        name: codepoints_string(255),
+        client_type: "public",
+        allowed_grant_types: ["authorization_code"],
+        allowed_scopes: ["api"],
+        redirect_uris: ["https://example.com/" <> combining_string(235)]
+      }
+
+      assert Client.changeset(%Client{}, attrs).valid?
+
+      changeset = Client.changeset(%Client{}, %{attrs | name: codepoints_string(256)})
+      assert errors_on(changeset).name == "should be at most 255 character(s)"
+
+      changeset =
+        Client.changeset(%Client{}, %{
+          attrs
+          | redirect_uris: ["https://example.com/" <> combining_string(236)]
+        })
+
+      assert errors_on(changeset).redirect_uris == "entries should be at most 255 byte(s)"
+    end
+  end
+
   describe "build/1" do
     test "builds client with valid attributes" do
       attrs = %{

@@ -21,6 +21,8 @@ defmodule Hexpm.Repository.Policy.Override do
     |> cast(attrs, [:action, :package, :requirement])
     |> update_change(:requirement, &nilify_blank/1)
     |> validate_required([:action, :package])
+    |> validate_length(:package, count: :bytes, max: 255)
+    |> validate_length(:requirement, count: :bytes, max: 255)
     |> validate_format(:package, @package_format)
     |> validate_requirement()
   end

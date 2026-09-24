@@ -38,6 +38,16 @@ defmodule HexpmWeb.Plugs.AttackTest do
       assert get_resp_header(conn, "x-ratelimit-remaining") == ["499"]
     end
 
+    test "broadcasts varsel token ids" do
+      time = System.system_time(:millisecond)
+      key = {:varsel_jti, "broadcast-jti"}
+      Phoenix.PubSub.broadcast!(Hexpm.PubSub, "ratelimit", {:throttle, key, time})
+      :sys.get_state(RateLimitPubSub)
+
+      assert Attack.varsel_jti("broadcast-jti", time: time) == 2
+      assert Attack.varsel_jti("fresh-jti", time: time) == 1
+    end
+
     test "broadcasts user rate limits", %{user: user} do
       align_to_throttle_bucket()
       time = System.system_time(:millisecond)
@@ -91,10 +101,12 @@ defmodule HexpmWeb.Plugs.AttackTest do
       time = System.system_time(:millisecond)
       ip = {6, 6, 6, 6}
       organization_id = 123
+      user_id = 456
 
       for key <- [
             {:sso_start_ip, ip},
             {:sso_start_organization, organization_id, ip},
+            {:sso_start_user, user_id, organization_id},
             {:sso_callback_ip, ip}
           ] do
         Phoenix.PubSub.broadcast!(Hexpm.PubSub, "ratelimit", {:throttle, key, time})
@@ -108,11 +120,15 @@ defmodule HexpmWeb.Plugs.AttackTest do
       assert {:allow, {:throttle, organization_data}} =
                Attack.sso_start_organization_throttle(organization_id, ip, time: time)
 
+      assert {:allow, {:throttle, user_data}} =
+               Attack.sso_start_user_throttle(user_id, organization_id, time: time)
+
       assert {:allow, {:throttle, callback_data}} =
                Attack.sso_callback_ip_throttle(ip, time: time)
 
-      assert start_data[:remaining] == 28
+      assert start_data[:remaining] == 298
       assert organization_data[:remaining] == 18
+      assert user_data[:remaining] == 18
       assert callback_data[:remaining] == 48
     end
 

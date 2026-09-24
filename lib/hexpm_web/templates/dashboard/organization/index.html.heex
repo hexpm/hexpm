@@ -38,7 +38,7 @@
                 organization={@organization}
                 quantity={@quantity}
                 sso_mode={@sso_mode}
-                sso_requires_sso?={@sso_requires_sso?}
+                sso_required_at={@sso_required_at}
               />
             <% :keys -> %>
               <.keys_tab
@@ -105,6 +105,8 @@
             <% :sso -> %>
               <.sso_tab
                 callback_url={@sso_callback_url}
+                scim_base_url={@sso_scim_base_url}
+                generated_scim_token={@sso_generated_scim_token}
                 connection={@sso_connection}
                 domains={@sso_domains}
                 failures={@sso_failures}

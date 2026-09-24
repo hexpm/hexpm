@@ -9,6 +9,16 @@ defmodule Hexpm.ShortURLs.ShortURLTest do
       assert String.length(changes.short_code) == 5
     end
 
+    test "bounds the url in bytes" do
+      prefix = "https://hex.pm/?q="
+      at_cap = prefix <> combining_string(8192 - byte_size(prefix))
+      assert %{valid?: true} = ShortURL.changeset(%{"url" => at_cap})
+
+      over_cap = prefix <> combining_string(8193 - byte_size(prefix))
+      changeset = ShortURL.changeset(%{"url" => over_cap})
+      assert errors_on(changeset).url == "should be at most 8192 byte(s)"
+    end
+
     test "valid when redirecting to hex.pm" do
       params = %{"url" => "https://hex.pm"}
       assert %{valid?: true} = ShortURL.changeset(params)

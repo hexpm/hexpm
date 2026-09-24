@@ -21,12 +21,13 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
   end
 
   defp active_org_tab(html) do
-    {:ok, document} = Floki.parse_document(html)
+    document = LazyHTML.from_document(html)
 
-    [active_tab] = Floki.find(document, ~s(#org-tab-nav [data-active="true"]))
+    [active_tab] =
+      LazyHTML.query(document, ~s(#org-tab-nav [data-active="true"])) |> Enum.to_list()
 
     active_tab
-    |> Floki.text(sep: " ")
+    |> LazyHTML.text(separator: " ")
     |> String.replace(~r/\s+/, " ")
     |> String.trim()
   end
@@ -163,24 +164,26 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> get("/dashboard/orgs/#{organization.name}/members")
         |> html_response(200)
 
-      {:ok, document} = Floki.parse_document(html)
+      document = LazyHTML.from_document(html)
       modal_id = "remove-member-#{member.id}"
 
-      assert [_role_form] = Floki.find(document, "#change-role-form-#{member.id}")
-      assert [_role_select] = Floki.find(document, "#role-#{member.id}")
-      assert [_modal] = Floki.find(document, "##{modal_id}")
+      assert [_role_form] =
+               LazyHTML.query(document, "#change-role-form-#{member.id}") |> Enum.to_list()
+
+      assert [_role_select] = LazyHTML.query(document, "#role-#{member.id}") |> Enum.to_list()
+      assert [_modal] = LazyHTML.query(document, "##{modal_id}") |> Enum.to_list()
 
       assert [remove_button] =
-               Floki.find(document, ~s(button[aria-label="Remove member"]))
+               LazyHTML.query(document, ~s(button[aria-label="Remove member"])) |> Enum.to_list()
 
-      assert Floki.attribute(remove_button, "phx-click")
+      assert LazyHTML.attribute(remove_button, "phx-click")
              |> List.first()
              |> String.contains?("##{modal_id}")
 
       assert ["member.with.dots"] =
                document
-               |> Floki.find(~s(##{modal_id} input[name="organization_user[username]"]))
-               |> Floki.attribute("value")
+               |> LazyHTML.query(~s(##{modal_id} input[name="organization_user[username]"]))
+               |> LazyHTML.attribute("value")
     end
 
     test "returns 404 for non-members", %{user: user, organization: organization} do
@@ -205,12 +208,14 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> test_login(user)
         |> get("/dashboard/orgs/#{organization.name}/members")
         |> html_response(200)
-        |> Floki.parse_document!()
+        |> LazyHTML.from_document()
 
       usernames =
         document
-        |> Floki.find(~s(form[id^="change-role-form-"] input[name="organization_user[username]"]))
-        |> Enum.map(&(Floki.attribute(&1, "value") |> List.first()))
+        |> LazyHTML.query(
+          ~s(form[id^="change-role-form-"] input[name="organization_user[username]"])
+        )
+        |> Enum.map(&(LazyHTML.attribute(&1, "value") |> List.first()))
 
       assert usernames == Enum.sort(usernames)
       assert "alpha_member" in usernames
@@ -265,6 +270,29 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert response(conn, 200) =~ "mykey"
     end
 
+    test "shows keys with docs permissions", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "write")
+      mock_customer(organization)
+
+      insert(:key,
+        organization: organization,
+        name: "hexdocs",
+        permissions: [
+          build(:key_permission, domain: "repository", resource: organization.name),
+          build(:key_permission, domain: "docs", resource: organization.name)
+        ]
+      )
+
+      html =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/keys")
+        |> html_response(200)
+
+      assert html =~ "REPO:#{organization.name}"
+      assert html =~ "DOCS:#{organization.name}"
+    end
+
     test "sorts package permissions by package name", c do
       insert(:organization_user, organization: c.organization, user: c.user, role: "write")
       insert(:package, name: "zulu_package", repository_id: c.repository.id)
@@ -276,9 +304,9 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> test_login(c.user)
         |> get("/dashboard/orgs/#{c.organization.name}/keys")
         |> html_response(200)
-        |> Floki.parse_document!()
-        |> Floki.find(~s(#generate-key-modal input[name^="key[permissions][package]"]))
-        |> Enum.map(&(Floki.attribute(&1, "name") |> List.first()))
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(~s(#generate-key-modal input[name^="key[permissions][package]"]))
+        |> Enum.map(&(LazyHTML.attribute(&1, "name") |> List.first()))
 
       assert package_inputs == [
                "key[permissions][package][#{c.organization.name}/alpha_package]",
@@ -453,7 +481,37 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       assert repo_user.role == "write"
 
-      assert_email_sent(Hexpm.Emails.organization_invite(organization, new_user))
+      assert %Hexpm.Emails.OutboxEntry{category: "organization.member_added"} =
+               Repo.get_by!(Hexpm.Emails.OutboxEntry,
+                 group_key: "organization-member-added:#{organization.id}:#{new_user.id}"
+               )
+    end
+
+    test "add member whose primary email is unverified", %{
+      user: user,
+      organization: organization
+    } do
+      mock_customer(organization)
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      unverified = insert(:user, emails: [build(:email, verified: false)])
+      params = %{"username" => unverified.username, role: "write"}
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}", %{
+          "action" => "add_member",
+          "organization_user" => params
+        })
+
+      html = html_response(conn, 400)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "User #{unverified.username} has not verified their primary email."
+
+      assert active_org_tab(html) == "Members"
+      refute Repo.get_by(assoc(organization, :organization_users), user_id: unverified.id)
+      assert_no_email_sent()
     end
 
     test "adding member does not send invite when user opts out", %{
@@ -555,7 +613,11 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert [invitation] = OrganizationInvitations.all_pending(organization)
       assert invitation.email == "newcomer@example.com"
       assert invitation.role == "write"
-      assert_email_sent(fn email -> email.to == [{"", "newcomer@example.com"}] end)
+
+      assert %{email: %{"to" => [%{"address" => "newcomer@example.com"}]}} =
+               Repo.get_by!(Hexpm.Emails.OutboxEntry,
+                 group_key: "organization-invitation:#{invitation.id}"
+               )
     end
 
     test "inviting an address that already belongs to a member is refused", %{
@@ -787,7 +849,10 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> response(200)
 
       text =
-        body |> Floki.parse_document!() |> Floki.text(sep: " ") |> String.replace(~r/\s+/, " ")
+        body
+        |> LazyHTML.from_document()
+        |> LazyHTML.text(separator: " ")
+        |> String.replace(~r/\s+/, " ")
 
       assert text =~ "Organization, monthly billed ($7.00 per user / month)"
       assert text =~ "$7.00 x 2 user(s)"
@@ -825,8 +890,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> test_login(user)
         |> get("/dashboard/orgs/#{organization.name}/billing")
         |> response(200)
-        |> Floki.parse_document!()
-        |> Floki.text(sep: " ")
+        |> LazyHTML.from_document()
+        |> LazyHTML.text(separator: " ")
         |> String.replace(~r/\s+/, " ")
 
       assert text =~ "Organization, monthly billed ($7.00 per user / month)"
@@ -866,8 +931,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> test_login(user)
         |> get("/dashboard/orgs/#{organization.name}/billing")
         |> response(200)
-        |> Floki.parse_document!()
-        |> Floki.text(sep: " ")
+        |> LazyHTML.from_document()
+        |> LazyHTML.text(separator: " ")
         |> String.replace(~r/\s+/, " ")
 
       assert text =~ "Organization, annually billed ($70.00 per user / year)"
@@ -1093,7 +1158,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       stub(Hexpm.Billing.Mock, :invoice, fn id, _opts ->
         assert id == 123
-        "Invoice"
+        {:ok, "Invoice"}
       end)
 
       insert(:organization_user, organization: organization, user: user, role: "admin")
@@ -1104,6 +1169,26 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> get("/dashboard/orgs/#{organization.name}/invoices/123")
 
       assert response(conn, 200) == "Invoice"
+    end
+
+    test "renders an error when the billing service fails", %{
+      user: user,
+      organization: organization
+    } do
+      stub(Hexpm.Billing.Mock, :get, fn _token, _opts ->
+        %{"invoices" => [%{"id" => 123}]}
+      end)
+
+      stub(Hexpm.Billing.Mock, :invoice, fn _id, _opts -> {:error, %{}} end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/invoices/123")
+
+      assert response(conn, 500)
     end
 
     test "returns 404 for non-integer invoice ID", %{user: user, organization: organization} do
@@ -1244,8 +1329,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       audit_logs = AuditLogs.all_by(user)
       assert audit_log = Enum.find(audit_logs, &(&1.action == "billing.update"))
       assert audit_log.action == "billing.update"
-      assert audit_log.params["email"] == "billing@example.com"
       assert audit_log.params["organization"]["name"] == organization.name
+      refute Map.has_key?(audit_log.params, "email")
     end
   end
 
@@ -1423,6 +1508,11 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       audit_logs = AuditLogs.all_by(user)
       assert audit_log = Enum.find(audit_logs, &(&1.action == "billing.create"))
       assert audit_log.params["organization"]["name"] == organization.name
+
+      refute Map.has_key?(audit_log.params, "email")
+      refute Map.has_key?(audit_log.params, "person")
+      refute Map.has_key?(audit_log.params, "company")
+      refute Map.has_key?(audit_log.params, "token")
     end
   end
 
@@ -1784,9 +1874,9 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> test_login(c.user)
         |> get("/dashboard/orgs/#{c.organization.name}/packages")
         |> html_response(200)
-        |> Floki.parse_document!()
-        |> Floki.find("table tbody tr td:first-child span.font-medium")
-        |> Enum.map(&(&1 |> Floki.text() |> String.trim()))
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("table tbody tr td:first-child span.font-medium")
+        |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim()))
 
       assert package_names == ["alpha_package", "zulu_package"]
     end

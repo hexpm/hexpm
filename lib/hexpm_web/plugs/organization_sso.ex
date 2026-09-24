@@ -1,7 +1,6 @@
 defmodule HexpmWeb.Plugs.OrganizationSSO do
   @moduledoc """
-  Requires a current organization access session on pages of an organization
-  that enforces SSO.
+  Requires the organization's independent SSO and 2FA verification on its pages.
 
   This runs alongside sudo rather than instead of it: sudo says the person at
   the keyboard is still the account holder, and the organization access session
@@ -18,7 +17,8 @@ defmodule HexpmWeb.Plugs.OrganizationSSO do
   broken, or whose administrator was deactivated in it by mistake, has to be
   able to repair the connection, keep paying, and get out, and it could not if
   those screens sat behind the gate they are the only way to unlock. Reaching
-  one that way is audited and mailed to the administrators.
+  one that way is audited, and mailed to the administrators unless it is a
+  member leaving.
 
   `screen:` names what the audit entry records where the action name is not the
   screen a person would recognise. It defaults to the action name.
@@ -44,10 +44,19 @@ defmodule HexpmWeb.Plugs.OrganizationSSO do
     with %{} = user <- conn.assigns[:current_user],
          %{} = organization <- organization(conn, opts.source),
          {:error, refusal} <- SSOEnforcement.check(conn, organization, user) do
-      if carve_out?(conn, opts.except) do
-        record_break_glass(conn, organization, user, screen(conn, opts.screen))
-      else
-        SSOEnforcement.refuse(conn, refusal, organization)
+      cond do
+        carve_out?(conn, opts.except) and refusal == :sso_required ->
+          record_break_glass(conn, organization, user, screen(conn, opts.screen))
+
+        carve_out?(conn, opts.except) and
+            Phoenix.Controller.action_name(conn) in [:leave, :danger_zone] ->
+          if Enforcement.check(organization, user, nil, conn.assigns.current_session.id) ==
+               {:error, :sso_required},
+             do: record_break_glass(conn, organization, user, screen(conn, opts.screen)),
+             else: conn
+
+        true ->
+          SSOEnforcement.refuse(conn, refusal, organization)
       end
     else
       _ -> conn

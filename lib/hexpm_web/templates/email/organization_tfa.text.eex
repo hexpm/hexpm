@@ -1,0 +1,8 @@
+<%= OrganizationTFA.heading(@stage) %>
+
+<%= OrganizationTFA.intro(@stage, @organization, :text) %>
+
+<%= OrganizationTFA.body(@stage, @suspended, :text) %>
+<%= if @stage == "summary" do %>
+<%= OrganizationTFA.members_page(@organization, :text) %>
+<% end %>

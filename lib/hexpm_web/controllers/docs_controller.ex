@@ -1,7 +1,7 @@
 defmodule HexpmWeb.DocsController do
   use HexpmWeb, :controller
 
-  alias Hexpm.Accounts.SSO
+  alias Hexpm.Accounts.{OrganizationTFA, SSO}
   alias Hexpm.TrustedPublishers
 
   def index(conn, _params) do
@@ -103,6 +103,19 @@ defmodule HexpmWeb.DocsController do
       title: "Dependency policies and cooldowns",
       container: "flex-1 flex flex-col"
     )
+  end
+
+  def organization_tfa(conn, _params) do
+    if OrganizationTFA.available?() do
+      render(conn, "layout.html",
+        view: "organization_tfa.html",
+        view_name: :organization_tfa,
+        title: "Organization two-factor authentication",
+        container: "flex-1 flex flex-col"
+      )
+    else
+      not_found(conn)
+    end
   end
 
   def organization_sso(conn, _params) do

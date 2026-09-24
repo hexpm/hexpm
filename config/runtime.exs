@@ -1,5 +1,31 @@
 import Config
 
+organization_tfa_mode =
+  case System.get_env("HEXPM_ORGANIZATION_TFA_MODE", "off") do
+    "off" ->
+      :off
+
+    "beta" ->
+      :beta
+
+    "enabled" ->
+      :enabled
+
+    value ->
+      raise "invalid HEXPM_ORGANIZATION_TFA_MODE #{inspect(value)}; expected off, beta, or enabled"
+  end
+
+organization_tfa_beta_organizations =
+  System.get_env("HEXPM_ORGANIZATION_TFA_BETA_ORGANIZATIONS", "")
+  |> String.split(",", trim: true)
+  |> Enum.map(&String.trim/1)
+  |> Enum.reject(&(&1 == ""))
+  |> Enum.uniq()
+
+config :hexpm, :organization_tfa,
+  mode: organization_tfa_mode,
+  beta_organizations: organization_tfa_beta_organizations
+
 default_sso_mode = if config_env() == :dev, do: "enabled", else: "off"
 
 sso_mode =
@@ -47,6 +73,9 @@ if config_env() == :prod do
     private_key: System.fetch_env!("HEXPM_SIGNING_KEY"),
     repo_bucket: System.fetch_env!("HEXPM_REPO_BUCKET"),
     logs_bucket: System.fetch_env!("HEXPM_LOGS_BUCKET"),
+    # Staging serves no package downloads, so an empty day is not a broken
+    # log pipeline there
+    stats_expect_downloads: System.fetch_env!("HEXPM_ENV") == "prod",
     audit_bucket: System.fetch_env!("HEXPM_AUDIT_BUCKET"),
     docs_bucket: System.fetch_env!("HEXPM_DOCS_BUCKET"),
     preview_bucket: System.fetch_env!("HEXPM_PREVIEW_BUCKET"),
@@ -73,7 +102,8 @@ if config_env() == :prod do
     report_url: System.fetch_env!("HEXPM_VARSEL_REPORT_URL"),
     audience: System.fetch_env!("HEXPM_VARSEL_JWT_AUDIENCE"),
     signing_key: System.fetch_env!("HEXPM_VARSEL_SIGNING_KEY"),
-    key_id: System.fetch_env!("HEXPM_VARSEL_KEY_ID")
+    key_id: System.fetch_env!("HEXPM_VARSEL_KEY_ID"),
+    jwks: System.fetch_env!("HEXPM_VARSEL_JWKS")
 
   config :hexpm, :hcaptcha,
     sitekey: System.fetch_env!("HEXPM_HCAPTCHA_SITEKEY"),
@@ -87,9 +117,19 @@ if config_env() == :prod do
     access_key_id: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_ID"),
     secret_access_key: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_SECRET")
 
+  # GIT_SHA is baked into the image (see the Dockerfile) and matches the
+  # release CI creates in Sentry, so issues resolved via commits auto-resolve
+  # when the deploy carrying the fix is registered.
+  sentry_release =
+    case System.get_env("GIT_SHA") do
+      sha when sha in [nil, "", "unknown"] -> nil
+      sha -> sha
+    end
+
   config :sentry,
     dsn: System.fetch_env!("HEXPM_SENTRY_DSN"),
-    environment_name: System.fetch_env!("HEXPM_ENV")
+    environment_name: System.fetch_env!("HEXPM_ENV"),
+    release: sentry_release
 
   config :hexpm,
     email_base_url: "https://#{System.fetch_env!("HEXPM_HOST")}",
@@ -171,7 +211,8 @@ if config_env() == :prod do
         periodic: String.to_integer(System.fetch_env!("HEXPM_OBAN_PERIODIC_CONCURRENCY")),
         heavy: String.to_integer(System.fetch_env!("HEXPM_OBAN_HEAVY_CONCURRENCY")),
         registry: String.to_integer(System.fetch_env!("HEXPM_OBAN_REGISTRY_CONCURRENCY")),
-        purge: String.to_integer(System.fetch_env!("HEXPM_OBAN_PURGE_CONCURRENCY"))
+        purge: String.to_integer(System.fetch_env!("HEXPM_OBAN_PURGE_CONCURRENCY")),
+        email: String.to_integer(System.fetch_env!("HEXPM_OBAN_EMAIL_CONCURRENCY"))
       ]
 
     config :hexpm,

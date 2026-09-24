@@ -109,6 +109,27 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
       refute Organizations.get_role(organization, organization2.user)
     end
 
+    test "new organization member validates primary email is verified", %{
+      user1: user1,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user1, role: "admin")
+      unverified = insert(:user, emails: [build(:email, verified: false)])
+      params = %{"name" => unverified.username, "role" => "read"}
+
+      conn =
+        build_conn()
+        |> put_req_header("authorization", key_for(user1))
+        |> post("/api/orgs/#{organization.name}/members", params)
+
+      result = json_response(conn, 422)
+
+      assert result["errors"] ==
+               "cannot add member until the user has verified their primary email"
+
+      refute Organizations.get_role(organization, unverified)
+    end
+
     test "new organization member validates number of seats", %{
       user1: user1,
       organization: organization

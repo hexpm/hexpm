@@ -17,16 +17,21 @@ defmodule Hexpm.Billing.Report do
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{}}) do
     if Application.fetch_env!(:hexpm, :billing_report) and Repo.write_mode?() do
-      report_data = Hexpm.Billing.report()
-      report_map = Map.new(report_data, &{&1["token"], &1["quantity"]})
-      report_tokens = MapSet.new(report_map, fn {token, _quantity} -> token end)
-      updates = to_update(organizations(), report_tokens, report_map)
+      case Hexpm.Billing.report() do
+        {:ok, report_data} ->
+          report_map = Map.new(report_data, &{&1["token"], &1["quantity"]})
+          report_tokens = MapSet.new(report_map, fn {token, _quantity} -> token end)
+          updates = to_update(organizations(), report_tokens, report_map)
 
-      {set_active, set_inactive} =
-        Enum.split_with(updates, fn {_name, active?, _old_seats, _new_seats} -> active? end)
+          {set_active, set_inactive} =
+            Enum.split_with(updates, fn {_name, active?, _old_seats, _new_seats} -> active? end)
 
-      do_update(set_active, true)
-      do_update(set_inactive, false)
+          do_update(set_active, true)
+          do_update(set_inactive, false)
+
+        {:error, reason} ->
+          {:error, reason}
+      end
     else
       :ok
     end

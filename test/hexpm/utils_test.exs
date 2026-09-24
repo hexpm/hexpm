@@ -17,6 +17,30 @@ defmodule Hexpm.UtilsTest do
     end
   end
 
+  describe "truncate_bytes/2" do
+    test "leaves a string within the limit alone" do
+      assert Utils.truncate_bytes("héllo", 6) == "héllo"
+    end
+
+    test "cuts at the limit without splitting a codepoint" do
+      assert Utils.truncate_bytes("aé", 2) == "a"
+      assert Utils.truncate_bytes("aé", 3) == "aé"
+      assert Utils.truncate_bytes("a€b", 3) == "a"
+    end
+
+    test "replaces invalid bytes" do
+      assert Utils.truncate_bytes(<<255, ?a>>, 10) == "�a"
+      assert Utils.truncate_bytes(<<255, 255, 255, 255>>, 8) == "��"
+    end
+
+    test "keeps a combining sequence valid" do
+      string = "a" <> String.duplicate("́", 1000)
+      truncated = Utils.truncate_bytes(string, 255)
+      assert String.valid?(truncated)
+      assert byte_size(truncated) == 255
+    end
+  end
+
   describe "datetime_to_rfc2822" do
     test "formats sample timestamps correctly" do
       assert Utils.datetime_to_rfc2822(~U[2002-09-07 09:42:31Z]) ==
@@ -186,6 +210,43 @@ defmodule Hexpm.UtilsTest do
 
       assert Utils.docs_html_url(hexpm, package, release) ==
                "http://localhost:5002/search/0.3.0/"
+    end
+  end
+
+  describe "safe_page/3" do
+    test "clamps lower bound to 1 for negative or zero page" do
+      assert Utils.safe_page(0, 30, 30) == 1
+      assert Utils.safe_page(-5, 30, 30) == 1
+    end
+
+    test "clamps to 1 when count is 0" do
+      assert Utils.safe_page(1, 0, 30) == 1
+      assert Utils.safe_page(2, 0, 30) == 1
+      assert Utils.safe_page(10, 0, 30) == 1
+    end
+
+    test "clamps upper bound when count is an exact multiple of per_page" do
+      # 30 items at 30 per page = 1 page
+      assert Utils.safe_page(1, 30, 30) == 1
+      assert Utils.safe_page(2, 30, 30) == 1
+      assert Utils.safe_page(5, 30, 30) == 1
+
+      # 60 items at 30 per page = 2 pages
+      assert Utils.safe_page(1, 60, 30) == 1
+      assert Utils.safe_page(2, 60, 30) == 2
+      assert Utils.safe_page(3, 60, 30) == 2
+      assert Utils.safe_page(99, 60, 30) == 2
+    end
+
+    test "correctly handles non-multiple counts" do
+      # 31 items at 30 per page = 2 pages
+      assert Utils.safe_page(1, 31, 30) == 1
+      assert Utils.safe_page(2, 31, 30) == 2
+      assert Utils.safe_page(3, 31, 30) == 2
+
+      # 1 item at 30 per page = 1 page
+      assert Utils.safe_page(1, 1, 30) == 1
+      assert Utils.safe_page(2, 1, 30) == 1
     end
   end
 end

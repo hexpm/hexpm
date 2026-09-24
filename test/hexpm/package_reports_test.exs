@@ -33,6 +33,20 @@ defmodule Hexpm.PackageReportsTest do
       end
     end
 
+    test "bounds the summary and the description in codepoints" do
+      attrs = %{reason: "other", summary: "Package report", description: "Details"}
+
+      assert Report.changeset(%Report{}, %{attrs | summary: codepoints_string(200)}).valid?
+
+      assert Report.changeset(%Report{}, %{attrs | description: codepoints_string(100_000)}).valid?
+
+      changeset = Report.changeset(%Report{}, %{attrs | summary: codepoints_string(201)})
+      assert errors_on(changeset).summary == "should be at most 200 character(s)"
+
+      changeset = Report.changeset(%Report{}, %{attrs | description: codepoints_string(100_001)})
+      assert errors_on(changeset).description == "should be at most 100000 character(s)"
+    end
+
     test "rejects line breaks in the email subject summary" do
       changeset =
         Report.changeset(%Report{}, %{

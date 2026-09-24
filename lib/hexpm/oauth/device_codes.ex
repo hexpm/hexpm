@@ -265,6 +265,13 @@ defmodule Hexpm.OAuth.DeviceCodes do
 
       result =
         Ecto.Multi.new()
+        |> Ecto.Multi.run(:sso_connection_lock, fn _repo, _changes ->
+          {:ok,
+           Hexpm.Accounts.SSO.lock_granting_connections!(
+             Keyword.get(opts, :browser_session_id),
+             user.id
+           )}
+        end)
         |> Ecto.Multi.run(:session, fn _repo, _changes ->
           UserSessions.create_oauth_session(user, device_code_record.client_id,
             name: device_code_record.name,

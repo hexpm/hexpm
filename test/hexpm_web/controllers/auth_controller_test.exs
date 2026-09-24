@@ -8,6 +8,19 @@ defmodule HexpmWeb.AuthControllerTest do
     :ok
   end
 
+  defp oauth_return(path, opts \\ []) do
+    minutes_ago = Keyword.get(opts, :minutes_ago, 0)
+    at = NaiveDateTime.utc_now() |> NaiveDateTime.add(-minutes_ago * 60, :second)
+    %{"at" => NaiveDateTime.to_iso8601(at), "path" => path}
+  end
+
+  defp pending_link(opts \\ []) do
+    minutes_ago = Keyword.get(opts, :minutes_ago, 0)
+    provider = Keyword.get(opts, :provider, "github")
+    at = NaiveDateTime.utc_now() |> NaiveDateTime.add(-minutes_ago * 60, :second)
+    %{"at" => NaiveDateTime.to_iso8601(at), "provider" => provider}
+  end
+
   describe "GET /auth/github/callback - GitHub signup (new user)" do
     test "redirects to username selection form" do
       email = Hexpm.Fake.sequence(:email)
@@ -61,7 +74,97 @@ defmodule HexpmWeb.AuthControllerTest do
     end
   end
 
+  describe "GET /auth/github - Request phase" do
+    setup do
+      previous = Application.get_env(:ueberauth, Ueberauth.Strategy.Github.OAuth)
+
+      Application.put_env(:ueberauth, Ueberauth.Strategy.Github.OAuth,
+        client_id: "test_client_id",
+        client_secret: "test_client_secret"
+      )
+
+      on_exit(fn ->
+        Application.put_env(:ueberauth, Ueberauth.Strategy.Github.OAuth, previous)
+      end)
+
+      :ok
+    end
+
+    test "stores an on-site return path in the session" do
+      return = "/oauth/authorize?client_id=abc&redirect_uri=https%3A%2F%2Fexample.com%2Fcallback"
+      conn = get(build_conn(), "/auth/github", %{"return" => return})
+
+      assert redirected_to(conn) =~ "https://github.com/login/oauth/authorize"
+      assert %{"at" => _, "path" => ^return} = get_session(conn, "oauth_return")
+    end
+
+    test "drops an off-site return path" do
+      conn = get(build_conn(), "/auth/github", %{"return" => "https://evil.com"})
+
+      assert redirected_to(conn) =~ "https://github.com/login/oauth/authorize"
+      refute get_session(conn, "oauth_return")
+    end
+
+    test "clears a stale return path when none is given" do
+      conn =
+        build_conn()
+        |> Plug.Test.init_test_session(%{"oauth_return" => oauth_return("/dashboard")})
+        |> get("/auth/github")
+
+      assert redirected_to(conn) =~ "https://github.com/login/oauth/authorize"
+      refute get_session(conn, "oauth_return")
+    end
+  end
+
   describe "GET /auth/github/callback - GitHub login (existing user)" do
+    test "redirects to the return path stored during the request phase" do
+      email = Hexpm.Fake.sequence(:email)
+      user = insert(:user)
+      insert(:user_provider, user: user, provider: "github", provider_uid: "67891")
+      return = "/oauth/authorize?client_id=abc&redirect_uri=https%3A%2F%2Fexample.com%2Fcallback"
+
+      conn =
+        build_conn()
+        |> mock_github_auth_success("67891", email)
+        |> put_session("oauth_return", oauth_return(return))
+        |> HexpmWeb.AuthController.callback(%{})
+
+      assert redirected_to(conn) == return
+      assert get_session(conn, "session_token")
+      refute get_session(conn, "oauth_return")
+    end
+
+    test "ignores an expired return path" do
+      email = Hexpm.Fake.sequence(:email)
+      user = insert(:user)
+      insert(:user_provider, user: user, provider: "github", provider_uid: "67892")
+
+      conn =
+        build_conn()
+        |> mock_github_auth_success("67892", email)
+        |> put_session("oauth_return", oauth_return("/dashboard", minutes_ago: 31))
+        |> HexpmWeb.AuthController.callback(%{})
+
+      assert redirected_to(conn) == "/users/#{user.username}"
+      refute get_session(conn, "oauth_return")
+    end
+
+    test "carries the return path into the TFA step" do
+      email = Hexpm.Fake.sequence(:email)
+      user = insert(:user_with_tfa)
+      insert(:user_provider, user: user, provider: "github", provider_uid: "99998")
+
+      conn =
+        build_conn()
+        |> mock_github_auth_success("99998", email)
+        |> put_session("oauth_return", oauth_return("/dashboard"))
+        |> HexpmWeb.AuthController.callback(%{})
+
+      assert redirected_to(conn) == "/tfa"
+      assert get_session(conn, "tfa_user_id")["return"] == "/dashboard"
+      refute get_session(conn, "oauth_return")
+    end
+
     test "logs in existing user with GitHub provider" do
       email = Hexpm.Fake.sequence(:email)
       user = insert(:user)
@@ -116,6 +219,20 @@ defmodule HexpmWeb.AuthControllerTest do
       assert Phoenix.Flash.get(conn.assigns.flash, "error") =~
                "An account with email #{email} already exists"
     end
+
+    test "sends the email conflict back to the login page with the return path" do
+      existing_user = insert(:user)
+      email = hd(existing_user.emails).email
+
+      conn =
+        build_conn()
+        |> mock_github_auth_success("11112", email)
+        |> put_session("oauth_return", oauth_return("/dashboard"))
+        |> HexpmWeb.AuthController.callback(%{})
+
+      assert redirected_to(conn) == "/login?return=%2Fdashboard"
+      refute get_session(conn, "oauth_return")
+    end
   end
 
   describe "GET /auth/github/callback - Link to logged-in user" do
@@ -127,6 +244,7 @@ defmodule HexpmWeb.AuthControllerTest do
         build_conn()
         |> mock_github_auth_success("22222", email)
         |> Plug.Conn.assign(:current_user, user)
+        |> Plug.Conn.put_session("provider_link", pending_link())
         |> HexpmWeb.AuthController.callback(%{})
 
       assert redirected_to(conn) == "/dashboard/security"
@@ -137,6 +255,8 @@ defmodule HexpmWeb.AuthControllerTest do
       user_provider = UserProviders.get_by_provider("github", "22222")
       assert user_provider
       assert user_provider.user_id == user.id
+
+      refute get_session(conn, "provider_link")
     end
 
     test "shows error when linking fails" do
@@ -150,10 +270,60 @@ defmodule HexpmWeb.AuthControllerTest do
         build_conn()
         |> mock_github_auth_success("33333", email)
         |> Plug.Conn.assign(:current_user, user)
+        |> Plug.Conn.put_session("provider_link", pending_link())
         |> HexpmWeb.AuthController.callback(%{})
 
       assert redirected_to(conn) == "/dashboard/security"
       assert Phoenix.Flash.get(conn.assigns.flash, "error") == "Failed to connect GitHub account."
+    end
+
+    test "refuses to link when the flow did not start from security settings" do
+      email = Hexpm.Fake.sequence(:email)
+      user = insert(:user)
+
+      conn =
+        build_conn()
+        |> mock_github_auth_success("22223", email)
+        |> Plug.Conn.assign(:current_user, user)
+        |> HexpmWeb.AuthController.callback(%{})
+
+      assert redirected_to(conn) == "/dashboard/security"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, "error") ==
+               "Connect your GitHub account from your security settings."
+
+      refute UserProviders.get_by_provider("github", "22223")
+    end
+
+    test "refuses to link when the started flow expired" do
+      email = Hexpm.Fake.sequence(:email)
+      user = insert(:user)
+
+      conn =
+        build_conn()
+        |> mock_github_auth_success("22224", email)
+        |> Plug.Conn.assign(:current_user, user)
+        |> Plug.Conn.put_session("provider_link", pending_link(minutes_ago: 11))
+        |> HexpmWeb.AuthController.callback(%{})
+
+      assert redirected_to(conn) == "/dashboard/security"
+      refute UserProviders.get_by_provider("github", "22224")
+      refute get_session(conn, "provider_link")
+    end
+
+    test "refuses to link when the started flow names another provider" do
+      email = Hexpm.Fake.sequence(:email)
+      user = insert(:user)
+
+      conn =
+        build_conn()
+        |> mock_github_auth_success("22225", email)
+        |> Plug.Conn.assign(:current_user, user)
+        |> Plug.Conn.put_session("provider_link", pending_link(provider: "gitlab"))
+        |> HexpmWeb.AuthController.callback(%{})
+
+      assert redirected_to(conn) == "/dashboard/security"
+      refute UserProviders.get_by_provider("github", "22225")
     end
   end
 
@@ -168,6 +338,17 @@ defmodule HexpmWeb.AuthControllerTest do
 
       assert Phoenix.Flash.get(conn.assigns.flash, "error") ==
                "Failed to authenticate with GitHub."
+    end
+
+    test "keeps the return path on the login page" do
+      conn =
+        build_conn()
+        |> mock_github_auth_failure()
+        |> put_session("oauth_return", oauth_return("/dashboard"))
+        |> HexpmWeb.AuthController.callback(%{})
+
+      assert redirected_to(conn) == "/login?return=%2Fdashboard"
+      refute get_session(conn, "oauth_return")
     end
   end
 
@@ -261,7 +442,7 @@ defmodule HexpmWeb.AuthControllerTest do
         |> get("/auth/complete-signup")
 
       assert html_response(conn, 200) =~ "Complete your signup"
-      assert html_response(conn, 200) =~ username
+      assert html_response(conn, 200) =~ binary_part(username, 0, min(byte_size(username), 20))
     end
 
     test "redirects to signup when session expired" do
@@ -276,6 +457,31 @@ defmodule HexpmWeb.AuthControllerTest do
   end
 
   describe "POST /auth/complete-signup - Complete signup" do
+    test "redirects a new user to the return path stored during the request phase" do
+      email = Hexpm.Fake.sequence(:email)
+      chosen_username = Hexpm.Fake.sequence(:username)
+      return = "/oauth/authorize?client_id=abc&redirect_uri=https%3A%2F%2Fexample.com%2Fcallback"
+
+      conn =
+        build_conn()
+        |> Plug.Test.init_test_session(%{
+          "pending_oauth" => %{
+            "at" => NaiveDateTime.to_iso8601(NaiveDateTime.utc_now()),
+            "provider" => "github",
+            "provider_uid" => "12346",
+            "provider_email" => email,
+            "provider_name" => Hexpm.Fake.sequence(:full_name),
+            "provider_nickname" => Hexpm.Fake.sequence(:username)
+          },
+          "oauth_return" => oauth_return(return)
+        })
+        |> post("/auth/complete-signup", %{"user" => %{"username" => chosen_username}})
+
+      assert redirected_to(conn) == return
+      assert Users.get(chosen_username)
+      refute get_session(conn, "oauth_return")
+    end
+
     test "creates user and logs them in with chosen username" do
       email = Hexpm.Fake.sequence(:email)
       username = Hexpm.Fake.sequence(:username)

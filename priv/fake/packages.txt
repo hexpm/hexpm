@@ -1441,7 +1441,6 @@ flickrex
 fling
 flip_text
 flippant
-flock
 floki
 floorplan
 flow
@@ -2571,7 +2570,6 @@ phone
 phst_transform
 phubme
 phux
-phx
 picosat
 pigeon
 piliponi

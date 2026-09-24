@@ -1119,7 +1119,7 @@ defmodule Hexpm.Accounts.SSOTest do
       # deletes it and cascades to the organization access session. The
       # administrator's linked-accounts view has to survive that.
       Hexpm.UserSessions.revoke(user_session, nil, audit: audit_data(context.member))
-      Hexpm.ReleaseTasks.PurgeExpiredRecords.run()
+      Hexpm.PurgeExpiredRecords.run()
 
       refute Repo.exists?(SSO.OrgSession)
       assert Repo.get!(Identity, identity.id).last_authenticated_at == authenticated_at
@@ -1286,6 +1286,27 @@ defmodule Hexpm.Accounts.SSOTest do
       assert SSO.current_org_session(user_session.id, context.organization.id)
     end
 
+    test "re-authenticating clears the session the access was copied from", context do
+      # A CLI session gets its access as a copy carrying the browser session it
+      # came from, and OrgSession.live/2 discards a copy whose source is gone.
+      # Re-authorizing through the provider has to stand on its own, or the
+      # member cannot restore CLI access until the nightly purge.
+      identity = link_identity(context, context.member)
+      browser = browser_session(context.member)
+      cli = browser_session(context.member)
+
+      SSO.establish_org_session!(identity, browser.id)
+      SSO.grant_org_sessions!(browser.id, cli.id, context.member.id)
+
+      assert SSO.current_org_session(cli.id, context.organization.id)
+
+      Hexpm.UserSessions.revoke(browser, nil, audit: audit_data(context.member))
+      refute SSO.current_org_session(cli.id, context.organization.id)
+
+      SSO.establish_org_session!(identity, cli.id)
+      assert SSO.current_org_session(cli.id, context.organization.id)
+    end
+
     test "an organization access session is scoped to its own organization", context do
       other_organization = insert(:organization)
       insert(:organization_user, organization: other_organization, user: context.member)
@@ -1412,6 +1433,71 @@ defmodule Hexpm.Accounts.SSOTest do
       refute Repo.exists?(Identity)
     end
 
+    test "removing or leaving sends no unlink notice", context do
+      leaver = insert(:user)
+      insert(:organization_user, organization: context.organization, user: leaver)
+      link_identity(context, context.member)
+      link_identity(context, leaver, subject: "leaver")
+
+      assert :ok =
+               Organizations.remove_member(context.organization, context.member,
+                 audit: audit_data(context.admin)
+               )
+
+      assert :ok =
+               Organizations.remove_member(context.organization, leaver,
+                 audit: audit_data(leaver)
+               )
+
+      refute Repo.exists?(Identity)
+
+      refute Repo.exists?(
+               from(entry in OutboxEntry, where: entry.category == "sso.identity_unlinked")
+             )
+    end
+
+    test "an administrator unlink tells a governed member they are locked out", context do
+      link_identity(context, context.admin, subject: "admin")
+      link_identity(context, context.member)
+
+      assert {:ok, _connection} =
+               SSO.configure_enforcement(
+                 context.organization,
+                 %{"enforcement_mode" => "required", "personal_keys" => "allow"},
+                 audit: audit_data(context.admin)
+               )
+
+      assert {:ok, %Identity{}} =
+               SSO.unlink_identity(context.organization, context.member,
+                 audit: audit_data(context.admin)
+               )
+
+      body = unlinked_notice().email["text_body"]
+
+      assert body =~
+               "#{context.admin.username}, an administrator of the " <>
+                 "#{context.organization.name} organization, disconnected your Hex.pm account"
+
+      assert body =~ "you can't reach it until you connect your account again"
+      assert body =~ "/sso/org/#{context.organization.name}"
+      refute body =~ "contact support"
+    end
+
+    test "an administrator unlink tells an ungoverned member nothing else changed", context do
+      link_identity(context, context.member)
+
+      assert {:ok, %Identity{}} =
+               SSO.unlink_identity(context.organization, context.member,
+                 audit: audit_data(context.admin)
+               )
+
+      body = unlinked_notice().email["text_body"]
+
+      assert body =~ "your access to it hasn't changed"
+      assert body =~ "/sso/org/#{context.organization.name}"
+      refute body =~ "can't reach it"
+    end
+
     test "a provider email change notifies the member without changing their addresses",
          context do
       link_identity(context, context.member, provider_email: "old@example.com")
@@ -1433,6 +1519,22 @@ defmodule Hexpm.Accounts.SSOTest do
       refute "new@example.com" in emails
 
       assert Repo.exists?(
+               from(entry in OutboxEntry, where: entry.category == "sso.email_mismatch")
+             )
+    end
+
+    test "a provider email that only changes case is not a new address", context do
+      link_identity(context, context.member, provider_email: "Person@IdP.example")
+      user_session = browser_session(context.member)
+
+      assert {:ok, {:login, _user, _org_session, _return}} =
+               context
+               |> start_transaction(context.member)
+               |> complete(valid_claims("person@idp.example"), context.member, user_session.id)
+
+      assert Repo.one!(Identity).provider_email == "person@idp.example"
+
+      refute Repo.exists?(
                from(entry in OutboxEntry, where: entry.category == "sso.email_mismatch")
              )
     end
@@ -1513,6 +1615,10 @@ defmodule Hexpm.Accounts.SSOTest do
         attrs
       )
     )
+  end
+
+  defp unlinked_notice do
+    Repo.one!(from(entry in OutboxEntry, where: entry.category == "sso.identity_unlinked"))
   end
 
   defp browser_session(user) do
@@ -1731,7 +1837,8 @@ defmodule Hexpm.Accounts.SSOTest do
     end
 
     test "covers the organizations that are still governed", context do
-      session = browser_session(context.member)
+      session =
+        insert(:oauth_session, user: context.member, client_id: insert(:oauth_client).client_id)
 
       assert {:ok, authorization} =
                SSO.request_authorization(context.member, session.id, [context.organization.name])
@@ -1742,7 +1849,9 @@ defmodule Hexpm.Accounts.SSOTest do
     test "skips a name that is no longer governed and keeps the rest", context do
       exempted = insert(:organization)
       insert(:organization_user, organization: exempted, user: context.member)
-      session = browser_session(context.member)
+
+      session =
+        insert(:oauth_session, user: context.member, client_id: insert(:oauth_client).client_id)
 
       # The client posts the list it last heard about, which is as old as its
       # access token, so one name that has since stopped being governed cannot
@@ -1757,7 +1866,8 @@ defmodule Hexpm.Accounts.SSOTest do
     end
 
     test "refuses when nothing named is governed", context do
-      session = browser_session(context.member)
+      session =
+        insert(:oauth_session, user: context.member, client_id: insert(:oauth_client).client_id)
 
       assert {:error, :not_governed} =
                SSO.request_authorization(context.member, session.id, ["no-such-organization"])

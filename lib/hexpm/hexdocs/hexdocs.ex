@@ -7,6 +7,7 @@ defmodule Hexpm.Hexdocs do
   @special_packages Application.compile_env!(:hexpm, :hexdocs_special_packages)
   @special_package_names Map.keys(@special_packages)
   @gcs_put_debounce Application.compile_env!(:hexpm, :hexdocs_gcs_put_debounce)
+  @lock_timeout :timer.minutes(4)
 
   # ExDoc marks these `noindex`, so listing them asks a crawler to fetch a page
   # it has been told not to keep.
@@ -24,20 +25,57 @@ defmodule Hexpm.Hexdocs do
     start = System.monotonic_time(:millisecond)
     Logger.info("UPLOAD #{key}")
 
-    {version, all_versions, retired_versions} = versions(repository, package, version)
+    version = parse_version(package, version)
     {dir, files, checksum} = download_and_unpack!(key, repository, package, version)
     FileRewriter.rewrite_files(dir, files)
-    Bucket.upload(repository, package, version, all_versions, retired_versions, dir, files)
-    ensure_archive_current!(key, checksum)
 
-    if Utils.latest_version?(package, version, all_versions) do
-      update_index_sitemap(repository, key)
-      update_package_sitemap(repository, key, package, files)
-      update_package_names_csv(repository)
+    outcome =
+      locked(repository, package, fn ->
+        case archive_state(key, checksum) do
+          :current ->
+            {all_versions, retired_versions} = versions(repository, package)
+            latest? = Utils.latest_version?(package, version, all_versions)
+            Bucket.upload_versioned(repository, package, version, dir, files)
+
+            if latest? do
+              Bucket.upload_unversioned(repository, package, version, dir, files)
+              update_package_sitemap(repository, key, package, files)
+            end
+
+            Bucket.upload_docs_config(
+              repository,
+              package,
+              version,
+              all_versions,
+              retired_versions,
+              dir,
+              files
+            )
+
+            {:uploaded, latest?}
+
+          :changed ->
+            raise StaleArchiveError, key: key
+
+          :missing ->
+            :removed
+        end
+      end)
+
+    case outcome do
+      {:uploaded, latest?} ->
+        if latest? do
+          update_index_sitemap(repository, key)
+          update_package_names_csv(repository)
+        end
+
+        elapsed = System.monotonic_time(:millisecond) - start
+        Logger.info("FINISHED UPLOADING DOCS #{key} #{elapsed}ms")
+
+      :removed ->
+        Logger.info("SKIPPING UPLOAD #{key} (archive removed)")
     end
 
-    elapsed = System.monotonic_time(:millisecond) - start
-    Logger.info("FINISHED UPLOADING DOCS #{key} #{elapsed}ms")
     :ok
   end
 
@@ -83,20 +121,31 @@ defmodule Hexpm.Hexdocs do
   def delete(key) do
     {repository, package, version} = key_components!(key)
 
-    cond do
-      package in @special_package_names ->
-        :ok
+    if package in @special_package_names do
+      :ok
+    else
+      parsed = Version.parse!(version)
 
-      Releases.docs_exist?(repository, package, version) ->
-        upload(key)
+      outcome =
+        locked(repository, package, fn ->
+          if Releases.docs_exist?(repository, package, version) do
+            :published
+          else
+            {all_versions, _retired_versions} = Releases.docs_versions(repository, package)
+            delete_docs(repository, package, parsed, all_versions)
+            update_index_sitemap(repository, key)
+            :deleted
+          end
+        end)
 
-      true ->
-        version = Version.parse!(version)
-        {all_versions, _retired_versions} = Releases.docs_versions(repository, package)
-        delete_docs(repository, package, version, all_versions)
-        update_index_sitemap(repository, key)
-        if repository == "hexpm", do: Search.delete(package, version)
-        :ok
+      case outcome do
+        :published ->
+          upload(key)
+
+        :deleted ->
+          if repository == "hexpm", do: Search.delete(package, parsed)
+          :ok
+      end
     end
   end
 
@@ -124,7 +173,17 @@ defmodule Hexpm.Hexdocs do
     {repository, package, version} = key_components!(key)
     {_dir, files, _checksum} = download_and_unpack!(key, repository, package, version)
     update_index_sitemap(repository, key)
-    update_package_sitemap(repository, key, package, files)
+
+    locked(repository, package, fn ->
+      {all_versions, _retired_versions} = versions(repository, package)
+
+      if Utils.latest_version?(package, parse_version(package, version), all_versions) do
+        update_package_sitemap(repository, key, package, files)
+      else
+        Logger.info("SKIPPING PACKAGE SITEMAP #{key} (not the latest version)")
+      end
+    end)
+
     :ok
   end
 
@@ -157,19 +216,51 @@ defmodule Hexpm.Hexdocs do
     end
   end
 
-  defp versions(_repository, package, version) when package in @special_package_names do
-    version =
-      case Version.parse(version) do
-        {:ok, parsed} -> parsed
-        :error -> version
-      end
-
-    {version, SourceRepo.versions!(Map.fetch!(@special_packages, package)), MapSet.new()}
+  defp parse_version(package, version) when package in @special_package_names do
+    case Version.parse(version) do
+      {:ok, parsed} -> parsed
+      :error -> version
+    end
   end
 
-  defp versions(repository, package, version) do
-    {all_versions, retired_versions} = Releases.docs_versions(repository, package)
-    {Version.parse!(version), all_versions, retired_versions}
+  defp parse_version(_package, version), do: Version.parse!(version)
+
+  defp versions(_repository, package) when package in @special_package_names do
+    {SourceRepo.versions!(Map.fetch!(@special_packages, package)), MapSet.new()}
+  end
+
+  defp versions(repository, package), do: Releases.docs_versions(repository, package)
+
+  # Uploads and deletions of one package's docs write the same objects, and
+  # which version is the latest, and whether the archive a job unpacked is
+  # still the one in the store, is decided under the lock, so the last
+  # writer is the version that is the latest at that moment and a job never
+  # writes from an archive that has been replaced or removed. The download
+  # and unpack and the site-wide files stay outside it. A failure after some
+  # of the writes still has to purge what was written, so the transaction
+  # commits their purge jobs before the error goes on.
+  defp locked(repository, package, fun) do
+    {:ok, result} =
+      Hexpm.Repo.transaction(
+        fn ->
+          Hexpm.Repo.advisory_xact_lock(:hexdocs,
+            sub_key: :erlang.phash2({repository, package}),
+            timeout: @lock_timeout
+          )
+
+          try do
+            {:ok, fun.()}
+          catch
+            kind, reason -> {:raised, kind, reason, __STACKTRACE__}
+          end
+        end,
+        timeout: @lock_timeout
+      )
+
+    case result do
+      {:ok, value} -> value
+      {:raised, kind, reason, stacktrace} -> :erlang.raise(kind, reason, stacktrace)
+    end
   end
 
   defp download_and_unpack!(key, repository, package, version) do
@@ -192,13 +283,19 @@ defmodule Hexpm.Hexdocs do
   end
 
   defp ensure_archive_current!(key, checksum) do
-    path = Hexpm.TmpDir.tmp_file("docs-tarball")
-
-    if Hexpm.Store.get_to_file(:repo_bucket, key, path) == :ok and
-         Assets.file_checksum(path) == checksum do
+    if archive_state(key, checksum) == :current do
       :ok
     else
       raise StaleArchiveError, key: key
+    end
+  end
+
+  defp archive_state(key, checksum) do
+    path = Hexpm.TmpDir.tmp_file("docs-tarball")
+
+    case Hexpm.Store.get_to_file(:repo_bucket, key, path) do
+      :ok -> if Assets.file_checksum(path) == checksum, do: :current, else: :changed
+      nil -> :missing
     end
   end
 
@@ -209,7 +306,11 @@ defmodule Hexpm.Hexdocs do
       Hexpm.Hexdocs.Debouncer,
       :sitemap_index,
       @gcs_put_debounce,
-      fn -> Bucket.upload_index_sitemap(Sitemaps.render_docs(Sitemaps.packages_with_docs())) end
+      fn ->
+        Bucket.upload_index_sitemap(fn ->
+          Sitemaps.render_docs(Sitemaps.packages_with_docs())
+        end)
+      end
     )
   end
 
@@ -222,17 +323,18 @@ defmodule Hexpm.Hexdocs do
           path not in @noindex_pages,
           do: path
 
-    Bucket.upload_package_sitemap(
-      package,
+    Bucket.upload_package_sitemap(package, fn ->
       PackageSitemap.render(package, pages, DateTime.utc_now())
-    )
+    end)
   end
 
   defp update_package_sitemap(_repository, _key, _package, _files), do: :ok
 
   defp update_package_names_csv("hexpm") do
-    names = Enum.sort(@special_package_names) ++ Packages.public_names()
-    Bucket.upload_package_names_csv(for name <- names, do: [name, "\n"])
+    Bucket.upload_package_names_csv(fn ->
+      names = Enum.sort(@special_package_names) ++ Packages.public_names()
+      for name <- names, do: [name, "\n"]
+    end)
   end
 
   defp update_package_names_csv(_repository), do: :ok

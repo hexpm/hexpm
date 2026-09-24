@@ -43,16 +43,27 @@ defmodule HexpmWeb.DiffComponentTest do
     assert html =~ "&lt;"
     refute html =~ "<script>"
 
-    document = Floki.parse_document!(html)
-    assert [_] = Floki.find(document, "div.ghd-file > button.ghd-file-header")
-    assert [] = Floki.find(document, "details")
+    document = LazyHTML.from_fragment(html)
 
-    assert Floki.attribute(document, "#diff-0-toggle", "aria-controls") == ["diff-0-body"]
-    assert Floki.attribute(document, "#diff-0-toggle", "aria-expanded") == ["true"]
+    assert [_] =
+             LazyHTML.query(document, "div.ghd-file > button.ghd-file-header") |> Enum.to_list()
 
-    assert [_] = Floki.find(document, ~s(.ghd-line-number[tabindex="0"][role="link"]))
-    assert Floki.text(Floki.find(document, ".ghd-line-status")) == "+ "
-    assert [_] = Floki.find(document, ".ghd-line-code")
+    assert [] = LazyHTML.query(document, "details") |> Enum.to_list()
+
+    assert LazyHTML.query(document, "#diff-0-toggle") |> LazyHTML.attribute("aria-controls") == [
+             "diff-0-body"
+           ]
+
+    assert LazyHTML.query(document, "#diff-0-toggle") |> LazyHTML.attribute("aria-expanded") == [
+             "true"
+           ]
+
+    assert [_] =
+             LazyHTML.query(document, ~s(.ghd-line-number[tabindex="0"][role="link"]))
+             |> Enum.to_list()
+
+    assert LazyHTML.text(LazyHTML.query(document, ".ghd-line-status")) == "+ "
+    assert [_] = LazyHTML.query(document, ".ghd-line-code") |> Enum.to_list()
   end
 
   test "renders added, removed, and oversized files" do
@@ -74,5 +85,14 @@ defmodule HexpmWeb.DiffComponentTest do
     assert oversized =~ "unknown"
     assert oversized =~ "ghd-file-status-unknown"
     refute oversized =~ "ghd-file-status-too-large"
+  end
+
+  test "renders renamed files with both paths" do
+    diff = %GitDiff.Patch{from: "lib/old_name.ex", to: "lib/new_name.ex", chunks: []}
+
+    html = render_component(&DiffComponent.diff/1, diff: diff, id: "renamed", highlights: %{})
+
+    assert html =~ "ghd-file-status-renamed"
+    assert html =~ "lib/old_name.ex → lib/new_name.ex"
   end
 end

@@ -1,6 +1,8 @@
 defmodule Hexpm.HTTPTest do
   use ExUnit.Case, async: true
 
+  import Hexpm.TestHelpers, only: [capture_final_requests: 1]
+
   alias Hexpm.HTTP
   alias Plug.Conn
 
@@ -19,6 +21,16 @@ defmodule Hexpm.HTTPTest do
     end)
 
     assert {:ok, 200, _headers, "respbody"} = HTTP.get(lasso_url(lasso, "/get"), [])
+  end
+
+  test "head/2 tolerates a json content-type with no body", %{lasso: lasso} do
+    Lasso.expect_once(lasso, "HEAD", "/head", fn conn ->
+      conn
+      |> Conn.put_resp_content_type("application/json")
+      |> Conn.resp(200, "")
+    end)
+
+    assert {:ok, 200, _headers, ""} = HTTP.head(lasso_url(lasso, "/head"), [])
   end
 
   test "get/3 can stop reading an oversized response", %{lasso: lasso} do
@@ -389,6 +401,68 @@ defmodule Hexpm.HTTPTest do
     assert Agent.get(counter, & &1) == 3
   end
 
+  describe "track_request/3" do
+    defp responses(responses) do
+      {:ok, agent} = Agent.start_link(fn -> responses end)
+      fn -> Agent.get_and_update(agent, fn [response | rest] -> {response, rest} end) end
+    end
+
+    test "records one success after retries without exposing request or response contents" do
+      success = {:ok, 200, [{"set-cookie", "private"}], "private response"}
+
+      fun =
+        responses([{:error, %Mint.TransportError{reason: :closed}}, {:ok, 503, [], ""}, success])
+
+      url = "https://user:password@storage.googleapis.com/private?token=secret"
+
+      events =
+        capture_final_requests(fn ->
+          assert HTTP.track_request(:get, url, fn ->
+                   HTTP.retry(fun, "test", attempts: 5, base_delay: 0, statuses: [500..599])
+                 end) == success
+        end)
+
+      assert events == [%{host: "storage.googleapis.com", method: "GET", status: 200}]
+    end
+
+    for {failure, status} <- [
+          {{:ok, 503, [], ""}, 503},
+          {{:ok, 429, [], ""}, 429},
+          {{:error, %Mint.TransportError{reason: :timeout}}, "error"}
+        ] do
+      test "records one final failure after exhausting #{inspect(failure)}" do
+        failure = unquote(Macro.escape(failure))
+        fun = responses(List.duplicate(failure, 5))
+
+        events =
+          capture_final_requests(fn ->
+            assert HTTP.track_request(:put, "https://storage.googleapis.com/bucket/key", fn ->
+                     HTTP.retry(fun, "test",
+                       attempts: 5,
+                       base_delay: 0,
+                       statuses: [429, 500..599]
+                     )
+                   end) == failure
+          end)
+
+        assert events == [
+                 %{host: "storage.googleapis.com", method: "PUT", status: unquote(status)}
+               ]
+      end
+    end
+
+    test "records a request that is not retried" do
+      events =
+        capture_final_requests(fn ->
+          assert HTTP.track_request("POST", "http://localhost:4001/api/customers", fn ->
+                   {:ok, 422, [], %{}}
+                 end) == {:ok, 422, [], %{}}
+        end)
+
+      assert events == [%{host: "localhost", method: "POST", status: 422}]
+    end
+  end
+
   test "patch/3", %{lasso: lasso} do
     Lasso.expect_once(lasso, "PATCH", "/patch", fn conn ->
       {:ok, reqbody, conn} = Conn.read_body(conn)
@@ -518,6 +592,36 @@ defmodule Hexpm.HTTPTest do
         {:dictionary, dictionary} <- [Process.info(pid, :dictionary)],
         self() in List.wrap(dictionary[:"$callers"]),
         do: pid
+  end
+
+  test "get/3 returns an error when the pool has no free connection within the pool timeout",
+       %{lasso: lasso} do
+    test = self()
+
+    Lasso.expect(lasso, "GET", "/held", fn conn ->
+      send(test, {:held, self()})
+
+      receive do
+        :release -> Conn.resp(conn, 200, "released")
+      end
+    end)
+
+    tasks = for _ <- 1..50, do: Task.async(fn -> HTTP.get(lasso_url(lasso, "/held"), []) end)
+
+    held =
+      for _ <- tasks do
+        assert_receive {:held, pid}, @server_await_timeout
+        pid
+      end
+
+    assert {:error, %RuntimeError{message: "Finch was unable to provide a connection" <> _}} =
+             HTTP.get(lasso_url(lasso, "/held"), [], pool_timeout: 100)
+
+    Enum.each(held, &send(&1, :release))
+
+    for result <- Task.await_many(tasks, @server_await_timeout) do
+      assert {:ok, 200, _headers, "released"} = result
+    end
   end
 
   defp lasso_url(lasso, path) do

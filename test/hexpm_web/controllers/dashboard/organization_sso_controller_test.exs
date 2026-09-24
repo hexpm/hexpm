@@ -38,22 +38,24 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
 
     assert html =~ "Single sign-on"
     assert html =~ "Redirect URI"
-    assert html =~ "Okta is the documented pilot integration"
+    assert html =~ "Okta and Microsoft Entra are the documented"
     assert html =~ "Required scopes"
     assert html =~ "openid email"
     refute html =~ "stored-client-secret"
 
-    {:ok, document} = Floki.parse_document(html)
+    document = LazyHTML.from_document(html)
 
     assert [_link] =
-             Floki.find(document, ~s(a[href="/docs/organization-sso"]))
+             LazyHTML.query(document, ~s(a[href="/docs/organization-sso"])) |> Enum.to_list()
 
     for path <- [
           "/dashboard/orgs/#{context.organization.name}/policies",
           "/dashboard/orgs/#{context.organization.name}/sso"
         ] do
-      assert [tab] = Floki.find(document, ~s(#org-tab-nav a[href="#{path}"]))
-      assert Floki.text(tab) =~ "NEW"
+      assert [tab] =
+               LazyHTML.query(document, ~s(#org-tab-nav a[href="#{path}"])) |> Enum.to_list()
+
+      assert LazyHTML.text(tab) =~ "NEW"
     end
 
     conn =
@@ -77,7 +79,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
 
     status = connection_status(context)
 
-    assert Floki.text(status) |> String.trim() == "Not tested"
+    assert LazyHTML.text(status) |> String.trim() == "Not tested"
 
     connection =
       connection
@@ -86,7 +88,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
 
     status = connection_status(context)
 
-    assert Floki.text(status) |> String.trim() == "Tested, disabled"
+    assert LazyHTML.text(status) |> String.trim() == "Tested, disabled"
 
     connection
     |> Ecto.Changeset.change(enabled_at: DateTime.utc_now())
@@ -94,7 +96,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
 
     status = connection_status(context)
 
-    assert Floki.text(status) |> String.trim() == "Enabled"
+    assert LazyHTML.text(status) |> String.trim() == "Enabled"
   end
 
   test "links linked accounts to user profiles", context do
@@ -116,13 +118,14 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
       |> get("/dashboard/orgs/#{context.organization.name}/sso")
       |> html_response(200)
 
-    {:ok, document} = Floki.parse_document(html)
+    document = LazyHTML.from_document(html)
 
     assert [_link] =
-             Floki.find(
+             LazyHTML.query(
                document,
                ~s(#sso-linked-accounts a[href="/users/#{context.member.username}"])
              )
+             |> Enum.to_list()
   end
 
   test "the runtime gate hides setup and action routes", context do
@@ -157,12 +160,13 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
       |> get("/dashboard/orgs/#{context.organization.name}")
       |> html_response(200)
 
-    {:ok, document} = Floki.parse_document(html)
+    document = LazyHTML.from_document(html)
 
-    assert Floki.find(
+    assert LazyHTML.query(
              document,
              ~s(#org-tab-nav a[href="/dashboard/orgs/#{context.organization.name}/sso"])
-           ) == []
+           )
+           |> Enum.to_list() == []
 
     build_conn()
     |> test_login(context.admin)
@@ -305,7 +309,11 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
        }}
     end)
 
-    conn = conn |> recycle() |> get("/sso/callback", %{state: state, code: "code"})
+    conn =
+      conn
+      |> recycle()
+      |> get("/sso/callback/#{context.organization.name}", %{state: state, code: "code"})
+
     assert redirected_to(conn) == "/dashboard/orgs/#{context.organization.name}/sso"
     assert Repo.get!(Connection, connection.id).tested_at
 
@@ -515,13 +523,13 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     assert html =~
              "records when it was last used but not what it was used for"
 
-    {:ok, document} = Floki.parse_document(html)
+    document = LazyHTML.from_document(html)
 
     rows =
       document
-      |> Floki.find("#sso-enforcement table tbody tr")
+      |> LazyHTML.query("#sso-enforcement table tbody tr")
       |> Enum.map(fn row ->
-        row |> Floki.find("td") |> Enum.map(&(&1 |> Floki.text() |> String.trim()))
+        row |> LazyHTML.query("td") |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim()))
       end)
 
     assert rows == [
@@ -532,12 +540,14 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
   end
 
   test "shows the exemption list and the residual bypasses during the grace period", context do
+    required_at = DateTime.add(DateTime.utc_now(), 9 * 24 * 60 * 60, :second)
+
     insert(:organization_sso_connection,
       organization: context.organization,
       tested_at: DateTime.utc_now(),
       enabled_at: DateTime.utc_now(),
       enforcement_mode: "required",
-      required_at: DateTime.add(DateTime.utc_now(), 9 * 24 * 60 * 60, :second)
+      required_at: required_at
     )
 
     {:ok, _member} =
@@ -552,18 +562,224 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     members = conn |> get("/dashboard/orgs/#{context.organization.name}/members")
     members_html = html_response(members, 200)
 
-    assert members_html =~ "Exempt from SSO (1)"
+    assert members_html =~ "1 member reaches this organization"
     assert members_html =~ context.member.username
-    assert members_html =~ "Enforced on the date"
+
+    document = LazyHTML.from_document(members_html)
+
+    # The toggles read the same as in a pilot, so the date is what says that
+    # the members with it off need SSO too once it passes.
+    assert [notice] = document |> LazyHTML.query("#sso-required-date") |> Enum.to_list()
+
+    assert LazyHTML.text(notice) =~
+             ~r/SSO becomes required on\s+#{HexpmWeb.ViewHelpers.pretty_date(required_at)}\s+for every member who isn't exempt/
+
+    assert member_row(document, context.member) |> LazyHTML.text() =~ "SSO exempt"
+
+    assert [_toggle] =
+             document |> LazyHTML.query("#sso-enforcement-#{context.member.id}") |> Enum.to_list()
 
     sso_html =
       conn
       |> get("/dashboard/orgs/#{context.organization.name}/sso")
       |> html_response(200)
 
-    assert sso_html =~ "Exempt members (1)"
+    assert sso_html =~ "Exempt members."
+    refute sso_html =~ "Exempt members ("
     assert sso_html =~ "Billing and this page"
     assert sso_html =~ "Organization API keys"
+  end
+
+  describe "per-member SSO controls on the members tab" do
+    test "a required organization badges exemptions and has no per-member toggle", context do
+      insert(:organization_sso_connection,
+        organization: context.organization,
+        tested_at: DateTime.utc_now(),
+        enabled_at: DateTime.utc_now(),
+        enforcement_mode: "required"
+      )
+
+      {:ok, _member} =
+        SSO.set_member_enforcement(context.organization, context.admin, "exempt",
+          audit: audit_data(context.admin)
+        )
+
+      document = members_document(context.admin, context)
+
+      refute LazyHTML.text(document) =~ "Require SSO"
+      assert LazyHTML.query(document, "#sso-required-date") |> Enum.to_list() == []
+      assert member_row(document, context.admin) |> LazyHTML.text() =~ "SSO exempt"
+      refute member_row(document, context.member) |> LazyHTML.text() =~ "SSO exempt"
+
+      assert document
+             |> LazyHTML.query("#sso-exempt-user option[value]:not([value=''])")
+             |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim())) == [context.member.username]
+
+      assert [_remove] =
+               document
+               |> LazyHTML.query("#sso-unexempt-form-#{context.admin.id}")
+               |> Enum.to_list()
+    end
+
+    test "exempting and un-exempting a member lands back on the members tab", context do
+      insert(:organization_sso_connection,
+        organization: context.organization,
+        tested_at: DateTime.utc_now(),
+        enabled_at: DateTime.utc_now(),
+        enforcement_mode: "required"
+      )
+
+      {:ok, _member} =
+        SSO.set_member_enforcement(context.organization, context.admin, "exempt",
+          audit: audit_data(context.admin)
+        )
+
+      conn = build_conn() |> test_login(context.admin)
+      path = "/dashboard/orgs/#{context.organization.name}/sso/enforcement/member"
+
+      exempted =
+        post(conn, path, %{"user_id" => context.member.id, "sso_enforcement" => "exempt"})
+
+      assert redirected_to(exempted) == "/dashboard/orgs/#{context.organization.name}/members"
+
+      assert Phoenix.Flash.get(exempted.assigns.flash, :info) =~
+               "#{context.member.username} is exempt from SSO"
+
+      assert member_enforcement(context, context.member) == "exempt"
+
+      removed = post(conn, path, %{"user_id" => context.member.id, "sso_enforcement" => ""})
+
+      assert redirected_to(removed) == "/dashboard/orgs/#{context.organization.name}/members"
+
+      assert Phoenix.Flash.get(removed.assigns.flash, :info) ==
+               "#{context.member.username} now needs SSO."
+
+      assert member_enforcement(context, context.member) == nil
+    end
+
+    test "a pilot has a Require SSO toggle on every row", context do
+      insert(:organization_sso_connection,
+        organization: context.organization,
+        tested_at: DateTime.utc_now(),
+        enabled_at: DateTime.utc_now(),
+        enforcement_mode: "pilot"
+      )
+
+      {:ok, _member} =
+        SSO.set_member_enforcement(context.organization, context.member, "enforced",
+          audit: audit_data(context.admin)
+        )
+
+      {:ok, _member} =
+        SSO.set_member_enforcement(context.organization, context.admin, "exempt",
+          audit: audit_data(context.admin)
+        )
+
+      document = members_document(context.admin, context)
+
+      assert [member_toggle] =
+               document
+               |> LazyHTML.query("#sso-enforcement-#{context.member.id}")
+               |> Enum.to_list()
+
+      assert LazyHTML.attribute(member_toggle, "checked") != []
+
+      assert [admin_toggle] =
+               document
+               |> LazyHTML.query("#sso-enforcement-#{context.admin.id}")
+               |> Enum.to_list()
+
+      assert LazyHTML.attribute(admin_toggle, "checked") == []
+
+      assert member_row(document, context.admin) |> LazyHTML.text() =~ "SSO exempt"
+      refute member_row(document, context.member) |> LazyHTML.text() =~ "SSO exempt"
+
+      assert LazyHTML.text(document) =~
+               "1 member will keep reaching this organization's private packages on a Hexpm password alone once SSO is required."
+
+      assert LazyHTML.query(document, "#sso-required-date") |> Enum.to_list() == []
+
+      reader = insert(:user)
+      insert(:organization_user, organization: context.organization, user: reader, role: "read")
+
+      refute members_document(reader, context) |> LazyHTML.text() =~ "SSO exempt"
+    end
+
+    test "the toggle posts the value its checkbox carries", context do
+      insert(:organization_sso_connection,
+        organization: context.organization,
+        tested_at: DateTime.utc_now(),
+        enabled_at: DateTime.utc_now(),
+        enforcement_mode: "pilot"
+      )
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> put_req_header("content-type", "application/x-www-form-urlencoded")
+
+      path = "/dashboard/orgs/#{context.organization.name}/sso/enforcement/member"
+
+      on =
+        post(conn, path, "user_id=#{context.member.id}&sso_enforcement=&sso_enforcement=enforced")
+
+      assert Phoenix.Flash.get(on.assigns.flash, :info) ==
+               "#{context.member.username} now needs SSO."
+
+      assert member_enforcement(context, context.member) == "enforced"
+
+      off = post(conn, path, "user_id=#{context.member.id}&sso_enforcement=")
+
+      assert Phoenix.Flash.get(off.assigns.flash, :info) ==
+               "#{context.member.username} doesn't need SSO."
+
+      assert member_enforcement(context, context.member) == nil
+    end
+
+    test "turning the toggle off during the grace period names the date", context do
+      required_at = DateTime.add(DateTime.utc_now(), 9 * 24 * 60 * 60, :second)
+
+      insert(:organization_sso_connection,
+        organization: context.organization,
+        tested_at: DateTime.utc_now(),
+        enabled_at: DateTime.utc_now(),
+        enforcement_mode: "required",
+        required_at: required_at
+      )
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/enforcement/member", %{
+          "user_id" => context.member.id,
+          "sso_enforcement" => ""
+        })
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
+               "#{context.member.username} needs SSO from #{HexpmWeb.ViewHelpers.pretty_date(required_at)}."
+    end
+
+    test "an optional organization shows no per-member SSO controls", context do
+      insert(:organization_sso_connection,
+        organization: context.organization,
+        tested_at: DateTime.utc_now(),
+        enabled_at: DateTime.utc_now(),
+        enforcement_mode: "optional"
+      )
+
+      Repo.update_all(
+        from(member in Hexpm.Accounts.OrganizationUser,
+          where: member.organization_id == ^context.organization.id
+        ),
+        set: [sso_enforcement: "exempt"]
+      )
+
+      text = members_document(context.admin, context) |> LazyHTML.text()
+
+      refute text =~ "Require SSO"
+      refute text =~ "SSO exempt"
+      refute text =~ "Exempt from SSO"
+    end
   end
 
   test "does not claim every member goes through the provider when nobody is exempt", context do
@@ -583,6 +799,31 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
 
     assert html =~ "Nobody is exempt."
     assert html =~ "Organization API keys and, unless you block them, personal API keys"
+  end
+
+  # A member who is not an administrator is told no. Someone outside the
+  # organization is told nothing: 403 against 404 reports whether the
+  # organization has SSO configured and whether it is paying.
+  test "an outsider cannot tell an SSO organization from any other", context do
+    insert(:organization_sso_connection,
+      organization: context.organization,
+      tested_at: DateTime.utc_now(),
+      enabled_at: DateTime.utc_now()
+    )
+
+    outsider = insert(:user)
+
+    conn =
+      build_conn()
+      |> test_login(outsider)
+      |> post("/dashboard/orgs/#{context.organization.name}/sso/disable")
+
+    assert response(conn, 404)
+
+    assert build_conn()
+           |> test_login(context.member)
+           |> post("/dashboard/orgs/#{context.organization.name}/sso/disable")
+           |> response(403)
   end
 
   test "takes a fresh password before enforcement is turned down", context do
@@ -629,6 +870,262 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     assert Repo.get!(Connection, connection.id).enforcement_mode == "optional"
   end
 
+  describe "SCIM provisioning" do
+    setup context do
+      connection = insert(:organization_sso_connection, organization: context.organization)
+      Map.put(context, :connection, connection)
+    end
+
+    test "generating a token shows it exactly once", context do
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/scim/generate", %{
+          "scim" => %{"scim_seat_policy" => "block", "scim_role" => "read"}
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{context.organization.name}/sso"
+
+      html =
+        conn
+        |> recycle()
+        |> get("/dashboard/orgs/#{context.organization.name}/sso")
+        |> html_response(200)
+
+      assert html =~ "Copy the token now"
+      assert [token] = Regex.run(~r/<code[^>]*>\s*([0-9a-f]{32})\s*<\/code>/, html) |> tl()
+      assert {:ok, _connection} = SSO.scim_auth(token)
+
+      html =
+        build_conn()
+        |> test_login(context.admin)
+        |> get("/dashboard/orgs/#{context.organization.name}/sso")
+        |> html_response(200)
+
+      refute html =~ "Copy the token now"
+      refute html =~ token
+    end
+
+    test "the one-time token never renders on another organization", context do
+      other = insert(:organization)
+      insert(:organization_user, organization: other, user: context.admin, role: "admin")
+      insert(:organization_sso_connection, organization: other)
+
+      config = Application.fetch_env!(:hexpm, :organization_sso)
+
+      app_env(
+        :hexpm,
+        :organization_sso,
+        Keyword.merge(config,
+          mode: :beta,
+          beta_organizations: [context.organization.name, other.name]
+        )
+      )
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/scim/generate", %{
+          "scim" => %{"scim_seat_policy" => "block", "scim_role" => "read"}
+        })
+
+      html =
+        conn
+        |> recycle()
+        |> get("/dashboard/orgs/#{other.name}/sso")
+        |> html_response(200)
+
+      refute html =~ "Copy the token now"
+    end
+
+    test "generating without the seat policy is refused", context do
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/scim/generate", %{
+          "scim" => %{"scim_role" => "read"}
+        })
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+               "Choose what happens when the seats run out"
+
+      refute Connection.scim_enabled?(Repo.get!(Connection, context.connection.id))
+    end
+
+    test "settings save and token delete work while provisioning is on", context do
+      {:ok, _connection} =
+        SSO.generate_scim_token(
+          context.organization,
+          %{"scim_seat_policy" => "block", "scim_role" => "read"},
+          audit: audit_data(context.admin)
+        )
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/scim", %{
+          "scim" => %{"scim_seat_policy" => "expand", "scim_role" => "write"}
+        })
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Provisioning settings saved"
+      stored = Repo.get!(Connection, context.connection.id)
+      assert stored.scim_seat_policy == "expand"
+      assert stored.scim_role == "write"
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/scim/delete")
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Provisioning is off"
+      refute Connection.scim_enabled?(Repo.get!(Connection, context.connection.id))
+    end
+
+    test "members cannot touch provisioning", context do
+      conn =
+        build_conn()
+        |> test_login(context.member)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/scim/generate", %{
+          "scim" => %{"scim_seat_policy" => "block", "scim_role" => "read"}
+        })
+
+      assert response(conn, 403)
+    end
+
+    test "the page carrying the token is not stored by anything in between", context do
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/scim/generate", %{
+          "scim" => %{"scim_seat_policy" => "block", "scim_role" => "read"}
+        })
+
+      conn =
+        conn
+        |> recycle()
+        |> get("/dashboard/orgs/#{context.organization.name}/sso")
+
+      assert html_response(conn, 200) =~ "Copy the token now"
+      assert get_resp_header(conn, "cache-control") == ["no-store"]
+      assert get_resp_header(conn, "pragma") == ["no-cache"]
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> get("/dashboard/orgs/#{context.organization.name}/sso")
+
+      refute html_response(conn, 200) =~ "Copy the token now"
+      refute get_resp_header(conn, "cache-control") == ["no-store"]
+    end
+
+    test "the card names who generated the token and when it was last used", context do
+      {:ok, connection} =
+        SSO.generate_scim_token(
+          context.organization,
+          %{"scim_seat_policy" => "block", "scim_role" => "read"},
+          audit: audit_data(context.admin)
+        )
+
+      {:ok, authenticated} = SSO.scim_auth(connection.scim_token)
+      :ok = SSO.record_scim_token_use(authenticated, "198.51.100.7")
+
+      html =
+        build_conn()
+        |> test_login(context.admin)
+        |> get("/dashboard/orgs/#{context.organization.name}/sso")
+        |> html_response(200)
+
+      assert html =~ "Token generated"
+      assert html =~ context.admin.username
+      assert html =~ "Token last used"
+      assert html =~ "198.51.100.7"
+    end
+
+    test "setting provisioning up needs an organization access session, revoking it does not",
+         context do
+      insert(:organization_sso_identity,
+        connection: context.connection,
+        organization: context.organization,
+        user: context.admin
+      )
+
+      Repo.update!(
+        Ecto.Changeset.change(context.connection,
+          tested_at: DateTime.utc_now(),
+          enabled_at: DateTime.utc_now()
+        )
+      )
+
+      {:ok, _connection} =
+        SSO.configure_enforcement(
+          context.organization,
+          %{"enforcement_mode" => "required", "personal_keys" => "block"},
+          audit: audit_data(context.admin)
+        )
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/scim/generate", %{
+          "scim" => %{"scim_seat_policy" => "block", "scim_role" => "read"}
+        })
+
+      assert redirected_to(conn) =~ "/organizations/#{context.organization.name}/authenticate"
+      refute Connection.scim_enabled?(Repo.get!(Connection, context.connection.id))
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/scim", %{
+          "scim" => %{"scim_seat_policy" => "expand", "scim_role" => "admin"}
+        })
+
+      assert redirected_to(conn) =~ "/organizations/#{context.organization.name}/authenticate"
+      assert Repo.get!(Connection, context.connection.id).scim_role == "read"
+
+      # Revoking the credential is the emergency direction, so it stays on the
+      # break-glass path.
+      {:ok, _connection} =
+        SSO.generate_scim_token(
+          context.organization,
+          %{"scim_seat_policy" => "block", "scim_role" => "read"},
+          audit: audit_data(context.admin)
+        )
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/scim/delete")
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{context.organization.name}/sso"
+      refute Connection.scim_enabled?(Repo.get!(Connection, context.connection.id))
+    end
+  end
+
+  defp members_document(user, context) do
+    build_conn()
+    |> test_login(user)
+    |> get("/dashboard/orgs/#{context.organization.name}/members")
+    |> html_response(200)
+    |> LazyHTML.from_document()
+  end
+
+  # The member list row, which links to the profile. The exemption list names
+  # members without a link, so this never matches a row there.
+  defp member_row(document, user) do
+    document
+    |> LazyHTML.query("li")
+    |> Enum.filter(&(LazyHTML.query(&1, ~s(a[href="/users/#{user.username}"])) |> Enum.any?()))
+    |> then(fn [row] -> row end)
+  end
+
+  defp member_enforcement(context, user) do
+    Repo.get_by!(Hexpm.Accounts.OrganizationUser,
+      organization_id: context.organization.id,
+      user_id: user.id
+    ).sso_enforcement
+  end
+
   defp enable_beta_for(organization) do
     config = Application.fetch_env!(:hexpm, :organization_sso)
 
@@ -646,8 +1143,12 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
       |> get("/dashboard/orgs/#{context.organization.name}/sso")
       |> html_response(200)
 
-    {:ok, document} = Floki.parse_document(html)
-    [status] = Floki.find(document, "section > div:first-child > #sso-connection-status")
+    document = LazyHTML.from_document(html)
+
+    [status] =
+      LazyHTML.query(document, "section > div:first-child > #sso-connection-status")
+      |> Enum.to_list()
+
     status
   end
 
@@ -751,6 +1252,72 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     end
   end
 
+  test "names every way into a required organization that skips the provider", context do
+    insert(:organization_sso_connection,
+      organization: context.organization,
+      enforcement_mode: "required",
+      personal_keys: "block"
+    )
+
+    html =
+      build_conn()
+      |> test_login(context.admin)
+      |> get("/dashboard/orgs/#{context.organization.name}/sso")
+      |> html_response(200)
+
+    assert html =~ "What enforcement does not cover"
+    assert html =~ "Readme URLs"
+    assert html =~ "That is permanent"
+  end
+
+  describe "settings posted in a shape the form never produces" do
+    test "answers rather than raising", context do
+      insert(:organization_sso_connection, organization: context.organization)
+      base = "/dashboard/orgs/#{context.organization.name}/sso"
+
+      for {path, params} <- [
+            {"#{base}/jit", %{"jit" => "block"}},
+            {"#{base}/scim", %{"scim" => ["expand"]}},
+            {"#{base}/scim/generate", %{"scim" => "read"}},
+            {"#{base}/enforcement", %{"enforcement" => "required"}},
+            {"#{base}/test", %{"secret_slot" => %{"a" => "b"}}}
+          ] do
+        conn = build_conn() |> test_login(context.admin) |> post(path, params)
+
+        assert conn.status == 302, "#{path} answered #{conn.status}"
+      end
+    end
+
+    test "refuses a domain that is not a map", context do
+      insert(:organization_sso_connection, organization: context.organization)
+
+      assert_error_sent(400, fn ->
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/domains", %{
+          "domain" => "example.com"
+        })
+      end)
+    end
+
+    test "refuses an enforcement setting that is not a string", context do
+      insert(:organization_sso_connection, organization: context.organization)
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/enforcement/member", %{
+          "user_id" => to_string(context.member.id),
+          "sso_enforcement" => %{"x" => "y"}
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{context.organization.name}/members"
+
+      assert Repo.get_by!(Hexpm.Accounts.OrganizationUser, user_id: context.member.id).sso_enforcement ==
+               nil
+    end
+  end
+
   describe "just-in-time membership" do
     test "will not turn on without a verified domain", context do
       insert(:organization_sso_connection, organization: context.organization)
@@ -782,6 +1349,62 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
       connection = SSO.get_connection(context.organization)
       assert connection.jit_seat_policy == "expand"
       assert connection.jit_role == "write"
+    end
+
+    # Admission and the domains it keys on decide who joins and at what role, so
+    # a stolen cookie inside the rolling sudo window must not reach them.
+    test "takes a fresh password", context do
+      insert(:organization_sso_connection, organization: context.organization)
+      verify_domain(context)
+
+      stale = fn ->
+        build_conn()
+        |> test_login(context.admin,
+          sudo_at: NaiveDateTime.add(NaiveDateTime.utc_now(), -5, :minute)
+        )
+      end
+
+      conn =
+        stale.()
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/jit", %{
+          "jit" => %{"jit_seat_policy" => "expand", "jit_role" => "write"}
+        })
+
+      assert redirected_to(conn) == "/sudo"
+      refute Connection.jit_enabled?(SSO.get_connection(context.organization))
+
+      for path <- ["domains", "domains/verify", "domains/remove"] do
+        conn =
+          stale.()
+          |> post("/dashboard/orgs/#{context.organization.name}/sso/#{path}", %{
+            "domain" => %{"domain" => "attacker.example"},
+            "id" => "1"
+          })
+
+        assert redirected_to(conn) == "/sudo"
+      end
+
+      assert OrganizationDomains.all(context.organization) |> Enum.map(& &1.domain) ==
+               ["example.com"]
+    end
+
+    # The provider decides who arrives. Who administers the organization is the
+    # administrators' to decide, and they can elevate a member afterwards.
+    test "will not admit people as administrators", context do
+      insert(:organization_sso_connection, organization: context.organization)
+      verify_domain(context)
+
+      conn =
+        build_conn()
+        |> test_login(context.admin)
+        |> post("/dashboard/orgs/#{context.organization.name}/sso/jit", %{
+          "jit" => %{"jit_seat_policy" => "block", "jit_role" => "admin"}
+        })
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error)
+      connection = SSO.get_connection(context.organization)
+      refute Connection.jit_enabled?(connection)
+      assert connection.jit_role == "read"
     end
 
     test "a read member cannot change it", context do

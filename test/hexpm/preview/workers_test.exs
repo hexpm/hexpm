@@ -8,6 +8,11 @@ defmodule Hexpm.Preview.WorkersTest do
     @behaviour Hexpm.Store.Behaviour
 
     defdelegate list(bucket, prefix), to: Hexpm.Store.Memory
+
+    def get(_bucket, "file_lists/backfill_storage_failure-1.0.0.json", _opts) do
+      raise "simulated storage failure"
+    end
+
     defdelegate get(bucket, key, opts), to: Hexpm.Store.Memory
     defdelegate size(bucket, key), to: Hexpm.Store.Memory
     defdelegate stream(bucket, key), to: Hexpm.Store.Memory
@@ -86,6 +91,29 @@ defmodule Hexpm.Preview.WorkersTest do
              "defmodule Foo"
 
     assert Hexpm.Store.get(:preview_bucket, "latest_versions/#{package.name}") == "1.0.0"
+  end
+
+  test "upload stores the release's documentation files, replacing them on reupload" do
+    package = insert(:package, name: "doc_files_preview")
+    release = insert(:release, package: package, version: "1.0.0")
+    key = "tarballs/#{package.name}-#{release.version}.tar"
+
+    put_tarball(key, package.name, to_string(release.version), [
+      {"README.md", "readme"},
+      {"CHANGELOG.md", "changelog"}
+    ])
+
+    assert :ok = perform_job(Workers.Upload, %{key: key})
+
+    assert Hexpm.Repository.Releases.doc_files(release) == %{
+             readme: "README.md",
+             changelog: "CHANGELOG.md"
+           }
+
+    put_tarball(key, package.name, to_string(release.version), [{"README.md", "readme"}])
+    assert :ok = perform_job(Workers.Upload, %{key: key})
+
+    assert Hexpm.Repository.Releases.doc_files(release) == %{readme: "README.md"}
   end
 
   test "nonlatest uploads do not replace latest metadata" do
@@ -439,6 +467,82 @@ defmodule Hexpm.Preview.WorkersTest do
 
     assert_raise RuntimeError, ~r/Preview tarball not found/, fn ->
       perform_job(Workers.Delete, %{key: key})
+    end
+  end
+
+  describe "BackfillDocFiles" do
+    alias Hexpm.Repository.Releases
+
+    test "stores doc files for releases without them and enqueues the next batch" do
+      package = insert(:package, name: "backfill_preview")
+      listed = insert(:release, package: package, version: "1.0.0")
+      unlisted = insert(:release, package: package, version: "1.1.0")
+      stored = insert(:release, package: package, version: "1.2.0")
+
+      Hexpm.Store.put(
+        :preview_bucket,
+        "file_lists/backfill_preview-1.0.0.json",
+        JSON.encode!(["README.md", "CHANGELOG.md", "lib/backfill.ex"])
+      )
+
+      Hexpm.Store.put(
+        :preview_bucket,
+        "file_lists/backfill_preview-1.2.0.json",
+        JSON.encode!(["README.md", "CHANGELOG.md"])
+      )
+
+      :ok = Releases.put_doc_files("hexpm", package.name, "1.2.0", ["README.md"])
+
+      assert :ok = perform_job(Workers.BackfillDocFiles, %{after_id: 0})
+
+      assert Releases.doc_files(listed) == %{readme: "README.md", changelog: "CHANGELOG.md"}
+      assert Releases.doc_files(unlisted) == %{}
+      # Written by the upload job, so the backfill leaves it alone.
+      assert Releases.doc_files(stored) == %{readme: "README.md"}
+
+      assert_enqueued(worker: Workers.BackfillDocFiles, args: %{after_id: unlisted.id})
+    end
+
+    @tag :capture_log
+    test "storage failures stop the backfill without advancing its cursor" do
+      package = insert(:package, name: "backfill_storage_failure")
+      release = insert(:release, package: package, version: "1.0.0")
+
+      Hexpm.Store.put(
+        :preview_bucket,
+        "file_lists/#{package.name}-1.0.0.json",
+        JSON.encode!(["LICENSE"])
+      )
+
+      original_bucket = Application.fetch_env!(:hexpm, :preview_bucket)
+      Application.put_env(:hexpm, :preview_bucket, {FailingStore, "preview_bucket"})
+      on_exit(fn -> Application.put_env(:hexpm, :preview_bucket, original_bucket) end)
+      trap_exit? = Process.flag(:trap_exit, true)
+
+      try do
+        task = Task.async(fn -> perform_job(Workers.BackfillDocFiles, %{after_id: 0}) end)
+
+        assert {{%RuntimeError{message: "simulated storage failure"}, _}, _} =
+                 catch_exit(Task.await(task))
+      after
+        Process.flag(:trap_exit, trap_exit?)
+      end
+
+      refute_enqueued(worker: Workers.BackfillDocFiles)
+      assert Releases.doc_files(release) == %{}
+
+      Application.put_env(:hexpm, :preview_bucket, original_bucket)
+      assert :ok = perform_job(Workers.BackfillDocFiles, %{after_id: 0})
+      assert Releases.doc_files(release) == %{license: "LICENSE"}
+      assert_enqueued(worker: Workers.BackfillDocFiles, args: %{after_id: release.id})
+    end
+
+    test "stops when no releases are left" do
+      release = insert(:release, package: insert(:package))
+
+      assert :ok = perform_job(Workers.BackfillDocFiles, %{after_id: release.id})
+
+      refute_enqueued(worker: Workers.BackfillDocFiles)
     end
   end
 

@@ -19,6 +19,10 @@ defmodule Hexpm.Repository.Requirement do
     repository = params["repository"] || "hexpm"
 
     cast(requirement, params, ~w(repository name app requirement optional)a)
+    |> validate_length(:repository, count: :bytes, max: 255)
+    |> validate_length(:name, count: :bytes, max: 255)
+    |> validate_length(:app, count: :codepoints, max: 255)
+    |> validate_length(:requirement, count: :bytes, max: 255)
     |> put_assoc(:dependency, dependencies[{repository, params["name"]}])
     |> validate_required(~w(name app requirement optional)a)
     |> validate_required(

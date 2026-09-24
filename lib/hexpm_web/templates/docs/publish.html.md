@@ -4,20 +4,13 @@ Publishing a package to Hex consists of registering a Hex user, adding metadata 
 
 ### Registering a Hex user
 
-When registering a user, you will be prompted for a username, your email and a password. The email is used to confirm your identity during signup, as well as to contact you in case there is an issue with one of your packages. The email will never be shared with a third party.
+[Sign up](/signup) with a username, your email and a password. The email is used to confirm your identity during signup, as well as to contact you in case there is an issue with one of your packages. The email will never be shared with a third party.
+
+Check your inbox for the confirmation email and follow the enclosed link, then authenticate the Hex client with your account:
 
 ```nohighlight
-$ mix hex.user register
-Username: johndoe
-Email: john.doe@example.com
-Password:
-Password (confirm):
-Registering...
-Generating API key...
-You are required to confirm your email to access your account, a confirmation email has been sent to john.doe@example.com
+$ mix hex.user auth
 ```
-
-Once this step has been completed, check your email inbox for the confirmation email. Once you have followed the enclosed link, your account will be ready to use.
 
 ### Naming your package
 

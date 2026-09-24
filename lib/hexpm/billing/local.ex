@@ -95,7 +95,7 @@ defmodule Hexpm.Billing.Local do
   end
 
   def invoice(_id, _opts \\ []) do
-    %{}
+    {:ok, ""}
   end
 
   def pay_invoice(_id) do
@@ -103,7 +103,7 @@ defmodule Hexpm.Billing.Local do
   end
 
   def report() do
-    []
+    {:ok, []}
   end
 
   defp quantity(organization) do

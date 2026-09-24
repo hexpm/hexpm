@@ -15,7 +15,7 @@ defmodule HexpmWeb.UserController do
         owned_packages: [:repository]
       ])
 
-    if user do
+    if user && User.public_profile?(user) do
       organization = user.organization
 
       case conn.path_info do
@@ -85,7 +85,8 @@ defmodule HexpmWeb.UserController do
              :emails,
              :organization,
              owned_packages: [:repository]
-           ]) do
+           ]),
+         true <- User.public_profile?(user) do
       all_packages =
         user
         |> Packages.accessible_user_owned_packages(SSOEnforcement.reachable_organizations(conn))

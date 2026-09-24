@@ -6,4 +6,4 @@
 
 <%= @reason %>
 
-<%= ReleaseRemoved.questions_notice(:text) %>
+<%= ReleaseRemoved.terms_notice(:text) %>

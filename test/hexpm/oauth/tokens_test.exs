@@ -3,7 +3,7 @@ defmodule Hexpm.OAuth.TokensTest do
 
   import Ecto.Changeset, only: [get_field: 2]
 
-  alias Hexpm.OAuth.{Token, Tokens}
+  alias Hexpm.OAuth.{JWT, Token, Tokens}
 
   describe "minted scopes" do
     setup do
@@ -66,6 +66,24 @@ defmodule Hexpm.OAuth.TokensTest do
                  "dropped repository:#{name} from #{inspect(requested)} for a member"
         end
       end
+    end
+
+    test "the refresh token names no organization", %{user: user} do
+      changeset =
+        Tokens.create_for_user(
+          user,
+          "test_client",
+          ["api", "repositories"],
+          "authorization_code",
+          nil,
+          with_refresh_token: true
+        )
+
+      assert Enum.any?(get_field(changeset, :scopes), &String.starts_with?(&1, "repository:"))
+
+      {:ok, claims} = JWT.verify_and_decode(get_field(changeset, :refresh_token))
+
+      refute Map.has_key?(claims, "scope")
     end
   end
 
@@ -518,7 +536,7 @@ defmodule Hexpm.OAuth.TokensTest do
       revoke_session(session)
 
       assert {:error, :token_invalid} = Tokens.lookup(token.access_token, :access)
-      assert :error = Hexpm.Accounts.Auth.oauth_token_auth(token.access_token, %{})
+      assert {:error, :invalid} = Hexpm.Accounts.Auth.oauth_token_auth(token.access_token, %{})
     end
 
     test "rejects a live token whose session expired", %{
@@ -541,7 +559,7 @@ defmodule Hexpm.OAuth.TokensTest do
       |> Repo.update!()
 
       assert {:error, :token_invalid} = Tokens.lookup(token.access_token, :access)
-      assert :error = Hexpm.Accounts.Auth.oauth_token_auth(token.access_token, %{})
+      assert {:error, :invalid} = Hexpm.Accounts.Auth.oauth_token_auth(token.access_token, %{})
     end
 
     test "still finds a token of a revoked session when not validating", %{

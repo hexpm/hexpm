@@ -189,9 +189,12 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
 
   defp permission_name(%KeyPermission{domain: "repositories"}), do: "REPOS"
 
+  defp permission_name(%KeyPermission{domain: "docs", resource: resource}), do: "DOCS:#{resource}"
+
   defp permission_variant(%KeyPermission{domain: "api"}), do: "green"
   defp permission_variant(%KeyPermission{domain: "repositories"}), do: "purple"
   defp permission_variant(%KeyPermission{domain: "repository"}), do: "purple"
+  defp permission_variant(%KeyPermission{domain: "docs"}), do: "purple"
   defp permission_variant(%KeyPermission{domain: "package"}), do: "default"
 
   defp last_use_details(last_use) do

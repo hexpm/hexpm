@@ -119,6 +119,30 @@ defmodule HexpmWeb.PolicyView do
               color: var(--color-grey-600);
               margin-bottom: 1rem;
             }
+            .policy-content table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 1rem;
+              font-size: 0.9375rem;
+              line-height: 1.6;
+            }
+            .policy-content th {
+              text-align: left;
+              font-weight: 600;
+              color: var(--color-grey-900);
+              border-bottom: 2px solid var(--color-grey-200);
+              padding: 0.625rem 0.75rem;
+            }
+            .policy-content td {
+              color: var(--color-grey-600);
+              border-bottom: 1px solid var(--color-grey-200);
+              padding: 0.625rem 0.75rem;
+              vertical-align: top;
+            }
+            .policy-content th:first-child,
+            .policy-content td:first-child {
+              padding-left: 0;
+            }
             html[data-theme="dark"] .policy-content h2,
             html[data-theme="dark"] .policy-content h3,
             html[data-theme="dark"] .policy-content h4,
@@ -161,6 +185,14 @@ defmodule HexpmWeb.PolicyView do
             html[data-theme="dark"] .policy-content blockquote {
               border-left-color: var(--color-blue-300);
               color: var(--color-grey-300);
+            }
+            html[data-theme="dark"] .policy-content th {
+              color: white;
+              border-bottom-color: var(--color-grey-600);
+            }
+            html[data-theme="dark"] .policy-content td {
+              color: var(--color-grey-200);
+              border-bottom-color: var(--color-grey-700);
             }
             html[data-theme="dark"] .policy-content dt {
               color: var(--color-grey-100);
