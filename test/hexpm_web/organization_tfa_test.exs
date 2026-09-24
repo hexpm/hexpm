@@ -115,6 +115,8 @@ defmodule HexpmWeb.OrganizationTFATest do
     app_env(:hexpm, :organization_tfa, mode: :off, beta_organizations: [])
     body = conn |> recycle() |> get(path <> "/members") |> html_response(200)
     assert body =~ "organization-tfa-policy"
+    assert body =~ "Hex has paused organization 2FA enforcement"
+    refute body =~ "Enforced since"
     disabled = conn |> recycle() |> post(path <> "/tfa", %{policy: %{enforcement: "disabled"}})
     assert Phoenix.Flash.get(disabled.assigns.flash, :info) =~ "updated"
     body = conn |> recycle() |> get(path <> "/members") |> html_response(200)
@@ -128,9 +130,8 @@ defmodule HexpmWeb.OrganizationTFATest do
     now = DateTime.utc_now()
 
     for {deadline, actions, selected} <- [
-          {nil, ["transition", "immediate", "disabled"], "transition"},
-          {DateTime.add(now, 86400), ["keep", "transition", "immediate", "disabled"], "keep"},
-          {DateTime.add(now, -1), ["keep", "disabled"], "keep"}
+          {nil, ["transition", "immediate"], "transition"},
+          {DateTime.add(now, 86400), ["keep", "transition", "immediate", "disabled"], "keep"}
         ] do
       c.organization |> Ecto.Changeset.change(tfa_required_at: deadline) |> Repo.update!()
 
@@ -150,11 +151,31 @@ defmodule HexpmWeb.OrganizationTFATest do
              |> LazyHTML.query("#policy-enforcement option[selected]")
              |> LazyHTML.attribute("value") == [selected]
 
-      assert Enum.empty?(LazyHTML.query(document, "#policy-grace-days")) ==
-               "transition" not in actions
-
+      refute LazyHTML.query(document, "#policy-grace-days") |> Enum.empty?()
       assert LazyHTML.query(document, "#policy-tfa-session-lifetime") |> Enum.empty?()
     end
+  end
+
+  test "a started policy offers only disabling enforcement", c do
+    enforce(c)
+
+    document =
+      browser(c.admin)
+      |> recycle()
+      |> get("/dashboard/orgs/#{c.organization.name}/members")
+      |> html_response(200)
+      |> LazyHTML.from_document()
+
+    assert LazyHTML.query(document, "#policy-enforcement") |> Enum.empty?()
+    assert LazyHTML.query(document, "#policy-grace-days") |> Enum.empty?()
+
+    assert document
+           |> LazyHTML.query(~s(#organization-tfa-policy input[name="policy[enforcement]"]))
+           |> LazyHTML.attribute("value") == ["disabled"]
+
+    assert document
+           |> LazyHTML.query(~s(#organization-tfa-policy button[type="submit"]))
+           |> LazyHTML.text() =~ "Disable enforcement"
   end
 
   test "an unenrolled member is sent to enrollment and returns after enabling 2FA", c do
@@ -187,22 +208,39 @@ defmodule HexpmWeb.OrganizationTFATest do
 
   test "the deadline is shown as a readable UTC date on the page and in email", c do
     c.organization
-    |> Ecto.Changeset.change(tfa_required_at: ~U[2026-09-29 01:04:53.493658Z])
+    |> Ecto.Changeset.change(tfa_required_at: ~U[2099-09-29 01:04:53.493658Z])
     |> Repo.update!()
 
+    conn = browser(c.admin)
+
     body =
-      browser(c.admin)
+      conn
       |> recycle()
       |> get("/dashboard/orgs/#{c.organization.name}/members")
       |> html_response(200)
 
-    assert body =~ "Enforcement deadline: <strong>September 29, 2026 at 01:04 UTC</strong>"
-    refute body =~ "2026-09-29T01:04:53"
+    assert body =~ "Enforcement deadline: <strong>September 29, 2099 at 01:04 UTC</strong>"
+    refute body =~ "2099-09-29T01:04:53"
+    refute body =~ "Enforced since"
 
     organization = Repo.get!(Hexpm.Accounts.Organization, c.organization.id)
     email = Hexpm.Emails.organization_tfa(organization, "scheduled", ["member@example.com"], [])
-    assert email.html_body =~ "from <strong>September 29, 2026 at 01:04 UTC</strong>"
-    assert email.text_body =~ "from September 29, 2026 at 01:04 UTC."
+    assert email.html_body =~ "from <strong>September 29, 2099 at 01:04 UTC</strong>"
+    assert email.text_body =~ "from September 29, 2099 at 01:04 UTC."
+
+    c.organization
+    |> Ecto.Changeset.change(tfa_required_at: ~U[2026-09-01 08:30:12.000000Z])
+    |> Repo.update!()
+
+    body =
+      conn
+      |> recycle()
+      |> get("/dashboard/orgs/#{c.organization.name}/members")
+      |> html_response(200)
+
+    assert body =~ "Enforced since <strong>September 1, 2026 at 08:30 UTC</strong>"
+    refute body =~ "Enforcement deadline"
+    refute body =~ "Hex has paused organization 2FA enforcement"
   end
 
   test "an administrator without 2FA can't configure a policy", c do

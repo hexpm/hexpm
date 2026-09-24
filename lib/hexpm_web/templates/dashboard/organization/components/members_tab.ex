@@ -28,6 +28,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
   attr :sso_required_at, :any, default: nil
 
   def members_tab(assigns) do
+    assigns = assign(assigns, :tfa_policy, tfa_policy(assigns.organization))
+
     ~H"""
     <div class="space-y-6">
       <section
@@ -41,43 +43,57 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
         <p>
           Members must enable two-factor authentication on their accounts. After the deadline, members without 2FA lose access to the organization until they enable it. SSO settings are separate.
         </p>
-        <p :if={@organization.tfa_required_at}>
+        <p :if={@tfa_policy == :disabled}>Enforcement is disabled.</p>
+        <p :if={@tfa_policy == :scheduled}>
           Enforcement deadline: <strong>{HexpmWeb.ViewHelpers.pretty_utc_datetime(@organization.tfa_required_at)}</strong>.
           Suspended members retain their membership, role, package ownership, and billed seat.
         </p>
-        <p :if={!@organization.tfa_required_at}>Enforcement is disabled.</p>
+        <p :if={@tfa_policy == :started}>
+          Enforced since <strong>{HexpmWeb.ViewHelpers.pretty_utc_datetime(@organization.tfa_required_at)}</strong>.
+          Members without 2FA are suspended until they enable it. Suspended members retain their membership, role, package ownership, and billed seat.
+        </p>
+        <p :if={@tfa_policy == :paused}>
+          The deadline passed on <strong>{HexpmWeb.ViewHelpers.pretty_utc_datetime(@organization.tfa_required_at)}</strong>, but Hex has paused organization 2FA enforcement, so members without 2FA have access until it resumes.
+        </p>
         <.sudo_form
           current_user={@current_user}
           action={~p"/dashboard/orgs/#{@organization}/tfa"}
           id="organization-tfa-policy"
           class="group/tfa-policy space-y-4"
         >
-          <.select_input
-            id="policy-enforcement"
-            name="policy[enforcement]"
-            label="Enforcement"
-            options={tfa_enforcement_options(@organization)}
-            value={if @organization.tfa_required_at, do: "keep", else: "transition"}
-          />
-          <div
-            :if={!Hexpm.Accounts.OrganizationTFA.enforced?(@organization)}
-            id="policy-grace-days"
-            class="hidden group-has-[option[value=transition]:checked]/tfa-policy:block"
-          >
-            <.text_input
-              id="policy-grace-days-input"
-              type="number"
-              name="policy[grace_days]"
-              label="Days from now until enforcement (1 to 30)"
-              value="14"
-              min="1"
-              max="30"
+          <%= if @tfa_policy in [:started, :paused] do %>
+            <input type="hidden" name="policy[enforcement]" value="disabled" />
+            <p>
+              Disabling enforcement removes the deadline and lifts the suspensions. You can schedule a new deadline after that.
+            </p>
+            <.button type="submit" variant="danger">Disable enforcement</.button>
+          <% else %>
+            <.select_input
+              id="policy-enforcement"
+              name="policy[enforcement]"
+              label="Enforcement"
+              options={tfa_enforcement_options(@tfa_policy)}
+              value={if @tfa_policy == :scheduled, do: "keep", else: "transition"}
             />
-          </div>
-          <p>
-            Configuring this policy requires 2FA on your own account. Once enforcement starts, disable it before scheduling another transition.
-          </p>
-          <.button type="submit">Save 2FA policy</.button>
+            <div
+              id="policy-grace-days"
+              class="hidden group-has-[option[value=transition]:checked]/tfa-policy:block"
+            >
+              <.text_input
+                id="policy-grace-days-input"
+                type="number"
+                name="policy[grace_days]"
+                label="Days from now until enforcement (1 to 30)"
+                value="14"
+                min="1"
+                max="30"
+              />
+            </div>
+            <p>
+              Configuring this policy requires 2FA on your own account. Once enforcement starts, disable it before scheduling another transition.
+            </p>
+            <.button type="submit">Save 2FA policy</.button>
+          <% end %>
         </.sudo_form>
       </section>
       <%!-- Member List --%>
@@ -491,15 +507,22 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
     """
   end
 
-  defp tfa_enforcement_options(organization) do
-    keep = if organization.tfa_required_at, do: [{"Keep current deadline", "keep"}], else: []
+  defp tfa_policy(%{tfa_required_at: nil}), do: :disabled
 
-    schedule =
-      if Hexpm.Accounts.OrganizationTFA.enforced?(organization),
-        do: [],
-        else: [{"Schedule a transition", "transition"}, {"Enforce immediately", "immediate"}]
+  defp tfa_policy(organization) do
+    cond do
+      DateTime.after?(organization.tfa_required_at, DateTime.utc_now()) -> :scheduled
+      Hexpm.Accounts.OrganizationTFA.enforcement_enabled?() -> :started
+      true -> :paused
+    end
+  end
 
-    keep ++ schedule ++ [{"Disable enforcement", "disabled"}]
+  defp tfa_enforcement_options(:disabled),
+    do: [{"Schedule a transition", "transition"}, {"Enforce immediately", "immediate"}]
+
+  defp tfa_enforcement_options(:scheduled) do
+    [{"Keep current deadline", "keep"}] ++
+      tfa_enforcement_options(:disabled) ++ [{"Disable enforcement", "disabled"}]
   end
 
   defp add_member_modal_id, do: "add-member-modal"
