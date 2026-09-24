@@ -114,15 +114,11 @@ defmodule HexpmWeb.TFAAuthControllerTest do
     test "redirects to login after too many failed attempts", c do
       PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
 
-      session_data = %{
-        "uid" => c.user.id,
-        "return" => "/",
-        "at" => NaiveDateTime.to_iso8601(NaiveDateTime.utc_now())
-      }
+      session_data = session_data(c.user)
 
       # Exhaust rate limit using the throttle function directly (this is the real test)
       Enum.each(1..5, fn _ ->
-        HexpmWeb.Plugs.Attack.tfa_session_throttle(session_data)
+        HexpmWeb.Plugs.Attack.tfa_user_throttle(c.user.id)
       end)
 
       # Now make one request - it should be rate limited immediately
@@ -139,5 +135,54 @@ defmodule HexpmWeb.TFAAuthControllerTest do
 
       assert get_session(conn, "tfa_user_id") == nil
     end
+
+    test "refuses a correct code once the limit is spent", c do
+      PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
+
+      Enum.each(1..6, fn _ ->
+        HexpmWeb.Plugs.Attack.tfa_user_throttle(c.user.id)
+      end)
+
+      token = Hexpm.Accounts.TFA.time_based_token(c.user.tfa.secret)
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> put_session("tfa_user_id", session_data(c.user))
+        |> post("/tfa", %{"code" => token})
+
+      assert redirected_to(conn) == "/login?return=%2F"
+      assert get_session(conn, "tfa_user_id") == nil
+    end
+
+    test "a new login does not hand out a fresh attempt budget", c do
+      PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
+
+      Enum.each(1..5, fn _ ->
+        build_conn()
+        |> test_login(c.user)
+        |> put_session("tfa_user_id", session_data(c.user))
+        |> post("/tfa", %{"code" => "999999"})
+      end)
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> put_session("tfa_user_id", session_data(c.user))
+        |> post("/tfa", %{"code" => "999999"})
+
+      assert redirected_to(conn) == "/login?return=%2F"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, "error") ==
+               "Too many incorrect codes. Please log in again."
+    end
+  end
+
+  defp session_data(user) do
+    %{
+      "uid" => user.id,
+      "return" => "/",
+      "at" => NaiveDateTime.to_iso8601(NaiveDateTime.utc_now())
+    }
   end
 end
