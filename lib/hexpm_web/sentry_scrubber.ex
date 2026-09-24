@@ -51,7 +51,22 @@ defmodule HexpmWeb.SentryScrubber do
   end
 
   def scrub_headers(conn) do
-    Enum.reject(conn.req_headers, fn {name, _value} -> sensitive?(name) end)
+    conn.req_headers
+    |> Enum.reject(fn {name, _value} -> sensitive?(name) end)
+    |> Enum.map(fn
+      {"referer", value} -> {"referer", strip_query(value)}
+      header -> header
+    end)
+  end
+
+  # The referrer is usually a hex.pm page, so its query can hold any of the
+  # secrets above; the browser sends it whole on same-origin requests. The path
+  # is enough to say where a request came from.
+  defp strip_query(url) do
+    url
+    |> URI.parse()
+    |> Map.merge(%{query: nil, fragment: nil})
+    |> URI.to_string()
   end
 
   defp scrub_params(%{} = params) when not is_struct(params) do

@@ -181,6 +181,16 @@ defmodule HexpmWeb.SentryScrubberTest do
       )
     end
 
+    test "keeps the referrer's path but not its query" do
+      request =
+        sentry_request(:post, "/password/new", %{}, [
+          {"referer", "https://hex.pm/password/new?username=someone&key=raw-reset-key#frag"}
+        ])
+
+      refute_leaks(request)
+      assert request.headers["referer"] == "https://hex.pm/password/new"
+    end
+
     test "keeps ordinary query and body parameters" do
       request = sentry_request(:get, "/packages?search=ecto&sort=downloads")
       assert request.url == "http://www.example.com/packages?search=ecto&sort=downloads"
