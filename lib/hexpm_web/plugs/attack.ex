@@ -313,11 +313,11 @@ defmodule HexpmWeb.Plugs.Attack do
     )
   end
 
-  def tfa_session_throttle(tfa_user_id, opts \\ []) do
+  def tfa_user_throttle(user_id, opts \\ []) do
     time = opts[:time] || System.system_time(:millisecond)
 
     timed_throttle(
-      {:tfa_session, tfa_user_id},
+      {:tfa_user, user_id},
       time: time,
       increment: Keyword.get(opts, :increment, 1),
       storage: @storage,
