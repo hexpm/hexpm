@@ -486,16 +486,24 @@ defmodule Hexpm.Accounts.Users do
   end
 
   def password_reset_finish(username, key, params, revoke_all_access?, audit: audit_data) do
-    user = get(username, [:emails, :password_resets])
+    user = get(username)
 
-    if user && not User.organization?(user) && User.can_reset_password?(user, key) do
+    if user && not User.organization?(user) do
       multi =
-        password_reset(user, params, revoke_all_access?)
+        Multi.new()
+        |> Multi.run(:user, fn _repo, _ ->
+          user = user |> lock!() |> Repo.preload(:password_resets)
+          if User.can_reset_password?(user, key), do: {:ok, user}, else: {:error, :invalid_key}
+        end)
+        |> Multi.merge(fn %{user: user} -> password_reset(user, params, revoke_all_access?) end)
         |> audit(audit_data, "password.reset.finish", nil)
 
       case Repo.transaction(multi) do
         {:ok, _} ->
           :ok
+
+        {:error, :user, :invalid_key, _} ->
+          :error
 
         {:error, _, changeset, _} ->
           {:error, changeset}
@@ -717,18 +725,18 @@ defmodule Hexpm.Accounts.Users do
   end
 
   def tfa_recover(%User{} = user, code_str) do
-    case RecoveryCode.verify(user.tfa.recovery_codes, code_str) do
-      {:ok, %RecoveryCode{} = code} ->
-        user =
-          user
-          |> User.recovery_code_used(code)
-          |> Repo.update!()
+    Repo.transaction(fn ->
+      user = lock!(user)
 
-        {:ok, user}
-
-      err ->
-        err
-    end
+      with %{recovery_codes: codes} <- user.tfa,
+           {:ok, %RecoveryCode{} = code} <- RecoveryCode.verify(codes, code_str) do
+        user
+        |> User.recovery_code_used(code)
+        |> Repo.update!()
+      else
+        _ -> Repo.rollback(:invalid_code)
+      end
+    end)
   end
 
   def lock!(user) do
