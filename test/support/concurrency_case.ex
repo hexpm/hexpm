@@ -14,7 +14,7 @@ defmodule Hexpm.ConcurrencyCase do
   import Ecto.Query, only: [from: 2]
 
   alias Ecto.Adapters.SQL.Sandbox
-  alias Hexpm.Accounts.{AuditLog, Email, Organization, OrganizationUser, User}
+  alias Hexpm.Accounts.{AuditLog, Email, Organization, OrganizationUser, PasswordReset, User}
   alias Hexpm.Accounts.SSO.{Connection, Failure, Identity, OrgSession}
   alias Hexpm.Accounts.SSO.Transaction, as: SSOTransaction
   alias Hexpm.Emails.OutboxEntry
@@ -35,6 +35,7 @@ defmodule Hexpm.ConcurrencyCase do
     UserSession,
     OrganizationUser,
     Organization,
+    PasswordReset,
     Email,
     User
   ]
