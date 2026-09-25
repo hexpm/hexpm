@@ -83,17 +83,6 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
       assert entries() == []
       assert all_enqueued(worker: Hexpm.Accounts.OrganizationDataWorker) == []
     end
-
-    test "the billing-cancelled email is only sent when on" do
-      {organization, _email} = insert(:organization) |> with_admin()
-
-      for mode <- [:off, :report] do
-        app_env(:hexpm, :organization_deletions, mode)
-        assert :ok = OrganizationDeletions.notify_billing_cancelled(organization, nil)
-      end
-
-      assert entries() == []
-    end
   end
 
   describe "schedule" do
@@ -131,15 +120,30 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
       active = insert(:organization, billing_active: true, billing_inactive_since: days_ago(100))
       comped = inactive_organization(billing_override: true)
       trialing = inactive_organization(trial_end: days_from_now(5))
-      never_billed = insert(:organization, billing_active: false, trial_end: days_ago(400))
 
       assert %{scheduled: []} = OrganizationDeletions.run()
 
-      for organization <- [active, comped, trialing, never_billed] do
+      for organization <- [active, comped, trialing] do
         refute Organizations.get(organization.name).deletion_scheduled_at
       end
 
       refute Repo.get!(Organization, 1).deletion_scheduled_at
+    end
+
+    test "counts an organization that never had billing from the end of its trial" do
+      {organization, _email} =
+        insert(:organization, billing_active: false, trial_end: days_ago(10)) |> with_admin()
+
+      name = organization.name
+      assert %{scheduled: [^name]} = OrganizationDeletions.run()
+
+      scheduled_at = Organizations.get(name).deletion_scheduled_at
+      assert DateTime.diff(scheduled_at, days_from_now(80), :second) |> abs() < 60
+
+      # Nothing about it looks like billing coming back, so the next run
+      # keeps the schedule.
+      assert %{cleared: []} = OrganizationDeletions.run()
+      assert Organizations.get(name).deletion_scheduled_at == scheduled_at
     end
 
     test "posts one Slack message for the run" do
@@ -397,28 +401,48 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
     end
   end
 
-  describe "notify_billing_cancelled/2" do
-    test "tells the admins until when the organization is usable and when it is deleted" do
-      {organization, email} = insert(:organization) |> with_admin()
+  describe "telemetry" do
+    test "a run reports how many organizations each step took" do
+      ref = make_ref()
+      parent = self()
 
-      assert :ok =
-               OrganizationDeletions.notify_billing_cancelled(
-                 organization,
-                 "2027-01-15T00:00:00Z"
-               )
+      :telemetry.attach(
+        {__MODULE__, ref},
+        [:hexpm, :organization_deletions, :run],
+        fn _event, measurements, _metadata, _config -> send(parent, {ref, measurements}) end,
+        nil
+      )
 
-      assert [entry] = entries()
-      assert entry.type == "organization_billing_cancelled"
-      assert entry.recipients == [email]
-      assert entry.email["text_body"] =~ "January 15, 2027"
-      assert entry.email["text_body"] =~ "April 15, 2027"
+      on_exit(fn -> :telemetry.detach({__MODULE__, ref}) end)
+
+      inactive_organization(billing_inactive_since: days_ago(10))
+
+      inactive_organization(
+        deletion_scheduled_at: days_ago(1),
+        deletion_notices: ["scheduled", "7_days", "1_days"]
+      )
+
+      OrganizationDeletions.run()
+
+      assert_receive {^ref,
+                      %{
+                        cleared: 0,
+                        scheduled: 1,
+                        reminded: 0,
+                        deleted: 1,
+                        skipped: 0,
+                        failed: 0
+                      }}
     end
 
-    test "without a paid period counts from today" do
-      {organization, _email} = insert(:organization) |> with_admin()
-      assert :ok = OrganizationDeletions.notify_billing_cancelled(organization, nil)
-      assert [entry] = entries()
-      assert entry.email["text_body"] =~ "can no longer be used"
+    test "state_counts/0 counts organizations with and without billing and the scheduled ones" do
+      insert(:organization, billing_active: true)
+      inactive_organization(billing_override: true)
+      inactive_organization(trial_end: days_from_now(5))
+      inactive_organization([])
+      inactive_organization(deletion_scheduled_at: days_from_now(3))
+
+      assert OrganizationDeletions.state_counts() == %{active: 3, inactive: 2, scheduled: 1}
     end
   end
 

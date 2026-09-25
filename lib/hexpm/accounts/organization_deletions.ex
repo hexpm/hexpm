@@ -3,9 +3,11 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
   Deletes organizations that have had no active billing for 90 days.
 
   `Hexpm.Billing.Report` records when billing stopped in
-  `billing_inactive_since`. The daily run schedules every such organization
-  for deletion 90 days after that (or after its trial ended, whichever is
-  later), tells its admins, reminds them a week and a day before, and on the
+  `billing_inactive_since`; an organization that never had billing has none,
+  and its trial's end counts instead. The daily run schedules every inactive
+  organization for deletion 90 days after that (or after its trial ended,
+  whichever is later), tells its admins, reminds them a week and a day
+  before, and on the
   day deletes the organization with its stored data through
   `Hexpm.AdminTasks.delete_organization/2`. Billing coming back clears the
   schedule, in the report as soon as it sees the subscription and here as a
@@ -18,8 +20,11 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
   `config :hexpm, :organization_deletions` (`HEXPM_ORGANIZATION_DELETIONS`)
   switches it: `:off` does nothing, `:report` posts to Slack what a run would
   schedule, remind and delete without writing, emailing or deleting
-  anything, and `:on` runs it. The billing-cancelled email is only sent
-  with `:on`, since it announces the deletion.
+  anything, and `:on` runs it.
+
+  Each run emits `[:hexpm, :organization_deletions, :run]` with the number of
+  organizations per step, and `state_counts/0` backs the gauges of active,
+  inactive and scheduled organizations (`Hexpm.PromEx.Plugins.Hexpm`).
   """
 
   import Ecto.Query, only: [from: 2]
@@ -38,38 +43,6 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
   def grace_days(), do: @grace_days
 
   def mode(), do: Application.fetch_env!(:hexpm, :organization_deletions)
-
-  @doc """
-  Tells the organization's admins that billing was cancelled from the
-  dashboard, until when the organization stays usable (`period_end`, an ISO
-  8601 string or unix timestamp from the billing service, `nil` when nothing
-  was paid for) and the earliest day it is deleted after that.
-  """
-  def notify_billing_cancelled(organization, period_end) do
-    if mode() == :on, do: do_notify_billing_cancelled(organization, period_end), else: :ok
-  end
-
-  defp do_notify_billing_cancelled(organization, period_end) do
-    access_until = parse_period_end(period_end)
-    deletion_at = DateTime.add(access_until || DateTime.utc_now(), @grace_days, :day)
-
-    notify(organization, "billing_cancelled", fn recipients ->
-      Emails.organization_billing_cancelled(
-        organization.name,
-        access_until,
-        deletion_at,
-        recipients
-      )
-    end)
-  end
-
-  defp parse_period_end(nil), do: nil
-  defp parse_period_end(unix) when is_integer(unix), do: DateTime.from_unix!(unix)
-
-  defp parse_period_end(iso) when is_binary(iso) do
-    {:ok, datetime, _offset} = DateTime.from_iso8601(iso)
-    datetime
-  end
 
   def run(), do: run(mode())
 
@@ -110,7 +83,54 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
     scheduled = schedule()
     reminded = remind()
     deleted = delete(Enum.map(reminded, &elem(&1, 0)))
+
+    outcomes = Enum.frequencies_by(deleted, fn {_name, result} -> outcome(result) end)
+
+    :telemetry.execute(
+      [:hexpm, :organization_deletions, :run],
+      %{
+        cleared: length(cleared),
+        scheduled: length(scheduled),
+        reminded: length(reminded),
+        deleted: Map.get(outcomes, :deleted, 0),
+        skipped: Map.get(outcomes, :skipped, 0),
+        failed: Map.get(outcomes, :failed, 0)
+      },
+      %{}
+    )
+
     %{cleared: cleared, scheduled: scheduled, reminded: reminded, deleted: deleted}
+  end
+
+  defp outcome(:ok), do: :deleted
+  defp outcome({:skipped, _reason}), do: :skipped
+  defp outcome({:error, _reason}), do: :failed
+
+  @doc """
+  How many organizations have billing (active, trialing or comped), how many
+  don't, and how many of those are scheduled for deletion.
+  """
+  def state_counts() do
+    now = DateTime.utc_now()
+
+    from(o in Organization,
+      where: o.id != 1,
+      select: %{
+        active:
+          filter(
+            count(),
+            o.billing_active or o.billing_override == true or o.trial_end >= ^now
+          ),
+        inactive:
+          filter(
+            count(),
+            not o.billing_active and
+              (is_nil(o.billing_override) or o.billing_override == false) and o.trial_end < ^now
+          ),
+        scheduled: filter(count(), not is_nil(o.deletion_scheduled_at))
+      }
+    )
+    |> Repo.one()
   end
 
   # The report clears the schedule when a subscription is back; this catches
@@ -118,9 +138,7 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
   defp clear_reactivated() do
     from(o in Organization,
       where: not is_nil(o.deletion_scheduled_at),
-      where:
-        o.billing_active or o.billing_override == true or o.trial_end > ^DateTime.utc_now() or
-          is_nil(o.billing_inactive_since)
+      where: o.billing_active or o.billing_override == true or o.trial_end > ^DateTime.utc_now()
     )
     |> Repo.all()
     |> Enum.map(fn organization ->
@@ -159,18 +177,20 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
     from(o in Organization,
       where: o.id != 1,
       where: is_nil(o.deletion_scheduled_at),
-      where: not is_nil(o.billing_inactive_since),
       where: not o.billing_active,
       where: is_nil(o.billing_override) or o.billing_override == false,
       where: o.trial_end < ^now,
-      order_by: o.billing_inactive_since
+      order_by: fragment("coalesce(?, ?)", o.billing_inactive_since, o.trial_end)
     )
   end
 
   # An organization overdue by the time it is scheduled (the job did not run
   # for a while) still gets the week of notice.
   defp deletion_at(organization, now) do
-    since = Enum.max([organization.billing_inactive_since, organization.trial_end], DateTime)
+    since =
+      [organization.billing_inactive_since, organization.trial_end]
+      |> Enum.reject(&is_nil/1)
+      |> Enum.max(DateTime)
 
     Enum.max(
       [DateTime.add(since, @grace_days, :day), DateTime.add(now, hd(@reminder_days), :day)],

@@ -611,6 +611,7 @@ defmodule Hexpm.AdminTasksTest do
       put_diff_objects(package.name)
 
       assert :ok = AdminTasks.remove_package("hexpm", package.name)
+      run_diff_cache_jobs()
 
       assert Enum.to_list(Hexpm.Store.list(:diff_bucket, "")) == [
                "metadata/other-1.0.0-2.0.0-1.json"
@@ -624,6 +625,7 @@ defmodule Hexpm.AdminTasksTest do
       put_diff_objects(package.name, "repos/#{repository.name}/")
 
       assert :ok = AdminTasks.remove_package(repository.name, package.name)
+      run_diff_cache_jobs()
 
       assert Enum.to_list(Hexpm.Store.list(:diff_bucket, "repos/")) == [
                "repos/#{repository.name}/metadata/other-1.0.0-2.0.0-1.json"
@@ -779,6 +781,7 @@ defmodule Hexpm.AdminTasksTest do
       put_diff_objects(package.name)
 
       assert :ok = AdminTasks.remove_release("hexpm", package.name, "1.0.0")
+      run_diff_cache_jobs()
 
       assert Enum.to_list(Hexpm.Store.list(:diff_bucket, "")) == [
                "metadata/other-1.0.0-2.0.0-1.json"

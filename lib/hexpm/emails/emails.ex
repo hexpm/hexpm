@@ -353,17 +353,6 @@ defmodule Hexpm.Emails do
     |> render_body(:sso_email_mismatch)
   end
 
-  def organization_billing_cancelled(organization, access_until, deletion_at, recipients) do
-    base_email(:organization_billing_cancelled)
-    |> email_to(recipients)
-    |> subject("Hex.pm - Billing for #{organization} has been cancelled")
-    |> assign(:organization, organization)
-    |> assign(:access_until, access_until)
-    |> assign(:deletion_at, deletion_at)
-    |> assign(:billing_url, billing_url(organization))
-    |> render_body(:organization_billing_cancelled)
-  end
-
   def organization_deletion_scheduled(organization, deletion_at, recipients) do
     base_email(:organization_deletion_scheduled)
     |> email_to(recipients)

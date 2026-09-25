@@ -609,10 +609,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     access_organization(conn, organization, "admin", fn organization ->
       audit = %{audit_data: audit_data(conn), organization: organization}
       customer = Hexpm.Billing.cancel(organization.name, audit: audit)
-      period_end = customer["subscription"]["current_period_end"]
-
-      Hexpm.Accounts.OrganizationDeletions.notify_billing_cancelled(organization, period_end)
-      message = cancel_message(period_end)
+      message = cancel_message(customer["subscription"]["current_period_end"])
 
       conn
       |> put_flash(:info, message)

@@ -411,26 +411,6 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
-  defmodule OrganizationBillingCancelled do
-    def heading(), do: "Billing Has Been Cancelled"
-
-    def body(organization, nil) do
-      "Billing for the #{organization} organization on Hex.pm has been cancelled and the organization can no longer be used."
-    end
-
-    def body(organization, access_until) do
-      "Billing for the #{organization} organization on Hex.pm has been cancelled. The organization stays usable until the end of the paid period on #{Common.date(access_until)}."
-    end
-
-    def deletion(organization, deletion_at) do
-      "An organization without billing is deleted 90 days after billing ends, on #{Common.date(deletion_at)} at the earliest: its private packages, their documentation, its members and its API keys are removed for good and the name #{organization} is retired. A reminder is sent a week before and again the day before."
-    end
-
-    def next_step() do
-      "To keep the organization, resume billing from its billing page before then."
-    end
-  end
-
   defmodule OrganizationDeletionScheduled do
     def heading(), do: "Organization Scheduled for Deletion"
 

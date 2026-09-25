@@ -1051,24 +1051,6 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Your subscription is cancelled"
     end
 
-    test "tells the admins billing was cancelled", %{user: user, organization: organization} do
-      stub(Hexpm.Billing.Mock, :cancel, fn _token ->
-        %{"subscription" => %{"current_period_end" => "2027-12-12T00:00:00Z"}}
-      end)
-
-      insert(:organization_user, organization: organization, user: user, role: "admin")
-
-      build_conn()
-      |> test_login(user)
-      |> post("/dashboard/orgs/#{organization.name}/cancel-billing")
-
-      assert [entry] = Repo.all(Hexpm.Emails.OutboxEntry)
-      assert entry.type == "organization_billing_cancelled"
-      assert entry.recipients == [hd(user.emails).email]
-      assert entry.email["text_body"] =~ "December 12, 2027"
-      assert entry.email["text_body"] =~ "March 11, 2028"
-    end
-
     test "create audit_log with action billing.cancel", %{user: user, organization: organization} do
       stub(Hexpm.Billing.Mock, :cancel, fn token ->
         assert organization.name == token

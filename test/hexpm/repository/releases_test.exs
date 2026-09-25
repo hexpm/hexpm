@@ -484,6 +484,9 @@ defmodule Hexpm.Repository.ReleasesTest do
       Hexpm.Store.put(:diff_bucket, "metadata/other-0.1.0-0.2.0-1.json", "{}", [])
 
       assert Releases.revert(package, release, audit: audit_data(user)) == :ok
+      assert Hexpm.Store.list(:diff_bucket, "metadata/#{package.name}-") |> Enum.count() == 1
+
+      run_diff_cache_jobs()
 
       assert Enum.to_list(Hexpm.Store.list(:diff_bucket, "")) == [
                "metadata/other-0.1.0-0.2.0-1.json"

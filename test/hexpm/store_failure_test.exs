@@ -3,7 +3,7 @@ defmodule Hexpm.StoreFailureTest do
   use Hexpm.DataCase, async: false
   use Oban.Testing, repo: Hexpm.RepoBase
 
-  alias Hexpm.{AdminTasks, OrphanedObjects}
+  alias Hexpm.OrphanedObjects
 
   defmodule FailingStore do
     @behaviour Hexpm.Store.Behaviour
@@ -27,18 +27,13 @@ defmodule Hexpm.StoreFailureTest do
     defdelegate delete(bucket, key), to: Hexpm.Store.Memory
   end
 
-  test "remove_release queues the registry rebuild before touching the diff cache" do
-    package = insert(:package)
-    insert(:release, package: package, version: "1.0.0")
-    insert(:release, package: package, version: "2.0.0")
+  test "a diff cache job fails when the store does, so Oban retries it" do
     app_env(:hexpm, :diff_bucket, {FailingStore, "diff_bucket"})
     Process.put(:fail, :list)
 
     assert_raise RuntimeError, "store down", fn ->
-      AdminTasks.remove_release("hexpm", package.name, "1.0.0")
+      perform_job(Hexpm.Diff.CacheDeleteWorker, %{"repository" => "hexpm", "package" => "pkg"})
     end
-
-    assert length(all_enqueued(worker: Hexpm.Repository.RegistryWorker)) == 2
   end
 
   test "the sweep records a gone repository for the backup before deleting its objects" do

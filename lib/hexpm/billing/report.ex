@@ -85,6 +85,8 @@ defmodule Hexpm.Billing.Report do
     newly_inactive = Enum.count(updates, & &1.active_changed?)
 
     if newly_inactive > @max_deactivations do
+      :telemetry.execute([:hexpm, :billing, :report_refused], %{count: newly_inactive}, %{})
+
       Logger.error(%{
         message: "Billing report refused: too many organizations to set inactive",
         event: "billing.report_refused",
@@ -153,6 +155,14 @@ defmodule Hexpm.Billing.Report do
 
     from(r in Organization, where: r.name in ^changed)
     |> Repo.update_all(set: set)
+
+    if changed != [] do
+      :telemetry.execute(
+        [:hexpm, :billing, :organization_state_changed],
+        %{count: length(changed)},
+        %{billing_active: boolean}
+      )
+    end
 
     :ok
   end

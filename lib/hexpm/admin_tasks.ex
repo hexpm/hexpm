@@ -535,7 +535,7 @@ defmodule Hexpm.AdminTasks do
 
   defp run_package_removal_side_effects({releases, package}) do
     Enum.each(releases, &Assets.revert_release/1)
-    Hexpm.Diff.Cache.delete_package(package.repository.name, package.name)
+    {:ok, _} = Hexpm.Diff.CacheDeleteWorker.enqueue(package.repository.name, package.name)
   end
 
   @doc """
@@ -572,6 +572,7 @@ defmodule Hexpm.AdminTasks do
       Assets.revert_release(release)
       {:ok, _} = RegistryWorker.enqueue_package(package)
       {:ok, _} = RegistryWorker.enqueue_repository(package.repository)
+      {:ok, _} = Hexpm.Diff.CacheDeleteWorker.enqueue(package.repository.name, package.name)
 
       remaining = Repo.aggregate(assoc(package, :releases), :count)
 
@@ -581,9 +582,6 @@ defmodule Hexpm.AdminTasks do
         &Emails.release_removed(owners, package.name, version, remaining, &1)
       )
 
-      # Last: a failure here leaves a cache entry, not a registry that still
-      # lists the release.
-      Hexpm.Diff.Cache.delete_package(package.repository.name, package.name)
       :ok
     end
   end

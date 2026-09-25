@@ -39,15 +39,6 @@ defmodule Hexpm.EmailsTest do
       email = Emails.organization_deleted("acme", ["a@example.com"])
       assert email.subject == "Hex.pm - acme has been deleted"
       assert email.text_body =~ "the name acme has been retired"
-
-      email =
-        Emails.organization_billing_cancelled("acme", ~U[2026-12-01 00:00:00Z], deletion_at, [
-          "a@example.com"
-        ])
-
-      assert email.subject == "Hex.pm - Billing for acme has been cancelled"
-      assert email.text_body =~ "until the end of the paid period on December 1, 2026"
-      assert email.text_body =~ "on March 1, 2027 at the earliest"
     end
   end
 

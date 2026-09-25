@@ -166,6 +166,36 @@ defmodule Hexpm.Billing.ReportTest do
     assert Organizations.get(still.name).billing_inactive_since == ~U[2026-02-01 00:00:00.000000Z]
   end
 
+  test "reports how many organizations it set active and inactive" do
+    ref = make_ref()
+    parent = self()
+
+    :telemetry.attach(
+      {__MODULE__, ref},
+      [:hexpm, :billing, :organization_state_changed],
+      fn _event, measurements, metadata, _config ->
+        send(parent, {ref, measurements.count, metadata.billing_active})
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach({__MODULE__, ref}) end)
+
+    stopped = insert(:organization, billing_active: true)
+    insert(:organization, billing_active: true)
+    started = insert(:organization, billing_active: false)
+
+    stub(Billing.Mock, :report, fn ->
+      {:ok, [%{"token" => started.name, "quantity" => 1}]}
+    end)
+
+    assert :ok = perform_job(Billing.Report, %{})
+
+    assert_receive {^ref, 1, true}
+    assert_receive {^ref, 2, false}
+    refute Organizations.get(stopped.name).billing_active
+  end
+
   test "refuses a report that sets more than ten organizations inactive at once" do
     organizations = for _ <- 1..11, do: insert(:organization, billing_active: true)
     activated = insert(:organization, billing_active: false)
