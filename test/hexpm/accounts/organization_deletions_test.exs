@@ -326,6 +326,10 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
         %{"subscription" => %{"status" => "active"}}
       end)
 
+      expect(Hexpm.Billing.Mock, :cancel, 0, fn _name ->
+        flunk("cancelled a live subscription")
+      end)
+
       assert %{deleted: [{^name, {:skipped, :billing_live}}]} = OrganizationDeletions.run()
 
       organization = Organizations.get(name)
@@ -346,11 +350,11 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
 
       log =
         ExUnit.CaptureLog.capture_log(fn ->
-          assert %{deleted: [{^name, {:skipped, :billing_unreachable}}]} =
-                   OrganizationDeletions.run()
+          assert %{deleted: [{^name, {:error, %RuntimeError{}}}]} = OrganizationDeletions.run()
         end)
 
-      assert log =~ "billing unreachable"
+      assert log =~ "Organization deletion failed"
+      assert log =~ "billing down"
       assert Organizations.get(name).deletion_scheduled_at
     end
 

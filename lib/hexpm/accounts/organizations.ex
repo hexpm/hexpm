@@ -145,6 +145,7 @@ defmodule Hexpm.Accounts.Organizations do
       |> Multi.insert(:reserved_name, %ReservedUsername{name: organization.name},
         on_conflict: :nothing
       )
+      |> reserve_repository_name(organization)
       |> audit(audit_data, "organization.delete", organization)
       |> Multi.delete(:organization, organization)
       |> insert_jobs(Keyword.get(opts, :jobs, []))
@@ -158,6 +159,20 @@ defmodule Hexpm.Accounts.Organizations do
         {:error, changeset}
     end
   end
+
+  # A renamed organization's objects stay under its repository's name, which
+  # is reserved too so nobody can take it while they are being deleted.
+  defp reserve_repository_name(
+         multi,
+         %Organization{repository: %Repository{name: name}} = organization
+       )
+       when name != organization.name do
+    Multi.insert(multi, :reserved_repository_name, %ReservedUsername{name: name},
+      on_conflict: :nothing
+    )
+  end
+
+  defp reserve_repository_name(multi, _organization), do: multi
 
   defp insert_jobs(multi, jobs) do
     jobs

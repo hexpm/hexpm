@@ -1306,6 +1306,48 @@ defmodule Hexpm.AdminTasksTest do
       assert all_enqueued(worker: Hexpm.Accounts.OrganizationDataWorker) == []
     end
 
+    test "unless_billing_live refuses a live subscription without cancelling it" do
+      organization = insert(:organization)
+      name = organization.name
+
+      expect(Hexpm.Billing.Mock, :get, fn ^name, _opts ->
+        %{"subscription" => %{"status" => "past_due"}}
+      end)
+
+      expect(Hexpm.Billing.Mock, :cancel, 0, fn _name -> flunk("cancelled") end)
+
+      assert {:error, {:billing_live, "past_due"}} =
+               AdminTasks.delete_organization(name, delete_data: true, unless_billing_live: true)
+
+      assert Organizations.get(name)
+      assert all_enqueued(worker: Hexpm.Accounts.OrganizationDataWorker) == []
+    end
+
+    test "unless_billing_live cancels and deletes an organization whose subscription ended" do
+      organization = insert(:organization)
+      name = organization.name
+
+      expect(Hexpm.Billing.Mock, :get, fn ^name, _opts ->
+        %{"subscription" => %{"status" => "canceled"}}
+      end)
+
+      expect(Hexpm.Billing.Mock, :cancel, fn ^name -> %{} end)
+
+      assert :ok = AdminTasks.delete_organization(name, unless_billing_live: true)
+      refute Organizations.get(name)
+    end
+
+    test "reserves a renamed organization's old repository name too" do
+      named_repository("name_before")
+      assert :ok = AdminTasks.rename_organization("name_before", "name_after")
+      Repo.delete_all(from(r in Hexpm.Accounts.ReservedUsername, where: r.name == "name_before"))
+
+      assert :ok = AdminTasks.delete_organization("name_after", delete_data: true)
+
+      assert Repo.exists?(Hexpm.Accounts.ReservedUsername.by_name("name_before"))
+      assert Repo.exists?(Hexpm.Accounts.ReservedUsername.by_name("name_after"))
+    end
+
     test "delete_data records the deletion for the backup" do
       repository = insert(:repository)
       name = repository.organization.name

@@ -37,7 +37,14 @@ defmodule Hexpm.Accounts.OrganizationDataWorker do
   def perform(%Oban.Job{args: args}) do
     Repo.write_mode!()
 
-    names = Map.fetch!(args, "names")
+    {names, taken} = Enum.split_with(Map.fetch!(args, "names"), &free?/1)
+
+    for name <- taken do
+      message = "Stored objects of #{name} kept: the name belongs to an organization again"
+      Logger.error(%{message: message, event: "organization_data.kept", name: name})
+      Sentry.capture_message(message, extra: %{name: name})
+      Hexpm.Slack.post(message)
+    end
 
     packages =
       Enum.map(Map.fetch!(args, "packages"), fn [package, version] -> {package, version} end)
@@ -74,6 +81,15 @@ defmodule Hexpm.Accounts.OrganizationDataWorker do
     )
 
     :ok
+  end
+
+  # The job runs after the transaction that reserved the names, but a name
+  # renamed away from before that could have been taken since.
+  defp free?(name) do
+    import Ecto.Query, only: [from: 2]
+
+    not Repo.exists?(from(o in Hexpm.Accounts.Organization, where: o.name == ^name)) and
+      not Repo.exists?(from(r in Hexpm.Repository.Repository, where: r.name == ^name))
   end
 
   @doc """

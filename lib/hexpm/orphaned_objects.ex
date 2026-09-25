@@ -174,8 +174,10 @@ defmodule Hexpm.OrphanedObjects do
     |> Stream.chunk_every(@delete_batch)
     |> Enum.reduce(%{deleted: 0, rewritten: 0}, fn batch, counts ->
       keys = unchanged(bucket, batch)
-      Hexpm.Store.delete_many(bucket, keys)
+      # Before the delete: once a repository's last objects are gone, nothing
+      # would name it for a retry to record.
       record_deleted_repositories(bucket, keys, index)
+      Hexpm.Store.delete_many(bucket, keys)
 
       Logger.info(%{
         message: "Deleted orphaned objects",

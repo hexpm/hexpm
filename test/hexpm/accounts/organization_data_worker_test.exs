@@ -69,6 +69,25 @@ defmodule Hexpm.Accounts.OrganizationDataWorkerTest do
 
       assert :ok = perform_job(OrganizationDataWorker, args)
     end
+
+    test "keeps the objects of a name that belongs to an organization again" do
+      repository = insert(:repository)
+      taken = repository.organization.name
+      Hexpm.Store.put(:repo_bucket, "repos/#{taken}/names", "LIVE", [])
+      Hexpm.Store.put(:repo_bucket, "repos/gone_name/names", "OLD", [])
+
+      args = OrganizationDataWorker.new_job(["gone_name", taken], [], []).changes.args
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert :ok = perform_job(OrganizationDataWorker, args)
+        end)
+
+      assert log =~ "Stored objects of #{taken} kept"
+      assert Hexpm.Store.get(:repo_bucket, "repos/#{taken}/names", []) == "LIVE"
+      refute Hexpm.Store.get(:repo_bucket, "repos/gone_name/names", [])
+      refute Hexpm.Store.get(:deletions_bucket, "organizations/#{taken}", [])
+    end
   end
 
   # Organization names are [a-z0-9_]+, three characters or more.

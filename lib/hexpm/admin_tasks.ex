@@ -570,7 +570,6 @@ defmodule Hexpm.AdminTasks do
       |> Repo.delete!()
 
       Assets.revert_release(release)
-      Hexpm.Diff.Cache.delete_package(package.repository.name, package.name)
       {:ok, _} = RegistryWorker.enqueue_package(package)
       {:ok, _} = RegistryWorker.enqueue_repository(package.repository)
 
@@ -582,6 +581,9 @@ defmodule Hexpm.AdminTasks do
         &Emails.release_removed(owners, package.name, version, remaining, &1)
       )
 
+      # Last: a failure here leaves a cache entry, not a registry that still
+      # lists the release.
+      Hexpm.Diff.Cache.delete_package(package.repository.name, package.name)
       :ok
     end
   end
@@ -788,6 +790,8 @@ defmodule Hexpm.AdminTasks do
     end
   end
 
+  @live_billing_statuses ~w(active trialing past_due)
+
   @doc """
   Deletes an organization.
 
@@ -804,6 +808,10 @@ defmodule Hexpm.AdminTasks do
 
   - `name` - The name of the organization
   - `opts` - Options:
+    - `:unless_billing_live` - When `true`, a subscription that is active,
+      trialing or past due refuses the deletion with
+      `{:error, {:billing_live, status}}` instead of being cancelled
+      (default: `false`)
     - `:delete_data` - When `true`, also deletes the organization's stored
       objects, `repos/<name>/` in the repository, preview and diff buckets,
       the uploads kept under `debug/` in the repository bucket and `<name>/`
@@ -825,9 +833,10 @@ defmodule Hexpm.AdminTasks do
   @spec delete_organization(String.t(), keyword()) :: :ok | {:error, term()}
   def delete_organization(name, opts \\ []) do
     delete_data? = Keyword.get(opts, :delete_data, false)
+    unless_billing_live? = Keyword.get(opts, :unless_billing_live, false)
 
-    with {:ok, organization} <- find_organization(name) do
-      cancel_billing(organization)
+    with {:ok, organization} <- find_organization(name),
+         :ok <- cancel_billing(organization, unless_billing_live?) do
       # Read while the rows are still there, the CDN keys are built from them.
       jobs = if delete_data?, do: [organization_data_job(organization)], else: []
 
@@ -839,12 +848,23 @@ defmodule Hexpm.AdminTasks do
   # was, and a database failure after it leaves a period-end cancellation the
   # dashboard's resume button undoes. Not gated on billing_active, which is
   # false for a trialing subscription that Stripe would go on to charge.
-  defp cancel_billing(organization) do
-    if Hexpm.Billing.get(organization.name) do
-      Hexpm.Billing.cancel(organization.name)
-    end
+  #
+  # With `unless_billing_live?` a subscription that is paying or about to
+  # pay refuses the deletion instead, decided on the same lookup the
+  # cancellation would follow.
+  defp cancel_billing(organization, unless_billing_live?) do
+    case Hexpm.Billing.get(organization.name) do
+      nil ->
+        :ok
 
-    :ok
+      %{"subscription" => %{"status" => status}}
+      when unless_billing_live? and status in @live_billing_statuses ->
+        {:error, {:billing_live, status}}
+
+      _customer ->
+        Hexpm.Billing.cancel(organization.name)
+        :ok
+    end
   end
 
   defp organization_data_job(organization) do

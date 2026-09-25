@@ -33,7 +33,6 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
   @grace_days 90
   @reminder_days [7, 1]
   @max_deletions 5
-  @live_statuses ~w(active trialing past_due)
   @category "organization_deletion"
 
   def grace_days(), do: @grace_days
@@ -287,12 +286,27 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
     )
   end
 
+  # The billing service is asked once more right before the delete, by the
+  # admin task on the lookup it cancels from: the cached flag was set by a
+  # report up to a day old. A failure, the billing service unreachable say,
+  # leaves the organization for the next run.
   defp delete_organization(organization) do
-    case live_subscription(organization) do
-      {:ok, nil} ->
-        do_delete(organization)
+    recipients = admin_emails(organization)
+    description = describe(organization)
 
-      {:ok, status} ->
+    case Hexpm.AdminTasks.delete_organization(organization.name,
+           delete_data: true,
+           unless_billing_live: true
+         ) do
+      :ok ->
+        deliver(organization, "deleted", recipients, fn recipients ->
+          Emails.organization_deleted(organization.name, recipients)
+        end)
+
+        report(:info, "Organization deleted", organization, contents: description)
+        :ok
+
+      {:error, {:billing_live, status}} ->
         clear(organization)
 
         report(:warning, "Organization deletion skipped, billing is live", organization,
@@ -302,43 +316,16 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
         {:skipped, :billing_live}
 
       {:error, reason} ->
-        report(:error, "Organization deletion skipped, billing unreachable", organization,
-          reason: inspect(reason)
-        )
-
-        {:skipped, :billing_unreachable}
-    end
-  end
-
-  defp do_delete(organization) do
-    recipients = admin_emails(organization)
-    description = describe(organization)
-
-    case Hexpm.AdminTasks.delete_organization(organization.name, delete_data: true) do
-      :ok ->
-        deliver(organization, "deleted", recipients, fn recipients ->
-          Emails.organization_deleted(organization.name, recipients)
-        end)
-
-        report(:info, "Organization deleted", organization, contents: description)
-        :ok
-
-      {:error, reason} ->
         report(:error, "Organization deletion failed", organization, reason: inspect(reason))
         {:error, reason}
     end
-  end
-
-  # The billing service is asked right before the delete, the cached flag
-  # was set by a report up to a day old. An unreachable service skips the
-  # organization until the next run rather than trusting the flag.
-  defp live_subscription(organization) do
-    case Hexpm.Billing.get(organization.name) do
-      %{"subscription" => %{"status" => status}} when status in @live_statuses -> {:ok, status}
-      _customer -> {:ok, nil}
-    end
   rescue
-    error -> {:error, error}
+    error ->
+      report(:error, "Organization deletion failed", organization,
+        reason: Exception.message(error)
+      )
+
+      {:error, error}
   end
 
   defp report(level, message, organization, extra) do
