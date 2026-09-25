@@ -67,6 +67,7 @@ defmodule HexpmWeb.Endpoint do
 
   plug Sentry.PlugContext,
     body_scrubber: {HexpmWeb.SentryScrubber, :scrub_body},
+    header_scrubber: {HexpmWeb.SentryScrubber, :scrub_headers},
     url_scrubber: {HexpmWeb.SentryScrubber, :scrub_url}
 
   plug Plug.MethodOverride
