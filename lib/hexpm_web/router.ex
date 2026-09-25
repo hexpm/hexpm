@@ -569,7 +569,6 @@ defmodule HexpmWeb.Router do
     post "/oauth/organization_authorization", SSOAuthorizationController, :create
 
     get "/oidc/audience", OIDCController, :audience
-    post "/oidc/mint-token", OIDCController, :mint_token
 
     for prefix <- ["/", "/repos/:repository"] do
       scope prefix do

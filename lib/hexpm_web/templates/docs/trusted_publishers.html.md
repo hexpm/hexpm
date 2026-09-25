@@ -2,15 +2,17 @@
 
 Trusted publishers let CI publish Hex packages without storing a long-lived API key. A GitHub Actions job presents a short-lived OpenID Connect (OIDC) identity token; Hex verifies it against a publisher you configured for the package and returns a short-lived, package-scoped access token that the normal publish path accepts.
 
+Hex exchanges the OIDC token through the standard OAuth 2.0 token endpoint using the JWT bearer grant defined in [RFC 7523](https://www.rfc-editor.org/rfc/rfc7523), rather than a dedicated mint endpoint.
+
 This release supports GitHub Actions only. There is no web UI yet: configure publishers through the API. Native Mix / Rebar3 helpers are not required for the server flow, but until the Hex clients add first-class support you exchange the OIDC token yourself (examples below).
 
 ### How it works
 
 1. A package owner configures a trusted publisher that names the GitHub repository, workflow file, and optional environment.
 2. The CI job requests an OIDC token from GitHub with audience `hexpm`.
-3. The job posts that token to Hex's mint endpoint for one target package.
+3. The job exchanges that token at Hex's OAuth token endpoint for one target package.
 4. Hex verifies the token, matches a publisher, and returns a Hex access token that expires in 15 minutes and can only publish that package.
-5. The job publishes with `Authorization: Bearer <token>` (or `HEX_API_KEY` set to the minted token).
+5. The job publishes with `Authorization: Bearer <token>` (for Mix, `HEX_API_KEY="Bearer <token>"`, since Mix sends `HEX_API_KEY` as the raw `Authorization` header value).
 
 The package must already exist. Trusted publishers cannot create a new package or publish its first release; do that once with a normal Hex account or API key.
 
@@ -135,6 +137,7 @@ jobs:
       - name: Mint Hex token and publish
         env:
           HEX_API_URL: https://hex.pm/api
+          HEX_TRUSTED_PUBLISHER_CLIENT_ID: a1111111-1111-4111-8111-111111111111
         run: |
           set -euo pipefail
 
@@ -144,24 +147,23 @@ jobs:
             "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${AUDIENCE}" \
             | jq -r .value)
 
-          BODY=$(jq -n \
-            --arg token "$OIDC_TOKEN" \
-            --arg package "PACKAGE" \
-            '{token: $token, package: $package}')
+          MINT=$(curl -fsS -X POST "$HEX_API_URL/oauth/token" \
+            -H "content-type: application/x-www-form-urlencoded" \
+            --data-urlencode "grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer" \
+            --data-urlencode "client_id=$HEX_TRUSTED_PUBLISHER_CLIENT_ID" \
+            --data-urlencode "assertion=$OIDC_TOKEN" \
+            --data-urlencode "scope=package:hexpm/PACKAGE")
 
-          MINT=$(curl -fsS -X POST "$HEX_API_URL/oidc/mint-token" \
-            -H "content-type: application/json" \
-            -d "$BODY")
+          ACCESS_TOKEN=$(printf '%s' "$MINT" | jq -r .access_token)
 
-          export HEX_API_KEY=$(printf '%s' "$MINT" | jq -r .token)
           mix deps.get
-          mix hex.publish --yes
+          HEX_API_KEY="Bearer $ACCESS_TOKEN" mix hex.publish --yes
 ```
 
-Replace `PACKAGE` with the Hex package name. For a private organization package, pass the Hex repository when minting:
+Replace `PACKAGE` with the Hex package name. For a private organization package, use the Hex repository in the scope:
 
 ```nohighlight
-{"token":"<oidc-jwt>","repository":"ORG","package":"PACKAGE"}
+scope=package:ORG/PACKAGE
 ```
 
 Notes:
@@ -169,7 +171,7 @@ Notes:
 * `permissions.id-token: write` is required so the job can request an OIDC token.
 * Discover the audience with `GET /api/oidc/audience` rather than hardcoding it. Today the value is `hexpm`.
 * Each OIDC token may be minted at most once (`jti` replay is rejected).
-* The minted Hex token is scoped to exactly the package named in the mint request and is publish-oriented; it is not a general-purpose API key.
+* The minted Hex token is scoped to exactly the package named in the `scope` parameter and is publish-oriented; it is not a general-purpose API key.
 * Prefer matching on a GitHub Environment for production release workflows so only that environment can mint.
 
 ### Mint API
@@ -182,31 +184,30 @@ GET /api/oidc/audience
 {"audience":"hexpm"}
 ```
 
-Exchange a CI OIDC token for a Hex access token:
+Exchange a CI OIDC token for a Hex access token with the JWT bearer grant ([RFC 7523](https://www.rfc-editor.org/rfc/rfc7523)) on the standard OAuth token endpoint:
 
 ```nohighlight
-POST /api/oidc/mint-token
-Content-Type: application/json
+POST /api/oauth/token
+Content-Type: application/x-www-form-urlencoded
 
-{
-  "token": "<github-oidc-jwt>",
-  "repository": "hexpm",
-  "package": "PACKAGE"
-}
+grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&
+client_id=a1111111-1111-4111-8111-111111111111&
+assertion=<github-oidc-jwt>&
+scope=package:hexpm/PACKAGE
 ```
 
-`repository` defaults to `hexpm` when omitted. Successful response:
+`client_id` is the fixed, public trusted-publisher client shown above. `scope` names exactly one package as `package:REPOSITORY/PACKAGE`; use the Hex repository name (for example `package:ORG/PACKAGE`) for a private organization package. Successful response:
 
 ```nohighlight
 {
-  "token": "<hex-access-token>",
+  "access_token": "<hex-access-token>",
   "token_type": "bearer",
   "expires_in": 900,
-  "expires_at": "2026-07-30T12:00:00Z"
+  "scope": "package:hexpm/PACKAGE"
 }
 ```
 
-Errors use OAuth-style bodies (`error`, `error_description`), for example missing fields (`invalid_request`), bad or replayed OIDC tokens (`invalid_grant`), or no matching publisher (`access_denied`). The mint endpoint is public (the OIDC token is the credential) and rate-limited by IP.
+Errors use OAuth-style bodies (`error`, `error_description`), for example missing fields (`invalid_request`), a malformed or missing `scope` (`invalid_scope`), bad or replayed OIDC tokens (`invalid_grant`), or no matching publisher (`access_denied`). The grant is public (the OIDC token is the credential) and rate-limited by IP.
 
 ### Security model
 
@@ -221,7 +222,7 @@ Errors use OAuth-style bodies (`error`, `error_description`), for example missin
 
 * GitHub Actions only in this release. GitLab, CircleCI, and custom issuers are not supported yet.
 * No dashboard UI; use the management API.
-* No Mix / Rebar3 built-in trusted-publisher commands yet. Clients should request the CI OIDC token with audience from `/api/oidc/audience`, call `/api/oidc/mint-token`, and publish with the returned bearer token.
+* No Mix / Rebar3 built-in trusted-publisher commands yet. Clients should request the CI OIDC token with audience from `/api/oidc/audience`, exchange it at `/api/oauth/token` with the JWT bearer grant, and publish with the returned bearer token.
 * Cannot create a package or land the first release from CI. Publish once manually, then attach a trusted publisher.
 * Provenance / attestations, pending publishers, and a package setting to disallow long-lived tokens are deferred.
 
@@ -230,7 +231,7 @@ Errors use OAuth-style bodies (`error`, `error_description`), for example missin
 * **Create fails with 422 and `github_repository` could not be resolved:** the GitHub owner does not exist or is misspelled. Hex could read neither the repository nor the owner profile.
 * **Create fails with 422 and `repository_id` is required:** Hex could not see the repository, so it cannot pin the ID itself. For a private repository, send `repository_id`. For a public one, this usually means the repository name is misspelled, because GitHub answers 404 both for a repository that does not exist and for one Hex cannot see, which makes a typo indistinguishable from a private repository. Note that a wrong repository name combined with a supplied `repository_id` is created but never matches, and mint returns no matching trusted publisher.
 * **Create fails with 503:** GitHub was unreachable, rate-limited, or answered with something unexpected. Nothing was stored, so the same request can be retried.
-* **Mint returns no matching trusted publisher:** check package name, Hex repository, GitHub `owner/repo`, workflow **filename**, and optional environment against the configured publisher, including the exact casing of the workflow filename and environment. The workflow file that calls `mint-token` must live in the trusted repository.
+* **Mint returns no matching trusted publisher:** check package name, Hex repository, GitHub `owner/repo`, workflow **filename**, and optional environment against the configured publisher, including the exact casing of the workflow filename and environment. The workflow file that requests the OIDC token must live in the trusted repository.
 * **Mint rejects the OIDC token:** confirm `id-token: write`, audience `hexpm`, and that you are not reusing a JWT that was already minted.
 * **Publish fails with package ownership / scope errors:** the minted token only covers the package named at mint time; mint again for that package name.
-* **Endpoints return 404:** trusted publishers may be disabled on that Hex deployment.
+* **Configuration endpoints return 404, or the token endpoint returns `unsupported_grant_type`:** trusted publishers may be disabled on that Hex deployment.

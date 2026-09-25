@@ -18,7 +18,7 @@ defmodule Hexpm.TrustedPublisherHelpers do
           client_id: client_id,
           name: "Trusted Publisher",
           client_type: "public",
-          allowed_grant_types: ["trusted_publisher"],
+          allowed_grant_types: ["urn:ietf:params:oauth:grant-type:jwt-bearer"],
           allowed_scopes: ["package"],
           redirect_uris: []
         )

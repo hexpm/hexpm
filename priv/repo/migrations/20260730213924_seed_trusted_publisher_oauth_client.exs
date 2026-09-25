@@ -12,7 +12,7 @@ defmodule Hexpm.Repo.Migrations.SeedTrustedPublisherOauthClient do
       '#{@client_id}',
       'Trusted Publisher',
       'public',
-      ARRAY['trusted_publisher'],
+      ARRAY['urn:ietf:params:oauth:grant-type:jwt-bearer'],
       ARRAY['package'],
       ARRAY[]::text[],
       NOW(),

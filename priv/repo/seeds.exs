@@ -40,7 +40,7 @@ Hexpm.Repo.transaction(fn ->
       name: "Trusted Publisher",
       client_id: trusted_publisher_client_id,
       client_type: "public",
-      allowed_grant_types: ["trusted_publisher"],
+      allowed_grant_types: ["urn:ietf:params:oauth:grant-type:jwt-bearer"],
       allowed_scopes: ["package"],
       redirect_uris: []
     )

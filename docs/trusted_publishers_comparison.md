@@ -79,7 +79,11 @@ reasoning applies directly to Hex:
 There is no RFC or cross-ecosystem wire standard. RFC 8693 (OAuth 2.0 Token
 Exchange) is the closest generic mechanism but no registry adopted it here; each
 ships a custom endpoint. PEP 807 is an in-progress attempt to standardize the
-shape within Python.
+shape within Python. Hex instead reuses RFC 7523 (JWT Bearer Token as an OAuth
+2.0 authorization grant) on its existing `POST /api/oauth/token` endpoint, so
+the OIDC exchange is one more grant type next to `authorization_code`,
+`client_credentials`, and the device code grant, rather than a bespoke
+endpoint.
 
 | | npm | PyPI |
 | --- | --- | --- |
@@ -183,14 +187,16 @@ Hex defers full provenance/attestations, but stores an allowlisted snapshot of t
 | Config-time verification | None | Yes (implied by ID resolution) | Follow PyPI: resolve immutable IDs when the publisher is created |
 | Pending publishers | No | Yes | Defer to a later phase |
 | Provenance | Auto | Attestations | Defer (design schema to allow it later) |
-| Mint endpoint | OIDC token exchange endpoint | `/_/oidc/mint-token` | Dedicated `POST /api/oidc/mint-token` |
+| Mint endpoint | OIDC token exchange endpoint | `/_/oidc/mint-token` | Existing `POST /api/oauth/token`, `urn:ietf:params:oauth:grant-type:jwt-bearer` grant (RFC 7523) |
 | `aud` | `npm:registry.npmjs.org` | `pypi` | `hexpm` (documented constant) |
 
 ## 5. Implications for the Hex implementation
 
 Grounded in the current codebase:
 
-- **Verify-and-mint, dedicated endpoint.** A new `POST /api/oidc/mint-token`
+- **Verify-and-mint, existing endpoint.** The `urn:ietf:params:oauth:grant-type:jwt-bearer`
+  grant on `POST /api/oauth/token`
+  (`[lib/hexpm_web/controllers/api/oauth_controller.ex](lib/hexpm_web/controllers/api/oauth_controller.ex)`)
   returns a normal Hex OAuth access token, so the existing publish path
   (`[lib/hexpm_web/controllers/api/release_controller.ex](lib/hexpm_web/controllers/api/release_controller.ex)`
   -> `authorize` plug -> `[lib/hexpm/permissions.ex](lib/hexpm/permissions.ex)`)

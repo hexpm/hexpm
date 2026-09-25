@@ -86,7 +86,7 @@ defmodule HexpmWeb.DocsControllerTest do
 
     assert html =~ "Trusted publishers"
     assert html =~ "Configure a trusted publisher"
-    assert html =~ "/api/oidc/mint-token"
+    assert html =~ "urn:ietf:params:oauth:grant-type:jwt-bearer"
     assert html =~ "id-token: write"
     assert html =~ "Cannot create a package"
 

@@ -120,8 +120,12 @@ defmodule HexpmWeb.API.TrustedPublisherPublishTest do
 
       mint_conn =
         build_conn()
-        |> put_req_header("content-type", "application/json")
-        |> post("/api/oidc/mint-token", %{"token" => oidc, "package" => pkg.name})
+        |> post("/api/oauth/token", %{
+          "grant_type" => "urn:ietf:params:oauth:grant-type:jwt-bearer",
+          "client_id" => Hexpm.TrustedPublishers.client_id(),
+          "assertion" => oidc,
+          "scope" => "package:hexpm/#{pkg.name}"
+        })
 
       minted = json_response(mint_conn, 200)
       meta = %{name: pkg.name, version: "1.0.0", description: "from CI"}
@@ -129,7 +133,7 @@ defmodule HexpmWeb.API.TrustedPublisherPublishTest do
       publish_conn =
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
-        |> put_req_header("authorization", "Bearer #{minted["token"]}")
+        |> put_req_header("authorization", "Bearer #{minted["access_token"]}")
         |> post("/api/publish", create_tar(meta))
 
       result = json_response(publish_conn, 201)

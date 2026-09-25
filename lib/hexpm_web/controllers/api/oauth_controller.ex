@@ -4,14 +4,20 @@ defmodule HexpmWeb.API.OAuthController do
   import HexpmWeb.RequestHelpers, only: [build_usage_info: 1]
 
   alias Hexpm.Accounts.Organization
-  alias Hexpm.{SecurityLog, UserSessions}
+  alias Hexpm.{SecurityLog, TrustedPublishers, UserSessions}
   alias Hexpm.OAuth.{Clients, Token, Tokens, AuthorizationCodes, DeviceCodes}
+  alias HexpmWeb.Plugs.Attack
+
+  @jwt_bearer_grant_type "urn:ietf:params:oauth:grant-type:jwt-bearer"
+
+  plug :jwt_bearer_mint_rate_limit when action in [:token]
 
   defp safe_param(params, key), do: safe_string(params[key])
 
   @doc """
   Standard OAuth 2.0 token endpoint for API access.
-  Handles multiple grant types: authorization_code, device_code, refresh_token, client_credentials.
+  Handles multiple grant types: authorization_code, device_code, refresh_token,
+  client_credentials, jwt-bearer.
   """
   def token(conn, params) do
     case get_grant_type(params) do
@@ -27,12 +33,31 @@ defmodule HexpmWeb.API.OAuthController do
       "client_credentials" ->
         handle_client_credentials_grant(conn, params)
 
+      @jwt_bearer_grant_type ->
+        handle_jwt_bearer_grant(conn, params)
+
       invalid_grant ->
         render_oauth_error(
           conn,
           :unsupported_grant_type,
           "Unsupported grant type: #{inspect(invalid_grant)}"
         )
+    end
+  end
+
+  defp jwt_bearer_mint_rate_limit(conn, _opts) do
+    if get_grant_type(conn.params) == @jwt_bearer_grant_type do
+      case Attack.trusted_publisher_mint_ip_throttle(conn.remote_ip) do
+        {:allow, _} ->
+          conn
+
+        {:block, _} ->
+          conn
+          |> render_oauth_error(:slow_down, "Too many mint requests. Please try again later.")
+          |> halt()
+      end
+    else
+      conn
     end
   end
 
@@ -277,6 +302,99 @@ defmodule HexpmWeb.API.OAuthController do
         render_oauth_error(conn, :invalid_client, error)
     end
   end
+
+  defp handle_jwt_bearer_grant(conn, params) do
+    if TrustedPublishers.enabled?() do
+      with {:ok, client} <- validate_client(safe_param(params, "client_id")),
+           :ok <- validate_client_supports_grant(client, @jwt_bearer_grant_type),
+           {:ok, repository, package} <- parse_package_scope(params["scope"]),
+           {:ok, assertion} <- fetch_assertion(params) do
+        case TrustedPublishers.verify_and_mint(assertion,
+               repository: repository,
+               package: package,
+               audit: audit_data(conn)
+             ) do
+          {:ok, token} ->
+            render(conn, :token, token: token)
+
+          {:error, reason} ->
+            {error, description} = jwt_bearer_error(reason)
+            render_oauth_error(conn, error, description)
+        end
+      else
+        {:error, error, description} ->
+          render_oauth_error(conn, error, description)
+
+        {:error, error} ->
+          render_oauth_error(conn, :invalid_client, error)
+      end
+    else
+      render_oauth_error(
+        conn,
+        :unsupported_grant_type,
+        "Unsupported grant type: #{@jwt_bearer_grant_type}"
+      )
+    end
+  end
+
+  defp parse_package_scope(scope_string) when is_binary(scope_string) do
+    case String.split(scope_string, " ", trim: true) do
+      [scope] -> parse_package_scope_value(scope)
+      _ -> {:error, :invalid_scope, "Expected exactly one package scope"}
+    end
+  end
+
+  defp parse_package_scope(_), do: {:error, :invalid_scope, "Missing scope parameter"}
+
+  defp parse_package_scope_value("package:" <> resource) do
+    case String.split(resource, "/", parts: 2) do
+      [repository, package] when repository != "" and package != "" ->
+        {:ok, repository, package}
+
+      _ ->
+        {:error, :invalid_scope, "Expected a package scope in the form package:repository/name"}
+    end
+  end
+
+  defp parse_package_scope_value(_) do
+    {:error, :invalid_scope, "Expected a single package scope"}
+  end
+
+  defp fetch_assertion(params) do
+    case safe_param(params, "assertion") do
+      nil -> {:error, :invalid_request, "Missing assertion"}
+      assertion -> {:ok, assertion}
+    end
+  end
+
+  defp jwt_bearer_error(:disabled),
+    do: {:unsupported_grant_type, "Trusted publishers are disabled"}
+
+  defp jwt_bearer_error(:package_not_found), do: {:access_denied, "No matching trusted publisher"}
+
+  defp jwt_bearer_error(:no_matching_publisher),
+    do: {:access_denied, "No matching trusted publisher"}
+
+  defp jwt_bearer_error(:token_replayed), do: {:invalid_grant, "OIDC token has already been used"}
+  defp jwt_bearer_error(:issuer_not_allowed), do: {:invalid_grant, "OIDC issuer is not allowed"}
+
+  defp jwt_bearer_error(reason)
+       when reason in [
+              :invalid_token,
+              :algorithm_rejected,
+              :signature_invalid,
+              :audience_mismatch,
+              :token_expired,
+              :token_not_yet_valid,
+              :issued_at_in_future,
+              :issuer_mismatch,
+              :jti_missing,
+              :issuer_missing
+            ] do
+    {:invalid_grant, "Invalid OIDC token"}
+  end
+
+  defp jwt_bearer_error(_reason), do: {:server_error, "Failed to mint token"}
 
   defp validate_client_supports_grant(client, grant_type) do
     if Clients.supports_grant_type?(client, grant_type) do
@@ -544,5 +662,6 @@ defmodule HexpmWeb.API.OAuthController do
   defp error_status(:server_error), do: 500
   defp error_status(:authorization_pending), do: 400
   defp error_status(:expired_token), do: 400
+  defp error_status(:slow_down), do: 429
   defp error_status(_), do: 400
 end
