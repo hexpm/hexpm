@@ -224,7 +224,6 @@ Errors use OAuth-style bodies (`error`, `error_description`), for example missin
 * No dashboard UI; use the management API.
 * No Mix / Rebar3 built-in trusted-publisher commands yet. Clients should request the CI OIDC token with audience from `/api/oidc/audience`, exchange it at `/api/oauth/token` with the JWT bearer grant, and publish with the returned bearer token.
 * Cannot create a package or land the first release from CI. Publish once manually, then attach a trusted publisher.
-* Provenance / attestations, pending publishers, and a package setting to disallow long-lived tokens are deferred.
 
 ### Troubleshooting
 
