@@ -249,8 +249,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
         <h3 class="font-semibold text-grey-900 dark:text-grey-100">Just-in-time membership</h3>
         <p class="mt-2 text-sm text-grey-600 dark:text-grey-300">
           Adds an existing Hex account to the organization the first time it authenticates through
-          your provider with an address on a verified domain. It never creates a Hex account, and
-          people without one are reached with an invitation instead.
+          your provider with an address on a verified domain. It never creates a Hex account or
+          sends an invitation, so people without an account sign up before their first login.
         </p>
         <p
           :if={@domains == [] or Enum.all?(@domains, &(!OrganizationDomain.verified?(&1)))}

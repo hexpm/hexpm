@@ -33,6 +33,29 @@ defmodule HexpmWeb.DocsControllerTest do
     assert LazyHTML.attribute(link, "class") |> List.first() =~ "bg-blue-50"
   end
 
+  test "every in-page link in the organization SSO guide points at a heading on it" do
+    enable_sso_docs()
+
+    document =
+      build_conn()
+      |> get("/docs/organization-sso")
+      |> html_response(200)
+      |> LazyHTML.from_document()
+
+    anchors =
+      LazyHTML.query(document, ~s(.docs-content a[href^="#"]))
+      |> LazyHTML.attribute("href")
+      |> Enum.uniq()
+
+    assert "#just-in-time-membership" in anchors
+    assert "#verified-domains" in anchors
+
+    for "#" <> id <- anchors do
+      assert [_heading] = LazyHTML.query(document, ~s([id="#{id}"])) |> Enum.to_list(),
+             "no element with id #{id}"
+    end
+  end
+
   test "renders the navigation as a sidebar on desktop and a collapsed accordion below it" do
     html =
       build_conn()
