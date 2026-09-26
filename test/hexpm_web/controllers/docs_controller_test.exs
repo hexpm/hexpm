@@ -76,6 +76,58 @@ defmodule HexpmWeb.DocsControllerTest do
     assert_sso_docs_hidden()
   end
 
+  test "renders the trusted publishers guide in the docs navigation" do
+    enable_trusted_publisher_docs()
+
+    html =
+      build_conn()
+      |> get("/docs/trusted-publishers")
+      |> html_response(200)
+
+    assert html =~ "Trusted publishers"
+    assert html =~ "Configure a trusted publisher"
+    assert html =~ "urn:ietf:params:oauth:grant-type:jwt-bearer"
+    assert html =~ "id-token: write"
+    assert html =~ "Cannot create a package"
+
+    document = LazyHTML.from_document(html)
+
+    assert [link] =
+             LazyHTML.query(document, ~s(#docs-nav a[href="/docs/trusted-publishers"]))
+             |> Enum.to_list()
+
+    assert LazyHTML.text(link) =~ "Trusted publishers"
+    assert [class] = LazyHTML.attribute(link, "class")
+    assert class =~ "bg-blue-50"
+  end
+
+  test "hides the trusted publishers guide and navigation when the feature is off" do
+    app_env(:hexpm, :features, trusted_publishers: false)
+
+    build_conn()
+    |> get("/docs/trusted-publishers")
+    |> response(404)
+
+    html =
+      build_conn()
+      |> get("/docs/usage")
+      |> html_response(200)
+
+    refute html =~ ~s(href="/docs/trusted-publishers")
+  end
+
+  test "publish docs link to trusted publishers when the feature is on" do
+    enable_trusted_publisher_docs()
+
+    html =
+      build_conn()
+      |> get("/docs/publish")
+      |> html_response(200)
+
+    assert html =~ ~s(href="/docs/trusted-publishers")
+    assert html =~ "trusted publishers"
+  end
+
   test "2FA documentation and navigation follow their own rollout availability" do
     app_env(:hexpm, :organization_sso, mode: :off, beta_organizations: [])
 
@@ -136,5 +188,9 @@ defmodule HexpmWeb.DocsControllerTest do
       :organization_sso,
       Keyword.merge(config, mode: :beta, beta_organizations: ["pilot"])
     )
+  end
+
+  defp enable_trusted_publisher_docs do
+    app_env(:hexpm, :features, trusted_publishers: true)
   end
 end

@@ -256,6 +256,7 @@ defmodule HexpmWeb.Router do
     get "/docs/private", DocsController, :private
     get "/docs/dependency-policies", DocsController, :dependency_policies
     get "/docs/organization-sso", DocsController, :organization_sso
+    get "/docs/trusted-publishers", DocsController, :trusted_publishers
     get "/docs/organization-tfa", DocsController, :organization_tfa
     get "/docs/faq", DocsController, :faq
     get "/docs/mirrors", DocsController, :mirrors
@@ -566,6 +567,17 @@ defmodule HexpmWeb.Router do
     post "/oauth/revoke", OAuthController, :revoke
     post "/oauth/revoke_by_hash", OAuthController, :revoke_by_hash
     post "/oauth/organization_authorization", SSOAuthorizationController, :create
+
+    get "/oidc/audience", OIDCController, :audience
+
+    for prefix <- ["/", "/repos/:repository"] do
+      scope prefix do
+        get "/packages/:name/trusted_publishers", TrustedPublisherController, :index
+        get "/packages/:name/trusted_publishers/:id", TrustedPublisherController, :show
+        post "/packages/:name/trusted_publishers", TrustedPublisherController, :create
+        delete "/packages/:name/trusted_publishers/:id", TrustedPublisherController, :delete
+      end
+    end
   end
 
   scope "/api", HexpmWeb.API, as: :api do
