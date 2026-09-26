@@ -7,7 +7,7 @@ defmodule Hexpm.Diff.CacheDeleteWorker do
   """
 
   use Oban.Worker,
-    queue: :purge,
+    queue: :heavy,
     max_attempts: 10,
     unique: [fields: [:worker, :args], states: [:available, :scheduled, :retryable]]
 

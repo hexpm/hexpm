@@ -13,7 +13,7 @@ defmodule Hexpm.Accounts.OrganizationDataWorker do
   of its repository, which the objects were written under.
   """
 
-  use Oban.Worker, queue: :purge, max_attempts: 10
+  use Oban.Worker, queue: :heavy, max_attempts: 10
 
   require Logger
 
