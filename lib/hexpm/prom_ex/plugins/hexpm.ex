@@ -199,8 +199,10 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
   defp organization_state_description(:inactive), do: "without billing"
   defp organization_state_description(:scheduled), do: "scheduled for deletion"
 
-  # telemetry_poller stops calling a measurement that raises, so a database
-  # error skips this minute's reading instead.
+  # telemetry_poller stops calling a measurement that raises or exits, for
+  # good. The first poll runs as the node boots, before the repo is up, and a
+  # database error can come at any time, so any failure skips this minute's
+  # reading instead.
   @doc false
   def execute_organization_metrics do
     :telemetry.execute(
@@ -209,9 +211,15 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
       %{}
     )
   rescue
-    exception in [DBConnection.ConnectionError, Postgrex.Error] ->
-      require Logger
-      Logger.warning("organization metrics skipped: #{Exception.message(exception)}")
+    exception -> skip_organization_metrics(Exception.message(exception))
+  catch
+    :exit, reason -> skip_organization_metrics(inspect(reason))
+  end
+
+  defp skip_organization_metrics(reason) do
+    require Logger
+    Logger.warning("organization metrics skipped: #{reason}")
+    :ok
   end
 
   @doc false
