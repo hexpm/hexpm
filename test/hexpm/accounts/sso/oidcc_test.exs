@@ -619,6 +619,30 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
              )
   end
 
+  test "reads email_verified and xms_edov as true only when the claim is the boolean true",
+       context do
+    for {overrides, email_verified, xms_edov} <- [
+          {%{}, false, false},
+          {%{"email_verified" => true}, true, false},
+          {%{"xms_edov" => true}, false, true},
+          {%{"email_verified" => false, "xms_edov" => false}, false, false},
+          {%{"email_verified" => "true", "xms_edov" => "true"}, false, false},
+          {%{"email_verified" => "True", "xms_edov" => false}, false, false}
+        ] do
+      token = signed_id_token(context.key, "key-1", context.transaction, overrides)
+      expect_token_response(token)
+
+      assert {:ok, %{email_verified: ^email_verified, xms_edov: ^xms_edov}} =
+               Oidcc.exchange_code(
+                 context.connection,
+                 context.transaction,
+                 "authorization-code",
+                 context.transaction.redirect_uri,
+                 context.connection.client_secret
+               )
+    end
+  end
+
   test "refreshes JWKS once for an unknown key ID and keeps strict validation", context do
     replacement_key = JOSE.JWK.generate_key({:rsa, 1_024})
     {_, public_key} = JOSE.JWK.to_public_map(replacement_key)

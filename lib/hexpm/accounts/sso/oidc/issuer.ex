@@ -15,6 +15,10 @@ defmodule Hexpm.Accounts.SSO.OIDC.Issuer do
     end
   end
 
+  def entra?(issuer) do
+    URI.parse(issuer).host == "login.microsoftonline.com"
+  end
+
   defp reject_query(%URI{query: nil}), do: :ok
   defp reject_query(%URI{}), do: error(:query_not_allowed)
 
