@@ -18,6 +18,7 @@ defmodule Hexpm.ConcurrencyCase do
   alias Hexpm.Accounts.SSO.{Connection, Failure, Identity, OrgSession}
   alias Hexpm.Accounts.SSO.Transaction, as: SSOTransaction
   alias Hexpm.Emails.OutboxEntry
+  alias Hexpm.Repository.{Package, PackageOwner}
   alias Hexpm.UserSession
 
   # Nothing here is rolled back, so the rows these tests commit have to be
@@ -32,6 +33,8 @@ defmodule Hexpm.ConcurrencyCase do
     OutboxEntry,
     Oban.Job,
     AuditLog,
+    PackageOwner,
+    Package,
     UserSession,
     OrganizationUser,
     Organization,
