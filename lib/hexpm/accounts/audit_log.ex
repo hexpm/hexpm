@@ -19,7 +19,7 @@ defmodule Hexpm.Accounts.AuditLog do
   end
 
   def build(%{user: nil} = audit_data, action, params)
-      when action in ~w(password.reset.init password.reset.finish user_provider.create user.delete trusted_publisher.mint) do
+      when action in ~w(password.reset.init password.reset.finish user_provider.create user.delete) do
     params = extract_params(action, params)
 
     {key, oauth_token} = extract_auth_credential(audit_data.auth_credential)
@@ -280,9 +280,6 @@ defmodule Hexpm.Accounts.AuditLog do
 
   defp extract_params("trusted_publisher.remove", trusted_publisher),
     do: serialize(trusted_publisher)
-
-  defp extract_params("trusted_publisher.mint", {trusted_publisher, subject}),
-    do: %{trusted_publisher: serialize(trusted_publisher), subject: subject}
 
   defp extract_params("password.add", _), do: %{}
   defp extract_params("password.remove", _), do: %{}

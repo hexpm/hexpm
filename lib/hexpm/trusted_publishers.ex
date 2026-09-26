@@ -104,7 +104,6 @@ defmodule Hexpm.TrustedPublishers do
   def verify_and_mint(oidc_token, opts) when is_binary(oidc_token) do
     repository = Keyword.get(opts, :repository, "hexpm")
     package_name = Keyword.fetch!(opts, :package)
-    audit_data = Keyword.get(opts, :audit)
 
     with :ok <- enabled_guard(),
          {:ok, peeked} <- OIDC.peek_claims(oidc_token),
@@ -113,7 +112,7 @@ defmodule Hexpm.TrustedPublishers do
          {:ok, claims} <- OIDC.verify(oidc_token, issuer),
          {:ok, package} <- fetch_package(repository, package_name),
          {:ok, trusted_publisher} <- find_matching_publisher(package, provider, claims),
-         {:ok, token} <- mint_token(trusted_publisher, package, claims, audit_data, provider) do
+         {:ok, token} <- mint_token(trusted_publisher, package, claims, provider) do
       :telemetry.execute([:hexpm, :trusted_publishers, :mint, :success], %{count: 1}, %{
         provider: provider.name(),
         package_id: package.id
@@ -197,14 +196,12 @@ defmodule Hexpm.TrustedPublishers do
     end
   end
 
-  defp mint_token(trusted_publisher, package, claims, audit_data, provider) do
+  defp mint_token(trusted_publisher, package, claims, provider) do
     client_id = client_id()
     scope = package_scope(package)
     expires_in = @mint_expires_in
     expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)
     jti_oidc = claims["jti"]
-
-    subject = "trusted_publisher:#{trusted_publisher.id}"
 
     with {:ok, client} <- fetch_client(client_id),
          {:ok, access_token, jti} <-
@@ -227,32 +224,18 @@ defmodule Hexpm.TrustedPublishers do
         oidc_claims: provider.claims_snapshot(claims)
       }
 
-      multi =
-        Multi.new()
-        |> Multi.insert(:token, Token.build(attrs))
-        |> maybe_audit_mint(audit_data, trusted_publisher, subject)
-
-      case Repo.transaction(multi) do
-        {:ok, %{token: token}} ->
+      case Repo.insert(Token.build(attrs)) do
+        {:ok, token} ->
           {:ok, %{token | access_token: access_token}}
 
-        {:error, :token, changeset, _} ->
+        {:error, changeset} ->
           if unique_grant_reference_error?(changeset) do
             {:error, :token_replayed}
           else
             {:error, changeset}
           end
-
-        {:error, _op, reason, _} ->
-          {:error, reason}
       end
     end
-  end
-
-  defp maybe_audit_mint(multi, nil, _trusted_publisher, _subject), do: multi
-
-  defp maybe_audit_mint(multi, audit_data, trusted_publisher, subject) do
-    audit(multi, audit_data, "trusted_publisher.mint", {trusted_publisher, subject})
   end
 
   defp fetch_client(client_id) do

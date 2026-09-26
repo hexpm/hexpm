@@ -311,8 +311,7 @@ defmodule HexpmWeb.API.OAuthController do
            {:ok, assertion} <- fetch_assertion(params) do
         case TrustedPublishers.verify_and_mint(assertion,
                repository: repository,
-               package: package,
-               audit: audit_data(conn)
+               package: package
              ) do
           {:ok, token} ->
             render(conn, :token, token: token)

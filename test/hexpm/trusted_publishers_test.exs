@@ -72,25 +72,17 @@ defmodule Hexpm.TrustedPublishersTest do
       assert reloaded.oidc_claims.workflow_ref =~ "acme/widget/.github/workflows/release.yml"
     end
 
-    test "writes a mint audit log", %{package: package, trusted_publisher: tp} do
+    test "does not write an audit log", %{package: package} do
       token =
         TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
 
       assert {:ok, _} =
                TrustedPublishers.verify_and_mint(token,
                  repository: "hexpm",
-                 package: package.name,
-                 audit: %{
-                   user: nil,
-                   auth_credential: nil,
-                   user_agent: "test",
-                   remote_ip: "127.0.0.1"
-                 }
+                 package: package.name
                )
 
-      log = Repo.get_by!(AuditLog, action: "trusted_publisher.mint")
-      assert log.user_id == nil
-      assert log.params["subject"] == "trusted_publisher:#{tp.id}"
+      assert Repo.aggregate(AuditLog, :count) == 0
     end
 
     test "mints per package when one repository config backs several packages", %{
