@@ -685,12 +685,12 @@ defmodule Hexpm.Accounts.UsersTest do
 
       :ok = Users.password_reset_init(user.username, audit: audit_data(user))
       user = Users.get_by_id(user.id, [:emails, :password_resets])
-      [reset] = user.password_resets
+      reset_key = password_reset_key()
 
       :ok =
         Users.password_reset_finish(
           user.username,
-          reset.key,
+          reset_key,
           %{
             "username" => user.username,
             "password" => "new_password_123",

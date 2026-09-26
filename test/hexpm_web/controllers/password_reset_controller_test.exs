@@ -1,6 +1,5 @@
 defmodule HexpmWeb.PasswordResetControllerTest do
   use HexpmWeb.ConnCase, async: true
-  import Swoosh.TestAssertions
   alias Hexpm.Accounts.User
 
   setup do
@@ -26,6 +25,7 @@ defmodule HexpmWeb.PasswordResetControllerTest do
         })
 
       assert response(conn, 200) =~ "Check your email"
+      first_key = password_reset_key()
 
       mock_captcha_success()
 
@@ -37,20 +37,17 @@ defmodule HexpmWeb.PasswordResetControllerTest do
         })
 
       assert response(conn, 200) =~ "Check your email"
+      second_key = password_reset_key()
 
       user =
         Hexpm.Repo.get_by!(User, username: c.user.username)
         |> Hexpm.Repo.preload([:emails, :password_resets])
 
-      assert [reset1, reset2] = user.password_resets
+      assert [_, _] = user.password_resets
 
-      # check email was sent with correct token
-      assert_email_sent(Hexpm.Emails.password_reset_request(user, reset1))
-      assert_email_sent(Hexpm.Emails.password_reset_request(user, reset2))
-
-      # check reset will succeed
-      assert User.can_reset_password?(user, reset1.key)
-      assert User.can_reset_password?(user, reset2.key)
+      # both mailed keys reset the password
+      assert User.can_reset_password?(user, first_key)
+      assert User.can_reset_password?(user, second_key)
     end
 
     test "captha failed", c do

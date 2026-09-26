@@ -10,13 +10,13 @@ defmodule Hexpm.Accounts.UsersConcurrencyTest do
   test "a password reset key resets the password once" do
     committed(fn -> %{user: insert(:user)} end, fn context ->
       :ok = Users.password_reset_init(context.user.username, audit: audit_data(context.user))
-      [reset] = Users.get_by_id(context.user.id, [:password_resets]).password_resets
+      reset_key = password_reset_key()
 
       results =
         race(["first_password_123", "second_password_123"], fn password ->
           Users.password_reset_finish(
             context.user.username,
-            reset.key,
+            reset_key,
             %{"password" => password, "password_confirmation" => password},
             false,
             audit: audit_data(context.user)

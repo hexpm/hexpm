@@ -21,8 +21,7 @@ defmodule HexpmWeb.PasswordControllerTest do
     test "show select new password", c do
       # Need to create a valid password reset first
       Users.password_reset_init(c.user.username, audit: audit_data(c.user))
-      user = Repo.preload(c.user, :password_resets)
-      reset_key = hd(user.password_resets).key
+      reset_key = password_reset_key()
 
       conn =
         build_conn()
@@ -69,8 +68,7 @@ defmodule HexpmWeb.PasswordControllerTest do
     test "redirect when trying to access with used reset key", c do
       # Create and immediately use a reset key
       Users.password_reset_init(c.user.username, audit: audit_data(c.user))
-      user = Repo.preload(c.user, :password_resets)
-      reset_key = hd(user.password_resets).key
+      reset_key = password_reset_key()
 
       # Complete the password reset (this consumes/deletes the key)
       Users.password_reset_finish(
@@ -114,7 +112,7 @@ defmodule HexpmWeb.PasswordControllerTest do
         |> post("/password/new", %{
           "user" => %{
             "username" => user.username,
-            "key" => hd(user.password_resets).key,
+            "key" => password_reset_key(),
             "password" => "abcd1234",
             "password_confirmation" => "abcd1234"
           }
@@ -164,7 +162,7 @@ defmodule HexpmWeb.PasswordControllerTest do
         |> post("/password/new", %{
           "user" => %{
             "username" => user.username,
-            "key" => hd(user.password_resets).key,
+            "key" => password_reset_key(),
             "password" => "abcd1234",
             "password_confirmation" => "abcd1234"
           }
@@ -180,7 +178,7 @@ defmodule HexpmWeb.PasswordControllerTest do
       username = c.user.username
       Users.password_reset_init(username, audit: audit_data(c.user))
       user = Repo.preload(c.user, :password_resets)
-      reset_key = hd(user.password_resets).key
+      reset_key = password_reset_key()
 
       # First request - should succeed
       conn1 =
@@ -269,7 +267,7 @@ defmodule HexpmWeb.PasswordControllerTest do
         |> post("/password/new", %{
           "user" => %{
             "username" => user.username,
-            "key" => hd(user.password_resets).key,
+            "key" => password_reset_key(),
             "password" => "new_password123",
             "password_confirmation" => "new_password123",
             "revoke_all_access" => "yes"
@@ -341,7 +339,7 @@ defmodule HexpmWeb.PasswordControllerTest do
         |> post("/password/new", %{
           "user" => %{
             "username" => user.username,
-            "key" => hd(user.password_resets).key,
+            "key" => password_reset_key(),
             "password" => "new_password123",
             "password_confirmation" => "new_password123",
             "revoke_all_access" => "no"

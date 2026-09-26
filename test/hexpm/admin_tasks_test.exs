@@ -140,7 +140,7 @@ defmodule Hexpm.AdminTasksTest do
 
       password_reset =
         Repo.insert!(%Hexpm.Accounts.PasswordReset{
-          key: "test_key",
+          key_hash: :crypto.hash(:sha256, "test_key"),
           primary_email: "test@example.com",
           user_id: user.id
         })
