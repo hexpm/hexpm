@@ -272,9 +272,15 @@ defmodule Hexpm.Accounts.OrganizationDomains.Resolver do
   one apart from the first two. The trailing dot makes the query absolute, so a
   resolver search list cannot turn `example.com` into a lookup of some
   `example.com.internal`.
+
+  Without `nxdomain_reply`, a server's NXDOMAIN comes back as a bare
+  `{:error, :nxdomain}`, which is also what `:inet_res` returns when it has no
+  name server to ask. With it, only the server's answer is `{:nxdomain, msg}`.
+
+  `opts` are passed on to `:inet_res.resolve/4`.
   """
-  def lookup(domain) do
-    case :inet_res.resolve(domain ++ ~c".", :in, :txt) do
+  def lookup(domain, opts \\ []) do
+    case :inet_res.resolve(domain ++ ~c".", :in, :txt, [nxdomain_reply: true] ++ opts) do
       {:ok, message} ->
         # A TXT record longer than 255 bytes arrives split into several strings
         # that have to be joined back together before comparing.
