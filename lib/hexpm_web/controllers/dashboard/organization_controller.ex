@@ -283,6 +283,15 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
           |> put_flash(:error, "That address already belongs to a member of this organization.")
           |> render_index(organization, tab: :members)
 
+        {:error, :too_many_invitations} ->
+          conn
+          |> put_status(429)
+          |> put_flash(
+            :error,
+            "Too many invitations have been sent to that address or by you recently. Try again later."
+          )
+          |> render_index(organization, tab: :members)
+
         {:error, changeset} ->
           conn
           |> put_status(400)

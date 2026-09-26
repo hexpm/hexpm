@@ -641,6 +641,39 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert OrganizationInvitations.all_pending(organization) == []
     end
 
+    test "inviting an address invited too often recently is refused", %{
+      user: user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      mock_customer(organization)
+
+      for _ <- 1..5 do
+        {:ok, _invitation} =
+          OrganizationInvitations.invite(
+            insert(:organization),
+            %{"email" => "newcomer@example.com", "role" => "read"},
+            user,
+            audit: audit_data(user)
+          )
+      end
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}", %{
+          "action" => "invite_member",
+          "organization_invitation" => %{"email" => "newcomer@example.com", "role" => "read"}
+        })
+
+      assert html_response(conn, 429)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+               "Too many invitations have been sent"
+
+      assert OrganizationInvitations.all_pending(organization) == []
+    end
+
     test "revoke a pending invitation", %{user: user, organization: organization} do
       insert(:organization_user, organization: organization, user: user, role: "admin")
       mock_customer(organization)

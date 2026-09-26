@@ -19,6 +19,13 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
   alias Hexpm.Accounts.{OrganizationInvitation, SCIM}
   alias Hexpm.Emails.Outbox
 
+  # Every invitation mails an address the inviter chose, so both the address,
+  # across all organizations, and the inviter are capped.
+  @address_limit 5
+  @address_period_seconds 24 * 60 * 60
+  @inviter_limit 50
+  @inviter_period_seconds 60 * 60
+
   def all_pending(organization) do
     Repo.all(
       from(invitation in pending_query(organization),
@@ -63,6 +70,9 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
       member?(organization, email) ->
         {:error, :already_member}
 
+      too_many_invitations?(email, invited_by) ->
+        {:error, :too_many_invitations}
+
       lapsed = lapsed_invitation(organization, email) ->
         # The unique index that stops two live invitations for one address
         # cannot exclude expired rows, because a partial index predicate has to
@@ -96,6 +106,35 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
     |> deliver(organization, raw_token)
     |> Repo.transaction()
     |> result()
+  end
+
+  # An invitation row is written when it is created and when it is reissued,
+  # the two writes that send mail, so its updated_at counts every mail to the
+  # address. Revoking or accepting writes it too, which only counts toward the
+  # limit sooner.
+  defp too_many_invitations?(email, invited_by) do
+    address_count =
+      Repo.aggregate(
+        from(invitation in OrganizationInvitation,
+          where: invitation.email == ^email,
+          where: invitation.updated_at > ago(@address_period_seconds, "second")
+        ),
+        :count
+      )
+
+    address_count >= @address_limit or inviter_count(invited_by) >= @inviter_limit
+  end
+
+  defp inviter_count(nil), do: 0
+
+  defp inviter_count(%User{id: id}) do
+    Repo.aggregate(
+      from(invitation in OrganizationInvitation,
+        where: invitation.invited_by_user_id == ^id,
+        where: invitation.inserted_at > ago(@inviter_period_seconds, "second")
+      ),
+      :count
+    )
   end
 
   defp lapsed_invitation(organization, email) do
