@@ -32,6 +32,12 @@ defmodule Hexpm.TrustedPublishers.Provider.GitHub do
 
   def validate_claims(claims) when is_map(claims), do: :ok
 
+  # Keyed on a claim GitHub signed, so a failing repository only throttles
+  # itself and never the runners it shares an address with.
+  @impl true
+  def rate_limit_key(claims) when is_map(claims),
+    do: {:github_repository, to_string_or_nil(claims["repository_id"])}
+
   # The GitHub namespace and environment names are case-insensitive, so owner,
   # repository, and environment are compared case-insensitively, with owner and
   # repository pinned by their immutable ids. The workflow is matched exactly:

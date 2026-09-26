@@ -10,8 +10,6 @@ defmodule HexpmWeb.API.OAuthController do
 
   @jwt_bearer_grant_type "urn:ietf:params:oauth:grant-type:jwt-bearer"
 
-  plug :jwt_bearer_mint_rate_limit when action in [:token]
-
   defp safe_param(params, key), do: safe_string(params[key])
 
   @doc """
@@ -42,23 +40,6 @@ defmodule HexpmWeb.API.OAuthController do
           :unsupported_grant_type,
           "Unsupported grant type: #{inspect(invalid_grant)}"
         )
-    end
-  end
-
-  defp jwt_bearer_mint_rate_limit(conn, _opts) do
-    if get_grant_type(conn.params) == @jwt_bearer_grant_type do
-      if Attack.trusted_publisher_mint_ip_blocked?(conn.remote_ip) do
-        conn
-        |> render_oauth_error(
-          :slow_down,
-          "Too many failed mint requests. Please try again later."
-        )
-        |> halt()
-      else
-        conn
-      end
-    else
-      conn
     end
   end
 
@@ -309,24 +290,17 @@ defmodule HexpmWeb.API.OAuthController do
       with {:ok, client} <- validate_client(safe_param(params, "client_id")),
            :ok <- validate_client_supports_grant(client, @jwt_bearer_grant_type),
            {:ok, repository, package} <- parse_package_scope(params["scope"]),
-           {:ok, assertion} <- fetch_assertion(params) do
-        case TrustedPublishers.verify_and_mint(assertion,
-               repository: repository,
-               package: package
-             ) do
-          {:ok, token} ->
-            render(conn, :token, token: token)
-
-          {:error, reason} ->
-            {error, description} = jwt_bearer_error(reason)
-            reject_jwt_bearer(conn, error, description)
-        end
+           {:ok, assertion} <- fetch_assertion(params),
+           {:ok, verified} <- verify_assertion(assertion),
+           :ok <- check_mint_rate_limit(verified),
+           {:ok, token} <- mint_trusted_publisher_token(verified, repository, package) do
+        render(conn, :token, token: token)
       else
         {:error, error, description} ->
-          reject_jwt_bearer(conn, error, description)
+          render_oauth_error(conn, error, description)
 
         {:error, error} ->
-          reject_jwt_bearer(conn, :invalid_client, error)
+          render_oauth_error(conn, :invalid_client, error)
       end
     else
       render_oauth_error(
@@ -337,11 +311,42 @@ defmodule HexpmWeb.API.OAuthController do
     end
   end
 
-  # CI runners share egress addresses, so only failures count against the
-  # address. A server error is ours and the runner should be free to retry it.
-  defp reject_jwt_bearer(conn, error, description) do
-    if error != :server_error, do: Attack.trusted_publisher_mint_ip_throttle(conn.remote_ip)
-    render_oauth_error(conn, error, description)
+  defp verify_assertion(assertion) do
+    case TrustedPublishers.verify(assertion) do
+      {:ok, verified} ->
+        {:ok, verified}
+
+      {:error, reason} ->
+        {error, description} = jwt_bearer_error(reason)
+        {:error, error, description}
+    end
+  end
+
+  # Only failures on a verified token are limited. Anyone can send an
+  # unverified token from the addresses CI runners share, and rejecting one
+  # costs a signature check.
+  defp check_mint_rate_limit(verified) do
+    if Attack.trusted_publisher_mint_blocked?(TrustedPublishers.rate_limit_key(verified)) do
+      {:error, :slow_down, "Too many failed mint requests. Please try again later."}
+    else
+      :ok
+    end
+  end
+
+  defp mint_trusted_publisher_token(verified, repository, package) do
+    case TrustedPublishers.mint(verified, repository: repository, package: package) do
+      {:ok, token} ->
+        {:ok, token}
+
+      {:error, reason} ->
+        {error, description} = jwt_bearer_error(reason)
+
+        if error != :server_error do
+          Attack.trusted_publisher_mint_throttle(TrustedPublishers.rate_limit_key(verified))
+        end
+
+        {:error, error, description}
+    end
   end
 
   defp parse_package_scope(scope_string) when is_binary(scope_string) do

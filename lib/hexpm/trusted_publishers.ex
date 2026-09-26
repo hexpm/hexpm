@@ -7,7 +7,7 @@ defmodule Hexpm.TrustedPublishers do
 
   alias Hexpm.OAuth.{Clients, JWT, Token}
   alias Hexpm.Repository.Package
-  alias Hexpm.TrustedPublishers.{OIDC, Provider, TrustedPublisher}
+  alias Hexpm.TrustedPublishers.{OIDC, Provider, TrustedPublisher, VerifiedToken}
 
   @mint_expires_in 15 * 60
   @client_id_env_key :trusted_publisher_oauth_client_id
@@ -121,16 +121,36 @@ defmodule Hexpm.TrustedPublishers do
   @doc """
   Verifies an OIDC token and mints a short-lived package-scoped Hex access token.
   """
-  def verify_and_mint(oidc_token, opts) when is_binary(oidc_token) do
-    repository = Keyword.get(opts, :repository, "hexpm")
-    package_name = Keyword.fetch!(opts, :package)
+  def verify_and_mint(oidc_token, opts) do
+    with {:ok, verified} <- verify(oidc_token) do
+      mint(verified, opts)
+    end
+  end
 
+  @doc """
+  Verifies an OIDC token's signature and standard claims against its issuer.
+  """
+  def verify(oidc_token) when is_binary(oidc_token) do
     with :ok <- enabled_guard(),
          {:ok, peeked} <- OIDC.peek_claims(oidc_token),
          {:ok, issuer} <- fetch_issuer(peeked),
          {:ok, provider} <- fetch_provider_by_issuer(issuer),
-         {:ok, claims} <- OIDC.verify(oidc_token, issuer),
-         :ok <- provider.validate_claims(claims),
+         {:ok, claims} <- OIDC.verify(oidc_token, issuer) do
+      {:ok, %VerifiedToken{provider: provider, claims: claims}}
+    end
+    |> tap_failure()
+  end
+
+  def verify(_), do: {:error, :invalid_token}
+
+  @doc """
+  Mints a short-lived package-scoped Hex access token for a verified OIDC token.
+  """
+  def mint(%VerifiedToken{provider: provider, claims: claims}, opts) do
+    repository = Keyword.get(opts, :repository, "hexpm")
+    package_name = Keyword.fetch!(opts, :package)
+
+    with :ok <- provider.validate_claims(claims),
          {:ok, package} <- fetch_package(repository, package_name),
          {:ok, trusted_publisher} <- find_matching_publisher(package, provider, claims),
          {:ok, token} <- mint_token(trusted_publisher, package, claims, provider) do
@@ -140,14 +160,19 @@ defmodule Hexpm.TrustedPublishers do
       })
 
       {:ok, token}
-    else
-      {:error, reason} = error ->
-        emit_failure(reason)
-        error
     end
+    |> tap_failure()
   end
 
-  def verify_and_mint(_, _), do: {:error, :invalid_token}
+  def rate_limit_key(%VerifiedToken{provider: provider, claims: claims}),
+    do: provider.rate_limit_key(claims)
+
+  defp tap_failure({:error, reason} = error) do
+    emit_failure(reason)
+    error
+  end
+
+  defp tap_failure(result), do: result
 
   defp enabled_guard do
     if enabled?(), do: :ok, else: {:error, :disabled}

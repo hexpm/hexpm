@@ -273,12 +273,12 @@ defmodule HexpmWeb.Plugs.Attack do
     )
   end
 
-  def trusted_publisher_mint_ip_throttle(ip, opts \\ []) do
+  def trusted_publisher_mint_throttle(key, opts \\ []) do
     time = opts[:time] || System.system_time(:millisecond)
-    unless opts[:time], do: RateLimitPubSub.broadcast({:trusted_publisher_mint_ip, ip}, time)
+    unless opts[:time], do: RateLimitPubSub.broadcast({:trusted_publisher_mint, key}, time)
 
     timed_throttle(
-      {:trusted_publisher_mint_ip, ip},
+      {:trusted_publisher_mint, key},
       time: time,
       increment: Keyword.get(opts, :increment, 1),
       storage: @storage,
@@ -287,9 +287,9 @@ defmodule HexpmWeb.Plugs.Attack do
     )
   end
 
-  def trusted_publisher_mint_ip_blocked?(ip) do
+  def trusted_publisher_mint_blocked?(key) do
     {_, {:throttle, data}} =
-      trusted_publisher_mint_ip_throttle(ip, time: System.system_time(:millisecond), increment: 0)
+      trusted_publisher_mint_throttle(key, time: System.system_time(:millisecond), increment: 0)
 
     data[:remaining] == 0
   end
@@ -414,7 +414,8 @@ defmodule HexpmWeb.Plugs.Attack do
   defp api?(%Plug.Conn{request_path: "/api/" <> _}), do: true
   defp api?(%Plug.Conn{}), do: false
 
-  # Failed mints have their own limit in HexpmWeb.API.OAuthController.
+  # Verified failed mints have their own limit, keyed on the repository that
+  # signed the token, in HexpmWeb.API.OAuthController.
   defp trusted_publisher_mint?(%Plug.Conn{
          request_path: "/api/oauth/token",
          params: %{"grant_type" => "urn:ietf:params:oauth:grant-type:jwt-bearer"}

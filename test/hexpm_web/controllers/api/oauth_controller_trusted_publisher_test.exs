@@ -121,24 +121,57 @@ defmodule HexpmWeb.API.OAuthControllerTrustedPublisherTest do
       on_exit(fn -> PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage) end)
     end
 
-    test "only counts failed mints", %{package: package, client: client} do
+    test "does not limit tokens that fail verification", %{package: package, client: client} do
       scope = "package:hexpm/#{package.name}"
-      ip = {127, 0, 0, 1}
 
-      for _ <- 1..29, do: HexpmWeb.Plugs.Attack.trusted_publisher_mint_ip_throttle(ip)
+      for _ <- 1..40 do
+        conn = post(build_conn(), "/api/oauth/token", mint_params(client, "not-a-jwt", scope))
+        assert json_response(conn, 400)["error"] == "invalid_grant"
+      end
+
+      oidc = TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
+      conn = post(build_conn(), "/api/oauth/token", mint_params(client, oidc, scope))
+      assert json_response(conn, 200)["access_token"]
+    end
+
+    test "limits verified failures per repository", %{package: package, client: client} do
+      scope = "package:hexpm/#{package.name}"
+
+      mint = fn claims ->
+        oidc =
+          TrustedPublisherHelpers.github_claims()
+          |> Map.merge(claims)
+          |> TrustedPublisherHelpers.sign_oidc_claims()
+
+        post(build_conn(), "/api/oauth/token", mint_params(client, oidc, scope))
+      end
+
+      wrong_workflow = %{
+        "workflow_ref" => "acme/widget/.github/workflows/other.yml@refs/heads/main"
+      }
+
+      for _ <- 1..30 do
+        assert json_response(mint.(wrong_workflow), 403)["error"] == "access_denied"
+      end
+
+      assert json_response(mint.(wrong_workflow), 429)["error"] == "slow_down"
+      assert json_response(mint.(%{}), 429)["error"] == "slow_down"
+
+      other_repository = Map.put(wrong_workflow, "repository_id", "99999")
+      assert json_response(mint.(other_repository), 403)["error"] == "access_denied"
+    end
+
+    test "successful mints do not count", %{package: package, client: client} do
+      scope = "package:hexpm/#{package.name}"
+
+      for _ <- 1..29,
+          do: HexpmWeb.Plugs.Attack.trusted_publisher_mint_throttle({:github_repository, "67890"})
 
       for _ <- 1..2 do
         oidc = TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
         conn = post(build_conn(), "/api/oauth/token", mint_params(client, oidc, scope))
         assert json_response(conn, 200)["access_token"]
       end
-
-      conn = post(build_conn(), "/api/oauth/token", mint_params(client, "not-a-jwt", scope))
-      assert json_response(conn, 400)["error"] == "invalid_grant"
-
-      oidc = TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
-      conn = post(build_conn(), "/api/oauth/token", mint_params(client, oidc, scope))
-      assert json_response(conn, 429)["error"] == "slow_down"
     end
   end
 

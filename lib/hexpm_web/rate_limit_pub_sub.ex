@@ -66,8 +66,8 @@ defmodule HexpmWeb.RateLimitPubSub do
     {:noreply, []}
   end
 
-  def handle_info({:throttle, {:trusted_publisher_mint_ip, ip}, time}, []) do
-    Attack.trusted_publisher_mint_ip_throttle(ip, time: time)
+  def handle_info({:throttle, {:trusted_publisher_mint, key}, time}, []) do
+    Attack.trusted_publisher_mint_throttle(key, time: time)
     {:noreply, []}
   end
 end
