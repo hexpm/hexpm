@@ -115,7 +115,7 @@ It needs a saved SSO configuration and at least one [verified domain](#verified-
 A signed-in Hexpm account that isn't a member is admitted when all of these hold:
 
 * The ID token's `email` claim is on a verified domain. The part after `@` has to equal the verified domain exactly.
-* The ID token's `email_verified` claim is `true`, or with Microsoft Entra its `xms_edov` claim (see [Register the Entra application](#register-the-entra-application)). A token without it, or with `false`, is refused with the `provider_email_unverified` code, which the person sees and **Recent failures** records.
+* The provider marks the address as verified. That's the ID token's `email_verified` claim being `true`. When the ID token leaves the claim out, as Okta's organization authorization server does, Hexpm asks the provider's userinfo endpoint instead, and counts its `email_verified` only when it returns the same `email`. With Microsoft Entra it's the `xms_edov` claim (see [Register the Entra application](#register-the-entra-application)). Anything else is refused with the `provider_email_unverified` code, which the person sees and **Recent failures** records.
 * The account meets the organization's two-factor requirement, if it has one.
 * A seat is free, or the seat policy adds one.
 
