@@ -36,6 +36,10 @@ defmodule Hexpm.AdminTasks do
       iex> AdminTasks.remove_organization_member("acme", "jose")
       :ok
 
+      # Delete an organization and everything stored under its name
+      iex> AdminTasks.delete_organization("acme", delete_data: true)
+      :ok
+
       # Remove a package
       iex> AdminTasks.remove_package("hexpm", "malicious_pkg")
       :ok
@@ -49,6 +53,12 @@ defmodule Hexpm.AdminTasks do
       # Send an email
       iex> AdminTasks.send_email(["bob@example.com"], "Hex.pm - Subject", "Body")
       {:ok, 1}
+
+      # Report, then delete, objects no package or release accounts for
+      iex> AdminTasks.orphaned_objects(buckets: [:diff_bucket])
+      %{diff_bucket: %{scanned: 812, orphaned: 40, unrecognised: 0, ...}}
+      iex> AdminTasks.delete_orphaned_objects(buckets: [:diff_bucket])
+      %{diff_bucket: %{deleted: 40, ...}}
 
   ## Removal emails
 
@@ -73,6 +83,8 @@ defmodule Hexpm.AdminTasks do
   # Announcements queue behind transactional mail: package reports, secret-scan
   # alerts and SSO notices go out first.
   @announcement_priority 3
+
+  # Fastly takes at most 256 surrogate keys in one purge request.
 
   require Logger
 
@@ -290,20 +302,32 @@ defmodule Hexpm.AdminTasks do
   ## Arguments
 
   - `old_name` - The current username
-  - `new_name` - The new username
+  - `new_name` - The new username, refused if it is reserved
 
   ## Examples
 
       iex> AdminTasks.rename_user("oldname", "newname")
       :ok
+
+      iex> AdminTasks.rename_user("oldname", "deleted_user")
+      {:error, :name_reserved}
   """
   @spec rename_user(String.t(), String.t()) :: :ok | {:error, atom()}
   def rename_user(old_name, new_name) do
-    with {:ok, user} <- find_user(old_name) do
+    with {:ok, user} <- find_user(old_name),
+         :ok <- check_name_available(new_name) do
       user
       |> Ecto.Changeset.change(username: new_name)
       |> Repo.update!()
 
+      :ok
+    end
+  end
+
+  defp check_name_available(name) do
+    if Repo.exists?(ReservedUsername.by_name(name)) do
+      {:error, :name_reserved}
+    else
       :ok
     end
   end
@@ -509,8 +533,9 @@ defmodule Hexpm.AdminTasks do
     {releases, package}
   end
 
-  defp run_package_removal_side_effects({releases, _package}) do
+  defp run_package_removal_side_effects({releases, package}) do
     Enum.each(releases, &Assets.revert_release/1)
+    {:ok, _} = Hexpm.Diff.CacheDeleteWorker.enqueue(package.repository.name, package.name)
   end
 
   @doc """
@@ -547,6 +572,7 @@ defmodule Hexpm.AdminTasks do
       Assets.revert_release(release)
       {:ok, _} = RegistryWorker.enqueue_package(package)
       {:ok, _} = RegistryWorker.enqueue_repository(package.repository)
+      {:ok, _} = Hexpm.Diff.CacheDeleteWorker.enqueue(package.repository.name, package.name)
 
       remaining = Repo.aggregate(assoc(package, :releases), :count)
 
@@ -697,19 +723,28 @@ defmodule Hexpm.AdminTasks do
   This updates the organization name, its associated user's username, and all
   key permissions that reference the organization.
 
+  The old name is reserved. Stored objects keep the `repos/<old name>/` prefix
+  they were written under, so letting another organization take the name would
+  point its prefix at them, and `delete_organization/2` would then delete one
+  organization's objects for another.
+
   ## Arguments
 
   - `old_name` - The current organization name
-  - `new_name` - The new organization name
+  - `new_name` - The new organization name, refused if it is reserved
 
   ## Examples
 
       iex> AdminTasks.rename_organization("old_org", "new_org")
       :ok
+
+      iex> AdminTasks.rename_organization("old_org", "deleted_org")
+      {:error, :name_reserved}
   """
   @spec rename_organization(String.t(), String.t()) :: :ok | {:error, atom()}
   def rename_organization(old_name, new_name) do
-    with {:ok, organization} <- find_organization(old_name) do
+    with {:ok, organization} <- find_organization(old_name),
+         :ok <- check_name_available(new_name) do
       user_changeset = Ecto.Changeset.change(organization.user, username: new_name)
 
       changeset =
@@ -719,6 +754,7 @@ defmodule Hexpm.AdminTasks do
 
       Repo.transaction(fn ->
         Repo.update!(changeset)
+        Repo.insert!(%ReservedUsername{name: old_name}, on_conflict: :nothing)
 
         keys = Repo.all(Key)
 
@@ -751,6 +787,149 @@ defmodule Hexpm.AdminTasks do
       :ok
     end
   end
+
+  @live_billing_statuses ~w(active trialing past_due)
+
+  @doc """
+  Deletes an organization.
+
+  Removes the organization together with its repository and every package and
+  release in it, its members, keys and audit logs, and reserves the name so it
+  cannot be taken again, as an organization or as a username.
+
+  A billing subscription is cancelled first, the way the dashboard's cancel
+  does it: a started one at the end of its period, a trialing or unpaid one at
+  once. The billing service refusing or being unreachable raises, and at that
+  point nothing has been deleted.
+
+  ## Arguments
+
+  - `name` - The name of the organization
+  - `opts` - Options:
+    - `:unless_billing_live` - When `true`, a subscription that is active,
+      trialing or past due refuses the deletion with
+      `{:error, {:billing_live, status}}` instead of being cancelled
+      (default: `false`)
+    - `:delete_data` - When `true`, also deletes the organization's stored
+      objects, `repos/<name>/` in the repository, preview and diff buckets,
+      the uploads kept under `debug/` in the repository bucket and `<name>/`
+      in the private docs bucket, purges the CDN keys they were served under
+      and records the deletion for the nightly backup, which removes the
+      organization from every snapshot 35 days later (default: `false`). This
+      runs in `Hexpm.Accounts.OrganizationDataWorker`, a job inserted with
+      the deletion, which retries until it is through and posts the number of
+      objects it deleted to Slack.
+
+  ## Examples
+
+      iex> AdminTasks.delete_organization("acme")
+      :ok
+
+      iex> AdminTasks.delete_organization("acme", delete_data: true)
+      :ok
+  """
+  @spec delete_organization(String.t(), keyword()) :: :ok | {:error, term()}
+  def delete_organization(name, opts \\ []) do
+    delete_data? = Keyword.get(opts, :delete_data, false)
+    unless_billing_live? = Keyword.get(opts, :unless_billing_live, false)
+
+    with {:ok, organization} <- find_organization(name),
+         :ok <- cancel_billing(organization, unless_billing_live?) do
+      # Read while the rows are still there, the CDN keys are built from them.
+      jobs = if delete_data?, do: [organization_data_job(organization)], else: []
+
+      Organizations.delete(organization, audit: AuditLogs.admin(), jobs: jobs)
+    end
+  end
+
+  # Before any row goes. A failure here raises with the organization as it
+  # was, and a database failure after it leaves a period-end cancellation the
+  # dashboard's resume button undoes. Not gated on billing_active, which is
+  # false for a trialing subscription that Stripe would go on to charge.
+  #
+  # With `unless_billing_live?` a subscription that is paying or about to
+  # pay refuses the deletion instead, decided on the same lookup the
+  # cancellation would follow.
+  defp cancel_billing(organization, unless_billing_live?) do
+    case Hexpm.Billing.get(organization.name) do
+      nil ->
+        :ok
+
+      %{"subscription" => %{"status" => status}}
+      when unless_billing_live? and status in @live_billing_statuses ->
+        {:error, {:billing_live, status}}
+
+      _customer ->
+        Hexpm.Billing.cancel(organization.name)
+        :ok
+    end
+  end
+
+  defp organization_data_job(organization) do
+    organization = Repo.preload(organization, [:repository, :policies])
+
+    packages =
+      case organization.repository do
+        nil ->
+          []
+
+        repository ->
+          from(p in Package,
+            where: p.repository_id == ^repository.id,
+            left_join: r in assoc(p, :releases),
+            select: {p.name, r.version}
+          )
+          |> Repo.all()
+      end
+
+    # A renamed organization's objects stay under its repository's name.
+    names = [
+      organization.name | List.wrap(organization.repository && organization.repository.name)
+    ]
+
+    policies = Enum.map(organization.policies, & &1.name)
+    Hexpm.Accounts.OrganizationDataWorker.new_job(names, packages, policies)
+  end
+
+  @doc """
+  Reports objects in the buckets that no repository, package, release or
+  policy accounts for, without deleting anything.
+
+  Takes `:buckets`, `:prefix`, `:older_than` and `:limit`, see
+  `Hexpm.OrphanedObjects.scan/1`.
+
+  ## Examples
+
+      iex> AdminTasks.orphaned_objects()
+      %{diff_bucket: %{scanned: 812, orphaned: 40, unrecognised: 0, ...}, ...}
+
+      iex> AdminTasks.orphaned_objects(buckets: [:docs_bucket], prefix: "phoenix/")
+      %{docs_bucket: %{scanned: 1204, orphaned: 0, ...}}
+  """
+  @spec orphaned_objects(keyword()) :: %{atom() => map()}
+  defdelegate orphaned_objects(opts \\ []), to: Hexpm.OrphanedObjects, as: :scan
+
+  @doc """
+  Deletes what `orphaned_objects/1` reports, and returns the same report with
+  the number deleted per bucket.
+
+  Objects written in the last `:older_than` days are left alone, and every
+  candidate is checked against a second read of the packages before it goes,
+  so a release published while the bucket was being listed keeps its objects.
+  Run `orphaned_objects/1` first and read `unrecognised_sample`: those keys
+  are never deleted, and a shape appearing there means this needs teaching
+  about it.
+
+  ## Examples
+
+      iex> AdminTasks.delete_orphaned_objects(buckets: [:diff_bucket])
+      %{diff_bucket: %{deleted: 40, orphaned: 40, ...}}
+
+      iex> AdminTasks.delete_orphaned_objects(older_than: 30)
+      %{repo_bucket: %{deleted: 0, ...}, ...}
+  """
+  @spec delete_orphaned_objects(keyword()) :: %{atom() => map()}
+  defdelegate delete_orphaned_objects(opts \\ []), to: Hexpm.OrphanedObjects, as: :delete
 
   @doc """
   Initiates a security password reset for a user by sending a password reset email.

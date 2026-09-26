@@ -18,6 +18,11 @@ defmodule HexpmWeb.EmailView do
 
     def greeting(username), do: "Hello #{username}"
 
+    def date(datetime), do: Calendar.strftime(datetime, "%B %-d, %Y")
+
+    def in_days(1), do: "tomorrow"
+    def in_days(days), do: "in #{days} days"
+
     def support_email(), do: "support@hex.pm"
 
     # Smart link wrapping - add <a> only for HTML format
@@ -403,6 +408,42 @@ defmodule HexpmWeb.EmailView do
 
     def questions(organization, _username, _unlinked_by) do
       "If you don't know why this happened, ask an administrator of the #{organization} organization."
+    end
+  end
+
+  defmodule OrganizationDeletionScheduled do
+    def heading(), do: "Organization Scheduled for Deletion"
+
+    def body(organization, deletion_at) do
+      "The #{organization} organization on Hex.pm has had no active billing for 90 days and is scheduled for deletion on #{Common.date(deletion_at)}. Its private packages, their documentation, its members and its API keys will be removed for good and the name #{organization} will be retired."
+    end
+
+    def next_step() do
+      "To keep the organization, resume billing from its billing page before then. A reminder is sent a week before and again the day before."
+    end
+  end
+
+  defmodule OrganizationDeletionReminder do
+    def heading(days), do: "Organization Deleted #{Common.in_days(days) |> String.capitalize()}"
+
+    def body(organization, deletion_at, days) do
+      "The #{organization} organization on Hex.pm is deleted #{Common.in_days(days)}, on #{Common.date(deletion_at)}, because it has had no active billing for 90 days. Its private packages, their documentation, its members and its API keys are then removed for good and the name #{organization} is retired."
+    end
+
+    def next_step() do
+      "To keep the organization, resume billing from its billing page before then."
+    end
+  end
+
+  defmodule OrganizationDeleted do
+    def heading(), do: "Organization Deleted"
+
+    def body(organization) do
+      "The #{organization} organization on Hex.pm has been deleted after 90 days without active billing. Its private packages, their documentation, its members and its API keys have been removed and the name #{organization} has been retired. Packages published to the public repository by its members are not affected."
+    end
+
+    def next_step() do
+      "Reply to this email if this was not expected."
     end
   end
 

@@ -1,0 +1,7 @@
+<%= OrganizationDeletionScheduled.heading() %>
+
+<%= OrganizationDeletionScheduled.body(@organization, @deletion_at) %>
+
+<%= OrganizationDeletionScheduled.next_step() %>
+
+<%= @billing_url %>

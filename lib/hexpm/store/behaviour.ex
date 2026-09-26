@@ -11,7 +11,10 @@ defmodule Hexpm.Store.Behaviour do
   """
   @type etag :: String.t()
 
-  @callback list(bucket, prefix) :: [key]
+  @typedoc "One object in a listing: its key and when the store last wrote it."
+  @type object :: %{key: key, last_modified: DateTime.t()}
+
+  @callback list_objects(bucket, prefix) :: Enumerable.t()
   @callback get(bucket, key, opts) :: body | nil
   @doc """
   The object body as a stream of binary chunks, `nil` when the object does

@@ -111,6 +111,118 @@ defmodule Hexpm.Accounts.Organizations do
     end
   end
 
+  @doc """
+  Deletes the organization and everything scoped to it: its repository with
+  every package and release in it, its members, keys, audit logs and the user
+  row carrying its name. The name is reserved afterwards so nobody can take it
+  again, as an organization or as a username.
+
+  Objects in the repository, preview and docs buckets are left where they are
+  and the billing subscription is left running; `Hexpm.AdminTasks.delete_organization/2`
+  handles both. `:jobs` are Oban jobs inserted in the same transaction, so
+  they run exactly when the rows are gone.
+  """
+  def delete(organization, opts)
+
+  def delete(%Organization{id: 1}, _opts) do
+    {:error, :public_organization}
+  end
+
+  def delete(organization, opts) do
+    audit_data = Keyword.fetch!(opts, :audit)
+    organization = Repo.preload(organization, [:repository, :user])
+
+    multi =
+      Multi.new()
+      |> Multi.delete_all(
+        :audit_logs,
+        from(a in AuditLog, where: a.organization_id == ^organization.id)
+      )
+      |> Multi.delete_all(:keys, from(k in Key, where: k.organization_id == ^organization.id))
+      |> Multi.delete_all(:organization_users, assoc(organization, :organization_users))
+      |> delete_repository(organization.repository)
+      |> delete_organization_user(organization.user)
+      |> Multi.insert(:reserved_name, %ReservedUsername{name: organization.name},
+        on_conflict: :nothing
+      )
+      |> reserve_repository_name(organization)
+      |> audit(audit_data, "organization.delete", organization)
+      |> Multi.delete(:organization, organization)
+      |> insert_jobs(Keyword.get(opts, :jobs, []))
+
+    case Repo.transaction(multi) do
+      {:ok, _result} ->
+        publish_org_names()
+        :ok
+
+      {:error, _operation, changeset, _changes} ->
+        {:error, changeset}
+    end
+  end
+
+  # A renamed organization's objects stay under its repository's name, which
+  # is reserved too so nobody can take it while they are being deleted.
+  defp reserve_repository_name(
+         multi,
+         %Organization{repository: %Repository{name: name}} = organization
+       )
+       when name != organization.name do
+    Multi.insert(multi, :reserved_repository_name, %ReservedUsername{name: name},
+      on_conflict: :nothing
+    )
+  end
+
+  defp reserve_repository_name(multi, _organization), do: multi
+
+  defp insert_jobs(multi, jobs) do
+    jobs
+    |> Enum.with_index()
+    |> Enum.reduce(multi, fn {job, index}, multi -> Oban.insert(multi, {:job, index}, job) end)
+  end
+
+  defp delete_repository(multi, nil), do: multi
+
+  # Releases and package reports go before packages because neither
+  # releases_package_id_fkey nor package_reports_package_id_fkey cascades, and
+  # reserved_packages before the repository for the same reason.
+  defp delete_repository(multi, repository) do
+    packages = from(p in Package, where: p.repository_id == ^repository.id)
+    package_ids = from(p in packages, select: p.id)
+
+    multi
+    |> Multi.delete_all(
+      :package_reports,
+      from(r in Hexpm.PackageReports.Report, where: r.package_id in subquery(package_ids))
+    )
+    |> Multi.delete_all(
+      :releases,
+      from(r in Release, where: r.package_id in subquery(package_ids))
+    )
+    |> Multi.delete_all(:packages, packages)
+    |> Multi.delete_all(
+      :reserved_packages,
+      from(r in "reserved_packages", where: r.repository_id == ^repository.id)
+    )
+    |> Multi.delete(:repository, repository)
+  end
+
+  defp delete_organization_user(multi, nil), do: multi
+
+  # An organization made out of an existing account keeps that account's keys
+  # and tokens. Audit logs reference both with ON DELETE SET NULL, and letting
+  # the user's deletion cascade into them instead hits the foreign key trigger
+  # ordering that fails the transaction, which is what Users.delete/2 takes
+  # them out in their own statements to avoid.
+  defp delete_organization_user(multi, user) do
+    multi
+    |> Multi.delete_all(:user_keys, assoc(user, :keys))
+    |> Multi.delete_all(
+      :user_oauth_tokens,
+      from(t in Hexpm.OAuth.Token, where: t.user_id == ^user.id)
+    )
+    |> Multi.delete(:user, user)
+  end
+
   def merge_with_user(
         %Organization{name: name} = organization,
         %User{username: name, organization_id: nil} = user

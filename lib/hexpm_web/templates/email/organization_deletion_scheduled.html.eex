@@ -1,0 +1,15 @@
+<h1 style="color: #030913; font-size: 24px; line-height: 32px; font-weight: 600; margin: 0 0 24px 0; text-align: center;">
+  <%= OrganizationDeletionScheduled.heading() %>
+</h1>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= OrganizationDeletionScheduled.body(@organization, @deletion_at) %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= OrganizationDeletionScheduled.next_step() %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <a href="<%= @billing_url %>" style="color: #0f59d8; text-decoration: none; word-break: break-all;"><%= @billing_url %></a>
+</p>

@@ -474,6 +474,25 @@ defmodule Hexpm.Repository.ReleasesTest do
       refute Hexpm.Store.get(:repo_bucket, "packages/#{package.name}", [])
     end
 
+    test "revert drops the package's cached diffs", %{
+      package: package,
+      release: release,
+      user: user
+    } do
+      Hexpm.Store.put(:diff_bucket, "metadata/#{package.name}-0.1.0-0.2.0-1.json", "{}", [])
+      Hexpm.Store.put(:diff_bucket, "diffs/#{package.name}-0.1.0-0.2.0-1-diff-0.json", "{}", [])
+      Hexpm.Store.put(:diff_bucket, "metadata/other-0.1.0-0.2.0-1.json", "{}", [])
+
+      assert Releases.revert(package, release, audit: audit_data(user)) == :ok
+      assert Hexpm.Store.list(:diff_bucket, "metadata/#{package.name}-") |> Enum.count() == 1
+
+      run_diff_cache_jobs()
+
+      assert Enum.to_list(Hexpm.Store.list(:diff_bucket, "")) == [
+               "metadata/other-0.1.0-0.2.0-1.json"
+             ]
+    end
+
     test "revert only release", %{
       package: package,
       user: user

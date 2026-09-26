@@ -223,6 +223,20 @@ defmodule Hexpm.TestHelpers do
     end)
   end
 
+  @doc """
+  Runs the waiting `Hexpm.Diff.CacheDeleteWorker` jobs in the test process,
+  where the in-memory store the test wrote to lives.
+  """
+  def run_diff_cache_jobs() do
+    import Ecto.Query, only: [from: 2]
+
+    from(j in Oban.Job,
+      where: j.worker == "Hexpm.Diff.CacheDeleteWorker" and j.state == "available"
+    )
+    |> Hexpm.Repo.all()
+    |> Enum.each(&(:ok = Hexpm.Diff.CacheDeleteWorker.perform(&1)))
+  end
+
   def app_env(app, key, value) do
     original_env = Application.get_env(app, key)
     Application.put_env(app, key, value)

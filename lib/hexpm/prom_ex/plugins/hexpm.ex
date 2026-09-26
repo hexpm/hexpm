@@ -4,16 +4,44 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
   the contexts (see `Hexpm.Repository.Releases` and `Hexpm.Accounts.Users`),
   API authentication (`HexpmWeb.AuthHelpers`), registry builds
   (`Hexpm.Repository.RegistryWorker`) and CDN purges (`Hexpm.CDN.PurgeWorker`,
-  `Hexpm.CDN.Fastly`), and the number of Erlang nodes this node is connected to.
+  `Hexpm.CDN.Fastly`), organization billing and deletion
+  (`Hexpm.Billing.Report`, `Hexpm.Accounts.OrganizationDeletions`), and the
+  number of Erlang nodes this node is connected to.
   """
 
   use PromEx.Plugin
 
   @cluster_event [:hexpm, :cluster, :connected_nodes]
+  @organizations_event [:hexpm, :organizations, :billing]
+  @deletion_steps [:cleared, :scheduled, :reminded, :deleted, :skipped, :failed]
 
   @impl true
   def event_metrics(_opts) do
     [
+      Event.build(
+        :hexpm_organization_event_metrics,
+        [
+          sum("hexpm.billing.organization_state_changed.total",
+            event_name: [:hexpm, :billing, :organization_state_changed],
+            measurement: :count,
+            description:
+              "Organizations the billing report set active or inactive, by the new state.",
+            tags: [:billing_active]
+          ),
+          sum("hexpm.billing.report_refused.organizations.total",
+            event_name: [:hexpm, :billing, :report_refused],
+            measurement: :count,
+            description: "Organizations a refused billing report would have set inactive at once."
+          )
+        ] ++
+          for step <- @deletion_steps do
+            sum("hexpm.organization_deletions.#{step}.total",
+              event_name: [:hexpm, :organization_deletions, :run],
+              measurement: step,
+              description: "Organizations the daily deletion run #{step}."
+            )
+          end
+      ),
       Event.build(:hexpm_business_event_metrics, [
         counter("hexpm.repository.publish.total",
           event_name: [:hexpm, :repository, :publish],
@@ -136,18 +164,54 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
   def polling_metrics(opts) do
     poll_rate = Keyword.get(opts, :poll_rate, 5_000)
 
-    Polling.build(
-      :hexpm_cluster_polling_metrics,
-      poll_rate,
-      {__MODULE__, :execute_cluster_metrics, []},
-      [
-        last_value("hexpm.cluster.connected_nodes",
-          event_name: @cluster_event,
-          measurement: :count,
-          description: "Erlang nodes this node is connected to, the length of Node.list/0."
-        )
-      ]
+    [
+      Polling.build(
+        :hexpm_cluster_polling_metrics,
+        poll_rate,
+        {__MODULE__, :execute_cluster_metrics, []},
+        [
+          last_value("hexpm.cluster.connected_nodes",
+            event_name: @cluster_event,
+            measurement: :count,
+            description: "Erlang nodes this node is connected to, the length of Node.list/0."
+          )
+        ]
+      ),
+      # A count over the organizations table, so once a minute rather than at
+      # the cluster gauge's rate.
+      Polling.build(
+        :hexpm_organization_polling_metrics,
+        :timer.minutes(1),
+        {__MODULE__, :execute_organization_metrics, []},
+        for state <- [:active, :inactive, :scheduled] do
+          last_value("hexpm.organizations.#{state}",
+            event_name: @organizations_event,
+            measurement: state,
+            description:
+              "Organizations #{organization_state_description(state)}, the public one excluded."
+          )
+        end
+      )
+    ]
+  end
+
+  defp organization_state_description(:active), do: "with active, trialing or comped billing"
+  defp organization_state_description(:inactive), do: "without billing"
+  defp organization_state_description(:scheduled), do: "scheduled for deletion"
+
+  # telemetry_poller stops calling a measurement that raises, so a database
+  # error skips this minute's reading instead.
+  @doc false
+  def execute_organization_metrics do
+    :telemetry.execute(
+      @organizations_event,
+      Hexpm.Accounts.OrganizationDeletions.state_counts(),
+      %{}
     )
+  rescue
+    exception in [DBConnection.ConnectionError, Postgrex.Error] ->
+      require Logger
+      Logger.warning("organization metrics skipped: #{Exception.message(exception)}")
   end
 
   @doc false

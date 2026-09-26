@@ -395,6 +395,8 @@ defmodule Hexpm.Repository.Releases do
 
   defp revert_result({:ok, %{release: release}}) do
     Assets.revert_release(release)
+    package = release.package
+    {:ok, _} = Hexpm.Diff.CacheDeleteWorker.enqueue(package.repository.name, package.name)
     :ok
   end
 

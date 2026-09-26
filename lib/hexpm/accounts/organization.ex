@@ -14,6 +14,9 @@ defmodule Hexpm.Accounts.Organization do
     field :tfa_required_at, :utc_datetime_usec
     field :tfa_policy_updated_at, :utc_datetime_usec
     field :tfa_policy_revision, :integer, default: 0
+    field :billing_inactive_since, :utc_datetime_usec
+    field :deletion_scheduled_at, :utc_datetime_usec
+    field :deletion_notices, {:array, :string}, default: []
     timestamps()
 
     has_one :repository, Repository
@@ -42,6 +45,19 @@ defmodule Hexpm.Accounts.Organization do
     |> validate_length(:name, count: :bytes, max: 255)
     |> validate_format(:name, @name_regex)
     |> validate_exclusion(:name, @reserved_names)
+    |> validate_name_not_reserved()
+  end
+
+  defp validate_name_not_reserved(changeset) do
+    prepare_changes(changeset, fn changeset ->
+      name = get_field(changeset, :name)
+
+      if name && changeset.repo.exists?(ReservedUsername.by_name(name)) do
+        add_error(changeset, :name, "has already been taken")
+      else
+        changeset
+      end
+    end)
   end
 
   def build_from_user(user) do
