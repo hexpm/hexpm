@@ -8,10 +8,9 @@ defmodule Hexpm.Diff.Cache do
   ]
 
   def fetch(%Request{} = request) do
-    case fetch_metadata(request, request.canonical_hash) do
-      {:ok, metadata} -> ready(request, request.canonical_hash, metadata)
-      :miss -> fetch_legacy(request)
-      {:error, _} = error -> error
+    case fetch_metadata(request, request.hash) do
+      {:ok, metadata} -> ready(request, request.hash, metadata)
+      other -> other
     end
   end
 
@@ -24,14 +23,14 @@ defmodule Hexpm.Diff.Cache do
   end
 
   def put_piece!(%Request{} = request, index, data) do
-    key = diff_key(request, request.canonical_hash, index)
+    key = diff_key(request, request.hash, index)
     put!(key, JSON.encode!(data))
     %Piece{id: "diff-#{index}", key: key}
   end
 
   def put_metadata!(%Request{} = request, metadata) do
     request
-    |> metadata_key(request.canonical_hash)
+    |> metadata_key(request.hash)
     |> put!(JSON.encode!(metadata))
   end
 
@@ -64,15 +63,6 @@ defmodule Hexpm.Diff.Cache do
   defp repo_prefix(%Request{repository: repository}), do: repo_prefix(repository)
   defp repo_prefix("hexpm"), do: ""
   defp repo_prefix(repository) when is_binary(repository), do: "repos/#{repository}/"
-
-  defp fetch_legacy(%Request{canonical_hash: hash, legacy_hash: hash}), do: :miss
-
-  defp fetch_legacy(request) do
-    case fetch_metadata(request, request.legacy_hash) do
-      {:ok, metadata} -> ready(request, request.legacy_hash, metadata)
-      other -> other
-    end
-  end
 
   defp fetch_metadata(request, hash) do
     case Hexpm.Store.fetch(:diff_bucket, metadata_key(request, hash)) do

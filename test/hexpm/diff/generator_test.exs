@@ -170,7 +170,7 @@ defmodule Hexpm.Diff.GeneratorTest do
 
     assert {:error, :checksum_mismatch} = Generator.generate(request)
     assert :miss = Hexpm.Diff.fetch(request)
-    refute cache_object(Cache.metadata_key(request, request.canonical_hash))
+    refute cache_object(Cache.metadata_key(request, request.hash))
   end
 
   test "piece storage failure leaves no completion marker and retry overwrites partial pieces" do
@@ -189,19 +189,19 @@ defmodule Hexpm.Diff.GeneratorTest do
 
     Application.put_env(:hexpm, :diff_test_store_put, {"-diff-1.json", nil})
     assert {:error, {%RuntimeError{}, _stacktrace}} = Generator.generate(request)
-    assert cache_object(Cache.diff_key(request, request.canonical_hash, 0))
-    refute cache_object(Cache.metadata_key(request, request.canonical_hash))
+    assert cache_object(Cache.diff_key(request, request.hash, 0))
+    refute cache_object(Cache.metadata_key(request, request.hash))
 
     Hexpm.Store.Memory.put(
       "diff_bucket",
-      Cache.diff_key(request, request.canonical_hash, 0),
+      Cache.diff_key(request, request.hash, 0),
       "partial",
       []
     )
 
     Application.delete_env(:hexpm, :diff_test_store_put)
     assert :ok = Generator.generate(request)
-    refute cache_object(Cache.diff_key(request, request.canonical_hash, 0)) == "partial"
+    refute cache_object(Cache.diff_key(request, request.hash, 0)) == "partial"
     assert {:ok, %{total_diffs: 2}, [_, _]} = Hexpm.Diff.fetch(request)
   end
 
@@ -227,8 +227,8 @@ defmodule Hexpm.Diff.GeneratorTest do
 
     assert {:error, {%RuntimeError{}, _stacktrace}} = Generator.generate(request)
     assert :miss = Hexpm.Diff.fetch(request)
-    assert cache_object(Cache.diff_key(request, request.canonical_hash, 0))
-    refute cache_object(Cache.metadata_key(request, request.canonical_hash))
+    assert cache_object(Cache.diff_key(request, request.hash, 0))
+    refute cache_object(Cache.metadata_key(request, request.hash))
   end
 
   test "missing and invalid tarballs fail without writing metadata" do
@@ -273,10 +273,11 @@ defmodule Hexpm.Diff.GeneratorTest do
     request = %{
       request
       | from_checksum: :crypto.hash(:sha256, invalid),
-        canonical_hash:
+        hash:
           Hexpm.Diff.Request.cache_hash(
             request.cache_version,
-            [:crypto.hash(:sha256, invalid), request.to_checksum],
+            :crypto.hash(:sha256, invalid),
+            request.to_checksum,
             false
           )
     }

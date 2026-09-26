@@ -11,58 +11,60 @@ defmodule Hexpm.DiffTest do
     {:ok, package: package, from: from, to: to}
   end
 
-  test "prepares canonical and legacy standalone cache hashes", %{package: package} do
+  test "prepares the cache hash from both full checksums", %{package: package} do
     assert {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
 
     assert request.package_record.id == package.id
     assert MapSet.new(request.versions) == MapSet.new(["1.0.0", "2.0.0"])
     assert request.versions == Enum.map(request.releases, &to_string(&1.version))
 
-    assert request.canonical_hash == :erlang.phash2({1, [<<1::256>>, <<2::256>>]})
-    assert request.legacy_hash == :erlang.phash2({1, [<<2::256>>, <<1::256>>]})
+    assert request.hash == Request.cache_hash(1, <<1::256>>, <<2::256>>, false)
+    refute request.hash == Request.cache_hash(1, <<2::256>>, <<1::256>>, false)
 
     assert {:ok, whitespace} =
              Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", ignore_whitespace: true)
 
-    assert whitespace.canonical_hash ==
-             :erlang.phash2({{1, [<<1::256>>, <<2::256>>]}, [ignore_whitespace: true]})
-
-    refute whitespace.canonical_hash == request.canonical_hash
+    assert whitespace.hash == Request.cache_hash(1, <<1::256>>, <<2::256>>, true)
+    refute whitespace.hash == request.hash
   end
 
-  test "reads canonical cache objects before reversed legacy objects", %{package: package} do
+  test "checksums that share a 27-bit hash get different cache entries" do
+    from = <<1::256>>
+
+    first =
+      Base.decode16!("2dc366499884c061264fe624be1962d6148d937f9cc400bba175032fe3767ddf",
+        case: :lower
+      )
+
+    second =
+      Base.decode16!("b5751dd58cb9be1c9f3d1e2407d2187549ec4e6ae5137403f5d15a24fdb16b1c",
+        case: :lower
+      )
+
+    assert :erlang.phash2({1, [from, first]}) == :erlang.phash2({1, [from, second]})
+    refute Request.cache_hash(1, from, first, false) == Request.cache_hash(1, from, second, false)
+  end
+
+  test "reads a cached diff", %{package: package} do
     {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
-    legacy_metadata = %{total_diffs: 1, total_additions: 3, total_deletions: 2, files_changed: 1}
-    legacy_piece = %{"type" => "too_large", "file" => "legacy.bin"}
+    metadata = %{total_diffs: 1, total_additions: 3, total_deletions: 2, files_changed: 1}
 
     Hexpm.Store.put(
       :diff_bucket,
-      Cache.metadata_key(request, request.legacy_hash),
-      JSON.encode!(legacy_metadata),
+      Cache.metadata_key(request, request.hash),
+      JSON.encode!(metadata),
       []
     )
 
     Hexpm.Store.put(
       :diff_bucket,
-      Cache.diff_key(request, request.legacy_hash, 0),
-      JSON.encode!(legacy_piece),
+      Cache.diff_key(request, request.hash, 0),
+      JSON.encode!(%{"type" => "too_large", "file" => "big.bin"}),
       []
     )
 
-    assert {:ok, ^legacy_metadata, [piece]} = Hexpm.Diff.fetch(request)
-    assert {:ok, {:too_large, "legacy.bin"}} = Hexpm.Diff.fetch_piece(piece)
-
-    canonical_metadata =
-      %{total_diffs: 0, total_additions: 0, total_deletions: 0, files_changed: 0}
-
-    Hexpm.Store.put(
-      :diff_bucket,
-      Cache.metadata_key(request, request.canonical_hash),
-      JSON.encode!(canonical_metadata),
-      []
-    )
-
-    assert {:ok, ^canonical_metadata, []} = Hexpm.Diff.fetch(request)
+    assert {:ok, ^metadata, [piece]} = Hexpm.Diff.fetch(request)
+    assert {:ok, {:too_large, "big.bin"}} = Hexpm.Diff.fetch_piece(piece)
   end
 
   test "keeps standalone object names and raw JSON format", %{package: package} do
@@ -76,7 +78,7 @@ defmodule Hexpm.DiffTest do
       })
 
     assert piece.key ==
-             "diffs/#{package.name}-1.0.0-2.0.0-#{request.canonical_hash}-diff-4.json"
+             "diffs/#{package.name}-1.0.0-2.0.0-#{request.hash}-diff-4.json"
 
     assert {:ok, {:diff, "diff --git a/a b/a\n", "/tmp/from", "/tmp/to"}} =
              Hexpm.Diff.fetch_piece(piece)
@@ -88,8 +90,8 @@ defmodule Hexpm.DiffTest do
       files_changed: 0
     })
 
-    assert Cache.metadata_key(request, request.canonical_hash) ==
-             "metadata/#{package.name}-1.0.0-2.0.0-#{request.canonical_hash}.json"
+    assert Cache.metadata_key(request, request.hash) ==
+             "metadata/#{package.name}-1.0.0-2.0.0-#{request.hash}.json"
   end
 
   test "namespaces private repository requests and cache objects" do
@@ -104,11 +106,11 @@ defmodule Hexpm.DiffTest do
     assert request.repository == repository.name
     assert request.package_record.id == package.id
 
-    assert Cache.metadata_key(request, request.canonical_hash) ==
-             "repos/#{repository.name}/metadata/#{package.name}-1.0.0-2.0.0-#{request.canonical_hash}.json"
+    assert Cache.metadata_key(request, request.hash) ==
+             "repos/#{repository.name}/metadata/#{package.name}-1.0.0-2.0.0-#{request.hash}.json"
 
-    assert Cache.diff_key(request, request.canonical_hash, 0) ==
-             "repos/#{repository.name}/diffs/#{package.name}-1.0.0-2.0.0-#{request.canonical_hash}-diff-0.json"
+    assert Cache.diff_key(request, request.hash, 0) ==
+             "repos/#{repository.name}/diffs/#{package.name}-1.0.0-2.0.0-#{request.hash}-diff-0.json"
 
     args = Request.to_args(request)
     assert args.repository == repository.name
@@ -116,7 +118,7 @@ defmodule Hexpm.DiffTest do
     args = args |> JSON.encode!() |> JSON.decode!()
     assert {:ok, rebuilt} = Request.from_args(args)
     assert rebuilt.repository == repository.name
-    assert rebuilt.canonical_hash == request.canonical_hash
+    assert rebuilt.hash == request.hash
 
     assert {:error, :invalid_args} = Request.from_args(Map.delete(args, "repository"))
   end
@@ -304,7 +306,7 @@ defmodule Hexpm.DiffTest do
 
     Hexpm.Store.put(
       :diff_bucket,
-      Cache.metadata_key(request, request.canonical_hash),
+      Cache.metadata_key(request, request.hash),
       JSON.encode!(%{total_diffs: -1}),
       []
     )

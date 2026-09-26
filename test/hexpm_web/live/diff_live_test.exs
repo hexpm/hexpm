@@ -197,8 +197,8 @@ defmodule HexpmWeb.DiffLiveTest do
     })
 
     Application.put_env(:hexpm, :diff_test_store_get, {:notify, self()})
-    piece_5_key = Cache.diff_key(request, request.canonical_hash, 5)
-    piece_6_key = Cache.diff_key(request, request.canonical_hash, 6)
+    piece_5_key = Cache.diff_key(request, request.hash, 5)
+    piece_6_key = Cache.diff_key(request, request.hash, 6)
 
     {:ok, view, _html} = live(build_conn(), "/diff/#{package.name}/1.0.0..7.0.0")
 
