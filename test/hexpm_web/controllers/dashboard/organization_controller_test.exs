@@ -195,17 +195,16 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert response(conn, 404)
     end
 
-    test "sorts members by username", %{user: user, organization: organization} do
-      insert(:organization_user, organization: organization, user: user, role: "admin")
+    test "sorts members by username", %{organization: organization} do
       zulu = insert(:user, username: "zulu_member")
       alpha = insert(:user, username: "alpha_member")
-      insert(:organization_user, organization: organization, user: zulu)
+      insert(:organization_user, organization: organization, user: zulu, role: "admin")
       insert(:organization_user, organization: organization, user: alpha)
       mock_customer(organization)
 
       document =
         build_conn()
-        |> test_login(user)
+        |> test_login(zulu)
         |> get("/dashboard/orgs/#{organization.name}/members")
         |> html_response(200)
         |> LazyHTML.from_document()
@@ -217,9 +216,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         )
         |> Enum.map(&(LazyHTML.attribute(&1, "value") |> List.first()))
 
-      assert usernames == Enum.sort(usernames)
-      assert "alpha_member" in usernames
-      assert "zulu_member" in usernames
+      assert usernames == ["alpha_member", "zulu_member"]
     end
   end
 

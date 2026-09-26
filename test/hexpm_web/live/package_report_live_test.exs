@@ -10,7 +10,7 @@ defmodule HexpmWeb.PackageReportLiveTest do
   setup :verify_on_exit!
 
   setup do
-    reporter = insert(:user, username: "reporter", full_name: "Report Person")
+    reporter = insert(:user, username: "report_person", full_name: "Report Person")
     maintainer = insert(:user, username: "maintainer", full_name: "Maintain Person")
 
     package =
