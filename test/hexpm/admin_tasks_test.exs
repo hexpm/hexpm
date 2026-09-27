@@ -1432,6 +1432,7 @@ defmodule Hexpm.AdminTasksTest do
         set: [deletion_scheduled_at: DateTime.utc_now(), deletion_notices: ["scheduled"]]
       )
 
+      Hexpm.Store.Memory.written_at(~U[2026-01-01 00:00:00Z])
       Hexpm.Store.put(:repo_bucket, "repos/#{name}/tarballs/#{package.name}-1.0.0.tar", "T", [])
 
       assert :ok = AdminTasks.delete_organization_data(name)
@@ -1452,7 +1453,8 @@ defmodule Hexpm.AdminTasksTest do
       refute Repo.exists?(Hexpm.Accounts.ReservedUsername.by_name(name))
 
       assert [job] = all_enqueued(worker: Hexpm.Accounts.OrganizationDataWorker)
-      assert job.args["kept"] == true
+      assert {:ok, written_before, 0} = DateTime.from_iso8601(job.args["written_before"])
+      assert DateTime.diff(DateTime.utc_now(), written_before) in 0..5
       assert :ok = perform_job(Hexpm.Accounts.OrganizationDataWorker, job.args)
       assert Hexpm.Store.list(:repo_bucket, "repos/#{name}/") |> Enum.to_list() == []
       assert Hexpm.Store.get(:deletions_bucket, "organizations/#{name}", [])

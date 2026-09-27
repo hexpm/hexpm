@@ -331,6 +331,7 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
 
       {_organization, email} = with_admin(organization)
       name = organization.name
+      Hexpm.Store.Memory.written_at(~U[2026-01-01 00:00:00Z])
       Hexpm.Store.put(:repo_bucket, "repos/#{name}/tarballs/pkg-1.0.0.tar", "TARBALL", [])
 
       assert %{deleted: [{^name, :ok}]} = OrganizationDeletions.run()

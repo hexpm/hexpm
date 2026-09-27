@@ -12,6 +12,10 @@ defmodule Hexpm.Accounts.OrganizationDataWorker do
 
   `names` holds the organization's name and, when it was renamed, the name
   of its repository, which the objects were written under.
+
+  A kept organization can publish again once its billing is back, at any
+  point after the deletion, so its job carries `written_before`, the time the
+  deletion started, and deletes only the objects written before then.
   """
 
   use Oban.Worker, queue: :heavy, max_attempts: 10
@@ -29,7 +33,7 @@ defmodule Hexpm.Accounts.OrganizationDataWorker do
       "names" => Enum.uniq(names),
       "packages" => Enum.map(packages, fn {package, version} -> [package, version] end),
       "policies" => policies,
-      "kept" => Keyword.get(opts, :kept, false)
+      "written_before" => opts[:written_before] && DateTime.to_iso8601(opts[:written_before])
     })
   end
 
@@ -40,11 +44,15 @@ defmodule Hexpm.Accounts.OrganizationDataWorker do
   def perform(%Oban.Job{args: args}) do
     Repo.write_mode!()
 
-    deletable? = if Map.get(args, "kept", false), do: &emptied?/1, else: &free?/1
-    {names, taken} = Enum.split_with(Map.fetch!(args, "names"), deletable?)
+    written_before = written_before(args)
+
+    {names, taken} =
+      if written_before,
+        do: {Map.fetch!(args, "names"), []},
+        else: Enum.split_with(Map.fetch!(args, "names"), &free?/1)
 
     for name <- taken do
-      message = "Stored objects of #{name} kept: #{kept_reason(args)}"
+      message = "Stored objects of #{name} kept: the name belongs to an organization again"
       Logger.error(%{message: message, event: "organization_data.kept", name: name})
       Sentry.capture_message(message, extra: %{name: name})
       Hexpm.Slack.post(message)
@@ -59,7 +67,11 @@ defmodule Hexpm.Accounts.OrganizationDataWorker do
       names
       |> Enum.flat_map(&prefixes/1)
       |> Enum.reduce(%{}, fn {bucket, prefix}, counts ->
-        count = Hexpm.Store.delete_prefix(bucket, prefix)
+        count =
+          if written_before,
+            do: Hexpm.Store.delete_prefix(bucket, prefix, written_before: written_before),
+            else: Hexpm.Store.delete_prefix(bucket, prefix)
+
         Map.update(counts, bucket, count, &(&1 + count))
       end)
 
@@ -94,25 +106,12 @@ defmodule Hexpm.Accounts.OrganizationDataWorker do
       not Repo.exists?(from(r in Hexpm.Repository.Repository, where: r.name == ^name))
   end
 
-  # A kept organization can publish again once billing is back, which can
-  # happen between the deletion's commit and a retry of this job.
-  defp emptied?(name) do
-    not Repo.exists?(
-      from(p in Hexpm.Repository.Package,
-        join: r in assoc(p, :repository),
-        where: r.name == ^name
-      )
-    ) and
-      not Repo.exists?(
-        from(p in Hexpm.Repository.Policy,
-          join: o in assoc(p, :organization),
-          where: o.name == ^name
-        )
-      )
+  defp written_before(%{"written_before" => iso8601}) when is_binary(iso8601) do
+    {:ok, datetime, 0} = DateTime.from_iso8601(iso8601)
+    datetime
   end
 
-  defp kept_reason(%{"kept" => true}), do: "packages or policies were added under the name again"
-  defp kept_reason(_args), do: "the name belongs to an organization again"
+  defp written_before(_args), do: nil
 
   @doc """
   Every object an organization named `name` has in a bucket, under one prefix

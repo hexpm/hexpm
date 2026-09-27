@@ -891,7 +891,10 @@ defmodule Hexpm.AdminTasks do
     with {:ok, organization} <- find_organization(name),
          :ok <- refuse_live_billing(organization) do
       # Read while the rows are still there, the CDN keys are built from them.
-      job = organization_data_job(organization, kept: true)
+      # The store's times have whole seconds, and a package published from
+      # here on keeps its objects.
+      written_before = DateTime.utc_now() |> DateTime.truncate(:second)
+      job = organization_data_job(organization, written_before: written_before)
       Organizations.delete_data(organization, audit: AuditLogs.admin(), jobs: [job])
     end
   end
