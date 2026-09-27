@@ -136,9 +136,6 @@ jobs:
           - hex-version: v2.4
             otp: 29.1
             elixir: 1.20.4
-          - hex-version: v2.3
-            otp: 29.1
-            elixir: 1.20.4
 
     env:
       HEXPM_PATH: ..
