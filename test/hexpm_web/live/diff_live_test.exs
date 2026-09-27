@@ -601,6 +601,34 @@ defmodule HexpmWeb.DiffLiveTest do
     assert html =~ "Package not found"
   end
 
+  test "a member removed while the diff generates is not shown it when the job completes" do
+    %{repository: repository, package: package, user: user} =
+      private_package("private_removed_diff")
+
+    {:ok, view, html} =
+      build_conn()
+      |> test_login(user)
+      |> live("/diff/#{repository.name}/#{package.name}/1.0.0..2.0.0")
+
+    assert html =~ "Diff queued"
+    job = Repo.one!(from job in Oban.Job, where: job.worker == "Hexpm.Diff.Worker")
+
+    Repo.delete_all(
+      from(ou in Hexpm.Accounts.OrganizationUser,
+        where: ou.user_id == ^user.id and ou.organization_id == ^repository.organization_id
+      )
+    )
+
+    {:ok, request} = Hexpm.Diff.prepare(repository.name, package.name, "1.0.0", "2.0.0", [])
+    put_ready_cache(request, 1)
+    set_job_state(job, "completed")
+
+    send(view.pid, {:poll_job, job.id})
+    html = render(view)
+    assert html =~ "Package not found"
+    refute html =~ "file-0.bin"
+  end
+
   test "private package version links use repository-scoped diff and files routes" do
     %{repository: repository, package: package, user: user} =
       private_package("private_versions_diff")
