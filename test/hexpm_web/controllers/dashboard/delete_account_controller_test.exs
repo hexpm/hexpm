@@ -10,7 +10,7 @@ defmodule HexpmWeb.Dashboard.DeleteAccountControllerTest do
 
   defp request_deletion(user) do
     :ok = Users.delete_request(user, audit: audit_data(user))
-    Repo.get_by!(AccountDeletionRequest, user_id: user.id)
+    account_deletion_key()
   end
 
   describe "GET /dashboard/delete-account" do
@@ -153,14 +153,16 @@ defmodule HexpmWeb.Dashboard.DeleteAccountControllerTest do
 
   describe "GET /dashboard/delete-account/confirm" do
     test "renders the final confirmation page with a valid key", c do
-      request = request_deletion(c.user)
+      key = request_deletion(c.user)
 
       conn =
         build_conn()
         |> test_login(c.user)
-        |> get("/dashboard/delete-account/confirm", %{"key" => request.key})
+        |> get("/dashboard/delete-account/confirm", %{"key" => key})
 
-      assert response(conn, 200) =~ "Delete my account"
+      html = response(conn, 200)
+      assert html =~ "Delete my account"
+      assert html =~ ~s(<input type="hidden" name="key" value="#{key}">)
     end
 
     test "rejects an invalid key with a generic error", c do
@@ -175,12 +177,12 @@ defmodule HexpmWeb.Dashboard.DeleteAccountControllerTest do
 
     test "rejects another user's key with the same generic error", c do
       attacker = insert(:user)
-      attacker_request = request_deletion(attacker)
+      attacker_key = request_deletion(attacker)
 
       conn =
         build_conn()
         |> test_login(c.user)
-        |> get("/dashboard/delete-account/confirm", %{"key" => attacker_request.key})
+        |> get("/dashboard/delete-account/confirm", %{"key" => attacker_key})
 
       assert redirected_to(conn) == "/dashboard/delete-account"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "invalid or has expired"
@@ -189,7 +191,7 @@ defmodule HexpmWeb.Dashboard.DeleteAccountControllerTest do
     end
 
     test "redirects when eligibility changed after the request", c do
-      request = request_deletion(c.user)
+      key = request_deletion(c.user)
 
       organization = insert(:organization)
       insert(:organization_user, user: c.user, organization: organization, role: "admin")
@@ -197,7 +199,7 @@ defmodule HexpmWeb.Dashboard.DeleteAccountControllerTest do
       conn =
         build_conn()
         |> test_login(c.user)
-        |> get("/dashboard/delete-account/confirm", %{"key" => request.key})
+        |> get("/dashboard/delete-account/confirm", %{"key" => key})
 
       assert redirected_to(conn) == "/dashboard/delete-account"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "cannot be deleted right now"
@@ -263,14 +265,14 @@ defmodule HexpmWeb.Dashboard.DeleteAccountControllerTest do
         |> post("/dashboard/delete-account", %{"username" => username})
 
       assert redirected_to(conn) == "/dashboard/delete-account"
-      request = Repo.get_by!(AccountDeletionRequest, user_id: user.id)
-      assert_email_sent(subject: "Hex.pm - Account deletion request")
+      assert Repo.get_by(AccountDeletionRequest, user_id: user.id)
+      deletion_key = account_deletion_key()
 
       # 3. follow the emailed link
       conn =
         build_conn()
         |> test_login(user)
-        |> get("/dashboard/delete-account/confirm", %{"key" => request.key})
+        |> get("/dashboard/delete-account/confirm", %{"key" => deletion_key})
 
       assert response(conn, 200) =~ "Delete my account"
 
@@ -279,7 +281,7 @@ defmodule HexpmWeb.Dashboard.DeleteAccountControllerTest do
         build_conn()
         |> test_login(user)
         |> post("/dashboard/delete-account/confirm", %{
-          "key" => request.key,
+          "key" => deletion_key,
           "username" => username
         })
 
@@ -336,14 +338,13 @@ defmodule HexpmWeb.Dashboard.DeleteAccountControllerTest do
 
   describe "POST /dashboard/delete-account/confirm" do
     test "deletes the account, logs out, redirects home", c do
-      request = request_deletion(c.user)
-      assert_email_sent(subject: "Hex.pm - Account deletion request")
+      key = request_deletion(c.user)
 
       conn =
         build_conn()
         |> test_login(c.user)
         |> post("/dashboard/delete-account/confirm", %{
-          "key" => request.key,
+          "key" => key,
           "username" => c.user.username
         })
 
@@ -355,30 +356,30 @@ defmodule HexpmWeb.Dashboard.DeleteAccountControllerTest do
     end
 
     test "rejects with mismatched username and deletes nothing", c do
-      request = request_deletion(c.user)
+      key = request_deletion(c.user)
 
       conn =
         build_conn()
         |> test_login(c.user)
         |> post("/dashboard/delete-account/confirm", %{
-          "key" => request.key,
+          "key" => key,
           "username" => "someone-else"
         })
 
-      assert redirected_to(conn) == "/dashboard/delete-account/confirm?key=#{request.key}"
+      assert redirected_to(conn) == "/dashboard/delete-account/confirm?key=#{key}"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "does not match"
       assert Repo.get(User, c.user.id)
     end
 
     test "a key cannot be reused", c do
-      request = request_deletion(c.user)
+      key = request_deletion(c.user)
       other = insert(:user)
 
       conn =
         build_conn()
         |> test_login(c.user)
         |> post("/dashboard/delete-account/confirm", %{
-          "key" => request.key,
+          "key" => key,
           "username" => c.user.username
         })
 
@@ -388,7 +389,7 @@ defmodule HexpmWeb.Dashboard.DeleteAccountControllerTest do
         build_conn()
         |> test_login(other)
         |> post("/dashboard/delete-account/confirm", %{
-          "key" => request.key,
+          "key" => key,
           "username" => other.username
         })
 
@@ -397,7 +398,7 @@ defmodule HexpmWeb.Dashboard.DeleteAccountControllerTest do
     end
 
     test "rejects with invalid key and deletes nothing", c do
-      _request = request_deletion(c.user)
+      _key = request_deletion(c.user)
 
       conn =
         build_conn()
