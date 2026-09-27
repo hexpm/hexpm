@@ -79,7 +79,7 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
         # be immutable and expiry is a comparison against now. So an expired
         # invitation still holds the slot, and no read path shows it. Reissuing
         # it is what the administrator meant by inviting the address again.
-        reissue(organization, %{lapsed | role: params["role"] || lapsed.role}, audit_data)
+        reissue(organization, lapsed, params["role"] || lapsed.role, audit_data)
 
       true ->
         insert(organization, invited_by, email, params["role"], audit_data)
@@ -151,13 +151,13 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
 
   # An expired invitation still holds the one-per-address slot, so inviting
   # that address again reissues the row rather than being refused.
-  defp reissue(organization, invitation, audit_data) do
+  defp reissue(organization, invitation, role, audit_data) do
     raw_token = random_token()
 
     Multi.new()
     |> Multi.update(
       :invitation,
-      OrganizationInvitation.reissue_changeset(invitation, hash(raw_token), expires_at())
+      OrganizationInvitation.reissue_changeset(invitation, role, hash(raw_token), expires_at())
     )
     |> audit(audit_data, "organization.invitation.create", &{organization, &1.invitation})
     |> deliver(organization, raw_token)
