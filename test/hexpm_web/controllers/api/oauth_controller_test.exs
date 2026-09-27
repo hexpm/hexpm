@@ -371,6 +371,28 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       refute "repository:#{org_left.name}" in scopes
     end
 
+    test "refuses a refresh for a deactivated account", %{
+      client: client,
+      user: user,
+      refresh_token: refresh_token
+    } do
+      deactivate(user)
+      tokens = token_count(client)
+
+      response =
+        build_conn()
+        |> post(~p"/api/oauth/token", %{
+          "grant_type" => "refresh_token",
+          "refresh_token" => refresh_token,
+          "client_id" => client.client_id
+        })
+        |> json_response(400)
+
+      assert response["error"] == "invalid_grant"
+      assert response["error_description"] == "Account has been deactivated"
+      assert token_count(client) == tokens
+    end
+
     test "returns error for missing refresh_token", %{client: client} do
       conn =
         post(build_conn(), ~p"/api/oauth/token", %{
@@ -599,6 +621,24 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
       assert response["error"] == "invalid_grant"
       assert response["error_description"] == "Authorization code expired or already used"
+      assert token_count(client) == 0
+    end
+
+    test "refuses a code for a deactivated account", %{
+      code_user: user,
+      code_client: client,
+      auth_code: auth_code,
+      verifier: verifier
+    } do
+      deactivate(user)
+
+      response =
+        build_conn()
+        |> post(~p"/api/oauth/token", token_params(client, auth_code, verifier))
+        |> json_response(400)
+
+      assert response["error"] == "invalid_grant"
+      assert response["error_description"] == "Account has been deactivated"
       assert token_count(client) == 0
     end
 
@@ -1128,6 +1168,33 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
       assert_received {Hexpm.LogLines, :warning,
                        %{method: "api_key", reason: "revoked", key_id: ^key_id, user_id: ^user_id}}
+    end
+
+    test "refuses the API key of a deactivated account", %{
+      client: client,
+      user: user,
+      api_key: api_key
+    } do
+      deactivate(user)
+
+      response =
+        build_conn()
+        |> post(~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "api"
+        })
+        |> json_response(400)
+
+      assert response["error"] == "invalid_grant"
+      assert response["error_description"] == "Account has been deactivated"
+      assert token_count(client) == 0
+
+      user_id = user.id
+
+      assert_received {Hexpm.LogLines, :warning,
+                       %{method: "api_key", reason: "deactivated", user_id: ^user_id}}
     end
 
     test "returns error for unauthorized grant type", %{api_key: api_key} do
@@ -1996,5 +2063,11 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
     {:ok, jwt, _} = Joken.generate_and_sign(%{}, claims, signer)
     jwt
+  end
+
+  defp deactivate(user) do
+    user
+    |> Ecto.Changeset.change(deactivated_at: DateTime.utc_now())
+    |> Repo.update!()
   end
 end

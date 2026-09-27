@@ -3,7 +3,7 @@ defmodule HexpmWeb.API.OAuthController do
 
   import HexpmWeb.RequestHelpers, only: [build_usage_info: 1]
 
-  alias Hexpm.Accounts.Organization
+  alias Hexpm.Accounts.{Organization, User}
   alias Hexpm.{SecurityLog, UserSessions}
   alias Hexpm.OAuth.{Clients, Token, Tokens, AuthorizationCodes, DeviceCodes}
 
@@ -100,6 +100,7 @@ defmodule HexpmWeb.API.OAuthController do
          :ok <- validate_client_supports_grant(client, "authorization_code"),
          {:ok, auth_code} <-
            validate_authorization_code(safe_param(params, "code"), client.client_id),
+         :ok <- validate_active_user(auth_code.user),
          :ok <- validate_redirect_uri_match(auth_code, params["redirect_uri"]),
          :ok <- validate_pkce(auth_code, safe_param(params, "code_verifier")) do
       usage_info = build_usage_info(conn)
@@ -231,6 +232,7 @@ defmodule HexpmWeb.API.OAuthController do
   defp refresh_failure_description(:expired), do: "Refresh token has expired"
   defp refresh_failure_description(:session_revoked), do: "Session has been revoked"
   defp refresh_failure_description(:invalid), do: "Invalid refresh token"
+  defp refresh_failure_description(:deactivated), do: "Account has been deactivated"
 
   defp handle_client_credentials_grant(conn, params) do
     with {:ok, client} <- validate_client(safe_param(params, "client_id")),
@@ -295,7 +297,12 @@ defmodule HexpmWeb.API.OAuthController do
 
     case Hexpm.Accounts.Auth.key_auth(api_key_secret, usage_info, preload: :oauth) do
       {:ok, auth_info} ->
-        {:ok, auth_info}
+        if deactivated?(auth_info.user) do
+          SecurityLog.auth_failure(conn, :api_key, :deactivated, key: auth_info.auth_credential)
+          {:error, :invalid_grant, "Account has been deactivated"}
+        else
+          {:ok, auth_info}
+        end
 
       {:error, :invalid} ->
         SecurityLog.auth_failure(conn, :api_key, :invalid)
@@ -480,6 +487,13 @@ defmodule HexpmWeb.API.OAuthController do
   defp validate_authorization_code(_, _),
     do: {:error, :invalid_grant, "Missing authorization code"}
 
+  defp validate_active_user(user) do
+    if deactivated?(user), do: {:error, :invalid_grant, "Account has been deactivated"}, else: :ok
+  end
+
+  defp deactivated?(%User{deactivated_at: %DateTime{}}), do: true
+  defp deactivated?(_user), do: false
+
   defp validate_redirect_uri_match(auth_code, redirect_uri) do
     if auth_code.redirect_uri == redirect_uri do
       :ok
@@ -507,6 +521,7 @@ defmodule HexpmWeb.API.OAuthController do
         cond do
           Tokens.revoked?(token) -> {:error, :refresh_token, :revoked}
           Tokens.refresh_token_expired?(token) -> {:error, :refresh_token, :expired}
+          deactivated?(token.user) -> {:error, :refresh_token, :deactivated}
           true -> {:ok, token}
         end
 
