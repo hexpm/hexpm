@@ -378,7 +378,7 @@ defmodule Hexpm.PurgeExpiredRecordsTest do
 
       old =
         Repo.insert!(%Hexpm.Accounts.AccountDeletionRequest{
-          key: "old-key",
+          key_hash: "old-hash",
           primary_email: "old@example.com",
           user_id: user1.id,
           inserted_at: days_ago(91)
@@ -386,7 +386,7 @@ defmodule Hexpm.PurgeExpiredRecordsTest do
 
       recent =
         Repo.insert!(%Hexpm.Accounts.AccountDeletionRequest{
-          key: "new-key",
+          key_hash: "new-hash",
           primary_email: "new@example.com",
           user_id: user2.id
         })
@@ -552,7 +552,7 @@ defmodule Hexpm.PurgeExpiredRecordsTest do
       "oauth_tokens" => ~w(refresh_token_hash),
       "user_sessions" => ~w(session_token),
       "password_resets" => ~w(key_hash),
-      "account_deletion_requests" => ~w(key),
+      "account_deletion_requests" => ~w(key_hash),
       "organization_sso_transactions" =>
         ~w(state_hash nonce code_verifier link_token_hash subject provider_email),
       "organization_sso_sessions" => [],
@@ -803,7 +803,7 @@ defmodule Hexpm.PurgeExpiredRecordsTest do
 
     deletion_request =
       Repo.insert!(%Hexpm.Accounts.AccountDeletionRequest{
-        key: "old-key",
+        key_hash: "old-hash",
         primary_email: "old@example.com",
         user_id: user.id,
         inserted_at: days_ago(91)
