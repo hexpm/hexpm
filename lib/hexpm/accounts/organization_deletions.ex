@@ -5,9 +5,10 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
 
   `Hexpm.Billing.Report` records when billing stopped in
   `billing_inactive_since`; an organization that never had billing has none,
-  and its trial's end counts instead. The daily run schedules every inactive
-  organization that has packages or policies for deletion 90 days after that
-  (or after its trial ended, whichever is later), tells its admins, reminds
+  and its trial's end counts instead, or its creation if it never started a
+  trial. The daily run schedules every inactive organization that has
+  packages or policies for deletion 90 days after that (or after its trial
+  ended, whichever is later), tells its admins, reminds
   them a week and a day before, and on the day deletes its packages,
   policies and stored objects through
   `Hexpm.AdminTasks.delete_organization_data/1`. The organization, its
@@ -129,7 +130,8 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
           filter(
             count(),
             not o.billing_active and
-              (is_nil(o.billing_override) or o.billing_override == false) and o.trial_end < ^now
+              (is_nil(o.billing_override) or o.billing_override == false) and
+              (is_nil(o.trial_end) or o.trial_end < ^now)
           ),
         scheduled: filter(count(), not is_nil(o.deletion_scheduled_at))
       }
@@ -186,7 +188,7 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
       where: is_nil(o.deletion_scheduled_at),
       where: not o.billing_active,
       where: is_nil(o.billing_override) or o.billing_override == false,
-      where: o.trial_end < ^now,
+      where: is_nil(o.trial_end) or o.trial_end < ^now,
       where:
         exists(
           from(p in Package,
@@ -195,7 +197,8 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
           )
         ) or
           exists(from(p in Policy, where: p.organization_id == parent_as(:organization).id)),
-      order_by: fragment("coalesce(?, ?)", o.billing_inactive_since, o.trial_end)
+      order_by:
+        fragment("coalesce(?, ?, ?)", o.billing_inactive_since, o.trial_end, o.inserted_at)
     )
   end
 
@@ -203,7 +206,7 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
   # for a while) still gets the week of notice.
   defp deletion_at(organization, now) do
     since =
-      [organization.billing_inactive_since, organization.trial_end]
+      [organization.billing_inactive_since, organization.trial_end || organization.inserted_at]
       |> Enum.reject(&is_nil/1)
       |> Enum.max(DateTime)
 
@@ -315,7 +318,7 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
       where: o.name not in ^reminded_now,
       where: not o.billing_active,
       where: is_nil(o.billing_override) or o.billing_override == false,
-      where: o.trial_end < ^now,
+      where: is_nil(o.trial_end) or o.trial_end < ^now,
       order_by: o.deletion_scheduled_at,
       limit: @max_deletions
     )

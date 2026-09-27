@@ -2,7 +2,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
   use HexpmWeb.ConnCase, async: true
   import Swoosh.TestAssertions
 
-  alias Hexpm.Accounts.{AuditLogs, OrganizationInvitations, Organizations, Users}
+  alias Hexpm.Accounts.{AuditLogs, Organization, OrganizationInvitations, Organizations, Users}
 
   defp add_email(user, email) do
     {:ok, user} = Users.add_email(user, %{email: email}, audit: audit_data(user))
@@ -367,6 +367,39 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> get("/dashboard/orgs/#{organization.name}/billing")
 
       assert response(conn, 200) =~ "Expired"
+    end
+
+    test "offers to enable private packages before billing is set up", %{user: user} do
+      for trial_end <- [nil, ~U[2020-01-01 00:00:00Z]] do
+        organization = insert(:organization, billing_active: false, trial_end: trial_end)
+        insert(:organization_user, organization: organization, user: user, role: "admin")
+        stub(Hexpm.Billing.Mock, :get, fn _token, _opts -> nil end)
+
+        conn =
+          build_conn()
+          |> test_login(user)
+          |> get("/dashboard/orgs/#{organization.name}/billing")
+
+        html = response(conn, 200)
+        assert html =~ "Saving your billing information below enables private packages"
+        assert html =~ ~r/<button[^>]*type="submit"[^>]*>\s*Enable private packages\s*</
+        refute html =~ "current trial ends on"
+      end
+    end
+
+    test "shows the end of a running trial before billing is set up", %{user: user} do
+      trial_end = DateTime.add(DateTime.utc_now(), 5, :day)
+      organization = insert(:organization, billing_active: false, trial_end: trial_end)
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      stub(Hexpm.Billing.Mock, :get, fn _token, _opts -> nil end)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/billing")
+
+      assert response(conn, 200) =~
+               "current trial ends on #{HexpmWeb.ViewHelpers.pretty_date(trial_end)}"
     end
   end
 
@@ -1482,10 +1515,11 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     assert get_resp_header(conn, "location") == ["/dashboard/orgs/createrepo"]
 
     assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
-             "Organization created with one month free trial period active."
+             "Organization created. Enable private packages with a one month free trial on the billing tab."
 
     assert organization = Organizations.get("createrepo", [:repository])
     assert organization.repository.name == "createrepo"
+    assert organization.trial_end == nil
   end
 
   test "create organization validates name", %{user: user} do
@@ -1509,6 +1543,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
   describe "POST /dashboard/orgs/:dashboard_org/create-billing" do
     test "create billing customer after organization", %{user: user, organization: organization} do
       stub(Hexpm.Billing.Mock, :create, fn params ->
+        {trial_end, params} = Map.pop(params, "trial_end")
+
         assert params == %{
                  "person" => %{"country" => "SE"},
                  "token" => organization.name,
@@ -1516,6 +1552,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
                  "email" => "eric@mail.com",
                  "quantity" => 1
                }
+
+        assert {:ok, _trial_end, 0} = DateTime.from_iso8601(trial_end)
 
         {:ok, %{}}
       end)
@@ -1535,7 +1573,58 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       response(conn, 302)
       assert get_resp_header(conn, "location") == ["/dashboard/orgs/#{organization.name}/billing"]
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Updated your billing information."
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
+               "Private packages enabled with a one month free trial."
+
+      trial_end = Repo.get!(Organization, organization.id).trial_end
+      assert DateTime.diff(trial_end, DateTime.utc_now(), :day) in 29..31
+    end
+
+    test "starts the trial", %{user: user} do
+      organization = insert(:organization, billing_active: false, trial_end: nil)
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      test_pid = self()
+
+      stub(Hexpm.Billing.Mock, :create, fn params ->
+        send(test_pid, {:trial_end, params["trial_end"]})
+        {:ok, %{}}
+      end)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}/create-billing", %{
+          "person" => %{"country" => "SE"},
+          "email" => "eric@mail.com"
+        })
+
+      response(conn, 302)
+      assert_received {:trial_end, sent_trial_end}
+      {:ok, sent_trial_end, 0} = DateTime.from_iso8601(sent_trial_end)
+
+      organization = Repo.get!(Organization, organization.id)
+      assert DateTime.compare(organization.trial_end, sent_trial_end) == :eq
+      assert DateTime.diff(organization.trial_end, DateTime.utc_now(), :day) in 29..31
+      assert Organization.trialing?(organization)
+    end
+
+    test "does not start the trial when billing fails", %{user: user} do
+      organization = insert(:organization, billing_active: false, trial_end: nil)
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      stub(Hexpm.Billing.Mock, :create, fn _params -> {:error, %{"errors" => %{}}} end)
+      stub(Hexpm.Billing.Mock, :get, fn _, _opts -> nil end)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}/create-billing", %{
+          "person" => %{"country" => "SE"},
+          "email" => "eric@mail.com"
+        })
+
+      response(conn, 400)
+      assert Repo.get!(Organization, organization.id).trial_end == nil
     end
 
     test "create audit_log with action billing.create", %{user: user, organization: organization} do

@@ -1,7 +1,7 @@
 defmodule Hexpm.BillingTest do
   use Hexpm.DataCase, async: true
 
-  alias Hexpm.Accounts.{AuditLog, AuditLogs}
+  alias Hexpm.Accounts.{AuditLog, AuditLogs, Organization}
 
   describe "checkout/3" do
     test "returns {:ok, whatever} when impl().checkout/2 succeeds" do
@@ -118,7 +118,10 @@ defmodule Hexpm.BillingTest do
       stub(Hexpm.Billing.Mock, :create, fn _params -> {:ok, :whatever} end)
 
       assert Hexpm.Billing.create(%{},
-               audit: %{audit_data: audit_data(insert(:user)), organization: nil}
+               audit: %{
+                 audit_data: audit_data(insert(:user)),
+                 organization: insert(:organization)
+               }
              ) ==
                {:ok, :whatever}
     end
@@ -129,7 +132,7 @@ defmodule Hexpm.BillingTest do
       user = insert(:user)
 
       Hexpm.Billing.create(%{},
-        audit: %{audit_data: audit_data(user), organization: nil}
+        audit: %{audit_data: audit_data(user), organization: insert(:organization)}
       )
 
       assert [%AuditLog{action: "billing.create"}] = AuditLogs.all_by(user)
@@ -139,7 +142,10 @@ defmodule Hexpm.BillingTest do
       stub(Hexpm.Billing.Mock, :create, fn _params -> {:error, :reason} end)
 
       assert Hexpm.Billing.create(%{},
-               audit: %{audit_data: audit_data(insert(:user)), organization: nil}
+               audit: %{
+                 audit_data: audit_data(insert(:user)),
+                 organization: insert(:organization)
+               }
              ) ==
                {:error, :reason}
     end
@@ -150,10 +156,71 @@ defmodule Hexpm.BillingTest do
       user = insert(:user)
 
       Hexpm.Billing.create(%{},
-        audit: %{audit_data: audit_data(user), organization: nil}
+        audit: %{audit_data: audit_data(user), organization: insert(:organization)}
       )
 
       assert [] = AuditLogs.all_by(user)
+    end
+
+    test "starts the trial of an organization that has not had one" do
+      organization = insert(:organization, billing_active: false, trial_end: nil)
+      test_pid = self()
+
+      stub(Hexpm.Billing.Mock, :create, fn params ->
+        send(test_pid, {:trial_end, params["trial_end"]})
+        {:ok, %{}}
+      end)
+
+      Hexpm.Billing.create(%{},
+        audit: %{audit_data: audit_data(insert(:user)), organization: organization}
+      )
+
+      assert_received {:trial_end, sent_trial_end}
+      {:ok, sent_trial_end, 0} = DateTime.from_iso8601(sent_trial_end)
+      trial_end = Repo.get!(Organization, organization.id).trial_end
+      assert DateTime.compare(trial_end, sent_trial_end) == :eq
+      assert DateTime.diff(trial_end, DateTime.utc_now(), :day) in 29..31
+    end
+
+    test "starts a new trial when an earlier one ended" do
+      organization =
+        insert(:organization, billing_active: false, trial_end: ~U[2020-01-01 00:00:00Z])
+
+      stub(Hexpm.Billing.Mock, :create, fn _params -> {:ok, %{}} end)
+
+      Hexpm.Billing.create(%{},
+        audit: %{audit_data: audit_data(insert(:user)), organization: organization}
+      )
+
+      trial_end = Repo.get!(Organization, organization.id).trial_end
+      assert DateTime.diff(trial_end, DateTime.utc_now(), :day) in 29..31
+    end
+
+    test "keeps a longer trial" do
+      trial_end = DateTime.add(DateTime.utc_now(), 60, :day)
+      organization = insert(:organization, billing_active: false, trial_end: trial_end)
+
+      stub(Hexpm.Billing.Mock, :create, fn params ->
+        assert params["trial_end"] == DateTime.to_iso8601(trial_end)
+        {:ok, %{}}
+      end)
+
+      Hexpm.Billing.create(%{},
+        audit: %{audit_data: audit_data(insert(:user)), organization: organization}
+      )
+
+      assert Repo.get!(Organization, organization.id).trial_end == trial_end
+    end
+
+    test "does not start the trial when impl().create/1 fails" do
+      organization = insert(:organization, billing_active: false, trial_end: nil)
+      stub(Hexpm.Billing.Mock, :create, fn _params -> {:error, :reason} end)
+
+      Hexpm.Billing.create(%{},
+        audit: %{audit_data: audit_data(insert(:user)), organization: organization}
+      )
+
+      assert Repo.get!(Organization, organization.id).trial_end == nil
     end
   end
 

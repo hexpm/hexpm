@@ -37,7 +37,6 @@ defmodule Hexpm.Accounts.Organization do
 
   def changeset(struct, params) do
     cast(struct, params, ~w(name)a)
-    |> put_change(:trial_end, default_trial_end())
     |> validate_required(~w(name)a)
     |> unique_constraint(:name)
     |> update_change(:name, &String.downcase/1)
@@ -161,8 +160,22 @@ defmodule Hexpm.Accounts.Organization do
     active or trialing?(organization)
   end
 
+  def trialing?(%Organization{trial_end: nil}), do: false
+
   def trialing?(%Organization{trial_end: trial_end}) do
     DateTime.compare(trial_end, DateTime.utc_now()) == :gt
+  end
+
+  # The trial starts when the organization sets up billing. A longer trial
+  # set by hand is kept.
+  def start_trial(%Organization{trial_end: trial_end} = organization) do
+    start = default_trial_end()
+
+    if trial_end && DateTime.after?(trial_end, start) do
+      change(organization)
+    else
+      change(organization, trial_end: start)
+    end
   end
 
   defp default_trial_end() do

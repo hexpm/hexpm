@@ -103,35 +103,23 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingTab do
   defp setup_billing_notice(assigns) do
     ~H"""
     <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-6 py-5">
-      <%= if Hexpm.Accounts.Organization.trialing?(@organization) do %>
-        <h2 class="text-amber-900 dark:text-amber-200 text-base font-semibold mb-2">Trial active</h2>
-        <p class="text-sm text-amber-800 dark:text-amber-100 mb-1">
-          Subscription is in trial mode until {HexpmWeb.ViewHelpers.pretty_date(
-            @organization.trial_end
-          )}.
-          After the trial is over private packages will not be available.
-        </p>
-        <p class="text-sm text-amber-800 dark:text-amber-100">
-          Add a payment method to continue using organizations after the trial.
-          Subscription cost is
-          <strong class="text-amber-900 dark:text-amber-50">$9.00 per user / month</strong>
-          + local VAT when applicable.
-          Enter your billing information below to enable the payment method form.
-        </p>
-      <% else %>
-        <h2 class="text-amber-900 dark:text-amber-200 text-base font-semibold mb-2">
-          Subscription not active
-        </h2>
-        <p class="text-sm text-amber-800 dark:text-amber-100 mb-1">
-          Private packages will not be available until a payment method has been added.
-        </p>
-        <p class="text-sm text-amber-800 dark:text-amber-100">
-          Subscription cost is
-          <strong class="text-amber-900 dark:text-amber-50">$9.00 per user / month</strong>
-          + local VAT when applicable.
-          Enter your billing information below to enable the payment method form.
-        </p>
-      <% end %>
+      <h2 class="text-amber-900 dark:text-amber-200 text-base font-semibold mb-2">
+        Enable private packages
+      </h2>
+      <p class="text-sm text-amber-800 dark:text-amber-100 mb-1">
+        Saving your billing information below enables private packages with a one month free trial.
+        You don't need a payment method until the trial ends, after that the subscription cost is
+        <strong class="text-amber-900 dark:text-amber-50">$9.00 per user / month</strong>
+        + local VAT when applicable.
+      </p>
+      <p
+        :if={Hexpm.Accounts.Organization.trialing?(@organization)}
+        class="text-sm text-amber-800 dark:text-amber-100"
+      >
+        The organization's current trial ends on {HexpmWeb.ViewHelpers.pretty_date(
+          @organization.trial_end
+        )}.
+      </p>
     </div>
     """
   end
