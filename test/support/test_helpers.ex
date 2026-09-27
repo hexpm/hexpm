@@ -46,6 +46,18 @@ defmodule Hexpm.TestHelpers do
   end
 
   @doc """
+  The key from the email verification mail sent to this process. Only its hash
+  is stored, so the mail is the one place a test can read it from.
+  """
+  def email_verification_key do
+    receive do
+      {:email, %Swoosh.Email{private: %{type: "verification"}, assigns: %{key: key}}} -> key
+    after
+      0 -> raise "no email verification mail was sent"
+    end
+  end
+
+  @doc """
   Captures logs down to debug, including Ecto's query log.
 
   `capture_log/2`'s `:level` option filters what it keeps; it does not lower

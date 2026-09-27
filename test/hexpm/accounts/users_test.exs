@@ -737,6 +737,34 @@ defmodule Hexpm.Accounts.UsersTest do
     end
   end
 
+  describe "email verification keys" do
+    test "stores a hash of the mailed key, never the key" do
+      user = insert(:user)
+      {:ok, user} = Users.add_email(user, %{email: "new@example.com"}, audit: audit_data(user))
+      key = email_verification_key()
+
+      email = Repo.get_by!(Hexpm.Accounts.Email, email: "new@example.com")
+      assert email.verification_key_hash == :crypto.hash(:sha256, key)
+      assert email.verification_key == nil
+
+      assert :ok = Users.verify_email(user.username, "new@example.com", key)
+      refute Repo.get_by!(Hexpm.Accounts.Email, email: "new@example.com").verification_key_hash
+    end
+
+    test "resending mails a new key and the old one stops working" do
+      user = insert(:user)
+      {:ok, user} = Users.add_email(user, %{email: "new@example.com"}, audit: audit_data(user))
+      old_key = email_verification_key()
+
+      assert :ok = Users.resend_verify_email(user, %{"email" => "new@example.com"})
+      new_key = email_verification_key()
+
+      refute new_key == old_key
+      assert :error = Users.verify_email(user.username, "new@example.com", old_key)
+      assert :ok = Users.verify_email(user.username, "new@example.com", new_key)
+    end
+  end
+
   describe "update_profile/3 when user is an organization" do
     test "updates full_name" do
       organization = insert(:organization, user: build(:user, full_name: "Old Full Name"))
