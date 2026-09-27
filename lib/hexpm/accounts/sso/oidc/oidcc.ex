@@ -86,6 +86,7 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
            {:ok, %Oidcc.Token{id: %Oidcc.Token.Id{claims: claims}} = token} <-
              retrieve_token(code, client_context, transaction, redirect_uri, ref),
            :ok <- validate_claims(claims, connection) do
+        email_verified = email_verified?(claims, token, client_context, connection, ref)
         {refreshed_jwks, refreshed_jwks_expires_at} = refreshed_jwks(ref)
 
         {:ok,
@@ -93,7 +94,7 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
            issuer: claims["iss"],
            subject: claims["sub"],
            email: optional_binary(claims["email"]),
-           email_verified: email_verified?(claims, token, client_context, connection, ref),
+           email_verified: email_verified,
            xms_edov: claims["xms_edov"] == true,
            jwks_document: refreshed_jwks,
            jwks_expires_at: refreshed_jwks_expires_at
@@ -190,7 +191,11 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
   # the ID token carries.
   defp userinfo_email_verified?(email, token, client_context, ref) do
     endpoint = client_context.provider_configuration.userinfo_endpoint
-    opts = %{request_opts: HTTPAdapter.request_opts(ref, @http_timeout)}
+
+    opts = %{
+      refresh_jwks: refresh_jwks_fun(client_context, ref),
+      request_opts: HTTPAdapter.request_opts(ref, @http_timeout)
+    }
 
     with true <- is_binary(endpoint),
          {:ok, _uri} <- SafeURL.validate(endpoint),

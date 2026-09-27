@@ -726,6 +726,33 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
     end
   end
 
+  test "verifies signed userinfo with keys refreshed for the ID token", context do
+    connection = signed_userinfo_connection(context.connection)
+    {replacement_key, refreshed_jwks} = replacement_key()
+
+    token = signed_id_token(replacement_key, "key-2", context.transaction)
+    expect_token_response_with_access_token(token)
+    expect_json_get(@jwks_uri, refreshed_jwks)
+    expect_userinfo(signed_userinfo_response(replacement_key))
+    expect_json_get(@jwks_uri, refreshed_jwks)
+
+    assert {:ok, %{email_verified: true, jwks_document: ^refreshed_jwks}} =
+             exchange_code(connection, context.transaction)
+  end
+
+  test "keeps keys refreshed for signed userinfo", context do
+    connection = signed_userinfo_connection(context.connection)
+    {replacement_key, refreshed_jwks} = replacement_key()
+
+    token = signed_id_token(context.key, "key-1", context.transaction)
+    expect_token_response_with_access_token(token)
+    expect_userinfo(signed_userinfo_response(replacement_key))
+    expect_json_get(@jwks_uri, refreshed_jwks)
+
+    assert {:ok, %{email_verified: true, jwks_document: ^refreshed_jwks}} =
+             exchange_code(connection, context.transaction)
+  end
+
   test "refreshes JWKS once for an unknown key ID and keeps strict validation", context do
     replacement_key = JOSE.JWK.generate_key({:rsa, 1_024})
     {_, public_key} = JOSE.JWK.to_public_map(replacement_key)
@@ -1057,6 +1084,37 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
         discovery_document:
           Map.put(connection.discovery_document, "userinfo_endpoint", @userinfo_endpoint)
     }
+  end
+
+  defp signed_userinfo_connection(connection) do
+    connection = userinfo_connection(connection)
+
+    %{
+      connection
+      | discovery_document:
+          Map.put(connection.discovery_document, "userinfo_signing_alg_values_supported", [
+            "RS256"
+          ])
+    }
+  end
+
+  defp replacement_key do
+    key = JOSE.JWK.generate_key({:rsa, 1_024})
+    {_, public_key} = JOSE.JWK.to_public_map(key)
+    {key, %{"keys" => [Map.put(public_key, "kid", "key-2")]}}
+  end
+
+  defp signed_userinfo_response(key) do
+    userinfo =
+      sign_id_token(key, "key-2", %{
+        "iss" => @issuer,
+        "aud" => "client-id",
+        "sub" => "00u123",
+        "email" => "member@example.com",
+        "email_verified" => true
+      })
+
+    {:ok, 200, [{"content-type", "application/jwt"}], userinfo}
   end
 
   defp exchange_code(connection, transaction) do
