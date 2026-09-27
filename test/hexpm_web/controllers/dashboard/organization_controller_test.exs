@@ -384,6 +384,25 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert response(conn, 200) =~ "Recent Activities"
     end
 
+    test "shows the deletion of the organization's data", %{
+      user: user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user)
+      mock_customer(organization)
+      stub(Hexpm.Billing.Mock, :get, fn _name, _opts -> nil end)
+
+      assert :ok = Hexpm.AdminTasks.delete_organization_data(organization.name)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/audit-logs")
+
+      assert response(conn, 200) =~
+               "Deleted the packages and policies of organization #{organization.name}"
+    end
+
     test "queries audit_logs only on the audit logs tab", %{
       user: user,
       organization: organization

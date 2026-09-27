@@ -865,7 +865,48 @@ defmodule Hexpm.AdminTasks do
     end
   end
 
-  defp organization_data_job(organization) do
+  @doc """
+  Deletes an organization's data and keeps the organization.
+
+  Removes every package and release in the organization's repository and its
+  policies, then its stored objects the way `delete_organization/2` does with
+  `delete_data: true`: `repos/<name>/` in the repository, preview and diff
+  buckets, the uploads kept under `debug/` in the repository bucket and
+  `<name>/` in the private docs bucket, the CDN keys they were served under,
+  and every backup snapshot 35 days later. The organization, its repository,
+  members, keys, audit logs and billing customer stay, and its members can
+  publish again once billing is back.
+
+  A billing subscription that is active, trialing or past due refuses the
+  deletion with `{:error, {:billing_live, status}}`; billing is otherwise left
+  as it is.
+
+  ## Examples
+
+      iex> AdminTasks.delete_organization_data("acme")
+      :ok
+  """
+  @spec delete_organization_data(String.t()) :: :ok | {:error, term()}
+  def delete_organization_data(name) do
+    with {:ok, organization} <- find_organization(name),
+         :ok <- refuse_live_billing(organization) do
+      # Read while the rows are still there, the CDN keys are built from them.
+      job = organization_data_job(organization, kept: true)
+      Organizations.delete_data(organization, audit: AuditLogs.admin(), jobs: [job])
+    end
+  end
+
+  defp refuse_live_billing(organization) do
+    case Hexpm.Billing.get(organization.name) do
+      %{"subscription" => %{"status" => status}} when status in @live_billing_statuses ->
+        {:error, {:billing_live, status}}
+
+      _customer ->
+        :ok
+    end
+  end
+
+  defp organization_data_job(organization, opts \\ []) do
     organization = Repo.preload(organization, [:repository, :policies])
 
     packages =
@@ -888,7 +929,7 @@ defmodule Hexpm.AdminTasks do
     ]
 
     policies = Enum.map(organization.policies, & &1.name)
-    Hexpm.Accounts.OrganizationDataWorker.new_job(names, packages, policies)
+    Hexpm.Accounts.OrganizationDataWorker.new_job(names, packages, policies, opts)
   end
 
   @doc """

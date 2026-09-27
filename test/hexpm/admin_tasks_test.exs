@@ -1406,6 +1406,93 @@ defmodule Hexpm.AdminTasksTest do
     end
   end
 
+  describe "delete_organization_data/1" do
+    setup do
+      stub(Hexpm.Billing.Mock, :get, fn _organization, _opts -> nil end)
+      :ok
+    end
+
+    test "deletes the packages, releases, policies and objects and keeps the organization" do
+      repository = insert(:repository)
+      organization = repository.organization
+      name = organization.name
+      package = insert(:package, repository_id: repository.id)
+      insert(:release, package: package)
+      member = insert(:user)
+      insert(:organization_user, organization: organization, user: member)
+      key = insert(:key, organization: organization)
+
+      Repo.insert!(%Hexpm.Repository.Policy{
+        name: "internal",
+        visibility: "private",
+        organization_id: organization.id
+      })
+
+      Repo.update_all(from(o in Organization, where: o.id == ^organization.id),
+        set: [deletion_scheduled_at: DateTime.utc_now(), deletion_notices: ["scheduled"]]
+      )
+
+      Hexpm.Store.put(:repo_bucket, "repos/#{name}/tarballs/#{package.name}-1.0.0.tar", "T", [])
+
+      assert :ok = AdminTasks.delete_organization_data(name)
+
+      organization = Repo.get!(Organization, organization.id)
+      refute organization.deletion_scheduled_at
+      assert organization.deletion_notices == []
+      assert Repo.get(Hexpm.Repository.Repository, repository.id)
+      refute Repo.get(Package, package.id)
+      refute Repo.exists?(from(r in Release, where: r.package_id == ^package.id))
+
+      refute Repo.exists?(
+               from(p in Hexpm.Repository.Policy, where: p.organization_id == ^organization.id)
+             )
+
+      assert Repo.get_by(Hexpm.Accounts.OrganizationUser, user_id: member.id)
+      assert Repo.get(Hexpm.Accounts.Key, key.id)
+      refute Repo.exists?(Hexpm.Accounts.ReservedUsername.by_name(name))
+
+      assert [job] = all_enqueued(worker: Hexpm.Accounts.OrganizationDataWorker)
+      assert job.args["kept"] == true
+      assert :ok = perform_job(Hexpm.Accounts.OrganizationDataWorker, job.args)
+      assert Hexpm.Store.list(:repo_bucket, "repos/#{name}/") |> Enum.to_list() == []
+      assert Hexpm.Store.get(:deletions_bucket, "organizations/#{name}", [])
+    end
+
+    test "refuses while the subscription is live and leaves billing alone" do
+      repository = insert(:repository)
+      name = repository.organization.name
+      package = insert(:package, repository_id: repository.id)
+
+      expect(Hexpm.Billing.Mock, :get, fn ^name, _opts ->
+        %{"subscription" => %{"status" => "past_due"}}
+      end)
+
+      expect(Hexpm.Billing.Mock, :cancel, 0, fn _name -> flunk("cancelled billing") end)
+
+      assert {:error, {:billing_live, "past_due"}} = AdminTasks.delete_organization_data(name)
+      assert Repo.get(Package, package.id)
+      assert all_enqueued(worker: Hexpm.Accounts.OrganizationDataWorker) == []
+    end
+
+    test "does not touch a subscription that has ended" do
+      repository = insert(:repository)
+      name = repository.organization.name
+
+      expect(Hexpm.Billing.Mock, :get, fn ^name, _opts ->
+        %{"subscription" => %{"status" => "canceled"}}
+      end)
+
+      expect(Hexpm.Billing.Mock, :cancel, 0, fn _name -> flunk("cancelled billing") end)
+
+      assert :ok = AdminTasks.delete_organization_data(name)
+    end
+
+    test "refuses the public organization and an unknown name" do
+      assert {:error, :public_organization} = AdminTasks.delete_organization_data("hexpm")
+      assert {:error, :organization_not_found} = AdminTasks.delete_organization_data("nope")
+    end
+  end
+
   describe "add_install/2" do
     test "adds new install record" do
       initial_count = Repo.aggregate(Hexpm.Repository.Install, :count)

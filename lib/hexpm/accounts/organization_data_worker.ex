@@ -1,13 +1,14 @@
 defmodule Hexpm.Accounts.OrganizationDataWorker do
   @moduledoc """
-  Deletes the stored objects of a deleted organization, purges the CDN keys
-  they were served under and records the deletion for the nightly backup.
+  Deletes the stored objects of a deleted organization, or of one whose data
+  was deleted and which was kept, purges the CDN keys they were served under
+  and records the deletion for the nightly backup.
 
   The job is inserted in the transaction that deletes the organization's
-  rows, so a store request failing after the commit is retried rather than
-  leaving objects that nothing points at any more. Every step can run again:
-  deleting an emptied prefix deletes nothing and the backup acts on a marker
-  written again the same way.
+  rows, or its packages and policies, so a store request failing after the
+  commit is retried rather than leaving objects that nothing points at any
+  more. Every step can run again: deleting an emptied prefix deletes nothing
+  and the backup acts on a marker written again the same way.
 
   `names` holds the organization's name and, when it was renamed, the name
   of its repository, which the objects were written under.
@@ -15,6 +16,7 @@ defmodule Hexpm.Accounts.OrganizationDataWorker do
 
   use Oban.Worker, queue: :heavy, max_attempts: 10
 
+  import Ecto.Query, only: [from: 2]
   require Logger
 
   alias Hexpm.Repo
@@ -22,11 +24,12 @@ defmodule Hexpm.Accounts.OrganizationDataWorker do
   # Fastly takes at most 256 surrogate keys in one purge request.
   @purge_keys_per_request 256
 
-  def new_job(names, packages, policies) do
+  def new_job(names, packages, policies, opts \\ []) do
     new(%{
       "names" => Enum.uniq(names),
       "packages" => Enum.map(packages, fn {package, version} -> [package, version] end),
-      "policies" => policies
+      "policies" => policies,
+      "kept" => Keyword.get(opts, :kept, false)
     })
   end
 
@@ -37,10 +40,11 @@ defmodule Hexpm.Accounts.OrganizationDataWorker do
   def perform(%Oban.Job{args: args}) do
     Repo.write_mode!()
 
-    {names, taken} = Enum.split_with(Map.fetch!(args, "names"), &free?/1)
+    deletable? = if Map.get(args, "kept", false), do: &emptied?/1, else: &free?/1
+    {names, taken} = Enum.split_with(Map.fetch!(args, "names"), deletable?)
 
     for name <- taken do
-      message = "Stored objects of #{name} kept: the name belongs to an organization again"
+      message = "Stored objects of #{name} kept: #{kept_reason(args)}"
       Logger.error(%{message: message, event: "organization_data.kept", name: name})
       Sentry.capture_message(message, extra: %{name: name})
       Hexpm.Slack.post(message)
@@ -86,11 +90,29 @@ defmodule Hexpm.Accounts.OrganizationDataWorker do
   # The job runs after the transaction that reserved the names, but a name
   # renamed away from before that could have been taken since.
   defp free?(name) do
-    import Ecto.Query, only: [from: 2]
-
     not Repo.exists?(from(o in Hexpm.Accounts.Organization, where: o.name == ^name)) and
       not Repo.exists?(from(r in Hexpm.Repository.Repository, where: r.name == ^name))
   end
+
+  # A kept organization can publish again once billing is back, which can
+  # happen between the deletion's commit and a retry of this job.
+  defp emptied?(name) do
+    not Repo.exists?(
+      from(p in Hexpm.Repository.Package,
+        join: r in assoc(p, :repository),
+        where: r.name == ^name
+      )
+    ) and
+      not Repo.exists?(
+        from(p in Hexpm.Repository.Policy,
+          join: o in assoc(p, :organization),
+          where: o.name == ^name
+        )
+      )
+  end
+
+  defp kept_reason(%{"kept" => true}), do: "packages or policies were added under the name again"
+  defp kept_reason(_args), do: "the name belongs to an organization again"
 
   @doc """
   Every object an organization named `name` has in a bucket, under one prefix

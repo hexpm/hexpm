@@ -18,7 +18,16 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
   defp days_ago(days), do: DateTime.add(DateTime.utc_now(), -days * @day, :second)
   defp days_from_now(days), do: DateTime.add(DateTime.utc_now(), days * @day, :second)
 
+  # An inactive organization with a package in its repository, which is what
+  # makes it schedulable.
   defp inactive_organization(attrs) do
+    organization = empty_inactive_organization(attrs)
+    repository = insert(:repository, name: organization.name, organization: organization)
+    insert(:package, repository_id: repository.id)
+    organization
+  end
+
+  defp empty_inactive_organization(attrs) do
     attrs =
       Keyword.merge(
         [billing_active: false, trial_end: days_ago(400), billing_inactive_since: days_ago(100)],
@@ -26,6 +35,23 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
       )
 
     insert(:organization, attrs)
+  end
+
+  defp insert_policy(organization) do
+    Repo.insert!(%Hexpm.Repository.Policy{
+      name: "internal",
+      visibility: "private",
+      organization_id: organization.id
+    })
+  end
+
+  defp packages?(organization) do
+    Repo.exists?(
+      from(p in Hexpm.Repository.Package,
+        join: r in assoc(p, :repository),
+        where: r.organization_id == ^organization.id
+      )
+    )
   end
 
   defp with_admin(organization) do
@@ -79,7 +105,7 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
                OrganizationDeletions.run()
 
       refute Organizations.get(unscheduled_name).deletion_scheduled_at
-      assert Organizations.get(due_name)
+      assert packages?(due)
       assert entries() == []
       assert all_enqueued(worker: Hexpm.Accounts.OrganizationDataWorker) == []
     end
@@ -101,9 +127,23 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
       assert organization.deletion_notices == ["scheduled"]
 
       assert [entry] = entries()
-      assert entry.type == "organization_deletion_scheduled"
+      assert entry.type == "organization_data_deletion_scheduled"
       assert entry.recipients == [email]
-      assert entry.subject =~ "#{name} will be deleted on"
+      assert entry.subject =~ "The packages of #{name} will be deleted on"
+    end
+
+    test "leaves an organization with nothing to delete alone" do
+      empty = empty_inactive_organization(billing_inactive_since: days_ago(10))
+      assert %{scheduled: []} = OrganizationDeletions.run()
+      refute Organizations.get(empty.name).deletion_scheduled_at
+      assert entries() == []
+    end
+
+    test "schedules an organization that only has policies" do
+      organization = empty_inactive_organization(billing_inactive_since: days_ago(10))
+      insert_policy(organization)
+      name = organization.name
+      assert %{scheduled: [^name]} = OrganizationDeletions.run()
     end
 
     test "counts from the end of the trial when that is later" do
@@ -132,7 +172,8 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
 
     test "counts an organization that never had billing from the end of its trial" do
       {organization, _email} =
-        insert(:organization, billing_active: false, trial_end: days_ago(10)) |> with_admin()
+        inactive_organization(billing_inactive_since: nil, trial_end: days_ago(10))
+        |> with_admin()
 
       name = organization.name
       assert %{scheduled: [^name]} = OrganizationDeletions.run()
@@ -151,7 +192,7 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
       app_env(:hexpm, :slack_webhook_url, "https://hooks.slack.test/T/B/x")
 
       expect(Hexpm.HTTP.Mock, :post, fn _url, _headers, %{text: text} ->
-        assert text =~ "3 organization(s) scheduled for deletion, the first ("
+        assert text =~ "3 organization(s) scheduled for data deletion, the first ("
         {:ok, 200, [], "ok"}
       end)
 
@@ -178,8 +219,8 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
       assert DateTime.diff(scheduled_at, days_from_now(7), :second) |> abs() < 60
 
       assert [
-               %{type: "organization_deletion_scheduled"},
-               %{type: "organization_deletion_reminder"}
+               %{type: "organization_data_deletion_scheduled"},
+               %{type: "organization_data_deletion_reminder"}
              ] =
                entries()
     end
@@ -197,7 +238,10 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
       assert %{reminded: [{name, "7_days"}]} = OrganizationDeletions.run()
       assert name == organization.name
       assert Organizations.get(name).deletion_notices == ["scheduled", "7_days"]
-      assert [%{type: "organization_deletion_reminder", recipients: [^email]} = entry] = entries()
+
+      assert [%{type: "organization_data_deletion_reminder", recipients: [^email]} = entry] =
+               entries()
+
       assert entry.subject =~ "will be deleted in 7 days"
 
       assert %{reminded: []} = OrganizationDeletions.run()
@@ -267,9 +311,12 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
   end
 
   describe "delete" do
-    test "deletes the organization with its data on the day and tells the admins" do
+    test "deletes the data on the day, keeps the organization and tells the admins" do
       repository = insert(:repository)
       organization = repository.organization
+      package = insert(:package, repository_id: repository.id)
+      insert(:release, package: package)
+      insert_policy(organization)
 
       from(o in Organization, where: o.id == ^organization.id)
       |> Repo.update_all(
@@ -292,11 +339,30 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
         assert :ok = perform_job(Hexpm.Accounts.OrganizationDataWorker, job.args)
       end
 
-      refute Organizations.get(name)
-      assert Repo.exists?(Hexpm.Accounts.ReservedUsername.by_name(name))
+      organization = Organizations.get(name)
+      assert organization
+      refute organization.deletion_scheduled_at
+      assert organization.deletion_notices == []
+      assert Repo.get_by(Hexpm.Repository.Repository, organization_id: organization.id)
+      refute packages?(organization)
+
+      refute Repo.exists?(
+               from(p in Hexpm.Repository.Policy, where: p.organization_id == ^organization.id)
+             )
+
+      refute Repo.exists?(Hexpm.Accounts.ReservedUsername.by_name(name))
+
+      assert Repo.get_by(Hexpm.Accounts.AuditLog,
+               action: "organization.delete_data",
+               organization_id: organization.id
+             )
+
       assert Hexpm.Store.list(:repo_bucket, "repos/#{name}/") |> Enum.to_list() == []
       assert Hexpm.Store.get(:deletions_bucket, "organizations/#{name}", [])
-      assert [%{type: "organization_deleted", recipients: [^email]}] = entries()
+      assert [%{type: "organization_data_deleted", recipients: [^email]}] = entries()
+
+      # With nothing left, the next run doesn't schedule it again.
+      assert %{scheduled: [], deleted: []} = OrganizationDeletions.run()
     end
 
     test "deletes at most five per run, oldest schedule first" do
@@ -312,9 +378,9 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
       assert length(deleted) == 5
 
       [first, second | _rest] = organizations
-      assert Organizations.get(first.name)
-      assert Organizations.get(second.name)
-      refute Organizations.get(List.last(organizations).name)
+      assert packages?(first)
+      assert packages?(second)
+      refute packages?(List.last(organizations))
     end
 
     test "skips and clears an organization whose subscription is live" do
@@ -337,7 +403,7 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
       assert %{deleted: [{^name, {:skipped, :billing_live}}]} = OrganizationDeletions.run()
 
       organization = Organizations.get(name)
-      assert organization
+      assert packages?(organization)
       refute organization.deletion_scheduled_at
     end
 
@@ -357,7 +423,7 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
           assert %{deleted: [{^name, {:error, %RuntimeError{}}}]} = OrganizationDeletions.run()
         end)
 
-      assert log =~ "Organization deletion failed"
+      assert log =~ "Organization data deletion failed"
       assert log =~ "billing down"
       assert Organizations.get(name).deletion_scheduled_at
     end
@@ -382,9 +448,9 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
         )
 
       assert %{deleted: []} = OrganizationDeletions.run()
-      assert Organizations.get(pending.name)
-      assert Organizations.get(unreminded.name)
-      assert Organizations.get(back.name)
+      assert packages?(pending)
+      assert packages?(unreminded)
+      assert packages?(back)
     end
 
     test "does not delete in the run that sent the last reminder" do

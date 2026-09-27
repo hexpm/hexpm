@@ -197,7 +197,7 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
 
   defp organization_state_description(:active), do: "with active, trialing or comped billing"
   defp organization_state_description(:inactive), do: "without billing"
-  defp organization_state_description(:scheduled), do: "scheduled for deletion"
+  defp organization_state_description(:scheduled), do: "scheduled for data deletion"
 
   # telemetry_poller stops calling a measurement that raises or exits, for
   # good. The first poll runs as the node boots, before the repo is up, and a

@@ -88,6 +88,36 @@ defmodule Hexpm.Accounts.OrganizationDataWorkerTest do
       refute Hexpm.Store.get(:repo_bucket, "repos/gone_name/names", [])
       refute Hexpm.Store.get(:deletions_bucket, "organizations/#{taken}", [])
     end
+
+    test "deletes the objects of a kept organization that has nothing left" do
+      repository = insert(:repository)
+      name = repository.organization.name
+      Hexpm.Store.put(:repo_bucket, "repos/#{name}/names", "OLD", [])
+
+      args = OrganizationDataWorker.new_job([name], [], [], kept: true).changes.args
+
+      assert :ok = perform_job(OrganizationDataWorker, args)
+      refute Hexpm.Store.get(:repo_bucket, "repos/#{name}/names", [])
+      assert Hexpm.Store.get(:deletions_bucket, "organizations/#{name}", [])
+    end
+
+    test "keeps the objects of a kept organization that published again" do
+      repository = insert(:repository)
+      name = repository.organization.name
+      insert(:package, repository_id: repository.id)
+      Hexpm.Store.put(:repo_bucket, "repos/#{name}/names", "LIVE", [])
+
+      args = OrganizationDataWorker.new_job([name], [], [], kept: true).changes.args
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert :ok = perform_job(OrganizationDataWorker, args)
+        end)
+
+      assert log =~ "Stored objects of #{name} kept: packages or policies were added"
+      assert Hexpm.Store.get(:repo_bucket, "repos/#{name}/names", []) == "LIVE"
+      refute Hexpm.Store.get(:deletions_bucket, "organizations/#{name}", [])
+    end
   end
 
   # Organization names are [a-z0-9_]+, three characters or more.
