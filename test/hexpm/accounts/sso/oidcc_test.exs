@@ -26,6 +26,7 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
   @authorization_endpoint "https://1.1.1.1/oauth2/v1/authorize"
   @token_endpoint "https://1.1.1.1/oauth2/v1/token"
   @jwks_uri "https://1.1.1.1/oauth2/v1/keys"
+  @userinfo_endpoint "https://1.1.1.1/oauth2/v1/userinfo"
 
   setup :verify_on_exit!
 
@@ -619,6 +620,112 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
              )
   end
 
+  test "reads email_verified and xms_edov as true only when the claim is the boolean true",
+       context do
+    for {overrides, email_verified, xms_edov} <- [
+          {%{}, false, false},
+          {%{"email_verified" => true}, true, false},
+          {%{"xms_edov" => true}, false, true},
+          {%{"email_verified" => false, "xms_edov" => false}, false, false},
+          {%{"email_verified" => "true", "xms_edov" => "true"}, false, false},
+          {%{"email_verified" => "True", "xms_edov" => false}, false, false}
+        ] do
+      token = signed_id_token(context.key, "key-1", context.transaction, overrides)
+      expect_token_response(token)
+
+      assert {:ok, %{email_verified: ^email_verified, xms_edov: ^xms_edov}} =
+               Oidcc.exchange_code(
+                 context.connection,
+                 context.transaction,
+                 "authorization-code",
+                 context.transaction.redirect_uri,
+                 context.connection.client_secret
+               )
+    end
+  end
+
+  test "reads email_verified from userinfo when the ID token leaves it out", context do
+    connection = userinfo_connection(context.connection)
+    token = signed_id_token(context.key, "key-1", context.transaction)
+    expect_token_response_with_access_token(token)
+
+    expect_userinfo(
+      {:ok, 200, [{"content-type", "application/json"}],
+       JSON.encode!(%{
+         "sub" => "00u123",
+         "email" => "member@example.com",
+         "email_verified" => true
+       })}
+    )
+
+    assert {:ok, %{email: "member@example.com", email_verified: true}} =
+             exchange_code(connection, context.transaction)
+  end
+
+  test "reads userinfo as unverified unless it confirms the ID token's own subject and address",
+       context do
+    connection = userinfo_connection(context.connection)
+
+    for body <- [
+          %{"sub" => "00u123", "email" => "member@example.com", "email_verified" => false},
+          %{"sub" => "00u123", "email" => "member@example.com"},
+          %{"sub" => "00u123", "email" => "member@example.com", "email_verified" => "true"},
+          %{"sub" => "00u123", "email" => "other@example.com", "email_verified" => true},
+          %{"sub" => "00u123", "email_verified" => true},
+          %{"sub" => "00u999", "email" => "member@example.com", "email_verified" => true}
+        ] do
+      token = signed_id_token(context.key, "key-1", context.transaction)
+      expect_token_response_with_access_token(token)
+      expect_userinfo({:ok, 200, [{"content-type", "application/json"}], JSON.encode!(body)})
+
+      assert {:ok, %{email_verified: false}} = exchange_code(connection, context.transaction)
+    end
+  end
+
+  test "reads a failed userinfo request as unverified without failing the login", context do
+    connection = userinfo_connection(context.connection)
+
+    for response <- [
+          {:ok, 401, [{"content-type", "application/json"}], "{}"},
+          {:ok, 500, [], ""},
+          {:ok, 200, [{"content-type", "application/json"}], "not json"},
+          {:error, :timeout}
+        ] do
+      token = signed_id_token(context.key, "key-1", context.transaction)
+      expect_token_response_with_access_token(token)
+      expect_userinfo(response)
+
+      assert {:ok, %{subject: "00u123", email_verified: false}} =
+               exchange_code(connection, context.transaction)
+    end
+  end
+
+  test "asks userinfo only with just-in-time membership on and email_verified absent",
+       context do
+    entra_issuer =
+      "https://login.microsoftonline.com/11111111-2222-3333-4444-555555555555/v2.0"
+
+    userinfo = userinfo_connection(context.connection)
+
+    cases = [
+      {%{userinfo | jit_seat_policy: nil}, %{}},
+      {userinfo, %{"email_verified" => false}},
+      {%{userinfo | discovery_document: context.discovery_document}, %{}},
+      {%{
+         userinfo
+         | issuer: entra_issuer,
+           discovery_document: Map.put(userinfo.discovery_document, "issuer", entra_issuer)
+       }, %{"iss" => entra_issuer}}
+    ]
+
+    for {connection, overrides} <- cases do
+      token = signed_id_token(context.key, "key-1", context.transaction, overrides)
+      expect_token_response_with_access_token(token)
+
+      assert {:ok, %{email_verified: false}} = exchange_code(connection, context.transaction)
+    end
+  end
+
   test "refreshes JWKS once for an unknown key ID and keeps strict validation", context do
     replacement_key = JOSE.JWK.generate_key({:rsa, 1_024})
     {_, public_key} = JOSE.JWK.to_public_map(replacement_key)
@@ -940,6 +1047,42 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
       assert opts[:connect_address] == {1, 1, 1, 1}
       assert opts[:connect_hostname] == "1.1.1.1"
       {:ok, 200, [{"content-type", "application/json"}], JSON.encode!(%{"id_token" => id_token})}
+    end)
+  end
+
+  defp userinfo_connection(connection) do
+    %{
+      connection
+      | jit_seat_policy: "block",
+        discovery_document:
+          Map.put(connection.discovery_document, "userinfo_endpoint", @userinfo_endpoint)
+    }
+  end
+
+  defp exchange_code(connection, transaction) do
+    Oidcc.exchange_code(
+      connection,
+      transaction,
+      "authorization-code",
+      transaction.redirect_uri,
+      connection.client_secret
+    )
+  end
+
+  defp expect_token_response_with_access_token(id_token) do
+    expect(Hexpm.HTTP.Mock, :post, fn _url, _headers, _body, _opts ->
+      body = %{"id_token" => id_token, "access_token" => "access-token", "token_type" => "Bearer"}
+      {:ok, 200, [{"content-type", "application/json"}], JSON.encode!(body)}
+    end)
+  end
+
+  defp expect_userinfo(response) do
+    expect(Hexpm.HTTP.Mock, :get, fn url, headers, opts ->
+      assert url == @userinfo_endpoint
+      assert List.keyfind(headers, "authorization", 0) == {"authorization", "Bearer access-token"}
+      assert opts[:connect_address] == {1, 1, 1, 1}
+      assert opts[:connect_hostname] == "1.1.1.1"
+      response
     end)
   end
 

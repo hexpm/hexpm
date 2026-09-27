@@ -83,7 +83,7 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
       ) do
     with_adapter(fn ref ->
       with {:ok, client_context} <- client_context(connection, client_secret),
-           {:ok, claims} <-
+           {:ok, %Oidcc.Token{id: %Oidcc.Token.Id{claims: claims}} = token} <-
              retrieve_token(code, client_context, transaction, redirect_uri, ref),
            :ok <- validate_claims(claims, connection) do
         {refreshed_jwks, refreshed_jwks_expires_at} = refreshed_jwks(ref)
@@ -93,7 +93,8 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
            issuer: claims["iss"],
            subject: claims["sub"],
            email: optional_binary(claims["email"]),
-           email_verified: claims["email_verified"] == true,
+           email_verified: email_verified?(claims, token, client_context, connection, ref),
+           xms_edov: claims["xms_edov"] == true,
            jwks_document: refreshed_jwks,
            jwks_expires_at: refreshed_jwks_expires_at
          }}
@@ -156,10 +157,51 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
     }
 
     case oidcc_retrieve(code, client_context, opts, ref) do
-      {:ok, %Oidcc.Token{id: %Oidcc.Token.Id{claims: claims}}} -> {:ok, claims}
+      {:ok, %Oidcc.Token{id: %Oidcc.Token.Id{}} = token} -> {:ok, token}
       {:ok, %Oidcc.Token{}} -> error(:token, :id_token_missing)
       {:error, reason} -> token_error(reason, ref)
     end
+  end
+
+  # Okta's organization authorization server leaves email_verified out of the
+  # ID token whenever it also issues an access token, which the authorization
+  # code flow always does, and returns it from userinfo instead. Only
+  # just-in-time membership reads the claim, so userinfo is asked only while
+  # that is on, and any failure there reads as unverified rather than failing
+  # the login. Entra never returns the claim from userinfo.
+  defp email_verified?(
+         %{"email_verified" => verified},
+         _token,
+         _client_context,
+         _connection,
+         _ref
+       ),
+       do: verified == true
+
+  defp email_verified?(%{"email" => email}, token, client_context, connection, ref)
+       when is_binary(email) do
+    Connection.jit_enabled?(connection) and not Issuer.entra?(connection.issuer) and
+      userinfo_email_verified?(email, token, client_context, ref)
+  end
+
+  defp email_verified?(_claims, _token, _client_context, _connection, _ref), do: false
+
+  # Userinfo vouches only for the address it returns, so it has to be the one
+  # the ID token carries.
+  defp userinfo_email_verified?(email, token, client_context, ref) do
+    endpoint = client_context.provider_configuration.userinfo_endpoint
+    opts = %{request_opts: HTTPAdapter.request_opts(ref, @http_timeout)}
+
+    with true <- is_binary(endpoint),
+         {:ok, _uri} <- SafeURL.validate(endpoint),
+         {:ok, %{"email" => ^email, "email_verified" => true}} <-
+           Oidcc.Userinfo.retrieve(token, client_context, opts) do
+      true
+    else
+      _other -> false
+    end
+  rescue
+    _exception -> false
   end
 
   defp oidcc_retrieve(code, client_context, opts, ref) do

@@ -20,6 +20,7 @@ defmodule HexpmWeb.DocsControllerTest do
     # catches nothing.
     assert html =~ "never submitted for review"
     assert html =~ "tenant-specific v2 issuer"
+    assert html =~ "xms_edov"
     assert html =~ "organization access session"
     assert html =~ "never suppresses a personal Hexpm two-factor prompt"
 
