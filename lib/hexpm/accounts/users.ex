@@ -714,9 +714,7 @@ defmodule Hexpm.Accounts.Users do
         {:error, :already_verified}
 
       true ->
-        Emails.verification(user, email)
-        |> Mailer.deliver!()
-
+        email_verification(user, email)
         :ok
     end
   end

@@ -10,7 +10,8 @@ defmodule Hexpm.Accounts.Email do
     field :primary, :boolean, default: false
     field :public, :boolean, default: false
     field :gravatar, :boolean, default: false
-    field :verification_key, :string
+    field :verification_key_hash, :binary, redact: true
+    field :verification_key, :string, virtual: true, redact: true
     field :verification_expiry, :utc_datetime_usec
 
     belongs_to :user, User
@@ -32,8 +33,7 @@ defmodule Hexpm.Accounts.Email do
     |> downcase_and_validate_email()
     |> validate_verified_email_exists(:email, message: "already in use")
     |> put_change(:verified, verified?)
-    |> put_change(:verification_key, Auth.gen_key())
-    |> put_change(:verification_expiry, DateTime.utc_now())
+    |> put_verification_key()
   end
 
   def changeset(email, :create_for_org, params, false) do
@@ -43,17 +43,19 @@ defmodule Hexpm.Accounts.Email do
   end
 
   def verification(email) do
-    change(email, %{
-      verification_key: Auth.gen_key(),
-      verification_expiry: DateTime.utc_now()
-    })
+    email
+    |> change()
+    |> put_verification_key()
   end
 
   def verify?(nil, _key), do: false
 
   def verify?(email, key) do
-    email_key = email.verification_key
-    valid_key? = !!(email_key && Hexpm.Utils.secure_check(email_key, key))
+    key_hash = email.verification_key_hash
+
+    valid_key? =
+      is_binary(key_hash) and is_binary(key) and Plug.Crypto.secure_compare(key_hash, hash(key))
+
     within_time? = Hexpm.Utils.within_last_day?(email.verification_expiry)
     valid_key? and within_time?
   end
@@ -61,7 +63,7 @@ defmodule Hexpm.Accounts.Email do
   def verify(email) do
     change(email, %{
       verified: true,
-      verification_key: nil,
+      verification_key_hash: nil,
       verification_expiry: nil
     })
     |> unique_constraint(:email, name: "emails_email_key", message: "already in use")
@@ -79,6 +81,17 @@ defmodule Hexpm.Accounts.Email do
   def order_emails(emails) do
     Enum.sort_by(emails, &[not &1.primary, not &1.public, not &1.verified, -&1.id])
   end
+
+  defp put_verification_key(changeset) do
+    key = Auth.gen_key()
+
+    changeset
+    |> put_change(:verification_key, key)
+    |> put_change(:verification_key_hash, hash(key))
+    |> put_change(:verification_expiry, DateTime.utc_now())
+  end
+
+  defp hash(key), do: :crypto.hash(:sha256, key)
 
   defp downcase_and_validate_email(changeset) do
     changeset

@@ -140,13 +140,14 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     user2 = insert(:user, emails: [build(:email, verified: false)])
     user = add_email(c.user, hd(user2.emails).email)
     [dup_email] = tl(user.emails)
+    key = email_verification_key()
 
     conn =
       build_conn()
       |> get("/email/verify", %{
         username: c.user.username,
         email: dup_email.email,
-        key: dup_email.verification_key
+        key: key
       })
 
     assert redirected_to(conn) == "/"
@@ -330,7 +331,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
   test "resend verify email", c do
     new_email = Fake.sequence(:email)
     user = add_email(c.user, new_email)
-    email = Enum.find(user.emails, &(&1.email == new_email))
+    added_key = email_verification_key()
 
     conn =
       build_conn()
@@ -340,7 +341,6 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     assert redirected_to(conn) == "/dashboard/email"
     assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "verification email has been sent"
 
-    assert_email_sent(Hexpm.Emails.verification(user, email))
-    assert_email_sent(Hexpm.Emails.verification(user, email))
+    refute email_verification_key() == added_key
   end
 end
