@@ -75,6 +75,32 @@ defmodule HexpmWeb.TestControllerTest do
     assert json_response(conn, 400)["error"] == "Failed to create user"
   end
 
+  test "POST /api/key creates an API key for the user and returns 201" do
+    user = insert(:user)
+
+    conn =
+      json_post(build_conn(), "/api/key", %{
+        "username" => user.username,
+        "name" => "test_key",
+        "permissions" => [%{"domain" => "api"}]
+      })
+
+    assert %{"name" => "test_key", "secret" => secret} = json_response(conn, 201)
+
+    conn =
+      build_conn()
+      |> put_req_header("authorization", secret)
+      |> get("/api/keys")
+
+    assert [%{"name" => "test_key", "authing_key" => true}] = json_response(conn, 200)
+  end
+
+  test "POST /api/key returns 400 for an unknown user" do
+    conn = json_post(build_conn(), "/api/key", %{"username" => "nobody", "name" => "test_key"})
+
+    assert json_response(conn, 400)["error"] == "User not found"
+  end
+
   test "POST /api/repo creates organization and returns 204" do
     user = insert(:user)
     org_name = "org_" <> Fake.sequence(:package)
