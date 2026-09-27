@@ -102,10 +102,24 @@ defmodule Hexpm.Store do
   Deletes every object under `prefix` and returns how many there were. The
   listing is lazy and a prefix can cover a page per file of every version of
   a package, so the keys go out in batches rather than one call.
+
+  With `written_before: datetime` only the objects the store last wrote
+  before then are deleted.
   """
-  def delete_prefix(bucket, prefix) do
-    bucket
-    |> list(prefix)
+  def delete_prefix(bucket, prefix, opts \\ []) do
+    objects = list_objects(bucket, prefix)
+
+    objects =
+      case Keyword.fetch(opts, :written_before) do
+        {:ok, cutoff} ->
+          Stream.filter(objects, &(DateTime.compare(&1.last_modified, cutoff) == :lt))
+
+        :error ->
+          objects
+      end
+
+    objects
+    |> Stream.map(& &1.key)
     |> Stream.chunk_every(@delete_batch)
     |> Enum.reduce(0, fn keys, count ->
       delete_many(bucket, keys)

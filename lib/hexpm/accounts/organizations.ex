@@ -182,10 +182,23 @@ defmodule Hexpm.Accounts.Organizations do
 
   defp delete_repository(multi, nil), do: multi
 
-  # Releases and package reports go before packages because neither
-  # releases_package_id_fkey nor package_reports_package_id_fkey cascades, and
-  # reserved_packages before the repository for the same reason.
+  # reserved_packages goes before the repository because
+  # reserved_packages_repository_id_fkey doesn't cascade.
   defp delete_repository(multi, repository) do
+    multi
+    |> delete_packages(repository)
+    |> Multi.delete_all(
+      :reserved_packages,
+      from(r in "reserved_packages", where: r.repository_id == ^repository.id)
+    )
+    |> Multi.delete(:repository, repository)
+  end
+
+  defp delete_packages(multi, nil), do: multi
+
+  # Releases and package reports go before packages because neither
+  # releases_package_id_fkey nor package_reports_package_id_fkey cascades.
+  defp delete_packages(multi, repository) do
     packages = from(p in Package, where: p.repository_id == ^repository.id)
     package_ids = from(p in packages, select: p.id)
 
@@ -199,11 +212,6 @@ defmodule Hexpm.Accounts.Organizations do
       from(r in Release, where: r.package_id in subquery(package_ids))
     )
     |> Multi.delete_all(:packages, packages)
-    |> Multi.delete_all(
-      :reserved_packages,
-      from(r in "reserved_packages", where: r.repository_id == ^repository.id)
-    )
-    |> Multi.delete(:repository, repository)
   end
 
   defp delete_organization_user(multi, nil), do: multi
@@ -221,6 +229,44 @@ defmodule Hexpm.Accounts.Organizations do
       from(t in Hexpm.OAuth.Token, where: t.user_id == ^user.id)
     )
     |> Multi.delete(:user, user)
+  end
+
+  @doc """
+  Deletes an organization's packages, their releases and its policies, and
+  keeps the organization with its repository, members, keys and audit log.
+  Any deletion scheduled for it is cleared.
+
+  Objects in the buckets are left where they are;
+  `Hexpm.AdminTasks.delete_organization_data/2` deletes them. `:jobs` are Oban
+  jobs inserted in the same transaction, so they run exactly when the rows are
+  gone.
+  """
+  def delete_data(organization, opts)
+
+  def delete_data(%Organization{id: 1}, _opts) do
+    {:error, :public_organization}
+  end
+
+  def delete_data(organization, opts) do
+    audit_data = Keyword.fetch!(opts, :audit)
+    organization = Repo.preload(organization, :repository)
+
+    multi =
+      Multi.new()
+      |> delete_packages(organization.repository)
+      |> Multi.delete_all(:policies, assoc(organization, :policies))
+      |> Multi.update_all(
+        :schedule,
+        from(o in Organization, where: o.id == ^organization.id),
+        set: [deletion_scheduled_at: nil, deletion_notices: []]
+      )
+      |> audit(audit_data, "organization.delete_data", organization)
+      |> insert_jobs(Keyword.get(opts, :jobs, []))
+
+    case Repo.transaction(multi) do
+      {:ok, _result} -> :ok
+      {:error, _operation, changeset, _changes} -> {:error, changeset}
+    end
   end
 
   def merge_with_user(
