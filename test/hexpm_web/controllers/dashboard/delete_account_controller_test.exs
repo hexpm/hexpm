@@ -160,7 +160,9 @@ defmodule HexpmWeb.Dashboard.DeleteAccountControllerTest do
         |> test_login(c.user)
         |> get("/dashboard/delete-account/confirm", %{"key" => key})
 
-      assert response(conn, 200) =~ "Delete my account"
+      html = response(conn, 200)
+      assert html =~ "Delete my account"
+      assert html =~ ~s(<input type="hidden" name="key" value="#{key}">)
     end
 
     test "rejects an invalid key with a generic error", c do

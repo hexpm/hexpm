@@ -46,12 +46,12 @@ defmodule HexpmWeb.Dashboard.DeleteAccountController do
   def confirm(conn, params) do
     user = conn.assigns.current_user
 
-    with request when not is_nil(request) <- Users.get_delete_request(user, params["key"]),
+    with %{} <- Users.get_delete_request(user, params["key"]),
          {:ok, warnings} <- Users.delete_eligibility(user) do
       render(conn, "confirm.html",
         title: "Confirm account deletion",
         container: "container page dashboard",
-        key: request.key,
+        key: params["key"],
         warnings: warnings
       )
     else
