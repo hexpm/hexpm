@@ -24,6 +24,28 @@ defmodule Hexpm.ApplicationTest do
       assert Hexpm.Application.sentry_before_send(event) == event
     end
 
+    test "drops the arguments of the frame that raised" do
+      stacktrace = [
+        {HexpmWeb.PackageReportLive, :handle_event,
+         ["validate", %{"code" => "raw-code"}, %{session_token: "raw-token"}],
+         [file: ~c"lib/hexpm_web/live/package_report_live.ex", line: 1]}
+      ]
+
+      exception_event =
+        Sentry.Event.create_event(exception: %FunctionClauseError{}, stacktrace: stacktrace)
+
+      message_event = Sentry.Event.create_event(message: "crash", stacktrace: stacktrace)
+
+      assert [%{stacktrace: %{frames: [%{vars: vars}]}}] = exception_event.exception
+      assert vars["arg1"] =~ "raw-code"
+
+      for event <- [exception_event, message_event] do
+        sent = Hexpm.Application.sentry_before_send(event)
+        refute inspect(sent, limit: :infinity, printable_limit: :infinity) =~ "raw-"
+        assert sent.message == event.message
+      end
+    end
+
     test "keeps events without a crash reason" do
       event = Sentry.Event.create_event(exception: %RuntimeError{message: "oops"})
 
