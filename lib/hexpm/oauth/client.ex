@@ -18,6 +18,8 @@ defmodule Hexpm.OAuth.Client do
     timestamps()
   end
 
+  @host ~r/\A[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\z/
+
   @valid_client_types ~w(public confidential)
   @valid_grant_types ~w(authorization_code urn:ietf:params:oauth:grant-type:device_code refresh_token client_credentials)
 
@@ -110,6 +112,12 @@ defmodule Hexpm.OAuth.Client do
       String.contains?(uri, "*") and not sufficient_domain_segments?(uri) ->
         [redirect_uris: "#{uri} wildcard must have at least domain.tld after *"]
 
+      String.contains?(uri, "*") and not valid_wildcard_authority?(uri) ->
+        [
+          redirect_uris:
+            "#{uri} wildcard redirect URIs must have a lowercase hostname and no userinfo"
+        ]
+
       true ->
         []
     end
@@ -130,6 +138,17 @@ defmodule Hexpm.OAuth.Client do
     case URI.parse(uri) do
       %URI{host: host} when not is_nil(host) -> String.contains?(host, "*")
       _ -> false
+    end
+  end
+
+  defp valid_wildcard_authority?(uri) do
+    case URI.parse(uri) do
+      %URI{userinfo: nil, host: host} when is_binary(host) ->
+        not String.contains?(uri, ["\\", "\t", "\r", "\n"]) and
+          Regex.match?(@host, String.replace(host, "*", "a"))
+
+      _ ->
+        false
     end
   end
 

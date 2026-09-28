@@ -99,37 +99,55 @@ defmodule Hexpm.OAuth.Clients do
   @doc """
   Validates that the redirect URI is allowed for this client.
 
-  Supports wildcard patterns in the subdomain position, e.g.:
+  Supports wildcard patterns in the host, e.g.:
   - `https://*.hexdocs.pm/oauth/callback` matches `https://acme.hexdocs.pm/oauth/callback`
-  - The wildcard `*` matches a single subdomain segment (no dots)
+  - The wildcard `*` matches characters within a single DNS label (no dots)
+
+  For wildcard patterns the scheme, port, path, query and fragment must equal
+  the pattern's, and URIs with userinfo, backslashes, tabs or newlines never
+  match.
   """
   def valid_redirect_uri?(%Client{redirect_uris: []}, _uri), do: false
 
-  def valid_redirect_uri?(%Client{redirect_uris: allowed_uris}, uri) do
+  def valid_redirect_uri?(%Client{redirect_uris: allowed_uris}, uri) when is_binary(uri) do
     Enum.any?(allowed_uris, &uri_matches?(&1, uri))
   end
 
+  def valid_redirect_uri?(%Client{}, _uri), do: false
+
+  @label "[a-z0-9]([a-z0-9-]*[a-z0-9])?"
+
   defp uri_matches?(pattern, uri) do
     if String.contains?(pattern, "*") do
-      # Normalize default ports: https://foo.com:443 → https://foo.com
-      normalized_uri = strip_default_port(uri)
-
-      # Convert wildcard to regex: * → [^.]+ (single subdomain segment)
-      pattern
-      |> Regex.escape()
-      |> String.replace("\\*", "[^.]+")
-      |> then(&Regex.match?(~r/^#{&1}$/, normalized_uri))
+      wildcard_matches?(URI.parse(pattern), uri)
     else
       pattern == uri
     end
   end
 
-  defp strip_default_port(uri) do
-    case URI.parse(uri) do
-      %URI{scheme: "https", port: 443} = parsed -> URI.to_string(%{parsed | port: nil})
-      %URI{scheme: "http", port: 80} = parsed -> URI.to_string(%{parsed | port: nil})
-      _ -> uri
-    end
+  # WHATWG strips tabs and newlines and reads `\\` as `/` in special schemes,
+  # `URI.parse/1` does neither, so a URI holding one can parse to a different
+  # authority in a browser.
+  defp wildcard_matches?(pattern, uri) do
+    parsed = URI.parse(uri)
+
+    not String.contains?(uri, ["\\", "\t", "\r", "\n"]) and
+      parsed.userinfo == nil and
+      pattern.userinfo == nil and
+      is_binary(parsed.host) and
+      parsed.scheme == pattern.scheme and
+      parsed.port == pattern.port and
+      parsed.path == pattern.path and
+      parsed.query == pattern.query and
+      parsed.fragment == pattern.fragment and
+      Regex.match?(host_regex(pattern.host), String.downcase(parsed.host))
+  end
+
+  defp host_regex(pattern_host) do
+    pattern_host
+    |> Regex.escape()
+    |> String.replace("\\*", @label)
+    |> then(&Regex.compile!("\\A#{&1}\\z"))
   end
 
   @doc """
