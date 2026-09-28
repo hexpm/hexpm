@@ -25,4 +25,36 @@ defmodule Hexpm.TrustedPublishers.ClaimsSnapshot do
   def changeset(snapshot, params) do
     cast(snapshot, params, @fields)
   end
+
+  @github "https://github.com"
+
+  def commit_url(%__MODULE__{repository: repository, sha: sha})
+      when is_binary(repository) and is_binary(sha),
+      do: "#{@github}/#{repository}/commit/#{sha}"
+
+  def commit_url(%__MODULE__{}), do: nil
+
+  def workflow_path(%__MODULE__{repository: repository, workflow_ref: workflow_ref})
+      when is_binary(repository) and is_binary(workflow_ref) do
+    [path | _ref] = String.split(workflow_ref, "@", parts: 2)
+    String.replace_prefix(path, repository <> "/", "")
+  end
+
+  def workflow_path(%__MODULE__{}), do: nil
+
+  def workflow_url(%__MODULE__{repository: repository, sha: sha} = snapshot)
+      when is_binary(repository) and is_binary(sha) do
+    case workflow_path(snapshot) do
+      nil -> nil
+      path -> "#{@github}/#{repository}/blob/#{sha}/#{path}"
+    end
+  end
+
+  def workflow_url(%__MODULE__{}), do: nil
+
+  def run_url(%__MODULE__{repository: repository, run_id: run_id, run_attempt: run_attempt})
+      when is_binary(repository) and is_binary(run_id) and is_binary(run_attempt),
+      do: "#{@github}/#{repository}/actions/runs/#{run_id}/attempts/#{run_attempt}"
+
+  def run_url(%__MODULE__{}), do: nil
 end
