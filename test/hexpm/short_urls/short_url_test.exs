@@ -161,18 +161,8 @@ defmodule Hexpm.ShortURLs.ShortURLTest do
 
   describe "redirect_url/1" do
     test "reads the target" do
-      short_url = %ShortURL{
-        url: "https://diff.hex.pm/diffs?diffs[]=ecto:3.0.0:3.0.1",
-        target: %Target{url: "https://hex.pm/diffs?diffs[]=ecto:3.0.0:3.0.1"}
-      }
-
+      short_url = %ShortURL{target: %Target{url: "https://hex.pm/diffs?diffs[]=ecto:3.0.0:3.0.1"}}
       assert ShortURL.redirect_url(short_url) == "https://hex.pm/diffs?diffs[]=ecto:3.0.0:3.0.1"
-    end
-
-    test "reads the url when there is no target" do
-      short_url = %ShortURL{url: "https://diff.hex.pm/diff/ecto/3.0.1..3.0.4"}
-
-      assert ShortURL.redirect_url(short_url) == "https://diff.hex.pm/diff/ecto/3.0.1..3.0.4"
     end
 
     test "keeps redirecting to hex.pm and hexdocs.pm pages" do
@@ -193,7 +183,6 @@ defmodule Hexpm.ShortURLs.ShortURLTest do
         ] do
       test "refuses a stored #{inspect(url)}" do
         refute ShortURL.redirect_url(%ShortURL{target: %Target{url: unquote(url)}})
-        refute ShortURL.redirect_url(%ShortURL{url: unquote(url)})
       end
     end
   end
