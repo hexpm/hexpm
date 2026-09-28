@@ -113,8 +113,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
   end
 
   defp key_row(assigns) do
-    modal_id = "revoke-key-#{assigns.key.id}"
-    assigns = assign(assigns, :modal_id, modal_id)
+    assigns = assign(assigns, :modal_id, "revoke-key-#{assigns.key.id}")
 
     ~H"""
     <tr>
@@ -160,7 +159,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
 
       <%!-- Actions Column --%>
       <td class="px-4 py-4">
-        <div class="flex items-center justify-end">
+        <div class="flex items-center justify-end gap-2">
           <.tooltip text="Revoke key">
             <.icon_button
               phx-click={show_modal(@modal_id)}
