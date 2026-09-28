@@ -5,6 +5,8 @@ defmodule Hexpm.Accounts.Organizations do
   alias Hexpm.Emails.Outbox
   alias Hexpm.Repository.OrgNamesPublisher
 
+  @policy_actions ~w(policy.create policy.update policy.delete)
+
   def all_by_user(user, preload \\ []) do
     from(organization in assoc(user, :organizations), order_by: organization.name)
     |> Repo.all()
@@ -113,7 +115,8 @@ defmodule Hexpm.Accounts.Organizations do
 
   @doc """
   Deletes the organization and everything scoped to it: its repository with
-  every package and release in it, its members, keys, audit logs and the user
+  every package and release in it, its members, keys, audit logs (including
+  the entries members made about its packages) and the user
   row carrying its name. The name is reserved afterwards so nobody can take it
   again, as an organization or as a username.
 
@@ -198,11 +201,19 @@ defmodule Hexpm.Accounts.Organizations do
 
   # Releases and package reports go before packages because neither
   # releases_package_id_fkey nor package_reports_package_id_fkey cascades.
+  # An audit log entry about a package references the organization only when
+  # an organization key acted, so the entries are found by the package.
   defp delete_packages(multi, repository) do
     packages = from(p in Package, where: p.repository_id == ^repository.id)
     package_ids = from(p in packages, select: p.id)
 
     multi
+    |> Multi.delete_all(
+      :package_audit_logs,
+      from(a in AuditLog,
+        where: fragment("(? -> 'package' ->> 'id')::integer", a.params) in subquery(package_ids)
+      )
+    )
     |> Multi.delete_all(
       :package_reports,
       from(r in Hexpm.PackageReports.Report, where: r.package_id in subquery(package_ids))
@@ -232,9 +243,10 @@ defmodule Hexpm.Accounts.Organizations do
   end
 
   @doc """
-  Deletes an organization's packages, their releases and its policies, and
-  keeps the organization with its repository, members, keys and audit log.
-  Any deletion scheduled for it is cleared.
+  Deletes an organization's packages, their releases and its policies with
+  the audit log entries about them, and keeps the organization with its
+  repository, members, keys and the rest of its audit log. Any deletion
+  scheduled for it is cleared.
 
   Objects in the buckets are left where they are;
   `Hexpm.AdminTasks.delete_organization_data/2` deletes them. `:jobs` are Oban
@@ -255,6 +267,12 @@ defmodule Hexpm.Accounts.Organizations do
       Multi.new()
       |> delete_packages(organization.repository)
       |> Multi.delete_all(:policies, assoc(organization, :policies))
+      |> Multi.delete_all(
+        :policy_audit_logs,
+        from(a in AuditLog,
+          where: a.organization_id == ^organization.id and a.action in @policy_actions
+        )
+      )
       |> Multi.update_all(
         :schedule,
         from(o in Organization, where: o.id == ^organization.id),
