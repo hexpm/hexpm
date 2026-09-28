@@ -1,20 +1,26 @@
 defmodule Hexpm.Accounts.OrganizationDataWorker do
   @moduledoc """
-  Deletes the stored objects of a deleted organization, purges the CDN keys
-  they were served under and records the deletion for the nightly backup.
+  Deletes the stored objects of a deleted organization, or of one whose data
+  was deleted and which was kept, purges the CDN keys they were served under
+  and records the deletion for the nightly backup.
 
   The job is inserted in the transaction that deletes the organization's
-  rows, so a store request failing after the commit is retried rather than
-  leaving objects that nothing points at any more. Every step can run again:
-  deleting an emptied prefix deletes nothing and the backup acts on a marker
-  written again the same way.
+  rows, or its packages and policies, so a store request failing after the
+  commit is retried rather than leaving objects that nothing points at any
+  more. Every step can run again: deleting an emptied prefix deletes nothing
+  and the backup acts on a marker written again the same way.
 
   `names` holds the organization's name and, when it was renamed, the name
   of its repository, which the objects were written under.
+
+  A kept organization can publish again once its billing is back, at any
+  point after the deletion, so its job carries `written_before`, the time the
+  deletion started, and deletes only the objects written before then.
   """
 
   use Oban.Worker, queue: :heavy, max_attempts: 10
 
+  import Ecto.Query, only: [from: 2]
   require Logger
 
   alias Hexpm.Repo
@@ -22,11 +28,12 @@ defmodule Hexpm.Accounts.OrganizationDataWorker do
   # Fastly takes at most 256 surrogate keys in one purge request.
   @purge_keys_per_request 256
 
-  def new_job(names, packages, policies) do
+  def new_job(names, packages, policies, opts \\ []) do
     new(%{
       "names" => Enum.uniq(names),
       "packages" => Enum.map(packages, fn {package, version} -> [package, version] end),
-      "policies" => policies
+      "policies" => policies,
+      "written_before" => opts[:written_before] && DateTime.to_iso8601(opts[:written_before])
     })
   end
 
@@ -37,7 +44,12 @@ defmodule Hexpm.Accounts.OrganizationDataWorker do
   def perform(%Oban.Job{args: args}) do
     Repo.write_mode!()
 
-    {names, taken} = Enum.split_with(Map.fetch!(args, "names"), &free?/1)
+    written_before = written_before(args)
+
+    {names, taken} =
+      if written_before,
+        do: {Map.fetch!(args, "names"), []},
+        else: Enum.split_with(Map.fetch!(args, "names"), &free?/1)
 
     for name <- taken do
       message = "Stored objects of #{name} kept: the name belongs to an organization again"
@@ -55,7 +67,11 @@ defmodule Hexpm.Accounts.OrganizationDataWorker do
       names
       |> Enum.flat_map(&prefixes/1)
       |> Enum.reduce(%{}, fn {bucket, prefix}, counts ->
-        count = Hexpm.Store.delete_prefix(bucket, prefix)
+        count =
+          if written_before,
+            do: Hexpm.Store.delete_prefix(bucket, prefix, written_before: written_before),
+            else: Hexpm.Store.delete_prefix(bucket, prefix)
+
         Map.update(counts, bucket, count, &(&1 + count))
       end)
 
@@ -86,11 +102,16 @@ defmodule Hexpm.Accounts.OrganizationDataWorker do
   # The job runs after the transaction that reserved the names, but a name
   # renamed away from before that could have been taken since.
   defp free?(name) do
-    import Ecto.Query, only: [from: 2]
-
     not Repo.exists?(from(o in Hexpm.Accounts.Organization, where: o.name == ^name)) and
       not Repo.exists?(from(r in Hexpm.Repository.Repository, where: r.name == ^name))
   end
+
+  defp written_before(%{"written_before" => iso8601}) when is_binary(iso8601) do
+    {:ok, datetime, 0} = DateTime.from_iso8601(iso8601)
+    datetime
+  end
+
+  defp written_before(_args), do: nil
 
   @doc """
   Every object an organization named `name` has in a bucket, under one prefix

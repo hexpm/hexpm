@@ -316,6 +316,9 @@ defmodule Hexpm.Accounts.AuditLog do
 
   defp extract_params("organization.delete", organization), do: serialize(organization)
 
+  defp extract_params("organization.delete_data", organization),
+    do: %{organization: serialize(organization)}
+
   defp extract_params("organization.member.add", {organization, user}),
     do: %{organization: serialize(organization), user: serialize(user)}
 

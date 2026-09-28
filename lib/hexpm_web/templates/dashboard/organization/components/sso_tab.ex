@@ -251,6 +251,9 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
           Adds an existing Hex account to the organization the first time it authenticates through
           your provider with an address on a verified domain. It never creates a Hex account or
           sends an invitation, so people without an account sign up before their first login.
+          With Microsoft Entra, the application's ID token needs the <code>email</code>
+          and <code>xms_edov</code>
+          optional claims.
         </p>
         <p
           :if={@domains == [] or Enum.all?(@domains, &(!OrganizationDomain.verified?(&1)))}

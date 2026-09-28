@@ -209,12 +209,9 @@ defmodule Hexpm.Accounts.Users do
 
             :ok
 
+          # A concurrent request replaced the previous one first and mailed
+          # its own key.
           {:error, :request, _changeset, _} ->
-            if request = Repo.get_by(AccountDeletionRequest, user_id: user.id) do
-              Emails.account_deletion_request(user, request)
-              |> Mailer.deliver!()
-            end
-
             :ok
         end
       else
@@ -717,9 +714,7 @@ defmodule Hexpm.Accounts.Users do
         {:error, :already_verified}
 
       true ->
-        Emails.verification(user, email)
-        |> Mailer.deliver!()
-
+        email_verification(user, email)
         :ok
     end
   end

@@ -48,9 +48,12 @@ In the Microsoft Entra admin center:
 3. Under **Redirect URI**, choose the **Web** platform and enter the exact **Redirect URI** from the Hexpm SSO dashboard.
 4. Register the application, then copy the **Application (client) ID** and **Directory (tenant) ID** from its **Overview** page.
 5. Open **Certificates & secrets**, add a client secret, and copy its **Value** before leaving the page; it is shown once. Entra client secrets expire, so note the date and rotate before it as described below.
-6. Open the application under **Enterprise applications**, set **Assignment required** to **Yes** under **Properties**, and assign the people or groups who should be able to use the Hexpm integration under **Users and groups**.
+6. Open **Manifest** and add the `email` and `xms_edov` optional claims to the ID token: the `idToken` list under `optionalClaims` has to contain `{"name": "email"}` and `{"name": "xms_edov"}`. Keep any entries already there, then save.
+7. Open the application under **Enterprise applications**, set **Assignment required** to **Yes** under **Properties**, and assign the people or groups who should be able to use the Hexpm integration under **Users and groups**.
 
 The issuer to enter in Hexpm is the tenant-specific v2 issuer, `https://login.microsoftonline.com/{tenant-id}/v2.0`. Do not use `common`, `organizations`, or another tenant-independent issuer: their discovery documents do not return the issuer you configured, and Hexpm requires that they match. Hexpm uses the exact issuer and stable OIDC subject as the identity key for managed and guest users alike, and never substitutes `preferred_username` or the user principal name for a missing email claim.
+
+[Just-in-time membership](#just-in-time-membership) needs both optional claims. Entra sends `email_verified` only when a claims-mapping policy adds it, with whatever value the policy sets, so for an Entra issuer Hexpm ignores `email_verified` and reads `xms_edov` in its place. Entra sends `xms_edov` only together with `email`, and sets it to `true` when the owner of the address's domain has verified it, such as for a domain verified in your tenant; Microsoft's [optional claims reference](https://learn.microsoft.com/en-us/entra/identity-platform/optional-claims-reference) lists the cases. Without the claims, SSO login still works, but just-in-time membership refuses everyone with the `provider_email_unverified` code.
 
 ### Configure Hexpm
 
@@ -112,7 +115,7 @@ It needs a saved SSO configuration and at least one [verified domain](#verified-
 A signed-in Hexpm account that isn't a member is admitted when all of these hold:
 
 * The ID token's `email` claim is on a verified domain. The part after `@` has to equal the verified domain exactly.
-* The ID token's `email_verified` claim is `true`. A token without it, or with `false`, is refused with the `provider_email_unverified` code, which the person sees and **Recent failures** records.
+* The provider marks the address as verified. That's the ID token's `email_verified` claim being `true`. When the ID token leaves the claim out, as Okta's organization authorization server does, Hexpm asks the provider's userinfo endpoint instead, and counts its `email_verified` only when it returns the same `email`. With Microsoft Entra it's the `xms_edov` claim (see [Register the Entra application](#register-the-entra-application)). Anything else is refused with the `provider_email_unverified` code, which the person sees and **Recent failures** records.
 * The account meets the organization's two-factor requirement, if it has one.
 * A seat is free, or the seat policy adds one.
 
@@ -318,6 +321,7 @@ The SSO dashboard shows recent failures using stable stage and error codes. Chec
 * **Configuration cannot be saved:** confirm that the issuer is an exact HTTPS URL and that its discovery and key endpoints are publicly reachable over HTTPS.
 * **The provider rejects the callback:** compare the redirect URI registered in the provider with the **Redirect URI** shown by Hexpm, including the scheme, host, path, and port.
 * **Saving an Entra configuration reports an issuer mismatch:** the issuer is `common`, `organizations`, or another tenant-independent endpoint. Use `https://login.microsoftonline.com/{tenant-id}/v2.0`.
+* **Just-in-time membership refuses Entra users with `provider_email_unverified`:** add the `email` and `xms_edov` optional claims to the application's ID token as described in [Register the Entra application](#register-the-entra-application), and check that the person's email address is on a domain verified in your tenant.
 * **The user cannot open the application:** confirm that the user or one of their groups is assigned to the application.
 * **The connection test fails:** restart it from the same browser while signed in as the Hexpm administrator who saved the configuration and initiated the test. If that administrator is unavailable, disable SSO if it is enabled, have a current administrator save the existing configuration again, then test and re-enable it. Leaving the client secret blank while re-saving keeps the current secret.
 * **Account linking says the account is not a member:** add the existing Hexpm account to the organization, then restart from the organization login URL. With just-in-time membership on, check instead that the address your provider returns is on a verified domain, exactly.

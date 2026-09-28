@@ -218,7 +218,6 @@ defmodule Hexpm.Factory do
 
   def short_url_factory() do
     %Hexpm.ShortURLs.ShortURL{
-      url: "",
       short_code: ""
     }
   end

@@ -151,6 +151,32 @@ defmodule HexpmWeb.PackageReportLiveTest do
            ]
   end
 
+  test "sends a reporter whose session ended back to login instead of filing", context do
+    {:ok, view, _html} = live(test_login(context.conn, context.reporter), report_path(context))
+
+    Mox.stub(Hexpm.HTTP.Mock, :post, fn "https://hcaptcha.com/siteverify", _headers, _params ->
+      {:ok, 200, [{"content-type", "application/json"}], %{"success" => true}}
+    end)
+
+    Mox.allow(Hexpm.HTTP.Mock, self(), view.pid)
+    Repo.update_all(Hexpm.UserSession, set: [revoked_at: DateTime.utc_now()])
+
+    assert {:error, {:redirect, %{to: login_path}}} =
+             render_submit(view, "submit", %{
+               "h-captcha-response" => "captcha",
+               "report" => %{
+                 reason: "other",
+                 summary: "Question",
+                 description: "Report details"
+               }
+             })
+
+    assert URI.parse(login_path).path == "/login"
+    assert URI.decode_query(URI.parse(login_path).query) == %{"return" => report_path(context)}
+    refute Repo.exists?(Report)
+    refute Repo.exists?(OutboxEntry)
+  end
+
   test "rejects a report when hCaptcha verification fails", context do
     {:ok, view, _html} = live(test_login(context.conn, context.reporter), report_path(context))
     allow_captcha(view, false)

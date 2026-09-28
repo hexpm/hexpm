@@ -377,33 +377,36 @@ defmodule Hexpm.Emails do
     |> render_body(:sso_email_mismatch)
   end
 
-  def organization_deletion_scheduled(organization, deletion_at, recipients) do
-    base_email(:organization_deletion_scheduled)
+  def organization_data_deletion_scheduled(organization, deletion_at, recipients) do
+    base_email(:organization_data_deletion_scheduled)
     |> email_to(recipients)
-    |> subject("Hex.pm - #{organization} will be deleted on #{Common.date(deletion_at)}")
+    |> subject(
+      "Hex.pm - The packages of #{organization} will be deleted on #{Common.date(deletion_at)}"
+    )
     |> assign(:organization, organization)
     |> assign(:deletion_at, deletion_at)
     |> assign(:billing_url, billing_url(organization))
-    |> render_body(:organization_deletion_scheduled)
+    |> render_body(:organization_data_deletion_scheduled)
   end
 
-  def organization_deletion_reminder(organization, deletion_at, days, recipients) do
-    base_email(:organization_deletion_reminder)
+  def organization_data_deletion_reminder(organization, deletion_at, days, recipients) do
+    base_email(:organization_data_deletion_reminder)
     |> email_to(recipients)
-    |> subject("Hex.pm - #{organization} will be deleted #{Common.in_days(days)}")
+    |> subject("Hex.pm - The packages of #{organization} will be deleted #{Common.in_days(days)}")
     |> assign(:organization, organization)
     |> assign(:deletion_at, deletion_at)
     |> assign(:days, days)
     |> assign(:billing_url, billing_url(organization))
-    |> render_body(:organization_deletion_reminder)
+    |> render_body(:organization_data_deletion_reminder)
   end
 
-  def organization_deleted(organization, recipients) do
-    base_email(:organization_deleted)
+  def organization_data_deleted(organization, recipients) do
+    base_email(:organization_data_deleted)
     |> email_to(recipients)
-    |> subject("Hex.pm - #{organization} has been deleted")
+    |> subject("Hex.pm - The packages of #{organization} have been deleted")
     |> assign(:organization, organization)
-    |> render_body(:organization_deleted)
+    |> assign(:billing_url, billing_url(organization))
+    |> render_body(:organization_data_deleted)
   end
 
   defp billing_url(organization) do

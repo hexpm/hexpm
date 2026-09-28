@@ -5,11 +5,14 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
 
   describe "GET /email/verify" do
     setup do
+      key = Hexpm.Accounts.Auth.gen_key()
+
       email =
         build(
           :email,
           verified: false,
-          verification_key: Hexpm.Accounts.Auth.gen_key(),
+          verification_key: key,
+          verification_key_hash: :crypto.hash(:sha256, key),
           verification_expiry: DateTime.utc_now()
         )
 
@@ -91,8 +94,8 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
                "If this email exists in our database and is not already verified"
 
       user = Users.get(user.username, [:emails])
-      assert_email_sent(Hexpm.Emails.verification(user, hd(user.emails)))
-      assert hd(user.emails).verification_key
+      key = email_verification_key()
+      assert hd(user.emails).verification_key_hash == :crypto.hash(:sha256, key)
     end
 
     test "dont send verification email for already verified email" do
@@ -113,7 +116,7 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
 
       user = Users.get(user.username, [:emails])
       assert_no_email_sent()
-      refute hd(user.emails).verification_key
+      refute hd(user.emails).verification_key_hash
     end
 
     test "dont send verification email for non-existent email" do
@@ -152,11 +155,11 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
       assert_no_email_sent()
 
       user1 = Users.get(user1.username, [:emails])
-      refute hd(user1.emails).verification_key
+      refute hd(user1.emails).verification_key_hash
 
       user2 = Users.get(user2.username, [:emails])
 
-      refute hd(user2.emails).verification_key
+      refute hd(user2.emails).verification_key_hash
     end
   end
 

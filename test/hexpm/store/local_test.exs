@@ -16,6 +16,29 @@ defmodule Hexpm.Store.LocalTest do
     :ok
   end
 
+  describe "Hexpm.Store.delete_prefix/3" do
+    @tag :tmp_dir
+    test "with written_before deletes only the older objects", %{tmp_dir: tmp_dir} do
+      bucket_dir = Path.join([tmp_dir, "store", "bucket", "repos", "acme"])
+      File.mkdir_p!(bucket_dir)
+      old = Path.join(bucket_dir, "old")
+      new = Path.join(bucket_dir, "new")
+      File.write!(old, "OLD")
+      File.write!(new, "NEW")
+      File.touch!(old, ~U[2026-08-01 12:00:00Z] |> DateTime.to_unix())
+      File.touch!(new, ~U[2026-09-01 12:00:00Z] |> DateTime.to_unix())
+
+      assert Hexpm.Store.delete_prefix({Local, "bucket"}, "repos/acme/",
+               written_before: ~U[2026-09-01 12:00:00Z]
+             ) == 1
+
+      refute File.exists?(old)
+      assert File.exists?(new)
+      assert Hexpm.Store.delete_prefix({Local, "bucket"}, "repos/acme/") == 1
+      refute File.exists?(new)
+    end
+  end
+
   describe "stream/2" do
     @tag :tmp_dir
     test "streams the file in chunks", %{tmp_dir: tmp_dir} do

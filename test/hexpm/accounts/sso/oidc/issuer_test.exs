@@ -27,4 +27,14 @@ defmodule Hexpm.Accounts.SSO.OIDC.IssuerTest do
     assert {:error, %Error{stage: :url_validation, code: :private_address_not_allowed}} =
              Issuer.validate("https://127.0.0.1/tenant")
   end
+
+  test "recognizes a Microsoft Entra issuer by its host" do
+    assert Issuer.entra?(
+             "https://login.microsoftonline.com/11111111-2222-3333-4444-555555555555/v2.0"
+           )
+
+    refute Issuer.entra?("https://example.okta.com")
+    refute Issuer.entra?("https://login.microsoftonline.com.example.com/tenant/v2.0")
+    refute Issuer.entra?("https://example.com/login.microsoftonline.com/tenant/v2.0")
+  end
 end

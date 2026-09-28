@@ -127,6 +127,38 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
       assert [_invitation] = OrganizationInvitations.all_pending(organization)
     end
 
+    test "re-inviting an expired address stores the role asked for", %{
+      organization: organization,
+      admin: admin
+    } do
+      {:ok, first} = invite(organization, admin, "newcomer@example.com", "read")
+      expire(first)
+
+      assert {:ok, second} = invite(organization, admin, "newcomer@example.com", "admin")
+
+      assert second.role == "admin"
+      assert Repo.get!(Hexpm.Accounts.OrganizationInvitation, first.id).role == "admin"
+    end
+
+    test "re-inviting an expired address refuses a role that does not exist", %{
+      organization: organization,
+      admin: admin
+    } do
+      {:ok, first} = invite(organization, admin, "newcomer@example.com", "read")
+      expire(first)
+
+      assert {:error, changeset} =
+               invite(organization, admin, "newcomer@example.com", "Visit example.com")
+
+      assert errors_on(changeset).role == "is invalid"
+      assert Repo.get!(Hexpm.Accounts.OrganizationInvitation, first.id).role == "read"
+
+      assert Repo.aggregate(
+               from(e in OutboxEntry, where: e.category == "organization.invitation"),
+               :count
+             ) == 1
+    end
+
     test "stops mailing an address five invitations reached in the last day", %{admin: admin} do
       invite_from_other_organizations(admin, "target@example.com", 5)
 
@@ -293,6 +325,12 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
     OrganizationInvitations.invite(organization, %{"email" => email, "role" => role}, admin,
       audit: audit_data(admin)
     )
+  end
+
+  defp expire(invitation) do
+    invitation
+    |> Ecto.Changeset.change(expires_at: DateTime.add(DateTime.utc_now(), -1, :second))
+    |> Repo.update!()
   end
 
   defp invite_from_other_organizations(admin, email, count) do

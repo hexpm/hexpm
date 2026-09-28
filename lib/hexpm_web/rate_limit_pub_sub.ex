@@ -70,4 +70,9 @@ defmodule HexpmWeb.RateLimitPubSub do
     Attack.trusted_publisher_mint_throttle(key, time: time)
     {:noreply, []}
   end
+
+  # A pod on another release can broadcast a key this one doesn't know.
+  def handle_info({:throttle, _key, _time}, []) do
+    {:noreply, []}
+  end
 end

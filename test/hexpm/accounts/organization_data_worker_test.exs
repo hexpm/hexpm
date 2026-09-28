@@ -88,6 +88,30 @@ defmodule Hexpm.Accounts.OrganizationDataWorkerTest do
       refute Hexpm.Store.get(:repo_bucket, "repos/gone_name/names", [])
       refute Hexpm.Store.get(:deletions_bucket, "organizations/#{taken}", [])
     end
+
+    test "for a kept organization deletes only the objects written before the deletion" do
+      repository = insert(:repository)
+      name = repository.organization.name
+      deleted_at = ~U[2026-09-01 12:00:00Z]
+
+      Hexpm.Store.Memory.written_at(~U[2026-08-01 12:00:00Z])
+      Hexpm.Store.put(:repo_bucket, "repos/#{name}/tarballs/old-1.0.0.tar", "OLD", [])
+      Hexpm.Store.put(:docs_private_bucket, "#{name}/old/index.html", "OLD DOCS", [])
+      Hexpm.Store.Memory.written_at(deleted_at)
+      Hexpm.Store.put(:repo_bucket, "repos/#{name}/names", "PUBLISHED AGAIN", [])
+      Hexpm.Store.Memory.written_at(~U[2026-09-02 12:00:00Z])
+      Hexpm.Store.put(:repo_bucket, "repos/#{name}/tarballs/new-1.0.0.tar", "NEW", [])
+
+      args =
+        OrganizationDataWorker.new_job([name], [{"old", "1.0.0"}], [], written_before: deleted_at).changes.args
+
+      assert :ok = perform_job(OrganizationDataWorker, args)
+      refute Hexpm.Store.get(:repo_bucket, "repos/#{name}/tarballs/old-1.0.0.tar", [])
+      refute Hexpm.Store.get(:docs_private_bucket, "#{name}/old/index.html", [])
+      assert Hexpm.Store.get(:repo_bucket, "repos/#{name}/names", []) == "PUBLISHED AGAIN"
+      assert Hexpm.Store.get(:repo_bucket, "repos/#{name}/tarballs/new-1.0.0.tar", []) == "NEW"
+      assert Hexpm.Store.get(:deletions_bucket, "organizations/#{name}", [])
+    end
   end
 
   # Organization names are [a-z0-9_]+, three characters or more.

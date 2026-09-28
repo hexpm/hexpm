@@ -30,7 +30,7 @@ defmodule Hexpm.PurgeExpiredRecords do
     Hexpm.OAuth.Token => ~w(refresh_token_hash),
     Hexpm.UserSession => ~w(session_token),
     Hexpm.Accounts.PasswordReset => ~w(key_hash),
-    Hexpm.Accounts.AccountDeletionRequest => ~w(key),
+    Hexpm.Accounts.AccountDeletionRequest => ~w(key_hash),
     Hexpm.Accounts.SSO.Transaction =>
       ~w(state_hash nonce code_verifier link_token_hash subject provider_email),
     Hexpm.Accounts.SSO.Authorization => ~w(code_hash),

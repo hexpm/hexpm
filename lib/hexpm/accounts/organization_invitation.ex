@@ -48,9 +48,9 @@ defmodule Hexpm.Accounts.OrganizationInvitation do
     )
   end
 
-  def reissue_changeset(invitation, token_hash, expires_at) do
+  def reissue_changeset(invitation, role, token_hash, expires_at) do
     invitation
-    |> cast(%{"role" => invitation.role}, [:role])
+    |> cast(%{"role" => role}, [:role])
     |> put_change(:token_hash, token_hash)
     |> put_change(:expires_at, expires_at)
     |> validate_inclusion(:role, @roles)

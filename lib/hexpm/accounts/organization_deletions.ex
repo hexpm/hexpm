@@ -1,21 +1,24 @@
 defmodule Hexpm.Accounts.OrganizationDeletions do
   @moduledoc """
-  Deletes organizations that have had no active billing for 90 days.
+  Deletes the data of organizations that have had no active billing for 90
+  days, and keeps the organizations.
 
   `Hexpm.Billing.Report` records when billing stopped in
   `billing_inactive_since`; an organization that never had billing has none,
   and its trial's end counts instead. The daily run schedules every inactive
-  organization for deletion 90 days after that (or after its trial ended,
-  whichever is later), tells its admins, reminds them a week and a day
-  before, and on the
-  day deletes the organization with its stored data through
-  `Hexpm.AdminTasks.delete_organization/2`. Billing coming back clears the
-  schedule, in the report as soon as it sees the subscription and here as a
-  last check against the billing service before anything is deleted.
+  organization that has packages or policies for deletion 90 days after that
+  (or after its trial ended, whichever is later), tells its admins, reminds
+  them a week and a day before, and on the day deletes its packages,
+  policies and stored objects through
+  `Hexpm.AdminTasks.delete_organization_data/1`. The organization, its
+  members and keys stay, and it can publish again once billing is back.
+  Billing coming back clears the schedule, in the report as soon as it sees
+  the subscription and here as a last check against the billing service
+  before anything is deleted.
 
-  A run deletes at most `@max_deletions` organizations, so a mistake in the
-  scheduling is bounded to a day's worth, and every step is posted to Slack
-  and Sentry.
+  A run deletes the data of at most `@max_deletions` organizations, so a
+  mistake in the scheduling is bounded to a day's worth, and every step is
+  posted to Slack and Sentry.
 
   `config :hexpm, :organization_deletions` (`HEXPM_ORGANIZATION_DELETIONS`)
   switches it: `:off` does nothing, `:report` posts to Slack what a run would
@@ -32,6 +35,7 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
 
   alias Hexpm.Repo
   alias Hexpm.Accounts.{Organization, OrganizationUser}
+  alias Hexpm.Repository.{Package, Policy}
   alias Hexpm.Emails
   alias Hexpm.Emails.Outbox
 
@@ -71,7 +75,7 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
       end
 
     Hexpm.Slack.post(
-      "Organization deletions, report only: #{length(would_schedule)} would be scheduled" <>
+      "Organization data deletions, report only: #{length(would_schedule)} would be scheduled" <>
         "#{first}; #{length(would_delete)} would be deleted today#{names(would_delete)}"
     )
 
@@ -108,7 +112,7 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
 
   @doc """
   How many organizations have billing (active, trialing or comped), how many
-  don't, and how many of those are scheduled for deletion.
+  don't, and how many of those are scheduled for data deletion.
   """
   def state_counts() do
     now = DateTime.utc_now()
@@ -145,7 +149,7 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
       clear(organization)
 
       Hexpm.Slack.post(
-        "Deletion of organization #{organization.name} cancelled, billing is active again"
+        "Data deletion of organization #{organization.name} cancelled, billing is active again"
       )
 
       organization.name
@@ -171,15 +175,26 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
     Enum.map(scheduled, &elem(&1, 0))
   end
 
+  # An organization with nothing to delete, one that never published or whose
+  # data is already gone, is left alone.
   defp schedulable() do
     now = DateTime.utc_now()
 
     from(o in Organization,
+      as: :organization,
       where: o.id != 1,
       where: is_nil(o.deletion_scheduled_at),
       where: not o.billing_active,
       where: is_nil(o.billing_override) or o.billing_override == false,
       where: o.trial_end < ^now,
+      where:
+        exists(
+          from(p in Package,
+            join: r in assoc(p, :repository),
+            where: r.organization_id == parent_as(:organization).id
+          )
+        ) or
+          exists(from(p in Policy, where: p.organization_id == parent_as(:organization).id)),
       order_by: fragment("coalesce(?, ?)", o.billing_inactive_since, o.trial_end)
     )
   end
@@ -210,12 +225,12 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
       )
 
       notify(organization, "scheduled", fn recipients ->
-        Emails.organization_deletion_scheduled(organization.name, deletion_at, recipients)
+        Emails.organization_data_deletion_scheduled(organization.name, deletion_at, recipients)
       end)
     end)
 
     Logger.info(%{
-      message: "Organization scheduled for deletion",
+      message: "Organization data scheduled for deletion",
       event: "organization_deletion.scheduled",
       organization: organization.name,
       deletion_at: deletion_at
@@ -233,7 +248,7 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
     scheduled_names = Enum.map(scheduled, &elem(&1, 0))
 
     Hexpm.Slack.post(
-      "#{length(scheduled_names)} organization(s) scheduled for deletion, the first " <>
+      "#{length(scheduled_names)} organization(s) scheduled for data deletion, the first " <>
         "(#{first_name}) on #{date(first_at)}#{names(scheduled_names)}"
     )
   end
@@ -256,7 +271,7 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
             |> Repo.update_all(push: [deletion_notices: notice])
 
             notify(organization, notice, fn recipients ->
-              Emails.organization_deletion_reminder(
+              Emails.organization_data_deletion_reminder(
                 organization.name,
                 organization.deletion_scheduled_at,
                 days,
@@ -267,7 +282,7 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
 
           if days == 1 do
             Hexpm.Slack.post(
-              "Organization #{organization.name} is deleted at the next run, " <>
+              "The data of organization #{organization.name} is deleted at the next run, " <>
                 "scheduled for #{date(organization.deletion_scheduled_at)} (#{describe(organization)})"
             )
           end
@@ -279,14 +294,14 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
   end
 
   # Only an organization whose admins had the last reminder before this run
-  # is deleted; the notices are recorded, so a run that missed days does not
-  # remind and delete in one go.
+  # has its data deleted; the notices are recorded, so a run that missed days
+  # does not remind and delete in one go.
   defp delete(reminded_now) do
     DateTime.utc_now()
     |> deletable(reminded_now)
     |> Repo.all()
     |> Enum.map(fn organization ->
-      {organization.name, delete_organization(organization)}
+      {organization.name, delete_data(organization)}
     end)
   end
 
@@ -307,41 +322,38 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
   end
 
   # The billing service is asked once more right before the delete, by the
-  # admin task on the lookup it cancels from: the cached flag was set by a
-  # report up to a day old. A failure, the billing service unreachable say,
-  # leaves the organization for the next run.
-  defp delete_organization(organization) do
-    recipients = admin_emails(organization)
+  # admin task: the cached flag was set by a report up to a day old. A
+  # failure, the billing service unreachable say, leaves the organization for
+  # the next run.
+  defp delete_data(organization) do
     description = describe(organization)
 
-    case Hexpm.AdminTasks.delete_organization(organization.name,
-           delete_data: true,
-           unless_billing_live: true
-         ) do
+    case Hexpm.AdminTasks.delete_organization_data(organization.name) do
       :ok ->
-        deliver(organization, "deleted", recipients, fn recipients ->
-          Emails.organization_deleted(organization.name, recipients)
+        notify(organization, "deleted", fn recipients ->
+          Emails.organization_data_deleted(organization.name, recipients)
         end)
 
-        report(:info, "Organization deleted", organization, contents: description)
+        report(:info, "Organization data deleted", organization, contents: description)
         :ok
 
       {:error, {:billing_live, status}} ->
         clear(organization)
 
-        report(:warning, "Organization deletion skipped, billing is live", organization,
+        report(:warning, "Organization data deletion skipped, billing is live", organization,
           status: status
         )
 
         {:skipped, :billing_live}
 
       {:error, reason} ->
-        report(:error, "Organization deletion failed", organization, reason: inspect(reason))
+        report(:error, "Organization data deletion failed", organization, reason: inspect(reason))
+
         {:error, reason}
     end
   rescue
     error ->
-      report(:error, "Organization deletion failed", organization,
+      report(:error, "Organization data deletion failed", organization,
         reason: Exception.message(error)
       )
 
@@ -400,7 +412,7 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
 
         repository ->
           Repo.aggregate(
-            from(p in Hexpm.Repository.Package, where: p.repository_id == ^repository.id),
+            from(p in Package, where: p.repository_id == ^repository.id),
             :count
           )
       end
