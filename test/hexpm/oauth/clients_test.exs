@@ -230,6 +230,16 @@ defmodule Hexpm.OAuth.ClientsTest do
       assert Clients.valid_redirect_uri?(client, "https://ACME.hexdocs.pm/oauth/callback")
     end
 
+    test "wildcard inside a label matches hyphens next to the literal part" do
+      client = %Client{redirect_uris: ["https://preview*.example.com/callback"]}
+
+      assert Clients.valid_redirect_uri?(client, "https://preview-123.example.com/callback")
+      assert Clients.valid_redirect_uri?(client, "https://preview1.example.com/callback")
+      refute Clients.valid_redirect_uri?(client, "https://preview-.example.com/callback")
+      refute Clients.valid_redirect_uri?(client, "https://preview.example.com/callback")
+      refute Clients.valid_redirect_uri?(client, "https://preview-a.b.example.com/callback")
+    end
+
     test "wildcard requires exact query and fragment match" do
       client = %Client{redirect_uris: ["https://*.hexdocs.pm/oauth/callback"]}
 
