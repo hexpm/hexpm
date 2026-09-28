@@ -28,6 +28,11 @@ defmodule Hexpm.TrustedPublishers.ClaimsSnapshot do
 
   @github "https://github.com"
 
+  def repository_url(%__MODULE__{repository: repository}) when is_binary(repository),
+    do: "#{@github}/#{repository}"
+
+  def repository_url(%__MODULE__{}), do: nil
+
   def commit_url(%__MODULE__{repository: repository, sha: sha})
       when is_binary(repository) and is_binary(sha),
       do: "#{@github}/#{repository}/commit/#{sha}"
@@ -51,6 +56,26 @@ defmodule Hexpm.TrustedPublishers.ClaimsSnapshot do
   end
 
   def workflow_url(%__MODULE__{}), do: nil
+
+  def ref_name(%__MODULE__{ref: "refs/heads/" <> name}), do: name
+  def ref_name(%__MODULE__{ref: "refs/tags/" <> name}), do: name
+  def ref_name(%__MODULE__{ref: ref}), do: ref
+
+  def ref_url(%__MODULE__{repository: repository, ref: "refs/" <> kind_and_name})
+      when is_binary(repository) do
+    case String.split(kind_and_name, "/", parts: 2) do
+      [kind, name] when kind in ["heads", "tags"] ->
+        "#{@github}/#{repository}/tree/#{URI.encode(name)}"
+
+      _ ->
+        nil
+    end
+  end
+
+  def ref_url(%__MODULE__{}), do: nil
+
+  def actor_url(%__MODULE__{actor: actor}) when is_binary(actor), do: "#{@github}/#{actor}"
+  def actor_url(%__MODULE__{}), do: nil
 
   def run_url(%__MODULE__{repository: repository, run_id: run_id, run_attempt: run_attempt})
       when is_binary(repository) and is_binary(run_id) and is_binary(run_attempt),

@@ -411,7 +411,10 @@ defmodule HexpmWeb.PackageControllerTest do
           workflow_ref: "acme/widget/.github/workflows/release.yml@refs/tags/v0.1.0",
           sha: "0123456789abcdef0123456789abcdef01234567",
           ref: "refs/tags/v0.1.0",
+          ref_type: "tag",
           environment: "hex",
+          actor: "octocat",
+          event_name: "push",
           run_id: "42",
           run_attempt: "1"
         }
@@ -430,7 +433,8 @@ defmodule HexpmWeb.PackageControllerTest do
                "https://github.com/acme/widget/blob/0123456789abcdef0123456789abcdef01234567/.github/workflows/release.yml"
 
       assert body =~ "https://github.com/acme/widget/actions/runs/42/attempts/1"
-      assert body =~ "refs/tags/v0.1.0"
+      assert body =~ "https://github.com/acme/widget/tree/v0.1.0"
+      assert body =~ "https://github.com/octocat"
       assert body =~ "hex"
     end
 

@@ -17,12 +17,12 @@ defmodule HexpmWeb.Components.PackageLayout do
     statics: HexpmWeb.static_paths()
 
   import HexpmWeb.Components.Badge
+  import HexpmWeb.Components.Provenance
 
   alias Hexpm.Docs.Files
   alias Hexpm.Repository.Owners
   alias Hexpm.Security.Advisories
   alias Hexpm.TrustedPublishers
-  alias Hexpm.TrustedPublishers.ClaimsSnapshot
   alias HexpmWeb.ViewHelpers
 
   # All assigns below (except per-page ones) come from
@@ -467,9 +467,7 @@ defmodule HexpmWeb.Components.PackageLayout do
                   </div>
                 </div>
 
-                <%= if @current_release.oidc_claims do %>
-                  <.provenance_card claims={@current_release.oidc_claims} />
-                <% end %>
+                <.provenance :if={@current_release.oidc_claims} claims={@current_release.oidc_claims} />
 
                 <%!-- Links Card --%>
                 <%= if @links != [] do %>
@@ -539,73 +537,6 @@ defmodule HexpmWeb.Components.PackageLayout do
           </div>
         </div>
       </div>
-    </div>
-    """
-  end
-
-  attr :claims, Hexpm.TrustedPublishers.ClaimsSnapshot, required: true
-
-  defp provenance_card(assigns) do
-    ~H"""
-    <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-5 flex flex-col gap-4">
-      <div class="flex flex-col gap-1">
-        <h3 class="text-grey-700 dark:text-grey-100 text-lg font-semibold">Provenance</h3>
-        <p class="text-grey-500 dark:text-grey-300 text-sm">
-          Published from GitHub Actions through a trusted publisher.
-        </p>
-      </div>
-      <dl class="flex flex-col gap-3">
-        <.provenance_entry label="Source Commit" href={ClaimsSnapshot.commit_url(@claims)}>
-          {@claims.repository}{if @claims.sha, do: "@#{String.slice(@claims.sha, 0, 7)}"}
-        </.provenance_entry>
-        <.provenance_entry
-          :if={ClaimsSnapshot.workflow_path(@claims)}
-          label="Build File"
-          href={ClaimsSnapshot.workflow_url(@claims)}
-        >
-          {ClaimsSnapshot.workflow_path(@claims)}
-        </.provenance_entry>
-        <.provenance_entry :if={@claims.ref} label="Ref">
-          {@claims.ref}
-        </.provenance_entry>
-        <.provenance_entry :if={@claims.environment} label="Environment">
-          {@claims.environment}
-        </.provenance_entry>
-        <.provenance_entry
-          :if={ClaimsSnapshot.run_url(@claims)}
-          label="Build Run"
-          href={ClaimsSnapshot.run_url(@claims)}
-        >
-          View build summary
-        </.provenance_entry>
-      </dl>
-    </div>
-    """
-  end
-
-  attr :label, :string, required: true
-  attr :href, :string, default: nil
-  slot :inner_block, required: true
-
-  defp provenance_entry(assigns) do
-    ~H"""
-    <div class="flex flex-col gap-0.5">
-      <dt class="text-grey-400 dark:text-grey-300 text-[10px] font-medium uppercase tracking-wide">
-        {@label}
-      </dt>
-      <dd class="text-sm font-medium break-all">
-        <%= if @href do %>
-          <a
-            href={@href}
-            rel="nofollow"
-            class="text-blue-600 dark:text-blue-300 hover:text-blue-700 dark:hover:text-blue-200 hover:underline"
-          >
-            {render_slot(@inner_block)}
-          </a>
-        <% else %>
-          <span class="text-grey-700 dark:text-grey-100">{render_slot(@inner_block)}</span>
-        <% end %>
-      </dd>
     </div>
     """
   end
