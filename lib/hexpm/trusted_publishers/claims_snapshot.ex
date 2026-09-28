@@ -74,6 +74,14 @@ defmodule Hexpm.TrustedPublishers.ClaimsSnapshot do
 
   def ref_url(%__MODULE__{}), do: nil
 
+  def environment_url(%__MODULE__{repository: repository, environment: environment})
+      when is_binary(repository) and is_binary(environment) do
+    query = URI.encode_query(%{"environments_filter" => environment})
+    "#{@github}/#{repository}/deployments/activity_log?#{query}"
+  end
+
+  def environment_url(%__MODULE__{}), do: nil
+
   def actor_url(%__MODULE__{actor: actor}) when is_binary(actor), do: "#{@github}/#{actor}"
   def actor_url(%__MODULE__{}), do: nil
 

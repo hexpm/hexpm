@@ -435,6 +435,10 @@ defmodule HexpmWeb.PackageControllerTest do
       assert body =~ "https://github.com/acme/widget/actions/runs/42/attempts/1"
       assert body =~ "https://github.com/acme/widget/tree/v0.1.0"
       assert body =~ "https://github.com/octocat"
+
+      assert body =~
+               "https://github.com/acme/widget/deployments/activity_log?environments_filter=hex"
+
       assert body =~ "hex"
     end
 

@@ -39,6 +39,13 @@ defmodule Hexpm.TrustedPublishers.ClaimsSnapshotTest do
     assert ClaimsSnapshot.ref_url(pull) == nil
   end
 
+  test "links the environment to its deployment history" do
+    snapshot = %{@snapshot | environment: "hex release"}
+
+    assert ClaimsSnapshot.environment_url(snapshot) ==
+             "https://github.com/acme/widget/deployments/activity_log?environments_filter=hex+release"
+  end
+
   test "links the repository and the actor who triggered the run" do
     snapshot = %{@snapshot | actor: "octocat"}
 
@@ -55,5 +62,6 @@ defmodule Hexpm.TrustedPublishers.ClaimsSnapshotTest do
     assert ClaimsSnapshot.run_url(snapshot) == nil
     assert ClaimsSnapshot.ref_url(snapshot) == nil
     assert ClaimsSnapshot.actor_url(snapshot) == nil
+    assert ClaimsSnapshot.environment_url(snapshot) == nil
   end
 end

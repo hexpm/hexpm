@@ -46,7 +46,9 @@ defmodule HexpmWeb.Components.Provenance do
           </.provenance_link>
         </.provenance_entry>
         <.provenance_entry :if={@claims.environment} label="Environment">
-          {@claims.environment}
+          <.provenance_link href={ClaimsSnapshot.environment_url(@claims)}>
+            {@claims.environment}
+          </.provenance_link>
         </.provenance_entry>
         <.provenance_entry :if={@claims.actor} label="Triggered By">
           <span class="flex flex-wrap gap-1">
