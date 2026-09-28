@@ -11,6 +11,7 @@ defmodule HexpmWeb.Plugs.Attack do
   @diff_limit 20
   @diff_period 60_000
   @sso_period 10 * 60_000
+  @short_url_period 10 * 60_000
   @varsel_jti_period 300_000
 
   rule "allow local", conn do
@@ -196,6 +197,22 @@ defmodule HexpmWeb.Plugs.Attack do
       storage: @storage,
       limit: @diff_limit,
       period: @diff_period
+    )
+  end
+
+  # Counts only requests that would write a new short URL; a link that
+  # already has one is answered without touching the bucket. Not broadcast,
+  # so each pod keeps its own count.
+  def short_url_ip_throttle(ip, opts \\ []) do
+    key = {:short_url_ip, ip}
+    time = opts[:time] || System.system_time(:millisecond)
+
+    timed_throttle(
+      key,
+      time: time,
+      storage: @storage,
+      limit: 30,
+      period: @short_url_period
     )
   end
 

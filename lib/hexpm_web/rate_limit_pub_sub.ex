@@ -65,4 +65,9 @@ defmodule HexpmWeb.RateLimitPubSub do
     Attack.sso_callback_ip_throttle(ip, time: time)
     {:noreply, []}
   end
+
+  # A pod on another release can broadcast a key this one doesn't know.
+  def handle_info({:throttle, _key, _time}, []) do
+    {:noreply, []}
+  end
 end
