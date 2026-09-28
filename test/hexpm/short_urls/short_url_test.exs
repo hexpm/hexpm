@@ -81,6 +81,16 @@ defmodule Hexpm.ShortURLs.ShortURLTest do
                {:error, "has an invalid comparison"}
     end
 
+    test "rejects a canonical link longer than 8192 bytes" do
+      query =
+        Enum.map_join(1..150, "&", fn n ->
+          "diffs[]=ecto:1.0.#{n}-#{String.duplicate("a", 100)}:2.0.0"
+        end)
+
+      assert ShortURL.canonical_diff_url("https://hex.pm/diffs?" <> query) ==
+               {:error, "must be at most 8192 bytes"}
+    end
+
     test "rejects a link without a query" do
       assert ShortURL.canonical_diff_url("https://hex.pm/diffs") ==
                {:error, "must contain at least one comparison"}

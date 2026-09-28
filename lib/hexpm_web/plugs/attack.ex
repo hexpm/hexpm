@@ -201,11 +201,11 @@ defmodule HexpmWeb.Plugs.Attack do
   end
 
   # Counts only requests that would write a new short URL; a link that
-  # already has one is answered without touching the bucket.
+  # already has one is answered without touching the bucket. Not broadcast,
+  # so each pod keeps its own count.
   def short_url_ip_throttle(ip, opts \\ []) do
     key = {:short_url_ip, ip}
     time = opts[:time] || System.system_time(:millisecond)
-    unless opts[:time], do: RateLimitPubSub.broadcast(key, time)
 
     timed_throttle(
       key,

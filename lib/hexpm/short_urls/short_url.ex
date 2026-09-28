@@ -21,6 +21,9 @@ defmodule Hexpm.ShortURLs.ShortURL do
   ]
   @max_comparisons 150
   @max_comparison_bytes 512
+  # Bandit refuses request lines over 10,000 bytes, so a longer link would
+  # shorten fine and then fail with 414 when followed.
+  @max_url_bytes 8192
   @package_name ~r/^[a-z][a-z0-9_]*$/
   @max_package_name_bytes 255
 
@@ -68,7 +71,13 @@ defmodule Hexpm.ShortURLs.ShortURL do
         end)
 
       packages = comparisons |> Enum.map(&elem(&1, 0)) |> Enum.uniq()
-      {:ok, "https://hex.pm/diffs?" <> query, packages}
+      url = "https://hex.pm/diffs?" <> query
+
+      if byte_size(url) <= @max_url_bytes do
+        {:ok, url, packages}
+      else
+        {:error, "must be at most #{@max_url_bytes} bytes"}
+      end
     end
   end
 
