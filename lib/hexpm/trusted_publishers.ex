@@ -5,12 +5,11 @@ defmodule Hexpm.TrustedPublishers do
 
   use Hexpm.Context
 
-  alias Hexpm.OAuth.{Clients, JWT, Token}
+  alias Hexpm.OAuth.{JWT, Token}
   alias Hexpm.Repository.Package
   alias Hexpm.TrustedPublishers.{OIDC, Provider, TrustedPublisher, VerifiedToken}
 
   @mint_expires_in 15 * 60
-  @client_id_env_key :trusted_publisher_oauth_client_id
 
   def enabled? do
     features = Application.get_env(:hexpm, :features, [])
@@ -18,10 +17,6 @@ defmodule Hexpm.TrustedPublishers do
   end
 
   def audience, do: OIDC.audience()
-
-  def client_id do
-    Application.fetch_env!(:hexpm, @client_id_env_key)
-  end
 
   def list(%Package{} = package) do
     from(tp in TrustedPublisher, where: tp.package_id == ^package.id, order_by: [asc: tp.id])
@@ -243,14 +238,12 @@ defmodule Hexpm.TrustedPublishers do
   end
 
   defp mint_token(trusted_publisher, package, claims, provider) do
-    client_id = client_id()
     scope = package_scope(package)
     expires_in = @mint_expires_in
     expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)
     jti_oidc = claims["jti"]
 
-    with {:ok, client} <- fetch_client(client_id),
-         {:ok, access_token, jti} <-
+    with {:ok, access_token, jti} <-
            JWT.generate_access_token(
              to_string(trusted_publisher.id),
              "trusted_publisher",
@@ -265,7 +258,6 @@ defmodule Hexpm.TrustedPublishers do
         expires_at: expires_at,
         grant_type: "trusted_publisher",
         grant_reference: jti_oidc,
-        client_id: client.client_id,
         trusted_publisher_id: trusted_publisher.id,
         oidc_claims: provider.claims_snapshot(claims)
       }
@@ -284,13 +276,6 @@ defmodule Hexpm.TrustedPublishers do
     end
   end
 
-  defp fetch_client(client_id) do
-    case Clients.get(client_id) do
-      nil -> {:error, :oauth_client_missing}
-      client -> {:ok, client}
-    end
-  end
-
   defp package_scope(%Package{repository: %{name: repo}, name: name}) do
     "package:#{repo}/#{name}"
   end
@@ -299,8 +284,8 @@ defmodule Hexpm.TrustedPublishers do
     Enum.any?(changeset.errors, fn
       {:grant_reference, {_msg, opts}} ->
         opts[:constraint_name] in [
-          :oauth_tokens_trusted_publisher_grant_reference_client_id_index,
-          "oauth_tokens_trusted_publisher_grant_reference_client_id_index"
+          :oauth_tokens_trusted_publisher_grant_reference_index,
+          "oauth_tokens_trusted_publisher_grant_reference_index"
         ]
 
       _ ->

@@ -88,7 +88,6 @@ jobs:
       - name: Mint Hex token and publish
         env:
           HEX_API_URL: https://hex.pm/api
-          HEX_TRUSTED_PUBLISHER_CLIENT_ID: a1111111-1111-4111-8111-111111111111
         run: |
           set -euo pipefail
 
@@ -101,7 +100,6 @@ jobs:
           MINT=$(curl -fsS -X POST "$HEX_API_URL/oauth/token" \
             -H "content-type: application/x-www-form-urlencoded" \
             --data-urlencode "grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer" \
-            --data-urlencode "client_id=$HEX_TRUSTED_PUBLISHER_CLIENT_ID" \
             --data-urlencode "assertion=$OIDC_TOKEN" \
             --data-urlencode "scope=package:hexpm/PACKAGE")
 
@@ -142,12 +140,11 @@ POST /api/oauth/token
 Content-Type: application/x-www-form-urlencoded
 
 grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&
-client_id=a1111111-1111-4111-8111-111111111111&
 assertion=<github-oidc-jwt>&
 scope=package:hexpm/PACKAGE
 ```
 
-`client_id` is the fixed, public trusted-publisher client shown above. `scope` names exactly one package as `package:REPOSITORY/PACKAGE`; use the Hex repository name (for example `package:ORG/PACKAGE`) for a private organization package. Successful response:
+No `client_id` is needed, because the OIDC token is the credential. `scope` names exactly one package as `package:REPOSITORY/PACKAGE`; use the Hex repository name (for example `package:ORG/PACKAGE`) for a private organization package. Successful response:
 
 ```nohighlight
 {

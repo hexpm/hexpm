@@ -66,9 +66,9 @@ defmodule Hexpm.OAuth.Token do
       :token_type,
       :scopes,
       :expires_at,
-      :grant_type,
-      :client_id
+      :grant_type
     ])
+    |> validate_client_present()
     |> validate_inclusion(:grant_type, @valid_grant_types)
     |> validate_subject_present()
     |> validate_scopes()
@@ -80,7 +80,7 @@ defmodule Hexpm.OAuth.Token do
       message: "a live token already exists for this device code"
     )
     |> unique_constraint(:grant_reference,
-      name: :oauth_tokens_trusted_publisher_grant_reference_client_id_index,
+      name: :oauth_tokens_trusted_publisher_grant_reference_index,
       message: "OIDC token has already been used"
     )
   end
@@ -91,6 +91,14 @@ defmodule Hexpm.OAuth.Token do
   end
 
   def valid_grant_types, do: @valid_grant_types
+
+  defp validate_client_present(changeset) do
+    if get_field(changeset, :grant_type) == "trusted_publisher" do
+      changeset
+    else
+      validate_required(changeset, [:client_id])
+    end
+  end
 
   defp validate_subject_present(changeset) do
     user_id = get_field(changeset, :user_id)

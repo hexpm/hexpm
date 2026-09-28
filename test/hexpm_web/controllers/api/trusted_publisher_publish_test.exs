@@ -9,7 +9,6 @@ defmodule HexpmWeb.API.TrustedPublisherPublishTest do
   setup :verify_on_exit!
 
   setup do
-    TrustedPublisherHelpers.ensure_oauth_client()
     TrustedPublisherHelpers.stub_oidc_discovery()
 
     user = insert(:user)
@@ -122,7 +121,6 @@ defmodule HexpmWeb.API.TrustedPublisherPublishTest do
         build_conn()
         |> post("/api/oauth/token", %{
           "grant_type" => "urn:ietf:params:oauth:grant-type:jwt-bearer",
-          "client_id" => Hexpm.TrustedPublishers.client_id(),
           "assertion" => oidc,
           "scope" => "package:hexpm/#{pkg.name}"
         })

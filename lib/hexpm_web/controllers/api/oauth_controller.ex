@@ -287,9 +287,7 @@ defmodule HexpmWeb.API.OAuthController do
 
   defp handle_jwt_bearer_grant(conn, params) do
     if TrustedPublishers.enabled?() do
-      with {:ok, client} <- validate_client(safe_param(params, "client_id")),
-           :ok <- validate_client_supports_grant(client, @jwt_bearer_grant_type),
-           {:ok, repository, package} <- parse_package_scope(params["scope"]),
+      with {:ok, repository, package} <- parse_package_scope(params["scope"]),
            {:ok, assertion} <- fetch_assertion(params),
            {:ok, verified} <- verify_assertion(assertion),
            :ok <- check_mint_rate_limit(verified),
@@ -298,9 +296,6 @@ defmodule HexpmWeb.API.OAuthController do
       else
         {:error, error, description} ->
           render_oauth_error(conn, error, description)
-
-        {:error, error} ->
-          render_oauth_error(conn, :invalid_client, error)
       end
     else
       render_oauth_error(

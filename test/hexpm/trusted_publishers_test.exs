@@ -10,7 +10,6 @@ defmodule Hexpm.TrustedPublishersTest do
   setup :verify_on_exit!
 
   setup do
-    TrustedPublisherHelpers.ensure_oauth_client()
     TrustedPublisherHelpers.stub_oidc_discovery()
 
     user = insert(:user)
@@ -47,6 +46,7 @@ defmodule Hexpm.TrustedPublishersTest do
 
       assert access_token.grant_type == "trusted_publisher"
       assert access_token.scopes == ["package:hexpm/#{package.name}"]
+      assert access_token.client_id == nil
       assert is_binary(access_token.access_token)
 
       {:ok, claims} = Joken.peek_claims(access_token.access_token)

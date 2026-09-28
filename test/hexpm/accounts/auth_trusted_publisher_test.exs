@@ -8,7 +8,6 @@ defmodule Hexpm.Accounts.AuthTrustedPublisherTest do
   setup :verify_on_exit!
 
   setup do
-    TrustedPublisherHelpers.ensure_oauth_client()
     TrustedPublisherHelpers.stub_oidc_discovery()
 
     user = insert(:user)

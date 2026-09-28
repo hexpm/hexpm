@@ -1,32 +1,11 @@
 defmodule Hexpm.TrustedPublisherHelpers do
   @moduledoc false
 
-  import Hexpm.Factory
   import Mox
 
-  alias Hexpm.TrustedPublishers
   alias Hexpm.TrustedPublishers.OIDC
 
   @issuer "https://token.actions.githubusercontent.com"
-
-  def ensure_oauth_client do
-    client_id = TrustedPublishers.client_id()
-
-    case Hexpm.Repo.get(Hexpm.OAuth.Client, client_id) do
-      nil ->
-        insert(:oauth_client,
-          client_id: client_id,
-          name: "Trusted Publisher",
-          client_type: "public",
-          allowed_grant_types: ["urn:ietf:params:oauth:grant-type:jwt-bearer"],
-          allowed_scopes: ["package"],
-          redirect_uris: []
-        )
-
-      client ->
-        client
-    end
-  end
 
   def rsa_jwk(name \\ :default) do
     case :persistent_term.get({__MODULE__, :rsa_jwk, name}, :miss) do

@@ -9,7 +9,6 @@ defmodule HexpmWeb.API.OAuthControllerTrustedPublisherTest do
   setup :verify_on_exit!
 
   setup do
-    client = TrustedPublisherHelpers.ensure_oauth_client()
     TrustedPublisherHelpers.stub_oidc_discovery()
 
     user = insert(:user)
@@ -28,24 +27,23 @@ defmodule HexpmWeb.API.OAuthControllerTrustedPublisherTest do
       workflow: "release.yml"
     )
 
-    %{package: package, client: client}
+    %{package: package}
   end
 
-  defp mint_params(client, assertion, scope) do
+  defp mint_params(assertion, scope) do
     %{
       "grant_type" => @grant_type,
-      "client_id" => client.client_id,
       "assertion" => assertion,
       "scope" => scope
     }
   end
 
-  test "exchanges a valid OIDC token for a Hex access token", %{package: package, client: client} do
+  test "exchanges a valid OIDC token for a Hex access token", %{package: package} do
     oidc = TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
 
     conn =
       build_conn()
-      |> post("/api/oauth/token", mint_params(client, oidc, "package:hexpm/#{package.name}"))
+      |> post("/api/oauth/token", mint_params(oidc, "package:hexpm/#{package.name}"))
 
     body = json_response(conn, 200)
     assert is_binary(body["access_token"])
@@ -55,12 +53,11 @@ defmodule HexpmWeb.API.OAuthControllerTrustedPublisherTest do
     refute Map.has_key?(body, "refresh_token")
   end
 
-  test "rejects a missing assertion", %{package: package, client: client} do
+  test "rejects a missing assertion", %{package: package} do
     conn =
       build_conn()
       |> post("/api/oauth/token", %{
         "grant_type" => @grant_type,
-        "client_id" => client.client_id,
         "scope" => "package:hexpm/#{package.name}"
       })
 
@@ -68,51 +65,15 @@ defmodule HexpmWeb.API.OAuthControllerTrustedPublisherTest do
     assert body["error"] == "invalid_request"
   end
 
-  test "rejects a scope that does not name exactly one package", %{client: client} do
+  test "rejects a scope that does not name exactly one package", _context do
     oidc = TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
 
     conn =
       build_conn()
-      |> post("/api/oauth/token", mint_params(client, oidc, "api"))
+      |> post("/api/oauth/token", mint_params(oidc, "api"))
 
     body = json_response(conn, 400)
     assert body["error"] == "invalid_scope"
-  end
-
-  test "rejects a missing client_id", %{package: package} do
-    oidc = TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
-
-    conn =
-      build_conn()
-      |> post("/api/oauth/token", %{
-        "grant_type" => @grant_type,
-        "assertion" => oidc,
-        "scope" => "package:hexpm/#{package.name}"
-      })
-
-    body = json_response(conn, 401)
-    assert body["error"] == "invalid_client"
-  end
-
-  test "rejects a client that is not allowed to use this grant", %{package: package} do
-    other_client =
-      insert(:oauth_client,
-        client_type: "public",
-        allowed_grant_types: ["client_credentials"],
-        allowed_scopes: ["api"]
-      )
-
-    oidc = TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
-
-    conn =
-      build_conn()
-      |> post(
-        "/api/oauth/token",
-        mint_params(other_client, oidc, "package:hexpm/#{package.name}")
-      )
-
-    body = json_response(conn, 400)
-    assert body["error"] == "unauthorized_client"
   end
 
   describe "rate limit" do
@@ -121,20 +82,20 @@ defmodule HexpmWeb.API.OAuthControllerTrustedPublisherTest do
       on_exit(fn -> PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage) end)
     end
 
-    test "does not limit tokens that fail verification", %{package: package, client: client} do
+    test "does not limit tokens that fail verification", %{package: package} do
       scope = "package:hexpm/#{package.name}"
 
       for _ <- 1..40 do
-        conn = post(build_conn(), "/api/oauth/token", mint_params(client, "not-a-jwt", scope))
+        conn = post(build_conn(), "/api/oauth/token", mint_params("not-a-jwt", scope))
         assert json_response(conn, 400)["error"] == "invalid_grant"
       end
 
       oidc = TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
-      conn = post(build_conn(), "/api/oauth/token", mint_params(client, oidc, scope))
+      conn = post(build_conn(), "/api/oauth/token", mint_params(oidc, scope))
       assert json_response(conn, 200)["access_token"]
     end
 
-    test "limits verified failures per repository", %{package: package, client: client} do
+    test "limits verified failures per repository", %{package: package} do
       scope = "package:hexpm/#{package.name}"
 
       mint = fn claims ->
@@ -143,7 +104,7 @@ defmodule HexpmWeb.API.OAuthControllerTrustedPublisherTest do
           |> Map.merge(claims)
           |> TrustedPublisherHelpers.sign_oidc_claims()
 
-        post(build_conn(), "/api/oauth/token", mint_params(client, oidc, scope))
+        post(build_conn(), "/api/oauth/token", mint_params(oidc, scope))
       end
 
       wrong_workflow = %{
@@ -161,7 +122,7 @@ defmodule HexpmWeb.API.OAuthControllerTrustedPublisherTest do
       assert json_response(mint.(other_repository), 403)["error"] == "access_denied"
     end
 
-    test "successful mints do not count", %{package: package, client: client} do
+    test "successful mints do not count", %{package: package} do
       scope = "package:hexpm/#{package.name}"
 
       for _ <- 1..29,
@@ -169,13 +130,13 @@ defmodule HexpmWeb.API.OAuthControllerTrustedPublisherTest do
 
       for _ <- 1..2 do
         oidc = TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
-        conn = post(build_conn(), "/api/oauth/token", mint_params(client, oidc, scope))
+        conn = post(build_conn(), "/api/oauth/token", mint_params(oidc, scope))
         assert json_response(conn, 200)["access_token"]
       end
     end
   end
 
-  test "rejects tokens from pull_request_target workflows", %{package: package, client: client} do
+  test "rejects tokens from pull_request_target workflows", %{package: package} do
     oidc =
       TrustedPublisherHelpers.github_claims()
       |> Map.put("event_name", "pull_request_target")
@@ -183,14 +144,14 @@ defmodule HexpmWeb.API.OAuthControllerTrustedPublisherTest do
 
     conn =
       build_conn()
-      |> post("/api/oauth/token", mint_params(client, oidc, "package:hexpm/#{package.name}"))
+      |> post("/api/oauth/token", mint_params(oidc, "package:hexpm/#{package.name}"))
 
     body = json_response(conn, 400)
     assert body["error"] == "invalid_grant"
     assert body["error_description"] =~ "pull_request_target"
   end
 
-  test "rejects non-matching publisher", %{package: package, client: client} do
+  test "rejects non-matching publisher", %{package: package} do
     oidc =
       TrustedPublisherHelpers.sign_oidc_claims(
         TrustedPublisherHelpers.github_claims(workflow: "nope.yml")
@@ -198,14 +159,14 @@ defmodule HexpmWeb.API.OAuthControllerTrustedPublisherTest do
 
     conn =
       build_conn()
-      |> post("/api/oauth/token", mint_params(client, oidc, "package:hexpm/#{package.name}"))
+      |> post("/api/oauth/token", mint_params(oidc, "package:hexpm/#{package.name}"))
 
     assert json_response(conn, 403)["error"] == "access_denied"
   end
 
-  test "rejects replayed tokens", %{package: package, client: client} do
+  test "rejects replayed tokens", %{package: package} do
     oidc = TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
-    params = mint_params(client, oidc, "package:hexpm/#{package.name}")
+    params = mint_params(oidc, "package:hexpm/#{package.name}")
 
     build_conn()
     |> post("/api/oauth/token", params)
@@ -221,8 +182,7 @@ defmodule HexpmWeb.API.OAuthControllerTrustedPublisherTest do
   end
 
   test "returns unsupported_grant_type when the feature is disabled", %{
-    package: package,
-    client: client
+    package: package
   } do
     previous = Application.get_env(:hexpm, :features)
     Application.put_env(:hexpm, :features, trusted_publishers: false)
@@ -232,7 +192,7 @@ defmodule HexpmWeb.API.OAuthControllerTrustedPublisherTest do
 
     body =
       build_conn()
-      |> post("/api/oauth/token", mint_params(client, oidc, "package:hexpm/#{package.name}"))
+      |> post("/api/oauth/token", mint_params(oidc, "package:hexpm/#{package.name}"))
       |> json_response(400)
 
     assert body["error"] == "unsupported_grant_type"
