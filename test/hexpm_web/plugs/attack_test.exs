@@ -96,6 +96,25 @@ defmodule HexpmWeb.Plugs.AttackTest do
       assert {:block, _data} = Attack.diff_throttle(identity, time: time)
     end
 
+    test "broadcasts and bounds short URL rate limits" do
+      align_to_throttle_bucket(10 * 60_000)
+      ip = {7, 7, 7, 7}
+      time = System.system_time(:millisecond)
+      Phoenix.PubSub.broadcast!(Hexpm.PubSub, "ratelimit", {:throttle, {:short_url_ip, ip}, time})
+      :sys.get_state(RateLimitPubSub)
+
+      assert {:allow, {:throttle, data}} = Attack.short_url_ip_throttle(ip, time: time)
+      assert data[:limit] == 30
+      assert data[:remaining] == 28
+
+      for _ <- 1..28 do
+        assert {:allow, _data} = Attack.short_url_ip_throttle(ip, time: time)
+      end
+
+      assert {:block, _data} = Attack.short_url_ip_throttle(ip, time: time)
+      assert {:allow, _data} = Attack.short_url_ip_throttle({8, 8, 8, 8}, time: time)
+    end
+
     test "broadcasts SSO rate limits" do
       align_to_throttle_bucket()
       time = System.system_time(:millisecond)
