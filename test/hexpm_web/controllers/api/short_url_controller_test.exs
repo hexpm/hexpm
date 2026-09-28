@@ -50,8 +50,8 @@ defmodule HexpmWeb.API.ShortURLControllerTest do
                |> json_response(422)
     end
 
-    test "fails given an unknown package" do
-      assert %{"errors" => %{"url" => "unknown packages: not_a_package"}} =
+    test "fails given only unknown packages" do
+      assert %{"errors" => %{"url" => "must compare at least one package on hex.pm"}} =
                build_conn()
                |> post("/api/short_url", %{
                  "url" => "https://hex.pm/diffs?diffs[]=not_a_package:1.0.0:1.0.1"

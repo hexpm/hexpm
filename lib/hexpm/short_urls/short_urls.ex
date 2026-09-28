@@ -10,10 +10,7 @@ defmodule Hexpm.ShortURLs do
   other than `:ok` is returned as `{:error, value}` without writing.
   """
   def add(params, opts \\ []) do
-    changeset =
-      params
-      |> ShortURL.diff_changeset()
-      |> validate_packages_exist()
+    changeset = ShortURL.diff_changeset(params, &existing_packages/1)
 
     with {:ok, %{url: url}} <- apply_action(changeset, :insert) do
       hash = Target.url_hash(url)
@@ -38,19 +35,9 @@ defmodule Hexpm.ShortURLs do
     |> Repo.one()
   end
 
-  defp validate_packages_exist(%Ecto.Changeset{valid?: false} = changeset), do: changeset
-
-  defp validate_packages_exist(changeset) do
-    names = get_change(changeset, :packages)
-
-    existing =
-      from(p in Package, where: p.repository_id == 1 and p.name in ^names, select: p.name)
-      |> Repo.all()
-
-    case names -- existing do
-      [] -> changeset
-      missing -> add_error(changeset, :url, "unknown packages: #{Enum.join(missing, ", ")}")
-    end
+  defp existing_packages(names) do
+    from(p in Package, where: p.repository_id == 1 and p.name in ^names, select: p.name)
+    |> Repo.all()
   end
 
   defp get_by_url_hash(hash) do

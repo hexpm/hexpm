@@ -44,24 +44,33 @@ defmodule Hexpm.ShortURLs.ShortURL do
   @doc """
   Validates a submitted diff link and puts its canonical form in `:url` and
   the package names it compares in `:packages`.
+
+  See `canonical_diff_url/2` for `existing`.
   """
-  def diff_changeset(params) do
+  def diff_changeset(params, existing \\ &Function.identity/1) do
     {%{}, %{url: :string, packages: {:array, :string}}}
     |> cast(params, [:url])
     |> validate_required([:url])
-    |> put_canonical_diff_url()
+    |> put_canonical_diff_url(existing)
   end
 
   @doc """
   The canonical form of a hex.pm diff link: its comparisons sorted and
   deduplicated under `https://hex.pm/diffs`, whichever accepted diff host and
   query key the link used.
+
+  `existing` is given the package names the link compares and returns the ones
+  that exist. Comparisons of any other package are dropped, since the diff page
+  can't show them.
   """
-  def canonical_diff_url(url) when is_binary(url) do
+  def canonical_diff_url(url, existing \\ &Function.identity/1)
+
+  def canonical_diff_url(url, existing) when is_binary(url) do
     uri = URI.parse(url)
 
     with :ok <- check_diff_uri(url, uri),
-         {:ok, comparisons} <- diff_comparisons(uri.query) do
+         {:ok, comparisons} <- diff_comparisons(uri.query),
+         {:ok, comparisons} <- existing_comparisons(comparisons, existing) do
       comparisons = comparisons |> Enum.uniq() |> Enum.sort()
 
       query =
@@ -80,7 +89,21 @@ defmodule Hexpm.ShortURLs.ShortURL do
     end
   end
 
-  def canonical_diff_url(_url), do: {:error, "must be a hex.pm diff link"}
+  def canonical_diff_url(_url, _existing), do: {:error, "must be a hex.pm diff link"}
+
+  defp existing_comparisons(comparisons, existing) do
+    known =
+      comparisons
+      |> Enum.map(&elem(&1, 0))
+      |> Enum.uniq()
+      |> existing.()
+      |> MapSet.new()
+
+    case Enum.filter(comparisons, &MapSet.member?(known, elem(&1, 0))) do
+      [] -> {:error, "must compare at least one package on hex.pm"}
+      comparisons -> {:ok, comparisons}
+    end
+  end
 
   @doc """
   The URL a short code redirects to, or `nil` when the stored value does not
@@ -96,13 +119,13 @@ defmodule Hexpm.ShortURLs.ShortURL do
     end
   end
 
-  defp put_canonical_diff_url(changeset) do
+  defp put_canonical_diff_url(changeset, existing) do
     case get_change(changeset, :url) do
       nil ->
         changeset
 
       url ->
-        case canonical_diff_url(url) do
+        case canonical_diff_url(url, existing) do
           {:ok, canonical, packages} ->
             changeset
             |> put_change(:url, canonical)

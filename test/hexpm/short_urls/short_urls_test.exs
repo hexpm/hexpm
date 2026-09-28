@@ -74,22 +74,38 @@ defmodule Hexpm.ShortURLsTest do
       assert Repo.aggregate(Target, :count) == 0
     end
 
-    test "rejects a comparison of a package that does not exist", %{first: first} do
+    test "drops comparisons of packages that do not exist", %{first: first} do
       url =
         "https://hex.pm/diffs?diffs[]=#{first}:1.0.0:1.1.0&diffs[]=not_a_package:1.0.0:1.1.0"
 
+      assert {:ok, short_url} = ShortURLs.add(%{"url" => url})
+
+      assert ShortURLs.get(short_url.short_code).target.url ==
+               "https://hex.pm/diffs?diffs[]=#{first}:1.0.0:1.1.0"
+
+      assert {:ok, ^short_url} =
+               ShortURLs.add(%{"url" => "https://hex.pm/diffs?diffs[]=#{first}:1.0.0:1.1.0"})
+    end
+
+    test "rejects a link where no package exists" do
+      url = "https://hex.pm/diffs?diffs[]=not_a_package:1.0.0:1.1.0"
+
       assert {:error, changeset} = ShortURLs.add(%{"url" => url})
-      assert errors_on(changeset).url == "unknown packages: not_a_package"
+      assert errors_on(changeset).url == "must compare at least one package on hex.pm"
       assert Repo.aggregate(ShortURL, :count) == 0
     end
 
-    test "rejects a package that only exists in an organization repository" do
+    test "drops a package that only exists in an organization repository", %{first: first} do
       repository = insert(:repository)
       package = insert(:package, repository_id: repository.id)
-      url = "https://hex.pm/diffs?diffs[]=#{package.name}:1.0.0:1.1.0"
 
-      assert {:error, changeset} = ShortURLs.add(%{"url" => url})
-      assert errors_on(changeset).url == "unknown packages: #{package.name}"
+      url =
+        "https://hex.pm/diffs?diffs[]=#{package.name}:1.0.0:1.1.0&diffs[]=#{first}:1.0.0:1.1.0"
+
+      assert {:ok, short_url} = ShortURLs.add(%{"url" => url})
+
+      assert ShortURLs.get(short_url.short_code).target.url ==
+               "https://hex.pm/diffs?diffs[]=#{first}:1.0.0:1.1.0"
     end
 
     test "rejects a url that is not a diff link" do
