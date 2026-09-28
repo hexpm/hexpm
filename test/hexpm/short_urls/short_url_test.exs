@@ -133,6 +133,23 @@ defmodule Hexpm.ShortURLs.ShortURLTest do
     end
   end
 
+  describe "canonical_diff_url/2" do
+    test "drops comparisons of packages that don't exist" do
+      url = "https://hex.pm/diffs?diffs[]=oban_pro:1.0.0:1.1.0&diffs[]=ecto:3.0.0:3.1.0"
+      existing = &Enum.filter(&1, fn name -> name == "ecto" end)
+
+      assert ShortURL.canonical_diff_url(url, existing) ==
+               {:ok, "https://hex.pm/diffs?diffs[]=ecto:3.0.0:3.1.0", ["ecto"]}
+    end
+
+    test "rejects a link when no package exists" do
+      url = "https://hex.pm/diffs?diffs[]=oban_pro:1.0.0:1.1.0"
+
+      assert ShortURL.canonical_diff_url(url, fn _names -> [] end) ==
+               {:error, "must compare at least one package on hex.pm"}
+    end
+  end
+
   describe "diff_changeset/1" do
     test "puts the canonical url and the package names" do
       changeset =
