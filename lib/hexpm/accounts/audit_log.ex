@@ -39,36 +39,6 @@ defmodule Hexpm.Accounts.AuditLog do
     }
   end
 
-  def build(
-        %{
-          user: nil,
-          auth_credential: %Hexpm.OAuth.Token{grant_type: "trusted_publisher"} = token
-        } = audit_data,
-        action,
-        params
-      ) do
-    params = extract_params(action, params)
-    {_key, oauth_token} = extract_auth_credential(token)
-
-    %AuditLog{
-      user_id: nil,
-      organization_id:
-        params[:organization][:id] || params[:package][:organization_id] ||
-          params[:organization_id],
-      user_data: %{
-        trusted_publisher_id: token.trusted_publisher_id,
-        grant_type: "trusted_publisher"
-      },
-      key_data: nil,
-      key: nil,
-      oauth_token: oauth_token,
-      user_agent: Hexpm.Utils.truncate_bytes(audit_data.user_agent, 255),
-      remote_ip: audit_data.remote_ip,
-      action: action,
-      params: params
-    }
-  end
-
   def build(%{user: %User{id: user_id}} = audit_data, "organization.create", organization) do
     params = extract_params("organization.create", organization)
 
@@ -143,6 +113,32 @@ defmodule Hexpm.Accounts.AuditLog do
       user_id: nil,
       organization_id: organization_id,
       user_data: nil,
+      key_data: serialize_key(key),
+      key: key,
+      oauth_token: oauth_token,
+      user_agent: Hexpm.Utils.truncate_bytes(audit_data.user_agent, 255),
+      remote_ip: audit_data.remote_ip,
+      request_id: Map.get(audit_data, :request_id),
+      action: action,
+      params: params
+    }
+  end
+
+  def build(
+        %{user: %Hexpm.TrustedPublishers.TrustedPublisher{id: trusted_publisher_id}} = audit_data,
+        action,
+        params
+      ) do
+    params = extract_params(action, params)
+
+    {key, oauth_token} = extract_auth_credential(audit_data.auth_credential)
+
+    %AuditLog{
+      user_id: nil,
+      organization_id:
+        params[:organization][:id] || params[:package][:organization_id] ||
+          params[:organization_id],
+      user_data: %{trusted_publisher_id: trusted_publisher_id, grant_type: "trusted_publisher"},
       key_data: serialize_key(key),
       key: key,
       oauth_token: oauth_token,

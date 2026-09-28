@@ -82,6 +82,8 @@ defmodule HexpmWeb.API.TrustedPublisherPublishTest do
     log = Hexpm.Repo.get_by!(AuditLog, action: "release.publish")
     assert log.user_id == nil
     assert log.user_data["trusted_publisher_id"] == tp.id
+    assert log.oauth_token_id
+    assert log.request_id
   end
 
   test "deleting the trusted publisher keeps the claims snapshot on the release", %{
