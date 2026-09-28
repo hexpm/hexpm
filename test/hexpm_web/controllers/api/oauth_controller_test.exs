@@ -132,6 +132,28 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert Repo.aggregate(Hexpm.OAuth.DeviceCode, :count) == 1
     end
 
+    test "refuses a package scope containing a tab" do
+      {:ok, client} =
+        Client.build(%{
+          client_id: Clients.generate_client_id(),
+          name: "Package OAuth Client",
+          client_type: "public",
+          allowed_grant_types: ["urn:ietf:params:oauth:grant-type:device_code"],
+          allowed_scopes: ["package"]
+        })
+        |> Repo.insert()
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/device_authorization", %{
+          "client_id" => client.client_id,
+          "scope" => "package:acme/x\trepository:victim"
+        })
+
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_request"
+      assert Repo.aggregate(Hexpm.OAuth.DeviceCode, :count) == 0
+    end
+
     test "returns error for scope as array (malformed JSON)", %{client: client} do
       conn =
         post(build_conn(), ~p"/api/oauth/device_authorization", %{
