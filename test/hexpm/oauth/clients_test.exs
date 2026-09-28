@@ -194,6 +194,65 @@ defmodule Hexpm.OAuth.ClientsTest do
 
       refute Clients.valid_redirect_uri?(client, "https://prod-acme.hexdocs.pm/oauth/callback")
     end
+
+    test "wildcard rejects userinfo and backslashes in the authority" do
+      client = %Client{redirect_uris: ["https://*.hexdocs.pm/oauth/callback"]}
+
+      refute Clients.valid_redirect_uri?(
+               client,
+               "https://evil%2ecom\\@x.hexdocs.pm/oauth/callback"
+             )
+
+      refute Clients.valid_redirect_uri?(client, "https://a@b.hexdocs.pm/oauth/callback")
+      refute Clients.valid_redirect_uri?(client, "https://evil.com\\.hexdocs.pm/oauth/callback")
+
+      refute Clients.valid_redirect_uri?(
+               client,
+               "https://acme.hexdocs.pm\\@evil.com/oauth/callback"
+             )
+    end
+
+    test "wildcard rejects tabs and newlines" do
+      client = %Client{redirect_uris: ["https://*.hexdocs.pm/oauth/callback"]}
+
+      refute Clients.valid_redirect_uri?(client, "https://ac\tme.hexdocs.pm/oauth/callback")
+      refute Clients.valid_redirect_uri?(client, "https://acme.hexdocs.pm/oauth/call\nback")
+    end
+
+    test "wildcard matches only host label characters" do
+      client = %Client{redirect_uris: ["https://*.hexdocs.pm/oauth/callback"]}
+
+      refute Clients.valid_redirect_uri?(client, "https://evil%2ecom.hexdocs.pm/oauth/callback")
+      refute Clients.valid_redirect_uri?(client, "https://-acme.hexdocs.pm/oauth/callback")
+      refute Clients.valid_redirect_uri?(client, "https://acme-.hexdocs.pm/oauth/callback")
+      assert Clients.valid_redirect_uri?(client, "https://a.hexdocs.pm/oauth/callback")
+      assert Clients.valid_redirect_uri?(client, "https://ac_me.hexdocs.pm/oauth/callback")
+      assert Clients.valid_redirect_uri?(client, "https://ACME.hexdocs.pm/oauth/callback")
+    end
+
+    test "wildcard inside a label matches hyphens next to the literal part" do
+      client = %Client{redirect_uris: ["https://preview*.example.com/callback"]}
+
+      assert Clients.valid_redirect_uri?(client, "https://preview-123.example.com/callback")
+      assert Clients.valid_redirect_uri?(client, "https://preview1.example.com/callback")
+      refute Clients.valid_redirect_uri?(client, "https://preview-.example.com/callback")
+      refute Clients.valid_redirect_uri?(client, "https://preview.example.com/callback")
+      refute Clients.valid_redirect_uri?(client, "https://preview-a.b.example.com/callback")
+    end
+
+    test "wildcard requires exact query and fragment match" do
+      client = %Client{redirect_uris: ["https://*.hexdocs.pm/oauth/callback"]}
+
+      refute Clients.valid_redirect_uri?(client, "https://acme.hexdocs.pm/oauth/callback?x=1")
+      refute Clients.valid_redirect_uri?(client, "https://acme.hexdocs.pm/oauth/callback#x")
+    end
+
+    test "returns false for non-string redirect URIs" do
+      client = %Client{redirect_uris: ["https://*.hexdocs.pm/oauth/callback"]}
+
+      refute Clients.valid_redirect_uri?(client, nil)
+      refute Clients.valid_redirect_uri?(client, %{"a" => "b"})
+    end
   end
 
   describe "requires_authentication?/1" do

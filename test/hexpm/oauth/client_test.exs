@@ -172,6 +172,38 @@ defmodule Hexpm.OAuth.ClientTest do
       assert error =~ "wildcard must have at least domain.tld after"
     end
 
+    test "validates redirect URIs - rejects wildcard with userinfo" do
+      attrs = %{
+        client_id: "test_client",
+        name: "Test Client",
+        client_type: "public",
+        redirect_uris: ["https://user@*.example.com/callback"]
+      }
+
+      changeset = Client.changeset(%Client{}, attrs)
+      assert %{redirect_uris: error} = errors_on(changeset)
+      assert error =~ "must have a lowercase hostname and no userinfo"
+    end
+
+    test "validates redirect URIs - rejects wildcard with invalid hostname" do
+      for uri <- [
+            "https://*.Example.com/callback",
+            "https://*.exa%mple.com/callback",
+            "https://*.example.com\\/callback"
+          ] do
+        attrs = %{
+          client_id: "test_client",
+          name: "Test Client",
+          client_type: "public",
+          redirect_uris: [uri]
+        }
+
+        changeset = Client.changeset(%Client{}, attrs)
+        assert %{redirect_uris: error} = errors_on(changeset)
+        assert error =~ "must have a lowercase hostname and no userinfo"
+      end
+    end
+
     test "validates redirect URIs - accepts wildcard with two domain segments" do
       attrs = %{
         client_id: "test_client",
