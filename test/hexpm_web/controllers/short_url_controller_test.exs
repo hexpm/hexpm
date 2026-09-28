@@ -12,19 +12,6 @@ defmodule HexpmWeb.ShortURLControllerTest do
     assert redirected_to(conn, 301) == url
   end
 
-  test "redirects a short code without a target to its url" do
-    Hexpm.Repo.insert_all("short_urls", [
-      %{
-        short_code: "GgHhJ",
-        url: "https://diff.hex.pm?diff[]=ecto:3.0.0:3.0.1",
-        inserted_at: NaiveDateTime.utc_now()
-      }
-    ])
-
-    conn = get(build_conn(), "/l/GgHhJ")
-    assert redirected_to(conn, 301) == "https://diff.hex.pm?diff[]=ecto:3.0.0:3.0.1"
-  end
-
   test "show an invalid short code" do
     conn = get(build_conn(), "/l/f4k3")
     assert response(conn, 404)

@@ -36,15 +36,7 @@ defmodule Hexpm.ShortURLs do
   def get(short_code) do
     from(s in ShortURL, where: s.short_code == ^short_code, preload: :target)
     |> Repo.one()
-    |> put_url()
   end
-
-  defp put_url(%ShortURL{target_id: nil} = short_url) do
-    url = from(s in "short_urls", where: s.id == ^short_url.id, select: s.url) |> Repo.one()
-    %{short_url | url: url}
-  end
-
-  defp put_url(short_url), do: short_url
 
   defp validate_packages_exist(%Ecto.Changeset{valid?: false} = changeset), do: changeset
 

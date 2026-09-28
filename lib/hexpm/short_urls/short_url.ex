@@ -28,7 +28,6 @@ defmodule Hexpm.ShortURLs.ShortURL do
   @max_package_name_bytes 255
 
   schema "short_urls" do
-    field :url, :string, virtual: true
     field :short_code, :string
     belongs_to :target, Target
 
@@ -90,10 +89,7 @@ defmodule Hexpm.ShortURLs.ShortURL do
   Rebuilt from the parsed host and path rather than returned as stored, so the
   host redirected to is the one that was checked.
   """
-  def redirect_url(%ShortURL{target: %Target{url: url}}), do: checked_redirect_url(url)
-  def redirect_url(%ShortURL{url: url}), do: checked_redirect_url(url)
-
-  defp checked_redirect_url(url) do
+  def redirect_url(%ShortURL{target: %Target{url: url}}) do
     case canonical_uri(url) do
       {:ok, uri} -> URI.to_string(uri)
       {:error, _reason} -> nil
@@ -202,8 +198,6 @@ defmodule Hexpm.ShortURLs.ShortURL do
          }}
     end
   end
-
-  defp canonical_uri(_url), do: {:error, "must include a host"}
 
   defp allowed_host?(host, path) do
     cond do

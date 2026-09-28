@@ -19,9 +19,6 @@ defmodule Hexpm.ShortURLsTest do
       canonical =
         "https://hex.pm/diffs?diffs[]=#{first}:2.0.0:2.0.1&diffs[]=#{second}:1.0.0:1.1.0"
 
-      assert from(s in "short_urls", where: s.id == ^short_url.id, select: s.url) |> Repo.one() ==
-               nil
-
       short_url = ShortURLs.get(short_url.short_code)
       assert short_url.target.url == canonical
       assert short_url.target.url_hash == Target.url_hash(canonical)
@@ -132,23 +129,6 @@ defmodule Hexpm.ShortURLsTest do
 
       assert %ShortURL{target: %Target{url: "https://hex.pm/diffs?diffs[]=ecto:3.0.1:3.0.4"}} =
                ShortURLs.get("abcde")
-    end
-
-    test "reads the url of a short code without a target" do
-      Repo.insert_all("short_urls", [
-        %{
-          short_code: "fghjk",
-          url: "https://diff.hex.pm/diffs?diffs[]=ecto:3.0.1:3.0.4",
-          inserted_at: NaiveDateTime.utc_now()
-        }
-      ])
-
-      short_url = ShortURLs.get("fghjk")
-      refute short_url.target
-      assert short_url.url == "https://diff.hex.pm/diffs?diffs[]=ecto:3.0.1:3.0.4"
-
-      assert ShortURL.redirect_url(short_url) ==
-               "https://diff.hex.pm/diffs?diffs[]=ecto:3.0.1:3.0.4"
     end
 
     test "given a short_code that does not exist, returns nil" do
