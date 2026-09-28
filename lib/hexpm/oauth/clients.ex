@@ -101,7 +101,7 @@ defmodule Hexpm.OAuth.Clients do
 
   Supports wildcard patterns in the host, e.g.:
   - `https://*.hexdocs.pm/oauth/callback` matches `https://acme.hexdocs.pm/oauth/callback`
-  - The wildcard `*` matches characters within a single DNS label (no dots)
+  - The wildcard `*` matches one host label: lowercase letters, digits, `_` and `-` (organization names can contain `_`)
 
   For wildcard patterns the scheme, port, path, query and fragment must equal
   the pattern's, and URIs with userinfo, backslashes, tabs or newlines never
@@ -115,7 +115,7 @@ defmodule Hexpm.OAuth.Clients do
 
   def valid_redirect_uri?(%Client{}, _uri), do: false
 
-  @label "[a-z0-9]([a-z0-9-]*[a-z0-9])?"
+  @label "[a-z0-9_]([a-z0-9_-]*[a-z0-9_])?"
 
   defp uri_matches?(pattern, uri) do
     if String.contains?(pattern, "*") do

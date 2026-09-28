@@ -18,7 +18,7 @@ defmodule Hexpm.OAuth.Client do
     timestamps()
   end
 
-  @host ~r/\A[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\z/
+  @host ~r/\A[a-z0-9_]([a-z0-9_-]*[a-z0-9_])?(\.[a-z0-9_]([a-z0-9_-]*[a-z0-9_])?)*\z/
 
   @valid_client_types ~w(public confidential)
   @valid_grant_types ~w(authorization_code urn:ietf:params:oauth:grant-type:device_code refresh_token client_credentials)

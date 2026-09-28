@@ -219,14 +219,14 @@ defmodule Hexpm.OAuth.ClientsTest do
       refute Clients.valid_redirect_uri?(client, "https://acme.hexdocs.pm/oauth/call\nback")
     end
 
-    test "wildcard matches only DNS label characters" do
+    test "wildcard matches only host label characters" do
       client = %Client{redirect_uris: ["https://*.hexdocs.pm/oauth/callback"]}
 
       refute Clients.valid_redirect_uri?(client, "https://evil%2ecom.hexdocs.pm/oauth/callback")
       refute Clients.valid_redirect_uri?(client, "https://-acme.hexdocs.pm/oauth/callback")
       refute Clients.valid_redirect_uri?(client, "https://acme-.hexdocs.pm/oauth/callback")
-      refute Clients.valid_redirect_uri?(client, "https://ac_me.hexdocs.pm/oauth/callback")
       assert Clients.valid_redirect_uri?(client, "https://a.hexdocs.pm/oauth/callback")
+      assert Clients.valid_redirect_uri?(client, "https://ac_me.hexdocs.pm/oauth/callback")
       assert Clients.valid_redirect_uri?(client, "https://ACME.hexdocs.pm/oauth/callback")
     end
 

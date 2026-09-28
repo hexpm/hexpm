@@ -188,7 +188,7 @@ defmodule Hexpm.OAuth.ClientTest do
     test "validates redirect URIs - rejects wildcard with invalid hostname" do
       for uri <- [
             "https://*.Example.com/callback",
-            "https://*.exa_mple.com/callback",
+            "https://*.exa%mple.com/callback",
             "https://*.example.com\\/callback"
           ] do
         attrs = %{
