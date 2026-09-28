@@ -78,19 +78,7 @@ defmodule Hexpm.Repository.Release do
     |> put_change(:inner_checksum, inner_checksum)
     |> put_change(:outer_checksum, outer_checksum)
     |> put_assoc(:publisher, publisher)
-    |> then(fn changeset ->
-      case trusted_publisher_context do
-        %{trusted_publisher_id: trusted_publisher_id, oidc_claims: oidc_claims} ->
-          changeset
-          |> put_change(:trusted_publisher_id, trusted_publisher_id)
-          |> put_embed(:oidc_claims, oidc_claims)
-
-        nil ->
-          changeset
-          |> put_change(:trusted_publisher_id, nil)
-          |> put_embed(:oidc_claims, nil)
-      end
-    end)
+    |> put_trusted_publisher(trusted_publisher_context)
     |> Requirement.build_all(package)
   end
 
@@ -136,6 +124,21 @@ defmodule Hexpm.Repository.Release do
       replace?,
       trusted_publisher_context
     )
+  end
+
+  defp put_trusted_publisher(changeset, %{
+         trusted_publisher_id: trusted_publisher_id,
+         oidc_claims: oidc_claims
+       }) do
+    changeset
+    |> put_change(:trusted_publisher_id, trusted_publisher_id)
+    |> put_embed(:oidc_claims, oidc_claims)
+  end
+
+  defp put_trusted_publisher(changeset, nil) do
+    changeset
+    |> put_change(:trusted_publisher_id, nil)
+    |> put_embed(:oidc_claims, nil)
   end
 
   defp validate_version(changeset) do
