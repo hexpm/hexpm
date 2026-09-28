@@ -1,28 +1,35 @@
 defmodule HexpmWeb.Plugs.Forwarded do
-  import Bitwise
   import Plug.Conn
   require Logger
 
-  # https://cloud.google.com/load-balancing/docs/firewall-rules
-  @load_balancer_ranges [
-    {{130, 211, 0, 0}, 22},
-    {{35, 191, 0, 0}, 16}
-  ]
+  # The load balancer sets this header on every request it forwards and
+  # overwrites any value the client sent:
+  # https://cloud.google.com/load-balancing/docs/https/custom-headers
+  @secret_header "x-hexpm-load-balancer-secret"
 
   def init(opts), do: opts
 
   def call(conn, _opts) do
-    remote_ip = remote_ip(conn.remote_ip, get_req_header(conn, "x-forwarded-for"))
-    %{conn | remote_ip: remote_ip}
+    remote_ip = remote_ip(conn, Application.get_env(:hexpm, :load_balancer_secret))
+
+    conn
+    |> delete_req_header(@secret_header)
+    |> Map.put(:remote_ip, remote_ip)
   end
 
-  def remote_ip(peer, headers) do
-    if load_balancer?(peer) do
-      forwarded_ip(peer, headers)
+  def remote_ip(conn, secret) do
+    if load_balancer?(get_req_header(conn, @secret_header), secret) do
+      forwarded_ip(conn.remote_ip, get_req_header(conn, "x-forwarded-for"))
     else
-      peer
+      conn.remote_ip
     end
   end
+
+  defp load_balancer?([value], secret) when is_binary(secret) and secret != "" do
+    Plug.Crypto.secure_compare(value, secret)
+  end
+
+  defp load_balancer?(_values, _secret), do: false
 
   # https://cloud.google.com/load-balancing/docs/https#x-forwarded-for_header
   defp forwarded_ip(peer, headers) do
@@ -47,28 +54,4 @@ defmodule HexpmWeb.Plugs.Forwarded do
       peer
     end
   end
-
-  defp load_balancer?(ip) do
-    case ipv4(ip) do
-      {:ok, ip} ->
-        ip = ipv4_to_integer(ip)
-
-        Enum.any?(@load_balancer_ranges, fn {network, prefix} ->
-          mask = bnot((1 <<< (32 - prefix)) - 1) &&& 0xFFFFFFFF
-          (ip &&& mask) == ipv4_to_integer(network)
-        end)
-
-      :error ->
-        false
-    end
-  end
-
-  defp ipv4({_, _, _, _} = ip), do: {:ok, ip}
-
-  defp ipv4({0, 0, 0, 0, 0, 0xFFFF, high, low}),
-    do: {:ok, {high >>> 8, high &&& 0xFF, low >>> 8, low &&& 0xFF}}
-
-  defp ipv4(_ip), do: :error
-
-  defp ipv4_to_integer({a, b, c, d}), do: a <<< 24 ||| b <<< 16 ||| c <<< 8 ||| d
 end

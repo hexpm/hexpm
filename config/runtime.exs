@@ -103,6 +103,7 @@ if config_env() == :prod do
     dashboard_password: System.fetch_env!("HEXPM_DASHBOARD_PASSWORD"),
     img_url: System.fetch_env!("HEXPM_IMG_URL"),
     img_proxy_secret: System.fetch_env!("HEXPM_IMG_PROXY_SECRET"),
+    load_balancer_secret: System.fetch_env!("HEXPM_LOAD_BALANCER_SECRET"),
     readme_host: System.fetch_env!("HEXPM_README_HOST"),
     readme_url: System.fetch_env!("HEXPM_README_URL"),
     secret_scan_notify: System.get_env("HEXPM_SECRET_SCAN_NOTIFY") == "true"

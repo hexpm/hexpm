@@ -26,6 +26,7 @@ defmodule Hexpm.RuntimeConfigTest do
     "HEXPM_DASHBOARD_PASSWORD" => "dashboard-password",
     "HEXPM_IMG_URL" => "https://img.example.com",
     "HEXPM_IMG_PROXY_SECRET" => "img-proxy-secret",
+    "HEXPM_LOAD_BALANCER_SECRET" => "load-balancer-secret",
     "HEXPM_README_HOST" => "readme.hex.example.com",
     "HEXPM_README_URL" => "https://readme.hex.example.com",
     "HEXPM_VARSEL_REPORT_URL" => "https://cna.example.com/reports",
@@ -115,6 +116,14 @@ defmodule Hexpm.RuntimeConfigTest do
              "Worker pods mount every env var web pods do, so unless the key " <>
              "configures the web server itself it belongs in the shared block, " <>
              "where jobs can read it too."
+  end
+
+  test "reads the load balancer secret in prod only" do
+    assert read_runtime(@web_env)[:hexpm][:load_balancer_secret] == "load-balancer-secret"
+
+    for env <- [:dev, :test] do
+      assert read_runtime(@web_env, env)[:hexpm][:load_balancer_secret] == nil
+    end
   end
 
   test "organization deletions default to off and accept each mode" do
