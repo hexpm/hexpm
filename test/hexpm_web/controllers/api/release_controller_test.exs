@@ -309,6 +309,47 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       refute Hexpm.Repo.get_by(Package, name: meta.name)
     end
 
+    test "rejects release with more than 10,000 files", %{user: user} do
+      meta = %{
+        name: Fake.sequence(:package),
+        version: "1.0.0",
+        description: "description",
+        files: ["lib"]
+      }
+
+      files = for i <- 1..10_001, do: {"lib/file#{i}.ex", ""}
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(user))
+        |> post("/api/publish", create_tar(meta, files))
+
+      assert json_response(conn, 422)["errors"] == %{"tar" => "tarball has more than 10000 files"}
+      refute Hexpm.Repo.get_by(Package, name: meta.name)
+    end
+
+    test "rejects release with unexpected files in the outer tarball", %{user: user} do
+      meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "description"}
+      tarball = create_tar(meta)
+      tarball = binary_part(tarball, 0, byte_size(tarball) - 1024)
+
+      tarball =
+        tarball <> Hexpm.TarballHelpers.tar_entry("dir/", ?5) <> Hexpm.TarballHelpers.tar_end()
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(user))
+        |> post("/api/publish", tarball)
+
+      assert json_response(conn, 422)["errors"] == %{
+               "tar" => "unsupported file type in tarball: dir/ (directory)"
+             }
+
+      refute Hexpm.Repo.get_by(Package, name: meta.name)
+    end
+
     test "authenticates before extracting release contents" do
       meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "description"}
 
