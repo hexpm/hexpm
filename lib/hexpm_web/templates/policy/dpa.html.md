@@ -77,7 +77,7 @@ At your choice, Six Colors will delete Customer Personal Data or return it to yo
 
 After termination or expiry of your subscription, or the end of a free trial that isn't followed by a subscription, Six Colors retains Customer Personal Data for 90 days so that you can make that choice. That applies however the subscription ended. Six Colors then deletes the contents of your private packages and documentation, your policies and the audit log entries about them, after emailing the Notification Address when the deletion is scheduled and again a week and a day before it; the deletion is never less than a week after the first email. The organization record, its members and the rest of its audit log are kept while the organization exists. Six Colors deletes the data earlier on your request, and keeps it longer only where retention is required by Union or Member State law.
 
-Copies in Six Colors' backups are gone within 75 days of the deletion, except in the encrypted archives of the package repository made with Tarsnap until September 2026, which are kept. Copies held by Subprocessors are deleted on those systems' own cycles. Until copies are deleted, they remain subject to this DPA and are not restored or used for any other purpose.
+Copies in Six Colors' backups are gone within 75 days of the deletion. Copies held by Subprocessors are deleted on those systems' own cycles. Until copies are deleted, they remain subject to this DPA and are not restored or used for any other purpose.
 
 ### 10. Audits and information
 

@@ -40,7 +40,7 @@ defmodule HexpmWeb.PolicyControllerTest do
 
     response = response(conn, 200)
     assert response =~ "Subprocessors"
-    assert response =~ "Tarsnap"
+    assert response =~ "Fastly"
   end
 
   test "show policy security" do

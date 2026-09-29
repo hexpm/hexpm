@@ -76,7 +76,7 @@ We may disclose personal data when required by law, for example to comply with a
 
 The service runs on infrastructure located in the United States, so operating it involves transferring personal data there.
 
-Six Colors is the exporter for those transfers and is responsible for the transfer mechanism. For each provider in the United States we rely on either the European Commission's adequacy decision for the EU-US Data Privacy Framework, where that provider is certified, or the Standard Contractual Clauses adopted by the European Commission, together with the UK Addendum and the Swiss amendments where those apply. For a copy of the clauses, contact <support@hex.pm>. Backups of the package repository are encrypted before they leave our infrastructure and the keys are held only by us, so the backup provider cannot read them.
+Six Colors is the exporter for those transfers and is responsible for the transfer mechanism. For each provider in the United States we rely on either the European Commission's adequacy decision for the EU-US Data Privacy Framework, where that provider is certified, or the Standard Contractual Clauses adopted by the European Commission, together with the UK Addendum and the Swiss amendments where those apply. For a copy of the clauses, contact <support@hex.pm>. Backups of the package repository are encrypted with a key only we hold before they're written to Google Cloud Storage, so Google can't read them.
 
 ### Your rights
 
