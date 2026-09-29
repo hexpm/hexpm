@@ -1175,6 +1175,22 @@ defmodule Hexpm.AdminTasksTest do
       assert deletion.params["name"] == organization.name
     end
 
+    test "deletes the audit log entries members made about its packages" do
+      repository = insert(:repository)
+      package = insert(:package, repository_id: repository.id)
+
+      audit_log =
+        insert(:audit_log,
+          user: insert(:user),
+          action: "release.publish",
+          params: %{"package" => %{"id" => package.id, "name" => package.name}}
+        )
+
+      assert :ok = AdminTasks.delete_organization(repository.organization.name)
+
+      refute Repo.get(Hexpm.Accounts.AuditLog, audit_log.id)
+    end
+
     test "reserves the name so another organization cannot take it" do
       organization = insert(:organization)
       user = insert(:user)
@@ -1458,6 +1474,58 @@ defmodule Hexpm.AdminTasksTest do
       assert :ok = perform_job(Hexpm.Accounts.OrganizationDataWorker, job.args)
       assert Hexpm.Store.list(:repo_bucket, "repos/#{name}/") |> Enum.to_list() == []
       assert Hexpm.Store.get(:deletions_bucket, "organizations/#{name}", [])
+    end
+
+    test "deletes the audit log entries about the packages and policies and keeps the rest" do
+      repository = insert(:repository)
+      organization = repository.organization
+      package = insert(:package, repository_id: repository.id)
+      public_package = insert(:package)
+      member = insert(:user)
+
+      package_log =
+        insert(:audit_log,
+          user: member,
+          action: "release.publish",
+          params: %{"package" => %{"id" => package.id, "name" => package.name}}
+        )
+
+      key_package_log =
+        insert(:audit_log,
+          organization: organization,
+          action: "docs.publish",
+          params: %{"package" => %{"id" => package.id, "name" => package.name}}
+        )
+
+      policy_log =
+        insert(:audit_log,
+          organization: organization,
+          action: "policy.create",
+          params: %{"name" => "internal"}
+        )
+
+      public_package_log =
+        insert(:audit_log,
+          organization: organization,
+          action: "release.publish",
+          params: %{"package" => %{"id" => public_package.id, "name" => public_package.name}}
+        )
+
+      member_log =
+        insert(:audit_log, organization: organization, action: "organization.member.add")
+
+      assert :ok = AdminTasks.delete_organization_data(organization.name)
+
+      refute Repo.get(Hexpm.Accounts.AuditLog, package_log.id)
+      refute Repo.get(Hexpm.Accounts.AuditLog, key_package_log.id)
+      refute Repo.get(Hexpm.Accounts.AuditLog, policy_log.id)
+      assert Repo.get(Hexpm.Accounts.AuditLog, public_package_log.id)
+      assert Repo.get(Hexpm.Accounts.AuditLog, member_log.id)
+
+      assert Repo.get_by(Hexpm.Accounts.AuditLog,
+               action: "organization.delete_data",
+               organization_id: organization.id
+             )
     end
 
     test "refuses while the subscription is live and leaves billing alone" do
