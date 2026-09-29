@@ -26,7 +26,7 @@ We process public packages to run the registry, on the basis of our contract wit
 
 ### Private packages
 
-Packages published to an organization's private repository aren't public. They're available only to members of that organization, and so is their documentation. The organization is the controller of this content and we process it under the [Data Processing Agreement](/policies/dpa); it's also covered by the confidentiality terms of the [Terms of Service](/policies/termsofservice). When a subscription or a free trial ends we keep the organization's content for 90 days so the organization can retrieve it. After that we may delete it at any time, and we delete it on request. Deleting it removes the organization's packages, their documentation and its policies; the organization, its members and its keys stay.
+Packages published to an organization's private repository aren't public. They're available only to members of that organization, and so is their documentation. The organization is the controller of this content and we process it under the [Data Processing Agreement](/policies/dpa); it's also covered by the confidentiality terms of the [Terms of Service](/policies/termsofservice). When a subscription or a free trial ends we keep the organization's content for 90 days so the organization can retrieve it, and then delete its packages, their documentation and its policies. Its administrators are emailed when the deletion is scheduled and again a week and a day before it, and nothing is deleted if a subscription starts in the meantime. The organization, its members and its keys stay. We also delete the content earlier on request.
 
 ### Logs and security
 
