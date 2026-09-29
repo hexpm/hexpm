@@ -58,6 +58,43 @@ defmodule Hexpm.TarballHelpers do
     }
   end
 
+  @doc """
+  Builds a ustar entry by hand, for entry types and header layouts that
+  `:erl_tar.create` doesn't write.
+  """
+  def tar_entry(name, typeflag, data \\ "") do
+    size = if typeflag in [?1, ?2, ?5], do: 0, else: byte_size(data)
+
+    header =
+      IO.iodata_to_binary([
+        pad(name, 100),
+        pad("0000644", 8),
+        pad("0000000", 8),
+        pad("0000000", 8),
+        pad(String.pad_leading(Integer.to_string(size, 8), 11, "0"), 12),
+        pad("00000000000", 12),
+        "        ",
+        typeflag,
+        pad("", 100),
+        "ustar\0",
+        "00",
+        pad("", 247)
+      ])
+
+    checksum = for <<byte <- header>>, reduce: 0, do: (acc -> acc + byte)
+    checksum = String.pad_leading(Integer.to_string(checksum, 8), 6, "0") <> "\0 "
+    <<before::binary-148, _::binary-8, rest::binary>> = header
+    data = if size == 0, do: "", else: pad(data, byte_size(data) + padding(byte_size(data)))
+
+    before <> checksum <> rest <> data
+  end
+
+  def tar_end, do: <<0::size(1024 * 8)>>
+
+  defp pad(binary, size), do: binary <> :binary.copy(<<0>>, size - byte_size(binary))
+
+  defp padding(size), do: rem(512 - rem(size, 512), 512)
+
   defp tree_entries(root, relative) do
     full = if relative == "", do: root, else: Path.join(root, relative)
 
