@@ -67,6 +67,121 @@ defmodule Hexpm.Diff.GeneratorTest do
     assert Enum.map(repeated_pieces, & &1.key) == Enum.map(pieces, & &1.key)
   end
 
+  describe "whole-tree diff" do
+    setup do
+      package = insert(:package, name: "generator_whole_tree")
+      same = Enum.map_join(1..40, "", &"line #{&1}\n")
+
+      from_files = %{
+        "lib/changed.ex" => "defmodule A do\n  def a, do: 1\nend\n",
+        "lib/renamed_from.ex" => same,
+        "lib/deleted.ex" => "deleted\n",
+        "lib/space.ex" => "value = 1\n",
+        "lib/unchanged.ex" => "unchanged\n",
+        "image.bin" => <<0, 1, 2, 3, 255, 0>>,
+        "huge.txt" => String.duplicate("a", 100_001),
+        "mode.sh" => {"echo\n", 0o644},
+        "conflict" => "file becomes a directory\n",
+        "dir/a.ex" => "dir a\n",
+        "dir.ex" => "dir.ex\n",
+        "with space.ex" => "old\n",
+        "weird b/name b.ex" => "old\n",
+        "tab\tname.ex" => "old\n",
+        "new\nline.ex" => "old\n",
+        "quo\"te.ex" => "old\n",
+        "back\\slash.ex" => "old\n",
+        "control\x01.ex" => "old\n",
+        "é.ex" => "old\n"
+      }
+
+      to_files = %{
+        "lib/changed.ex" => "defmodule A do\n  def a, do: 2\nend\n",
+        "lib/renamed_to.ex" => same,
+        "lib/added.ex" => "added\n",
+        "lib/empty.ex" => "",
+        "lib/space.ex" => "value    =    1\n",
+        "lib/unchanged.ex" => "unchanged\n",
+        "image.bin" => <<0, 1, 2, 4, 255, 0>>,
+        "huge.txt" => String.duplicate("b", 100_001),
+        "mode.sh" => {"echo\n", 0o755},
+        "conflict/inner.ex" => "directory now\n",
+        "dir/a.ex" => "dir a changed\n",
+        "dir.ex" => "dir.ex changed\n",
+        "with space.ex" => "new\n",
+        "weird b/name b.ex" => "new\n",
+        "tab\tname.ex" => "new\n",
+        "new\nline.ex" => "new\n",
+        "quo\"te.ex" => "new\n",
+        "back\\slash.ex" => "new\n",
+        "control\x01.ex" => "new\n",
+        "é.ex" => "new\n"
+      }
+
+      insert_tarball_release(package, "1.0.0", from_files,
+        symlinks: %{"link.ex" => "lib/changed.ex"}
+      )
+
+      insert_tarball_release(package, "2.0.0", to_files)
+
+      files =
+        (Map.keys(from_files) ++ Map.keys(to_files) ++ ["hex_metadata.config"])
+        |> Enum.uniq()
+        |> Enum.sort()
+
+      {:ok, package: package, files: files}
+    end
+
+    for ignore_whitespace <- [false, true] do
+      test "matches a per-file git diff with ignore_whitespace: #{ignore_whitespace}", %{
+        package: package,
+        files: files
+      } do
+        ignore_whitespace = unquote(ignore_whitespace)
+
+        {:ok, request} =
+          Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0",
+            ignore_whitespace: ignore_whitespace
+          )
+
+        assert :ok = Generator.generate(request)
+        assert {:ok, metadata, pieces} = Hexpm.Diff.fetch(request)
+        loaded = Enum.map(pieces, &Hexpm.Diff.fetch_piece/1)
+        [{from_dir, to_dir} | _] = for {:ok, {:diff, _, from, to}} <- loaded, do: {from, to}
+
+        expected =
+          Enum.flat_map(files, fn file ->
+            from_path = Path.join(from_dir, file)
+            to_path = Path.join(to_dir, file)
+            from_path = if File.regular?(from_path), do: from_path, else: "/dev/null"
+            to_path = if File.regular?(to_path), do: to_path, else: "/dev/null"
+
+            cond do
+              file == "huge.txt" ->
+                [{sanitize(file), {:ok, {:too_large, sanitize(file)}}}]
+
+              diff = per_file_git_diff(from_path, to_path, ignore_whitespace) ->
+                [{sanitize(file), {:ok, {:diff, sanitize(diff), from_dir, to_dir}}}]
+
+              true ->
+                []
+            end
+          end)
+
+        assert Enum.zip(metadata.files, loaded) == expected
+
+        refute "lib/unchanged.ex" in metadata.files
+        refute "link.ex" in metadata.files
+        assert "lib/renamed_from.ex" in metadata.files
+        assert "lib/renamed_to.ex" in metadata.files
+        assert "conflict" in metadata.files
+        assert "conflict/inner.ex" in metadata.files
+        assert "lib/empty.ex" in metadata.files
+        assert "mode.sh" in metadata.files
+        assert "lib/space.ex" in metadata.files == not ignore_whitespace
+      end
+    end
+  end
+
   test "symlinks in tarballs are skipped and link cycles do not multiply the tree" do
     package = insert(:package, name: "generator_symlinks")
 
@@ -427,5 +542,31 @@ defmodule Hexpm.Diff.GeneratorTest do
     original = Application.fetch_env!(:hexpm, key)
     Application.put_env(:hexpm, key, value)
     on_exit(fn -> Application.put_env(:hexpm, key, original) end)
+  end
+
+  defp per_file_git_diff(from_path, to_path, ignore_whitespace) do
+    args =
+      [
+        "-c",
+        "core.quotepath=false",
+        "-c",
+        "diff.algorithm=histogram",
+        "diff",
+        "--no-index",
+        "--no-color"
+      ] ++ if(ignore_whitespace, do: ["-w"], else: []) ++ [from_path, to_path]
+
+    case System.cmd("git", args, stderr_to_stdout: true) do
+      {"", 0} -> nil
+      {output, 1} -> output
+    end
+  end
+
+  defp sanitize(binary) do
+    binary
+    |> String.chunk(:valid)
+    |> Enum.map_join(fn chunk ->
+      if String.valid?(chunk), do: chunk, else: String.duplicate("?", byte_size(chunk))
+    end)
   end
 end
