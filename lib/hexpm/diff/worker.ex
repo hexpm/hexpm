@@ -19,11 +19,17 @@ defmodule Hexpm.Diff.Worker do
   end
 
   defp generate(request) do
-    case Generator.generate(request) do
-      {:error, :tarball_not_found} -> {:discard, :tarball_not_found}
-      {:error, :checksum_mismatch} -> {:discard, :checksum_mismatch}
-      {:error, {:invalid_tarball, _reason} = reason} -> {:discard, reason}
-      result -> result
+    task = Task.async(fn -> Generator.generate(request) end)
+    timeout = Application.fetch_env!(:hexpm, :diff_timeout)
+
+    case Task.yield(task, timeout) || Task.shutdown(task, :brutal_kill) do
+      {:ok, result} -> result(result)
+      nil -> {:discard, :timeout}
     end
   end
+
+  defp result({:error, :tarball_not_found}), do: {:discard, :tarball_not_found}
+  defp result({:error, :checksum_mismatch}), do: {:discard, :checksum_mismatch}
+  defp result({:error, {:invalid_tarball, _reason} = reason}), do: {:discard, reason}
+  defp result(result), do: result
 end

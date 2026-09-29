@@ -209,23 +209,33 @@
             role="status"
             aria-live="polite"
           >
-            <%= if @job_state in [:discarded, :cancelled, :missing, :completed_without_metadata] do %>
-              {icon(:heroicon, "exclamation-triangle", class: "mb-3 size-8 text-grey-300")}
-              <h2 class="mb-2 text-h6 font-semibold text-grey-700 dark:text-grey-200">
-                Diff generation did not complete
-              </h2>
-              <p>{job_state_message(@job_state)}</p>
-              <.button type="button" size="sm" class="mt-4" phx-click="retry">Try again</.button>
-            <% else %>
-              <div
-                class="mb-4 size-6 animate-spin rounded-full border-2 border-grey-100 border-t-primary-500 dark:border-grey-700 dark:border-t-primary-300"
-                aria-hidden="true"
-              >
-              </div>
-              <h2 class="mb-2 text-h6 font-semibold text-grey-700 dark:text-grey-200">
-                {job_state_title(@job_state)}
-              </h2>
-              <p>This page updates automatically.</p>
+            <%= cond do %>
+              <% @job_state == :too_large -> %>
+                {icon(:heroicon, "document", class: "mb-3 size-8 text-grey-300")}
+                <h2
+                  id="diff-too-large"
+                  class="mb-2 text-h6 font-semibold text-grey-700 dark:text-grey-200"
+                >
+                  Diff too large
+                </h2>
+                <p>{too_large_message(@metadata.files_changed)}</p>
+              <% @job_state in [:discarded, :cancelled, :missing, :completed_without_metadata] -> %>
+                {icon(:heroicon, "exclamation-triangle", class: "mb-3 size-8 text-grey-300")}
+                <h2 class="mb-2 text-h6 font-semibold text-grey-700 dark:text-grey-200">
+                  Diff generation did not complete
+                </h2>
+                <p>{job_state_message(@job_state)}</p>
+                <.button type="button" size="sm" class="mt-4" phx-click="retry">Try again</.button>
+              <% true -> %>
+                <div
+                  class="mb-4 size-6 animate-spin rounded-full border-2 border-grey-100 border-t-primary-500 dark:border-grey-700 dark:border-t-primary-300"
+                  aria-hidden="true"
+                >
+                </div>
+                <h2 class="mb-2 text-h6 font-semibold text-grey-700 dark:text-grey-200">
+                  {job_state_title(@job_state)}
+                </h2>
+                <p>This page updates automatically.</p>
             <% end %>
           </div>
         <% end %>

@@ -489,6 +489,37 @@ defmodule HexpmWeb.DiffLiveTest do
     assert html =~ "file-0.bin"
   end
 
+  test "too-large metadata renders the too-large state without a file list or retry", %{
+    package: package
+  } do
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
+    Cache.put_metadata!(request, %{too_large: true, files_changed: 6000})
+
+    {:ok, view, html} = live(build_conn(), "/diff/#{package.name}/1.0.0..2.0.0")
+
+    assert has_element?(view, "#diff-too-large", "Diff too large")
+    assert html =~ "These releases differ in 6000 files. The diff is too large to show."
+    refute has_element?(view, "#diff-files")
+    refute has_element?(view, "#diff-list")
+    refute has_element?(view, "button", "Try again")
+    refute Repo.exists?(from job in Oban.Job, where: job.worker == "Hexpm.Diff.Worker")
+  end
+
+  test "a completed job with too-large metadata renders the too-large state", %{
+    package: package
+  } do
+    {:ok, view, _html} = live(build_conn(), "/diff/#{package.name}/3.0.0..4.0.0")
+    job = Repo.one!(from job in Oban.Job, where: job.worker == "Hexpm.Diff.Worker")
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "3.0.0", "4.0.0", [])
+    Cache.put_metadata!(request, %{too_large: true, files_changed: 1})
+    set_job_state(job, "completed")
+
+    send(view.pid, {:poll_job, job.id})
+
+    assert render(view) =~ "These releases differ in 1 file. The diff is too large to show."
+    assert has_element?(view, "#diff-too-large")
+  end
+
   test "selector uses an explicit action, disables identical choices, and keeps whitespace mode",
        %{
          package: package

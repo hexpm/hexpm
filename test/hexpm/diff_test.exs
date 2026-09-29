@@ -148,6 +148,18 @@ defmodule Hexpm.DiffTest do
     assert {:error, :invalid_metadata} = Hexpm.Diff.fetch(request)
   end
 
+  test "reads too-large metadata without pieces and rejects a malformed count", %{
+    package: package
+  } do
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
+
+    Cache.put_metadata!(request, %{too_large: true, files_changed: 7000})
+    assert {:ok, %{too_large: true, files_changed: 7000}, []} = Hexpm.Diff.fetch(request)
+
+    Cache.put_metadata!(request, %{too_large: true, files_changed: -1})
+    assert {:error, :invalid_metadata} = Hexpm.Diff.fetch(request)
+  end
+
   test "validates public packages, releases, routes, and identical versions", %{package: package} do
     private_repository = insert(:repository)
 
