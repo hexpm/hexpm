@@ -72,6 +72,8 @@ defmodule Hexpm.Diff.Cache do
     end
   end
 
+  defp ready(_request, _hash, %{too_large: true} = metadata), do: {:ok, metadata, []}
+
   defp ready(request, hash, metadata) do
     pieces =
       if metadata.total_diffs == 0 do
@@ -90,8 +92,23 @@ defmodule Hexpm.Diff.Cache do
   end
 
   defp decode_metadata(body) do
-    with {:ok, metadata} <- JSON.decode(body),
-         {:ok, total_diffs} <- non_negative_integer(metadata["total_diffs"]),
+    case JSON.decode(body) do
+      {:ok, %{"too_large" => true, "files_changed" => files_changed}} ->
+        case non_negative_integer(files_changed) do
+          {:ok, files_changed} -> {:ok, %{too_large: true, files_changed: files_changed}}
+          :error -> {:error, :invalid_metadata}
+        end
+
+      {:ok, metadata} when is_map(metadata) ->
+        decode_diff_metadata(metadata)
+
+      _ ->
+        {:error, :invalid_metadata}
+    end
+  end
+
+  defp decode_diff_metadata(metadata) do
+    with {:ok, total_diffs} <- non_negative_integer(metadata["total_diffs"]),
          {:ok, total_additions} <- non_negative_integer(metadata["total_additions"]),
          {:ok, total_deletions} <- non_negative_integer(metadata["total_deletions"]),
          {:ok, files_changed} <- non_negative_integer(metadata["files_changed"]),

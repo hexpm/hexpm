@@ -23,8 +23,16 @@ defmodule Hexpm.Diff.Generator do
     with :ok <- from_download,
          :ok <- to_download,
          {:ok, from_dir} <- unpack(from_path, request, request.from),
-         {:ok, to_dir} <- unpack(to_path, request, request.to),
-         {:ok, metadata} <- generate_pieces(request, from_dir, to_dir) do
+         {:ok, to_dir} <- unpack(to_path, request, request.to) do
+      changes = changes(from_dir, to_dir)
+
+      metadata =
+        if within_limits?(changes) do
+          generate_pieces(request, from_dir, to_dir, changes)
+        else
+          %{too_large: true, files_changed: length(changes)}
+        end
+
       Cache.put_metadata!(request, metadata)
       :ok
     end
@@ -61,49 +69,14 @@ defmodule Hexpm.Diff.Generator do
     end
   end
 
-  defp generate_pieces(request, from_dir, to_dir) do
-    files =
-      (Hexpm.Utils.tree_regular_files(from_dir) ++ Hexpm.Utils.tree_regular_files(to_dir))
-      |> Enum.uniq()
-      |> Enum.sort()
-
-    initial = %{
-      total_diffs: 0,
-      total_additions: 0,
-      total_deletions: 0,
-      files_changed: 0,
-      files: []
-    }
-
-    metadata =
-      files
-      |> Stream.transform(0, fn file, index ->
-        case build_piece(request, from_dir, to_dir, file) do
-          :unchanged -> {[], index}
-          {update, data} -> {[{index, update, data}], index + 1}
-        end
-      end)
-      |> Task.async_stream(
-        fn {index, update, data} ->
-          try do
-            Cache.put_piece!(request, index, data)
-            update
-          rescue
-            exception -> {:piece_error, exception, __STACKTRACE__}
-          end
-        end,
-        max_concurrency: @upload_concurrency,
-        timeout: @upload_timeout
-      )
-      |> Enum.reduce(initial, fn
-        {:ok, {:piece_error, exception, stacktrace}}, _metadata -> reraise(exception, stacktrace)
-        {:ok, update}, metadata -> merge_metadata(metadata, update)
-      end)
-
-    {:ok, metadata}
+  defp changes(from_dir, to_dir) do
+    (Hexpm.Utils.tree_regular_files(from_dir) ++ Hexpm.Utils.tree_regular_files(to_dir))
+    |> Enum.uniq()
+    |> Enum.sort()
+    |> Enum.flat_map(&change(from_dir, to_dir, &1))
   end
 
-  defp build_piece(request, from_dir, to_dir, file) do
+  defp change(from_dir, to_dir, file) do
     from_path = Path.join(from_dir, file)
     to_path = Path.join(to_dir, file)
     from_path = if regular_file?(from_path), do: from_path, else: "/dev/null"
@@ -112,29 +85,84 @@ defmodule Hexpm.Diff.Generator do
 
     cond do
       same_contents? and same_executable_mode?(from_path, to_path) ->
-        :unchanged
+        []
 
       not same_contents? and (too_large?(from_path) or too_large?(to_path)) ->
-        file = sanitize_utf8(file)
-        {metadata_update(file, 0, 0), %{type: "too_large", file: file}}
+        [{:too_large, file}]
 
       true ->
-        case git_diff(from_path, to_path, request.ignore_whitespace) do
-          nil ->
-            :unchanged
+        [{:diff, file, from_path, to_path}]
+    end
+  end
 
-          raw_diff ->
-            raw_diff = sanitize_utf8(raw_diff)
-            {additions, deletions} = count_changes(raw_diff)
+  defp within_limits?(changes) do
+    max_files = Application.fetch_env!(:hexpm, :diff_max_changed_files)
+    max_bytes = Application.fetch_env!(:hexpm, :diff_max_changed_bytes)
 
-            data = %{
-              "diff" => raw_diff,
-              "path_from" => sanitize_utf8(from_dir),
-              "path_to" => sanitize_utf8(to_dir)
-            }
+    bytes =
+      Enum.reduce(changes, 0, fn
+        {:too_large, _file}, bytes -> bytes
+        {:diff, _file, from_path, to_path}, bytes -> bytes + size(from_path) + size(to_path)
+      end)
 
-            {metadata_update(sanitize_utf8(file), additions, deletions), data}
+    length(changes) <= max_files and bytes <= max_bytes
+  end
+
+  defp generate_pieces(request, from_dir, to_dir, changes) do
+    initial = %{
+      total_diffs: 0,
+      total_additions: 0,
+      total_deletions: 0,
+      files_changed: 0,
+      files: []
+    }
+
+    changes
+    |> Stream.transform(0, fn change, index ->
+      case build_piece(request, from_dir, to_dir, change) do
+        :unchanged -> {[], index}
+        {update, data} -> {[{index, update, data}], index + 1}
+      end
+    end)
+    |> Task.async_stream(
+      fn {index, update, data} ->
+        try do
+          Cache.put_piece!(request, index, data)
+          update
+        rescue
+          exception -> {:piece_error, exception, __STACKTRACE__}
         end
+      end,
+      max_concurrency: @upload_concurrency,
+      timeout: @upload_timeout
+    )
+    |> Enum.reduce(initial, fn
+      {:ok, {:piece_error, exception, stacktrace}}, _metadata -> reraise(exception, stacktrace)
+      {:ok, update}, metadata -> merge_metadata(metadata, update)
+    end)
+  end
+
+  defp build_piece(_request, _from_dir, _to_dir, {:too_large, file}) do
+    file = sanitize_utf8(file)
+    {metadata_update(file, 0, 0), %{type: "too_large", file: file}}
+  end
+
+  defp build_piece(request, from_dir, to_dir, {:diff, file, from_path, to_path}) do
+    case git_diff(from_path, to_path, request.ignore_whitespace) do
+      nil ->
+        :unchanged
+
+      raw_diff ->
+        raw_diff = sanitize_utf8(raw_diff)
+        {additions, deletions} = count_changes(raw_diff)
+
+        data = %{
+          "diff" => raw_diff,
+          "path_from" => sanitize_utf8(from_dir),
+          "path_to" => sanitize_utf8(to_dir)
+        }
+
+        {metadata_update(sanitize_utf8(file), additions, deletions), data}
     end
   end
 
@@ -194,8 +222,10 @@ defmodule Hexpm.Diff.Generator do
     }
   end
 
-  defp too_large?("/dev/null"), do: false
-  defp too_large?(path), do: File.stat!(path).size > @max_file_size
+  defp too_large?(path), do: size(path) > @max_file_size
+
+  defp size("/dev/null"), do: 0
+  defp size(path), do: File.stat!(path).size
 
   defp same_contents?("/dev/null", _path), do: false
   defp same_contents?(_path, "/dev/null"), do: false

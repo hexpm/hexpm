@@ -160,6 +160,84 @@ defmodule Hexpm.Diff.GeneratorTest do
     assert diff =~ "new mode 100644"
   end
 
+  describe "limits" do
+    setup do
+      package = insert(:package, name: "generator_limits")
+
+      insert_tarball_release(package, "1.0.0", %{
+        "a.txt" => "old a\n",
+        "b.txt" => "old b\n",
+        "c.txt" => "old c\n",
+        "huge.bin" => String.duplicate("a", 200_001)
+      })
+
+      insert_tarball_release(package, "2.0.0", %{
+        "a.txt" => "new a\n",
+        "b.txt" => "new b\n",
+        "c.txt" => "old c\n",
+        "huge.bin" => String.duplicate("b", 200_001)
+      })
+
+      {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
+      {:ok, request: request}
+    end
+
+    test "a diff at the changed-file limit is generated", %{request: request} do
+      put_limit(:diff_max_changed_files, 3)
+
+      assert :ok = Generator.generate(request)
+      assert {:ok, metadata, [_, _, _]} = Hexpm.Diff.fetch(request)
+      assert metadata.files == ["a.txt", "b.txt", "huge.bin"]
+    end
+
+    test "a diff over the changed-file limit stores too-large metadata and no pieces", %{
+      request: request
+    } do
+      put_limit(:diff_max_changed_files, 2)
+
+      assert :ok = Generator.generate(request)
+      assert {:ok, %{too_large: true, files_changed: 3}, []} = Hexpm.Diff.fetch(request)
+      refute cache_object(Cache.diff_key(request, request.hash, 0))
+    end
+
+    test "the changed-byte limit counts both sides of files under the size limit", %{
+      request: request
+    } do
+      put_limit(:diff_max_changed_bytes, 24)
+      assert :ok = Generator.generate(request)
+      assert {:ok, %{total_diffs: 3}, [_, _, _]} = Hexpm.Diff.fetch(request)
+
+      Hexpm.Store.Memory.delete("diff_bucket", Cache.metadata_key(request, request.hash))
+      put_limit(:diff_max_changed_bytes, 23)
+      assert :ok = Generator.generate(request)
+      assert {:ok, %{too_large: true, files_changed: 3}, []} = Hexpm.Diff.fetch(request)
+    end
+
+    test "the worker completes a job over the limit instead of retrying it", %{
+      request: request
+    } do
+      put_limit(:diff_max_changed_files, 2)
+
+      assert :ok = perform_job(Worker, Hexpm.Diff.Request.to_args(request))
+      assert {:ok, %{too_large: true}, []} = Hexpm.Diff.fetch(request)
+    end
+
+    test "the worker discards a job that times out", %{request: request} do
+      put_limit(:diff_timeout, 100)
+      original_bucket = Application.fetch_env!(:hexpm, :diff_bucket)
+      Application.put_env(:hexpm, :diff_bucket, {Hexpm.Diff.TestStore, "diff_bucket"})
+      Application.put_env(:hexpm, :diff_test_store_put, {"-diff-0.json", :hang})
+
+      on_exit(fn ->
+        Application.put_env(:hexpm, :diff_bucket, original_bucket)
+        Application.delete_env(:hexpm, :diff_test_store_put)
+      end)
+
+      assert {:discard, :timeout} = perform_job(Worker, Hexpm.Diff.Request.to_args(request))
+      assert :miss = Hexpm.Diff.fetch(request)
+    end
+  end
+
   test "checksum failures never write completion metadata" do
     package = insert(:package, name: "generator_checksum")
     insert_tarball_release(package, "1.0.0", %{"same" => "one"})
@@ -343,5 +421,11 @@ defmodule Hexpm.Diff.GeneratorTest do
 
     assert {:discard, {:invalid_tarball, _reason}} =
              perform_job(Worker, Hexpm.Diff.Request.to_args(request))
+  end
+
+  defp put_limit(key, value) do
+    original = Application.fetch_env!(:hexpm, key)
+    Application.put_env(:hexpm, key, value)
+    on_exit(fn -> Application.put_env(:hexpm, key, original) end)
   end
 end
