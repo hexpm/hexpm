@@ -165,6 +165,30 @@ defmodule Hexpm.TestHelpers do
     contents = File.read!(contents_path)
 
     meta_string = HexpmWeb.ConsultFormat.encode(meta)
+    build_tar(meta_string, contents, "#{meta[:name]}-#{meta[:version]}")
+  end
+
+  @doc """
+  Like `create_tar/2` but writes `metadata` into metadata.config as given, so
+  its values keep Erlang map syntax instead of being converted to proplists.
+  `metadata` needs binary keys and all required fields.
+  """
+  def create_tar_with_raw_metadata(metadata, files \\ [{"mix.exs", "mix.exs"}]) do
+    name = "#{metadata["name"]}-#{metadata["version"]}"
+    contents_path = Path.join(@tmp, "#{name}-contents.tar.gz")
+    files = Enum.map(files, fn {name, bin} -> {String.to_charlist(name), bin} end)
+    :ok = :erl_tar.create(contents_path, files, [:compressed])
+    contents = File.read!(contents_path)
+
+    meta_string =
+      metadata
+      |> Enum.map(&[:io_lib.print(&1) | ".\n"])
+      |> IO.iodata_to_binary()
+
+    build_tar(meta_string, contents, name)
+  end
+
+  defp build_tar(meta_string, contents, name) do
     blob = "3" <> meta_string <> contents
     checksum = :crypto.hash(:sha256, blob) |> Base.encode16()
 
@@ -175,7 +199,7 @@ defmodule Hexpm.TestHelpers do
       {~c"contents.tar.gz", contents}
     ]
 
-    path = Path.join(@tmp, "#{meta[:name]}-#{meta[:version]}.tar")
+    path = Path.join(@tmp, "#{name}.tar")
     :ok = :erl_tar.create(path, files)
 
     File.read!(path)

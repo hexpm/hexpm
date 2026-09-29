@@ -783,6 +783,100 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       assert [%{app: "app", requirement: "~> 0.0.1", optional: false}] = release.requirements
     end
 
+    test "create releases with requirements as a map", %{user: user, package: package} do
+      other = insert(:package)
+
+      reqs = %{
+        package.name => %{app: package.name, requirement: "~> 0.0.1", optional: false},
+        other.name => %{app: other.name, requirement: "~> 0.0.1", optional: true}
+      }
+
+      meta = %{
+        name: Fake.sequence(:package),
+        version: "0.0.1",
+        requirements: reqs,
+        description: "description"
+      }
+
+      result =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(user))
+        |> post("/api/publish", create_tar(meta))
+        |> json_response(201)
+
+      assert result["requirements"] == %{
+               package.name => %{
+                 "app" => package.name,
+                 "optional" => false,
+                 "requirement" => "~> 0.0.1"
+               },
+               other.name => %{
+                 "app" => other.name,
+                 "optional" => true,
+                 "requirement" => "~> 0.0.1"
+               }
+             }
+    end
+
+    test "create releases with too many requirements", %{user: user} do
+      reqs =
+        Map.new(1..501, fn i ->
+          {"dep_#{i}", %{requirement: "~> 0.0.1", app: "dep_#{i}", optional: false}}
+        end)
+
+      meta = %{
+        name: Fake.sequence(:package),
+        version: "0.0.1",
+        requirements: reqs,
+        description: "description"
+      }
+
+      result =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(user))
+        |> post("/api/publish", create_tar(meta))
+        |> json_response(422)
+
+      assert result["errors"]["requirements"] == "should have at most 500 item(s)"
+      refute Hexpm.Repo.get_by(Package, name: meta.name)
+    end
+
+    test "create releases with duplicate requirements", %{user: user, package: package} do
+      name = Fake.sequence(:package)
+
+      req = %{
+        "name" => package.name,
+        "requirement" => "~> 0.0.1",
+        "app" => package.name,
+        "optional" => false
+      }
+
+      metadata = %{
+        "name" => name,
+        "app" => name,
+        "version" => "0.0.1",
+        "description" => "description",
+        "licenses" => ["Apache-2.0"],
+        "build_tools" => ["mix"],
+        "files" => ["mix.exs"],
+        "requirements" => [req, req, req]
+      }
+
+      result =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(user))
+        |> post("/api/publish", create_tar_with_raw_metadata(metadata))
+        |> json_response(422)
+
+      assert result["errors"]["requirements"] ==
+               ~s(has duplicate requirement "#{package.name}")
+
+      refute Hexpm.Repo.get_by(Package, name: name)
+    end
+
     test "create releases with requirements validates requirement", %{
       user: user,
       package: package

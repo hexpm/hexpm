@@ -97,6 +97,43 @@ defmodule Hexpm.Repository.ReleaseTest do
              requirement_error(build.(%{requirement: "~> 1.0" <> String.duplicate(" ", 250)}))
   end
 
+  test "caps the number of requirements", %{publisher: publisher, packages: [package, _, _]} do
+    build = fn count ->
+      requirements =
+        for i <- 1..count//1 do
+          %{name: "dep_#{i}", app: "dep_#{i}", requirement: "~> 1.0"}
+        end
+
+      params = rel_meta(%{version: "0.0.1", app: package.name, requirements: requirements})
+      Release.build(package, publisher, params, "", "")
+    end
+
+    changeset = build.(500)
+    refute Keyword.has_key?(changeset.errors, :requirements)
+    assert length(changeset.changes.requirements) == 500
+
+    changeset = build.(501)
+    assert errors_on(changeset).requirements == "should have at most 500 item(s)"
+    refute Map.has_key?(changeset.changes, :requirements)
+  end
+
+  test "rejects duplicate requirement names", %{
+    publisher: publisher,
+    packages: [package, dep, other]
+  } do
+    requirements = [
+      %{name: dep.name, app: dep.name, requirement: "~> 1.0"},
+      %{name: other.name, app: other.name, requirement: "~> 1.0"},
+      %{name: dep.name, app: dep.name, requirement: "~> 2.0"}
+    ]
+
+    params = rel_meta(%{version: "0.0.1", app: package.name, requirements: requirements})
+    changeset = Release.build(package, publisher, params, "", "")
+
+    assert errors_on(changeset).requirements == ~s(has duplicate requirement "#{dep.name}")
+    refute Map.has_key?(changeset.changes, :requirements)
+  end
+
   defp requirement_error(changeset) do
     changeset |> errors_on() |> Map.fetch!(:requirements) |> List.wrap() |> hd()
   end

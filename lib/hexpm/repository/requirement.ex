@@ -33,15 +33,42 @@ defmodule Hexpm.Repository.Requirement do
     |> validate_repository(:repository, repository: package.repository)
   end
 
-  def build_all(release_changeset, package) do
-    dependencies = preload_dependencies(release_changeset.params["requirements"])
+  @max_requirements 500
 
-    cast_assoc(
-      release_changeset,
-      :requirements,
-      with: &changeset(&1, &2, dependencies, package)
-    )
+  def build_all(release_changeset, package) do
+    requirements = release_changeset.params["requirements"]
+
+    case validate_requirements_list(requirements) do
+      :ok ->
+        dependencies = preload_dependencies(requirements)
+
+        cast_assoc(
+          release_changeset,
+          :requirements,
+          with: &changeset(&1, &2, dependencies, package)
+        )
+
+      {:error, message, keys} ->
+        add_error(release_changeset, :requirements, message, keys)
+    end
   end
+
+  defp validate_requirements_list(requirements)
+       when is_list(requirements) and length(requirements) > @max_requirements do
+    {:error, "should have at most %{count} item(s)",
+     count: @max_requirements, validation: :length, kind: :max, type: :list}
+  end
+
+  defp validate_requirements_list(requirements) when is_list(requirements) do
+    names = for %{"name" => name} when is_binary(name) <- requirements, do: name
+
+    case names -- Enum.uniq(names) do
+      [] -> :ok
+      [name | _] -> {:error, ~s(has duplicate requirement "#{name}"), []}
+    end
+  end
+
+  defp validate_requirements_list(_requirements), do: :ok
 
   defp preload_dependencies(requirements) do
     names = requirement_names(requirements)
