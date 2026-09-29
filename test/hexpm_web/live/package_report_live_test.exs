@@ -31,6 +31,26 @@ defmodule HexpmWeb.PackageReportLiveTest do
     assert URI.parse(login_path).path == "/login"
   end
 
+  test "says the form isn't for bug reports and where reports go", context do
+    {:ok, view, _html} = live(test_login(context.conn, context.reporter), report_path(context))
+
+    assert has_element?(view, "#package-report-not-for-bugs", "This form isn't for bug reports.")
+
+    assert has_element?(
+             view,
+             ~s(#package-report-not-for-bugs a[href="/packages/#{context.package.name}"]),
+             "package page"
+           )
+
+    assert has_element?(
+             view,
+             ~s(a[href="https://cna.erlef.org"]),
+             "Erlang Ecosystem Foundation CNA"
+           )
+
+    assert has_element?(view, "p", "Hex administrators at support@hex.pm")
+  end
+
   test "shows all reasons and only requires CNA confirmations for vulnerabilities", context do
     {:ok, view, _html} = live(test_login(context.conn, context.reporter), report_path(context))
 
