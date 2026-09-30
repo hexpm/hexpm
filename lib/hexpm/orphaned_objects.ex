@@ -348,8 +348,9 @@ defmodule Hexpm.OrphanedObjects do
       |> Repo.all()
       |> MapSet.new()
 
-    unless MapSet.member?(repositories, "hexpm") and Map.has_key?(packages, {"hexpm", "hex"}) do
-      raise "the database read holds no public repository or no hex package, refusing to judge objects by it"
+    unless MapSet.member?(repositories, "hexpm") and
+             Enum.any?(packages, &match?({{"hexpm", _package}, _versions}, &1)) do
+      raise "the database read holds no public repository or no package in it, refusing to judge objects by it"
     end
 
     %{
