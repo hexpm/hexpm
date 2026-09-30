@@ -3,9 +3,9 @@ defmodule Hexpm.OrphanedObjectsTest do
 
   alias Hexpm.OrphanedObjects
 
-  # The sweep refuses a database read without the public hex package.
+  # The sweep refuses a database read without a public package.
   setup do
-    insert(:package, name: "hex", repository_id: 1)
+    insert(:package, repository_id: 1)
     :ok
   end
 
@@ -32,8 +32,8 @@ defmodule Hexpm.OrphanedObjectsTest do
   end
 
   describe "the database read" do
-    test "is refused without the public hex package" do
-      Repo.delete_all(from(p in Hexpm.Repository.Package, where: p.name == "hex"))
+    test "is refused without a public package" do
+      Repo.delete_all(from(p in Hexpm.Repository.Package, where: p.repository_id == 1))
       put(:repo_bucket, "repos/gone/names")
 
       assert_raise RuntimeError, ~r/refusing to judge objects/, fn -> report(:repo_bucket) end
