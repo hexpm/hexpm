@@ -44,6 +44,14 @@ defmodule HexpmWeb.Plugs.Attack do
     end
   end
 
+  rule "trusted publisher throttle", conn do
+    trusted_publisher = conn.assigns[:trusted_publisher]
+
+    if api?(conn) && trusted_publisher do
+      trusted_publisher_throttle(trusted_publisher.id)
+    end
+  end
+
   # The provisioning agent is one client per connection whatever address it
   # sends from, and the address is the provider's shared egress, so the
   # connection is the key. Requests that fail authentication never reach here.
@@ -56,7 +64,7 @@ defmodule HexpmWeb.Plugs.Attack do
   end
 
   rule "ip throttle", conn do
-    if api?(conn) and not trusted_publisher_mint?(conn) do
+    if api?(conn) and not trusted_publisher_mint?(conn) and not oidc_audience?(conn) do
       ip_throttle(conn.remote_ip)
     end
   end
@@ -106,6 +114,9 @@ defmodule HexpmWeb.Plugs.Attack do
       organization = conn.assigns[:current_organization] ->
         "organization #{organization.id}"
 
+      trusted_publisher = conn.assigns[:trusted_publisher] ->
+        "trusted publisher #{trusted_publisher.id}"
+
       connection = conn.assigns[:scim_connection] ->
         "provisioning connection #{connection.id}"
 
@@ -134,6 +145,20 @@ defmodule HexpmWeb.Plugs.Attack do
 
   def organization_throttle(organization_id, opts \\ []) do
     key = {:organization, organization_id}
+    time = opts[:time] || System.system_time(:millisecond)
+    unless opts[:time], do: RateLimitPubSub.broadcast(key, time)
+
+    timed_throttle(
+      key,
+      time: time,
+      storage: @storage,
+      limit: 500,
+      period: 60_000
+    )
+  end
+
+  def trusted_publisher_throttle(trusted_publisher_id, opts \\ []) do
+    key = {:trusted_publisher, trusted_publisher_id}
     time = opts[:time] || System.system_time(:millisecond)
     unless opts[:time], do: RateLimitPubSub.broadcast(key, time)
 
@@ -440,6 +465,9 @@ defmodule HexpmWeb.Plugs.Attack do
        do: true
 
   defp trusted_publisher_mint?(%Plug.Conn{}), do: false
+
+  defp oidc_audience?(%Plug.Conn{method: "GET", request_path: "/api/oidc/audience"}), do: true
+  defp oidc_audience?(%Plug.Conn{}), do: false
 
   defp scim?(%Plug.Conn{request_path: "/scim/" <> _}), do: true
   defp scim?(%Plug.Conn{}), do: false
