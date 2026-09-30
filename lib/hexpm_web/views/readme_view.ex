@@ -58,6 +58,7 @@ defmodule HexpmWeb.ReadmeView do
     .readme li:has(> input[type="checkbox"]) { list-style: none; }
     html[data-theme="light"] .color-scheme-dark { display: none !important; }
     html[data-theme="dark"] .color-scheme-light { display: none !important; }
+    html[data-theme="dark"] { color-scheme: dark; }
     html[data-theme="dark"] body { color: var(--color-grey-200); background-color: var(--color-grey-800); }
     html[data-theme="dark"] .readme h1, html[data-theme="dark"] .readme h2 { border-bottom-color: var(--color-grey-600); }
     html[data-theme="dark"] .readme a { color: var(--color-blue-300); }
