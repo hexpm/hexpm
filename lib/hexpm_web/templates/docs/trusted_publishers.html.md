@@ -2,9 +2,7 @@
 
 Trusted publishers let CI publish Hex packages without storing a long-lived API key. A GitHub Actions job presents a short-lived OpenID Connect (OIDC) identity token; Hex verifies it against a publisher you configured for the package and returns a short-lived, package-scoped access token that the normal publish path accepts.
 
-Hex exchanges the OIDC token through the standard OAuth 2.0 token endpoint using the JWT bearer grant defined in [RFC 7523](https://www.rfc-editor.org/rfc/rfc7523), rather than a dedicated mint endpoint.
-
-This release supports GitHub Actions only. Native Mix / Rebar3 helpers are not required for the server flow, but until the Hex clients add first-class support you exchange the OIDC token yourself (examples below).
+GitHub Actions is the only supported CI provider.
 
 ### How it works
 
@@ -168,8 +166,7 @@ Errors use OAuth-style bodies (`error`, `error_description`), for example missin
 
 ### Limitations
 
-* GitHub Actions only in this release. GitLab, CircleCI, and custom issuers are not supported yet.
-* No Mix / Rebar3 built-in trusted-publisher commands yet. Clients should request the CI OIDC token with audience from `/api/oidc/audience`, exchange it at `/api/oauth/token` with the JWT bearer grant, and publish with the returned bearer token.
+* Only GitHub Actions can act as a trusted publisher. GitLab, CircleCI, and custom OIDC issuers are not supported.
 * Cannot create a package or land the first release from CI. Publish once manually, then attach a trusted publisher.
 
 ### Troubleshooting
