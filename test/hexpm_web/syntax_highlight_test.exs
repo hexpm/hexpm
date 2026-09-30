@@ -3,12 +3,8 @@ defmodule HexpmWeb.SyntaxHighlightTest do
 
   alias HexpmWeb.SyntaxHighlight
 
-  # Without this the assertions below race the highlighter's first load, and a
-  # loaded machine loses: `highlight/3` gives up after @timeout and answers with
-  # escaped plain source, which looks like a highlighting bug.
-  setup do
-    assert SyntaxHighlight.warm() == :ok
-    :ok
+  setup_all do
+    Lumis.Languages.load(["elixir"])
   end
 
   test "highlights documents and line fragments with Lumis" do
@@ -34,19 +30,38 @@ defmodule HexpmWeb.SyntaxHighlightTest do
 
   @tag :capture_log
   test "uses escaped fallback output after timeout or failure" do
-    assert ["&lt;script&gt;"] =
-             SyntaxHighlight.run(
-               fn -> Process.sleep(100) end,
-               fn -> ["&lt;script&gt;"] end,
-               "slow source",
-               0
-             )
+    lines = List.duplicate("value = <script>", 2_000)
+    budget = [time_limit: 1, match_limit: 4096]
 
-    assert :fallback =
-             SyntaxHighlight.run(
-               fn -> raise "invalid source" end,
-               fn -> :fallback end,
-               "invalid source"
-             )
+    document = SyntaxHighlight.highlight(Enum.join(lines, "\n"), "lib/app.ex", "slow", budget)
+
+    assert document =~ ~s(data-lumis-budget="time")
+    assert document =~ "&lt;script&gt;"
+    refute document =~ ~s(class="l-variable")
+
+    assert SyntaxHighlight.highlight_lines(lines, "lib/app.ex", "slow", budget) |> Enum.uniq() ==
+             ["value = &lt;script&gt;"]
+
+    error = %Lumis.RenderError{reason: :runtime, detail: "unavailable"}
+    assert :fallback = SyntaxHighlight.or_plain({:error, error}, "invalid", fn -> :fallback end)
+  end
+
+  # VHDL is in the Lumis catalog but hexpm does not depend on its parser.
+  test "renders plain text when the parser is not installed" do
+    lines = ["signal clk : std_logic;", "end architecture;"]
+    document = SyntaxHighlight.highlight(Enum.join(lines, "\n"), "vhdl", "missing parser")
+
+    assert document =~ "signal clk : std_logic;"
+    refute document =~ ~r/class="l-(?!line)/
+  end
+
+  test "keeps one fragment per diff line, including trailing blank lines" do
+    assert SyntaxHighlight.highlight_lines([""], "elixir", "blank lines") == [""]
+
+    assert [_value, ""] =
+             SyntaxHighlight.highlight_lines(["value = 1", ""], "elixir", "blank lines")
+
+    assert SyntaxHighlight.highlight_lines(["", "x", "", ""], "vhdl", "blank lines") ==
+             ["", "x", "", ""]
   end
 end

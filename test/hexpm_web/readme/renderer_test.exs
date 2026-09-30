@@ -47,8 +47,8 @@ defmodule HexpmWeb.Readme.RendererTest do
   end
 
   test "preserves whitespace between highlighted tokens" do
-    code = "def add(left, right) do\n  left + right\nend\n"
-    document = render("```elixir\n" <> code <> "```\n") |> LazyHTML.from_fragment()
+    code = "def add(left, right) do\n  left + right\nend"
+    document = render("```elixir\n" <> code <> "\n```\n") |> LazyHTML.from_fragment()
 
     assert [_code] = LazyHTML.query(document, "pre code") |> Enum.to_list()
     assert Enum.count(LazyHTML.query(document, "pre code span")) > 1
@@ -74,10 +74,10 @@ defmodule HexpmWeb.Readme.RendererTest do
   end
 
   test "preserves blank lines in highlighted and unhighlighted code blocks" do
-    code = "first = 1\n\n\nsecond = 2\n"
+    code = "first = 1\n\n\nsecond = 2"
 
     for language <- ["", "elixir"] do
-      document = render("```#{language}\n#{code}```\n") |> LazyHTML.from_fragment()
+      document = render("```#{language}\n#{code}\n```\n") |> LazyHTML.from_fragment()
 
       assert [_code] = LazyHTML.query(document, "pre code") |> Enum.to_list()
       assert document |> LazyHTML.query("pre code") |> LazyHTML.text() == code
