@@ -1131,16 +1131,18 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         description: "Domain-specific language."
       }
 
-      result =
+      conn =
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
         |> post("/api/repos/#{repository.name}/publish", create_tar(meta))
-        |> json_response(201)
+
+      result = json_response(conn, 201)
 
       assert result["url"] =~
                "api/repos/#{repository.name}/packages/#{meta.name}/releases/1.0.0"
 
+      assert get_resp_header(conn, "cache-control") == ["private, max-age=60"]
       package = Hexpm.Repo.get_by!(Package, name: meta.name)
       assert package.repository_id == repository.id
     end
@@ -1517,10 +1519,9 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
   describe "GET /api/packages/:name/releases/:version" do
     test "get release", %{package: package, release: release} do
-      result =
-        build_conn()
-        |> get("/api/packages/#{package.name}/releases/#{release.version}")
-        |> json_response(200)
+      conn = get(build_conn(), "/api/packages/#{package.name}/releases/#{release.version}")
+      result = json_response(conn, 200)
+      assert get_resp_header(conn, "cache-control") == ["public, max-age=60"]
 
       assert result["configs"]["mix.exs"] == ~s({:#{package.name}, "~> 0.0.1"})
 
@@ -1634,11 +1635,13 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       insert(:release, package: package, version: "0.0.1", has_docs: true)
       insert(:organization_user, organization: repository.organization, user: user)
 
-      result =
+      conn =
         build_conn()
         |> put_req_header("authorization", key_for(user))
         |> get("/api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1")
-        |> json_response(200)
+
+      result = json_response(conn, 200)
+      assert get_resp_header(conn, "cache-control") == ["private, max-age=60"]
 
       assert result["url"] ==
                "http://localhost:5000/api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1"

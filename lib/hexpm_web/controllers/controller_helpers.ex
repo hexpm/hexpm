@@ -6,7 +6,7 @@ defmodule HexpmWeb.ControllerHelpers do
 
   alias Hexpm.Accounts.{Auth, Organizations}
   alias Hexpm.UserSessions
-  alias Hexpm.Repository.{Packages, Releases, Repositories}
+  alias Hexpm.Repository.{Packages, Releases, Repositories, Repository}
 
   @max_cache_age 60
 
@@ -15,6 +15,14 @@ defmodule HexpmWeb.ControllerHelpers do
     conn
     |> maybe_put_resp_header("cache-control", parse_control(control))
     |> maybe_put_resp_header("vary", parse_vary(vary))
+  end
+
+  def api_cache(conn, %Repository{} = repository), do: api_cache(conn, [repository])
+
+  def api_cache(conn, repositories) when is_list(repositories) do
+    if Enum.all?(repositories, &(&1.id == 1)),
+      do: api_cache(conn, :public),
+      else: api_cache(conn, :private)
   end
 
   def api_cache(conn, privacy) do

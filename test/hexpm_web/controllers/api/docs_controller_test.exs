@@ -209,8 +209,11 @@ defmodule HexpmWeb.API.DocsControllerTest do
       insert(:release, package: package, version: "0.0.1")
       insert(:organization_user, organization: repository.organization, user: user)
 
-      publish_docs(user, repository, package, "0.0.1", [{~c"index.html", "package v0.0.1"}])
-      |> response(201)
+      conn =
+        publish_docs(user, repository, package, "0.0.1", [{~c"index.html", "package v0.0.1"}])
+
+      assert response(conn, 201)
+      assert get_resp_header(conn, "cache-control") == ["private, max-age=60"]
 
       assert Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
 

@@ -63,7 +63,7 @@ defmodule HexpmWeb.API.DocsController do
 
         conn
         |> put_resp_header("location", location)
-        |> api_cache(:public)
+        |> api_cache(repository)
         |> send_resp(201, "")
     end
   end
