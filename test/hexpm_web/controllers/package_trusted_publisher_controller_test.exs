@@ -207,6 +207,25 @@ defmodule HexpmWeb.PackageTrustedPublisherControllerTest do
       assert html_response(conn, 400) =~ "already configured for this package"
     end
 
+    test "shows the changeset error for an invalid workflow", %{
+      full_owner: full_owner,
+      package: package
+    } do
+      conn =
+        build_conn()
+        |> test_login(full_owner, sudo: true)
+        |> post("/packages/#{package.name}/trusted-publishers", %{
+          "trusted_publisher" => %{
+            "provider" => "github",
+            "repository_owner" => "acme",
+            "repository" => "widget",
+            "workflow" => "release"
+          }
+        })
+
+      assert html_response(conn, 400) =~ "has invalid format"
+    end
+
     test "flashes an error when GitHub repository resolution fails", %{
       full_owner: full_owner,
       package: package

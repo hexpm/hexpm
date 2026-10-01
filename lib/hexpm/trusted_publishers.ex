@@ -55,7 +55,7 @@ defmodule Hexpm.TrustedPublishers do
             {:error, reason}
         end
       else
-        {:error, changeset}
+        {:error, %{changeset | action: :insert}}
       end
     end
   end
