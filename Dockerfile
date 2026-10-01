@@ -13,7 +13,20 @@ RUN apt update && \
     apt clean -y && rm -rf /var/lib/apt/lists/*
 
 # install rust, the lumis and mdex_native NIFs are built from source
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+ARG RUST_VERSION=1.99.0
+ARG RUSTUP_VERSION=1.29.1
+RUN arch="$(uname -m)" && \
+    case "$arch" in \
+      aarch64) sha256=15f6e4ce9f583b929c996c91562bad6d4454f3281de858b02cdfdef615fac433 ;; \
+      x86_64) sha256=dda7234360b7f578ca8b0ddcb80145646fa61a67c1720a5abc7051b35c9fcb71 ;; \
+      *) echo "unsupported architecture: $arch" && exit 1 ;; \
+    esac && \
+    curl --proto '=https' --tlsv1.2 -sSfo /tmp/rustup-init \
+      "https://static.rust-lang.org/rustup/archive/${RUSTUP_VERSION}/${arch}-unknown-linux-gnu/rustup-init" && \
+    echo "${sha256}  /tmp/rustup-init" | sha256sum -c - && \
+    chmod +x /tmp/rustup-init && \
+    /tmp/rustup-init -y --no-modify-path --profile minimal --default-toolchain "${RUST_VERSION}" && \
+    rm /tmp/rustup-init
 ENV PATH="/root/.cargo/bin:${PATH}"
 
 # tree-sitter grammars generated with CLI < 0.26.4 ship an array.h whose
