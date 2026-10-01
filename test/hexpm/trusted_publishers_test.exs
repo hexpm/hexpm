@@ -159,6 +159,29 @@ defmodule Hexpm.TrustedPublishersTest do
                )
     end
 
+    test "rejects a token minted for another deployment's audience", %{package: package} do
+      token = TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
+
+      previous = Application.get_env(:hexpm, :trusted_publishers)
+      Application.put_env(:hexpm, :trusted_publishers, audience: "hexpm-staging")
+      on_exit(fn -> Application.put_env(:hexpm, :trusted_publishers, previous) end)
+
+      assert {:error, :audience_mismatch} =
+               TrustedPublishers.verify_and_mint(token,
+                 repository: "hexpm",
+                 package: package.name
+               )
+
+      staging_token =
+        TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
+
+      assert {:ok, _} =
+               TrustedPublishers.verify_and_mint(staging_token,
+                 repository: "hexpm",
+                 package: package.name
+               )
+    end
+
     test "rejects issuer not in allowlist", %{package: package} do
       token =
         TrustedPublisherHelpers.sign_oidc_claims(

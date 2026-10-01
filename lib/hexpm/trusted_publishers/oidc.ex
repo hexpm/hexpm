@@ -3,7 +3,6 @@ defmodule Hexpm.TrustedPublishers.OIDC do
   OIDC discovery, JWKS caching, and JWT verification for trusted publishers.
   """
 
-  @audience "hexpm"
   @allowed_algs ~w(RS256 RS384 RS512 PS256 PS384 PS512 ES256 ES384 ES512 EdDSA)
   @fallback_cache_seconds 3_600
   @http_timeout 5_000
@@ -11,7 +10,7 @@ defmodule Hexpm.TrustedPublishers.OIDC do
   @clock_skew_seconds 60
   @min_refresh_interval_seconds 30
 
-  def audience, do: @audience
+  def audience, do: Application.fetch_env!(:hexpm, :trusted_publishers)[:audience]
 
   @doc """
   Peeks claims without verifying the signature.
@@ -142,7 +141,7 @@ defmodule Hexpm.TrustedPublishers.OIDC do
       id_token_signing_alg_values_supported: @allowed_algs
     }
 
-    Oidcc.ClientContext.from_manual(configuration, jwks, @audience, :unauthenticated)
+    Oidcc.ClientContext.from_manual(configuration, jwks, audience(), :unauthenticated)
   end
 
   defp unknown_key?(:no_matching_key), do: true
