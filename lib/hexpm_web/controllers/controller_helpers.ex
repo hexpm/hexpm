@@ -33,7 +33,9 @@ defmodule HexpmWeb.ControllerHelpers do
   end
 
   defp logged_in_privacy(conn, :logged_in) do
-    if conn.assigns.current_user, do: :private, else: :public
+    if conn.assigns.current_user || conn.assigns.current_organization,
+      do: :private,
+      else: :public
   end
 
   defp logged_in_privacy(_conn, other) do
