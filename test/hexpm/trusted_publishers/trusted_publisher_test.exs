@@ -73,6 +73,51 @@ defmodule Hexpm.TrustedPublishers.TrustedPublisherTest do
       assert Ecto.Changeset.get_field(changeset, :environment) == "Production"
     end
 
+    test "bounds every user-supplied field to its column", %{package: package} do
+      params = %{
+        "provider" => "github",
+        "repository_owner" => "acme",
+        "repository" => "widget",
+        "workflow" => "release.yml"
+      }
+
+      for {field, value} <- [
+            repository_owner: String.duplicate("a", 40),
+            repository: String.duplicate("a", 136),
+            repository_id: String.duplicate("1", 20),
+            workflow: String.duplicate("a", 252) <> ".yml",
+            environment: String.duplicate("é", 256)
+          ] do
+        changeset =
+          TrustedPublisher.changeset(
+            %TrustedPublisher{},
+            Map.put(params, to_string(field), value),
+            package
+          )
+
+        assert Enum.any?(changeset.errors, fn {error_field, {_, opts}} ->
+                 error_field == field and opts[:validation] == :length
+               end)
+      end
+    end
+
+    test "accepts an environment of 255 characters", %{package: package} do
+      changeset =
+        TrustedPublisher.changeset(
+          %TrustedPublisher{},
+          %{
+            "provider" => "github",
+            "repository_owner" => "acme",
+            "repository" => "widget",
+            "workflow" => "release.yml",
+            "environment" => String.duplicate("é", 255)
+          },
+          package
+        )
+
+      assert changeset.valid?
+    end
+
     test "rejects repository owned by a different owner", %{package: package} do
       changeset =
         TrustedPublisher.changeset(

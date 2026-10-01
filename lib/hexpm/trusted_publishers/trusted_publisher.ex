@@ -35,6 +35,11 @@ defmodule Hexpm.TrustedPublishers.TrustedPublisher do
     |> update_change(:repository_owner, &normalize_name/1)
     |> update_change(:repository, &normalize_name/1)
     |> qualify_repository()
+    |> validate_length(:repository_owner, count: :bytes, max: 39)
+    |> validate_length(:repository, count: :bytes, max: 140)
+    |> validate_length(:repository_id, count: :bytes, max: 19)
+    |> validate_length(:workflow, count: :bytes, max: 255)
+    |> validate_length(:environment, count: :codepoints, max: 255)
     |> validate_format(
       :repository_owner,
       ~r/\A[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}\z/
