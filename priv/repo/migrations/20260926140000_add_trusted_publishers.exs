@@ -28,18 +28,44 @@ defmodule Hexpm.Repo.Migrations.AddTrustedPublishers do
                          )
 
     alter table(:oauth_tokens) do
-      add_if_not_exists :trusted_publisher_id,
-                        references(:trusted_publishers, on_delete: :delete_all, validate: false)
-
+      add_if_not_exists :trusted_publisher_id, :bigint
       add_if_not_exists :oidc_claims, :map
     end
 
     alter table(:releases) do
-      add_if_not_exists :trusted_publisher_id,
-                        references(:trusted_publishers, on_delete: :nilify_all, validate: false)
-
+      add_if_not_exists :trusted_publisher_id, :bigint
       add_if_not_exists :oidc_claims, :map
     end
+
+    execute """
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'oauth_tokens_trusted_publisher_id_fkey'
+      ) THEN
+        ALTER TABLE oauth_tokens
+          ADD CONSTRAINT oauth_tokens_trusted_publisher_id_fkey
+          FOREIGN KEY (trusted_publisher_id) REFERENCES trusted_publishers(id) ON DELETE CASCADE
+          NOT VALID;
+      END IF;
+    END
+    $$
+    """
+
+    execute """
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'releases_trusted_publisher_id_fkey'
+      ) THEN
+        ALTER TABLE releases
+          ADD CONSTRAINT releases_trusted_publisher_id_fkey
+          FOREIGN KEY (trusted_publisher_id) REFERENCES trusted_publishers(id) ON DELETE SET NULL
+          NOT VALID;
+      END IF;
+    END
+    $$
+    """
 
     drop_if_exists constraint(:oauth_tokens, :user_or_organization_required)
 
