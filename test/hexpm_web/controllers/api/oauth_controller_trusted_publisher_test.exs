@@ -53,6 +53,30 @@ defmodule HexpmWeb.API.OAuthControllerTrustedPublisherTest do
     refute Map.has_key?(body, "refresh_token")
   end
 
+  describe "revoke" do
+    setup %{package: package} do
+      oidc = TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
+
+      %{"access_token" => access_token} =
+        build_conn()
+        |> post("/api/oauth/token", mint_params(oidc, "package:hexpm/#{package.name}"))
+        |> json_response(200)
+
+      %{access_token: access_token}
+    end
+
+    test "revokes the token without a client_id", %{access_token: access_token} do
+      conn = post(build_conn(), "/api/oauth/revoke", %{"token" => access_token})
+
+      assert response(conn, 200) == ""
+
+      assert {:ok, token} =
+               Hexpm.OAuth.Tokens.lookup(access_token, :access, validate: false, preload: [])
+
+      assert Hexpm.OAuth.Tokens.revoked?(token)
+    end
+  end
+
   test "rejects a missing assertion", %{package: package} do
     conn =
       build_conn()

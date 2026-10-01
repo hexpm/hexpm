@@ -513,6 +513,19 @@ defmodule HexpmWeb.API.OAuthController do
     end
   end
 
+  defp revoke_token(%{"token" => token_value}) when is_binary(token_value) do
+    case lookup_token_for_revocation(token_value, nil) do
+      {:ok, %Token{client_id: nil} = token} ->
+        case revoke(token) do
+          {:ok, _} -> :ok
+          {:error, _} -> {:error, :revocation_failed}
+        end
+
+      _ ->
+        {:error, :invalid_token}
+    end
+  end
+
   defp revoke_token(_params), do: {:error, :invalid_request}
 
   # RFC 7009 section 2.1: either token of a pair revokes the other. Marking only

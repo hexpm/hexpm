@@ -883,6 +883,17 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       refute Tokens.revoked?(updated_token)
     end
 
+    test "does not revoke a client's token without its client_id", %{
+      revoke_token: token,
+      revoke_access_token: access_token
+    } do
+      build_conn()
+      |> post(~p"/api/oauth/revoke", %{token: access_token})
+      |> response(200)
+
+      refute Tokens.revoked?(Repo.get(Token, token.id))
+    end
+
     test "returns 200 OK for missing parameters" do
       params = %{}
 

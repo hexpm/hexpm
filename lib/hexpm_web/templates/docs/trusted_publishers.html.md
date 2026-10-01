@@ -155,6 +155,15 @@ No `client_id` is needed, because the OIDC token is the credential. `scope` name
 
 Errors use OAuth-style bodies (`error`, `error_description`), for example missing fields (`invalid_request`), a malformed or missing `scope` (`invalid_scope`), bad or replayed OIDC tokens (`invalid_grant`), or no matching publisher (`access_denied`). The grant is public (the OIDC token is the credential). It has no per-address rate limit, so CI runners sharing an address never throttle each other. Mints that fail after the OIDC token is verified count toward a limit per GitHub repository; once it is exceeded the endpoint answers `429` with `slow_down` for that repository only.
 
+To revoke a minted token before it expires, for example at the end of the job, send it to the standard revocation endpoint ([RFC 7009](https://www.rfc-editor.org/rfc/rfc7009)), again without a `client_id`:
+
+```nohighlight
+POST /api/oauth/revoke
+Content-Type: application/x-www-form-urlencoded
+
+token=<hex-access-token>
+```
+
 ### Security model
 
 * Hex verifies the GitHub OIDC signature via discovery and JWKS, rejects `none` and HMAC algorithms, and checks `iss`, `aud`, `exp`, `nbf`, and `iat`.
