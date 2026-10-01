@@ -711,6 +711,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         conn,
         organization,
         params,
+        "Updated your billing information.",
         &Hexpm.Billing.update(organization.name, &1, audit: audit)
       )
     end)
@@ -721,7 +722,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       params = Map.put(params, "token", organization.name)
       audit = %{audit_data: audit_data(conn), organization: organization}
 
-      update_billing(conn, organization, params, fn customer_params ->
+      info = "Private packages enabled with a one month free trial."
+
+      update_billing(conn, organization, params, info, fn customer_params ->
         Seats.update_quantity(organization, :member_count, fn quantity ->
           Hexpm.Billing.create(Map.put(customer_params, "quantity", quantity), audit: audit)
         end)
@@ -867,7 +870,10 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     case Organizations.create(user, params["organization"], audit: audit_data(conn)) do
       {:ok, organization} ->
         conn
-        |> put_flash(:info, "Organization created with one month free trial period active.")
+        |> put_flash(
+          :info,
+          "Organization created. Enable private packages with a one month free trial on the billing tab."
+        )
         |> redirect(to: ~p"/dashboard/orgs/#{organization}")
 
       {:error, changeset} ->
@@ -877,7 +883,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end
   end
 
-  defp update_billing(conn, organization, params, fun) do
+  defp update_billing(conn, organization, params, info, fun) do
     customer_params =
       params
       |> Map.take(["email", "person", "company", "token", "quantity"])
@@ -887,7 +893,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     with :ok <- validate_billing_params(customer_params),
          {:ok, _} <- fun.(customer_params) do
       conn
-      |> put_flash(:info, "Updated your billing information.")
+      |> put_flash(:info, info)
       |> redirect(to: ~p"/dashboard/orgs/#{organization}/billing")
     else
       {:error, errors}

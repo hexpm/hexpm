@@ -113,7 +113,9 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInfoForms do
               person={@person}
             />
             <div class="mt-6">
-              <.button type="submit" variant="primary">Save</.button>
+              <.button type="submit" variant="primary">
+                {if @billing_started?, do: "Save", else: "Enable private packages"}
+              </.button>
             </div>
           </.sudo_form>
         </div>
@@ -131,7 +133,9 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInfoForms do
               company={@company}
             />
             <div class="mt-6">
-              <.button type="submit" variant="primary">Save</.button>
+              <.button type="submit" variant="primary">
+                {if @billing_started?, do: "Save", else: "Enable private packages"}
+              </.button>
             </div>
           </.sudo_form>
         </div>

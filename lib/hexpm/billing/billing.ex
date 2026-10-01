@@ -78,10 +78,13 @@ defmodule Hexpm.Billing do
 
   def create(params, audit: %{audit_data: audit_data, organization: organization}) do
     Repo.write_mode!()
+    trial = Organization.start_trial(organization)
+    params = Map.put(params, "trial_end", DateTime.to_iso8601(get_field(trial, :trial_end)))
 
     case impl().create(params) do
       {:ok, result} ->
         Repo.insert!(audit(audit_data, "billing.create", {organization, params}))
+        Repo.update!(trial)
         {:ok, result}
 
       {:error, reason} ->

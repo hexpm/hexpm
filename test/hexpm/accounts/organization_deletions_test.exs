@@ -187,6 +187,22 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
       assert Organizations.get(name).deletion_scheduled_at == scheduled_at
     end
 
+    test "counts an organization that never started a trial from its creation" do
+      organization =
+        empty_inactive_organization(
+          billing_inactive_since: nil,
+          trial_end: nil,
+          inserted_at: days_ago(10)
+        )
+
+      insert_policy(organization)
+      name = organization.name
+      assert %{scheduled: [^name]} = OrganizationDeletions.run()
+
+      scheduled_at = Organizations.get(name).deletion_scheduled_at
+      assert DateTime.diff(scheduled_at, days_from_now(80), :second) |> abs() < 60
+    end
+
     test "posts one Slack message for the run" do
       for _ <- 1..3, do: inactive_organization(billing_inactive_since: days_ago(10))
       app_env(:hexpm, :slack_webhook_url, "https://hooks.slack.test/T/B/x")
@@ -507,9 +523,10 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
       inactive_organization(billing_override: true)
       inactive_organization(trial_end: days_from_now(5))
       inactive_organization([])
+      inactive_organization(billing_inactive_since: nil, trial_end: nil)
       inactive_organization(deletion_scheduled_at: days_from_now(3))
 
-      assert OrganizationDeletions.state_counts() == %{active: 3, inactive: 2, scheduled: 1}
+      assert OrganizationDeletions.state_counts() == %{active: 3, inactive: 3, scheduled: 1}
     end
   end
 
