@@ -181,11 +181,13 @@ defmodule Hexpm.TrustedPublishers do
 
   defp emit_failure(%Ecto.Changeset{}), do: emit_failure(:changeset_error)
 
-  defp emit_failure(reason) do
+  defp emit_failure(reason) when is_atom(reason) do
     :telemetry.execute([:hexpm, :trusted_publishers, :mint, :failure], %{count: 1}, %{
       reason: reason
     })
   end
+
+  defp emit_failure(_reason), do: emit_failure(:request_failed)
 
   defp fetch_provider(nil), do: {:error, :unknown_provider}
 

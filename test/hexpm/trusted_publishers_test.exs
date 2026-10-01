@@ -182,6 +182,34 @@ defmodule Hexpm.TrustedPublishersTest do
                )
     end
 
+    test "counts a failed JWKS fetch under a reason the metric can export", %{
+      package: package
+    } do
+      stub(Hexpm.HTTP.Mock, :get, fn _url, _headers, _opts ->
+        {:error, %RuntimeError{message: "connection refused"}}
+      end)
+
+      Hexpm.TrustedPublishers.OIDC.clear_cache()
+
+      ref =
+        :telemetry_test.attach_event_handlers(self(), [
+          [:hexpm, :trusted_publishers, :mint, :failure]
+        ])
+
+      on_exit(fn -> :telemetry.detach(ref) end)
+
+      token = TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
+
+      assert {:error, %RuntimeError{}} =
+               TrustedPublishers.verify_and_mint(token,
+                 repository: "hexpm",
+                 package: package.name
+               )
+
+      assert_received {[:hexpm, :trusted_publishers, :mint, :failure], ^ref, %{count: 1},
+                       %{reason: :request_failed}}
+    end
+
     test "rejects issuer not in allowlist", %{package: package} do
       token =
         TrustedPublisherHelpers.sign_oidc_claims(
