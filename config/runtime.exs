@@ -127,6 +127,15 @@ if config_env() == :prod do
     access_key_id: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_ID"),
     secret_access_key: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_SECRET")
 
+  # BroadwaySQS.Producer signs SQS requests with the credentials and region it
+  # gets from aws_credentials, whose env provider takes them from these app env
+  # keys as charlists. The queues are in us-east-1.
+  config :aws_credentials,
+    credential_providers: [:aws_credentials_env],
+    aws_access_key_id: String.to_charlist(System.fetch_env!("HEXPM_AWS_ACCESS_KEY_ID")),
+    aws_secret_access_key: String.to_charlist(System.fetch_env!("HEXPM_AWS_ACCESS_KEY_SECRET")),
+    aws_region: ~c"us-east-1"
+
   # GIT_SHA is baked into the image (see the Dockerfile) and matches the
   # release CI creates in Sentry, so issues resolved via commits auto-resolve
   # when the deploy carrying the fix is registered.
