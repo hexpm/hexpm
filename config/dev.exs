@@ -91,6 +91,15 @@ config :phoenix_live_view,
 config :logger, level: log_level
 config :logger, :default_formatter, format: "[$level] $message\n"
 
+# Without credential providers aws_credentials logs "No credentials available"
+# every 5 seconds. Setting :filters replaces Logger's default remote_gl filter,
+# so it is listed again.
+config :logger, :default_handler,
+  filters: [
+    remote_gl: {&:logger_filters.remote_gl/2, :stop},
+    aws_credentials: {&:logger_filters.domain/2, {:stop, :sub, [:aws_credentials]}}
+  ]
+
 config :phoenix, :stacktrace_depth, 20
 
 config :phoenix, :plug_init_mode, :runtime

@@ -126,6 +126,23 @@ defmodule Hexpm.RuntimeConfigTest do
     end
   end
 
+  # BroadwaySQS.Producer signs SQS requests with what aws_credentials returns,
+  # and its env provider reads the app env values as charlists
+  test "gives aws_credentials the AWS credentials and the SQS region in prod only" do
+    for env <- [@web_env, @worker_env] do
+      assert read_runtime(env)[:aws_credentials] == [
+               credential_providers: [:aws_credentials_env],
+               aws_access_key_id: ~c"aws-id",
+               aws_secret_access_key: ~c"aws-secret",
+               aws_region: ~c"us-east-1"
+             ]
+    end
+
+    for env <- [:dev, :test] do
+      assert read_runtime(@web_env, env)[:aws_credentials] == nil
+    end
+  end
+
   test "organization deletions default to off and accept each mode" do
     assert read_runtime(@worker_env)[:hexpm][:organization_deletions] == :off
 

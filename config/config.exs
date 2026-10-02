@@ -105,6 +105,11 @@ config :ex_aws,
   http_client: ExAws.Request.Req,
   req_opts: [finch: [name: Hexpm.Finch]]
 
+# Only BroadwaySQS.Producer asks aws_credentials for credentials, and outside of
+# prod the queues use Broadway.DummyProducer. Prod's providers are set in
+# config/runtime.exs.
+config :aws_credentials, credential_providers: []
+
 config :sentry,
   client: Hexpm.SentryClient,
   json_library: JSON
