@@ -1,0 +1,138 @@
+<% form = to_form(@changeset, as: :trusted_publisher) %>
+<.package_layout {@package_layout} active_tab={:trusted_publishers}>
+  <:inner_content>
+    <div class="flex flex-col gap-6">
+      <%!-- Current trusted publishers --%>
+      <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden">
+        <div class="px-6 py-4 border-b border-grey-200 dark:border-grey-700">
+          <h2 class="text-base font-semibold text-grey-900 dark:text-white">
+            Trusted publishers
+          </h2>
+        </div>
+        <ul class="divide-y divide-grey-100 dark:divide-grey-700">
+          <%= for trusted_publisher <- @trusted_publishers do %>
+            <li class="flex items-center justify-between px-6 py-4">
+              <div class="flex flex-col gap-1">
+                <p class="text-sm font-medium text-grey-900 dark:text-white">
+                  {trusted_publisher.repository} ({trusted_publisher.workflow})
+                </p>
+                <p class="text-xs text-grey-500 dark:text-grey-300">
+                  Environment: {HexpmWeb.PackageTrustedPublisherView.environment_label(
+                    trusted_publisher.environment
+                  )}
+                </p>
+              </div>
+
+              <.icon_button
+                icon="x-mark"
+                variant="danger"
+                aria-label={"Remove trusted publisher #{trusted_publisher.repository}"}
+                phx-click={show_modal("remove-trusted-publisher-#{trusted_publisher.id}")}
+              />
+            </li>
+          <% end %>
+          <li
+            :if={@trusted_publishers == []}
+            class="px-6 py-4 text-sm text-grey-500 dark:text-grey-300"
+          >
+            No trusted publishers configured for this package.
+          </li>
+        </ul>
+      </div>
+
+      <%!-- Add trusted publisher --%>
+      <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden">
+        <div class="px-6 py-4 border-b border-grey-200 dark:border-grey-700">
+          <h2 class="text-base font-semibold text-grey-900 dark:text-white">
+            Add trusted publisher
+          </h2>
+        </div>
+
+        <.sudo_form
+          current_user={@current_user}
+          action={HexpmWeb.ViewHelpers.path_for_trusted_publishers(@package)}
+          method="post"
+          id="add-trusted-publisher-form"
+          class="px-6 py-4 flex flex-col gap-4"
+        >
+          <input type="hidden" name="trusted_publisher[provider]" value="github" />
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <.text_input
+              field={form[:repository_owner]}
+              label="Repository owner"
+              placeholder="acme"
+              required
+            />
+            <.text_input
+              field={form[:repository]}
+              label="GitHub repository"
+              placeholder="acme/widget"
+              required
+            />
+            <.text_input
+              field={form[:workflow]}
+              label="Workflow"
+              placeholder="release.yml"
+              required
+            />
+            <.text_input
+              field={form[:environment]}
+              label="Environment"
+              placeholder="Any"
+            />
+          </div>
+
+          <.text_input
+            field={form[:repository_id]}
+            label="Repository ID"
+            placeholder="123456"
+          />
+          <p class="text-xs text-grey-500 dark:text-grey-300">
+            Required for private GitHub repositories Hex cannot see. Find it with <code class="text-xs">gh api repos/OWNER/NAME --jq .id</code>.
+          </p>
+
+          <div class="flex justify-end">
+            <.button type="submit" variant="primary">Add trusted publisher</.button>
+          </div>
+        </.sudo_form>
+      </div>
+    </div>
+
+    <%!-- Remove modals --%>
+    <%= for trusted_publisher <- @trusted_publishers do %>
+      <.modal
+        id={"remove-trusted-publisher-#{trusted_publisher.id}"}
+        title="Remove trusted publisher?"
+        max_width="md"
+      >
+        <p class="text-sm text-grey-600 dark:text-grey-300">
+          Are you sure you want to remove the trusted publisher for
+          <strong class="font-semibold text-grey-900 dark:text-white">
+            {trusted_publisher.repository}
+          </strong>
+          ({trusted_publisher.workflow})?
+        </p>
+
+        <.sudo_form
+          current_user={@current_user}
+          action={HexpmWeb.ViewHelpers.path_for_trusted_publisher(@package, trusted_publisher.id)}
+          method="delete"
+          id={"remove-trusted-publisher-form-#{trusted_publisher.id}"}
+          class="flex flex-col gap-6"
+        >
+          <div class="flex justify-end gap-3">
+            <.button
+              type="button"
+              variant="secondary"
+              phx-click={hide_modal("remove-trusted-publisher-#{trusted_publisher.id}")}
+            >
+              Cancel
+            </.button>
+            <.button type="submit" variant="danger">Remove trusted publisher</.button>
+          </div>
+        </.sudo_form>
+      </.modal>
+    <% end %>
+  </:inner_content>
+</.package_layout>

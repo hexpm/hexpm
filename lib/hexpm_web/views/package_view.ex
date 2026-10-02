@@ -214,6 +214,12 @@ defmodule HexpmWeb.PackageView do
       "release.unretire" ->
         do_release_action("Unretire release", version_from_params(params))
 
+      "trusted_publisher.create" ->
+        do_trusted_publisher_action("Add trusted publisher", params)
+
+      "trusted_publisher.remove" ->
+        do_trusted_publisher_action("Remove trusted publisher", params)
+
       _ ->
         "Action not recognized"
     end
@@ -254,6 +260,15 @@ defmodule HexpmWeb.PackageView do
     do: "#{base_message} #{release_version}"
 
   defp version_from_params(params) when is_map(params), do: params["release"]["version"]
+
+  defp do_trusted_publisher_action(base_message, %{
+         "repository" => repository,
+         "workflow" => workflow
+       })
+       when not is_nil(repository) and not is_nil(workflow),
+       do: "#{base_message} #{repository} (#{workflow})"
+
+  defp do_trusted_publisher_action(base_message, _params), do: base_message
 
   def affected_requirements_for(advisory, package) do
     advisory.affected_versions
