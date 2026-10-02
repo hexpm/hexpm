@@ -19,6 +19,7 @@ defmodule HexpmWeb.Readme.Sanitizer do
         ~w(href title id class aria-label data-footnote-ref data-footnote-backref data-footnote-backref-idx)
       ),
     "li" => MapSet.new(~w(id)),
+    "p" => MapSet.new(~w(class)),
     "section" => MapSet.new(~w(class data-footnotes)),
     "sup" => MapSet.new(~w(class)),
     "img" => MapSet.new(~w(src alt width height title)),
@@ -99,6 +100,8 @@ defmodule HexpmWeb.Readme.Sanitizer do
 
   defp sanitize_attribute("a", {"class", "footnote-backref"} = attr), do: [attr]
   defp sanitize_attribute("a", {"class", _}), do: []
+  defp sanitize_attribute("p", {"class", "markdown-alert-title"} = attr), do: [attr]
+  defp sanitize_attribute("p", {"class", _}), do: []
 
   defp sanitize_attribute(_tag, attr), do: [attr]
 
