@@ -257,6 +257,34 @@ defmodule Hexpm.Hexdocs.WorkersTest do
            }
   end
 
+  test "delete verifies the pages of a package with capitals in its name on the apex" do
+    package = insert(:package, name: "verifiedDocs", docs_updated_at: DateTime.utc_now())
+    release = insert(:release, package: package, version: "1.0.0", has_docs: true)
+    key = "docs/#{package.name}-#{release.version}.tar.gz"
+
+    Hexpm.Store.put(
+      :repo_bucket,
+      key,
+      create_docs_tar([{"index.html", "<html><head></head></html>"}])
+    )
+
+    assert :ok = perform_job(Workers.Upload, %{key: key})
+
+    keys = ["docspage/verifiedDocs", "docspage/verifiedDocs/1.0.0"]
+
+    Ecto.Changeset.change(release, has_docs: false) |> Repo.update!()
+    assert :ok = perform_job(Workers.Delete, %{key: key})
+
+    assert purge_args(keys) == %{
+             "service" => "fastly_hexdocs",
+             "keys" => keys,
+             "verify" => [
+               %{"url" => "http://localhost:5002/verifiedDocs/1.0.0/index.html", "etag" => nil},
+               %{"url" => "http://localhost:5002/verifiedDocs/index.html", "etag" => nil}
+             ]
+           }
+  end
+
   test "upload succeeds for archives with write-protected file modes" do
     package = insert(:package, name: "readonly_docs", docs_updated_at: DateTime.utc_now())
     release = insert(:release, package: package, version: "1.0.0", has_docs: true)
