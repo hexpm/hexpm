@@ -155,14 +155,15 @@ defmodule HexpmWeb.API.PackageControllerTest do
     end
 
     test "show private packages", %{user: user, package3: package3} do
-      result =
+      conn =
         build_conn()
         # TODO: change to web_login/api_login helper
         |> put_req_header("authorization", key_for(user))
         |> get("/api/packages")
-        |> json_response(200)
 
+      result = json_response(conn, 200)
       assert length(result) == 4
+      assert get_resp_header(conn, "cache-control") == ["private, max-age=60"]
       assert package3.name in Enum.map(result, & &1["name"])
     end
 
@@ -171,15 +172,16 @@ defmodule HexpmWeb.API.PackageControllerTest do
       repository: repository,
       package3: package3
     } do
-      result =
+      conn =
         build_conn()
         # TODO: change to web_login/api_login helper
         |> put_req_header("authorization", key_for(user))
         |> get("/api/repos/#{repository.name}/packages")
-        |> json_response(200)
 
+      result = json_response(conn, 200)
       assert length(result) == 1
       assert package3.name in Enum.map(result, & &1["name"])
+      assert get_resp_header(conn, "cache-control") == ["private, max-age=60"]
     end
 
     test "show private packages in organization with service account", %{
@@ -219,6 +221,7 @@ defmodule HexpmWeb.API.PackageControllerTest do
     test "get package", %{package1: package1} do
       conn = get(build_conn(), "/api/packages/#{package1.name}")
       result = json_response(conn, 200)
+      assert get_resp_header(conn, "cache-control") == ["public, max-age=60"]
       assert result["name"] == package1.name
       assert result["inserted_at"] == "2030-01-01T00:00:00.000000Z"
       # updated_at ISO8601 datetime string should include a Z to indicate UTC
@@ -286,12 +289,13 @@ defmodule HexpmWeb.API.PackageControllerTest do
       repository: repository,
       package3: package3
     } do
-      result =
+      conn =
         build_conn()
         |> put_req_header("authorization", key_for(user))
         |> get("/api/repos/#{repository.name}/packages/#{package3.name}")
-        |> json_response(200)
 
+      result = json_response(conn, 200)
+      assert get_resp_header(conn, "cache-control") == ["private, max-age=60"]
       assert result["name"] == package3.name
       assert result["repository"] == repository.name
 

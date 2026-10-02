@@ -94,7 +94,7 @@ defmodule HexpmWeb.API.ReleaseController do
 
       when_stale(conn, release, fn conn ->
         conn
-        |> api_cache(:public)
+        |> api_cache(conn.assigns.repository)
         |> render(:show, release: release)
       end)
     else
@@ -167,14 +167,14 @@ defmodule HexpmWeb.API.ReleaseController do
 
     conn
     |> put_resp_header("location", location)
-    |> api_cache(:public)
+    |> api_cache(conn.assigns.repository)
     |> put_status(201)
     |> render(:show, release: release)
   end
 
   defp publish_result({:ok, %{action: :update, release: release}}, conn) do
     conn
-    |> api_cache(:public)
+    |> api_cache(conn.assigns.repository)
     |> render(:show, release: release)
   end
 
