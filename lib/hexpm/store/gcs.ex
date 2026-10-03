@@ -5,7 +5,11 @@ defmodule Hexpm.Store.GCS do
   @default_gs_xml_url "https://storage.googleapis.com"
 
   def list_objects(bucket, prefix) do
-    list_stream(bucket, prefix)
+    list_stream(&do_list(bucket, prefix, &1))
+  end
+
+  def list_prefixes(bucket, prefix) do
+    list_stream(&do_list_prefixes(bucket, prefix, &1))
   end
 
   def get(bucket, key, _opts) do
@@ -115,7 +119,7 @@ defmodule Hexpm.Store.GCS do
     end
   end
 
-  defp list_stream(bucket, prefix) do
+  defp list_stream(list_page) do
     start_fun = fn -> nil end
     after_fun = fn _ -> nil end
 
@@ -124,7 +128,7 @@ defmodule Hexpm.Store.GCS do
         {:halt, nil}
 
       marker ->
-        {items, marker} = do_list(bucket, prefix, marker)
+        {items, marker} = list_page.(marker)
         {items, marker || :halt}
     end
 
@@ -132,13 +136,7 @@ defmodule Hexpm.Store.GCS do
   end
 
   defp do_list(bucket, prefix, marker) do
-    query = URI.encode_query(%{"prefix" => prefix, "marker" => marker || ""})
-    url = url(bucket) <> "?" <> query
-
-    {:ok, 200, _headers, body} = retry(:get, url, fn -> Hexpm.HTTP.impl().get(url, headers()) end)
-
-    doc = SweetXml.parse(body)
-    marker = SweetXml.xpath(doc, ~x"/ListBucketResult/NextMarker/text()"s)
+    {doc, marker} = list_page(bucket, %{"prefix" => prefix}, marker)
 
     items =
       SweetXml.xpath(doc, ~x"/ListBucketResult/Contents"l,
@@ -147,9 +145,24 @@ defmodule Hexpm.Store.GCS do
       )
       |> Enum.map(&%{key: &1.key, last_modified: parse_last_modified(&1.last_modified)})
 
-    marker = if marker != "", do: marker
-
     {items, marker}
+  end
+
+  defp do_list_prefixes(bucket, prefix, marker) do
+    {doc, marker} = list_page(bucket, %{"prefix" => prefix, "delimiter" => "/"}, marker)
+    prefixes = SweetXml.xpath(doc, ~x"/ListBucketResult/CommonPrefixes/Prefix/text()"ls)
+    {prefixes, marker}
+  end
+
+  defp list_page(bucket, params, marker) do
+    query = URI.encode_query(Map.put(params, "marker", marker || ""))
+    url = url(bucket) <> "?" <> query
+
+    {:ok, 200, _headers, body} = retry(:get, url, fn -> Hexpm.HTTP.impl().get(url, headers()) end)
+
+    doc = SweetXml.parse(body)
+    marker = SweetXml.xpath(doc, ~x"/ListBucketResult/NextMarker/text()"s)
+    {doc, if(marker != "", do: marker)}
   end
 
   defp parse_last_modified(value) do

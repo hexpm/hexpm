@@ -4,6 +4,19 @@ defmodule Hexpm.Store.Local do
 
   # only used during development (not safe)
 
+  def list_prefixes(bucket, prefix) do
+    bucket
+    |> list_objects(prefix)
+    |> Enum.flat_map(fn %{key: key} ->
+      case String.split(String.replace_prefix(key, prefix, ""), "/", parts: 2) do
+        [first, _rest] -> [prefix <> first <> "/"]
+        [_object] -> []
+      end
+    end)
+    |> Enum.uniq()
+    |> Enum.sort()
+  end
+
   def list_objects(bucket, prefix) do
     bucket_dir = Path.join([dir(), bucket])
     paths = Path.join(bucket_dir, "**") |> Path.wildcard()

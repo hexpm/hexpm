@@ -33,6 +33,11 @@ defmodule Hexpm.Store do
     impl.list_objects(bucket, prefix)
   end
 
+  def list_prefixes(bucket, prefix) do
+    {impl, bucket} = impl_bucket(bucket)
+    impl.list_prefixes(bucket, prefix)
+  end
+
   def get(bucket, key, opts \\ []) do
     {impl, bucket} = impl_bucket(bucket)
     impl.get(bucket, key, opts)

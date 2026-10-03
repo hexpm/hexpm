@@ -12,7 +12,8 @@ defmodule Hexpm.Accounts.OrganizationDataWorkerTest do
                {:repo_bucket, "debug/docs/acme-"},
                {:preview_bucket, "repos/acme/"},
                {:diff_bucket, "repos/acme/"},
-               {:docs_private_bucket, "acme/"}
+               {:docs_private_bucket, "acme/"},
+               {:access_logs_private_bucket, "org=acme/"}
              ]
     end
 
@@ -56,6 +57,14 @@ defmodule Hexpm.Accounts.OrganizationDataWorkerTest do
     test "deletes the objects, records the deletion and can run again" do
       Hexpm.Store.put(:repo_bucket, "repos/acme/names", "NAMES", [])
       Hexpm.Store.put(:docs_private_bucket, "acme/pkg/index.html", "DOCS", [])
+
+      Hexpm.Store.put(
+        :access_logs_private_bucket,
+        "org=acme/service=fastly_hex/dt=2025-01-01/a.log.gz",
+        "LOG",
+        []
+      )
+
       Hexpm.Store.put(:repo_bucket, "repos/acme_two/names", "OTHER", [])
 
       args = OrganizationDataWorker.new_job(["acme"], [{"pkg", "1.0.0"}], []).changes.args
@@ -64,6 +73,7 @@ defmodule Hexpm.Accounts.OrganizationDataWorkerTest do
 
       assert Hexpm.Store.list(:repo_bucket, "repos/acme/") |> Enum.to_list() == []
       assert Hexpm.Store.list(:docs_private_bucket, "acme/") |> Enum.to_list() == []
+      assert Hexpm.Store.list(:access_logs_private_bucket, "org=acme/") |> Enum.to_list() == []
       assert Hexpm.Store.get(:repo_bucket, "repos/acme_two/names", []) == "OTHER"
       assert Hexpm.Store.get(:deletions_bucket, "organizations/acme", [])
 
@@ -164,7 +174,9 @@ defmodule Hexpm.Accounts.OrganizationDataWorkerTest do
       {:diff_bucket, "#{repo}/metadata/#{package}-#{version}-#{version}-1.json"},
       {:diff_bucket, "#{repo}/diffs/#{package}-#{version}-#{version}-1-diff-0.json"},
       {:docs_private_bucket, "#{organization}/#{package}/index.html"},
-      {:docs_private_bucket, "#{organization}/#{package}/#{version}/index.html"}
+      {:docs_private_bucket, "#{organization}/#{package}/#{version}/index.html"},
+      {:access_logs_private_bucket,
+       "org=#{organization}/service=fastly_hex/dt=2025-01-01/#{random}.log.gz"}
     ]
   end
 

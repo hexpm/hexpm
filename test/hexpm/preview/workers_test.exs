@@ -7,6 +7,8 @@ defmodule Hexpm.Preview.WorkersTest do
   defmodule FailingStore do
     @behaviour Hexpm.Store.Behaviour
 
+    defdelegate list_prefixes(bucket, prefix), to: Hexpm.Store.Memory
+
     defdelegate list_objects(bucket, prefix), to: Hexpm.Store.Memory
 
     def get(_bucket, "file_lists/backfill_storage_failure-1.0.0.json", _opts) do
@@ -32,6 +34,8 @@ defmodule Hexpm.Preview.WorkersTest do
 
   defmodule ActionStore do
     @behaviour Hexpm.Store.Behaviour
+
+    defdelegate list_prefixes(bucket, prefix), to: Hexpm.Store.Memory
     @action_key {__MODULE__, :action}
 
     defdelegate get(bucket, key, opts), to: Hexpm.Store.Memory

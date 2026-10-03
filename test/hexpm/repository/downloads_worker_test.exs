@@ -12,6 +12,8 @@ defmodule Hexpm.Repository.DownloadsWorkerTest do
   defmodule DroppingStore do
     @behaviour Hexpm.Store.Behaviour
 
+    defdelegate list_prefixes(bucket, prefix), to: Hexpm.Store.Memory
+
     defdelegate list_objects(bucket, prefix), to: Hexpm.Store.Memory
     defdelegate get(bucket, key, opts), to: Hexpm.Store.Memory
     defdelegate size(bucket, key), to: Hexpm.Store.Memory

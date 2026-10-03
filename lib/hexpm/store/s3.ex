@@ -9,6 +9,26 @@ defmodule Hexpm.Store.S3 do
     |> Stream.map(&%{key: &1.key, last_modified: parse_last_modified(&1.last_modified)})
   end
 
+  def list_prefixes(bucket, prefix) do
+    Stream.unfold(:start, fn
+      nil ->
+        nil
+
+      marker ->
+        opts = [prefix: prefix, delimiter: "/"]
+        opts = if marker == :start, do: opts, else: Keyword.put(opts, :marker, marker)
+
+        %{body: body} =
+          S3.list_objects(bucket(bucket), opts)
+          |> ExAws.request!(region: region(bucket))
+
+        prefixes = Enum.map(body.common_prefixes, & &1.prefix)
+        next = if body.is_truncated == "true", do: body.next_marker
+        {prefixes, next}
+    end)
+    |> Stream.flat_map(& &1)
+  end
+
   defp parse_last_modified(value) do
     {:ok, datetime, _offset} = DateTime.from_iso8601(value)
     datetime
