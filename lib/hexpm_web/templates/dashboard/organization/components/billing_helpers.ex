@@ -67,6 +67,76 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingHelpers do
     "#{brand} **** **** **** #{last4}, Expires: #{month}/#{year}"
   end
 
+  def payment_method(_card, true = _bank_transfer),
+    do: "Bank transfer, invoices are due in 30 days"
+
+  def payment_method(card, _bank_transfer), do: payment_card(card)
+
+  def invoice_payment(%{"bank_transfer" => true}), do: "Bank transfer"
+  def invoice_payment(invoice), do: payment_card(invoice["card"])
+
+  def invoice_due_status(due_date) do
+    {:ok, due_date, _offset} = DateTime.from_iso8601(due_date)
+
+    if DateTime.compare(due_date, DateTime.utc_now()) == :lt,
+      do: "Overdue",
+      else: "Due #{due_date |> DateTime.to_naive() |> pretty_date()}"
+  end
+
+  # Bank account details from Stripe funding instructions, as a list of
+  # `{title, [{label, value}]}` for each way the customer can transfer money
+  def bank_transfer_details(%{"bank_transfer" => %{"financial_addresses" => addresses}}) do
+    addresses
+    |> Enum.flat_map(&financial_address/1)
+    |> Enum.map(fn {title, rows} -> {title, Enum.reject(rows, &(elem(&1, 1) in [nil, ""]))} end)
+  end
+
+  def bank_transfer_details(nil), do: []
+
+  defp financial_address(%{"type" => "aba", "aba" => aba}) do
+    [
+      {"US domestic transfer (ACH or wire)",
+       [
+         {"Account holder", aba["account_holder_name"]},
+         {"Account holder address", bank_address(aba["account_holder_address"])},
+         {"Bank", aba["bank_name"]},
+         {"Bank address", bank_address(aba["bank_address"])},
+         {"Routing number", aba["routing_number"]},
+         {"Account number", aba["account_number"]}
+       ]}
+    ]
+  end
+
+  defp financial_address(%{"type" => "swift", "swift" => swift}) do
+    [
+      {"International wire (SWIFT)",
+       [
+         {"Account holder", swift["account_holder_name"]},
+         {"Account holder address", bank_address(swift["account_holder_address"])},
+         {"Bank", swift["bank_name"]},
+         {"Bank address", bank_address(swift["bank_address"])},
+         {"SWIFT code", swift["swift_code"]},
+         {"Account number", swift["account_number"]}
+       ]}
+    ]
+  end
+
+  defp financial_address(_address), do: []
+
+  defp bank_address(nil), do: nil
+
+  defp bank_address(address) do
+    [
+      address["line1"],
+      address["line2"],
+      address["city"],
+      Enum.join(Enum.reject([address["state"], address["postal_code"]], &is_nil/1), " "),
+      address["country"]
+    ]
+    |> Enum.reject(&(&1 in [nil, ""]))
+    |> Enum.join(", ")
+  end
+
   # Short label for pill badges — single line, no HTML
   def subscription_badge_label(%{"status" => "active", "cancel_at_period_end" => false}),
     do: "Active"
@@ -82,24 +152,39 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingHelpers do
   def subscription_badge_label(_), do: ""
 
   # Full prose for the status detail row — may include HTML via raw/1
-  def subscription_status(%{"status" => "active", "cancel_at_period_end" => false}, _card),
-    do: "Active"
+  def subscription_status(
+        %{"status" => "active", "cancel_at_period_end" => false},
+        _card,
+        _bank_transfer
+      ),
+      do: "Active"
 
-  def subscription_status(%{"status" => "active", "cancel_at_period_end" => true}, _card),
-    do: "Ends after current subscription period"
+  def subscription_status(
+        %{"status" => "active", "cancel_at_period_end" => true},
+        _card,
+        _bank_transfer
+      ),
+      do: "Ends after current subscription period"
 
-  def subscription_status(%{"status" => "trialing", "trial_end" => trial_end}, card) do
-    raw("Trial ends on #{payment_date(trial_end)}, #{trial_status_message(card)}")
+  def subscription_status(
+        %{"status" => "trialing", "trial_end" => trial_end},
+        card,
+        bank_transfer
+      ) do
+    raw("Trial ends on #{payment_date(trial_end)}, #{trial_status_message(card, bank_transfer)}")
   end
 
-  def subscription_status(%{"status" => "past_due"}, _card),
+  def subscription_status(%{"status" => "past_due"}, _card, _bank_transfer),
     do: "Active with past due invoice — if unpaid the organization will be disabled"
 
-  def subscription_status(%{"status" => "incomplete"}, _card), do: "Incomplete"
-  def subscription_status(%{"status" => "canceled"}, _card), do: "Not active"
-  def subscription_status(%{"status" => "incomplete_expired"}, _card), do: "Not active"
-  def subscription_status(nil, _card), do: ""
-  def subscription_status(_subscription, _card), do: ""
+  def subscription_status(%{"status" => "incomplete"}, _card, _bank_transfer), do: "Incomplete"
+  def subscription_status(%{"status" => "canceled"}, _card, _bank_transfer), do: "Not active"
+
+  def subscription_status(%{"status" => "incomplete_expired"}, _card, _bank_transfer),
+    do: "Not active"
+
+  def subscription_status(nil, _card, _bank_transfer), do: ""
+  def subscription_status(_subscription, _card, _bank_transfer), do: ""
 
   def discount_status(nil), do: ""
 
@@ -153,9 +238,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingHelpers do
   Please add a payment method to continue using organizations after the trial.
   """
 
-  defp trial_status_message(%{"brand" => nil}), do: @trial_no_card
-  defp trial_status_message(nil), do: @trial_no_card
+  defp trial_status_message(_card, true = _bank_transfer),
+    do: "an invoice with bank transfer details is sent when the trial ends"
 
-  defp trial_status_message(_card),
+  defp trial_status_message(%{"brand" => nil}, _bank_transfer), do: @trial_no_card
+  defp trial_status_message(nil, _bank_transfer), do: @trial_no_card
+
+  defp trial_status_message(_card, _bank_transfer),
     do: "a payment method is on file and your subscription will continue after the trial"
 end

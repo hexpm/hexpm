@@ -124,26 +124,132 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingHelpersTest do
     end
   end
 
-  describe "subscription_status/2" do
+  describe "subscription_status/3" do
     test "nil subscription returns empty string" do
-      assert BillingHelpers.subscription_status(nil, nil) == ""
+      assert BillingHelpers.subscription_status(nil, nil, false) == ""
     end
 
     test "unknown status returns empty string without crashing" do
-      assert BillingHelpers.subscription_status(%{"status" => "paused"}, nil) == ""
+      assert BillingHelpers.subscription_status(%{"status" => "paused"}, nil, false) == ""
     end
 
     test "trialing with timezone-aware trial_end does not crash" do
       sub = %{"status" => "trialing", "trial_end" => "2024-04-12T00:00:00Z"}
-      result = BillingHelpers.subscription_status(sub, nil)
+      result = BillingHelpers.subscription_status(sub, nil, false)
       assert inspect(result) =~ "Trial ends on"
     end
 
     test "trialing with unix timestamp trial_end does not crash" do
       trial_end = DateTime.utc_now() |> DateTime.add(30, :day) |> DateTime.to_unix()
       sub = %{"status" => "trialing", "trial_end" => trial_end}
-      result = BillingHelpers.subscription_status(sub, nil)
+      result = BillingHelpers.subscription_status(sub, nil, false)
       assert inspect(result) =~ "Trial ends on"
+    end
+
+    test "trialing without card says the subscription ends after the trial" do
+      sub = %{"status" => "trialing", "trial_end" => "2024-04-12T00:00:00Z"}
+      result = BillingHelpers.subscription_status(sub, nil, false)
+      assert inspect(result) =~ "your subscription will end after the trial period"
+    end
+
+    test "trialing with bank transfer says an invoice is sent" do
+      sub = %{"status" => "trialing", "trial_end" => "2024-04-12T00:00:00Z"}
+      result = BillingHelpers.subscription_status(sub, nil, true)
+
+      assert inspect(result) =~
+               "an invoice with bank transfer details is sent when the trial ends"
+    end
+  end
+
+  describe "payment_method/2" do
+    test "bank transfer" do
+      assert BillingHelpers.payment_method(nil, true) ==
+               "Bank transfer, invoices are due in 30 days"
+    end
+
+    test "card" do
+      card = %{"brand" => "Visa", "last4" => "4242", "exp_month" => 1, "exp_year" => 2030}
+
+      assert BillingHelpers.payment_method(card, false) ==
+               "Visa **** **** **** 4242, Expires: 01/2030"
+    end
+  end
+
+  describe "invoice_payment/1" do
+    test "bank transfer invoice" do
+      assert BillingHelpers.invoice_payment(%{"bank_transfer" => true, "card" => nil}) ==
+               "Bank transfer"
+    end
+
+    test "card invoice" do
+      invoice = %{"bank_transfer" => false, "card" => %{"brand" => nil}}
+      assert BillingHelpers.invoice_payment(invoice) == "No payment method on file"
+    end
+  end
+
+  describe "invoice_due_status/1" do
+    test "due in the future" do
+      due_date = DateTime.utc_now() |> DateTime.add(10, :day)
+      expected = "Due #{due_date |> DateTime.to_naive() |> HexpmWeb.ViewHelpers.pretty_date()}"
+      assert BillingHelpers.invoice_due_status(DateTime.to_iso8601(due_date)) == expected
+    end
+
+    test "past due date" do
+      assert BillingHelpers.invoice_due_status("2024-04-12T00:00:00.000000Z") == "Overdue"
+    end
+  end
+
+  describe "bank_transfer_details/1" do
+    test "lists the domestic and international bank details" do
+      funding_instructions = %{
+        "bank_transfer" => %{
+          "financial_addresses" => [
+            %{
+              "type" => "aba",
+              "aba" => %{
+                "account_holder_name" => "Hex",
+                "account_holder_address" => %{
+                  "line1" => "354 Oyster Point Blvd",
+                  "line2" => nil,
+                  "city" => "South San Francisco",
+                  "state" => "CA",
+                  "postal_code" => "94080",
+                  "country" => "US"
+                },
+                "account_number" => "11119934683455685",
+                "bank_name" => "US Test Bank",
+                "routing_number" => "999999999"
+              }
+            },
+            %{
+              "type" => "swift",
+              "swift" => %{
+                "account_holder_name" => "Hex",
+                "account_number" => "11119934683455685",
+                "bank_name" => "US Test Bank",
+                "swift_code" => "TESTUS99XXX"
+              }
+            },
+            %{"type" => "unknown"}
+          ]
+        }
+      }
+
+      assert [
+               {"US domestic transfer (ACH or wire)", aba},
+               {"International wire (SWIFT)", swift}
+             ] = BillingHelpers.bank_transfer_details(funding_instructions)
+
+      assert {"Account holder address",
+              "354 Oyster Point Blvd, South San Francisco, CA 94080, US"} in aba
+
+      assert {"Routing number", "999999999"} in aba
+      assert {"SWIFT code", "TESTUS99XXX"} in swift
+      refute List.keymember?(swift, "Bank address", 0)
+    end
+
+    test "nil funding instructions" do
+      assert BillingHelpers.bank_transfer_details(nil) == []
     end
   end
 end

@@ -24,6 +24,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingTab do
   attr :max_period_quantity, :integer, default: nil
   attr :subscription, :map, default: nil
   attr :card, :map, default: nil
+  attr :bank_transfer, :boolean, default: false
+  attr :funding_instructions, :map, default: nil
   attr :discount, :map, default: nil
   attr :tax_rate, :any, default: nil
   attr :amount_with_tax, :integer, default: nil
@@ -60,6 +62,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingTab do
           member_count={@member_count}
           subscription={@subscription}
           card={@card}
+          bank_transfer={@bank_transfer}
+          funding_instructions={@funding_instructions}
           discount={@discount}
           tax_rate={@tax_rate}
           amount_with_tax={@amount_with_tax}
