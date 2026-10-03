@@ -425,6 +425,103 @@ defmodule Hexpm.Accounts.UsersTest do
       end)
     end
 
+    test "removes the user's email addresses from the audit log" do
+      user =
+        insert(:user,
+          handles: build(:user_handles, github: "deleted-gh"),
+          emails: [
+            build(:email, email: "primary@example.com"),
+            build(:email, email: "hidden@example.com", primary: false, public: false)
+          ]
+        )
+
+      user_data = %{
+        "id" => user.id,
+        "username" => user.username,
+        "handles" => %{"github" => "deleted-gh"},
+        "emails" => [%{"email" => "primary@example.com"}, %{"email" => "hidden@example.com"}]
+      }
+
+      update_log =
+        insert(:audit_log,
+          user: user,
+          action: "user.update",
+          user_data: user_data,
+          params: %{"id" => user.id, "username" => user.username},
+          remote_ip: "192.0.2.1",
+          user_agent: "hex/2.3"
+        )
+
+      email_log =
+        insert(:audit_log,
+          user: user,
+          action: "email.primary",
+          user_data: user_data,
+          params: %{
+            "old_email" => %{"email" => "old@example.com", "primary" => true},
+            "new_email" => %{"email" => "primary@example.com", "primary" => true}
+          }
+        )
+
+      organization_email_log =
+        insert(:audit_log,
+          user: user,
+          action: "email.add",
+          user_data: user_data,
+          params: %{"organization" => %{"id" => 1}, "email" => "billing@example.com"}
+        )
+
+      provider_log =
+        insert(:audit_log,
+          user: user,
+          action: "user_provider.create",
+          user_data: user_data,
+          params: %{
+            "provider" => "github",
+            "provider_uid" => "1",
+            "provider_email" => "gh@example.com"
+          }
+        )
+
+      other_log =
+        insert(:audit_log,
+          action: "owner.add",
+          user_data: %{
+            "id" => 0,
+            "username" => "other",
+            "emails" => [%{"email" => "o@example.com"}]
+          },
+          params: %{"user" => %{"id" => user.id, "username" => user.username}}
+        )
+
+      assert :ok = Users.delete(user, audit: audit_data(user))
+
+      update_log = Repo.get(AuditLog, update_log.id)
+      assert update_log.user_data == %{"id" => user.id, "username" => user.username}
+      assert update_log.params == %{"id" => user.id, "username" => user.username}
+      assert update_log.remote_ip == "192.0.2.1"
+      assert update_log.user_agent == "hex/2.3"
+
+      assert Repo.get(AuditLog, email_log.id).params == %{
+               "old_email" => %{"primary" => true},
+               "new_email" => %{"primary" => true}
+             }
+
+      assert Repo.get(AuditLog, organization_email_log.id).params["email"] ==
+               "billing@example.com"
+
+      assert Repo.get(AuditLog, provider_log.id).params == %{
+               "provider" => "github",
+               "provider_uid" => "1"
+             }
+
+      assert Repo.get(AuditLog, other_log.id).user_data == other_log.user_data
+
+      delete_log = Repo.get_by(AuditLog, action: "user.delete")
+      assert delete_log.user_data == %{"id" => user.id, "username" => user.username}
+      assert delete_log.params == %{"id" => user.id, "username" => user.username}
+    end
+
     test "deletes a user without a primary email and sends no email" do
       user = insert(:user, emails: [])
 
