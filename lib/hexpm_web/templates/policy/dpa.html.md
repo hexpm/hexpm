@@ -26,7 +26,7 @@ Six Colors acts as a Controller, not a Processor, for everything else it process
 
 1. The account records of individual users. A hex.pm account exists independently of any organization, is created by the individual, and survives their leaving your organization. Those records are governed by the [Privacy Policy](/policies/privacy).
 2. Public packages and their metadata, which are published to the world by the user who publishes them.
-3. Server and request logs, and security telemetry, which Six Colors retains to operate and secure the Services and to prevent abuse. This includes logs recording access to your private packages and documentation; a year after the deletion in section 9, Six Colors removes the IP address, user agent and key or token identifier from those entries.
+3. Server and request logs, and security telemetry, which Six Colors retains to operate and secure the Services and to prevent abuse. This includes logs recording access to your private packages and documentation; a year after the deletion in section 9, Six Colors removes the IP address, user agent and key or token identifier from those entries, apart from documentation requests logged before October 2026, which don't record the organization they were for.
 4. Billing, payment and tax records. Six Colors determines these purposes itself in order to invoice you and to meet its own legal obligations under Swedish law.
 
 Where this DPA conflicts with the Terms of Service in respect of Customer Personal Data, this DPA prevails.
