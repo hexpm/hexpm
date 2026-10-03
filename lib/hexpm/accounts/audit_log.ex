@@ -466,12 +466,6 @@ defmodule Hexpm.Accounts.AuditLog do
     |> Map.put(:retirement, serialize(release.retirement))
   end
 
-  defp serialize(%User{} = user) do
-    user
-    |> do_serialize()
-    |> Map.put(:handles, serialize(user.handles))
-  end
-
   defp serialize(%Hexpm.UserSession{} = session) do
     session
     |> do_serialize()
@@ -525,9 +519,6 @@ defmodule Hexpm.Accounts.AuditLog do
 
   defp fields(%Hexpm.Repository.Policy{}),
     do: [:id, :name, :visibility, :description, :repositories, :organization_id]
-
-  defp fields(%UserHandles{}),
-    do: [:twitter, :bluesky, :github, :elixirforum, :freenode, :slack, :url]
 
   defp fields(%Hexpm.UserSession{}), do: [:id, :type, :name, :client_id]
   defp fields(%Hexpm.OAuth.Client{}), do: [:id, :name]

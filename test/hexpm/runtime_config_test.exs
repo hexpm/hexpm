@@ -31,6 +31,7 @@ defmodule Hexpm.RuntimeConfigTest do
     "HEXPM_README_URL" => "https://readme.hex.example.com",
     "HEXPM_VARSEL_REPORT_URL" => "https://cna.example.com/reports",
     "HEXPM_VARSEL_JWT_AUDIENCE" => "https://cna.example.com/reports",
+    "HEXPM_ACCESS_LOGS_PRIVATE_BUCKET" => "access-logs-private",
     "HEXPM_VARSEL_SIGNING_KEY" => "varsel-signing-key",
     "HEXPM_VARSEL_KEY_ID" => "varsel-key-id",
     "HEXPM_VARSEL_JWKS" => ~S({"keys":[]}),

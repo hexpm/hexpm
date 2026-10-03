@@ -117,7 +117,8 @@ defmodule Hexpm.Accounts.OrganizationDataWorker do
   Every object an organization named `name` has in a bucket, under one prefix
   per bucket: its registry, tarballs, docs archives and policies in the repo
   bucket, the uploads kept as sent under debug/, the unpacked preview files,
-  the cached diffs and the unpacked private docs.
+  the cached diffs, the unpacked private docs, and the access log lines for
+  its private packages and docs kept after the raw logs expire.
   """
   def prefixes(name) do
     # The public repository's uploads are debug/*/hexpm-*, so its name would
@@ -132,7 +133,8 @@ defmodule Hexpm.Accounts.OrganizationDataWorker do
       {:repo_bucket, "debug/docs/#{name}-"},
       {:preview_bucket, "repos/#{name}/"},
       {:diff_bucket, "repos/#{name}/"},
-      {:docs_private_bucket, "#{name}/"}
+      {:docs_private_bucket, "#{name}/"},
+      {:access_logs_private_bucket, "org=#{name}/"}
     ]
   end
 

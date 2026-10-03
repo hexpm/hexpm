@@ -81,6 +81,7 @@ if config_env() == :prod do
     preview_bucket: System.fetch_env!("HEXPM_PREVIEW_BUCKET"),
     diff_bucket: System.fetch_env!("HEXPM_DIFF_BUCKET"),
     deletions_bucket: System.fetch_env!("HEXPM_DELETIONS_BUCKET"),
+    access_logs_private_bucket: System.fetch_env!("HEXPM_ACCESS_LOGS_PRIVATE_BUCKET"),
     slack_webhook_url: System.get_env("HEXPM_SLACK_WEBHOOK_URL"),
     organization_deletions:
       (case System.get_env("HEXPM_ORGANIZATION_DELETIONS", "off") do

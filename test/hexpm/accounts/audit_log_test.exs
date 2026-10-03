@@ -169,8 +169,8 @@ defmodule Hexpm.Accounts.AuditLogTest do
       assert audit.params.package.name == package.name
       assert audit.params.package.meta.description == package.meta.description
       assert audit.params.user.id == user.id
-      assert audit.params.user.username == user.username
-      assert audit.params.user.handles.github == user.handles.github
+      assert audit.params.user == %{id: user.id, username: user.username}
+      refute Map.has_key?(audit.user_data, :handles)
     end
 
     test "action organization.create", %{user: user, key: key} do
