@@ -34,7 +34,8 @@ defmodule HexpmWeb.DiffLive do
           current_release: release,
           graph_release: release,
           sidebar?: false,
-          dependants_count?: false
+          dependants_count?: false,
+          doc_kinds?: false
         )
 
       socket =
@@ -236,6 +237,10 @@ defmodule HexpmWeb.DiffLive do
       {:error, reason} ->
         assign(socket, error: storage_error(reason))
     end
+  end
+
+  defp show_ready(socket, %{too_large: true} = metadata, _pieces) do
+    assign(socket, metadata: metadata, job_state: :too_large, error: nil)
   end
 
   defp show_ready(socket, metadata, pieces) do
@@ -590,6 +595,11 @@ defmodule HexpmWeb.DiffLive do
   def job_state_title(:running), do: "Generating diff"
   def job_state_title(:retrying), do: "Retrying diff generation"
   def job_state_title(_), do: "Diff queued"
+
+  def too_large_message(1), do: "These releases differ in 1 file. The diff is too large to show."
+
+  def too_large_message(files_changed),
+    do: "These releases differ in #{files_changed} files. The diff is too large to show."
 
   def job_state_message(:discarded), do: "Generation failed after all retry attempts."
   def job_state_message(:cancelled), do: "Generation was cancelled."

@@ -41,7 +41,7 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
 
   describe "warn_pending/0" do
     test "mails a member who has not linked before the date", context do
-      require_sso(context, DateTime.add(DateTime.utc_now(), 3 * 24 * 60 * 60, :second))
+      schedule_sso(context, DateTime.add(DateTime.utc_now(), 3 * 24 * 60 * 60, :second))
 
       assert Enforcement.warn_pending() == 1
       assert [entry] = pending_entries()
@@ -50,6 +50,9 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
       assert entry.email["text_body"] =~
                Application.fetch_env!(:hexpm, :email_base_url) <>
                  "/sso/org/#{context.organization.name}"
+
+      assert entry.email["text_body"] =~ "isn't connected to that provider yet"
+      assert entry.email["text_body"] =~ "again every 24 hours"
     end
 
     test "builds the login link without the web endpoint" do
@@ -64,7 +67,7 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
     end
 
     test "says nothing twice", context do
-      require_sso(context, DateTime.add(DateTime.utc_now(), 3 * 24 * 60 * 60, :second))
+      schedule_sso(context, DateTime.add(DateTime.utc_now(), 3 * 24 * 60 * 60, :second))
 
       assert Enforcement.warn_pending() == 1
       assert Enforcement.warn_pending() == 0
@@ -72,12 +75,12 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
     end
 
     test "says nothing twice once the mail has gone out", context do
-      require_sso(context, DateTime.add(DateTime.utc_now(), 3 * 24 * 60 * 60, :second))
+      schedule_sso(context, DateTime.add(DateTime.utc_now(), 3 * 24 * 60 * 60, :second))
 
       assert Enforcement.warn_pending() == 1
 
-      # The outbox row is the mail waiting to be sent, and the worker deletes it
-      # on delivery. Tomorrow's tick has only the audit entry to go on.
+      # A delivered outbox row is purged after the retention window, and a tick
+      # after that has only the audit entry to go on.
       Enum.each(pending_entries(), &Repo.delete!/1)
 
       assert Enforcement.warn_pending() == 0
@@ -92,9 +95,56 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
         subject: "linked-member"
       )
 
-      require_sso(context, DateTime.add(DateTime.utc_now(), 3 * 24 * 60 * 60, :second))
+      schedule_sso(context, DateTime.add(DateTime.utc_now(), 3 * 24 * 60 * 60, :second))
 
       assert Enforcement.warn_pending() == 0
+    end
+
+    test "tells a linked member which of their personal keys the date takes", context do
+      insert(:organization_sso_identity,
+        connection: context.connection,
+        organization: context.organization,
+        user: context.member,
+        subject: "linked-member"
+      )
+
+      revoked =
+        personal_key(context, [%{domain: "repository", resource: context.organization.name}])
+
+      trimmed =
+        personal_key(context, [
+          %{domain: "repository", resource: context.organization.name},
+          %{domain: "api", resource: "read"}
+        ])
+
+      refused = personal_key(context, [%{domain: "repositories", resource: nil}])
+
+      schedule_sso(context, DateTime.add(DateTime.utc_now(), 3 * 24 * 60 * 60, :second))
+
+      assert Enforcement.warn_pending() == 1
+      assert [entry] = pending_entries()
+
+      body = entry.email["text_body"]
+      assert body =~ "already connected to that provider"
+      assert body =~ "Your key #{revoked.name} carries nothing but access to this organization"
+      assert body =~ "Your key #{trimmed.name} will lose its permissions for this organization"
+      assert body =~ "Your key #{refused.name} reaches this organization through wider"
+      refute body =~ "/sso/org/"
+    end
+
+    test "leaves a linked member's keys alone while the organization allows them", context do
+      insert(:organization_sso_identity,
+        connection: context.connection,
+        organization: context.organization,
+        user: context.member,
+        subject: "linked-member"
+      )
+
+      personal_key(context, [%{domain: "repository", resource: context.organization.name}])
+      schedule_sso(context, DateTime.add(DateTime.utc_now(), 3 * 24 * 60 * 60, :second), "allow")
+
+      assert Enforcement.warn_pending() == 0
+      assert pending_entries() == []
     end
 
     test "leaves an exempt member alone", context do
@@ -103,7 +153,7 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
           audit: audit_data(context.admin)
         )
 
-      require_sso(context, DateTime.add(DateTime.utc_now(), 3 * 24 * 60 * 60, :second))
+      schedule_sso(context, DateTime.add(DateTime.utc_now(), 3 * 24 * 60 * 60, :second))
 
       assert Enforcement.warn_pending() == 0
     end
@@ -114,19 +164,19 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
           audit: audit_data(context.admin)
         )
 
-      require_sso(context, DateTime.add(DateTime.utc_now(), 3 * 24 * 60 * 60, :second))
+      schedule_sso(context, DateTime.add(DateTime.utc_now(), 3 * 24 * 60 * 60, :second))
 
       assert Enforcement.warn_pending() == 0
     end
 
     test "says it again when the date moves", context do
-      require_sso(context, DateTime.add(DateTime.utc_now(), 3 * 24 * 60 * 60, :second))
+      schedule_sso(context, DateTime.add(DateTime.utc_now(), 3 * 24 * 60 * 60, :second))
 
       assert Enforcement.warn_pending() == 1
       Enum.each(pending_entries(), &Repo.delete!/1)
 
       moved = DateTime.add(DateTime.utc_now(), 5 * 24 * 60 * 60, :second)
-      require_sso(context, moved)
+      schedule_sso(context, moved)
 
       assert Enforcement.warn_pending() == 1
       assert [entry] = pending_entries()
@@ -146,13 +196,149 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
     end
 
     test "goes away with the account it was addressed to", context do
-      require_sso(context, DateTime.add(DateTime.utc_now(), 3 * 24 * 60 * 60, :second))
+      schedule_sso(context, DateTime.add(DateTime.utc_now(), 3 * 24 * 60 * 60, :second))
 
       assert Enforcement.warn_pending() == 1
 
       :ok = Hexpm.Accounts.Users.delete(context.member, audit: audit_data(context.member))
 
       assert pending_entries() == []
+    end
+  end
+
+  describe "announcing an enforcement change" do
+    test "tells unlinked members when required mode starts at the save", context do
+      {:ok, _connection} =
+        SSO.configure_enforcement(
+          context.organization,
+          %{"enforcement_mode" => "required", "required_at" => "", "personal_keys" => "allow"},
+          audit: audit_data(context.admin)
+        )
+
+      # The administrator is linked and keeps their access.
+      assert [entry] = started_entries()
+      assert entry.recipients == [primary_email(context.member)]
+      assert entry.subject =~ "now requires single sign-on"
+
+      body = entry.email["text_body"]
+      assert body =~ "now requires you to sign in through its identity provider"
+      assert body =~ "/sso/org/#{context.organization.name}"
+      refute body =~ "From "
+      assert pending_entries() == []
+    end
+
+    test "tells them when the date saved has already passed", context do
+      require_sso(context, DateTime.add(DateTime.utc_now(), -24 * 60 * 60, :second))
+
+      assert [_entry] = started_entries()
+    end
+
+    test "tells a warned member again when the date moves to now", context do
+      schedule_sso(context, DateTime.add(DateTime.utc_now(), 3 * 24 * 60 * 60, :second))
+      assert Enforcement.warn_pending() == 1
+
+      require_sso(context, DateTime.add(DateTime.utc_now(), -60, :second))
+
+      assert [_entry] = started_entries()
+    end
+
+    test "announces a date inside the warning window at the save", context do
+      # Saved after the daily run for a date at the start of the next day.
+      require_sso(context, DateTime.add(DateTime.utc_now(), 20 * 60 * 60, :second))
+
+      assert [entry] = pending_entries()
+      assert entry.email["text_body"] =~ "From "
+      assert started_entries() == []
+      assert Enforcement.warn_pending() == 0
+    end
+
+    test "leaves a date outside the warning window to the daily run", context do
+      require_sso(context, DateTime.add(DateTime.utc_now(), 60 * 24 * 60 * 60, :second))
+
+      assert pending_entries() == []
+      assert started_entries() == []
+    end
+
+    test "tells a member enforced during a pilot", context do
+      pilot_sso(context)
+      assert started_entries() == []
+
+      enforce(context, context.member)
+
+      assert [entry] = started_entries()
+      assert entry.recipients == [primary_email(context.member)]
+    end
+
+    test "tells a member enforced during the grace period", context do
+      require_sso(context, DateTime.add(DateTime.utc_now(), 60 * 24 * 60 * 60, :second))
+
+      enforce(context, context.member)
+
+      assert [_entry] = started_entries()
+    end
+
+    test "tells a member whose exemption is lifted", context do
+      exempt(context, context.member)
+      require_sso(context, DateTime.add(DateTime.utc_now(), -60, :second))
+      assert started_entries() == []
+
+      {:ok, _member} =
+        SSO.set_member_enforcement(context.organization, context.member, nil,
+          audit: audit_data(context.admin)
+        )
+
+      assert [_entry] = started_entries()
+    end
+
+    test "leaves a linked member alone", context do
+      insert(:organization_sso_identity,
+        connection: context.connection,
+        organization: context.organization,
+        user: context.member,
+        subject: "linked-member"
+      )
+
+      require_sso(context, DateTime.add(DateTime.utc_now(), -60, :second))
+
+      assert started_entries() == []
+    end
+
+    test "says nothing for a save that governs nobody new", context do
+      require_sso(context, DateTime.add(DateTime.utc_now(), -60, :second))
+      assert [entry] = started_entries()
+      assert :ok = perform_job(Hexpm.Emails.OutboxWorker, %{outbox_entry_id: entry.id})
+
+      {:ok, _connection} =
+        SSO.configure_enforcement(
+          context.organization,
+          %{
+            "enforcement_mode" => "required",
+            "session_lifetime_seconds" => "3600",
+            "personal_keys" => "block"
+          },
+          audit: audit_data(context.admin)
+        )
+
+      assert [_entry] = started_entries()
+    end
+
+    test "tells members when a connection that requires SSO is turned on", context do
+      {:ok, _connection} = SSO.disable(context.organization, audit: audit_data(context.admin))
+      require_sso(context, DateTime.add(DateTime.utc_now(), -60, :second))
+      assert started_entries() == []
+
+      {:ok, _connection} = SSO.enable(context.organization, audit: audit_data(context.admin))
+
+      assert [_entry] = started_entries()
+    end
+
+    test "goes away with the account it was addressed to", context do
+      require_sso(context, DateTime.add(DateTime.utc_now(), -60, :second))
+      assert [_entry] = started_entries()
+
+      :ok = Hexpm.Accounts.Users.delete(context.member, audit: audit_data(context.member))
+
+      assert started_entries() == []
     end
   end
 
@@ -341,6 +527,33 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
       refute key.revoke_at
     end
 
+    test "tells the owner of a trimmed key once", context do
+      trimmed =
+        personal_key(context, [
+          %{domain: "repository", resource: context.organization.name},
+          %{domain: "api", resource: "read"}
+        ])
+
+      require_sso(context, DateTime.add(DateTime.utc_now(), -60, :second))
+
+      assert Enforcement.sweep_personal_keys() == 1
+      assert [entry] = blocked_entries()
+      assert entry.email["text_body"] =~ "Your key #{trimmed.name} has had its access"
+      assert :ok = perform_job(Hexpm.Emails.OutboxWorker, %{outbox_entry_id: entry.id})
+
+      # What the key has left still reaches the organization through `api`, so
+      # the next sweep finds it again and turns it away.
+      assert Enforcement.sweep_personal_keys() == 0
+      assert [_entry] = blocked_entries()
+
+      refused = personal_key(context, [%{domain: "repositories", resource: nil}])
+
+      assert Enforcement.sweep_personal_keys() == 0
+      assert [_first, second] = Enum.sort_by(blocked_entries(), & &1.id)
+      assert second.email["text_body"] =~ "your key #{refused.name} no longer reaches"
+      refute second.email["text_body"] =~ trimmed.name
+    end
+
     test "tells an owner about all their keys at once", context do
       personal_key(context, [%{domain: "repository", resource: context.organization.name}])
       personal_key(context, [%{domain: "docs", resource: context.organization.name}])
@@ -390,8 +603,8 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
 
       assert Enforcement.sweep_personal_keys() == 0
 
-      # A blocked key changes nothing, so it is blocked again tomorrow. The
-      # outbox row is gone by then and only the audit entry stops the mail.
+      # A blocked key changes nothing, so it is blocked again tomorrow. By then
+      # the notice is no longer pending, and only the audit entry stops the mail.
       Enum.each(blocked_entries(), &Repo.delete!/1)
 
       assert Enforcement.sweep_personal_keys() == 0
@@ -513,6 +726,27 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
       )
   end
 
+  # Saving a date inside the warning window announces it at the save. The daily
+  # run is for a date that has come inside the window since it was saved, so
+  # this saves one outside it and moves it in.
+  defp schedule_sso(context, required_at, personal_keys \\ "block") do
+    {:ok, connection} =
+      SSO.configure_enforcement(
+        context.organization,
+        %{
+          "enforcement_mode" => "required",
+          "required_at" => DateTime.add(DateTime.utc_now(), 60 * 24 * 60 * 60, :second),
+          "personal_keys" => personal_keys
+        },
+        audit: audit_data(context.admin)
+      )
+
+    Repo.update_all(
+      from(c in SSO.Connection, where: c.id == ^connection.id),
+      set: [required_at: required_at]
+    )
+  end
+
   defp require_sso(context, required_at) do
     {:ok, connection} =
       SSO.configure_enforcement(
@@ -544,6 +778,16 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
       key.permissions ++ Enum.map(permissions, &struct(Hexpm.Accounts.KeyPermission, &1))
     )
     |> Repo.update!()
+  end
+
+  defp started_entries do
+    Repo.all(from(e in OutboxEntry, where: e.category == "sso.enforcement_started"))
+  end
+
+  defp primary_email(user) do
+    user.id
+    |> Hexpm.Accounts.Users.get_by_id([:emails])
+    |> Hexpm.Accounts.User.email(:primary)
   end
 
   defp pending_entries do

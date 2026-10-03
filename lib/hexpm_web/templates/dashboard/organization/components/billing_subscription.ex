@@ -25,6 +25,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
   attr :member_count, :integer, default: 0
   attr :subscription, :map, default: nil
   attr :card, :map, default: nil
+  attr :bank_transfer, :boolean, default: false
+  attr :funding_instructions, :map, default: nil
   attr :discount, :map, default: nil
   attr :tax_rate, :any, default: nil
   attr :amount_with_tax, :integer, default: nil
@@ -101,7 +103,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
                 Payment method
               </dt>
               <dd class="text-sm text-grey-900 dark:text-white">
-                {BillingHelpers.payment_card(@card)}
+                {BillingHelpers.payment_method(@card, @bank_transfer)}
               </dd>
             </div>
             <div>
@@ -130,13 +132,13 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
                 = ${BillingHelpers.money(@amount_with_tax)}
               </dd>
             </div>
-            <%= if BillingHelpers.subscription_status(@subscription, @card) not in ["Active", ""] do %>
+            <%= if BillingHelpers.subscription_status(@subscription, @card, @bank_transfer) not in ["Active", ""] do %>
               <div class="sm:col-span-2">
                 <dt class="text-xs font-medium text-grey-500 dark:text-grey-300 uppercase tracking-wider mb-1">
                   Status
                 </dt>
                 <dd class="text-sm text-grey-900 dark:text-white">
-                  {BillingHelpers.subscription_status(@subscription, @card)}
+                  {BillingHelpers.subscription_status(@subscription, @card, @bank_transfer)}
                 </dd>
               </div>
             <% end %>
@@ -169,29 +171,37 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
             </div>
           </dl>
 
-          <script nonce={@script_src_nonce}>
-            window.hexpm_billing_api_url = '/dashboard/billing-api';
-            window.hexpm_billing_csrf_token = '<%= Plug.CSRFProtection.get_csrf_token() %>';
-            window.hexpm_billing_defer_mount = true;
-            window.hexpm_billing_success = function() { window.location.reload(); };
-          </script>
+          <%= if @bank_transfer do %>
+            <.bank_transfer_details funding_instructions={@funding_instructions} />
+          <% else %>
+            <script nonce={@script_src_nonce}>
+              window.hexpm_billing_api_url = '/dashboard/billing-api';
+              window.hexpm_billing_csrf_token = '<%= Plug.CSRFProtection.get_csrf_token() %>';
+              window.hexpm_billing_defer_mount = true;
+              window.hexpm_billing_success = function() { window.location.reload(); };
+            </script>
 
-          <.payment_method_modal
-            checkout_html={@checkout_html}
-            post_action={@post_action}
-            csrf_token={@csrf_token}
-          />
+            <.payment_method_modal
+              checkout_html={@checkout_html}
+              post_action={@post_action}
+              csrf_token={@csrf_token}
+            />
+          <% end %>
 
-          <div class="mt-4 flex gap-3 items-center">
-            <.button
-              type="button"
-              variant="outline"
-              size="sm"
-              phx-click={show_modal("payment-method-modal") |> JS.dispatch("payment-modal:opened")}
-            >
-              Update payment method
-            </.button>
-            <%= if @subscription["cancel_at_period_end"] && @card && @card["brand"] do %>
+          <div class="mt-4 flex flex-wrap gap-3 items-center">
+            <%= if @bank_transfer do %>
+              <.change_payment_method_notice />
+            <% else %>
+              <.button
+                type="button"
+                variant="outline"
+                size="sm"
+                phx-click={show_modal("payment-method-modal") |> JS.dispatch("payment-modal:opened")}
+              >
+                Update payment method
+              </.button>
+            <% end %>
+            <%= if @subscription["cancel_at_period_end"] && (@bank_transfer || (@card && @card["brand"])) do %>
               <.sudo_form
                 current_user={@current_user}
                 action={~p"/dashboard/orgs/#{@organization}/resume-billing"}
@@ -369,38 +379,49 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
             </script>
           <% end %>
         <% else %>
-          <p class="text-sm text-grey-600 dark:text-grey-300 mb-4">
-            No active subscription.
-            <strong class="text-grey-900 dark:text-white">
-              Private packages will not be available
-            </strong>
-            until a payment method has been added.
-          </p>
-          <p class="text-sm text-grey-600 dark:text-grey-300 mb-6">
-            Subscription cost is
-            <strong class="text-grey-900 dark:text-white">$9.00 per user / month</strong>
-            + local VAT when applicable.
-          </p>
-          <script nonce={@script_src_nonce}>
-            window.hexpm_billing_api_url = '/dashboard/billing-api';
-            window.hexpm_billing_csrf_token = '<%= Plug.CSRFProtection.get_csrf_token() %>';
-            window.hexpm_billing_defer_mount = true;
-            window.hexpm_billing_success = function() { window.location.reload(); };
-          </script>
+          <%= if @bank_transfer do %>
+            <p class="text-sm text-grey-600 dark:text-grey-300 mb-4">
+              No active subscription.
+              <strong class="text-grey-900 dark:text-white">
+                Private packages will not be available
+              </strong>
+              until the subscription is restarted.
+            </p>
+            <.change_payment_method_notice action="restart the subscription" />
+          <% else %>
+            <p class="text-sm text-grey-600 dark:text-grey-300 mb-4">
+              No active subscription.
+              <strong class="text-grey-900 dark:text-white">
+                Private packages will not be available
+              </strong>
+              until a payment method has been added.
+            </p>
+            <p class="text-sm text-grey-600 dark:text-grey-300 mb-6">
+              Subscription cost is
+              <strong class="text-grey-900 dark:text-white">$9.00 per user / month</strong>
+              + local VAT when applicable.
+            </p>
+            <script nonce={@script_src_nonce}>
+              window.hexpm_billing_api_url = '/dashboard/billing-api';
+              window.hexpm_billing_csrf_token = '<%= Plug.CSRFProtection.get_csrf_token() %>';
+              window.hexpm_billing_defer_mount = true;
+              window.hexpm_billing_success = function() { window.location.reload(); };
+            </script>
 
-          <.payment_method_modal
-            checkout_html={@checkout_html}
-            post_action={@post_action}
-            csrf_token={@csrf_token}
-          />
+            <.payment_method_modal
+              checkout_html={@checkout_html}
+              post_action={@post_action}
+              csrf_token={@csrf_token}
+            />
 
-          <.button
-            type="button"
-            variant="primary"
-            phx-click={show_modal("payment-method-modal") |> JS.dispatch("payment-modal:opened")}
-          >
-            Add payment method
-          </.button>
+            <.button
+              type="button"
+              variant="primary"
+              phx-click={show_modal("payment-method-modal") |> JS.dispatch("payment-modal:opened")}
+            >
+              Add payment method
+            </.button>
+          <% end %>
         <% end %>
       </div>
     </div>
@@ -418,6 +439,47 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
 
   defp subscription_badge_class(_),
     do: "bg-grey-100 dark:bg-grey-700 text-grey-600 dark:text-grey-200"
+
+  attr :funding_instructions, :map, default: nil
+
+  defp bank_transfer_details(assigns) do
+    ~H"""
+    <div class="mt-5 rounded-lg border border-grey-200 dark:border-grey-700 px-4 py-4">
+      <h3 class="text-sm font-semibold text-grey-900 dark:text-white">Bank details</h3>
+      <p class="mt-1 text-sm text-grey-600 dark:text-grey-300">
+        Pay each invoice by bank transfer to this account.
+        Use the payment reference shown on the invoice so that the transfer is matched to it.
+      </p>
+      <div class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div :for={{title, rows} <- BillingHelpers.bank_transfer_details(@funding_instructions)}>
+          <p class="text-xs font-medium text-grey-500 dark:text-grey-300 uppercase tracking-wider mb-1">
+            {title}
+          </p>
+          <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+            <%= for {label, value} <- rows do %>
+              <dt class="text-grey-500 dark:text-grey-300">{label}</dt>
+              <dd class="text-grey-900 dark:text-white break-words">{value}</dd>
+            <% end %>
+          </dl>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  attr :action, :string, default: "change payment method"
+
+  defp change_payment_method_notice(assigns) do
+    ~H"""
+    <p class="text-sm text-grey-600 dark:text-grey-300">
+      Contact
+      <a href="mailto:support@hex.pm" class="text-purple-600 hover:text-purple-700 hover:underline">
+        support@hex.pm
+      </a>
+      to {@action}.
+    </p>
+    """
+  end
 
   attr :checkout_html, :string, required: true
   attr :post_action, :string, required: true

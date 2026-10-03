@@ -612,7 +612,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
         data-severity-control
         aria-invalid={@errors != [] && "true"}
         class={[
-          "h-8 w-full sm:w-36 pl-6 pr-7 rounded-md border text-sm font-medium appearance-none",
+          "h-9 w-full sm:w-36 pl-6 pr-7 rounded-md border text-sm font-medium appearance-none",
           "bg-white dark:bg-grey-800 text-grey-900 dark:text-grey-100",
           "focus:outline-none focus:ring-1",
           input_border_class(@errors)

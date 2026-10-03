@@ -6,6 +6,8 @@ defmodule Hexpm.Accounts.SSOJITTest do
   alias Hexpm.Accounts.SSO.{Connection, Failure, Identity, OIDC}
   alias Hexpm.Emails.OutboxEntry
 
+  @entra_issuer "https://login.microsoftonline.com/11111111-2222-3333-4444-555555555555/v2.0"
+
   setup :verify_on_exit!
 
   defmodule Resolver do
@@ -112,15 +114,31 @@ defmodule Hexpm.Accounts.SSOJITTest do
       Map.put(context, :connection, connection)
     end
 
-    test "scheduled 2FA requires enrollment before SSO creates membership", context do
+    test "scheduled 2FA requires enrollment before SSO offers membership", context do
       context.organization
       |> Ecto.Changeset.change(tfa_required_at: DateTime.add(DateTime.utc_now(), 14 * 86_400))
       |> Repo.update!()
 
       newcomer = insert(:user)
       transaction = start_login(context, newcomer)
+
+      assert {:error, :tfa_enrollment_required} =
+               complete(transaction, claims("newcomer@example.com"), newcomer)
+
+      refute Organizations.get_role(context.organization, newcomer)
+      assert Seats.used(context.organization) == 1
+      refute Repo.exists?(Identity)
+    end
+
+    test "2FA scheduled during the consent step still refuses the join", context do
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
       {:ok, {:link, id, token}} = complete(transaction, claims("newcomer@example.com"), newcomer)
       session = browser_session(newcomer)
+
+      context.organization
+      |> Ecto.Changeset.change(tfa_required_at: DateTime.add(DateTime.utc_now(), 14 * 86_400))
+      |> Repo.update!()
 
       assert {:error, :tfa_enrollment_required} =
                SSO.complete_link(
@@ -189,6 +207,16 @@ defmodule Hexpm.Accounts.SSOJITTest do
       refute Organizations.get_role(context.organization, newcomer)
     end
 
+    test "xms_edov does not stand in for email_verified outside Entra", context do
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
+
+      claims = Map.put(claims("newcomer@example.com", false), :xms_edov, true)
+
+      assert {:error, :provider_email_unverified} = complete(transaction, claims, newcomer)
+      refute Organizations.get_role(context.organization, newcomer)
+    end
+
     test "a subdomain of a verified domain does not count", context do
       newcomer = insert(:user)
       transaction = start_login(context, newcomer)
@@ -222,6 +250,23 @@ defmodule Hexpm.Accounts.SSOJITTest do
       assert failure.code == "seats_exhausted"
       assert [entry] = Repo.all(OutboxEntry)
       assert entry.category == "sso.seats_exhausted"
+    end
+
+    test "reports a seat count it cannot read as such", context do
+      context.organization
+      |> Ecto.Changeset.change(billing_seats: nil, billing_active: true)
+      |> Repo.update!()
+
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
+
+      assert {:error, :seat_limit_unknown} =
+               complete(transaction, claims("newcomer@example.com"), newcomer)
+
+      assert [entry] = Repo.all(OutboxEntry)
+      assert entry.subject =~ "seat count could not be read"
+      assert entry.email["text_body"] =~ "couldn't read how many seats"
+      refute entry.email["text_body"] =~ "no seats left"
     end
 
     test "does not mail the administrators again within the hour", context do
@@ -319,6 +364,101 @@ defmodule Hexpm.Accounts.SSOJITTest do
     end
   end
 
+  describe "with just-in-time membership on through Microsoft Entra" do
+    setup context do
+      verify_domain(context, "example.com")
+      {:ok, connection} = enable_jit(context, "block", "write")
+
+      connection =
+        connection
+        |> Ecto.Changeset.change(issuer: @entra_issuer)
+        |> Repo.update!()
+
+      Map.put(context, :connection, connection)
+    end
+
+    test "admits an address Entra marks with xms_edov", context do
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
+
+      assert {:ok, {:link, transaction_id, link_token}} =
+               complete(
+                 transaction,
+                 entra_claims("newcomer@example.com", %{xms_edov: true}),
+                 newcomer
+               )
+
+      assert {:ok, {%Identity{}, _org_session}} =
+               SSO.complete_link(
+                 transaction_id,
+                 link_token,
+                 Repo.preload(newcomer, :emails),
+                 browser_session(newcomer).id,
+                 audit_data(newcomer)
+               )
+
+      assert Organizations.get_role(context.organization, newcomer) == "write"
+    end
+
+    test "email_verified from Entra does not count", context do
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
+
+      assert {:error, :provider_email_unverified} =
+               complete(
+                 transaction,
+                 entra_claims("newcomer@example.com", %{email_verified: true, xms_edov: false}),
+                 newcomer
+               )
+
+      refute Organizations.get_role(context.organization, newcomer)
+    end
+
+    test "re-admits a linked account on an address Entra marks with xms_edov", context do
+      member = insert(:user)
+
+      insert(:organization_sso_identity,
+        connection: context.connection,
+        organization: context.organization,
+        user: member,
+        issuer: @entra_issuer
+      )
+
+      transaction = start_login(context, member)
+
+      assert {:ok, {:login, user, _org_session, _return}} =
+               complete(
+                 transaction,
+                 entra_claims("member@example.com", %{xms_edov: true}),
+                 member,
+                 browser_session(member).id
+               )
+
+      assert user.id == member.id
+      assert Organizations.get_role(context.organization, member) == "write"
+    end
+
+    test "buys a seat for an address Entra marks with xms_edov", context do
+      {:ok, _connection} = enable_jit(context, "expand")
+      fill_seats(context.organization)
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
+
+      Mox.stub(Hexpm.Billing.Mock, :update, fn _name, params ->
+        {:ok, %{"quantity" => params["quantity"]}}
+      end)
+
+      assert :ok =
+               SSO.maybe_expand_seats(
+                 transaction,
+                 newcomer,
+                 entra_claims("newcomer@example.com", %{xms_edov: true})
+               )
+
+      assert Repo.get!(Hexpm.Accounts.Organization, context.organization.id).billing_seats == 4
+    end
+  end
+
   describe "maybe_expand_seats/3" do
     setup context do
       verify_domain(context, "example.com")
@@ -342,11 +482,16 @@ defmodule Hexpm.Accounts.SSOJITTest do
       assert :ok = SSO.maybe_expand_seats(transaction, newcomer, claims("newcomer@example.com"))
       assert Repo.get!(Hexpm.Accounts.Organization, context.organization.id).billing_seats == 3
 
-      assert {:error, :seats_exhausted} =
+      # A seat would not let them join, so the administrators are not asked
+      # for one.
+      assert {:error, :tfa_enrollment_required} =
                complete(transaction, claims("newcomer@example.com"), newcomer)
 
       refute Organizations.get_role(context.organization, newcomer)
       assert Seats.used(context.organization) == 3
+      assert Repo.all(OutboxEntry) == []
+      assert [failure] = SSO.failures(context.connection)
+      assert failure.code == "tfa_enrollment_required"
     end
 
     test "buys a seat when the organization is full", context do
@@ -569,6 +714,29 @@ defmodule Hexpm.Accounts.SSOJITTest do
 
       refute Organizations.get_role(context.organization, newcomer)
     end
+
+    test "a failed purchase and the refusal after it are one notice", context do
+      fill_seats(context.organization)
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
+
+      Mox.stub(Hexpm.Billing.Mock, :update, fn _name, _params ->
+        {:error, %{"errors" => "card declined"}}
+      end)
+
+      assert :ok = SSO.maybe_expand_seats(transaction, newcomer, claims("newcomer@example.com"))
+
+      assert {:error, :seats_exhausted} =
+               complete(transaction, claims("newcomer@example.com"), newcomer)
+
+      assert [entry] = Repo.all(OutboxEntry)
+      assert entry.subject =~ "could not add a seat"
+
+      body = entry.email["text_body"]
+      assert body =~ "buying the extra seat failed"
+      assert body =~ "For an hour after a failed purchase"
+      refute body =~ "without retrying the purchase"
+    end
   end
 
   defp enable_jit(context, policy, role \\ "read") do
@@ -637,6 +805,10 @@ defmodule Hexpm.Accounts.SSOJITTest do
       email_verified: email_verified,
       jwks_document: nil
     }
+  end
+
+  defp entra_claims(email, verification) do
+    Map.merge(%{claims(email, false) | issuer: @entra_issuer}, verification)
   end
 
   defp callback_url, do: "https://hex.pm/sso/callback"

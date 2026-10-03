@@ -147,14 +147,15 @@ defmodule HexpmWeb.LoginControllerTest do
   test "log in with unknown user" do
     PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
 
-    conn = post(build_conn(), "/login", %{username: "nobody@example.com", password: "WRONG"})
+    # Factory emails are <fake username>@example.com and the fake usernames include "nobody"
+    conn = post(build_conn(), "/login", %{username: "nobody@example.org", password: "WRONG"})
     assert response(conn, 400) =~ "Log in"
 
     assert Phoenix.Flash.get(conn.assigns.flash, "error") ==
              "Invalid username, email or password."
 
     assert_received {Hexpm.LogLines, :warning,
-                     %{method: "password", reason: "unknown_user", username: "nobody@example.com"}}
+                     %{method: "password", reason: "unknown_user", username: "nobody@example.org"}}
   end
 
   test "log in with unconfirmed email", c do

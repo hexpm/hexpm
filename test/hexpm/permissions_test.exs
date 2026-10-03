@@ -43,6 +43,27 @@ defmodule Hexpm.PermissionsTest do
       end
     end
 
+    test "rejects a scope containing whitespace" do
+      for whitespace <- [
+            "\t",
+            "\n",
+            "\r",
+            "\v",
+            "\f",
+            " ",
+            "\u0085",
+            "\u00A0",
+            "\u2028",
+            "\u3000"
+          ] do
+        assert {:error, _} =
+                 Permissions.validate_scopes(["package:acme/x#{whitespace}repository:victim"])
+
+        assert {:error, _} = Permissions.validate_scopes(["repository:acme#{whitespace}"])
+        assert {:error, _} = Permissions.validate_scopes(["api#{whitespace}"])
+      end
+    end
+
     test "accepts mixed valid scopes" do
       assert :ok =
                Permissions.validate_scopes([

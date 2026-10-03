@@ -309,6 +309,47 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       refute Hexpm.Repo.get_by(Package, name: meta.name)
     end
 
+    test "rejects release with more than 10,000 files", %{user: user} do
+      meta = %{
+        name: Fake.sequence(:package),
+        version: "1.0.0",
+        description: "description",
+        files: ["lib"]
+      }
+
+      files = for i <- 1..10_001, do: {"lib/file#{i}.ex", ""}
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(user))
+        |> post("/api/publish", create_tar(meta, files))
+
+      assert json_response(conn, 422)["errors"] == %{"tar" => "tarball has more than 10000 files"}
+      refute Hexpm.Repo.get_by(Package, name: meta.name)
+    end
+
+    test "rejects release with unexpected files in the outer tarball", %{user: user} do
+      meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "description"}
+      tarball = create_tar(meta)
+      tarball = binary_part(tarball, 0, byte_size(tarball) - 1024)
+
+      tarball =
+        tarball <> Hexpm.TarballHelpers.tar_entry("dir/", ?5) <> Hexpm.TarballHelpers.tar_end()
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(user))
+        |> post("/api/publish", tarball)
+
+      assert json_response(conn, 422)["errors"] == %{
+               "tar" => "unsupported file type in tarball: dir/ (directory)"
+             }
+
+      refute Hexpm.Repo.get_by(Package, name: meta.name)
+    end
+
     test "authenticates before extracting release contents" do
       meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "description"}
 
@@ -783,6 +824,100 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       assert [%{app: "app", requirement: "~> 0.0.1", optional: false}] = release.requirements
     end
 
+    test "create releases with requirements as a map", %{user: user, package: package} do
+      other = insert(:package)
+
+      reqs = %{
+        package.name => %{app: package.name, requirement: "~> 0.0.1", optional: false},
+        other.name => %{app: other.name, requirement: "~> 0.0.1", optional: true}
+      }
+
+      meta = %{
+        name: Fake.sequence(:package),
+        version: "0.0.1",
+        requirements: reqs,
+        description: "description"
+      }
+
+      result =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(user))
+        |> post("/api/publish", create_tar(meta))
+        |> json_response(201)
+
+      assert result["requirements"] == %{
+               package.name => %{
+                 "app" => package.name,
+                 "optional" => false,
+                 "requirement" => "~> 0.0.1"
+               },
+               other.name => %{
+                 "app" => other.name,
+                 "optional" => true,
+                 "requirement" => "~> 0.0.1"
+               }
+             }
+    end
+
+    test "create releases with too many requirements", %{user: user} do
+      reqs =
+        Map.new(1..501, fn i ->
+          {"dep_#{i}", %{requirement: "~> 0.0.1", app: "dep_#{i}", optional: false}}
+        end)
+
+      meta = %{
+        name: Fake.sequence(:package),
+        version: "0.0.1",
+        requirements: reqs,
+        description: "description"
+      }
+
+      result =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(user))
+        |> post("/api/publish", create_tar(meta))
+        |> json_response(422)
+
+      assert result["errors"]["requirements"] == "should have at most 500 item(s)"
+      refute Hexpm.Repo.get_by(Package, name: meta.name)
+    end
+
+    test "create releases with duplicate requirements", %{user: user, package: package} do
+      name = Fake.sequence(:package)
+
+      req = %{
+        "name" => package.name,
+        "requirement" => "~> 0.0.1",
+        "app" => package.name,
+        "optional" => false
+      }
+
+      metadata = %{
+        "name" => name,
+        "app" => name,
+        "version" => "0.0.1",
+        "description" => "description",
+        "licenses" => ["Apache-2.0"],
+        "build_tools" => ["mix"],
+        "files" => ["mix.exs"],
+        "requirements" => [req, req, req]
+      }
+
+      result =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(user))
+        |> post("/api/publish", create_tar_with_raw_metadata(metadata))
+        |> json_response(422)
+
+      assert result["errors"]["requirements"] ==
+               ~s(has duplicate requirement "#{package.name}")
+
+      refute Hexpm.Repo.get_by(Package, name: name)
+    end
+
     test "create releases with requirements validates requirement", %{
       user: user,
       package: package
@@ -996,16 +1131,18 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         description: "Domain-specific language."
       }
 
-      result =
+      conn =
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
         |> post("/api/repos/#{repository.name}/publish", create_tar(meta))
-        |> json_response(201)
+
+      result = json_response(conn, 201)
 
       assert result["url"] =~
                "api/repos/#{repository.name}/packages/#{meta.name}/releases/1.0.0"
 
+      assert get_resp_header(conn, "cache-control") == ["private, max-age=60"]
       package = Hexpm.Repo.get_by!(Package, name: meta.name)
       assert package.repository_id == repository.id
     end
@@ -1382,10 +1519,9 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
   describe "GET /api/packages/:name/releases/:version" do
     test "get release", %{package: package, release: release} do
-      result =
-        build_conn()
-        |> get("/api/packages/#{package.name}/releases/#{release.version}")
-        |> json_response(200)
+      conn = get(build_conn(), "/api/packages/#{package.name}/releases/#{release.version}")
+      result = json_response(conn, 200)
+      assert get_resp_header(conn, "cache-control") == ["public, max-age=60"]
 
       assert result["configs"]["mix.exs"] == ~s({:#{package.name}, "~> 0.0.1"})
 
@@ -1499,11 +1635,13 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       insert(:release, package: package, version: "0.0.1", has_docs: true)
       insert(:organization_user, organization: repository.organization, user: user)
 
-      result =
+      conn =
         build_conn()
         |> put_req_header("authorization", key_for(user))
         |> get("/api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1")
-        |> json_response(200)
+
+      result = json_response(conn, 200)
+      assert get_resp_header(conn, "cache-control") == ["private, max-age=60"]
 
       assert result["url"] ==
                "http://localhost:5000/api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1"

@@ -59,6 +59,29 @@ defmodule HexpmWeb.TestController do
     end
   end
 
+  def key(conn, params) do
+    if user = Users.get(params["username"], [:emails]) do
+      case Keys.create(user, params, audit: %{audit_data(conn) | user: user}) do
+        {:ok, %{key: key}} ->
+          conn
+          |> put_status(201)
+          |> put_view(HexpmWeb.API.KeyView)
+          |> render(:show, key: key, authing_key: nil)
+
+        {:error, :key, changeset, _} ->
+          conn
+          |> put_status(400)
+          |> render(:error,
+            error: %{error: "Failed to create key", details: inspect(changeset.errors)}
+          )
+      end
+    else
+      conn
+      |> put_status(400)
+      |> render(:error, error: %{error: "User not found"})
+    end
+  end
+
   def repo(conn, params) do
     {:ok, organization} =
       Organizations.create(conn.assigns.current_user, params,

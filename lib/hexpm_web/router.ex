@@ -313,6 +313,16 @@ defmodule HexpmWeb.Router do
     get "/packages/:name/versions", PackageController, :versions
     get "/packages/:name/advisories", PackageController, :advisories
     get "/packages/:name/:version/dependencies", PackageController, :dependencies
+
+    # Before `:show`, whose `/packages/:repository/:name/:version` would match these.
+    for kind <- Hexpm.Docs.Files.kinds(), kind != :readme do
+      get "/packages/:name/:version/#{kind}", PackageController, :docs_file,
+        assigns: %{doc_kind: kind}
+
+      get "/packages/:repository/:name/:version/#{kind}", PackageController, :docs_file,
+        assigns: %{doc_kind: kind}
+    end
+
     get "/packages/:name/:version", PackageController, :show
     get "/packages/:repository/:name/owners", PackageOwnerController, :index
     post "/packages/:repository/:name/owners", PackageOwnerController, :create
@@ -614,6 +624,7 @@ defmodule HexpmWeb.Router do
       pipe_through :api
 
       post "/user", TestController, :user
+      post "/key", TestController, :key
       post "/repo", TestController, :repo
       post "/oauth_client", TestController, :oauth_client
       post "/oauth_token", TestController, :oauth_token

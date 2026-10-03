@@ -9,8 +9,9 @@
       and have just authenticated with {@organization.name}'s identity provider.
     </p>
     <p :if={@provider_email}>
-      The identity provider reported <strong>{@provider_email}</strong>. This address is shown for confirmation only;
-      it is not used to match accounts or grant membership.
+      The identity provider reported <strong>{@provider_email}</strong>. This address doesn't choose which Hexpm
+      account is linked. It decides membership only if {@organization.name} admits new members by the domain of
+      their address.
     </p>
     <p>
       Linking records that {@organization.name}'s provider authenticated you. Nothing at Hexpm requires it yet, and

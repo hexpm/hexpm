@@ -1,6 +1,8 @@
-<%= @organization.name %> requires two-factor authentication from <%= HexpmWeb.ViewHelpers.pretty_utc_datetime(@organization.tfa_required_at) %>.
+<%= OrganizationTFA.heading(@stage) %>
 
-<%= if @stage == "summary" do %>Members suspended because 2FA isn't enabled: <%= if @suspended == [], do: "none", else: Enum.join(@suspended, ", ") %>.<% end %>
-<%= if @stage == "suspended" do %>Your organization access is suspended until you enable 2FA. Your membership, role, package ownership, and billed seat are retained.<% end %>
+<%= OrganizationTFA.intro(@stage, @organization, :text) %>
 
-Enable 2FA at <%= email_url("/dashboard/security") %>. Your existing Hex client sessions and API keys work again as soon as 2FA is enabled on your account. SSO authentication is separate and may also be required. Recovery codes remain available. After enrollment, return to any pending invitation to accept it.
+<%= OrganizationTFA.body(@stage, @suspended, :text) %>
+<%= if @stage == "summary" do %>
+<%= OrganizationTFA.members_page(@organization, :text) %>
+<% end %>

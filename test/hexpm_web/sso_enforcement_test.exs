@@ -292,9 +292,9 @@ defmodule HexpmWeb.SSOEnforcementTest do
 
       conn = get(conn, "/dashboard/orgs/#{context.organization.name}/members")
 
-      # The per-member enforcement control is what the members tab derives from
-      # the mode, and it only appears once the organization is not optional.
-      assert response(conn, 200) =~ "sso-enforcement-form-#{context.member.id}"
+      # The exemption list is what the members tab derives from the mode, and it
+      # only appears once the organization is not optional.
+      assert response(conn, 200) =~ "Nobody is exempt."
     end
 
     test "keeps billing reachable and says so", context do
@@ -347,6 +347,12 @@ defmodule HexpmWeb.SSOEnforcementTest do
         })
 
       assert redirected_to(conn) == "/dashboard/profile"
+
+      # Audited like every other screen reached without a session, and not
+      # announced to the administrators.
+      assert [log] = break_glass_logs(context)
+      assert log.params["screen"] == "leave"
+      assert Repo.all(from(e in OutboxEntry, where: e.category == "sso.break_glass")) == []
     end
 
     # Leaving is carved out because it is the only lever someone deactivated at

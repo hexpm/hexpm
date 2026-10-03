@@ -8,10 +8,9 @@ defmodule Hexpm.Diff.Cache do
   ]
 
   def fetch(%Request{} = request) do
-    case fetch_metadata(request, request.canonical_hash) do
-      {:ok, metadata} -> ready(request, request.canonical_hash, metadata)
-      :miss -> fetch_legacy(request)
-      {:error, _} = error -> error
+    case fetch_metadata(request, request.hash) do
+      {:ok, metadata} -> ready(request, request.hash, metadata)
+      other -> other
     end
   end
 
@@ -24,14 +23,14 @@ defmodule Hexpm.Diff.Cache do
   end
 
   def put_piece!(%Request{} = request, index, data) do
-    key = diff_key(request, request.canonical_hash, index)
+    key = diff_key(request, request.hash, index)
     put!(key, JSON.encode!(data))
     %Piece{id: "diff-#{index}", key: key}
   end
 
   def put_metadata!(%Request{} = request, metadata) do
     request
-    |> metadata_key(request.canonical_hash)
+    |> metadata_key(request.hash)
     |> put!(JSON.encode!(metadata))
   end
 
@@ -43,17 +42,27 @@ defmodule Hexpm.Diff.Cache do
     "#{repo_prefix(request)}diffs/#{request.package}-#{request.from}-#{request.to}-#{hash}-diff-#{index}.json"
   end
 
-  defp repo_prefix(%Request{repository: "hexpm"}), do: ""
-  defp repo_prefix(%Request{repository: repository}), do: "repos/#{repository}/"
+  @doc """
+  Deletes every cached diff of the package.
 
-  defp fetch_legacy(%Request{canonical_hash: hash, legacy_hash: hash}), do: :miss
+  An entry is keyed by the pair of versions it compares, so removing one
+  release invalidates every entry naming it, and the entries that pair it with
+  a version removed earlier can no longer be told apart from a valid one by
+  the key. The package's whole cache goes instead. The next request for a pair
+  that is still valid recomputes it.
+  """
+  @spec delete_package(String.t(), String.t()) :: :ok
+  def delete_package(repository, package) when is_binary(repository) and is_binary(package) do
+    prefix = repo_prefix(repository)
 
-  defp fetch_legacy(request) do
-    case fetch_metadata(request, request.legacy_hash) do
-      {:ok, metadata} -> ready(request, request.legacy_hash, metadata)
-      other -> other
-    end
+    Hexpm.Store.delete_prefix(:diff_bucket, "#{prefix}metadata/#{package}-")
+    Hexpm.Store.delete_prefix(:diff_bucket, "#{prefix}diffs/#{package}-")
+    :ok
   end
+
+  defp repo_prefix(%Request{repository: repository}), do: repo_prefix(repository)
+  defp repo_prefix("hexpm"), do: ""
+  defp repo_prefix(repository) when is_binary(repository), do: "repos/#{repository}/"
 
   defp fetch_metadata(request, hash) do
     case Hexpm.Store.fetch(:diff_bucket, metadata_key(request, hash)) do
@@ -62,6 +71,8 @@ defmodule Hexpm.Diff.Cache do
       {:error, reason} -> {:error, {:storage, reason}}
     end
   end
+
+  defp ready(_request, _hash, %{too_large: true} = metadata), do: {:ok, metadata, []}
 
   defp ready(request, hash, metadata) do
     pieces =
@@ -81,8 +92,23 @@ defmodule Hexpm.Diff.Cache do
   end
 
   defp decode_metadata(body) do
-    with {:ok, metadata} <- JSON.decode(body),
-         {:ok, total_diffs} <- non_negative_integer(metadata["total_diffs"]),
+    case JSON.decode(body) do
+      {:ok, %{"too_large" => true, "files_changed" => files_changed}} ->
+        case non_negative_integer(files_changed) do
+          {:ok, files_changed} -> {:ok, %{too_large: true, files_changed: files_changed}}
+          :error -> {:error, :invalid_metadata}
+        end
+
+      {:ok, metadata} when is_map(metadata) ->
+        decode_diff_metadata(metadata)
+
+      _ ->
+        {:error, :invalid_metadata}
+    end
+  end
+
+  defp decode_diff_metadata(metadata) do
+    with {:ok, total_diffs} <- non_negative_integer(metadata["total_diffs"]),
          {:ok, total_additions} <- non_negative_integer(metadata["total_additions"]),
          {:ok, total_deletions} <- non_negative_integer(metadata["total_deletions"]),
          {:ok, files_changed} <- non_negative_integer(metadata["files_changed"]),

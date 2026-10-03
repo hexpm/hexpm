@@ -283,6 +283,15 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
           |> put_flash(:error, "That address already belongs to a member of this organization.")
           |> render_index(organization, tab: :members)
 
+        {:error, :too_many_invitations} ->
+          conn
+          |> put_status(429)
+          |> put_flash(
+            :error,
+            "Too many invitations have been sent to that address or by you recently. Try again later."
+          )
+          |> render_index(organization, tab: :members)
+
         {:error, changeset} ->
           conn
           |> put_status(400)
@@ -609,7 +618,6 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     access_organization(conn, organization, "admin", fn organization ->
       audit = %{audit_data: audit_data(conn), organization: organization}
       customer = Hexpm.Billing.cancel(organization.name, audit: audit)
-
       message = cancel_message(customer["subscription"]["current_period_end"])
 
       conn
@@ -703,6 +711,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         conn,
         organization,
         params,
+        "Updated your billing information.",
         &Hexpm.Billing.update(organization.name, &1, audit: audit)
       )
     end)
@@ -713,7 +722,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       params = Map.put(params, "token", organization.name)
       audit = %{audit_data: audit_data(conn), organization: organization}
 
-      update_billing(conn, organization, params, fn customer_params ->
+      info = "Private packages enabled with a one month free trial."
+
+      update_billing(conn, organization, params, info, fn customer_params ->
         Seats.update_quantity(organization, :member_count, fn quantity ->
           Hexpm.Billing.create(Map.put(customer_params, "quantity", quantity), audit: audit)
         end)
@@ -859,7 +870,10 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     case Organizations.create(user, params["organization"], audit: audit_data(conn)) do
       {:ok, organization} ->
         conn
-        |> put_flash(:info, "Organization created with one month free trial period active.")
+        |> put_flash(
+          :info,
+          "Organization created. Enable private packages with a one month free trial on the billing tab."
+        )
         |> redirect(to: ~p"/dashboard/orgs/#{organization}")
 
       {:error, changeset} ->
@@ -869,7 +883,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end
   end
 
-  defp update_billing(conn, organization, params, fun) do
+  defp update_billing(conn, organization, params, info, fun) do
     customer_params =
       params
       |> Map.take(["email", "person", "company", "token", "quantity"])
@@ -879,7 +893,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     with :ok <- validate_billing_params(customer_params),
          {:ok, _} <- fun.(customer_params) do
       conn
-      |> put_flash(:info, "Updated your billing information.")
+      |> put_flash(:info, info)
       |> redirect(to: ~p"/dashboard/orgs/#{organization}/billing")
     else
       {:error, errors}
@@ -1130,7 +1144,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         policy_rev: policy_rev,
         sso_org_session: current_org_session(conn, organization),
         sso_mode: Enforcement.mode(organization, connection),
-        sso_requires_sso?: sso_requires_sso?(connection),
+        sso_required_at: sso_required_at(connection),
         sso_generated_scim_token: opts[:generated_scim_token]
       ] ++
         audit_log_assigns(organization, opts[:tab], opts) ++
@@ -1177,13 +1191,12 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   defp policy_assigns(_organization, _tab, _action, _policy), do: {[], %{}, [], 0}
 
   # The mode in force during a grace period is pilot, which is what governs, but
-  # the screens an administrator prepares with have to know the date is set: the
-  # activation checklist says review the exemptions and then set the date, and
-  # doing those the other way round would otherwise hide the list.
-  defp sso_requires_sso?(%Connection{enforcement_mode: "required"} = connection),
-    do: Connection.enabled?(connection)
+  # the members tab has to say when every member starts needing SSO.
+  defp sso_required_at(%Connection{enforcement_mode: "required"} = connection) do
+    if Connection.enabled?(connection), do: connection.required_at
+  end
 
-  defp sso_requires_sso?(_connection), do: false
+  defp sso_required_at(_connection), do: nil
 
   defp sso_assigns(organization, connection, :sso) do
     [
@@ -1267,6 +1280,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       tax_rate: nil,
       discount: nil,
       card: nil,
+      bank_transfer: false,
+      funding_instructions: nil,
       invoices: [],
       person: nil,
       company: nil,
@@ -1298,6 +1313,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       tax_rate: customer["tax_rate"],
       discount: customer["discount"],
       card: customer["card"],
+      bank_transfer: customer["bank_transfer"],
+      funding_instructions: customer["funding_instructions"],
       invoices: customer["invoices"],
       person: customer["person"],
       company: customer["company"],

@@ -10,13 +10,15 @@ defmodule Hexpm.Hexdocs.SourceRepo.GitHub do
     credentials = Base.encode64("#{user}:#{token}")
     headers = [{"accept", "application/json"}, {"authorization", "Basic " <> credentials}]
 
-    Hexpm.HTTP.retry(
-      fn -> Hexpm.HTTP.impl().get(url, headers) end,
-      "github #{url}",
-      attempts: 5,
-      base_delay: 200,
-      statuses: [429, 500..599]
-    )
+    Hexpm.HTTP.track_request(:get, url, fn ->
+      Hexpm.HTTP.retry(
+        fn -> Hexpm.HTTP.impl().get(url, headers) end,
+        "github #{url}",
+        attempts: 5,
+        base_delay: 200,
+        statuses: [429, 500..599]
+      )
+    end)
     |> case do
       {:ok, 200, _headers, body} ->
         versions =

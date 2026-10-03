@@ -38,6 +38,8 @@ defmodule HexpmWeb.PackageLayoutAssigns do
       defaults to `true`
     * `:dependants_count?` — load the dependant count used in the tab label;
       defaults to `true`
+    * `:doc_kinds?` — load the documentation files (changelog, license, ...)
+      of the current release for the mobile tab dropdown; defaults to `true`
   """
   def for_package(conn_or_socket, package, opts \\ []) do
     current_user = conn_or_socket.assigns.current_user
@@ -46,6 +48,7 @@ defmodule HexpmWeb.PackageLayoutAssigns do
     graph_release = opts[:graph_release]
     sidebar? = Keyword.get(opts, :sidebar?, true)
     dependants_count? = Keyword.get(opts, :dependants_count?, true)
+    doc_kinds? = Keyword.get(opts, :doc_kinds?, true)
 
     owners =
       cond do
@@ -90,11 +93,15 @@ defmodule HexpmWeb.PackageLayoutAssigns do
           Keyword.get_lazy(opts, :dependants_count, fn ->
             Packages.count_dependants(repositories, package)
           end)
-        end
+        end,
+      doc_kinds: if(doc_kinds?, do: doc_kinds(current_release), else: %{})
     ]
 
     [{:package_layout, Map.new(layout)} | layout]
   end
+
+  defp doc_kinds(nil), do: %{}
+  defp doc_kinds(current_release), do: Releases.doc_files(current_release)
 
   # The layout shows a security banner for the release on screen, so that one
   # release needs its vulnerable? flag and none of the others do.

@@ -19,6 +19,45 @@ defmodule Hexpm.TestHelpers do
   end
 
   @doc """
+  The key from the password reset mail sent to this process. Only its hash is
+  stored, so the mail is the one place a test can read it from.
+  """
+  def password_reset_key do
+    receive do
+      {:email, %Swoosh.Email{private: %{type: type}, assigns: %{key: key}}}
+      when type in ["password_reset_request", "security_password_reset"] ->
+        key
+    after
+      0 -> raise "no password reset mail was sent"
+    end
+  end
+
+  @doc """
+  The key from the account deletion mail sent to this process. Only its hash
+  is stored, so the mail is the one place a test can read it from.
+  """
+  def account_deletion_key do
+    receive do
+      {:email, %Swoosh.Email{private: %{type: "account_deletion_request"}, assigns: %{key: key}}} ->
+        key
+    after
+      0 -> raise "no account deletion mail was sent"
+    end
+  end
+
+  @doc """
+  The key from the email verification mail sent to this process. Only its hash
+  is stored, so the mail is the one place a test can read it from.
+  """
+  def email_verification_key do
+    receive do
+      {:email, %Swoosh.Email{private: %{type: "verification"}, assigns: %{key: key}}} -> key
+    after
+      0 -> raise "no email verification mail was sent"
+    end
+  end
+
+  @doc """
   Captures logs down to debug, including Ecto's query log.
 
   `capture_log/2`'s `:level` option filters what it keeps; it does not lower
@@ -126,6 +165,30 @@ defmodule Hexpm.TestHelpers do
     contents = File.read!(contents_path)
 
     meta_string = HexpmWeb.ConsultFormat.encode(meta)
+    build_tar(meta_string, contents, "#{meta[:name]}-#{meta[:version]}")
+  end
+
+  @doc """
+  Like `create_tar/2` but writes `metadata` into metadata.config as given, so
+  its values keep Erlang map syntax instead of being converted to proplists.
+  `metadata` needs binary keys and all required fields.
+  """
+  def create_tar_with_raw_metadata(metadata, files \\ [{"mix.exs", "mix.exs"}]) do
+    name = "#{metadata["name"]}-#{metadata["version"]}"
+    contents_path = Path.join(@tmp, "#{name}-contents.tar.gz")
+    files = Enum.map(files, fn {name, bin} -> {String.to_charlist(name), bin} end)
+    :ok = :erl_tar.create(contents_path, files, [:compressed])
+    contents = File.read!(contents_path)
+
+    meta_string =
+      metadata
+      |> Enum.map(&[:io_lib.print(&1) | ".\n"])
+      |> IO.iodata_to_binary()
+
+    build_tar(meta_string, contents, name)
+  end
+
+  defp build_tar(meta_string, contents, name) do
     blob = "3" <> meta_string <> contents
     checksum = :crypto.hash(:sha256, blob) |> Base.encode16()
 
@@ -136,7 +199,7 @@ defmodule Hexpm.TestHelpers do
       {~c"contents.tar.gz", contents}
     ]
 
-    path = Path.join(@tmp, "#{meta[:name]}-#{meta[:version]}.tar")
+    path = Path.join(@tmp, "#{name}.tar")
     :ok = :erl_tar.create(path, files)
 
     File.read!(path)
@@ -221,6 +284,20 @@ defmodule Hexpm.TestHelpers do
       |> Map.put_new("optional", false)
       |> Map.put_new("app", req["name"])
     end)
+  end
+
+  @doc """
+  Runs the waiting `Hexpm.Diff.CacheDeleteWorker` jobs in the test process,
+  where the in-memory store the test wrote to lives.
+  """
+  def run_diff_cache_jobs() do
+    import Ecto.Query, only: [from: 2]
+
+    from(j in Oban.Job,
+      where: j.worker == "Hexpm.Diff.CacheDeleteWorker" and j.state == "available"
+    )
+    |> Hexpm.Repo.all()
+    |> Enum.each(&(:ok = Hexpm.Diff.CacheDeleteWorker.perform(&1)))
   end
 
   def app_env(app, key, value) do
@@ -323,12 +400,38 @@ defmodule Hexpm.TestHelpers do
       :telemetry.detach(handler)
     end
 
-    collect_queries(handler, [])
+    collect_events(handler, [])
   end
 
-  defp collect_queries(handler, acc) do
+  @doc """
+  Returns the final outbound HTTP outcomes `fun` recorded in the calling
+  process, as the metadata of each `Hexpm.HTTP.track_request/3` event.
+  """
+  def capture_final_requests(fun) do
+    test = self()
+    handler = {__MODULE__, System.unique_integer()}
+
+    :telemetry.attach(
+      handler,
+      [:hexpm, :http, :request, :stop],
+      fn _event, _measurements, metadata, _config ->
+        if self() == test, do: send(test, {handler, metadata})
+      end,
+      nil
+    )
+
+    try do
+      fun.()
+    after
+      :telemetry.detach(handler)
+    end
+
+    collect_events(handler, [])
+  end
+
+  defp collect_events(handler, acc) do
     receive do
-      {^handler, query} -> collect_queries(handler, [query | acc])
+      {^handler, event} -> collect_events(handler, [event | acc])
     after
       0 -> Enum.reverse(acc)
     end

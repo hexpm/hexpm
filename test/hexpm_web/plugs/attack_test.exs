@@ -96,6 +96,33 @@ defmodule HexpmWeb.Plugs.AttackTest do
       assert {:block, _data} = Attack.diff_throttle(identity, time: time)
     end
 
+    test "bounds short URL rate limits per pod" do
+      align_to_throttle_bucket(10 * 60_000)
+      ip = {7, 7, 7, 7}
+      time = System.system_time(:millisecond)
+
+      assert {:allow, {:throttle, data}} = Attack.short_url_ip_throttle(ip, time: time)
+      assert data[:limit] == 30
+      assert data[:remaining] == 29
+
+      for _ <- 1..29 do
+        assert {:allow, _data} = Attack.short_url_ip_throttle(ip, time: time)
+      end
+
+      assert {:block, _data} = Attack.short_url_ip_throttle(ip, time: time)
+      assert {:allow, _data} = Attack.short_url_ip_throttle({8, 8, 8, 8}, time: time)
+    end
+
+    test "ignores a broadcast for a key it doesn't know" do
+      pid = Process.whereis(RateLimitPubSub)
+      time = System.system_time(:millisecond)
+      Phoenix.PubSub.broadcast!(Hexpm.PubSub, "ratelimit", {:throttle, {:unknown, 1}, time})
+      :sys.get_state(RateLimitPubSub)
+
+      assert Process.whereis(RateLimitPubSub) == pid
+      assert Process.alive?(pid)
+    end
+
     test "broadcasts SSO rate limits" do
       align_to_throttle_bucket()
       time = System.system_time(:millisecond)
@@ -295,20 +322,17 @@ defmodule HexpmWeb.Plugs.AttackTest do
       result = HexpmWeb.Plugs.Attack.tfa_ip_throttle({5, 5, 5, 5})
       assert {:allow, _data} = result
 
-      tfa_user_id = %{"uid" => 123, "return" => "/"}
-      result = HexpmWeb.Plugs.Attack.tfa_session_throttle(tfa_user_id)
+      result = HexpmWeb.Plugs.Attack.tfa_user_throttle(123)
       assert {:allow, _data} = result
     end
 
-    test "blocks 2FA requests when session limit is exceeded" do
-      tfa_user_id = %{"uid" => 456, "return" => "/"}
-
-      # Exhaust session limit (5 attempts per 10 minutes)
+    test "blocks 2FA requests when the user limit is exceeded" do
+      # Exhaust user limit (5 attempts per 10 minutes)
       Enum.each(1..5, fn _ ->
-        HexpmWeb.Plugs.Attack.tfa_session_throttle(tfa_user_id)
+        HexpmWeb.Plugs.Attack.tfa_user_throttle(456)
       end)
 
-      result = HexpmWeb.Plugs.Attack.tfa_session_throttle(tfa_user_id)
+      result = HexpmWeb.Plugs.Attack.tfa_user_throttle(456)
       assert {:block, _data} = result
     end
 
@@ -322,21 +346,18 @@ defmodule HexpmWeb.Plugs.AttackTest do
       assert {:block, _data} = result
     end
 
-    test "different TFA sessions have independent limits" do
-      tfa_user_id_1 = %{"uid" => 111, "return" => "/"}
-      tfa_user_id_2 = %{"uid" => 222, "return" => "/"}
-
-      # Exhaust limit for first session
+    test "different users have independent limits" do
+      # Exhaust limit for the first user
       Enum.each(1..5, fn _ ->
-        HexpmWeb.Plugs.Attack.tfa_session_throttle(tfa_user_id_1)
+        HexpmWeb.Plugs.Attack.tfa_user_throttle(111)
       end)
 
-      # First session should be blocked
-      result1 = HexpmWeb.Plugs.Attack.tfa_session_throttle(tfa_user_id_1)
+      # First user should be blocked
+      result1 = HexpmWeb.Plugs.Attack.tfa_user_throttle(111)
       assert {:block, _data} = result1
 
-      # Second session should still work
-      result2 = HexpmWeb.Plugs.Attack.tfa_session_throttle(tfa_user_id_2)
+      # Second user should still work
+      result2 = HexpmWeb.Plugs.Attack.tfa_user_throttle(222)
       assert {:allow, _data} = result2
     end
   end

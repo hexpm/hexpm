@@ -1,0 +1,11 @@
+Single Sign-On Is Now Required
+
+<%= SSOEnforcementStarted.intro(@organization) %> <%= SSOEnforcementStarted.scope() %>
+
+<%= SSOEnforcementStarted.not_linked() %>
+
+<%= @login_url %>
+
+<%= SSOEnforcementStarted.session(@session_lifetime) %>
+
+<%= SSOEnforcementStarted.account_notice() %>

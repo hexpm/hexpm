@@ -6,7 +6,7 @@ defmodule HexpmWeb.ControllerHelpers do
 
   alias Hexpm.Accounts.{Auth, Organizations}
   alias Hexpm.UserSessions
-  alias Hexpm.Repository.{Packages, Releases, Repositories}
+  alias Hexpm.Repository.{Packages, Releases, Repositories, Repository}
 
   @max_cache_age 60
 
@@ -15,6 +15,14 @@ defmodule HexpmWeb.ControllerHelpers do
     conn
     |> maybe_put_resp_header("cache-control", parse_control(control))
     |> maybe_put_resp_header("vary", parse_vary(vary))
+  end
+
+  def api_cache(conn, %Repository{} = repository), do: api_cache(conn, [repository])
+
+  def api_cache(conn, repositories) when is_list(repositories) do
+    if Enum.all?(repositories, &(&1.id == 1)),
+      do: api_cache(conn, :public),
+      else: api_cache(conn, :private)
   end
 
   def api_cache(conn, privacy) do
@@ -33,7 +41,9 @@ defmodule HexpmWeb.ControllerHelpers do
   end
 
   defp logged_in_privacy(conn, :logged_in) do
-    if conn.assigns.current_user, do: :private, else: :public
+    if conn.assigns.current_user || conn.assigns.current_organization,
+      do: :private,
+      else: :public
   end
 
   defp logged_in_privacy(_conn, other) do
@@ -401,6 +411,10 @@ defmodule HexpmWeb.ControllerHelpers do
   def sso_callback_error_message(:session_user_mismatch),
     do:
       "That provider identity is already linked to a different Hexpm account. Sign in as that account, or ask an organization administrator to unlink it."
+
+  def sso_callback_error_message(:tfa_enrollment_required),
+    do:
+      "The organization requires two-factor authentication. Enable it on your Hexpm account and sign in through the provider again."
 
   def sso_callback_error_message(:identity_conflict),
     do:

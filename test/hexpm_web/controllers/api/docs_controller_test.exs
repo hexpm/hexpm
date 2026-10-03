@@ -108,6 +108,41 @@ defmodule HexpmWeb.API.DocsControllerTest do
 
       assert json_response(conn, 422)["errors"] == %{"tar" => "too big (uncompressed)"}
     end
+
+    test "validates the number of files", %{user: user} do
+      package = insert(:package, package_owners: [build(:package_owner, user: user)])
+      insert(:release, package: package, version: "0.0.1")
+      files = for i <- 1..10_001, do: {~c"file#{i}.html", ""}
+
+      conn = publish_docs(user, package, "0.0.1", files)
+
+      assert json_response(conn, 422)["errors"] == %{"tar" => "tarball has more than 10000 files"}
+      refute Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
+    end
+
+    test "rejects symlinks", %{user: user} do
+      package = insert(:package, package_owners: [build(:package_owner, user: user)])
+      insert(:release, package: package, version: "0.0.1")
+
+      body =
+        :zlib.gzip([
+          Hexpm.TarballHelpers.tar_entry("index.html", ?0, "docs"),
+          Hexpm.TarballHelpers.tar_entry("link", ?2),
+          Hexpm.TarballHelpers.tar_end()
+        ])
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(user))
+        |> post("/api/packages/#{package.name}/releases/0.0.1/docs", body)
+
+      assert json_response(conn, 422)["errors"] == %{
+               "tar" => "unsupported file type in tarball: link (symlink)"
+             }
+
+      refute Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
+    end
   end
 
   describe "POST /api/repos/:repository/packages/:name/releases/:version/docs" do
@@ -174,8 +209,11 @@ defmodule HexpmWeb.API.DocsControllerTest do
       insert(:release, package: package, version: "0.0.1")
       insert(:organization_user, organization: repository.organization, user: user)
 
-      publish_docs(user, repository, package, "0.0.1", [{~c"index.html", "package v0.0.1"}])
-      |> response(201)
+      conn =
+        publish_docs(user, repository, package, "0.0.1", [{~c"index.html", "package v0.0.1"}])
+
+      assert response(conn, 201)
+      assert get_resp_header(conn, "cache-control") == ["private, max-age=60"]
 
       assert Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
 

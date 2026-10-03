@@ -73,7 +73,9 @@ defmodule HexpmWeb.Dashboard.Session.Components.SessionManagementCard do
     # Check if this is the current session
     is_current = is_current_session?(assigns.session, assigns.current_session_token)
 
-    assigns = assign(assigns, modal_id: modal_id, is_current: is_current)
+    geo = Hexpm.Geo.lookup_country(assigns.session.last_use && assigns.session.last_use.ip)
+
+    assigns = assign(assigns, modal_id: modal_id, is_current: is_current, geo: geo)
 
     ~H"""
     <tr class="last:border-0 hover:bg-grey-50 dark:hover:bg-grey-700 transition-colors">
@@ -113,6 +115,9 @@ defmodule HexpmWeb.Dashboard.Session.Components.SessionManagementCard do
               {ViewHelpers.pretty_date(@session.last_use.used_at)}
             </span>
           </.tooltip>
+          <span :if={@geo} class="ml-2 text-xs font-medium text-grey-400 dark:text-grey-300">
+            <span class="flag-emoji">{Hexpm.Geo.flag_emoji(@geo.iso_code)}</span> {@geo.name}
+          </span>
         <% else %>
           <span class="text-grey-700 dark:text-grey-200">
             {ViewHelpers.pretty_date(@session.inserted_at)}

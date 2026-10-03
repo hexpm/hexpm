@@ -14,12 +14,19 @@ defmodule HexpmWeb.Dashboard.BillingProxyControllerTest do
       {:ok, 200, [], %{"client_secret" => "seti_123"}}
     end)
 
-    conn =
-      build_conn()
-      |> test_login(context.admin)
-      |> post("/dashboard/billing-api/api/customers/#{context.organization.name}/setup_intent")
+    events =
+      capture_final_requests(fn ->
+        conn =
+          build_conn()
+          |> test_login(context.admin)
+          |> post(
+            "/dashboard/billing-api/api/customers/#{context.organization.name}/setup_intent"
+          )
 
-    assert json_response(conn, 200)["client_secret"] == "seti_123"
+        assert json_response(conn, 200)["client_secret"] == "seti_123"
+      end)
+
+    assert events == [%{host: "localhost", method: "POST", status: 200}]
   end
 
   test "takes sudo before it forwards anything", context do

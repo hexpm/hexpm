@@ -1,11 +1,13 @@
 Single Sign-On Is Becoming Required
 
-<%= SSOEnforcementPending.intro(@organization, @required_at) %>
+<%= SSOEnforcementPending.intro(@organization, @required_at) %> <%= SSOEnforcementPending.scope() %>
 
-<%= SSOEnforcementPending.not_linked() %>
-
+<%= SSOEnforcementPending.linked(@linked) %>
+<%= unless @linked do %>
 <%= @login_url %>
-
+<% end %>
+<%= SSOEnforcementPending.session(@session_lifetime) %>
+<%= for paragraph <- SSOEnforcementPending.keys(@keys) do %>
+<%= paragraph %>
+<% end %>
 <%= SSOEnforcementPending.account_notice() %>
-
-<%= SSOEnforcementPending.cli_notice() %>

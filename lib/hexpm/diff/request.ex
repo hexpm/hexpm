@@ -11,8 +11,7 @@ defmodule Hexpm.Diff.Request do
     :to_checksum,
     :cache_version,
     :ignore_whitespace,
-    :canonical_hash,
-    :legacy_hash,
+    :hash,
     :releases,
     :versions
   ]
@@ -54,9 +53,7 @@ defmodule Hexpm.Diff.Request do
          to_checksum: to_checksum,
          cache_version: cache_version,
          ignore_whitespace: ignore_whitespace,
-         canonical_hash:
-           cache_hash(cache_version, [from_checksum, to_checksum], ignore_whitespace),
-         legacy_hash: cache_hash(cache_version, [to_checksum, from_checksum], ignore_whitespace),
+         hash: cache_hash(cache_version, from_checksum, to_checksum, ignore_whitespace),
          releases: releases,
          versions: Enum.map(releases, &to_string(&1.version))
        }}
@@ -95,9 +92,7 @@ defmodule Hexpm.Diff.Request do
          | from_checksum: decoded_from,
            to_checksum: decoded_to,
            cache_version: cache_version,
-           canonical_hash:
-             cache_hash(cache_version, [decoded_from, decoded_to], ignore_whitespace),
-           legacy_hash: cache_hash(cache_version, [decoded_to, decoded_from], ignore_whitespace)
+           hash: cache_hash(cache_version, decoded_from, decoded_to, ignore_whitespace)
        }}
     else
       _ -> {:error, :invalid_args}
@@ -119,10 +114,21 @@ defmodule Hexpm.Diff.Request do
     }
   end
 
-  def cache_hash(cache_version, checksums, ignore_whitespace) do
-    base = {cache_version, checksums}
-    key = if ignore_whitespace, do: {base, [ignore_whitespace: true]}, else: base
-    :erlang.phash2(key)
+  @doc """
+  The name of a diff in the cache. It covers both full release checksums, so a
+  release replaced with a different tarball never reads the diff of the one it
+  replaced.
+  """
+  def cache_hash(cache_version, from_checksum, to_checksum, ignore_whitespace) do
+    [
+      Integer.to_string(cache_version),
+      Base.encode16(from_checksum, case: :lower),
+      Base.encode16(to_checksum, case: :lower),
+      to_string(ignore_whitespace)
+    ]
+    |> Enum.join(":")
+    |> then(&:crypto.hash(:sha256, &1))
+    |> Base.encode16(case: :lower)
   end
 
   defp parse_version(version) when is_binary(version) do

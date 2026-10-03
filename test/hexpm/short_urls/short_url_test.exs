@@ -1,97 +1,211 @@
 defmodule Hexpm.ShortURLs.ShortURLTest do
   use Hexpm.DataCase, async: true
-  alias Hexpm.ShortURLs.ShortURL
+  alias Hexpm.ShortURLs.{ShortURL, Target}
 
-  describe "changeset/1" do
-    test "with correct params, creates a new short url" do
-      params = %{"url" => "https://diff.hex.pm?diff[]=ecto:3.0.1:3.0.4"}
-      assert %{valid?: true, changes: changes} = ShortURL.changeset(params)
-      assert String.length(changes.short_code) == 5
+  describe "canonical_diff_url/1" do
+    test "sorts comparisons" do
+      assert {:ok, url, packages} =
+               ShortURL.canonical_diff_url(
+                 "https://hex.pm/diffs?diffs[]=plug:1.0.0:1.1.0&diffs[]=ecto:3.0.0:3.0.1"
+               )
+
+      assert url == "https://hex.pm/diffs?diffs[]=ecto:3.0.0:3.0.1&diffs[]=plug:1.0.0:1.1.0"
+      assert packages == ["ecto", "plug"]
     end
 
-    test "bounds the url in bytes" do
-      prefix = "https://hex.pm/?q="
-      at_cap = prefix <> combining_string(8192 - byte_size(prefix))
-      assert %{valid?: true} = ShortURL.changeset(%{"url" => at_cap})
+    test "sorts comparisons of the same package by version" do
+      assert {:ok, url, packages} =
+               ShortURL.canonical_diff_url(
+                 "https://hex.pm/diffs?diffs[]=ecto:3.1.0:3.2.0&diffs[]=ecto:3.0.0:3.0.1"
+               )
 
-      over_cap = prefix <> combining_string(8193 - byte_size(prefix))
-      changeset = ShortURL.changeset(%{"url" => over_cap})
-      assert errors_on(changeset).url == "should be at most 8192 byte(s)"
+      assert url == "https://hex.pm/diffs?diffs[]=ecto:3.0.0:3.0.1&diffs[]=ecto:3.1.0:3.2.0"
+      assert packages == ["ecto"]
     end
 
-    test "valid when redirecting to hex.pm" do
-      params = %{"url" => "https://hex.pm"}
-      assert %{valid?: true} = ShortURL.changeset(params)
+    test "drops duplicate comparisons" do
+      assert {:ok, url, _packages} =
+               ShortURL.canonical_diff_url(
+                 "https://hex.pm/diffs?diffs[]=ecto:3.0.0:3.0.1&diffs[]=ecto:3.0.0:3.0.1"
+               )
+
+      assert url == "https://hex.pm/diffs?diffs[]=ecto:3.0.0:3.0.1"
     end
 
-    test "valid when redirecting to a complex subdomain on hex.pm" do
-      params = %{"url" => "https://www.links.hex.pm"}
-      assert %{valid?: true} = ShortURL.changeset(params)
+    test "gives links on diff.hex.pm and hex.pm the same canonical form" do
+      canonical = "https://hex.pm/diffs?diffs[]=ecto:3.0.0:3.0.1&diffs[]=plug:1.0.0:1.1.0"
+
+      for url <- [
+            "https://diff.hex.pm/diffs?diffs[]=plug:1.0.0:1.1.0&diffs[]=ecto:3.0.0:3.0.1",
+            "https://diff.hex.pm?diff[]=ecto:3.0.0:3.0.1&diff[]=plug:1.0.0:1.1.0",
+            "https://diff.hex.pm/?diffs[]=ecto:3.0.0:3.0.1&diffs[]=plug:1.0.0:1.1.0",
+            "http://hex.pm/diffs?diffs[]=ecto:3.0.0:3.0.1&diffs[]=plug:1.0.0:1.1.0",
+            "https://hex.pm/diffs?diffs[]=ecto:3.0.0:3.0.1&diffs[]=plug:1.0.0:1.1.0"
+          ] do
+        assert {:ok, ^canonical, _packages} = ShortURL.canonical_diff_url(url)
+      end
     end
 
-    test "validate redirecting to hexdocs.pm" do
-      assert %{valid?: true} = ShortURL.changeset(%{"url" => "https://hexdocs.pm"})
-      assert %{valid?: true} = ShortURL.changeset(%{"url" => "https://hexdocs.pm/"})
-      assert %{valid?: true} = ShortURL.changeset(%{"url" => "https://hexdocs.pm/?foo"})
-      assert %{valid?: true} = ShortURL.changeset(%{"url" => "https://hexdocs.pm/#foo"})
+    test "decodes percent-encoding and re-encodes only what the query needs" do
+      assert {:ok, url, _packages} =
+               ShortURL.canonical_diff_url(
+                 "https://hex.pm/diffs?diffs%5B%5D=ecto%3A3.0.0-rc.1%2Bbuild.1%3A3.0.1"
+               )
 
-      assert %{valid?: false} = ShortURL.changeset(%{"url" => "https://hexdocs.pm/foo"})
+      assert url == "https://hex.pm/diffs?diffs[]=ecto:3.0.0-rc.1%2Bbuild.1:3.0.1"
+
+      %URI{query: query} = URI.parse(url)
+      assert Plug.Conn.Query.decode(query) == %{"diffs" => ["ecto:3.0.0-rc.1+build.1:3.0.1"]}
     end
 
-    test "validate redirecting to a *.hexdocs.pm subdomain" do
-      assert %{valid?: true} = ShortURL.changeset(%{"url" => "https://phoenix.hexdocs.pm"})
-      assert %{valid?: true} = ShortURL.changeset(%{"url" => "https://phoenix.hexdocs.pm/"})
-
-      assert %{valid?: true} =
-               ShortURL.changeset(%{"url" => "https://phoenix.hexdocs.pm/1.7.0/Phoenix.html"})
-
-      assert %{valid?: true} =
-               ShortURL.changeset(%{"url" => "https://acme.staging.hexdocs.pm/some/page"})
+    test "drops other query parameters and the fragment" do
+      assert {:ok, "https://hex.pm/diffs?diffs[]=ecto:3.0.0:3.0.1", _packages} =
+               ShortURL.canonical_diff_url(
+                 "https://hex.pm/diffs?diffs[]=ecto:3.0.0:3.0.1&utm_source=x#top"
+               )
     end
 
-    test "validate redirecting to a *.hexorgs.pm subdomain" do
-      assert %{valid?: true} = ShortURL.changeset(%{"url" => "https://acme.hexorgs.pm"})
-      assert %{valid?: true} = ShortURL.changeset(%{"url" => "https://acme.hexorgs.pm/"})
-
-      assert %{valid?: true} =
-               ShortURL.changeset(%{"url" => "https://acme.hexorgs.pm/some_package/readme.html"})
-
-      assert %{valid?: true} =
-               ShortURL.changeset(%{"url" => "https://acme.staging.hexorgs.pm/pkg/page"})
+    test "accepts 150 comparisons" do
+      assert {:ok, _url, _packages} = ShortURL.canonical_diff_url(diff_url(150))
     end
 
-    test "with incorrect params" do
-      assert %{valid?: false, errors: errors} = ShortURL.changeset(%{foo: 420})
+    test "rejects more than 150 comparisons" do
+      assert ShortURL.canonical_diff_url(diff_url(151)) ==
+               {:error, "must contain at most 150 comparisons"}
+    end
+
+    test "rejects a comparison longer than 512 bytes" do
+      version = "1.0.0-" <> String.duplicate("a", 512)
+
+      assert ShortURL.canonical_diff_url("https://hex.pm/diffs?diffs[]=ecto:#{version}:1.0.1") ==
+               {:error, "has an invalid comparison"}
+    end
+
+    test "rejects a canonical link longer than 8192 bytes" do
+      query =
+        Enum.map_join(1..150, "&", fn n ->
+          "diffs[]=ecto:1.0.#{n}-#{String.duplicate("a", 100)}:2.0.0"
+        end)
+
+      assert ShortURL.canonical_diff_url("https://hex.pm/diffs?" <> query) ==
+               {:error, "must be at most 8192 bytes"}
+    end
+
+    test "rejects a link without a query" do
+      assert ShortURL.canonical_diff_url("https://hex.pm/diffs") ==
+               {:error, "must contain at least one comparison"}
+    end
+
+    for url <- [
+          "https://hex.pm/packages/ecto",
+          "https://hex.pm/?diffs[]=ecto:3.0.0:3.0.1",
+          "https://hexdocs.pm/?diffs[]=ecto:3.0.0:3.0.1",
+          "https://evil.example/diffs?diffs[]=ecto:3.0.0:3.0.1",
+          "https://preview.hex.pm/diffs?diffs[]=ecto:3.0.0:3.0.1",
+          "https://user@hex.pm/diffs?diffs[]=ecto:3.0.0:3.0.1",
+          "https://hex.pm:8443/diffs?diffs[]=ecto:3.0.0:3.0.1",
+          "javascript://hex.pm/diffs?diffs[]=ecto:3.0.0:3.0.1",
+          "https://hex.pm/diffs?diffs[]=ecto:3.0.0:3.0.1\n"
+        ] do
+      test "rejects #{inspect(url)}" do
+        assert {:error, _reason} = ShortURL.canonical_diff_url(unquote(url))
+      end
+    end
+
+    for {label, query} <- [
+          {"no comparisons", "foo=bar"},
+          {"an organization package", "diffs[]=acme/ecto:3.0.0:3.0.1"},
+          {"an invalid package name", "diffs[]=Ecto:3.0.0:3.0.1"},
+          {"a package name longer than 255 bytes",
+           "diffs[]=#{String.duplicate("a", 256)}:1.0.0:1.0.1"},
+          {"an invalid from version", "diffs[]=ecto:3.0:3.0.1"},
+          {"an invalid to version", "diffs[]=ecto:3.0.0:latest"},
+          {"a missing version", "diffs[]=ecto:3.0.0"},
+          {"one invalid comparison among valid ones",
+           "diffs[]=ecto:3.0.0:3.0.1&diffs[]=plug:1.0:1.1.0"},
+          {"a comparison map", "diffs[a]=ecto:3.0.0:3.0.1"},
+          {"invalid percent-encoding", "diffs[]=ecto%ZZ:3.0.0:3.0.1"}
+        ] do
+      test "rejects #{label}" do
+        assert {:error, _reason} =
+                 ShortURL.canonical_diff_url("https://hex.pm/diffs?" <> unquote(query))
+      end
+    end
+  end
+
+  describe "canonical_diff_url/2" do
+    test "drops comparisons of packages that don't exist" do
+      url = "https://hex.pm/diffs?diffs[]=oban_pro:1.0.0:1.1.0&diffs[]=ecto:3.0.0:3.1.0"
+      existing = &Enum.filter(&1, fn name -> name == "ecto" end)
+
+      assert ShortURL.canonical_diff_url(url, existing) ==
+               {:ok, "https://hex.pm/diffs?diffs[]=ecto:3.0.0:3.1.0", ["ecto"]}
+    end
+
+    test "rejects a link when no package exists" do
+      url = "https://hex.pm/diffs?diffs[]=oban_pro:1.0.0:1.1.0"
+
+      assert ShortURL.canonical_diff_url(url, fn _names -> [] end) ==
+               {:error, "must compare at least one package on hex.pm"}
+    end
+  end
+
+  describe "diff_changeset/1" do
+    test "puts the canonical url and the package names" do
+      changeset =
+        ShortURL.diff_changeset(%{
+          "url" => "https://diff.hex.pm/diffs?diffs[]=plug:1.0.0:1.1.0&diffs[]=ecto:3.0.0:3.0.1"
+        })
+
+      assert changeset.valid?
+
+      assert changeset.changes.url ==
+               "https://hex.pm/diffs?diffs[]=ecto:3.0.0:3.0.1&diffs[]=plug:1.0.0:1.1.0"
+
+      assert changeset.changes.packages == ["ecto", "plug"]
+    end
+
+    test "requires a url" do
+      assert %{valid?: false, errors: errors} = ShortURL.diff_changeset(%{foo: 420})
       assert errors == [{:url, {"can't be blank", [validation: :required]}}]
     end
 
-    test "rejects javascript: scheme" do
-      assert %{valid?: false, errors: errors} =
-               ShortURL.changeset(%{url: "javascript://hex.pm/%0Aalert(1)"})
+    test "rejects a link that is not a diff link" do
+      changeset = ShortURL.diff_changeset(%{"url" => "https://hexdocs.pm"})
+      assert errors_on(changeset).url == "must be a hex.pm diff link"
+    end
+  end
 
-      assert errors == [url: {"must use http or https scheme", []}]
+  describe "redirect_url/1" do
+    test "reads the target" do
+      short_url = %ShortURL{target: %Target{url: "https://hex.pm/diffs?diffs[]=ecto:3.0.0:3.0.1"}}
+      assert ShortURL.redirect_url(short_url) == "https://hex.pm/diffs?diffs[]=ecto:3.0.0:3.0.1"
     end
 
-    test "rejects non-http schemes" do
-      assert %{valid?: false} = ShortURL.changeset(%{url: "ftp://hex.pm/foo"})
-      assert %{valid?: false} = ShortURL.changeset(%{url: "data://hex.pm/foo"})
+    test "keeps redirecting to hex.pm and hexdocs.pm pages" do
+      for url <- [
+            "https://hex.pm/packages/ecto",
+            "https://hexdocs.pm/",
+            "https://acme.hexorgs.pm/"
+          ] do
+        assert ShortURL.redirect_url(%ShortURL{target: %Target{url: url}}) == url
+      end
     end
 
-    test "rejects URLs without a host" do
-      assert %{valid?: false, errors: errors} = ShortURL.changeset(%{url: "https:/packages/ecto"})
-      assert errors == [url: {"must include a host", []}]
+    for url <- [
+          "https://evil.example\\@hex.pm/",
+          "https://evil.example/",
+          "https://hexdocs.pm/foo",
+          "javascript://hex.pm/%0Aalert(1)"
+        ] do
+      test "refuses a stored #{inspect(url)}" do
+        refute ShortURL.redirect_url(%ShortURL{target: %Target{url: unquote(url)}})
+      end
     end
+  end
 
-    test "where host is not on hex.pm" do
-      assert %{valid?: false, errors: errors} =
-               ShortURL.changeset(%{url: "https://supersimple.org?spoof=hex.pm"})
-
-      assert errors ==
-               [
-                 url:
-                   {"domain must match hex.pm, *.hex.pm, hexdocs.pm, *.hexdocs.pm, or *.hexorgs.pm",
-                    []}
-               ]
-    end
+  defp diff_url(count) do
+    query = Enum.map_join(1..count, "&", &"diffs[]=ecto:1.0.#{&1}:2.0.0")
+    "https://hex.pm/diffs?" <> query
   end
 end

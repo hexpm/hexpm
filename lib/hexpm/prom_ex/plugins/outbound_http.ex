@@ -20,6 +20,12 @@ defmodule Hexpm.PromEx.Plugins.OutboundHttp do
       Keyword.get(opts, :metric_prefix, PromEx.metric_prefix(otp_app, :outbound_http))
 
     Event.build(:hexpm_outbound_http_event_metrics, [
+      counter(
+        metric_prefix ++ [:request, :final, :total],
+        event_name: [:hexpm, :http, :request, :stop],
+        description: "Final outbound HTTP outcomes after all retries at instrumented call sites.",
+        tags: [:host, :method, :status]
+      ),
       distribution(
         metric_prefix ++ [:request, :duration, :milliseconds],
         event_name: [:finch, :request, :stop],

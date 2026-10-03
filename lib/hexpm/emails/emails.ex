@@ -1,5 +1,7 @@
 defmodule Hexpm.Emails do
   use Phoenix.Swoosh, view: HexpmWeb.EmailView
+
+  alias HexpmWeb.EmailView.Common
   alias Hexpm.Accounts.{Email, Organization, User}
 
   def owner_added(package, owners, owner) do
@@ -248,21 +250,32 @@ defmodule Hexpm.Emails do
     |> render_body(:sso_identity_linked)
   end
 
-  def sso_identity_unlinked(organization, username, recipients) do
+  def sso_identity_unlinked(
+        organization,
+        username,
+        unlinked_by,
+        locked_out?,
+        login_url,
+        recipients
+      ) do
     base_email(:sso_identity_unlinked)
     |> email_to(recipients)
     |> subject("Hex.pm - Organization SSO disconnected")
     |> assign(:organization, organization)
     |> assign(:username, username)
+    |> assign(:unlinked_by, unlinked_by)
+    |> assign(:locked_out, locked_out?)
+    |> assign(:login_url, login_url)
     |> render_body(:sso_identity_unlinked)
   end
 
-  def sso_seats(organization, kind, recipients) do
+  def sso_seats(organization, kind, source, recipients) do
     base_email(:sso_seats)
     |> email_to(recipients)
     |> subject("Hex.pm - #{sso_seats_subject(kind, organization)}")
     |> assign(:organization, organization)
     |> assign(:kind, kind)
+    |> assign(:source, source)
     |> render_body(:sso_seats)
   end
 
@@ -271,24 +284,55 @@ defmodule Hexpm.Emails do
   defp sso_seats_subject("expansion_failed", organization),
     do: "#{organization} could not add a seat"
 
+  defp sso_seats_subject("seat_limit_unknown", organization),
+    do: "#{organization} seat count could not be read"
+
   def organization_tfa(organization, stage, recipients, suspended) do
     base_email(:organization_tfa)
     |> email_to(recipients)
-    |> subject("Hex.pm - #{organization.name} 2FA enforcement")
+    |> subject("Hex.pm - #{organization_tfa_subject(stage, organization.name)}")
     |> assign(:organization, organization)
     |> assign(:stage, stage)
     |> assign(:suspended, suspended)
     |> render_body(:organization_tfa)
   end
 
-  def sso_enforcement_pending(organization, required_at, login_url, recipients) do
+  defp organization_tfa_subject("scheduled", organization),
+    do: "#{organization} will require two-factor authentication"
+
+  defp organization_tfa_subject("seven_days", organization),
+    do: "#{organization} requires two-factor authentication in 7 days"
+
+  defp organization_tfa_subject("one_day", organization),
+    do: "#{organization} requires two-factor authentication within a day"
+
+  defp organization_tfa_subject("suspended", organization),
+    do: "Your access to #{organization} is suspended until you enable 2FA"
+
+  defp organization_tfa_subject("summary", organization),
+    do: "#{organization} now requires two-factor authentication"
+
+  def sso_enforcement_pending(organization, required_at, notice, login_url, recipients) do
     base_email(:sso_enforcement_pending)
     |> email_to(recipients)
     |> subject("Hex.pm - #{organization} will require single sign-on")
     |> assign(:organization, organization)
     |> assign(:required_at, required_at)
+    |> assign(:linked, notice.linked?)
+    |> assign(:session_lifetime, notice.session_lifetime)
+    |> assign(:keys, notice.keys)
     |> assign(:login_url, login_url)
     |> render_body(:sso_enforcement_pending)
+  end
+
+  def sso_enforcement_started(organization, session_lifetime, login_url, recipients) do
+    base_email(:sso_enforcement_started)
+    |> email_to(recipients)
+    |> subject("Hex.pm - #{organization} now requires single sign-on")
+    |> assign(:organization, organization)
+    |> assign(:session_lifetime, session_lifetime)
+    |> assign(:login_url, login_url)
+    |> render_body(:sso_enforcement_started)
   end
 
   def sso_keys_refused(organization, revoked, trimmed, blocked, recipients) do
@@ -326,6 +370,42 @@ defmodule Hexpm.Emails do
     |> assign(:provider_email, provider_email)
     |> assign(:username, username)
     |> render_body(:sso_email_mismatch)
+  end
+
+  def organization_data_deletion_scheduled(organization, deletion_at, recipients) do
+    base_email(:organization_data_deletion_scheduled)
+    |> email_to(recipients)
+    |> subject(
+      "Hex.pm - The packages of #{organization} will be deleted on #{Common.date(deletion_at)}"
+    )
+    |> assign(:organization, organization)
+    |> assign(:deletion_at, deletion_at)
+    |> assign(:billing_url, billing_url(organization))
+    |> render_body(:organization_data_deletion_scheduled)
+  end
+
+  def organization_data_deletion_reminder(organization, deletion_at, days, recipients) do
+    base_email(:organization_data_deletion_reminder)
+    |> email_to(recipients)
+    |> subject("Hex.pm - The packages of #{organization} will be deleted #{Common.in_days(days)}")
+    |> assign(:organization, organization)
+    |> assign(:deletion_at, deletion_at)
+    |> assign(:days, days)
+    |> assign(:billing_url, billing_url(organization))
+    |> render_body(:organization_data_deletion_reminder)
+  end
+
+  def organization_data_deleted(organization, recipients) do
+    base_email(:organization_data_deleted)
+    |> email_to(recipients)
+    |> subject("Hex.pm - The packages of #{organization} have been deleted")
+    |> assign(:organization, organization)
+    |> assign(:billing_url, billing_url(organization))
+    |> render_body(:organization_data_deleted)
+  end
+
+  defp billing_url(organization) do
+    HexpmWeb.EmailView.email_url("/dashboard/orgs/#{organization}/billing")
   end
 
   def package_published(owners, publisher, name, version) do

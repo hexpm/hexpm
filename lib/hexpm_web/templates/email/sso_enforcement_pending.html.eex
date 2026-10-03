@@ -4,20 +4,25 @@
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
   <%= SSOEnforcementPending.intro(@organization, @required_at) %>
+  <%= SSOEnforcementPending.scope() %>
 </p>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
-  <%= SSOEnforcementPending.not_linked() %>
+  <%= SSOEnforcementPending.linked(@linked) %>
 </p>
-
+<%= unless @linked do %>
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
   <a href="<%= @login_url %>" style="color: #0f59d8; text-decoration: none; word-break: break-all;"><%= @login_url %></a>
 </p>
-
+<% end %>
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= SSOEnforcementPending.session(@session_lifetime) %>
+</p>
+<%= for paragraph <- SSOEnforcementPending.keys(@keys) do %>
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= paragraph %>
+</p>
+<% end %>
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
   <%= SSOEnforcementPending.account_notice() %>
-</p>
-
-<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
-  <%= SSOEnforcementPending.cli_notice() %>
 </p>

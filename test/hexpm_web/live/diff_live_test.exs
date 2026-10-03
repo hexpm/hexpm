@@ -197,8 +197,8 @@ defmodule HexpmWeb.DiffLiveTest do
     })
 
     Application.put_env(:hexpm, :diff_test_store_get, {:notify, self()})
-    piece_5_key = Cache.diff_key(request, request.canonical_hash, 5)
-    piece_6_key = Cache.diff_key(request, request.canonical_hash, 6)
+    piece_5_key = Cache.diff_key(request, request.hash, 5)
+    piece_6_key = Cache.diff_key(request, request.hash, 6)
 
     {:ok, view, _html} = live(build_conn(), "/diff/#{package.name}/1.0.0..7.0.0")
 
@@ -489,6 +489,37 @@ defmodule HexpmWeb.DiffLiveTest do
     assert html =~ "file-0.bin"
   end
 
+  test "too-large metadata renders the too-large state without a file list or retry", %{
+    package: package
+  } do
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
+    Cache.put_metadata!(request, %{too_large: true, files_changed: 6000})
+
+    {:ok, view, html} = live(build_conn(), "/diff/#{package.name}/1.0.0..2.0.0")
+
+    assert has_element?(view, "#diff-too-large", "Diff too large")
+    assert html =~ "These releases differ in 6000 files. The diff is too large to show."
+    refute has_element?(view, "#diff-files")
+    refute has_element?(view, "#diff-list")
+    refute has_element?(view, "button", "Try again")
+    refute Repo.exists?(from job in Oban.Job, where: job.worker == "Hexpm.Diff.Worker")
+  end
+
+  test "a completed job with too-large metadata renders the too-large state", %{
+    package: package
+  } do
+    {:ok, view, _html} = live(build_conn(), "/diff/#{package.name}/3.0.0..4.0.0")
+    job = Repo.one!(from job in Oban.Job, where: job.worker == "Hexpm.Diff.Worker")
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "3.0.0", "4.0.0", [])
+    Cache.put_metadata!(request, %{too_large: true, files_changed: 1})
+    set_job_state(job, "completed")
+
+    send(view.pid, {:poll_job, job.id})
+
+    assert render(view) =~ "These releases differ in 1 file. The diff is too large to show."
+    assert has_element?(view, "#diff-too-large")
+  end
+
   test "selector uses an explicit action, disables identical choices, and keeps whitespace mode",
        %{
          package: package
@@ -599,6 +630,34 @@ defmodule HexpmWeb.DiffLiveTest do
 
     {:ok, _view, html} = live(build_conn(), "/diff/#{package.name}/1.0.0..2.0.0")
     assert html =~ "Package not found"
+  end
+
+  test "a member removed while the diff generates is not shown it when the job completes" do
+    %{repository: repository, package: package, user: user} =
+      private_package("private_removed_diff")
+
+    {:ok, view, html} =
+      build_conn()
+      |> test_login(user)
+      |> live("/diff/#{repository.name}/#{package.name}/1.0.0..2.0.0")
+
+    assert html =~ "Diff queued"
+    job = Repo.one!(from job in Oban.Job, where: job.worker == "Hexpm.Diff.Worker")
+
+    Repo.delete_all(
+      from(ou in Hexpm.Accounts.OrganizationUser,
+        where: ou.user_id == ^user.id and ou.organization_id == ^repository.organization_id
+      )
+    )
+
+    {:ok, request} = Hexpm.Diff.prepare(repository.name, package.name, "1.0.0", "2.0.0", [])
+    put_ready_cache(request, 1)
+    set_job_state(job, "completed")
+
+    send(view.pid, {:poll_job, job.id})
+    html = render(view)
+    assert html =~ "Package not found"
+    refute html =~ "file-0.bin"
   end
 
   test "private package version links use repository-scoped diff and files routes" do

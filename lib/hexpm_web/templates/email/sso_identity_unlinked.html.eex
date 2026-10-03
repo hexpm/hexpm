@@ -7,9 +7,18 @@
 </p>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
-  Single sign-on for the <strong><%= @organization %></strong> organization has been disconnected from your Hex.pm account. Conventional Hex.pm login remains available.
+  <%= SSOIdentityUnlinked.intro(@organization, @username, @unlinked_by) %>
 </p>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
-  <%= raw(Common.unauthorized_change_notice(:html)) %>
+  <%= SSOIdentityUnlinked.access(@locked_out) %>
 </p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <a href="<%= @login_url %>" style="color: #0f59d8; text-decoration: none; word-break: break-all;"><%= @login_url %></a>
+</p>
+<%= if questions = SSOIdentityUnlinked.questions(@organization, @username, @unlinked_by) do %>
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= questions %>
+</p>
+<% end %>

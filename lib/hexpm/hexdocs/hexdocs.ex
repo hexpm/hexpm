@@ -7,7 +7,7 @@ defmodule Hexpm.Hexdocs do
   @special_packages Application.compile_env!(:hexpm, :hexdocs_special_packages)
   @special_package_names Map.keys(@special_packages)
   @gcs_put_debounce Application.compile_env!(:hexpm, :hexdocs_gcs_put_debounce)
-  @lock_timeout :timer.minutes(4)
+  @transaction_timeout :timer.minutes(4)
 
   # ExDoc marks these `noindex`, so listing them asks a crawler to fetch a page
   # it has been told not to keep.
@@ -18,6 +18,14 @@ defmodule Hexpm.Hexdocs do
 
     @impl true
     def message(%{key: key}), do: "Hexdocs archive changed while processing: #{key}"
+  end
+
+  defmodule LockedError do
+    defexception [:repository, :package]
+
+    @impl true
+    def message(%{repository: repository, package: package}),
+      do: "Hexdocs of #{repository}/#{package} are locked by another job"
   end
 
   def upload(key) do
@@ -158,6 +166,13 @@ defmodule Hexpm.Hexdocs do
         key = Bucket.archive_key(repository, package, new_latest)
         {dir, files, checksum} = download_and_unpack!(key, repository, package, new_latest)
         FileRewriter.rewrite_files(dir, files)
+
+        # A revert clears has_docs before it deletes the archive, so this
+        # catches one that landed during the download before the promote.
+        unless Releases.docs_exist?(repository, package, to_string(new_latest)) do
+          raise StaleArchiveError, key: key
+        end
+
         Bucket.promote(repository, package, version, new_latest, dir, files)
         ensure_archive_current!(key, checksum)
 
@@ -238,28 +253,33 @@ defmodule Hexpm.Hexdocs do
   # writes from an archive that has been replaced or removed. The download
   # and unpack and the site-wide files stay outside it. A failure after some
   # of the writes still has to purge what was written, so the transaction
-  # commits their purge jobs before the error goes on.
+  # commits their purge jobs before the error goes on. A job holds the lock
+  # for as long as its writes take, up to minutes for a large archive, so
+  # the lock is only tried: a job that finds it held raises LockedError for
+  # its worker to snooze, instead of holding a connection while it waits.
   defp locked(repository, package, fun) do
     {:ok, result} =
       Hexpm.Repo.transaction(
         fn ->
-          Hexpm.Repo.advisory_xact_lock(:hexdocs,
-            sub_key: :erlang.phash2({repository, package}),
-            timeout: @lock_timeout
-          )
-
-          try do
-            {:ok, fun.()}
-          catch
-            kind, reason -> {:raised, kind, reason, __STACKTRACE__}
+          if Hexpm.Repo.try_advisory_xact_lock?(:hexdocs,
+               sub_key: :erlang.phash2({repository, package})
+             ) do
+            try do
+              {:ok, fun.()}
+            catch
+              kind, reason -> {:raised, kind, reason, __STACKTRACE__}
+            end
+          else
+            :locked
           end
         end,
-        timeout: @lock_timeout
+        timeout: @transaction_timeout
       )
 
     case result do
       {:ok, value} -> value
       {:raised, kind, reason, stacktrace} -> :erlang.raise(kind, reason, stacktrace)
+      :locked -> raise LockedError, repository: repository, package: package
     end
   end
 

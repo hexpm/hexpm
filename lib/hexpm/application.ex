@@ -75,9 +75,29 @@ defmodule Hexpm.Application do
         nil
 
       true ->
-        event
+        drop_frame_vars(event)
     end
   end
+
+  # The SDK reports the arguments of the frame that raised as inspected
+  # `vars`, scrubbed only of the keys password, passwd and secret. Those
+  # arguments are whatever the crashing function was given: a LiveView's event
+  # params and socket, whose assigns hold the user's emails and the browser
+  # session token, or a controller's params under names like code and key.
+  defp drop_frame_vars(event) do
+    %{
+      event
+      | exception: Enum.map(event.exception, &%{&1 | stacktrace: drop_vars(&1.stacktrace)}),
+        threads:
+          event.threads && Enum.map(event.threads, &%{&1 | stacktrace: drop_vars(&1.stacktrace)})
+    }
+  end
+
+  defp drop_vars(%Sentry.Interfaces.Stacktrace{frames: frames} = stacktrace) do
+    %{stacktrace | frames: Enum.map(frames, &%{&1 | vars: %{}})}
+  end
+
+  defp drop_vars(nil), do: nil
 
   # Oban retries a failed job until max_attempts and its exception telemetry
   # counts every attempt, so only the attempt that exhausts the retries is

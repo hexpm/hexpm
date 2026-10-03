@@ -16,6 +16,29 @@ defmodule Hexpm.Store.LocalTest do
     :ok
   end
 
+  describe "Hexpm.Store.delete_prefix/3" do
+    @tag :tmp_dir
+    test "with written_before deletes only the older objects", %{tmp_dir: tmp_dir} do
+      bucket_dir = Path.join([tmp_dir, "store", "bucket", "repos", "acme"])
+      File.mkdir_p!(bucket_dir)
+      old = Path.join(bucket_dir, "old")
+      new = Path.join(bucket_dir, "new")
+      File.write!(old, "OLD")
+      File.write!(new, "NEW")
+      File.touch!(old, ~U[2026-08-01 12:00:00Z] |> DateTime.to_unix())
+      File.touch!(new, ~U[2026-09-01 12:00:00Z] |> DateTime.to_unix())
+
+      assert Hexpm.Store.delete_prefix({Local, "bucket"}, "repos/acme/",
+               written_before: ~U[2026-09-01 12:00:00Z]
+             ) == 1
+
+      refute File.exists?(old)
+      assert File.exists?(new)
+      assert Hexpm.Store.delete_prefix({Local, "bucket"}, "repos/acme/") == 1
+      refute File.exists?(new)
+    end
+  end
+
   describe "stream/2" do
     @tag :tmp_dir
     test "streams the file in chunks", %{tmp_dir: tmp_dir} do
@@ -178,7 +201,7 @@ defmodule Hexpm.Store.LocalTest do
     end
   end
 
-  describe "list/2" do
+  describe "list_objects/2" do
     @tag :tmp_dir
     test "works for valid paths", %{tmp_dir: tmp_dir} do
       bucket_dir = Path.join([tmp_dir, "store", "bucket"])
@@ -187,9 +210,21 @@ defmodule Hexpm.Store.LocalTest do
       File.write!(Path.join(bucket_dir, "prefix_file2.txt"), "content2")
       File.write!(Path.join(bucket_dir, "other.txt"), "content3")
 
-      result = Local.list("bucket", "prefix_")
+      result = Local.list_objects("bucket", "prefix_")
 
-      assert Enum.sort(result) == ["prefix_file1.txt", "prefix_file2.txt"]
+      assert Enum.sort(Enum.map(result, & &1.key)) == ["prefix_file1.txt", "prefix_file2.txt"]
+    end
+
+    @tag :tmp_dir
+    test "reports when each object was written", %{tmp_dir: tmp_dir} do
+      bucket_dir = Path.join([tmp_dir, "store", "bucket"])
+      File.mkdir_p!(bucket_dir)
+      File.write!(Path.join(bucket_dir, "prefix_file1.txt"), "content1")
+
+      before = DateTime.add(DateTime.utc_now(), -1, :minute)
+      [object] = Enum.to_list(Local.list_objects("bucket", "prefix_"))
+
+      assert DateTime.after?(object.last_modified, before)
     end
   end
 end

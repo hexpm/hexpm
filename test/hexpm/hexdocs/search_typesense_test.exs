@@ -2,6 +2,7 @@ defmodule Hexpm.Hexdocs.Search.TypesenseTest do
   use ExUnit.Case, async: false
 
   import Mox
+  import Hexpm.TestHelpers, only: [capture_final_requests: 1]
 
   alias Hexpm.Hexdocs.Search.Typesense
 
@@ -56,7 +57,12 @@ defmodule Hexpm.Hexdocs.Search.TypesenseTest do
       {:ok, 200, [], ~s({"success":true})}
     end)
 
-    assert :ok = Typesense.index("package", Version.parse!("1.0.0"), "elixir", items)
+    events =
+      capture_final_requests(fn ->
+        assert :ok = Typesense.index("package", Version.parse!("1.0.0"), "elixir", items)
+      end)
+
+    assert events == [%{host: "typesense.example", method: "POST", status: 200}]
   end
 
   test "deletes all search documents for a package version" do
@@ -68,7 +74,12 @@ defmodule Hexpm.Hexdocs.Search.TypesenseTest do
       {:ok, 200, [], ""}
     end)
 
-    assert :ok = Typesense.delete("package", Version.parse!("1.0.0"))
+    events =
+      capture_final_requests(fn ->
+        assert :ok = Typesense.delete("package", Version.parse!("1.0.0"))
+      end)
+
+    assert events == [%{host: "typesense.example", method: "DELETE", status: 200}]
   end
 
   defp restore_env(key, nil), do: Application.delete_env(:hexpm, key)

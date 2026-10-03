@@ -52,17 +52,10 @@ defmodule HexpmWeb.Plugs do
   defp read_body_to_file_loop(conn, fd, size) do
     case read_body(conn, @read_body_opts) do
       {:ok, body, conn} ->
-        :ok = IO.binwrite(fd, body)
-        {conn, size + byte_size(body)}
+        {conn, write_body_chunk(fd, body, size)}
 
       {:more, body, conn} ->
-        new_size = size + byte_size(body)
-
-        if new_size > @read_body_opts[:length] do
-          raise Plug.Parsers.RequestTooLargeError
-        end
-
-        :ok = IO.binwrite(fd, body)
+        new_size = write_body_chunk(fd, body, size)
         read_body_to_file_loop(conn, fd, new_size)
 
       {:error, :timeout} ->
@@ -71,6 +64,17 @@ defmodule HexpmWeb.Plugs do
       {:error, _} ->
         raise Plug.BadRequestError
     end
+  end
+
+  defp write_body_chunk(fd, body, size) do
+    new_size = size + byte_size(body)
+
+    if new_size > @read_body_opts[:length] do
+      raise Plug.Parsers.RequestTooLargeError
+    end
+
+    :ok = IO.binwrite(fd, body)
+    new_size
   end
 
   def user_agent(conn, opts) do

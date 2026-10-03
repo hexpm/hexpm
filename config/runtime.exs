@@ -80,6 +80,15 @@ if config_env() == :prod do
     docs_bucket: System.fetch_env!("HEXPM_DOCS_BUCKET"),
     preview_bucket: System.fetch_env!("HEXPM_PREVIEW_BUCKET"),
     diff_bucket: System.fetch_env!("HEXPM_DIFF_BUCKET"),
+    deletions_bucket: System.fetch_env!("HEXPM_DELETIONS_BUCKET"),
+    slack_webhook_url: System.get_env("HEXPM_SLACK_WEBHOOK_URL"),
+    organization_deletions:
+      (case System.get_env("HEXPM_ORGANIZATION_DELETIONS", "off") do
+         "off" -> :off
+         "report" -> :report
+         "on" -> :on
+         other -> raise "HEXPM_ORGANIZATION_DELETIONS must be off, report or on, got: #{other}"
+       end),
     diff_cache_version: System.fetch_env!("HEXPM_DIFF_CACHE_VERSION") |> String.to_integer(),
     cdn_url: System.fetch_env!("HEXPM_CDN_URL"),
     docs_url: System.fetch_env!("HEXPM_DOCS_URL"),
@@ -94,6 +103,7 @@ if config_env() == :prod do
     dashboard_password: System.fetch_env!("HEXPM_DASHBOARD_PASSWORD"),
     img_url: System.fetch_env!("HEXPM_IMG_URL"),
     img_proxy_secret: System.fetch_env!("HEXPM_IMG_PROXY_SECRET"),
+    load_balancer_secret: System.fetch_env!("HEXPM_LOAD_BALANCER_SECRET"),
     readme_host: System.fetch_env!("HEXPM_README_HOST"),
     readme_url: System.fetch_env!("HEXPM_README_URL"),
     secret_scan_notify: System.get_env("HEXPM_SECRET_SCAN_NOTIFY") == "true"
@@ -116,6 +126,15 @@ if config_env() == :prod do
   config :ex_aws,
     access_key_id: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_ID"),
     secret_access_key: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_SECRET")
+
+  # BroadwaySQS.Producer signs SQS requests with the credentials and region it
+  # gets from aws_credentials, whose env provider takes them from these app env
+  # keys as charlists. The queues are in us-east-1.
+  config :aws_credentials,
+    credential_providers: [:aws_credentials_env],
+    aws_access_key_id: String.to_charlist(System.fetch_env!("HEXPM_AWS_ACCESS_KEY_ID")),
+    aws_secret_access_key: String.to_charlist(System.fetch_env!("HEXPM_AWS_ACCESS_KEY_SECRET")),
+    aws_region: ~c"us-east-1"
 
   # GIT_SHA is baked into the image (see the Dockerfile) and matches the
   # release CI creates in Sentry, so issues resolved via commits auto-resolve

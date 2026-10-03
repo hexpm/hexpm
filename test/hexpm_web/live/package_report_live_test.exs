@@ -10,7 +10,7 @@ defmodule HexpmWeb.PackageReportLiveTest do
   setup :verify_on_exit!
 
   setup do
-    reporter = insert(:user, username: "reporter", full_name: "Report Person")
+    reporter = insert(:user, username: "report_person", full_name: "Report Person")
     maintainer = insert(:user, username: "maintainer", full_name: "Maintain Person")
 
     package =
@@ -29,6 +29,26 @@ defmodule HexpmWeb.PackageReportLiveTest do
 
     assert URI.decode_query(URI.parse(login_path).query) == %{"return" => path}
     assert URI.parse(login_path).path == "/login"
+  end
+
+  test "says the form isn't for bug reports and where reports go", context do
+    {:ok, view, _html} = live(test_login(context.conn, context.reporter), report_path(context))
+
+    assert has_element?(view, "#package-report-not-for-bugs", "This form isn't for bug reports.")
+
+    assert has_element?(
+             view,
+             ~s(#package-report-not-for-bugs a[href="/packages/#{context.package.name}"]),
+             "package page"
+           )
+
+    assert has_element?(
+             view,
+             ~s(a[href="https://cna.erlef.org"]),
+             "Erlang Ecosystem Foundation CNA"
+           )
+
+    assert has_element?(view, "p", "Hex administrators at support@hex.pm")
   end
 
   test "shows all reasons and only requires CNA confirmations for vulnerabilities", context do
@@ -149,6 +169,32 @@ defmodule HexpmWeb.PackageReportLiveTest do
                "address" => Hexpm.Accounts.User.email(context.reporter, :primary)
              }
            ]
+  end
+
+  test "sends a reporter whose session ended back to login instead of filing", context do
+    {:ok, view, _html} = live(test_login(context.conn, context.reporter), report_path(context))
+
+    Mox.stub(Hexpm.HTTP.Mock, :post, fn "https://hcaptcha.com/siteverify", _headers, _params ->
+      {:ok, 200, [{"content-type", "application/json"}], %{"success" => true}}
+    end)
+
+    Mox.allow(Hexpm.HTTP.Mock, self(), view.pid)
+    Repo.update_all(Hexpm.UserSession, set: [revoked_at: DateTime.utc_now()])
+
+    assert {:error, {:redirect, %{to: login_path}}} =
+             render_submit(view, "submit", %{
+               "h-captcha-response" => "captcha",
+               "report" => %{
+                 reason: "other",
+                 summary: "Question",
+                 description: "Report details"
+               }
+             })
+
+    assert URI.parse(login_path).path == "/login"
+    assert URI.decode_query(URI.parse(login_path).query) == %{"return" => report_path(context)}
+    refute Repo.exists?(Report)
+    refute Repo.exists?(OutboxEntry)
   end
 
   test "rejects a report when hCaptcha verification fails", context do

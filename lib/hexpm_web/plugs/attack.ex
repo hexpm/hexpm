@@ -11,6 +11,7 @@ defmodule HexpmWeb.Plugs.Attack do
   @diff_limit 20
   @diff_period 60_000
   @sso_period 10 * 60_000
+  @short_url_period 10 * 60_000
   @varsel_jti_period 300_000
 
   rule "allow local", conn do
@@ -203,6 +204,22 @@ defmodule HexpmWeb.Plugs.Attack do
     )
   end
 
+  # Counts only requests that would write a new short URL; a link that
+  # already has one is answered without touching the bucket. Not broadcast,
+  # so each pod keeps its own count.
+  def short_url_ip_throttle(ip, opts \\ []) do
+    key = {:short_url_ip, ip}
+    time = opts[:time] || System.system_time(:millisecond)
+
+    timed_throttle(
+      key,
+      time: time,
+      storage: @storage,
+      limit: 30,
+      period: @short_url_period
+    )
+  end
+
   # From https://github.com/michalmuskala/plug_attack/blob/812ff857d0958f1a00a711273887d7187ae80a23/lib/rule.ex#L62
   # Adding an option for `now`
   defp timed_throttle(key, opts) do
@@ -317,11 +334,11 @@ defmodule HexpmWeb.Plugs.Attack do
     )
   end
 
-  def tfa_session_throttle(tfa_user_id, opts \\ []) do
+  def tfa_user_throttle(user_id, opts \\ []) do
     time = opts[:time] || System.system_time(:millisecond)
 
     timed_throttle(
-      {:tfa_session, tfa_user_id},
+      {:tfa_user, user_id},
       time: time,
       increment: Keyword.get(opts, :increment, 1),
       storage: @storage,

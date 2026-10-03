@@ -183,9 +183,58 @@ defmodule Hexpm.Accounts.SCIMTest do
 
       refute Organizations.get_role(organization, user)
 
-      assert Repo.get_by(OutboxEntry,
-               group_key: "sso.seats_exhausted:seats_exhausted:#{connection.id}"
-             )
+      assert entry = Repo.get_by(OutboxEntry, group_key: "sso.seats_exhausted:#{connection.id}")
+
+      # Nobody signed in, and the provider is the one that tries again.
+      assert entry.email["text_body"] =~ "through SCIM provisioning"
+      refute entry.email["text_body"] =~ "sign in"
+    end
+
+    test "a failed purchase under expand tells the administrators once", context do
+      organization = seats_full(context.organization)
+
+      connection = %{
+        context.connection
+        | organization: organization,
+          scim_seat_policy: "expand"
+      }
+
+      user = insert(:user)
+
+      expect(Hexpm.Billing.Mock, :update, fn _name, _params ->
+        {:error, %{"errors" => "card declined"}}
+      end)
+
+      assert {:error, :seats_exhausted} =
+               create_user(connection, %{"userName" => hd(user.emails).email})
+
+      assert [entry] =
+               Repo.all(from(e in OutboxEntry, where: e.category == "sso.seats_exhausted"))
+
+      assert entry.subject =~ "could not add a seat"
+      assert entry.email["text_body"] =~ "buying the extra seat failed"
+    end
+
+    test "an unreadable seat count is reported as such", context do
+      organization =
+        context.organization
+        |> Ecto.Changeset.change(billing_seats: nil, billing_active: true)
+        |> Repo.update!()
+
+      connection = %{context.connection | organization: organization}
+      user = insert(:user)
+
+      assert {:error, :seat_limit_unknown} =
+               create_user(connection, %{"userName" => hd(user.emails).email})
+
+      assert [entry] =
+               Repo.all(from(e in OutboxEntry, where: e.category == "sso.seats_exhausted"))
+
+      assert entry.subject =~ "seat count could not be read"
+      refute entry.email["text_body"] =~ "no seats left"
+
+      assert [failure] = SSO.failures(connection)
+      assert failure.code == "seat_limit_unknown"
     end
 
     test "seat exhaustion under expand buys a seat and retries once", context do

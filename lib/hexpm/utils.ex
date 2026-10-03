@@ -246,19 +246,25 @@ defmodule Hexpm.Utils do
   end
 
   # A handful of packages predate the subdomain scheme and carry a name the
-  # docs CDN routes somewhere else, `search` to the search backend and the rest
-  # to their own services. The apex serves those packages directly instead of
-  # redirecting, so it is the only address they have.
+  # docs CDN can't serve from a subdomain. It routes `search` and the rest of
+  # the reserved names to other services, and it reads the host lowercased,
+  # since hostnames are case-insensitive, so a name with capitals reaches
+  # another package or none. The apex serves those packages directly instead
+  # of redirecting, so it is the only address they have.
   @reserved_docs_subdomains ~w(api assets docs preview search staging stats static)
 
   defp public_docs_url(package, "/" <> _ = path) do
     uri = URI.parse(Application.fetch_env!(:hexpm, :docs_url))
 
-    if package in @reserved_docs_subdomains do
-      URI.to_string(%{uri | path: "/#{package}#{path}"})
-    else
+    if docs_subdomain?(package) do
       URI.to_string(%{uri | host: "#{name_to_subdomain(package)}.#{uri.host}", path: path})
+    else
+      URI.to_string(%{uri | path: "/#{package}#{path}"})
     end
+  end
+
+  defp docs_subdomain?(package) do
+    package not in @reserved_docs_subdomains and package =~ ~r/\A[a-z][a-z0-9_]*\z/
   end
 
   @doc """

@@ -15,7 +15,13 @@ config :hexpm,
   docs_private_bucket: {Hexpm.Store.Local, "docs_private_bucket"},
   preview_bucket: {Hexpm.Store.Local, "preview_bucket"},
   diff_bucket: {Hexpm.Store.Local, "diff_bucket"},
+  deletions_bucket: {Hexpm.Store.Local, "deletions_bucket"},
+  slack_webhook_url: nil,
+  organization_deletions: :off,
   diff_cache_version: 1,
+  diff_max_changed_files: 5_000,
+  diff_max_changed_bytes: 32_000_000,
+  diff_timeout: 260_000,
   cdn_impl: Hexpm.CDN.Local,
   hexdocs_search_impl: Hexpm.Hexdocs.Search.Local,
   hexdocs_source_repo_impl: Hexpm.Hexdocs.SourceRepo.GitHub,
@@ -98,6 +104,11 @@ config :ex_aws,
   json_codec: JSON,
   http_client: ExAws.Request.Req,
   req_opts: [finch: [name: Hexpm.Finch]]
+
+# Only BroadwaySQS.Producer asks aws_credentials for credentials, and outside of
+# prod the queues use Broadway.DummyProducer. Prod's providers are set in
+# config/runtime.exs.
+config :aws_credentials, credential_providers: []
 
 config :sentry,
   client: Hexpm.SentryClient,

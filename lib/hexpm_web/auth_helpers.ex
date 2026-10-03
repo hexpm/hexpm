@@ -149,7 +149,7 @@ defmodule HexpmWeb.AuthHelpers do
 
   defp check_totp_rate_limits(conn, user, opts \\ []) do
     ip_result = Attack.tfa_ip_throttle(conn.remote_ip, opts)
-    user_result = Attack.tfa_session_throttle(%{"uid" => user.id}, opts)
+    user_result = Attack.tfa_user_throttle(user.id, opts)
 
     case {ip_result, user_result} do
       {{:block, _}, _} -> {:rate_limited, :ip}

@@ -1,0 +1,7 @@
+<%= OrganizationDataDeleted.heading() %>
+
+<%= OrganizationDataDeleted.body(@organization) %>
+
+<%= OrganizationDataDeleted.next_step() %>
+
+<%= @billing_url %>

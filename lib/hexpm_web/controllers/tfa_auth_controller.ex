@@ -10,37 +10,53 @@ defmodule HexpmWeb.TFAAuthController do
   def create(conn, %{"code" => code}) do
     %{"uid" => uid} = session_data = get_session(conn, "tfa_user_id")
     user = Hexpm.Accounts.Users.get_by_id(uid, [:emails, organizations: :repository])
-    secret = user.tfa.secret
 
-    if Hexpm.Accounts.TFA.token_valid?(secret, code) do
+    case check_rate_limits(conn, uid, increment: 0) do
+      :ok -> verify_code(conn, user, session_data, code)
+      {:rate_limited, scope} -> rate_limited(conn, session_data, scope)
+    end
+  end
+
+  defp verify_code(conn, user, session_data, code) do
+    if Hexpm.Accounts.TFA.token_valid?(user.tfa.secret, code) do
       conn
       |> delete_session("tfa_user_id")
       |> start_session_internal(user)
       |> HexpmWeb.Plugs.Sudo.set_sudo_authenticated()
       |> redirect(to: safe_return_path(session_data["return"]) || ~p"/users/#{user}")
     else
-      SecurityLog.auth_failure(conn, :tfa, :invalid_code, user_id: uid)
+      SecurityLog.auth_failure(conn, :tfa, :invalid_code, user_id: user.id)
 
-      ip_result = Attack.tfa_ip_throttle(conn.remote_ip)
-      session_result = Attack.tfa_session_throttle(session_data)
-
-      case {ip_result, session_result} do
-        {{:block, _}, _} ->
-          conn
-          |> delete_session("tfa_user_id")
-          |> put_flash(:error, "Too many 2FA attempts from your IP. Please try again later.")
-          |> redirect(to: login_path(session_data["return"]))
-
-        {_, {:block, _}} ->
-          conn
-          |> delete_session("tfa_user_id")
-          |> put_flash(:error, "Too many incorrect codes. Please log in again.")
-          |> redirect(to: login_path(session_data["return"]))
-
-        _ ->
-          render_show_error(conn)
+      case check_rate_limits(conn, user.id) do
+        :ok -> render_show_error(conn)
+        {:rate_limited, scope} -> rate_limited(conn, session_data, scope)
       end
     end
+  end
+
+  defp check_rate_limits(conn, user_id, opts \\ []) do
+    ip_result = Attack.tfa_ip_throttle(conn.remote_ip, opts)
+    user_result = Attack.tfa_user_throttle(user_id, opts)
+
+    case {ip_result, user_result} do
+      {{:block, _}, _} -> {:rate_limited, :ip}
+      {_, {:block, _}} -> {:rate_limited, :user}
+      _ -> :ok
+    end
+  end
+
+  defp rate_limited(conn, session_data, :ip) do
+    conn
+    |> delete_session("tfa_user_id")
+    |> put_flash(:error, "Too many 2FA attempts from your IP. Please try again later.")
+    |> redirect(to: login_path(session_data["return"]))
+  end
+
+  defp rate_limited(conn, session_data, :user) do
+    conn
+    |> delete_session("tfa_user_id")
+    |> put_flash(:error, "Too many incorrect codes. Please log in again.")
+    |> redirect(to: login_path(session_data["return"]))
   end
 
   defp render_show(conn) do

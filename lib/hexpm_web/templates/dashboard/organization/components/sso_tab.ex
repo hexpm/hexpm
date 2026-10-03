@@ -249,8 +249,11 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
         <h3 class="font-semibold text-grey-900 dark:text-grey-100">Just-in-time membership</h3>
         <p class="mt-2 text-sm text-grey-600 dark:text-grey-300">
           Adds an existing Hex account to the organization the first time it authenticates through
-          your provider with an address on a verified domain. It never creates a Hex account, and
-          people without one are reached with an invitation instead.
+          your provider with an address on a verified domain. It never creates a Hex account or
+          sends an invitation, so people without an account sign up before their first login.
+          With Microsoft Entra, the application's ID token needs the <code>email</code>
+          and <code>xms_edov</code>
+          optional claims.
         </p>
         <p
           :if={@domains == [] or Enum.all?(@domains, &(!OrganizationDomain.verified?(&1)))}
@@ -416,8 +419,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
         <h3 class="font-semibold text-grey-900 dark:text-grey-100">Enforcement</h3>
         <p class="mt-2 text-sm text-grey-600 dark:text-grey-300">
           Decides whether members have to authenticate through your provider to reach this
-          organization. Optional asks nobody. Pilot asks only the members you mark as enforced on
-          the members tab. Required asks everyone except the exemptions listed there.
+          organization. Optional asks nobody. Pilot asks only the members with Require SSO turned
+          on in the members tab. Required asks everyone except the exemptions listed there.
         </p>
 
         <.form
@@ -501,9 +504,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
               enforcement. Removing the member here still takes their keys with it.
             </li>
             <li :if={@exempt_count > 0}>
-              <span class="font-medium">
-                Exempt members ({@exempt_count}).
-              </span>
+              <span class="font-medium">Exempt members.</span>
               They reach this organization on a Hex password alone. The members tab names them.
             </li>
             <li>
@@ -542,8 +543,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
           keys={@pending_personal_keys}
           organization={@organization}
         >
-          These members follow the organization's mode rather than a per-member setting, so they
-          keep their access until the date above and lose it on it.
+          These members don't have Require SSO turned on, so they keep their access until the date
+          above and lose it on it.
         </.personal_key_table>
       </section>
 

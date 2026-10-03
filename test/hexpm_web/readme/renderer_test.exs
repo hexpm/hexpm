@@ -120,11 +120,24 @@ defmodule HexpmWeb.Readme.RendererTest do
     result = Renderer.render("hexpm", "README.txt", content, "my_package", "1.0.0")
 
     assert result ==
-             "<pre>&lt;img src=&quot;logo.png&quot; onerror=&quot;alert(1)&quot;&gt; &amp; &lt;script&gt;alert(&#39;x&#39;)&lt;/script&gt;</pre>"
+             ~s|<pre class="plain-text">&lt;img src=&quot;logo.png&quot; onerror=&quot;alert(1)&quot;&gt; &amp; &lt;script&gt;alert(&#39;x&#39;)&lt;/script&gt;</pre>|
 
     document = LazyHTML.from_fragment(result)
-    assert [{"pre", [], [^content]}] = LazyHTML.to_tree(document)
+    assert [{"pre", [{"class", "plain-text"}], [^content]}] = LazyHTML.to_tree(document)
     assert [] = LazyHTML.query(document, "img, script") |> Enum.to_list()
+  end
+
+  test "marks only plain text files as plain text" do
+    plain_text =
+      Renderer.render("hexpm", "LICENSE", "Apache License\n", "my_package", "1.0.0")
+      |> LazyHTML.from_fragment()
+
+    assert [_pre] = LazyHTML.query(plain_text, "pre.plain-text") |> Enum.to_list()
+
+    markdown = render("```\nplain code\n```\n") |> LazyHTML.from_fragment()
+
+    assert [_pre] = LazyHTML.query(markdown, "pre") |> Enum.to_list()
+    assert [] = LazyHTML.query(markdown, "pre.plain-text") |> Enum.to_list()
   end
 
   test "renders complete tables with alignment attributes" do
@@ -172,6 +185,6 @@ defmodule HexpmWeb.Readme.RendererTest do
 
     result = Renderer.render("hexpm", "README", content, "my_package", "1.0.0")
 
-    assert result =~ "<pre>caf� au lait</pre>"
+    assert result =~ ~s|<pre class="plain-text">caf� au lait</pre>|
   end
 end

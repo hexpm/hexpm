@@ -27,7 +27,9 @@ defmodule Hexpm.Pwned.HaveIBeenPwned do
     headers = [{"user-agent", "hexpm"}]
     opts = [pool_timeout: @timeout, receive_timeout: @timeout]
 
-    case HTTP.retry(fn -> HTTP.get(url, headers, opts) end, "pwned") do
+    case HTTP.track_request(:get, url, fn ->
+           HTTP.retry(fn -> HTTP.get(url, headers, opts) end, "pwned")
+         end) do
       {:ok, 200, _headers, body} ->
         String.split(body, "\r\n")
 

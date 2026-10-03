@@ -333,11 +333,11 @@ defmodule Hexpm.Accounts.SCIM do
         write(connection, fun, true)
 
       {:error, {:seats_exhausted, _user}} ->
-        SSO.notify_seats_exhausted(connection, :scim)
+        SSO.notify_no_seat(connection, :seats_exhausted, :scim)
         {:error, :seats_exhausted}
 
       {:error, :seat_limit_unknown} = error ->
-        SSO.notify_seats_exhausted(connection, :scim)
+        SSO.notify_no_seat(connection, :seat_limit_unknown, :scim)
         error
 
       {:error, reason} ->
@@ -563,6 +563,9 @@ defmodule Hexpm.Accounts.SCIM do
           # the account here would trust exactly what the design refuses to.
           {:error, :already_member} ->
             {:error, :unverified_member}
+
+          {:error, :too_many_invitations} = error ->
+            error
 
           {:error, %Ecto.Changeset{} = changeset} ->
             {:error, changeset}
