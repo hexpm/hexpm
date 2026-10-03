@@ -164,6 +164,9 @@ defmodule HexpmWeb.SCIM.UserController do
         "The address belongs to an existing member but is not a verified email on hex.pm"
       )
 
+  defp refuse(conn, :too_many_invitations),
+    do: scim_error(conn, 429, "Too many invitations have been sent to this address recently")
+
   defp refuse(conn, :invalid_value),
     do: scim_error(conn, 400, "userName must be an email address", :invalidValue)
 

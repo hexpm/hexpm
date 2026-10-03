@@ -4,7 +4,7 @@ defmodule Hexpm.Store.GCS do
 
   @default_gs_xml_url "https://storage.googleapis.com"
 
-  def list(bucket, prefix) do
+  def list_objects(bucket, prefix) do
     list_stream(bucket, prefix)
   end
 
@@ -139,10 +139,22 @@ defmodule Hexpm.Store.GCS do
 
     doc = SweetXml.parse(body)
     marker = SweetXml.xpath(doc, ~x"/ListBucketResult/NextMarker/text()"s)
-    items = SweetXml.xpath(doc, ~x"/ListBucketResult/Contents/Key/text()"ls)
+
+    items =
+      SweetXml.xpath(doc, ~x"/ListBucketResult/Contents"l,
+        key: ~x"./Key/text()"s,
+        last_modified: ~x"./LastModified/text()"s
+      )
+      |> Enum.map(&%{key: &1.key, last_modified: parse_last_modified(&1.last_modified)})
+
     marker = if marker != "", do: marker
 
     {items, marker}
+  end
+
+  defp parse_last_modified(value) do
+    {:ok, datetime, _offset} = DateTime.from_iso8601(value)
+    datetime
   end
 
   defp filter_nil_values(keyword) do

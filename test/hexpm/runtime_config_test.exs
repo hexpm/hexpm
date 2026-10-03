@@ -11,6 +11,7 @@ defmodule Hexpm.RuntimeConfigTest do
     "HEXPM_DOCS_BUCKET" => "gcs,docs",
     "HEXPM_PREVIEW_BUCKET" => "gcs,preview",
     "HEXPM_DIFF_BUCKET" => "gcs,diff",
+    "HEXPM_DELETIONS_BUCKET" => "gcs,deletions",
     "HEXPM_DIFF_CACHE_VERSION" => "1",
     "HEXPM_CDN_URL" => "https://repo.example.com",
     "HEXPM_DOCS_URL" => "https://docs.example.com",
@@ -25,6 +26,7 @@ defmodule Hexpm.RuntimeConfigTest do
     "HEXPM_DASHBOARD_PASSWORD" => "dashboard-password",
     "HEXPM_IMG_URL" => "https://img.example.com",
     "HEXPM_IMG_PROXY_SECRET" => "img-proxy-secret",
+    "HEXPM_LOAD_BALANCER_SECRET" => "load-balancer-secret",
     "HEXPM_README_HOST" => "readme.hex.example.com",
     "HEXPM_README_URL" => "https://readme.hex.example.com",
     "HEXPM_VARSEL_REPORT_URL" => "https://cna.example.com/reports",
@@ -114,6 +116,44 @@ defmodule Hexpm.RuntimeConfigTest do
              "Worker pods mount every env var web pods do, so unless the key " <>
              "configures the web server itself it belongs in the shared block, " <>
              "where jobs can read it too."
+  end
+
+  test "reads the load balancer secret in prod only" do
+    assert read_runtime(@web_env)[:hexpm][:load_balancer_secret] == "load-balancer-secret"
+
+    for env <- [:dev, :test] do
+      assert read_runtime(@web_env, env)[:hexpm][:load_balancer_secret] == nil
+    end
+  end
+
+  # BroadwaySQS.Producer signs SQS requests with what aws_credentials returns,
+  # and its env provider reads the app env values as charlists
+  test "gives aws_credentials the AWS credentials and the SQS region in prod only" do
+    for env <- [@web_env, @worker_env] do
+      assert read_runtime(env)[:aws_credentials] == [
+               credential_providers: [:aws_credentials_env],
+               aws_access_key_id: ~c"aws-id",
+               aws_secret_access_key: ~c"aws-secret",
+               aws_region: ~c"us-east-1"
+             ]
+    end
+
+    for env <- [:dev, :test] do
+      assert read_runtime(@web_env, env)[:aws_credentials] == nil
+    end
+  end
+
+  test "organization deletions default to off and accept each mode" do
+    assert read_runtime(@worker_env)[:hexpm][:organization_deletions] == :off
+
+    for {value, mode} <- [{"off", :off}, {"report", :report}, {"on", :on}] do
+      config = read_runtime(Map.put(@worker_env, "HEXPM_ORGANIZATION_DELETIONS", value))
+      assert config[:hexpm][:organization_deletions] == mode
+    end
+
+    assert_raise RuntimeError, ~r/must be off, report or on/, fn ->
+      read_runtime(Map.put(@worker_env, "HEXPM_ORGANIZATION_DELETIONS", "yes"))
+    end
   end
 
   test "organization 2FA defaults to off in every environment" do

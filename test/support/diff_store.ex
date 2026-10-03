@@ -1,7 +1,7 @@
 defmodule Hexpm.Diff.TestStore do
   @behaviour Hexpm.Store.Behaviour
 
-  defdelegate list(bucket, prefix), to: Hexpm.Store.Memory
+  defdelegate list_objects(bucket, prefix), to: Hexpm.Store.Memory
   defdelegate size(bucket, key), to: Hexpm.Store.Memory
   defdelegate stream(bucket, key), to: Hexpm.Store.Memory
   defdelegate get_to_file(bucket, key, destination, opts), to: Hexpm.Store.Memory
@@ -28,6 +28,11 @@ defmodule Hexpm.Diff.TestStore do
 
   def put(bucket, key, body, opts) do
     case Application.get_env(:hexpm, :diff_test_store_put) do
+      {marker, :hang} ->
+        if String.contains?(key, marker),
+          do: Process.sleep(:infinity),
+          else: Hexpm.Store.Memory.put(bucket, key, body, opts)
+
       {marker, result} ->
         if String.contains?(key, marker),
           do: result,

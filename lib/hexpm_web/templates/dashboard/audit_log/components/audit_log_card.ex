@@ -325,6 +325,13 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
   end
 
   defp humanize_action(%AuditLog{
+         action: "organization.delete_data",
+         params: %{"organization" => %{"name" => name}}
+       }) do
+    "Deleted the packages and policies of organization #{name}"
+  end
+
+  defp humanize_action(%AuditLog{
          action: "organization.member.add",
          params: %{"user" => %{"username" => username}, "organization" => %{"name" => org}}
        }) do

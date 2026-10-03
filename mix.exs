@@ -37,7 +37,7 @@ defmodule Hexpm.MixProject do
       {:bandit, "~> 1.0"},
       {:bcrypt_elixir, "~> 3.0"},
       {:broadway, "~> 1.0"},
-      {:broadway_sqs, "~> 0.7.0"},
+      {:broadway_sqs, "~> 1.0.0"},
       {:corsica, "~> 2.0"},
       {:cvss, "~> 0.1.0"},
       {:ecto_psql_extras, "~> 0.6"},

@@ -15,26 +15,27 @@ defmodule HexpmWeb.API.RepositoryControllerTest do
       conn = get(build_conn(), "/api/repos")
       result = json_response(conn, 200)
       assert length(result) == 1
+      assert get_resp_header(conn, "cache-control") == ["public, max-age=60"]
     end
 
     test "authorized user", %{repo_user: repo_user} do
-      result =
+      conn =
         build_conn()
         |> put_req_header("authorization", key_for(repo_user))
         |> get("/api/repos")
-        |> json_response(200)
 
-      assert length(result) == 2
+      assert length(json_response(conn, 200)) == 2
+      assert get_resp_header(conn, "cache-control") == ["private, max-age=60"]
     end
 
     test "authorized organization", %{repository1: repository1} do
-      result =
+      conn =
         build_conn()
         |> put_req_header("authorization", key_for(repository1.organization))
         |> get("/api/repos")
-        |> json_response(200)
 
-      assert length(result) == 2
+      assert length(json_response(conn, 200)) == 2
+      assert get_resp_header(conn, "cache-control") == ["private, max-age=60"]
     end
 
     test "sorts organization repositories by name after the public repository", %{

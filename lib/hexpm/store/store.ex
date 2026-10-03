@@ -1,4 +1,6 @@
 defmodule Hexpm.Store do
+  @delete_batch 1000
+
   defp impl_bucket(atom) when is_atom(atom) do
     impl_bucket(Application.get_env(:hexpm, atom))
   end
@@ -16,8 +18,19 @@ defmodule Hexpm.Store do
   end
 
   def list(bucket, prefix) do
+    bucket
+    |> list_objects(prefix)
+    |> Stream.map(& &1.key)
+  end
+
+  @doc """
+  The objects under `prefix` as `%{key: key, last_modified: datetime}`, for a
+  caller that has to know how old an object is. `list/2` is the same listing
+  with only the keys.
+  """
+  def list_objects(bucket, prefix) do
     {impl, bucket} = impl_bucket(bucket)
-    impl.list(bucket, prefix)
+    impl.list_objects(bucket, prefix)
   end
 
   def get(bucket, key, opts \\ []) do
@@ -73,5 +86,44 @@ defmodule Hexpm.Store do
   def delete_many(bucket, keys) do
     {impl, bucket} = impl_bucket(bucket)
     impl.delete_many(bucket, keys)
+  end
+
+  @doc """
+  The object at `key` as `list_objects/2` reports it, or `nil`. For confirming
+  an object is still the one a listing turned up.
+  """
+  def object(bucket, key) do
+    bucket
+    |> list_objects(key)
+    |> Enum.find(&(&1.key == key))
+  end
+
+  @doc """
+  Deletes every object under `prefix` and returns how many there were. The
+  listing is lazy and a prefix can cover a page per file of every version of
+  a package, so the keys go out in batches rather than one call.
+
+  With `written_before: datetime` only the objects the store last wrote
+  before then are deleted.
+  """
+  def delete_prefix(bucket, prefix, opts \\ []) do
+    objects = list_objects(bucket, prefix)
+
+    objects =
+      case Keyword.fetch(opts, :written_before) do
+        {:ok, cutoff} ->
+          Stream.filter(objects, &(DateTime.compare(&1.last_modified, cutoff) == :lt))
+
+        :error ->
+          objects
+      end
+
+    objects
+    |> Stream.map(& &1.key)
+    |> Stream.chunk_every(@delete_batch)
+    |> Enum.reduce(0, fn keys, count ->
+      delete_many(bucket, keys)
+      count + length(keys)
+    end)
   end
 end

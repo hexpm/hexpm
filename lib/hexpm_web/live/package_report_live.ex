@@ -60,7 +60,15 @@ defmodule HexpmWeb.PackageReportLive do
     {:noreply, assign(socket, form: form)}
   end
 
+  # The form outlives the browser session that opened it, and the user is
+  # resolved again before every event, so it can be gone by the time the form
+  # is submitted.
   @impl true
+  def handle_event("submit", _params, %{assigns: %{current_user: nil}} = socket) do
+    return_path = report_path(socket.assigns.repository_name, socket.assigns.package_name)
+    {:noreply, redirect(socket, to: ~p"/login?#{[return: return_path]}")}
+  end
+
   def handle_event("submit", %{"report" => params} = event_params, socket) do
     %{repository_name: repository, package_name: package_name} = socket.assigns
 

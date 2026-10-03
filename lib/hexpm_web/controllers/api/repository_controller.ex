@@ -32,7 +32,7 @@ defmodule HexpmWeb.API.RepositoryController do
 
     when_stale(conn, repository, fn conn ->
       conn
-      |> api_cache(show_cachability(repository))
+      |> api_cache(repository)
       |> render(:show, repository: repository)
     end)
   end
@@ -51,7 +51,4 @@ defmodule HexpmWeb.API.RepositoryController do
 
   defp all_by_organization(nil), do: []
   defp all_by_organization(organization), do: [organization.repository]
-
-  defp show_cachability(%Repository{id: 1}), do: :public
-  defp show_cachability(%Repository{}), do: :private
 end

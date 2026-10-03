@@ -20,7 +20,7 @@ defmodule Hexpm.Security.UpdaterTest do
   test "fetches and imports the advisory archive" do
     expect(Hexpm.HTTP.Mock, :get, fn url, [], opts ->
       assert url == "https://osv-vulnerabilities.storage.googleapis.com/Hex/all.zip"
-      assert opts == [receive_timeout: 60_000]
+      assert opts == [receive_timeout: 60_000, max_body_bytes: 16 * 1024 * 1024]
       {:ok, 200, [], zip_body([])}
     end)
 
@@ -43,6 +43,63 @@ defmodule Hexpm.Security.UpdaterTest do
     expect(Hexpm.HTTP.Mock, :get, fn _url, [], _opts -> {:ok, 200, [], "not a zip"} end)
 
     assert {:error, {:invalid_archive, _reason}} = perform_job(Updater, %{})
+  end
+
+  test "imports stored and deflated entries" do
+    advisory = %{
+      "id" => "GHSA-stored",
+      "summary" => "Stored entry",
+      "modified" => "2024-04-05T01:28:39Z",
+      "published" => "2024-04-03T16:46:30Z",
+      "affected" => [
+        %{"package" => %{"ecosystem" => "Hex", "name" => "oidcc"}, "versions" => ["3.0.0"]}
+      ]
+    }
+
+    stored_files = [{~c"GHSA-stored.json", JSON.encode!(advisory)}]
+
+    deflated_files = [
+      {~c"GHSA-deflated.json", JSON.encode!(%{advisory | "id" => "GHSA-deflated"})}
+    ]
+
+    {:ok, {_, stored}} =
+      :zip.create(~c"all.zip", stored_files, [:memory, {:uncompress, [~c".json"]}])
+
+    {:ok, {_, deflated}} = :zip.create(~c"all.zip", deflated_files, [:memory])
+
+    expect(Hexpm.HTTP.Mock, :get, fn _url, [], _opts -> {:ok, 200, [], stored} end)
+    assert :ok = perform_job(Updater, %{})
+    assert Repo.get(Advisory, "GHSA-stored")
+
+    expect(Hexpm.HTTP.Mock, :get, fn _url, [], _opts -> {:ok, 200, [], deflated} end)
+    assert :ok = perform_job(Updater, %{})
+    assert Repo.get(Advisory, "GHSA-deflated")
+  end
+
+  test "rejects an archive that inflates past the size budget" do
+    {:ok, {_, zip}} =
+      :zip.create(~c"all.zip", [{~c"bomb.json", :binary.copy(<<0>>, 64 * 1024 * 1024 + 1)}], [
+        :memory
+      ])
+
+    assert byte_size(zip) < 1024 * 1024
+    expect(Hexpm.HTTP.Mock, :get, fn _url, [], _opts -> {:ok, 200, [], zip} end)
+
+    assert {:error, {:invalid_archive, :too_large}} = perform_job(Updater, %{})
+  end
+
+  test "rejects an archive with too many entries" do
+    files = for i <- 1..10_001, do: {String.to_charlist("#{i}.json"), "{}"}
+    {:ok, {_, zip}} = :zip.create(~c"all.zip", files, [:memory])
+    expect(Hexpm.HTTP.Mock, :get, fn _url, [], _opts -> {:ok, 200, [], zip} end)
+
+    assert {:error, {:invalid_archive, :too_many_entries}} = perform_job(Updater, %{})
+  end
+
+  test "returns an error for a response over the size limit" do
+    expect(Hexpm.HTTP.Mock, :get, fn _url, [], _opts -> {:error, :response_too_large} end)
+
+    assert {:error, {:request_failed, :response_too_large}} = perform_job(Updater, %{})
   end
 
   defp zip_body(advisories) do

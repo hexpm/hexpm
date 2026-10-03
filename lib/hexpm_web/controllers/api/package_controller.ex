@@ -20,7 +20,7 @@ defmodule HexpmWeb.API.PackageController do
 
     when_stale(conn, packages, [modified: false], fn conn ->
       conn
-      |> api_cache(:public)
+      |> api_cache(repositories)
       |> render(:index, packages: packages)
     end)
   end
@@ -33,7 +33,7 @@ defmodule HexpmWeb.API.PackageController do
         package = %{package | owners: owners}
 
         conn
-        |> api_cache(:public)
+        |> api_cache(conn.assigns.repository)
         |> render(:show, package: package)
       end)
     else

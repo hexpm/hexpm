@@ -8,7 +8,7 @@ defmodule Hexpm.Hexdocs.WorkersTest do
     @behaviour Hexpm.Store.Behaviour
     @replacement_key {__MODULE__, :replacement}
 
-    defdelegate list(bucket, prefix), to: Hexpm.Store.Memory
+    defdelegate list_objects(bucket, prefix), to: Hexpm.Store.Memory
     defdelegate get(bucket, key, opts), to: Hexpm.Store.Memory
     defdelegate size(bucket, key), to: Hexpm.Store.Memory
     defdelegate stream(bucket, key), to: Hexpm.Store.Memory
@@ -42,7 +42,7 @@ defmodule Hexpm.Hexdocs.WorkersTest do
     @behaviour Hexpm.Store.Behaviour
     @hook_key {__MODULE__, :after_read}
 
-    defdelegate list(bucket, prefix), to: Hexpm.Store.Memory
+    defdelegate list_objects(bucket, prefix), to: Hexpm.Store.Memory
     defdelegate get(bucket, key, opts), to: Hexpm.Store.Memory
     defdelegate size(bucket, key), to: Hexpm.Store.Memory
     defdelegate stream(bucket, key), to: Hexpm.Store.Memory
@@ -76,7 +76,7 @@ defmodule Hexpm.Hexdocs.WorkersTest do
     @behaviour Hexpm.Store.Behaviour
     @failing_key {__MODULE__, :failing}
 
-    defdelegate list(bucket, prefix), to: Hexpm.Store.Memory
+    defdelegate list_objects(bucket, prefix), to: Hexpm.Store.Memory
     defdelegate get(bucket, key, opts), to: Hexpm.Store.Memory
     defdelegate size(bucket, key), to: Hexpm.Store.Memory
     defdelegate stream(bucket, key), to: Hexpm.Store.Memory
@@ -253,6 +253,34 @@ defmodule Hexpm.Hexdocs.WorkersTest do
              "verify" => [
                %{"url" => "http://verified-docs.localhost:5002/1.0.0/index.html", "etag" => nil},
                %{"url" => "http://verified-docs.localhost:5002/index.html", "etag" => nil}
+             ]
+           }
+  end
+
+  test "delete verifies the pages of a package with capitals in its name on the apex" do
+    package = insert(:package, name: "verifiedDocs", docs_updated_at: DateTime.utc_now())
+    release = insert(:release, package: package, version: "1.0.0", has_docs: true)
+    key = "docs/#{package.name}-#{release.version}.tar.gz"
+
+    Hexpm.Store.put(
+      :repo_bucket,
+      key,
+      create_docs_tar([{"index.html", "<html><head></head></html>"}])
+    )
+
+    assert :ok = perform_job(Workers.Upload, %{key: key})
+
+    keys = ["docspage/verifiedDocs", "docspage/verifiedDocs/1.0.0"]
+
+    Ecto.Changeset.change(release, has_docs: false) |> Repo.update!()
+    assert :ok = perform_job(Workers.Delete, %{key: key})
+
+    assert purge_args(keys) == %{
+             "service" => "fastly_hexdocs",
+             "keys" => keys,
+             "verify" => [
+               %{"url" => "http://localhost:5002/verifiedDocs/1.0.0/index.html", "etag" => nil},
+               %{"url" => "http://localhost:5002/verifiedDocs/index.html", "etag" => nil}
              ]
            }
   end
@@ -456,6 +484,120 @@ defmodule Hexpm.Hexdocs.WorkersTest do
 
     assert :ok = perform_job(Workers.Delete, %{key: removed_key, generation: "0001"})
     assert Hexpm.Store.get(:docs_bucket, "#{package.name}/index.html") =~ "new"
+  end
+
+  test "deleting latest docs snoozes before promoting a fallback reverted during the download" do
+    package =
+      insert(:package, name: "reverted_fallback_docs", docs_updated_at: DateTime.utc_now())
+
+    fallback = insert(:release, package: package, version: "1.0.0", has_docs: true)
+    removed = insert(:release, package: package, version: "2.0.0", has_docs: false)
+    fallback_key = "docs/#{package.name}-#{fallback.version}.tar.gz"
+    removed_key = "docs/#{package.name}-#{removed.version}.tar.gz"
+    Hexpm.Store.put(:repo_bucket, fallback_key, create_docs_tar([{"index.html", "fallback"}]))
+    Hexpm.Store.put(:docs_bucket, "#{package.name}/index.html", "removed latest")
+
+    app_env(:hexpm, :repo_bucket, {PublishingStore, "repo_bucket"})
+    on_exit(&PublishingStore.clear/0)
+
+    PublishingStore.after_read(fallback_key, fn ->
+      Ecto.Changeset.change(fallback, has_docs: false) |> Repo.update!()
+    end)
+
+    assert {:snooze, 15} = perform_job(Workers.Delete, %{key: removed_key})
+    assert Hexpm.Store.get(:docs_bucket, "#{package.name}/index.html") == "removed latest"
+    assert all_enqueued(worker: Hexpm.CDN.PurgeWorker) == []
+  end
+
+  describe "package lock" do
+    setup do
+      previous = Application.fetch_env!(:hexpm, :skip_advisory_locks)
+      Application.put_env(:hexpm, :skip_advisory_locks, false)
+      on_exit(fn -> Application.put_env(:hexpm, :skip_advisory_locks, previous) end)
+
+      package = insert(:package, name: "locked_docs", docs_updated_at: DateTime.utc_now())
+      release = insert(:release, package: package, version: "1.0.0", has_docs: true)
+      key = "docs/#{package.name}-#{release.version}.tar.gz"
+      Hexpm.Store.put(:repo_bucket, key, create_docs_tar([{"index.html", "1.0.0"}]))
+      %{package: package, release: release, key: key}
+    end
+
+    test "upload snoozes while another job holds the package", %{package: package, key: key} do
+      holder = hold_package(package.name)
+
+      assert {:snooze, 30} = perform_job(Workers.Upload, %{key: key})
+      refute Hexpm.Store.get(:docs_bucket, "#{package.name}/1.0.0/index.html")
+      assert all_enqueued(worker: Hexpm.CDN.PurgeWorker) == []
+
+      release(holder)
+      assert :ok = perform_job(Workers.Upload, %{key: key})
+      assert Hexpm.Store.get(:docs_bucket, "#{package.name}/1.0.0/index.html") =~ "1.0.0"
+    end
+
+    test "delete snoozes while another job holds the package", %{
+      package: package,
+      release: release,
+      key: key
+    } do
+      Hexpm.Store.put(:docs_bucket, "#{package.name}/1.0.0/index.html", "1.0.0")
+      Ecto.Changeset.change(release, has_docs: false) |> Repo.update!()
+      holder = hold_package(package.name)
+
+      assert {:snooze, 30} = perform_job(Workers.Delete, %{key: key})
+      assert Hexpm.Store.get(:docs_bucket, "#{package.name}/1.0.0/index.html") == "1.0.0"
+
+      release(holder)
+      assert :ok = perform_job(Workers.Delete, %{key: key})
+      refute Hexpm.Store.get(:docs_bucket, "#{package.name}/1.0.0/index.html")
+    end
+
+    test "sitemap snoozes while another job holds the package", %{package: package, key: key} do
+      holder = hold_package(package.name)
+
+      assert {:snooze, 30} = perform_job(Workers.Sitemap, %{key: key})
+      refute Hexpm.Store.get(:docs_bucket, "#{package.name}/sitemap.xml")
+
+      release(holder)
+      assert :ok = perform_job(Workers.Sitemap, %{key: key})
+      assert Hexpm.Store.get(:docs_bucket, "#{package.name}/sitemap.xml")
+    end
+
+    test "upload runs beside a job holding another package", %{package: package, key: key} do
+      holder = hold_package("other_locked_docs")
+
+      assert :ok = perform_job(Workers.Upload, %{key: key})
+      assert Hexpm.Store.get(:docs_bucket, "#{package.name}/1.0.0/index.html") =~ "1.0.0"
+
+      release(holder)
+    end
+  end
+
+  # Holds the package's lock on its own connection until released. A session
+  # lock, so it is free by the time the holder replies.
+  defp hold_package(package) do
+    parent = self()
+    params = [Hexpm.RepoBase.advisory_lock_key(:hexdocs), :erlang.phash2({"hexpm", package})]
+
+    holder =
+      spawn_link(fn ->
+        :ok = Ecto.Adapters.SQL.Sandbox.checkout(Hexpm.RepoBase)
+        Hexpm.RepoBase.query!("SELECT pg_advisory_lock($1, $2)", params)
+        send(parent, :locked)
+
+        receive do
+          :release ->
+            Hexpm.RepoBase.query!("SELECT pg_advisory_unlock($1, $2)", params)
+            send(parent, :released)
+        end
+      end)
+
+    assert_receive :locked
+    holder
+  end
+
+  defp release(holder) do
+    send(holder, :release)
+    assert_receive :released
   end
 
   defp use_replacing_store(key, replacement) do

@@ -172,6 +172,27 @@ defmodule HexpmWeb.SCIM.UserControllerTest do
            |> response(201)
   end
 
+  test "an address invited too often recently is a 429", context do
+    inviter = insert(:user)
+
+    for _ <- 1..5 do
+      {:ok, _invitation} =
+        Hexpm.Accounts.OrganizationInvitations.invite(
+          insert(:organization),
+          %{"email" => "new@example.com", "role" => "read"},
+          inviter,
+          audit: audit_data(inviter)
+        )
+    end
+
+    body =
+      scim_conn(context.token)
+      |> post("/scim/v2/Users", scim_body(%{"userName" => "new@example.com"}))
+      |> scim_json_response(429)
+
+    assert body["detail"] =~ "Too many invitations"
+  end
+
   test "seat exhaustion is a 409 naming the fix", context do
     Repo.update!(Ecto.Changeset.change(context.organization, billing_seats: 1))
     user = insert(:user)

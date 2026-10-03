@@ -570,15 +570,25 @@ defmodule Hexpm.Accounts.UsersTest do
 
       request = Repo.get_by!(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
       user = Repo.preload(user, :emails)
-      assert_email_sent(Hexpm.Emails.account_deletion_request(user, request))
+      key = account_deletion_key()
 
       request_log = Repo.get_by(Hexpm.Accounts.AuditLog, action: "user.delete.request")
       assert request_log.user_id == user.id
 
-      assert :ok = Users.delete_confirm(user, request.key, audit: audit_data(user))
+      assert :ok = Users.delete_confirm(user, key, audit: audit_data(user))
       refute Repo.get(User, user.id)
       assert Repo.exists?(Hexpm.Accounts.ReservedUsername.by_name(username))
       refute Repo.get(Hexpm.Accounts.AccountDeletionRequest, request.id)
+    end
+
+    test "stores a hash of the mailed key, never the key" do
+      user = insert(:user)
+      :ok = Users.delete_request(user, audit: audit_data(user))
+      key = account_deletion_key()
+
+      request = Repo.get_by!(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
+      assert request.key_hash == :crypto.hash(:sha256, key)
+      assert request.key == nil
     end
 
     test "a new request replaces the previous one" do
@@ -586,6 +596,7 @@ defmodule Hexpm.Accounts.UsersTest do
 
       assert :ok = Users.delete_request(user, audit: audit_data(user))
       first = Repo.get_by!(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
+      first_key = account_deletion_key()
 
       assert :ok = Users.delete_request(user, audit: audit_data(user))
       second = Repo.get_by!(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
@@ -593,7 +604,7 @@ defmodule Hexpm.Accounts.UsersTest do
       assert first.id != second.id
 
       assert {:error, :invalid_request} =
-               Users.delete_confirm(user, first.key, audit: audit_data(user))
+               Users.delete_confirm(user, first_key, audit: audit_data(user))
 
       assert Repo.get(User, user.id)
     end
@@ -603,7 +614,7 @@ defmodule Hexpm.Accounts.UsersTest do
       attacker = insert(:user)
 
       assert :ok = Users.delete_request(user, audit: audit_data(user))
-      request = Repo.get_by!(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
+      key = account_deletion_key()
 
       # wrong key
       assert {:error, :invalid_request} =
@@ -611,10 +622,10 @@ defmodule Hexpm.Accounts.UsersTest do
 
       # foreign key: attacker's own request used against user's account
       assert :ok = Users.delete_request(attacker, audit: audit_data(attacker))
-      attacker_request = Repo.get_by!(Hexpm.Accounts.AccountDeletionRequest, user_id: attacker.id)
+      attacker_key = account_deletion_key()
 
       assert {:error, :invalid_request} =
-               Users.delete_confirm(user, attacker_request.key, audit: audit_data(user))
+               Users.delete_confirm(user, attacker_key, audit: audit_data(user))
 
       # expired key
       Repo.update_all(Hexpm.Accounts.AccountDeletionRequest,
@@ -622,7 +633,7 @@ defmodule Hexpm.Accounts.UsersTest do
       )
 
       assert {:error, :invalid_request} =
-               Users.delete_confirm(user, request.key, audit: audit_data(user))
+               Users.delete_confirm(user, key, audit: audit_data(user))
 
       assert Repo.get(User, user.id)
     end
@@ -663,7 +674,7 @@ defmodule Hexpm.Accounts.UsersTest do
     test "changing the primary email deletes the pending request" do
       user = insert(:user)
       assert :ok = Users.delete_request(user, audit: audit_data(user))
-      request = Repo.get_by!(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
+      key = account_deletion_key()
 
       {:ok, user} = Users.add_email(user, %{email: "new@example.com"}, audit: audit_data(user))
       new_email = Enum.find(user.emails, &(&1.email == "new@example.com"))
@@ -676,7 +687,7 @@ defmodule Hexpm.Accounts.UsersTest do
       user = Users.get_by_id(user.id, [:emails])
 
       assert {:error, :invalid_request} =
-               Users.delete_confirm(user, request.key, audit: audit_data(user))
+               Users.delete_confirm(user, key, audit: audit_data(user))
     end
 
     test "password reset deletes pending requests" do
@@ -685,12 +696,12 @@ defmodule Hexpm.Accounts.UsersTest do
 
       :ok = Users.password_reset_init(user.username, audit: audit_data(user))
       user = Users.get_by_id(user.id, [:emails, :password_resets])
-      [reset] = user.password_resets
+      reset_key = password_reset_key()
 
       :ok =
         Users.password_reset_finish(
           user.username,
-          reset.key,
+          reset_key,
           %{
             "username" => user.username,
             "password" => "new_password_123",
@@ -706,13 +717,13 @@ defmodule Hexpm.Accounts.UsersTest do
     test "confirm is blocked when eligibility changed after the request" do
       user = insert(:user)
       assert :ok = Users.delete_request(user, audit: audit_data(user))
-      request = Repo.get_by!(Hexpm.Accounts.AccountDeletionRequest, user_id: user.id)
+      key = account_deletion_key()
 
       organization = insert(:organization)
       insert(:organization_user, user: user, organization: organization, role: "admin")
 
       assert {:error, {:organizations, _}} =
-               Users.delete_confirm(user, request.key, audit: audit_data(user))
+               Users.delete_confirm(user, key, audit: audit_data(user))
 
       assert Repo.get(User, user.id)
     end
@@ -723,6 +734,34 @@ defmodule Hexpm.Accounts.UsersTest do
 
       assert {:error, :invalid_request} = Users.delete_confirm(user, nil, audit: audit_data(user))
       assert Repo.get(User, user.id)
+    end
+  end
+
+  describe "email verification keys" do
+    test "stores a hash of the mailed key, never the key" do
+      user = insert(:user)
+      {:ok, user} = Users.add_email(user, %{email: "new@example.com"}, audit: audit_data(user))
+      key = email_verification_key()
+
+      email = Repo.get_by!(Hexpm.Accounts.Email, email: "new@example.com")
+      assert email.verification_key_hash == :crypto.hash(:sha256, key)
+      assert email.verification_key == nil
+
+      assert :ok = Users.verify_email(user.username, "new@example.com", key)
+      refute Repo.get_by!(Hexpm.Accounts.Email, email: "new@example.com").verification_key_hash
+    end
+
+    test "resending mails a new key and the old one stops working" do
+      user = insert(:user)
+      {:ok, user} = Users.add_email(user, %{email: "new@example.com"}, audit: audit_data(user))
+      old_key = email_verification_key()
+
+      assert :ok = Users.resend_verify_email(user, %{"email" => "new@example.com"})
+      new_key = email_verification_key()
+
+      refute new_key == old_key
+      assert :error = Users.verify_email(user.username, "new@example.com", old_key)
+      assert :ok = Users.verify_email(user.username, "new@example.com", new_key)
     end
   end
 

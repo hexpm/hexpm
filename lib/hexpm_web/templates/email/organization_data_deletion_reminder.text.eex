@@ -1,0 +1,7 @@
+<%= OrganizationDataDeletionReminder.heading(@days) %>
+
+<%= OrganizationDataDeletionReminder.body(@organization, @deletion_at, @days) %>
+
+<%= OrganizationDataDeletionReminder.next_step() %>
+
+<%= @billing_url %>

@@ -87,6 +87,10 @@ defmodule Hexpm.Permissions do
   defp valid_scope?(scope) when byte_size(scope) > 255, do: false
 
   defp valid_scope?(scope) do
+    not String.match?(scope, ~r/\s/u) and valid_scope_shape?(scope)
+  end
+
+  defp valid_scope_shape?(scope) do
     case String.split(scope, ":", parts: 2) do
       [scope_name] ->
         scope_name in @all_scopes

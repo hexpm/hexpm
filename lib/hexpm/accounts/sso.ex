@@ -845,7 +845,7 @@ defmodule Hexpm.Accounts.SSO do
       callback_available?(%{transaction | connection: connection}) == :ok and
       transaction_configuration_available?(transaction, connection) == :ok and
       connection.jit_seat_policy == "expand" and
-      jit_admits(connection, claims.email, claims[:email_verified] == true) == :ok and
+      jit_admits(connection, claims.email, email_verified?(connection, claims)) == :ok and
       is_nil(Organizations.get_role(connection.organization, user))
   end
 
@@ -1760,7 +1760,7 @@ defmodule Hexpm.Accounts.SSO do
       # JIT on there is no consent left to ask for, so re-admit rather than
       # unlinking and making them start over.
       is_nil(locked_member(organization, identity.user)) and
-          jit_admits(connection, claims.email, claims[:email_verified] == true) == :ok ->
+          jit_admits(connection, claims.email, email_verified?(connection, claims)) == :ok ->
         case join_member(connection, organization, identity.user, audit_data) do
           :ok ->
             login!(transaction, connection, identity, claims, user_session_id, audit_data)
@@ -1848,7 +1848,7 @@ defmodule Hexpm.Accounts.SSO do
   # turns away cannot join however many seats there are, and telling the
   # administrators to add one would not help.
   defp begin_jit_link!(transaction, connection, claims, current_user) do
-    case jit_admits(connection, claims.email, claims[:email_verified] == true) do
+    case jit_admits(connection, claims.email, email_verified?(connection, claims)) do
       :ok ->
         with :ok <- Hexpm.Accounts.OrganizationTFA.admit(connection.organization, current_user),
              {:ok, _usage} <- Seats.claim(connection.organization, unknown: :deny) do
@@ -1940,6 +1940,16 @@ defmodule Hexpm.Accounts.SSO do
       true ->
         :ok
     end
+  end
+
+  # Microsoft Entra sends `email_verified` only when a claims-mapping policy
+  # emits it, with whatever value the policy sets, so from Entra it counts for
+  # nothing. `xms_edov` is Entra saying the owner of the address's domain
+  # verified it, and no policy can emit or override a claim named `xms_*`.
+  defp email_verified?(connection, claims) do
+    if Issuer.entra?(connection.issuer),
+      do: claims[:xms_edov] == true,
+      else: claims[:email_verified] == true
   end
 
   defp maybe_notify_no_seat(connection, reason)

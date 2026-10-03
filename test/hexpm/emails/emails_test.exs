@@ -19,6 +19,37 @@ defmodule Hexpm.EmailsTest do
     end
   end
 
+  describe "organization data deletion emails" do
+    test "render the dates and the billing page" do
+      deletion_at = ~U[2027-03-01 05:00:00Z]
+
+      email =
+        Emails.organization_data_deletion_scheduled("acme", deletion_at, ["a@example.com"])
+
+      assert email.subject == "Hex.pm - The packages of acme will be deleted on March 1, 2027"
+      assert email.text_body =~ "scheduled for deletion on March 1, 2027"
+      assert email.text_body =~ "The organization, its members and its API keys stay."
+      assert email.html_body =~ "/dashboard/orgs/acme/billing"
+
+      email =
+        Emails.organization_data_deletion_reminder("acme", deletion_at, 7, ["a@example.com"])
+
+      assert email.subject == "Hex.pm - The packages of acme will be deleted in 7 days"
+      assert email.text_body =~ "are deleted in 7 days, on March 1, 2027"
+
+      email =
+        Emails.organization_data_deletion_reminder("acme", deletion_at, 1, ["a@example.com"])
+
+      assert email.subject == "Hex.pm - The packages of acme will be deleted tomorrow"
+      assert email.html_body =~ "Organization Packages Deleted Tomorrow"
+
+      email = Emails.organization_data_deleted("acme", ["a@example.com"])
+      assert email.subject == "Hex.pm - The packages of acme have been deleted"
+      assert email.text_body =~ "The organization, its members and its API keys are still there."
+      assert email.text_body =~ "/dashboard/orgs/acme/billing"
+    end
+  end
+
   describe "html layout" do
     test "header does not rely on flexbox" do
       refute package_published_email().html_body =~ "display: flex"

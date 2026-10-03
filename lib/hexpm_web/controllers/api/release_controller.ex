@@ -94,7 +94,7 @@ defmodule HexpmWeb.API.ReleaseController do
 
       when_stale(conn, release, fn conn ->
         conn
-        |> api_cache(:public)
+        |> api_cache(conn.assigns.repository)
         |> render(:show, release: release)
       end)
     else
@@ -167,14 +167,14 @@ defmodule HexpmWeb.API.ReleaseController do
 
     conn
     |> put_resp_header("location", location)
-    |> api_cache(:public)
+    |> api_cache(conn.assigns.repository)
     |> put_status(201)
     |> render(:show, release: release)
   end
 
   defp publish_result({:ok, %{action: :update, release: release}}, conn) do
     conn
-    |> api_cache(:public)
+    |> api_cache(conn.assigns.repository)
     |> render(:show, release: release)
   end
 
@@ -211,18 +211,25 @@ defmodule HexpmWeb.API.ReleaseController do
   defp release_metadata(body_path, mode \\ :validate)
 
   defp release_metadata(body_path, :metadata) do
-    unpack_release_metadata(body_path, :none)
+    with :ok <- check_tarball(Hexpm.TarballLimits.check_package_outer(body_path)) do
+      unpack_release_metadata(body_path, :none)
+    end
   end
 
   defp release_metadata(body_path, :validate) do
-    tmp_dir = Hexpm.TmpDir.tmp_dir("release-tarball")
+    with :ok <- check_tarball(Hexpm.TarballLimits.check_package(body_path)) do
+      tmp_dir = Hexpm.TmpDir.tmp_dir("release-tarball")
 
-    try do
-      unpack_release_metadata(body_path, String.to_charlist(tmp_dir))
-    after
-      Hexpm.TmpDir.cleanup()
+      try do
+        unpack_release_metadata(body_path, String.to_charlist(tmp_dir))
+      after
+        Hexpm.TmpDir.cleanup()
+      end
     end
   end
+
+  defp check_tarball(:ok), do: :ok
+  defp check_tarball({:error, reason}), do: {:error, Hexpm.TarballLimits.format_error(reason)}
 
   defp unpack_release_metadata(body_path, output) do
     case :hex_tarball.unpack({:file, String.to_charlist(body_path)}, output) do

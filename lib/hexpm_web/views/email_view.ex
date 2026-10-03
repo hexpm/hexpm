@@ -18,6 +18,11 @@ defmodule HexpmWeb.EmailView do
 
     def greeting(username), do: "Hello #{username}"
 
+    def date(datetime), do: Calendar.strftime(datetime, "%B %-d, %Y")
+
+    def in_days(1), do: "tomorrow"
+    def in_days(days), do: "in #{days} days"
+
     def support_email(), do: "support@hex.pm"
 
     # Smart link wrapping - add <a> only for HTML format
@@ -403,6 +408,43 @@ defmodule HexpmWeb.EmailView do
 
     def questions(organization, _username, _unlinked_by) do
       "If you don't know why this happened, ask an administrator of the #{organization} organization."
+    end
+  end
+
+  defmodule OrganizationDataDeletionScheduled do
+    def heading(), do: "Organization Packages Scheduled for Deletion"
+
+    def body(organization, deletion_at) do
+      "The #{organization} organization on Hex.pm has had no active billing for 90 days, and its private packages are scheduled for deletion on #{Common.date(deletion_at)}. The packages, their releases and documentation, and the organization's policies will be removed for good. The organization, its members and its API keys stay."
+    end
+
+    def next_step() do
+      "To keep the packages, resume billing from the organization's billing page before then. A reminder is sent a week before and again the day before."
+    end
+  end
+
+  defmodule OrganizationDataDeletionReminder do
+    def heading(days),
+      do: "Organization Packages Deleted #{Common.in_days(days) |> String.capitalize()}"
+
+    def body(organization, deletion_at, days) do
+      "The private packages of the #{organization} organization on Hex.pm are deleted #{Common.in_days(days)}, on #{Common.date(deletion_at)}, because it has had no active billing for 90 days. The packages, their releases and documentation, and the organization's policies are then removed for good. The organization, its members and its API keys stay."
+    end
+
+    def next_step() do
+      "To keep the packages, resume billing from the organization's billing page before then."
+    end
+  end
+
+  defmodule OrganizationDataDeleted do
+    def heading(), do: "Organization Packages Deleted"
+
+    def body(organization) do
+      "The private packages of the #{organization} organization on Hex.pm have been deleted after 90 days without active billing, with their releases and documentation and the organization's policies. The organization, its members and its API keys are still there. Packages published to the public repository by its members are not affected."
+    end
+
+    def next_step() do
+      "To publish packages to the organization again, resume billing from its billing page. Reply to this email if this was not expected."
     end
   end
 

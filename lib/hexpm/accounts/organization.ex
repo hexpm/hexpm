@@ -14,6 +14,9 @@ defmodule Hexpm.Accounts.Organization do
     field :tfa_required_at, :utc_datetime_usec
     field :tfa_policy_updated_at, :utc_datetime_usec
     field :tfa_policy_revision, :integer, default: 0
+    field :billing_inactive_since, :utc_datetime_usec
+    field :deletion_scheduled_at, :utc_datetime_usec
+    field :deletion_notices, {:array, :string}, default: []
     timestamps()
 
     has_one :repository, Repository
@@ -34,7 +37,6 @@ defmodule Hexpm.Accounts.Organization do
 
   def changeset(struct, params) do
     cast(struct, params, ~w(name)a)
-    |> put_change(:trial_end, default_trial_end())
     |> validate_required(~w(name)a)
     |> unique_constraint(:name)
     |> update_change(:name, &String.downcase/1)
@@ -42,6 +44,19 @@ defmodule Hexpm.Accounts.Organization do
     |> validate_length(:name, count: :bytes, max: 255)
     |> validate_format(:name, @name_regex)
     |> validate_exclusion(:name, @reserved_names)
+    |> validate_name_not_reserved()
+  end
+
+  defp validate_name_not_reserved(changeset) do
+    prepare_changes(changeset, fn changeset ->
+      name = get_field(changeset, :name)
+
+      if name && changeset.repo.exists?(ReservedUsername.by_name(name)) do
+        add_error(changeset, :name, "has already been taken")
+      else
+        changeset
+      end
+    end)
   end
 
   def build_from_user(user) do
@@ -145,8 +160,22 @@ defmodule Hexpm.Accounts.Organization do
     active or trialing?(organization)
   end
 
+  def trialing?(%Organization{trial_end: nil}), do: false
+
   def trialing?(%Organization{trial_end: trial_end}) do
     DateTime.compare(trial_end, DateTime.utc_now()) == :gt
+  end
+
+  # The trial starts when the organization sets up billing. A longer trial
+  # set by hand is kept.
+  def start_trial(%Organization{trial_end: trial_end} = organization) do
+    start = default_trial_end()
+
+    if trial_end && DateTime.after?(trial_end, start) do
+      change(organization)
+    else
+      change(organization, trial_end: start)
+    end
   end
 
   defp default_trial_end() do

@@ -175,6 +175,13 @@ defmodule HexpmWeb.Readme.SanitizerTest do
       assert sanitize(html) =~ ~s[class="language-elixir"]
     end
 
+    test "keeps only the alert title class on paragraphs" do
+      html = ~s[<p class="markdown-alert-title">Note</p>]
+      assert sanitize(html) == html
+
+      assert sanitize(~s[<p class="x">Text</p>]) == "<p>Text</p>"
+    end
+
     test "strips comments" do
       html = "<p>before</p><!-- comment --><p>after</p>"
       assert sanitize(html) == "<p>before</p><p>after</p>"

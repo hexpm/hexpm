@@ -14,10 +14,11 @@ defmodule Hexpm.ConcurrencyCase do
   import Ecto.Query, only: [from: 2]
 
   alias Ecto.Adapters.SQL.Sandbox
-  alias Hexpm.Accounts.{AuditLog, Email, Organization, OrganizationUser, User}
+  alias Hexpm.Accounts.{AuditLog, Email, Organization, OrganizationUser, PasswordReset, User}
   alias Hexpm.Accounts.SSO.{Connection, Failure, Identity, OrgSession}
   alias Hexpm.Accounts.SSO.Transaction, as: SSOTransaction
   alias Hexpm.Emails.OutboxEntry
+  alias Hexpm.Repository.{Package, PackageOwner}
   alias Hexpm.UserSession
 
   # Nothing here is rolled back, so the rows these tests commit have to be
@@ -32,9 +33,12 @@ defmodule Hexpm.ConcurrencyCase do
     OutboxEntry,
     Oban.Job,
     AuditLog,
+    PackageOwner,
+    Package,
     UserSession,
     OrganizationUser,
     Organization,
+    PasswordReset,
     Email,
     User
   ]

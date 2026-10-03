@@ -1173,12 +1173,12 @@ defmodule Hexpm.Accounts.SSOTest do
                |> complete(valid_claims(), context.member, user_session.id)
 
       :ok = Users.password_reset_init(context.member.username, audit: audit_data(context.member))
-      [reset] = Users.get_by_id(context.member.id, [:emails, :password_resets]).password_resets
+      reset_key = password_reset_key()
 
       :ok =
         Users.password_reset_finish(
           context.member.username,
-          reset.key,
+          reset_key,
           %{
             "username" => context.member.username,
             "password" => "new_password_123",

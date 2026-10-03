@@ -564,6 +564,9 @@ defmodule Hexpm.Accounts.SCIM do
           {:error, :already_member} ->
             {:error, :unverified_member}
 
+          {:error, :too_many_invitations} = error ->
+            error
+
           {:error, %Ecto.Changeset{} = changeset} ->
             {:error, changeset}
         end

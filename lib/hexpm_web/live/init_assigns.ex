@@ -4,12 +4,14 @@ defmodule HexpmWeb.Live.InitAssigns do
   session in the same way the `login/2` plug does for controllers.
 
   The mount-time resolution is a snapshot and a connected socket outlives it, so
-  the same resolution runs again before every `handle_params` and
-  `handle_event`. A session revoked or expired since mount resolves to nobody,
-  and a membership removed since mount is absent from the reloaded association.
-  An idle socket requests nothing, so refreshing on the events that do bounds
-  every authorization input to one event of staleness, the same bound a
-  controller gets per request.
+  the same resolution runs again before every `handle_params`, `handle_event`
+  and `handle_info`. A session revoked or expired since mount resolves to
+  nobody, and a membership removed since mount is absent from the reloaded
+  association. `handle_info` is included because a view can deliver content
+  from its own messages, such as a diff that finishes generating while the view
+  polls for it. An idle socket requests nothing, so refreshing on the callbacks
+  that do bounds every authorization input to one callback of staleness, the
+  same bound a controller gets per request.
   """
 
   import Phoenix.Component, only: [assign: 3, assign_new: 3]
@@ -41,6 +43,9 @@ defmodule HexpmWeb.Live.InitAssigns do
       {:cont, refresh(socket, session)}
     end)
     |> attach_hook(:refresh_auth_event, :handle_event, fn _event, _params, socket ->
+      {:cont, refresh(socket, session)}
+    end)
+    |> attach_hook(:refresh_auth_info, :handle_info, fn _message, socket ->
       {:cont, refresh(socket, session)}
     end)
   end

@@ -211,6 +211,20 @@ defmodule Hexpm.UtilsTest do
       assert Utils.docs_html_url(hexpm, package, release) ==
                "http://localhost:5002/search/0.3.0/"
     end
+
+    # The docs CDN reads the host lowercased, so addressBook.hexdocs.pm serves
+    # the docs of addressbook.
+    test "keeps packages with capitals in their name on the apex" do
+      assert Utils.docs_html_url("hexpm", "addressBook", "/index.html") ==
+               "http://localhost:5002/addressBook/index.html"
+
+      hexpm = %Hexpm.Repository.Repository{id: 1, name: "hexpm"}
+      package = %Hexpm.Repository.Package{name: "yEnc", repository: hexpm}
+      release = %Hexpm.Repository.Release{version: Version.parse!("0.1.0")}
+
+      assert Utils.docs_html_url(hexpm, package, release) ==
+               "http://localhost:5002/yEnc/0.1.0/"
+    end
   end
 
   describe "safe_page/3" do

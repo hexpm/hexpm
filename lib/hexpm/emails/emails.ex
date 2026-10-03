@@ -1,5 +1,7 @@
 defmodule Hexpm.Emails do
   use Phoenix.Swoosh, view: HexpmWeb.EmailView
+
+  alias HexpmWeb.EmailView.Common
   alias Hexpm.Accounts.{Email, Organization, User}
 
   def owner_added(package, owners, owner) do
@@ -349,6 +351,42 @@ defmodule Hexpm.Emails do
     |> assign(:provider_email, provider_email)
     |> assign(:username, username)
     |> render_body(:sso_email_mismatch)
+  end
+
+  def organization_data_deletion_scheduled(organization, deletion_at, recipients) do
+    base_email(:organization_data_deletion_scheduled)
+    |> email_to(recipients)
+    |> subject(
+      "Hex.pm - The packages of #{organization} will be deleted on #{Common.date(deletion_at)}"
+    )
+    |> assign(:organization, organization)
+    |> assign(:deletion_at, deletion_at)
+    |> assign(:billing_url, billing_url(organization))
+    |> render_body(:organization_data_deletion_scheduled)
+  end
+
+  def organization_data_deletion_reminder(organization, deletion_at, days, recipients) do
+    base_email(:organization_data_deletion_reminder)
+    |> email_to(recipients)
+    |> subject("Hex.pm - The packages of #{organization} will be deleted #{Common.in_days(days)}")
+    |> assign(:organization, organization)
+    |> assign(:deletion_at, deletion_at)
+    |> assign(:days, days)
+    |> assign(:billing_url, billing_url(organization))
+    |> render_body(:organization_data_deletion_reminder)
+  end
+
+  def organization_data_deleted(organization, recipients) do
+    base_email(:organization_data_deleted)
+    |> email_to(recipients)
+    |> subject("Hex.pm - The packages of #{organization} have been deleted")
+    |> assign(:organization, organization)
+    |> assign(:billing_url, billing_url(organization))
+    |> render_body(:organization_data_deleted)
+  end
+
+  defp billing_url(organization) do
+    HexpmWeb.EmailView.email_url("/dashboard/orgs/#{organization}/billing")
   end
 
   def package_published(owners, publisher, name, version) do

@@ -41,6 +41,14 @@ defmodule HexpmWeb.ReadmeView do
     .readme code:not(pre code) { padding: 0.125rem 0.375rem; font-size: 0.875rem; background-color: var(--color-grey-50); border-radius: 0.25rem; font-family: ui-monospace, monospace; color: var(--color-grey-800); }
     .readme pre code { padding: 0; background: transparent; font-size: 0.875rem; }
     .readme blockquote { padding: 0 1em; color: var(--color-grey-500); border-left: 0.25em solid var(--color-grey-100); margin-bottom: 16px; }
+    .readme .markdown-alert { --alert-color: var(--color-grey-500); padding: 0.5rem 1em; margin-bottom: 16px; border-left: 0.25em solid var(--alert-color); }
+    .readme .markdown-alert > :last-child { margin-bottom: 0; }
+    .readme .markdown-alert-title { margin-bottom: 4px; font-weight: 600; color: var(--alert-color); }
+    .readme .markdown-alert-note { --alert-color: #0969da; }
+    .readme .markdown-alert-tip { --alert-color: #1a7f37; }
+    .readme .markdown-alert-important { --alert-color: #8250df; }
+    .readme .markdown-alert-warning { --alert-color: #9a6700; }
+    .readme .markdown-alert-caution { --alert-color: #d1242f; }
     .readme ul, .readme ol { padding-left: 2em; margin-bottom: 16px; }
     .readme li { margin-top: 0.25em; }
     .readme table { border-collapse: collapse; border-spacing: 0; margin-bottom: 16px; display: block; width: max-content; max-width: 100%; overflow: auto; }
@@ -58,11 +66,17 @@ defmodule HexpmWeb.ReadmeView do
     .readme li:has(> input[type="checkbox"]) { list-style: none; }
     html[data-theme="light"] .color-scheme-dark { display: none !important; }
     html[data-theme="dark"] .color-scheme-light { display: none !important; }
+    html[data-theme="dark"] { color-scheme: dark; }
     html[data-theme="dark"] body { color: var(--color-grey-200); background-color: var(--color-grey-800); }
     html[data-theme="dark"] .readme h1, html[data-theme="dark"] .readme h2 { border-bottom-color: var(--color-grey-600); }
     html[data-theme="dark"] .readme a { color: var(--color-blue-300); }
     html[data-theme="dark"] .readme code:not(pre code) { background-color: var(--color-grey-900); color: var(--color-grey-100); }
     html[data-theme="dark"] .readme blockquote { color: var(--color-grey-300); border-left-color: var(--color-grey-500); }
+    html[data-theme="dark"] .readme .markdown-alert-note { --alert-color: #4493f8; }
+    html[data-theme="dark"] .readme .markdown-alert-tip { --alert-color: #3fb950; }
+    html[data-theme="dark"] .readme .markdown-alert-important { --alert-color: #ab7df8; }
+    html[data-theme="dark"] .readme .markdown-alert-warning { --alert-color: #d29922; }
+    html[data-theme="dark"] .readme .markdown-alert-caution { --alert-color: #f85149; }
     html[data-theme="dark"] .readme table th, html[data-theme="dark"] .readme table td { border-color: var(--color-grey-600); }
     html[data-theme="dark"] .readme table th, html[data-theme="dark"] .readme table tr:nth-child(2n) { background-color: var(--color-grey-800); }
     html[data-theme="dark"] .readme hr { background-color: var(--color-grey-600); }

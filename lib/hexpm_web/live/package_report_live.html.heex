@@ -37,8 +37,33 @@
           Report package
         </h1>
         <p class="text-grey-600 dark:text-grey-300">
-          Vulnerability reports go to the Erlang Ecosystem Foundation CNA. All other reports go to Hex support, with a copy sent to you.
+          Vulnerability reports go to the <a
+            href="https://cna.erlef.org"
+            target="_blank"
+            rel="noopener"
+            class="text-primary-700 underline dark:text-primary-300"
+          >Erlang Ecosystem Foundation CNA</a>. All other reports go to the Hex administrators at support@hex.pm, with a copy sent to you.
         </p>
+      </div>
+
+      <div
+        id="package-report-not-for-bugs"
+        class="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg p-4 mb-7"
+      >
+        <div class="flex gap-3">
+          {icon(:heroicon, "exclamation-triangle",
+            class: "size-5 shrink-0 text-amber-600 dark:text-amber-400"
+          )}
+          <div class="text-sm text-amber-900 dark:text-amber-100">
+            <p class="font-semibold mb-1">This form isn't for bug reports.</p>
+            <p>
+              Reports don't reach the package maintainers, and neither the CNA nor the Hex administrators can fix bugs in the package. Send bug reports, feature requests and questions to the maintainers through the links on the <a
+                href={@package_path}
+                class="underline"
+              >package page</a>.
+            </p>
+          </div>
+        </div>
       </div>
 
       <.form

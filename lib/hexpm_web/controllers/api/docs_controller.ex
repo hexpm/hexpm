@@ -44,6 +44,9 @@ defmodule HexpmWeb.API.DocsController do
       gzip_too_large?(body_path) ->
         validation_failed(conn, %{tar: "too big (uncompressed)"})
 
+      error = check_tarball(body_path) ->
+        validation_failed(conn, %{tar: error})
+
       true ->
         repository = conn.assigns.repository
         package = conn.assigns.package
@@ -60,7 +63,7 @@ defmodule HexpmWeb.API.DocsController do
 
         conn
         |> put_resp_header("location", location)
-        |> api_cache(:public)
+        |> api_cache(repository)
         |> send_resp(201, "")
     end
   end
@@ -71,6 +74,14 @@ defmodule HexpmWeb.API.DocsController do
     conn
     |> api_cache(:private)
     |> send_resp(204, "")
+  end
+
+  defp check_tarball(path) do
+    case Hexpm.TarballLimits.check_docs(path) do
+      :ok -> nil
+      {:error, :too_big} -> "too big (uncompressed)"
+      {:error, reason} -> Hexpm.TarballLimits.format_error(reason)
+    end
   end
 
   defp gzip_too_large?(path) do

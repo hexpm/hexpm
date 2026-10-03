@@ -5,7 +5,7 @@ defmodule Hexpm do
 
     unless Hexpm.Repo.get(Hexpm.Accounts.Organization, 1) do
       %{id: 1} =
-        %Hexpm.Accounts.Organization{name: "hexpm", trial_end: DateTime.utc_now()}
+        %Hexpm.Accounts.Organization{name: "hexpm"}
         |> Hexpm.Repo.insert!()
     end
 

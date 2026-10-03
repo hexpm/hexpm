@@ -181,16 +181,7 @@ defmodule Hexpm.RepoBase do
 
   defp xact_lock(function, key, opts) do
     unless skip_advisory_locks?() do
-      {sub_key, opts} = Keyword.pop(opts, :sub_key)
-
-      {sql, params} =
-        if sub_key do
-          {"SELECT #{function}($1, $2)", [Map.fetch!(@advisory_locks, key), sub_key]}
-        else
-          {"SELECT #{function}($1)", [Map.fetch!(@advisory_locks, key)]}
-        end
-
-      %Postgrex.Result{} = query!(sql, params, opts)
+      %Postgrex.Result{} = lock_query(function, key, opts)
     end
 
     :ok
@@ -200,15 +191,22 @@ defmodule Hexpm.RepoBase do
     if skip_advisory_locks?() do
       true
     else
-      %Postgrex.Result{rows: [[result]]} =
-        query!(
-          "SELECT pg_try_advisory_xact_lock($1)",
-          [Map.fetch!(@advisory_locks, key)],
-          opts
-        )
-
+      %Postgrex.Result{rows: [[result]]} = lock_query("pg_try_advisory_xact_lock", key, opts)
       result
     end
+  end
+
+  defp lock_query(function, key, opts) do
+    {sub_key, opts} = Keyword.pop(opts, :sub_key)
+
+    {sql, params} =
+      if sub_key do
+        {"SELECT #{function}($1, $2)", [Map.fetch!(@advisory_locks, key), sub_key]}
+      else
+        {"SELECT #{function}($1)", [Map.fetch!(@advisory_locks, key)]}
+      end
+
+    query!(sql, params, opts)
   end
 
   def try_advisory_lock?(key, opts \\ []) do
