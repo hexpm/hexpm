@@ -1022,6 +1022,106 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert text =~ "Your price will change to $90.00 per user / year on January 15, 2027."
     end
 
+    test "shows bank details and due dates for bank transfer customers", %{
+      user: user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      due_date = DateTime.utc_now() |> DateTime.add(10, :day)
+      no_card = %{"brand" => nil, "last4" => nil, "exp_month" => nil, "exp_year" => nil}
+
+      stub(Hexpm.Billing.Mock, :get, fn _token, _opts ->
+        %{
+          "checkout_html" => "",
+          "bank_transfer" => true,
+          "funding_instructions" => %{
+            "bank_transfer" => %{
+              "financial_addresses" => [
+                %{
+                  "type" => "aba",
+                  "aba" => %{
+                    "account_holder_name" => "Hex",
+                    "account_number" => "11119934683455685",
+                    "bank_name" => "US Test Bank",
+                    "routing_number" => "999999999"
+                  }
+                }
+              ]
+            }
+          },
+          "subscription" => %{
+            "status" => "active",
+            "current_period_end" => "2027-01-15T00:00:00Z",
+            "cancel_at_period_end" => true
+          },
+          "plan_id" => "organization-monthly",
+          "plan_unit_amount" => 900,
+          "amount_with_tax" => 1_800,
+          "quantity" => 2,
+          "max_period_quantity" => 2,
+          "proration_amount" => 0,
+          "proration_days" => 0,
+          "tax_rate" => 0,
+          "invoices" => [
+            %{
+              "id" => 1,
+              "created" => "2026-08-01T00:00:00Z",
+              "amount_due" => 1_800,
+              "status" => "open",
+              "paid" => false,
+              "attempted" => false,
+              "refund" => false,
+              "bank_transfer" => true,
+              "due_date" => "2026-08-31T00:00:00.000000Z",
+              "payment_reference" => "92VS4TU9-0001",
+              "card" => no_card
+            },
+            %{
+              "id" => 2,
+              "created" => "2026-09-01T00:00:00Z",
+              "amount_due" => 1_800,
+              "status" => "open",
+              "paid" => false,
+              "attempted" => false,
+              "refund" => false,
+              "bank_transfer" => true,
+              "due_date" => DateTime.to_iso8601(due_date),
+              "payment_reference" => "92VS4TU9-0002",
+              "card" => no_card
+            }
+          ]
+        }
+      end)
+
+      body =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/billing")
+        |> response(200)
+
+      text =
+        body
+        |> LazyHTML.from_document()
+        |> LazyHTML.text(separator: " ")
+        |> String.replace(~r/\s+/, " ")
+
+      assert text =~ "Bank transfer, invoices are due in 30 days"
+      assert text =~ "US domestic transfer (ACH or wire)"
+      assert text =~ "Routing number 999999999"
+      assert text =~ "Account number 11119934683455685"
+      assert text =~ "Contact support@hex.pm to change payment method."
+      assert text =~ "Resume subscription"
+      refute text =~ "Update payment method"
+      refute body =~ "payment-method-modal"
+
+      assert text =~ "Overdue"
+
+      assert text =~
+               "Due #{due_date |> DateTime.to_naive() |> HexpmWeb.ViewHelpers.pretty_date()}"
+
+      refute text =~ "Pay now"
+    end
+
     test "returns 400 for non-admin member", %{user: user, organization: organization} do
       mock_customer(organization)
       insert(:organization_user, organization: organization, user: user, role: "read")

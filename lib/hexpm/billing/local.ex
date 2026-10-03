@@ -38,6 +38,8 @@ defmodule Hexpm.Billing.Local do
         "exp_month" => 12,
         "exp_year" => 2028
       },
+      "bank_transfer" => false,
+      "funding_instructions" => nil,
       "amount_with_tax" => 700,
       "tax_rate" => 0,
       "person" => %{
