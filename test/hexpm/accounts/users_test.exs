@@ -522,6 +522,31 @@ defmodule Hexpm.Accounts.UsersTest do
       assert delete_log.params == %{"id" => user.id, "username" => user.username}
     end
 
+    test "tells Varsel when the CNA holds the user's data" do
+      user = insert(:user)
+      Hexpm.PackageReports.record_disclosure([user])
+
+      assert :ok = Users.delete(user, audit: audit_data(user))
+
+      assert [%Oban.Job{args: args, scheduled_at: scheduled_at}] =
+               Oban.Testing.all_enqueued(Hexpm.RepoBase,
+                 worker: Hexpm.PackageReports.ErasureWorker
+               )
+
+      assert args == %{"username" => user.username, "email" => User.email(user, :primary)}
+      assert DateTime.diff(scheduled_at, DateTime.utc_now()) in 590..600
+    end
+
+    test "sends Varsel nothing when the CNA never received the user's data" do
+      user = insert(:user)
+
+      assert :ok = Users.delete(user, audit: audit_data(user))
+
+      assert Oban.Testing.all_enqueued(Hexpm.RepoBase,
+               worker: Hexpm.PackageReports.ErasureWorker
+             ) == []
+    end
+
     test "deletes a user without a primary email and sends no email" do
       user = insert(:user, emails: [])
 

@@ -17,6 +17,7 @@ defmodule HexpmWeb.API.UserContactControllerTest do
              }
 
       assert get_resp_header(conn, "cache-control") == ["private, max-age=60"]
+      assert Repo.get_by(Hexpm.PackageReports.Disclosure, user_id: user.id)
     end
 
     test "falls back to the username when the full name is blank" do
@@ -79,6 +80,7 @@ defmodule HexpmWeb.API.UserContactControllerTest do
       user = insert(:user, deactivated_at: DateTime.utc_now())
 
       assert json_response(lookup(user.username), 404)
+      refute Repo.get_by(Hexpm.PackageReports.Disclosure, user_id: user.id)
     end
 
     test "accepts an audience list that names hex.pm" do

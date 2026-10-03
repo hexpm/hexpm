@@ -1,11 +1,12 @@
 defmodule Hexpm.PackageReportsTest do
   use Hexpm.DataCase, async: true
+  use Oban.Testing, repo: Hexpm.RepoBase
 
   import Mox
 
   alias Hexpm.Emails.OutboxEntry
   alias Hexpm.PackageReports
-  alias Hexpm.PackageReports.{Maintainers, Report}
+  alias Hexpm.PackageReports.{Disclosure, ErasureWorker, Maintainers, Report}
 
   setup :verify_on_exit!
 
@@ -56,6 +57,40 @@ defmodule Hexpm.PackageReportsTest do
         })
 
       assert errors_on(changeset).summary == "must be one line"
+    end
+  end
+
+  describe "record_disclosure/1" do
+    test "records each user once" do
+      user = insert(:user)
+
+      PackageReports.record_disclosure([user, user])
+      PackageReports.record_disclosure([user])
+
+      assert [%Disclosure{user_id: user_id}] = Repo.all(Disclosure)
+      assert user_id == user.id
+    end
+  end
+
+  describe "ErasureWorker" do
+    test "sends the username and email to Varsel" do
+      expect(Hexpm.PackageReports.Varsel.Mock, :erase, fn person ->
+        assert person == %{username: "deleted", email: "deleted@example.com"}
+        :ok
+      end)
+
+      assert :ok =
+               perform_job(ErasureWorker, %{
+                 "username" => "deleted",
+                 "email" => "deleted@example.com"
+               })
+    end
+
+    test "retries when Varsel is unavailable" do
+      expect(Hexpm.PackageReports.Varsel.Mock, :erase, fn _person -> {:error, :unavailable} end)
+
+      assert {:error, :unavailable} =
+               perform_job(ErasureWorker, %{"username" => "deleted", "email" => nil})
     end
   end
 
@@ -121,6 +156,9 @@ defmodule Hexpm.PackageReportsTest do
                "https://cna.erlef.org/sign-in/hex?return-url=/reports/report-id"
 
       refute Repo.exists?(OutboxEntry)
+
+      assert Repo.all(from(d in Disclosure, select: d.user_id, order_by: d.user_id)) ==
+               Enum.sort([reporter.id, maintainer.id])
     end
 
     test "records failed vulnerability delivery attempts" do
@@ -147,6 +185,9 @@ defmodule Hexpm.PackageReportsTest do
                reporter_id: reporter_id,
                external_id: nil
              } = Repo.one!(Report)
+
+      # Varsel may have stored the report even though no response arrived.
+      assert Repo.get_by(Disclosure, user_id: reporter.id)
 
       assert package_id == package.id
       assert reporter_id == reporter.id
