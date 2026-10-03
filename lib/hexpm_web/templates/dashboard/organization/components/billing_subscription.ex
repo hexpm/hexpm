@@ -240,6 +240,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
             proration_amount={@proration_amount}
             proration_days={@proration_days}
             max_period_quantity={@max_period_quantity}
+            bank_transfer={@bank_transfer}
           />
           <.remove_seats_modal
             current_user={@current_user}
@@ -546,6 +547,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
   attr :proration_amount, :integer, default: 0
   attr :proration_days, :integer, default: 0
   attr :max_period_quantity, :integer, default: nil
+  attr :bank_transfer, :boolean, default: false
 
   defp add_seats_modal(assigns) do
     ~H"""
@@ -591,7 +593,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingSubscription do
               @proration_amount,
               @proration_days,
               @quantity,
-              @max_period_quantity
+              @max_period_quantity,
+              @bank_transfer
             )}
           </p>
         <% end %>
