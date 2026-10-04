@@ -219,6 +219,7 @@ defmodule Hexpm.Application do
       if(write_mode?, do: setup()),
       HexpmWeb.Telemetry,
       metrics_server_spec(),
+      HexpmWeb.SyntaxHighlight,
       {Task, &HexpmWeb.SyntaxHighlight.warm/0}
     ]
     |> Enum.reject(&is_nil/1)

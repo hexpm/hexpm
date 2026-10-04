@@ -55,6 +55,15 @@ defmodule HexpmWeb.Readme.RendererTest do
     assert document |> LazyHTML.query("pre code") |> LazyHTML.text() == code
   end
 
+  test "highlights a long Elixir operator chain in a code block" do
+    chain = Enum.map_join(1..500, " or ", &"x === #{&1}")
+    code = "def f(x) when #{chain} do\n  x\nend\n"
+    document = render("```elixir\n" <> code <> "```\n") |> LazyHTML.from_fragment()
+
+    assert Enum.count(LazyHTML.query(document, "pre code span.l-keyword")) > 0
+    assert document |> LazyHTML.query("pre code") |> LazyHTML.text() == code
+  end
+
   test "preserves whitespace-only nodes between code spans" do
     content =
       ~s|<pre><code><span class="l-name">one</span> \t<span class="l-name">two</span>\n\n<span class="l-name">three</span></code></pre>|

@@ -20,6 +20,11 @@ erl_crash.dump
 
 /priv/geoip/
 
+/priv/lumis/*
+!/priv/lumis/parsers/
+/priv/lumis/parsers/*
+!/priv/lumis/parsers/elixir.lumis.json
+
 .tool-versions
 .elixir_ls
 .elixir_ls.nosync

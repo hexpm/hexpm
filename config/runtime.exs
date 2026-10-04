@@ -60,6 +60,10 @@ config :hexpm, :organization_sso,
   mode: sso_mode,
   beta_organizations: sso_beta_organizations
 
+# Lumis takes a language package from here before fetching it from the CDN, so
+# priv/lumis/parsers/elixir.lumis.json is the Elixir package hexpm highlights with
+config :lumis, data_dir: Application.app_dir(:hexpm, "priv/lumis")
+
 if config_env() == :prod do
   mode =
     case System.get_env("HEXPM_MODE") do
