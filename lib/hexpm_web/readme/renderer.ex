@@ -53,11 +53,7 @@ defmodule HexpmWeb.Readme.Renderer do
   end
 
   defp highlight_code_block(%MDEx.CodeBlock{info: info, literal: literal}, label) do
-    language =
-      case String.split(info, " ", parts: 2) do
-        [""] -> "plaintext"
-        [language | _] -> language
-      end
+    language = info |> String.split() |> List.first("plaintext")
 
     %MDEx.HtmlBlock{literal: SyntaxHighlight.highlight(literal, language, "#{label} #{language}")}
   end

@@ -104,6 +104,23 @@ defmodule HexpmWeb.SyntaxHighlightTest do
     end
 
     @tag :capture_log
+    test "falls back to escaped source that keeps every line", %{table: table} do
+      source = "one\n\n<three>\n"
+
+      document =
+        source
+        |> SyntaxHighlight.highlight("lib/app.ex", "test fallback",
+          table: table,
+          max_concurrency: 0
+        )
+        |> LazyHTML.from_fragment()
+
+      assert Enum.count(LazyHTML.query(document, ".l-line")) == 4
+      assert [] = LazyHTML.query(document, "span") |> Enum.to_list()
+      assert document |> LazyHTML.query("pre code") |> LazyHTML.text() == source
+    end
+
+    @tag :capture_log
     test "falls back without starting work while every slot is taken", %{table: table} do
       test = self()
       opts = [table: table, max_concurrency: 1]

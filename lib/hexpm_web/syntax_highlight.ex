@@ -25,12 +25,13 @@ defmodule HexpmWeb.SyntaxHighlight do
     error -> Logger.warning("Failed to warm the highlighter: #{Exception.message(error)}")
   end
 
-  def highlight(source, language, label) do
+  def highlight(source, language, label, opts \\ []) do
     run(
       {language, source},
       fn -> Lumis.highlight!(source, formatter: {:html_linked, language: language}) end,
       fn -> plain_source(source) end,
-      label
+      label,
+      opts
     )
   end
 
@@ -161,12 +162,15 @@ defmodule HexpmWeb.SyntaxHighlight do
   end
 
   defp plain_source(source) do
+    lines = String.split(source, "\n")
+    last = length(lines)
+
     lines =
-      source
-      |> String.split("\n")
+      lines
       |> Enum.with_index(1)
       |> Enum.map_join(fn {line, number} ->
-        ~s(<div class="l-line" data-line="#{number}">#{escape(line)}</div>)
+        newline = if number < last, do: "\n"
+        ~s(<div class="l-line" data-line="#{number}">#{escape(line)}#{newline}</div>)
       end)
 
     ~s(<pre class="lumis"><code>#{lines}</code></pre>)

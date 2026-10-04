@@ -64,6 +64,13 @@ defmodule HexpmWeb.Readme.RendererTest do
     assert document |> LazyHTML.query("pre code") |> LazyHTML.text() == code
   end
 
+  test "takes the language from the first word of a tab-separated info string" do
+    document = render("```elixir\tcaption\nx = 1\n```\n") |> LazyHTML.from_fragment()
+
+    assert [_code] = LazyHTML.query(document, "pre code.language-elixir") |> Enum.to_list()
+    assert Enum.count(LazyHTML.query(document, "pre code span")) > 0
+  end
+
   test "preserves whitespace-only nodes between code spans" do
     content =
       ~s|<pre><code><span class="l-name">one</span> \t<span class="l-name">two</span>\n\n<span class="l-name">three</span></code></pre>|
