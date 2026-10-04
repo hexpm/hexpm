@@ -100,15 +100,20 @@ defmodule HexpmWeb.SyntaxHighlight.PoolTest do
     System.put_env("HEXPM_SYNTAX_HIGHLIGHT_TEST_CANARY", "secret")
     on_exit(fn -> System.delete_env("HEXPM_SYNTAX_HIGHLIGHT_TEST_CANARY") end)
 
-    # A port opened without an environment inherits the one the VM started
-    # with, which shows the check below would see it.
+    # A port opened without an environment inherits the VM's, which shows the
+    # check below would see it. Each process answers a request before its
+    # environment is read, because until erl_child_setup has exec'd lumis the
+    # pid shows erl_child_setup's environment.
     inheriting = Lumis.Port.open()
     {:os_pid, inheriting_os_pid} = Port.info(inheriting, :os_pid)
+    Port.command(inheriting, Lumis.Port.request(":ok", "lib/app.ex"))
+    assert_receive {^inheriting, {:data, _reply}}, 5_000
     assert process_environment(inheriting_os_pid) =~ "PATH="
     Port.close(inheriting)
 
-    start_pool(opts)
+    opts = start_pool(opts)
     [os_pid] = idle_os_pids(name)
+    assert {:ok, _html} = Pool.highlight(":ok", "lib/app.ex", opts)
 
     environment = process_environment(os_pid)
     refute environment =~ "HEXPM_SYNTAX_HIGHLIGHT_TEST_CANARY"
