@@ -123,7 +123,9 @@ defmodule HexpmWeb.SyntaxHighlight do
   end
 
   defp acquire(table, max_concurrency) do
-    if :ets.update_counter(table, :running, {2, 1}) <= max_concurrency do
+    running = :ets.update_counter(table, :running, {2, 1})
+
+    if max_concurrency == :infinity or running <= max_concurrency do
       true
     else
       :ets.update_counter(table, :running, {2, -1})
