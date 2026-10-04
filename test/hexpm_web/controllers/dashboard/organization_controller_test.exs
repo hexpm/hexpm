@@ -1585,6 +1585,33 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}/billing"
     end
+
+    test "shows billing's error message", %{user: user, organization: organization} do
+      mock_customer(organization)
+
+      stub(Hexpm.Billing.Mock, :update, fn _, _ ->
+        {:error,
+         %{
+           "errors" =>
+             "Only companies can pay by bank transfer. Contact support@hex.pm to bill a person instead."
+         }}
+      end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}/update-billing", %{
+          "email" => "billing@example.com",
+          "person" => %{"country" => "US"}
+        })
+
+      assert response(conn, 400)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+               "Only companies can pay by bank transfer."
+    end
   end
 
   test "create organization", %{user: user} do

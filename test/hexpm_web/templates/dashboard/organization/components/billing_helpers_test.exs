@@ -175,6 +175,43 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingHelpersTest do
     end
   end
 
+  describe "proration_description/6" do
+    test "annual seats are charged to the card" do
+      text =
+        "organization-annually"
+        |> BillingHelpers.proration_description(4500, 182, 2, 2, false)
+        |> Phoenix.HTML.safe_to_string()
+
+      assert text =~ "Each new seat will be charged a proration for"
+    end
+
+    test "annual seats are invoiced for bank transfer" do
+      text =
+        "organization-annually"
+        |> BillingHelpers.proration_description(4500, 182, 2, 2, true)
+        |> Phoenix.HTML.safe_to_string()
+
+      assert text =~ "Each new seat will be invoiced a proration, payable by bank transfer, for"
+
+      text =
+        "organization-annually"
+        |> BillingHelpers.proration_description(4500, 182, 2, 3, true)
+        |> Phoenix.HTML.safe_to_string()
+
+      assert text =~
+               "New seats over this amount will be invoiced a proration, payable by bank transfer, for"
+    end
+
+    test "monthly seats are prorated on the next invoice" do
+      text =
+        "organization-monthly"
+        |> BillingHelpers.proration_description(450, 15, 2, 2, true)
+        |> Phoenix.HTML.safe_to_string()
+
+      assert text =~ "Each new seat will be prorated on the next invoice for"
+    end
+  end
+
   describe "invoice_payment/1" do
     test "bank transfer invoice" do
       assert BillingHelpers.invoice_payment(%{"bank_transfer" => true, "card" => nil}) ==

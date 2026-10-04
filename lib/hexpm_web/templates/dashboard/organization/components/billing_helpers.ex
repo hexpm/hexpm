@@ -191,21 +191,21 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingHelpers do
   def discount_status(%{"name" => name, "percent_off" => pct}),
     do: "(\"#{name}\" discount for #{pct}% of price)"
 
-  def proration_description("organization-monthly", price, days, qty, qty) do
+  def proration_description("organization-monthly", price, days, qty, qty, _bank_transfer) do
     raw("""
     Each new seat will be prorated on the next invoice for
     <strong>#{days}</strong> day(s) @ <strong>$#{money(price)}</strong>.
     """)
   end
 
-  def proration_description("organization-annually", price, days, qty, qty) do
+  def proration_description("organization-annually", price, days, qty, qty, bank_transfer) do
     raw("""
-    Each new seat will be charged a proration for
+    Each new seat will be #{proration_charge(bank_transfer)} for
     <strong>#{days}</strong> day(s) @ <strong>$#{money(price)}</strong>.
     """)
   end
 
-  def proration_description("organization-monthly", price, days, qty, max_qty)
+  def proration_description("organization-monthly", price, days, qty, max_qty, _bank_transfer)
       when is_integer(qty) and is_integer(max_qty) and qty < max_qty do
     raw("""
     You have already used <strong>#{max_qty}</strong> seats this billing period.
@@ -214,16 +214,21 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingHelpers do
     """)
   end
 
-  def proration_description("organization-annually", price, days, qty, max_qty)
+  def proration_description("organization-annually", price, days, qty, max_qty, bank_transfer)
       when is_integer(qty) and is_integer(max_qty) and qty < max_qty do
     raw("""
     You have already used <strong>#{max_qty}</strong> seats this billing period.
-    New seats over this amount will be charged a proration for
+    New seats over this amount will be #{proration_charge(bank_transfer)} for
     <strong>#{days}</strong> day(s) @ <strong>$#{money(price)}</strong>.
     """)
   end
 
-  def proration_description(_, _, _, _, _), do: ""
+  def proration_description(_, _, _, _, _, _), do: ""
+
+  defp proration_charge(true = _bank_transfer),
+    do: "invoiced a proration, payable by bank transfer,"
+
+  defp proration_charge(_bank_transfer), do: "charged a proration"
 
   def default_billing_emails(user, billing_email) do
     emails = user.emails |> Enum.filter(& &1.verified) |> Enum.map(& &1.email)
