@@ -6,6 +6,8 @@ defmodule Hexpm.Hexdocs.WorkersTest do
 
   defmodule ReplacingStore do
     @behaviour Hexpm.Store.Behaviour
+
+    defdelegate list_prefixes(bucket, prefix), to: Hexpm.Store.Memory
     @replacement_key {__MODULE__, :replacement}
 
     defdelegate list_objects(bucket, prefix), to: Hexpm.Store.Memory
@@ -40,6 +42,8 @@ defmodule Hexpm.Hexdocs.WorkersTest do
 
   defmodule PublishingStore do
     @behaviour Hexpm.Store.Behaviour
+
+    defdelegate list_prefixes(bucket, prefix), to: Hexpm.Store.Memory
     @hook_key {__MODULE__, :after_read}
 
     defdelegate list_objects(bucket, prefix), to: Hexpm.Store.Memory
@@ -74,6 +78,8 @@ defmodule Hexpm.Hexdocs.WorkersTest do
 
   defmodule FailingStore do
     @behaviour Hexpm.Store.Behaviour
+
+    defdelegate list_prefixes(bucket, prefix), to: Hexpm.Store.Memory
     @failing_key {__MODULE__, :failing}
 
     defdelegate list_objects(bucket, prefix), to: Hexpm.Store.Memory

@@ -8,6 +8,8 @@ defmodule Hexpm.StoreFailureTest do
   defmodule FailingStore do
     @behaviour Hexpm.Store.Behaviour
 
+    defdelegate list_prefixes(bucket, prefix), to: Hexpm.Store.Memory
+
     def list_objects(bucket, prefix) do
       if Process.get(:fail) == :list, do: raise("store down")
       Hexpm.Store.Memory.list_objects(bucket, prefix)

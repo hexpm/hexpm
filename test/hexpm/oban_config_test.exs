@@ -95,7 +95,8 @@ defmodule Hexpm.ObanConfigTest do
              {"15 3 * * *", Hexpm.Accounts.OrganizationDomains.RecheckWorker},
              {"45 3 * * *", Hexpm.Accounts.SSO.EnforcementWorker},
              {"*/15 * * * *", Hexpm.Accounts.OrganizationTFAWorker},
-             {"0 5 * * *", Hexpm.Accounts.OrganizationDeletions.Worker}
+             {"0 5 * * *", Hexpm.Accounts.OrganizationDeletions.Worker},
+             {"30 6 * * *", Hexpm.Accounts.PrivateAccessLogsSweep}
            ]
 
     assert {Hexpm.Oban.Pruner, [max_age: 259_200, discarded_max_age: 31_536_000]} in oban[
