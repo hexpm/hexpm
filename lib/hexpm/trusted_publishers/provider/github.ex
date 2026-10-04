@@ -208,18 +208,15 @@ defmodule Hexpm.TrustedPublishers.Provider.GitHub do
       {"user-agent", "hexpm-trusted-publishers"}
     ]
 
-    case github_token() do
-      token when is_binary(token) and token != "" ->
-        [{"authorization", "Bearer #{token}"} | headers]
+    config = Application.get_env(:ueberauth, Ueberauth.Strategy.Github.OAuth, [])
+
+    case {config[:client_id], config[:client_secret]} do
+      {id, secret} when is_binary(id) and id != "" and is_binary(secret) and secret != "" ->
+        [{"authorization", "Basic " <> Base.encode64(id <> ":" <> secret)} | headers]
 
       _ ->
         headers
     end
-  end
-
-  defp github_token do
-    Application.get_env(:hexpm, :trusted_publisher_github_token) ||
-      Application.get_env(:hexpm, :hexdocs_github_token)
   end
 
   defp to_string_or_nil(nil), do: nil

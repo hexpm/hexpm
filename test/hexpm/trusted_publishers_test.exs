@@ -347,6 +347,74 @@ defmodule Hexpm.TrustedPublishersTest do
       assert publisher.repository_id == "99"
     end
 
+    test "authenticates GitHub lookups with the OAuth app credentials", %{user: user} do
+      package =
+        insert(:package,
+          package_owners: [build(:package_owner, user: user, level: "full")]
+        )
+
+      previous = Application.get_env(:ueberauth, Ueberauth.Strategy.Github.OAuth)
+
+      Application.put_env(:ueberauth, Ueberauth.Strategy.Github.OAuth,
+        client_id: "client-id",
+        client_secret: "client-secret"
+      )
+
+      on_exit(fn ->
+        Application.put_env(:ueberauth, Ueberauth.Strategy.Github.OAuth, previous)
+      end)
+
+      authorization = "Basic " <> Base.encode64("client-id:client-secret")
+
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", headers, _ ->
+        assert {"authorization", ^authorization} = List.keyfind(headers, "authorization", 0)
+        {:ok, 200, [], %{"id" => 99, "owner" => %{"id" => 42}}}
+      end)
+
+      assert {:ok, _publisher} =
+               TrustedPublishers.create(
+                 package,
+                 %{
+                   "provider" => "github",
+                   "repository_owner" => "acme",
+                   "repository" => "widget",
+                   "workflow" => "release.yml"
+                 },
+                 audit: audit_data(user)
+               )
+    end
+
+    test "looks up GitHub without credentials when no OAuth app is configured", %{user: user} do
+      package =
+        insert(:package,
+          package_owners: [build(:package_owner, user: user, level: "full")]
+        )
+
+      previous = Application.get_env(:ueberauth, Ueberauth.Strategy.Github.OAuth)
+      Application.put_env(:ueberauth, Ueberauth.Strategy.Github.OAuth, [])
+
+      on_exit(fn ->
+        Application.put_env(:ueberauth, Ueberauth.Strategy.Github.OAuth, previous)
+      end)
+
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", headers, _ ->
+        refute List.keyfind(headers, "authorization", 0)
+        {:ok, 200, [], %{"id" => 99, "owner" => %{"id" => 42}}}
+      end)
+
+      assert {:ok, _publisher} =
+               TrustedPublishers.create(
+                 package,
+                 %{
+                   "provider" => "github",
+                   "repository_owner" => "acme",
+                   "repository" => "widget",
+                   "workflow" => "release.yml"
+                 },
+                 audit: audit_data(user)
+               )
+    end
+
     test "emails every package owner", %{user: user} do
       other_owner = insert(:user)
 
