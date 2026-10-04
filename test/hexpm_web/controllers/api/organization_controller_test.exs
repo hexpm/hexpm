@@ -1,6 +1,8 @@
 defmodule HexpmWeb.API.OrganizationControllerTest do
   use HexpmWeb.ConnCase, async: true
 
+  alias Hexpm.Accounts.{Key, OrganizationUser}
+
   defp mock_customer(context) do
     stub(Hexpm.Billing.Mock, :get, fn token, _opts ->
       assert context.organization.name == token
@@ -175,6 +177,59 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
         |> get("/api/orgs/#{organization.name}/audit-logs")
 
       assert [%{"action" => "organization.test"}] = json_response(conn, :ok)
+    end
+  end
+
+  describe "read member" do
+    setup %{user1: user1, organization: organization} do
+      member = insert(:user)
+      insert(:organization_user, organization: organization, user: user1, role: "read")
+      insert(:organization_user, organization: organization, user: member, role: "write")
+      key = insert(:key, organization: organization, name: "existing")
+      %{member: member, key: key}
+    end
+
+    test "is refused on every route that changes organization state", %{
+      user1: user1,
+      organization: organization,
+      member: member,
+      key: key
+    } do
+      org = "/api/orgs/#{organization.name}"
+
+      requests = [
+        {:post, org, %{seats: 10}},
+        {:post, "#{org}/members", %{name: insert(:user).username, role: "read"}},
+        {:post, "#{org}/members/#{member.username}", %{role: "admin"}},
+        {:post, "#{org}/members/#{user1.username}", %{role: "admin"}},
+        {:delete, "#{org}/members/#{member.username}", %{}},
+        {:post, "#{org}/keys", %{name: "new", permissions: [%{domain: "api"}]}},
+        {:delete, "#{org}/keys/#{key.name}", %{}},
+        {:delete, "#{org}/keys", %{}}
+      ]
+
+      for {method, path, params} <- requests do
+        conn =
+          build_conn()
+          |> put_req_header("authorization", key_for(user1))
+          |> dispatch(@endpoint, method, path, params)
+
+        assert conn.status in [403, 404], "#{method} #{path} answered #{conn.status}"
+      end
+
+      assert Repo.get_by!(OrganizationUser, organization_id: organization.id, user_id: user1.id).role ==
+               "read"
+
+      assert Repo.get_by!(OrganizationUser, organization_id: organization.id, user_id: member.id).role ==
+               "write"
+
+      assert Repo.aggregate(
+               from(ou in OrganizationUser, where: ou.organization_id == ^organization.id),
+               :count
+             ) == 2
+
+      assert [%Key{name: "existing", revoke_at: nil}] =
+               Repo.all(from(k in Key, where: k.organization_id == ^organization.id))
     end
   end
 end
