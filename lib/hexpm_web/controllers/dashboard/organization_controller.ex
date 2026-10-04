@@ -905,6 +905,12 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         |> put_flash(:error, "Please fill in all required fields.")
         |> render_index(organization, params: params, errors: errors, tab: :billing)
 
+      {:error, %{"errors" => message}} when is_binary(message) ->
+        conn
+        |> put_status(400)
+        |> put_flash(:error, message)
+        |> render_index(organization, params: params, errors: %{}, tab: :billing)
+
       {:error, reason} ->
         conn
         |> put_status(400)
