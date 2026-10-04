@@ -256,6 +256,7 @@ defmodule HexpmWeb.Router do
     get "/docs/private", DocsController, :private
     get "/docs/dependency-policies", DocsController, :dependency_policies
     get "/docs/organization-sso", DocsController, :organization_sso
+    get "/docs/trusted-publishers", DocsController, :trusted_publishers
     get "/docs/organization-tfa", DocsController, :organization_tfa
     get "/docs/faq", DocsController, :faq
     get "/docs/mirrors", DocsController, :mirrors
@@ -300,6 +301,9 @@ defmodule HexpmWeb.Router do
     post "/packages/:name/owners", PackageOwnerController, :create
     put "/packages/:name/owners/:username", PackageOwnerController, :update
     delete "/packages/:name/owners/:username", PackageOwnerController, :delete
+    get "/packages/:name/trusted-publishers", PackageTrustedPublisherController, :index
+    post "/packages/:name/trusted-publishers", PackageTrustedPublisherController, :create
+    delete "/packages/:name/trusted-publishers/:id", PackageTrustedPublisherController, :delete
     get "/packages/:name", PackageController, :show
     get "/packages/:name/audit-logs", PackageController, :audit_logs
     get "/packages/:name/dependents", PackageController, :dependents
@@ -322,6 +326,19 @@ defmodule HexpmWeb.Router do
     post "/packages/:repository/:name/owners", PackageOwnerController, :create
     put "/packages/:repository/:name/owners/:username", PackageOwnerController, :update
     delete "/packages/:repository/:name/owners/:username", PackageOwnerController, :delete
+
+    get "/packages/:repository/:name/trusted-publishers",
+        PackageTrustedPublisherController,
+        :index
+
+    post "/packages/:repository/:name/trusted-publishers",
+         PackageTrustedPublisherController,
+         :create
+
+    delete "/packages/:repository/:name/trusted-publishers/:id",
+           PackageTrustedPublisherController,
+           :delete
+
     get "/packages/:repository/:name/audit-logs", PackageController, :audit_logs
     get "/packages/:repository/:name/dependents", PackageController, :dependents
     get "/packages/:repository/:name/versions", PackageController, :versions
@@ -566,6 +583,8 @@ defmodule HexpmWeb.Router do
     post "/oauth/revoke", OAuthController, :revoke
     post "/oauth/revoke_by_hash", OAuthController, :revoke_by_hash
     post "/oauth/organization_authorization", SSOAuthorizationController, :create
+
+    get "/oidc/audience", OIDCController, :audience
   end
 
   scope "/api", HexpmWeb.API, as: :api do

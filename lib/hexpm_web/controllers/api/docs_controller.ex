@@ -16,9 +16,17 @@ defmodule HexpmWeb.API.DocsController do
   plug :authorize,
        [
          domains: [{"api", "write"}, "package"],
+         allow_trusted_publisher: true,
          fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
        ]
-       when action in [:create, :delete]
+       when action in [:create]
+
+  plug :authorize,
+       [
+         domains: [{"api", "write"}, "package"],
+         fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
+       ]
+       when action in [:delete]
 
   plug :handle_100_continue, [max_size: @tarball_max_size] when action in [:create]
 

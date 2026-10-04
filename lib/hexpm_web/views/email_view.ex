@@ -181,6 +181,32 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
+  defmodule TrustedPublisherAdd do
+    def message(username, package) do
+      "#{username} added a trusted publisher to package #{package}."
+    end
+
+    def warning(package) do
+      "Anyone who can run this workflow can now publish #{package}. " <>
+        "If you did not expect this change, remove the publisher and review the package owners."
+    end
+  end
+
+  defmodule TrustedPublisherRemove do
+    def message(username, package) do
+      "#{username} removed a trusted publisher from package #{package}."
+    end
+  end
+
+  defmodule TrustedPublisherDetails do
+    def lines(repository, workflow, environment) do
+      [
+        "GitHub repository: #{repository}",
+        "Workflow: #{workflow}"
+      ] ++ if(environment in [nil, ""], do: [], else: ["Environment: #{environment}"])
+    end
+  end
+
   defmodule Verification do
     def intro() do
       "To begin using your email, we require you to verify your email address."

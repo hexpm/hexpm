@@ -102,6 +102,22 @@ defmodule HexpmWeb.ViewHelpers do
     ~p"/packages/#{package.repository}/#{package}/owners/#{username}"
   end
 
+  def path_for_trusted_publishers(%Package{repository_id: 1} = package) do
+    ~p"/packages/#{package}/trusted-publishers"
+  end
+
+  def path_for_trusted_publishers(%Package{} = package) do
+    ~p"/packages/#{package.repository}/#{package}/trusted-publishers"
+  end
+
+  def path_for_trusted_publisher(%Package{repository_id: 1} = package, id) do
+    ~p"/packages/#{package}/trusted-publishers/#{id}"
+  end
+
+  def path_for_trusted_publisher(%Package{} = package, id) do
+    ~p"/packages/#{package.repository}/#{package}/trusted-publishers/#{id}"
+  end
+
   def path_for_dependencies(%Package{repository_id: 1} = package) do
     ~p"/packages/#{package}/dependencies"
   end
