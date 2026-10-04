@@ -6,6 +6,8 @@ defmodule HexpmWeb.SyntaxHighlight do
   @budget [time_limit: to_timeout(second: 1), match_limit: 4096]
   @linked_attrs Map.new(HTML.classes(), fn {scope, class} -> {scope, ~s|class="#{class}"|} end)
 
+  def budget, do: @budget
+
   def highlight(source, language, label, budget \\ @budget) do
     source
     |> Lumis.highlight(formatter: {:html_linked, language: language}, budget: budget)

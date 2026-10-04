@@ -46,6 +46,21 @@ defmodule HexpmWeb.SyntaxHighlightTest do
     assert :fallback = SyntaxHighlight.or_plain({:error, error}, "invalid", fn -> :fallback end)
   end
 
+  test "preserves diff lines when the highlighting match limit is exhausted" do
+    lines = ["fn main() {", "  let value = (1 + (2 * (3 - 4)));", "}", ""]
+    budget = [time_limit: 0, match_limit: 1]
+
+    document = SyntaxHighlight.highlight(Enum.join(lines, "\n"), "rust", "matches", budget)
+    assert document =~ ~s(data-lumis-budget="matches")
+
+    highlighted = SyntaxHighlight.highlight_lines(lines, "rust", "matches", budget)
+    assert length(highlighted) == length(lines)
+
+    assert Enum.map(highlighted, fn html ->
+             html |> LazyHTML.from_fragment() |> LazyHTML.text()
+           end) == lines
+  end
+
   # VHDL is in the Lumis catalog but hexpm does not depend on its parser.
   test "renders plain text when the parser is not installed" do
     lines = ["signal clk : std_logic;", "end architecture;"]
