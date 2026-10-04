@@ -341,10 +341,12 @@ defmodule HexpmWeb.ControllerHelpers do
   end
 
   def audit_data(conn) do
-    user_or_organization = conn.assigns.current_user || conn.assigns.current_organization
+    actor =
+      conn.assigns.current_user || conn.assigns.current_organization ||
+        Map.get(conn.assigns, :trusted_publisher)
 
     %{
-      user: user_or_organization,
+      user: actor,
       auth_credential: Map.get(conn.assigns, :auth_credential),
       user_agent: conn.assigns.user_agent,
       remote_ip: HexpmWeb.RequestHelpers.parse_ip(conn.remote_ip),

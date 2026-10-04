@@ -7,7 +7,7 @@ defmodule HexpmWeb.ErrorView do
       conn: assigns.conn,
       error: true,
       status: status,
-      message: message(status),
+      message: assigns[:message] || message(status),
       container: "container error-view",
       current_user: assigns[:current_user],
       script_src_nonce: assigns[:script_src_nonce],

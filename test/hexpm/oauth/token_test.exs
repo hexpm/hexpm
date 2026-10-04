@@ -16,6 +16,12 @@ defmodule Hexpm.OAuth.TokenTest do
              } = errors_on(changeset)
     end
 
+    test "does not require a client for trusted publisher tokens" do
+      changeset = Token.changeset(%Token{}, %{grant_type: "trusted_publisher"})
+
+      refute Map.has_key?(errors_on(changeset), :client_id)
+    end
+
     test "validates grant type inclusion" do
       user = insert(:user)
       expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
