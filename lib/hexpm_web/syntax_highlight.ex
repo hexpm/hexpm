@@ -1,71 +1,65 @@
 defmodule HexpmWeb.SyntaxHighlight do
+  @moduledoc """
+  Highlights file previews and diffs with lumis, in `lumis serve` processes
+  from `HexpmWeb.SyntaxHighlight.Pool`. Anything that does not highlight in
+  time, or at all, is shown as escaped plain text.
+
+  Every call emits `[:hexpm, :syntax_highlight, :start | :stop]` telemetry,
+  with a `:result` of `:ok`, `:not_cached`, `:timeout`, `:queue_timeout`,
+  `:exit`, `:error`, `:rejected_output` or `:unavailable` on stop.
+  """
+
   require Logger
 
-  @timeout 1_000
+  alias HexpmWeb.SyntaxHighlight.Pool
+
   @line_pattern ~r/<div class="l-line" data-line="\d+">(.*?)\n?<\/div>/s
 
-  @doc """
-  Loads the highlighter so the first request does not have to.
-
-  The NIF is 143 MB, and the timeout above is sized for highlighting a file, not
-  for opening it. Whichever request arrived first used to pay that load out of
-  its own budget and fall back to unhighlighted source when it ran out.
-  """
-  def warm() do
-    Lumis.highlight!("", formatter: {:html_linked, language: "warm.ex"})
-    :ok
-  rescue
-    error -> Logger.warning("Failed to warm the highlighter: #{Exception.message(error)}")
-  end
-
-  def highlight(source, language, label) do
-    run(
-      fn -> Lumis.highlight!(source, formatter: {:html_linked, language: language}) end,
-      fn -> plain_source(source) end,
-      label
-    )
-  end
-
-  def highlight_lines([], _language, _label), do: []
-
-  def highlight_lines(lines, language, label) when is_list(lines) do
-    run(
-      fn ->
-        highlighted =
-          lines
-          |> Enum.join("\n")
-          |> Lumis.highlight!(formatter: {:html_linked, language: language})
-
-        fragments =
-          @line_pattern
-          |> Regex.scan(highlighted, capture: :all_but_first)
-          |> List.flatten()
-
-        if length(fragments) == length(lines) do
-          fragments
-        else
-          raise "Lumis returned #{length(fragments)} lines for #{length(lines)} source lines"
-        end
-      end,
-      fn -> Enum.map(lines, &escape/1) end,
-      label
-    )
-  end
-
-  @doc false
-  def run(function, fallback, label, timeout \\ @timeout)
-      when is_function(function, 0) and is_function(fallback, 0) do
-    task = Task.Supervisor.async_nolink(Hexpm.Tasks, function)
-
-    case Task.yield(task, timeout) || Task.shutdown(task, :brutal_kill) do
-      {:ok, result} ->
-        result
-
-      result ->
-        Logger.warning("Failed to highlight #{label}: #{inspect(result)}")
-        fallback.()
+  def highlight(source, language, label, opts \\ []) do
+    case run(source, language, label, opts) do
+      {:ok, html} -> html
+      :error -> plain_source(source)
     end
   end
+
+  def highlight_lines(lines, language, label, opts \\ [])
+
+  def highlight_lines([], _language, _label, _opts), do: []
+
+  def highlight_lines(lines, language, label, opts) when is_list(lines) do
+    with {:ok, html} <- run(Enum.join(lines, "\n"), language, label, opts),
+         fragments = Regex.scan(@line_pattern, html, capture: :all_but_first),
+         true <- length(fragments) == length(lines) do
+      List.flatten(fragments)
+    else
+      false ->
+        Logger.warning("Lumis returned a different number of lines for #{label}")
+        Enum.map(lines, &escape/1)
+
+      :error ->
+        Enum.map(lines, &escape/1)
+    end
+  end
+
+  defp run(source, language, label, opts) do
+    :telemetry.span([:hexpm, :syntax_highlight], %{}, fn ->
+      case Pool.highlight(source, language, opts) do
+        {:ok, html} ->
+          {{:ok, html}, %{result: :ok}}
+
+        {:error, :not_cached} ->
+          {:error, %{result: :not_cached}}
+
+        {:error, reason} ->
+          Logger.warning("Failed to highlight #{label}: #{inspect(reason)}")
+          {:error, %{result: result(reason)}}
+      end
+    end)
+  end
+
+  defp result({:exit, _status}), do: :exit
+  defp result({:lumis, _message}), do: :error
+  defp result(reason), do: reason
 
   defp plain_source(source) do
     lines =

@@ -10,6 +10,7 @@ defmodule HexpmWeb.Readme.Renderer do
   alias HexpmWeb.MDExPlugins.HeadingAnchors
   alias HexpmWeb.MDExPlugins.InlineAttributeLists
   alias HexpmWeb.Readme.{Sanitizer, URLRewriter}
+  alias HexpmWeb.SyntaxHighlight
 
   @header_tags [1, 2, 3, 4, 5, 6]
 
@@ -26,10 +27,13 @@ defmodule HexpmWeb.Readme.Renderer do
           MDEx.new(
             markdown: content,
             extension: [description_lists: true, superscript: true, subscript: true],
-            syntax_highlight: [formatter: :html_linked]
+            syntax_highlight: nil
           )
           |> MDExGFM.attach()
           |> MDEx.Document.run()
+          |> MDEx.traverse_and_update(
+            &highlight_code_block(&1, "readme #{package_name} #{version}")
+          )
           |> MDEx.traverse_and_update(&InlineAttributeLists.transform/1)
           |> MDEx.traverse_and_update(
             HeadingAnchors.transform(levels: @header_tags, hover_link: false)
@@ -48,6 +52,18 @@ defmodule HexpmWeb.Readme.Renderer do
     |> LazyHTML.Tree.postwalk(&preserve_pre_newline/1)
     |> LazyHTML.Tree.to_html()
   end
+
+  # Code blocks are highlighted in lumis serve processes, like file previews,
+  # rather than in the VM.
+  defp highlight_code_block(%MDEx.CodeBlock{info: info, literal: literal}, label) do
+    language = info |> String.split() |> List.first("plaintext")
+
+    %MDEx.HtmlBlock{
+      literal: SyntaxHighlight.highlight(literal, language, "#{label} #{language}")
+    }
+  end
+
+  defp highlight_code_block(node, _label), do: node
 
   # HTML parsing discards the first newline after <pre>. Prefix one so the
   # serialized HTML preserves the first text node when parsed again.

@@ -1,15 +1,10 @@
 defmodule HexpmWeb.SyntaxHighlightTest do
   use ExUnit.Case, async: true
 
-  alias HexpmWeb.SyntaxHighlight
+  import ExUnit.CaptureLog
+  import HexpmWeb.SyntaxHighlightHelpers
 
-  # Without this the assertions below race the highlighter's first load, and a
-  # loaded machine loses: `highlight/3` gives up after @timeout and answers with
-  # escaped plain source, which looks like a highlighting bug.
-  setup do
-    assert SyntaxHighlight.warm() == :ok
-    :ok
-  end
+  alias HexpmWeb.SyntaxHighlight
 
   test "highlights documents and line fragments with Lumis" do
     document = SyntaxHighlight.highlight("value = <script>", "lib/app.ex", "test document")
@@ -32,21 +27,47 @@ defmodule HexpmWeb.SyntaxHighlightTest do
     refute first =~ "<pre"
   end
 
-  @tag :capture_log
-  test "uses escaped fallback output after timeout or failure" do
-    assert ["&lt;script&gt;"] =
-             SyntaxHighlight.run(
-               fn -> Process.sleep(100) end,
-               fn -> ["&lt;script&gt;"] end,
-               "slow source",
-               0
-             )
+  test "uses escaped plain source after a timeout" do
+    source = slow_source(0.5) <> "<script>"
 
-    assert :fallback =
-             SyntaxHighlight.run(
-               fn -> raise "invalid source" end,
-               fn -> :fallback end,
-               "invalid source"
-             )
+    log =
+      capture_log(fn ->
+        assert document =
+                 SyntaxHighlight.highlight(source, "lib/app.ex", "slow source", timeout: 1)
+
+        assert document =~ ~s(<div class="l-line" data-line="1">defmodule App do</div>)
+        assert document =~ "&lt;script&gt;"
+        refute document =~ "l-keyword"
+
+        assert ["value = &lt;script&gt;"] =
+                 SyntaxHighlight.highlight_lines(["value = <script>"], "lib/app.ex", "slow lines",
+                   timeout: 0
+                 )
+      end)
+
+    assert log =~ "Failed to highlight slow source: :timeout"
+  end
+
+  test "uses escaped plain source when highlighting is unavailable" do
+    log =
+      capture_log(fn ->
+        assert SyntaxHighlight.highlight("<b>", "lib/app.ex", "source", name: :no_such_pool) ==
+                 ~s(<pre class="lumis"><code><div class="l-line" data-line="1">&lt;b&gt;</div></code></pre>)
+      end)
+
+    assert log =~ "Failed to highlight source: :unavailable"
+  end
+
+  test "emits telemetry with the result" do
+    ref = :telemetry_test.attach_event_handlers(self(), [[:hexpm, :syntax_highlight, :stop]])
+
+    SyntaxHighlight.highlight(":ok", "lib/app.ex", "source")
+    assert_receive {[:hexpm, :syntax_highlight, :stop], ^ref, %{duration: _}, %{result: :ok}}
+
+    capture_log(fn ->
+      SyntaxHighlight.highlight(":ok", "lib/app.ex", "source", name: :no_such_pool)
+    end)
+
+    assert_receive {[:hexpm, :syntax_highlight, :stop], ^ref, _, %{result: :unavailable}}
   end
 end

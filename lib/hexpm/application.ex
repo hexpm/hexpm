@@ -218,8 +218,7 @@ defmodule Hexpm.Application do
       goth_spec(),
       if(write_mode?, do: setup()),
       HexpmWeb.Telemetry,
-      metrics_server_spec(),
-      {Task, &HexpmWeb.SyntaxHighlight.warm/0}
+      metrics_server_spec()
     ]
     |> Enum.reject(&is_nil/1)
   end
@@ -257,8 +256,17 @@ defmodule Hexpm.Application do
        interval: 3_600_000,
        enabled: Application.fetch_env!(:hexpm, :cache_enabled)},
       load_caches(),
+      syntax_highlight_fetcher_spec(),
+      HexpmWeb.SyntaxHighlight.Pool,
       HexpmWeb.Endpoint
     ]
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp syntax_highlight_fetcher_spec() do
+    if Application.fetch_env!(:hexpm, HexpmWeb.SyntaxHighlight)[:download] do
+      HexpmWeb.SyntaxHighlight.Fetcher
+    end
   end
 
   defp worker_before_oban_children,

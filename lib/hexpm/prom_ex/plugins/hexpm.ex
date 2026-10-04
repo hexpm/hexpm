@@ -5,8 +5,9 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
   API authentication (`HexpmWeb.AuthHelpers`), registry builds
   (`Hexpm.Repository.RegistryWorker`) and CDN purges (`Hexpm.CDN.PurgeWorker`,
   `Hexpm.CDN.Fastly`), organization billing and deletion
-  (`Hexpm.Billing.Report`, `Hexpm.Accounts.OrganizationDeletions`), and the
-  number of Erlang nodes this node is connected to.
+  (`Hexpm.Billing.Report`, `Hexpm.Accounts.OrganizationDeletions`), syntax
+  highlighting (`HexpmWeb.SyntaxHighlight`), and the number of Erlang nodes
+  this node is connected to.
   """
 
   use PromEx.Plugin
@@ -99,6 +100,21 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
           event_name: [:hexpm, :registry_builder, :build, :exception],
           description: "Registry builds that raised.",
           tags: [:type]
+        )
+      ]),
+      Event.build(:hexpm_syntax_highlight_event_metrics, [
+        counter("hexpm.syntax_highlight.total",
+          event_name: [:hexpm, :syntax_highlight, :stop],
+          description: "File previews and diffs highlighted, by result.",
+          tags: [:result]
+        ),
+        distribution("hexpm.syntax_highlight.duration.milliseconds",
+          event_name: [:hexpm, :syntax_highlight, :stop],
+          measurement: :duration,
+          description: "How long highlighting took, waiting for a worker included.",
+          reporter_options: [buckets: [5, 10, 25, 50, 100, 250, 500, 1_000, 2_500]],
+          tags: [:result],
+          unit: {:native, :millisecond}
         )
       ]),
       Event.build(:hexpm_sentry_event_metrics, [

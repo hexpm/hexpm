@@ -2,6 +2,7 @@
   inputs: [
     "*.{heex,ex,exs}",
     "{config,lib,test}/**/*.{heex,ex,exs}",
+    "bench/*.exs",
     "priv/*/seeds.exs"
   ],
   plugins: [Phoenix.LiveView.HTMLFormatter],

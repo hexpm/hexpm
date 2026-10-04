@@ -9,10 +9,10 @@ ENV LANG=C.UTF-8
 # install build dependencies
 RUN apt update && \
     apt upgrade -y && \
-    apt install -y --no-install-recommends git build-essential cmake curl ca-certificates && \
+    apt install -y --no-install-recommends git build-essential cmake curl ca-certificates util-linux-extra && \
     apt clean -y && rm -rf /var/lib/apt/lists/*
 
-# install rust, the lumis and mdex_native NIFs are built from source
+# install rust, the lumis NIF and CLI and the mdex_native NIF are built from source
 ARG RUST_VERSION=1.99.0
 ARG RUSTUP_VERSION=1.29.1
 RUN arch="$(uname -m)" && \
@@ -79,6 +79,14 @@ RUN mix compile
 ARG GEOIP_MONTH
 RUN mix download_geoip${GEOIP_MONTH:+ --month ${GEOIP_MONTH}}
 
+# Parsers for syntax highlighting (priv/lumis), and the seccomp filter for the
+# processes that run it (priv/lumis_sandbox), written here because a filter is
+# for one CPU architecture. Pass --build-arg LUMIS_LANGUAGES="elixir erlang" to
+# replace the configured list.
+ARG LUMIS_LANGUAGES
+RUN mix hexpm.lumis_cache ${LUMIS_LANGUAGES}
+RUN mix hexpm.lumis_seccomp
+
 # build release
 COPY rel rel
 RUN mix do sentry.package_source_code + release
@@ -95,7 +103,10 @@ RUN mkdir /app
 WORKDIR /app
 
 COPY --from=build /app/_build/prod/rel/hexpm ./
-RUN chown -R nobody: /app
+# The release stays owned by root, so the processes that highlight package
+# source, which run as nobody too, cannot change it. nobody writes to tmp,
+# RELEASE_TMP and :tmp_dir, and to priv/lumis, where parsers are downloaded.
+RUN mkdir tmp && chown -R nobody: tmp lib/hexpm-*/priv/lumis
 USER nobody
 
 ENV HOME=/app

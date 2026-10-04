@@ -132,7 +132,8 @@ defmodule Hexpm.MixProject do
         "ecto.setup",
         "esbuild.install",
         "tailwind.install",
-        "generate_lumis_css"
+        "generate_lumis_css",
+        "hexpm.lumis_cache"
       ],
       "ecto.setup": ["ecto.reset", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.create", "ecto.load", "ecto.migrate"],
@@ -142,7 +143,13 @@ defmodule Hexpm.MixProject do
         "tailwind default --minify",
         "phx.digest"
       ],
-      test: ["ecto.create --quiet", "ecto.load --skip-if-loaded", "ecto.migrate", "test"]
+      test: [
+        "ecto.create --quiet",
+        "ecto.load --skip-if-loaded",
+        "ecto.migrate",
+        "hexpm.lumis_cache",
+        "test"
+      ]
     ]
   end
 
