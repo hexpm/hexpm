@@ -10,9 +10,11 @@ defmodule Hexpm.HTTPTest do
   @server_step_timeout 10_000
   @server_await_timeout 30_000
 
+  # ThousandIsland's default num_acceptors, which Lasso's Bandit server uses
+  @lasso_acceptors 100
+
   setup do
-    lasso = Lasso.open()
-    {:ok, lasso: lasso}
+    {:ok, lasso: open_lasso()}
   end
 
   test "get/2", %{lasso: lasso} do
@@ -622,6 +624,35 @@ defmodule Hexpm.HTTPTest do
     for result <- Task.await_many(tasks, @server_await_timeout) do
       assert {:ok, 200, _headers, "released"} = result
     end
+  end
+
+  # Shutting down a ThousandIsland server closes the listener before the
+  # acceptors stop, and an acceptor that hasn't fetched the listener socket yet
+  # crashes. Wait until every acceptor has fetched it.
+  defp open_lasso do
+    ref =
+      :telemetry_test.attach_event_handlers(self(), [
+        [:thousand_island, :listener, :start],
+        [:thousand_island, :acceptor, :start]
+      ])
+
+    on_exit(fn -> :telemetry.detach(ref) end)
+
+    lasso = Lasso.open()
+    port = lasso.port
+
+    assert_receive {[:thousand_island, :listener, :start], ^ref, _,
+                    %{local_port: ^port, telemetry_span_context: listener}},
+                   @server_await_timeout
+
+    for _ <- 1..@lasso_acceptors do
+      assert_receive {[:thousand_island, :acceptor, :start], ^ref, _,
+                      %{parent_telemetry_span_context: ^listener}},
+                     @server_await_timeout
+    end
+
+    :telemetry.detach(ref)
+    lasso
   end
 
   defp lasso_url(lasso, path) do
