@@ -221,6 +221,31 @@ defmodule Hexpm.PurgeExpiredRecordsTest do
       refute Repo.get(Hexpm.OAuth.Token, revoked.id)
     end
 
+    test "keeps a revoked trusted publisher token until it expires" do
+      trusted_publisher = insert(:trusted_publisher)
+
+      token = fn jti, expires_at ->
+        Repo.insert!(%Hexpm.OAuth.Token{
+          jti: jti,
+          token_type: "bearer",
+          scopes: ["package:hexpm/#{trusted_publisher.package.name}"],
+          expires_at: expires_at,
+          revoked_at: truncated_seconds_ago(60),
+          grant_type: "trusted_publisher",
+          grant_reference: "oidc-#{jti}",
+          trusted_publisher_id: trusted_publisher.id
+        })
+      end
+
+      live = token.("live-jti", truncated_seconds_from_now(600))
+      expired = token.("expired-jti", truncated_seconds_ago(60))
+
+      PurgeExpiredRecords.run()
+
+      assert Repo.get(Hexpm.OAuth.Token, live.id)
+      refute Repo.get(Hexpm.OAuth.Token, expired.id)
+    end
+
     test "deletes revoked tokens whose refresh token has not expired" do
       user = insert(:user)
       client = insert(:oauth_client)

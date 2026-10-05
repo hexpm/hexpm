@@ -102,6 +102,17 @@ defmodule Hexpm.TrustedPublishers.OIDCTest do
     assert {:error, :issued_at_in_future} = OIDC.verify(token, @issuer)
   end
 
+  test "rejects tokens valid for longer than a Hex token" do
+    now = System.system_time(:second)
+
+    token =
+      TrustedPublisherHelpers.sign_oidc_claims(
+        Map.merge(TrustedPublisherHelpers.github_claims(), %{"iat" => now, "exp" => now + 3600})
+      )
+
+    assert {:error, :lifetime_too_long} = OIDC.verify(token, @issuer)
+  end
+
   test "rejects missing jti" do
     token =
       TrustedPublisherHelpers.sign_oidc_claims(

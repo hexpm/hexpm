@@ -417,6 +417,7 @@ defmodule HexpmWeb.API.OAuthController do
               :token_expired,
               :token_not_yet_valid,
               :issued_at_in_future,
+              :lifetime_too_long,
               :issuer_mismatch,
               :jti_missing,
               :issuer_missing

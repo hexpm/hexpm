@@ -158,7 +158,7 @@ Notes:
 
 * `permissions.id-token: write` is required so the job can request an OIDC token.
 * Discover the audience with `GET /api/oidc/audience` rather than hardcoding it. Today the value is `hexpm`.
-* Each OIDC token may be minted at most once (`jti` replay is rejected).
+* Each OIDC token may be minted at most once (`jti` replay is rejected). Hex refuses OIDC tokens that are valid for more than 15 minutes, because it keeps the record of a used token for that long. GitHub's are valid for 5 minutes.
 * The minted Hex token is scoped to exactly the package named in the `scope` parameter and is publish-oriented; it is not a general-purpose API key.
 * Prefer matching on a GitHub Environment for production release workflows so only that environment can mint.
 

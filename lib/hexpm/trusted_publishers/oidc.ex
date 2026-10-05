@@ -8,6 +8,10 @@ defmodule Hexpm.TrustedPublishers.OIDC do
   @http_timeout 5_000
   @max_response_bytes 1_000_000
   @clock_skew_seconds 60
+
+  # The Hex token row that records an OIDC token as used lives this long, so
+  # an OIDC token valid for longer could be exchanged again after it's purged.
+  @max_lifetime_seconds 15 * 60
   @min_refresh_interval_seconds 30
 
   def audience, do: Application.fetch_env!(:hexpm, :trusted_publishers)[:audience]
@@ -191,6 +195,9 @@ defmodule Hexpm.TrustedPublishers.OIDC do
     cond do
       is_integer(claims["iat"]) and claims["iat"] > now + @clock_skew_seconds ->
         {:error, :issued_at_in_future}
+
+      is_integer(claims["exp"]) and claims["exp"] > now + @max_lifetime_seconds ->
+        {:error, :lifetime_too_long}
 
       not is_binary(claims["jti"]) or claims["jti"] == "" ->
         {:error, :jti_missing}
