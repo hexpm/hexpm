@@ -338,13 +338,22 @@ defmodule HexpmWeb.API.OAuthController do
       {:error, reason} ->
         {error, description} = jwt_bearer_error(reason)
 
-        if error != :server_error do
+        if counts_toward_mint_limit?(reason, error) do
           Attack.trusted_publisher_mint_throttle(TrustedPublishers.rate_limit_key(verified))
         end
 
         {:error, error, description}
     end
   end
+
+  # A rejected event or a replayed token says nothing about the publishers Hex
+  # has, and a pull request from a fork can produce either, so counting them
+  # would let outsiders block the repository's releases.
+  defp counts_toward_mint_limit?(reason, _error)
+       when reason in [:event_not_allowed, :token_replayed],
+       do: false
+
+  defp counts_toward_mint_limit?(_reason, error), do: error != :server_error
 
   defp parse_trusted_publisher_scope(scope_string) when is_binary(scope_string) do
     case String.split(scope_string, " ", trim: true) do

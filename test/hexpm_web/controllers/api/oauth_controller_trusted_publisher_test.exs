@@ -148,6 +148,35 @@ defmodule HexpmWeb.API.OAuthControllerTrustedPublisherTest do
       assert json_response(mint.(other_repository), 403)["error"] == "access_denied"
     end
 
+    test "rejected events and replayed tokens do not count", %{package: package} do
+      scope = "package:hexpm/#{package.name}"
+
+      align_to_throttle_bucket(15 * 60_000)
+
+      for event <- List.duplicate("pull_request_target", 20) ++ List.duplicate("workflow_run", 20) do
+        oidc =
+          TrustedPublisherHelpers.github_claims()
+          |> Map.put("event_name", event)
+          |> TrustedPublisherHelpers.sign_oidc_claims()
+
+        conn = post(build_conn(), "/api/oauth/token", mint_params(oidc, scope))
+        assert json_response(conn, 400)["error"] == "invalid_grant"
+      end
+
+      oidc = TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
+      params = mint_params(oidc, scope)
+      assert json_response(post(build_conn(), "/api/oauth/token", params), 200)["access_token"]
+
+      for _ <- 1..35 do
+        conn = post(build_conn(), "/api/oauth/token", params)
+        assert json_response(conn, 400)["error_description"] =~ "already been used"
+      end
+
+      fresh = TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
+      conn = post(build_conn(), "/api/oauth/token", mint_params(fresh, scope))
+      assert json_response(conn, 200)["access_token"]
+    end
+
     test "successful mints do not count", %{package: package} do
       scope = "package:hexpm/#{package.name}"
 

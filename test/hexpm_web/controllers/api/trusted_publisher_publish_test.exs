@@ -247,94 +247,6 @@ defmodule HexpmWeb.API.TrustedPublisherPublishTest do
     assert conn.status in [401, 403]
   end
 
-  describe "organization repository" do
-    setup %{user: user} do
-      repository = insert(:repository)
-
-      package =
-        insert(:package,
-          repository_id: repository.id,
-          package_owners: [build(:package_owner, user: user)]
-        )
-
-      insert(:trusted_publisher,
-        package: package,
-        repository_owner: "acme",
-        repository_owner_id: "12345",
-        repository_id: "67890",
-        repository: "acme/widget",
-        workflow: "release.yml"
-      )
-
-      token =
-        TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
-        |> Hexpm.TrustedPublishers.verify_and_mint(
-          repository: repository.name,
-          package: package.name
-        )
-        |> then(fn {:ok, token} -> token end)
-
-      %{repository: repository, org_package: package, token: token}
-    end
-
-    test "minted token can publish a release", %{
-      repository: repository,
-      org_package: package,
-      token: token
-    } do
-      meta = %{name: package.name, version: "1.0.0", description: "from CI"}
-
-      conn =
-        build_conn()
-        |> put_req_header("content-type", "application/octet-stream")
-        |> put_req_header("authorization", "Bearer #{token.access_token}")
-        |> post("/api/repos/#{repository.name}/publish", create_tar(meta))
-
-      assert json_response(conn, 201)
-      assert Hexpm.Repo.get_by!(Release, package_id: package.id, version: "1.0.0")
-    end
-
-    test "minted token can publish docs", %{
-      repository: repository,
-      org_package: package,
-      token: token,
-      user: user
-    } do
-      insert(:release, package: package, version: "1.0.0", publisher: user)
-
-      conn =
-        build_conn()
-        |> put_req_header("content-type", "application/octet-stream")
-        |> put_req_header("authorization", "Bearer #{token.access_token}")
-        |> post(
-          "/api/repos/#{repository.name}/packages/#{package.name}/releases/1.0.0/docs",
-          create_docs_tar([{"index.html", "docs"}])
-        )
-
-      assert conn.status == 201
-    end
-
-    test "minted token is refused when organization billing is inactive", %{
-      repository: repository,
-      org_package: package,
-      token: token
-    } do
-      repository.organization
-      |> Ecto.Changeset.change(billing_active: false)
-      |> Hexpm.Repo.update!()
-
-      meta = %{name: package.name, version: "1.0.0", description: "from CI"}
-
-      conn =
-        build_conn()
-        |> put_req_header("content-type", "application/octet-stream")
-        |> put_req_header("authorization", "Bearer #{token.access_token}")
-        |> post("/api/repos/#{repository.name}/publish", create_tar(meta))
-
-      assert conn.status == 403
-    end
-  end
-
   describe "organization publisher" do
     setup do
       repository = insert(:repository)
@@ -478,6 +390,20 @@ defmodule HexpmWeb.API.TrustedPublisherPublishTest do
         )
 
       assert conn.status == 201
+    end
+
+    test "is refused at publish when billing lapsed after the exchange", %{
+      repository: repository,
+      organization: organization,
+      org_package: package
+    } do
+      token = mint(repository: repository.name, package: package.name)
+
+      organization
+      |> Ecto.Changeset.change(billing_active: false)
+      |> Hexpm.Repo.update!()
+
+      assert publish(token, repository, package.name).status == 403
     end
 
     test "a repository token can't publish", %{repository: repository, org_package: package} do

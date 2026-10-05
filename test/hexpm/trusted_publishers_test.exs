@@ -730,28 +730,31 @@ defmodule Hexpm.TrustedPublishersTest do
                mint(repository: repository.name, package: "other_package")
     end
 
-    test "prefers the package's own publisher", %{
+    test "ignores package publishers on a private package", %{
       repository: repository,
       organization: organization
     } do
       package = insert(:package, repository_id: repository.id)
 
-      insert(:organization_trusted_publisher,
-        organization: organization,
-        role: "write",
+      insert(:trusted_publisher,
+        package: package,
         repository: "acme/widget",
         workflow: "release.yml"
       )
 
-      package_publisher =
-        insert(:trusted_publisher,
-          package: package,
+      assert {:error, :no_matching_publisher} =
+               mint(repository: repository.name, package: package.name)
+
+      organization_publisher =
+        insert(:organization_trusted_publisher,
+          organization: organization,
+          role: "write",
           repository: "acme/widget",
           workflow: "release.yml"
         )
 
       assert {:ok, token} = mint(repository: repository.name, package: package.name)
-      assert token.trusted_publisher_id == package_publisher.id
+      assert token.trusted_publisher_id == organization_publisher.id
     end
 
     test "refuses a package token from a read publisher", %{
@@ -996,6 +999,26 @@ defmodule Hexpm.TrustedPublishersTest do
       assert "trusted publisher already configured for this organization" in List.wrap(
                errors_on(changeset).repository
              )
+    end
+
+    test "refuses a package publisher on a private package", %{
+      admin: admin,
+      organization: organization
+    } do
+      repository = Repo.get_by!(Hexpm.Repository.Repository, organization_id: organization.id)
+      package = insert(:package, repository_id: repository.id)
+
+      assert {:error, :not_allowed} =
+               TrustedPublishers.create(
+                 package,
+                 %{
+                   "provider" => "github",
+                   "repository_owner" => "acme",
+                   "repository" => "widget",
+                   "workflow" => "release.yml"
+                 },
+                 audit: audit_data(admin)
+               )
     end
 
     test "refuses the hexpm organization", %{admin: admin} do

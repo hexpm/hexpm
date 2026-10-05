@@ -2,6 +2,7 @@ defmodule Hexpm.Repository.Owners do
   use Hexpm.Context
 
   alias Hexpm.Accounts.OptionalEmails
+  alias Hexpm.TrustedPublishers.TrustedPublisher
 
   def all(package, preload \\ []) do
     from(owner in assoc(package, :package_owners),
@@ -75,6 +76,7 @@ defmodule Hexpm.Repository.Owners do
         PackageOwner.changeset(owner, params)
       end)
       |> remove_existing_owners(params)
+      |> remove_trusted_publishers(package, params, audit_data)
       |> audit(audit_data, add_owner_audit_log_action(params), fn %{owner: owner} ->
         {package, owner.level, user}
       end)
@@ -122,6 +124,25 @@ defmodule Hexpm.Repository.Owners do
   end
 
   defp remove_existing_owners(multi, _params) do
+    multi
+  end
+
+  # A transfer hands the package to new owners, so a publisher the previous
+  # owners pointed at their own repositories stops publishing it.
+  defp remove_trusted_publishers(multi, package, %{"transfer" => true}, audit_data) do
+    multi
+    |> Multi.run(:trusted_publishers, fn repo, _changes ->
+      query = from(tp in TrustedPublisher, where: tp.package_id == ^package.id)
+      trusted_publishers = query |> repo.all() |> Enum.map(&%{&1 | package: package})
+      repo.delete_all(query)
+      {:ok, trusted_publishers}
+    end)
+    |> Multi.merge(fn %{trusted_publishers: trusted_publishers} ->
+      audit_many(Multi.new(), audit_data, "trusted_publisher.remove", trusted_publishers)
+    end)
+  end
+
+  defp remove_trusted_publishers(multi, _package, _params, _audit_data) do
     multi
   end
 

@@ -142,11 +142,13 @@ defmodule Hexpm.TrustedPublishers.Provider.GitHub do
 
   defp extract_workflow_filename(nil, _repository), do: nil
 
+  # A workflow filename may contain `@` but never `/`, so the ref starts at the
+  # first `@refs/`. A ref that isn't under refs/ leaves the path unmatched.
   defp extract_workflow_filename(value, repository)
        when is_binary(value) and is_binary(repository) and repository != "" do
     path =
       value
-      |> String.split("@", parts: 2)
+      |> String.split("@refs/", parts: 2)
       |> List.first()
 
     prefix = String.downcase(repository) <> "/"

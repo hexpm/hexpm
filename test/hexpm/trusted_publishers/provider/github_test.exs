@@ -8,6 +8,41 @@ defmodule Hexpm.TrustedPublishers.Provider.GitHubTest do
   setup :verify_on_exit!
 
   describe "match?/2" do
+    test "an @ in the workflow filename doesn't pass for the name before it" do
+      publisher = %TrustedPublisher{
+        repository_owner_id: "123",
+        repository_id: "456",
+        repository: "acme/widget",
+        workflow: "release.yml",
+        environment: ""
+      }
+
+      claims = fn workflow_ref ->
+        %{
+          "repository" => "acme/widget",
+          "repository_owner_id" => "123",
+          "repository_id" => "456",
+          "workflow_ref" => workflow_ref,
+          "job_workflow_ref" => workflow_ref
+        }
+      end
+
+      refute GitHub.match?(
+               publisher,
+               claims.("acme/widget/.github/workflows/release.yml@x.yml@refs/heads/main")
+             )
+
+      assert GitHub.match?(
+               publisher,
+               claims.("acme/widget/.github/workflows/release.yml@refs/heads/a@b")
+             )
+
+      assert GitHub.match?(
+               publisher,
+               claims.("acme/widget/.github/workflows/release.yml@refs/tags/v1.0.0")
+             )
+    end
+
     test "an empty repository matches every repository of the owner only for an organization read publisher" do
       claims = fn repository, repository_id, owner_id ->
         %{

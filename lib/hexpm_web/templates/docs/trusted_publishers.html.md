@@ -2,7 +2,7 @@
 
 Trusted publishers let CI publish Hex packages without storing a long-lived API key. A GitHub Actions job presents a short-lived OpenID Connect (OIDC) identity token; Hex verifies it against a publisher you configured for the package and returns a short-lived, package-scoped access token that the normal publish path accepts.
 
-An organization can also configure publishers for its private repository. Those fetch the organization's packages, and with the write role publish and create them, see [Organization publishers](#organization-publishers).
+Package publishers are for packages in the public `hexpm` repository. Packages in an organization's private repository are published by the organization's publishers, which also fetch its packages, see [Organization publishers](#organization-publishers).
 
 GitHub Actions is the only supported CI provider.
 
@@ -14,7 +14,9 @@ GitHub Actions is the only supported CI provider.
 4. Hex verifies the token, matches a publisher, and returns a Hex access token that expires in 15 minutes and can only publish that package.
 5. The job publishes with `Authorization: Bearer <token>` (for Mix, `HEX_API_KEY="Bearer <token>"`, since Mix sends `HEX_API_KEY` as the raw `Authorization` header value).
 
-The package must already exist. A package's trusted publishers cannot create a new package or publish its first release; do that once with a normal Hex account or API key, or use an [organization publisher](#organization-publishers) for a private package.
+The package must already exist. A package's trusted publishers cannot create a new package or publish its first release; do that once with a normal Hex account or API key.
+
+Transferring a package (`mix hex.owner transfer`) removes its trusted publishers, so a publisher a previous owner set up can't keep publishing it. The new owners add their own. Adding or removing an owner without a transfer keeps them.
 
 ### Before you begin
 
@@ -23,7 +25,6 @@ You need:
 * Full ownership of the Hex package (`owner` level, not only `maintainer`).
 * Two-factor authentication enabled on your Hex account, from `/dashboard/security`. A trusted publisher grants publish rights the same way a personal API key does, so configuring or removing one carries the same requirement.
 * A GitHub Actions workflow that will publish, with `id-token: write` permission.
-* For private organization packages, an active organization billing state (same requirement as other publish paths).
 
 ### Configure a trusted publisher
 
@@ -58,7 +59,7 @@ A package may have multiple publishers (for example several workflows or reposit
 
 ### Organization publishers
 
-An organization admin configures publishers for the organization's private repository on the organization dashboard's "Trusted publishers" tab. Adding or removing one requires the admin role, two-factor authentication on the admin's account, and an active organization billing state. Every organization admin is emailed when one is added or removed, and the change is recorded in the organization's activity log.
+An organization admin configures publishers for the organization's private repository on the organization dashboard's "Trusted publishers" page. Every member can see the page. Adding one requires the admin role, two-factor authentication on the admin's account, and an active organization billing state, and removing one requires the same except billing. Every organization admin is emailed when one is added or removed, and the change is recorded in the organization's activity log. A private package's own "Trusted publishers" tab lists the organization publishers that can publish it and links to the organization page.
 
 Each publisher has a role:
 
@@ -76,7 +77,7 @@ The other fields are the same as for a package publisher. The `write` role needs
 
 A common setup is one `read` publisher with an empty repository name, so every repository in your GitHub organization can fetch private dependencies, and one `write` publisher per repository that releases packages, naming its release workflow and environment.
 
-Organization publishers never cover the public `hexpm` repository. Public packages owned by an organization keep their own package publishers.
+Organization publishers never cover the public `hexpm` repository. Public packages owned by an organization use package publishers, and private packages only use organization publishers.
 
 Retiring releases, reverting, and changing owners, keys, members, or settings aren't available to either role. Organization publishers aren't governed by the organization's single sign-on or two-factor authentication requirements, the same as organization API keys.
 
@@ -94,7 +95,7 @@ To publish or create a package, use a package scope in the organization's reposi
 scope=package:ORG/PACKAGE
 ```
 
-Hex tries the package's own publishers first and then the organization's `write` publishers whose package list covers the name. A package created this way has no owners, the same as one created with an organization API key. A job that fetches private dependencies and then publishes exchanges twice, once per scope, with a fresh OIDC token each time.
+Hex matches the organization's `write` publishers whose package list covers the name. A package created this way has no owners, the same as one created with an organization API key. A job that fetches private dependencies and then publishes exchanges twice, once per scope, with a fresh OIDC token each time.
 
 Removing a publisher stops its tokens at the Hex API on the next request. repo.hex.pm verifies tokens without asking Hex, so a fetch token keeps working there until it expires, at most 15 minutes. A lapsed billing subscription behaves the same, since billing is checked when exchanging.
 
@@ -151,11 +152,7 @@ jobs:
           HEX_API_KEY="Bearer $ACCESS_TOKEN" mix hex.publish --yes
 ```
 
-Replace `PACKAGE` with the Hex package name. For a private organization package, use the Hex repository in the scope:
-
-```nohighlight
-scope=package:ORG/PACKAGE
-```
+Replace `PACKAGE` with the Hex package name. For a private package, see [Organization publishers](#organization-publishers).
 
 Notes:
 
@@ -186,7 +183,7 @@ assertion=<github-oidc-jwt>&
 scope=package:hexpm/PACKAGE
 ```
 
-No `client_id` is needed, because the OIDC token is the credential. `scope` names exactly one package as `package:REPOSITORY/PACKAGE`; use the Hex repository name (for example `package:ORG/PACKAGE`) for a private organization package. An [organization publisher](#organization-publishers) can instead request `repository:ORG` to fetch. Successful response:
+No `client_id` is needed, because the OIDC token is the credential. `scope` names exactly one package as `package:REPOSITORY/PACKAGE`. An [organization publisher](#organization-publishers) uses its organization's repository (`package:ORG/PACKAGE`), or requests `repository:ORG` to fetch. Successful response:
 
 ```nohighlight
 {
@@ -197,7 +194,7 @@ No `client_id` is needed, because the OIDC token is the credential. `scope` name
 }
 ```
 
-Errors use OAuth-style bodies (`error`, `error_description`), for example missing fields (`invalid_request`), a malformed or missing `scope` (`invalid_scope`), bad or replayed OIDC tokens (`invalid_grant`), or no matching publisher (`access_denied`). An unknown package, repository, or organization returns the same `access_denied` as no matching publisher. A matching publisher of an organization without an active billing state also gets `access_denied`, with a description saying so. The grant is public (the OIDC token is the credential). It has no per-address rate limit, so CI runners sharing an address never throttle each other. Mints that fail after the OIDC token is verified count toward a limit per GitHub repository; once it is exceeded the endpoint answers `429` with `slow_down` for that repository only.
+Errors use OAuth-style bodies (`error`, `error_description`), for example missing fields (`invalid_request`), a malformed or missing `scope` (`invalid_scope`), bad or replayed OIDC tokens (`invalid_grant`), or no matching publisher (`access_denied`). An unknown package, repository, or organization returns the same `access_denied` as no matching publisher. A matching publisher of an organization without an active billing state also gets `access_denied`, with a description saying so. The grant is public (the OIDC token is the credential). It has no per-address rate limit, so CI runners sharing an address never throttle each other. Mints that fail after the OIDC token is verified count toward a limit per GitHub repository; once it is exceeded the endpoint answers `429` with `slow_down` for that repository only. Tokens from rejected events and replayed tokens don't count, because a pull request from a fork can produce them.
 
 To revoke a minted token before it expires, for example at the end of the job, send it to the standard revocation endpoint ([RFC 7009](https://www.rfc-editor.org/rfc/rfc7009)), again without a `client_id`:
 
@@ -215,13 +212,13 @@ token=<hex-access-token>
 * Pinning the repository ID as well as the owner ID matters inside an organization: if the trusted repository is deleted, anyone who can create a repository in that organization could otherwise recreate the name, add the configured workflow, and mint. The owner ID alone would not stop that.
 * Minted tokens are short-lived (15 minutes), cover one package or one organization repository, and are attributed to the trusted publisher (release publisher user is unset; audit logs record the publish).
 * Tokens from `pull_request_target` and `workflow_run` workflows are rejected. A `workflow_run` run gets write permissions even when a pull request from a fork triggered the run that started it, and no OIDC claim says whether one did.
-* Configuring or removing a publisher requires full package ownership and two-factor authentication, because a publisher grants publish rights the same way a personal API key does. Every package owner is emailed when a publisher is added or removed, and the email cannot be turned off. Two-factor authentication is not required for CI mint/publish itself, because the trusted-publisher grant has no interactive user.
+* Configuring or removing a package publisher requires full package ownership and two-factor authentication, because a publisher grants publish rights the same way a personal API key does. Every package owner is emailed when a publisher is added or removed, and the email cannot be turned off. Transferring the package removes its publishers. Two-factor authentication is not required for CI mint/publish itself, because the trusted-publisher grant has no interactive user.
 * Hex records an allowlisted snapshot of the verified OIDC claims (repository, workflow ref, commit SHA, run id, and similar) on the minted token and attaches it to the release published with that token. The release API exposes this as `oidc_claims`, and the package page shows it in a Provenance card linking to the source commit, build file, branch or tag, environment, triggering actor, and workflow run, so consumers can see that a release was published via trusted publishing and which workflow produced it.
 
 ### Limitations
 
 * Only GitHub Actions can act as a trusted publisher. GitLab, CircleCI, and custom OIDC issuers are not supported.
-* A package's publishers can't create a package or land the first release from CI. Publish once manually, then attach a trusted publisher, or use an organization publisher for a private package.
+* A package's publishers can't create a package or land the first release from CI. Publish once manually, then attach a trusted publisher. For a private package, use an organization publisher, which can create it.
 * Mix and rebar3 don't request repository tokens with an OIDC token, so an organization publisher's `read` role only serves tools that call repo.hex.pm directly. Publishing works with the `package:ORG/PACKAGE` scope as shown above.
 
 ### Troubleshooting

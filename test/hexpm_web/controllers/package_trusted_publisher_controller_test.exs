@@ -487,10 +487,10 @@ defmodule HexpmWeb.PackageTrustedPublisherControllerTest do
     end
   end
 
-  describe "organization billing" do
+  describe "private package" do
     setup do
       org_user = insert(:user_with_tfa)
-      organization = insert(:organization, user: org_user, billing_active: false)
+      organization = insert(:organization, user: org_user)
       insert(:organization_user, organization: organization, user: org_user, role: "admin")
       repository = insert(:repository, organization: organization)
 
@@ -505,7 +505,7 @@ defmodule HexpmWeb.PackageTrustedPublisherControllerTest do
       %{organization: organization, repository: repository, org_user: org_user, package: package}
     end
 
-    test "refuses create for a private repository package with no active billing", %{
+    test "refuses a package publisher and points to the organization page", %{
       org_user: org_user,
       repository: repository,
       package: package
@@ -522,10 +522,11 @@ defmodule HexpmWeb.PackageTrustedPublisherControllerTest do
           }
         })
 
-      assert redirected_to(conn) ==
-               "/packages/#{repository.name}/#{package.name}/trusted-publishers"
+      assert redirected_to(conn) == "/dashboard/orgs/#{repository.name}/trusted-publishers"
 
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "no active billing subscription"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+               "managed on the organization's Trusted publishers page"
+
       assert TrustedPublishers.list(package) == []
     end
   end
@@ -600,8 +601,9 @@ defmodule HexpmWeb.PackageTrustedPublisherControllerTest do
         |> get("/packages/#{repository.name}/#{package.name}/trusted-publishers")
         |> html_response(200)
 
-      assert body =~ "Organization trusted publishers"
+      assert body =~ "published by the organization's trusted publishers"
       assert body =~ "acme/covering (release.yml)"
+      refute body =~ "add-trusted-publisher-form"
       assert body =~ "/dashboard/orgs/#{repository.name}/trusted-publishers"
       refute body =~ "acme/excluded"
       refute body =~ "acme/fetching"

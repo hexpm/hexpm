@@ -17,15 +17,8 @@ defmodule HexpmWeb.PackageTrustedPublisherController do
 
   def create(conn, params) do
     package = conn.assigns.package
-    trusted_publisher_params = params["trusted_publisher"] || %{}
+    params = params["trusted_publisher"] || %{}
 
-    case billing_active(package) do
-      :ok -> do_create(conn, package, trusted_publisher_params)
-      {:error, message} -> refuse_billing(conn, message)
-    end
-  end
-
-  defp do_create(conn, package, params) do
     case TrustedPublishers.create(package, params, audit: audit_data(conn)) do
       {:ok, _trusted_publisher} ->
         conn
@@ -36,6 +29,14 @@ defmodule HexpmWeb.PackageTrustedPublisherController do
         conn
         |> put_status(400)
         |> render_index(package, changeset)
+
+      {:error, :not_allowed} ->
+        conn
+        |> put_flash(
+          :error,
+          "Trusted publishers for private packages are managed on the organization's Trusted publishers page."
+        )
+        |> redirect(to: ~p"/dashboard/orgs/#{package.repository.name}/trusted-publishers")
 
       {:error, :unknown_provider} ->
         conn
@@ -84,24 +85,6 @@ defmodule HexpmWeb.PackageTrustedPublisherController do
         changeset: changeset
       ] ++ PackageLayoutAssigns.for_package(conn, package)
     )
-  end
-
-  defp billing_active(%{repository: %{organization: %Organization{id: 1}}}), do: :ok
-
-  defp billing_active(%{repository: %{organization: %Organization{} = organization}}) do
-    if Organization.billing_active?(organization) do
-      :ok
-    else
-      {:error, "This organization has no active billing subscription."}
-    end
-  end
-
-  defp refuse_billing(conn, message) do
-    package = conn.assigns.package
-
-    conn
-    |> put_flash(:error, message)
-    |> redirect(to: ViewHelpers.path_for_trusted_publishers(package))
   end
 
   defp feature_enabled(conn, _opts) do

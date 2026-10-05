@@ -86,14 +86,23 @@ defmodule HexpmWeb.Dashboard.OrganizationTrustedPublishersTest do
       refute body =~ "add-trusted-publisher-form"
     end
 
-    test "refuses a read member", %{reader: reader, organization: organization} do
-      conn =
+    test "shows the publishers without the form to a read member", %{
+      reader: reader,
+      organization: organization
+    } do
+      insert(:organization_trusted_publisher,
+        organization: organization,
+        repository: "acme/widget"
+      )
+
+      body =
         build_conn()
         |> test_login(reader)
         |> get(path(organization))
+        |> html_response(200)
 
-      assert conn.status == 400
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "permission"
+      assert body =~ "acme/widget"
+      refute body =~ "add-trusted-publisher-form"
     end
 
     test "requires sudo", %{admin: admin, organization: organization} do

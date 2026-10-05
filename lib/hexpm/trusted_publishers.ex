@@ -75,6 +75,11 @@ defmodule Hexpm.TrustedPublishers do
   # publishers never cover.
   def create(%Organization{id: 1}, _params, _opts), do: {:error, :not_allowed}
 
+  # A package in an organization's repository is published by the organization's
+  # publishers, which only admins manage and every admin hears about.
+  def create(%Package{repository_id: repository_id}, _params, _opts) when repository_id != 1,
+    do: {:error, :not_allowed}
+
   def create(owner, params, audit: audit_data) do
     provider_name = params["provider"] || params[:provider]
 
@@ -212,7 +217,8 @@ defmodule Hexpm.TrustedPublishers do
   Mints a short-lived Hex access token for a verified OIDC token.
 
   With `:package`, the token is scoped to that package in `:repository`
-  (default `"hexpm"`), and the package's own publishers are tried before the
+  (default `"hexpm"`). A package in the public repository matches its own
+  publishers, and a package in an organization's repository matches the
   organization's `write` publishers that cover the name. The package doesn't
   have to exist for an organization publisher, which can create it.
 
@@ -318,24 +324,11 @@ defmodule Hexpm.TrustedPublishers do
   defp find_package_publisher(repository, package_name, provider, claims) do
     package = Packages.get(repository, package_name)
 
-    package_publishers =
-      if package do
-        from(tp in TrustedPublisher,
-          where: tp.package_id == ^package.id and tp.provider == ^provider.name(),
-          order_by: [asc: tp.id]
-        )
-        |> Repo.all()
-      else
-        []
-      end
-
-    organization_publishers =
+    publishers =
       repository
-      |> organization_publishers_query(["write"], package_name)
+      |> package_publishers_query(package, package_name)
       |> for_provider(provider)
       |> Repo.all()
-
-    publishers = package_publishers ++ organization_publishers
 
     case Enum.find(publishers, &provider.match?(&1, claims)) do
       nil ->
@@ -346,6 +339,18 @@ defmodule Hexpm.TrustedPublishers do
       trusted_publisher ->
         {:ok, trusted_publisher, "package:#{repository.name}/#{package_name}"}
     end
+  end
+
+  defp package_publishers_query(%Repository{id: 1}, nil = _package, _package_name) do
+    from(tp in TrustedPublisher, where: false)
+  end
+
+  defp package_publishers_query(%Repository{id: 1}, %Package{} = package, _package_name) do
+    from(tp in TrustedPublisher, where: tp.package_id == ^package.id, order_by: [asc: tp.id])
+  end
+
+  defp package_publishers_query(%Repository{} = repository, _package, package_name) do
+    organization_publishers_query(repository, ["write"], package_name)
   end
 
   defp find_repository_publisher(%Repository{id: 1}, _provider, _claims) do

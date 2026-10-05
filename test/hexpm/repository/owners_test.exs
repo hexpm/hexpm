@@ -80,5 +80,34 @@ defmodule Hexpm.Repository.OwnersTest do
       assert [%{user_id: user_id}] = Owners.all(package)
       assert user_id == organization.user.id
     end
+
+    test "a transfer removes the package's trusted publishers", %{
+      owner: owner,
+      package: package
+    } do
+      trusted_publisher = insert(:trusted_publisher, package: package)
+      other_package_publisher = insert(:trusted_publisher)
+      new_owner = insert(:user)
+
+      assert {:ok, _} =
+               Owners.add(package, new_owner, %{"transfer" => true}, audit: audit_data(owner))
+
+      refute Repo.get(Hexpm.TrustedPublishers.TrustedPublisher, trusted_publisher.id)
+      assert Repo.get(Hexpm.TrustedPublishers.TrustedPublisher, other_package_publisher.id)
+
+      log = Repo.get_by!(Hexpm.Accounts.AuditLog, action: "trusted_publisher.remove")
+      assert log.params["repository"] == trusted_publisher.repository
+      assert log.params["package"]["name"] == package.name
+    end
+
+    test "adding an owner keeps the package's trusted publishers", %{
+      owner: owner,
+      package: package
+    } do
+      trusted_publisher = insert(:trusted_publisher, package: package)
+
+      assert {:ok, _} = Owners.add(package, insert(:user), %{}, audit: audit_data(owner))
+      assert Repo.get(Hexpm.TrustedPublishers.TrustedPublisher, trusted_publisher.id)
+    end
   end
 end

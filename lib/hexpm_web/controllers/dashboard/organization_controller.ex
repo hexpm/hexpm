@@ -1020,7 +1020,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   end
 
   def trusted_publishers(conn, %{"dashboard_org" => organization}) do
-    access_organization(conn, organization, "write", fn organization ->
+    access_organization(conn, organization, "read", fn organization ->
       render_index(conn, organization, tab: :trusted_publishers)
     end)
   end
