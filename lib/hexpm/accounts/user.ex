@@ -34,7 +34,7 @@ defmodule Hexpm.Accounts.User do
   end
 
   @username_regex ~r"\A[a-z0-9_\-\.]+\z"
-  @username_reject_regex ~r"(?!kneergo)$"
+  @username_reject_regex ~r"\A(?!.*kneergo)"
   @reserved_names ~w(me hex hexpm elixir erlang otp)
   @possible_roles ~w(basic mod)
 

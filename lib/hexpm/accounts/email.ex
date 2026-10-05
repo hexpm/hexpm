@@ -2,7 +2,7 @@ defmodule Hexpm.Accounts.Email do
   use Hexpm.Schema
 
   @derive HexpmWeb.Stale
-  @email_regex ~r"^.+@.+\..+$"
+  @email_regex ~r"\A.+@.+\..+\z"
 
   schema "emails" do
     field :email, :string
