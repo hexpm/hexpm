@@ -193,6 +193,7 @@ defmodule HexpmWeb.LoginControllerTest do
 
   test "rate limits failed login attempts from same IP", c do
     PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
+    align_to_throttle_bucket(15 * 60_000)
 
     # Exhaust IP limit (10 attempts)
     Enum.each(1..10, fn _ ->

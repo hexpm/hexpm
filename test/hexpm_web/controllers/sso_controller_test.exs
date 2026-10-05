@@ -811,6 +811,7 @@ defmodule HexpmWeb.SSOControllerTest do
   describe "rate limiting and state binding" do
     test "rate limits starts per IP before inserting a transaction", context do
       ip = {198, 51, 100, 42}
+      align_to_throttle_bucket(10 * 60_000)
       time = System.system_time(:millisecond)
 
       for _attempt <- 1..300 do
@@ -828,6 +829,7 @@ defmodule HexpmWeb.SSOControllerTest do
     end
 
     test "rate limits starts per account without locking out the rest", context do
+      align_to_throttle_bucket(10 * 60_000)
       time = System.system_time(:millisecond)
 
       for _attempt <- 1..20 do
@@ -863,6 +865,7 @@ defmodule HexpmWeb.SSOControllerTest do
 
     test "rate limits callbacks before state lookup or token exchange" do
       ip = {198, 51, 100, 43}
+      align_to_throttle_bucket(10 * 60_000)
       time = System.system_time(:millisecond)
 
       for _attempt <- 1..50 do

@@ -1,7 +1,7 @@
 defmodule HexpmWeb.Plugs.AttackTest do
   use ExUnit.Case
   import Plug.{Conn, Test}
-  import Hexpm.Factory
+  import Hexpm.{Factory, TestHelpers}
   alias HexpmWeb.{Plugs.Attack, RateLimitPubSub}
 
   defmodule Hello do
@@ -389,12 +389,14 @@ defmodule HexpmWeb.Plugs.AttackTest do
     end
 
     test "blocks login requests when IP limit is exceeded" do
+      time = System.system_time(:millisecond)
+
       # Exhaust IP limit (10 attempts per 15 minutes)
       Enum.each(1..10, fn _ ->
-        HexpmWeb.Plugs.Attack.login_ip_throttle({2, 2, 2, 2})
+        HexpmWeb.Plugs.Attack.login_ip_throttle({2, 2, 2, 2}, time: time)
       end)
 
-      result = HexpmWeb.Plugs.Attack.login_ip_throttle({2, 2, 2, 2})
+      result = HexpmWeb.Plugs.Attack.login_ip_throttle({2, 2, 2, 2}, time: time)
       assert {:block, _data} = result
     end
   end
@@ -409,47 +411,45 @@ defmodule HexpmWeb.Plugs.AttackTest do
     end
 
     test "blocks 2FA requests when the user limit is exceeded" do
+      time = System.system_time(:millisecond)
+
       # Exhaust user limit (5 attempts per 10 minutes)
       Enum.each(1..5, fn _ ->
-        HexpmWeb.Plugs.Attack.tfa_user_throttle(456)
+        HexpmWeb.Plugs.Attack.tfa_user_throttle(456, time: time)
       end)
 
-      result = HexpmWeb.Plugs.Attack.tfa_user_throttle(456)
+      result = HexpmWeb.Plugs.Attack.tfa_user_throttle(456, time: time)
       assert {:block, _data} = result
     end
 
     test "blocks 2FA requests when IP limit is exceeded" do
+      time = System.system_time(:millisecond)
+
       # Exhaust IP limit (20 attempts per 15 minutes)
       Enum.each(1..20, fn _ ->
-        HexpmWeb.Plugs.Attack.tfa_ip_throttle({7, 7, 7, 7})
+        HexpmWeb.Plugs.Attack.tfa_ip_throttle({7, 7, 7, 7}, time: time)
       end)
 
-      result = HexpmWeb.Plugs.Attack.tfa_ip_throttle({7, 7, 7, 7})
+      result = HexpmWeb.Plugs.Attack.tfa_ip_throttle({7, 7, 7, 7}, time: time)
       assert {:block, _data} = result
     end
 
     test "different users have independent limits" do
+      time = System.system_time(:millisecond)
+
       # Exhaust limit for the first user
       Enum.each(1..5, fn _ ->
-        HexpmWeb.Plugs.Attack.tfa_user_throttle(111)
+        HexpmWeb.Plugs.Attack.tfa_user_throttle(111, time: time)
       end)
 
       # First user should be blocked
-      result1 = HexpmWeb.Plugs.Attack.tfa_user_throttle(111)
+      result1 = HexpmWeb.Plugs.Attack.tfa_user_throttle(111, time: time)
       assert {:block, _data} = result1
 
       # Second user should still work
-      result2 = HexpmWeb.Plugs.Attack.tfa_user_throttle(222)
+      result2 = HexpmWeb.Plugs.Attack.tfa_user_throttle(222, time: time)
       assert {:allow, _data} = result2
     end
-  end
-
-  # The throttle counter is keyed by `div(time_ms, period_ms)`. If a test's
-  # setup and assertion fall in different buckets, the counter resets between
-  # them. Wait past the next boundary if we're too close to it.
-  defp align_to_throttle_bucket(period_ms \\ 60_000, headroom_ms \\ 5_000) do
-    remaining = period_ms - rem(System.system_time(:millisecond), period_ms)
-    if remaining < headroom_ms, do: Process.sleep(remaining + 50)
   end
 
   defp request_ip(remote_ip) do

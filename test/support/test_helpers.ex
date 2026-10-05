@@ -58,6 +58,19 @@ defmodule Hexpm.TestHelpers do
   end
 
   @doc """
+  Waits past the next throttle bucket boundary when fewer than `headroom_ms`
+  remain in the current one.
+
+  `HexpmWeb.Plugs.Attack` keys its counters by `div(now_ms, period_ms)`, so a
+  test that fills a bucket and expects the next request to be refused fails if
+  a boundary passes in between.
+  """
+  def align_to_throttle_bucket(period_ms \\ 60_000, headroom_ms \\ 5_000) do
+    remaining = period_ms - rem(System.system_time(:millisecond), period_ms)
+    if remaining < headroom_ms, do: Process.sleep(remaining + 50)
+  end
+
+  @doc """
   Captures logs down to debug, including Ecto's query log.
 
   `capture_log/2`'s `:level` option filters what it keeps; it does not lower

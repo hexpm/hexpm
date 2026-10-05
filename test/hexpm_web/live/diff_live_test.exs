@@ -390,6 +390,7 @@ defmodule HexpmWeb.DiffLiveTest do
 
   test "distinct anonymous generation requests are rate limited", %{package: package} do
     identity = {:ip, {127, 0, 0, 1}}
+    align_to_throttle_bucket()
 
     for _ <- 1..20 do
       assert {:allow, _data} = Attack.diff_throttle(identity)
