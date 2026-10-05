@@ -112,6 +112,7 @@ defmodule HexpmWeb.Dashboard.DeleteAccountControllerTest do
 
     test "is throttled per user", c do
       conn = build_conn() |> test_login(c.user)
+      align_to_throttle_bucket(60 * 60_000)
 
       for _ <- 1..3 do
         post(conn, "/dashboard/delete-account", %{"username" => c.user.username})

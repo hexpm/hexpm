@@ -82,6 +82,7 @@ defmodule HexpmWeb.SCIM.DiscoveryControllerTest do
 
     # Both providers send from the same address.
     ip = {203, 0, 113, 9}
+    align_to_throttle_bucket()
 
     request = fn token ->
       %{build_conn() | remote_ip: ip}
@@ -105,6 +106,8 @@ defmodule HexpmWeb.SCIM.DiscoveryControllerTest do
        context do
     PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
     on_exit(fn -> PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage) end)
+
+    align_to_throttle_bucket()
 
     conn =
       Enum.reduce(1..501, nil, fn _index, _acc ->

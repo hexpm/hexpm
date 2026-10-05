@@ -135,6 +135,8 @@ defmodule HexpmWeb.API.OAuthControllerTrustedPublisherTest do
         "workflow_ref" => "acme/widget/.github/workflows/other.yml@refs/heads/main"
       }
 
+      align_to_throttle_bucket(15 * 60_000)
+
       for _ <- 1..30 do
         assert json_response(mint.(wrong_workflow), 403)["error"] == "access_denied"
       end

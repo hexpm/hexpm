@@ -1892,6 +1892,8 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         |> post("/api/packages/#{meta.name}/releases", create_tar(meta))
       end
 
+      align_to_throttle_bucket(10 * 60_000)
+
       for _ <- 1..5, do: json_response(publish.("000000"), 401)
       json_response(publish.("000000"), 429)
 
