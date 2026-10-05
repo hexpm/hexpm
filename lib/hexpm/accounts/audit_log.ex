@@ -306,6 +306,12 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("trusted_publisher.remove", trusted_publisher),
     do: serialize(trusted_publisher)
 
+  defp extract_params("organization.trusted_publisher.add", trusted_publisher),
+    do: serialize(trusted_publisher)
+
+  defp extract_params("organization.trusted_publisher.remove", trusted_publisher),
+    do: serialize(trusted_publisher)
+
   defp extract_params("password.add", _), do: %{}
   defp extract_params("password.remove", _), do: %{}
   defp extract_params("organization.create", organization), do: serialize(organization)
@@ -519,6 +525,7 @@ defmodule Hexpm.Accounts.AuditLog do
     trusted_publisher
     |> do_serialize()
     |> Map.put(:package, serialize_if_loaded(trusted_publisher.package))
+    |> Map.put(:organization, serialize_if_loaded(trusted_publisher.organization))
   end
 
   defp serialize(nil), do: nil
@@ -571,7 +578,10 @@ defmodule Hexpm.Accounts.AuditLog do
       :repository,
       :workflow,
       :environment,
-      :package_id
+      :role,
+      :packages,
+      :package_id,
+      :organization_id
     ]
 
   defp fields(%Hexpm.Accounts.UserProvider{}),

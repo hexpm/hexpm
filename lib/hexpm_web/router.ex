@@ -456,6 +456,17 @@ defmodule HexpmWeb.Router do
     post "/orgs/:dashboard_org/change-plan", OrganizationController, :change_plan
     post "/orgs/:dashboard_org/keys", OrganizationController, :create_key
     delete "/orgs/:dashboard_org/keys", OrganizationController, :delete_key
+
+    get "/orgs/:dashboard_org/trusted-publishers", OrganizationController, :trusted_publishers
+
+    post "/orgs/:dashboard_org/trusted-publishers",
+         OrganizationController,
+         :create_trusted_publisher
+
+    delete "/orgs/:dashboard_org/trusted-publishers/:id",
+           OrganizationController,
+           :delete_trusted_publisher
+
     get "/orgs/:dashboard_org/invoices/:id", OrganizationController, :show_invoice
     post "/orgs/:dashboard_org/invoices/:id/pay", OrganizationController, :pay_invoice
     post "/orgs/:dashboard_org/profile", OrganizationController, :update_profile

@@ -46,6 +46,41 @@ defmodule Hexpm.Emails do
     |> assign(:environment, trusted_publisher.environment)
   end
 
+  def organization_trusted_publisher_added(trusted_publisher, organization, actor) do
+    organization_trusted_publisher_email(
+      :organization_trusted_publisher_added,
+      trusted_publisher,
+      organization,
+      actor
+    )
+    |> subject("Hex.pm - Trusted publisher added to organization #{organization.name}")
+    |> render_body(:organization_trusted_publisher_add)
+  end
+
+  def organization_trusted_publisher_removed(trusted_publisher, organization, actor) do
+    organization_trusted_publisher_email(
+      :organization_trusted_publisher_removed,
+      trusted_publisher,
+      organization,
+      actor
+    )
+    |> subject("Hex.pm - Trusted publisher removed from organization #{organization.name}")
+    |> render_body(:organization_trusted_publisher_remove)
+  end
+
+  defp organization_trusted_publisher_email(type, trusted_publisher, organization, actor) do
+    base_email(type)
+    |> email_to(organization)
+    |> assign(:username, actor.username)
+    |> assign(:organization, organization.name)
+    |> assign(:role, trusted_publisher.role)
+    |> assign(:repository_owner, trusted_publisher.repository_owner)
+    |> assign(:repository, trusted_publisher.repository)
+    |> assign(:workflow, trusted_publisher.workflow)
+    |> assign(:environment, trusted_publisher.environment)
+    |> assign(:packages, trusted_publisher.packages)
+  end
+
   def verification(user, email) do
     base_email(:verification)
     |> email_to(%{email | user: user})

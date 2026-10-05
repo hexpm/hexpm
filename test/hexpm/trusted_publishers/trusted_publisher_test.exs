@@ -138,4 +138,221 @@ defmodule Hexpm.TrustedPublishers.TrustedPublisherTest do
              )
     end
   end
+
+  describe "changeset/3 for an organization" do
+    setup do
+      %{organization: insert(:organization)}
+    end
+
+    defp organization_params(params) do
+      Map.merge(
+        %{
+          "provider" => "github",
+          "repository_owner" => "acme",
+          "repository" => "widget"
+        },
+        params
+      )
+    end
+
+    test "stores an empty workflow for the read role", %{organization: organization} do
+      changeset =
+        TrustedPublisher.changeset(
+          %TrustedPublisher{},
+          organization_params(%{"role" => "read", "workflow" => ""}),
+          organization
+        )
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_field(changeset, :workflow) == ""
+    end
+
+    test "requires a workflow for the write role", %{organization: organization} do
+      changeset =
+        TrustedPublisher.changeset(
+          %TrustedPublisher{},
+          organization_params(%{"role" => "write"}),
+          organization
+        )
+
+      assert "is required for the write role" in List.wrap(errors_on(changeset).workflow)
+    end
+
+    test "rejects an unknown role", %{organization: organization} do
+      changeset =
+        TrustedPublisher.changeset(
+          %TrustedPublisher{},
+          organization_params(%{"role" => "admin", "workflow" => "release.yml"}),
+          organization
+        )
+
+      assert errors_on(changeset).role
+    end
+
+    test "splits, deduplicates and sorts package names", %{organization: organization} do
+      changeset =
+        TrustedPublisher.changeset(
+          %TrustedPublisher{},
+          organization_params(%{
+            "role" => "write",
+            "workflow" => "release.yml",
+            "packages" => "widget_core, gadget\nwidget_core"
+          }),
+          organization
+        )
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_field(changeset, :packages) == ["gadget", "widget_core"]
+    end
+
+    test "stores no package names as every package", %{organization: organization} do
+      changeset =
+        TrustedPublisher.changeset(
+          %TrustedPublisher{},
+          organization_params(%{
+            "role" => "write",
+            "workflow" => "release.yml",
+            "packages" => " , "
+          }),
+          organization
+        )
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_field(changeset, :packages) == nil
+    end
+
+    test "rejects invalid package names", %{organization: organization} do
+      changeset =
+        TrustedPublisher.changeset(
+          %TrustedPublisher{},
+          organization_params(%{
+            "role" => "write",
+            "workflow" => "release.yml",
+            "packages" => "Widget"
+          }),
+          organization
+        )
+
+      assert "must be valid package names" in List.wrap(errors_on(changeset).packages)
+    end
+
+    test "rejects a null package name", %{organization: organization} do
+      changeset =
+        TrustedPublisher.changeset(
+          %TrustedPublisher{},
+          organization_params(%{
+            "role" => "write",
+            "workflow" => "release.yml",
+            "packages" => ["widget", nil]
+          }),
+          organization
+        )
+
+      assert "must be valid package names" in List.wrap(errors_on(changeset).packages)
+    end
+
+    test "matches every repository of the owner for a read publisher with no repository", %{
+      organization: organization
+    } do
+      changeset =
+        TrustedPublisher.changeset(
+          %TrustedPublisher{},
+          %{"provider" => "github", "repository_owner" => "Acme", "role" => "read"},
+          organization
+        )
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_field(changeset, :repository) == ""
+      assert Ecto.Changeset.get_field(changeset, :repository_id) == ""
+      assert Ecto.Changeset.get_field(changeset, :workflow) == ""
+    end
+
+    test "rejects a workflow or environment when every repository matches", %{
+      organization: organization
+    } do
+      changeset =
+        TrustedPublisher.changeset(
+          %TrustedPublisher{},
+          %{
+            "provider" => "github",
+            "repository_owner" => "acme",
+            "role" => "read",
+            "workflow" => "ci.yml",
+            "environment" => "ci"
+          },
+          organization
+        )
+
+      errors = errors_on(changeset)
+      assert "must be empty when every repository matches" in List.wrap(errors.workflow)
+      assert "must be empty when every repository matches" in List.wrap(errors.environment)
+    end
+
+    test "requires a repository for the write role", %{organization: organization} do
+      changeset =
+        TrustedPublisher.changeset(
+          %TrustedPublisher{},
+          %{
+            "provider" => "github",
+            "repository_owner" => "acme",
+            "role" => "write",
+            "workflow" => "release.yml"
+          },
+          organization
+        )
+
+      assert "is required for the write role" in List.wrap(errors_on(changeset).repository)
+    end
+
+    test "rejects package names for the read role", %{organization: organization} do
+      changeset =
+        TrustedPublisher.changeset(
+          %TrustedPublisher{},
+          organization_params(%{"role" => "read", "packages" => "widget"}),
+          organization
+        )
+
+      assert "can only be limited for the write role" in List.wrap(errors_on(changeset).packages)
+    end
+  end
+
+  describe "database constraints" do
+    test "refuse an empty workflow on a package publisher", %{package: package} do
+      assert_raise Ecto.ConstraintError, ~r/trusted_publishers_workflow/, fn ->
+        insert(:trusted_publisher, package: package, workflow: "")
+      end
+    end
+
+    test "refuse an empty workflow on an organization write publisher" do
+      assert_raise Ecto.ConstraintError, ~r/trusted_publishers_workflow/, fn ->
+        insert(:organization_trusted_publisher, role: "write", workflow: "")
+      end
+    end
+
+    test "refuse an empty repository on a package publisher", %{package: package} do
+      assert_raise Ecto.ConstraintError, ~r/trusted_publishers_repository/, fn ->
+        insert(:trusted_publisher, package: package, repository: "", repository_id: "")
+      end
+    end
+
+    test "refuse a workflow on an organization publisher for every repository" do
+      assert_raise Ecto.ConstraintError, ~r/trusted_publishers_repository/, fn ->
+        insert(:organization_trusted_publisher,
+          repository: "",
+          repository_id: "",
+          workflow: "ci.yml"
+        )
+      end
+    end
+
+    test "refuse a publisher with both a package and an organization", %{package: package} do
+      assert_raise Ecto.ConstraintError, ~r/trusted_publishers_package_or_organization/, fn ->
+        insert(:organization_trusted_publisher,
+          package: package,
+          role: "write",
+          workflow: "a.yml"
+        )
+      end
+    end
+  end
 end

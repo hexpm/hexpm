@@ -1,0 +1,5 @@
+<%= OrganizationTrustedPublisherAdd.message(@username, @organization) %>
+
+<%= Enum.join(OrganizationTrustedPublisherDetails.lines(@role, @repository_owner, @repository, @workflow, @environment, @packages), "\n") %>
+
+<%= OrganizationTrustedPublisherAdd.warning(@role, @organization, @packages) %>

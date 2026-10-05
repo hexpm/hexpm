@@ -14,10 +14,15 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   alias Hexpm.Accounts.SSO
   alias Hexpm.Accounts.SSO.{Connection, Enforcement}
   alias HexpmWeb.SSOEnforcement
+  alias Hexpm.TrustedPublishers
+  alias Hexpm.TrustedPublishers.TrustedPublisher
 
   @policy_suggestion_limit 8
 
   plug :requires_login
+
+  plug :trusted_publishers_enabled
+       when action in [:trusted_publishers, :create_trusted_publisher, :delete_trusted_publisher]
 
   plug HexpmWeb.Plugs.Sudo
        when action in [
@@ -45,6 +50,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
               :change_plan,
               :create_key,
               :delete_key,
+              :trusted_publishers,
+              :create_trusted_publisher,
+              :delete_trusted_publisher,
               :show_invoice,
               :pay_invoice,
               :update_profile,
@@ -1011,6 +1019,106 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end)
   end
 
+  def trusted_publishers(conn, %{"dashboard_org" => organization}) do
+    access_organization(conn, organization, "write", fn organization ->
+      render_index(conn, organization, tab: :trusted_publishers)
+    end)
+  end
+
+  def create_trusted_publisher(conn, %{"dashboard_org" => organization} = params) do
+    access_organization(conn, organization, "admin", fn organization ->
+      with :ok <- trusted_publisher_tfa(conn, organization),
+           :ok <- trusted_publisher_billing(conn, organization) do
+        do_create_trusted_publisher(conn, organization, params["trusted_publisher"] || %{})
+      end
+    end)
+  end
+
+  defp do_create_trusted_publisher(conn, organization, params) do
+    path = ~p"/dashboard/orgs/#{organization}/trusted-publishers"
+
+    case TrustedPublishers.create(organization, params, audit: audit_data(conn)) do
+      {:ok, _trusted_publisher} ->
+        conn
+        |> put_flash(:info, "Trusted publisher added.")
+        |> redirect(to: path)
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        conn
+        |> put_status(400)
+        |> render_index(organization,
+          tab: :trusted_publishers,
+          trusted_publisher_changeset: changeset
+        )
+
+      {:error, :not_allowed} ->
+        conn
+        |> put_flash(:error, "This organization can't have trusted publishers.")
+        |> redirect(to: path)
+
+      {:error, :repository_not_found} ->
+        conn
+        |> put_flash(:error, "The GitHub repository could not be resolved.")
+        |> redirect(to: path)
+
+      {:error, _reason} ->
+        conn
+        |> put_flash(:error, "GitHub could not be reached, try again later.")
+        |> redirect(to: path)
+    end
+  end
+
+  def delete_trusted_publisher(conn, %{"dashboard_org" => organization, "id" => id}) do
+    access_organization(conn, organization, "admin", fn organization ->
+      path = ~p"/dashboard/orgs/#{organization}/trusted-publishers"
+
+      with :ok <- trusted_publisher_tfa(conn, organization) do
+        case TrustedPublishers.get(organization, id) do
+          nil ->
+            conn
+            |> put_flash(:error, "The trusted publisher was not found.")
+            |> redirect(to: path)
+
+          trusted_publisher ->
+            {:ok, _} = TrustedPublishers.delete(trusted_publisher, audit: audit_data(conn))
+
+            conn
+            |> put_flash(:info, "Trusted publisher removed.")
+            |> redirect(to: path)
+        end
+      end
+    end)
+  end
+
+  defp trusted_publisher_tfa(conn, organization) do
+    if User.tfa_enabled?(conn.assigns.current_user) do
+      :ok
+    else
+      conn
+      |> put_session(:tfa_return_to, ~p"/dashboard/orgs/#{organization}/trusted-publishers")
+      |> put_flash(:error, "Enable 2FA on your account before managing trusted publishers.")
+      |> redirect(to: ~p"/dashboard/security")
+    end
+  end
+
+  defp trusted_publisher_billing(conn, organization) do
+    if Organization.billing_active?(organization) do
+      :ok
+    else
+      conn
+      |> put_flash(:error, "This organization has no active billing subscription.")
+      |> redirect(to: ~p"/dashboard/orgs/#{organization}/trusted-publishers")
+    end
+  end
+
+  defp trusted_publishers_enabled(conn, _opts) do
+    if TrustedPublishers.enabled?() do
+      conn
+    else
+      not_found(conn)
+    end
+  end
+
   def update_profile(conn, %{"dashboard_org" => organization, "profile" => profile_params}) do
     access_organization(conn, organization, "admin", fn organization ->
       case Users.update_profile(organization.user, profile_params, audit: audit_data(conn)) do
@@ -1026,6 +1134,11 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
           |> render_index(organization)
       end
     end)
+  end
+
+  # A new publisher defaults to fetching only.
+  defp trusted_publisher_changeset(organization) do
+    TrustedPublisher.changeset(%TrustedPublisher{}, %{"role" => "read"}, organization)
   end
 
   defp render_new(conn, opts \\ []) do
@@ -1107,6 +1220,10 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
     customer = customer(conn, organization, opts[:tab])
     keys = if opts[:tab] == :keys, do: Keys.all(organization), else: []
+
+    trusted_publishers =
+      if opts[:tab] == :trusted_publishers, do: TrustedPublishers.list(organization), else: []
+
     delete_key_path = ~p"/dashboard/orgs/#{organization}/keys"
     create_key_path = ~p"/dashboard/orgs/#{organization}/keys"
     packages = packages_assign(organization, opts[:tab])
@@ -1123,6 +1240,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       [
         title: "Dashboard - Organization",
         container: "container page dashboard",
+        sidebar: :organization,
         tab: opts[:tab] || :profile,
         changeset: user && User.update_profile(user, %{}),
         public_email: public_email && public_email.email,
@@ -1137,6 +1255,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         create_key_path: create_key_path,
         generated_key: opts[:generated_key],
         key_changeset: opts[:key_changeset] || key_changeset(),
+        trusted_publishers: trusted_publishers,
+        trusted_publisher_changeset:
+          opts[:trusted_publisher_changeset] || trusted_publisher_changeset(organization),
         packages: packages,
         add_member_changeset: opts[:add_member_changeset] || add_member_changeset(),
         new_organization_changeset: create_changeset(),

@@ -334,4 +334,186 @@ defmodule HexpmWeb.API.TrustedPublisherPublishTest do
       assert conn.status == 403
     end
   end
+
+  describe "organization publisher" do
+    setup do
+      repository = insert(:repository)
+      organization = repository.organization
+      package = insert(:package, repository_id: repository.id)
+
+      trusted_publisher =
+        insert(:organization_trusted_publisher,
+          organization: organization,
+          role: "write",
+          repository: "acme/widget",
+          workflow: "release.yml"
+        )
+
+      %{
+        repository: repository,
+        organization: organization,
+        org_package: package,
+        org_publisher: trusted_publisher
+      }
+    end
+
+    defp mint(opts) do
+      TrustedPublisherHelpers.github_claims()
+      |> TrustedPublisherHelpers.sign_oidc_claims()
+      |> Hexpm.TrustedPublishers.verify_and_mint(opts)
+      |> then(fn {:ok, token} -> token end)
+    end
+
+    defp publish(token, repository, name, version \\ "1.0.0") do
+      meta = %{name: name, version: version, description: "from CI"}
+
+      build_conn()
+      |> put_req_header("content-type", "application/octet-stream")
+      |> put_req_header("authorization", "Bearer #{token.access_token}")
+      |> post("/api/repos/#{repository.name}/publish", create_tar(meta))
+    end
+
+    test "publishes a release of a package in the repository", %{
+      repository: repository,
+      org_package: package,
+      org_publisher: tp
+    } do
+      token = mint(repository: repository.name, package: package.name)
+
+      assert json_response(publish(token, repository, package.name), 201)
+
+      release = Hexpm.Repo.get_by!(Release, package_id: package.id)
+      assert release.trusted_publisher_id == tp.id
+      assert release.publisher_id == nil
+    end
+
+    test "creates a package", %{repository: repository, org_publisher: tp} do
+      token = mint(repository: repository.name, package: "new_package")
+
+      result = json_response(publish(token, repository, "new_package"), 201)
+      assert result["oidc_claims"]["repository"] == "acme/widget"
+
+      package = Hexpm.Repo.get_by!(Package, repository_id: repository.id, name: "new_package")
+      assert Hexpm.Repo.preload(package, :package_owners).package_owners == []
+
+      release = Hexpm.Repo.get_by!(Release, package_id: package.id)
+      assert release.trusted_publisher_id == tp.id
+
+      log = Hexpm.Repo.get_by!(AuditLog, action: "release.publish")
+      assert log.user_data["trusted_publisher_id"] == tp.id
+      assert log.params["package"]["name"] == "new_package"
+    end
+
+    test "creates a package through the package releases endpoint", %{repository: repository} do
+      token = mint(repository: repository.name, package: "new_package")
+      meta = %{name: "new_package", version: "1.0.0", description: "from CI"}
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> post(
+          "/api/repos/#{repository.name}/packages/new_package/releases",
+          create_tar(meta)
+        )
+
+      assert json_response(conn, 201)
+      assert Hexpm.Repo.get_by(Package, repository_id: repository.id, name: "new_package")
+    end
+
+    test "can't create a package other than the one the token names", %{
+      repository: repository
+    } do
+      token = mint(repository: repository.name, package: "new_package")
+
+      assert json_response(publish(token, repository, "other_package"), 401)
+      refute Hexpm.Repo.get_by(Package, repository_id: repository.id, name: "other_package")
+    end
+
+    test "is refused for a package the allowlist stops covering", %{
+      repository: repository,
+      org_package: package,
+      org_publisher: tp
+    } do
+      token = mint(repository: repository.name, package: package.name)
+
+      tp
+      |> Ecto.Changeset.change(packages: ["other_package"])
+      |> Hexpm.Repo.update!()
+
+      assert json_response(publish(token, repository, package.name), 404)
+    end
+
+    test "is refused after the publisher is removed", %{
+      repository: repository,
+      org_package: package,
+      org_publisher: tp,
+      user: user
+    } do
+      token = mint(repository: repository.name, package: package.name)
+      assert {:ok, _} = Hexpm.TrustedPublishers.delete(tp, audit: audit_data(user))
+
+      assert json_response(publish(token, repository, package.name), 401)
+    end
+
+    test "can't publish into another organization's repository", %{repository: repository} do
+      other = insert(:repository)
+      token = mint(repository: repository.name, package: "new_package")
+
+      assert json_response(publish(token, other, "new_package"), 401)
+      refute Hexpm.Repo.get_by(Package, repository_id: other.id, name: "new_package")
+    end
+
+    test "publishes docs", %{repository: repository, org_package: package, user: user} do
+      insert(:release, package: package, version: "1.0.0", publisher: user)
+      token = mint(repository: repository.name, package: package.name)
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> post(
+          "/api/repos/#{repository.name}/packages/#{package.name}/releases/1.0.0/docs",
+          create_docs_tar([{"index.html", "docs"}])
+        )
+
+      assert conn.status == 201
+    end
+
+    test "a repository token can't publish", %{repository: repository, org_package: package} do
+      token = mint(repository: repository.name)
+
+      assert json_response(publish(token, repository, package.name), 401)
+      assert json_response(publish(token, repository, "new_package"), 401)
+    end
+
+    test "a repository token can't call the API", %{repository: repository} do
+      token = mint(repository: repository.name)
+
+      conn =
+        build_conn()
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> get("/api/auth", domain: "repository", resource: repository.name)
+
+      assert conn.status == 403
+    end
+
+    test "a read publisher can't publish", %{
+      repository: repository,
+      organization: organization,
+      org_package: package,
+      org_publisher: tp
+    } do
+      Hexpm.Repo.delete!(tp)
+
+      insert(:organization_trusted_publisher,
+        organization: organization,
+        repository: "acme/widget",
+        workflow: "release.yml"
+      )
+
+      token = mint(repository: repository.name)
+      assert json_response(publish(token, repository, package.name), 401)
+    end
+  end
 end

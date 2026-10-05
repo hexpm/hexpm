@@ -16,7 +16,13 @@ defmodule Hexpm.TrustedPublishers.Provider.GitHub do
   @impl true
   def issuer, do: @issuer
 
+  # A publisher that matches every repository of its owner pins the owner id
+  # alone.
   @impl true
+  def resolve_immutable_ids(%{repository: "", repository_owner: owner}) do
+    if valid_owner?(owner), do: fetch_owner_id(owner), else: {:error, :repository_not_found}
+  end
+
   def resolve_immutable_ids(%{repository: repository}) do
     with {:ok, owner, name} <- split_repository(repository) do
       fetch_repository_ids(owner, name)
@@ -25,10 +31,12 @@ defmodule Hexpm.TrustedPublishers.Provider.GitHub do
 
   # pull_request_target runs with the base repository's permissions, so a
   # workflow that checks out the pull request head would hand a fork's code an
-  # OIDC token.
+  # OIDC token. workflow_run gets the same permissions when a fork's pull
+  # request triggered the run, and no claim says whether it did.
   @impl true
-  def validate_claims(%{"event_name" => "pull_request_target"}),
-    do: {:error, :event_not_allowed}
+  def validate_claims(%{"event_name" => event})
+      when event in ["pull_request_target", "workflow_run"],
+      do: {:error, :event_not_allowed}
 
   def validate_claims(claims) when is_map(claims), do: :ok
 
@@ -51,11 +59,25 @@ defmodule Hexpm.TrustedPublishers.Provider.GitHub do
     workflow = workflow_filename(claims)
     environment = claims["environment"] || ""
 
-    repository == downcase(publisher.repository) and
+    repository_matches?(publisher, repository, repository_id) and
       owner_id == publisher.repository_owner_id and
-      repository_id_matches?(publisher, repository_id) and
       workflow_matches?(publisher, workflow) and
       environment_matches?(publisher, environment)
+  end
+
+  # An organization read publisher with no repository matches every repository
+  # of the pinned owner.
+  defp repository_matches?(
+         %{repository: "", role: "read", organization_id: organization_id},
+         repository,
+         repository_id
+       )
+       when not is_nil(organization_id),
+       do: is_binary(repository) and is_binary(repository_id)
+
+  defp repository_matches?(publisher, repository, repository_id) do
+    repository == downcase(publisher.repository) and
+      repository_id_matches?(publisher, repository_id)
   end
 
   @impl true
@@ -83,13 +105,17 @@ defmodule Hexpm.TrustedPublishers.Provider.GitHub do
   end
 
   defp repository_id_matches?(%{repository_id: expected}, actual)
-       when is_binary(expected) and is_binary(actual),
+       when is_binary(expected) and expected != "" and is_binary(actual),
        do: expected == actual
 
   defp repository_id_matches?(_publisher, _actual), do: false
 
+  defp workflow_matches?(%{workflow: "", role: "read", organization_id: id}, _actual)
+       when not is_nil(id),
+       do: true
+
   defp workflow_matches?(%{workflow: expected}, actual)
-       when is_binary(expected) and is_binary(actual),
+       when is_binary(expected) and expected != "" and is_binary(actual),
        do: expected == actual
 
   defp workflow_matches?(_publisher, _actual), do: false

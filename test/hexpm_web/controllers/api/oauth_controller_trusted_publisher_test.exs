@@ -223,4 +223,99 @@ defmodule HexpmWeb.API.OAuthControllerTrustedPublisherTest do
 
     assert body["error"] == "unsupported_grant_type"
   end
+
+  test "rejects tokens from workflow_run workflows", %{package: package} do
+    oidc =
+      TrustedPublisherHelpers.github_claims()
+      |> Map.put("event_name", "workflow_run")
+      |> TrustedPublisherHelpers.sign_oidc_claims()
+
+    body =
+      build_conn()
+      |> post("/api/oauth/token", mint_params(oidc, "package:hexpm/#{package.name}"))
+      |> json_response(400)
+
+    assert body["error"] == "invalid_grant"
+    assert body["error_description"] =~ "workflow_run"
+  end
+
+  describe "repository scope" do
+    setup do
+      repository = insert(:repository)
+
+      insert(:organization_trusted_publisher,
+        organization: repository.organization,
+        repository: "acme/widget"
+      )
+
+      %{repository: repository}
+    end
+
+    test "exchanges an OIDC token for a repository token", %{repository: repository} do
+      oidc = TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
+
+      body =
+        build_conn()
+        |> post("/api/oauth/token", mint_params(oidc, "repository:#{repository.name}"))
+        |> json_response(200)
+
+      assert body["scope"] == "repository:#{repository.name}"
+      assert body["expires_in"] in 899..900
+      refute Map.has_key?(body, "refresh_token")
+    end
+
+    test "rejects an empty repository", _context do
+      oidc = TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
+
+      body =
+        build_conn()
+        |> post("/api/oauth/token", mint_params(oidc, "repository:"))
+        |> json_response(400)
+
+      assert body["error"] == "invalid_scope"
+    end
+
+    test "rejects a repository and a package scope together", %{
+      repository: repository,
+      package: package
+    } do
+      oidc = TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
+      scope = "repository:#{repository.name} package:hexpm/#{package.name}"
+
+      body =
+        build_conn()
+        |> post("/api/oauth/token", mint_params(oidc, scope))
+        |> json_response(400)
+
+      assert body["error"] == "invalid_scope"
+    end
+
+    test "answers an unknown organization like no matching publisher", _context do
+      oidc = TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
+
+      body =
+        build_conn()
+        |> post("/api/oauth/token", mint_params(oidc, "repository:missing"))
+        |> json_response(403)
+
+      assert body["error"] == "access_denied"
+      assert body["error_description"] == "No matching trusted publisher"
+    end
+
+    test "names inactive billing after a match", %{repository: repository} do
+      repository.organization
+      |> Ecto.Changeset.change(billing_active: false)
+      |> Hexpm.Repo.update!()
+
+      oidc = TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
+
+      body =
+        build_conn()
+        |> post("/api/oauth/token", mint_params(oidc, "repository:#{repository.name}"))
+        |> json_response(403)
+
+      assert body["error"] == "access_denied"
+      assert body["error_description"] =~ "no active billing subscription"
+    end
+  end
 end

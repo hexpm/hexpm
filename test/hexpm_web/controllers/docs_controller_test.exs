@@ -112,7 +112,9 @@ defmodule HexpmWeb.DocsControllerTest do
     assert html =~ "Configure a trusted publisher"
     assert html =~ "urn:ietf:params:oauth:grant-type:jwt-bearer"
     assert html =~ "id-token: write"
-    assert html =~ "Cannot create a package"
+    assert html =~ "create a package or land the first release from CI"
+    assert html =~ ~s(id="organization-publishers")
+    assert html =~ "scope=repository:ORG"
 
     document = LazyHTML.from_document(html)
 

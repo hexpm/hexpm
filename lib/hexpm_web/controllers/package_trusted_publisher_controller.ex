@@ -80,6 +80,7 @@ defmodule HexpmWeb.PackageTrustedPublisherController do
         title: "Trusted publishers – #{package.name}",
         container: "container",
         trusted_publishers: TrustedPublishers.list(package),
+        organization_publishers: TrustedPublishers.list_covering(package),
         changeset: changeset
       ] ++ PackageLayoutAssigns.for_package(conn, package)
     )

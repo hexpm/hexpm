@@ -8,6 +8,67 @@ defmodule Hexpm.TrustedPublishers.Provider.GitHubTest do
   setup :verify_on_exit!
 
   describe "match?/2" do
+    test "an empty repository matches every repository of the owner only for an organization read publisher" do
+      claims = fn repository, repository_id, owner_id ->
+        %{
+          "repository" => repository,
+          "repository_owner_id" => owner_id,
+          "repository_id" => repository_id,
+          "workflow_ref" => "#{repository}/.github/workflows/ci.yml@refs/heads/main"
+        }
+      end
+
+      publisher = %TrustedPublisher{
+        repository_owner: "acme",
+        repository_owner_id: "123",
+        repository_id: "",
+        repository: "",
+        workflow: "",
+        environment: "",
+        role: "read",
+        organization_id: 1
+      }
+
+      assert GitHub.match?(publisher, claims.("acme/widget", "456", "123"))
+      assert GitHub.match?(publisher, claims.("acme/gadget", "789", "123"))
+      refute GitHub.match?(publisher, claims.("other/widget", "456", "999"))
+
+      refute GitHub.match?(
+               publisher,
+               Map.delete(claims.("acme/widget", "456", "123"), "repository_id")
+             )
+
+      refute GitHub.match?(%{publisher | role: "write"}, claims.("acme/widget", "456", "123"))
+
+      refute GitHub.match?(
+               %{publisher | organization_id: nil, package_id: 1},
+               claims.("acme/widget", "456", "123")
+             )
+    end
+
+    test "an empty workflow matches any workflow only for an organization read publisher" do
+      claims = %{
+        "repository" => "acme/widget",
+        "repository_owner_id" => "123",
+        "repository_id" => "456",
+        "workflow_ref" => "acme/widget/.github/workflows/test.yml@refs/heads/main"
+      }
+
+      publisher = %TrustedPublisher{
+        repository_owner_id: "123",
+        repository_id: "456",
+        repository: "acme/widget",
+        workflow: "",
+        environment: "",
+        role: "read",
+        organization_id: 1
+      }
+
+      assert GitHub.match?(publisher, claims)
+      refute GitHub.match?(%{publisher | role: "write"}, claims)
+      refute GitHub.match?(%{publisher | organization_id: nil, package_id: 1}, claims)
+    end
+
     test "matches repository, workflow filename, and owner id" do
       publisher = %TrustedPublisher{
         provider: "github",
@@ -248,6 +309,11 @@ defmodule Hexpm.TrustedPublishers.Provider.GitHubTest do
                {:error, :event_not_allowed}
     end
 
+    test "rejects workflow_run" do
+      assert GitHub.validate_claims(%{"event_name" => "workflow_run"}) ==
+               {:error, :event_not_allowed}
+    end
+
     test "accepts other events" do
       assert GitHub.validate_claims(%{"event_name" => "push"}) == :ok
       assert GitHub.validate_claims(%{"event_name" => "release"}) == :ok
@@ -265,6 +331,15 @@ defmodule Hexpm.TrustedPublishers.Provider.GitHubTest do
 
       assert {:ok, %{repository_owner_id: 123, repository_id: 456}} =
                GitHub.resolve_immutable_ids(%{repository: "acme/widget"})
+    end
+
+    test "pins only the owner id for a publisher that matches every repository" do
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/users/acme", _, _ ->
+        {:ok, 200, [], %{"id" => 123}}
+      end)
+
+      assert {:ok, %{repository_owner_id: 123, repository_id: nil}} =
+               GitHub.resolve_immutable_ids(%{repository: "", repository_owner: "acme"})
     end
 
     test "pins only the owner id for a repository Hex cannot see" do

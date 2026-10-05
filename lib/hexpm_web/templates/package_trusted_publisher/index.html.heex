@@ -40,6 +40,45 @@
         </ul>
       </div>
 
+      <%!-- Organization trusted publishers covering this package --%>
+      <div
+        :if={@organization_publishers != []}
+        id="organization-trusted-publishers"
+        class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden"
+      >
+        <div class="px-6 py-4 border-b border-grey-200 dark:border-grey-700">
+          <h2 class="text-base font-semibold text-grey-900 dark:text-white">
+            Organization trusted publishers
+          </h2>
+          <p class="mt-1 text-sm text-grey-500 dark:text-grey-300">
+            These publishers belong to the {@package.repository.name} organization and can also publish this package. Organization admins manage them on the <a
+              href={~p"/dashboard/orgs/#{@package.repository.name}/trusted-publishers"}
+              class="text-primary-600 dark:text-primary-300 hover:underline"
+            >
+              organization's Trusted publishers page</a>.
+          </p>
+        </div>
+        <ul class="divide-y divide-grey-100 dark:divide-grey-700">
+          <li :for={trusted_publisher <- @organization_publishers} class="px-6 py-4">
+            <div class="flex flex-col gap-1">
+              <p class="text-sm font-medium text-grey-900 dark:text-white">
+                {trusted_publisher.repository} ({trusted_publisher.workflow})
+              </p>
+              <p class="text-xs text-grey-500 dark:text-grey-300">
+                Environment: {HexpmWeb.PackageTrustedPublisherView.environment_label(
+                  trusted_publisher.environment
+                )}
+              </p>
+              <p class="text-xs text-grey-500 dark:text-grey-300">
+                Packages: {HexpmWeb.PackageTrustedPublisherView.packages_label(
+                  trusted_publisher.packages
+                )}
+              </p>
+            </div>
+          </li>
+        </ul>
+      </div>
+
       <%!-- Add trusted publisher --%>
       <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden">
         <div class="px-6 py-4 border-b border-grey-200 dark:border-grey-700">
@@ -66,8 +105,8 @@
             />
             <.text_input
               field={form[:repository]}
-              label="GitHub repository"
-              placeholder="acme/widget"
+              label="Repository name"
+              placeholder="widget"
               required
             />
             <.text_input

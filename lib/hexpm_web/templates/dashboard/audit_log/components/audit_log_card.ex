@@ -378,6 +378,20 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
   end
 
   defp humanize_action(%AuditLog{
+         action: "organization.trusted_publisher.add",
+         params: %{"role" => role, "organization" => %{"name" => org}} = params
+       }) do
+    "Added the trusted publisher #{trusted_publisher_repository(params)} (#{role}) to #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "organization.trusted_publisher.remove",
+         params: %{"role" => role, "organization" => %{"name" => org}} = params
+       }) do
+    "Removed the trusted publisher #{trusted_publisher_repository(params)} (#{role}) from #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
          action: "organization.domain.add",
          params: %{"domain" => domain, "organization" => %{"name" => org}}
        }) do
@@ -674,4 +688,9 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
     |> String.replace("_", " ")
     |> String.capitalize()
   end
+
+  defp trusted_publisher_repository(%{"repository" => "", "repository_owner" => owner}),
+    do: "for any repository owned by #{owner}"
+
+  defp trusted_publisher_repository(%{"repository" => repository}), do: repository
 end

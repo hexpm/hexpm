@@ -568,6 +568,45 @@ defmodule HexpmWeb.PackageTrustedPublisherControllerTest do
       assert html_response(conn, 200) =~ "Trusted publishers"
     end
 
+    test "lists the organization publishers that can publish the package", %{
+      organization: organization,
+      repository: repository,
+      full_owner: full_owner,
+      package: package
+    } do
+      insert(:organization_trusted_publisher,
+        organization: organization,
+        role: "write",
+        repository: "acme/covering",
+        workflow: "release.yml"
+      )
+
+      insert(:organization_trusted_publisher,
+        organization: organization,
+        role: "write",
+        repository: "acme/excluded",
+        workflow: "release.yml",
+        packages: ["other"]
+      )
+
+      insert(:organization_trusted_publisher,
+        organization: organization,
+        repository: "acme/fetching"
+      )
+
+      body =
+        build_conn()
+        |> test_login(full_owner)
+        |> get("/packages/#{repository.name}/#{package.name}/trusted-publishers")
+        |> html_response(200)
+
+      assert body =~ "Organization trusted publishers"
+      assert body =~ "acme/covering (release.yml)"
+      assert body =~ "/dashboard/orgs/#{repository.name}/trusted-publishers"
+      refute body =~ "acme/excluded"
+      refute body =~ "acme/fetching"
+    end
+
     test "answers an outsider the same for a package that exists and one that does not", %{
       repository: repository,
       package: package

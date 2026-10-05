@@ -1,0 +1,3 @@
+<%= OrganizationTrustedPublisherRemove.message(@username, @organization) %>
+
+<%= Enum.join(OrganizationTrustedPublisherDetails.lines(@role, @repository_owner, @repository, @workflow, @environment, @packages), "\n") %>

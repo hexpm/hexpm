@@ -6,4 +6,7 @@ defmodule HexpmWeb.PackageTrustedPublisherView do
   def environment_label(""), do: "Any"
   def environment_label(nil), do: "Any"
   def environment_label(environment), do: environment
+
+  def packages_label(nil), do: "All packages in the repository"
+  def packages_label(packages), do: Enum.join(packages, ", ")
 end

@@ -207,6 +207,53 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
+  defmodule OrganizationTrustedPublisherAdd do
+    def message(username, organization) do
+      "#{username} added a trusted publisher to organization #{organization}."
+    end
+
+    def warning(role, organization, packages) do
+      "Anyone who can run a matching workflow can now #{reach(role, organization, packages)}. " <>
+        "If you did not expect this change, remove the publisher and review the organization's admins."
+    end
+
+    defp reach("read", organization, _packages),
+      do: "fetch every package in the #{organization} repository"
+
+    defp reach("write", organization, nil),
+      do: "fetch, publish and create every package in the #{organization} repository"
+
+    defp reach("write", organization, _packages),
+      do:
+        "fetch every package in the #{organization} repository, " <>
+          "and publish and create the packages listed above"
+  end
+
+  defmodule OrganizationTrustedPublisherRemove do
+    def message(username, organization) do
+      "#{username} removed a trusted publisher from organization #{organization}."
+    end
+  end
+
+  defmodule OrganizationTrustedPublisherDetails do
+    def lines(role, owner, repository, workflow, environment, packages) do
+      [
+        "Role: #{role}",
+        "GitHub repository: #{repository_label(owner, repository)}",
+        "Workflow: #{if workflow in [nil, ""], do: "any", else: workflow}"
+      ] ++
+        if(environment in [nil, ""], do: [], else: ["Environment: #{environment}"]) ++
+        packages_line(role, packages)
+    end
+
+    defp repository_label(owner, ""), do: "any repository owned by #{owner}"
+    defp repository_label(_owner, repository), do: repository
+
+    defp packages_line("write", nil), do: ["Packages: all"]
+    defp packages_line("write", packages), do: ["Packages: #{Enum.join(packages, ", ")}"]
+    defp packages_line(_role, _packages), do: []
+  end
+
   defmodule Verification do
     def intro() do
       "To begin using your email, we require you to verify your email address."

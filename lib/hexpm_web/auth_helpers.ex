@@ -68,12 +68,13 @@ defmodule HexpmWeb.AuthHelpers do
   defp authorized_trusted_publisher(conn, %TrustedPublisher{} = trusted_publisher, opts) do
     domains = Keyword.get(opts, :domains, [])
     auth_credential = conn.assigns.auth_credential
+    opts = Keyword.put(opts, :package_name, conn.params["name"])
 
     cond do
       not Keyword.get(opts, :allow_trusted_publisher, false) ->
         error(conn, {:error, :auth})
 
-      not verify_permissions?(conn, auth_credential, domains) ->
+      not trusted_publisher_permissions?(conn, auth_credential, domains) ->
         error(conn, {:error, :domain})
 
       true ->
@@ -88,6 +89,23 @@ defmodule HexpmWeb.AuthHelpers do
             error(conn, other)
         end
     end
+  end
+
+  # Permissions can only match a package scope against a package that exists,
+  # so a token creating a package must name it in its own scope.
+  defp trusted_publisher_permissions?(
+         %Plug.Conn{assigns: %{package: nil, repository: %Repository{} = repository}} = conn,
+         %Token{} = token,
+         domains
+       ) do
+    name = conn.params["name"]
+
+    "package" in domains and is_binary(name) and
+      "package:#{repository.name}/#{name}" in token.scopes
+  end
+
+  defp trusted_publisher_permissions?(conn, auth_credential, domains) do
+    verify_permissions?(conn, auth_credential, domains)
   end
 
   defp apply_authorization_fun({module, fun_name}, conn, user_or_organization) do
@@ -394,14 +412,24 @@ defmodule HexpmWeb.AuthHelpers do
       ) do
     cond do
       trusted_publisher.package_id == package.id -> :ok
+      organization_publishes?(trusted_publisher, repository, package.name) -> :ok
       repository.id == 1 -> {:error, :auth}
       true -> {:error, :not_found}
     end
   end
 
-  # Pending publishers (create brand-new packages from CI) are deferred.
-  def package_owner(%Repository{} = repository, nil = _package, %TrustedPublisher{}, _opts) do
-    if repository.id == 1, do: {:error, :auth}, else: {:error, :not_found}
+  # Only an organization publisher creates packages, named by the tarball.
+  def package_owner(
+        %Repository{} = repository,
+        nil = _package,
+        %TrustedPublisher{} = trusted_publisher,
+        opts
+      ) do
+    cond do
+      organization_publishes?(trusted_publisher, repository, opts[:package_name]) -> :ok
+      repository.id == 1 -> {:error, :auth}
+      true -> {:error, :not_found}
+    end
   end
 
   def package_owner(
@@ -468,6 +496,17 @@ defmodule HexpmWeb.AuthHelpers do
   def package_owner(nil = _repository, _package, _user, _opts) do
     {:error, :not_found}
   end
+
+  defp organization_publishes?(
+         %TrustedPublisher{organization_id: organization_id, role: "write", packages: packages},
+         %Repository{id: repository_id, organization_id: organization_id},
+         name
+       )
+       when not is_nil(organization_id) and repository_id != 1 and is_binary(name) do
+    is_nil(packages) or name in packages
+  end
+
+  defp organization_publishes?(_trusted_publisher, _repository, _name), do: false
 
   def organization_access(conn, user_or_organization, opts \\ [])
 

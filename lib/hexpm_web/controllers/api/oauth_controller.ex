@@ -289,11 +289,11 @@ defmodule HexpmWeb.API.OAuthController do
 
   defp handle_jwt_bearer_grant(conn, params) do
     if TrustedPublishers.enabled?() do
-      with {:ok, repository, package} <- parse_package_scope(params["scope"]),
+      with {:ok, scope} <- parse_trusted_publisher_scope(params["scope"]),
            {:ok, assertion} <- fetch_assertion(params),
            {:ok, verified} <- verify_assertion(assertion),
            :ok <- check_mint_rate_limit(verified),
-           {:ok, token} <- mint_trusted_publisher_token(verified, repository, package) do
+           {:ok, token} <- mint_trusted_publisher_token(verified, scope) do
         render(conn, :token, token: token)
       else
         {:error, error, description} ->
@@ -330,8 +330,8 @@ defmodule HexpmWeb.API.OAuthController do
     end
   end
 
-  defp mint_trusted_publisher_token(verified, repository, package) do
-    case TrustedPublishers.mint(verified, repository: repository, package: package) do
+  defp mint_trusted_publisher_token(verified, scope) do
+    case TrustedPublishers.mint(verified, scope) do
       {:ok, token} ->
         {:ok, token}
 
@@ -346,27 +346,32 @@ defmodule HexpmWeb.API.OAuthController do
     end
   end
 
-  defp parse_package_scope(scope_string) when is_binary(scope_string) do
+  defp parse_trusted_publisher_scope(scope_string) when is_binary(scope_string) do
     case String.split(scope_string, " ", trim: true) do
-      [scope] -> parse_package_scope_value(scope)
-      _ -> {:error, :invalid_scope, "Expected exactly one package scope"}
+      [scope] -> parse_trusted_publisher_scope_value(scope)
+      _ -> {:error, :invalid_scope, "Expected exactly one package or repository scope"}
     end
   end
 
-  defp parse_package_scope(_), do: {:error, :invalid_scope, "Missing scope parameter"}
+  defp parse_trusted_publisher_scope(_), do: {:error, :invalid_scope, "Missing scope parameter"}
 
-  defp parse_package_scope_value("package:" <> resource) do
+  defp parse_trusted_publisher_scope_value("package:" <> resource) do
     case String.split(resource, "/", parts: 2) do
       [repository, package] when repository != "" and package != "" ->
-        {:ok, repository, package}
+        {:ok, repository: repository, package: package}
 
       _ ->
         {:error, :invalid_scope, "Expected a package scope in the form package:repository/name"}
     end
   end
 
-  defp parse_package_scope_value(_) do
-    {:error, :invalid_scope, "Expected a single package scope"}
+  defp parse_trusted_publisher_scope_value("repository:" <> repository)
+       when repository != "" do
+    {:ok, repository: repository}
+  end
+
+  defp parse_trusted_publisher_scope_value(_) do
+    {:error, :invalid_scope, "Expected a single package or repository scope"}
   end
 
   defp fetch_assertion(params) do
@@ -379,16 +384,20 @@ defmodule HexpmWeb.API.OAuthController do
   defp jwt_bearer_error(:disabled),
     do: {:unsupported_grant_type, "Trusted publishers are disabled"}
 
-  defp jwt_bearer_error(:package_not_found), do: {:access_denied, "No matching trusted publisher"}
+  defp jwt_bearer_error(reason)
+       when reason in [:repository_not_found, :package_not_found, :no_matching_publisher],
+       do: {:access_denied, "No matching trusted publisher"}
 
-  defp jwt_bearer_error(:no_matching_publisher),
-    do: {:access_denied, "No matching trusted publisher"}
+  defp jwt_bearer_error(:billing_inactive),
+    do: {:access_denied, "The organization has no active billing subscription"}
 
   defp jwt_bearer_error(:token_replayed), do: {:invalid_grant, "OIDC token has already been used"}
   defp jwt_bearer_error(:issuer_not_allowed), do: {:invalid_grant, "OIDC issuer is not allowed"}
 
   defp jwt_bearer_error(:event_not_allowed),
-    do: {:invalid_grant, "OIDC tokens from pull_request_target workflows are not accepted"}
+    do:
+      {:invalid_grant,
+       "OIDC tokens from pull_request_target and workflow_run workflows are not accepted"}
 
   defp jwt_bearer_error(reason)
        when reason in [

@@ -6,6 +6,8 @@ defmodule HexpmWeb.DashboardView do
   import HexpmWeb.Dashboard.Organization.Components.CreateOrganizationModal,
     only: [create_organization_modal: 1]
 
+  import HexpmWeb.Dashboard.Organization.Components.OrgNav, only: [org_nav: 1]
+
   import HexpmWeb.ViewIcons, only: [icon: 3]
   alias Phoenix.LiveView.JS
 
