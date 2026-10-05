@@ -278,6 +278,22 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       assert Hexpm.Repo.get_by(Package, name: package.name).meta.description == "awesomeness"
     end
 
+    for name <- ["decimal\n", "decimal ", "decimal\t"] do
+      test "rejects package name #{inspect(name)}", %{user: user} do
+        meta = %{name: unquote(name), version: "1.0.0", description: "description"}
+
+        conn =
+          build_conn()
+          |> put_req_header("content-type", "application/octet-stream")
+          |> put_req_header("authorization", key_for(user))
+          |> post("/api/publish", create_tar(meta))
+
+        result = json_response(conn, 422)
+        assert result["errors"]["name"] == "has invalid format"
+        refute Hexpm.Repo.get_by(Package, name: unquote(name))
+      end
+    end
+
     test "rejects release with escaping symlink", %{user: user} do
       meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "description"}
 

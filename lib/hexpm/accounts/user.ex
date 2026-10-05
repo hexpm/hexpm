@@ -33,7 +33,7 @@ defmodule Hexpm.Accounts.User do
     has_many :user_providers, UserProvider
   end
 
-  @username_regex ~r"^[a-z0-9_\-\.]+$"
+  @username_regex ~r"\A[a-z0-9_\-\.]+\z"
   @username_reject_regex ~r"(?!kneergo)$"
   @reserved_names ~w(me hex hexpm elixir erlang otp)
   @possible_roles ~w(basic mod)
