@@ -87,7 +87,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInvoices do
         {BillingHelpers.dollar_money(!!@invoice["refund"], @invoice["amount_due"])}
       </td>
       <td class="px-4 py-4 whitespace-nowrap text-grey-600 dark:text-grey-300">
-        {BillingHelpers.payment_card(@invoice["card"])}
+        {BillingHelpers.invoice_payment(@invoice)}
       </td>
       <td class="px-4 py-4 whitespace-nowrap">
         {invoice_status(@invoice, @organization, @card, @subscription, @current_user)}
@@ -108,6 +108,23 @@ defmodule HexpmWeb.Dashboard.Organization.Components.BillingInvoices do
 
   defp invoice_status(%{"paid" => true}, _, _, _, _), do: "Paid"
   defp invoice_status(%{"status" => "uncollectible"}, _, _, _, _), do: "Forgiven"
+
+  defp invoice_status(
+         %{"bank_transfer" => true, "status" => "open", "due_date" => due_date},
+         _,
+         _,
+         _,
+         _
+       ) do
+    assigns = %{status: BillingHelpers.invoice_due_status(due_date)}
+
+    ~H"""
+    <span class={if @status == "Overdue", do: "text-red-600 dark:text-red-400 font-medium"}>
+      {@status}
+    </span>
+    """
+  end
+
   defp invoice_status(%{"paid" => false, "attempted" => false}, _, _, _, _), do: "Pending"
 
   defp invoice_status(%{"paid" => false, "attempted" => true}, _, nil, _, _) do
