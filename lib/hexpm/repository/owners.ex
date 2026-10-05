@@ -20,6 +20,16 @@ defmodule Hexpm.Repository.Owners do
   end
 
   @doc """
+  The trusted publishers that keep publishing the package whoever its owners
+  are, shown to whoever removes an owner.
+  """
+  def trusted_publishers(package) do
+    if Hexpm.TrustedPublishers.enabled?(),
+      do: Hexpm.TrustedPublishers.list(package),
+      else: []
+  end
+
+  @doc """
   Whether `user` appears in `owners` with `level: "full"`. Safe to call with a
   nil user (returns false) and an empty owners list. `owners` is the
   already-loaded list from `Owners.all/2`.
@@ -215,7 +225,7 @@ defmodule Hexpm.Repository.Owners do
           |> Enum.filter(&OptionalEmails.allowed?(&1, :owner_removed_from_package))
 
         if owners != [] do
-          Emails.owner_removed(package, owners, owner.user)
+          Emails.owner_removed(package, owners, owner.user, trusted_publishers(package))
           |> Mailer.deliver!()
         end
 

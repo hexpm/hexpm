@@ -415,6 +415,20 @@ defmodule HexpmWeb.Plugs.Attack do
 
   @spec account_delete_request_throttle(integer(), keyword()) ::
           {:allow | :block, {:throttle, keyword()}}
+  # Adding a trusted publisher looks the repository up on GitHub with the OAuth
+  # app's credentials, whose quota every add on Hex shares.
+  def trusted_publisher_lookup_throttle(user_id, opts \\ []) do
+    time = opts[:time] || System.system_time(:millisecond)
+
+    timed_throttle(
+      {:trusted_publisher_lookup, user_id},
+      time: time,
+      storage: @storage,
+      limit: 20,
+      period: 60 * 60_000
+    )
+  end
+
   def account_delete_request_throttle(user_id, opts \\ []) do
     time = opts[:time] || System.system_time(:millisecond)
 

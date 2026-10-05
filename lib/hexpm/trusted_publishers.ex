@@ -68,6 +68,10 @@ defmodule Hexpm.TrustedPublishers do
 
   @doc """
   Adds a publisher to a package or to an organization.
+
+  `:before_lookup` runs once the params are valid, right before Hex asks GitHub
+  for the owner and repository IDs, and refuses the add when it returns
+  `{:error, reason}`.
   """
   def create(owner, params, opts)
 
@@ -80,7 +84,9 @@ defmodule Hexpm.TrustedPublishers do
   def create(%Package{repository_id: repository_id}, _params, _opts) when repository_id != 1,
     do: {:error, :not_allowed}
 
-  def create(owner, params, audit: audit_data) do
+  def create(owner, params, opts) do
+    audit_data = Keyword.fetch!(opts, :audit)
+    before_lookup = Keyword.get(opts, :before_lookup, fn -> :ok end)
     provider_name = params["provider"] || params[:provider]
 
     with {:ok, provider} <- fetch_provider(provider_name) do
@@ -93,12 +99,9 @@ defmodule Hexpm.TrustedPublishers do
           repository_owner: Ecto.Changeset.get_field(changeset, :repository_owner)
         }
 
-        case provider.resolve_immutable_ids(resolve_attrs) do
-          {:ok, immutable_ids} ->
-            insert_publisher(owner, changeset, immutable_ids, audit_data)
-
-          {:error, reason} ->
-            {:error, reason}
+        with :ok <- before_lookup.(),
+             {:ok, immutable_ids} <- provider.resolve_immutable_ids(resolve_attrs) do
+          insert_publisher(owner, changeset, immutable_ids, audit_data)
         end
       else
         {:error, %{changeset | action: :insert}}

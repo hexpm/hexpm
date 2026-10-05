@@ -1037,7 +1037,10 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   defp do_create_trusted_publisher(conn, organization, params) do
     path = ~p"/dashboard/orgs/#{organization}/trusted-publishers"
 
-    case TrustedPublishers.create(organization, params, audit: audit_data(conn)) do
+    case TrustedPublishers.create(organization, params,
+           audit: audit_data(conn),
+           before_lookup: fn -> trusted_publisher_lookup_allowed(conn.assigns.current_user) end
+         ) do
       {:ok, _trusted_publisher} ->
         conn
         |> put_flash(:info, "Trusted publisher added.")
@@ -1054,6 +1057,14 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       {:error, :not_allowed} ->
         conn
         |> put_flash(:error, "This organization can't have trusted publishers.")
+        |> redirect(to: path)
+
+      {:error, :rate_limited} ->
+        conn
+        |> put_flash(
+          :error,
+          "Too many attempts to add a trusted publisher in the last hour. Try again later."
+        )
         |> redirect(to: path)
 
       {:error, :repository_not_found} ->
@@ -1108,6 +1119,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       conn
       |> put_flash(:error, "This organization has no active billing subscription.")
       |> redirect(to: ~p"/dashboard/orgs/#{organization}/trusted-publishers")
+    end
+  end
+
+  defp trusted_publisher_lookup_allowed(user) do
+    case HexpmWeb.Plugs.Attack.trusted_publisher_lookup_throttle(user.id) do
+      {:allow, _data} -> :ok
+      {:block, _data} -> {:error, :rate_limited}
     end
   end
 
@@ -1221,8 +1239,11 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     customer = customer(conn, organization, opts[:tab])
     keys = if opts[:tab] == :keys, do: Keys.all(organization), else: []
 
+    # The members tab warns that removing a member leaves these in place.
     trusted_publishers =
-      if opts[:tab] == :trusted_publishers, do: TrustedPublishers.list(organization), else: []
+      if opts[:tab] in [:trusted_publishers, :members] and TrustedPublishers.enabled?(),
+        do: TrustedPublishers.list(organization),
+        else: []
 
     delete_key_path = ~p"/dashboard/orgs/#{organization}/keys"
     create_key_path = ~p"/dashboard/orgs/#{organization}/keys"

@@ -16,7 +16,7 @@ GitHub Actions is the only supported CI provider.
 
 The package must already exist. A package's trusted publishers cannot create a new package or publish its first release; do that once with a normal Hex account or API key.
 
-Transferring a package (`mix hex.owner transfer`) removes its trusted publishers, so a publisher a previous owner set up can't keep publishing it. The new owners add their own. Adding or removing an owner without a transfer keeps them.
+Transferring a package (`mix hex.owner transfer`) removes its trusted publishers, so a publisher a previous owner set up can't keep publishing it. The new owners add their own. Adding or removing an owner without a transfer keeps them, and a removed owner who can still run one of their workflows on GitHub can still publish the package. Hex points this out when an owner is removed, in the confirmation on the Owners tab and in the email to the package's owners. Removing an organization member works the same way for organization publishers.
 
 ### Before you begin
 

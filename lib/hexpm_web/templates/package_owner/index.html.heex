@@ -139,6 +139,27 @@
           </p>
         <% end %>
 
+        <div
+          :if={@trusted_publishers != []}
+          class="mt-4 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 p-4 space-y-2 text-sm text-amber-900 dark:text-amber-100"
+        >
+          <p>
+            Removing an owner doesn't change {@package.name}'s trusted publishers, so anyone who can run these workflows on GitHub can still publish it, including a removed owner with access to the repositories:
+          </p>
+          <ul class="list-disc pl-5">
+            <li :for={trusted_publisher <- @trusted_publishers}>
+              {trusted_publisher.repository} ({trusted_publisher.workflow})
+            </li>
+          </ul>
+          <p>
+            Review them on the <a
+              href={HexpmWeb.ViewHelpers.path_for_trusted_publishers(@package)}
+              class="font-medium underline"
+            >
+              Trusted publishers tab</a>.
+          </p>
+        </div>
+
         <.sudo_form
           current_user={@current_user}
           action={HexpmWeb.ViewHelpers.path_for_owner(@package, owner.user.username)}

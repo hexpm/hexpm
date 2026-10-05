@@ -19,7 +19,10 @@ defmodule HexpmWeb.PackageTrustedPublisherController do
     package = conn.assigns.package
     params = params["trusted_publisher"] || %{}
 
-    case TrustedPublishers.create(package, params, audit: audit_data(conn)) do
+    case TrustedPublishers.create(package, params,
+           audit: audit_data(conn),
+           before_lookup: fn -> lookup_allowed(conn.assigns.current_user) end
+         ) do
       {:ok, _trusted_publisher} ->
         conn
         |> put_flash(:info, "Trusted publisher added.")
@@ -37,6 +40,14 @@ defmodule HexpmWeb.PackageTrustedPublisherController do
           "Trusted publishers for private packages are managed on the organization's Trusted publishers page."
         )
         |> redirect(to: ~p"/dashboard/orgs/#{package.repository.name}/trusted-publishers")
+
+      {:error, :rate_limited} ->
+        conn
+        |> put_flash(
+          :error,
+          "Too many attempts to add a trusted publisher in the last hour. Try again later."
+        )
+        |> redirect(to: ViewHelpers.path_for_trusted_publishers(package))
 
       {:error, :unknown_provider} ->
         conn
@@ -85,6 +96,13 @@ defmodule HexpmWeb.PackageTrustedPublisherController do
         changeset: changeset
       ] ++ PackageLayoutAssigns.for_package(conn, package)
     )
+  end
+
+  defp lookup_allowed(user) do
+    case HexpmWeb.Plugs.Attack.trusted_publisher_lookup_throttle(user.id) do
+      {:allow, _data} -> :ok
+      {:block, _data} -> {:error, :rate_limited}
+    end
   end
 
   defp feature_enabled(conn, _opts) do

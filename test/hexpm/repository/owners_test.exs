@@ -1,6 +1,8 @@
 defmodule Hexpm.Repository.OwnersTest do
   use Hexpm.DataCase, async: true
 
+  import Swoosh.TestAssertions
+
   alias Hexpm.Repository.Owners
 
   setup do
@@ -108,6 +110,49 @@ defmodule Hexpm.Repository.OwnersTest do
 
       assert {:ok, _} = Owners.add(package, insert(:user), %{}, audit: audit_data(owner))
       assert Repo.get(Hexpm.TrustedPublishers.TrustedPublisher, trusted_publisher.id)
+    end
+  end
+
+  describe "remove/3" do
+    test "tells the owners which trusted publishers can still publish", %{
+      owner: owner,
+      package: package
+    } do
+      removed = insert(:user)
+      insert(:package_owner, package: package, user: removed)
+
+      insert(:trusted_publisher,
+        package: package,
+        repository: "acme/widget",
+        workflow: "release.yml"
+      )
+
+      assert :ok = Owners.remove(package, removed, audit: audit_data(owner))
+
+      assert_email_sent(fn email ->
+        assert email.subject =~ "Owner removed from package #{package.name}"
+
+        assert email.text_body =~
+                 "Removing an owner doesn't change #{package.name}'s trusted publishers"
+
+        assert email.text_body =~ "acme/widget (release.yml)"
+        assert email.text_body =~ "/packages/#{package.name}/trusted-publishers"
+      end)
+    end
+
+    test "says nothing about trusted publishers when there are none", %{
+      owner: owner,
+      package: package
+    } do
+      removed = insert(:user)
+      insert(:package_owner, package: package, user: removed)
+
+      assert :ok = Owners.remove(package, removed, audit: audit_data(owner))
+
+      assert_email_sent(fn email ->
+        refute email.text_body =~ "trusted publishers"
+        assert email.subject =~ "Owner removed"
+      end)
     end
   end
 end

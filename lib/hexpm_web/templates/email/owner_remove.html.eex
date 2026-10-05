@@ -5,3 +5,19 @@
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
   <%= OwnerRemove.message(@username, @package) %>
 </p>
+
+<%= if @trusted_publishers != [] do %>
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= OwnerRemove.trusted_publishers(@package) %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= for trusted_publisher <- @trusted_publishers do %>
+    <%= trusted_publisher.repository %> (<%= trusted_publisher.workflow %>)<br>
+  <% end %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= raw(OwnerRemove.review(@trusted_publishers_url, :html)) %>
+</p>
+<% end %>

@@ -407,6 +407,38 @@ defmodule HexpmWeb.PackageTrustedPublisherControllerTest do
     end
   end
 
+  describe "adding rate limit" do
+    setup do
+      PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
+      on_exit(fn -> PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage) end)
+      align_to_throttle_bucket(60 * 60_000)
+      :ok
+    end
+
+    test "refuses before asking GitHub once the limit is reached", %{
+      full_owner: full_owner,
+      package: package
+    } do
+      for _ <- 1..20, do: HexpmWeb.Plugs.Attack.trusted_publisher_lookup_throttle(full_owner.id)
+
+      conn =
+        build_conn()
+        |> test_login(full_owner)
+        |> post("/packages/#{package.name}/trusted-publishers", %{
+          "trusted_publisher" => %{
+            "provider" => "github",
+            "repository_owner" => "acme",
+            "repository" => "widget",
+            "workflow" => "release.yml"
+          }
+        })
+
+      assert redirected_to(conn) == "/packages/#{package.name}/trusted-publishers"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "Too many attempts"
+      assert TrustedPublishers.list(package) == []
+    end
+  end
+
   describe "DELETE /packages/:name/trusted-publishers/:id" do
     test "full owner with sudo removes a publisher", %{
       full_owner: full_owner,

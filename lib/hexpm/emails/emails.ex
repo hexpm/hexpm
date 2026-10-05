@@ -13,12 +13,17 @@ defmodule Hexpm.Emails do
     |> render_body(:owner_add)
   end
 
-  def owner_removed(package, owners, owner) do
+  def owner_removed(package, owners, owner, trusted_publishers) do
     base_email(:owner_removed)
     |> email_to(owners)
     |> subject("Hex.pm - Owner removed from package #{package.name}")
     |> assign(:username, owner.username)
     |> assign(:package, package.name)
+    |> assign(:trusted_publishers, trusted_publishers)
+    |> assign(
+      :trusted_publishers_url,
+      HexpmWeb.EmailView.email_url(HexpmWeb.ViewHelpers.path_for_trusted_publishers(package))
+    )
     |> render_body(:owner_remove)
   end
 

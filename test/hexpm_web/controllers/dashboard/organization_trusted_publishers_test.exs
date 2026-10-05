@@ -275,4 +275,82 @@ defmodule HexpmWeb.Dashboard.OrganizationTrustedPublishersTest do
       assert Repo.get(TrustedPublisher, publisher.id)
     end
   end
+
+  describe "adding rate limit" do
+    setup do
+      PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
+      on_exit(fn -> PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage) end)
+      align_to_throttle_bucket(60 * 60_000)
+      :ok
+    end
+
+    test "refuses before asking GitHub once the limit is reached", %{
+      admin: admin,
+      organization: organization
+    } do
+      for _ <- 1..20, do: HexpmWeb.Plugs.Attack.trusted_publisher_lookup_throttle(admin.id)
+
+      conn =
+        build_conn()
+        |> test_login(admin)
+        |> post(path(organization), publisher_params(%{"role" => "read"}))
+
+      assert redirected_to(conn) == path(organization)
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "Too many attempts"
+      assert TrustedPublishers.list(organization) == []
+    end
+
+    test "doesn't count invalid submissions", %{admin: admin, organization: organization} do
+      for _ <- 1..25 do
+        conn =
+          build_conn()
+          |> test_login(admin)
+          |> post(path(organization), publisher_params(%{"role" => "write"}))
+
+        assert conn.status == 400
+      end
+
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
+        {:ok, 200, [], %{"id" => 22, "owner" => %{"id" => 11}}}
+      end)
+
+      conn =
+        build_conn()
+        |> test_login(admin)
+        |> post(path(organization), publisher_params(%{"role" => "read"}))
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "added"
+    end
+  end
+
+  describe "removing a member" do
+    test "the dialog says the organization's trusted publishers stay", %{
+      admin: admin,
+      organization: organization
+    } do
+      stub(Hexpm.Billing.Mock, :get, fn _name, _opts -> nil end)
+
+      body =
+        build_conn()
+        |> test_login(admin)
+        |> get("/dashboard/orgs/#{organization.name}/members")
+        |> html_response(200)
+
+      refute body =~ "Removing a member doesn't change"
+
+      insert(:organization_trusted_publisher, organization: organization)
+      insert(:organization_trusted_publisher, organization: organization)
+
+      body =
+        build_conn()
+        |> test_login(admin)
+        |> get("/dashboard/orgs/#{organization.name}/members")
+        |> html_response(200)
+
+      assert body =~
+               "Removing a member doesn't change the organization's 2 trusted publishers"
+
+      assert body =~ ~s(href="#{path(organization)}")
+    end
+  end
 end

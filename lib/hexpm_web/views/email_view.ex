@@ -179,6 +179,16 @@ defmodule HexpmWeb.EmailView do
     def message(username, package) do
       "#{username} has been removed from owners of package #{package}."
     end
+
+    def trusted_publishers(package) do
+      "Removing an owner doesn't change #{package}'s trusted publishers, so anyone who can " <>
+        "run these workflows on GitHub can still publish it, including a removed owner " <>
+        "with access to the repositories:"
+    end
+
+    def review(url, format) do
+      "Review them at #{Common.link(url, url, format)}."
+    end
   end
 
   defmodule TrustedPublisherAdd do

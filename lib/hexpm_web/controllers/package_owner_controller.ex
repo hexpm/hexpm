@@ -16,7 +16,8 @@ defmodule HexpmWeb.PackageOwnerController do
       "index.html",
       [
         title: "Manage owners – #{package.name}",
-        container: "container"
+        container: "container",
+        trusted_publishers: Owners.trusted_publishers(package)
       ] ++ PackageLayoutAssigns.for_package(conn, package)
     )
   end
