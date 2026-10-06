@@ -55,12 +55,12 @@ defmodule Hexpm.Repository.ReleaseTest do
 
     elixir = "~> 1.0" <> String.duplicate(" ", 249)
 
-    assert build.(%{app: codepoints_string(255)}).valid?
+    assert build.(%{app: String.duplicate("a", 255)}).valid?
     assert build.(%{app: package.name, elixir: elixir}).valid?
 
     assert build.(%{app: package.name, build_tools: List.duplicate(codepoints_string(255), 16)}).valid?
 
-    assert errors_on(build.(%{app: codepoints_string(256)})).meta.app ==
+    assert errors_on(build.(%{app: String.duplicate("a", 256)})).meta.app ==
              "should be at most 255 character(s)"
 
     assert errors_on(build.(%{app: package.name, elixir: elixir <> " "})).meta.elixir ==
@@ -87,11 +87,11 @@ defmodule Hexpm.Repository.ReleaseTest do
       Release.build(package, publisher, params, "", "")
     end
 
-    assert build.(%{app: codepoints_string(255)}).valid?
+    assert build.(%{app: String.duplicate("a", 255)}).valid?
     assert build.(%{requirement: "~> 1.0" <> String.duplicate(" ", 249)}).valid?
 
     assert %{app: "should be at most 255 character(s)"} =
-             requirement_error(build.(%{app: codepoints_string(256)}))
+             requirement_error(build.(%{app: String.duplicate("a", 256)}))
 
     assert %{requirement: "should be at most 255 byte(s)"} =
              requirement_error(build.(%{requirement: "~> 1.0" <> String.duplicate(" ", 250)}))
