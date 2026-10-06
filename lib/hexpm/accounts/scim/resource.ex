@@ -52,7 +52,7 @@ defmodule Hexpm.Accounts.SCIM.Resource do
   end
 
   def email_shaped?(value) when is_binary(value) do
-    Regex.match?(~r/\A[^\s]+@[^\s]+\.[^\s]+\z/, value) and byte_size(value) <= 255
+    Regex.match?(Email.format(), value) and byte_size(value) <= 255
   end
 
   def email_shaped?(_value), do: false

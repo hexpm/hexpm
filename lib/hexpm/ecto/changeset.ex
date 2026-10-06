@@ -113,6 +113,14 @@ defmodule Hexpm.Changeset do
   end
 
   def validate_verified_email_exists(changeset, field, opts) do
+    if Keyword.has_key?(changeset.errors, field) do
+      changeset
+    else
+      validate_unique_verified_email(changeset, field, opts)
+    end
+  end
+
+  defp validate_unique_verified_email(changeset, field, opts) do
     validate_change(changeset, field, fn _, email ->
       case Hexpm.Repo.get_by(Hexpm.Accounts.Email, email: email, verified: true) do
         nil ->
