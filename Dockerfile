@@ -9,10 +9,10 @@ ENV LANG=C.UTF-8
 # install build dependencies
 RUN apt update && \
     apt upgrade -y && \
-    apt install -y --no-install-recommends git build-essential curl ca-certificates && \
+    apt install -y --no-install-recommends git build-essential cmake curl ca-certificates && \
     apt clean -y && rm -rf /var/lib/apt/lists/*
 
-# install rust, the lumis CLI is built from source
+# install rust, the lumis CLI is built from source, and cmake for wasmtime
 ARG RUST_VERSION=1.99.0
 ARG RUSTUP_VERSION=1.29.1
 RUN arch="$(uname -m)" && \
