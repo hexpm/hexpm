@@ -44,11 +44,11 @@ defmodule HexpmWeb.Plugs.Attack do
     end
   end
 
-  rule "trusted publisher throttle", conn do
-    trusted_publisher = conn.assigns[:trusted_publisher]
+  rule "workload identity throttle", conn do
+    workload_identity = conn.assigns[:workload_identity]
 
-    if api?(conn) && trusted_publisher do
-      trusted_publisher_throttle(trusted_publisher.id)
+    if api?(conn) && workload_identity do
+      workload_identity_throttle(workload_identity.id)
     end
   end
 
@@ -64,7 +64,7 @@ defmodule HexpmWeb.Plugs.Attack do
   end
 
   rule "ip throttle", conn do
-    if api?(conn) and not trusted_publisher_mint?(conn) and not oidc_audience?(conn) do
+    if api?(conn) and not workload_identity_mint?(conn) and not oidc_audience?(conn) do
       ip_throttle(conn.remote_ip)
     end
   end
@@ -114,8 +114,8 @@ defmodule HexpmWeb.Plugs.Attack do
       organization = conn.assigns[:current_organization] ->
         "organization #{organization.id}"
 
-      trusted_publisher = conn.assigns[:trusted_publisher] ->
-        "trusted publisher #{trusted_publisher.id}"
+      workload_identity = conn.assigns[:workload_identity] ->
+        "workload identity #{workload_identity.id}"
 
       connection = conn.assigns[:scim_connection] ->
         "provisioning connection #{connection.id}"
@@ -157,8 +157,8 @@ defmodule HexpmWeb.Plugs.Attack do
     )
   end
 
-  def trusted_publisher_throttle(trusted_publisher_id, opts \\ []) do
-    key = {:trusted_publisher, trusted_publisher_id}
+  def workload_identity_throttle(workload_identity_id, opts \\ []) do
+    key = {:workload_identity, workload_identity_id}
     time = opts[:time] || System.system_time(:millisecond)
     unless opts[:time], do: RateLimitPubSub.broadcast(key, time)
 
@@ -315,12 +315,12 @@ defmodule HexpmWeb.Plugs.Attack do
     )
   end
 
-  def trusted_publisher_mint_throttle(key, opts \\ []) do
+  def workload_identity_mint_throttle(key, opts \\ []) do
     time = opts[:time] || System.system_time(:millisecond)
-    unless opts[:time], do: RateLimitPubSub.broadcast({:trusted_publisher_mint, key}, time)
+    unless opts[:time], do: RateLimitPubSub.broadcast({:workload_identity_mint, key}, time)
 
     timed_throttle(
-      {:trusted_publisher_mint, key},
+      {:workload_identity_mint, key},
       time: time,
       increment: Keyword.get(opts, :increment, 1),
       storage: @storage,
@@ -329,9 +329,9 @@ defmodule HexpmWeb.Plugs.Attack do
     )
   end
 
-  def trusted_publisher_mint_blocked?(key) do
+  def workload_identity_mint_blocked?(key) do
     {_, {:throttle, data}} =
-      trusted_publisher_mint_throttle(key, time: System.system_time(:millisecond), increment: 0)
+      workload_identity_mint_throttle(key, time: System.system_time(:millisecond), increment: 0)
 
     data[:remaining] == 0
   end
@@ -415,10 +415,10 @@ defmodule HexpmWeb.Plugs.Attack do
 
   @spec account_delete_request_throttle(integer(), keyword()) ::
           {:allow | :block, {:throttle, keyword()}}
-  # Adding a trusted publisher looks the repository up on GitHub with the OAuth
+  # Adding a workload identity looks the repository up on GitHub with the OAuth
   # app's credentials, whose quota every add on Hex shares.
-  def trusted_publisher_lookup_throttle(user_id, opts \\ []) do
-    key = {:trusted_publisher_lookup, user_id}
+  def workload_identity_lookup_throttle(user_id, opts \\ []) do
+    key = {:workload_identity_lookup, user_id}
     time = opts[:time] || System.system_time(:millisecond)
     unless opts[:time], do: RateLimitPubSub.broadcast(key, time)
 
@@ -474,13 +474,13 @@ defmodule HexpmWeb.Plugs.Attack do
 
   # Verified failed mints have their own limit, keyed on the repository that
   # signed the token, in HexpmWeb.API.OAuthController.
-  defp trusted_publisher_mint?(%Plug.Conn{
+  defp workload_identity_mint?(%Plug.Conn{
          request_path: "/api/oauth/token",
          params: %{"grant_type" => "urn:ietf:params:oauth:grant-type:jwt-bearer"}
        }),
        do: true
 
-  defp trusted_publisher_mint?(%Plug.Conn{}), do: false
+  defp workload_identity_mint?(%Plug.Conn{}), do: false
 
   defp oidc_audience?(%Plug.Conn{method: "GET", request_path: "/api/oidc/audience"}), do: true
   defp oidc_audience?(%Plug.Conn{}), do: false

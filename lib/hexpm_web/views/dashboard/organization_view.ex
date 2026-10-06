@@ -14,6 +14,6 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
   import HexpmWeb.Dashboard.Organization.Components.ProfileTab, only: [profile_tab: 1]
   import HexpmWeb.Dashboard.Organization.Components.SSOTab, only: [sso_tab: 1]
 
-  import HexpmWeb.Dashboard.Organization.Components.TrustedPublishersTab,
-    only: [trusted_publishers_tab: 1]
+  import HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab,
+    only: [workload_identities_tab: 1]
 end

@@ -118,12 +118,12 @@ defmodule HexpmWeb.DashboardView do
     "Remove #{params["user"]["username"]} from owners of package #{params["package"]["name"]}"
   end
 
-  def humanize_audit_log_info(%AuditLog{action: "trusted_publisher.create", params: params}) do
-    "Add trusted publisher #{params["repository"]} (#{params["workflow"]}) on package #{params["package"]["name"]}"
+  def humanize_audit_log_info(%AuditLog{action: "workload_identity.create", params: params}) do
+    "Add workload identity #{params["repository"]} (#{params["workflow"]}) on package #{params["package"]["name"]}"
   end
 
-  def humanize_audit_log_info(%AuditLog{action: "trusted_publisher.remove", params: params}) do
-    "Remove trusted publisher #{params["repository"]} (#{params["workflow"]}) from package #{params["package"]["name"]}"
+  def humanize_audit_log_info(%AuditLog{action: "workload_identity.remove", params: params}) do
+    "Remove workload identity #{params["repository"]} (#{params["workflow"]}) from package #{params["package"]["name"]}"
   end
 
   def humanize_audit_log_info(%AuditLog{action: "release.publish", params: params}) do

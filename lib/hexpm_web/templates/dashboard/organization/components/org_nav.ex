@@ -13,9 +13,9 @@ defmodule HexpmWeb.Dashboard.Organization.Components.OrgNav do
   import HexpmWeb.Components.Dropdown, only: [dropdown: 1, dropdown_item: 1]
 
   alias Hexpm.Accounts.SSO
-  alias Hexpm.TrustedPublishers
+  alias Hexpm.WorkloadIdentities
 
-  @new_sections [:trusted_publishers, :policies, :sso]
+  @new_sections [:workload_identities, :policies, :sso]
 
   attr :current_user, :map, required: true
   attr :organization, :map, required: true
@@ -131,10 +131,10 @@ defmodule HexpmWeb.Dashboard.Organization.Components.OrgNav do
          [{:audit_logs, "Activity", ~p"/dashboard/orgs/#{organization}/audit-logs"}]},
       {"Access",
        [{:keys, "Keys", ~p"/dashboard/orgs/#{organization}/keys"}] ++
-         if(TrustedPublishers.enabled?(),
+         if(WorkloadIdentities.enabled?(),
            do: [
-             {:trusted_publishers, "Trusted publishers",
-              ~p"/dashboard/orgs/#{organization}/trusted-publishers"}
+             {:workload_identities, "Workload identities",
+              ~p"/dashboard/orgs/#{organization}/workload-identities"}
            ],
            else: []
          ) ++

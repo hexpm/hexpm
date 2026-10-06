@@ -281,14 +281,14 @@ defmodule Hexpm.Factory do
     }
   end
 
-  def trusted_publisher_factory() do
+  def workload_identity_factory() do
     package = build(:package)
     n = System.unique_integer([:positive])
 
-    %Hexpm.TrustedPublishers.TrustedPublisher{
+    %Hexpm.WorkloadIdentities.WorkloadIdentity{
       package: package,
       provider: "github",
-      issuer: Hexpm.TrustedPublishers.TrustedPublisher.github_issuer(),
+      issuer: Hexpm.WorkloadIdentities.WorkloadIdentity.github_issuer(),
       repository_owner: "acme",
       repository_owner_id: "12345",
       repository_id: "67890",
@@ -298,14 +298,14 @@ defmodule Hexpm.Factory do
     }
   end
 
-  def organization_trusted_publisher_factory() do
+  def organization_workload_identity_factory() do
     n = System.unique_integer([:positive])
 
-    %Hexpm.TrustedPublishers.TrustedPublisher{
+    %Hexpm.WorkloadIdentities.WorkloadIdentity{
       organization: build(:organization),
       role: "read",
       provider: "github",
-      issuer: Hexpm.TrustedPublishers.TrustedPublisher.github_issuer(),
+      issuer: Hexpm.WorkloadIdentities.WorkloadIdentity.github_issuer(),
       repository_owner: "acme",
       repository_owner_id: "12345",
       repository_id: "67890",

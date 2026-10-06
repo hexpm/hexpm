@@ -26,7 +26,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
   attr :quantity, :integer, default: nil
   attr :sso_mode, :atom, default: :optional
   attr :sso_required_at, :any, default: nil
-  attr :trusted_publishers, :list, default: []
+  attr :workload_identities, :list, default: []
 
   def members_tab(assigns) do
     assigns = assign(assigns, :tfa_policy, tfa_policy(assigns.organization))
@@ -389,20 +389,20 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
             </p>
 
             <div
-              :if={@trusted_publishers != []}
+              :if={@workload_identities != []}
               class="mt-4 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 p-4 space-y-2 text-sm text-amber-900 dark:text-amber-100"
             >
               <p>
-                Removing a member doesn't change the organization's {trusted_publishers_count(
-                  @trusted_publishers
-                )}, so anyone who can run their workflows on GitHub can still fetch its packages, and publish them through write publishers, including a removed member with access to the repositories.
+                Removing a member doesn't change the organization's {workload_identities_count(
+                  @workload_identities
+                )}, so anyone who can run their workflows on GitHub can still fetch its packages, and publish them through write workload identities, including a removed member with access to the repositories.
               </p>
               <p>
                 Review them on the <a
-                  href={~p"/dashboard/orgs/#{@organization}/trusted-publishers"}
+                  href={~p"/dashboard/orgs/#{@organization}/workload-identities"}
                   class="font-medium underline"
                 >
-                  Trusted publishers page</a>.
+                  Workload identities page</a>.
               </p>
             </div>
 
@@ -596,8 +596,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
     "#{count} #{member_label(count)} will keep reaching this organization's private packages on a Hexpm password alone once SSO is required."
   end
 
-  defp trusted_publishers_count([_trusted_publisher]), do: "trusted publisher"
+  defp workload_identities_count([_workload_identity]), do: "workload identity"
 
-  defp trusted_publishers_count(trusted_publishers),
-    do: "#{length(trusted_publishers)} trusted publishers"
+  defp workload_identities_count(workload_identities),
+    do: "#{length(workload_identities)} workload identities"
 end

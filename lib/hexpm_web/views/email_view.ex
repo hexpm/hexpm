@@ -180,8 +180,8 @@ defmodule HexpmWeb.EmailView do
       "#{username} has been removed from owners of package #{package}."
     end
 
-    def trusted_publishers(package) do
-      "Removing an owner doesn't change #{package}'s trusted publishers, so anyone who can " <>
+    def workload_identities(package) do
+      "Removing an owner doesn't change #{package}'s workload identities, so anyone who can " <>
         "run these workflows on GitHub can still publish it, including a removed owner " <>
         "with access to the repositories:"
     end
@@ -191,24 +191,24 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
-  defmodule TrustedPublisherAdd do
+  defmodule WorkloadIdentityAdd do
     def message(username, package) do
-      "#{username} added a trusted publisher to package #{package}."
+      "#{username} added a workload identity to package #{package}."
     end
 
     def warning(package) do
       "Anyone who can run this workflow can now publish #{package}. " <>
-        "If you did not expect this change, remove the publisher and review the package owners."
+        "If you did not expect this change, remove the workload identity and review the package owners."
     end
   end
 
-  defmodule TrustedPublisherRemove do
+  defmodule WorkloadIdentityRemove do
     def message(username, package) do
-      "#{username} removed a trusted publisher from package #{package}."
+      "#{username} removed a workload identity from package #{package}."
     end
   end
 
-  defmodule TrustedPublisherDetails do
+  defmodule WorkloadIdentityDetails do
     def lines(repository, workflow, environment) do
       [
         "GitHub repository: #{repository}",
@@ -217,14 +217,14 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
-  defmodule OrganizationTrustedPublisherAdd do
+  defmodule OrganizationWorkloadIdentityAdd do
     def message(username, organization) do
-      "#{username} added a trusted publisher to organization #{organization}."
+      "#{username} added a workload identity to organization #{organization}."
     end
 
     def warning(role, organization, packages) do
       "Anyone who can run a matching workflow can now #{reach(role, organization, packages)}. " <>
-        "If you did not expect this change, remove the publisher and review the organization's admins."
+        "If you did not expect this change, remove the workload identity and review the organization's admins."
     end
 
     defp reach("read", organization, _packages),
@@ -239,13 +239,13 @@ defmodule HexpmWeb.EmailView do
           "and publish and create the packages listed above"
   end
 
-  defmodule OrganizationTrustedPublisherRemove do
+  defmodule OrganizationWorkloadIdentityRemove do
     def message(username, organization) do
-      "#{username} removed a trusted publisher from organization #{organization}."
+      "#{username} removed a workload identity from organization #{organization}."
     end
   end
 
-  defmodule OrganizationTrustedPublisherDetails do
+  defmodule OrganizationWorkloadIdentityDetails do
     def lines(role, owner, repository, workflow, environment, packages) do
       [
         "Role: #{role}",

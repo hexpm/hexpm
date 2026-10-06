@@ -12,7 +12,7 @@ defmodule Hexpm.Application do
 
     mode = mode()
     if web_mode?(mode), do: Hexpm.BlockAddress.start()
-    Hexpm.TrustedPublishers.OIDC.start()
+    Hexpm.WorkloadIdentities.OIDC.start()
     children = children(mode, Hexpm.Repo.write_mode?())
 
     shutdown_on_eof()

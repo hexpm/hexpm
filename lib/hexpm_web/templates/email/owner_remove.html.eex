@@ -6,18 +6,18 @@
   <%= OwnerRemove.message(@username, @package) %>
 </p>
 
-<%= if @trusted_publishers != [] do %>
+<%= if @workload_identities != [] do %>
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
-  <%= OwnerRemove.trusted_publishers(@package) %>
+  <%= OwnerRemove.workload_identities(@package) %>
 </p>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
-  <%= for trusted_publisher <- @trusted_publishers do %>
-    <%= trusted_publisher.repository %> (<%= trusted_publisher.workflow %>)<br>
+  <%= for workload_identity <- @workload_identities do %>
+    <%= workload_identity.repository %> (<%= workload_identity.workflow %>)<br>
   <% end %>
 </p>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
-  <%= raw(OwnerRemove.review(@trusted_publishers_url, :html)) %>
+  <%= raw(OwnerRemove.review(@workload_identities_url, :html)) %>
 </p>
 <% end %>

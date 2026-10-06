@@ -1,8 +1,8 @@
 <%= OwnerRemove.message(@username, @package) %>
-<%= if @trusted_publishers != [] do %>
-<%= OwnerRemove.trusted_publishers(@package) %>
+<%= if @workload_identities != [] do %>
+<%= OwnerRemove.workload_identities(@package) %>
 
-<%= for trusted_publisher <- @trusted_publishers do %><%= trusted_publisher.repository %> (<%= trusted_publisher.workflow %>)
+<%= for workload_identity <- @workload_identities do %><%= workload_identity.repository %> (<%= workload_identity.workflow %>)
 <% end %>
-<%= OwnerRemove.review(@trusted_publishers_url, :text) %>
+<%= OwnerRemove.review(@workload_identities_url, :text) %>
 <% end %>

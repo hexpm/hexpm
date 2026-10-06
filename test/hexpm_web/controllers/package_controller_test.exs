@@ -400,13 +400,13 @@ defmodule HexpmWeb.PackageControllerTest do
       assert response(conn, 200) =~ release.publisher.username
     end
 
-    test "show provenance for releases published by a trusted publisher", %{package1: package1} do
+    test "show provenance for releases published by a workload identity", %{package1: package1} do
       insert(
         :release,
         package: package1,
         version: "0.1.0",
         meta: build(:release_metadata, app: package1.name),
-        oidc_claims: %Hexpm.TrustedPublishers.ClaimsSnapshot{
+        oidc_claims: %Hexpm.WorkloadIdentities.ClaimsSnapshot{
           repository: "acme/widget",
           workflow_ref: "acme/widget/.github/workflows/release.yml@refs/tags/v0.1.0",
           sha: "0123456789abcdef0123456789abcdef01234567",

@@ -84,7 +84,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
                "Billing",
                "Activity",
                "Keys",
-               "Trusted publishers NEW",
+               "Workload identities NEW",
                "Packages",
                "Policies NEW",
                "Danger Zone"

@@ -44,7 +44,7 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCardTest do
     refute html =~ "United States"
   end
 
-  test "describes organization trusted publisher changes" do
+  test "describes organization workload identity changes" do
     stub(Hexpm.Geo.Mock, :lookup_country, fn _ -> nil end)
 
     params = %{
@@ -56,19 +56,19 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCardTest do
     html =
       render_component(&AuditLogCard.audit_log_card/1,
         audit_logs: [
-          login_log(%{action: "organization.trusted_publisher.add", params: params}),
-          login_log(%{action: "organization.trusted_publisher.remove", params: params})
+          login_log(%{action: "organization.workload_identity.add", params: params}),
+          login_log(%{action: "organization.workload_identity.remove", params: params})
         ]
       )
 
-    assert html =~ "Added the trusted publisher acme/widget (write) to acme"
-    assert html =~ "Removed the trusted publisher acme/widget (write) from acme"
+    assert html =~ "Added the workload identity acme/widget (write) to acme"
+    assert html =~ "Removed the workload identity acme/widget (write) from acme"
 
     any =
       render_component(&AuditLogCard.audit_log_card/1,
         audit_logs: [
           login_log(%{
-            action: "organization.trusted_publisher.add",
+            action: "organization.workload_identity.add",
             params:
               %{params | "repository" => "", "role" => "read"}
               |> Map.put("repository_owner", "acme")
@@ -76,6 +76,6 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCardTest do
         ]
       )
 
-    assert any =~ "Added the trusted publisher for any repository owned by acme (read) to acme"
+    assert any =~ "Added the workload identity for any repository owned by acme (read) to acme"
   end
 end

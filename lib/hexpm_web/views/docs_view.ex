@@ -35,7 +35,7 @@ defmodule HexpmWeb.DocsView do
       {"Hex",
        organization_sso_link() ++
          organization_tfa_link() ++
-         trusted_publishers_link() ++
+         workload_identity_link() ++
          [
            %{view: :faq, label: "FAQ", href: ~p"/docs/faq"},
            %{view: :self_hosting, label: "Self-hosting", href: ~p"/docs/self-hosting"},
@@ -61,13 +61,13 @@ defmodule HexpmWeb.DocsView do
       else: []
   end
 
-  defp trusted_publishers_link() do
-    if Hexpm.TrustedPublishers.enabled?(),
+  defp workload_identity_link() do
+    if Hexpm.WorkloadIdentities.enabled?(),
       do: [
         %{
-          view: :trusted_publishers,
-          label: "Trusted publishers",
-          href: ~p"/docs/trusted-publishers"
+          view: :workload_identity,
+          label: "Workload Identity",
+          href: ~p"/docs/workload-identity"
         }
       ],
       else: []

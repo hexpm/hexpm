@@ -83,12 +83,12 @@ defmodule Hexpm.Repository.OwnersTest do
       assert user_id == organization.user.id
     end
 
-    test "a transfer removes the package's trusted publishers", %{
+    test "a transfer removes the package's workload identities", %{
       owner: owner,
       package: package
     } do
-      trusted_publisher = insert(:trusted_publisher, package: package)
-      other_package_publisher = insert(:trusted_publisher)
+      workload_identity = insert(:workload_identity, package: package)
+      other_package_identity = insert(:workload_identity)
       new_owner = insert(:user)
 
       token =
@@ -97,43 +97,43 @@ defmodule Hexpm.Repository.OwnersTest do
           token_type: "bearer",
           scopes: ["package:hexpm/#{package.name}"],
           expires_at: DateTime.utc_now() |> DateTime.add(600) |> DateTime.truncate(:second),
-          grant_type: "trusted_publisher",
+          grant_type: "workload_identity",
           grant_reference: "oidc-transfer-jti",
-          trusted_publisher_id: trusted_publisher.id
+          workload_identity_id: workload_identity.id
         })
 
       assert {:ok, _} =
                Owners.add(package, new_owner, %{"transfer" => true}, audit: audit_data(owner))
 
-      refute Repo.get(Hexpm.TrustedPublishers.TrustedPublisher, trusted_publisher.id)
-      assert Repo.get(Hexpm.TrustedPublishers.TrustedPublisher, other_package_publisher.id)
+      refute Repo.get(Hexpm.WorkloadIdentities.WorkloadIdentity, workload_identity.id)
+      assert Repo.get(Hexpm.WorkloadIdentities.WorkloadIdentity, other_package_identity.id)
       assert Repo.get!(Hexpm.OAuth.Token, token.id).revoked_at
 
-      log = Repo.get_by!(Hexpm.Accounts.AuditLog, action: "trusted_publisher.remove")
-      assert log.params["repository"] == trusted_publisher.repository
+      log = Repo.get_by!(Hexpm.Accounts.AuditLog, action: "workload_identity.remove")
+      assert log.params["repository"] == workload_identity.repository
       assert log.params["package"]["name"] == package.name
     end
 
-    test "adding an owner keeps the package's trusted publishers", %{
+    test "adding an owner keeps the package's workload identities", %{
       owner: owner,
       package: package
     } do
-      trusted_publisher = insert(:trusted_publisher, package: package)
+      workload_identity = insert(:workload_identity, package: package)
 
       assert {:ok, _} = Owners.add(package, insert(:user), %{}, audit: audit_data(owner))
-      assert Repo.get(Hexpm.TrustedPublishers.TrustedPublisher, trusted_publisher.id)
+      assert Repo.get(Hexpm.WorkloadIdentities.WorkloadIdentity, workload_identity.id)
     end
   end
 
   describe "remove/3" do
-    test "tells the owners which trusted publishers can still publish", %{
+    test "tells the owners which workload identities can still publish", %{
       owner: owner,
       package: package
     } do
       removed = insert(:user)
       insert(:package_owner, package: package, user: removed)
 
-      insert(:trusted_publisher,
+      insert(:workload_identity,
         package: package,
         repository: "acme/widget",
         workflow: "release.yml"
@@ -145,14 +145,14 @@ defmodule Hexpm.Repository.OwnersTest do
         assert email.subject =~ "Owner removed from package #{package.name}"
 
         assert email.text_body =~
-                 "Removing an owner doesn't change #{package.name}'s trusted publishers"
+                 "Removing an owner doesn't change #{package.name}'s workload identities"
 
         assert email.text_body =~ "acme/widget (release.yml)"
-        assert email.text_body =~ "/packages/#{package.name}/trusted-publishers"
+        assert email.text_body =~ "/packages/#{package.name}/workload-identities"
       end)
     end
 
-    test "says nothing about trusted publishers when there are none", %{
+    test "says nothing about workload identities when there are none", %{
       owner: owner,
       package: package
     } do
@@ -162,7 +162,7 @@ defmodule Hexpm.Repository.OwnersTest do
       assert :ok = Owners.remove(package, removed, audit: audit_data(owner))
 
       assert_email_sent(fn email ->
-        refute email.text_body =~ "trusted publishers"
+        refute email.text_body =~ "workload identities"
         assert email.subject =~ "Owner removed"
       end)
     end

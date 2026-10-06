@@ -29,14 +29,14 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
 
       body = html_response(conn, 200)
       assert body =~ "Current owners"
-      refute body =~ "trusted publishers, so anyone who can run"
+      refute body =~ "workload identities, so anyone who can run"
     end
 
-    test "the remove dialog says the package's trusted publishers stay", %{
+    test "the remove dialog says the package's workload identities stay", %{
       full_owner: full_owner,
       package: package
     } do
-      insert(:trusted_publisher,
+      insert(:workload_identity,
         package: package,
         repository: "acme/widget",
         workflow: "release.yml"
@@ -49,10 +49,10 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
         |> html_response(200)
 
       assert body =~
-               "Removing an owner doesn't change #{package.name}'s trusted publishers"
+               "Removing an owner doesn't change #{package.name}'s workload identities"
 
       assert body =~ "acme/widget (release.yml)"
-      assert body =~ ~s(href="/packages/#{package.name}/trusted-publishers")
+      assert body =~ ~s(href="/packages/#{package.name}/workload-identities")
     end
 
     test "an organization admin who owns nothing directly sees the page" do

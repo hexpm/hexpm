@@ -2,7 +2,7 @@ defmodule Hexpm.Repository.Owners do
   use Hexpm.Context
 
   alias Hexpm.Accounts.OptionalEmails
-  alias Hexpm.TrustedPublishers.TrustedPublisher
+  alias Hexpm.WorkloadIdentities.WorkloadIdentity
 
   def all(package, preload \\ []) do
     from(owner in assoc(package, :package_owners),
@@ -20,12 +20,12 @@ defmodule Hexpm.Repository.Owners do
   end
 
   @doc """
-  The trusted publishers that keep publishing the package whoever its owners
+  The workload identities that keep publishing the package whoever its owners
   are, shown to whoever removes an owner.
   """
-  def trusted_publishers(package) do
-    if Hexpm.TrustedPublishers.enabled?(),
-      do: Hexpm.TrustedPublishers.list(package),
+  def workload_identities(package) do
+    if Hexpm.WorkloadIdentities.enabled?(),
+      do: Hexpm.WorkloadIdentities.list(package),
       else: []
   end
 
@@ -86,7 +86,7 @@ defmodule Hexpm.Repository.Owners do
         PackageOwner.changeset(owner, params)
       end)
       |> remove_existing_owners(params)
-      |> remove_trusted_publishers(package, params, audit_data)
+      |> remove_workload_identities(package, params, audit_data)
       |> audit(audit_data, add_owner_audit_log_action(params), fn %{owner: owner} ->
         {package, owner.level, user}
       end)
@@ -137,28 +137,28 @@ defmodule Hexpm.Repository.Owners do
     multi
   end
 
-  # A transfer hands the package to new owners, so a publisher the previous
+  # A transfer hands the package to new owners, so a workload identity the previous
   # owners pointed at their own repositories stops publishing it.
-  defp remove_trusted_publishers(multi, package, %{"transfer" => true}, audit_data) do
+  defp remove_workload_identities(multi, package, %{"transfer" => true}, audit_data) do
     multi
-    |> Multi.run(:trusted_publishers, fn repo, _changes ->
-      query = from(tp in TrustedPublisher, where: tp.package_id == ^package.id)
-      trusted_publishers = query |> repo.all() |> Enum.map(&%{&1 | package: package})
+    |> Multi.run(:workload_identities, fn repo, _changes ->
+      query = from(tp in WorkloadIdentity, where: tp.package_id == ^package.id)
+      workload_identities = query |> repo.all() |> Enum.map(&%{&1 | package: package})
 
-      trusted_publishers
+      workload_identities
       |> Enum.map(& &1.id)
-      |> Hexpm.TrustedPublishers.revoke_tokens_query()
+      |> Hexpm.WorkloadIdentities.revoke_tokens_query()
       |> repo.update_all([])
 
       repo.delete_all(query)
-      {:ok, trusted_publishers}
+      {:ok, workload_identities}
     end)
-    |> Multi.merge(fn %{trusted_publishers: trusted_publishers} ->
-      audit_many(Multi.new(), audit_data, "trusted_publisher.remove", trusted_publishers)
+    |> Multi.merge(fn %{workload_identities: workload_identities} ->
+      audit_many(Multi.new(), audit_data, "workload_identity.remove", workload_identities)
     end)
   end
 
-  defp remove_trusted_publishers(multi, _package, _params, _audit_data) do
+  defp remove_workload_identities(multi, _package, _params, _audit_data) do
     multi
   end
 
@@ -231,7 +231,7 @@ defmodule Hexpm.Repository.Owners do
           |> Enum.filter(&OptionalEmails.allowed?(&1, :owner_removed_from_package))
 
         if owners != [] do
-          Emails.owner_removed(package, owners, owner.user, trusted_publishers(package))
+          Emails.owner_removed(package, owners, owner.user, workload_identities(package))
           |> Mailer.deliver!()
         end
 

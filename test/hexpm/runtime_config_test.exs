@@ -35,7 +35,7 @@ defmodule Hexpm.RuntimeConfigTest do
     "HEXPM_VARSEL_SIGNING_KEY" => "varsel-signing-key",
     "HEXPM_VARSEL_KEY_ID" => "varsel-key-id",
     "HEXPM_VARSEL_JWKS" => ~S({"keys":[]}),
-    "HEXPM_TRUSTED_PUBLISHERS_AUDIENCE" => "hexpm-staging",
+    "HEXPM_WORKLOAD_IDENTITY_AUDIENCE" => "hexpm-staging",
     "HEXPM_HCAPTCHA_SITEKEY" => "hcaptcha-sitekey",
     "HEXPM_HCAPTCHA_SECRET" => "hcaptcha-secret",
     "HEXPM_GITHUB_CLIENT_ID" => "github-client-id",
@@ -120,11 +120,11 @@ defmodule Hexpm.RuntimeConfigTest do
              "where jobs can read it too."
   end
 
-  test "reads the trusted publisher audience in prod" do
-    assert read_runtime(@web_env)[:hexpm][:trusted_publishers] == [audience: "hexpm-staging"]
+  test "reads the workload identity audience in prod" do
+    assert read_runtime(@web_env)[:hexpm][:workload_identity] == [audience: "hexpm-staging"]
 
-    assert_raise System.EnvError, ~r/HEXPM_TRUSTED_PUBLISHERS_AUDIENCE/, fn ->
-      read_runtime(Map.put(@web_env, "HEXPM_TRUSTED_PUBLISHERS_AUDIENCE", nil))
+    assert_raise System.EnvError, ~r/HEXPM_WORKLOAD_IDENTITY_AUDIENCE/, fn ->
+      read_runtime(Map.put(@web_env, "HEXPM_WORKLOAD_IDENTITY_AUDIENCE", nil))
     end
   end
 

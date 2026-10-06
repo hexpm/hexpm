@@ -378,17 +378,17 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
   end
 
   defp humanize_action(%AuditLog{
-         action: "organization.trusted_publisher.add",
+         action: "organization.workload_identity.add",
          params: %{"role" => role, "organization" => %{"name" => org}} = params
        }) do
-    "Added the trusted publisher #{trusted_publisher_repository(params)} (#{role}) to #{org}"
+    "Added the workload identity #{workload_identity_repository(params)} (#{role}) to #{org}"
   end
 
   defp humanize_action(%AuditLog{
-         action: "organization.trusted_publisher.remove",
+         action: "organization.workload_identity.remove",
          params: %{"role" => role, "organization" => %{"name" => org}} = params
        }) do
-    "Removed the trusted publisher #{trusted_publisher_repository(params)} (#{role}) from #{org}"
+    "Removed the workload identity #{workload_identity_repository(params)} (#{role}) from #{org}"
   end
 
   defp humanize_action(%AuditLog{
@@ -689,8 +689,8 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
     |> String.capitalize()
   end
 
-  defp trusted_publisher_repository(%{"repository" => "", "repository_owner" => owner}),
+  defp workload_identity_repository(%{"repository" => "", "repository_owner" => owner}),
     do: "for any repository owned by #{owner}"
 
-  defp trusted_publisher_repository(%{"repository" => repository}), do: repository
+  defp workload_identity_repository(%{"repository" => repository}), do: repository
 end

@@ -72,14 +72,14 @@ defmodule HexpmWeb.Plugs.AttackTest do
       assert data[:remaining] == 98
     end
 
-    test "broadcasts trusted publisher lookup limits", %{user: user} do
+    test "broadcasts workload identity lookup limits", %{user: user} do
       time = System.system_time(:millisecond)
-      key = {:trusted_publisher_lookup, user.id}
+      key = {:workload_identity_lookup, user.id}
       Phoenix.PubSub.broadcast!(Hexpm.PubSub, "ratelimit", {:throttle, key, time})
       :sys.get_state(RateLimitPubSub)
 
       assert {:allow, {:throttle, data}} =
-               Attack.trusted_publisher_lookup_throttle(user.id, time: time)
+               Attack.workload_identity_lookup_throttle(user.id, time: time)
 
       assert data[:limit] == 20
       assert data[:remaining] == 18
@@ -172,7 +172,7 @@ defmodule HexpmWeb.Plugs.AttackTest do
       assert callback_data[:remaining] == 48
     end
 
-    test "broadcasts and bounds trusted publisher mint rate limits" do
+    test "broadcasts and bounds workload identity mint rate limits" do
       align_to_throttle_bucket()
       time = System.system_time(:millisecond)
       key = {:github_repository, "8888"}
@@ -180,22 +180,22 @@ defmodule HexpmWeb.Plugs.AttackTest do
       Phoenix.PubSub.broadcast!(
         Hexpm.PubSub,
         "ratelimit",
-        {:throttle, {:trusted_publisher_mint, key}, time}
+        {:throttle, {:workload_identity_mint, key}, time}
       )
 
       :sys.get_state(RateLimitPubSub)
 
       assert {:allow, {:throttle, data}} =
-               Attack.trusted_publisher_mint_throttle(key, time: time)
+               Attack.workload_identity_mint_throttle(key, time: time)
 
       assert data[:limit] == 30
       assert data[:remaining] == 28
 
       for _ <- 1..28 do
-        assert {:allow, _data} = Attack.trusted_publisher_mint_throttle(key, time: time)
+        assert {:allow, _data} = Attack.workload_identity_mint_throttle(key, time: time)
       end
 
-      assert {:block, _data} = Attack.trusted_publisher_mint_throttle(key, time: time)
+      assert {:block, _data} = Attack.workload_identity_mint_throttle(key, time: time)
     end
 
     test "halts requests when ip limit is exceeded" do
@@ -233,7 +233,7 @@ defmodule HexpmWeb.Plugs.AttackTest do
                })
     end
 
-    test "doesn't apply the ip limit to trusted publisher mints" do
+    test "doesn't apply the ip limit to workload identity mints" do
       conn =
         conn(:post, "/api/oauth/token", %{
           "grant_type" => "urn:ietf:params:oauth:grant-type:jwt-bearer"
@@ -247,41 +247,41 @@ defmodule HexpmWeb.Plugs.AttackTest do
       assert get_resp_header(conn, "x-ratelimit-remaining") == []
     end
 
-    test "halts requests when trusted publisher limit is exceeded" do
+    test "halts requests when workload identity limit is exceeded" do
       align_to_throttle_bucket()
-      trusted_publisher = %{id: 7}
+      workload_identity = %{id: 7}
 
       Enum.each(499..0//-1, fn i ->
-        conn = request_trusted_publisher(trusted_publisher)
+        conn = request_workload_identity(workload_identity)
         assert conn.status == 200
         assert get_resp_header(conn, "x-ratelimit-remaining") == ["#{i}"]
       end)
 
-      conn = request_trusted_publisher(trusted_publisher)
+      conn = request_workload_identity(workload_identity)
       assert conn.status == 429
 
       assert conn.resp_body ==
                JSON.encode!(%{
                  status: 429,
-                 message: "API rate limit exceeded for trusted publisher 7"
+                 message: "API rate limit exceeded for workload identity 7"
                })
 
       assert request_ip({5, 5, 5, 5}).status == 200
     end
 
-    test "broadcasts trusted publisher rate limits" do
+    test "broadcasts workload identity rate limits" do
       align_to_throttle_bucket()
       time = System.system_time(:millisecond)
 
       Phoenix.PubSub.broadcast!(
         Hexpm.PubSub,
         "ratelimit",
-        {:throttle, {:trusted_publisher, 8}, time}
+        {:throttle, {:workload_identity, 8}, time}
       )
 
       :sys.get_state(RateLimitPubSub)
 
-      assert {:allow, {:throttle, data}} = Attack.trusted_publisher_throttle(8, time: time)
+      assert {:allow, {:throttle, data}} = Attack.workload_identity_throttle(8, time: time)
       assert data[:remaining] == 498
     end
 
@@ -473,12 +473,12 @@ defmodule HexpmWeb.Plugs.AttackTest do
     |> Hello.call(:index)
   end
 
-  defp request_trusted_publisher(trusted_publisher) do
+  defp request_workload_identity(workload_identity) do
     conn(:get, "/api/")
     |> Map.put(:remote_ip, {5, 5, 5, 5})
     |> assign(:current_user, nil)
     |> assign(:current_organization, nil)
-    |> assign(:trusted_publisher, trusted_publisher)
+    |> assign(:workload_identity, workload_identity)
     |> Hello.call(:index)
   end
 

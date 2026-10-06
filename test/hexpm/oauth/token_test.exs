@@ -16,8 +16,8 @@ defmodule Hexpm.OAuth.TokenTest do
              } = errors_on(changeset)
     end
 
-    test "does not require a client for trusted publisher tokens" do
-      changeset = Token.changeset(%Token{}, %{grant_type: "trusted_publisher"})
+    test "does not require a client for workload identity tokens" do
+      changeset = Token.changeset(%Token{}, %{grant_type: "workload_identity"})
 
       refute Map.has_key?(errors_on(changeset), :client_id)
     end

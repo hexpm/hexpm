@@ -22,7 +22,7 @@ defmodule HexpmWeb.Components.PackageLayout do
   alias Hexpm.Docs.Files
   alias Hexpm.Repository.Owners
   alias Hexpm.Security.Advisories
-  alias Hexpm.TrustedPublishers
+  alias Hexpm.WorkloadIdentities
   alias HexpmWeb.ViewHelpers
 
   # All assigns below (except per-page ones) come from
@@ -602,7 +602,7 @@ defmodule HexpmWeb.Components.PackageLayout do
           label: "Activity",
           path: audit_logs_path(assigns.package)
         }
-      ] ++ owners_tab(assigns) ++ trusted_publishers_tab(assigns)
+      ] ++ owners_tab(assigns) ++ workload_identities_tab(assigns)
   end
 
   defp files_tab(%{current_release: nil}), do: []
@@ -641,18 +641,18 @@ defmodule HexpmWeb.Components.PackageLayout do
     end
   end
 
-  defp trusted_publishers_tab(assigns) do
+  defp workload_identities_tab(assigns) do
     is_full_owner =
-      assigns.active_tab == :trusted_publishers or
+      assigns.active_tab == :workload_identities or
         Owners.full_owner?(assigns.owners, assigns.current_user)
 
-    if TrustedPublishers.enabled?() and is_full_owner do
+    if WorkloadIdentities.enabled?() and is_full_owner do
       [
         %{
-          active: assigns.active_tab == :trusted_publishers,
+          active: assigns.active_tab == :workload_identities,
           icon: "key",
-          label: "Trusted publishers",
-          path: ViewHelpers.path_for_trusted_publishers(assigns.package)
+          label: "Workload identities",
+          path: ViewHelpers.path_for_workload_identities(assigns.package)
         }
       ]
     else

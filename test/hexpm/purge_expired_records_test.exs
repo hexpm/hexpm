@@ -221,19 +221,19 @@ defmodule Hexpm.PurgeExpiredRecordsTest do
       refute Repo.get(Hexpm.OAuth.Token, revoked.id)
     end
 
-    test "keeps a revoked trusted publisher token until it expires" do
-      trusted_publisher = insert(:trusted_publisher)
+    test "keeps a revoked workload identity token until it expires" do
+      workload_identity = insert(:workload_identity)
 
       token = fn jti, expires_at ->
         Repo.insert!(%Hexpm.OAuth.Token{
           jti: jti,
           token_type: "bearer",
-          scopes: ["package:hexpm/#{trusted_publisher.package.name}"],
+          scopes: ["package:hexpm/#{workload_identity.package.name}"],
           expires_at: expires_at,
           revoked_at: truncated_seconds_ago(60),
-          grant_type: "trusted_publisher",
+          grant_type: "workload_identity",
           grant_reference: "oidc-#{jti}",
-          trusted_publisher_id: trusted_publisher.id
+          workload_identity_id: workload_identity.id
         })
       end
 

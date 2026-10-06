@@ -27,7 +27,7 @@ defmodule Hexpm.PurgeExpiredRecords do
   @redacted %{
     Hexpm.OAuth.AuthorizationCode => ~w(code code_challenge),
     Hexpm.OAuth.DeviceCode => ~w(device_code user_code verification_uri_complete),
-    Hexpm.OAuth.Token => ~w(refresh_token_hash),
+    Hexpm.OAuth.Token => ~w(refresh_token_hash trusted_publisher_id),
     Hexpm.UserSession => ~w(session_token),
     Hexpm.Accounts.PasswordReset => ~w(key_hash primary_email),
     Hexpm.Accounts.AccountDeletionRequest => ~w(key_hash primary_email),
@@ -110,7 +110,7 @@ defmodule Hexpm.PurgeExpiredRecords do
   # refresh_token_expires_at. The row is unreachable once both timestamps have
   # passed, not once the access token alone has.
   #
-  # A trusted publisher token's row is what makes its OIDC token single-use,
+  # A workload identity token's row is what makes its OIDC token single-use,
   # so it stays until it expires even when revoked. The exchange refuses OIDC
   # tokens that outlive it.
   defp purge_oauth_tokens(repo, batch_size, run) do
@@ -122,7 +122,7 @@ defmodule Hexpm.PurgeExpiredRecords do
           where:
             (t.expires_at < fragment("NOW()") and
                (is_nil(t.refresh_jti) or t.refresh_token_expires_at < fragment("NOW()"))) or
-              (not is_nil(t.revoked_at) and t.grant_type != "trusted_publisher"),
+              (not is_nil(t.revoked_at) and t.grant_type != "workload_identity"),
           order_by: t.expires_at
         ),
         batch_size,

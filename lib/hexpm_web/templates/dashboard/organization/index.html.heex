@@ -38,7 +38,7 @@
               quantity={@quantity}
               sso_mode={@sso_mode}
               sso_required_at={@sso_required_at}
-              trusted_publishers={@trusted_publishers}
+              workload_identities={@workload_identities}
             />
           <% :keys -> %>
             <.keys_tab
@@ -51,12 +51,12 @@
               organization={@organization}
               packages={@packages}
             />
-          <% :trusted_publishers -> %>
-            <.trusted_publishers_tab
-              changeset={@trusted_publisher_changeset}
+          <% :workload_identities -> %>
+            <.workload_identities_tab
+              changeset={@workload_identity_changeset}
               current_user={@current_user}
               organization={@organization}
-              trusted_publishers={@trusted_publishers}
+              workload_identities={@workload_identities}
             />
           <% :packages -> %>
             <.packages_tab

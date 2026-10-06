@@ -100,38 +100,39 @@ defmodule HexpmWeb.DocsControllerTest do
     assert_sso_docs_hidden()
   end
 
-  test "renders the trusted publishers guide in the docs navigation" do
-    enable_trusted_publisher_docs()
+  test "renders the Workload Identity guide in the docs navigation" do
+    enable_workload_identity_docs()
 
     html =
       build_conn()
-      |> get("/docs/trusted-publishers")
+      |> get("/docs/workload-identity")
       |> html_response(200)
 
-    assert html =~ "Trusted publishers"
-    assert html =~ "Configure a trusted publisher"
+    assert html =~ "Workload Identity"
+    assert html =~ "sometimes also known as &quot;Trusted Publishing&quot;"
+    assert html =~ "Configure a workload identity"
     assert html =~ "urn:ietf:params:oauth:grant-type:jwt-bearer"
     assert html =~ "id-token: write"
     assert html =~ "create a package or land the first release from CI"
-    assert html =~ ~s(id="organization-publishers")
+    assert html =~ ~s(id="organization-workload-identities")
     assert html =~ "scope=repository:ORG"
 
     document = LazyHTML.from_document(html)
 
     assert [link] =
-             LazyHTML.query(document, ~s(#docs-nav a[href="/docs/trusted-publishers"]))
+             LazyHTML.query(document, ~s(#docs-nav a[href="/docs/workload-identity"]))
              |> Enum.to_list()
 
-    assert LazyHTML.text(link) =~ "Trusted publishers"
+    assert LazyHTML.text(link) =~ "Workload Identity"
     assert [class] = LazyHTML.attribute(link, "class")
     assert class =~ "bg-blue-50"
   end
 
-  test "hides the trusted publishers guide and navigation when the feature is off" do
-    app_env(:hexpm, :features, trusted_publishers: false)
+  test "hides the Workload Identity guide and navigation when the feature is off" do
+    app_env(:hexpm, :features, workload_identity: false)
 
     build_conn()
-    |> get("/docs/trusted-publishers")
+    |> get("/docs/workload-identity")
     |> response(404)
 
     html =
@@ -139,19 +140,19 @@ defmodule HexpmWeb.DocsControllerTest do
       |> get("/docs/usage")
       |> html_response(200)
 
-    refute html =~ ~s(href="/docs/trusted-publishers")
+    refute html =~ ~s(href="/docs/workload-identity")
   end
 
-  test "publish docs link to trusted publishers when the feature is on" do
-    enable_trusted_publisher_docs()
+  test "publish docs link to Workload Identity when the feature is on" do
+    enable_workload_identity_docs()
 
     html =
       build_conn()
       |> get("/docs/publish")
       |> html_response(200)
 
-    assert html =~ ~s(href="/docs/trusted-publishers")
-    assert html =~ "trusted publishers"
+    assert html =~ ~s(href="/docs/workload-identity")
+    assert html =~ "Workload Identity"
   end
 
   test "2FA documentation and navigation follow their own rollout availability" do
@@ -216,7 +217,7 @@ defmodule HexpmWeb.DocsControllerTest do
     )
   end
 
-  defp enable_trusted_publisher_docs do
-    app_env(:hexpm, :features, trusted_publishers: true)
+  defp enable_workload_identity_docs do
+    app_env(:hexpm, :features, workload_identity: true)
   end
 end
