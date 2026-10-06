@@ -400,6 +400,9 @@ defmodule HexpmWeb.API.OAuthController do
   defp jwt_bearer_error(:billing_inactive),
     do: {:access_denied, "The organization has no active billing subscription"}
 
+  defp jwt_bearer_error(:invalid_package_name),
+    do: {:invalid_scope, "The scope doesn't name a valid package"}
+
   defp jwt_bearer_error(:token_replayed), do: {:invalid_grant, "OIDC token has already been used"}
   defp jwt_bearer_error(:issuer_not_allowed), do: {:invalid_grant, "OIDC issuer is not allowed"}
 

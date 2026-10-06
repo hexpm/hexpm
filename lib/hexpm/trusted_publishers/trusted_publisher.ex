@@ -143,7 +143,7 @@ defmodule Hexpm.TrustedPublishers.TrustedPublisher do
     end
   end
 
-  defp valid_package_name?(name),
+  def valid_package_name?(name),
     do: is_binary(name) and byte_size(name) <= 255 and Regex.match?(@package_name_re, name)
 
   # The form sends one string, so names may be separated by commas or

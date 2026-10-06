@@ -319,6 +319,25 @@ defmodule HexpmWeb.API.OAuthControllerTrustedPublisherTest do
       assert body["error"] == "invalid_scope"
     end
 
+    test "rejects a package name no package can be created with", %{repository: repository} do
+      insert(:organization_trusted_publisher,
+        organization: repository.organization,
+        role: "write",
+        repository: "acme/widget",
+        workflow: "release.yml"
+      )
+
+      oidc = TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
+
+      body =
+        build_conn()
+        |> post("/api/oauth/token", mint_params(oidc, "package:#{repository.name}/Widget"))
+        |> json_response(400)
+
+      assert body["error"] == "invalid_scope"
+      assert body["error_description"] == "The scope doesn't name a valid package"
+    end
+
     test "answers an unknown organization like no matching publisher", _context do
       oidc = TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
 

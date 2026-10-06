@@ -327,21 +327,33 @@ defmodule Hexpm.TrustedPublishers do
   defp find_package_publisher(repository, package_name, provider, claims) do
     package = Packages.get(repository, package_name)
 
-    publishers =
-      repository
-      |> package_publishers_query(package, package_name)
-      |> for_provider(provider)
-      |> Repo.all()
+    with :ok <- check_package_name(package, package_name) do
+      publishers =
+        repository
+        |> package_publishers_query(package, package_name)
+        |> for_provider(provider)
+        |> Repo.all()
 
-    case Enum.find(publishers, &provider.match?(&1, claims)) do
-      nil ->
-        if is_nil(package) and publishers == [],
-          do: {:error, :package_not_found},
-          else: {:error, :no_matching_publisher}
+      case Enum.find(publishers, &provider.match?(&1, claims)) do
+        nil ->
+          if is_nil(package) and publishers == [],
+            do: {:error, :package_not_found},
+            else: {:error, :no_matching_publisher}
 
-      trusted_publisher ->
-        {:ok, trusted_publisher, "package:#{repository.name}/#{package_name}"}
+        trusted_publisher ->
+          {:ok, trusted_publisher, "package:#{repository.name}/#{package_name}"}
+      end
     end
+  end
+
+  # Some existing packages predate the current name rules, so only a name that
+  # no package has yet must be one a package can be created with.
+  defp check_package_name(%Package{}, _package_name), do: :ok
+
+  defp check_package_name(nil, package_name) do
+    if TrustedPublisher.valid_package_name?(package_name),
+      do: :ok,
+      else: {:error, :invalid_package_name}
   end
 
   defp package_publishers_query(%Repository{id: 1}, nil = _package, _package_name) do

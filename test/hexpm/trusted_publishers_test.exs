@@ -730,6 +730,42 @@ defmodule Hexpm.TrustedPublishersTest do
                mint(repository: repository.name, package: "other_package")
     end
 
+    test "refuses a name no package can be created with", %{
+      repository: repository,
+      organization: organization
+    } do
+      insert(:organization_trusted_publisher,
+        organization: organization,
+        role: "write",
+        repository: "acme/widget",
+        workflow: "release.yml"
+      )
+
+      for name <- ["new_package\n", "New_package", "new-package", "1package"] do
+        assert {:error, :invalid_package_name} =
+                 mint(repository: repository.name, package: name)
+      end
+
+      assert {:ok, _token} = mint(repository: repository.name, package: "new_package")
+    end
+
+    test "mints for an existing package whose name predates the name rules", %{
+      repository: repository,
+      organization: organization
+    } do
+      package = insert(:package, repository_id: repository.id, name: "Legacy_Package")
+
+      insert(:organization_trusted_publisher,
+        organization: organization,
+        role: "write",
+        repository: "acme/widget",
+        workflow: "release.yml"
+      )
+
+      assert {:ok, token} = mint(repository: repository.name, package: package.name)
+      assert token.scopes == ["package:#{repository.name}/Legacy_Package"]
+    end
+
     test "ignores package publishers on a private package", %{
       repository: repository,
       organization: organization
