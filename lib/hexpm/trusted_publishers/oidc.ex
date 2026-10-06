@@ -12,9 +12,16 @@ defmodule Hexpm.TrustedPublishers.OIDC do
   # The Hex token row that records an OIDC token as used lives this long, so
   # an OIDC token valid for longer could be exchanged again after it's purged.
   @max_lifetime_seconds 15 * 60
-  @min_refresh_interval_seconds 30
+  @min_refresh_interval_ms 30_000
 
   def audience, do: Application.fetch_env!(:hexpm, :trusted_publishers)[:audience]
+
+  @doc """
+  Creates the table that records when each issuer's keys were last fetched.
+  """
+  def start do
+    :ets.new(__MODULE__, [:named_table, :public, :set])
+  end
 
   @doc """
   Peeks claims without verifying the signature.
@@ -39,8 +46,8 @@ defmodule Hexpm.TrustedPublishers.OIDC do
   def verify(token, issuer) when is_binary(token) and is_binary(issuer) do
     with {:ok, header} <- peek_header(token),
          :ok <- validate_alg(header),
-         {:ok, jwks} <- get_jwks(issuer),
-         {:ok, claims} <- validate_jwt(token, jwks, issuer),
+         {:ok, jwks, kids} <- get_jwks(issuer),
+         {:ok, claims} <- validate_jwt(token, header["kid"], jwks, kids, issuer),
          :ok <- validate_claims(claims) do
       {:ok, claims}
     end
@@ -65,15 +72,30 @@ defmodule Hexpm.TrustedPublishers.OIDC do
 
   defp get_jwks(issuer) do
     case :persistent_term.get({__MODULE__, :jwks, issuer}, :miss) do
-      {:ok, jwks, expires_at} ->
+      {:ok, jwks, kids, expires_at} ->
         if DateTime.compare(DateTime.utc_now(), expires_at) == :lt do
-          {:ok, jwks}
+          {:ok, jwks, kids}
         else
-          fetch_and_cache_jwks(issuer)
+          refresh_jwks(issuer, {:ok, jwks, kids})
         end
 
       :miss ->
-        fetch_and_cache_jwks(issuer)
+        refresh_jwks(issuer, nil)
+    end
+  end
+
+  # Until a fetch succeeds, the cached keys are used even after they expire.
+  defp refresh_jwks(issuer, cached) do
+    result =
+      case claim_refresh(issuer) do
+        :ok -> fetch_and_cache_jwks(issuer)
+        :claimed -> {:error, :jwks_unavailable}
+      end
+
+    case {result, cached} do
+      {{:ok, _jwks, _kids}, _cached} -> result
+      {{:error, _reason}, {:ok, _jwks, _kids}} -> cached
+      {{:error, _reason}, nil} -> result
     end
   end
 
@@ -83,9 +105,9 @@ defmodule Hexpm.TrustedPublishers.OIDC do
     with {:ok, discovery, _} <- fetch_json(discovery_url),
          jwks_uri when is_binary(jwks_uri) <- Map.get(discovery, "jwks_uri"),
          {:ok, jwks_document, expires_at} <- fetch_json(jwks_uri),
-         {:ok, jwks} <- decode_jwks(jwks_document) do
-      put_jwks_cache(issuer, jwks, expires_at)
-      {:ok, jwks}
+         {:ok, jwks, kids} <- decode_jwks(jwks_document) do
+      :persistent_term.put({__MODULE__, :jwks, issuer}, {:ok, jwks, kids, expires_at})
+      {:ok, jwks, kids}
     else
       nil -> {:error, :jwks_uri_missing}
       {:error, reason} -> {:error, reason}
@@ -93,19 +115,29 @@ defmodule Hexpm.TrustedPublishers.OIDC do
     end
   end
 
-  defp put_jwks_cache(issuer, jwks, expires_at) do
-    :persistent_term.put({__MODULE__, :jwks, issuer}, {:ok, jwks, expires_at})
-    :persistent_term.put({__MODULE__, :jwks_refreshed_at, issuer}, DateTime.utc_now())
-    :ok
+  # One request per pod fetches an issuer's keys in any
+  # @min_refresh_interval_ms. It claims the fetch before starting it, so
+  # requests that arrive during the fetch, or while fetches fail, don't fetch.
+  defp claim_refresh(issuer) do
+    now = System.monotonic_time(:millisecond)
+    cutoff = now - @min_refresh_interval_ms
+
+    claimed? =
+      :ets.insert_new(__MODULE__, {issuer, now}) or
+        :ets.select_replace(__MODULE__, [
+          {{issuer, :"$1"}, [{:"=<", :"$1", cutoff}], [{{issuer, now}}]}
+        ]) == 1
+
+    if claimed?, do: :ok, else: :claimed
   end
 
-  defp validate_jwt(token, jwks, issuer) do
+  defp validate_jwt(token, kid, jwks, kids, issuer) do
     case oidcc_validate_jwt(token, jwks, issuer) do
       {:ok, claims} ->
         {:ok, claims}
 
       {:error, error} ->
-        if unknown_key?(error) do
+        if unknown_key?(error) and unknown_kid?(kid, kids) do
           refresh_and_validate_jwt(token, issuer, error)
         else
           {:error, translate_error(error)}
@@ -114,14 +146,14 @@ defmodule Hexpm.TrustedPublishers.OIDC do
   end
 
   defp refresh_and_validate_jwt(token, issuer, error) do
-    with :ok <- refresh_allowed?(issuer),
-         {:ok, jwks} <- fetch_and_cache_jwks(issuer) do
+    with :ok <- claim_refresh(issuer),
+         {:ok, jwks, _kids} <- fetch_and_cache_jwks(issuer) do
       case oidcc_validate_jwt(token, jwks, issuer) do
         {:ok, claims} -> {:ok, claims}
         {:error, refresh_error} -> {:error, translate_error(refresh_error)}
       end
     else
-      :refresh_cooldown -> {:error, translate_error(error)}
+      :claimed -> {:error, translate_error(error)}
       {:error, reason} -> {:error, reason}
     end
   end
@@ -152,6 +184,11 @@ defmodule Hexpm.TrustedPublishers.OIDC do
   defp unknown_key?({:no_matching_key_with_kid, _kid}), do: true
   defp unknown_key?(_error), do: false
 
+  # oidcc reports a bad signature under a known key ID the same way as an
+  # unknown key ID, and fetching the keys again only helps the latter.
+  defp unknown_kid?(kid, kids) when is_binary(kid), do: kid not in kids
+  defp unknown_kid?(_kid, _kids), do: false
+
   defp translate_error(:token_expired), do: :token_expired
   defp translate_error(:token_not_yet_valid), do: :token_not_yet_valid
   defp translate_error(:none_alg_used), do: :algorithm_rejected
@@ -173,21 +210,6 @@ defmodule Hexpm.TrustedPublishers.OIDC do
   defp translate_missing_claim("aud"), do: :audience_mismatch
   defp translate_missing_claim("exp"), do: :token_expired
   defp translate_missing_claim(_claim), do: :invalid_token
-
-  defp refresh_allowed?(issuer) do
-    case :persistent_term.get({__MODULE__, :jwks_refreshed_at, issuer}, nil) do
-      nil ->
-        :ok
-
-      refreshed_at ->
-        if DateTime.diff(DateTime.utc_now(), refreshed_at, :second) >=
-             @min_refresh_interval_seconds do
-          :ok
-        else
-          :refresh_cooldown
-        end
-    end
-  end
 
   defp validate_claims(claims) do
     now = System.system_time(:second)
@@ -232,7 +254,8 @@ defmodule Hexpm.TrustedPublishers.OIDC do
   end
 
   defp decode_jwks(%{"keys" => keys}) when is_list(keys) and keys != [] do
-    {:ok, JOSE.JWK.from_map(%{"keys" => keys})}
+    kids = for %{"kid" => kid} <- keys, is_binary(kid), do: kid
+    {:ok, JOSE.JWK.from_map(%{"keys" => keys}), kids}
   end
 
   defp decode_jwks(_), do: {:error, :invalid_jwks}
@@ -281,7 +304,7 @@ defmodule Hexpm.TrustedPublishers.OIDC do
   def clear_cache do
     for issuer <- Hexpm.TrustedPublishers.Provider.known_issuers() do
       :persistent_term.erase({__MODULE__, :jwks, issuer})
-      :persistent_term.erase({__MODULE__, :jwks_refreshed_at, issuer})
+      :ets.delete(__MODULE__, issuer)
     end
 
     :ok
