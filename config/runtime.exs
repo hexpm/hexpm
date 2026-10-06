@@ -60,10 +60,6 @@ config :hexpm, :organization_sso,
   mode: sso_mode,
   beta_organizations: sso_beta_organizations
 
-# Lumis takes a language package from here before fetching it from the CDN, so
-# priv/lumis/parsers/elixir.lumis.json is the Elixir package hexpm highlights with
-config :lumis, data_dir: Application.app_dir(:hexpm, "priv/lumis")
-
 if config_env() == :prod do
   mode =
     case System.get_env("HEXPM_MODE") do
@@ -85,6 +81,7 @@ if config_env() == :prod do
     preview_bucket: System.fetch_env!("HEXPM_PREVIEW_BUCKET"),
     diff_bucket: System.fetch_env!("HEXPM_DIFF_BUCKET"),
     deletions_bucket: System.fetch_env!("HEXPM_DELETIONS_BUCKET"),
+    access_logs_private_bucket: System.fetch_env!("HEXPM_ACCESS_LOGS_PRIVATE_BUCKET"),
     slack_webhook_url: System.get_env("HEXPM_SLACK_WEBHOOK_URL"),
     organization_deletions:
       (case System.get_env("HEXPM_ORGANIZATION_DELETIONS", "off") do
@@ -118,6 +115,9 @@ if config_env() == :prod do
     signing_key: System.fetch_env!("HEXPM_VARSEL_SIGNING_KEY"),
     key_id: System.fetch_env!("HEXPM_VARSEL_KEY_ID"),
     jwks: System.fetch_env!("HEXPM_VARSEL_JWKS")
+
+  config :hexpm, :trusted_publishers,
+    audience: System.fetch_env!("HEXPM_TRUSTED_PUBLISHERS_AUDIENCE")
 
   config :hexpm, :hcaptcha,
     sitekey: System.fetch_env!("HEXPM_HCAPTCHA_SITEKEY"),

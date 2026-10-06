@@ -43,6 +43,11 @@ defmodule Hexpm.Repository.Policy.OverrideTest do
     cs = changeset(%{"action" => "allow", "package" => "Bad Name"})
     refute cs.valid?
     assert errors_on(cs).package == "has invalid format"
+
+    for package <- ["phoenix\n", "phoenix ", "phoenix\t"] do
+      cs = changeset(%{"action" => "allow", "package" => package})
+      assert errors_on(cs).package == "has invalid format"
+    end
   end
 
   test "accepts a valid version requirement" do

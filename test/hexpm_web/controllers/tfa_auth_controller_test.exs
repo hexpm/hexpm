@@ -113,6 +113,7 @@ defmodule HexpmWeb.TFAAuthControllerTest do
 
     test "redirects to login after too many failed attempts", c do
       PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
+      align_to_throttle_bucket(10 * 60_000)
 
       session_data = session_data(c.user)
 
@@ -138,6 +139,7 @@ defmodule HexpmWeb.TFAAuthControllerTest do
 
     test "refuses a correct code once the limit is spent", c do
       PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
+      align_to_throttle_bucket(10 * 60_000)
 
       Enum.each(1..6, fn _ ->
         HexpmWeb.Plugs.Attack.tfa_user_throttle(c.user.id)
@@ -157,6 +159,7 @@ defmodule HexpmWeb.TFAAuthControllerTest do
 
     test "a new login does not hand out a fresh attempt budget", c do
       PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
+      align_to_throttle_bucket(10 * 60_000)
 
       Enum.each(1..5, fn _ ->
         build_conn()

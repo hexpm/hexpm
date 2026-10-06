@@ -2,64 +2,69 @@ defmodule HexpmWeb.SyntaxHighlight do
   use GenServer
   require Logger
 
+  alias Lumis.Formatter.HTML
+
+  @budget [time_limit: 300, match_limit: 4096]
+  @linked_attrs Map.new(HTML.classes(), fn {scope, class} -> {scope, ~s|class="#{class}"|} end)
   @timeout 1_000
   @slow_ttl :timer.hours(1)
-  @line_pattern ~r/<div class="l-line" data-line="\d+">(.*?)\n?<\/div>/s
 
   def start_link(opts \\ []) do
     name = Keyword.get(opts, :name, __MODULE__)
     GenServer.start_link(__MODULE__, name, name: name)
   end
 
-  @doc """
-  Loads the highlighter so the first request does not have to.
-
-  The NIF is 143 MB, and the timeout above is sized for highlighting a file, not
-  for opening it. Whichever request arrived first used to pay that load out of
-  its own budget and fall back to unhighlighted source when it ran out.
-  """
-  def warm() do
-    Lumis.highlight!("", formatter: {:html_linked, language: "warm.ex"})
-    :ok
-  rescue
-    error -> Logger.warning("Failed to warm the highlighter: #{Exception.message(error)}")
-  end
+  def budget, do: @budget
 
   def highlight(source, language, label, opts \\ []) do
+    budget = Keyword.get(opts, :budget, @budget)
+
     run(
       {language, source},
-      fn -> Lumis.highlight!(source, formatter: {:html_linked, language: language}) end,
+      fn ->
+        source
+        |> Lumis.highlight(formatter: {:html_linked, language: language}, budget: budget)
+        |> or_plain(label, fn ->
+          Lumis.highlight!(source, formatter: {:html_linked, language: "plaintext"})
+        end)
+      end,
       fn -> plain_source(source) end,
       label,
       opts
     )
   end
 
-  def highlight_lines([], _language, _label), do: []
+  def highlight_lines(lines, language, label, opts \\ [])
 
-  def highlight_lines(lines, language, label) when is_list(lines) do
+  def highlight_lines([], _language, _label, _opts), do: []
+
+  def highlight_lines(lines, language, label, opts) when is_list(lines) do
+    budget = Keyword.get(opts, :budget, @budget)
+
     run(
       {language, lines},
       fn ->
-        highlighted =
-          lines
-          |> Enum.join("\n")
-          |> Lumis.highlight!(formatter: {:html_linked, language: language})
+        source = Enum.map_join(lines, &(&1 <> "\n"))
 
-        fragments =
-          @line_pattern
-          |> Regex.scan(highlighted, capture: :all_but_first)
-          |> List.flatten()
+        events =
+          source
+          |> Lumis.highlight_events(language, budget: budget)
+          |> or_plain(label, fn -> Lumis.highlight_events!(source, "plaintext") end)
 
-        if length(fragments) == length(lines) do
-          fragments
-        else
-          raise "Lumis returned #{length(fragments)} lines for #{length(lines)} source lines"
-        end
+        HTML.render_lines_from_events(source, events, @linked_attrs)
       end,
       fn -> Enum.map(lines, &escape/1) end,
-      label
+      label,
+      opts
     )
+  end
+
+  @doc false
+  def or_plain({:ok, result}, _label, _fun), do: result
+
+  def or_plain({:error, error}, label, fun) do
+    Logger.warning("Failed to highlight #{label}: #{Exception.message(error)}")
+    fun.()
   end
 
   @doc """
@@ -162,18 +167,17 @@ defmodule HexpmWeb.SyntaxHighlight do
   end
 
   defp plain_source(source) do
-    lines = String.split(source, "\n")
-    last = length(lines)
-
     lines =
-      lines
+      source
+      |> String.replace(~r/\r?\n\z/, "")
+      |> String.split(["\r\n", "\n"])
       |> Enum.with_index(1)
-      |> Enum.map_join(fn {line, number} ->
-        newline = if number < last, do: "\n"
-        ~s(<div class="l-line" data-line="#{number}">#{escape(line)}#{newline}</div>)
+      |> Enum.map_join("\n", fn {line, number} ->
+        ~s(<span class="l-line" data-line="#{number}">#{escape(line)}</span>)
       end)
 
-    ~s(<pre class="lumis"><code>#{lines}</code></pre>)
+    ~s(<pre class="lumis"><code class="language-plaintext" translate="no" tabindex="0">) <>
+      lines <> "</code></pre>"
   end
 
   defp escape(source) do

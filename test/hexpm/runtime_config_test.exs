@@ -31,9 +31,11 @@ defmodule Hexpm.RuntimeConfigTest do
     "HEXPM_README_URL" => "https://readme.hex.example.com",
     "HEXPM_VARSEL_REPORT_URL" => "https://cna.example.com/reports",
     "HEXPM_VARSEL_JWT_AUDIENCE" => "https://cna.example.com/reports",
+    "HEXPM_ACCESS_LOGS_PRIVATE_BUCKET" => "access-logs-private",
     "HEXPM_VARSEL_SIGNING_KEY" => "varsel-signing-key",
     "HEXPM_VARSEL_KEY_ID" => "varsel-key-id",
     "HEXPM_VARSEL_JWKS" => ~S({"keys":[]}),
+    "HEXPM_TRUSTED_PUBLISHERS_AUDIENCE" => "hexpm-staging",
     "HEXPM_HCAPTCHA_SITEKEY" => "hcaptcha-sitekey",
     "HEXPM_HCAPTCHA_SECRET" => "hcaptcha-secret",
     "HEXPM_GITHUB_CLIENT_ID" => "github-client-id",
@@ -116,6 +118,14 @@ defmodule Hexpm.RuntimeConfigTest do
              "Worker pods mount every env var web pods do, so unless the key " <>
              "configures the web server itself it belongs in the shared block, " <>
              "where jobs can read it too."
+  end
+
+  test "reads the trusted publisher audience in prod" do
+    assert read_runtime(@web_env)[:hexpm][:trusted_publishers] == [audience: "hexpm-staging"]
+
+    assert_raise System.EnvError, ~r/HEXPM_TRUSTED_PUBLISHERS_AUDIENCE/, fn ->
+      read_runtime(Map.put(@web_env, "HEXPM_TRUSTED_PUBLISHERS_AUDIENCE", nil))
+    end
   end
 
   test "reads the load balancer secret in prod only" do

@@ -53,7 +53,9 @@ defmodule Hexpm.Shared do
         Repository.Requirement,
         Repository.Sitemaps,
         SecretScan.Finding,
-        SecretScan.Scan
+        SecretScan.Scan,
+        TrustedPublishers,
+        TrustedPublishers.TrustedPublisher
       }
     end
   end

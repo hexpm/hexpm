@@ -17,7 +17,14 @@ defmodule HexpmWeb.Readme.Renderer do
   @doc """
   Converts README content to sanitized, URL-rewritten HTML.
   """
-  def render(repository, filename, content, package_name, version) do
+  def render(
+        repository,
+        filename,
+        content,
+        package_name,
+        version,
+        budget \\ SyntaxHighlight.budget()
+      ) do
     ext = Path.extname(filename) |> String.downcase()
     content = scrub_invalid_utf8(content)
 
@@ -31,7 +38,7 @@ defmodule HexpmWeb.Readme.Renderer do
           |> MDExGFM.attach()
           |> MDEx.Document.run()
           |> MDEx.traverse_and_update(
-            &highlight_code_block(&1, "readme #{package_name} #{version}")
+            &highlight_code_block(&1, "readme #{package_name} #{version}", budget)
           )
           |> MDEx.traverse_and_update(&InlineAttributeLists.transform/1)
           |> MDEx.traverse_and_update(
@@ -52,13 +59,13 @@ defmodule HexpmWeb.Readme.Renderer do
     |> LazyHTML.Tree.to_html()
   end
 
-  defp highlight_code_block(%MDEx.CodeBlock{info: info, literal: literal}, label) do
+  defp highlight_code_block(%MDEx.CodeBlock{info: info, literal: literal}, label, budget) do
     language = info |> String.split() |> List.first("plaintext")
-
-    %MDEx.HtmlBlock{literal: SyntaxHighlight.highlight(literal, language, "#{label} #{language}")}
+    html = SyntaxHighlight.highlight(literal, language, "#{label} #{language}", budget: budget)
+    %MDEx.HtmlBlock{literal: html}
   end
 
-  defp highlight_code_block(node, _label), do: node
+  defp highlight_code_block(node, _label, _budget), do: node
 
   # HTML parsing discards the first newline after <pre>. Prefix one so the
   # serialized HTML preserves the first text node when parsed again.

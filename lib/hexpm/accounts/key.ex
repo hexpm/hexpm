@@ -65,7 +65,7 @@ defmodule Hexpm.Accounts.Key do
 
   defmacrop query_revoked(key) do
     quote do
-      not is_nil(unquote(key).revoke_at) and unquote(key).revoke_at < fragment("NOW()")
+      not is_nil(unquote(key).revoke_at) and unquote(key).revoke_at < ^DateTime.utc_now()
     end
   end
 

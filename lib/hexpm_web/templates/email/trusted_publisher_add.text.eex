@@ -1,0 +1,5 @@
+<%= TrustedPublisherAdd.message(@username, @package) %>
+
+<%= Enum.join(TrustedPublisherDetails.lines(@repository, @workflow, @environment), "\n") %>
+
+<%= TrustedPublisherAdd.warning(@package) %>

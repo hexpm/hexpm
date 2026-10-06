@@ -168,6 +168,36 @@ defmodule Hexpm.Store.GCSTest do
     assert events == [%{host: "storage.example", method: "PUT", status: 200}]
   end
 
+  test "lists the prefixes one level down, across pages" do
+    expect(Hexpm.HTTP.Mock, :get, 2, fn url, headers ->
+      assert headers == [{"authorization", "Bearer token"}]
+      %URI{path: "/bucket", query: query} = URI.parse(url)
+
+      case URI.decode_query(query) do
+        %{"prefix" => "", "delimiter" => "/", "marker" => ""} ->
+          {:ok, 200, [],
+           """
+           <ListBucketResult>
+             <CommonPrefixes><Prefix>org=acme/</Prefix></CommonPrefixes>
+             <CommonPrefixes><Prefix>org=beta/</Prefix></CommonPrefixes>
+             <NextMarker>org=beta/</NextMarker>
+           </ListBucketResult>
+           """}
+
+        %{"prefix" => "", "delimiter" => "/", "marker" => "org=beta/"} ->
+          {:ok, 200, [],
+           """
+           <ListBucketResult>
+             <CommonPrefixes><Prefix>org=gamma/</Prefix></CommonPrefixes>
+           </ListBucketResult>
+           """}
+      end
+    end)
+
+    assert GCS.list_prefixes("bucket", "") |> Enum.to_list() ==
+             ["org=acme/", "org=beta/", "org=gamma/"]
+  end
+
   test "treats missing objects as successfully deleted" do
     expect(Hexpm.HTTP.Mock, :delete, fn url, headers ->
       assert url == "https://storage.example/bucket/docs/missing.html"

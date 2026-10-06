@@ -44,6 +44,14 @@ defmodule HexpmWeb.Plugs.Attack do
     end
   end
 
+  rule "trusted publisher throttle", conn do
+    trusted_publisher = conn.assigns[:trusted_publisher]
+
+    if api?(conn) && trusted_publisher do
+      trusted_publisher_throttle(trusted_publisher.id)
+    end
+  end
+
   # The provisioning agent is one client per connection whatever address it
   # sends from, and the address is the provider's shared egress, so the
   # connection is the key. Requests that fail authentication never reach here.
@@ -56,7 +64,7 @@ defmodule HexpmWeb.Plugs.Attack do
   end
 
   rule "ip throttle", conn do
-    if api?(conn) do
+    if api?(conn) and not trusted_publisher_mint?(conn) and not oidc_audience?(conn) do
       ip_throttle(conn.remote_ip)
     end
   end
@@ -106,6 +114,9 @@ defmodule HexpmWeb.Plugs.Attack do
       organization = conn.assigns[:current_organization] ->
         "organization #{organization.id}"
 
+      trusted_publisher = conn.assigns[:trusted_publisher] ->
+        "trusted publisher #{trusted_publisher.id}"
+
       connection = conn.assigns[:scim_connection] ->
         "provisioning connection #{connection.id}"
 
@@ -134,6 +145,20 @@ defmodule HexpmWeb.Plugs.Attack do
 
   def organization_throttle(organization_id, opts \\ []) do
     key = {:organization, organization_id}
+    time = opts[:time] || System.system_time(:millisecond)
+    unless opts[:time], do: RateLimitPubSub.broadcast(key, time)
+
+    timed_throttle(
+      key,
+      time: time,
+      storage: @storage,
+      limit: 500,
+      period: 60_000
+    )
+  end
+
+  def trusted_publisher_throttle(trusted_publisher_id, opts \\ []) do
+    key = {:trusted_publisher, trusted_publisher_id}
     time = opts[:time] || System.system_time(:millisecond)
     unless opts[:time], do: RateLimitPubSub.broadcast(key, time)
 
@@ -290,6 +315,27 @@ defmodule HexpmWeb.Plugs.Attack do
     )
   end
 
+  def trusted_publisher_mint_throttle(key, opts \\ []) do
+    time = opts[:time] || System.system_time(:millisecond)
+    unless opts[:time], do: RateLimitPubSub.broadcast({:trusted_publisher_mint, key}, time)
+
+    timed_throttle(
+      {:trusted_publisher_mint, key},
+      time: time,
+      increment: Keyword.get(opts, :increment, 1),
+      storage: @storage,
+      limit: 30,
+      period: 15 * 60_000
+    )
+  end
+
+  def trusted_publisher_mint_blocked?(key) do
+    {_, {:throttle, data}} =
+      trusted_publisher_mint_throttle(key, time: System.system_time(:millisecond), increment: 0)
+
+    data[:remaining] == 0
+  end
+
   def sso_start_organization_throttle(organization_id, ip, opts \\ []) do
     time = opts[:time] || System.system_time(:millisecond)
     key = {:sso_start_organization, organization_id, ip}
@@ -409,6 +455,19 @@ defmodule HexpmWeb.Plugs.Attack do
 
   defp api?(%Plug.Conn{request_path: "/api/" <> _}), do: true
   defp api?(%Plug.Conn{}), do: false
+
+  # Verified failed mints have their own limit, keyed on the repository that
+  # signed the token, in HexpmWeb.API.OAuthController.
+  defp trusted_publisher_mint?(%Plug.Conn{
+         request_path: "/api/oauth/token",
+         params: %{"grant_type" => "urn:ietf:params:oauth:grant-type:jwt-bearer"}
+       }),
+       do: true
+
+  defp trusted_publisher_mint?(%Plug.Conn{}), do: false
+
+  defp oidc_audience?(%Plug.Conn{method: "GET", request_path: "/api/oidc/audience"}), do: true
+  defp oidc_audience?(%Plug.Conn{}), do: false
 
   defp scim?(%Plug.Conn{request_path: "/scim/" <> _}), do: true
   defp scim?(%Plug.Conn{}), do: false

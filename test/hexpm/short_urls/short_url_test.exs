@@ -116,6 +116,7 @@ defmodule Hexpm.ShortURLs.ShortURLTest do
           {"no comparisons", "foo=bar"},
           {"an organization package", "diffs[]=acme/ecto:3.0.0:3.0.1"},
           {"an invalid package name", "diffs[]=Ecto:3.0.0:3.0.1"},
+          {"a package name ending in a newline", "diffs[]=ecto%0A:3.0.0:3.0.1"},
           {"a package name longer than 255 bytes",
            "diffs[]=#{String.duplicate("a", 256)}:1.0.0:1.0.1"},
           {"an invalid from version", "diffs[]=ecto:3.0:3.0.1"},

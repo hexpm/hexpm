@@ -11,6 +11,8 @@ config :hexpm,
   pwned_impl: Hexpm.Pwned.HaveIBeenPwned,
   tmp_dir: "tmp"
 
+config :hexpm, :features, trusted_publishers: false
+
 config :hexpm, HexpmWeb.Endpoint,
   url: [scheme: "https", port: 443],
   cache_static_manifest: "priv/static/cache_manifest.json"
@@ -66,7 +68,8 @@ config :hexpm, Oban,
        {"15 3 * * *", Hexpm.Accounts.OrganizationDomains.RecheckWorker},
        {"45 3 * * *", Hexpm.Accounts.SSO.EnforcementWorker},
        {"*/15 * * * *", Hexpm.Accounts.OrganizationTFAWorker},
-       {"0 5 * * *", Hexpm.Accounts.OrganizationDeletions.Worker}
+       {"0 5 * * *", Hexpm.Accounts.OrganizationDeletions.Worker},
+       {"30 6 * * *", Hexpm.Accounts.PrivateAccessLogsSweep}
      ],
      timezone: "Etc/UTC"},
     # Successful jobs are read by nobody and are the bulk of the table, which

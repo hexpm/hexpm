@@ -15,6 +15,11 @@ defmodule Hexpm.Store.Behaviour do
   @type object :: %{key: key, last_modified: DateTime.t()}
 
   @callback list_objects(bucket, prefix) :: Enumerable.t()
+  @doc """
+  The distinct key prefixes one level below `prefix`, each ending in `/`,
+  without listing the objects under them.
+  """
+  @callback list_prefixes(bucket, prefix) :: Enumerable.t()
   @callback get(bucket, key, opts) :: body | nil
   @doc """
   The object body as a stream of binary chunks, `nil` when the object does

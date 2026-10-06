@@ -24,7 +24,7 @@ defmodule Hexpm.ShortURLs.ShortURL do
   # Bandit refuses request lines over 10,000 bytes, so a longer link would
   # shorten fine and then fail with 414 when followed.
   @max_url_bytes 8192
-  @package_name ~r/^[a-z][a-z0-9_]*$/
+  @package_name ~r/\A[a-z][a-z0-9_]*\z/
   @max_package_name_bytes 255
 
   schema "short_urls" do

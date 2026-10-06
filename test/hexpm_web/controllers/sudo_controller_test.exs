@@ -161,6 +161,7 @@ defmodule HexpmWeb.SudoControllerTest do
     test "rate limits password attempts" do
       user = insert(:user)
       PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
+      align_to_throttle_bucket(15 * 60_000)
 
       # Make 5 failed attempts to exhaust the limit
       for _ <- 1..5 do
@@ -225,6 +226,7 @@ defmodule HexpmWeb.SudoControllerTest do
     test "rate limits 2FA attempts" do
       user = insert(:user_with_tfa)
       PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
+      align_to_throttle_bucket(15 * 60_000)
 
       # Make 5 failed attempts to exhaust the limit
       for _ <- 1..5 do

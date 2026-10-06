@@ -3,12 +3,8 @@ defmodule HexpmWeb.SyntaxHighlightTest do
 
   alias HexpmWeb.SyntaxHighlight
 
-  # Without this the assertions below race the highlighter's first load, and a
-  # loaded machine loses: `highlight/3` gives up after @timeout and answers with
-  # escaped plain source, which looks like a highlighting bug.
-  setup do
-    assert SyntaxHighlight.warm() == :ok
-    :ok
+  setup_all do
+    Lumis.Languages.load(["elixir"])
   end
 
   test "highlights documents and line fragments with Lumis" do
@@ -41,7 +37,7 @@ defmodule HexpmWeb.SyntaxHighlightTest do
   end
 
   @tag :capture_log
-  test "uses escaped fallback output after timeout or failure" do
+  test "answers the fallback after the task times out or fails" do
     assert ["&lt;script&gt;"] =
              SyntaxHighlight.run(
                make_ref(),
@@ -60,6 +56,58 @@ defmodule HexpmWeb.SyntaxHighlightTest do
              )
   end
 
+  @tag :capture_log
+  test "uses escaped fallback output after timeout or failure" do
+    lines = List.duplicate("value = <script>", 2_000)
+    opts = [budget: [time_limit: 1, match_limit: 4096]]
+
+    document = SyntaxHighlight.highlight(Enum.join(lines, "\n"), "lib/app.ex", "slow", opts)
+
+    assert document =~ ~s(data-lumis-budget="time")
+    assert document =~ "&lt;script&gt;"
+    refute document =~ ~s(class="l-variable")
+
+    assert SyntaxHighlight.highlight_lines(lines, "lib/app.ex", "slow", opts) |> Enum.uniq() ==
+             ["value = &lt;script&gt;"]
+
+    error = %Lumis.RenderError{reason: :runtime, detail: "unavailable"}
+    assert :fallback = SyntaxHighlight.or_plain({:error, error}, "invalid", fn -> :fallback end)
+  end
+
+  test "preserves diff lines when the highlighting match limit is exhausted" do
+    lines = ["fn main() {", "  let value = (1 + (2 * (3 - 4)));", "}", ""]
+    opts = [budget: [time_limit: 0, match_limit: 1]]
+
+    document = SyntaxHighlight.highlight(Enum.join(lines, "\n"), "rust", "matches", opts)
+    assert document =~ ~s(data-lumis-budget="matches")
+
+    highlighted = SyntaxHighlight.highlight_lines(lines, "rust", "matches", opts)
+    assert length(highlighted) == length(lines)
+
+    assert Enum.map(highlighted, fn html ->
+             html |> LazyHTML.from_fragment() |> LazyHTML.text()
+           end) == lines
+  end
+
+  # VHDL is in the Lumis catalog but hexpm does not depend on its parser.
+  test "renders plain text when the parser is not installed" do
+    lines = ["signal clk : std_logic;", "end architecture;"]
+    document = SyntaxHighlight.highlight(Enum.join(lines, "\n"), "vhdl", "missing parser")
+
+    assert document =~ "signal clk : std_logic;"
+    refute document =~ ~r/class="l-(?!line)/
+  end
+
+  test "keeps one fragment per diff line, including trailing blank lines" do
+    assert SyntaxHighlight.highlight_lines([""], "elixir", "blank lines") == [""]
+
+    assert [_value, ""] =
+             SyntaxHighlight.highlight_lines(["value = 1", ""], "elixir", "blank lines")
+
+    assert SyntaxHighlight.highlight_lines(["", "x", "", ""], "vhdl", "blank lines") ==
+             ["", "x", "", ""]
+  end
+
   describe "limits" do
     setup do
       table = :"#{__MODULE__}.#{System.unique_integer([:positive])}"
@@ -72,15 +120,25 @@ defmodule HexpmWeb.SyntaxHighlightTest do
       key = make_ref()
       test = self()
 
+      blocked = fn ->
+        send(test, {:blocked, self()})
+
+        receive do
+          :release -> :done
+        end
+      end
+
       assert :fallback =
                SyntaxHighlight.run(
                  key,
-                 fn -> Process.sleep(100) end,
+                 blocked,
                  fn -> :fallback end,
                  "slow source",
                  table: table,
                  timeout: 0
                )
+
+      assert_receive {:blocked, pid}
 
       assert :fallback =
                SyntaxHighlight.run(
@@ -101,23 +159,20 @@ defmodule HexpmWeb.SyntaxHighlightTest do
                  "other source",
                  table: table
                )
+
+      ref = Process.monitor(pid)
+      send(pid, :release)
+      assert_receive {:DOWN, ^ref, :process, ^pid, _reason}
     end
 
     @tag :capture_log
-    test "falls back to escaped source that keeps every line", %{table: table} do
-      source = "one\n\n<three>\n"
+    test "falls back to the markup Lumis renders for plain text", %{table: table} do
+      for source <- ["one\n\n<three>\n", "", "a\r\n\r\nb", ~s(q "x" & y's)] do
+        opts = [table: table, max_concurrency: 0]
 
-      document =
-        source
-        |> SyntaxHighlight.highlight("lib/app.ex", "test fallback",
-          table: table,
-          max_concurrency: 0
-        )
-        |> LazyHTML.from_fragment()
-
-      assert Enum.count(LazyHTML.query(document, ".l-line")) == 4
-      assert [] = LazyHTML.query(document, "span") |> Enum.to_list()
-      assert document |> LazyHTML.query("pre code") |> LazyHTML.text() == source
+        assert SyntaxHighlight.highlight(source, "lib/app.ex", "test fallback", opts) ==
+                 Lumis.highlight!(source, formatter: {:html_linked, language: "plaintext"})
+      end
     end
 
     @tag :capture_log
