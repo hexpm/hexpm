@@ -68,16 +68,27 @@ defmodule HexpmWeb.SyntaxHighlight do
   defp result(:malformed_reply), do: :error
   defp result(reason), do: reason
 
+  # The markup lumis writes for plain text. A final newline ends the last line
+  # rather than starting another.
   defp plain_source(source) do
     lines =
-      source
-      |> String.split("\n")
+      case String.split(source, "\n") do
+        [_ | [_ | _]] = lines when binary_part(source, byte_size(source), -1) == "\n" ->
+          Enum.drop(lines, -1)
+
+        lines ->
+          lines
+      end
+
+    lines =
+      lines
       |> Enum.with_index(1)
-      |> Enum.map_join(fn {line, number} ->
-        ~s(<div class="l-line" data-line="#{number}">#{escape(line)}</div>)
+      |> Enum.map_join("\n", fn {line, number} ->
+        ~s(<span class="l-line" data-line="#{number}">#{escape(line)}</span>)
       end)
 
-    ~s(<pre class="lumis"><code>#{lines}</code></pre>)
+    ~s(<pre class="lumis"><code class="language-plaintext" translate="no" tabindex="0">) <>
+      lines <> "</code></pre>"
   end
 
   defp escape(source) do

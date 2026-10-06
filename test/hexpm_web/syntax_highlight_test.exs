@@ -5,6 +5,7 @@ defmodule HexpmWeb.SyntaxHighlightTest do
   import HexpmWeb.SyntaxHighlightHelpers
 
   alias HexpmWeb.SyntaxHighlight
+  alias HexpmWeb.SyntaxHighlight.Pool
 
   test "highlights documents and line fragments with Lumis" do
     document = SyntaxHighlight.highlight("value = <script>", "lib/app.ex", "test document")
@@ -79,19 +80,30 @@ defmodule HexpmWeb.SyntaxHighlightTest do
   end
 
   test "uses escaped plain source after a timeout" do
+    # A timeout closes a process, and the other tests would wait for the pool
+    # to load every language into its replacement.
+    pool = :"#{inspect(__MODULE__)} timeout"
+    start_supervised!({Pool, name: pool, workers: 1})
+    assert await_idle(pool)
     source = slow_source(0.5) <> "<script>"
 
     log =
       capture_log(fn ->
         assert document =
-                 SyntaxHighlight.highlight(source, "lib/app.ex", "slow source", timeout: 1)
+                 SyntaxHighlight.highlight(source, "lib/app.ex", "slow source",
+                   name: pool,
+                   timeout: 1
+                 )
 
-        assert document =~ ~s(<div class="l-line" data-line="1">defmodule App do</div>)
+        assert document =~ ~s(<span class="l-line" data-line="1">defmodule App do</span>)
         assert document =~ "&lt;script&gt;"
         refute document =~ "l-keyword"
 
+        assert await_idle(pool)
+
         assert ["value = &lt;script&gt;"] =
                  SyntaxHighlight.highlight_lines(["value = <script>"], "lib/app.ex", "slow lines",
+                   name: pool,
                    timeout: 0
                  )
       end)
@@ -99,11 +111,13 @@ defmodule HexpmWeb.SyntaxHighlightTest do
     assert log =~ "Failed to highlight slow source: :timeout"
   end
 
-  test "uses escaped plain source when highlighting is unavailable" do
+  test "uses the markup lumis writes for plain text when highlighting is unavailable" do
     log =
       capture_log(fn ->
-        assert SyntaxHighlight.highlight("<b>", "lib/app.ex", "source", name: :no_such_pool) ==
-                 ~s(<pre class="lumis"><code><div class="l-line" data-line="1">&lt;b&gt;</div></code></pre>)
+        for source <- ["", "\n", "<b>", "a & 'b' \"c\"", "a\n<b>", "a\n<b>\n", "a\n\n"] do
+          assert SyntaxHighlight.highlight(source, "lib/app.ex", "source", name: :no_such_pool) ==
+                   Lumis.highlight!(source, formatter: {:html_linked, language: "plaintext"})
+        end
       end)
 
     assert log =~ "Failed to highlight source: :unavailable"
