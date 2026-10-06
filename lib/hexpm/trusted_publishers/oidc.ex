@@ -71,33 +71,37 @@ defmodule Hexpm.TrustedPublishers.OIDC do
   defp validate_alg(_), do: {:error, :algorithm_rejected}
 
   defp get_jwks(issuer) do
-    case :persistent_term.get({__MODULE__, :jwks, issuer}, :miss) do
+    case cached_jwks(issuer) do
       {:ok, jwks, kids, expires_at} ->
         if DateTime.compare(DateTime.utc_now(), expires_at) == :lt do
           {:ok, jwks, kids}
         else
-          refresh_jwks(issuer, {:ok, jwks, kids})
+          refresh_jwks(issuer)
         end
 
       :miss ->
-        refresh_jwks(issuer, nil)
+        refresh_jwks(issuer)
     end
   end
 
   # Until a fetch succeeds, the cached keys are used even after they expire.
-  defp refresh_jwks(issuer, cached) do
+  # They're read again afterwards, since the request that holds the claim may
+  # have stored new ones.
+  defp refresh_jwks(issuer) do
     result =
       case claim_refresh(issuer) do
         :ok -> fetch_and_cache_jwks(issuer)
         :claimed -> {:error, :jwks_unavailable}
       end
 
-    case {result, cached} do
+    case {result, cached_jwks(issuer)} do
       {{:ok, _jwks, _kids}, _cached} -> result
-      {{:error, _reason}, {:ok, _jwks, _kids}} -> cached
-      {{:error, _reason}, nil} -> result
+      {{:error, _reason}, {:ok, jwks, kids, _expires_at}} -> {:ok, jwks, kids}
+      {{:error, _reason}, :miss} -> result
     end
   end
+
+  defp cached_jwks(issuer), do: :persistent_term.get({__MODULE__, :jwks, issuer}, :miss)
 
   defp fetch_and_cache_jwks(issuer) do
     discovery_url = String.trim_trailing(issuer, "/") <> "/.well-known/openid-configuration"
@@ -138,23 +142,37 @@ defmodule Hexpm.TrustedPublishers.OIDC do
 
       {:error, error} ->
         if unknown_key?(error) and unknown_kid?(kid, kids) do
-          refresh_and_validate_jwt(token, issuer, error)
+          refresh_and_validate_jwt(token, kid, issuer, error)
         else
           {:error, translate_error(error)}
         end
     end
   end
 
-  defp refresh_and_validate_jwt(token, issuer, error) do
-    with :ok <- claim_refresh(issuer),
-         {:ok, jwks, _kids} <- fetch_and_cache_jwks(issuer) do
+  defp refresh_and_validate_jwt(token, kid, issuer, error) do
+    with {:ok, jwks} <- refreshed_jwks(issuer, kid, error) do
       case oidcc_validate_jwt(token, jwks, issuer) do
         {:ok, claims} -> {:ok, claims}
         {:error, refresh_error} -> {:error, translate_error(refresh_error)}
       end
-    else
-      :claimed -> {:error, translate_error(error)}
-      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  # When another request holds the claim, it may have stored keys with this key
+  # ID since this request read the cache.
+  defp refreshed_jwks(issuer, kid, error) do
+    case claim_refresh(issuer) do
+      :ok ->
+        with {:ok, jwks, _kids} <- fetch_and_cache_jwks(issuer), do: {:ok, jwks}
+
+      :claimed ->
+        case cached_jwks(issuer) do
+          {:ok, jwks, kids, _expires_at} ->
+            if kid in kids, do: {:ok, jwks}, else: {:error, translate_error(error)}
+
+          :miss ->
+            {:error, translate_error(error)}
+        end
     end
   end
 

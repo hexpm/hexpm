@@ -108,14 +108,21 @@ defmodule Hexpm.TrustedPublishers.TrustedPublisher do
   end
 
   # Whoever creates a repository also names its workflows and environments, so
-  # neither narrows a publisher that matches every repository.
+  # neither narrows a publisher that matches every repository. The fields keep
+  # what was typed when they aren't empty, so a resubmitted form doesn't turn
+  # into a publisher for every repository.
   defp any_repository(changeset) do
-    changeset
-    |> validate_empty(:workflow)
-    |> validate_empty(:environment)
-    |> put_change(:repository, "")
-    |> put_change(:repository_id, "")
-    |> put_change(:workflow, "")
+    fields = [:workflow, :environment, :repository_id]
+    changeset = Enum.reduce(fields, changeset, &validate_empty(&2, &1))
+
+    if Enum.any?(fields, &Keyword.has_key?(changeset.errors, &1)) do
+      changeset
+    else
+      changeset
+      |> put_change(:repository, "")
+      |> put_change(:repository_id, "")
+      |> put_change(:workflow, "")
+    end
   end
 
   defp validate_empty(changeset, field) do
@@ -138,13 +145,25 @@ defmodule Hexpm.TrustedPublishers.TrustedPublisher do
           add_error(changeset, :packages, "must be valid package names")
         end
 
+      # The form keeps the hidden package list when the role goes back to read.
       {_role, _packages} ->
-        add_error(changeset, :packages, "can only be limited for the write role")
+        put_change(changeset, :packages, nil)
     end
   end
 
-  def valid_package_name?(name),
-    do: is_binary(name) and byte_size(name) <= 255 and Regex.match?(@package_name_re, name)
+  @doc """
+  Whether a package can be created with this name.
+  """
+  def valid_package_name?(name) do
+    is_binary(name) and byte_size(name) in 2..255 and Regex.match?(@package_name_re, name) and
+      name not in Package.reserved_names()
+  end
+
+  @doc """
+  The repository's name without its owner, as the forms take it.
+  """
+  def repository_name(nil), do: nil
+  def repository_name(repository), do: repository |> String.split("/") |> List.last()
 
   # The form sends one string, so names may be separated by commas or
   # whitespace. No names means every package.

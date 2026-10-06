@@ -72,6 +72,19 @@ defmodule HexpmWeb.Plugs.AttackTest do
       assert data[:remaining] == 98
     end
 
+    test "broadcasts trusted publisher lookup limits", %{user: user} do
+      time = System.system_time(:millisecond)
+      key = {:trusted_publisher_lookup, user.id}
+      Phoenix.PubSub.broadcast!(Hexpm.PubSub, "ratelimit", {:throttle, key, time})
+      :sys.get_state(RateLimitPubSub)
+
+      assert {:allow, {:throttle, data}} =
+               Attack.trusted_publisher_lookup_throttle(user.id, time: time)
+
+      assert data[:limit] == 20
+      assert data[:remaining] == 18
+    end
+
     test "broadcasts and bounds diff generation rate limits" do
       align_to_throttle_bucket()
       identity = {:ip, {5, 5, 5, 5}}

@@ -418,10 +418,12 @@ defmodule HexpmWeb.Plugs.Attack do
   # Adding a trusted publisher looks the repository up on GitHub with the OAuth
   # app's credentials, whose quota every add on Hex shares.
   def trusted_publisher_lookup_throttle(user_id, opts \\ []) do
+    key = {:trusted_publisher_lookup, user_id}
     time = opts[:time] || System.system_time(:millisecond)
+    unless opts[:time], do: RateLimitPubSub.broadcast(key, time)
 
     timed_throttle(
-      {:trusted_publisher_lookup, user_id},
+      key,
       time: time,
       storage: @storage,
       limit: 20,

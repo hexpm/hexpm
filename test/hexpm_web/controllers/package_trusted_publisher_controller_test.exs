@@ -223,7 +223,10 @@ defmodule HexpmWeb.PackageTrustedPublisherControllerTest do
           }
         })
 
-      assert html_response(conn, 400) =~ "has invalid format"
+      body = html_response(conn, 400)
+      assert body =~ "has invalid format"
+      assert body =~ ~s(value="widget")
+      refute body =~ "acme/widget"
     end
 
     test "flashes an error when GitHub repository resolution fails", %{

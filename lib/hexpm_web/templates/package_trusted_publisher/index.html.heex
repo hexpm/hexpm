@@ -111,6 +111,9 @@
             />
             <.text_input
               field={form[:repository]}
+              value={
+                Hexpm.TrustedPublishers.TrustedPublisher.repository_name(form[:repository].value)
+              }
               label="Repository name"
               placeholder="widget"
               required

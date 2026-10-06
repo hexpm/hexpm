@@ -115,6 +115,7 @@ defmodule Hexpm.TrustedPublishers do
 
     multi =
       Multi.new()
+      |> check_owner(owner, audit_data)
       |> Multi.insert(:trusted_publisher, changeset)
       |> audit(audit_data, action, fn %{trusted_publisher: tp} -> preload_owner(tp) end)
 
@@ -128,6 +129,22 @@ defmodule Hexpm.TrustedPublishers do
         {:error, changeset}
     end
   end
+
+  # Ownership was checked before Hex asked GitHub. A transfer in the meantime
+  # removed the package's publishers, so check again under the package row lock
+  # that owner changes take.
+  defp check_owner(multi, %Package{} = package, %{user: user}) do
+    Multi.run(multi, :owner, fn repo, _changes ->
+      repo.one!(from(p in Package, where: p.id == ^package.id, lock: "FOR NO KEY UPDATE"))
+      package = repo.preload(package, :repository)
+
+      if Packages.owner_with_access?(package, user, "full"),
+        do: {:ok, user},
+        else: {:error, :not_owner}
+    end)
+  end
+
+  defp check_owner(multi, %Organization{}, _audit_data), do: multi
 
   def delete(%TrustedPublisher{} = trusted_publisher, audit: audit_data) do
     trusted_publisher = preload_owner(trusted_publisher)
@@ -248,6 +265,7 @@ defmodule Hexpm.TrustedPublishers do
   """
   def mint(%VerifiedToken{provider: provider, claims: claims}, opts) do
     with :ok <- provider.validate_claims(claims),
+         :ok <- check_unused(claims),
          {:ok, repository} <- fetch_repository(opts),
          {:ok, trusted_publisher, scope} <- find_publisher(repository, provider, claims, opts),
          :ok <- check_billing(repository),
@@ -322,6 +340,17 @@ defmodule Hexpm.TrustedPublishers do
   end
 
   defp stringify_repository_id(params), do: params
+
+  # Inserting the token is what makes an OIDC token single-use. Checking first
+  # answers a used token the same way whatever scope it asks for.
+  defp check_unused(claims) do
+    query =
+      from(t in Token,
+        where: t.grant_type == "trusted_publisher" and t.grant_reference == ^claims["jti"]
+      )
+
+    if Repo.exists?(query), do: {:error, :token_replayed}, else: :ok
+  end
 
   defp fetch_repository(opts) do
     name =

@@ -17,6 +17,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.TrustedPublishersTab do
   import HexpmWeb.Components.Input, only: [text_input: 1, select_input: 1]
   import HexpmWeb.Components.Modal, only: [modal: 1, show_modal: 1, hide_modal: 1]
 
+  alias Hexpm.TrustedPublishers.TrustedPublisher
+
   attr :changeset, :any, required: true
   attr :current_user, :map, required: true
   attr :organization, :map, required: true
@@ -122,6 +124,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.TrustedPublishersTab do
             />
             <.text_input
               field={@form[:repository]}
+              value={TrustedPublisher.repository_name(@form[:repository].value)}
               label="Repository name"
               placeholder="widget"
             />

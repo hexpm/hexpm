@@ -286,6 +286,28 @@ defmodule Hexpm.TrustedPublishers.TrustedPublisherTest do
       errors = errors_on(changeset)
       assert "must be empty when every repository matches" in List.wrap(errors.workflow)
       assert "must be empty when every repository matches" in List.wrap(errors.environment)
+      assert Ecto.Changeset.get_field(changeset, :workflow) == "ci.yml"
+      assert Ecto.Changeset.get_field(changeset, :repository) == nil
+    end
+
+    test "rejects a repository ID when every repository matches", %{organization: organization} do
+      changeset =
+        TrustedPublisher.changeset(
+          %TrustedPublisher{},
+          %{
+            "provider" => "github",
+            "repository_owner" => "acme",
+            "role" => "read",
+            "repository_id" => "123"
+          },
+          organization
+        )
+
+      assert "must be empty when every repository matches" in List.wrap(
+               errors_on(changeset).repository_id
+             )
+
+      assert Ecto.Changeset.get_field(changeset, :repository_id) == "123"
     end
 
     test "requires a repository for the write role", %{organization: organization} do
@@ -304,7 +326,7 @@ defmodule Hexpm.TrustedPublishers.TrustedPublisherTest do
       assert "is required for the write role" in List.wrap(errors_on(changeset).repository)
     end
 
-    test "rejects package names for the read role", %{organization: organization} do
+    test "ignores package names for the read role", %{organization: organization} do
       changeset =
         TrustedPublisher.changeset(
           %TrustedPublisher{},
@@ -312,7 +334,23 @@ defmodule Hexpm.TrustedPublishers.TrustedPublisherTest do
           organization
         )
 
-      assert "can only be limited for the write role" in List.wrap(errors_on(changeset).packages)
+      assert changeset.valid?
+      assert Ecto.Changeset.get_field(changeset, :packages) == nil
+    end
+
+    test "rejects package names a package can't be created with", %{
+      organization: organization
+    } do
+      for name <- ["a", "elixir", "Widget"] do
+        changeset =
+          TrustedPublisher.changeset(
+            %TrustedPublisher{},
+            organization_params(%{"role" => "write", "packages" => "widget, #{name}"}),
+            organization
+          )
+
+        assert "must be valid package names" in List.wrap(errors_on(changeset).packages)
+      end
     end
   end
 

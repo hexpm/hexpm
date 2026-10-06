@@ -194,6 +194,24 @@ defmodule HexpmWeb.Dashboard.OrganizationTrustedPublishersTest do
       assert TrustedPublishers.list(organization) == []
     end
 
+    test "keeps the typed workflow when the repository name is missing", %{
+      admin: admin,
+      organization: organization
+    } do
+      conn =
+        build_conn()
+        |> test_login(admin)
+        |> post(
+          path(organization),
+          publisher_params(%{"role" => "read", "repository" => "", "workflow" => "ci.yml"})
+        )
+
+      body = html_response(conn, 400)
+      assert body =~ "must be empty when every repository matches"
+      assert body =~ ~s(value="ci.yml")
+      assert TrustedPublishers.list(organization) == []
+    end
+
     test "refuses a write member", %{writer: writer, organization: organization} do
       conn =
         build_conn()

@@ -49,6 +49,9 @@ defmodule HexpmWeb.PackageTrustedPublisherController do
         )
         |> redirect(to: ViewHelpers.path_for_trusted_publishers(package))
 
+      {:error, :not_owner} ->
+        render_error(conn, 403, message: "You must be a full owner of this package")
+
       {:error, :unknown_provider} ->
         conn
         |> put_flash(:error, "The provider is invalid.")

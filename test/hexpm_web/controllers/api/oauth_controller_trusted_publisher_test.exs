@@ -167,8 +167,8 @@ defmodule HexpmWeb.API.OAuthControllerTrustedPublisherTest do
       params = mint_params(oidc, scope)
       assert json_response(post(build_conn(), "/api/oauth/token", params), 200)["access_token"]
 
-      for _ <- 1..35 do
-        conn = post(build_conn(), "/api/oauth/token", params)
+      for replay_scope <- List.duplicate(scope, 20) ++ List.duplicate("repository:missing", 20) do
+        conn = post(build_conn(), "/api/oauth/token", mint_params(oidc, replay_scope))
         assert json_response(conn, 400)["error_description"] =~ "already been used"
       end
 

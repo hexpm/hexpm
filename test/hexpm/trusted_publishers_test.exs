@@ -129,6 +129,19 @@ defmodule Hexpm.TrustedPublishersTest do
                )
     end
 
+    test "rejects a used OIDC token whatever scope it asks for", %{package: package} do
+      oidc = TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
+
+      assert {:ok, _} =
+               TrustedPublishers.verify_and_mint(oidc, repository: "hexpm", package: package.name)
+
+      assert {:error, :token_replayed} =
+               TrustedPublishers.verify_and_mint(oidc, repository: "missing")
+
+      assert {:error, :token_replayed} =
+               TrustedPublishers.verify_and_mint(oidc, repository: "hexpm", package: "missing")
+    end
+
     test "rejects replayed OIDC jti", %{package: package} do
       claims = TrustedPublisherHelpers.github_claims() |> Map.put("jti", "fixed-jti-1")
       token = TrustedPublisherHelpers.sign_oidc_claims(claims)
@@ -345,6 +358,43 @@ defmodule Hexpm.TrustedPublishersTest do
       assert publisher.workflow == "Release.yml"
       assert publisher.repository_owner_id == "42"
       assert publisher.repository_id == "99"
+    end
+
+    test "refuses a user who stopped being a full owner during the GitHub lookup", %{
+      user: user
+    } do
+      package =
+        insert(:package,
+          package_owners: [build(:package_owner, user: user, level: "full")]
+        )
+
+      stub(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
+        {:ok, 200, [], %{"id" => 99, "owner" => %{"id" => 42}}}
+      end)
+
+      transfer = fn ->
+        Repo.delete_all(
+          from(o in Hexpm.Repository.PackageOwner, where: o.package_id == ^package.id)
+        )
+
+        insert(:package_owner, package: package, user: insert(:user), level: "full")
+        :ok
+      end
+
+      assert {:error, :not_owner} =
+               TrustedPublishers.create(
+                 package,
+                 %{
+                   "provider" => "github",
+                   "repository_owner" => "acme",
+                   "repository" => "widget",
+                   "workflow" => "release.yml"
+                 },
+                 audit: audit_data(user),
+                 before_lookup: transfer
+               )
+
+      assert TrustedPublishers.list(package) == []
     end
 
     test "authenticates GitHub lookups with the OAuth app credentials", %{user: user} do
@@ -791,7 +841,7 @@ defmodule Hexpm.TrustedPublishersTest do
         workflow: "release.yml"
       )
 
-      for name <- ["new_package\n", "New_package", "new-package", "1package"] do
+      for name <- ["new_package\n", "New_package", "new-package", "1package", "a", "elixir"] do
         assert {:error, :invalid_package_name} =
                  mint(repository: repository.name, package: name)
       end
