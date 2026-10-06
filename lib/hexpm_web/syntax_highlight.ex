@@ -1,87 +1,41 @@
 defmodule HexpmWeb.SyntaxHighlight do
   require Logger
 
-  @timeout 1_000
-  @line_pattern ~r/<div class="l-line" data-line="\d+">(.*?)\n?<\/div>/s
+  alias Lumis.Formatter.HTML
 
-  @doc """
-  Loads the highlighter so the first request does not have to.
+  @budget [time_limit: 300, match_limit: 4096]
+  @linked_attrs Map.new(HTML.classes(), fn {scope, class} -> {scope, ~s|class="#{class}"|} end)
 
-  The NIF is 143 MB, and the timeout above is sized for highlighting a file, not
-  for opening it. Whichever request arrived first used to pay that load out of
-  its own budget and fall back to unhighlighted source when it ran out.
-  """
-  def warm() do
-    Lumis.highlight!("", formatter: {:html_linked, language: "warm.ex"})
-    :ok
-  rescue
-    error -> Logger.warning("Failed to warm the highlighter: #{Exception.message(error)}")
+  def budget, do: @budget
+
+  def highlight(source, language, label, budget \\ @budget) do
+    source
+    |> Lumis.highlight(formatter: {:html_linked, language: language}, budget: budget)
+    |> or_plain(label, fn ->
+      Lumis.highlight!(source, formatter: {:html_linked, language: "plaintext"})
+    end)
   end
 
-  def highlight(source, language, label) do
-    run(
-      fn -> Lumis.highlight!(source, formatter: {:html_linked, language: language}) end,
-      fn -> plain_source(source) end,
-      label
-    )
-  end
+  def highlight_lines(lines, language, label, budget \\ @budget)
 
-  def highlight_lines([], _language, _label), do: []
+  def highlight_lines([], _language, _label, _budget), do: []
 
-  def highlight_lines(lines, language, label) when is_list(lines) do
-    run(
-      fn ->
-        highlighted =
-          lines
-          |> Enum.join("\n")
-          |> Lumis.highlight!(formatter: {:html_linked, language: language})
+  def highlight_lines(lines, language, label, budget) when is_list(lines) do
+    source = Enum.map_join(lines, &(&1 <> "\n"))
 
-        fragments =
-          @line_pattern
-          |> Regex.scan(highlighted, capture: :all_but_first)
-          |> List.flatten()
+    events =
+      source
+      |> Lumis.highlight_events(language, budget: budget)
+      |> or_plain(label, fn -> Lumis.highlight_events!(source, "plaintext") end)
 
-        if length(fragments) == length(lines) do
-          fragments
-        else
-          raise "Lumis returned #{length(fragments)} lines for #{length(lines)} source lines"
-        end
-      end,
-      fn -> Enum.map(lines, &escape/1) end,
-      label
-    )
+    HTML.render_lines_from_events(source, events, @linked_attrs)
   end
 
   @doc false
-  def run(function, fallback, label, timeout \\ @timeout)
-      when is_function(function, 0) and is_function(fallback, 0) do
-    task = Task.Supervisor.async_nolink(Hexpm.Tasks, function)
+  def or_plain({:ok, result}, _label, _fun), do: result
 
-    case Task.yield(task, timeout) || Task.shutdown(task, :brutal_kill) do
-      {:ok, result} ->
-        result
-
-      result ->
-        Logger.warning("Failed to highlight #{label}: #{inspect(result)}")
-        fallback.()
-    end
-  end
-
-  defp plain_source(source) do
-    lines =
-      source
-      |> String.split("\n")
-      |> Enum.with_index(1)
-      |> Enum.map_join(fn {line, number} ->
-        ~s(<div class="l-line" data-line="#{number}">#{escape(line)}</div>)
-      end)
-
-    ~s(<pre class="lumis"><code>#{lines}</code></pre>)
-  end
-
-  defp escape(source) do
-    source
-    |> Phoenix.HTML.html_escape()
-    |> Phoenix.HTML.safe_to_string()
+  def or_plain({:error, error}, label, fun) do
+    Logger.warning("Failed to highlight #{label}: #{Exception.message(error)}")
+    fun.()
   end
 end

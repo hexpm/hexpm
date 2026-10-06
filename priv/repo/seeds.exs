@@ -155,6 +155,28 @@ Hexpm.Repo.transaction(fn ->
       has_docs: true
     )
 
+  readme = """
+  # Decimal
+
+  Arbitrary precision decimal arithmetic for Elixir.
+
+  ```elixir
+  Decimal.add(Decimal.new("0.1"), Decimal.new("0.2"))
+  #=> Decimal.new("0.3")
+  ```
+  """
+
+  Hexpm.Store.put(:preview_bucket, "files/decimal/0.1.0/README.md", readme, [])
+
+  Hexpm.Store.put(
+    :preview_bucket,
+    "file_lists/decimal-0.1.0.json",
+    JSON.encode!(["README.md"]),
+    []
+  )
+
+  Hexpm.Repository.Releases.put_doc_files("hexpm", "decimal", "0.1.0", ["README.md"])
+
   insert(
     :download,
     package: decimal,
