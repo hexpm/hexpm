@@ -41,8 +41,7 @@ defmodule HexpmWeb.PageControllerTest do
       day: NaiveDateTime.to_date(base_date)
     )
 
-    old_date = today |> NaiveDateTime.add(-91 * seconds_in_a_day) |> NaiveDateTime.to_date()
-    insert(:download, package: p2, release: rel2, downloads: 1, day: old_date)
+    insert(:download, package: p2, release: rel2, downloads: 1, day: database_days_ago(91))
 
     Repo.refresh_view(PackageDownload)
     Repo.refresh_view(ReleaseDownload)

@@ -60,30 +60,12 @@ config :hexpm, :organization_sso,
   mode: sso_mode,
   beta_organizations: sso_beta_organizations
 
-# Parsers for syntax highlighting, which `mix hexpm.lumis_cache` prefetches and
-# HexpmWeb.SyntaxHighlight.Fetcher adds to.
-config :lumis, data_dir: Application.app_dir(:hexpm, "priv/lumis")
-
 syntax_highlight_integer = fn name, default ->
   case System.get_env(name) do
     nil -> default
     value -> String.to_integer(value)
   end
 end
-
-default_syntax_highlight_sandbox = if config_env() == :prod, do: "required", else: "off"
-
-syntax_highlight_sandbox =
-  case System.get_env("HEXPM_SYNTAX_HIGHLIGHT_SANDBOX", default_syntax_highlight_sandbox) do
-    "required" ->
-      :required
-
-    "off" ->
-      :off
-
-    value ->
-      raise "invalid HEXPM_SYNTAX_HIGHLIGHT_SANDBOX #{inspect(value)}; expected required or off"
-  end
 
 config :hexpm, HexpmWeb.SyntaxHighlight,
   workers:
@@ -94,15 +76,9 @@ config :hexpm, HexpmWeb.SyntaxHighlight,
   timeout: syntax_highlight_integer.("HEXPM_SYNTAX_HIGHLIGHT_TIMEOUT_MS", 1_000),
   queue_timeout: syntax_highlight_integer.("HEXPM_SYNTAX_HIGHLIGHT_QUEUE_TIMEOUT_MS", 1_000),
   cpu_limit_ms: syntax_highlight_integer.("HEXPM_SYNTAX_HIGHLIGHT_CPU_MS", 2_000),
-  max_data_mb: syntax_highlight_integer.("HEXPM_SYNTAX_HIGHLIGHT_MAX_DATA_MB", 128),
+  max_data_mb: syntax_highlight_integer.("HEXPM_SYNTAX_HIGHLIGHT_MAX_DATA_MB", 256),
   nice: syntax_highlight_integer.("HEXPM_SYNTAX_HIGHLIGHT_NICE", 10),
-  recycle_rss_mb: syntax_highlight_integer.("HEXPM_SYNTAX_HIGHLIGHT_RECYCLE_RSS_MB", 128),
-  download: System.get_env("HEXPM_SYNTAX_HIGHLIGHT_DOWNLOAD", "true") == "true",
-  preload:
-    "HEXPM_SYNTAX_HIGHLIGHT_PRELOAD"
-    |> System.get_env("elixir,erlang")
-    |> String.split(",", trim: true),
-  sandbox: syntax_highlight_sandbox
+  recycle_rss_mb: syntax_highlight_integer.("HEXPM_SYNTAX_HIGHLIGHT_RECYCLE_RSS_MB", 256)
 
 if config_env() == :prod do
   mode =

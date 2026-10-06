@@ -48,7 +48,6 @@ jobs:
           path: |
             deps
             _build
-            priv/lumis
           key: ${{ runner.os }}-elixir-${{ env.elixir }}-otp-${{ env.otp }}-${{ hashFiles('mix.lock', 'config/config.exs') }}
 
       - name: Install dependencies
@@ -98,7 +97,6 @@ jobs:
           path: |
             deps
             _build
-            priv/lumis
           key: ${{ runner.os }}-elixir-${{ env.elixir }}-otp-${{ env.otp }}-${{ hashFiles('mix.lock', 'config/config.exs') }}
 
       - name: Install dependencies
@@ -159,7 +157,6 @@ jobs:
           path: |
             deps
             _build
-            priv/lumis
           key: ${{ runner.os }}-elixir-${{ matrix.elixir }}-otp-${{ matrix.otp }}-${{ hashFiles('mix.lock', 'config/config.exs') }}
 
       - name: Install hexpm dependencies

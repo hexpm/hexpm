@@ -120,35 +120,25 @@ Re-run the task and restart (or call `Geolix.reload_databases/0`) to update.
 
 ### Syntax Highlighting
 
-File previews and diffs are highlighted by [lumis](https://github.com/ericmj/lumis/tree/hexpm)
-in a pool of `lumis serve` OS processes that the app talks to over Erlang ports
+File previews, diffs and README code blocks are highlighted by
+[lumis](https://github.com/ericmj/lumis/tree/hexpm-serve) in a pool of
+`lumis serve` OS processes that the app talks to over Erlang ports
 (`HexpmWeb.SyntaxHighlight.Pool`). The first `mix deps.compile` builds the
-`lumis` executable with Cargo, so development needs Rust 1.91 or newer.
+`lumis` executable with Cargo, so development needs Rust 1.95 or newer.
 
-Parsers are kept in `priv/lumis`. `mix setup` and `mix test` run
-`mix hexpm.lumis_cache`, which downloads the languages listed in
-`:prefetch_languages` in `config/config.exs`, and the Docker image runs it at
-build time. Any other language is downloaded the first time a file needs it,
-and that file is shown unhighlighted until the download finishes.
+Parsers come from the `lumis_wasm_*` dependencies in `mix.exs`, and nothing is
+downloaded at runtime. A language without one is shown as plain text. Each
+process loads all of them before it takes a request.
 
-In production each process runs under a seccomp filter
-(`mix hexpm.lumis_seccomp`) that blocks the network and signals, with resource
-limits on its memory and CPU (`HexpmWeb.SyntaxHighlight.Launcher`). The sandbox
-needs Linux and is off in development and tests. On Linux with util-linux 2.41
-or newer, `mix test --include sandbox` runs its tests.
-
-| Variable                                  | Default                              |                                                                                         |
-| ----------------------------------------- | ------------------------------------ | --------------------------------------------------------------------------------------- |
-| `HEXPM_SYNTAX_HIGHLIGHT_WORKERS`          | half the schedulers, at least 1      | Processes per node                                                                      |
-| `HEXPM_SYNTAX_HIGHLIGHT_TIMEOUT_MS`       | `1000`                               | Time a highlight may take before its process is closed and the file shown unhighlighted |
-| `HEXPM_SYNTAX_HIGHLIGHT_QUEUE_TIMEOUT_MS` | `1000`                               | Time to wait for a free process                                                         |
-| `HEXPM_SYNTAX_HIGHLIGHT_CPU_MS`           | `2000`                               | CPU time a request may use before the kernel kills its process, rounded up to seconds   |
-| `HEXPM_SYNTAX_HIGHLIGHT_MAX_DATA_MB`      | `128`                                | Heap limit of each process, with the sandbox                                            |
-| `HEXPM_SYNTAX_HIGHLIGHT_NICE`             | `10`                                 | Scheduling priority of the processes                                                    |
-| `HEXPM_SYNTAX_HIGHLIGHT_RECYCLE_RSS_MB`   | `128`                                | Peak memory after which a process is replaced                                           |
-| `HEXPM_SYNTAX_HIGHLIGHT_DOWNLOAD`         | `true`                               | Download languages that are not in `priv/lumis`                                         |
-| `HEXPM_SYNTAX_HIGHLIGHT_PRELOAD`          | `elixir,erlang`                      | Languages each process loads when it starts                                             |
-| `HEXPM_SYNTAX_HIGHLIGHT_SANDBOX`          | `required` in prod, `off` otherwise  | With `required`, highlighting is off if the sandbox fails its start check               |
+| Variable                                  | Default                         |                                                                                         |
+| ----------------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------- |
+| `HEXPM_SYNTAX_HIGHLIGHT_WORKERS`          | half the schedulers, at least 1 | Processes per node                                                                      |
+| `HEXPM_SYNTAX_HIGHLIGHT_TIMEOUT_MS`       | `1000`                          | Time a highlight may take before its process is closed and the file shown unhighlighted |
+| `HEXPM_SYNTAX_HIGHLIGHT_QUEUE_TIMEOUT_MS` | `1000`                          | Time to wait for a free process                                                         |
+| `HEXPM_SYNTAX_HIGHLIGHT_CPU_MS`           | `2000`                          | CPU time a request may use before the kernel kills its process, rounded up to seconds   |
+| `HEXPM_SYNTAX_HIGHLIGHT_MAX_DATA_MB`      | `256`                           | Heap limit of each process, on Linux                                                    |
+| `HEXPM_SYNTAX_HIGHLIGHT_NICE`             | `10`                            | Scheduling priority of the processes                                                    |
+| `HEXPM_SYNTAX_HIGHLIGHT_RECYCLE_RSS_MB`   | `256`                           | Peak memory after which a process is replaced                                           |
 
 ### Billing Integration Tests
 

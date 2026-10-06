@@ -4,7 +4,7 @@ defmodule Hexpm.Repository.Policy do
   alias Hexpm.Repository.Policy.RepositoryPolicy
 
   @valid_visibilities ~w(public private)
-  @name_format ~r/^[a-z0-9][a-z0-9_\-\.]*[a-z0-9]$/
+  @name_format ~r/\A[a-z0-9][a-z0-9_\-\.]*[a-z0-9]\z/
 
   # Names that would collide with the policy sub-routes under
   # `/policies/:name` (see `HexpmWeb.Router`).

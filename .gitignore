@@ -19,8 +19,6 @@ erl_crash.dump
 /assets/vendor/css/lumis.css
 
 /priv/geoip/
-/priv/lumis/
-/priv/lumis_sandbox/
 
 .tool-versions
 .elixir_ls

@@ -136,7 +136,7 @@ defmodule HexpmWeb.API.AuthControllerTest do
           :key,
           user: user,
           permissions: [build(:key_permission, domain: "api")],
-          revoke_at: ~N[2030-01-01 00:00:00]
+          revoke_at: DateTime.add(DateTime.utc_now(), 1, :day)
         )
 
       build_conn()

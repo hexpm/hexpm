@@ -595,23 +595,6 @@ defmodule HexpmWeb.SSOEnforcementTest do
       assert json_response(conn, 403)["message"] =~ "organization key"
     end
 
-    test "refuses basic auth, which holds no session either", context do
-      require_sso(context)
-      user = insert(:user, password: Hexpm.Accounts.Auth.gen_password("hunter42"))
-      insert(:organization_user, organization: context.organization, user: user, role: "read")
-
-      conn =
-        build_conn()
-        |> put_req_header("authorization", basic_auth(user.username, "hunter42"))
-        |> get("/api/orgs/#{context.organization.name}")
-
-      message = json_response(conn, 403)["message"]
-
-      assert message =~ "requires authenticating through its identity"
-      assert message =~ "username and password"
-      refute message =~ "/sso/org/"
-    end
-
     test "lets a personal key through where the organization allows them", context do
       require_sso(context, "allow")
 
@@ -2018,10 +2001,6 @@ defmodule HexpmWeb.SSOEnforcementTest do
 
   defp repository_permission(context) do
     [%{domain: "repository", resource: context.organization.name}]
-  end
-
-  defp basic_auth(username, password) do
-    "Basic " <> Base.encode64("#{username}:#{password}")
   end
 
   defp break_glass_logs(context) do

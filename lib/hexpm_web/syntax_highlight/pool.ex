@@ -1,6 +1,7 @@
 defmodule HexpmWeb.SyntaxHighlight.Pool do
   @moduledoc """
-  A pool of `lumis serve` processes, each behind an Erlang port.
+  A pool of `lumis serve` processes, each behind an Erlang port, with every
+  language hexpm depends on loaded before it takes a request.
 
   A caller checks out a port, which is connected to it for the request, sends
   the source, and waits up to `:timeout`. On a reply it connects the port back
@@ -10,25 +11,24 @@ defmodule HexpmWeb.SyntaxHighlight.Pool do
   per-request CPU limit, which the kernel enforces, stops a process whose stdin
   is never read.
 
-  Workers whose peak memory passed `:recycle_rss_mb` are replaced after the
-  request.
-
-  Languages a worker did not have are given to `HexpmWeb.SyntaxHighlight.Fetcher`.
+  Each process runs under `nice`, and on Linux with a heap limit, so an
+  allocation fails in that process before the container reaches its memory
+  limit. Workers whose peak memory passed `:recycle_rss_mb` are replaced after
+  the request.
   """
 
   @behaviour NimblePool
 
   require Logger
 
-  alias HexpmWeb.SyntaxHighlight.{Fetcher, Launcher, Output}
+  @ready_timeout 60_000
 
   @type error() ::
-          :not_cached
-          | :timeout
+          :timeout
           | :queue_timeout
           | :unavailable
-          | :rejected_output
-          | {:exit, non_neg_integer() | :closed}
+          | :malformed_reply
+          | {:exit, non_neg_integer()}
           | {:lumis, String.t()}
 
   def child_spec(opts) do
@@ -37,10 +37,13 @@ defmodule HexpmWeb.SyntaxHighlight.Pool do
 
   @doc """
   Starts the pool. Options are those of `config :hexpm, HexpmWeb.SyntaxHighlight`,
-  which they default to, plus `:name` and `:fetcher`.
+  which they default to, plus `:name`.
 
-  It checks that `lumis serve` starts under its sandbox first, see
-  `HexpmWeb.SyntaxHighlight.Launcher.check/1`, and does not start without it.
+  It first starts one `lumis serve` that loads every language without the heap
+  limit, and does not start if that one does not answer. Compiling the parsers
+  takes about three times the memory loading compiled ones does, so that one
+  compiles them into the cache once, and the processes in the pool load them
+  from there.
   """
   def start_link(opts) do
     config = config(opts)
@@ -53,30 +56,33 @@ defmodule HexpmWeb.SyntaxHighlight.Pool do
   end
 
   @doc """
-  Highlights `source` as html-linked HTML. `language` is a language name or a
-  file path.
+  Highlights `source` as an html-linked `:document`, or as `:lines` of
+  html-linked fragments. `language` is a language name or a file path.
 
-  Options override the pool's configuration for `:timeout`, `:queue_timeout`,
-  `:cpu_limit_ms` and `:match_limit`.
+  Options override the pool's configuration for `:timeout`, `:queue_timeout`
+  and `:cpu_limit_ms`, and take the budget's `:time_limit` and `:match_limit`.
   """
-  @spec highlight(String.t(), String.t(), keyword()) :: {:ok, String.t()} | {:error, error()}
-  def highlight(source, language, opts \\ []) do
+  @spec highlight(Lumis.Port.kind(), String.t(), String.t(), keyword()) ::
+          {:ok, String.t() | [String.t()]} | {:error, error()}
+  def highlight(kind, source, language, opts \\ []) do
     config = config(opts)
 
     request =
-      Lumis.Port.request(source, language,
-        cpu_limit_ms: Keyword.fetch!(config, :cpu_limit_ms),
-        match_limit: Keyword.get(config, :match_limit, 0)
+      Lumis.Port.request(kind, source, language,
+        match_limit: Keyword.get(config, :match_limit, 0),
+        time_limit: Keyword.get(config, :time_limit, 0),
+        cpu_limit_ms: Keyword.fetch!(config, :cpu_limit_ms)
       )
 
     config
     |> Keyword.fetch!(:name)
     |> NimblePool.checkout!(
       :checkout,
-      fn {pool, _ref}, port -> run(port, pool, request, Keyword.fetch!(config, :timeout)) end,
+      fn {pool, _ref}, port ->
+        run(port, pool, kind, request, Keyword.fetch!(config, :timeout))
+      end,
       Keyword.fetch!(config, :queue_timeout)
     )
-    |> fetch_missing(Keyword.fetch!(config, :fetcher))
   catch
     :exit, {:timeout, {NimblePool, :checkout, _}} -> {:error, :queue_timeout}
     :exit, {:noproc, {NimblePool, :checkout, _}} -> {:error, :unavailable}
@@ -85,126 +91,144 @@ defmodule HexpmWeb.SyntaxHighlight.Pool do
   defp config(opts) do
     :hexpm
     |> Application.fetch_env!(HexpmWeb.SyntaxHighlight)
-    |> Keyword.merge(name: __MODULE__, fetcher: Fetcher, data_dir: Lumis.Port.data_dir())
+    |> Keyword.put(:name, __MODULE__)
     |> Keyword.merge(opts)
   end
 
-  defp run(port, pool, request, timeout) do
-    Port.command(port, request)
+  # A port that already exited drops the command, and its exit status is
+  # already on its way here, since the port was connected to this process.
+  defp run(port, pool, kind, request, timeout) do
+    send(port, {self(), {:command, request}})
 
     receive do
       {^port, {:data, reply}} ->
-        handle_reply(decode_reply(reply), port, pool)
+        handle_reply(Lumis.Port.decode_reply(reply, kind), port, pool)
 
       {^port, {:exit_status, status}} ->
-        Launcher.close(port)
+        close(port)
         {{:error, {:exit, status}}, :remove}
     after
       timeout ->
-        Launcher.close(port)
+        close(port)
         {{:error, :timeout}, :remove}
     end
-  rescue
-    # The process exited after it was checked out and before the request.
-    ArgumentError ->
-      Launcher.close(port)
-      {{:error, {:exit, :closed}}, :remove}
   end
 
-  defp decode_reply(reply) do
-    Lumis.Port.decode_reply(reply)
-  rescue
-    _error -> :malformed
-  end
-
-  defp handle_reply(:malformed, port, _pool) do
-    Launcher.close(port)
-    {{:error, :rejected_output}, :remove}
-  end
-
-  defp handle_reply({:ok, html, missing, max_rss_kb}, port, pool) do
-    if Output.valid?(html) do
-      {{:ok, html, missing}, give_back(port, pool, max_rss_kb)}
-    else
-      Launcher.close(port)
-      {{:error, :rejected_output}, :remove}
-    end
-  end
-
-  defp handle_reply({:not_cached, language, max_rss_kb}, port, pool) do
-    {{:not_cached, language}, give_back(port, pool, max_rss_kb)}
+  defp handle_reply({:ok, result, max_rss_kb}, port, pool) do
+    {{:ok, result}, give_back(port, pool, max_rss_kb)}
   end
 
   defp handle_reply({:error, message, max_rss_kb}, port, pool) do
     {{:error, {:lumis, message}}, give_back(port, pool, max_rss_kb)}
   end
 
+  defp handle_reply(_reply, port, _pool) do
+    close(port)
+    {{:error, :malformed_reply}, :remove}
+  end
+
   # Connects the port back to the pool, and drops anything it sent the caller
   # before that, so nothing from it reaches the caller's mailbox later.
   defp give_back(port, pool, max_rss_kb) do
-    Port.connect(port, pool)
-    Process.unlink(port)
-    Launcher.flush(port)
-    {:ok, max_rss_kb}
-  rescue
-    # The process exited after it replied.
-    ArgumentError ->
-      Launcher.close(port)
+    if connect(port, pool) do
+      Process.unlink(port)
+      flush(port)
+      {:ok, max_rss_kb}
+    else
+      close(port)
       :remove
+    end
   end
 
-  defp fetch_missing({:ok, html, []}, _fetcher), do: {:ok, html}
-
-  defp fetch_missing({:ok, html, missing}, fetcher) do
-    Fetcher.fetch(fetcher, missing)
-    {:ok, html}
+  # `Port.connect/2` raises only when the port is closed.
+  defp connect(port, pid) do
+    Port.connect(port, pid)
+  rescue
+    ArgumentError -> false
   end
 
-  defp fetch_missing({:not_cached, language}, fetcher) do
-    Fetcher.fetch(fetcher, [language])
-    {:error, :not_cached}
+  # `Port.close/1` raises only when the port is already closed.
+  defp close(port) do
+    Process.unlink(port)
+
+    try do
+      Port.close(port)
+    rescue
+      ArgumentError -> :ok
+    end
+
+    flush(port)
   end
 
-  defp fetch_missing({:error, _reason} = error, _fetcher), do: error
-
-  @impl NimblePool
-  def init_pool(config) do
-    case Launcher.check(config) do
-      :ok ->
-        {:ok,
-         %{
-           wrapper: Launcher.wrapper(config),
-           data_dir: Keyword.fetch!(config, :data_dir),
-           preload: Keyword.fetch!(config, :preload),
-           recycle_kb: Keyword.fetch!(config, :recycle_rss_mb) * 1024
-         }}
-
-      {:error, reason} ->
-        Logger.error("Syntax highlighting is off, lumis serve failed its start check: #{reason}")
-        :ignore
+  defp flush(port) do
+    receive do
+      {^port, _message} -> flush(port)
+      {:EXIT, ^port, _reason} -> flush(port)
+    after
+      0 -> :ok
     end
   end
 
   @impl NimblePool
+  def init_pool(config) do
+    state = %{
+      wrapper: [nice!(), "-n", to_string(Keyword.fetch!(config, :nice)), "--"],
+      max_data_mb: if(match?({:unix, :linux}, :os.type()), do: config[:max_data_mb]),
+      recycle_kb: Keyword.fetch!(config, :recycle_rss_mb) * 1024
+    }
+
+    port = Lumis.Port.open(wrapper: state.wrapper, preload_installed: true)
+    ready = Lumis.Port.await_ready(port, @ready_timeout)
+    close(port)
+
+    case ready do
+      {:ok, _max_rss_kb} ->
+        {:ok, state}
+
+      {:error, reason} ->
+        Logger.error("Syntax highlighting is off, lumis serve did not start: #{inspect(reason)}")
+        :ignore
+    end
+  end
+
+  defp nice!() do
+    System.find_executable("nice") || raise "nice is not on the PATH"
+  end
+
+  # Loading every language takes a while, so a process joins the pool only
+  # once it says it is ready, and no request waits on it.
+  @impl NimblePool
   def init_worker(state) do
+    pool = self()
+    {:async, fn -> start_worker(state, pool) end, state}
+  end
+
+  defp start_worker(state, pool) do
     port =
       Lumis.Port.open(
         wrapper: state.wrapper,
-        env: Launcher.env(),
-        data_dir: state.data_dir,
-        preload: state.preload
+        max_data_mb: state.max_data_mb,
+        preload_installed: true
       )
 
-    {:ok, port, state}
+    with {:ok, _max_rss_kb} <- Lumis.Port.await_ready(port, @ready_timeout),
+         true <- connect(port, pool) do
+      Process.unlink(port)
+      port
+    else
+      error ->
+        close(port)
+        exit({:lumis_serve_not_ready, error})
+    end
   end
 
   @impl NimblePool
   def handle_checkout(:checkout, {client, _ref}, port, state) do
-    Port.connect(port, client)
-    {:ok, port, port, state}
-  rescue
-    # The process exited while idle and its exit has not been handled yet.
-    ArgumentError -> {:remove, :exit, state}
+    if connect(port, client) do
+      {:ok, port, port, state}
+    else
+      {:remove, :exit, state}
+    end
   end
 
   @impl NimblePool
@@ -227,7 +251,7 @@ defmodule HexpmWeb.SyntaxHighlight.Pool do
 
   @impl NimblePool
   def terminate_worker(_reason, port, state) do
-    Launcher.close(port)
+    close(port)
     {:ok, state}
   end
 end

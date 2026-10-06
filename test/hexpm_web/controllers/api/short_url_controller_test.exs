@@ -60,7 +60,7 @@ defmodule HexpmWeb.API.ShortURLControllerTest do
     end
 
     test "throttles new short urls per IP and still answers existing ones", %{package: package} do
-      align_to_throttle_bucket()
+      align_to_throttle_bucket(10 * 60_000, 10_000)
       ip = {192, 0, 2, 12}
       existing = "https://hex.pm/diffs?diffs[]=#{package.name}:1.0.0:1.0.1"
 
@@ -91,11 +91,5 @@ defmodule HexpmWeb.API.ShortURLControllerTest do
     build_conn()
     |> Map.put(:remote_ip, ip)
     |> post("/api/short_url", %{"url" => url})
-  end
-
-  defp align_to_throttle_bucket() do
-    period = 10 * 60_000
-    remaining = period - rem(System.system_time(:millisecond), period)
-    if remaining < 10_000, do: Process.sleep(remaining + 50)
   end
 end

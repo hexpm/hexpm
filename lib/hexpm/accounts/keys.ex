@@ -26,7 +26,7 @@ defmodule Hexpm.Accounts.Keys do
       join: member in OrganizationUser,
       on: member.user_id == key.user_id,
       where: member.organization_id == ^organization.id,
-      where: is_nil(key.revoke_at) or key.revoke_at > fragment("NOW()"),
+      where: is_nil(key.revoke_at) or key.revoke_at > ^DateTime.utc_now(),
       order_by: [asc: key.name],
       preload: [:user]
     )

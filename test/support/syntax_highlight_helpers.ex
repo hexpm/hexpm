@@ -26,6 +26,14 @@ defmodule HexpmWeb.SyntaxHighlightHelpers do
         do: os_pid
   end
 
+  @doc """
+  Waits until `pool` holds `count` idle processes. A process joins the pool once
+  it has loaded every language, which takes about a second.
+  """
+  def await_idle(pool, count \\ 1) do
+    wait_until(fn -> length(idle_os_pids(pool)) == count end, 3_000)
+  end
+
   def alive?(os_pid) do
     {_output, status} = System.cmd("kill", ["-0", to_string(os_pid)], stderr_to_stdout: true)
     status == 0
@@ -61,7 +69,9 @@ defmodule HexpmWeb.SyntaxHighlightHelpers do
     end)
 
     receive do
-      {:started, pool} -> idle_os_pids(pool)
+      {:started, pool} ->
+        true = await_idle(pool)
+        idle_os_pids(pool)
     end
   end
 end

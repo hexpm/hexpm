@@ -482,7 +482,6 @@ html.no-flag-emoji .flag-emoji {
 }
 
 .preview-source .l-line {
-  display: block;
   min-height: 1.5rem;
   padding-right: 1rem;
   cursor: pointer;

@@ -196,6 +196,13 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
       assert errors_on(changeset).email == "is not a valid email"
     end
 
+    test "accepts an address without a dot in the domain", %{
+      organization: organization,
+      admin: admin
+    } do
+      assert {:ok, _invitation} = invite(organization, admin, "person@localhost")
+    end
+
     test "audits the invitation without exposing the token", %{
       organization: organization,
       admin: admin

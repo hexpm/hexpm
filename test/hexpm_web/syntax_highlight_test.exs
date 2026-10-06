@@ -27,6 +27,57 @@ defmodule HexpmWeb.SyntaxHighlightTest do
     refute first =~ "<pre"
   end
 
+  test "returns plain text marked with the budget after the time limit" do
+    lines = List.duplicate("value = <script>", 2_000)
+    budget = [time_limit: 1, match_limit: 4096]
+
+    document =
+      SyntaxHighlight.highlight(Enum.join(lines, "\n"), "lib/app.ex", "slow", budget: budget)
+
+    assert document =~ ~s(data-lumis-budget="time")
+    assert document =~ "&lt;script&gt;"
+    refute document =~ ~s(class="l-variable")
+
+    assert SyntaxHighlight.highlight_lines(lines, "lib/app.ex", "slow", budget: budget)
+           |> Enum.uniq() == ["value = &lt;script&gt;"]
+  end
+
+  test "preserves diff lines when the highlighting match limit is exhausted" do
+    lines = ["fn main() {", "  let value = (1 + (2 * (3 - 4)));", "}", ""]
+    budget = [time_limit: 0, match_limit: 1]
+
+    document =
+      SyntaxHighlight.highlight(Enum.join(lines, "\n"), "rust", "matches", budget: budget)
+
+    assert document =~ ~s(data-lumis-budget="matches")
+
+    highlighted = SyntaxHighlight.highlight_lines(lines, "rust", "matches", budget: budget)
+    assert length(highlighted) == length(lines)
+
+    assert Enum.map(highlighted, fn html ->
+             html |> LazyHTML.from_fragment() |> LazyHTML.text()
+           end) == lines
+  end
+
+  # VHDL is in the Lumis catalog but hexpm does not depend on its parser.
+  test "renders plain text when the parser is not installed" do
+    lines = ["signal clk : std_logic;", "end architecture;"]
+    document = SyntaxHighlight.highlight(Enum.join(lines, "\n"), "vhdl", "missing parser")
+
+    assert document =~ "signal clk : std_logic;"
+    refute document =~ ~r/class="l-(?!line)/
+  end
+
+  test "keeps one fragment per diff line, including trailing blank lines" do
+    assert SyntaxHighlight.highlight_lines([""], "elixir", "blank lines") == [""]
+
+    assert [_value, ""] =
+             SyntaxHighlight.highlight_lines(["value = 1", ""], "elixir", "blank lines")
+
+    assert SyntaxHighlight.highlight_lines(["", "x", "", ""], "vhdl", "blank lines") ==
+             ["", "x", "", ""]
+  end
+
   test "uses escaped plain source after a timeout" do
     source = slow_source(0.5) <> "<script>"
 

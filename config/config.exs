@@ -206,14 +206,4 @@ config :ueberauth, Ueberauth,
 
 config :mdex_native, syntax_highlighter: :lumis
 
-# Parsers `mix hexpm.lumis_cache` downloads into priv/lumis, and the Docker
-# image ships. Others are downloaded the first time a file needs them.
-config :hexpm, HexpmWeb.SyntaxHighlight, prefetch_languages: ~w(
-    bash c comment css diff dockerfile eex elixir erlang gleam heex html
-    javascript json make markdown markdown_inline regex rust sql toml yaml
-  )
-
-# The lumis git checkout has no precompiled NIF checksums, build from source
-System.put_env("LUMIS_BUILD", "1")
-
 import_config "#{Mix.env()}.exs"

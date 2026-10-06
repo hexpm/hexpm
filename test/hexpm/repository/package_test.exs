@@ -475,7 +475,7 @@ defmodule Hexpm.Repository.PackageTest do
     insert(:release,
       package: zero,
       daily_downloads: [
-        build(:download, package_id: zero.id, downloads: 10, day: Hexpm.Utils.utc_days_ago(91))
+        build(:download, package_id: zero.id, downloads: 10, day: database_days_ago(91))
       ]
     )
 
@@ -849,7 +849,7 @@ defmodule Hexpm.Repository.PackageTest do
       :release,
       package_id: phoenix_id,
       daily_downloads: [
-        build(:download, package_id: phoenix_id, downloads: 10, day: Hexpm.Utils.utc_days_ago(91))
+        build(:download, package_id: phoenix_id, downloads: 10, day: database_days_ago(91))
       ]
     )
 
@@ -857,7 +857,7 @@ defmodule Hexpm.Repository.PackageTest do
       :release,
       package_id: decimal_id,
       daily_downloads: [
-        build(:download, package_id: decimal_id, downloads: 10, day: Hexpm.Utils.utc_days_ago(35))
+        build(:download, package_id: decimal_id, downloads: 10, day: database_days_ago(35))
       ]
     )
 
@@ -865,7 +865,7 @@ defmodule Hexpm.Repository.PackageTest do
       :release,
       package_id: ecto_id,
       daily_downloads: [
-        build(:download, package_id: ecto_id, downloads: 5, day: Hexpm.Utils.utc_days_ago(10))
+        build(:download, package_id: ecto_id, downloads: 5, day: database_days_ago(10))
       ]
     )
 

@@ -117,7 +117,7 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
       Event.build(:hexpm_syntax_highlight_event_metrics, [
         counter("hexpm.syntax_highlight.total",
           event_name: [:hexpm, :syntax_highlight, :stop],
-          description: "File previews and diffs highlighted, by result.",
+          description: "File previews, diffs and README code blocks highlighted, by result.",
           tags: [:result]
         ),
         distribution("hexpm.syntax_highlight.duration.milliseconds",
