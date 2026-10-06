@@ -21,6 +21,11 @@ defmodule Hexpm.Repository.PolicyTest do
 
       refute changeset.valid?
       assert errors_on(changeset).name == "has invalid format"
+
+      for name <- ["ok-name\n", "ok-name ", "ok-name\t"] do
+        changeset = Policy.changeset(%Policy{}, %{name: name, visibility: "public"})
+        assert errors_on(changeset).name == "has invalid format"
+      end
     end
 
     test "validates name length 3..64" do

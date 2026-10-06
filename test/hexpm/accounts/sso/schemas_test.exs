@@ -134,6 +134,12 @@ defmodule Hexpm.Accounts.SSO.SchemasTest do
       refute Resource.email_shaped?(combining_string(244) <> "@example.com")
     end
 
+    test "email_shaped?/1 uses the account email format" do
+      assert Resource.email_shaped?("person@localhost")
+      refute Resource.email_shaped?("person@example.com\n")
+      refute Resource.email_shaped?("not-an-email")
+    end
+
     defp resource(overrides) do
       attrs = Map.merge(%{user_name: "person@example.com"}, Map.new(overrides))
 

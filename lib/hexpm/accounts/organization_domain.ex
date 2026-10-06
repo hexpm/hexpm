@@ -8,7 +8,7 @@ defmodule Hexpm.Accounts.OrganizationDomain do
   # A label is 1-63 characters and the whole name is at most 253. Leading and
   # trailing dots are rejected rather than trimmed, because an administrator who
   # typed one probably pasted something else too.
-  @domain_regex ~r/^(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))+$/
+  @domain_regex ~r/\A(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))+\z/
 
   schema "organization_domains" do
     field :domain, :string

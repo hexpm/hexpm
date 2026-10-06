@@ -20,6 +20,13 @@ defmodule Hexpm.Accounts.OrganizationTest do
       refute Organization.changeset(%Organization{}, %{name: "foo.bar"}).valid?
     end
 
+    test "rejects trailing whitespace" do
+      for name <- ["globex\n", "globex ", "globex\t"] do
+        changeset = Organization.changeset(%Organization{}, %{name: name})
+        assert errors_on(changeset).name == "has invalid format"
+      end
+    end
+
     test "bounds the name in bytes" do
       assert Organization.changeset(%Organization{}, %{name: String.duplicate("a", 255)}).valid?
 
