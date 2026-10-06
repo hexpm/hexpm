@@ -3,7 +3,7 @@ defmodule HexpmWeb.SyntaxHighlight do
 
   alias Lumis.Formatter.HTML
 
-  @budget [time_limit: to_timeout(second: 1), match_limit: 4096]
+  @budget [time_limit: 300, match_limit: 4096]
   @linked_attrs Map.new(HTML.classes(), fn {scope, class} -> {scope, ~s|class="#{class}"|} end)
 
   def budget, do: @budget
