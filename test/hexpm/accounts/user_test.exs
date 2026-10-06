@@ -33,11 +33,6 @@ defmodule Hexpm.Accounts.UserTest do
         changeset = User.build(%{username: username})
         assert errors_on(changeset)[:username] == "has invalid format"
       end
-
-      for username <- ["kneergo", "kneergo12", "xkneergo"] do
-        changeset = User.build(%{username: username})
-        assert errors_on(changeset)[:username] == "has invalid format"
-      end
     end
 
     test "validates email format" do
