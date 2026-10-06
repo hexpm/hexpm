@@ -536,6 +536,56 @@ defmodule Hexpm.TrustedPublishersTest do
         assert email.to == [{user.username, Hexpm.Accounts.User.email(user, :primary)}]
       end)
     end
+
+    test "revokes the publisher's tokens and keeps their rows", %{
+      user: user,
+      package: package,
+      trusted_publisher: trusted_publisher
+    } do
+      oidc = TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
+
+      assert {:ok, token} =
+               TrustedPublishers.verify_and_mint(oidc, repository: "hexpm", package: package.name)
+
+      assert {:ok, _} = TrustedPublishers.delete(trusted_publisher, audit: audit_data(user))
+
+      reloaded = Repo.get!(Hexpm.OAuth.Token, token.id)
+      assert reloaded.revoked_at
+      assert reloaded.trusted_publisher_id == trusted_publisher.id
+
+      assert {:error, :invalid} =
+               Hexpm.Accounts.Auth.oauth_token_auth(token.access_token, %{})
+    end
+
+    test "an exchanged OIDC token stays used after its publisher is removed", %{
+      user: user,
+      package: package,
+      trusted_publisher: tp
+    } do
+      other_package = insert(:package)
+
+      insert(:trusted_publisher,
+        package: other_package,
+        repository_owner: tp.repository_owner,
+        repository_owner_id: tp.repository_owner_id,
+        repository_id: tp.repository_id,
+        repository: tp.repository,
+        workflow: tp.workflow
+      )
+
+      oidc = TrustedPublisherHelpers.sign_oidc_claims(TrustedPublisherHelpers.github_claims())
+
+      assert {:ok, _} =
+               TrustedPublishers.verify_and_mint(oidc, repository: "hexpm", package: package.name)
+
+      assert {:ok, _} = TrustedPublishers.delete(tp, audit: audit_data(user))
+
+      assert {:error, :token_replayed} =
+               TrustedPublishers.verify_and_mint(oidc,
+                 repository: "hexpm",
+                 package: other_package.name
+               )
+    end
   end
 
   describe "verify_and_mint/2 event filter" do

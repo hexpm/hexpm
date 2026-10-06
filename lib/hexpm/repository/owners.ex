@@ -144,6 +144,12 @@ defmodule Hexpm.Repository.Owners do
     |> Multi.run(:trusted_publishers, fn repo, _changes ->
       query = from(tp in TrustedPublisher, where: tp.package_id == ^package.id)
       trusted_publishers = query |> repo.all() |> Enum.map(&%{&1 | package: package})
+
+      trusted_publishers
+      |> Enum.map(& &1.id)
+      |> Hexpm.TrustedPublishers.revoke_tokens_query()
+      |> repo.update_all([])
+
       repo.delete_all(query)
       {:ok, trusted_publishers}
     end)

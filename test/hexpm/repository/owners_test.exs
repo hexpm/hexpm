@@ -91,11 +91,23 @@ defmodule Hexpm.Repository.OwnersTest do
       other_package_publisher = insert(:trusted_publisher)
       new_owner = insert(:user)
 
+      token =
+        Repo.insert!(%Hexpm.OAuth.Token{
+          jti: "transfer-jti",
+          token_type: "bearer",
+          scopes: ["package:hexpm/#{package.name}"],
+          expires_at: DateTime.utc_now() |> DateTime.add(600) |> DateTime.truncate(:second),
+          grant_type: "trusted_publisher",
+          grant_reference: "oidc-transfer-jti",
+          trusted_publisher_id: trusted_publisher.id
+        })
+
       assert {:ok, _} =
                Owners.add(package, new_owner, %{"transfer" => true}, audit: audit_data(owner))
 
       refute Repo.get(Hexpm.TrustedPublishers.TrustedPublisher, trusted_publisher.id)
       assert Repo.get(Hexpm.TrustedPublishers.TrustedPublisher, other_package_publisher.id)
+      assert Repo.get!(Hexpm.OAuth.Token, token.id).revoked_at
 
       log = Repo.get_by!(Hexpm.Accounts.AuditLog, action: "trusted_publisher.remove")
       assert log.params["repository"] == trusted_publisher.repository

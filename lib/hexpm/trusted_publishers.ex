@@ -135,6 +135,7 @@ defmodule Hexpm.TrustedPublishers do
 
     multi =
       Multi.new()
+      |> Multi.update_all(:tokens, revoke_tokens_query([trusted_publisher.id]), [])
       |> Multi.delete(:trusted_publisher, trusted_publisher)
       |> audit(audit_data, action, trusted_publisher)
 
@@ -146,6 +147,23 @@ defmodule Hexpm.TrustedPublishers do
       {:error, _op, changeset, _} ->
         {:error, changeset}
     end
+  end
+
+  @doc """
+  Revokes the tokens issued to the given publishers. Their rows outlive the
+  publishers, like any other OAuth token's, until the purge archives and deletes
+  them after they expire. A row is also what keeps its OIDC token from being
+  exchanged again.
+
+  Returns the query, suitable for use in Multi.update_all.
+  """
+  def revoke_tokens_query(trusted_publisher_ids) do
+    now = DateTime.utc_now()
+
+    from(t in Token,
+      where: t.trusted_publisher_id in ^trusted_publisher_ids and is_nil(t.revoked_at),
+      update: [set: [revoked_at: ^now, updated_at: ^now]]
+    )
   end
 
   defp audit_action(%Organization{}, :add), do: "organization.trusted_publisher.add"
