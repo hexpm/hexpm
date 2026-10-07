@@ -116,6 +116,14 @@ defmodule HexpmWeb.AuthControllerTest do
     end
   end
 
+  describe "GET /auth/:provider" do
+    test "is a 404 for a provider that isn't configured" do
+      conn = get(build_conn(), "/auth/login")
+
+      assert html_response(conn, 404)
+    end
+  end
+
   describe "GET /auth/github/callback - GitHub login (existing user)" do
     test "redirects to the return path stored during the request phase" do
       email = Hexpm.Fake.sequence(:email)
