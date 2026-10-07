@@ -200,6 +200,19 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
       assert json_response(conn, 400)
     end
+
+    test "refuses an unauthorized caller before reading the body", %{package: package} do
+      meta = %{name: package.name, version: "0.1.0", description: "description"}
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(insert(:user)))
+        |> post("/api/packages/#{package.name}/releases", create_tar(meta))
+
+      assert json_response(conn, 403)
+      refute Map.has_key?(conn.params, "body")
+    end
   end
 
   describe "POST /api/publish" do
@@ -377,6 +390,29 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       result = json_response(conn, 401)
       assert result["message"] == "missing authentication information"
       refute Hexpm.Repo.get_by(Package, name: meta.name)
+    end
+
+    test "refuses a caller with no credential before reading the body" do
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> post("/api/publish", "not a tarball")
+
+      assert json_response(conn, 401)["message"] == "missing authentication information"
+      refute Map.has_key?(conn.params, "body")
+    end
+
+    test "refuses a caller with no credential before sending 100 Continue" do
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("expect", "100-continue")
+        |> put_req_header("content-length", "13")
+        |> post("/api/publish", "not a tarball")
+
+      assert json_response(conn, 401)["message"] == "missing authentication information"
+      assert Plug.Test.sent_informs(conn) == []
+      refute Map.has_key?(conn.params, "body")
     end
 
     test "accepts release with internal symlink", %{user: user} do
