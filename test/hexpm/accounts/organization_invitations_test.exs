@@ -202,6 +202,22 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
                provision(organization, admin, "person501@example.com")
     end
 
+    test "counts provisioning that reissues an invitation a person sent", %{
+      organization: organization,
+      admin: admin
+    } do
+      {:ok, lapsed} = invite(organization, admin, "lapsed@example.com")
+      expire(lapsed)
+      insert_invitations(organization, nil, 499)
+
+      assert {:ok, reissued} = provision(organization, admin, "lapsed@example.com")
+      assert reissued.id == lapsed.id
+      assert reissued.invited_by_user_id == nil
+
+      assert {:error, :too_many_invitations} =
+               provision(organization, admin, "person501@example.com")
+    end
+
     test "counts provisioning invitations of the organization in the last day only", %{
       admin: admin
     } do
