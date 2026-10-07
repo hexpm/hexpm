@@ -193,6 +193,33 @@ defmodule HexpmWeb.SCIM.UserControllerTest do
     assert body["detail"] =~ "Too many invitations"
   end
 
+  test "an organization that provisioned too many invitations today is a 429", context do
+    now = DateTime.utc_now()
+
+    rows =
+      for index <- 1..500 do
+        %{
+          organization_id: context.organization.id,
+          email: "provisioned#{index}@example.com",
+          role: "read",
+          token_hash: :crypto.strong_rand_bytes(32),
+          expires_at: DateTime.add(now, 7 * 24 * 60 * 60),
+          inserted_at: now,
+          updated_at: now
+        }
+      end
+
+    Repo.insert_all(Hexpm.Accounts.OrganizationInvitation, rows)
+
+    body =
+      scim_conn(context.token)
+      |> post("/scim/v2/Users", scim_body(%{"userName" => "new@example.com"}))
+      |> scim_json_response(429)
+
+    assert body["detail"] =~ "by this organization's provisioning"
+    refute Repo.get_by(Hexpm.Accounts.OrganizationInvitation, email: "new@example.com")
+  end
+
   test "seat exhaustion is a 409 naming the fix", context do
     Repo.update!(Ecto.Changeset.change(context.organization, billing_seats: 1))
     user = insert(:user)

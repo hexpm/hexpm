@@ -191,6 +191,33 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
                invite(organization, admin, "person51@example.com")
     end
 
+    test "stops provisioning after five hundred invitations to an organization in a day", %{
+      organization: organization,
+      admin: admin
+    } do
+      insert_invitations(organization, nil, 499)
+      assert {:ok, _invitation} = provision(organization, admin, "person500@example.com")
+
+      assert {:error, :too_many_invitations} =
+               provision(organization, admin, "person501@example.com")
+    end
+
+    test "counts provisioning invitations of the organization in the last day only", %{
+      admin: admin
+    } do
+      insert_invitations(insert(:organization), nil, 500)
+      assert {:ok, _invitation} = provision(insert(:organization), admin, "first@example.com")
+
+      invited_by_a_person = insert(:organization)
+      insert_invitations(invited_by_a_person, admin, 500)
+      assert {:ok, _invitation} = provision(invited_by_a_person, admin, "second@example.com")
+
+      day_ago = DateTime.add(DateTime.utc_now(), -25 * 60 * 60)
+      provisioned_yesterday = insert(:organization)
+      insert_invitations(provisioned_yesterday, nil, 500, day_ago)
+      assert {:ok, _invitation} = provision(provisioned_yesterday, admin, "third@example.com")
+    end
+
     test "rejects an address that is not one", %{organization: organization, admin: admin} do
       assert {:error, changeset} = invite(organization, admin, "not-an-address")
       assert errors_on(changeset).email == "is not a valid email"
@@ -332,6 +359,30 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
     OrganizationInvitations.invite(organization, %{"email" => email, "role" => role}, admin,
       audit: audit_data(admin)
     )
+  end
+
+  defp provision(organization, admin, email) do
+    OrganizationInvitations.invite(organization, %{"email" => email, "role" => "read"}, nil,
+      audit: audit_data(admin)
+    )
+  end
+
+  defp insert_invitations(organization, invited_by, count, written_at \\ DateTime.utc_now()) do
+    rows =
+      for index <- 1..count do
+        %{
+          organization_id: organization.id,
+          invited_by_user_id: invited_by && invited_by.id,
+          email: "invited#{index}-#{organization.id}@example.com",
+          role: "read",
+          token_hash: :crypto.strong_rand_bytes(32),
+          expires_at: DateTime.add(DateTime.utc_now(), 7 * 24 * 60 * 60),
+          inserted_at: written_at,
+          updated_at: written_at
+        }
+      end
+
+    Repo.insert_all(Hexpm.Accounts.OrganizationInvitation, rows)
   end
 
   defp expire(invitation) do
