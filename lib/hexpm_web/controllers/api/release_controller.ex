@@ -28,7 +28,11 @@ defmodule HexpmWeb.API.ReleaseController do
        ]
        when action in [:delete]
 
-  plug :handle_100_continue, [max_size: @tarball_max_size] when action in [:create, :publish]
+  # The package a publish names is in the tarball, so a caller with no
+  # credential is refused before the body is read and the package is
+  # authorized once the tarball is parsed.
+  plug :require_authentication when action in [:publish]
+  plug :fetch_body, [max_size: @tarball_max_size] when action in [:create, :publish]
   plug :parse_tarball when action in [:publish]
   plug :maybe_fetch_package when action in [:publish]
 
@@ -125,6 +129,15 @@ defmodule HexpmWeb.API.ReleaseController do
 
       {:error, _, changeset, _} ->
         validation_failed(conn, changeset)
+    end
+  end
+
+  defp require_authentication(conn, _opts) do
+    if conn.assigns.current_user || conn.assigns.current_organization ||
+         conn.assigns.trusted_publisher do
+      conn
+    else
+      AuthHelpers.error(conn, {:error, :missing})
     end
   end
 
