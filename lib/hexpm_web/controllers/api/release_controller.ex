@@ -2,6 +2,7 @@ defmodule HexpmWeb.API.ReleaseController do
   use HexpmWeb, :controller
 
   @tarball_max_size 16 * 1024 * 1024
+  @metadata_string_max_size 255
 
   plug :maybe_fetch_release when action in [:show]
   plug :fetch_release when action in [:delete]
@@ -259,10 +260,27 @@ defmodule HexpmWeb.API.ReleaseController do
   defp unpack_release_metadata(body_path, output) do
     case :hex_tarball.unpack({:file, String.to_charlist(body_path)}, output) do
       {:ok, %{inner_checksum: inner_checksum, outer_checksum: outer_checksum, metadata: metadata}} ->
-        {:ok, metadata, inner_checksum, outer_checksum}
+        with :ok <- check_metadata_string(metadata, "name"),
+             :ok <- check_metadata_string(metadata, "version") do
+          {:ok, metadata, inner_checksum, outer_checksum}
+        end
 
       {:error, reason} ->
         {:error, List.to_string(:hex_tarball.format_error(reason))}
+    end
+  end
+
+  # The name and version are used in queries and storage keys before the
+  # changesets validate them, so they are checked for type and size first.
+  # Valid ones are far shorter than the limit.
+  defp check_metadata_string(metadata, field) do
+    case metadata[field] do
+      value when is_binary(value) and byte_size(value) <= @metadata_string_max_size ->
+        :ok
+
+      _ ->
+        {:error,
+         "metadata #{field} must be a string of at most #{@metadata_string_max_size} bytes"}
     end
   end
 

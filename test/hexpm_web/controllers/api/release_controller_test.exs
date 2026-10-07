@@ -415,6 +415,41 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       refute Map.has_key?(conn.params, "body")
     end
 
+    test "refuses a metadata name or version that isn't a string of at most 255 bytes", %{
+      user: user
+    } do
+      metadata = %{
+        "name" => Fake.sequence(:package),
+        "version" => "1.0.0",
+        "app" => "app",
+        "description" => "description",
+        "licenses" => ["Apache-2.0"],
+        "build_tools" => ["mix"],
+        "files" => ["mix.exs"],
+        "requirements" => %{}
+      }
+
+      invalid = [
+        {"name", 123},
+        {"version", 123},
+        {"version", "1.0.0-" <> String.duplicate("a", 250)}
+      ]
+
+      for {field, value} <- invalid do
+        conn =
+          build_conn()
+          |> put_req_header("content-type", "application/octet-stream")
+          |> put_req_header("authorization", key_for(user))
+          |> post("/api/publish", create_tar_with_raw_metadata(Map.put(metadata, field, value)))
+
+        assert json_response(conn, 422)["errors"] == %{
+                 "tar" => "metadata #{field} must be a string of at most 255 bytes"
+               }
+      end
+
+      refute Hexpm.Repo.get_by(Package, name: metadata["name"])
+    end
+
     test "accepts release with internal symlink", %{user: user} do
       meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "description"}
 
