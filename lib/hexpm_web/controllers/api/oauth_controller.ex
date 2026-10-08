@@ -124,6 +124,7 @@ defmodule HexpmWeb.API.OAuthController do
              usage_info: usage_info,
              audit: audit,
              browser_session_id: auth_code.user_session_id,
+             organization_ids: auth_code.organization_ids,
              authorization_code: auth_code
            ) do
         {:ok, token} ->

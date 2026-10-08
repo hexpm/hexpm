@@ -261,7 +261,8 @@ defmodule HexpmWeb.API.ReleaseController do
     case :hex_tarball.unpack({:file, String.to_charlist(body_path)}, output) do
       {:ok, %{inner_checksum: inner_checksum, outer_checksum: outer_checksum, metadata: metadata}} ->
         with :ok <- check_metadata_string(metadata, "name"),
-             :ok <- check_metadata_string(metadata, "version") do
+             :ok <- check_metadata_string(metadata, "version"),
+             :ok <- check_metadata_text(metadata) do
           {:ok, metadata, inner_checksum, outer_checksum}
         end
 
@@ -282,6 +283,14 @@ defmodule HexpmWeb.API.ReleaseController do
         {:error,
          "metadata #{field} must be a string of at most #{@metadata_string_max_size} bytes"}
     end
+  end
+
+  # Metadata is stored as text and jsonb, which hold neither a NUL byte nor
+  # invalid UTF-8, and nothing upstream of the insert checks for them.
+  defp check_metadata_text(metadata) do
+    if Hexpm.Utils.storable_text?(metadata),
+      do: :ok,
+      else: {:error, "metadata must be valid UTF-8 without NUL bytes"}
   end
 
   defp publisher_for(conn) do

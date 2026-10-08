@@ -361,6 +361,23 @@ defmodule HexpmWeb.SCIM.UserControllerTest do
     refute Organizations.get_role(context.organization, user)
   end
 
+  test "an externalId carrying a NUL byte is refused", context do
+    {400, headers, body} =
+      assert_error_sent(400, fn ->
+        scim_conn(context.token)
+        |> post(
+          "/scim/v2/Users",
+          scim_body(%{"userName" => "nul@example.com", "externalId" => "okta\u00001"})
+        )
+      end)
+
+    assert {"content-type", "application/scim+json" <> _} =
+             List.keyfind(headers, "content-type", 0)
+
+    assert JSON.decode!(body)["schemas"] == ["urn:ietf:params:scim:api:messages:2.0:Error"]
+    refute Repo.exists?(Hexpm.Accounts.SCIM.Resource)
+  end
+
   defp scim_conn(token) do
     build_conn()
     |> put_req_header("authorization", "Bearer #{token}")
