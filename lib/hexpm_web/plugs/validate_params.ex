@@ -1,7 +1,7 @@
 defmodule HexpmWeb.Plugs.ValidateParams do
   @moduledoc """
-  Refuses a request whose path or parameters hold text Postgres can't store, a
-  NUL byte or invalid UTF-8, before any query reads them.
+  Refuses a request whose host, path or parameters hold text Postgres can't
+  store, a NUL byte or invalid UTF-8, before any query reads them.
 
   It runs in the endpoint right after the body is parsed, so it covers every
   route whether or not it goes through a pipeline. No format has been
@@ -21,7 +21,8 @@ defmodule HexpmWeb.Plugs.ValidateParams do
 
   @impl Plug
   def call(conn, _opts) do
-    if storable_path?(conn.path_info) and Hexpm.Utils.storable_text?(conn.params) do
+    if Hexpm.Utils.storable_text?(conn.host) and storable_path?(conn.path_info) and
+         Hexpm.Utils.storable_text?(conn.params) do
       conn
     else
       raise InvalidTextError
